@@ -4031,6 +4031,11 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   opens 1/1, closes 0/0 and reopens 1/1, with screenshots and predicted census. A labelled
   one-field stock fixture preserves saved 1/1 while closed. Evidence: `docs/exe/park-gate.md`;
   original saves unchanged, no code change, Q90 unchanged.
+- [x] **Q90. The advisor says nothing when the park opens or closes. Decode first.** Decoded 2026-10-03:
+  events 3/4 → messages `0x80`/`0x81` → responses 308–311 → samples 342–345. Both shipped scores are **20**,
+  below the tick's strict **>25** threshold: stock silence is expected, though OpenTPW still lacks the posting/gate
+  path. Low-score slots remain occupied in the tick. Fresh Ghidra initializer/schema reconstruction and independent
+  review; `docs/exe/advisor-park.md`, Q90. No implementation or runtime confirmation this session; Q90b follows.
 
 ## B. Docs and comments
 

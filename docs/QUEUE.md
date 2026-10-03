@@ -52,11 +52,16 @@ artifacts are listed in `docs/history/README.md`.
   window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
   together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
 
-- [ ] **Q90. The advisor says nothing when the park opens or closes. Decode first.** Found by Q50b's decode. The door
-  posts a type-`0x13` message, 3 or 4, whether or not anything changed, and `CAdvisor::ReceiveMessage`
-  (`FUN_0059b060`) answers with its own message `0x80` or `0x81` (`FUN_0059ae20`); `advisor-park.md` lists neither.
-  Counted `PARK_OPENED_ADVISOR_MESSAGE`, `PARK_CLOSED_ADVISOR_MESSAGE`. Decode what the two say and when, then build.
-  Confirm: press the door, the advisor's line in the log and on screen.
+- [ ] **Q90b. Build the decoded park-door advisor message path, preserving stock silence.** Q90 decoded
+  `docs/exe/advisor-park.md`: door events 3/4 always post messages `0x80`/`0x81`, including unchanged states.
+  Derive scores and thresholds from data; one pending instance per message, category-0 cooldown, priority queue,
+  and two-line histories. Remove `PARK_OPENED_ADVISOR_MESSAGE` / `PARK_CLOSED_ADVISOR_MESSAGE` only when built.
+  Confirm: predict **0** spoken door announcements at stock score 20 / threshold 25, then press the real door and
+  capture a screenshot AND message/score/threshold log. In a labelled private configuration fixture with only
+  both scores raised to 26 before posting, predict and confirm the opening/closing response/sample sequence (342/343, 344/345)
+  on screen and in the log. Stock silence is fidelity, not a reason to force speech. Add regression for routing,
+  repeated states, duplicate cap, strict 25 boundary, cooldown, priority and rotation; restore defects and require
+  the new tests to fail. Build/test the exact commit alone in a throwaway worktree.
 - [ ] **Q91. A ride's model does not change as it closes and opens. Decode first.** Found by Q50b's decode. Every
   close calls `FUN_00454550( model, 1 )` and every open `FUN_004547c0( model )` (`ride-operation.md`, the
   `FUN_00454550` row); the model loader around them names `Hoardings`, and nothing parses or reads `RideInfo.Hoarding`.

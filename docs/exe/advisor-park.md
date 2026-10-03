@@ -1,6 +1,6 @@
 # Park advisor (original executable)
 
-The park advisor is a THING like the weather, ticking on the same beat. It hears in two ways: the park **posts a message** to it, and **each tick it polls one row** of the metadata table below, calling that row's score function (`FUN_0059a550` calls `FUN_0059c680( 1 )` on the static at `0x00fb3540`, built by `FUN_0059bea0`, whose `+0x20` is `MinScoreForConsideration` (`DAT_00fb3560`); it steps its cursor at `+0` over the 351 rows to the next whose `+0x00` is nought, 156 of them, calls that row's score function and keeps a score above nought that the accept gate `FUN_0059abc0` would take; the tick raises it when `FUN_0059bf20` answers above `MinScoreForConsideration`, 25). Either way the message is accepted or rejected by a gate, and an accepted message occupies one of **eight priority slots**. Each tick the advisor says the highest-scoring slot, picks a line within that response, and plays a sample. Two separate tables sit behind this — a static response table at `0x00768fb8` that maps a response id to a sample, lip file and gesture, and a runtime-filled metadata table at `0x0076e300` that holds the per-message score function, category and line count. The scores' coefficients live in `data/Advisor/Advisor.sam`, whose schema is compiled into the executable as 60-byte descriptors. This page is about the park advisor's message and scoring system; the on-screen advisor model and his interruption are in `ui.md`.
+The park advisor is a THING like the weather, ticking on the same beat. It hears in two ways: the park **posts a message** to it, and **each tick it polls one row** of the metadata table below, calling that row's score function (`FUN_0059a550` calls `FUN_0059c680( 1 )` on the static at `0x00fb3540`, built by `FUN_0059bea0`, whose `+0x20` is `MinScoreForConsideration` (`DAT_00fb3560`); it steps its cursor at `+0` over the 351 rows to the next whose `+0x00` is nought, 156 of them, calls that row's score function and keeps a score above nought that the accept gate `FUN_0059abc0` would take; the tick raises it when `FUN_0059bf20` answers above `MinScoreForConsideration`, 25). Either way the message is accepted or rejected by a gate, and an accepted message occupies one of **eight priority slots**. Each tick the advisor considers the highest-scoring slot, speaking only if its score passes the threshold (Q90 below), then picks a line within that response and plays a sample. Two separate tables sit behind this — a static response table at `0x00768fb8` that maps a response id to a sample, lip file and gesture, and a runtime-filled metadata table at `0x0076e300` that holds the per-message score function, category and line count. The scores' coefficients live in `data/Advisor/Advisor.sam`, whose schema is compiled into the executable as 60-byte descriptors. This page is about the park advisor's message and scoring system; the on-screen advisor model and his interruption are in `ui.md`.
 
 ## The thing
 
@@ -18,6 +18,109 @@ The park advisor is a THING like the weather, ticking on the same beat. It hears
 | `FUN_005194d0` | — | Fetches the advisor THING; indexes a THING table at `DAT_007cfb90`, stride 5 dwords | Asserts "Thing has been allocated in Thing..."; the decompiler hides the call because the result is passed in ECX by `__fastcall` |
 
 Concrete message-to-response pairs seen in the dispatch: message `8` → response `0x102`; message `0x0e` sub 0/1/2 → `0x7d`/`0x7e`/`0x7f`; message `0x11` (research) categories 0-4 → `0x5d`, `0x5f`, `0x60`, `0x61`, `0x5e`.
+
+## Q90 — park opening and closing (decode only, 2026-10-03)
+
+**The shipped settings suppress both announcements.** The door posts advisor messages, but their score is
+**20** and the tick requires **strictly more than 25**. Silence alone therefore does not prove a missing
+feature. OpenTPW still lacks the message/gate path (`ParkState.SetParkClosed` counts it); Q90b builds that
+path while preserving the decoded stock silence. No game was launched for this decode and no speech was
+confirmed on screen. The following runtime expectations are predictions from executable instructions and data.
+
+### Door event, message, response and sample are different numbers
+
+`FUN_00519ef0( open, 0 )` posts a type-`0x13` record through `FUN_0040f630` (vtable `0x006fd810`,
+type accessor `0x0040f650` returns `0x13`): event **3** for open
+(`0x0051a031`), **4** for close (`0x0051a1c1`), outside each state-change guard. `FUN_0059b060` case `0x13`
+passes that event to `FUN_0059ae20`. Cases 3/4 construct messages **`0x80`/`0x81`**, with line index **−1**,
+forced **0**, score override **−1**, then call `FUN_0059a940` (`0x0059af04`..`0x0059af53`).
+`FUN_0059b590` derives the score from the message's metadata, marks it occupied, and leaves score-overridden
+false. Thus repeating the same door state still posts; it does not force speech or reset its history.
+
+Fresh reconstruction of all **5,280** initializer instructions at `0x005a0a50`..`0x005a86fb` gives:
+
+| Event | Advisor message / metadata address | Score function | First response | Lines / selection |
+|---|---|---|---|---|
+| 3, open | `0x80` / `0x0076ff00` | `0x0059f390`: `[ECX + 0x3e0]` | 308 (`0x134`) | 2 / mode 2 |
+| 4, close | `0x81` / `0x0076ff38` | `0x005b96a0`: `[ECX + 0x3e4]` | 310 (`0x136`) | 2 / mode 2 |
+
+Both rows are posted-only (`+0 = 1`), category **0**, valid for either game mode (`+0xc = 2`), with at most
+**one pending instance of each message** (`+0x20 = 1`). Neither is the category-1 sticky help message.
+The first-response writers are `0x005a385d` and `0x005a3939`; the pointer writers are `0x005a3710` and
+`0x005a3883`. Mode 2 advances the message's own history and wraps at its two-line count in `FUN_0059a550`.
+Only a successful playback-helper return advances that history; the open and close messages have separate histories.
+
+| Response / table address | Sample and lip number | Existing transcript's meaning |
+|---|---|---|
+| 308 / `0x0076b638` | **342** | The park is now open; the transcript's first word is uncertain |
+| 309 / `0x0076b658` | **343** | Attention please: the park is open for business |
+| 310 / `0x0076b678` | **344** | The park is closed; nearly time to turn out the lights and lock up |
+| 311 / `0x0076b698` | **345** | Closed for business; time to end the day |
+
+These are meanings from the existing `global-speech-transcripts.tsv`, not freshly heard quotations (its
+342 and 345 rows contain apparent transcription errors). All four response records have gesture **−1**, model/bank
+word **0** (global speech bank), face fields **9/0**. Their trailing values **150/151** are not the message
+IDs or `.sam` ordinals. The advice to open a closed park (samples 1–3) is a different message.
+
+### Why the stock door is silent, and when these lines can speak
+
+The score functions above run with `ECX = 0x00fb3540`. The compiled schema, not the text file's order,
+resolves the three relevant keys:
+
+| Key | Descriptor / runtime address | Shipped value |
+|---|---|---|
+| `GeneralAdvisor.MinScoreForConsideration` | `0x0072e1d4` / `0x00fb3560` | **25** |
+| `ParkNowOpen.Score` | `0x00734e94` / `0x00fb3920` | **20** |
+| `ParkNowClosed.Score` | `0x00734f48` / `0x00fb3924` | **20** |
+
+`FUN_0059bea0` builds the balance sub-object at receiver **+0xc**, then reads `data/advisor/advisor.sam`.
+Its vtable `0x006fd958` returns the schema through `0x00415e90` and the storage base (`this + 8`) through
+`0x005b0d60`. `FUN_00401030` starts at slot 1. The ten-entry `MessageGroups` array consumes **30 value
+slots plus one extra dword** (`0x0040115b`, `0x0040119b`); omitting that extra dword misidentifies both
+score fields. The schema walk reproduces the direct readers' `+0x3e0`/`+0x3e4` exactly.
+
+The accept gate `FUN_0059abc0` can admit score-20 messages: **it does not test the score threshold**.
+They occupy ordinary slots. In the tick, `0x0059a6d5` compares the best occupied slot's stored score with
+`[0x00fb3560]`; `JLE 0x0059a8e8` skips speaking for **20 and also 25**. That tail only reads elapsed time
+through `FUN_0041a990` and returns. **This tick retains the low-score slot; it does not discard it.**
+A second copy of that message then fails the instance cap. A higher-priority message can replace it when
+all eight slots are full; explicit withdrawal `FUN_0059aa70` can clear it. No opposite-message withdrawal
+is present in the two door-event arms.
+
+If a message was posted with a score **above 25**, the tick can select it after any current action's wait
+and the one-shot suppression flag. The non-overridden playback helper `FUN_0059b620` then clears occupancy
+and re-evaluates its score: its separate check at `0x0059b6c3` / `JL 0x0059b6c9` requires **at least 25**.
+That weaker second check does not rescue a newly posted score-25 message from the tick's first check.
+A successful helper return sets the wait to the response's duration plus **1,000 ms** and records the history.
+That return is not proof of audible output: the helper does not test `Advisor_SayResponse`'s return value.
+Higher-scoring pending messages take precedence; pressing the door does not interrupt them immediately.
+
+Category 0's shipped `MinTimeSameMessage` is **120**, `SayOnlyOnce` **0**, `DiscardAfterSlaps` **0**.
+After a successful helper return, and only when `lastSaidTick >> 2` is nonzero, the accept gate compares the same message's elapsed
+`(mGameTick >> 2) - (lastSaidTick >> 2)` with 120; this is **480 world sweeps** when both stamps are aligned
+(about **119 seconds** at eight 31-ms ticks per sweep), not a wall-clock timer. Opening and closing do not
+share this cooldown. The general five-second and 120-second keys are not read, as Q194 established in "The content" below.
+
+### Evidence and next-session confirmation
+
+Private Ghidra project `q90-codex-project`, copied and hash-checked from the original without altering it;
+program `/testme.exe`, image base `0x00400000`, executable SHA-256
+`cf0ffd955077eca146d75ee46c45b8a0786fb757a8f7d204b1aed8ec5a1ee4cb`, matching the reference executable.
+The `q90/` harness directory holds `initial-decode.txt`, `filler.txt`, `loader-schema-door.txt`,
+`allocation-and-clear.txt`, `tick-constructor-withdraw.txt`, `tail-xrefs.txt`, and the reproducible
+`check_tables.py` / `table-check.json`. Both metadata rows also match the earlier Q177 extraction.
+No new shipped-file layout was discovered; these are executable mappings of already documented data.
+
+**Q90b must predict zero spoken door announcements with the stock scores**, then confirm the real door
+with a screenshot and message/score/threshold log. To exercise the audible branch, use a clearly labelled,
+private configuration fixture raising only both door scores to **26** before posting, leaving the threshold at 25.
+Read or explicitly reset the two histories before predicting the response/sample sequence: event 10 in
+`FUN_0059ae20` sets every rotation index to −1, so each message then selects line 0, then 1, then 0.
+A saved history may begin elsewhere; fresh-constructor initialization was not traced here. Confirm both the actual door action and
+advisor on screen with its matching log. Cover alternating lines, same-state posting, duplicate suppression,
+the strict 25 boundary, per-message cooldown and queue priority in regression tests; restore the missing
+route and threshold defects separately and require the new tests to fail. Never hard-code an unconditional
+`Say(342)`/`Say(344)` or change the shipped scores to satisfy the old confirmation wording.
 
 ## The message record (0x18 bytes)
 
