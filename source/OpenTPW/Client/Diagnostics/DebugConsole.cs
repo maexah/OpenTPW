@@ -1714,6 +1714,10 @@ public static class DebugConsole
 			// them printed, "the plus button charged one more" is a measurement rather than a picture.
 			// Then the bank's other four, which the original's memory shows beside a drink's +10: the year's profit,
 			// the balance the last withdrawal left, the tick it entered the red and whether withdrawals are on.
+			case "gate":
+				Reply( ParkPeople.Current?.GateDescription() ?? "gate: no park" );
+				break;
+
 			case "money":
 				Reply( Level.Current?.ParkState is { } purse
 					? $"money balance {purse.Balance} takings {purse.Takings} " +

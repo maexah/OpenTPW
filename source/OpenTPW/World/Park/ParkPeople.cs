@@ -132,6 +132,8 @@ public sealed class ParkPeople : Entity
 	/// </summary>
 	private readonly System.Func<int, RideScript?>? _scriptFor;
 
+	private readonly int _gateThing;
+
 	/// <summary>
 	/// What a ride's turn rolls with: <see cref="Peep.SetState"/>, which none of the states a ride puts a guest into
 	/// consults, and a shop's docks on its ingredient as a guest leaves (<see cref="ParkRideOperation.Dismiss"/>), which
@@ -193,6 +195,7 @@ public sealed class ParkPeople : Entity
 		Random? behaviourRandom = null, Random? rideRandom = null, Random? staffRandom = null )
 	{
 		_scriptFor = scriptFor;
+		_gateThing = park?.ParkGates ?? 0;
 		_banks = banks ?? new ParkSpriteBanks( 0, 0, 0 );
 		_arrivalRandom = random ?? new Random();
 		_rideRandom = rideRandom ?? new Random();
@@ -393,7 +396,7 @@ public sealed class ParkPeople : Entity
 	/// <see cref="_peeps"/> is the simulation; <see cref="_byId"/> is how a ride finds who is at its
 	/// queue head; <see cref="_walks"/> is the only reason they move; <see cref="_sprites"/> is the only
 	/// reason they are drawn; and <see cref="ParkState.StandOn"/> is what puts them in a cell's
-	/// occupancy list - without which the gate cannot see them.
+	/// occupancy list, which the entry booths read.
 	/// </para>
 	/// <para>
 	/// Initial values follow <c>FUN_004faec0</c>, including the base constructor's speed draw first
@@ -1716,6 +1719,7 @@ public sealed class ParkPeople : Entity
 			StepVehicle();
 
 			TakeTheRidesTurns( thingTick );
+			RetryGateClose();
 		}
 	}
 
@@ -1870,13 +1874,15 @@ public sealed class ParkPeople : Entity
 	}
 
 	/// <summary>
-	/// The rides' half of the park's door - <c>FUN_00519ef0</c>'s walk along the object chain, over every
+	/// The gate command and rides of the park's door - <c>FUN_00519ef0</c>'s walk along the object chain, over every
 	/// object a guest may be offered (<c>+0x32 &amp; 4</c>). Closing closes each (<c>0x0051a1ae</c>); opening
 	/// opens each that <see cref="ParkRideOperation.MayOpen"/> allows (<c>0x0051a013</c>..<c>0x0051a01e</c>).
 	/// See <see cref="ParkState.SetParkClosed"/>.
 	/// </summary>
 	internal void DoorMoved( bool closed )
 	{
+		CommandGateFromDoor( closed );
+
 		var operation = new ParkRideOperation( State, Guests );
 
 		foreach ( var thing in State.ObjectsInChainOrder().ToArray() )
@@ -1892,6 +1898,57 @@ public sealed class ParkPeople : Entity
 				operation.Open( script, thing.ThingId );
 		}
 	}
+
+	/// <summary>The position-cell test used by the door, independent of occupancy and admission state.</summary>
+	private bool InsideGateCensus( PeepNavigator navigator )
+	{
+		var (x, y) = navigator.Position.Cell;
+		return x >= 0 && y >= 0 && x < ParkWorld.MapSize && y < ParkWorld.MapSize
+			&& Peep.CountsOn( State.Record( x, y ).Type );
+	}
+
+	internal int GateGuestCensus => _peeps.Count( peep => InsideGateCensus( peep.Navigator ) );
+
+	// FUN_00516380 requires thing byte +3 == 0, not the staff activity. This list contains live staff:
+	// Fire removes immediately; the original marks +3 then drains deletion after the retry. See park-gate.md.
+	internal int GateStaffOutside => _staff.Count( member => member.Model is >= 4 and <= 8
+		&& !InsideGateCensus( member.Navigator ) );
+
+	private RideScript? GateScript => _gateThing == 0 ? null : _scriptFor?.Invoke( _gateThing );
+
+	private void CommandGateFromDoor( bool closed )
+	{
+		if ( GateScript is not { } gate )
+		{
+			if ( _gateThing != 0 )
+				Unimplemented.Report( "PARK_DOOR_COMMANDS_THE_GATE" );
+			return;
+		}
+
+		if ( !closed || (gate[ParkRides.GateState] == ParkRides.GateIsOpen && GateGuestCensus == 0) )
+			gate.Set( ParkRides.GateCommand, closed ? 0 : 1 );
+
+		Log.Info( $"Gate door: {GateDescription()}" );
+	}
+
+	/// <summary>After the thing sweep, every 30 world ticks: FUN_00516380 (docs/exe/park-gate.md).</summary>
+	internal void RetryGateClose()
+	{
+		if ( !State.ParkIsClosed || (uint)State.GameTick % 30 != 0 || GateScript is not { } gate
+			|| gate[ParkRides.GateState] != ParkRides.GateIsOpen )
+			return;
+
+		if ( GateGuestCensus == 0 && GateStaffOutside == 0 )
+			gate.Set( ParkRides.GateCommand, 0 );
+
+		Log.Info( $"Gate retry: {GateDescription()}" );
+	}
+
+	/// <summary>A pure census for the console, including the clock whose multiples schedule retries.</summary>
+	internal string GateDescription()
+		=> $"gate {_gateThing} closed {(State.ParkIsClosed ? 1 : 0)} tick {State.GameTick} "
+			+ $"command {GateScript?[ParkRides.GateCommand] ?? -1} status {GateScript?[ParkRides.GateState] ?? -1} "
+			+ $"guests {GateGuestCensus} staffOutside {GateStaffOutside}";
 
 	/// <summary>
 	/// What kind of track an item runs on, for the one gate in <see cref="ParkRideOperation.Invite"/> that

@@ -1,8 +1,9 @@
-# The park door and gate (Q89)
+# The park door and gate (Q89, Q89b)
 
-**Decoded, not implemented.** Q89 separates the ordinary door command from the end-of-park
-sequence. Q89b owns the build, regression mutation check and screenshot with a predicted
-runtime census. No game run or on-screen confirmation is claimed for this decode.
+**Implemented and confirmed in Lost Kingdom (Q89b).** The entry-price door opens and closes
+the gate through ordinary dispatch. Populated closure waits for the position-cell census;
+the 30-world-sweep retry additionally waits for live staff outside. Screenshot and predicted
+census evidence is recorded below. Q90's advisor messages remain counted.
 
 ## What writes the command
 
@@ -81,19 +82,66 @@ same script instance without resetting its control flow. This is an end sequence
 **not an interchangeable ordinary close command**.
 These are decoded script effects, not observed animation timing or screenshots.
 
-## Implementation handoff and evidence limits
+## Implementation and verification (Q89b)
 
-Q89b must wire the real door and deferred close checks, using live guest positions and the
-numeric cell predicate rather than total guest count or occupancy. Preserve the immediate
-versus delayed staff distinction. Replace the saved-closed command-2 stand-in and correct
-`ParkRides.CommandTheGate` and `ParkFixedItemsTests` comments; their idle explanation only
-holds while status is 0. Saved-script restoration and a fresh closed gate need separate
-cases: do not overwrite a valid resumed script merely to force an assumed pose.
+`ParkPeople.DoorMoved` commands the gate before its ride loop. The guest census reads live
+navigator positions and `ParkState.Record` cell types, independent of occupancy, guest activity
+and admission. `RetryGateClose` runs after the thing sweep, against the incremented unsigned
+world tick modulo 30. The console's `gate` command is a pure getter for command, status,
+closed flag, world tick, guest census and outside-staff count. A missing bound gate script
+still reports `PARK_DOOR_COMMANDS_THE_GATE` when its door is moved.
 
-Confirm an empty park opened then closed at its entry-price door, with the gate photographed
-and command/status/census predicted before reading them. Also cover populated closure and
-the later retry, including outside staff. Reopen after ordinary close to detect the terminal
-command-2 mistake. New regression tests must fail when each implemented defect is restored.
+**The staff byte is a lifecycle flag, not `Staff.Activity`.** The base constructor writes zero
+at `0x0050aff1`; the successful base load resets it at `0x0050b340`. Firing calls the thing's
+deletion (`FUN_00505790` → `FUN_0050b780`), which writes `+3 = 1` at `0x0050b8e9`, queues
+deletion and changes kind to 2. OpenTPW's live staff list loads/hire-adds live staff and removes
+fired staff immediately. Iterating that list with kinds 4–8 implements the lifecycle guard
+for these paths; it must remain so if deferred destruction is introduced. Non-idle staff
+outside block the retry too. Primary Q89b artifacts: `thing-init-ins.txt`, `thing-load.txt`,
+`thing-delete.txt`, `fire.txt` and `deferred-close.txt`.
+
+A fresh closed gate starts with command 0 and its closed base pose. A successfully resumed
+gate keeps its saved command, program counter, variables and animations, including a pending
+opening in a closed park. A missing or invalid saved script falls back to initializing the gate command from the park flag.
+Command 2 is never substituted for normal closure. For malformed off-map managed positions,
+the census returns false as a safety guard; the decoded native byte-coordinate lookup has
+no equivalent bounds guard. The existing omission of world-state-4 sweep suppression is not
+changed here; the retry follows every supported world sweep.
+
+**Running game, predicted before reading.** Both completed runs used the entry-price screen's
+real door button through `click`, with muted audio. The admitted guest and staff placement
+are console setup instruments; the door, departure walk, periodic retry and animations are
+production paths. `confirm.py` and `staff-confirm.py` produced these observations:
+
+| Scenario | Command / status | Guest census / staff outside | Evidence |
+|---|---|---|---|
+| Fresh closed park, tick 4 | 0 / 0 | 0 / 0 | `runtime2/fresh-closed.png` |
+| Door opened, tick 20 | 1 / 1 | 0 / 0 | `runtime2/opened.png` |
+| Empty door closed, tick 36 | 0 / 0 | 0 / 0 | `runtime2/closed.png` |
+| Reopened, tick 53 | 1 / 1 | 0 / 0 | `runtime2/reopened.png` |
+| One inside guest, door closed | 1 / 1 | 1 / 0 | `runtime2/populated-close.png` |
+| Last guest outside, retry tick 60 | 0 / 1, then 0 / 0 | 0 / 0 | `runtime2/run.log`, `last-guest-left.png` |
+| Empty census but staff outside, ticks 780/810/840 | 1 / 1 | 0 / 1 | `staff-runtime2/run.log`, `staff-blocks-empty-gate.png` |
+| Staff moved inside, retry tick 870 | 0 / 1, then 0 / 0 | 0 / 0 | `staff-runtime2/run.log`, `staff-inside-gate-closed.png` |
+| Reopened after deferred close, tick 904 | 1 / 1 | 0 / 0 | `staff-runtime2/deferred-reopened.png` |
+
+All paths in that table are below `~/.cache/tpw-harnesses/q89b/`; each run's `run.log`
+contains the matching census. Prediction lines are in `runtime2-summary.log` and
+`staff-runtime2-summary.log`. The close-up images visibly show both gate leaves closed,
+open, and reopened. An unchanged open-frame pair was also captured. Both completed runs
+left game-save file hashes unchanged after removing only the verification player created
+by the fresh-park run. Earlier exploratory runs changed only loading-count cache
+`save/opentpw.cfg`, which was reported and left intact. One harness used the wrong hex
+OK-button ID; one staff fixture had no inside guests and therefore correctly took the
+immediate close. Both were corrected before the completed runs.
+
+**Regression limits.** `ParkGateTests` covers ordinary script close/reopen, changed-door and
+status guards, census types and guest activities, exact world-sweep cadence through the real
+update, staff-kind and non-idle activity guards, fired-staff removal, fresh closed startup,
+missing saved gate state and saved closed commands 0/1 without counter/variable clobbering.
+Saved-closed restoration, missing saved state and every staff kind were test-verified, not
+runtime-verified; the photographed outside blocker was the mechanic. Invalid program-counter
+fallback and malformed positions were source-reviewed only. No advisor behavior was implemented.
 
 Primary artifacts: `q89/door-census.txt`, `census-followup.txt`, `cell-types-writer.txt`,
 `tick-opcode-table.txt`, `gates-listings.txt`, `content-check.json`, `corpus.log`, in the
@@ -103,4 +151,17 @@ harness scratch directory. The private Ghidra project was hash-checked against t
 reference and installed `TP-nodisc.exe`. All **106** opcode name/arity entries matched the
 fresh Ghidra table; **308/308** corpus scripts parsed and **2664/2664** branch targets fell
 on instructions. Four freshly extracted gate scripts matched the corpus byte for byte.
-No binary layout was changed or inferred from one file. Runtime behavior remains unconfirmed.
+No binary layout was changed or inferred from one file. These Q89 artifacts establish the decode;
+Q89b runtime evidence is above.
+
+Q89b mutation checks restored eleven faults: omitted door and retry calls, command 2 for ordinary
+close and fresh closed startup, saved-command overwrite, total guest count, occupancy-based
+count, a 29-sweep period, omitted staff guard, activity mistaken for lifecycle, and the staff
+guard incorrectly applied to immediate closure. Each failed the new tests. The occupancy
+mutation initially survived because the fixture had no separate occupancy mapping; the test
+now explicitly stands its subject on type-30 cell (2,2) while its navigator is at (1,1), and
+that mutation fails. `mutations.json` records the final failures; first-attempt results were
+retained. Source and binary were restored and the full suite passed: **1679**, no failures or
+skips, **121** build warnings and no errors. Independent Astra review assessed supplied primary
+excerpts and applied code; child filesystem access failed, so direct file/log/runtime checks
+were performed by the parent. The review restored the explicit zero-script-handle guard.

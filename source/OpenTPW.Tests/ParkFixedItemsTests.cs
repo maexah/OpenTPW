@@ -386,8 +386,7 @@ public class ParkFixedItemsTests
 	/// <para>
 	/// <c>Gates.RSE</c> opens on a dispatch loop that reads <c>VAR_COMMAND</c>, and every variable starts at
 	/// nought - so it cycles five instructions for ever and reaches neither the open branch's
-	/// <c>WAITANIM</c> nor the close branch's <c>TRIGANIM</c>. In the original the only thing that ever
-	/// writes that variable is opening or closing the park, and nothing in this fixture does either.
+	/// <c>WAITANIM</c> nor the close branch's <c>TRIGANIM</c>. The door and the deferred-close check write that variable; neither runs in this fixture.
 	/// </para>
 	/// <para>
 	/// The anti-vacuity check matters more than the assertion it guards: an idle channel would also be what
@@ -430,8 +429,8 @@ public class ParkFixedItemsTests
 	/// nothing, which on screen is indistinguishable from a gate nobody commanded.
 	/// </para>
 	/// <para>
-	/// One is open. <b>Two</b> is what the end-of-park path writes and what a park saved closed is given here;
-	/// the door's own close writes nought (<c>docs/exe/lobby.md</c>).
+	/// One is open, zero is ordinary close when status is one; two is the terminal end-of-park sequence
+	/// (<c>docs/exe/park-gate.md</c>).
 	/// </para>
 	/// </summary>
 	[TestMethod]

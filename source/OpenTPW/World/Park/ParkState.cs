@@ -657,9 +657,9 @@ public sealed class ParkState
 	/// <see cref="DoorMoved"/>: closing closes every object a guest may be offered (<c>0x0051a1ae</c>), opening
 	/// opens each that <see cref="ParkRideOperation.MayOpen"/> allows (<c>0x0051a01e</c>).
 	/// <para>
-	/// <b>Two parts are counted.</b> Each arm commands the gate's script - opening writes 1, closing writes 0
+	/// The people command the gate script - opening writes 1, closing writes 0
 	/// only when nobody is in the park and the gate reads open (<c>0x0051a0e8</c>..<c>0x0051a161</c>) - and
-	/// each posts a type-<c>0x13</c> message, 3 open or 4 closed, which the advisor answers with its own
+	/// each still counts a type-<c>0x13</c> message, 3 open or 4 closed, which the advisor answers with its own
 	/// message <c>0x80</c> or <c>0x81</c>; the message is posted whether or not anything changed.
 	/// </para>
 	/// </remarks>
@@ -669,7 +669,6 @@ public sealed class ParkState
 		{
 			ParkIsClosed = closed;
 
-			Unimplemented.Report( "PARK_DOOR_COMMANDS_THE_GATE" );
 			DoorMoved?.Invoke( closed );
 		}
 

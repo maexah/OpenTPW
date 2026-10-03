@@ -290,6 +290,7 @@ public sealed class ParkRides : Entity
 		// Only from a module that read whole, as the next handle is restored only then: one that stopped part-way
 		// could have the counter hand out a handle a script it did not reach was saved under.
 		var saveOrder = new Dictionary<int, int>();
+		var gateResumed = false;
 
 		for ( var at = 0; saved?.ScriptStates.Problem == null && saved != null && at < saved.ScriptStates.Order.Count; ++at )
 			saveOrder[saved.ScriptStates.Order[at]] = at;
@@ -364,7 +365,11 @@ public sealed class ParkRides : Entity
 				// out of its egg on every load.
 				// See ParkScriptStates, and RideScript.ResumeAt for what it refuses.
 				if ( saved != null )
-					Resume( script, placed, saved );
+				{
+					var resumed = Resume( script, placed, saved );
+					if ( placed.ThingId == world.ParkGates )
+						gateResumed = resumed;
+				}
 
 				// Its own thing's player where the thing is standing, so that what the script triggers and
 				// what the model is posed from are the same one.
@@ -456,10 +461,9 @@ public sealed class ParkRides : Entity
 			}
 		}
 
-		// And tell the gate whether this park is open - one of several writes of a script variable from
-		// outside a script, beside the capacity and duration above and ride operation's VAR_LETMEON and
-		// VAR_LETMEOFF. Last, because it needs the binding above to have run.
-		CommandTheGate( world );
+		// A gate without saved state starts open or closed with its park. A resumed gate keeps its own
+		// command and animation state. Last, because it needs the binding above to have run.
+		CommandTheGate( world, gateResumed );
 
 		// The restore counts go in this line because otherwise nothing anywhere reports them. A park whose
 		// saved state stops reading does not fail: every script quietly starts at its own first
@@ -486,63 +490,27 @@ public sealed class ParkRides : Entity
 			Current = null;
 	}
 
-	/// <summary>The gate's command variable, by the name its own script declares it under.</summary>
-	private const string GateCommand = "VAR_COMMAND";
-
-	/// <summary>Open the gate. <c>FUN_00519ef0</c> writes this when a park is opened.</summary>
-	private const int OpenTheGate = 1;
+	/// <summary>The gate's command variable, resolved by its declared name.</summary>
+	internal const string GateCommand = "VAR_COMMAND";
 
 	/// <summary>
-	/// What a park saved closed commands: <b>2</b>, the value only the end-of-park path writes
-	/// (<c>0x00519f40</c>). The door's own close writes 0, and only with nobody in the park - see the
-	/// remarks below.
+	/// Initialize only a gate without a valid resumed script. A fresh closed gate keeps command 0 and
+	/// its closed base pose; 2 is the terminal end sequence, never an ordinary close. Saved commands,
+	/// including a pending close/open animation, belong to the restored script (docs/exe/park-gate.md).
 	/// </summary>
-	private const int ShutTheGate = 2;
-
-	/// <summary>
-	/// Tells the park's gate whether the park is open, which is what makes it move at all.
-	///
-	/// <para>
-	/// <b>The gate moves only when it is commanded.</b> <c>Gates.RSE</c> opens on a dispatch loop that reads
-	/// <c>VAR_COMMAND</c>; with nought there it cycles five instructions for ever and reaches neither the open
-	/// branch nor the close one. The only thing in the original that ever writes that variable is
-	/// opening or closing a park - <c>FUN_00519ef0</c>, which looks the gate's script up from the header's
-	/// own <c>mParkGates</c> handle and writes variable 0.
-	/// </para>
-	/// <para>
-	/// <b>The values are read off the disassembly rather than the decompile.</b> The call sites push an extra
-	/// argument that survives one call and is consumed by the next, so Ghidra hangs each value on the wrong
-	/// call. Read as instructions, opening the park writes <b>1</b>; closing it writes <b>0</b>, and only when
-	/// nobody is in the park and the gate reads open (<c>0x0051a0e8</c>..<c>0x0051a161</c>); <b>2</b> is written
-	/// only by the end-of-park path (<c>0x00519f40</c>). Commanding 2 for a park saved closed is a stand-in for
-	/// the door's close, whose 0 is not decoded on the script's side (<c>docs/exe/lobby.md</c>).
-	/// </para>
-	/// <para>
-	/// <b>Commanding it as the park loads is a reproduction of the end state, not of a call anybody has
-	/// traced.</b> The original restores the script's variables with the rest of the save (<c>FUN_005597a0</c>,
-	/// see <see cref="Resume"/>); whether it also re-commands at load is not established here. What is
-	/// established is that this park is saved open, so its gate belongs open; doing it this way makes the
-	/// screen agree with <c>mParkClosed</c>.
-	/// </para>
-	/// </summary>
-	private void CommandTheGate( IParkInitialState world )
+	private void CommandTheGate( IParkInitialState world, bool resumed )
 	{
 		var id = ScriptFor( world.ParkGates );
 
-		if ( id == 0 || Scheduler.Find( id ) is not { } gate )
+		if ( resumed || id == 0 || Scheduler.Find( id ) is not { } gate )
 			return;
 
-		// Zero is open - see ParkWorld.ParkClosed.
-		var command = world.ParkClosed == 0 ? OpenTheGate : ShutTheGate;
-
-		// Said out loud rather than shrugged off: a script that declares no such variable takes the write
-		// nowhere, and a gate that never moves is exactly what that looks like from the outside.
-		if ( !gate.Set( GateCommand, command ) )
-			Log.Warning( $"{ThemeName}: the gate's script declares no {GateCommand}, so it cannot be opened" );
+		if ( !gate.Set( GateCommand, world.ParkClosed == 0 ? 1 : 0 ) )
+			Log.Warning( $"{ThemeName}: the gate's script declares no {GateCommand}" );
 	}
 
 	/// <summary>The variable the gate's script reports its own state through - see <see cref="GateStatus"/>.</summary>
-	private const string GateState = "VAR_STATUS";
+	internal const string GateState = "VAR_STATUS";
 
 	/// <summary>What <see cref="GateStatus"/> answers where there is no gate, as the original's own does.</summary>
 	public const int NoGate = -1;
@@ -819,12 +787,12 @@ public sealed class ParkRides : Entity
 	/// so the refusal that handle could cause is never reached (docs/exe/ride-operation.md, "How a scream VARIES").
 	/// </para>
 	/// </summary>
-	private void Resume( RideScript script, ParkWorld.CatalogueObject placed, ParkWorld world )
+	private bool Resume( RideScript script, ParkWorld.CatalogueObject placed, ParkWorld world )
 	{
 		if ( world.ScriptStates.For( placed.RideScript ) is not { } saved )
 		{
 			++NotResumed;
-			return;
+			return false;
 		}
 
 		// The name first, because resuming steps over the NAME every one of these scripts opens with, and
@@ -852,7 +820,7 @@ public sealed class ParkRides : Entity
 				+ $"{saved.BodyWords}, which is not the start of an instruction, so it starts from the beginning" );
 
 			++NotResumed;
-			return;
+			return false;
 		}
 
 		// With the counter, the stack and the register it was saved with: a ride saved mid-cycle has its
@@ -886,6 +854,7 @@ public sealed class ParkRides : Entity
 		KeptReadingsMoved += kept;
 
 		++Resumed;
+		return true;
 	}
 
 	/// <summary>

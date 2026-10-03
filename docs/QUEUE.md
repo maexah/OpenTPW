@@ -52,18 +52,6 @@ artifacts are listed in `docs/history/README.md`.
   window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
   together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
 
-- [ ] **Q89b. Build the decoded park door and deferred gate close.** Q89's contract is
-  `docs/exe/park-gate.md`, with script content in FileFormats `vm/park-gates.md`. Opening commands **1**;
-  closing commands **0** only with the position-cell guest census empty and gate status **1**.
-  Build the **30-world-sweep** retry and its extra state-byte-0 staff-outside guard, distinct from
-  the immediate door close. Resolve script variables by name. Replace `ParkRides.CommandTheGate`'s
-  saved-closed command **2** stand-in without clobbering valid resumed script state; check fresh closed
-  and saved closed gates separately. Correct its and `ParkFixedItemsTests`' stale idle/writer comments.
-  Retire `PARK_DOOR_COMMANDS_THE_GATE` only where built. Confirm: open then close an empty park at
-  the entry-price door, photograph the gate AND log the command/status/census, predicted first; reopen
-  to prove normal dispatch remains live. Cover populated closure, the last guest leaving, and the
-  delayed staff guard. Add regression tests, restore each bug and prove the new tests fail. Build/test
-  the exact commit alone in a throwaway worktree. Do not implement Q90's advisor messages here.
 - [ ] **Q90. The advisor says nothing when the park opens or closes. Decode first.** Found by Q50b's decode. The door
   posts a type-`0x13` message, 3 or 4, whether or not anything changed, and `CAdvisor::ReceiveMessage`
   (`FUN_0059b060`) answers with its own message `0x80` or `0x81` (`FUN_0059ae20`); `advisor-park.md` lists neither.

@@ -4,6 +4,8 @@ Last updated: 2026-10-03. **This header names no branch and no sha, deliberately
 
 ## Works
 
+- **The entry-price door moves the gate, which reopens after closing** (Q89b). Closing waits for guests on the decoded cell types; every 30 world sweeps it retries, also waiting for staff outside. Fresh closed gates stay in normal dispatch; valid saved scripts keep their state.
+
 - **Full Simulation starts an empty park without a save file**: twelve reserved things, gate 11/light 12, closed, fee 20, cash 50,000 and regular loans. The fixed paths and initial boundary come from theme data (Q197).
 
 - Lobby: four islands, front end, advisor, weather, particles, options, saves, the island gate, and the attract camera flying around all four islands with all four heard at once. Enter swings the camera onto the gate, opens it and flies in before the loading screen; **the island keys wait for that flight**, and **Escape cancels it** (the camera orbits again, the gate shuts, the panel comes back). **Enter, the arrows and Escape act on their release**, and **a left press on the lobby's view enters the park**.
@@ -23,7 +25,7 @@ Last updated: 2026-10-03. **This header names no branch and no sha, deliberately
 - No screen sets the training budgets or buys a loan; six months in the red is counted, not an end (Q198b). No litter, day ending, saving a park back, video (the player is decoded: `docs/exe/boot.md`), networking. Research is inert. In a park the advisor says the gadget's opening line and no more (`docs/PLAYER-GAPS.md` gap 4).
 - Eight of the nine per-object windows are unbuilt. Setting patrol areas is deferred by Alexah; staff keep the save's. A walking member of staff is not entered in the cells they cross; only hiring and putting down place one.
 - Unbuilt: Q102-Q105, four queue-turn arms, spot animation (Q98), Q112's walk to path.
-- The park's door moves no gate (Q89), advisor (Q90) or shut ride's model (Q91); the ride window's door is no button (Q92), and a bought queued thing starts open (Q93).
+- The park's door has no advisor response (Q90) or shut ride model change (Q91); the ride window's door is no button (Q92), and a bought queued thing starts open (Q93).
 - Nothing shows what the hand holds (`CARRY_PREVIEW_MARKERS`, `STAFF_CARRY_PREVIEW`); any cell takes a candidate (Q40).
 - The fly-in's fade to black is not drawn (Q61). Keys: Escape over the player slots opens the game menu (Q64) and closes no park screen (Q119); Ctrl+H acts on the press, F8 is not built (Q65); modifiers count as the frame ends (Q120). A disabled button still takes the pointer (Q66); presses the original stops reach the park (Q113, Q115).
 - The happiness gauge draws two copies of its bar, split down the middle (`docs/PLAYER-GAPS.md` gap 5; unmeasured). Every other sound still waits out a per-effect "repeat delay" that is really a priority (Q43). A voice is not clamped to 16 bits as the original's is, only the mix (`docs/exe/audio.md`).
@@ -33,9 +35,11 @@ Last updated: 2026-10-03. **This header names no branch and no sha, deliberately
 
 ## Next
 
-`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next **Q89b**, implement the decoded park door and delayed gate close (`docs/exe/park-gate.md`); Q89 was decode only. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. **Q188 remains on hold** until Alexah says otherwise. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
+`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next **Q90**, decode the advisor responses to the park opening and closing; decode only next session. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. **Q188 remains on hold** until Alexah says otherwise. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
 
 ## Not verified on screen
+
+- Q89b saved-closed script restoration, missing saved state and all outside staff kinds: tested only; the running staff guard was photographed with the mechanic.
 
 - Q86 populated-queue release is instrumented; no normal player sequence established. Nominee/state-14 exemptions tested only.
 - **The RIDER on a ride bought this session**: measured five times, not photographed (the console has no pitch).
@@ -52,12 +56,14 @@ Last updated: 2026-10-03. **This header names no branch and no sha, deliberately
 | | | measured |
 |---|---|---|
 | Opcodes | **77** of 106 | 2026-10-01, `case Opcode.` labels vs enum members, after Q87 |
-| Tests | **1667**, 0 fail, 0 skip with the game | 2026-10-03, Q86 |
+| Tests | **1679**, 0 fail, 0 skip with the game | 2026-10-03, Q89b |
 | Tests without the game | **647** ran, **928** skipped, of 1575 | 2026-10-01, after Q87 |
 | Build warnings | 121 | 2026-10-03, archive exact reads |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
+
+**2026-10-03 (Q89b).** Gate open/close/reopen confirmed at the entry-price door with screenshots and predicted command/status/census. One guest delayed closure until retry tick 60; outside staff blocked ticks 780/810/840, then moving inside allowed close at 870 and reopening. All eleven mutations fail after repairing an occupancy fixture; 1679 tests pass. Independent applied review through relayed evidence passed. `docs/exe/park-gate.md`.
 
 **2026-10-03 (Q89).** Gate commands decoded, not built: **0** ordinary close, **2** end sequence with a terminal yield loop. Guest census uses cell types **0/1/3/9/10**; a newly traced **30-world-sweep** retry also waits for staff outside. Private Ghidra identity verified, four gate scripts freshly extracted and 308-script corpus checked. `docs/exe/park-gate.md`; implementation, regression mutation and runtime screenshot/census remain Q89b.
 

@@ -4011,6 +4011,23 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   world sweeps and also waits for state-byte-0 staff outside those types; the immediate close does not.
   Hash-matched private Ghidra; **4/4** gate scripts freshly extracted, **308/308** corpus scripts parsed.
   No runtime confirmation claimed.
+- [x] **Q89b. Build the decoded park door and deferred gate close.** Q89's contract is
+  `docs/exe/park-gate.md`, with script content in FileFormats `vm/park-gates.md`. Opening commands **1**;
+  closing commands **0** only with the position-cell guest census empty and gate status **1**.
+  Build the **30-world-sweep** retry and its extra state-byte-0 staff-outside guard, distinct from
+  the immediate door close. Resolve script variables by name. Replace `ParkRides.CommandTheGate`'s
+  saved-closed command **2** stand-in without clobbering valid resumed script state; check fresh closed
+  and saved closed gates separately. Correct its and `ParkFixedItemsTests`' stale idle/writer comments.
+  Retire `PARK_DOOR_COMMANDS_THE_GATE` only where built. Confirm: open then close an empty park at
+  the entry-price door, photograph the gate AND log the command/status/census, predicted first; reopen
+  to prove normal dispatch remains live. Cover populated closure, the last guest leaving, and the
+  delayed staff guard. Add regression tests, restore each bug and prove the new tests fail. Build/test
+  the exact commit alone in a throwaway worktree. Do not implement Q90's advisor messages here.
+  Confirmed Q89b on `alexah/260-q89b-park-gate`: door 1/1 → 0/0 → 1/1 command/status,
+  populated close waits for the last guest (retry tick 60); staff outside block ticks 780/810/840,
+  inside closes at 870, then reopens. Screenshots + predicted census: `docs/exe/park-gate.md`.
+  Twelve regressions, eleven restored defects fail (occupancy fixture repaired); 1679 tests pass.
+  Saved-closed restoration remains test-verified only; Q90 unchanged.
 
 ## B. Docs and comments
 
