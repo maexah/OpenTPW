@@ -795,11 +795,10 @@ public sealed class LobbyModel
 	/// <see cref="CutOutAlphaFlag"/> when that material's texture turns out to be a cut-out mask
 	/// rather than a real gradient - see <see cref="Texture.HasGradedAlpha"/>.
 	///
-	/// The original never reads the model's own see-through bit at draw time; it classifies from
-	/// the texture's pixels alone. We keep the model's bit as the gate for whether a surface is
-	/// see-through at all, because taking every texture's alpha at face value ate holes in
-	/// geometry the game draws whole, and use the pixels only to choose between the two alpha
-	/// references - which is the one call the original makes from them.
+	/// An empirical compatibility gate: source bit 0x2 is not established as the original's
+	/// alpha-enable semantic. Removing this gate reportedly exposed holes; the cause remains
+	/// unverified. The original load path also has material overrides absent here.
+	/// See docs/exe/render-states.md for the bounded trace and required live comparison.
 	/// </summary>
 	private static uint MaterialFlagsFor( ModelFile.Mesh mesh, List<Texture> textures, bool[] substituted,
 		int material )

@@ -28,11 +28,10 @@ public partial class Texture : Asset
 	/// <summary>
 	/// Whether this texture's alpha is a real gradient rather than a cut-out mask.
 	///
-	/// The original decides this from the pixels, not from anything a model says: FUN_00575160
-	/// counts the texels whose alpha lies strictly between zero and the cut-out reference, and
-	/// marks the texture graded once they reach a twentieth of its area (the 0.05 multiplier is
-	/// at 0x00701720). A graded texture is then drawn with the low alpha reference and a cut-out
-	/// one with the high reference - see <see cref="CutOutAlphaReference"/> and the shader.
+	/// The current classifier counts partly-clear pixels and requires at least one twentieth
+	/// of the area. This differs at the rounding boundary from the original's truncated
+	/// threshold, and omits its material-load overrides; see docs/exe/render-states.md.
+	/// The result selects the low or high alpha reference after the material's current gate.
 	/// </summary>
 	public bool HasGradedAlpha { get; private set; }
 
@@ -272,7 +271,7 @@ public partial class Texture : Asset
 	}
 
 	/// <summary>
-	/// The original's own test for a gradient - see <see cref="HasGradedAlpha"/>. Texels that are
+	/// OpenTPW's current test for a gradient - see <see cref="HasGradedAlpha"/>. Texels that are
 	/// fully clear don't count, because a cut-out mask is mostly those; it is the partly-clear
 	/// ones that tell a gradient from a mask.
 	/// </summary>
