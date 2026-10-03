@@ -1,0 +1,11 @@
+#!/bin/sh
+# Moves ticked queue items to docs/history/queue-done.md (tools/queue-sweep.py).
+# Enable once per clone: git config core.hooksPath tools/hooks
+root=$(git rev-parse --show-toplevel) || exit 1
+git diff --cached --quiet -- docs/QUEUE.md && exit 0
+if ! git diff --quiet -- docs/QUEUE.md docs/history/queue-done.md; then
+	echo "queue-sweep: docs/QUEUE.md or queue-done.md has unstaged changes; stage them or sweep by hand" >&2
+	exit 1
+fi
+python3 "$root/tools/queue-sweep.py" || exit 1
+git add -- "$root/docs/QUEUE.md" "$root/docs/history/queue-done.md"

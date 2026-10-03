@@ -5,8 +5,8 @@ numbers in Q13-Q34 are from `9b0ebab` and have drifted (`park-engine.md` by up t
 the heading, never the line.
 
 **How to use this file.** One item per session. Take the first unticked item and do only that one.
-Tick it in the commit that lands it, with the number that proves it, and in that commit move it to the end of its
-section in `history/queue-done.md`, which holds every finished item. A page citing a Q-number that is not here
+Tick it in the commit that lands it, with the number that proves it; the pre-commit hook then moves it to the end of
+its section in `history/queue-done.md`, which holds every finished item. A page citing a Q-number that is not here
 means that finished entry. If an item turns out to be two,
 split it into two lines here and stop after the first. Alexah may reorder; nobody else does.
 
