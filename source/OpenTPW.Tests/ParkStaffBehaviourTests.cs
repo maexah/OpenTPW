@@ -536,4 +536,150 @@ public class ParkStaffBehaviourTests
 		Assert.IsTrue( researcher.Patrols( ParkWorld.MapSize - 1, ParkWorld.MapSize - 1 ), "the far corner" );
 		Assert.IsFalse( researcher.Patrols( -1, 0 ), "off the map is still off the map" );
 	}
+	[DataTestMethod]
+	[DataRow( 28, 48, 22 )]
+	[DataRow( 30, 48, 22 )]
+	[DataRow( 30, 47, 17 )]
+	[DataRow( 30, 48, 17 )]
+	public void WanderingStaffStayOnPathsBesideQueuesAndTheGate( int id, int x, int y )
+	{
+		var world = Park();
+		var state = new ParkState( world );
+		var moved = 0;
+
+		for ( var seed = 0; seed < 32; ++seed )
+		{
+			var member = ParkPeople.StaffIn( world ).Single( staff => staff.ThingId == id );
+			member.Navigator.Position = new FixedVector( PeepNavigator.WaypointCentre( x ), PeepNavigator.WaypointCentre( y ) );
+			member.SetActivity( StaffActivity.Idle, tick: 1 );
+			var walk = new PeepWalk( member.Navigator, CellEdge.For( world, ParkPeople.WalkingMode ).Blocked );
+			var behaviour = new StaffBehaviour( Balance(), new Random( seed ), state );
+
+			for ( var tick = 1001; tick <= 1400; ++tick )
+			{
+				behaviour.Step( member, walk, playing: null, tick );
+				var cell = member.Navigator.Position.Cell;
+				Assert.AreEqual( CellEdge.Path, state.Record( cell.X, cell.Y ).Type,
+					$"staff {id}, seed {seed}, tick {tick}: walked onto {cell}; at={member.Navigator.Position} target={member.Navigator.Target} previous={member.Navigator.Previous} velocity={member.Navigator.Velocity} activity={member.Activity}" );
+				if ( cell != (x, y) )
+					++moved;
+			}
+		}
+
+		Assert.IsTrue( moved > 0, "refusing every walk is not a fix" );
+	}
+
+	[DataTestMethod]
+	[DataRow( 3 )]
+	[DataRow( 9 )]
+	[DataRow( 30 )]
+	public void PatrolFallbackRejectsReachableNonPathDestinations( int type )
+	{
+		var world = Park();
+		var state = new ParkState( world );
+		state.SetRecord( 49, 22, state.Record( 49, 22 ) with { Type = type, Neighbours = 0x44 } );
+		// An entrance source may route into another queue cell; the path-only patrol gate must reject it.
+		state.SetRecord( 48, 22, state.Record( 48, 22 ) with { Type = CellEdge.RideEnd, Neighbours = 0x04 } );
+		var saved = world.People.Single( person => person.ThingId == Researcher );
+		var member = new Staff( saved.ThingId, saved.Model, saved.Staff!.Value with
+		{
+			State = (int)StaffActivity.Idle, TimeStartedIdling = 0,
+			PatrolBottomLeft = MapStep.CellId( 49, 22 ), PatrolTopRight = MapStep.CellId( 49, 22 )
+		}, saved.Navigator );
+		member.Navigator.Position = new FixedVector( PeepNavigator.WaypointCentre( 48 ), PeepNavigator.WaypointCentre( 22 ) );
+		var edge = new CellEdge( state.Record, ParkPeople.WalkingMode );
+		var walk = new PeepWalk( member.Navigator, edge.Blocked );
+		member.Navigator.Target = new FixedVector( PeepNavigator.WaypointCentre( 49 ), PeepNavigator.WaypointCentre( 22 ) );
+		Assert.IsTrue( walk.PlanRoute(), "the non-path destination must be reachable to expose the defect" );
+		var behaviour = new StaffBehaviour( Balance(), new ConstantDraw(), state );
+		behaviour.Step( member, walk, playing: null, tick: 1001 );
+		Assert.AreEqual( StaffActivity.Idle, member.Activity, "a reachable queue/entrance/approach is not a patrol destination" );
+
+		state.SetRecord( 49, 22, state.Record( 49, 22 ) with { Type = CellEdge.Path } );
+		behaviour.Step( member, walk, playing: null, tick: 1002 );
+		Assert.AreEqual( StaffActivity.Walking, member.Activity, "the same live cell converted to path must be accepted" );
+	}
+
+	[DataTestMethod]
+	[DataRow( 3, 0x04, false )]
+	[DataRow( 3, 0x40, true )]
+	[DataRow( 9, 0x04, true )]
+	public void AQueueWanderHeadsOutButAnEntranceKeepsItsLinks( int type, int facing, bool east )
+	{
+		var world = Park();
+		var state = new ParkState( world );
+		state.SetRecord( 50, 22, state.Record( 50, 22 ) with { Type = type, Direction = (byte)facing } );
+		var member = ParkPeople.StaffIn( world ).Single( staff => staff.ThingId == Researcher );
+		member.Navigator.Position = new FixedVector( PeepNavigator.WaypointCentre( 50 ), PeepNavigator.WaypointCentre( 22 ) );
+		member.SetActivity( StaffActivity.Idle, tick: 1 );
+		var walk = new PeepWalk( member.Navigator, new CellEdge( state.Record, ParkPeople.WalkingMode ).Blocked );
+		// Slot 3 is east. A facing exclusion must still allow the opposite direction.
+		var behaviour = new StaffBehaviour( Balance(), new ConstantDraw(), state );
+		behaviour.Step( member, walk, playing: null, tick: 1001 );
+		Assert.AreEqual( StaffActivity.Walking, member.Activity );
+		Assert.AreEqual( (east ? 51 : 49, 22), member.Navigator.Target.Cell );
+	}
+
+	[TestMethod]
+	public void AStaffWanderUsesTheSourceLinkAndRejectsAnExit()
+	{
+		var world = Park();
+		var state = new ParkState( world );
+		var member = ParkPeople.StaffIn( world ).Single( staff => staff.ThingId == Researcher );
+		var behaviour = new StaffBehaviour( Balance(), new ConstantDraw(), state );
+		foreach ( var type in new[] { CellEdge.Path, CellEdge.RideFarEnd } )
+		{
+			// East destination links back, but source north/south links must take precedence.
+			state.SetRecord( 48, 22, state.Record( 48, 22 ) with { Neighbours = (byte)(type == CellEdge.Path ? 0x11 : 0x15) } );
+			state.SetRecord( 49, 22, state.Record( 49, 22 ) with { Type = type } );
+			member.Navigator.Position = new FixedVector( PeepNavigator.WaypointCentre( 48 ), PeepNavigator.WaypointCentre( 22 ) );
+			member.SetActivity( StaffActivity.Idle, tick: 1 );
+			// A permissive route delegate isolates destination selection from CellEdge's own exit refusal.
+			var walk = new PeepWalk( member.Navigator, ( x, y, direction ) => MapStep.LeavesTheMap( x, y, direction ) );
+			behaviour.Step( member, walk, playing: null, tick: 1001 );
+			Assert.AreEqual( StaffActivity.Walking, member.Activity );
+			Assert.AreNotEqual( (49, 22), member.Navigator.Target.Cell );
+		}
+	}
+
+	[TestMethod]
+	public void AStaffRestWalkCanEnterAQueueAfterAConstrainedWander()
+	{
+		var world = Park();
+		var state = new ParkState( world );
+		var member = ParkPeople.StaffIn( world ).Single( staff => staff.ThingId == Researcher );
+		member.Navigator.Position = new FixedVector( PeepNavigator.WaypointCentre( 48 ), PeepNavigator.WaypointCentre( 22 ) );
+		member.SetActivity( StaffActivity.Idle, tick: 1 );
+		var walk = new PeepWalk( member.Navigator, CellEdge.For( world, ParkPeople.WalkingMode ).Blocked );
+		var behaviour = new StaffBehaviour( Balance(), new ConstantDraw(), state );
+		behaviour.Step( member, walk, playing: null, tick: 1001 );
+		Assert.AreEqual( StaffActivity.Walking, member.Activity );
+		behaviour.Step( member, walk, playing: null, tick: 1002 );
+
+		member.Navigator.Target = new FixedVector( PeepNavigator.WaypointCentre( 49 ), PeepNavigator.WaypointCentre( 22 ) );
+		Assert.IsTrue( walk.PlanRoute(), "the wander policy must not leak into an intentional destination" );
+		member.SetActivity( StaffActivity.GoingToRest, tick: 1003 );
+		for ( var tick = 1004; tick < 1104 && member.Activity == StaffActivity.GoingToRest; ++tick )
+			behaviour.Step( member, walk, playing: null, tick );
+		Assert.AreEqual( StaffActivity.Resting, member.Activity );
+		Assert.AreEqual( (49, 22), member.Navigator.Position.Cell );
+	}
+
+	[TestMethod]
+	public void AFailedWanderConstraintDoesNotLeakIntoTheNextRoute()
+	{
+		var world = Park();
+		var member = ParkPeople.StaffIn( world ).Single( staff => staff.ThingId == Researcher );
+		member.Navigator.Position = new FixedVector( PeepNavigator.WaypointCentre( 48 ), PeepNavigator.WaypointCentre( 22 ) );
+		member.Navigator.Target = new FixedVector( PeepNavigator.WaypointCentre( 49 ), PeepNavigator.WaypointCentre( 22 ) );
+		var walk = new PeepWalk( member.Navigator, CellEdge.For( world, ParkPeople.WalkingMode ).Blocked );
+		Assert.ThrowsException<InvalidOperationException>( () => walk.PlanRoute( ( x, y, direction ) => throw new InvalidOperationException() ) );
+		Assert.IsTrue( walk.PlanRoute(), "an exceptional constrained search must restore ordinary routing" );
+	}
+
+	private sealed class ConstantDraw : Random
+	{
+		public override int Next() => 3;
+	}
+
 }

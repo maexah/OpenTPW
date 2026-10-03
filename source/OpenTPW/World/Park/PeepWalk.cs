@@ -61,6 +61,7 @@ public sealed class PeepWalk
 {
 	private readonly PeepNavigator _navigator;
 	private readonly Func<int, int, StepDirection, bool> _blocked;
+	private Func<int, int, StepDirection, bool>? _constraint;
 	private readonly PeepJourney _journey = new();
 	private readonly PeepSteering _steering = new();
 	private readonly List<Steer> _behaviours;
@@ -85,7 +86,7 @@ public sealed class PeepWalk
 		[
 			new Steer( PeepSteering.AvoidWallsWeight,
 				() => WallAvoidance.Steer( _navigator.Position, _navigator.Velocity,
-					_navigator.Radius, _blocked ) ),
+					_navigator.Radius, EdgeBlocked ) ),
 			new Steer( PeepSteering.FollowPathWeight, () => _journey.Steer() )
 		];
 
@@ -144,6 +145,31 @@ public sealed class PeepWalk
 	/// </para>
 	/// </summary>
 	public bool PlanRoute() => Renavigate( addCurrent: false );
+
+	// A staff wander may narrow the route, wall avoidance and actual movement for one operation.
+	// Restore the policy even on failure so resting, jobs and later callers retain ordinary routing.
+	internal bool PlanRoute( Func<int, int, StepDirection, bool> constraint )
+		=> Constrained( constraint, PlanRoute );
+
+	internal WalkVerdict Step( Func<int, int, StepDirection, bool> constraint )
+		=> Constrained( constraint, Step );
+
+	private T Constrained<T>( Func<int, int, StepDirection, bool> constraint, Func<T> action )
+	{
+		var previous = _constraint;
+		_constraint = constraint;
+		try
+		{
+			return action();
+		}
+		finally
+		{
+			_constraint = previous;
+		}
+	}
+
+	private bool EdgeBlocked( int x, int y, StepDirection direction )
+		=> _blocked( x, y, direction ) || (_constraint?.Invoke( x, y, direction ) ?? false);
 
 	/// <summary>Whether this person has a route to walk at all.</summary>
 	public bool HasRoute => _navigator.TotalWaypoints > 0 && _navigator.Waypoints.Count > 0;
@@ -246,7 +272,7 @@ public sealed class PeepWalk
 	/// </summary>
 	private bool Renavigate( bool addCurrent )
 	{
-		var found = _navigator.NavigateTo( _navigator.Target, _blocked, addCurrent );
+		var found = _navigator.NavigateTo( _navigator.Target, EdgeBlocked, addCurrent );
 
 		// A failed plan zeroes every count and distance on the navigator. It also zeroes the last-progress
 		// mark, which lives on the steering step here rather than on the navigator - the original writes
@@ -316,7 +342,7 @@ public sealed class PeepWalk
 		var (fromX, fromY) = from.Cell;
 		var (toX, toY) = to.Cell;
 
-		return MapStep.CanStep( MapStep.CellId( fromX, fromY ), MapStep.CellId( toX, toY ), _blocked );
+		return MapStep.CanStep( MapStep.CellId( fromX, fromY ), MapStep.CellId( toX, toY ), EdgeBlocked );
 	}
 
 	/// <summary>

@@ -68,6 +68,7 @@ own source rots within days — the fact lives here and the code points at it, n
 | `exe/park.md` | What a park is made of on disk; the grid, item animation, the `.RSE` interpreter end to end, arrivals, and the save's map cells. Its format half is duplicated in the FileFormats clone and says so. |
 | `exe/park-engine.md` | Park loading, the heightfield inside `base.MD2`, the state machine, camera and FOV, the save container, the sky, the clock and tick, key bindings, the gadget and camcorder, and the interaction modes: placing, the queue and path tools, selling, moving, hiring, the hand's ways out, leaving a park, and the per-object windows. |
 | `exe/ride-operation.md` | A ride's turn on the thing sweep, the boarding chain, the state-to-handler maps, the queue and every way out of it, deciding and wandering, the staff turn, spending and a visit's effects, the object and guest fields, the WALK/BOUNCE/SCREAM families — and **where a peep is drawn**, both the rider carried on a ride's node and the walking peep interpolated per frame between two simulated positions. |
+| `exe/staff-wandering.md` | Staff queue/park-boundary wandering: decoded filters, containment deviation and verification (Q206). |
 | `exe/hud.md` | The compiled layout-stream format, the mesh-name hash, every park panel's stream, the map's cell-to-pixel mapping. |
 | `exe/weather.md` | Weather as thing model 15, "funny time" and its structural drift, the `.sam` schema compiled into the exe. |
 | `exe/advisor-park.md` | The park advisor's eight scored message slots and its two tables. |

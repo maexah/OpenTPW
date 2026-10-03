@@ -42,9 +42,8 @@ public sealed class StaffBehaviour
 	private readonly Random _random;
 
 	/// <summary>
-	/// The park as it is being played, for the one question this needs of it: which objects standing now
-	/// are rest areas, and where each one wants to be approached from. Null leaves a staff member unable to
-	/// find one, which is the original's own "couldn't find a rest area" path rather than a failure.
+	/// The live cells used to choose wandering destinations, and the objects used to find rest areas.
+	/// Null leaves cell filtering and rest-area lookup unavailable to isolated behaviour fixtures.
 	/// </summary>
 	private readonly ParkState? _state;
 
@@ -58,8 +57,7 @@ public sealed class StaffBehaviour
 	/// </param>
 	/// <param name="random">The rolls this makes. Taken so a test can seed them; the game does not.</param>
 	/// <param name="state">
-	/// The park these staff are in, for finding a rest area. Null leaves them unable to find one - see the
-	/// field's own remarks.
+	/// The park these staff are in, for wandering cell filters and finding a rest area.
 	/// </param>
 	public StaffBehaviour( ParkBalance? balance = null, Random? random = null, ParkState? state = null )
 	{
@@ -355,12 +353,18 @@ public sealed class StaffBehaviour
 	/// One turn of walking and the animation that goes with it - the same join
 	/// <see cref="PeepBehaviour"/> makes, and for the same reasons.
 	/// </summary>
-	private static WalkVerdict Walked( Staff staff, PeepWalk walk, SpriteScript? playing )
+	private WalkVerdict Walked( Staff staff, PeepWalk walk, SpriteScript? playing )
 	{
-		if ( !walk.HasRoute && (staff.Navigator.CannotReach || !walk.PlanRoute()) )
+		var wandering = staff.Activity == StaffActivity.Walking;
+
+		if ( !walk.HasRoute && (staff.Navigator.CannotReach
+			|| !(wandering ? walk.PlanRoute( WanderBlocked ) : walk.PlanRoute())) )
 			return WalkVerdict.CannotReach;
 
-		var verdict = walk.Step();
+		// Containment deviation: the original filters destinations, but our steering can overshoot
+		// a valid edge-near target onto the approach. Apply the same limits during a free wander.
+		// Rest and strike walks keep the general route rules (docs/exe/staff-wandering.md).
+		var verdict = wandering ? walk.Step( WanderBlocked ) : walk.Step();
 
 		if ( verdict != WalkVerdict.Walking )
 			return verdict;
@@ -428,6 +432,9 @@ public sealed class StaffBehaviour
 			if ( !staff.Patrols( cell.X, cell.Y ) )
 				continue;
 
+			if ( WanderBlocked( x, y, SlotOrder[slot] ) )
+				continue;
+
 			candidates[slot] = cell;
 			++found;
 		}
@@ -448,10 +455,30 @@ public sealed class StaffBehaviour
 			// guest takes - this tail is shared between the two halves of the original's function.
 			staff.Navigator.Target = new FixedVector( SomewhereIn( cell.X ), SomewhereIn( cell.Y ) );
 
-			return walk.PlanRoute();
+			return walk.PlanRoute( WanderBlocked );
 		}
 
 		return PatrolRoll( staff, walk );
+	}
+
+	/// <summary>The linked-cell filters in FUN_004f9490; the no-links recovery remains Q112.</summary>
+	private bool WanderBlocked( int x, int y, StepDirection direction )
+	{
+		if ( _state is not { } state )
+			return false;
+
+		var from = state.Record( x, y );
+		if ( CellEdge.Links( from.Neighbours ) == 0 )
+			return false;
+
+		var (toX, toY) = MapStep.Beyond( x, y, direction );
+		var to = state.Record( toX, toY );
+		var bit = CellEdge.Opposite( CellEdge.BitFor( direction ) );
+
+		return (from.Neighbours & bit) == 0
+			|| (from.Type == CellEdge.Path && CellEdge.IsQueue( to.Type ))
+			|| (from.Type == 3 && from.Direction == bit)
+			|| to.Type == CellEdge.RideFarEnd;
 	}
 
 	/// <summary>
@@ -462,11 +489,7 @@ public sealed class StaffBehaviour
 	/// <b>This one aims at the cell CENTRE</b>, not at a random point inside it: it goes through the
 	/// ordinary destination setter rather than through the tail that jitters. The two are a few lines apart
 	/// in the original and do different things, which is worth not tidying.
-	/// <para>
-	/// One predicate of the original's is left out: between the bounds check and the route it takes
-	/// only a path cell, <c>mType</c> 1 (<c>FUN_00536310</c>; Q136). A cell that fails it would almost
-	/// certainly fail to produce a route either, which is the test that follows here.
-	/// </para>
+	/// Only path cells are candidates (FUN_00506f30); route reachability is checked afterwards.
 	/// </remarks>
 	private bool PatrolRoll( Staff staff, PeepWalk walk )
 	{
@@ -490,10 +513,13 @@ public sealed class StaffBehaviour
 			if ( x < 0 || y < 0 || x >= ParkWorld.MapSize || y >= ParkWorld.MapSize )
 				continue;
 
+			if ( _state is { } state && state.Record( x, y ).Type != CellEdge.Path )
+				continue;
+
 			staff.Navigator.Target = new FixedVector(
 				PeepNavigator.WaypointCentre( x ), PeepNavigator.WaypointCentre( y ) );
 
-			if ( walk.PlanRoute() )
+			if ( walk.PlanRoute( WanderBlocked ) )
 				return true;
 		}
 

@@ -910,6 +910,9 @@ and 6 on 0.
 
 ### SetRandomDest - `FUN_004f9490`
 
+Staff destination filtering and the additional movement containment are implemented in Q206;
+see [staff-wandering.md](staff-wandering.md) for the reproduced bug, explicit deviation and runtime evidence.
+
 Thiscall on the person, in order:
 
 1. **The stranded refusal** (`0x004f94e2`..`0x004f9527`): the counter goes up (`FUN_004d8c50`); `+0x198` is zeroed when
@@ -1695,7 +1698,7 @@ three.
 | Tired | the byte `<=` 1 | the float `<` 1 | a rest in [1, 2) (Q136) |
 | Tired with no rest area found or reached | `FUN_00506a40` answers 0 and the kind's choice follows | the guard and the researcher stand and ask again after the idle wait | once the Staff Room at (58,16) is sold or cannot be routed to (Q136) |
 | The end of a rest | the kind's decide in the same sweep | Idle at stamp 0, decided on the next sweep | every rest (Q136) |
-| The patrol roll | path cells only | any cell | every roll (Q136) |
+| The patrol roll | path cells only | path cells only (Q206) | verified in `staff-wandering.md` |
 | Speed by rest | `+0xc0`, 60 to 140, one of `FUN_004fa870`'s three terms | none: staff are not eased and keep the saved `max_speed` (a guest's is, `Peep.Pace`) | every decide (Q136) |
 | Thoughts `0x12` to `0x16` | shown | none, uncounted | tired, unhappy, very happy staff (Q110) |
 | Strikes | `mStaffHQ`'s monthly flag, the strike walk, state 5's end | none, uncounted, the model-9 record unread | the monthly consideration every month the park is open; a strike only past the 24-month gate (Q138) |

@@ -3990,6 +3990,12 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
     thought census **1 to 2**. Both restored defects fail the new tests; full suite **1641**, no failures/skips.
     Independent Astra review; remaining generator/entrance/thought/tiredness limits and evidence in
     `docs/exe/guest-arrivals.md`. Q86 not started.
+- [x] **Q206. Staff wander down ride queues and outside the park.** Alexah's report, investigated ahead of Q86.
+  `alexah/257-staff-wander-boundaries`: restore linked-cell destination filters and path-only patrol rolls;
+  explicitly apply containment during free-wander movement after destination-only filtering failed at the gate.
+  Predicted zero queue/approach excursions: zero across 3,840 staff census rows in two 120-second game runs,
+  screenshots inspected. Restored bug fails nine tests; containment and patrol type mutations fail three each.
+  1,654 tests pass with game data, none skipped. Evidence and limitations: `docs/exe/staff-wandering.md`.
 
 ## B. Docs and comments
 

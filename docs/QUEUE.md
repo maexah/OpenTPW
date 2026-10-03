@@ -187,7 +187,8 @@ artifacts are listed in `docs/history/README.md`.
   The original walks r % 5 + 1 linked cells from the mask of the cell being LEFT, never ending on the guest's own
   cell, and aims inside the last; it drops queue and entrance neighbours from a path cell, a queue cell's
   `mDirection` slot and exit cells; below a count of 2 it takes a fixed order, else a random start with no reverse.
-  Ours steps one adjacent cell. Add `mSetDestSuccessfully` and SetState(7)'s re-aim with it. Confirm: over a run, no
+  Ours steps one adjacent cell. Q206 restores the staff destination filters and adds explicit movement containment;
+  the guest filters and the multi-cell walk remain here. Add `mSetDestSuccessfully` and SetState(7)'s re-aim with it. Confirm: over a run, no
   wanderer steps from (48,22) onto a queue or entrance cell, and wanders of up to five cells in the census.
 - [ ] **Q109. When a guest leaves. Alexah's call first.** Found by Q53 (`ride-operation.md`, arm (d)). The original
   tests leaving in state 6 alone: the happiness byte nought, `mExitLevel` exactly nought (it counts down unclamped, so
@@ -378,7 +379,7 @@ artifacts are listed in `docs/history/README.md`.
 - [ ] **Q136. Six small differences in the staff's decide.** Found by Q82 (`ride-operation.md`, "Drawn on the way").
   (a) Tired is `(u8)trunc( rest ) <= RestLevel`, signed and inclusive (`0x00506b41`); `StaffBehaviour.Decide` tests
   the float `< RestLevel` and misses [1, 2). (b) The patrol roll `FUN_00506f30` takes only a path cell (`mType` 1,
-  `FUN_00536310`) before it routes; `PatrolRoll` routes to any, as its remark says. (c) Not
+  `FUN_00536310`) before it routes; **built in Q206**, with queue/approach wandering containment. (c) Not
   tired, `FUN_00506a40` sets the speed word `+0xc0` from the rest byte (60 to 140, `[0x0075c7f8]`), one of
   `FUN_004fa870`'s three terms. From Q177d: how the terms reach the walk is decoded (`ride-operation.md`, "Where a
   WALKING peep is drawn") and every person's four speed words are read (`ParkWorld.PaceState`); guests are eased
