@@ -46,9 +46,9 @@ public sealed class ParkPaths : ModelEntity
 	private readonly string _themeName;
 
 	/// <summary>The park this was built from, so that it can be built again when a cell changes.</summary>
-	private readonly ParkWorld? _world;
+	private readonly IParkInitialState? _world;
 
-	public ParkPaths( string themeName, ParkWorld? world )
+	public ParkPaths( string themeName, IParkInitialState? world )
 	{
 		_themeName = themeName;
 		_world = world;
@@ -115,7 +115,7 @@ public sealed class ParkPaths : ModelEntity
 	/// </summary>
 	public static bool IsPath( ParkWorld.MapCell cell ) => cell.TileSet == PathTileSet;
 
-	private void Build( ParkWorld? world )
+	private void Build( IParkInitialState? world )
 	{
 		// Without a save there are no paths - which is the ordinary case for three of the four themes,
 		// since only the jungle ships a park. Not a failure, and it says so once rather than warning.

@@ -66,7 +66,7 @@ public static class ParkRideChoice
 	/// test holding an object with no world around it.
 	/// </param>
 	public static bool CanBeOffered( ParkWorld.CatalogueObject item, int queueLength, int trackType = 0,
-		ParkWorld? park = null )
+		IParkInitialState? park = null )
 	{
 		// A tracked ride whose track is not valid is not open, whatever else is true of it.
 		if ( trackType is ItemDescriptionFile.CarTrack or ItemDescriptionFile.WaterTrack
@@ -117,12 +117,12 @@ public static class ParkRideChoice
 	/// <see cref="ParkCoasters"/> reads the first coaster's. One whose header lies past the first, or in a module that
 	/// would not read, cannot be found; it is counted and let through.
 	/// </remarks>
-	public static bool CircuitClosed( ParkWorld.CatalogueObject coaster, ParkWorld? park )
+	public static bool CircuitClosed( ParkWorld.CatalogueObject coaster, IParkInitialState? park )
 	{
-		if ( park?.Coasters.For( coaster.MeshInstance ) is { } saved )
+		if ( park?.Save?.Coasters.For( coaster.MeshInstance ) is { } saved )
 			return saved.CircuitClosed && saved.Clashes == 0;
 
-		if ( coaster.MeshInstance != 0 && park is { } world
+		if ( coaster.MeshInstance != 0 && park?.Save is { } world
 			&& (world.Coasters.Unread > 0 || world.Coasters.Problem != null) )
 		{
 			Unimplemented.Report( "SAVED_COASTER_HEADER_UNREAD" );
@@ -160,7 +160,7 @@ public static class ParkRideChoice
 	/// exactly as it did before.
 	/// </para>
 	/// </summary>
-	private static ParkWorld.MapCell LiveCell( ParkWorld park, int x, int y )
+	private static ParkWorld.MapCell LiveCell( IParkInitialState park, int x, int y )
 		=> ParkState.CellFor( park, x, y );
 
 	/// <summary>
@@ -194,7 +194,7 @@ public static class ParkRideChoice
 	/// </para>
 	/// </summary>
 	/// <returns>The packed cell the queue starts at, or nought where the entry cell connects to nothing.</returns>
-	public static int StartOfQueue( ParkWorld? park, ParkWorld.CatalogueObject item )
+	public static int StartOfQueue( IParkInitialState? park, ParkWorld.CatalogueObject item )
 	{
 		if ( park == null || item.EntryPos == 0 )
 			return 0;
@@ -255,7 +255,7 @@ public static class ParkRideChoice
 	/// </para>
 	/// </summary>
 	/// <returns>The packed cell one further along, or nought at the end of the queue.</returns>
-	public static int StepToNextQueueCell( ParkWorld? park, int cellId )
+	public static int StepToNextQueueCell( IParkInitialState? park, int cellId )
 	{
 		if ( park == null || cellId == 0 )
 			return 0;
@@ -307,7 +307,7 @@ public static class ParkRideChoice
 	/// </para>
 	/// </summary>
 	/// <returns>The packed back-of-queue cell and the number of cells, or <c>(0, 0)</c> for neither.</returns>
-	public static (int BackOfQueue, int Cells) QueueCellsFor( ParkWorld? park, ParkWorld.CatalogueObject item )
+	public static (int BackOfQueue, int Cells) QueueCellsFor( IParkInitialState? park, ParkWorld.CatalogueObject item )
 	{
 		// The cached pair. The original returns mBackOfQueue without touching the count whenever it is set,
 		// which is what leaves the ride and the sideshow on the numbers their file was saved with.
@@ -358,7 +358,7 @@ public static class ParkRideChoice
 	/// fills through <c>PeepBehaviour.JoinTheQueue</c> are counted by <see cref="ParkState.QueueCount"/>.
 	/// </para>
 	/// </summary>
-	public static int QueueLength( ParkWorld? park, ParkWorld.CatalogueObject item )
+	public static int QueueLength( IParkInitialState? park, ParkWorld.CatalogueObject item )
 	{
 		if ( park == null )
 			return 0;
@@ -430,7 +430,7 @@ public static class ParkRideChoice
 	/// Each object's <c>Bumper.WhichTrackType</c>, from the item catalogue, or null where no catalogue is
 	/// to hand - which treats every object as untracked.
 	/// </param>
-	public static List<ParkWorld.CatalogueObject> Offerable( ParkWorld? park,
+	public static List<ParkWorld.CatalogueObject> Offerable( IParkInitialState? park,
 		Func<ParkWorld.CatalogueObject, int>? queueLength = null,
 		Func<ParkWorld.CatalogueObject, int>? trackTypeOf = null )
 	{

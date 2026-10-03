@@ -41,18 +41,9 @@ public class Level
 	/// </summary>
 	public ParkBalance? Balance { get; private set; }
 
-	/// <summary>
-	/// The park's own save as it was read, or null in the lobby and in a theme that ships no park of its
-	/// own. Kept so that the interface can show what the file says - the balance it was left with and what
-	/// it charges - without reading a megabyte and a half a second time.
-	///
-	/// <para>
-	/// <b>It describes a FILE and it is deliberately immutable</b>, which is why everything that moves has
-	/// to be held somewhere else: <see cref="ParkState"/>, seeded from it once, holds the running numbers.
-	/// Anything that wants a running number reads it there rather than expecting to find it here.
-	/// </para>
-	/// </summary>
-	public ParkWorld? Park { get; private set; }
+	/// <summary>The read-only starting world, from a file or fresh initialization; null in the lobby.
+	/// Running numbers and changed cells belong to <see cref="ParkState"/>.</summary>
+	public IParkInitialState? Park { get; private set; }
 
 	/// <summary>
 	/// The park as it is being <i>played</i>, seeded once from <see cref="Park"/> - the balance that
@@ -76,14 +67,8 @@ public class Level
 	/// Whether the park is Instant Action's, the original's game type 2: the balance lays <c>Easy_Standard.sam</c> and
 	/// the catalogue each item's <c>Easy_</c> file, both on this one condition.
 	/// </summary>
-	/// <remarks>
-	/// <b>True, because the only park file this loads is Easymode.TPWI</b> - see ReadPark, which names it outright
-	/// and unconditionally - and the original runs that file only in type 2 (<c>FUN_005c8190</c>). A deviation for a
-	/// Full Simulation player, who is given this balance too and is counted as FULL_SIMULATION_NEW_PARK. The park it
-	/// reads carries nought APR on all eight of its loans, which matches Easy_Standard.sam and the global file
-	/// nowhere. If a park that is NOT the easy one is ever loaded, this has to move with it rather than stay true.
-	/// </remarks>
-	private static bool InstantAction => true;
+	/// <remarks>A console park with nobody selected retains Instant Action for existing diagnostics.</remarks>
+	internal static bool InstantAction => Players.Roster.Current?.InstantAction ?? true;
 
 	/// <summary>Who the park may hire - see <see cref="ParkStaffPool"/>.</summary>
 	public ParkStaffPool? StaffPool { get; private set; }
@@ -139,8 +124,8 @@ public class Level
 
 		if ( kind == Scene.Park )
 		{
-			SetupParkEntities();
 			SetupParticles();
+			SetupParkEntities();
 			SetupParkHud();
 
 			return;
@@ -283,35 +268,15 @@ public class Level
 		_ = new Sky( $"levels/{ThemeName}/sky", centre: Vector3.Zero, height: Sky.ParkHeight, tinted: false );
 		load.Mark( "sky" );
 
-		// The park's own save, read once here and handed to everything that needs it: the ground to know
-		// which cells it must leave alone, the paths to draw those cells, and the objects to stand where
-		// it says. It inflates to a megabyte and a half, so reading it three times would be careless.
-		var park = ReadPark( ThemeName );
-		load.Mark( "the save" );
-		CountAFullSimulationPark();
+		Catalogue = new ParkItemCatalogue( ThemeName, instantAction: InstantAction );
+		Catalogue.RegisterParticleEffects( ParticleSystem.Current?.Library );
+		load.Mark( "catalogue" );
+		var catalogue = Catalogue;
 
-		// Kept on the level as well as handed round below, so that the interface can show what the file
-		// says without opening a megabyte and a half a second time - see the Park property. Anything running
-		// is read from ParkState, below, rather than looked for inside it.
+		var park = CreatePark( ThemeName, Balance, catalogue );
 		Park = park;
-
-		// And the running copy of everything in it that moves, made once here so that the guests, the
-		// interface and the staff all read and write the same numbers rather than each keeping their own.
 		ParkState = new ParkState( park );
 		load.Mark( "park state" );
-
-		// The ground first, then what stands on it. The paths follow the ground because they lie on its
-		// heightfield, and ParkObjects is last because it asks how high the land is under each thing it
-		// places.
-		// Everything this theme sells, read once and shared: the objects need it to know what to stand on
-		// the ground, and the rides need it to know where each item's script lives. Built only where there
-		// is a park to place anything in, since without one neither of them has anything to ask it.
-		// Kept on the level as well as handed round below, because buying something needs it long after
-		// the park has finished loading - see ParkBuilding.
-		Catalogue = park == null ? null : new ParkItemCatalogue( ThemeName, instantAction: InstantAction );
-		load.Mark( "catalogue" );
-
-		var catalogue = Catalogue;
 
 		Research = park == null || catalogue == null ? null : new ParkResearch( park.ObjectControlRecords, catalogue );
 
@@ -403,16 +368,15 @@ public class Level
 		Camera.SetCameraMode<ParkOrbitCameraMode>();
 	}
 
-	/// <summary>
-	/// <b>A deviation, counted:</b> a new Full Simulation player's first park is built fresh in the original
-	/// (<c>FUN_00407d80</c>, <c>FUN_00515540</c>) and loads no file; here every player is handed the Easymode park
-	/// and its <c>Easy_</c> balance. Counted here, where the player is known, because ReadPark takes only a theme;
-	/// a console <c>park</c> with nobody picked has no player and is not counted. <c>docs/PLAYER-GAPS.md</c> gap 7.
-	/// </summary>
-	internal static void CountAFullSimulationPark()
+	/// <summary>Selects the original's new-world or Instant Action file path for the current player.</summary>
+	internal static IParkInitialState? CreatePark( string theme, ParkBalance balance, ParkItemCatalogue catalogue )
 	{
-		if ( Players.Roster.Current is { InstantAction: false } )
-			Unimplemented.Report( "FULL_SIMULATION_NEW_PARK" );
+		if ( InstantAction )
+			return ReadPark( theme );
+
+		var park = new FreshPark( theme, balance, catalogue );
+		Log.Info( $"{theme}: {park.Census()}" );
+		return park;
 	}
 
 	/// <summary>

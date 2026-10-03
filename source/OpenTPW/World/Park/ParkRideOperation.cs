@@ -155,7 +155,7 @@ public sealed class ParkRideOperation
 	/// test calls it; the park's own turn (<c>ParkPeople.TakeTheRidesTurns</c>) asks each object itself.
 	/// </summary>
 	/// <returns>How many stale heads were dropped.</returns>
-	public int DropStaleQueueHeads( ParkWorld? park )
+	public int DropStaleQueueHeads( IParkInitialState? park )
 	{
 		if ( park == null )
 			return 0;
@@ -375,7 +375,7 @@ public sealed class ParkRideOperation
 	/// </param>
 	/// <returns>Whether a guest was let off.</returns>
 	public bool Dismiss( RideScript? script, ParkWorld.CatalogueObject ride, int tick, Random random,
-		Func<int, PeepWalk?>? walkFor = null, ParkWorld? park = null, ParkItemCatalogue? catalogue = null )
+		Func<int, PeepWalk?>? walkFor = null, IParkInitialState? park = null, ParkItemCatalogue? catalogue = null )
 	{
 		ArgumentNullException.ThrowIfNull( random );
 
@@ -452,7 +452,7 @@ public sealed class ParkRideOperation
 	/// </para>
 	/// </summary>
 	private static void PutDownAtTheExit( Peep peep, PeepWalk walk, ParkWorld.CatalogueObject ride,
-		ParkWorld? park )
+		IParkInitialState? park )
 	{
 		peep.Navigator.Position = new FixedVector(
 			PeepNavigator.WaypointCentre( ride.ExitCellX ),
@@ -1281,7 +1281,7 @@ public sealed class ParkRideOperation
 	/// <c>FUN_00441970</c> whether its circuit is closed, which <see cref="ParkRideChoice.CircuitClosed"/> answers
 	/// for the choice; the door does not ask it. The shipped park holds no coaster.
 	/// </remarks>
-	public static bool MayOpen( ParkWorld? park, ParkWorld.CatalogueObject ride, int trackType )
+	public static bool MayOpen( IParkInitialState? park, ParkWorld.CatalogueObject ride, int trackType )
 	{
 		// 2 is an upgrade waiting to be done; the original asks 1, 4, the service, then 2.
 		if ( ride.State is ParkRideChoice.StateRefusedOne or ParkRideChoice.StateRefusedFour
@@ -1313,7 +1313,7 @@ public sealed class ParkRideOperation
 	/// for any other angle (<c>0x004de510</c>..<c>0x004de53f</c>); here that is not connected.
 	/// </para>
 	/// </remarks>
-	public static bool BackOfQueueConnected( ParkWorld? park, ParkWorld.CatalogueObject ride )
+	public static bool BackOfQueueConnected( IParkInitialState? park, ParkWorld.CatalogueObject ride )
 	{
 		if ( park == null )
 			return false;
@@ -1359,7 +1359,7 @@ public sealed class ParkRideOperation
 	/// <c>mIsTrackRideValid</c> as well (<c>0x004de2f7</c>..<c>0x004de3df</c>), then opens as
 	/// <see cref="Open"/> does. <c>mAssignedStaffMember</c> is zeroed whatever was decided (<c>0x004de48c</c>).
 	/// </remarks>
-	public void ReopenAfterRemeasure( RideScript? script, int rideId, ParkWorld? park, int trackType )
+	public void ReopenAfterRemeasure( RideScript? script, int rideId, IParkInitialState? park, int trackType )
 	{
 		if ( !_state.TryObject( rideId, out var ride ) )
 			return;

@@ -121,13 +121,13 @@ public sealed class ParkQueues : Entity
 	public static ParkQueues? Current { get; private set; }
 
 	/// <summary>The park this was built from, so that it can be built again when a cell changes.</summary>
-	private readonly ParkWorld? _world;
+	private readonly IParkInitialState? _world;
 
 	/// <param name="world">
 	/// The park's own save, already walked, or null where the theme ships none. It is read once by
 	/// <see cref="Level"/> and shared with the ground, the paths and the objects.
 	/// </param>
-	public ParkQueues( string themeName, ParkWorld? world )
+	public ParkQueues( string themeName, IParkInitialState? world )
 	{
 		ThemeName = themeName;
 		_world = world;
@@ -196,7 +196,7 @@ public sealed class ParkQueues : Entity
 		_models.Clear();
 	}
 
-	private void Build( ParkWorld? world )
+	private void Build( IParkInitialState? world )
 	{
 		if ( world == null || world.Cells.Count == 0 )
 		{

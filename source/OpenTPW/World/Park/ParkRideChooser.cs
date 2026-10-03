@@ -32,7 +32,7 @@ namespace OpenTPW;
 /// </summary>
 public sealed class ParkRideChooser
 {
-	private readonly ParkWorld? _park;
+	private readonly IParkInitialState? _park;
 	private readonly ParkItemCatalogue? _catalogue;
 	private readonly ParkState? _state;
 
@@ -49,7 +49,7 @@ public sealed class ParkRideChooser
 	/// The park as it is being played, whose object chain is the live one. Null falls back to the save's
 	/// chain - see the class remarks.
 	/// </param>
-	public ParkRideChooser( ParkWorld? park, ParkItemCatalogue? catalogue = null, ParkRideScore? score = null,
+	public ParkRideChooser( IParkInitialState? park, ParkItemCatalogue? catalogue = null, ParkRideScore? score = null,
 		ParkState? state = null )
 	{
 		_park = park;

@@ -64,7 +64,7 @@ public static class ParkBuilding
 	/// <see cref="Level"/>. With no <paramref name="objects"/> nothing can be stood, so a placement that passes
 	/// every test answers that it would not load.
 	/// </summary>
-	private static Built Build( ParkState state, ParkWorld park, ParkItemCatalogue catalogue, ParkObjects? objects,
+	private static Built Build( ParkState state, IParkInitialState park, ParkItemCatalogue catalogue, ParkObjects? objects,
 		ParkRides? rides, int catalogueId, int cellX, int cellY, int angle )
 	{
 		if ( !catalogue.TryGet( catalogueId, out var item ) )
@@ -334,7 +334,7 @@ public static class ParkBuilding
 	/// The whole of <see cref="Sell(int)"/> once the park is in hand - internal so a test can sell something
 	/// without a running <see cref="Level"/>, the way <see cref="Stamp"/> and <see cref="ReleaseEnds"/> are.
 	/// </summary>
-	internal static string Sell( ParkState state, ParkWorld park, ParkItemCatalogue catalogue, ParkObjects? objects,
+	internal static string Sell( ParkState state, IParkInitialState park, ParkItemCatalogue catalogue, ParkObjects? objects,
 		ParkRides? rides, int thingId, ParkPeople? people = null )
 		=> Demolish( state, park, catalogue, objects, rides, thingId, people ).Answer;
 
@@ -367,7 +367,7 @@ public static class ParkBuilding
 	/// and the cells it leaves". Nothing runs between the unlink and the footprint's clear, and the people
 	/// answer only after both, so where the clear falls against the unlink changes nothing.
 	/// </remarks>
-	private static Sold Demolish( ParkState state, ParkWorld park, ParkItemCatalogue catalogue, ParkObjects? objects,
+	private static Sold Demolish( ParkState state, IParkInitialState park, ParkItemCatalogue catalogue, ParkObjects? objects,
 		ParkRides? rides, int thingId, ParkPeople? people )
 	{
 		if ( !state.TryObject( thingId, out var placed ) )
@@ -462,7 +462,7 @@ public static class ParkBuilding
 	/// before it lose their bit toward it.
 	/// </para>
 	/// </remarks>
-	internal static void ReleaseEnds( ParkState state, ParkWorld park, ParkWorld.CatalogueObject placed )
+	internal static void ReleaseEnds( ParkState state, IParkInitialState park, ParkWorld.CatalogueObject placed )
 	{
 		if ( placed.EntryPos == 0 )
 			return;
@@ -550,7 +550,7 @@ public static class ParkBuilding
 	/// <summary>What one pickup did: the line to show, and whether the item is in the hand.</summary>
 	private readonly record struct Taken( string Answer, bool Holding = false );
 
-	private static Taken PickUp( ParkState state, ParkWorld park, ParkItemCatalogue catalogue, ParkObjects? objects,
+	private static Taken PickUp( ParkState state, IParkInitialState park, ParkItemCatalogue catalogue, ParkObjects? objects,
 		ParkRides? rides, int thingId, ParkPeople? people )
 	{
 		if ( !state.TryObject( thingId, out var placed ) )
@@ -585,7 +585,7 @@ public static class ParkBuilding
 	/// <summary>
 	/// The whole of <see cref="Move(int, int, int, int?)"/> once the park is in hand, for a test.
 	/// </summary>
-	internal static string Move( ParkState state, ParkWorld park, ParkItemCatalogue catalogue, ParkObjects? objects,
+	internal static string Move( ParkState state, IParkInitialState park, ParkItemCatalogue catalogue, ParkObjects? objects,
 		ParkRides? rides, int thingId, int cellX, int cellY, int? angle = null, ParkPeople? people = null )
 	{
 		var taken = PickUp( state, park, catalogue, objects, rides, thingId, people );
@@ -784,7 +784,7 @@ public static class ParkBuilding
 	/// </para>
 	/// </remarks>
 	/// <param name="ownerCell">The packed cell of the thing's anchor, which a queue cell names as its owner.</param>
-	internal static (int X, int Y)? MarkWaysInAndOut( ParkState state, ParkWorld park,
+	internal static (int X, int Y)? MarkWaysInAndOut( ParkState state, IParkInitialState park,
 		int entryCellX, int entryCellY, int exitCellX, int exitCellY,
 		int entryDirection, int exitDirection, int angle, bool hasQueue, int ownerCell )
 	{
@@ -848,7 +848,7 @@ public static class ParkBuilding
 	/// finds a single link and stands <c>quedead</c> on it. <b>It is free</b>: the commit raises
 	/// <c>DAT_008186d4</c> before the placer runs, and the stamp debits nothing while that is set.
 	/// </remarks>
-	private static (int X, int Y)? LayQueueStub( ParkState state, ParkWorld park, int x, int y,
+	private static (int X, int Y)? LayQueueStub( ParkState state, IParkInitialState park, int x, int y,
 		int heading, int ownerCell )
 	{
 		// EndRefusal has already refused a placement whose entrance faces off the map.
@@ -891,7 +891,7 @@ public static class ParkBuilding
 	/// with no queue - stamped, joined to what is around it, retiled, and flagged NOMODIFY, with <b>no
 	/// direction byte</b>. The shipped park's (52,27) carries exactly that: the bit, and direction 0.
 	/// </summary>
-	private static void LayPathStub( ParkState state, ParkWorld park, int x, int y )
+	private static void LayPathStub( ParkState state, IParkInitialState park, int x, int y )
 	{
 		if ( !ParkState.OnMap( x, y ) )
 			return;
@@ -944,7 +944,7 @@ public static class ParkBuilding
 	/// STORED tile index, so without it the masks say joined and the path goes on drawing the piece it drew
 	/// before the thing arrived.
 	/// </remarks>
-	private static void RelinkIfPath( ParkState state, ParkWorld park, int x, int y )
+	private static void RelinkIfPath( ParkState state, IParkInitialState park, int x, int y )
 	{
 		if ( !ParkState.OnMap( x, y ) || state.Record( x, y ).Type != CellEdge.Path )
 			return;
@@ -1222,7 +1222,7 @@ public static class ParkBuilding
 	/// The whole of <see cref="PlaceCarried(int, int, int?)"/> once the park is in hand. With no
 	/// <paramref name="angle"/> the thing faces the way the hand holds it.
 	/// </summary>
-	private static string PlaceCarried( ParkState state, ParkWorld park, ParkItemCatalogue catalogue,
+	private static string PlaceCarried( ParkState state, IParkInitialState park, ParkItemCatalogue catalogue,
 		ParkObjects? objects, ParkRides? rides, int cellX, int cellY, int? angle )
 	{
 		if ( Carrying == 0 )

@@ -132,7 +132,7 @@ public sealed class ParkFixedItems : Entity
 	/// those handles hold are <i>not</i> catalogue numbers but thing ids - 11 and 12 in the shipped park.
 	/// </para>
 	/// </summary>
-	private static readonly (string Name, bool CarriesSign, Func<ParkWorld, int> Thing)[] Items =
+	private static readonly (string Name, bool CarriesSign, Func<IParkInitialState, int> Thing)[] Items =
 	[
 		("gates", true, world => world.ParkGates),
 		("lights", false, world => world.TrafficLights),
@@ -183,7 +183,7 @@ public sealed class ParkFixedItems : Entity
 	/// <c>world.Objects</c> would pass just as well with the <c>mFirstObject</c> mistake put back, which
 	/// is the shape of test that proves nothing - so the test calls this.
 	/// </remarks>
-	internal static int ThingByCatalogue( ParkWorld world, int catalogueId )
+	internal static int ThingByCatalogue( IParkInitialState world, int catalogueId )
 	{
 		foreach ( var placed in world.Objects )
 		{
@@ -230,7 +230,7 @@ public sealed class ParkFixedItems : Entity
 	/// clock of their own - see <see cref="ParkObjects.Stand"/>. Null leaves them standing and inert, which
 	/// is what a theme with no park file gets.
 	/// </param>
-	public ParkFixedItems( string themeName, ParkWorld? world = null, ParkObjects? objects = null )
+	public ParkFixedItems( string themeName, IParkInitialState? world = null, ParkObjects? objects = null )
 	{
 		ThemeName = themeName;
 		Name = $"{themeName} fixed items";

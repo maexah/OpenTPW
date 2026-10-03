@@ -52,19 +52,6 @@ artifacts are listed in `docs/history/README.md`.
   window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
   together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
 
-- [ ] **Q197. A Full Simulation player's fresh park.** Found by the fork review (gap3-2..gap3-11, refute rank 2);
-  queued by Alexah 2026-09-30, beyond the Easymode scope. The original builds it with no file: `FUN_00407d80`
-  allocates the world and `FUN_00515540` builds the staff pool, the calendar, the arrival block, the 16,384 map cells
-  and the other tables, the park closed. The level load `FUN_00407e00` then reads the catalogue (`FUN_00413140`, which
-  also puts the items' `.emt` into free particle slots) and `FUN_005156a0` lays the balance stack without `Easy_` and
-  makes exactly twelve things: the ten managers, the gates (11) and the traffic lights (12), both unplaced; then the
-  sky, `Scape.omp` and the lighting. Fee from `InitialAdmissionFee` (20), cash from `InitialCash`, each loan's
-  repayment = amount × (1 + APR/100)^(period/24) / period (`FUN_004cf7c0`, constants `0x00700378`..`0x00700390`).
-  Keep ids 3 and 10 for the advisor thing and the challenge manager, which a load reaches by the ids the new world
-  gave them. No `.hmp` needs generating. Write the chain into `boot.md`'s step 9 rows and beside `park-engine.md`'s
-  allocation paragraph first, then build from the empty-park path, after Q186. Confirm against jungle `restart.INTS`
-  (Q167's note): the twelve things, the fee, the APRs and the repayments; then a screenshot of the empty park.
-
 - [ ] **Q85. A guest who arrives starts with happiness nought, and stays there. Decode first.** Found by Q50's game
   runs: every one of the 33 guests who arrived (30 by `load 30`) read `happy 0` in `peeps`, none above it in nine minutes,
   while the save's 13 kept theirs (most at 50) until they went home, all by about four minutes, so a dock on anyone left

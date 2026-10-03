@@ -817,6 +817,72 @@ can step.
 do. `Forget`, part of `Level.Unload`, lets it go. What else a left park lets go of is under "Leaving a park with
 something in the hand".
 
+### A fresh Full Simulation world
+
+Lead: Aluzed's OpenTPW-decomp fork, review gap3-2 through gap3-11 (Q197). The 2.0 executable
+(`testme.exe`, MD5 `c7c07bbded605cc45f922afa75fd71a7`) and the original's jungle `restart.INTS`
+are the two checks; the restart is a reference, not a template to load when making a new park.
+
+`FUN_00515540` constructs the staff pool, calendar and arrival block, 16,384 map records of `0x44`
+bytes, 16,384 track records of `0x28`, and the other world tables. `world+0x1da710` starts at 1
+(park closed). `world+0x1da738` is a separate state word. `FUN_00515660` calls `FUN_00515f30`, which
+resets the free thing list to id 1. `FUN_005156a0` loads global then theme `Standard.sam`, adding
+`Easy_Standard.sam` only in game type 2; it zeros `mGameTick`, resets the map (`FUN_004d7bb0`),
+and creates manager models 9, 10, 11, 12, 13, 14, 15, 16, 17 and 19 in that order. Thus the advisor
+is thing 3 and the challenge manager thing 10. Gates and lights follow, as things 11 and 12,
+found by their catalogue stems. The new world contains twelve things and no people or placed rides.
+The object chain is lights 12 → gates 11 → 0. Unplaced does not mean absent from the cell lists:
+`FUN_0050afe0` inserts a thing through `FUN_004d91f0`; the restart's cell 1 has occupant 12.
+
+The bank constructor `FUN_004cf7c0` takes cash and admission from `BankAccountInfo.InitialCash`
+and `InitialAdmissionFee`. Its eight loans take amount, APR, period and lender from the merged
+balance. Availability compares the amount **unsigned** against 10,000; bought and months repaid
+start at zero. Its x87 sequence at `0x004cf85c` uses unsigned dword inputs, computes
+`amount * pow(APR * 0.01 + 1, period * (1.0 / 12.0) * 0.5) / period`, and truncates toward zero
+(`0x0067a830` sets the rounding-control bits before `FISTP`, then restores them). Constants
+`0x00700378/380/388/390` are 0.01, -1, 1/12 and 0.5. All eight jungle restart repayments agree:
+3651, 1825, 912, 365, 922, 1282, 2320 and 2749. Its fee is 20. Its cash is 9,999,999; this
+reference is not the initial-cash oracle. The shipped regular balance starts at 50,000.
+
+A fresh map is not all bare ground. `FUN_00450900` loads `terrain/base.map` through the MAP handler
+at `0x004d8cf0`; `FUN_0052f050` visits the 128×128 map, calling `FUN_00536490` for the map record
+and `FUN_0053af00` for the separate track record. The buildable-area test `FUN_00450420` reads
+bit 0 of the terrain model's cell word. Attributes then select the fixed approach, solid cells
+and the initial paths; `FUN_005365d0` selects their tiles. The jungle restart has 6,991 type-0,
+9,077 type-7, 66 type-30, 10 type-1 and 240 type-2 cells. Its game tick is zero and its park is closed.
+
+The terrain initializer continues through `FUN_005323f0`: it replays `Hoardings.sam`'s
+`HoardingClicks` relative to entrance B plus `(3,0)` until X=512, in two-cell steps
+(`FUN_00524960` → `FUN_0053aac0`). Each anchor is track type 25 and its other three 2×2
+cells become type 12 with the anchor as parent (`FUN_0052ba50`). `FUN_005311c0` clears
+map flag 0x40 inside; `FUN_005370e0`'s 0x81 arm includes all four cells of an inward
+corner, and the final gate pass clears two rows between entrance A−2 and entrance B+3.
+Its 0x85 arm marks straight hoarding records crossing map types 2, 7 or 30 with flag 1;
+corner records skip that test. `FreshParkBoundary` expresses this initial, simple polygon
+as an interior fill; it is not the general hoarding editor. `mStatusFlags` is the attribute byte, as already documented in FileFormats.
+The four reference path tiles using art index 20 instead of 10 depend on the carried
+RNG coin in `FUN_00535dd0`; fresh initialization retains the existing path builder's
+base-art policy and counts `FRESH_PARK_PATH_ART_VARIANT`.
+
+**Q197 verification, 2026-10-03.** A scratch copy of jungle `restart.INTS` (SHA-256
+`84887ACABAF850CD06E77B11034845941C47227570159CAD7DC9A2A94FA05DB9`) supplied the
+reference. All twelve identities and both complete exposed object records agree. Across all
+16,384 cells every exposed field agrees except four tile indices (20 versus base 10). The
+normalized cell JSON SHA-256 is `CE6D735C46A27C7FB16458974BEE6F1DED0CE55598161A2C0534091A8150D7B2`,
+pinned by `LevelFullSimulationParkTests`. The copied restart is never a runtime input.
+`q197confirm.py` created a temporary Full Simulation player through the real lobby, entered Lost
+Kingdom, and captured `K0-empty-full-simulation.png`: empty grass and the fixed entrance, $50,000.
+The prediction preceded entry: twelve things, two unplaced objects, no people, 16,384 cells,
+closed 1, fee 20, and the eight APRs/repayments above; the startup log agreed. Live censuses read
+zero guests and zero staff. Item emitters registered into slots 101 and 102. The run deleted only
+its own player files; the existing `opentpw.cfg` changed loading-bar counts and was retained.
+Restoring the old always-Instant-Action decision makes the new test fail (a `ParkWorld` and
+42 things rather than a `FreshPark` and twelve). The restored full suite passes 1,636 tests,
+zero skips. Review of the applied core used exact relayed excerpts because the verifier's shell
+sandbox could not start; its missing-terminator finding was fixed and tested. Other consumer
+changes were checked mechanically as type-only edits. Park saving, synthetic arrival-vehicle
+render objects, and the cosmetic RNG sequence remain separate existing limitations.
+
 ### Entering and leaving first person: a click on the ground
 
 **'C' puts the viewer nowhere.** `FUN_00481a10` only installs mode 9, whose `OnInstall` (`0x0046d590`) sets cursor

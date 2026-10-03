@@ -42,6 +42,20 @@ public sealed class ParticleLibraryFile : BaseFormat
 		Effectors = ReadRecords( reader, ParticleEffectorTemplate.RecordSize, record => new ParticleEffectorTemplate( record ) );
 	}
 
+	/// <summary>Registers one raw .emt record in the first slot whose name is empty (FUN_0051fa20).</summary>
+	public int RegisterEffect( Stream stream )
+	{
+		var slot = Array.FindIndex( Effects, effect => effect.Name.Length == 0 );
+		if ( slot < 0 )
+			throw new InvalidDataException( "No free particle effect slot" );
+
+		// A safety deviation: reject a truncated record rather than copying past the input buffer.
+		var record = new byte[ParticleEffectTemplate.RecordSize];
+		stream.ReadExactly( record );
+		Effects[slot] = new ParticleEffectTemplate( record );
+		return slot;
+	}
+
 	private static T[] ReadRecords<T>( BinaryReader reader, int recordSize, Func<byte[], T> read )
 	{
 		var count = reader.ReadInt32();

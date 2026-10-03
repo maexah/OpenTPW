@@ -276,7 +276,7 @@ public sealed class CellEdge
 	/// worse than not answering it, and it only bears on mode 2.
 	/// </para>
 	/// </summary>
-	public static CellEdge For( ParkWorld park, int mode )
+	public static CellEdge For( IParkInitialState park, int mode )
 	{
 		ArgumentNullException.ThrowIfNull( park );
 
@@ -300,14 +300,14 @@ public sealed class CellEdge
 	/// until somebody builds something, so a park nobody has edited answers exactly as its file does.
 	/// </para>
 	/// </summary>
-	private static Func<int, int, ParkWorld.MapCell> Live( ParkWorld park )
+	private static Func<int, int, ParkWorld.MapCell> Live( IParkInitialState park )
 		=> ( x, y ) => ParkState.CellFor( park, x, y );
 
 	/// <summary>
 	/// A cell by its number, for the parent a deferring track record names. Counted from one, as every
 	/// reference in the save is - <see cref="MapStep.CellAt"/> is what undoes that.
 	/// </summary>
-	private static Func<int, ParkWorld.MapCell> ById( ParkWorld park )
+	private static Func<int, ParkWorld.MapCell> ById( IParkInitialState park )
 		=> id =>
 		{
 			var (x, y) = MapStep.CellAt( id );

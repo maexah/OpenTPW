@@ -58,8 +58,8 @@ public sealed class ParkState
 	/// </summary>
 	internal static void ForgetCurrent() => Current = null;
 
-	/// <summary>The file this was seeded from, for the cells nothing has changed - see <see cref="Record"/>.</summary>
-	private readonly ParkWorld? _park;
+	/// <summary>The initial world this was seeded from, for the cells nothing has changed - see <see cref="Record"/>.</summary>
+	private readonly IParkInitialState? _park;
 
 	/// <summary>
 	/// The cells a player has changed since the park was loaded, by packed index. Sparse on purpose:
@@ -87,9 +87,9 @@ public sealed class ParkState
 			: _park?.CellAt( x, y ) ?? default;
 	}
 
-	/// <summary>The save this was seeded from, so that a caller can tell whether this overlay is the one
+	/// <summary>The initial world this was seeded from, so that a caller can tell whether this overlay is the one
 	/// describing the park it has in hand - see <see cref="CellFor"/>.</summary>
-	public ParkWorld? Park => _park;
+	public IParkInitialState? Park => _park;
 
 	/// <summary>
 	/// A cell as the RUNNING park holds it: the player's changes first, and the file for everything
@@ -108,7 +108,7 @@ public sealed class ParkState
 	/// edge test rather than failing. Tying the overlay to the park it was seeded from makes a mismatch
 	/// answer from the file.
 	/// </remarks>
-	public static ParkWorld.MapCell CellFor( ParkWorld? park, int x, int y )
+	public static ParkWorld.MapCell CellFor( IParkInitialState? park, int x, int y )
 	{
 		if ( park == null )
 			return default;
@@ -235,8 +235,8 @@ public sealed class ParkState
 
 		if ( _park != null )
 		{
-			foreach ( var person in _park.People )
-				highest = Math.Max( highest, person.ThingId );
+			foreach ( var thing in _park.Things )
+				highest = Math.Max( highest, thing.ThingId );
 		}
 
 		return highest;
@@ -384,7 +384,7 @@ public sealed class ParkState
 	/// <see cref="PeepBehaviour"/> already gives for a null park, and for the same reason: a park with
 	/// nothing loaded is not a park whose gates are shut.
 	/// </summary>
-	public ParkState( ParkWorld? park )
+	public ParkState( IParkInitialState? park )
 	{
 		_park = park;
 		Current = this;
@@ -414,12 +414,12 @@ public sealed class ParkState
 		// Each track ride back in its saved slot with its sections, as the track-rides module's loader puts them.
 		// Said out loud when a module will not read, because its track rides then score as stale handles and its
 		// coasters go unfound, which looks like the game's own doing.
-		TrackRides = new ParkTrackRideTable( park?.TrackRides );
+		TrackRides = new ParkTrackRideTable( park?.Save?.TrackRides );
 
-		if ( park?.TrackRides.Problem is { } kart )
+		if ( park?.Save?.TrackRides.Problem is { } kart )
 			Log.Warning( $"Park: the track-rides module would not read ({kart}); every saved track ride has no track" );
 
-		if ( park?.Coasters.Problem is { } saoc )
+		if ( park?.Save?.Coasters.Problem is { } saoc )
 			Log.Warning( $"Park: the coasters module would not read ({saoc}); every saved coaster is counted and offered" );
 
 		if ( park == null )

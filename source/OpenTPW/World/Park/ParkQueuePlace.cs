@@ -59,7 +59,7 @@ public static class ParkQueuePlace
 	/// across it. Cell nought is a place past the queue's cells, or a queue with no cells: the original packs it
 	/// as x 127, y 255, which no route reaches.
 	/// </summary>
-	public static Point For( ParkWorld? park, ParkWorld.CatalogueObject item, int place, int jitter )
+	public static Point For( IParkInitialState? park, ParkWorld.CatalogueObject item, int place, int jitter )
 		=> item.HasQueuePath
 			? AlongThePath( park, item, place, jitter )
 			: InTheBackCell( park, item, place, jitter );
@@ -70,7 +70,7 @@ public static class ParkQueuePlace
 	/// along above 128, turns to the next queue cell's, or at the back cell to the side opposite the first its path
 	/// joins (<see cref="BackEnd"/>).
 	/// </summary>
-	private static Point AlongThePath( ParkWorld? park, ParkWorld.CatalogueObject item, int place, int jitter )
+	private static Point AlongThePath( IParkInitialState? park, ParkWorld.CatalogueObject item, int place, int jitter )
 	{
 		var cell = ParkRideChoice.StartOfQueue( park, item );
 		var n = (uint)place;
@@ -100,7 +100,7 @@ public static class ParkQueuePlace
 	/// facing the ENTRY cell's direction (<c>0x004decd1</c>), with the whole place as n - no walk, no bound, so a
 	/// fifth guest wraps to along 255 on the same cell.
 	/// </summary>
-	private static Point InTheBackCell( ParkWorld? park, ParkWorld.CatalogueObject item, int place, int jitter )
+	private static Point InTheBackCell( IParkInitialState? park, ParkWorld.CatalogueObject item, int place, int jitter )
 	{
 		var (back, _) = ParkRideChoice.QueueCellsFor( park, item );
 
@@ -134,7 +134,7 @@ public static class ParkQueuePlace
 	/// (<c>01 04 10 40</c>, <c>0x004dea15</c>) that the cell's <c>mNeighbours</c> holds and whose neighbour is
 	/// plain path (<c>FUN_00536310</c>); with none, the cell's own direction.
 	/// </summary>
-	private static int BackEnd( ParkWorld? park, int cell )
+	private static int BackEnd( IParkInitialState? park, int cell )
 	{
 		var (x, y) = MapStep.CellAt( cell );
 
@@ -169,7 +169,7 @@ public static class ParkQueuePlace
 	];
 
 	/// <summary>A queue cell's <c>mDirection</c>, as the running park holds it, or nought off the map.</summary>
-	private static int DirectionOf( ParkWorld? park, int cell )
+	private static int DirectionOf( IParkInitialState? park, int cell )
 	{
 		var (x, y) = MapStep.CellAt( cell );
 

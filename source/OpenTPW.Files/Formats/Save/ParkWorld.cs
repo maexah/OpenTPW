@@ -27,8 +27,12 @@ namespace OpenTPW;
 /// for why, and <see cref="CatalogueObject.IsPlaced"/> for how they read.
 /// </para>
 /// </summary>
-public sealed class ParkWorld
+public sealed class ParkWorld : IParkInitialState
 {
+	public ParkWorld Save => this;
+	public IReadOnlyList<ParkThingIdentity> Things => _things;
+	private readonly List<ParkThingIdentity> _things = [];
+
 	/// <summary>
 	/// When a thing was built, as the save breaks it down - the eight <c>tv_t</c> dwords a catalogue
 	/// object writes at file offset 22.
@@ -1643,6 +1647,7 @@ public sealed class ParkWorld
 			else if ( model == StaffHqModel )
 				StaffHq = ReadStaffHq( start );
 
+			_things.Add( new( id, model ) );
 			++ThingCount;
 
 			_at = start + size;

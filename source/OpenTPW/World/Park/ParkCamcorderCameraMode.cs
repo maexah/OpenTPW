@@ -475,7 +475,7 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	/// The park's own edge test, built once per park rather than once per frame, and let go of by
 	/// <see cref="Forget"/>. Null for no park, which leaves what is kept alone.
 	/// </summary>
-	internal static Func<int, int, StepDirection, bool>? EdgeTest( ParkWorld? park )
+	internal static Func<int, int, StepDirection, bool>? EdgeTest( IParkInitialState? park )
 	{
 		if ( park == null )
 			return null;
@@ -490,9 +490,9 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	}
 
 	/// <summary>The park <see cref="EdgeTest"/> is kept for, for the debug console's <c>parks</c>.</summary>
-	internal static ParkWorld? EdgeTestPark => _blockedFor;
+	internal static IParkInitialState? EdgeTestPark => _blockedFor;
 
-	private static ParkWorld? _blockedFor;
+	private static IParkInitialState? _blockedFor;
 	private static Func<int, int, StepDirection, bool>? _blocked;
 
 	/// <summary>

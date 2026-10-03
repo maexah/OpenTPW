@@ -98,7 +98,7 @@ internal static class ParkCategoryScreens
 			4 => ("ALL_STAFF_SCREEN", "nothing - it is built and opened above"),
 			6 => ("ALL_VISITORS_SCREEN", "nothing - it is built and opened above"),
 			7 => ("FINANCE_SCREEN", "the monthly cash-in and cost ring buffers, and the year graph"),
-			8 => ("LOANS_SCREEN", "the mLoans[] records, which ParkWorld does not read"),
+			8 => ("LOANS_SCREEN", "the mLoans[] records, which IParkInitialState does not read"),
 			9 => ("STAFF_COSTS_SCREEN", "training budgets, other costs and loan repayments"),
 			_ => ("RESEARCH_SCREEN", "researchers, research groups and per-group research points")
 		};

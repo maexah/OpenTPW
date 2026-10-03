@@ -94,7 +94,7 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// <summary>How many banks of each guest kind the park draws over, or null - see the constructor.</summary>
 	private readonly ParkSpriteBanks? _counts;
 	private string? _themeName;
-	private ParkWorld? _park;
+	private IParkInitialState? _park;
 
 	private Texture? _atlas;
 	private Region? _plain;
@@ -226,7 +226,7 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// them every child and costume bank is packed, as an arrival or a costume may wear any, and a guest is drawn in what
 	/// they wear now (<see cref="LookOf"/>).
 	/// </param>
-	public ParkGuestSprites( string themeName, ParkWorld? park, ParkSpriteBanks? banks = null )
+	public ParkGuestSprites( string themeName, IParkInitialState? park, ParkSpriteBanks? banks = null )
 	{
 		_counts = banks;
 
@@ -260,7 +260,7 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// Reads each bank a sprite in this park wears, and packs their pictures into one texture. Banks are
 	/// numbered within their kind in the order <see cref="BanksIn"/> gives, which is the original's.
 	/// </summary>
-	private void Load( string themeName, ParkWorld park )
+	private void Load( string themeName, IParkInitialState park )
 	{
 		var pictures = new List<SpritePicture>();
 		var placed = new List<(int Type, int Bank, int First, int Count, SpriteBankFile File)>();

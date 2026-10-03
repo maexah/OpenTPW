@@ -233,7 +233,7 @@ public sealed class ParkRides : Entity
 	/// The things already standing in this park, or null where nothing is drawn. It comes last so that a
 	/// caller passing only a file system - which is what every test does - is unaffected.
 	/// </param>
-	public ParkRides( string themeName, ParkWorld? world, ParkItemCatalogue? catalogue, BaseFileSystem? files = null,
+	public ParkRides( string themeName, IParkInitialState? world, ParkItemCatalogue? catalogue, BaseFileSystem? files = null,
 		ParkObjects? objects = null )
 	{
 		ThemeName = themeName;
@@ -256,22 +256,24 @@ public sealed class ParkRides : Entity
 		// Said out loud, because the consequence is silent and looks exactly like the bug this fixes: with
 		// no saved script state every thing starts at its own first instruction and builds itself again.
 		// The model half warns from inside PairSavedThings for the same reason.
-		if ( world.ScriptStates.Problem != null )
+		var saved = world.Save;
+
+		if ( saved?.ScriptStates.Problem != null )
 		{
 			Log.Warning( $"{ThemeName}: the park file's script states would not read, so everything in it "
-				+ $"starts from its own beginning and will replay its construction - {world.ScriptStates.Problem}" );
+				+ $"starts from its own beginning and will replay its construction - {saved.ScriptStates.Problem}" );
 		}
 
-		_saved = PairSavedThings( world, catalogue );
+		_saved = saved == null ? [] : PairSavedThings( saved, catalogue );
 
 		// The moment this load stands for on the clock these scripts and their channels run on. It is the save's
 		// own moment on the save's clock: the engine makes its clock read the saved reading again as the load
 		// ends (FUN_00415140, 0x00415193), so everything the save measured against that clock keeps its distance
 		// from now. See OnThisClock.
 		_loaded = (int)(GameClock.Ticks * MillisecondsPerTick);
-		_clock = world.Clock;
+		_clock = saved?.Clock;
 
-		if ( _clock.Problem != null )
+		if ( _clock?.Problem != null )
 		{
 			Log.Warning( $"{ThemeName}: the park file's clock would not read, so every saved wait, timer and clip "
 				+ $"starts afresh at the load - {_clock.Problem}" );
@@ -279,8 +281,8 @@ public sealed class ParkRides : Entity
 
 		// The scheduler's own state as the park was saved: its tick, so each script keeps the phase of its one turn in
 		// eight, and the next handle, so a script made from here on is numbered past every saved one.
-		if ( world.ScriptStates.Problem == null )
-			Scheduler.Restore( world.ScriptStates.Tick, world.ScriptStates.NextHandle );
+		if ( saved?.ScriptStates is { Problem: null } scripts )
+			Scheduler.Restore( scripts.Tick, scripts.NextHandle );
 
 		// In the order the module holds the scripts, which the engine's reader inserts one by one at the head of its
 		// list (0x005599d3), so that the scheduler's newest-first walk takes their turns as the engine's does. A thing
@@ -289,8 +291,8 @@ public sealed class ParkRides : Entity
 		// could have the counter hand out a handle a script it did not reach was saved under.
 		var saveOrder = new Dictionary<int, int>();
 
-		for ( var at = 0; world.ScriptStates.Problem == null && at < world.ScriptStates.Order.Count; ++at )
-			saveOrder[world.ScriptStates.Order[at]] = at;
+		for ( var at = 0; saved?.ScriptStates.Problem == null && saved != null && at < saved.ScriptStates.Order.Count; ++at )
+			saveOrder[saved.ScriptStates.Order[at]] = at;
 
 		var inSaveOrder = world.Objects
 			.OrderBy( placed => saveOrder.TryGetValue( placed.RideScript, out var at ) ? at : int.MaxValue );
@@ -361,7 +363,8 @@ public sealed class ParkRides : Entity
 				// instruction instead, the Belly Bounce would run WAITANIM 0 0, the construction clip, and hatch
 				// out of its egg on every load.
 				// See ParkScriptStates, and RideScript.ResumeAt for what it refuses.
-				Resume( script, placed, world );
+				if ( saved != null )
+					Resume( script, placed, saved );
 
 				// Its own thing's player where the thing is standing, so that what the script triggers and
 				// what the model is posed from are the same one.
@@ -371,7 +374,7 @@ public sealed class ParkRides : Entity
 
 				// The head table as it was saved, an empty one too, whose length the save gives (FUN_005597a0); after
 				// NodesFor, which sizes a fresh one and gives the heads their nodes. Only where ADDHEAD or DELHEAD reads it.
-				if ( script.UsesHeads && world.ScriptStates.For( placed.RideScript ) is { Heads: { } heads } )
+				if ( script.UsesHeads && saved?.ScriptStates.For( placed.RideScript ) is { Heads: { } heads } )
 					script.RestoreHeads( heads );
 
 				if ( script.Animations.Loaded > 0 )
@@ -522,7 +525,7 @@ public sealed class ParkRides : Entity
 	/// screen agree with <c>mParkClosed</c>.
 	/// </para>
 	/// </summary>
-	private void CommandTheGate( ParkWorld world )
+	private void CommandTheGate( IParkInitialState world )
 	{
 		var id = ScriptFor( world.ParkGates );
 
@@ -570,7 +573,7 @@ public sealed class ParkRides : Entity
 	/// and is deliberately not the same as a gate that is shut.
 	/// </para>
 	/// </summary>
-	public int GateStatus( ParkWorld? world )
+	public int GateStatus( IParkInitialState? world )
 	{
 		if ( world == null )
 			return NoGate;

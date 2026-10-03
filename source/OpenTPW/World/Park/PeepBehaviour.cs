@@ -73,7 +73,7 @@ public sealed class PeepBehaviour
 	/// reads (<c>FUN_004fd4e0</c>, <c>0x004fd50a</c>). Null scores with <see cref="ParkRideScore"/>'s own
 	/// fallbacks, which prefer 50 for every type.
 	/// </param>
-	public PeepBehaviour( ParkWorld? park, Random? random = null,
+	public PeepBehaviour( IParkInitialState? park, Random? random = null,
 		ParkAdmission? admission = null, Func<int>? gateStatus = null, ParkState? state = null,
 		ParkItemCatalogue? catalogue = null,
 		Func<ParkWorld.CatalogueObject, int, bool>? admit = null,
@@ -202,7 +202,7 @@ public sealed class PeepBehaviour
 	/// chose, and where its queue ends. Null leaves a guest unable to join one, which is the same answer
 	/// a null park gives everywhere else here.
 	/// </summary>
-	private readonly ParkWorld? _park;
+	private readonly IParkInitialState? _park;
 
 	/// <summary>What the chosen thing actually is, for the excitement a guest turns away from.</summary>
 	private readonly ParkItemCatalogue? _catalogue;
@@ -218,7 +218,7 @@ public sealed class PeepBehaviour
 	/// else in the park's people, which is why they are reached through here.
 	/// </para>
 	/// </summary>
-	internal ParkWorld? Park => _park;
+	internal IParkInitialState? Park => _park;
 
 	/// <inheritdoc cref="Park"/>
 	internal ParkItemCatalogue? Catalogue => _catalogue;

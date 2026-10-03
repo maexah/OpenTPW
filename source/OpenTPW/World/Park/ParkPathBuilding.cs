@@ -438,7 +438,7 @@ public static class ParkPathBuilding
 	/// One square of the queue tool's preview - the queue arm of <c>FUN_00535670</c>, as far as it is
 	/// decoded. It answers only blue, red, <c>m_link</c> and <c>m_end</c>.
 	/// </summary>
-	private static (int Marker, string? Why) Verdict( ParkState state, ParkWorld park, int x, int y, int serves,
+	private static (int Marker, string? Why) Verdict( ParkState state, IParkInitialState park, int x, int y, int serves,
 		bool last, int price, ref int owed )
 	{
 		if ( !ParkState.OnMap( x, y ) )
@@ -539,7 +539,7 @@ public static class ParkPathBuilding
 		return PathStrip( state, park, toX, toY, CellCost( level ) );
 	}
 
-	internal static List<QueueSquare> PathStrip( ParkState state, ParkWorld park, int toX, int toY, int price )
+	internal static List<QueueSquare> PathStrip( ParkState state, IParkInitialState park, int toX, int toY, int price )
 	{
 		var strip = new List<QueueSquare>();
 		var (fromX, fromY) = ParkBuildMode.Anchored ? ParkBuildMode.Anchor : (toX, toY);
@@ -573,7 +573,7 @@ public static class ParkPathBuilding
 	/// The original's <c>d50</c>/<c>d58</c>: once one square refuses in a way that latches, every square
 	/// after it is red. Outside-the-park land and an unknown cell type refuse without latching.
 	/// </param>
-	private static (int Marker, string? Why, bool Unaffordable) PathVerdict( ParkState state, ParkWorld park,
+	private static (int Marker, string? Why, bool Unaffordable) PathVerdict( ParkState state, IParkInitialState park,
 		int x, int y, bool last, int price, ref int owed, ref bool latched )
 	{
 		var cell = ParkState.CellFor( park, x, y );
@@ -655,7 +655,7 @@ public static class ParkPathBuilding
 	/// The track record a cell answers by: its own (<c>FUN_004d0af0</c>), or for a track cell of type 12
 	/// or 17, its parent's - a redirect each caller makes inline after that fetch (<c>0x00535811</c>).
 	/// </summary>
-	private static ParkWorld.MapCell TrackRecord( ParkWorld park, ParkWorld.MapCell cell )
+	private static ParkWorld.MapCell TrackRecord( IParkInitialState park, ParkWorld.MapCell cell )
 	{
 		if ( !CellEdge.TrackDefersToParent( cell.TrackType ) || cell.TrackParentId == 0 )
 			return cell;
@@ -766,7 +766,7 @@ public static class ParkPathBuilding
 	/// is nought: the original writes the selected thing's cell (op <c>0x83</c>), and a click on grass
 	/// selects nothing - inferred, not traced.
 	/// </remarks>
-	internal static (int Laid, bool Ended) LayPathRun( ParkState state, ParkWorld park, int fromX, int fromY,
+	internal static (int Laid, bool Ended) LayPathRun( ParkState state, IParkInitialState park, int fromX, int fromY,
 		int toX, int toY, int price )
 	{
 		var steps = Math.Max( Math.Abs( toX - fromX ), Math.Abs( toY - fromY ) );
@@ -866,7 +866,7 @@ public static class ParkPathBuilding
 	/// −1), so a cell laid over twice needs three. A NOMODIFY cell with links is never removed; one with
 	/// none gives up the flag and goes. Nothing is refunded. Answers whether the cell went.
 	/// </summary>
-	internal static bool ClearPathCell( ParkState state, ParkWorld park, int x, int y, bool stepped )
+	internal static bool ClearPathCell( ParkState state, IParkInitialState park, int x, int y, bool stepped )
 	{
 		if ( !ParkState.OnMap( x, y ) )
 			return false;
@@ -923,7 +923,7 @@ public static class ParkPathBuilding
 	}
 
 	/// <summary>The clear, pressed once on every cell of the line from a run's end back to its start.</summary>
-	internal static int UndoRun( ParkState state, ParkWorld park, (int X, int Y) end, (int X, int Y) start )
+	internal static int UndoRun( ParkState state, IParkInitialState park, (int X, int Y) end, (int X, int Y) start )
 	{
 		var steps = Math.Max( Math.Abs( start.X - end.X ), Math.Abs( start.Y - end.Y ) );
 		var (acrossBy, downBy) = (Math.Sign( start.X - end.X ), Math.Sign( start.Y - end.Y ));
@@ -974,7 +974,7 @@ public static class ParkPathBuilding
 	/// has already pointed at its ride keeps that heading rather than being turned round by the run.
 	/// Internal so that a test can lay a run on real ground without a loaded level.
 	/// </remarks>
-	internal static int StampQueueCell( ParkState state, ParkWorld park, int x, int y, int fromX, int fromY,
+	internal static int StampQueueCell( ParkState state, IParkInitialState park, int x, int y, int fromX, int fromY,
 		ParkWorld.CatalogueObject serves, bool firstOfRun )
 	{
 		var flow = FlowFrom( fromX, fromY, x, y );
@@ -1004,7 +1004,7 @@ public static class ParkPathBuilding
 	/// <c>FUN_005367a0</c> under force: the neighbours lose their bits toward it, then its mask, flow
 	/// byte, flags and owner go, whatever NOMODIFY said. No refund. Does nothing to any other cell.
 	/// </summary>
-	internal static void ForceClearPath( ParkState state, ParkWorld park, int x, int y )
+	internal static void ForceClearPath( ParkState state, IParkInitialState park, int x, int y )
 	{
 		if ( !ParkState.OnMap( x, y ) || ParkState.CellFor( park, x, y ).Type != PathType )
 			return;
@@ -1037,7 +1037,7 @@ public static class ParkPathBuilding
 	/// Nothing else: a queue cell never links to a path, an exit or another ride's cells beside it, so a
 	/// queue laid along a path does not leak into it.
 	/// </remarks>
-	private static void LinkQueueCell( ParkState state, ParkWorld park, int x, int y, int fromX, int fromY,
+	private static void LinkQueueCell( ParkState state, IParkInitialState park, int x, int y, int fromX, int fromY,
 		int owner, ParkWorld.CatalogueObject serves, bool firstOfRun )
 	{
 		if ( firstOfRun )
@@ -1086,7 +1086,7 @@ public static class ParkPathBuilding
 	/// The first cell of a queue run bonds to the ride's own entrance when it is beside it and the
 	/// entrance's direction byte points straight at it (<c>0x0053525a</c>..<c>0x00535323</c>).
 	/// </summary>
-	private static void BondToEntrance( ParkState state, ParkWorld park, int x, int y, ParkWorld.CatalogueObject serves )
+	private static void BondToEntrance( ParkState state, IParkInitialState park, int x, int y, ParkWorld.CatalogueObject serves )
 	{
 		if ( serves.EntryPos == 0 )
 			return;
@@ -1121,7 +1121,7 @@ public static class ParkPathBuilding
 	/// <b>The shipped park carries the owner as a fingerprint</b>: of Lost Kingdom's 78 path cells, only
 	/// (48,22) - where the Belly Bounce's queue meets the path - names an owner, the ride's own 2996.
 	/// </remarks>
-	internal static void JoinQueueToPath( ParkState state, ParkWorld park, int queueX, int queueY, int pathX, int pathY,
+	internal static void JoinQueueToPath( ParkState state, IParkInitialState park, int queueX, int queueY, int pathX, int pathY,
 		ParkWorld.CatalogueObject serves )
 	{
 		var owner = MapStep.CellId( serves.CellX, serves.CellY );
@@ -1213,7 +1213,7 @@ public static class ParkPathBuilding
 	}
 
 	/// <summary>Clears the mutual link between a queue's last cell and any path beside it, and redraws both.</summary>
-	internal static void DetachFromPath( ParkState state, ParkWorld park, int x, int y )
+	internal static void DetachFromPath( ParkState state, IParkInitialState park, int x, int y )
 	{
 		foreach ( var (bit, acrossBy, downBy) in Sides )
 		{
@@ -1259,7 +1259,7 @@ public static class ParkPathBuilding
 	/// so the Belly Bounce's four return three.
 	/// </para>
 	/// </remarks>
-	internal static int DrainQueue( ParkState state, ParkWorld park, ParkWorld.CatalogueObject placed )
+	internal static int DrainQueue( ParkState state, IParkInitialState park, ParkWorld.CatalogueObject placed )
 	{
 		var (_, cached) = ParkRideChoice.QueueCellsFor( park, placed );
 		var pending = QueueEnds( state, park, placed );
@@ -1326,7 +1326,7 @@ public static class ParkPathBuilding
 	/// <see cref="ParkState.LongestQueue"/> cells, which keeps the list inside that.
 	/// </para>
 	/// </remarks>
-	internal static List<(int X, int Y)> QueueEnds( ParkState state, ParkWorld park, ParkWorld.CatalogueObject placed )
+	internal static List<(int X, int Y)> QueueEnds( ParkState state, IParkInitialState park, ParkWorld.CatalogueObject placed )
 	{
 		var ends = new List<(int X, int Y)>();
 		var (x, y) = (placed.EntryCellX, placed.EntryCellY);
@@ -1454,7 +1454,7 @@ public static class ParkPathBuilding
 	/// (<c>0x00536a07</c>), with no unlink of the cells beside it; a bare cell is left alone (<c>0x005367ed</c>). Op <c>0x86</c> answers
 	/// only track types a queue never carries.
 	/// </remarks>
-	private static int ClearQueueLine( ParkState state, ParkWorld park, int fromX, int fromY, int toX, int toY, int price )
+	private static int ClearQueueLine( ParkState state, IParkInitialState park, int fromX, int fromY, int toX, int toY, int price )
 	{
 		var alongX = Math.Abs( toX - fromX ) > Math.Abs( toY - fromY );
 		var steps = alongX ? Math.Abs( toX - fromX ) : Math.Abs( toY - fromY );
@@ -1600,7 +1600,7 @@ public static class ParkPathBuilding
 	/// <summary>
 	/// Clears this cell's bit from every neighbour it was joined to, and retiles each of them.
 	/// </summary>
-	internal static void Unlink( ParkState state, ParkWorld park, int x, int y )
+	internal static void Unlink( ParkState state, IParkInitialState park, int x, int y )
 	{
 		var cell = ParkState.CellFor( park, x, y );
 
@@ -1628,7 +1628,7 @@ public static class ParkPathBuilding
 	/// detaches for the same reason.
 	/// </para>
 	/// </summary>
-	internal static void RetileAround( ParkState state, ParkWorld park, int x, int y )
+	internal static void RetileAround( ParkState state, IParkInitialState park, int x, int y )
 	{
 		Retile( state, park, x, y );
 
@@ -1655,7 +1655,7 @@ public static class ParkPathBuilding
 	/// back.
 	/// </para>
 	/// </remarks>
-	internal static void Retile( ParkState state, ParkWorld park, int x, int y )
+	internal static void Retile( ParkState state, IParkInitialState park, int x, int y )
 	{
 		var cell = ParkState.CellFor( park, x, y );
 		var queue = cell.Type == ParkRideChoice.QueueCellType;
@@ -1711,7 +1711,7 @@ public static class ParkPathBuilding
 	/// original refuses.
 	/// </para>
 	/// </remarks>
-	private static int PathLinks( ParkWorld park, int x, int y, ParkWorld.MapCell cell )
+	private static int PathLinks( IParkInitialState park, int x, int y, ParkWorld.MapCell cell )
 	{
 		var links = 0;
 

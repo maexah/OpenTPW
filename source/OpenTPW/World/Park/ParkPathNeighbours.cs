@@ -65,28 +65,34 @@ public static class ParkPathNeighbours
 	/// families read different fields, but not what the original does.
 	/// </para>
 	/// </summary>
-	public static void LinkPath( ParkState state, ParkWorld park, int x, int y )
+	public static void LinkPath( ParkState state, IParkInitialState park, int x, int y )
 	{
 		if ( state == null || park == null || !ParkState.OnMap( x, y ) )
 			return;
 
+		LinkPath( (cx, cy) => ParkState.CellFor( park, cx, cy ), state.SetRecord, x, y );
+	}
+
+	internal static void LinkPath( Func<int, int, ParkWorld.MapCell> read,
+		Action<int, int, ParkWorld.MapCell> write, int x, int y )
+	{
 		// A path laid over a queue cell DEMOTES it before any neighbour work - the original does this
 		// at the top of the same function (0x00534906..0x00534913), so it happens in the linker as well as
 		// in the stamp. It writes the type and nothing else: the direction, the flags and the owner stay.
-		var self = ParkState.CellFor( park, x, y );
+		var self = read( x, y );
 
 		if ( self.Type == QueueType )
-			state.SetRecord( x, y, self with { Type = PathType } );
+			write( x, y, self with { Type = PathType } );
 
 		foreach ( var (bit, acrossBy, downBy) in Ring )
 		{
 			if ( IsCardinal( bit ) )
-				Cardinal( state, park, x, y, bit, acrossBy, downBy );
+				Cardinal( read, write, x, y, bit, acrossBy, downBy );
 			else
-				StrictDiagonal( state, park, x, y, bit, acrossBy, downBy );
+				StrictDiagonal( read, write, x, y, bit, acrossBy, downBy );
 		}
 
-		Prune( state, park, x, y );
+		Prune( read, write, x, y );
 	}
 
 	/// <summary>
@@ -101,7 +107,7 @@ public static class ParkPathNeighbours
 	/// only lets the neighbour retile. A link is symmetric: this cell gains D and the neighbour gains
 	/// the opposite bit.
 	/// </remarks>
-	private static void Cardinal( ParkState state, ParkWorld park, int x, int y,
+	private static void Cardinal( Func<int, int, ParkWorld.MapCell> read, Action<int, int, ParkWorld.MapCell> write, int x, int y,
 		int bit, int acrossBy, int downBy )
 	{
 		var (nx, ny) = (x + acrossBy, y + downBy);
@@ -109,7 +115,7 @@ public static class ParkPathNeighbours
 		if ( !ParkState.OnMap( nx, ny ) )
 			return;
 
-		var nb = ParkState.CellFor( park, nx, ny );
+		var nb = read( nx, ny );
 		var back = CellEdge.Opposite( bit );
 
 		// A queue already joined this way is retiled - which the caller's RetileAround does - with a
@@ -128,12 +134,12 @@ public static class ParkPathNeighbours
 		if ( !links )
 			return;
 
-		var self = ParkState.CellFor( park, x, y );
+		var self = read( x, y );
 
-		state.SetRecord( x, y, self with { Neighbours = (byte)(self.Neighbours | bit) } );
-		state.SetRecord( nx, ny, nb with { Neighbours = (byte)(nb.Neighbours | back) } );
+		write( x, y, self with { Neighbours = (byte)(self.Neighbours | bit) } );
+		write( nx, ny, nb with { Neighbours = (byte)(nb.Neighbours | back) } );
 
-		WeakFixUp( state, park, nx, ny, back );
+		WeakFixUp( read, write, nx, ny, back );
 	}
 
 	/// <summary>
@@ -146,7 +152,7 @@ public static class ParkPathNeighbours
 	/// <b>not a queue and not a ride entrance</b> here, where the strict rule below demands it be path.
 	/// </para>
 	/// </summary>
-	private static void WeakFixUp( ParkState state, ParkWorld park, int nx, int ny, int back )
+	private static void WeakFixUp( Func<int, int, ParkWorld.MapCell> read, Action<int, int, ParkWorld.MapCell> write, int nx, int ny, int back )
 	{
 		var at = IndexOf( back );
 
@@ -160,17 +166,17 @@ public static class ParkPathNeighbours
 			if ( !ParkState.OnMap( nx + dax, ny + day ) || !ParkState.OnMap( nx + iax, ny + iay ) )
 				continue;
 
-			if ( ParkState.CellFor( park, nx + dax, ny + day ).Type != PathType )
+			if ( read( nx + dax, ny + day ).Type != PathType )
 				continue;
 
-			var between = ParkState.CellFor( park, nx + iax, ny + iay ).Type;
+			var between = read( nx + iax, ny + iay ).Type;
 
 			if ( between == QueueType || between == CellEdge.RideEnd )
 				continue;
 
-			var nb = ParkState.CellFor( park, nx, ny );
+			var nb = read( nx, ny );
 
-			state.SetRecord( nx, ny, nb with { Neighbours = (byte)(nb.Neighbours | diag) } );
+			write( nx, ny, nb with { Neighbours = (byte)(nb.Neighbours | diag) } );
 		}
 	}
 
@@ -178,7 +184,7 @@ public static class ParkPathNeighbours
 	/// One diagonal, by the strict rule: the diagonal cell <b>and both cells between</b> must all be
 	/// path, all three looked up from this cell, and the pair that results is symmetric.
 	/// </summary>
-	private static void StrictDiagonal( ParkState state, ParkWorld park, int x, int y,
+	private static void StrictDiagonal( Func<int, int, ParkWorld.MapCell> read, Action<int, int, ParkWorld.MapCell> write, int x, int y,
 		int bit, int acrossBy, int downBy )
 	{
 		var at = IndexOf( bit );
@@ -190,15 +196,15 @@ public static class ParkPathNeighbours
 			if ( !ParkState.OnMap( x + dx, y + dy ) )
 				return;
 
-			if ( ParkState.CellFor( park, x + dx, y + dy ).Type != PathType )
+			if ( read( x + dx, y + dy ).Type != PathType )
 				return;
 		}
 
-		var self = ParkState.CellFor( park, x, y );
-		var far = ParkState.CellFor( park, x + acrossBy, y + downBy );
+		var self = read( x, y );
+		var far = read( x + acrossBy, y + downBy );
 
-		state.SetRecord( x, y, self with { Neighbours = (byte)(self.Neighbours | bit) } );
-		state.SetRecord( x + acrossBy, y + downBy,
+		write( x, y, self with { Neighbours = (byte)(self.Neighbours | bit) } );
+		write( x + acrossBy, y + downBy,
 			far with { Neighbours = (byte)(far.Neighbours | CellEdge.Opposite( bit )) } );
 	}
 
@@ -212,19 +218,19 @@ public static class ParkPathNeighbours
 	/// clears NE and SE, south clears SE and SW, west clears NW and SW.
 	/// </para>
 	/// </summary>
-	private static void Prune( ParkState state, ParkWorld park, int x, int y )
+	private static void Prune( Func<int, int, ParkWorld.MapCell> read, Action<int, int, ParkWorld.MapCell> write, int x, int y )
 	{
 		foreach ( var (bit, acrossBy, downBy) in Ring )
 		{
 			if ( !IsCardinal( bit ) )
 				continue;
 
-			var self = ParkState.CellFor( park, x, y );
+			var self = read( x, y );
 
 			if ( (self.Neighbours & bit) == 0 || !ParkState.OnMap( x + acrossBy, y + downBy ) )
 				continue;
 
-			var target = ParkState.CellFor( park, x + acrossBy, y + downBy ).Type;
+			var target = read( x + acrossBy, y + downBy ).Type;
 
 			if ( target != QueueType && target != CellEdge.RideEnd )
 				continue;
@@ -232,7 +238,7 @@ public static class ParkPathNeighbours
 			var at = IndexOf( bit );
 			var clear = Ring[(at + 1) % 8].Bit | Ring[(at + 7) % 8].Bit;
 
-			state.SetRecord( x, y, self with { Neighbours = (byte)(self.Neighbours & ~clear) } );
+			write( x, y, self with { Neighbours = (byte)(self.Neighbours & ~clear) } );
 		}
 	}
 

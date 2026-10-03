@@ -198,7 +198,7 @@ public sealed class ParkObjects : Entity
 	/// the same items and reading every item's description twice would be careless - the same reason the
 	/// park file itself is read once.
 	/// </param>
-	public ParkObjects( string themeName, ParkWorld? world, ParkItemCatalogue? catalogue )
+	public ParkObjects( string themeName, IParkInitialState? world, ParkItemCatalogue? catalogue )
 	{
 		ThemeName = themeName;
 		Name = $"{themeName} objects";

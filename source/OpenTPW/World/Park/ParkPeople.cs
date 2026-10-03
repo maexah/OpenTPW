@@ -187,7 +187,7 @@ public sealed class ParkPeople : Entity
 	/// <param name="behaviourRandom">Guest decisions; null keeps an independent runtime generator.</param>
 	/// <param name="rideRandom">Ride settlement choices; null keeps an independent runtime generator.</param>
 	/// <param name="staffRandom">Staff decisions; null keeps an independent runtime generator.</param>
-	public ParkPeople( ParkWorld? park, ParkBalance? balance = null, System.Func<int>? gateStatus = null,
+	public ParkPeople( IParkInitialState? park, ParkBalance? balance = null, System.Func<int>? gateStatus = null,
 		ParkState? state = null, ParkItemCatalogue? catalogue = null,
 		System.Func<int, RideScript?>? scriptFor = null, Random? random = null, ParkSpriteBanks? banks = null,
 		Random? behaviourRandom = null, Random? rideRandom = null, Random? staffRandom = null )
@@ -1449,7 +1449,7 @@ public sealed class ParkPeople : Entity
 	/// the file system.
 	/// </para>
 	/// </summary>
-	internal static List<Peep> PeepsIn( ParkWorld? park )
+	internal static List<Peep> PeepsIn( IParkInitialState? park )
 		=> park == null
 			? []
 			: [.. park.People
@@ -1464,7 +1464,7 @@ public sealed class ParkPeople : Entity
 	/// Every member of staff the save named, as a running copy - the five kinds of person that are not
 	/// model 1.
 	/// </summary>
-	internal static List<Staff> StaffIn( ParkWorld? park )
+	internal static List<Staff> StaffIn( IParkInitialState? park )
 		=> park == null
 			? []
 			: [.. park.People

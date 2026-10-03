@@ -73,7 +73,7 @@ public static class DebugConsole
 	/// Every park save seen up, in the order they came, with the hiring pool its level built, each held WEAKLY so
 	/// that watching one cannot be what keeps it alive - see <see cref="Parks"/>.
 	/// </summary>
-	private static readonly List<(int Number, string Theme, WeakReference<ParkWorld> Save,
+	private static readonly List<(int Number, string Theme, WeakReference<IParkInitialState> Save,
 		WeakReference<ParkStaffPool>? Pool)> _parks = [];
 
 	/// <summary>
@@ -95,7 +95,7 @@ public static class DebugConsole
 				return;
 		}
 
-		_parks.Add( (_parks.Count + 1, level.ThemeName, new WeakReference<ParkWorld>( save ),
+		_parks.Add( (_parks.Count + 1, level.ThemeName, new WeakReference<IParkInitialState>( save ),
 			level.StaffPool is { } pool ? new WeakReference<ParkStaffPool>( pool ) : null) );
 	}
 

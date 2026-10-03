@@ -245,6 +245,24 @@ public sealed class ParkItemCatalogue
 			+ (InstantAction ? $", {leftOut} left out of Instant Action" : "") );
 	}
 
+	/// <summary>FUN_0051fa20: item emitters occupy the first unnamed library slots, in catalogue order.</summary>
+	internal void RegisterParticleEffects( ParticleLibraryFile? library )
+	{
+		if ( library == null )
+			return;
+
+		foreach ( var item in All )
+		{
+			foreach ( var path in _files.GetFiles( item.Directory ).Where( path =>
+				Path.GetExtension( path ).Equals( ".emt", StringComparison.OrdinalIgnoreCase ) ) )
+			{
+				using var stream = _files.OpenRead( path );
+				var slot = library.RegisterEffect( stream );
+				Log.Info( $"Particle catalogue: {path} -> slot {slot}" );
+			}
+		}
+	}
+
 	/// <summary>
 	/// Reads one item's description, or answers false if that directory does not hold one - which is not
 	/// an error worth a line of its own, because these folders can hold things that are not items.
