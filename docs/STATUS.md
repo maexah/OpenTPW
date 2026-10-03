@@ -108,13 +108,13 @@ together, not started alone. Until then Q197. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md
 | | | measured |
 |---|---|---|
 | Opcodes | **77** of 106 | 2026-10-01, `case Opcode.` labels vs enum members, after Q87 |
-| Tests | **1596**, 0 fail, 0 skip with the game | 2026-10-03, preservation and timing |
+| Tests | **1597**, 0 fail, 0 skip with the game | 2026-10-03, review follow-up |
 | Tests without the game | **647** ran, **928** skipped, of 1575 | 2026-10-01, after Q87 |
 | Build warnings | 123 | 2026-10-01, after Q87 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
 
-**2026-10-03 (review).** Q150 admission discrepancy reproduced through production updates; remains open. Unread player profiles/options stay read-only, including failed-load fallbacks; destinations are rechecked. 18 preservation cases pass; removing the guards fails seven. A copied Full Simulation profile saves normally, and its damaged copy stays unchanged. This is OpenTPW's preservation policy.
+**2026-10-03 (review).** Q150 admission discrepancy reproduced; remains open. Seeded guest/staff/ride replay now compares 400 updates. Unread player profiles/options stay read-only, including failed-load fallbacks; destinations are rechecked. 18 preservation cases pass; removing the guards fails seven. A copied Full Simulation profile saves normally, and its damaged copy stays unchanged. This is OpenTPW's preservation policy.
 
 **2026-10-03 (Q205).** `alexah/244-queue-history`: the 115 ticked items moved, verbatim and by script, from `QUEUE.md` (530 KB, now 108 KB) to `history/queue-done.md`; all 238 Q-numbers resolve once across the two. **Earlier:** `242` (Q87), `241` (Q116), `240` (Q118), `239` (Q106), `238` (Q196), `236` (Q195), `235` (Q194), `234` (Q193), `233` (Q203), `232` (Q202), `231` (Q202 queued), `230` (Q192), `229` (Q191), `228` (heads follow), `227` (Q190), `226` (Q189), `225` (Q187), `224` (Q186), `223` (Q185), `222` (Q183), `220` (Q182b), `218` (Q182), `217` (Q181b), `216` (Q181), `215` (Q180), `214` (heads), `213` (Q179d), `212` (Q179c), `209`-`211` (Q179b), `208` (Q179c queued), `207` (Q179), `206` (Q201b), `205` (Q201), `204` (Q178b), `203` (Q178), `202` (Q200b), `201` (Q200), `200` (Q199), `199` (Q198b), `198` (Q198), `197` (Q177f), `196` (Q177e), `195` (Q177d), `194` (Q177c, Q96), `193` (the fork review), `192` (Q177b), `191` (Q177), `190` (Q176), `189`, `188` (Q184), `187` (Q175b), `186` (Q175), `185` (Q168), `184` (FileFormats rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.

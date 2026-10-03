@@ -1850,3 +1850,16 @@ future script state because all ride ticks have already run. The test asserts th
 Q150 discrepancy, not correct behaviour. Replace its unequal expectations when the scheduler
 is repaired. This isolates admission timing; it does not establish that every subsystem
 should be partition-invariant (frame animation and original script time have separate rules).
+
+## Repeatable OpenTPW simulation tests (2026-10-03)
+
+`ParkPeople` accepts separate optional arrival, guest-decision, ride-settlement and staff
+random generators. Omitted arguments retain separate default generators. This is a test
+control for the current simulation, not a reconstruction of the original shared RNG.
+`ParkReplayTests` runs 400 eight-tick updates per replay, comparing guest/staff state,
+positions, destinations, cash, happiness and appearance after every update. Every supplied
+random stream must actually draw; a costume-shop dismissal exercises ride settlement.
+Identical seeds and frame inputs reproduce the trace; different seeds change it. Removing
+random injection fails the test. `SimulationClockScope` restores frame/tick clock internals.
+This does not prove determinism of weather, rendering, audio or a complete `Level` session,
+and does not require different frame partitions to agree while Q150 is open.

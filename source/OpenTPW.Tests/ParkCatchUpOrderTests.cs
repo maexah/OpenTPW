@@ -46,21 +46,27 @@ public class ParkCatchUpOrderTests
 		var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
 		using var clock = new SimulationClockScope();
 		var previousState = ParkState.Current;
-		var state = new ParkState( world );
-		var initialTick = state.GameTick;
-		var script = AcceptOnSecondTurn();
-		var rides = new ParkRides( "jungle", null, null );
-		rides.Scheduler.Add( 1, script ); // Eligible at ticks 1 and 9.
-		Peep? guest = null;
-		int? admittedAt = null;
-		var people = new ParkPeople( world, state: state, scriptFor: id =>
-		{
-			if ( guest?.State == PeepState.Riding ) admittedAt ??= state.GameTick - initialTick;
-			return id == 13 ? script : null;
-		}, random: new Random( 1 ) );
+		var previousPeople = ParkPeople.Current;
+		var previousRides = ParkRides.Current;
+		ParkRides? rides = null;
+		ParkPeople? people = null;
 		try
 		{
-			guest = people.Peeps.First();
+			var state = new ParkState( world );
+			var initialTick = state.GameTick;
+			var script = AcceptOnSecondTurn();
+			rides = new ParkRides( "jungle", null, null );
+			rides.Scheduler.Add( 1, script ); // Eligible at ticks 1 and 9.
+			Peep? guest = null;
+			int? admittedAt = null;
+			people = new ParkPeople( world, state: state, scriptFor: id =>
+			{
+				if ( guest?.State == PeepState.Riding ) admittedAt ??= state.GameTick - initialTick;
+				return id == 13 ? script : null;
+			}, random: new Random( 1 ), behaviourRandom: new Random( 2 ),
+				rideRandom: new Random( 3 ), staffRandom: new Random( 4 ) );
+
+			guest = people.Peeps.Single( peep => peep.ThingId == 29 );
 			var id = guest.ThingId;
 			guest.MajorDest = 13;
 			guest.SetState( PeepState.EnteringRide, 0, new Random( 1 ) );
@@ -84,9 +90,11 @@ public class ParkCatchUpOrderTests
 		}
 		finally
 		{
-			people.Delete();
-			rides.Delete();
+			people?.Delete();
+			rides?.Delete();
 			Entity.ApplyDeletions();
+			typeof( ParkPeople ).GetProperty( "Current", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic )!.SetValue( null, previousPeople );
+			typeof( ParkRides ).GetProperty( nameof( ParkRides.Current ) )!.SetValue( null, previousRides );
 			typeof( ParkState ).GetProperty( nameof( ParkState.Current ) )!.SetValue( null, previousState );
 		}
 	}

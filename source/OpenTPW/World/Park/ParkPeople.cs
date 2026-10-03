@@ -137,7 +137,7 @@ public sealed class ParkPeople : Entity
 	/// consults, and a shop's docks on its ingredient as a guest leaves (<see cref="ParkRideOperation.Dismiss"/>), which
 	/// the original draws from the park's one generator.
 	/// </summary>
-	private readonly Random _rideRandom = new();
+	private readonly Random _rideRandom;
 
 	/// <summary>What an arriving guest's kind and base speed are drawn with - see <see cref="Admit"/>. A test seeds it.</summary>
 	private readonly Random _arrivalRandom;
@@ -184,13 +184,18 @@ public sealed class ParkPeople : Entity
 	/// (<see cref="ParkSpriteBanks.Read"/>). Null counts none: every arrival a child of bank nought, a costume and a
 	/// balloon's colour drawn over nothing, and a balloon's life with no balloon to show.
 	/// </param>
+	/// <param name="behaviourRandom">Guest decisions; null keeps an independent runtime generator.</param>
+	/// <param name="rideRandom">Ride settlement choices; null keeps an independent runtime generator.</param>
+	/// <param name="staffRandom">Staff decisions; null keeps an independent runtime generator.</param>
 	public ParkPeople( ParkWorld? park, ParkBalance? balance = null, System.Func<int>? gateStatus = null,
 		ParkState? state = null, ParkItemCatalogue? catalogue = null,
-		System.Func<int, RideScript?>? scriptFor = null, Random? random = null, ParkSpriteBanks? banks = null )
+		System.Func<int, RideScript?>? scriptFor = null, Random? random = null, ParkSpriteBanks? banks = null,
+		Random? behaviourRandom = null, Random? rideRandom = null, Random? staffRandom = null )
 	{
 		_scriptFor = scriptFor;
 		_banks = banks ?? new ParkSpriteBanks( 0, 0, 0 );
 		_arrivalRandom = random ?? new Random();
+		_rideRandom = rideRandom ?? new Random();
 
 		_peeps = PeepsIn( park );
 
@@ -245,7 +250,7 @@ public sealed class ParkPeople : Entity
 		// admission needs both halves that PeepBehaviour lacks - the ride's script, and the park's guests
 		// by thing id - and handing it a delegate keeps the guest's turn from depending on ride operation
 		// for anything more than a yes or no.
-		_behaviour = new PeepBehaviour( park, random: null, admission, gateStatus, state, catalogue,
+		_behaviour = new PeepBehaviour( park, behaviourRandom, admission, gateStatus, state, catalogue,
 			( ride, personId ) => new ParkRideOperation( State, Guests )
 				.AdmitPerson( _scriptFor?.Invoke( ride.ThingId ), ride, personId ),
 			( ride, tick ) => new ParkRideOperation( State, Guests )
@@ -282,7 +287,7 @@ public sealed class ParkPeople : Entity
 		// Staff take the balance stack alone: every constant they run on is a per-grade entry in it, and
 		// none of what a guest needs - the fee, the gate - means anything to them.
 		_staff = StaffIn( park );
-		_staffBehaviour = new StaffBehaviour( balance, random: null, State );
+		_staffBehaviour = new StaffBehaviour( balance, staffRandom, State );
 
 		// A cell edit that measures a queue again tells the people in it - see QueueRemeasured - and the
 		// park's door closes and opens the rides through their scripts - see DoorMoved.
