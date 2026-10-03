@@ -4004,6 +4004,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Completed on `alexah/258-q86-path-clear-queue`; decode, runtime evidence and reachability limits in
   `docs/exe/ride-operation.md`, "Q86: clearing a path joined to an entrance". Normal placement reaches an empty
   queue; populated-queue release confirmed with explicit instrumentation.
+- [x] **Q89. Decode the park door's gate command and empty-park census.** Done 2026-10-03,
+  `alexah/259-q89-gate-decode`. Decode only; implementation and game confirmation are Q89b.
+  `docs/exe/park-gate.md`: command **0** ordinary close, **2** end sequence ending in a permanent
+  yield loop; guest kind 1 on cell types **0, 1, 3, 9, 10**. The delayed writer checks every **30**
+  world sweeps and also waits for state-byte-0 staff outside those types; the immediate close does not.
+  Hash-matched private Ghidra; **4/4** gate scripts freshly extracted, **308/308** corpus scripts parsed.
+  No runtime confirmation claimed.
 
 ## B. Docs and comments
 

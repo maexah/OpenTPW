@@ -33,7 +33,7 @@ Last updated: 2026-10-03. **This header names no branch and no sha, deliberately
 
 ## Next
 
-`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next **Q89**, decode the park door’s gate command and its empty-park census; decode only next session. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. **Q188 remains on hold** until Alexah says otherwise. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
+`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next **Q89b**, implement the decoded park door and delayed gate close (`docs/exe/park-gate.md`); Q89 was decode only. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. **Q188 remains on hold** until Alexah says otherwise. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
@@ -58,6 +58,8 @@ Last updated: 2026-10-03. **This header names no branch and no sha, deliberately
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
+
+**2026-10-03 (Q89).** Gate commands decoded, not built: **0** ordinary close, **2** end sequence with a terminal yield loop. Guest census uses cell types **0/1/3/9/10**; a newly traced **30-world-sweep** retry also waits for staff outside. Private Ghidra identity verified, four gate scripts freshly extracted and 308-script corpus checked. `docs/exe/park-gate.md`; implementation, regression mutation and runtime screenshot/census remain Q89b.
 
 **2026-10-03 (Q86).** Path clears remeasure linked entrances after both link bits go. Predicted and observed one notification during queued placement, and zero cells removed by a protected stock-path delete. Two instrumented four-guest runs matched queue 4→0, cells 1→0 and happiness 50→35, with screenshots and logs. Eight tests fail with the bug restored. Reachability limits and evidence: `docs/exe/ride-operation.md`, Q86.
 

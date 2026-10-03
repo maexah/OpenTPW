@@ -705,6 +705,10 @@ caller is the end-of-park routine `FUN_005168f0` (`0x00516ada`).
 | open, first argument non-zero (`0x00519f76`) | the park is closed | `mParkClosed` = 0; the gate's `VAR_COMMAND` = 1; along `mFirstObject`, every object with `+0x32 & 4` that `FUN_004df290` allows is opened (`FUN_004df390`) |
 | close, first argument nought (`0x0051a091`) | the park is open | `mParkClosed` = 1; if `FUN_004c9130` counts nobody (things of kind 1 on cells of type 0, 1, 3, 9 or 10) and the gate's `VAR_STATUS` reads 1, the gate's `VAR_COMMAND` = 0 (`0x0051a0e8`..`0x0051a161`); along `mFirstObject`, every object with `+0x32 & 4` is closed (`FUN_004df300`) |
 
+The position-cell census and the later close retry are decoded in [park-gate.md](park-gate.md)
+(Q89). The census counts guests only; the delayed writer additionally refuses closure while
+state-byte-0 staff stand outside its accepted cell types. The immediate door arm has no staff scan.
+
 Both arms then post a type-`0x13` message, 3 on open and 4 on close (`0x0051a031`, `0x0051a1c1`), whether or not
 anything changed; `CAdvisor::ReceiveMessage` (`FUN_0059b060`, `0x0059b1f8`) answers it with its own message `0x80`
 on open and `0x81` on close (`FUN_0059ae20`). The log `"*** You have just %s your park ***"` is a `RET` stub. The
