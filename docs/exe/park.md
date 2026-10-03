@@ -1836,3 +1836,17 @@ Known divergences still open, both in lobby playback, which a park thing does no
 A third read method — `memory.getBytes` into a Jython bytearray — **silently returned zeros and was discarded as a dead instrument** rather than believed. Two agents hit that same bug; no conclusion here rests on it.
 
 **Three clip totals are all correct and answer different questions. Do not read a mismatch as an error:** **1085** clips summed PER SCRIPT (308 `.RSE` files across 262 archives; an archive with several scripts counts its clips once per script); **910** per archive-named item (274 of them); **1273** per base model across all of `data/` (445 of them). Likewise the item census: keyed on **base models** — any `<stem>.md2` with at least one role file beside it — the answer is **197 of 445**; the older "88 of 274" keyed each item to its archive's basename, which is invisible to every archive holding more than one base model (`terrain.wad` holds `base.MD2`, `queue.wad` holds every queue piece, and the go-kart and water-ride archives hold a track segment each).
+
+## OpenTPW catch-up ordering reproduction (2026-10-03)
+
+Observed in OpenTPW, not an additional executable claim: `ParkCatchUpOrderTests` drives
+`ParkRides.Update` then `ParkPeople.Update`, the order used by `Level`. A synthetic script
+with scheduler id 1 yields at tick 1 and clears `VAR_ADMIT` at tick 9. A guest from the shipped
+Lost Kingdom park is placed in the entering-ride state and queue for thing 13.
+
+Across 16 ticks, partitions of 1 or 8 ticks per frame complete boarding on relative world
+tick 2; one 16-tick frame completes it on relative world tick 1. The first guest turn sees
+future script state because all ride ticks have already run. The test asserts this known
+Q150 discrepancy, not correct behaviour. Replace its unequal expectations when the scheduler
+is repaired. This isolates admission timing; it does not establish that every subsystem
+should be partition-invariant (frame animation and original script time have separate rules).
