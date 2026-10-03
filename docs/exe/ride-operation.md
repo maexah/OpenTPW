@@ -796,8 +796,9 @@ the stand point on the same cell, and `FUN_004fa5f0` also fails without routing 
 `0x004fa62a`, that nothing here keeps: nought on the queue paths but from a save), the dirt gate (`QUEUE_TOILET_DIRT_GATE`), the
 coaster's record (`QUEUE_TURN_COASTER_TRACK_RECORD`, let through), the
 thoughts, the spot animations (`QUEUE_SPOT_ANIMATION`), the heading (`QUEUE_TURN_HEADING`) and boredom
-(`QUEUE_TURN_BOREDOM`). **The unhappy arm is held** (`QUEUE_TURN_UNHAPPY`) until Q85: an arriving guest here starts at
-happiness nought, not the constructor's 50, and the arm would put every arrival out of every queue. 5b's built half is
+(`QUEUE_TURN_BOREDOM`). **The unhappy arm runs the common leave path** (Q85b), after the same mood gap;
+its thought `0xb` remains counted (`QUEUE_TURN_THOUGHT_0xB`). New arrivals start at the constructor's 50
+([guest-arrivals.md](guest-arrivals.md)). 5b's built half is
 dead by content: the shipped park places nothing tracked, nothing here sets `mIsTrackRideValid`, and the choice
 sends nobody to a car track without it, so only a save holding a queue for an invalid Dino Karts (item 1150, the
 jungle's one car track) reaches it. With spot animations unbuilt `TimeOfLastSpotAnim` stays at nought, and the thing
@@ -1345,9 +1346,10 @@ the base speed `% 5` (`FUN_004f8940`, `0x004f89e1`; "Where a WALKING peep is dra
 the guest constructor's eight direct pre-reseed draws, after the exit level's variation (`0x004faff8`) and before the
 cash's (`0x004fb046`); the five after it set thirst and hunger (`% 50`), toilet (`% 30`), one discarded, and the
 prankery byte `+0x1c0` against `PrankeryLikelihood`. The later ID reseed, child-bank draw and two conditional
-destination draws are decoded in [guest-arrivals.md](guest-arrivals.md) (Q85). OpenTPW draws the kind
-and then the base speed, from `System.Random`, and varies neither cash nor exit level (`park.md`, "What a new guest's
-fields come from"), so the ranges are the original's and the sequence is not.
+destination draws are decoded in [guest-arrivals.md](guest-arrivals.md) (Q85). OpenTPW consumes the base-speed
+draw then those eight direct guest draws, including cash/exit variation (Q85b). Its separate `System.Random`
+and independent child-bank reseed still depart from the shared world sequence; the implementation limits
+are recorded in that page.
 
 ## A second toilet: the minor decision and the saved major - `FUN_004fd570` and `FUN_00500900`
 
@@ -1939,7 +1941,7 @@ a divisor of nought would fault the `IDIV`.
 and 80: on the Totem a kind liking 80 is ten off (+15) and a kind 3 thirty-five (+5); on the Belly Bounce a kind 3 is five
 off (+15, not the perfect 25) and a kind liking 80 forty (nothing). The Totem's 70 over 10 is 7. The original's arrival draws its hunger
 `% 50` (`FUN_004faec0`, `0x004fb0c5`), so a ride there at that hunger adds 35, 28, 21 or 14, most often 28 or 21;
-OpenTPW's arrival comes in at hunger nought (Q85) and takes 35. In both, the quarter of guests whose id divides by four
+OpenTPW's arrival now draws the same hunger range (Q85b), so those initial sickness bands apply here too. In both, the quarter of guests whose id divides by four
 grow hungrier as they go (`FUN_00501650`, `Peep.Tick`) and so take less. A shop declares no excitement, so no shipped thing has both an
 excitement and a hunger effect, and the order against the effects cannot show.
 

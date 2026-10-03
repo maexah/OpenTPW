@@ -1,6 +1,6 @@
 # A new guest's initial values (Q85)
 
-Decode only, 2026-10-03. **The original starts happiness at 50, not zero.** It also draws
+Decoded and implemented, 2026-10-03 (Q85, Q85b). **The original starts happiness at 50, not zero.** It also draws
 thirst, hunger and toilet need before the guest takes a turn. The normal arrival caller does
 not replace those values. A suitable ride can subsequently raise happiness; the old Q50
 observation that arrivals stayed at zero is not a measurement of today's OpenTPW.
@@ -17,10 +17,9 @@ session workspace's `evidence/` directory. They contain the decompiler output an
 listings, not an imported third-party interpretation. An independent Astra review rechecked
 the relevant instructions and applied documentation (`verifier-decode.txt`, `verifier-review.md`).
 
-This session changes documentation only. No new arrival values, queue behavior, regression
-test or mutation are implemented. No running-game screenshot or census is claimed. Q85b
-must obtain both, with its prediction recorded before observing the count, and must restore
-the defect to demonstrate that its new test fails. Static decoding does not meet that gate.
+Q85 was decode-only. Q85b implements the arrival meters, cash/exit variation, prankery
+and unhappy queue exit. Runtime and regression evidence is recorded below; static decoding
+alone does not satisfy the screenshot and predicted-census gate.
 
 ## Construction and arrival
 
@@ -91,7 +90,7 @@ an isolated random source when claiming exact whole-world sequence parity.
 `IDIV` for exit/kind/cash differs from its unsigned `DIV` for needs/prankery. Do not infer
 that every raw return is a positive signed integer. The need ranges above remain valid.
 
-## Rides and the held unhappy queue arm
+## Rides and the unhappy queue arm
 
 A ride can raise happiness. Freshly traced: `FUN_004fd970` gates the effects on byte
 `+0x1f1`; the nonzero branch calls `FUN_004fe1e0`, which calls `FUN_004fdcc0` at
@@ -101,13 +100,9 @@ and clamps the changed happiness to 0..100. Zero excitement returns; a gap of 40
 adds nothing. The zero-byte settlement branch instead docks happiness. Full formulas and
 other effects have one home: [ride-operation.md](ride-operation.md#the-excitement-match--fun_004fdcc0).
 
-In today's source, `ParkRideOperation.SettleUp` calls `MatchTheExcitement` on its successful branch, and the
-latter changes happiness. Therefore Q85 does **not** require rebuilding the excitement
-match, and the older nine-minute observation cannot establish that it currently never
-raises an arrival's happiness. The remaining constructor defect is explicit in
-`ParkPeople.Admit`: zero happiness/needs, fixed cash/exit level and zero prankery.
-Its separate `System.Random` source and kind-before-speed ordering also differ from the
-original. These are source observations, not a runtime measurement.
+`ParkRideOperation.SettleUp` calls `MatchTheExcitement` on its successful branch, and the
+latter changes happiness. Q85b leaves that existing gain in place and initializes the
+arrival's own meters through `ParkPeople.Admit`.
 
 `FUN_004ffff0` reaches the mood branch only after its earlier queue guards and unsigned
 `mGameTick - [+0x208] > 30` (`0x00500308`). Happiness is truncated by `__ftol`, then its
@@ -116,10 +111,99 @@ to the common leave path (`0x00500382` → `0x0050049e`). At 10..19 it starts an
 The other queue arms and common leave path remain in
 [ride-operation.md](ride-operation.md#the-inqueue-turn---fun_004ffff0).
 
-Q85b must set the decoded arrival values first, then replace `QUEUE_TURN_UNHAPPY` with
-this arm and turn around
-`ParkQueueTurnTests.AnUnhappyQueuerStaysUntilArrivalsHaveTheOriginalsHappiness`.
-Use the real arrival constructor in regression coverage, exercise both sides of 10 and
-the 30-tick guard, and prove the tests fail when the zero initialization and held queue
-arm are restored. Confirm `load 30` with `peeps` over a few minutes and a screenshot from
-the same run; distinguish the initial value from later ride gains and departures.
+## OpenTPW implementation and limits (Q85b)
+
+`ParkPeople.Admit` consumes the base-speed draw and then all eight direct guest draws in
+the order above, including the discarded draw. Happiness starts at 50; the need remainders
+are unsigned, exit/kind/cash remainders signed, the cash product wraps at 32 bits, and its
+integer division truncates before the nonnegative clamp. Prankery uses the ID's low word
+and is retained by `Peep` for both a new guest and a loaded guest. Construction logging
+records these values before any turn can change them; `peeps` includes prankery.
+
+Remaining deviations are explicit at the code sites:
+
+- The arrival values still draw a separate `System.Random`, not the shared world generator.
+  Its normal outputs exclude the original's exceptional signed-negative return; regression
+  inputs exercise that arithmetic boundary anyway. `ChildOf` independently reproduces the
+  ID-reseeded child bank, without changing subsequent world draws.
+- The kind count remains the shipped eight; the general balance-parser row count is Q54.
+- Guests start at the admission sequence's `AtGate`, skipping the original outside walk and
+  its conditional destination draws (Q128). This does not claim whole-call-tree draw parity.
+- Guest tiredness remains unrepresented in `GuestState`/`Peep`; no tiredness behavior is built.
+- Thought `0xb` is counted as `QUEUE_TURN_THOUGHT_0xB`, like the other unbuilt thoughts.
+  The unhappy queue arm itself runs the common leave path after its existing guards and
+  unsigned gap greater than 30: slot release, unlink, happiness dock and return to deciding.
+
+`ParkGuestArrivalTests` exercises the real constructor with scripted raw draws: exact
+fields/order, endpoints, the discarded draw, two successive guests, prankery threshold,
+the signed-negative boundary, and cash truncation with a forced kind that still consumes
+its draw. Queue tests exercise 9/9.9 versus 10/10.9, low-byte wrapping, 30/31, and the shared
+unlink/dock path. Choice fixtures now explicitly remove competing needs when comparing
+kind preference, history or shelter.
+
+Restoring zero initialization fails all four arrival tests; restoring the held queue arm
+fails `AnUnhappyQueuerLeavesBelowTenAfterTheMoodGap`. The full regression suite and live
+confirmation are recorded in the verification results below. Overflow/clamp cash content,
+a guest ID above 16 bits and loaded nonzero prankery are source-reviewed, not separately
+exercised by these new tests.
+
+## Verification results (Q85b, 2026-10-03)
+
+The Q85b session workspace holds `evidence/runtime/`: `predictions.txt`, `run.log`,
+`cohort-summary.json`, the eight `after-<seconds>s.txt` censuses, and screenshots. The
+prediction before `load 30` was **30 new guests, each happiness 50**; all thirty IDs
+43..72 matched, with all initial needs, cash, exit and prankery inside the decoded bounds.
+The screenshot `after-30s.png` shows the crowd entering; its paired census has **43** guests,
+the thirteen saved guests plus thirty arrivals. Every arrival in this run drew prankery 0;
+nonzero prankery is demonstrated by the scripted constructor tests, not this screen.
+
+Censuses every thirty simulated seconds retain IDs rather than treating a shrinking
+population as a mood improvement:
+
+| Seconds | All guests present | Of the original thirty | Of those thirty departed |
+|---|---:|---:|---:|
+| 30 | 43 | 30 | 0 |
+| 60 | 43 | 30 | 0 |
+| 90 | 38 | 30 | 0 |
+| 120 | 32 | 26 | 4 |
+| 150 | 25 | 22 | 8 |
+| 180 | 18 | 15 | 15 |
+| 210 | 8 | 6 | 24 |
+| 240 | 5 | 3 | 27 |
+
+The first prediction of a positive cohort ride gain by 120 seconds was refuted: arrival
+51's gap was 40, so it gained zero; the earlier +5 belonged to saved guest 31. By 150 seconds,
+arrival **66** had ridden Belly Bounce: excitement 40 against preference 65, gap 25,
+predicted **+5**, logged **50 to 55**, and census `after-150s.txt` records happiness 55
+and one ride. Arrival **56** later got the predicted **+15**, **0 to 15**, for gap 10;
+its maxed needs subsequently docked it back to zero. `after-120s.png` and `after-240s.png`
+were inspected; the individual gain magnitudes are log/census evidence, not numerals
+visible in the park screenshots.
+
+Arrival **60** naturally left the queue unhappy between 150 and 180 seconds. A focused
+instrumented check then admitted guest **75**, sent it to Belly Bounce, and confirmed
+`InQueue` at 50 before setting happiness to 9. Predicted **one additional unhappy exit**
+and thought count **1 to 2**; after sixteen frames the census shows `Deciding`, destination
+0, no queue place and happiness 0, and the log names its unhappiness exit. The census counts
+`QUEUE_TURN_THOUGHT_0xB` exactly twice and has no `QUEUE_TURN_UNHAPPY`. Paired screenshots
+`unhappy-before.png` and `unhappy-after.png` were inspected: the state change initially
+leaves the guest at its feet. A power interruption lost the subsequent walk-away capture;
+it is not used as evidence. The preserved four-minute run and immediate-exit checks remain
+valid. The only save-file change recorded before that interruption was `opentpw.cfg`, the
+loading-bar cache; the other original save files retain their run-start hashes.
+
+The final source build has **0 errors, 121 warnings**; the full suite with real game data
+has **1641 passed, 0 failed, 0 skipped** (`final-source.trx`). The two defect-restoration
+runs are `mutation-zero.trx` and `mutation-held.trx`. Independent Astra review checked the
+applied arithmetic, callers, state guards, tests and primary Ghidra listings.
+
+The separate post-outage recovery run is `evidence/runtime-recovery/`. It reproduced a
+single predicted unhappy exit for guest **44**: `unhappy-before.txt` has `InQueue`,
+happiness 9; `unhappy-after.txt` has `Deciding`, destination 0, no place, happiness 0,
+and thought count **1**. Five seconds later `walked-away.txt` has `Wandering` at
+(50.557,22.209), away from (52.523,22.946); `walked-away.png` was inspected against the
+queue screenshot. It is movement out of the queue, not proof that the guest left the park.
+A different saved guest (35) reached the same unhappy arm during those later five seconds;
+it is separate from the one-exit, sixteen-frame measurement.
+
+The recovery run exited cleanly; its before/after save-file hashes are identical.

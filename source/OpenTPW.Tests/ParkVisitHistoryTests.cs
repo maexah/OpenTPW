@@ -53,6 +53,15 @@ public class ParkVisitHistoryTests
 		Entity.ApplyDeletions();
 	}
 
+	// These choices compare history and shelter scores with no competing food, drink or toilet need.
+	private static int AdmitWithoutNeeds( ParkPeople people, int x, int y, int personType )
+	{
+		var id = people.Admit( x, y, personType );
+		var guest = people.Guests[id];
+		guest.Thirst = guest.Hunger = guest.Toilet = 0f;
+		return id;
+	}
+
 	/// <summary>The thing a guest's <c>why</c> line says they chose.</summary>
 	private static int Chose( ParkPeople people, int guestId )
 	{
@@ -180,7 +189,7 @@ public class ParkVisitHistoryTests
 
 		try
 		{
-			var guest = people.Admit( 55, 30, personType: 3 );
+			var guest = AdmitWithoutNeeds( people, 55, 30, personType: 3 );
 
 			CollectionAssert.Contains( new[] { JungleSpray, 98 }, Chose( people, guest ), "with nothing left, a Spray" );
 
@@ -245,7 +254,7 @@ public class ParkVisitHistoryTests
 
 		try
 		{
-			var guest = people.Admit( 55, 30, personType: 3 );
+			var guest = AdmitWithoutNeeds( people, 55, 30, personType: 3 );
 
 			Assert.AreEqual( JungleSpray, Chose( people, guest ), "before, the Spray" );
 
@@ -280,7 +289,7 @@ public class ParkVisitHistoryTests
 
 		try
 		{
-			var guest = people.Admit( 52, 33, personType: 0 );
+			var guest = AdmitWithoutNeeds( people, 52, 33, personType: 0 );
 
 			Assert.AreEqual( 0, Chose( people, guest ), "at 30, nothing" );
 
@@ -306,7 +315,7 @@ public class ParkVisitHistoryTests
 
 		try
 		{
-			var guest = people.Admit( 55, 30, personType: 0 );
+			var guest = AdmitWithoutNeeds( people, 55, 30, personType: 0 );
 
 			Assert.AreEqual( BellyBounce, Chose( people, guest ), "dry, the ride" );
 
@@ -351,7 +360,7 @@ public class ParkVisitHistoryTests
 				"counted to the one who left, and including them" );
 			Assert.AreEqual( 4, state.QueueCount( JungleSpray ), "and every link with no test" );
 
-			var guest = people.Admit( 55, 30, personType: 3 );
+			var guest = AdmitWithoutNeeds( people, 55, 30, personType: 3 );
 
 			Assert.AreEqual( JungleSpray, Chose( people, guest ), "room for them by the original's count" );
 		}

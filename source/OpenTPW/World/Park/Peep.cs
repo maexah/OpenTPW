@@ -41,6 +41,9 @@ public sealed class Peep
 
 	public float Happiness { get; set; }
 
+	/// <summary>The saved or newly drawn prankery index; initialization is in <c>docs/exe/guest-arrivals.md</c>.</summary>
+	public int PrankeryIndex { get; set; }
+
 	/// <summary>
 	/// Happiness as it was when this guest joined the queue of the thing they are visiting - <c>+0x20c</c>, copied
 	/// at the join (<c>0x004ffd92</c>) and read only by the settle-up, which averages three times the change into
@@ -435,6 +438,7 @@ public sealed class Peep
 		Cash = saved.Cash;
 		ExitLevel = saved.ExitLevel;
 		Happiness = saved.Happiness;
+		PrankeryIndex = saved.PrankeryIndex;
 		Thirst = saved.Thirst;
 		Hunger = saved.Hunger;
 		Toilet = saved.Toilet;

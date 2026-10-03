@@ -58,6 +58,13 @@ public class ParkGuestTypeTests
 		var likesItQuiet = people.Admit( 55, 30, personType: 3 );
 		var likesItWild = people.Admit( 55, 30, personType: 0 );
 
+		// Isolate kind preference from the constructor's independently drawn needs.
+		foreach ( var id in new[] { likesItQuiet, likesItWild } )
+		{
+			var guest = people.Guests[id];
+			guest.Thirst = guest.Hunger = guest.Toilet = 0f;
+		}
+
 		var why = people.WhyCensus().ToArray();
 
 		StringAssert.Contains( Chose( why, likesItQuiet ), $"chose thing {JungleSpray} ",
@@ -106,7 +113,7 @@ public class ParkGuestTypeTests
 
 	/// <summary>
 	/// <b>An arriving guest is drawn as one of the eight kinds</b> (<c>FUN_004faec0</c>, <c>0x004fb019</c>), and
-	/// starts with that kind's <c>PeepTypes[n].StartingCash</c>: 300, 500, 600, 700, 750, 600, 400 and 500.
+	/// starts within fifteen percent of that kind's <c>PeepTypes[n].StartingCash</c>.
 	/// </summary>
 	[TestMethod]
 	public void AnArrivingGuestIsDrawnAsOneOfTheEightKinds()
@@ -124,7 +131,8 @@ public class ParkGuestTypeTests
 		int[] startingCash = [300, 500, 600, 700, 750, 600, 400, 500];
 
 		foreach ( var guest in arrivals )
-			Assert.AreEqual( startingCash[guest.PersonType], guest.Cash, $"guest {guest.ThingId}, a type {guest.PersonType}" );
+			Assert.IsTrue( guest.Cash >= startingCash[guest.PersonType] * 85 / 100
+				&& guest.Cash <= startingCash[guest.PersonType] * 115 / 100, $"guest {guest.ThingId}, a type {guest.PersonType}" );
 	}
 
 	/// <summary>

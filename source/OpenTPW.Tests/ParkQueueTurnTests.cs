@@ -9,7 +9,7 @@ namespace OpenTPW.Tests;
 /// <summary>
 /// A guest's own turn standing in a queue - <c>FUN_004ffff0</c>: the toilet and the lost place, which put them
 /// out; the invited guest who is not the nominee, whose turn is nothing; the broken ride, which re-takes no
-/// place; and the unhappy arm, held until Q85. See <c>docs/exe/ride-operation.md</c>, "The <c>InQueue</c> turn".
+/// place; and the unhappy arm below ten. See <c>docs/exe/ride-operation.md</c>, "The <c>InQueue</c> turn".
 ///
 /// <para>
 /// Guests are queued for the Belly Bounce in Lost Kingdom's own save, and one of them takes one turn at thing
@@ -219,20 +219,42 @@ public class ParkQueueTurnTests
 		AssertPutOut( park, peep, "at sweep 31 it is" );
 	}
 
-	/// <summary>
-	/// <b>An unhappy queuer stays</b>: the original puts out a guest below 10 (thought <c>0xb</c>), and that arm is
-	/// held until Q85 gives an arriving guest the original's happiness of 50 rather than nought. Alexah's hold.
-	/// </summary>
+	/// <summary>The truncated low byte gates the common leave path; its mood dock and queue unlink must run.</summary>
 	[TestMethod]
-	public void AnUnhappyQueuerStaysUntilArrivalsHaveTheOriginalsHappiness()
+	public void AnUnhappyQueuerLeavesBelowTenAfterTheMoodGap()
 	{
-		var park = Open();
-		var peep = Guest( 30, happiness: 0f );
+		foreach ( var happiness in new[] { 0f, 9f, 9.9f, 256f, 265.9f } )
+		{
+			var park = Open();
+			var peep = Guest( 30, happiness: happiness );
+			var behind = Guest( 31 );
+			Join( park, peep, behind );
 
-		Join( park, peep );
-		Turn( park, peep );
+			Turn( park, peep, tick: 30 );
+			AssertQueueing( peep, "the gap includes 30", happiness: happiness );
+			Turn( park, peep, tick: 31 );
 
-		AssertQueueing( peep, "happiness nought", happiness: 0f );
+			Assert.AreEqual( PeepState.Deciding, peep.State );
+			Assert.AreEqual( 0, peep.MajorDest );
+			Assert.AreEqual( Math.Clamp( happiness - 15f, 0f, 100f ), peep.Happiness );
+			Assert.AreEqual( -1, park.State.PositionInQueue( BellyBounce, peep.ThingId ) );
+			Assert.AreEqual( behind.ThingId, park.State.FirstInQueue( BellyBounce ) );
+			Assert.AreEqual( 0, park.State.PreviousInQueue( behind.ThingId ) );
+			Assert.AreEqual( 0, park.State.NextInQueue( peep.ThingId ) );
+		}
+	}
+
+	[TestMethod]
+	public void HappinessTenAndNegativeLowBytesDoNotTakeTheUnhappyExit()
+	{
+		foreach ( var happiness in new[] { 10f, 10.9f, 19.9f, 266f, -1f } )
+		{
+			var park = Open();
+			var peep = Guest( 30, happiness: happiness );
+			Join( park, peep );
+			Turn( park, peep, tick: 31 );
+			AssertQueueing( peep, "not below ten after truncation and byte narrowing", happiness: happiness );
+		}
 	}
 
 	/// <summary>

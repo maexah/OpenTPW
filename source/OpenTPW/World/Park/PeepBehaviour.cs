@@ -1392,18 +1392,13 @@ public sealed class PeepBehaviour
 	/// <item><b>The mood</b>, read once <see cref="QueueMoodGap"/> sweeps have passed since a spot animation: above
 	/// <see cref="QueueHappyAbove"/> and from <see cref="QueueUnhappyBelow"/> to 19 a spot animation (counted);
 	/// from <see cref="QueueToiletFrom"/> to 80 with a toilet need above <see cref="QueueToiletAbove"/>, thought 4
-	/// (counted), and out unless the thing is a toilet; below <see cref="QueueUnhappyBelow"/>, out - <b>held
-	/// until Q85</b>, see below.</item>
+	/// (counted), and out unless the thing is a toilet; below <see cref="QueueUnhappyBelow"/>, thought <c>0xb</c>
+	/// (counted), and out by the common leave path.</item>
 	/// <item><b>Within the gap</b>, one turn in ten turns the heading (counted); boredom would put them out once
 	/// <see cref="QueueBoredAfter"/> sweeps have passed since they began to stand, and <b>never fires</b>:
 	/// <c>mTimeStartedIdling</c> is stamped on every return to the queue at least eleven sweeps after the spot
 	/// animation that began the gap, so it cannot be a hundred past within thirty. It is counted, not built.</item>
 	/// </list>
-	/// <para>
-	/// <b>The unhappy arm is counted, not built, and that is a deviation.</b> The original's new guest starts at
-	/// happiness 50 (<c>FUN_004faec0</c>, <c>0x004fb075</c>); one arriving here starts at nought (Q85), so the arm
-	/// would put every arrival out of every queue it joins. Alexah held it for Q85.
-	/// </para>
 	/// <para>
 	/// <b>Spot animations are not built</b>, so <see cref="Peep.TimeOfLastSpotAnim"/> stays at nought, which the
 	/// thing tick has passed by more than thirty once the lobby has run about seven seconds: a queuer's mood is read
@@ -1526,7 +1521,8 @@ public sealed class PeepBehaviour
 			return;
 		}
 
-		Unimplemented.Report( "QUEUE_TURN_UNHAPPY" );
+		Unimplemented.Report( "QUEUE_TURN_THOUGHT_0xB" );
+		PutOutOfTheQueue( peep, queueing, tick, "unhappiness" );
 	}
 
 	/// <summary>

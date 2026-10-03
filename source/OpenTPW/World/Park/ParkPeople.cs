@@ -139,7 +139,7 @@ public sealed class ParkPeople : Entity
 	/// </summary>
 	private readonly Random _rideRandom;
 
-	/// <summary>What an arriving guest's kind and base speed are drawn with - see <see cref="Admit"/>. A test seeds it.</summary>
+	/// <summary>What an arriving guest's initial values are drawn with - see <see cref="Admit"/>. A test seeds it.</summary>
 	private readonly Random _arrivalRandom;
 
 	/// <summary>
@@ -178,7 +178,7 @@ public sealed class ParkPeople : Entity
 	/// choosing where to go can score a thing by what it actually is rather than by where it stands -
 	/// see <see cref="ParkRideChooser"/>. Null leaves that arm scoring on distance and queue alone.
 	/// </param>
-	/// <param name="random">What an arriving guest's kind and base speed are drawn with. Null for the game; a test seeds one.</param>
+	/// <param name="random">What an arriving guest's initial values are drawn with. Null for the game; a test seeds one.</param>
 	/// <param name="banks">
 	/// How many banks of each guest kind the park draws over, which the level reads from the data
 	/// (<see cref="ParkSpriteBanks.Read"/>). Null counts none: every arrival a child of bank nought, a costume and a
@@ -396,13 +396,11 @@ public sealed class ParkPeople : Entity
 	/// occupancy list - without which the gate cannot see them.
 	/// </para>
 	/// <para>
-	/// <b>Their needs are a deviation and are declared as one.</b> The balance file states a starting
-	/// cash (<c>PeepTypes[x].StartingCash</c>) and a starting exit level (<c>PeepInfo.ExitLevel</c>,
-	/// "starting value... in SECONDS") and says nothing at all about hunger, thirst, toilet, vomit,
-	/// litter or happiness. Those six begin at nought here because a number had to be chosen, not
-	/// because anything was decoded. Cash and exit level are taken unvaried, where the original varies them
-	/// by <c>PeepInfo.StartingCashVarPc</c> and <c>ExitLevelVar</c> (<c>docs/exe/park.md</c>, "What the balance
-	/// file supplies, and the one score that is not decoded").
+	/// Initial values follow <c>FUN_004faec0</c>, including the base constructor's speed draw first
+	/// (<c>docs/exe/guest-arrivals.md</c>). The draws here still use a separate <see cref="Random"/>;
+	/// the original uses its shared world generator and reseeds it with the guest's id before choosing
+	/// the child bank. <see cref="ParkSpriteBanks.ChildOf"/> reproduces that bank, but not the reseed's
+	/// effect on later world draws. The entrance-state deviation is described below.
 	/// </para>
 	/// </summary>
 	/// <param name="personType">
@@ -414,20 +412,31 @@ public sealed class ParkPeople : Entity
 		if ( _blocked == null || !ParkState.OnMap( cellX, cellY ) )
 			return 0;
 
-		// FUN_004faec0 draws the kind from the world generator modulo the balance's PeepTypes row count
-		// (0x004fb019), the highest PeepTypes[n] the balance stack sets plus one. The two global files,
-		// data/levels/Standard.sam and Online_Standard.sam, each set rows 0 to 7 and no theme file sets one, so it
-		// is 8 in every shipped park, the constant here. The range is the original's; the sequence is not.
-		var type = personType ?? _arrivalRandom.Next( ParkWorld.GuestState.PersonTypes );
-
-		// The person base's constructor draws the base speed modulo five before any of that (FUN_004f8940), the
-		// guest's own sets the hurry to 25, and the eased speed starts at nought, so a guest walks off slowly
-		// (ride-operation.md, the person +0xc0 row). Drawn after the kind here, from a generator of its own either way.
+		// Base constructor first, then the eight direct guest draws in docs/exe/guest-arrivals.md.
 		var pace = new ParkWorld.PaceState(
 			AdjustorSpeed: 0,
-			BaseSpeed: Peep.BaseSpeeds[_arrivalRandom.Next() % Peep.BaseSpeeds.Length],
+			BaseSpeed: Peep.BaseSpeeds[(uint)_arrivalRandom.Next() % Peep.BaseSpeeds.Length],
 			PreviousSpeed: 0f,
 			PurposeSpeed: Peep.HurryingSpeed );
+
+		var exitVariation = _balance?.Int( "PeepInfo.ExitLevelVar", 60 ) ?? 60;
+		var exitLevel = (_balance?.Int( "PeepInfo.ExitLevel", 120 ) ?? 120)
+			+ _arrivalRandom.Next() % (2 * exitVariation) - exitVariation;
+
+		// The shipped balance stacks all define eight kinds. The parser's general row-count rule is Q54.
+		// An instrument's forced kind still consumes the original draw.
+		var drawnType = (byte)(_arrivalRandom.Next() % ParkWorld.GuestState.PersonTypes);
+		var type = personType ?? drawnType;
+		var cashVariation = _balance?.Int( "PeepInfo.StartingCashVarPc", 15 ) ?? 15;
+		var cashPercent = _arrivalRandom.Next() % (2 * cashVariation + 1) - cashVariation + 100;
+		var startingCash = _balance?.Int( $"PeepTypes[{type}].StartingCash", 300 ) ?? 300;
+		var cash = Math.Max( 0, unchecked( cashPercent * startingCash ) / 100 );
+		var thirst = (uint)_arrivalRandom.Next() % 50;
+		var hunger = (uint)_arrivalRandom.Next() % 50;
+		var toilet = (uint)_arrivalRandom.Next() % 30;
+		_ = _arrivalRandom.Next();
+		var prankery = (uint)_arrivalRandom.Next() % 100
+			< (uint)(_balance?.Int( "PeepInfo.PrankeryLikelihood", 5 ) ?? 5);
 
 		var one = ParkWorld.NavigatorState.One;
 
@@ -442,8 +451,6 @@ public sealed class ParkPeople : Entity
 		var x = (cellX * one) + (one / 2);
 		var y = (cellY * one) + (one / 2);
 
-		var cash = _balance?.Int( $"PeepTypes[{type}].StartingCash", 300 ) ?? 300;
-		var exitLevel = _balance?.Int( "PeepInfo.ExitLevel", 120 ) ?? 120;
 
 		// The mover's constructor's force and speed, a speed of one (FUN_0050ffe0), which the guest's first turn
 		// eases over before they take a step (Peep.Pace).
@@ -467,8 +474,8 @@ public sealed class ParkPeople : Entity
 		var guest = new ParkWorld.GuestState(
 			State: (int)PeepState.AtGate, SavedState: ParkWorld.GuestState.Deciding,
 			PersonType: type, Cash: cash, ExitLevel: exitLevel,
-			Happiness: 0f, Thirst: 0f, Hunger: 0f, Toilet: 0f, Vomit: 0f, Litter: 0f,
-			MajorDest: 0, QueuePos: 0, PrankeryIndex: 0 );
+			Happiness: 50f, Thirst: thirst, Hunger: hunger, Toilet: toilet, Vomit: 0f, Litter: 0f,
+			MajorDest: 0, QueuePos: 0, PrankeryIndex: prankery ? 100 + (thingId & 0xffff) % 3 : 0 );
 
 		// The child they arrive as, by their id alone (FUN_004faec0, 0x004fb18d..0x004fb1bc).
 		var child = _banks.ChildOf( thingId );
@@ -518,7 +525,8 @@ public sealed class ParkPeople : Entity
 		_behaviour.State.Admit();
 
 		Log.Info( $"People: guest {thingId} arrived at ({cellX},{cellY}) on mGameTick {State.GameTick} - "
-			+ $"{_peeps.Count} guests now" );
+			+ $"{_peeps.Count} guests now; kind {type} happy {peep.Happiness:0} "
+			+ $"thirst {thirst} hunger {hunger} toilet {toilet} cash {cash} exit {exitLevel} prankery {peep.PrankeryIndex}" );
 
 		GuestArrived?.Invoke( peep );
 
@@ -1067,10 +1075,8 @@ public sealed class ParkPeople : Entity
 
 	/// <summary>
 	/// Sets every guest's happiness, for the debug console's <c>happy</c>. An INSTRUMENT, as
-	/// <see cref="MakeThirsty"/> is: a guest who arrives starts at happiness nought and stays there (Q85), and the
-	/// save's own guests, most carrying 50, have gone home within about four minutes, so a dock of happiness - a
-	/// guest put out of a queue - clamps at nought and shows nothing. It sets a meter the game itself moves,
-	/// and nothing else.
+	/// <see cref="MakeThirsty"/> is: set a known level to exercise mood thresholds and measure a queue exit's
+	/// happiness dock. It sets a meter the game itself moves, and nothing else.
 	/// </summary>
 	/// <returns>How many guests were set.</returns>
 	internal int SetHappiness( float level )
@@ -1103,9 +1109,8 @@ public sealed class ParkPeople : Entity
 
 	/// <summary>
 	/// Sets every guest's cash, for the debug console's <c>cash</c>. An INSTRUMENT, as <see cref="SetHappiness"/>
-	/// is: a guest arrives with <c>StartingCash</c>, 300, so none in Lost Kingdom comes to a door short of its
-	/// price, and that is the one test there of <see cref="PeepPriceOpinion"/> that can refuse. It sets a meter
-	/// the game itself moves, and nothing else.
+	/// is. A new guest's varied cash covers Lost Kingdom's admission price; this lets the insufficient-cash
+	/// branch of <see cref="PeepPriceOpinion"/> be exercised. It sets a meter the game itself moves.
 	/// </summary>
 	internal int SetCash( int amount )
 	{
@@ -2559,7 +2564,7 @@ public sealed class ParkPeople : Entity
 				+ $"saved-major {peep.SavedMajorDest,2} turns {peep.WalkingTurns,2} "
 				+ $"(saved {peep.SavedState}) cash {peep.Cash,4} exit {peep.ExitLevel,4} "
 				+ $"happy {peep.Happiness,3:0} thirst {peep.Thirst,3:0} hunger {peep.Hunger,3:0} "
-				+ $"toilet {peep.Toilet,3:0} vomit {peep.Vomit,3:0} litter {peep.Litter,3:0} "
+				+ $"toilet {peep.Toilet,3:0} vomit {peep.Vomit,3:0} litter {peep.Litter,3:0} prankery {peep.PrankeryIndex} "
 				// The two histories the ride score divides down by, newest first.
 				+ $"visits [{string.Join( ",", peep.PreviousRides )}] refused [{string.Join( ",", peep.PreviousTemporaryRides )}] "
 				// The three speed words, the eased speed and what it gave the walk (Peep.Pace).

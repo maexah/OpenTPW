@@ -3971,6 +3971,25 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   cash/exit/prankery formulas, eight direct pre-reseed draws plus the base speed and child-bank draw,
   the ID reseed, both arrival callers, existing ride happiness gains, and the below-10 queue arm.
   Fresh headless Ghidra instructions against the hash-matched reference; no runtime confirmation claimed.
+- [x] **Q85b. Build the decoded new-guest values, then the unhappy queue arm.** Q85's decode is
+  `docs/exe/guest-arrivals.md`. Implement the constructor's initial happiness and needs, cash/exit variation
+  and prankery, retaining the decoded draw order and stating any remaining generator/arrival-path deviation.
+  `ParkPeople.Admit` still starts happiness/needs at zero, fixes cash/exit level and drops prankery.
+  The ride excitement gain already exists; verify it through a real arrival rather than rebuilding it.
+  Then replace `QUEUE_TURN_UNHAPPY` in `PeepBehaviour.QueueTurn`: below happiness 10 (the truncated low byte),
+  after the original's earlier guards and 30-tick window, thought `0xb`, out by the common leave path.
+  Turn around `ParkQueueTurnTests.AnUnhappyQueuerStaysUntilArrivalsHaveTheOriginalsHappiness`.
+  Confirm: `load 30`, `peeps` over a few minutes, initial happiness **50**, later gains distinguished from
+  departures; a screenshot AND the corresponding census/log. Predict each measured count before reading it.
+  Cover the real constructor and queue boundaries; restore the zero initialization and held queue arm,
+  re-run the new tests and strengthen any that stay green. Build/test the exact commit alone in a worktree.
+  - **Done 2026-10-03, `alexah/256-q85b-guest-arrivals`.** Constructor values and direct draw order built;
+    prankery retained; unhappy queue exit uses the shared leave path, thought `0xb` counted. Predicted
+    **30** new guests at happiness **50**, all matched; screenshots and censuses across four simulated minutes.
+    Real arrival 66's ride gain **+5**, 50 to 55; natural unhappy exit 60 and instrumented 75's **9 to 0**,
+    thought census **1 to 2**. Both restored defects fail the new tests; full suite **1641**, no failures/skips.
+    Independent Astra review; remaining generator/entrance/thought/tiredness limits and evidence in
+    `docs/exe/guest-arrivals.md`. Q86 not started.
 
 ## B. Docs and comments
 
