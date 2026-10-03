@@ -1,4 +1,4 @@
-﻿namespace OpenTPW;
+namespace OpenTPW;
 
 partial class Refpack
 {
@@ -13,25 +13,16 @@ partial class Refpack
 
 	public static void DecompressData( byte[] data, ref List<byte> outputData, int offset, int opcodeLength, uint proceedingDataLength, uint referencedDataLength, uint referencedDataOffset )
 	{
-		for ( var i = 0; i < proceedingDataLength; ++i ) // Proceeding data comes from the source buffer (compressed data)
-		{
-			var pos = (uint)(offset + opcodeLength + i);
-			if ( pos >= data.Length )
-				break; // Prevent any overflowing
+		if ( (long)offset + opcodeLength + proceedingDataLength > data.Length )
+			throw new InvalidDataException( "Truncated Refpack literals." );
+		for ( var i = 0; i < proceedingDataLength; ++i )
+			outputData.Add( data[offset + opcodeLength + i] );
 
-			outputData.Add( data[pos] );
-		}
-
-		var outputDataLen = outputData.Count;
-
-		for ( var i = 0; i < referencedDataLength; ++i ) // Referenced data comes from the output buffer (decompressed data)
-		{
-			var pos = (int)(outputDataLen - referencedDataOffset);
-			if ( pos < 0 || pos >= outputData.Count )
-				break; // Prevent any overflowing
-
-			outputData.Add( outputData[pos + i] );
-		}
+		if ( referencedDataLength > 0 && (referencedDataOffset == 0 || referencedDataOffset > outputData.Count) )
+			throw new InvalidDataException( "Refpack backreference precedes the output." );
+		// Overlap is valid: each copied byte can become the source of the next byte.
+		for ( var i = 0; i < referencedDataLength; ++i )
+			outputData.Add( outputData[outputData.Count - (int)referencedDataOffset] );
 	}
 
 	internal class FourByteCommand : IRefpackCommand

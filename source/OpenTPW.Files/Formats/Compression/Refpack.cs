@@ -1,4 +1,4 @@
-﻿namespace OpenTPW;
+namespace OpenTPW;
 
 internal sealed partial class Refpack
 {
@@ -9,48 +9,35 @@ internal sealed partial class Refpack
 		Data = data;
 	}
 
-	public List<byte> Decompress()
+	public List<byte> Decompress( uint expectedSize )
 	{
-		using var stream = new ExpandedMemoryStream( Data );
-
-		var refpackHeader = stream.ReadBytes( 2, bigEndian: true );
-
-		// 0x10: LU01000C - 00010000 - large files & compressed size are not supported.
-		if ( refpackHeader[0] != 0xFB || refpackHeader[1] != 0x10 )
-			throw new Exception( "Data was not compressed using refpack (header does not match) - possibly corrupted?" );
-
-		// Skip decompressed size
-		stream.Seek( 3, SeekOrigin.Current );
-
-		// Refpack is big-endian, unlike the rest of the DWFB format
-		// Therefore all memorystream operations have bigEndian set to true
-		var decompressedData = new List<byte>();
-
-		// The five commands, in their declaration order in RefpackCommands.cs. Their opcode ranges do
-		// not overlap, so the order is only for reading.
+		if ( Data.Length < 5 || Data[0] != 0x10 || Data[1] != 0xFB )
+			throw new InvalidDataException( "Unsupported or truncated Refpack header." );
+		var size = (Data[2] << 16) | (Data[3] << 8) | Data[4];
+		if ( size != expectedSize )
+			throw new InvalidDataException( "WAD and Refpack decompressed sizes disagree." );
+		var output = new List<byte>();
 		IRefpackCommand[] commands =
 		{
 			new FourByteCommand(), new ThreeByteCommand(), new TwoByteCommand(), new OneByteCommand(), new StopCommand()
 		};
-
-		var currentByte = stream.ReadBytes( 1, bigEndian: true );
-		while ( stream.Position < Data.Length )
+		var position = 5;
+		while ( position < Data.Length )
 		{
-			foreach ( var command in commands )
+			var command = commands.First( candidate => candidate.OpcodeMatches( Data[position] ) );
+			if ( command.Length > Data.Length - position )
+				throw new InvalidDataException( "Truncated Refpack command." );
+			command.Decompress( Data, ref output, position, out var literals );
+			position += command.Length + (int)literals;
+			if ( output.Count > size )
+				throw new InvalidDataException( "Refpack output exceeds its declared size." );
+			if ( command.StopAfterFound )
 			{
-				if ( command.OpcodeMatches( currentByte[0] ) )
-				{
-					command.Decompress( Data, ref decompressedData, (int)stream.Position - 1, out var skipAhead );
-					stream.Seek( command.Length + skipAhead - 1, SeekOrigin.Current );
-
-					if ( command.StopAfterFound )
-						stream.Seek( Data.Length, SeekOrigin.Current );
-				}
+				if ( output.Count != size || position != Data.Length )
+					throw new InvalidDataException( "Refpack ended with a size mismatch or trailing bytes." );
+				return output;
 			}
-
-			currentByte = stream.ReadBytes( 1, bigEndian: true );
 		}
-
-		return decompressedData;
+		throw new InvalidDataException( "Refpack stream has no stop command." );
 	}
 }

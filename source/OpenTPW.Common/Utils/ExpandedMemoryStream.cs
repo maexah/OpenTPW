@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 
 namespace OpenTPW;
 
@@ -7,8 +7,11 @@ public sealed class ExpandedMemoryStream : MemoryStream
 	public ExpandedMemoryStream( byte[] buffer ) : base( buffer ) { }
 	public byte[] ReadBytes( int length, bool bigEndian = false )
 	{
+		ArgumentOutOfRangeException.ThrowIfNegative( length );
+		if ( length > Length - Position )
+			throw new EndOfStreamException( "Binary field extends beyond the stream." );
 		var bytes = new byte[length];
-		Read( bytes, 0, length );
+		ReadExactly( bytes );
 
 		if ( bigEndian )
 			Array.Reverse( bytes );
