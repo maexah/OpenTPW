@@ -396,8 +396,7 @@ public class Level
 	/// <para>
 	/// This reads the copy that ships beside the level rather than the player's own, for every player. For an
 	/// Instant Action player the two are identical, as nothing writes a park back yet. <b>A deviation for a Full
-	/// Simulation player</b>, whose first park the original builds fresh and loads no file for; the caller counts
-	/// it as FULL_SIMULATION_NEW_PARK. When saving exists, this is the line that has to start asking which player
+	/// Simulation player</b>, whose first park the original builds fresh and loads no file for. When saving exists, this is the line that has to start asking which player
 	/// is playing.
 	/// </para>
 	/// </summary>

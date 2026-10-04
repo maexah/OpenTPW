@@ -1832,7 +1832,7 @@ three.
 |---|---|---|---|
 | `FUN_004fd970` | — | The settle-up for leaving **any** visitable thing (not just a sideshow). Shifts the guest's recent-things history (`+0x1e0`..`+0x1e6`), bumps the guest's `mNumRides`, `mNumShops` or `mNumSideshows` by the descriptor's `+0x4ac`, charges, counts the visit on the object (`FUN_004e1690`), takes the descriptor's `+0xe8` (`FatigueEffect`) off the guest's `mTiredness` `+0x1b8` held to 0..100 (`0x004fd9e7`..`0x004fda00`; the constructor zeroes it and a load restores the saved one, file 521 (`0x004fc794`), nought on every shipped guest; nothing raises it, so it stays nought), then splits on `+0x1f1`, the win roll: nought logs `"Person lost this sideshow…"`, docks happiness at `+0x19c` and, at a sideshow, thinks thought 6 and pushes event `0x19` (`0x004fdc1c`..`0x004fdc3e`); otherwise it runs `FUN_004fe1e0`, then takes three times the change in happiness since the guest's snapshot at `+0x20c` (both truncated), logs it (`"Person %d: Happiness changed by %d since using object %d"`, `0x0075d6cc`), averages it into the object's satisfaction (`FUN_004e1e00`), posts it plus 50 to the park analyser for a shop or sideshow (`0x004fda1b`..`0x004fdb2c`) counts the object's served (`FUN_004e19f0`) and, at a sideshow, thinks thought 5 and pushes event `0x18` (`0x004fdb5d`..`0x004fdb7f`); happiness itself is not moved. Each step: "The settle-up's bookkeeping", below. | Its own strings |
 | `FUN_004fe1a0` | — | **The charge.** `price = object[+0x194]`; when non-zero it credits the ride, plays a sound, and does `person[+0x1a0] -= price`. **The only `SUB [reg+0x1A0], reg` in the image.** | Byte search |
-| `FUN_004e16b0` | — | **The economy feed**: first the bank's deposit, `FUN_004d0190( price )` (the balance, `0x004e16c6`), then `ride[+0x180] += price`, `ride[+0x70] += price`, then on the descriptor's `+0x4ac` — **1, a shop, credits the park analyser's `+0x20130`; 2, a sideshow, its `+0x20380`** (month accumulators, `FUN_00519510`, `0x004e170c`); a ride (0) credits neither and posts nothing. The shop arm then posts the price to the challenge manager as progress on challenge type 12 (shops' profit), the sideshow arm on 13 (sideshows'). Inside the shop arm a second switch on `+0x164` (`ShopType`, table `0x004e18e4`; then `+0x158` `SpecialIngredient` for types 2 and 4, table `0x004e18fc`) posts **1, not the money**, as progress on a selling challenge: ShopType 1 type 5 (gifts), 3 type 8 (meals), 5 type 7 (costumes), 6 type 6 (balloons), and by ingredient salt 1, fat 2, ice 3, sugar 4 (the Drinks Shop's "Sell 30 drinks"). A post lands only while a challenge of that type is on ("The settle-up's bookkeeping", the cost of goods). | Disassembly |
+| `FUN_004e16b0` | — | **The economy feed**: first the bank's deposit, `FUN_004d0190( price )` (the balance, `0x004e16c6`), then `ride[+0x180] += price`, `ride[+0x70] += price`, then on the descriptor's `+0x4ac` — **1, a shop, credits the park analyser's `+0x20130`; 2, a sideshow, its `+0x20380`** (month accumulators, `FUN_00519510`, `0x004e170c`); a ride (0) credits neither and posts nothing. The shop arm then posts the price to the challenge manager as progress on challenge type 12 (shops' profit), the sideshow arm on 13 (sideshows'). Inside the shop arm a second switch on `+0x164` (`ShopType`, table `0x004e18e4`; then `+0x158` `SpecialIngredient` for types 2 and 4, table `0x004e18fc`) posts **1, not the money**, as progress on a selling challenge: ShopType 1 type 5 (gifts), 3 type 8 (meals), 5 type 7 (costumes), 6 type 6 (balloons), and by ingredient the challenge type: salt (ingredient 2) type 1, fat (ingredient 1) type 2, ice 3, sugar 4 (table `0x004e18fc`; the Drinks Shop's "Sell 30 drinks"). A post lands only while a challenge of that type is on ("The settle-up's bookkeeping", the cost of goods). | Disassembly |
 | `FUN_004d0600` | — | **The admission fee**, no argument (`RET`, `0x004d068d`): the fee is the bank's `mAdmissionFee` `+0x118` (`0x004d0609`). No gate, and no test of nought; the deposit's three adds (`+0xc`, the analyser's `+0x1fc90`, `+0x124`), then the analyser's month gate takings `+0x1fee0` (`0x004d0670`, the only add to it), then `FUN_004c7520` (`0x004d0686`): the analyser's `mLifetimeVisitors` `+0x21c08` +1, `mMostPaidForTicket` `+0x21c40` raised to the fee (signed), and a message of type `0x1a` (sent at `0x004c75d8`) whose one listener, the challenge manager, counts one toward a challenge of type 11, "Get 100 new visitors" (`FUN_004d2860`, `0x004d28bb`). One caller, the guest's opinions 2 and 3 (`0x004ffae5`). **The ride charge does not go through it.** | Disassembly |
 | `+0x194` | `mPricePerUse` | File **1054**. | Save record |
 | `+0x180` | `mTotalTakings` | File **1090**. | Save record |
@@ -1933,8 +1933,8 @@ Alexah's two played Lost Kingdom saves, written by the original, which hold 29 a
    byte `+0xa0`, once its script has shown a frame (`+0x114`).
 4. **It lives on the needs sweeps.** In `FUN_00501650`'s `(id & 3)` block (`0x005018f8`..`0x00501949`): outside states 16
    and 17 and on a cell `FUN_004fa990` passes (the runtime cell's `mType` under the thing's own cell bytes: 0, 1, 3, 9
-   or 10), one draw of the generator, a tenth of which picks a thought (`FUN_004fc8a0`), then the life down by one,
-   unsigned, whether or not a balloon is showing, and at nought `FUN_004fe950`. At a sweep in four, about 25 s, 2 min
+   or 10), one draw of the generator, a tenth of which picks a thought (`FUN_004fc8a0`), then the life, unless it is
+   already nought (`JBE`, `0x0050193a`), down by one, whether or not a balloon is showing, and at nought `FUN_004fe950`. At a sweep in four, about 25 s, 2 min
    or 4 min at quality 0, 50 or 100 of qualifying time. The shipped park's guests all stand on the gateway's approach,
    cells of type 30, which do not count.
 5. **Let go** (`FUN_004fe950`, whose callers are the countdown, the prank, the state setter's case `0x11` and the
@@ -2316,7 +2316,8 @@ every such purchase, as no list of ticket-bought items is kept) and a kart or wa
 Re-read for Q194 from the fork review (`economy-8`, `economy-9`; `wf_cba77d07-b66`, a read-only Opus verifier in
 Ghidra and over every shipped `.sam`). **None of it is built in OpenTPW**: Q141 is the item.
 
-**The tick.** `FUN_004d4a00`, from `FUN_004d7b20` (`0x004d7b60`) once a thing sweep (`0x00516695`), does nothing unless
+**The tick.** `FUN_004d4a00`, from `FUN_004d7b20` (`0x004d7b60`) on a thing sweep (`0x00516695`) whose world counter
+`+0x1da70c` is a multiple of 100 (`DIV`, `0x004d7b54`; not every sweep), does nothing unless
 the game type `DAT_00fb3b7c` is 0 (`0x004d4a31`..`0x004d4a40`), so play awards no ticket in Instant Action or online
 (`saves.md`, "Keys and tickets"). It runs the six Local tickets (`FUN_004d4bc0`), the four Global (`FUN_004d4e50`), then
 the Secret. Each ticket is tested and awarded alone, never "all met", and **every threshold compare is a signed strict `>`**
@@ -2375,7 +2376,9 @@ being offered") is not traced.
 and `ShortTimeLeftWarningAt` (`0x007857d0`). `FUN_004d1e90`, the daily tick: with the system off, it needs the park open
 (`FUN_004c9050`) and `FUN_004f8800`'s time in whole days (`/ 0xC92A69C000`) at least `0x007857c8`, then switches it on
 and offers at once. Later offers wait for `mNextChallengeEventTime` (`+0x3d0`, an absolute time on the park calendar).
-While one is on, a pass of `FUN_004d1660(…, 0)` before the deadline wins (`FUN_004d2fb0`); at the deadline
+While one is on, a tick whose world counter `+0x1da70c` has its low two bits nought posts message `0x160` from the slot
+(`FUN_004d3390`, `FUN_0040f7a0`) and returns before the win test (`FUN_004d1e90`); on the others, a pass of
+`FUN_004d1660(…, 0)` before the deadline wins (`FUN_004d2fb0`); at the deadline
 `FUN_004d2840` runs, then `FUN_004d1660(…, 1)` wins or loses (`FUN_004d3140`). When `TargetTime` is non-zero and the
 time **left**, in days × 100 / `TargetTime`, is below `0x007857d0`, it raises message `0x17f` (`FUN_0040f7a0`).
 

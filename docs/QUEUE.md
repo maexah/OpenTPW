@@ -30,7 +30,8 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
 `docs/REVIEW-2026-09-22.md` for Q2 and Q8 to Q12. Q70-Q75 come from the 2026-09-12 review, whose three
 artifacts are listed in `docs/history/README.md`. Q208-Q217 come from the 2026-10-04 review of the commits of
 2026-10-03 and 2026-10-04; an id such as `u6-hoardings-1` names a finding in its findings file (`CLAUDE.local.md`
-says where).
+says where). Q219-Q221 come from the 2026-10-04 effort audit of the commits of 2026-09-29 to 2026-10-01; an id such
+as `r-f1` names a verdict in its results file (`CLAUDE.local.md` says where).
 
 ---
 
@@ -646,6 +647,34 @@ says where).
   two sentences: `docs/exe/saves.md`'s "None of this is the original's behaviour" follows a sentence that says the
   first save is the original's, and `STATUS.md`'s "cached profiles stay read-only" is true of an unreadable file
   only. Put the bug back for each test (`CLAUDE.md` rule 6). No game run.
+
+- [ ] **Q219. Light the models from the normals the file stores. Decode first.** Found by the 2026-10-04 effort
+  audit (`r-f1`, `r-c2`). The original's model lighter `FUN_00574660` takes one normal per vertex-order entry from the
+  table at mesh `+0x64` (stride 12, `+0x5e` entries); OpenTPW lights every placed model from smoothed normals it
+  computes, and `ModelFile.ReadFaceNormals` reads only as many entries as the faces index. Count the table's entries
+  across all 2,129 `.md2`, compare the stored normals with the computed ones, then read and use the stored ones. The
+  FileFormats models page gets the count. Confirm: one ride and one shop photographed beside the original's under
+  Proton, the same sun.
+- [ ] **Q220. Tests for the wiring the effort audit found untested.** Found by the 2026-10-04 effort audit: seventeen
+  bugs put back left all 1,766 tests green. `Level.Update`'s day roll, month turn (its order: training, the bank,
+  wages) and year turn; `ParkRides.Resume`'s `MoveKeptReadings` and `BindNew`'s `RideNodes`; the walk leg's x/z form
+  (a leg a hair from a whole unit); the Hot Pot's `ParkBumperBoats.Put` and its drawn heading, the speed word's
+  placement wiring, the seating friction 7/10 and the broken ride's 1000, the car's turn, the engine fade's length,
+  `TowardsCamera`; `ParkGuestSprites.DrawBalloons` (the bob's rate and write-back); the camcorder's
+  `UseFirstPersonPictures` on enter and leave; `ParkObjectWindow`'s 30 days and 4 s; the buy list's features tab.
+  Write each test, put its bug back, see it fail (`CLAUDE.md` rule 6). No game run.
+- [ ] **Q221. Eight leftovers from the effort audit, each dead by content today.** Found by the 2026-10-04 effort
+  audit, each read in the listing. (1) `ParkScriptStates` reads the tick and next handle with `header > dword * 4`; it
+  should be `>= (dword + 1) * 4`. (2) `ParkBuyScreen.Listed` applies two of the original's four filters: add the
+  upgrade (`+0x284`) and model-failed (`+0x508`) tests or count them (`FUN_004aaf70`). (3) `ParkAudio.ScreamEffectFor`
+  silences a negative band; `FUN_00551130` plays `0x48` for one. (4) `RideScript.NextRandom` answers 0 for every
+  bound + 1 at or below nought; only -1 divides by nought (`0x00553994`). (5) `ParkItemHeights.Over` floors the
+  cell's middle where `0x00452bb0` truncates corner offsets: measure it on raised ground. (6) The original rolls a
+  rider's head sprite to its node (`FUN_0044b510`, `0x0044ba04`); `DrawHead` does not: say it at the site or build
+  it. (7) `Peep.Pace` works at 24 bits and `ShopCostOfGoods` at 53 under one control word: settle which, the pinned
+  18 may be 19. (8) Two docs lines not yet re-measured: `park.md`'s selector table rows 8 and 9 leave out the
+  `0x4000` and type gates of `FUN_00544c80` and `FUN_00544e50`; FileFormats `sound-categories.md` says the masks use
+  bits 1, 2 and 4 beside 645 speech variations holding 100.
 
 ## B. Docs and comments
 

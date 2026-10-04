@@ -180,8 +180,8 @@ what sets the car's case to 2 or 4, the gates on the go-kart and water arms of `
   way. The cars stay when a go ends; only `BUMP 10`, a sale or a capacity cut takes them off.
 - **Measured in the original** (Q202, `q202/voicelog.py`, the reference park patched to research the Hot Pot, bought
   and queued; two goes logged every track tick): the lead boat's `+0x20` was non-zero from the go's first tick, the
-  same handle for all 557 ticks of it; the ride went back to loading at tick 29575 and `+0x20` read 0 from 29583, 8
-  ticks later; the next go's first tick held a new handle. No other boat held one.
+  same handle for all 750 ticks of it (28825 to 29575); the ride went back to loading at tick 29575 and `+0x20` read 0
+  from 29583, 8 ticks and 135 ms later (that run stepped two ticks a frame); the next go's first tick held a new handle. No other boat held one.
 
 The effect is jungle 194, `Engine.mp2` (447 ms by the map), flagged `0x6` (below): a voice with no timer, so its own tick plays
 the sample again each time its channel ends and the handle lives for the whole go.
@@ -196,7 +196,7 @@ gives `2`, `0x200` gives `8`, `0x20` gives `0x200`, `+0x11` bit `0x40` gives `0x
 times out** (`FUN_006bcb60`); one without it is freed at start + length + 250 ms. When its channel ends
 (`0x006bbe40`) it clears `1` and, unless it holds `0x40` or `0x4800`, is marked finished (`0x10`) and freed by the
 next service (`0x006b62d5`). Effect `0x8`'s voice bit `4` asks the mixer for a loop (`0x006be016`, request `0x40`).
-Which of these keeps 194's voice alive across its channel's end was **measured, not read**: the handle lived 557
+Which of these keeps 194's voice alive across its channel's end was **measured, not read**: the handle lived 758
 ticks over a 447 ms sample.
 
 **The controllers** (`[voice+0x4c]`, eight bytes, `FUN_006b7150`): four keys then four values. Key 0 is the effect

@@ -3533,7 +3533,7 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `ParkCamcorderCameraMode.Enter` and `Leave`, packs the atlas again whole (the deviation in how is said at the site).
   `FIRST_PERSON_SPRITE_SWAP` was not added: the swap is built, and nothing unbuilt is left on the path. Game (`q187run.py`):
   `q187/run2/` the log reads 20 banks, 0 from `.FPC` at load, **12** on entering (predicted 10, wrong: the park packs six kid
-  banks and five staff and entertainer banks, not eight and one; the eight left are the six kid heads, the costume head
+  banks and six staff and entertainer banks, not eight and one; the eight left are the six kid heads, the costume head
   and the balloons, all unflagged), 0 on leaving; `pair-fix` against `pair-control` (main's build) from the same places,
   looked at: the near child seen from above becomes upright and face-on. The original under Proton, first person in the
   reference park, `q187/orig/q187-13.png`, looked at: a handyman and a child upright at eye level, as predicted. Tests

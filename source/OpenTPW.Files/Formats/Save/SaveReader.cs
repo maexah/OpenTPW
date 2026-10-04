@@ -49,7 +49,7 @@ public class SaveReader : BaseFormat
 			
 		Header, as the loader FUN_00416240 reads it (FileFormats saves.md, "Header")
 			4 bytes: Version - 400 in the shipped park, 500 in a saved one (NOT a magic number)
-			1 byte:  Read and not checked; 0
+			1 byte:  Compared with nothing; it picks the entry the legal text is checked against (0x004162c2); 0
 			0x500 bytes: Legal text from 0x005, UTF-16 (824 bytes of notice), then zeros
 			0x100 bytes: From 0x505, validated by FUN_0051ab60; zero
 			4 bytes: Magic at 0x605, big-endian 0x01221985, stored 01 22 19 85

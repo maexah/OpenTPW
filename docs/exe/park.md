@@ -238,7 +238,7 @@ The engine's loader `FUN_00461f10` probes for an item's clips with a **12-entry 
 | `0x006fe6bc` | - | the twelve-entry letter table, **stride 8** | `MOV [ESP+0x14],0x6fe6bc` at `0x004622fb`, `MOV [ESP+0x20],0xc` at `0x00462303` |
 | `0x74d2b4` | - | format string `"%s%s%c%d.md2"` | read |
 | `0x74d2a8` | - | format string `"%s%s%c.md2"` | read |
-| `FUN_0044a220` | - | the probe: whether the composed name exists (one call site, `0x0046240e`, with flags `DAT_007a445c ? 2 : 0`). Flag 2 looks the basename up in a preloaded name list (`FUN_00461820`; −1 when `DAT_007a445c` is 0); without flag 4 that answer stands, otherwise, or on a miss, it opens and closes the file (`FUN_0046f120`). It loads nothing; the loader is `FUN_0046dcf0` (`FUN_0046d6d0`, then `FUN_0045ba70`, `FUN_0046ead0`) | Ghidra, Q194 |
+| `FUN_0044a220` | - | the probe: whether the composed name exists (one call site, `0x0046240e`, with flags `DAT_007a445c ? 2 : 0`). Flag 2 looks the basename up in a preloaded name list (`FUN_00461820`; −1 when `DAT_007a445c` is 0); without flag 4 that answer stands, a miss included (`0x0044a274`); the file is opened and closed (`FUN_0046f120`) only when flag 2 is absent, or when flag 4 is set and the list answered nought. It loads nothing; the loader is `FUN_0046dcf0` (`FUN_0046d6d0`, then `FUN_0045ba70`, `FUN_0046ead0`) | Ghidra, Q194 |
 | `FUN_004629d0` | - | loads a whole second model+animation set as `"p%s"`. A leading `P` is a **prefix**, not a suffix; **what it is for is not known** | read |
 | `FUN_00463060` | - | build path: checks role 0 exists, triggers it, then starts `0xd` at once (not a clip — it binds nothing; it sets the freeze flag `0x2` and re-stamps the channel's timers, so role 0's clip holds at frame nought) | read |
 | `FUN_004647a0` | - | save load: overwrites every animation channel with the saved state and restores the per-node flag words with it | read |
@@ -643,7 +643,8 @@ so an unlocked pair can be split, leaving a raw reading in `VAR_TEMP` and in the
 **The engine's readings survive a load unchanged; OpenTPW's do not.** `FUN_005597a0` reads the variable block raw and
 writes no variable after it, and the load puts the `0x785970` clock back to the saved reading (`FUN_00415140` at
 `0x00415193`, through `FUN_004031f0`: offset = saved - now), on the load path where `FUN_00414d40`'s fourth argument is
-not 1 (`0x004150b5`; which loads pass 1 is not established). The clock is integer milliseconds (`FUN_00402f10`, the
+not 1 (`0x004150b5`; only `0x0054f105`, game type 1, pushes 1, and `0x005ad04a` and `0x005ac735` push 2, so the Easymode
+load restores it). The clock is integer milliseconds (`FUN_00402f10`, the
 `QueryPerformanceCounter` count over frequency/1000, through `__ftol`). OpenTPW copies the variables raw
 (`ParkRides.Resume`) but runs its scripts on its own clock (`ParkRides.Moved`), far behind a save's, so `deadline - now`
 stays positive until OpenTPW's clock catches the save's: about 80 minutes for Alexah's jungle saves (4.82M ms), 31.8
@@ -1302,7 +1303,8 @@ first, for each car: clear `0x200000`, `Bumper_CarTick` (`FUN_005474b0`: the tim
 thrust), then, if still live, `Bumper_StepCar` (`FUN_00547f50`). The second, for each car: if its collision object
 lacks `0x80` and it lacks `0x200`, the bump against **every** other such car in the pool; then, for every car,
 `Bumper_KeepInObject` (`FUN_005497b0`), `Bumper_PushOffObstacles` (`FUN_005494d0`) and `Bumper_PlayCarSound`
-(`FUN_00547170`). Nothing in either pass reads the ride's state, so empty boats are pushed about and kept in the pot
+(`FUN_00547170`). The second pass reads none of the ride's state (the first does: `Bumper_CarTick` and `Bumper_StepCar` test its `+0x50`
+and `+0x54`), so empty boats are pushed about and kept in the pot
 while the ride loads.
 
 | Car | | Record (`Bumper_SetPerformance`, `FUN_00545180`) | |
@@ -1425,7 +1427,7 @@ car, sets `+0x7c` and `+0x80` to −1, and puts at `+0x98` the first object that
 is built by pushing each candidate on its head in pool order, so the draw counts back from the last. **The draw eases
 back, not ahead**: `Game_StateMachine` passes `FUN_00519060` (and so `FUN_00546280`) `(DAT_008786bc − DAT_00878c74) ×
 1/31` (`0x0054fa0d`..`0x0054fa33`), the clock less the last stepped time, which the catch-up loop has carried past it
-(`0x0054f4c4`), so between −1 and 0; a car is drawn at its position plus its velocity times that, its heading less
+(`0x0054f4c4`), so between −1 and 0; a car is drawn at its position plus its velocity times that, its heading plus
 `+0x5c` times it, and each corner's bob `s[p×m] + (s[p×m] − s[p×m − m]) ×` it. OpenTPW's own per-tick census, replayed
 through Q179c's step check, matched 285 transitions of 285 (`q179d/run4/`).
 
@@ -1578,9 +1580,9 @@ against the population `FUN_004c7fa0` reports: **500 in the online mode** (`DAT_
 otherwise**, each logging `"Capping the number of people in o..."`. It then logs `"Number of people is %d"`.
 
 **A guest is made at a cell, not carried in the vehicle.** `FUN_004cf720` asks `FUN_004d8650` for the second bus
-stop (argument 1, pushed at `0x004cf745` before either arm) and, when `FUN_0051aad0` reports a vehicle standing,
-subtracts `0x100` from the packed id (`0x004cf75c`). `FUN_004d8650` packs `y * 128 + x + 1` (`SHL EAX,0x7`,
-`0x004d8663`), so that is two rows: Lost Kingdom's (53,5) becomes (53,3). It then allocates `0x22c` bytes and
+stop (argument 1, pushed at `0x004cf745` before either arm) and, when `FUN_0051aad0` reports a vehicle standing other than
+the small crowd's (`[+0x1da72c]`'s, the bus), subtracts `0x100` from the packed id (`0x004cf75c`). `FUN_004d8650` packs `y * 128 + x + 1` (`SHL EAX,0x7`,
+`0x004d8663`), so that is two rows: Lost Kingdom's (53,5) becomes (53,3) for a larger vehicle, and a bus load is made at (53,5). It then allocates `0x22c` bytes and
 constructs the person there. **So the vehicles are mechanism rather than transport**: nobody is ever inside one.
 
 **Which balance keys these globals are, proven.** Nothing writes them by name: the balance loader stores each

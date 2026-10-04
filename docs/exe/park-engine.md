@@ -1554,8 +1554,8 @@ one thing the old object passes on is its facing - see "Moving a thing".
 **DEMOLISH (verb 0x33) refunds `price * percent / 100`**, where percent is `FUN_004e2290` - a per-item,
 per-build-state, **per-age-bucket** field selected from a four-year scrap table at
 `Upgrades[level]+0x08..+0x14`, returning a literal **100** only while the object is under 30 days old, has had no
-customer (`mNumCustomers` `+0x1a0` nought, `0x004e2390`) and its item's descriptor `+0x188` is above nought
-(`0x004e23b2`); otherwise the first year's figure. So a new object's first customer lowers it. It is *not* a flat
+customer (`mNumCustomers` `+0x1a0` nought, `0x004e2390`) and its item's descriptor `+0x188` (level 0's first-year figure,
+whatever the object's level) is above nought (`0x004e23b2`); otherwise the first year's figure. So a new object's first customer lowers it. It is *not* a flat
 half. The same expression is packaged as `FUN_004e2400` and shown on the object's own window before the
 player sells, which is UITEXT 23 **"Scrap value"**.
 

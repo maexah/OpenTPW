@@ -91,7 +91,8 @@ refuses unless the player exists (`DAT_00802bc0`) and none is playing (`DAT_0080
 `DAT_00802ba8 * 10000 / 1023 - 10000`, in hundredths of a decibel.
 
 **The chunk reader `FUN_0066e410`.** Reads the 8-byte chunk header with `mmioRead`; the size counts the header. It
-takes every FourCC in both byte orders. Video frames go to the queue (`FUN_0066e840`) with a codec type:
+takes TGVk, TGVf, MADk, MADm, MADe, SCHl, SCDl, SCCl and SCLl in both byte orders and the rest in one, and sends a
+`SEAD` chunk to `FUN_0066e920`. Video frames go to the queue (`FUN_0066e840`) with a codec type:
 
 | FourCC | Type | Frame decoder (`FUN_00670c20`) | Shipped movies |
 |---|---|---|---|

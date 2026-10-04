@@ -327,7 +327,7 @@ public static class ParkBuilding
 	/// a simplification.</b> <c>FUN_004dd0a0</c> refunds <c>price * FUN_004e2290( thing ) / 100</c>,
 	/// and that percentage is picked from a four-year scrap table by the object's age bucket -
 	/// returning a literal <b>100</b> for one under thirty days old that has had no customer yet
-	/// (<c>0x004e2390</c>). The park's own screens call it "Scrap value".
+	/// (<c>0x004e2390</c>) and whose item's level-0 first-year figure is above nought (<c>0x004e23b2</c>). The park's own screens call it "Scrap value".
 	/// </para>
 	/// <para>
 	/// <b>The depreciation itself is NOT built</b>, and is counted rather than guessed: the table's age buckets

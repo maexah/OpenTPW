@@ -251,7 +251,7 @@ Stride `0x38`, validated by `row+0x04 == id`, with a linear-scan fallback bounde
 
 `MinScoreForConsideration` being a file key is why `DAT_00fb3560` has three readers and no writer. **The other two
 `GeneralAdvisor` keys are loaded and never read** (Q194). The balance object is the sub-object at `0x00fb354c` (vtable
-`0x006fd958`; built at `0x00415e70`), its member calls made with `ECX = 0x00fb3540`, and `FUN_00401030`'s rule puts
+`0x006fd958`; built by `FUN_00401030`; `0x00415e70` is its destructor thunk), its member calls made with `ECX = 0x00fb3540`, and `FUN_00401030`'s rule puts
 `MinTimeAnyMessage` at `0x00fb3558` and `MinTimeSameMessage` at `0x00fb355c`. No operand of the program falls in
 `0x00fb3554`..`0x00fb355f` and no byte search finds either address, where the same search finds `0x00fb3560` at exactly
 its three reads; none of the 15 member functions nor any of the 201 score functions (thiscall on `0x00fb3540`, every

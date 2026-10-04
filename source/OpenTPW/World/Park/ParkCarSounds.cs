@@ -160,7 +160,7 @@ public sealed class ParkCarSounds : ParkBumperCars.ISounds
 		held.Pitch = Level( held, 2, held.Header.Pitch );
 		held.Voice.SetRate( Rate( held.Pitch ) );
 
-		// A fade runs on to its end whatever the step sets (the original's voice went 8 ticks after its fade began,
+		// A fade runs on to its end whatever the step sets (the original's voice went 135 ms after its fade began,
 		// Q202); a volume set here would stop it.
 		if ( !held.Voice.Ending )
 			held.Voice.SetVolume( Level( held, 1, held.Header.Volume ) / 100f );
