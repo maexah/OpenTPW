@@ -609,7 +609,7 @@ public class ParkPathBuildingTests
 
 		var measured = new System.Collections.Generic.List<(int Cells, bool Connected)>();
 
-		state.QueueRemeasured = thing => measured.Add( (ParkRideChoice.QueueCellsFor( park, ride ).Cells,
+		state.QueueRemeasured = ( thing, _ ) => measured.Add( (ParkRideChoice.QueueCellsFor( park, ride ).Cells,
 			ParkRideOperation.BackOfQueueConnected( park, ride )) );
 
 		var balance = state.Balance;

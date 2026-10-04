@@ -652,6 +652,66 @@ of goods and the park's money"). `FUN_004e2290`, the per-age
 percentage the refund and the debit both scale by, is decoded in `park-engine.md`, "Sell, move and the scrap value". `FUN_004d8c60` (`0x004de266`) writes a fresh
 counter value into the back cell's 16 × 16 block stamp ("The stranded bookkeeping").
 
+#### A bought queued thing starts closed (Q93)
+
+Rechecked 2026-10-03 in a private Ghidra copy of `testme.exe` (SHA-256
+`cf0ffd955077eca146d75ee46c45b8a0786fb757a8f7d204b1aed8ec5a1ee4cb`, matching the reference executable).
+The constructor binds its script at `0x004db517`. At `0x004db712` it tests the queue-path flag (`+0x32 & 8`),
+then clears `mCanLoad` at `0x004db747` and the nominee at `0x004db767`, writes script variable 6 to 1
+(`0x004db76b`..`0x004db779`) and raises closed hoardings at `0x004db78e`. `EBX` is zero from `0x004db0cb`.
+This is the ordinary close operation; it does not change the object's operating state.
+
+`ParkBuilding.BindOperation` binds the new script and applies `ParkRideOperation.Close` for `Info.HasQueue`
+before the placer stamps its entrance/exit and measures its new queue. The existing queue remeasurement opens
+it when connected and allowed by its ordinary guards. A neighbouring path alone does not link the queue stub;
+the queue tool performs that join. Nonqueued purchases keep their initial open state. No new file-format fact.
+
+Regression evidence: `ParkBoughtClosedTests` covers the closed script/record, nominee, hoardings and capacity;
+first versus later connected remeasurement; and an unqueued shop. The initial four purchase cases pass. Restoring the missing
+close fails three, closing before binding fails two, and closing every purchase fails the shop case. The queue
+fixture explicitly includes the caller's remeasurement after `JoinQueueToPath`, which does not notify by itself.
+
+Alex confirmed the expected original behavior: a ride with an unconnected queue remains closed with its
+hoardings up. The implementation enforces this at purchase, queue remeasurement, path-tail removal, loaded-park
+initialization and direct reopening. Existing riders remain aboard to finish through the ordinary script; a live
+close clears the pending nominee. Synchronous demolition keeps its existing nominee exemption until removal,
+so its established guest penalties are unchanged. Path clearing notifies a queue tail once after all links go;
+an entrance already measured for the same object is not notified twice.
+
+The purchase close above is established directly in Ghidra. The broader original closure mechanism is not yet
+located: the traced queue-edit arm (`0x005260f5`..`0x00526120`) detaches, remeasures and installs mode 3, and the
+remeasure tail itself only reopens. The status routine `FUN_00485f60` computes disconnected status as
+`22 + FUN_004e0440()`; the latter is `mCanLoad == 0`. These bounded observations do not establish the original's
+complete behavior across callbacks and later turns. They do not justify calling disconnected closure a deviation.
+
+Additional regressions cover loaded open/closed disconnected records, raised hoardings, path-tail deletion and
+reconnection, preservation of riders, cancellation of nominees and refusing a disconnected reopen. The existing
+sale regression retains its original nominee happiness of 30. All 1,727 tests pass with the real game data,
+without skips. All six additional mutations fail: missing disconnect closure (2 cases), missing load closure (2), missing
+tail notification (1), unguarded reopening (1), cancelling the demolition nominee (1), and duplicate tail
+notification (3). Together with the three purchase mutations, nine altered builds are rejected; restored tests pass.
+
+**Running-game confirmation:** `q93/confirm.py`, `runtime-final-summary.log`, `runtime-result.json` and
+`runtime-final/run.log` in the harness folder. The final build buys Belly Bounce 43 at (57,23) through carry/put,
+then connects its queue with the real world-click transaction. Predictions were logged before observations:
+
+| State and screenshot (`runtime-final/`) | Predicted and observed |
+|---|---|
+| `bought-closed-hoardings.png`, `bought-closed-window.png` | canload 0; after 7 s, 12 Closed panels, progress 1, active 1; CLOSED: QUEUE NOT CONNECTED |
+| `connected-hoardings-retracted.png` | queue joins path at (56,22); canload 1; after 4 s progress 0, active 0 |
+| `bought-ride-boarding.png` | capacity 5; onride 1, bouncing 1; guest 35 visibly aboard at (585.4,252.6,10.3) |
+| `edited-queue-closed-hoardings.png` | editing detaches the tail; canload 0 immediately, existing rider count still 1; after 7 s progress 1, active 1 |
+| `edited-queue-reconnected.png` | canload 1; after 4 s progress 0, active 0 |
+| `path-removed-closed-hoardings-confirmed.png` | deleting owned path (56,21) closes the extended queue's ride; canload 0 and after 7 s progress 1, active 1 |
+
+The path's overlap count required three delete presses: the first prediction that one press would remove it
+was wrong, and the unchanged canload 1/progress 0 is retained in the log. The corrected prediction was made
+before the final two presses and actual removal. Both runs used private saves; original save hashes are unchanged.
+The parent viewed all final proof screenshots; the independent reviewer also viewed purchase, connection,
+boarding and edited-queue hoardings. Loaded-disconnected normalization and direct reopening remain tested only;
+successful moved-ride placement was code-reviewed, not separately photographed. The wider original closure
+mechanism remains unlocated as qualified above. No next queue item was started.
+
 #### The closed ride - `FUN_004e0450`
 
 Decoded 2026-09-24 (`docs/QUEUE.md` Q50b): five decoders, each report put to a refuter reading the disassembly.

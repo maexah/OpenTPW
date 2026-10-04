@@ -52,13 +52,6 @@ artifacts are listed in `docs/history/README.md`.
   window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
   together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
 
-- [ ] **Q93. A bought thing with a queue starts open, where the original's starts closed.** Found by Q50b's decode.
-  The constructor closes every object with the queue-path bit (`0x004db712`..`0x004db793`), and the first queue
-  measure that finds its back connected opens it. `ParkBuilding` sets the bit (`Info.HasQueue`, descriptor `+0x40`,
-  pinned by Q50b) but not the close, counted `BOUGHT_QUEUED_THING_STARTS_CLOSED`. Build the close after the script is
-  bound, and re-confirm Q1's flow on top of it. Confirm: buy a Belly Bounce, `objects` canload 0 until its queue joins
-  a path, then a guest boarding. Seen in the original (Q175b): an Aztec Mayhem bought in the stock park read "CLOSED:
-  LINE NOT CONNECTED" in its window until its queue joined the path, then open, with no press of its door.
 - [ ] **Q94. The console's `path` lays what the path tool refuses.** Found by Q50b's decode. `ParkPathBuilding.Lay`
   checks the cell's type and NOMODIFY but not the verdict `FUN_00535670`, which refuses path over a queue cell whose
   `mNeighbours` has more than one bit - every Belly Bounce queue cell (`ride-operation.md`, "The queue measured

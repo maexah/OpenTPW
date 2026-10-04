@@ -294,6 +294,13 @@ public sealed class ParkPeople : Entity
 
 		// A cell edit that measures a queue again tells the people in it - see QueueRemeasured - and the
 		// park's door closes and opens the rides through their scripts - see DoorMoved.
+		// Disconnected-queue closure also applies to loaded parks, after scripts and hoardings
+		// are bound. This preserves existing riders and lets the normal closed turn complete admissions.
+		// See docs/exe/ride-operation.md, Q93.
+		var operation = new ParkRideOperation( State, Guests );
+		foreach ( var thing in State.Objects.ToArray() )
+			operation.CloseIfQueueDisconnected( _scriptFor?.Invoke( thing.ThingId ), thing.ThingId );
+
 		State.QueueRemeasured = QueueRemeasured;
 		State.DoorMoved = DoorMoved;
 
@@ -1903,7 +1910,7 @@ public sealed class ParkPeople : Entity
 		}
 	}
 
-	/// <summary>The ride-window switch, FUN_0048ccf0: down closes, up opens without a handler guard.</summary>
+	/// <summary>The ride-window switch, FUN_0048ccf0: down closes; up opens, subject to Q93 disconnected closure.</summary>
 	internal void SetRideClosed( int thingId, bool closed )
 	{
 		var operation = new ParkRideOperation( State, Guests );
@@ -2126,7 +2133,7 @@ public sealed class ParkPeople : Entity
 	/// queueing. One put out makes the kids' sound where a queuer put off by a sale does, when their id
 	/// divides by eight (<c>0x0050133d</c>) - see <see cref="SoundFor"/>.
 	/// </remarks>
-	internal void QueueRemeasured( int objectId )
+	internal void QueueRemeasured( int objectId, bool removing = false )
 	{
 		if ( !State.TryObject( objectId, out var thing ) )
 			return;
@@ -2159,7 +2166,7 @@ public sealed class ParkPeople : Entity
 		}
 
 		new ParkRideOperation( State, Guests )
-			.ReopenAfterRemeasure( script, objectId, _behaviour.Park, TrackTypeOf( thing ) );
+			.ReopenAfterRemeasure( script, objectId, _behaviour.Park, TrackTypeOf( thing ), removing );
 	}
 
 	/// <summary>Whether a guest is still in a queue's states - <c>FUN_00502430</c>, for the queue walk.</summary>

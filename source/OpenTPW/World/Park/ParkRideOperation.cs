@@ -1246,9 +1246,24 @@ public sealed class ParkRideOperation
 		_state.HoardingFor( rideId )?.Close();
 	}
 
+
+	/// <summary>
+	/// A queued ride stays closed while disconnected, including on load and edits.
+	/// See docs/exe/ride-operation.md, "A bought queued thing starts closed (Q93)".
+	/// </summary>
+	internal bool CloseIfQueueDisconnected( RideScript? script, int rideId )
+	{
+		if ( _state.Park == null || !_state.TryObject( rideId, out var ride ) || !ride.HasQueuePath
+			|| BackOfQueueConnected( _state.Park, ride ) )
+			return false;
+
+		Close( script, rideId );
+		return true;
+	}
+
 	/// <summary>
 	/// Opens a ride - <c>FUN_004df390</c>: <c>mCanLoad</c> 1, <see cref="ClosedVariable"/> nought, and
-	/// SetState(0), which for state 0 is the store alone. It leaves the nominee alone.
+	/// SetState(0), which for state 0 is the store alone. A disconnected queued ride stays closed by the Q93 queue rule; otherwise the nominee is left alone.
 	/// </summary>
 	/// <remarks>
 	/// <b>The original asks <see cref="MayOpen"/> again first and opens whatever it answers</b>, logging
@@ -1259,6 +1274,9 @@ public sealed class ParkRideOperation
 	/// </remarks>
 	public void Open( RideScript? script, int rideId )
 	{
+		if ( CloseIfQueueDisconnected( script, rideId ) )
+			return;
+
 		if ( !_state.TryObject( rideId, out var ride ) )
 			return;
 
@@ -1360,14 +1378,17 @@ public sealed class ParkRideOperation
 	/// <c>mIsTrackRideValid</c> as well (<c>0x004de2f7</c>..<c>0x004de3df</c>), then opens as
 	/// <see cref="Open"/> does. <c>mAssignedStaffMember</c> is zeroed whatever was decided (<c>0x004de48c</c>).
 	/// </remarks>
-	public void ReopenAfterRemeasure( RideScript? script, int rideId, IParkInitialState? park, int trackType )
+	public void ReopenAfterRemeasure( RideScript? script, int rideId, IParkInitialState? park, int trackType,
+		bool removing = false )
 	{
 		if ( !_state.TryObject( rideId, out var ride ) )
 			return;
 
 		Log.Info( $"Object {rideId}: back of queue is {(BackOfQueueConnected( park, ride ) ? "" : "not ")}connected" );
 
-		if ( ride.CanLoad == 0 && MayOpen( park, ride, trackType )
+		// Demolition removes the object in this transaction; its queue drain must keep the nominee
+		// exemption until ThingRemoved applies the sale penalty (docs/exe/ride-operation.md, Q93).
+		if ( (removing || !CloseIfQueueDisconnected( script, rideId )) && ride.CanLoad == 0 && MayOpen( park, ride, trackType )
 			&& (trackType is not (ItemDescriptionFile.CarTrack or ItemDescriptionFile.WaterTrack
 				or ItemDescriptionFile.CoasterTrack) || ride.IsTrackRideValid != 0) )
 			Open( script, rideId );

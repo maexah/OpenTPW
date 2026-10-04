@@ -100,11 +100,9 @@ public static class ParkBuilding
 		//
 		// The bits come from FlagsFor, which Constructed asks. The constructor then CLOSES a thing carrying the
 		// queue-path bit (0x004db712..0x004db793, as ParkRideOperation.Close does), and the first queue measure
-		// that finds its back connected opens it; not built, so a bought queued thing starts open.
+		// that finds its back connected opens it; BindOperation applies the close after binding the script.
 		Unimplemented.Report( "BOUGHT_OBJECT_FLAG_BITS" );
 
-		if ( item.HasQueue )
-			Unimplemented.Report( "BOUGHT_QUEUED_THING_STARTS_CLOSED" );
 
 		// Where a guest walks up to it, and where one is put down leaving it. The original derives both in
 		// the same constructor, from the item's own footprint picture turned by the angle it is being
@@ -155,6 +153,7 @@ public static class ParkBuilding
 		}
 
 		state.AddObject( placed );
+		BindOperation( state, rides, placed, item );
 		Stamp( state, footprint, cellX, cellY );
 
 		// And onto its anchor cell's own list, which is the ONE cell the save puts a placed thing on -
@@ -183,8 +182,6 @@ public static class ParkBuilding
 		// because the three divide the map by cell and one rebuilt alone leaves a hole. See ParkSurfaces.
 		ParkSurfaces.Rebuild();
 
-		rides?.BindNew( placed, item );
-
 		Log.Info( $"Building: bought '{item.Name}' for {item.BuildPrice} as thing {thingId} at " +
 			$"({cellX},{cellY}) turned {angle}, covering ({footprint.Left},{footprint.Top}).." +
 			$"({footprint.Right},{footprint.Bottom}) - the park has {state.Balance} left; price {placed.PricePerUse}, " +
@@ -194,6 +191,23 @@ public static class ParkBuilding
 		return new( $"buy: '{item.Name}' built as thing {thingId} at ({cellX},{cellY}) for {item.BuildPrice}, " +
 			$"balance {state.Balance}" + (node is { } at ? $", queue node at ({at.X},{at.Y})" : ""), thingId, node,
 			item.HasQueue, item.TrackType );
+	}
+
+	/// <summary>
+	/// Binds a purchase's script, then closes a queued thing before the placer measures its first queue cell.
+	/// The constructor's close at 0x004db712 also clears the nominee and raises hoardings;
+	/// see docs/exe/ride-operation.md, "A bought queued thing starts closed (Q93)".
+	/// </summary>
+	internal static void BindOperation( ParkState state, ParkRides? rides, ParkWorld.CatalogueObject placed,
+		ParkItemCatalogue.Item item )
+	{
+		rides?.BindNew( placed, item );
+
+		if ( item.HasQueue )
+		{
+			var script = rides?.Scheduler.Find( rides.ScriptFor( placed.ThingId ) );
+			new ParkRideOperation( state, new Dictionary<int, Peep>() ).Close( script, placed.ThingId );
+		}
 	}
 
 	/// <summary>

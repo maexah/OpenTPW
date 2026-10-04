@@ -4076,6 +4076,18 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   **Done 2026-10-03**, `alexah/266-q92-ride-window-door`: predicted `canload` 1→0→1 and 13 peeps
   match real-pointer screenshots/logs. Seven regressions; six logical mutations and one render mutation fail.
   Ordinary closed status/colour built; guard/disconnected wording tested. `docs/exe/ride-window-door.md`.
+- [x] **Q93. A bought thing with a queue starts open, where the original's starts closed.** Found by Q50b's decode.
+  The constructor closes every object with the queue-path bit (`0x004db712`..`0x004db793`), and the first queue
+  measure that finds its back connected opens it. `ParkBuilding` sets the bit (`Info.HasQueue`, descriptor `+0x40`,
+  pinned by Q50b) but not the close, counted `BOUGHT_QUEUED_THING_STARTS_CLOSED`. Build the close after the script is
+  bound, and re-confirm Q1's flow on top of it. Confirm: buy a Belly Bounce, `objects` canload 0 until its queue joins
+  a path, then a guest boarding. Seen in the original (Q175b): an Aztec Mayhem bought in the stock park read "CLOSED:
+  LINE NOT CONNECTED" in its window until its queue joined the path, then open, with no press of its door.
+  **Confirmed 2026-10-03 on `alexah/267-q93-bought-ride-closed`:** bought Belly Bounce 43 canload 0→1,
+  12 Closed panels progress 1→0, and guest 35 visibly riding (`onride 1 bouncing 1`). Queue editing and actual
+  path-tail removal close it with panels raised; reconnection reopens it. Nine regressions, nine rejected
+  mutations, 1,727 full-suite passes. Loaded/disconnected normalization is tested; demolition preserves its
+  nominee. Screenshots, predictions, census and original-trace limits: `docs/exe/ride-operation.md`, Q93.
 
 ## B. Docs and comments
 
