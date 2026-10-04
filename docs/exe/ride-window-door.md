@@ -5,7 +5,7 @@ the complete object-status engine is not implemented.
 
 ## Executable evidence
 
-Read in a Codex-owned private Ghidra project copied from `SimThemePark`, with all
+Read in a private copy of the `SimThemePark` Ghidra project, with all
 20 source files hash-verified. The reference `/testme.exe` SHA-256 is
 `cf0ffd955077eca146d75ee46c45b8a0786fb757a8f7d204b1aed8ec5a1ee4cb`, equal to
 `~/repos/game/testme.exe`. The original project and its locks were left alone.
@@ -88,8 +88,6 @@ restoring the overlay passes. This is a local capture regression, not a portable
 font/rasterizer invariant. Full-suite and exact-commit results are recorded in the
 live plan and STATUS numbers.
 
-Independent Astra review checked the applied logic against relayed source and
-primary Ghidra output: its sandbox could not open local files. The parent ran the
-checks and inspected the screenshots. Queue-disconnected wording/disabled-door
+Queue-disconnected wording/disabled-door
 cases and other guard refusals are tested, not confirmed on screen. Paused peep
 censuses do not demonstrate queue draining or a rider boarding after reopening.

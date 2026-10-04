@@ -1702,6 +1702,11 @@ public static class DebugConsole
 
 				break;
 
+			// The park gate's script as the door left it: the command and status, and the two censuses the close waits on.
+			case "gate":
+				Reply( ParkPeople.Current?.GateDescription() ?? "gate: no park" );
+				break;
+
 			// What the park is worth. It exists so that a test can prove money moved by EXACTLY one
 			// amount: the clock is stopped under `pause`, so between two of these with no `step`
 			// between them no tick runs, nobody pays at the gate, and nothing but the command under
@@ -1712,10 +1717,6 @@ public static class DebugConsole
 			// them printed, "the plus button charged one more" is a measurement rather than a picture.
 			// Then the bank's other four, which the original's memory shows beside a drink's +10: the year's profit,
 			// the balance the last withdrawal left, the tick it entered the red and whether withdrawals are on.
-			case "gate":
-				Reply( ParkPeople.Current?.GateDescription() ?? "gate: no park" );
-				break;
-
 			case "money":
 				Reply( Level.Current?.ParkState is { } purse
 					? $"money balance {purse.Balance} takings {purse.Takings} " +
@@ -1725,12 +1726,13 @@ public static class DebugConsole
 					: "money: a park has to be loaded" );
 				break;
 
-			// What is standing in the park NOW, which is the save's list plus what has been built and
-			// minus what has been sold - the census that says whether buying actually changed anything.
+			// Every bound hoarding: its panels, texture, progress and flags.
 			case "hoardings":
 				foreach ( var hoardingLine in ParkObjects.Current?.HoardingCensus() ?? [] ) Reply( hoardingLine );
 				break;
 
+			// What is standing in the park NOW, which is the save's list plus what has been built and
+			// minus what has been sold - the census that says whether buying actually changed anything.
 			case "objects":
 				var standing = ParkBuilding.Census().ToArray();
 

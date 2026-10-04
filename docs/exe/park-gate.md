@@ -32,7 +32,7 @@ It does **not** separately filter the thing's `+3` byte, guest state, admission 
 ride membership or a cell's occupancy list. Staff are not counted here.
 
 `FUN_004fa990` reads the integer cell coordinates from position bytes `+5` (x) and `+7`
-(y), makes `y*128+x+1`, and indexes the 68-byte runtime cell array at `0x008023a0`.
+(y), makes `y*128+x+1`, and indexes the 68-byte runtime cell array through the pointer at `0x008023a0`.
 It asks the type dword at cell `+8`; the accepted set is **{0, 1, 3, 9, 10}**:
 
 | Address / offset | Original name (if known) | What it is | Evidence |
@@ -194,6 +194,4 @@ mutation initially survived because the fixture had no separate occupancy mappin
 now explicitly stands its subject on type-30 cell (2,2) while its navigator is at (1,1), and
 that mutation fails. `mutations.json` records the final failures; first-attempt results were
 retained. Source and binary were restored and the full suite passed: **1679**, no failures or
-skips, **121** build warnings and no errors. Independent Astra review assessed supplied primary
-excerpts and applied code; child filesystem access failed, so direct file/log/runtime checks
-were performed by the parent. The review restored the explicit zero-script-handle guard.
+skips, **121** build warnings and no errors.

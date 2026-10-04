@@ -3965,7 +3965,24 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   gave them. No `.hmp` needs generating. Write the chain into `boot.md`'s step 9 rows and beside `park-engine.md`'s
   allocation paragraph first, then build from the empty-park path, after Q186. Confirm against jungle `restart.INTS`
   (Q167's note): the twelve things, the fee, the APRs and the repayments; then a screenshot of the empty park.
-- [x] **Q85. New guests start unhappy: the decode.** Done 2026-10-03,
+- [x] **Q85. A guest who arrives starts with happiness nought, and stays there. Decode first.** Found by Q50's game
+  runs: every one of the 33 guests who arrived (30 by `load 30`) read `happy 0` in `peeps`, none above it in nine minutes,
+  while the save's 13 kept theirs (most at 50) until they went home, all by about four minutes, so a dock on anyone left
+  clamps and shows nothing. `ParkPeople`'s new-guest record writes `Happiness: 0f` (and nought thirst, hunger,
+  toilet, vomit, litter) with no note. Decode what the guest constructor `FUN_004faec0` and the arrival give a new
+  guest, and whether a ride's settle-up should raise it, then build it. Confirm: `load 30`, `peeps` over a few
+  minutes. **Then build the `InQueue` turn's unhappy arm** (`QUEUE_TURN_UNHAPPY` in `PeepBehaviour.QueueTurn`): below
+  happiness 10, thought `0xb`, out. Alexah held it at Q50d (2026-09-24) until arrivals start at the original's 50
+  (`FUN_004faec0`, `0x004fb075`), since at nought it would put every arrival out of every queue it joins;
+  `ParkQueueTurnTests.AnUnhappyQueuerStaysUntilArrivalsHaveTheOriginalsHappiness` pins the hold and turns round with it.
+  From Q165b: the constructor's eight unconditional draws on the world generator are the exit level's variation
+  (`0x004faff8`), the kind (`0x004fb01f`, built), the cash's variation (`0x004fb046`), thirst and hunger `% 50` (`+0x1a4`,
+  `+0x1a8`), toilet `% 30` (`+0x1ac`), one discarded (`0x004fb109`), and `+0x1c0` set to 100 when `% 100` is under
+  `PrankeryLikelihood` (`0x004fb114`); two more follow when `FUN_004fa990` answers nought (`0x004fb201`, `0x004fb21c`).
+  From Q169: the excitement match reads the arrival's hunger, so an OpenTPW arrival whose id does not divide by four
+  (the three quarters whose hunger never drifts) takes 35 on every Totem ride until they eat, where the original's,
+  drawn `% 50`, take 35, 28, 21 or 14.
+  **Outcome, 2026-10-03:** Done 2026-10-03,
   `alexah/255-q85-arrival-decode`. Decode only; the build and game confirmation are Q85b.
   `docs/exe/guest-arrivals.md`: constructor happiness **50**, thirst/hunger **0..49**, toilet **0..29**,
   cash/exit/prankery formulas, eight direct pre-reseed draws plus the base speed and child-bank draw,
@@ -3988,7 +4005,7 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
     **30** new guests at happiness **50**, all matched; screenshots and censuses across four simulated minutes.
     Real arrival 66's ride gain **+5**, 50 to 55; natural unhappy exit 60 and instrumented 75's **9 to 0**,
     thought census **1 to 2**. Both restored defects fail the new tests; full suite **1641**, no failures/skips.
-    Independent Astra review; remaining generator/entrance/thought/tiredness limits and evidence in
+    Remaining generator/entrance/thought/tiredness limits and evidence in
     `docs/exe/guest-arrivals.md`. Q86 not started.
 - [x] **Q206. Staff wander down ride queues and outside the park.** Alexah's report, investigated ahead of Q86.
   `alexah/257-staff-wander-boundaries`: restore linked-cell destination filters and path-only patrol rolls;
@@ -4004,7 +4021,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Completed on `alexah/258-q86-path-clear-queue`; decode, runtime evidence and reachability limits in
   `docs/exe/ride-operation.md`, "Q86: clearing a path joined to an entrance". Normal placement reaches an empty
   queue; populated-queue release confirmed with explicit instrumentation.
-- [x] **Q89. Decode the park door's gate command and empty-park census.** Done 2026-10-03,
+- [x] **Q89. The park's door does not command the gate. Decode first.** Found by Q50b's decode (`ride-operation.md`,
+  "The closed ride"; `lobby.md`, "The park gate"). Opening the park writes the gate's `VAR_COMMAND` 1; closing writes 0,
+  and only when `FUN_004c9130` counts nobody in the park and `VAR_STATUS` reads 1; 2 is the end-of-park routine's
+  alone (`FUN_005168f0`). Counted `PARK_DOOR_COMMANDS_THE_GATE`. Decode what `Gates.RSE` does with 0 against 2 and which
+  cells `FUN_004c9130` counts, then build it; `ParkRides.CommandTheGate` writes 2 for a park saved closed and
+  `ParkFixedItems` and its tests call that 2 a stand-in for the door's close. Confirm: close an empty park at the door, photograph the gate.
+  **Outcome, 2026-10-03:** Done 2026-10-03,
   `alexah/259-q89-gate-decode`. Decode only; implementation and game confirmation are Q89b.
   `docs/exe/park-gate.md`: command **0** ordinary close, **2** end sequence ending in a permanent
   yield loop; guest kind 1 on cell types **0, 1, 3, 9, 10**. The delayed writer checks every **30**
@@ -4031,7 +4054,12 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   opens 1/1, closes 0/0 and reopens 1/1, with screenshots and predicted census. A labelled
   one-field stock fixture preserves saved 1/1 while closed. Evidence: `docs/exe/park-gate.md`;
   original saves unchanged, no code change, Q90 unchanged.
-- [x] **Q90. The advisor says nothing when the park opens or closes. Decode first.** Decoded 2026-10-03:
+- [x] **Q90. The advisor says nothing when the park opens or closes. Decode first.** Found by Q50b's decode. The door
+  posts a type-`0x13` message, 3 or 4, whether or not anything changed, and `CAdvisor::ReceiveMessage`
+  (`FUN_0059b060`) answers with its own message `0x80` or `0x81` (`FUN_0059ae20`); `advisor-park.md` lists neither.
+  Counted `PARK_OPENED_ADVISOR_MESSAGE`, `PARK_CLOSED_ADVISOR_MESSAGE`. Decode what the two say and when, then build.
+  Confirm: press the door, the advisor's line in the log and on screen.
+  **Outcome, 2026-10-03:** Decoded 2026-10-03:
   events 3/4 → messages `0x80`/`0x81` → responses 308–311 → samples 342–345. Both shipped scores are **20**,
   below the tick's strict **>25** threshold: stock silence is expected, though OpenTPW still lacks the posting/gate
   path. Low-score slots remain occupied in the tick. Fresh Ghidra initializer/schema reconstruction and independent
@@ -4050,7 +4078,12 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   response/sample sequence **308/342, 310/344, 309/343, 311/345**. All **14** restored defects fail; **1699** tests pass,
   no skips. Independent applied review passed after timing corrections. `docs/exe/advisor-park.md`; branch
   `alexah/263-q90b-advisor-door`. Saved histories remain counted; original data and saves unchanged.
-- [x] **Q91. A ride's model does not change as it closes and opens. Decode first.** Decoded only on
+- [x] **Q91. A ride's model does not change as it closes and opens. Decode first.** Found by Q50b's decode. Every
+  close calls `FUN_00454550( model, 1 )` and every open `FUN_004547c0( model )` (`ride-operation.md`, the
+  `FUN_00454550` row); the model loader around them names `Hoardings`, and nothing parses or reads `RideInfo.Hoarding`.
+  Counted `CLOSED_RIDE_MODEL_CHANGE`, `OPENED_RIDE_MODEL_CHANGE`. Decode what the four texture offsets and `+0xbc` draw,
+  then build. Confirm: photograph the Belly Bounce before and after the door.
+  **Outcome, 2026-10-03:** Decoded only on
   `alexah/264-q91-closed-ride-decode`: separate generated hoardings, four texture frames (byte offsets
   0/8/16/24), progress rates +0.2/−0.3 per engine-clock second, staggered vertex/UV animation and guarded
   warning selection. `docs/exe/ride-hoardings.md`. No runtime screenshot/census, implementation or mutation
@@ -4088,7 +4121,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   path-tail removal close it with panels raised; reconnection reopens it. Nine regressions, nine rejected
   mutations, 1,727 full-suite passes. Loaded/disconnected normalization is tested; demolition preserves its
   nominee. Screenshots, predictions, census and original-trace limits: `docs/exe/ride-operation.md`, Q93.
-- [x] **Q94. The console's `path` lays what the path tool refuses.** Done 2026-10-03,
+- [x] **Q94. The console's `path` lays what the path tool refuses.** Found by Q50b's decode. `ParkPathBuilding.Lay`
+  checks the cell's type and NOMODIFY but not the verdict `FUN_00535670`, which refuses path over a queue cell whose
+  `mNeighbours` has more than one bit - every Belly Bounce queue cell (`ride-operation.md`, "The queue measured
+  again"). Q50's game run cut the queue that way, a cut the player cannot make in one click. Route the console
+  through the verdict and re-stage Q50's confirmation with a cut the player can make, or say which. Confirm: `path 51 22`
+  refused with the verdict's reason.
+  **Outcome, 2026-10-03:** Done 2026-10-03,
   `alexah/268-q94-console-path-verdict`. Public `Lay` shares the player verdict. Predicted `path 51 22` refusal,
   zero changed cells, zero charge and four retained queue pieces confirmed with screenshots and census.
   Q50 restaged by detaching each tail first: legal cuts reduce 12 → 8 → 4 queuers, eight predicted releases at
@@ -4110,7 +4149,7 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   predicted `spend`: stock cost/chance 50/25 and 20/100; labelled fixture 80/58 and 80/100. Fourteen regressions,
   eight mutation failures, 1,752 tests pass. RNG ownership remains a deviation; played-save render fails on
   duplicate sprite key 0. `docs/exe/ride-operation.md`, Q97.
-- [x] **Q207. Repair the three confirmed Codex audit defects.** User-authorized together, 2026-10-03.
+- [x] **Q207. Repair three defects found by an audit of the 2026-10-03 commits.** Asked for together by Alexah, 2026-10-03.
   Fresh Full Simulation hires and draws all five staff kinds from native initialization and archive counts;
   price opinions use catalogue InitCostOfGoods for the base and object cost only for the sideshow prize;
   failed selection reloads revoke cached profile write permission until a successful reload. Real hire-screen/XTEST

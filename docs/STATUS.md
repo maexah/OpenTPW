@@ -83,7 +83,7 @@ Last updated: 2026-10-04. **This header names no branch and no sha, deliberately
 
 ## Recent
 
-**2026-10-04 (Q207).** Three audit defects repaired: fresh staff sprites/atlas, catalogue price base, failed-selection write provenance. All five staff visible after actual screen/drop path. Five mutations fail; restored full suite 1,764 passes/zero skips. `docs/exe/park-engine.md`, `ride-operation.md`, `saves.md`. Exact commit verification is recorded in the external live plan.
+**2026-10-04 (Q207).** Three audit defects repaired: fresh staff sprites/atlas, catalogue price base, failed-selection write provenance. All five staff visible after actual screen/drop path. Five mutations fail; restored full suite 1,764 passes/zero skips. `docs/exe/park-engine.md`, `ride-operation.md`, `saves.md`.
 
 **2026-10-03 (Q97).** Saved object goods/chance restored; Q207 corrects the price base and two wrong test expectations. Predicted stock/fixture censuses and screenshots agree; 14 new regressions, eight killed mutations, restored full suite 1,752 passes. Original saves unchanged. `docs/exe/ride-operation.md`, Q97.
 

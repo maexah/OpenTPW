@@ -327,6 +327,9 @@ public sealed class ParkObjects : Entity
 			_models.Add( model );
 			_standing[placed.ThingId] = new Standing( model, animations, placed.CatalogueId );
 
+			// The original gates on the base vertices FUN_00469a80 counts (0x0046a838) and reads the mesh with the
+			// most of them (0x0046a82c). The node count and the first mesh stand in for both: the same mesh in
+			// every shipped outline. docs/exe/ride-hoardings.md.
 			if ( item.Hoarding is { } outline && model.Source.Nodes.Count > 1 && model.Source.Meshes.Count > 0
 				&& ParkState.Current is { } state )
 			{

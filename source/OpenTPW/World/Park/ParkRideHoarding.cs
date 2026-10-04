@@ -58,7 +58,10 @@ internal sealed class ParkRideHoarding : ModelEntity
 	internal static float Ground( HeightfieldFile field, System.Numerics.Vector2 grid, Vector3 origin, Quaternion turn )
 	{
 		var world = V3.Transform( new V3( grid.X * 10, grid.Y * 10, 0 ), turn ) + origin.GetSystemVector3();
-		// FUN_00454050 biases positive grid coordinates by 0.1 before truncating.
+		// FUN_00454050 biases positive grid coordinates by 0.1 before truncating. It samples inside the model's
+		// inclusive rectangle (+0xc0 to +0xc4, FUN_00467030), x0 + trunc( gx * (w - 1) / w + 0.1 ); this samples
+		// x0 + gx, which is the same on flat ground only. docs/exe/ride-hoardings.md.
+		Unimplemented.Report( "HOARDING_TERRAIN_RECTANGLE" );
 		var x = (int)(world.X / field.CellSizeX + 0.1f);
 		var y = (int)(world.Y / field.CellSizeY + 0.1f);
 		return (field.HeightAt( x, y ) - origin.Z) * 0.5f;

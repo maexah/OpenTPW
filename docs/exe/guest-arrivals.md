@@ -14,8 +14,7 @@ all 19 files before and after copying; the original session and project were lef
 The query harness is `ghidra_query.py`; its outputs are `initial-decode.txt`,
 `arrival-decode.txt`, `queue-decode.txt`, `identity.txt` and `program-info.txt` in the Q85
 session workspace's `evidence/` directory. They contain the decompiler output and instruction
-listings, not an imported third-party interpretation. An independent Astra review rechecked
-the relevant instructions and applied documentation (`verifier-decode.txt`, `verifier-review.md`).
+listings, not an imported third-party interpretation.
 
 Q85 was decode-only. Q85b implements the arrival meters, cash/exit variation, prankery
 and unhappy queue exit. Runtime and regression evidence is recorded below; static decoding
@@ -31,8 +30,9 @@ The transport and spawn-cell selection remain documented in [park.md](park.md#ar
 
 The constructor first zeroes its guest fields, then overwrites the values below. Its final
 state selection is separate from those assignments: `FUN_004fa990` tests the cell under the
-guest. Types 0, 1, 3, 9 and 10 pass; this branch records the current arrival vehicle in
-`+0x1d8` and enters state 6. Otherwise two more random draws select and vary a destination;
+guest. Types 0, 1, 3, 9 and 10 pass; this branch takes the next visitor number into
+`+0x1d8` (`FUN_0051aaf0` at `0x004fb1df`: world `+0x1da714` incremented, logged as "Your park has received its
+%dth visitor!") and enters state 6. Otherwise two more random draws select and vary a destination;
 `FUN_004fa5f0` succeeding enters state 0, failing enters state 6. Neither constructor state
 arm in `FUN_00501db0` writes happiness or the needs. This does not imply those meters stay
 unchanged through subsequent game turns.
@@ -194,8 +194,7 @@ loading-bar cache; the other original save files retain their run-start hashes.
 
 The final source build has **0 errors, 121 warnings**; the full suite with real game data
 has **1641 passed, 0 failed, 0 skipped** (`final-source.trx`). The two defect-restoration
-runs are `mutation-zero.trx` and `mutation-held.trx`. Independent Astra review checked the
-applied arithmetic, callers, state guards, tests and primary Ghidra listings.
+runs are `mutation-zero.trx` and `mutation-held.trx`.
 
 The separate post-outage recovery run is `evidence/runtime-recovery/`. It reproduced a
 single predicted unhappy exit for guest **44**: `unhappy-before.txt` has `InQueue`,

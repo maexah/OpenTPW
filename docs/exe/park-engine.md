@@ -1825,7 +1825,7 @@ unchanged all matched censuses and screenshots. `runtime-final/all-five-hired.pn
 `five-after-ticks.png` and the accompanying census show them after 100 more frames. No fake employees were seeded.
 The final sprite factory tests also pin nonzero costume bytes and the guard's separate selection.
 
-Evidence directory: `/home/alex/Documents/Codex/2026-10-03/start-from-home-alex-repos-opentpw/` (live `PLAN.md`,
+Evidence: the Q207 working folder, outside the repository and named in the machine notes (`PLAN.md`,
 `staff-*-native.txt`, `mutation-results/`, `runtime-final/`, `price-fixture.json`). Original saves are
 hash-protected; runtime uses disposable copies and muted audio. Original-hire and original-atlas restorations
 fail two and four regression cases; wrong sprite mapping fails one. Original-price and original-profile

@@ -568,8 +568,7 @@ and `refusal-after.png`, `loose-tail-before.png`/`after.png`, and `populated-{tw
 positions. The capture used original assets with private saves; the original save hashes remained unchanged.
 `ParkConsolePathTests` has 11 public-command cases. Restoring the old `Lay` method fails 8, including the connected
 queue and outside-land/track refusals. Restoring and rebuilding passes all 1,738 tests, none skipped; 121 build
-warnings, no errors. Independent Astra applied review found no material defect and independently checked the
-mutation logs, runtime census blocks and screenshots. Six mutation failures expose bypassed verdicts; two detect
+warnings, no errors. Six mutation failures expose bypassed verdicts; two detect
 refusal-message differences. The private Ghidra startup check matched the reference executable SHA-256
 `cf0ffd955077eca146d75ee46c45b8a0786fb757a8f7d204b1aed8ec5a1ee4cb`; no new executable or file-layout decode was needed.
 
@@ -613,8 +612,7 @@ Evidence in the local `q86/` harness directory: `clear-cell.txt`, `clear-path-as
 `forced/` each hold `run.log`, two screenshots and same-run save manifests. All four save comparisons were unchanged.
 Thirteen new regression cases cover both clearing helpers, the actual stamp caller, exemptions, refusals, cardinal
 and owner guards, both link bits, and per-side timing. Restoring both missing notifications failed **8 of 20**
-`ParkQueueRemeasureTests`; restoring the fix passed the full **1,667** tests, none skipped. Independent Astra review
-checked the applied change and the supplied Ghidra evidence; runtime and build checks were run by the parent.
+`ParkQueueRemeasureTests`; restoring the fix passed the full **1,667** tests, none skipped.
 
 #### The sale's drain - `FUN_00530120` and `FUN_0052fe50`
 

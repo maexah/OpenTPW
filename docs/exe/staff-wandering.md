@@ -81,8 +81,5 @@ entrance and approach destinations that are otherwise reachable. Logs: `mutation
 `mutations.json`. Restored build: **121 warnings, 0 errors**; full suite **1,654 passed, 0 failed, 0 skipped**
 with the real game data. Exact-commit isolation is recorded in the task's live plan after committing.
 
-Astra independently reviewed the applied code and executable filters through parent-relayed source and
-Ghidra listings because the child sandbox could not read the filesystem. No blocking finding remained.
-Direct independent shell execution was unavailable. Tests and launches were run by the parent.
 Rest/exception controls and synthetic direction edges are tested, not photographed. The original game was
 not replayed to compare its transient overshoot; no such equivalence is claimed.

@@ -103,7 +103,7 @@ share this cooldown. The general five-second and 120-second keys are not read, a
 
 ### Evidence and next-session confirmation
 
-Private Ghidra project `q90-codex-project`, copied and hash-checked from the original without altering it;
+A private copy of the Ghidra project, hash-checked against the original and not altered;
 program `/testme.exe`, image base `0x00400000`, executable SHA-256
 `cf0ffd955077eca146d75ee46c45b8a0786fb757a8f7d204b1aed8ec5a1ee4cb`, matching the reference executable.
 The `q90/` harness directory holds `initial-decode.txt`, `filler.txt`, `loader-schema-door.txt`,
