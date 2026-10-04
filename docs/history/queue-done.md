@@ -4130,6 +4130,18 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   "Closing" line, hoarding 13 at progress 0, the box "QUEUE NOT CONNECTED" in orange, photographed beside the
   original's. Four tests rewritten to the original; four ways of putting the bug back each fail one or two of them.
   Not done: the box's lettering is smaller than the original's (Q213); no test runs `ParkBuilding.Buy` (Q211).
+- [x] **Q209. A player folder with no gms.dat is never saved again.** Found by the 2026-10-04 review of the profile
+  preservation commits. `Players.Load` gave such a folder the read-only stand-in meant for a file that would not
+  read, and `Select` revoked writing whenever the load answered null, so `SavePlayer` refused for good: the player
+  played and lost everything on quitting, with a log line the only sign. Before those commits the folder was a new
+  player; the original's writer (`0x005afc60`) writes unconditionally. Keep a missing file writable, keep a file that
+  is there but unreadable protected, and do not replace a file that appears after the player was read. Confirm: a
+  folder with no gms.dat, picked in the lobby, the game closed, the file on disk.
+  **Done 2026-10-04**, `alexah/272-a-player-with-no-gms-dat-is-saved`. Predicted the file; a private game folder with
+  `save/users/1nofile/` and nothing in it, the first slot clicked, the window closed: `Saves: wrote
+  users/1nofile/gms.dat`, 748 bytes, version 12. `ProfilePreservationTests` gains a folder with no file saved and read
+  back, and a file that would not open left alone once it can; four restored bugs each fail one or two tests.
+  Not done: nothing on screen tells a player when a save is refused (Q216).
 
 ## B. Docs and comments
 

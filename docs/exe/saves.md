@@ -230,17 +230,17 @@ behaviour. A player loaded read-only can still be selected, but their changes re
 `ProfilePreservationTests` drives selection, key awards and deselection over disposable files, including truncation,
 unknown versions, invalid counts, trailing bytes and a destination damaged after selection.
 
-**Q207, failed selection reload.** A null `LoadPlayer` result revokes `CanWrite` on the cached roster profile,
-retaining its readable progress. Immediate key saves and deselection both remain blocked even if a valid file
-returns. Only a successful reload replaces that instance and may restore write permission. The regression scans
-7 keys, removes the file during selection, restores 19, and verifies unchanged bytes through both save paths;
-reloading then permits saving 20. Restoring the original selection code fails this regression. This closes an
-inherited gap in the preservation policy; it is not a native-game behavior claim.
+**A reload that fails, and a file that is not there (Q207, Q209).** When a player is selected and their gms.dat is
+there but will not read, the cached profile keeps its readable progress and loses `CanWrite`; key saves and
+deselection stay blocked even if a valid file returns, and only a successful reload restores writing. A folder with
+no gms.dat at all is different: it is a player nobody has saved yet (`SaveFolder.ScanPlayers`), there is nothing to
+protect, and the first save makes the file, as the original's writer does (`0x005afc60` writes unconditionally).
+`Player.FileMissing` records that no file was there when the player was read; if one has appeared by the time of
+the save it was never read, and `SaveFolder.SavePlayer` leaves it alone. None of this is the original's behaviour.
 
-The same 7→failed selection→restored 19 sequence passed through real lobby controls with disposable saves.
-`runtime-profile/preserved-result.json` records the byte-identical restored profile after the confirmation tick;
-`successful-reload-nineteen.png` shows the reloaded keys. The normal second deselection writes successfully.
-Evidence is in the Q207 directory named in `park-engine.md`; installed saves remain hash-identical.
+`ProfilePreservationTests` covers each: a folder with no file is saved and reads back; a file appearing after such a
+read is not replaced; a file that would not open is not replaced once it can; a file removed and then restored with
+other contents during a session is kept, and a successful reload then saves normally.
 
 ## Unresolved
 

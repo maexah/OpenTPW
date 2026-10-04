@@ -114,14 +114,66 @@ public class ProfilePreservationTests
 	}
 
 	[TestMethod]
-	public void AFailedPlayerLoadCannotOverwriteAFileThatBecomesReadableLater()
+	public void APlayerReadWithNoFileCannotOverwriteOneThatAppearsLater()
 	{
-		// A missing gms.dat takes the same null-returning fallback as an open failure.
+		// No gms.dat when the player was read: one that turns up afterwards was never read, and is not replaced.
 		var players = new Players();
 		players.Load();
 		players.Select( 0 );
 		var original = Written( new PlayerFile { KeysGiven = 19 } );
 		File.WriteAllBytes( Profile, original );
+		players.SaveAndDeselect();
+		CollectionAssert.AreEqual( original, File.ReadAllBytes( Profile ) );
+	}
+
+	/// <summary>
+	/// A folder with no gms.dat is still a player (<see cref="SaveFolder.ScanPlayers"/>), and the original's writer
+	/// (0x005afc60) writes whatever is there: their first key makes the file, and it reads back.
+	/// </summary>
+	[TestMethod]
+	public void APlayerFolderWithNoFileIsSavedLikeAnyOther()
+	{
+		Assert.IsFalse( File.Exists( Profile ) );
+		var players = new Players();
+		players.Load();
+		players.Select( 0 );
+		Assert.IsTrue( players.Current!.File.CanWrite );
+		players.Current.AddKey();
+		Assert.IsTrue( File.Exists( Profile ), "the first save makes the file" );
+		players.Current.AddKey();
+		players.SaveAndDeselect();
+		using ( var saved = File.OpenRead( Profile ) )
+			Assert.AreEqual( 2, PlayerFile.Read( saved ).KeysGiven );
+
+		var again = new Players();
+		again.Load();
+		again.Select( 0 );
+		Assert.AreEqual( 2, again.Current!.File.KeysGiven );
+		Assert.IsFalse( again.Current.FileMissing );
+	}
+
+	/// <summary>A gms.dat that is there but will not open is not a new player: it is never replaced by the stand-in.</summary>
+	[TestMethod]
+	public void AFileThatWouldNotOpenIsNotReplacedOnceItCan()
+	{
+		if ( OperatingSystem.IsWindows() )
+		{
+			Assert.Inconclusive( "the open failure is staged with Unix file modes" );
+			return;
+		}
+
+		var original = Written( new PlayerFile { KeysGiven = 19 } );
+		File.WriteAllBytes( Profile, original );
+		File.SetUnixFileMode( Profile, UnixFileMode.None );
+
+		var players = new Players();
+		players.Load();
+		players.Select( 0 );
+		Assert.IsFalse( players.Current!.File.CanWrite );
+		Assert.IsFalse( players.Current.FileMissing );
+
+		File.SetUnixFileMode( Profile, UnixFileMode.UserRead | UnixFileMode.UserWrite );
+		players.Current.AddKey();
 		players.SaveAndDeselect();
 		CollectionAssert.AreEqual( original, File.ReadAllBytes( Profile ) );
 	}
@@ -135,7 +187,7 @@ public class ProfilePreservationTests
 		File.Delete( Profile );
 		players.Select( 0 );
 		Assert.AreEqual( 7, players.Current!.File.KeysGiven, "retain the cached readable progress" );
-		Assert.IsFalse( players.Current.File.CanWrite, "the failed reload invalidates its write permission" );
+		Assert.IsTrue( players.Current.FileMissing, "the file was gone at this selection: one that appears later is not theirs" );
 		// Repeated selection failures must not clear the provenance.
 		players.Select( 0 );
 		var restored = Written( new PlayerFile { KeysGiven = 19 } );

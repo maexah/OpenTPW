@@ -302,7 +302,12 @@ internal static class SaveFolder
 	/// Writes a player's gms.dat. The options in it are always the options as they stand: the original writes
 	/// its options object itself into the file (0x00423e90), whoever set them.
 	/// </summary>
-	public static void SavePlayer( int slot, string name, PlayerFile file )
+	/// <param name="slot">The player's slot.</param>
+	/// <param name="name">The player's name.</param>
+	/// <param name="file">What to write.</param>
+	/// <param name="expectMissing">No gms.dat was there when this player was read; one found now is someone else's.</param>
+	/// <returns>Whether the file was written.</returns>
+	public static bool SavePlayer( int slot, string name, PlayerFile file, bool expectMissing = false )
 	{
 		var folder = PlayerFolder( slot, name );
 		var path = Path.Join( folder, PlayerFileName );
@@ -316,6 +321,9 @@ internal static class SaveFolder
 
 			if ( Find( PlayerFileName, folder ) is { } existing )
 			{
+				if ( expectMissing )
+					throw new InvalidDataException( "a player file has appeared that was never read; leaving it unchanged" );
+
 				path = existing;
 				using var original = SaveFileSystem.OpenRead( path );
 				if ( !PlayerFile.Read( original ).CanWrite )
@@ -328,12 +336,17 @@ internal static class SaveFolder
 
 			SaveFileSystem.WriteAllBytes( path, memory.ToArray() );
 			Log.Info( $"Saves: wrote {path}" );
+			return true;
 		}
 		catch ( Exception e )
 		{
 			Log.Warning( $"Saves: {path} could not be written - {e.Message}" );
+			return false;
 		}
 	}
+
+	/// <summary>Whether a player's folder holds a gms.dat at all, readable or not.</summary>
+	public static bool HasPlayerFile( int slot, string name ) => Find( PlayerFileName, PlayerFolder( slot, name ) ) != null;
 
 	/// <summary>
 	/// Deletes a player's folder and everything in it - 0x005c5250. Like the original, it passes over any name

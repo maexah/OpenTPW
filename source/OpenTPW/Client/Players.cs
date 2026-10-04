@@ -51,9 +51,17 @@ internal sealed class Players
 		Current = null;
 
 		foreach ( var (slot, name, file) in SaveFolder.ScanPlayers() )
-			// A failed read is not a new player. Keep the fallback read-only even if the original
-			// becomes readable before saving; only a successful select may replace this state.
-			_slots[slot] = new Player( slot, name, file ?? PlayerFile.Read( Stream.Null ) );
+		{
+			// A folder with no gms.dat is a player nobody has saved yet, and is written like any other. A
+			// gms.dat that would not read is not a new player: its stand-in stays read-only even if the file
+			// becomes readable before saving, and only a successful select replaces it.
+			var missing = file == null && !SaveFolder.HasPlayerFile( slot, name );
+
+			_slots[slot] = new Player( slot, name, file ?? (missing ? new PlayerFile() : PlayerFile.Read( Stream.Null )) )
+			{
+				FileMissing = missing
+			};
+		}
 
 		if ( UsedSlots > 0 )
 			Log.Info( $"Front end: {UsedSlots} saved player(s)" );
@@ -86,6 +94,7 @@ internal sealed class Players
 		if ( SaveFolder.LoadPlayer( slot, player.Name ) is { } file )
 		{
 			player.File = file;
+			player.FileMissing = false;
 
 			if ( file.HasOptions )
 			{
@@ -94,8 +103,11 @@ internal sealed class Players
 			}
 		}
 
-		else
+		else if ( SaveFolder.HasPlayerFile( slot, player.Name ) )
 			player.File.PreserveAfterFailedReload();
+
+		else
+			player.FileMissing = true;
 
 		foreach ( var theme in SaveFolder.Themes )
 			player.File.Park( theme );
@@ -139,6 +151,12 @@ internal sealed class Player( int slot, string name, PlayerFile file )
 
 	public PlayerFile File { get; set; } = file;
 
+	/// <summary>
+	/// No gms.dat was in their folder when it was last read. Saving then makes one; but a file that has
+	/// appeared since was never read, and is left alone - see <see cref="SaveFolder.SavePlayer"/>.
+	/// </summary>
+	public bool FileMissing { get; set; }
+
 	/// <summary>Instant Action rather than Full Simulation - the joystick beside their slot.</summary>
 	public bool InstantAction => File.InstantAction;
 
@@ -165,5 +183,9 @@ internal sealed class Player( int slot, string name, PlayerFile file )
 		Save();
 	}
 
-	public void Save() => SaveFolder.SavePlayer( Slot, Name, File );
+	public void Save()
+	{
+		if ( SaveFolder.SavePlayer( Slot, Name, File, FileMissing ) )
+			FileMissing = false;
+	}
 }

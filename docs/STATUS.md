@@ -4,7 +4,7 @@ Last updated: 2026-10-04. **This header names no branch and no sha, deliberately
 
 ## Works
 
-- **Failed profile selection reloads preserve restored progress** (Q207). Cached profiles stay read-only until successfully reloaded; immediate key saves and deselection are covered.
+- **Failed profile selection reloads preserve restored progress** (Q207). Cached profiles stay read-only until successfully reloaded; immediate key saves and deselection are covered. A folder with no gms.dat is a new player and is saved like any other (Q209).
 - **Objects keep their own saved cost of goods and chance of winning** (Q97). The sideshow price-opinion prize, rolls, excitement and settlement use them; the price-opinion base uses catalogue InitCostOfGoods (Q207). Stock and labelled-fixture screenshots/censuses match predicted 50/25 → 80/58 for the Jungle Spray.
 - **Console path placement uses the player verdict** (Q94). Connected queue cells refuse with no charge or edit. Legal detached-tail cuts are photographed; predicted census confirms 12 → 8 → 4 queuers, eight releases at happiness 35.
 
@@ -76,9 +76,9 @@ Last updated: 2026-10-04. **This header names no branch and no sha, deliberately
 | | | measured |
 |---|---|---|
 | Opcodes | **77** of 106 | 2026-10-01, `case Opcode.` labels vs enum members, after Q87 |
-| Tests | **1764**, 0 fail, 0 skip with the game | 2026-10-04, Q208, alone in a worktree |
-| Tests without the game | **731** ran, **1033** skipped, of 1764 | 2026-10-04, Q208 |
-| Build warnings | 121 | 2026-10-04, Q208 |
+| Tests | **1766**, 0 fail, 0 skip with the game | 2026-10-04, Q209, alone in a worktree |
+| Tests without the game | **733** ran, **1033** skipped, of 1766 | 2026-10-04, Q209 |
+| Build warnings | 121 | 2026-10-04, Q209 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
@@ -88,6 +88,8 @@ Last updated: 2026-10-04. **This header names no branch and no sha, deliberately
 **2026-10-03 (Q97).** Saved object goods/chance restored; Q207 corrects the price base and two wrong test expectations. Predicted stock/fixture censuses and screenshots agree; 14 new regressions, eight killed mutations, restored full suite 1,752 passes. Original saves unchanged. `docs/exe/ride-operation.md`, Q97.
 
 **2026-10-03 (Q94).** Shared path verdict; connected stock queue refuses with screenshot and predicted zero-edit/$0 census. Legal tail cuts restage Q50: 12→8→4 queuers, eight predicted happiness 50→35 releases. Eleven new tests; eight fail with the original method restored; 1,738 pass after rebuilding; independent applied review passed. Admission/choice were instruments; nominee/state-14 exemptions and post-cut walking were not reconfirmed. `docs/exe/ride-operation.md`, Q94.
+
+**2026-10-04 (Q209).** A player folder with no gms.dat is saved again: since the preservation policy it had been read-only for good. A file that appears after such a read is still left alone (`Player.FileMissing`). Picked in the lobby and the window closed: `Saves: wrote users/1nofile/gms.dat`, 748 bytes, version 12, in a private game folder. Two tests added; four restored bugs each fail. `docs/exe/saves.md`.
 
 **2026-10-04 (Q208).** Q93's close on a cut-off queue taken out: the original leaves the ride open (three callers of `FUN_004df300`, none an edit; seen in the reference park, `+0x68` 1, "LINE NOT CONNECTED"). Status 22 built. OpenTPW photographed beside the original after the same path clear: `canload 1`, no hoarding. Four tests rewritten; four restored bugs each fail. Found by the 2026-10-04 review of the 24 commits of 2026-10-03/04, whose other findings are Q209 to Q217. **2026-10-03 (Q93).** Bought queued rides close after script binding; canload 0→1 on connection, 12 hoarding panels raised and retracted, guest 35 aboard. `docs/exe/ride-operation.md`, Q93.
 
@@ -114,5 +116,3 @@ Last updated: 2026-10-04. **This header names no branch and no sha, deliberately
 **2026-10-03 (Q197).** Fresh Full Simulation startup confirmed by screenshot ($50,000, empty Lost Kingdom) and predicted startup census (12 things, 0 peeps, 16,384 cells, closed, fee and eight loans). All 16,384 reference cells agree except four cosmetic random path-art variants, counted; both fixed objects and manager IDs agree. Bug restoration fails the new test. Source review covered the applied core through relayed evidence; direct reviewer shell access was unavailable. Save/load of a played park remains unbuilt.
 
 **2026-10-03 (review).** Q150 admission discrepancy reproduced; remains open. Seeded guest/staff/ride replay compares 400 updates. Archive validation covers 36 cases and all 312 WADs; independent decoded bytes agree. Ghidra qualifies the alpha gate and records load overrides/threshold rounding; rendering unchanged. Unread player profiles/options stay read-only, including failed-load fallbacks; destinations are rechecked. 18 preservation cases pass; removing the guards fails seven. A copied Full Simulation profile saves normally, and its damaged copy stays unchanged. This is OpenTPW's preservation policy.
-
-**2026-10-03 (Q205).** `alexah/244-queue-history`: the 115 ticked items moved, verbatim and by script, from `QUEUE.md` (530 KB, now 108 KB) to `history/queue-done.md`; all 238 Q-numbers resolve once across the two. **Earlier:** `242` (Q87), `241` (Q116), `240` (Q118), `239` (Q106), `238` (Q196), `236` (Q195), `235` (Q194), `234` (Q193), `233` (Q203), `232` (Q202), `231` (Q202 queued), `230` (Q192), `229` (Q191), `228` (heads follow), `227` (Q190), `226` (Q189), `225` (Q187), `224` (Q186), `223` (Q185), `222` (Q183), `220` (Q182b), `218` (Q182), `217` (Q181b), `216` (Q181), `215` (Q180), `214` (heads), `213` (Q179d), `212` (Q179c), `209`-`211` (Q179b), `208` (Q179c queued), `207` (Q179), `206` (Q201b), `205` (Q201), `204` (Q178b), `203` (Q178), `202` (Q200b), `201` (Q200), `200` (Q199), `199` (Q198b), `198` (Q198), `197` (Q177f), `196` (Q177e), `195` (Q177d), `194` (Q177c, Q96), `193` (the fork review), `192` (Q177b), `191` (Q177), `190` (Q176), `189`, `188` (Q184), `187` (Q175b), `186` (Q175), `185` (Q168), `184` (FileFormats rules); each QUEUE.md entry names its branch: `183` (Q174c) back to `118` (Q4), less `127`, `133`, `159`, `160`, `162`, `166`, `169`; `117`, `109`.
