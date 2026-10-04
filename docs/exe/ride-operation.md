@@ -69,8 +69,15 @@ In order:
 
 1. If `mFlags & 0x80`: read script var **0** (`VAR_LETMEON`); if it reads **1**, run `FUN_004cd4e0` / `FUN_004d8460(7, …)` and write **2** back. **The `0x80` bit is `IsFireworks`** (descriptor `+0x110`, set by `FUN_004db090`); no jungle item sets it.
 2. **States 3 and 4 return immediately** — a state-3 object does nothing at all on its turn.
-3. **The breakdown request.** Unless the state is 1, or `mCanLoad` is nought, or a global counter's low three bits are set, it checks the ride and — for a non-toilet whose `VAR_BREAKSTAT` is nought — logs `"Object %d: requested breakdown"`, takes a constant off the wear at `+0x48` (clamped 0..100), and writes **`VAR_BREAKSTAT` = 1**. So var 4 is an engine → script channel, confirmed from the other side by `FUN_004e0db0` setting it and `FUN_004e03f0` clearing it.
-4. **The worn flag.** A wear value below a threshold writes **`VAR_WORN` (var 8) = 1**.
+3. **Wear and the breakdown request**, only in a state other than 1 with `mCanLoad` set and `mGameTick & 7` nought
+   (`0x004e0c13`..`0x004e0c33`). First the wear `FUN_004df670` ("A toilet's dirt", below). Then,
+   only when the wear `+0x48` or the State of repair `+0x44` truncates to a byte of nought (`0x004e0c4e`..`0x004e0c64`),
+   a non-toilet whose `VAR_BREAKSTAT` is nought logs `"Object %d: requested breakdown"`, takes 5.0 (`0x007005c8`) off
+   `+0x48` unless its byte is already nought (clamped 0..100), and writes **`VAR_BREAKSTAT` = 1**. So var 4 is an
+   engine → script channel, confirmed from the other side by `FUN_004e0db0` setting it and `FUN_004e03f0` clearing it.
+4. **The toilet's worn flag**, on every turn that reaches here, whatever step 3's gates said (`0x004e0d10`): a toilet
+   (`mFlags & 1`) whose `+0x44` truncates to a byte below 25.0 (`0x00700550`) has **`VAR_WORN` (var 8) = 1** written.
+   Nothing here writes it for a non-toilet; a ride's is `FUN_004df670`'s, below 20.
 5. **The stale-queue-head drop.** If `mFirstInQ` names nobody the engine knows, or names somebody not queueing (`FUN_00502430`), the head is cleared and nothing else is tidied.
 
 ## The second half — `FUN_004e0e00`, a switch on `mState` (`+0x19c`)
@@ -831,9 +838,9 @@ the one tail (`0x0050049e` / `0x005004aa`): `FUN_004ddd20`, then `FUN_005012f0` 
    `VAR_LETMEON` where it names them), then the object reloaded by `MajorDest` and the tail at `0x005004aa`.
 2. **Wait**: the same two with the object naming somebody else: the whole turn is nothing (`0x005001d8`). The
    invitation is kept, and nothing below runs, not even the mood.
-3. **Dirt gate**: `FUN_004e0390`, a toilet (`+0x32 & 1`) whose `+0x44` (its State of repair, `park-engine.md`; what lowers it
-   is not decoded) truncates to a
-   byte below 25.0 (`0x00700550`): thought `0xe`, out.
+3. **Dirt gate**: `FUN_004e0390`, a toilet (`+0x32 & 1`) whose `+0x44` (its State of repair, `park-engine.md`; "A
+   toilet's dirt", below, says what lowers and restores it) truncates to a byte below 25.0 (`0x00700550`): thought
+   `0xe`, out.
 4. **Lost place**: `FUN_004ddf50` answers -1 (the guest is unlinked, or somebody in front is no longer in states
    11..14): out. Its string, `"Problem with a queue - shouldn't be fatal, closing and reopening the ride with the
    problem!"` (`0x0075dbac`), promises a close and reopen that nothing does.
@@ -1924,6 +1931,101 @@ three.
 | Speed by rest | `+0xc0`, 60 to 140, one of `FUN_004fa870`'s three terms | none: staff are not eased and keep the saved `max_speed` (a guest's is, `Peep.Pace`) | every decide (Q136) |
 | Thoughts `0x12` to `0x16` | shown | none, uncounted | tired, unhappy, very happy staff (Q110) |
 | Strikes | `mStaffHQ`'s monthly flag, the strike walk, state 5's end | none, uncounted, the model-9 record unread | the monthly consideration every month the park is open; a strike only past the 24-month gate (Q138) |
+
+## A toilet's dirt - `FUN_004e2440`, `FUN_004e0390` and the handyman's `FUN_004d7880`
+
+A toilet is an object with `mFlags & 1`, set by the constructor from the descriptor's `+0xf4`
+(`UsageInfo.ProvidesRelief`, `0x004db3c0`..`0x004db3d2`). Its dirt is the same float every object has at `+0x44`, the
+State of repair (file 1074): 100 at construction (`0x004db360`), and **dirty means it truncates to a byte below 25.0**
+(`FLD [ECX+0x44]`, `__ftol`, `AND EAX,0xff`, against `0x00700550`). That test is `FUN_004e0390`, and it is inlined at
+six sites in four more functions (every reference to `0x00700550` in the image). Every store to an object's `+0x44` in the object code (`0x004db000`..`0x004e3000`, swept) is in one
+of the six functions named here. Not ruled out: seven float stores to a `+0x44` outside that range whose structures
+were not read (`0x00432ef1`, `0x00442548`, `0x0053dd42`, `0x005d9a9e`, `0x005d9d86`, `0x005dcd33`, `0x005e310c`).
+
+**What lowers it: use, and nothing else a shipped toilet reaches.**
+
+| Writer | When | What |
+|---|---|---|
+| `FUN_004e2440`, from the settle-up's toilet arm alone (`0x004fe7a8`) | every use, not in the online game | `+0x44` += need's byte × −0.05 (`0x007005d0`), held to 0..100. On the use that takes a toilet from not dirty to dirty: `"Toilet has become dirty and smelly"`, effect 1 unstamped and effect 6 stamped at its cell ("The effects of a visit", step 5) |
+| `FUN_004df670`, from the object's turn (`0x004e0c49`) | `mGameTick & 0x3f` nought, the tier's `Upgrades[l].WearRate` (descriptor `+0x1b0 + 0x40 × l`) non-zero, not online, and `VAR_RUNNING` above nought or `mFlags & 0x100` | a wear `w` - nought while `VAR_ONRIDE` is nought, else `FUN_004df450`'s, which is not decoded here - comes off `+0x44`, and `0.02 × w` (`0x00700548`) off `+0x48`, each held to 0..100; `VAR_WORN` = 1 when `+0x44`'s byte is below 20 (`0x0070059c`); advisor message `0x42` on the turn its byte goes below 10 (`0x007005a0`) |
+| `FUN_004df8f0`, the mechanic's repair | | 100 |
+| `FUN_004dfd80`, the handyman's clean (below) | | 100 |
+| the constructor `FUN_004db090`, the loader `FUN_004db7d0` | | 100; the file's |
+
+`FUN_004df670` is **dead by content for a toilet**: `Features.sam` gives every feature `WearRate` 0 on all three tiers
+and neither `Toilet.sam` nor `SupBog.sam` sets one, so the function leaves at `0x004df6e0`. The need's byte is held
+to 0..100 where this page reads its writers (not every writer of `+0x1ac` was read), so one use takes at most 5, and a toilet at 100 is dirty on its sixteenth use at the earliest (arithmetic,
+not run). Lost Kingdom's three toilets (things 21, 22, 23, item 1402) are saved at 100, state 0, nobody assigned.
+
+**What reads it.**
+
+| Reader | Address | What a dirty toilet does there |
+|---|---|---|
+| The queue turn's dirt gate | `0x005001f0` | thought `0xe`, the queuer is put out ("The queue", step 3) |
+| The arrival's excitement difference `FUN_004fd4e0` | `0x004fd4ea` | answers 100 instead of the difference, which the gate at `0x004ffc7a` reads as "too exciting" (event 4, thought `0xf`) - but only at the back of the queue with room, and when `FUN_004e0860( object, 1 )` is non-zero (`0x004ffc68`), and no jungle feature sets `UsageInfo.ExcitementLevel`. Whether a toilet passes that test was not run |
+| The object's turn `FUN_004e0b90` | `0x004e0d16` | `VAR_WORN` = 1, every turn. `Toilet.rse` answers it once with `ADDOBJ 1, 1, 9, 1` and `ADDOBJ 1, 1, 69, 1` (latched in its own `VAR_WORNON`), and `KILLOBJ 1` when `VAR_WORN` reads nought again |
+| The handyman's search `FUN_004d7880` | `0x004d79ab` | a candidate for cleaning |
+| The destructor `FUN_004dd0a0` | `0x004dd222` | unstamps effect 6 where a clean toilet's sale unstamps 1 |
+
+The chooser does not read it: a dirty toilet is still chosen and walked to. Nothing on this path closes one; the
+request for service below does, and the other closers were not shown unreachable for a toilet. The one other float
+read of an object's `+0x44` found is the mechanic's repair time (`0x004da42a`).
+
+**The region effects.** `FUN_004d8440( fx, cell )` stamps and `FUN_004d8460( fx, cell )` unstamps, both
+`FUN_004d8480( sign, fx, cell )`, whose `this` is `[0x008023a0]`, the world `+0x2d8`: over the square of the effect's
+radius (the byte at `+0x1d910e + 12 × fx` from it) around the cell, clipped to the map, each of the effect's five words
+(`+0x1d9104 + 12 × fx`) is added to or taken from the cell's five (`+0x1b1104`, ten bytes a cell), divided by
+`|dx| + |dy| + 1`. A toilet's constructor stamps 1
+(`0x004db3ee`); the balance file's comments call `RegionFX[1]` "Clean Toilet" (radius 3, Illness 1, Hunger −1) and
+`RegionFX[6]` "Dirty Toilet" (radius 3, Illness 2, Hunger −2). Which of the five words is which key was not read.
+The other call sites, callers not read here, pass 0, 2, 3, 4, 5 and 7.
+
+**The handyman's cleaning.** With no litter in range (`FUN_004c8ed0` answers 0) the decide `FUN_004d7100` calls
+`FUN_004d7880` (`0x004d72f7`), which walks every object from `mFirstObject` and keeps the nearest toilet that
+
+1. nobody else is assigned to (`FUN_004e0220`: `mAssignedStaffMember` `+0x5e` nought or this handyman; the getter
+   itself forgets an assignment more than 100 ticks old, `+0x60`, whose member no longer aims at this object,
+   `FUN_00506580`: a handyman's `+0x21a`, a mechanic's `+0x218`);
+2. either has `mRequestedService` (`+0x64`) set and is nearer than the best so far, at any distance, or is dirty and
+   nearer than the grade's `HandymanConstsPerGrade.DetectionRange` in cells, squared, strictly (`0x004d79b4`..
+   `0x004d79cb`; `0x007853f0 + 12 × grade`: 2, 3, 3, 4, 5 - the key by the file's order and the litter search's use
+   of the same slot, the loader's table not read). A dirty toilet in range is taken even when it is farther than the
+   best so far (`0x004d79a9` falls through to the second test, which does not ask the best), so among dirty toilets
+   in range the last in the list wins; the distance is cell to cell, the toilet's `+5`, `+7`;
+3. the handyman can route to its entry cell `mEntryPos` (`+0x36`, `FUN_004fa530`).
+
+The winner is assigned (`FUN_004e01f0`: `+0x5e` = the handyman, `+0x60` = mGameTick) and written to the handyman's
+`+0x21a`; `"Handyman found dirty loo, walkin..."`, SetState(`0xa`).
+
+| State | Entered | Each turn | Ends |
+|---|---|---|---|
+| `0xa`, to a loo | `FUN_004d7330`: hurry speed `+0xc2` = 25 (`0x0075c7f2`), animation 9 | `FUN_004d7790`: the walk `FUN_004fa2a0`; 2 is SetState(0), any other non-zero waits | arrived (0): on the toilet's `mEntryPos` and still its assigned member, SetState(`0xb`); otherwise SetState(0) |
+| `0xb`, cleaning | `+0x214` = mGameTick, animation `0x11` | `FUN_00506760`: `+0x1fc` loses (6 − grade) × 0.025 and `+0x1f8` (6 − grade) × 0.01, each held to 0..100 | mGameTick > `+0x214` + `WorkDuration` (40, 30, 20, 10, 5): `FUN_004dfd80` on the toilet, then `FUN_004df390` (the open: `mCanLoad` = 1, `VAR_RIDECLOSED` = 0), animation 3, SetState(0) (`0x004d7462`..`0x004d74c8`) |
+
+`FUN_004dfd80`: a dirty toilet has effect 6 unstamped and 1 stamped; then, toilet or not, `VAR_WORN` = 0, `+0x44` =
+100.0, `+0x5e` = 0 and `+0x64` = 0. Its one caller is the handyman's state `0xb`.
+
+**The request for service.** `FUN_004dfe30( 1 )`, whose two callers are `FUN_0048e0f0` and `FUN_0048ce50`,
+sets `+0x64`, shuts the object (`mCanLoad` 0, the nominee `+0x6c` forgotten, `VAR_RIDECLOSED` 1); `FUN_004dfe30( 0 )`
+cancels and reopens under the open guard. Which control calls them was not read (`FUN_00485f60`, beside them, reads
+the assignment and `+0x64`). A toilet so marked is a handyman's work from anywhere in the park, clean or not, and only
+a handyman's: the mechanic's search takes a `+0x64` object only without the toilet bit (`0x004dac0f`..`0x004dac1e`).
+
+**The online game** (mode 1) has no dirtying: `FUN_004e2440` instead cleans a toilet found dirty, as `FUN_004dfd80`
+does (`0x004e24bc`..`0x004e252a`).
+
+### Where OpenTPW differs
+
+| | The original | OpenTPW |
+|---|---|---|
+| Use dirties a toilet | every use | counted, `SETTLE_UP_TOILET_DIRTYING` |
+| The queue's dirt gate | reads `+0x44` | counted, `QUEUE_TOILET_DIRT_GATE`; the save's 100 never falls |
+| `VAR_WORN` to a dirty toilet, and its two script objects | every turn | none, uncounted |
+| Effects 1 and 6 | stamped into the cells | no stamping at all; the save's cell record is read (`MapCell.NearbyEffects`) |
+| The handyman's search, walk and clean | states `0xa`, `0xb` | none, uncounted; the handyman stands (Q133) |
+| The request for service | shuts the object and calls a member | none |
+
+Nothing here was built or run in the game.
 
 ## Spending — a guest pays on LEAVING
 

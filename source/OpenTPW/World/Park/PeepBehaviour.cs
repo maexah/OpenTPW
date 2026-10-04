@@ -1403,7 +1403,8 @@ public sealed class PeepBehaviour
 	/// <item><b>Wait.</b> At the front and invited but not the nominee: the whole turn is nothing (<c>0x005001d8</c>).</item>
 	/// <item><b>The dirt gate</b> puts out a queuer for a toilet whose <c>+0x44</c> truncates below 25
 	/// (<c>FUN_004e0390</c>): its State of repair (<see cref="ParkWorld.CatalogueObject.StateOfRepair"/>), which the
-	/// save gives and nothing here lowers. What lowers it is not decoded (Q100), so the gate is counted.</item>
+	/// save gives and nothing here lowers. Use lowers it and a handyman's cleaning restores it, neither built
+	/// (<c>ride-operation.md</c>, "A toilet's dirt"), so the gate is counted.</item>
 	/// <item><b>The lost place.</b> The queue walk cannot reach them - they are unlinked, or somebody in front has
 	/// stopped queueing: put out. The original's log says it closes and reopens the ride; nothing does.</item>
 	/// <item><b>In place</b>: too far back for the thing's longest queue (<see cref="LongestQueue"/>), or a

@@ -44,7 +44,7 @@ Last updated: 2026-10-04. **This header names no branch and no sha, deliberately
 
 ## Next
 
-`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next **Q100**, the toilet's `+0x44` the queue turn's dirt gate reads (decode first). Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. **Q188 remains on hold** until Alexah says otherwise. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
+`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next **Q100b**, building a toilet's dirt from Q100's decode. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. **Q188 remains on hold** until Alexah says otherwise. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
@@ -82,6 +82,8 @@ Last updated: 2026-10-04. **This header names no branch and no sha, deliberately
 
 ## Recent
 
+**2026-10-04 (Q100).** Decode only: what lowers a toilet's State of repair and what restores it. Use alone lowers a shipped toilet's (0.05 of the need a use; the timed wear needs a `WearRate`, 0 for features); below 25 the queue turns guests away, the script is told `VAR_WORN`, region effect 6 replaces 1, and a handyman in range walks over and cleans it back to 100. Stock toilets start at 100: dirty on the sixteenth use at the earliest (arithmetic). Read in the listing and checked by a second reader, three statements corrected. Nothing built or run in the game; Q100b is the build. `docs/exe/ride-operation.md`, "A toilet's dirt".
+
 **2026-10-04 (Q99).** The board arm's no route is built (`0x0050010a`): the ride forgets its nominee, the queue is left, the guest is put out. A front queuer cannot be cut off (the first queue cell is protected), so the run re-laid a bought Belly Bounce's queue under a guest walking up it. Predicted and read: one put-out a sweep after the nomination, happiness 50 to 35, nominee 44 to 0, photographed; the unchanged build counted 1 and the guest rode. 300 s left alone: 0 in both. Four restored bugs each fail. `docs/exe/ride-operation.md`, "Q99".
 
 **2026-10-04 (Q98b).** The spot animations Q98 decoded are built for the queue turn's two calls: `FUN_004fc800`, state 8's return, the yawn. Predicted and read in two runs: every start returned 11 sweeps on (147 of 147) and a guest still queueing started again 31 on (115 of 116); guest 48 yawned on each start of 4. The jump and the hands on hips photographed under `pause`/`step` on sets 12 and 14. Eight restored bugs each fail. `docs/exe/ride-operation.md`, "Spot animations".
@@ -115,5 +117,3 @@ Last updated: 2026-10-04. **This header names no branch and no sha, deliberately
 **2026-10-03 (Q86).** Path clears remeasure linked entrances after both link bits go. Predicted and observed one notification during queued placement, and zero cells removed by a protected stock-path delete. Two instrumented four-guest runs matched queue 4→0, cells 1→0 and happiness 50→35, with screenshots and logs. Eight tests fail with the bug restored. Reachability limits and evidence: `docs/exe/ride-operation.md`, Q86.
 
 **2026-10-03 (Q206).** Staff queue/approach wandering reproduced and fixed; `docs/exe/staff-wandering.md`. Predicted zero excursions in two 120-second runs; observed zero in 3,840 guard/researcher census rows, with screenshots and continued movement. Restoring the bug fails nine tests; removing containment or the patrol type gate fails three each. Original destination filters restored; their use during physical movement is an explicit containment deviation. Q112 recovery from unlinked terrain remains open. Independent applied review passed through relayed primary evidence (child filesystem access unavailable).
-
-**2026-10-03 (Q85b).** New-guest initialization and unhappy queue exit implemented; decode/evidence in `docs/exe/guest-arrivals.md`. Predicted 30 arrivals at happiness 50, observed all 30 with screenshots and four-minute censuses. Arrival 66 gained 5 (50 to 55); 60 naturally left unhappy; an instrumented 75 exited from 9 to 0, thought census 1 to 2. Both restored defects fail the new tests. Separate random generators and the shortened entrance path remain deviations; thoughts are counted, guest tiredness unrepresented. Independent applied-code review passed.

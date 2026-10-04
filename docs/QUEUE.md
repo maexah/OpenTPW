@@ -55,18 +55,15 @@ as `r-f1` names a verdict in its results file (`CLAUDE.local.md` says where).
   window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
   together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
 
-- [ ] **Q100. A toilet's `+0x44`, which the queue turn's dirt gate reads. Decode first.** Found by Q50d.
-  `FUN_004e0390` puts out a queuer for a toilet (`+0x32 & 1`) whose `+0x44` truncates below 25.0 (`0x00700550`);
-  `+0x44` is its State of repair, saved at file 1074 and read as `CatalogueObject.StateOfRepair` (`park-engine.md`,
-  "The object window's stats panel"), but nothing here lowers it and the gate is counted (`QUEUE_TOILET_DIRT_GATE`).
-  Decode what lowers it (the handyman's cleaning, use), then build the gate. Confirm: a queue at Lost Kingdom's
-  toilet, `peeps` before and after.
-  From Q170: use lowers it. The settle-up's toilet arm calls `FUN_004e2440` with the need's byte (`0x004fe7a8`), which
-  takes 0.05 of it off `+0x44`, held to 0..100, and on falling below 25 logs "Toilet has become dirty and smelly",
-  unstamps `RegionFX` 1 around the toilet and stamps 6; in the online game (mode 1) there is no dirtying, and a toilet
-  already below 25 is cleaned instead (`ride-operation.md`, "The effects of a visit", step 5). The handyman's cleaning
-  is still to decode. From Q170b: the call is counted, `SETTLE_UP_TOILET_DIRTYING`, with the need taken before it is
-  emptied.
+- [ ] **Q100b. Build a toilet's dirt.** Q100's decode is `ride-operation.md`, "A toilet's dirt". Keep the State of
+  repair in `ParkState`, not `ParkWorld`; take 0.05 of the need's byte off it at the settle-up (retire
+  `SETTLE_UP_TOILET_DIRTYING`), read it at the queue's gate (retire `QUEUE_TOILET_DIRT_GATE`, thought `0xe` counted),
+  write `VAR_WORN` to a dirty toilet each turn, by name, so `Toilet.rse` adds its two objects, and answer 100 at the
+  arrival's excitement difference. Count, do not build: the effect 1 and 6 stamps (no cell effects are kept here) and
+  the handyman's search where his decide makes it (Q133 builds the decide; the clean needs it). Confirm: one toilet
+  used sixteen times by guests sent with `send` at need 100, predicted first - 100 to 20 in steps of 5, the queuers
+  behind put out on the sixteenth, `peeps` and the script's `VAR_WORN` before and after; the toilet's two script
+  objects photographed.
 - [ ] **Q102. The walk to a chosen thing's own arms.** Found by Q50e's decode (`ride-operation.md`, "Walking to a new
   place in the queue", the first caller). The original's state 10 (`FUN_004ffbc0`) takes `BigHappinessChange` (25)
   and pushes event 3 when the walk is stuck, where `GoingToRide` only goes back to deciding; takes 25 and clears
@@ -288,6 +285,8 @@ as `r-f1` names a verdict in its results file (`CLAUDE.local.md` says where).
   `0x004d712d`), and SetState(0) only when none is found; the entertainer's `FUN_004d46d0`, after a draw mod 3 and no
   guest within `ActivationDistance`, takes the guard's `mGameTick & 3`. `StaffBehaviour.Decide` stands all three, and
   none of their searches is counted (`CLAUDE.md` rule 4): a broken ride, litter, a loo, guests to perform to.
+  From Q100: the handyman's loo search and his states `0xa` and `0xb` are decoded (`ride-operation.md`, "A toilet's
+  dirt"); building them belongs with this decide.
   Build the no-work walk and count each search where the original makes it; every kind's decide calls
   `FUN_00506a40` first (`0x004da5b8`, `0x004d7108`, `0x004d46d5`), as `StaffActivity.Idle` says. `Decide`'s summary
   and the class remarks already say the original's three walk about (`e0462c9`). Confirm: all five staff walking in

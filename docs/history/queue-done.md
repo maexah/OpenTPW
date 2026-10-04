@@ -4214,6 +4214,24 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   them: predicted and read, one put-out a sweep after the nomination, happiness 50 to 35, nominee 44 to 0; the
   unchanged build counted 1 and the guest rode. 300 s left alone: 0 in both builds. Four restored bugs each fail the
   new test. `docs/exe/ride-operation.md`, "Q99".
+- [x] **Q100. A toilet's `+0x44`, which the queue turn's dirt gate reads. Decode first.** Found by Q50d.
+  `FUN_004e0390` puts out a queuer for a toilet (`+0x32 & 1`) whose `+0x44` truncates below 25.0 (`0x00700550`);
+  `+0x44` is its State of repair, saved at file 1074 and read as `CatalogueObject.StateOfRepair` (`park-engine.md`,
+  "The object window's stats panel"), but nothing here lowers it and the gate is counted (`QUEUE_TOILET_DIRT_GATE`).
+  Decode what lowers it (the handyman's cleaning, use), then build the gate. Confirm: a queue at Lost Kingdom's
+  toilet, `peeps` before and after.
+  From Q170: use lowers it. The settle-up's toilet arm calls `FUN_004e2440` with the need's byte (`0x004fe7a8`), which
+  takes 0.05 of it off `+0x44`, held to 0..100, and on falling below 25 logs "Toilet has become dirty and smelly",
+  unstamps `RegionFX` 1 around the toilet and stamps 6; in the online game (mode 1) there is no dirtying, and a toilet
+  already below 25 is cleaned instead (`ride-operation.md`, "The effects of a visit", step 5). The handyman's cleaning
+  is still to decode. From Q170b: the call is counted, `SETTLE_UP_TOILET_DIRTYING`, with the need taken before it is
+  emptied.
+  **Outcome, 2026-10-04:** decoded only, on `alexah/278-q100-toilet-dirt-decode`: use is the one thing that lowers a
+  shipped toilet's `+0x44` (the wear `FUN_004df670` needs a `WearRate`, 0 for every feature); five readers of the
+  dirty test; the handyman's search `FUN_004d7880` and states `0xa` and `0xb`, cleaning for `WorkDuration` then 100
+  again; the three stock toilets saved at 100, so the sixteenth use at the earliest. `ride-operation.md`, "A toilet's
+  dirt". Checked by a second reader in the listing: three statements corrected. Nothing built, nothing run in the
+  game; Q100b carries the build and its confirmation.
 
 ## B. Docs and comments
 

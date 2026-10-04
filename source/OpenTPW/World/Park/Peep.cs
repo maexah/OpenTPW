@@ -642,8 +642,8 @@ public sealed class Peep
 	/// illness and hunger - three signed shorts of a ten-byte per-cell record that placed objects and
 	/// walking staff stamp into the cells around them. Those values are the balance file's
 	/// <c>RegionFX[0..7]</c> and are well understood, but which of the eight a given thing stamps is
-	/// chosen at each call site in the executable and is only known for two of them, so modelling it now
-	/// would mean inventing the rest. Nothing here reads a cell, and nothing pretends to.
+	/// chosen at each call site in the executable and is read only for a toilet's and the fireworks'
+	/// (<c>ride-operation.md</c>, "A toilet's dirt"), so modelling it now would mean inventing the rest. Nothing here reads a cell, and nothing pretends to.
 	/// </para>
 	/// <para>
 	/// <b>A quirk worth not tidying away.</b> The drift is gated on the same counter as the whole tick,
