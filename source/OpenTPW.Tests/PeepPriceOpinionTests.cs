@@ -63,14 +63,21 @@ public class PeepPriceOpinionTests
 		BufferedDistance: 0, TailDistance: 0, TotalDistance: 0, StuckBits: 0 );
 
 	[TestMethod]
-	public void Q97WorthUsesTheObjectsCostAndChance()
+	public void WorthUsesTheCatalogueBaseAndTheObjectsPrizeAndChance()
 	{
 		var item = Item( JungleSprayItem );
 		var thing = Goods( item ) with { CostOfGoods = 80, ChanceOfWinning = 256 + 58 };
-		Assert.AreEqual( 483u, PeepPriceOpinion.Worth( Guest( 1000, 0f ), item, thing ),
-			"(92 goods + 46 expected prize) * 350 / 100" );
-		Assert.IsFalse( PeepPriceOpinion.TooExpensive( Guest( 1000, 0f ), 483, item, thing ) );
-		Assert.IsTrue( PeepPriceOpinion.TooExpensive( Guest( 1000, 0f ), 484, item, thing ) );
+		Assert.AreEqual( 360u, PeepPriceOpinion.Worth( Guest( 1000, 0f ), item, thing ),
+			"(57 catalogue goods + 46 expected prize) * 350 / 100" );
+		Assert.IsFalse( PeepPriceOpinion.TooExpensive( Guest( 1000, 0f ), 360, item, thing ) );
+		Assert.IsTrue( PeepPriceOpinion.TooExpensive( Guest( 1000, 0f ), 361, item, thing ) );
+	}
+
+	[TestMethod]
+	public void ShopWorthKeepsTheCatalogueBaseWhenTheObjectsGoodsAreZero()
+	{
+		var item = Item( DrinksShopItem );
+		Assert.AreEqual( 72u, PeepPriceOpinion.Worth( Guest( 300, Before ), item, Goods( item ) with { CostOfGoods = 0 } ) );
 	}
 
 	private sealed class LosingRoll : Random
@@ -87,11 +94,12 @@ public class PeepPriceOpinionTests
 	}
 
 	[TestMethod]
-	public void Q97DoorUsesTheLiveObjectsGoods()
+	public void DoorAdmitsAPricedDrinkDespiteZeroObjectGoodsCost()
 	{
 		var (_, peep, _, _) = AtTheDoor( 300, cost: 0 );
-		Assert.AreEqual( PeepState.Deciding, peep.State, "zero goods makes a priced drink worthless" );
-		Assert.AreEqual( 300, peep.Cash );
+		Assert.AreEqual( PeepState.EnteringRide, peep.State, "catalogue worth 72 permits price 30" );
+		Assert.AreEqual( Before, peep.Happiness, "no erroneous price-refusal penalty" );
+		Assert.AreEqual( 300, peep.Cash, "charging happens at settlement" );
 	}
 
 	/// <summary>The three keys the opinion reads beside the effects, as the shipped files give them.</summary>

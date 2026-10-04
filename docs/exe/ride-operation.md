@@ -838,8 +838,8 @@ open, guard, queue-connection test, completion and reopen after remeasurement. G
 are Q89b (`park-gate.md`); advisor messages are Q90b (`advisor-park.md`); hoardings are Q91b
 (`ride-hoardings.md`). Q92 builds the ride-window door callback, ordinary closed/queue-disconnected
 warning, disabled reopening and all-items row colour (`ride-window-door.md`, with its status limitations).
-**Still counted:** the coaster's closed circuit in the opening guard (`OPEN_GUARD_COASTER_TRACK_RECORD`)
-and the constructor's close (`BOUGHT_QUEUED_THING_STARTS_CLOSED`). **Not built:** the blocked exit
+Q93 implements closure on purchase and queue disconnection. **Still counted:** the coaster's closed circuit
+in the opening guard (`OPEN_GUARD_COASTER_TRACK_RECORD`). **Not built:** the blocked exit
 (deliberately, `ParkRideOperation.Dismiss`), maintenance and track-editor closes, advisor scores,
 and the second completion on a breakdown turn.
 
@@ -2723,9 +2723,9 @@ object's saved chance (Q97); generator ownership and draw-sequence parity remain
 ### Q97: the object's cost of goods and chance of winning
 
 **Implemented, 2026-10-03.** `CatalogueObject` loads both saved dwords; `ParkBuilding.Constructed` and
-`FreshPark.FixedObject` seed them from the item's starting settings. Price opinion, admission's win roll,
-sideshow excitement, shop booking, sideshow booking/prize/winning happiness and `spend` read the object's
-values. Chance consumers use the low byte; cost consumers retain their existing signed/unsigned arithmetic.
+`FreshPark.FixedObject` seed them from the item's starting settings. Price opinion's sideshow prize, admission's
+win roll, sideshow excitement, shop booking, sideshow booking/prize/winning happiness and `spend` read the object's
+values. Price opinion's base term reads the catalogue's `InitCostOfGoods` at descriptor `+0x140` (Q207). Chance consumers use the low byte; cost consumers retain their existing signed/unsigned arithmetic.
 The window setters remain Q31. The shared park generator remains unbuilt: this change preserves the documented
 `System.Random` departure, including its different draw sequence.
 
@@ -2749,7 +2749,7 @@ An unchanged copy of Alexah's played jungle `New Save.TPWS` loaded 526 things an
 rendering in `ParkGuestSprites` on duplicate key 0. Its full runtime loading remains unverified; no unrelated fix.
 
 **Regressions.** Fourteen new cases cover saved dwords/neighbours, shipped values, catalogue-wide placement,
-object price opinion and actual door refusal, actual admission, low-byte/inclusive rolls, excitement,
+object fields and actual admission, low-byte/inclusive rolls, excitement,
 shop booking and sideshow booking/prize/happiness. Eight isolated put-backs fail 3, 2, 1, 2, 1, 2, 1 and 1 cases
 respectively (load cost, load chance, placement, price opinion, excitement, settlement, admission, byte mask).
 After restoration all **1,752 tests pass, zero skipped**. Fresh fixed-object seeding is code-reviewed;
@@ -2760,6 +2760,21 @@ nondefault fixed-object settings are not exercised by the shipped content.
 `corpus.json` (all nine park files, 366 object records), `mutations.json`, `mut-*.log`, `restored-full.log`,
 `predictions.txt`, `runtime-result.json`, `runtime-stock-confirmed/stock-object-settings.png` and its `run.log`,
 `runtime-fixture/fixture-object-settings.png` and its `run.log`; the unsuccessful played load is `runtime-played/run.log`.
+
+**Q207 audit correction (2026-10-04).** The original Q97 base-term change and two corresponding test expectations
+were incorrect. Fresh native instructions at `004fdf32` read descriptor `+0x140`; only the sideshow prize reads
+object `+0x188`. Ordered schema bytes and the thirst/channel-count anchors identify `InitCostOfGoods`.
+`PeepPriceOpinion.Worth` now preserves these separate sources. At happiness 50/thirst 10, the Drinks Shop with
+object cost 0 is worth **72**, admits at price 30 and keeps happiness 50 (cash is charged later at settlement).
+The Jungle Spray with object cost 80/chance 58, happiness 0 is worth **360**: `(57 + 46) * 350 / 100`.
+Restoring the original price implementation fails all three corrected regressions. Other object-owned consumers
+remain covered by their existing tests. Evidence: `q97-schema-anchors.txt`, audit `q97-price-native.txt`,
+`q97-accessors-native.txt`, `q97-schema-direct-bytes.txt`; the earlier `q97-schema-check.txt` zeros were an invalid
+buffer read and are discarded. In a labelled disposable stock park, live guest 43 reached the Drinks Shop verdict at price 30/worth 72,
+then completed a purchase with cash 270, happiness 57 and one shop visit. Guest 44 reached the Spray verdict at
+happiness 0/worth 360 and entered Riding. `runtime-price/run.log` and screenshots preserve both; `admit`, `send`
+and global meter commands were instruments, so this proves the door path rather than natural destination choice.
+Full verification is recorded with Q207 in `park-engine.md`.
 
 ## Object fields
 

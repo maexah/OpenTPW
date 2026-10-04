@@ -46,6 +46,9 @@ public static class PeepPriceOpinion
 			return false;
 
 		var worth = Worth( peep, item, thing );
+		Log.Info( $"Price opinion: guest {peep.ThingId} thing {thing.ThingId} price {price} worth {worth} "
+			+ $"catalogue goods {item.CostOfGoods} object goods {thing.CostOfGoods} chance {thing.ChanceOfWinning & 0xff} "
+			+ $"cash {peep.Cash} happiness {peep.Happiness:0.##}" );
 
 		for ( var samples = SamplesPushed( item ); samples > 0; --samples )
 			Unimplemented.Report( "DOOR_PRICE_ANALYSER_SAMPLE" );
@@ -54,7 +57,7 @@ public static class PeepPriceOpinion
 	}
 
 	/// <summary>
-	/// What a thing is worth to this guest - its cost of goods, raised by what it does for their needs, by
+	/// What a thing is worth to this guest - its catalogue cost of goods, raised by what it does for their needs, by
 	/// the prize a sideshow may pay, by <c>UsageInfo.RipOffOK</c> and by how happy they are.
 	/// </summary>
 	public static uint Worth( Peep peep, ParkItemCatalogue.Item item, ParkWorld.CatalogueObject thing )
@@ -71,7 +74,8 @@ public static class PeepPriceOpinion
 				- item.VomitEffect * Meter( peep.Vomit ) / 100
 				+ 100;
 
-			var valued = (uint)(mood * (thing.CostOfGoods * 115 / 100)) / 100;
+			// The descriptor's InitCostOfGoods, not the object's saved cost (004fdf32); docs/exe/ride-operation.md, Q97.
+			var valued = (uint)(mood * (item.CostOfGoods * 115 / 100)) / 100;
 
 			// The object's +0x188 and low byte of +0x190; docs/exe/ride-operation.md, Q97.
 			var prize = item.UiType == Sideshow ? thing.CostOfGoods : 0;
