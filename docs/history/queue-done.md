@@ -4088,6 +4088,12 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   path-tail removal close it with panels raised; reconnection reopens it. Nine regressions, nine rejected
   mutations, 1,727 full-suite passes. Loaded/disconnected normalization is tested; demolition preserves its
   nominee. Screenshots, predictions, census and original-trace limits: `docs/exe/ride-operation.md`, Q93.
+- [x] **Q94. The console's `path` lays what the path tool refuses.** Done 2026-10-03,
+  `alexah/268-q94-console-path-verdict`. Public `Lay` shares the player verdict. Predicted `path 51 22` refusal,
+  zero changed cells, zero charge and four retained queue pieces confirmed with screenshots and census.
+  Q50 restaged by detaching each tail first: legal cuts reduce 12 → 8 → 4 queuers, eight predicted releases at
+  happiness 35, photographed with logs. Eleven regressions; restoring the old method fails eight; 1,738 tests pass.
+  `ride-operation.md`, "Q94: the console path shares the player verdict", records instruments and limits.
 
 ## B. Docs and comments
 

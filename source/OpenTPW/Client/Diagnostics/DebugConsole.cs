@@ -1378,11 +1378,8 @@ public static class DebugConsole
 					: "move <thingId> <cellX> <cellY> [angle]" );
 				break;
 
-			// Laying and lifting path one cell at a time. The original has no drag - both drag slots of
-			// its build mode are bare RET stubs - so a run really is a sequence of single commits, and
-			// driving them one at a time from here is the same shape the game uses rather than a
-			// shortcut around it. The pointer half is Level.WorldClick; this exists for the same reason
-			// `put` does, because the console cannot move the mouse.
+			// One-cell path commits use the player tool's verdict and stamp. The pointer tool separately
+			// anchors its first click and lays an axis-aligned run on the second (Level.WorldClick).
 			case "path":
 				Reply( parts.Length > 2
 					? ParkPathBuilding.Lay( (int)Argument( 1 ), (int)Argument( 2 ) )

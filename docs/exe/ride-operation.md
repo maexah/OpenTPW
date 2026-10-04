@@ -525,8 +525,53 @@ Bounce's: cells (52,22), (51,22), (50,22), (49,22), of which (52,22) is NOMODIFY
 one cell and room for four. **The path tool refuses that click in the shipped map.** Its verdict `FUN_00535670`
 lets path over a queue cell only when the cell's `mNeighbours` has exactly one bit (`FUN_00522790`,
 `0x00535ce0`..`0x00535ce9`) and the cell that way is a queue cell (`0x00535ced`..`0x00535cfe`); otherwise it answers
-red (`0x00535d12`). All four cells carry two bits (0x50, 0x44, 0x44, 0x44). The console's `path`, which Q50's game
-run used, calls `LayPathRun` without the verdict.
+red (`0x00535d12`). All four cells carry two bits (0x50, 0x44, 0x44, 0x44). The console's `path` now calls the same
+verdict before `LayPathRun` (Q94). Q50's historical run bypassed that verdict; the legal replacement is below.
+
+#### Q94: the console path shares the player verdict
+
+`ParkPathBuilding.Lay` calls `PathVerdict` for a one-cell, final-cell run, with fresh cost/latch state,
+independent of the pointer tool's anchor. A red verdict returns its reason before any stamp, charge, link or retile.
+The duplicated type/NOMODIFY/price checks are removed: the player's path verdict does not read NOMODIFY.
+`LayPathRun` remains the low-level stamp used after validation; direct stamp tests do not prove player reachability.
+The console still commits one cell immediately; the pointer tool still anchors, then commits on a second click.
+
+**Running confirmation, 2026-10-03.** Before reading the census, predicted `path 51 22` would refuse as
+`is a queue that is not a loose end`, with **0 changed cells, $0 charged, 4 queue pieces**; the player preview would
+be one red square (marker 1). The paused game matched: type 3, neighbours `0x44`, 78 drawn path cells, 4 queue
+pieces, overlay 0 and balance 87,987 both before and after. The screenshots show the red square and intact queue.
+
+**Q50 restaged with legal cuts.** Click the queue to edit it: the tail at `(49,22)` detaches from the path and its
+neighbours become `0x04`. Switch to the path tool; its marker is 8 (link). Two player-tool clicks on this tail
+replace it with path: predicted and observed **4 → 3 queue pieces, 78 → 79 path cells, $20 charged**.
+Fourteen guests were then admitted at `(49,22)` and sent to ride 13 using the existing `admit`/`send` instruments:
+IDs 43–56 and 27 simulated guests total, as predicted. Twelve joined; two chose other destinations. The paused
+census showed places 0–11, happiness 50, and no nominee. Before each further cut, the queue editor detached its
+new tail. `path 50 22` (legal marker 8) and then two player-tool clicks on `(51,22)` shortened it to two cells and
+one. Predictions were recorded before the cuts and matched:
+
+| Cut | Queue guests | Ejected IDs | Result |
+|---|---|---|---|
+| `(50,22)`, 3 → 2 cells | 12 → 8 | 54, 55, 56, 48 | Four release logs; happiness 50 → 35, Deciding, destination 0 |
+| `(51,22)`, 2 → 1 cells | 8 → 4 | 53, 45, 50, 52 | Four release logs; happiness 50 → 35, Deciding, destination 0 |
+
+The four survivors (43, 44, 46, 47) kept happiness 50. All eight ejected guests stayed at their exact census
+positions during the paused cuts. Screenshots show the populated queue replaced by path, 3 → 2 → 1 pieces;
+state, queue membership and happiness are log evidence, not readable from the pictures. The cuts use ordinary
+player verdicts and stamps; admission and destination choice were controlled instruments, not natural arrivals.
+This replaces Q50's unsupported single-click cut of the connected stock queue. Nominee/state-14 exemptions and
+walking away after these paused cuts were not reconfirmed on screen.
+
+Evidence is in the local `q94/` harness directory: `predictions.txt`, `runtime/run.log`, `runtime/refusal-before.png`
+and `refusal-after.png`, `loose-tail-before.png`/`after.png`, and `populated-{two,one}-cell-cut-{before,after}.png`.
+`populated-censuses.json` and `runtime-result.json` mechanically check the IDs, counts, happiness and unchanged
+positions. The capture used original assets with private saves; the original save hashes remained unchanged.
+`ParkConsolePathTests` has 11 public-command cases. Restoring the old `Lay` method fails 8, including the connected
+queue and outside-land/track refusals. Restoring and rebuilding passes all 1,738 tests, none skipped; 121 build
+warnings, no errors. Independent Astra applied review found no material defect and independently checked the
+mutation logs, runtime census blocks and screenshots. Six mutation failures expose bypassed verdicts; two detect
+refusal-message differences. The private Ghidra startup check matched the reference executable SHA-256
+`cf0ffd955077eca146d75ee46c45b8a0786fb757a8f7d204b1aed8ec5a1ee4cb`; no new executable or file-layout decode was needed.
 
 #### Q86: clearing a path joined to an entrance
 

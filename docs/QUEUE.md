@@ -52,12 +52,6 @@ artifacts are listed in `docs/history/README.md`.
   window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
   together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
 
-- [ ] **Q94. The console's `path` lays what the path tool refuses.** Found by Q50b's decode. `ParkPathBuilding.Lay`
-  checks the cell's type and NOMODIFY but not the verdict `FUN_00535670`, which refuses path over a queue cell whose
-  `mNeighbours` has more than one bit - every Belly Bounce queue cell (`ride-operation.md`, "The queue measured
-  again"). Q50's game run cut the queue that way, a cut the player cannot make in one click. Route the console
-  through the verdict and re-stage Q50's confirmation with a cut the player can make, or say which. Confirm: `path 51 22`
-  refused with the verdict's reason.
 - [ ] **Q97. The object's own cost of goods and chance of winning.** Found by Q50c's review. The object keeps both at
   `+0x188` and `+0x190`, built from the item at placement but saved and loaded with it (`FUN_004db7d0`,
   `0x004dcd01`..; file 1042 and 1050) and set per object from its window (`FUN_004e1a20`, `FUN_004e21c0`). OpenTPW

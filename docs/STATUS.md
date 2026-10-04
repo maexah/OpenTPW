@@ -4,6 +4,8 @@ Last updated: 2026-10-03. **This header names no branch and no sha, deliberately
 
 ## Works
 
+- **Console path placement uses the player verdict** (Q94). Connected queue cells refuse with no charge or edit. Legal detached-tail cuts are photographed; predicted census confirms 12 → 8 → 4 queuers, eight releases at happiness 35.
+
 - **Queued rides stay closed with hoardings raised until their queue connects** (Q93). A bought Belly Bounce opens on connection and carries a visible rider. Queue editing and path-tail removal close it again; reconnecting retracts the panels. Demolition keeps its existing guest penalties.
 
 - **The ride window closes and reopens its ride** (Q92), showing CLOSED and a grey all-items row. Belly Bounce matches predicted `canload` 1 → 0 → 1, with screenshots and 13-peep censuses. Disconnected-queue wording and disabled reopening are tested.
@@ -42,7 +44,7 @@ Last updated: 2026-10-03. **This header names no branch and no sha, deliberately
 
 ## Next
 
-`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next **Q94**, route console path placement through the player tool's refusal rules. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. **Q188 remains on hold** until Alexah says otherwise. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
+`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next **Q97**, restore each object's saved cost of goods and chance of winning. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. **Q188 remains on hold** until Alexah says otherwise. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
@@ -71,12 +73,14 @@ Last updated: 2026-10-03. **This header names no branch and no sha, deliberately
 | | | measured |
 |---|---|---|
 | Opcodes | **77** of 106 | 2026-10-01, `case Opcode.` labels vs enum members, after Q87 |
-| Tests | **1727**, 0 fail, 0 skip with the game | 2026-10-03, Q93 |
+| Tests | **1738**, 0 fail, 0 skip with the game | 2026-10-03, Q94 |
 | Tests without the game | **647** ran, **928** skipped, of 1575 | 2026-10-01, after Q87 |
 | Build warnings | 121 | 2026-10-03, archive exact reads |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
+
+**2026-10-03 (Q94).** Shared path verdict; connected stock queue refuses with screenshot and predicted zero-edit/$0 census. Legal tail cuts restage Q50: 12→8→4 queuers, eight predicted happiness 50→35 releases. Eleven new tests; eight fail with the original method restored; 1,738 pass after rebuilding; independent applied review passed. Admission/choice were instruments; nominee/state-14 exemptions and post-cut walking were not reconfirmed. `docs/exe/ride-operation.md`, Q94.
 
 **2026-10-03 (Q93).** Bought queued rides close after script binding; live disconnection, path-tail removal and loaded disconnected records also close them. Screenshots and predicted census confirm canload 0→1, 12 hoarding panels raised/retracted, guest 35 aboard, and close/reopen after queue editing. Actual path removal closes too; overlapping path needed three delete presses. Nine regressions and nine mutation failures; full suite 1727 passes. Independent applied review passed. `docs/exe/ride-operation.md`, Q93.
 

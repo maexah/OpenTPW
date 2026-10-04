@@ -92,7 +92,7 @@ public static class ParkPathBuilding
 	/// <b>A cell that is already path costs nothing</b>, which is the original's own shortcut: its overlap
 	/// counter goes up by one and the stamp answers success before any price is fetched. The cell is laid
 	/// as a one-cell run of <see cref="LayPathRun"/>, so it is joined, given a flow byte and retiled as a
-	/// click on the anchor would.
+	/// click on the anchor would, after the same player-tool verdict (<c>FUN_00535670</c>).
 	/// </para>
 	/// </summary>
 	public static string Lay( int cellX, int cellY )
@@ -103,22 +103,13 @@ public static class ParkPathBuilding
 		if ( !ParkState.OnMap( cellX, cellY ) )
 			return $"path: ({cellX},{cellY}) is off the map";
 
-		var cell = ParkState.CellFor( park, cellX, cellY );
 		var price = CellCost( level );
+		var owed = 0;
+		var latched = false;
+		var (marker, why, _) = PathVerdict( state, park, cellX, cellY, true, price, ref owed, ref latched );
 
-		if ( cell.Type != PathType )
-		{
-			if ( !MayBecome( cell.Type, PathType ) )
-				return $"path: ({cellX},{cellY}) is type {cell.Type}, which path may not be laid over";
-
-			// NOMODIFY marks a cell the player may not change - the level's avenue, and the cells the placer
-			// lays before a thing's ends. See NoModify.
-			if ( (cell.Flags & NoModify) != 0 )
-				return $"path: ({cellX},{cellY}) is marked NOMODIFY - the level owns that cell";
-
-			if ( state.Balance < price )
-				return $"path: a cell costs {price} and the park has {state.Balance}";
-		}
+		if ( marker == MarkerRed )
+			return $"path: nothing laid - ({cellX},{cellY}) {why}";
 
 		var (laid, _) = LayPathRun( state, park, cellX, cellY, cellX, cellY, price );
 
