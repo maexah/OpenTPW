@@ -631,6 +631,21 @@ says where).
   versions of `FUN_004fa990`: `InsideGateCensus` reads the position's cell as the original does (bytes `+5`, `+7`),
   `OnACountingCell` reads the occupancy link first; make them one. `ParkCatchUpOrderTests`' row (16, 1) asserts the
   open Q150 defect as the expected result and will go red when Q150 is fixed: say so in the test.
+- [ ] **Q218. Five gaps left by the Q208 and Q209 corrections.** Found 2026-10-04 by a second read of those four
+  commits, each checked against the code. (1) `RideHoardingTests.TerrainEndpointsFollowTheOriginalNormalizedQuarterTurns`
+  still says by its name that it follows the original, while `docs/exe/ride-hoardings.md` says it checks OpenTPW's
+  larger rectangle: rename it now, and Q210 writes the real one. (2) `ride-hoardings.md` says `Meshes[0]` is the mesh
+  with the most base vertices in every shipped outline; the corpus test reads `Meshes[0]` and never counts them.
+  Measure it over all 129 outlines and assert it, or take the sentence out. (3) `ProfilePreservationTests` has no
+  profile that reads at `Load` and fails at `Select`: the unreadable one is unreadable before `Load`, the cached one
+  is deleted. Write that case (readable, then mode 0, then restored) and put the `CanWrite` revoke back out to see it
+  fail. (4) `ParkBoughtClosedTests.ALoadedDisconnectedRideKeepsItsSavedDoor` builds a new ride and rebinds it; no save
+  is read. Load one, or name the test for what it does. (5) `docs/exe/ride-operation.md` says the remeasure tail
+  `FUN_004de1f0` leaves at once when `+0x68` is non-zero; `ParkRideOperation.ReopenAfterRemeasure` clears
+  `AssignedStaff` whatever was decided and cites `0x004de48c`. Read the tail in Ghidra and make the two agree. Also
+  two sentences: `docs/exe/saves.md`'s "None of this is the original's behaviour" follows a sentence that says the
+  first save is the original's, and `STATUS.md`'s "cached profiles stay read-only" is true of an unreadable file
+  only. Put the bug back for each test (`CLAUDE.md` rule 6). No game run.
 
 ## B. Docs and comments
 
