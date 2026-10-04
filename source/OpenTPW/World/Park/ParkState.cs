@@ -367,6 +367,20 @@ public sealed class ParkState
 		return true;
 	}
 
+	/// <summary>
+	/// The State of repair below which a toilet is dirty - 25.0 (<c>0x00700550</c>), which the original holds the
+	/// float's truncated low byte against.
+	/// </summary>
+	public const int DirtyBelow = 25;
+
+	/// <summary>
+	/// Whether a thing is a dirty toilet - <c>FUN_004e0390</c>: the toilet bit, and the State of repair
+	/// (<c>+0x44</c>) truncated to a byte below <see cref="DirtyBelow"/>. Hand it the park's own record
+	/// (<see cref="TryObject"/>), which use lowers; the save's never moves.
+	/// </summary>
+	public static bool IsDirty( ParkWorld.CatalogueObject thing )
+		=> thing.IsToilet && ((int)thing.StateOfRepair & 0xff) < DirtyBelow;
+
 	/// <summary>The placed object with this thing id, if the park has one.</summary>
 	public bool TryObject( int thingId, out ParkWorld.CatalogueObject placed )
 	{

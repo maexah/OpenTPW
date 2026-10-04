@@ -55,15 +55,6 @@ as `r-f1` names a verdict in its results file (`CLAUDE.local.md` says where).
   window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
   together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
 
-- [ ] **Q100b. Build a toilet's dirt.** Q100's decode is `ride-operation.md`, "A toilet's dirt". Keep the State of
-  repair in `ParkState`, not `ParkWorld`; take 0.05 of the need's byte off it at the settle-up (retire
-  `SETTLE_UP_TOILET_DIRTYING`), read it at the queue's gate (retire `QUEUE_TOILET_DIRT_GATE`, thought `0xe` counted),
-  write `VAR_WORN` to a dirty toilet each turn, by name, so `Toilet.rse` adds its two objects, and answer 100 at the
-  arrival's excitement difference. Count, do not build: the effect 1 and 6 stamps (no cell effects are kept here) and
-  the handyman's search where his decide makes it (Q133 builds the decide; the clean needs it). Confirm: one toilet
-  used sixteen times by guests sent with `send` at need 100, predicted first - 100 to 20 in steps of 5, the queuers
-  behind put out on the sixteenth, `peeps` and the script's `VAR_WORN` before and after; the toilet's two script
-  objects photographed.
 - [ ] **Q102. The walk to a chosen thing's own arms.** Found by Q50e's decode (`ride-operation.md`, "Walking to a new
   place in the queue", the first caller). The original's state 10 (`FUN_004ffbc0`) takes `BigHappinessChange` (25)
   and pushes event 3 when the walk is stuck, where `GoingToRide` only goes back to deciding; takes 25 and clears

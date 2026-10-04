@@ -193,6 +193,45 @@ public class ParkGuestTypeTests
 	}
 
 	/// <summary>
+	/// <b>A dirty toilet that declares an excitement turns every arrival away</b>: <c>FUN_004fd4e0</c> answers 100
+	/// for one before it compares anything (<c>0x004fd4ea</c>). No shipped toilet declares one, so the Jungle Spray
+	/// is given the toilet bit: at a State of repair of 25 the type 2 joins as before, and at 24 turns away.
+	/// </summary>
+	[TestMethod]
+	public void ADirtyToiletWithAnExcitementTurnsEveryArrivalAway()
+	{
+		foreach ( var repair in new[] { 25f, 24f } )
+		{
+			var world = World();
+			var state = new ParkState( world );
+			var behaviour = new PeepBehaviour( world, new Random( 1 ), null, () => ParkRides.GateIsOpen, state,
+				new ParkItemCatalogue( "jungle", data ), balance: Balance() );
+			var blocked = CellEdge.For( world, ParkPeople.WalkingMode ).Blocked;
+			var spray = state.Objects.Single( o => o.ThingId == JungleSpray );
+
+			state.ReplaceObject( spray with
+			{
+				Flags = (ushort)(spray.Flags | ParkWorld.CatalogueObject.ToiletFlag),
+				StateOfRepair = repair
+			} );
+
+			var middling = Standing( 31, personType: 2, PeepState.GoingToRide, 52, 29 );
+
+			behaviour.Step( middling, new PeepWalk( middling.Navigator, blocked ), playing: null, 40 );
+
+			if ( repair < ParkState.DirtyBelow )
+			{
+				Assert.AreEqual( PeepState.Deciding, middling.State, "at 24 the type 2 thinks again" );
+				Assert.AreEqual( JungleSpray, middling.PreviousTemporaryRides[0], "remembering it" );
+			}
+			else
+			{
+				Assert.AreEqual( PeepState.SteppingUpQueue, middling.State, "at 25 the type 2 joins" );
+			}
+		}
+	}
+
+	/// <summary>
 	/// A guest of <paramref name="personType"/> in <paramref name="state"/> on the centre of a cell, naming
 	/// <paramref name="thing"/> - the Jungle Spray, whose back cell is (52,29), unless told otherwise.
 	/// </summary>

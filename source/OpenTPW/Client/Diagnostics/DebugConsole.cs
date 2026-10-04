@@ -684,13 +684,25 @@ public static class DebugConsole
 
 			// Writes one of a thing's script variables by name, as the engine writes VAR_BREAKSTAT, VAR_WORN and the rest
 			// from outside the script - an instrument for an arm nothing built here reaches yet (breakdowns, wear).
+			// With no value it reads the variable instead.
 			case "scriptvar":
 			{
-				if ( parts.Length < 4 || !int.TryParse( parts[1], out var varThing ) || !int.TryParse( parts[3], out var varValue )
+				var varValue = 0;
+
+				if ( parts.Length < 3 || !int.TryParse( parts[1], out var varThing )
+					|| (parts.Length > 3 && !int.TryParse( parts[3], out varValue ))
 					|| ParkRides.Current is not { } varRides || varRides.ScriptFor( varThing ) is not (var varId and not 0)
 					|| varRides.Scheduler.Find( varId ) is not { } varScript )
 				{
-					Reply( "scriptvar: scriptvar <thing> <VAR_NAME> <value>, for a thing running a script" );
+					Reply( "scriptvar: scriptvar <thing> <VAR_NAME> [value], for a thing running a script" );
+					break;
+				}
+
+				if ( parts.Length == 3 )
+				{
+					Reply( varScript.IndexOf( parts[2] ) >= 0
+						? $"scriptvar: thing {varThing} {parts[2]} is {varScript[parts[2]]}"
+						: $"scriptvar: thing {varThing}'s script declares no {parts[2]}" );
 					break;
 				}
 
@@ -808,7 +820,7 @@ public static class DebugConsole
 				break;
 
 			// Sets every guest's toilet need - an instrument as `thirst` is, so that a queuer can pass 80 and leave
-			// for a toilet: see ParkPeople.SetToilet.
+			// for a toilet: see ParkPeople.SetToilet. A second argument names one guest.
 			case "toilet":
 				if ( ParkPeople.Current is not { } bladders )
 				{
@@ -818,7 +830,7 @@ public static class DebugConsole
 
 				var need = Math.Clamp( Argument( 1, Peep.HurryAboveToilet ), Peep.Least, Peep.Most );
 
-				Reply( $"toilet: {bladders.SetToilet( need )} guests are now toilet {need}" );
+				Reply( $"toilet: {bladders.SetToilet( need, (int)Argument( 2, 0 ) )} guests are now toilet {need}" );
 
 				break;
 

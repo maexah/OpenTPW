@@ -1102,15 +1102,24 @@ public sealed class ParkPeople : Entity
 	/// a guest whose id divides by four passes 80 at their next drift and no other does. It sets a meter the game
 	/// itself moves, and nothing else.
 	/// </summary>
+	/// <param name="only">One guest's thing id, or nought for every guest.</param>
 	/// <returns>How many guests were set.</returns>
-	internal int SetToilet( float level )
+	internal int SetToilet( float level, int only = 0 )
 	{
+		var set = 0;
+
 		foreach ( var peep in _peeps )
+		{
+			if ( only != 0 && peep.ThingId != only )
+				continue;
+
 			peep.Toilet = Math.Clamp( level, Peep.Least, Peep.Most );
+			set++;
+		}
 
-		Log.Info( $"People: {_peeps.Count} guests are now toilet {level}" );
+		Log.Info( $"People: {set} guests are now toilet {level}" );
 
-		return _peeps.Count;
+		return set;
 	}
 
 	/// <summary>
@@ -1764,13 +1773,20 @@ public sealed class ParkPeople : Entity
 		// ParkState's list and in no other, so a sweep over the save's list hands it no turn at all - it
 		// binds a script and animates, and then never invites, never dismisses and never takes a fare,
 		// which is a ride that looks alive and is not.
-		foreach ( var thing in _behaviour.State.Objects )
+		//
+		// A copy of the list, because a turn may replace a thing's record under the walk: a toilet's use lowers
+		// its State of repair (ParkRideOperation.WearByUse).
+		foreach ( var thing in _behaviour.State.Objects.ToArray() )
 		{
 			var script = _scriptFor( thing.ThingId );
 
-			// FUN_004e0b90's tail. States 3 and 4 return before ever reaching it.
+			// FUN_004e0b90's last two steps, the toilet's worn flag and the stale head. States 3 and 4 return
+			// before ever reaching them.
 			if ( thing.State is not (3 or ParkRideChoice.StateRefusedFour) )
+			{
+				operation.TellTheWorn( script, thing.ThingId );
 				operation.DropStaleQueueHead( thing.ThingId );
+			}
 
 			// FUN_004e0e00 is a switch on mState and nothing else.
 			switch ( thing.State )
@@ -2451,6 +2467,9 @@ public sealed class ParkPeople : Entity
 				// How often it took a lock on the last unit of its budget, and the longest section it then ran in
 				// that same turn: the arrival the budget's charging decides.
 				+ $"lastunit {script.LastUnitLocks} ran {script.LongestLastUnitSection} "
+				// What ADDOBJ has started and no KILLOBJ stopped, each as type:effect@tag - records only, since
+				// nothing draws or plays them (RideEffects).
+				+ $"effects [{string.Join( ' ', (script.Effects?.Records ?? []).Select( record => $"{record.Type}:{record.Effect}@{record.Tag}" ) )}] "
 				// WHICH scream, not just whether: a ride that replays a fresh sample every pass and one
 				// that loops a single clip for ever both read "screaming True". The sample name and the pass
 				// count tell them apart.

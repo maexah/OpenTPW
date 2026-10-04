@@ -924,7 +924,7 @@ strings that print them (`0x004fda74`, `0x004fd10e`) and by the needs tick, not 
 5b for a car track, the re-take (`FindQueueDestination`, and out when it fails), the broken ride's skipped re-take, and
 the toilet. `ParkState.LeaveQueue` splices by the leaver's own links, so a leaver with nobody in front
 writes their own next as the head (`0x004ddde9`): an unlinked one empties it and the rest of that queue is lost to the
-walk in turn. **Counted:** the dirt gate (`QUEUE_TOILET_DIRT_GATE`), the
+walk in turn. **The dirt gate is built** (Q100b, "A toilet's dirt"). **Counted:** the
 coaster's record (`QUEUE_TURN_COASTER_TRACK_RECORD`, let through), the
 thoughts, the heading (`QUEUE_TURN_HEADING`) and boredom
 (`QUEUE_TURN_BOREDOM`). **The two spot animations are built** (`PeepBehaviour.PlaySpotAnimation`, below). **The unhappy arm runs the common leave path** (Q85b), after the same mood gap;
@@ -1717,7 +1717,7 @@ its own footprint, so every guest let off anything gave up on the spot.
 | Within one cell | the list, newest linked first | the park's order | no: no two objects share a cell |
 | The park shut under a walk | `BigHappinessChange`, `MajorDest` 0, Deciding, uncounted | walks on, uncounted, `GOING_TO_RIDE_PARK_SHUT` (Q102) | the entry-price door |
 | The switch's event `0x17`, the toilet's `0x11` and `0x12` | the guest's event ring | counted (`MINOR_DECISION_EVENT`, `SETTLE_UP_TOILET_EVENT`, `SETTLE_UP_TOILET_ILLNESS_EVENT`) | every switch and toilet use |
-| A toilet dirtied by use | `FUN_004e2440` | counted, `SETTLE_UP_TOILET_DIRTYING` (Q100) | every toilet use |
+| A toilet dirtied by use | `FUN_004e2440` | built, `ParkRideOperation.WearByUse` (Q100b) | every toilet use |
 | An exit that will not route | ExitRide closes the ride, no state 15 | dismissed anyway, then the walk off gives up, keeping `+0x1de` | none in the stock park |
 
 ## The staff turn - `CStaff`, every clock `mGameTick`
@@ -1962,7 +1962,7 @@ not run). Lost Kingdom's three toilets (things 21, 22, 23, item 1402) are saved 
 | Reader | Address | What a dirty toilet does there |
 |---|---|---|
 | The queue turn's dirt gate | `0x005001f0` | thought `0xe`, the queuer is put out ("The queue", step 3) |
-| The arrival's excitement difference `FUN_004fd4e0` | `0x004fd4ea` | answers 100 instead of the difference, which the gate at `0x004ffc7a` reads as "too exciting" (event 4, thought `0xf`) - but only at the back of the queue with room, and when `FUN_004e0860( object, 1 )` is non-zero (`0x004ffc68`), and no jungle feature sets `UsageInfo.ExcitementLevel`. Whether a toilet passes that test was not run |
+| The arrival's excitement difference `FUN_004fd4e0` | `0x004fd4ea` | answers 100 instead of the difference, which the gate at `0x004ffc7a` reads as "too exciting" (event 4, thought `0xf`) - but only at the back of the queue with room, and when `FUN_004e0860( object, 1 )` is non-zero (`0x004ffc68`). With 1 that function answers the descriptor's `+0x13c` itself, `UsageInfo.ExcitementLevel`, which neither jungle toilet sets: no Lost Kingdom toilet takes this arm, and an arrival joins a dirty one |
 | The object's turn `FUN_004e0b90` | `0x004e0d16` | `VAR_WORN` = 1, every turn. `Toilet.rse` answers it once with `ADDOBJ 1, 1, 9, 1` and `ADDOBJ 1, 1, 69, 1` (latched in its own `VAR_WORNON`), and `KILLOBJ 1` when `VAR_WORN` reads nought again |
 | The handyman's search `FUN_004d7880` | `0x004d79ab` | a candidate for cleaning |
 | The destructor `FUN_004dd0a0` | `0x004dd222` | unstamps effect 6 where a clean toilet's sale unstamps 1 |
@@ -2018,14 +2018,38 @@ does (`0x004e24bc`..`0x004e252a`).
 
 | | The original | OpenTPW |
 |---|---|---|
-| Use dirties a toilet | every use | counted, `SETTLE_UP_TOILET_DIRTYING` |
-| The queue's dirt gate | reads `+0x44` | counted, `QUEUE_TOILET_DIRT_GATE`; the save's 100 never falls |
-| `VAR_WORN` to a dirty toilet, and its two script objects | every turn | none, uncounted |
-| Effects 1 and 6 | stamped into the cells | no stamping at all; the save's cell record is read (`MapCell.NearbyEffects`) |
-| The handyman's search, walk and clean | states `0xa`, `0xb` | none, uncounted; the handyman stands (Q133) |
+| Use dirties a toilet | every use | built, `ParkRideOperation.WearByUse`, in the park's own record (`ParkState`) |
+| The queue's dirt gate | reads `+0x44` | built in `PeepBehaviour.QueueTurn` on `ParkState.IsDirty`; thought `0xe` counted, `QUEUE_TURN_THOUGHT_0xE` |
+| The arrival's answer of 100 | `FUN_004fd4e0` | built in `PeepBehaviour.TurnsAwayFrom`; dead by content in Lost Kingdom |
+| `VAR_WORN` to a dirty toilet | every turn | built, `ParkRideOperation.TellTheWorn`, by name; `Toilet.rse` adds its two objects, kept as records and not drawn (Q20b) |
+| Effects 1 and 6 | stamped into the cells | counted on the use that dirties, `TOILET_DIRTY_REGION_EFFECTS`; no stamping at all; the save's cell record is read (`MapCell.NearbyEffects`) |
+| The handyman's search, walk and clean | states `0xa`, `0xb` | the search counted at his decide, `HANDYMAN_TOILET_SEARCH`; none built, the handyman stands (Q133), so **a toilet here never becomes clean again** |
 | The request for service | shuts the object and calls a member | none |
+| The online game's clean | mode 1 | none; there is no online game |
 
-Nothing here was built or run in the game.
+### Q100b: the build, and what the running game showed
+
+**A dirty toilet is still used.** The queue turn's board arm comes before its dirt gate ("The queue", steps 1 and 3),
+and the object's turn invites a front queuer whatever its State of repair. So a guest who reaches an empty queue is
+invited before their first queue turn, boards and uses the toilet, and only a queuer who has to wait is put out. Read
+in the listing, and seen in OpenTPW; not run in the original.
+
+Lost Kingdom, toilet 21 at (55,17), guests made beside it, sent to it and given a need of 100 (instruments). Each
+figure was predicted before it was read.
+
+| | Predicted | Read |
+|---|---|---|
+| Sixteen uses at need 100 | 100 to 20, five a use | 95, 90 ... 25, 20 on the log's sixteen lines |
+| Dirty | on the sixteenth, once; 25 is not dirty | `Toilet has become dirty and smelly`, once, on 25 to 20 |
+| `VAR_WORN` | 0 until then, 1 after | 0 at every batch, 1 after |
+| The queuers behind | each put out on the next sweep, 15 off | two, then three in the second run: 25 to 9 and 10, then 29 to 14, 31 to 15, 32 to 17 (the queue line before is up to a sweep old, and a need of 100 drains happiness too) |
+| Counters | `TOILET_DIRTY_REGION_EFFECTS` 1, `QUEUE_TURN_THOUGHT_0xE` one a put-out, the two retired ones absent | as predicted |
+| The script's objects | `1:69@1 1:9@1` in `rides`, nothing drawn | as predicted; the photograph shows no change at the toilet |
+| Afterwards | no more uses (wrong) | a seventeenth, 20 to 15: the arrival at an empty queue, above |
+
+In the second run a passing guest used it at need 13 and took 0.65, so that run's sixteenth use left 24.35, dirty all
+the same. The first run of all stopped on an exception: the use replaced the toilet's record while the rides' sweep
+walked the list, and the sweep now walks a copy.
 
 ## Spending — a guest pays on LEAVING
 
@@ -2092,7 +2116,8 @@ Named by its own strings: `"Litter gone up by %d, is now %d"`, `"Customer bought
    event `0x12` (`0x004fe7dc`..`0x004fe7ef`); and sets `+0xc2`, the hurry speed, to 25 (`0x0075c7f2`, `0x004fe7f5`),
    which the needs turn sets back from the need within four sweeps. Event `0x11` names the toilet; `0x12` names nothing
    and is pushed before illness is emptied. The online branch also sets the toilet's script variable 8 to nought
-   (`0x004e2517`). OpenTPW builds the need, the illness and the speed, and counts the dirtying and both events
+   (`0x004e2517`). OpenTPW builds the dirtying (`ParkRideOperation.WearByUse`, Q100b; the two
+   effect stamps counted), the need, the illness and the speed, and counts both events
    (`ParkRideOperation.UseTheToilet`, Q170b).
 6. **Then, for a sideshow only:** `person[+0x1d0] += 1` and a happiness rise computed from **`log2( costOfGoods / pricePerUse )`** - `FUN_004e1a10` (`+0x188`, cost of goods) over `FUN_004e1a00` (`+0x194`, price), `FILD`/`FIDIV` at `0x004fe835`/`0x004fe84b`, the logarithm by `FYL2X` over `ln 2` - scaled by the byte at `DAT_0078505c` (`PeepInfo.MediumHappinessChange`), and logged as `"Sideshow won - happiness up %d points to %d"`.
 

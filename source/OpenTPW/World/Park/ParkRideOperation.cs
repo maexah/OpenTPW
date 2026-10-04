@@ -780,15 +780,15 @@ public sealed class ParkRideOperation
 	/// else happened.
 	/// </summary>
 	/// <remarks>
-	/// Counted and not kept: the dirtying of the toilet by the need's byte (<c>FUN_004e2440</c>, Q100), and the two
-	/// entries in the guest's event ring, <c>0x11</c> naming the toilet and <c>0x12</c> for the illness.
+	/// The toilet is worn first, by the need the guest brought (<see cref="WearByUse"/>). Counted and not kept: the
+	/// two entries in the guest's event ring, <c>0x11</c> naming the toilet and <c>0x12</c> for the illness.
 	/// </remarks>
-	private static void UseTheToilet( Peep peep, ParkWorld.CatalogueObject toilet )
+	private void UseTheToilet( Peep peep, ParkWorld.CatalogueObject toilet )
 	{
 		var (need, illness) = (peep.Toilet, peep.Vomit);
 
-		// FUN_004e2440 is handed the need's truncated byte before it is emptied (0x004fe7a8).
-		Unimplemented.Report( "SETTLE_UP_TOILET_DIRTYING" );
+		// The need's truncated byte, before it is emptied (0x004fe795..0x004fe7a8).
+		WearByUse( toilet.ThingId, (int)peep.Toilet & 0xff );
 
 		peep.Toilet = 0f;
 
@@ -808,6 +808,56 @@ public sealed class ParkRideOperation
 		Log.Info( $"Person {peep.ThingId}: used toilet {toilet.ThingId}, need {need:0.0} to {peep.Toilet:0.0}, "
 			+ $"illness {illness:0.0} to {peep.Vomit:0.0}" );
 	}
+
+	/// <summary>What one point of a guest's toilet need takes off a toilet's State of repair - -0.05 (<c>0x007005d0</c>).</summary>
+	public const float UseWears = -0.05f;
+
+	/// <summary>
+	/// A use wears a thing - <c>FUN_004e2440</c>, whose one caller is the settle-up's toilet arm: the State of repair
+	/// (<c>+0x44</c>) gains the need's byte times <see cref="UseWears"/>, held to 0..100, in the park's own record.
+	/// The use that takes a toilet from not dirty to dirty (<see cref="ParkState.IsDirty"/>) logs it
+	/// (<c>docs/exe/ride-operation.md</c>, "A toilet's dirt").
+	/// </summary>
+	/// <remarks>
+	/// Counted and not kept: on that use the original unstamps region effect 1 and stamps effect 6 at the toilet's
+	/// cell (<c>FUN_004d8460</c>, <c>FUN_004d8440</c>); no cell effects are stamped here. The online game's arm,
+	/// which cleans instead, is not built: there is no online game.
+	/// </remarks>
+	/// <returns>Whether this use made a toilet dirty.</returns>
+	internal bool WearByUse( int thingId, int need )
+	{
+		if ( !_state.TryObject( thingId, out var used ) )
+			return false;
+
+		var was = ParkState.IsDirty( used );
+		var repair = Math.Clamp( (float)(need * (double)UseWears + used.StateOfRepair), 0f, 100f );
+		var worn = used with { StateOfRepair = repair };
+
+		_state.ReplaceObject( worn );
+
+		Log.Info( $"Object {thingId}: used at need {need}, State of repair {used.StateOfRepair:R} to {repair:R}" );
+
+		if ( was || !ParkState.IsDirty( worn ) )
+			return false;
+
+		Log.Info( $"Object {thingId}: Toilet has become dirty and smelly" );
+		Unimplemented.Report( "TOILET_DIRTY_REGION_EFFECTS" );
+
+		return true;
+	}
+
+	/// <summary>The script variable a dirty toilet is told every turn - <c>VAR_WORN</c>, variable 8.</summary>
+	public const string WornVariable = "VAR_WORN";
+
+	/// <summary>
+	/// The toilet's worn flag, on every turn of a thing not in state 3 or 4 - <c>FUN_004e0b90</c>,
+	/// <c>0x004e0d10</c>: a dirty toilet (<see cref="ParkState.IsDirty"/>) has <see cref="WornVariable"/> written 1.
+	/// Nothing here writes nought; the handyman's clean does, and it is not built (Q133).
+	/// </summary>
+	/// <returns>Whether the variable was written.</returns>
+	public bool TellTheWorn( RideScript? script, int thingId )
+		=> _state.TryObject( thingId, out var thing ) && ParkState.IsDirty( thing )
+			&& script?.Set( WornVariable, 1 ) == true;
 
 	/// <summary>
 	/// The illness a toilet leaves alone - <c>CMP AL,0x5a</c> / <c>JBE</c> at <c>0x004fe7dc</c>: 91 and over is emptied.

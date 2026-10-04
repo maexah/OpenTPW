@@ -4,6 +4,8 @@ Last updated: 2026-10-04. **This header names no branch and no sha, deliberately
 
 ## Works
 
+- **A toilet gets dirty with use** (Q100b): each use takes 0.05 of the guest's need off its State of repair; below 25 its queuers are put out and its script is told `VAR_WORN`. Toilet 21 matches predicted 100 → 20 over sixteen uses.
+
 - **Failed profile selection reloads preserve restored progress** (Q207). Cached profiles stay read-only until successfully reloaded; immediate key saves and deselection are covered. A folder with no gms.dat is a new player and is saved like any other (Q209).
 - **Objects keep their own saved cost of goods and chance of winning** (Q97). The sideshow price-opinion prize, rolls, excitement and settlement use them; the price-opinion base uses catalogue InitCostOfGoods (Q207). Stock and labelled-fixture screenshots/censuses match predicted 50/25 → 80/58 for the Jungle Spray.
 - **Console path placement uses the player verdict** (Q94). Connected queue cells refuse with no charge or edit. Legal detached-tail cuts are photographed; predicted census confirms 12 → 8 → 4 queuers, eight releases at happiness 35.
@@ -34,7 +36,7 @@ Last updated: 2026-10-04. **This header names no branch and no sha, deliberately
 
 - No screen sets the training budgets or buys a loan; six months in the red is counted, not an end (Q198b). No litter, day ending, saving a park back, video (the player is decoded: `docs/exe/boot.md`), networking. Research is inert. In a park the advisor says the gadget's opening line and no more (`docs/PLAYER-GAPS.md` gap 4).
 - Eight of the nine per-object windows are unbuilt. Setting patrol areas is deferred by Alexah; staff keep the save's. A walking member of staff is not entered in the cells they cross; only hiring and putting down place one.
-- Unbuilt: Q102-Q105, four queue-turn arms, the deciding turn's three spot animations (Q107, Q111), Q112's walk to path.
+- **Nothing cleans a dirty toilet** (the handyman's clean is Q133), so one stays dirty for the session; its script's two objects are not drawn (Q20b). Unbuilt: Q102-Q105, four queue-turn arms, the deciding turn's three spot animations (Q107, Q111), Q112's walk to path.
 - Nothing shows what the hand holds (`CARRY_PREVIEW_MARKERS`, `STAFF_CARRY_PREVIEW`); any cell takes a candidate (Q40).
 - The fly-in's fade to black is not drawn (Q61). Keys: Escape over the player slots opens the game menu (Q64) and closes no park screen (Q119); Ctrl+H acts on the press, F8 is not built (Q65); modifiers count as the frame ends (Q120). A disabled button still takes the pointer (Q66); presses the original stops reach the park (Q113, Q115).
 - The happiness gauge draws two copies of its bar, split down the middle (`docs/PLAYER-GAPS.md` gap 5; unmeasured). Every other sound still waits out a per-effect "repeat delay" that is really a priority (Q43). A voice is not clamped to 16 bits as the original's is, only the mix (`docs/exe/audio.md`).
@@ -44,10 +46,11 @@ Last updated: 2026-10-04. **This header names no branch and no sha, deliberately
 
 ## Next
 
-`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next **Q100b**, building a toilet's dirt from Q100's decode. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. **Q188 remains on hold** until Alexah says otherwise. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
+`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next **Q102**, the walk to a chosen thing's own arms. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. **Q188 remains on hold** until Alexah says otherwise. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
+- Q100b: uses were made with `admit`/`send`/`toilet`; the seventeenth use and the dirty toilet's behaviour were not compared with the original; a toilet restored dirty from a save, and the Super Toilet: tested only or not at all.
 - Q99: reached only under `pause`/`step` with `admit`/`send`, on a bought ride; the stranded-stamp refusal is unbuilt (no save's stamp is read); not compared with the original.
 - Q97 payouts and actual win outcomes: tested only; window setters wait for Q31. Shared RNG parity remains unbuilt. Played jungle save loads objects but rendering crashes on duplicate sprite key 0; runtime proof uses a labelled shipped-park fixture.
 
@@ -75,12 +78,14 @@ Last updated: 2026-10-04. **This header names no branch and no sha, deliberately
 | | | measured |
 |---|---|---|
 | Opcodes | **77** of 106 | 2026-10-01, `case Opcode.` labels vs enum members, after Q87 |
-| Tests | **1771**, 0 fail, 0 skip with the game | 2026-10-04, Q99, alone in a worktree |
-| Tests without the game | **733** ran, **1038** skipped, of 1771 | 2026-10-04, Q99 |
-| Build warnings | 121 | 2026-10-04, Q99 |
+| Tests | **1779**, 0 fail, 0 skip with the game | 2026-10-04, Q100b, alone in a worktree |
+| Tests without the game | **733** ran, **1046** skipped, of 1779 | 2026-10-04, Q100b |
+| Build warnings | 121 | 2026-10-04, Q100b |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
+
+**2026-10-04 (Q100b).** A toilet's dirt is built: the use's wear in `ParkState`'s record, the queue's dirt gate, `VAR_WORN`, the arrival's answer; the effect stamps and the handyman's search counted. Predicted and read on toilet 21: 100 to 20 in sixteen fives, dirty once, `VAR_WORN` 0 to 1, the queuers behind put out for 15, the script's two objects in `rides`; the photograph shows nothing, since script particles are not drawn. Not predicted: a seventeenth use by an arrival at the empty queue, which the listing agrees with. The game run found the use breaking the rides' sweep, fixed. Eight tests; eleven restored bugs each fail. `docs/exe/ride-operation.md`, "Q100b".
 
 **2026-10-04 (Q100).** Decode only: what lowers a toilet's State of repair and what restores it. Use alone lowers a shipped toilet's (0.05 of the need a use; the timed wear needs a `WearRate`, 0 for features); below 25 the queue turns guests away, the script is told `VAR_WORN`, region effect 6 replaces 1, and a handyman in range walks over and cleans it back to 100. Stock toilets start at 100: dirty on the sixteenth use at the earliest (arithmetic). Read in the listing and checked by a second reader, three statements corrected. Nothing built or run in the game; Q100b is the build. `docs/exe/ride-operation.md`, "A toilet's dirt".
 
@@ -111,9 +116,3 @@ Last updated: 2026-10-04. **This header names no branch and no sha, deliberately
 **2026-10-03 (Q90).** Decode only: door events 3/4 map to messages 128/129, responses 308–311 and samples 342–345. Shipped scores 20 fail the tick's strict >25 gate; low-score slots remain pending. Private Ghidra identity, fresh metadata/schema reconstruction and independent review; `docs/exe/advisor-park.md`. No implementation, regression mutation or runtime screenshot/log claimed; Q90b is next.
 
 **2026-10-03 (Q89b).** Required saved-closed runtime proof completed on `alexah/261-q89b-saved-gate-proof`: an unchanged original restart loads closed, opens, closes and reopens, with predicted census and screenshots. A labelled one-field fixture also preserves saved command/status 1/1 in a closed park. Original saves unchanged; no code change. Gate open/close/reopen confirmed at the entry-price door with screenshots and predicted command/status/census. One guest delayed closure until retry tick 60; outside staff blocked ticks 780/810/840, then moving inside allowed close at 870 and reopening. All eleven mutations fail after repairing an occupancy fixture; 1679 tests pass. Independent applied review through relayed evidence passed. `docs/exe/park-gate.md`.
-
-**2026-10-03 (Q89).** Gate commands decoded, not built: **0** ordinary close, **2** end sequence with a terminal yield loop. Guest census uses cell types **0/1/3/9/10**; a newly traced **30-world-sweep** retry also waits for staff outside. Private Ghidra identity verified, four gate scripts freshly extracted and 308-script corpus checked. `docs/exe/park-gate.md`; implementation, regression mutation and runtime screenshot/census remain Q89b.
-
-**2026-10-03 (Q86).** Path clears remeasure linked entrances after both link bits go. Predicted and observed one notification during queued placement, and zero cells removed by a protected stock-path delete. Two instrumented four-guest runs matched queue 4→0, cells 1→0 and happiness 50→35, with screenshots and logs. Eight tests fail with the bug restored. Reachability limits and evidence: `docs/exe/ride-operation.md`, Q86.
-
-**2026-10-03 (Q206).** Staff queue/approach wandering reproduced and fixed; `docs/exe/staff-wandering.md`. Predicted zero excursions in two 120-second runs; observed zero in 3,840 guard/researcher census rows, with screenshots and continued movement. Restoring the bug fails nine tests; removing containment or the patrol type gate fails three each. Original destination filters restored; their use during physical movement is an explicit containment deviation. Q112 recovery from unlinked terrain remains open. Independent applied review passed through relayed primary evidence (child filesystem access unavailable).

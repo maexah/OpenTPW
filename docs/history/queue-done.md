@@ -4232,6 +4232,24 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   again; the three stock toilets saved at 100, so the sixteenth use at the earliest. `ride-operation.md`, "A toilet's
   dirt". Checked by a second reader in the listing: three statements corrected. Nothing built, nothing run in the
   game; Q100b carries the build and its confirmation.
+- [x] **Q100b. Build a toilet's dirt.** Q100's decode is `ride-operation.md`, "A toilet's dirt". Keep the State of
+  repair in `ParkState`, not `ParkWorld`; take 0.05 of the need's byte off it at the settle-up (retire
+  `SETTLE_UP_TOILET_DIRTYING`), read it at the queue's gate (retire `QUEUE_TOILET_DIRT_GATE`, thought `0xe` counted),
+  write `VAR_WORN` to a dirty toilet each turn, by name, so `Toilet.rse` adds its two objects, and answer 100 at the
+  arrival's excitement difference. Count, do not build: the effect 1 and 6 stamps (no cell effects are kept here) and
+  the handyman's search where his decide makes it (Q133 builds the decide; the clean needs it). Confirm: one toilet
+  used sixteen times by guests sent with `send` at need 100, predicted first - 100 to 20 in steps of 5, the queuers
+  behind put out on the sixteenth, `peeps` and the script's `VAR_WORN` before and after; the toilet's two script
+  objects photographed.
+  Done 2026-10-04, `alexah/279-toilet-dirt`: `ParkRideOperation.WearByUse` lowers the park's own record,
+  `PeepBehaviour.QueueTurn` gates on `ParkState.IsDirty`, the toilet's turn writes `VAR_WORN` and the arrival's
+  difference answers 100 (dead by content here); the effect stamps and the handyman's search are counted. Predicted
+  and read on toilet 21: sixteen uses, 100 to 20 in fives, dirty once on the sixteenth, `VAR_WORN` 0 to 1, the two
+  queuers behind (three in a second run) put out on the next sweep for 15, the script's two objects in `rides`.
+  Photographed, and nothing shows: a script's particles are not drawn (Q20b). Not predicted: a seventeenth use, since
+  an arrival at an empty queue is invited before the gate sees them, as the listing has it. The first run found the
+  use breaking the rides' sweep; it walks a copy now. Eight tests; eleven restored bugs each fail one.
+  `docs/exe/ride-operation.md`, "Q100b". A toilet here never becomes clean again until Q133 builds the handyman.
 
 ## B. Docs and comments
 

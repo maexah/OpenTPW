@@ -247,6 +247,12 @@ public sealed class StaffBehaviour
 	{
 		if ( staff.Model is not (GuardModel or ResearcherModel) )
 		{
+			// The handyman's decide looks for a toilet to clean once no litter is in range (FUN_004d7880 from
+			// 0x004d72f7; docs/exe/ride-operation.md, "A toilet's dirt"). Nothing here finds litter, so every one
+			// of his decides is counted.
+			if ( staff.Model == HandymanModel )
+				Unimplemented.Report( "HANDYMAN_TOILET_SEARCH" );
+
 			// They have arrived somewhere and have no work to look for, so they stand. Going to Idle from a
 			// walk stamps the clock; from an idle it stamps 0, so after that they are asked again every sweep.
 			staff.SetActivity( StaffActivity.Idle, tick );
@@ -305,6 +311,9 @@ public sealed class StaffBehaviour
 				+ (walks ? "finding nowhere to walk" : "its choice's low two bits nought") );
 		}
 	}
+
+	/// <summary>The handyman's thing model.</summary>
+	private const int HandymanModel = 5;
 
 	/// <summary>The thing models whose decide arm is answered inline by the shared switch.</summary>
 	private const int GuardModel = 7;

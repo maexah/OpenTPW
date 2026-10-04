@@ -1401,10 +1401,10 @@ public sealed class PeepBehaviour
 	/// <c>0x004fa62a</c>), which every walk tick zeroes, so on this arm it is nought unless a save loaded it, and
 	/// nothing here reads a save's: that refusal is not built.</item>
 	/// <item><b>Wait.</b> At the front and invited but not the nominee: the whole turn is nothing (<c>0x005001d8</c>).</item>
-	/// <item><b>The dirt gate</b> puts out a queuer for a toilet whose <c>+0x44</c> truncates below 25
-	/// (<c>FUN_004e0390</c>): its State of repair (<see cref="ParkWorld.CatalogueObject.StateOfRepair"/>), which the
-	/// save gives and nothing here lowers. Use lowers it and a handyman's cleaning restores it, neither built
-	/// (<c>ride-operation.md</c>, "A toilet's dirt"), so the gate is counted.</item>
+	/// <item><b>The dirt gate</b> (<c>0x005001f0</c>) puts out a queuer for a dirty toilet
+	/// (<see cref="ParkState.IsDirty"/>), which use makes one (<see cref="ParkRideOperation.WearByUse"/>); thought
+	/// <c>0xe</c> is counted. A handyman's cleaning restores it and is not built (Q133), so a toilet here stays
+	/// dirty (<c>ride-operation.md</c>, "A toilet's dirt").</item>
 	/// <item><b>The lost place.</b> The queue walk cannot reach them - they are unlinked, or somebody in front has
 	/// stopped queueing: put out. The original's log says it closes and reopens the ride; nothing does.</item>
 	/// <item><b>In place</b>: too far back for the thing's longest queue (<see cref="LongestQueue"/>), or a
@@ -1461,8 +1461,13 @@ public sealed class PeepBehaviour
 			return;
 		}
 
-		if ( queueing.IsToilet )
-			Unimplemented.Report( "QUEUE_TOILET_DIRT_GATE" );
+		if ( ParkState.IsDirty( queueing ) )
+		{
+			Unimplemented.Report( "QUEUE_TURN_THOUGHT_0xE" );
+			PutOutOfTheQueue( peep, queueing, tick, "the toilet's dirt" );
+
+			return;
+		}
 
 		var place = State.PositionInQueue( queueing.ThingId, peep.ThingId, _stillQueueing );
 
@@ -1819,13 +1824,18 @@ public sealed class PeepBehaviour
 	/// than a guard against missing data: <c>FUN_004e0860(1)</c> decides whether the comparison happens at
 	/// all, and it is the same test that drops the excitement weight out of the ride scorer. The comparison is
 	/// against the thing's computed excitement, <see cref="ParkRideScore.ExcitementOf"/>, as <c>FUN_004fd4e0</c>
-	/// asks <c>FUN_004e0860( object, 0 )</c>.
+	/// asks <c>FUN_004e0860( object, 0 )</c>. For a dirty toilet (<see cref="ParkState.IsDirty"/>) that function
+	/// answers 100 before it compares anything (<c>0x004fd4ea</c>), which is past the refusal; no jungle toilet
+	/// declares an excitement, so none reaches it.
 	/// </remarks>
 	private bool TurnsAwayFrom( Peep peep, ParkWorld.CatalogueObject chosen )
 	{
 		if ( _catalogue == null || !_catalogue.TryGet( chosen.CatalogueId, out var item )
 			|| (item.ExcitementLevel & 0xff) == 0 )
 			return false;
+
+		if ( ParkState.IsDirty( chosen ) )
+			return true;
 
 		var wanted = _chooser.Score.PreferredExcitementFor( peep.PersonType ) & 0xff;
 
