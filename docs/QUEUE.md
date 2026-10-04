@@ -55,19 +55,6 @@ as `r-f1` names a verdict in its results file (`CLAUDE.local.md` says where).
   window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
   together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
 
-- [ ] **Q102. The walk to a chosen thing's own arms.** Found by Q50e's decode (`ride-operation.md`, "Walking to a new
-  place in the queue", the first caller). The original's state 10 (`FUN_004ffbc0`) takes `BigHappinessChange` (25)
-  and pushes event 3 when the walk is stuck, where `GoingToRide` only goes back to deciding; takes 25 and clears
-  `MajorDest` while walking with the park shut (`"The park has closed underneath me!"`), which nothing here does; and
-  every 12th walking turn, counted across walks by the saved byte `+0x2c`, runs the minor decision `FUN_004fd570`,
-  which may switch to a nearer thing and aim at its entry. Build the first two; the minor decision needs
-  `FUN_004d8b40`'s raw line-search length. Confirm: `peeps` over a guest walking to a ride when the door shuts, and
-  over one cut off by a path edit.
-  From Q170: the walking-turn count and the minor decision are Q170b's steps 3 and 4, built after this item's park-shut
-  arm (`ride-operation.md`, "A second toilet: the minor decision and the saved major").
-  From Q170b: both are built, in `PeepBehaviour.WalkOn`; the shut arm is counted there (`GOING_TO_RIDE_PARK_SHUT`) and
-  skips the count, as the original's does.
-
 - [ ] **Q103. The gates at the back of a queue.** Found by Q50e's decode. On arriving, the original refuses on room
   with event `0x15` and KEEPS `MajorDest` (`GiveUpOnIt` clears it); asks excitement only when the item's `+0x13c`
   (`UsageInfo.ExcitementLevel`) has a non-zero low byte, of the OBJECT's computed excitement (`FUN_004e0860( object,
@@ -513,7 +500,7 @@ as `r-f1` names a verdict in its results file (`CLAUDE.local.md` says where).
   reached in Lost Kingdom, unbuilt, and calls no `Unimplemented.Report` (`CLAUDE.md` rule 4). In `PeepBehaviour`:
   `Entering` lacks `FUN_004ffb20`'s guard (park shut or gate not open, back to the gate), reachable since the
   entry-price door shuts a running park; `GoingToRide`'s stuck arm (`BigHappinessChange`, event 3) and its park-shut
-  arm, which Q102 builds; `AtGate` asks nothing of `FUN_0051a760`, the arrival vehicle's gate; `HeadingForExit` has no
+  arm, both built by Q102; `AtGate` asks nothing of `FUN_0051a760`, the arrival vehicle's gate; `HeadingForExit` has no
   change of mind (`FUN_00500a50`), which a saved guest can take; states 19 and 21 stand silently, 19 on every
   departure and 21 after `WalkingOutside`, which Q128 builds; `Decide` does nothing when the chooser finds nothing,
   which Q107 builds; and `Judge` reads `ParkExcitement`, nought until Q26 decodes `FUN_004c8240`. `CellReroute` never

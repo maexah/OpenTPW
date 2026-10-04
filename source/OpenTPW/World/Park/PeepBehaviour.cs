@@ -467,12 +467,16 @@ public sealed class PeepBehaviour
 						JoinTheQueue( peep, walk, tick );
 						break;
 
-					// "The person has become stuck on the way to the ride" - they give up on it and think
-					// again, as the original does; its BigHappinessChange (25) and event 3 are not built (Q102).
-					// The saved major stays (0x004ffe9f clears +0x1dc alone).
+					// "The person has become stuck on their way to the ride they were interested in"
+					// (0x004ffe7a): BigHappinessChange off, the thing let go of, and they think again. The
+					// event it pushes first (3) is counted: this project keeps no event ring. The saved major
+					// stays (0x004ffe9f clears +0x1dc alone).
 					case WalkVerdict.CannotReach:
-						peep.MajorDest = 0;
-						peep.SetState( PeepState.Deciding, tick, _random );
+						Log.Info( $"Person {peep.ThingId}: stuck on the way to thing {peep.MajorDest}, tick {tick}" );
+
+						Unimplemented.Report( "GOING_TO_RIDE_STUCK_EVENT" );
+
+						LoseHeartOnTheWay( peep, tick );
 						break;
 
 					case WalkVerdict.Walking:
@@ -2079,21 +2083,37 @@ public sealed class PeepBehaviour
 	}
 
 	/// <summary>
+	/// How both failed walks to a chosen thing end - the tails of <c>FUN_004ffbc0</c>'s stuck and shut arms
+	/// (<c>0x004ffe94</c>, <c>0x004ffec9</c>): <c>FUN_004fea70( 2 )</c>, which is
+	/// <see cref="ParkAdmission.BigHappinessChange"/> off, the thing let go of, and back to
+	/// <see cref="PeepState.Deciding"/>.
+	/// </summary>
+	private void LoseHeartOnTheWay( Peep peep, int tick )
+	{
+		if ( Admission is { } mood )
+			peep.Happiness = Peep.Change( peep.Happiness, -mood.BigHappinessChange );
+
+		GiveUpOnIt( peep, tick );
+	}
+
+	/// <summary>
 	/// A turn of walking to a chosen thing that has not got there yet - the walking arm of <c>FUN_004ffbc0</c>
 	/// (<c>0x004ffef2</c>..<c>0x004fff06</c>): the turn is counted on <see cref="Peep.WalkingTurns"/>, and every
 	/// twelfth runs the minor decision (<see cref="MinorDecision"/>), the count zeroed first. Nothing follows it in
 	/// the turn.
 	/// </summary>
 	/// <remarks>
-	/// <b>With the park shut the original counts nothing</b>: "The park has closed underneath me!", the thing let go
-	/// of, <c>BigHappinessChange</c> off and back to deciding. That arm is not built (Q102), so the guest walks on,
-	/// uncounted.
+	/// <b>With the park shut nothing is counted</b> (<c>FUN_0051a280</c>, <c>0x004ffeaf</c>): "The park has closed
+	/// underneath me!", and <see cref="LoseHeartOnTheWay"/>.
 	/// </remarks>
 	private void WalkOn( Peep peep, PeepWalk walk, int tick )
 	{
 		if ( ParkIsClosed )
 		{
-			Unimplemented.Report( "GOING_TO_RIDE_PARK_SHUT" );
+			Log.Info( $"Person {peep.ThingId}: the park has closed underneath me, bound for thing {peep.MajorDest}, "
+				+ $"tick {tick}" );
+
+			LoseHeartOnTheWay( peep, tick );
 
 			return;
 		}

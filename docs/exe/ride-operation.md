@@ -439,8 +439,19 @@ Seed 1's cycle, 248,316,293 states, never meets `0x80000000`, which lies on anot
 A direction neither switch knows stands the point at the cell's centre, counted
 `QUEUE_PLACE_DODGY_DIRECTION`, where the original routes with whatever its stack held. A place past the queue's cells
 is refused before routing, where the original routes to (127, 255) and fails. `FUN_004fa5f0`'s stranded refusal is
-absent: nothing keeps `mStrandedTime`. State 10's own arms, the gates' side effects and the chooser's in-walk routing
-are Q102 to Q104.
+absent: nothing keeps `mStrandedTime`. The gates' side effects and the chooser's in-walk routing are Q103 and Q104.
+
+**Q102: state 10's stuck and shut arms** are built in `PeepBehaviour` (`LoseHeartOnTheWay`): either takes
+`BigHappinessChange` off (`FUN_004fea70( 2 )`, the byte at `0x00785060`, clamped to 0..100), zeroes `MajorDest` and
+sets state 6; `+0x1de`, the saved major, is untouched by both. The stuck arm's event 3 is counted
+(`GOING_TO_RIDE_STUCK_EVENT`: no event ring is kept). The shut arm comes before the walking-turn count, so that turn
+is not counted and makes no minor decision. Read in the running game, each predicted first: with the entry-price
+door pressed under a guest walking to the Belly Bounce, 50 to 25, `MajorDest` 13 to 0, Deciding, on their next turn,
+then the deciding turn's own 25 for a shut park (0, HeadingForExit); with the path at the Belly Bounce's queue tail,
+(48,22), lifted under another, 50 to 25, `MajorDest` 0, Deciding, the event counted once. **Where the stuck arm is
+reached differs**: that guest walked on to the cell beside the gap before the walk answered stuck, where the
+original's walker re-plans as the ground changes ("The ground changed under this peep..."); when the original's
+answers 2 after an edit has not been measured.
 
 The supporting helpers:
 
@@ -1715,7 +1726,6 @@ its own footprint, so every guest let off anything gave up on the spot.
 | The switch test's mode | the guest's `+0x188`, which some arms set to 1 | mode 0 (`ParkPeople.WalkingMode`); mode 1 also lets a step leave a path for bare ground (`0x004d8a37`) | not established: which states a guest walking to a thing can hold 1 in |
 | The score in the window | to the candidate's back cell | to its entry cell (Q105) | every decision |
 | Within one cell | the list, newest linked first | the park's order | no: no two objects share a cell |
-| The park shut under a walk | `BigHappinessChange`, `MajorDest` 0, Deciding, uncounted | walks on, uncounted, `GOING_TO_RIDE_PARK_SHUT` (Q102) | the entry-price door |
 | The switch's event `0x17`, the toilet's `0x11` and `0x12` | the guest's event ring | counted (`MINOR_DECISION_EVENT`, `SETTLE_UP_TOILET_EVENT`, `SETTLE_UP_TOILET_ILLNESS_EVENT`) | every switch and toilet use |
 | A toilet dirtied by use | `FUN_004e2440` | built, `ParkRideOperation.WearByUse` (Q100b) | every toilet use |
 | An exit that will not route | ExitRide closes the ride, no state 15 | dismissed anyway, then the walk off gives up, keeping `+0x1de` | none in the stock park |

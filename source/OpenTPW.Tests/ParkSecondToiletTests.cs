@@ -48,7 +48,8 @@ public class ParkSecondToiletTests
 	private ParkItemCatalogue Catalogue() => new( "jungle", data );
 
 	private PeepBehaviour Behaviour( ParkWorld world, ParkState state )
-		=> new( world, new Random( 1 ), null, () => ParkRides.GateIsOpen, state, Catalogue(), balance: Balance() );
+		=> new( world, new Random( 1 ), new ParkAdmission( Balance(), world.Economy!.Value.AdmissionFee ),
+			() => ParkRides.GateIsOpen, state, Catalogue(), balance: Balance() );
 
 	/// <summary>A guest standing on one cell, aimed at another, at a guest's measured walking speed.</summary>
 	private static Peep Guest( int thingId, PeepState state, (int X, int Y) at, (int X, int Y) aim, int majorDest,
@@ -193,26 +194,71 @@ public class ParkSecondToiletTests
 	}
 
 	/// <summary>
-	/// <b>With the park shut a walking turn is not counted</b>: the original's shut arm comes first and returns. That
-	/// arm is Q102's and is counted, not built, so the guest walks on.
+	/// <b>The park shut under a walk</b> - <c>FUN_004ffbc0</c>'s shut arm, which comes before the count and returns:
+	/// the turn is not counted, 25 comes off, the thing is let go of and the guest thinks again.
 	/// </summary>
 	[TestMethod]
-	public void WithTheParkShutAWalkingTurnIsNotCounted()
+	public void TheParkShuttingUnderAWalkCostsTwentyFiveAndTheThing()
 	{
 		var world = World();
 		var state = new ParkState( world );
 		var behaviour = Behaviour( world, state );
-		var guest = Guest( 30, PeepState.GoingToRide, (56, 19), BackOf( world, Toilet23 ), Toilet23, walkingTurns: 11 );
+		var guest = Guest( 30, PeepState.GoingToRide, (56, 19), BackOf( world, Toilet23 ), Toilet23,
+			savedMajorDest: BellyBounce, walkingTurns: 11 );
 		var walk = WalkOf( world, guest );
 
 		state.SetParkClosed( true );
-		var before = Times( "GOING_TO_RIDE_PARK_SHUT" );
 
 		behaviour.Step( guest, walk, playing: null, tick: 2 );
 
-		Assert.AreEqual( 11, guest.WalkingTurns, "not counted" );
-		Assert.AreEqual( Toilet23, guest.MajorDest, "and no decision" );
-		Assert.AreEqual( before + 1, Times( "GOING_TO_RIDE_PARK_SHUT" ), "the shut arm counted" );
+		Assert.AreEqual( 11, guest.WalkingTurns, "not counted, so no minor decision" );
+		Assert.AreEqual( 25f, guest.Happiness, "BigHappinessChange off 50" );
+		Assert.AreEqual( 0, guest.MajorDest, "the thing let go of" );
+		Assert.AreEqual( BellyBounce, guest.SavedMajorDest, "the saved major kept" );
+		Assert.AreEqual( PeepState.Deciding, guest.State, "thinking again" );
+	}
+
+	/// <summary>
+	/// <b>With the park open the same turn costs nothing</b>: the control for the test above.
+	/// </summary>
+	[TestMethod]
+	public void AWalkingTurnInAnOpenParkCostsNothing()
+	{
+		var world = World();
+		var behaviour = Behaviour( world, new ParkState( world ) );
+		var guest = Guest( 30, PeepState.GoingToRide, (56, 19), BackOf( world, Toilet23 ), Toilet23, walkingTurns: 3 );
+		var walk = WalkOf( world, guest );
+
+		behaviour.Step( guest, walk, playing: null, tick: 2 );
+
+		Assert.AreEqual( 50f, guest.Happiness );
+		Assert.AreEqual( Toilet23, guest.MajorDest );
+		Assert.AreEqual( PeepState.GoingToRide, guest.State );
+	}
+
+	/// <summary>
+	/// <b>Stuck on the way</b> - <c>FUN_004ffbc0</c>'s arm for a walk that answers 2: event 3 (counted), 25 off, the
+	/// thing let go of, the saved major kept, and the guest thinks again. The guest is aimed at a cell of bare ground
+	/// no path reaches.
+	/// </summary>
+	[TestMethod]
+	public void StuckOnTheWayCostsTwentyFiveAndTheThing()
+	{
+		var world = World();
+		var behaviour = Behaviour( world, new ParkState( world ) );
+		var guest = Guest( 30, PeepState.GoingToRide, (56, 19), (5, 120), Toilet23, savedMajorDest: BellyBounce,
+			walkingTurns: 4 );
+		var walk = WalkOf( world, guest );
+		var before = Times( "GOING_TO_RIDE_STUCK_EVENT" );
+
+		behaviour.Step( guest, walk, playing: null, tick: 2 );
+
+		Assert.AreEqual( before + 1, Times( "GOING_TO_RIDE_STUCK_EVENT" ), "event 3 counted" );
+		Assert.AreEqual( 25f, guest.Happiness, "BigHappinessChange off 50" );
+		Assert.AreEqual( 0, guest.MajorDest, "the thing let go of" );
+		Assert.AreEqual( BellyBounce, guest.SavedMajorDest, "the saved major kept" );
+		Assert.AreEqual( 4, guest.WalkingTurns, "no walking turn counted" );
+		Assert.AreEqual( PeepState.Deciding, guest.State, "thinking again" );
 	}
 
 	/// <summary>

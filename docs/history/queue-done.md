@@ -4250,6 +4250,24 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   an arrival at an empty queue is invited before the gate sees them, as the listing has it. The first run found the
   use breaking the rides' sweep; it walks a copy now. Eight tests; eleven restored bugs each fail one.
   `docs/exe/ride-operation.md`, "Q100b". A toilet here never becomes clean again until Q133 builds the handyman.
+- [x] **Q102. The walk to a chosen thing's own arms.** Found by Q50e's decode (`ride-operation.md`, "Walking to a new
+  place in the queue", the first caller). The original's state 10 (`FUN_004ffbc0`) takes `BigHappinessChange` (25)
+  and pushes event 3 when the walk is stuck, where `GoingToRide` only goes back to deciding; takes 25 and clears
+  `MajorDest` while walking with the park shut (`"The park has closed underneath me!"`), which nothing here does; and
+  every 12th walking turn, counted across walks by the saved byte `+0x2c`, runs the minor decision `FUN_004fd570`,
+  which may switch to a nearer thing and aim at its entry. Build the first two; the minor decision needs
+  `FUN_004d8b40`'s raw line-search length. Confirm: `peeps` over a guest walking to a ride when the door shuts, and
+  over one cut off by a path edit.
+  From Q170: the walking-turn count and the minor decision are Q170b's steps 3 and 4, built after this item's park-shut
+  arm (`ride-operation.md`, "A second toilet: the minor decision and the saved major").
+  From Q170b: both are built, in `PeepBehaviour.WalkOn`; the shut arm is counted there (`GOING_TO_RIDE_PARK_SHUT`) and
+  skips the count, as the original's does.
+  Done 2026-10-04: both arms built (`PeepBehaviour.LoseHeartOnTheWay`), `GOING_TO_RIDE_PARK_SHUT` retired, the stuck
+  arm's event 3 counted (`GOING_TO_RIDE_STUCK_EVENT`). Predicted and read in the game: the door pressed under guest 43
+  walking to the Belly Bounce, happiness 50 to 25, dest 13 to 0, Deciding, one "closed underneath me" line; the path
+  at (48,22) lifted under another, 50 to 25, dest 0, Deciding, one "stuck" line and the counter at 1; both
+  photographed. Three tests; six restored bugs each fail. The guest reaches the gap before the walk answers stuck,
+  where the original's walker re-plans on the edit: not measured. `docs/exe/ride-operation.md`, "Q102".
 
 ## B. Docs and comments
 
