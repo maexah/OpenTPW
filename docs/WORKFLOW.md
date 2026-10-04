@@ -57,8 +57,8 @@ path, judges, and does the Ghidra work. It still greps when it has to chase some
 
 **Calls.** Every call re-reads the agent's whole context, so an agent costs its calls times its context; the results
 themselves are small. Batch them: several greps in one command, several addresses in one Ghidra `run_python`.
-`tpw-gather` reports what is left at about 25 calls and `tpw-sweep` at about 60; both numbers are provisional and are
-reset from measured runs at the weekly usage look. **`tpw-verify` has no limit**: a check is never thinned to save
+`tpw-gather` reports what is left at about 25 calls and `tpw-sweep` at about 30 (measured 2026-10-04: sweeps handed
+their evidence finished in 7 to 14); both numbers are reset from measured runs at the weekly usage look. **`tpw-verify` has no limit**: a check is never thinned to save
 tokens (Alexah, 2026-10-03).
 
 **Fable is a last resort.** Its tokens count against the weekly limit and the Fable limit at the same time, so it
@@ -81,7 +81,21 @@ say so before launching it.
   pages those commits touched, and the sites that cite what changed. A full-tree audit is a baseline, not a habit.
 - An incremental verifier hunts misses by targeted greps (numbers, Q-numbers, names, history words), not a re-read.
 - End each queue item with a light check of the docs and comments it touched, so drift stays small.
-- After an interruption, resume the run (`resumeFromRunId`) rather than relaunching it.
+- After an interruption, resume the run (`resumeFromRunId`) rather than relaunching it. Only agents that had
+  RETURNED are kept, and not always those (2026-10-04: two of six finished sweeps came back from the cache, and four
+  verifiers mid-run were lost whole), so put the long agents last and keep each one short enough to lose.
+- One verifier per area, with at most about 25 statements to settle. A verifier's cost is its requests times its
+  context: one handed two areas made 60 requests and ended at 279k tokens; one handed 236 functions made 72 and ended
+  at 369k. Split by area before launch rather than widen one.
+- Evidence is split by the script into parts a `Read` takes whole (under about 18k tokens each), and the prompt tells
+  the agent to read all of them in one turn. Functions a verifier will need are dumped from Ghidra by the script
+  first, with an index from cited address to file.
+- A tool call that does not depend on another goes in the same turn. The verifiers of 2026-10-04 sent one tool a
+  request; the agent definitions now say to send them together.
+- Paths an agent reports for a mutation are repo-relative, and the runner refuses an absolute one: on 2026-10-04
+  absolute paths put twenty mutations in the main tree instead of the worktree.
+- After a run, `agents_check.py <transcript dir>` prints each agent's type, model, requests, cache reads, end context
+  and any rule it broke.
 
 ## Sessions
 
