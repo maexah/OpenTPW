@@ -55,14 +55,6 @@ as `r-f1` names a verdict in its results file (`CLAUDE.local.md` says where).
   window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
   together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
 
-- [ ] **Q99. The board arm's put-out when no route is found.** Found by Q50d. The original forgets a guest called
-  forward and puts them out when `FUN_004fa5f0` fails (`0x0050010a`); `QueueTurn` counts it (`QUEUE_BOARD_NO_ROUTE`)
-  and walks them on. The stand point is on the entry cell (`FUN_004dedf0(0)`, `ride-operation.md`, "Leaving a
-  ride"), but `FUN_004fa5f0` also fails without routing when its retry stamp at `+0x198` says so (`0x004fa62a`,
-  `FUN_004fa770`), which nothing here keeps. The stamp is decoded (Q50e): `mStrandedTime`, set only at the dead end
-  of `FUN_004f9490`'s linked walk and zeroed by every walk tick, so on the board arm it is nought unless a save loaded
-  it - build the arm and say so at the site. Confirm: `unimplemented` over a long run (the counter's rate), then a
-  boarding guest cut off by a path edit.
 - [ ] **Q100. A toilet's `+0x44`, which the queue turn's dirt gate reads. Decode first.** Found by Q50d.
   `FUN_004e0390` puts out a queuer for a toilet (`+0x32 & 1`) whose `+0x44` truncates below 25.0 (`0x00700550`);
   `+0x44` is its State of repair, saved at file 1074 and read as `CatalogueObject.StateOfRepair` (`park-engine.md`,

@@ -57,6 +57,11 @@ public class ParkQueueTurnTests
 
 		var behaviour = new PeepBehaviour( world, new Random( 1 ), admission, () => ParkRides.GateIsOpen, state,
 			new ParkItemCatalogue( "jungle", data ),
+			walkAway: ( ride, id ) =>
+			{
+				new ParkRideOperation( state, guests ).Forget( script, ride.ThingId, id );
+				ParkRideOperation.LeaveQueue( state, script, ride.ThingId, id );
+			},
 			leaveQueue: ( ride, id ) => ParkRideOperation.LeaveQueue( state, script, ride.ThingId, id ),
 			stillQueueing: stop ? id => guests.TryGetValue( id, out var peep ) && ParkRideOperation.IsQueueing( peep ) : null );
 
@@ -454,6 +459,78 @@ public class ParkQueueTurnTests
 
 		AssertQueueing( peep, "invited, not nominated, and needing the toilet" );
 		Assert.IsTrue( peep.BeenAdmitted, "the invitation is kept" );
+	}
+
+	/// <summary>The Belly Bounce's front queue cell, where place nought stands, beside its entry cell.</summary>
+	private static readonly (int X, int Y) FrontOfQueue = (52, 22);
+
+	/// <summary>The Belly Bounce's entry cell, which only the front queue cell links to.</summary>
+	private static readonly (int X, int Y) EntryCell = (52, 23);
+
+	/// <summary>One turn of one guest in a park whose every edge onto the Belly Bounce's entry cell is shut, as with its queue lifted.</summary>
+	private static void TurnCutOff( Park park, Peep peep )
+	{
+		var edge = CellEdge.For( park.World, ParkPeople.WalkingMode );
+		var walk = new PeepWalk( peep.Navigator,
+			( x, y, direction ) => MapStep.Beyond( x, y, direction ) == EntryCell || edge.Blocked( x, y, direction ) );
+
+		park.Behaviour.Step( peep, walk, playing: null, Sweep );
+	}
+
+	/// <summary>A guest on the front queue cell, invited and the ride's nominee, with the admission slot naming them.</summary>
+	private static Peep CalledForward( Park park, params Peep[] behind )
+	{
+		var peep = Guest( 30 );
+
+		peep.Navigator.Position = new FixedVector(
+			PeepNavigator.WaypointCentre( FrontOfQueue.X ), PeepNavigator.WaypointCentre( FrontOfQueue.Y ) );
+
+		Join( park, new[] { peep }.Concat( behind ).ToArray() );
+		peep.BeenAdmitted = true;
+		park.State.NominateForLoading( BellyBounce, peep.ThingId );
+		park.Script.Set( ParkRideOperation.AdmitVariable, peep.ThingId );
+
+		return peep;
+	}
+
+	/// <summary>
+	/// <b>A guest called forward who has no route to the ride is forgotten by it and put out</b>
+	/// (<c>0x0050010a</c>): the nominee let go of and the admission slot emptied (<c>FUN_004e0ac0</c>), the queue
+	/// left with whoever stood behind now at its head (<c>FUN_004ddd20</c>), and <c>MediumHappinessChange</c> off
+	/// (<c>FUN_005012f0</c>). The control, the same guest with the entry cell linked, sets off to board and is still
+	/// the nominee.
+	/// </summary>
+	[TestMethod]
+	public void AGuestCalledForwardWithNoRouteIsForgottenAndPutOut()
+	{
+		var park = Open();
+
+		var ride = park.State.Objects.Single( thing => thing.ThingId == BellyBounce );
+
+		Assert.AreEqual( EntryCell, (ride.EntryCellX, ride.EntryCellY), "the cell shut is the ride's entry" );
+
+		var behind = Guest( 31 );
+		var peep = CalledForward( park, behind );
+
+		TurnCutOff( park, peep );
+
+		AssertPutOut( park, peep, "no route to the ride" );
+		Assert.IsFalse( peep.BeenAdmitted, "the invitation is used up" );
+		Assert.AreEqual( 0, park.State.PersonBeingLoaded( BellyBounce ), "the ride forgets its nominee" );
+		Assert.AreEqual( 0, park.Script[ParkRideOperation.AdmitVariable], "the admission slot is emptied" );
+		Assert.AreEqual( behind.ThingId, park.State.FirstInQueue( BellyBounce ), "whoever stood behind is the head" );
+		Assert.AreEqual( 0, park.State.PositionInQueue( BellyBounce, behind.ThingId ), "and at the front" );
+
+		var control = Open();
+		var boarding = CalledForward( control );
+
+		Turn( control, boarding );
+
+		Assert.AreEqual( PeepState.BeingAdmitted, boarding.State, "with a route they set off to board" );
+		Assert.AreEqual( BellyBounce, boarding.MajorDest, "still naming the ride" );
+		Assert.AreEqual( Before, boarding.Happiness, 0.001f, "losing nothing" );
+		Assert.AreEqual( boarding.ThingId, control.State.PersonBeingLoaded( BellyBounce ), "still the nominee" );
+		Assert.AreEqual( boarding.ThingId, control.Script[ParkRideOperation.AdmitVariable], "the slot still names them" );
 	}
 
 	/// <summary>

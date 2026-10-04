@@ -44,8 +44,9 @@ public class ParkBoardingTests
 			Vomit: 0f, Litter: 0f, MajorDest: Ride, QueuePos: queuePos, PrankeryIndex: 0,
 			BeenAdmitted: admitted ? 1 : 0 ), StandingStill );
 
+	/// <summary>On the Belly Bounce's front queue cell, (52,22), from which a route to its entry cell starts.</summary>
 	private static ParkWorld.NavigatorState StandingStill => new(
-		X: 0, Y: 0, VelocityX: 0, VelocityY: 0, TargetX: 0, TargetY: 0,
+		X: PeepNavigator.WaypointCentre( 52 ), Y: PeepNavigator.WaypointCentre( 22 ), VelocityX: 0, VelocityY: 0, TargetX: 0, TargetY: 0,
 		Mass: ParkWorld.NavigatorState.DefaultMass, Radius: ParkWorld.NavigatorState.DefaultRadius,
 		MaxForce: 0, MaxSpeed: 0, NavMode: 0, CantReachDest: 0, PathFinished: false,
 		PathCount: 0, PathTotalCount: 0, PathBufferCount: 0,

@@ -826,7 +826,9 @@ the one tail (`0x0050049e` / `0x005004aa`): `FUN_004ddd20`, then `FUN_005012f0` 
 
 1. **Board**: `mQueuePos` (a byte) nought, `mBeenAdmitted` non-zero and `FUN_004e0aa0` (the object's word `+0x6c` is
    this guest): `mBeenAdmitted` cleared, route to the stand point (`FUN_004dedf0(0)`, then `FUN_004fa5f0`), state 13.
-   **1b**, no route: `"the player has removed the path from under me"` (`0x0050010a`), `FUN_004e0ac0`, out.
+   **1b**, no route (`JZ` at `0x0050009c`): `"the player has removed the path from under me and I can no longer get
+   into object %d"` (`0x0050010a`), `FUN_004e0ac0` with the guest's id (`0x0050012b`: the nominee `+0x6c` zeroed, and
+   `VAR_LETMEON` where it names them), then the object reloaded by `MajorDest` and the tail at `0x005004aa`.
 2. **Wait**: the same two with the object naming somebody else: the whole turn is nothing (`0x005001d8`). The
    invitation is kept, and nothing below runs, not even the mood.
 3. **Dirt gate**: `FUN_004e0390`, a toilet (`+0x32 & 1`) whose `+0x44` (its State of repair, `park-engine.md`; what lowers it
@@ -911,13 +913,11 @@ through. The guest constructor `FUN_004faec0` zeroes `+0x208` and `+0x1fc` and s
 strings that print them (`0x004fda74`, `0x004fd10e`) and by the needs tick, not by a name in the game.
 
 **OpenTPW builds** the turn as `PeepBehaviour.QueueTurn`, with `ParkRideOperation.LeaveQueue` as the tail's
-`FUN_004ddd20` and `DismissFromTheQueue` as `FUN_005012f0`: arms 1, 2 and 4, 5a on `PeepBehaviour.LongestQueue`,
+`FUN_004ddd20` and `DismissFromTheQueue` as `FUN_005012f0`: arms 1, 1b (Q99, below), 2 and 4, 5a on `PeepBehaviour.LongestQueue`,
 5b for a car track, the re-take (`FindQueueDestination`, and out when it fails), the broken ride's skipped re-take, and
 the toilet. `ParkState.LeaveQueue` splices by the leaver's own links, so a leaver with nobody in front
 writes their own next as the head (`0x004ddde9`): an unlinked one empties it and the rest of that queue is lost to the
-walk in turn. **Counted:** the no-route board (`QUEUE_BOARD_NO_ROUTE`: ours routes to the entry cell's centre, the original to
-the stand point on the same cell, and `FUN_004fa5f0` also fails without routing on `mStrandedTime` at `+0x198`,
-`0x004fa62a`, that nothing here keeps: nought on the queue paths but from a save), the dirt gate (`QUEUE_TOILET_DIRT_GATE`), the
+walk in turn. **Counted:** the dirt gate (`QUEUE_TOILET_DIRT_GATE`), the
 coaster's record (`QUEUE_TURN_COASTER_TRACK_RECORD`, let through), the
 thoughts, the heading (`QUEUE_TURN_HEADING`) and boredom
 (`QUEUE_TURN_BOREDOM`). **The two spot animations are built** (`PeepBehaviour.PlaySpotAnimation`, below). **The unhappy arm runs the common leave path** (Q85b), after the same mood gap;
@@ -928,6 +928,33 @@ sends nobody to a car track without it, so only a save holding a queue for an in
 jungle's one car track) reaches it. A guest who has played no spot animation has `TimeOfLastSpotAnim` at nought, and the
 thing tick is `GameClock.Ticks` over eight, which is not reset on entering a park: their mood is read on their first turn
 in a queue once the lobby has run about seven seconds, and the window is reached only after a spot animation.
+
+**Q99: the board arm's no route (1b)** is built in `QueueTurn`: a failed `SendTo` runs `ParkRideOperation.Forget`
+and `LeaveQueue`, then the common put-out, and the guest does not enter state 13. Two things differ and are said at
+the site: ours routes to the entry cell's centre where the original aims at the stand point on the same cell, and
+`FUN_004fa5f0`'s refusal on `mStrandedTime` (`+0x198`, `0x004fa62a`) is not built - every walk tick zeroes the stamp,
+so on this arm it is nought unless a save loaded it, and nothing here reads a save's.
+
+**What reaches it.** Not a guest standing at the front: a queue's first cell is NOMODIFY (`flags 0x0020`, the shipped
+Belly Bounce's (52,22) and a bought ride's alike), `delqueue` refuses it, and the path verdict lets path over a queue
+cell only when its one link leads to a type-3 cell (`CMP dword ptr [EAX + 0x8],0x3` at `0x00535cfa`), which the entry
+cell, type 9, is not. So the front cell always routes to the entry. The reach is a guest **walking up** an empty
+queue (state 12, place 0) while the player re-lays it: the walk gives up, state 12 ends in state 11 either way, the
+ride nominates the head it finds there, and the board arm routes from wherever they stopped. Here a ride's turn
+follows the guests' in a sweep, so the board comes one sweep after the nomination.
+
+**Running confirmation, 2026-10-04.** A Belly Bounce bought at (57,23), its queue (58,22), (57,22) joined to the path
+at (56,22); a guest made on the path and sent to it (`admit`, `send`: instruments). Caught under `pause`/`step` in
+state 12 at (57.41,22.52), then three player actions: a click on the queue (the tail lets go of the path), path laid
+over (57,22) for 20, a click on the queue again ((58,22) lets go of the new path, neighbours `0x10`). Neither
+re-measure put the guest out (place 0 of room 4). Predicted before reading, and read: the walk gave up, state
+InQueue on the path cell with `nominee 44`; one sweep (15 frames) on, one `the player has removed the path from under
+me` line, state Deciding, dest 0, happiness 50 to 35, `nominee 0`, where they stood; ten seconds on they had walked
+off. The unchanged build under the same steps: `1x QUEUE_BOARD_NO_ROUTE`, state BeingAdmitted, happiness 50,
+`nominee 44`, and ten seconds on the guest was riding. Left alone for 300 s neither build reached the arm:
+0 put-outs over 7 boards here, and the old counter absent over 6 boards there. Harness `q99confirm.py`; runs `q99/cut4`, `q99/cut-control`, `q99/long-fix`, `q99/long-control`.
+`ParkQueueTurnTests.AGuestCalledForwardWithNoRouteIsForgottenAndPutOut` shuts every edge onto the entry cell; four
+restored bugs each fail it (the count-and-walk-on, no `Forget`, no return, no `LeaveQueue`).
 
 #### Spot animations - `FUN_004fc800` and state 8
 

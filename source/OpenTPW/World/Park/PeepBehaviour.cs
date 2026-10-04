@@ -1395,10 +1395,11 @@ public sealed class PeepBehaviour
 	/// <item><b>Board.</b> At the front (<see cref="Peep.QueuePos"/>, a byte, nought), invited
 	/// (<see cref="Peep.BeenAdmitted"/>) and the ride's nominee (<c>FUN_004e0aa0</c>): the invitation is cleared
 	/// and they walk to the ride: the entry cell's centre, where the original aims at the stand point on the same
-	/// cell (<c>FUN_004dedf0(0)</c>, the item's sub-cell offset turned by the facing). The original forgets them
-	/// and puts them out when <c>FUN_004fa5f0</c> fails (<c>0x0050010a</c>), and that also fails without routing on a
-	/// guest's <c>mStrandedTime</c> (<c>+0x198</c>, <c>0x004fa62a</c>) nothing here keeps, so a failed route is counted and they go
-	/// on.</item>
+	/// cell (<c>FUN_004dedf0(0)</c>, the item's sub-cell offset turned by the facing). With no route the ride
+	/// forgets them and they are put out (<c>0x0050010a</c>, <see cref="PutOutOfTheQueue"/>). The original's
+	/// <c>FUN_004fa5f0</c> also answers nought without routing on a guest's <c>mStrandedTime</c> (<c>+0x198</c>,
+	/// <c>0x004fa62a</c>), which every walk tick zeroes, so on this arm it is nought unless a save loaded it, and
+	/// nothing here reads a save's: that refusal is not built.</item>
 	/// <item><b>Wait.</b> At the front and invited but not the nominee: the whole turn is nothing (<c>0x005001d8</c>).</item>
 	/// <item><b>The dirt gate</b> puts out a queuer for a toilet whose <c>+0x44</c> truncates below 25
 	/// (<c>FUN_004e0390</c>): its State of repair (<see cref="ParkWorld.CatalogueObject.StateOfRepair"/>), which the
@@ -1446,7 +1447,13 @@ public sealed class PeepBehaviour
 			peep.BeenAdmitted = false;
 
 			if ( !SendTo( peep, walk, (queueing.EntryCellX, queueing.EntryCellY) ) )
-				Unimplemented.Report( "QUEUE_BOARD_NO_ROUTE" );
+			{
+				Log.Info( $"Person {peep.ThingId}: the player has removed the path from under me and I can no "
+					+ $"longer get into object {queueing.ThingId}" );
+				PutOutOfTheQueue( peep, queueing, tick, "no route to board", forgotten: true );
+
+				return;
+			}
 
 			peep.SetState( PeepState.BeingAdmitted, tick, _random );
 
@@ -1585,10 +1592,14 @@ public sealed class PeepBehaviour
 	/// for an id divisible by eight.
 	/// </summary>
 	/// <param name="by">What put them out, for the log.</param>
+	/// <param name="forgotten">
+	/// The board arm's: the ride forgets its nominee first (<see cref="_walkAway"/>, <c>FUN_004e0ac0</c> at
+	/// <c>0x0050012b</c>, then <c>FUN_004ddd20</c>).
+	/// </param>
 	private void PutOutOfTheQueue( Peep peep, ParkWorld.CatalogueObject queueing, int tick,
-		string by = "their own turn" )
+		string by = "their own turn", bool forgotten = false )
 	{
-		_leaveQueue?.Invoke( queueing, peep.ThingId );
+		(forgotten ? _walkAway : _leaveQueue)?.Invoke( queueing, peep.ThingId );
 		DismissFromTheQueue( peep, tick );
 
 		Log.Info( $"People: guest {peep.ThingId} put out of thing {queueing.ThingId}'s queue by {by}, "

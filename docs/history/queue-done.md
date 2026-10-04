@@ -4200,6 +4200,20 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   every 31 - and the jump photographed with `pause` and `step`; the same at happiness 15 for the hands on hips.
   Done 2026-10-04: `PeepBehaviour.PlaySpotAnimation` and state 8's return; `QUEUE_SPOT_ANIMATION` is gone. In two
   runs 147 of 147 starts returned 11 sweeps on and 115 of 116 repeats came 31 on; sets 12 and 14 photographed.
+- [x] **Q99. The board arm's put-out when no route is found.** Found by Q50d. The original forgets a guest called
+  forward and puts them out when `FUN_004fa5f0` fails (`0x0050010a`); `QueueTurn` counts it (`QUEUE_BOARD_NO_ROUTE`)
+  and walks them on. The stand point is on the entry cell (`FUN_004dedf0(0)`, `ride-operation.md`, "Leaving a
+  ride"), but `FUN_004fa5f0` also fails without routing when its retry stamp at `+0x198` says so (`0x004fa62a`,
+  `FUN_004fa770`), which nothing here keeps. The stamp is decoded (Q50e): `mStrandedTime`, set only at the dead end
+  of `FUN_004f9490`'s linked walk and zeroed by every walk tick, so on the board arm it is nought unless a save loaded
+  it - build the arm and say so at the site. Confirm: `unimplemented` over a long run (the counter's rate), then a
+  boarding guest cut off by a path edit.
+  Done 2026-10-04, `alexah/277-board-arm-put-out`: the arm is `Forget`, `LeaveQueue` and the common put-out, and
+  `QUEUE_BOARD_NO_ROUTE` is gone. A guest at the front cannot be cut off (the first queue cell is NOMODIFY and the
+  path verdict refuses it), so the run cut off a guest walking up a bought Belly Bounce's empty queue, re-laid under
+  them: predicted and read, one put-out a sweep after the nomination, happiness 50 to 35, nominee 44 to 0; the
+  unchanged build counted 1 and the guest rode. 300 s left alone: 0 in both builds. Four restored bugs each fail the
+  new test. `docs/exe/ride-operation.md`, "Q99".
 
 ## B. Docs and comments
 

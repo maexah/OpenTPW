@@ -479,6 +479,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004ffefe` | FUN_004ffbc0: CMP AL,0xb / JBE, unsigned: the twelfth decides | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fff06` | FUN_004ffbc0: the count zeroed, then the minor decision FUN_004fd570 called, to here | OpenTPW/World/Park/Peep.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x0050010a` | `InQueue` turn: the board arm's no route, "the player has removed the path", out | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x0050012b` | `InQueue` turn: the board arm's no route calls `FUN_004e0ac0`, the ride forgets its nominee | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x005001d8` | `InQueue` turn: invited but not the nominee, the whole turn is nothing | OpenTPW.Tests/ParkQueueTurnTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x00500270` | `InQueue` turn: the lost place, "Problem with a queue", out | OpenTPW.Tests/ParkQueueTurnTests.cs  |
 | `0x005002f2` | `FUN_004ffff0`: the mood, which a re-take falls through to | OpenTPW.Tests/ParkQueuePlaceTests.cs  |
