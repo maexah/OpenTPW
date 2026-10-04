@@ -34,7 +34,7 @@ internal class UiControl
 	public int Frame { get; set; }
 
 	/// <summary>The row of UIHELPTEXT.str the <see cref="HelpBar"/> shows over it, or -1 for none.</summary>
-	public int HelpText { get; init; } = -1;
+	public int HelpText { get; set; } = -1;
 
 	public string? Text { get; set; }
 

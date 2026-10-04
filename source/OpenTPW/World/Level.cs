@@ -1259,6 +1259,11 @@ public class Level
 				if ( window is UI.ParkObjectWindow ride )
 					ride.DrawPreview();
 			}
+
+			// Draw the active warning after every preview, but beneath the advisor. Covered windows
+			// keep their HUD drawing order; the preview pass has its own existing overlay behaviour.
+			if ( showing.Windows.LastOrDefault( window => !window.Hidden && !window.PutAway ) is UI.ParkObjectWindow activeRide )
+				activeRide.DrawStatus();
 		}
 
 		Entity.All.ForEach( entity => entity.RenderOverlay() );

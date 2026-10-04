@@ -309,12 +309,8 @@ internal sealed class ParkItemsScreen : UiWindow
 				? new[] { "", "", $"{(int)placed.StateOfRepair}", $"{(int)placed.RemainingLife}" }
 				: new string[tab.Columns - 1];
 
-			chosen.Add( new UiList.Row( placed.ThingId, item.Name, 0, Values: values ) );
-
-			// The original colours a row by the thing's status (FUN_00485f60, table 0x0074fb50): grey for
-			// closed.
-			if ( placed.CanLoad == 0 )
-				Unimplemented.Report( "ALL_ITEMS_CLOSED_ROW_COLOUR" );
+			chosen.Add( new UiList.Row( placed.ThingId, item.Name, 0, Values: values,
+				Colour: ParkClosedStatus.Colour( ParkClosedStatus.For( level.Park, placed, item.TrackType ) ) ) );
 		}
 
 		// Named rather than left quietly blank: "last month", satisfaction and "total profit", whose day rings,

@@ -43,7 +43,7 @@ internal sealed class UiList : UiControl
 	/// <see cref="Values"/> - the shape the buy and hire screens and the items screen's counted rows push.
 	/// </remarks>
 	internal readonly record struct Row( int Id, string Name, int Value, int State = 0,
-		IReadOnlyList<string>? Values = null );
+		IReadOnlyList<string>? Values = null, UiColour? Colour = null );
 
 	private readonly List<Row> _rows = [];
 
@@ -362,6 +362,9 @@ internal sealed class UiList : UiControl
 				continue;
 
 			var row = _rows[index];
+
+			foreach ( var cell in cells )
+				cell.TextColour = row.Colour ?? UiColour.White;
 
 			cells[0].Text = row.Name;
 

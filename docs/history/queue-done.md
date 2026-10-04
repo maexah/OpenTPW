@@ -4066,6 +4066,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Done 2026-10-03 on `alexah/265-q91b-ride-hoardings`: twelve panels, Closed, progress 0/0.2/1/0
   photographed and predicted. Twelve tests, ten restored bugs fail; full suite 1711 passes.
   Details, deviations and screen-proof limits: `docs/exe/ride-hoardings.md`.
+- [x] **Q92. The ride window's door is not built.** Found by Q50b's decode. `FUN_004af600` case `0x3e38` →
+  `FUN_0048ccf0` closes with `FUN_004df300` or opens with `FUN_004df390`, unguarded; `FUN_004ad4e0` sets the switch
+  from `mCanLoad`, greys it for a closed ride the guard refuses, and the window's box (`0x3e25`) shows status code 1,
+  `CLOSED` (UITEXT 365), or `0x17`, `CLOSED: QUEUE NOT CONNECTED` (`FUN_00485f60`). `ParkRideOperation.Close` and
+  `Open` exist now, and the switch already follows `mCanLoad`. Counted `RIDE_WINDOW_OPEN_OR_CLOSE_THE_RIDE`,
+  `RIDE_WINDOW_CLOSED_STATUS`, `RIDE_WINDOW_DOOR_GREYED`, and the all-items row colour `ALL_ITEMS_CLOSED_ROW_COLOUR`.
+  Confirm: close the Belly Bounce from its window, `objects` and `peeps`, photographed.
+  **Done 2026-10-03**, `alexah/266-q92-ride-window-door`: predicted `canload` 1→0→1 and 13 peeps
+  match real-pointer screenshots/logs. Seven regressions; six logical mutations and one render mutation fail.
+  Ordinary closed status/colour built; guard/disconnected wording tested. `docs/exe/ride-window-door.md`.
 
 ## B. Docs and comments
 

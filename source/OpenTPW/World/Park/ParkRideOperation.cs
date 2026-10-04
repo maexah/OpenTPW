@@ -1252,8 +1252,9 @@ public sealed class ParkRideOperation
 	/// </summary>
 	/// <remarks>
 	/// <b>The original asks <see cref="MayOpen"/> again first and opens whatever it answers</b>, logging
-	/// "Opening non-openable ride!" five times when it refuses (<c>0x004df3ea</c>). Every caller here has just
-	/// asked it, so the second asking is left out. <c>FUN_004547c0( model )</c>, the model's side of opening,
+	/// "Opening non-openable ride!" five times when it refuses (<c>0x004df3ea</c>). The UI disables reopening
+	/// when the guard refuses; the ride-window handler itself remains unguarded.
+	/// The redundant diagnostic-only asking is left out. <c>FUN_004547c0( model )</c>, the model's side of opening,
 	/// retracts the hoarding panels.
 	/// </remarks>
 	public void Open( RideScript? script, int rideId )

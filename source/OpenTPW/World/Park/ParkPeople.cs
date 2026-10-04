@@ -1903,6 +1903,17 @@ public sealed class ParkPeople : Entity
 		}
 	}
 
+	/// <summary>The ride-window switch, FUN_0048ccf0: down closes, up opens without a handler guard.</summary>
+	internal void SetRideClosed( int thingId, bool closed )
+	{
+		var operation = new ParkRideOperation( State, Guests );
+		var script = _scriptFor?.Invoke( thingId );
+		if ( closed )
+			operation.Close( script, thingId );
+		else
+			operation.Open( script, thingId );
+	}
+
 	/// <summary>The position-cell test used by the door, independent of occupancy and admission state.</summary>
 	private bool InsideGateCensus( PeepNavigator navigator )
 	{

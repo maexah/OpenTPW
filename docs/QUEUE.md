@@ -52,13 +52,6 @@ artifacts are listed in `docs/history/README.md`.
   window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
   together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
 
-- [ ] **Q92. The ride window's door is not built.** Found by Q50b's decode. `FUN_004af600` case `0x3e38` →
-  `FUN_0048ccf0` closes with `FUN_004df300` or opens with `FUN_004df390`, unguarded; `FUN_004ad4e0` sets the switch
-  from `mCanLoad`, greys it for a closed ride the guard refuses, and the window's box (`0x3e25`) shows status code 1,
-  `CLOSED` (UITEXT 365), or `0x17`, `CLOSED: QUEUE NOT CONNECTED` (`FUN_00485f60`). `ParkRideOperation.Close` and
-  `Open` exist now, and the switch already follows `mCanLoad`. Counted `RIDE_WINDOW_OPEN_OR_CLOSE_THE_RIDE`,
-  `RIDE_WINDOW_CLOSED_STATUS`, `RIDE_WINDOW_DOOR_GREYED`, and the all-items row colour `ALL_ITEMS_CLOSED_ROW_COLOUR`.
-  Confirm: close the Belly Bounce from its window, `objects` and `peeps`, photographed.
 - [ ] **Q93. A bought thing with a queue starts open, where the original's starts closed.** Found by Q50b's decode.
   The constructor closes every object with the queue-path bit (`0x004db712`..`0x004db793`), and the first queue
   measure that finds its back connected opens it. `ParkBuilding` sets the bit (`Info.HasQueue`, descriptor `+0x40`,

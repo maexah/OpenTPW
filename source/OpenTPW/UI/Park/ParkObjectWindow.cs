@@ -164,15 +164,12 @@ internal sealed class ParkObjectWindow : UiWindow
 
 	/// <summary>
 	/// The message box's border over the preview - control <c>0x3e25</c>, the yellow-and-black chevron.
-	/// <b>Shown only while the ride is broken down</b>; see where it is built for why.
+	/// Shows the closed status, or the existing broken-ride warning.
 	/// </summary>
 	private readonly UiControl _broken;
 
 	/// <summary>The ride's door, <c>b_door</c> (<c>0x3e38</c>): down while the ride is closed.</summary>
 	private readonly UiButton? _door;
-
-	/// <summary>The thing and whether it was closed when the window last looked, so a change is counted once.</summary>
-	private (int Thing, bool Closed) _shown;
 
 	/// <summary>
 	/// How far the preview looks down at the ride, in degrees. <b>A choice, and marked as one.</b> The
@@ -244,10 +241,7 @@ internal sealed class ParkObjectWindow : UiWindow
 			Mesh = UiMesh.Get( "!frame" )
 		} );
 
-		// HIDDEN UNTIL THE RIDE BREAKS DOWN. This is not decoration over the preview: it is the border
-		// of a message box that appears on top of it, and the builder says so - FUN_004ad720 sets its
-		// frame and then calls UI_SetVisible(0), so it starts hidden. Drawn always, it would be a
-		// yellow-and-black bar across a working preview.
+		// FUN_004ad720 starts the status box hidden; ShowTheDoor supplies the current warning.
 		_broken = _preview.Add( new UiControl
 		{
 			Id = 0x3e25,
@@ -405,6 +399,7 @@ internal sealed class ParkObjectWindow : UiWindow
 		// rebuilt every time it changes - which is what makes the cycle arrows work.
 		ShowSettings();
 		FillStats();
+		ShowTheDoor();
 
 		// Said out loud so a test can pair what is on screen with what the window thinks it is showing.
 		// A region that changed when the arrows were pressed proves something moved, not that the
@@ -890,6 +885,9 @@ internal sealed class ParkObjectWindow : UiWindow
 		command.SetFullScissorRects();
 	}
 
+	/// <summary>The status box must cover the model, which the overlay pass draws after the HUD.</summary>
+	internal void DrawStatus() => _broken.Draw();
+
 	/// <summary>
 	/// Where one of the model's meshes goes in the preview: its own placement within the model, spun,
 	/// with the park position taken out.
@@ -1193,8 +1191,7 @@ internal sealed class ParkObjectWindow : UiWindow
 	protected internal override void Closed() => Commit();
 
 	/// <summary>
-	/// The chevron border belongs to a message box that appears over the preview when the ride breaks
-	/// down, so it follows the ride's own state rather than being drawn as decoration.
+	/// Refreshes the status warning and door from the live ride, including changes to its queue.
 	/// </summary>
 	/// <remarks>
 	/// Read every frame because a ride can break while its window is open - the window does not pause
@@ -1202,8 +1199,6 @@ internal sealed class ParkObjectWindow : UiWindow
 	/// </remarks>
 	protected internal override void Update()
 	{
-		_broken.Visible = IsBroken();
-
 		ShowTheDoor();
 
 		if ( Time.Now < _nextRefresh )
@@ -1217,11 +1212,6 @@ internal sealed class ParkObjectWindow : UiWindow
 	/// The door switch follows the ride's <c>mCanLoad</c>: <c>FUN_004ad4e0</c> sets it down for a closed ride
 	/// (<c>Button_SetDown</c>, <c>0x004ad606</c>..<c>0x004ad622</c>) whenever the ride's status changes.
 	/// </summary>
-	/// <remarks>
-	/// Two more parts of that function are counted, once each time a ride is seen closed: the status box's
-	/// <c>CLOSED</c> or <c>CLOSED: QUEUE NOT CONNECTED</c> (<c>FUN_00485f60</c>, codes 1 and <c>0x17</c>), and the
-	/// door greyed while <see cref="ParkRideOperation.MayOpen"/> refuses (<c>0x004ad5c6</c>..<c>0x004ad5e2</c>).
-	/// </remarks>
 	private void ShowTheDoor()
 	{
 		if ( _door == null || Level.Current is not { ParkState: { } state } level
@@ -1229,25 +1219,21 @@ internal sealed class ParkObjectWindow : UiWindow
 			return;
 
 		var closed = placed.CanLoad == 0;
+		var trackType = level.Catalogue is { } catalogue && catalogue.TryGet( placed.CatalogueId, out var item )
+			? item.TrackType : 0;
 
 		_door.IsDown = closed;
+		_door.HelpText = closed ? 12 : 13;
+		_door.Enabled = !closed || ParkRideOperation.MayOpen( level.Park, placed, trackType );
 
-		if ( _shown == (ThingId, closed) )
-			return;
-
-		_shown = (ThingId, closed);
-
-		if ( !closed )
-			return;
-
-		Unimplemented.Report( "RIDE_WINDOW_CLOSED_STATUS" );
-
-		var trackType = level.Catalogue is { } catalogue && catalogue.TryGet( placed.CatalogueId, out var item )
-			? item.TrackType
-			: 0;
-
-		if ( !ParkRideOperation.MayOpen( level.Park, placed, trackType ) )
-			Unimplemented.Report( "RIDE_WINDOW_DOOR_GREYED" );
+		var status = ParkClosedStatus.For( level.Park, placed, trackType );
+		// Breakdown already precedes the closed status in FUN_00485f60. Other maintenance/track
+		// statuses remain outside this closed-door implementation (docs/exe/ride-window-door.md).
+		var broken = IsBroken();
+		_broken.Visible = status != 0 || broken;
+		_broken.Text = broken ? Localization.Text( 366 ) : status == 0 ? null
+			: Localization.Text( status == 23 ? 389 : 365 );
+		_broken.TextColour = broken ? new UiColour( 255, 50, 30 ) : ParkClosedStatus.Colour( status );
 	}
 
 	/// <summary>Whether the ride being shown has broken down - <c>VAR_BROKEN</c> on its own script.</summary>
@@ -1265,7 +1251,7 @@ internal sealed class ParkObjectWindow : UiWindow
 	}
 
 	/// <summary>
-	/// One of the bottom row's verbs. Delete, move and show the queue are built; the rest are counted by name.
+	/// One of the bottom row's verbs. Delete, move, queue and the door are built; the rest are counted by name.
 	/// </summary>
 	private void Verb( int id, string what )
 	{
@@ -1291,6 +1277,13 @@ internal sealed class ParkObjectWindow : UiWindow
 			case 0x3e34:
 				Log.Info( $"Ride window: {ParkPathBuilding.EditQueue( ThingId )}" );
 				Stack.Close( this );
+				return;
+
+			// FUN_004af600 -> FUN_0048ccf0 uses the switch's new down state, with no handler guard.
+			case 0x3e38:
+				if ( _door != null )
+					ParkPeople.Current?.SetRideClosed( ThingId, _door.IsDown );
+				ShowTheDoor();
 				return;
 
 			default:

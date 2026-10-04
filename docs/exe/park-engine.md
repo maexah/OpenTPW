@@ -2110,6 +2110,9 @@ same function but for `FUN_00483770` against `FUN_00483740`, and wear `b_arup` /
 the window's own kind tag to a class mask - ride 0x80, shop 0x200, sideshow 0x100, feature 0x800,
 staff 0x40, visitor 1 - so the arrows walk every thing of that class without closing the window.
 
+The ride-window door and its ordinary closed warning are implemented in Q92; see
+[ride-window-door.md](ride-window-door.md) for the callback, status colours and verification boundaries.
+
 **The shared base's three ids.** `FUN_0048cea0( stream, handler, a, b, c )` is called here as
 `(0x00755150, FUN_004af600, 0x3e24, 0x3e15, 0x3e25)`: `a` is the preview panel, kept at `this[6]` and
 filled through vtable `+0x10`; `b` is the stats panel at `this[5]`, filled through vtable `+0xc`; `c`

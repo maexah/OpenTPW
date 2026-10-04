@@ -728,16 +728,15 @@ stops admitting (`FLUSHANIM`, `VAR_RUNNING` = 0, `TRIGANIM 2,0,0`) and loops `FO
 until it reads nought; `Coconut.RSE` runs `TRIGANIM 5,0,0` and `KILLOBJ 1`; `Junspray.RSE` and `Toilet.RSE` never
 touch it.
 
-**OpenTPW builds** the door's two arms (`ParkState.SetParkClosed` → `ParkPeople.DoorMoved`), the close, the open,
-the guard and `FUN_004de4a0` (`ParkRideOperation.Close`, `Open`, `MayOpen`, `BackOfQueueConnected`), the completion,
-the reopen, the queue-path bit on a bought thing (`ParkBuilding.FlagsFor`) and the ride window's door switch following
-`mCanLoad`. The generated closed/open hoardings are built and confirmed in Q91b (`ride-hoardings.md`). **Counted:** the gate's command (`PARK_DOOR_COMMANDS_THE_GATE`), the `0x13` message
-(`PARK_CLOSED_ADVISOR_MESSAGE`, `PARK_OPENED_ADVISOR_MESSAGE`), the coaster's closed circuit, which the guard lets through where the choice refuses
-without it (`OPEN_GUARD_COASTER_TRACK_RECORD`; `ParkRideChoice.CircuitClosed`), the constructor's close (`BOUGHT_QUEUED_THING_STARTS_CLOSED`), the ride window's
-status box and greyed door (`RIDE_WINDOW_CLOSED_STATUS`, `RIDE_WINDOW_DOOR_GREYED`) and the all-items row colour
-(`ALL_ITEMS_CLOSED_ROW_COLOUR`). **Not built:** the ride window's door as a button
-(`RIDE_WINDOW_OPEN_OR_CLOSE_THE_RIDE`), the blocked exit (deliberately, `ParkRideOperation.Dismiss`), the maintenance
-and track-editor closes, the advisor scores, and the second completion on a breakdown turn.
+**OpenTPW builds** the park door's two arms (`ParkState.SetParkClosed` → `ParkPeople.DoorMoved`), the close,
+open, guard, queue-connection test, completion and reopen after remeasurement. Gate commands and retry
+are Q89b (`park-gate.md`); advisor messages are Q90b (`advisor-park.md`); hoardings are Q91b
+(`ride-hoardings.md`). Q92 builds the ride-window door callback, ordinary closed/queue-disconnected
+warning, disabled reopening and all-items row colour (`ride-window-door.md`, with its status limitations).
+**Still counted:** the coaster's closed circuit in the opening guard (`OPEN_GUARD_COASTER_TRACK_RECORD`)
+and the constructor's close (`BOUGHT_QUEUED_THING_STARTS_CLOSED`). **Not built:** the blocked exit
+(deliberately, `ParkRideOperation.Dismiss`), maintenance and track-editor closes, advisor scores,
+and the second completion on a breakdown turn.
 
 #### The `InQueue` turn - `FUN_004ffff0`
 
