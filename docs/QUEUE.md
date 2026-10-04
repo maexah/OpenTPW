@@ -52,19 +52,6 @@ artifacts are listed in `docs/history/README.md`.
   window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
   together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
 
-- [ ] **Q97. The object's own cost of goods and chance of winning.** Found by Q50c's review. The object keeps both at
-  `+0x188` and `+0x190`, built from the item at placement but saved and loaded with it (`FUN_004db7d0`,
-  `0x004dcd01`..; file 1042 and 1050) and set per object from its window (`FUN_004e1a20`, `FUN_004e21c0`). OpenTPW
-  reads the item's in the price opinion, the win roll (`FUN_004e2670`, `ParkRideOperation`) and the prize;
-  the shipped Lost Kingdom save holds the items' own; Alexah's played parks hold a chance of 55 to 58 on all seven
-  sideshows (the Jungle Spray 58, its item's 25), which the win roll, the price opinion and the excitement read. Read both from the save record, a bought thing's
-  from its item, and say it at each site. The window's setters wait on Q31. No game run beyond a census of the two.
-  Q165c added a fourth reader: a sideshow's excitement (`ParkRideScore.ExcitementOf`) takes both from the item too.
-  From Q177: the shop's booking (`FUN_004e1b40`) reads `+0x188` too, and the win roll draws the park's generator
-  (`0x004e26c6`) where `Succeeds` draws the `Random` it is handed.
-  From Q177c: the booking is built and reads the item's cost of goods for both a shop (`ShopCostOfGoods`) and a
-  sideshow (`SettleUp`, the same value as the prize, booked first); switch both with the rest.
-
 - [ ] **Q98. Spot animations are never played. Decode first.** Found by Q50d. `FUN_004fc800(n)` plays animation `n`,
   stamps `mTimeOfLastSpotAnim` (`+0x208`), saves the state in `+0x224` and enters state 8, whose return
   (`FUN_004fc890`) is not built either; for `n` 4 it also plays sound `0x7e` for an id whose low nibble is nought. The queue turn

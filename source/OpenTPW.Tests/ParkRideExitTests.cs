@@ -544,10 +544,10 @@ public class ParkRideExitTests
 
 		for ( var draw = 0; draw < 1000; ++draw )
 		{
-			if ( ParkRideOperation.Succeeds( coconut, random ) )
+			if ( ParkRideOperation.Succeeds( ParkBuilding.Constructed( coconut, 99, 40, 40, 0, 0, 0, default ), random ) )
 				++shopWins;
 
-			if ( ParkRideOperation.Succeeds( junspray, random ) )
+			if ( ParkRideOperation.Succeeds( ParkBuilding.Constructed( junspray, 99, 40, 40, 0, 0, 0, default ), random ) )
 				++sprayWins;
 		}
 

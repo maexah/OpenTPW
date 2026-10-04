@@ -38,14 +38,14 @@ public static class PeepPriceOpinion
 	/// <c>FUN_00519510</c> and <c>FUN_004c74b0</c> for a sideshow, and for a shop one per ingredient
 	/// (1 to 4) and one per appearance effect (1 or 2); nothing here keeps a park analyser.
 	/// </remarks>
-	public static bool TooExpensive( Peep peep, int price, ParkItemCatalogue.Item item )
+	public static bool TooExpensive( Peep peep, int price, ParkItemCatalogue.Item item, ParkWorld.CatalogueObject thing )
 	{
 		ArgumentNullException.ThrowIfNull( peep );
 
 		if ( price == 0 )
 			return false;
 
-		var worth = Worth( peep, item );
+		var worth = Worth( peep, item, thing );
 
 		for ( var samples = SamplesPushed( item ); samples > 0; --samples )
 			Unimplemented.Report( "DOOR_PRICE_ANALYSER_SAMPLE" );
@@ -57,7 +57,7 @@ public static class PeepPriceOpinion
 	/// What a thing is worth to this guest - its cost of goods, raised by what it does for their needs, by
 	/// the prize a sideshow may pay, by <c>UsageInfo.RipOffOK</c> and by how happy they are.
 	/// </summary>
-	public static uint Worth( Peep peep, ParkItemCatalogue.Item item )
+	public static uint Worth( Peep peep, ParkItemCatalogue.Item item, ParkWorld.CatalogueObject thing )
 	{
 		ArgumentNullException.ThrowIfNull( peep );
 
@@ -71,13 +71,11 @@ public static class PeepPriceOpinion
 				- item.VomitEffect * Meter( peep.Vomit ) / 100
 				+ 100;
 
-			var valued = (uint)(mood * (item.CostOfGoods * 115 / 100)) / 100;
+			var valued = (uint)(mood * (thing.CostOfGoods * 115 / 100)) / 100;
 
-			// The prize and the chance are read from the item. The original reads the object's +0x188 and +0x190,
-			// built from the item at placement but saved and loaded with the object and settable in its window;
-			// Lost Kingdom's save holds the items' own (the Drinks Shop 20 and 100, the Jungle Spray 50 and 25).
-			var prize = item.UiType == Sideshow ? item.CostOfGoods : 0;
-			var won = prize * (item.ChanceOfWinning & 0xff) / 100;
+			// The object's +0x188 and low byte of +0x190; docs/exe/ride-operation.md, Q97.
+			var prize = item.UiType == Sideshow ? thing.CostOfGoods : 0;
+			var won = prize * (thing.ChanceOfWinning & 0xff) / 100;
 
 			var premium = (uint)((won + (int)valued) * (item.RipOffOK + 100)) / 100;
 

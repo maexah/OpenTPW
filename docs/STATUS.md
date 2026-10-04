@@ -4,6 +4,8 @@ Last updated: 2026-10-03. **This header names no branch and no sha, deliberately
 
 ## Works
 
+- **Objects keep their own saved cost of goods and chance of winning** (Q97). Pricing, rolls, excitement and settlement use them. Stock and labelled-fixture screenshots/censuses match predicted 50/25 → 80/58 for the Jungle Spray.
+
 - **Console path placement uses the player verdict** (Q94). Connected queue cells refuse with no charge or edit. Legal detached-tail cuts are photographed; predicted census confirms 12 → 8 → 4 queuers, eight releases at happiness 35.
 
 - **Queued rides stay closed with hoardings raised until their queue connects** (Q93). A bought Belly Bounce opens on connection and carries a visible rider. Queue editing and path-tail removal close it again; reconnecting retracts the panels. Demolition keeps its existing guest penalties.
@@ -44,9 +46,11 @@ Last updated: 2026-10-03. **This header names no branch and no sha, deliberately
 
 ## Next
 
-`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next **Q97**, restore each object's saved cost of goods and chance of winning. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. **Q188 remains on hold** until Alexah says otherwise. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
+`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next **Q98**, decode spot animations and their callers before implementation. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. **Q188 remains on hold** until Alexah says otherwise. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
 
 ## Not verified on screen
+
+- Q97 payouts and actual win outcomes: tested only; window setters wait for Q31. Shared RNG parity remains unbuilt. Played jungle save loads objects but rendering crashes on duplicate sprite key 0; runtime proof uses a labelled shipped-park fixture.
 
 - Q93 loaded-disconnected initialization and direct reopening guard: tested only. Successful moved placement: code-reviewed. The original's broader disconnection closure mechanism remains unlocated; the purchase close is verified in Ghidra.
 
@@ -73,12 +77,14 @@ Last updated: 2026-10-03. **This header names no branch and no sha, deliberately
 | | | measured |
 |---|---|---|
 | Opcodes | **77** of 106 | 2026-10-01, `case Opcode.` labels vs enum members, after Q87 |
-| Tests | **1738**, 0 fail, 0 skip with the game | 2026-10-03, Q94 |
+| Tests | **1752**, 0 fail, 0 skip with the game | 2026-10-03, Q97 |
 | Tests without the game | **647** ran, **928** skipped, of 1575 | 2026-10-01, after Q87 |
 | Build warnings | 121 | 2026-10-03, archive exact reads |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
+
+**2026-10-03 (Q97).** Saved object goods/chance restored through every reader. Predicted stock/fixture censuses and screenshots agree; 14 new regressions, eight killed mutations, restored full suite 1,752 passes. Original saves unchanged. `docs/exe/ride-operation.md`, Q97.
 
 **2026-10-03 (Q94).** Shared path verdict; connected stock queue refuses with screenshot and predicted zero-edit/$0 census. Legal tail cuts restage Q50: 12→8→4 queuers, eight predicted happiness 50→35 releases. Eleven new tests; eight fail with the original method restored; 1,738 pass after rebuilding; independent applied review passed. Admission/choice were instruments; nominee/state-14 exemptions and post-cut walking were not reconfirmed. `docs/exe/ride-operation.md`, Q94.
 

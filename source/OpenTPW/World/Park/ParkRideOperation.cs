@@ -73,9 +73,9 @@ public sealed class ParkRideOperation
 	/// id and the script handle from, and both of those are object fields.
 	/// </para>
 	/// <para>
-	/// <b>Two departures.</b> The original draws <c>r</c> from the park's own generator (<c>FUN_00516330</c>,
+	/// <b>Generator departure.</b> The original draws <c>r</c> from the park's own generator (<c>FUN_00516330</c>,
 	/// <c>0x004e26c6</c>), one draw for every admission to anything, where this draws from the
-	/// <see cref="Random"/> it is handed; and this reads the item's chance, not the object's (Q97).
+	/// <see cref="Random"/> it is handed. The chance is the object's saved low byte (Q97).
 	/// </para>
 	/// <para>
 	/// <b>A shop always wins, and that is the mechanism rather than an accident.</b> Nothing in the
@@ -85,11 +85,11 @@ public sealed class ParkRideOperation
 	/// object is a sideshow <i>or</i> that this value is a hundred.
 	/// </para>
 	/// </summary>
-	public static bool Succeeds( ParkItemCatalogue.Item item, Random random )
+	public static bool Succeeds( ParkWorld.CatalogueObject thing, Random random )
 	{
 		ArgumentNullException.ThrowIfNull( random );
 
-		return random.Next() % 100 <= item.ChanceOfWinning;
+		return random.Next() % 100 <= (thing.ChanceOfWinning & 0xff);
 	}
 
 	/// <summary>
@@ -593,11 +593,11 @@ public sealed class ParkRideOperation
 		// object's +0x188, built from UsageInfo.InitCostOfGoods, against the object and the park's bank, then adds
 		// the same to the guest's cash: fifty, for the Jungle Spray, against the twenty they were just charged. A shop
 		// books its own cost of goods and pays nobody (docs/exe/ride-operation.md, "The cost of goods and the park's
-		// money"). Both read the item's cost of goods where the original reads the object's (Q97).
+		// money", Q97). Both read the object's cost of goods.
 		if ( item.UiType == SideshowUiType )
 		{
-			_state.BookCostOfGoods( ride.ThingId, item.CostOfGoods );
-			peep.Cash += item.CostOfGoods;
+			_state.BookCostOfGoods( ride.ThingId, ride.CostOfGoods );
+			peep.Cash += ride.CostOfGoods;
 		}
 		else if ( item.UiType == ShopUiType )
 			_state.BookCostOfGoods( ride.ThingId, ShopCostOfGoods( item, ride ) );
@@ -631,7 +631,7 @@ public sealed class ParkRideOperation
 		if ( item.UiType == SideshowUiType )
 		{
 			peep.NumSideshowsWon++;
-			peep.Happiness = Peep.Change( peep.Happiness, WinningIsWorth( item, ride ) );
+			peep.Happiness = Peep.Change( peep.Happiness, WinningIsWorth( ride ) );
 		}
 
 		// Three times the change since the join, each side truncated to its low byte (0x004fda1b..0x004fda47),
@@ -668,7 +668,7 @@ public sealed class ParkRideOperation
 	/// and the product are in double, the runtime's starting precision, where which precision is live is not
 	/// settled (<c>docs/exe/park-engine.md</c>, "Which rounding is live"): only off the steps of 50 the saves hold
 	/// does it matter, and a Drinks Shop at a quality of nought and an amount of 10 books 18 here and 19 at 24 bits.
-	/// The cost is the item's where the original reads the object's <c>+0x188</c>, as unsigned (Q97).
+	/// The cost is the object's <c>+0x188</c>, read as unsigned (Q97).
 	/// </remarks>
 	internal static int ShopCostOfGoods( ParkItemCatalogue.Item item, ParkWorld.CatalogueObject shop )
 	{
@@ -681,7 +681,7 @@ public sealed class ParkRideOperation
 		var factor = ((double)quality + ingredient) - -1.0;
 
 		// __ftol: truncated through a 64-bit integer, its low dword kept.
-		return unchecked((int)(long)(factor * (uint)item.CostOfGoods));
+		return unchecked((int)(long)(factor * (uint)shop.CostOfGoods));
 	}
 
 	/// <summary>
@@ -857,12 +857,12 @@ public sealed class ParkRideOperation
 	/// show - and returning nought keeps the arm honest instead of producing an infinity.
 	/// </para>
 	/// </summary>
-	private int WinningIsWorth( ParkItemCatalogue.Item item, ParkWorld.CatalogueObject ride )
+	private int WinningIsWorth( ParkWorld.CatalogueObject ride )
 	{
-		if ( _admission is not { } mood || item.CostOfGoods <= 0 || ride.PricePerUse <= 0 )
+		if ( _admission is not { } mood || ride.CostOfGoods <= 0 || ride.PricePerUse <= 0 )
 			return 0;
 
-		return (int)(Math.Log2( item.CostOfGoods / (float)ride.PricePerUse ) * mood.MediumHappinessChange);
+		return (int)(Math.Log2( ride.CostOfGoods / (float)ride.PricePerUse ) * mood.MediumHappinessChange);
 	}
 
 	/// <summary>

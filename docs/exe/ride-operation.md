@@ -1462,7 +1462,6 @@ column is the chooser before Q165b and Q165c built what the decode column shows.
 | The FPU's precision | not settled (`park-engine.md`, "Which rounding is live") | double, the runtime's starting precision | Eruption's golden ticket at some scores (62 against 63 at 45); the longest queue at 21,708 of Lost Kingdom's 1,690,500 slider settings (1.3%), each with the speed moved off its tier's (one more at 24 bits); a shop's cost of goods at an amount of special ingredient off the steps of 50 (the Drinks Shop at quality 0 and amount 10: 18, and 19 at 24 bits), only by a save's byte until the shop window is built: no save read holds one |
 | A coaster's excitement | `trunc( 50 + f / 2 )` of its node's rating, or nought before `COAST 8` binds it | its `ExcitementLevel`, counted (`RIDE_EXCITEMENT_COASTER_TRACK`) | Alexah's saved Temple Of Gloom, which is offered (Q167); a bought one is refused before it is scored |
 | A tier past the third | the divisors read from the fields after `Upgrades` (`+0x260`, `+0x268`) | its base without the ratios, counted (`RIDE_EXCITEMENT_UPGRADE_TIER`) | only by a save's byte; no save read has one |
-| A sideshow's cost of goods and chance of winning, and a shop's cost of goods | the object's own `+0x188` and `+0x190` | the item's (Q97) | the chance, in Alexah's played parks: all seven sideshows hold 55 to 58, the Jungle Spray 58 where its item's is 25 (`~/.cache/tpw-harnesses/q177c/objmoney.py`); the cost of goods matches the item's on every jungle shop checked (`ParkBankTests`) |
 | The longest queue at a tier past the third, or for an item the catalogue lacks | the constant and speed read from past `Upgrades`, or through a null descriptor | counted, and both gates let the guest through (`QUEUE_CAPACITY_UPGRADE_TIER`, `QUEUE_CAPACITY_UNKNOWN_ITEM`) | only by a save's byte; no save read has one |
 | The calendar at load | the save's `mGameTick`, 755: 2000-02-02 18:27:30 | the score's calendar is the original's (`ParkState.CalendarNow`); the gadget's date and the weather's days count from nought (`GameCalendar.Rebase`, Q149) | every load |
 
@@ -2101,7 +2100,7 @@ excitement and a hunger effect, and the order against the effects cannot show.
 **OpenTPW builds it** (`ParkRideOperation.MatchTheExcitement`, the keys on `ParkAdmission`, the likings from the park's
 `ParkRideScore`), and logs each match. Its departures: an absent divisor is held at one where the engine would fault, and
 the excitement is worked out once where the engine asks three times (the same answer, since nothing it reads moves).
-And it reads `ExcitementOf`, so that function's departures in "Where OpenTPW differs" (Q97, Q172) reach it too.
+And it reads `ExcitementOf`, so that function's departures in "Where OpenTPW differs" (Q172) reach it too.
 
 ### The effect block, descriptor field to guest meter
 
@@ -2130,7 +2129,7 @@ In `rides`, **twelve of thirteen** `Easy_*.sam` files carry real content — `Ea
 | Address / offset | Original name | What it is | Evidence |
 |---|---|---|---|
 | `FUN_004e2670` | — | Reached from `FUN_00501db0` case `0xe` (entering `EnteringRide`). Asserts `"Non sideshow object number %d ha[s]…"` (descriptor `+0x4ac` == 2), reads a chance-of-winning byte at **`+0x190`** (decimal 400), draws **`r = FUN_00516330() % 100`** from the park's own generator (`0x004e26c6`, the world's `mRandomSeed`, not the C library's `rand()`), wins when **`chance >= r`** (`CMP`/`SBB`/`INC` at `0x004e26e2`), so a chance below 100 wins (chance + 1) times in 100, writes the result into script variable **11 (`VAR_PARAM`)**, and returns it. One draw for every admission to any object. | Its own assert |
-| `+0x190` | `mChanceOfWinning` | **It is the OBJECT's, and it is saved and loaded with the object** (`FUN_004db7d0`, beside `mCostOfGoods` at `+0x188`, `0x004dcd01`..; file 1050); two setters (`FUN_004e1a20`, `FUN_004e21c0`) are reached from the object window. Placing one, `FUN_004db090` derives it as `100 - descriptor[+0xec]` at `004db38f`..`004db3a1` — `MOV EDX,[EDI+0xec]` / `MOV ECX,0x64` / `SUB ECX,EDX` / `MOV [ESI+0x190],ECX` — where `+0xec` is `UsageInfo.InitChanceOfLoosing`. That `FUN_004e2670` takes both the catalogue id (`+0xe`) and the script handle (`+0x24`) off the same pointer is what fixes it as the object rather than the person. OpenTPW reads the item's figure instead (Q97). | Disassembly |
+| `+0x190` | `mChanceOfWinning` | **It is the OBJECT's, and it is saved and loaded with the object** (`FUN_004db7d0`, beside `mCostOfGoods` at `+0x188`, `0x004dcd01`..; file 1050); two setters (`FUN_004e1a20`, `FUN_004e21c0`) are reached from the object window. Placing one, `FUN_004db090` derives it as `100 - descriptor[+0xec]` at `004db38f`..`004db3a1` — `MOV EDX,[EDI+0xec]` / `MOV ECX,0x64` / `SUB ECX,EDX` / `MOV [ESI+0x190],ECX` — where `+0xec` is `UsageInfo.InitChanceOfLoosing`. That `FUN_004e2670` takes both the catalogue id (`+0xe`) and the script handle (`+0x24`) off the same pointer is what fixes it as the object rather than the person. OpenTPW reads the object's saved figure (Q97). | Disassembly |
 | `FUN_004e1a10` | `mCostOfGoods` | **Not the chance-of-winning accessor.** It is two instructions, `MOV EAX,[ECX+0x188]; RET`, on the OBJECT. `FUN_004db090` builds `+0x188` from the descriptor's `+0x140`, which is `UsageInfo.InitCostOfGoods`. It is the sideshow's **prize** and the numerator of what winning is worth. The chance of winning is `+0x190`, reached by `FUN_004e21b0`. | Disassembly, 2026-09-20 |
 | `FUN_004e1a00` | `mPricePerUse` | `MOV EAX,[ECX+0x194]`. The divisor in the happiness sum below. | Disassembly |
 | `FUN_004e21b0` | — | `MOV AL,[ECX+0x190]` — the real chance-of-winning accessor. | Disassembly |
@@ -2289,7 +2288,7 @@ dismissal, cost of goods, a sold coaster's nought), gated on `WithdrawalsEnabled
 `TurnEnteredRed` (on `GameTick`) and `ProfitThisYear`; `ParkState.Deposit` is the deposit (a sale's refund, a cleared
 queue cell, the charge through `TakeAt`); `ParkState.Take` is the gate fee; `ParkState.BookCostOfGoods` is
 `FUN_004e1920`, and `ParkRideOperation.ShopCostOfGoods` is `FUN_004e1b40`, its terms as floats and its sum and product
-in double ("What a thing is worth to a guest", "Where OpenTPW differs", the FPU's row), with the item's cost of goods
+in double ("What a thing is worth to a guest", "Where OpenTPW differs", the FPU's row), with the object's saved cost of goods
 (Q97). The four bank fields are seeded from the save, and the year's change zeroes the profit
 (`ParkState.TurnTheYear`, on `GameCalendar.YearRolled`). Counted, not built: the analyser's money in and out
 (`BANK_ANALYSER_MONEY_IN`, `_MONEY_OUT`), the gate fee's analyser totals and challenge post
@@ -2718,8 +2717,49 @@ its days turn at other moments than the original's would after the same load, an
 The join's snapshot is `Peep.JoinHappiness`. The ride window's Users last month (filled on show and every four
 seconds, on the frame clock) and the all-visitors list's Rides Ridden read them. Counted by name: `SETTLE_UP_EVENT_HISTORY`, `_BALLOON_EVENT`, `_COSTUME_EVENT`, `_ANALYSER_SAMPLE` (step 6),
 `_SIDESHOW_THOUGHT` and the toilet's three. Its win roll (`PeepBehaviour`, `Succeeds`) and the ingredient's docks (the
-ride turn's) draw from `System.Random` where the original draws from the park's generator, and the roll reads the
-item's chance where the original reads the object's (Q97).
+ride turn's) draw from `System.Random` where the original draws from the park's generator. The roll reads the
+object's saved chance (Q97); generator ownership and draw-sequence parity remain deviations.
+
+### Q97: the object's cost of goods and chance of winning
+
+**Implemented, 2026-10-03.** `CatalogueObject` loads both saved dwords; `ParkBuilding.Constructed` and
+`FreshPark.FixedObject` seed them from the item's starting settings. Price opinion, admission's win roll,
+sideshow excitement, shop booking, sideshow booking/prize/winning happiness and `spend` read the object's
+values. Chance consumers use the low byte; cost consumers retain their existing signed/unsigned arithmetic.
+The window setters remain Q31. The shared park generator remains unbuilt: this change preserves the documented
+`System.Random` departure, including its different draw sequence.
+
+**Primary evidence rechecked.** A private hash-matched Ghidra project held `testme.exe`, SHA-256
+`cf0ffd955077eca146d75ee46c45b8a0786fb757a8f7d204b1aed8ec5a1ee4cb`, 12,203 functions at image base `00400000`.
+`FUN_004db090` initializes the two fields; `FUN_004e2670` reads the object's chance byte and wins at `r % 100 <= chance`.
+The serializer at `004dcd01` walks cost, quality, chance and price through `FUN_004fae10` in that order.
+The existing file offsets and nine-save measurements are in FileFormats `saves.md`; no new file-layout claim.
+
+**Running-game confirmation.** Numbers were written before the `spend` census, then checked with screenshots:
+
+| Park copy | Jungle Spray: cost / chance / excitement | Drinks Shop: cost / chance |
+|---|---|---|
+| Unchanged shipped park | 50 / 25 / 30 | 20 / 100 |
+| Labelled saved-field fixture | 80 / 58 / 55 | 80 / 100 |
+
+Both 1280×720 screenshots show the rendered park; the numeric settings are census evidence, not visible sliders.
+The fixture changes only those three saved fields, retaining catalogue defaults. The park is paused for the census;
+no payout or statistical win frequency is claimed from these frames. Original saves were hash-checked unchanged.
+An unchanged copy of Alexah's played jungle `New Save.TPWS` loaded 526 things and 124 objects, but crashed before
+rendering in `ParkGuestSprites` on duplicate key 0. Its full runtime loading remains unverified; no unrelated fix.
+
+**Regressions.** Fourteen new cases cover saved dwords/neighbours, shipped values, catalogue-wide placement,
+object price opinion and actual door refusal, actual admission, low-byte/inclusive rolls, excitement,
+shop booking and sideshow booking/prize/happiness. Eight isolated put-backs fail 3, 2, 1, 2, 1, 2, 1 and 1 cases
+respectively (load cost, load chance, placement, price opinion, excitement, settlement, admission, byte mask).
+After restoration all **1,752 tests pass, zero skipped**. Fresh fixed-object seeding is code-reviewed;
+nondefault fixed-object settings are not exercised by the shipped content.
+
+**Artifacts:** `~/.cache/tpw-harnesses/q97/`: `PLAN.md`, `applied.diff`, `ghidra-identity.txt`,
+`object-constructor.txt`, `win-roll.txt`, `serializer-fields.txt`, `serializer-dword-helper.txt`, `serializer-names.txt`,
+`corpus.json` (all nine park files, 366 object records), `mutations.json`, `mut-*.log`, `restored-full.log`,
+`predictions.txt`, `runtime-result.json`, `runtime-stock-confirmed/stock-object-settings.png` and its `run.log`,
+`runtime-fixture/fixture-object-settings.png` and its `run.log`; the unsuccessful played load is `runtime-played/run.log`.
 
 ## Object fields
 

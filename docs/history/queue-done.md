@@ -4094,6 +4094,22 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Q50 restaged by detaching each tail first: legal cuts reduce 12 → 8 → 4 queuers, eight predicted releases at
   happiness 35, photographed with logs. Eleven regressions; restoring the old method fails eight; 1,738 tests pass.
   `ride-operation.md`, "Q94: the console path shares the player verdict", records instruments and limits.
+- [x] **Q97. The object's own cost of goods and chance of winning.** Found by Q50c's review. The object keeps both at
+  `+0x188` and `+0x190`, built from the item at placement but saved and loaded with it (`FUN_004db7d0`,
+  `0x004dcd01`..; file 1042 and 1050) and set per object from its window (`FUN_004e1a20`, `FUN_004e21c0`). OpenTPW
+  reads the item's in the price opinion, the win roll (`FUN_004e2670`, `ParkRideOperation`) and the prize;
+  the shipped Lost Kingdom save holds the items' own; Alexah's played parks hold a chance of 55 to 58 on all seven
+  sideshows (the Jungle Spray 58, its item's 25), which the win roll, the price opinion and the excitement read. Read both from the save record, a bought thing's
+  from its item, and say it at each site. The window's setters wait on Q31. No game run beyond a census of the two.
+  Q165c added a fourth reader: a sideshow's excitement (`ParkRideScore.ExcitementOf`) takes both from the item too.
+  From Q177: the shop's booking (`FUN_004e1b40`) reads `+0x188` too, and the win roll draws the park's generator
+  (`0x004e26c6`) where `Succeeds` draws the `Random` it is handed.
+  From Q177c: the booking is built and reads the item's cost of goods for both a shop (`ShopCostOfGoods`) and a
+  sideshow (`SettleUp`, the same value as the prize, booked first); switch both with the rest.
+  Completed 2026-10-03, `alexah/269-q97-object-goods-chance`: object fields and all readers restored. Screenshot +
+  predicted `spend`: stock cost/chance 50/25 and 20/100; labelled fixture 80/58 and 80/100. Fourteen regressions,
+  eight mutation failures, 1,752 tests pass. RNG ownership remains a deviation; played-save render fails on
+  duplicate sprite key 0. `docs/exe/ride-operation.md`, Q97.
 
 ## B. Docs and comments
 

@@ -1305,9 +1305,8 @@ public sealed class PeepBehaviour
 	/// place is spent. Nothing reads it as a position again before the settle-up reads it as an outcome.
 	/// </para>
 	/// <para>
-	/// <b>Without a catalogue the roll is not made at all</b>, rather than defaulting to a win: an item
-	/// nothing can describe has no chance to roll against, and the settle-up refuses the same case one step
-	/// later for the same reason.
+	/// <b>Without a catalogue the roll is not made at all</b>: an unknown item cannot settle its visit,
+	/// so admission retains the same description guard as the settle-up. The object supplies the chance.
 	/// </para>
 	/// </summary>
 	private void RollForTheVisit( Peep peep, ParkWorld.CatalogueObject entering )
@@ -1315,7 +1314,7 @@ public sealed class PeepBehaviour
 		if ( _catalogue == null || !_catalogue.TryGet( entering.CatalogueId, out var item ) )
 			return;
 
-		var succeeded = ParkRideOperation.Succeeds( item, _random );
+		var succeeded = ParkRideOperation.Succeeds( entering, _random );
 
 		peep.QueuePos = succeeded ? 1 : 0;
 
@@ -1648,7 +1647,7 @@ public sealed class PeepBehaviour
 	/// </summary>
 	private bool ThinksTooExpensive( Peep peep, ParkWorld.CatalogueObject thing )
 		=> _catalogue != null && _catalogue.TryGet( thing.CatalogueId, out var item )
-			&& PeepPriceOpinion.TooExpensive( peep, thing.PricePerUse, item );
+			&& PeepPriceOpinion.TooExpensive( peep, thing.PricePerUse, item, thing );
 
 	/// <summary>
 	/// Walking away from a thing too expensive to board - <c>FUN_005006b0</c>'s first arm, <i>"Person %d:

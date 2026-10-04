@@ -2523,8 +2523,8 @@ public sealed class ParkPeople : Entity
 				// The longest queue a guest joins or stays in (FUN_004dda40); "-" where both gates let everyone through,
 				// which for an unknown item or a tier past the third is counted, so not asked here.
 				+ $"longest {(thing.HasQueuePath && (!described || thing.UpgradeLevel >= ItemDescriptionFile.Tiers) ? "-" : PeepBehaviour.LongestQueue( thing, described ? item : null ))} "
-				+ $"win {(described ? item.ChanceOfWinning : -1)}% "
-				+ $"prize {(described ? item.CostOfGoods : -1)} "
+				+ $"win {(thing.ChanceOfWinning & 0xff)}% "
+				+ $"prize {thing.CostOfGoods} "
 				// What the score, the arrival's refusal and the settle-up read; a coaster's is counted, so not asked here.
 				+ $"excitement {(!described ? "-" : item.TrackType == ItemDescriptionFile.CoasterTrack ? "coaster" : ParkRideScore.ExcitementOf( thing, item, State.TrackRides ))} "
 				+ $"OFFERABLE {offerable}";

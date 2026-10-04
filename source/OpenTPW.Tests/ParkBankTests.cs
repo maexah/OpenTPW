@@ -88,6 +88,94 @@ public class ParkBankTests
 
 	private static ParkState Bank( int balance = 0 ) => new( parkIsClosed: false, visitorsToDate: 0, balance: balance );
 
+	[TestMethod]
+	public void Q97SavedGoodsAndChanceKeepTheirDwordsAndNeighbours()
+	{
+		var payload = Payload();
+		var shop = new ParkWorld( payload ).Objects.Single( o => o.ThingId == DrinksShop );
+		var at = RecordAt( payload, p => U16( payload, p + 20 ) == shop.CatalogueId
+			&& U16( payload, p + 206 ) == shop.EntryPos && I32( payload, p + 1054 ) == shop.PricePerUse );
+		Put( payload, at + 1042, 0x12345678 );
+		Put( payload, at + 1050, 0x2345013a );
+		var read = new ParkWorld( payload ).Objects.Single( o => o.ThingId == DrinksShop );
+		Assert.AreEqual( (0x12345678, 0x2345013a), (read.CostOfGoods, read.ChanceOfWinning) );
+		Assert.AreEqual( shop with { Rings = null }, read with { Rings = null, CostOfGoods = shop.CostOfGoods, ChanceOfWinning = shop.ChanceOfWinning } );
+	}
+
+	[TestMethod]
+	public void Q97ShippedObjectSettingsAreLoaded()
+	{
+		var objects = Park().Objects;
+		Assert.IsTrue( objects.All( o => o.CostOfGoods == (o.ThingId == JungleSpray ? 50 : o.ThingId == DrinksShop ? 20 : 0) ) );
+		Assert.IsTrue( objects.All( o => o.ChanceOfWinning == (o.ThingId == JungleSpray ? 25 : 100) ) );
+	}
+
+	[TestMethod]
+	public void Q97NewObjectsCopyEachItemsStartingSettings()
+	{
+		foreach ( var item in Catalogue().All )
+		{
+			var made = ParkBuilding.Constructed( item, 9000, 40, 40, 0, 0, 0, default );
+			Assert.AreEqual( (item.CostOfGoods, item.ChanceOfWinning), (made.CostOfGoods, made.ChanceOfWinning), item.Stem );
+		}
+	}
+
+	[TestMethod]
+	public void Q97ShopBooksTheObjectsCostInsteadOfTheCatalogue()
+	{
+		var world = Park();
+		var bank = new ParkState( world );
+		var shop = Thing( DrinksShop ) with { CostOfGoods = 80 };
+		Assert.IsTrue( bank.ReplaceObject( shop ) );
+		var before = bank.Balance;
+		var peep = LetOff( bank, shop, won: true );
+		Assert.AreEqual( 300 - 30, peep.Cash );
+		Assert.AreEqual( before + 30 - 80, bank.Balance );
+		Assert.AreEqual( 80, bank.CostsFor( DrinksShop ) );
+	}
+
+	[TestMethod]
+	public void Q97SideshowsBookPayAndValueTheObjectsPrize()
+	{
+		var bank = new ParkState( Park() );
+		var ride = Thing( JungleSpray ) with { CostOfGoods = 80, ChanceOfWinning = 58 };
+		Assert.IsTrue( bank.ReplaceObject( ride ) );
+		var before = bank.Balance;
+		var peep = LetOff( bank, ride, won: true );
+		Assert.AreEqual( 300 - 20 + 80, peep.Cash );
+		Assert.AreEqual( before + 20 - 80, bank.Balance );
+		Assert.AreEqual( 80, bank.CostsFor( JungleSpray ) );
+		Assert.AreEqual( 80f, peep.Happiness, "50 + log2(80/20) * 15, with no excitement matcher" );
+	}
+
+	[TestMethod]
+	public void Q97ExcitementReadsBothObjectSettings()
+	{
+		var ride = Thing( JungleSpray ) with { CostOfGoods = 80, ChanceOfWinning = 256 + 58 };
+		Assert.IsTrue( Catalogue().TryGet( ride.CatalogueId, out var item ) );
+		Assert.AreEqual( 55, ParkRideScore.ExcitementOf( ride, item ), "20 + trunc(58 * sqrt(60) * 0.08)" );
+	}
+
+	private sealed class FixedRoll( int value ) : Random
+	{
+		public int Draws { get; private set; }
+		public override int Next() { ++Draws; return value; }
+	}
+
+	[TestMethod]
+	[DataRow( 58, 58, true )]
+	[DataRow( 58, 59, false )]
+	[DataRow( 314, 59, false )]
+	[DataRow( 0, 0, true )]
+	[DataRow( 100, 99, true )]
+	public void Q97WinRollReadsTheObjectsLowByteAndDrawsOnce( int chance, int draw, bool expected )
+	{
+		var random = new FixedRoll( draw );
+		var thing = new ParkWorld.CatalogueObject( 9, 1303, 0, 0, 0, ChanceOfWinning: chance );
+		Assert.AreEqual( expected, ParkRideOperation.Succeeds( thing, random ) );
+		Assert.AreEqual( 1, random.Draws );
+	}
+
 	// ---- the bank, without the game ----
 
 	/// <summary>
@@ -250,7 +338,7 @@ public class ParkBankTests
 		static int Cost( int ingredient, int quality, int amount, int cost = 40 )
 			=> ParkRideOperation.ShopCostOfGoods(
 				new ParkItemCatalogue.Item( 1, "shop", "", "", 1, 1, null, CostOfGoods: cost, SpecialIngredient: ingredient ),
-				new ParkWorld.CatalogueObject( 9, 1, 0, 0, 0, QualityOfGoods: quality, AmountOfSpecialIngredient: amount ) );
+				new ParkWorld.CatalogueObject( 9, 1, 0, 0, 0, QualityOfGoods: quality, AmountOfSpecialIngredient: amount, CostOfGoods: cost ) );
 
 		Assert.AreEqual( 40, Cost( 0, 50, 50 ), "at 50 and 50 the cost itself" );
 		Assert.AreEqual( 50, Cost( 0, 100, 50 ), "quality 100 is a quarter more" );
@@ -293,7 +381,7 @@ public class ParkBankTests
 			Assert.IsTrue( catalogue.TryGet( id, out var item ), $"item {id} is Lost Kingdom's" );
 			Assert.AreEqual( cost, item.CostOfGoods, $"item {id}'s cost of goods is the saved object's" );
 			Assert.AreEqual( booked, ParkRideOperation.ShopCostOfGoods( item,
-				new ParkWorld.CatalogueObject( 9, id, 0, 0, 0, QualityOfGoods: quality, AmountOfSpecialIngredient: amount ) ),
+				new ParkWorld.CatalogueObject( 9, id, 0, 0, 0, QualityOfGoods: quality, AmountOfSpecialIngredient: amount, CostOfGoods: cost ) ),
 				$"item {id} at quality {quality} and amount {amount}" );
 		}
 	}

@@ -63,6 +63,8 @@ public sealed class FreshPark : IParkInitialState
 			State: 3, TopLeft: 1, CanLoad: 1, ExitPos: 1, IsTrackRideValid: 1,
 			OperatingCapacity: item.InitCapacity, OperatingDuration: item.InitDuration,
 			OperatingSpeed: item.InitSpeed, PricePerUse: item.InitPricePerUse,
+			// Object-owned settings seeded by FUN_004db090; docs/exe/ride-operation.md, Q97.
+			CostOfGoods: item.CostOfGoods, ChanceOfWinning: item.ChanceOfWinning,
 			StateOfRepair: 100, RemainingLife: 100, Built: ParkWorld.BuiltWhen.At( GameCalendar.Epoch ),
 			MeshInstance: id - 10, Rings: EmptyRings(), QualityOfGoods: 50, AmountOfSpecialIngredient: 50 );
 	}

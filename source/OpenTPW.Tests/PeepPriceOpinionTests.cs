@@ -44,6 +44,9 @@ public class PeepPriceOpinionTests
 		return item;
 	}
 
+	private static ParkWorld.CatalogueObject Goods( ParkItemCatalogue.Item item )
+		=> new( 9, item.Id, 0, 0, 0, CostOfGoods: item.CostOfGoods, ChanceOfWinning: item.ChanceOfWinning );
+
 	private static Peep Guest( int cash, float happiness, float thirst = 10f, float hunger = 10f, float vomit = 0f,
 		int thingId = 90, int majorDest = 0, PeepState state = PeepState.BeingAdmitted )
 		=> new( thingId, new ParkWorld.GuestState(
@@ -58,6 +61,38 @@ public class PeepPriceOpinionTests
 		MaxForce: 0, MaxSpeed: 0, NavMode: 0, CantReachDest: 1, PathFinished: false,
 		PathCount: 0, PathTotalCount: 0, PathBufferCount: 0,
 		BufferedDistance: 0, TailDistance: 0, TotalDistance: 0, StuckBits: 0 );
+
+	[TestMethod]
+	public void Q97WorthUsesTheObjectsCostAndChance()
+	{
+		var item = Item( JungleSprayItem );
+		var thing = Goods( item ) with { CostOfGoods = 80, ChanceOfWinning = 256 + 58 };
+		Assert.AreEqual( 483u, PeepPriceOpinion.Worth( Guest( 1000, 0f ), item, thing ),
+			"(92 goods + 46 expected prize) * 350 / 100" );
+		Assert.IsFalse( PeepPriceOpinion.TooExpensive( Guest( 1000, 0f ), 483, item, thing ) );
+		Assert.IsTrue( PeepPriceOpinion.TooExpensive( Guest( 1000, 0f ), 484, item, thing ) );
+	}
+
+	private sealed class LosingRoll : Random
+	{
+		public override int Next() => 59;
+	}
+
+	[TestMethod]
+	public void Q97AdmissionUsesTheLiveObjectsChance()
+	{
+		var (_, peep, _, _) = AtTheDoor( 300, chance: 58, random: new LosingRoll() );
+		Assert.AreEqual( PeepState.EnteringRide, peep.State );
+		Assert.AreEqual( 0, peep.QueuePos, "59 loses against the object's 58, despite the item's 100" );
+	}
+
+	[TestMethod]
+	public void Q97DoorUsesTheLiveObjectsGoods()
+	{
+		var (_, peep, _, _) = AtTheDoor( 300, cost: 0 );
+		Assert.AreEqual( PeepState.Deciding, peep.State, "zero goods makes a priced drink worthless" );
+		Assert.AreEqual( 300, peep.Cash );
+	}
 
 	/// <summary>The three keys the opinion reads beside the effects, as the shipped files give them.</summary>
 	[TestMethod]
@@ -84,10 +119,10 @@ public class PeepPriceOpinionTests
 	{
 		var shop = Item( DrinksShopItem );
 
-		Assert.AreEqual( 72u, PeepPriceOpinion.Worth( Guest( 300, Before ), shop ) );
-		Assert.AreEqual( 42u, PeepPriceOpinion.Worth( Guest( 300, 0f, thirst: 0f, hunger: 0f, vomit: 100f ), shop ),
+		Assert.AreEqual( 72u, PeepPriceOpinion.Worth( Guest( 300, Before ), shop, Goods( shop ) ) );
+		Assert.AreEqual( 42u, PeepPriceOpinion.Worth( Guest( 300, 0f, thirst: 0f, hunger: 0f, vomit: 100f ), shop, Goods( shop ) ),
 			"the least it is worth: 95×23/100 = 21, doubled, at happiness nought" );
-		Assert.AreEqual( 128u, PeepPriceOpinion.Worth( Guest( 300, 100f, thirst: 100f, hunger: 0f ), shop ),
+		Assert.AreEqual( 128u, PeepPriceOpinion.Worth( Guest( 300, 100f, thirst: 100f, hunger: 0f ), shop, Goods( shop ) ),
 			"the most: 140×23/100 = 32, doubled, and doubled again at happiness a hundred" );
 		Assert.AreEqual( 1, PeepPriceOpinion.SamplesPushed( shop ), "one price sample, for the ice" );
 	}
@@ -101,8 +136,8 @@ public class PeepPriceOpinionTests
 	{
 		var spray = Item( JungleSprayItem );
 
-		Assert.AreEqual( 241u, PeepPriceOpinion.Worth( Guest( 300, 0f ), spray ) );
-		Assert.AreEqual( 482u, PeepPriceOpinion.Worth( Guest( 300, 100f ), spray ) );
+		Assert.AreEqual( 241u, PeepPriceOpinion.Worth( Guest( 300, 0f ), spray, Goods( spray ) ) );
+		Assert.AreEqual( 482u, PeepPriceOpinion.Worth( Guest( 300, 100f ), spray, Goods( spray ) ) );
 		Assert.AreEqual( 1, PeepPriceOpinion.SamplesPushed( spray ), "a sideshow pushes one sample" );
 		Assert.AreEqual( 0, PeepPriceOpinion.SamplesPushed( Item( BellyBounceItem ) ), "a ride pushes none" );
 	}
@@ -119,7 +154,7 @@ public class PeepPriceOpinionTests
 	[DataRow( 30, -5, false, "cash below nought, compared unsigned, reads as a fortune" )]
 	[DataRow( 0, 0, false, "no price, and nothing is asked" )]
 	public void TooExpensiveIsThePriceAboveTheWorthOrTheCash( int price, int cash, bool expected, string why )
-		=> Assert.AreEqual( expected, PeepPriceOpinion.TooExpensive( Guest( cash, Before ), price, Item( DrinksShopItem ) ), why );
+		=> Assert.AreEqual( expected, PeepPriceOpinion.TooExpensive( Guest( cash, Before ), price, Item( DrinksShopItem ), Goods( Item( DrinksShopItem ) ) ), why );
 
 	/// <summary>
 	/// <b>A guest short of the price walks away from the door, and it costs them thirty.</b> Fifteen at the door and
@@ -250,11 +285,16 @@ public class PeepPriceOpinionTests
 	/// behind; one turn of the first. A Belly Bounce script stands in for the shop's: both declare
 	/// <c>VAR_LETMEON</c> by name, and the script is not run.
 	/// </summary>
-	private (ParkState State, Peep Peep, Peep Behind, RideScript Script) AtTheDoor( int cash )
+	private (ParkState State, Peep Peep, Peep Behind, RideScript Script) AtTheDoor( int cash, int? cost = null, int chance = 100, Random? random = null )
 	{
 		using var stream = new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
 		var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
 		var state = new ParkState( world );
+		if ( cost.HasValue || chance != 100 )
+		{
+			var shop = state.Objects.Single( o => o.ThingId == DrinksShop );
+			Assert.IsTrue( state.ReplaceObject( shop with { CostOfGoods = cost ?? shop.CostOfGoods, ChanceOfWinning = chance } ) );
+		}
 		var admission = new ParkAdmission( new ParkBalance( "jungle", easyMode: true ), world.Economy!.Value.AdmissionFee );
 
 		using var rse = data.OpenRead( "levels/jungle/rides/bouncy/bouncy.RSE" );
@@ -269,7 +309,7 @@ public class PeepPriceOpinionTests
 
 		var guests = new Dictionary<int, Peep> { [90] = peep, [91] = behind };
 
-		var behaviour = new PeepBehaviour( world, new Random( 1 ), admission, () => ParkRides.GateIsOpen, state,
+		var behaviour = new PeepBehaviour( world, random ?? new Random( 1 ), admission, () => ParkRides.GateIsOpen, state,
 			new ParkItemCatalogue( "jungle", data ),
 			admit: ( ride, id ) => new ParkRideOperation( state, guests ).AdmitPerson( script, ride, id ),
 			walkAway: ( ride, id ) =>

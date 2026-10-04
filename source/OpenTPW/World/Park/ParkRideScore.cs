@@ -279,8 +279,7 @@ public sealed class ParkRideScore
 	/// <list type="bullet">
 	/// <item>No <c>UsageInfo.ExcitementLevel</c>: nought.</item>
 	/// <item>A sideshow (<c>Info.WhichUIType</c> 2): <see cref="SideshowExcitement"/> of the thing's cost of goods,
-	/// price and chance of winning - the object's <c>+0x188</c>, <c>+0x194</c> and <c>+0x190</c>. The price is the
-	/// thing's own; the other two are its item's, as everywhere here (Q97).</item>
+	/// price and chance of winning - the object's <c>+0x188</c>, <c>+0x194</c> and <c>+0x190</c>, all saved with the object (Q97).</item>
 	/// <item>A coaster (track type 3): <c>trunc( 50 + f / 2 )</c> of its node's rating, or nought before its script
 	/// binds the node (<c>0x004e05f8</c>..). Not built: counted, and scored as its level.</item>
 	/// <item>Anything else: its base times its speed and its duration each against its tier's starting ones, held
@@ -301,7 +300,7 @@ public sealed class ParkRideScore
 			return 0;
 
 		if ( item.UiType == ParkRideOperation.SideshowUiType )
-			return SideshowExcitement( item.CostOfGoods, placed.PricePerUse, item.ChanceOfWinning );
+			return SideshowExcitement( placed.CostOfGoods, placed.PricePerUse, placed.ChanceOfWinning );
 
 		if ( item.TrackType == ItemDescriptionFile.CoasterTrack )
 		{
