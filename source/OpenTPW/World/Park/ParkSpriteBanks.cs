@@ -17,6 +17,12 @@ namespace OpenTPW;
 /// </param>
 public sealed record ParkSpriteBanks( int KidBanks, int CostumeBanks, int BalloonSets, int StaffCap = 2 )
 {
+	/// <summary>
+	/// Actual loaded counts for sprite kinds 4..8, read independently of saved people.
+	/// Null is for fixtures supplying only guest counts; runtime Read always supplies all five kinds.
+	/// </summary>
+	public System.Collections.Generic.IReadOnlyDictionary<int, int>? StaffBanks { get; init; }
+
 	/// <summary>The sprite kind a child is - <c>mESPSprite</c> 0, "kids".</summary>
 	public const int ChildKind = 0;
 
@@ -53,7 +59,7 @@ public sealed record ParkSpriteBanks( int KidBanks, int CostumeBanks, int Balloo
 	/// How many banks a person's sprite kind has here: children, costumes and the four capped staff kinds (handymen 5,
 	/// mechanics 6, guards 7, researchers 8); nought for any other, which is left as it is.
 	/// </summary>
-	public int CountOf( int kind ) => kind switch
+	public int CountOf( int kind ) => StaffBanks != null && StaffBanks.TryGetValue( kind, out var staff ) ? staff : kind switch
 	{
 		ChildKind => KidBanks,
 		CostumeKind => CostumeBanks,
@@ -110,6 +116,10 @@ public sealed record ParkSpriteBanks( int KidBanks, int CostumeBanks, int Balloo
 		}
 
 		return new ParkSpriteBanks( Math.Min( KidCap( numKids ), Count( ChildKind ) ), Count( CostumeKind ),
-			Balloon.SetsIn( data ), StaffCapFor( numKids ) );
+			Balloon.SetsIn( data ), StaffCapFor( numKids ) )
+		{
+			StaffBanks = Enumerable.Range( 4, 5 ).ToDictionary( kind => kind,
+				kind => kind == 4 ? Count( kind ) : Math.Min( StaffCapFor( numKids ), Count( kind ) ) )
+		};
 	}
 }

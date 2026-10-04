@@ -226,6 +226,17 @@ public sealed class ParkStaffPool
 		_ => 0
 	};
 
+	/// <summary>The sprite kind the native staff constructors use; docs/exe/park-engine.md, hiring.</summary>
+	internal static int SpriteKindFor( int kind ) => kind switch
+	{
+		0 => 5,
+		1 => 6,
+		2 => 4,
+		3 => 7,
+		4 => 8,
+		_ => -1
+	};
+
 	/// <summary>
 	/// The kind a thing model belongs to - the inverse of <see cref="ModelFor"/>, and <b>-1</b> for a
 	/// model that is not staff at all.

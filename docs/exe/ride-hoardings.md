@@ -177,4 +177,4 @@ runtime. The finite-source corpus assertion it requested is included.
 
 Not confirmed on screen: non-Closed warning textures, a nonzero saved hoarding restored in the game,
 and slope/quarter-turn edge cases. Those state/geometry paths are tested. Equality to the original's
-x87 output at every near-tie is unproven. Q92 (ride-window door) remains separate and unbuilt.
+x87 output at every near-tie is unproven. Q92 implements the ride-window door; its separate evidence is in `ride-window-door.md`.

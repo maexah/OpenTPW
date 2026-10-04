@@ -1,11 +1,11 @@
 # Status
 
-Last updated: 2026-10-03. **This header names no branch and no sha, deliberately**: a line in the commit that moves the tip cannot name it. Read the current state from the repository, which cannot lag: `git log --oneline -1`. **`docs/QUEUE.md` is the work queue**, one item per session, taken from the top unless Alexah reorders.
+Last updated: 2026-10-04. **This header names no branch and no sha, deliberately**: a line in the commit that moves the tip cannot name it. Read the current state from the repository, which cannot lag: `git log --oneline -1`. **`docs/QUEUE.md` is the work queue**, one item per session, taken from the top unless Alexah reorders.
 
 ## Works
 
-- **Objects keep their own saved cost of goods and chance of winning** (Q97). Pricing, rolls, excitement and settlement use them. Stock and labelled-fixture screenshots/censuses match predicted 50/25 → 80/58 for the Jungle Spray.
-
+- **Failed profile selection reloads preserve restored progress** (Q207). Cached profiles stay read-only until successfully reloaded; immediate key saves and deselection are covered.
+- **Objects keep their own saved cost of goods and chance of winning** (Q97). The sideshow price-opinion prize, rolls, excitement and settlement use them; the price-opinion base uses catalogue InitCostOfGoods (Q207). Stock and labelled-fixture screenshots/censuses match predicted 50/25 → 80/58 for the Jungle Spray.
 - **Console path placement uses the player verdict** (Q94). Connected queue cells refuse with no charge or edit. Legal detached-tail cuts are photographed; predicted census confirms 12 → 8 → 4 queuers, eight releases at happiness 35.
 
 - **Queued rides stay closed with hoardings raised until their queue connects** (Q93). A bought Belly Bounce opens on connection and carries a visible rider. Queue editing and path-tail removal close it again; reconnecting retracts the panels. Demolition keeps its existing guest penalties.
@@ -18,7 +18,7 @@ Last updated: 2026-10-03. **This header names no branch and no sha, deliberately
 
 - **The entry-price door moves the gate, which reopens after closing** (Q89b). Closing waits for guests on the decoded cell types; every 30 world sweeps it retries, also waiting for staff outside. Fresh closed gates stay in normal dispatch; valid saved scripts keep their state.
 
-- **Full Simulation starts an empty park without a save file**: twelve reserved things, gate 11/light 12, closed, fee 20, cash 50,000 and regular loans. The fixed paths and initial boundary come from theme data (Q197).
+- **Full Simulation starts an empty park without a save file and can hire all five staff kinds** (Q207, real-screen/drop screenshots and sprite census): twelve reserved things, gate 11/light 12, closed, fee 20, cash 50,000 and regular loans. The fixed paths and initial boundary come from theme data (Q197).
 
 - Lobby: four islands, front end, advisor, weather, particles, options, saves, the island gate, and the attract camera flying around all four islands with all four heard at once. Enter swings the camera onto the gate, opens it and flies in before the loading screen; **the island keys wait for that flight**, and **Escape cancels it** (the camera orbits again, the gate shuts, the panel comes back). **Enter, the arrows and Escape act on their release**, and **a left press on the lobby's view enters the park**.
 - Park: ground, paths, queues, placed objects, fixed items, sky, music, weather, camcorder, gadget (5 of 6), **lit per vertex as the original lights it** (ambient colour + clamped sun; the lobby keeps the old lighting), **every material a mesh names drawn** (Q203). The camcorder walks the original's sweep pass for pass, **draws the peeps from their ground-level `.FPC` pictures**, and **a quick right click leaves it** (RMB cancel on). Leaving one lets go of all of it: nothing of a left park is held in the lobby, nor of any left scene's interface.
@@ -63,7 +63,6 @@ Last updated: 2026-10-03. **This header names no branch and no sha, deliberately
 - Q89b missing saved state and all outside staff kinds: tested only; the running staff guard was photographed with the mechanic.
 
 - Q86 populated-queue release is instrumented; no normal player sequence established. Nominee/state-14 exemptions tested only.
-- **The RIDER on a ride bought this session**: measured five times, not photographed (the console has no pitch).
 - `SpriteScript.ScheduleFrom` and `DropUnreadyNominee`: unwiring either leaves the suite green.
 - Nothing the game ships reaches the critical-section cap (Q11), Q68b's ferry and seaplane let-go, Q82b's stamp ahead of the clock, state 6's wait or Q83b's stack errors: tested only; nor a sale's staff half, as nobody rests yet (Q36).
 - Tested, not run in the game: the Delete key's and a sale's let-go of a candidate (Q39), Escape before the gate opens (Q41), the name box's two releases in one frame, a park whose global.sam will not load (Q42), `Rotation.From` (Q71).
@@ -84,7 +83,9 @@ Last updated: 2026-10-03. **This header names no branch and no sha, deliberately
 
 ## Recent
 
-**2026-10-03 (Q97).** Saved object goods/chance restored through every reader. Predicted stock/fixture censuses and screenshots agree; 14 new regressions, eight killed mutations, restored full suite 1,752 passes. Original saves unchanged. `docs/exe/ride-operation.md`, Q97.
+**2026-10-04 (Q207).** Three audit defects repaired: fresh staff sprites/atlas, catalogue price base, failed-selection write provenance. All five staff visible after actual screen/drop path. Five mutations fail; restored full suite 1,764 passes/zero skips. `docs/exe/park-engine.md`, `ride-operation.md`, `saves.md`. Exact commit verification is recorded in the external live plan.
+
+**2026-10-03 (Q97).** Saved object goods/chance restored; Q207 corrects the price base and two wrong test expectations. Predicted stock/fixture censuses and screenshots agree; 14 new regressions, eight killed mutations, restored full suite 1,752 passes. Original saves unchanged. `docs/exe/ride-operation.md`, Q97.
 
 **2026-10-03 (Q94).** Shared path verdict; connected stock queue refuses with screenshot and predicted zero-edit/$0 census. Legal tail cuts restage Q50: 12→8→4 queuers, eight predicted happiness 50→35 releases. Eleven new tests; eight fail with the original method restored; 1,738 pass after rebuilding; independent applied review passed. Admission/choice were instruments; nominee/state-14 exemptions and post-cut walking were not reconfirmed. `docs/exe/ride-operation.md`, Q94.
 

@@ -56,7 +56,7 @@ summary logs, and before/after save hashes. Runs use the real Lost Kingdom park 
   rows across 1,900 guard/researcher census rows. This was sustained wandering, not just a boundary twitch.
 - Fixed queue: predicted **zero** queue/approach excursions with staff still moving. Observed zero across
   1,918 guard/researcher census rows over 120 seconds. The researcher visited 16 distinct cells and the
-  guard 19. `fixed-queue/start.png` shows the researcher beside the queue on the ordinary path;
+  guard 17. `fixed-queue/start.png` shows the researcher beside the queue on the ordinary path;
   `fixed-queue/end.png` and the final census show the continuing park run.
 - Fixed gate: predicted **zero**, observed zero across **1,922** guard/researcher census rows over
   120 seconds. The researcher visited 14 distinct cells and the guard 25. `fixed-gate/start.png`

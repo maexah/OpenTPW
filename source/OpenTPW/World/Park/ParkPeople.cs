@@ -107,13 +107,6 @@ public sealed class ParkPeople : Entity
 	private readonly Dictionary<int, PeepWalk> _staffWalks = [];
 
 	/// <summary>
-	/// A sprite the save's own staff of each thing model wear, so that a new hire can be dressed in
-	/// one the atlas already holds - see <see cref="Hire"/>. Keyed by MODEL, which is the number a
-	/// <see cref="Staff"/> carries.
-	/// </summary>
-	private readonly Dictionary<int, ParkWorld.Sprite> _staffSprite = [];
-
-	/// <summary>
 	/// What each member of staff is doing - the shared half of the original's five per-kind behaviours.
 	/// One for the park, as <see cref="_behaviour"/> is, because the constants it reads are the park's.
 	/// </summary>
@@ -377,11 +370,6 @@ public sealed class ParkPeople : Entity
 
 					_sprites[member.ThingId] = sprite;
 
-					// Kept so that somebody hired later can WEAR a pair this park already packs - see
-					// Hire. The atlas is built once from the banks the save's own people wear and
-					// nothing adds to it, so a newcomer in an unpacked bank has no picture at all and
-					// reads as a broken hire rather than a missing texture.
-					_staffSprite[member.Model] = picture;
 				}
 			}
 		}
@@ -544,6 +532,26 @@ public sealed class ParkPeople : Entity
 	}
 
 	/// <summary>
+	/// A new staff sprite from the native constructors, independent of saved employees.
+	/// Slot and position are assigned when Hire adds it; docs/exe/park-engine.md, hiring.
+	/// </summary>
+	internal static ParkWorld.Sprite? StaffPicture( ParkStaffPool.Candidate candidate, ParkSpriteBanks banks, Random random )
+	{
+		var kind = ParkStaffPool.SpriteKindFor( candidate.Kind );
+		// The guard chooses anew (FUN_004d5de0); the other four constructors use the candidate.
+		// As with arrivals, the native shared generator is not yet reproduced.
+		var bank = kind == 7 && banks.CountOf( kind ) > 0
+			? (random.Next() >> 2) % banks.CountOf( kind ) : candidate.Costume & 0xff;
+		if ( kind < 0 || (banks.StaffBanks != null && bank >= banks.CountOf( kind )) )
+			return null;
+
+		return new ParkWorld.Sprite(
+			Slot: 0, Type: kind, Bank: bank, SpriteNumber: 0,
+			X: 0f, Height: 0f, Y: 0f, Facing: 0, Frame: 0, Alpha: 255, State: 1,
+			Script: SpriteScript.None, Pc: 0 );
+	}
+
+	/// <summary>
 	/// Puts a hired candidate into the park at a cell. Answers their thing id, or nought.
 	///
 	/// <para>
@@ -565,14 +573,9 @@ public sealed class ParkPeople : Entity
 
 		var model = ParkStaffPool.ModelFor( candidate.Kind );
 
-		// Dressed in a pair this park already packs, never an invented one - see _staffSprite. A park
-		// with nobody of that kind cannot clothe them, and that is said out loud rather than drawn as
-		// nothing.
-		if ( !_staffSprite.TryGetValue( model, out var picture ) )
+		if ( StaffPicture( candidate, _banks, _arrivalRandom ) is not { } picture )
 		{
-			Log.Warning( $"People: nothing in this park wears model {model}, so a " +
-				$"{ParkStaffPool.NameOfKind( candidate.Kind ).ToLowerInvariant()} would have no picture - not hired" );
-
+			Log.Warning( $"People: sprite for staff kind {candidate.Kind} is unavailable - not hired" );
 			return 0;
 		}
 
@@ -627,7 +630,7 @@ public sealed class ParkPeople : Entity
 
 		_sprites[thingId] = animation;
 
-		ParkGuestSprites.Current?.Add( person, picture with { Slot = slot, X = cellX, Y = cellY, Facing = 0 } );
+		ParkGuestSprites.Current?.Add( person, picture with { Slot = slot, X = cellX, Y = cellY } );
 
 		// A member of staff enters a cell's occupancy list only here and in DropStaff: PeepBehaviour's
 		// StandOn is for guests, and nothing re-stands a member of staff as they walk.
@@ -1609,8 +1612,8 @@ public sealed class ParkPeople : Entity
 
 			// The park's own clock goes one up before anything in the sweep runs (FUN_00516380, 0x00516394).
 			State.AdvanceGameTick();
-			// Every catch-up sweep sees the same response clock, as FUN_00402d80 does.
-			// GameClock.Now keeps the engine's existing clamped-frame timing deviation.
+			// Catch-up sweeps share a frame timestamp here; the native running clock may query the OS per call.
+			// GameClock.Now keeps the engine's clamped-frame timing deviation (docs/exe/advisor-park.md).
 			State.AdvisorMessages?.Tick( State.GameTick, (long)(GameClock.Now * 1000),
 				(response, sample) => Advisor.Current?.PlayParkResponse( response, sample ) ?? 0 );
 

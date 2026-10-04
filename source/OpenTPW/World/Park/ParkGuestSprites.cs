@@ -247,9 +247,8 @@ public sealed class ParkGuestSprites : ModelEntity
 		_themeName = themeName;
 		_park = park;
 
-		// Only the banks BanksToPack names: the staff's worn, every child and costume bank the park counts, and the
-		// balloons'. Loading every person bank in the archive would be 5,316 pictures and an atlas 13,885 pixels tall, past
-		// what a good many devices will allocate at all; the shipped park packs thirteen banks, 1,973 pictures.
+		// Pack the counted guest and staff banks before anyone arrives or is hired, plus worn banks and balloons.
+		// Counts follow the theme and detail cap rather than packing the entire archive.
 		Load( themeName, park );
 
 		if ( _people.Count > 0 && _atlas != null )
@@ -356,7 +355,7 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// <summary>
 	/// Which banks the atlas packs. With the counts: what the save's people wear, each brought within its kind's banks
 	/// (<see cref="ParkSpriteBanks.Reduce"/>), every child and costume bank - an arrival or a costume may wear any - and
-	/// the balloon bank. Without: what the save's people wear, and the balloon bank. Each once.
+	/// all counted staff banks (including in an empty park), and the balloon bank. Without: what the save's people wear, and the balloon bank. Each once.
 	/// </summary>
 	internal static IEnumerable<(int Type, int Bank)> BanksToPack( IEnumerable<ParkWorld.Sprite> worn, ParkSpriteBanks? counts )
 	{
@@ -372,6 +371,10 @@ public sealed class ParkGuestSprites : ModelEntity
 				.Concat( Enumerable.Range( 0, counts.KidBanks ).Select( bank => (Type: ParkSpriteBanks.KidHeadKind, Bank: bank) ) )
 				.Concat( Enumerable.Range( 0, counts.CostumeBanks ).Select( bank => (Type: ParkSpriteBanks.CostumeHeadKind, Bank: bank) ) );
 		}
+
+		if ( counts?.StaffBanks is { } staff )
+			banks = banks.Concat( staff.SelectMany( pair =>
+				Enumerable.Range( 0, pair.Value ).Select( bank => (Type: pair.Key, Bank: bank) ) ) );
 
 		return banks.Distinct();
 	}

@@ -3,7 +3,7 @@
 **Implemented and confirmed in Lost Kingdom (Q89b).** The entry-price door opens and closes
 the gate through ordinary dispatch. Populated closure waits for the position-cell census;
 the 30-world-sweep retry additionally waits for live staff outside. Screenshot and predicted
-census evidence is recorded below. Q90's advisor messages remain counted.
+census evidence is recorded below. Q90b implements the advisor messages (`advisor-park.md`).
 
 ## What writes the command
 

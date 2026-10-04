@@ -4110,6 +4110,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   predicted `spend`: stock cost/chance 50/25 and 20/100; labelled fixture 80/58 and 80/100. Fourteen regressions,
   eight mutation failures, 1,752 tests pass. RNG ownership remains a deviation; played-save render fails on
   duplicate sprite key 0. `docs/exe/ride-operation.md`, Q97.
+- [x] **Q207. Repair the three confirmed Codex audit defects.** User-authorized together, 2026-10-03.
+  Fresh Full Simulation hires and draws all five staff kinds from native initialization and archive counts;
+  price opinions use catalogue InitCostOfGoods for the base and object cost only for the sideshow prize;
+  failed selection reloads revoke cached profile write permission until a successful reload. Real hire-screen/XTEST
+  drops, sprite censuses and screenshots; five defect/mapping mutations fail; restored 1,764-test suite has no skips.
+  Branch `alexah/270-audit-fixes`. Evidence and remaining limits: `docs/exe/park-engine.md`, "Fresh staff sprites";
+  pricing `docs/exe/ride-operation.md`, Q207; profiles `docs/exe/saves.md`, preservation policy.
 
 ## B. Docs and comments
 

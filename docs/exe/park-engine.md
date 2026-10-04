@@ -1805,6 +1805,36 @@ fills only 80% of its meter**. Names come from five per-kind tables of 35 entrie
 entertainer 6, guard 7, researcher 8) and the sprite bank (entertainers 4, handymen 5, mechanics 6,
 guards 7, researchers 8).
 
+#### Fresh staff sprites (Q207)
+
+New staff need no saved employee template. Native constructors call `FUN_004d4140(3, kind, bank)`:
+mechanic `004d9eb0` uses kind 6, cleaner `004d6b60` kind 5, entertainer `004d4340` kind 4 and researcher
+`00502600` kind 8, each taking the candidate costume's low byte. Guard `004d5de0` instead selects a new kind-7
+bank through `00541f70`: `(random >> 2) % loadedCount`. The common sprite constructor `004758f0` initializes
+set/height/facing to zero, alpha 255, state 1 and unit scales. `004d4140` uses standing script table entry 3.
+These were rechecked in a private hash-matched Ghidra copy of the 2.0 executable.
+
+`ParkSpriteBanks.Read` counts the archive independently of saved people. Kinds 5–8 obey the detail cap;
+entertainers (kind 4) are uncapped. The renderer packs all those banks before the first hire. `ParkPeople.Hire`
+builds a new picture from the candidate and those counts, and adding the first employee builds its live mesh.
+Missing staff banks still refuse hiring. Saved staff retain their own pictures and animation state.
+
+**Verified in a genuinely fresh Full Simulation park:** zero initial people/sprites, then five actual hire-screen
+selections and XTEST world drops. Predicted staff count 0→5, kinds 5/6/4/7/8, empty candidate hand and $50,000
+unchanged all matched censuses and screenshots. `runtime-final/all-five-hired.png` shows all five together;
+`five-after-ticks.png` and the accompanying census show them after 100 more frames. No fake employees were seeded.
+The final sprite factory tests also pin nonzero costume bytes and the guard's separate selection.
+
+Evidence directory: `/home/alex/Documents/Codex/2026-10-03/start-from-home-alex-repos-opentpw/` (live `PLAN.md`,
+`staff-*-native.txt`, `mutation-results/`, `runtime-final/`, `price-fixture.json`). Original saves are
+hash-protected; runtime uses disposable copies and muted audio. Original-hire and original-atlas restorations
+fail two and four regression cases; wrong sprite mapping fails one. Original-price and original-profile
+restorations fail three and one. Restored full suite: **1,764 passed, zero failed/skipped**.
+
+**Limits retained:** the candidate pool still generates costume 0 rather than native costume variation;
+shared RNG parity, staff carry preview, placement-cell filters and the existing Q136 behavior deviations are
+outside this repair. Staff bank content/order and detail limits are documented in FileFormats `sprites.md`.
+
 #### Putting a candidate down: the type-5 mode
 
 Decoded for `docs/QUEUE.md` Q6; every claim below was put to a refuter.

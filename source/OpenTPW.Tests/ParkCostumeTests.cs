@@ -120,7 +120,10 @@ public class ParkCostumeTests
 	[TestMethod]
 	public void LostKingdomsBanksAreCounted()
 	{
-		Assert.AreEqual( Banks, ParkSpriteBanks.Read( Data(), "jungle", numKids: 2 ) );
+		var counts = ParkSpriteBanks.Read( Data(), "jungle", numKids: 2 );
+		Assert.AreEqual( (Banks.KidBanks, Banks.CostumeBanks, Banks.BalloonSets, Banks.StaffCap),
+			(counts.KidBanks, counts.CostumeBanks, counts.BalloonSets, counts.StaffCap) );
+		CollectionAssert.AreEqual( new[] { 3, 1, 2, 1, 1 }, Enumerable.Range( 4, 5 ).Select( counts.CountOf ).ToArray() );
 		Assert.AreEqual( 8, ParkSpriteBanks.Read( Data(), "jungle", numKids: 3 ).KidBanks, "all eight banks" );
 		Assert.AreEqual( (2, 1), (ParkSpriteBanks.Read( Data(), "jungle", numKids: 0 ) is var low ? (low.KidBanks, low.StaffCap) : default),
 			"low detail: two children, one bank a staff folder" );
