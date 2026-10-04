@@ -28,7 +28,9 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
 
 **Where the detail is.** `docs/REVIEW-2026-09-21.md` section 5 for Q1 and Q3 to Q7.
 `docs/REVIEW-2026-09-22.md` for Q2 and Q8 to Q12. Q70-Q75 come from the 2026-09-12 review, whose three
-artifacts are listed in `docs/history/README.md`.
+artifacts are listed in `docs/history/README.md`. Q208-Q217 come from the 2026-10-04 review of the commits of
+2026-10-03 and 2026-10-04; an id such as `u6-hoardings-1` names a finding in its findings file (`CLAUDE.local.md`
+says where).
 
 ---
 
@@ -576,6 +578,59 @@ artifacts are listed in `docs/history/README.md`.
   `QueueSizeInCells` times four, nought on the Drinks Shop and the three toilets, where the gate measures their walked
   cells (`ParkRideChoice.QueueCellsFor`); a run that queues a guest at a toilet fails it falsely. Use the walked
   count. Put the bug back for each (`CLAUDE.md` rule 6). No game run.
+
+- [ ] **Q210. Hoardings: the original's terrain rectangle and its base-vertex gate.** Found by the 2026-10-04 review
+  (`u6-hoardings-1`, `-2`, `-4`; `docs/exe/ride-hoardings.md`). `ParkRideHoarding.Ground` samples `x0 + gx` where the
+  original samples `x0 + trunc( gx * (w - 1) / w + 0.1 )` inside the model's inclusive rectangle (`+0xc0`, `+0xc4`,
+  `FUN_00467030` `0x004670c1`, `FUN_00454190`); counted `HOARDING_TERRAIN_RECTANGLE`. `ParkObjects` gates on
+  `Nodes.Count > 1` and reads `Meshes[0]` where the original counts base vertices (`FUN_00469a80`, `0x0046a838`) and
+  reads the mesh with the most (`0x0046a82c`). Port both, and write the test's expected value from the executable's
+  formula, not from the code. Confirm: a ride bought on sloping ground, closed, photographed with `hoardings`; then
+  the same panels beside the original's under Proton (their height, which rises first, where the sign sits).
+- [ ] **Q211. Tests that run the callers, not the helpers.** Found by the 2026-10-04 review: fifteen bugs put back
+  left all 1,764 tests green. Nothing runs `ParkBuilding.Buy` (taking `BindOperation` out of `Build`); `ParkObjects`'
+  hoarding gate, its saved-slot `Restore`, `ParkRideHoarding.Fill`'s sliding V, the panels' `OrderBy`, the `+ 0.1`
+  truncation; `Advisor.PlayParkResponse` (its `Busy` guard, the end clip's length); `SayOnlyOnce`'s `history.Said`;
+  `Level`'s `DrawStatus`; `SetupParticles` before `SetupParkEntities`; `FreshPark`'s goods and chance on the two fixed
+  objects; the prankery id's `& 0xffff`; the cash's `Math.Max( 0, ... )`; `Players.Load`'s read-only stand-in. And
+  `ArchiveDamageTests.EveryInstalledWadEntryStillDecodes` prints its hash and count without asserting either. Write
+  each test, put its bug back, see it fail (`CLAUDE.md` rule 6). No game run.
+- [ ] **Q212. The ride window's other statuses. Decode first.** Found by the 2026-10-04 review (`u7-ride-door-6`,
+  `-7`, `-9`, `-10`). `FUN_00485f60` answers `0xb`..`0x14` (80/100/255) for a ride with a mechanic called (`+0x64`),
+  2 (UITEXT 366) for state 1 with nobody assigned and `0x15` (UITEXT 385, "REPAIRS IN PROGRESS") with one, 24 for an
+  exit not connected; `ParkClosedStatus` answers 1, 22 and 23 only, shows grey CLOSED for a mechanic call, and
+  `ParkObjectWindow` shows BROKEN DOWN from `VAR_BROKEN` with no decode behind it. `OBJECT_WINDOW_EXIT_CONNECTION_STATUS`
+  and `QUEUE_VERDICT_CORNER_RULE` are reported every frame a window is open (9,631 and 24,273 in one run): report on
+  a change. Confirm: each status photographed beside the original's.
+- [ ] **Q213. The status box's lettering is smaller than the original's.** Seen 2026-10-04 with the two side by side
+  (Q208): the original's "LINE NOT CONNECTED" fills the striped box in two lines of large type, OpenTPW's is small.
+  Decode the font and size `FUN_004ade40` draws with. Confirm: the box photographed beside the original's.
+- [ ] **Q214. A fresh Full Simulation park's four gaps.** Found by the 2026-10-04 review (`u1-startup-1` to `-4`).
+  `ParkStaffPool.Roll` gives every candidate costume 0 where `FUN_00507600` stores `FUN_00541f70( kind )` at record
+  `+9`, so every hired entertainer and mechanic wears bank 0 (`guests`: `bank 0+0` on all five kinds). The land
+  boundary (track types 25 and 12, from `Hoardings.sam`) is written into the cells and neither drawn nor counted.
+  The catalogue's emitters are registered and the per-item slot table (item `+0x4dc`, `0x0041455a`) is thrown away.
+  `FreshParkBoundary.Apply` throws where the original stops at its 64th entry (`0x00532517`), and a test pins the
+  throw. Confirm: several entertainers hired in a fresh park, more than one costume on screen; the boundary beside
+  the original's fresh park.
+- [ ] **Q215. The park advisor's tick: three paths neither built nor counted, and the original never watched.** Found
+  by the 2026-10-04 review (`u5-advisor-door-2`, `-3`, `-9`). `FUN_0059a550` polls a metadata row each tick
+  (`FUN_0059c680( 1 )`); `FUN_0059b620` posts a message after `Advisor_SayResponse` (`FUN_0040f740`, `FUN_0040fb10`,
+  response groups 150 and 151 for the door); `Advisor_SayResponse` answers 0 for a sample of no length; event 10 keeps
+  the cooldown stamp. Count each, then build. Confirm: press the door in the original under Proton and hear whether
+  he speaks (Q90 predicted silence from the scores and never ran it), then the same in OpenTPW.
+- [ ] **Q216. The save-preservation policy. Alexah's call first.** Found by the 2026-10-04 review (`u9-foundation-2`,
+  `-5`). OpenTPW will not rewrite a gms.dat or Config.tcf it did not read whole; the original overwrites. A Config.tcf
+  of version 0, of another version or with a tail blocks saving the options for good, and nothing on screen says a
+  save was refused (rule 11: say it in the game's own style). Decide whether to keep it. Either way, measure the
+  stricter `ExpandedMemoryStream.ReadBytes` over all 47 `.sdt`, the 42 `.str` and the saves: a short read it used to
+  pad now throws.
+- [ ] **Q217. Three leftovers among the park's people.** Found by the 2026-10-04 review (`u3-staff-paths-1`,
+  `u4-gate-1`, `u2-arrivals-4`). Staff are kept on paths by a fence the original does not have; its own recovery is
+  the no-links arm (`0x004f95c0`, Q112): build that, then ask Alexah whether the fence stays. `ParkPeople` holds two
+  versions of `FUN_004fa990`: `InsideGateCensus` reads the position's cell as the original does (bytes `+5`, `+7`),
+  `OnACountingCell` reads the occupancy link first; make them one. `ParkCatchUpOrderTests`' row (16, 1) asserts the
+  open Q150 defect as the expected result and will go red when Q150 is fixed: say so in the test.
 
 ## B. Docs and comments
 
