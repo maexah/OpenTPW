@@ -94,6 +94,9 @@ internal sealed class Players
 			}
 		}
 
+		else
+			player.File.PreserveAfterFailedReload();
+
 		foreach ( var theme in SaveFolder.Themes )
 			player.File.Park( theme );
 

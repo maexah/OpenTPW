@@ -77,6 +77,12 @@ public sealed class PlayerFile
 	/// </summary>
 	public bool CanWrite { get; private set; } = true;
 
+	/// <summary>
+	/// Retains a cached profile for reading after its reload failed, without permission to save it.
+	/// Only replacing it with a successfully read profile restores writing; this is OpenTPW's preservation policy.
+	/// </summary>
+	public void PreserveAfterFailedReload() => CanWrite = false;
+
 	/// <summary>Whether it holds the player's options whole - always, for a file made here rather than read.</summary>
 	public bool HasOptions { get; private set; } = true;
 

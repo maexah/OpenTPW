@@ -127,6 +127,35 @@ public class ProfilePreservationTests
 	}
 
 	[TestMethod]
+	public void AFailedSelectionReloadPreservesRestoredProgressUntilSuccessfulReload()
+	{
+		File.WriteAllBytes( Profile, Written( new PlayerFile { KeysGiven = 7 } ) );
+		var players = new Players();
+		players.Load();
+		File.Delete( Profile );
+		players.Select( 0 );
+		Assert.AreEqual( 7, players.Current!.File.KeysGiven, "retain the cached readable progress" );
+		Assert.IsFalse( players.Current.File.CanWrite, "the failed reload invalidates its write permission" );
+		// Repeated selection failures must not clear the provenance.
+		players.Select( 0 );
+		var restored = Written( new PlayerFile { KeysGiven = 19 } );
+		File.WriteAllBytes( Profile, restored );
+		players.Current!.AddKey();
+		CollectionAssert.AreEqual( restored, File.ReadAllBytes( Profile ), "immediate key saves are protected too" );
+		players.SaveAndDeselect();
+		CollectionAssert.AreEqual( restored, File.ReadAllBytes( Profile ), "deselection cannot save the stale roster" );
+		Assert.IsFalse( File.Exists( Profile + ".tmp" ) );
+
+		players.Select( 0 );
+		Assert.IsTrue( players.Current!.File.CanWrite, "a successful reload restores normal saving" );
+		Assert.AreEqual( 19, players.Current.File.KeysGiven );
+		players.Current.AddKey();
+		players.SaveAndDeselect();
+		using var saved = File.OpenRead( Profile );
+		Assert.AreEqual( 20, PlayerFile.Read( saved ).KeysGiven );
+	}
+
+	[TestMethod]
 	public void AFailedConfigLoadCannotOverwriteAFileThatBecomesReadableLater()
 	{
 		var path = Path.Combine( root, "save", "Config.tcf" );

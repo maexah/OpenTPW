@@ -230,6 +230,18 @@ behaviour. A player loaded read-only can still be selected, but their changes re
 `ProfilePreservationTests` drives selection, key awards and deselection over disposable files, including truncation,
 unknown versions, invalid counts, trailing bytes and a destination damaged after selection.
 
+**Q207, failed selection reload.** A null `LoadPlayer` result revokes `CanWrite` on the cached roster profile,
+retaining its readable progress. Immediate key saves and deselection both remain blocked even if a valid file
+returns. Only a successful reload replaces that instance and may restore write permission. The regression scans
+7 keys, removes the file during selection, restores 19, and verifies unchanged bytes through both save paths;
+reloading then permits saving 20. Restoring the original selection code fails this regression. This closes an
+inherited gap in the preservation policy; it is not a native-game behavior claim.
+
+The same 7→failed selection→restored 19 sequence passed through real lobby controls with disposable saves.
+`runtime-profile/preserved-result.json` records the byte-identical restored profile after the confirmation tick;
+`successful-reload-nineteen.png` shows the reloaded keys. The normal second deselection writes successfully.
+Evidence is in the Q207 directory named in `park-engine.md`; installed saves remain hash-identical.
+
 ## Unresolved
 
 - The park body's compression (`FUN_005f8050`).
