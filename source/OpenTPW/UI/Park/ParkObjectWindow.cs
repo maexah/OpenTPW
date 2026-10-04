@@ -1232,7 +1232,7 @@ internal sealed class ParkObjectWindow : UiWindow
 		var broken = IsBroken();
 		_broken.Visible = status != 0 || broken;
 		_broken.Text = broken ? Localization.Text( 366 ) : status == 0 ? null
-			: Localization.Text( status == 23 ? 389 : 365 );
+			: Localization.Text( status switch { 22 => 388, 23 => 389, _ => 365 } );
 		_broken.TextColour = broken ? new UiColour( 255, 50, 30 ) : ParkClosedStatus.Colour( status );
 	}
 

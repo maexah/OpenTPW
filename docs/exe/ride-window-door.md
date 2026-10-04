@@ -18,9 +18,10 @@ Read in a Codex-owned private Ghidra project copied from `SimThemePark`, with al
   are 13 (close) and 12 (open), as recorded in the ride-window layout.
 - `FUN_004ade40` asks `FUN_00485f60( object, 2 )` for the status.
   Ordinary closure is code **1**, UITEXT **365**. A queued ride whose back is
-  disconnected is code **23**, UITEXT **389**, when closed (22 when open).
+  disconnected is code **23**, UITEXT **389**, when closed, and **22**, UITEXT **388**,
+  while still open: cutting a queue off closes nothing (`ride-operation.md`, Q93).
 - The colour table at `0x0074fb50` contains `0xff808080` for 1 and
-  `0xff1e96ff` for 23. `FUN_004861e0` unpacks red from the low byte, then
+  `0xff1e96ff` for 22 and 23. `FUN_004861e0` unpacks red from the low byte, then
   green and blue: **128/128/128** and **255/150/30**. The text table starts
   at `0x0074fbc0`; `FUN_004861d0` supplies the list's colour.
 - Condemned, missing/unfinished track, maintenance and breakdown statuses
@@ -50,8 +51,8 @@ ride over another window; Q92 does not repair that broader preview layering issu
 The ordinary closed row was photographed after dismissing the ride window.
 
 The existing coaster-opening guard remains incomplete and counted. Detailed
-maintenance/track messages, the open-disconnected status 22 and exit-disconnected
-status 24 remain outside this implementation. The unresolved exit check is counted
+maintenance/track messages and exit-disconnected status 24 remain outside this
+implementation; `ParkClosedStatus` answers 1, 22 and 23. The unresolved exit check is counted
 as `OBJECT_WINDOW_EXIT_CONNECTION_STATUS`; ordinary CLOSED is the fallback.
 No complete status parity is claimed.
 All-items rows are refreshed on opening/changing tab, not continuously.

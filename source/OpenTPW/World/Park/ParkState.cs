@@ -1388,9 +1388,7 @@ public sealed class ParkState
 	/// this at the end of its transaction, the sale's drain once for each run it clears, and a path clear
 	/// after unlinking each cardinal entrance.
 	/// </summary>
-	/// <param name="objectId">The object whose queue changed.</param>
-	/// <param name="removing">The synchronous sale drain keeps its nominee until object removal.</param>
-	public void RemeasureQueue( int objectId, bool removing = false )
+	public void RemeasureQueue( int objectId )
 	{
 		if ( objectId == 0 )
 			return;
@@ -1402,14 +1400,14 @@ public sealed class ParkState
 		// kept here (docs/exe/ride-operation.md, "The stranded bookkeeping").
 		Unimplemented.Report( "QUEUE_REMEASURE_BACK_CELL_STAMP" );
 
-		QueueRemeasured?.Invoke( objectId, removing );
+		QueueRemeasured?.Invoke( objectId );
 	}
 
 	/// <summary>
 	/// Who is told a queue was measured again - the park's people, which set it when they are made. With
 	/// nobody set, <see cref="RemeasureQueue"/> is <see cref="InvalidateQueue"/> alone.
 	/// </summary>
-	internal Action<int, bool>? QueueRemeasured { get; set; }
+	internal Action<int>? QueueRemeasured { get; set; }
 
 	// Who a ride has picked out to load next - the object's own mPersonBeingLoaded at +0x6c, per-object
 	// runtime state that admitting reads.

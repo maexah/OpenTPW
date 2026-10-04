@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace OpenTPW.Tests;
 
-/// <summary>Q93: purchase-time script binding and closing, followed by the real queue remeasurement.</summary>
+/// <summary>Q93: a bought thing with a queue starts closed and its first joined measure opens it; a queue cut off later closes nothing.</summary>
 [TestClass]
 public class ParkBoughtClosedTests
 {
@@ -104,71 +104,79 @@ public class ParkBoughtClosedTests
 		Assert.AreEqual( 1, Ride.CanLoad );
 	}
 
-	private void AssertClosed()
+	private void AssertOpen()
 	{
-		Assert.AreEqual( 0, Ride.CanLoad );
-		Assert.AreEqual( 1, Script[ParkRideOperation.ClosedVariable] );
-		var hoarding = state.HoardingFor( Bought )!;
-		hoarding.Advance( 6f );
-		hoarding.Advance( 1f );
-		Assert.AreEqual( 1f, hoarding.Progress );
-		Assert.IsTrue( hoarding.Active );
-		Assert.AreEqual( 0, hoarding.Texture );
-	}
-
-	[TestMethod]
-	public void ClearingThePathAtTheQueueTailClosesUntilReconnected()
-	{
-		StandAndConnect();
-		Assert.IsTrue( ParkPathBuilding.ClearPathCell( state, world, 19, 10, stepped: true ) );
-		Assert.IsFalse( ParkRideOperation.BackOfQueueConnected( world, Ride ) );
-		AssertClosed();
-		Connect();
-		state.RemeasureQueue( Bought );
 		Assert.AreEqual( 1, Ride.CanLoad );
 		Assert.AreEqual( 0, Script[ParkRideOperation.ClosedVariable] );
 		var hoarding = state.HoardingFor( Bought )!;
-		hoarding.Advance( 4f );
-		hoarding.Advance( 1f );
+		hoarding.Advance( 6f );
 		Assert.AreEqual( 0f, hoarding.Progress );
 		Assert.IsFalse( hoarding.Active );
 	}
 
+	/// <summary>
+	/// The original leaves an open ride open when its queue is cut off from the path, and its window reads
+	/// status 22 (docs/exe/ride-operation.md, Q93): ClearCell measures entrances only, and nothing closes.
+	/// </summary>
 	[TestMethod]
-	public void DisconnectionPreservesRidersButClearsTheNominee()
+	public void ClearingThePathAtTheQueueTailLeavesAnOpenRideOpen()
+	{
+		StandAndConnect();
+		var measured = 0;
+		var tell = state.QueueRemeasured;
+		state.QueueRemeasured = id => { measured++; tell?.Invoke( id ); };
+		Assert.IsTrue( ParkPathBuilding.ClearPathCell( state, world, 19, 10, stepped: true ) );
+		Assert.IsFalse( ParkRideOperation.BackOfQueueConnected( world, Ride ) );
+		Assert.AreEqual( 0, measured, "a path beside a queue cell is not an entrance: nothing is measured" );
+		AssertOpen();
+		Assert.AreEqual( 22, UI.ParkClosedStatus.For( world, Ride ) );
+		Connect();
+		state.RemeasureQueue( Bought );
+		AssertOpen();
+		Assert.AreEqual( 0, UI.ParkClosedStatus.For( world, Ride ) );
+	}
+
+	[TestMethod]
+	public void AMeasureOfADisconnectedQueueKeepsTheDoorTheRidersAndTheNominee()
 	{
 		StandAndConnect();
 		var guest = people.Peeps.First();
 		guest.MajorDest = Bought;
 		guest.SetState( PeepState.Riding, tick: 1, new System.Random( 1 ) );
 		Script.Set( ParkRideOperation.OnRideVariable, 1 );
-		state.NominateForLoading( Bought, people.Peeps.Skip( 1 ).First().ThingId );
+		var nominee = people.Peeps.Skip( 1 ).First().ThingId;
+		state.NominateForLoading( Bought, nominee );
 		var tail = state.Record( 20, 10 );
 		state.SetRecord( 20, 10, tail with { Neighbours = tail.Direction } );
 		state.RemeasureQueue( Bought );
-		AssertClosed();
-		Assert.AreEqual( 0, state.PersonBeingLoaded( Bought ) );
+		Assert.IsFalse( ParkRideOperation.BackOfQueueConnected( world, Ride ) );
+		AssertOpen();
+		Assert.AreEqual( nominee, state.PersonBeingLoaded( Bought ) );
 		Assert.AreEqual( PeepState.Riding, guest.State );
 		Assert.AreEqual( 1, Script[ParkRideOperation.OnRideVariable] );
 		Assert.AreEqual( Bought, guest.MajorDest );
 	}
 
+	/// <summary><c>FUN_004df390</c> opens whatever its guard answers; the closed, disconnected status is 23.</summary>
 	[TestMethod]
-	public void AnOpenRequestCannotLowerDisconnectedHoardings()
+	public void AnOpenRequestOpensADisconnectedRide()
 	{
-		Construct( 1100 );
-		var operation = new ParkRideOperation( state, people.Guests );
-		// Bind the script without the purchase close to exercise an inconsistent open record as well.
-		Assert.IsTrue( catalogue.TryGet( 1100, out var item ) );
-		rides.BindNew( Ride, item );
-		operation.Open( Script, Bought );
-		AssertClosed();
+		var item = Construct( 1100 );
+		ParkBuilding.BindOperation( state, rides, Ride, item );
+		Assert.AreEqual( 0, Ride.CanLoad );
+		Assert.AreEqual( 23, UI.ParkClosedStatus.For( world, Ride ) );
+		new ParkRideOperation( state, people.Guests ).Open( Script, Bought );
+		Assert.AreEqual( 1, Ride.CanLoad );
+		Assert.AreEqual( 0, Script[ParkRideOperation.ClosedVariable] );
+		Assert.AreEqual( -0.3f, state.HoardingFor( Bought )!.Rate );
+		Assert.AreEqual( 22, UI.ParkClosedStatus.For( world, Ride ) );
 	}
 
+	/// <summary>Loading a park closes nothing: a ride keeps the door its save gave it, queue joined or not.</summary>
 	[TestMethod]
 	[DataRow( 0 )]
 	[DataRow( 1 )]
-	public void LoadedDisconnectedRidesHaveClosedScriptsAndRaisedHoardings( int canLoad )
+	public void ALoadedDisconnectedRideKeepsItsSavedDoor( int canLoad )
 	{
 		var item = Construct( 1100 );
 		rides.BindNew( Ride, item );
@@ -177,7 +185,9 @@ public class ParkBoughtClosedTests
 		Entity.ApplyDeletions();
 		people = new( world, new ParkBalance( "jungle", easyMode: true ), null, state, catalogue,
 			id => rides.Scheduler.Find( rides.ScriptFor( id ) ) );
-		AssertClosed();
+		Assert.AreEqual( canLoad, Ride.CanLoad );
+		Assert.AreEqual( 0, Script[ParkRideOperation.ClosedVariable], "the script is as it was bound" );
+		Assert.AreEqual( 0f, state.HoardingFor( Bought )!.Rate );
 	}
 
 	private void Connect()

@@ -1279,7 +1279,7 @@ public static class ParkPathBuilding
 
 			Unimplemented.Report( "QUEUE_DRAIN_ADVISOR_0xCB" );
 
-			state.RemeasureQueue( placed.ThingId, removing: true );
+			state.RemeasureQueue( placed.ThingId );
 		}
 
 		// The call that finds one entry left writes the count back to 1 and re-arms mode 3 too (0x005300a6), and
@@ -1595,8 +1595,6 @@ public static class ParkPathBuilding
 	internal static void Unlink( ParkState state, IParkInitialState park, int x, int y, bool remeasureEntrances = false )
 	{
 		var cell = ParkState.CellFor( park, x, y );
-		var queueOwners = new HashSet<int>();
-		var entranceOwners = new HashSet<int>();
 
 		foreach ( var (bit, acrossBy, downBy) in Sides )
 		{
@@ -1618,25 +1616,12 @@ public static class ParkPathBuilding
 
 			// ClearCell measures each cardinal entrance after BOTH link bits go, before the next side.
 			// Forced queue-over-path clearing does too (0x0053694b; docs/exe/ride-operation.md, Q86).
-			// Queue-tail notification is part of Q93 closure: disconnecting closes the ride.
 			if ( remeasureEntrances && cell.Type == PathType && nb.Type == CellEdge.RideEnd
 				&& bit is 0x01 or 0x04 or 0x10 or 0x40 && OwnerOf( state, nb ) is var owner && owner != 0 )
 			{
 				Log.Info( $"Path clear: ({x},{y}) unlinked entrance ({x + acrossBy},{y + downBy}), remeasuring thing {owner}" );
-				entranceOwners.Add( owner );
 				state.RemeasureQueue( owner );
 			}
-			else if ( remeasureEntrances && cell.Type == PathType && nb.Type == ParkRideChoice.QueueCellType
-				&& bit is 0x01 or 0x04 or 0x10 or 0x40 && OwnerOf( state, nb ) is var queueOwner && queueOwner != 0 )
-				queueOwners.Add( queueOwner );
-		}
-
-		// A removed entrance has already measured zero cells. Do not ask that queue's nominee twice;
-		// otherwise measure each affected tail once after all this path cell's links are gone.
-		foreach ( var owner in queueOwners.Except( entranceOwners ) )
-		{
-			Log.Info( $"Path clear: ({x},{y}) unlinked queue, remeasuring thing {owner}" );
-			state.RemeasureQueue( owner );
 		}
 	}
 

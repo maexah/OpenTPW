@@ -8,7 +8,7 @@ Last updated: 2026-10-04. **This header names no branch and no sha, deliberately
 - **Objects keep their own saved cost of goods and chance of winning** (Q97). The sideshow price-opinion prize, rolls, excitement and settlement use them; the price-opinion base uses catalogue InitCostOfGoods (Q207). Stock and labelled-fixture screenshots/censuses match predicted 50/25 → 80/58 for the Jungle Spray.
 - **Console path placement uses the player verdict** (Q94). Connected queue cells refuse with no charge or edit. Legal detached-tail cuts are photographed; predicted census confirms 12 → 8 → 4 queuers, eight releases at happiness 35.
 
-- **Queued rides stay closed with hoardings raised until their queue connects** (Q93). A bought Belly Bounce opens on connection and carries a visible rider. Queue editing and path-tail removal close it again; reconnecting retracts the panels. Demolition keeps its existing guest penalties.
+- **A bought ride with a queue starts closed and opens when its queue joins a path** (Q93); **an open ride whose queue is cut off stays open** and its window reads QUEUE NOT CONNECTED (Q208), as the original's does: the reference park under Proton kept `+0x68` at 1 with the path at the Belly Bounce's queue tail cleared.
 
 - **The ride window closes and reopens its ride** (Q92), showing CLOSED and a grey all-items row. Belly Bounce matches predicted `canload` 1 → 0 → 1, with screenshots and 13-peep censuses. Disconnected-queue wording and disabled reopening are tested.
 
@@ -52,7 +52,7 @@ Last updated: 2026-10-04. **This header names no branch and no sha, deliberately
 
 - Q97 payouts and actual win outcomes: tested only; window setters wait for Q31. Shared RNG parity remains unbuilt. Played jungle save loads objects but rendering crashes on duplicate sprite key 0; runtime proof uses a labelled shipped-park fixture.
 
-- Q93 loaded-disconnected initialization and direct reopening guard: tested only. Successful moved placement: code-reviewed. The original's broader disconnection closure mechanism remains unlocated; the purchase close is verified in Ghidra.
+- Q208: only path clearing was tried in the original; its queue-edit button was pressed but no queue was re-laid. The status box's lettering is smaller than the original's (Q213). Q93's moved placement: code-reviewed only.
 
 - Q92 disconnected-queue and other reopening guards: tested only. Complete object statuses and covered-model preview layering remain unbuilt; paused peeps do not prove queue draining or boarding.
 
@@ -76,9 +76,9 @@ Last updated: 2026-10-04. **This header names no branch and no sha, deliberately
 | | | measured |
 |---|---|---|
 | Opcodes | **77** of 106 | 2026-10-01, `case Opcode.` labels vs enum members, after Q87 |
-| Tests | **1752**, 0 fail, 0 skip with the game | 2026-10-03, Q97 |
-| Tests without the game | **647** ran, **928** skipped, of 1575 | 2026-10-01, after Q87 |
-| Build warnings | 121 | 2026-10-03, archive exact reads |
+| Tests | **1764**, 0 fail, 0 skip with the game | 2026-10-04, Q208, alone in a worktree |
+| Tests without the game | **731** ran, **1033** skipped, of 1764 | 2026-10-04, Q208 |
+| Build warnings | 121 | 2026-10-04, Q208 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent
@@ -89,7 +89,7 @@ Last updated: 2026-10-04. **This header names no branch and no sha, deliberately
 
 **2026-10-03 (Q94).** Shared path verdict; connected stock queue refuses with screenshot and predicted zero-edit/$0 census. Legal tail cuts restage Q50: 12→8→4 queuers, eight predicted happiness 50→35 releases. Eleven new tests; eight fail with the original method restored; 1,738 pass after rebuilding; independent applied review passed. Admission/choice were instruments; nominee/state-14 exemptions and post-cut walking were not reconfirmed. `docs/exe/ride-operation.md`, Q94.
 
-**2026-10-03 (Q93).** Bought queued rides close after script binding; live disconnection, path-tail removal and loaded disconnected records also close them. Screenshots and predicted census confirm canload 0→1, 12 hoarding panels raised/retracted, guest 35 aboard, and close/reopen after queue editing. Actual path removal closes too; overlapping path needed three delete presses. Nine regressions and nine mutation failures; full suite 1727 passes. Independent applied review passed. `docs/exe/ride-operation.md`, Q93.
+**2026-10-04 (Q208).** Q93's close on a cut-off queue taken out: the original leaves the ride open (three callers of `FUN_004df300`, none an edit; seen in the reference park, `+0x68` 1, "LINE NOT CONNECTED"). Status 22 built. OpenTPW photographed beside the original after the same path clear: `canload 1`, no hoarding. Four tests rewritten; four restored bugs each fail. Found by the 2026-10-04 review of the 24 commits of 2026-10-03/04, whose other findings are Q209 to Q217. **2026-10-03 (Q93).** Bought queued rides close after script binding; canload 0→1 on connection, 12 hoarding panels raised and retracted, guest 35 aboard. `docs/exe/ride-operation.md`, Q93.
 
 **2026-10-03 (Q92).** Ride-window close/reopen, ordinary closed status, guard and row colour implemented. Real-pointer screenshots and predicted `canload` 1→0→1 / 13 peeps match. Seven regressions pass; six logical mutations and one screen mutation fail. The screen check found and fixed label occlusion; the restored lettering has 216 predicted grey pixels. Independent applied review through relayed evidence passed. `docs/exe/ride-window-door.md`.
 

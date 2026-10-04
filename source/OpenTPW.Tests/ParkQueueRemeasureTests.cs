@@ -205,7 +205,7 @@ public class ParkQueueRemeasureTests
 				ParentId = owned ? (ushort)MapStep.CellId( ride.CellX, ride.CellY ) : (ushort)0
 			} );
 			var measured = 0;
-			park.State.QueueRemeasured = ( id, _ ) =>
+			park.State.QueueRemeasured = id =>
 			{
 				++measured;
 				Assert.AreEqual( BellyBounce, id );
@@ -242,7 +242,7 @@ public class ParkQueueRemeasureTests
 					ParentId = (ushort)MapStep.CellId( ride.CellX, ride.CellY )
 				} );
 			var masks = new System.Collections.Generic.List<byte>();
-			park.State.QueueRemeasured = ( id, _ ) => masks.Add( ParkState.CellFor( park.World, 20, 20 ).Neighbours );
+			park.State.QueueRemeasured = id => masks.Add( ParkState.CellFor( park.World, 20, 20 ).Neighbours );
 
 			ParkPathBuilding.ForceClearPath( park.State, park.World, 20, 20 );
 

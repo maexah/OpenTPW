@@ -4117,6 +4117,19 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   drops, sprite censuses and screenshots; five defect/mapping mutations fail; restored 1,764-test suite has no skips.
   Branch `alexah/270-audit-fixes`. Evidence and remaining limits: `docs/exe/park-engine.md`, "Fresh staff sprites";
   pricing `docs/exe/ride-operation.md`, Q207; profiles `docs/exe/saves.md`, preservation policy.
+- [x] **Q208. An open ride whose queue is cut off stays open.** Found by the 2026-10-04 review of Q93. Q93 built a
+  close for every queued ride whose queue leaves the path (on a measure, on a path clear beside the tail, on load, and
+  in `Open`), which the original does not have: `FUN_004df300` has three callers and none is an edit, the tail of
+  `FUN_004de1f0` only reopens, `FUN_005367a0` measures only a type-1 cell beside a type-9, and `FUN_004df390` opens
+  whatever its guard answers. Take the four out, build status 22 (UITEXT 388, 255/150/30), and correct
+  `ride-operation.md`. Confirm: in the original, clear the path at the Belly Bounce's queue tail and read `+0x68` and
+  its window; then the same in OpenTPW.
+  **Done 2026-10-04**, `alexah/271-open-rides-stay-open-with-a-detached-queue`. The original (reference park under
+  Proton, Backspace on the path cell at the tail): `+0x68` 1 at park ticks 7219 and 8331, queue length 4, the box
+  reading "LINE NOT CONNECTED", the door's light green. OpenTPW, predicted first, `delpath 48 22`: `canload 1`, no
+  "Closing" line, hoarding 13 at progress 0, the box "QUEUE NOT CONNECTED" in orange, photographed beside the
+  original's. Four tests rewritten to the original; four ways of putting the bug back each fail one or two of them.
+  Not done: the box's lettering is smaller than the original's (Q213); no test runs `ParkBuilding.Buy` (Q211).
 
 ## B. Docs and comments
 
