@@ -55,12 +55,6 @@ as `r-f1` names a verdict in its results file (`CLAUDE.local.md` says where).
   window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
   together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
 
-- [ ] **Q98b. Build the spot animations.** Q98's decode is `ride-operation.md`, "Spot animations - `FUN_004fc800` and
-  state 8". Build `FUN_004fc800` (the request, the stamp, the saved state, state 8, the yawn for an id whose low nibble
-  is nought) and state 8's return through the saved state's own SetState; call it from the queue turn's two arms and
-  retire `QUEUE_SPOT_ANIMATION`. The state-6 callers stay with their own items (Q107's 4, Q111's 5 and 7): say so at
-  each site. Confirm: `peeps` over a queue at happiness 90, predicted first - a queuer in state 8 for eleven sweeps of
-  every 31 - and the jump photographed with `pause` and `step`; the same at happiness 15 for the hands on hips.
 - [ ] **Q99. The board arm's put-out when no route is found.** Found by Q50d. The original forgets a guest called
   forward and puts them out when `FUN_004fa5f0` fails (`0x0050010a`); `QueueTurn` counts it (`QUEUE_BOARD_NO_ROUTE`)
   and walks them on. The stand point is on the entry cell (`FUN_004dedf0(0)`, `ride-operation.md`, "Leaving a

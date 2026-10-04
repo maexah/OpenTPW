@@ -919,19 +919,20 @@ walk in turn. **Counted:** the no-route board (`QUEUE_BOARD_NO_ROUTE`: ours rout
 the stand point on the same cell, and `FUN_004fa5f0` also fails without routing on `mStrandedTime` at `+0x198`,
 `0x004fa62a`, that nothing here keeps: nought on the queue paths but from a save), the dirt gate (`QUEUE_TOILET_DIRT_GATE`), the
 coaster's record (`QUEUE_TURN_COASTER_TRACK_RECORD`, let through), the
-thoughts, the spot animations (`QUEUE_SPOT_ANIMATION`), the heading (`QUEUE_TURN_HEADING`) and boredom
-(`QUEUE_TURN_BOREDOM`). **The unhappy arm runs the common leave path** (Q85b), after the same mood gap;
+thoughts, the heading (`QUEUE_TURN_HEADING`) and boredom
+(`QUEUE_TURN_BOREDOM`). **The two spot animations are built** (`PeepBehaviour.PlaySpotAnimation`, below). **The unhappy arm runs the common leave path** (Q85b), after the same mood gap;
 its thought `0xb` remains counted (`QUEUE_TURN_THOUGHT_0xB`). New arrivals start at the constructor's 50
 ([guest-arrivals.md](guest-arrivals.md)). 5b's built half is
 dead by content: the shipped park places nothing tracked, nothing here sets `mIsTrackRideValid`, and the choice
 sends nobody to a car track without it, so only a save holding a queue for an invalid Dino Karts (item 1150, the
-jungle's one car track) reaches it. With spot animations unbuilt `TimeOfLastSpotAnim` stays at nought, and the thing
-tick is `GameClock.Ticks` over eight, which is not reset on entering a park: a queuer's mood is read on every turn and
-the window is not reached once the lobby has run about seven seconds.
+jungle's one car track) reaches it. A guest who has played no spot animation has `TimeOfLastSpotAnim` at nought, and the
+thing tick is `GameClock.Ticks` over eight, which is not reset on entering a park: their mood is read on their first turn
+in a queue once the lobby has run about seven seconds, and the window is reached only after a spot animation.
 
 #### Spot animations - `FUN_004fc800` and state 8
 
-Decoded 2026-10-04 (`docs/QUEUE.md` Q98), from the disassembly; not built (Q98b).
+Decoded from the disassembly (`docs/QUEUE.md` Q98). The function, state 8's turn and the queue turn's two calls are
+built (Q98b); the deciding turn's three calls are not (Q107, Q111).
 
 **`FUN_004fc800( n )`**, a guest thiscall, in order:
 
@@ -986,9 +987,19 @@ takes the window's heading turn until the 30th, and jumps again on the 31st: abo
 guest above 80 jumps every 101 sweeps, about 25 s. A queuer at 10..19 stands hands on hips on the same 31-sweep
 round. While any of them is in state 8 the state-11 turn does not run: no mood, toilet, drift or board arm.
 
-**OpenTPW has the parts and plays none**: `SpriteScript` holds scripts 4, 5 and 7, `Peep.NextAnimation` is the
-`+0x10` request, `PeepState.PlayingSpotAnimation` stamps `TimeOfLastSpotAnim`, and `Peep.SavedState` is read from the
-save. Nothing sets the request to 4, 5 or 7, and state 8's turn only stands (`QUEUE_SPOT_ANIMATION`).
+**In OpenTPW** `PeepBehaviour.PlaySpotAnimation` is `FUN_004fc800` without its step 1: the yawn
+(`PeepBehaviour.Yawns`, `ParkAudio.Yawn`, at the level `ParkAudio.PutOff` stands in with), the request
+(`Peep.NextAnimation`), the saved state and SetState(8), which stamps `TimeOfLastSpotAnim`. `PeepBehaviour.Step`'s
+case for state 8 is the return. The queue turn's two arms call it; the deciding turn's three do not yet (Q107's 4,
+Q111's 5 and 7). A guest in state 8 is held by a thing when the saved state is (`PeepBehaviour.HeldByAThing( Peep )`),
+so `Step`'s exit-level arm, which is this build's own (Q109), leaves a jumping queuer in the queue.
+
+**Measured in the running game** (`q98bconfirm.py`, two runs, guests made with `admit` and sent with `send`, happiness
+held with `happy`): at 90, 75 of 75 jumps returned 11 sweeps after they began and 59 of 59 repeats by a guest still
+`InQueue` came 31 after the last; at 15, 72 of 72 and 56 of 57, the other 32. No other number was played at either
+level. Guest 48 yawned on each of its five starts of 4 and on none of its ten of 5. A re-take walk on the mood's own
+turn saves 12, and twice the return was to `SteppingUpQueue`. The sprite showed set 12 and set 14 while playing and
+set 0 after. The yawn's samples have not been listened to.
 
 #### At the door - `FUN_005006b0` and `FUN_004fde50`
 

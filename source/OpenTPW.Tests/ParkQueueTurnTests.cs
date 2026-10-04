@@ -159,7 +159,7 @@ public class ParkQueueTurnTests
 
 	/// <summary>
 	/// <b>The toilet is asked about only from happiness 20 to 80</b>: above it the guest plays a spot animation
-	/// (<c>0x0050031e</c>), from 10 to 19 another (<c>0x00500336</c>), each counted, and neither leaves. The
+	/// (<c>0x0050031e</c>), from 10 to 19 another (<c>0x00500336</c>), and neither leaves. The
 	/// happiness is a truncated byte as well, so 80.9 is 80 and 19.9 is 19.
 	/// </summary>
 	[TestMethod]
@@ -180,7 +180,10 @@ public class ParkQueueTurnTests
 			}
 			else
 			{
-				AssertQueueing( peep, $"happiness {happiness} is not asked", happiness: happiness );
+				Assert.AreEqual( PeepState.PlayingSpotAnimation, peep.State, $"happiness {happiness} is not asked" );
+				Assert.AreEqual( PeepState.InQueue, peep.SavedState, $"happiness {happiness} will queue again" );
+				Assert.AreEqual( happiness, peep.Happiness, 0.001f, $"happiness {happiness} loses nothing" );
+				Assert.AreEqual( 0, park.State.PositionInQueue( BellyBounce, peep.ThingId ), "and keeps the place" );
 			}
 		}
 	}
@@ -244,17 +247,138 @@ public class ParkQueueTurnTests
 		}
 	}
 
+	/// <summary>
+	/// The truncated low byte picks the arm: ten to nineteen stands hands on hips, and a negative happiness, whose
+	/// byte is above eighty, jumps. Neither takes the unhappy exit.
+	/// </summary>
 	[TestMethod]
 	public void HappinessTenAndNegativeLowBytesDoNotTakeTheUnhappyExit()
 	{
-		foreach ( var happiness in new[] { 10f, 10.9f, 19.9f, 266f, -1f } )
+		foreach ( var (happiness, animation) in new[] { (10f, 4), (10.9f, 4), (19.9f, 4), (266f, 4), (-1f, 5) } )
 		{
 			var park = Open();
 			var peep = Guest( 30, happiness: happiness );
 			Join( park, peep );
 			Turn( park, peep, tick: 31 );
-			AssertQueueing( peep, "not below ten after truncation and byte narrowing", happiness: happiness );
+
+			Assert.AreEqual( PeepState.PlayingSpotAnimation, peep.State, $"happiness {happiness} plays one" );
+			Assert.AreEqual( animation, peep.NextAnimation, $"happiness {happiness}'s animation" );
+			Assert.AreEqual( BellyBounce, peep.MajorDest, "still naming it" );
+			Assert.AreEqual( happiness, peep.Happiness, 0.001f, "and losing nothing" );
+			Assert.AreEqual( 0, park.State.PositionInQueue( BellyBounce, peep.ThingId ), "still in the queue" );
 		}
+	}
+
+	/// <summary>
+	/// <b>A queuer above 80 jumps on every 31st sweep and is out of the queue's turn for eleven of them</b>
+	/// (<c>FUN_004fc800</c> from <c>0x00500324</c>; the return at <c>0x00501d3b</c>): the sprite is asked for
+	/// animation 5, the state is saved and stamped, ten turns only stand, and the eleventh enters the queue's
+	/// state again, which asks for the stand and stamps the idling time.
+	/// </summary>
+	[TestMethod]
+	public void AHappyQueuerJumpsStandsTenSweepsAndReturnsOnTheEleventh()
+	{
+		var park = Open();
+		var peep = Guest( 30, happiness: 90f, toilet: 90f );
+
+		Join( park, peep );
+		Turn( park, peep, tick: 31 );
+
+		Assert.AreEqual( PeepState.PlayingSpotAnimation, peep.State, "the mood read starts the jump" );
+		Assert.AreEqual( PeepState.InQueue, peep.SavedState, "the queue's state is saved" );
+		Assert.AreEqual( PeepBehaviour.SpotHappy, peep.NextAnimation, "the sprite is asked for animation 5" );
+		Assert.AreEqual( 140, SpriteScript.EntryFor( peep.NextAnimation ), "which is the jump's script" );
+		Assert.AreEqual( 31, peep.TimeOfLastSpotAnim, "stamped" );
+		Assert.IsTrue( ParkRideOperation.IsQueueing( peep ), "still queueing to the ride" );
+
+		peep.NextAnimation = 0;
+
+		for ( var tick = 32; tick <= 41; tick++ )
+		{
+			Turn( park, peep, tick );
+			Assert.AreEqual( PeepState.PlayingSpotAnimation, peep.State, $"sweep {tick} only stands" );
+			Assert.AreEqual( 0, peep.NextAnimation, $"sweep {tick} asks the sprite for nothing" );
+		}
+
+		Turn( park, peep, tick: 42 );
+		AssertQueueing( peep, "the eleventh sweep returns", happiness: 90f );
+		Assert.AreEqual( (int)PeepAnimation.Stand, peep.NextAnimation, "through the queue state's own entry: the stand" );
+		Assert.AreEqual( 42, peep.TimeStartedIdling, "and its idling stamp" );
+		Assert.AreEqual( 31, peep.TimeOfLastSpotAnim, "the return stamps no spot animation" );
+
+		for ( var tick = 43; tick <= 61; tick++ )
+		{
+			Turn( park, peep, tick );
+			AssertQueueing( peep, $"sweep {tick} is inside the thirty", happiness: 90f );
+		}
+
+		Turn( park, peep, tick: 62 );
+		Assert.AreEqual( PeepState.PlayingSpotAnimation, peep.State, "the 31st sweep after the jump jumps again" );
+		Assert.AreEqual( 62, peep.TimeOfLastSpotAnim );
+	}
+
+	/// <summary>The jump is for a happiness byte above 80 (<c>0x0050031c</c>), hands on hips for 10 to 19 (<c>0x00500330</c>, <c>0x00500334</c>).</summary>
+	[TestMethod]
+	public void TheSpotAnimationIsPickedByTheHappinessByte()
+	{
+		foreach ( var (happiness, expected) in new[] { (81f, 5), (100f, 5), (80.9f, 0), (20f, 0), (19f, 4), (10f, 4) } )
+		{
+			var park = Open();
+			var peep = Guest( 30, happiness: happiness );
+
+			Join( park, peep );
+			Turn( park, peep, tick: 31 );
+
+			if ( expected == 0 )
+			{
+				AssertQueueing( peep, $"happiness {happiness} plays nothing", happiness: happiness );
+				Assert.AreEqual( 0, peep.TimeOfLastSpotAnim );
+				continue;
+			}
+
+			Assert.AreEqual( PeepState.PlayingSpotAnimation, peep.State, $"happiness {happiness}" );
+			Assert.AreEqual( expected, peep.NextAnimation, $"happiness {happiness}'s animation" );
+			Assert.AreEqual( expected == 4 ? 100 : 140, SpriteScript.EntryFor( peep.NextAnimation ) );
+		}
+	}
+
+	/// <summary>
+	/// <b>A queuer playing a spot animation is still held by their queue</b>: a day that runs out does not send
+	/// them home from the middle of it, and they cannot be taken out of the park.
+	/// </summary>
+	[TestMethod]
+	public void AQueuerPlayingASpotAnimationIsStillHeld()
+	{
+		var park = Open();
+		var peep = Guest( 30, happiness: 90f );
+
+		Join( park, peep );
+		Turn( park, peep, tick: 31 );
+		Assert.AreEqual( PeepState.PlayingSpotAnimation, peep.State );
+		Assert.IsTrue( PeepBehaviour.HeldByAThing( peep ), "held through the saved state" );
+
+		peep.ExitLevel = 0;
+		Turn( park, peep, tick: 32 );
+
+		Assert.AreEqual( PeepState.PlayingSpotAnimation, peep.State, "not sent home" );
+		Assert.AreEqual( 0, park.State.PositionInQueue( BellyBounce, peep.ThingId ), "and still in the queue" );
+
+		var deciding = Guest( 31 );
+		deciding.SavedState = PeepState.Deciding;
+		deciding.SetState( PeepState.PlayingSpotAnimation, tick: 31, new Random( 1 ) );
+		Assert.IsFalse( PeepBehaviour.HeldByAThing( deciding ), "one who will return to deciding is nobody's" );
+	}
+
+	/// <summary>Only animation 4 yawns, and only for an id whose low nibble is nought (<c>0x004fc82e</c>, <c>0x004fc83f</c>).</summary>
+	[TestMethod]
+	public void OnlyTheBoredStandOfOneGuestInSixteenYawns()
+	{
+		Assert.IsTrue( PeepBehaviour.Yawns( 4, 32 ) );
+		Assert.IsTrue( PeepBehaviour.Yawns( 4, 0x130 ) );
+		Assert.IsFalse( PeepBehaviour.Yawns( 4, 33 ) );
+		Assert.IsFalse( PeepBehaviour.Yawns( 4, 40 ), "eight is the put-off's divisor, not this one's" );
+		Assert.IsFalse( PeepBehaviour.Yawns( 5, 32 ) );
+		Assert.IsFalse( PeepBehaviour.Yawns( 7, 32 ) );
 	}
 
 	/// <summary>

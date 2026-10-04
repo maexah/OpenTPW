@@ -4192,6 +4192,14 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   happy, 4 bored, 7 the vomit), state 8 returning on the eleventh sweep, scripts and picture sets 14, 12 and 6 in all
   twelve guest banks of 46, effect `0x7e` three yawns. `ride-operation.md`, "Spot animations". Nothing built, nothing
   run in the game; Q98b carries the build and its confirmation.
+- [x] **Q98b. Build the spot animations.** Q98's decode is `ride-operation.md`, "Spot animations - `FUN_004fc800` and
+  state 8". Build `FUN_004fc800` (the request, the stamp, the saved state, state 8, the yawn for an id whose low nibble
+  is nought) and state 8's return through the saved state's own SetState; call it from the queue turn's two arms and
+  retire `QUEUE_SPOT_ANIMATION`. The state-6 callers stay with their own items (Q107's 4, Q111's 5 and 7): say so at
+  each site. Confirm: `peeps` over a queue at happiness 90, predicted first - a queuer in state 8 for eleven sweeps of
+  every 31 - and the jump photographed with `pause` and `step`; the same at happiness 15 for the hands on hips.
+  Done 2026-10-04: `PeepBehaviour.PlaySpotAnimation` and state 8's return; `QUEUE_SPOT_ANIMATION` is gone. In two
+  runs 147 of 147 starts returned 11 sweeps on and 115 of 116 repeats came 31 on; sets 12 and 14 photographed.
 
 ## B. Docs and comments
 

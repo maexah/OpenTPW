@@ -576,6 +576,36 @@ public sealed class ParkAudio : Entity
 	private const int PutOffEffect = 0x80;
 
 	/// <summary>
+	/// The kids' effect <c>0x7e</c>, a yawn, which the original plays at a guest starting spot animation 4 when
+	/// their id's low nibble is nought (<c>FUN_004fc800</c>, <c>0x004fc84e</c>). What the three samples say has
+	/// not been checked by listening; they are named <c>yawn1</c>, <c>yawn2a</c> and <c>yawn3a</c>.
+	/// </summary>
+	/// <remarks>
+	/// The engine sets no level for it, as for <see cref="PutOff"/>, so it plays at the same declared stand-in,
+	/// and it is not held back by the repeat delay.
+	/// </remarks>
+	/// <returns>Whether anything started.</returns>
+	internal bool Yawn( Vector3 at )
+	{
+		if ( !Audio.Ready || _kids is not { IsValid: true } )
+			return false;
+
+		var voice = _kids.Play( YawnEffect, SingleScreamVolume, respectDelay: false, bus: AudioBus.Effects,
+			position: at );
+
+		if ( voice == null )
+			return false;
+
+		Log.Info( $"Park audio: yawn, effect {YawnEffect} sample '{voice.Name}' "
+			+ $"at ({at.X:0.0},{at.Y:0.0},{at.Z:0.0})" );
+
+		return true;
+	}
+
+	/// <summary>The kids' category effect a bored guest's yawn plays - see <see cref="Yawn"/>.</summary>
+	private const int YawnEffect = 0x7e;
+
+	/// <summary>
 	/// <c>SCREAMLEVEL</c> - moves the parameter of the scream a script is already holding, by the same
 	/// <c>(operand + speed) / 2</c> the start used (<c>FUN_00551290</c>, parameter 6). The chain's later
 	/// children pick their variation by it, and here the newest child's gain follows it too - see

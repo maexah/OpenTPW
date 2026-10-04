@@ -332,16 +332,17 @@ public sealed class PeepBehaviour
 	/// for one whose <c>+0x212</c> names this person and leaves them alone if it finds one. Removing
 	/// somebody a thing still names would leave the thing pointing at nobody.
 	/// </summary>
-	/// <remarks>
-	/// <b>Misses a state-8 queuer, and it is dead by CONTENT, not a defect.</b> Unlike
-	/// <see cref="ParkRideOperation.IsQueueing"/>, this does not read <c>SavedState</c> when
-	/// <paramref name="state"/> is <see cref="PeepState.PlayingSpotAnimation"/>, so a guest a thing still
-	/// names while playing one would read as not held. Nothing sets a guest to that state - playing a spot
-	/// animation is unbuilt (Q98) - so the case cannot be reached; it becomes live the day that is built.
-	/// </remarks>
 	internal static bool HeldByAThing( PeepState state )
 		=> state is PeepState.InQueue or PeepState.SteppingUpQueue or PeepState.BeingAdmitted
 			or PeepState.EnteringRide or PeepState.Riding or PeepState.LeavingRide;
+
+	/// <summary>
+	/// <see cref="HeldByAThing(PeepState)"/> for a guest: one playing a spot animation is held when the state
+	/// they will return to is, as <see cref="ParkRideOperation.IsQueueing"/> reads it (<c>FUN_00502430</c>), so
+	/// a queuer in the middle of a jump is still their queue's.
+	/// </summary>
+	internal static bool HeldByAThing( Peep peep )
+		=> HeldByAThing( peep.State == PeepState.PlayingSpotAnimation ? peep.SavedState : peep.State );
 
 	/// <summary>
 	/// One turn of one guest's behaviour.
@@ -384,7 +385,7 @@ public sealed class PeepBehaviour
 		// docking nothing. A guest a thing is holding is left alone, for the reason Leaving is.
 		if ( peep.ExitLevel <= 0
 			&& peep.State is not (PeepState.HeadingForExit or PeepState.Leaving)
-			&& !HeldByAThing( peep.State )
+			&& !HeldByAThing( peep )
 			&& Admission is { } goingHome )
 		{
 			SendTo( peep, walk, EitherOf( goingHome.BusStopA, goingHome.BusStopB ) );
@@ -691,15 +692,25 @@ public sealed class PeepBehaviour
 			case PeepState.Leaving:
 				break;
 
-			// <b>Four states answered by standing still, each saying what it waits on.</b> Nothing here sets
-			// 8 or 9; HeadingForExit and WalkingOutside set 19 and 21, and ParkPeople takes a guest in 19 out
+			// Playing a spot animation - FUN_005019f0 case 8 (0x00501d26): they stand, with no walk tick,
+			// until the sweep counter is more than SpotAnimationSweeps past the stamp, then enter the state
+			// PlaySpotAnimation saved through its own SetState (FUN_004fc890), which asks for that state's
+			// animation and, for the queue, stamps the idling time and derives the move delay again.
+			case PeepState.PlayingSpotAnimation:
+				if ( (uint)tick > (uint)(peep.TimeOfLastSpotAnim + SpotAnimationSweeps) )
+				{
+					peep.SetState( peep.SavedState, tick, _random );
+
+					Log.Info( $"Person {peep.ThingId}: spot animation over at tick {tick}, back to {peep.State}" );
+				}
+
+				break;
+
+			// <b>Three states answered by standing still, each saying what it waits on.</b> Nothing here sets
+			// 9; HeadingForExit and WalkingOutside set 19 and 21, and ParkPeople takes a guest in 19 out
 			// of the park. A case that breaks looks exactly like a missing case on screen - the guest stands
 			// still either way - so the difference has to be written down, and UnansweredState is what lets
 			// the program itself tell them apart.
-			//
-			// PlayingSpotAnimation (8) returns to SavedState once ten ticks have passed in the original
-			// (FUN_004fc890). Neither that return nor anything that PLAYS a spot animation is built (Q98),
-			// so this case only stands the guest still.
 			//
 			// <b>GoingToMinorDestination (9) is a LITTER-BIN ERRAND.</b> FUN_004fec90 sets it at 004fedf6, when
 			// the guest's litter (+0x1b4) reaches 90 and FUN_00500dc0 (at 004feddd) finds the nearest thing
@@ -717,7 +728,6 @@ public sealed class PeepBehaviour
 			// for its script state, FUN_0051aad0 for whether one is here. The bus runs its script
 			// (ParkFixedItems stands it, ParkRides binds it). Both stay unbuilt until their decode is checked
 			// whole (Q128).
-			case PeepState.PlayingSpotAnimation:
 			case PeepState.GoingToMinorDestination:
 			case PeepState.PickingACellOutside:
 			case PeepState.AtTheBusStop:
@@ -1069,7 +1079,8 @@ public sealed class PeepBehaviour
 	/// <see cref="ChooseSomewhereToGo"/> asks <see cref="ParkRideChooser"/>, which walks the world's object
 	/// list, filters it with <see cref="ParkRideChoice"/> and scores the survivors with
 	/// <see cref="ParkRideScore"/>, whose summary lists its steps. A guest who finds nothing worth more than nine
-	/// does nothing more here; the original also pushes event 1, plays spot animation 4 and docks
+	/// does nothing more here; the original also pushes event 1, plays spot animation 4
+	/// (<see cref="PlaySpotAnimation"/>, which this arm does not call yet) and docks
 	/// <c>SmallHappinessChange</c> (Q107).
 	/// </para>
 	/// <para>
@@ -1077,7 +1088,8 @@ public sealed class PeepBehaviour
 	/// happiness byte is nought, when <c>mExitLevel</c> (<c>+0x1bc</c>) is exactly nought, or when the park has
 	/// shut (<c>docs/exe/ride-operation.md</c>, "The state-6 turn, in order"); only the shut-park test is
 	/// here, and <see cref="Step"/> sends a guest home on the exit level from any state (Q109). The arms
-	/// before the split - a happy spot animation, vomit, litter, watching, pranks - are not built (Q111).
+	/// before the split - spot animation 5 above happiness 80, the vomit and its spot animation 7, litter,
+	/// watching, pranks - are not built (Q111), so no deciding guest reaches <see cref="PlaySpotAnimation"/>.
 	/// </para>
 	/// </summary>
 	private void Decide( Peep peep, PeepWalk walk, int tick )
@@ -1337,6 +1349,18 @@ public sealed class PeepBehaviour
 	/// <summary>How long a queuer stands before boredom would take them - <c>0x00500415</c>. It never does: see <see cref="QueueTurn"/>.</summary>
 	public const int QueueBoredAfter = 100;
 
+	/// <summary>
+	/// How many sweeps past its stamp a spot animation holds its guest - <c>ADD EAX,0xa</c> at <c>0x00501d32</c>.
+	/// The return comes on the first sweep above it, the eleventh after the one that began it.
+	/// </summary>
+	public const int SpotAnimationSweeps = 10;
+
+	/// <summary>Spot animation 4: hands on hips, picture set 14 - a bored or unhappy guest (<c>0x00500387</c>).</summary>
+	public const int SpotBored = 4;
+
+	/// <summary>Spot animation 5: a jump with both arms up, picture set 12 - a happy guest (<c>0x00500320</c>).</summary>
+	public const int SpotHappy = 5;
+
 	/// <summary>Happiness above which a queuer plays spot animation 5 - <c>CMP AL,0x50</c> at <c>0x0050031c</c>.</summary>
 	public const int QueueHappyAbove = 80;
 
@@ -1389,7 +1413,8 @@ public sealed class PeepBehaviour
 	/// to it (<see cref="FindQueueDestination"/>, <c>0x00500532</c>) and the mood still runs on the same turn; one who
 	/// cannot get there is put out (<c>0x005004b3</c>). Otherwise a delay is spent.</item>
 	/// <item><b>The mood</b>, read once <see cref="QueueMoodGap"/> sweeps have passed since a spot animation: above
-	/// <see cref="QueueHappyAbove"/> and from <see cref="QueueUnhappyBelow"/> to 19 a spot animation (counted);
+	/// <see cref="QueueHappyAbove"/> spot animation <see cref="SpotHappy"/> and from <see cref="QueueUnhappyBelow"/>
+	/// to 19 <see cref="SpotBored"/> (<see cref="PlaySpotAnimation"/>), either ending the turn;
 	/// from <see cref="QueueToiletFrom"/> to 80 with a toilet need above <see cref="QueueToiletAbove"/>, thought 4
 	/// (counted), and out unless the thing is a toilet; below <see cref="QueueUnhappyBelow"/>, thought <c>0xb</c>
 	/// (counted), and out by the common leave path.</item>
@@ -1399,10 +1424,11 @@ public sealed class PeepBehaviour
 	/// animation that began the gap, so it cannot be a hundred past within thirty. It is counted, not built.</item>
 	/// </list>
 	/// <para>
-	/// <b>Spot animations are not built</b>, so <see cref="Peep.TimeOfLastSpotAnim"/> stays at nought, which the
-	/// thing tick has passed by more than thirty once the lobby has run about seven seconds: a queuer's mood is read
-	/// on every turn and the window is not reached, where the original's happy guest stands out an animation and the
-	/// gap after it between readings.
+	/// <b>A guest who has played no spot animation has <see cref="Peep.TimeOfLastSpotAnim"/> at nought</b>, which
+	/// the thing tick has passed by more than thirty once the lobby has run about seven seconds, so their mood is
+	/// read on their first turn in a queue. A queuer above <see cref="QueueHappyAbove"/> then jumps on every 31st
+	/// sweep and is in <see cref="PeepState.PlayingSpotAnimation"/> for eleven of them, during which this turn does
+	/// not run: no place, mood, toilet or board arm.
 	/// </para>
 	/// </remarks>
 	private void QueueTurn( Peep peep, PeepWalk walk, int tick )
@@ -1492,7 +1518,7 @@ public sealed class PeepBehaviour
 
 		if ( happiness > QueueHappyAbove )
 		{
-			Unimplemented.Report( "QUEUE_SPOT_ANIMATION" );
+			PlaySpotAnimation( peep, SpotHappy, tick );
 
 			return;
 		}
@@ -1515,7 +1541,7 @@ public sealed class PeepBehaviour
 
 		if ( happiness >= QueueUnhappyBelow )
 		{
-			Unimplemented.Report( "QUEUE_SPOT_ANIMATION" );
+			PlaySpotAnimation( peep, SpotBored, tick );
 
 			return;
 		}
@@ -1523,6 +1549,34 @@ public sealed class PeepBehaviour
 		Unimplemented.Report( "QUEUE_TURN_THOUGHT_0xB" );
 		PutOutOfTheQueue( peep, queueing, tick, "unhappiness" );
 	}
+
+	/// <summary>
+	/// Stops a guest where they stand to play a one-off animation - <c>FUN_004fc800</c>
+	/// (<c>docs/exe/ride-operation.md</c>, "Spot animations"): for <see cref="SpotBored"/> a guest whose id has a
+	/// low nibble of nought yawns (<c>0x004fc83f</c>, no draw taken, so always the same guests); the sprite is
+	/// asked for the animation; the state they are in is saved; and they enter
+	/// <see cref="PeepState.PlayingSpotAnimation"/>, which stamps <see cref="Peep.TimeOfLastSpotAnim"/> and asks for
+	/// no animation of its own. <see cref="Step"/>'s case for that state brings them back.
+	/// </summary>
+	/// <remarks>
+	/// Only the queue turn's two arms call it. The original's other three calls are the deciding turn's
+	/// (Q107's 4, Q111's 5 and 7).
+	/// </remarks>
+	internal void PlaySpotAnimation( Peep peep, int animation, int tick )
+	{
+		if ( Yawns( animation, peep.ThingId ) && ParkGuestSprites.Feet( peep.Navigator.Position ) is { } feet )
+			ParkAudio.Current?.Yawn( feet );
+
+		peep.NextAnimation = animation;
+		peep.SavedState = peep.State;
+		peep.SetState( PeepState.PlayingSpotAnimation, tick, _random );
+
+		Log.Info( $"Person {peep.ThingId}: spot animation {animation} from {peep.SavedState} at tick {tick}, "
+			+ $"happiness {peep.Happiness:0}" );
+	}
+
+	/// <summary>Whether a spot animation starts with a yawn: number 4, for an id whose low nibble is nought (<c>0x004fc82e</c>..<c>0x004fc842</c>).</summary>
+	internal static bool Yawns( int animation, int thingId ) => animation == SpotBored && (thingId & 0xf) == 0;
 
 	/// <summary>
 	/// Where every arm of <see cref="QueueTurn"/> that gives up ends - <c>0x0050049e</c> - and the join's and the

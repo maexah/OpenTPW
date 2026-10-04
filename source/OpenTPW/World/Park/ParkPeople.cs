@@ -1428,7 +1428,7 @@ public sealed class ParkPeople : Entity
 		if ( !_byId.TryGetValue( thingId, out var peep ) )
 			return false;
 
-		if ( PeepBehaviour.HeldByAThing( peep.State ) )
+		if ( PeepBehaviour.HeldByAThing( peep ) )
 			return false;
 
 		GuestLeaving?.Invoke( thingId );

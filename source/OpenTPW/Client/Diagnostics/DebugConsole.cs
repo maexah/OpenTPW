@@ -992,7 +992,7 @@ public static class DebugConsole
 				var leaving = asked != 0
 					? asked
 					: departures.Peeps.FirstOrDefault(
-						peep => !PeepBehaviour.HeldByAThing( peep.State ) )?.ThingId ?? 0;
+						peep => !PeepBehaviour.HeldByAThing( peep ) )?.ThingId ?? 0;
 
 				Reply( leaving != 0 && departures.Depart( leaving )
 					? $"depart: guest {leaving} went home"
