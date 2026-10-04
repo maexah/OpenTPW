@@ -929,6 +929,67 @@ jungle's one car track) reaches it. With spot animations unbuilt `TimeOfLastSpot
 tick is `GameClock.Ticks` over eight, which is not reset on entering a park: a queuer's mood is read on every turn and
 the window is not reached once the lobby has run about seven seconds.
 
+#### Spot animations - `FUN_004fc800` and state 8
+
+Decoded 2026-10-04 (`docs/QUEUE.md` Q98), from the disassembly; not built (Q98b).
+
+**`FUN_004fc800( n )`**, a guest thiscall, in order:
+
+1. `FUN_004754e0` on the sprite at `+0xc`, into four locals nothing reads again.
+2. For `n` 4 only: when the guest's id word has a low nibble of nought (`TEST byte [EAX],0xf` on `FUN_0050b350`'s
+   answer, `0x004fc83f`), `FUN_004faa00( [0x00803a24], 0x7e )`: `cat_kids` effect `0x7e` at the guest. No draw is taken:
+   one guest in sixteen, always the same ones.
+3. `FUN_004217f0( n )` on `+0xc`, which writes `+0x10` = `n`, the animation the sprite is put on next.
+4. `+0x208` = `mGameTick` (`0x004fc871`), `+0x224` = the state at `+0x220` (`0x004fc877`), then SetState(8), whose case
+   stamps `+0x208` again (`0x0050237b`) and asks for no animation.
+
+**State 8's turn** (`FUN_005019f0` case 8, `0x00501d26`) is one unsigned test: `mGameTick` above `+0x208` + 10
+(`JBE` at `0x00501d3b`) calls `FUN_004fc890`, which is SetState( `+0x224` ) and nothing else. So the guest stands for
+the ten sweeps after the one that started it and returns on the eleventh, with no walk tick between. The return runs
+the saved state's own SetState case: 6 asks for the stand (3); `0xb` asks for the stand, stamps `mTimeStartedIdling`
+and derives the delay from `mQueuePos` again; `0xc` asks for the walk and routes nowhere new.
+
+**Five callers, in two functions, and no pointer to either function anywhere in the image** (the same search finds
+the script array's end word `0x005da3c0`, so it could have found one):
+
+| Call | In | Number | When |
+|---|---|---|---|
+| `0x004fecea` | state 6, `FUN_004fec90` arm (a) | 5 | more than 100 sweeps since `+0x208` and the happiness byte above 80 |
+| `0x004fed30` | state 6, arm (b) | 7 | the illness byte exactly 100 and r % 3 nought; the litter, event `0x12` and sound `0xcc` follow it |
+| `0x004ff489` | state 6, the split's arm 0 | 4 | the chooser found nothing; −5 and the restamp of `+0x1fc` follow it |
+| `0x00500324` | state 11, `FUN_004ffff0` arm 7 | 5 | more than 30 sweeps since `+0x208` and the happiness byte above 80 |
+| `0x0050038b` | state 11, arm 7 | 4 | the same gap and the happiness byte 10..19 |
+
+So the vomit is a spot animation too: it leaves the guest in state 8 with 6 saved.
+
+**What the three numbers show.** The table at `0x0075a418` gives each a script in the array at `0x0074dab8`; each
+sets a picture set, shows its frames one a turn, then jumps to the standing script (`0x0074dc20`), so each plays
+once. Seen in `Generic\Kids\SPR_KI`'s pictures (`sheet.py`), all five directions:
+
+| Number | Script | Set | Frames | The pictures |
+|---|---|---|---|---|
+| 4 | `0x0074dc48` | 14 | 0, 0, 1, 1, four times over (16 turns) | Standing with hands on hips; the two differ by a pixel or so. Bored |
+| 5 | `0x0074dce8` | 12 | 0, 1, 2, 3 (4 turns) | A jump with both arms up. Happy |
+| 7 | `0x0074dda8` | 6 | 0, 1, 2, 3 (4 turns) | Bending forward at the waist and straightening. Sick |
+
+All twelve guest banks (the eight of `Generic\Kids` and the four themes' `Costumes`) carry set 14 with two frames a
+direction and sets 12 and 6 with four; every staff and entertainer bank has set 6 and neither 14 nor 12 (measured over
+all 46 `.ESP`). `FUN_004fc800` writes no interval: the sprite keeps the one its last walk left, or the constructor's 62 ms,
+at which a turn comes due every 124 ms - sixteen turns in about 2 s of the 2.7 s that eleven sweeps last.
+
+**Effect `0x7e`** in `data/global/sound/cat_kidsSFX.map` is one variation of three samples, by name `yawn1.mp2`
+(1,254 ms), `yawn2a.mp2` (2,728 ms) and `yawn3a.mp2` (1,979 ms), equal weights, volume 47, no pitch spread
+(`fx`, the Q98 harness). Nobody has listened to them. `0xcc` is ten: `puke1`..`puke4`, `sick1`, `sick1a`, `sick6`..`sick9`.
+
+**What follows from it.** A queuer above 80 jumps on the first mood read, returns on the eleventh sweep after it,
+takes the window's heading turn until the 30th, and jumps again on the 31st: about every 7.7 s. A wandering
+guest above 80 jumps every 101 sweeps, about 25 s. A queuer at 10..19 stands hands on hips on the same 31-sweep
+round. While any of them is in state 8 the state-11 turn does not run: no mood, toilet, drift or board arm.
+
+**OpenTPW has the parts and plays none**: `SpriteScript` holds scripts 4, 5 and 7, `Peep.NextAnimation` is the
+`+0x10` request, `PeepState.PlayingSpotAnimation` stamps `TimeOfLastSpotAnim`, and `Peep.SavedState` is read from the
+save. Nothing sets the request to 4, 5 or 7, and state 8's turn only stands (`QUEUE_SPOT_ANIMATION`).
+
 #### At the door - `FUN_005006b0` and `FUN_004fde50`
 
 **`FUN_004fde50` is asked only here** (`0x00500715`, its one caller), of a thing with a price (nought answers nought,

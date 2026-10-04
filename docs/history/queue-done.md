@@ -4181,6 +4181,17 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   users/1nofile/gms.dat`, 748 bytes, version 12. `ProfilePreservationTests` gains a folder with no file saved and read
   back, and a file that would not open left alone once it can; four restored bugs each fail one or two tests.
   Not done: nothing on screen tells a player when a save is refused (Q216).
+- [x] **Q98. Spot animations are never played. Decode first.** Found by Q50d. `FUN_004fc800(n)` plays animation `n`,
+  stamps `mTimeOfLastSpotAnim` (`+0x208`), saves the state in `+0x224` and enters state 8, whose return
+  (`FUN_004fc890`) is not built either; for `n` 4 it also plays sound `0x7e` for an id whose low nibble is nought. The queue turn
+  reaches it for happiness above 80 and from 10 to 19 (`QUEUE_SPOT_ANIMATION`). While it is unbuilt a queuer's mood is
+  read on every turn, and the window after an animation - the heading turned one turn in ten (`QUEUE_TURN_HEADING`) -
+  is never reached. Decode its other callers and what animations 4 and 5 are, then build both. Confirm: `peeps` over
+  a queue at happiness 90, the guests animating on screen.
+  **Outcome, 2026-10-04:** decoded only, on `alexah/271-q98-spot-animation-decode`: five callers in two functions (5
+  happy, 4 bored, 7 the vomit), state 8 returning on the eleventh sweep, scripts and picture sets 14, 12 and 6 in all
+  twelve guest banks of 46, effect `0x7e` three yawns. `ride-operation.md`, "Spot animations". Nothing built, nothing
+  run in the game; Q98b carries the build and its confirmation.
 
 ## B. Docs and comments
 

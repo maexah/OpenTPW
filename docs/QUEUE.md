@@ -55,13 +55,12 @@ as `r-f1` names a verdict in its results file (`CLAUDE.local.md` says where).
   window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
   together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
 
-- [ ] **Q98. Spot animations are never played. Decode first.** Found by Q50d. `FUN_004fc800(n)` plays animation `n`,
-  stamps `mTimeOfLastSpotAnim` (`+0x208`), saves the state in `+0x224` and enters state 8, whose return
-  (`FUN_004fc890`) is not built either; for `n` 4 it also plays sound `0x7e` for an id whose low nibble is nought. The queue turn
-  reaches it for happiness above 80 and from 10 to 19 (`QUEUE_SPOT_ANIMATION`). While it is unbuilt a queuer's mood is
-  read on every turn, and the window after an animation - the heading turned one turn in ten (`QUEUE_TURN_HEADING`) -
-  is never reached. Decode its other callers and what animations 4 and 5 are, then build both. Confirm: `peeps` over
-  a queue at happiness 90, the guests animating on screen.
+- [ ] **Q98b. Build the spot animations.** Q98's decode is `ride-operation.md`, "Spot animations - `FUN_004fc800` and
+  state 8". Build `FUN_004fc800` (the request, the stamp, the saved state, state 8, the yawn for an id whose low nibble
+  is nought) and state 8's return through the saved state's own SetState; call it from the queue turn's two arms and
+  retire `QUEUE_SPOT_ANIMATION`. The state-6 callers stay with their own items (Q107's 4, Q111's 5 and 7): say so at
+  each site. Confirm: `peeps` over a queue at happiness 90, predicted first - a queuer in state 8 for eleven sweeps of
+  every 31 - and the jump photographed with `pause` and `step`; the same at happiness 15 for the hands on hips.
 - [ ] **Q99. The board arm's put-out when no route is found.** Found by Q50d. The original forgets a guest called
   forward and puts them out when `FUN_004fa5f0` fails (`0x0050010a`); `QueueTurn` counts it (`QUEUE_BOARD_NO_ROUTE`)
   and walks them on. The stand point is on the entry cell (`FUN_004dedf0(0)`, `ride-operation.md`, "Leaving a

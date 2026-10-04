@@ -7,9 +7,7 @@ Last updated: 2026-10-04. **This header names no branch and no sha, deliberately
 - **Failed profile selection reloads preserve restored progress** (Q207). Cached profiles stay read-only until successfully reloaded; immediate key saves and deselection are covered. A folder with no gms.dat is a new player and is saved like any other (Q209).
 - **Objects keep their own saved cost of goods and chance of winning** (Q97). The sideshow price-opinion prize, rolls, excitement and settlement use them; the price-opinion base uses catalogue InitCostOfGoods (Q207). Stock and labelled-fixture screenshots/censuses match predicted 50/25 → 80/58 for the Jungle Spray.
 - **Console path placement uses the player verdict** (Q94). Connected queue cells refuse with no charge or edit. Legal detached-tail cuts are photographed; predicted census confirms 12 → 8 → 4 queuers, eight releases at happiness 35.
-
 - **A bought ride with a queue starts closed and opens when its queue joins a path** (Q93); **an open ride whose queue is cut off stays open** and its window reads QUEUE NOT CONNECTED (Q208), as the original's does: the reference park under Proton kept `+0x68` at 1 with the path at the Belly Bounce's queue tail cleared.
-
 - **The ride window closes and reopens its ride** (Q92), showing CLOSED and a grey all-items row. Belly Bounce matches predicted `canload` 1 → 0 → 1, with screenshots and 13-peep censuses. Disconnected-queue wording and disabled reopening are tested.
 
 - **Closing raises ride hoardings; reopening retracts them** (Q91b). Belly Bounce has twelve outline panels, with staggered height/UV movement. The running game matches predicted progress 0 → 0.2 → 1 → 0; four textures, warning guards and saved state are built.
@@ -36,7 +34,7 @@ Last updated: 2026-10-04. **This header names no branch and no sha, deliberately
 
 - No screen sets the training budgets or buys a loan; six months in the red is counted, not an end (Q198b). No litter, day ending, saving a park back, video (the player is decoded: `docs/exe/boot.md`), networking. Research is inert. In a park the advisor says the gadget's opening line and no more (`docs/PLAYER-GAPS.md` gap 4).
 - Eight of the nine per-object windows are unbuilt. Setting patrol areas is deferred by Alexah; staff keep the save's. A walking member of staff is not entered in the cells they cross; only hiring and putting down place one.
-- Unbuilt: Q102-Q105, four queue-turn arms, spot animation (Q98), Q112's walk to path.
+- Unbuilt: Q102-Q105, four queue-turn arms, spot animations (decoded, Q98; the build is Q98b), Q112's walk to path.
 - Nothing shows what the hand holds (`CARRY_PREVIEW_MARKERS`, `STAFF_CARRY_PREVIEW`); any cell takes a candidate (Q40).
 - The fly-in's fade to black is not drawn (Q61). Keys: Escape over the player slots opens the game menu (Q64) and closes no park screen (Q119); Ctrl+H acts on the press, F8 is not built (Q65); modifiers count as the frame ends (Q120). A disabled button still takes the pointer (Q66); presses the original stops reach the park (Q113, Q115).
 - The happiness gauge draws two copies of its bar, split down the middle (`docs/PLAYER-GAPS.md` gap 5; unmeasured). Every other sound still waits out a per-effect "repeat delay" that is really a priority (Q43). A voice is not clamped to 16 bits as the original's is, only the mix (`docs/exe/audio.md`).
@@ -46,7 +44,7 @@ Last updated: 2026-10-04. **This header names no branch and no sha, deliberately
 
 ## Next
 
-`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next **Q98**, decode spot animations and their callers before implementation. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. **Q188 remains on hold** until Alexah says otherwise. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
+`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next **Q98b**, build the spot animations Q98 decoded (`docs/exe/ride-operation.md`, "Spot animations"). Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. **Q188 remains on hold** until Alexah says otherwise. Gaps 4, 5, 7: `docs/PLAYER-GAPS.md`. Q13: `CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
@@ -83,6 +81,8 @@ Last updated: 2026-10-04. **This header names no branch and no sha, deliberately
 
 ## Recent
 
+**2026-10-04 (Q98).** Decode only: `FUN_004fc800` has five callers in two functions - 5 a happy jump, 4 hands on hips with a yawn for one guest in sixteen, 7 the vomit - and state 8 returns to the saved state on the eleventh sweep. Scripts and picture sets 14, 12 and 6 checked in all twelve guest banks of 46. `docs/exe/ride-operation.md`, "Spot animations". Not built, not run in the game; Q98b carries both.
+
 **2026-10-04 (effort audit).** The commits of 2026-09-29 to 2026-10-01, written at medium reasoning effort, re-read in the listing: 172 verdicts, nothing wrong that a player sees or a save records. Docs lines and four comments corrected; Q219 (stored normals), Q220 (seventeen untested wirings) and Q221 (eight leftovers) filed. 1,766 pass, 0 skip, 121 warnings, alone in a worktree.
 
 **2026-10-04 (Q207).** Three audit defects repaired: fresh staff sprites/atlas, catalogue price base, failed-selection write provenance. All five staff visible after actual screen/drop path. Five mutations fail; restored full suite 1,764 passes/zero skips. `docs/exe/park-engine.md`, `ride-operation.md`, `saves.md`.
@@ -116,5 +116,3 @@ Last updated: 2026-10-04. **This header names no branch and no sha, deliberately
 **2026-10-03 (Q85b).** New-guest initialization and unhappy queue exit implemented; decode/evidence in `docs/exe/guest-arrivals.md`. Predicted 30 arrivals at happiness 50, observed all 30 with screenshots and four-minute censuses. Arrival 66 gained 5 (50 to 55); 60 naturally left unhappy; an instrumented 75 exited from 9 to 0, thought census 1 to 2. Both restored defects fail the new tests. Separate random generators and the shortened entrance path remain deviations; thoughts are counted, guest tiredness unrepresented. Independent applied-code review passed.
 
 **2026-10-03 (Q197).** Fresh Full Simulation startup confirmed by screenshot ($50,000, empty Lost Kingdom) and predicted startup census (12 things, 0 peeps, 16,384 cells, closed, fee and eight loans). All 16,384 reference cells agree except four cosmetic random path-art variants, counted; both fixed objects and manager IDs agree. Bug restoration fails the new test. Source review covered the applied core through relayed evidence; direct reviewer shell access was unavailable. Save/load of a played park remains unbuilt.
-
-**2026-10-03 (review).** Q150 admission discrepancy reproduced; remains open. Seeded guest/staff/ride replay compares 400 updates. Archive validation covers 36 cases and all 312 WADs; independent decoded bytes agree. Ghidra qualifies the alpha gate and records load overrides/threshold rounding; rendering unchanged. Unread player profiles/options stay read-only, including failed-load fallbacks; destinations are rechecked. 18 preservation cases pass; removing the guards fails seven. A copied Full Simulation profile saves normally, and its damaged copy stays unchanged. This is OpenTPW's preservation policy.
