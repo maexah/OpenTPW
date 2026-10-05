@@ -340,9 +340,13 @@ public class ParkQueuePlaceTests
 	{
 		var park = Open();
 		var lost = Guest( park, 30, PeepState.GoingToRide, 0, 0 );
+		var events = Unimplemented.Summary.FirstOrDefault( entry => entry.What == "ARRIVAL_BACK_OF_QUEUE_LOST_EVENT" ).Times;
 
 		Turn( park, lost );
 
+		Assert.AreEqual( events + 1,
+			Unimplemented.Summary.FirstOrDefault( entry => entry.What == "ARRIVAL_BACK_OF_QUEUE_LOST_EVENT" ).Times,
+			"event 0x16 is counted once" );
 		Assert.AreEqual( PeepState.Deciding, lost.State );
 		Assert.AreEqual( BellyBounce, lost.MajorDest, "the thing is still named" );
 		Assert.AreEqual( Before, lost.Happiness, 0.001f, "and nothing is taken off" );

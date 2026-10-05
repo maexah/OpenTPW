@@ -73,6 +73,8 @@ public class ParkGuestTypeTests
 			"a type 0, preferring 80, takes the Belly Bounce" );
 	}
 
+	private static int Counted( string gap ) => Unimplemented.Summary.FirstOrDefault( entry => entry.What == gap ).Times;
+
 	private static string Chose( string[] census, int thingId )
 		=> census.Single( line => line.StartsWith( $"thing {thingId,3} " ) );
 
@@ -139,7 +141,9 @@ public class ParkGuestTypeTests
 	/// <b>A guest turns away from a ride too far from what their kind prefers</b> (<c>FUN_004fd4e0</c>, the byte at
 	/// <c>0x004fd50a</c>), and remembers it (<c>FUN_004fdc60</c>, <c>0x004ffce6</c>). The Jungle Spray's computed
 	/// excitement is 30: a type 0 prefers 80, 50 away, past the 44 allowed, gives up on it at its back cell and puts it
-	/// in front of their refusals; a type 2 prefers 50, 20 away, and joins, remembering nothing.
+	/// in front of their refusals; a type 2 prefers 50, 20 away, and joins, remembering nothing. The refusal is the
+	/// "not exciting enough" arm: event 5 and thought <c>0xc</c> counted, and the idle stamp zeroed
+	/// (<c>0x004ffcf6</c>), where the joiner's is left alone.
 	/// </summary>
 	[TestMethod]
 	public void AGuestTurnsAwayFromARideTooFarFromWhatTheirKindPrefers()
@@ -152,9 +156,19 @@ public class ParkGuestTypeTests
 
 		var wild = Standing( 30, personType: 0, PeepState.GoingToRide, 52, 29 );
 		var middling = Standing( 31, personType: 2, PeepState.GoingToRide, 52, 29 );
+		wild.TimeStartedIdling = middling.TimeStartedIdling = 17;
+
+		string[] arms = ["ARRIVAL_NOT_EXCITING_EVENT", "ARRIVAL_NOT_EXCITING_THOUGHT_0xC",
+			"ARRIVAL_TOO_EXCITING_EVENT", "ARRIVAL_TOO_EXCITING_THOUGHT_0xF"];
+		var before = arms.Select( Counted ).ToArray();
 
 		behaviour.Step( wild, new PeepWalk( wild.Navigator, blocked ), playing: null, 40 );
 		behaviour.Step( middling, new PeepWalk( middling.Navigator, blocked ), playing: null, 40 );
+
+		CollectionAssert.AreEqual( new[] { before[0] + 1, before[1] + 1, before[2], before[3] },
+			arms.Select( Counted ).ToArray(), "event 5 and thought 0xc, once, and neither of the other arm's" );
+		Assert.AreEqual( 0, wild.TimeStartedIdling, "the refusal zeroes the idle stamp" );
+		Assert.AreEqual( 17, middling.TimeStartedIdling, "which a joiner keeps until the queue stamps it" );
 
 		Assert.AreEqual( PeepState.Deciding, wild.State, "the type 0 thinks again" );
 		Assert.AreEqual( 0, wild.MajorDest, "and names nothing" );
@@ -195,7 +209,8 @@ public class ParkGuestTypeTests
 	/// <summary>
 	/// <b>A dirty toilet that declares an excitement turns every arrival away</b>: <c>FUN_004fd4e0</c> answers 100
 	/// for one before it compares anything (<c>0x004fd4ea</c>). No shipped toilet declares one, so the Jungle Spray
-	/// is given the toilet bit: at a State of repair of 25 the type 2 joins as before, and at 24 turns away.
+	/// is given the toilet bit: at a State of repair of 25 the type 2 joins as before, and at 24 turns away, by the
+	/// "too exciting" arm: event 4 and thought <c>0xf</c>.
 	/// </summary>
 	[TestMethod]
 	public void ADirtyToiletWithAnExcitementTurnsEveryArrivalAway()
@@ -216,8 +231,16 @@ public class ParkGuestTypeTests
 			} );
 
 			var middling = Standing( 31, personType: 2, PeepState.GoingToRide, 52, 29 );
+			var (events, thoughts, other) = (Counted( "ARRIVAL_TOO_EXCITING_EVENT" ),
+				Counted( "ARRIVAL_TOO_EXCITING_THOUGHT_0xF" ), Counted( "ARRIVAL_NOT_EXCITING_EVENT" ));
 
 			behaviour.Step( middling, new PeepWalk( middling.Navigator, blocked ), playing: null, 40 );
+
+			var dirty = repair < ParkState.DirtyBelow ? 1 : 0;
+
+			Assert.AreEqual( events + dirty, Counted( "ARRIVAL_TOO_EXCITING_EVENT" ), $"repair {repair}: event 4" );
+			Assert.AreEqual( thoughts + dirty, Counted( "ARRIVAL_TOO_EXCITING_THOUGHT_0xF" ), $"repair {repair}: thought 0xf" );
+			Assert.AreEqual( other, Counted( "ARRIVAL_NOT_EXCITING_EVENT" ), "never the other arm" );
 
 			if ( repair < ParkState.DirtyBelow )
 			{

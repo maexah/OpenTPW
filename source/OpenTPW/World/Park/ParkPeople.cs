@@ -2656,6 +2656,8 @@ public sealed class ParkPeople : Entity
 				+ $"dest {peep.MajorDest,2} place {place,2} recorded {peep.QueuePos & 0xff,2} "
 				// The major a minor decision put by, and the walking turns counted toward the next decision.
 				+ $"saved-major {peep.SavedMajorDest,2} turns {peep.WalkingTurns,2} "
+				// mTimeStartedIdling, which the thinking gap in front of the chooser is measured from.
+				+ $"idle {peep.TimeStartedIdling,4} "
 				+ $"(saved {peep.SavedState}) cash {peep.Cash,4} exit {peep.ExitLevel,4} "
 				+ $"happy {peep.Happiness,3:0} thirst {peep.Thirst,3:0} hunger {peep.Hunger,3:0} "
 				+ $"toilet {peep.Toilet,3:0} vomit {peep.Vomit,3:0} litter {peep.Litter,3:0} prankery {peep.PrankeryIndex} "

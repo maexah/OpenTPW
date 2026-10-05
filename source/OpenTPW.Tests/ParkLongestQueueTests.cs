@@ -204,32 +204,8 @@ public class ParkLongestQueueTests
 	{
 		foreach ( var (queued, refused) in new[] { (8, true), (7, false) } )
 		{
-			var world = World();
-			var state = new ParkState( world );
-			var bounce = world.Objects.Single( o => o.ThingId == BellyBounce );
-			state.ReplaceObject( bounce with { OperatingCapacity = 2 } );
-
-			for ( var guest = 70; state.QueueCount( BellyBounce, _ => true ) < queued; ++guest )
-				state.JoinQueue( BellyBounce, guest );
-
-			var balance = new ParkBalance( "jungle", easyMode: true );
-			var behaviour = new PeepBehaviour( world, new Random( 1 ),
-				new ParkAdmission( balance, world.Economy!.Value.AdmissionFee ), () => ParkRides.GateIsOpen, state,
-				Catalogue(), stillQueueing: _ => true, balance: balance );
-
-			// A type 2, preferring 50, against the Belly Bounce's 40: the excitement gate lets them by.
-			var (x, y) = MapStep.CellAt( ParkRideChoice.QueueCellsFor( world, bounce ).BackOfQueue );
-			var centre = new FixedVector( PeepNavigator.WaypointCentre( x ), PeepNavigator.WaypointCentre( y ) );
-			var saved = world.People.First( person => person.Guest is { } );
-			var arriving = new Peep( 30, saved.Guest!.Value with {
-				State = (int)PeepState.GoingToRide, PersonType = 2, Happiness = Before, MajorDest = BellyBounce },
-				saved.Navigator with { X = centre.X, Y = centre.Y, TargetX = centre.X, TargetY = centre.Y } );
-
-			Assert.AreEqual( 16, ParkRideChoice.QueueCellsFor( world, bounce ).Cells * ParkRideChoice.QueueRoomPerCell,
-				"room for sixteen" );
-
-			behaviour.Step( arriving, new PeepWalk( arriving.Navigator, CellEdge.For( world, ParkPeople.WalkingMode ).Blocked ),
-				playing: null, Sweep );
+			var (events, thoughts) = (Counted( "ARRIVAL_TOO_LONG_EVENT" ), Counted( "ARRIVAL_TOO_LONG_THOUGHT_0x10" ));
+			var (state, arriving) = ArrivesAtTheBellyBounce( capacity: 2, queued );
 
 			if ( refused )
 			{
@@ -238,13 +214,94 @@ public class ParkLongestQueueTests
 				Assert.AreEqual( Before, arriving.Happiness, 0.001f, "and loses nothing" );
 				Assert.AreEqual( BellyBounce, arriving.PreviousTemporaryRides[0], "but remembers it" );
 				Assert.AreEqual( -1, state.PositionInQueue( BellyBounce, arriving.ThingId ), "not in it" );
+				Assert.AreEqual( IdleStamp, arriving.TimeStartedIdling, "the idle stamp is left alone" );
+				Assert.AreEqual( events + 1, Counted( "ARRIVAL_TOO_LONG_EVENT" ), "event 0x15 is counted" );
+				Assert.AreEqual( thoughts + 1, Counted( "ARRIVAL_TOO_LONG_THOUGHT_0x10" ), "and thought 0x10" );
 			}
 			else
 			{
 				Assert.AreEqual( BellyBounce, arriving.MajorDest, $"{queued} queueing: joins" );
 				Assert.AreEqual( queued, state.PositionInQueue( BellyBounce, arriving.ThingId ), "at the back" );
+				Assert.AreEqual( events, Counted( "ARRIVAL_TOO_LONG_EVENT" ), "no event" );
 			}
 		}
+	}
+
+	/// <summary>
+	/// <b>A guest arriving at a queue with no room is turned away still naming the thing</b> (<c>FUN_004dda20</c>,
+	/// <c>0x004ffe0a</c>): at its saved capacity of 5 the Belly Bounce's longest is 21, past its sixteen places of room,
+	/// so an arrival finding 16 queueing fails the room gate first. They think again, keep <c>MajorDest</c>, lose
+	/// nothing, remember no refusal and keep their idle stamp; event <c>0x15</c> is counted, and no thought. One
+	/// finding 15 joins, sixteenth in line.
+	/// </summary>
+	[TestMethod]
+	public void AnArrivalAtAQueueWithNoRoomStillNamesTheThing()
+	{
+		foreach ( var (queued, refused) in new[] { (16, true), (15, false) } )
+		{
+			var (events, tooLong) = (Counted( "ARRIVAL_NO_ROOM_EVENT" ), Counted( "ARRIVAL_TOO_LONG_EVENT" ));
+			var (state, arriving) = ArrivesAtTheBellyBounce( capacity: 5, queued );
+
+			Assert.AreEqual( BellyBounce, arriving.MajorDest, $"{queued} queueing: the thing is named either way" );
+			Assert.AreEqual( Before, arriving.Happiness, 0.001f, "and nothing is lost" );
+			Assert.AreEqual( 0, arriving.PreviousTemporaryRides[0], "nor a refusal remembered" );
+			Assert.AreEqual( tooLong, Counted( "ARRIVAL_TOO_LONG_EVENT" ), "the too-long gate is not reached" );
+
+			if ( refused )
+			{
+				Assert.AreEqual( PeepState.Deciding, arriving.State, "16 queueing: turned away" );
+				Assert.AreEqual( -1, state.PositionInQueue( BellyBounce, arriving.ThingId ), "not in it" );
+				Assert.AreEqual( IdleStamp, arriving.TimeStartedIdling, "the idle stamp is left alone" );
+				Assert.AreEqual( events + 1, Counted( "ARRIVAL_NO_ROOM_EVENT" ), "event 0x15 is counted once" );
+			}
+			else
+			{
+				Assert.AreEqual( PeepState.SteppingUpQueue, arriving.State, "15 queueing: joins" );
+				Assert.AreEqual( queued, state.PositionInQueue( BellyBounce, arriving.ThingId ), "at the back" );
+				Assert.AreEqual( events, Counted( "ARRIVAL_NO_ROOM_EVENT" ), "no event" );
+			}
+		}
+	}
+
+	private const int IdleStamp = 17;
+
+	/// <summary>
+	/// A type 2 guest (preferring 50 against the Belly Bounce's 40, so past the excitement gate) taking their arrival
+	/// turn on the back cell of the Belly Bounce's queue, set to <paramref name="capacity"/> with
+	/// <paramref name="queued"/> already in it.
+	/// </summary>
+	private (ParkState State, Peep Arriving) ArrivesAtTheBellyBounce( int capacity, int queued )
+	{
+		var world = World();
+		var state = new ParkState( world );
+		var bounce = world.Objects.Single( o => o.ThingId == BellyBounce );
+		state.ReplaceObject( bounce with { OperatingCapacity = capacity } );
+
+		for ( var guest = 70; state.QueueCount( BellyBounce, _ => true ) < queued; ++guest )
+			state.JoinQueue( BellyBounce, guest );
+
+		var balance = new ParkBalance( "jungle", easyMode: true );
+		var behaviour = new PeepBehaviour( world, new Random( 1 ),
+			new ParkAdmission( balance, world.Economy!.Value.AdmissionFee ), () => ParkRides.GateIsOpen, state,
+			Catalogue(), stillQueueing: _ => true, balance: balance );
+
+		var (x, y) = MapStep.CellAt( ParkRideChoice.QueueCellsFor( world, bounce ).BackOfQueue );
+		var centre = new FixedVector( PeepNavigator.WaypointCentre( x ), PeepNavigator.WaypointCentre( y ) );
+		var saved = world.People.First( person => person.Guest is { } );
+		var arriving = new Peep( 30, saved.Guest!.Value with {
+			State = (int)PeepState.GoingToRide, PersonType = 2, Happiness = Before, MajorDest = BellyBounce },
+			saved.Navigator with { X = centre.X, Y = centre.Y, TargetX = centre.X, TargetY = centre.Y } )
+		{
+			TimeStartedIdling = IdleStamp
+		};
+
+		Assert.AreEqual( 16, ParkRideChoice.QueueCellsFor( world, bounce ).Cells * ParkRideChoice.QueueRoomPerCell,
+			"room for sixteen" );
+
+		behaviour.Step( arriving, new PeepWalk( arriving.Navigator, CellEdge.For( world, ParkPeople.WalkingMode ).Blocked ),
+			playing: null, Sweep );
+
+		return (state, arriving);
 	}
 
 	/// <summary>

@@ -356,7 +356,8 @@ arm holds and nothing routes them again until their place moves; its other arms 
    `GetBackOfQueue` as a word. Not equal: `"The back of the queue has moved while I was walking here"`,
    `FUN_004fa530( GetBackOfQueue )` again, and a route keeps state 10; no cell or no route: event `0x16`, state 6,
    **`MajorDest` kept**. Equal: the gates. **Room** (`FUN_004dda20`): refused, event `0x15`, state 6, `MajorDest` kept,
-   no dock. **Excitement**: `FUN_004fd4e0` always computed, asked only when the descriptor's `+0x13c`
+   no dock (`0x004ffe0a`; both this event and `0x16` carry a thing word of nought, `MOV word ptr [EAX],0x0`, where
+   the other arms' carry `+0x1dc`). **Excitement**: `FUN_004fd4e0` always computed, asked only when the descriptor's `+0x13c`
    (`UsageInfo.ExcitementLevel`) has a non-zero low byte, refused at a difference of 45 or more (signed, `0x004ffc7a`):
    `"ride is not exciting enough!"`, event 5, thought `0xc`; or `"ride is too exciting!"`, event 4, thought `0xf`; both
    then `FUN_004fdc60` (the id onto `mPreviousTemporaryRides`, `+0x1e8`, where it divides the thing's score until
@@ -439,7 +440,7 @@ Seed 1's cycle, 248,316,293 states, never meets `0x80000000`, which lies on anot
 A direction neither switch knows stands the point at the cell's centre, counted
 `QUEUE_PLACE_DODGY_DIRECTION`, where the original routes with whatever its stack held. A place past the queue's cells
 is refused before routing, where the original routes to (127, 255) and fails. `FUN_004fa5f0`'s stranded refusal is
-absent: nothing keeps `mStrandedTime`. The gates' side effects and the chooser's in-walk routing are Q103 and Q104.
+absent: nothing keeps `mStrandedTime`. The chooser's in-walk routing is Q104.
 
 **Q102: state 10's stuck and shut arms** are built in `PeepBehaviour` (`LoseHeartOnTheWay`): either takes
 `BigHappinessChange` off (`FUN_004fea70( 2 )`, the byte at `0x00785060`, clamped to 0..100), zeroes `MajorDest` and
@@ -452,6 +453,25 @@ then the deciding turn's own 25 for a shut park (0, HeadingForExit); with the pa
 reached differs**: that guest walked on to the cell beside the gap before the walk answered stuck, where the
 original's walker re-plans as the ground changes ("The ground changed under this peep..."); when the original's
 answers 2 after an edit has not been measured.
+
+**Q103: the gates' side effects** are built in `PeepBehaviour.JoinTheQueue`. A guest refused on room goes to state
+6 with nothing else written, so they **still name the thing** (the queue's census prints `dest` kept) until the
+chooser next runs on them, which zeroes `+0x1dc` before it looks (`FUN_004fcb10`, `0x004fcb21`); a sale of the thing
+meanwhile still answers them (`FUN_004fb360` asks `+0x1dc` alone). The excitement refusal zeroes `+0x1fc`
+(`Peep.TimeStartedIdling`, `0x004ffcf6`), so the 30-sweep thinking gap is over at once; the too-long refusal leaves
+it, and SetState(6) stamps nothing. The sign of `FUN_004fd4e0` picks the excitement arm: preference at or above the
+thing's excitement answers below nought, "not exciting enough" (event 5, thought `0xc`); below it, or a dirty
+toilet's 100, "too exciting" (event 4, thought `0xf`). Events and thoughts are counted, one name an arm:
+`ARRIVAL_NO_ROOM_EVENT`, `ARRIVAL_BACK_OF_QUEUE_LOST_EVENT`, `ARRIVAL_NOT_EXCITING_EVENT` and `_THOUGHT_0xC`,
+`ARRIVAL_TOO_EXCITING_EVENT` and `_THOUGHT_0xF`, `ARRIVAL_TOO_LONG_EVENT` and `_THOUGHT_0x10` (no event ring is
+kept and no thought drawn, Q110). Read in the running game, each predicted first: seven guests made on Small Toilet
+21's back cell (56,17) under `pause` and sent to it, room for four in its one cell: places 0 to 3 taken, and the
+last three Deciding with `dest 21`, happiness 50, no refusal remembered, the event counted 3; the unchanged build
+read `dest 0`. A kind 0 (preferring 80) sent to the Jungle Spray (computed 30): "not exciting enough", `idle` 202
+to 0, the Spray onto their refusals, event and thought each one more. Left alone for 25 s the three still named the
+toilet, wandering. **Where it differs**: `PeepBehaviour.Decide` stamps `+0x1fc` before it chooses (Q107), so the
+stamp a room or too-long refusal leaves is the choice's, where the original's is older. None of it was compared
+with the original.
 
 The supporting helpers:
 

@@ -1153,8 +1153,8 @@ public sealed class PeepBehaviour
 	/// <remarks>
 	/// The sign is the original's own and is worth not tidying: <c>FUN_004fd4e0</c> returns
 	/// <i>preferred minus actual</i>, clamped to fifty, negated - so a NEGATIVE answer means the guest
-	/// wanted more excitement than the ride offers. Only the magnitude is used here, because both arms
-	/// end the same way.
+	/// wanted more excitement than the ride offers. The magnitude refuses, and the sign picks the arm's event and
+	/// thought (<see cref="TurnsAwayFrom"/>).
 	/// </remarks>
 	public const int ExcitementRefusal = 44;
 
@@ -1170,13 +1170,16 @@ public sealed class PeepBehaviour
 	/// with no back of queue or no route to it, go back to deciding still naming the thing (<c>0x004ffe16</c>).
 	/// </para>
 	/// <para>
-	/// <b>The gates.</b> A guest who fails one goes back to deciding with their choice let go of. The free-space
+	/// <b>The gates.</b> A guest who fails one goes back to deciding, and none is docked. The free-space
 	/// gate is <c>FUN_004dda20</c>, <c>length &lt; cells * 4</c> over the walked cells
-	/// (<see cref="ParkRideChoice.HasQueueRoom"/>), the excitement gate is <see cref="TurnsAwayFrom"/> and the third is
-	/// <see cref="QueueTooLong"/>, each with the length counted as the original counts it (<see cref="QueueCount"/>).
-	/// A guest refused by either of the last two remembers the thing (<see cref="Peep.RememberRefusal"/>); their
-	/// thoughts are counted, and the room refusal keeping <see cref="Peep.MajorDest"/>, the events and <c>+0x1fc</c>
-	/// are Q103's.
+	/// (<see cref="ParkRideChoice.HasQueueRoom"/>): refused, the guest <b>still names the thing</b>
+	/// (<c>0x004ffe0a</c> writes neither <c>+0x1dc</c> nor a refusal), until the chooser next runs and lets it go.
+	/// The excitement gate is <see cref="TurnsAwayFrom"/> and the third is <see cref="QueueTooLong"/>, each with the
+	/// length counted as the original counts it (<see cref="QueueCount"/>). A guest refused by either of these two
+	/// remembers the thing (<see cref="Peep.RememberRefusal"/>) and lets it go, and the excitement refusal also
+	/// zeroes <see cref="Peep.TimeStartedIdling"/> (<c>0x004ffcf6</c>), so the thinking gap in front of the chooser
+	/// is over at once. Each arm's event and thought is counted: this project keeps no event ring and draws no
+	/// thought. See <c>docs/exe/ride-operation.md</c>, "Q103".
 	/// </para>
 	/// <para>
 	/// <b>The walk</b> is <see cref="FindQueueDestination"/> (<c>0x004ffdad</c>). A guest who cannot get to their
@@ -1202,8 +1205,13 @@ public sealed class PeepBehaviour
 		{
 			Log.Info( $"Person {peep.ThingId}: The back of the queue has moved while I was walking here" );
 
+			// No back of queue, or no route to it: event 0x16 and deciding, the thing still named (0x004ffe4a).
 			if ( backOfQueue == 0 || !SendTo( peep, walk, MapStep.CellAt( backOfQueue ) ) )
+			{
+				Unimplemented.Report( "ARRIVAL_BACK_OF_QUEUE_LOST_EVENT" );
+
 				peep.SetState( PeepState.Deciding, tick, _random );
+			}
 
 			return;
 		}
@@ -1211,20 +1219,32 @@ public sealed class PeepBehaviour
 		// Asked of the park as PLAYED, so a queue that filled up while this guest walked to it turns them away.
 		var queue = QueueCount( chosen );
 
+		// No room: event 0x15 with no thing in it, and deciding (0x004ffe0a). Nothing else is written, so the guest
+		// still names the thing, remembers no refusal and keeps their idle stamp.
 		if ( !ParkRideChoice.HasQueueRoom( queue, queueCells ) )
 		{
-			GiveUpOnIt( peep, tick );
+			Log.Info( $"Person {peep.ThingId}: no room in thing {chosen.ThingId}'s queue ({queue} in {queueCells} cells), "
+				+ $"still naming it, tick {tick}" );
+			Unimplemented.Report( "ARRIVAL_NO_ROOM_EVENT" );
+
+			peep.SetState( PeepState.Deciding, tick, _random );
 
 			return;
 		}
 
 		// The two refusals push the thing onto the guest's second history (FUN_004fdc60, 0x004ffce6 and
 		// 0x004ffd74), which divides its score down until aged out.
-		if ( TurnsAwayFrom( peep, chosen ) )
+		if ( TurnsAwayFrom( peep, chosen, out var tooExciting ) )
 		{
-			Unimplemented.Report( "ARRIVAL_EXCITEMENT_THOUGHT" );
+			// Event 5 and thought 0xc for a ride not exciting enough, event 4 and thought 0xf for one too exciting
+			// (0x004ffca1..0x004ffcd7).
+			Log.Info( $"Person {peep.ThingId}: ride is {(tooExciting ? "too exciting" : "not exciting enough")}! "
+				+ $"(thing {chosen.ThingId}, tick {tick})" );
+			Unimplemented.Report( tooExciting ? "ARRIVAL_TOO_EXCITING_EVENT" : "ARRIVAL_NOT_EXCITING_EVENT" );
+			Unimplemented.Report( tooExciting ? "ARRIVAL_TOO_EXCITING_THOUGHT_0xF" : "ARRIVAL_NOT_EXCITING_THOUGHT_0xC" );
 
 			peep.RememberRefusal( chosen.ThingId );
+			peep.TimeStartedIdling = 0;
 			GiveUpOnIt( peep, tick );
 
 			return;
@@ -1233,6 +1253,7 @@ public sealed class PeepBehaviour
 		if ( QueueTooLong( chosen, ItemOf( chosen ), queue ) )
 		{
 			Log.Info( $"Person {peep.ThingId}: queue is too long! ({queue} for thing {chosen.ThingId})" );
+			Unimplemented.Report( "ARRIVAL_TOO_LONG_EVENT" );
 			Unimplemented.Report( "ARRIVAL_TOO_LONG_THOUGHT_0x10" );
 
 			peep.RememberRefusal( chosen.ThingId );
@@ -1637,7 +1658,9 @@ public sealed class PeepBehaviour
 	private ParkWorld.CatalogueObject? Chosen( Peep peep )
 		=> State.TryObject( peep.MajorDest, out var chosen ) ? chosen : null;
 
-	/// <summary>Lets go of what they chose and thinks again, which is where every refusal above ends.</summary>
+	/// <summary>
+	/// Lets go of what they chose and thinks again, which is where the excitement and too-long refusals above end.
+	/// </summary>
 	private void GiveUpOnIt( Peep peep, int tick )
 	{
 		peep.MajorDest = 0;
@@ -1829,21 +1852,34 @@ public sealed class PeepBehaviour
 	/// all, and it is the same test that drops the excitement weight out of the ride scorer. The comparison is
 	/// against the thing's computed excitement, <see cref="ParkRideScore.ExcitementOf"/>, as <c>FUN_004fd4e0</c>
 	/// asks <c>FUN_004e0860( object, 0 )</c>. For a dirty toilet (<see cref="ParkState.IsDirty"/>) that function
-	/// answers 100 before it compares anything (<c>0x004fd4ea</c>), which is past the refusal; no jungle toilet
-	/// declares an excitement, so none reaches it.
+	/// answers 100 before it compares anything (<c>0x004fd4ea</c>), which is past the refusal and on the too-exciting
+	/// side; no jungle toilet declares an excitement, so none reaches it.
 	/// </remarks>
-	private bool TurnsAwayFrom( Peep peep, ParkWorld.CatalogueObject chosen )
+	/// <param name="tooExciting">
+	/// Which arm a refusal took: true where the thing offers more than the guest's kind prefers (the answer above
+	/// nought, <c>0x004ffc85</c>), false where it offers the same or less.
+	/// </param>
+	private bool TurnsAwayFrom( Peep peep, ParkWorld.CatalogueObject chosen, out bool tooExciting )
 	{
+		tooExciting = false;
+
 		if ( _catalogue == null || !_catalogue.TryGet( chosen.CatalogueId, out var item )
 			|| (item.ExcitementLevel & 0xff) == 0 )
 			return false;
 
 		if ( ParkState.IsDirty( chosen ) )
+		{
+			tooExciting = true;
+
 			return true;
+		}
 
 		var wanted = _chooser.Score.PreferredExcitementFor( peep.PersonType ) & 0xff;
+		var offered = ParkRideScore.ExcitementOf( chosen, item, State.TrackRides );
 
-		return Math.Abs( wanted - ParkRideScore.ExcitementOf( chosen, item, State.TrackRides ) ) > ExcitementRefusal;
+		tooExciting = wanted < offered;
+
+		return Math.Abs( wanted - offered ) > ExcitementRefusal;
 	}
 
 	/// <summary>

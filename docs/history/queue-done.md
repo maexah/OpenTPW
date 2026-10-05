@@ -4268,6 +4268,24 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   at (48,22) lifted under another, 50 to 25, dest 0, Deciding, one "stuck" line and the counter at 1; both
   photographed. Three tests; six restored bugs each fail. The guest reaches the gap before the walk answers stuck,
   where the original's walker re-plans on the edit: not measured. `docs/exe/ride-operation.md`, "Q102".
+- [x] **Q103. The gates at the back of a queue.** Done 2026-10-04, `alexah/281-arrival-gates-keep-dest`: the room
+  refusal keeps `MajorDest`, the excitement refusal zeroes `+0x1fc`, every arm's event and thought counted by name
+  (`ride-operation.md`, "Q103"). In the game, predicted first: of seven guests sent to Small Toilet 21 from its back
+  cell four joined and three were Deciding with `dest 21` (the unchanged build: `dest 0`), `ARRIVAL_NO_ROOM_EVENT`
+  3; a kind 0 at the Jungle Spray, `idle` 202 to 0. The item as written: Found by Q50e's decode. On arriving, the original refuses on room
+  with event `0x15` and KEEPS `MajorDest` (`GiveUpOnIt` clears it); asks excitement only when the item's `+0x13c`
+  (`UsageInfo.ExcitementLevel`) has a non-zero low byte, of the OBJECT's computed excitement (`FUN_004e0860( object,
+  0 )`, `FUN_004e0560`) where `TurnsAwayFrom` reads the catalogue level, with an event and thought per arm, then
+  pushes the thing onto `mPreviousTemporaryRides` and zeroes `+0x1fc`; and refuses a queue too long (`FUN_004ddb60`
+  against `FUN_004dda40`, which is 100 for a thing without the queue-path bit, so Lost Kingdom's five need no
+  unproven field). The computed excitement is blocked on the divisors `park-engine.md` will not guess: say at
+  `TurnsAwayFrom` that the catalogue level stands in for it. Confirm: `peeps` for a guest refused at a full queue,
+  dest kept.
+  Q165c built three of these: `TurnsAwayFrom` reads the computed excitement, both refusals push the thing onto
+  `mPreviousTemporaryRides`, and the too-long gate stands (100 without the queue-path bit; with it, counted as
+  `QUEUE_TOO_LONG_CAPACITY`). Left: the room refusal keeping `MajorDest`, the events and thoughts, and `+0x1fc`.
+  From Q173: the too-long gate is built for a thing with a queue path too (`PeepBehaviour.QueueTooLong` on
+  `PeepBehaviour.LongestQueue`), and `QUEUE_TOO_LONG_CAPACITY` is gone.
 
 ## B. Docs and comments
 

@@ -55,20 +55,6 @@ as `r-f1` names a verdict in its results file (`CLAUDE.local.md` says where).
   window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
   together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
 
-- [ ] **Q103. The gates at the back of a queue.** Found by Q50e's decode. On arriving, the original refuses on room
-  with event `0x15` and KEEPS `MajorDest` (`GiveUpOnIt` clears it); asks excitement only when the item's `+0x13c`
-  (`UsageInfo.ExcitementLevel`) has a non-zero low byte, of the OBJECT's computed excitement (`FUN_004e0860( object,
-  0 )`, `FUN_004e0560`) where `TurnsAwayFrom` reads the catalogue level, with an event and thought per arm, then
-  pushes the thing onto `mPreviousTemporaryRides` and zeroes `+0x1fc`; and refuses a queue too long (`FUN_004ddb60`
-  against `FUN_004dda40`, which is 100 for a thing without the queue-path bit, so Lost Kingdom's five need no
-  unproven field). The computed excitement is blocked on the divisors `park-engine.md` will not guess: say at
-  `TurnsAwayFrom` that the catalogue level stands in for it. Confirm: `peeps` for a guest refused at a full queue,
-  dest kept.
-  Q165c built three of these: `TurnsAwayFrom` reads the computed excitement, both refusals push the thing onto
-  `mPreviousTemporaryRides`, and the too-long gate stands (100 without the queue-path bit; with it, counted as
-  `QUEUE_TOO_LONG_CAPACITY`). Left: the room refusal keeping `MajorDest`, the events and thoughts, and `+0x1fc`.
-  From Q173: the too-long gate is built for a thing with a queue path too (`PeepBehaviour.QueueTooLong` on
-  `PeepBehaviour.LongestQueue`), and `QUEUE_TOO_LONG_CAPACITY` is gone.
 - [ ] **Q104. The chooser routes as it walks the objects.** Found by Q50e's decode. `FUN_004fcb10` routes every
   candidate that beats the best in turn, so a better one that cannot be routed still leaves the walker failed while
   `MajorDest` names the earlier winner, and the first state-10 turn takes the stuck arm (−25) - unless a ground change
