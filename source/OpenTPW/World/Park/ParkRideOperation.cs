@@ -443,11 +443,10 @@ public sealed class ParkRideOperation
 	/// and only the aim can fail.
 	/// </para>
 	/// <para>
-	/// <b>What cannot be shown is the ? itself.</b> It is thought <c>0x11</c>, the stranded bubble, a blue
-	/// question mark, which only <c>FUN_004f9490</c> raises, at its linked walk's dead end or its refusal
-	/// after one (<c>docs/exe/ride-operation.md</c>, "Thoughts and their pictures"). This project has no
-	/// thought system at all - see <see cref="PeepBehaviour.SetRandomDest"/>, which records the same absence
-	/// from the other side. So a guest who cannot leave the exit stands there silently instead of asking.
+	/// <b>The ? is thought <c>0x11</c></b>, the stranded bubble, a blue question mark, which only
+	/// <c>FUN_004f9490</c> raises, at its linked walk's dead end or its refusal after one
+	/// (<see cref="PeepBehaviour.SetRandomDest"/>; <c>docs/exe/ride-operation.md</c>, "Thoughts and their
+	/// pictures").
 	/// </para>
 	/// </summary>
 	private static void PutDownAtTheExit( Peep peep, PeepWalk walk, ParkWorld.CatalogueObject ride,
@@ -502,7 +501,10 @@ public sealed class ParkRideOperation
 			return;
 		}
 
-		PeepBehaviour.SendTo( peep, walk, (nextX, nextY) );
+		// The running park's stamps, when it is this park's, for the route's stranded refusal.
+		var running = ParkState.Current is { } current && ReferenceEquals( current.Park, park ) ? current : null;
+
+		PeepBehaviour.SendTo( running, peep, walk, (nextX, nextY) );
 	}
 
 	/// <summary>
@@ -580,7 +582,7 @@ public sealed class ParkRideOperation
 
 			// A sideshow's loser also thinks thought 6 and gains an event-history entry (0x004fdc25).
 			if ( item.UiType == SideshowUiType )
-				Unimplemented.Report( "SETTLE_UP_SIDESHOW_THOUGHT" );
+				ThinkOfTheSideshow( peep, 6 );
 
 			return;
 		}
@@ -652,7 +654,18 @@ public sealed class ParkRideOperation
 
 		// A sideshow's winner thinks thought 5 and gains an event-history entry (0x004fdb38..0x004fdb7f).
 		if ( item.UiType == SideshowUiType )
-			Unimplemented.Report( "SETTLE_UP_SIDESHOW_THOUGHT" );
+			ThinkOfTheSideshow( peep, 5 );
+	}
+
+	/// <summary>A sideshow player's thought, 5 pleased or 6 dissatisfied, and the event beside it, counted.</summary>
+	private void ThinkOfTheSideshow( Peep peep, int thought )
+	{
+		var shown = peep.Thoughts.Set( thought, _state.GameTick, ParkPeople.FirstPersonView );
+
+		Log.Info( $"Person {peep.ThingId}: thought 0x{thought:x}, bubble {(shown ? "made" : "not made")}, "
+			+ $"tick {_state.GameTick}" );
+
+		Unimplemented.Report( "SETTLE_UP_SIDESHOW_EVENT" );
 	}
 
 	/// <summary>

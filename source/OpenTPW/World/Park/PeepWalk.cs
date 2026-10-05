@@ -49,12 +49,10 @@ public enum WalkVerdict
 /// give a plausible and wrong number on every final leg, which is why it is spelled out here.
 /// </para>
 /// <para>
-/// <b>What is deliberately not built.</b> The front of <c>follow_path</c> tests whether the ground has been
-/// rebuilt under the person - <c>FUN_0050ed10</c> shifts the position right by <b>twenty</b>, so sixteen-cell
-/// blocks, indexes a stamp table at <c>world + 0x2d8</c> and compares it against the stamp the navigator
-/// recorded at <c>+0x48</c> when it planned. Neither the table nor that field exists here, so a person never
-/// notices a path being demolished under them. The stuck half of the same front <i>is</i> built, because
-/// everything it needs is present.
+/// <b>The ground changing under a person.</b> The front of <c>follow_path</c>, <c>FUN_0050ed10</c>, shifts the
+/// position right by twenty, so sixteen-cell blocks, reads that block's stamp and compares it with the stamp the
+/// route was planned at (<c>+0x48</c>, <see cref="RouteStamp"/>): a newer block asks for a fresh route, keeping the
+/// cell they stand in, and a failed one gives up (<c>0x0050ed79</c>). <see cref="Ground"/> holds the stamps.
 /// </para>
 /// </summary>
 public sealed class PeepWalk
@@ -94,6 +92,18 @@ public sealed class PeepWalk
 
 		Seed();
 	}
+
+	/// <summary>
+	/// The park whose block stamps this walk reads, or null for a walk that never notices the ground changing
+	/// (a walk made with no park). See the class remarks.
+	/// </summary>
+	internal ParkState? Ground { get; set; }
+
+	/// <summary>
+	/// The shared counter's value when the route was last found - the navigator's <c>+0x48</c>, written at
+	/// <c>0x0050fd19</c> by every plan that finds one.
+	/// </summary>
+	internal uint RouteStamp { get; private set; }
 
 	/// <summary>
 	/// Whether a side of a cell is closed, which is the same test this walk steers by.
@@ -227,8 +237,18 @@ public sealed class PeepWalk
 		_steering.MaxSpeed = _navigator.MaxSpeed;
 		_steering.MaxForce = _navigator.MaxForce;
 
-		// The half of follow_path's front that can be built: six of the last fifteen steps blocked and the
-		// person asks for a new way round, keeping the cell they are standing in on the front of it.
+		// follow_path's front, first half: the block they stand in stamped since the route was found
+		// (0x0050ed79). A fresh route keeps the cell they stand in; none found gives up.
+		if ( Ground is { } ground )
+		{
+			var (cellX, cellY) = _navigator.Position.Cell;
+
+			if ( RouteStamp < ground.BlockStamp( cellX, cellY ) )
+				Renavigate( addCurrent: true );
+		}
+
+		// The second half: six of the last fifteen steps blocked and the person asks for a new way round, keeping
+		// the cell they are standing in on the front of it.
 		if ( !_navigator.Finished && PeepNavigator.BlockedTooOften( _navigator.StuckBits ) )
 			Renavigate( addCurrent: true );
 
@@ -279,6 +299,8 @@ public sealed class PeepWalk
 		// measure progress against a route that no longer exists.
 		if ( !found )
 			_steering.LastProgress = 0;
+		else
+			RouteStamp = ParkState.NextCounter();
 
 		Seed();
 

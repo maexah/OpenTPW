@@ -19,10 +19,15 @@ namespace OpenTPW;
 /// frame while the game is not paused. Alexah, who played the original: "they were translucent. They
 /// waved like a flag/water."
 /// <para>
-/// Four things are counted rather than guessed: the brightening and dimming that goes with the wave (the
-/// same sine scales the vertex's up vector, which this shader normalises away), the blink of a red square
-/// (seven rendered frames on, two off), the turning of <c>m_link</c> and <c>m_end</c> to face the camera, and
-/// the walls a lifted square drops to a lower neighbour.
+/// Three things are counted rather than guessed: the brightening and dimming that goes with the wave (the
+/// same sine scales the vertex's up vector, which this shader normalises away), the turning of <c>m_link</c> and
+/// <c>m_end</c> to face the camera, and the walls a lifted square drops to a lower neighbour.
+/// </para>
+/// <para>
+/// <b>Every red square blinks, seven frames on and two off, all together</b> (<see cref="AdvanceBlink"/>), and
+/// <b>a stranded guest has one under them</b>: the same red square at their own cell, 1.0 over the ground and
+/// never lifted over what is built there (<c>FUN_004fa030</c>, <c>0x004fa0e6</c>;
+/// <c>docs/exe/ride-operation.md</c>, "The red square under a stranded person").
 /// </para>
 /// <para>
 /// <b>Over a built cell the square lifts by the height of what is built there, rounded up to ten</b>
@@ -36,7 +41,7 @@ public sealed class ParkBuildMarkers : ModelEntity
 	/// <summary>The markers of the park currently loaded, or null outside one.</summary>
 	public static ParkBuildMarkers? Current { get; private set; }
 
-	/// <summary>How far above the ground a square sits - the <c>1.5</c> in <c>FUN_0053df30</c>'s corner height.</summary>
+	/// <summary>How far above the ground a tool's square sits - the <c>1.5</c> in <c>FUN_0053df30</c>'s corner height.</summary>
 	private const float Lift = 1.5f;
 
 	/// <summary>
@@ -64,13 +69,56 @@ public sealed class ParkBuildMarkers : ModelEntity
 	/// <summary>The strip last built, so the mesh is laid again only when it changes.</summary>
 	private string _built = string.Empty;
 
+	/// <summary>How far above the ground a stranded guest's square sits - the 1.0 <c>FUN_004fa030</c> passes.</summary>
+	private const float StrandedLift = 1f;
+
+	/// <summary>One square of the mesh: its cell, its marker, and how far over the ground its corners start.</summary>
+	private readonly record struct Square( int X, int Y, int Marker, float Over );
+
 	/// <summary>The squares the mesh holds now, and its vertices, so the wave can move them every frame.</summary>
-	private List<ParkPathBuilding.QueueSquare> _strip = [];
+	private List<Square> _strip = [];
 
 	private Vertex[] _vertices = [];
 
-	/// <summary>How far each square of <see cref="_strip"/> is lifted over what is built under it - see <see cref="LiftOver"/>.</summary>
-	private float[] _lifts = [];
+	/// <summary>How many of <see cref="_strip"/>, from its start, are the tool's; the rest are under stranded guests.</summary>
+	private int _toolSquares;
+
+	/// <summary>
+	/// Whether red squares are showing, and the frames counted toward the next change - <c>DAT_00763c98</c> and
+	/// <c>DAT_00874fc8</c>, which the marker draw <c>FUN_0053c3f0</c> steps unless the game is paused.
+	/// </summary>
+	private bool _redShown = true;
+
+	private float _blinkFrames;
+
+	/// <summary>How many frames a red square shows for, and how many it is gone for (<c>0x0053c7b1</c>..<c>0x0053c7f6</c>).</summary>
+	public const int BlinkOn = 7;
+
+	/// <inheritdoc cref="BlinkOn"/>
+	public const int BlinkOff = 2;
+
+	/// <summary>
+	/// How many frames a second the blink counts. <b>The original counts rendered frames</b>; this takes 30 a
+	/// second, as the wave does (<see cref="WavePerSecond"/>), and runs off <see cref="Time.Delta"/>.
+	/// </summary>
+	private const float BlinkFramesPerSecond = 30f;
+
+	/// <summary>
+	/// The blink after some frames: showing, it stops once <see cref="BlinkOn"/> frames are counted; gone, it
+	/// shows again once <see cref="BlinkOff"/> are; the count starts again at each change.
+	/// </summary>
+	internal static (bool Shown, float Frames) AdvanceBlink( bool shown, float frames, float passed )
+	{
+		frames += passed;
+
+		while ( frames >= (shown ? BlinkOn : BlinkOff) )
+		{
+			frames -= shown ? BlinkOn : BlinkOff;
+			shown = !shown;
+		}
+
+		return (shown, frames);
+	}
 
 	/// <summary>
 	/// Where the wave is, in radians - <c>DAT_00874fc0</c>, which <c>FUN_0053c3f0</c> raises by 0.1 each
@@ -113,40 +161,70 @@ public sealed class ParkBuildMarkers : ModelEntity
 	protected override void OnUpdate()
 	{
 		if ( !GameClock.Paused )
+		{
 			_phase = (_phase + (WavePerSecond * Time.Delta)) % (MathF.PI * 2f);
+			(_redShown, _blinkFrames) = AdvanceBlink( _redShown, _blinkFrames, BlinkFramesPerSecond * Time.Delta );
+		}
 
 		var strip = ParkPicking.TryCell( out var x, out var y )
 			? ParkPathBuilding.Strip( x, y )
 			: [];
 
-		var built = string.Join( ";", strip.Select( square => $"{square.X},{square.Y},{square.Marker}" ) );
+		var stranded = Stranded();
+
+		var built = string.Join( ";", strip.Select( square => $"{square.X},{square.Y},{square.Marker}" ) )
+			+ "|" + string.Join( ";", stranded.Select( cell => $"{cell.X},{cell.Y}" ) );
 
 		if ( built != _built )
 		{
 			_built = built;
-			Build( strip );
+			Build( strip, stranded );
 
 			return;
 		}
 
-		// The same squares: only the wave has moved, so the heights are laid again in place.
+		// The same squares: only the wave and the blink have moved, so the corners are laid again in place.
 		if ( TranslucentModel is { } model && ParkGround.Current?.Heightfield is { } field && Fill( field ) > 0 )
 			model.UpdateVertices( _vertices );
 	}
 
-	/// <summary>The squares the mesh holds now, each with its lift after a <c>^</c>, for the debug console.</summary>
-	public string Census() => _strip.Count == 0
-		? "none"
-		: string.Join( ";", _strip.Select( ( square, index ) => $"{square.X},{square.Y},{square.Marker}^{_lifts[index]:0}" ) );
+	/// <summary>The cell of every stranded guest, one a guest, as the per-frame placement queues them.</summary>
+	private static List<(int X, int Y)> Stranded()
+	{
+		if ( ParkPeople.Current is not { } people )
+			return [];
 
-	private void Build( List<ParkPathBuilding.QueueSquare> strip )
+		return people.Guests.Values
+			.Where( peep => peep.StrandedTime != 0 )
+			.Select( peep => people.WalkFor( peep.ThingId ) )
+			.Where( walk => walk != null )
+			.Select( walk => walk!.Position.Cell )
+			.ToList();
+	}
+
+	/// <summary>
+	/// The squares the mesh holds now, the tool's each with its lift after a <c>^</c>, then those under stranded
+	/// guests after a <c>|</c>, and whether red is showing, for the debug console.
+	/// </summary>
+	public string Census()
+	{
+		string Line( Square square ) => $"{square.X},{square.Y},{square.Marker}^{square.Over - Lift:0}";
+
+		var tool = _strip.Take( _toolSquares ).Select( Line ).ToArray();
+		var stranded = _strip.Skip( _toolSquares ).Select( square => $"{square.X},{square.Y}" ).ToArray();
+
+		return (tool.Length == 0 ? "none" : string.Join( ";", tool ))
+			+ (stranded.Length == 0 ? "" : $" | stranded {string.Join( ";", stranded )} red {(_redShown ? "on" : "off")}");
+	}
+
+	private void Build( List<ParkPathBuilding.QueueSquare> strip, List<(int X, int Y)> stranded )
 	{
 		TranslucentModel?.Delete();
 		TranslucentModel = null;
 		_strip = [];
-		_lifts = [];
+		_toolSquares = 0;
 
-		if ( strip.Count == 0 || ParkGround.Current?.Heightfield is not { } field )
+		if ( strip.Count + stranded.Count == 0 || ParkGround.Current?.Heightfield is not { } field )
 			return;
 
 		Unimplemented.Report( "MARKER_RIPPLE_SHADING" );
@@ -154,18 +232,26 @@ public sealed class ParkBuildMarkers : ModelEntity
 		if ( strip.Any( square => square.Marker is ParkPathBuilding.MarkerLink or ParkPathBuilding.MarkerEnd ) )
 			Unimplemented.Report( "MARKER_ICON_TURNS_WITH_CAMERA" );
 
-		if ( strip.Any( square => square.Marker == ParkPathBuilding.MarkerRed ) )
-			Unimplemented.Report( "MARKER_RED_BLINK_TIMING" );
+		bool OnTheField( int x, int y ) => x >= 0 && y >= 0 && x < field.CellsX && y < field.CellsY;
 
-		_strip = strip.Where( square => square.X >= 0 && square.Y >= 0 && square.X < field.CellsX && square.Y < field.CellsY ).ToList();
-		_lifts = _strip.Select( square => ParkState.Current is { } state
-			? LiftOver( state, Level.Current?.Catalogue, field, square.X, square.Y )
-			: 0f ).ToArray();
-		_vertices = new Vertex[_strip.Count * 4];
+		var lifts = strip.Where( square => OnTheField( square.X, square.Y ) )
+			.Select( square => (Square: square, Lift: ParkState.Current is { } state
+				? LiftOver( state, Level.Current?.Catalogue, field, square.X, square.Y )
+				: 0f) )
+			.ToList();
 
 		// The original also walls a lifted square down to a lower neighbour (FUN_0053df30's other faces).
-		if ( _lifts.Any( lift => lift > 0f ) )
+		if ( lifts.Any( square => square.Lift > 0f ) )
 			Unimplemented.Report( "MARKER_LIFT_SIDE_FACES" );
+
+		_strip = lifts.Select( square => new Square( square.Square.X, square.Square.Y, square.Square.Marker, Lift + square.Lift ) )
+			.ToList();
+		_toolSquares = _strip.Count;
+
+		_strip.AddRange( stranded.Where( cell => OnTheField( cell.X, cell.Y ) )
+			.Select( cell => new Square( cell.X, cell.Y, ParkPathBuilding.MarkerRed, StrandedLift ) ) );
+
+		_vertices = new Vertex[_strip.Count * 4];
 
 		if ( Fill( field ) == 0 )
 			return;
@@ -196,28 +282,29 @@ public sealed class ParkBuildMarkers : ModelEntity
 	{
 		var vertex = 0;
 
-		for ( var square = 0; square < _strip.Count; ++square )
+		foreach ( var (x, y, marker, over) in _strip )
 		{
-			var (x, y, marker, _, _) = _strip[square];
 			var slot = Math.Max( 0, Array.IndexOf( Drawn, marker ) );
-			var lift = _lifts[square];
 
-			_vertices[vertex++] = Corner( field, x, y, new Vector2( 0f, 0f ), slot, lift );
-			_vertices[vertex++] = Corner( field, x + 1, y, new Vector2( 1f, 0f ), slot, lift );
-			_vertices[vertex++] = Corner( field, x + 1, y + 1, new Vector2( 1f, 1f ), slot, lift );
-			_vertices[vertex++] = Corner( field, x, y + 1, new Vector2( 0f, 1f ), slot, lift );
+			// A red square that is not showing is laid with no area: all four corners on its first.
+			var gone = marker == ParkPathBuilding.MarkerRed && !_redShown;
+
+			_vertices[vertex++] = Corner( field, x, y, new Vector2( 0f, 0f ), slot, over );
+			_vertices[vertex++] = Corner( field, gone ? x : x + 1, y, new Vector2( 1f, 0f ), slot, over );
+			_vertices[vertex++] = Corner( field, gone ? x : x + 1, gone ? y : y + 1, new Vector2( 1f, 1f ), slot, over );
+			_vertices[vertex++] = Corner( field, x, gone ? y : y + 1, new Vector2( 0f, 1f ), slot, over );
 		}
 
 		return vertex;
 	}
 
-	private Vertex Corner( HeightfieldFile field, int x, int y, Vector2 uv, int slot, float lift )
+	private Vertex Corner( HeightfieldFile field, int x, int y, Vector2 uv, int slot, float over )
 	{
 		var (worldX, worldY) = (x * field.CellSizeX, y * field.CellSizeY);
 
 		return new()
 		{
-			Position = new Vector3( worldX, worldY, field.HeightAt( x, y ) + lift + Lift + Wave( _phase, worldX, worldY ) ),
+			Position = new Vector3( worldX, worldY, field.HeightAt( x, y ) + over + Wave( _phase, worldX, worldY ) ),
 			Normal = ParkGround.NormalAt( field, x, y ),
 			TexCoords = uv,
 			TexIndex = slot,

@@ -367,6 +367,17 @@ public sealed class Peep
 	public int TimeStartedIdling { get; internal set; }
 
 	/// <summary>
+	/// The shared counter's value when a wander last met a dead end, or nought - <c>mStrandedTime</c>,
+	/// <c>+0x198</c>. While it is set and no block stamp around the guest is as new, every route and wander is
+	/// refused (<see cref="PeepBehaviour.RefusedAsStranded"/>) and a red square blinks under them; a walk tick and
+	/// any route asked for zero it (<c>docs/exe/ride-operation.md</c>, "The stranded bookkeeping").
+	/// </summary>
+	public uint StrandedTime { get; internal set; }
+
+	/// <summary>What they last thought, and the bubble over them.</summary>
+	public Thoughts Thoughts { get; } = new();
+
+	/// <summary>
 	/// Whether SetRandomDest has ever routed this guest - <c>mSetDestSuccessfully</c>, <c>+0xd0</c>, which only
 	/// the constructor and a load clear. Entering <see cref="PeepState.Wandering"/> routes again to the stored
 	/// destination while it is set (<c>docs/exe/ride-operation.md</c>, "The state-6 turn, in order").
@@ -461,6 +472,13 @@ public sealed class Peep
 		NumShops = saved.NumShops;
 		NumSideshows = saved.NumSideshows;
 		NumSideshowsWon = saved.NumSideshowsWon;
+
+		StrandedTime = saved.StrandedTime;
+		Thoughts.Restore( saved.LastThought, saved.TimeBubbleShown );
+
+		// A bubble showing when the park was saved is a slot of the sprite table (mThoughtScript); it is not made again.
+		if ( saved.ThoughtScript != 0 )
+			Unimplemented.Report( "SAVED_THOUGHT_BUBBLE" );
 
 		// The balloon's life and its next place; its sprite is the table's, which ParkPeople joins by the slot.
 		BalloonLife = saved.RemainingBalloonLife;
@@ -665,7 +683,11 @@ public sealed class Peep
 	/// Whether the cell they stand on passes <c>FUN_004fa990</c>, as <see cref="CountsOn"/> answers of its type. False
 	/// by default, which leaves the balloon's countdown alone for a caller asking about the needs.
 	/// </param>
-	public void Tick( int tick, bool onACountingCell = false )
+	/// <param name="think">
+	/// The block's draw of the park's generator and, one time in ten, the thought the needs pick
+	/// (<see cref="ParkPeople"/> hands it in, with the generator and the park's clock).
+	/// </param>
+	public void Tick( int tick, bool onACountingCell = false, Action<Peep>? think = null )
 	{
 		if ( !DueOn( tick ) )
 			return;
@@ -692,13 +714,13 @@ public sealed class Peep
 		PurposeSpeed = Toilet > HurryAboveToilet ? HurryingSpeed : UnhurriedSpeed;
 
 		// The block's last test (0x005018f8..0x00501949): off a ride and on a counting cell, a draw of the park's
-		// generator, one in ten of which picks a thought (FUN_004fc8a0), and then the balloon's life goes down by one,
+		// generator, one in ten of which picks a thought (FUN_004fc8a0, the caller's), and then the balloon's life goes down by one,
 		// unsigned, letting it go at nought. It reads the life alone, so a guest whose balloon is not showing still
 		// counts down.
 		if ( State is PeepState.Riding or PeepState.Leaving || !onACountingCell )
 			return;
 
-		Unimplemented.Report( "NEEDS_THOUGHT_PICKER" );
+		think?.Invoke( this );
 
 		if ( BalloonLife != 0 && --BalloonLife == 0 )
 			LetGoOfTheBalloon();

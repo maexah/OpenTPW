@@ -200,7 +200,7 @@ public class ParkLeavingTests
 	{
 		var (behaviour, guest, walk, admission) = Guest( PeepState.HeadingForExit, walled: true );
 
-		PeepBehaviour.SendTo( guest, walk, admission.CrossingParkSideA );
+		PeepBehaviour.SendTo( behaviour.State, guest, walk, admission.CrossingParkSideA );
 		behaviour.Step( guest, walk, playing: null, tick: 1 );
 
 		Assert.AreEqual( PeepState.Deciding, guest.State );
@@ -218,18 +218,14 @@ public class ParkLeavingTests
 		var (behaviour, guest, walk, _) = Guest( state, shut: state == PeepState.WaitingForOpening, fee: 100000 );
 
 		guest.ParkOpeningWait = 0;
-		var thoughts = FeeThoughts();
 		behaviour.Step( guest, walk, playing: null, tick: 1 );
 
 		Assert.AreEqual( PeepState.HeadingForExit, guest.State );
 		Assert.AreEqual( 0, guest.ExitLevel );
 
 		// Only the far-too-expensive arm thinks thought 6 (0x004ffa44); the waited-out arm thinks nothing.
-		Assert.AreEqual( thoughts + (state == PeepState.JudgingTheFee ? 1 : 0), FeeThoughts() );
+		Assert.AreEqual( state == PeepState.JudgingTheFee ? 6 : 0, guest.Thoughts.Last );
 	}
-
-	private static int FeeThoughts() =>
-		Unimplemented.Summary.FirstOrDefault( gap => gap.What == "FEE_JUDGEMENT_THOUGHT_6" ).Times;
 
 	/// <summary>
 	/// The expensive arm's own leaver: the sulk is rolled, the medium change takes their last happiness, and
@@ -245,13 +241,12 @@ public class ParkLeavingTests
 
 			guest.ParkOpeningWait = 0;
 			guest.Happiness = 10;
-			var thoughts = FeeThoughts();
 			behaviour.Step( guest, walk, playing: null, tick: 1 );
 
 			// Of the arms that do not take the fee, only the expensive one rolls a sulk.
 			if ( guest.State == PeepState.WaitingForOpening )
 			{
-				Assert.AreEqual( thoughts, FeeThoughts(), "a guest who pays thinks nothing of the fee" );
+				Assert.AreEqual( 0, guest.Thoughts.Last, "a guest who pays thinks nothing of the fee" );
 				continue;
 			}
 
@@ -260,7 +255,7 @@ public class ParkLeavingTests
 
 			Assert.AreEqual( PeepState.HeadingForExit, guest.State );
 			Assert.AreEqual( 0, guest.ExitLevel );
-			Assert.AreEqual( thoughts + 1, FeeThoughts(), "the sulk comes with thought 6 (0x004ffa7d)" );
+			Assert.AreEqual( 6, guest.Thoughts.Last, "the sulk comes with thought 6 (0x004ffa7d)" );
 
 			return;
 		}

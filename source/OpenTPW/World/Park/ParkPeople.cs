@@ -308,6 +308,7 @@ public sealed class ParkPeople : Entity
 				// them. Starting everyone at zero would swing the whole park round on the first frame.
 				_walks[peep.ThingId] = new PeepWalk( peep.Navigator, blocked )
 				{
+					Ground = State,
 					Heading = person.Angle
 				};
 
@@ -351,6 +352,7 @@ public sealed class ParkPeople : Entity
 
 				_staffWalks[member.ThingId] = new PeepWalk( member.Navigator, blocked )
 				{
+					Ground = State,
 					Heading = person.Angle
 				};
 
@@ -481,6 +483,7 @@ public sealed class ParkPeople : Entity
 		_byId[thingId] = peep;
 		_walks[thingId] = new PeepWalk( peep.Navigator, _blocked )
 		{
+			Ground = State,
 			Heading = PeepBehaviour.ArrivalHeading
 		};
 
@@ -610,7 +613,7 @@ public sealed class ParkPeople : Entity
 		var member = new global::OpenTPW.Staff( thingId, model, state, navigator );
 
 		_staff.Add( member );
-		_staffWalks[thingId] = new PeepWalk( member.Navigator, _blocked );
+		_staffWalks[thingId] = new PeepWalk( member.Navigator, _blocked ) { Ground = State };
 
 		var person = new ParkWorld.Person(
 			ThingId: thingId, Model: model, RawX: x >> 8, RawY: y >> 8,
@@ -1501,6 +1504,12 @@ public sealed class ParkPeople : Entity
 	/// <summary>Every member of staff, in the order the save lists them.</summary>
 	internal IReadOnlyList<Staff> Staff => _staff;
 
+	/// <summary>A person's thoughts, guest or staff, or null for nobody the park holds.</summary>
+	internal Thoughts? ThoughtsOf( int thingId )
+		=> _byId.TryGetValue( thingId, out var peep )
+			? peep.Thoughts
+			: _staff.FirstOrDefault( member => member.ThingId == thingId )?.Thoughts;
+
 	/// <summary>
 	/// How many of the game's 31ms ticks pass between turns of the thing engine.
 	///
@@ -1585,6 +1594,15 @@ public sealed class ParkPeople : Entity
 	/// </summary>
 	protected override void OnUpdate()
 	{
+		// The per-frame placement's half of the stranded bookkeeping (FUN_004fa030, 0x004fa0c7): a counter value
+		// for every person, and a stranded stamp above it zeroed, which only a stamp from an earlier run of the
+		// counter can be. Only a guest is ever stamped, so only guests are asked.
+		foreach ( var peep in _peeps )
+		{
+			if ( ParkState.NextCounter() < peep.StrandedTime )
+				peep.StrandedTime = 0;
+		}
+
 		for ( var i = 0; i < GameClock.TicksDue; ++i )
 		{
 			var tick = GameClock.Ticks - GameClock.TicksDue + 1 + i;
@@ -1637,7 +1655,11 @@ public sealed class ParkPeople : Entity
 				// oscillate for ever.
 				peep.Navigator.StampPrevious();
 
-				peep.Tick( thingTick, OnACountingCell( peep ) );
+				peep.Tick( thingTick, OnACountingCell( peep ), ThinkOfNeeds );
+
+				// The needs turn's bubble call (0x00501951): on every needs turn, riding or not.
+				if ( peep.DueOn( thingTick ) )
+					peep.Thoughts.Expire( State.GameTick );
 
 				// The guest tick handler's last call, after its (id & 3) needs block, so every sweep, on the park's
 				// own clock (FUN_004fdc90, 0x005019da).
@@ -1681,6 +1703,11 @@ public sealed class ParkPeople : Entity
 				// staff are not eased (Peep.Pace), and keep the speed they were saved or hired with, as their
 				// base follows their rest, which is unbuilt (Q136).
 				member.Navigator.StampPrevious();
+
+				// The staff handler's own bubble call, on the member's sweep in four of the park's clock
+				// (FUN_00505490, 0x005054b3..0x005054c0).
+				if ( (member.ThingId & 3) == (State.GameTick & 3) )
+					member.Thoughts.Expire( State.GameTick );
 
 				var playing = _sprites.GetValueOrDefault( member.ThingId );
 
@@ -1734,6 +1761,29 @@ public sealed class ParkPeople : Entity
 			TakeTheRidesTurns( thingTick );
 			RetryGateClose();
 		}
+	}
+
+	/// <summary>
+	/// Whether the view is first person, in which a thought is stored and no bubble is made
+	/// (<c>gui_CameraFlags &amp; 0x16</c>, <c>FUN_0050be80</c>).
+	/// </summary>
+	internal static bool FirstPersonView => ParkGuestSprites.Current?.FirstPerson ?? false;
+
+	/// <summary>
+	/// The needs turn's thought (<c>0x00501913</c>..<c>0x0050192d</c>): one draw of the park's generator, and one
+	/// time in ten the thought the needs pick (<see cref="Thoughts.PickFromNeeds"/>), set with no sound argument.
+	/// The draw comes from the arrivals' generator here: this project keeps no shared one
+	/// (<see cref="ParkGenerator"/>).
+	/// </summary>
+	private void ThinkOfNeeds( Peep peep )
+	{
+		if ( (uint)_arrivalRandom.Next() % 10 != 0 || Thoughts.PickFromNeeds( peep ) is not { } thought )
+			return;
+
+		var shown = peep.Thoughts.Set( thought, State.GameTick, FirstPersonView );
+
+		Log.Info( $"Person {peep.ThingId}: thought 0x{thought:x} from their needs, bubble {(shown ? "made" : "not made")}, "
+			+ $"tick {State.GameTick}" );
 	}
 
 	/// <summary>
@@ -2668,6 +2718,9 @@ public sealed class ParkPeople : Entity
 				+ $"joined {peep.JoinHappiness:0} "
 				// What they wear, the sprite kind and bank: 0 a child, 2 a costume.
 				+ $"sprite {peep.SpriteKind}/{peep.SpriteBank} "
+				// The stranded stamp, the thought last set and the bubble's bank and set, or "-" with none.
+				+ $"stranded {peep.StrandedTime} thought 0x{peep.Thoughts.Last:x} "
+				+ $"bubble {(peep.Thoughts.Bubble is { } bubble ? $"{bubble.Bank}/{bubble.Set} since {peep.Thoughts.TimeBubbleShown}" : "-")} "
 				// The balloon's life, its colour and its picture's turn, or "-" for none held.
 				+ $"balloon {peep.BalloonLife} {(peep.Balloon is { } held ? $"set {held.Sprite.Set} frame {held.Sprite.Frame} shown {held.Sprite.Shown}" : "-")} "
 				// Where they ARE, without which a person whose needs change and whose position does not

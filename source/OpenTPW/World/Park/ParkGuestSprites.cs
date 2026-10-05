@@ -172,6 +172,7 @@ public sealed class ParkGuestSprites : ModelEntity
 		6 => "esprites/Generic/Mechanics",
 		7 => "esprites/Generic/Guards",
 		8 => "esprites/Generic/Researchers",
+		Thoughts.SpriteKind => Thoughts.Folder,
 		Balloon.SpriteKind => Balloon.Folder,
 		_ => null
 	};
@@ -234,7 +235,7 @@ public sealed class ParkGuestSprites : ModelEntity
 			return;
 
 		// Only the people. The table's balloons are taken by their guests (ParkPeople, by mBalloonScript) and
-		// drawn by DrawBalloons; litter and thought bubbles have no thing of their own to take a position from yet.
+		// drawn by DrawBalloons, and a thought bubble is its person's (DrawBubble); litter has no thing of its own to take a position from yet.
 		var byPerson = park.People.ToDictionary( person => person.SpriteSlot, person => person );
 
 		foreach ( var sprite in park.Sprites )
@@ -355,13 +356,15 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// <summary>
 	/// Which banks the atlas packs. With the counts: what the save's people wear, each brought within its kind's banks
 	/// (<see cref="ParkSpriteBanks.Reduce"/>), every child and costume bank - an arrival or a costume may wear any - and
-	/// all counted staff banks (including in an empty park), and the balloon bank. Without: what the save's people wear, and the balloon bank. Each once.
+	/// all counted staff banks (including in an empty park), the balloon bank and the two thought banks. Without: what the save's people wear, the balloon bank and the two thought banks. Each once.
 	/// </summary>
 	internal static IEnumerable<(int Type, int Bank)> BanksToPack( IEnumerable<ParkWorld.Sprite> worn, ParkSpriteBanks? counts )
 	{
 		var banks = worn.Select( sprite => (sprite.Type, Bank: sprite.Bank + sprite.BankOffset) )
 			.Select( key => (key.Type, Bank: counts?.Reduce( key.Type, key.Bank ) ?? key.Bank) )
-			.Append( (Type: Balloon.SpriteKind, Bank: 0) );
+			.Append( (Type: Balloon.SpriteKind, Bank: 0) )
+			.Append( (Type: Thoughts.SpriteKind, Bank: 0) )
+			.Append( (Type: Thoughts.SpriteKind, Bank: 1) );
 
 		if ( counts != null )
 		{
@@ -439,11 +442,13 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// are bursting than it has room for.
 	/// </para>
 	/// </summary>
+	private const int QuadsAPerson = 4;
+
 	private void Build( int bursting = BurstingRoom )
 	{
-		// Three quads a person - the sprite, the debug dash that is usually collapsed to nothing, and a balloon -
-		// and room for the balloons bursting, which outlast their guests.
-		var quads = (_people.Count * 3) + bursting;
+		// Four quads a person - the sprite, the debug dash that is usually collapsed to nothing, a balloon and a
+		// thought bubble - and room for the balloons bursting, which outlast their guests.
+		var quads = (_people.Count * QuadsAPerson) + bursting;
 
 		_vertices = new Vertex[quads * 4];
 
@@ -577,7 +582,7 @@ public sealed class ParkGuestSprites : ModelEntity
 		var people = ParkPeople.Current;
 
 		// Room for the balloons bursting, which the crowd's size does not cover, before anything is written.
-		if ( people is { Bursting.Count: > BurstingRoom } && ((_people.Count * 3) + people.Bursting.Count) * 4 > _vertices.Length )
+		if ( people is { Bursting.Count: > BurstingRoom } && ((_people.Count * QuadsAPerson) + people.Bursting.Count) * 4 > _vertices.Length )
 			Build( people.Bursting.Count + BurstingRoom );
 		var cellX = field?.CellSizeX ?? 0f;
 		var cellY = field?.CellSizeY ?? 0f;
@@ -598,6 +603,8 @@ public sealed class ParkGuestSprites : ModelEntity
 				if ( DrawHead( used, boat.Seat, boat.Frame, kind, bank, sprite.Alpha ) )
 					++used;
 
+				used = DrawBubble( used, people, person.ThingId, boat.Seat );
+
 				continue;
 			}
 
@@ -606,6 +613,8 @@ public sealed class ParkGuestSprites : ModelEntity
 			{
 				if ( DrawHead( used, hung.At, hung.Frame, kind, bank, sprite.Alpha ) )
 					++used;
+
+				used = DrawBubble( used, people, person.ThingId, hung.At );
 
 				continue;
 			}
@@ -642,6 +651,8 @@ public sealed class ParkGuestSprites : ModelEntity
 
 			if ( DebugFacing && _plain is { } plain )
 				WriteGroundDash( used++, centre, angle, kind, plain );
+
+			used = DrawBubble( used, people, person.ThingId, centre );
 		}
 
 		used = DrawBalloons( people, field, cellX, cellY, alpha, used );
@@ -747,6 +758,32 @@ public sealed class ParkGuestSprites : ModelEntity
 		WriteQuad( used, seat, loaded.Pictures[index], false, alpha, HeadScale );
 
 		return true;
+	}
+
+	/// <summary>
+	/// A person's thought bubble, <see cref="Thoughts.Lift"/> above where they are drawn - the bubble's half of the
+	/// per-frame placement (<c>FUN_004fa030</c>, guests and staff). The set's one picture, facing nowhere, at the
+	/// alpha a new sprite is made with. Answers the next free quad.
+	/// </summary>
+	/// <remarks>
+	/// A rider drawn as a head has the bubble over the head; the original places it over the body it leaves
+	/// standing where they boarded.
+	/// </remarks>
+	private int DrawBubble( int used, ParkPeople? people, int thingId, Vector3 body )
+	{
+		if ( people?.ThoughtsOf( thingId )?.Bubble is not { } bubble
+			|| !_banks.TryGetValue( (Thoughts.SpriteKind, bubble.Bank), out var bank )
+			|| bubble.Set >= bank.Bank.Sets.Length )
+			return used;
+
+		var index = Picture( bank.Bank.Sets[bubble.Set], 0, 0, out _ );
+
+		if ( index < 0 || index >= bank.Pictures.Length )
+			return used;
+
+		WriteQuad( used, body + new Vector3( 0f, 0f, Thoughts.Lift ), bank.Pictures[index], false, 0xff );
+
+		return used + 1;
 	}
 
 	/// <summary>
@@ -1246,6 +1283,13 @@ public sealed class ParkGuestSprites : ModelEntity
 
 		foreach ( var letGo in people.Bursting )
 			yield return BalloonLine( "balloon let go", letGo, field );
+
+		foreach ( var (person, _) in _people )
+		{
+			if ( people.ThoughtsOf( person.ThingId ) is { Bubble: { } bubble } thoughts )
+				yield return $"bubble over {person.ThingId,2} thought 0x{thoughts.Last:x} bank {bubble.Bank} set {bubble.Set} "
+					+ $"since {thoughts.TimeBubbleShown} packed {_banks.ContainsKey( (Thoughts.SpriteKind, bubble.Bank) )}";
+		}
 	}
 
 	private static string BalloonLine( string whose, Balloon balloon, HeightfieldFile? field )

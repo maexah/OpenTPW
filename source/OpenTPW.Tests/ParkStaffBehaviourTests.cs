@@ -592,15 +592,15 @@ public class ParkStaffBehaviourTests
 		member.Navigator.Target = new FixedVector( PeepNavigator.WaypointCentre( 49 ), PeepNavigator.WaypointCentre( 22 ) );
 		Assert.IsTrue( walk.PlanRoute(), "the non-path destination must be reachable to expose the defect" );
 		var behaviour = new StaffBehaviour( Balance(), new ConstantDraw(), state );
-		var failed = Counted( "STAFF_PATROL_ROLL_FAILED_THOUGHT_0x16" );
 		behaviour.Step( member, walk, playing: null, tick: 1001 );
 		Assert.AreEqual( StaffActivity.Idle, member.Activity, "a reachable queue/entrance/approach is not a patrol destination" );
-		Assert.AreEqual( failed + 1, Counted( "STAFF_PATROL_ROLL_FAILED_THOUGHT_0x16" ), "thirty failed tries think 0x16 (0x0050701f)" );
+		Assert.AreEqual( 0x16, member.Thoughts.Last, "thirty failed tries think 0x16 (0x0050701f)" );
+		member.Thoughts.Restore( 0, 0 );
 
 		state.SetRecord( 49, 22, state.Record( 49, 22 ) with { Type = CellEdge.Path } );
 		behaviour.Step( member, walk, playing: null, tick: 1002 );
 		Assert.AreEqual( StaffActivity.Walking, member.Activity, "the same live cell converted to path must be accepted" );
-		Assert.AreEqual( failed + 1, Counted( "STAFF_PATROL_ROLL_FAILED_THOUGHT_0x16" ), "a roll that finds a cell thinks nothing" );
+		Assert.AreEqual( 0, member.Thoughts.Last, "a roll that finds a cell thinks nothing" );
 	}
 
 	[DataTestMethod]
@@ -785,13 +785,10 @@ public class ParkStaffBehaviourTests
 		var world = Park();
 		var (member, walk) = Deciding( world, happiness, tiredness: 80f );
 		var random = new CountedDraw( draw );
-		var before = (Counted( "STAFF_UNHAPPY_THOUGHT_0x13" ), Counted( "STAFF_VERY_HAPPY_THOUGHT_0x12" ), Counted( "STAFF_TIRED_THOUGHT_0x14" ));
-
 		new StaffBehaviour( Balance(), random ).Step( member, walk, playing: null, tick: 1001 );
 
-		Assert.AreEqual( before.Item1 + unhappy, Counted( "STAFF_UNHAPPY_THOUGHT_0x13" ), "unhappy" );
-		Assert.AreEqual( before.Item2 + veryHappy, Counted( "STAFF_VERY_HAPPY_THOUGHT_0x12" ), "very happy" );
-		Assert.AreEqual( before.Item3, Counted( "STAFF_TIRED_THOUGHT_0x14" ), "a rested member is not tired" );
+		Assert.AreEqual( unhappy == 1 ? 0x13 : veryHappy == 1 ? 0x12 : 0, member.Thoughts.Last,
+			"0x13 unhappy, 0x12 very happy, and a rested member never 0x14" );
 		Assert.AreEqual( draws, random.Asked, "the draw is taken only above 97" );
 	}
 
@@ -801,12 +798,9 @@ public class ParkStaffBehaviourTests
 	{
 		var world = Park();
 		var (member, walk) = Deciding( world, happiness: 5f, tiredness: 0.5f );
-		var before = (Counted( "STAFF_TIRED_THOUGHT_0x14" ), Counted( "STAFF_UNHAPPY_THOUGHT_0x13" ));
-
 		new StaffBehaviour( Balance(), new ConstantDraw() ).Step( member, walk, playing: null, tick: 1001 );
 
-		Assert.AreEqual( before.Item1 + 1, Counted( "STAFF_TIRED_THOUGHT_0x14" ) );
-		Assert.AreEqual( before.Item2, Counted( "STAFF_UNHAPPY_THOUGHT_0x13" ) );
+		Assert.AreEqual( 0x14, member.Thoughts.Last, "tired, though their happiness of 5 would think 0x13" );
 	}
 
 }

@@ -244,7 +244,7 @@ public sealed class StaffBehaviour
 	/// </summary>
 	private void Decide( Staff staff, PeepWalk walk, int tick )
 	{
-		CountMoodThought( staff );
+		ThinkOfTheMood( staff );
 
 		if ( staff.Model is not (GuardModel or ResearcherModel) )
 		{
@@ -275,7 +275,7 @@ public sealed class StaffBehaviour
 		// here they stand idle.
 		//
 		// The original also shows thought 0x14, tired, on the way into this branch, before it knows whether it
-		// will find anything (FUN_0050be80 at 0x00506b50): counted in CountMoodThought.
+		// will find anything (FUN_0050be80 at 0x00506b50): ThinkOfTheMood's.
 		if ( staff.Tiredness < RestLevel )
 		{
 			if ( GoAndRest( staff, walk ) )
@@ -400,9 +400,10 @@ public sealed class StaffBehaviour
 	/// patrol roll answers again.
 	/// </para>
 	/// <para>
-	/// <b>A guest in the same position gets a "stranded" stamp and a thought bubble instead</b> - the
-	/// <c>mStrandedTime</c> the person base names at <c>+0x198</c>. Staff never take that path; they take
-	/// the patrol roll, which is why this is not simply the guest's routine with an extra test.
+	/// <b>A guest in the same position gets a "stranded" stamp and a thought bubble instead</b>
+	/// (<see cref="Peep.StrandedTime"/>). Staff never take that path; they take the patrol roll, which is why this
+	/// is not simply the guest's routine with an extra test. The stranded refusal the original's call opens with
+	/// is therefore not asked of staff here: nothing but a save can give a member a stamp.
 	/// </para>
 	/// </summary>
 	private bool SetRandomDest( Staff staff, PeepWalk walk )
@@ -479,18 +480,17 @@ public sealed class StaffBehaviour
 	/// The thought every kind's decide may show before it chooses - <c>FUN_00506a40</c>, which each kind's decide
 	/// calls first: tired, <c>0x14</c> (<c>0x00506b50</c>); else unhappy, <c>0x13</c>, at a happiness byte of 10
 	/// or less (<c>0x00506ccd</c>); else very happy, <c>0x12</c>, above 97 on one draw in sixteen
-	/// (<c>0x00506cf4</c>), a draw taken only above 97. No thought is kept or drawn here, so each is counted;
-	/// their pictures are in <c>docs/exe/ride-operation.md</c>, "Thoughts and their pictures".
+	/// (<c>0x00506cf4</c>), a draw taken only above 97. Their pictures are in <c>docs/exe/ride-operation.md</c>, "Thoughts and their pictures".
 	/// </summary>
 	/// <remarks>
-	/// Tired is this file's own test (<see cref="RestLevel"/>, Q136 (a)), so the count and the walk to a rest
+	/// Tired is this file's own test (<see cref="RestLevel"/>, Q136 (a)), so the thought and the walk to a rest
 	/// area agree with each other.
 	/// </remarks>
-	private void CountMoodThought( Staff staff )
+	private void ThinkOfTheMood( Staff staff )
 	{
 		if ( staff.Tiredness < RestLevel )
 		{
-			Unimplemented.Report( "STAFF_TIRED_THOUGHT_0x14" );
+			Think( staff, 0x14 );
 
 			return;
 		}
@@ -498,9 +498,18 @@ public sealed class StaffBehaviour
 		var happiness = (byte)(int)staff.Happiness;
 
 		if ( happiness <= UnhappyThoughtAtMost )
-			Unimplemented.Report( "STAFF_UNHAPPY_THOUGHT_0x13" );
+			Think( staff, 0x13 );
 		else if ( happiness > VeryHappyThoughtAbove && (_random.Next() & 0xf) == 0 )
-			Unimplemented.Report( "STAFF_VERY_HAPPY_THOUGHT_0x12" );
+			Think( staff, 0x12 );
+	}
+
+	/// <summary>Sets a member's thought - SetThought, <c>FUN_0050be80</c>, on the park's clock.</summary>
+	private void Think( Staff staff, int thought )
+	{
+		var tick = _state?.GameTick ?? 0;
+		var shown = staff.Thoughts.Set( thought, tick, ParkPeople.FirstPersonView );
+
+		Log.Info( $"Staff {staff.ThingId}: thought 0x{thought:x}, bubble {(shown ? "made" : "not made")}, tick {tick}" );
 	}
 
 	/// <summary>
@@ -545,8 +554,8 @@ public sealed class StaffBehaviour
 				return true;
 		}
 
-		// Thought 0x16 beside the log line (0x0050701f); no thought is kept or drawn here.
-		Unimplemented.Report( "STAFF_PATROL_ROLL_FAILED_THOUGHT_0x16" );
+		// Thought 0x16 beside the log line (0x0050701f).
+		Think( staff, 0x16 );
 
 		return false;
 	}

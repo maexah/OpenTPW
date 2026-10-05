@@ -228,36 +228,46 @@ public class ParkStateTests
 	}
 
 	/// <summary>
-	/// A cell that becomes bare ground, path or queue is counted once, where the original stamps the cell's
-	/// 16 x 16 block (<c>FUN_004d8c60</c>); a write that keeps the type, or makes a footprint, is not.
+	/// A cell that becomes bare ground, path or queue stamps its 16 x 16 block with a fresh value of the shared
+	/// counter (<c>FUN_004d8c60</c>); a write that keeps the type, or makes a footprint, does not.
 	/// </summary>
 	[TestMethod]
-	public void AChangeOfTypeToGroundPathOrQueueCountsABlockStamp()
+	public void AChangeOfTypeToGroundPathOrQueueStampsTheCellsBlock()
 	{
 		var state = new ParkState( Park() );
 		var path = state.Record( 48, 22 );
 		Assert.AreEqual( CellEdge.Path, path.Type, "(48,22) is path in the shipped park" );
+		Assert.AreEqual( 0u, state.BlockStamp( 48, 22 ), "a park starts with every stamp nought" );
 
-		var before = Stamps();
 		state.SetRecord( 48, 22, path with { Neighbours = 0 } );
-		Assert.AreEqual( before, Stamps(), "the same type written again stamps nothing" );
+		Assert.AreEqual( 0u, state.BlockStamp( 48, 22 ), "the same type written again stamps nothing" );
 
 		state.SetRecord( 48, 22, path with { Type = CellEdge.Nothing } );
-		Assert.AreEqual( before + 1, Stamps(), "path to bare ground" );
+		var first = state.BlockStamp( 48, 22 );
+		Assert.AreNotEqual( 0u, first, "path to bare ground: a value of the counter" );
 
 		state.SetRecord( 48, 22, path with { Type = ParkRideChoice.QueueCellType } );
-		Assert.AreEqual( before + 2, Stamps(), "bare ground to queue" );
+		var second = state.BlockStamp( 48, 22 );
+		Assert.IsTrue( second > first, "bare ground to queue: a newer one" );
 
 		state.SetRecord( 48, 22, path with { Type = CellEdge.Footprint } );
-		Assert.AreEqual( before + 2, Stamps(), "a footprint is not one of the three writers' types" );
+		Assert.AreEqual( second, state.BlockStamp( 48, 22 ), "a footprint is not one of the three writers' types" );
 
 		state.ClearRecord( 48, 22 );
-		Assert.AreEqual( before + 3, Stamps(), "giving the cell back to the save's path" );
+		var third = state.BlockStamp( 48, 22 );
+		Assert.IsTrue( third > second, "giving the cell back to the save's path" );
 
 		state.ClearRecord( 48, 22 );
-		Assert.AreEqual( before + 3, Stamps(), "and a cell already the save's stamps nothing" );
+		Assert.AreEqual( third, state.BlockStamp( 48, 22 ), "and a cell already the save's stamps nothing" );
+
+		// One block is 16 x 16 cells: (48,16)..(63,31) share (48,22)'s, and (47,22) and (48,32) do not.
+		Assert.AreEqual( third, state.BlockStamp( 63, 31 ) );
+		Assert.AreEqual( third, state.BlockStamp( 48, 16 ) );
+		Assert.AreEqual( 0u, state.BlockStamp( 47, 22 ) );
+		Assert.AreEqual( 0u, state.BlockStamp( 48, 32 ) );
+		Assert.AreEqual( third, state.BlockStampOf( MapStep.CellId( 48, 22 ) ), "and by packed id, as FUN_004d8ca0 reads it" );
+		Assert.AreEqual( third, state.BlockStampOf( MapStep.CellId( 48, 23 ) ), "an odd row reads the same block: three bits of column, no more" );
+		Assert.AreEqual( 0u, state.BlockStampOf( MapStep.CellId( 47, 22 ) ) );
+		Assert.AreEqual( 0u, state.BlockStampOf( MapStep.CellId( 47, 23 ) ) );
 	}
-
-	private static int Stamps() =>
-		Unimplemented.Summary.FirstOrDefault( gap => gap.What == "MAP_TYPE_WRITE_BLOCK_STAMP" ).Times;
 }

@@ -55,6 +55,9 @@ public sealed class Staff
 	/// </summary>
 	public float Tiredness { get; internal set; }
 
+	/// <summary>What they last thought, and the bubble over them.</summary>
+	public Thoughts Thoughts { get; } = new();
+
 	/// <summary>How many jobs they have finished - <c>mJobsDone</c>.</summary>
 	public int JobsDone { get; internal set; }
 

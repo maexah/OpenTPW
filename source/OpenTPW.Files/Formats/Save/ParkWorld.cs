@@ -579,6 +579,11 @@ public sealed class ParkWorld : IParkInitialState
 	/// <c>mRemainingBalloonLife</c> (<c>+0x214</c>) - the needs sweeps the balloon has left. It outlasts the sprite:
 	/// a guest on a ride keeps it with no balloon to show.
 	/// </param>
+	/// <param name="StrandedTime">
+	/// <c>mStrandedTime</c> (<c>+0x198</c>), with <see cref="LastThought"/>, <see cref="ThoughtScript"/> and
+	/// <see cref="TimeBubbleShown"/> of the person base: the stranded stamp, the thought last set, the bubble's
+	/// slot in the sprite table and the park's clock when it was made.
+	/// </param>
 	/// <param name="LastPosX">
 	/// <c>mLastPosX</c> (<c>+0x218</c>) - where the held balloon goes next frame, across, in world units;
 	/// <see cref="LastPosY"/> (<c>+0x21c</c>) is down. Only a placement writes them.
@@ -592,7 +597,8 @@ public sealed class ParkWorld : IParkInitialState
 		IReadOnlyList<int>? PreviousRides = null, IReadOnlyList<int>? PreviousTemporaryRides = null,
 		int SavedMajorDest = 0, int WalkingTurns = 0,
 		int NumRides = 0, int NumShops = 0, int NumSideshows = 0, int NumSideshowsWon = 0,
-		int BalloonScript = 0, int RemainingBalloonLife = 0, float LastPosX = 0f, float LastPosY = 0f )
+		int BalloonScript = 0, int RemainingBalloonLife = 0, float LastPosX = 0f, float LastPosY = 0f,
+		uint StrandedTime = 0, int LastThought = 0, int ThoughtScript = 0, int TimeBubbleShown = 0 )
 	{
 		/// <summary>How many things each of the two histories holds - <c>mPreviousRides[4]</c> and its twin.</summary>
 		public const int Remembered = 4;
@@ -1997,6 +2003,12 @@ public sealed class ParkWorld : IParkInitialState
 			// mBeenAdmitted, fourth in the block's alphabetical order and the flag a queueing guest is
 			// let onto a ride by - see the field table above, which puts it at 410 and closes on 533.
 			BeenAdmitted: ReadInt32At( start + 410 ),
+			// The person base's: mStrandedTime, and after the event ring's index and 32 events at 254, mLastThought,
+			// mThoughtScript (the bubble's slot in the sprite table) and mTimeBubbleShown, closing on 398.
+			StrandedTime: (uint)ReadInt32At( start + 232 ),
+			LastThought: ReadInt32At( start + 386 ),
+			ThoughtScript: ReadInt32At( start + 390 ),
+			TimeBubbleShown: ReadInt32At( start + 394 ),
 			// What the visitor window counts, bumped by the settle-up (docs/exe/ride-operation.md, "The settle-up's
 			// bookkeeping", steps 1 and 3), in the block's alphabetical order after mMajorDest.
 			NumRides: ReadInt32At( start + 444 ),        // mNumRides

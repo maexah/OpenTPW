@@ -130,7 +130,7 @@ Remaining deviations are explicit at the code sites:
 - Guests start at the admission sequence's `AtGate`, skipping the original outside walk and
   its conditional destination draws (Q128). This does not claim whole-call-tree draw parity.
 - Guest tiredness remains unrepresented in `GuestState`/`Peep`; no tiredness behavior is built.
-- Thought `0xb` is counted as `QUEUE_TURN_THOUGHT_0xB`, like the other unbuilt thoughts.
+- Thought `0xb` is thought there (Q110b; `ride-operation.md`, "Thoughts and their pictures").
   The unhappy queue arm itself runs the common leave path after its existing guards and
   unsigned gap greater than 30: slot release, unlink, happiness dock and return to deciding.
 

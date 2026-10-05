@@ -125,22 +125,62 @@ public sealed class ParkState
 		if ( !OnMap( x, y ) )
 			return;
 
-		CountBlockStamp( Record( x, y ).Type, cell.Type );
+		StampTypeWrite( x, y, Record( x, y ).Type, cell.Type );
 
 		_records[(y * ParkWorld.MapSize) + x] = cell;
 	}
 
 	/// <summary>
-	/// Counts the block stamp a cell's change of type leaves in the original: after writing bare ground, path or
-	/// queue (<c>FUN_005346d0</c>, <c>0x005347af</c>; a queue cell made path, <c>0x00534913</c>) it writes a fresh
-	/// value of the shared counter into the cell's 16 x 16 block (<c>FUN_004d8c60</c>). A walker re-plans when
-	/// its block's stamp is newer than its route, and a stranded guest is freed by one. No stamp is kept here
-	/// (<c>docs/exe/ride-operation.md</c>, "The stranded bookkeeping").
+	/// The shared counter, <c>[0x007cdb98]</c>: <c>FUN_004d8c50</c> adds one and answers it. A logical clock, never
+	/// reset or saved, whose values order the block stamps, a route's stamp and a guest's stranded stamp against
+	/// one another (<c>docs/exe/ride-operation.md</c>, "The stranded bookkeeping").
 	/// </summary>
-	private static void CountBlockStamp( int was, int now )
+	public static uint NextCounter() => ++_counter;
+
+	/// <summary>The counter's last value, for a census.</summary>
+	public static uint Counter => _counter;
+
+	private static uint _counter;
+
+	/// <summary>How many blocks a side the stamps have, one a 16 x 16 cells and one over - world <c>+0x1b02d8</c>.</summary>
+	public const int BlocksASide = 33;
+
+	private readonly uint[] _blockStamps = new uint[BlocksASide * BlocksASide];
+
+	/// <summary>
+	/// Writes a fresh counter value into a cell's 16 x 16 block - <c>FUN_004d8c50</c> then <c>FUN_004d8c60</c>.
+	/// A walker re-plans when its block's stamp is newer than its route, and a stranded guest is freed by one.
+	/// </summary>
+	public void StampBlock( int x, int y )
+	{
+		if ( OnMap( x, y ) )
+			_blockStamps[((y >> 4) * BlocksASide) + (x >> 4)] = NextCounter();
+	}
+
+	/// <summary>A cell's block stamp by cell - <c>FUN_004d8cd0</c> of the two block indices.</summary>
+	public uint BlockStamp( int x, int y )
+		=> OnMap( x, y ) ? _blockStamps[((y >> 4) * BlocksASide) + (x >> 4)] : 0;
+
+	/// <summary>
+	/// A cell's block stamp by packed id - <c>FUN_004d8ca0</c>, which takes one off the id's sixteen bits and reads
+	/// <c>((id &gt;&gt; 4) &amp; 7) + (id &gt;&gt; 11) × 33</c>, so an id off the map's edge reads a neighbouring block.
+	/// </summary>
+	public uint BlockStampOf( int cellId )
+	{
+		var id = (uint)(cellId - 1) & 0xffff;
+
+		return _blockStamps[((id >> 4) & 7) + ((id >> 11) * BlocksASide)];
+	}
+
+	/// <summary>
+	/// The block stamp a cell's change of type leaves: after writing bare ground, path or queue
+	/// (<c>FUN_005346d0</c>, <c>0x005347af</c>; a queue cell made path, <c>0x00534913</c>) the original stamps the
+	/// cell's block (<see cref="StampBlock"/>).
+	/// </summary>
+	private void StampTypeWrite( int x, int y, int was, int now )
 	{
 		if ( was != now && now is CellEdge.Nothing or CellEdge.Path or ParkRideChoice.QueueCellType )
-			Unimplemented.Report( "MAP_TYPE_WRITE_BLOCK_STAMP" );
+			StampBlock( x, y );
 	}
 
 	/// <summary>
@@ -154,7 +194,7 @@ public sealed class ParkState
 		if ( !OnMap( x, y ) )
 			return;
 
-		CountBlockStamp( Record( x, y ).Type, _park?.CellAt( x, y ).Type ?? 0 );
+		StampTypeWrite( x, y, Record( x, y ).Type, _park?.CellAt( x, y ).Type ?? 0 );
 
 		_records.Remove( (y * ParkWorld.MapSize) + x );
 	}
@@ -1428,12 +1468,19 @@ public sealed class ParkState
 		if ( objectId == 0 )
 			return;
 
+		// The counter is taken before the measure and written into the new back cell's block after it
+		// (0x004de233, 0x004de266), so a queue edit frees its stranded guests.
+		var stamp = NextCounter();
+
 		InvalidateQueue( objectId );
 
-		// Between the measure and the people, FUN_004d8c60 (0x004de266) writes a fresh route-counter value
-		// into the back cell's 16 x 16 block stamp, so a queue edit frees its stranded guests; no stamp is
-		// kept here (docs/exe/ride-operation.md, "The stranded bookkeeping").
-		Unimplemented.Report( "QUEUE_REMEASURE_BACK_CELL_STAMP" );
+		if ( TryObject( objectId, out var thing ) && ParkRideChoice.QueueCellsFor( _park, thing ) is (var back and not 0, _) )
+		{
+			var (x, y) = MapStep.CellAt( back );
+
+			if ( OnMap( x, y ) )
+				_blockStamps[((y >> 4) * BlocksASide) + (x >> 4)] = stamp;
+		}
 
 		QueueRemeasured?.Invoke( objectId );
 	}

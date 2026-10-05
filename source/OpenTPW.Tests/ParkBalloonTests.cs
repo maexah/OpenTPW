@@ -227,7 +227,7 @@ public class ParkBalloonTests
 
 	/// <summary>
 	/// <b>The countdown waits on a ride, leaving the park, off a counting cell and off the guest's sweep</b>, and runs with
-	/// no balloon showing; each counted sweep counts the thought picker's draw.
+	/// no balloon showing; each counted sweep asks for the thought picker's draw.
 	/// </summary>
 	[TestMethod]
 	public void TheCountdownWaitsWhereTheOriginalsDoes()
@@ -237,12 +237,12 @@ public class ParkBalloonTests
 			(PeepState.Wandering, 4, true, 5), (PeepState.Wandering, 3, true, 4) } )
 		{
 			var peep = Guest( state, life: 5 );
-			var draws = Times( "NEEDS_THOUGHT_PICKER" );
+			var draws = 0;
 
-			peep.Tick( tick, onACountingCell: counting );
+			peep.Tick( tick, onACountingCell: counting, think: _ => ++draws );
 
 			Assert.AreEqual( life, peep.BalloonLife, $"{state} at {tick} on a counting cell {counting}" );
-			Assert.AreEqual( draws + (5 - life), Times( "NEEDS_THOUGHT_PICKER" ), "the draw is counted where it runs" );
+			Assert.AreEqual( 5 - life, draws, "the thought picker's draw is asked for where it runs" );
 		}
 	}
 

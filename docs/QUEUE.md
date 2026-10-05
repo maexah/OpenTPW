@@ -56,20 +56,6 @@ the original.
   window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
   together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
 
-- [ ] **Q110b. Build the stranded stamp, its refusals and the thought bubble.** Split from Q110, which counted,
-  measured and decoded it (`ride-operation.md`, "The stranded bookkeeping", "Thoughts and their pictures", "Q110").
-  Keep the shared counter (`FUN_004d8c50`, its 14 sites) and the 33 × 33 block stamps (`ParkState.CountBlockStamp`
-  is where the three writers land; the queue re-measure's is `QUEUE_REMEASURE_BACK_CELL_STAMP`); `mStrandedTime` on
-  the guest, written at the dead end (`WANDER_DEAD_END_STRANDED_STAMP`); `FUN_004fa770`'s 3 × 3 test and the refusals
-  in SetRandomDest's entry, `FUN_004fa530` and `FUN_004fa5f0`; the walker's re-plan on a newer stamp
-  (`0x0050ed79`), which Q102 and Q104 left unbuilt. Then `mLastThought` and SetThought's bubble: a kind-9 world
-  sprite from the two `Generic\Thoughts` banks by the tabled set, 2.5 above the guest, the class's wait, gone 13 to
-  16 sweeps on, hidden in first person; and the red square blinking under a stranded guest (decoded by Q223:
-  `ParkBuildMarkers`' red square at the guest's own cell, 1.0 up, seven frames on and two off, which also settles
-  `MARKER_RED_BLINK_TIMING`). Every counted `*_THOUGHT_*` site then calls it. Confirm as the original was measured:
-  `delpath 48 22`, the Belly Bounce shut by its window's door - the put-out queuers stamped, standing, each under
-  the blue question mark, `peeps` and a screenshot beside `q110/orig/s13.png`; then the path laid back and each
-  stamped afresh. The original's three stood 900 sweeps; here four of ten joined the queue.
 - [ ] **Q111. The state-6 turn's arms before its split are unbuilt and uncounted.** Found by Q53 (`ride-operation.md`,
   "The state-6 turn, in order"). (a) spot animation 5 above happiness 80, (b) vomit, (c) litter to a bin (the Litter
   Bin at (44,29)), (e) facing an entertainer, (f) pranks: each is reached in Lost Kingdom and none calls

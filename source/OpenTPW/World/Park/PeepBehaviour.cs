@@ -597,7 +597,7 @@ public sealed class PeepBehaviour
 			case PeepState.AtGate:
 				if ( Admission is { } atTheGate )
 				{
-					SendTo( peep, walk, EitherOf( atTheGate.TicketBoothA, atTheGate.TicketBoothB ) );
+					SendTo( State, peep, walk, EitherOf( atTheGate.TicketBoothA, atTheGate.TicketBoothB ) );
 					peep.SetState( PeepState.HeadingForGate, tick, _random );
 				}
 
@@ -825,6 +825,9 @@ public sealed class PeepBehaviour
 	/// </summary>
 	private static WalkVerdict Walked( Peep peep, PeepWalk walk, SpriteScript? playing )
 	{
+		// Every walk tick zeroes the stranded stamp (0x004fa30b).
+		peep.StrandedTime = 0;
+
 		// A guest who cannot be given a route has given up, which is what the navigator itself records when
 		// a search fails - so it is reported as such rather than as a turn that quietly did nothing.
 		if ( !walk.HasRoute && (peep.Navigator.CannotReach || !walk.PlanRoute()) )
@@ -885,10 +888,10 @@ public sealed class PeepBehaviour
 		{
 			// "Person: park far too expensive" - they set off for the bus stop and give up on the park.
 			case ParkAdmission.Opinion.FarTooExpensive:
-				SendTo( peep, walk, EitherOf( admission.BusStopA, admission.BusStopB ) );
+				SendTo( State, peep, walk, EitherOf( admission.BusStopA, admission.BusStopB ) );
 
-				// Thought 6, dissatisfied, after the destination (0x004ffa44); no thought is kept or drawn here.
-				Unimplemented.Report( "FEE_JUDGEMENT_THOUGHT_6" );
+				// Thought 6, dissatisfied, after the destination (0x004ffa44).
+				Think( peep, 6 );
 				peep.SetState( PeepState.HeadingForExit, tick, _random );
 				peep.ExitLevel = 0;
 
@@ -900,8 +903,8 @@ public sealed class PeepBehaviour
 			case ParkAdmission.Opinion.OnTheExpensiveSide:
 				peep.ParkOpeningWait = (_random.Next() % SulkSpread) + SulkAtLeast;
 
-				// Thought 6 with the wait (0x004ffa7d), counted as the arm above's.
-				Unimplemented.Report( "FEE_JUDGEMENT_THOUGHT_6" );
+				// Thought 6 with the wait (0x004ffa7d).
+				Think( peep, 6 );
 				peep.Happiness = Peep.Change( peep.Happiness, -admission.MediumHappinessChange );
 
 				// The original tests the low byte of the truncated happiness, which cannot mislead here
@@ -956,7 +959,7 @@ public sealed class PeepBehaviour
 				return;
 			}
 
-			SendTo( peep, walk, EitherOf( admission.BusStopA, admission.BusStopB ) );
+			SendTo( State, peep, walk, EitherOf( admission.BusStopA, admission.BusStopB ) );
 			peep.SetState( PeepState.HeadingForExit, tick, _random );
 			peep.ExitLevel = 0;
 
@@ -968,7 +971,7 @@ public sealed class PeepBehaviour
 			// Back to the booths to be charged. A guest already standing on one of the two keeps it,
 			// which is the original's own order - it tests each booth against where they are before it
 			// rolls for one.
-			SendTo( peep, walk, BoothFor( peep, walk, admission ) );
+			SendTo( State, peep, walk, BoothFor( peep, walk, admission ) );
 
 			peep.ParkOpeningWait = 0;
 			peep.SetState( PeepState.HeadingForGate, tick, _random );
@@ -985,7 +988,7 @@ public sealed class PeepBehaviour
 		// maintains it as guests move.
 		else if ( StandingOnTheirOwnCell( peep, walk ) )
 		{
-			SendTo( peep, walk, EitherOf( admission.EntranceA, admission.EntranceB ) );
+			SendTo( State, peep, walk, EitherOf( admission.EntranceA, admission.EntranceB ) );
 			peep.SetState( PeepState.Entering, tick, _random );
 		}
 	}
@@ -1050,8 +1053,8 @@ public sealed class PeepBehaviour
 	/// that through the same pair of steps this does - a destination, then a route. Widening one method is
 	/// cheaper than a second way of moving a peep, which is how the two would drift apart.
 	/// </remarks>
-	internal static bool SendTo( Peep peep, PeepWalk walk, (int X, int Y) cell )
-		=> SendTo( peep, walk, new FixedVector(
+	internal static bool SendTo( ParkState? state, Peep peep, PeepWalk walk, (int X, int Y) cell )
+		=> SendTo( state, peep, walk, new FixedVector(
 			PeepNavigator.WaypointCentre( cell.X ), PeepNavigator.WaypointCentre( cell.Y ) ) );
 
 	/// <summary>
@@ -1059,11 +1062,92 @@ public sealed class PeepBehaviour
 	/// <c>FUN_004fa530</c> takes a cell's centre. The route runs to the point's cell and its last leg closes on
 	/// the point itself (<see cref="PeepNavigator.NavigateTo"/>).
 	/// </summary>
-	private static bool SendTo( Peep peep, PeepWalk walk, FixedVector point )
+	/// <remarks>
+	/// Both first refuse a guest still stranded (<see cref="RefusedAsStranded"/>), answering false with no
+	/// destination written and no route asked; otherwise the stranded stamp is zeroed before the route
+	/// (<c>0x004fa578</c>, <c>0x004fa5fe</c>).
+	/// </remarks>
+	private static bool SendTo( ParkState? state, Peep peep, PeepWalk walk, FixedVector point )
 	{
+		if ( RefusedAsStranded( state, peep, walk ) )
+			return false;
+
+		peep.StrandedTime = 0;
 		peep.Navigator.Target = point;
 
 		return walk.PlanRoute();
+	}
+
+	/// <summary>
+	/// The refusal every route and wander opens with (<c>0x004f94e2</c>, <c>0x004fa578</c>, <c>0x004fa5fe</c>): the
+	/// shared counter goes up, a stranded stamp above it is zeroed, and a guest whose stamp is still set and
+	/// <see cref="StillStranded"/> is refused.
+	/// </summary>
+	internal static bool RefusedAsStranded( ParkState? state, Peep peep, PeepWalk walk )
+	{
+		if ( ParkState.NextCounter() < peep.StrandedTime )
+			peep.StrandedTime = 0;
+
+		return peep.StrandedTime != 0 && StillStranded( state, peep, walk );
+	}
+
+	/// <summary>
+	/// Whether nothing near a stranded guest has changed since they were stamped - <c>FUN_004fa770</c>: every block
+	/// stamp of the 3 x 3 cells around a base is below their stamp. The base is their own cell, or, standing on a
+	/// queue cell or a ride's end (type 3 or 9), the far end of the queue run from it (<c>FUN_004de670</c>, walked
+	/// until it answers nought). With no park every stamp is nought.
+	/// </summary>
+	/// <remarks>
+	/// The cells are taken in the table's order at <c>0x007ced88</c>, the row below first, and the walk stops
+	/// early once a stamp passes theirs. The original's walk along the run has no bound; this one stops at the
+	/// map's cell count, which no run reaches.
+	/// </remarks>
+	internal static bool StillStranded( ParkState? state, Peep peep, PeepWalk walk )
+	{
+		if ( state == null )
+			return true;
+
+		var (x, y) = walk.Position.Cell;
+		var at = MapStep.CellId( x, y );
+
+		if ( state.Record( x, y ).Type is ParkRideChoice.QueueCellType or CellEdge.RideEnd )
+		{
+			for ( var steps = 0; steps < MapStep.MapSize * MapStep.MapSize; ++steps )
+			{
+				var next = ParkRideChoice.StepToNextQueueCell( state.Park, at );
+
+				if ( next == 0 )
+					break;
+
+				at = next;
+			}
+		}
+
+		var newest = 0u;
+
+		foreach ( var down in new[] { 1, 0, -1 } )
+		{
+			foreach ( var across in new[] { -1, 0, 1 } )
+			{
+				if ( peep.StrandedTime < newest )
+					return false;
+
+				newest = Math.Max( newest, state.BlockStampOf( at + (down * MapStep.MapSize) + across ) );
+			}
+		}
+
+		return newest < peep.StrandedTime;
+	}
+
+	/// <summary>
+	/// Sets a guest's thought - SetThought, <c>FUN_0050be80</c>, on the park's clock (<see cref="Thoughts.Set"/>).
+	/// </summary>
+	private void Think( Peep peep, int thought )
+	{
+		var shown = peep.Thoughts.Set( thought, State.GameTick, ParkPeople.FirstPersonView );
+
+		Log.Info( $"Person {peep.ThingId}: thought 0x{thought:x}, bubble {(shown ? "made" : "not made")}, "
+			+ $"tick {State.GameTick}" );
 	}
 
 	/// <summary>
@@ -1204,7 +1288,7 @@ public sealed class PeepBehaviour
 
 		foreach ( var cell in new[] { first, second } )
 		{
-			if ( !SendTo( peep, walk, cell ) )
+			if ( !SendTo( State, peep, walk, cell ) )
 				continue;
 
 			Log.Info( $"Person {peep.ThingId}: leaving, {why}, exit level {peep.ExitLevel}, happiness {before:0} to "
@@ -1255,8 +1339,8 @@ public sealed class PeepBehaviour
 	/// length counted as the original counts it (<see cref="QueueCount"/>). A guest refused by either of these two
 	/// remembers the thing (<see cref="Peep.RememberRefusal"/>) and lets it go, and the excitement refusal also
 	/// zeroes <see cref="Peep.TimeStartedIdling"/> (<c>0x004ffcf6</c>), so the thinking gap in front of the chooser
-	/// is over at once. Each arm's event and thought is counted: this project keeps no event ring and draws no
-	/// thought. See <c>docs/exe/ride-operation.md</c>, "Q103".
+	/// is over at once. Each arm thinks its thought (<see cref="Think"/>) and its event is counted: this project
+	/// keeps no event ring. See <c>docs/exe/ride-operation.md</c>, "Q103".
 	/// </para>
 	/// <para>
 	/// <b>The walk</b> is <see cref="FindQueueDestination"/> (<c>0x004ffdad</c>). A guest who cannot get to their
@@ -1283,7 +1367,7 @@ public sealed class PeepBehaviour
 			Log.Info( $"Person {peep.ThingId}: The back of the queue has moved while I was walking here" );
 
 			// No back of queue, or no route to it: event 0x16 and deciding, the thing still named (0x004ffe4a).
-			if ( backOfQueue == 0 || !SendTo( peep, walk, MapStep.CellAt( backOfQueue ) ) )
+			if ( backOfQueue == 0 || !SendTo( State, peep, walk, MapStep.CellAt( backOfQueue ) ) )
 			{
 				Unimplemented.Report( "ARRIVAL_BACK_OF_QUEUE_LOST_EVENT" );
 
@@ -1318,7 +1402,7 @@ public sealed class PeepBehaviour
 			Log.Info( $"Person {peep.ThingId}: ride is {(tooExciting ? "too exciting" : "not exciting enough")}! "
 				+ $"(thing {chosen.ThingId}, tick {tick})" );
 			Unimplemented.Report( tooExciting ? "ARRIVAL_TOO_EXCITING_EVENT" : "ARRIVAL_NOT_EXCITING_EVENT" );
-			Unimplemented.Report( tooExciting ? "ARRIVAL_TOO_EXCITING_THOUGHT_0xF" : "ARRIVAL_NOT_EXCITING_THOUGHT_0xC" );
+			Think( peep, tooExciting ? 0xf : 0xc );
 
 			peep.RememberRefusal( chosen.ThingId );
 			peep.TimeStartedIdling = 0;
@@ -1331,7 +1415,7 @@ public sealed class PeepBehaviour
 		{
 			Log.Info( $"Person {peep.ThingId}: queue is too long! ({queue} for thing {chosen.ThingId})" );
 			Unimplemented.Report( "ARRIVAL_TOO_LONG_EVENT" );
-			Unimplemented.Report( "ARRIVAL_TOO_LONG_THOUGHT_0x10" );
+			Think( peep, 0x10 );
 
 			peep.RememberRefusal( chosen.ThingId );
 			GiveUpOnIt( peep, tick );
@@ -1370,8 +1454,8 @@ public sealed class PeepBehaviour
 	/// its sequence is not.
 	/// </para>
 	/// <para>
-	/// The route (<c>FUN_004fa5f0</c>) first refuses a guest whose <c>mStrandedTime</c> no ground change near them
-	/// has reached. Nothing here keeps that field; on these three paths it is nought unless a save loaded it.
+	/// The route (<c>FUN_004fa5f0</c>) first refuses a guest still stranded (<see cref="RefusedAsStranded"/>); on
+	/// these three paths the stamp is nought unless a save loaded it.
 	/// </para>
 	/// </remarks>
 	/// <returns>Whether a route to their place was found.</returns>
@@ -1391,7 +1475,7 @@ public sealed class PeepBehaviour
 			Unimplemented.Report( "QUEUE_PLACE_DODGY_DIRECTION" );
 
 		// Cell nought, a place past the queue's cells, packs as (127, 255), which no route reaches.
-		if ( point.Cell == 0 || !SendTo( peep, walk, point.Position ) )
+		if ( point.Cell == 0 || !SendTo( State, peep, walk, point.Position ) )
 		{
 			Log.Info( $"Person {peep.ThingId}: QQQ - FindQueueDestination SetDest failed, so I'm standing in queue" );
 
@@ -1500,12 +1584,12 @@ public sealed class PeepBehaviour
 	/// cell (<c>FUN_004dedf0(0)</c>, the item's sub-cell offset turned by the facing). With no route the ride
 	/// forgets them and they are put out (<c>0x0050010a</c>, <see cref="PutOutOfTheQueue"/>). The original's
 	/// <c>FUN_004fa5f0</c> also answers nought without routing on a guest's <c>mStrandedTime</c> (<c>+0x198</c>,
-	/// <c>0x004fa62a</c>), which every walk tick zeroes, so on this arm it is nought unless a save loaded it, and
-	/// nothing here reads a save's: that refusal is not built.</item>
+	/// <c>0x004fa62a</c>, <see cref="RefusedAsStranded"/>), which every walk tick zeroes, so on this arm it is
+	/// nought unless a save loaded it.</item>
 	/// <item><b>Wait.</b> At the front and invited but not the nominee: the whole turn is nothing (<c>0x005001d8</c>).</item>
 	/// <item><b>The dirt gate</b> (<c>0x005001f0</c>) puts out a queuer for a dirty toilet
-	/// (<see cref="ParkState.IsDirty"/>), which use makes one (<see cref="ParkRideOperation.WearByUse"/>); thought
-	/// <c>0xe</c> is counted. A handyman's cleaning restores it and is not built (Q133), so a toilet here stays
+	/// (<see cref="ParkState.IsDirty"/>), which use makes one (<see cref="ParkRideOperation.WearByUse"/>), with
+	/// thought <c>0xe</c>. A handyman's cleaning restores it and is not built (Q133), so a toilet here stays
 	/// dirty (<c>ride-operation.md</c>, "A toilet's dirt").</item>
 	/// <item><b>The lost place.</b> The queue walk cannot reach them - they are unlinked, or somebody in front has
 	/// stopped queueing: put out. The original's log says it closes and reopens the ride; nothing does.</item>
@@ -1519,9 +1603,9 @@ public sealed class PeepBehaviour
 	/// <item><b>The mood</b>, read once <see cref="QueueMoodGap"/> sweeps have passed since a spot animation: above
 	/// <see cref="QueueHappyAbove"/> spot animation <see cref="SpotHappy"/> and from <see cref="QueueUnhappyBelow"/>
 	/// to 19 <see cref="SpotBored"/> (<see cref="PlaySpotAnimation"/>), either ending the turn;
-	/// from <see cref="QueueToiletFrom"/> to 80 with a toilet need above <see cref="QueueToiletAbove"/>, thought 4
-	/// (counted), and out unless the thing is a toilet; below <see cref="QueueUnhappyBelow"/>, thought <c>0xb</c>
-	/// (counted), and out by the common leave path.</item>
+	/// from <see cref="QueueToiletFrom"/> to 80 with a toilet need above <see cref="QueueToiletAbove"/>, thought 4,
+	/// and out unless the thing is a toilet; below <see cref="QueueUnhappyBelow"/>, thought <c>0xb</c>, and out by
+	/// the common leave path.</item>
 	/// <item><b>Within the gap</b>, one turn in ten turns the heading (counted); boredom would put them out once
 	/// <see cref="QueueBoredAfter"/> sweeps have passed since they began to stand, and <b>never fires</b>:
 	/// <c>mTimeStartedIdling</c> is stamped on every return to the queue at least eleven sweeps after the spot
@@ -1549,7 +1633,7 @@ public sealed class PeepBehaviour
 
 			peep.BeenAdmitted = false;
 
-			if ( !SendTo( peep, walk, (queueing.EntryCellX, queueing.EntryCellY) ) )
+			if ( !SendTo( State, peep, walk, (queueing.EntryCellX, queueing.EntryCellY) ) )
 			{
 				Log.Info( $"Person {peep.ThingId}: the player has removed the path from under me and I can no "
 					+ $"longer get into object {queueing.ThingId}" );
@@ -1565,7 +1649,7 @@ public sealed class PeepBehaviour
 
 		if ( ParkState.IsDirty( queueing ) )
 		{
-			Unimplemented.Report( "QUEUE_TURN_THOUGHT_0xE" );
+			Think( peep, 0xe );
 			PutOutOfTheQueue( peep, queueing, tick, "the toilet's dirt" );
 
 			return;
@@ -1585,7 +1669,7 @@ public sealed class PeepBehaviour
 		{
 			if ( LongestQueue( queueing, ItemOf( queueing ) ) is { } longest && (uint)recorded > longest )
 			{
-				Unimplemented.Report( "QUEUE_TURN_THOUGHT_0x10" );
+				Think( peep, 0x10 );
 				PutOutOfTheQueue( peep, queueing, tick, $"the capacity, place {recorded} past {longest}" );
 
 				return;
@@ -1599,7 +1683,7 @@ public sealed class PeepBehaviour
 			}
 			else if ( track == ItemDescriptionFile.CarTrack && queueing.IsTrackRideValid == 0 )
 			{
-				Unimplemented.Report( "QUEUE_TURN_THOUGHT_0xD" );
+				Think( peep, 0xd );
 				PutOutOfTheQueue( peep, queueing, tick );
 
 				return;
@@ -1646,7 +1730,7 @@ public sealed class PeepBehaviour
 			Log.Info( $"Person {peep.ThingId}: needs the toilet, in the queue for {queueing.ThingId} "
 				+ $"(happiness {peep.Happiness:0}, toilet {peep.Toilet:0})" );
 
-			Unimplemented.Report( "QUEUE_TURN_THOUGHT_4" );
+			Think( peep, 4 );
 
 			if ( !queueing.IsToilet )
 				PutOutOfTheQueue( peep, queueing, tick );
@@ -1661,7 +1745,7 @@ public sealed class PeepBehaviour
 			return;
 		}
 
-		Unimplemented.Report( "QUEUE_TURN_THOUGHT_0xB" );
+		Think( peep, 0xb );
 		PutOutOfTheQueue( peep, queueing, tick, "unhappiness" );
 	}
 
@@ -1833,15 +1917,14 @@ public sealed class PeepBehaviour
 	/// </summary>
 	/// <remarks>
 	/// The object counts the walk-away (<c>FUN_004e1670</c>, <see cref="ParkObjectRings.CountWalkAway"/>). Thought 6
-	/// and the event-ring entry (event 10, <c>0x0050076b</c>) are counted; nothing here draws a thought or keeps the
-	/// ring.
+	/// is thought; the event-ring entry (event 10, <c>0x0050076b</c>) is counted, as nothing here keeps the ring.
 	/// </remarks>
 	private void WalkAwayFromTheDoor( Peep peep, ParkWorld.CatalogueObject thing, int tick )
 	{
 		Log.Info( $"Person {peep.ThingId}: Object {thing.ThingId} is too expensive, I'm leaving the queue "
 			+ $"(price {thing.PricePerUse}, cash {peep.Cash})" );
 
-		Unimplemented.Report( "DOOR_PRICE_THOUGHT_6" );
+		Think( peep, 6 );
 		Unimplemented.Report( "DOOR_EVENT_HISTORY" );
 
 		if ( Admission is { } mood )
@@ -1896,8 +1979,8 @@ public sealed class PeepBehaviour
 	/// <see cref="DismissFromTheQueue"/>: <see cref="ParkAdmission.MediumHappinessChange"/> and nothing else.
 	/// The kids' sound is the caller's, which knows where the guest is drawn.
 	/// <para>
-	/// <b>One guest in three also thinks something</b> (thought <c>0xd</c> when the id divides by three,
-	/// <c>0x0050148a</c>), and nothing here draws a thought, so it is counted.
+	/// <b>One guest in three also thinks something</b>: thought <c>0xd</c> when the id divides by three
+	/// (<c>0x0050148a</c>).
 	/// </para>
 	/// </remarks>
 	/// <param name="place">Where the queue walk found them, or -1.</param>
@@ -1912,7 +1995,7 @@ public sealed class PeepBehaviour
 			return false;
 
 		if ( peep.ThingId % 3 == 0 )
-			Unimplemented.Report( "QUEUE_SHORTENED_THOUGHT_0xD" );
+			Think( peep, 0xd );
 
 		ParkRideOperation.LeaveQueue( State, script, peep.MajorDest, peep.ThingId );
 		DismissFromTheQueue( peep, tick );
@@ -2127,7 +2210,8 @@ public sealed class PeepBehaviour
 	/// walker failed under the earlier winner's name</b>. The guest is still answered as having chosen, and their
 	/// first turn walking takes the stuck arm (<see cref="LoseHeartOnTheWay"/>). The original's walker can instead
 	/// revive the failed route when the ground near the guest has changed since their last plan, and walk them to
-	/// the loser's back of queue; <see cref="PeepWalk"/> keeps no ground stamp, so that does not happen here.
+	/// the loser's back of queue (<c>0x0050ed79</c>); here a walk holding no route gives up before its step
+	/// (<see cref="Walked"/>), so the re-plan is never reached for it and that does not happen.
 	/// See <c>docs/exe/ride-operation.md</c>, "Q104".
 	/// </para>
 	/// <para>
@@ -2169,7 +2253,7 @@ public sealed class PeepBehaviour
 		// stand. The chooser offers nothing without one.
 		var (backOfQueue, _) = ParkRideChoice.QueueCellsFor( _park, chosen );
 
-		if ( backOfQueue == 0 || !SendTo( peep, walk, MapStep.CellAt( backOfQueue ) ) )
+		if ( backOfQueue == 0 || !SendTo( State, peep, walk, MapStep.CellAt( backOfQueue ) ) )
 			return false;
 
 		peep.MajorDest = chosen.ThingId;
@@ -2322,7 +2406,7 @@ public sealed class PeepBehaviour
 		peep.MajorDest = nearer.Thing.ThingId;
 		peep.SavedMajorDest = major.ThingId;
 
-		SendTo( peep, walk, (nearer.Thing.EntryCellX, nearer.Thing.EntryCellY) );
+		SendTo( State, peep, walk, (nearer.Thing.EntryCellX, nearer.Thing.EntryCellY) );
 	}
 
 	/// <summary>
@@ -2355,7 +2439,7 @@ public sealed class PeepBehaviour
 
 		var (backOfQueue, _) = ParkRideChoice.QueueCellsFor( _park, restored );
 
-		if ( backOfQueue == 0 || !SendTo( peep, walk, MapStep.CellAt( backOfQueue ) ) )
+		if ( backOfQueue == 0 || !SendTo( State, peep, walk, MapStep.CellAt( backOfQueue ) ) )
 			return false;
 
 		Log.Info( $"Person {peep.ThingId}: Left minor destination, found old major one again! ({restored.ThingId})" );
@@ -2380,17 +2464,27 @@ public sealed class PeepBehaviour
 	/// (<c>0x004f991c</c>). A route there sets <see cref="Peep.SetDestSuccessfully"/>.
 	/// </para>
 	/// <para>
-	/// <b>The stranded bookkeeping is absent</b> (Q110b): the original refuses a guest whose stamp says
-	/// nothing near them has changed, stamps one who reaches a dead end and raises the question-mark bubble,
-	/// thought <c>0x11</c>, and neither the stamp nor the thought system exists here, so a guest at a dead end
-	/// is counted on every wander that meets it, stays where they are, is asked again and can still be chosen
-	/// a ride (<c>docs/exe/ride-operation.md</c>, "Q110").
+	/// <b>The stranded bookkeeping.</b> The call opens by refusing a guest still stranded
+	/// (<see cref="RefusedAsStranded"/>), with thought <c>0x11</c> and before any draw (<c>0x004f94e2</c>). A
+	/// linked walk that meets a dead end thinks <c>0x11</c> and stamps the guest with a fresh counter value
+	/// (<c>0x004f9deb</c>, <c>0x004f9e09</c>): until a block stamp near them is as new they can be chosen no ride,
+	/// cannot leave and cannot wander (<c>docs/exe/ride-operation.md</c>, "The stranded bookkeeping").
 	/// </para>
 	/// </summary>
 	/// <returns>Whether somewhere was found and a route to it planned.</returns>
 	internal bool SetRandomDest( Peep peep, PeepWalk walk )
 	{
 		var (x, y) = walk.Position.Cell;
+
+		if ( RefusedAsStranded( State, peep, walk ) )
+		{
+			Think( peep, Thoughts.Confused );
+			Log.Info( $"Peep {peep.ThingId}: still stranded at ({x},{y}), stamp {peep.StrandedTime}, no wander" );
+
+			return false;
+		}
+
+		peep.StrandedTime = 0;
 
 		// The original's pass count, drawn on every call before the count (0x004f9534); the linked walk reads it.
 		var passes = (_random.Next() % LinkedWander.MostPasses) + 1;
@@ -2404,17 +2498,19 @@ public sealed class PeepBehaviour
 
 		if ( stepped == null )
 		{
-			Unimplemented.Report( "WANDER_DEAD_END_STRANDED_STAMP" );
-			Log.Info( $"Peep {peep.ThingId}: wander of {passes} from ({x},{y}) met a dead end" );
+			Think( peep, Thoughts.Confused );
+			peep.StrandedTime = ParkState.NextCounter();
+
+			Log.Info( $"Peep {peep.ThingId}: wander of {passes} from ({x},{y}) met a dead end, stranded at time "
+				+ $"{peep.StrandedTime}" );
 
 			return false;
 		}
 
 		var cell = stepped[^1];
 
-		peep.Navigator.Target = new FixedVector( SomewhereIn( cell.X ), SomewhereIn( cell.Y ) );
-
-		var routed = walk.PlanRoute();
+		// The linked arm's inline SetDest, the refusal and all (0x004f9983).
+		var routed = SendTo( State, peep, walk, new FixedVector( SomewhereIn( cell.X ), SomewhereIn( cell.Y ) ) );
 
 		Log.Info( $"Peep {peep.ThingId}: wander of {passes} from ({x},{y}) by "
 			+ string.Join( " ", stepped.Select( step => $"({step.X},{step.Y})" ) ) + (routed ? "" : ", no route") );
@@ -2437,7 +2533,7 @@ public sealed class PeepBehaviour
 	private void SetWandering( Peep peep, PeepWalk walk, int tick )
 	{
 		if ( peep.SetDestSuccessfully )
-			walk.PlanRoute();
+			SendTo( State, peep, walk, peep.Navigator.Target );
 
 		peep.SetState( PeepState.Wandering, tick, _random );
 	}
@@ -2464,7 +2560,7 @@ public sealed class PeepBehaviour
 			if ( ParkState.CellFor( _park, atX, atY ).Type != CellEdge.Path )
 				continue;
 
-			if ( SendTo( peep, walk, (atX, atY) ) )
+			if ( SendTo( State, peep, walk, (atX, atY) ) )
 			{
 				peep.SetDestSuccessfully = true;
 				Log.Info( $"Peep {peep.ThingId}: no links at ({x},{y}); probe {probe} aims at path ({atX},{atY})" );
@@ -2481,7 +2577,7 @@ public sealed class PeepBehaviour
 			if ( !ParkState.OnMap( toX, toY ) )
 				continue;
 
-			if ( SendTo( peep, walk, (toX, toY) ) )
+			if ( SendTo( State, peep, walk, (toX, toY) ) )
 			{
 				peep.SetDestSuccessfully = true;
 				Log.Info( $"Peep {peep.ThingId}: no links at ({x},{y}) and no path on the rays; try {attempt} aims at "

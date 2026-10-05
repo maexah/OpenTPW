@@ -204,7 +204,7 @@ public class ParkLongestQueueTests
 	{
 		foreach ( var (queued, refused) in new[] { (8, true), (7, false) } )
 		{
-			var (events, thoughts) = (Counted( "ARRIVAL_TOO_LONG_EVENT" ), Counted( "ARRIVAL_TOO_LONG_THOUGHT_0x10" ));
+			var events = Counted( "ARRIVAL_TOO_LONG_EVENT" );
 			var (state, arriving) = ArrivesAtTheBellyBounce( capacity: 2, queued );
 
 			if ( refused )
@@ -216,7 +216,7 @@ public class ParkLongestQueueTests
 				Assert.AreEqual( -1, state.PositionInQueue( BellyBounce, arriving.ThingId ), "not in it" );
 				Assert.AreEqual( IdleStamp, arriving.TimeStartedIdling, "the idle stamp is left alone" );
 				Assert.AreEqual( events + 1, Counted( "ARRIVAL_TOO_LONG_EVENT" ), "event 0x15 is counted" );
-				Assert.AreEqual( thoughts + 1, Counted( "ARRIVAL_TOO_LONG_THOUGHT_0x10" ), "and thought 0x10" );
+				Assert.AreEqual( 0x10, arriving.Thoughts.Last, "and thought 0x10" );
 			}
 			else
 			{

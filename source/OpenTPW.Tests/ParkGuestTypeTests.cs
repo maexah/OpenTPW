@@ -167,15 +167,16 @@ public class ParkGuestTypeTests
 		var middling = Standing( 31, personType: 2, PeepState.GoingToRide, 52, 29 );
 		wild.TimeStartedIdling = middling.TimeStartedIdling = 17;
 
-		string[] arms = ["ARRIVAL_NOT_EXCITING_EVENT", "ARRIVAL_NOT_EXCITING_THOUGHT_0xC",
-			"ARRIVAL_TOO_EXCITING_EVENT", "ARRIVAL_TOO_EXCITING_THOUGHT_0xF"];
+		string[] arms = ["ARRIVAL_NOT_EXCITING_EVENT", "ARRIVAL_TOO_EXCITING_EVENT"];
 		var before = arms.Select( Counted ).ToArray();
 
 		behaviour.Step( wild, new PeepWalk( wild.Navigator, blocked ), playing: null, 40 );
 		behaviour.Step( middling, new PeepWalk( middling.Navigator, blocked ), playing: null, 40 );
 
-		CollectionAssert.AreEqual( new[] { before[0] + 1, before[1] + 1, before[2], before[3] },
-			arms.Select( Counted ).ToArray(), "event 5 and thought 0xc, once, and neither of the other arm's" );
+		CollectionAssert.AreEqual( new[] { before[0] + 1, before[1] },
+			arms.Select( Counted ).ToArray(), "event 5, once, and not the other arm's" );
+		Assert.AreEqual( 0xc, wild.Thoughts.Last, "thought 0xc, bored" );
+		Assert.AreEqual( 0, middling.Thoughts.Last, "and a joiner thinks nothing" );
 		Assert.AreEqual( 0, wild.TimeStartedIdling, "the refusal zeroes the idle stamp" );
 		Assert.AreEqual( 17, middling.TimeStartedIdling, "which a joiner keeps until the queue stamps it" );
 
@@ -240,15 +241,14 @@ public class ParkGuestTypeTests
 			} );
 
 			var middling = Standing( 31, personType: 2, PeepState.GoingToRide, 52, 29 );
-			var (events, thoughts, other) = (Counted( "ARRIVAL_TOO_EXCITING_EVENT" ),
-				Counted( "ARRIVAL_TOO_EXCITING_THOUGHT_0xF" ), Counted( "ARRIVAL_NOT_EXCITING_EVENT" ));
+			var (events, other) = (Counted( "ARRIVAL_TOO_EXCITING_EVENT" ), Counted( "ARRIVAL_NOT_EXCITING_EVENT" ));
 
 			behaviour.Step( middling, new PeepWalk( middling.Navigator, blocked ), playing: null, 40 );
 
 			var dirty = repair < ParkState.DirtyBelow ? 1 : 0;
 
 			Assert.AreEqual( events + dirty, Counted( "ARRIVAL_TOO_EXCITING_EVENT" ), $"repair {repair}: event 4" );
-			Assert.AreEqual( thoughts + dirty, Counted( "ARRIVAL_TOO_EXCITING_THOUGHT_0xF" ), $"repair {repair}: thought 0xf" );
+			Assert.AreEqual( dirty == 1 ? 0xf : 0, middling.Thoughts.Last, $"repair {repair}: thought 0xf" );
 			Assert.AreEqual( other, Counted( "ARRIVAL_NOT_EXCITING_EVENT" ), "never the other arm" );
 
 			if ( repair < ParkState.DirtyBelow )
