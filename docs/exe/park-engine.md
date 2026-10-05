@@ -1438,7 +1438,8 @@ positions at `+0x64`):
 
 The double count on raised ground was not caught on one cell. The original's strip ends at the raised out-of-park
 cells before it draws a square there. **Red blinks**: `FUN_0053c8d0` drops texture 1 while `DAT_00763c98` is nought, which
-toggles on a counter (on past 1, off past 6) of an unestablished unit. Textures 8 to 14 take UVs turned by
+toggles on a counter of rendered, unpaused frames: seven on, two off (`ride-operation.md`, "The red square under a
+stranded person"). Textures 8 to 14 take UVs turned by
 the camera's yaw (`DAT_00790a38`), so `m_link` and `m_end` stay upright on screen. The squares are
 see-through, by Alexah's own memory of the original; the blend state itself was not traced.
 

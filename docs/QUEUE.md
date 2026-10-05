@@ -64,8 +64,9 @@ the original.
   in SetRandomDest's entry, `FUN_004fa530` and `FUN_004fa5f0`; the walker's re-plan on a newer stamp
   (`0x0050ed79`), which Q102 and Q104 left unbuilt. Then `mLastThought` and SetThought's bubble: a kind-9 world
   sprite from the two `Generic\Thoughts` banks by the tabled set, 2.5 above the guest, the class's wait, gone 13 to
-  16 sweeps on, hidden in first person; and the red square blinking under a stranded guest (`FUN_004fa030`, not yet
-  decoded: decode it first). Every counted `*_THOUGHT_*` site then calls it. Confirm as the original was measured:
+  16 sweeps on, hidden in first person; and the red square blinking under a stranded guest (decoded by Q223:
+  `ParkBuildMarkers`' red square at the guest's own cell, 1.0 up, seven frames on and two off, which also settles
+  `MARKER_RED_BLINK_TIMING`). Every counted `*_THOUGHT_*` site then calls it. Confirm as the original was measured:
   `delpath 48 22`, the Belly Bounce shut by its window's door - the put-out queuers stamped, standing, each under
   the blue question mark, `peeps` and a screenshot beside `q110/orig/s13.png`; then the path laid back and each
   stamped afresh. The original's three stood 900 sweeps; here four of ten joined the queue.

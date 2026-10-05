@@ -4417,6 +4417,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Harness `q110confirm.py`, run `q110/run1`; the original: `q110/orig/strand.py`, `strand1.log`, `strand2.log`,
   `s13.png`, `s15.png`; the pictures: `q110/thoughts.py`. `docs/exe/ride-operation.md`, "Thoughts and their
   pictures" and "Q110"; FileFormats `sprites.md`, "Thought bubbles".
+- [x] **Q223. Decode the red square under a stranded person, and the counter's 14 sites.** Split from Q110b, which
+  said to decode the square first. Done 2026-10-05, decode only, nothing built or run: `FUN_004fa030` queues the
+  build tools' own red square (`FUN_0053c8d0`, texture 1, face 0, one cell) at the person's own cell, 1.0 over the
+  ground, waving, every frame `+0x198` is non-zero, for guests and all five staff kinds; red blinks seven rendered
+  frames on and two off for every red square at once (`FUN_0053c3f0`); all 14 callers of `FUN_004d8c50` tabled
+  (`ride-operation.md`, "The stranded bookkeeping", "The red square under a stranded person"). The proof is the
+  listing: 14 of 14 call sites read. Q110b is the build.
 
 ## B. Docs and comments
 

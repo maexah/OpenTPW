@@ -21,7 +21,7 @@ namespace OpenTPW;
 /// <para>
 /// Four things are counted rather than guessed: the brightening and dimming that goes with the wave (the
 /// same sine scales the vertex's up vector, which this shader normalises away), the blink of a red square
-/// (a counter of unestablished unit), the turning of <c>m_link</c> and <c>m_end</c> to face the camera, and
+/// (seven rendered frames on, two off), the turning of <c>m_link</c> and <c>m_end</c> to face the camera, and
 /// the walls a lifted square drops to a lower neighbour.
 /// </para>
 /// <para>

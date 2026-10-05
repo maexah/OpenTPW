@@ -1248,9 +1248,7 @@ log**.
 ### The stranded bookkeeping
 
 - **The counter** `[0x007cdb98]`: `FUN_004d8c50` adds one and answers it. It starts at 0 and is never reset or saved; 14
-  sites share it - every SetDest, SetRandomDest's entry and each of its routes, a route found (walker `+0x48`), every
-  map type write, the queue re-measure, and the per-frame person update `FUN_004fa030`. It is a logical clock, not a
-  count of routes.
+  sites share it, tabled below. It is a logical clock, not a count of routes.
 - **The block stamps**: a 33 × 33 dword array at world `+0x1b02d8`, one per 16 × 16 cells, `(y >> 4) × 33 + (x >> 4)`. A
   map type write (`FUN_005346d0`, ClearCell's tail among its callers; `FUN_005348d0`; `FUN_00538fc0`) and the queue
   re-measure's back cell (`FUN_004de1f0`) write a fresh counter value there (`FUN_004d8c60`). Zeroed at map init and
@@ -1266,8 +1264,72 @@ log**.
 - **Thought `0x11`** is `FUN_0050be80`, SetThought (its own "Not a known thought!"), on `+0x30`: the thought stored, the
   old bubble freed, and sprite script `0x0074f2f8` (set 15, frame 0, looping) of kind 9, which the name table calls
   "thoughts", spawned again on every call; `FUN_0050be40` takes it away 13 to 16 sweeps later. It changes no happiness.
-  While `+0x198` is non-zero `FUN_004fa030` also queues a blinking square under the person. Set 15 is a blue bubble
-  holding a question mark, and THOUGHTS.str row 17 names the thought "Confused..." ("Thoughts and their pictures").
+  While `+0x198` is non-zero `FUN_004fa030` also queues a blinking square under the person ("The red square under a
+  stranded person"). Set 15 is a blue bubble holding a question mark, and THOUGHTS.str row 17 names the thought
+  "Confused..." ("Thoughts and their pictures").
+
+**The counter's 14 sites**, every caller of `FUN_004d8c50`:
+
+| Site | In | What the value is for |
+|---|---|---|
+| `0x004de233` | `FUN_004de1f0`, the queue re-measure | the back cell's block stamp |
+| `0x004f94e2` | SetRandomDest's entry | the refusal's test of `+0x198` |
+| `0x004f9983` | SetRandomDest, the linked arm's inline SetDest | the same test, before the route |
+| `0x004f9b2e` | SetRandomDest, a no-links probe's inline SetDest | the same test |
+| `0x004f9cb5` | SetRandomDest, one of the no-links arm's five tries | the same test |
+| `0x004f9dfc` | SetRandomDest's dead end | written to `+0x198` (`0x004f9e09`) |
+| `0x004fa0c7` | `FUN_004fa030`, each person each frame | the test alone: `+0x198` is zeroed when the counter is below it |
+| `0x004fa578` | `FUN_004fa530`, SetDest to a cell | the refusal's test |
+| `0x004fa5fe` | `FUN_004fa5f0`, SetDest to a point | the refusal's test |
+| `0x004fa686` | `FUN_004fa670` with a non-zero argument | written to `+0x198`; dead by code, both callers pass 0 |
+| `0x0050fd0f` | `FUN_0050f8e0`, a route found | written to walker `+0x48` |
+| `0x005347bd`, `0x00534921`, `0x0053909a` | the three map type writers | the cell's block stamp |
+
+Each of the three inline SetDests in SetRandomDest carries the whole refusal (the counter, the zeroing, `FUN_004fa770`,
+answer 0), so a stamp written earlier in the same call cannot pass them. Because `FUN_004fa030` takes a value for
+every person on every frame, the counter runs at people × frames and a stamp's age in counter values says nothing of
+time.
+
+### The red square under a stranded person
+
+`FUN_004fa030( fraction )` is the per-frame placement of one person. Its one live caller is the frame driver
+`FUN_00518f90` (`0x00519012`), which walks the thing list and calls it for every thing whose `+3` is nought and whose
+type byte is 1, 4, 5, 6, 7, 8 or `0x12`: guests and all five staff kinds. In order it places the body (while `+0x28`
+is nought), takes a counter value and zeroes a `+0x198` above it, **queues the square while `+0x198` is non-zero**
+(`0x004fa0e6`..`0x004fa14f`), places the bubble at `+0xb4` 2.5 above the body (`[0x0075c804]`), and places a guest's
+balloon.
+
+The square is one call of `FUN_0053c8d0`, the marker queue the build tools use (`park-engine.md`, "Placement feedback"),
+with these arguments, read at the call site:
+
+| Record | Value | Meaning |
+|---|---|---|
+| x, z | cell x × 10, cell y × 10 (`[0x007006dc]` = 10.0) | the corner of **the person's own cell**, bytes `+5` and `+7`; not the queue's far end `FUN_004fa770` tests |
+| y | 1.0 | the lift over the ground; a tool's square passes 1.5 plus its lift over a built cell |
+| `+0xc` | 0 | face 0, the flat square |
+| `+0x10` | 0 | orientation: corners unturned |
+| `+0x9c` | **1** | texture 1 of the marker table, `red` |
+| `+0x18` | 0 | 10 by 10, one cell (non-zero is 20) |
+| `+0x98` | 0 | see the slide below |
+| `+0x90` | 0 | mesh 0, `BlueprintMesh` |
+
+So it is the build tools' red square, drawn by the same builder: texture below 15 takes the wave branch of
+`FUN_0053ddd0`, each corner at the ground height there + 1.0 + `sin( phase + x + z )`, brightened and dimmed by the
+same sine. Nothing reads a built cell's `.hmp` for it, so on a queue or entrance cell it lies at the ground.
+
+**The blink is `FUN_0053c8d0`'s own**: a call with texture 1 queues nothing while `DAT_00763c98` is nought
+(`0x0053c8ec`). The marker draw `FUN_0053c3f0` empties the list every frame and, unless the game is paused
+(`[0x00785970 + 0x30]`), adds the clock's scale as an integer (`[0x00785970 + 0x20]`, 1.0 in a park; `__ftol`) to
+`DAT_00874fc8`: with the flag set it clears flag and count once the count passes 6, with it clear it sets the flag
+and clears the count once the count passes 1 (`0x0053c7b1`..`0x0053c7f6`). **Seven frames on, two off, counted in
+rendered frames**, and held still by a pause; every red square on screen, a tool's too, blinks together.
+
+**It slides with a tool's blueprint.** With `+0x98` nought, `DAT_00874fc4` nought (the queue tool's strip
+`FUN_005234d0` writes it, and while it is set every record's `+0x98` is 1) and a texture below 13, `FUN_0053df30` moves the square by the blueprint's eased offset (`0x0053df93`: x − `[0x008186b8]` × 10 +
+`[0x00820afc]`, z likewise from `[0x008186b4]`, `[0x00820af8]`) while the tool mode `DAT_0081ae2c` is 4, `0xe` or
+`0x13`. Read, not seen: what those three modes are and where the square lands under them is not measured.
+
+The face list holds `0x806` records, shared with every tool's squares; past it a square is dropped.
 
 ### A queuer put off onto cleared ground
 
