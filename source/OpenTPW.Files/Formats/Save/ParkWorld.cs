@@ -166,6 +166,24 @@ public sealed class ParkWorld : IParkInitialState
 		public const int KeepsRidersSpriteFlag = 0x20;
 
 		/// <summary>
+		/// The bit a deciding guest carrying too much litter looks for - <c>UsageInfo.HoldsLitter</c>, tested by
+		/// <c>FUN_00500dc0</c>. Lost Kingdom's save sets it on one object, the Litter Bin.
+		/// </summary>
+		public const int HoldsLitterFlag = 0x40;
+
+		/// <summary>
+		/// The bit a deciding guest stops to watch - <c>UsageInfo.IsFireworks</c>, tested by <c>FUN_00501020</c>.
+		/// Nothing in Lost Kingdom's save carries it.
+		/// </summary>
+		public const int IsFireworksFlag = 0x80;
+
+		/// <summary>Whether a guest can put litter in this - see <see cref="HoldsLitterFlag"/>.</summary>
+		public bool HoldsLitter => (Flags & HoldsLitterFlag) != 0;
+
+		/// <summary>Whether a guest stops to watch this - see <see cref="IsFireworksFlag"/>.</summary>
+		public bool IsFireworks => (Flags & IsFireworksFlag) != 0;
+
+		/// <summary>
 		/// Whether tired guests can use this object - one bit, and the thing a handyman's toilet arm
 		/// looks for.
 		/// </summary>

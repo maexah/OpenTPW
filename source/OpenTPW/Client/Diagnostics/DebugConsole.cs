@@ -834,6 +834,24 @@ public static class DebugConsole
 
 				break;
 
+			// Sets a level the deciding turn's counted arms test - `need vomit|litter|prankery <n> [guest]` - an
+			// instrument as `toilet` is: see ParkPeople.SetNeed.
+			case "need":
+				if ( ParkPeople.Current is not { } needy )
+				{
+					Reply( "need: none - a park has to be loaded" );
+					break;
+				}
+
+				var needName = parts.Length > 1 ? parts[1] : "";
+				var needSet = needy.SetNeed( needName, (int)Argument( 2, 100 ), (int)Argument( 3, 0 ) );
+
+				Reply( needSet < 0
+					? "need: vomit, litter or prankery, then a level and optionally a guest"
+					: $"need: {needSet} guests are now {needName} {(int)Argument( 2, 100 )}" );
+
+				break;
+
 			// What every thing a guest may be sent to has taken, and whether it can be offered at all. The
 			// two censuses above this one cannot answer that: `rides` says what a script is doing
 			// and `peeps` says what a guest carries, while whether a shop is REACHABLE turns on a walk over

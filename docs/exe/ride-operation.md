@@ -1017,7 +1017,7 @@ restored bugs each fail it (the count-and-walk-on, no `Forget`, no return, no `L
 #### Spot animations - `FUN_004fc800` and state 8
 
 Decoded from the disassembly (`docs/QUEUE.md` Q98). The function, state 8's turn and the queue turn's two calls are
-built (Q98b), and so is the deciding turn's call of 4 (Q107); its calls of 5 and 7 are not (Q111).
+built (Q98b), and so is the deciding turn's call of 4 (Q107); its calls of 5 and 7 are counted, not built (Q224, Q226).
 
 **`FUN_004fc800( n )`**, a guest thiscall, in order:
 
@@ -1076,7 +1076,7 @@ round. While any of them is in state 8 the state-11 turn does not run: no mood, 
 (`PeepBehaviour.Yawns`, `ParkAudio.Yawn`, at the level `ParkAudio.PutOff` stands in with), the request
 (`Peep.NextAnimation`), the saved state and SetState(8), which stamps `TimeOfLastSpotAnim`. `PeepBehaviour.Step`'s
 case for state 8 is the return. The queue turn's two arms and the deciding turn's empty hand call it; the deciding
-turn's other two do not yet (Q111's 5 and 7). A guest in state 8 is held by a thing when the saved state is (`PeepBehaviour.HeldByAThing( Peep )`),
+turn's other two do not yet (5 and 7: Q224, Q226). A guest in state 8 is held by a thing when the saved state is (`PeepBehaviour.HeldByAThing( Peep )`),
 so `ParkPeople.Depart` refuses a jumping queuer.
 
 **Measured in the running game** (`q98bconfirm.py`, two runs, guests made with `admit` and sent with `send`, happiness
@@ -1154,11 +1154,14 @@ at `[ESP+0x18]`) serves every arm. A byte below is `(u8)__ftol` of the float nam
 1. **(a) Happy.** More than 100 sweeps since `+0x208` and happiness (`+0x19c`) above 80: spot animation 5, return.
    `FUN_004fc800( n )` sets `+0x10` = n, `+0x208` = mGameTick, saves the state at `+0x224` and sets state 8, whose turn
    restores it once mGameTick > `+0x208` + 10.
-2. **(b) Vomit.** Illness (`+0x1b0`) exactly 100 and r % 3 nought: animation 7, litter type 7 on the guest's cell, event
-   `0x12`, sound `0xcc`, `+0x1b0` = 0, return.
-3. **(c) Litter.** Litter (`+0x1b4`) 90 or more: `FUN_00500dc0` aims at the nearest `HoldsLitter` thing (`+0x32 & 0x40`)
-   within squared distance under 9 that routes, at its `mEntryPos` - `MajorDest` and state 9, return; none: litter of
-   type 1 + (a fresh draw % 5), `+0x1b4` = 0, on.
+2. **(b) Vomit.** Illness (`+0x1b0`) exactly 100 (`0x004fed15`; the test above 80 before it is spent) and r % 3
+   nought: animation 7, litter type 7 on the guest's cell (`FUN_004d93b0`), event `0x12`, sound `0xcc`, `+0x1b0` = 0,
+   return.
+3. **(c) Litter.** Litter (`+0x1b4`) 90 or more, and the state word 6, 7 or 10 (`0x004fedbb`..`0x004fedce`, always
+   6 from this function's one caller): `FUN_00500dc0( 3 )` walks the object chain for the nearest `HoldsLitter` thing
+   (`+0x32 & 0x40`) within squared cell distance under 9 that routes (`FUN_004fa530` to its `mEntryPos`, `+0x36`,
+   asked of each nearer candidate in turn, so the walk left is the last one asked) - `MajorDest` and state 9, return;
+   none: litter of type 1 + (a fresh draw % (`[0x0070048c]` − 1), 5), `+0x1b4` = 0, on.
 4. **(d) Leaving** (`0x004fee5b`..`0x004fee81`): the happiness byte nought, **or `mExitLevel` (`+0x1bc`) exactly
    nought**, or the park shut (`FUN_0051a280`, world `+0x1da710`). It docks `BigHappinessChange` (25,
    `FUN_004fea70( 2 )`) before routing, every turn the test holds; reads the gate script's variable 1 and discards it
@@ -1172,11 +1175,18 @@ at `[ESP+0x18]`) serves every arm. A byte below is `(u8)__ftol` of the float nam
    SetState(`0x12`).
 5. **(e) Watching.** The nearest `IsFireworks` thing (`+0x32 & 0x80`) within squared distance 4 whose script variable 0
    is nought (`FUN_00501020`): face it (`+0x1c`), return - dead by content in Lost Kingdom, whose items set no
-   `IsFireworks` ("The first half of the turn"). Else an entertainer on the 3×3 around the guest (`FUN_004c8eb0`) and
-   the nearest one's staff state `0xe`: event `0xe`, face them, return. Both skip the facing when dx + dy is nought.
+   `IsFireworks` ("The first half of the turn"). Else any thing of model 6, an entertainer, in the thing lists of the
+   3×3 cells around the guest (`FUN_004c8eb0( 6, cell, 1 )`, which is `FUN_004c8d30` answering at the first), then
+   the nearest thing of the chain at world `+0x1da740`, linked by `+0x210` (`FUN_00500f00`), and its
+   staff state `0xe`: event `0xe` with the entertainer's id, face them, return. Both skip the facing when dx + dy is
+   nought, falling on to (f).
 6. **(f) Pranks.** Happiness below 15 and r % 101 below `mPrankeryIndex` (`+0x1c0`: 100 + id % 3 for a prankster, else
-   0): a stink bomb, litter, or another guest's balloon on the same cell; event `0xf`, a type-`0xe` bus message,
-   happiness +1. It does not return.
+   0; always true at 101 and 102), by the index: **100**, when r % 100 is under `PeepInfo.StinkbombLikelihood`
+   (`[0x007850e0]`, 25; `0x004ff24b`), litter type 8 on the cell and sound `0xcf`; **101**, litter type r % 5 + 1;
+   **102**, the balloon of the first other guest in the cell's thing list who holds one let go (`FUN_004fe950`). A
+   prank done pushes event `0xf`, sends a type-`0xe` bus message (the guest's id twice, and id % 3) and takes −1.0
+   off happiness (`[0x00700794]`, so +1, clamped 0..100); one not done (the bomb's roll, no balloon) does nothing.
+   It does not return.
 7. **The split** (`0x004ff3b4`), r % 3. **0**, only when mGameTick > `+0x1fc` + 30, unsigned: the chooser
    `FUN_004fcb10`; a route gives event 2 and state 10; none gives event 1, spot animation 4 (sound `0x7e` when id &
    `0xf` is nought), `FUN_004fea70( 0 )` (−5, `SmallHappinessChange`) and `+0x1fc` = mGameTick
@@ -1365,7 +1375,7 @@ and its sale.
 | The dead end and the stamp | thought `0x11`, `+0x198` stamped, every route refused until a map edit | the same, for a guest (`PeepBehaviour.SetRandomDest`, `RefusedAsStranded`; "Q110b") | not by the stock park left alone; by a player who cuts a queue's tail off its path ("Q110") |
 | A map type write's block stamp | a fresh counter value in the cell's 16 × 16 block | the same, where a cell becomes ground, path or queue (`ParkState.SetRecord`, `ClearRecord`, `StampBlock`) | every path or queue cell laid or cleared, every sale |
 | The split's events 1 and 2 | pushed onto the guest's event ring | counted, `DECIDE_NOTHING_CHOSEN_EVENT` and `DECIDE_CHOSEN_EVENT`; no ring is kept | every choice |
-| Arms (a), (b), (c), (e) entertainer, (f) | run before the split | absent and uncounted | (a) above 80; (c) the Drinks Shop's litter and the bin at (44,29); (f) pranksters (Q111) |
+| Arms (a), (b), (c), (e), (f) | run before the split | counted at each arm's own test, none built (`PeepBehaviour.CountBeforeLeaving`, `CountAfterLeaving`; "Q111") | (a) above 80; (c) the Drinks Shop's litter and the bin at (44,29); (e) the entertainer, thing 27; (f) pranksters |
 | Leaving | state 6 only: happiness byte 0, `mExitLevel` exactly 0, or shut; −25 every turn it holds; (47,9)/(48,9); state `0x12` only on a route | the same (`PeepBehaviour.WantsToLeave`, `Leave`, Q109); the second pass in walking mode 1 is counted, `LEAVE_ROUTE_MODE_1_RETRY`; a guest reaching state 19 is taken out at the crossing, where the original walks them on to a bus stop (Q128) | every leaver |
 
 **Q109: when a guest leaves** is built in `PeepBehaviour.Decide` (`WantsToLeave`, `Leave`), as the listing reads
@@ -1383,6 +1393,33 @@ nought or less from any state, is gone. Read with it, first-hand:
   `mExitLevel` = 0; the expensive arm's leaver (happiness byte nought after the medium change) gets the state and the
   nought with no destination. OpenTPW writes the nought on all three and still aims the first two at a bus stop
   (Q128).
+
+**Q111: the arms either side of the leave test are counted**, none built, the listing re-read first-hand
+(`0x004fecb9`..`0x004ff3ae`; the corrections are in the list above). `PeepBehaviour.CountBeforeLeaving` counts
+`DECIDE_HAPPY_SPOT_ANIMATION`, `DECIDE_VOMIT` and, for litter, `DECIDE_LITTER_BIN_ERRAND` with a `HoldsLitter` thing
+inside the reach or `DECIDE_LITTER_DROPPED` without; `CountAfterLeaving` counts `DECIDE_WATCH_FIREWORKS` (dead by
+content in Lost Kingdom), else `DECIDE_ENTERTAINER_BESIDE`, then `DECIDE_PRANK_STINK_BOMB`, `DECIDE_PRANK_LITTER` or
+`DECIDE_PRANK_BALLOON`, all on the turn's one draw. **Each is a count of deciding turns on which the arm's own test
+held**, and differs from the original's reach in four ways, said at the site: no arm ends the turn; nothing clears a
+test (the jump's stamp, the levels zeroed), so a guest counts on every turn it holds; the bin's route is not asked;
+and the entertainer's count is of one standing beside the guest, where the original goes on to ask for staff state
+`0xe`, which nobody takes here (Q133). The fireworks' script variable is not read. The console's `need` sets
+illness, litter or prankery.
+
+Predicted and read in Lost Kingdom (`q111confirm.py`, `q111/run1`). The stock park left alone 120 s: vomit, litter,
+pranks and fireworks all nought as predicted, the happy jump 0 (0 to 40 predicted), an entertainer beside 4 (0 to 60).
+Then every guest set to happiness 90, litter 90 and illness 100 for 20 s, litter being every deciding turn: **33 turns
+(hundreds predicted: wrong, a guest decides in a turn or two)**, 8 of them inside the bin's reach, the happy jump 29
+(0.88 of them; 0.6 to 1 predicted), the vomit 10 (0.30; a third predicted). Four guests made on the entertainer's
+cell: 5 of 7 turns beside him. Happiness 10 and prankery 100: 5 stink bombs in 19 turns (0.26; 0.248 predicted);
+prankery 101: **18 litter pranks in 18 turns, as predicted exactly**; 102: none, nobody holding a balloon. No guest
+jumped, was sick or walked to the bin. The samples are small; the two exact readings are the zeros and the 18.
+
+**In the original**, from Q107's log of the stock park taken the same day (`q107/orig/watch1.log`, 964 sweeps, 13
+guests, not run again): **one happy jump** (guest 33 at 83, state 6 to 8, `+0x208` stamped, no idle stamp, no event),
+**eight watches of the entertainer** (event `0xe` naming thing 27, from cells (47..49,19..26)), and no vomit (event
+`0x12`), no prank (`0xf`) and nobody into state 9. So its entertainer performs, and the stock park reaches arms (a)
+and (e) and no other.
 
 Measured before the build, Alexah's call resting on it. **The original** under Proton, the stock park left alone for
 2,792 sweeps (692 s), every guest's `+0x1bc`, `+0x220` and `+0x19c` polled every 20 ms (`leave.py`): 61 guests seen;

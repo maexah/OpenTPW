@@ -4444,6 +4444,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   gone. The needs' thought picker `FUN_004fc8a0` was decoded and built with it. Left: a failed route is not revived
   by a stamp (Q104's note), the picker's litter arm and the thoughts' sounds are counted, a saved bubble is not made
   again. `ride-operation.md`, "Q110b".
+- [x] **Q111. The state-6 turn's arms before its split are unbuilt and uncounted.** Found by Q53 (`ride-operation.md`,
+  "The state-6 turn, in order"). (a) spot animation 5 above happiness 80, (b) vomit, (c) litter to a bin (the Litter
+  Bin at (44,29)), (e) facing an entertainer, (f) pranks: each is reached in Lost Kingdom and none calls
+  `Unimplemented.Report` (`CLAUDE.md` rule 4); (e)'s fireworks half is dead by content. Count each where the original
+  tests it, with its one draw, and put its build in the queue.
+  **Done 2026-10-05:** counted, nine names in `PeepBehaviour.CountBeforeLeaving` and `CountAfterLeaving`. Read in
+  Lost Kingdom: the stock park 120 s, all nought but an entertainer beside 4; every guest at litter 90, 33 deciding
+  turns, the happy jump 29, the vomit 10, the bin in reach 8; prankery 101, 18 litter pranks in 18 turns. The
+  original's stock park (Q107's log): one happy jump and eight entertainer watches in 964 sweeps. Seven new tests;
+  twenty-two restored bugs each fail (two only after the tests were tightened). The builds are Q224 to Q228.
 
 ## B. Docs and comments
 

@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 
 namespace OpenTPW;
 
@@ -356,7 +357,7 @@ public sealed class PeepBehaviour
 	/// <see cref="PeepState.WaitingForOpening"/> is <see cref="Wait"/>,
 	/// <see cref="PeepState.JudgingTheFee"/> is <see cref="Judge"/>, and
 	/// <see cref="PeepState.Deciding"/> - the hub a guest returns to whenever they finish anything - is
-	/// <see cref="Decide"/>. What is absent sits inside those - the arms before Decide's split (Q111) - and
+	/// <see cref="Decide"/>. What is absent sits inside those - the arms either side of Decide's leave test, counted - and
 	/// each is recorded where it happens rather than here.
 	/// </para>
 	/// <para>
@@ -726,7 +727,7 @@ public sealed class PeepBehaviour
 			// Lost Kingdom there is exactly one such target: thing 17, the Litter Bin at (44,29).
 			//
 			// <b>It is reachable content.</b> The Drinks Shop's LitterEffect is 50, so two drinks put a guest
-			// over the threshold, and with the errand unbuilt (Q111, arm (c)) the guest carries the litter.
+			// over the threshold, and with the errand unbuilt the guest carries the litter (counted in CountBeforeLeaving).
 			// The separate "Minor Decision" (FUN_004fd570) stays in state 10.
 			//
 			// PickingACellOutside (19) and AtTheBusStop (21) walk to cells from FUN_004d8650, which reads
@@ -1182,9 +1183,8 @@ public sealed class PeepBehaviour
 	/// orders the leaver's two cells and its remainder picks the split's arm (<c>0x004fecb4</c>).
 	/// </para>
 	/// <para>
-	/// <b>The other arms before the split are not here.</b> Spot animation 5 above happiness 80, the vomit and its
-	/// spot animation 7, and litter each return before the leave test in the original; watching and pranks follow
-	/// it. None is built (Q111).
+	/// <b>The other arms before the split are counted, not built</b>: <see cref="CountBeforeLeaving"/> and
+	/// <see cref="CountAfterLeaving"/>, either side of the leave test as the original has them.
 	/// </para>
 	/// </summary>
 	private void Decide( Peep peep, PeepWalk walk, int tick )
@@ -1194,8 +1194,12 @@ public sealed class PeepBehaviour
 
 		var draw = _random.Next();
 
+		CountBeforeLeaving( peep, walk, draw, tick );
+
 		if ( WantsToLeave( peep ) && Leave( peep, walk, admission, draw, tick ) )
 			return;
+
+		CountAfterLeaving( peep, walk, admission, draw );
 
 		switch ( draw % 3 )
 		{
@@ -1250,6 +1254,118 @@ public sealed class PeepBehaviour
 				break;
 		}
 	}
+
+	/// <summary>How many sweeps past their last spot animation a happy guest jumps again (<c>0x004fecd2</c>).</summary>
+	public const int HappyJumpGap = 100;
+
+	/// <summary>The happiness byte a deciding guest jumps above (<c>0x004fece2</c>).</summary>
+	public const int HappyJumpAbove = 80;
+
+	/// <summary>The illness byte a deciding guest is sick at, exactly (<c>0x004fed15</c>).</summary>
+	public const int VomitAt = 100;
+
+	/// <summary>The litter byte from which a deciding guest gets rid of it (<c>0x004fedb3</c>).</summary>
+	public const int LitterFullFrom = 90;
+
+	/// <summary>How near a litter bin must be, in cells, squared and exclusive (<c>0x004fedd8</c>).</summary>
+	public const int LitterBinReach = 3;
+
+	/// <summary>The squared distance in cells inside which fireworks are watched, exclusive (<c>FUN_00501020</c>).</summary>
+	public const int FireworksWithinSquared = 5;
+
+	/// <summary>The happiness byte below which a prankster plays up (<c>0x004ff108</c>).</summary>
+	public const int PrankBelow = 15;
+
+	/// <summary>
+	/// Whether a member of staff of the entertainers' model stands on the nine cells around this one -
+	/// <c>FUN_004c8eb0( 6, cell, 1 )</c>. <see cref="ParkPeople"/> hands in its own; nothing handed in is no staff.
+	/// </summary>
+	internal Func<int, int, bool> EntertainerBeside { get; set; } = static ( _, _ ) => false;
+
+	/// <summary>
+	/// Whether another guest on this guest's cell holds a balloon - the walk of the cell's things at
+	/// <c>0x004ff156</c>. <see cref="ParkPeople"/> hands in its own; nothing handed in is nobody.
+	/// </summary>
+	internal Func<Peep, int, int, bool> BalloonBeside { get; set; } = static ( _, _, _ ) => false;
+
+	/// <summary>
+	/// The deciding turn's three arms ahead of the leave test (<c>0x004fecb9</c>..<c>0x004fee51</c>), each counted
+	/// where the original tests it and none built: the happy jump, the vomit, and litter, which goes to a bin in
+	/// reach or onto the ground (<c>docs/exe/ride-operation.md</c>, "The state-6 turn, in order").
+	/// </summary>
+	/// <remarks>
+	/// In the original the jump, the vomit and the bin errand each end the turn, and each clears its own test:
+	/// the jump stamps <c>+0x208</c>, the vomit and the dropped litter zero their levels. Here nothing ends the
+	/// turn or clears a test, so a count is of deciding turns on which the test held, and the turn goes on to the
+	/// leave test and the split as before. The bin's route (<c>FUN_004fa530</c> inside <c>FUN_00500dc0</c>) is not
+	/// asked, so a bin in reach is counted as the errand whether or not a walk would get there.
+	/// </remarks>
+	private void CountBeforeLeaving( Peep peep, PeepWalk walk, int draw, int tick )
+	{
+		if ( (uint)(tick - peep.TimeOfLastSpotAnim) > HappyJumpGap && (byte)(int)peep.Happiness > HappyJumpAbove )
+			Unimplemented.Report( "DECIDE_HAPPY_SPOT_ANIMATION" );
+
+		if ( (byte)(int)peep.Vomit == VomitAt && draw % 3 == 0 )
+			Unimplemented.Report( "DECIDE_VOMIT" );
+
+		if ( (byte)(int)peep.Litter < LitterFullFrom )
+			return;
+
+		var (x, y) = walk.Position.Cell;
+
+		var bin = State.ObjectsInChainOrder().Any( thing => thing.HoldsLitter
+			&& SquaredCells( x, y, thing.CellX, thing.CellY ) < LitterBinReach * LitterBinReach );
+
+		Unimplemented.Report( bin ? "DECIDE_LITTER_BIN_ERRAND" : "DECIDE_LITTER_DROPPED" );
+	}
+
+	/// <summary>
+	/// The deciding turn's two arms between the leave test and the split (<c>0x004fef19</c>..<c>0x004ff3ae</c>),
+	/// each counted where the original tests it and none built: watching fireworks or an entertainer, and a
+	/// prankster's three pranks by <see cref="Peep.PrankeryIndex"/>, on the turn's one draw.
+	/// </summary>
+	/// <remarks>
+	/// Watching ends the original's turn; here it does not. The fireworks' script variable 0 is not read, and
+	/// the entertainer's count is of one standing beside the guest: the original then asks the nearest one's
+	/// state <c>0xe</c>, performing, which no member of staff takes here. A prank whose own test fails (the stink
+	/// bomb's roll, no balloon on the cell) does nothing in the original and counts nothing here.
+	/// </remarks>
+	private void CountAfterLeaving( Peep peep, PeepWalk walk, ParkAdmission admission, int draw )
+	{
+		var (x, y) = walk.Position.Cell;
+
+		if ( State.ObjectsInChainOrder().Any( thing => thing.IsFireworks
+			&& SquaredCells( x, y, thing.CellX, thing.CellY ) < FireworksWithinSquared ) )
+			Unimplemented.Report( "DECIDE_WATCH_FIREWORKS" );
+		else if ( EntertainerBeside( x, y ) )
+			Unimplemented.Report( "DECIDE_ENTERTAINER_BESIDE" );
+
+		if ( (byte)(int)peep.Happiness >= PrankBelow || draw % 101 >= (byte)peep.PrankeryIndex )
+			return;
+
+		switch ( (byte)peep.PrankeryIndex )
+		{
+			case 100:
+				if ( draw % 100 < admission.StinkbombLikelihood )
+					Unimplemented.Report( "DECIDE_PRANK_STINK_BOMB" );
+
+				break;
+
+			case 101:
+				Unimplemented.Report( "DECIDE_PRANK_LITTER" );
+
+				break;
+
+			case 102:
+				if ( BalloonBeside( peep, x, y ) )
+					Unimplemented.Report( "DECIDE_PRANK_BALLOON" );
+
+				break;
+		}
+	}
+
+	private static int SquaredCells( int x, int y, int toX, int toY )
+		=> (toX - x) * (toX - x) + (toY - y) * (toY - y);
 
 	/// <summary>
 	/// Whether a deciding guest sets off home this turn - the test at <c>0x004fee5b</c>: the happiness byte nought,
@@ -1759,7 +1875,7 @@ public sealed class PeepBehaviour
 	/// </summary>
 	/// <remarks>
 	/// The queue turn's two arms and the deciding turn's empty hand call it. The original's other two calls are
-	/// the deciding turn's 5 and 7 (Q111).
+	/// the deciding turn's 5 and 7, counted in <see cref="CountBeforeLeaving"/>.
 	/// </remarks>
 	internal void PlaySpotAnimation( Peep peep, int animation, int tick )
 	{

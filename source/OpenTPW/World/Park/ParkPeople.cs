@@ -277,7 +277,10 @@ public sealed class ParkPeople : Entity
 			// The park's own weather, asked at each choice: shelter is worth more while drops fall.
 			Raining = static () => ParkWeather.Current is { Drops: > 0 },
 			// And the bus's report, which a guest heading for the gate runs for.
-			BusStatus = BusStatus
+			BusStatus = BusStatus,
+			// And who stands near a deciding guest, which only the holder of everybody's walk can say.
+			EntertainerBeside = EntertainerBeside,
+			BalloonBeside = BalloonBeside
 		};
 
 		// Staff take the balance stack alone: every constant they run on is a per-grade entry in it, and
@@ -1118,6 +1121,80 @@ public sealed class ParkPeople : Entity
 		}
 
 		Log.Info( $"People: {set} guests are now toilet {level}" );
+
+		return set;
+	}
+
+	/// <summary>The thing model of an entertainer, which <c>FUN_004fec90</c> hands <c>FUN_004c8eb0</c> (<c>0x004feff2</c>).</summary>
+	public const int EntertainerModel = 6;
+
+	/// <summary>
+	/// Whether an entertainer stands on the nine cells around (x, y), for a deciding guest's watching arm. The
+	/// original walks those cells' thing lists; staff here are not entered in the cells they cross, so this asks
+	/// each one's walk where they are.
+	/// </summary>
+	private bool EntertainerBeside( int x, int y )
+	{
+		foreach ( var member in _staff )
+		{
+			if ( member.Model != EntertainerModel || !_staffWalks.TryGetValue( member.ThingId, out var walk ) )
+				continue;
+
+			var (cellX, cellY) = walk.Position.Cell;
+
+			if ( Math.Abs( cellX - x ) <= 1 && Math.Abs( cellY - y ) <= 1 )
+				return true;
+		}
+
+		return false;
+	}
+
+	/// <summary>
+	/// Whether another guest on (x, y) holds a balloon, for a prankster's third prank (<c>0x004ff1c8</c>..
+	/// <c>0x004ff1d9</c>: not themselves, a guest, <c>mBalloonScript</c> set).
+	/// </summary>
+	private bool BalloonBeside( Peep prankster, int x, int y )
+	{
+		foreach ( var peep in _peeps )
+		{
+			if ( peep == prankster || peep.Balloon == null || !_walks.TryGetValue( peep.ThingId, out var walk ) )
+				continue;
+
+			if ( walk.Position.Cell == (x, y) )
+				return true;
+		}
+
+		return false;
+	}
+
+	/// <summary>
+	/// Sets a level the deciding turn's unbuilt arms test, for the debug console's <c>need</c>: illness, litter or
+	/// prankery. An INSTRUMENT, as <see cref="SetToilet"/> is: nothing here makes a guest ill, two drinks fill
+	/// their litter, and one arrival in twenty is a prankster.
+	/// </summary>
+	/// <param name="only">One guest's thing id, or nought for every guest.</param>
+	/// <returns>How many guests were set, or -1 for a name that is none of the three.</returns>
+	internal int SetNeed( string which, int level, int only = 0 )
+	{
+		var set = 0;
+
+		foreach ( var peep in _peeps )
+		{
+			if ( only != 0 && peep.ThingId != only )
+				continue;
+
+			switch ( which )
+			{
+				case "vomit": peep.Vomit = Math.Clamp( level, Peep.Least, Peep.Most ); break;
+				case "litter": peep.Litter = Math.Clamp( level, Peep.Least, Peep.Most ); break;
+				case "prankery": peep.PrankeryIndex = level; break;
+				default: return -1;
+			}
+
+			set++;
+		}
+
+		Log.Info( $"People: {set} guests are now {which} {level}" );
 
 		return set;
 	}
@@ -2616,6 +2693,9 @@ public sealed class ParkPeople : Entity
 	/// a park is running; one of this simulation's own, when a test built it from a file alone.
 	/// </summary>
 	internal ParkState State => _behaviour.State;
+
+	/// <summary>The guests' turn, for a test of what this hands it.</summary>
+	internal PeepBehaviour Behaviour => _behaviour;
 
 	/// <summary>
 	/// How happy the park's visitors are, which is the number the management gadget's gauge shows - the

@@ -56,11 +56,6 @@ the original.
   window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
   together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
 
-- [ ] **Q111. The state-6 turn's arms before its split are unbuilt and uncounted.** Found by Q53 (`ride-operation.md`,
-  "The state-6 turn, in order"). (a) spot animation 5 above happiness 80, (b) vomit, (c) litter to a bin (the Litter
-  Bin at (44,29)), (e) facing an entertainer, (f) pranks: each is reached in Lost Kingdom and none calls
-  `Unimplemented.Report` (`CLAUDE.md` rule 4); (e)'s fireworks half is dead by content. Count each where the original
-  tests it, with its one draw, and put its build in the queue.
 - [ ] **Q112. Staff on a cell with no links do not look for path.** Found by Q53b. The no-links arm reads no person
   type (`ride-operation.md`, "SetRandomDest"): a member of staff reaches the count inside their patrol area, or outside
   it once `FUN_00506f30` fails (`0x004f95af` falls through, where ours answers false for either arm), after the
@@ -587,6 +582,36 @@ the original.
   never compared with the original. Read one guest's scores in the original at a known cell (a break in
   `FUN_004fcc30`, or its inputs from memory) beside `why` for the same guest and cell, find the term that differs,
   then file its build. Instruments: `q107/orig/watch.py` and `watch1.log`, `q107/base`.
+
+- [ ] **Q224. A happy guest does not jump on their deciding turn.** Found by Q111 (`ride-operation.md`, "The state-6
+  turn, in order", (a)). More than 100 sweeps past `+0x208` and happiness above 80: spot animation 5 and the turn ends
+  (`0x004fecd2`..`0x004fecea`). Every part is built (`PeepBehaviour.PlaySpotAnimation`, `SpotHappy`); build it where
+  `DECIDE_HAPPY_SPOT_ANIMATION` is counted. The original's stock park made one in 964 sweeps (guest 33 at 83).
+  Confirm: a guest at happiness 90 deciding, set 5 for eleven sweeps and no sooner than 101 sweeps again; a screenshot
+  of the jump, beside the original's.
+- [ ] **Q225. A guest full of litter neither walks to a bin nor drops it. Decode first.** Found by Q111, arm (c).
+  Litter 90 or more: the nearest `HoldsLitter` thing within three cells that routes, `MajorDest` and state 9, whose
+  turn `FUN_004fff20` walks there, sets the bin's script variable 0 and zeroes the litter; none, litter of a drawn
+  type on the cell (`FUN_004d93b0`) and the level zeroed. Decode `FUN_004d93b0` and what a cell's litter is drawn as,
+  and check `FUN_004fff20` whole; then build both where `DECIDE_LITTER_BIN_ERRAND` and `DECIDE_LITTER_DROPPED` are
+  counted. Confirm: a guest at litter 90 beside the bin at (44,29) walks to it, `peeps` showing litter 0; one far
+  from it drops, `cell` showing the litter; a screenshot of each.
+- [ ] **Q226. Nobody is sick.** Found by Q111, arm (b). Illness exactly 100 on a third of deciding turns: spot
+  animation 7, litter type 7 on the cell, event `0x12`, sound `0xcc`, illness nought, and the turn ends. After Q225,
+  which builds a cell's litter. Build it where `DECIDE_VOMIT` is counted. Confirm: `need vomit 100`, a guest sick
+  within a few turns, `peeps` showing illness 0; a screenshot.
+- [ ] **Q227. Nobody stops to watch the entertainer.** Found by Q111, arm (e). An entertainer on the nine cells
+  around a deciding guest, and the nearest one performing (staff state `0xe`): event `0xe`, the guest turned to face
+  them, and the turn ends. The original's stock park did it eight times in 964 sweeps. After Q133, which builds the
+  performance; counted meanwhile as `DECIDE_ENTERTAINER_BESIDE`, whoever the entertainer is doing. The fireworks half
+  (`DECIDE_WATCH_FIREWORKS`) is dead by content in Lost Kingdom. Confirm: a guest beside the performing entertainer
+  facing them; `facing 1` and a screenshot.
+- [ ] **Q228. A prankster plays no pranks.** Found by Q111, arm (f). Below happiness 15, on a draw under the
+  prankery: a stink bomb (litter type 8, sound `0xcf`) on `PeepInfo.StinkbombLikelihood` of a hundred, litter, or
+  the balloon of another guest on the cell let go; event `0xf`, a type-`0xe` bus message and happiness up one. After
+  Q225. Decode what the bus message's receivers do with it before building. Counted as
+  `DECIDE_PRANK_STINK_BOMB`, `DECIDE_PRANK_LITTER` and `DECIDE_PRANK_BALLOON`. Confirm: `need prankery 102` beside a
+  guest holding a balloon, the balloon let go; a screenshot.
 
 ## B. Docs and comments
 

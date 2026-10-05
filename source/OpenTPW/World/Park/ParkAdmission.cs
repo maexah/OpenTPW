@@ -69,6 +69,7 @@ public sealed class ParkAdmission
 		SmallHappinessChange = balance.Int( "PeepInfo.SmallHappinessChange", 5 );
 		MediumHappinessChange = balance.Int( "PeepInfo.MediumHappinessChange", 15 );
 		BigHappinessChange = balance.Int( "PeepInfo.BigHappinessChange", 25 );
+		StinkbombLikelihood = balance.Int( "PeepInfo.StinkbombLikelihood", 25 );
 		// Nought when a key is absent, as the original's loader leaves it: a visit then cheers nobody, which
 		// is still a playable park.
 		PerfectRide = balance.Int( "PeepInfo.PerfectRide" );
@@ -112,6 +113,12 @@ public sealed class ParkAdmission
 
 	/// <summary>Bottom of the "far too expensive" band - 2.0 in the standard game, 2.5 in easy mode.</summary>
 	public float ExpensiveMultiplier { get; }
+
+	/// <summary>
+	/// How many of a hundred pranks by a guest whose prankery is 100 drop a stink bomb -
+	/// <c>PeepInfo.StinkbombLikelihood</c>, 25, the global at <c>0x007850e0</c> (<c>0x004ff24b</c>).
+	/// </summary>
+	public int StinkbombLikelihood { get; }
 
 	/// <summary>
 	/// The smallest of the three mood changes - <c>PeepInfo.SmallHappinessChange</c>, 5, the global at
