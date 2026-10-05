@@ -55,12 +55,6 @@ as `r-f1` names a verdict in its results file (`CLAUDE.local.md` says where).
   window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
   together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
 
-- [ ] **Q104. The chooser routes as it walks the objects.** Found by Q50e's decode. `FUN_004fcb10` routes every
-  candidate that beats the best in turn, so a better one that cannot be routed still leaves the walker failed while
-  `MajorDest` names the earlier winner, and the first state-10 turn takes the stuck arm (−25) - unless a ground change
-  revives the loser's route and walks the guest to the loser's queue. `ChooseSomewhereToGo` routes once, to the final
-  best. Build it with the walker's failed state, and say it at the site. Confirm: a guest choosing between a
-  reachable shop and a better ride cut off by a path edit, `peeps` and the log.
 - [ ] **Q105. The chooser scores the distance at the back of the queue.** Found by Q50g (`ride-operation.md`, "Where a
   guest is aimed"). `FUN_004fcc30` reads the squared distance, the close-to-queue test (under 9) and the nearby-effects
   divisor at `GetBackOfQueue`'s cell (`FUN_004de110` with the object in `ECX`, `0x004fcc49`..`0x004fcc7d`);

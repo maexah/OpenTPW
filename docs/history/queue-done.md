@@ -4286,6 +4286,17 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `QUEUE_TOO_LONG_CAPACITY`). Left: the room refusal keeping `MajorDest`, the events and thoughts, and `+0x1fc`.
   From Q173: the too-long gate is built for a thing with a queue path too (`PeepBehaviour.QueueTooLong` on
   `PeepBehaviour.LongestQueue`), and `QUEUE_TOO_LONG_CAPACITY` is gone.
+- [x] **Q104. The chooser routes as it walks the objects.** Found by Q50e's decode. `FUN_004fcb10` routes every
+  candidate that beats the best in turn, so a better one that cannot be routed still leaves the walker failed while
+  `MajorDest` names the earlier winner, and the first state-10 turn takes the stuck arm (−25) - unless a ground change
+  revives the loser's route and walks the guest to the loser's queue. `ChooseSomewhereToGo` routes once, to the final
+  best. Build it with the walker's failed state, and say it at the site. Confirm: a guest choosing between a
+  reachable shop and a better ride cut off by a path edit, `peeps` and the log.
+  **Done 2026-10-04.** Predicted and read in the running game with (48,22) lifted: kind-2 guests 46 and 47 routed to
+  thing 14 (score 14), found no route to thing 13 (17), stood `GoingToRide` `dest 14` at happiness 50, and a sweep on
+  were `Deciding`, `dest 0`, 25, `GOING_TO_RIDE_STUCK_EVENT` 2; the unchanged build: no counter, `dest 0`, 50.
+  Photographed. Seven tests; nine restored bugs each fail. 1789 pass, 0 skip. The revived route is not built
+  (`PeepWalk` keeps no ground stamp), said at `ChooseSomewhereToGo`; not compared with the original.
 
 ## B. Docs and comments
 

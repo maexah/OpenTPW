@@ -1022,7 +1022,8 @@ public sealed class PeepBehaviour
 	/// a cell away from where the pathfinder would ever put them.
 	/// </para>
 	/// <para>
-	/// It answers whether a route was found. <see cref="ChooseSomewhereToGo"/>, the boarding arm of
+	/// It answers whether a route was found. <see cref="ChooseSomewhereToGo"/> passes over a candidate that fails
+	/// and leaves the walker as the last asking left it; the boarding arm of
 	/// <see cref="QueueTurn"/>, the arrival's re-aim in <see cref="JoinTheQueue"/>,
 	/// <see cref="FindQueueDestination"/> and <see cref="WanderFromNowhere"/> act on a failure at once; every
 	/// other caller leaves it to <see cref="Walked"/>, which reports a guest who cannot get through as
@@ -1974,25 +1975,29 @@ public sealed class PeepBehaviour
 		=> new( peep.PersonType, peep.Thirst, peep.Hunger, peep.Toilet, peep.Vomit,
 			peep.PreviousRides, peep.PreviousTemporaryRides );
 
-	/// <summary>The one call both halves of the choice make - see <see cref="Explain"/>.</summary>
+	/// <summary>
+	/// The chooser's best candidate with no route asked, so no walker is touched - <see cref="Explain"/>'s call.
+	/// <see cref="ChooseSomewhereToGo"/> makes the same call with the route asked inside the walk, so its answer can
+	/// be a lesser candidate than this one.
+	/// </summary>
 	private ParkWorld.CatalogueObject? Choose( Peep peep, int x, int y, int tick )
 		=> _chooser.ChooseFor( WantsOf( peep ), x, y, tick, queueLength: QueueCount,
 			now: State.CalendarNow, raining: Raining() );
 
 	/// <summary>
-	/// What the chooser answers for one guest and where it would aim them - one of the two halves
-	/// <see cref="ChooseSomewhereToGo"/> collapses into a single bool. Whether they got a route is read from
-	/// their own state and <see cref="Peep.MajorDest"/>, not tested here - see the note inside.
+	/// What the chooser scores best for one guest and where it would aim them, with no route asked. Whether they
+	/// got a route is read from their own state and <see cref="Peep.MajorDest"/>, not tested here - see the note
+	/// inside.
 	/// </summary>
 	/// <remarks>
-	/// <b>It exists because no census here can tell those halves apart.</b> <see cref="Peep.MajorDest"/>
-	/// is written only after <see cref="PeepWalk.PlanRoute"/> succeeds, so a guest who chooses somewhere
-	/// and cannot route to it leaves no trace whatever - and an empty <c>dest</c> census then reads
-	/// exactly like "nothing was ever chosen". The two want opposite fixes.
+	/// <b>It exists because no census here can tell the score from the route.</b> <see cref="Peep.MajorDest"/>
+	/// is written only after <see cref="PeepWalk.PlanRoute"/> succeeds, so a guest whose best candidate cannot be
+	/// routed to names a lesser one or nothing - and an empty <c>dest</c> census then reads exactly like "nothing
+	/// was ever chosen". <see cref="ChooseSomewhereToGo"/> logs each route it asks.
 	/// <para>
-	/// It makes the SAME call <see cref="ChooseSomewhereToGo"/> makes, rather than asking the question its
-	/// own way: a census that recomputes is not an observation. So each candidate whose excitement is counted
-	/// (<see cref="ParkRideScore.ExcitementOf"/>) adds to the <c>unimplemented</c> census on every asking.
+	/// It makes <see cref="ChooseSomewhereToGo"/>'s call on the chooser less the route, rather than asking the
+	/// question its own way: a census that recomputes is not an observation. So each candidate whose excitement is
+	/// counted (<see cref="ParkRideScore.ExcitementOf"/>) adds to the <c>unimplemented</c> census on every asking.
 	/// </para>
 	/// </remarks>
 	internal string Explain( Peep peep, PeepWalk walk, int tick )
@@ -2031,16 +2036,15 @@ public sealed class PeepBehaviour
 	/// Offers this guest the best thing in the park and sets them off for it - <c>FUN_004fcb10</c>.
 	///
 	/// <para>
-	/// <b>The walk is committed to only once a route exists</b>, the order <c>StaffBehaviour.GoAndRest</c>
-	/// follows too: a guest never claims somewhere they cannot get to, and a best candidate that cannot be
-	/// reached leaves them deciding again next turn. The original routes every candidate that beats the
-	/// best as it walks them, so a better one that cannot be routed leaves the walker failed under the
-	/// earlier winner's name (Q104).
-	/// </para>
-	/// <para>
-	/// <b>The chosen thing is recorded in <see cref="Peep.MajorDest"/></b> - the person's own
-	/// <c>+0x1dc</c>, which is where the original writes it and which the queueing states read back. It is
-	/// written after the route for the same reason the state is.
+	/// <b>The route is asked inside the chooser's walk</b>, of every candidate that beats the best so far, at the
+	/// centre of its back-of-queue cell (<c>0x004fcbc4</c>): one that routes becomes the best and is written to
+	/// <see cref="Peep.MajorDest"/>, the person's own <c>+0x1dc</c>; one that does not is passed over. Every asking
+	/// rewrites the walker, so <b>a better candidate that cannot be routed, met after one that could, leaves the
+	/// walker failed under the earlier winner's name</b>. The guest is still answered as having chosen, and their
+	/// first turn walking takes the stuck arm (<see cref="LoseHeartOnTheWay"/>). The original's walker can instead
+	/// revive the failed route when the ground near the guest has changed since their last plan, and walk them to
+	/// the loser's back of queue; <see cref="PeepWalk"/> keeps no ground stamp, so that does not happen here.
+	/// See <c>docs/exe/ride-operation.md</c>, "Q104".
 	/// </para>
 	/// <para>
 	/// <b>Queue lengths ARE passed, and are measured from the park as played rather than as saved.</b> The
@@ -2048,25 +2052,32 @@ public sealed class PeepBehaviour
 	/// queue starts genuinely empty; but guests join them, so the length has to be read live.
 	/// </para>
 	/// </summary>
-	/// <returns>Whether somewhere was chosen and a route to it planned.</returns>
-	private bool ChooseSomewhereToGo( Peep peep, PeepWalk walk, int tick )
+	/// <returns>Whether a thing is named, which is what the caller tests (<c>0x004ff437</c>).</returns>
+	internal bool ChooseSomewhereToGo( Peep peep, PeepWalk walk, int tick )
 	{
-		// Whatever they named before is let go of first, chosen or not (FUN_004fcb10, 0x004fcb21).
+		// Whatever they named before is let go of first, chosen or not (0x004fcb21).
 		peep.MajorDest = 0;
 
 		var (x, y) = walk.Position.Cell;
 
-		// Queues are measured from the park as it is being PLAYED, not as it was saved - a guest who joined
-		// one a moment ago has to count.
-		if ( Choose( peep, x, y, tick ) is not { } chosen )
-			return false;
+		bool Route( ParkWorld.CatalogueObject candidate, int score )
+		{
+			var routed = SetOffFor( peep, walk, candidate );
 
-		return SetOffFor( peep, walk, chosen );
+			Log.Info( $"Person {peep.ThingId}: the chooser routes to thing {candidate.ThingId} (score {score}): "
+				+ (routed ? "a route" : $"NO ROUTE, the walker left failed, still naming thing {peep.MajorDest}")
+				+ $", tick {tick}" );
+
+			return routed;
+		}
+
+		return _chooser.ChooseFor( WantsOf( peep ), x, y, tick, queueLength: QueueCount,
+			now: State.CalendarNow, raining: Raining(), route: Route ) != null;
 	}
 
 	/// <summary>
-	/// The half of <see cref="ChooseSomewhereToGo"/> after the choice: the route to the thing's back of queue, and
-	/// then <see cref="Peep.MajorDest"/>. Answers whether a route was found.
+	/// One candidate's routing in <see cref="ChooseSomewhereToGo"/>: the route to the thing's back of queue, and on
+	/// a route <see cref="Peep.MajorDest"/>. Answers whether a route was found.
 	/// </summary>
 	private bool SetOffFor( Peep peep, PeepWalk walk, ParkWorld.CatalogueObject chosen )
 	{

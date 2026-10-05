@@ -261,6 +261,83 @@ public class ParkSecondToiletTests
 		Assert.AreEqual( PeepState.Deciding, guest.State, "thinking again" );
 	}
 
+	private const int JungleSpray = 14;
+
+	/// <summary>A guest of kind 2 thinking on the path beside the Belly Bounce's back of queue, wanting no toilet.</summary>
+	private static Peep Thinker()
+		=> Guest( 30, PeepState.Deciding, (48, 22), (48, 22), majorDest: BellyBounce, toilet: 10f );
+
+	/// <summary>
+	/// <b>The chooser routes as it walks the objects</b> (<c>FUN_004fcb10</c>, <c>0x004fcbcf</c>). With the way into
+	/// the Belly Bounce's back-of-queue cell shut, the guest's walk meets the Jungle Spray, routes to it and names it,
+	/// then meets the better Belly Bounce and fails to route: the chooser still answers a choice, naming the Jungle
+	/// Spray, while the walker holds the failed route to the Belly Bounce's back cell. The first walking turn then
+	/// takes the stuck arm: 25 off, the thing let go of, thinking again.
+	/// </summary>
+	[TestMethod]
+	public void ABetterRideWithNoRouteLeavesTheWalkerFailedUnderTheEarlierWinnersName()
+	{
+		var world = World();
+		var edge = CellEdge.For( world, ParkPeople.WalkingMode ).Blocked;
+		var back = BackOf( world, BellyBounce );
+		bool Shut( int x, int y, StepDirection d ) => edge( x, y, d ) || MapStep.Beyond( x, y, d ) == back;
+
+		var behaviour = Behaviour( world, new ParkState( world ) );
+		var guest = Thinker();
+		var walk = new PeepWalk( guest.Navigator, Shut );
+
+		Assert.IsTrue( behaviour.ChooseSomewhereToGo( guest, walk, tick: 2 ), "a thing is named, so the caller sets state 10" );
+		Assert.AreEqual( JungleSpray, guest.MajorDest, "the earlier winner's name" );
+		Assert.IsTrue( guest.Navigator.CannotReach, "under a failed walker" );
+		Assert.AreEqual( back, guest.Navigator.Target.Cell, "whose destination is the loser's back of queue" );
+
+		var before = Times( "GOING_TO_RIDE_STUCK_EVENT" );
+
+		guest.SetState( PeepState.GoingToRide, 2, new Random( 1 ) );
+		behaviour.Step( guest, walk, playing: null, tick: 3 );
+
+		Assert.AreEqual( before + 1, Times( "GOING_TO_RIDE_STUCK_EVENT" ), "the first walking turn is the stuck arm" );
+		Assert.AreEqual( 25f, guest.Happiness, "BigHappinessChange off 50" );
+		Assert.AreEqual( 0, guest.MajorDest );
+		Assert.AreEqual( PeepState.Deciding, guest.State );
+		Assert.AreEqual( (48, 22), walk.Position.Cell, "having gone nowhere" );
+	}
+
+	/// <summary>
+	/// <b>With the way open the same guest names the Belly Bounce and has a route to it</b>: the control for the test
+	/// above. The thing named before the chooser ran is let go of either way (<c>0x004fcb21</c>).
+	/// </summary>
+	[TestMethod]
+	public void WithEveryRouteFoundTheLastAndBestIsNamed()
+	{
+		var world = World();
+		var behaviour = Behaviour( world, new ParkState( world ) );
+		var guest = Thinker();
+		var walk = WalkOf( world, guest );
+
+		Assert.IsTrue( behaviour.ChooseSomewhereToGo( guest, walk, tick: 2 ) );
+		Assert.AreEqual( BellyBounce, guest.MajorDest );
+		Assert.IsFalse( guest.Navigator.CannotReach );
+		Assert.AreEqual( BackOf( world, BellyBounce ), guest.Navigator.Target.Cell );
+	}
+
+	/// <summary>
+	/// <b>With no route to anything the guest names nothing</b>, the thing they named before included: it is let go
+	/// of before the walk (<c>0x004fcb21</c>), and the caller's test of <c>+0x1dc</c> finds nought.
+	/// </summary>
+	[TestMethod]
+	public void WithNoRouteToAnythingTheGuestNamesNothing()
+	{
+		var world = World();
+		var behaviour = Behaviour( world, new ParkState( world ) );
+		var guest = Thinker();
+		var walk = new PeepWalk( guest.Navigator, ( _, _, _ ) => true );
+
+		Assert.IsFalse( behaviour.ChooseSomewhereToGo( guest, walk, tick: 2 ) );
+		Assert.AreEqual( 0, guest.MajorDest );
+		Assert.IsTrue( guest.Navigator.CannotReach );
+	}
+
 	/// <summary>
 	/// <b>A tie in length does not switch</b> - the <c>JLE</c> at <c>0x004fd888</c>. From (56,17), 22 is the only thing
 	/// in the window nearer 23's back of queue, and both lengths are 2.

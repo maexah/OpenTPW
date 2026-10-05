@@ -1553,9 +1553,9 @@ public static class DebugConsole
 					.Select( square => $"({square.X},{square.Y}):{square.Marker}" + (square.Why is { } why ? $"[{why}]" : "") ) ) );
 				break;
 
-			// WHY a guest is not going anywhere, which `peeps` cannot answer. MajorDest is written only after a route succeeds, so a guest who
-			// chose somewhere unreachable looks identical to one who chose nothing - and those two
-			// want opposite fixes. This asks the chooser and the router separately.
+			// WHY a guest is not going anywhere, which `peeps` cannot answer. MajorDest is written only after a route
+			// succeeds, so a guest whose best cannot be reached looks identical to one who chose nothing. This asks
+			// the chooser alone, no route; each route a real choice asked is in the log ("the chooser routes to").
 			case "why":
 				if ( ParkPeople.Current is not { } undecided )
 				{

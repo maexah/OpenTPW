@@ -440,7 +440,7 @@ Seed 1's cycle, 248,316,293 states, never meets `0x80000000`, which lies on anot
 A direction neither switch knows stands the point at the cell's centre, counted
 `QUEUE_PLACE_DODGY_DIRECTION`, where the original routes with whatever its stack held. A place past the queue's cells
 is refused before routing, where the original routes to (127, 255) and fails. `FUN_004fa5f0`'s stranded refusal is
-absent: nothing keeps `mStrandedTime`. The chooser's in-walk routing is Q104.
+absent: nothing keeps `mStrandedTime`. The chooser's in-walk routing is built ("Q104", below).
 
 **Q102: state 10's stuck and shut arms** are built in `PeepBehaviour` (`LoseHeartOnTheWay`): either takes
 `BigHappinessChange` off (`FUN_004fea70( 2 )`, the byte at `0x00785060`, clamped to 0..100), zeroes `MajorDest` and
@@ -472,6 +472,28 @@ to 0, the Spray onto their refusals, event and thought each one more. Left alone
 toilet, wandering. **Where it differs**: `PeepBehaviour.Decide` stamps `+0x1fc` before it chooses (Q107), so the
 stamp a room or too-long refusal leaves is the choice's, where the original's is older. None of it was compared
 with the original.
+
+**Q104: the chooser routes as it walks** is built in `ParkRideChooser.ChooseFor` (its `route` argument) and
+`PeepBehaviour.ChooseSomewhereToGo`. The listing, re-read: the best starts at nought and `+0x1dc` is zeroed
+(`0x004fcb19`, `0x004fcb21`); a candidate at 10 or more that beats the best (`JG`, or equal on an odd `mGameTick`,
+`0x004fcb9f`..`0x004fcbb0`) and passes the offer gate is routed to at once (`FUN_004fa530` at `0x004fcbcf`), and only
+on a route are the best and `+0x1dc` written (`0x004fcbd8`, `0x004fcbdc`), so **a later candidate need only beat the
+last that routed**. The function answers nothing; its caller tests `+0x1dc` (`0x004ff437`) and on non-zero pushes
+event 2 and sets state 10, whatever the walker holds. Every routing rewrites the walker (`+0x18`/`+0x1a` and
+`FUN_00510100`), so the walker is left as the last candidate asked left it. Lost Kingdom's chain ends ... 16 (Drinks
+Shop), 14 (Jungle Spray), 13 (Belly Bounce), so the Belly Bounce is always asked last.
+Read in the running game, predicted first: with the path at the Belly Bounce's queue tail, (48,22), lifted, guests
+of kind 2 made on the path below it logged a route to thing 14 (score 14), then no route to thing 13 (score 17)
+"still naming thing 14"; `peeps` that sweep `GoingToRide`, `dest 14`, happiness 50, standing where they were; one
+sweep on, "stuck on the way to thing 14", `Deciding`, `dest 0`, happiness 25, `GOING_TO_RIDE_STUCK_EVENT` one more
+each. The unchanged build, same run: no counter, `dest 0`, happiness 50, wandering. With the way open the same kind
+routed to 14 and then 13 and named 13, and no route failed. A guest already walking to the ride when the path went
+lost 25 to Q102's arm and 25 more three sweeps on to this one, the thinking gap being over. **Where it differs**:
+the original's walker re-plans when the ground near the guest has changed since their last plan, which can revive
+the failed route and walk them to the loser's back cell under the winner's name; `PeepWalk` keeps no ground stamp,
+so here the stuck arm is always what follows. `FUN_004fa530`'s stranded refusal, which answers no route without
+touching the walker, is not built (Q110). `Decide` stamps `+0x1fc` before choosing (Q107). The offer gate is asked
+before the score here and after it in the original. None of it was compared with the original.
 
 The supporting helpers:
 

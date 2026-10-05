@@ -1,4 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
@@ -182,5 +183,84 @@ public class ParkRideChooserTests
 		// And the default the chooser uses really is past the boundary, rather than merely large.
 		Assert.IsTrue( ParkRideChooser.NotNew > score.NewForDays,
 			"the age used when nothing can date a thing counts as old" );
+	}
+
+	/// <summary>A guest of one kind and thirst on a cell of the path below the Belly Bounce's queue.</summary>
+	private static readonly (int X, int Y) BelowTheQueue = (48, 25);
+
+	private const int Even = 2;
+
+	/// <summary>What the chooser asks a route of, in order, and what it answers, with one thing refused.</summary>
+	private (List<string> Asked, int Answer) Routed( int personType, float thirst, int refused = 0 )
+	{
+		var asked = new List<string>();
+		var answer = Chooser( Park() ).ChooseFor( new ParkRideScore.Wants( personType, thirst, 10f, 10f, 0f ),
+			BelowTheQueue.X, BelowTheQueue.Y, Even, route: ( candidate, score ) =>
+			{
+				asked.Add( $"{candidate.ThingId}:{score}" );
+
+				return candidate.ThingId != refused;
+			} );
+
+		return (asked, answer?.ThingId ?? 0);
+	}
+
+	/// <summary>
+	/// <b>The route is asked inside the walk, of every candidate that beats the best so far</b>
+	/// (<c>FUN_004fa530</c> at <c>0x004fcbcf</c>). A thirsty guest of kind 2 below the Belly Bounce's queue meets the
+	/// Drinks Shop, then the Jungle Spray, then the Belly Bounce, each better than the last: three routes, and with
+	/// all three found the last is the answer.
+	/// </summary>
+	[TestMethod]
+	public void TheRouteIsAskedOfEachCandidateThatBeatsTheBestAsTheWalkMeetsIt()
+	{
+		var (asked, answer) = Routed( personType: 2, thirst: 60f );
+
+		CollectionAssert.AreEqual( new[] { "16:14", "14:15", "13:17" }, asked );
+		Assert.AreEqual( BellyBounce, answer );
+	}
+
+	/// <summary>
+	/// <b>A better candidate that does not route is passed over, after it was asked</b>: the earlier winner is the
+	/// answer, and the last asking, the one that failed, is what the guest's walker is left holding.
+	/// </summary>
+	[TestMethod]
+	public void ABetterCandidateWithNoRouteIsAskedAndTheEarlierWinnerKept()
+	{
+		var (asked, answer) = Routed( personType: 2, thirst: 60f, refused: BellyBounce );
+
+		CollectionAssert.AreEqual( new[] { "16:14", "14:15", "13:17" }, asked, "the Belly Bounce is still asked, last" );
+		Assert.AreEqual( JungleSpray, answer );
+	}
+
+	/// <summary>
+	/// <b>The best is raised only by a candidate that routes</b> (<c>0x004fcbd8</c> follows the route's test). For a
+	/// kind 3 the Jungle Spray and the Belly Bounce tie at 18, and on an even tick the later of a tie is not asked;
+	/// with the Jungle Spray refused the best stays the Drinks Shop's 14, so the Belly Bounce is asked and taken.
+	/// </summary>
+	[TestMethod]
+	public void ACandidateNeedOnlyBeatTheLastThatRouted()
+	{
+		var (asked, answer) = Routed( personType: 3, thirst: 60f );
+
+		CollectionAssert.AreEqual( new[] { "16:14", "14:18" }, asked, "the tie is not asked on an even tick" );
+		Assert.AreEqual( JungleSpray, answer );
+
+		(asked, answer) = Routed( personType: 3, thirst: 60f, refused: JungleSpray );
+
+		CollectionAssert.AreEqual( new[] { "16:14", "14:18", "13:18" }, asked );
+		Assert.AreEqual( BellyBounce, answer );
+	}
+
+	/// <summary>With nothing routed, nothing is answered.</summary>
+	[TestMethod]
+	public void WithNoRouteToAnythingNothingIsChosen()
+	{
+		var asked = 0;
+		var answer = Chooser( Park() ).ChooseFor( new ParkRideScore.Wants( 2, 60f, 10f, 10f, 0f ),
+			BelowTheQueue.X, BelowTheQueue.Y, Even, route: ( _, _ ) => { ++asked; return false; } );
+
+		Assert.IsNull( answer );
+		Assert.AreEqual( 3, asked, "each of the three beats nine, the best never raised" );
 	}
 }

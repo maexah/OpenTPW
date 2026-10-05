@@ -3,7 +3,7 @@ namespace OpenTPW;
 /// <summary>
 /// Which of a park's objects a guest actually sets off for - the original's <c>FUN_004fcb10</c>, which
 /// walks the world's object list, asks <see cref="ParkRideChoice"/> whether each candidate may be offered,
-/// scores the survivors with <see cref="ParkRideScore"/> and takes the best.
+/// scores the survivors with <see cref="ParkRideScore"/> and takes the best it can route the guest to.
 ///
 /// <para>
 /// <b>The list is walked the original's way</b>, from <c>mFirstObject</c> along each object's own
@@ -121,8 +121,17 @@ public sealed class ParkRideChooser
 	/// Null treats everything as no longer new.
 	/// </param>
 	/// <param name="raining">Whether drops are falling, which multiplies what is indoors.</param>
+	/// <param name="route">
+	/// Routes the guest to a candidate's back of queue and answers whether a route was found - the original's
+	/// <c>FUN_004fa530</c>, called inside the walk for every candidate that beats the best so far
+	/// (<c>0x004fcbcf</c>). A candidate that does not route is not kept, and the best is not raised to its score, so a
+	/// later one need only beat the last that did route. <b>Each call rewrites the guest's walker</b>, so the walker
+	/// is left as the last call left it, whichever candidate is answered. Null asks nothing, and answers the best
+	/// candidate with no walker touched.
+	/// </param>
 	public ParkWorld.CatalogueObject? ChooseFor( ParkRideScore.Wants wants, int fromX, int fromY, int gameTick,
-		Func<ParkWorld.CatalogueObject, int>? queueLength = null, DateTime? now = null, bool raining = false )
+		Func<ParkWorld.CatalogueObject, int>? queueLength = null, DateTime? now = null, bool raining = false,
+		Func<ParkWorld.CatalogueObject, int, bool>? route = null )
 	{
 		if ( _park == null )
 			return null;
@@ -143,6 +152,9 @@ public sealed class ParkRideChooser
 			var score = ScoreOf( wants, candidate, item, queue, fromX, fromY, now, raining );
 
 			if ( !Beats( score, bestScore, best, gameTick ) )
+				continue;
+
+			if ( route != null && !route( candidate, score ) )
 				continue;
 
 			bestScore = score;
