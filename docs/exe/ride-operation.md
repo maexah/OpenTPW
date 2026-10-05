@@ -465,7 +465,7 @@ thing's excitement answers below nought, "not exciting enough" (event 5, thought
 toilet's 100, "too exciting" (event 4, thought `0xf`). Events and thoughts are counted, one name an arm:
 `ARRIVAL_NO_ROOM_EVENT`, `ARRIVAL_BACK_OF_QUEUE_LOST_EVENT`, `ARRIVAL_NOT_EXCITING_EVENT` and `_THOUGHT_0xC`,
 `ARRIVAL_TOO_EXCITING_EVENT` and `_THOUGHT_0xF`, `ARRIVAL_TOO_LONG_EVENT` and `_THOUGHT_0x10` (no event ring is
-kept and no thought drawn, Q110). Read in the running game, each predicted first: seven guests made on Small Toilet
+kept and no thought drawn, Q110b). Read in the running game, each predicted first: seven guests made on Small Toilet
 21's back cell (56,17) under `pause` and sent to it, room for four in its one cell: places 0 to 3 taken, and the
 last three Deciding with `dest 21`, happiness 50, no refusal remembered, the event counted 3; the unchanged build
 read `dest 0`. A kind 0 (preferring 80) sent to the Jungle Spray (computed 30): "not exciting enough", `idle` 202
@@ -491,7 +491,7 @@ lost 25 to Q102's arm and 25 more three sweeps on to this one, the thinking gap 
 the original's walker re-plans when the ground near the guest has changed since their last plan, which can revive
 the failed route and walk them to the loser's back cell under the winner's name; `PeepWalk` keeps no ground stamp,
 so here the stuck arm is always what follows. `FUN_004fa530`'s stranded refusal, which answers no route without
-touching the walker, is not built (Q110). The offer gate is asked
+touching the walker, is not built (Q110b). The offer gate is asked
 before the score here and after it in the original. None of it was compared with the original.
 
 The supporting helpers:
@@ -1266,8 +1266,8 @@ log**.
 - **Thought `0x11`** is `FUN_0050be80`, SetThought (its own "Not a known thought!"), on `+0x30`: the thought stored, the
   old bubble freed, and sprite script `0x0074f2f8` (set 15, frame 0, looping) of kind 9, which the name table calls
   "thoughts", spawned again on every call; `FUN_0050be40` takes it away 13 to 16 sweeps later. It changes no happiness.
-  While `+0x198` is non-zero `FUN_004fa030` also queues a blinking square under the person. Which picture set 15 shows
-  is not established.
+  While `+0x198` is non-zero `FUN_004fa030` also queues a blinking square under the person. Set 15 is a blue bubble
+  holding a question mark, and THOUGHTS.str row 17 names the thought "Confused..." ("Thoughts and their pictures").
 
 ### A queuer put off onto cleared ground
 
@@ -1296,7 +1296,8 @@ and its sale.
 |---|---|---|---|
 | A cell with no links, staff | the no-links arm, whoever asks: inside the patrol area, or outside it once `FUN_00506f30` fails (`0x004f95af`) | inside, the neighbour pick; outside, false; both counted `STAFF_NO_LINKS_WANDER` (Q112) | a guard or researcher put down off a path |
 | Staff outside their area whose patrol roll fails | the count and the linked walk, with no patrol filter (the flag at `0x004f95af`) | false | not measured |
-| The dead end and the stamp | thought `0x11`, `+0x198` stamped, every route refused until a map edit | false, nothing kept, counted `WANDER_DEAD_END_STRANDED_STAMP` | none in 150 s of 54 guests (Q110) |
+| The dead end and the stamp | thought `0x11`, `+0x198` stamped, every route refused until a map edit | false, nothing kept, counted `WANDER_DEAD_END_STRANDED_STAMP` on every wander that meets one; the guest is asked again and can still be chosen a ride | not by the stock park left alone; by a player who cuts a queue's tail off its path ("Q110") |
+| A map type write's block stamp | a fresh counter value in the cell's 16 × 16 block | none kept, counted `MAP_TYPE_WRITE_BLOCK_STAMP` where a cell becomes ground, path or queue (`ParkState.SetRecord`, `ClearRecord`) | every path or queue cell laid or cleared, every sale |
 | The split's events 1 and 2 | pushed onto the guest's event ring | counted, `DECIDE_NOTHING_CHOSEN_EVENT` and `DECIDE_CHOSEN_EVENT`; no ring is kept | every choice |
 | Arms (a), (b), (c), (e) entertainer, (f) | run before the split | absent and uncounted | (a) above 80; (c) the Drinks Shop's litter and the bin at (44,29); (f) pranksters (Q111) |
 | Leaving | state 6 only: happiness byte 0, `mExitLevel` exactly 0, or shut; −25 every turn it holds; (47,9)/(48,9); state `0x12` only on a route | the same (`PeepBehaviour.WantsToLeave`, `Leave`, Q109); the second pass in walking mode 1 is counted, `LEAVE_ROUTE_MODE_1_RETRY`; a guest reaching state 19 is taken out at the crossing, where the original walks them on to a bus stop (Q128) | every leaver |
@@ -2096,7 +2097,7 @@ three.
 | The end of a rest | the kind's decide in the same sweep | Idle at stamp 0, decided on the next sweep | every rest (Q136) |
 | The patrol roll | path cells only | path cells only (Q206) | verified in `staff-wandering.md` |
 | Speed by rest | `+0xc0`, 60 to 140, one of `FUN_004fa870`'s three terms | none: staff are not eased and keep the saved `max_speed` (a guest's is, `Peep.Pace`) | every decide (Q136) |
-| Thoughts `0x12` to `0x16` | shown | none, uncounted | tired, unhappy, very happy staff (Q110) |
+| Thoughts `0x12` to `0x16` | shown | none; `0x14`, `0x13`, `0x12` counted at every kind's decide (`StaffBehaviour.CountMoodThought`: `STAFF_TIRED_THOUGHT_0x14`, `STAFF_UNHAPPY_THOUGHT_0x13`, `STAFF_VERY_HAPPY_THOUGHT_0x12`, the last with its one draw) and `0x16` where the patrol roll fails (`STAFF_PATROL_ROLL_FAILED_THOUGHT_0x16`); `0x15` waits on the strike walk (Q138) | tired, unhappy, very happy staff; a failed roll ("Thoughts and their pictures") |
 | Strikes | `mStaffHQ`'s monthly flag, the strike walk, state 5's end | none, uncounted, the model-9 record unread | the monthly consideration every month the park is open; a strike only past the 24-month gate (Q138) |
 
 ## A toilet's dirt - `FUN_004e2440`, `FUN_004e0390` and the handyman's `FUN_004d7880`
@@ -3010,11 +3011,93 @@ toilet's illness), `0x18` and `0x19` (a sideshow won or lost, naming it).
 first-person view (`gui_CameraFlags & 0x16`) or an online game; otherwise it frees the old bubble and, when `mGameTick`
 is at least `mTimeBubbleShown` + 20 × the thought's class, builds a world sprite of kind 9 ("thoughts") and stamps the
 time (`0x0050c039`..`0x0050c06a`). Thoughts 5 and 6 are class 0, so a sideshow player always gets one: 5 "Pleased", a
-thumbs-up; 6 "Dissatisfied", a thumbs-down (THOUGHTS.str rows 5 and 6; the pictures in `Generic\Thoughts`). Each frame
+thumbs-up; 6 "Dissatisfied", a thumbs-down ("Thoughts and their pictures"). Each frame
 `FUN_004fa030` puts the bubble 2.5 units above the guest; `FUN_0050be40` takes it away 13 to 16 sweeps later, or a
 later thought frees it sooner. `mLastThought` is read by the visitor window (its icon and text), Park Status's "Top 3
 Thoughts" (three icons, empty ones hidden), the all-visitors list and the locator panel. Thought 6 also comes from the
 door's price (`0x00500756`) and the park's fee (`FUN_004ff9d0`).
+
+### Thoughts and their pictures
+
+SetThought's switch (`FUN_0050be80`) gives each thought a sprite script and a class. The 22 scripts are 24 bytes each
+from `0x0074f190`: set the picture set (`LAB_004768b0`, one operand), show frame 0 (`LAB_00476940`), jump to the start.
+The operand packs the bank offset in its high bits and the set in its low four (`lobby.md`, "World sprites"), and kind
+9 has two banks, `Generic\Thoughts\SPR_TB` then `SPR_TC`, so 16 to 21 are `SPR_TC`'s sets 0 to 5 (the pictures:
+FileFormats `sprites.md`, "Thought bubbles"). The class times 20 is how many sweeps must have passed since
+`mTimeBubbleShown` for a new bubble to be made; the thought is stored either way.
+
+| Thought | THOUGHTS.str | Script | Set | Picture | Class |
+|---|---|---|---|---|---|
+| 1 | Hungry | `0x0074f250` | 8 | burger | 1 |
+| 2 | Thirsty | `0x0074f280` | 10 | drink | 1 |
+| 3 | Hungry and thirsty | `0x0074f2b0` | 12 | drink and burger | 1 |
+| 4 | Need the toilet | `0x0074f2c8` | 13 | toilet sign | 1 |
+| 5 | Pleased | `0x0074f310` | 21 | thumbs up | 0 |
+| 6 | Dissatisfied | `0x0074f268` | 9 | thumbs down | 0 |
+| 7 | Too messy | `0x0074f2e0` | 14 | litter | 1 |
+| 8 | Super happy!! | `0x0074f208` | 5 | laughing face | 3 |
+| 9 | Happy! | `0x0074f190` | 0 | smiling face | 3 |
+| `0xa` | Okay | `0x0074f1a8` | 1 | level face | 3 |
+| `0xb` | Unhappy | `0x0074f1d8` | 3 | sad face | 3 |
+| `0xc` | Bored | `0x0074f1f0` | 4 | yawning face | 0 |
+| `0xd` | Angry | `0x0074f1c0` | 2 | angry face | 0 |
+| `0xe` | Feeling sick | `0x0074f220` | 6 | sick face | 1 |
+| `0xf` | Scared | `0x0074f238` | 7 | frightened face | 0 |
+| `0x10` | Queue too long | `0x0074f298` | 11 | hourglass and thumbs down | 0 |
+| `0x11` | Confused... | `0x0074f2f8` | 15 | **question mark, blue bubble** | 0 |
+| `0x12` | none (the file has 18 rows) | `0x0074f328` | 16 | smiling face, pink bubble | 3 |
+| `0x13` | none | `0x0074f340` | 17 | sad face, pink bubble | 2 |
+| `0x14` | none | `0x0074f358` | 18 | sleeping face, pink bubble | 0 |
+| `0x15` | none | `0x0074f370` | 19 | placard, pink bubble | 0 |
+| `0x16` | none | `0x0074f388` | 20 | question mark, pink bubble | 0 |
+
+Sets 22 to 25, the four arrows, are named by no thought. **All 22 callers**, and what OpenTPW counts at each (it keeps
+no thought and draws no bubble, Q110b):
+
+| Site | Thought | Counted as |
+|---|---|---|
+| `0x004f950e`, SetRandomDest's stranded refusal | `0x11` | not reached: no stamp is kept ("The stranded bookkeeping") |
+| `0x004f9deb`, SetRandomDest's dead end | `0x11` | `WANDER_DEAD_END_STRANDED_STAMP` |
+| `0x004fca88`, the needs picker `FUN_004fc8a0` | its pick | `NEEDS_THOUGHT_PICKER` |
+| `0x004fdb66`, `0x004fdc25`, a sideshow's settle-up | 5, 6 | `SETTLE_UP_SIDESHOW_THOUGHT` |
+| `0x004ffa44`, `0x004ffa7d`, the fee: far too expensive after the destination, expensive with the sulk | 6 | `FEE_JUDGEMENT_THOUGHT_6` |
+| `0x004ffcd7`, `0x004ffd7e`, arriving at a queue | `0xf` (and `0xc`), `0x10` | `ARRIVAL_TOO_EXCITING_THOUGHT_0xF`, `ARRIVAL_NOT_EXCITING_THOUGHT_0xC`, `ARRIVAL_TOO_LONG_THOUGHT_0x10` |
+| `0x00500200`, `0x0050033f`, `0x005003b1`, `0x0050045b`, `0x005005b9`, `0x00500650`, the queue turn | `0xe`, `0xb`, 4, `0xc`, `0x10`, `0xd` | `QUEUE_TURN_THOUGHT_0xE`, `_0xB`, `_4`, `QUEUE_TURN_BOREDOM`, `_0x10`, `_0xD` |
+| `0x00500756`, the door's price | 6 | `DOOR_PRICE_THOUGHT_6` |
+| `0x00501496`, a shortened queue | `0xd` | `QUEUE_SHORTENED_THOUGHT_0xD` |
+| `0x00506b50`, `0x00506ccd`, `0x00506cf4`, every staff decide (`FUN_00506a40`) | `0x14` tired; else `0x13` at a happiness byte of 10 or less; else `0x12` above 97 when a draw's low four bits are nought | `STAFF_TIRED_THOUGHT_0x14`, `STAFF_UNHAPPY_THOUGHT_0x13`, `STAFF_VERY_HAPPY_THOUGHT_0x12` |
+| `0x0050701f`, the patrol roll's thirty failures | `0x16` | `STAFF_PATROL_ROLL_FAILED_THOUGHT_0x16` |
+| `0x00505709`, the strike walk `FUN_005056e0` | `0x15` | not reached: no strike (Q138) |
+
+### Q110: what is counted, and whether a guest is ever stranded
+
+Counted, not built (the build is Q110b). **The block stamp** follows the type write in each of its three writers
+(`0x005347af`, `0x00534913`, `0x0053908c`, each then `FUN_004d8c50` and `FUN_004d8c60`); OpenTPW counts it once in
+`ParkState.SetRecord` and `ClearRecord`, where a cell's type changes to ground, path or queue (a track cell's writer
+has no caller here). The refusals (`FUN_004fa770`'s six callers) and the blinking square need a non-zero `+0x198`,
+which only the dead end writes, so they are reached only after `WANDER_DEAD_END_STRANDED_STAMP`.
+
+**Measured in the original** (the reference park under Proton, off-screen, the park clock true; `strand.py` polls
+every person's `+0x198`, `mLastThought`, `mThoughtScript` and `mTimeBubbleShown` every 20 ms). The stock park left
+alone 1,630 sweeps (420 s): **no `+0x198` was ever written**, no thought `0x11`; 108 bubbles (guests' 1, 3, 5, 6, 9,
+`0xb`, `0xc`; staff's `0x12` once and `0x14` four times), none living past 16 sweeps. Then the path at the Belly
+Bounce's queue tail, (48,22), taken up (Backspace over it) and the ride shut by its window's door, which puts its
+queuers out where they stand: **three were stamped within 32 sweeps**, guest 52 on (52,22), 46 on (49,22) and 42 on
+(50,22), each `+0x198` a counter value a few tens old, each thinking `0x11`. On screen each has **the blue question
+mark bubble** over them and a red square blinking under them. They stood there for the 900 sweeps left, thinking
+`0x11` afresh 900 times between them (a third of their deciding turns, the entry's refusal), no bubble living past
+15 sweeps. The path cell laid back 100 sweeps in, each was stamped once more, with a newer counter value, within six
+sweeps: the edit's block stamp let one wander through, which met the same dead end (the queue's tail is not joined
+again by a path laid beside it).
+
+**Read in OpenTPW**, predicted first (`q110confirm.py`). The stock park left alone 150 s: every new count nought, as
+predicted (no map edit, no dead end, no member of staff tired, at 10 or below or above 97, no patrol roll failed, no
+fee refused). `delpath 48 22`: `MAP_TYPE_WRITE_BLOCK_STAMP` 1, as predicted; `QUEUE_REMEASURE_BACK_CELL_STAMP` stayed
+nought where one was predicted, the prediction wrong: `ClearCell` measures again only for a cleared path cell
+beside an entrance, never beside a queue cell (`0x0053694b`). Ten guests made on the cut tail (49,22), a queue cell whose one link
+its own `mDirection` drops: 343 wanders in 40 s, **343 dead ends, every one from (49,22)**, the count equal to the
+log's lines. Where the original's three stood stranded, four of ours joined the queue behind them, the chooser's
+route not being refused. Photographed: the heap on the cut tail, and nothing over it.
 
 ### The analyser's samples
 

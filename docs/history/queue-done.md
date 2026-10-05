@@ -4388,6 +4388,35 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   added); the twentieth, crossing B read on its own row, cannot fail on shipped data, every theme's two rows being equal. Leavers are taken out at the crossing until Q128 builds the walk on to the stop.
   Harnesses `q109confirm.py` (before), `q109fix.py`, `q109fix2.py`; runs `q109/run1`, `fix1`, `fix2`.
   `docs/exe/ride-operation.md`, "Q109".
+- [x] **Q110. The stranded bookkeeping, and thought bubbles.** Found by Q53 (`ride-operation.md`, "The stranded
+  bookkeeping"). The shared counter, the 33 × 33 block stamps its map writes leave, `FUN_004fa770`'s 3 × 3 test, the
+  refusals in SetRandomDest, `FUN_004fa530` and `FUN_004fa5f0`, the dead-end stamp, and SetThought's bubble
+  (`FUN_0050be80`: sprite script `0x0074f2f8` of kind 9, gone 13 to 16 sweeps on). None is kept; only the queue
+  re-measure's stamp (`QUEUE_REMEASURE_BACK_CELL_STAMP`) and five guest sites' thoughts (`*_THOUGHT_*`) are counted.
+  Count the rest first; measure whether a Lost Kingdom guest ever reaches `0x004f9e09`; decode which picture thought
+  `0x11` is.
+  Q82 found the staff's own thoughts through the same `FUN_0050be80`: `0x14` tired, `0x13` unhappy, `0x12` very happy,
+  `0x15` the strike walk, `0x16` a failed patrol roll (`ride-operation.md`, "Drawn on the way").
+  From Q177: SetThought is decoded whole (`ride-operation.md`, "Thoughts 5 and 6, and the bubble"): the class gate,
+  the pictures, the lift of 2.5, the expiry and the four readers. A Jungle Spray player's thought 5 or 6 is class 0 and
+  showed a live bubble on every play measured in the original; here it is counted as `SETTLE_UP_SIDESHOW_THOUGHT`.
+  **Done 2026-10-05**, as the count, the measure and the decode; the build is Q110b. **Thought `0x11` is a blue
+  bubble holding a question mark**, kind 9's set 15 (`Generic\Thoughts\SPR_TB`), named "Confused..." by THOUGHTS.str
+  row 17; all 22 thoughts' pictures and classes and all 22 callers of SetThought are tabled. Counted where the
+  original does it: the block stamp (`MAP_TYPE_WRITE_BLOCK_STAMP`, where a cell becomes ground, path or queue), the
+  fee's thought 6 (`FEE_JUDGEMENT_THOUGHT_6`), the staff's `0x14`, `0x13`, `0x12` (with its draw) and `0x16`. The
+  refusals need a stamp, so they are reached only after `WANDER_DEAD_END_STRANDED_STAMP`. **In the original** under
+  Proton: the stock park left alone 1,630 sweeps, no `+0x198` written and no thought `0x11` in 108 bubbles; with the
+  path at the Belly Bounce's queue tail taken up and the ride shut, three put-out queuers were stamped inside 32
+  sweeps, each under a blue question mark with a red square blinking beneath (photographed), stood 900 sweeps
+  thinking it 900 times, and were stamped afresh when the path cell was laid back. **In OpenTPW**, predicted first:
+  the stock park 150 s, every new count nought; `delpath 48 22`, the block stamp 1 (the queue re-measure's 0, where
+  1 was predicted: wrong, a path beside a queue cell measures nothing); ten guests made on the cut tail, 343
+  wanders, 343 dead ends, all from (49,22); photographed, nothing over them, and four joined the queue where the
+  original's stand refused. Eight new tests, three extended; eighteen restored bugs each fail.
+  Harness `q110confirm.py`, run `q110/run1`; the original: `q110/orig/strand.py`, `strand1.log`, `strand2.log`,
+  `s13.png`, `s15.png`; the pictures: `q110/thoughts.py`. `docs/exe/ride-operation.md`, "Thoughts and their
+  pictures" and "Q110"; FileFormats `sprites.md`, "Thought bubbles".
 
 ## B. Docs and comments
 

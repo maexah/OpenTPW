@@ -122,8 +122,25 @@ public sealed class ParkState
 	/// see <see cref="ParkSurfaces.Rebuild"/>, which lays all three together.</summary>
 	public void SetRecord( int x, int y, ParkWorld.MapCell cell )
 	{
-		if ( OnMap( x, y ) )
-			_records[(y * ParkWorld.MapSize) + x] = cell;
+		if ( !OnMap( x, y ) )
+			return;
+
+		CountBlockStamp( Record( x, y ).Type, cell.Type );
+
+		_records[(y * ParkWorld.MapSize) + x] = cell;
+	}
+
+	/// <summary>
+	/// Counts the block stamp a cell's change of type leaves in the original: after writing bare ground, path or
+	/// queue (<c>FUN_005346d0</c>, <c>0x005347af</c>; a queue cell made path, <c>0x00534913</c>) it writes a fresh
+	/// value of the shared counter into the cell's 16 x 16 block (<c>FUN_004d8c60</c>). A walker re-plans when
+	/// its block's stamp is newer than its route, and a stranded guest is freed by one. No stamp is kept here
+	/// (<c>docs/exe/ride-operation.md</c>, "The stranded bookkeeping").
+	/// </summary>
+	private static void CountBlockStamp( int was, int now )
+	{
+		if ( was != now && now is CellEdge.Nothing or CellEdge.Path or ParkRideChoice.QueueCellType )
+			Unimplemented.Report( "MAP_TYPE_WRITE_BLOCK_STAMP" );
 	}
 
 	/// <summary>
@@ -134,8 +151,12 @@ public sealed class ParkState
 	/// </summary>
 	public void ClearRecord( int x, int y )
 	{
-		if ( OnMap( x, y ) )
-			_records.Remove( (y * ParkWorld.MapSize) + x );
+		if ( !OnMap( x, y ) )
+			return;
+
+		CountBlockStamp( Record( x, y ).Type, _park?.CellAt( x, y ).Type ?? 0 );
+
+		_records.Remove( (y * ParkWorld.MapSize) + x );
 	}
 
 	/// <summary>Whether any cell has been changed at all - what a rebuild can skip on.</summary>

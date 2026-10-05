@@ -123,6 +123,12 @@ public sealed class StaffBehaviour
 	/// </summary>
 	public const int TiringBase = 6;
 
+	/// <summary>The happiness byte at or below which a deciding member thinks <c>0x13</c> - <c>0x00506cc2</c>.</summary>
+	private const int UnhappyThoughtAtMost = 10;
+
+	/// <summary>The happiness byte above which a deciding member may think <c>0x12</c> - <c>0x00506cda</c>.</summary>
+	private const int VeryHappyThoughtAbove = 0x61;
+
 	/// <summary>How many times the patrol roll tries for a cell before giving up - <c>FUN_00506f30</c>.</summary>
 	public const int PatrolTries = 30;
 
@@ -238,6 +244,8 @@ public sealed class StaffBehaviour
 	/// </summary>
 	private void Decide( Staff staff, PeepWalk walk, int tick )
 	{
+		CountMoodThought( staff );
+
 		if ( staff.Model is not (GuardModel or ResearcherModel) )
 		{
 			// The handyman's decide looks for a toilet to clean once no litter is in range (FUN_004d7880 from
@@ -267,7 +275,7 @@ public sealed class StaffBehaviour
 		// here they stand idle.
 		//
 		// The original also shows thought 0x14, tired, on the way into this branch, before it knows whether it
-		// will find anything (FUN_0050be80 at 0x00506b50). Staff thoughts are not built (Q110).
+		// will find anything (FUN_0050be80 at 0x00506b50): counted in CountMoodThought.
 		if ( staff.Tiredness < RestLevel )
 		{
 			if ( GoAndRest( staff, walk ) )
@@ -468,6 +476,34 @@ public sealed class StaffBehaviour
 	}
 
 	/// <summary>
+	/// The thought every kind's decide may show before it chooses - <c>FUN_00506a40</c>, which each kind's decide
+	/// calls first: tired, <c>0x14</c> (<c>0x00506b50</c>); else unhappy, <c>0x13</c>, at a happiness byte of 10
+	/// or less (<c>0x00506ccd</c>); else very happy, <c>0x12</c>, above 97 on one draw in sixteen
+	/// (<c>0x00506cf4</c>), a draw taken only above 97. No thought is kept or drawn here, so each is counted;
+	/// their pictures are in <c>docs/exe/ride-operation.md</c>, "Thoughts and their pictures".
+	/// </summary>
+	/// <remarks>
+	/// Tired is this file's own test (<see cref="RestLevel"/>, Q136 (a)), so the count and the walk to a rest
+	/// area agree with each other.
+	/// </remarks>
+	private void CountMoodThought( Staff staff )
+	{
+		if ( staff.Tiredness < RestLevel )
+		{
+			Unimplemented.Report( "STAFF_TIRED_THOUGHT_0x14" );
+
+			return;
+		}
+
+		var happiness = (byte)(int)staff.Happiness;
+
+		if ( happiness <= UnhappyThoughtAtMost )
+			Unimplemented.Report( "STAFF_UNHAPPY_THOUGHT_0x13" );
+		else if ( happiness > VeryHappyThoughtAbove && (_random.Next() & 0xf) == 0 )
+			Unimplemented.Report( "STAFF_VERY_HAPPY_THOUGHT_0x12" );
+	}
+
+	/// <summary>
 	/// Thirty tries at a cell inside the patrol area - <c>FUN_00506f30</c>, whose own log line when it runs
 	/// out is "Could not find or reach a destination".
 	/// </summary>
@@ -508,6 +544,9 @@ public sealed class StaffBehaviour
 			if ( walk.PlanRoute( WanderBlocked ) )
 				return true;
 		}
+
+		// Thought 0x16 beside the log line (0x0050701f); no thought is kept or drawn here.
+		Unimplemented.Report( "STAFF_PATROL_ROLL_FAILED_THOUGHT_0x16" );
 
 		return false;
 	}

@@ -886,6 +886,9 @@ public sealed class PeepBehaviour
 			// "Person: park far too expensive" - they set off for the bus stop and give up on the park.
 			case ParkAdmission.Opinion.FarTooExpensive:
 				SendTo( peep, walk, EitherOf( admission.BusStopA, admission.BusStopB ) );
+
+				// Thought 6, dissatisfied, after the destination (0x004ffa44); no thought is kept or drawn here.
+				Unimplemented.Report( "FEE_JUDGEMENT_THOUGHT_6" );
 				peep.SetState( PeepState.HeadingForExit, tick, _random );
 				peep.ExitLevel = 0;
 
@@ -896,6 +899,9 @@ public sealed class PeepBehaviour
 			// expensive arm reaches the shared tail without ever calling SetDest, unlike the arm above.
 			case ParkAdmission.Opinion.OnTheExpensiveSide:
 				peep.ParkOpeningWait = (_random.Next() % SulkSpread) + SulkAtLeast;
+
+				// Thought 6 with the wait (0x004ffa7d), counted as the arm above's.
+				Unimplemented.Report( "FEE_JUDGEMENT_THOUGHT_6" );
 				peep.Happiness = Peep.Change( peep.Happiness, -admission.MediumHappinessChange );
 
 				// The original tests the low byte of the truncated happiness, which cannot mislead here
@@ -2374,10 +2380,11 @@ public sealed class PeepBehaviour
 	/// (<c>0x004f991c</c>). A route there sets <see cref="Peep.SetDestSuccessfully"/>.
 	/// </para>
 	/// <para>
-	/// <b>The stranded bookkeeping is absent</b> (Q110): the original refuses a guest whose stamp says
-	/// nothing near them has changed, stamps one who reaches a dead end and raises a thought bubble, and
-	/// neither the stamp nor the thought system exists here, so a guest at a dead end is counted, stays where
-	/// they are and is asked again.
+	/// <b>The stranded bookkeeping is absent</b> (Q110b): the original refuses a guest whose stamp says
+	/// nothing near them has changed, stamps one who reaches a dead end and raises the question-mark bubble,
+	/// thought <c>0x11</c>, and neither the stamp nor the thought system exists here, so a guest at a dead end
+	/// is counted on every wander that meets it, stays where they are, is asked again and can still be chosen
+	/// a ride (<c>docs/exe/ride-operation.md</c>, "Q110").
 	/// </para>
 	/// </summary>
 	/// <returns>Whether somewhere was found and a route to it planned.</returns>

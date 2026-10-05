@@ -443,12 +443,11 @@ public sealed class ParkRideOperation
 	/// and only the aim can fail.
 	/// </para>
 	/// <para>
-	/// <b>What cannot be shown is the ? itself.</b> If it is thought <c>0x11</c>, the stranded bubble, only
-	/// <c>FUN_004f9490</c> raises it, at its linked walk's dead end or its refusal after one, and which
-	/// picture it shows is not established (<c>docs/exe/ride-operation.md</c>, "Leaving a ride"). This
-	/// project has no thought
-	/// system at all - see <see cref="PeepBehaviour.SetRandomDest"/>, which records the same absence from
-	/// the other side. So a guest who cannot leave the exit stands there silently instead of asking.
+	/// <b>What cannot be shown is the ? itself.</b> It is thought <c>0x11</c>, the stranded bubble, a blue
+	/// question mark, which only <c>FUN_004f9490</c> raises, at its linked walk's dead end or its refusal
+	/// after one (<c>docs/exe/ride-operation.md</c>, "Thoughts and their pictures"). This project has no
+	/// thought system at all - see <see cref="PeepBehaviour.SetRandomDest"/>, which records the same absence
+	/// from the other side. So a guest who cannot leave the exit stands there silently instead of asking.
 	/// </para>
 	/// </summary>
 	private static void PutDownAtTheExit( Peep peep, PeepWalk walk, ParkWorld.CatalogueObject ride,

@@ -592,12 +592,15 @@ public class ParkStaffBehaviourTests
 		member.Navigator.Target = new FixedVector( PeepNavigator.WaypointCentre( 49 ), PeepNavigator.WaypointCentre( 22 ) );
 		Assert.IsTrue( walk.PlanRoute(), "the non-path destination must be reachable to expose the defect" );
 		var behaviour = new StaffBehaviour( Balance(), new ConstantDraw(), state );
+		var failed = Counted( "STAFF_PATROL_ROLL_FAILED_THOUGHT_0x16" );
 		behaviour.Step( member, walk, playing: null, tick: 1001 );
 		Assert.AreEqual( StaffActivity.Idle, member.Activity, "a reachable queue/entrance/approach is not a patrol destination" );
+		Assert.AreEqual( failed + 1, Counted( "STAFF_PATROL_ROLL_FAILED_THOUGHT_0x16" ), "thirty failed tries think 0x16 (0x0050701f)" );
 
 		state.SetRecord( 49, 22, state.Record( 49, 22 ) with { Type = CellEdge.Path } );
 		behaviour.Step( member, walk, playing: null, tick: 1002 );
 		Assert.AreEqual( StaffActivity.Walking, member.Activity, "the same live cell converted to path must be accepted" );
+		Assert.AreEqual( failed + 1, Counted( "STAFF_PATROL_ROLL_FAILED_THOUGHT_0x16" ), "a roll that finds a cell thinks nothing" );
 	}
 
 	[DataTestMethod]
@@ -734,6 +737,76 @@ public class ParkStaffBehaviourTests
 	private sealed class ConstantDraw : Random
 	{
 		public override int Next() => 3;
+	}
+
+	/// <summary>Answers one value and counts how often it was asked.</summary>
+	private sealed class CountedDraw( int value ) : Random
+	{
+		public int Asked { get; private set; }
+
+		public override int Next()
+		{
+			++Asked;
+
+			return value;
+		}
+	}
+
+	private static int Counted( string gap ) => Unimplemented.Summary.FirstOrDefault( entry => entry.What == gap ).Times;
+
+	/// <summary>One idle member of staff with no work to find, about to decide.</summary>
+	private (Staff Member, PeepWalk Walk) Deciding( ParkWorld world, float happiness, float tiredness )
+	{
+		var saved = world.People.Single( person => person.ThingId == WithoutWork[0] );
+		var member = new Staff( saved.ThingId, saved.Model, saved.Staff!.Value with
+		{
+			State = (int)StaffActivity.Idle, TimeStartedIdling = 0
+		}, saved.Navigator );
+
+		member.Happiness = happiness;
+		member.Tiredness = tiredness;
+
+		return (member, new PeepWalk( member.Navigator, CellEdge.For( world, ParkPeople.WalkingMode ).Blocked ));
+	}
+
+	/// <summary>
+	/// The thought a decide opens with (<c>FUN_00506a40</c>): unhappy at a happiness byte of 10 or less, very
+	/// happy above 97 on a draw whose low four bits are nought, and that draw taken only above 97.
+	/// </summary>
+	[DataTestMethod]
+	[DataRow( 10.9f, 0, 1, 0, 0 )]
+	[DataRow( 11f, 0, 0, 0, 0 )]
+	[DataRow( 97.9f, 16, 0, 0, 0 )]
+	[DataRow( 98f, 16, 0, 1, 1 )]
+	[DataRow( 98f, 17, 0, 0, 1 )]
+	[DataRow( 98f, 8, 0, 0, 1 )]
+	public void ADecidingMemberThinksOfTheirMood( float happiness, int draw, int unhappy, int veryHappy, int draws )
+	{
+		var world = Park();
+		var (member, walk) = Deciding( world, happiness, tiredness: 80f );
+		var random = new CountedDraw( draw );
+		var before = (Counted( "STAFF_UNHAPPY_THOUGHT_0x13" ), Counted( "STAFF_VERY_HAPPY_THOUGHT_0x12" ), Counted( "STAFF_TIRED_THOUGHT_0x14" ));
+
+		new StaffBehaviour( Balance(), random ).Step( member, walk, playing: null, tick: 1001 );
+
+		Assert.AreEqual( before.Item1 + unhappy, Counted( "STAFF_UNHAPPY_THOUGHT_0x13" ), "unhappy" );
+		Assert.AreEqual( before.Item2 + veryHappy, Counted( "STAFF_VERY_HAPPY_THOUGHT_0x12" ), "very happy" );
+		Assert.AreEqual( before.Item3, Counted( "STAFF_TIRED_THOUGHT_0x14" ), "a rested member is not tired" );
+		Assert.AreEqual( draws, random.Asked, "the draw is taken only above 97" );
+	}
+
+	/// <summary>A tired member thinks <c>0x14</c> and nothing of their mood (<c>0x00506b50</c>).</summary>
+	[TestMethod]
+	public void ATiredMemberThinksTiredAndNothingElse()
+	{
+		var world = Park();
+		var (member, walk) = Deciding( world, happiness: 5f, tiredness: 0.5f );
+		var before = (Counted( "STAFF_TIRED_THOUGHT_0x14" ), Counted( "STAFF_UNHAPPY_THOUGHT_0x13" ));
+
+		new StaffBehaviour( Balance(), new ConstantDraw() ).Step( member, walk, playing: null, tick: 1001 );
+
+		Assert.AreEqual( before.Item1 + 1, Counted( "STAFF_TIRED_THOUGHT_0x14" ) );
+		Assert.AreEqual( before.Item2, Counted( "STAFF_UNHAPPY_THOUGHT_0x13" ) );
 	}
 
 }

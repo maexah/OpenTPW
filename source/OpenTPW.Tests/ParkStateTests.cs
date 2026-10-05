@@ -1,6 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.IO;
+using System.Linq;
 
 namespace OpenTPW.Tests;
 
@@ -225,4 +226,38 @@ public class ParkStateTests
 		Assert.IsNotNull( alone.State, "a park built without one should make its own" );
 		Assert.AreNotSame( state, alone.State, "and it should not be somebody else's" );
 	}
+
+	/// <summary>
+	/// A cell that becomes bare ground, path or queue is counted once, where the original stamps the cell's
+	/// 16 x 16 block (<c>FUN_004d8c60</c>); a write that keeps the type, or makes a footprint, is not.
+	/// </summary>
+	[TestMethod]
+	public void AChangeOfTypeToGroundPathOrQueueCountsABlockStamp()
+	{
+		var state = new ParkState( Park() );
+		var path = state.Record( 48, 22 );
+		Assert.AreEqual( CellEdge.Path, path.Type, "(48,22) is path in the shipped park" );
+
+		var before = Stamps();
+		state.SetRecord( 48, 22, path with { Neighbours = 0 } );
+		Assert.AreEqual( before, Stamps(), "the same type written again stamps nothing" );
+
+		state.SetRecord( 48, 22, path with { Type = CellEdge.Nothing } );
+		Assert.AreEqual( before + 1, Stamps(), "path to bare ground" );
+
+		state.SetRecord( 48, 22, path with { Type = ParkRideChoice.QueueCellType } );
+		Assert.AreEqual( before + 2, Stamps(), "bare ground to queue" );
+
+		state.SetRecord( 48, 22, path with { Type = CellEdge.Footprint } );
+		Assert.AreEqual( before + 2, Stamps(), "a footprint is not one of the three writers' types" );
+
+		state.ClearRecord( 48, 22 );
+		Assert.AreEqual( before + 3, Stamps(), "giving the cell back to the save's path" );
+
+		state.ClearRecord( 48, 22 );
+		Assert.AreEqual( before + 3, Stamps(), "and a cell already the save's stamps nothing" );
+	}
+
+	private static int Stamps() =>
+		Unimplemented.Summary.FirstOrDefault( gap => gap.What == "MAP_TYPE_WRITE_BLOCK_STAMP" ).Times;
 }

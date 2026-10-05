@@ -56,18 +56,19 @@ the original.
   window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
   together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
 
-- [ ] **Q110. The stranded bookkeeping, and thought bubbles.** Found by Q53 (`ride-operation.md`, "The stranded
-  bookkeeping"). The shared counter, the 33 × 33 block stamps its map writes leave, `FUN_004fa770`'s 3 × 3 test, the
-  refusals in SetRandomDest, `FUN_004fa530` and `FUN_004fa5f0`, the dead-end stamp, and SetThought's bubble
-  (`FUN_0050be80`: sprite script `0x0074f2f8` of kind 9, gone 13 to 16 sweeps on). None is kept; only the queue
-  re-measure's stamp (`QUEUE_REMEASURE_BACK_CELL_STAMP`) and five guest sites' thoughts (`*_THOUGHT_*`) are counted.
-  Count the rest first; measure whether a Lost Kingdom guest ever reaches `0x004f9e09`; decode which picture thought
-  `0x11` is.
-  Q82 found the staff's own thoughts through the same `FUN_0050be80`: `0x14` tired, `0x13` unhappy, `0x12` very happy,
-  `0x15` the strike walk, `0x16` a failed patrol roll (`ride-operation.md`, "Drawn on the way").
-  From Q177: SetThought is decoded whole (`ride-operation.md`, "Thoughts 5 and 6, and the bubble"): the class gate,
-  the pictures, the lift of 2.5, the expiry and the four readers. A Jungle Spray player's thought 5 or 6 is class 0 and
-  showed a live bubble on every play measured in the original; here it is counted as `SETTLE_UP_SIDESHOW_THOUGHT`.
+- [ ] **Q110b. Build the stranded stamp, its refusals and the thought bubble.** Split from Q110, which counted,
+  measured and decoded it (`ride-operation.md`, "The stranded bookkeeping", "Thoughts and their pictures", "Q110").
+  Keep the shared counter (`FUN_004d8c50`, its 14 sites) and the 33 × 33 block stamps (`ParkState.CountBlockStamp`
+  is where the three writers land; the queue re-measure's is `QUEUE_REMEASURE_BACK_CELL_STAMP`); `mStrandedTime` on
+  the guest, written at the dead end (`WANDER_DEAD_END_STRANDED_STAMP`); `FUN_004fa770`'s 3 × 3 test and the refusals
+  in SetRandomDest's entry, `FUN_004fa530` and `FUN_004fa5f0`; the walker's re-plan on a newer stamp
+  (`0x0050ed79`), which Q102 and Q104 left unbuilt. Then `mLastThought` and SetThought's bubble: a kind-9 world
+  sprite from the two `Generic\Thoughts` banks by the tabled set, 2.5 above the guest, the class's wait, gone 13 to
+  16 sweeps on, hidden in first person; and the red square blinking under a stranded guest (`FUN_004fa030`, not yet
+  decoded: decode it first). Every counted `*_THOUGHT_*` site then calls it. Confirm as the original was measured:
+  `delpath 48 22`, the Belly Bounce shut by its window's door - the put-out queuers stamped, standing, each under
+  the blue question mark, `peeps` and a screenshot beside `q110/orig/s13.png`; then the path laid back and each
+  stamped afresh. The original's three stood 900 sweeps; here four of ten joined the queue.
 - [ ] **Q111. The state-6 turn's arms before its split are unbuilt and uncounted.** Found by Q53 (`ride-operation.md`,
   "The state-6 turn, in order"). (a) spot animation 5 above happiness 80, (b) vomit, (c) litter to a bin (the Litter
   Bin at (44,29)), (e) facing an entertainer, (f) pranks: each is reached in Lost Kingdom and none calls
