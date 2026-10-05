@@ -56,12 +56,6 @@ the original.
   window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
   together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
 
-- [ ] **Q113. The gadget's body, aerial and arm take no press.** Found by Q56. The original's body `0x1d` answers
-  inside its 23-point outline (stream `0x00752940`, sub-op 4 at `0x00752ac2`), the arm `0x21` and its end over their
-  rects, the handle `0x23` inside a 16-point outline, and the aerial `0x2d`/`0x2e` over theirs (`0x2e` answers a right
-  click itself, `0x004a11a2`); here none takes the pointer, so a left or a quick right click on them reaches the park.
-  Read the outlines into `UiControl.Outline`, build the aerial, and see Q66 before changing the hit test. Confirm: an item
-  in the hand, a quick right click on the body's bare metal keeps it; a screenshot.
 - [ ] **Q114. The park's full-screen toggle `FUN_004a29d0`. Decode first.** Found by Q56. It hides layer 0 under a
   full-screen control whose handler `0x004a2840` gives a right press to the camera and arms nothing. Only handler
   `0x0048a740` turns it on (`0x0048a7f3`, `0x0048a8d8`), installed by the screens `FUN_0048ac40` and `FUN_0048adb0`

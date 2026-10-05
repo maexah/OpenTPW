@@ -368,9 +368,7 @@ internal sealed class WindowStack : Panel
 	/// The original's press goes to the control under the pointer and on to no parent, so only one that lands on the
 	/// park's own layer arms the quick click (<c>0x0048833a</c>). The game menu and the message box cover that layer and
 	/// the options and map screens hide it; a <see cref="UiWindow.ParkScreen"/> does neither, so a right press beside
-	/// one still arms. See <c>docs/exe/park-engine.md</c>, "Whose a right press is". <b>A deviation:</b> the gadget's
-	/// body outside its controls, its arm and its aerial take no press here, where the original's do, so a right press
-	/// on them is the park's (<c>docs/QUEUE.md</c> Q113).
+	/// one still arms. See <c>docs/exe/park-engine.md</c>, "Whose a right press is".
 	/// </remarks>
 	internal bool TakesRightPress( float x, float y )
 		=> _windows.Exists( window => !window.Hidden && !window.PutAway
@@ -381,8 +379,8 @@ internal sealed class WindowStack : Panel
 	/// The right button's click, this frame, as the base control proc makes one for button 1 (<c>docs/exe/hud.md</c>, "A
 	/// click and a double click"): the button down or up, the control under the pointer, and where the pointer is in the
 	/// interface's units. A click whose press landed on the view goes to what <see cref="ViewRightClick"/> named at the
-	/// press; one on a control goes nowhere, since no control here answers a right click, but it still stamps the time a
-	/// second press is judged by. Only a press the window system sent can click, never a button already down when the
+	/// press; one on a control goes to its <see cref="UiControl.RightClicked"/>, and stamps the time a second press is
+	/// judged by either way. Only a press the window system sent can click, never a button already down when the
 	/// stack next looked (F2 stops it).
 	/// </summary>
 	/// <remarks>
@@ -425,7 +423,10 @@ internal sealed class WindowStack : Panel
 		_rightStamp = Time.Now;
 
 		if ( clicked )
+		{
 			_rightPress.Answer?.Invoke();
+			_rightPress.On?.RightClicked?.Invoke();
+		}
 	}
 
 	private UiControl? HitTest( float x, float y )

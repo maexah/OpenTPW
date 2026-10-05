@@ -176,7 +176,7 @@ Built by `FUN_004a1d70` onto the park's layer 0, with no handler for the stream 
 | `0x34` (`gkey`) | Takes **frame 3** (`FUN_0065d3a3(3)`) — what the four `gkey0-3.wct` textures are for — and **is hidden outright in Instant Action** (`DAT_00fb3b7c == 2` -> `UI_SetVisible(0)`) | Disassembly |
 | `0x30` | **Yellow** (0xff,0xff,0,0xff), font 2, and **starts hidden** (`UI_SetVisible(0)`) — matches it being the price of the item in hand, absent when your hand is empty | Disassembly |
 | `0x2f` | Its field is sized by **measuring the string `999999999`** (`UI_MeasureText` on the string at `0x00752f10`), white, font `FUN_00485a70(1)`, skin `FUN_0048fde0(0)`; `0x32`'s rect is then computed from that measurement rather than being fixed | Disassembly |
-| `0x2d` / `0x2e` | Callbacks `LAB_004a11e0` and `FUN_004a1190`; the aerial is repositioned by `sStack_32 - iStack_3e` — it moves against its neighbour rather than sitting at its stream rect | Disassembly |
+| `0x2d` / `0x2e` | Callbacks `LAB_004a11e0` and `FUN_004a1190`; the mast is shrunk to eight units and the top follows it down ("The arm and the aerial as built" below) | Disassembly |
 | `0x1f` | Takes the `meter.wct` skin | Confirmed twice, independently |
 | `0x20` | The date is **black** — `FUN_0065c5d5(0,0,0,0xff)` with font slot 3 (`_DAT_007cb2d4 = 3`) | Confirmed twice, independently |
 
@@ -188,8 +188,54 @@ at n+2. The receivers are `__fastcall` and **Ghidra hides them** — read the di
     0x21 arm 4   0x22 end 4   0x24 b_retract 7   0x1d body 8   0x23 handle 9   0x25 six buttons 10
 
 **Higher is nearer the front**, settled by screenshot: the six buttons sit at 10 inside a body at 8 and
-plainly draw over it. So the arm draws **behind** the body. Built the other way it lays a hard seam across
-the panel.
+plainly draw over it. So the arm draws **behind** the body, and the handle in front of it. Built the other way
+the arm lays a hard seam across the panel. A control linked later takes its parent's depth and two
+(`FUN_0065f447`).
+
+### The arm and the aerial as built
+
+A control's flags `0x10000`, `0x20000`, `0x40000` and `0x80000` make it follow its parent's left, right, top and
+bottom edge when the parent's rectangle is set to another size (`FUN_0065cc04` → `FUN_0065c9bd`, which moves the child
+by that edge's change through `FUN_0065c7fe`; `0x30000`, `0xc0000` and `0xf0000` together stretch it instead).
+`FUN_0065c7fe` moves a control's regions and then every child the same way. In the gadget's stream the arm's end
+`0x22` and the handle `0x23` carry `0x20000`, and the aerial's top `0x2e` carries `0x40000`.
+
+**The arm is built in.** `FUN_004a1d70` reads the arm's rectangle and the handle's, adds the arm's left less the
+handle's (331 − 976 = −645) to the arm's right (`0x004a23da`) and sets it (`0x004a23e2`): the arm is
+(331,1069)-(361,1495), 30 wide, and its end, following the right edge with the handle inside it, sits 645 left of the
+stream: the end (361,1069)-(426,1382), the handle (331,1058)-(484,1503) with its 16 points moved as far. The handle is
+at depth 9 over the body's 8, so with the arm in it is the blue grip that shows past the body's right edge (439);
+every point of the narrowed arm and of its end is inside the body's outline or the handle's. The retract button `0x24`
+(flags 1) stays at its stream rectangle, switched off.
+
+**The aerial is built down.** The builder sets the mast `0x2d`'s top to its bottom less 8 (`0x004a2057`,
+`0x004a205c`): (94,976)-(144,984). The top `0x2e` follows the mast's top edge, 58 down: (77,848)-(161,976), resting on
+the body's neck. (The move at `0x004a2034` before it, the mast's top less the top's bottom, is nought in this stream.)
+`LAB_004a11e0`, the mast's handler, answers `0x100001`, a message's icon handed to it: it links the icon as its child,
+fades it in over 500 ms, and grows the mast upward by the icon's height and 10 (`FUN_0065cd95( 0, -(h + 10), 0, 0 )`,
+`0x004a12e3`), which lifts the top as far. `FUN_004a1190`, the top's handler, answers a right click (`0x10006`, button
+1) by sending the mast `0x100003`, and the mast's `0x100003` arm (`0x004a13b7`) walks the icons from `[0x007cb2c8]`,
+posting each message 5 (close) with a delay 100 ms longer than the last one's: "Right-click to delete ALL messages", help row 476. Seen in the original:
+with no message the red top sits on the neck; with one, an icon block stands between them.
+
+**The hit test's order.** `FUN_0065db25` skips a control flagged `0x2` or with `+4` set, tests every child in turn
+whatever the parent's own region says, keeps the LAST child that answers, and answers itself only when no child did.
+Children are linked at the tail (`FUN_0065f447`), so in stream order. Under the body: the gauge `0x1e`, the date
+`0x20`, the arm `0x21`, the six buttons' panel `0x25`. So the panel answers before the arm where they meet, the arm
+before the date (the date's x 331 to 361 with the arm in), and any child before the body's outline.
+
+**Measured in the original** with the path tool armed and RMB cancel on (`[0x0078d911]` 1), reading the mode object
+`[0x007b05d8]`, which a right click that reaches the park replaces: a quick right click on the body's bare metal, the
+red top, the mast and the handle past the body's edge left it alone, each tried once or twice; one on the grass, and
+one in the corner of the body's rectangle outside its outline, replaced it, four of four. Over the red top the help
+bar read row 476. The arm out was not tried there.
+
+**OpenTPW.** `ParkGadget` builds the body's children in that order under a body that draws by depth
+(`UiControl.DrawsByDepth`, `Depth`), reads both outlines into `UiControl.Outline`, and builds the arm in
+(`PutArm`) and the aerial down. The arm, its end, the mast and the buttons' panel stop the pointer over their
+rectangles (`UiControl.StopsPointer`). Not the original's: the arm does not slide; in, the arm and its end draw
+nothing (how a mesh is drawn on a narrowed control is not traced) and the retract button is hidden; and the top's
+right click is counted, `AERIAL_DELETE_ALL_MESSAGES`, since no message bar is built.
 
 ### Op 4 sub-op 4 is a hit-test region, not a motion path
 

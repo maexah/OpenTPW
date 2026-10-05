@@ -4472,6 +4472,20 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   each there inside 6 s, photographed; the unchanged build counted 1, 2, 3 and 8 and walked to the roll's cells. **The
   original**: the guard put down on (42,24) and (42,26) was given (45,21) and (44,28), each the cell's centre, 2 of 2.
   Three new tests; eight restored bugs each fail. The put-down's own timing differs: Q229.
+- [x] **Q113. The gadget's body, aerial and arm take no press.** Done 2026-10-05,
+  `alexah/293-gadget-body-aerial-arm-take-a-press`. The body answers inside its 23-point outline and the handle inside
+  its 16-point one; the arm, its end and the aerial over their rectangles; the handle sits where the builder leaves it,
+  645 left of the stream and in front of the body, and the aerial's top on the neck (`hud.md`, "The arm and the aerial
+  as built"). The aerial's right click is counted, `AERIAL_DELETE_ALL_MESSAGES`. Confirmed in the game with the Belly
+  Bounce in the hand and a real quick right click: 8 of 8 gadget points kept it, the bare corner let it go, each
+  predicted first (the unchanged build let go 9 of 9); photographed beside the original's frame. In the original, path
+  tool armed: body, red top, mast and handle kept it; grass and the bare corner did not. Q66's hit test is untouched.
+  The item as written: found by Q56. The original's body `0x1d` answers
+  inside its 23-point outline (stream `0x00752940`, sub-op 4 at `0x00752ac2`), the arm `0x21` and its end over their
+  rects, the handle `0x23` inside a 16-point outline, and the aerial `0x2d`/`0x2e` over theirs (`0x2e` answers a right
+  click itself, `0x004a11a2`); here none takes the pointer, so a left or a quick right click on them reaches the park.
+  Read the outlines into `UiControl.Outline`, build the aerial, and see Q66 before changing the hit test. Confirm: an item
+  in the hand, a quick right click on the body's bare metal keeps it; a screenshot.
 
 ## B. Docs and comments
 

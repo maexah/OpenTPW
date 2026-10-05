@@ -1968,8 +1968,8 @@ opens keeps the capture on the layer (`0x004882ba`), so its release can still le
 (`UiWindow.ParkScreen`) takes it, and `Level.RightPressTaken` adds first person (and gives the park every press while
 F2 hides the HUD). The screens are modal here for the left press, which the original's `0x00488741` keeps from the
 hand, but that also shuts out the gadget beside them, and the object window's frame lets a left press through (Q115);
-`ParkScreen` gives the right press beside them back to the park. The gadget's body outline, its aerial and its arm take
-no press here, so a press on them is the park's (Q113). A right press on a list row is counted,
+`ParkScreen` gives the right press beside them back to the park. The gadget's body takes a press inside its outline,
+and its arm, handle and aerial take theirs (`hud.md`, "The arm and the aerial as built"). A right press on a list row is counted,
 `LIST_ROW_RIGHT_CLICK` (Q117). `Level.LeftPressTaken` keeps a left press off the park in first person too (Q116): the
 viewfinder layer's `FUN_00488a00` gives a press (`0x10005`) to the key table (`FUN_0040c900`) and every message to
 `FUN_0042a760`, where a left press only sets bit 1 of the camera's button state `DAT_00790aac` (what reads that bit is
@@ -2016,8 +2016,7 @@ Delete key (`Level.ClearKey`) - lets go first; a quick right click (`Level.Right
 on its release (`ParkFrontEnd.MenuKey`) and leaving the park (`Level.ForgetPark`, before anything in the park is deleted) let go
 and nothing more; and a sale lets go when no item is held and no build tool armed, as the demolisher's restore of
 tool 0 does (`0x0052818d`).
-`ParkPeople.PutBack` puts a worker down in their own cell through the drop. **Not the original's**: a right press on
-the gadget's body outside its controls, its arm or its aerial arms the click here (Q113); the rotation is not the one
+`ParkPeople.PutBack` puts a worker down in their own cell through the drop. **Not the original's**: the rotation is not the one
 global, so a purchase always starts at nought; and a mechanic put down goes idle (`MECHANIC_PUT_DOWN_JOB_SEARCH`).
 
 ### Leaving a park with something in the hand

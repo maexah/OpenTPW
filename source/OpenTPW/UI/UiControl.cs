@@ -48,7 +48,7 @@ internal class UiControl
 	public TextAlign TextDown { get; set; } = TextAlign.Centre;
 
 	/// <summary>Where the text goes, when that is not the whole control.</summary>
-	public UiRect? TextRect { get; init; }
+	public UiRect? TextRect { get; internal set; }
 
 	/// <summary>Whether the text has the purple skin's dark edge - see <see cref="UiText"/>.</summary>
 	public bool TextShadow { get; init; }
@@ -92,7 +92,29 @@ internal class UiControl
 	/// </summary>
 	public Action? RightPressed { get; set; }
 
+	/// <summary>
+	/// What a right click on it does, if anything: the click the base control proc makes of a press and a release of
+	/// button 1 (<c>0x10006</c>; <c>docs/exe/hud.md</c>, "A click and a double click"), posted to the control the press
+	/// landed on. Only <see cref="WindowStack"/> calls it.
+	/// </summary>
+	public Action? RightClicked { get; set; }
+
 	public Action? Exited { get; set; }
+
+	/// <summary>
+	/// How near the front it is drawn among the controls under a <see cref="DrawsByDepth"/> control - the original's
+	/// <c>+0xe0</c>, which <c>FUN_0065f16b</c> writes and hands to the children two higher. Null takes two more than
+	/// its parent's.
+	/// </summary>
+	public int? Depth { get; init; }
+
+	/// <summary>
+	/// Whether it and everything under it are drawn in order of <see cref="Depth"/>, lowest first, rather than each
+	/// parent before its children - so a child can lie behind its parent. Controls of one depth keep the tree's order.
+	/// </summary>
+	public bool DrawsByDepth { get; init; }
+
+	private int DrawDepth => Depth ?? (Parent is { } parent ? parent.DrawDepth + 2 : 0);
 
 	internal bool Hovered { get; set; }
 
@@ -116,10 +138,17 @@ internal class UiControl
 	/// rectangle (op 4, sub-op 4) - or null. A control with an outline stops the pointer inside it whether or not it does
 	/// anything with it, as the original's hit test answers with any control whose region holds the point.
 	/// </summary>
-	public UiPoint[]? Outline { get; init; }
+	public UiPoint[]? Outline { get; internal set; }
+
+	/// <summary>
+	/// Whether it stops the pointer over its rectangle though it does nothing with it, as every control of the original's
+	/// does that is shown and not switched off (<c>FUN_0065db25</c>). Here a control says so, because the windows are
+	/// written with containers the original does not have.
+	/// </summary>
+	public bool StopsPointer { get; init; }
 
 	/// <summary>Whether the pointer stops at it, rather than passing through to whatever is under it.</summary>
-	internal virtual bool TakesMouse => Clicked != null || Entered != null || HelpText >= 0 || Outline != null;
+	internal virtual bool TakesMouse => Clicked != null || Entered != null || HelpText >= 0 || Outline != null || StopsPointer;
 
 	/// <summary>Where on the window it takes the pointer, when it does - all of it, unless its layout data says otherwise.</summary>
 	internal virtual PixelRect HitArea => Pixels;
@@ -137,10 +166,60 @@ internal class UiControl
 		if ( !Visible )
 			return;
 
+		if ( DrawsByDepth )
+		{
+			foreach ( var control in DrawOrder() )
+				control.OnDraw();
+
+			return;
+		}
+
 		OnDraw();
 
 		foreach ( var child in Children )
 			child.Draw();
+	}
+
+	/// <summary>
+	/// It and every shown control under it in the order they are drawn: lowest <see cref="Depth"/> first with the
+	/// tree's order within a depth when it <see cref="DrawsByDepth"/>, and the tree's order alone when it does not.
+	/// </summary>
+	internal List<UiControl> DrawOrder()
+	{
+		var shown = new List<UiControl>();
+		Collect( this );
+
+		// OrderBy is a stable sort, which List.Sort is not.
+		return DrawsByDepth ? shown.OrderBy( control => control.DrawDepth ).ToList() : shown;
+
+		void Collect( UiControl control )
+		{
+			if ( !control.Visible )
+				return;
+
+			shown.Add( control );
+
+			foreach ( var child in control.Children )
+				Collect( child );
+		}
+	}
+
+	/// <summary>
+	/// Moves it and everything under it across and down the virtual screen, its outline and text rectangle with it -
+	/// <c>FUN_0065c7fe</c>, which moves a control's regions and then each child the same way.
+	/// </summary>
+	internal void Move( int across, int down )
+	{
+		Rect = new UiRect( Rect.Left + across, Rect.Top + down, Rect.Right + across, Rect.Bottom + down );
+
+		if ( TextRect is { } text )
+			TextRect = new UiRect( text.Left + across, text.Top + down, text.Right + across, text.Bottom + down );
+
+		if ( Outline is { } outline )
+			Outline = outline.Select( point => new UiPoint( point.X + across, point.Y + down ) ).ToArray();
+
+		foreach ( var child in Children )
+			child.Move( across, down );
 	}
 
 	protected virtual void OnDraw()
