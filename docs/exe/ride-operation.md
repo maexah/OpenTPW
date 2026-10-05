@@ -1319,8 +1319,20 @@ run all 43 `idle` readings of guests the chooser never routed were nought, an em
 in the animation, `guests` reading set 14 and then set 0. The unchanged build, same run: no such line, no counter,
 55 readings all at happiness 50. Not predicted, and wrong in the first run's prediction: a guest who then queues is
 stamped by the queue, and one who buys a drink gains happiness, so "50 less 5 a line" holds only for a guest who
-does neither. **Where it differs**: the events are counted, not kept, and nothing of it was compared with the
-original. The yawn's samples have not been listened to.
+does neither. The events are counted, not kept. The yawn's samples have not been listened to.
+**In the original** (the reference install off screen, the stock park, `watch.py` polling every guest's `+0x220`,
+`+0x224`, `+0x1fc`, `+0x208`, `+0x1dc`, the event cursor and `+0x19c` for 962 sweeps, the clock true; predicted from
+the listing first): 112 changes of state 6 to 8 that wrote `+0x1fc`, every one with `+0x1fc` and `+0x208` equal to that
+sweep's `mGameTick`, 108 exactly 5 off (the others 4, 6 and 1, a need's own change or the hold at nought inside one
+poll), all returned to 6 eleven sweeps on, and no guest's two closer than 31 sweeps. 39 of them pushed event 1; the
+other 73 followed an event 1 already newest in the ring, which a push skips ("The event history"), so
+`DECIDE_NOTHING_CHOSEN_EVENT` counts empty hands, not ring entries. 377 changes 6 to 7 and 72 changes 6 to 10 (each
+with event 2 naming `+0x1dc`) wrote no `+0x1fc`. One 6 to 8 wrote `+0x208` alone at happiness 83: arm (a).
+**The build agrees with all of it. How often it happens does not**: in the same 240 s of the same stock park OpenTPW
+counted no empty hand and 16 choices (13: 14, 14: 1, 16: 1) against the original's 112 and 72 (14: 27, 16: 18, 13: 16,
+toilets 11), with one arrival against at least fifteen. In the original seven of the empty hands were at (52,29),
+where the Jungle Spray turned guests away fourteen times (event 5 naming 14); here a fresh guest anywhere inside the
+park scores the Belly Bounce 10 or more. The cause is not found (Q222).
 
 ## What a thing is worth to a guest - `FUN_004fcc30`
 

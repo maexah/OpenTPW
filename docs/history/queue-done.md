@@ -4332,7 +4332,10 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   drink, `guests` reading set 14, then set 0. The unchanged build, same run: no line, no counter, 55 readings at
   happiness 50. The first run's prediction was wrong twice (a queue stamps a queuer; a drink gives happiness back),
   and its photograph was six guests on one cell, retaken. Seven new tests, three re-aimed; eleven restored bugs each
-  fail. Not compared with the original; the events are counted, not kept; the yawn not listened to. Harness
+  fail. Compared with the original afterwards, the same day, by memory (`q107/orig/watch.py`, `watch1.log`): 112 of 112
+  empty hands stamped `+0x1fc` and `+0x208` with that sweep's `mGameTick`, 108 exactly 5 off, all back 11 sweeps on,
+  none inside 31; 377 wanders and 72 choices wrote no stamp. It found Q222. The events are counted, not kept; the yawn
+  not listened to. Harness
   `q107confirm.py`, runs `q107/run1`..`run4`, `control`. `docs/exe/ride-operation.md`, "Q107".
 
 ## B. Docs and comments

@@ -31,7 +31,8 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
 artifacts are listed in `docs/history/README.md`. Q208-Q217 come from the 2026-10-04 review of the commits of
 2026-10-03 and 2026-10-04; an id such as `u6-hoardings-1` names a finding in its findings file (`CLAUDE.local.md`
 says where). Q219-Q221 come from the 2026-10-04 effort audit of the commits of 2026-09-29 to 2026-10-01; an id such
-as `r-f1` names a verdict in its results file (`CLAUDE.local.md` says where).
+as `r-f1` names a verdict in its results file (`CLAUDE.local.md` says where). Q222 comes from Q107's comparison with
+the original.
 
 ---
 
@@ -600,6 +601,16 @@ as `r-f1` names a verdict in its results file (`CLAUDE.local.md` says where).
   18 may be 19. (8) Two docs lines not yet re-measured: `park.md`'s selector table rows 8 and 9 leave out the
   `0x4000` and type gates of `FUN_00544c80` and `FUN_00544e50`; FileFormats `sound-categories.md` says the masks use
   bits 1, 2 and 4 beside 645 speech variations holding 100.
+- [ ] **Q222. The original's guests come up empty-handed, and ours do not. Measure first.** Found by Q107's
+  comparison with the original (`ride-operation.md`, "Q107"). The same stock Lost Kingdom park left alone for 240 s:
+  the original's chooser named nothing 112 times and a thing 72 times (Jungle Spray 27, Drinks Shop 18, Belly Bounce
+  16, toilets 11), with at least fifteen arrivals; OpenTPW's named nothing never and a thing 16 times (Belly Bounce 14,
+  Jungle Spray 1, Drinks Shop 1), with one arrival (Q26). In the original seven of the empty hands were at (52,29),
+  where the Jungle Spray turned guests away fourteen times; here `why` scores the Belly Bounce 10 or more for a fresh guest anywhere inside
+  the park. So a score, an offer gate or the clock the chooser reads (Q132) differs, and Q104's and Q105's scores were
+  never compared with the original. Read one guest's scores in the original at a known cell (a break in
+  `FUN_004fcc30`, or its inputs from memory) beside `why` for the same guest and cell, find the term that differs,
+  then file its build. Instruments: `q107/orig/watch.py` and `watch1.log`, `q107/base`.
 
 ## B. Docs and comments
 
