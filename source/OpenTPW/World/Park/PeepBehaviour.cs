@@ -581,7 +581,7 @@ public sealed class PeepBehaviour
 				if ( Walked( peep, walk, playing ) != WalkVerdict.Walking )
 				{
 					if ( (_random.Next() & (KeepWanderingShare - 1)) == 0 && SetRandomDest( peep, walk ) )
-						peep.SetState( PeepState.Wandering, tick, _random );
+						SetWandering( peep, walk, tick );
 					else
 						peep.SetState( PeepState.Deciding, tick, _random );
 				}
@@ -703,7 +703,10 @@ public sealed class PeepBehaviour
 			case PeepState.PlayingSpotAnimation:
 				if ( (uint)tick > (uint)(peep.TimeOfLastSpotAnim + SpotAnimationSweeps) )
 				{
-					peep.SetState( peep.SavedState, tick, _random );
+					if ( peep.SavedState == PeepState.Wandering )
+						SetWandering( peep, walk, tick );
+					else
+						peep.SetState( peep.SavedState, tick, _random );
 
 					Log.Info( $"Person {peep.ThingId}: spot animation over at tick {tick}, back to {peep.State}" );
 				}
@@ -1062,16 +1065,6 @@ public sealed class PeepBehaviour
 	public const int ThinkingGap = 30;
 
 	/// <summary>
-	/// The four sides in the order the original tests them, which is <b>not</b> compass order.
-	/// <c>FUN_004f9490</c> reads the cell's connection bits as <c>0x10, 0x04, 0x01, 0x40</c>, and
-	/// <see cref="CellEdge.BitFor"/> - derived separately, from the map - gives those to North, West, South
-	/// and East. So slot and opposite slot differ by two, which is what makes the original's
-	/// "do not turn back" test <c>(slot + 2) &amp; 3</c> correct.
-	/// </summary>
-	private static readonly StepDirection[] SlotOrder =
-		[StepDirection.North, StepDirection.West, StepDirection.South, StepDirection.East];
-
-	/// <summary>
 	/// What a guest does when they finish anything - <c>FUN_004fec90</c>.
 	///
 	/// <para>
@@ -1121,7 +1114,7 @@ public sealed class PeepBehaviour
 			// (0x004ff3d6); failing to find anywhere stamps it and leaves them deciding (0x004ff3f4).
 			case 1:
 				if ( SetRandomDest( peep, walk ) )
-					peep.SetState( PeepState.Wandering, tick, _random );
+					SetWandering( peep, walk, tick );
 				else
 				{
 					peep.TimeStartedIdling = tick;
@@ -2321,15 +2314,15 @@ public sealed class PeepBehaviour
 	/// the guest's half, and the staff's is <see cref="StaffBehaviour"/>'s.
 	/// </para>
 	/// <para>
-	/// <b>A linked cell sends them to one of its four neighbours</b>, a random point INSIDE it rather than
-	/// its centre: the original masks a roll to <c>0x7f</c> and clamps it to 5..123 of the 256 sub-cell
-	/// units. Its linked arm walks one to five cells from the mask of the cell being left, with three
-	/// filters; this steps one cell from the entered cell's mask (Q108).
+	/// <b>A linked cell starts <see cref="LinkedWander"/></b>, a walk of the call's r % 5 + 1 passes over linked
+	/// cells, and the guest is aimed at a random point INSIDE the last cell rather than its centre: two draws,
+	/// x then y, each masked to <c>0x7f</c> and clamped to 5..123 of the 256 sub-cell units
+	/// (<c>0x004f991c</c>). A route there sets <see cref="Peep.SetDestSuccessfully"/>.
 	/// </para>
 	/// <para>
 	/// <b>The stranded bookkeeping is absent</b> (Q110): the original refuses a guest whose stamp says
 	/// nothing near them has changed, stamps one who reaches a dead end and raises a thought bubble, and
-	/// neither the stamp nor the thought system exists here, so a guest who can reach nowhere stays where
+	/// neither the stamp nor the thought system exists here, so a guest at a dead end is counted, stays where
 	/// they are and is asked again.
 	/// </para>
 	/// </summary>
@@ -2338,52 +2331,54 @@ public sealed class PeepBehaviour
 	{
 		var (x, y) = walk.Position.Cell;
 
-		// The original's pass count, r % 5 + 1, drawn on every call before the count (0x004f9534). Only its linked
-		// walk reads it, and ours steps one cell (Q108), so it is drawn and not used.
-		_ = (_random.Next() % 5) + 1;
+		// The original's pass count, drawn on every call before the count (0x004f9534); the linked walk reads it.
+		var passes = (_random.Next() % LinkedWander.MostPasses) + 1;
 
-		// A park that was never loaded has no cells to count, and is taken as linked - the answer Connects gives.
+		// A park that was never loaded has no cells to count, and every cell of it is taken as linked on all
+		// four sides.
 		if ( _park != null && CellEdge.Links( ParkState.CellFor( _park, x, y ).Neighbours ) == 0 )
 			return WanderFromNowhere( peep, walk, x, y );
 
-		// The four candidates, in the original's slot order, empty where that side is closed.
-		var candidates = new (int X, int Y)?[SlotOrder.Length];
-		var found = 0;
+		var stepped = LinkedWander.Walk( CellOf, x, y, passes, _random );
 
-		for ( var slot = 0; slot < SlotOrder.Length; ++slot )
+		if ( stepped == null )
 		{
-			if ( walk.Blocked( x, y, SlotOrder[slot] ) )
-				continue;
+			Unimplemented.Report( "WANDER_DEAD_END_STRANDED_STAMP" );
+			Log.Info( $"Peep {peep.ThingId}: wander of {passes} from ({x},{y}) met a dead end" );
 
-			var step = MapStep.Beyond( x, y, SlotOrder[slot] );
-
-			if ( !Connects( step.X, step.Y, SlotOrder[slot] ) )
-				continue;
-
-			candidates[slot] = step;
-			++found;
-		}
-
-		if ( found == 0 )
 			return false;
-
-		// Start at a random slot and take the first one open, which is how the original spreads guests
-		// across the ways out of a cell rather than always preferring north.
-		var first = _random.Next() & (SlotOrder.Length - 1);
-
-		for ( var step = 0; step < SlotOrder.Length; ++step )
-		{
-			var slot = (first + step) & (SlotOrder.Length - 1);
-
-			if ( candidates[slot] is not { } cell )
-				continue;
-
-			peep.Navigator.Target = new FixedVector( SomewhereIn( cell.X ), SomewhereIn( cell.Y ) );
-
-			return walk.PlanRoute();
 		}
 
-		return false;
+		var cell = stepped[^1];
+
+		peep.Navigator.Target = new FixedVector( SomewhereIn( cell.X ), SomewhereIn( cell.Y ) );
+
+		var routed = walk.PlanRoute();
+
+		Log.Info( $"Peep {peep.ThingId}: wander of {passes} from ({x},{y}) by "
+			+ string.Join( " ", stepped.Select( step => $"({step.X},{step.Y})" ) ) + (routed ? "" : ", no route") );
+
+		if ( routed )
+			peep.SetDestSuccessfully = true;
+
+		return routed;
+	}
+
+	/// <summary>The running park's cell, or with no park a bare cell linked on all four sides.</summary>
+	private ParkWorld.MapCell CellOf( int x, int y )
+		=> _park == null ? new ParkWorld.MapCell( 0, 0, 0x55, 0, 0, 0, 0, 0 ) : ParkState.CellFor( _park, x, y );
+
+	/// <summary>
+	/// Sets a guest wandering - SetState(7), <c>FUN_00501db0</c> case 7, which first routes again to the stored
+	/// destination when <see cref="Peep.SetDestSuccessfully"/> is set (<c>FUN_004fa5f0</c>) and takes no notice
+	/// of the answer.
+	/// </summary>
+	private void SetWandering( Peep peep, PeepWalk walk, int tick )
+	{
+		if ( peep.SetDestSuccessfully )
+			walk.PlanRoute();
+
+		peep.SetState( PeepState.Wandering, tick, _random );
 	}
 
 	/// <summary>
@@ -2410,6 +2405,7 @@ public sealed class PeepBehaviour
 
 			if ( SendTo( peep, walk, (atX, atY) ) )
 			{
+				peep.SetDestSuccessfully = true;
 				Log.Info( $"Peep {peep.ThingId}: no links at ({x},{y}); probe {probe} aims at path ({atX},{atY})" );
 
 				return true;
@@ -2426,6 +2422,7 @@ public sealed class PeepBehaviour
 
 			if ( SendTo( peep, walk, (toX, toY) ) )
 			{
+				peep.SetDestSuccessfully = true;
 				Log.Info( $"Peep {peep.ThingId}: no links at ({x},{y}) and no path on the rays; try {attempt} aims at "
 					+ $"({toX},{toY}), type {ParkState.CellFor( _park, toX, toY ).Type}" );
 
@@ -2478,45 +2475,6 @@ public sealed class PeepBehaviour
 					yield return (atX, atY);
 			}
 		}
-	}
-
-	/// <summary>
-	/// Whether the cell being entered says it connects the way we are coming from - the stored
-	/// <c>mNeighbours</c> mask, bit-tested, which is what the original builds its wander candidates from.
-	///
-	/// <para>
-	/// <b>The mask keeps a linked wander off the road outside.</b> The original picks a wander destination in
-	/// <c>FUN_004f9490</c> from the byte <c>FUN_00522770</c> hands back - the cell's own <c>+0xc</c> - and
-	/// <b>only 91 of this park's 16,384 cells carry a non-zero one</b>. The road outside is cell type 30 and
-	/// its mask is nought, so the engine can never choose it, however walkable its edges are.
-	/// </para>
-	/// <para>
-	/// <b>The mask is read from the cell being ENTERED, about the side facing the cell being left</b>, and
-	/// the bit is set when the two connect. The original's wander reads the cell being LEFT, each of its own
-	/// bits along that bit's step (<c>docs/exe/ride-operation.md</c>, "SetRandomDest"); on a symmetric mask,
-	/// as the shipped park's is, the two agree (Q108).
-	/// </para>
-	/// <para>
-	/// <b>This narrows rather than replaces.</b> The original uses the mask <i>instead of</i> an edge test
-	/// here; keeping both means the mask can only ever close a way and never open one, so no route this
-	/// build already walks can be widened by it. A park that was never loaded has no cells to ask, and
-	/// answers yes - the same thing every other null-park arm in this class does.
-	/// </para>
-	/// </summary>
-	private bool Connects( int x, int y, StepDirection direction )
-	{
-		if ( _park == null )
-			return true;
-
-		if ( !ParkState.OnMap( x, y ) )
-			return false;
-
-		// The RUNNING park's mask, not the file's. A path a player has just laid carries its connections
-		// only in the overlay, and asking ParkWorld would answer nought for every one of them - so a new
-		// walkway would draw perfectly and no guest would ever wander onto it.
-		var cell = ParkState.CellFor( _park, x, y );
-
-		return (cell.Neighbours & CellEdge.BitFor( direction )) != 0;
 	}
 
 	/// <summary>The near edge of a cell plus a clamped roll - see <see cref="SetRandomDest"/>.</summary>

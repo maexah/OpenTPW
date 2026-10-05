@@ -279,8 +279,9 @@ public class ParkNoLinksWanderTests
 	}
 
 	/// <summary>
-	/// And a linked cell whose pick finds nothing does not probe: (48,22) is path with links, every side shut,
-	/// and the answer is false with the target untouched.
+	/// And a linked cell does not probe: (48,22) is path with links, every side shut, and the answer is false.
+	/// The linked walk tests no edge, so its aim is written before the route fails (<c>0x004f99bf</c>), into a
+	/// cell within five of the guest.
 	/// </summary>
 	[TestMethod]
 	public void ALinkedCellWithEverySideShutDoesNotProbe()
@@ -296,7 +297,12 @@ public class ParkNoLinksWanderTests
 
 			Assert.AreNotEqual( 0, CellEdge.Links( ParkState.CellFor( park.World, 48, 22 ).Neighbours ) );
 			Assert.IsFalse( Behaviour( park, new Random( 1 ) ).SetRandomDest( peep, walk ) );
-			Assert.AreEqual( Centre( 30, 30 ), peep.Navigator.Target );
+
+			var (x, y) = peep.Navigator.Target.Cell;
+
+			Assert.IsTrue( Math.Abs( x - 48 ) + Math.Abs( y - 22 ) is >= 1 and <= LinkedWander.MostPasses,
+				$"aimed into ({x},{y})" );
+			Assert.IsFalse( peep.SetDestSuccessfully );
 		}
 		finally
 		{

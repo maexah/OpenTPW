@@ -261,9 +261,11 @@ public class ParkDecidingTests
 	[TestMethod]
 	public void ARoutedWanderKeepsTheIdleStampAndAFailedOneSetsIt()
 	{
-		var (routed, walk, behaviour) = Deciding( SeedFor( 1 ), stamp: 7 );
+		var (routed, _, behaviour) = Deciding( SeedFor( 1 ), stamp: 7 );
 
-		behaviour.Step( routed, walk, playing: null, tick: 100 );
+		// With no park every cell is linked on all four sides, so the wander may be aimed anywhere within five
+		// cells: a walk nothing shuts routes there.
+		behaviour.Step( routed, new PeepWalk( routed.Navigator, MapStep.LeavesTheMap ), playing: null, tick: 100 );
 
 		Assert.AreEqual( PeepState.Wandering, routed.State );
 		Assert.AreEqual( 7, routed.TimeStartedIdling, "a routed wander does not stamp" );

@@ -56,13 +56,6 @@ the original.
   window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
   together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
 
-- [ ] **Q108. `SetRandomDest`'s linked walk.** Found by Q53 (`ride-operation.md`, "SetRandomDest", the linked arm).
-  The original walks r % 5 + 1 linked cells from the mask of the cell being LEFT, never ending on the guest's own
-  cell, and aims inside the last; it drops queue and entrance neighbours from a path cell, a queue cell's
-  `mDirection` slot and exit cells; below a count of 2 it takes a fixed order, else a random start with no reverse.
-  Ours steps one adjacent cell. Q206 restores the staff destination filters and adds explicit movement containment;
-  the guest filters and the multi-cell walk remain here. Add `mSetDestSuccessfully` and SetState(7)'s re-aim with it. Confirm: over a run, no
-  wanderer steps from (48,22) onto a queue or entrance cell, and wanders of up to five cells in the census.
 - [ ] **Q109. When a guest leaves. Alexah's call first.** Found by Q53 (`ride-operation.md`, arm (d)). The original
   tests leaving in state 6 alone: the happiness byte nought, `mExitLevel` exactly nought (it counts down unclamped, so
   a four-sweep window) or the park shut; it docks 25 every turn the test holds, aims at `CrossingParkSide` (47,9) and

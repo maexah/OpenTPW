@@ -365,6 +365,13 @@ public sealed class Peep
 	/// </summary>
 	public int TimeStartedIdling { get; internal set; }
 
+	/// <summary>
+	/// Whether SetRandomDest has ever routed this guest - <c>mSetDestSuccessfully</c>, <c>+0xd0</c>, which only
+	/// the constructor and a load clear. Entering <see cref="PeepState.Wandering"/> routes again to the stored
+	/// destination while it is set (<c>docs/exe/ride-operation.md</c>, "The state-6 turn, in order").
+	/// </summary>
+	public bool SetDestSuccessfully { get; internal set; }
+
 	/// <summary>The animation the state they are in asked for as they entered it.</summary>
 	public PeepAnimation Animation { get; private set; } = PeepAnimation.None;
 

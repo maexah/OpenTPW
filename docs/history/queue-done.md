@@ -4337,6 +4337,33 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   none inside 31; 377 wanders and 72 choices wrote no stamp. It found Q222. The events are counted, not kept; the yawn
   not listened to. Harness
   `q107confirm.py`, runs `q107/run1`..`run4`, `control`. `docs/exe/ride-operation.md`, "Q107".
+- [x] **Q108. `SetRandomDest`'s linked walk.** Found by Q53 (`ride-operation.md`, "SetRandomDest", the linked arm).
+  The original walks r % 5 + 1 linked cells from the mask of the cell being LEFT, never ending on the guest's own
+  cell, and aims inside the last; it drops queue and entrance neighbours from a path cell, a queue cell's
+  `mDirection` slot and exit cells; below a count of 2 it takes a fixed order, else a random start with no reverse.
+  Ours steps one adjacent cell. Q206 restores the staff destination filters and adds explicit movement containment;
+  the guest filters and the multi-cell walk remain here. Add `mSetDestSuccessfully` and SetState(7)'s re-aim with it. Confirm: over a run, no
+  wanderer steps from (48,22) onto a queue or entrance cell, and wanders of up to five cells in the census.
+  **Done 2026-10-05.** The linked walk is `LinkedWander.Walk`, the listing's (`0x004f95c6`..`0x004f99f2`, re-read
+  first-hand): slots from the mask of the cell being left in the order `0x10`, `0x04`, `0x01`, `0x40`, no edge test,
+  the three filters and the count, the fixed order below two and the random start with no reverse above, the extra
+  pass off the own cell, the aim inside the last cell. Guests and staff inside their patrol area walk it;
+  `Peep.SetDestSuccessfully` and SetState(7)'s re-aim are built (`PeepBehaviour.SetWandering`); a guest's dead end is
+  counted (`WANDER_DEAD_END_STRANDED_STAMP`, its stamp and thought are Q110's). Predicted and read in the running
+  game on forty guests made with `admit` on (48,22) and left 150 s, every wander logged with its passes and cells:
+  543 wanders, passes 1 to 5 at 114, 107, 112, 101, 109; every step along a link of the cell left; none from path
+  onto a queue, entrance or exit cell; none ending on its start; ends 1 to 5 cells off; **0 of 52 from (48,22)
+  stepped onto the queue's back cell (49,22)**. The control, the same build with the path filter taken out: 17 of 58,
+  predicted a quarter. Photographed 12 s and 40 s in. One prediction was worded wrong: ten `peeps` readings had a
+  wanderer on (49,22), each a guest turned away at the full queue whose wander began there and left by the path.
+  Compared with the original the same session, by memory (`q108/orig/wander.py`, `wander1.log`, 946 sweeps of the
+  stock park): 348 wander ends, none on the own cell, none past five cells (89, 80, 80, 44, 55), all in path cells,
+  sub-cell bytes all 5..123, `+0xd0` 1 on all, 62 from a path cell linked to a queue or entrance and none into it.
+  Not read there: the cells stepped, the slot order, the single-link choice, a wander from a queue cell. Nineteen new
+  tests, four re-aimed; nineteen restored bugs each fail (two stayed green until a staff test was added). Staff
+  outside their area whose patrol roll fails still answer false (the original walks on unfiltered), said in
+  `ride-operation.md`'s table. Harness `q108confirm.py`, runs `q108/run1`, `control`. `docs/exe/ride-operation.md`,
+  "Q108".
 
 ## B. Docs and comments
 

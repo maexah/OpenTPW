@@ -137,13 +137,6 @@ public sealed class StaffBehaviour
 	/// <summary>How many idle durations the waiting state waits - three.</summary>
 	public const int WaitingIsIdleTimes = 3;
 
-	/// <summary>
-	/// The four sides in the order the original tests them, which is the same order and the same reason as
-	/// <see cref="PeepBehaviour"/>'s: the connection bits run 0x10, 0x04, 0x01, 0x40.
-	/// </summary>
-	private static readonly StepDirection[] SlotOrder =
-		[StepDirection.North, StepDirection.West, StepDirection.South, StepDirection.East];
-
 	/// <summary>One turn of one staff member's behaviour.</summary>
 	/// <param name="tick">
 	/// The park's <c>mGameTick</c>, <see cref="ParkState.GameTick"/>, already one up for this sweep. Every stamp a
@@ -395,8 +388,8 @@ public sealed class StaffBehaviour
 	/// <para>
 	/// <b>Standing outside your patrol area is answered before anything else</b>: a staff member who has
 	/// wandered out of their patch heads straight back into it rather than picking a neighbour. Inside it,
-	/// the ordinary neighbour pick runs with any candidate outside the area struck out, and if that leaves
-	/// nothing the patrol roll answers again.
+	/// <see cref="LinkedWander"/> runs with any slot outside the area struck out, and at its dead end the
+	/// patrol roll answers again.
 	/// </para>
 	/// <para>
 	/// <b>A guest in the same position gets a "stranded" stamp and a thought bubble instead</b> - the
@@ -407,6 +400,9 @@ public sealed class StaffBehaviour
 	private bool SetRandomDest( Staff staff, PeepWalk walk )
 	{
 		var (x, y) = walk.Position.Cell;
+
+		// The call's pass count, drawn before the patrol check (0x004f9534).
+		var passes = (_random.Next() % LinkedWander.MostPasses) + 1;
 
 		// The original counts this cell's links once the patrol check is past - inside the area, or outside it
 		// when the patrol roll fails (0x004f95b9) - and at none takes the no-links arm whoever is asking,
@@ -427,47 +423,28 @@ public sealed class StaffBehaviour
 		if ( noLinks )
 			Unimplemented.Report( "STAFF_NO_LINKS_WANDER" );
 
-		var candidates = new (int X, int Y)?[SlotOrder.Length];
-		var found = 0;
+		// The linked walk, a slot outside the patrol area struck out before the other filters (0x004f96fb). Its
+		// dead end is the patrol roll for staff (0x004f9d8e), which a park never loaded, with no cells to walk,
+		// takes as well.
+		var stepped = _state is { } state
+			? LinkedWander.Walk( state.Record, x, y, passes, _random, staff.Patrols )
+			: null;
 
-		for ( var slot = 0; slot < SlotOrder.Length; ++slot )
-		{
-			if ( walk.Blocked( x, y, SlotOrder[slot] ) )
-				continue;
-
-			var cell = MapStep.Beyond( x, y, SlotOrder[slot] );
-
-			// The strike-out the guest version has no idea about.
-			if ( !staff.Patrols( cell.X, cell.Y ) )
-				continue;
-
-			if ( WanderBlocked( x, y, SlotOrder[slot] ) )
-				continue;
-
-			candidates[slot] = cell;
-			++found;
-		}
-
-		if ( found == 0 )
+		if ( stepped == null )
 			return PatrolRoll( staff, walk );
 
-		var first = _random.Next() & (SlotOrder.Length - 1);
+		// A random point inside the cell rather than its centre, the same clamped rolls a wandering guest
+		// takes - this tail is shared between the two halves of the original's function.
+		var cell = stepped[^1];
 
-		for ( var step = 0; step < SlotOrder.Length; ++step )
-		{
-			var slot = (first + step) & (SlotOrder.Length - 1);
+		staff.Navigator.Target = new FixedVector( SomewhereIn( cell.X ), SomewhereIn( cell.Y ) );
 
-			if ( candidates[slot] is not { } cell )
-				continue;
+		var routed = walk.PlanRoute( WanderBlocked );
 
-			// A random point inside the cell rather than its centre, the same clamped roll a wandering
-			// guest takes - this tail is shared between the two halves of the original's function.
-			staff.Navigator.Target = new FixedVector( SomewhereIn( cell.X ), SomewhereIn( cell.Y ) );
+		Log.Info( $"Staff: {staff.ThingId} wander of {passes} from ({x},{y}) by "
+			+ string.Join( " ", stepped.Select( step => $"({step.X},{step.Y})" ) ) + (routed ? "" : ", no route") );
 
-			return walk.PlanRoute( WanderBlocked );
-		}
-
-		return PatrolRoll( staff, walk );
+		return routed;
 	}
 
 	/// <summary>The linked-cell filters in FUN_004f9490; the no-links recovery remains Q112.</summary>

@@ -603,7 +603,7 @@ public class ParkStaffBehaviourTests
 	[DataTestMethod]
 	[DataRow( 3, 0x04, false )]
 	[DataRow( 3, 0x40, true )]
-	[DataRow( 9, 0x04, true )]
+	[DataRow( 9, 0x40, false )]
 	public void AQueueWanderHeadsOutButAnEntranceKeepsItsLinks( int type, int facing, bool east )
 	{
 		var world = Park();
@@ -613,11 +613,65 @@ public class ParkStaffBehaviourTests
 		member.Navigator.Position = new FixedVector( PeepNavigator.WaypointCentre( 50 ), PeepNavigator.WaypointCentre( 22 ) );
 		member.SetActivity( StaffActivity.Idle, tick: 1 );
 		var walk = new PeepWalk( member.Navigator, new CellEdge( state.Record, ParkPeople.WalkingMode ).Blocked );
-		// Slot 3 is east. A facing exclusion must still allow the opposite direction.
+		// The draw's slot 3 is west (bit 0x40). A facing exclusion must still allow the opposite direction, and
+		// an entrance keeps the slot its facing names.
 		var behaviour = new StaffBehaviour( Balance(), new ConstantDraw(), state );
 		behaviour.Step( member, walk, playing: null, tick: 1001 );
 		Assert.AreEqual( StaffActivity.Walking, member.Activity );
-		Assert.AreEqual( (east ? 51 : 49, 22), member.Navigator.Target.Cell );
+		Assert.AreEqual( (east ? 51 : 49, 22), LinkedWander.Walk( state.Record, 50, 22, 1, new ConstantDraw() )![0] );
+	}
+
+	/// <summary>
+	/// A member of staff inside their patrol area walks the linked walk: up to five cells with the whole map
+	/// to patrol, and never aimed outside a small area, whose outside slots are struck out on every pass.
+	/// </summary>
+	[TestMethod]
+	public void AStaffWanderWalksUpToFiveCellsAndKeepsInsideThePatrolArea()
+	{
+		var world = Park();
+		var state = new ParkState( world );
+		var saved = world.People.Single( person => person.ThingId == Researcher );
+		var farthest = 0;
+		var fencedWalks = 0;
+
+		for ( var seed = 0; seed < 200; ++seed )
+		{
+			foreach ( var fenced in new[] { false, true } )
+			{
+				var member = new Staff( saved.ThingId, saved.Model, saved.Staff!.Value with
+				{
+					State = (int)StaffActivity.Idle, TimeStartedIdling = 0,
+					PatrolBottomLeft = fenced ? MapStep.CellId( 47, 18 ) : MapStep.CellId( 0, 0 ),
+					PatrolTopRight = fenced ? MapStep.CellId( 48, 25 ) : MapStep.CellId( 127, 127 )
+				}, saved.Navigator );
+
+				member.Navigator.Position = new FixedVector( PeepNavigator.WaypointCentre( 48 ), PeepNavigator.WaypointCentre( 22 ) );
+				Assert.IsTrue( member.Patrols( 48, 22 ) );
+
+				var walk = new PeepWalk( member.Navigator, new CellEdge( state.Record, ParkPeople.WalkingMode ).Blocked );
+
+				new StaffBehaviour( Balance(), new Random( seed ), state ).Step( member, walk, playing: null, tick: 1001 );
+
+				if ( member.Activity != StaffActivity.Walking )
+					continue;
+
+				var (x, y) = member.Navigator.Target.Cell;
+				var cells = Math.Abs( x - 48 ) + Math.Abs( y - 22 );
+
+				Assert.IsTrue( cells is >= 1 and <= LinkedWander.MostPasses, $"seed {seed} aims {cells} cells off" );
+
+				if ( fenced )
+				{
+					++fencedWalks;
+					Assert.IsTrue( member.Patrols( x, y ), $"seed {seed} aims outside the area, into ({x},{y})" );
+				}
+				else
+					farthest = Math.Max( farthest, cells );
+			}
+		}
+
+		Assert.IsTrue( fencedWalks > 50, $"only {fencedWalks} fenced walks" );
+		Assert.AreEqual( LinkedWander.MostPasses, farthest, "a walk of five passes ends five cells off" );
 	}
 
 	[TestMethod]

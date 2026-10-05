@@ -1216,9 +1216,12 @@ a slot outside it; **on a path cell, a queue or entrance neighbour** (`0x004f973
 slot its `mDirection` names, the count lowered even when that slot was already empty (`0x004f977b`..`0x004f97e3`); a
 type-10 (exit) neighbour. Then **a count below 2** takes the first non-empty slot in that order, a step back allowed;
 **two or more** start at r & 3 and take the first non-empty slot that is not the reverse of the last step (none on the
-first pass); **none left, on any pass**, is the dead end below. A last pass that would end on the person's own cell gets
+first pass: the reverse slot starts at `0x270f`, `0x004f94c1`); **none left, on any pass**, is the dead end below. With
+two or more counted and no slot passing, the start slot is taken as it is (`0x004f98a1`), which a count that high never
+reaches. A last pass that would end on the person's own cell gets
 one more. So **a wander ends 1 to 5 linked cells away, never on the person's own cell**, at a point inside the last one:
-sub-bytes `r & 0x7f` clamped to 5..`0x7b`, x then y (`0x004f991c`..`0x004f997f`), through an inline SetDest; a route
+sub-bytes `r & 0x7f` clamped to 5..`0x7b`, x then y (`0x004f991c`..`0x004f997f`), through an inline SetDest, which
+writes `+0x18`/`+0x1a` before it routes (`0x004f99bf`); a route
 sets `+0xd0` = 1 and answers 1, a failure answers 0 and stamps nothing.
 
 **The dead end** (`0x004f9861` to `0x004f9d64`): "Peep can't SetRandomDest anywhere"; a guest (type byte not 4..8) gets
@@ -1292,15 +1295,39 @@ and its sale.
 | What | The original | OpenTPW | Reached in Lost Kingdom |
 |---|---|---|---|
 | A cell with no links, staff | the no-links arm, whoever asks: inside the patrol area, or outside it once `FUN_00506f30` fails (`0x004f95af`) | inside, the neighbour pick; outside, false; both counted `STAFF_NO_LINKS_WANDER` (Q112) | a guard or researcher put down off a path |
-| A linked wander | 1 to 5 linked cells, aimed at the last | one adjacent cell | every wander (Q108) |
-| Its candidates | the LEFT cell's mask, along each bit | the ENTERED cell's mask back, and the edge test | only on a one-way link or a shut track edge |
-| Its filters | from path, no queue or entrance; a queue cell's `mDirection` slot; no exit | none | (48,22) onto the Belly Bounce's back cell; the toilets', Spray's and Drinks Shop's entrances |
-| Its choice | count under 2: fixed order, back allowed; else a random start, no reverse | a random start, reverse allowed | every multi-step walk |
-| The dead end and the stamp | thought `0x11`, `+0x198` stamped, every route refused until a map edit | false, nothing kept | not measured (Q110) |
+| Staff outside their area whose patrol roll fails | the count and the linked walk, with no patrol filter (the flag at `0x004f95af`) | false | not measured |
+| The dead end and the stamp | thought `0x11`, `+0x198` stamped, every route refused until a map edit | false, nothing kept, counted `WANDER_DEAD_END_STRANDED_STAMP` | none in 150 s of 54 guests (Q110) |
 | The split's events 1 and 2 | pushed onto the guest's event ring | counted, `DECIDE_NOTHING_CHOSEN_EVENT` and `DECIDE_CHOSEN_EVENT`; no ring is kept | every choice |
 | Arms (a), (b), (c), (e) entertainer, (f) | run before the split | absent and uncounted | (a) above 80; (c) the Drinks Shop's litter and the bin at (44,29); (f) pranksters (Q111) |
 | Leaving | state 6 only: happiness byte 0, `mExitLevel` exactly 0, or shut; −25 every turn it holds; (47,9)/(48,9); state `0x12` only on a route | `Step`: `ExitLevel <= 0` in any state a thing does not hold, no dock; `Decide`: shut only, −25; the bus stops; `HeadingForExit` whatever the route | yes: the measured run's three left this way (Q109) |
-| `mSetDestSuccessfully` | SetState(7) routes again to the stored target | absent | every wander, invisibly |
+
+**Q108: the linked walk** is built as `LinkedWander.Walk`, one routine for guests and for staff inside their patrol
+area, as the listing reads (`0x004f95c6`..`0x004f99f2`, re-read): the slots are the bits of the cell being left, in the
+order `0x10`, `0x04`, `0x01`, `0x40`, with no edge test; the filters and the count are the original's; the aim is two
+draws inside the last cell. `Peep.SetDestSuccessfully` is `+0xd0`, and entering the wandering state routes again to the
+stored destination while it is set (`PeepBehaviour.SetWandering`), a spot animation's end on a wandering guest included.
+A guest's dead end is counted and answers nought; staff take the patrol roll there. With no park loaded every cell is
+taken as linked on all four sides. Staff keep Q206's containment on the route and the steps.
+Read in the running game, predicted first: forty guests of kind 0 made with `admit` on (48,22), path with four links,
+one of them the Belly Bounce's back of queue (49,22), then 150 s left alone. Every wander is logged with its passes and
+the cells it stepped. 543 wander lines: passes 1 to 5 at 114, 107, 112, 101 and 109; cells stepped equal to the passes
+but for 9 with the extra pass, each after a last pass back onto the start; every step along a link of the cell left; no
+step from a path cell onto a queue or entrance cell, none onto an exit, no walk ending on its start; the ends 1 to 5
+cells off (165, 125, 111, 74, 68); **of 52 wanders that began on (48,22), none stepped onto (49,22)**. The control, the
+same build with the path filter taken out: 17 of 58 from (48,22) stepped first onto (49,22), predicted a quarter, and
+103 steps from path onto a queue or entrance cell in 686 lines. Photographed 12 s and 40 s in, the guests spread along
+the paths; a photograph cannot tell a wanderer from a queuer on the queue cell, so the log is the reading. **Predicted
+wrong:** "no wandering guest reads on a queue cell" - ten `peeps` readings had one on (49,22), each a guest the chooser
+had sent to the full queue, turned away there, whose next wander began on the queue cell and left it by the path (24
+such lines, all first to (48,22): a queue cell drops its `mDirection` slot).
+**In the original** (the reference install off screen, the stock park, `wander.py` polling every guest's `+0x220`,
+`+0x18`, `+0x1a`, `+5`, `+7` and `+0xd0` for 946 sweeps, predicted from the listing): 348 destinations written in state
+7, all from path cells; none in the cell stood on, none more than five cells off (89, 80, 80, 44 and 55 at 1 to 5);
+every one in a path cell; every sub-cell byte in 5..123; `+0xd0` 1 on all. 62 of them began on a path cell linked to a
+queue or entrance cell ((43,29) 26, (52,29) 19, (56,15..17) 12, (44,28) 5) and none was aimed into it. The masks read
+there equal ours on all 60 cells. Not measured there: the cells stepped (only the end is in memory), the slot order,
+the choice at a count below two, a wander from a queue cell (none in the sample), and (48,22) itself (no wander began
+there). Nineteen new tests, four re-aimed; nineteen restored bugs each fail.
 
 **Q107: the split's stamps and the empty hand** are built in `PeepBehaviour.Decide`, as the listing reads
 (`0x004ff3b4`..`0x004ff4a9`, re-read): arm 1 sets state 7 on a route and writes nothing else, and stamps `+0x1fc` only
