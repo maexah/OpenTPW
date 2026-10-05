@@ -35,7 +35,8 @@ public sealed class Peep
 	/// <summary>
 	/// The countdown to going home, in the guest's own ticks rather than in seconds. The balance file
 	/// calls its starting value <c>PeepInfo.ExitLevel</c> and says it is "in SECONDS", but the code only
-	/// ever decrements it once per needs tick, so what it actually measures is turns of this loop.
+	/// ever decrements it once per needs tick, so what it actually measures is turns of this loop. It has no
+	/// floor, and only the deciding turn reads it, for exactly nought (<see cref="PeepBehaviour.WantsToLeave"/>).
 	/// </summary>
 	public int ExitLevel { get; set; }
 

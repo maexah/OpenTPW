@@ -1078,7 +1078,7 @@ round. While any of them is in state 8 the state-11 turn does not run: no mood, 
 (`Peep.NextAnimation`), the saved state and SetState(8), which stamps `TimeOfLastSpotAnim`. `PeepBehaviour.Step`'s
 case for state 8 is the return. The queue turn's two arms and the deciding turn's empty hand call it; the deciding
 turn's other two do not yet (Q111's 5 and 7). A guest in state 8 is held by a thing when the saved state is (`PeepBehaviour.HeldByAThing( Peep )`),
-so `Step`'s exit-level arm, which is this build's own (Q109), leaves a jumping queuer in the queue.
+so `ParkPeople.Depart` refuses a jumping queuer.
 
 **Measured in the running game** (`q98bconfirm.py`, two runs, guests made with `admit` and sent with `send`, happiness
 held with `happy`): at 90, 75 of 75 jumps returned 11 sweeps after they began and 59 of 59 repeats by a guest still
@@ -1299,7 +1299,43 @@ and its sale.
 | The dead end and the stamp | thought `0x11`, `+0x198` stamped, every route refused until a map edit | false, nothing kept, counted `WANDER_DEAD_END_STRANDED_STAMP` | none in 150 s of 54 guests (Q110) |
 | The split's events 1 and 2 | pushed onto the guest's event ring | counted, `DECIDE_NOTHING_CHOSEN_EVENT` and `DECIDE_CHOSEN_EVENT`; no ring is kept | every choice |
 | Arms (a), (b), (c), (e) entertainer, (f) | run before the split | absent and uncounted | (a) above 80; (c) the Drinks Shop's litter and the bin at (44,29); (f) pranksters (Q111) |
-| Leaving | state 6 only: happiness byte 0, `mExitLevel` exactly 0, or shut; −25 every turn it holds; (47,9)/(48,9); state `0x12` only on a route | `Step`: `ExitLevel <= 0` in any state a thing does not hold, no dock; `Decide`: shut only, −25; the bus stops; `HeadingForExit` whatever the route | yes: the measured run's three left this way (Q109) |
+| Leaving | state 6 only: happiness byte 0, `mExitLevel` exactly 0, or shut; −25 every turn it holds; (47,9)/(48,9); state `0x12` only on a route | the same (`PeepBehaviour.WantsToLeave`, `Leave`, Q109); the second pass in walking mode 1 is counted, `LEAVE_ROUTE_MODE_1_RETRY`; a guest reaching state 19 is taken out at the crossing, where the original walks them on to a bus stop (Q128) | every leaver |
+
+**Q109: when a guest leaves** is built in `PeepBehaviour.Decide` (`WantsToLeave`, `Leave`), as the listing reads
+(`0x004fee5b`..`0x004fef13`, re-read first-hand): the three tests, `BigHappinessChange` off before any route on every
+turn they hold, the two cells of `FUN_004d86d0` in the order the turn's one draw's low bit picks (even: A first), state
+`0x12` on the first that routes, and on none the turn goes on into the split. The second pass with `+0x188` = 1 is
+counted, every walk here being mode 0. `Step`'s old arm, which sent any guest no thing held home at an exit level of
+nought or less from any state, is gone. Read with it, first-hand:
+- **State 18, `FUN_00500a50`**: the change of mind first (exit level 1 or more, happiness byte not nought, park open,
+  `FUN_004fa990` true: "Make up your mind!", `+0x188` = 0, state 6); else the walk `FUN_004fa2a0`: arrived, state
+  `0x13`; stuck (2), "I'm stuck in the park, even though it's closed!!", `+0x188` = 0, **state 6**. OpenTPW builds the
+  stuck arm; the change of mind is not built (Q157).
+- **The gate's leavers aim at the crossing too.** `FUN_004ff9d0`'s far-too-expensive arm and `FUN_004ff7f0`'s
+  waited-out arm each write `+0x188` = 1, send the guest to `FUN_004d86d0( draw & 1 )`, set state `0x12` and then write
+  `mExitLevel` = 0; the expensive arm's leaver (happiness byte nought after the medium change) gets the state and the
+  nought with no destination. OpenTPW writes the nought on all three and still aims the first two at a bus stop
+  (Q128).
+
+Measured before the build, Alexah's call resting on it. **The original** under Proton, the stock park left alone for
+2,792 sweeps (692 s), every guest's `+0x1bc`, `+0x220` and `+0x19c` polled every 20 ms (`leave.py`): 61 guests seen;
+**37 left: 5 with the exit level at nought, 32 with the happiness byte nought** and the exit level 33 to 579 below
+nought; **36 passed nought without leaving** (passing in states 7 and 10, eight each, 16 seven, 11 six, 6, 8 and 15 two
+each, 12 one), and those still in at the end read down to −663. The five were each in state 6 and lost exactly 25
+(74 to 49, 58 to 33, 62 to 37, 52 to 27, 54 to 29); 36 of the 37 went from state 6, one read 17 to 18 (not explained).
+Predicted a third of those reaching nought would leave; read 5 of 41. **OpenTPW before the build**, the same park for
+720 s: all 17 guests were sent home by the old arm, each from Deciding the turn a thing let go of them, at exit levels
+0 to −212, and the park ended empty.
+
+Read in the running game after it, predicted first. The stock park left alone 720 s: no guest left for the exit level
+(predicted 0 to 4 of 17), 10 left with the happiness byte nought, each aimed at (47,9) or (48,9); 107 `peeps` readings
+of a guest no thing held below nought (the old build: 1 of 46); 7 guests in the park at the end, six of them below
+nought down to −691. Then `happy 0`: six more left from their next deciding turn, photographed walking out through
+the gate. Forty guests made with `admit` on (48,22) and left 240 s: **8 left because their day ran out** (7 of the
+forty and saved guest 35; predicted 2 to 10), every one at exit level exactly 0 and 25 off, held at nought (37 to 12, 40 to 15,
+32 to 7; 22 to 0), 23 of the forty still in the park below nought. Then the entry-price door pressed: 30 of 30 left as the park
+shut, each 25 off, to (47,9) or (48,9), photographed streaming out; none stayed deciding and no route failed.
+Not reached in the game: a leaver with no route, and a stuck one (tested).
 
 **Q108: the linked walk** is built as `LinkedWander.Walk`, one routine for guests and for staff inside their patrol
 area, as the listing reads (`0x004f95c6`..`0x004f99f2`, re-read): the slots are the bits of the cell being left, in the

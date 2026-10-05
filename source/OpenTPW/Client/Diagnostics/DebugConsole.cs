@@ -987,8 +987,8 @@ public static class DebugConsole
 				break;
 
 			// Sends one guest home, which is the other half of `arrive`. Driven by hand for the same
-			// reason: a guest's own day takes about two minutes of park time to run down, and watching
-			// that is a poor way to find out whether the removal works.
+			// reason: a guest sets off of their own accord only when miserable, shut out, or caught deciding
+			// as their day runs out, and waiting for one is a poor way to find out whether the removal works.
 			//
 			// With no id it takes the first guest no thing is holding, because a guest a ride or a
 			// queue has is refused - see ParkPeople.Depart.

@@ -145,7 +145,7 @@ public sealed class ParkPeople : Entity
 	/// <c>0050f931</c>, by the steering step at <c>0050f501</c> and twenty times over by <c>avoid_walls</c>. The
 	/// navigator's constructor writes zero (<c>0051009f</c>, <c>FUN_0050ffe0</c>). <b>A guest's is also written
 	/// through the guest</b>, whose navigator sits at <c>+0xd4</c>, as <c>+0x188</c>: 1 by the gate's states, the
-	/// put-down <c>FUN_004feb50</c> and the leaving arm's retry (Q109), 0 again by the leaving arm's failure and state
+	/// put-down <c>FUN_004feb50</c> and the leaving arm's retry, 0 again by the leaving arm's failure and state
 	/// 18. <b>Every person here walks in mode 0</b>; mode 1 also lets a step leave a path for a cell that is not path,
 	/// queue or footprint, bare ground included (<c>0x004d8a37</c>, the <c>mode</c> of <see cref="CellEdge"/>).
 	/// </para>
@@ -1004,10 +1004,7 @@ public sealed class ParkPeople : Entity
 	/// the thirst term - measured in <c>ParkRideChoiceTests</c>, where a parched guest picks it from four
 	/// cells across the park and an unthirsty one picks the ride from the same spot. But a park left alone
 	/// hardly ever holds a guest who is thirsty <i>and</i> still deciding: only a quarter of guests grow
-	/// thirsty at all (<see cref="Peep.Tick"/> shares the drift by thing id, and 4 divides 16), and by the
-	/// time they do their exit countdown has usually run out. Measured over a 400-second run: of 148
-	/// samples carrying thirst 50 or more, <b>73 were HeadingForExit and only 11 were Deciding</b>, and 68%
-	/// had an exit countdown already past nought.
+	/// thirsty at all (<see cref="Peep.Tick"/> shares the drift by thing id, and 4 divides 16).
 	/// </para>
 	/// <para>
 	/// <b>It sets a meter the game itself moves, and nothing else.</b> It does not choose for anybody, does

@@ -356,8 +356,8 @@ public sealed class PeepBehaviour
 	/// <see cref="PeepState.WaitingForOpening"/> is <see cref="Wait"/>,
 	/// <see cref="PeepState.JudgingTheFee"/> is <see cref="Judge"/>, and
 	/// <see cref="PeepState.Deciding"/> - the hub a guest returns to whenever they finish anything - is
-	/// <see cref="Decide"/>. What is absent sits inside those - Decide's leave test and the arms before its
-	/// split (Q109, Q111) - and each is recorded where it happens rather than here.
+	/// <see cref="Decide"/>. What is absent sits inside those - the arms before Decide's split (Q111) - and
+	/// each is recorded where it happens rather than here.
 	/// </para>
 	/// <para>
 	/// <b>And the give-up path does nothing on purpose.</b> Where the walk reports it cannot get through,
@@ -377,22 +377,6 @@ public sealed class PeepBehaviour
 	{
 		ArgumentNullException.ThrowIfNull( peep );
 		ArgumentNullException.ThrowIfNull( walk );
-
-		// <b>Their day running out, a deviation Q109 holds.</b> ExitLevel counts down on every needs tick -
-		// once per guest's turn in four. The original tests it for exactly nought in the Deciding turn alone
-		// and aims the guest at CrossingParkSide (docs/exe/ride-operation.md, "The state-6 turn, in order");
-		// this sends any guest a thing is not holding home from any state at nought or below, to a bus stop,
-		// docking nothing. A guest a thing is holding is left alone, for the reason Leaving is.
-		if ( peep.ExitLevel <= 0
-			&& peep.State is not (PeepState.HeadingForExit or PeepState.Leaving)
-			&& !HeldByAThing( peep )
-			&& Admission is { } goingHome )
-		{
-			SendTo( peep, walk, EitherOf( goingHome.BusStopA, goingHome.BusStopB ) );
-			peep.SetState( PeepState.HeadingForExit, tick, _random );
-
-			return;
-		}
 
 		switch ( peep.State )
 		{
@@ -675,18 +659,33 @@ public sealed class PeepBehaviour
 			case PeepState.Riding:
 				break;
 
-			// Heading for the exit, having decided not to stay - FUN_00500a50. They walk to whichever bus
-			// stop the arm that sent them here chose, and on arriving go on to pick a cell outside.
+			// Heading for the exit, having decided not to stay - FUN_00500a50. They walk to the cell the arm
+			// that sent them here chose, and on arriving go on to pick a cell outside.
 			//
 			// <b>The change-of-mind arm is absent.</b> The original turns a guest back to Deciding - "Make
 			// up your mind!" - when mExitLevel (+0x1bc) is positive AND the happiness byte (+0x19c) is
 			// non-zero AND the park is open AND FUN_004fa990 agrees.
 			//
-			// Getting stuck prints "I'm stuck in the park, even though it's closed!!" and leaves them where
-			// they are, which is the give-up path this switch takes everywhere.
+			// Getting stuck prints "I'm stuck in the park, even though it's closed!!" and puts them back to
+			// Deciding, whose leave test sends them off again if it still holds.
 			case PeepState.HeadingForExit:
-				if ( Walked( peep, walk, playing ) == WalkVerdict.Arrived )
-					peep.SetState( PeepState.PickingACellOutside, tick, _random );
+				switch ( Walked( peep, walk, playing ) )
+				{
+					case WalkVerdict.Arrived:
+						peep.SetState( PeepState.PickingACellOutside, tick, _random );
+
+						break;
+
+					case WalkVerdict.CannotReach:
+						Log.Info( $"Person {peep.ThingId}: stuck on the way out, deciding again, tick {tick}" );
+
+						peep.SetState( PeepState.Deciding, tick, _random );
+
+						break;
+
+					default:
+						break;
+				}
 
 				break;
 
@@ -871,10 +870,11 @@ public sealed class PeepBehaviour
 	/// exactly as somebody who found it fair would.
 	/// </para>
 	/// <para>
-	/// <b>Two fields the original touches on the leaving arms are deliberately not reproduced.</b> It
-	/// writes 1 to <c>+0x188</c> and nought to <c>mExitLevel</c> (<c>+0x1bc</c>, <see cref="Peep.ExitLevel"/>).
-	/// Nothing here reads <c>+0x188</c>, and a guest this sends home is past the one test here that reads
-	/// the exit level.
+	/// <b>The leaving arms zero <c>mExitLevel</c></b> (<c>+0x1bc</c>, <see cref="Peep.ExitLevel"/>) after the state,
+	/// as <see cref="Wait"/>'s does, so a guest put back to Deciding by a walk that sticks leaves again on that
+	/// turn (<see cref="WantsToLeave"/>). The 1 the far-too-expensive arm writes to <c>+0x188</c>, the walking
+	/// mode, is not reproduced: every walk here is mode 0 (<see cref="ParkPeople.WalkingMode"/>). Both arms aim
+	/// at a bus stop where the original's aim at <c>FUN_004d86d0</c>'s cells, the crossing's park side (Q128).
 	/// </para>
 	/// </summary>
 	private void Judge( Peep peep, PeepWalk walk, ParkAdmission admission, int tick )
@@ -887,6 +887,7 @@ public sealed class PeepBehaviour
 			case ParkAdmission.Opinion.FarTooExpensive:
 				SendTo( peep, walk, EitherOf( admission.BusStopA, admission.BusStopB ) );
 				peep.SetState( PeepState.HeadingForExit, tick, _random );
+				peep.ExitLevel = 0;
 
 				break;
 
@@ -900,7 +901,10 @@ public sealed class PeepBehaviour
 				// The original tests the low byte of the truncated happiness, which cannot mislead here
 				// because Peep.Change clamps it to 0..100 and so it never reaches 256.
 				if ( (int)peep.Happiness == 0 )
+				{
 					peep.SetState( PeepState.HeadingForExit, tick, _random );
+					peep.ExitLevel = 0;
+				}
 
 				break;
 
@@ -948,6 +952,7 @@ public sealed class PeepBehaviour
 
 			SendTo( peep, walk, EitherOf( admission.BusStopA, admission.BusStopB ) );
 			peep.SetState( PeepState.HeadingForExit, tick, _random );
+			peep.ExitLevel = 0;
 
 			return;
 		}
@@ -1082,12 +1087,14 @@ public sealed class PeepBehaviour
 	/// <see cref="ThinkingGap"/> sweeps; the event either answer pushes is counted.
 	/// </para>
 	/// <para>
-	/// <b>The leave test and the arms before the split are not all here.</b> The original leaves when the
-	/// happiness byte is nought, when <c>mExitLevel</c> (<c>+0x1bc</c>) is exactly nought, or when the park has
-	/// shut (<c>docs/exe/ride-operation.md</c>, "The state-6 turn, in order"); only the shut-park test is
-	/// here, and <see cref="Step"/> sends a guest home on the exit level from any state (Q109). The arms
-	/// before the split - spot animation 5 above happiness 80, the vomit and its spot animation 7, litter,
-	/// watching, pranks - are not built (Q111).
+	/// <b>The leave test comes before the split</b> (<see cref="WantsToLeave"/>, <see cref="Leave"/>), and a guest
+	/// it finds no route for goes on into the split, still deciding. The turn's one draw serves both: its low bit
+	/// orders the leaver's two cells and its remainder picks the split's arm (<c>0x004fecb4</c>).
+	/// </para>
+	/// <para>
+	/// <b>The other arms before the split are not here.</b> Spot animation 5 above happiness 80, the vomit and its
+	/// spot animation 7, and litter each return before the leave test in the original; watching and pranks follow
+	/// it. None is built (Q111).
 	/// </para>
 	/// </summary>
 	private void Decide( Peep peep, PeepWalk walk, int tick )
@@ -1095,20 +1102,12 @@ public sealed class PeepBehaviour
 		if ( Admission is not { } admission )
 			return;
 
-		// A park that has shut under them: they lose heart badly and set off for a bus stop. A deviation
-		// Q109 holds: the original aims at CrossingParkSide, not a bus stop, and docks BigHappinessChange on
-		// every turn until a route is found (docs/exe/ride-operation.md, "The state-6 turn, in order", (d)).
-		if ( ParkIsClosed )
-		{
-			peep.Happiness = Peep.Change( peep.Happiness, -admission.BigHappinessChange );
+		var draw = _random.Next();
 
-			SendTo( peep, walk, EitherOf( admission.BusStopA, admission.BusStopB ) );
-			peep.SetState( PeepState.HeadingForExit, tick, _random );
-
+		if ( WantsToLeave( peep ) && Leave( peep, walk, admission, draw, tick ) )
 			return;
-		}
 
-		switch ( _random.Next() % 3 )
+		switch ( draw % 3 )
 		{
 			// Wander off somewhere reachable. A route sets them wandering and leaves the idle stamp as it was
 			// (0x004ff3d6); failing to find anywhere stamps it and leaves them deciding (0x004ff3f4).
@@ -1160,6 +1159,61 @@ public sealed class PeepBehaviour
 			default:
 				break;
 		}
+	}
+
+	/// <summary>
+	/// Whether a deciding guest sets off home this turn - the test at <c>0x004fee5b</c>: the happiness byte nought,
+	/// or <c>mExitLevel</c> (<c>+0x1bc</c>) <b>exactly</b> nought, or the park shut.
+	/// </summary>
+	/// <remarks>
+	/// The exit level loses one on each of the guest's needs turns, one sweep in four, in every state and with no
+	/// floor (<see cref="Peep.Tick"/>), and nothing but this turn reads it for leaving. So it reads nought for
+	/// four sweeps, and a guest who is not deciding during them passes below and stays until they are miserable
+	/// or the park shuts (<c>docs/exe/ride-operation.md</c>, "Q109").
+	/// </remarks>
+	internal bool WantsToLeave( Peep peep )
+		=> (byte)(int)peep.Happiness == 0 || peep.ExitLevel == 0 || ParkIsClosed;
+
+	/// <summary>
+	/// The leaving arm of the deciding turn (<c>0x004fee87</c>..<c>0x004fef13</c>): <c>BigHappinessChange</c> off,
+	/// on every turn the test holds and before any route is asked for, then a route to one of the crossing's two
+	/// park-side cells, in the order the draw's low bit picks. The first that routes sets
+	/// <see cref="PeepState.HeadingForExit"/>.
+	/// </summary>
+	/// <remarks>
+	/// The original asks for both again in walking mode 1 (<c>+0x188</c>) before it gives up. Every walk here is
+	/// mode 0 (<see cref="ParkPeople.WalkingMode"/>), so the second pass is counted and not made.
+	/// </remarks>
+	/// <returns>Whether a route was found. Without one the guest is still deciding, 25 the worse.</returns>
+	private bool Leave( Peep peep, PeepWalk walk, ParkAdmission admission, int draw, int tick )
+	{
+		var before = peep.Happiness;
+		var why = (byte)(int)before == 0 ? "miserable" : peep.ExitLevel == 0 ? "their day ran out" : "the park shut";
+
+		peep.Happiness = Peep.Change( peep.Happiness, -admission.BigHappinessChange );
+
+		var (first, second) = (draw & 1) == 0
+			? (admission.CrossingParkSideA, admission.CrossingParkSideB)
+			: (admission.CrossingParkSideB, admission.CrossingParkSideA);
+
+		foreach ( var cell in new[] { first, second } )
+		{
+			if ( !SendTo( peep, walk, cell ) )
+				continue;
+
+			Log.Info( $"Person {peep.ThingId}: leaving, {why}, exit level {peep.ExitLevel}, happiness {before:0} to "
+				+ $"{peep.Happiness:0}, to ({cell.X},{cell.Y}), tick {tick}" );
+
+			peep.SetState( PeepState.HeadingForExit, tick, _random );
+
+			return true;
+		}
+
+		Unimplemented.Report( "LEAVE_ROUTE_MODE_1_RETRY" );
+
+		Log.Info( $"Person {peep.ThingId}: no way out, {why}, happiness {before:0} to {peep.Happiness:0}, tick {tick}" );
+
+		return false;
 	}
 
 	/// <summary>

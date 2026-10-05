@@ -356,8 +356,8 @@ public class ParkDecidingTests
 	/// mood change in the admission states, so the amount is asserted and not just the direction.
 	/// </para>
 	/// <para>
-	/// <b>They walk to the stop and arrive</b>, so the arrival is asserted as well as the aim: a guest only
-	/// aimed at a bus stop can still be standing where they decided.
+	/// <b>They walk to the crossing and arrive</b>, so the arrival is asserted as well as the aim: a guest only
+	/// aimed at it can still be standing where they decided.
 	/// </para>
 	/// </summary>
 	[TestMethod]
@@ -372,23 +372,23 @@ public class ParkDecidingTests
 
 		var one = ParkWorld.NavigatorState.One;
 
-		var stops = new[] { admission.BusStopA, admission.BusStopB }
+		var stops = new[] { admission.CrossingParkSideA, admission.CrossingParkSideB }
 			.Select( cell => ((cell.X * one) + (one / 2), (cell.Y * one) + (one / 2)) )
 			.ToHashSet();
 
-		var stopCells = new[] { admission.BusStopA, admission.BusStopB }.ToHashSet();
+		var stopCells = new[] { admission.CrossingParkSideA, admission.CrossingParkSideB }.ToHashSet();
 
 		foreach ( var id in InTheGateway )
 		{
 			Assert.AreEqual( PeepState.PickingACellOutside, guests[id].State,
-				$"guest {id} should have given up on a park that shut under them, WALKED to a bus stop, "
+				$"guest {id} should have given up on a park that shut under them, WALKED to the crossing, "
 				+ "and gone on to pick a cell outside the park" );
 
 			Assert.IsTrue( stops.Contains( (guests[id].Navigator.Target.X, guests[id].Navigator.Target.Y) ),
-				$"guest {id} should be walking to a bus stop, not to {guests[id].Navigator.Target}" );
+				$"guest {id} should be walking to the crossing's park side, not to {guests[id].Navigator.Target}" );
 
 			Assert.IsTrue( stopCells.Contains( guests[id].Navigator.Position.Cell ),
-				$"guest {id} should have REACHED a bus stop rather than merely been aimed at one - they "
+				$"guest {id} should have REACHED the crossing rather than merely been aimed at it - they "
 				+ $"are standing at {guests[id].Navigator.Position.Cell}" );
 
 			// 50 as saved, less the big change, and nothing else in this path touches happiness.

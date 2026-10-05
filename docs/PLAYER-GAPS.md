@@ -279,7 +279,7 @@ button. It only logs, and counts each click as `RESEARCH_BUTTON`.
       one ride, nothing changes again, ever.
 - **DONE, 2026-09-20: GUESTS ARRIVE BY THEMSELVES AND GO HOME BY THEMSELVES.** A park left
   alone takes a load on the park's own clock with nothing typed — the first 126 s in, the next about
-  150 s after each — and the saved guests go home as their day runs out. `ParkPeople.StepArrivals` is the manager
+  150 s after each — and the saved guests go home once miserable, or caught deciding as their day runs out (Q109). `ParkPeople.StepArrivals` is the manager
   and `ParkPeople.Depart` the other half; `ExitLevel` is what sends them home, a countdown nothing had
   ever read. **And the vehicles carry them now — 2026-09-20, all three drive.** The one thing missing
   was an opcode: `Ferry.RSE` and `seaplane.RSE` start every animation with `TRIGWAITANIM` where
@@ -293,7 +293,7 @@ button. It only logs, and counts each click as `RESEARCH_BUTTON`.
   drained to nought after one guest**. `ParkPeople.StepVehicle` is the tail of `FUN_004cf3e0`, which
   runs every thing sweep and re-triggers on status -1, 0, 4 and on 2 once its load is let go. Unattended, the
   population moves both ways: a load is called about 150 s after the last one got off, and the saved
-  guests go home as their day runs out.
+  guests go home once miserable, or caught deciding as their day runs out (Q109).
   A `vehicles` console census was added to see this at all - `paths` reports where a vehicle is drawn,
   which reads identically whether its script is running or parked, and only the pc separates them.
 - **Lives:** `ParkPeople.PeepsIn` builds the save's guests; `ParkPeople.Admit` builds every arrival, at a bus

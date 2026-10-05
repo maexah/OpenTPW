@@ -56,15 +56,6 @@ the original.
   window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
   together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
 
-- [ ] **Q109. When a guest leaves. Alexah's call first.** Found by Q53 (`ride-operation.md`, arm (d)). The original
-  tests leaving in state 6 alone: the happiness byte nought, `mExitLevel` exactly nought (it counts down unclamped, so
-  a four-sweep window) or the park shut; it docks 25 every turn the test holds, aims at `CrossingParkSide` (47,9) and
-  (48,9) with a mode-1 retry, and sets state `0x12` only on a route. `Step` sends home any unheld guest at
-  `ExitLevel <= 0` from any state, docking nothing, at the bus stops, whatever the route. Retiring `Step`'s arm keeps
-  most guests in the park until unhappy or shut, which a player will see: measure first how many leave through the
-  window, then ask.
-  From Q170b: that retry writes `+0x188`, the navigator's walking mode (`0x004fef04`); so do the gate's states and the
-  put-down `FUN_004feb50`. Every person here walks in mode 0 (`ParkPeople.WalkingMode`).
 - [ ] **Q110. The stranded bookkeeping, and thought bubbles.** Found by Q53 (`ride-operation.md`, "The stranded
   bookkeeping"). The shared counter, the 33 × 33 block stamps its map writes leave, `FUN_004fa770`'s 3 × 3 test, the
   refusals in SetRandomDest, `FUN_004fa530` and `FUN_004fa5f0`, the dead-end stamp, and SetThought's bubble
@@ -177,6 +168,10 @@ the original.
   the pair is `FixedItemInfo.BusStopA/B` (`park.md`, "Arrivals"), and both files say so. Check the two states' decode
   is whole, then build them and retire what `ParkPeople` says waits on Q128. Confirm: a guest who has decided to leave
   walks to the stop and is removed there; `peeps` and a screenshot.
+  From Q109: a guest who leaves from inside the park now aims at the crossing's park side, (47,9) or (48,9), as the
+  original's does, and is taken out there on reaching state 19: four rows short of the stop until this is built. The
+  gate's two leavers (`PeepBehaviour.Judge`, `Wait`) still aim at a bus stop, where the listing sends them to the
+  same `FUN_004d86d0` cells (`ride-operation.md`, "Q109"): move them with this build.
 - [ ] **Q129. The crowd sets the music's level every frame, where the original sets it once a second.** Found by Q68's
   review. The park loop reaches `FUN_0051e790` only on every 32nd tick (`TEST [0x00877d34],0x1f`, `0x0054f82d`) and
   clamps the crowd's level, half its count, to 89 before it (`0x0054f84e`), which binds from 180 guests; the park holds 1,500.

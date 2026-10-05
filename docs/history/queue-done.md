@@ -4364,6 +4364,30 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   outside their area whose patrol roll fails still answer false (the original walks on unfiltered), said in
   `ride-operation.md`'s table. Harness `q108confirm.py`, runs `q108/run1`, `control`. `docs/exe/ride-operation.md`,
   "Q108".
+- [x] **Q109. When a guest leaves. Alexah's call first.** Found by Q53 (`ride-operation.md`, arm (d)). The original
+  tests leaving in state 6 alone: the happiness byte nought, `mExitLevel` exactly nought (it counts down unclamped, so
+  a four-sweep window) or the park shut; it docks 25 every turn the test holds, aims at `CrossingParkSide` (47,9) and
+  (48,9) with a mode-1 retry, and sets state `0x12` only on a route. `Step` sends home any unheld guest at
+  `ExitLevel <= 0` from any state, docking nothing, at the bus stops, whatever the route. Retiring `Step`'s arm keeps
+  most guests in the park until unhappy or shut, which a player will see: measure first how many leave through the
+  window, then ask.
+  From Q170b: that retry writes `+0x188`, the navigator's walking mode (`0x004fef04`); so do the gate's states and the
+  put-down `FUN_004feb50`. Every person here walks in mode 0 (`ParkPeople.WalkingMode`).
+  **Done 2026-10-05.** Measured first, in the original under Proton (the stock park, 692 s, `q109/orig/leave.py`):
+  37 guests left, **5 at exit level nought** (each from state 6, exactly 25 off) and 32 with the happiness byte
+  nought; **36 passed nought and stayed**. OpenTPW's old arm in the same park for 720 s sent all 17 guests home and
+  left the park empty. Alexah chose the original's rule (2026-10-05). Built as the listing reads (`0x004fee5b`..
+  `0x004fef13`, re-read first-hand): `PeepBehaviour.WantsToLeave` and `Leave` in the deciding turn, on its one draw;
+  `Step`'s arm gone; the crossing's cells in `ParkAdmission`; a stuck leaver put back to deciding (`FUN_00500a50`);
+  the gate's three leaving arms zero the exit level. The mode-1 second pass is counted (`LEAVE_ROUTE_MODE_1_RETRY`).
+  Predicted and read in the running game: the stock park left 720 s, 0 left for the exit level (predicted 0 to 4), 10
+  miserable, 7 still in at the end, six below nought; forty guests made with `admit`, 240 s: **8 left as their day
+  ran out, each at exactly 0 and 25 off** (predicted 2 to 10), 23 below nought and still in; the entry-price door:
+  30 of 30 left as the park shut, each 25 off, to (47,9) or (48,9). Photographed walking out through the gate.
+  Nineteen new tests, one re-aimed; nineteen restored bugs each fail (one by a test of its own only after one was
+  added); the twentieth, crossing B read on its own row, cannot fail on shipped data, every theme's two rows being equal. Leavers are taken out at the crossing until Q128 builds the walk on to the stop.
+  Harnesses `q109confirm.py` (before), `q109fix.py`, `q109fix2.py`; runs `q109/run1`, `fix1`, `fix2`.
+  `docs/exe/ride-operation.md`, "Q109".
 
 ## B. Docs and comments
 
