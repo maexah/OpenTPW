@@ -271,7 +271,8 @@ public class ParkEvictionTests
 
 		behaviour.Step( guest, walk, playing: null, tick: 100 );
 
-		Assert.AreEqual( PeepState.Deciding, guest.State, "nothing was chosen" );
+		Assert.AreEqual( PeepState.PlayingSpotAnimation, guest.State, "nothing was chosen, so the empty hand's animation" );
+		Assert.AreEqual( PeepState.Deciding, guest.SavedState );
 		Assert.AreEqual( 0, guest.MajorDest, "and the ride they named before is let go of" );
 	}
 

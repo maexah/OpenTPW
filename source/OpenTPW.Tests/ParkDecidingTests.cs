@@ -94,12 +94,14 @@ public class ParkDecidingTests
 		// deciding, wandering, or on their way out.
 		foreach ( var id in InTheGateway )
 		{
-			// <b>Three states, and the reason it is only three is the construction rather than the hub.</b>
+			// <b>Four states, and the reason it is only four is the construction rather than the hub.</b>
 			// Run builds the behaviour from two facts, so its chooser has no park and the ride arm can never
 			// return a candidate; given one it would also produce GoingToRide and SteppingUpQueue. Widening
 			// this list would weaken it, so it stays narrow and says why.
+			// The fourth is the empty hand's spot animation, which every failed choice here plays.
 			Assert.IsTrue(
-				guests[id].State is PeepState.Deciding or PeepState.Wandering or PeepState.HeadingForExit,
+				guests[id].State is PeepState.Deciding or PeepState.Wandering or PeepState.HeadingForExit
+					or PeepState.PlayingSpotAnimation,
 				$"guest {id} ended in {guests[id].State}, which the hub cannot produce without a park" );
 		}
 	}
@@ -147,6 +149,133 @@ public class ParkDecidingTests
 		Assert.IsTrue( everWandered.Count >= 5,
 			$"only {everWandered.Count} guests ever wandered, which is too few for a one-in-three roll "
 			+ $"over 400 turns: {string.Join( ", ", everWandered.OrderBy( id => id ) )}" );
+	}
+
+	/// <summary>A seed whose first roll takes the given arm of the turn's split.</summary>
+	private static int SeedFor( int arm )
+		=> Enumerable.Range( 0, 100 ).First( candidate => new Random( candidate ).Next() % 3 == arm );
+
+	private static int Counted( string gap ) => Unimplemented.Summary.FirstOrDefault( entry => entry.What == gap ).Times;
+
+	/// <summary>One guest of the save made Deciding at happiness 50, with a walk nothing shuts or everything does.</summary>
+	private (Peep Guest, PeepWalk Walk, PeepBehaviour Behaviour) Deciding( int seed, int stamp, bool walled = false )
+	{
+		var world = Park();
+		var guest = ParkPeople.PeepsIn( world ).First();
+		var open = CellEdge.For( world, ParkPeople.WalkingMode ).Blocked;
+
+		guest.SetState( PeepState.Deciding, tick: 1, new Random( 1 ) );
+		guest.Happiness = 50f;
+		guest.TimeStartedIdling = stamp;
+
+		return (guest, new PeepWalk( guest.Navigator, walled ? ( _, _, _ ) => true : open ),
+			new PeepBehaviour( parkIsClosed: false, world.NumberOfVisitorsToDate, new Random( seed ), Admission( world ) ));
+	}
+
+	/// <summary>
+	/// <b>The chooser's empty hand</b> (<c>0x004ff46f</c>..<c>0x004ff4a3</c>): event 1, spot animation 4 with
+	/// Deciding saved, <c>SmallHappinessChange</c> off, and the idle stamp. This file's behaviour has no park, so
+	/// its chooser never names a thing.
+	/// </summary>
+	[TestMethod]
+	public void AGuestTheChooserGivesNothingIsBoredLosesTheSmallChangeAndIsStamped()
+	{
+		var (guest, walk, behaviour) = Deciding( SeedFor( 0 ), stamp: 0 );
+		var small = Admission( Park() ).SmallHappinessChange;
+		var events = Counted( "DECIDE_NOTHING_CHOSEN_EVENT" );
+
+		Assert.AreEqual( 5, small, "the balance file's SmallHappinessChange" );
+
+		behaviour.Step( guest, walk, playing: null, tick: 100 );
+
+		Assert.AreEqual( PeepState.PlayingSpotAnimation, guest.State, "they stop to play it" );
+		Assert.AreEqual( PeepState.Deciding, guest.SavedState, "and come back to deciding" );
+		Assert.AreEqual( PeepBehaviour.SpotBored, guest.NextAnimation, "number 4, hands on hips" );
+		Assert.AreEqual( 45f, guest.Happiness, "50 less the small change" );
+		Assert.AreEqual( 100, guest.TimeStartedIdling, "stamped with the sweep it failed on" );
+		Assert.AreEqual( events + 1, Counted( "DECIDE_NOTHING_CHOSEN_EVENT" ), "event 1, counted" );
+
+		for ( var tick = 101; tick <= 110; ++tick )
+		{
+			behaviour.Step( guest, walk, playing: null, tick );
+			Assert.AreEqual( PeepState.PlayingSpotAnimation, guest.State, $"still playing on sweep {tick}" );
+		}
+
+		behaviour.Step( guest, walk, playing: null, tick: 111 );
+		Assert.AreEqual( PeepState.Deciding, guest.State, "back on the eleventh sweep" );
+	}
+
+	/// <summary>
+	/// <b>Each failed choice takes the small change again, and no two are closer than 31 sweeps</b>: the gate is
+	/// the sweep counter more than 30 past the stamp (<c>0x004ff42e</c>), and the empty hand is what stamps it.
+	/// </summary>
+	[TestMethod]
+	public void EveryFailedChoiceTakesTheSmallChangeAndTheGapIsMeasuredFromTheLast()
+	{
+		var (guest, walk, behaviour) = Deciding( seed: 3, stamp: 0 );
+		var failedOn = new System.Collections.Generic.List<int>();
+
+		for ( var tick = 100; tick <= 500; ++tick )
+		{
+			var before = guest.Happiness;
+
+			behaviour.Step( guest, walk, playing: null, tick );
+
+			if ( guest.Happiness == before )
+				continue;
+
+			Assert.AreEqual( before - 5f, guest.Happiness, $"sweep {tick} took something other than the small change" );
+			Assert.AreEqual( tick, guest.TimeStartedIdling, $"and sweep {tick} stamped" );
+			failedOn.Add( tick );
+		}
+
+		Assert.IsTrue( failedOn.Count >= 4, $"only {failedOn.Count} failed choices in 400 sweeps" );
+		Assert.AreEqual( 50f - (5f * failedOn.Count), guest.Happiness, "nothing else in this turn moves happiness" );
+
+		for ( var n = 1; n < failedOn.Count; ++n )
+			Assert.IsTrue( failedOn[n] - failedOn[n - 1] > PeepBehaviour.ThinkingGap,
+				$"failed choices on sweeps {failedOn[n - 1]} and {failedOn[n]}, inside the thinking gap" );
+	}
+
+	/// <summary>The chooser is asked on the 31st sweep past the stamp and not on the 30th (<c>JBE</c>, <c>0x004ff42e</c>).</summary>
+	[TestMethod]
+	[DataRow( 70, 100, false )]
+	[DataRow( 69, 100, true )]
+	[DataRow( 0, 30, false )]
+	[DataRow( 0, 31, true )]
+	public void TheChooserWaitsThirtySweepsPastTheStamp( int stamp, int tick, bool asked )
+	{
+		var (guest, walk, behaviour) = Deciding( SeedFor( 0 ), stamp );
+
+		behaviour.Step( guest, walk, playing: null, tick );
+
+		Assert.AreEqual( asked ? PeepState.PlayingSpotAnimation : PeepState.Deciding, guest.State );
+		Assert.AreEqual( asked ? 45f : 50f, guest.Happiness );
+		Assert.AreEqual( asked ? tick : stamp, guest.TimeStartedIdling );
+	}
+
+	/// <summary>
+	/// <b>A wander that routes leaves the idle stamp as it was</b> (<c>0x004ff3d6</c>, state 7 and return), and
+	/// <b>one that finds nowhere stamps it</b> (<c>0x004ff3f4</c>).
+	/// </summary>
+	[TestMethod]
+	public void ARoutedWanderKeepsTheIdleStampAndAFailedOneSetsIt()
+	{
+		var (routed, walk, behaviour) = Deciding( SeedFor( 1 ), stamp: 7 );
+
+		behaviour.Step( routed, walk, playing: null, tick: 100 );
+
+		Assert.AreEqual( PeepState.Wandering, routed.State );
+		Assert.AreEqual( 7, routed.TimeStartedIdling, "a routed wander does not stamp" );
+		Assert.AreEqual( 50f, routed.Happiness );
+
+		var (stuck, walled, second) = Deciding( SeedFor( 1 ), stamp: 7, walled: true );
+
+		second.Step( stuck, walled, playing: null, tick: 100 );
+
+		Assert.AreEqual( PeepState.Deciding, stuck.State, "nowhere to wander to" );
+		Assert.AreEqual( 100, stuck.TimeStartedIdling, "a failed wander stamps" );
+		Assert.AreEqual( 50f, stuck.Happiness, "and costs nothing" );
 	}
 
 	/// <summary>

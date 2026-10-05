@@ -1058,7 +1058,7 @@ public sealed class PeepBehaviour
 	/// </summary>
 	public const int KeepWanderingShare = 4;
 
-	/// <summary>How many turns the original waits between a guest's decisions before it offers them a ride.</summary>
+	/// <summary>How many sweeps past a guest's idle stamp the sweep counter must be before the chooser is asked (<c>0x004ff425</c>).</summary>
 	public const int ThinkingGap = 30;
 
 	/// <summary>
@@ -1083,10 +1083,10 @@ public sealed class PeepBehaviour
 	/// <b>The ride arm.</b>
 	/// <see cref="ChooseSomewhereToGo"/> asks <see cref="ParkRideChooser"/>, which walks the world's object
 	/// list, filters it with <see cref="ParkRideChoice"/> and scores the survivors with
-	/// <see cref="ParkRideScore"/>, whose summary lists its steps. A guest who finds nothing worth more than nine
-	/// does nothing more here; the original also pushes event 1, plays spot animation 4
-	/// (<see cref="PlaySpotAnimation"/>, which this arm does not call yet) and docks
-	/// <c>SmallHappinessChange</c> (Q107).
+	/// <see cref="ParkRideScore"/>, whose summary lists its steps. A guest who finds nothing worth more than nine,
+	/// or nothing they can route to, plays spot animation 4 (<see cref="PlaySpotAnimation"/>), loses
+	/// <c>SmallHappinessChange</c> and has their idle stamp set, so the chooser is not asked again for
+	/// <see cref="ThinkingGap"/> sweeps; the event either answer pushes is counted.
 	/// </para>
 	/// <para>
 	/// <b>The leave test and the arms before the split are not all here.</b> The original leaves when the
@@ -1094,7 +1094,7 @@ public sealed class PeepBehaviour
 	/// shut (<c>docs/exe/ride-operation.md</c>, "The state-6 turn, in order"); only the shut-park test is
 	/// here, and <see cref="Step"/> sends a guest home on the exit level from any state (Q109). The arms
 	/// before the split - spot animation 5 above happiness 80, the vomit and its spot animation 7, litter,
-	/// watching, pranks - are not built (Q111), so no deciding guest reaches <see cref="PlaySpotAnimation"/>.
+	/// watching, pranks - are not built (Q111).
 	/// </para>
 	/// </summary>
 	private void Decide( Peep peep, PeepWalk walk, int tick )
@@ -1117,26 +1117,49 @@ public sealed class PeepBehaviour
 
 		switch ( _random.Next() % 3 )
 		{
-			// Wander off somewhere reachable. Failing to find anywhere leaves them deciding again, which
-			// is the original's own answer - SetRandomDest reports it rather than throwing.
+			// Wander off somewhere reachable. A route sets them wandering and leaves the idle stamp as it was
+			// (0x004ff3d6); failing to find anywhere stamps it and leaves them deciding (0x004ff3f4).
 			case 1:
 				if ( SetRandomDest( peep, walk ) )
 					peep.SetState( PeepState.Wandering, tick, _random );
+				else
+				{
+					peep.TimeStartedIdling = tick;
 
-				peep.TimeStartedIdling = tick;
+					Log.Info( $"Person {peep.ThingId}: nowhere to wander to, idle stamp {tick}" );
+				}
 
 				break;
 
-			// Being offered somewhere to go. The thirty-turn gate in front of it is what stops a guest being
-			// offered a ride every third turn for ever, and it is measured from their own idle stamp.
+			// Being offered somewhere to go, once the sweep counter is more than ThinkingGap past their idle
+			// stamp, unsigned (0x004ff42e). Only an empty hand stamps it again, so the gap is measured from the
+			// last time nothing was found, or from the last wander that found nowhere.
 			case 0:
-				if ( peep.TimeStartedIdling + ThinkingGap >= tick )
+				if ( (uint)tick <= (uint)(peep.TimeStartedIdling + ThinkingGap) )
 					break;
 
+				// A thing named: event 2 with the thing in it, and off they go (0x004ff44e).
+				if ( ChooseSomewhereToGo( peep, walk, tick ) )
+				{
+					Unimplemented.Report( "DECIDE_CHOSEN_EVENT" );
+
+					peep.SetState( PeepState.GoingToRide, tick, _random );
+
+					break;
+				}
+
+				// Nothing named: event 1, spot animation 4, SmallHappinessChange off, and the stamp
+				// (0x004ff480..0x004ff4a3). This project keeps no event ring, so the event is counted.
+				Unimplemented.Report( "DECIDE_NOTHING_CHOSEN_EVENT" );
+
+				var before = peep.Happiness;
+
+				PlaySpotAnimation( peep, SpotBored, tick );
+				peep.Happiness = Peep.Change( peep.Happiness, -admission.SmallHappinessChange );
 				peep.TimeStartedIdling = tick;
 
-				if ( ChooseSomewhereToGo( peep, walk, tick ) )
-					peep.SetState( PeepState.GoingToRide, tick, _random );
+				Log.Info( $"Person {peep.ThingId}: the chooser found nothing, happiness {before:0} to "
+					+ $"{peep.Happiness:0}, tick {tick}" );
 
 				break;
 
@@ -1598,8 +1621,8 @@ public sealed class PeepBehaviour
 	/// no animation of its own. <see cref="Step"/>'s case for that state brings them back.
 	/// </summary>
 	/// <remarks>
-	/// Only the queue turn's two arms call it. The original's other three calls are the deciding turn's
-	/// (Q107's 4, Q111's 5 and 7).
+	/// The queue turn's two arms and the deciding turn's empty hand call it. The original's other two calls are
+	/// the deciding turn's 5 and 7 (Q111).
 	/// </remarks>
 	internal void PlaySpotAnimation( Peep peep, int animation, int tick )
 	{

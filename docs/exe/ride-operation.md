@@ -470,9 +470,7 @@ kept and no thought drawn, Q110). Read in the running game, each predicted first
 last three Deciding with `dest 21`, happiness 50, no refusal remembered, the event counted 3; the unchanged build
 read `dest 0`. A kind 0 (preferring 80) sent to the Jungle Spray (computed 30): "not exciting enough", `idle` 202
 to 0, the Spray onto their refusals, event and thought each one more. Left alone for 25 s the three still named the
-toilet, wandering. **Where it differs**: `PeepBehaviour.Decide` stamps `+0x1fc` before it chooses (Q107), so the
-stamp a room or too-long refusal leaves is the choice's, where the original's is older. None of it was compared
-with the original.
+toilet, wandering. None of it was compared with the original.
 
 **Q104: the chooser routes as it walks** is built in `ParkRideChooser.ChooseFor` (its `route` argument) and
 `PeepBehaviour.ChooseSomewhereToGo`. The listing, re-read: the best starts at nought and `+0x1dc` is zeroed
@@ -493,7 +491,7 @@ lost 25 to Q102's arm and 25 more three sweeps on to this one, the thinking gap 
 the original's walker re-plans when the ground near the guest has changed since their last plan, which can revive
 the failed route and walk them to the loser's back cell under the winner's name; `PeepWalk` keeps no ground stamp,
 so here the stuck arm is always what follows. `FUN_004fa530`'s stranded refusal, which answers no route without
-touching the walker, is not built (Q110). `Decide` stamps `+0x1fc` before choosing (Q107). The offer gate is asked
+touching the walker, is not built (Q110). The offer gate is asked
 before the score here and after it in the original. None of it was compared with the original.
 
 The supporting helpers:
@@ -1020,7 +1018,7 @@ restored bugs each fail it (the count-and-walk-on, no `Forget`, no return, no `L
 #### Spot animations - `FUN_004fc800` and state 8
 
 Decoded from the disassembly (`docs/QUEUE.md` Q98). The function, state 8's turn and the queue turn's two calls are
-built (Q98b); the deciding turn's three calls are not (Q107, Q111).
+built (Q98b), and so is the deciding turn's call of 4 (Q107); its calls of 5 and 7 are not (Q111).
 
 **`FUN_004fc800( n )`**, a guest thiscall, in order:
 
@@ -1078,8 +1076,8 @@ round. While any of them is in state 8 the state-11 turn does not run: no mood, 
 **In OpenTPW** `PeepBehaviour.PlaySpotAnimation` is `FUN_004fc800` without its step 1: the yawn
 (`PeepBehaviour.Yawns`, `ParkAudio.Yawn`, at the level `ParkAudio.PutOff` stands in with), the request
 (`Peep.NextAnimation`), the saved state and SetState(8), which stamps `TimeOfLastSpotAnim`. `PeepBehaviour.Step`'s
-case for state 8 is the return. The queue turn's two arms call it; the deciding turn's three do not yet (Q107's 4,
-Q111's 5 and 7). A guest in state 8 is held by a thing when the saved state is (`PeepBehaviour.HeldByAThing( Peep )`),
+case for state 8 is the return. The queue turn's two arms and the deciding turn's empty hand call it; the deciding
+turn's other two do not yet (Q111's 5 and 7). A guest in state 8 is held by a thing when the saved state is (`PeepBehaviour.HeldByAThing( Peep )`),
 so `Step`'s exit-level arm, which is this build's own (Q109), leaves a jumping queuer in the queue.
 
 **Measured in the running game** (`q98bconfirm.py`, two runs, guests made with `admit` and sent with `send`, happiness
@@ -1299,12 +1297,30 @@ and its sale.
 | Its filters | from path, no queue or entrance; a queue cell's `mDirection` slot; no exit | none | (48,22) onto the Belly Bounce's back cell; the toilets', Spray's and Drinks Shop's entrances |
 | Its choice | count under 2: fixed order, back allowed; else a random start, no reverse | a random start, reverse allowed | every multi-step walk |
 | The dead end and the stamp | thought `0x11`, `+0x198` stamped, every route refused until a map edit | false, nothing kept | not measured (Q110) |
-| After a routed wander | state 7, no restamp | restamps `TimeStartedIdling` | yes (Q107) |
-| Before choosing | restamps only when nothing is chosen | restamps first | yes (Q107) |
-| Nothing chosen | event 1, spot animation 4, −5 | nothing | every failed choice (Q107) |
+| The split's events 1 and 2 | pushed onto the guest's event ring | counted, `DECIDE_NOTHING_CHOSEN_EVENT` and `DECIDE_CHOSEN_EVENT`; no ring is kept | every choice |
 | Arms (a), (b), (c), (e) entertainer, (f) | run before the split | absent and uncounted | (a) above 80; (c) the Drinks Shop's litter and the bin at (44,29); (f) pranksters (Q111) |
 | Leaving | state 6 only: happiness byte 0, `mExitLevel` exactly 0, or shut; −25 every turn it holds; (47,9)/(48,9); state `0x12` only on a route | `Step`: `ExitLevel <= 0` in any state a thing does not hold, no dock; `Decide`: shut only, −25; the bus stops; `HeadingForExit` whatever the route | yes: the measured run's three left this way (Q109) |
 | `mSetDestSuccessfully` | SetState(7) routes again to the stored target | absent | every wander, invisibly |
+
+**Q107: the split's stamps and the empty hand** are built in `PeepBehaviour.Decide`, as the listing reads
+(`0x004ff3b4`..`0x004ff4a9`, re-read): arm 1 sets state 7 on a route and writes nothing else, and stamps `+0x1fc` only
+when SetRandomDest answers nought; arm 0 asks the chooser when `mGameTick` is above `+0x1fc` + 30 (`JBE`, unsigned),
+and stamps only in its empty hand, after event 1, `FUN_004fc800( 4 )` and `FUN_004fea70( 0 )`. So the thinking gap
+runs from the last empty hand or failed wander, and a guest who chose, walked and was turned away at the queue is
+asked again on their next roll of 0.
+Read in the running game, predicted first. Six guests of kind 0 made with `admit` on the approach, around (47,12),
+where `why` scores nothing above 9 at (47..48, 11..12): over three runs every "the chooser found nothing" line took
+exactly 5 (43 lines on those guests, 50 to 45 down to 25 to 20), each guest was `PlayingSpotAnimation` with Deciding
+saved and `idle` the line's tick, back Deciding 11 sweeps on, and no guest's two lines were closer than 32 sweeps;
+`DECIDE_NOTHING_CHOSEN_EVENT` equalled the lines in the log (30 of 30 in the third run, ten of them other guests'
+inside the park); guest 48, whose id's low nibble is nought, yawned once on each of its own (6 of 6). In a fourth
+run all 43 `idle` readings of guests the chooser never routed were nought, an empty hand's tick or a failed wander's
+(14 and 17 logged): a routed wander stamps nothing. A guest inside the park, at (45,28) after a drink, photographed
+in the animation, `guests` reading set 14 and then set 0. The unchanged build, same run: no such line, no counter,
+55 readings all at happiness 50. Not predicted, and wrong in the first run's prediction: a guest who then queues is
+stamped by the queue, and one who buys a drink gains happiness, so "50 less 5 a line" holds only for a guest who
+does neither. **Where it differs**: the events are counted, not kept, and nothing of it was compared with the
+original. The yawn's samples have not been listened to.
 
 ## What a thing is worth to a guest - `FUN_004fcc30`
 

@@ -55,11 +55,6 @@ as `r-f1` names a verdict in its results file (`CLAUDE.local.md` says where).
   window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
   together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
 
-- [ ] **Q107. `Decide`'s stamps and the chooser's empty hand.** Found by Q53 (`ride-operation.md`, "The state-6 turn,
-  in order", the split). The original restamps `+0x1fc` only when a wander fails (`0x004ff3f4`) and when the chooser
-  finds nothing (`0x004ff4a3`); `Decide` restamps after a routed wander and before choosing. With nothing chosen the
-  original pushes event 1, plays spot animation 4 (Q98) and docks `SmallHappinessChange` (`0x004ff492`); ours does none.
-  Confirm: `happy` and `peeps` over a Deciding guest the chooser fails, −5 each time it runs.
 - [ ] **Q108. `SetRandomDest`'s linked walk.** Found by Q53 (`ride-operation.md`, "SetRandomDest", the linked arm).
   The original walks r % 5 + 1 linked cells from the mask of the cell being LEFT, never ending on the guest's own
   cell, and aims inside the last; it drops queue and entrance neighbours from a path cell, a queue cell's
@@ -470,8 +465,8 @@ as `r-f1` names a verdict in its results file (`CLAUDE.local.md` says where).
   entry-price door shuts a running park; `GoingToRide`'s stuck arm (`BigHappinessChange`, event 3) and its park-shut
   arm, both built by Q102; `AtGate` asks nothing of `FUN_0051a760`, the arrival vehicle's gate; `HeadingForExit` has no
   change of mind (`FUN_00500a50`), which a saved guest can take; states 19 and 21 stand silently, 19 on every
-  departure and 21 after `WalkingOutside`, which Q128 builds; `Decide` does nothing when the chooser finds nothing,
-  which Q107 builds; and `Judge` reads `ParkExcitement`, nought until Q26 decodes `FUN_004c8240`. `CellReroute` never
+  departure and 21 after `WalkingOutside`, which Q128 builds; `Decide` did nothing when the chooser finds nothing,
+  built by Q107; and `Judge` reads `ParkExcitement`, nought until Q26 decodes `FUN_004c8240`. `CellReroute` never
   runs `FUN_005108a0`'s diagonal pass after a scan that splices nothing, which is how most routes end.
   `CellEdge.Blocked`'s mode-2 entrance arm always answers nothing, whenever the camcorder walks at an entrance, which
   Q140 decodes. `Peep.Tick` leaves out the cell's `RegionFX` term (`FUN_00501650`) on every needs turn.

@@ -98,11 +98,20 @@ public class ParkGuestTypeTests
 			for ( var turn = 0; turn < 60; ++turn )
 			{
 				var peep = Standing( 30, personType, PeepState.Deciding, 55, 28, thing: 0 );
+				var events = Counted( "DECIDE_CHOSEN_EVENT" );
+
+				peep.TimeStartedIdling = 17;
 
 				behaviour.Step( peep, new PeepWalk( peep.Navigator, blocked ), playing: null, 1000 );
 
 				if ( peep.State == PeepState.GoingToRide )
+				{
+					// A choice that names a thing stamps nothing (0x004ff437..0x004ff457), and pushes event 2.
+					Assert.AreEqual( 17, peep.TimeStartedIdling, "a guest who chose keeps their idle stamp" );
+					Assert.AreEqual( events + 1, Counted( "DECIDE_CHOSEN_EVENT" ), "event 2, counted" );
+
 					return peep.MajorDest;
+				}
 			}
 
 			Assert.Fail( $"a type {personType} was never offered a ride in 60 turns" );

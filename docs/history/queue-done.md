@@ -4316,6 +4316,24 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   where the unchanged reading chooses the Belly Bounce, 19. Photographed. Three new tests, nine re-aimed at back
   cells; five restored bugs each fail. 1792 pass, 0 skip. Not compared with the original; no shipped cell has an
   effects count, so that divisor is tested only.
+- [x] **Q107. `Decide`'s stamps and the chooser's empty hand.** Found by Q53 (`ride-operation.md`, "The state-6 turn,
+  in order", the split). The original restamps `+0x1fc` only when a wander fails (`0x004ff3f4`) and when the chooser
+  finds nothing (`0x004ff4a3`); `Decide` restamps after a routed wander and before choosing. With nothing chosen the
+  original pushes event 1, plays spot animation 4 (Q98) and docks `SmallHappinessChange` (`0x004ff492`); ours does none.
+  Confirm: `happy` and `peeps` over a Deciding guest the chooser fails, −5 each time it runs.
+  **Done 2026-10-05.** `Decide`'s split is the listing's, re-read first-hand (`0x004ff3b4`..`0x004ff4a9`): a routed
+  wander and a choice that names a thing stamp nothing; a failed wander stamps; the empty hand counts event 1
+  (`DECIDE_NOTHING_CHOSEN_EVENT`), plays spot animation 4, takes `SmallHappinessChange` and stamps; the gate is
+  unsigned. Predicted and read in the running game on six kind-0 guests made with `admit` on the approach around
+  (47,12), where `why` picks nothing: 43 "the chooser found nothing" lines over three runs, every one exactly 5 off
+  (50 to 45 down to 25 to 20), `PlayingSpotAnimation` with Deciding saved, back 11 sweeps on (27 of 27 in the third run), no guest's
+  two closer than 32 sweeps, the counter 30 against 30 lines, guest 48 yawning on 6 of its 6; in a fourth run 43 of
+  43 `idle` readings were nought, an empty hand's tick or a failed wander's. Photographed: a guest at (45,28) after a
+  drink, `guests` reading set 14, then set 0. The unchanged build, same run: no line, no counter, 55 readings at
+  happiness 50. The first run's prediction was wrong twice (a queue stamps a queuer; a drink gives happiness back),
+  and its photograph was six guests on one cell, retaken. Seven new tests, three re-aimed; eleven restored bugs each
+  fail. Not compared with the original; the events are counted, not kept; the yawn not listened to. Harness
+  `q107confirm.py`, runs `q107/run1`..`run4`, `control`. `docs/exe/ride-operation.md`, "Q107".
 
 ## B. Docs and comments
 
