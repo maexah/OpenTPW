@@ -1980,9 +1980,10 @@ public sealed class PeepBehaviour
 	/// <see cref="ChooseSomewhereToGo"/> makes the same call with the route asked inside the walk, so its answer can
 	/// be a lesser candidate than this one.
 	/// </summary>
-	private ParkWorld.CatalogueObject? Choose( Peep peep, int x, int y, int tick )
+	private ParkWorld.CatalogueObject? Choose( Peep peep, int x, int y, int tick,
+		Action<ParkWorld.CatalogueObject, int>? scored = null )
 		=> _chooser.ChooseFor( WantsOf( peep ), x, y, tick, queueLength: QueueCount,
-			now: State.CalendarNow, raining: Raining() );
+			now: State.CalendarNow, raining: Raining(), scored: scored );
 
 	/// <summary>
 	/// What the chooser scores best for one guest and where it would aim them, with no route asked. Whether they
@@ -2005,7 +2006,14 @@ public sealed class PeepBehaviour
 		var (x, y) = walk.Position.Cell;
 		var memory = $"visits [{string.Join( ",", peep.PreviousRides )}] refused [{string.Join( ",", peep.PreviousTemporaryRides )}]";
 
-		if ( Choose( peep, x, y, tick ) is not { } chosen )
+		// Every offered candidate's score, in the chooser's own order, as "thing:score".
+		var scores = new List<string>();
+
+		var picked = Choose( peep, x, y, tick, ( candidate, score ) => scores.Add( $"{candidate.ThingId}:{score}" ) );
+
+		memory = $"scores [{string.Join( " ", scores )}] {memory}";
+
+		if ( picked is not { } chosen )
 			return $"at ({x},{y}) the chooser picked NOTHING {memory}";
 
 		// <b>THE ROUTE IS DELIBERATELY NOT TESTED HERE, and both ways of testing it were wrong.</b>

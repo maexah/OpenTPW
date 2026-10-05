@@ -184,7 +184,7 @@ public class ParkRideChoiceTests
 	/// <b>It refutes both readings of a shop that is offerable and never chosen</b> - "its entry cell is
 	/// unroutable" and "it is outscored from where guests stand". Measured, neither is true: the route
 	/// exists from the shop's own approach cell,
-	/// from mid-park and from beside the ride, and a parched guest picks the shop from four of these five
+	/// from mid-park and from beside the ride, and a parched guest picks the shop from three of these five
 	/// cells. What the live park lacks is a thirsty guest who is still DECIDING - see
 	/// <see cref="Peep.Tick"/>, where only a quarter of guests ever grow thirsty at all.
 	/// </para>
@@ -227,12 +227,13 @@ public class ParkRideChoiceTests
 		Assert.AreEqual( "yes", Routes( 47, 25 ), "from the middle of the park" );
 		Assert.AreEqual( "yes", Routes( 48, 22 ), "and from beside the ride" );
 
-		// And chosen, which refuted the second. Four of five - the shop wins on the thirst term from
-		// everywhere except beside the sideshow, where the sideshow's distance term carries it.
+		// And chosen, which refuted the second. Three of five - the shop wins on the thirst term except beside
+		// the sideshow and at the back of the free ride's queue, where each one's distance and empty queue
+		// carry it: there the ride is 25 against the shop's 23.
 		Assert.AreEqual( DrinksShop.ToString(), Picks( 43, 29 ), "standing at the shop" );
 		Assert.AreEqual( DrinksShop.ToString(), Picks( 44, 28 ), "on the loop beside it" );
 		Assert.AreEqual( DrinksShop.ToString(), Picks( 47, 25 ), "in the middle of the park" );
-		Assert.AreEqual( DrinksShop.ToString(), Picks( 48, 22 ), "even standing beside the free ride" );
+		Assert.AreEqual( BellyBounce.ToString(), Picks( 48, 22 ), "but not at the back of the free ride's queue" );
 
 		// The anti-vacuity half, and it is what stops this reading as "the shop always wins": a cell east of
 		// the sideshow's doorstep it is the sideshow, 23 against 22. On the doorstep itself (52,29) the two tie at

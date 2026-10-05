@@ -304,7 +304,7 @@ public class ParkVisitHistoryTests
 	}
 
 	/// <summary>
-	/// <b>While drops fall, shelter is worth five times as much</b>, for a rain handed to the park's people. At (55,30)
+	/// <b>While drops fall, shelter is worth five times as much</b>, for a rain handed to the park's people. At (55,28)
 	/// a type 0 takes the Belly Bounce dry, 10 against the Jungle Spray's 9; wet, the Spray is 45.
 	/// </summary>
 	[TestMethod]
@@ -315,7 +315,7 @@ public class ParkVisitHistoryTests
 
 		try
 		{
-			var guest = AdmitWithoutNeeds( people, 55, 30, personType: 0 );
+			var guest = AdmitWithoutNeeds( people, 55, 28, personType: 0 );
 
 			Assert.AreEqual( BellyBounce, Chose( people, guest ), "dry, the ride" );
 
@@ -371,9 +371,10 @@ public class ParkVisitHistoryTests
 	}
 
 	/// <summary>
-	/// <b>The queue term is over the queue's walked cells</b>, which the chooser hands in: beside the Belly Bounce's
-	/// entry at (52,24), with four in its queue of four cells, a type 3 scores it 24 - queue 75 - against the Jungle
-	/// Spray's 18. Read as one cell the queue term is nought, 17, and the Spray would win. The record's cached pair and
+	/// <b>The queue term is over the queue's walked cells</b>, which the chooser hands in: on the path at the
+	/// back of the Belly Bounce's queue, (48,22), with four in its queue of four cells, a type 3 scores it 24 - queue
+	/// 75 - against the Jungle Spray's 17. Read as one cell the queue term is nought, 17, and the Spray, met first,
+	/// keeps the tie on an even tick. The record's cached pair and
 	/// its saved <c>mQueueSizeInCells</c> are both cleared, so only the walk off the map can answer four.
 	/// </summary>
 	[TestMethod]
@@ -388,7 +389,7 @@ public class ParkVisitHistoryTests
 		var chooser = new ParkRideChooser( world, new ParkItemCatalogue( "jungle", data ), new ParkRideScore( Balance() ), state );
 
 		Assert.AreEqual( 4, ParkRideChoice.QueueCellsFor( world, bounce ).Cells, "the Belly Bounce's queue walks four cells" );
-		Assert.AreEqual( BellyBounce, chooser.ChooseFor( new ParkRideScore.Wants( 3, 0f, 0f, 0f, 0f ), 52, 24, gameTick: 0,
+		Assert.AreEqual( BellyBounce, chooser.ChooseFor( new ParkRideScore.Wants( 3, 0f, 0f, 0f, 0f ), 48, 22, gameTick: 0,
 			queueLength: thing => thing.ThingId == BellyBounce ? 4 : 0 )?.ThingId );
 	}
 

@@ -55,18 +55,6 @@ as `r-f1` names a verdict in its results file (`CLAUDE.local.md` says where).
   window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
   together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
 
-- [ ] **Q105. The chooser scores the distance at the back of the queue.** Found by Q50g (`ride-operation.md`, "Where a
-  guest is aimed"). `FUN_004fcc30` reads the squared distance, the close-to-queue test (under 9) and the nearby-effects
-  divisor at `GetBackOfQueue`'s cell (`FUN_004de110` with the object in `ECX`, `0x004fcc49`..`0x004fcc7d`);
-  `ParkRideChooser.ScoreOf` reads all three at the entry cell, which for the Belly Bounce is four cells from its back.
-  Build it and retire the remark at `ScoreOf`. Confirm: `why` over a guest nearer the Belly Bounce's entrance than its
-  back of queue, the chosen thing before and after.
-  The score's queue term has the same root (the 2026-09-26 staleness audit): `ParkRideScore` divides by the save's
-  `mQueueSizeInCells`, nought on the Drinks Shop and the three toilets (a guard makes it one), where the original's
-  `+0x40` is the count `GetBackOfQueue` walks, the call `FUN_004fcc30` makes first (`ride-operation.md`, the
-  `GetBackOfQueue` row). Divide by the walked count (`ParkRideChoice.QueueCellsFor`) with it.
-  Q165c built that half, the count to the first guest no longer queueing over the walked cells; the distance, the
-  close-to-queue test and the effects divisor at the back-of-queue cell remain.
 - [ ] **Q107. `Decide`'s stamps and the chooser's empty hand.** Found by Q53 (`ride-operation.md`, "The state-6 turn,
   in order", the split). The original restamps `+0x1fc` only when a wander fails (`0x004ff3f4`) and when the chooser
   finds nothing (`0x004ff4a3`); `Decide` restamps after a routed wander and before choosing. With nothing chosen the

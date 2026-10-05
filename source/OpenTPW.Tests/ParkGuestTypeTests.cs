@@ -39,10 +39,10 @@ public class ParkGuestTypeTests
 	private static ParkBalance Balance() => new( "jungle", easyMode: true );
 
 	/// <summary>
-	/// <b>Two kinds of guest on one cell choose different rides, through the park's own wiring.</b> At (55,30) the
-	/// Jungle Spray's entry is 98 for distance and the Belly Bounce's 88. A type 3 prefers 35: the Spray's computed 30
-	/// and the Belly Bounce's 40 both score 90 for excitement, so 18 against 17. A type 0 prefers 80: nought against
-	/// 20, so 9, which is not enough, against 10. Both win outright, so neither turns on the tick's tie-break.
+	/// <b>Two kinds of guest on one cell choose different rides, through the park's own wiring.</b> At (55,28) the
+	/// Jungle Spray's back of queue is 98 for distance and the Belly Bounce's 84. A type 3 prefers 35: the Spray's
+	/// computed 30 and the Belly Bounce's 40 both score 90 for excitement, so 18 against 17. A type 0 prefers 80: nought
+	/// against 20, so 9, which is not enough, against 10. Both win outright, so neither turns on the tick's tie-break.
 	///
 	/// <para>
 	/// With no balance behind the chooser every kind prefers 50 and scores every candidate alike, so no two kinds
@@ -55,8 +55,8 @@ public class ParkGuestTypeTests
 		var world = World();
 		var people = new ParkPeople( world, Balance(), null, new ParkState( world ), new ParkItemCatalogue( "jungle", data ) );
 
-		var likesItQuiet = people.Admit( 55, 30, personType: 3 );
-		var likesItWild = people.Admit( 55, 30, personType: 0 );
+		var likesItQuiet = people.Admit( 55, 28, personType: 3 );
+		var likesItWild = people.Admit( 55, 28, personType: 0 );
 
 		// Isolate kind preference from the constructor's independently drawn needs.
 		foreach ( var id in new[] { likesItQuiet, likesItWild } )
@@ -79,7 +79,7 @@ public class ParkGuestTypeTests
 		=> census.Single( line => line.StartsWith( $"thing {thingId,3} " ) );
 
 	/// <summary>
-	/// <b>And the choice a guest acts on is the same</b>: deciding at (55,30), a type 3 sets off for the Jungle Spray
+	/// <b>And the choice a guest acts on is the same</b>: deciding at (55,28), a type 3 sets off for the Jungle Spray
 	/// and a type 0 for the Belly Bounce, the thing each is sent to written in <see cref="Peep.MajorDest"/>. The turn
 	/// offers a ride on one roll in three (<c>FUN_004fec90</c>), so each is made afresh and stepped until it is offered.
 	/// </summary>
@@ -97,7 +97,7 @@ public class ParkGuestTypeTests
 		{
 			for ( var turn = 0; turn < 60; ++turn )
 			{
-				var peep = Standing( 30, personType, PeepState.Deciding, 55, 30, thing: 0 );
+				var peep = Standing( 30, personType, PeepState.Deciding, 55, 28, thing: 0 );
 
 				behaviour.Step( peep, new PeepWalk( peep.Navigator, blocked ), playing: null, 1000 );
 

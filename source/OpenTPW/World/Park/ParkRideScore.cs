@@ -97,7 +97,7 @@ public sealed class ParkRideScore
 	/// <summary>
 	/// One thing being considered, and the facts about it that live outside its own record.
 	/// </summary>
-	/// <param name="DistanceSquared">Squared distance in cells between the guest and the object's entry cell.</param>
+	/// <param name="DistanceSquared">Squared distance in cells between the guest and the object's back-of-queue cell.</param>
 	/// <param name="QueueLength">
 	/// How many are queueing, counted from the head up to and including the first guest no longer queueing -
 	/// <c>FUN_004ddf50( 0 )</c>, <see cref="ParkState.QueueCount"/>.

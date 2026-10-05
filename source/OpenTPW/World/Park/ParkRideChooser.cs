@@ -129,9 +129,10 @@ public sealed class ParkRideChooser
 	/// is left as the last call left it, whichever candidate is answered. Null asks nothing, and answers the best
 	/// candidate with no walker touched.
 	/// </param>
+	/// <param name="scored">Told each offered candidate's score as it is taken, for a census. Null tells nobody.</param>
 	public ParkWorld.CatalogueObject? ChooseFor( ParkRideScore.Wants wants, int fromX, int fromY, int gameTick,
 		Func<ParkWorld.CatalogueObject, int>? queueLength = null, DateTime? now = null, bool raining = false,
-		Func<ParkWorld.CatalogueObject, int, bool>? route = null )
+		Func<ParkWorld.CatalogueObject, int, bool>? route = null, Action<ParkWorld.CatalogueObject, int>? scored = null )
 	{
 		if ( _park == null )
 			return null;
@@ -150,6 +151,8 @@ public sealed class ParkRideChooser
 				continue;
 
 			var score = ScoreOf( wants, candidate, item, queue, fromX, fromY, now, raining );
+
+			scored?.Invoke( candidate, score );
 
 			if ( !Beats( score, bestScore, best, gameTick ) )
 				continue;
@@ -182,10 +185,8 @@ public sealed class ParkRideChooser
 	/// toilet, when every toilet scores nought, one is still taken on an odd tick.
 	/// </para>
 	/// <para>
-	/// <b>Two differences, each held elsewhere.</b> The score measures to the entry cell where the original measures
-	/// to the back cell (<see cref="ScoreOf"/>, Q105). And within one cell the original walks its list newest-linked
-	/// first where this takes the park's own order, which cannot differ while no two objects stand on one cell, as
-	/// none do in Lost Kingdom.
+	/// <b>One difference.</b> Within one cell the original walks its list newest-linked first where this takes the
+	/// park's own order, which cannot differ while no two objects stand on one cell, as none do in Lost Kingdom.
 	/// </para>
 	/// </remarks>
 	/// <param name="majorBack">The back-of-queue cell of the thing the guest is bound for.</param>
@@ -281,32 +282,38 @@ public sealed class ParkRideChooser
 	/// One candidate's score, with the facts that live outside its own record gathered first.
 	/// </summary>
 	/// <remarks>
-	/// <b>The distance and the nearby effects are read at the entry cell, and that is a deviation.</b> The
-	/// original's <c>FUN_004fcc30</c> reads both at the back-of-queue cell (<c>GetBackOfQueue</c>, asked of the
-	/// object at <c>0x004fcc49</c>), which is also where a chosen guest is sent
-	/// (<c>PeepBehaviour.ChooseSomewhereToGo</c>); <c>docs/QUEUE.md</c> Q105 builds it.
+	/// <b>The distance, the queue term's nearness test and the nearby effects are all read at the back-of-queue
+	/// cell</b>, as <c>FUN_004fcc30</c> reads them: it asks <c>GetBackOfQueue</c> of the object
+	/// (<c>0x004fcc7d</c>), unpacks that cell and measures the guest's own cell against it, then asks the effects
+	/// record of the same cell (<c>0x004fce04</c>). It is also where a chosen guest is sent
+	/// (<c>PeepBehaviour.ChooseSomewhereToGo</c>). <c>docs/exe/ride-operation.md</c>, "What a thing is worth to a
+	/// guest", step 2.
+	/// <para>
+	/// A candidate with no back of queue is never scored: both callers ask
+	/// <see cref="ParkRideChoice.CanBeOffered"/> first, which refuses it.
+	/// </para>
 	/// </remarks>
 	private int ScoreOf( ParkRideScore.Wants wants, ParkWorld.CatalogueObject candidate,
 		ParkItemCatalogue.Item? item, int queue, int fromX, int fromY, DateTime? now, bool raining )
 	{
-		var acrossBy = candidate.EntryCellX - fromX;
-		var downBy = candidate.EntryCellY - fromY;
+		// GetBackOfQueue's pair: the back cell, and the walked count, the object's +0x40 (0x004fce40).
+		var (backOfQueue, cells) = ParkRideChoice.QueueCellsFor( _park, candidate );
+		var (backX, backY) = MapStep.CellAt( backOfQueue );
+
+		var acrossBy = fromX - backX;
+		var downBy = fromY - backY;
 		var distanceSquared = (acrossBy * acrossBy) + (downBy * downBy);
 
-		// The cell's own effects count, which divides the distance term. Asked of the entry cell because
-		// that is the cell the distance was measured to.
+		// The back cell's own effects count, which divides the distance term.
 		var effects = 0;
 
-		if ( ParkState.OnMap( candidate.EntryCellX, candidate.EntryCellY ) )
-			effects = _park!.CellAt( candidate.EntryCellX, candidate.EntryCellY ).NearbyEffects;
+		if ( ParkState.OnMap( backX, backY ) )
+			effects = _park!.CellAt( backX, backY ).NearbyEffects;
 
 		var age = AgeOf( now, candidate.Built );
 
 		var described = item ?? Undescribed;
 		var excitement = item is { } known ? ParkRideScore.ExcitementOf( candidate, known, _state?.TrackRides ) : 0;
-
-		// GetBackOfQueue's walked count, the object's +0x40 (0x004fce40).
-		var cells = ParkRideChoice.QueueCellsFor( _park, candidate ).Cells;
 
 		return Score.Of( wants,
 			new ParkRideScore.Candidate( candidate, described, distanceSquared, queue, effects,

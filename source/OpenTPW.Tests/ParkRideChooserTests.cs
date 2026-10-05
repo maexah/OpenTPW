@@ -1,3 +1,4 @@
+using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
 using System.IO;
@@ -11,8 +12,8 @@ namespace OpenTPW.Tests;
 /// <para>
 /// <b>The load-bearing test here is the one about what is NOT chosen.</b> Six of the shipped park's
 /// objects carry the "a guest may choose this" bit and all six pass <see cref="ParkRideChoice"/>, but
-/// toilets 21 and 22 are never the best candidate from any of the six entry cells: from each toilet's cell
-/// all three tie on distance, and 23, walked first, keeps the tie at game tick 0. Pinning the answer at
+/// toilets 21 and 22 are never the best candidate from any of the six back-of-queue cells: from each toilet's
+/// back cell all three tie on distance, and 23, walked first, keeps the tie at game tick 0. Pinning the answer at
 /// four is what tells the scorer from the filter.
 /// </para>
 /// <para>
@@ -56,8 +57,8 @@ public class ParkRideChooserTests
 	/// <see cref="ParkRideChoice.QueueCellsFor"/> - so the Drinks Shop is chosen when a guest is standing by
 	/// it. <b>Measured rather than predicted:</b> the answer is four of the six, not all six. Toilets 21 and
 	/// 22 are never the best candidate from any of these six cells: the three toilets stand in a row, (55,15)
-	/// to (55,17), so from each toilet's cell all three score a full hundred on distance, and 23, walked
-	/// first, keeps the tie at game tick 0. That is the scorer working, not the filter.
+	/// to (55,17), so from each toilet's back cell all three score a full hundred on distance and on their empty
+	/// queues, and 23, walked first, keeps the tie at game tick 0. That is the scorer working, not the filter.
 	/// </para>
 	/// </summary>
 	[TestMethod]
@@ -67,11 +68,14 @@ public class ParkRideChooserTests
 		var chooser = Chooser( park );
 		var offered = new System.Collections.Generic.HashSet<int>();
 
-		// From the entry cell of every visitable object in the park, including the two toilets that are
-		// never chosen - so the test stands a guest right on top of the tempting ones.
+		// From the back-of-queue cell of every visitable object in the park, where the score measures from,
+		// including the two toilets that are never chosen - so the test stands a guest right on top of the
+		// tempting ones.
 		foreach ( var from in park.Objects.Where( o => o.IsVisitable ) )
 		{
-			if ( chooser.ChooseFor( Guest(), from.EntryCellX, from.EntryCellY, gameTick: 0 ) is { } chosen )
+			var (x, y) = MapStep.CellAt( ParkRideChoice.QueueCellsFor( park, from ).BackOfQueue );
+
+			if ( chooser.ChooseFor( Guest(), x, y, gameTick: 0 ) is { } chosen )
 				offered.Add( chosen.ThingId );
 		}
 
@@ -214,9 +218,9 @@ public class ParkRideChooserTests
 	[TestMethod]
 	public void TheRouteIsAskedOfEachCandidateThatBeatsTheBestAsTheWalkMeetsIt()
 	{
-		var (asked, answer) = Routed( personType: 2, thirst: 60f );
+		var (asked, answer) = Routed( personType: 2, thirst: 50f );
 
-		CollectionAssert.AreEqual( new[] { "16:14", "14:15", "13:17" }, asked );
+		Assert.AreEqual( "16:13 14:15 13:17", string.Join( " ", asked ) );
 		Assert.AreEqual( BellyBounce, answer );
 	}
 
@@ -227,28 +231,28 @@ public class ParkRideChooserTests
 	[TestMethod]
 	public void ABetterCandidateWithNoRouteIsAskedAndTheEarlierWinnerKept()
 	{
-		var (asked, answer) = Routed( personType: 2, thirst: 60f, refused: BellyBounce );
+		var (asked, answer) = Routed( personType: 2, thirst: 50f, refused: BellyBounce );
 
-		CollectionAssert.AreEqual( new[] { "16:14", "14:15", "13:17" }, asked, "the Belly Bounce is still asked, last" );
+		Assert.AreEqual( "16:13 14:15 13:17", string.Join( " ", asked ), "the Belly Bounce is still asked, last" );
 		Assert.AreEqual( JungleSpray, answer );
 	}
 
 	/// <summary>
 	/// <b>The best is raised only by a candidate that routes</b> (<c>0x004fcbd8</c> follows the route's test). For a
 	/// kind 3 the Jungle Spray and the Belly Bounce tie at 18, and on an even tick the later of a tie is not asked;
-	/// with the Jungle Spray refused the best stays the Drinks Shop's 14, so the Belly Bounce is asked and taken.
+	/// with the Jungle Spray refused the best stays the Drinks Shop's 13, so the Belly Bounce is asked and taken.
 	/// </summary>
 	[TestMethod]
 	public void ACandidateNeedOnlyBeatTheLastThatRouted()
 	{
-		var (asked, answer) = Routed( personType: 3, thirst: 60f );
+		var (asked, answer) = Routed( personType: 3, thirst: 50f );
 
-		CollectionAssert.AreEqual( new[] { "16:14", "14:18" }, asked, "the tie is not asked on an even tick" );
+		Assert.AreEqual( "16:13 14:18", string.Join( " ", asked ), "the tie is not asked on an even tick" );
 		Assert.AreEqual( JungleSpray, answer );
 
-		(asked, answer) = Routed( personType: 3, thirst: 60f, refused: JungleSpray );
+		(asked, answer) = Routed( personType: 3, thirst: 50f, refused: JungleSpray );
 
-		CollectionAssert.AreEqual( new[] { "16:14", "14:18", "13:18" }, asked );
+		Assert.AreEqual( "16:13 14:18 13:18", string.Join( " ", asked ) );
 		Assert.AreEqual( BellyBounce, answer );
 	}
 
@@ -262,5 +266,102 @@ public class ParkRideChooserTests
 
 		Assert.IsNull( answer );
 		Assert.AreEqual( 3, asked, "each of the three beats nine, the best never raised" );
+	}
+
+	/// <summary>Every offered candidate's score, by thing, as the chooser takes them.</summary>
+	private static Dictionary<int, int> Scores( ParkRideChooser chooser, ParkRideScore.Wants wants, int x, int y,
+		int queueing = 0 )
+	{
+		var scores = new Dictionary<int, int>();
+
+		chooser.ChooseFor( wants, x, y, Even, queueLength: thing => thing.ThingId == BellyBounce ? queueing : 0,
+			scored: ( candidate, score ) => scores[candidate.ThingId] = score );
+
+		return scores;
+	}
+
+	/// <summary>On the path by the Belly Bounce's entrance (52,23): 5 squared cells from it, 17 from its back of queue.</summary>
+	private static readonly (int X, int Y) ByTheEntrance = (53, 21);
+
+	/// <summary>On the path at the Belly Bounce's back of queue (49,22): 1 squared cell from it, 17 from its entrance.</summary>
+	private static readonly (int X, int Y) AtTheBack = (48, 22);
+
+	/// <summary>
+	/// <b>The distance and the queue term's nearness are measured to the back-of-queue cell</b> (<c>FUN_004fcc30</c>,
+	/// <c>0x004fcc7d</c>). For a kind 2 the Belly Bounce's excitement is 80. By the entrance the distance is 97 and the
+	/// queue does not count: 17, however many queue. At the back the distance is 100 and the queue counts: 25 empty,
+	/// and 20 with eight in its sixteen places.
+	/// </summary>
+	[TestMethod]
+	public void TheScoreMeasuresToTheBackOfTheQueue()
+	{
+		var park = Park();
+		var ride = park.Objects.Single( o => o.ThingId == BellyBounce );
+		var kind2 = new ParkRideScore.Wants( 2, 10f, 10f, 10f, 0f );
+
+		Assert.AreEqual( (52, 23), (ride.EntryCellX, ride.EntryCellY), "the entrance" );
+		Assert.AreEqual( (49, 22), MapStep.CellAt( ParkRideChoice.QueueCellsFor( park, ride ).BackOfQueue ), "the back" );
+
+		var chooser = Chooser( park );
+
+		Assert.AreEqual( 17, Scores( chooser, kind2, ByTheEntrance.X, ByTheEntrance.Y )[BellyBounce], "by the entrance" );
+		Assert.AreEqual( 17, Scores( chooser, kind2, ByTheEntrance.X, ByTheEntrance.Y, queueing: 8 )[BellyBounce],
+			"and the queue is not read from there" );
+		Assert.AreEqual( 25, Scores( chooser, kind2, AtTheBack.X, AtTheBack.Y )[BellyBounce], "at the back, empty" );
+		Assert.AreEqual( 20, Scores( chooser, kind2, AtTheBack.X, AtTheBack.Y, queueing: 8 )[BellyBounce],
+			"at the back, half full" );
+	}
+
+	/// <summary>
+	/// <b>And the choice follows</b>: a kind 0 by the Belly Bounce's entrance who needs the toilet scores the three
+	/// toilets 12 and the Belly Bounce 11, so takes a toilet - 23, met first, which keeps the tie on an even tick.
+	/// Measured to its entrance the Belly Bounce would be 19 and taken.
+	/// </summary>
+	[TestMethod]
+	public void AGuestByTheEntranceIsNotCloseToTheQueue()
+	{
+		var chooser = Chooser( Park() );
+		var needsTheToilet = new ParkRideScore.Wants( 0, 10f, 10f, 60f, 0f );
+		var scores = Scores( chooser, needsTheToilet, ByTheEntrance.X, ByTheEntrance.Y );
+
+		Assert.AreEqual( 11, scores[BellyBounce] );
+		Assert.AreEqual( "12 12 12", $"{scores[23]} {scores[22]} {scores[21]}" );
+		Assert.AreEqual( 23,
+			chooser.ChooseFor( needsTheToilet, ByTheEntrance.X, ByTheEntrance.Y, Even )?.ThingId );
+	}
+
+	/// <summary>
+	/// <b>The effects count that divides the distance term is the back cell's</b> (<c>FUN_004d8410</c> of that cell,
+	/// <c>0x004fce04</c>). With 2 on the Belly Bounce's back cell a kind 2 by the entrance scores it
+	/// ( 97 / 2 + 80 ) / 10, 12; with the 2 on its entry cell instead, 17 as before.
+	/// </summary>
+	[TestMethod]
+	public void TheEffectsCountIsTheBackCells()
+	{
+		var kind2 = new ParkRideScore.Wants( 2, 10f, 10f, 10f, 0f );
+
+		Assert.AreEqual( 12, Scores( Chooser( WithEffects( 49, 22 ) ), kind2, ByTheEntrance.X, ByTheEntrance.Y )[BellyBounce],
+			"effects on the back cell" );
+		Assert.AreEqual( 17, Scores( Chooser( WithEffects( 52, 23 ) ), kind2, ByTheEntrance.X, ByTheEntrance.Y )[BellyBounce],
+			"effects on the entry cell" );
+	}
+
+	/// <summary>The shipped park with an effects count of 2 written on one cell; no shipped cell has one.</summary>
+	private ParkWorld WithEffects( int x, int y )
+	{
+		var park = Park();
+		var cells = (ParkWorld.MapCell[])typeof( ParkWorld )
+			.GetField( "_cells", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance )!
+			.GetValue( park )!;
+
+		Assert.AreEqual( 0, cells.Count( cell => cell.NearbyEffects != 0 ), "no shipped cell has an effects count" );
+
+		var index = (y * ParkWorld.MapSize) + x;
+
+		cells[index] = cells[index] with { NearbyEffects = 2 };
+
+		Assert.AreEqual( 2, park.CellAt( x, y ).NearbyEffects );
+
+		return park;
 	}
 }

@@ -395,7 +395,8 @@ back cell under the winner's name, to be re-aimed there. **The score is measured
 `0x004fcc65` and `0x004fcc7d`; the guest is `EDI`) and reads the squared distance from the guest's cell (bytes `+5`
 and `+7`), the close-to-queue test (under 9) and the nearby-effects divisor (the word `+8` of what `FUN_004d8410`
 answers for that cell id; its log says "nearby fireworks") all at that cell.
-OpenTPW's `ParkRideChooser.ScoreOf` reads the three at the entry cell (Q105). With nothing chosen the caller pushes event 1, plays spot
+OpenTPW's `ParkRideChooser.ScoreOf` reads the three there too
+(Q105, in "What a thing is worth to a guest", "Where OpenTPW differs"). With nothing chosen the caller pushes event 1, plays spot
 animation 4, runs `FUN_004fea70(0)` and restamps `+0x1fc`. The other aims: the minor decision `FUN_004fd570` ("A second
 toilet", below) looks in a 4×4 window for a thing that passes the offer gate and scores best from nought, an equal
 score winning on an odd tick (no threshold of 10), switches to it only when the raw line search (`FUN_004d8b40`, no
@@ -1591,12 +1592,36 @@ column is the chooser before Q165b and Q165c built what the decode column shows.
 
 | What | The original | OpenTPW | Reached in Lost Kingdom |
 |---|---|---|---|
-| Distance, the effects divisor and the queue term's distance test | at the back-of-queue cell | at the entry cell (Q105) | every candidate |
 | The FPU's precision | not settled (`park-engine.md`, "Which rounding is live") | double, the runtime's starting precision | Eruption's golden ticket at some scores (62 against 63 at 45); the longest queue at 21,708 of Lost Kingdom's 1,690,500 slider settings (1.3%), each with the speed moved off its tier's (one more at 24 bits); a shop's cost of goods at an amount of special ingredient off the steps of 50 (the Drinks Shop at quality 0 and amount 10: 18, and 19 at 24 bits), only by a save's byte until the shop window is built: no save read holds one |
 | A coaster's excitement | `trunc( 50 + f / 2 )` of its node's rating, or nought before `COAST 8` binds it | its `ExcitementLevel`, counted (`RIDE_EXCITEMENT_COASTER_TRACK`) | Alexah's saved Temple Of Gloom, which is offered (Q167); a bought one is refused before it is scored |
 | A tier past the third | the divisors read from the fields after `Upgrades` (`+0x260`, `+0x268`) | its base without the ratios, counted (`RIDE_EXCITEMENT_UPGRADE_TIER`) | only by a save's byte; no save read has one |
 | The longest queue at a tier past the third, or for an item the catalogue lacks | the constant and speed read from past `Upgrades`, or through a null descriptor | counted, and both gates let the guest through (`QUEUE_CAPACITY_UPGRADE_TIER`, `QUEUE_CAPACITY_UNKNOWN_ITEM`) | only by a save's byte; no save read has one |
 | The calendar at load | the save's `mGameTick`, 755: 2000-02-02 18:27:30 | the score's calendar is the original's (`ParkState.CalendarNow`); the gadget's date and the weather's days count from nought (`GameCalendar.Rebase`, Q149) | every load |
+
+**Built: the three readings at the back cell** (`docs/QUEUE.md` Q105). `ParkRideChooser.ScoreOf` takes
+`GetBackOfQueue`'s cell (`ParkRideChoice.QueueCellsFor`) and measures the guest's cell against it, so the distance
+term, the queue term's test (`d² <= 8`) and the effects count are all that cell's, for the chooser and for the minor
+decision's window. Re-read first-hand before the build: the cell is unpacked as `( low byte − 1 ) & 0x7f` and
+`( word − 1 ) >> 7` (`0x004fcc6b`..`0x004fcc9b`), the guest's as bytes `+5` and `+7`, and the effects record asked
+is the id rebuilt from that same pair (`0x004fcde7`..`0x004fce04`). What changes for a player: the queue's length
+counts for a guest within three cells of the BACK of a queue, where it had counted only within three of the entrance;
+and a guest by an entrance no longer scores the ride as if at its queue.
+
+**Read in the game, each predicted first** (`q105confirm.py`, script `q105/run.txt`, paused, guests made with `admit`;
+the control is the same build with the one line reading the entry cell; `save/` unchanged in both). The Belly Bounce's
+entry is (52,23) and its back (49,22). `why` now prints every offered candidate's score.
+
+| Guest | Fix: Belly Bounce, chosen | Control: Belly Bounce, chosen |
+|---|---|---|
+| kind 2 on the path by the entrance, (53,21) | 17, the Belly Bounce | 25, the Belly Bounce |
+| kind 0 there | 11, the Belly Bounce | 19, the Belly Bounce |
+| kind 0 there, toilet need 60 (the toilets 12) | 11, **toilet 21** | 19, **the Belly Bounce** |
+| kind 2 on the path at the back, (48,22) | 25, the Belly Bounce | 17, the Belly Bounce |
+| the same, eight in the queue's sixteen places | 20 | 17 |
+| the first, eight in the queue | 17 | 20 |
+
+Photographed in both; the pictures show the guests standing at the two cells and the queue of eight, and no score.
+Not compared with the original. No shipped cell has an effects count, so that divisor is tested only.
 
 **Built: the rest of the score** (`docs/QUEUE.md` Q165c). `ParkRideScore.Of` runs all twelve steps in the original's
 order: the same kind as the thing left last scores nought first; the queue term counts to the first guest no longer
@@ -1735,7 +1760,7 @@ between the three ways is not established: the original's log is the bare `RET` 
 
 **Measured in OpenTPW's park before the build** (a throwaway build working out the minor decision on every 12th walking turn - the
 window, the scores, the raw search's two lengths - and logging what the original would do without doing it; it finds an
-object only on its anchor cell and scores with OpenTPW's `ScoreOf`, the distance at the entry cell (Q105); `q170run.py`,
+object only on its anchor cell and scores with OpenTPW's `ScoreOf` as it then was, the distance at the entry cell; `q170run.py`,
 `q170run2.py`, `q170run4.py`, judged by `q170analyse.py`; silent, jungle, `toilet 90` on every guest every 20 s (once,
 in run 1), predicted first; `save/` unchanged within each run). Lost Kingdom's three toilets stand at the dead end of
 the path up column 56, 21 at y 17, 22 at 16 and 23 at 15, each back cell the path beside it. In 900 s: 43 walks to a
@@ -1766,7 +1791,6 @@ its own footprint, so every guest let off anything gave up on the spot.
 | What | The original | OpenTPW | Reached in Lost Kingdom |
 |---|---|---|---|
 | The switch test's mode | the guest's `+0x188`, which some arms set to 1 | mode 0 (`ParkPeople.WalkingMode`); mode 1 also lets a step leave a path for bare ground (`0x004d8a37`) | not established: which states a guest walking to a thing can hold 1 in |
-| The score in the window | to the candidate's back cell | to its entry cell (Q105) | every decision |
 | Within one cell | the list, newest linked first | the park's order | no: no two objects share a cell |
 | The switch's event `0x17`, the toilet's `0x11` and `0x12` | the guest's event ring | counted (`MINOR_DECISION_EVENT`, `SETTLE_UP_TOILET_EVENT`, `SETTLE_UP_TOILET_ILLNESS_EVENT`) | every switch and toilet use |
 | A toilet dirtied by use | `FUN_004e2440` | built, `ParkRideOperation.WearByUse` (Q100b) | every toilet use |

@@ -4297,6 +4297,25 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   were `Deciding`, `dest 0`, 25, `GOING_TO_RIDE_STUCK_EVENT` 2; the unchanged build: no counter, `dest 0`, 50.
   Photographed. Seven tests; nine restored bugs each fail. 1789 pass, 0 skip. The revived route is not built
   (`PeepWalk` keeps no ground stamp), said at `ChooseSomewhereToGo`; not compared with the original.
+- [x] **Q105. The chooser scores the distance at the back of the queue.** Found by Q50g (`ride-operation.md`, "Where a
+  guest is aimed"). `FUN_004fcc30` reads the squared distance, the close-to-queue test (under 9) and the nearby-effects
+  divisor at `GetBackOfQueue`'s cell (`FUN_004de110` with the object in `ECX`, `0x004fcc49`..`0x004fcc7d`);
+  `ParkRideChooser.ScoreOf` reads all three at the entry cell, which for the Belly Bounce is four cells from its back.
+  Build it and retire the remark at `ScoreOf`. Confirm: `why` over a guest nearer the Belly Bounce's entrance than its
+  back of queue, the chosen thing before and after.
+  The score's queue term has the same root (the 2026-09-26 staleness audit): `ParkRideScore` divides by the save's
+  `mQueueSizeInCells`, nought on the Drinks Shop and the three toilets (a guard makes it one), where the original's
+  `+0x40` is the count `GetBackOfQueue` walks, the call `FUN_004fcc30` makes first (`ride-operation.md`, the
+  `GetBackOfQueue` row). Divide by the walked count (`ParkRideChoice.QueueCellsFor`) with it.
+  Q165c built that half, the count to the first guest no longer queueing over the walked cells; the distance, the
+  close-to-queue test and the effects divisor at the back-of-queue cell remain.
+  **Done 2026-10-04.** `ScoreOf` reads all three at `GetBackOfQueue`'s cell, re-read first-hand in the listing.
+  Predicted and read in the running game with `why`, which now prints each candidate's score: a kind 2 by the Belly
+  Bounce's entrance, (53,21), scores it 17 (the unchanged reading: 25) and one at its back of queue, (48,22), 25 (17),
+  20 with eight queueing (17); a kind 0 by the entrance with a toilet need of 60 chooses toilet 21, 12 against 11,
+  where the unchanged reading chooses the Belly Bounce, 19. Photographed. Three new tests, nine re-aimed at back
+  cells; five restored bugs each fail. 1792 pass, 0 skip. Not compared with the original; no shipped cell has an
+  effects count, so that divisor is tested only.
 
 ## B. Docs and comments
 
