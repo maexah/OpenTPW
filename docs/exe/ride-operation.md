@@ -1144,7 +1144,7 @@ Decoded 2026-09-25 (`docs/QUEUE.md` Q53): five decoders (the no-links arm, the l
 state-6 turn, the ground after a sale), each report put to a skeptic reading the disassembly, then a critic over all
 five - 173 claims, 144 upheld, 28 amended, 1 refuted (about a run's output file, not the executable). **A guest put off
 onto cells a sale cleared is not stranded in the original**: SetRandomDest has an arm for a cell with no links, and it
-sends them to the nearest path. OpenTPW builds it for guests (Q53b).
+sends them to the nearest path. OpenTPW builds it for guests (Q53b) and for staff (Q112).
 
 ### The state-6 turn, in order
 
@@ -1366,11 +1366,35 @@ the 5 whose first roll was the wander were aimed at exactly the predicted cell, 
 rolled the chooser first and went to the Jungle Spray, its gate open because nothing restamps it between choosing a ride
 and its sale.
 
+**And for staff** (Q112): `StaffBehaviour.SetRandomDest` counts the own cell's links after the patrol check, as
+`0x004f95b7` does - inside the area, or outside it once the patrol roll has failed - and at none takes the same walk,
+`PeepBehaviour.WanderFromNowhere`, with no patrol roll and no thought after five failed tries. Measured in both games on
+Lost Kingdom's stock park, the guard (thing 28, area (39,21)-(56,28)) picked up and put down on grass, each aim
+predicted from the probe table first:
+
+| Put down on | First path on the probes | The original (`+0x18`/`+0x1a`) | OpenTPW |
+|---|---|---|---|
+| (42,24) | probe 16, d 3 k 3: (45,21) | (45,21), sub (128,128), at tick 1207; there at 1237 | (45,21), there 5.6 s on |
+| (42,26) | probe 7, d 1 k 2: (44,28) | (44,28), sub (128,128), at tick 1733; there at 1774 | (44,28), there 4.9 s on |
+| (54,24) | probe 7, d 1 k 2: (56,26) | not run | (56,26), there 4.1 s on |
+
+From (42,24) the path three cells west and the path three cells north are both nearer on the map than (45,21): the
+north-east ray is tried before either. The researcher (thing 30, area the whole map) on (42,24) is aimed at (45,21)
+too, in OpenTPW; not run in the original. The build before this one counted each such decide and took the patrol
+roll's random cell, and its researcher, whose roll over the whole map fails, stood on the grass thinking `0x16`.
+
+**The put-down itself differs, and is not this arm** (Q229). In the original each put-down reads state 7 to 0 on the
+click, 0 to 1 with the destination a sweep later, **back to 0 inside that same tick**, and 1 again eleven and twelve
+sweeps on (ticks 1206, 1207, 1207, 1218; and 1732, 1733, 1733, 1745, 1744 being a multiple of four), with the same
+destination: the idle wait of a stamp taken at the second 0. OpenTPW's member is put down idle at stamp 0 and walks on
+the next sweep that chooses to. What writes the second 0 is not read. In the second run the walk also stopped on
+(43,27), grass, eight sweeps in, and the arm ran again from there twelve sweeps later: not read either.
+
 ### Where OpenTPW differs
 
 | What | The original | OpenTPW | Reached in Lost Kingdom |
 |---|---|---|---|
-| A cell with no links, staff | the no-links arm, whoever asks: inside the patrol area, or outside it once `FUN_00506f30` fails (`0x004f95af`) | inside, the neighbour pick; outside, false; both counted `STAFF_NO_LINKS_WANDER` (Q112) | a guard or researcher put down off a path |
+| A cell with no links, staff | the no-links arm, whoever asks: inside the patrol area, or outside it once `FUN_00506f30` fails (`0x004f95af`) | the same (`StaffBehaviour.SetRandomDest`, through `PeepBehaviour.WanderFromNowhere`; "OpenTPW takes the arm", Q112); each aim is routed under the staff wander's own limits (`staff-wandering.md`), and no stranded refusal is asked of staff | not by the stock park left alone (0 in 240 s); by a member put down off a path |
 | Staff outside their area whose patrol roll fails | the count and the linked walk, with no patrol filter (the flag at `0x004f95af`) | false | not measured |
 | The dead end and the stamp | thought `0x11`, `+0x198` stamped, every route refused until a map edit | the same, for a guest (`PeepBehaviour.SetRandomDest`, `RefusedAsStranded`; "Q110b") | not by the stock park left alone; by a player who cuts a queue's tail off its path ("Q110") |
 | A map type write's block stamp | a fresh counter value in the cell's 16 × 16 block | the same, where a cell becomes ground, path or queue (`ParkState.SetRecord`, `ClearRecord`, `StampBlock`) | every path or queue cell laid or cleared, every sale |

@@ -397,7 +397,8 @@ public sealed class StaffBehaviour
 	/// <b>Standing outside your patrol area is answered before anything else</b>: a staff member who has
 	/// wandered out of their patch heads straight back into it rather than picking a neighbour. Inside it,
 	/// <see cref="LinkedWander"/> runs with any slot outside the area struck out, and at its dead end the
-	/// patrol roll answers again.
+	/// patrol roll answers again. <b>On a cell with no links</b> - grass a member was put down on - the walk is
+	/// <see cref="PeepBehaviour.WanderFromNowhere"/> instead, inside the area or outside it once the roll fails.
 	/// </para>
 	/// <para>
 	/// <b>A guest in the same position gets a "stranded" stamp and a thought bubble instead</b>
@@ -414,23 +415,22 @@ public sealed class StaffBehaviour
 		var passes = (_random.Next() % LinkedWander.MostPasses) + 1;
 
 		// The original counts this cell's links once the patrol check is past - inside the area, or outside it
-		// when the patrol roll fails (0x004f95b9) - and at none takes the no-links arm whoever is asking,
-		// PeepBehaviour.WanderFromNowhere. Not built for staff (Q112): counted, and what follows runs instead.
-		var noLinks = _state?.Park is { } park && CellEdge.Links( ParkState.CellFor( park, x, y ).Neighbours ) == 0;
+		// when the patrol roll fails (0x004f95af) - and at none takes the no-links arm whoever is asking
+		// (0x004f95c0): the nearest path on seven rays, then five random cells, with no patrol roll after it.
+		var noLinks = _state is { Park: not null } live && CellEdge.Links( live.Record( x, y ).Neighbours ) == 0;
 
 		if ( !staff.Patrols( x, y ) )
 		{
 			if ( PatrolRoll( staff, walk ) )
 				return true;
 
-			if ( noLinks )
-				Unimplemented.Report( "STAFF_NO_LINKS_WANDER" );
-
-			return false;
+			// A deviation: on a linked cell the original goes on to the linked walk with no patrol filter;
+			// this answers false (docs/exe/ride-operation.md, "Where OpenTPW differs").
+			return noLinks && WanderFromNowhere( staff, walk, x, y );
 		}
 
 		if ( noLinks )
-			Unimplemented.Report( "STAFF_NO_LINKS_WANDER" );
+			return WanderFromNowhere( staff, walk, x, y );
 
 		// The linked walk, a slot outside the patrol area struck out before the other filters (0x004f96fb). Its
 		// dead end is the patrol roll for staff (0x004f9d8e), which a park never loaded, with no cells to walk,
@@ -456,7 +456,23 @@ public sealed class StaffBehaviour
 		return routed;
 	}
 
-	/// <summary>The linked-cell filters in FUN_004f9490; the no-links recovery remains Q112.</summary>
+	/// <summary>
+	/// The no-links arm for a member of staff - <see cref="PeepBehaviour.WanderFromNowhere"/>, the walk a guest
+	/// takes, each aim routed as a staff wander's is.
+	/// </summary>
+	private bool WanderFromNowhere( Staff staff, PeepWalk walk, int x, int y )
+		=> PeepBehaviour.WanderFromNowhere( _state!.Record, x, y, _random, cell =>
+		{
+			staff.Navigator.Target = new FixedVector(
+				PeepNavigator.WaypointCentre( cell.X ), PeepNavigator.WaypointCentre( cell.Y ) );
+
+			return walk.PlanRoute( WanderBlocked );
+		}, $"Staff: {staff.ThingId}" );
+
+	/// <summary>
+	/// The linked-cell filters in FUN_004f9490. A cell with no links shuts nothing, so the walk off it to a
+	/// path is free.
+	/// </summary>
 	private bool WanderBlocked( int x, int y, StepDirection direction )
 	{
 		if ( _state is not { } state )

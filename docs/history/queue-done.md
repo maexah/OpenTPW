@@ -4454,6 +4454,24 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   turns, the happy jump 29, the vomit 10, the bin in reach 8; prankery 101, 18 litter pranks in 18 turns. The
   original's stock park (Q107's log): one happy jump and eight entertainer watches in 964 sweeps. Seven new tests;
   twenty-two restored bugs each fail (two only after the tests were tightened). The builds are Q224 to Q228.
+- [x] **Q112. Staff on a cell with no links do not look for path.** Found by Q53b. The no-links arm reads no person
+  type (`ride-operation.md`, "SetRandomDest"): a member of staff reaches the count inside their patrol area, or outside
+  it once `FUN_00506f30` fails (`0x004f95af` falls through, where ours answers false for either arm), after the
+  call's r % 5 + 1 draw, which ours does not take. `StaffBehaviour.SetRandomDest` counts both reaches
+  (`STAFF_NO_LINKS_WANDER`). Wire `PeepBehaviour.WanderFromNowhere` into it: five failed tries answer 0 for staff too,
+  with no stamp and no `FUN_00506f30`, which is the linked walk's dead end alone. Only a guard or a researcher reaches
+  the staff wander (`StaffBehaviour.Decide`). Measure first where the count is reached: one of Q53b's two runs counted
+  23 before any sale, the other none. Confirm: the guard put down on grass inside their area walks to the nearest
+  path, `staff` and `unimplemented` read before and after, photographed.
+  Q82 found every kind reaching the wander in the original, not only the guard and the researcher: the mechanic and the
+  handyman with no work, and the entertainer (Q133).
+  **Done 2026-10-05.** Measured first: the stock park left alone 240 s reaches the count 0 times. Built:
+  `StaffBehaviour.SetRandomDest` takes `PeepBehaviour.WanderFromNowhere` on a cell with no links, inside the area or
+  after a failed roll outside it; the count is gone. Predicted from the probe table and read: the guard put down on
+  (42,24), (54,24) and (42,26) aimed at (45,21), (56,26) and (44,28), the researcher on (42,24) at (45,21), 4 of 4,
+  each there inside 6 s, photographed; the unchanged build counted 1, 2, 3 and 8 and walked to the roll's cells. **The
+  original**: the guard put down on (42,24) and (42,26) was given (45,21) and (44,28), each the cell's centre, 2 of 2.
+  Three new tests; eight restored bugs each fail. The put-down's own timing differs: Q229.
 
 ## B. Docs and comments
 

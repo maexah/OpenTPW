@@ -734,6 +734,103 @@ public class ParkStaffBehaviourTests
 		Assert.IsTrue( walk.PlanRoute(), "an exceptional constrained search must restore ordinary routing" );
 	}
 
+	/// <summary>
+	/// A guard put down on grass inside their area takes SetRandomDest's no-links arm (<c>0x004f95c0</c>): the first
+	/// path cell on the seven rays, in the table's order, and not the patrol roll's random cell. From (42,24) the
+	/// path three cells west and the path three cells north are both nearer on the map than the answer, which is
+	/// the third cell of the north-east ray, tried first.
+	/// </summary>
+	[DataTestMethod]
+	[DataRow( 42, 24, 45, 21 )]
+	[DataRow( 54, 24, 56, 26 )]
+	[DataRow( 42, 26, 44, 28 )]
+	public void AGuardPutDownOnGrassInTheirAreaWalksToTheFirstPathOnTheRays( int x, int y, int toX, int toY )
+	{
+		for ( var seed = 0; seed < 16; ++seed )
+		{
+			var world = Park();
+			var state = new ParkState( world );
+			var member = ParkPeople.StaffIn( world ).Single( staff => staff.ThingId == Guard );
+
+			Assert.IsTrue( member.Patrols( x, y ), "the cell is inside the guard's area" );
+			Assert.AreEqual( 0, state.Record( x, y ).Neighbours, "and has no links" );
+
+			member.Navigator.Position = new FixedVector( PeepNavigator.WaypointCentre( x ), PeepNavigator.WaypointCentre( y ) );
+			member.Navigator.Target = member.Navigator.Position;
+			member.SetActivity( StaffActivity.Idle, tick: 1 );
+
+			var walk = new PeepWalk( member.Navigator, new CellEdge( state.Record, ParkPeople.WalkingMode ).Blocked );
+			var behaviour = new StaffBehaviour( Balance(), new Random( seed ), state );
+
+			behaviour.Step( member, walk, playing: null, tick: 1001 );
+
+			Assert.AreEqual( StaffActivity.Walking, member.Activity, $"seed {seed}" );
+			Assert.AreEqual( PeepNavigator.WaypointCentre( toX ), member.Navigator.Target.X, $"seed {seed}: the cell's centre, x" );
+			Assert.AreEqual( PeepNavigator.WaypointCentre( toY ), member.Navigator.Target.Y, $"seed {seed}: the cell's centre, y" );
+			Assert.AreEqual( 0, member.Thoughts.Last, "the arm thinks nothing" );
+
+			for ( var tick = 1002; tick < 1100 && member.Navigator.Position.Cell != (toX, toY); ++tick )
+				behaviour.Step( member, walk, playing: null, tick );
+
+			Assert.AreEqual( (toX, toY), member.Navigator.Position.Cell, $"seed {seed}: the walk arrives" );
+		}
+	}
+
+	/// <summary>
+	/// Outside the patrol area the roll comes first, and its failure falls through to the count (<c>0x004f95af</c>):
+	/// on a cell with no links the member still takes the no-links arm.
+	/// </summary>
+	[TestMethod]
+	public void StaffOutsideTheirAreaOnGrassTakeTheSameArmOnceThePatrolRollFails()
+	{
+		var world = Park();
+		var state = new ParkState( world );
+		var saved = world.People.Single( person => person.ThingId == Guard );
+
+		// An area of one grass cell: the roll takes only path, so all thirty tries fail.
+		var member = new Staff( saved.ThingId, saved.Model, saved.Staff!.Value with
+		{
+			State = (int)StaffActivity.Idle, TimeStartedIdling = 0,
+			PatrolBottomLeft = MapStep.CellId( 36, 14 ), PatrolTopRight = MapStep.CellId( 36, 14 )
+		}, saved.Navigator );
+
+		member.Navigator.Position = new FixedVector( PeepNavigator.WaypointCentre( 42 ), PeepNavigator.WaypointCentre( 24 ) );
+
+		var walk = new PeepWalk( member.Navigator, new CellEdge( state.Record, ParkPeople.WalkingMode ).Blocked );
+
+		new StaffBehaviour( Balance(), new Random( 7 ), state ).Step( member, walk, playing: null, tick: 1001 );
+
+		Assert.AreEqual( 0x16, member.Thoughts.Last, "the patrol roll ran and failed first (0x0050701f)" );
+		Assert.AreEqual( StaffActivity.Walking, member.Activity );
+		Assert.AreEqual( (45, 21), member.Navigator.Target.Cell );
+	}
+
+	/// <summary>
+	/// With no path on the rays that routes, the arm draws five cells, x before y, and five failures answer nought:
+	/// no patrol roll follows, and nothing is thought (<c>0x004f9d19</c>).
+	/// </summary>
+	[TestMethod]
+	public void FiveFailedTriesFromGrassLeaveAGuardStandingWithNoPatrolRoll()
+	{
+		var world = Park();
+		var state = new ParkState( world );
+		var member = ParkPeople.StaffIn( world ).Single( staff => staff.ThingId == Guard );
+
+		member.Navigator.Position = new FixedVector( PeepNavigator.WaypointCentre( 42 ), PeepNavigator.WaypointCentre( 24 ) );
+		member.Navigator.Target = member.Navigator.Position;
+		member.SetActivity( StaffActivity.Idle, tick: 1 );
+
+		// Every edge shut, so no aim routes.
+		var walk = new PeepWalk( member.Navigator, ( _, _, _ ) => true );
+		var draws = new CountedDraw( 3 );
+
+		new StaffBehaviour( Balance(), draws, state ).Step( member, walk, playing: null, tick: 1001 );
+
+		Assert.AreEqual( StaffActivity.Idle, member.Activity );
+		Assert.AreEqual( 0, member.Thoughts.Last, "a patrol roll would have thought 0x16" );
+		Assert.AreEqual( 1 + (2 * PeepBehaviour.NowhereTries), draws.Asked, "the call's pass draw, then x and y of five tries" );
+	}
+
 	private sealed class ConstantDraw : Random
 	{
 		public override int Next() => 3;

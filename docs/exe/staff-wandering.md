@@ -37,9 +37,9 @@ steps during staff's free-walking state. This additional containment is not clai
 operation share it. Rest and strike walks retain their general routing. Guests are unchanged.
 
 The original multi-cell random walk and slot-selection order are built for staff inside their area
-(`LinkedWander`, [ride-operation.md](ride-operation.md), "Q108"); the zero-link recovery remains
-Q112, and job finding remains Q133. A worker deliberately dropped on unlinked terrain or already outside
-is not the linked-path containment case verified here. No blanket restriction was added to hiring,
+(`LinkedWander`, [ride-operation.md](ride-operation.md), "Q108"); the zero-link recovery is built too
+(Q112, the same page, "OpenTPW takes the arm"), and job finding remains Q133. A worker deliberately dropped on
+unlinked terrain or already outside is not the linked-path containment case verified here. No blanket restriction was added to hiring,
 placement, rest or strike travel.
 
 ## Running-game evidence

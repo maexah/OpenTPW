@@ -2570,8 +2570,8 @@ public sealed class PeepBehaviour
 	/// <para>
 	/// <b>It first counts the links of the cell the guest stands on</b> (<c>0x004f95b9</c>). None - a cell
 	/// a sale has cleared, a lone path cell - takes <see cref="WanderFromNowhere"/>, the nearest path on
-	/// seven rays and then five random cells near by. The original takes that arm for any person; this is
-	/// the guest's half, and the staff's is <see cref="StaffBehaviour"/>'s.
+	/// seven rays and then five random cells near by. The original takes that arm for any person, and
+	/// <see cref="StaffBehaviour"/> takes the same walk for staff.
 	/// </para>
 	/// <para>
 	/// <b>A linked cell starts <see cref="LinkedWander"/></b>, a walk of the call's r % 5 + 1 passes over linked
@@ -2656,16 +2656,35 @@ public sealed class PeepBehaviour
 
 	/// <summary>
 	/// SetRandomDest's arm for a cell with no links, <c>0x004f9a05</c>..<c>0x004f9d5f</c>
-	/// (<c>docs/exe/ride-operation.md</c>, "SetRandomDest", the no-links arm).
+	/// (<c>docs/exe/ride-operation.md</c>, "SetRandomDest", the no-links arm), for a guest.
+	/// </summary>
+	private bool WanderFromNowhere( Peep peep, PeepWalk walk, int x, int y )
+	{
+		var routed = WanderFromNowhere( ( atX, atY ) => ParkState.CellFor( _park, atX, atY ), x, y, _random,
+			cell => SendTo( State, peep, walk, cell ), $"Peep {peep.ThingId}" );
+
+		if ( routed )
+			peep.SetDestSuccessfully = true;
+
+		return routed;
+	}
+
+	/// <summary>
+	/// The no-links arm itself, which reads no person type: a guest's and a member of staff's
+	/// (<see cref="StaffBehaviour"/>) are this one walk.
 	///
 	/// <para>
 	/// <b>First the nearest path</b>: each of <see cref="NoLinksProbes"/> that is path (type 1,
 	/// <c>FUN_00536310</c>) is aimed at its centre and routed, and a route that fails moves on to the next
-	/// probe. <b>Then five random cells</b> within five of the guest, x drawn before y, of any type; a draw
+	/// probe. <b>Then five random cells</b> within five of the person, x drawn before y, of any type; a draw
 	/// off the map uses a try. Five failures answer nought, and the original stamps, thinks and logs nothing.
 	/// </para>
 	/// </summary>
-	private bool WanderFromNowhere( Peep peep, PeepWalk walk, int x, int y )
+	/// <param name="cellAt">The running park's cell.</param>
+	/// <param name="send">The arm's inline SetDest: aims the person at a cell's centre and answers whether a route was found.</param>
+	/// <param name="who">The person, as the log names them.</param>
+	internal static bool WanderFromNowhere( Func<int, int, ParkWorld.MapCell> cellAt, int x, int y, Random random,
+		Func<(int X, int Y), bool> send, string who )
 	{
 		var probe = 0;
 
@@ -2673,13 +2692,12 @@ public sealed class PeepBehaviour
 		{
 			++probe;
 
-			if ( ParkState.CellFor( _park, atX, atY ).Type != CellEdge.Path )
+			if ( cellAt( atX, atY ).Type != CellEdge.Path )
 				continue;
 
-			if ( SendTo( State, peep, walk, (atX, atY) ) )
+			if ( send( (atX, atY) ) )
 			{
-				peep.SetDestSuccessfully = true;
-				Log.Info( $"Peep {peep.ThingId}: no links at ({x},{y}); probe {probe} aims at path ({atX},{atY})" );
+				Log.Info( $"{who}: no links at ({x},{y}); probe {probe} aims at path ({atX},{atY})" );
 
 				return true;
 			}
@@ -2687,23 +2705,22 @@ public sealed class PeepBehaviour
 
 		for ( var attempt = 1; attempt <= NowhereTries; ++attempt )
 		{
-			var toX = x + (_random.Next() % 11) - 5;
-			var toY = y + (_random.Next() % 11) - 5;
+			var toX = x + (random.Next() % 11) - 5;
+			var toY = y + (random.Next() % 11) - 5;
 
 			if ( !ParkState.OnMap( toX, toY ) )
 				continue;
 
-			if ( SendTo( State, peep, walk, (toX, toY) ) )
+			if ( send( (toX, toY) ) )
 			{
-				peep.SetDestSuccessfully = true;
-				Log.Info( $"Peep {peep.ThingId}: no links at ({x},{y}) and no path on the rays; try {attempt} aims at "
-					+ $"({toX},{toY}), type {ParkState.CellFor( _park, toX, toY ).Type}" );
+				Log.Info( $"{who}: no links at ({x},{y}) and no path on the rays; try {attempt} aims at "
+					+ $"({toX},{toY}), type {cellAt( toX, toY ).Type}" );
 
 				return true;
 			}
 		}
 
-		Log.Info( $"Peep {peep.ThingId}: no links at ({x},{y}), no path on the rays and {NowhereTries} tries failed" );
+		Log.Info( $"{who}: no links at ({x},{y}), no path on the rays and {NowhereTries} tries failed" );
 
 		return false;
 	}

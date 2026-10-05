@@ -56,17 +56,6 @@ the original.
   window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
   together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
 
-- [ ] **Q112. Staff on a cell with no links do not look for path.** Found by Q53b. The no-links arm reads no person
-  type (`ride-operation.md`, "SetRandomDest"): a member of staff reaches the count inside their patrol area, or outside
-  it once `FUN_00506f30` fails (`0x004f95af` falls through, where ours answers false for either arm), after the
-  call's r % 5 + 1 draw, which ours does not take. `StaffBehaviour.SetRandomDest` counts both reaches
-  (`STAFF_NO_LINKS_WANDER`). Wire `PeepBehaviour.WanderFromNowhere` into it: five failed tries answer 0 for staff too,
-  with no stamp and no `FUN_00506f30`, which is the linked walk's dead end alone. Only a guard or a researcher reaches
-  the staff wander (`StaffBehaviour.Decide`). Measure first where the count is reached: one of Q53b's two runs counted
-  23 before any sale, the other none. Confirm: the guard put down on grass inside their area walks to the nearest
-  path, `staff` and `unimplemented` read before and after, photographed.
-  Q82 found every kind reaching the wander in the original, not only the guard and the researcher: the mechanic and the
-  handyman with no work, and the entertainer (Q133).
 - [ ] **Q113. The gadget's body, aerial and arm take no press.** Found by Q56. The original's body `0x1d` answers
   inside its 23-point outline (stream `0x00752940`, sub-op 4 at `0x00752ac2`), the arm `0x21` and its end over their
   rects, the handle `0x23` inside a 16-point outline, and the aerial `0x2d`/`0x2e` over theirs (`0x2e` answers a right
@@ -612,6 +601,16 @@ the original.
   Q225. Decode what the bus message's receivers do with it before building. Counted as
   `DECIDE_PRANK_STINK_BOMB`, `DECIDE_PRANK_LITTER` and `DECIDE_PRANK_BALLOON`. Confirm: `need prankery 102` beside a
   guest holding a balloon, the balloon let go; a screenshot.
+- [ ] **Q229. A member of staff put down sets off on the next sweep, where the original's stands eleven. Decode
+  first.** Found by Q112's measurement of the original (`ride-operation.md`, "OpenTPW takes the arm"). Its guard, put
+  down from the staff window's PICK UP, reads state 7 to 0 on the click, 0 to 1 with a destination a sweep later, 0
+  again inside that same tick, and walks eleven or twelve sweeps on (ticks 1206, 1207, 1207, 1218; 1732, 1733, 1733,
+  1745). `ParkPeople.DropStaff` sets Idle from Carried, which stamps 0, so ours decides on the next sweep and keeps
+  walking. What writes the second 0 is not read: the hand mode's uninstall puts a worker it still names down again
+  (`0x0046cdc0`, `FUN_00505ea0`), and state 0 from a walk stamps the clock, which would fit. Decode the drop's order,
+  then build it. In the second run the walk also stopped on grass at (43,27) eight sweeps in and the no-links arm ran
+  again from there: read why. Confirm: `staff` after `putstaff`, `idleSince` and the sweep the walk starts, predicted
+  first; a screenshot.
 
 ## B. Docs and comments
 
