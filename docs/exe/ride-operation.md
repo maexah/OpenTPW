@@ -1456,7 +1456,7 @@ walk's end is drawn inside the cell and can stand over its edge. Guests turned a
 the same road.
 
 **OpenTPW** (Q128b): `PeepBehaviour`'s cases for `PickingACellOutside`, `WalkingOutside` and `AtTheBusStop` are the
-three turns above, on `StopCells`; `ParkPeople.MayLeaveForTheStop` is `FUN_0051a760`, `LeaverAtTheStop` is
+three turns above, on `StopCells`; `ParkPeople.MayCrossTheRoad` is `FUN_0051a760`, `LeaverAtTheStop` is
 `FUN_0051a9d0`, and `StepVehicle` is the manager's tail with both arms; `Summon( 0 )` draws one of the three vehicles
 (`VehicleAtRandom`, on the arrivals' generator, the original's on the save's seed). A guest who goes comes off their cell
 inside their own turn, as the original's delete does it (`FUN_0050b780` to the unlink `FUN_004d9280`), so the one

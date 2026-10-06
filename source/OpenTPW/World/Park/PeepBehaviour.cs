@@ -611,13 +611,13 @@ public sealed class PeepBehaviour
 				break;
 
 			// At the crossing, about to set off for the stop - FUN_00500ad0. They wait there for as long as the bus
-			// is driving in, unloading or moving on (FUN_0051a760, MayLeaveForTheStop); then one of stop A's four
+			// is driving in, unloading or moving on (FUN_0051a760, MayCrossTheRoad); then one of stop A's four
 			// cells by the first draw, a point on it by two more, the walk, and state 0x14
 			// (docs/exe/ride-operation.md, "Q128").
 			case PeepState.PickingACellOutside:
-				if ( Admission is { } leaving && MayLeaveForTheStop() )
+				if ( Admission is { } leaving && MayCrossTheRoad() )
 				{
-					SendToTheStop( peep, walk, StopCells( leaving.BusStopA )[_random.Next() & 3] );
+					SendToAPointOn( peep, walk, StopCells( leaving.BusStopA )[_random.Next() & 3] );
 					peep.SetState( PeepState.WalkingOutside, tick, _random );
 				}
 
@@ -659,25 +659,21 @@ public sealed class PeepBehaviour
 
 					if ( (hereX, hereY) != cells[first] && (hereX, hereY) != cells[first + 1] )
 					{
-						SendToTheStop( peep, walk, cells[first + (_random.Next() & 1)] );
+						SendToAPointOn( peep, walk, cells[first + (_random.Next() & 1)] );
 						peep.SetState( PeepState.WalkingOutside, tick, _random );
 					}
 				}
 
 				break;
 
-			// Standing at the gate having walked to it - FUN_004ff520. They pick one of the two ticket
-			// booths and set off to be charged, which is how a guest who arrives from outside joins the
-			// admission sequence at its head.
-			//
-			// The original gates this on FUN_0051a760, which asks the arrival vehicle's script what it is
-			// doing, and returns 1 at its first test when no bus thing stands. A bus stands in the park and
-			// its script runs - ParkFixedItems stands it and ParkRides binds it - so whether the branch is
-			// reached is not measured. The gate is left open here.
+			// Standing by the road on the bus stop's side, having walked there from the stop - FUN_004ff520. They
+			// wait for as long as the bus is driving in, unloading or moving on (FUN_0051a760, MayCrossTheRoad:
+			// the leavers' own test, from the other side); then one of the two ticket booths by the first draw, a
+			// point on its cell by two more, the walk, and state 2 (docs/exe/park.md, "Arrivals").
 			case PeepState.AtGate:
-				if ( Admission is { } atTheGate )
+				if ( Admission is { } atTheGate && MayCrossTheRoad() )
 				{
-					SendTo( State, peep, walk, EitherOf( atTheGate.TicketBoothA, atTheGate.TicketBoothB ) );
+					SendToAPointOn( peep, walk, EitherOf( atTheGate.TicketBoothA, atTheGate.TicketBoothB ) );
 					peep.SetState( PeepState.HeadingForGate, tick, _random );
 				}
 
@@ -2323,8 +2319,11 @@ public sealed class PeepBehaviour
 	/// <summary>Whether a vehicle other than the small crowd's is current - <c>FUN_0051aad0</c>.</summary>
 	internal Func<bool> LargerVehicleCurrent { get; set; } = static () => false;
 
-	/// <summary>Whether a guest at the crossing may set off for the stop - <c>FUN_0051a760</c>.</summary>
-	internal Func<bool> MayLeaveForTheStop { get; set; } = static () => true;
+	/// <summary>
+	/// Whether a guest standing by the road may cross it - <c>FUN_0051a760</c>, asked by a leaver on the crossing's
+	/// park side (<c>0x00500b47</c>) and by an arrival on its bus-stop side (<c>0x004ff52c</c>).
+	/// </summary>
+	internal Func<bool> MayCrossTheRoad { get; set; } = static () => true;
 
 	/// <summary>What the choice reads of a guest: their kind, needs and histories.</summary>
 	private static ParkRideScore.Wants WantsOf( Peep peep )
@@ -2849,10 +2848,53 @@ public sealed class PeepBehaviour
 	}
 
 	/// <summary>
-	/// Sends a leaver to a point on one of the stop's cells: two draws, the low byte of each the place across and
-	/// down the cell (<c>FUN_00500ad0</c>), through <c>FUN_004fa5f0</c>.
+	/// Starts a guest made outside the park on their way in - the constructor's own first move
+	/// (<c>FUN_004faec0</c>, <c>0x004fb1f5</c>..<c>0x004fb24d</c>): one of the crossing's two bus-stop-side cells
+	/// (<c>FUN_004d8710</c>), a point on it <paramref name="across"/> of 256 across and 200 of 256 down, and the walk
+	/// (<c>FUN_004fa5f0</c>). Answers whether a route was found; with none the constructor makes them in state 6.
+	/// False where the park names no crossing.
 	/// </summary>
-	private void SendToTheStop( Peep peep, PeepWalk walk, (int X, int Y) cell )
+	internal bool WalkInFromTheStop( Peep peep, PeepWalk walk, bool sideB, int across )
+	{
+		if ( Admission is not { } admission )
+			return false;
+
+		var cell = sideB ? admission.CrossingBusStopSideB : admission.CrossingBusStopSideA;
+
+		return SendTo( State, peep, walk, new FixedVector(
+			(cell.X * PeepNavigator.One) + (across * (PeepNavigator.One / 256)),
+			(cell.Y * PeepNavigator.One) + (WalkInPlaceDown * (PeepNavigator.One / 256)) ) );
+	}
+
+	/// <summary>How far down the roadside cell a new guest's walk in is aimed, of 256 (<c>0x004fb22b</c>).</summary>
+	internal const int WalkInPlaceDown = 0xc8;
+
+	/// <summary>
+	/// The two draws of a new guest's walk in, which the guest's id alone decides: the constructor reseeds the
+	/// park's generator with the id word (<c>0x004fb19e</c>), and the fourth draw from there picks the roadside cell
+	/// by its low bit (<c>0x004fb206</c>) and the fifth's low byte the place across it (<c>0x004fb221</c>). The
+	/// first of the three before them is the child's bank (<see cref="ParkSpriteBanks.ChildOf"/>); the other two
+	/// are made inside the sprite's set-up (<c>FUN_004d4140</c>) and are not traced. In the original, guests 38
+	/// and 43 to 54 chose (47,5) and (48,5) exactly as this answers (<c>docs/exe/park.md</c>, "Arrivals").
+	/// </summary>
+	internal static (bool SideB, int Across) WalkInDraws( int thingId )
+	{
+		var state = (uint)(thingId & 0xffff);
+
+		for ( var i = 0; i < 3; ++i )
+			ParkGenerator.Draw( ref state );
+
+		var sideB = (ParkGenerator.Draw( ref state ) & 1) != 0;
+
+		return (sideB, (int)(ParkGenerator.Draw( ref state ) & 0xff));
+	}
+
+	/// <summary>
+	/// Sends a guest to a point on a cell: two draws, the low byte of each the place across and down the cell
+	/// (<c>FUN_00500ad0</c> for a leaver's stop cell, <c>FUN_004ff520</c> for an arrival's ticket booth), through
+	/// <c>FUN_004fa5f0</c>.
+	/// </summary>
+	private void SendToAPointOn( Peep peep, PeepWalk walk, (int X, int Y) cell )
 	{
 		var across = _random.Next() & 0xff;
 		var down = _random.Next() & 0xff;

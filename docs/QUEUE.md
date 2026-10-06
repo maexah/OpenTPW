@@ -838,6 +838,16 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   window whose root takes no pointer: a press on a greyed button there would fall through to the world. Confirm: an
   Instant Action player's pointer on a grey arrow, no help row; a screenshot.
 
+- [ ] **Q235. A walk stops short of its aim. DECODE FIRST.** Found by the review's fix 1 (`docs/exe/park.md`,
+  "From the stop to the booths"). In the original the thirteen guests of a load, aimed by `FUN_004fa5f0` at points up
+  to 245 of 256 across their roadside cell and walking in from the east, all stood on the cell aimed at
+  (`~/.cache/tpw-harnesses/rv1/orig/a.log`). Here a walk ends up to about a sixth of a cell short: guest 43, aimed at
+  (47.89,5.78), stands on (47,5) in the game but on (48,5) in `ParkTickTests`' sweeps, and of 30 leavers' walks into a
+  stop's second cell 7 ended one cell east and were sent again
+  (`~/.cache/tpw-harnesses/review-run-2026-10-06/game/lean-probe.txt`). Decode where `FUN_004fa2a0` and the mover
+  count a walk done (`0x00510100` on) against `PeepWalk.Step`'s `Progress() == One`, write it to `docs/exe/` and
+  stop. Two tests allow the cell beyond until then (`ParkTickTests`, `ParkDecidingTests`).
+
 ## E. Large
 
 - [ ] **Q31. The other eight object windows.** `Level.OpenObjectWindow` opens only a ride's (`UiType 0`). Shops,

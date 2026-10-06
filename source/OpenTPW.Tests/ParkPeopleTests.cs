@@ -76,6 +76,22 @@ public class ParkPeopleTests
 	[TestMethod]
 	public void AnArrivalJoinsEveryListThatHasToKnowAboutIt()
 	{
+		// The balance is read through the game's own file system, and without it the park names no crossing.
+		var filesBefore = FileSystem;
+		FileSystem = data;
+
+		try
+		{
+			AnArrival();
+		}
+		finally
+		{
+			FileSystem = filesBefore;
+		}
+	}
+
+	private void AnArrival()
+	{
 		var world = World();
 		var state = new ParkState( world );
 		var people = new ParkPeople( world, new ParkBalance( "jungle", easyMode: true ), null, state );
@@ -97,10 +113,62 @@ public class ParkPeopleTests
 		Assert.IsFalse( world.Objects.Any( placed => placed.ThingId == id ),
 			$"id {id} already belongs to an object in the save" );
 
-		// And they begin where the admission sequence begins rather than in the hub a guest is
-		// constructed in, which is a deviation Admit explains at the site.
-		Assert.AreEqual( PeepState.AtGate, people.Peeps.Single( peep => peep.ThingId == id ).State,
-			"an arrival joins the admission sequence at its head" );
+		// And they begin as the original's constructor makes a guest outside the park (FUN_004faec0, 0x004fb1f5):
+		// walking, state 0, to a point on the crossing's bus-stop side, the cell and the place across it picked by
+		// their own id. In the original all thirteen of a load were made so (docs/exe/park.md, "Arrivals").
+		var arrival = people.Peeps.Single( peep => peep.ThingId == id );
+		var admission = people.Admission!;
+		var (sideB, across) = PeepBehaviour.WalkInDraws( id );
+		var roadside = sideB ? admission.CrossingBusStopSideB : admission.CrossingBusStopSideA;
+
+		Assert.AreEqual( (47, 5), admission.CrossingBusStopSideA, "Lost Kingdom's roadside, the bus stop's side" );
+		Assert.AreEqual( (48, 5), admission.CrossingBusStopSideB, "B's X on A's row" );
+		Assert.AreEqual( PeepState.Walking, arrival.State, "an arrival starts on its walk to the roadside" );
+		Assert.AreEqual( new FixedVector(
+				(roadside.X * PeepNavigator.One) + (across * (PeepNavigator.One / 256)),
+				(roadside.Y * PeepNavigator.One) + (200 * (PeepNavigator.One / 256)) ),
+			arrival.Navigator.Target, "aimed at the point on the roadside cell that its id picks, 200 of 256 down it" );
+
+		// One made on a cell that counts as the park's is deciding from the start (FUN_004fa990, 0x004fb1e4): the
+		// gateway's own cell is a path.
+		var inside = people.Admit( admission.EntranceA.X, admission.EntranceA.Y );
+
+		Assert.AreEqual( PeepState.Deciding, people.Peeps.Single( peep => peep.ThingId == inside ).State,
+			"a guest made on a park cell is deciding at once" );
+
+		// And one made where no route leads to the road is deciding too, not left walking (0x004fb259): the map's
+		// far corner, out in the sea.
+		var cutOff = people.Admit( 2, 125 );
+		var stranded = people.Peeps.Single( peep => peep.ThingId == cutOff );
+
+		Assert.IsFalse( people.WalkFor( cutOff )!.HasRoute, "nothing leads from the far corner to the road" );
+		Assert.AreEqual( PeepState.Deciding, stranded.State, "with no route they are made deciding" );
+	}
+
+	/// <summary>
+	/// The roadside cell a new guest walks to is picked by their id alone: the constructor reseeds the park's
+	/// generator with it and the fourth draw's low bit chooses (<c>0x004fb19e</c>, <c>0x004fb206</c>). <b>The
+	/// oracle is the original itself</b>: the thirteen guests of its first load, read from its memory, entered
+	/// state 1 on these cells.
+	/// </summary>
+	[TestMethod]
+	public void TheRoadsideCellIsPickedByTheGuestsIdAsTheOriginalPickedIt()
+	{
+		var seen = new (int Id, int X)[]
+		{
+			(38, 47), (43, 47), (44, 48), (45, 47), (46, 48), (47, 48), (48, 47), (49, 48), (50, 47), (51, 48),
+			(52, 48), (53, 48), (54, 48)
+		};
+
+		foreach ( var (id, x) in seen )
+			Assert.AreEqual( x, PeepBehaviour.WalkInDraws( id ).SideB ? 48 : 47, $"guest {id}" );
+
+		// The place across is the next draw's low byte. The original's memory was not read for it; these are the
+		// listing's generator worked by hand from the id (0x00516330: times 0x19660d, plus 0x3c6ef35f, rolled right 13).
+		Assert.AreEqual( 90, PeepBehaviour.WalkInDraws( 38 ).Across );
+		Assert.AreEqual( 229, PeepBehaviour.WalkInDraws( 43 ).Across );
+		Assert.AreEqual( 81, PeepBehaviour.WalkInDraws( 44 ).Across );
+		Assert.AreEqual( 245, PeepBehaviour.WalkInDraws( 52 ).Across );
 	}
 
 	/// <summary>

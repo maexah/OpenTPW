@@ -1585,6 +1585,33 @@ the small crowd's (`[+0x1da72c]`'s, the bus), subtracts `0x100` from the packed 
 `0x004d8663`), so that is two rows: Lost Kingdom's (53,5) becomes (53,3) for a larger vehicle, and a bus load is made at (53,5). It then allocates `0x22c` bytes and
 constructs the person there. **So the vehicles are mechanism rather than transport**: nobody is ever inside one.
 
+**From the stop to the booths: a walk to the roadside, and a wait there.** The constructor `FUN_004faec0` sets a new
+guest's first state (`0x004fb1d0` on). On a cell that counts as the park's (`FUN_004fa990`) they take a visitor number
+and are made deciding, state 6. Anywhere else, which the bus stop is, they are sent to the crossing's bus-stop side:
+`FUN_004d8710( draw & 1 )` is `CrossingBSSideA`'s cell or B's X on A's row, (47,5) or (48,5) in Lost Kingdom, and the
+point on it is a second draw's low byte across and a fixed 200 of 256 down (`0x004fb22b`), through `FUN_004fa5f0`;
+state 0 with a route, state 6 with none (`0x004fb252`), then particle `0x13`. **Both draws are the guest's own**: the
+constructor has just reseeded the generator with the guest's id word (`FUN_00516370`, `0x004fb19e`), and the cell is
+the fourth draw from there (the child's bank is the first; the two between are made inside the sprite's set-up
+`FUN_004d4140` and are not traced), the place across the fifth. State 0 (`0x00501a0f`) walks; arrived, it writes
+the facing `0x400` and state 1. State 1 is `FUN_004ff520`: **nothing at all while `FUN_0051a760` answers no**
+(`0x004ff52c`, `JZ 0x004ff5ab`), the leavers' own test, so they stand by the road while the bus drives in, unloads
+or moves on (unless ten or more are still to drop); then a ticket booth by `draw & 1` (`FUN_004d8610`), a point on
+its cell by the low bytes of two more draws, across then down, the walk and state 2. `FUN_0051a760` has those two
+callers and no other (`0x004ff52c`, `0x00500b47`). **In the original, predicted first** (the reader `arrivals.py`,
+2026-10-06): the load of thirteen was called and the bus summoned on `mGameTick` 1264 with no vehicle current; the
+thirteen were made in state 0 on (53,5), one a sweep from 1300; each entered state 1 on (47,5) or (48,5) between 1326
+and 1359, on the cell the fourth draw from its id picks, thirteen of thirteen; the load was let go on 1313 and the
+bus read 3 from 1321; **all thirteen went to state 2 on 1360, the tick the bus first read 4, and none before**; they
+reached the booths from 1389. **OpenTPW** (the review's fix 1): `ParkPeople.Admit` makes the guest so
+(`PeepBehaviour.WalkInFromTheStop`, `WalkInDraws`), `AtGate` waits on `MayCrossTheRoad` and aims at a point on a
+booth's cell. Measured in Lost Kingdom, whose load is one guest: made on 1300 walking, aimed at (47.89,5.78); standing
+on (47,5) from 1327 (the original's guest 43: 1326); let go 1301, the bus at 3 from 1308 and at 4 on 1348, and the
+guest heading for a booth on 1348. On the unchanged build it headed for the booth's centre on 1303, the bus still
+unloading. **Not the original's**: a walk here stops up to a sixth of a cell short of its aim, so a guest aimed
+high across a cell can stand one cell east of it, where the original's thirteen all stood on the cell aimed at
+(`docs/QUEUE.md`, the walk's stopping distance); and particle `0x13` is not made.
+
 **Which balance keys these globals are, proven.** Nothing writes them by name: the balance loader stores each
 value at a slot its descriptor's place in the table gives it (`park-engine.md`, "How a key finds its global"; the
 `PeepInfo` object at `0x00785040`). Walked over all 283 descriptors from the file on disk, the table closes exactly on
@@ -1592,7 +1619,12 @@ the next object (`0x00785828`), and `Arrival.MinPeople` (descriptor 93) lands on
 `TimeBetweenArrivals` on `0x00785314`, the period; `FixedRate` on `0x00785318`, which nothing reads (no reference, no
 bytes `18 53 78 00`); `NewParkBonus` on `0x0078531c`; and `PointsPerVisitor` on `0x00785320`, the divisor. And
 `FixedItemInfo.BusStopAPosX`/`Y` land on `0x007855ac`/`0x007855b0` and `BusStopBPosX`/`Y` on `0x007855b4`/`0x007855b8`,
-which is what `FUN_004d8650` reads for arguments 0 and 1; `FUN_004d8690` reads `EntranceA`/`B` the same way. Three were
+which is what `FUN_004d8650` reads for arguments 0 and 1; `FUN_004d8690` reads `EntranceA`/`B` the same way
+(`0x007855bc` to `0x007855c8`), `FUN_004d8610` `TicketBoothA`/`B` (`0x0078559c` to `0x007855a8`), `FUN_004d86d0`
+`CrossingParkSideA`/`B` (`0x007855cc` to `0x007855d8`, one Y for both) and `FUN_004d8710` `CrossingBSSideA`/`B`
+(`0x007855dc` to `0x007855e8`, one Y for both). The table's order is the executable's own, not the file's: in the
+table `Entrance` and `CrossingParkSide` come before `CrossingBSSide` (names at file offsets `0x340cfc`, `0x340dec`,
+`0x340edc`), where `Standard.sam` lists the crossings first. Three were
 known by their readers before the walk (the floor, the divisor, and the stop ten arrays further on), and all three land
 where they should.
 

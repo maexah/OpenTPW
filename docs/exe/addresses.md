@@ -482,8 +482,17 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004fae10` | | OpenTPW.Files/Formats/Save/RecordStream.cs  |
 | `0x004fb019` | Guest constructor `FUN_004faec0`: the kind drawn as the world generator mod `[0x007851d4]`, the `PeepTypes` row count | OpenTPW.Tests/ParkGuestTypeTests.cs  |
 | `0x004fb18d` | Guest constructor FUN_004faec0: the child - the generator reseeded with the id, kind 0, one draw over the kid banks, from | OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/ParkSpriteBanks.cs  |
+| `0x004fb19e` | Guest constructor FUN_004faec0: FUN_00516370 reseeds the park's generator with the guest's id word | OpenTPW.Tests/ParkPeopleTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fb1bc` | FUN_004faec0: the child's sprite built (FUN_004d4140), to here | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004fb1c9` | Guest constructor FUN_004faec0: the hurry +0xc2 set to 25, the word at 0x0075c7f2 | OpenTPW.Tests/ParkTickTests.cs  |
+| `0x004fb1d0` | Guest constructor: FUN_004fa990 on the cell the guest is made on decides the first state | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x004fb1e4` | Guest constructor: on a park cell, a visitor number and state 6 | OpenTPW.Tests/ParkPeopleTests.cs  |
+| `0x004fb1f5` | Guest constructor: off the park's cells, the walk to the crossing's bus-stop side begins (to 0x004fb24d) | OpenTPW.Tests/ParkPeopleTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fb206` | Guest constructor: the low bit of the fourth draw after the reseed picks the roadside cell (FUN_004d8710) | OpenTPW.Tests/ParkPeopleTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fb221` | Guest constructor: the low byte of the fifth draw is the place across the roadside cell | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fb22b` | Guest constructor: the place down the roadside cell, a fixed 0xc8 of 256 | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fb24d` | Guest constructor: FUN_004fa5f0 routes the walk to the roadside point | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fb259` | Guest constructor: no route to the roadside, state 6 instead of state 0 | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004fb2fd` | Guest constructor FUN_004faec0: broadcasts message 0x1c, a guest made (the all-visitors list adds their row) | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004fb333` | FUN_004fb330, a guest deleted at the bus: the balloon's sprite deleted (FUN_00475550), no burst, from | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004fb346` | FUN_004fb330: the balloon deletion, to here | OpenTPW/World/Park/ParkPeople.cs  |
@@ -614,6 +623,11 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004ff46f` | | OpenTPW.Tests/ParkDecidingTests.cs  |
 | `0x004ff480` | | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004ff4a3` | | OpenTPW.Tests/ParkDecidingTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004ff52c` | State 1's handler FUN_004ff520: FUN_0051a760 asked; no does nothing at all | OpenTPW.Tests/PeepBehaviourTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004ff543` | FUN_004ff520: the first draw's low bit picks the ticket booth (FUN_004d8610) | OpenTPW.Tests/PeepBehaviourTests.cs  |
+| `0x004ff55e` | FUN_004ff520: the second draw's low byte, the place across the booth's cell | OpenTPW.Tests/PeepBehaviourTests.cs  |
+| `0x004ff56b` | FUN_004ff520: the third draw's low byte, the place down the booth's cell | OpenTPW.Tests/PeepBehaviourTests.cs  |
+| `0x004ff5ab` | FUN_004ff520's return, where a no from FUN_0051a760 jumps | OpenTPW.Tests/PeepBehaviourTests.cs  |
 | `0x004ffa44` | | OpenTPW.Tests/ParkLeavingTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004ffa7d` | | OpenTPW.Tests/ParkLeavingTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004ffc3d` | State 10's arrival test: the guest's cell against `GetBackOfQueue` | OpenTPW.Tests/ParkQueuePlaceTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
@@ -674,6 +688,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0050092a` | FUN_00500900: the saved major cleared | OpenTPW/World/Park/Peep.cs  |
 | `0x005009d7` | FUN_00500900: "Left minor destination, found old major one again!", SetState(10) | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x00500a3b` | FUN_00500900, stuck: MajorDest cleared, the saved major left | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x00500b47` | State 0x13's handler FUN_00500ad0: FUN_0051a760 asked, the other of its two callers | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x0050133d` | `FUN_005012f0` plays the kids' effect `0x80` only when the guest's id `& 7` is nought | OpenTPW.Tests/ParkPutOffSoundTests.cs OpenTPW/World/Park/ParkAudio.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x00501413` | `FUN_00501390`: place against cells times four, unsigned (from here) | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x0050141c` | `FUN_00501390`: the unsigned place test (to here) | OpenTPW.Tests/ParkQueueRemeasureTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |

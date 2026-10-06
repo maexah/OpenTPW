@@ -280,7 +280,7 @@ public sealed class ParkPeople : Entity
 			BusStatus = BusStatus,
 			VehicleStatus = VehicleStatus,
 			LargerVehicleCurrent = () => LargerVehicleIsCurrent,
-			MayLeaveForTheStop = MayLeaveForTheStop,
+			MayCrossTheRoad = MayCrossTheRoad,
 			// And who stands near a deciding guest, which only the holder of everybody's walk can say.
 			EntertainerBeside = EntertainerBeside,
 			BalloonBeside = BalloonBeside
@@ -462,15 +462,14 @@ public sealed class ParkPeople : Entity
 			PathCount: 0, PathTotalCount: 0, PathBufferCount: 0,
 			BufferedDistance: 0, TailDistance: 0, TotalDistance: 0, StuckBits: 0 );
 
-		// <b>A deviation, and the reason is that the faithful path is not buildable yet.</b> The engine
-		// constructs a guest in Deciding and walks them in from outside; how an arrival gets from the stop
-		// to the gate there is not decoded (the leavers' use of WalkingOutside and AtTheBusStop is:
-		// docs/exe/ride-operation.md, "Q128"). Left in Deciding out here a guest stands for ever: Decide looks
-		// for somewhere inside the park, and they are outside it and unadmitted. AtGate is the head of the
-		// admission sequence the original joins them to anyway - it picks a ticket booth and sends them
-		// to be charged - so this starts them there and skips the walk in.
+		// The constructor's first state (FUN_004faec0, 0x004fb1d0 on). A guest made on a cell that counts as the
+		// park's (FUN_004fa990, Peep.CountsOn) is deciding from the start. One made outside it, which the bus
+		// stop is, walks to the crossing's bus-stop side in state 0 and stands there in state 1 until the road is
+		// clear (PeepBehaviour.WalkInFromTheStop, below; docs/exe/park.md, "Arrivals").
+		var inThePark = Peep.CountsOn( State.Record( cellX, cellY ).Type );
+
 		var guest = new ParkWorld.GuestState(
-			State: (int)PeepState.AtGate, SavedState: ParkWorld.GuestState.Deciding,
+			State: (int)(inThePark ? PeepState.Deciding : PeepState.Walking), SavedState: ParkWorld.GuestState.Deciding,
 			PersonType: type, Cash: cash, ExitLevel: exitLevel,
 			Happiness: 50f, Thirst: thirst, Hunger: hunger, Toilet: toilet, Vomit: 0f, Litter: 0f,
 			MajorDest: 0, QueuePos: 0, PrankeryIndex: prankery ? 100 + (thingId & 0xffff) % 3 : 0 );
@@ -486,11 +485,21 @@ public sealed class ParkPeople : Entity
 
 		_peeps.Add( peep );
 		_byId[thingId] = peep;
-		_walks[thingId] = new PeepWalk( peep.Navigator, _blocked )
+		var walk = _walks[thingId] = new PeepWalk( peep.Navigator, _blocked )
 		{
 			Ground = State,
 			Heading = PeepBehaviour.ArrivalHeading
 		};
+
+		// With no route the constructor makes them in state 6 instead (0x004fb259). A park that names no crossing,
+		// which only a test builds, has nowhere to send them: they stand at the roadside's state where they are.
+		var (sideB, across) = PeepBehaviour.WalkInDraws( thingId );
+
+		if ( !inThePark && !_behaviour.WalkInFromTheStop( peep, walk, sideB, across ) )
+		{
+			peep.SetState( _behaviour.Admission == null ? PeepState.AtGate : PeepState.Deciding,
+				GameClock.Ticks / ThingTickEvery, _arrivalRandom );
+		}
 
 		var person = new ParkWorld.Person(
 			ThingId: thingId, Model: ParkWorld.GuestModel, RawX: x >> 8, RawY: y >> 8,
@@ -1544,12 +1553,13 @@ public sealed class ParkPeople : Entity
 	}
 
 	/// <summary>
-	/// Whether a guest at the crossing may set off for the stop - <c>FUN_0051a760</c>. Yes with no vehicle current,
+	/// Whether a guest standing by the road may cross it - <c>FUN_0051a760</c>, the test of a leaver at the crossing's
+	/// park side and of an arrival at its bus-stop side alike. Yes with no vehicle current,
 	/// or one that is not the small crowd's. With the bus current: no while it moves on (status 3); then yes if more
 	/// than nine of the load are still to drop; no while it drives in (1) or unloads (2); else yes. A spent bus is
 	/// forgotten by the asking, as <see cref="VehicleStatus"/> does it, and reads as none.
 	/// </summary>
-	internal bool MayLeaveForTheStop()
+	internal bool MayCrossTheRoad()
 	{
 		if ( _arrivalVehicle != 1 )
 			return true;

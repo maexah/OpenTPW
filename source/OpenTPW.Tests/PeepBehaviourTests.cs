@@ -280,8 +280,9 @@ public class PeepBehaviourTests
 	}
 
 	/// <summary>
-	/// A guest at the gate picks one of the two ticket booths and sets off to be charged -
-	/// <c>FUN_004ff520</c>, and the head of the admission sequence.
+	/// A guest standing by the road picks one of the two ticket booths and sets off to be charged -
+	/// <c>FUN_004ff520</c>: the booth by one draw's low bit, then a point on its cell by the low bytes of two more,
+	/// across and then down (<c>0x004ff543</c>, <c>0x004ff55e</c>, <c>0x004ff56b</c>).
 	///
 	/// <para>
 	/// The assertion is about the <b>destination</b> as well as the state, because a guest who changed
@@ -303,13 +304,62 @@ public class PeepBehaviourTests
 
 		Assert.AreEqual( PeepState.HeadingForGate, peep.State, "they should set off for a booth" );
 
-		var booths = new[] { admission.TicketBoothA, admission.TicketBoothB }
-			.Select( cell => new FixedVector(
-				PeepNavigator.WaypointCentre( cell.X ), PeepNavigator.WaypointCentre( cell.Y ) ) )
-			.ToArray();
+		// The same three draws, in the handler's order.
+		var draws = new Random( 1 );
+		var booth = (draws.Next() & 1) == 0 ? admission.TicketBoothA : admission.TicketBoothB;
+		var across = draws.Next() & 0xff;
+		var down = draws.Next() & 0xff;
 
-		Assert.IsTrue( booths.Contains( peep.Navigator.Target ),
-			$"they should be aimed at a ticket booth, not at {peep.Navigator.Target}" );
+		Assert.AreEqual( new FixedVector(
+				(booth.X * PeepNavigator.One) + (across * (PeepNavigator.One / 256)),
+				(booth.Y * PeepNavigator.One) + (down * (PeepNavigator.One / 256)) ),
+			peep.Navigator.Target, "a point on the booth's cell, the booth and the point by three draws" );
+	}
+
+	/// <summary>
+	/// By the road they wait until it is clear: <c>FUN_004ff520</c> does nothing at all while
+	/// <c>FUN_0051a760</c> answers no (<c>0x004ff52c</c>, <c>JZ 0x004ff5ab</c>), no draw included. In the original
+	/// the thirteen guests of a load stood in state 1 on (47,5) and (48,5) for up to 34 sweeps and all went on the
+	/// tick the bus's status became 4.
+	/// </summary>
+	[TestMethod]
+	public void AGuestByTheRoadStandsUntilItIsClear()
+	{
+		var admission = Admission();
+		var clear = false;
+		var random = new CountingRandom();
+		var behaviour = new PeepBehaviour( parkIsClosed: false, visitorsToDate: 0, random, admission )
+		{
+			MayCrossTheRoad = () => clear
+		};
+
+		var peep = Guest( 6, (int)PeepState.AtGate );
+		var walk = new PeepWalk( peep.Navigator, ( _, _, _ ) => false );
+		var aimedBefore = peep.Navigator.Target;
+
+		for ( var turn = 1; turn <= 5; ++turn )
+			behaviour.Step( peep, walk, playing: null, tick: turn );
+
+		Assert.AreEqual( PeepState.AtGate, peep.State, "the road not clear, they stand" );
+		Assert.AreEqual( aimedBefore, peep.Navigator.Target, "aimed nowhere new" );
+		Assert.AreEqual( 0, random.Draws, "and nothing is drawn while they wait" );
+
+		clear = true;
+		behaviour.Step( peep, walk, playing: null, tick: 6 );
+
+		Assert.AreEqual( PeepState.HeadingForGate, peep.State, "clear, they cross" );
+	}
+
+	private sealed class CountingRandom : Random
+	{
+		public int Draws { get; private set; }
+
+		public override int Next()
+		{
+			++Draws;
+
+			return base.Next();
+		}
 	}
 
 	/// <summary>

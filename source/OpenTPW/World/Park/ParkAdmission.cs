@@ -88,6 +88,8 @@ public sealed class ParkAdmission
 		BusStopB = Cell( balance, "BusStopB" );
 		CrossingParkSideA = Cell( balance, "CrossingParkSideA" );
 		CrossingParkSideB = (Cell( balance, "CrossingParkSideB" ).X, CrossingParkSideA.Y);
+		CrossingBusStopSideA = Cell( balance, "CrossingBSSideA" );
+		CrossingBusStopSideB = (Cell( balance, "CrossingBSSideB" ).X, CrossingBusStopSideA.Y);
 	}
 
 	private static (int X, int Y) Cell( ParkBalance balance, string name )
@@ -218,6 +220,16 @@ public sealed class ParkAdmission
 
 	/// <inheritdoc cref="CrossingParkSideA"/>
 	public (int X, int Y) CrossingParkSideB { get; }
+
+	/// <summary>
+	/// Where a guest made at the bus stop walks to, and stands until the road is clear - the crossing's bus-stop
+	/// side, (47,5) and (48,5) in Lost Kingdom. <c>FUN_004d8710</c> hands one out: <c>CrossingBSSideA</c>'s cell, or
+	/// B's X on A's row, since it reads one Y for both (<c>docs/exe/park.md</c>, "Arrivals").
+	/// </summary>
+	public (int X, int Y) CrossingBusStopSideA { get; }
+
+	/// <inheritdoc cref="CrossingBusStopSideA"/>
+	public (int X, int Y) CrossingBusStopSideB { get; }
 
 	/// <summary>
 	/// What the park is worth to a guest, which the original logs as <c>GP</c> beside the fee's <c>AF</c>.

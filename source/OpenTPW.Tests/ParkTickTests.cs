@@ -678,9 +678,9 @@ public class ParkTickTests
 			{
 				Plays( status );
 				people.HoldTheLoad( 10 );
-				Assert.AreEqual( may, people.MayLeaveForTheStop(), $"ten still to drop, the bus at {status}" );
+				Assert.AreEqual( may, people.MayCrossTheRoad(), $"ten still to drop, the bus at {status}" );
 				people.HoldTheLoad( 9 );
-				Assert.AreEqual( status == 5, people.MayLeaveForTheStop(), $"nine still to drop, the bus at {status}" );
+				Assert.AreEqual( status == 5, people.MayCrossTheRoad(), $"nine still to drop, the bus at {status}" );
 			}
 
 			people.HoldTheLoad( 0 );
@@ -967,17 +967,51 @@ public class ParkTickTests
 			for ( var sweep = 0; sweep < 600 && !people.LoadHeld; ++sweep )
 				Sweep( people );
 
-			// Dropped, then its first turn from AtGate to HeadingForGate, then its first turn heading there.
+			// Dropped at the stop, the guest walks to the roadside and stands there for as long as the bus unloads or
+			// moves on (FUN_004ff520 on FUN_0051a760). The original's thirteen all stood until the tick its bus read 4.
 			bus.Set( "VAR_STATUS", 2 );
-			Sweep( people );
-			Sweep( people );
 			Sweep( people );
 
 			var guest = people.Peeps.Single( peep => peep.ThingId > newest );
 			var ownHurry = PeepBehaviour.HurriesToTheGate( guest ) ? Peep.HurryingSpeed : Peep.UnhurriedSpeed;
+			var admission = people.Admission!;
+			var roadside = PeepBehaviour.WalkInDraws( guest.ThingId ).SideB
+				? admission.CrossingBusStopSideB : admission.CrossingBusStopSideA;
 
-			Assert.AreEqual( PeepState.HeadingForGate, guest.State, "the dropped guest heads for the gate" );
-			Assert.AreEqual( ownHurry, guest.PurposeSpeed, "at the stop, the bus is not run for" );
+			Assert.AreEqual( PeepState.Walking, guest.State, "the dropped guest walks to the roadside first" );
+
+			for ( var sweep = 0; sweep < 200 && guest.State == PeepState.Walking; ++sweep )
+				Sweep( people );
+
+			Assert.AreEqual( PeepState.AtGate, guest.State, "and stands there" );
+
+			// The walk here stops up to a sixth of a cell short of its aim, so one aimed high across the cell, coming
+			// from the stop, stands just over its far edge. The original's thirteen all stood on the cell aimed at
+			// (docs/QUEUE.md, the walk's stopping distance).
+			var stoodOn = people.WalkFor( guest.ThingId )!.Position.Cell;
+
+			Assert.IsTrue( stoodOn == roadside || stoodOn == (roadside.X + 1, roadside.Y),
+				$"on the cell their id picked, {roadside}, or just over its far edge, not on {stoodOn}" );
+
+			foreach ( var status in new[] { 2, 3, 1 } )
+			{
+				bus.Set( "VAR_STATUS", status );
+				Sweep( people );
+				Sweep( people );
+
+				Assert.AreEqual( PeepState.AtGate, guest.State, $"the road is not clear with the bus at {status}" );
+			}
+
+			bus.Set( "VAR_STATUS", 4 );
+			Sweep( people );
+
+			Assert.AreEqual( PeepState.HeadingForGate, guest.State, "the bus standing for leavers, they cross" );
+			Assert.IsTrue( new[] { admission.TicketBoothA, admission.TicketBoothB }.Contains( guest.Navigator.Target.Cell ),
+				$"aimed at a ticket booth's cell, not at {guest.Navigator.Target.Cell}" );
+
+			Sweep( people );
+
+			Assert.AreEqual( ownHurry, guest.PurposeSpeed, "with the bus standing, it is not run for" );
 
 			bus.Set( "VAR_STATUS", PeepBehaviour.BusIsLeaving );
 			Sweep( people );
