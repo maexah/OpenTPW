@@ -83,9 +83,7 @@ pump (the game stopped, the events sent, the game let run): Shift and Escape dow
 and Shift up, and the tool stays armed with no menu; Escape up and then Shift down, and the tool is put away, a plain
 Escape. In the original the mode's vtable stayed `0x6fe9e0` with its anchor in the first and went to the idle mode's
 `0x6fea10` in the second, the menu 0 in both. **Not the original's:** a binding read as a held state or on its press
-(`Input.Down`, `Pressed`, `Released`) is still rebuilt from the keys held as the frame ends; a screen
-left open over first person takes the key before the viewfinder does, where the original has closed it on the way in
-(Q122).
+(`Input.Down`, `Pressed`, `Released`) is still rebuilt from the keys held as the frame ends.
 
 ## The advisor
 

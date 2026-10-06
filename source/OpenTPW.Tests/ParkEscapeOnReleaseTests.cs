@@ -395,8 +395,9 @@ public class ParkEscapeOnReleaseTests
 	}
 
 	/// <summary>
-	/// <b>A screen left open over first person takes the key first</b>, which is ours alone (the original closes the
-	/// screen on the way in): the first Escape closes the screen and the viewer stays down, the second leaves.
+	/// <b>A screen put up over first person takes the key first</b>, which only the debug console can do (the way in
+	/// closes the one open, and the gadget is hidden there): the first Escape closes the screen and the viewer stays
+	/// down, the second leaves.
 	/// </summary>
 	/// <remarks><b>Mutations:</b> first person's arm put before the screen's leaves first person with the window still open.</remarks>
 	[TestMethod]

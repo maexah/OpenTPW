@@ -592,8 +592,8 @@ otherwise. Flag `0x10` is tested and never set (dead by CODE). The two views of 
 
 **OpenTPW.** `WindowStack.RightClick` is the base proc's click for the right button; a press on the view asks
 `ViewRightClick` what answers its click, and the park answers `ParkViewfinder.RightClicked` in first person, which leaves
-it with RMB cancel on. The limit runs on the frame clock (`docs/QUEUE.md` Q123), and a park screen left open over first
-person takes a right press on its body, where the original's entry closes it (`FUN_00485b40`, Q122). The eject button is `ParkViewfinder`'s, `Clicked = ParkCamcorderCameraMode.Leave`. A held right button walks:
+it with RMB cancel on. The limit runs on the frame clock (`docs/QUEUE.md` Q123), and the way into first
+person closes the open park screen, as the original's does (`FUN_00485b40` at `0x00481a2b`), so none is there to take the press. The eject button is `ParkViewfinder`'s, `Clicked = ParkCamcorderCameraMode.Leave`. A held right button walks:
 `ParkCamcorderCameraMode.RightHeld` is the bit, read once a frame after the interface has had the press, and `Walk`
 adds the forward key's amount for it. The walk's speed is a chosen 40 units a second for one forward term, where the
 original's measures about 21.8, and its keys are W and S, where the original's are the zoom's, Up and Down

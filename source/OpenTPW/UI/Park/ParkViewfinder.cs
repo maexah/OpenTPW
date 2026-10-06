@@ -76,11 +76,6 @@ internal sealed class ParkViewfinder : UiWindow
 	/// layer, under the frame, which takes no pointer, and beside the eject button, which drops a right
 	/// click; outside it the view is the park's own layer, which answers no click.
 	/// </summary>
-	/// <remarks>
-	/// <b>Not the original's while a park screen is open over first person.</b> Entering first person
-	/// closes the one open (<c>FUN_00485b40</c>) and hides the park's layer; here the screen stays and
-	/// takes a right press on its body (<c>docs/QUEUE.md</c> Q122).
-	/// </remarks>
 	internal static Action? RightClickAnswer() => ParkCamcorderCameraMode.Active ? RightClicked : null;
 
 	/// <summary>

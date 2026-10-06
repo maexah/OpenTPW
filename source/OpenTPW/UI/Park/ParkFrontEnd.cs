@@ -277,8 +277,9 @@ internal sealed class ParkFrontEnd : Panel
 	/// none, so nothing answers it (<c>docs/exe/scenes.md</c>, "The park Escape route").
 	/// </para>
 	/// <para>
-	/// A park screen open over first person is ours alone, since the original closes it on the way in
-	/// (<c>docs/QUEUE.md</c> Q122): the screen in front takes the key there too, and the next Escape leaves.
+	/// The way into first person closes the park screen that is open (<see cref="ParkCamcorderCameraMode.Enter"/>), and
+	/// the gadget that opens one is hidden there, so only the debug console puts one up over first person: the screen
+	/// in front takes the key there too, and the next Escape leaves.
 	/// </para>
 	/// </summary>
 	/// <param name="plain">Whether no modifier was held as the key came up (<see cref="Input.Releases"/>).</param>

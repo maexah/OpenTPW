@@ -1034,6 +1034,13 @@ public class Level
 		return $"anchored a queue run at ({cellX},{cellY}) - click again to lay it";
 	}
 
+	/// <summary>
+	/// Closes the park screen that is open, for what closes one without opening a window: the way into first person
+	/// (<see cref="ParkCamcorderCameraMode.Enter"/>). See <see cref="UI.WindowStack.CloseParkScreen"/>.
+	/// </summary>
+	/// <returns>Whether one was open.</returns>
+	internal bool CloseParkScreen() => _windows?.CloseParkScreen() == true;
+
 	/// <summary>The object windows open in this park, oldest first - the debug console's way to the preview.</summary>
 	internal IEnumerable<UI.ParkObjectWindow> OpenObjectWindows()
 		=> _windows?.Windows.OfType<UI.ParkObjectWindow>() ?? [];

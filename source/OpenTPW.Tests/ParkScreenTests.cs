@@ -342,6 +342,78 @@ public class ParkScreenTests
 		Assert.AreEqual( ParkBuildMode.None, ParkBuildMode.Current, "and Delete puts the tool away" );
 	}
 
+	/// <summary>
+	/// <b>The way into first person closes the open park screen</b>: <c>FUN_00481a10</c>, which C and the gadget's
+	/// first-person button both reach, calls <c>FUN_00485b40</c> before anything else (<c>0x00481a2b</c>). With a screen
+	/// up and a plain window beside it, C let go leaves the viewer in first person, the screen gone and the plain window
+	/// where it was; held, nothing closes.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the call taken out of <c>ParkCamcorderCameraMode.Enter</c> leaves the screen up over first
+	/// person; <c>WindowStack.CloseParkScreen</c> closing every window takes the plain one too, and closing the front
+	/// window only leaves the screen under it; <c>Level.CloseParkScreen</c> not reaching the stack leaves the screen.
+	/// </remarks>
+	[DataTestMethod]
+	[DataRow( "a park screen" )]
+	[DataRow( "buy" )]
+	[DataRow( "object window" )]
+	public void GoingIntoFirstPersonClosesTheOpenScreen( string which )
+	{
+		var stack = APark();
+		var park = AParkOver( stack );
+		Camera.SetCameraMode<ParkOrbitCameraMode>();
+
+		UI.UiWindow screen = which switch
+		{
+			"buy" => new UI.ParkBuyScreen( stack ),
+			"object window" => new UI.ParkObjectWindow( stack, 13 ),
+			_ => new AWindow( stack, parkScreen: true )
+		};
+
+		stack.Open( screen );
+		stack.Open( new AWindow( stack, parkScreen: false ) );
+
+		WorldFrame( stack, park, Down( Key.C ) );
+		Assert.IsFalse( ParkCamcorderCameraMode.Active, "held: still in orbit" );
+		CollectionAssert.Contains( stack.Windows.ToList(), screen, "and the screen is still up" );
+
+		WorldFrame( stack, park, Up( Key.C ) );
+		Assert.IsTrue( ParkCamcorderCameraMode.Active, "let go: in first person" );
+		Assert.AreEqual( "ParkGadget, ParkViewfinder, AWindow", Names( stack ), "the screen is gone and the plain window is not" );
+		Assert.IsFalse( stack.ParkScreenUp, "no park screen is open" );
+	}
+
+	/// <summary>
+	/// <b>Going into first person with no screen open closes nothing</b>, and says so: the answer is what the log line
+	/// hangs on.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> <c>CloseParkScreen</c> answering that it closed one whatever was open.</remarks>
+	[TestMethod]
+	public void GoingIntoFirstPersonWithNoScreenOpenClosesNothing()
+	{
+		var stack = APark();
+		var park = AParkOver( stack );
+		stack.Open( new AWindow( stack, parkScreen: false ) );
+
+		Assert.IsFalse( park.CloseParkScreen(), "nothing to close" );
+		Assert.AreEqual( "ParkGadget, ParkViewfinder, AWindow", Names( stack ) );
+
+		stack.Open( new AWindow( stack, parkScreen: true ) );
+		Assert.IsTrue( park.CloseParkScreen(), "one closed" );
+		Assert.AreEqual( "ParkGadget, ParkViewfinder, AWindow", Names( stack ) );
+	}
+
+	/// <summary>A park whose windows are this stack, made the current level.</summary>
+	private static Level AParkOver( UI.WindowStack stack )
+	{
+		var park = (Level)RuntimeHelpers.GetUninitializedObject( typeof( Level ) );
+		typeof( Level ).GetProperty( nameof( Level.Kind ) )!.SetValue( park, Level.Scene.Park );
+		typeof( Level ).GetField( "_windows", BindingFlags.Instance | BindingFlags.NonPublic )!.SetValue( park, stack );
+		Level.Current = park;
+
+		return park;
+	}
+
 	/// <summary>A park's interface: the real front end over a real stack, its gadget and viewfinder up.</summary>
 	private static UI.WindowStack APark()
 	{

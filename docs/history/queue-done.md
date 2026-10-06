@@ -4658,6 +4658,21 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   forward; the Up arrow 1.87 s, 40.4; both, twice the rate; Down with it, standing; the eject button, nothing. The
   original walks at about 21.8 units a second where ours is a chosen 40 (noted under Q25). Nine tests; fourteen of fifteen restored bugs each fail (one only after its test was
   fixed); the fifteenth, `Level`'s one call taken out, only the game run sees.
+- [x] **Q122. Entering first person leaves a park screen open.** Found by Q59's review. `FUN_00481a10`, which C and
+  `b_1person` both reach, first closes the open screen (`FUN_00485b40`, message 5 to `DAT_007c24c8`), and entering hides
+  layer 0 with anything else on it. Here an object window or a management screen stays up over first person, and a right
+  press on its body is the screen's, so it does not leave (said at `ParkViewfinder.RightClickAnswer`). Add the call to
+  `park-engine.md`'s decode of `FUN_00481a10`. Confirm: a ride's window open, C, the window gone; a screenshot.
+  From Q115: `WindowStack.Open` closes the open park screen for any window that sets `UiWindow.ClosesParkScreen`
+  (the game menu and the map do); entering first person opens no window, so it needs the close called.
+  Done 2026-10-06: `ParkCamcorderCameraMode.Enter` calls `Level.CloseParkScreen` (`WindowStack.CloseParkScreen`, the
+  body `Open` ran) before anything else, as `FUN_00481a10`'s first call does (`0x00481a2b`, re-read). Predicted and read
+  in Lost Kingdom with real keys and buttons, **6 of 6** on the second run (the unchanged build 6 of 6 the other way):
+  the Belly Bounce's window up, C let go, the log's "First person: closed the open park screen", `windows` ParkGadget,
+  ParkViewfinder, in first person; a quick right click where the window was, out; the buy screen the same and one
+  Escape out; the arm's first-person button the same; C alone, no line. In the original, read from memory: the buy
+  screen, `[0x007c24c8]` `0x46bf8d0` to 0 on C; a visitor's window, `0x46cad30` to 0. Four test cases new; seven
+  restored bugs each fail. Photographed either side.
 
 ## B. Docs and comments
 

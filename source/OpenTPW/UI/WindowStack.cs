@@ -204,16 +204,28 @@ internal sealed class WindowStack : Panel
 		if ( _windows.Contains( window ) )
 			return;
 
-		// One park screen at a time: each opener first sends the open one its close (FUN_00485b40, message 5 to
-		// DAT_007c24c8), as the game menu's and the map's do.
+		// One park screen at a time: each opener first sends the open one its close, as the game menu's and the map's do.
 		if ( window.ParkScreen || window.ClosesParkScreen )
-		{
-			foreach ( var open in _windows.Where( open => open.ParkScreen ).ToArray() )
-				Close( open );
-		}
+			CloseParkScreen();
 
 		_windows.Add( window );
 		window.Shown();
+	}
+
+	/// <summary>
+	/// Closes the park screen that is open, if one is - the original's <c>FUN_00485b40</c>, message 5 to
+	/// <c>DAT_007c24c8</c>. Every opener calls it first (<see cref="Open"/>), and so does the way into first person,
+	/// which opens no window (<c>FUN_00481a10</c>, <c>0x00481a2b</c>).
+	/// </summary>
+	/// <returns>Whether one was open.</returns>
+	internal bool CloseParkScreen()
+	{
+		var open = _windows.Where( window => window.ParkScreen ).ToArray();
+
+		foreach ( var screen in open )
+			Close( screen );
+
+		return open.Length > 0;
 	}
 
 	internal void Close( UiWindow window )

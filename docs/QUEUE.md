@@ -38,13 +38,6 @@ the original.
 
 ## A. Bugs first
 
-- [ ] **Q122. Entering first person leaves a park screen open.** Found by Q59's review. `FUN_00481a10`, which C and
-  `b_1person` both reach, first closes the open screen (`FUN_00485b40`, message 5 to `DAT_007c24c8`), and entering hides
-  layer 0 with anything else on it. Here an object window or a management screen stays up over first person, and a right
-  press on its body is the screen's, so it does not leave (said at `ParkViewfinder.RightClickAnswer`). Add the call to
-  `park-engine.md`'s decode of `FUN_00481a10`. Confirm: a ride's window open, C, the window gone; a screenshot.
-  From Q115: `WindowStack.Open` closes the open park screen for any window that sets `UiWindow.ClosesParkScreen`
-  (the game menu and the map do); entering first person opens no window, so it needs the close called.
 - [ ] **Q123. The click limits run on the frame clock.** Found by Q59's review. `WindowStack.RightClick`'s 500 ms and
   `Level.RightButton`'s 200 ms read `Time.Now`, whose frames are clamped to 0.1 s and which the console's `pause` holds;
   the original times both in milliseconds of wall time (`FUN_0065968e`, `hud.md`, "A click and a double click"). Below

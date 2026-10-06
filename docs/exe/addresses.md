@@ -186,6 +186,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0047f020` | | OpenTPW/UI/Screens/MessageBox.cs OpenTPW/UI/UiWindow.cs OpenTPW/UI/WindowStack.cs OpenTPW/World/Advisor/Advisor.cs  |
 | `0x0047f251` | | OpenTPW/World/Level.cs  |
 | `0x004813c0` | | OpenTPW/UI/WindowStack.cs  |
+| `0x00481a2b` | Camcorder button `FUN_00481a10`, its first call: FUN_00485b40 closes the open park screen before the mode is built | OpenTPW.Tests/ParkScreenTests.cs OpenTPW/UI/WindowStack.cs OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x00481ad0` | Camcorder button `FUN_00481a10`: installs the camcorder mode through the setter, letting go of the hand | OpenTPW.Tests/ParkHandTests.cs  |
 | `0x00485780` | | OpenTPW/UI/ButtonGlint.cs OpenTPW/UI/UiControl.cs OpenTPW/UI/UiSounds.cs OpenTPW/UI/WindowStack.cs  |
 | `0x00485a70` | The font in a slot of the current set: none from slot 13 up, by an unsigned compare (`lobby.md`, "Meshes and fonts") | OpenTPW.Tests/UiFontsTests.cs OpenTPW/UI/UiFonts.cs  |

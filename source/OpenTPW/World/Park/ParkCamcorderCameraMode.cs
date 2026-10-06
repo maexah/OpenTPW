@@ -183,6 +183,11 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	/// </summary>
 	public static void Enter()
 	{
+		// Before anything else the open park screen is sent its close (FUN_00485b40 at 0x00481a2b), so no object
+		// window or management screen is left up over first person.
+		if ( Level.Current?.CloseParkScreen() == true )
+			Log.Info( "First person: closed the open park screen" );
+
 		// The camcorder is an interaction mode of its own, installed through the setter over whatever was
 		// held (FUN_00481a10), so the hand is let go of first.
 		if ( ParkHand.LetGo() is { } letGo )

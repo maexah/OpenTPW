@@ -750,9 +750,17 @@ The key acts on its **release**, both ways. In orbit the park runs its tables on
 
 `FUN_00481a10` is:
 
+    FUN_00485b40();               // 0x00481a2b: close the open park screen (message 5 to DAT_007c24c8)
     uVar2 = FUN_0046cff0();       // build a mode object, vtable 0x006fead0
     if ( DAT_007b05e8 == 0 ) { ... ensure the holder exists, install the default mode 0x006fea10 ... }
     FUN_0046c350( uVar2 );        // make it the current interaction mode
+
+**The close comes first and is unconditional** (`CALL 0x00485b40` at `0x00481a2b`, straight after the prologue's
+pushes), so C or the gadget's button with a management screen or an object window up takes the screen away before the
+pick is installed. In the original, read from memory with a frame each: the buy screen open, `[0x007c24c8]`
+`0x46bf8d0`, C let go, 0, the mode's vtable `0x6fea10` to `0x6fead0`; a visitor's window, `0x46cad30` to 0, the same;
+C with no screen, the same vtable and the global still 0. OpenTPW: `ParkCamcorderCameraMode.Enter` calls
+`Level.CloseParkScreen` (`WindowStack.CloseParkScreen`) before anything else, and logs it when one was open.
 
 The "operator new twice behind SEH" part is a **shared prologue**, not camcorder's own work — `FUN_00497bc0` (the coaster builder bar) has it verbatim.
 
@@ -2245,8 +2253,8 @@ the object window's preview answers `Clicked` and `RightClicked`. Differences, e
   decoded (`FUN_00495110` fills them through `FUN_00481bc0( 0x400, 0x004941e0 )`).
 - **The preview's left click** is a press and a release on the panel with no limit on its time, where the original's
   is the 500 ms click (`docs/QUEUE.md` Q123).
-- **In first person** the original's two words are where the viewer stands, and no screen is open there; here a
-  screen can be (Q122) and only the orbit's point moves.
+- **In first person** the original's two words are where the viewer stands, and no screen is open there; here only
+  the debug console can put one up, and then only the orbit's point moves.
 - **The status label** inside the preview (`0x3e25`) does not take the pointer here, so a click on it is the
   preview's; whether the original's label takes it is not measured.
 
