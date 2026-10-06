@@ -38,6 +38,19 @@ the original.
 
 ## A. Bugs first
 
+- [ ] **Q233. The preview's footprint picture: the item's size, entrance and exit. Decode first.** Asked for by
+  Alexah, 2026-10-06, as the next item. Beside the turning model the original draws a small flat picture of the
+  item's footprint at the panel's lower left: a blue block the footprint's size with a green and a brown mark on
+  its edge, which do not turn with the model. Seen in Q188's frames of the buy screen with the Aztec Mayhem (a large
+  block), the Crazy Ape and the Balloon Shop (a small one); not seen in the Belly Bounce's ride window, so where it
+  shows is the first thing to settle (`~/.cache/tpw-harnesses/q188/orig/`, `sim*`, `buy*`, `shops.png`, `bbc*`).
+  Nothing of it is decoded: `park-engine.md`, "The object window's preview" names the blue square and no more.
+  Decode what draws it (start from `FUN_004ab1b0`'s four calls of `FUN_00486410` and the instance `FUN_004689f0`
+  makes), what the colours stand for and where each mark is taken from (`Info.Shape`, the `.hmp`'s mark plane, the
+  entry and exit cells), and which panels show it; write it to `docs/exe/` and stop. The build is the session after:
+  `ParkObjectPreview` draws it, and the buy screen's panel (Q158) with it if that is where it lives. Confirm: the
+  panel beside the original's for a ride and a shop, the block's size and each mark's place predicted first.
+
 - [ ] **Q119. A plain Escape does not close the park screen in front.** Found by Q57's review. In the original the six
   management screens, an object window and the map take the focus as they open (`FUN_00485b70`, `FUN_004862a0`), and
   their key handler answers a plain Escape let go by closing the screen, and nothing more (`FUN_00488ba0`, `0x00488bc6`;
