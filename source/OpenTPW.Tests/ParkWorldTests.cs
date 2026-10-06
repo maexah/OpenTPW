@@ -242,6 +242,41 @@ public class ParkWorldTests
 	}
 
 	/// <summary>
+	/// <b>The staff pool, all sixteen candidates of its 32 records, and its own mark</b>, as <c>FUN_005070a0</c> and
+	/// <c>FUN_00507850</c> read them (FileFormats <c>saves.md</c>, "The staff pool"). The slots are the file's. The
+	/// kind, grade, mark and lifetime of fourteen of them are what the original holds in memory after loading this file
+	/// (<c>docs/exe/park-engine.md</c>, "The staff pool's refresh"); slots 18 and 22, gone before that read began, and
+	/// every name and costume are this reader's own.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the records skipped; a record's two four-byte tails swapped; the bytes read in another order;
+	/// the mark read before the five counts; the bytes after the mark stepped over short, which moves the arrival block.
+	/// </remarks>
+	[TestMethod]
+	public void TheStaffPoolIsReadRecordForRecord()
+	{
+		var world = World();
+		var expected = new (int Slot, int Type, int Name, int PayGrade, int SubType, int TimeSig, int TimeoutTime)[]
+		{
+			(0, 4, 33, 2, 0, 361, 146), (1, 4, 14, 1, 0, 722, 151), (2, 4, 30, 1, 0, 722, 139), (3, 1, 12, 1, 1, 722, 170),
+			(4, 3, 29, 1, 0, 722, 158), (5, 2, 30, 2, 1, 722, 135), (6, 3, 8, 1, 0, 722, 129), (7, 0, 31, 2, 0, 361, 176),
+			(8, 1, 24, 2, 1, 722, 134), (9, 2, 1, 2, 2, 722, 166), (10, 1, 15, 2, 0, 722, 165), (11, 0, 6, 3, 0, 722, 166),
+			(13, 2, 24, 2, 0, 361, 141), (18, 0, 18, 3, 0, 361, 124), (22, 1, 26, 3, 1, 361, 124), (23, 2, 12, 3, 2, 361, 143)
+		};
+
+		Assert.AreEqual( 32, world.StaffPool.Count, "every slot is read, the empty ones too" );
+
+		var held = world.StaffPool.Select( ( record, slot ) => (record, slot) ).Where( at => at.record.Valid )
+			.Select( at => (at.slot, at.record.Type, at.record.Name, at.record.PayGrade, at.record.SubType, at.record.TimeSig, at.record.TimeoutTime) )
+			.ToArray();
+
+		CollectionAssert.AreEqual( expected, held );
+		Assert.IsFalse( world.StaffPool.Any( record => record.OnPointer ), "nobody was in the hand" );
+		Assert.AreEqual( 722, world.StaffPoolTimeSig, "the pool's own mark, not the arrival timer's 661" );
+		Assert.AreEqual( 661, world.Arrival.TimeSig, "and the arrival block is still found after it" );
+	}
+
+	/// <summary>
 	/// Everything standing in Lost Kingdom, by catalogue number and cell. The whole table is pinned rather
 	/// than a sample of it, because a walk that drifts produces a table that is still the right shape.
 	///

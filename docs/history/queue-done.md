@@ -4850,6 +4850,17 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Kingdom: the opening twenty-two, made on 755, each went on 755 plus four times their lifetime plus one; topped up
   on 1116 by two and on 1477 by ten; the unchanged build kept the same twenty-two 210 s on. The hire screen
   photographed with five, six and one cleaner. Twenty-three of twenty-four restored bugs fail.
+- [x] **Q130c. Read the save's staff pool.** From Q130b. The save holds the pool: 32 records of 20 bytes at the
+  world's start, which `ParkWorld`'s reader skips (`PoolRecords`, `PoolRecordSize`), each a kind, a name's row, a
+  grade, a costume, the occupied and taken bytes, the `mGameTick` it was made on and its lifetime; and the pool's own
+  mark (`+0x294` in memory: find it in the file). Read them, write the layout to the FileFormats saves page
+  (`CLAUDE.md` rule 14), and give a loaded park that pool in place of a rolled one; a fresh park still rolls.
+  Confirm: Lost Kingdom's hire screen showing the save's fourteen candidates, the first drops on `mGameTick` 926,
+  934 and 946 and the first top-up on 1083, as the original's log has them (`park-engine.md`, "The staff pool's
+  refresh"); a screenshot beside the original's hire screen.
+  **Done 2026-10-06**: `ParkWorld.StaffPool` and `StaffPoolTimeSig`; `ParkStaffPool` takes a save's records. The file
+  holds sixteen, not fourteen (two go on 858, before the original's log began). Every drop to 1403 and both top-ups
+  on the original's ticks; the hire screen beside the original's (`park-engine.md`, "The staff pool's refresh").
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

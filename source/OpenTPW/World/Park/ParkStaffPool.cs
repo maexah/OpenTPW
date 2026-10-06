@@ -207,7 +207,10 @@ public sealed class ParkStaffPool
 	private readonly Random _random;
 	private int _nextId = 1;
 
-	/// <summary>Everybody currently available to hire, in the order they joined the pool.</summary>
+	/// <summary>
+	/// Everybody currently available to hire: a save's in the order of its slots, then each who joins after the last.
+	/// The original keeps 32 slots and puts a newcomer in the lowest free one; the slots are not kept here.
+	/// </summary>
 	public IReadOnlyList<Candidate> Candidates => _candidates;
 
 	/// <summary>Everybody of one kind - what a hire screen tab lists.</summary>
@@ -319,14 +322,15 @@ public sealed class ParkStaffPool
 	{
 		++Turns;
 
-		for ( var at = _candidates.Count - 1; at >= 0; --at )
+		// From the first on, as the original walks its slots.
+		for ( var at = 0; at < _candidates.Count; ++at )
 		{
 			var person = _candidates[at];
 
 			if ( person.Id == Carrying || !TimedOut( gameTick, person.Mark, person.Lifetime ) )
 				continue;
 
-			_candidates.RemoveAt( at );
+			_candidates.RemoveAt( at-- );
 			Left?.Invoke( person.Id );
 
 			Log.Info( $"Staff pool: {person.Name}, a {NameOfKind( person.Kind ).ToLowerInvariant()}, timed out on mGameTick "
@@ -468,20 +472,56 @@ public sealed class ParkStaffPool
 	/// </summary>
 	internal static int LifetimeFrom( int timeout, uint draw ) => timeout + (int)(draw % (uint)Math.Max( 1, timeout >> 1 ));
 
-	public ParkStaffPool( ParkBalance? balance, int seed = 20260920, int gameTick = 0 )
+	/// <summary>
+	/// The pool a park starts with: the one its save holds, record for record and with the save's mark, or, where
+	/// there is no save, the opening pool the original makes as a park is created (<c>FUN_005087d0</c>), rolled and
+	/// marked with <paramref name="gameTick"/>.
+	/// </summary>
+	public ParkStaffPool( ParkBalance? balance, int seed = 20260920, int gameTick = 0, ParkWorld? saved = null )
 	{
 		_balance = balance;
 		_random = new Random( seed );
 		Current = this;
 		Mark = gameTick;
 
-		// The opening pool, which the original generates once as a park opens.
-		for ( var kind = 0; kind < Kinds; ++kind )
+		if ( saved is { StaffPool.Count: > 0 } )
 		{
-			var wanted = balance?.Int( $"StaffPoolInfo.BeginningNumberOf{BalanceNames[kind]}", 5 ) ?? 5;
+			Mark = saved.StaffPoolTimeSig;
 
-			for ( var i = 0; i < wanted && _candidates.Count < Slots; ++i )
-				_candidates.Add( Roll( kind, gameTick ) );
+			foreach ( var record in saved.StaffPool )
+			{
+				if ( !record.Valid )
+					continue;
+
+				if ( record.Type is < 0 or >= Kinds )
+				{
+					Unimplemented.Report( "SAVED_STAFF_CANDIDATE_OF_NO_KIND" );
+					continue;
+				}
+
+				// No save here holds one in the hand, and the hand is not restored from a save.
+				if ( record.OnPointer )
+					Unimplemented.Report( "SAVED_STAFF_CANDIDATE_ON_POINTER" );
+
+				// The costume is the record's, which a hire's picture is refused on where the park has loaded fewer
+				// banks of the kind (ParkPeople.StaffPicture, counted there).
+				_candidates.Add( new Candidate( Id: _nextId++, Kind: record.Type, Name: NameAt( record.Type, record.Name ),
+					Grade: record.PayGrade, Costume: record.SubType, Wage: WageFor( record.Type, record.PayGrade ),
+					Mark: record.TimeSig, Lifetime: record.TimeoutTime ) );
+			}
+		}
+		else
+		{
+			if ( saved != null )
+				Log.Warning( "Staff: the park file's walk did not reach its staff pool, so one is rolled" );
+
+			for ( var kind = 0; kind < Kinds; ++kind )
+			{
+				var wanted = balance?.Int( $"StaffPoolInfo.BeginningNumberOf{BalanceNames[kind]}", 5 ) ?? 5;
+
+				for ( var i = 0; i < wanted && _candidates.Count < Slots; ++i )
+					_candidates.Add( Roll( kind, gameTick ) );
+			}
 		}
 
 		Log.Info( $"Staff: {_candidates.Count} candidates waiting - " + string.Join( ", ",
@@ -515,13 +555,16 @@ public sealed class ParkStaffPool
 	}
 
 	/// <summary>One of the kind's 35 names, or a plain one where the table will not read.</summary>
-	private string RollName( int kind )
+	private string RollName( int kind ) => NameAt( kind, _random.Next( 35 ) );
+
+	/// <summary>A row of the kind's name table, which is what a record keeps of a name (<c>mName</c>).</summary>
+	private string NameAt( int kind, int row )
 	{
 		try
 		{
 			var names = new StringFile( $"Language/English/{NameTables[kind]}.str" );
 
-			return names[_random.Next( 35 )] ?? $"{NameOfKind( kind )} {_nextId}";
+			return names[row] ?? $"{NameOfKind( kind )} {_nextId}";
 		}
 		catch ( Exception )
 		{

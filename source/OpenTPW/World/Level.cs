@@ -340,7 +340,7 @@ public class Level
 		// Who the park may hire, which is a population of its own and nothing to do with the people
 		// already in it - see ParkStaffPool. Built before the park's own people only for readability;
 		// neither asks anything of the other.
-		StaffPool = new ParkStaffPool( Balance, gameTick: ParkState?.GameTick ?? 0 );
+		StaffPool = new ParkStaffPool( Balance, gameTick: ParkState?.GameTick ?? 0, saved: park as ParkWorld );
 		load.Mark( "staff pool" );
 
 		_ = new ParkPeople( park, Balance, () => rides.GateStatus( park ), ParkState, catalogue,

@@ -1171,17 +1171,20 @@ public sealed class ParkWorld : IParkInitialState
 	private const int ObjectControlSize = 32;
 
 	/// <summary>
-	/// A pool of 32 twenty-byte records - type, name, pay grade, sub-type, valid, on-pointer, time
-	/// signature and timeout - followed by a tail of arrival and clock fields that comes to 76 bytes:
-	/// five people-per-category counts with their stop flags (25), a time signature, a staff-pool flag,
-	/// two eight-byte timestamps, the month and day last updated, the funny-time rate, the arrival rate,
-	/// another time signature, the target vehicle capacity, the people on the bus, and two flags.
+	/// A pool of 32 twenty-byte records (<see cref="StaffCandidate"/>) followed by a tail of arrival and clock
+	/// fields that comes to 76 bytes: five people-per-category counts with their stop flags (25), the pool's time
+	/// signature (<see cref="StaffPoolTimeSig"/>), a staff-pool flag, two eight-byte timestamps, the month and day
+	/// last updated, the funny-time rate, the arrival rate, another time signature, the target vehicle capacity,
+	/// the people on the bus, and two flags.
 	/// </summary>
 	private const int PoolRecords = 32;
 
 	private const int PoolRecordSize = 20;
 
 	private const int ArrivalTailSize = 76;
+
+	/// <summary>The five <c>mPeopleInCat</c> and <c>mStopProducing</c> pairs after the pool's records, four bytes and one.</summary>
+	private const int PoolCountsSize = 25;
 
 	/// <summary>
 	/// The last 18 of those 76: the arrival timer's own block, which <c>FUN_004cf050</c> reads field by field and
@@ -1381,12 +1384,12 @@ public sealed class ParkWorld : IParkInitialState
 
 		ReadHeader();
 
-		// The fixed tables. The object controls are read; the rest say nothing about what stands in the park,
-		// and are stepped over but for the last 18 bytes of the arrival and clock fields, the arrival timer.
+		// The fixed tables. The object controls and the staff pool are read; of the arrival and clock fields after
+		// them, the pool's mark and the last 18 bytes, the arrival timer.
 		ReadObjectControls();
 		Skip( 2 );                                  // mPreviousSearchKey
-		Skip( PoolRecords * PoolRecordSize );
-		Skip( ArrivalTailSize - ArrivalBlockSize );
+		ReadStaffPool();
+		Skip( ArrivalTailSize - PoolCountsSize - 4 - ArrivalBlockSize );
 		ReadArrivalBlock();
 
 		ReadMap();
@@ -1486,6 +1489,42 @@ public sealed class ParkWorld : IParkInitialState
 		}
 
 		ObjectControlRecords = records;
+	}
+
+	/// <summary>
+	/// One of the staff pool's 32 records as it was saved: <c>FUN_005070a0</c>'s eight fields, in its order
+	/// (FileFormats, <c>saves.md</c>, "The staff pool"). The game's names are <c>mType</c>, <c>mName</c>,
+	/// <c>mPayGrade</c>, <c>mSubType</c>, <c>mValid</c>, <c>mOnPointer</c>, <c>mTimeSig</c> and <c>mTimeoutTime</c>.
+	/// </summary>
+	/// <param name="Type">The kind: 0 handyman, 1 mechanic, 2 entertainer, 3 guard, 4 researcher.</param>
+	/// <param name="Name">The row of the kind's name table.</param>
+	/// <param name="Valid">Whether the record holds a candidate; the rest means nothing where it does not.</param>
+	/// <param name="OnPointer">Whether the candidate was in the player's hand.</param>
+	/// <param name="TimeSig">The <see cref="GameTick"/> the candidate joined the pool on.</param>
+	/// <param name="TimeoutTime">How long they wait, in fours of sweeps.</param>
+	public readonly record struct StaffCandidate( int Type, int Name, int PayGrade, int SubType, bool Valid,
+		bool OnPointer, int TimeSig, int TimeoutTime );
+
+	/// <summary>The staff pool's 32 records, in the file's order, the empty ones among them. None until the walk reaches them.</summary>
+	public IReadOnlyList<StaffCandidate> StaffPool { get; private set; } = [];
+
+	/// <summary>The <see cref="GameTick"/> the pool was last topped up on - its own <c>mTimeSig</c>, read by <c>FUN_00507850</c>.</summary>
+	public int StaffPoolTimeSig { get; private set; }
+
+	private void ReadStaffPool()
+	{
+		var records = new StaffCandidate[PoolRecords];
+
+		for ( var i = 0; i < PoolRecords; ++i )
+		{
+			records[i] = new StaffCandidate( Type: ReadInt32(), Name: ReadInt32(), PayGrade: ReadByteAt( _at++ ),
+				SubType: ReadByteAt( _at++ ), Valid: ReadByteAt( _at++ ) != 0, OnPointer: ReadByteAt( _at++ ) != 0,
+				TimeSig: ReadInt32(), TimeoutTime: ReadInt32() );
+		}
+
+		StaffPool = records;
+		Skip( PoolCountsSize );
+		StaffPoolTimeSig = ReadInt32();
 	}
 
 	private void ReadArrivalBlock()

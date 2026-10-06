@@ -2017,7 +2017,7 @@ so each marked nought with its own lifetime, then the pool's mark; it runs befor
 
 **In the original**, predicted first, the pool read from memory every 100 ms for 240 s (`pool.py`). The keys as
 Lost Kingdom's Instant Action loads them: 90, 10 and 120; `Max` 6, 5, 6, 4, 3; `Min` 1, 1, 1, 1, 0; in the park 30,
-15, 30, 15, 6. The park's save holds a pool of fourteen, made on `mGameTick` 361 and 722, its mark 722. **Twenty-four
+15, 30, 15, 6. The pool stood at fourteen when the read began on 868 (the save holds sixteen, below), made on `mGameTick` 361 and 722, its mark 722. **Twenty-four
 of twenty-four candidates went on the first sweep past four times their lifetime** (one of lifetime 141 made on 361
 went on 926, 565 sweeps old), their lifetimes 126 to 176. **The pool was topped up on `mGameTick` 1083 and 1444, 361
 sweeps apart, by ten each time**, no kind past its `Max`. Not seen: a kind full in the park, the minimums' pass
@@ -2030,10 +2030,24 @@ it is open. Measured in Lost Kingdom, the opening pool of twenty-two made on 755
 later, went on their mark plus four times their lifetime plus one; topped up on 1116 by two (only two were wanted,
 the opening pool standing at or over most kinds' `Max`) and on 1477 by ten; before it, the same twenty-two stood 210 s
 on. **Not the original's**: the draws are the pool's own generator, the world's there; a name is drawn once with no
-look for one in use, and every costume is nought (Q214); a minimums' round that can add nobody is the last, where
-the original's would go round for ever; the
-opening pool is still rolled, `BeginningNumberOf<Kind>` each and made on the load's tick, where a save holds its own
-(Lost Kingdom's fourteen, with their marks and lifetimes): reading it is Q130c.
+look for one in use, and every rolled costume is nought (Q214); a newcomer is put after the last, where the original takes the lowest free slot of its 32; a minimums' round that can add nobody is the last, where
+the original's would go round for ever.
+
+**A loaded park's pool is the save's** (Q130c). `FUN_00507850` reads the 32 records through `FUN_005070a0`, then the
+five `mPeopleInCat` and `mStopProducing` pairs, the pool's `mTimeSig` (`FUN_0041a860`) and
+`mOpeningStaffPoolGenerated`, over the opening pool the park's creation has just made; the layout is FileFormats
+`saves.md`, "The staff pool". `ParkWorld.StaffPool` and `StaffPoolTimeSig` are that, and `ParkStaffPool` built
+with a save takes its occupied records as they stand: kind, the name by its row of the kind's table, grade,
+costume, mark and lifetime, and the pool's mark. A park with no save still rolls. Lost Kingdom's file holds
+sixteen (the original's log above began on 868, after two of lifetime 124 had gone on 858). Predicted and read in
+OpenTPW: sixteen made on 361 and 722; gone on 858, 858, 926, 934, 946, 1066, 1239, 1259, 1263, 1279, 1327, 1355,
+1383, 1387, 1387 and 1403; topped up on 1083 by ten to twenty and on 1444 by ten, each the original's own tick and
+count; the build before it rolled twenty-two on 755 and topped up on 1116 and 1477. **Beside the original's hire
+screen** on `mGameTick` 980 to 1054: the same people at the same wages on four tabs (Chris Battson 63 and Rajan Tande
+45; mechanics at 92, 115, 115; entertainers at 60, 60; researchers at 100, 100). Two differences, neither the
+pool's: the reference install reads the `american` name tables, where three of those rows hold other names than
+`English`'s (mechanic row 12 is Alex Cullum there, Rob O'Farrell here), and its list stands in name order on all
+four tabs where OpenTPW's is in the pool's order (Q130d).
 
 **Every way out without a drop returns the candidate**: a quick right click with RMB cancel on, which is
 the default (`0x0048842b` installs the idle mode whatever the current one is); Escape (`0x0040c180`),

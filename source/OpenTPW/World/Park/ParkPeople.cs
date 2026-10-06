@@ -543,7 +543,14 @@ public sealed class ParkPeople : Entity
 		// As with arrivals, the native shared generator is not yet reproduced.
 		var bank = kind == 7 && banks.CountOf( kind ) > 0
 			? (random.Next() >> 2) % banks.CountOf( kind ) : candidate.Costume & 0xff;
-		if ( kind < 0 || (banks.StaffBanks != null && bank >= banks.CountOf( kind )) )
+		if ( kind >= 0 && banks.StaffBanks != null && bank >= banks.CountOf( kind ) )
+		{
+			// What the original's constructor does with a costume past the banks it loaded is not decoded.
+			Unimplemented.Report( "HIRE_COSTUME_PAST_THE_BANKS_LOADED" );
+			return null;
+		}
+
+		if ( kind < 0 )
 			return null;
 
 		return new ParkWorld.Sprite(

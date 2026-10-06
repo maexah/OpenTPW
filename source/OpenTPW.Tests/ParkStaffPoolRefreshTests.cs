@@ -140,6 +140,58 @@ public class ParkStaffPoolRefreshTests
 	}
 
 	/// <summary>
+	/// <b>A park loaded from a save starts with the save's pool, and a park with no save rolls one.</b> Lost Kingdom's
+	/// sixteen, with the marks and lifetimes the file gives them and the pool's mark of 722, run from the save's 755:
+	/// each goes on the sweep the original drops them on and the pool is topped up on 1083 and 1444, as the
+	/// original's own log has it (<c>docs/exe/park-engine.md</c>, "The staff pool's refresh").
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the save's pool not used; the empty records taken too; the pool marked with the park's clock;
+	/// a candidate marked with the park's clock, or given a rolled lifetime; the name not the record's row; the drops
+	/// walked from the last.
+	/// </remarks>
+	[TestMethod]
+	public void ALoadedParkStartsWithTheSavesPool()
+	{
+		using var stream = FileSystem.OpenRead( "levels/jungle/Easymode.TPWI" );
+		var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
+		var pool = new ParkStaffPool( new ParkBalance( "jungle", easyMode: true ), gameTick: world.GameTick, saved: world );
+		var saved = pool.Candidates.ToArray();
+		var left = new List<int>();
+		var joined = new List<int>();
+		var tick = world.GameTick;
+
+		Assert.AreEqual( 16, saved.Length );
+		Assert.AreEqual( 722, pool.Mark );
+		CollectionAssert.AreEqual( new[] { 3, 4, 4, 2, 3 }, Enumerable.Range( 0, 5 ).Select( kind => pool.OfKind( kind ).Count() ).ToArray() );
+		Assert.AreEqual( (4, 2, 0, 361, 146), (saved[0].Kind, saved[0].Grade, saved[0].Costume, saved[0].Mark, saved[0].Lifetime) );
+		Assert.AreEqual( (2, 3, 2, 361, 143), (saved[15].Kind, saved[15].Grade, saved[15].Costume, saved[15].Mark, saved[15].Lifetime) );
+		Assert.AreEqual( new StringFile( "Language/English/RESEARCHER_NAMES.str" )[33], saved[0].Name, "the name is the record's row of its kind's table" );
+		Assert.AreEqual( pool.WageFor( 4, 2 ), saved[0].Wage );
+
+		var went = new List<int>();
+
+		pool.Left += id => { left.Add( tick ); went.Add( id ); };
+		pool.Joined += _ => joined.Add( tick );
+
+		for ( tick = world.GameTick + 1; tick <= 1444; ++tick )
+			pool.Sweep( tick, _ => 0 );
+
+		CollectionAssert.AreEqual( new[] { 858, 858, 926, 934, 946, 1066, 1239, 1259, 1263, 1279, 1327, 1355, 1383, 1387, 1387, 1403 },
+			left.Take( 16 ).ToArray(), "the save's sixteen go when the original's do" );
+		CollectionAssert.AreEqual( new[] { saved[13].Id, saved[14].Id }, went.Take( 2 ).ToArray(), "two on one sweep go lower slot first" );
+		CollectionAssert.AreEqual( new[] { 1083, 1444 }, joined.Distinct().ToArray() );
+		Assert.AreEqual( 10, joined.Count( on => on == 1083 ), "ten wanted and ten the most a top-up adds" );
+
+		// With no save, the opening pool is rolled and marked with the clock it was made on.
+		var fresh = new ParkStaffPool( new ParkBalance( "jungle", easyMode: true ), gameTick: 0 );
+
+		Assert.AreEqual( 22, fresh.Candidates.Count );
+		Assert.AreEqual( 0, fresh.Mark );
+		Assert.IsTrue( fresh.Candidates.All( person => person.Mark == 0 ) );
+	}
+
+	/// <summary>
 	/// <b>The minimums' round takes the mechanics first, then the handymen, the entertainers, the guards and the
 	/// researchers</b> (<c>FUN_00508170</c>), and names each kind that has fewer than its minimum between the park and
 	/// the pool and is not full.

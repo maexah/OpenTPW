@@ -38,14 +38,13 @@ the original.
 
 ## A. Bugs first
 
-- [ ] **Q130c. Read the save's staff pool.** From Q130b. The save holds the pool: 32 records of 20 bytes at the
-  world's start, which `ParkWorld`'s reader skips (`PoolRecords`, `PoolRecordSize`), each a kind, a name's row, a
-  grade, a costume, the occupied and taken bytes, the `mGameTick` it was made on and its lifetime; and the pool's own
-  mark (`+0x294` in memory: find it in the file). Read them, write the layout to the FileFormats saves page
-  (`CLAUDE.md` rule 14), and give a loaded park that pool in place of a rolled one; a fresh park still rolls.
-  Confirm: Lost Kingdom's hire screen showing the save's fourteen candidates, the first drops on `mGameTick` 926,
-  934 and 946 and the first top-up on 1083, as the original's log has them (`park-engine.md`, "The staff pool's
-  refresh"); a screenshot beside the original's hire screen.
+- [ ] **Q130d. The hire list stands in name order in the original. Decode first.** From Q130c. On four tabs the
+  original lists its candidates by name (Chris Battson above Rajan Tande, who holds the earlier slot); OpenTPW's
+  `ParkHireScreen` lists them in the pool's order. Decode what orders the list (`FUN_00481550` adds a row;
+  `UiList.Insert` already models the sorted insert `FUN_0066403b`) and whether a heading's click re-sorts it. Confirm
+  beside the original's screen, whose reference install reads the `american` name tables. Q130c's review: the
+  list's builder is `FUN_0049b5b0`, which adds rows in slot order with the slot as the row's key; the pool here
+  keeps no slots (`ParkStaffPool.Candidates`), which matters if the order turns out to be the slots'.
 - [ ] **Q132. Guests and rides take their turns on the game clock over eight, where the original hands them
   `mGameTick`. Decode first.** Found by Q68b. `ParkPeople.OnUpdate` hands `Peep.Tick`, `PeepBehaviour.Step` and the
   rides' turns `GameClock.Ticks / 8`, which runs from the program's start and is not reset on entering a park
