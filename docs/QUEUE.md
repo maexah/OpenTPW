@@ -605,6 +605,16 @@ the original.
   then build it. In the second run the walk also stopped on grass at (43,27) eight sweeps in and the no-links arm ran
   again from there: read why. Confirm: `staff` after `putstaff`, `idleSince` and the sweep the walk starts, predicted
   first; a screenshot.
+- [ ] **Q230. The gadget's arm jumps out and in, where the original's slides. Decode first.** Found by Q113. The
+  arm's handler `LAB_004a14f0` (installed at `0x004a2387`) is a jump table over messages `0xa` to `0x100` working a
+  state in the control's own `+0x134`; `FUN_004a25f0` reads states 3 and 4 as "still moving", and `FUN_004a2590` is
+  the one way a panel gets onto the arm. Neither how far a step moves nor how long the slide takes is traced. The two
+  ends are known: in, the arm's right edge is 645 left of the stream's (`hud.md`, "The arm and the aerial as built").
+  Here `ParkGadget.PutArm` sets it out or in at once, counted as `GADGET_ARM_SLIDE`; in, the arm and its end draw
+  nothing and the retract button is hidden, where the original narrows the arm and switches the button off. Decode
+  the states, the step and its clock, and how a mesh is drawn on a narrowed control; measure the slide's length in the
+  original's frames; then build it on `Time.Delta` (rule 10). Confirm: frames every 50 ms of the arm going out, beside
+  the original's.
 
 ## B. Docs and comments
 

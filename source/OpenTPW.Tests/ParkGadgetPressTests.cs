@@ -64,12 +64,16 @@ public class ParkGadgetPressTests
 	/// </summary>
 	/// <remarks>
 	/// <b>Mutations:</b> the arm left out at build; the handle not moved with the end; its outline left behind when it
-	/// moves; the arm or its end not stopping the pointer; the travel 675, the arm's whole width.
+	/// moves; the arm or its end not stopping the pointer; the travel 675, the arm's whole width; the slide not
+	/// counted, or counted at the build.
 	/// </remarks>
 	[TestMethod]
 	public void TheHandleFollowsTheArmInAndOut()
 	{
+		var slides = Times( "GADGET_ARM_SLIDE" );
 		var (stack, gadget) = AGadget();
+
+		Assert.AreEqual( slides, Times( "GADGET_ARM_SLIDE" ), "the build puts the arm in and slides nothing" );
 
 		Assert.IsFalse( gadget.ArmOut, "built in" );
 		Assert.AreEqual( 0x23, Under( gadget, 460, 1310 ), "the handle, past the body's 439" );
@@ -84,6 +88,7 @@ public class ParkGadgetPressTests
 		Assert.IsTrue( stack.ClickAt( 261, 1414 ), "the camcorder button, 0x27" );
 
 		Assert.IsTrue( gadget.ArmOut );
+		Assert.AreEqual( slides + 1, Times( "GADGET_ARM_SLIDE" ), "out, which the original slides" );
 		Assert.AreEqual( 0x21, Under( gadget, 850, 1150 ), "the arm's bare panel" );
 		Assert.AreEqual( 0x22, Under( gadget, 1030, 1200 ), "its end" );
 		Assert.AreEqual( 0x23, Under( gadget, 1100, 1300 ), "the handle inside its outline" );
@@ -96,6 +101,7 @@ public class ParkGadgetPressTests
 		Assert.IsTrue( stack.ClickAt( 389, 1426 ), "the retract button, 0x24" );
 
 		Assert.IsFalse( gadget.ArmOut );
+		Assert.AreEqual( slides + 2, Times( "GADGET_ARM_SLIDE" ), "and in" );
 		Assert.AreEqual( 0x23, Under( gadget, 460, 1310 ), "and the handle is back" );
 		Assert.IsNull( Under( gadget, 850, 1150 ) );
 	}

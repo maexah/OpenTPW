@@ -233,7 +233,7 @@ bar read row 476. The arm out was not tried there.
 **OpenTPW.** `ParkGadget` builds the body's children in that order under a body that draws by depth
 (`UiControl.DrawsByDepth`, `Depth`), reads both outlines into `UiControl.Outline`, and builds the arm in
 (`PutArm`) and the aerial down. The arm, its end, the mast and the buttons' panel stop the pointer over their
-rectangles (`UiControl.StopsPointer`). Not the original's: the arm does not slide; in, the arm and its end draw
+rectangles (`UiControl.StopsPointer`). Not the original's: the arm does not slide (counted, `GADGET_ARM_SLIDE`; `docs/QUEUE.md` Q230); in, the arm and its end draw
 nothing (how a mesh is drawn on a narrowed control is not traced) and the retract button is hidden; and the top's
 right click is counted, `AERIAL_DELETE_ALL_MESSAGES`, since no message bar is built.
 

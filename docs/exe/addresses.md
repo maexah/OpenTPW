@@ -16,6 +16,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 
 | Address | What it is | Cited in |
 |---|---|---|
+| `0x0040153a` | | OpenTPW.Files/Formats/ItemDescriptionFile.cs  |
+| `0x00401d8b` | | OpenTPW.Files/Formats/ItemDescriptionFile.cs  |
 | `0x00402938` | Shape reader `FUN_00402720`: start of the row swap that turns a picture upside down | OpenTPW.Files/Formats/ItemDescriptionFile.cs OpenTPW.Tests/ParkEntryCellTests.cs  |
 | `0x004029ab` | Shape reader: end of the row swap | OpenTPW.Files/Formats/ItemDescriptionFile.cs OpenTPW.Tests/ParkEntryCellTests.cs  |
 | `0x00402d70` | | OpenTPW/Global/GameCalendar.cs OpenTPW/VM/RideScript.cs  |
@@ -45,10 +47,15 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0040c35f` | Escape handler `0x0040c180`: installs the idle mode through the setter over any mode but 0 or 1, which runs the outgoing mode's uninstall | OpenTPW.Tests/ParkHandTests.cs  |
 | `0x0040c368` | Escape handler `0x0040c180`: after the idle install, `FUN_0052f200(0,1)` zeroes the tool and the rotation, and the handler answers 1 so the menu does not open | OpenTPW.Tests/ParkHandTests.cs OpenTPW/UI/Park/ParkFrontEnd.cs  |
 | `0x0040c4d0` | | OpenTPW/UI/Park/ParkFrontEnd.cs  |
+| `0x0040c5c0` | | OpenTPW.Tests/ParkCamcorderKeyOnReleaseTests.cs OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
 | `0x0040c5d0` | The system table's Ctrl+H handler, Popup Help, run on the key's release by the window procedure | OpenTPW/UI/HelpBar.cs  |
 | `0x004134f5` | Item loader `FUN_00413410`: descriptor `+0x4ac` stored as a copy of `+0x4c`, `Info.WhichUIType` | OpenTPW/World/Park/ParkRideOperation.cs  |
-| `0x00415193` | FUN_00415140, the post-load rebuild: FUN_00402e80 makes both clocks read their saved KOLC readings | OpenTPW.Files/Formats/Save/ParkClock.cs OpenTPW/World/Park/ParkRides.cs  |
+| `0x00413ac4` | | OpenTPW/World/Park/ParkItemCatalogue.cs  |
+| `0x00413f18` | | OpenTPW.Files/Formats/ItemDescriptionFile.cs OpenTPW/World/Park/ParkItemCatalogue.cs  |
+| `0x00413ffe` | | OpenTPW.Files/Formats/ItemDescriptionFile.cs  |
+| `0x00415193` | FUN_00415140, the post-load rebuild: FUN_00402e80 makes both clocks read their saved KOLC readings | OpenTPW.Files/Formats/Save/ParkClock.cs OpenTPW/VM/RideScript.cs OpenTPW/World/Park/ParkRides.cs  |
 | `0x00415270` | the whole-game restore chain: seventeen modules in order, each checked against a four-character tag that follows it | OpenTPW.Files/Formats/Save/ParkScriptStates.cs  |
+| `0x004162c2` | | OpenTPW.Files/Formats/Save/SaveReader.cs  |
 | `0x00419710` | | OpenTPW/UI/UiFonts.cs  |
 | `0x00423690` | | OpenTPW/Client/GameOptions.cs OpenTPW/World/Level.cs  |
 | `0x004237f0` | | OpenTPW.Files/Formats/Save/ConfigFile.cs OpenTPW/Client/SaveFolder.cs OpenTPW/UI/Screens/OptionsScreen.cs  |
@@ -63,6 +70,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00429ba0` | | OpenTPW/World/Advisor/AdvisorModel.cs  |
 | `0x00429d60` | | OpenTPW/UI/Park/ParkFrontEnd.cs OpenTPW/World/Advisor/Advisor.cs  |
 | `0x0042a190` | | OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
+| `0x0042af85` | | OpenTPW/World/Park/ParkGuestSprites.cs  |
+| `0x0042afba` | | OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x0042b935` | First-person camera update: a held right press (DAT_00790aac & 4) adds the Up arrow's 0.1 to the forward term | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x0042bdd8` | `FUN_0042b1c0`: the first-person sweep begins, the camcorder's step taken cell by cell | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x0042bdf6` | | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
@@ -81,12 +90,18 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004382b3` | SAOC loader: node +0x3c bit 1, a gap open, from the saved header's flag bit 1 | OpenTPW.Files/Formats/Save/ParkCoasters.cs  |
 | `0x0043837d` | SAOC loader: node +0x140, the clash count, restored from header +0x1c last | OpenTPW.Files/Formats/Save/ParkCoasters.cs OpenTPW/World/Park/ParkRideChoice.cs  |
 | `0x0044a904` | FUN_0044a870: a lookup record gets a matrix only when its file flags carry 0x10 or 0x20 (TEST byte [rec],0x30) | OpenTPW/World/Ride/RideNodes.cs  |
-| `0x0044abf2` | Pose walk FUN_0044ab30: a record whose file flags meet 0x40040 takes its position from a face of its parent mesh while that mesh carries 0x200000 | OpenTPW/World/Ride/RideNodes.cs  |
+| `0x0044abf2` | Pose walk FUN_0044ab30: a record whose file flags meet 0x40040 takes its position from a face of its parent mesh while that mesh carries 0x200000 | OpenTPW/World/Lobby/LobbyModel.cs OpenTPW/World/Ride/RideNodes.cs  |
+| `0x0044ac00` | | OpenTPW/World/Lobby/MeshAnimator.cs  |
+| `0x0044ac2a` | | OpenTPW.Files/Formats/Model/ModelFile.cs  |
+| `0x0044ad11` | | OpenTPW.Files/Formats/Model/ModelFile.cs  |
 | `0x0044b220` | | OpenTPW.Files/Formats/Model/ModelFile.cs  |
 | `0x0044b226` | Node lookup FUN_0044b220: the mask tested against 0x3da1f83 | OpenTPW.Files/Formats/Model/ModelFile.cs  |
 | `0x0044b22e` | Node lookup FUN_0044b220: a mask sharing no bit with 0x3da1f83 replaced by 0x3da1f82 | OpenTPW.Files/Formats/Model/ModelFile.cs OpenTPW.Tests/RideNodesTests.cs  |
 | `0x0044b2e0` | | OpenTPW/World/Advisor/AdvisorModel.cs  |
+| `0x0044ba1f` | | OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x0044e4b7` | FUN_0044e410( 3 ), the off-screen sweep: FUN_00473c70 called with flags 8 (no rest pose, no hide list) | OpenTPW/World/Ride/AnimTimeControl.cs  |
+| `0x00452bb0` | | OpenTPW/World/Park/ParkItemHeights.cs  |
+| `0x00452c1d` | | OpenTPW/World/Park/ParkItemHeights.cs  |
 | `0x0045aa5a` | | OpenTPW/Client/Players.cs  |
 | `0x0045aa74` | | OpenTPW/Client/Game.cs OpenTPW/Client/Players.cs  |
 | `0x0045aab4` | | OpenTPW.Files/Formats/Save/ConfigFile.cs  |
@@ -104,6 +119,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0046717c` | Placement FUN_00467030: the sine table index, FISTP of the float turn times 651.89862; the cosine's is rounded apart at 0x00467194 | OpenTPW/World/Ride/RideNodes.cs  |
 | `0x00467d00` | | OpenTPW/World/Lobby/LobbyModel.cs  |
 | `0x00467d60` | | OpenTPW/World/Lobby/LobbyModel.cs  |
+| `0x0046a82c` | | OpenTPW/World/Park/ParkObjects.cs  |
+| `0x0046a838` | | OpenTPW/World/Park/ParkObjects.cs  |
 | `0x0046b600` | | OpenTPW.Common/Client/Window.cs  |
 | `0x0046bb0b` | Window procedure `FUN_0046b600`: `GetKeyState` for Shift, Ctrl and Alt at each key, before `UI_PostKey` | OpenTPW/Global/Input.cs  |
 | `0x0046c480` | Place-staff mode (type 5, vtable `0x006fea40`) MOVE: carries the candidate's sprite under the pointer and draws a red square over a cell the click would refuse | OpenTPW/World/Park/ParkStaffPool.cs  |
@@ -171,7 +188,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0048833a` | Park mouse proc: a right press with RMB cancel on arms the quick click (DAT_007c2500 = 1) | OpenTPW.Tests/ParkHandTests.cs OpenTPW/UI/WindowStack.cs  |
 | `0x0048842b` | Park mouse proc: a quick right click with RMB cancel on installs the idle mode over whatever mode is current | OpenTPW.Tests/ParkHandTests.cs OpenTPW/World/Level.cs  |
 | `0x00488921` | `Park_MouseMessageProc` key-up case (`0x1000b`): the binding tables through `FUN_0040c990` - `scenes.md`, "The park Escape route" | OpenTPW/UI/Park/ParkFrontEnd.cs OpenTPW/UI/WindowStack.cs  |
-| `0x00488a00` | | OpenTPW.Tests/ParkEscapeOnReleaseTests.cs OpenTPW/UI/Park/ParkFrontEnd.cs  |
+| `0x00488a00` | | OpenTPW.Tests/ParkCamcorderKeyOnReleaseTests.cs OpenTPW.Tests/ParkEscapeOnReleaseTests.cs OpenTPW/UI/Park/ParkFrontEnd.cs OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x00488aa1` | Layer 1 (first person) handler FUN_00488a00: its 0x10006 click case, right button and RMB cancel, leaves first person | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs OpenTPW/UI/Park/ParkViewfinder.cs  |
 | `0x00488aa8` | FUN_00488a00: the 0x10006 case's RMB cancel test | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
 | `0x00488bc6` | `FUN_00488ba0`, the park screens' key handler: a plain Escape let go closes the screen (message 4) | OpenTPW/UI/Park/ParkFrontEnd.cs  |
@@ -218,7 +235,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0049bf34` | Hire screen FUN_0049bdd0: UI_LoadTree onto the park's layer 0 | OpenTPW/UI/Park/ParkHireScreen.cs  |
 | `0x004a0f05` | | OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x004a0f8a` | FUN_004a0e30, the gadget's trend arrow: last month's cash in (+0x1fc94) against its total costs (+0x1f5a4), frame 1 when lower | OpenTPW/UI/Park/ParkGadget.cs  |
-| `0x004a2387` | | OpenTPW/UI/Park/ParkGadget.cs  |
+| `0x004a2057` | FUN_004a1d70: the aerial mast 0x2d's top set to its bottom less 8, so the mast is built eight high | OpenTPW/UI/Park/ParkGadget.cs  |
+| `0x004a23da` | FUN_004a1d70: the arm 0x21's right edge moved by its left less the handle's (-645), so the arm is built in | OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x004a2529` | | OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x004a2ac0` | FUN_004a2ac0( a ): message 6 with a to the park's layer 0 and 1 - a to layer 1; first person's entry passes 0 | OpenTPW.Tests/ParkHandTests.cs OpenTPW/UI/Park/ParkGadget.cs OpenTPW/World/Level.cs  |
 | `0x004a2bf0` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
@@ -242,9 +260,10 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004a6b80` | | OpenTPW/UI/FrontEnd/Screens/NewPlayerDialog.cs  |
 | `0x004a6d00` | | OpenTPW/UI/FrontEnd/Screens/NewPlayerDialog.cs OpenTPW/UI/WindowStack.cs  |
 | `0x004a6e40` | | OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/FrontEnd/FrontEndLines.cs OpenTPW/UI/FrontEnd/Screens/NewPlayerDialog.cs  |
+| `0x004ab023` | | OpenTPW/UI/Park/ParkBuyScreen.cs OpenTPW/World/Park/ParkResearch.cs  |
+| `0x004ab063` | | OpenTPW/UI/Park/ParkBuyScreen.cs  |
+| `0x004ab086` | | OpenTPW/UI/Park/ParkBuyScreen.cs  |
 | `0x004acd62` | Buy screen FUN_004acc70: UI_LoadTree onto the park's layer 0, not modal | OpenTPW.Tests/ParkHandTests.cs OpenTPW/UI/Park/ParkBuyScreen.cs OpenTPW/UI/UiWindow.cs  |
-| `0x004ad5c6` | The ride window greys its door for a closed ride the open guard refuses (from here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
-| `0x004ad5e2` | The ride window's door greying (to here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004ad606` | The ride window sets its door down while `mCanLoad` is nought (`Button_SetDown`, from here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004ad622` | The ride window's door position (to here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004ad890` | The object windows' shared base, vtable `+0xc`: fills the stats table's labels | OpenTPW/UI/Park/ParkObjectWindow.cs  |
@@ -279,10 +298,12 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004d0251` | FUN_004d01f0: mProfitThisYear +0x124 less the amount, to here | OpenTPW.Tests/ParkBankTests.cs  |
 | `0x004d034e` | Bank message handler FUN_004d02d0, message 0xd (the year's change): mProfitThisYear +0x124 zeroed | OpenTPW.Tests/ParkBankTests.cs OpenTPW/World/Park/ParkState.cs  |
 | `0x004d0499` | The bank's month turn: a bought loan's repayment taken off the year's profit by an unsigned division | OpenTPW.Tests/ParkBankTests.cs  |
+| `0x004d3e92` | | OpenTPW.Files/Formats/ItemDescriptionFile.cs OpenTPW/World/Park/ParkResearch.cs  |
 | `0x004d49a0` | | OpenTPW/World/Park/FixedVector.cs  |
 | `0x004d5e76` | `FUN_004d5de0`: the guard's decide at hire, on `mGameTick & 3` | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004d6545` | `FUN_004d6410`: a staff member's idle stamp tested against `mGameTick` | OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/StaffBehaviour.cs  |
 | `0x004d655d` | `FUN_004d6410`: the guard's walk-or-stay, `mGameTick & 3` | OpenTPW.Tests/ParkStaffBehaviourTests.cs OpenTPW/World/Park/StaffBehaviour.cs  |
+| `0x004d72f7` | | OpenTPW/World/Park/StaffBehaviour.cs  |
 | `0x004d7b29` | `FUN_004d7b20`: the arrival manager's one call, through its thunk, once a thing sweep | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004d8a37` | Edge test FUN_004d8750: CMP ESI,1, mode 1's clause letting a step leave a path for a cell not path, queue or footprint | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004d8b8f` | FUN_004d8b40, a route's length: -1 when FUN_00511ef0 answers 0x70000000 | OpenTPW/World/Park/CellSearch.cs  |
@@ -297,7 +318,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004db425` | Object constructor: `OR [ESI+0x32],0x8` | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x004db517` | | OpenTPW/World/Park/ParkRides.cs  |
 | `0x004db51c` | Object constructor FUN_004db090: the starting speed, capacity and duration from Upgrades[0], each only above nought, from | OpenTPW.Tests/ParkStartingSettingsTests.cs OpenTPW/World/Park/ParkBuilding.cs OpenTPW/World/Park/ParkRides.cs  |
-| `0x004db534` | Object constructor FUN_004db090: FUN_0055a300 pushes the starting speed into the script's speed word +0xc0 | OpenTPW/World/Park/ParkRides.cs  |
+| `0x004db534` | Object constructor FUN_004db090: FUN_0055a300 pushes the starting speed into the script's speed word +0xc0 | OpenTPW/World/Park/ParkBumperCars.cs OpenTPW/World/Park/ParkRides.cs  |
 | `0x004db560` | Object constructor FUN_004db090: the starting capacity's low byte through the setter FUN_004dd7f0 (+0x5d, script variable 2) | OpenTPW/World/Park/ParkRides.cs  |
 | `0x004db64f` | Object constructor FUN_004db090: the starting duration's low byte, held to Min/MaxDuration, stored to +0x5c, to here | OpenTPW.Tests/ParkStartingSettingsTests.cs OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x004db66a` | Object constructor FUN_004db090: +0x18 stamped with the park calendar, FUN_004f8690 | OpenTPW/World/Park/ParkBuilding.cs OpenTPW/World/Park/ParkState.cs  |
@@ -315,7 +336,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004ddd7d` | `FUN_004ddd20`: the `VAR_LETMEON` clear (to here) | OpenTPW.Tests/ParkQueueRemeasureTests.cs OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004ddde9` | `FUN_004ddd20`: with no `mQPrev` the leaver's `mQNext` becomes `mFirstInQ` | OpenTPW.Tests/ParkQueueJoinTests.cs OpenTPW.Tests/ParkQueueTurnTests.cs OpenTPW/World/Park/ParkRideOperation.cs OpenTPW/World/Park/ParkState.cs  |
 | `0x004ddfa9` | `FUN_004ddf50` (GetPositionInQueue) gives up at a guest no longer queueing | OpenTPW.Tests/ParkQueueRemeasureTests.cs OpenTPW/World/Park/ParkState.cs  |
-| `0x004de266` | `FUN_004de1f0` calls `FUN_004d8c60`, a write into a coarse grid at the back cell's block | OpenTPW/World/Park/ParkState.cs  |
+| `0x004de233` | | OpenTPW/World/Park/ParkState.cs  |
+| `0x004de266` | `FUN_004de1f0` calls `FUN_004d8c60`, a write into a coarse grid at the back cell's block | OpenTPW.Tests/ParkStrandedTests.cs OpenTPW/World/Park/ParkState.cs  |
 | `0x004de2b9` | `FUN_004de1f0`'s queue walk skips the object's nominee | OpenTPW.Tests/ParkQueueRemeasureTests.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004de2bd` | `FUN_004de1f0`'s queue walk reads each `mQNext` before the call | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004de2f7` | `FUN_004de1f0`'s tail: the reopen asks `mCanLoad` nought first | OpenTPW/World/Park/ParkRideOperation.cs  |
@@ -342,11 +364,15 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004e0714` | FUN_004e0560: the track term held 0..40, to here | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x004e0756` | FUN_004e0560, the track arm: the base held 0..100, to here | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x004e07be` | FUN_004e0560: the level times the speed and duration ratios, each held 0.75..1.25 | OpenTPW/World/Park/ParkRideScore.cs  |
+| `0x004e092c` | | OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x004e09b0` | | OpenTPW.Tests/ParkRideAdmitTests.cs OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x004e0d10` | | OpenTPW.Tests/ParkToiletDirtTests.cs OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004e13fc` | `Invite`'s `mCanLoad` bail: `FUN_004e0450` and return, skipping the watchdog | OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/ParkRideOperation.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004e16c6` | The charge's economy feed `FUN_004e16b0`: the price deposited in the park's bank (`FUN_004d0190`) | OpenTPW.Tests/ParkRideExitTests.cs  |
 | `0x004e1711` | Economy feed FUN_004e16b0, a shop: the park analyser's month total +0x20130 | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004e18a6` | FUN_004e16b0, a sideshow: the park analyser's month total +0x20380 | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004e2390` | FUN_004e2290, the scrap percentage: 100 only with mNumCustomers (+0x1a0) nought, under 30 days old | OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x004e23b2` | | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x004e26c6` | The win roll FUN_004e2670: r drawn from the park's generator FUN_00516330, won when the object's chance >= r % 100 | OpenTPW.Files/Formats/ItemDescriptionFile.cs OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004f7ea0` | Clock constructor FUN_004f7e80: mFunnyTimeStart seeded 2000-01-01 00:00 through SystemTimeToFileTime | OpenTPW/Global/GameCalendar.cs  |
 | `0x004f7ea9` | | OpenTPW/Global/GameCalendar.cs  |
@@ -357,26 +383,47 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004f87e7` | | OpenTPW.Tests/GameCalendarTests.cs OpenTPW/Global/GameCalendar.cs  |
 | `0x004f8ccc` | Person serialiser FUN_004f8b10, write arm: mCount (+0x2c) written as one byte, the person record's byte 36 | OpenTPW.Files/Formats/Save/ParkWorld.cs  |
 | `0x004f93a6` | Person base reader FUN_004f8b10: mSpriteID reduced modulo its kind's loaded banks (FUN_00541f60) | OpenTPW.Tests/ParkCostumeTests.cs OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/ParkSpriteBanks.cs  |
-| `0x004f9534` | SetRandomDest: the call's one draw, r % 5 + 1, the linked walk's pass count, taken before the links count | OpenTPW.Tests/ParkNoLinksWanderTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
-| `0x004f95b9` | SetRandomDest `FUN_004f9490`: the count of the person's own cell's links (`FUN_00522810`); nought takes the no-links arm | OpenTPW/World/Park/PeepBehaviour.cs OpenTPW/World/Park/StaffBehaviour.cs  |
+| `0x004f94e2` | | OpenTPW.Tests/ParkStrandedTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004f950e` | | OpenTPW/World/Park/Thoughts.cs  |
+| `0x004f9534` | SetRandomDest: the call's one draw, r % 5 + 1, the linked walk's pass count, taken before the links count | OpenTPW.Tests/ParkNoLinksWanderTests.cs OpenTPW/World/Park/PeepBehaviour.cs OpenTPW/World/Park/StaffBehaviour.cs  |
+| `0x004f953b` | | OpenTPW/World/Park/LinkedWander.cs  |
+| `0x004f95af` | | OpenTPW.Tests/ParkStaffBehaviourTests.cs OpenTPW/World/Park/StaffBehaviour.cs  |
+| `0x004f95b9` | SetRandomDest `FUN_004f9490`: the count of the person's own cell's links (`FUN_00522810`); nought takes the no-links arm | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004f95c0` | | OpenTPW.Tests/ParkStaffBehaviourTests.cs OpenTPW/World/Park/StaffBehaviour.cs  |
+| `0x004f95c6` | | OpenTPW.Tests/ParkLinkedWanderTests.cs OpenTPW/World/Park/LinkedWander.cs  |
+| `0x004f96fb` | | OpenTPW/World/Park/StaffBehaviour.cs  |
+| `0x004f98a1` | | OpenTPW/World/Park/LinkedWander.cs  |
+| `0x004f98f5` | | OpenTPW/World/Park/LinkedWander.cs  |
+| `0x004f9916` | | OpenTPW.Tests/ParkLinkedWanderTests.cs OpenTPW/World/Park/LinkedWander.cs  |
+| `0x004f991c` | | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004f9983` | | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004f99bf` | | OpenTPW.Tests/ParkNoLinksWanderTests.cs  |
 | `0x004f9a05` | SetRandomDest: start of the no-links arm (path on seven rays, then five random cells) | OpenTPW.Tests/ParkNoLinksWanderTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004f9b98` | SetRandomDest's no-links arm: a probe's failed route moves on to the next probe | OpenTPW.Tests/ParkNoLinksWanderTests.cs  |
-| `0x004f9d19` | SetRandomDest's no-links arm: the five random tries' count, an off-map draw included | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004f9d19` | SetRandomDest's no-links arm: the five random tries' count, an off-map draw included | OpenTPW.Tests/ParkStaffBehaviourTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004f9d5f` | SetRandomDest: end of the no-links arm | OpenTPW.Tests/ParkNoLinksWanderTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004f9d8e` | | OpenTPW/World/Park/StaffBehaviour.cs  |
+| `0x004f9deb` | | OpenTPW.Tests/ParkStrandedTests.cs OpenTPW/World/Park/PeepBehaviour.cs OpenTPW/World/Park/Thoughts.cs  |
+| `0x004f9e09` | | OpenTPW.Tests/ParkStrandedTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004f9e40` | SetRandomDest's no-links arm: the eight-way direction table of its probes | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004f9f89` | `FUN_004f9f00`: first half of `prev + (cur - prev) * t` | OpenTPW.Tests/ParkGuestPlacementTests.cs OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x004f9fa9` | FUN_004f9f00, a person's sample: the across position truncated by __ftol before the scale | OpenTPW/World/Park/Balloon.cs  |
 | `0x004f9fb6` | `FUN_004f9f00`: second half of the interpolation | OpenTPW.Tests/ParkGuestPlacementTests.cs OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x004f9fd2` | FUN_004f9f00: the down position truncated by __ftol | OpenTPW/World/Park/Balloon.cs  |
 | `0x004fa015` | `FUN_004f9f00` copies the octant straight off the thing: the heading is not blended | OpenTPW.Tests/ParkGuestPlacementTests.cs OpenTPW/World/Park/ParkGuestSprites.cs  |
+| `0x004fa0c7` | | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x004fa0e6` | | OpenTPW/World/Park/ParkBuildMarkers.cs  |
 | `0x004fa184` | FUN_004fa030: a guest (model byte 1) holding a balloon (+0x210) has it placed each frame, from | OpenTPW/World/Park/Balloon.cs  |
 | `0x004fa244` | FUN_004fa030: the bob's phase counts the placement (0x007cedd8 by 0.1 to 1.0), from | OpenTPW/World/Park/Balloon.cs  |
 | `0x004fa28b` | FUN_004fa030: the bob's count, to here | OpenTPW/World/Park/Balloon.cs  |
+| `0x004fa30b` | | OpenTPW.Tests/ParkStrandedTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fa578` | | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fa5d0` | | OpenTPW.Tests/ParkStrandedTests.cs  |
+| `0x004fa5fe` | | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fa62a` | `FUN_004fa5f0`: returns nought without routing on `mStrandedTime` (`+0x198`) | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fa95d` | The place-a-peep routine re-stamps previous := current | OpenTPW.Tests/ParkTickTests.cs OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/ParkRideOperation.cs OpenTPW/World/Park/PeepNavigator.cs  |
 | `0x004fae10` | | OpenTPW.Files/Formats/Save/RecordStream.cs  |
-| `0x004fb019` | Guest constructor `FUN_004faec0`: the kind drawn as the world generator mod `[0x007851d4]`, the `PeepTypes` row count | OpenTPW.Tests/ParkGuestTypeTests.cs OpenTPW/World/Park/ParkPeople.cs  |
-| `0x004fb075` | Guest constructor `FUN_004faec0`: happiness set to 50.0 | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fb019` | Guest constructor `FUN_004faec0`: the kind drawn as the world generator mod `[0x007851d4]`, the `PeepTypes` row count | OpenTPW.Tests/ParkGuestTypeTests.cs  |
 | `0x004fb18d` | Guest constructor FUN_004faec0: the child - the generator reseeded with the id, kind 0, one draw over the kid banks, from | OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/ParkSpriteBanks.cs  |
 | `0x004fb1bc` | FUN_004faec0: the child's sprite built (FUN_004d4140), to here | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004fb1c9` | Guest constructor FUN_004faec0: the hurry +0xc2 set to 25, the word at 0x0075c7f2 | OpenTPW.Tests/ParkTickTests.cs  |
@@ -393,12 +440,22 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004fb4ba` | FUN_004fb360, a thing removed: each mPreviousRides slot naming it emptied with the refusal beside it, from | OpenTPW.Tests/ParkVisitHistoryTests.cs OpenTPW/World/Park/Peep.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fb4d9` | FUN_004fb360: the history clear, to here | OpenTPW/World/Park/Peep.cs  |
 | `0x004fc66d` | Guest reader FUN_004fb530, read arm: mSavedMajorDest (+0x1de) read as a word by FUN_004d37e0, as mMajorDest is | OpenTPW.Files/Formats/Save/ParkWorld.cs  |
-| `0x004fcb21` | The guest's chooser `FUN_004fcb10` clears `mMajorDest` before it chooses, chosen or not | OpenTPW.Tests/ParkEvictionTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fc82e` | | OpenTPW.Tests/ParkQueueTurnTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fc83f` | | OpenTPW.Tests/ParkQueueTurnTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fc842` | | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fc84e` | | OpenTPW/World/Park/ParkAudio.cs  |
+| `0x004fc985` | | OpenTPW/World/Park/Thoughts.cs  |
+| `0x004fc9eb` | | OpenTPW/World/Park/Thoughts.cs  |
+| `0x004fca43` | | OpenTPW/World/Park/Thoughts.cs  |
+| `0x004fcb21` | The guest's chooser `FUN_004fcb10` clears `mMajorDest` before it chooses, chosen or not | OpenTPW.Tests/ParkEvictionTests.cs OpenTPW.Tests/ParkSecondToiletTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fcbc4` | The chooser `FUN_004fcb10` aims at the back-of-queue cell's centre (`FUN_004fa530`) | OpenTPW.Tests/ParkQueuePlaceTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
-| `0x004fcc49` | `FUN_004fcc30` asks `GetBackOfQueue` of the object: the score's distance and nearby effects are read there | OpenTPW/World/Park/ParkRideChooser.cs  |
+| `0x004fcbcf` | | OpenTPW.Tests/ParkRideChooserTests.cs OpenTPW.Tests/ParkSecondToiletTests.cs OpenTPW/World/Park/ParkRideChooser.cs  |
+| `0x004fcbd8` | | OpenTPW.Tests/ParkRideChooserTests.cs  |
+| `0x004fcc7d` | | OpenTPW.Tests/ParkRideChooserTests.cs OpenTPW/World/Park/ParkRideChooser.cs  |
 | `0x004fcd3f` | FUN_004fcc30, the ride score: the same kind as mPreviousRides[0] scores nought, from | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x004fcd79` | FUN_004fcc30: mPreviousRides[0] looked up in the thing table 0x7cfb90 | OpenTPW/World/Park/ParkRideChooser.cs  |
 | `0x004fcd97` | FUN_004fcc30: the same-kind nought, to here | OpenTPW/World/Park/ParkRideScore.cs  |
+| `0x004fce04` | | OpenTPW.Tests/ParkRideChooserTests.cs OpenTPW/World/Park/ParkRideChooser.cs  |
 | `0x004fce3e` | FUN_004fcc30: the queue term only within a squared distance of 8 (JG) | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x004fce40` | FUN_004fcc30: the queue term over +0x40, the walked cells, nought read as 1 | OpenTPW/World/Park/ParkRideChooser.cs  |
 | `0x004fcf06` | FUN_004fcc30: the excitement weight only for a non-zero low byte of ExcitementLevel | OpenTPW/World/Park/ParkRideScore.cs  |
@@ -409,6 +466,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004fd352` | FUN_004fcc30: the golden-ticket or price factor, to here | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x004fd354` | FUN_004fcc30: the two histories divide the score, from | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x004fd496` | FUN_004fcc30: the two histories, to here | OpenTPW/World/Park/ParkRideScore.cs  |
+| `0x004fd4ea` | | OpenTPW.Tests/ParkGuestTypeTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fd50a` | `FUN_004fd4e0`, the arrival refusal: reads `PeepTypes[kind].PreferredExcitement`, the byte at `0x7850e4` + 12 × kind | OpenTPW.Tests/ParkGuestTypeTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fd660` | FUN_004fd570: the window, x from the guest's x - 2 to + 1 (outer), from | OpenTPW/World/Park/ParkRideChooser.cs  |
 | `0x004fd6ce` | FUN_004fd570: a window cell only if strictly nearer the major's back cell than the guest (JGE) | OpenTPW.Tests/ParkSecondToiletTests.cs  |
@@ -461,34 +519,83 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004fe787` | FUN_004fe1e0: the balloon and costume arms' shared event tail, FUN_0050c100 with the shop's id | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe78a` | FUN_004fe1e0: the balloon arm and the costume arm's shared event tail, to here | OpenTPW.Tests/ParkBalloonTests.cs OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe78f` | FUN_004fe1e0, the toilet arm: the object's flags & 1, from | OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x004fe795` | FUN_004fe1e0: the toilet need truncated for FUN_004e2440's byte, from | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe7a8` | FUN_004fe1e0: FUN_004e2440, the dirtying, with the need's byte | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe7b6` | FUN_004fe1e0, a toilet: the guest's toilet need +0x1ac zeroed | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe7dc` | FUN_004fe1e0: illness's truncated byte above 90, unsigned (CMP AL,0x5a / JBE) | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe81f` | FUN_004fe1e0, a sideshow: mNumSideshowsWon +0x1d0 +1, before the winner's rise | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe8e8` | FUN_004fe1e0: the special ingredient's jump table, five entries (0 and above 4 to the switch's end) | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004fe96b` | Let-go FUN_004fe950: mBalloonScript +0x210 zeroed after the sprite is put on 0x0074f4c0 | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x004fecb4` | | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fecb9` | | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fecd2` | | OpenTPW.Tests/ParkDecidingArmsTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fece2` | | OpenTPW.Tests/ParkDecidingArmsTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fed15` | | OpenTPW.Tests/ParkDecidingArmsTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fed26` | | OpenTPW.Tests/ParkDecidingArmsTests.cs  |
+| `0x004fedb3` | | OpenTPW.Tests/ParkDecidingArmsTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fedd8` | | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fee51` | | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fee5b` | | OpenTPW.Tests/ParkLeavingTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fee87` | | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fef13` | | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fef19` | | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004feff2` | | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x004ff108` | | OpenTPW.Tests/ParkDecidingArmsTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004ff150` | | OpenTPW.Tests/ParkDecidingArmsTests.cs  |
+| `0x004ff156` | | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004ff1c8` | | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x004ff1d9` | | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x004ff24b` | | OpenTPW/World/Park/ParkAdmission.cs  |
+| `0x004ff3ae` | | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004ff3d6` | | OpenTPW.Tests/ParkDecidingTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004ff3f4` | | OpenTPW.Tests/ParkDecidingTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004ff425` | | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004ff42e` | | OpenTPW.Tests/ParkDecidingTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004ff437` | | OpenTPW.Tests/ParkGuestTypeTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004ff44e` | | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004ff457` | | OpenTPW.Tests/ParkGuestTypeTests.cs  |
+| `0x004ff46f` | | OpenTPW.Tests/ParkDecidingTests.cs  |
+| `0x004ff480` | | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004ff4a3` | | OpenTPW.Tests/ParkDecidingTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004ffa44` | | OpenTPW.Tests/ParkLeavingTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004ffa7d` | | OpenTPW.Tests/ParkLeavingTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004ffc3d` | State 10's arrival test: the guest's cell against `GetBackOfQueue` | OpenTPW.Tests/ParkQueuePlaceTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004ffc68` | | OpenTPW.Tests/ParkToiletDirtTests.cs  |
+| `0x004ffc85` | | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004ffca1` | | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004ffcd7` | | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004ffce6` | Arrival FUN_004ffbc0: the excitement refusal pushes the thing onto mPreviousTemporaryRides (FUN_004fdc60) | OpenTPW.Tests/ParkGuestTypeTests.cs OpenTPW/World/Park/Peep.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004ffcf6` | | OpenTPW.Tests/ParkGuestTypeTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004ffd74` | Arrival FUN_004ffbc0: the too-long refusal pushes the thing onto mPreviousTemporaryRides | OpenTPW/World/Park/Peep.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004ffd92` | Arrival FUN_004ffbc0: happiness copied to +0x20c, the join's snapshot, before FUN_004ddb90 links the queue | OpenTPW.Tests/ParkSettleUpCountsTests.cs OpenTPW/World/Park/Peep.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004ffdad` | Joining a queue re-takes the place (`FUN_00501160`) | OpenTPW.Tests/ParkQueuePlaceTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004ffdf4` | Arriving at a queue with no route to the place: put out | OpenTPW.Tests/ParkQueuePlaceTests.cs OpenTPW.Tests/ParkVisitHistoryTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004ffe0a` | | OpenTPW.Tests/ParkLongestQueueTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004ffe16` | State 10: no back of queue, or no route to it - state 6 with `MajorDest` kept | OpenTPW.Tests/ParkQueuePlaceTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004ffe4a` | | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004ffe7a` | | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004ffe94` | | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004ffe9f` | State 10 FUN_004ffbc0, stuck: MajorDest cleared, the saved major left | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004ffeaf` | | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004ffec9` | | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004ffef2` | FUN_004ffbc0: the walking-turn count +0x2c, from | OpenTPW/World/Park/Peep.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004ffefe` | FUN_004ffbc0: CMP AL,0xb / JBE, unsigned: the twelfth decides | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fff06` | FUN_004ffbc0: the count zeroed, then the minor decision FUN_004fd570 called, to here | OpenTPW/World/Park/Peep.cs OpenTPW/World/Park/PeepBehaviour.cs  |
-| `0x0050010a` | `InQueue` turn: the board arm's no route, "the player has removed the path", out | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x0050010a` | `InQueue` turn: the board arm's no route, "the player has removed the path", out | OpenTPW.Tests/ParkQueueTurnTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x0050012b` | `InQueue` turn: the board arm's no route calls `FUN_004e0ac0`, the ride forgets its nominee | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x005001d8` | `InQueue` turn: invited but not the nominee, the whole turn is nothing | OpenTPW.Tests/ParkQueueTurnTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x005001f0` | | OpenTPW.Tests/ParkToiletDirtTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x00500270` | `InQueue` turn: the lost place, "Problem with a queue", out | OpenTPW.Tests/ParkQueueTurnTests.cs  |
 | `0x005002f2` | `FUN_004ffff0`: the mood, which a re-take falls through to | OpenTPW.Tests/ParkQueuePlaceTests.cs  |
 | `0x00500308` | `InQueue` turn: the mood is read once `mGameTick - mTimeOfLastSpotAnim` exceeds 30 | OpenTPW.Tests/ParkQueueTurnTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
-| `0x0050031c` | `InQueue` turn: happiness above `0x50` plays spot animation 5 | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x0050031c` | `InQueue` turn: happiness above `0x50` plays spot animation 5 | OpenTPW.Tests/ParkQueueTurnTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x0050031e` | `InQueue` turn: the branch for happiness above `0x50` | OpenTPW.Tests/ParkQueueTurnTests.cs  |
-| `0x00500330` | `InQueue` turn: happiness from `0x14` asks about the toilet | OpenTPW/World/Park/PeepBehaviour.cs  |
-| `0x00500334` | `InQueue` turn: happiness below `0xa` gives up unhappy | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x00500320` | | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x00500324` | | OpenTPW.Tests/ParkQueueTurnTests.cs  |
+| `0x00500330` | `InQueue` turn: happiness from `0x14` asks about the toilet | OpenTPW.Tests/ParkQueueTurnTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x00500334` | `InQueue` turn: happiness below `0xa` gives up unhappy | OpenTPW.Tests/ParkQueueTurnTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x00500336` | `InQueue` turn: happiness 10..19 plays spot animation 4 | OpenTPW.Tests/ParkQueueTurnTests.cs  |
+| `0x00500387` | | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x005003a2` | `InQueue` turn: a toilet need above `0x50` leaves for a toilet | OpenTPW.Tests/ParkQueueTurnTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x005003b6` | `InQueue` turn: a queuer for a toilet stays in its queue | OpenTPW.Tests/ParkQueueTurnTests.cs  |
 | `0x00500415` | `InQueue` turn: boredom after `mTimeStartedIdling` + 100 | OpenTPW/World/Park/PeepBehaviour.cs  |
@@ -519,8 +626,14 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005015ef` | ExitRide FUN_005014e0: the route to it must succeed before the settle-up FUN_004fd970 | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x00501658` | Guest tick handler `FUN_00501650`: its first call, `FUN_004fa870`, stamps the previous position | OpenTPW.Tests/ParkTickTests.cs OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/PeepNavigator.cs  |
 | `0x005018f8` | Needs turn FUN_00501650, its last test: states 16 and 17 and FUN_004fa990 gate a draw and the balloon's countdown, from | OpenTPW/World/Park/Peep.cs  |
+| `0x00501913` | | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x0050192d` | | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x00501949` | FUN_00501650: the life at nought lets the balloon go (FUN_004fe950), to here | OpenTPW/World/Park/Peep.cs  |
+| `0x00501951` | | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x005019da` | Guest needs turn FUN_00501650, its last call: FUN_004fdc90, a nought onto the refusals when mGameTick % 20 is nought | OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/Peep.cs  |
+| `0x00501d26` | | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x00501d32` | | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x00501d3b` | | OpenTPW.Tests/ParkQueueTurnTests.cs  |
 | `0x00501fd3` | State setter FUN_00501db0 case 0xf: with life left and the thing left not a balloon shop, the balloon built again, from | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x0050208a` | FUN_00501db0 case 0xf: the rebuild, to here | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x0050212b` | Admission tests the object's flag bit `0x20`, which keeps the rider's sprite | OpenTPW.Files/Formats/Save/ParkWorld.cs  |
@@ -533,14 +646,24 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00502be4` | `FUN_005029f0`: the researcher staying takes state `0xf`, research | OpenTPW/World/Park/StaffBehaviour.cs  |
 | `0x00504d8f` | `FUN_00504c70`: a staff member put out of a sold rest area claims another and stays in state 0 | OpenTPW.Tests/ParkEvictionTests.cs OpenTPW/World/Park/StaffBehaviour.cs  |
 | `0x00505495` | `FUN_00505490` opens with `FUN_004fa870`, as the guest handler does | OpenTPW.Tests/ParkTickTests.cs OpenTPW/World/Park/ParkPeople.cs  |
+| `0x005054b3` | | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x005054c0` | | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x00505542` | Staff idle turn: a nought idle stamp ends the idle wait on the next sweep | OpenTPW/World/Park/Staff.cs  |
 | `0x00505745` | `FUN_005056e0`: state 6's wait against `mGameTick`, unsigned | OpenTPW.Tests/ParkStaffBehaviourTests.cs OpenTPW/World/Park/StaffBehaviour.cs  |
 | `0x00506286` | `FUN_005061d0`: the normal end of a rest calls `FUN_00506d10`, which takes one off `VAR_STAFFIN` | OpenTPW/World/Park/StaffBehaviour.cs  |
 | `0x00506b41` | FUN_00506a40, the tired branch: the rest byte, truncated, tested <= the rest level | OpenTPW/World/Park/StaffBehaviour.cs  |
-| `0x00506b50` | FUN_00506a40: thought 0x14 (tired) shown through FUN_0050be80 before the rest area is looked for | OpenTPW/World/Park/StaffBehaviour.cs  |
+| `0x00506b50` | FUN_00506a40: thought 0x14 (tired) shown through FUN_0050be80 before the rest area is looked for | OpenTPW.Tests/ParkStaffBehaviourTests.cs OpenTPW/World/Park/StaffBehaviour.cs  |
+| `0x00506cc2` | | OpenTPW/World/Park/StaffBehaviour.cs  |
+| `0x00506ccd` | | OpenTPW/World/Park/StaffBehaviour.cs  |
+| `0x00506cda` | | OpenTPW/World/Park/StaffBehaviour.cs  |
+| `0x00506cf4` | | OpenTPW/World/Park/StaffBehaviour.cs  |
+| `0x0050701f` | | OpenTPW.Tests/ParkStaffBehaviourTests.cs OpenTPW/World/Park/StaffBehaviour.cs  |
 | `0x0050b7f9` | Thing delete FUN_0050b780: broadcasts message 0x1b before the free (the all-visitors list removes a guest's row) | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x0050c039` | | OpenTPW/World/Park/Thoughts.cs  |
 | `0x0050cd80` | | OpenTPW/World/Park/FixedVector.cs  |
+| `0x0050ed79` | | OpenTPW.Tests/ParkStrandedTests.cs OpenTPW/World/Park/PeepBehaviour.cs OpenTPW/World/Park/PeepWalk.cs  |
 | `0x0050f870` | | OpenTPW/World/Park/FixedVector.cs  |
+| `0x0050fd19` | | OpenTPW/World/Park/PeepWalk.cs  |
 | `0x005101d0` | FUN_00510190: max_force and max_speed each held at 0x28f (655) or more | OpenTPW/World/Park/Peep.cs  |
 | `0x00511fc4` | | OpenTPW/World/Park/ParkWeather.cs  |
 | `0x00512880` | | OpenTPW/World/Lobby/LobbyWeather.cs OpenTPW/World/Weather/Lightning.cs  |
@@ -553,14 +676,14 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00516695` | World tick FUN_00516380: FUN_004d7b20 after every thing's turn, where the calendar sends the day's change | OpenTPW/World/Level.cs  |
 | `0x00516d13` | World save `FUN_00516c80`: installs the idle mode before anything is written, so leaving a park lets go of the hand | OpenTPW/World/Level.cs  |
 | `0x00517bec` | World load: `mGameTick` read from the save | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x005181e7` | | OpenTPW/World/Park/ParkResearch.cs  |
 | `0x0051861c` | Load factory FUN_005179c0: the join's snapshot +0x20c zeroed before the guest's record is read | OpenTPW/World/Park/Peep.cs  |
-| `0x00519f40` | `FUN_00519ef0`'s second-argument path writes the gate's `VAR_COMMAND` = 2 | OpenTPW/World/Park/ParkRides.cs  |
 | `0x00519f76` | `FUN_00519ef0`'s open arm (first argument non-zero), only when the park is closed | OpenTPW.Tests/ParkClosedRideTests.cs OpenTPW/UI/Park/ParkEntryPriceScreen.cs OpenTPW/World/Park/ParkState.cs  |
 | `0x0051a013` | The park's door, opening: the open guard `FUN_004df290` on each visitable object | OpenTPW.Tests/ParkClosedRideTests.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x0051a01e` | The park's door, opening: `FUN_004df390` opens it | OpenTPW.Tests/ParkClosedRideTests.cs OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/ParkState.cs  |
 | `0x0051a09e` | `FUN_00519ef0`'s close arm runs only when the park is open | OpenTPW.Tests/ParkClosedRideTests.cs OpenTPW/World/Park/ParkState.cs  |
-| `0x0051a0e8` | The park's door, closing: the gate's `VAR_COMMAND` = 0 when nobody is in the park (from here) | OpenTPW/World/Park/ParkRides.cs OpenTPW/World/Park/ParkState.cs  |
-| `0x0051a161` | The park's door, closing: the gate write (to here) | OpenTPW/World/Park/ParkRides.cs OpenTPW/World/Park/ParkState.cs  |
+| `0x0051a0e8` | The park's door, closing: the gate's `VAR_COMMAND` = 0 when nobody is in the park (from here) | OpenTPW/World/Park/ParkState.cs  |
+| `0x0051a161` | The park's door, closing: the gate write (to here) | OpenTPW/World/Park/ParkState.cs  |
 | `0x0051a1ae` | The park's door, closing: `FUN_004df300` on every visitable object | OpenTPW.Tests/ParkClosedRideTests.cs OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/ParkState.cs  |
 | `0x0051a66b` | End of `FUN_0051a2f0`: sets variable 0 (`VAR_TRIGGER`) to 1 on the standing vehicle | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x0051b920` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
@@ -568,7 +691,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0051bd70` | | OpenTPW/Audio/Audio.cs OpenTPW/World/Advisor/Advisor.cs OpenTPW/World/Park/ParkAudio.cs  |
 | `0x0051bfab` | Sound_ApplyGroupVolumes posting the voice service (message `0x700b6c`) | OpenTPW/World/Park/ParkScreams.cs  |
 | `0x0051c2c0` | | OpenTPW/World/Advisor/Advisor.cs  |
-| `0x0051c300` | | OpenTPW/World/Advisor/Advisor.cs  |
+| `0x0051c300` | | OpenTPW/World/Advisor/Advisor.cs OpenTPW/World/Park/ParkCarSounds.cs  |
 | `0x0051e8f0` | | OpenTPW/World/Lobby/LobbyAudio.cs  |
 | `0x0051ea50` | | OpenTPW/World/Lobby/LobbyAudio.cs  |
 | `0x0051eae0` | | OpenTPW/UI/UiSounds.cs OpenTPW/World/Advisor/Advisor.cs OpenTPW/World/Park/ParkAudio.cs  |
@@ -636,6 +759,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00529abf` | Placer: start of the relink round the exit path | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x00529b18` | Placer: end of the exit half | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x00529e4d` | Placer FUN_00529e10: a track handle for an item whose Bumper.BumperType (+0xa0) is non-zero | OpenTPW.Files/Formats/ItemDescriptionFile.cs OpenTPW/World/Park/ParkBuilding.cs OpenTPW/World/Park/ParkTrackRideTable.cs  |
+| `0x00529edf` | | OpenTPW/World/Park/ParkBumperCars.cs  |
+| `0x00529f2b` | | OpenTPW/World/Park/ParkBumperCars.cs  |
 | `0x00529f6a` | Placer FUN_00529e10: the call to FUN_00545890 for a track ride's slot | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x0052ff9a` | `FUN_0052fe50` clears nothing when the mode is 3 and P is a path | OpenTPW.Tests/ParkPathBuildingTests.cs OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x0052ffec` | `FUN_004de1f0` from the backtrack `FUN_0052fe50` | OpenTPW/World/Park/ParkPathBuilding.cs  |
@@ -648,11 +773,13 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0053036d` | `FUN_00530120` at a path: steps back unless the cell before is an entrance | OpenTPW.Tests/ParkPathBuildingTests.cs OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x005303f1` | `FUN_00530120`: an entry cell with no link pushes the cell its angle names | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00530487` | `FUN_00530120`'s angle arm ends; the final push follows | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x005330ca` | | OpenTPW/World/Park/ParkBuildMarkers.cs  |
 | `0x0053473c` | Stamp: queue over path force-clears the path, `FUN_005367a0(0,0)` | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x0053475d` | Stamp: end of the force-clear | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x005347af` | | OpenTPW/World/Park/ParkState.cs  |
 | `0x00534858` | `FUN_004de1f0` from the stamp: path laid over a queue cell | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00534906` | `FUN_005348d0` path arm: a queue cell becomes path, type only | OpenTPW/World/Park/ParkPathNeighbours.cs  |
-| `0x00534913` | Path arm: the type write | OpenTPW/World/Park/ParkPathNeighbours.cs  |
+| `0x00534913` | Path arm: the type write | OpenTPW/World/Park/ParkPathNeighbours.cs OpenTPW/World/Park/ParkState.cs  |
 | `0x0053522d` | `FUN_005348d0`: the queue arm, laid type 0 or 3 | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x0053525a` | Queue arm: first of the four entrance-bond probes | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00535323` | Queue arm: last entrance-bond probe | OpenTPW/World/Park/ParkPathBuilding.cs  |
@@ -664,16 +791,21 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00535d63` | Verdict: end of the path arm | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00536140` | `FUN_00536100` chooses its axis: a tie runs along Y | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x005367ed` | `FUN_005367a0` leaves a bare cell alone | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x0053694b` | | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00536a07` | The clear's queue arm zeroes the overlap counter under force | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00536a37` | `FUN_005367a0`'s forced queue arm refunds only while the owner's cell is typed | OpenTPW.Tests/ParkPathBuildingTests.cs OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00536abf` | The clear's queue arm zeroes the overlap counter before its reset | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00536bc9` | The clear's reset, which type 4 and the queue arm jump to and the path arm repeats: bare, unlinked, unflagged, unowned, tile 55 | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x0053c755` | `FUN_0053c3f0`: the marker wave's phase gains 0.1 a frame unless paused | OpenTPW/World/Park/ParkBuildMarkers.cs  |
 | `0x0053c773` | `FUN_0053c3f0`: the phase store | OpenTPW/World/Park/ParkBuildMarkers.cs  |
-| `0x00540d90` | | OpenTPW.Files/Formats/Sprite/SpriteBankFile.cs  |
+| `0x0053c7b1` | | OpenTPW.Tests/ParkStrandedTests.cs OpenTPW/World/Park/ParkBuildMarkers.cs  |
+| `0x0053c7f6` | | OpenTPW.Tests/ParkStrandedTests.cs OpenTPW/World/Park/ParkBuildMarkers.cs  |
+| `0x00540900` | | OpenTPW/World/Park/ParkGuestSprites.cs  |
+| `0x00540d90` | | OpenTPW.Files/Formats/Sprite/SpriteBankFile.cs OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x005419a4` | Sprites_LoadFolder: the folder's files sorted by name with _stricmp (FUN_00541210) before any loads | OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x00542075` | World sprite draw FUN_00542010: the flags word +0xc4 read | OpenTPW/World/Park/SpriteScript.cs  |
 | `0x0054207d` | FUN_00542010: the alpha byte +0xa0 read into the draw's colour | OpenTPW/World/Park/SpriteScript.cs  |
+| `0x005422b2` | | OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x005422fb` | FUN_00542010: the flags word's 0x200 bit tested | OpenTPW/World/Park/SpriteScript.cs  |
 | `0x005423a0` | | OpenTPW.Files/Formats/Sprite/SpriteBankFile.cs OpenTPW/UI/ScreenParticles.cs  |
 | `0x00543725` | KART loader FUN_00543560: a saved ride through FUN_00545890 with its handle, which names the slot | OpenTPW/World/Park/ParkTrackRideTable.cs  |
@@ -685,7 +817,28 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005453e1` | FUN_00545310: the walk's back edge, to here | OpenTPW/World/Park/ParkTrackRideTable.cs  |
 | `0x0054566e` | FUN_00545610: the same stale test before freeing | OpenTPW/World/Park/ParkTrackRideTable.cs  |
 | `0x005458ea` | FUN_00545890, a placement: the search for an entry whose entry[0] is nought stops at 0x40 | OpenTPW/World/Park/ParkTrackRideTable.cs  |
+| `0x00545a0b` | | OpenTPW/World/Park/ParkBumperCars.cs  |
 | `0x00546225` | FUN_00545890 with every entry taken: the read through a null entry | OpenTPW/World/Park/ParkTrackRideTable.cs  |
+| `0x00546409` | | OpenTPW/World/Park/ParkBumperBoats.cs  |
+| `0x00546439` | | OpenTPW/World/Park/ParkBumperBoats.cs  |
+| `0x0054658c` | | OpenTPW/World/Park/ParkBumperBoats.cs  |
+| `0x005466c0` | | OpenTPW/World/Park/ParkBumperBoats.cs  |
+| `0x0054760f` | | OpenTPW/World/Park/ParkBumperCars.cs  |
+| `0x005478fc` | | OpenTPW/World/Park/ParkBumperCars.cs  |
+| `0x00548499` | | OpenTPW/World/Park/ParkBumperCars.cs  |
+| `0x0054856f` | | OpenTPW/World/Park/ParkBumperCars.cs  |
+| `0x00548584` | | OpenTPW/World/Park/ParkBumperCars.cs  |
+| `0x0054997b` | | OpenTPW/World/Park/ParkBumperCars.cs  |
+| `0x005499ab` | | OpenTPW/World/Park/ParkBumperCars.cs  |
+| `0x0054a01d` | | OpenTPW/World/Park/ParkBumperCars.cs  |
+| `0x0054a0e0` | | OpenTPW/World/Park/ParkBumperCars.cs  |
+| `0x0054a185` | | OpenTPW/World/Park/ParkBumperCars.cs  |
+| `0x0054a250` | | OpenTPW/World/Park/ParkBumperCars.cs  |
+| `0x0054a2bd` | | OpenTPW/World/Park/ParkCarSounds.cs  |
+| `0x0054a2ee` | | OpenTPW/World/Park/ParkCarSounds.cs  |
+| `0x0054a366` | | OpenTPW/World/Park/ParkBumperCars.cs  |
+| `0x0054a3a2` | | OpenTPW/World/Park/ParkBumperCars.cs  |
+| `0x0054b065` | | OpenTPW/World/Park/ParkBumperCars.cs  |
 | `0x0054e682` | | OpenTPW/Global/GameClock.cs OpenTPW/World/Advisor/Advisor.cs OpenTPW/World/Level.cs  |
 | `0x0054e6a6` | | OpenTPW/Client/Game.cs  |
 | `0x0054e6df` | | OpenTPW/World/Advisor/Advisor.cs OpenTPW/World/Level.cs  |
@@ -702,11 +855,13 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0054f455` | | OpenTPW/Global/GameClock.cs  |
 | `0x0054f45f` | | OpenTPW/Global/GameClock.cs  |
 | `0x0054f47a` | | OpenTPW/Global/GameCalendar.cs  |
+| `0x0054f47f` | | OpenTPW/World/Park/ParkRides.cs  |
 | `0x0054f493` | | OpenTPW/Global/GameClock.cs  |
 | `0x0054f49b` | | OpenTPW/Global/GameClock.cs  |
+| `0x0054f4ad` | | OpenTPW/Global/GameClock.cs  |
 | `0x0054f4bf` | | OpenTPW/Global/GameClock.cs  |
 | `0x0054f4c4` | | OpenTPW/Global/GameClock.cs  |
-| `0x0054f56b` | | OpenTPW/VM/RideScriptScheduler.cs OpenTPW/World/Park/ParkRides.cs  |
+| `0x0054f56b` | | OpenTPW/VM/RideScriptScheduler.cs  |
 | `0x0054f668` | | OpenTPW/Global/GameCalendar.cs OpenTPW/World/Level.cs OpenTPW/World/Park/ParkWeather.cs  |
 | `0x0054f680` | | OpenTPW/Global/GameCalendar.cs  |
 | `0x0054f683` | Re-stamps the peep beat's baseline `[0x00878a1c]` inside the every-eighth-tick gate | OpenTPW/World/Park/ParkPeople.cs  |
@@ -714,7 +869,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0054f870` | | OpenTPW/World/Park/ParkAudio.cs  |
 | `0x0054f9f9` | | OpenTPW/World/Advisor/Advisor.cs OpenTPW/World/Level.cs  |
 | `0x0054fa08` | The park frame's one call of `FUN_00557ab0`, after the 31 ms catch-up loop: every script's walks stepped once a frame | OpenTPW/VM/RideScript.cs OpenTPW/World/Park/ParkRides.cs  |
-| `0x0054fa0d` | Per-frame block: placed objects' fraction, 1/31 against its own baseline | OpenTPW/Global/GameClock.cs  |
+| `0x0054fa0d` | Per-frame block: placed objects' fraction, 1/31 against its own baseline | OpenTPW/Global/GameClock.cs OpenTPW/World/Park/ParkBumperBoats.cs  |
 | `0x0054fa38` | Per-frame block: particles' fraction, 1/62 | OpenTPW/Global/GameClock.cs  |
 | `0x0054fa5c` | Per-frame block: peeps' and staff's fraction, 1/248.000007, driving `FUN_00518f90` | OpenTPW/Global/GameClock.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x005502f6` | | OpenTPW/Client/Players.cs  |
@@ -723,6 +878,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00551701` | `FUN_005516b0`: clears the script's critical flag as its turn begins | OpenTPW/VM/RideScript.cs  |
 | `0x00551715` | | OpenTPW/VM/RideScript.cs  |
 | `0x00551724` | | OpenTPW/VM/RideScript.cs  |
+| `0x00551844` | | OpenTPW/World/Park/ParkBumperCars.cs  |
 | `0x00551da3` | RSSE COPY: operand 0 tested before operand 1 is fetched; a literal leaves the PC on operand 1 | OpenTPW.Tests/RideScriptStackTests.cs OpenTPW/VM/RideScript.cs  |
 | `0x00551df5` | | OpenTPW.Files/Formats/Script/RideScriptFile.cs  |
 | `0x00551f5f` | `PUSH 0x1c`: the effect list's nodes are 28 bytes | OpenTPW/World/Ride/RideEffects.cs  |
@@ -768,7 +924,22 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00553dfa` | RSSE heap error: logs "RSSE: Heap Error" and changes nothing | OpenTPW.Tests/RideScriptStackTests.cs OpenTPW/VM/RideScript.cs  |
 | `0x00553e72` | RSSE ADD: a literal operand 0 leaves through NOP before +0x48 is written | OpenTPW.Tests/RideScriptStackTests.cs OpenTPW/VM/RideScript.cs  |
 | `0x00554052` | RSSE DIV: the IDIV, which faults on INT_MIN / -1 (MOD has its own at 0x00554120) | OpenTPW/VM/RideScript.cs  |
+| `0x0055470b` | | OpenTPW/VM/RideScript.cs  |
+| `0x0055473d` | | OpenTPW/VM/RideScript.cs  |
+| `0x00554777` | | OpenTPW/VM/RideScript.cs  |
+| `0x00554913` | | OpenTPW/VM/RideScript.cs  |
+| `0x0055496e` | | OpenTPW/World/Park/ParkBumperCars.cs  |
+| `0x00554b11` | | OpenTPW/VM/RideScript.cs  |
 | `0x00554c07` | | OpenTPW/World/Ride/RideState.cs  |
+| `0x00554c3e` | | OpenTPW.Tests/RideScriptHeadTests.cs OpenTPW/VM/RideScript.cs  |
+| `0x00554c89` | | OpenTPW.Tests/RideScriptHeadTests.cs  |
+| `0x00554ca9` | | OpenTPW.Tests/RideScriptHeadTests.cs  |
+| `0x00554caf` | | OpenTPW/VM/RideScript.cs  |
+| `0x00554ccb` | | OpenTPW/VM/RideScript.cs  |
+| `0x00554cd3` | | OpenTPW/VM/RideScript.cs  |
+| `0x00554cf3` | | OpenTPW/VM/RideScript.cs  |
+| `0x00554d13` | | OpenTPW/VM/RideScript.cs  |
+| `0x00554d26` | | OpenTPW.Tests/RideScriptHeadTests.cs OpenTPW/VM/RideScript.cs  |
 | `0x0055512e` | `SPAWNCHILD` tests the loader's answer (`TEST EAX,EAX / JZ`) | OpenTPW/VM/RideScript.cs  |
 | `0x005555ad` | `GETVARINCHILD`/`GETVARINPARENT`: shared tail that bounds the index from above only | OpenTPW/VM/RideScript.cs  |
 | `0x005555e9` | RSSE BOUNCESETNODE: the raw operand word stored to +0x70, no tag test | OpenTPW/VM/RideScript.cs  |
@@ -788,19 +959,27 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00556fce` | WALKON FUN_00556f40: the leg from the distance between the walk and head nodes, x100, nought to 100 | OpenTPW/VM/RideScript.cs  |
 | `0x00557276` | WALKOFF FUN_005571a0: a new leg from the distance between the off-from and off-to nodes, x100 | OpenTPW/VM/RideScript.cs  |
 | `0x00557b3a` | FUN_00557ab0, a bounce rider's place: the node looked up by id in the walk space 0x800 (FUN_0044b220) | OpenTPW/World/Park/ParkPeople.cs  |
-| `0x00557e79` | FUN_00557d80, arriving on the ride (state 1 to 2): start restamped from the clock; due left alone | OpenTPW/VM/RideScript.cs  |
-| `0x00558018` | FUN_00557d80, a walk off's end (state 3 to 4): the state written alone | OpenTPW/VM/RideScript.cs  |
+| `0x00557e79` | FUN_00557d80, arriving on the ride (state 1 to 2): start restamped from the clock; due left alone | OpenTPW.Tests/RideScriptWalkTests.cs OpenTPW/VM/RideScript.cs  |
+| `0x00558018` | FUN_00557d80, a walk off's end (state 3 to 4): the state written alone | OpenTPW.Tests/RideScriptWalkTests.cs OpenTPW/VM/RideScript.cs  |
 | `0x005587f0` | | OpenTPW.Files/Formats/Script/RideScriptFile.cs  |
 | `0x00558c45` | Script loader FUN_005587f0: the bounce node base +0x70 set to 1 | OpenTPW/VM/RideScript.cs  |
 | `0x00558c4f` | Script loader FUN_005587f0: +0xa8, the looping key, starts at 0xffff | OpenTPW/VM/RideScript.cs  |
 | `0x00558d2e` | | OpenTPW/VM/RideScript.cs  |
 | `0x00558d5b` | | OpenTPW/VM/RideScript.cs  |
 | `0x00558d68` | | OpenTPW/VM/RideScript.cs  |
+| `0x00558d8a` | | OpenTPW/World/Ride/RideNodes.cs  |
+| `0x00558db7` | | OpenTPW/World/Ride/RideNodes.cs  |
+| `0x00558db9` | | OpenTPW/VM/RideScript.cs  |
 | `0x0055924b` | Script death: the sound-script arm, first of three identical arms | OpenTPW/VM/RideScriptScheduler.cs  |
 | `0x0055928c` | Script death: the child arm | OpenTPW/VM/RideScriptScheduler.cs  |
 | `0x005592cd` | Script death: the arm that tells the parent | OpenTPW/VM/RideScriptScheduler.cs  |
 | `0x005597a0` | the `RSSE` arm of the restore chain: reads each script's whole 244-byte struct back from the file, program counter included, so a loaded park's scripts resume mid-flight | OpenTPW.Files/Formats/Save/ParkScriptStates.cs OpenTPW.Files/Formats/Save/ParkThingStates.cs OpenTPW/VM/RideScript.cs OpenTPW/World/Park/ParkRides.cs OpenTPW/World/Ride/RideEffects.cs  |
+| `0x005598d7` | | OpenTPW.Files/Formats/Save/ParkScriptStates.cs OpenTPW.Tests/ParkScriptStateTests.cs OpenTPW/VM/RideScriptScheduler.cs  |
+| `0x005599d3` | | OpenTPW.Files/Formats/Save/ParkScriptStates.cs OpenTPW/World/Park/ParkRides.cs  |
 | `0x00559af1` | FUN_005597a0: the stack size +0x54 from the saved stack block's length | OpenTPW/World/Park/ParkRides.cs  |
+| `0x00559d3d` | | OpenTPW.Files/Formats/Save/ParkScriptStates.cs OpenTPW/VM/RideScript.cs  |
+| `0x00559da7` | | OpenTPW.Files/Formats/Save/ParkScriptStates.cs  |
+| `0x00564790` | | OpenTPW.Files/Formats/Sprite/SpritePackFile.cs  |
 | `0x0056695c` | | OpenTPW/World/Lobby/LobbyModel.cs  |
 | `0x00579e00` | | OpenTPW/Render/Assets/Asset.cs  |
 | `0x0057c620` | | OpenTPW/UI/ScreenParticles.cs  |
@@ -832,7 +1011,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005af940` | | OpenTPW.Files/Formats/Save/PlayerFile.cs  |
 | `0x005afb00` | | OpenTPW.Files/Formats/Save/PlayerFile.cs  |
 | `0x005afc30` | | OpenTPW.Files/Formats/Save/PlayerFile.cs OpenTPW/Client/Players.cs OpenTPW/UI/FrontEnd/FrontEnd.cs  |
-| `0x005afc60` | | OpenTPW.Files/Formats/Save/PlayerFile.cs  |
+| `0x005afc60` | | OpenTPW.Files/Formats/Save/PlayerFile.cs OpenTPW.Tests/ProfilePreservationTests.cs  |
 | `0x005afd70` | | OpenTPW.Files/Formats/Save/PlayerFile.cs  |
 | `0x005aff50` | | OpenTPW.Files/Formats/Save/PlayerFile.cs OpenTPW.Files/Formats/Save/RecordStream.cs  |
 | `0x005b09c0` | A park's record: found or made, and answered only while its global.sam loads (`0x005b11c0`) | OpenTPW.Files/Formats/Save/PlayerFile.cs OpenTPW/World/Lobby/LobbyIsland.cs  |
@@ -947,6 +1126,9 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x006b88d7` | The other read of `+0xc`: a play replaces a live handle only for a higher priority | OpenTPW.Files/Formats/Sound/SoundCategoryFile.cs  |
 | `0x006b8930` | | OpenTPW/World/Advisor/Advisor.cs  |
 | `0x006bb9f9` | The effect record's `+0xc` copied into the voice's priority - `audio.md` | OpenTPW.Files/Formats/Sound/SoundCategoryFile.cs  |
+| `0x006bbb80` | | OpenTPW/World/Park/ParkCarSounds.cs  |
+| `0x006bbbe0` | | OpenTPW/World/Park/ParkCarSounds.cs  |
+| `0x006bbfb1` | | OpenTPW.Files/Formats/Sound/SoundCategoryFile.cs  |
 | `0x006bc2d0` | A variation's wait between a held voice's samples: `min + LCG % (max - min)` | OpenTPW.Files/Formats/Sound/SoundCategoryFile.cs OpenTPW/World/Park/ParkScreams.cs  |
 | `0x006bcc71` | A held voice's fade step taking the no-channel exit, so its stop is a cut | OpenTPW/World/Park/ParkScreams.cs  |
 | `0x006bd9b0` | A held voice's stop: its own children only | OpenTPW/World/Park/ParkAudio.cs OpenTPW/World/Park/ParkScreams.cs  |
@@ -961,19 +1143,26 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x006c3d80` | Whether a variation takes its wait from the voice's parameter (mask `+0x18` bit 4) | OpenTPW.Files/Formats/Sound/SoundCategoryFile.cs OpenTPW/World/Park/ParkScreams.cs  |
 | `0x006c3e00` | A held voice's next variation: the first first, then by the zones and the parameter | OpenTPW.Files/Formats/Sound/SoundCategoryFile.cs OpenTPW/World/Park/ParkScreams.cs  |
 | `0x006c3e1c` | The held voice's parameter byte read for the variation pick | OpenTPW/World/Park/ParkAudio.cs  |
+| `0x006c3e26` | | OpenTPW/World/Park/ParkCarSounds.cs  |
 | `0x006c3f49` | No zone covers the parameter: the chain is parked | OpenTPW/World/Park/ParkScreams.cs  |
 | `0x006c581b` | The one call site of QMixer's SetDistanceMapping, gated on a request bit that nothing writes | OpenTPW/Audio/Audio.cs OpenTPW/Audio/AudioListener.cs  |
+| `0x006c9270` | | OpenTPW/Audio/AudioClip.cs  |
 | `0x006e71b4` | | OpenTPW.Tests/PeepHeadingTests.cs OpenTPW/World/Park/PeepHeading.cs  |
+| `0x006fe2bc` | | OpenTPW/World/Park/ParkBumperBoats.cs  |
+| `0x006fe2c4` | | OpenTPW/World/Park/ParkBumperBoats.cs  |
+| `0x006fe408` | | OpenTPW.Files/Formats/Map/ItemHeightMapFile.cs  |
 | `0x006fe6bc` | | OpenTPW.Tests/RideAnimationsTests.cs OpenTPW/World/Ride/RideAnimations.cs  |
 | `0x006febe4` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |
 | `0x006febec` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |
 | `0x006fec00` | The constant 0.01 in the lobby path sampler's `percent * 0.01 * segments` | OpenTPW/World/Lobby/LobbyModel.cs  |
 | `0x006fec08` | | OpenTPW.Files/Formats/Model/AnimationFile.cs OpenTPW.Tests/RideAnimationsTests.cs OpenTPW/World/Ride/AnimTimeControl.cs OpenTPW/World/Ride/RideAnimations.cs  |
 | `0x006fecb8` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |
+| `0x00700550` | | OpenTPW/World/Park/ParkState.cs  |
 | `0x00700558` | Float 4.0f, the longest queue's floor (FUN_004dda40) | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x007005b0` | Float -0.8f, the sideshow excitement's factor | OpenTPW.Tests/ParkRideScoreTests.cs OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x007005b8` | | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x007005c0` | | OpenTPW/World/Park/ParkRideScore.cs  |
+| `0x007005d0` | | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x00700750` | Float 1/3000, the price factor's scale | OpenTPW.Tests/ParkRideScoreTests.cs OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x00700754` | Float -0.1f, the price factor's step | OpenTPW.Tests/ParkRideScoreTests.cs OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x007007a4` | | OpenTPW.Tests/ParkBoardingTests.cs OpenTPW/World/Park/Peep.cs  |
@@ -982,7 +1171,9 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x007009a0` | Float 2.0f: the most speed FUN_00510190 hands the mover | OpenTPW/World/Park/Peep.cs  |
 | `0x007009a8` | Double 26214.4: a speed of one in the mover's max_force | OpenTPW/World/Park/Peep.cs  |
 | `0x007009b0` | Double 13107.2: a speed of one in the mover's max_speed, a fifth of a cell a sweep | OpenTPW/World/Park/Peep.cs  |
-| `0x00701720` | | OpenTPW/Render/Assets/Texture.cs  |
+| `0x00700eb8` | | OpenTPW/World/Park/ParkBumperCars.cs  |
+| `0x00700ec8` | | OpenTPW/World/Park/ParkBumperCars.cs  |
+| `0x00700f20` | | OpenTPW/World/Park/ParkCarSounds.cs  |
 | `0x00701f50` | | OpenTPW/World/Sky.cs  |
 | `0x00701f54` | | OpenTPW/World/Sky.cs  |
 | `0x00701f58` | | OpenTPW/World/Sky.cs  |
@@ -1000,21 +1191,26 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00702ca4` | | OpenTPW/World/LobbyCameraMode.cs  |
 | `0x0070a2e0` | vtable of the held-chain voice class (flags `0x0404`) | OpenTPW/World/Park/ParkScreams.cs  |
 | `0x007396c8` | The `Info.Shape` alphabet, 19 rows of `{char, kind, bit}` | OpenTPW.Files/Formats/ItemDescriptionFile.cs OpenTPW.Tests/ParkEntryCellTests.cs  |
+| `0x007397b0` | | OpenTPW.Files/Formats/ItemHoarding.cs  |
 | `0x00741c8c` | | OpenTPW/World/Park/ParkWeather.cs  |
 | `0x00741d40` | | OpenTPW/World/Park/ParkWeather.cs  |
 | `0x00742178` | | OpenTPW/World/Park/ParkWeather.cs  |
+| `0x00744b30` | | OpenTPW.Files/Formats/ItemDescriptionFile.cs  |
 | `0x00744e3c` | The compiled item schema's `HasQueue` entry, after `IsChoosable`: descriptor `+0x40` | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x0074669c` | The compiled .sam schema's Upgrades entry: three tiers of 16 leaves, 0x40 apart | OpenTPW.Files/Formats/ItemDescriptionFile.cs  |
+| `0x00747930` | | OpenTPW/World/Park/ParkItemCatalogue.cs  |
 | `0x0074c9c4` | Float 9.999: where the camcorder sweep parks or puts back an axis going positive, `cell * 10 + 9.999` | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x0074c9c8` | Float 1.01: the camcorder sweep's tie-break | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x0074c9d0` | Float 0.001: the camcorder sweep's nudge after an open crossing that left the cell unchanged | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
+| `0x0074ced0` | | OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x0074cf58` | | OpenTPW.Tests/LobbyModelAnimationTests.cs  |
 | `0x0074f480` | Sprite script, the held balloon (word 1650): frame 0, jump to itself | OpenTPW/World/Park/Balloon.cs  |
 | `0x0074f490` | Sprite script words 1654..1664: the let-go loop, frame 1 and the alpha down by 20 while it is nought or more | OpenTPW/World/Park/SpriteScript.cs  |
 | `0x0074f4c0` | Sprite script, the let-go balloon (word 1666): the alpha to 250, then into the loop at 0x0074f490 | OpenTPW.Tests/ParkBalloonTests.cs OpenTPW/World/Park/SpriteScript.cs  |
+| `0x0074f558` | | OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x0074f920` | | OpenTPW/UI/Screens/MessageBox.cs  |
 | `0x0074fa98` | | OpenTPW/UI/Park/ParkGadget.cs OpenTPW/UI/Park/ParkViewfinder.cs  |
-| `0x0074fb50` | Status code to colour, for the object windows and the all-items rows (`FUN_00485f60`'s codes) | OpenTPW/UI/Park/ParkItemsScreen.cs  |
+| `0x0074fb50` | Status code to colour, for the object windows and the all-items rows (`FUN_00485f60`'s codes) | OpenTPW/UI/Park/ParkClosedStatus.cs  |
 | `0x007501a0` | | OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x007506c8` | Layout stream of the allpeeps (visitors) screen | OpenTPW/UI/Park/ParkFrontEnd.cs OpenTPW/UI/Park/ParkVisitorsScreen.cs  |
 | `0x007508e0` | Layout stream of the allitems screen's frame | OpenTPW/UI/Park/ParkFrontEnd.cs OpenTPW/UI/Park/ParkItemsScreen.cs  |
@@ -1027,6 +1223,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00751fa8` | Layout stream of the hire screen | OpenTPW/UI/Park/ParkFrontEnd.cs OpenTPW/UI/Park/ParkHireScreen.cs  |
 | `0x00752588` | | OpenTPW/UI/FrontEnd/Screens/NewPlayerDialog.cs  |
 | `0x00752940` | | OpenTPW/UI/Park/ParkGadget.cs  |
+| `0x00752a42` | The handle 0x23's 16-point outline in the gadget's stream (op 4, sub-op 4) | OpenTPW/UI/Park/ParkGadget.cs  |
+| `0x00752ac8` | The gadget body 0x1d's 23-point outline in the gadget's stream (op 4, sub-op 4) | OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x00752f10` | | OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x00752f24` | | OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x00752f30` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
@@ -1041,6 +1239,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0075c7f2` | The hurry-speed word 25, in the table at 0x0075c7f0 (0, 25, 50) | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x0075c7f8` | Words 60, 80, 100, 120, 140: the base speeds (a guest's drawn % 5, a member of staff's by rest) | OpenTPW/World/Park/Peep.cs  |
 | `0x0075c7fc` | Word 100: what FUN_004fa870 divides the three speed words' sum by | OpenTPW/World/Park/Peep.cs  |
+| `0x0075c804` | | OpenTPW/World/Park/Thoughts.cs  |
 | `0x0075c808` | Float 1.0: a held balloon's height before the dip and the bob | OpenTPW/World/Park/Balloon.cs  |
 | `0x0075c80c` | Dword 20: the bob's rows | OpenTPW/World/Park/Balloon.cs  |
 | `0x0075c810` | The bob's table: twenty rows of three floats; only the middle, 0 to 0.2 and back, is not nought | OpenTPW/World/Park/Balloon.cs  |
@@ -1054,10 +1253,10 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x007622b0` | | OpenTPW/World/Park/CellLine.cs OpenTPW/World/Park/MapStep.cs  |
 | `0x0076338c` | The queue pieces table, twelve bytes a record | OpenTPW/World/Park/ParkQueues.cs  |
 | `0x00763b38` | The 20-entry marker texture table (`blue`, `red`, ... `m_link`, `m_end`) | OpenTPW/World/Park/ParkBuildMarkers.cs OpenTPW/World/Park/ParkPathBuilding.cs  |
-| `0x00763f88` | Sprite kinds table: fourteen bare kind names | OpenTPW/World/Park/Balloon.cs OpenTPW/World/Park/ParkGuestSprites.cs  |
+| `0x00763f88` | Sprite kinds table: fourteen bare kind names | OpenTPW/World/Park/Balloon.cs OpenTPW/World/Park/ParkGuestSprites.cs OpenTPW/World/Park/Thoughts.cs  |
 | `0x00764030` | The four kid banks `Sprites_LoadFolder` loads before its sweep | OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x00764090` | String "balloons", sprite kind 10's name in the table at 0x00763f88 | OpenTPW/World/Park/Balloon.cs  |
-| `0x00764178` | The track ride templates: 14 of 0xd0 bytes, BumperType -1's first, each's first dword its BumperType | OpenTPW/World/Park/ParkTrackRideTable.cs  |
+| `0x00764178` | The track ride templates: 14 of 0xd0 bytes, BumperType -1's first, each's first dword its BumperType | OpenTPW/World/Park/ParkBumperCars.cs OpenTPW/World/Park/ParkTrackRideTable.cs  |
 | `0x00765280` | The opcode table `{name*, operandCount*}`, eight bytes a record | OpenTPW.Files/Formats/Script/Opcode.cs  |
 | `0x00765c18` | String "RSSE: Heap Error" | OpenTPW/VM/RideScript.cs  |
 | `0x00765c2c` | String "RSSE: Stack Error" | OpenTPW/VM/RideScript.cs  |
@@ -1070,6 +1269,12 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00774da0` | | OpenTPW/UI/Park/ParkMapScreen.cs  |
 | `0x0077c480` | UI click limit, 500 ms | OpenTPW/UI/WindowStack.cs  |
 | `0x0077c488` | Whether the interface posts input: set as the window comes active, cleared as it goes (WM_ACTIVATEAPP) | OpenTPW/Client/Renderer.cs  |
+| `0x00782f40` | | OpenTPW.Tests/ParkCarSoundsTests.cs  |
+| `0x00782f44` | | OpenTPW.Tests/ParkCarSoundsTests.cs  |
+| `0x00782fa0` | | OpenTPW.Tests/ParkCarSoundsTests.cs  |
+| `0x00783540` | | OpenTPW.Tests/ParkCarSoundsTests.cs  |
+| `0x00783544` | | OpenTPW.Tests/ParkCarSoundsTests.cs  |
+| `0x007835a0` | | OpenTPW.Tests/ParkCarSoundsTests.cs  |
 | `0x00785058` | `PeepInfo.SmallHappinessChange`, 5 in Lost Kingdom, read as a byte | OpenTPW.Tests/ParkMoodChangeTests.cs OpenTPW/World/Park/ParkAdmission.cs  |
 | `0x0078505c` | `PeepInfo.MediumHappinessChange`, 15 in Lost Kingdom, read as a byte | OpenTPW.Tests/ParkMoodChangeTests.cs OpenTPW/World/Park/ParkAdmission.cs  |
 | `0x00785060` | `PeepInfo.BigHappinessChange`, 25 in Lost Kingdom, read as a byte | OpenTPW.Tests/ParkMoodChangeTests.cs OpenTPW/World/Park/ParkAdmission.cs  |
@@ -1077,6 +1282,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00785068` | PeepInfo.GoodRide, an int: happiness for a gap under 15 | OpenTPW/World/Park/ParkAdmission.cs  |
 | `0x0078506c` | PeepInfo.OKRide, an int: happiness for a gap under 40 | OpenTPW/World/Park/ParkAdmission.cs  |
 | `0x00785070` | PeepInfo.RideVomitDivisor, an int: the excitement over it, times the fullness | OpenTPW/World/Park/ParkAdmission.cs  |
+| `0x007850e0` | | OpenTPW/World/Park/ParkAdmission.cs  |
 | `0x007854f4` | | OpenTPW/Global/GameCalendar.cs  |
 | `0x00785914` | | OpenTPW/World/Advisor/Advisor.cs  |
 | `0x00785970` | The game's global clock object; `GameClock_Pause`/`Resume` act on it and `Game_Pause` freezes it | OpenTPW/Global/GameCalendar.cs OpenTPW/Global/GameClock.cs OpenTPW/VM/RideScript.cs  |
@@ -1087,7 +1293,9 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0078d90e` | | OpenTPW/UI/ButtonGlint.cs  |
 | `0x007cb2fc` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x007cc4b8` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
+| `0x007cdb98` | | OpenTPW/World/Park/ParkState.cs  |
 | `0x007cdba0` | The static initialisers of the eight ring-order directions | OpenTPW/World/Park/ParkPathNeighbours.cs  |
+| `0x007ced88` | | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x007cedd4` | The bob's phase, a global only FUN_004fa030 writes, never reset | OpenTPW/World/Park/Balloon.cs OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x007cedd8` | The bob's count toward its next step, a float | OpenTPW/World/Park/Balloon.cs OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x007cfb90` | The thing table: stride 20, a thing's pointer by its handle | OpenTPW/World/Park/ParkRideScore.cs  |
@@ -1096,6 +1304,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00803a28` | Sound category slot: rides | OpenTPW/World/Park/ParkAudio.cs  |
 | `0x00803a2c` | | OpenTPW/UI/UiSounds.cs OpenTPW/World/Park/ParkAudio.cs  |
 | `0x00803a30` | Sound category slot: staff | OpenTPW/World/Park/ParkAudio.cs  |
+| `0x00803a3c` | | OpenTPW/World/Park/ParkAudio.cs  |
 | `0x0080ced8` | | OpenTPW.Files/Formats/Particle/ParticleLibraryFile.cs  |
 | `0x0080cef8` | | OpenTPW/World/Particles/ParticleSystem.cs  |
 | `0x0081b740` | The pending list of run ends Backspace pops; count `DAT_00820a8c` | OpenTPW.Tests/ParkBuildModeTests.cs OpenTPW/World/Park/ParkBuildMode.cs  |
@@ -1103,6 +1312,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00878128` | | OpenTPW/Global/GameClock.cs  |
 | `0x008786bc` | The per-frame clock sample the three beat fractions share | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x00878a1c` | The peep beat's baseline, re-stamped at `0x0054f683` | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x008791a0` | | OpenTPW.Files/Formats/Save/ParkScriptStates.cs OpenTPW.Tests/ParkScriptStateTests.cs  |
 | `0x008bcbcc` | | OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x00f82884` | The lobby's front-end object pointer; the message box's pause test wants it gone | OpenTPW/Global/GameClock.cs OpenTPW/World/Level.cs  |
 | `0x00faa5ac` | UI: the right button's time stamp (0x00faa5a0 + 1 * 0xc) | OpenTPW/UI/WindowStack.cs  |

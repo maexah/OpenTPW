@@ -579,7 +579,20 @@ internal sealed class ParkGadget : UiWindow
 	/// click meant. Toggling here as well would put the arm back where it started.
 	/// </para>
 	/// </summary>
-	private void ShowArm() => PutArm( _camcorder.IsDown );
+	private void ShowArm() => SlideArm( _camcorder.IsDown );
+
+	/// <summary>
+	/// The arm sent out or in while the park runs, which the original slides and this does at once: each is counted as
+	/// <c>GADGET_ARM_SLIDE</c>. The build's own <see cref="PutArm"/> is no slide and counts none.
+	/// </summary>
+	private void SlideArm( bool isOut )
+	{
+		if ( isOut == ArmOut )
+			return;
+
+		Unimplemented.Report( "GADGET_ARM_SLIDE" );
+		PutArm( isOut );
+	}
 
 	/// <summary>
 	/// Puts the arm out, at the stream's rectangles, or in, where FUN_004a1d70 builds it: its right edge
@@ -588,7 +601,8 @@ internal sealed class ParkGadget : UiWindow
 	/// </summary>
 	/// <remarks>
 	/// <b>Not the original's in three ways.</b> It slides: LAB_004a14f0, the handler on the arm, works a state in the
-	/// control's own +0x134, and neither how far a step nor how long is traced, so the arm is out or in. In, the arm and
+	/// control's own +0x134, and neither how far a step nor how long is traced, so the arm is out or in
+	/// (<see cref="SlideArm"/> counts it). In, the arm and
 	/// its end draw nothing here, since how the original draws a mesh on a narrowed control is not traced; every point
 	/// of both rectangles is inside the body's outline or the handle's, so they are behind those two either way. And
 	/// the retract button is hidden with what the arm carries, where the original switches it off and keeps it behind
@@ -618,7 +632,7 @@ internal sealed class ParkGadget : UiWindow
 	/// </summary>
 	private void CloseArm()
 	{
-		PutArm( false );
+		SlideArm( false );
 		_camcorder.IsDown = false;
 	}
 
