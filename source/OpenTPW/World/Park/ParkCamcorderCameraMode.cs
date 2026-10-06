@@ -232,6 +232,7 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 		Stand = Vector3.Zero;
 		Yaw = 0f;
 		Pitch = 0f;
+		RightHeld = false;
 
 		_blockedFor = null;
 		_blocked = null;
@@ -415,20 +416,51 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	private const int MaxPasses = 1024;
 
 	/// <summary>
+	/// Whether the right button is held from a press the park's view took: bit 4 of the camera's button word
+	/// <c>DAT_00790aac</c>, set on the press and cleared on the release (<c>0x0042a8bd</c>, <c>0x0042a8fb</c>). The
+	/// viewfinder's layer and the park's own both hand their messages to the function that keeps it
+	/// (<c>docs/exe/hud.md</c>, "Four ways out of camcorder mode"), so a press made in orbit and held into first person
+	/// counts, and one on the eject button, which never reaches a layer, does not.
+	/// </summary>
+	public static bool RightHeld { get; private set; }
+
+	/// <summary>
+	/// Reads this frame's right button for <see cref="RightHeld"/>, after the interface has had the frame's press. Only
+	/// a press the window system sent sets it, and only one the interface did not take
+	/// (<see cref="UI.WindowStack.RightPointerTaken"/>; with the HUD hidden by F2 it takes none).
+	/// </summary>
+	/// <remarks>
+	/// A press on the full-screen view's cover counts as taken here, where the original's cover feeds the same word
+	/// (<c>0x004a287d</c>). F3 is refused in first person, so only a press held from under the cover into first person
+	/// could tell the two apart.
+	/// </remarks>
+	internal static void ReadRightButton()
+	{
+		var held = Input.Mouse.Right
+			&& (RightHeld || (Input.Mouse.RightWentDown && !(!UI.RootPanel.Hidden && UI.WindowStack.RightPointerTaken)));
+
+		if ( held != RightHeld && Active )
+			Log.Info( $"First person: right button {(held ? "held, walking from" : "let go, walked to")} ({Stand.X:F1},{Stand.Y:F1})" );
+
+		RightHeld = held;
+	}
+
+	/// <summary>
 	/// Walks the viewer about, facing-relative, swept against the cell edges by <see cref="Slide"/>.
 	/// </summary>
-	private void Walk()
+	/// <remarks>
+	/// A held right button (<see cref="RightHeld"/>) adds the forward key's amount to the forward term, the original's
+	/// Up arrow's 0.1, on top of what the keys give and whatever RMB cancel is set to (<c>0x0042b935</c>): with the
+	/// forward key it walks twice as fast, and with the back key it stands.
+	/// </remarks>
+	internal static void Walk()
 	{
-		// The original also walks forward while a right press on the viewfinder's layer is held, as far as the Up arrow
-		// takes it, whatever RMB cancel is set to (0x0042b935). Not built (docs/QUEUE.md Q121). Counted every frame the
-		// button is down, a press held on the eject button included, where the original does not walk.
-		if ( Input.Mouse.Right )
-			Unimplemented.Report( "FIRST_PERSON_RIGHT_BUTTON_WALK" );
+		var forward = Input.Forward + (RightHeld ? 1f : 0f);
 
-		if ( Input.Forward == 0f && Input.Right == 0f )
+		if ( forward == 0f && Input.Right == 0f )
 			return;
 
-		Step( Input.Forward, Input.Right, WalkSpeed * Time.Delta );
+		Step( forward, Input.Right, WalkSpeed * Time.Delta );
 	}
 
 	/// <summary>

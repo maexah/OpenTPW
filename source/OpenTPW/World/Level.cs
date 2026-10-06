@@ -858,6 +858,8 @@ public class Level
 
 		_worldMouseWasDown = down;
 
+		ParkCamcorderCameraMode.ReadRightButton();
+
 		if ( RightButton( Input.Mouse.Right, Input.Mouse.Position / UI.VirtualScreen.Scale, RightPressTaken( UI.WindowStack.RightPointerTaken ) ) is { } putAway )
 		{
 			Log.Info( putAway );

@@ -38,13 +38,6 @@ the original.
 
 ## A. Bugs first
 
-- [ ] **Q121. A held right button in first person does not walk.** Found by Q59's decode (`hud.md`, "Four ways out of
-  camcorder mode"). The viewfinder layer's handler hands every message to `FUN_0042a760`, which sets 4 in `DAT_00790aac`
-  while the right button is down (`0x0042a8bd`), and the walking camera adds the Up arrow's 0.1 to its forward term for
-  as long as it is set (`0x0042b935`), whatever RMB cancel is. Here only the keys walk. Counted per frame held,
-  `FIRST_PERSON_RIGHT_BUTTON_WALK` (`ParkCamcorderCameraMode.Walk`), a hold on the eject button included; the walk
-  built must not take one, since the button's press never reaches the layer. Confirm: in first person hold the right
-  button 2 s on the view, `state`'s camera moved forward; a screenshot either side.
 - [ ] **Q122. Entering first person leaves a park screen open.** Found by Q59's review. `FUN_00481a10`, which C and
   `b_1person` both reach, first closes the open screen (`FUN_00485b40`, message 5 to `DAT_007c24c8`), and entering hides
   layer 0 with anything else on it. Here an object window or a management screen stays up over first person, and a right
@@ -743,6 +736,11 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   (`park-engine.md`, "Entering and leaving first person"): cursor `0x13`, a left click on a cell of type 0, 1, 3, 9 or
   30 stands the viewer at the picked point, and leaving puts the saved point of interest and yaw back, where ours keeps
   the walk. It is also Q48's hole (3). Left to decode: the click's own cell tests and its thing branch. Then build.
+  From Q121: measured in the original, one forward term (the Up arrow, or a held right button) walks about 21.8 units a
+  second at zoom word 110, both together twice that; `WalkSpeed` is a chosen 40. The velocity is not decoded to a speed
+  (`hud.md`, "Four ways out of camcorder mode"): decode it with this, then set the speed. The original's walk keys
+  are the zoom's, Up and Down (bits `0x20` and `0x40` of the button word, measured); here W and S walk and the arrows
+  do not.
 - [ ] **Q26. Ferry, seaplane and bus are always there.** `ParkFixedItems.Items` stands all three
   permanently. `ParkPeople.StepArrivals` sizes every load at `Arrival.MinPeople` (1), and `VehicleFor` gives one
   person the bus, so only the bus is ever called. The original creates the vehicle on demand (`FUN_0051a2f0`,

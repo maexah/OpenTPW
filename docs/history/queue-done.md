@@ -4642,6 +4642,22 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Escape up then Shift down, a plain Escape, mode 0; the buy screen kept; Ctrl+C no camcorder. In the original, 4 of 4
   from memory: the same two orders, the tool kept and then put away, the menu 0. Ten restored bugs each fail a test.
   A binding read on its press or as a held state is still rebuilt as the frame ends.
+- [x] **Q121. A held right button in first person does not walk.** Found by Q59's decode (`hud.md`, "Four ways out of
+  camcorder mode"). The viewfinder layer's handler hands every message to `FUN_0042a760`, which sets 4 in `DAT_00790aac`
+  while the right button is down (`0x0042a8bd`), and the walking camera adds the Up arrow's 0.1 to its forward term for
+  as long as it is set (`0x0042b935`), whatever RMB cancel is. Here only the keys walk. Counted per frame held,
+  `FIRST_PERSON_RIGHT_BUTTON_WALK` (`ParkCamcorderCameraMode.Walk`), a hold on the eject button included; the walk
+  built must not take one, since the button's press never reaches the layer. Confirm: in first person hold the right
+  button 2 s on the view, `state`'s camera moved forward; a screenshot either side.
+  Done 2026-10-06: `ParkCamcorderCameraMode.RightHeld` is the bit, set by a press the interface did not take and
+  cleared by the release, and `Walk` adds the forward key's amount for it; the counter is gone. Predicted and read in
+  Lost Kingdom with a real button, **7 of 7** on the second run (the unchanged build 7 of 7 the other way): held 2.00 s
+  at (475,110), the log's "walking from (475.0,110.0)" and "walked to (475.0,190.0)", 80.05 forward, still in first
+  person; the same with RMB cancel off, 79.77; W alone 79.77; W with the button 1 s, 82; 2 s on the eject button,
+  nothing; a quick click still leaves. In the original, read from memory: held 1.84 s, the button word `0x84`, 40.4
+  forward; the Up arrow 1.87 s, 40.4; both, twice the rate; Down with it, standing; the eject button, nothing. The
+  original walks at about 21.8 units a second where ours is a chosen 40 (noted under Q25). Nine tests; fourteen of fifteen restored bugs each fail (one only after its test was
+  fixed); the fifteenth, `Level`'s one call taken out, only the game run sees.
 
 ## B. Docs and comments
 

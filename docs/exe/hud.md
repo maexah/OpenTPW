@@ -564,10 +564,24 @@ onto layer 0, which first person hides, and the help bar is disabled, so nothing
 
 **What else a right press does in first person.** `FUN_00488a00` hands every message, before the base proc, to
 `FUN_0042a760`, which sets `DAT_00790aac |= 4` on a right press and clears it on the release (`0x0042a8bd`,
-`0x0042a8fb`). While it is set and the camera is walking (`(flags & 0x3c) == 0`), `FUN_0042b1c0` adds 0.1 to the forward
-term, the Up arrow's amount (`0x0042b935`, `[0x006fddac] = -0.1`), whatever RMB cancel is: **a held right button walks
-forward**. The press and release also reach the camera table as key `0xfff1` (`button - 0x10`, `0x00488a74`), which no
-row binds. The walk of a quick click is thrown away with the rest when leaving puts the saved point back.
+`0x0042a8fb`). The park's own layer and the full-screen view's cover hand theirs to the same function (`0x00488290`,
+`0x0048845c`, `0x004a287d`), so the bit is the right button held from a press on any of the three, and a press the
+eject button took never sets it. The camera update keeps bits 1, 2, 4 and `0x80` of the word each frame and rebuilds
+the rest from the keys (`AND AL,0x87`, `0x0042b32b`). Walking (`gui_CameraFlags & 0x16` set, `& 0x3c` clear) it
+builds the forward term from the keys, -0.1 for bit `0x40` then +0.1 for bit `0x20` (`0x0042b448`..`0x0042b468`), and
+then, while bit 4 is set, adds another 0.1 (`EDI = word & 4` at `0x0042b716`; `0x0042b925`..`0x0042b93f`,
+`[0x006fddac] = -0.1` subtracted), whatever RMB cancel is: **a held right button walks forward, as far as the Up arrow
+does, and the two add**. The press and release also reach the camera table as key `0xfff1` (`button - 0x10`,
+`0x00488a74`), which no row binds. The walk of a quick click is thrown away with the rest when leaving puts the saved
+point back.
+
+Measured in the original (Lost Kingdom, first person at (479.4,166.5), yaw 0, zoom word `0x007909ec` 110, RMB cancel
+on, the camera read from memory): the right button held 1.84 s on the view, the word `0x84` while held and `0x80`
+after, the position 40.4 along the facing, still in first person; the Up arrow held 1.87 s, the word `0xa0`, 40.4;
+both for 0.81 s, `0xa4`, 34.1, twice the rate; Down with the button, `0xc4`, standing to a frame; held 2 s on the eject
+button, the word `0x80` throughout and the position unmoved; a quick right click, out of first person. So one forward
+term walks about 21.8 units a second there. The velocity that term feeds is not decoded to a speed (`0x0042bc2a` on:
+the square root of the zoom word times `[0x006fddf8]` 0.02, halved with the last frame's).
 
 **In a ride view** (`gui_CameraFlags` 4, "Ride it!", `FUN_004e15b0` → `FUN_0042a560`) the same exits run `FUN_0042a190`,
 which goes back to walking first person when the ride was entered from it (`0x400`, `0x0042ac0b`) and to the orbit
@@ -579,8 +593,11 @@ otherwise. Flag `0x10` is tested and never set (dead by CODE). The two views of 
 **OpenTPW.** `WindowStack.RightClick` is the base proc's click for the right button; a press on the view asks
 `ViewRightClick` what answers its click, and the park answers `ParkViewfinder.RightClicked` in first person, which leaves
 it with RMB cancel on. The limit runs on the frame clock (`docs/QUEUE.md` Q123), and a park screen left open over first
-person takes a right press on its body, where the original's entry closes it (`FUN_00485b40`, Q122). The eject button is `ParkViewfinder`'s, `Clicked = ParkCamcorderCameraMode.Leave`. The held right button's walk is not
-built (`FIRST_PERSON_RIGHT_BUTTON_WALK`, `docs/QUEUE.md` Q121), and there is no ride view: walking onto a ride's
+person takes a right press on its body, where the original's entry closes it (`FUN_00485b40`, Q122). The eject button is `ParkViewfinder`'s, `Clicked = ParkCamcorderCameraMode.Leave`. A held right button walks:
+`ParkCamcorderCameraMode.RightHeld` is the bit, read once a frame after the interface has had the press, and `Walk`
+adds the forward key's amount for it. The walk's speed is a chosen 40 units a second for one forward term, where the
+original's measures about 21.8, and its keys are W and S, where the original's are the zoom's, Up and Down
+(`docs/QUEUE.md` Q25). There is no ride view: walking onto a ride's
 entrance, which rides it in the original, is counted instead (`FIRST_PERSON_WALK_INTO_RIDE`, `park-engine.md`).
 
 ### A click and a double click: the UI library's `0x10006` and `0x10007`

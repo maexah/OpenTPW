@@ -18,8 +18,8 @@ namespace OpenTPW.Tests;
 /// arithmetic is pinned against it directly. Its one side effect is the <c>FIRST_PERSON_WALK_INTO_RIDE</c>
 /// count when the ride test answers yes. <see cref="ParkCamcorderCameraMode.Step"/> - the body the keys
 /// and the console both run - reads the park on show from <c>Level.Current</c>, which is given a stand-in
-/// level holding the real park. What is left unpinned is <c>Walk</c> reading <c>Input</c> and calling
-/// <see cref="ParkCamcorderCameraMode.Step"/>.
+/// level holding the real park. <c>Walk</c> reading <c>Input</c> and calling
+/// <see cref="ParkCamcorderCameraMode.Step"/> is run by <see cref="ParkFirstPersonRightButtonWalkTests"/>.
 /// </para>
 /// </summary>
 [TestClass]

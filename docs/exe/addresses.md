@@ -71,9 +71,12 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00429ba0` | | OpenTPW/World/Advisor/AdvisorModel.cs  |
 | `0x00429d60` | | OpenTPW/UI/Park/ParkFrontEnd.cs OpenTPW/World/Advisor/Advisor.cs  |
 | `0x0042a190` | | OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
+| `0x0042a8bd` | FUN_0042a760, a right press: bit 4 of the camera's button word DAT_00790aac set | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
+| `0x0042a8fb` | FUN_0042a760, a right release: bit 4 of DAT_00790aac cleared | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x0042af85` | | OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x0042afba` | | OpenTPW/World/Park/ParkGuestSprites.cs  |
-| `0x0042b935` | First-person camera update: a held right press (DAT_00790aac & 4) adds the Up arrow's 0.1 to the forward term | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
+| `0x0042b925` | First-person camera update: the right button's walk tests the button bit (EDI) and the walking flags (EDX), never RMB cancel | OpenTPW.Tests/ParkFirstPersonRightButtonWalkTests.cs  |
+| `0x0042b935` | First-person camera update: a held right press (DAT_00790aac & 4) adds the Up arrow's 0.1 to the forward term | OpenTPW.Tests/ParkFirstPersonRightButtonWalkTests.cs OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x0042bdd8` | `FUN_0042b1c0`: the first-person sweep begins, the camcorder's step taken cell by cell | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x0042bdf6` | | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x0042bef5` | The sweep: X's reach, from `modf` of `position * 0.1f` | OpenTPW.Tests/ParkCamcorderWalkTests.cs OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
@@ -193,6 +196,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00485d20` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x00486bce` | | OpenTPW/Global/GameClock.cs  |
 | `0x004873b3` | Hover category: a type-12 track cell under a type-25 parent gets no category | OpenTPW/World/Level.cs  |
+| `0x00488290` | Park_MouseMessageProc hands its message to the camera's FUN_0042a760, as the viewfinder layer's handler does | OpenTPW.Tests/ParkFirstPersonRightButtonWalkTests.cs  |
 | `0x004882ba` | Park mouse proc: a right press with RMB cancel on takes the mouse capture | OpenTPW/UI/WindowStack.cs  |
 | `0x0048833a` | Park mouse proc: a right press with RMB cancel on arms the quick click (DAT_007c2500 = 1) | OpenTPW.Tests/ParkHandTests.cs OpenTPW/UI/WindowStack.cs  |
 | `0x0048842b` | Park mouse proc: a quick right click with RMB cancel on installs the idle mode over whatever mode is current | OpenTPW.Tests/ParkHandTests.cs OpenTPW/World/Level.cs  |
@@ -262,6 +266,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004a2057` | FUN_004a1d70: the aerial mast 0x2d's top set to its bottom less 8, so the mast is built eight high | OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x004a23da` | FUN_004a1d70: the arm 0x21's right edge moved by its left less the handle's (-645), so the arm is built in | OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x004a2529` | | OpenTPW/UI/Park/ParkGadget.cs  |
+| `0x004a287d` | The full-screen view's cover handler 0x004a2840 hands its message to the camera's FUN_0042a760 | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x004a2905` | The full-screen view's control handler 0x004a2840, key up: the camera table, then F3 or a plain Escape off, else Ctrl+P the postcard | OpenTPW/UI/Park/ParkFrontEnd.cs  |
 | `0x004a2918` | The full-screen view's handler, key up: FUN_0040c990 on the camera table alone | OpenTPW/World/Level.cs OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
 | `0x004a2938` | The full-screen view's handler 0x004a2840, a key up at the end of a park: a plain Escape opens the game menu | OpenTPW.Tests/ParkFullScreenViewTests.cs  |
@@ -1121,7 +1126,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005f5fa0` | The sound clock: wall-time milliseconds | OpenTPW/World/Park/ParkAudio.cs  |
 | `0x005f8ae0` | | OpenTPW/Client/GameDir.cs  |
 | `0x006584df` | | OpenTPW/UI/WindowStack.cs  |
-| `0x00658b5b` | UI: posts a release (0x10004) to the control that took the press | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
+| `0x00658b5b` | UI: posts a release (0x10004) to the control that took the press | OpenTPW.Tests/ParkFirstPersonRightButtonWalkTests.cs OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
 | `0x00658f97` | | OpenTPW/UI/Screens/GameMenu.cs  |
 | `0x00659a58` | | OpenTPW/UI/UiMesh.cs  |
 | `0x0065d3a3` | | OpenTPW/UI/UiControl.cs  |
