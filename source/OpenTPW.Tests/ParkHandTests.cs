@@ -54,6 +54,7 @@ public class ParkHandTests
 		ParkBuildMode.Forget();
 		GameOptions.Current.RmbCancel = rmbCancelBefore;
 		Time.Now = nowBefore;
+		Time.PinWall( 0 );
 		Screen.Size = screenBefore;
 		Input.Mouse = new();
 		InFirstPerson( false );
@@ -82,6 +83,43 @@ public class ParkHandTests
 	/// it moves counts.
 	/// </summary>
 	private static readonly Vector2 Pointer = new( 400, 300 );
+
+	/// <summary>
+	/// <b>The quick click's 200 ms is real time, not the frame clock's</b> (<c>FUN_0065968e</c> at <c>0x00488234</c>):
+	/// a press let go 50 ms on is a click though the frame clock ran five seconds between, as one long frame's would
+	/// if it were not clamped; and one held 300 ms is none though the frame clock stood still, as it does under the
+	/// console's pause.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the press stamped, or the hold measured, on <c>Time.Now</c>.</remarks>
+	[TestMethod]
+	public void TheQuickClickIsTimedInRealTime()
+	{
+		var (_, item) = MoveTheBellyBounceIntoTheHand();
+		var level = ALevel();
+		var frameClock = Time.Now;
+
+		GameOptions.Current.RmbCancel = true;
+
+		try
+		{
+			Time.PinWall( 5000 );
+			level.RightButton( true, Pointer );
+			Time.PinWall( 5300 );
+			Assert.IsNull( level.RightButton( false, Pointer ), "300 ms of real time with the frame clock still: no click" );
+			Assert.AreEqual( item, ParkBuilding.Carrying, "the hand is full" );
+
+			Time.PinWall( 9000 );
+			level.RightButton( true, Pointer );
+			Time.Now += 5f;
+			Time.PinWall( 9050 );
+			Assert.IsNotNull( level.RightButton( false, Pointer ), "50 ms of real time, five seconds on the frame clock: a click" );
+			Assert.AreEqual( 0, ParkBuilding.Carrying, "which lets go" );
+		}
+		finally
+		{
+			Time.Now = frameClock;
+		}
+	}
 
 	/// <summary>
 	/// <b>With RMB cancel off, no right click lets go</b> - neither the press nor a quick release - because every
@@ -123,17 +161,17 @@ public class ParkHandTests
 
 		GameOptions.Current.RmbCancel = true;
 
-		Time.Now = 10f;
+		Time.PinWall( 10000 );
 		Assert.IsNull( level.RightButton( true, Pointer ), "the press does nothing" );
 		Assert.AreEqual( item, ParkBuilding.Carrying, "the press leaves the hand full" );
 
-		Time.Now = 10.3f;
+		Time.PinWall( 10300 );
 		Assert.IsNull( level.RightButton( false, Pointer ), "a release 300 ms on does nothing" );
 		Assert.AreEqual( item, ParkBuilding.Carrying, "a held click leaves the hand full" );
 
-		Time.Now = 20f;
+		Time.PinWall( 20000 );
 		level.RightButton( true, Pointer );
-		Time.Now = 20.05f;
+		Time.PinWall( 20050 );
 		Assert.IsNull( level.RightButton( false, Pointer + new Vector2( 9, 0 ) ), "a release 9 units away does nothing" );
 		Assert.AreEqual( item, ParkBuilding.Carrying, "a dragged click leaves the hand full" );
 
@@ -163,17 +201,17 @@ public class ParkHandTests
 
 		GameOptions.Current.RmbCancel = true;
 
-		Time.Now = 30f;
+		Time.PinWall( 30000 );
 		level.RightButton( true, Pointer );
 		level.RightButton( true, Pointer + new Vector2( 0, 9 ) );
-		Time.Now = 30.05f;
+		Time.PinWall( 30050 );
 
 		Assert.IsNull( level.RightButton( false, Pointer ), "moved 9 down and back, so not a click" );
 		Assert.AreEqual( item, ParkBuilding.Carrying, "and the hand is still full" );
 
-		Time.Now = 40f;
+		Time.PinWall( 40000 );
 		level.RightButton( true, Pointer );
-		Time.Now = 40.05f;
+		Time.PinWall( 40050 );
 
 		Assert.IsNotNull( level.RightButton( false, Pointer + new Vector2( 8, 8 ) ), "8 across and 8 down is still a click" );
 		Assert.AreEqual( 0, ParkBuilding.Carrying, "so the hand is empty" );
@@ -197,35 +235,35 @@ public class ParkHandTests
 
 		GameOptions.Current.RmbCancel = true;
 
-		Time.Now = 60f;
+		Time.PinWall( 60000 );
 		level.RightButton( true, Pointer );
 
 		foreach ( var at in new[] { 60.05f, 60.1f, 60.15f, 60.2f } )
 		{
-			Time.Now = at;
+			Time.PinWall( (long)System.MathF.Round( at * 1000f ) );
 			level.RightButton( true, Pointer );
 		}
 
-		Time.Now = 60.25f;
+		Time.PinWall( 60250 );
 		Assert.IsNull( level.RightButton( false, Pointer ), "held still for 250 ms over five frames" );
 
-		Time.Now = 70f;
+		Time.PinWall( 70000 );
 		level.RightButton( true, Pointer );
 		level.RightButton( true, Pointer + new Vector2( 5, 0 ) );
 		level.RightButton( true, Pointer + new Vector2( 10, 0 ) );
-		Time.Now = 70.05f;
+		Time.PinWall( 70050 );
 		Assert.IsNull( level.RightButton( false, Pointer + new Vector2( 10, 0 ) ), "dragged 10 in steps of 5" );
 
-		Time.Now = 80f;
+		Time.PinWall( 80000 );
 		level.RightButton( true, Pointer );
-		Time.Now = 80.21f;
-		Assert.IsNull( level.RightButton( false, Pointer ), "210 ms is not a click" );
+		Time.PinWall( 80201 );
+		Assert.IsNull( level.RightButton( false, Pointer ), "201 ms is not a click" );
 		Assert.AreEqual( item, ParkBuilding.Carrying, "and none of those let go" );
 
-		Time.Now = 90f;
+		Time.PinWall( 90000 );
 		level.RightButton( true, Pointer );
-		Time.Now = 90.19f;
-		Assert.IsNotNull( level.RightButton( false, Pointer ), "190 ms is a click" );
+		Time.PinWall( 90200 );
+		Assert.IsNotNull( level.RightButton( false, Pointer ), "200 ms is a click" );
 		Assert.AreEqual( 0, ParkBuilding.Carrying, "which lets go" );
 	}
 
@@ -245,9 +283,9 @@ public class ParkHandTests
 
 		GameOptions.Current.RmbCancel = true;
 
-		Time.Now = 100f;
+		Time.PinWall( 100000 );
 		level.RightButton( true, Pointer, taken: true );
-		Time.Now = 100.05f;
+		Time.PinWall( 100050 );
 
 		Assert.IsNull( level.RightButton( false, Pointer ), "a quick click over the interface" );
 		Assert.AreEqual( item, ParkBuilding.Carrying, "leaves the hand full" );
@@ -805,9 +843,9 @@ public class ParkHandTests
 	/// <summary>A press and a release in the same instant, at the same place: the quickest click there is.</summary>
 	private static string? QuickRightClick( Level level )
 	{
-		Time.Now = 50f;
+		Time.PinWall( 50000 );
 		level.RightButton( true, Pointer );
-		Time.Now = 50.05f;
+		Time.PinWall( 50050 );
 
 		return level.RightButton( false, Pointer );
 	}
@@ -825,7 +863,7 @@ public class ParkHandTests
 
 		foreach ( var (down, time) in new[] { (true, now), (false, now + 0.05f) } )
 		{
-			Time.Now = time;
+			Time.PinWall( (long)System.MathF.Round( time * 1000f ) );
 			Input.Mouse = new() { Right = down, Position = at };
 			stack.Update();
 			worldClick.Invoke( level, [] );

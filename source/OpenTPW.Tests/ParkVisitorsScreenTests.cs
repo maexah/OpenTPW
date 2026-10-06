@@ -33,6 +33,7 @@ public class ParkVisitorsScreenTests
 	public void PutAwayWhatWasMade()
 	{
 		Time.Now = nowBefore;
+		Time.PinWall( 0 );
 		Screen.Size = screenBefore;
 
 		people?.Delete();
@@ -82,7 +83,18 @@ public class ParkVisitorsScreenTests
 		list.Scroll( 4 );
 		var first = list.Rows[4].Id;
 
-		Time.Now += 3f;
+		// The rewrite's two seconds are real time (a control's timer, FUN_00661fe5), whatever the frame clock does.
+		var values = list.Rows[4].Values;
+		Time.PinWall( 1999 );
+		Time.Now += 10f;
+		screen.Update();
+		Assert.AreSame( values, list.Rows[4].Values, "1999 ms of real time, ten seconds on the frame clock: not rewritten" );
+
+		Time.PinWall( 2000 );
+		screen.Update();
+		Assert.AreNotSame( values, list.Rows[4].Values, "2000 ms: rewritten" );
+
+		Time.PinWall( 3000 );
 		screen.Update();
 
 		Assert.AreEqual( 4, list.ScrollTop, "the two-second rewrite keeps the scroll" );

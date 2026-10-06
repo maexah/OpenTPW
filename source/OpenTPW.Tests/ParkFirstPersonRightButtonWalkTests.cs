@@ -77,6 +77,7 @@ public class ParkFirstPersonRightButtonWalkTests
 		GameOptions.Current.RmbCancel = _rmbCancel;
 		UI.RootPanel.Hidden = _hudHidden;
 		Time.Now = _now;
+		Time.PinWall( 0 );
 		Time.Delta = _delta;
 		Input.Mouse = new();
 		Input.Forward = 0f;
@@ -212,7 +213,7 @@ public class ParkFirstPersonRightButtonWalkTests
 		var stack = APark();
 		InFirstPerson( true );
 
-		Time.Now = 10f;
+		Time.PinWall( 10000 );
 		Input.Mouse = new() { Right = true, Position = View };
 		stack.Update();
 		ParkCamcorderCameraMode.ReadRightButton();
@@ -291,7 +292,7 @@ public class ParkFirstPersonRightButtonWalkTests
 	/// </summary>
 	private static void Frame( UI.WindowStack stack, bool right, Vector2 at, float now, bool walk = true )
 	{
-		Time.Now = now;
+		Time.PinWall( (long)System.MathF.Round( now * 1000f ) );
 		Input.Mouse = new() { Right = right, RightWentDown = right && !Input.Mouse.Right, Position = at };
 		stack.Update();
 		ParkCamcorderCameraMode.ReadRightButton();
@@ -303,7 +304,7 @@ public class ParkFirstPersonRightButtonWalkTests
 	/// <summary>One frame with the HUD hidden: the stack is not run, the camera reads the button and walks.</summary>
 	private static void HiddenFrame( bool right, float now )
 	{
-		Time.Now = now;
+		Time.PinWall( (long)System.MathF.Round( now * 1000f ) );
 		Input.Mouse = new() { Right = right, RightWentDown = right && !Input.Mouse.Right, Position = Eject };
 		ParkCamcorderCameraMode.ReadRightButton();
 		ParkCamcorderCameraMode.Walk();

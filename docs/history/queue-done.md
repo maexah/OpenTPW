@@ -4673,6 +4673,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Escape out; the arm's first-person button the same; C alone, no line. In the original, read from memory: the buy
   screen, `[0x007c24c8]` `0x46bf8d0` to 0 on C; a visitor's window, `0x46cad30` to 0. Four test cases new; seven
   restored bugs each fail. Photographed either side.
+- [x] **Q123. The click limits run on the frame clock.** Found by Q59's review. `WindowStack.RightClick`'s 500 ms and
+  `Level.RightButton`'s 200 ms read `Time.Now`, whose frames are clamped to 0.1 s and which the console's `pause` holds;
+  the original times both in milliseconds of wall time (`FUN_0065968e`, `hud.md`, "A click and a double click"). Below
+  10 fps a held press can pass as a click. Said at `RightClick`. Keep the tests able to set the time.
+  Done 2026-10-06: `Time.WallMilliseconds` (a monotonic stopwatch; `Time.PinWall` for tests) times the quick click,
+  the interface's right click and the buy panel's wait, which reads the same clock (`0x004ac438`). Predicted and read
+  in Lost Kingdom, **8 of 8** (the unchanged build 8 of 8 the other way): under `pause` a 600 ms hold is no quick
+  click (`tool` mode 1; unchanged, mode 0), nor an 800 ms hold in first person, and a buy row shows after its half
+  second; a press held across a 450 ms stopped frame is no click. In the original the same holds across a stopped
+  process kept the tool (3 of 3) and first person (2 of 2). Seventeen restored bugs each fail.
 
 ## B. Docs and comments
 

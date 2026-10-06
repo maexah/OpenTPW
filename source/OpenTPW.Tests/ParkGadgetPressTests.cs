@@ -33,6 +33,7 @@ public class ParkGadgetPressTests
 	public void PutItAllBack()
 	{
 		Time.Now = _now;
+		Time.PinWall( 0 );
 		Input.Mouse = new();
 		Input.ForgetHeldKeys();
 		Screen.Size = _screen;
@@ -211,7 +212,7 @@ public class ParkGadgetPressTests
 	/// <summary>One frame of the game: the right button and the pointer at a time, then the stack's update.</summary>
 	private static void Frame( UI.WindowStack stack, bool right, Vector2 at, float now )
 	{
-		Time.Now = now;
+		Time.PinWall( (long)System.MathF.Round( now * 1000f ) );
 		Input.Mouse = new() { Right = right, RightWentDown = right && !Input.Mouse.Right, Position = at };
 		stack.Update();
 	}

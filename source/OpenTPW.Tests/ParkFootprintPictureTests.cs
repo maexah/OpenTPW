@@ -37,6 +37,7 @@ public class ParkFootprintPictureTests
 		Level.Current = _level!;
 		Screen.Size = _screen;
 		Time.Now = _now;
+		Time.PinWall( 0 );
 		Input.Mouse = new();
 	}
 
@@ -274,6 +275,28 @@ public class ParkFootprintPictureTests
 	}
 
 	/// <summary>
+	/// <b>The row's wait is real time, not the frame clock's</b> (<c>FUN_0065968e</c> at <c>0x004ac438</c>): five seconds
+	/// on the frame clock show nothing, and 501 ms of real time with the frame clock still show the row.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the wait stamped or measured on <c>Time.Now</c>.</remarks>
+	[TestMethod]
+	public void TheRowsWaitIsTimedInRealTime()
+	{
+		var (catalogue, screen, _) = BuyScreen();
+		var aztec = catalogue.All.Single( item => item.Name == "Aztec Mayhem" );
+
+		Time.PinWall( 40000 );
+		screen.RowSelected( aztec.Id );
+		Time.Now += 5f;
+		screen.Update();
+		Assert.IsNull( screen.Footprint.Shape, "five seconds on the frame clock, none of real time: not shown" );
+
+		Time.PinWall( 40501 );
+		screen.Update();
+		Assert.IsNotNull( screen.Footprint.Shape, "501 ms of real time: shown" );
+	}
+
+	/// <summary>
 	/// A row is shown once it has waited more than 500 ms, not at 500; a second row inside the wait takes its place and
 	/// starts the wait again; the row waiting again does not; a land row clears the picture, and a mystery ride.
 	/// </summary>
@@ -289,48 +312,47 @@ public class ParkFootprintPictureTests
 		var aztec = catalogue.All.Single( item => item.Name == "Aztec Mayhem" );
 		var staffRoom = catalogue.All.Single( item => item.Name == "Staff Room" );
 
-		// Times a float holds exactly, so the half second's edge is the edge.
-		Time.Now = 16f;
+		Time.PinWall( 16000 );
 		screen.RowSelected( aztec.Id );
 		screen.Update();
 		Assert.IsNull( screen.Footprint.Shape );
 
-		Time.Now = 16.5f;
+		Time.PinWall( 16500 );
 		screen.Update();
 		Assert.IsNull( screen.Footprint.Shape, "500 ms is not more than 500" );
 
 		// The same row again does not start the wait again; another does.
 		screen.RowSelected( aztec.Id );
-		Time.Now = 16.625f;
+		Time.PinWall( 16625 );
 		screen.RowSelected( staffRoom.Id );
 		screen.Update();
 		Assert.IsNull( screen.Footprint.Shape, "the Staff Room took the Aztec Mayhem's place before it was shown" );
 
-		Time.Now = 17f;
+		Time.PinWall( 17000 );
 		screen.Update();
 		Assert.IsNull( screen.Footprint.Shape, "375 ms" );
 
-		Time.Now = 17.25f;
+		Time.PinWall( 17250 );
 		screen.Update();
 		Assert.AreSame( staffRoom.Shape, screen.Footprint.Shape );
 		Assert.AreEqual( staffRoom.Id, screen.Previewed );
 
 		screen.RowSelected( aztec.Id );
-		Time.Now = 17.5f;
+		Time.PinWall( 17500 );
 		screen.RowSelected( aztec.Id );
-		Time.Now = 17.875f;
+		Time.PinWall( 17875 );
 		screen.Update();
 		Assert.AreSame( aztec.Shape, screen.Footprint.Shape, "625 ms after the first, 375 after the second" );
 
 		// Shown once: a picture put there since is not painted over by the row that has stopped waiting.
 		screen.Footprint.Shape = staffRoom.Shape;
-		Time.Now = 19f;
+		Time.PinWall( 19000 );
 		screen.Update();
 		Assert.AreSame( staffRoom.Shape, screen.Footprint.Shape );
 
 		// Buy Land is row -1.
 		screen.RowSelected( -1 );
-		Time.Now = 20f;
+		Time.PinWall( 20000 );
 		screen.Update();
 		Assert.IsNull( screen.Footprint.Shape );
 		Assert.AreEqual( -1, screen.Previewed );
@@ -340,7 +362,7 @@ public class ParkFootprintPictureTests
 		Assert.IsNotNull( mystery.Shape );
 		screen.Footprint.Shape = staffRoom.Shape;
 		screen.RowSelected( mystery.Id );
-		Time.Now = 21f;
+		Time.PinWall( 21000 );
 		screen.Update();
 		Assert.IsNull( screen.Footprint.Shape, mystery.Name );
 	}
@@ -354,7 +376,7 @@ public class ParkFootprintPictureTests
 		var list = (UiList)typeof( ParkBuyScreen ).GetField( "_list", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance )!.GetValue( screen )!;
 		var first = catalogue.All.Single( item => item.Id == list.Rows[0].Id );
 
-		Time.Now = 32f;
+		Time.PinWall( 32000 );
 		Input.Mouse = new()
 		{
 			Position = new Vector2( (list.RowArea.Left + list.RowArea.Right) / 2f, list.RowArea.Top + (list.RowHeight / 2f) ),
@@ -365,7 +387,7 @@ public class ParkFootprintPictureTests
 		Assert.IsTrue( stack.Windows.Contains( screen ), "a move chooses nothing" );
 		Assert.IsNull( screen.Footprint.Shape );
 
-		Time.Now = 32.75f;
+		Time.PinWall( 32750 );
 		Input.Mouse = new() { Position = Input.Mouse.Position };
 		stack.Update();
 		Assert.AreSame( first.Shape, screen.Footprint.Shape );

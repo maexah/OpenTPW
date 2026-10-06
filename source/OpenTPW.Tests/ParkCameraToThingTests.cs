@@ -65,6 +65,47 @@ public class ParkCameraToThingTests
 		ParkOrbitCameraMode.Zoom = 95f;
 	}
 
+	/// <summary>
+	/// <b>An object window fills its figures again every four seconds of real time</b>, as a control's timer runs
+	/// (<c>0x004af67b</c>, <c>FUN_00661fe5</c>): ten seconds on the frame clock fill nothing, 3999 ms of real time
+	/// nothing, 4000 once, and the next not before 8000.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the refill timed on <c>Time.Now</c>; a period of 3999 or 4001.</remarks>
+	[TestMethod]
+	public void AnObjectWindowRefillsEveryFourSecondsOfRealTime()
+	{
+		var fills = 0;
+		Logger.LogDelegate count = ( _, text ) => fills += text.Contains( "Ride window: thing 13 stats" ) ? 1 : 0;
+
+		Time.PinWall( 50000 );
+		var window = new ParkObjectWindow( _stack, 13 );
+		Logger.OnLog += count;
+
+		try
+		{
+			Time.Now += 10f;
+			Time.PinWall( 53999 );
+			window.Update();
+			Assert.AreEqual( 0, fills, "3999 ms of real time, ten seconds on the frame clock" );
+
+			Time.PinWall( 54000 );
+			window.Update();
+			Assert.AreEqual( 1, fills, "4000 ms" );
+
+			Time.PinWall( 57999 );
+			window.Update();
+			Assert.AreEqual( 1, fills, "3999 ms after that" );
+
+			Time.PinWall( 58000 );
+			window.Update();
+			Assert.AreEqual( 2, fills, "and 4000" );
+		}
+		finally
+		{
+			Logger.OnLog -= count;
+		}
+	}
+
 	[TestCleanup]
 	public void PutItAllBack()
 	{
@@ -73,6 +114,7 @@ public class ParkCameraToThingTests
 		Level.Current = _level!;
 		Screen.Size = _screen;
 		Time.Now = _now;
+		Time.PinWall( 0 );
 		Input.Mouse = new();
 		ParkOrbitCameraMode.PointOfInterest = _looksAt;
 		ParkOrbitCameraMode.Yaw = _yaw;
@@ -99,7 +141,7 @@ public class ParkCameraToThingTests
 	/// <summary>One frame of the game: the right button and the pointer at a time, then the stack's update.</summary>
 	private void Frame( bool right, Vector2 at, float now )
 	{
-		Time.Now = now;
+		Time.PinWall( (long)System.MathF.Round( now * 1000f ) );
 		Input.Mouse = new() { Right = right, RightWentDown = right && !Input.Mouse.Right, Position = at };
 		_stack.Update();
 	}

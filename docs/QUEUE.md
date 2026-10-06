@@ -38,10 +38,13 @@ the original.
 
 ## A. Bugs first
 
-- [ ] **Q123. The click limits run on the frame clock.** Found by Q59's review. `WindowStack.RightClick`'s 500 ms and
-  `Level.RightButton`'s 200 ms read `Time.Now`, whose frames are clamped to 0.1 s and which the console's `pause` holds;
-  the original times both in milliseconds of wall time (`FUN_0065968e`, `hud.md`, "A click and a double click"). Below
-  10 fps a held press can pass as a click. Said at `RightClick`. Keep the tests able to set the time.
+- [ ] **Q123b. A left click has no time limit.** Found by Q123. The base proc makes the left button's click as it
+  makes the right's: a release under 500 ms from its press, not strayed more than 6 (`hud.md`, "A click and a double
+  click"). Here a left press and release on a control is a click however long it is held (`WindowStack`, the object
+  window's preview among them, `park-engine.md`, "The camera goes to a thing"). **Decode first** which controls act
+  on the click message `0x10006` and which on the release itself: a button's own handler may not use the click at
+  all. Then build what the decode finds on `Time.WallMilliseconds`. Confirm: a press held 600 ms on each kind of
+  control beside the original's.
 - [ ] **Q124. `Material.Default` compiles a shader nothing draws with.** Found by Q67's sweep. `Material.UI.cs` builds
   it from `content/shaders/3d.shader` the first time `Material` is touched and keeps it for the life of the process.
   Its one reader is the guard in `Material.Delete`, which can fire only if something holds it, and nothing does. The
@@ -580,6 +583,12 @@ the original.
   the hire list carries the flag too and does not set it, and the three list screens' trees carry it (`0x291`). With
   no first row selected, the buy screen's panel stays empty until the pointer has been over a row, where the
   original's shows the top row half a second after the list fills.
+
+- [ ] **Q234. One staff test fails now and then in the whole suite.** Found by Q123's gate (and once unnamed at
+  Q233's). `ParkStaffBehaviourTests.TheParksSweepHandsTheStaffItsOwnClock` failed 1 of 7 whole-suite runs with the
+  game, alone in a worktree, and 0 of 40 runs of its class alone, so something another class leaves behind reaches
+  it, or a draw it rests on is not seeded. Its message was not kept. Run the suite until it fails with the log kept,
+  find what it reads that is shared (the world's random, `GameClock`, `Time`), and pin it. No game run.
 
 ## B. Docs and comments
 

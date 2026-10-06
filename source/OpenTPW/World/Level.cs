@@ -841,10 +841,17 @@ public class Level
 	}
 
 	/// <summary>
-	/// Whether the right button's press is still a quick click (the original's <c>DAT_007c2500</c>), and when
-	/// and where it went down.
+	/// Whether the right button's press is still a quick click (the original's <c>DAT_007c2500</c>), and when, in
+	/// milliseconds of real time (<c>DAT_007c2504</c>, <see cref="Time.WallMilliseconds"/>), and where it went down.
 	/// </summary>
-	private (bool Armed, float At, Vector2 Where) _rightClick;
+	private (bool Armed, long At, Vector2 Where) _rightClick;
+
+	/// <summary>
+	/// How long a right press stays a quick click: a frame's tick more than 200 ms after it disarms it
+	/// (<c>0x0048823f</c>). The original's release reads no clock, only the flag (<c>0x0048836f</c>); after a stopped
+	/// frame its tick came before the release, three times of three, which is the order here.
+	/// </summary>
+	internal const long QuickClickLimit = 200;
 
 	/// <summary>
 	/// A press on the park itself. Clicking a placed thing opens its management window -
@@ -933,9 +940,9 @@ public class Level
 			return null;
 
 		if ( pressed )
-			_rightClick = (!taken, Time.Now, at);
+			_rightClick = (!taken, Time.WallMilliseconds, at);
 
-		if ( _rightClick.Armed && (Time.Now - _rightClick.At > 0.2f
+		if ( _rightClick.Armed && (Time.WallMilliseconds - _rightClick.At > QuickClickLimit
 			|| MathF.Abs( at.X - _rightClick.Where.X ) > 8f || MathF.Abs( at.Y - _rightClick.Where.Y ) > 8f) )
 			_rightClick.Armed = false;
 

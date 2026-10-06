@@ -592,7 +592,7 @@ otherwise. Flag `0x10` is tested and never set (dead by CODE). The two views of 
 
 **OpenTPW.** `WindowStack.RightClick` is the base proc's click for the right button; a press on the view asks
 `ViewRightClick` what answers its click, and the park answers `ParkViewfinder.RightClicked` in first person, which leaves
-it with RMB cancel on. The limit runs on the frame clock (`docs/QUEUE.md` Q123), and the way into first
+it with RMB cancel on. The limit is timed on `Time.WallMilliseconds`, real time as the original's, and the way into first
 person closes the open park screen, as the original's does (`FUN_00485b40` at `0x00481a2b`), so none is there to take the press. The eject button is `ParkViewfinder`'s, `Clicked = ParkCamcorderCameraMode.Leave`. A held right button walks:
 `ParkCamcorderCameraMode.RightHeld` is the bit, read once a frame after the interface has had the press, and `Walk`
 adds the forward key's amount for it. The walk's speed is a chosen 40 units a second for one forward term, where the
@@ -606,7 +606,17 @@ The base control proc `FUN_0065f6d1` makes both, from the press (`0x10005`, case
 `0x0065fa33`) and the release (`0x10004`, `0x0065f913`). It keeps **one record per button, not per control**, at
 `0x00faa598 + b * 0xc` (b = 0 left, 1 right, 2 middle): a state word (0 idle, 1 pressed and still a click, 2 spoiled),
 the press point (`+2`, `+4`) and one time stamp (`+8`); and a mask at the control's `+0x11c` of the buttons pressed on
-it. The clock is milliseconds (`FUN_0065968e` → `FUN_005f5f10`, QPC with `timeGetTime` as the fallback), the limit
+it. The clock is milliseconds of real time: `FUN_0065968e` calls slot 0 of the object at `[0x0077c490]`, which
+`UI_Init` sets to the game's (`FUN_00659674` at `0x00489d9e`: `0x007b9864`, vtable `0x006ff178`, slot 0 `0x00489c80` →
+`FUN_005f5fa0` → `FUN_005f5f10` on the timer at `0x00fa71e0`: QPC less its start, over its ticks a millisecond, plus
+its start's milliseconds, with `timeGetTime` as the fallback). Nothing clamps or holds it. Measured in the original,
+the game's process stopped 600 ms between a right press on the first-person view and its release, the press given 120
+ms to be handled first: no click, twice, and a quick click after it left; the park's quick click the same way, stopped
+400 ms, no click, three times. (A press sent 20 to 40 ms before the stop is handled after it, at 30 frames a second,
+and then clicks: that measures the stop, not the clock.) OpenTPW's is `Time.WallMilliseconds`. A control's timer runs on the same clock (`FUN_0065ef90` arms one,
+`FUN_00661fe5` fires it on `FUN_0065968e` differences): the visitors list's 2000 ms and an object window's 4000 ms,
+both timed so here. Not read here: the buy screen's own 1000 ms timer (`0x80080`, `0x004ac3ee`, what it does not
+decoded) and the two park's-end views' 2000 ms. The limit
 `[0x0077c480] = 500`, and the points the interface's 2048x1536 units.
 
 - **The press**, only from state 0: sets the mask bit, keeps the point, state 1. If the control's flags `+0x48` lack
@@ -618,7 +628,9 @@ it. The clock is milliseconds (`FUN_0065968e` → `FUN_005f5f10`, QPC with `time
   without a capture only moves over the pressed control are judged.
 - **The release**, delivered to the control that took the press wherever the pointer is: in state 1 with the mask bit, it
   posts **`0x10006`**, the click, with the press point, if less than 500 ms passed since the press (`0x0065f969`), and
-  stamps the release's time either way (`0x0065f9af`); otherwise it clears the stamp (`0x0065f9bd`). Mask bit and state
+  stamps the release's time either way (`0x0065f9af`); otherwise it clears the stamp (`0x0065f9bd`), to nought, which
+  the next press compares signed: once the clock has passed `0x80000000`, about 25 days up, that press is a double
+  click's second (read, not run; OpenTPW keeps no stamp instead). Mask bit and state
   are cleared.
 
 So a click is one press and its release under 500 ms, never having strayed more than 6. A press within 500 ms of the

@@ -81,10 +81,10 @@ internal sealed class ParkBuyScreen : UiWindow
 	/// </summary>
 	private int _pending;
 
-	private float _pendingSince;
+	private long _pendingSince;
 
 	/// <summary>How long a row waits before the panel shows it: more than 500 ms (<c>0x004ac443</c>).</summary>
-	internal const float PreviewDelay = 0.5f;
+	internal const long PreviewDelay = 500;
 
 	/// <summary>The row the panel shows, by its id, or nought before any has been shown.</summary>
 	internal int Previewed { get; private set; }
@@ -367,8 +367,8 @@ internal sealed class ParkBuyScreen : UiWindow
 	/// one waiting takes its place and starts the wait again.
 	/// </summary>
 	/// <remarks>
-	/// The original times the wait in milliseconds of wall time (<c>FUN_0065968e</c>); this reads the frame clock, as
-	/// the interface's click limits do (<c>docs/QUEUE.md</c> Q123). The original's list also selects its first row as
+	/// The wait is milliseconds of real time (<c>FUN_0065968e</c>, <see cref="Time.WallMilliseconds"/>), as the
+	/// interface's click limits are. The original's list also selects its first row as
 	/// it is filled, so there the panel shows the top row half a second after the screen or a tab opens; here a row is
 	/// shown only once the pointer has been over one (<c>UiList.FirstRow</c>).
 	/// </remarks>
@@ -378,7 +378,7 @@ internal sealed class ParkBuyScreen : UiWindow
 			return;
 
 		_pending = rowId;
-		_pendingSince = Time.Now;
+		_pendingSince = Time.WallMilliseconds;
 	}
 
 	/// <summary>
@@ -397,7 +397,7 @@ internal sealed class ParkBuyScreen : UiWindow
 
 	/// <summary>What the panel shows and what waits, for the console.</summary>
 	internal string PreviewCensus()
-		=> $"row {Previewed} shown, {(_pending != 0 ? $"row {_pending} waiting {(Time.Now - _pendingSince) * 1000f:F0} ms" : "none waiting")}, "
+		=> $"row {Previewed} shown, {(_pending != 0 ? $"row {_pending} waiting {Time.WallMilliseconds - _pendingSince} ms" : "none waiting")}, "
 			+ $"list selection {_list.Selected}: {_footprint.Census()}";
 
 	protected internal override void Update()
@@ -405,7 +405,7 @@ internal sealed class ParkBuyScreen : UiWindow
 		ShowMoney();
 
 		// The frame message's arm (0x004ac42e): a row that has waited long enough is shown, and waits no longer.
-		if ( _pending != 0 && Time.Now - _pendingSince > PreviewDelay )
+		if ( _pending != 0 && Time.WallMilliseconds - _pendingSince > PreviewDelay )
 		{
 			Preview( _pending );
 			_pending = 0;

@@ -61,6 +61,7 @@ public class ParkFirstPersonRightClickTests
 		ParkOrbitCameraMode.Yaw = _orbitYaw;
 		GameOptions.Current.RmbCancel = _rmbCancel;
 		Time.Now = _now;
+		Time.PinWall( 0 );
 		Input.Mouse = new();
 		Input.ForgetHeldKeys();
 
@@ -145,8 +146,44 @@ public class ParkFirstPersonRightClickTests
 		Assert.IsTrue( ParkCamcorderCameraMode.Active, "held 500 ms: still in first person" );
 
 		Frame( stack, true, View, 11.2f );
-		Frame( stack, false, View, 11.69f );
-		Assert.IsFalse( ParkCamcorderCameraMode.Active, "held 490 ms: out of it" );
+		Frame( stack, false, View, 11.699f );
+		Assert.IsFalse( ParkCamcorderCameraMode.Active, "held 499 ms: out of it" );
+	}
+
+	/// <summary>
+	/// <b>The 500 ms is real time, not the frame clock's</b> (<c>FUN_0065968e</c>): a press held 600 ms is no click though
+	/// the frame clock stood still, and one let go 80 ms on is a click though the frame clock ran five seconds between;
+	/// and a press 100 ms after that release is a double click's second however long the frame clock says it was.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the press or the release stamped on <c>Time.Now</c>; the hold measured on it.</remarks>
+	[TestMethod]
+	public void TheClickIsTimedInRealTime()
+	{
+		var stack = APark();
+		var frameClock = Time.Now;
+
+		try
+		{
+			InFirstPerson( true );
+			Frame( stack, true, View, 20.0f );
+			Frame( stack, false, View, 20.6f );
+			Assert.IsTrue( ParkCamcorderCameraMode.Active, "600 ms of real time with the frame clock still: no click" );
+
+			Frame( stack, true, View, 30.0f );
+			Time.Now += 5f;
+			Frame( stack, false, View, 30.08f );
+			Assert.IsFalse( ParkCamcorderCameraMode.Active, "80 ms of real time, five seconds on the frame clock: a click" );
+
+			InFirstPerson( true );
+			Time.Now += 5f;
+			Frame( stack, true, View, 30.18f );
+			Frame( stack, false, View, 30.26f );
+			Assert.IsTrue( ParkCamcorderCameraMode.Active, "a press 100 ms after that release is a double click's second" );
+		}
+		finally
+		{
+			Time.Now = frameClock;
+		}
 	}
 
 	/// <summary>
@@ -265,7 +302,7 @@ public class ParkFirstPersonRightClickTests
 		var stack = APark();
 		InFirstPerson( true );
 
-		Time.Now = 10f;
+		Time.PinWall( 10000 );
 		Input.Mouse = new() { Right = true, Position = View };
 		stack.Update();
 		Frame( stack, false, View, 10.05f );
@@ -355,6 +392,11 @@ public class ParkFirstPersonRightClickTests
 		Frame( stack, true, View, 10.75f );
 		Frame( stack, false, View, 10.80f );
 		Assert.IsFalse( ParkCamcorderCameraMode.Active, "and one pressed 500 ms after its release leaves too" );
+
+		InFirstPerson( true );
+		Frame( stack, true, View, 11.299f );
+		Frame( stack, false, View, 11.35f );
+		Assert.IsTrue( ParkCamcorderCameraMode.Active, "one pressed 499 ms after that release is a double click's second" );
 	}
 
 	/// <summary>A park's interface: the real front end over a real stack, its gadget and viewfinder up.</summary>
@@ -370,7 +412,7 @@ public class ParkFirstPersonRightClickTests
 	/// <summary>One frame of the game: the right button and the pointer at a time, then the stack's update.</summary>
 	private static void Frame( UI.WindowStack stack, bool right, Vector2 at, float now )
 	{
-		Time.Now = now;
+		Time.PinWall( (long)System.MathF.Round( now * 1000f ) );
 		Input.Mouse = new() { Right = right, RightWentDown = right && !Input.Mouse.Right, Position = at };
 		stack.Update();
 	}

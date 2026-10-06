@@ -112,19 +112,19 @@ internal sealed class ParkObjectWindow : UiWindow
 	];
 
 	/// <summary>
-	/// How often the figures are filled again while the window is open, in seconds - the original's timer
+	/// How often the figures are filled again while the window is open, in milliseconds of real time - the original's timer
 	/// <c>0x80080</c>, armed with 4000 ms as the window is made (<c>0x004af67b</c>) and answered by
 	/// <c>FUN_004ade40</c> (<c>0x004af63b</c>).
 	/// </summary>
 	/// <remarks>
-	/// On the frame clock, which only the debug console holds, where the original's runs on real time and stops only
-	/// under the game menu, the options screen or a message box. The door's press refills them too
+	/// Real time (<see cref="Time.WallMilliseconds"/>), as a control's timer is (<c>FUN_00661fe5</c>); the original's
+	/// stops under the game menu, the options screen or a message box, and this does not. The door's press refills them too
 	/// (<c>0x004af871</c>), and the door is not a button here (Q92).
 	/// </remarks>
-	private const float RefreshEvery = 4f;
+	private const long RefreshEvery = 4000;
 
 	/// <summary>When the figures are next filled: the timer's first tick is a period after the window is made.</summary>
-	private float _nextRefresh = Time.Now + RefreshEvery;
+	private long _nextRefresh = Time.WallMilliseconds + RefreshEvery;
 
 	/// <summary>How many finished days Users last month adds up - <c>MOV EDI,0x1e</c> at <c>0x004ade83</c>.</summary>
 	private const int UsersLastMonthDays = 30;
@@ -908,10 +908,10 @@ internal sealed class ParkObjectWindow : UiWindow
 	{
 		ShowTheDoor();
 
-		if ( Time.Now < _nextRefresh )
+		if ( Time.WallMilliseconds < _nextRefresh )
 			return;
 
-		_nextRefresh = Time.Now + RefreshEvery;
+		_nextRefresh = Time.WallMilliseconds + RefreshEvery;
 		FillStats();
 	}
 

@@ -197,9 +197,12 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00485d20` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x00486bce` | | OpenTPW/Global/GameClock.cs  |
 | `0x004873b3` | Hover category: a type-12 track cell under a type-25 parent gets no category | OpenTPW/World/Level.cs  |
+| `0x00488234` | Park_MouseMessageProc, the tick 0x1e with a quick click armed: FUN_0065968e, the real-time clock, less the press's stamp | OpenTPW.Tests/ParkHandTests.cs  |
+| `0x0048823f` | Park_MouseMessageProc: more than 200 ms (0xc8) since the right press disarms the quick click | OpenTPW/World/Level.cs  |
 | `0x00488290` | Park_MouseMessageProc hands its message to the camera's FUN_0042a760, as the viewfinder layer's handler does | OpenTPW.Tests/ParkFirstPersonRightButtonWalkTests.cs  |
 | `0x004882ba` | Park mouse proc: a right press with RMB cancel on takes the mouse capture | OpenTPW/UI/WindowStack.cs  |
 | `0x0048833a` | Park mouse proc: a right press with RMB cancel on arms the quick click (DAT_007c2500 = 1) | OpenTPW.Tests/ParkHandTests.cs OpenTPW/UI/WindowStack.cs  |
+| `0x0048836f` | Park_MouseMessageProc, the right release: reads the armed flag and no clock | OpenTPW/World/Level.cs  |
 | `0x0048842b` | Park mouse proc: a quick right click with RMB cancel on installs the idle mode over whatever mode is current | OpenTPW.Tests/ParkHandTests.cs OpenTPW/World/Level.cs  |
 | `0x00488569` | Park_MouseMessageProc, the timer: the hover FUN_00486d90 only while no park screen is open | OpenTPW/World/Level.cs  |
 | `0x004885a5` | Park_MouseMessageProc, a button's release: the camera table, the mode's move and its button-up slot, with no test of an open screen | OpenTPW/World/Level.cs  |
@@ -303,6 +306,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004ab403` | Buy screen fill FUN_004ab1b0: the footprint squares' alpha byte, 0x80 | OpenTPW/UI/Park/ParkFootprintPicture.cs  |
 | `0x004ab4c8` | Buy screen fill FUN_004ab1b0: a land row or a mystery ride clears the footprint surface and paints nothing | OpenTPW/UI/Park/ParkBuyScreen.cs  |
 | `0x004ac42e` | Buy screen handler FUN_004ac270, the frame message 0x1e: a waiting row is shown by FUN_004ab1b0 and cleared | OpenTPW/UI/Park/ParkBuyScreen.cs  |
+| `0x004ac438` | Buy screen handler FUN_004ac270, the frame message: FUN_0065968e less the row's stamp, shown past 500 ms | OpenTPW.Tests/ParkFootprintPictureTests.cs  |
 | `0x004ac443` | Buy screen handler FUN_004ac270: the waiting row is shown only after more than 500 ms (CMP 0x1f4, JLE) | OpenTPW/UI/Park/ParkBuyScreen.cs  |
 | `0x004aca16` | Buy screen handler FUN_004ac270, message 0x401: a row other than the waiting one is kept as waiting and stamped | OpenTPW/UI/Park/ParkBuyScreen.cs  |
 | `0x004acca0` | Buy screen opener FUN_004acc70: with the screen already up it picks the tab again and returns | OpenTPW.Tests/ParkScreenTests.cs OpenTPW/UI/Park/ParkGadget.cs  |
@@ -320,7 +324,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004ae0da` | FUN_004ade40: Scrap value handed to its painter as a number through +0x1c | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004af440` | The object windows' shared base, vtable `+0x3c`: writes the three buffered values onto the ride | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004af63b` | Ride window handler FUN_004af600: message 0x10 with 0x80080, the 4000 ms timer's tick, refills the figures (FUN_004ade40) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
-| `0x004af67b` | Ride window handler FUN_004af600, message 0x15: timer 0x80080 armed at 4000 ms | OpenTPW/UI/Park/ParkObjectWindow.cs  |
+| `0x004af67b` | Ride window handler FUN_004af600, message 0x15: timer 0x80080 armed at 4000 ms | OpenTPW.Tests/ParkCameraToThingTests.cs OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004af871` | Ride window handler FUN_004af600, the door (0x3e38): the figures refilled, FUN_004ade40 | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004b8b70` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
 | `0x004b8ca0` | | OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
@@ -1132,12 +1136,13 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00659a58` | | OpenTPW/UI/UiMesh.cs  |
 | `0x0065d3a3` | | OpenTPW/UI/UiControl.cs  |
 | `0x0065da8d` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
+| `0x0065f8b2` | Base control proc, the press: a control's flag 0x8 skips the double click's test | OpenTPW/UI/WindowStack.cs  |
 | `0x0065f8c7` | Base control proc: a press within 500 ms of the button's stamp is a double click's second (0x10007) | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
 | `0x0065f8d3` | Base control proc: the double click's compare, strictly less than 500 ms | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
 | `0x0065f969` | Base control proc: a release under 500 ms after its press posts the click 0x10006 | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
 | `0x0065f977` | Base control proc: the click 0x10006 is posted with the press's point | OpenTPW/UI/UiControl.cs  |
 | `0x0065f9af` | Base control proc: an unspoiled release stamps the button with its time | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
-| `0x0065f9bd` | Base control proc: any other release clears the button's stamp | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
+| `0x0065f9bd` | Base control proc: any other release clears the button's stamp | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs OpenTPW/UI/WindowStack.cs  |
 | `0x0065fa33` | Base control proc: a move spoils a press that strayed more than 6 units | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
 | `0x0065fab7` | Base control proc: the stray compare across, more than 6 | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs OpenTPW/UI/WindowStack.cs  |
 | `0x0065fadb` | Base control proc: the stray compare down, more than 6 | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |

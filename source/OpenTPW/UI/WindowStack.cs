@@ -46,10 +46,10 @@ internal sealed class WindowStack : Panel
 	private bool _rightWasDown;
 
 	/// <summary>
-	/// How long a press may be held and still make a click, in seconds: 500 ms (<c>[0x0077c480]</c>), timed from the
-	/// press to the release.
+	/// How long a press may be held and still make a click: 500 ms (<c>[0x0077c480]</c>) of real time
+	/// (<see cref="Time.WallMilliseconds"/>), from the press to the release.
 	/// </summary>
-	internal const float ClickLimit = 0.5f;
+	internal const long ClickLimit = 500;
 
 	/// <summary>
 	/// How far the pointer may stray from where the press went down, across or down, in the interface's 2048x1536
@@ -69,7 +69,7 @@ internal sealed class WindowStack : Panel
 	/// (<c>0x00faa5ac</c>): the press's time while it is held, the release's once an unspoiled press is let go of, and
 	/// none after any other release. A press within <see cref="ClickLimit"/> of it is a double click's second and spoiled.
 	/// </summary>
-	private float _rightStamp = float.NegativeInfinity;
+	private long? _rightStamp;
 
 	/// <summary>
 	/// Whether the interface used this frame's wheel, so that the world does not use it as well.
@@ -462,8 +462,10 @@ internal sealed class WindowStack : Panel
 	/// stack next looked (F2 stops it).
 	/// </summary>
 	/// <remarks>
-	/// <b>Not the original's in two ways.</b> The limit is timed on the frame clock, whose frames are clamped to 0.1 s,
-	/// where the original's is milliseconds of wall time (<c>docs/QUEUE.md</c> Q123). And a stray is judged only while the
+	/// <b>Not the original's in three ways.</b> No stamp is none here, where the original writes nought
+	/// (<c>0x0065f9bd</c>) and compares signed, so its next press is a double click's second once its clock has passed
+	/// <c>0x80000000</c>, about 25 days up. A control's flag <c>0x8</c>, which skips the double click's test
+	/// (<c>0x0065f8b2</c>), is not read. And a stray is judged only while the
 	/// pointer is over what the press landed on, which is the original's rule for a control without the mouse capture;
 	/// the park's own layer takes the capture on a right press (<c>0x004882ba</c>), so the original judges a press on the
 	/// park in orbit wherever the pointer goes. That can change only the stamp.
@@ -474,8 +476,10 @@ internal sealed class WindowStack : Panel
 		{
 			var answer = RightPointerTaken ? null : ViewRightClick?.Invoke();
 
-			_rightPress = (Input.Mouse.RightWentDown && Time.Now - _rightStamp >= ClickLimit, at, hit, answer);
-			_rightStamp = Time.Now;
+			var now = Time.WallMilliseconds;
+
+			_rightPress = (Input.Mouse.RightWentDown && !(now - _rightStamp < ClickLimit), at, hit, answer);
+			_rightStamp = now;
 			return;
 		}
 
@@ -493,12 +497,13 @@ internal sealed class WindowStack : Panel
 
 		if ( !_rightPress.Unspoiled )
 		{
-			_rightStamp = float.NegativeInfinity;
+			_rightStamp = null;
 			return;
 		}
 
-		var clicked = Time.Now - _rightStamp < ClickLimit;
-		_rightStamp = Time.Now;
+		var let = Time.WallMilliseconds;
+		var clicked = let - _rightStamp < ClickLimit;
+		_rightStamp = let;
 
 		if ( clicked )
 		{

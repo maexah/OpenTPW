@@ -2252,7 +2252,7 @@ the object window's preview answers `Clicked` and `RightClicked`. Differences, e
   its right click goes nowhere: counted, `ALL_ITEMS_MISC_ROW_RIGHT_CLICK`. What the original's rows there are is not
   decoded (`FUN_00495110` fills them through `FUN_00481bc0( 0x400, 0x004941e0 )`).
 - **The preview's left click** is a press and a release on the panel with no limit on its time, where the original's
-  is the 500 ms click (`docs/QUEUE.md` Q123).
+  is the 500 ms click (`docs/QUEUE.md` Q123b).
 - **In first person** the original's two words are where the viewer stands, and no screen is open there; here only
   the debug console can put one up, and then only the orbit's point moves.
 - **The status label** inside the preview (`0x3e25`) does not take the pointer here, so a click on it is the
@@ -2556,8 +2556,8 @@ the list is filled.
 **OpenTPW** (Q233b): `ParkFootprintPicture` is control `0x1eb`, a child of the panel; its `Grid` is `FUN_0052c5b0`
 and its `Squares` the paint's arithmetic, on a surface the control's rectangle in whole pixels, drawn at 8/15.
 `ParkBuyScreen.RowSelected` and `Update` keep the waiting row and show it after more than 500 ms;
-`UiList.SelectsUnderPointer` is the flag, set on the buy list, and `WindowStack` sends the move. It differs in three
-ways, each said at its site: the wait reads the frame clock where the original's reads wall time (Q123); no row is
+`UiList.SelectsUnderPointer` is the flag, set on the buy list, and `WindowStack` sends the move. It differs in two
+ways, each said at its site (the wait is real time, `Time.WallMilliseconds`, as the original's is); no row is
 selected as the list fills, so the panel stays empty until the pointer has been over a row (Q232); and the hire
 list, which carries the flag too, does not set it. The model and the name row `0x1ec` are not in the panel (Q158).
 The console's `footprint` prints the row shown, the row waiting, the cells and the block's place.

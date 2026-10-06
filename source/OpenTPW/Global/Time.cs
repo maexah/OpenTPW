@@ -6,6 +6,20 @@ public class Time
 	public static float Now { get; internal set; }
 
 	/// <summary>
+	/// Milliseconds of real time, from a monotonic clock: the original's <c>FUN_0065968e</c>, which its interface
+	/// times a click, the park's quick right click and the buy screen's wait by (<c>docs/exe/hud.md</c>, "A click and
+	/// a double click"). It runs whatever the frame rate is and whatever holds <see cref="Now"/>: a long frame is not
+	/// clamped here, and the debug console's pause does not stop it.
+	/// </summary>
+	public static long WallMilliseconds => _pinnedWall ?? _wall.ElapsedMilliseconds;
+
+	private static readonly System.Diagnostics.Stopwatch _wall = System.Diagnostics.Stopwatch.StartNew();
+	private static long? _pinnedWall;
+
+	/// <summary>Holds <see cref="WallMilliseconds"/> at a value, for a test, which has no real time to wait through; null lets it run.</summary>
+	internal static void PinWall( long? milliseconds ) => _pinnedWall = milliseconds;
+
+	/// <summary>
 	/// The blend factor for easing something towards a target at <paramref name="rate"/> per
 	/// second, to be handed to a Lerp.
 	///

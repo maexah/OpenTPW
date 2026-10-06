@@ -12,10 +12,18 @@ public static class TestRun
 {
 	/// <summary>
 	/// The log exists before any test runs, as the game makes it before anything else: a class that logs without
-	/// mounting the game would otherwise find it only if a class before it had.
+	/// mounting the game would otherwise find it only if a class before it had. And real time stands still until a
+	/// test moves it.
 	/// </summary>
 	[AssemblyInitialize]
-	public static void MakeTheLog( TestContext _ ) => Log = new();
+	public static void MakeTheLog( TestContext _ )
+	{
+		Log = new();
+
+		// Real time stands still for every test but the wall clock's own: the interface's click limits read a clock
+		// each test sets (Time.PinWall), so a slow machine cannot turn a click into a held press.
+		Time.PinWall( 0 );
+	}
 
 	/// <summary>
 	/// No test leaves a <see cref="ParkPeople"/> behind it: one left over is <c>Current</c> for every class after it,

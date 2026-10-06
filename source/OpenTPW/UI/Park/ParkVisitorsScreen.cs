@@ -44,20 +44,21 @@ internal sealed class ParkVisitorsScreen : UiWindow
 	];
 
 	/// <summary>
-	/// How often each row's values are rewritten, in seconds - <b>the original's own cadence</b>.
+	/// How often each row's values are rewritten, in milliseconds of real time (<see cref="Time.WallMilliseconds"/>, as
+	/// a control's timer is, <c>FUN_00661fe5</c>) - <b>the original's own cadence</b>.
 	/// <c>FUN_00493530</c> arms a 2000ms timer (id <c>0x80083</c>, the same one the gadget's gauge
 	/// uses), and on it <c>0x00493270</c> rewrites every existing row in place: nothing is added, removed,
 	/// re-sorted or scrolled, so the list stays where the player scrolled it. <c>docs/exe/hud.md</c>,
 	/// "How allpeeps keeps itself current".
 	/// </summary>
-	private const float RefreshEvery = 2f;
+	private const long RefreshEvery = 2000;
 
 	private readonly UiList _list;
 
 	/// <summary>The park whose guests arriving and going this list is told of, let go of as it closes.</summary>
 	private readonly ParkPeople? _people;
 
-	private float _nextRefresh;
+	private long _nextRefresh;
 
 	public ParkVisitorsScreen( WindowStack stack ) : base( stack )
 	{
@@ -168,7 +169,7 @@ internal sealed class ParkVisitorsScreen : UiWindow
 		foreach ( var guest in _people.Peeps )
 			_list.Insert( RowOf( guest ), SortKey );
 
-		_nextRefresh = Time.Now + RefreshEvery;
+		_nextRefresh = Time.WallMilliseconds + RefreshEvery;
 	}
 
 	/// <summary>A guest's row - the original's row adder <c>FUN_00493800</c>.</summary>
@@ -222,10 +223,10 @@ internal sealed class ParkVisitorsScreen : UiWindow
 	/// </summary>
 	protected internal override void Update()
 	{
-		if ( Time.Now < _nextRefresh )
+		if ( Time.WallMilliseconds < _nextRefresh )
 			return;
 
-		_nextRefresh = Time.Now + RefreshEvery;
+		_nextRefresh = Time.WallMilliseconds + RefreshEvery;
 
 		if ( _people == null )
 			return;

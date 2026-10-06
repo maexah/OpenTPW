@@ -192,4 +192,42 @@ public class GameClockTests
 
 		Assert.AreEqual( held, GameClock.PartialTick, 0.0001f, "a held clock moved the interpolation" );
 	}
+
+	/// <summary>
+	/// <b>The wall clock is real time</b>, the original's <c>FUN_0065968e</c>: it moves while the frame clock is held,
+	/// takes nothing from a frame's length, and stands where a test pins it.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the wall clock fed by <see cref="Time.Update"/>, which makes a five-second frame five seconds
+	/// of it and holds it under the pause; a pin that does not hold.
+	/// </remarks>
+	[TestMethod]
+	public void TheWallClockIsRealTimeWhateverTheFrameClockDoes()
+	{
+		try
+		{
+			Time.PinWall( null );
+
+			var before = Time.WallMilliseconds;
+			Time.Update( 5f );
+			var afterALongFrame = Time.WallMilliseconds;
+			Assert.IsTrue( afterALongFrame - before < 1000, $"a five-second frame is not five seconds of it ({afterALongFrame - before} ms)" );
+
+			Time.Paused = true;
+			Time.Update( 0.016f );
+			System.Threading.Thread.Sleep( 40 );
+			Time.Update( 0.016f );
+			var held = Time.WallMilliseconds - afterALongFrame;
+			Assert.IsTrue( held >= 30, $"it runs while the frame clock is held ({held} ms)" );
+
+			Time.PinWall( 1234 );
+			System.Threading.Thread.Sleep( 5 );
+			Assert.AreEqual( 1234, Time.WallMilliseconds, "pinned, it stands" );
+		}
+		finally
+		{
+			Time.Paused = false;
+			Time.PinWall( 0 );
+		}
+	}
 }
