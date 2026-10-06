@@ -1,4 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using System.Linq;
 
 namespace OpenTPW.Tests;
 
@@ -188,5 +190,53 @@ public class ParkScreamTests
 		Assert.IsTrue( ParkAudio.SetsMusicLevel( 70, 8 ), "a frame of ticks 63 to 70 holds the 64th" );
 		Assert.IsFalse( ParkAudio.SetsMusicLevel( 72, 8 ), "one of ticks 65 to 72 does not" );
 		Assert.IsTrue( ParkAudio.SetsMusicLevel( 127, 64 ) );
+	}
+
+	/// <summary>
+	/// <b>The level picks the music's variation and never its loudness.</b> In every theme's <c>music</c> category,
+	/// effect 2 names parameter 4 as its own (<c>+0x12</c>, the zone parameter) and no variation has a controller: both
+	/// keys nought, the volume a fixed hundred. So the park loop's number can only choose the variation, by the
+	/// zones every variation carries (<c>FUN_006be450</c>). In the original, read from the voice in memory: thirteen
+	/// guests, level 6, the variation of zone 0-14 (<c>docs/exe/park-engine.md</c>, "The music's level").
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the first sample by the level; the variation kept whatever the level; a level past
+	/// every zone still playing; the level scaled into the loudness. That <c>ParkAudio.OnUpdate</c> plays what
+	/// <c>NextMusic</c> says needs a sound device, and is watched in the game (<c>rv4/confirm.py</c>).</remarks>
+	[TestMethod]
+	public void TheLevelPicksTheMusicsVariationAndNeverItsLoudness()
+	{
+		FileSystem = GameData.Required();
+
+		foreach ( var theme in new[] { "jungle", "fantasy", "hallow", "space" } )
+		{
+			var file = new SoundCategoryFile( $"levels/{theme}/Music", "music" );
+			var effect = file.Effects.Single();
+			var variations = file.ReadVariations().Single();
+
+			Assert.AreEqual( (2, 4), (effect.Id, effect.ParameterId), $"{theme}: effect 2, steered by parameter 4" );
+
+			foreach ( var variation in variations )
+			{
+				Assert.AreEqual( (100, 100), variation.Volume, $"{theme}: a fixed hundred" );
+				Assert.AreEqual( (0, 0), (variation.FirstKey, variation.SecondKey), $"{theme}: no controller on it" );
+				Assert.AreEqual( (0, 0), (variation.GapMin, variation.GapMax), $"{theme}: one sample after another, no wait" );
+				Assert.AreEqual( 0, variation.Zones[0].Low, $"{theme}: the zones start at nought" );
+				Assert.AreEqual( 90, variation.Zones[^1].High, $"{theme}: and end at 90, one past the loop's 89" );
+			}
+		}
+
+		var jungle = new SoundCategoryFile( "levels/jungle/Music", "music" ).ReadVariations().Single();
+		var random = new Random( 1 );
+
+		Assert.AreEqual( 6, jungle.Count );
+		Assert.AreEqual( (0, ParkAudio.MusicVolume), ParkAudio.NextMusic( jungle, -1, 80, random ), "the first sample is the first variation's, whatever the level" );
+
+		foreach ( var (level, variation) in new[] { (0, 0), (6, 0), (14, 0), (15, 1), (29, 1), (30, 2), (44, 2), (45, 3), (59, 3), (60, 4), (74, 4), (75, 5), (89, 5) } )
+		{
+			for ( var current = 0; current < jungle.Count; ++current )
+				Assert.AreEqual( (variation, ParkAudio.MusicVolume), ParkAudio.NextMusic( jungle, current, level, random ), $"level {level} from variation {current}: its variation, at the one loudness" );
+		}
+
+		Assert.IsNull( ParkAudio.NextMusic( jungle, 2, 91, random ), "past every zone the voice waits" );
 	}
 }

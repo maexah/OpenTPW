@@ -949,6 +949,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0054f84e` | Game_StateMachine: the crowd's level held to 89 (0x59) before it is handed to the music | OpenTPW.Tests/ParkScreamTests.cs OpenTPW/World/Park/ParkAudio.cs  |
 | `0x0054f860` | Game_StateMachine: the music's level made nought while the world's state +0x1da738 is 4 | OpenTPW.Tests/ParkScreamTests.cs OpenTPW/World/Park/ParkAudio.cs  |
 | `0x0054f870` | | OpenTPW/World/Park/ParkAudio.cs  |
+| `0x0054f875` | Game_StateMachine, the every-32nd-step block: the word at 0x007b05cc read for the crowd voice's count (FUN_004c8d30) | OpenTPW/World/Park/ParkAudio.cs  |
+| `0x0054f8c8` | Game_StateMachine, the every-32nd-step block: CALL FUN_0055ab50, its last call | OpenTPW/World/Park/ParkAudio.cs  |
 | `0x0054f9f9` | | OpenTPW/World/Advisor/Advisor.cs OpenTPW/World/Level.cs  |
 | `0x0054fa08` | The park frame's one call of `FUN_00557ab0`, after the 31 ms catch-up loop: every script's walks stepped once a frame | OpenTPW/VM/RideScript.cs OpenTPW/World/Park/ParkRides.cs  |
 | `0x0054fa0d` | Per-frame block: placed objects' fraction, 1/31 against its own baseline | OpenTPW/Global/GameClock.cs OpenTPW/World/Park/ParkBumperBoats.cs  |
@@ -1224,6 +1226,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x006bdb50` | A held voice's chain extension | OpenTPW/World/Park/ParkScreams.cs  |
 | `0x006bdb88` | Make a child once the clock passes the newest child's time | OpenTPW.Tests/ParkScreamChainTests.cs OpenTPW/World/Park/ParkScreams.cs  |
 | `0x006bdc3e` | A pruned child deleted without its channel being stopped | OpenTPW/World/Park/ParkScreams.cs  |
+| `0x006bde00` | The music's voice class (vtable 0x0070a498), slot +0x00: queues the next sample as the current one runs out | OpenTPW/World/Park/ParkAudio.cs  |
+| `0x006be55e` | FUN_006be450: no zone record holds the parameter, so the controller's value is made 0x7f and the voice parked (flag 0x40) | OpenTPW/World/Park/ParkAudio.cs  |
 | `0x006c0314` | The SFX.map header word that says the weights are shares | OpenTPW.Files/Formats/Sound/SoundCategoryFile.cs  |
 | `0x006c0510` | The SFX.map loader's walk: effects, variation headers, samples, zones | OpenTPW.Files/Formats/Sound/SoundCategoryFile.cs  |
 | `0x006c0676` | Running-total variation weights turned into shares at load | OpenTPW.Files/Formats/Sound/SoundCategoryFile.cs  |
@@ -1386,6 +1390,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00790a88` | Camera scroll term, the first of three FUN_0042aab0 zeroes when it places the look-at | OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
 | `0x00790a90` | Camera scroll term, the last of the three FUN_0042aab0 zeroes | OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
 | `0x007afd08` | The preview record FUN_004689f0 fills: instance, root matrix, angle, panel, the fit's five floats, the clock | OpenTPW.Tests/ParkObjectPreviewTests.cs OpenTPW/UI/Park/ParkObjectPreview.cs  |
+| `0x007b05cc` | The packed cell (a word) whose neighbourhood the crowd voice's level is counted in (read at 0x0054f875) | OpenTPW/World/Park/ParkAudio.cs  |
 | `0x007c24c8` | The open park screen's control, nought when none is | OpenTPW/World/Level.cs  |
 | `0x007cb2fc` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x007cc1e4` | The buy screen's waiting row, an item id as a word; nought is none | OpenTPW/UI/Park/ParkBuyScreen.cs  |
@@ -1418,4 +1423,4 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00faa598` | The base control proc's record for button 0: state word, press point, then the stamp at +8 (stride 0xc a button) | OpenTPW/UI/WindowStack.cs  |
 | `0x00faa5a0` | The left button's click stamp: the press's time, the release's after a click, nought after any other release | OpenTPW/UI/WindowStack.cs  |
 | `0x00faa5ac` | UI: the right button's time stamp (0x00faa5a0 + 1 * 0xc) | OpenTPW/UI/WindowStack.cs  |
-| `0x00fb1f20` | The sound engine's one random seed | OpenTPW/World/Park/ParkScreams.cs  |
+| `0x00fb1f20` | The sound engine's one random seed | OpenTPW/World/Park/ParkAudio.cs OpenTPW/World/Park/ParkScreams.cs  |

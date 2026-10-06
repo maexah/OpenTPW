@@ -493,7 +493,7 @@ public static class DebugConsole
 			// The level the crowd has the park's music at, and how many times it has been set (ParkAudio.MusicLevel).
 			case "music":
 				Reply( ParkAudio.Current is { } playing
-					? $"music: level {playing.LevelNow} set {playing.LevelSets} times, {ParkPeople.Current?.Peeps.Count ?? 0} guests, tick {GameClock.Ticks}"
+					? $"music: level {playing.LevelNow} variation {playing.VariationNow + 1} set {playing.LevelSets} times, {ParkPeople.Current?.Peeps.Count ?? 0} guests, tick {GameClock.Ticks}"
 					: "music: a park has to be loaded" );
 				break;
 

@@ -756,9 +756,9 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   - replacing `ReadSamples`' scan with the structural walk.
 
   Decode the `0x4|0x2` class first. Confirm: capture the lobby's mix and a park's mix, before and after.
-  Music 2 is of that class (`0x0606`), and `ParkAudio` plays the park loop's `FUN_0051bc40( voice, 4, level )` as the
-  music's volume, so an empty park is silent; if parameter 4 picks the variation by the crowd instead, that silence is
-  ours (`scenes.md`, "Park parameters"; the 2026-09-26 staleness audit). Settle it with the class.
+  The class's `0x400` constructor is decoded and the park's music follows it (the 2026-10-06 review's fix 4;
+  `audio.md`, "The music's class"): parameter 4 picks the variation and an empty park is not silent. Its other
+  constructors are not: `0x006be090` (106 records) and `0x006be680` (2).
 - [ ] **Q51. Rest-area occupancy is unbuilt at both ends.** Found by Q36's decode. Arriving to rest
   (`FUN_00505fe0`) adds one to the rest area's script variable 0 (`VAR_STAFFIN` in every staff room) and sends
   message 15 to the resting-staff list (UI control `0x1e7b`); leaving (`FUN_00506d10`, from the normal end of a rest
@@ -847,9 +847,18 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   (`~/.cache/tpw-harnesses/review-run-2026-10-06/game/lean-probe.txt`). Decode where `FUN_004fa2a0` and the mover
   count a walk done (`0x00510100` on) against `PeepWalk.Step`'s `Progress() == One`, write it to `docs/exe/` and
   stop. Two tests allow the cell beyond until then (`ParkTickTests`, `ParkDecidingTests`).
+- [ ] **Q236. The crowd's own voice and `FUN_0055ab50` are counted, not built. DECODE FIRST.** Found by the
+  2026-10-06 review (fix 4). On every 32nd step, after the music's level, the park loop hands kids 91 the guests
+  within four cells of the cell at `[0x007b05cc]`, held to 100 (`FUN_004c8d30`, then `FUN_0051e7b0`: it plays the
+  effect from `[0x00803a24]` while `[0x00803aa8]` is set, sets its parameter 7 and stops it at nought), and calls
+  `FUN_0055ab50`, which scales four words at `0x007660b8` (`park-engine.md`, "The music's level"). OpenTPW counts both
+  (`CROWD_VOICE_LEVEL`, `PARK_LOOP_FUN_0055AB50`) and plays no crowd. Kids 91 is of the music's class: twelve
+  variations in bands of 16, the first six naming controller 7 over a volume range of 14 to 22. Decode what that
+  controller does to the volume (`FUN_006bc090`), which cell `[0x007b05cc]` holds, and what the four words feed.
+  Confirm: the crowd found in a capture beside the original's (`rv4/orig/xcorr.py` is the method), near a crowd and
+  away from one.
 
 ## E. Large
-
 - [ ] **Q31. The other eight object windows.** `Level.OpenObjectWindow` opens only a ride's (`UiType 0`). Shops,
   sideshows and the rest stop at `SHOP_WINDOW`, `SIDESHOW_WINDOW` and `FEATURE_WINDOW`, and a staff member at
   `STAFF_WINDOW` (`Level.ClickWorldAt`); a clicked visitor reaches nothing counted. `park-engine.md`, "The

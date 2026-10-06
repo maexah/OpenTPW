@@ -159,12 +159,12 @@ Leaving a park (state `0xb`) has the same shape, and additionally frees the leve
 |---|---|---|---|
 | `0x0051bd70` | `Sound_ApplyGroupVolumes` | Re-applies the group volumes on park entry; called at `0x0054ec9a` | State 9 body |
 | `FUN_0051e730` | — | Called at `0x0054ec9f`; plays `cat_music` effect 2, the only effect that category declares | State 9 body; category contents |
-| `FUN_0051bc40` | — | `FUN_0051bc40(voice, 4, 0)` sets that voice's parameter 4 to 0. The 4 is a parameter, not an op: it is the one music 2's record names, and kids 91's call passes 7 (`0x0051e7fd`). Whether music reads it as a volume is not established (`ride-operation.md`, `FUN_0051bc40`) | Called straight after the play |
+| `FUN_0051bc40` | — | `FUN_0051bc40(voice, 4, 0)` sets that voice's parameter 4 to 0. The 4 is a parameter, not an op: it is the one music 2's record names, and kids 91's call passes 7 (`0x0051e7fd`). Music reads it as its zone parameter and not as a volume (`audio.md`, "The music's class") | Called straight after the play |
 | `FUN_0051e790` | — | Called at `0x0054f870` on every 32nd pass of the park loop (`TEST [0x00877d34],0x1f`, `0x0054f82d`), about once a second; drives the music level from half the crowd count (`FUN_004c81e0`), clamped to 89 first (`0x0054f84e`), or 0 while `mWorldState` (`+0x1da738`) is 4 (`0x0054f860`) | Park loop body |
 | `FUN_004c81e0` → `FUN_004c7fa0` → `FUN_004fa990` | — | The counting chain behind that level: things that pass one of five type tests | Call chain traced |
 | `FUN_00550e00` | — | Reads placed emitters from the level's `scape.omp`: an `OBJ_` chunk of record count, record size, then a dispatch on field[0]; type 1 is a placed sound | Chunk layout read from the loader |
 
-The level is `clamp(things / 2, 0, 100)`, further clamped to 89, and it is music 2's parameter 4. In all four themes that effect's zones divide 0-90 among its five to seven variations, but its voice class, `0x0606`, is undecoded (`audio.md`, Q43), so whether the crowd picks the variation, sets the volume, or both is **not established**, and with it whether an empty park is silent. The ambience is placed emitters read by `FUN_00550e00`; the crowd and the rain are voices driven like the music ("Park parameters", below), and the rides sound through their scripts (`audio.md`, "Where positional audio actually lived").
+The level is `clamp(things / 2, 0, 100)`, further clamped to 89, and it is music 2's parameter 4. In all four themes that effect's zones divide 0-90 among its five to seven variations, and its voice class picks the next sample's variation by them and does nothing else with the parameter (`audio.md`, "The music's class"): **the crowd picks the variation, not the volume, and an empty park plays the first variation, not silence** (`park-engine.md`, "The music's level", measured in the original). The ambience is placed emitters read by `FUN_00550e00`; the crowd and the rain are voices driven like the music ("Park parameters", below), and the rides sound through their scripts (`audio.md`, "Where positional audio actually lived").
 
 ### Positioning
 
@@ -183,7 +183,7 @@ All three sites call **`FUN_0051c1d0`**, which is the per-frame listener update 
 
 ### Park parameters
 
-Music, crowd and rain are driven by voice parameters. The parameter an effect answers to is the byte at `+0x12` of its `SFX.map` record: 4 on music 2, 6 on the screams 71-74, 7 on kids 91 and 8 on global ambient 33, the numbers the game's own calls pass. What one does to a `0x0404` chain, picking its next variation by the zones, is in `audio.md`, "How the engine plays an effect: priority, not a repeat delay"; what it does to the `0x0606` voices of music, crowd and rain is **undecoded**.
+Music, crowd and rain are driven by voice parameters. The parameter an effect answers to is the byte at `+0x12` of its `SFX.map` record: 4 on music 2, 6 on the screams 71-74, 7 on kids 91 and 8 on global ambient 33, the numbers the game's own calls pass. What one does to a `0x0404` chain, picking its next variation by the zones, is in `audio.md`, "How the engine plays an effect: priority, not a repeat delay"; on the `0x0606` voices of music, crowd and rain it picks the next sample's variation the same way (`audio.md`, "The music's class"), and the crowd's variations also name it as a controller (key 7 on kids 91's first six, volume range 14 to 22), which is not decoded.
 
 ## Particles, sky and weather
 

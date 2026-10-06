@@ -12,20 +12,16 @@ namespace OpenTPW;
 /// </para>
 ///
 /// <para>
-/// <b>And then it turns it down to nothing.</b> The very next line is FUN_0051bc40( voice, 4, 0 ),
-/// which sets that voice's level to zero, and the park loop drives the level every 32nd pass afterwards
-/// (FUN_0051e790 at 0x0054f870). What it drives it from is a count: FUN_004c81e0 is
-/// <c>clamp( things / 2, 0, 100 )</c>, clamped again to 89 by the caller, where the count walks the
-/// park's thing list and takes every guest that passes one of five type tests (FUN_004c7fa0 into
-/// FUN_004fa990) - see <see cref="CrowdLevel"/>. <b>So in an empty park the original's music is silent</b>,
-/// and it swells as the park fills up.
-/// </para>
-///
-/// <para>
-/// <b>It is played that way here</b>: the guests of <see cref="ParkPeople"/> drive the level, and an
-/// empty park really is silent.
-/// <b>The shipped park is quiet, and that is the original's design rather than a fault</b>: thirteen
-/// guests give a level of six out of a hundred, because the music is meant to swell as a park fills.
+/// <b>The crowd picks the music's variation, not its loudness.</b> The very next line is
+/// FUN_0051bc40( voice, 4, 0 ), which sets the voice's parameter 4 to nought, and the park loop sets it every
+/// 32nd tick afterwards (FUN_0051e790 at 0x0054f870) from a count: FUN_004c81e0 is
+/// <c>clamp( guests / 2, 0, 100 )</c>, held to 89 by the caller - see <see cref="CrowdLevel"/>. Parameter 4 is
+/// the id music 2's record names (<c>+0x12</c>), so it is the voice's zone parameter and nothing else: each next
+/// sample is drawn from the variation the current one's zones give for it (FUN_006be450, from the voice's own
+/// slot at 0x006bde00). Every variation's volume is a fixed hundred with no controller on it, in all four
+/// themes, so the level never touches how loud the music is. Lost Kingdom's zones are 0-14, 15-29, 30-44, 45-59,
+/// 60-74 and 75-90 for its six variations: thirteen guests, level six, play the first, and so does an empty
+/// park (<c>docs/exe/park-engine.md</c>, "The music's level").
 /// </para>
 ///
 /// <para>
@@ -41,9 +37,8 @@ public sealed class ParkAudio : Entity
 
 	/// <summary>
 	/// The effect the original plays, and the only one cat_music declares - in all four themes.
-	/// It picks between six arrangements in jungle, five in hallow and space, seven in fantasy; each
-	/// runs about eight and a half seconds, and <see cref="SoundCategory.Play"/> holds the effect ten before it
-	/// may go again - OpenTPW's own reading of the record's priority, <c>docs/QUEUE.md</c> Q43.
+	/// It has six variations in jungle, five in hallow and space, seven in fantasy, each a set of samples
+	/// seventeen and a half seconds long, played one after another with no wait (every variation's gap is nought).
 	/// </summary>
 	private const int MusicEffect = 2;
 
@@ -139,7 +134,7 @@ public sealed class ParkAudio : Entity
 	/// compare against the wrong thing.
 	/// </para>
 	/// </summary>
-	private const float MusicVolume = 0.33f;
+	internal const float MusicVolume = 0.33f;
 
 	/// <summary>How long the music takes to fade as the park ends - the same as the lobby's stop.</summary>
 	private const float StopSeconds = 0.15f;
@@ -148,12 +143,12 @@ public sealed class ParkAudio : Entity
 	public const int LoudestCrowd = 100;
 
 	/// <summary>
-	/// How loud the crowd makes the music, nought through a hundred - the original's
-	/// <c>FUN_004c81e0</c>, which is <c>clamp( counted / 2, 0, 100 )</c> and nothing more.
+	/// The level the crowd gives the music, nought through a hundred - the original's
+	/// <c>FUN_004c81e0</c>, which is <c>clamp( counted / 2, 0, 100 )</c> and nothing more. It is the music voice's
+	/// zone parameter (<see cref="NextMusic"/>), not a loudness.
 	///
 	/// <para>
-	/// <b>It counts GUESTS, not people, and reading it as people would have made a park twice as loud as
-	/// the original.</b> <c>FUN_004c7fa0</c> walks the thing list and counts a thing only where
+	/// <b>It counts GUESTS, not people.</b> <c>FUN_004c7fa0</c> walks the thing list and counts a thing only where
 	/// <c>*(thing + 2) == 1</c> - the model byte, and model 1 is a guest - so the five staff are not in it.
 	/// The caller clamps the result again to 89, below this hundred, which binds from 180 guests
 	/// (<see cref="MusicLevel"/>).
@@ -165,8 +160,8 @@ public sealed class ParkAudio : Entity
 	/// 10. What that field is has not been established - it is not the person type, which runs 0 to 7, and
 	/// not the state, which lives at <c>+0x220</c> - and those predicates are asked of things right across
 	/// the executable rather than of guests alone. So this counts every guest the park simulates, which is
-	/// an <b>upper bound</b> on the original's count; where the filter excludes anybody, a park of ours is
-	/// a little louder than a park of theirs.
+	/// an <b>upper bound</b> on the original's count; where the filter excludes anybody, a park of ours
+	/// reaches a later variation a little sooner than a park of theirs.
 	/// </para>
 	/// </summary>
 	public static int CrowdLevel( int guests ) => Math.Clamp( guests / 2, 0, LoudestCrowd );
@@ -203,8 +198,30 @@ public sealed class ParkAudio : Entity
 		return false;
 	}
 
-	/// <summary>The level the music was last set to, nought until the first set, as the original turns its voice down as it starts it.</summary>
+	/// <summary>The level the music was last set to, nought until the first set, as the original sets it as it starts the voice (<c>FUN_0051e730</c>).</summary>
 	internal int LevelNow { get; private set; }
+
+	/// <summary>The variation the music's last sample was drawn from, zero-based; -1 before the first.</summary>
+	internal int VariationNow { get; private set; } = -1;
+
+	/// <summary>
+	/// What the music plays when its sample has run out: the variation its next sample is drawn from, and how
+	/// loud - <c>FUN_006be450</c>, the rule a held scream's chain follows too
+	/// (<see cref="ParkScreams.NextVariation"/>): the first sample takes the effect's first variation whatever the
+	/// level; each later one draws, by the targets' weights, among the current variation's zone records whose range
+	/// holds the level. The loudness is the music's one, whatever the level. Null where no zone holds the level, and
+	/// the voice then waits for a level one holds.
+	/// </summary>
+	internal static (int Variation, float Volume)? NextMusic( IReadOnlyList<SoundCategoryFile.Variation> variations,
+		int current, int level, Random random )
+	{
+		var next = ParkScreams.NextVariation( variations, current, level, random );
+
+		return next < 0 ? null : (next, MusicVolume);
+	}
+
+	/// <summary>The sound library draws on a generator of its own (<c>0x00fb1f20</c>); this is the music's.</summary>
+	private readonly Random _musicRandom = new();
 
 	/// <summary>How many times the level has been set since the park's sound was made, for the console.</summary>
 	internal int LevelSets { get; private set; }
@@ -786,13 +803,26 @@ public sealed class ParkAudio : Entity
 
 			LevelNow = level;
 			++LevelSets;
+
+			// The block's other half is not built (0x0054f875 to 0x0054f8c8): the crowd's own voice, kids 91, whose
+			// parameter 7 is the guests within four cells of the cell at [0x007b05cc], held to a hundred
+			// (FUN_004c8d30, FUN_0051e7b0), and FUN_0055ab50's four words.
+			Unimplemented.Report( "CROWD_VOICE_LEVEL" );
+			Unimplemented.Report( "PARK_LOOP_FUN_0055AB50" );
 		}
 
-		var volume = MusicVolume * LevelNow / (float)LoudestCrowd;
+		if ( _voice is { Playing: true } )
+			return;
 
-		if ( _voice is not { Playing: true } )
-			_voice = _music.Play( MusicEffect, volume, bus: AudioBus.Music );
-		else
-			_voice.SetVolume( volume );
+		// One sample after another: the next is drawn from the variation the level's zone gives, at the music's
+		// one loudness. With no zone holding the level the voice waits, as the original's is parked (0x006be55e).
+		if ( NextMusic( _music.VariationsOf( MusicEffect ), VariationNow, LevelNow, _musicRandom ) is not { } next )
+			return;
+
+		if ( next.Variation != VariationNow )
+			Log.Info( $"Park music: variation {VariationNow + 1} to {next.Variation + 1} at level {LevelNow} on tick {GameClock.Ticks}" );
+
+		VariationNow = next.Variation;
+		_voice = Audio.Play( _music.PickFrom( MusicEffect, next.Variation ), next.Volume, bus: AudioBus.Music );
 	}
 }
