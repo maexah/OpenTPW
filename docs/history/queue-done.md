@@ -4861,6 +4861,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   **Done 2026-10-06**: `ParkWorld.StaffPool` and `StaffPoolTimeSig`; `ParkStaffPool` takes a save's records. The file
   holds sixteen, not fourteen (two go on 858, before the original's log began). Every drop to 1403 and both top-ups
   on the original's ticks; the hire screen beside the original's (`park-engine.md`, "The staff pool's refresh").
+- [x] **Q234. One staff test fails now and then in the whole suite.** Found by Q123's gate (and once unnamed at
+  Q233's). `ParkStaffBehaviourTests.TheParksSweepHandsTheStaffItsOwnClock` failed 1 of 7 whole-suite runs with the
+  game, alone in a worktree, and 0 of 40 runs of its class alone, so something another class leaves behind reaches
+  it, or a draw it rests on is not seeded. Again at Q123b's gate, 2 of 9 runs by then: "Assert.IsTrue failed. staff 30
+  ended only 2 walks in 400 sweeps" (line 500). Find what it reads that is shared (the world's random, `GameClock`, `Time`), and pin it. No game run.
+  **Done 2026-10-06** (the review's fix 6): nothing shared reaches it; the draws were not seeded. How long a staff
+  walk lasts is drawn, and of 300 seeds two leave the guard or the researcher with under three ended walks in 400
+  sweeps, the failure quoted. Seeded, the two members' whole 400 sweeps are the same alone, in the class and in the
+  whole suite (`GameClock` at 0 or at 137,495, a staff pool left behind or none), so the test now seeds all four of
+  the park's generators. The "0 of 40 alone" against "2 of 9 in the suite" was chance on a rare draw.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

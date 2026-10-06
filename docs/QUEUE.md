@@ -534,12 +534,12 @@ the original.
   the hire list carries the flag too and does not set it, and the three list screens' trees carry it (`0x291`). With
   no first row selected, the buy screen's panel stays empty until the pointer has been over a row, where the
   original's shows the top row half a second after the list fills.
-
-- [ ] **Q234. One staff test fails now and then in the whole suite.** Found by Q123's gate (and once unnamed at
-  Q233's). `ParkStaffBehaviourTests.TheParksSweepHandsTheStaffItsOwnClock` failed 1 of 7 whole-suite runs with the
-  game, alone in a worktree, and 0 of 40 runs of its class alone, so something another class leaves behind reaches
-  it, or a draw it rests on is not seeded. Again at Q123b's gate, 2 of 9 runs by then: "Assert.IsTrue failed. staff 30
-  ended only 2 walks in 400 sweeps" (line 500). Find what it reads that is shared (the world's random, `GameClock`, `Time`), and pin it. No game run.
+- [ ] **Q237. One Full Simulation test failed twice with no message kept.** Found by the 2026-10-06 review (fix 6).
+  `LevelFullSimulationParkTests.FullSimulationCreatesTwelveThingsWithRegularLoans` failed once in the review's
+  put-back runs and once at a gate, about two whole-suite runs in a hundred and twenty, and neither output was kept.
+  Nothing it reads is drawn (`FreshPark` takes no generator; its `RandomSeed` is the clock's and nothing in the test
+  reads it), and forty whole-suite runs after Q234's fix were green (`~/.cache/tpw-harnesses/rv6/loop.log`). When it
+  next fails, keep the run's output first: the loop in `rv6` saves any failing run whole. No game run.
 
 ## B. Docs and comments
 

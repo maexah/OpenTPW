@@ -439,7 +439,11 @@ public class ParkStaffBehaviourTests
 		const int sweeps = 400;
 
 		var world = Park();
-		var people = new ParkPeople( world, Balance() );
+
+		// Every generator seeded: how long a walk lasts is drawn, and two seeds of 300 leave the guard or the
+		// researcher with fewer than the three ended walks asked for below.
+		var people = new ParkPeople( world, Balance(), random: new Random( 1 ), behaviourRandom: new Random( 1 ),
+			rideRandom: new Random( 1 ), staffRandom: new Random( 1 ) );
 
 		try
 		{
