@@ -158,6 +158,65 @@ public class ParkEscapeOnReleaseTests
 	}
 
 	/// <summary>
+	/// <b>The modifiers are the ones held as Escape came up, not as the frame ends.</b> The original asks
+	/// <c>GetKeyState</c> at each key-up (<c>0x0046bb0b</c>). Escape let go and then the modifier, inside one frame, is
+	/// still the modifier's Escape: the tool stays armed and no menu opens. A modifier that goes down in the frame after
+	/// Escape came up was not held for it: that Escape is a plain one. And Escape let go between a modifier's release
+	/// and its next press, all in one frame, is plain too.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> each release given the modifiers left as the frame ends empties the hand in the first case and
+	/// keeps it in the second; the modifiers read before the key-up's own event is applied are caught by the third,
+	/// and by a modifier's own release counting as held.
+	/// </remarks>
+	[DataTestMethod]
+	[DataRow( Key.ShiftLeft )]
+	[DataRow( Key.ControlRight )]
+	[DataRow( Key.AltLeft )]
+	public void TheModifiersAreTheOnesHeldAsEscapeCameUp( Key modifier )
+	{
+		var stack = APark();
+		ParkBuildMode.Arm( ParkBuildMode.Path );
+
+		Frame( stack, Down( modifier ), Down( Key.Escape ) );
+		Frame( stack, Up( Key.Escape ), Up( modifier ) );
+		Assert.AreEqual( ParkBuildMode.Path, ParkBuildMode.Current, $"Escape up, then {modifier} up, in one frame: the hand is kept" );
+		Assert.AreEqual( "ParkGadget, ParkViewfinder", Names( stack ), "and no menu opens" );
+		Assert.AreEqual( 0, Input.Keyboard.KeysDown.Count, "nothing is left held" );
+
+		Frame( stack, Down( Key.Escape ) );
+		Frame( stack, Up( Key.Escape ), Down( modifier ) );
+		Assert.AreEqual( ParkBuildMode.None, ParkBuildMode.Current, $"Escape up, then {modifier} down, in one frame: a plain Escape, the tool put away" );
+
+		Frame( stack, Down( Key.Escape ) );
+		Frame( stack, Up( modifier ), Up( Key.Escape ), Down( modifier ) );
+		Assert.AreEqual( "ParkGadget, ParkViewfinder, GameMenu", Names( stack ), $"{modifier} up, Escape up, {modifier} down: plain, the menu opens" );
+
+		Frame( stack, Up( modifier ) );
+	}
+
+	/// <summary>
+	/// <b>Over a park screen the same</b>: Escape up and then Shift up in one frame leaves the screen open, as
+	/// <c>FUN_00488ba0</c>'s test of the key-up's own modifier byte does (<c>0x00488bc6</c>).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the screen's arm asking the frame's end closes the screen.</remarks>
+	[TestMethod]
+	public void OverAScreenTheModifiersAreTheOnesHeldAsEscapeCameUp()
+	{
+		var stack = APark();
+		var screen = AScreen( "buy", stack );
+		stack.Open( screen );
+
+		Frame( stack, Down( Key.ShiftLeft ), Down( Key.Escape ) );
+		Frame( stack, Up( Key.Escape ), Up( Key.ShiftLeft ) );
+		Assert.AreSame( screen, stack.Windows[^1], "Escape up, then Shift up, in one frame: the screen stays" );
+
+		Frame( stack, Down( Key.Escape ) );
+		Frame( stack, Up( Key.Escape ), Down( Key.ShiftLeft ) );
+		Assert.AreEqual( "ParkGadget, ParkViewfinder", Names( stack ), "Escape up, then Shift down: a plain one closes it" );
+	}
+
+	/// <summary>
 	/// <b>A message box over the menu keeps Escape</b>: let go, it closes neither the box nor the menu, empties no hand
 	/// and opens no second menu. The original's box takes the focus and drops the key.
 	/// </summary>

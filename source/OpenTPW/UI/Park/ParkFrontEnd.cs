@@ -199,13 +199,16 @@ internal sealed class ParkFrontEnd : Panel
 	/// </summary>
 	private void ParkKeys()
 	{
-		foreach ( var key in Input.KeysReleased )
+		foreach ( var release in Input.Releases )
 		{
+			if ( release.Key is Key.Escape or Key.F3 )
+				Log.Info( $"Park keys: {release.Key} let go, {release.Held} held as it came up, {Input.Held} as the frame ends" );
+
 			if ( _stack.Covered )
-				FullScreenKey( key );
-			else if ( key == Key.Escape )
-				MenuKey( _stack.Windows.Count > 0 ? _stack.Windows[^1] : null );
-			else if ( key == Key.F3 && Input.NoModifierHeld )
+				FullScreenKey( release );
+			else if ( release.Key == Key.Escape )
+				MenuKey( _stack.Windows.Count > 0 ? _stack.Windows[^1] : null, release.Plain );
+			else if ( release.Key == Key.F3 && release.Plain )
 				ToggleFullScreen();
 		}
 	}
@@ -252,11 +255,11 @@ internal sealed class ParkFrontEnd : Panel
 	/// it holds; else Ctrl+P is the postcard's (<c>FUN_004a9380</c>, counted). No other key is heard but the camera's,
 	/// which the camera reads itself.
 	/// </summary>
-	private void FullScreenKey( Key key )
+	private void FullScreenKey( Input.KeyRelease release )
 	{
-		if ( key is (Key.F3 or Key.Escape) && Input.NoModifierHeld )
+		if ( release.Key is (Key.F3 or Key.Escape) && release.Plain )
 			ToggleFullScreen();
-		else if ( key == Key.P && Input.ControlAlone )
+		else if ( release.Key == Key.P && release.ControlAlone )
 			Unimplemented.Report( "FULL_SCREEN_VIEW_POSTCARD" );
 	}
 
@@ -278,7 +281,8 @@ internal sealed class ParkFrontEnd : Panel
 	/// (<c>docs/QUEUE.md</c> Q122): the screen in front takes the key there too, and the next Escape leaves.
 	/// </para>
 	/// </summary>
-	private void MenuKey( UiWindow? front )
+	/// <param name="plain">Whether no modifier was held as the key came up (<see cref="Input.Releases"/>).</param>
+	private void MenuKey( UiWindow? front, bool plain )
 	{
 		// The menu's handler compares the key alone (0x0048bb36), so an Escape let go with a modifier held closes it.
 		if ( front is GameMenu menu )
@@ -289,7 +293,7 @@ internal sealed class ParkFrontEnd : Panel
 
 		if ( front is { ParkScreen: true } or ParkMapScreen )
 		{
-			if ( Input.NoModifierHeld )
+			if ( plain )
 			{
 				_stack.Close( front );
 				Log.Info( $"Escape: closed {front.GetType().Name}" );
@@ -312,7 +316,7 @@ internal sealed class ParkFrontEnd : Panel
 
 		// The rest is the park's binding tables, whose Escape rows - the game table's row 0 and the shortcuts' row 0 -
 		// name no modifier, which a row must match exactly (FUN_0040c990).
-		if ( !Input.NoModifierHeld )
+		if ( !plain )
 			return;
 
 		// Escape over anything but the idle mode installs the idle mode and is spent doing it (0x0040c368; see
@@ -338,7 +342,7 @@ internal sealed class ParkFrontEnd : Panel
 	/// hold the game clock, which is exactly what a second, private road would be free to get wrong.
 	/// </para>
 	/// </summary>
-	internal void DebugOpenMenu() => MenuKey( _stack.Windows.Count > 0 ? _stack.Windows[^1] : null );
+	internal void DebugOpenMenu() => MenuKey( _stack.Windows.Count > 0 ? _stack.Windows[^1] : null, plain: true );
 
 	/// <summary>
 	/// The park's game menu, in the order GameMenu_BuildPark adds its choices, each with its id in the park

@@ -66,6 +66,37 @@ public class LobbyKeysOnReleaseTests
 	}
 
 	/// <summary>
+	/// <b>Each release carries the modifiers held as it came up</b>, the events taken in the order they came: a key let
+	/// go before its modifier in one frame has the modifier, a modifier's own release does not count itself, and a key
+	/// let go and pressed again in one frame is left held.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the modifiers taken as the frame ends, or before the event itself is applied, turn this red; so
+	/// does a held set that drops every key with a release in the frame whatever came after it.
+	/// </remarks>
+	[TestMethod]
+	public void EachReleaseCarriesTheModifiersHeldAsItCameUp()
+	{
+		Input.UpdateFrom( new Snapshot( Down( Key.ShiftLeft ), Down( Key.ControlRight ), Down( Key.Escape ) ) );
+		Input.UpdateFrom( new Snapshot( Up( Key.Escape ), Up( Key.ShiftLeft ), Up( Key.ControlRight ), Down( Key.Escape ) ) );
+
+		CollectionAssert.AreEqual(
+			new[]
+			{
+				new Input.KeyRelease( Key.Escape, Input.Modifiers.Shift | Input.Modifiers.Control ),
+				new Input.KeyRelease( Key.ShiftLeft, Input.Modifiers.Control ),
+				new Input.KeyRelease( Key.ControlRight, Input.Modifiers.None ),
+			},
+			Input.Releases.ToArray() );
+		Assert.IsFalse( Input.Releases[0].Plain );
+		Assert.IsTrue( Input.Releases[1].ControlAlone );
+		Assert.IsTrue( Input.Releases[2].Plain );
+		CollectionAssert.AreEqual( new[] { Key.Escape }, Input.Keyboard.KeysDown, "let go and pressed again: held" );
+
+		Input.UpdateFrom( new Snapshot( Up( Key.Escape ) ) );
+	}
+
+	/// <summary>
 	/// <b>A key's release is kept for the frame it comes up in</b>, once however long the key was held, and a held key's
 	/// repeats are presses only.
 	/// </summary>

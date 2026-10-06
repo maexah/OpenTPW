@@ -37,7 +37,40 @@ public static partial class Input
 	/// The keys that came up this frame, in the order they came up - once for each time a key is let go, however long it
 	/// was held. The original's key-up message (0x1000b, UI_PostKey) is the one most of its keys act on.
 	/// </summary>
-	public static IReadOnlyList<Key> KeysReleased { get; internal set; } = [];
+	public static IReadOnlyList<Key> KeysReleased
+	{
+		get => _keysReleased;
+		internal set => Releases = [.. value.Select( key => new KeyRelease( key, Held ) )];
+	}
+
+	private static Key[] _keysReleased = [];
+	private static KeyRelease[] _releases = [];
+
+	/// <summary>
+	/// <see cref="KeysReleased"/>, each with the modifiers held as it came up. The original's window procedure asks
+	/// <c>GetKeyState</c> for Shift, Ctrl and Alt at each key-up, just before it posts the key (<c>0x0046bb0b</c>;
+	/// <c>docs/exe/scenes.md</c>, "The park Escape route"), so a modifier let go later in the same frame still counts
+	/// for the key, and one pressed later does not.
+	/// </summary>
+	internal static IReadOnlyList<KeyRelease> Releases
+	{
+		get => _releases;
+		private set
+		{
+			_releases = [.. value];
+			_keysReleased = [.. value.Select( release => release.Key )];
+		}
+	}
+
+	/// <summary>A key let go, and the modifiers held as it came up.</summary>
+	internal readonly record struct KeyRelease( Key Key, Modifiers Held )
+	{
+		/// <summary>Whether no modifier was held - what a row that names none asks for, as the original's Escape rows do.</summary>
+		public bool Plain => Held == Modifiers.None;
+
+		/// <summary>Whether Ctrl was held and neither Shift nor Alt was: the modifier byte <c>0x0c</c>.</summary>
+		public bool ControlAlone => Held == Modifiers.Control;
+	}
 
 	/// <summary>
 	/// Set while a text box has the keyboard, so typing into it does not also press what its keys are
@@ -98,22 +131,22 @@ public static partial class Input
 	/// key was held, its repeats included.
 	/// </summary>
 	/// <remarks>
-	/// Unlike <see cref="Released"/>, a modifier pressed or let go under the held key is no key-up. The modifiers are read
-	/// as the frame ends, as <see cref="NoModifierHeld"/> says (<c>docs/QUEUE.md</c> Q120).
+	/// Unlike <see cref="Released"/>, a modifier pressed or let go under the held key is no key-up. The modifiers are the
+	/// ones held as the key came up (<see cref="Releases"/>).
 	/// </remarks>
 	public static bool KeyUp( InputButton button )
 	{
-		return !TextCaptured && KeyUpFrom( button, Keyboard.KeysDown, KeysReleased );
+		return !TextCaptured && KeyUpFrom( button, Releases );
 	}
 
-	internal static bool KeyUpFrom( InputButton button, IReadOnlyCollection<Key> keysHeld, IReadOnlyCollection<Key> keysReleased )
+	internal static bool KeyUpFrom( InputButton button, IReadOnlyCollection<KeyRelease> releases )
 	{
-		if ( !Bindings.TryGetValue( button, out var binding ) || HeldIn( keysHeld ) != binding.Modifiers )
+		if ( !Bindings.TryGetValue( button, out var binding ) )
 			return false;
 
-		foreach ( var key in binding.Keys )
+		foreach ( var release in releases )
 		{
-			if ( keysReleased.Contains( key ) )
+			if ( release.Held == binding.Modifiers && binding.Keys.Contains( release.Key ) )
 				return true;
 		}
 
@@ -137,7 +170,7 @@ public static partial class Input
 		KeysDown.Clear();
 		LastKeysDown.Clear();
 		KeysPressed = [];
-		KeysReleased = [];
+		Releases = [];
 	}
 
 	public struct KeyboardInfo
@@ -161,7 +194,7 @@ public static partial class Input
 	/// Windows key is not a modifier at all.
 	/// </summary>
 	[Flags]
-	private enum Modifiers
+	internal enum Modifiers
 	{
 		None = 0,
 		Shift = 1,
@@ -187,17 +220,13 @@ public static partial class Input
 	/// Whether Ctrl is held and neither Shift nor Alt is - the original's own test for "Ctrl alone",
 	/// a <c>GetAsyncKeyState</c> mask that must equal <c>0x0c</c> exactly (<c>FUN_00486aa0</c>).
 	/// </summary>
-	public static bool ControlAlone => HeldIn( Keyboard.KeysDown ) == Modifiers.Control;
+	public static bool ControlAlone => Held == Modifiers.Control;
 
 	/// <summary>Whether either Shift is held, whatever else is.</summary>
-	public static bool ShiftHeld => (HeldIn( Keyboard.KeysDown ) & Modifiers.Shift) != 0;
+	public static bool ShiftHeld => (Held & Modifiers.Shift) != 0;
 
-	/// <summary>Whether no modifier is held - what a binding that names none asks for, as the original's Escape rows do.</summary>
-	/// <remarks>
-	/// As the frame ends, as every binding here is judged. The original reads the modifiers at each key-up (GetKeyState,
-	/// 0x0046bb0b), so a modifier let go or pressed in the same frame as the key counts differently (<c>docs/QUEUE.md</c> Q120).
-	/// </remarks>
-	public static bool NoModifierHeld => HeldIn( Keyboard.KeysDown ) == Modifiers.None;
+	/// <summary>The modifiers held as the frame ends: a click's or a held state's, never a key-up's (<see cref="Releases"/>).</summary>
+	internal static Modifiers Held => HeldIn( Keyboard.KeysDown );
 
 	private static Modifiers HeldIn( IReadOnlyCollection<Key> keysDown )
 	{
@@ -214,6 +243,8 @@ public static partial class Input
 	/// being <i>exactly</i> the ones it asks for.
 	/// </summary>
 	/// <remarks>
+	/// This is the held state as the frame ends, which <see cref="Down"/>, <see cref="Pressed"/> and
+	/// <see cref="Released"/> are built on. A key-up is judged at its own moment instead (<see cref="KeyUp"/>).
 	/// The original compares a binding's modifier field for equality and not for containment, so a
 	/// binding that names no modifier only fires when none is held. That is what keeps Ctrl+C from
 	/// meaning Close Park and camcorder mode at once, and Ctrl+S from meaning both staff shortcuts.
@@ -299,18 +330,31 @@ public static partial class Input
 		Forward = 0;
 
 		var newKeysDown = inputSnapshot.KeyEvents.Where( x => x.Down ).Select( x => x.Key );
-		var newKeysUp = inputSnapshot.KeyEvents.Where( x => !x.Down ).Select( x => x.Key );
 
-		Keyboard = new KeyboardInfo(
-			Keyboard.KeysDown.Concat( newKeysDown )
-				.Distinct()
-				.Where( x => !newKeysUp.Contains( x ) )
-				.ToList()
-		);
+		// The frame's key events in the order they came, so that each release is given the modifiers held at that
+		// moment and not the ones left as the frame ends.
+		var held = new List<Key>( Keyboard.KeysDown );
+		var releases = new List<KeyRelease>();
+
+		foreach ( var keyEvent in inputSnapshot.KeyEvents )
+		{
+			if ( keyEvent.Down )
+			{
+				if ( !held.Contains( keyEvent.Key ) )
+					held.Add( keyEvent.Key );
+			}
+			else
+			{
+				held.Remove( keyEvent.Key );
+				releases.Add( new KeyRelease( keyEvent.Key, HeldIn( held ) ) );
+			}
+		}
+
+		Keyboard = new KeyboardInfo( held );
 
 		TypedText = new string( [.. inputSnapshot.KeyCharPresses] );
 		KeysPressed = [.. newKeysDown];
-		KeysReleased = [.. newKeysUp];
+		Releases = releases;
 
 		bool IsKeyPressed( Key k ) => Keyboard.KeysDown.Contains( k );
 

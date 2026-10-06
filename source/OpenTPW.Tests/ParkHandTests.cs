@@ -853,7 +853,7 @@ public class ParkHandTests
 		var frontEnd = RuntimeHelpers.GetUninitializedObject( typeof( UI.ParkFrontEnd ) );
 		var menuKey = typeof( UI.ParkFrontEnd ).GetMethod( "MenuKey", BindingFlags.Instance | BindingFlags.NonPublic )!;
 
-		menuKey.Invoke( frontEnd, [null] );
+		menuKey.Invoke( frontEnd, [null, true] );
 	}
 
 	/// <summary>

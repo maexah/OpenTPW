@@ -4627,6 +4627,21 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `windows` ParkGadget, ParkViewfinder and `tool` mode 1 at (47,20); the same over the Belly Bounce's window and the
   map; Shift+Escape, nothing. In the original, 7 of 7 from memory: the buy screen, a visitor's window and the map
   each closed, the menu shut, the tool and its anchor kept. Fourteen restored bugs each fail a test.
+- [x] **Q120. The modifiers are judged as the frame ends, not at each key.** Found by Q57's review. The original reads
+  Shift, Ctrl and Alt with `GetKeyState` at each key-up (`0x0046bb0b`, `scenes.md`, "The park Escape route"), so a
+  modifier let go in the same frame as Escape but after it still counts. `Input.BindingMatches` and
+  `Input.NoModifierHeld` read the held set as the frame ends, so Shift+Escape let go with Escape first, inside one frame,
+  empties the hand or opens the menu. Carry each event's modifiers (SDL's, Shift, Ctrl and Alt only) or replay the
+  frame's events in order. Said at `NoModifierHeld`. Confirm: Shift+Escape with the tool armed, Escape up then Shift up
+  in one frame through XTEST - `tool` still Path.
+  Done 2026-10-06: `Input.Releases` replays the frame's key events in order and gives each release the modifiers held
+  as it came up; Escape, F3, the full-screen view's keys and `Input.KeyUp` read them, and `NoModifierHeld` is gone.
+  Predicted and read in Lost Kingdom with real keys, two events landed in one frame by stopping the game, **6 of 6**
+  (the unchanged build 6 of 6 the other way): Shift and Escape down, the path tool armed at (47,20), Escape up then
+  Shift up, the log's "Shift held as it came up, None as the frame ends", `tool` mode 1 at (47,20), no GameMenu;
+  Escape up then Shift down, a plain Escape, mode 0; the buy screen kept; Ctrl+C no camcorder. In the original, 4 of 4
+  from memory: the same two orders, the tool kept and then put away, the menu 0. Ten restored bugs each fail a test.
+  A binding read on its press or as a held state is still rebuilt as the frame ends.
 
 ## B. Docs and comments
 

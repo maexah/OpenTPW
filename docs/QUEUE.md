@@ -38,13 +38,6 @@ the original.
 
 ## A. Bugs first
 
-- [ ] **Q120. The modifiers are judged as the frame ends, not at each key.** Found by Q57's review. The original reads
-  Shift, Ctrl and Alt with `GetKeyState` at each key-up (`0x0046bb0b`, `scenes.md`, "The park Escape route"), so a
-  modifier let go in the same frame as Escape but after it still counts. `Input.BindingMatches` and
-  `Input.NoModifierHeld` read the held set as the frame ends, so Shift+Escape let go with Escape first, inside one frame,
-  empties the hand or opens the menu. Carry each event's modifiers (SDL's, Shift, Ctrl and Alt only) or replay the
-  frame's events in order. Said at `NoModifierHeld`. Confirm: Shift+Escape with the tool armed, Escape up then Shift up
-  in one frame through XTEST - `tool` still Path.
 - [ ] **Q121. A held right button in first person does not walk.** Found by Q59's decode (`hud.md`, "Four ways out of
   camcorder mode"). The viewfinder layer's handler hands every message to `FUN_0042a760`, which sets 4 in `DAT_00790aac`
   while the right button is down (`0x0042a8bd`), and the walking camera adds the Up arrow's 0.1 to its forward term for

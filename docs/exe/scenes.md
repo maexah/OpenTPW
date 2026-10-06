@@ -76,7 +76,14 @@ front window read again for each; the menu and first person take it whatever the
 only with none held. The lobby's is `FrontEnd.LobbyKeys` (`lobby.md`, "The lobby's keys act on the release").
 Over a park screen or the map in front, a plain Escape closes it and nothing more, and one with a modifier held does
 nothing (`MenuKey`'s first arm after the menu's; Q119, measured in both games: `park-engine.md`, "A park screen is
-open"). **Not the original's:** the modifiers are judged as the frame ends, as every binding here is (Q120); a screen
+open"). Each release carries the modifiers held as it came up (`Input.Releases`: the frame's key events replayed in
+order), so Escape, F3, the camcorder's C and the full-screen view's Ctrl+P are judged as the original's key-up is,
+whatever a modifier does later in the same frame (Q120). Measured in both games with two key events landed in one
+pump (the game stopped, the events sent, the game let run): Shift and Escape down, the path tool armed, then Escape up
+and Shift up, and the tool stays armed with no menu; Escape up and then Shift down, and the tool is put away, a plain
+Escape. In the original the mode's vtable stayed `0x6fe9e0` with its anchor in the first and went to the idle mode's
+`0x6fea10` in the second, the menu 0 in both. **Not the original's:** a binding read as a held state or on its press
+(`Input.Down`, `Pressed`, `Released`) is still rebuilt from the keys held as the frame ends; a screen
 left open over first person takes the key before the viewfinder does, where the original has closed it on the way in
 (Q122).
 

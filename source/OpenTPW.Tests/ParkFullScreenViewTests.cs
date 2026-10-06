@@ -204,6 +204,37 @@ public class ParkFullScreenViewTests
 		Assert.IsTrue( stack.Covered, "and the view stays on" );
 	}
 
+	/// <summary>
+	/// <b>F3, Escape and Ctrl+P are judged by the modifiers held as each came up</b> (<c>GetKeyState</c> at the key-up,
+	/// <c>0x0046bb0b</c>): F3 up and then Shift up in one frame turns nothing on; under the view the same Escape turns
+	/// nothing off, and P up then Ctrl up is still the postcard's.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> any of the three asking the keys held as the frame ends fails its line.</remarks>
+	[TestMethod]
+	public void TheModifiersAreTheOnesHeldAsEachKeyCameUp()
+	{
+		var stack = APark();
+
+		Frame( stack, Down( Key.ShiftLeft ), Down( Key.F3 ) );
+		Frame( stack, Up( Key.F3 ), Up( Key.ShiftLeft ) );
+		Assert.IsFalse( stack.Covered, "F3 up, then Shift up, in one frame: Shift+F3, nothing" );
+
+		Press( stack, Key.F3 );
+		Frame( stack, Down( Key.ShiftLeft ), Down( Key.Escape ) );
+		Frame( stack, Up( Key.Escape ), Up( Key.ShiftLeft ) );
+		Assert.IsTrue( stack.Covered, "under the view, Escape up then Shift up: the view stays on" );
+
+		Frame( stack, Down( Key.ControlLeft ), Down( Key.P ) );
+		Frame( stack, Up( Key.P ), Up( Key.ControlLeft ) );
+		Assert.AreEqual( 1, Times( "FULL_SCREEN_VIEW_POSTCARD" ), "P up, then Ctrl up: Ctrl+P, counted" );
+
+		Frame( stack, Down( Key.F3 ) );
+		Frame( stack, Up( Key.F3 ), Down( Key.ShiftLeft ) );
+		Assert.IsFalse( stack.Covered, "F3 up, then Shift down: a plain F3, the view off" );
+
+		Frame( stack, Up( Key.ShiftLeft ) );
+	}
+
 	/// <summary><b>In first person F3 is refused</b> (<c>gui_CameraFlags &amp; 0x16</c>, <c>0x004a29e6</c>).</summary>
 	/// <remarks><b>Mutations:</b> taking the test out turns the view on over the viewfinder.</remarks>
 	[TestMethod]

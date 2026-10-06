@@ -107,6 +107,25 @@ public class ParkCamcorderKeyOnReleaseTests
 		}
 	}
 
+	/// <summary>
+	/// <b>The row is found by the modifiers held as C came up</b> (<c>GetKeyState</c> at the key-up, <c>0x0046bb0b</c>):
+	/// C up and then Ctrl up inside one frame is still Ctrl+C, and C up and then Ctrl down is a plain C.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> <see cref="Input.KeyUp"/> asking the keys held as the frame ends fails both halves.</remarks>
+	[TestMethod]
+	public void TheModifiersAreTheOnesHeldAsCCameUp()
+	{
+		Frame( Down( Key.ControlLeft ), Down( Key.C ) );
+		Frame( Up( Key.C ), Up( Key.ControlLeft ) );
+		Assert.IsFalse( ParkCamcorderCameraMode.Active, "C up, then Ctrl up, in one frame: Ctrl+C, not the camcorder" );
+
+		Frame( Down( Key.C ) );
+		Frame( Up( Key.C ), Down( Key.ControlLeft ) );
+		Assert.IsTrue( ParkCamcorderCameraMode.Active, "C up, then Ctrl down, in one frame: a plain C" );
+
+		Frame( Up( Key.ControlLeft ) );
+	}
+
 	/// <summary>Holds C down for three frames, the last two its repeats, without letting it go.</summary>
 	private static void HoldC()
 	{
