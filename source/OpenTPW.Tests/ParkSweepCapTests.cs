@@ -61,12 +61,17 @@ public class ParkSweepCapTests
 	}
 
 	/// <summary>
-	/// <b>The staff pool's unbuilt refresh is counted once a sweep the park runs</b>, where the original runs
-	/// <c>FUN_005084f0</c> (<c>0x004d7b30</c>), and not on a sweep that is dropped.
+	/// <b>The staff pool takes its turn on the park's sweep and the park's clock</b>, where the original runs
+	/// <c>FUN_005084f0</c> (<c>0x004d7b30</c>): a pool whose mark is 360 sweeps old is topped up on the first sweep
+	/// the park runs, and marked with that sweep's <c>mGameTick</c>; and in a frame that owes eight sweeps it takes
+	/// three turns, one with each sweep run and none with a sweep dropped.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the pool's turn not called from the sweep; called once a frame, or on a dropped sweep.</remarks>
+	/// <remarks>
+	/// <b>Mutations:</b> the pool's turn not called from the sweep; handed the 31 ms count, or a tick late; called once
+	/// a frame, or on a dropped sweep.
+	/// </remarks>
 	[TestMethod]
-	public void TheStaffPoolsRefreshIsCountedOnceASweep()
+	public void TheStaffPoolTakesItsTurnOnTheParksSweep()
 	{
 		var data = GameData.Required();
 		FileSystem = data;
@@ -78,21 +83,24 @@ public class ParkSweepCapTests
 
 		using var clock = new SimulationClockScope();
 		var people = new ParkPeople( world, balance );
-		_ = new ParkStaffPool( balance );
+		var start = people.State.GameTick;
+		var pool = new ParkStaffPool( balance, gameTick: start - 360 );
 
 		try
 		{
-			Unimplemented.Forget();
+			SimulationClockScope.Frame( GameClock.TickSeconds * 8 );
+			people.Update();
+
+			Assert.AreEqual( start + 1, people.State.GameTick );
+			Assert.AreEqual( start + 1, pool.Mark, "topped up on the park's first sweep, 361 past its mark" );
+			Assert.AreEqual( 1, pool.Turns );
 
 			SimulationClockScope.Frame( 2f );
 			people.Update();
-
-			Assert.AreEqual( 3, Unimplemented.Summary.FirstOrDefault( gap => gap.What == "STAFF_POOL_REFRESH" ).Times,
-				"a frame owing eight sweeps runs three, and the pool's turn with each" );
+			Assert.AreEqual( 4, pool.Turns, "a frame owing eight sweeps runs three, and the pool's turn with each" );
 		}
 		finally
 		{
-			Unimplemented.Forget();
 			typeof( ParkStaffPool ).GetProperty( nameof( ParkStaffPool.Current ) )!.SetValue( null, poolBefore );
 			people.Delete();
 			Entity.ApplyDeletions();

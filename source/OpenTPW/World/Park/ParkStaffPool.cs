@@ -182,7 +182,25 @@ public sealed class ParkStaffPool
 	/// arithmetic, not a bug to correct.
 	/// </param>
 	/// <param name="Costume">Which of that kind's sprite costumes they wear.</param>
-	public readonly record struct Candidate( int Id, int Kind, string Name, int Grade, int Costume, int Wage );
+	/// <param name="Mark">The park's <c>mGameTick</c> as they joined the pool - the record's <c>+0xc</c>.</param>
+	/// <param name="Lifetime">
+	/// How long they wait to be hired, in fours of sweeps - the record's <c>+0x10</c>: <c>StaffTimeoutTime</c> plus a
+	/// draw of up to half as much again.
+	/// </param>
+	public readonly record struct Candidate( int Id, int Kind, string Name, int Grade, int Costume, int Wage,
+		int Mark = 0, int Lifetime = 0 );
+
+	/// <summary>A candidate joined the pool while it was running - the hire list's row is added (<c>FUN_00481550</c>).</summary>
+	internal event Action<Candidate>? Joined;
+
+	/// <summary>A candidate's time ran out, by their id - the hire list's row goes.</summary>
+	internal event Action<int>? Left;
+
+	/// <summary>How many turns the pool has taken, one a sweep the park ran.</summary>
+	internal int Turns { get; private set; }
+
+	/// <summary>The <c>mGameTick</c> the pool was last topped up on, or made - world <c>+0x294</c>.</summary>
+	internal int Mark { get; private set; }
 
 	private readonly List<Candidate> _candidates = [];
 	private readonly ParkBalance? _balance;
@@ -287,18 +305,175 @@ public sealed class ParkStaffPool
 	/// </param>
 	/// <summary>
 	/// The pool's turn, once a thing sweep - the original's <c>FUN_005084f0</c>, which <c>FUN_004d7b20</c> calls on
-	/// every sweep (<c>0x004d7b30</c>). It drops each candidate older than four times its own lifetime in sweeps, and
-	/// every <c>TimeBetweenStaffUpdates</c> times four sweeps tops the pool up by at most
-	/// <c>MaxNumberOfStaffPerUpdate</c> (<c>docs/exe/park-engine.md</c>, "The staff pool's refresh"). <b>Unbuilt and
-	/// counted</b>: the pool here is the opening one for good (<c>docs/QUEUE.md</c> Q130b).
+	/// every sweep (<c>0x004d7b30</c>; <c>docs/exe/park-engine.md</c>, "The staff pool's refresh").
+	/// <list type="number">
+	/// <item>Each candidate who is not in the hand and is more than four times their lifetime old, in sweeps, is
+	/// dropped (<see cref="TimedOut"/>).</item>
+	/// <item>When the pool's mark is more than <c>TimeBetweenStaffUpdates * 4</c> sweeps old it is topped up
+	/// (<see cref="TopUp"/>) and marked with this sweep.</item>
+	/// </list>
 	/// </summary>
-	internal void Sweep() => Unimplemented.Report( "STAFF_POOL_REFRESH" );
+	/// <param name="gameTick">The park's own clock, one a sweep.</param>
+	/// <param name="inPark">How many of a kind the park employs now - what <c>FUN_00508000</c> counts.</param>
+	internal void Sweep( int gameTick, Func<int, int> inPark )
+	{
+		++Turns;
 
-	public ParkStaffPool( ParkBalance? balance, int seed = 20260920 )
+		for ( var at = _candidates.Count - 1; at >= 0; --at )
+		{
+			var person = _candidates[at];
+
+			if ( person.Id == Carrying || !TimedOut( gameTick, person.Mark, person.Lifetime ) )
+				continue;
+
+			_candidates.RemoveAt( at );
+			Left?.Invoke( person.Id );
+
+			Log.Info( $"Staff pool: {person.Name}, a {NameOfKind( person.Kind ).ToLowerInvariant()}, timed out on mGameTick "
+				+ $"{gameTick}, {gameTick - person.Mark} sweeps after {person.Mark} (lifetime {person.Lifetime})" );
+		}
+
+		if ( !UpdateIsDue( gameTick, Mark, Key( "TimeBetweenStaffUpdates", 90 ) ) )
+			return;
+
+		var before = _candidates.Count;
+
+		TopUp( gameTick, inPark );
+		Mark = gameTick;
+
+		Log.Info( $"Staff pool: topped up on mGameTick {gameTick} by {_candidates.Count - before} to {_candidates.Count} - "
+			+ string.Join( ", ", Enumerable.Range( 0, Kinds ).Select( kind => $"{OfKind( kind ).Count()} {NameOfKind( kind, plural: true ).ToLowerInvariant()}" ) ) );
+	}
+
+	/// <summary>Whether a candidate's time is up: more than four times their lifetime in sweeps, unsigned (<c>FUN_005084f0</c>'s first loop).</summary>
+	internal static bool TimedOut( int gameTick, int mark, int lifetime )
+		=> unchecked((uint)(gameTick - mark)) > (uint)(lifetime * 4);
+
+	/// <summary>Whether the pool is due its top-up: its mark more than <c>TimeBetweenStaffUpdates * 4</c> sweeps old, unsigned.</summary>
+	internal static bool UpdateIsDue( int gameTick, int mark, int timeBetween )
+		=> unchecked((uint)(gameTick - mark)) > (uint)(timeBetween * 4);
+
+	/// <summary>
+	/// The top-up. The budget is <c>MaxNumberOfStaffPerUpdate</c>, or the free slots where they are fewer. A kind the
+	/// park employs <c>Max&lt;Kind&gt;InPark</c> of is full and wants none; any other wants <c>Max&lt;Kind&gt;</c> less
+	/// its candidates in the pool. While the budget and the total wanted last, one draw modulo the total picks a kind
+	/// by those weights and a candidate of it is made. Then the minimums are made up (<see cref="MakeUpTheMinimums"/>).
+	/// </summary>
+	/// <remarks>
+	/// The original draws on the world's generator; this project keeps no shared one, so the pool's own is drawn. A
+	/// kind with more candidates than its <c>Max</c> wants a negative number, there as here. A kind is full only once
+	/// a member of it has been met in the park (<c>FUN_00508000</c> raises the flag as it counts one), so a limit of
+	/// nought with nobody employed is not full.
+	/// </remarks>
+	private void TopUp( int gameTick, Func<int, int> inPark )
+	{
+		var budget = Math.Min( Key( "MaxNumberOfStaffPerUpdate", 12 ), Slots - _candidates.Count );
+		var full = Enumerable.Range( 0, Kinds ).Select( kind => inPark( kind ) is var employed and > 0 && employed >= MostInPark( kind ) ).ToArray();
+		var want = Enumerable.Range( 0, Kinds )
+			.Select( kind => full[kind] ? 0 : Key( $"Max{BalanceNames[kind]}", 5 ) - OfKind( kind ).Count() ).ToArray();
+
+		for ( var total = want.Sum(); budget > 0 && total > 0; --total )
+		{
+			// The draw is under the total, which is the wants' own sum, so the walk always lands on a kind, and on
+			// one that wants somebody.
+			var kind = PickByWeight( want, (uint)_random.Next() % (uint)total );
+
+			if ( full[kind] || _candidates.Count >= Slots )
+				break;
+
+			Join( kind, gameTick );
+			--budget;
+			--want[kind];
+		}
+
+		MakeUpTheMinimums( gameTick, inPark, full );
+	}
+
+	/// <summary>
+	/// The kind a draw lands on: the weights are walked in order, the draw less each one passed, to the first it is
+	/// under (signed, as the original compares it). The draw must be under the weights' sum.
+	/// </summary>
+	internal static int PickByWeight( int[] want, uint draw )
+	{
+		for ( var kind = 0; kind < want.Length - 1; ++kind )
+		{
+			if ( (int)draw < want[kind] )
+				return kind;
+
+			draw -= (uint)want[kind];
+		}
+
+		return want.Length - 1;
+	}
+
+	/// <summary>
+	/// <c>FUN_00508170</c>: for the mechanics, the handymen, the entertainers, the guards and the researchers in that
+	/// order, round and round, a kind whose staff in the park plus candidates in the pool is under
+	/// <c>Min&lt;Kind&gt;InPool</c> gets one more, unless it is full or the pool is.
+	/// </summary>
+	/// <remarks>
+	/// The original goes round again whenever a kind was short, whether or not it could be given one, which never
+	/// ends for a kind that is short and cannot be: here a round that adds nobody is the last.
+	/// </remarks>
+	private void MakeUpTheMinimums( int gameTick, Func<int, int> inPark, bool[] full )
+	{
+		var minimum = Enumerable.Range( 0, Kinds ).Select( kind => Key( $"Min{BalanceNames[kind]}InPool", 1 ) ).ToArray();
+
+		for ( var added = true; added; )
+		{
+			added = false;
+
+			foreach ( var kind in ShortOfTheirMinimum( kind => inPark( kind ) + OfKind( kind ).Count(), minimum, full ) )
+			{
+				if ( _candidates.Count >= Slots )
+					return;
+
+				Join( kind, gameTick );
+				added = true;
+			}
+		}
+	}
+
+	/// <summary>
+	/// One round of <c>FUN_00508170</c>: the kinds that are under their minimum and not full, in the order it takes
+	/// them. <paramref name="have"/> is asked as each kind is reached, so a candidate one kind was just given counts.
+	/// </summary>
+	internal static IEnumerable<int> ShortOfTheirMinimum( Func<int, int> have, int[] minimum, bool[] full )
+	{
+		foreach ( var kind in MinimumsOrder )
+		{
+			if ( have( kind ) < minimum[kind] && !full[kind] )
+				yield return kind;
+		}
+	}
+
+	/// <summary>The order <c>FUN_00508170</c> takes the kinds in: mechanics first.</summary>
+	private static readonly int[] MinimumsOrder = [1, 0, 2, 3, 4];
+
+	/// <summary>Makes a candidate of a kind on this sweep and tells whoever shows the pool.</summary>
+	private void Join( int kind, int gameTick )
+	{
+		var person = Roll( kind, gameTick );
+
+		_candidates.Add( person );
+		Joined?.Invoke( person );
+	}
+
+	/// <summary>A key of the balance file's <c>StaffPoolInfo</c> block.</summary>
+	private int Key( string name, int fallback ) => _balance?.Int( $"StaffPoolInfo.{name}", fallback ) ?? fallback;
+
+	/// <summary>
+	/// A candidate's lifetime, in fours of sweeps - <c>FUN_00507600</c>'s last draw: <c>StaffTimeoutTime</c> plus a draw
+	/// modulo half of it, so 120 to 179 for the shipped 120.
+	/// </summary>
+	internal static int LifetimeFrom( int timeout, uint draw ) => timeout + (int)(draw % (uint)Math.Max( 1, timeout >> 1 ));
+
+	public ParkStaffPool( ParkBalance? balance, int seed = 20260920, int gameTick = 0 )
 	{
 		_balance = balance;
 		_random = new Random( seed );
 		Current = this;
+		Mark = gameTick;
 
 		// The opening pool, which the original generates once as a park opens.
 		for ( var kind = 0; kind < Kinds; ++kind )
@@ -306,7 +481,7 @@ public sealed class ParkStaffPool
 			var wanted = balance?.Int( $"StaffPoolInfo.BeginningNumberOf{BalanceNames[kind]}", 5 ) ?? 5;
 
 			for ( var i = 0; i < wanted && _candidates.Count < Slots; ++i )
-				_candidates.Add( Roll( kind ) );
+				_candidates.Add( Roll( kind, gameTick ) );
 		}
 
 		Log.Info( $"Staff: {_candidates.Count} candidates waiting - " + string.Join( ", ",
@@ -323,7 +498,7 @@ public sealed class ParkStaffPool
 	/// rather than live. Clamping in an int here cannot reproduce it, which is a deviation in this
 	/// direction rather than the dangerous one.
 	/// </remarks>
-	private Candidate Roll( int kind )
+	private Candidate Roll( int kind, int gameTick )
 	{
 		var average = _balance?.Int( $"StaffPoolInfo.AvgGradeOf{BalanceNames[kind]}", 2 ) ?? 2;
 		var grade = Math.Clamp( average + _random.Next( 3 ) - 1, 0, TopGrade );
@@ -334,7 +509,9 @@ public sealed class ParkStaffPool
 			Name: RollName( kind ),
 			Grade: grade,
 			Costume: 0,
-			Wage: WageFor( kind, grade ) );
+			Wage: WageFor( kind, grade ),
+			Mark: gameTick,
+			Lifetime: LifetimeFrom( Key( "StaffTimeoutTime", 120 ), (uint)_random.Next() ) );
 	}
 
 	/// <summary>One of the kind's 35 names, or a plain one where the table will not read.</summary>
@@ -425,7 +602,7 @@ public sealed class ParkStaffPool
 		foreach ( var person in _candidates )
 		{
 			yield return $"#{person.Id,-3} {NameOfKind( person.Kind ),-12} {person.Name,-20} " +
-				$"grade {person.Grade}  {person.Wage} a month";
+				$"grade {person.Grade}  {person.Wage} a month  made {person.Mark} lifetime {person.Lifetime}";
 		}
 	}
 }

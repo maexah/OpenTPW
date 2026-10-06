@@ -280,6 +280,42 @@ internal sealed class ParkHireScreen : UiWindow
 	}
 
 	/// <summary>
+	/// The list follows the pool while the screen is open: a candidate who joins it gets a row and one whose time
+	/// runs out loses theirs, as the original's pool tells the hire list (<c>FUN_00481550</c>).
+	/// </summary>
+	protected internal override void Shown()
+	{
+		_following = Level.Current?.StaffPool;
+
+		if ( _following == null )
+			return;
+
+		_following.Joined += Joined;
+		_following.Left += Left;
+	}
+
+	protected internal override void Closed()
+	{
+		if ( _following == null )
+			return;
+
+		_following.Joined -= Joined;
+		_following.Left -= Left;
+		_following = null;
+	}
+
+	/// <summary>The pool the list is following, which is let go of as it was taken hold of, whatever the level is by then.</summary>
+	private ParkStaffPool? _following;
+
+	private void Joined( ParkStaffPool.Candidate person )
+	{
+		if ( person.Kind == _kind )
+			_list.Add( new UiList.Row( person.Id, person.Name, person.Wage ) );
+	}
+
+	private void Left( int candidateId ) => _list.Remove( candidateId );
+
+	/// <summary>
 	/// A candidate was highlighted. The original previews the cost here - message <c>0x401</c> adds
 	/// this wage to the staff-costs row and takes it off the balance, so the player sees what hiring
 	/// would do before they do it.

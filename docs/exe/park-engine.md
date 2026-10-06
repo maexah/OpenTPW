@@ -2004,12 +2004,16 @@ after the arrival manager (`0x004d7b30`):
    set to this sweep.
 
 `FUN_00507600( kind, slot )` makes a candidate: the costume from `FUN_00541f70`, two draws of which the second, modulo
-3, plus `AvgGradeOf<Kind>` less one is the grade, held to 4; a name (`FUN_00507580`, a draw modulo 35, drawn again up
-to fifteen times while `FUN_005083f0` finds it in use); occupied; the hire list told; the mark; and the lifetime, a
+3, plus `AvgGradeOf<Kind>` less one is the grade, held to 4; a name (`FUN_00507580`, a draw modulo 35, fifteen draws at the
+most while `FUN_005083f0` finds it in use); occupied; the hire list told; the mark; and the lifetime, a
 draw modulo half `StaffTimeoutTime` plus `StaffTimeoutTime`. The keys are the `StaffPoolInfo` block, in the order the
 balance file lists them, four bytes each from `0x00785284`: `AvgGradeOf` at `0x00785298`, `Max<Kind>` at `0x007852c0`,
 `Min<Kind>InPool` at `0x007852d4`, `Max<Kind>InPark` at `0x007852e8`, `TimeBetweenStaffUpdates` at `0x00785304`,
 `MaxNumberOfStaffPerUpdate` at `0x00785308`, `StaffTimeoutTime` at `0x0078530c`.
+
+The opening pool is `FUN_005087d0`, from the park's creation (`FUN_005156a0`, which has just zeroed `mGameTick`, to
+`FUN_004d7af0` and `FUN_00507bb0`): `BeginningNumberOf<Kind>` candidates of each kind in turn through `FUN_00507600`,
+so each marked nought with its own lifetime, then the pool's mark; it runs before any save is read.
 
 **In the original**, predicted first, the pool read from memory every 100 ms for 240 s (`pool.py`). The keys as
 Lost Kingdom's Instant Action loads them: 90, 10 and 120; `Max` 6, 5, 6, 4, 3; `Min` 1, 1, 1, 1, 0; in the park 30,
@@ -2019,9 +2023,17 @@ went on 926, 565 sweeps old), their lifetimes 126 to 176. **The pool was topped 
 sweeps apart, by ten each time**, no kind past its `Max`. Not seen: a kind full in the park, the minimums' pass
 adding one, a candidate in the hand outliving its time.
 
-**OpenTPW** rolls an opening pool of `BeginningNumberOf<Kind>` each and keeps it for good; `ParkStaffPool.Sweep`
-counts the turn it does not take (`STAFF_POOL_REFRESH`). It does not read the save's pool either: Lost Kingdom's
-fourteen, with their marks and lifetimes, are in the file.
+**OpenTPW** (Q130b): `ParkStaffPool.Sweep`, called from the sweep's tail on `ParkState.GameTick`, is the turn
+above: `TimedOut`, `UpdateIsDue`, `TopUp` with `PickByWeight`, and `ShortOfTheirMinimum` for the minimums' round;
+every candidate carries its mark and its lifetime (`LifetimeFrom`), and the hire screen's list follows the pool while
+it is open. Measured in Lost Kingdom, the opening pool of twenty-two made on 755: all twenty-two, and one made
+later, went on their mark plus four times their lifetime plus one; topped up on 1116 by two (only two were wanted,
+the opening pool standing at or over most kinds' `Max`) and on 1477 by ten; before it, the same twenty-two stood 210 s
+on. **Not the original's**: the draws are the pool's own generator, the world's there; a name is drawn once with no
+look for one in use, and every costume is nought (Q214); a minimums' round that can add nobody is the last, where
+the original's would go round for ever; the
+opening pool is still rolled, `BeginningNumberOf<Kind>` each and made on the load's tick, where a save holds its own
+(Lost Kingdom's fourteen, with their marks and lifetimes): reading it is Q130c.
 
 **Every way out without a drop returns the candidate**: a quick right click with RMB cancel on, which is
 the default (`0x0048842b` installs the idle mode whatever the current one is); Escape (`0x0040c180`),

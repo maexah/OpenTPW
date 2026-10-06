@@ -38,16 +38,14 @@ the original.
 
 ## A. Bugs first
 
-- [ ] **Q130b. Build the staff pool's refresh, and read the save's pool.** From Q130 (`park-engine.md`, "The staff
-  pool's refresh"). `ParkStaffPool.Sweep`: a mark and a lifetime on every candidate (the lifetime a draw modulo half
-  `StaffTimeoutTime` plus it), the drop past four times the lifetime unless the candidate is in the hand, and the
-  top-up every `TimeBetweenStaffUpdates * 4` sweeps on `ParkState.GameTick`: the budget, the staff counted in the
-  park, each kind's want, the weighted draw, then the minimums' pass in its order. The hire screen's list must lose
-  and gain rows as it is open. Read the save's own pool (32 records at the world's start, with their marks and
-  lifetimes, and the pool's mark at `+0x294`) in place of rolling an opening one where a save holds one; a fresh
-  park still rolls. Confirm: the `candidates` census over a timed run beside the original's log (drops at four
-  times the lifetime plus one, top-ups 361 sweeps apart, of ten in Lost Kingdom); a screenshot of the hire screen
-  before and after a refresh.
+- [ ] **Q130c. Read the save's staff pool.** From Q130b. The save holds the pool: 32 records of 20 bytes at the
+  world's start, which `ParkWorld`'s reader skips (`PoolRecords`, `PoolRecordSize`), each a kind, a name's row, a
+  grade, a costume, the occupied and taken bytes, the `mGameTick` it was made on and its lifetime; and the pool's own
+  mark (`+0x294` in memory: find it in the file). Read them, write the layout to the FileFormats saves page
+  (`CLAUDE.md` rule 14), and give a loaded park that pool in place of a rolled one; a fresh park still rolls.
+  Confirm: Lost Kingdom's hire screen showing the save's fourteen candidates, the first drops on `mGameTick` 926,
+  934 and 946 and the first top-up on 1083, as the original's log has them (`park-engine.md`, "The staff pool's
+  refresh"); a screenshot beside the original's hire screen.
 - [ ] **Q132. Guests and rides take their turns on the game clock over eight, where the original hands them
   `mGameTick`. Decode first.** Found by Q68b. `ParkPeople.OnUpdate` hands `Peep.Tick`, `PeepBehaviour.Step` and the
   rides' turns `GameClock.Ticks / 8`, which runs from the program's start and is not reset on entering a park

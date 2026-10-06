@@ -1928,7 +1928,8 @@ public sealed class ParkPeople : Entity
 			StepVehicle();
 
 			// The staff pool's turn follows the arrival manager's in the sweep's tail (0x004d7b30).
-			ParkStaffPool.Current?.Sweep();
+			ParkStaffPool.Current?.Sweep( State.GameTick,
+				kind => _staff.Count( member => ParkStaffPool.KindFor( member.Model ) == kind ) );
 
 			TakeTheRidesTurns( thingTick );
 			RetryGateClose();

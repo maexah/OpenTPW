@@ -4835,6 +4835,21 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   pool read from memory for 240 s: 24 of 24 went on the first sweep past four times their lifetime, and the pool was
   topped up by ten on `mGameTick` 1083 and 1444, 361 apart. `ParkStaffPool.Sweep` counts the turn
   (`STAFF_POOL_REFRESH`). `park-engine.md`, "The staff pool's refresh".
+- [x] **Q130b. Build the staff pool's refresh, and read the save's pool.** From Q130 (`park-engine.md`, "The staff
+  pool's refresh"). `ParkStaffPool.Sweep`: a mark and a lifetime on every candidate (the lifetime a draw modulo half
+  `StaffTimeoutTime` plus it), the drop past four times the lifetime unless the candidate is in the hand, and the
+  top-up every `TimeBetweenStaffUpdates * 4` sweeps on `ParkState.GameTick`: the budget, the staff counted in the
+  park, each kind's want, the weighted draw, then the minimums' pass in its order. The hire screen's list must lose
+  and gain rows as it is open. Read the save's own pool (32 records at the world's start, with their marks and
+  lifetimes, and the pool's mark at `+0x294`) in place of rolling an opening one where a save holds one; a fresh
+  park still rolls. Confirm: the `candidates` census over a timed run beside the original's log (drops at four
+  times the lifetime plus one, top-ups 361 sweeps apart, of ten in Lost Kingdom); a screenshot of the hire screen
+  before and after a refresh.
+  Done 2026-10-06, the refresh (the save's pool is split off as Q130c: it needs the save reader and the FileFormats
+  page): `ParkStaffPool.Sweep` drops and tops up on `ParkState.GameTick`, and the hire list follows it. In Lost
+  Kingdom: the opening twenty-two, made on 755, each went on 755 plus four times their lifetime plus one; topped up
+  on 1116 by two and on 1477 by ten; the unchanged build kept the same twenty-two 210 s on. The hire screen
+  photographed with five, six and one cleaner. Twenty-three of twenty-four restored bugs fail.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.
