@@ -548,14 +548,45 @@ public sealed class ParkStaffPool
 			Kind: kind,
 			Name: RollName( kind ),
 			Grade: grade,
-			Costume: 0,
+			// The original draws the costume here (FUN_00541f70( kind ), stored at the record's +9); not built: Q214.
+			Costume: RolledCostume(),
 			Wage: WageFor( kind, grade ),
 			Mark: gameTick,
 			Lifetime: LifetimeFrom( Key( "StaffTimeoutTime", 120 ), (uint)_random.Next() ) );
 	}
 
-	/// <summary>One of the kind's 35 names, or a plain one where the table will not read.</summary>
-	private string RollName( int kind ) => NameAt( kind, _random.Next( 35 ) );
+	/// <summary>Every rolled candidate's costume is nought, and each one made is counted.</summary>
+	private static int RolledCostume()
+	{
+		Unimplemented.Report( "ROLLED_STAFF_COSTUME" );
+
+		return 0;
+	}
+
+	/// <summary>The most draws a new candidate's name is given (<c>0x0f</c>, <c>FUN_00507580</c>).</summary>
+	internal const int NameDraws = 15;
+
+	/// <summary>
+	/// A name for a new candidate - <c>FUN_00507580</c>: one of the kind's 35 rows is drawn, and drawn again, fifteen
+	/// draws at the most, while the name is in use (<c>FUN_005083f0</c>): a candidate in the pool has it, or, in the
+	/// original, a member of staff in the park does. A hired member keeps no name here, so that half is counted.
+	/// </summary>
+	private string RollName( int kind )
+	{
+		Unimplemented.Report( "STAFF_NAME_IN_USE_IN_THE_PARK" );
+
+		var name = "";
+
+		for ( var draw = 0; draw < NameDraws; ++draw )
+		{
+			name = NameAt( kind, _random.Next( 35 ) );
+
+			if ( !_candidates.Exists( person => person.Name == name ) )
+				break;
+		}
+
+		return name;
+	}
 
 	/// <summary>A row of the kind's name table, which is what a record keeps of a name (<c>mName</c>).</summary>
 	private string NameAt( int kind, int row )

@@ -296,6 +296,27 @@ public class ParkStaffPoolRefreshTests
 	}
 
 	/// <summary>
+	/// <b>A new candidate's name is drawn again while one in the pool has it</b>, fifteen draws at the most
+	/// (<c>FUN_00507580</c> on <c>FUN_005083f0</c>): forty opening pools of twenty-two, five or six to a kind from 35
+	/// names each, and no pool holds a name twice. Drawn once, about one kind in four would.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the name drawn once; the look made among the kind's own candidates only is not told apart here.</remarks>
+	[TestMethod]
+	public void ANewCandidatesNameIsDrawnAgainWhileItIsInUse()
+	{
+		var balance = new ParkBalance( "jungle", easyMode: true );
+
+		for ( var seed = 1; seed <= 40; ++seed )
+		{
+			var pool = new ParkStaffPool( balance, seed, gameTick: 0 );
+			var twice = pool.Candidates.GroupBy( person => person.Name ).Where( name => name.Count() > 1 ).Select( name => name.Key ).ToArray();
+
+			Assert.AreEqual( 22, pool.Candidates.Count );
+			Assert.AreEqual( 0, twice.Length, $"seed {seed}: {string.Join( ", ", twice )} held twice" );
+		}
+	}
+
+	/// <summary>
 	/// <b>The hire screen's list follows the pool while it is open</b>: a candidate of the kind shown who joins gets a
 	/// row, one of another kind does not, and one whose time runs out loses theirs (<c>FUN_00481550</c>).
 	/// </summary>

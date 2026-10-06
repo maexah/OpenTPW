@@ -2057,8 +2057,10 @@ every candidate carries its mark and its lifetime (`LifetimeFrom`), and the hire
 it is open. Measured in Lost Kingdom, the opening pool of twenty-two made on 755: all twenty-two, and one made
 later, went on their mark plus four times their lifetime plus one; topped up on 1116 by two (only two were wanted,
 the opening pool standing at or over most kinds' `Max`) and on 1477 by ten; before it, the same twenty-two stood 210 s
-on. **Not the original's**: the draws are the pool's own generator, the world's there; a name is drawn once with no
-look for one in use, and every rolled costume is nought (Q214); a newcomer is put after the last, where the original takes the lowest free slot of its 32; a minimums' round that can add nobody is the last, where
+on. **Not the original's**: the draws are the pool's own generator, the world's there; a name is drawn again, fifteen
+draws at the most, while a candidate in the pool has it, but not while a member of staff in the park does (a hired
+member keeps no name here: counted, `STAFF_NAME_IN_USE_IN_THE_PARK`); every rolled costume is nought (Q214, counted as
+`ROLLED_STAFF_COSTUME`); a newcomer is put after the last, where the original takes the lowest free slot of its 32; a minimums' round that can add nobody is the last, where
 the original's would go round for ever.
 
 **A loaded park's pool is the save's** (Q130c). `FUN_00507850` reads the 32 records through `FUN_005070a0`, then the

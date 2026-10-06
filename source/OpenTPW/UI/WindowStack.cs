@@ -184,12 +184,21 @@ internal sealed class WindowStack : Panel
 	/// </summary>
 	internal bool Covered { get; private set; }
 
-	/// <summary>Puts the cover over the stack or takes it off. A control held down as it goes on is let go of unclicked.</summary>
+	/// <summary>
+	/// Puts the cover over the stack or takes it off. A control held down as it goes on is let go of unclicked, and a
+	/// press of either button that was waiting on its release makes no click.
+	/// </summary>
 	internal void Cover( bool covered )
 	{
 		Covered = covered;
 
-		if ( !covered || _pressed == null )
+		if ( !covered )
+			return;
+
+		_leftPress = default;
+		_rightPress = default;
+
+		if ( _pressed == null )
 			return;
 
 		_pressed.Pressed = false;
@@ -199,6 +208,15 @@ internal sealed class WindowStack : Panel
 
 	/// <summary>Whether a modal window is up, which takes every press that misses its controls - see <see cref="PointerTaken"/>.</summary>
 	internal bool ModalUp => _windows.Exists( window => window.Modal && !window.Hidden && !window.PutAway );
+
+	/// <summary>
+	/// Whether the controls' timers are held (<see cref="UiTimer"/>): a message box, the game menu or the options
+	/// screen is up, each of which sets the original's hold as it opens (<c>FUN_00662411</c>, from
+	/// <c>MessageBox_Open</c>, <c>GameMenu_Open</c> and <c>OptionsScreen_Open</c>). Three more callers set it
+	/// (<c>FUN_0048a6e0</c>, <c>FUN_0048a720</c>, <c>FUN_005f0b40</c>) and are not identified.
+	/// </summary>
+	internal bool HoldsTimers
+		=> _windows.Exists( window => window is MessageBox or GameMenu or OptionsScreen && !window.Hidden && !window.PutAway );
 
 	/// <summary>The open windows, back to front.</summary>
 	public IReadOnlyList<UiWindow> Windows => _windows;
@@ -260,6 +278,9 @@ internal sealed class WindowStack : Panel
 
 		if ( _leftPress.On?.IsWithin( window.Root ) == true )
 			_leftPress = default;
+
+		if ( _rightPress.On?.IsWithin( window.Root ) == true )
+			_rightPress = default;
 
 		if ( window.Focus != null )
 			window.Focus.HasFocus = false;
@@ -339,9 +360,14 @@ internal sealed class WindowStack : Panel
 		_glint.Update();
 
 		// The original's move message 0x10001, which goes to the control under the pointer. Sent only on a frame the
-		// pointer moved, so what a list rewrites under a pointer at rest is not chosen until it moves.
+		// pointer moved, so what a list rewrites under a pointer at rest is not chosen until it moves. The control is
+		// told whether a button pressed on it is still down, the original's own record of that (control +0x11c),
+		// known here for a press that landed on it; whether theirs outlives a release let go elsewhere is not decoded.
 		if ( hit != null && Input.Mouse.Delta != Vector2.Zero )
-			hit.PointerMoved( mouse.X, mouse.Y );
+		{
+			hit.PointerMoved( mouse.X, mouse.Y,
+				(Input.Mouse.Left && _leftPress.On == hit) || (Input.Mouse.Right && _rightPress.On == hit) );
+		}
 
 		var mouseDown = Input.Mouse.Left;
 

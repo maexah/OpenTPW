@@ -476,10 +476,13 @@ internal sealed class UiList : UiControl
 			Activated( _rows[_selected].Id );
 	}
 
-	/// <summary>The pointer moved over the list: under <see cref="SelectsUnderPointer"/> the row under it is selected.</summary>
-	internal override void PointerMoved( float x, float y )
+	/// <summary>
+	/// The pointer moved over the list: under <see cref="SelectsUnderPointer"/> the row under it is selected, unless
+	/// a button pressed on the list is still down (<c>0x006656ba</c>).
+	/// </summary>
+	internal override void PointerMoved( float x, float y, bool held )
 	{
-		if ( SelectsUnderPointer && RowAt( x, y ) is var index and >= 0 )
+		if ( SelectsUnderPointer && !held && RowAt( x, y ) is var index and >= 0 )
 			Select( index );
 	}
 

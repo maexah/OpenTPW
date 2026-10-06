@@ -1191,6 +1191,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0065fd58` | | OpenTPW/UI/UiControl.cs  |
 | `0x0065fe75` | | OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x006644d2` | FUN_00664495, after a list add or removal: with count <= visible the slider is disabled and the top row left | OpenTPW.Tests/UiListTests.cs OpenTPW/UI/UiList.cs  |
+| `0x006656ba` | FUN_006656a0, a list's answer to the pointer's move: CMP [EDX+0x11c],0, no row selected while a button pressed on the list is down | OpenTPW.Tests/LeftClickTests.cs OpenTPW/UI/UiList.cs  |
 | `0x00665d22` | List proc FUN_00665c35, the move 0x10003: FUN_006656a0, then returns before the base proc, so no stray is judged | OpenTPW.Tests/LeftClickTests.cs OpenTPW/UI/UiList.cs  |
 | `0x00665dbd` | List proc FUN_00665c35: a click of any button but the left goes to FUN_0066563d (select the row under it, post 0x402) | OpenTPW/UI/UiList.cs  |
 | `0x006662b7` | | OpenTPW/UI/UiControl.cs  |

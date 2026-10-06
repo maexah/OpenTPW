@@ -270,6 +270,37 @@ public class LeftClickTests
 	}
 
 	/// <summary>
+	/// <b>A list that follows the pointer does not while a button pressed on it is down</b> (<c>0x006656ba</c>, the
+	/// control's own record of its pressed buttons, <c>+0x11c</c>): the row under a moving pointer is selected with no
+	/// button down, and stays as it was while the left or the right button pressed on the list is held.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the held button not asked; only the left asked.</remarks>
+	[TestMethod]
+	public void AListDoesNotFollowThePointerWhileAButtonIsDownOnIt()
+	{
+		var list = _window.List;
+
+		Frame( false, Row( 1 ), 1000, moved: true );
+		Assert.AreEqual( 101, list.Selected, "no button down: the row under the pointer" );
+
+		Frame( true, Row( 1 ), 2000, moved: true );
+		Frame( true, Row( 2 ), 2050, moved: true );
+		Assert.AreEqual( 101, list.Selected, "the left button down on the list: the pointer is not followed" );
+
+		Frame( false, Row( 2 ), 2100 );
+		Frame( false, Row( 0 ), 3000, moved: true );
+		Assert.AreEqual( 100, list.Selected, "let go, it follows again" );
+
+		Frame( true, Row( 0 ), 4000, right: true, moved: true );
+		Frame( true, Row( 2 ), 4050, right: true, moved: true );
+		Assert.AreEqual( 100, list.Selected, "nor with the right button down on it" );
+
+		Frame( false, Row( 2 ), 4700, right: true );
+		Frame( false, Row( 2 ), 5000, moved: true );
+		Assert.AreEqual( 102, list.Selected );
+	}
+
+	/// <summary>
 	/// <b>The double click's second press chooses the selected row again, on the press</b> (<c>FUN_006656fa</c> on
 	/// <c>0x11007</c>).
 	/// </summary>
@@ -459,17 +490,62 @@ public class LeftClickTests
 		Assert.AreEqual( 0, _window.PanelClicks, "the window closed under the press: no click" );
 	}
 
+	/// <summary>
+	/// <b>A press waiting on its release makes no click once its window has closed or the cover has gone on</b>, for
+	/// either button: the control it would be told is gone, or hidden under the full-screen view.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the right press kept through a close; the left or the right press kept through the cover.
+	/// </remarks>
+	[TestMethod]
+	public void AWaitingPressOfEitherButtonDiesWithItsWindowOrUnderTheCover()
+	{
+		var rights = 0;
+
+		_window.Panel.RightClicked = () => ++rights;
+
+		Frame( true, OnThePanel, 1000, right: true );
+		Frame( false, OnThePanel, 1100, right: true );
+		Assert.AreEqual( 1, rights, "a right click reaches the panel" );
+
+		try
+		{
+			Frame( true, OnThePanel, 3000 );
+			_stack.Cover( true );
+			Frame( false, OnThePanel, 3100 );
+			_stack.Cover( false );
+			Assert.AreEqual( 0, _window.PanelClicks, "the cover went on under the left press: no click" );
+
+			Frame( true, OnThePanel, 5000, right: true );
+			_stack.Cover( true );
+			Frame( false, OnThePanel, 5100, right: true );
+			_stack.Cover( false );
+			Assert.AreEqual( 1, rights, "nor under the right" );
+		}
+		finally
+		{
+			_stack.Cover( false );
+		}
+
+		Frame( true, OnThePanel, 7000, right: true );
+		_stack.Close( _window );
+		Frame( false, OnThePanel, 7100, right: true );
+		Assert.AreEqual( 1, rights, "the window closed under the right press: no click" );
+	}
+
 	/// <summary>The middle of one of the list's rows, in window pixels: rows are 44 tall from (600,100).</summary>
 	private static Vector2 Row( int slot ) => new( 700, 100 + (slot * 44) + 22 );
 
 	/// <summary>One frame of the game: a button and the pointer at a time, then the stack's update.</summary>
-	private void Frame( bool down, Vector2 at, long now, bool right = false )
+	private void Frame( bool down, Vector2 at, long now, bool right = false, bool moved = false )
 	{
 		Time.PinWall( now );
 
+		var delta = moved ? new Vector2( 1, 0 ) : default;
+
 		Input.Mouse = right
-			? new() { Right = down, RightWentDown = down && !Input.Mouse.Right, Position = at }
-			: new() { Left = down, LeftWentDown = down && !Input.Mouse.Left, Position = at };
+			? new() { Right = down, RightWentDown = down && !Input.Mouse.Right, Position = at, Delta = delta }
+			: new() { Left = down, LeftWentDown = down && !Input.Mouse.Left, Position = at, Delta = delta };
 
 		_stack.Update();
 	}

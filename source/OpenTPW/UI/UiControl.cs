@@ -330,7 +330,7 @@ internal class UiControl
 	/// The pointer moved, to (<paramref name="x"/>, <paramref name="y"/>) on the window, while over it: the original's
 	/// <c>0x10001</c>. Only <see cref="WindowStack"/> calls it.
 	/// </summary>
-	internal virtual void PointerMoved( float x, float y ) { }
+	internal virtual void PointerMoved( float x, float y, bool held ) { }
 
 	/// <summary>The pointer moved to (<paramref name="x"/>, <paramref name="y"/>) while held down after going down on it.</summary>
 	internal virtual void PointerDragged( float x, float y ) { }

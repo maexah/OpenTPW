@@ -63,9 +63,11 @@ public static class GameCalendar
 	/// The most counter advances one frame may run, from <c>CMP EAX,0x3</c> at 0x0054f680.
 	///
 	/// <para>
-	/// The original caps the world clock at three advances per <i>rendered</i> frame, on top of the
-	/// tick loop's own catch-up clamp. The effect is one-sided: on a machine that stutters the calendar
-	/// loses time and can never gain it, so a slow machine's park runs slow rather than lurching.
+	/// The original caps the world clock at three advances a pass of its park loop, on top of the tick loop's own
+	/// catch-up clamp, and drops the rest: on a machine that stutters its calendar loses time and can never gain it.
+	/// <b>Here the advances a long frame could not run are carried to the frames after it</b>
+	/// (<see cref="Update"/> counts from the tick clock), so the calendar catches up where the original's does not:
+	/// a deviation, <c>docs/QUEUE.md</c> Q149.
 	/// </para>
 	/// </summary>
 	public const int LongestCatchUp = 3;

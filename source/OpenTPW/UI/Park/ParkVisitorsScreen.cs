@@ -58,7 +58,8 @@ internal sealed class ParkVisitorsScreen : UiWindow
 	/// <summary>The park whose guests arriving and going this list is told of, let go of as it closes.</summary>
 	private readonly ParkPeople? _people;
 
-	private long _nextRefresh;
+	/// <summary>The rewrite's timer, running from the screen's making.</summary>
+	private readonly UiTimer _refresh = new( RefreshEvery );
 
 	public ParkVisitorsScreen( WindowStack stack ) : base( stack )
 	{
@@ -168,8 +169,6 @@ internal sealed class ParkVisitorsScreen : UiWindow
 
 		foreach ( var guest in _people.Peeps )
 			_list.Insert( RowOf( guest ), SortKey );
-
-		_nextRefresh = Time.WallMilliseconds + RefreshEvery;
 	}
 
 	/// <summary>A guest's row - the original's row adder <c>FUN_00493800</c>.</summary>
@@ -223,10 +222,8 @@ internal sealed class ParkVisitorsScreen : UiWindow
 	/// </summary>
 	protected internal override void Update()
 	{
-		if ( Time.WallMilliseconds < _nextRefresh )
+		if ( _refresh.Owed( Stack.HoldsTimers ) == 0 )
 			return;
-
-		_nextRefresh = Time.WallMilliseconds + RefreshEvery;
 
 		if ( _people == null )
 			return;

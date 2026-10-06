@@ -57,7 +57,8 @@ public class ParkVisitorsScreenTests
 	/// <remarks>
 	/// <b>Mutations:</b> the rewrite clearing and refilling the list (the build before Q200b) throws the top row back to
 	/// nought; no subscription leaves the row count unmoved by an arrival; no unsubscription keeps adding rows after
-	/// the screen closes; the first rewrite timed from nought and not from the opening; each later one too.
+	/// the screen closes; the first rewrite timed from nought and not from the opening; each later one too; the next
+	/// tick a period after a late one; the timer run under a message box, or not stamped afresh as the box goes.
 	/// </remarks>
 	[TestMethod]
 	public void TheListKeepsItsScrollAndFollowsGuestsWhileOpen()
@@ -71,7 +72,7 @@ public class ParkVisitorsScreenTests
 		for ( var n = 0; n < 20; ++n )
 			Assert.AreNotEqual( 0, people.Admit( 42, 5 ), "the park takes a guest at the bus stop" );
 
-		// Opened five seconds into real time: the rewrite is two seconds from the opening, not from nought.
+		// Made and opened five seconds into real time: the rewrite is two seconds from there, not from nought.
 		Time.PinWall( 5000 );
 
 		var stack = AStack();
@@ -105,6 +106,40 @@ public class ParkVisitorsScreenTests
 		Time.PinWall( 9000 );
 		screen.Update();
 		Assert.AreNotSame( values, list.Rows[4].Values, "then again" );
+
+		// A late frame does not move the timer's phase (FUN_00661fe5 leaves the stamp the remainder behind): a tick
+		// taken 100 ms late is followed by one 1900 ms on.
+		Time.PinWall( 11100 );
+		screen.Update();
+		values = list.Rows[4].Values;
+		Time.PinWall( 12999 );
+		screen.Update();
+		Assert.AreSame( values, list.Rows[4].Values, "1899 ms after a late tick: not yet" );
+		Time.PinWall( 13000 );
+		screen.Update();
+		Assert.AreNotSame( values, list.Rows[4].Values, "on the period's own beat" );
+
+		// Under a message box the timers are held, and stamped afresh as it goes (FUN_006622d2, FUN_00662420).
+		var box = new UI.MessageBox( stack, "held", () => { } );
+
+		stack.Open( box );
+		Assert.IsTrue( stack.HoldsTimers );
+		values = list.Rows[4].Values;
+		Time.PinWall( 20000 );
+		screen.Update();
+		Assert.AreSame( values, list.Rows[4].Values, "seven seconds under a message box: not rewritten" );
+
+		stack.Close( box );
+		Assert.IsFalse( stack.HoldsTimers );
+		Time.PinWall( 20500 );
+		screen.Update();
+		Assert.AreSame( values, list.Rows[4].Values, "nor as it goes: the period starts again there" );
+		Time.PinWall( 22499 );
+		screen.Update();
+		Assert.AreSame( values, list.Rows[4].Values );
+		Time.PinWall( 22500 );
+		screen.Update();
+		Assert.AreNotSame( values, list.Rows[4].Values, "two seconds after the box went" );
 
 		Assert.AreEqual( 4, list.ScrollTop, "the two-second rewrite keeps the scroll" );
 		Assert.AreEqual( first, list.Rows[4].Id, "and the row there" );

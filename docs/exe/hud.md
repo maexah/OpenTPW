@@ -613,9 +613,14 @@ its start's milliseconds, with `timeGetTime` as the fallback). Nothing clamps or
 the game's process stopped 600 ms between a right press on the first-person view and its release, the press given 120
 ms to be handled first: no click, twice, and a quick click after it left; the park's quick click the same way, stopped
 400 ms, no click, three times. (A press sent 20 to 40 ms before the stop is handled after it, at 30 frames a second,
-and then clicks: that measures the stop, not the clock.) OpenTPW's is `Time.WallMilliseconds`. A control's timer runs on the same clock (`FUN_0065ef90` arms one,
-`FUN_00661fe5` fires it on `FUN_0065968e` differences): the visitors list's 2000 ms and an object window's 4000 ms,
-both timed so here. Not read here: the buy screen's own 1000 ms timer (`0x80080`, `0x004ac3ee`, what it does not
+and then clicks: that measures the stop, not the clock.) OpenTPW's is `Time.WallMilliseconds`. A control's timer
+runs on the same clock (`FUN_0065ef90` arms one, `FUN_00661fe5` fires it on `FUN_0065968e` differences): nothing
+until a whole period has gone since its stamp, then message `0x10` once for each whole period gone, and the stamp
+left the remainder behind now, so a late pass does not move its phase. `FUN_006622d2` runs every timer, and none
+while `[0x00faa638]` is set: `FUN_00662411` sets it, called as a message box, the game menu and the options screen
+open (and from `FUN_0048a6e0`, `FUN_0048a720` and `FUN_005f0b40`, not identified), and `FUN_00662420` clears it and
+stamps every timer afresh (`FUN_0066213e`). OpenTPW: `UiTimer`, held by `WindowStack.HoldsTimers` for those three
+screens: the visitors list's 2000 ms and an object window's 4000 ms. Not read here: the buy screen's own 1000 ms timer (`0x80080`, `0x004ac3ee`, what it does not
 decoded) and the two park's-end views' 2000 ms. The limit
 `[0x0077c480] = 500`, and the points the interface's 2048x1536 units.
 
@@ -1046,8 +1051,12 @@ Under the list flag `0x80` the proc `FUN_00665c35` answers the pointer's move, `
 **`FUN_006656a0`**: when the list's `+0x11c` is nought and the point is inside the control's region (`+0x2c`), it
 hands the point to `FUN_0066552e`, the same row test the clicks use. So the row under a moving pointer is selected
 with no press, `FUN_0066525c` posts `0x401` when that changes the selected row, and a point over no row leaves the
-selection where it was. The buy and hire lists carry the flag, as the five list trees below do. What `+0x11c` holds
-and what sends `0x10003` are not traced.
+selection where it was. The buy and hire lists carry the flag, as the five list trees below do. `+0x11c` is the
+control's own record of the buttons pressed on it: the base proc sets a button's bit on its press and clears it on its
+release (`FUN_0065f6d1`, `0x0065f871`, `0x0065f9e1`), and the button class and the slider's thumb keep theirs the
+same way. So a list follows the pointer only while no button pressed on it is down. OpenTPW: `UiList.PointerMoved`,
+told by the stack whether a press that landed on the list is still held; whether the original's bit outlives a
+release let go off the control is not decoded. What sends `0x10003` is not traced.
 
 **OpenTPW**: `UiList.SelectsUnderPointer` and `PointerMoved`; `WindowStack` sends the move to the control under the
 pointer on a frame the pointer moved. Only the buy list sets the flag (Q233b); the others' rows are selected by a

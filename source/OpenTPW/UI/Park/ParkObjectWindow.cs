@@ -117,14 +117,13 @@ internal sealed class ParkObjectWindow : UiWindow
 	/// <c>FUN_004ade40</c> (<c>0x004af63b</c>).
 	/// </summary>
 	/// <remarks>
-	/// Real time (<see cref="Time.WallMilliseconds"/>), as a control's timer is (<c>FUN_00661fe5</c>); the original's
-	/// stops under the game menu, the options screen or a message box, and this does not. The door's press refills them too
-	/// (<c>0x004af871</c>), and the door is not a button here (Q92).
+	/// Real time, as a control's timer is (<see cref="UiTimer"/>): held under the game menu, the options screen or
+	/// a message box. The door's press refills them too (<c>0x004af871</c>), and the door is not a button here (Q92).
 	/// </remarks>
 	private const long RefreshEvery = 4000;
 
-	/// <summary>When the figures are next filled: the timer's first tick is a period after the window is made.</summary>
-	private long _nextRefresh = Time.WallMilliseconds + RefreshEvery;
+	/// <summary>The figures' timer: its first tick is a period after the window is made.</summary>
+	private readonly UiTimer _refresh = new( RefreshEvery );
 
 	/// <summary>How many finished days Users last month adds up - <c>MOV EDI,0x1e</c> at <c>0x004ade83</c>.</summary>
 	private const int UsersLastMonthDays = 30;
@@ -907,10 +906,9 @@ internal sealed class ParkObjectWindow : UiWindow
 	{
 		ShowTheDoor();
 
-		if ( Time.WallMilliseconds < _nextRefresh )
+		if ( _refresh.Owed( Stack.HoldsTimers ) == 0 )
 			return;
 
-		_nextRefresh = Time.WallMilliseconds + RefreshEvery;
 		FillStats();
 	}
 

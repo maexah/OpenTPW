@@ -234,6 +234,11 @@ public sealed class ParkPeople : Entity
 		if ( park?.Arrival.Offloading == true )
 			Unimplemented.Report( "SAVED_ARRIVAL_LOAD" );
 
+		// Nor is a vehicle the save holds current (mCurrentArrivalVehicle, a thing id; nought in the park the game
+		// ships): the park starts with none, and a save that names one is counted.
+		if ( park is { CurrentArrivalVehicle: not 0 } )
+			Unimplemented.Report( "SAVED_CURRENT_ARRIVAL_VEHICLE" );
+
 		// What the park charges is on its economy thing and what a guest will put up with is in the
 		// balance file, so it takes both - and neither on its own is enough to price the gate.
 		var admission = park?.Economy is { } money && balance != null

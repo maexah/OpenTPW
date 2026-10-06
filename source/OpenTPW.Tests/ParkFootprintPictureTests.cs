@@ -159,9 +159,9 @@ public class ParkFootprintPictureTests
 			for ( var n = 0; n < 3; ++n )
 				list.Add( new UiList.Row( 100 + n, $"{n}", n ) );
 
-			list.PointerMoved( 50, 44 + 22 );
-			list.PointerMoved( 50, 44 + 30 );
-			list.PointerMoved( 50, (5 * 44) + 22 );
+			list.PointerMoved( 50, 44 + 22, held: false );
+			list.PointerMoved( 50, 44 + 30, held: false );
+			list.PointerMoved( 50, (5 * 44) + 22, held: false );
 
 			Assert.AreEqual( flagged ? 101 : -1, list.Selected );
 			CollectionAssert.AreEqual( flagged ? new[] { 101 } : System.Array.Empty<int>(), told );
@@ -180,7 +180,7 @@ public class ParkFootprintPictureTests
 		{
 			public Heard Owner = null!;
 
-			internal override void PointerMoved( float x, float y ) => ++Owner.Moves;
+			internal override void PointerMoved( float x, float y, bool held ) => ++Owner.Moves;
 		}
 	}
 
