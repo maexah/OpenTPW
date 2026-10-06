@@ -133,6 +133,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0046bb0b` | Window procedure `FUN_0046b600`: `GetKeyState` for Shift, Ctrl and Alt at each key, before `UI_PostKey` | OpenTPW.Tests/ParkCamcorderKeyOnReleaseTests.cs OpenTPW.Tests/ParkEscapeOnReleaseTests.cs OpenTPW.Tests/ParkFullScreenViewTests.cs OpenTPW/Global/Input.cs  |
 | `0x0046c480` | Place-staff mode (type 5, vtable `0x006fea40`) MOVE: carries the candidate's sprite under the pointer and draws a red square over a cell the click would refuse | OpenTPW/World/Park/ParkStaffPool.cs  |
 | `0x0046c730` | Place-staff mode OnInstall: carry cursor 9, and a sprite of the candidate's kind in their costume | OpenTPW/World/Park/ParkStaffPool.cs  |
+| `0x0046c9b9` | Place-staff FUN_0046c8e0: the candidate's costume byte (+0x11 of the hand's record) pushed to the constructor, here the handyman's | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x0046cdc0` | Place-worker mode (type 6) OnUninstall: when the hand still names a worker, puts them down on their own current cell with the drop's body | OpenTPW.Tests/ParkHandTests.cs OpenTPW.Tests/ParkLeaveTests.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004702ea` | FUN_004702d0, local x parent: each element the third product plus the second plus the first; the translation row adds the parent's last | OpenTPW/World/Ride/RideNodes.cs  |
 | `0x00470e90` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |
@@ -165,6 +166,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00474cc0` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |
 | `0x0047509d` | Sprite VM FUN_00475010: the end word 0x005da3c0 spotted rather than called; state +0x18 = 4, from | OpenTPW/World/Park/SpriteScript.cs  |
 | `0x004750af` | FUN_00475010: +0x114 zeroed at the end word, to here | OpenTPW/World/Park/SpriteScript.cs  |
+| `0x00475a71` | Sprite maker FUN_00475a10: the kind's bank count read for its one assert, that the kind has a bank at all | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x00475c23` | FUN_00475b80 handed an address: the loop stack +0x1c reset to 0x14 and +0x70/+0x74/+0x78 zeroed, from | OpenTPW/World/Park/SpriteScript.cs  |
 | `0x00475c3e` | FUN_00475b80: the reset, to here; picture, alpha and due time kept | OpenTPW/World/Park/SpriteScript.cs  |
 | `0x004762b0` | | OpenTPW/World/Park/SpriteScript.cs  |

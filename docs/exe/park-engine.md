@@ -1951,6 +1951,26 @@ staff cap, not money, not a candidate already carried.
 candidate's kind in their costume (banks 6, 5, 4, 7, 8 for types 4..8), which MOVE carries under the
 pointer.
 
+**What a hire makes of the candidate's costume.** The place-staff routine `FUN_0046c8e0` hands each of the five
+constructors the cell, the candidate's grade byte, its costume byte (`mSubType`, `0x0046c9b9` and its kin) and its
+name row. Four of them (`FUN_004d6b60` the handyman, `FUN_004d4340` the entertainer, `FUN_004d9eb0` and `FUN_00502600`)
+write the costume to the person's sprite bank and make the sprite on it as it is, `FUN_004d4140( 3, kind, costume )`;
+the guard draws its own (`FUN_004d5de0`, `FUN_00541f70`). Nothing bounds it: the sprite maker `FUN_00475a10` asserts
+only that the kind has a bank at all (`0x00475a71`). A sprite is drawn from **one flat table of loaded banks**,
+`[0x00876b48 + (base of its kind + its bank) * 4]` (`FUN_00542010`, `FUN_00541fa0`), and `Sprites_LoadBanks`
+(`0x00541d90`) gives the fourteen kinds consecutive bases, each the running count `[0x0087626c]` as its folder is
+loaded. So a bank past its kind's count is the next kind's. A candidate rolled in the session cannot hold one (the
+roll is modulo the count, `FUN_00541f70`), but one read from a save can: Lost Kingdom's save holds three mechanics
+with the second costume, and low detail loads one mechanic bank. **In the original, predicted first** (low detail
+set in its options screen, the game restarted, 2026-10-06): the table read entertainers base 6 count 3, handymen 9
+and 1, mechanics 10 and 1, guards 11 and 1, researchers 12 and 1; the park's own saved mechanic, saved on bank 1,
+came in on bank 0 (the load's reduction, `0x004f93a6`); Alex Cullum, hired from the pool, was thing 43 with sprite
+kind 6 **bank 1**, and was drawn as the guard, in the park and in the hire screen's preview. **OpenTPW** (the
+review's fix 3) brings the costume within the banks loaded at the hire, as a save and load would: a deviation Alexah
+chose (`docs/DECISIONS.md`, "A hired costume is brought within the banks loaded"), said at `ParkPeople.StaffPicture`.
+In the game on low detail, Karl Fitzhugh hired as thing 43, sprite kind 6 bank 0, the mechanic's figure; the build
+before refused the hire and counted it.
+
 **The click reads the hovered cell, `DAT_007b05cc`**, never the coordinates the dispatcher passes, and
 tests it (`0x0046c928`..`0x0046c974`). **It refuses** when:
 

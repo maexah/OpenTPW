@@ -503,8 +503,8 @@ public sealed class ParkStaffPool
 				if ( record.OnPointer )
 					Unimplemented.Report( "SAVED_STAFF_CANDIDATE_ON_POINTER" );
 
-				// The costume is the record's, which a hire's picture is refused on where the park has loaded fewer
-				// banks of the kind (ParkPeople.StaffPicture, counted there).
+				// The costume is the record's. A hire brings it within the banks the park has loaded of the kind
+				// (ParkPeople.StaffPicture, a deviation said there).
 				_candidates.Add( new Candidate( Id: _nextId++, Kind: record.Type, Name: NameAt( record.Type, record.Name ),
 					Grade: record.PayGrade, Costume: record.SubType, Wage: WageFor( record.Type, record.PayGrade ),
 					Mark: record.TimeSig, Lifetime: record.TimeoutTime ) );

@@ -548,19 +548,30 @@ public sealed class ParkPeople : Entity
 	internal static ParkWorld.Sprite? StaffPicture( ParkStaffPool.Candidate candidate, ParkSpriteBanks banks, Random random )
 	{
 		var kind = ParkStaffPool.SpriteKindFor( candidate.Kind );
-		// The guard chooses anew (FUN_004d5de0); the other four constructors use the candidate.
-		// As with arrivals, the native shared generator is not yet reproduced.
-		var bank = kind == 7 && banks.CountOf( kind ) > 0
-			? (random.Next() >> 2) % banks.CountOf( kind ) : candidate.Costume & 0xff;
-		if ( kind >= 0 && banks.StaffBanks != null && bank >= banks.CountOf( kind ) )
-		{
-			// What the original's constructor does with a costume past the banks it loaded is not decoded.
-			Unimplemented.Report( "HIRE_COSTUME_PAST_THE_BANKS_LOADED" );
-			return null;
-		}
 
 		if ( kind < 0 )
 			return null;
+
+		// The guard chooses anew (FUN_004d5de0); the other four constructors are handed the candidate's costume
+		// byte as it is (FUN_0046c8e0, 0x0046c9b9 and its kin) and make the sprite on it.
+		// As with arrivals, the native shared generator is not yet reproduced.
+		var bank = kind == 7 && banks.CountOf( kind ) > 0
+			? (random.Next() >> 2) % banks.CountOf( kind ) : candidate.Costume & 0xff;
+
+		if ( banks.StaffBanks != null )
+		{
+			// A kind with no bank loaded has no picture to make: the sprite maker asserts one (0x00475a71).
+			if ( banks.CountOf( kind ) == 0 )
+				return null;
+
+			// <b>A deviation, at Alexah's word</b> (docs/DECISIONS.md, "A hired costume is brought within the banks
+			// loaded"). The original keeps a costume past its kind's banks and draws bank base + costume of one flat
+			// table (FUN_00542010), in which the kinds follow one another (Sprites_LoadBanks): on low detail, where
+			// the mechanics load one bank, a candidate saved with the second costume is drawn with the guards'
+			// pictures until a save and load reduces it (0x004f93a6). Here it is reduced at the hire, as that load
+			// would.
+			bank = banks.Reduce( kind, bank );
+		}
 
 		return new ParkWorld.Sprite(
 			Slot: 0, Type: kind, Bank: bank, SpriteNumber: 0,

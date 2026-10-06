@@ -62,6 +62,17 @@ clean frame is taken. When F3 was built (Q114b) the choice was put to Alexah wit
 as it is, keep it in the lobby only, or remove it. **Alexah chose to keep F2 as it is.** It is said at
 `InputButton.HideUI`.
 
+## A hired costume is brought within the banks loaded (2026-10-06)
+
+The original makes a hired person's sprite on the candidate's costume as saved, and draws from one flat table of
+loaded sprite banks in which a bank past its kind's count is the next kind's (`docs/exe/park-engine.md`, "What a hire
+makes of the candidate's costume"). On low detail, where one mechanic bank is loaded, a mechanic hired from Lost
+Kingdom's saved pool with the second costume is therefore drawn as a guard, in the park and in the hire screen's
+preview, until a save and load reduces the costume. Measured in the original under Proton: thing 43, sprite kind 6
+bank 1, the guard's figure. The choice was put to Alexah with that picture: draw the guard as the original does, or
+bring the costume within the banks loaded at the hire, as the original's own load of a saved person does. **Alexah
+chose the mechanic.** It is said at `ParkPeople.StaffPicture`.
+
 ## The reference executable is 2.0 (2026-09-27)
 
 Alexah asked for the reverse-engineering base to move from `testme.exe`, thought to be 1.0, to a decrypted 2.0 exe

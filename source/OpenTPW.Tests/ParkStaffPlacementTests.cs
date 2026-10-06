@@ -65,6 +65,54 @@ public class ParkStaffPlacementTests
 			(picture.Value.Type, picture.Value.Bank, picture.Value.SpriteNumber, picture.Value.Frame, picture.Value.Alpha, picture.Value.State) );
 	}
 
+	/// <summary>
+	/// A costume past the banks loaded of its kind is brought within them at the hire. Lost Kingdom's save holds
+	/// three mechanic candidates with the second costume and low detail loads one mechanic bank. <b>This is a
+	/// deviation</b> (<c>docs/DECISIONS.md</c>): the original hires them on bank 1 and draws the guards' first bank
+	/// (measured: thing 43, sprite kind 6 bank 1, the guard's figure in the park and in the hire screen's preview).
+	/// </summary>
+	[DataTestMethod]
+	[DataRow( 0, 0 )]
+	[DataRow( 2, 1 )]
+	public void AHiredCostumeIsBroughtWithinTheBanksLoaded( int detail, int mechanicsBank )
+	{
+		var banks = ParkSpriteBanks.Read( data, "jungle", detail );
+
+		Assert.AreEqual( mechanicsBank + 1, banks.CountOf( 6 ), "low detail loads one mechanic bank, the others two" );
+		Assert.AreEqual( 3, banks.CountOf( 4 ), "and three entertainer banks at every detail" );
+
+		var mechanic = ParkPeople.StaffPicture( new( 1, 1, "Test", 2, 1, 100 ), banks, new BankDraw() );
+		var entertainer = ParkPeople.StaffPicture( new( 2, 2, "Test", 2, 2, 100 ), banks, new BankDraw() );
+
+		Assert.AreEqual( (6, mechanicsBank), (mechanic!.Value.Type, mechanic.Value.Bank), "the mechanic's second costume" );
+		Assert.AreEqual( (4, 2), (entertainer!.Value.Type, entertainer.Value.Bank), "the entertainer's third is loaded" );
+
+		// Every candidate the shipped park saved can be hired at either detail.
+		using var stream = FileSystem.OpenRead( "levels/jungle/Easymode.TPWI" );
+		var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
+		var before = ParkStaffPool.Current;
+		var pool = new ParkStaffPool( new ParkBalance( "jungle", easyMode: true ), gameTick: world.GameTick, saved: world );
+
+		try
+		{
+			Assert.AreEqual( 3, pool.Candidates.Count( saved => saved.Kind == 1 && saved.Costume == 1 ),
+				"three of the save's four mechanics hold the second costume" );
+
+			foreach ( var saved in pool.Candidates )
+			{
+				var picture = ParkPeople.StaffPicture( saved, banks, new BankDraw() );
+
+				Assert.IsNotNull( picture, $"{saved.Name}, kind {saved.Kind} costume {saved.Costume}, has a picture" );
+				Assert.IsTrue( picture.Value.Bank < banks.CountOf( picture.Value.Type ),
+					$"{saved.Name}: bank {picture.Value.Bank} is one the park loaded" );
+			}
+		}
+		finally
+		{
+			typeof( ParkStaffPool ).GetProperty( nameof( ParkStaffPool.Current ) )!.SetValue( null, before );
+		}
+	}
+
 	[TestMethod]
 	public void MissingStaffBanksRefuseANewPicture()
 	{
