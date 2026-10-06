@@ -599,6 +599,66 @@ Since `+0x10` is null in every row, the down path invokes nothing and only latch
 
 **Deliberate deviation in OpenTPW:** each `[DefaultKey]` is split into `Modifiers` and `Keys`, `BindingMatches` compares held modifiers for **equality**, and `PressedFrom` also requires one of the binding's own keys among the frame's `KeysPressed`. `Clone` being Ctrl alone is a deliberate held state, not a binding bug.
 
+### The full-screen view: F3, `FUN_004a29d0`
+
+Decoded for `docs/QUEUE.md` Q114, and pressed in the original.
+
+**The key is F3.** `game` row 4 is key `0x72`, modifier 0, handler `0x0040c4b0` (the row at `0x00748078`, on disk
+`04 00 72 00 00 00 ...`). `0x72` is `VK_F3`: a function key has no character, so `MapVirtualKeyA( vk, 2 )` answers
+nought and the key code is the vk itself (`lobby.md`, "The key code"), as the `system` table's F8 is `0x77`. The handler
+is the usual 16-byte thunk into `0x00481490`, a bare `JMP FUN_004a29d0` (`e9 3b 15 02 00`) that no cross-reference
+names. **F2 (`0x71`) is bound in none of the six tables.** No gadget button and no menu row reaches the toggle.
+
+**What `FUN_004a29d0` does.** Nothing unless the park's interface is up (`DAT_007cb2ac`). Its state is `DAT_007cb2e8`
+(`FUN_004a2a90` reads it).
+
+- **Off to on.** Refused while `gui_CameraFlags & 0x16` (`0x004a29e6`): first person, a ride view. Otherwise it makes a
+  full-screen control on the UI root, id `0xddf22`, (0,0)-(2047,1535) (`FUN_0065dd7b( 1, 1, ... )`, kept in
+  `DAT_007cb2b4`), gives it the handler `0x004a2840` and the focus (`FUN_0065e59b`), and hides layer 0
+  (`UI_SetVisible( layer 0, 0 )`, `0x004a2a6b`). Layer 0 only: the gadget, the money counter, the help bar and any
+  park screen on it go; the pointer stays.
+- **On to off.** Deletes the control (its vtable `+8`), shows layer 0, and hands the focus back (`FUN_004862a0`).
+
+**While it is on, the control's handler `0x004a2840` is all that hears the player.**
+
+| Message | What it does |
+|---|---|
+| every one | to the camera's mouse reader `FUN_0042a760` first (`0x004a287d`) |
+| a press `0x10005`, a release `0x10004` | button 1 takes and lets go of the pointer capture; the button goes to the `camera` table as a key (`button - 0x10`), where no row binds one; then the base proc |
+| key down `0x1000a` | latches the `camera` table (`FUN_0040c900`) |
+| key up `0x1000b` | runs the `camera` table (`FUN_0040c990`). Then, by lookup (`FUN_0040c870`, which does not read a table's enable gate): `game` action 4, or Escape with no modifier, turns the view off (`0x004a2990`); else `shortcuts` action 15, Ctrl+P, takes a postcard (`FUN_004a9380`) |
+
+So the camera keys, F3, Escape and Ctrl+P work, and nothing else: no shortcut opens a screen, and no press reaches
+`Park_MouseMessageProc`, so nothing is picked, built or armed. **Escape there puts the interface back and opens no
+menu.** While the world's state (`+0x1da738`) is 4, the end of the park, the key-up arm reads neither F3 nor Ctrl+P:
+a plain Escape opens the game menu (`GameMenu_Open( 0 )`, `0x004a2942`) and the view stays on.
+
+**Everything else that calls it turns it off, or belongs to the end of the park.**
+
+| Caller | What it does |
+|---|---|
+| `FUN_004815d0`, from the save loader `FUN_00414d40` (`0x00415088`) | off, if on |
+| `FUN_004a9180`, the postcard screen's close (`0x004a923a`) | off, if on, when `DAT_00fb3b7c` is not 1 |
+| `FUN_0048ac40` (`0x0048aca4`), from the end-of-park routine `FUN_005168f0`, which sets the world's state to 4 and passes the park gates | off, if on. Then it leaves first person or a ride view, calls `FUN_004e15b0( 0 )`, takes the keys away (`FUN_0040cfa0`), closes the open screen, hides layers 0 and 1 itself (message 6) and puts up a full-screen control, id `0x7472`, handler `0x0048a740`, holding stream `0x0074fb20`: one control, id `0x5a`, (174,500)-(1874,1000), mesh `0xf3a7aff4` |
+| `FUN_0048ae70` (`0x0048aed4`), from `FUN_00516b00`, which makes the "End" feature | the same, with stream `0x0074faf0` (id `0x321`, (102,536)-(1946,940), mesh `0x706de86b`) and handler `0x0048a970` |
+| the handler `0x0048a740` (`0x0048a7f3`, `0x0048a8d8`) | **on.** A right click with RMB cancel on, 2000 ms or more after the control was made, or a plain Escape: it sends its control message 4, leaves the ride view (`FUN_0042a190`), turns the full-screen view on, loads `0x0074fb20` again into the view's own control, and gives the keys back (`FUN_0040cf60`) |
+| `FUN_0048adb0` (`0x0048addc`), from `FUN_004815e0` in the load's rebuild `FUN_00415140`, when the saved state is 4 | **on**, if off, and `0x0074fb20` loaded into it |
+
+So an ended park is left in the full-screen view under its banner, and by the handler's state-4 arm nothing brings
+the interface back. The two meshes' names are not resolved, and the end of a park was not run.
+
+**In the original** (the reference park under Proton, the state read from memory after each key let go, a frame
+grabbed with it): F2 changed nothing; F3 took `[0x007cb2e8]` 0 to 1, `[0x007cb2b4]` from nought to a control, and bit
+0 of layer 0's `+0x48` 1 to 0, the gadget, the money and the help bar gone from the frame; F3 again put all three
+back; F3 then Escape put them back with the game menu (`[0x007c2534]`) still shut; F3 with the camcorder tool armed
+turned it on all the same. Each as predicted from the listing. The refusal in first person was not reached (the
+click that enters it missed twice), so it is the listing's alone.
+
+**OpenTPW.** `InputButton.HideUI` is F2, OpenTPW's own key: `RootPanel.Hidden` stops the interface drawing and
+updating, and `Level.RightPressTaken` gives the park every right press while it is set. It is not this view: the key
+differs, nothing refuses it in first person, no layer takes the keys and the presses, and Escape is not its way out.
+What the hand, the tools and the shortcuts do under it here is not measured. The build is `docs/QUEUE.md` Q114b.
+
 ---
 
 ## The park management gadget
@@ -1959,9 +2019,9 @@ pause, a modal flag or an open screen (`0x004881a0`..`0x0048833a`). What keeps a
 
 The one test of an open screen on a press's path, `0x00488741`, keeps it from the mode's button slots, after the arm. A right
 click on a row of the all-staff, visitors or all-items list, or on an object window's preview, moves the camera and
-closes the window (the 500 ms click limit `[0x0077c480]`), never touching the hand. **Unsettled:** the toggle
-`FUN_004a29d0` hides the layer under a full-screen control whose handler `0x004a2840` gives a right press to the camera
-and arms nothing; which key or screen drives it is not established (`docs/QUEUE.md` Q114). A press made before a window
+closes the window (the 500 ms click limit `[0x0077c480]`), never touching the hand. The full-screen view, F3
+(`FUN_004a29d0`), hides the layer under a full-screen control whose handler `0x004a2840` gives a right press to the
+camera and arms nothing ("The full-screen view: F3"). A press made before a window
 opens keeps the capture on the layer (`0x004882ba`), so its release can still let go.
 
 **OpenTPW.** `WindowStack.TakesRightPress`: a control under the pointer, a modal window, or a park screen's root

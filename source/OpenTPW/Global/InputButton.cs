@@ -306,6 +306,8 @@ public enum InputButton
 	/// <summary>
 	/// Hide UI (F2)
 	/// Hides the whole HUD so a screenshot shows the scene with nothing in front of it.
+	/// OpenTPW's own key. The original's full-screen view is F3 (<c>FUN_004a29d0</c>) and is not this:
+	/// <c>docs/exe/park-engine.md</c>, "The full-screen view: F3".
 	/// </summary>
 	[DefaultKey( Key.F2 )]
 	HideUI,

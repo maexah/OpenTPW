@@ -4486,6 +4486,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   click itself, `0x004a11a2`); here none takes the pointer, so a left or a quick right click on them reaches the park.
   Read the outlines into `UiControl.Outline`, build the aerial, and see Q66 before changing the hit test. Confirm: an item
   in the hand, a quick right click on the body's bare metal keeps it; a screenshot.
+- [x] **Q114. The park's full-screen toggle `FUN_004a29d0`. Decode first.** Found by Q56. It hides layer 0 under a
+  full-screen control whose handler `0x004a2840` gives a right press to the camera and arms nothing. Only handler
+  `0x0048a740` turns it on (`0x0048a7f3`, `0x0048a8d8`), installed by the screens `FUN_0048ac40` and `FUN_0048adb0`
+  build; `FUN_004815d0`, `FUN_0048ac40`, `FUN_0048adb0`, `FUN_0048ae70` and `FUN_004a9180` turn it off. Decode what a
+  player reaches it from, and whether F2 here is it, before building anything.
+  **Decoded 2026-10-05.** It is **F3**: `game` row 4, key `0x72`, through the thunk `0x00481490`; F2 is bound nowhere.
+  On, a full-screen control hides layer 0 and hears only the camera, F3, Escape and Ctrl+P; refused in first person.
+  The screens `FUN_0048ac40` and `FUN_0048adb0` build are the end of a park's. In the original: F2 nothing, F3
+  `[0x007cb2e8]` 0 to 1 and the gadget gone, F3 or Escape back with no menu, each predicted. `park-engine.md`, "The
+  full-screen view: F3".
 
 ## B. Docs and comments
 

@@ -56,11 +56,15 @@ the original.
   window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
   together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
 
-- [ ] **Q114. The park's full-screen toggle `FUN_004a29d0`. Decode first.** Found by Q56. It hides layer 0 under a
-  full-screen control whose handler `0x004a2840` gives a right press to the camera and arms nothing. Only handler
-  `0x0048a740` turns it on (`0x0048a7f3`, `0x0048a8d8`), installed by the screens `FUN_0048ac40` and `FUN_0048adb0`
-  build; `FUN_004815d0`, `FUN_0048ac40`, `FUN_0048adb0`, `FUN_0048ae70` and `FUN_004a9180` turn it off. Decode what a
-  player reaches it from, and whether F2 here is it, before building anything.
+- [ ] **Q114b. Build the full-screen view on F3.** Split from Q114, whose decode is `park-engine.md`, "The full-screen
+  view: F3". First measure what F2 does here now (the hand, a tool, a shortcut, Escape, first person, F2 sent
+  through XTEST), predicted first. Then build the original's: F3 let go toggles it in a park, refused in first person;
+  on, the park's layer is hidden and a full-screen layer keeps the focus, so the camera's keys and mouse work, F3 or
+  a plain Escape puts the interface back and opens no menu, Ctrl+P is the postcard's (counted), and no other key or
+  press reaches the park. Whether F2 stays as OpenTPW's own key beside it (it also works in the lobby) is Alexah's
+  call: ask first. The end of a park's use of the view waits for an end of a park. Confirm: F3 in Lost Kingdom, the
+  frame without the gadget beside the original's (`q114/orig/k2-F3.png`), `windows` and `tool` either side; B and a
+  left click on grass under it change nothing; Escape, the gadget back and no GameMenu.
 - [ ] **Q115. The park screens are modal here and are not in the original.** Found by Q56's review. The original builds
   the six management screens and the nine object windows onto layer 0 (`park-engine.md`, "Whose a right press is"): its
   gadget answers beside a screen (`FUN_004a0940` tests only the game menu), a left press on the park beside one is kept

@@ -569,9 +569,10 @@ row binds. The walk of a quick click is thrown away with the rest when leaving p
 
 **In a ride view** (`gui_CameraFlags` 4, "Ride it!", `FUN_004e15b0` → `FUN_0042a560`) the same exits run `FUN_0042a190`,
 which goes back to walking first person when the ride was entered from it (`0x400`, `0x0042ac0b`) and to the orbit
-otherwise. Flag `0x10` is tested and never set (dead by CODE). The ride views that `FUN_0048ac40` and `FUN_0048ae70` build
+otherwise. Flag `0x10` is tested and never set (dead by CODE). The two views of a park's end that `FUN_0048ac40` and `FUN_0048ae70` build
 (world `+0x1da738 == 4`, where `FUN_004a2ac0` switches no layer) take the click in their own handlers, `0x0048a740` and
-`0x0048a970`, and only 2000 ms after they open.
+`0x0048a970`, and only 2000 ms after they open; the first then leaves the park in the full-screen view
+(`park-engine.md`, "The full-screen view: F3").
 
 **OpenTPW.** `WindowStack.RightClick` is the base proc's click for the right button; a press on the view asks
 `ViewRightClick` what answers its click, and the park answers `ParkViewfinder.RightClicked` in first person, which leaves
