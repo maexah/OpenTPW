@@ -4776,6 +4776,19 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   waiting leaver at random; an existing vehicle is summoned by `VAR_TRIGGER`, a new one by `VAR_STATUS` 1. In the
   original the bus's script was read through its first load: 1, 2, 3, 4, 0, 5, summoned again for a leaver and round
   once more, then not current with status 0. `park.md`, "The spent vehicle".
+- [x] **Q131b. Build the spent vehicle: it stays away until it is summoned.** From Q131 (`park.md`, "The spent
+  vehicle"). `ParkPeople.StepVehicle` and `ReleasesVehicle`: a 6 writes the script's `VAR_STATUS` nought and clears
+  the current vehicle, with no trigger; the summons is the one place a waiting script is triggered (an existing
+  vehicle's `VAR_TRIGGER`, a new one's `VAR_STATUS` 1), for a load by its size; status 4 is triggered when nobody
+  waits at the stop (nobody can, until Q128b); `GATE_HURRY_FORGETS_SPENT_VEHICLE` and `BusStatus` follow. Keep the
+  current vehicle as its own word, apart from the load's size, so Q128b and `ArrivalCell` can ask it. Confirm: the
+  log's call-to-drop run-in the same on every load; the bus's status through a load read with `rides` or a new
+  census line beside the original's sequence in `park.md`; the bus photographed away from the stops between loads.
+  Done 2026-10-06: `ParkPeople.VehicleStatus`, `Summon`, `StepVehicle`. In Lost Kingdom, 4 of 4: the bus at status 0
+  before the first load; summoned 1264, its guest 1300 (36 sweeps, the original's 1279 to 1315); spent 1394, 93
+  sweeps after the let-go (the original's 1328 to 1421); `load 3` summoned 1499, first guest 1535. The unchanged
+  build stood the bus at the stop after its first circuit. Photographed. Eleven of twelve restored bugs fail; the
+  twelfth is the summons at random, unreached until Q128b.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

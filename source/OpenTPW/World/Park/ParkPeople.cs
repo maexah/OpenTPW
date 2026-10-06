@@ -952,10 +952,9 @@ public sealed class ParkPeople : Entity
 	/// answer, as the original's test reads it.
 	/// </summary>
 	/// <remarks>
-	/// The original asks which vehicle is CURRENT, and a current vehicle is reused whatever size the load asked for
+	/// The vehicle is the one that is CURRENT, and a current vehicle is reused whatever size the load asked for
 	/// (<c>FUN_0051a2f0</c>, <c>0x0051a314</c>), so a load of one can be dropped two rows out by a larger vehicle still
-	/// standing. Here the vehicle is the one the load's size names (<see cref="VehicleFor"/>), which is the same
-	/// until a vehicle outlives its load: the leavers' summons (<c>docs/QUEUE.md</c> Q128b) and the headcount (Q26).
+	/// about (<see cref="Summon"/>).
 	/// </remarks>
 	internal static (int X, int Y) ArrivalCell( (int X, int Y) stopB, int vehicle )
 		=> vehicle is 2 or 3 ? (stopB.X, stopB.Y - 2) : stopB;
@@ -977,13 +976,8 @@ public sealed class ParkPeople : Entity
 	private const int VehicleIsUnloading = 2;
 
 	/// <summary>
-	/// The state a vehicle reports between runs, waiting to be sent off on the next leg.
-	/// </summary>
-	private const int VehicleIsIdle = 0;
-
-	/// <summary>
-	/// The state a vehicle reports once it has pulled away and is waiting to be released again - the
-	/// second of the three points every vehicle script parks at.
+	/// The state a vehicle reports once it has moved on from the arrivals' stop and stands for whoever is going
+	/// home - the second of the three points every vehicle script parks at.
 	/// </summary>
 	private const int VehicleIsLeaving = 4;
 
@@ -995,8 +989,9 @@ public sealed class ParkPeople : Entity
 	private const int VehicleIsSpent = 6;
 
 	/// <summary>
-	/// Starts a load of <paramref name="people"/> now, whatever the timer says, and answers which
-	/// vehicle that size calls for. Answering the console rather than the park.
+	/// Starts a load of <paramref name="people"/> now, whatever the timer says, and answers the vehicle that is
+	/// current, or with none the one that size calls for. Answering the console rather than the park. A current
+	/// vehicle past its unloading is spent before the load drops, and the load is then summoned by its size.
 	///
 	/// <para>
 	/// <b>It exists because the second and third vehicles are otherwise unreachable.</b> The headcount
@@ -1009,13 +1004,14 @@ public sealed class ParkPeople : Entity
 	internal int ForceArrival( int people )
 	{
 		_arrivalsRemaining = Math.Max( 1, people );
-		_arrivalVehicle = VehicleFor( _arrivalsRemaining );
 		_offloading = true;
 
-		Log.Info( $"People: {_arrivalsRemaining} arriving by hand, vehicle {_arrivalVehicle} "
-			+ $"({ParkFixedItems.VehicleName( _arrivalVehicle )})" );
+		// A vehicle still current brings it, whatever its size, as the original's summons reuses one.
+		var by = _arrivalVehicle != 0 ? _arrivalVehicle : VehicleFor( _arrivalsRemaining );
 
-		return _arrivalVehicle;
+		Log.Info( $"People: {_arrivalsRemaining} arriving by hand, vehicle {by} ({ParkFixedItems.VehicleName( by )})" );
+
+		return by;
 	}
 
 	/// <summary>
@@ -1332,16 +1328,23 @@ public sealed class ParkPeople : Entity
 				return;
 
 			_arrivalsRemaining = Math.Max( 1, _balance?.Int( "Arrival.MinPeople", 1 ) ?? 1 );
-			_arrivalVehicle = VehicleFor( _arrivalsRemaining );
 			_offloading = true;
 
-			Log.Info( $"People: {_arrivalsRemaining} arriving, vehicle {_arrivalVehicle}, on mGameTick {tick} "
-				+ $"(mark {_arrivalMark})" );
+			Log.Info( $"People: {_arrivalsRemaining} arriving on mGameTick {tick} (mark {_arrivalMark})" );
 
 			// And on in the same turn to ask the vehicle, as the original does from 0x004cf455.
 		}
 
-		var vehicle = VehicleScript( _arrivalVehicle );
+		// <b>No vehicle answering: the load's own is summoned, by its size</b> (0x004cf489), on this sweep and on
+		// every one after it until one answers. A spent vehicle answers as none (VehicleStatus), so every load has
+		// the drive in.
+		var status = VehicleStatus();
+
+		if ( status == NoVehicle )
+		{
+			Summon( VehicleFor( _arrivalsRemaining ) );
+			return;
+		}
 
 		// <b>The vehicle says when it is ready, which is the original's own handshake.</b> Its script plays its
 		// arrival animation, sets VAR_STATUS to 2 and then spins on VAR_TRIGGER; FUN_004cf3e0 drops one guest a
@@ -1350,7 +1353,9 @@ public sealed class ParkPeople : Entity
 		// <b>Where there is no script to ask, the guests still come.</b> A vehicle that is missing or unbound must
 		// not be able to stop a park getting visitors at all - and gating on a state that will never arrive is
 		// precisely what would do that. All three vehicles' scripts declare VAR_STATUS.
-		if ( vehicle != null && vehicle[VehicleState] != VehicleIsUnloading )
+		var vehicle = VehicleScript( _arrivalVehicle );
+
+		if ( vehicle != null && status != VehicleIsUnloading )
 			return;
 
 		if ( _arrivalsRemaining > 0 )
@@ -1375,34 +1380,84 @@ public sealed class ParkPeople : Entity
 		Log.Info( $"People: the load is all off on mGameTick {tick}; the next is due on mGameTick "
 			+ $"{FirstDueTick( tick, ArrivalPeriod )}" );
 
-		// And send it away. The script will not leave the stop until this changes, so a load that is finished
-		// with and never released leaves the vehicle sitting there - said out loud when the script declares no
-		// such variable, because a vehicle that never departs looks exactly like one that was never told to.
-		if ( vehicle != null && !vehicle.Set( VehicleTrigger, 1 ) )
-		{
-			Log.Warning( $"People: the {ParkFixedItems.VehicleName( _arrivalVehicle )}'s script "
-				+ $"declares no {VehicleTrigger}, so it cannot be sent away" );
-		}
+		// The same call the summons is, on the vehicle that is current: its trigger, which sends it on.
+		Summon( 0 );
+
+		// One with no script reports nothing ever again, so it cannot be left current to answer for the next load.
+		if ( vehicle == null )
+			_arrivalVehicle = 0;
+	}
+
+	/// <summary>What <see cref="VehicleStatus"/> answers with no vehicle current.</summary>
+	internal const int NoVehicle = -1;
+
+	/// <summary>
+	/// What the current arrival vehicle reports - <c>FUN_0051a690</c>: <see cref="NoVehicle"/> with none current, else
+	/// its script's <c>VAR_STATUS</c>. <b>A 6, the end of its circuit, is answered as none, and the asking itself
+	/// forgets the vehicle</b>: the script's <c>VAR_STATUS</c> is written nought and the vehicle is no longer current,
+	/// with no trigger, so its script stays at its last spin until a summons (<c>docs/exe/park.md</c>, "The spent
+	/// vehicle"). A vehicle with no script bound answers <see cref="VehicleIsUnloading"/>, so its load still comes.
+	/// </summary>
+	internal int VehicleStatus()
+	{
+		if ( _arrivalVehicle == 0 )
+			return NoVehicle;
+
+		if ( VehicleScript( _arrivalVehicle ) is not { } vehicle )
+			return VehicleIsUnloading;
+
+		var status = vehicle[VehicleState];
+
+		if ( status != VehicleIsSpent )
+			return status;
+
+		vehicle.Set( VehicleState, 0 );
+
+		Log.Info( $"People: the {ParkFixedItems.VehicleName( _arrivalVehicle )} is spent on mGameTick {State.GameTick}: "
+			+ "forgotten until it is summoned" );
+
+		_arrivalVehicle = 0;
+
+		return NoVehicle;
 	}
 
 	/// <summary>
-	/// Whether a vehicle reporting <paramref name="state"/>, with <paramref name="stillToDrop"/> of its
-	/// load left, should be sent on - the rule out of <c>FUN_004cf3e0</c>'s arms, on its own so that it
-	/// can be read and tested without a park standing around it.
-	///
-	/// <para>
-	/// <b>The one that matters is the refusal.</b> Unloading is NOT released while a load is held
-	/// (<paramref name="loadHeld"/>): the original drops a guest a sweep for exactly as long as the vehicle
-	/// answers 2, so letting it go with somebody aboard sends it off with them, and it lets the load go only on
-	/// a sweep after the last drop that still finds 2 (<c>0x004cf56b</c>). The ferry and the seaplane report 3
-	/// the moment they are let go (<c>Ferry.RSE</c> 26, <c>seaplane.RSE</c> 31), so one let go on the last
-	/// drop's sweep would hold its load until it came round again; the bus stays at 2 for 1.5 s first
-	/// (<c>bus.RSE</c> 47). Every other state the original ever nudges is nudged.
-	/// </para>
+	/// The summons - <c>FUN_0051a2f0</c>, the one thing that sets a vehicle's <c>VAR_TRIGGER</c>. With a vehicle
+	/// current it triggers that one whatever <paramref name="size"/> says (<c>0x0051a663</c>), which is how a load all
+	/// dropped and a vehicle standing for leavers are sent on. With none, the vehicle of that size is made current and
+	/// triggered, which starts its script's circuit from its last spin.
 	/// </summary>
-	internal static bool ReleasesVehicle( int state, int stillToDrop, bool loadHeld )
-		=> state is VehicleIsIdle or VehicleIsLeaving or VehicleIsSpent
-			|| (state == VehicleIsUnloading && stillToDrop == 0 && !loadHeld);
+	/// <remarks>
+	/// <b>Not the original's in three ways.</b> Size nought with no vehicle current is the leavers' summons, one of
+	/// the three at random: unbuilt and counted until a leaver can wait at the stop (<c>docs/QUEUE.md</c> Q128b). All
+	/// three vehicles are stood as the park loads here, where the original makes one at its first summons and starts
+	/// it from its script's top by <c>VAR_STATUS</c> 1 (<c>0x0051a5ed</c>, the same call with the other variable). The
+	/// ferry and the seaplane so stand at their first spin, at status 2, and a first summons' trigger sends them on
+	/// from it empty: they go round once, are spent and forgotten, are summoned again and only then drop the load
+	/// (read from <c>Ferry.RSE</c> and <c>seaplane.RSE</c>, not run; Q128b). And the original falls back through the
+	/// other two when the wanted one's feature is missing; here a vehicle with no script is current all the same.
+	/// </remarks>
+	private void Summon( int size )
+	{
+		if ( _arrivalVehicle == 0 )
+		{
+			if ( size == 0 )
+			{
+				Unimplemented.Report( "ARRIVAL_SUMMONS_AT_RANDOM" );
+				return;
+			}
+
+			_arrivalVehicle = size;
+
+			Log.Info( $"People: the {ParkFixedItems.VehicleName( size )} summoned on mGameTick {State.GameTick}" );
+		}
+
+		if ( VehicleScript( _arrivalVehicle ) is { } vehicle && !vehicle.Set( VehicleTrigger, 1 ) )
+		{
+			Log.Warning( $"People: the {ParkFixedItems.VehicleName( _arrivalVehicle )}'s script "
+				+ $"declares no {VehicleTrigger}, so it cannot be triggered" );
+		}
+	}
 
 	/// <summary>
 	/// What the current arrival vehicle reports when it is the bus, as a guest heading for the gate asks it:
@@ -1413,94 +1468,27 @@ public sealed class ParkPeople : Entity
 	/// <para>
 	/// <b>The original's asking forgets a spent vehicle</b>: <c>FUN_0051a690</c> answers state 6 by setting the
 	/// script's <c>VAR_STATUS</c> to nought and clearing <c>mCurrentArrivalVehicle</c>, so a guest heading for the gate
-	/// then can drop the bus before the manager sees it. That is counted, not done: here <see cref="StepVehicle"/> forgets it, sending it round again (Q131).
+	/// then can drop the bus before the manager sees it, as <see cref="VehicleStatus"/> does here.
 	/// </para>
 	/// </summary>
 	private int BusStatus()
-	{
-		if ( _arrivalVehicle != 1 || VehicleScript( _arrivalVehicle ) is not { } bus )
-			return -1;
-
-		var state = bus[VehicleState];
-
-		if ( state == VehicleIsSpent )
-		{
-			Unimplemented.Report( "GATE_HURRY_FORGETS_SPENT_VEHICLE" );
-			return -1;
-		}
-
-		return state;
-	}
+		=> _arrivalVehicle is 2 or 3 ? NoVehicle : VehicleStatus();
 
 	/// <summary>
-	/// One turn of the vehicle itself, which the original does on <b>every</b> sweep and not only while a
-	/// load is being dropped - the tail of <c>FUN_004cf3e0</c> at <c>LAB_004cf4b6</c>.
-	///
-	/// <para>
-	/// <b>Every vehicle script parks three times a circuit, and one release is not enough.</b> Each of
-	/// them sets a status, spins on <c>TEST VAR_TRIGGER / ENDSLICE / BRANCH_Z</c> back onto itself, and
-	/// goes no further until something writes that variable - <c>bus.RSE</c> at instructions 42, 87 and
-	/// 117, and the other two the same. Releasing only the first leaves the vehicle stopped at the
-	/// second for ever: measured in a live park as the bus sitting
-	/// at pc 90 with <c>VAR_STATUS</c> 4 from 69s to 169s while the park emptied itself.
-	/// </para>
-	///
-	/// <para>
-	/// <b>Summoning, releasing and sending away are all one write.</b> <c>FUN_0051a2f0</c> ends at
-	/// <c>0x51a66b</c> by setting variable nought - <c>VAR_TRIGGER</c> - to one on the vehicle it already
-	/// has standing, and the manager reaches it from every arm: when there is no vehicle, when one reports
-	/// idle, when one reports leaving, and when a load is spent. Only a freshly <i>created</i> thing is
-	/// treated differently, getting <c>VAR_STATUS</c> = 1 instead.
-	/// </para>
-	///
-	/// <para>
-	/// <b>State 2 is deliberately not released while a load is held.</b> That is the one the drip and the
-	/// let-go depend on: the original drops a guest a sweep for exactly as long as the vehicle answers 2, and
-	/// lets the load go on the sweep after the last drop only if it still does.
-	/// </para>
-	///
-	/// <para>
-	/// <b>One approximation, named rather than hidden.</b> The original chooses between two sets of states
-	/// by <c>FUN_0051a9d0</c>, which answers whether a guest is standing at the stop - a peep (model byte
-	/// 1) in state <c>0x15</c>, <see cref="PeepState.AtTheBusStop"/>, on one of the four cells
-	/// <c>{c, c+1, c-0x100, c-0xff}</c> around <c>FUN_004d8650</c>'s first cell, one of the bus stops
-	/// (<c>park.md</c>, "Arrivals"). <see cref="PeepBehaviour"/> leaves that state unbuilt until Q128,
-	/// so the choice between the arms is not reproduced and every state the
-	/// original ever nudges is nudged here, but for unloading while a load is held, which the arm with nobody at
-	/// the stop leaves to the manager (<c>0x004cf533</c> releases state 4 alone). The difference is confined to
-	/// which arm fires, and no guest in this park reaches those cells to be counted anyway.
-	/// </para>
-	///
-	/// <para>
-	/// <b>A spent vehicle is sent round again, which the original does not do.</b> <c>FUN_0051a690</c> answers
-	/// state 6 by setting its status to nought and forgetting it, and sets no trigger, so it waits at its last spin until the next load
-	/// summons it; here it is released and forgotten, drives back to the stop and waits there at 2 (Q131).
-	/// </para>
+	/// The manager's tail, which it reaches on every sweep (<c>FUN_004cf3e0</c>, <c>0x004cf4b6</c>): it asks the
+	/// vehicle's status, which is what forgets a spent one (<see cref="VehicleStatus"/>), and with nobody standing at
+	/// the stop to go home it triggers a vehicle at status 4, the stand it makes for them, and no other
+	/// (<c>0x004cf533</c>). <c>docs/exe/park.md</c>, "The spent vehicle".
 	/// </summary>
+	/// <remarks>
+	/// Whether a leaver stands there is <c>FUN_0051a9d0</c>: nobody can until the leavers' road is built, and with it
+	/// the other arm, which summons a vehicle for one and triggers it at 0 and at a spent 2
+	/// (<c>docs/QUEUE.md</c> Q128b).
+	/// </remarks>
 	private void StepVehicle()
 	{
-		// Nought is "no vehicle", and it must be refused here: VehicleName answers "bus" for anything it
-		// does not recognise, so asking about vehicle nought would quietly command the bus.
-		if ( _arrivalVehicle == 0 || VehicleScript( _arrivalVehicle ) is not { } vehicle )
-			return;
-
-		var state = vehicle[VehicleState];
-
-		if ( !ReleasesVehicle( state, _arrivalsRemaining, _offloading ) )
-			return;
-
-		if ( !vehicle.Set( VehicleTrigger, 1 ) )
-		{
-			Log.Warning( $"People: the {ParkFixedItems.VehicleName( _arrivalVehicle )}'s script "
-				+ $"declares no {VehicleTrigger}, so it cannot be released" );
-
-			return;
-		}
-
-		// FUN_0051a690's own answer to state 6: let go of the vehicle, so the next load summons one
-		// rather than commanding one that has already driven off.
-		if ( state == VehicleIsSpent )
-			_arrivalVehicle = 0;
+		if ( VehicleStatus() == VehicleIsLeaving )
+			Summon( 0 );
 	}
 
 	/// <summary>

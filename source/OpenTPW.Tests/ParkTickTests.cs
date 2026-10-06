@@ -500,7 +500,7 @@ public class ParkTickTests
 			}
 
 			Assert.AreEqual( 1264, call, "the first load is called on the 509th sweep after 755" );
-			Assert.AreEqual( call, drop, "with no vehicle to wait for, its one guest comes on the sweep that calls it" );
+			Assert.AreEqual( call + 1, drop, "the call's own sweep is the summons; with no script to wait for, its one guest comes on the next" );
 			Assert.AreEqual( drop + 1, letGo, "the load is let go on the sweep after the last drop, not on it" );
 			Assert.AreEqual( ParkPeople.FirstDueTick( letGo!.Value, 150 ), next,
 				"and the next is called on the first tick whose fours are 151 past the let-go's" );
@@ -597,13 +597,119 @@ public class ParkTickTests
 	}
 
 	/// <summary>
+	/// <b>The bus is triggered by a summons and by nothing else, and a spent bus stays away</b> (<c>FUN_004cf3e0</c>,
+	/// <c>FUN_0051a2f0</c>, <c>FUN_0051a690</c>; <c>docs/exe/park.md</c>, "The spent vehicle"). The test plays
+	/// <c>bus.RSE</c>'s part by hand: idle with no load, nothing triggers it; a load summons it; it is not triggered
+	/// driving in, nor while it unloads; the load all off, it is sent on; standing for leavers at 4 with nobody there,
+	/// it is sent off; spent, its status is written nought and it is forgotten with no trigger, until the next load.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> an idle bus triggered; a load that summons nothing; a bus triggered while it drives in or
+	/// unloads; not sent on when the load is off; not sent off at 4; a spent bus triggered, or left current, or left
+	/// at 6.
+	/// </remarks>
+	[TestMethod]
+	public void TheBusIsTriggeredOnlyByASummonsAndASpentBusStaysAway()
+	{
+		var world = World();
+		var catalogue = new ParkItemCatalogue( Theme, data );
+		var rides = new ParkRides( Theme, world, catalogue, data );
+		var busThing = world.ArrivalVehicleForSmallCrowd;
+
+		Assert.IsTrue( catalogue.TryGet( 1600, out var busItem ), "the jungle's catalogue has the bus" );
+		var bus = rides.Scheduler.Find( rides.Scheduler.Spawn( ParkRides.ScriptPathFor( busItem ) ) );
+		var standingBefore = ParkFixedItems.Current;
+
+		StandVehicles( ("bus", busThing) );
+
+		var people = new ParkPeople( world, new ParkBalance( Theme, easyMode: true ),
+			() => ParkRides.GateIsOpen, new ParkState( world ), catalogue,
+			thingId => thingId == busThing ? bus : rides.Scheduler.Find( rides.ScriptFor( thingId ) ) );
+
+		void Plays( int status )
+		{
+			bus!.Set( "VAR_TRIGGER", 0 );
+			bus.Set( "VAR_STATUS", status );
+		}
+
+		int Triggered() => bus!["VAR_TRIGGER"];
+
+		try
+		{
+			Assert.IsNotNull( bus );
+			EnterPark();
+
+			Plays( 0 );
+
+			for ( var sweep = 0; sweep < 30; ++sweep )
+				Sweep( people );
+
+			Assert.AreEqual( 0, Triggered(), "idle, with no load: nothing triggers it" );
+			Assert.AreEqual( ParkPeople.NoVehicle, people.VehicleStatus(), "and no vehicle is current" );
+
+			var before = people.Peeps.Count;
+
+			Assert.AreEqual( 1, people.ForceArrival( 1 ) );
+			Sweep( people );
+			Assert.AreEqual( 1, Triggered(), "a load summons it" );
+
+			Plays( 1 );
+			Sweep( people );
+			Sweep( people );
+			Assert.AreEqual( (0, before), (Triggered(), people.Peeps.Count), "driving in: not triggered, and nobody made" );
+
+			Plays( 2 );
+			Sweep( people );
+			Assert.AreEqual( (0, before + 1), (Triggered(), people.Peeps.Count), "unloading: the guest made, the bus held" );
+
+			Sweep( people );
+			Assert.AreEqual( 1, Triggered(), "the load all off: sent on" );
+			Assert.IsFalse( people.LoadHeld );
+
+			Plays( 3 );
+			Sweep( people );
+			Assert.AreEqual( 0, Triggered(), "moving on: not triggered" );
+
+			Plays( 4 );
+			Sweep( people );
+			Assert.AreEqual( 1, Triggered(), "standing for leavers with nobody there: sent off" );
+
+			Plays( 5 );
+			Sweep( people );
+			Assert.AreEqual( 0, Triggered(), "driving off: not triggered" );
+
+			Plays( 6 );
+			Sweep( people );
+			Assert.AreEqual( (0, 0), (Triggered(), bus["VAR_STATUS"]), "spent: its status written nought, and no trigger" );
+			Assert.AreEqual( ParkPeople.NoVehicle, people.VehicleStatus(), "and forgotten" );
+
+			for ( var sweep = 0; sweep < 30; ++sweep )
+				Sweep( people );
+
+			Assert.AreEqual( 0, Triggered(), "it stays away" );
+
+			people.ForceArrival( 1 );
+			Sweep( people );
+			Assert.AreEqual( 1, Triggered(), "until the next load summons it" );
+			Assert.AreEqual( 1, people.ForceArrival( 40 ), "a load called while a vehicle is current names that vehicle, whatever its size" );
+		}
+		finally
+		{
+			people.Delete();
+			rides.Delete();
+			Entity.ApplyDeletions();
+			typeof( ParkFixedItems ).GetProperty( nameof( ParkFixedItems.Current ) )!.SetValue( null, standingBefore );
+		}
+	}
+
+	/// <summary>
 	/// <b>A guest heading for the gate runs for the bus while it pulls away</b> (<c>FUN_004ff730</c>; Q199): the hurry
 	/// is 50 on the sweeps the park's own bus answers 3, and the guest's 25 or nought again once it answers 4. The
 	/// test plays <c>bus.RSE</c>'s part by hand, as the test above does.
 	/// </summary>
 	/// <remarks>
 	/// <b>Mutations:</b> <c>ParkPeople</c> not handing <c>BusStatus</c> in; <c>BusStatus</c> asking with no vehicle
-	/// current, or any vehicle but the bus; no count at 6.
+	/// current, or any vehicle but the bus; a spent bus left current.
 	/// </remarks>
 	[TestMethod]
 	public void AGuestHeadingForTheGateRunsWhileTheBusPullsAway()
@@ -675,16 +781,17 @@ public class ParkTickTests
 
 			Assert.AreEqual( ownHurry, guest.PurposeSpeed, "and gone, the guest's own hurry again" );
 
-			// Spent, the bus is let go of by the guest's asking, which is counted, and not run for.
-			Unimplemented.Forget();
+			// Spent, the bus is let go of by the asking (FUN_0051a690): its status written nought, no vehicle current,
+			// and not run for.
 			bus.Set( "VAR_STATUS", 6 );
 			Sweep( people );
 
-			Assert.IsTrue( Unimplemented.Summary.Any( gap => gap.What == "GATE_HURRY_FORGETS_SPENT_VEHICLE" ),
-				"a guest asking a spent bus is counted" );
+			Assert.AreEqual( 0, bus["VAR_STATUS"], "a spent bus has its status written nought" );
+			Assert.AreEqual( ParkPeople.NoVehicle, people.VehicleStatus(), "and is no longer current" );
 			Assert.AreEqual( ownHurry, guest.PurposeSpeed );
 
 			Assert.AreEqual( 2, people.ForceArrival( 40 ), "forty come by seaplane" );
+			Sweep( people );
 			bus.Set( "VAR_STATUS", PeepBehaviour.BusIsLeaving );
 			Sweep( people );
 

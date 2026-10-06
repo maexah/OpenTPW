@@ -1439,7 +1439,7 @@ status 2, no; else yes. So leavers stand at the crossing while the bus drives in
 **The vehicle's side is the arrival manager's tail**, every sweep (`FUN_004cf3e0`, `0x004cf4b6` on).
 `FUN_0051a9d0` answers whether any of the four cells' head is a guest in state `0x15`. Nobody waiting and the vehicle
 at status 4: `FUN_0051a2f0( 0 )`, which with a vehicle current sets its script's variable 0, `VAR_TRIGGER`, to 1
-(`0x0051a5ed`), so it drives off. Somebody waiting: with no vehicle (-1), `FUN_0051a2f0( 0 )` summons one **at random**
+(`0x0051a663`), so it drives off. Somebody waiting: with no vehicle (-1), `FUN_0051a2f0( 0 )` summons one **at random**
 of the three (`park.md`, "Arrivals"); at status 0, or at 2 with the load all dropped, the same call nudges it on.
 `bus.RSE` gives the statuses their meaning: 1 driving in, 2 standing at the arrivals' stop until triggered, 3 moving
 on, **4 standing for the leavers until triggered**, 0 then 5 driving off, 6 spent and waiting for a trigger (Q131).

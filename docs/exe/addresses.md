@@ -337,8 +337,10 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004b9840` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
 | `0x004cf3f6` | Arrival manager `FUN_004cf3e0`: `FUN_0041a990`'s elapsed count against the period `[0x00785314]`; `JBE` skips the call, so the count must be more than the period | OpenTPW.Tests/ParkPeopleTests.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004cf455` | Arrival manager: re-tests the offloading flag (`+0x10`) after a load is called, so the same call goes on to ask the vehicle | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x004cf489` | Arrival manager FUN_004cf3e0: with a load held and no vehicle answering, the load's vehicle summoned by its size | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x004cf4b6` | FUN_004cf3e0, its tail, every sweep: FUN_0051a9d0, then the vehicle's status asked and the trigger by who waits at the stop | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004cf533` | Arrival manager's tail, the arm with nobody at the stop (`FUN_0051a9d0` nought): lets the vehicle go at state 4 alone | OpenTPW/World/Park/ParkPeople.cs  |
-| `0x004cf56b` | Arrival manager, vehicle at 2: `JLE` on `mPeopleOnBus`; at nought or below the load is let go (`FUN_0041a960` re-marks `mTimeSig`, the flag cleared) | OpenTPW.Tests/ParkPeopleTests.cs OpenTPW/World/Park/ParkPeople.cs  |
+| `0x004cf56b` | Arrival manager, vehicle at 2: `JLE` on `mPeopleOnBus`; at nought or below the load is let go (`FUN_0041a960` re-marks `mTimeSig`, the flag cleared) | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004cf594` | Arrival manager: after dropping a guest, on to the tail at `0x004cf4b6`; the load is not let go on the drop's sweep | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004cf745` | Guest maker FUN_004cf720: FUN_004d8650 asked for stop B (argument 1) on both arms | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004cf75c` | FUN_004cf720: 0x100, two rows, off the packed cell while FUN_0051aad0 reports a vehicle other than the small crowd's | OpenTPW/World/Park/ParkPeople.cs  |
@@ -737,7 +739,9 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0051a0e8` | The park's door, closing: the gate's `VAR_COMMAND` = 0 when nobody is in the park (from here) | OpenTPW/World/Park/ParkState.cs  |
 | `0x0051a161` | The park's door, closing: the gate write (to here) | OpenTPW/World/Park/ParkState.cs  |
 | `0x0051a1ae` | The park's door, closing: `FUN_004df300` on every visitable object | OpenTPW.Tests/ParkClosedRideTests.cs OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/ParkState.cs  |
-| `0x0051a66b` | End of `FUN_0051a2f0`: sets variable 0 (`VAR_TRIGGER`) to 1 on the standing vehicle | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x0051a314` | Summons FUN_0051a2f0: a vehicle already current is reused whatever size is asked | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x0051a5ed` | FUN_0051a2f0, no vehicle current: the slot's existing thing has script variable 0, VAR_TRIGGER, set to 1; one just made has variable 1, VAR_STATUS | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x0051a663` | FUN_0051a2f0, a vehicle current: its script variable 0, VAR_TRIGGER, set to 1 | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x0051b920` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x0051bcb0` | | OpenTPW/Audio/Audio.cs OpenTPW/World/Level.cs  |
 | `0x0051bd70` | | OpenTPW/Audio/Audio.cs OpenTPW/World/Advisor/Advisor.cs OpenTPW/World/Park/ParkAudio.cs  |

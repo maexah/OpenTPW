@@ -1641,9 +1641,10 @@ through `FUN_0051a690` or `FUN_0051a760` is answered -1, and the asking itself w
 `VAR_STATUS`, to nought (`FUN_0055a0b0( script, 1, 0 )`) and clears `mCurrentArrivalVehicle`; the manager asks on
 every sweep (its tail, `0x004cf4b6` on), so a 6 does not outlive the sweep. Nothing drives the vehicle anywhere: it
 stands spent, off the stops, until a summons. `FUN_0051a2f0` is the summons: with a vehicle current it sets that
-script's variable 0, `VAR_TRIGGER`, to 1 (`0x0051a5ed`) and nothing else; with none it picks the slot (the size asked
+script's variable 0, `VAR_TRIGGER`, to 1 (`0x0051a663`) and nothing else; with none it picks the slot (the size asked
 for, or at random of the three for size 0, `% 3` of the save's seed), and for a vehicle thing that exists sets its
-`VAR_TRIGGER` to 1, for one it has just made sets `VAR_STATUS` to 1 (`0x0051a663`), and makes it current. Who summons:
+`VAR_TRIGGER` to 1, for one it has just made sets `VAR_STATUS` to 1 (both at `0x0051a5ed`, the variable pushed by the
+arm), and makes it current. Who summons:
 the manager with a load held and no vehicle answering (`0x004cf489`, by the load's size), and its tail for a leaver
 standing at stop A in state `0x15` (`FUN_0051a9d0`; at random). The tail also triggers a vehicle at status 4 when no
 leaver stands there, at 0 when one does, and at 2 when one does and the load is all dropped
@@ -1660,11 +1661,24 @@ wrong**: that the bus would stay away after its first circuit (a leaver summoned
 would show where it stands (the thing's position bytes read (0,0) throughout: the vehicle is drawn by its script's
 object, not placed as a thing).
 
+**OpenTPW** (Q131b): `ParkPeople.VehicleStatus` is `FUN_0051a690`, forgetting a spent vehicle as it answers;
+`Summon` is `FUN_0051a2f0` and the one place a vehicle's `VAR_TRIGGER` is set; `StepArrivals` summons the load's
+vehicle by size while none answers and sends it on with the same call when the load is all off; `StepVehicle` is the
+tail's arm with nobody waiting, a trigger at status 4. Measured in Lost Kingdom beside the sequence above: the bus at
+`VAR_STATUS` 0 and pc 120 before the first load; summoned on `mGameTick` 1264 and its guest made on 1300, **36 sweeps
+on, the original's 1279 to 1315**; let go on 1301 and spent on 1394, **93 sweeps on, the original's 1328 to 1421**;
+then at status 0 again, off the stops; a second load by hand summoned on 1499, its first guest on 1535, 36 again.
+Before it, the bus was sent round after its first circuit and stood at the arrivals' stop at status 2, and the second
+load's first guest was made on the call's own sweep.
+
 What it does not reproduce, each said at its site: the headcount, the floor alone (Q26); the two refusals, in world state 4 and at the cap, where the original calls a load
 of nobody or of what fits and still sends its vehicle (neither reached in Lost Kingdom); a load saved half-dropped,
-counted as `SAVED_ARRIVAL_LOAD` and not resumed; guests made with no script to ask, on the sweep that calls the load;
-and the spent vehicle, which is sent round again and waits at the stop (Q131), which is why the second load above
-dropped on the sweep that called it where the original's bus would have driven in first.
+counted as `SAVED_ARRIVAL_LOAD` and not resumed; guests made with no script to ask, on the sweep after the one that calls the load;
+the leavers' half of the tail, their summons at random and the triggers at 0 and at a spent 2 (Q128b); and the ferry
+and the seaplane, stood as the park loads where the original makes each at its first summons: they stand at their
+first spin at status 2, so a first summons' trigger sends them on empty, and the load drops only after that circuit
+is spent and the vehicle summoned again (read from their scripts, not run; Q128b). (The second load in the older measurement above dropped on the sweep that called
+it because the spent bus was then sent round again: Q131b took that out.)
 
 **The score in the headcount is `FUN_004c8240`, and it is NOT decoded**. (`FUN_00519590`'s `+0x30` is the weather
 thing's `mCurrentDrops`; `ride-operation.md`, "What a thing is worth to a guest".) It sums a

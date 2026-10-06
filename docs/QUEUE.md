@@ -38,14 +38,6 @@ the original.
 
 ## A. Bugs first
 
-- [ ] **Q131b. Build the spent vehicle: it stays away until it is summoned.** From Q131 (`park.md`, "The spent
-  vehicle"). `ParkPeople.StepVehicle` and `ReleasesVehicle`: a 6 writes the script's `VAR_STATUS` nought and clears
-  the current vehicle, with no trigger; the summons is the one place a waiting script is triggered (an existing
-  vehicle's `VAR_TRIGGER`, a new one's `VAR_STATUS` 1), for a load by its size; status 4 is triggered when nobody
-  waits at the stop (nobody can, until Q128b); `GATE_HURRY_FORGETS_SPENT_VEHICLE` and `BusStatus` follow. Keep the
-  current vehicle as its own word, apart from the load's size, so Q128b and `ArrivalCell` can ask it. Confirm: the
-  log's call-to-drop run-in the same on every load; the bus's status through a load read with `rides` or a new
-  census line beside the original's sequence in `park.md`; the bus photographed away from the stops between loads.
 - [ ] **Q128b. Build the leavers' road to the stop.** From Q128 (`ride-operation.md`, "Q128: from the crossing to
   the stop, and out"). States `0x13`, `0x14` and `0x15` in `PeepBehaviour`: the wait at the crossing on
   `FUN_0051a760`, the four cells of stop A, the facing, the shuffle to the current vehicle's pair, and the going at
@@ -53,7 +45,9 @@ the original.
   manager's tail in `StepArrivals`/`StepVehicle`: `FUN_0051a9d0`, the summons at random for a waiting leaver, the
   trigger at status 4 with nobody waiting and at 0 or a spent 2 with somebody. The current vehicle then outlives its
   load, so `ArrivalCell` and the gate's hurry must ask which vehicle is current (Q127's remark). Move the gate's two
-  leavers (`Judge`, `Wait`) to the crossing's cells. Q131's spent vehicle is the same machine: read it before
+  leavers (`Judge`, `Wait`) to the crossing's cells. The ferry and the seaplane are stood as the park loads and
+  stand at their first spin, so a first summons sends them round empty (`ParkPeople.Summon`'s remark): make each at
+  its first summons instead, as the original does, started by `VAR_STATUS` 1. Q131's spent vehicle is the same machine: read it before
   building, and build what the two share once. Confirm: the park shut with the door, `peeps` showing guests in 19,
   20 and 21 on stop A's cells and going from there, beside the original's log in `ride-operation.md`; a screenshot
   of guests standing at the stop.
