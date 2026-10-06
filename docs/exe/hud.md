@@ -642,6 +642,57 @@ the DirectInput cursor library is on (`FUN_0047e7d0` sets `DAT_007b4b88`, `0x004
 callback `0x00486c70` posts the presses and releases in the same units. Its own double click bit (`0x0063446a`) never
 reaches the UI, and `FUN_00658ab4`, which would post `0x10007` to the hover, has no caller (dead by CODE).
 
+### Who acts on the click, and who on the release
+
+Decoded for `docs/QUEUE.md` Q123b, first-hand, and run in the original.
+
+**A button does not use the click.** The button class's proc `FUN_00668f9c` answers the left press and release
+itself and never hands them to the base proc. The press, from state 0 only, stamps the button's record, sets state 1
+and draws it down (`0x10005`). The pointer leaving the button sets state 2 and lifts it, coming back sets 1 and puts
+it down again (`0x10002`, `0x10001`). The release posts **`0x100`** with the button's id to its parent when the state
+is 1 and `FUN_00668eff` answers true, which is false only when a repeating button (flag `0x20`) has already repeated
+(`+0x15a` 2; `FUN_00668dd9` on the tick `0x1e`, delays `+0x13c` then `+0x140`, posting `0x10009` then `0x10008`). No
+clock is read at the release: **a button held any length of time is a click**, so long as the pointer is on it when
+it comes up.
+
+**Everything else gets the base proc's click**, `0x10006`: the release under 500 ms from the press, not strayed more
+than 6. And for the release, the press, the click and the double click alike the base proc also calls
+`FUN_0065dcaf`: if the press's point is inside the control (vtable `+0x2c`), it posts the same message with
+**`0x1000` set** to the control itself, carrying the press's point. So `0x11006` is "a click that began inside me",
+and that is what turns `0x10006` into the message the list and the slider answer.
+
+| Who | Message | What a click does |
+|---|---|---|
+| a list's rows, `FUN_00665c35` | `0x11006` | the left button: the row click `FUN_006655a2`; any other: `FUN_0066563d`, the `0x402` above; `0x11007`, the double click, has its own arm |
+| the plain list class, `FUN_0065bb6b` (made by `FUN_0065ab64`) | `0x11006` | with flag `0x80`, posts `0x200` with the row; without, the row under the point (`FUN_0065b93f`, `0x201`) |
+| a slider's track, `Slider_Callback` | `0x11006` | pages towards the point (`Slider_PageTowards`) |
+| the game menu's rows, `MenuList_ChoiceCallback` | `0x10006` | **whatever the button**: sound `0xc1`, then the choice (`0x100001`) |
+| an object window's preview, `0x0048d1a0` | `0x10006` | whatever the button: the camera to the thing |
+| `FUN_004b5c80` (installed by `FUN_004b6080`) | `0x10006` | whatever the button: `FUN_0048ce80`, the camera to a thing |
+| the gadget's top, `FUN_004a1190` | `0x10006` | the right button only |
+| the first-person layer, `FUN_00488a00` | `0x10006` | the right button, with RMB cancel |
+| `FUN_004bed60` (two controls of `FUN_004bf460`) | `0x10006` | hides itself |
+| `FUN_004c56e0` (five controls of `FUN_004c4fb0`) | `0x10006` | `FUN_005b7910` with its index; not identified |
+| `0x005d58e0` (a control of `FrontEnd_Init`) | `0x10006` | `FUN_004bc710`, or message box `0x1d9`; not identified |
+| the two park's-end views, `0x0048a740` | `0x10006` | after their 2000 ms |
+| two lobby objects, `FUN_005dd530`, `FUN_005dd840` | `0x10006` | the middle button toggles a flag |
+
+The table is every `CMP` or `SUB` against `0x10006` or `0x11006` in the listing, and `FUN_00488a00`, which reaches its
+case through a jump table: a handler that switches on the message that way is not found by the scan, so the table can
+be short.
+
+**In the original**, predicted first, 6 of 6, read from memory: the left button held 1.0 s on the gadget's Buy, the
+buy screen opened as it came up (`[0x007c24c8]` 0 to `0x46bca50`); held 600 ms on a visitors row, nothing
+(`0x46cc670` stayed), and a 200 ms click on it opened the visitor's window (`0x46cf4a0`); held 600 ms on the game
+menu's Resume Game, the menu stayed (`[0x007c2534]` `0x46c1c30`); a quick right click on it chose it (0), and a quick
+left click the same.
+
+**OpenTPW** (read in the code, not run): a button's `Clicked` is the release over it, as the original's, with no
+repeat and no state for leaving and coming back beyond that. A list's row is selected by the press
+(`UiList.PointerPressed`), the game menu's rows are buttons (`GameMenu`, `Clicked`), and the preview's left click is
+a press and a release of any length: each acts where the original waits for a click under 500 ms, and the menu's
+rows do not answer the right button. The build is Q123c.
+
 ## The other park streams
 
 | Address | What it is | Contents |

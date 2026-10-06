@@ -4683,6 +4683,15 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   click (`tool` mode 1; unchanged, mode 0), nor an 800 ms hold in first person, and a buy row shows after its half
   second; a press held across a 450 ms stopped frame is no click. In the original the same holds across a stopped
   process kept the tool (3 of 3) and first person (2 of 2). Seventeen restored bugs each fail.
+- [x] **Q123b. A left click has no time limit.** Found by Q123. The base proc makes the left button's click as it
+  makes the right's: a release under 500 ms from its press, not strayed more than 6 (`hud.md`, "A click and a double
+  click"). Here a left press and release on a control is a click however long it is held. **Decode first** which
+  controls act on the click message `0x10006` and which on the release itself.
+  Done 2026-10-06, decode only: a button answers its own release and reads no clock (`FUN_00668f9c`), so it has no
+  limit; a list's rows, a slider's track, the game menu's rows and an object window's preview act on the click, which
+  reaches a list and a slider as `0x11006` (`FUN_0065dcaf`). In the original, 6 of 6: Buy held 1.0 s opened the buy
+  screen; a visitors row held 600 ms did nothing and a 200 ms click opened the window; Resume Game held 600 ms did
+  nothing, and a quick click of either button chose it. `hud.md`, "Who acts on the click, and who on the release".
 
 ## B. Docs and comments
 

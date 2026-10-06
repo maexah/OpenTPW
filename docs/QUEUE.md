@@ -38,13 +38,13 @@ the original.
 
 ## A. Bugs first
 
-- [ ] **Q123b. A left click has no time limit.** Found by Q123. The base proc makes the left button's click as it
-  makes the right's: a release under 500 ms from its press, not strayed more than 6 (`hud.md`, "A click and a double
-  click"). Here a left press and release on a control is a click however long it is held (`WindowStack`, the object
-  window's preview among them, `park-engine.md`, "The camera goes to a thing"). **Decode first** which controls act
-  on the click message `0x10006` and which on the release itself: a button's own handler may not use the click at
-  all. Then build what the decode finds on `Time.WallMilliseconds`. Confirm: a press held 600 ms on each kind of
-  control beside the original's.
+- [ ] **Q123c. Lists, the game menu's rows and the preview act on a press, where the original waits for the click.**
+  Found by Q123b (`hud.md`, "Who acts on the click, and who on the release"). Keep the left button's record in
+  `WindowStack` as the right's is kept (state, press point, stamp, on `Time.WallMilliseconds`); a list's row click and
+  its double click (`0x11007`: decode what that arm does first), the game menu's rows for either button, and the
+  preview's left click go through it; buttons stay as they are. A slider's track pages towards a click, if a
+  slider's track is built. Confirm: a visitors row and Resume Game held 600 ms and clicked quickly, `windows` after
+  each, beside the original's readings in `hud.md`; a screenshot.
 - [ ] **Q124. `Material.Default` compiles a shader nothing draws with.** Found by Q67's sweep. `Material.UI.cs` builds
   it from `content/shaders/3d.shader` the first time `Material` is touched and keeps it for the life of the process.
   Its one reader is the guard in `Material.Delete`, which can fire only if something holds it, and nothing does. The
