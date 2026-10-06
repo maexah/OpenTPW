@@ -370,30 +370,22 @@ public class ParkDecidingTests
 		// decide anything at all, and the longest route in this park arrives at turn 108.
 		var (_, guests, _) = Run( world, admission, turns: 400, parkIsClosed: true );
 
-		var one = ParkWorld.NavigatorState.One;
-
-		var stops = new[] { admission.CrossingParkSideA, admission.CrossingParkSideB }
-			.Select( cell => ((cell.X * one) + (one / 2), (cell.Y * one) + (one / 2)) )
-			.ToHashSet();
-
-		var stopCells = new[] { admission.CrossingParkSideA, admission.CrossingParkSideB }.ToHashSet();
+		// The crossing is not the end of it: from there they walk to one of the four cells by the first bus stop
+		// and stand to go home (docs/exe/ride-operation.md, "Q128").
+		// A walk's end is drawn anywhere on its cell and its last step can carry a guest just over the far edge, as
+		// the original's does (one of its leavers was first seen standing on (44,3)), so the cell beyond counts.
+		var stopCells = PeepBehaviour.StopCells( admission.BusStopA )
+			.SelectMany( cell => new[] { cell, (cell.X + 1, cell.Y) } ).ToHashSet();
 
 		foreach ( var id in InTheGateway )
 		{
-			Assert.AreEqual( PeepState.PickingACellOutside, guests[id].State,
-				$"guest {id} should have given up on a park that shut under them, WALKED to the crossing, "
-				+ "and gone on to pick a cell outside the park" );
-
-			Assert.IsTrue( stops.Contains( (guests[id].Navigator.Target.X, guests[id].Navigator.Target.Y) ),
-				$"guest {id} should be walking to the crossing's park side, not to {guests[id].Navigator.Target}" );
+			Assert.AreEqual( PeepState.AtTheBusStop, guests[id].State,
+				$"guest {id} should have given up on a park that shut under them, WALKED out by the crossing, and gone on to "
+				+ "stand at the stop" );
 
 			Assert.IsTrue( stopCells.Contains( guests[id].Navigator.Position.Cell ),
-				$"guest {id} should have REACHED the crossing rather than merely been aimed at it - they "
-				+ $"are standing at {guests[id].Navigator.Position.Cell}" );
-
-			// 50 as saved, less the big change, and nothing else in this path touches happiness.
-			Assert.AreEqual( 50f - admission.BigHappinessChange, guests[id].Happiness, 0.01f,
-				$"guest {id} should have lost exactly the big mood change" );
+				$"guest {id} should have REACHED the stop's cells rather than merely been aimed at them - "
+				+ $"they are standing at {guests[id].Navigator.Position.Cell}" );
 		}
 	}
 

@@ -339,6 +339,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004cf455` | Arrival manager: re-tests the offloading flag (`+0x10`) after a load is called, so the same call goes on to ask the vehicle | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004cf489` | Arrival manager FUN_004cf3e0: with a load held and no vehicle answering, the load's vehicle summoned by its size | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004cf4b6` | FUN_004cf3e0, its tail, every sweep: FUN_0051a9d0, then the vehicle's status asked and the trigger by who waits at the stop | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x004cf4cb` | FUN_004cf3e0's tail, somebody at the stop: the vehicle's status asked; none, 0, or 2 with the load off summons or triggers | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x004cf526` | FUN_004cf3e0's tail: FUN_0051a2f0( 0 ), the summons at random, for a leaver with no vehicle current | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004cf533` | Arrival manager's tail, the arm with nobody at the stop (`FUN_0051a9d0` nought): lets the vehicle go at state 4 alone | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004cf56b` | Arrival manager, vehicle at 2: `JLE` on `mPeopleOnBus`; at nought or below the load is let go (`FUN_0041a960` re-marks `mTimeSig`, the flag cleared) | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004cf594` | Arrival manager: after dropping a guest, on to the tail at `0x004cf4b6`; the load is not let go on the drop's sweep | OpenTPW/World/Park/ParkPeople.cs  |

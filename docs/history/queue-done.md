@@ -4789,6 +4789,25 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   sweeps after the let-go (the original's 1328 to 1421); `load 3` summoned 1499, first guest 1535. The unchanged
   build stood the bus at the stop after its first circuit. Photographed. Eleven of twelve restored bugs fail; the
   twelfth is the summons at random, unreached until Q128b.
+- [x] **Q128b. Build the leavers' road to the stop.** From Q128 (`ride-operation.md`, "Q128: from the crossing to
+  the stop, and out"). States `0x13`, `0x14` and `0x15` in `PeepBehaviour`: the wait at the crossing on
+  `FUN_0051a760`, the four cells of stop A, the facing, the shuffle to the current vehicle's pair, and the going at
+  status 4 as the head of the cell with particle `0x13`; `ParkPeople` stops taking a guest out at `0x13`. The arrival
+  manager's tail in `StepArrivals`/`StepVehicle`: `FUN_0051a9d0`, the summons at random for a waiting leaver, the
+  trigger at status 4 with nobody waiting and at 0 or a spent 2 with somebody. The current vehicle then outlives its
+  load, so `ArrivalCell` and the gate's hurry must ask which vehicle is current (Q127's remark). Move the gate's two
+  leavers (`Judge`, `Wait`) to the crossing's cells. The ferry and the seaplane are stood as the park loads and
+  stand at their first spin, so a first summons sends them round empty (`ParkPeople.Summon`'s remark): make each at
+  its first summons instead, as the original does, started by `VAR_STATUS` 1. Q131's spent vehicle is the same machine: read it before
+  building, and build what the two share once. Confirm: the park shut with the door, `peeps` showing guests in 19,
+  20 and 21 on stop A's cells and going from there, beside the original's log in `ride-operation.md`; a screenshot
+  of guests standing at the stop.
+  Done 2026-10-06: the three states, `MayLeaveForTheStop`, `LeaverAtTheStop`, the tail's other arm and the summons at
+  random. The park shut with its door: nine set off, a seaplane and then a bus were summoned at random, and thirteen
+  of thirteen went from the pair of the vehicle then current, (42,3)/(43,3) or (42,5)/(43,5); the unchanged build
+  took all nine out at the crossing. Twenty-one of twenty-two restored bugs fail. Not done here: the ferry and the
+  seaplane are still stood as the park loads (a first summons finds them at their first spin and sets no trigger);
+  making them on demand is Q26's. The puff as a guest goes is counted.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

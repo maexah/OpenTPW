@@ -278,6 +278,9 @@ public sealed class ParkPeople : Entity
 			Raining = static () => ParkWeather.Current is { Drops: > 0 },
 			// And the bus's report, which a guest heading for the gate runs for.
 			BusStatus = BusStatus,
+			VehicleStatus = VehicleStatus,
+			LargerVehicleCurrent = () => LargerVehicleIsCurrent,
+			MayLeaveForTheStop = MayLeaveForTheStop,
 			// And who stands near a deciding guest, which only the holder of everybody's walk can say.
 			EntertainerBeside = EntertainerBeside,
 			BalloonBeside = BalloonBeside
@@ -460,13 +463,12 @@ public sealed class ParkPeople : Entity
 			BufferedDistance: 0, TailDistance: 0, TotalDistance: 0, StuckBits: 0 );
 
 		// <b>A deviation, and the reason is that the faithful path is not buildable yet.</b> The engine
-		// constructs a guest in Deciding and walks them in from outside through WalkingOutside and
-		// AtTheBusStop; the second takes its cells from FUN_004d8650's bus stops (park.md, "Arrivals")
-		// and is unbuilt (Q128). Left in Deciding out here a guest stands for ever: Decide looks for
-		// somewhere inside the park, and they are outside it and unadmitted. AtGate is the head of the
+		// constructs a guest in Deciding and walks them in from outside; how an arrival gets from the stop
+		// to the gate there is not decoded (the leavers' use of WalkingOutside and AtTheBusStop is:
+		// docs/exe/ride-operation.md, "Q128"). Left in Deciding out here a guest stands for ever: Decide looks
+		// for somewhere inside the park, and they are outside it and unadmitted. AtGate is the head of the
 		// admission sequence the original joins them to anyway - it picks a ticket booth and sends them
-		// to be charged - so this starts them there and skips the walk in. Put it back when Q128 builds
-		// AtTheBusStop.
+		// to be charged - so this starts them there and skips the walk in.
 		var guest = new ParkWorld.GuestState(
 			State: (int)PeepState.AtGate, SavedState: ParkWorld.GuestState.Deciding,
 			PersonType: type, Cash: cash, ExitLevel: exitLevel,
@@ -1428,28 +1430,27 @@ public sealed class ParkPeople : Entity
 	/// triggered, which starts its script's circuit from its last spin.
 	/// </summary>
 	/// <remarks>
-	/// <b>Not the original's in three ways.</b> Size nought with no vehicle current is the leavers' summons, one of
-	/// the three at random: unbuilt and counted until a leaver can wait at the stop (<c>docs/QUEUE.md</c> Q128b). All
-	/// three vehicles are stood as the park loads here, where the original makes one at its first summons and starts
-	/// it from its script's top by <c>VAR_STATUS</c> 1 (<c>0x0051a5ed</c>, the same call with the other variable). The
-	/// ferry and the seaplane so stand at their first spin, at status 2, and a first summons' trigger sends them on
-	/// from it empty: they go round once, are spent and forgotten, are summoned again and only then drop the load
-	/// (read from <c>Ferry.RSE</c> and <c>seaplane.RSE</c>, not run; Q128b). And the original falls back through the
-	/// other two when the wanted one's feature is missing; here a vehicle with no script is current all the same.
+	/// <b>Not the original's in two ways.</b> All three vehicles are stood as the park loads here, where the
+	/// original makes one at its first summons and starts it from its script's top by <c>VAR_STATUS</c> 1
+	/// (<c>0x0051a5ed</c>, the same call with the other variable). The ferry and the seaplane so stand at their first
+	/// spin, at status 2, from the start, and a first summons finds the drive in already done: it makes the vehicle
+	/// current and sets no trigger, which would send it on empty. And the original falls back through the other two
+	/// when the wanted one's feature is missing; here a vehicle with no script is current all the same.
 	/// </remarks>
 	private void Summon( int size )
 	{
 		if ( _arrivalVehicle == 0 )
 		{
-			if ( size == 0 )
-			{
-				Unimplemented.Report( "ARRIVAL_SUMMONS_AT_RANDOM" );
+			// Size nought is one of the three at random, the leavers' summons (FUN_0051a2f0). The original draws on the
+			// save's own seed; this project keeps no shared generator, so the arrivals' is drawn.
+			_arrivalVehicle = size != 0 ? size : VehicleAtRandom( _arrivalRandom );
+
+			Log.Info( $"People: the {ParkFixedItems.VehicleName( _arrivalVehicle )} summoned on mGameTick {State.GameTick}"
+				+ (size == 0 ? ", at random" : "") );
+
+			// One that is stood at its first spin already, unloading, has done its drive in: it is current and no more.
+			if ( VehicleScript( _arrivalVehicle ) is { } stood && stood[VehicleState] == VehicleIsUnloading )
 				return;
-			}
-
-			_arrivalVehicle = size;
-
-			Log.Info( $"People: the {ParkFixedItems.VehicleName( size )} summoned on mGameTick {State.GameTick}" );
 		}
 
 		if ( VehicleScript( _arrivalVehicle ) is { } vehicle && !vehicle.Set( VehicleTrigger, 1 ) )
@@ -1475,20 +1476,86 @@ public sealed class ParkPeople : Entity
 		=> _arrivalVehicle is 2 or 3 ? NoVehicle : VehicleStatus();
 
 	/// <summary>
-	/// The manager's tail, which it reaches on every sweep (<c>FUN_004cf3e0</c>, <c>0x004cf4b6</c>): it asks the
-	/// vehicle's status, which is what forgets a spent one (<see cref="VehicleStatus"/>), and with nobody standing at
-	/// the stop to go home it triggers a vehicle at status 4, the stand it makes for them, and no other
-	/// (<c>0x004cf533</c>). <c>docs/exe/park.md</c>, "The spent vehicle".
+	/// The manager's tail, which it reaches on every sweep (<c>FUN_004cf3e0</c>, <c>0x004cf4b6</c>). It asks the
+	/// vehicle's status, which is what forgets a spent one (<see cref="VehicleStatus"/>), and acts by whether a guest
+	/// stands at the stop to go home (<see cref="LeaverAtTheStop"/>). <b>Nobody</b>: a vehicle at status 4, the stand
+	/// it makes for them, is triggered and no other (<c>0x004cf533</c>). <b>Somebody</b>: with no vehicle one is
+	/// summoned at random; one at status 0 is triggered, and so is one at 2 whose load is all dropped
+	/// (<c>0x004cf4cb</c>..<c>0x004cf526</c>). <c>docs/exe/park.md</c>, "The spent vehicle".
 	/// </summary>
-	/// <remarks>
-	/// Whether a leaver stands there is <c>FUN_0051a9d0</c>: nobody can until the leavers' road is built, and with it
-	/// the other arm, which summons a vehicle for one and triggers it at 0 and at a spent 2
-	/// (<c>docs/QUEUE.md</c> Q128b).
-	/// </remarks>
 	private void StepVehicle()
 	{
-		if ( VehicleStatus() == VehicleIsLeaving )
+		var status = VehicleStatus();
+
+		if ( !LeaverAtTheStop() )
+		{
+			if ( status == VehicleIsLeaving )
+				Summon( 0 );
+
+			return;
+		}
+
+		if ( status == NoVehicle || status == 0 || (status == VehicleIsUnloading && _arrivalsRemaining == 0) )
 			Summon( 0 );
+	}
+
+	/// <summary>One of the three vehicles, each as likely - the summons for size nought (<c>% 3</c>, in <c>FUN_0051a2f0</c>).</summary>
+	internal static int VehicleAtRandom( Random random ) => ((int)((uint)random.Next() % 3)) + 1;
+
+	/// <summary>Whether a vehicle other than the small crowd's is current - <c>FUN_0051aad0</c>.</summary>
+	internal bool LargerVehicleIsCurrent => _arrivalVehicle is 2 or 3;
+
+	/// <summary>Where this park's guests are admitted and where they go home from, for whoever needs the cells.</summary>
+	internal ParkAdmission? Admission => _behaviour.Admission;
+
+	/// <summary>Holds a load with this many still to drop, or with nought lets go of it, so a test can keep a vehicle at any status with or without its load.</summary>
+	internal void HoldTheLoad( int stillToDrop = 1 )
+	{
+		_arrivalsRemaining = stillToDrop;
+		_offloading = stillToDrop > 0;
+	}
+
+	/// <summary>
+	/// Whether a guest stands at the stop to go home - <c>FUN_0051a9d0</c>: the head of any of stop A's four cells
+	/// is a guest in state <c>0x15</c>.
+	/// </summary>
+	internal bool LeaverAtTheStop()
+	{
+		if ( _behaviour.Admission is not { } admission )
+			return false;
+
+		foreach ( var (x, y) in PeepBehaviour.StopCells( admission.BusStopA ) )
+		{
+			if ( !ParkState.OnMap( x, y ) || State.CellAt( x, y ).Occupant is not (var head and not 0) )
+				continue;
+
+			if ( _byId.TryGetValue( head, out var guest ) && guest.State == PeepState.AtTheBusStop )
+				return true;
+		}
+
+		return false;
+	}
+
+	/// <summary>
+	/// Whether a guest at the crossing may set off for the stop - <c>FUN_0051a760</c>. Yes with no vehicle current,
+	/// or one that is not the small crowd's. With the bus current: no while it moves on (status 3); then yes if more
+	/// than nine of the load are still to drop; no while it drives in (1) or unloads (2); else yes. A spent bus is
+	/// forgotten by the asking, as <see cref="VehicleStatus"/> does it, and reads as none.
+	/// </summary>
+	internal bool MayLeaveForTheStop()
+	{
+		if ( _arrivalVehicle != 1 )
+			return true;
+
+		var status = VehicleStatus();
+
+		if ( status == 3 )
+			return false;
+
+		if ( _arrivalsRemaining > 9 )
+			return true;
+
+		return status is not (1 or 2);
 	}
 
 	/// <summary>
@@ -1844,16 +1911,12 @@ public sealed class ParkPeople : Entity
 			// into these states and deliberately does not act on either: it owns what a guest wants,
 			// never the list they are in.
 			//
-			// <b>The deviation is here rather than in the transition that reaches it.</b> The original
-			// walks a leaver HeadingForExit -> PickingACellOutside (19) -> AtTheBusStop (21) and
-			// deletes them at Leaving (17); 19 and 21 both take their cells from FUN_004d8650, the bus
-			// stops (park.md, "Arrivals"), and neither is built (Q128), so a guest reaching 19 would
-			// stand there for ever. So 19 is treated as the end of the walk rather than the middle of
-			// it. Rerouting HeadingForExit itself would change a transition the original really makes,
-			// which three tests pin.
+			// A leaver walks HeadingForExit -> PickingACellOutside (19) -> WalkingOutside (20) ->
+			// AtTheBusStop (21) and goes from there when a vehicle stands for them, which PeepBehaviour
+			// answers by putting them in Leaving; the original deletes them in that turn (FUN_0050b780).
 			for ( var at = _peeps.Count - 1; at >= 0; --at )
 			{
-				if ( _peeps[at].State is PeepState.PickingACellOutside or PeepState.Leaving )
+				if ( _peeps[at].State is PeepState.Leaving )
 					Depart( _peeps[at].ThingId );
 			}
 

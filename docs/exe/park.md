@@ -1631,7 +1631,8 @@ on (53,5) with the current vehicle the small crowd's (`+0x1da72a` and `+0x1da72c
 guest, (53,5), a bus load of six by hand all (53,5), and forty by the second vehicle all (53,3), which the original
 was not made to send. **Not the original's in two ways**: the original asks which vehicle is current, and a current
 vehicle is reused whatever size the load asked for (`0x0051a314`), where the vehicle here is the one the load's size
-names, the same until a vehicle outlives its load (the leavers' summons, Q128b; the headcount, Q26); and when the
+names; `ArrivalCell` asks the current vehicle since Q131b, and a vehicle summoned for a leaver can be the one a load
+then finds current; and when the
 wanted feature is missing `FUN_0051a2f0` falls back through the ferry, the seaplane and the bus, where a vehicle with
 no script here still has its guests made at the wanted vehicle's cell.
 
@@ -1674,10 +1675,10 @@ load's first guest was made on the call's own sweep.
 What it does not reproduce, each said at its site: the headcount, the floor alone (Q26); the two refusals, in world state 4 and at the cap, where the original calls a load
 of nobody or of what fits and still sends its vehicle (neither reached in Lost Kingdom); a load saved half-dropped,
 counted as `SAVED_ARRIVAL_LOAD` and not resumed; guests made with no script to ask, on the sweep after the one that calls the load;
-the leavers' half of the tail, their summons at random and the triggers at 0 and at a spent 2 (Q128b); and the ferry
+and the ferry
 and the seaplane, stood as the park loads where the original makes each at its first summons: they stand at their
-first spin at status 2, so a first summons' trigger sends them on empty, and the load drops only after that circuit
-is spent and the vehicle summoned again (read from their scripts, not run; Q128b). (The second load in the older measurement above dropped on the sweep that called
+first spin at status 2 from the start, in view at the arrivals' stop, and a first summons finds the drive in done
+and sets no trigger (`ParkPeople.Summon`; making them on demand is Q26's). (The second load in the older measurement above dropped on the sweep that called
 it because the spent bus was then sent round again: Q131b took that out.)
 
 **The score in the headcount is `FUN_004c8240`, and it is NOT decoded**. (`FUN_00519590`'s `+0x30` is the weather

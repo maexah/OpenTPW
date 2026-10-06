@@ -325,7 +325,7 @@ public class ParkAdmissionTests
 	/// somewhere rather than merely relabelled.
 	/// </para>
 	/// <para>
-	/// <b>They walk to the stop, arrive, and go on to <see cref="PeepState.PickingACellOutside"/></b>, so the
+	/// <b>They walk out by the crossing and on to the stop, where they stand in <see cref="PeepState.AtTheBusStop"/></b>, so the
 	/// run asserts the arrival as well as the aim: a guest only AIMED at a bus stop can still be standing at
 	/// the booths.
 	/// </para>
@@ -340,26 +340,22 @@ public class ParkAdmissionTests
 		// the pair FUN_004ff7f0 asks about.
 		var (_, guests) = Run( world, admission, () => 0, turns: 600 );
 
-		var one = ParkWorld.NavigatorState.One;
-
-		var stops = new[] { admission.BusStopA, admission.BusStopB }
-			.Select( cell => ((cell.X * one) + (one / 2), (cell.Y * one) + (one / 2)) )
-			.ToHashSet();
-
-		var stopCells = new[] { admission.BusStopA, admission.BusStopB }.ToHashSet();
+		// The crossing is not the end of it: from there they walk to one of the four cells by the first bus stop
+		// and stand to go home (docs/exe/ride-operation.md, "Q128").
+		// A walk's end is drawn anywhere on its cell and its last step can carry a guest just over the far edge, as
+		// the original's does (one of its leavers was first seen standing on (44,3)), so the cell beyond counts.
+		var stopCells = PeepBehaviour.StopCells( admission.BusStopA )
+			.SelectMany( cell => new[] { cell, (cell.X + 1, cell.Y) } ).ToHashSet();
 
 		foreach ( var id in AtTheBooths )
 		{
-			Assert.AreEqual( PeepState.PickingACellOutside, guests[id].State,
-				$"guest {id} should have given up on a gate that never opened, WALKED to a bus stop, and "
-				+ "gone on to pick a cell outside the park" );
-
-			Assert.IsTrue( stops.Contains( (guests[id].Navigator.Target.X, guests[id].Navigator.Target.Y) ),
-				$"guest {id} should be walking to a bus stop, not to {guests[id].Navigator.Target}" );
+			Assert.AreEqual( PeepState.AtTheBusStop, guests[id].State,
+				$"guest {id} should have given up on a gate that never opened, WALKED out by the crossing, and gone on to "
+				+ "stand at the stop" );
 
 			Assert.IsTrue( stopCells.Contains( guests[id].Navigator.Position.Cell ),
-				$"guest {id} should have REACHED a bus stop rather than merely been aimed at one - they "
-				+ $"are standing at {guests[id].Navigator.Position.Cell}" );
+				$"guest {id} should have REACHED the stop's cells rather than merely been aimed at them - "
+				+ $"they are standing at {guests[id].Navigator.Position.Cell}" );
 		}
 	}
 

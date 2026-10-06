@@ -597,6 +597,215 @@ public class ParkTickTests
 	}
 
 	/// <summary>
+	/// <b>A guest going home waits at the crossing while the bus loads, walks to the stop, has a vehicle summoned for
+	/// them, and goes when it stands</b> (<c>FUN_00500ad0</c>, <c>FUN_00500bd0</c>, <c>FUN_0051a760</c>, the manager's
+	/// tail; <c>docs/exe/ride-operation.md</c>, "Q128"). The test plays the vehicle's script by hand, all three
+	/// vehicles answering through the one script, so whichever the summons draws can be played.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> a leaver taken out at the crossing; not held while the bus drives in, unloads or moves on;
+	/// sent to stop B's cells; no vehicle summoned for one standing at the stop; a vehicle at 2 with its load off not
+	/// sent on for them; gone at a status other than 4; left standing at 4; the wrong pair of cells for the vehicle that came; a guest on
+	/// the stop who is not going home counted as waiting; a vehicle stood at its first spin triggered when summoned; the
+	/// more-than-nine arm of the wait dropped or moved; a guest who goes left on their cell until the sweep's end; one who is not
+	/// the head of their cell going; the vehicle sent off from 4 while one still stands there.
+	/// </remarks>
+	[TestMethod]
+	public void ALeaverWaitsAtTheCrossingWalksToTheStopAndGoesWhenTheVehicleStands()
+	{
+		var world = World();
+		var catalogue = new ParkItemCatalogue( Theme, data );
+		var rides = new ParkRides( Theme, world, catalogue, data );
+		var busThing = world.ArrivalVehicleForSmallCrowd;
+
+		Assert.IsTrue( catalogue.TryGet( 1600, out var busItem ), "the jungle's catalogue has the bus" );
+		var script = rides.Scheduler.Find( rides.Scheduler.Spawn( ParkRides.ScriptPathFor( busItem ) ) );
+		var standingBefore = ParkFixedItems.Current;
+
+		const int seaplaneThing = 60000, ferryThing = 60001;
+
+		StandVehicles( ("bus", busThing), ("seaplane", seaplaneThing), ("ferry", ferryThing) );
+
+		// Seeded, so the vehicle the summons draws and the cells the walks end on are the same every run.
+		var people = new ParkPeople( world, new ParkBalance( Theme, easyMode: true ),
+			() => ParkRides.GateIsOpen, new ParkState( world ), catalogue,
+			thingId => thingId is var id && (id == busThing || id == seaplaneThing || id == ferryThing)
+				? script : rides.Scheduler.Find( rides.ScriptFor( thingId ) ),
+			random: new Random( 3 ), behaviourRandom: new Random( 3 ) );
+
+		void Plays( int status )
+		{
+			script!.Set( "VAR_TRIGGER", 0 );
+			script.Set( "VAR_STATUS", status );
+		}
+
+		int Triggered() => script!["VAR_TRIGGER"];
+
+		try
+		{
+			Assert.IsNotNull( script );
+			EnterPark();
+			Plays( 0 );
+
+			// A guest standing on the stop who is not going home is nobody waiting.
+			var stop = people.Admission!.BusStopA;
+			var cells = PeepBehaviour.StopCells( stop );
+
+			Assert.AreNotEqual( 0, people.Admit( stop.X, stop.Y ) );
+			Assert.IsFalse( people.LeaverAtTheStop(), "a guest on the stop's cell who is not in state 0x15 is not waiting" );
+
+			// The bus current and driving in, and a guest at the crossing who is going home.
+			people.ForceArrival( 1 );
+			Sweep( people );
+			Plays( 1 );
+
+			var id = people.Admit( 47, 9 );
+			var guest = people.Guests[id];
+			guest.SetState( PeepState.PickingACellOutside, people.State.GameTick, new Random( 1 ) );
+
+			foreach ( var status in new[] { 1, 2, 3 } )
+			{
+				Plays( status );
+				people.HoldTheLoad();
+				Sweep( people );
+				Sweep( people );
+				Assert.AreEqual( PeepState.PickingACellOutside, guest.State, $"the bus at {status}: they wait at the crossing" );
+				Assert.IsTrue( people.Guests.ContainsKey( id ), "and are not taken out there" );
+			}
+
+			// More than nine of the load still to drop: only the bus moving on holds them (FUN_0051a760).
+			foreach ( var (status, may) in new[] { (1, true), (2, true), (3, false), (5, true) } )
+			{
+				Plays( status );
+				people.HoldTheLoad( 10 );
+				Assert.AreEqual( may, people.MayLeaveForTheStop(), $"ten still to drop, the bus at {status}" );
+				people.HoldTheLoad( 9 );
+				Assert.AreEqual( status == 5, people.MayLeaveForTheStop(), $"nine still to drop, the bus at {status}" );
+			}
+
+			people.HoldTheLoad( 0 );
+			Plays( 5 );
+			Sweep( people );
+			Assert.AreEqual( PeepState.WalkingOutside, guest.State, "the bus gone on: they set off" );
+
+			for ( var sweep = 0; sweep < 300 && guest.State != PeepState.AtTheBusStop; ++sweep )
+				Sweep( people );
+
+			Assert.AreEqual( PeepState.AtTheBusStop, guest.State, "they reach the stop" );
+			Assert.IsTrue( cells.Any( cell => Near( cell, guest.Navigator.Position.Cell ) ),
+				$"on one of stop A's four cells, not at {guest.Navigator.Position.Cell}" );
+			Assert.IsTrue( people.LeaverAtTheStop() );
+			Assert.AreEqual( PeepBehaviour.ArrivalHeading, people.WalkFor( id )!.Heading, "facing as for the bus, the one current" );
+
+			// The bus spent and forgotten: with a leaver standing there one is summoned, at random of the three.
+			Plays( 6 );
+			Sweep( people );
+			Plays( 0 );
+			Sweep( people );
+			Assert.AreNotEqual( ParkPeople.NoVehicle, people.VehicleStatus(), "a vehicle is summoned for them" );
+			Assert.AreEqual( 1, Triggered(), "and triggered" );
+
+			var larger = people.LargerVehicleIsCurrent;
+			var pair = larger ? cells[2..] : cells[..2];
+
+			// Driving in, they walk to that vehicle's pair if they are not on it already.
+			Plays( 1 );
+
+			for ( var sweep = 0; sweep < 300; ++sweep )
+			{
+				Sweep( people );
+
+				if ( guest.State == PeepState.AtTheBusStop && pair.Any( cell => Near( cell, guest.Navigator.Position.Cell ) ) )
+					break;
+			}
+
+			Assert.AreEqual( PeepState.AtTheBusStop, guest.State );
+			Assert.IsTrue( pair.Any( cell => Near( cell, guest.Navigator.Position.Cell ) ),
+				$"on the {(larger ? "larger vehicle's" : "bus's")} pair, not at {guest.Navigator.Position.Cell}" );
+
+			// Standing at the arrivals' stop with no load to drop and somebody waiting: sent on.
+			Plays( 2 );
+			Sweep( people );
+			Assert.AreEqual( 1, Triggered(), "at 2 with its load off, it is sent on for them" );
+			Assert.IsTrue( people.Guests.ContainsKey( id ), "they do not go at 2" );
+
+			// A second guest on the same cell, linked after them and so the head of its list, and visited after them
+			// in the sweep: at 4 only the head goes, and the vehicle is not sent off while one still stands there.
+			var (cellX, cellY) = guest.Navigator.Position.Cell;
+			var second = people.Admit( cellX, cellY );
+
+			people.Guests[second].SetState( PeepState.AtTheBusStop, people.State.GameTick, new Random( 1 ) );
+			Assert.AreEqual( second, (int)people.State.CellAt( cellX, cellY ).Occupant, "the newcomer heads the cell" );
+
+			Plays( 4 );
+			Sweep( people );
+			Assert.IsFalse( people.Guests.ContainsKey( second ), "at 4 the head of the cell is gone" );
+			Assert.IsTrue( people.Guests.ContainsKey( id ), "and the one behind, whose turn came first, is not" );
+			Assert.AreEqual( 0, Triggered(), "with one still at the stop the vehicle is not sent off" );
+
+			// A third behind the first, who now heads the cell and is visited first: they go inside their own turn,
+			// so the one behind is the head later in the same sweep and goes too; and with nobody left at the stop
+			// the vehicle is sent off on that sweep, the manager's turn coming after every guest's.
+			var third = people.Admit( cellX, cellY );
+
+			people.Guests[third].SetState( PeepState.AtTheBusStop, people.State.GameTick, new Random( 1 ) );
+			people.State.Forget( id );
+			people.State.StandOn( id, cellX, cellY );
+			Assert.AreEqual( id, (int)people.State.CellAt( cellX, cellY ).Occupant, "the first guest heads the cell" );
+
+			Sweep( people );
+			Assert.IsFalse( people.Guests.ContainsKey( id ), "they are gone" );
+			Assert.IsFalse( people.Guests.ContainsKey( third ), "and so is the one who stood behind them, on the same sweep" );
+			Assert.AreEqual( 1, Triggered(), "and with nobody left at the stop it is sent off" );
+
+			// A vehicle found standing at its first spin, unloading, when it is first summoned is made current and
+			// not triggered: its drive in is done, and a trigger would send it on empty.
+			Plays( 6 );
+			Sweep( people );
+			Plays( 2 );
+			people.ForceArrival( 1 );
+			Sweep( people );
+			Assert.AreEqual( 0, Triggered(), "summoned while it stands unloading: not triggered" );
+			Assert.AreNotEqual( ParkPeople.NoVehicle, people.VehicleStatus(), "and current" );
+		}
+		finally
+		{
+			people.Delete();
+			rides.Delete();
+			Entity.ApplyDeletions();
+			typeof( ParkFixedItems ).GetProperty( nameof( ParkFixedItems.Current ) )!.SetValue( null, standingBefore );
+		}
+	}
+
+	/// <summary>A cell, or the one beyond it across: a walk's last step can carry a guest just over the far edge.</summary>
+	private static bool Near( (int X, int Y) cell, (int X, int Y) at ) => at.Y == cell.Y && at.X - cell.X is 0 or 1;
+
+	/// <summary>
+	/// <b>The stop's four cells</b> (<c>FUN_00500ad0</c>'s table): the stop given and the cell across, and the same two
+	/// rows out.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the rows added; the cell across taken back, not on.</remarks>
+	[TestMethod]
+	public void TheStopsFourCellsAreStopAs()
+	{
+		CollectionAssert.AreEqual( new[] { (42, 5), (43, 5), (42, 3), (43, 3) }, PeepBehaviour.StopCells( (42, 5) ) );
+	}
+
+	/// <summary>
+	/// <b>The summons for a leaver draws one of the three vehicles, each as likely</b> (<c>% 3</c>, in <c>FUN_0051a2f0</c>).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> always the bus; a fourth vehicle; nought.</remarks>
+	[TestMethod]
+	public void TheSummonsAtRandomDrawsEachOfTheThreeVehicles()
+	{
+		var random = new Random( 7 );
+		var drawn = Enumerable.Range( 0, 600 ).Select( _ => ParkPeople.VehicleAtRandom( random ) ).ToArray();
+
+		CollectionAssert.AreEquivalent( new[] { 1, 2, 3 }, drawn.Distinct().ToArray() );
+		Assert.IsTrue( drawn.GroupBy( vehicle => vehicle ).All( group => group.Count() is > 150 and < 250 ), "each about a third" );
+	}
+
+	/// <summary>
 	/// <b>The bus is triggered by a summons and by nothing else, and a spent bus stays away</b> (<c>FUN_004cf3e0</c>,
 	/// <c>FUN_0051a2f0</c>, <c>FUN_0051a690</c>; <c>docs/exe/park.md</c>, "The spent vehicle"). The test plays
 	/// <c>bus.RSE</c>'s part by hand: idle with no load, nothing triggers it; a load summons it; it is not triggered

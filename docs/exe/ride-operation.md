@@ -1415,11 +1415,10 @@ nought or less from any state, is gone. Read with it, first-hand:
 - **The gate's leavers aim at the crossing too.** `FUN_004ff9d0`'s far-too-expensive arm and `FUN_004ff7f0`'s
   waited-out arm each write `+0x188` = 1, send the guest to `FUN_004d86d0( draw & 1 )`, set state `0x12` and then write
   `mExitLevel` = 0; the expensive arm's leaver (happiness byte nought after the medium change) gets the state and the
-  nought with no destination. OpenTPW writes the nought on all three and still aims the first two at a bus stop
-  (Q128).
+  nought with no destination. OpenTPW writes the nought on all three and aims the first two at the crossing.
 
-**Q128: from the crossing to the stop, and out.** Decoded first-hand and run in the original; nothing of it is built
-(Q128b). A leaver's four cells are **stop A's**: `FUN_004d8650( 0 )`, `FixedItemInfo.BusStopA`, then one across
+**Q128: from the crossing to the stop, and out.** Decoded first-hand and run in the original; built by Q128b, below.
+A leaver's four cells are **stop A's**: `FUN_004d8650( 0 )`, `FixedItemInfo.BusStopA`, then one across
 (`+1`), two rows out (`-0x100`) and both (`-0xff`): in Lost Kingdom (42,5), (43,5), (42,3), (43,3). Stop B is never a
 leaver's. The first pair is the bus's and the second a larger vehicle's, by `FUN_0051aad0` (a vehicle current and not
 `mArrivalVehicle_Size1`'s).
@@ -1456,9 +1455,20 @@ reaches them. One guest was first seen in `0x15` on (44,3), a cell of none of th
 walk's end is drawn inside the cell and can stand over its edge. Guests turned away at the shut gate afterwards took
 the same road.
 
-**OpenTPW** takes a leaver out on reaching `0x13` at the crossing, four rows short (`ParkPeople`); the gate's two
-leavers aim at either bus stop (`PeepBehaviour.Judge`, `Wait`), where the listing sends them to the crossing first.
-The build is Q128b.
+**OpenTPW** (Q128b): `PeepBehaviour`'s cases for `PickingACellOutside`, `WalkingOutside` and `AtTheBusStop` are the
+three turns above, on `StopCells`; `ParkPeople.MayLeaveForTheStop` is `FUN_0051a760`, `LeaverAtTheStop` is
+`FUN_0051a9d0`, and `StepVehicle` is the manager's tail with both arms; `Summon( 0 )` draws one of the three vehicles
+(`VehicleAtRandom`, on the arrivals' generator, the original's on the save's seed). A guest who goes comes off their cell
+inside their own turn, as the original's delete does it (`FUN_0050b780` to the unlink `FUN_004d9280`), so the one
+behind is the head later in the same sweep; they are put in `Leaving` and taken out of the park's lists as the sweep's
+turns end. Measured in Lost Kingdom, the park shut with the entry-price screen's door:
+nine guests set off for the crossing; the seaplane was summoned at random on `mGameTick` 845 and four went from
+(42,3); spent on 930 and summoned again, five more from (42,3) and (43,3); a bus summoned at random on 1163, three
+from (42,5) and (43,5); one turned away at the shut gate later from (42,5): **thirteen of thirteen from the pair of
+the vehicle then current**, none taken out at the crossing (and the same thirteen of thirteen on a second run, two
+going from one cell on one tick). The build before it took all nine out at the crossing.
+Not built: the particle `0x13` as a guest goes (counted, `LEAVER_BOARDING_PARTICLE`); the walking mode `+0x188`.
+Not pinned by a test: the facing `0x7ff` for a larger vehicle.
 
 **Q111: the arms either side of the leave test are counted**, none built, the listing re-read first-hand
 (`0x004fecb9`..`0x004ff3ae`; the corrections are in the list above). `PeepBehaviour.CountBeforeLeaving` counts

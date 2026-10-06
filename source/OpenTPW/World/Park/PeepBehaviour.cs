@@ -309,6 +309,20 @@ public sealed class PeepBehaviour
 	/// </summary>
 	public const int ArrivalHeading = 0x400;
 
+	/// <summary>The facing a guest who reaches the stop takes while a vehicle other than the bus is current (case <c>0x14</c>).</summary>
+	public const int LargerVehicleHeading = 0x7ff;
+
+	/// <summary>The vehicle script's <c>VAR_STATUS</c> while it stands for whoever is going home - <c>bus.RSE</c> 84.</summary>
+	public const int VehicleStandsForLeavers = 4;
+
+	/// <summary>
+	/// The four cells a guest goes home from - <c>FUN_00500ad0</c>'s table: the first bus stop
+	/// (<c>FUN_004d8650( 0 )</c>), the cell across from it, and the same two rows nearer the map's edge. The first
+	/// pair is the bus's and the second a larger vehicle's. Lost Kingdom's are (42,5), (43,5), (42,3), (43,3).
+	/// </summary>
+	internal static (int X, int Y)[] StopCells( (int X, int Y) stopA )
+		=> [stopA, (stopA.X + 1, stopA.Y), (stopA.X, stopA.Y - 2), (stopA.X + 1, stopA.Y - 2)];
+
 	/// <summary>
 	/// The last state <see cref="Step"/> was handed that its switch has <b>no case for at all</b>, or null
 	/// if every state it has been given was answered by something.
@@ -573,16 +587,81 @@ public sealed class PeepBehaviour
 
 				break;
 
-			// Walking about outside the park, which ends at the bus stop.
-			//
-			// The original picks one of two headings here depending on whether a bus is due, and takes the
-			// same 0x400 this does when none is. The other heading needs the arrival vehicle's state, which
-			// this turn does not ask, so the no-bus reading is what is reproduced.
+			// Walking to the stop to go home - case 0x14 of FUN_005019f0. Arrived, they face the way the vehicle
+			// that is current asks (0x7ff for a larger one, FUN_0051aad0, else 0x400) and stand at the stop. Stuck,
+			// the original logs "Got stuck walking around outside" to its bare RET and does nothing else.
 			case PeepState.WalkingOutside:
-				if ( Walked( peep, walk, playing ) == WalkVerdict.Arrived )
+				switch ( Walked( peep, walk, playing ) )
 				{
-					walk.Heading = ArrivalHeading;
-					peep.SetState( PeepState.AtTheBusStop, tick, _random );
+					case WalkVerdict.Arrived:
+						walk.Heading = LargerVehicleCurrent() ? LargerVehicleHeading : ArrivalHeading;
+						peep.SetState( PeepState.AtTheBusStop, tick, _random );
+
+						break;
+
+					case WalkVerdict.CannotReach:
+						Log.Info( $"Person {peep.ThingId}: got stuck walking around outside, tick {tick}" );
+
+						break;
+
+					default:
+						break;
+				}
+
+				break;
+
+			// At the crossing, about to set off for the stop - FUN_00500ad0. They wait there for as long as the bus
+			// is driving in, unloading or moving on (FUN_0051a760, MayLeaveForTheStop); then one of stop A's four
+			// cells by the first draw, a point on it by two more, the walk, and state 0x14
+			// (docs/exe/ride-operation.md, "Q128").
+			case PeepState.PickingACellOutside:
+				if ( Admission is { } leaving && MayLeaveForTheStop() )
+				{
+					SendToTheStop( peep, walk, StopCells( leaving.BusStopA )[_random.Next() & 3] );
+					peep.SetState( PeepState.WalkingOutside, tick, _random );
+				}
+
+				break;
+
+			// Standing at the stop - FUN_00500bd0, by what the vehicle reports. At 4, the stand it makes for them,
+			// whoever is the head of their cell's list goes: particle 0x13 at them and the guest deleted. While it
+			// is at 1, 2 or 3, one who is on neither cell of that vehicle's pair walks to one of the pair. At
+			// anything else, the vehicle away included, they stand.
+			case PeepState.AtTheBusStop:
+				if ( Admission is not { } standing )
+					break;
+
+				var reported = VehicleStatus();
+				var (hereX, hereY) = walk.Position.Cell;
+
+				if ( reported == VehicleStandsForLeavers )
+				{
+					if ( State.CellAt( hereX, hereY ).Occupant == peep.ThingId )
+					{
+						// The puff they go in is a particle effect this project does not spawn from here.
+						Unimplemented.Report( "LEAVER_BOARDING_PARTICLE" );
+						Log.Info( $"Person {peep.ThingId}: gone from the stop at ({hereX},{hereY}), tick {tick}" );
+
+						peep.SetState( PeepState.Leaving, tick, _random );
+
+						// The original deletes them here, inside their own turn (FUN_0050b780), which takes them off
+						// their cell at once: whoever stood behind them is its head for the rest of this sweep and
+						// can go in it too. So they come off the cell now, and are not stood on it again below.
+						State.Forget( peep.ThingId );
+
+						return;
+					}
+				}
+				else if ( reported is 1 or 2 or 3 )
+				{
+					var cells = StopCells( standing.BusStopA );
+					var first = LargerVehicleCurrent() ? 2 : 0;
+
+					if ( (hereX, hereY) != cells[first] && (hereX, hereY) != cells[first + 1] )
+					{
+						SendToTheStop( peep, walk, cells[first + (_random.Next() & 1)] );
+						peep.SetState( PeepState.WalkingOutside, tick, _random );
+					}
 				}
 
 				break;
@@ -730,14 +809,7 @@ public sealed class PeepBehaviour
 			// over the threshold, and with the errand unbuilt the guest carries the litter (counted in CountBeforeLeaving).
 			// The separate "Minor Decision" (FUN_004fd570) stays in state 10.
 			//
-			// PickingACellOutside (19) and AtTheBusStop (21) walk to cells from FUN_004d8650, which reads
-			// FixedItemInfo.BusStopA/B (docs/exe/park.md, "Arrivals"), and consult the bus - FUN_0051a690
-			// for its script state, FUN_0051aad0 for whether one is here. The bus runs its script
-			// (ParkFixedItems stands it, ParkRides binds it). Both stay unbuilt until their decode is checked
-			// whole (Q128).
 			case PeepState.GoingToMinorDestination:
-			case PeepState.PickingACellOutside:
-			case PeepState.AtTheBusStop:
 				break;
 
 			// <b>And a guard for a state with no case.</b> A guest put into one would stand still for ever
@@ -878,7 +950,7 @@ public sealed class PeepBehaviour
 	/// as <see cref="Wait"/>'s does, so a guest put back to Deciding by a walk that sticks leaves again on that
 	/// turn (<see cref="WantsToLeave"/>). The 1 the far-too-expensive arm writes to <c>+0x188</c>, the walking
 	/// mode, is not reproduced: every walk here is mode 0 (<see cref="ParkPeople.WalkingMode"/>). Both arms aim
-	/// at a bus stop where the original's aim at <c>FUN_004d86d0</c>'s cells, the crossing's park side (Q128).
+	/// at <c>FUN_004d86d0</c>'s cells, the crossing's park side, and go on from there to the stop.
 	/// </para>
 	/// </summary>
 	private void Judge( Peep peep, PeepWalk walk, ParkAdmission admission, int tick )
@@ -889,7 +961,7 @@ public sealed class PeepBehaviour
 		{
 			// "Person: park far too expensive" - they set off for the bus stop and give up on the park.
 			case ParkAdmission.Opinion.FarTooExpensive:
-				SendTo( State, peep, walk, EitherOf( admission.BusStopA, admission.BusStopB ) );
+				SendTo( State, peep, walk, EitherOf( admission.CrossingParkSideA, admission.CrossingParkSideB ) );
 
 				// Thought 6, dissatisfied, after the destination (0x004ffa44).
 				Think( peep, 6 );
@@ -960,7 +1032,7 @@ public sealed class PeepBehaviour
 				return;
 			}
 
-			SendTo( State, peep, walk, EitherOf( admission.BusStopA, admission.BusStopB ) );
+			SendTo( State, peep, walk, EitherOf( admission.CrossingParkSideA, admission.CrossingParkSideB ) );
 			peep.SetState( PeepState.HeadingForExit, tick, _random );
 			peep.ExitLevel = 0;
 
@@ -2245,6 +2317,15 @@ public sealed class PeepBehaviour
 	/// </summary>
 	internal Func<int> BusStatus { get; set; } = static () => -1;
 
+	/// <summary>What the current arrival vehicle reports, whichever it is - <c>FUN_0051a690</c>; -1 with none.</summary>
+	internal Func<int> VehicleStatus { get; set; } = static () => -1;
+
+	/// <summary>Whether a vehicle other than the small crowd's is current - <c>FUN_0051aad0</c>.</summary>
+	internal Func<bool> LargerVehicleCurrent { get; set; } = static () => false;
+
+	/// <summary>Whether a guest at the crossing may set off for the stop - <c>FUN_0051a760</c>.</summary>
+	internal Func<bool> MayLeaveForTheStop { get; set; } = static () => true;
+
 	/// <summary>What the choice reads of a guest: their kind, needs and histories.</summary>
 	private static ParkRideScore.Wants WantsOf( Peep peep )
 		=> new( peep.PersonType, peep.Thirst, peep.Hunger, peep.Toilet, peep.Vomit,
@@ -2765,6 +2846,20 @@ public sealed class PeepBehaviour
 					yield return (atX, atY);
 			}
 		}
+	}
+
+	/// <summary>
+	/// Sends a leaver to a point on one of the stop's cells: two draws, the low byte of each the place across and
+	/// down the cell (<c>FUN_00500ad0</c>), through <c>FUN_004fa5f0</c>.
+	/// </summary>
+	private void SendToTheStop( Peep peep, PeepWalk walk, (int X, int Y) cell )
+	{
+		var across = _random.Next() & 0xff;
+		var down = _random.Next() & 0xff;
+
+		SendTo( State, peep, walk, new FixedVector(
+			(cell.X * PeepNavigator.One) + (across * (PeepNavigator.One / 256)),
+			(cell.Y * PeepNavigator.One) + (down * (PeepNavigator.One / 256)) ) );
 	}
 
 	/// <summary>The near edge of a cell plus a clamped roll - see <see cref="SetRandomDest"/>.</summary>
