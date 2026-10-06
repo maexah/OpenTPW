@@ -40,19 +40,16 @@ the original.
 
 **The 2026-10-06 review's leftovers come first, at Alexah's word (2026-10-06).**
 
-- [ ] **Q235b. A new guest's walk in is aimed by the wrong two draws.** Found by Q235. `PeepBehaviour.WalkInDraws`
-  takes the fourth draw from the id for the roadside cell and the fifth for the place across; the original's are
-  the second and the third, thirteen of thirteen on both by the walkers' own targets (`docs/exe/park.md`, "From the
-  stop to the booths"; `~/.cache/tpw-harnesses/q235/orig/a.log`: guest 43 is aimed at (47.742,5.781), not
-  (47.895,5.781)). Take the two draws after the child's bank, and correct the remarks and `ParkPeopleTests` that
-  say fourth. Confirm: guest 43's aim in the `peeps` census, predicted first, and a screenshot of them at the
-  roadside.
 - [ ] **Q237. One Full Simulation test failed twice with no message kept.** Found by the 2026-10-06 review (fix 6).
   `LevelFullSimulationParkTests.FullSimulationCreatesTwelveThingsWithRegularLoans` failed once in the review's
   put-back runs and once at a gate, about two whole-suite runs in a hundred and twenty, and neither output was kept.
   Nothing it reads is drawn (`FreshPark` takes no generator; its `RandomSeed` is the clock's and nothing in the test
   reads it), and forty whole-suite runs after Q234's fix were green (`~/.cache/tpw-harnesses/rv6/loop.log`). When it
   next fails, keep the run's output first: the loop in `rv6` saves any failing run whole. No game run.
+  From Q235b: `ParkTickTests.TheBusIsHeldAtTheStopUntilTheSweepAfterItsLastGuest` failed once in 25 runs of its
+  class beside `ParkPeopleTests` ("Expected:<0>. Actual:<1>. so the bus is NOT let go on the last drop's sweep"),
+  never alone. Its `ParkPeople` takes no generators, and a leaver standing at the stop triggers a bus at 2 with
+  nobody left to drop (`StepVehicle`): a likely cause, not shown.
 - [ ] **Q238. Seven leads from the 2026-10-06 review that nobody checked.** They were low and unverified, so they
   were left off its list (`~/.cache/tpw-harnesses/review-run-2026-10-06/LEDGER.md`, the lines marked OPEN, "lead" or
   "not checked", and what fixes 8 and 9 counted without a queue item). Check each first-hand; then mend it, say it

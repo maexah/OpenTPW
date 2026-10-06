@@ -2875,19 +2875,16 @@ public sealed class PeepBehaviour
 
 	/// <summary>
 	/// The two draws of a new guest's walk in, which the guest's id alone decides: the constructor reseeds the
-	/// park's generator with the id word (<c>0x004fb19e</c>), and the fourth draw from there picks the roadside cell
-	/// by its low bit (<c>0x004fb206</c>) and the fifth's low byte the place across it (<c>0x004fb221</c>). The
-	/// first of the three before them is the child's bank (<see cref="ParkSpriteBanks.ChildOf"/>); the other two
-	/// are taken as made inside the sprite's set-up (<c>FUN_004d4140</c>). <b>Not the original's</b>: measured on
-	/// thirteen walker targets, its cell is the second draw and its place the third (<c>docs/exe/park.md</c>,
-	/// "From the stop to the booths"; <c>docs/QUEUE.md</c> Q235b).
+	/// park's generator with the id word (<c>0x004fb19e</c>), and the second draw from there picks the roadside cell
+	/// by its low bit (<c>0x004fb206</c>) and the third's low byte the place across it (<c>0x004fb221</c>). The
+	/// first is the child's bank (<see cref="ParkSpriteBanks.ChildOf"/>); the sprite's set-up
+	/// (<c>FUN_004d4140</c>) makes none (<c>docs/exe/park.md</c>, "From the stop to the booths").
 	/// </summary>
 	internal static (bool SideB, int Across) WalkInDraws( int thingId )
 	{
 		var state = (uint)(thingId & 0xffff);
 
-		for ( var i = 0; i < 3; ++i )
-			ParkGenerator.Draw( ref state );
+		ParkGenerator.Draw( ref state );
 
 		var sideB = (ParkGenerator.Draw( ref state ) & 1) != 0;
 

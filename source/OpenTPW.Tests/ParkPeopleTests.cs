@@ -146,29 +146,30 @@ public class ParkPeopleTests
 	}
 
 	/// <summary>
-	/// The roadside cell a new guest walks to is picked by their id alone: the constructor reseeds the park's
-	/// generator with it and the fourth draw's low bit chooses (<c>0x004fb19e</c>, <c>0x004fb206</c>). <b>The
-	/// oracle is the original itself</b>: the thirteen guests of its first load, read from its memory, entered
-	/// state 1 on these cells.
+	/// The point a new guest walks to at the roadside is picked by their id alone: the constructor reseeds the park's
+	/// generator with it and the second draw's low bit chooses (<c>0x004fb19e</c>, <c>0x004fb206</c>), the third's
+	/// low byte the place across. <b>The oracle is the original itself</b>: the thirteen guests of a load, each
+	/// walker's own target read from its memory as it was made (<c>docs/exe/park.md</c>, "From the stop to the
+	/// booths").
 	/// </summary>
 	[TestMethod]
-	public void TheRoadsideCellIsPickedByTheGuestsIdAsTheOriginalPickedIt()
+	public void TheWalkInIsAimedByTheGuestsIdAsTheOriginalAimedIt()
 	{
-		var seen = new (int Id, int X)[]
+		var seen = new (int Id, double AimX)[]
 		{
-			(38, 47), (43, 47), (44, 48), (45, 47), (46, 48), (47, 48), (48, 47), (49, 48), (50, 47), (51, 48),
-			(52, 48), (53, 48), (54, 48)
+			(38, 47.1289), (33, 47.2656), (44, 48.1289), (45, 47.8320), (46, 48.3008), (47, 48.7773), (48, 47.3555),
+			(49, 48.5156), (50, 47.2188), (51, 48.0898), (52, 48.1641), (53, 47.9688), (54, 48.0977)
 		};
 
-		foreach ( var (id, x) in seen )
-			Assert.AreEqual( x, PeepBehaviour.WalkInDraws( id ).SideB ? 48 : 47, $"guest {id}" );
+		foreach ( var (id, aimX) in seen )
+		{
+			var (sideB, across) = PeepBehaviour.WalkInDraws( id );
 
-		// The place across is the next draw's low byte. The original's memory was not read for it; these are the
-		// listing's generator worked by hand from the id (0x00516330: times 0x19660d, plus 0x3c6ef35f, rolled right 13).
-		Assert.AreEqual( 90, PeepBehaviour.WalkInDraws( 38 ).Across );
-		Assert.AreEqual( 229, PeepBehaviour.WalkInDraws( 43 ).Across );
-		Assert.AreEqual( 81, PeepBehaviour.WalkInDraws( 44 ).Across );
-		Assert.AreEqual( 245, PeepBehaviour.WalkInDraws( 52 ).Across );
+			Assert.AreEqual( aimX, (sideB ? 48 : 47) + (across / 256.0), 0.00006, $"guest {id}" );
+		}
+
+		// The first new guest of Lost Kingdom's shipped park here, whom the original's load did not make.
+		Assert.AreEqual( (false, 190), PeepBehaviour.WalkInDraws( 43 ) );
 	}
 
 	/// <summary>

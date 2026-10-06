@@ -491,8 +491,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004fb1d0` | Guest constructor: FUN_004fa990 on the cell the guest is made on decides the first state | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004fb1e4` | Guest constructor: on a park cell, a visitor number and state 6 | OpenTPW.Tests/ParkPeopleTests.cs  |
 | `0x004fb1f5` | Guest constructor: off the park's cells, the walk to the crossing's bus-stop side begins (to 0x004fb24d) | OpenTPW.Tests/ParkPeopleTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
-| `0x004fb206` | Guest constructor: the low bit of the fourth draw after the reseed picks the roadside cell (FUN_004d8710) | OpenTPW.Tests/ParkPeopleTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
-| `0x004fb221` | Guest constructor: the low byte of the fifth draw is the place across the roadside cell | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fb206` | Guest constructor: the low bit of the second draw after the reseed picks the roadside cell (FUN_004d8710) | OpenTPW.Tests/ParkPeopleTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fb221` | Guest constructor: the low byte of the third draw is the place across the roadside cell | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fb22b` | Guest constructor: the place down the roadside cell, a fixed 0xc8 of 256 | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fb24d` | Guest constructor: FUN_004fa5f0 routes the walk to the roadside point | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fb259` | Guest constructor: no route to the roadside, state 6 instead of state 0 | OpenTPW.Tests/ParkPeopleTests.cs OpenTPW/World/Park/ParkPeople.cs  |

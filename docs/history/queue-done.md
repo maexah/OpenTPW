@@ -4885,6 +4885,21 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   measured"). In the original the thirteen ended 0.019 to 0.158 of a cell short, and guest 53, aimed at (47,5),
   stands on (48,5) (`~/.cache/tpw-harnesses/q235/orig/a.log`). The premise came from a wrong draw order: Q235b. The
   two tests' allowance stays, as the original's behaviour.
+- [x] **Q235b. A new guest's walk in is aimed by the wrong two draws.** Found by Q235. `PeepBehaviour.WalkInDraws`
+  takes the fourth draw from the id for the roadside cell and the fifth for the place across; the original's are
+  the second and the third, thirteen of thirteen on both by the walkers' own targets (`docs/exe/park.md`, "From the
+  stop to the booths"; `~/.cache/tpw-harnesses/q235/orig/a.log`: guest 43 is aimed at (47.742,5.781), not
+  (47.895,5.781)). Take the two draws after the child's bank, and correct the remarks and `ParkPeopleTests` that
+  say fourth. Confirm: guest 43's aim in the `peeps` census, predicted first, and a screenshot of them at the
+  roadside.
+  Done 2026-10-06, `alexah/330-walk-in-second-and-third-draws`: one draw skipped, not three. Guest 43's aim
+  **predicted (47.742,5.781), read (47.742,5.781)**, twice; the build before read (47.895,5.781), as predicted. It
+  stands at (47.756,5.781), photographed at the roadside about a fifth of a cell west of the build before's. The
+  first run's standing spot was 0.001 outside the band I had predicted (0.014 short of the aim; the original's
+  thirteen were 0.019 to 0.158 short), and its photograph had the bus in front. The test's oracle is now the
+  original's thirteen logged aims (`q235/orig/a.log`), cell and place; the fourth and fifth draws, and the first and
+  second, each put back, fail it (`~/.cache/tpw-harnesses/q235b/`). Not compared afresh with the original: its
+  load makes other ids (38, 33, 44 to 54), never 43, so 43's aim is the generator's, checked on those thirteen.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.
