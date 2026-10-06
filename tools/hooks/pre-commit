@@ -1,7 +1,16 @@
 #!/bin/sh
 # Moves ticked queue items to docs/history/queue-done.md (tools/queue-sweep.py).
+# Counts the opcodes and the known gaps into docs/STATUS.md (tools/status-numbers.py) when a commit changes source.
+# It never stops a commit: if it cannot run, the numbers are left as they are.
 # Enable once per clone: git config core.hooksPath tools/hooks
 root=$(git rev-parse --show-toplevel) || exit 1
+if ! git diff --cached --quiet -- source; then
+	if git diff --quiet -- docs/STATUS.md; then
+		python3 "$root/tools/status-numbers.py" && git add -- "$root/docs/STATUS.md"
+	else
+		echo "status-numbers: docs/STATUS.md has unstaged changes; its numbers were not refreshed" >&2
+	fi
+fi
 git diff --cached --quiet -- docs/QUEUE.md && exit 0
 if ! git diff --quiet -- docs/QUEUE.md docs/history/queue-done.md; then
 	echo "queue-sweep: docs/QUEUE.md or queue-done.md has unstaged changes; stage them or sweep by hand" >&2

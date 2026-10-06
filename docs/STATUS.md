@@ -100,6 +100,7 @@ Last updated: 2026-10-05. **This header names no branch and no sha, deliberately
 | Tests without the game | **777** ran, **1158** skipped, of 1935 | 2026-10-05, Q188 |
 | Build warnings | 121 | 2026-10-05, Q188 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
+| Known gaps | **173** | 2026-10-06, different names passed to `Unimplemented.Report`, outside the tests; counted by `tools/status-numbers.py` |
 
 ## Recent
 
