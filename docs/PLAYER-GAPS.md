@@ -161,19 +161,9 @@ button. It only logs, and counts each click as `RESEARCH_BUTTON`.
       (`park-engine.md`, the compiled `.sam` schema) and the guests' choice computes the first
       (`ParkRideScore.ExcitementOf`), but neither bar is built. **Users last month** is the object's customers
       over its last thirty finished game days (Q177b), read from the save's rings and kept by the settle-up.
-      **The preview draws the ride's own model** - the one standing in the park, so it animates as the
-      ride runs - fitted by a real bounding box, filling 93px of a 194px panel.
-      **It orbited until the per-mesh box was fixed.** A burst of sixteen frames showed the centroid
-      tracing a circle of constant radius; `LobbyModel` was boxing each mesh without putting the mesh's
-      own rotation through, which displaces the box and so displaces the centre it spins about. Spread
-      fell from across 0.387 / down 0.299 to **across 0.040 / down 0.024**.
-      **The ride sitting low in the panel is not a fault**: the drawn box and the fit centre agree to
-      (0.0, 0.0, 0.0), and the 0.591 centroid is where the pixels are - a wide wooden base under a thin
-      figure. Centring the silhouette would deviate from the engine, which fits from the box.
-      **One caveat.** The spin **stops while the clock is held**: the original differences a real-time
-      clock and keeps turning through a pause, and nothing here exposes wall-clock time while paused,
-      so that deviation is declared at the site rather than a wider clock invented for it. The scissor
-      clipping is proven: it is the *"harsh cutoff"* Alexah reported across the model.
+      **The preview draws a fresh instance of the item's `P` model**, its own where it ships none, fitted,
+      tipped and turned as the original's (Q188; `docs/exe/park-engine.md`, "The object window's preview").
+      The light is OpenTPW's own, and the turn stops while the debug console holds the clock.
 - [x] **The verbs underneath**: `ParkBuilding` buys, sells, moves and carries; `ParkStaffPool` and
       `ParkPeople` hire, fire, pick up and put down. Money is taken at PLACE time, from the item's
       `+0x1b8`, which is why cancelling a carry needs no refund.

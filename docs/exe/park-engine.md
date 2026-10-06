@@ -2387,6 +2387,72 @@ it is `window4` inside `w_big.MD2`, one of a family - `window1` `w_small`, `wind
 its parent's** (348..762), so a rule that only inherits a parent's edge when the child sits inside it
 will pin this one somewhere else and draw it 160px out of place on a 1280x720 window.
 
+### The object window's preview
+
+**The panel shows a fresh instance of the item's `P` model, not the thing standing in the park** (Q188). The item
+loader `FUN_004629d0`, asked with bit `0x20000` of its flags, loads a second model set named `"p%s"` (`0x0074d368`)
+into the item record's `+0xd0` (`0x00462bd1`..`0x00462c07`) and gives it the item's own `.hmp` (`+0xcc`). The
+catalogue loader passes `0xb24a9` for an ordinary item and `0x50c00`, without the bit, for one whose descriptor `+0x38`
+is set (`0x0041413c`, `0x00414192`); the fork review names that field `Info.DontApplyOffset`, the fixed items', which
+was not re-read, and no fixed item ships a `P` model. 39 shipped items have one
+(jungle 11: `totem`, `lookout`, `mumbo`, `spider`, `tvsim`, `coaster1`, `coaster3`, `minecart`, `gokarts`, `wateride`,
+`junspray`; fantasy 6, hallow 10, space 12), each with one clip in role M.
+
+Every window with a model panel builds it the same way. The ride window's fill `FUN_004ad7f0`
+hands the panel's rectangle and the item's model index (`FUN_004dd4e0`'s object, `+0x490`) to `FUN_00486410`
+(`0x004ad85c`); so do the shop window (`0x004afbdc`), four more windows (`0x004970ca`, `0x0049985c`, `0x004b100c`,
+`0x004b650c`) and the buy screen, four times (`FUN_004ab1b0`). `FUN_00486410` turns the rectangle into screen units,
+in which the screen is two wide and two high about its middle (`(x - 0x400) / 1024`, `(0x300 - y) / 768`), frees the
+instance before (`FUN_004690a0`) and calls `FUN_004689f0( left, bottom, depth, width, height, item )`, keeping its
+record at `[0x007b9f4c]`. `FUN_004864f0` runs `FUN_00468e50` on it each frame; `FUN_00486510` frees it.
+
+**`FUN_004689f0` builds the instance and its fit.**
+
+- `FUN_00463060( item, 0xc01, ... )` makes an instance; bit `0x400` takes the record at `+0xd0` where there is one
+  (`0x0046309b`), the item's own model otherwise.
+- With a `P` model, `FUN_00468950` looks in each of the two models for the materials named `sign1.tga` and
+  `sign2.tga`; only where all four are found does the instance's `sign1`, `sign2` take the item's own painted boards
+  (`0x00468a64`..).
+- The box is the `.hmp`'s six floats (`+0x18`, min then max). With `sx`, `sz` its width and depth:
+  `hd = sqrt( (sx/2)^2 + (sz/2)^2 )`, `reach` = the distance from `(middle x, 0, middle z)` to the max corner,
+  `diagonal` = from `(min x, 0, min z)` to the max corner. **Both start at height nought, not the box's floor.**
+  `scale = min( width * 2/3 / hd, height / diagonal )` (`0x006fe7d4`), applied to the instance (`FUN_0045bf20`).
+- The record at `0x007afd08` keeps: `+4` the instance, `+8` its root matrix, `+0x48` the angle, `+0x4c`..`+0x58`
+  left, bottom, width, height, `+0x5c` `scale * sx/2`, `+0x60` `scale * sz/2`, `+0x64` `reach / (reach + hd)`,
+  `+0x68` `scale * diagonal`, `+0x6c` `scale * reach`, `+0x70` the clock's last reading.
+- It triggers role 5 (M), entry 0, looped, at speed 1.0, on channel 0 (`FUN_004732a0`, `0x00468e11`).
+- The first angle is the answer of an x87 intrinsic (`FUN_0067b24a`, `0x00468e2f`) whose operands are not traced.
+
+**`FUN_00468e50` turns and places it each frame.** It copies the kept root matrix back, turns it about y by the angle
+(`FUN_0046f420`: `x' = x cos a + z sin a`, `z' = z cos a - x sin a`), tips it about x by 45 degrees
+(`FUN_0046f240` with 0.7071, -0.7071: `y' = 0.7071 ( y + z' )`), and sets the translation:
+
+```
+x = left + width / 2 - 0.75 * ( hx cos a + hz sin a )
+y = bottom + height / 2 - 0.35 * share * reach - 0.7 * ( hz cos a - hx sin a )
+```
+
+with `hx`, `hz`, `share`, `reach` the record's `+0x5c`, `+0x60`, `+0x64`, `+0x6c`. Then the matrix's x column is
+multiplied by 0.75 (the screen's 3:4) and its z column by 0.1 (`0x006fe7fc`, `0x006fe800`). So the model turns about
+the middle of its footprint for a box whose low corner is its origin, and that middle stands on the panel's middle
+line, under its middle by 0.35 of `share * reach`. The angle then takes `-0.0004` a millisecond off itself
+(`0x006fe804`): **0.4 of a radian a second**, on the clock `FUN_004031e0` reads.
+
+**Measured in the original** (2026-10-05, the record read from memory with each window open): the Belly Bounce's
+window `+0x4c`.. -0.66015625, 0.25, 0.404296875, 0.5390625 (the panel (348,162)..(762,576)) and `+0x5c`.. 0.1510225,
+0.2013633, 0.5574498, 0.5390625, 0.3170543; a bought Aztec Mayhem's 0.1666563, 0.1666563, 0.5989949, 0.5390625,
+0.3520546; the buy screen's panel -0.5732422, 0.2643229, 0.3515625, 0.47265625 with the same ride 0.1461262,
+0.1461262, 0.5989949, 0.47265625, 0.3086855: each the arithmetic above on the item's `.hmp` box. The angle grew
+0.3956 a second. The Belly Bounce, with no `P` model, shows built, on its grass plate, its M clip running.
+
+**OpenTPW builds it** (`ParkObjectPreview`, `ParkPreviewFit`): a fresh `LobbyModel` of `P<stem>.MD2`, or of the
+item's own model posed as built, wearing the name board where both models name both halves, its first M clip looped,
+fitted and placed by the arithmetic above. Differences, each said at its site: the light is OpenTPW's own; the turn
+and the clip run on the frame clock, so the console's `pause` holds them; the first angle is nought
+(`OBJECT_PREVIEW_START_ANGLE`). Only the ride window exists here: the shop window's and the buy screen's panels
+(Q158) take the same path when they are built. The buy screen's preview also draws a small blue square at its
+panel's lower left, with every item tried, which the windows' do not; it is not decoded.
+
 ### Every diagnostic string goes to a bare `RET`
 
 `FUN_005da3c0` is where the build's log and assert calls all land (about 1,700 of them), and they do not share one

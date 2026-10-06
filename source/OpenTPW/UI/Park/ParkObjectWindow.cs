@@ -32,8 +32,8 @@ namespace OpenTPW.UI;
 ///
 /// <para>
 /// <b>What is filled in and what is not.</b> The stats table takes its seven labels and the figures
-/// this game can answer (<see cref="FillStats"/>), and the preview shows the ride's own model turning
-/// (<see cref="DrawPreview"/>); excitement and reliability are counted instead. The
+/// this game can answer (<see cref="FillStats"/>), and the preview shows a fresh instance of the item's
+/// <c>P</c> model turning (<see cref="ParkObjectPreview"/>); excitement and reliability are counted instead. The
 /// original BUFFERS the three sliders and commits them only when the window closes or either arrow is
 /// pressed - capacity and duration byte-wide where speed is a dword - and so does this
 /// (<see cref="Commit"/>), all but what the speed word does to the script's waits.
@@ -171,34 +171,11 @@ internal sealed class ParkObjectWindow : UiWindow
 	/// <summary>The ride's door, <c>b_door</c> (<c>0x3e38</c>): down while the ride is closed.</summary>
 	private readonly UiButton? _door;
 
-	/// <summary>
-	/// How far the preview looks down at the ride, in degrees. <b>A choice, and marked as one.</b> The
-	/// park's own camera runs 45 pulled in to 65 pushed out (<see cref="ParkOrbitCameraMode.Pitch"/>),
-	/// and this takes the pulled-in end: reading the live pitch would swing the preview whenever the
-	/// player zoomed, which the original's does not do.
-	/// </summary>
-	private const float PreviewPitch = 45f;
+	/// <summary>The model turning in the preview, built when the window first draws a thing and let go when it shows another.</summary>
+	private ParkObjectPreview? _model;
 
-	/// <summary>Whether the preview has already reported what it found. Once, not once a frame.</summary>
-	private bool _previewSaidWhy;
-
-	/// <summary>The same, for the fit it worked out - reported after the scale exists to report.</summary>
-	private bool _previewSaidFit;
-
-	/// <summary>
-	/// How fast the preview turns, in radians a second. <b>A choice, and marked as one.</b> The
-	/// original advances its angle by <c>elapsed * _DAT_006fe804</c> and indexes a sine table masked
-	/// to wrap (<c>FUN_00468e50</c>); the table and the mask are decoded, that constant is not.
-	/// </summary>
-	private const float SpinRate = 0.9f;
-
-	/// <summary>
-	/// How much of the panel the model fills. <b>Also a choice.</b> The original fits by the model's
-	/// bounding box against the panel's width and height and takes whichever is tighter
-	/// (<c>FUN_004689f0</c>), and so does <see cref="DrawPreview"/>, by the box of the meshes it draws;
-	/// this is the share of the panel that box fills.
-	/// </summary>
-	private const float Fill = 0.8f;
+	/// <summary>The thing <see cref="_model"/> was last built for, or null before the first.</summary>
+	private int? _previewOf;
 
 	/// <summary>Which thing the window is showing. The original keeps the same in <c>DAT_007c2658</c>.</summary>
 	internal int ThingId { get; private set; }
@@ -618,316 +595,35 @@ internal sealed class ParkObjectWindow : UiWindow
 	}
 
 	/// <summary>
-	/// Draws the ride itself, turning, inside the preview panel.
+	/// Draws the thing's preview model, turning, inside the preview panel (<see cref="ParkObjectPreview"/>).
 	/// </summary>
 	/// <remarks>
-	/// <b>It is the model standing in the park, not a copy of it.</b> So the preview shows a ride that
-	/// is running - its animation is whatever the park has it doing this frame - and the entities must
-	/// not be moved to centre them: <see cref="ModelEntity.DrawOverlay"/> takes a transform of the
-	/// caller's own for exactly this.
-	/// <para>
 	/// <b>Drawn in the overlay pass, not with the interface.</b> <c>Level.Render</c> clears depth and
 	/// runs that pass after the HUD, which is how the advisor sits in front of everything; a model
-	/// drawn in the HUD's own pass would be flat UI geometry competing with the window frame. The
-	/// scissor keeps it inside the panel, which is what the original's view region does - it builds one
-	/// over the panel's rect and replaces it whenever the shown thing changes (<c>FUN_00486410</c>).
-	/// </para>
+	/// drawn in the HUD's own pass would be flat UI geometry competing with the window frame.
 	/// </remarks>
 	internal void DrawPreview()
 	{
-		if ( ParkObjects.Current?.ModelFor( ThingId ) is not { } model || model.Radius <= 0f )
+		// A fresh instance for each thing shown, the one before it let go (FUN_00486410). One that
+		// would not build is not asked for again every frame.
+		if ( _previewOf != ThingId )
 		{
-			// Said out loud: an empty panel and a panel drawn off its own edge look identical from
-			// outside, and guessing between them is how a matrix gets "adjusted" until something
-			// appears. Once a frame is too noisy, so this reports the first time it cannot draw.
-			if ( !_previewSaidWhy )
-			{
-				_previewSaidWhy = true;
-
-				Log.Info( $"Ride window: no preview for thing {ThingId} - " +
-					$"model {(ParkObjects.Current?.ModelFor( ThingId ) is null ? "not found" : "found")}, " +
-					$"objects {(ParkObjects.Current is null ? "null" : "live")}" );
-			}
-
-			return;
+			_model?.Delete();
+			_model = ParkObjectPreview.For( ThingId );
+			_previewOf = ThingId;
 		}
 
-		var panel = _preview.Pixels;
-
-		if ( panel.Width <= 0f || panel.Height <= 0f )
-			return;
-
-		if ( !_previewSaidWhy )
-		{
-			_previewSaidWhy = true;
-
-			var box = model.HasBounds
-				? $"box ({model.BoundsMin.X:F1},{model.BoundsMin.Y:F1},{model.BoundsMin.Z:F1})" +
-					$"..({model.BoundsMax.X:F1},{model.BoundsMax.Y:F1},{model.BoundsMax.Z:F1})"
-				: "box none";
-
-			Log.Info( $"Ride window: preview thing {ThingId} radius {model.Radius:F1}," +
-				$" meshes {model.Entities.Length}, {box}, panel ({panel.X:F0},{panel.Y:F0})" +
-				$" {panel.Width:F0}x{panel.Height:F0}, screen {Screen.Width:F0}x{Screen.Height:F0}" );
-		}
-
-		// FIT BY THE BOX, NOT BY THE RADIUS. Radius is a distance from the model's ORIGIN, and Belly
-		// Bounce reports 100.2 across eight meshes while its bulk is a fraction of that - so sizing by
-		// it draws the ride at about eight pixels. The engine fits its own
-		// preview from the model's box, taking (max + min) / 2 as the centre and max - min as the
-		// size (FUN_004689f0), which is what this does: the centre is subtracted in PreviewTransform
-		// and the half-extent is what the panel is divided by.
-		if ( !model.HasBounds )
-			return;
-
-		// THE PIVOT COMES FROM WHAT IS ACTUALLY DRAWN, not from the static box, and that is what stops
-		// the spin looking odd. The box is measured over every mesh the model ships - including the
-		// ones PoseAsBuilt hides once the ride is up, and including each mesh's own padding - so its
-		// centre is not the centre of what you can see. Turning about a point that is not the visual
-		// centre swings the model round instead of rotating it in place.
-		//
-		// IT TURNS ABOUT THE RIDE'S OWN CENTRE, which is all a preview wants. The model's whole box
-		// covers every mesh it ships, INCLUDING the building meshes PoseAsBuilt hides once the ride is
-		// up, so its centre sits below what can be seen and the ride would ride high. The drawn meshes'
-		// ORIGINS will not do either, because a ride's meshes all have their origins on its base plane.
-		// What is wanted is the box
-		// of the geometry actually DRAWN, and one centre serves both the pivot and the framing.
-		//
-		// The REST boxes are used rather than live positions deliberately: a pivot that followed the
-		// animation would bob about as the ride moved, and spinning about a moving point is the very
-		// wobble this is meant to remove.
-		var low = new Vector3( float.MaxValue, float.MaxValue, float.MaxValue );
-		var high = new Vector3( float.MinValue, float.MinValue, float.MinValue );
-		var drawn = 0;
-
-		for ( var i = 0; i < model.Entities.Length && i < model.MeshBoxes.Count; ++i )
-		{
-			if ( model.Entities[i].Model is null || model.Entities[i].Opacity <= 0f )
-				continue;
-
-			var (meshLow, meshHigh) = model.MeshBoxes[i];
-
-			low = new Vector3( MathF.Min( low.X, meshLow.X ), MathF.Min( low.Y, meshLow.Y ),
-				MathF.Min( low.Z, meshLow.Z ) );
-
-			high = new Vector3( MathF.Max( high.X, meshHigh.X ), MathF.Max( high.Y, meshHigh.Y ),
-				MathF.Max( high.Z, meshHigh.Z ) );
-
-			++drawn;
-		}
-
-		// A model with nothing drawable in it falls back to its whole box.
-		if ( drawn == 0 )
-		{
-			low = model.BoundsMin;
-			high = model.BoundsMax;
-		}
-
-		// One centre, for the pivot and the framing alike, and the size off the same box - so what is
-		// turned about is what is looked at, and what is fitted is what is drawn.
-		var centre = (low + high) * 0.5f;
-		var size = high - low;
-
-		// FITTED FOR THE ANGLE IT IS SEEN AT. Sizing by
-		// max( size.X, size.Z ) assumes the model is looked at square on; tilted down by PreviewPitch
-		// the model's DEPTH climbs into the picture as well, so it reaches
-		// depth * sin(pitch) + height * cos(pitch) up the screen. Ignoring that pushes the ride off the
-		// bottom of its panel and into the scissor, which cuts it clean across.
-		//
-		// Across, the spin turns X and Y through each other, so the widest it can ever be is the
-		// diagonal of its own footprint - not either side of it.
-		var pitch = PreviewPitch.DegreesToRadians();
-
-		var across = MathF.Sqrt( (size.X * size.X) + (size.Y * size.Y) );
-		var tall = (size.Y * MathF.Sin( pitch )) + (size.Z * MathF.Cos( pitch ));
-
-		var half = MathF.Max( MathF.Max( across, tall ) * 0.5f, 0.001f );
-
-		var perUnit = MathF.Min( panel.Width, panel.Height ) * 0.5f * Fill / half;
-
-		if ( !_previewSaidFit )
-		{
-			_previewSaidFit = true;
-
-			var first = model.Entities.Length > 0
-				? entityLocal( model.Entities[0] )
-				: Vector3.Zero;
-
-			// THE TERMS THEMSELVES, not another guess about them. The preview translates each mesh by
-			// (Position - PlacedOrigin - centre) while `centre` comes from MeshBoxes, which are built
-			// from REST offsets at load. If those two spaces disagree by any CONSTANT, the leftover is
-			// rigid and `spin` swings it round - which is exactly the clean ring of fixed radius a
-			// burst of frames showed. One line per mesh settles which, instead of editing and looking.
-			// The box of what is ACTUALLY DRAWN, built alongside, to say whether the ride sitting low in
-			// its panel is a framing fault or just where its pixels are. MeshBoxes[i] is offset +
-			// geometry, so taking Offsets[i] off it leaves the mesh's own extent, and putting that back
-			// on the LIVE position gives the pose on screen rather than the pose at rest. The gap
-			// between this centre and the one the fit uses IS the error, in model units - the camera is
-			// orthographic and aimed at the origin, so a centred box cannot land off-centre.
-			//
-			// THE FIT IS NOT WHAT SITS THE RIDE LOW. Belly
-			// Bounce reports off by (0.0, 0.0, 0.0), with every mesh's live position equal to its rest
-			// offset. A burst of frames still puts the lit-pixel centroid at 0.591 down the panel
-			// against a 0.500 middle, and that gap is WHERE THE PIXELS ARE: the ride's wide wooden base
-			// carries far more of them than the thin figure standing on it, so the centroid sits below
-			// the geometry's centre while the geometry's centre is exactly where it should be.
-			//
-			// So this is left alone deliberately. Centring the SILHOUETTE instead would be a deviation
-			// from the engine, which fits a preview from the model's box - (max + min) / 2 and
-			// max - min, FUN_004689f0 - and not from its pixels.
-			var liveLow = new Vector3( float.MaxValue, float.MaxValue, float.MaxValue );
-			var liveHigh = new Vector3( float.MinValue, float.MinValue, float.MinValue );
-
-			for ( var i = 0; i < model.Entities.Length && i < model.MeshBoxes.Count; ++i )
-			{
-				if ( model.Entities[i].Model is null || model.Entities[i].Opacity <= 0f )
-					continue;
-
-				var live = model.Entities[i].Position - model.PlacedOrigin;
-				var (meshLow, meshHigh) = model.MeshBoxes[i];
-				var rest = (meshLow + meshHigh) * 0.5f;
-
-				var lowAt = live + (meshLow - model.Offsets[i]);
-				var highAt = live + (meshHigh - model.Offsets[i]);
-
-				liveLow = new Vector3( MathF.Min( liveLow.X, lowAt.X ), MathF.Min( liveLow.Y, lowAt.Y ),
-					MathF.Min( liveLow.Z, lowAt.Z ) );
-
-				liveHigh = new Vector3( MathF.Max( liveHigh.X, highAt.X ), MathF.Max( liveHigh.Y, highAt.Y ),
-					MathF.Max( liveHigh.Z, highAt.Z ) );
-
-				Log.Info( $"Ride window: preview mesh {i}" +
-					$" live ({live.X:F1},{live.Y:F1},{live.Z:F1})" +
-					$" restoff ({model.Offsets[i].X:F1},{model.Offsets[i].Y:F1},{model.Offsets[i].Z:F1})" +
-					$" restbox ({rest.X:F1},{rest.Y:F1},{rest.Z:F1})" +
-					$" minus centre ({(live.X - centre.X):F1},{(live.Y - centre.Y):F1},{(live.Z - centre.Z):F1})" );
-			}
-
-			if ( drawn > 0 )
-			{
-				var liveCentre = (liveLow + liveHigh) * 0.5f;
-				var off = liveCentre - centre;
-
-				Log.Info( $"Ride window: preview drawn box centre" +
-					$" ({liveCentre.X:F1},{liveCentre.Y:F1},{liveCentre.Z:F1})" +
-					$" vs fit centre ({centre.X:F1},{centre.Y:F1},{centre.Z:F1})" +
-					$" off by ({off.X:F1},{off.Y:F1},{off.Z:F1})" );
-			}
-
-			// `drawn` is reported because its being NOUGHT is invisible otherwise: the fallback quietly
-			// reframes the ride by its whole box, and the only tell was a centre that looked familiar.
-			Log.Info( $"Ride window: preview fit drawn {drawn} of {model.Entities.Length}," +
-				$" half {half:F1}, perUnit {perUnit:F3}," +
-				$" span {(size.X * perUnit):F0}px of {panel.Width:F0}," +
-				$" centre ({centre.X:F1},{centre.Y:F1},{centre.Z:F1})," +
-				$" mesh0 local ({first.X:F1},{first.Y:F1},{first.Z:F1})" );
-
-			Vector3 entityLocal( ModelEntity one ) => one.Position - model.PlacedOrigin - centre;
-		}
-
-		// LOOKED AT FROM ABOVE AND IN FRONT, the way the park's camera sees a ride, rather than square
-		// on: AdvisorModel.ScreenProjection is a flat elevation - model X across, Z up, Y squashed almost
-		// out of depth - and gives a ride no perspective at all. Here the eye sits back and up by the
-		// pitch and looks at the model's own centre, so the centring stops being arithmetic to get
-		// right and becomes a consequence of what is aimed at.
-		var eye = new System.Numerics.Vector3( 0f, -MathF.Cos( pitch ), MathF.Sin( pitch ) ) * (half * 4f);
-
-		var view = System.Numerics.Matrix4x4.CreateLookAt( eye,
-			System.Numerics.Vector3.Zero, new System.Numerics.Vector3( 0f, 0f, 1f ) );
-
-		// A box big enough to hold the model at any angle of spin, then squeezed from the whole screen
-		// down into the panel: scale by the panel's share of the screen, then move it to the panel's
-		// own centre in normalised coordinates.
-		var ortho = System.Numerics.Matrix4x4.CreateOrthographic(
-			2f * half / Fill, 2f * half / Fill, -8f * half, 8f * half );
-
-		var x = ((panel.X + (panel.Width * 0.5f)) * 2f / Screen.Width) - 1f;
-		var y = 1f - ((panel.Y + (panel.Height * 0.5f)) * 2f / Screen.Height);
-
-		var projection = ortho
-			* System.Numerics.Matrix4x4.CreateScale( panel.Width / Screen.Width, panel.Height / Screen.Height, 1f )
-			* System.Numerics.Matrix4x4.CreateTranslation( x, y, 0f );
-
-		// Turning about the model's own up axis, off the frame clock.
-		//
-		// <b>A DECLARED DEVIATION: this stops while the clock is held, and the original's does not.</b>
-		// The engine advances its angle by differencing a real-time clock every frame and wrapping
-		// through a masked sine table (FUN_00468e50), so its preview keeps turning through a pause.
-		// Here Time.Now only advances by Time.Delta, and a held clock reports zero - Now, Delta and
-		// RawDelta all freeze together, and nothing in this project exposes wall-clock time while
-		// paused. Adding such a clock for a spinning model would be a wider change than the model is
-		// worth, so the deviation is said here instead. In normal play the window does not pause the
-		// game, so it turns.
-		var spin = System.Numerics.Matrix4x4.CreateRotationZ( Time.Now * SpinRate );
-
-		var command = global::Global.Render.CommandList;
-
-		command.SetScissorRect( 0, (uint)MathF.Max( 0f, panel.X ), (uint)MathF.Max( 0f, panel.Y ),
-			(uint)MathF.Max( 0f, panel.Width ), (uint)MathF.Max( 0f, panel.Height ) );
-
-		// THE DRAWN SET AND THE BOXED SET MUST BE THE SAME SET. Centring on half a ride and turning all
-		// of it is an ORBIT of the offset between the two centres, the centroid tracing a clean ring
-		// about the panel's middle.
-		//
-		// A hidden mesh is one PoseAsBuilt put away when the ride finished going up, and it has no more
-		// business in the preview than in the park. DrawOverlay does not consult Opacity the way
-		// ModelEntity.OnRender does, so the skip has to be made here.
-		foreach ( var entity in model.Entities )
-		{
-			if ( entity.Model is null || entity.Opacity <= 0f )
-				continue;
-
-			entity.DrawOverlay( view, projection, PreviewLight, PreviewLightColour,
-				PreviewAmbient, worldNormals: true, transform: PreviewTransform( entity, model, centre, spin ) );
-		}
-
-		// Every solid half before any see-through one, the order the scene uses - see AdvisorModel.Draw
-		// for what drawing them a mesh at a time costs.
-		foreach ( var entity in model.Entities )
-		{
-			if ( entity.TranslucentModel is null || entity.Opacity <= 0f )
-				continue;
-
-			entity.DrawOverlay( view, projection, PreviewLight, PreviewLightColour,
-				PreviewAmbient, worldNormals: true, translucent: true,
-				transform: PreviewTransform( entity, model, centre, spin ) );
-		}
-
-		command.SetFullScissorRects();
+		_model?.Draw( _preview.Pixels );
 	}
+
+	/// <summary>The preview's line for the debug console, or null with none built.</summary>
+	internal string? PreviewCensus => _model?.Census( _preview.Pixels );
+
+	/// <summary>Holds the preview's turn at an angle, or lets it go: the debug console's.</summary>
+	internal void HoldPreview( float? angle ) => _model?.Hold( angle );
 
 	/// <summary>The status box must cover the model, which the overlay pass draws after the HUD.</summary>
 	internal void DrawStatus() => _broken.Draw();
-
-	/// <summary>
-	/// Where one of the model's meshes goes in the preview: its own placement within the model, spun,
-	/// with the park position taken out.
-	/// </summary>
-	/// <remarks>
-	/// This is <see cref="Entity.ModelMatrix"/> with one substitution. That composes
-	/// <c>LinearTransform * Rotation * Translate( Position )</c>, and <see cref="LobbyModel"/> sets
-	/// each mesh's <c>Position</c> to its own offset PLUS the model's origin - so subtracting
-	/// <see cref="LobbyModel.PlacedOrigin"/> leaves the mesh where it belongs inside the model and
-	/// drops where the ride happens to stand in the park. Reading the live position rather than the
-	/// rest-pose <c>Offsets</c> is what makes the preview show the ride animating.
-	/// </remarks>
-	private static System.Numerics.Matrix4x4 PreviewTransform( ModelEntity entity, LobbyModel model,
-		Vector3 centre, System.Numerics.Matrix4x4 spin )
-	{
-		var matrix = entity.LinearTransform
-			?? System.Numerics.Matrix4x4.CreateScale( entity.Scale.GetSystemVector3() );
-
-		matrix *= System.Numerics.Matrix4x4.CreateFromQuaternion( entity.Rotation );
-
-		// TWO subtractions, and both are needed. PlacedOrigin takes out where the ride stands in the
-		// park; the box's centre takes out where the model sits relative to its OWN origin. Without
-		// the second the model is scaled right and still hangs off the panel by exactly that offset,
-		// which is the fault this was written to fix.
-		matrix *= System.Numerics.Matrix4x4.CreateTranslation(
-			(entity.Position - model.PlacedOrigin - centre).GetSystemVector3() );
-
-		return matrix * spin;
-	}
 
 	/// <summary>
 	/// Puts the red line where the item says it falls, as a fraction of the track.
@@ -1058,13 +754,6 @@ internal sealed class ParkObjectWindow : UiWindow
 				Graphics.Quad( new Rectangle( x, Screen.Height - y - height, width, height ), Material.UI );
 		}
 	}
-
-	/// <summary>How the preview is lit. <b>Chosen, not measured</b> - the original lights it from its own scene.</summary>
-	private static readonly Vector3 PreviewLight = new( -400f, -600f, 400f );
-
-	private static readonly Vector3 PreviewLightColour = Vector3.One;
-
-	private const float PreviewAmbient = 0.55f;
 
 	private void Set( int which, int lowest, int highest, int value, bool hideWhenEmpty )
 	{
@@ -1199,7 +888,14 @@ internal sealed class ParkObjectWindow : UiWindow
 	}
 
 	/// <summary>The window closing commits, the same as either arrow does - see <see cref="Commit"/>.</summary>
-	protected internal override void Closed() => Commit();
+	protected internal override void Closed()
+	{
+		Commit();
+
+		_model?.Delete();
+		_model = null;
+		_previewOf = null;
+	}
 
 	/// <summary>
 	/// Refreshes the status warning and door from the live ride, including changes to its queue.

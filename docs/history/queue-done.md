@@ -4553,6 +4553,37 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   (`LAB_0048d1a0`). The click is the UI library's (`hud.md`, "A click and a double click"; `WindowStack.RightClick`). Counted on the
   press as `LIST_ROW_RIGHT_CLICK`; the preview is no control of its own here, so its click is not counted. Confirm: a right
   click on a guest's row, the camera on that guest and the screen shut; a screenshot.
+- [x] **Q188. The object windows draw the park's own model where the original previews its P model.** Done 2026-10-05,
+  `alexah/299-object-window-p-model-preview`. Decoded first-hand: `FUN_004629d0` loads `"p%s"` into `+0xd0` behind
+  flag `0x20000`; `FUN_004689f0` makes a FRESH instance (`0x400` takes the P model, the item's own without one),
+  carries the name board only where both models name both halves, fits by the `.hmp` box (two thirds of the width
+  for half the footprint's diagonal, or the height for the corner-to-corner from height nought), loops M entry 0;
+  `FUN_00468e50` tips it 45 degrees and turns it 0.4 rad/s. Built: `ParkObjectPreview`, `ParkPreviewFit`, the
+  console's `preview`. Predicted and read in Lost Kingdom, **5 of 5**, the fit's numbers the original's own read
+  from its memory first: the Belly Bounce `bouncy.MD2`, half (0.15102,0.20136) share 0.55745 reach 0.31705; a bought
+  Aztec Mayhem `Ptvsim.MD2`, (0.16666,0.16666) 0.59899 0.35205; a bought Inca Totem `Ptotem.MD2`, no pit under it
+  (main draws the pit); the turn 0.408 rad/s (the original's 0.396). Photographed beside the original's at the same
+  angles: the Belly Bounce's window, and the Aztec Mayhem beside the original's buy screen. Fifteen tests new, 25
+  restored bugs each fail (one only after tightening). **Not in the original: the Inca Totem**, which its reference
+  park has not researched. Not built: the first angle (counted), the light (OpenTPW's own), the wall clock.
+  `park-engine.md`, "The object window's preview".
+  The item as written: Found by the
+  fork review (ghidra-docs-6, ghidra-docs-v2, refute rank 6; lead: Aluzed's fork, `docs/08`). For every item but the
+  six fixed ones (bus, ferry, seaplane, gates, lights, end: `Info.DontApplyOffset`), the loader also loads
+  `p<stem>` (`0x00462bd1`..`0x00462c07`) into `+0xd0`. The ride window's preview `FUN_004ad7f0` (vtable `0x006ffbe8`)
+  and the shop window's (`0x004afbdc`, in the function at `0x004afb70`) call `FUN_00486410`, then `FUN_004689f0`: a
+  fresh instance of the P model (flag `0x400` at `0x0046309b`) wearing the item's own sign textures (`FUN_00468950`),
+  fitted by the item's `.hmp` box (six floats at file `0x18`, record `+0xcc`), playing role 5 (M) entry 0 looped at
+  speed 1.0. Eleven jungle items ship one: totem, lookout, mumbo, spider, tvsim, both coasters, minecart, GOKARTS,
+  wateride, Junspray. `ParkObjectWindow.DrawPreview` draws the live park instance fitted by its meshes, so a broken or
+  closed ride previews its live pose. First: count `OBJECT_PREVIEW_P_MODEL` where the preview draws; correct
+  `ParkObjectWindow.cs`'s comments (199-201, 669-673 say "the model's bounding box"); answer `park.md:239` and FileFormats
+  `models.md:1271` ("not known"); cite `FUN_004ad7f0` and `0x004ad85c` in `park-engine.md`'s Ride window section. Then
+  build: load `P<stem>.md2` beside the item's model for the preview only; carry `sign1`/`sign2` only where both models
+  have them (`Pcoaster1` and `PJunspray` have none); fit by the `.hmp` box (the first consumer of `.hmp` builds its
+  reader, Q191); loop M. The buy screen's missing preview (Q158) takes the same path. Confirm: the Inca Totem's
+  window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
+  together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
 
 ## B. Docs and comments
 

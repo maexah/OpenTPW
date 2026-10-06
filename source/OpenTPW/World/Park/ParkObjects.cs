@@ -48,8 +48,12 @@ public sealed class ParkObjects : Entity
 	/// same player rather than at two readings of the same files.
 	/// </para>
 	/// </summary>
-	private sealed class Standing( LobbyModel model, RideAnimations animations, int catalogueId )
+	private sealed class Standing( LobbyModel model, RideAnimations animations, int catalogueId,
+		IReadOnlyDictionary<string, Texture>? sign = null )
 	{
+		/// <summary>The name board painted for it, or null where it has none - what its window's preview wears too.</summary>
+		public IReadOnlyDictionary<string, Texture>? Sign { get; } = sign;
+
 		public LobbyModel Model { get; } = model;
 
 		public RideAnimations Animations { get; } = animations;
@@ -325,7 +329,7 @@ public sealed class ParkObjects : Entity
 			model.SetTransform( origin, turn );
 
 			_models.Add( model );
-			_standing[placed.ThingId] = new Standing( model, animations, placed.CatalogueId );
+			_standing[placed.ThingId] = new Standing( model, animations, placed.CatalogueId, sign );
 
 			// The original gates on the base vertices FUN_00469a80 counts (0x0046a838) and reads the mesh with the
 			// most of them (0x0046a82c). The node count and the first mesh stand in for both: the same mesh in
@@ -389,7 +393,7 @@ public sealed class ParkObjects : Entity
 	/// nothing else - six items in the game ship exactly that.
 	/// </para>
 	/// </summary>
-	private void PoseAsBuilt( LobbyModel model, ParkItemCatalogue.Item item )
+	internal void PoseAsBuilt( LobbyModel model, ParkItemCatalogue.Item item )
 	{
 		AnimationFile construction;
 
@@ -676,17 +680,18 @@ public sealed class ParkObjects : Entity
 		=> _standing.TryGetValue( thingId, out var standing ) ? standing.Animations : null;
 
 	/// <summary>
-	/// The model a placed thing is standing as, or null where nothing of that id stands here.
+	/// The model a placed thing is standing as, or null where nothing of that id stands here. It is the
+	/// model the park is drawing, not a copy.
 	/// </summary>
-	/// <remarks>
-	/// <b>It is the same model the park is drawing</b>, not a copy - the ride window's preview shows
-	/// the very thing that is standing in the park, animations and all, which is what makes the preview
-	/// follow a ride that is running rather than a still of it. A caller drawing it somewhere else must
-	/// therefore not move it: see <see cref="ModelEntity.DrawOverlay"/>, which takes a view and a
-	/// projection of the caller's own and leaves the entity's own transform alone.
-	/// </remarks>
 	internal LobbyModel? ModelFor( int thingId )
 		=> _standing.TryGetValue( thingId, out var standing ) ? standing.Model : null;
+
+	/// <summary>
+	/// The name board painted for a placed thing, or null where it has none. The park owns the textures
+	/// and lets go of them when it ends.
+	/// </summary>
+	internal IReadOnlyDictionary<string, Texture>? SignFor( int thingId )
+		=> _standing.TryGetValue( thingId, out var standing ) ? standing.Sign : null;
 
 	/// <summary>
 	/// Brings every thing's animation player up to <paramref name="now"/> and shows whatever each one has

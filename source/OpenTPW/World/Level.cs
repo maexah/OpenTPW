@@ -1032,6 +1032,10 @@ public class Level
 		return $"anchored a queue run at ({cellX},{cellY}) - click again to lay it";
 	}
 
+	/// <summary>The object windows open in this park, oldest first - the debug console's way to the preview.</summary>
+	internal IEnumerable<UI.ParkObjectWindow> OpenObjectWindows()
+		=> _windows?.Windows.OfType<UI.ParkObjectWindow>() ?? [];
+
 	/// <summary>
 	/// Opens the management window for one thing - the original's <c>FUN_00486920</c>, which switches
 	/// on the thing's kind byte at <c>+2</c> and then, for a placed object, on the item's

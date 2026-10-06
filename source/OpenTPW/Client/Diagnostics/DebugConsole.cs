@@ -1764,6 +1764,21 @@ public static class DebugConsole
 				break;
 
 			// Every bound hoarding: its panels, texture, progress and flags.
+			// The open object window's preview: what it shows, its fit and where its turn and clip stand.
+			// `preview <radians>` holds the turn there for a repeatable frame; `preview go` lets it turn.
+			case "preview":
+				if ( Level.Current?.OpenObjectWindows().LastOrDefault() is not { } previewWindow )
+				{
+					Reply( "preview: no object window is open" );
+					break;
+				}
+
+				if ( parts.Length > 1 )
+					previewWindow.HoldPreview( parts[1] == "go" ? null : (float)Argument( 1 ) );
+
+				Reply( $"preview: {previewWindow.PreviewCensus ?? "none built"}" );
+				break;
+
 			case "hoardings":
 				foreach ( var hoardingLine in ParkObjects.Current?.HoardingCensus() ?? [] ) Reply( hoardingLine );
 				break;

@@ -109,6 +109,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0045acfc` | | OpenTPW/Client/Game.cs  |
 | `0x004623b3` | | OpenTPW.Tests/LobbyModelAnimationTests.cs OpenTPW/World/Lobby/LobbyModel.cs  |
 | `0x004623df` | | OpenTPW.Tests/LobbyModelAnimationTests.cs OpenTPW/World/Lobby/LobbyModel.cs  |
+| `0x00462bd1` | Item loader FUN_004629d0: with flag 0x20000, the second model set "p%s" loaded into the record's +0xd0 | OpenTPW/UI/Park/ParkObjectPreview.cs  |
 | `0x00462d4a` | Item loader FUN_004629d0: runtime bit 8 on every lookup record of an item loaded under 0x400000 (Info.DoHeadProcessing) | OpenTPW.Files/Formats/ItemDescriptionFile.cs  |
 | `0x00463060` | the build path: checks role 0 exists, triggers it, then starts role 13 at once, which holds that clip at frame nought. A newly built thing's script, run from word 0, plays it; a loaded one's resumes past it and its channels come back from the save | OpenTPW/World/Park/ParkRides.cs  |
 | `0x004646a1` | | OpenTPW/World/Ride/AnimTimeControl.cs  |
@@ -120,6 +121,9 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0046717c` | Placement FUN_00467030: the sine table index, FISTP of the float turn times 651.89862; the cosine's is rounded apart at 0x00467194 | OpenTPW/World/Ride/RideNodes.cs  |
 | `0x00467d00` | | OpenTPW/World/Lobby/LobbyModel.cs  |
 | `0x00467d60` | | OpenTPW/World/Lobby/LobbyModel.cs  |
+| `0x00468a64` | FUN_004689f0: FUN_00468950 looks for sign1 and sign2 in the item's model and its P model; all four found, the instance takes the item's boards | OpenTPW/UI/Park/ParkObjectPreview.cs  |
+| `0x00468e11` | FUN_004689f0: the preview instance triggers role 5 (M), entry 0, looped, speed 1.0 | OpenTPW/UI/Park/ParkObjectPreview.cs  |
+| `0x00468e2f` | FUN_004689f0: the preview's first angle, an x87 intrinsic's answer (FUN_0067b24a), operands not traced | OpenTPW/UI/Park/ParkObjectPreview.cs  |
 | `0x0046a82c` | | OpenTPW/World/Park/ParkObjects.cs  |
 | `0x0046a838` | | OpenTPW/World/Park/ParkObjects.cs  |
 | `0x0046b600` | | OpenTPW.Common/Client/Window.cs  |
@@ -1182,6 +1186,10 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x006fe2c4` | | OpenTPW/World/Park/ParkBumperBoats.cs  |
 | `0x006fe408` | | OpenTPW.Files/Formats/Map/ItemHeightMapFile.cs  |
 | `0x006fe6bc` | | OpenTPW.Tests/RideAnimationsTests.cs OpenTPW/World/Ride/RideAnimations.cs  |
+| `0x006fe7d4` | Float 2/3: the share of the panel's width for half the footprint's diagonal (FUN_004689f0) | OpenTPW/UI/Park/ParkObjectPreview.cs  |
+| `0x006fe7e4` | Float -pi/4: the preview's tip, the sine's index (FUN_00468e50) | OpenTPW/UI/Park/ParkObjectPreview.cs  |
+| `0x006fe7e8` | Float pi/4: the preview's tip, the cosine's index (FUN_00468e50) | OpenTPW/UI/Park/ParkObjectPreview.cs  |
+| `0x006fe804` | Float -0.0004: taken off the preview's angle each millisecond (FUN_00468e50) | OpenTPW/UI/Park/ParkObjectPreview.cs  |
 | `0x006febe4` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |
 | `0x006febec` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |
 | `0x006fec00` | The constant 0.01 in the lobby path sampler's `percent * 0.01 * segments` | OpenTPW/World/Lobby/LobbyModel.cs  |
@@ -1323,6 +1331,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0078d90e` | | OpenTPW/UI/ButtonGlint.cs  |
 | `0x00790a88` | Camera scroll term, the first of three FUN_0042aab0 zeroes when it places the look-at | OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
 | `0x00790a90` | Camera scroll term, the last of the three FUN_0042aab0 zeroes | OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
+| `0x007afd08` | The preview record FUN_004689f0 fills: instance, root matrix, angle, panel, the fit's five floats, the clock | OpenTPW.Tests/ParkObjectPreviewTests.cs OpenTPW/UI/Park/ParkObjectPreview.cs  |
 | `0x007c24c8` | The open park screen's control, nought when none is | OpenTPW/World/Level.cs  |
 | `0x007cb2fc` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x007cc4b8` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |

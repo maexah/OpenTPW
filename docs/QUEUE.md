@@ -38,24 +38,6 @@ the original.
 
 ## A. Bugs first
 
-- [ ] **Q188. The object windows draw the park's own model where the original previews its P model.** Found by the
-  fork review (ghidra-docs-6, ghidra-docs-v2, refute rank 6; lead: Aluzed's fork, `docs/08`). For every item but the
-  six fixed ones (bus, ferry, seaplane, gates, lights, end: `Info.DontApplyOffset`), the loader also loads
-  `p<stem>` (`0x00462bd1`..`0x00462c07`) into `+0xd0`. The ride window's preview `FUN_004ad7f0` (vtable `0x006ffbe8`)
-  and the shop window's (`0x004afbdc`, in the function at `0x004afb70`) call `FUN_00486410`, then `FUN_004689f0`: a
-  fresh instance of the P model (flag `0x400` at `0x0046309b`) wearing the item's own sign textures (`FUN_00468950`),
-  fitted by the item's `.hmp` box (six floats at file `0x18`, record `+0xcc`), playing role 5 (M) entry 0 looped at
-  speed 1.0. Eleven jungle items ship one: totem, lookout, mumbo, spider, tvsim, both coasters, minecart, GOKARTS,
-  wateride, Junspray. `ParkObjectWindow.DrawPreview` draws the live park instance fitted by its meshes, so a broken or
-  closed ride previews its live pose. First: count `OBJECT_PREVIEW_P_MODEL` where the preview draws; correct
-  `ParkObjectWindow.cs`'s comments (199-201, 669-673 say "the model's bounding box"); answer `park.md:239` and FileFormats
-  `models.md:1271` ("not known"); cite `FUN_004ad7f0` and `0x004ad85c` in `park-engine.md`'s Ride window section. Then
-  build: load `P<stem>.md2` beside the item's model for the preview only; carry `sign1`/`sign2` only where both models
-  have them (`Pcoaster1` and `PJunspray` have none); fit by the `.hmp` box (the first consumer of `.hmp` builds its
-  reader, Q191); loop M. The buy screen's missing preview (Q158) takes the same path. Confirm: the Inca Totem's
-  window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
-  together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
-
 - [ ] **Q119. A plain Escape does not close the park screen in front.** Found by Q57's review. In the original the six
   management screens, an object window and the map take the focus as they open (`FUN_00485b70`, `FUN_004862a0`), and
   their key handler answers a plain Escape let go by closing the screen, and nothing more (`FUN_00488ba0`, `0x00488bc6`;
@@ -429,6 +411,9 @@ the original.
   of a format not read back. `ParkBuyScreen`'s description panel `0x1ea` draws its frame and no preview. Count each
   where it is drawn. Confirm: `unimplemented` after opening a ride's window, the entry-price screen and the buy
   screen.
+  From Q188: the buy screen's panel is the object window's preview (`ParkObjectPreview`, which wants a placed thing
+  today: give it an item); in the original it is (437,162) 360 by 363, and it also draws a small blue square at its
+  lower left with every item tried, not decoded (`park-engine.md`, "The object window's preview").
 - [ ] **Q159. `SdtArchive.GetFile` matches a truncated name the wrong way round.** Found by the 2026-09-26 staleness
   audit. It tests `x.Name.StartsWith( name )`, the stored name against the one asked for. A `.sdt` name field is 16
   bytes and a longer name is cut to fit, so asking for "TP SCREECH 11.mp2", stored as "TP SCREECH 11.m", never
