@@ -38,6 +38,53 @@ the original.
 
 ## A. Bugs first
 
+**The 2026-10-06 review's leftovers come first, at Alexah's word (2026-10-06).**
+
+- [ ] **Q235. A walk stops short of its aim. DECODE FIRST.** Found by the review's fix 1 (`docs/exe/park.md`,
+  "From the stop to the booths"). In the original the thirteen guests of a load, aimed by `FUN_004fa5f0` at points up
+  to 245 of 256 across their roadside cell and walking in from the east, all stood on the cell aimed at
+  (`~/.cache/tpw-harnesses/rv1/orig/a.log`). Here a walk ends up to about a sixth of a cell short: guest 43, aimed at
+  (47.89,5.78), stands on (47,5) in the game but on (48,5) in `ParkTickTests`' sweeps, and of 30 leavers' walks into a
+  stop's second cell 7 ended one cell east and were sent again
+  (`~/.cache/tpw-harnesses/review-run-2026-10-06/game/lean-probe.txt`). Decode where `FUN_004fa2a0` and the mover
+  count a walk done (`0x00510100` on) against `PeepWalk.Step`'s `Progress() == One`, write it to `docs/exe/` and
+  stop. Two tests allow the cell beyond until then (`ParkTickTests`, `ParkDecidingTests`).
+- [ ] **Q237. One Full Simulation test failed twice with no message kept.** Found by the 2026-10-06 review (fix 6).
+  `LevelFullSimulationParkTests.FullSimulationCreatesTwelveThingsWithRegularLoans` failed once in the review's
+  put-back runs and once at a gate, about two whole-suite runs in a hundred and twenty, and neither output was kept.
+  Nothing it reads is drawn (`FreshPark` takes no generator; its `RandomSeed` is the clock's and nothing in the test
+  reads it), and forty whole-suite runs after Q234's fix were green (`~/.cache/tpw-harnesses/rv6/loop.log`). When it
+  next fails, keep the run's output first: the loop in `rv6` saves any failing run whole. No game run.
+- [ ] **Q238. Seven leads from the 2026-10-06 review that nobody checked.** They were low and unverified, so they
+  were left off its list (`~/.cache/tpw-harnesses/review-run-2026-10-06/LEDGER.md`, the lines marked OPEN, "lead" or
+  "not checked", and what fixes 8 and 9 counted without a queue item). Check each first-hand; then mend it, say it
+  at the site, or strike it here:
+  (a) whether guests at the stop go in the original's order: a newcomer heads its cell's list and the sweep visits
+  guests by descending id, which reproduces Q128's log exactly; nobody has compared `ParkState`'s head and the
+  sweep's order with it;
+  (b) the buy screen's own 1000 ms timer (`0x80080`, `0x004ac3ee`), not decoded, against a balance rewritten every
+  frame here;
+  (c) the three callers of the timers' hold that are not identified (`FUN_0048a6e0`, `FUN_0048a720`,
+  `FUN_005f0b40`; `hud.md`);
+  (d) a hired member of staff keeps no name here, so a new candidate can be given one in use in the park
+  (`STAFF_NAME_IN_USE_IN_THE_PARK`);
+  (e) the leaver's stay and the analyser's ring of fifty are counted with nothing built (`LEAVER_STAY_SAMPLE`): what
+  sets a guest's `+0x204`, and who reads the history ring at `+0x21164`;
+  (f) `ParkSweepCapTests`' remarks name a bug that was never put back, and one of Q123c's tests stages a state the
+  original cannot reach;
+  (g) Q125: the cache folder's `CreateDirectory` runs before the renderer and can stop the boot for a folder nothing
+  reads.
+  No game run for (c), (f) and (g).
+- [ ] **Q236. The crowd's own voice and `FUN_0055ab50` are counted, not built. DECODE FIRST.** Found by the
+  2026-10-06 review (fix 4). On every 32nd step, after the music's level, the park loop hands kids 91 the guests
+  within four cells of the cell at `[0x007b05cc]`, held to 100 (`FUN_004c8d30`, then `FUN_0051e7b0`: it plays the
+  effect from `[0x00803a24]` while `[0x00803aa8]` is set, sets its parameter 7 and stops it at nought), and calls
+  `FUN_0055ab50`, which scales four words at `0x007660b8` (`park-engine.md`, "The music's level"). OpenTPW counts both
+  (`CROWD_VOICE_LEVEL`, `PARK_LOOP_FUN_0055AB50`) and plays no crowd. Kids 91 is of the music's class: twelve
+  variations in bands of 16, the first six naming controller 7 over a volume range of 14 to 22. Decode what that
+  controller does to the volume (`FUN_006bc090`), which cell `[0x007b05cc]` holds, and what the four words feed.
+  Confirm: the crowd found in a capture beside the original's (`rv4/orig/xcorr.py` is the method), near a crowd and
+  away from one.
 - [ ] **Q130d. The hire list stands in name order in the original. Decode first.** From Q130c. On four tabs the
   original lists its candidates by name (Chris Battson above Rajan Tande, who holds the earlier slot); OpenTPW's
   `ParkHireScreen` lists them in the pool's order. Decode what orders the list (`FUN_00481550` adds a row;
@@ -534,12 +581,6 @@ the original.
   the hire list carries the flag too and does not set it, and the three list screens' trees carry it (`0x291`). With
   no first row selected, the buy screen's panel stays empty until the pointer has been over a row, where the
   original's shows the top row half a second after the list fills.
-- [ ] **Q237. One Full Simulation test failed twice with no message kept.** Found by the 2026-10-06 review (fix 6).
-  `LevelFullSimulationParkTests.FullSimulationCreatesTwelveThingsWithRegularLoans` failed once in the review's
-  put-back runs and once at a gate, about two whole-suite runs in a hundred and twenty, and neither output was kept.
-  Nothing it reads is drawn (`FreshPark` takes no generator; its `RandomSeed` is the clock's and nothing in the test
-  reads it), and forty whole-suite runs after Q234's fix were green (`~/.cache/tpw-harnesses/rv6/loop.log`). When it
-  next fails, keep the run's output first: the loop in `rv6` saves any failing run whole. No game run.
 
 ## B. Docs and comments
 
@@ -837,26 +878,6 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   still ends at the panel's outline, so nothing but the hover differs. Before changing the hit test, check every park
   window whose root takes no pointer: a press on a greyed button there would fall through to the world. Confirm: an
   Instant Action player's pointer on a grey arrow, no help row; a screenshot.
-
-- [ ] **Q235. A walk stops short of its aim. DECODE FIRST.** Found by the review's fix 1 (`docs/exe/park.md`,
-  "From the stop to the booths"). In the original the thirteen guests of a load, aimed by `FUN_004fa5f0` at points up
-  to 245 of 256 across their roadside cell and walking in from the east, all stood on the cell aimed at
-  (`~/.cache/tpw-harnesses/rv1/orig/a.log`). Here a walk ends up to about a sixth of a cell short: guest 43, aimed at
-  (47.89,5.78), stands on (47,5) in the game but on (48,5) in `ParkTickTests`' sweeps, and of 30 leavers' walks into a
-  stop's second cell 7 ended one cell east and were sent again
-  (`~/.cache/tpw-harnesses/review-run-2026-10-06/game/lean-probe.txt`). Decode where `FUN_004fa2a0` and the mover
-  count a walk done (`0x00510100` on) against `PeepWalk.Step`'s `Progress() == One`, write it to `docs/exe/` and
-  stop. Two tests allow the cell beyond until then (`ParkTickTests`, `ParkDecidingTests`).
-- [ ] **Q236. The crowd's own voice and `FUN_0055ab50` are counted, not built. DECODE FIRST.** Found by the
-  2026-10-06 review (fix 4). On every 32nd step, after the music's level, the park loop hands kids 91 the guests
-  within four cells of the cell at `[0x007b05cc]`, held to 100 (`FUN_004c8d30`, then `FUN_0051e7b0`: it plays the
-  effect from `[0x00803a24]` while `[0x00803aa8]` is set, sets its parameter 7 and stops it at nought), and calls
-  `FUN_0055ab50`, which scales four words at `0x007660b8` (`park-engine.md`, "The music's level"). OpenTPW counts both
-  (`CROWD_VOICE_LEVEL`, `PARK_LOOP_FUN_0055AB50`) and plays no crowd. Kids 91 is of the music's class: twelve
-  variations in bands of 16, the first six naming controller 7 over a volume range of 14 to 22. Decode what that
-  controller does to the volume (`FUN_006bc090`), which cell `[0x007b05cc]` holds, and what the four words feed.
-  Confirm: the crowd found in a capture beside the original's (`rv4/orig/xcorr.py` is the method), near a crowd and
-  away from one.
 
 ## E. Large
 - [ ] **Q31. The other eight object windows.** `Level.OpenObjectWindow` opens only a ride's (`UiType 0`). Shops,
