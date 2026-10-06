@@ -642,6 +642,10 @@ public sealed class PeepBehaviour
 						Unimplemented.Report( "LEAVER_BOARDING_PARTICLE" );
 						Log.Info( $"Person {peep.ThingId}: gone from the stop at ({hereX},{hereY}), tick {tick}" );
 
+						// A balloon they hold is deleted with them (FUN_004fb330, 0x004fb33e). It is let go only on
+						// entering state 0x11 (0x005022ef), which the original never does here: Leaving is this
+						// build's mark for the sweep to take them out.
+						peep.Balloon = null;
 						peep.SetState( PeepState.Leaving, tick, _random );
 
 						// The original deletes them here, inside their own turn (FUN_0050b780), which takes them off

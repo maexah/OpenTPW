@@ -492,9 +492,10 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004fb221` | Guest constructor: the low byte of the fifth draw is the place across the roadside cell | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fb22b` | Guest constructor: the place down the roadside cell, a fixed 0xc8 of 256 | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fb24d` | Guest constructor: FUN_004fa5f0 routes the walk to the roadside point | OpenTPW/World/Park/PeepBehaviour.cs  |
-| `0x004fb259` | Guest constructor: no route to the roadside, state 6 instead of state 0 | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x004fb259` | Guest constructor: no route to the roadside, state 6 instead of state 0 | OpenTPW.Tests/ParkPeopleTests.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004fb2fd` | Guest constructor FUN_004faec0: broadcasts message 0x1c, a guest made (the all-visitors list adds their row) | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004fb333` | FUN_004fb330, a guest deleted at the bus: the balloon's sprite deleted (FUN_00475550), no burst, from | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x004fb33e` | Guest delete FUN_004fb330: FUN_00475550 frees the balloon's sprite ([guest + 0x210]) before the guest goes | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fb346` | FUN_004fb330: the balloon deletion, to here | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004fb383` | The guest's type-10 answer `FUN_004fb360` chooses a guest by `mMajorDest` alone | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fb38d` | `FUN_004fb360`'s rider arm: state `0x10` exactly | OpenTPW.Tests/ParkEvictionTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
@@ -712,7 +713,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00502147` | Admission destroys the rider's sprite on an object without flag bit `0x20` | OpenTPW.Files/Formats/Save/ParkWorld.cs  |
 | `0x00502156` | FUN_00501db0 case 0x10: the balloon's sprite deleted (FUN_00475550), its life kept, from | OpenTPW/World/Park/Peep.cs  |
 | `0x00502169` | FUN_00501db0 case 0x10: +0x210 zeroed, to here | OpenTPW/World/Park/Peep.cs  |
-| `0x005022ef` | FUN_00501db0 case 0x11: the balloon let go (FUN_004fe950) | OpenTPW/World/Park/Peep.cs  |
+| `0x005022ef` | FUN_00501db0 case 0x11: the balloon let go (FUN_004fe950) | OpenTPW/World/Park/Peep.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x005026cb` | `FUN_00502600`: the researcher's decide at hire, on a world draw | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x00502ba9` | `FUN_005029f0`: the researcher's walk-or-stay, a world draw `& 3` | OpenTPW.Tests/ParkStaffBehaviourTests.cs OpenTPW/World/Park/StaffBehaviour.cs  |
 | `0x00502be4` | `FUN_005029f0`: the researcher staying takes state `0xf`, research | OpenTPW/World/Park/StaffBehaviour.cs  |
@@ -743,6 +744,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00512a5e` | | OpenTPW/World/Park/ParkWeather.cs  |
 | `0x00512b4c` | | OpenTPW/World/Weather/Lightning.cs  |
 | `0x00515865` | | OpenTPW/Global/GameCalendar.cs OpenTPW/World/Level.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x00516330` | The park's generator: the state at world +0x1da708 times 0x19660d plus 0x3c6ef35f, rolled right 13 and kept; answers its magnitude | OpenTPW.Tests/ParkPeopleTests.cs  |
 | `0x0051635f` | World generator FUN_00516330: NEG leaves 0x80000000 unchanged, which RAND and FINDSCRIPTRAND then halve | OpenTPW.Tests/RideScriptClockTests.cs OpenTPW/VM/RideScript.cs OpenTPW/World/Park/ParkGenerator.cs  |
 | `0x00516394` | Thing sweep `FUN_00516380`: `mGameTick` up by one | OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/ParkState.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x00516695` | World tick FUN_00516380: FUN_004d7b20 after every thing's turn, where the calendar sends the day's change | OpenTPW/World/Level.cs  |

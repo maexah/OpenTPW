@@ -793,7 +793,8 @@ public sealed class Peep
 				break;
 
 			// Both of these give up on wherever they were going, and entering the first lets go of a balloon
-			// (0x005022ef). A guard's catch, which enters it, has deleted the sprite first; nothing here enters it.
+			// (0x005022ef). A guard's catch, which enters it, has deleted the sprite first, and so has the bus
+			// stop's leaver, whom the original deletes without entering it at all (PeepBehaviour, AtTheBusStop).
 			case PeepState.Leaving:
 				MajorDest = 0;
 				LetGoOfTheBalloon();

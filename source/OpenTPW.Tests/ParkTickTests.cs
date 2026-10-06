@@ -737,9 +737,17 @@ public class ParkTickTests
 			people.Guests[second].SetState( PeepState.AtTheBusStop, people.State.GameTick, new Random( 1 ) );
 			Assert.AreEqual( second, (int)people.State.CellAt( cellX, cellY ).Occupant, "the newcomer heads the cell" );
 
+			// They hold a balloon, which the original deletes with them (FUN_004fb330): it is not let go to burst.
+			people.Guests[second].Balloon = Balloon.Make( second, sets: 4, now: 0 );
+			people.Guests[id].Balloon = Balloon.Make( id, sets: 4, now: 0 );
+			Assert.IsNotNull( people.Guests[second].Balloon );
+			Assert.AreEqual( 0, people.Bursting.Count );
+
 			Plays( 4 );
 			Sweep( people );
 			Assert.IsFalse( people.Guests.ContainsKey( second ), "at 4 the head of the cell is gone" );
+			Assert.AreEqual( 0, people.Bursting.Count, "and the balloon they held is gone with them, not let go" );
+			Assert.IsNotNull( people.Guests[id].Balloon, "the one behind, who stays, keeps theirs" );
 			Assert.IsTrue( people.Guests.ContainsKey( id ), "and the one behind, whose turn came first, is not" );
 			Assert.AreEqual( 0, Triggered(), "with one still at the stop the vehicle is not sent off" );
 
@@ -938,10 +946,14 @@ public class ParkTickTests
 
 		StandVehicles( ("bus", busThing), ("seaplane", seaplaneThing) );
 
+		// Every generator seeded: left to the clock's seed, one of the saved guests now and then gave up and reached
+		// the stop while this ran, and the vehicle summoned for them is current where the test asks for none.
 		var people = new ParkPeople( world, new ParkBalance( Theme, easyMode: true ),
 			() => ParkRides.GateIsOpen, new ParkState( world ), catalogue,
 			thingId => thingId is var id && (id == busThing || id == seaplaneThing)
-				? bus : rides.Scheduler.Find( rides.ScriptFor( thingId ) ) );
+				? bus : rides.Scheduler.Find( rides.ScriptFor( thingId ) ),
+			random: new Random( 1 ), behaviourRandom: new Random( 1 ), rideRandom: new Random( 1 ),
+			staffRandom: new Random( 1 ) );
 
 		try
 		{

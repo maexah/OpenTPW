@@ -1467,6 +1467,18 @@ nine guests set off for the crossing; the seaplane was summoned at random on `mG
 from (42,5) and (43,5); one turned away at the shut gate later from (42,5): **thirteen of thirteen from the pair of
 the vehicle then current**, none taken out at the crossing (and the same thirteen of thirteen on a second run, two
 going from one cell on one tick). The build before it took all nine out at the crossing.
+**A balloon held goes with them, deleted.** The guest's delete `FUN_004fb330` (from `FUN_0050b780`'s dispatch) frees
+the balloon's sprite first: `FUN_00475550( [guest + 0x210] )` at `0x004fb33e`, which zeroes the handle's entry in the
+sprite table `[0x007b49f0]`. Letting go is `FUN_004fe950` alone, which leaves the entry and restarts the sprite's
+script (`FUN_00475b80`), and it has four callers, none on this road: the state setter's entry to `0x11`
+(`0x005022ef`), `FUN_004f9ed0`, `FUN_00501650` and the deciding turn (`0x004ff1f2`). **In the original, predicted
+first** (the reader `balloons.py`, a Balloon Shop bought and the park shut): six guests went from state `0x15` on
+(42,3) holding a balloon, and each balloon's table entry read nought on the poll its guest went and a hundred polls
+after. **OpenTPW** (the review's fix 2): `AtTheBusStop` clears the balloon before it marks the guest `Leaving`,
+whose entry would let it go. In the game with the same shop: seven holders went from the stop and no balloon was
+left let go by it in 451 polls; on the build before, ten holders went and a let-go balloon stood by the stop on 9
+polls of 452.
+
 Not built: the particle `0x13` as a guest goes (counted, `LEAVER_BOARDING_PARTICLE`); the walking mode `+0x188`.
 Not pinned by a test: the facing `0x7ff` for a larger vehicle.
 
