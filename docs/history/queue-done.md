@@ -4692,6 +4692,21 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   reaches a list and a slider as `0x11006` (`FUN_0065dcaf`). In the original, 6 of 6: Buy held 1.0 s opened the buy
   screen; a visitors row held 600 ms did nothing and a 200 ms click opened the window; Resume Game held 600 ms did
   nothing, and a quick click of either button chose it. `hud.md`, "Who acts on the click, and who on the release".
+- [x] **Q123c. Lists, the game menu's rows and the preview act on a press, where the original waits for the click.**
+  Found by Q123b (`hud.md`, "Who acts on the click, and who on the release"). Keep the left button's record in
+  `WindowStack` as the right's is kept (state, press point, stamp, on `Time.WallMilliseconds`); a list's row click and
+  its double click (`0x11007`: decode what that arm does first), the game menu's rows for either button, and the
+  preview's left click go through it; buttons stay as they are. A slider's track pages towards a click, if a
+  slider's track is built. Confirm: a visitors row and Resume Game held 600 ms and clicked quickly, `windows` after
+  each, beside the original's readings in `hud.md`; a screenshot.
+  Done 2026-10-06: `WindowStack.LeftClick` and `UiControl.LeftClicked`/`LeftClickedAt`/`LeftDoubleClicked`; the list,
+  the menu's rows (either button) and the preview answer them; buttons as they were. Predicted and read in Lost
+  Kingdom, **8 of 8** (the unchanged build 8 of 8 the other way): a buy row held 600 ms, the screen up and `hand`
+  item 0, a 150 ms click, item 1100; Publish Park held 600 ms, nothing, a quick right click, chosen; the preview held
+  600 ms, the window up. In the original, new: a visitor's preview held 600 ms stayed, a 150 ms click closed it.
+  A slider's track pages on the click too (tested only). A read-only review then found, and the commit builds: a list
+  judges no stray, a slider's thumb leaves the stamp alone, the lobby's player slots and Quit Game are click-driven
+  (Quit Game held 600 ms asked nothing in both games; a right click asked). Thirty-two restored bugs each fail.
 
 ## B. Docs and comments
 

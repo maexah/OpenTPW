@@ -2251,8 +2251,8 @@ the object window's preview answers `Clicked` and `RightClicked`. Differences, e
 - **The miscellaneous tab** of the all-items list holds a row for each item type with a count, not a row a thing, so
   its right click goes nowhere: counted, `ALL_ITEMS_MISC_ROW_RIGHT_CLICK`. What the original's rows there are is not
   decoded (`FUN_00495110` fills them through `FUN_00481bc0( 0x400, 0x004941e0 )`).
-- **The preview's left click** is a press and a release on the panel with no limit on its time, where the original's
-  is the 500 ms click (`docs/QUEUE.md` Q123b).
+- **The preview's left click** is the 500 ms click, as the original's (`hud.md`, "Who acts on the click, and who on
+  the release").
 - **In first person** the original's two words are where the viewer stands, and no screen is open there; here only
   the debug console can put one up, and then only the orbit's point moves.
 - **The status label** inside the preview (`0x3e25`) does not take the pointer here, so a click on it is the

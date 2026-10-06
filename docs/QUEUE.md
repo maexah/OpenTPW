@@ -38,13 +38,6 @@ the original.
 
 ## A. Bugs first
 
-- [ ] **Q123c. Lists, the game menu's rows and the preview act on a press, where the original waits for the click.**
-  Found by Q123b (`hud.md`, "Who acts on the click, and who on the release"). Keep the left button's record in
-  `WindowStack` as the right's is kept (state, press point, stamp, on `Time.WallMilliseconds`); a list's row click and
-  its double click (`0x11007`: decode what that arm does first), the game menu's rows for either button, and the
-  preview's left click go through it; buttons stay as they are. A slider's track pages towards a click, if a
-  slider's track is built. Confirm: a visitors row and Resume Game held 600 ms and clicked quickly, `windows` after
-  each, beside the original's readings in `hud.md`; a screenshot.
 - [ ] **Q124. `Material.Default` compiles a shader nothing draws with.** Found by Q67's sweep. `Material.UI.cs` builds
   it from `content/shaders/3d.shader` the first time `Material` is touched and keeps it for the life of the process.
   Its one reader is the guard in `Material.Delete`, which can fire only if something holds it, and nothing does. The
@@ -587,8 +580,8 @@ the original.
 - [ ] **Q234. One staff test fails now and then in the whole suite.** Found by Q123's gate (and once unnamed at
   Q233's). `ParkStaffBehaviourTests.TheParksSweepHandsTheStaffItsOwnClock` failed 1 of 7 whole-suite runs with the
   game, alone in a worktree, and 0 of 40 runs of its class alone, so something another class leaves behind reaches
-  it, or a draw it rests on is not seeded. Its message was not kept. Run the suite until it fails with the log kept,
-  find what it reads that is shared (the world's random, `GameClock`, `Time`), and pin it. No game run.
+  it, or a draw it rests on is not seeded. Again at Q123b's gate, 2 of 9 runs by then: "Assert.IsTrue failed. staff 30
+  ended only 2 walks in 400 sweeps" (line 500). Find what it reads that is shared (the world's random, `GameClock`, `Time`), and pin it. No game run.
 
 ## B. Docs and comments
 

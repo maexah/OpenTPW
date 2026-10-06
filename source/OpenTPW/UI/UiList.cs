@@ -427,24 +427,53 @@ internal sealed class UiList : UiControl
 	internal void ScrollByWheel( float notches ) => Scroll( -(int)notches );
 
 	/// <summary>
-	/// A press picks the row under the pointer and activates it.
+	/// A left click on the list, as the class answers <c>0x11006</c> for button 0 (<c>FUN_006655a2</c>): the row under
+	/// the click's point is selected if there is one, and then, under the list's flag <c>0x80</c>, which every list
+	/// built here carries, the selected row is activated, whichever it is (<c>0x400</c>). A press alone does nothing
+	/// (<c>docs/exe/hud.md</c>, "Who acts on the click, and who on the release").
 	/// </summary>
 	/// <remarks>
-	/// <b>The original sends both messages, and a press-and-release sends the first one twice.</b>
-	/// With the list's flag <c>0x80</c> set - which the buy and hire screens set - <c>0x400</c> is raised
-	/// on the press and again on the release; the buy screen survives that only because its first handler
-	/// closes the screen and the second finds the tree gone. Firing once, on the press, is the
-	/// behaviour that arrangement produces and is what this does rather than reproducing a double
-	/// message that only works by accident.
+	/// The column the point is in (<c>0x404</c>, <c>FUN_00665494</c>) is told to nobody: no screen answers it.
+	/// <para>
+	/// The original's selected row is the one the pointer was last over (<see cref="SelectsUnderPointer"/>), so a
+	/// click that misses every row activates that one. A list that does not follow the pointer here would name the
+	/// row last clicked instead, so its miss activates nothing: counted.
+	/// </para>
 	/// </remarks>
-	internal override void PointerPressed( float x, float y )
+	internal override void LeftClickedAt( float x, float y )
 	{
-		if ( RowAt( x, y ) is not (var index and >= 0) )
+		if ( RowAt( x, y ) is var index and >= 0 )
+		{
+			Select( index );
+		}
+		else if ( !SelectsUnderPointer )
+		{
+			Unimplemented.Report( "LIST_CLICK_MISS_SELECTION_NOT_UNDER_POINTER" );
+			return;
+		}
+
+		ActivateSelected();
+	}
+
+	/// <summary>
+	/// The list's proc answers the pointer's move itself and returns before the base proc (<c>0x00665d22</c>), so a
+	/// press on a list is a click however far the pointer goes, for either button.
+	/// </summary>
+	internal override bool StraySpoilsAClick => false;
+
+	/// <summary>The double click's second press activates the selected row again (<c>FUN_006656fa</c>).</summary>
+	internal override void LeftDoubleClicked() => ActivateSelected();
+
+	private void ActivateSelected()
+	{
+		if ( _selected < 0 || _selected >= _rows.Count )
 			return;
 
-		Select( index );
-
-		Activated?.Invoke( _rows[index].Id );
+		// The class posts 0x400 to its parent whoever that is; a screen that answers nothing here is counted.
+		if ( Activated == null )
+			Unimplemented.Report( "LIST_ROW_ACTIVATED_UNANSWERED" );
+		else
+			Activated( _rows[_selected].Id );
 	}
 
 	/// <summary>The pointer moved over the list: under <see cref="SelectsUnderPointer"/> the row under it is selected.</summary>

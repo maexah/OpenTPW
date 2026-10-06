@@ -102,7 +102,9 @@ internal sealed class GameMenu : UiWindow
 
 		choice.Entered = () => choice.Ramp = 1;
 		choice.Exited = () => choice.Ramp = -1;
-		choice.Clicked = () => Choose( item );
+		// A row is not a button: it answers the base proc's click, whatever the button (MenuList_ChoiceCallback,
+		// 0x00492d8f), so a press held half a second chooses nothing.
+		choice.LeftClicked = choice.RightClicked = () => Choose( item );
 
 		_choices.Add( choice );
 	}

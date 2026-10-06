@@ -72,6 +72,15 @@ internal sealed class WindowStack : Panel
 	private long? _rightStamp;
 
 	/// <summary>
+	/// The left button's press and stamp, kept as the right's are (<c>0x00faa598</c>, <c>0x00faa5a0</c>). A press on a
+	/// <see cref="UiButton"/> is never unspoiled: the button's own proc answers it and the base proc never sees it.
+	/// A slider's thumb, alone, leaves the stamp as it found it.
+	/// </summary>
+	private (bool Unspoiled, bool KeepsStamp, Vector2 Where, UiControl? On) _leftPress;
+
+	private long? _leftStamp;
+
+	/// <summary>
 	/// Whether the interface used this frame's wheel, so that the world does not use it as well.
 	///
 	/// <para>
@@ -249,6 +258,9 @@ internal sealed class WindowStack : Panel
 			_pressed = null;
 		}
 
+		if ( _leftPress.On?.IsWithin( window.Root ) == true )
+			_leftPress = default;
+
 		if ( window.Focus != null )
 			window.Focus.HasFocus = false;
 
@@ -347,6 +359,8 @@ internal sealed class WindowStack : Panel
 		else if ( !mouseDown && _mouseWasDown )
 			Release( hit );
 
+		LeftClick( mouseDown, hit, mouse / VirtualScreen.Scale );
+
 		_mouseWasDown = mouseDown;
 
 		var rightDown = Input.Mouse.Right;
@@ -427,6 +441,10 @@ internal sealed class WindowStack : Panel
 		ViewTook = !taken && ViewPressed?.Invoke() == true;
 		Release( hit );
 
+		// And the click the base proc would make of so short a press, for what is not a button.
+		if ( hit is not (null or UiButton) )
+			LeftClicked( hit, x, y );
+
 		return taken;
 	}
 
@@ -485,7 +503,7 @@ internal sealed class WindowStack : Panel
 
 		if ( down )
 		{
-			if ( _rightPress.Unspoiled && hit == _rightPress.On
+			if ( _rightPress.Unspoiled && hit == _rightPress.On && hit?.StraySpoilsAClick != false
 				&& (MathF.Abs( at.X - _rightPress.Where.X ) > ClickStray || MathF.Abs( at.Y - _rightPress.Where.Y ) > ClickStray) )
 				_rightPress.Unspoiled = false;
 
@@ -511,6 +529,97 @@ internal sealed class WindowStack : Panel
 			_rightPress.On?.RightClicked?.Invoke();
 			_rightPress.On?.RightClickedAt( _rightPress.Where.X * VirtualScreen.Scale, _rightPress.Where.Y * VirtualScreen.Scale );
 		}
+	}
+
+	/// <summary>
+	/// The left button's click, this frame, for whatever is not a button: the base control proc's, as
+	/// <see cref="RightClick"/> is for button 1, with the same limit, stray and stamp. A click goes to the control the
+	/// press landed on, wherever the pointer is let go (<see cref="UiControl.LeftClicked"/>, then
+	/// <see cref="UiControl.LeftClickedAt"/> with the press's point); a press under <see cref="ClickLimit"/> from the
+	/// last click's release is a double click's second, told to the control at once
+	/// (<see cref="UiControl.LeftDoubleClicked"/>), and its release clicks nothing.
+	/// <para>
+	/// <b>A button keeps its own.</b> The button class's proc answers its press and release and reads no clock
+	/// (<c>FUN_00668f9c</c>): its press stamps the button's record and its release clears the stamp, so a press on
+	/// anything straight after a button's click is never a double click's second. <see cref="Release"/> is that proc.
+	/// A slider's thumb keeps its press too and never touches the stamp (<c>0x0066bb9b</c>).
+	/// </para>
+	/// <para>
+	/// A press on no control is the scene's own layer's, which hands it to the base proc
+	/// (<c>docs/exe/park-engine.md</c>, the park's mouse proc), so it stamps as a control's does.
+	/// </para>
+	/// </summary>
+	/// <remarks>
+	/// The stray is judged as the right button's is, only while the pointer is over what the press landed on and
+	/// never for a control that keeps the move from the base proc (<see cref="UiControl.StraySpoilsAClick"/>), and a
+	/// control's flag <c>0x8</c> is not read - see <see cref="RightClick"/>.
+	/// </remarks>
+	private void LeftClick( bool down, UiControl? hit, Vector2 at )
+	{
+		if ( down && !_mouseWasDown )
+		{
+			var now = Time.WallMilliseconds;
+
+			if ( hit is UiSliderThumb )
+			{
+				_leftPress = (false, true, at, hit);
+				return;
+			}
+
+			if ( hit is UiButton )
+			{
+				_leftPress = (false, false, at, hit);
+				_leftStamp = now;
+				return;
+			}
+
+			var second = Input.Mouse.LeftWentDown && now - _leftStamp < ClickLimit;
+
+			_leftPress = (Input.Mouse.LeftWentDown && !second, false, at, hit);
+			_leftStamp = now;
+
+			if ( second )
+				hit?.LeftDoubleClicked();
+
+			return;
+		}
+
+		if ( down )
+		{
+			if ( _leftPress.Unspoiled && hit == _leftPress.On && hit?.StraySpoilsAClick != false
+				&& (MathF.Abs( at.X - _leftPress.Where.X ) > ClickStray || MathF.Abs( at.Y - _leftPress.Where.Y ) > ClickStray) )
+				_leftPress.Unspoiled = false;
+
+			return;
+		}
+
+		if ( !_mouseWasDown )
+			return;
+
+		var on = _leftPress.On;
+		_leftPress.On = null;
+
+		if ( !_leftPress.Unspoiled )
+		{
+			if ( !_leftPress.KeepsStamp )
+				_leftStamp = null;
+
+			return;
+		}
+
+		var let = Time.WallMilliseconds;
+		var clicked = let - _leftStamp < ClickLimit;
+		_leftStamp = let;
+
+		if ( clicked && on != null )
+			LeftClicked( on, _leftPress.Where.X * VirtualScreen.Scale, _leftPress.Where.Y * VirtualScreen.Scale );
+	}
+
+	/// <summary>Hands a control its left click, with the press's point in window pixels.</summary>
+	private static void LeftClicked( UiControl on, float x, float y )
+	{
+		on.LeftClicked?.Invoke();
+		on.LeftClickedAt( x, y );
 	}
 
 	private UiControl? HitTest( float x, float y )

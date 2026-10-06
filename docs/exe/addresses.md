@@ -241,6 +241,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00491ab0` | | OpenTPW/UI/UiText.cs  |
 | `0x00492180` | | OpenTPW/UI/HelpBar.cs  |
 | `0x00492d80` | | OpenTPW/UI/Screens/GameMenu.cs OpenTPW/UI/UiSounds.cs  |
+| `0x00492d8f` | MenuList_ChoiceCallback: a click 0x10006 of any button plays sound 0xc1 and chooses the row | OpenTPW.Tests/LeftClickTests.cs OpenTPW/UI/Screens/GameMenu.cs  |
 | `0x00492e80` | | OpenTPW/UI/Screens/GameMenu.cs  |
 | `0x00492f60` | | OpenTPW/UI/Screens/GameMenu.cs  |
 | `0x00493171` | MenuList_Show: closes the open park screen (FUN_00485b40) before the menu is shown | OpenTPW.Tests/ParkScreenTests.cs OpenTPW/UI/Screens/GameMenu.cs OpenTPW/UI/UiWindow.cs  |
@@ -288,8 +289,10 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004a43b0` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x004a4490` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x004a6000` | | OpenTPW/Client/Locale/UIStrings.cs OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/FrontEnd/Screens/PlayerSlots.cs  |
+| `0x004a6104` | Player slot callback 0x004a6000: SUB 0x10002 then SUB 4, the click 0x10006 of any button | OpenTPW/UI/FrontEnd/Screens/PlayerSlots.cs  |
 | `0x004a61b0` | | OpenTPW/Client/Players.cs OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/FrontEnd/Screens/PlayerSlots.cs  |
 | `0x004a61d0` | | OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/FrontEnd/Screens/PlayerSlots.cs OpenTPW/UI/Screens/MessageBox.cs  |
+| `0x004a61e9` | Quit Game callback 0x004a61d0: the click 0x10006 of any button | OpenTPW/UI/FrontEnd/Screens/PlayerSlots.cs  |
 | `0x004a6290` | | OpenTPW/UI/FrontEnd/FrontEnd.cs  |
 | `0x004a62b0` | | OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/FrontEnd/Screens/PlayerSlots.cs  |
 | `0x004a6580` | | OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/FrontEnd/FrontEndLines.cs OpenTPW/UI/FrontEnd/Screens/PlayerSlots.cs  |
@@ -1137,19 +1140,20 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0065d3a3` | | OpenTPW/UI/UiControl.cs  |
 | `0x0065da8d` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
 | `0x0065f8b2` | Base control proc, the press: a control's flag 0x8 skips the double click's test | OpenTPW/UI/WindowStack.cs  |
-| `0x0065f8c7` | Base control proc: a press within 500 ms of the button's stamp is a double click's second (0x10007) | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
+| `0x0065f8c7` | Base control proc: a press within 500 ms of the button's stamp is a double click's second (0x10007) | OpenTPW.Tests/LeftClickTests.cs OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
 | `0x0065f8d3` | Base control proc: the double click's compare, strictly less than 500 ms | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
-| `0x0065f969` | Base control proc: a release under 500 ms after its press posts the click 0x10006 | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
-| `0x0065f977` | Base control proc: the click 0x10006 is posted with the press's point | OpenTPW/UI/UiControl.cs  |
+| `0x0065f969` | Base control proc: a release under 500 ms after its press posts the click 0x10006 | OpenTPW.Tests/LeftClickTests.cs OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
+| `0x0065f977` | Base control proc: the click 0x10006 is posted with the press's point | OpenTPW.Tests/LeftClickTests.cs OpenTPW/UI/UiControl.cs  |
 | `0x0065f9af` | Base control proc: an unspoiled release stamps the button with its time | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
-| `0x0065f9bd` | Base control proc: any other release clears the button's stamp | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs OpenTPW/UI/WindowStack.cs  |
+| `0x0065f9bd` | Base control proc: any other release clears the button's stamp | OpenTPW.Tests/LeftClickTests.cs OpenTPW.Tests/ParkFirstPersonRightClickTests.cs OpenTPW/UI/WindowStack.cs  |
 | `0x0065fa33` | Base control proc: a move spoils a press that strayed more than 6 units | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
-| `0x0065fab7` | Base control proc: the stray compare across, more than 6 | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs OpenTPW/UI/WindowStack.cs  |
+| `0x0065fab7` | Base control proc: the stray compare across, more than 6 | OpenTPW.Tests/LeftClickTests.cs OpenTPW.Tests/ParkFirstPersonRightClickTests.cs OpenTPW/UI/UiControl.cs OpenTPW/UI/WindowStack.cs  |
 | `0x0065fadb` | Base control proc: the stray compare down, more than 6 | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
 | `0x0065fd0e` | | OpenTPW/UI/UiWindow.cs  |
 | `0x0065fd58` | | OpenTPW/UI/UiControl.cs  |
 | `0x0065fe75` | | OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x006644d2` | FUN_00664495, after a list add or removal: with count <= visible the slider is disabled and the top row left | OpenTPW.Tests/UiListTests.cs OpenTPW/UI/UiList.cs  |
+| `0x00665d22` | List proc FUN_00665c35, the move 0x10003: FUN_006656a0, then returns before the base proc, so no stray is judged | OpenTPW.Tests/LeftClickTests.cs OpenTPW/UI/UiList.cs  |
 | `0x00665dbd` | List proc FUN_00665c35: a click of any button but the left goes to FUN_0066563d (select the row under it, post 0x402) | OpenTPW/UI/UiList.cs  |
 | `0x006662b7` | | OpenTPW/UI/UiControl.cs  |
 | `0x0066656c` | | OpenTPW/UI/UiControl.cs  |
@@ -1168,7 +1172,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0066b47d` | | OpenTPW/UI/UiControl.cs  |
 | `0x0066b8aa` | | OpenTPW/UI/UiControl.cs  |
 | `0x0066ba22` | | OpenTPW/UI/UiControl.cs  |
-| `0x0066bb9b` | | OpenTPW/UI/UiControl.cs  |
+| `0x0066bb9b` | | OpenTPW.Tests/LeftClickTests.cs OpenTPW/UI/UiControl.cs OpenTPW/UI/WindowStack.cs  |
 | `0x0066c5a4` | A polygon region's contains test: the crossings count, in whole virtual units | OpenTPW/UI/UiControl.cs  |
 | `0x0067a830` | __ftol: chop, FISTP qword, the low dword in EAX; the integer indefinite's low dword is nought | OpenTPW.Files/Formats/Model/AnimationFile.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x006804da` | The runtime's start-up: the FPU at 53-bit precision | OpenTPW/World/Park/ParkRideScore.cs  |
@@ -1378,5 +1382,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x008791a0` | | OpenTPW.Files/Formats/Save/ParkScriptStates.cs OpenTPW.Tests/ParkScriptStateTests.cs  |
 | `0x008bcbcc` | | OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x00f82884` | The lobby's front-end object pointer; the message box's pause test wants it gone | OpenTPW/Global/GameClock.cs OpenTPW/World/Level.cs  |
+| `0x00faa598` | The base control proc's record for button 0: state word, press point, then the stamp at +8 (stride 0xc a button) | OpenTPW/UI/WindowStack.cs  |
+| `0x00faa5a0` | The left button's click stamp: the press's time, the release's after a click, nought after any other release | OpenTPW/UI/WindowStack.cs  |
 | `0x00faa5ac` | UI: the right button's time stamp (0x00faa5a0 + 1 * 0xc) | OpenTPW/UI/WindowStack.cs  |
 | `0x00fb1f20` | The sound engine's one random seed | OpenTPW/World/Park/ParkScreams.cs  |

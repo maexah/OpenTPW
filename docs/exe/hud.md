@@ -657,15 +657,24 @@ it comes up.
 
 **Everything else gets the base proc's click**, `0x10006`: the release under 500 ms from the press, not strayed more
 than 6. And for the release, the press, the click and the double click alike the base proc also calls
-`FUN_0065dcaf`: if the press's point is inside the control (vtable `+0x2c`), it posts the same message with
-**`0x1000` set** to the control itself, carrying the press's point. So `0x11006` is "a click that began inside me",
-and that is what turns `0x10006` into the message the list and the slider answer.
+`FUN_0065dcaf`: if the message's own point is inside the control (slot 0 of the region object at `+0x2c`,
+`0x0065dcc9`), it posts the same message with **`0x1000` set** to the control itself, carrying the record's press
+point. For the click and the double click the two points are the same, so `0x11006` is "a click that began inside
+me", and that is what turns `0x10006` into the message the list and the slider answer. (For a press the record still
+holds the press before; nothing was found that reads `0x11004` or `0x11005`.)
+
+**The stray is the base proc's, on the move message.** A class whose proc answers `0x10003` itself and returns
+is never judged: the list's does (`0x00665d22`), so a press on a list is a click however far the pointer goes.
 
 | Who | Message | What a click does |
 |---|---|---|
 | a list's rows, `FUN_00665c35` | `0x11006` | the left button: the row click `FUN_006655a2`; any other: `FUN_0066563d`, the `0x402` above; `0x11007`, the double click, has its own arm |
 | the plain list class, `FUN_0065bb6b` (made by `FUN_0065ab64`) | `0x11006` | with flag `0x80`, posts `0x200` with the row; without, the row under the point (`FUN_0065b93f`, `0x201`) |
-| a slider's track, `Slider_Callback` | `0x11006` | pages towards the point (`Slider_PageTowards`) |
+| a slider's track, `Slider_Callback` | `0x11006` | whatever the button: pages towards the point (`Slider_PageTowards`) |
+| the lobby's player slots and Quit Game, `0x004a6000`, `0x004a61d0` (type 1 in the stream at `0x00753c68`, not buttons) | `0x10006` | whatever the button: the slot, or the quit question |
+| `FUN_0048d2e0` (installed by `FUN_0048d290`) | `0x10006` | the left button: vtable `+0x38` of control 0; not identified |
+| `FUN_00499060` (installed by `FUN_00498d80`) | `0x10006` | the left button: `FUN_004990f0`; not identified |
+| `FUN_004b3c10` (installed by `FUN_004b3cf0`, the staff and visitor locator) | `0x10006` | the left button: `FUN_004b79b0` or `FUN_004b6080` |
 | the game menu's rows, `MenuList_ChoiceCallback` | `0x10006` | **whatever the button**: sound `0xc1`, then the choice (`0x100001`) |
 | an object window's preview, `0x0048d1a0` | `0x10006` | whatever the button: the camera to the thing |
 | `FUN_004b5c80` (installed by `FUN_004b6080`) | `0x10006` | whatever the button: `FUN_0048ce80`, the camera to a thing |
@@ -677,21 +686,39 @@ and that is what turns `0x10006` into the message the list and the slider answer
 | the two park's-end views, `0x0048a740` | `0x10006` | after their 2000 ms |
 | two lobby objects, `FUN_005dd530`, `FUN_005dd840` | `0x10006` | the middle button toggles a flag |
 
-The table is every `CMP` or `SUB` against `0x10006` or `0x11006` in the listing, and `FUN_00488a00`, which reaches its
-case through a jump table: a handler that switches on the message that way is not found by the scan, so the table can
-be short.
+The table is every `CMP` or `SUB` against `0x10006` or `0x11006` in the listing, the handlers that reach it by a
+chain of `SUB`s (`SUB 0x10002`, then `SUB 4`: the lobby's two and the three after them, found by a second scan), and
+`FUN_00488a00`, which reaches its case through a jump table. A handler that switches on the message that last way is
+not found by either scan, so the table can be short.
 
 **In the original**, predicted first, 6 of 6, read from memory: the left button held 1.0 s on the gadget's Buy, the
 buy screen opened as it came up (`[0x007c24c8]` 0 to `0x46bca50`); held 600 ms on a visitors row, nothing
 (`0x46cc670` stayed), and a 200 ms click on it opened the visitor's window (`0x46cf4a0`); held 600 ms on the game
 menu's Resume Game, the menu stayed (`[0x007c2534]` `0x46c1c30`); a quick right click on it chose it (0), and a quick
-left click the same.
+left click the same. In the lobby (Q123c, photographed): Quit Game held 600 ms asked nothing, and a quick right click
+put the quit question up.
 
-**OpenTPW** (read in the code, not run): a button's `Clicked` is the release over it, as the original's, with no
-repeat and no state for leaving and coming back beyond that. A list's row is selected by the press
-(`UiList.PointerPressed`), the game menu's rows are buttons (`GameMenu`, `Clicked`), and the preview's left click is
-a press and a release of any length: each acts where the original waits for a click under 500 ms, and the menu's
-rows do not answer the right button. The build is Q123c.
+A visitor's window's preview, the same way (Q123c): held 600 ms, the window stayed (`0x46d3b20`) and the camera where
+it was; a 150 ms click, the window closed and the camera went to the visitor, (475,175) to (490,280).
+
+**OpenTPW** (Q123c): `WindowStack.LeftClick` keeps the left button's press and stamp as `RightClick` keeps the
+right's, on `Time.WallMilliseconds`, and hands a click to the control the press landed on:
+`UiControl.LeftClicked`, then `LeftClickedAt` with the press's point (`0x11006`); a double click's second press is
+`LeftDoubleClicked` (`0x11007`). A `UiButton` takes no part: `Release` is its proc, with no limit, and its release
+clears the stamp; a slider's thumb keeps its press too and leaves the stamp alone (`0x0066bb9b`).
+`UiList.LeftClickedAt` selects the row under the point and activates the selected row (`FUN_006655a2` under flag
+`0x80`; all seven list records carry it: buy `0x91`, the rest `0x291`, none `0x8` or `0x100`), and
+`LeftDoubleClicked` activates it again (`FUN_006656fa`); `UiList.StraySpoilsAClick` is false, for either button.
+The original's selected row is the one last hovered, so there a click that misses every row activates that one: here
+only a list that follows the pointer does so (the buy list), and any other's miss is counted,
+`LIST_CLICK_MISS_SELECTION_NOT_UNDER_POINTER`. A screen that answers no activation is counted,
+`LIST_ROW_ACTIVATED_UNANSWERED`: the visitors, all-staff and all-items lists, the first of which opens a visitor's
+window in the original. The game menu's rows, the lobby's player slots and Quit Game answer `LeftClicked` and
+`RightClicked`, the preview `LeftClicked`, and a slider's track pages towards a click of either button
+(`UiSlider.LeftClickedAt`, `RightClickedAt`), where it paged on the press. The console's `click` makes the click a
+short press would. Not built: a list's column message `0x404`, which no screen answers; the middle button; a
+repeating button; a control's flag `0x8`. A button that the pointer leaves and comes back to keeps its press here as
+there, but the two are not compared.
 
 ## The other park streams
 
@@ -1019,7 +1046,7 @@ and what sends `0x10003` are not traced.
 
 **OpenTPW**: `UiList.SelectsUnderPointer` and `PointerMoved`; `WindowStack` sends the move to the control under the
 pointer on a frame the pointer moved. Only the buy list sets the flag (Q233b); the others' rows are selected by a
-press alone.
+click alone.
 
 ### A frame worn at two sizes
 
@@ -1033,7 +1060,8 @@ its own (`UiMesh.Sized`). Photographed before and after (Q233b); no test, as a p
 
 The list's proc `FUN_00665c35` answers the message `0x11006`, which carries a button and a point: the left button
 (`param_3` nought) goes to `FUN_006655a2`, the row click above; any other goes to **`FUN_0066563d`** (`0x00665dbd`).
-What turns the base proc's click `0x10006` into `0x11006` is not traced. `FUN_0066563d` does nothing unless the list's
+The base proc's click `0x10006` becomes `0x11006` in `FUN_0065dcaf` ("Who acts on the click, and who on the
+release"). `FUN_0066563d` does nothing unless the list's
 flags `+0x48` have `0x80`. Then `FUN_0066552e` hit-tests the point against the row region (`+0x138`), divides its
 height above the rows' top (`+0x13e`) by the row height (`+0x170`), and hands the slot to `FUN_0066525c`, which
 selects it only when it is under the visible count (`+0x172`) and the row count; and then, **if any row is selected**
@@ -1052,12 +1080,9 @@ its tenth row went to that row's guest, not to an eleventh row's.
 `UiList.RowRightClicked`. The strip under the last whole row is no row's for either button. A list here opens with no
 row selected, so a miss before any row is chosen names nothing: counted, `LIST_RIGHT_CLICK_FIRST_ROW_NOT_SELECTED`.
 
-**With flag `0x80` set — buy is `0x91`, hire `0x291`, both have it — `0x400` fires twice per click**,
-once on press and once on release. The buy handler's first one closes the screen, so the second finds
-the tree gone and is a no-op. **A re-implementation that fires once, on the press, behaves as the original
-does (`UiList.PointerPressed`); one that copies the press path without the close-then-guard sequence purchases twice.** This is INFERRED,
-and is worth confirming in the running game by holding a click on a buy row and predicting one carried
-item before looking.
+**With flag `0x80` set, `0x400` is posted once, on the click** (`FUN_006655a2`, from `0x11006`), and once more on a
+double click's second press (`FUN_006656fa`); nothing posts it on a bare press ("Who acts on the click, and who on
+the release", measured). `UiList.LeftClickedAt` and `LeftDoubleClicked`.
 
 ### The structural surprise: the tab group is a CHILD of the list
 

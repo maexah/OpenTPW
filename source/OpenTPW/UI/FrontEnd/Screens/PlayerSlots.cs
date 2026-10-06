@@ -94,7 +94,9 @@ internal sealed class PlayerSlots : UiWindow
 
 			button.Entered = () => label.TextColour = Highlighted;
 			button.Exited = () => label.TextColour = Label;
-			button.Clicked = () => frontEnd.SlotClicked( chosen );
+			// A slot is no button to the original (type 1 in the stream at 0x00753c68): its callback answers the
+			// base proc's click of any button (0x004a6104), so a press held half a second does nothing.
+			button.LeftClicked = button.RightClicked = () => frontEnd.SlotClicked( chosen );
 		}
 
 		Root.Add( new UiControl
@@ -119,6 +121,7 @@ internal sealed class PlayerSlots : UiWindow
 
 		quit.Entered = () => quit.TextColour = QuitHighlighted;
 		quit.Exited = () => quit.TextColour = Label;
-		quit.Clicked = frontEnd.AskToQuit;
+		// As a slot: the click of any button (0x004a61e9).
+		quit.LeftClicked = quit.RightClicked = frontEnd.AskToQuit;
 	}
 }

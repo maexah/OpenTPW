@@ -99,6 +99,14 @@ internal class UiControl
 	/// </summary>
 	public Action? RightClicked { get; set; }
 
+	/// <summary>
+	/// What a left click on it does, if anything: the base control proc's click of button 0 (<c>0x10006</c>), a press
+	/// let go under 500 ms that has not strayed, where <see cref="Clicked"/> is a button's own, which reads no clock
+	/// (<c>docs/exe/hud.md</c>, "Who acts on the click, and who on the release"). Only <see cref="WindowStack"/> calls
+	/// it, and never for a <see cref="UiButton"/>.
+	/// </summary>
+	public Action? LeftClicked { get; set; }
+
 	public Action? Exited { get; set; }
 
 	/// <summary>
@@ -148,7 +156,7 @@ internal class UiControl
 	public bool StopsPointer { get; init; }
 
 	/// <summary>Whether the pointer stops at it, rather than passing through to whatever is under it.</summary>
-	internal virtual bool TakesMouse => Clicked != null || Entered != null || HelpText >= 0 || Outline != null || StopsPointer;
+	internal virtual bool TakesMouse => Clicked != null || LeftClicked != null || Entered != null || HelpText >= 0 || Outline != null || StopsPointer;
 
 	/// <summary>Where on the window it takes the pointer, when it does - all of it, unless its layout data says otherwise.</summary>
 	internal virtual PixelRect HitArea => Pixels;
@@ -298,6 +306,25 @@ internal class UiControl
 	/// base control proc posts with <c>0x10006</c> (<c>0x0065f977</c>). Called after <see cref="RightClicked"/>.
 	/// </summary>
 	internal virtual void RightClickedAt( float x, float y ) { }
+
+	/// <summary>
+	/// A left click whose press landed on it, with the press's point in window pixels: the message <c>0x11006</c>
+	/// the base proc posts to a control the press began inside (<c>FUN_0065dcaf</c>). Called after
+	/// <see cref="LeftClicked"/>.
+	/// </summary>
+	internal virtual void LeftClickedAt( float x, float y ) { }
+
+	/// <summary>
+	/// A left press on it within 500 ms of the last click's release: the double click's second, <c>0x11007</c>, which
+	/// arrives on the press and whose own release makes no click.
+	/// </summary>
+	internal virtual void LeftDoubleClicked() { }
+
+	/// <summary>
+	/// Whether a move of more than 6 from the press spoils its click. The base proc judges it on the move message
+	/// (<c>0x0065fab7</c>), so a class whose proc answers the move itself and never passes it on is never judged.
+	/// </summary>
+	internal virtual bool StraySpoilsAClick => true;
 
 	/// <summary>
 	/// The pointer moved, to (<paramref name="x"/>, <paramref name="y"/>) on the window, while over it: the original's
@@ -540,7 +567,7 @@ internal sealed class UiRadioGroup : UiControl
 /// The thumb sits where the value puts it along the track, less its own width, in whole units
 /// (0x0066b088). Dragging it moves it with the pointer as far as the track goes and reads the value off
 /// where it is (0x0066af19, on the thumb's messages at 0x0066bb9b); letting go puts it exactly where
-/// that value belongs. A press anywhere else in the rectangle moves a page towards the pointer
+/// that value belongs. A click anywhere else in the rectangle, of either button, moves a page towards its point
 /// (0x0066b8aa), and the mouse wheel moves a step a notch, a notch away lowering it (message 0x1000d,
 /// 0x0066ba22). Each change is told as it happens (message 0x800).
 /// </para>
@@ -642,8 +669,16 @@ internal sealed class UiSlider : UiControl
 			MoveBy( -(int)notches * Step );
 	}
 
-	/// <summary>A press on the slider but not on the thumb: a page towards the pointer.</summary>
-	internal override void PointerPressed( float x, float y )
+	/// <summary>
+	/// A click on the slider but not on the thumb, whatever the button: a page towards the click's point
+	/// (<c>Slider_Callback</c> on <c>0x11006</c>, which tests no button; <c>Slider_PageTowards</c>). A press alone, or
+	/// one held half a second, pages nothing.
+	/// </summary>
+	internal override void LeftClickedAt( float x, float y ) => PageTowards( x );
+
+	internal override void RightClickedAt( float x, float y ) => PageTowards( x );
+
+	private void PageTowards( float x )
 	{
 		if ( Thumb == null || !Enabled )
 			return;

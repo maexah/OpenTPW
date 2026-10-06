@@ -217,8 +217,7 @@ internal sealed class ParkObjectWindow : UiWindow
 
 			// A click on the preview, with either button, moves the camera to the window's thing and closes the
 			// window: the base's handler for this panel, 0x0048d1a0, answers the click 0x10006 whatever its button.
-			// The left one here is a press and a release on the panel, with no limit on its time (docs/QUEUE.md Q123).
-			Clicked = GoToThing,
+			LeftClicked = GoToThing,
 			RightClicked = GoToThing
 		} );
 

@@ -323,8 +323,22 @@ public class ParkCameraToThingTests
 		}
 		else
 		{
-			typeof( WindowStack ).GetField( "_pressed", Private )!.SetValue( _stack, preview );
-			typeof( WindowStack ).GetMethod( "Release", Private )!.Invoke( _stack, [preview] );
+			// The left button's is the timed click too (0x10006): held 600 ms, the window stays and the camera with it.
+			foreach ( var (from, to) in new[] { (20000L, 20600L), (30000L, 30080L) } )
+			{
+				Time.PinWall( from );
+				Input.Mouse = new() { Left = true, LeftWentDown = true, Position = middle };
+				_stack.Update();
+				Time.PinWall( to );
+				Input.Mouse = new() { Position = middle };
+				_stack.Update();
+
+				if ( to - from >= 500 )
+				{
+					Assert.IsTrue( _stack.Windows.Contains( window ), "a press held 600 ms is no click" );
+					Assert.AreEqual( new Vector3( 300f, 300f, 0f ), ParkOrbitCameraMode.PointOfInterest );
+				}
+			}
 		}
 
 		Assert.AreEqual( new Vector3( 510f, 230f, 0f ), ParkOrbitCameraMode.PointOfInterest );

@@ -32,7 +32,7 @@ public class UiListTests
 	[TestCleanup]
 	public void PutTheScreenBack() => Screen.Size = new Point2( 1280, 720 );
 
-	private static void Press( UiList list, int slot ) => list.PointerPressed( 50, (slot * 44) + 22 );
+	private static void Press( UiList list, int slot ) => list.LeftClickedAt( 50, (slot * 44) + 22 );
 
 	private static UiList.Row Row( int id, int key ) => new( id, $"{key}", key );
 
@@ -98,16 +98,16 @@ public class UiListTests
 
 		Assert.AreEqual( 10, list.VisibleRows );
 
-		list.PointerPressed( 50, 455 );
+		list.LeftClickedAt( 50, 455 );
 		Assert.AreEqual( -1, list.Selected, "the strip selects nothing" );
 
-		list.PointerPressed( 50, 439 );
+		list.LeftClickedAt( 50, 439 );
 		Assert.AreEqual( 109, list.Selected, "the tenth row ends at 440, where it is drawn to" );
 
-		list.PointerPressed( 50, 396 );
+		list.LeftClickedAt( 50, 396 );
 		Assert.AreEqual( 109, list.Selected, "and begins at 396" );
 
-		list.PointerPressed( 50, 395 );
+		list.LeftClickedAt( 50, 395 );
 		Assert.AreEqual( 108, list.Selected );
 	}
 
