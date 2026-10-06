@@ -201,7 +201,7 @@ public class ParkScreamTests
 	/// </summary>
 	/// <remarks><b>Mutations:</b> the first sample by the level; the variation kept whatever the level; a level past
 	/// every zone still playing; the level scaled into the loudness. That <c>ParkAudio.OnUpdate</c> plays what
-	/// <c>NextMusic</c> says needs a sound device, and is watched in the game (<c>rv4/confirm.py</c>).</remarks>
+	/// <c>NextMusic</c> says is <see cref="ParkScreamChainTests.TheParksMusicFollowsTheGuestsOnTheBeatAtOneLoudness"/>.</remarks>
 	[TestMethod]
 	public void TheLevelPicksTheMusicsVariationAndNeverItsLoudness()
 	{

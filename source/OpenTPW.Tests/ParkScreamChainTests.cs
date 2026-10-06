@@ -306,6 +306,150 @@ public class ParkScreamChainTests
 	}
 
 	/// <summary>
+	/// <b>The park's music, through <c>ParkAudio.OnUpdate</c> as the game runs it</b> (<c>docs/exe/park-engine.md</c>,
+	/// "The music's level"). The level is set only on a step whose count has its low five bits nought, from the
+	/// guests the park holds then, held to 89, and nought while the world's state is 4. A sample is played at the
+	/// music's one loudness whatever the level, and when it has ended the next comes from the variation whose zone
+	/// holds the level: the first at level 6, the sixth at 89, the first again at nought, never silence.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the level set every frame; the crowd's level set without the hold and the state; the level
+	/// never falling; the world's state not handed in; what is played scaled by the level; the variation never
+	/// moving on.
+	/// </remarks>
+	[TestMethod]
+	public void TheParksMusicFollowsTheGuestsOnTheBeatAtOneLoudness()
+	{
+		var data = GameData.Required();
+		FileSystem = data;
+
+		using var stream = new System.IO.MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
+		var levelBefore = Level.Current;
+		var people = new ParkPeople( world, new ParkBalance( "jungle", easyMode: true ), random: new Random( 1 ),
+			behaviourRandom: new Random( 1 ), rideRandom: new Random( 1 ), staffRandom: new Random( 1 ) );
+
+		try
+		{
+			InAPark( "jungle", park =>
+			{
+				Voice Music()
+				{
+					lock ( Audio.Lock )
+						return Audio.Voices.Last( voice => voice.Bus == AudioBus.Music );
+				}
+
+				// Frames of a tick or so, the park's audio updated on each, up to and including the next beat.
+				void ToTheBeat()
+				{
+					var beat = (GameClock.Ticks | 0x1f) + 1;
+
+					while ( GameClock.Ticks < beat )
+					{
+						Frame( held: false, GameClock.TickSeconds );
+						park.Update();
+					}
+				}
+
+				park.Update();
+				Assert.AreEqual( (0, 0, 0), (park.LevelNow, park.LevelSets, park.VariationNow), "the first sample is the first variation's" );
+
+				var first = Music();
+
+				Assert.AreEqual( ParkAudio.MusicVolume, first.Volume, 0.0001f, "at the music's loudness with the level nought" );
+				StringAssert.StartsWith( first.Name.ToLowerInvariant(), "level1" );
+
+				ToTheBeat();
+				Assert.AreEqual( (6, 1), (park.LevelNow, park.LevelSets), "thirteen guests: level 6, set on the beat" );
+
+				ToTheBeat();
+				Assert.AreEqual( 2, park.LevelSets, "and set again 32 ticks on, not on the frames between" );
+				Assert.AreSame( first, Music(), "while a sample plays no other is started" );
+
+				// Two hundred guests: the crowd's level is 100 and the music's is held to 89.
+				var came = new List<int>();
+
+				while ( people.Peeps.Count < 200 )
+				{
+					came.Add( people.Admit( 42, 5 ) );
+					Assert.AreNotEqual( 0, came[^1], "the stop takes another" );
+				}
+
+				ToTheBeat();
+				Assert.AreEqual( 89, park.LevelNow, "two hundred guests: held to 89" );
+
+				first.Stop();
+				park.Update();
+
+				var loud = Music();
+
+				Assert.AreNotSame( first, loud, "the sample ended, the next is started" );
+				Assert.AreEqual( 5, park.VariationNow, "from the sixth variation, whose zone holds 89" );
+				StringAssert.StartsWith( loud.Name.ToLowerInvariant(), "level6" );
+				Assert.AreEqual( ParkAudio.MusicVolume, loud.Volume, 0.0001f, "at the same loudness" );
+
+				// They go again: the level falls with them.
+				foreach ( var id in came )
+					Assert.IsTrue( people.Depart( id ) );
+
+				ToTheBeat();
+				Assert.AreEqual( 6, park.LevelNow, "thirteen guests again: level 6" );
+
+				// World state 4: the level is nought, and the music is the first variation's, not silence.
+				var level = (Level)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject( typeof( Level ) );
+
+				typeof( Level ).GetProperty( nameof( Level.Park ) )!.SetValue( level, new InWorldStateFour( world ) );
+				Level.Current = level;
+
+				ToTheBeat();
+				Assert.AreEqual( 0, park.LevelNow, "world state 4: nought" );
+
+				loud.Stop();
+				park.Update();
+				Assert.AreEqual( 0, park.VariationNow, "the first variation again" );
+				Assert.AreEqual( ParkAudio.MusicVolume, Music().Volume, 0.0001f, "and as loud as ever" );
+			} );
+		}
+		finally
+		{
+			Level.Current = levelBefore!;
+			people.Delete();
+			Entity.ApplyDeletions();
+		}
+	}
+
+	/// <summary>Lost Kingdom's save with its world state read as 4, and nothing else changed.</summary>
+	private sealed class InWorldStateFour( ParkWorld source ) : IParkInitialState
+	{
+		public ParkWorld? Save => source;
+		public IReadOnlyList<ParkThingIdentity> Things => source.Things;
+		public IReadOnlyList<ParkWorld.CatalogueObject> Objects => source.Objects;
+		public ParkWorld.EconomyState? Economy => source.Economy;
+		public ParkWorld.StaffHqState? StaffHq => source.StaffHq;
+		public IReadOnlyList<ParkWorld.Person> People => source.People;
+		public IReadOnlyList<ParkWorld.Sprite> Sprites => source.Sprites;
+		public IReadOnlyList<ParkWorld.MapCell> Cells => source.Cells;
+		public ParkWorld.MapCell CellAt( int x, int y ) => source.CellAt( x, y );
+		public int ParkGates => source.ParkGates;
+		public int TrafficLights => source.TrafficLights;
+		public int FirstObject => source.FirstObject;
+		public int RandomSeed => source.RandomSeed;
+		public int Weather => source.Weather;
+		public int ParkClosed => source.ParkClosed;
+		public int GameTick => source.GameTick;
+		public int BankAccount => source.BankAccount;
+		public int NumberOfVisitorsToDate => source.NumberOfVisitorsToDate;
+		public int WorldState => ParkAudio.SilentWorldState;
+		public int ThingCount => source.ThingCount;
+		public int ArrivalVehicleForSmallCrowd => source.ArrivalVehicleForSmallCrowd;
+		public int ArrivalVehicleForMediumCrowd => source.ArrivalVehicleForMediumCrowd;
+		public int ArrivalVehicleForLargeCrowd => source.ArrivalVehicleForLargeCrowd;
+		public int CurrentArrivalVehicle => source.CurrentArrivalVehicle;
+		public ParkWorld.ArrivalBlock Arrival => source.Arrival;
+		public IReadOnlyList<ParkWorld.ObjectControl> ObjectControlRecords => source.ObjectControlRecords;
+	}
+
+	/// <summary>
 	/// Runs <paramref name="run"/> against a park's audio as if there were a device, then takes back every voice the
 	/// park played and leaves the clock as a scene change leaves it.
 	/// </summary>

@@ -199,7 +199,7 @@ public class GameClockTests
 	/// </summary>
 	/// <remarks>
 	/// <b>Mutations:</b> the wall clock fed by <see cref="Time.Update"/>, which makes a five-second frame five seconds
-	/// of it and holds it under the pause; a pin that does not hold.
+	/// of it and holds it under the pause; a pin that does not hold; the clock run at twice the rate.
 	/// </remarks>
 	[TestMethod]
 	public void TheWallClockIsRealTimeWhateverTheFrameClockDoes()
@@ -219,6 +219,14 @@ public class GameClockTests
 			Time.Update( 0.016f );
 			var held = Time.WallMilliseconds - afterALongFrame;
 			Assert.IsTrue( held >= 30, $"it runs while the frame clock is held ({held} ms)" );
+
+			// At the rate of real time: a second clock started before it and read after it can never have run less.
+			var outer = System.Diagnostics.Stopwatch.StartNew();
+			var from = Time.WallMilliseconds;
+			System.Threading.Thread.Sleep( 60 );
+			var ran = Time.WallMilliseconds - from;
+			var most = outer.ElapsedMilliseconds + 1;
+			Assert.IsTrue( ran >= 50 && ran <= most, $"a millisecond of it is a millisecond ({ran} ms of it in at most {most})" );
 
 			Time.PinWall( 1234 );
 			System.Threading.Thread.Sleep( 5 );

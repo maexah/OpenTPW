@@ -103,8 +103,9 @@ public class ParkStaffPoolRefreshTests
 
 		ParkStaffPool.Carry( held.Id );
 
-		// The park is full of guards (kind 3) throughout, and employs nobody else. A kind is full only once somebody
-		// of it is employed, so a limit met by nobody is not: every other kind is topped up though the park asks 0.
+		// The park is full of guards (kind 3) throughout, and employs nobody else, so every other kind is topped up.
+		// (A limit of nought met by nobody is not full either, as the original has it, but no shipped balance holds
+		// such a limit, 6 being the least, and nothing here can show it.)
 		for ( tick = start + 1; tick <= start + 1000; ++tick )
 			pool.Sweep( tick, kind => kind == 3 ? pool.MostInPark( 3 ) : 0 );
 
@@ -146,16 +147,16 @@ public class ParkStaffPoolRefreshTests
 	/// original's own log has it (<c>docs/exe/park-engine.md</c>, "The staff pool's refresh").
 	/// </summary>
 	/// <remarks>
-	/// <b>Mutations:</b> the save's pool not used; the empty records taken too; the pool marked with the park's clock;
-	/// a candidate marked with the park's clock, or given a rolled lifetime; the name not the record's row; the drops
-	/// walked from the last.
+	/// <b>Mutations:</b> the save's pool not used, by the pool or by the level's hand-off; the empty records taken too;
+	/// the pool marked with the park's clock; a candidate marked with the park's clock, or given a rolled lifetime; the
+	/// name not the record's row; every wage a grade 2's; every name a researcher's; the drops walked from the last.
 	/// </remarks>
 	[TestMethod]
 	public void ALoadedParkStartsWithTheSavesPool()
 	{
 		using var stream = FileSystem.OpenRead( "levels/jungle/Easymode.TPWI" );
 		var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
-		var pool = new ParkStaffPool( new ParkBalance( "jungle", easyMode: true ), gameTick: world.GameTick, saved: world );
+		var pool = Level.StaffPoolFor( world, new ParkBalance( "jungle", easyMode: true ), world.GameTick );
 		var saved = pool.Candidates.ToArray();
 		var left = new List<int>();
 		var joined = new List<int>();
@@ -168,6 +169,22 @@ public class ParkStaffPoolRefreshTests
 		Assert.AreEqual( (2, 3, 2, 361, 143), (saved[15].Kind, saved[15].Grade, saved[15].Costume, saved[15].Mark, saved[15].Lifetime) );
 		Assert.AreEqual( new StringFile( "Language/English/RESEARCHER_NAMES.str" )[33], saved[0].Name, "the name is the record's row of its kind's table" );
 		Assert.AreEqual( pool.WageFor( 4, 2 ), saved[0].Wage );
+
+		// Every one of the sixteen is paid by their own kind and grade and named from their own kind's table.
+		string[] tables = ["HANDYMAN_NAMES", "MECHANIC_NAMES", "ENTERTAINER_NAMES", "GUARD_NAMES", "RESEARCHER_NAMES"];
+		var records = world.StaffPool.Where( record => record.Valid ).ToArray();
+
+		Assert.AreEqual( 16, records.Length );
+		Assert.IsTrue( records.Select( record => record.PayGrade ).Distinct().Count() > 1 && records.Select( record => record.Type ).Distinct().Count() == 5,
+			"the save's pool holds every kind and more than one grade" );
+
+		for ( var n = 0; n < records.Length; ++n )
+		{
+			Assert.AreEqual( pool.WageFor( records[n].Type, records[n].PayGrade ), saved[n].Wage, $"candidate {n}'s wage" );
+			Assert.AreEqual( new StringFile( $"Language/English/{tables[records[n].Type]}.str" )[records[n].Name], saved[n].Name, $"candidate {n}'s name" );
+		}
+
+		Assert.AreNotEqual( pool.WageFor( 1, 2 ), saved.First( person => person is { Kind: 1, Grade: 1 } ).Wage, "a grade-1 mechanic is not paid as grade 2" );
 
 		var went = new List<int>();
 
@@ -184,7 +201,7 @@ public class ParkStaffPoolRefreshTests
 		Assert.AreEqual( 10, joined.Count( on => on == 1083 ), "ten wanted and ten the most a top-up adds" );
 
 		// With no save, the opening pool is rolled and marked with the clock it was made on.
-		var fresh = new ParkStaffPool( new ParkBalance( "jungle", easyMode: true ), gameTick: 0 );
+		var fresh = Level.StaffPoolFor( null, new ParkBalance( "jungle", easyMode: true ), 0 );
 
 		Assert.AreEqual( 22, fresh.Candidates.Count );
 		Assert.AreEqual( 0, fresh.Mark );
@@ -223,6 +240,59 @@ public class ParkStaffPoolRefreshTests
 			foreach ( var kind in new[] { 0, 1, 2, 3 } )
 				Assert.IsTrue( pool.OfKind( kind ).Any(), $"seed {seed}: kind {kind} has its minimum of one after a top-up" );
 		}
+	}
+
+	/// <summary>
+	/// <b>A kind with more candidates than its <c>Max</c> takes from the total wanted</b>: the sum is signed, as the
+	/// original's is. The pool rolled for a fresh Lost Kingdom park holds 22 against Maxes of 24 with one kind over
+	/// its own, so its first top-up, 361 sweeps on and before anybody's time is up, adds two and not three, as the
+	/// game run measured.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> a kind over its Max wanting nought.</remarks>
+	[TestMethod]
+	public void AKindOverItsMaxTakesFromTheTotalWanted()
+	{
+		var pool = new ParkStaffPool( new ParkBalance( "jungle", easyMode: true ), gameTick: 0 );
+		int[] most = [6, 5, 6, 4, 3];
+		var have = Enumerable.Range( 0, 5 ).Select( kind => pool.OfKind( kind ).Count() ).ToArray();
+		var joined = 0;
+
+		Assert.IsTrue( Enumerable.Range( 0, 5 ).Any( kind => have[kind] > most[kind] ), $"some kind is over its Max ({string.Join( ",", have )})" );
+		Assert.AreEqual( 2, most.Sum() - have.Sum(), "the wants' signed sum" );
+
+		pool.Joined += _ => ++joined;
+
+		for ( var tick = 1; tick <= 361; ++tick )
+			pool.Sweep( tick, _ => 0 );
+
+		Assert.AreEqual( 361, pool.Mark, "topped up on 361" );
+		Assert.AreEqual( 2, joined, "by the signed sum" );
+	}
+
+	/// <summary>
+	/// <b>The minimums' round counts the staff the park employs with the candidates in the pool</b>
+	/// (<c>0x0050819d</c>): with one guard employed the guards have their minimum of one, so a top-up whose draws
+	/// gave the pool no guard leaves it with none. Forty pools topped up from empty, as the test above does it; with
+	/// nobody employed every one of them is given a guard.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the round counting the pool alone.</remarks>
+	[TestMethod]
+	public void TheMinimumsRoundCountsTheStaffEmployed()
+	{
+		var balance = new ParkBalance( "jungle", easyMode: true );
+		var without = 0;
+
+		for ( var seed = 1; seed <= 40; ++seed )
+		{
+			var pool = new ParkStaffPool( balance, seed, gameTick: 0 );
+
+			pool.Sweep( 5000, kind => kind == 3 ? 1 : 0 );
+
+			if ( !pool.OfKind( 3 ).Any() )
+				++without;
+		}
+
+		Assert.IsTrue( without > 0, "with a guard employed, a pool whose draws made no guard is not given one" );
 	}
 
 	/// <summary>

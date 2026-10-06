@@ -18,7 +18,8 @@ public class ParkSweepCapTests
 	/// </summary>
 	/// <remarks>
 	/// <b>Mutations:</b> no cap; a cap of two or of four; the dropped sweeps owed to the next frame; the count kept
-	/// from frame to frame, so the frame after a long one runs none.
+	/// from frame to frame, so the frame after a long one runs none; the cap only on a two-second frame; the sprites
+	/// capped with the sweeps.
 	/// </remarks>
 	[TestMethod]
 	public void ALongFrameRunsThreeSweepsAndDropsTheRest()
@@ -43,6 +44,16 @@ public class ParkSweepCapTests
 			Assert.AreEqual( start + 3, people.State.GameTick, "three sweeps run" );
 			Assert.AreEqual( (3, 5), (people.SweepsRun, people.SweepsDropped), "and five dropped" );
 
+			// The sprites are stepped before the gate and take no part in the cap (FUN_00475360 at 0x0054f5fb): each
+			// has had its turn at the frame's last sprite tick, so none is due before it.
+			var lastSpriteTick = (GameClock.Ticks & ~(ParkPeople.SpriteTickEvery - 1)) * ParkPeople.MillisecondsPerTick;
+			var sprites = people.Peeps.Select( peep => people.SpriteFor( peep.ThingId ) ).Where( sprite => sprite is { Ended: false } ).ToList();
+
+			Assert.IsTrue( sprites.Count >= 13, $"the save's guests have sprites ({sprites.Count})" );
+
+			foreach ( var sprite in sprites )
+				Assert.IsTrue( sprite!.Due >= lastSpriteTick, $"a sprite due at {sprite.Due} was not stepped up to {lastSpriteTick}" );
+
 			SimulationClockScope.Frame( GameClock.TickSeconds * 8 );
 			people.Update();
 			Assert.AreEqual( start + 4, people.State.GameTick, "the next frame owes one and runs one: nothing is made up" );
@@ -52,6 +63,13 @@ public class ParkSweepCapTests
 			people.Update();
 			Assert.AreEqual( start + 7, people.State.GameTick, "a frame owing three runs all three" );
 			Assert.AreEqual( (7, 5), (people.SweepsRun, people.SweepsDropped) );
+
+			// The cap is on any pass, not only the clock's longest (0x0054f680): 40 ticks owe five sweeps.
+			SimulationClockScope.Frame( GameClock.TickSeconds * 40 );
+			Assert.AreEqual( 40, GameClock.TicksDue );
+			people.Update();
+			Assert.AreEqual( start + 10, people.State.GameTick, "a frame owing five runs three" );
+			Assert.AreEqual( (10, 7), (people.SweepsRun, people.SweepsDropped), "and drops two" );
 		}
 		finally
 		{

@@ -340,7 +340,7 @@ public class Level
 		// Who the park may hire, which is a population of its own and nothing to do with the people
 		// already in it - see ParkStaffPool. Built before the park's own people only for readability;
 		// neither asks anything of the other.
-		StaffPool = new ParkStaffPool( Balance, gameTick: ParkState?.GameTick ?? 0, saved: park as ParkWorld );
+		StaffPool = StaffPoolFor( park, Balance, ParkState?.GameTick ?? 0 );
 		load.Mark( "staff pool" );
 
 		_ = new ParkPeople( park, Balance, () => rides.GateStatus( park ), ParkState, catalogue,
@@ -372,6 +372,13 @@ public class Level
 
 		Camera.SetCameraMode<ParkOrbitCameraMode>();
 	}
+
+	/// <summary>
+	/// Who the park may hire: the save's own pool for a park loaded from one, a rolled one for a park made fresh
+	/// (<see cref="ParkStaffPool"/>).
+	/// </summary>
+	internal static ParkStaffPool StaffPoolFor( IParkInitialState? park, ParkBalance? balance, int gameTick )
+		=> new( balance, gameTick: gameTick, saved: park as ParkWorld );
 
 	/// <summary>Selects the original's new-world or Instant Action file path for the current player.</summary>
 	internal static IParkInitialState? CreatePark( string theme, ParkBalance balance, ParkItemCatalogue catalogue )

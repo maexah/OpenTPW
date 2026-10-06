@@ -2,6 +2,8 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenTPW.UI;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace OpenTPW.Tests;
 
@@ -117,6 +119,99 @@ public class LeftClickTests
 		Frame( true, OnThePanel, 2250 );
 		Frame( false, OnThePanel, 2300 );
 		Assert.AreEqual( (3, 1), (_window.PanelClicks, _window.Panel.Seconds), "500 ms after a release is no second" );
+	}
+
+	/// <summary>
+	/// <b>A hold of half a second or more makes no click, and its release is stamped all the same</b>
+	/// (<c>0x0065f9af</c>): a press under 500 ms after it is a double click's second, told on the press, and its
+	/// release clicks nothing.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the stamp kept only by a release that clicked.</remarks>
+	[TestMethod]
+	public void ALongHoldsReleaseIsStampedAllTheSame()
+	{
+		Frame( true, OnThePanel, 1000 );
+		Frame( false, OnThePanel, 1600 );
+		Assert.AreEqual( (0, 0), (_window.PanelClicks, _window.Panel.Seconds), "held 600 ms: no click" );
+
+		Frame( true, OnThePanel, 1900 );
+		Assert.AreEqual( 1, _window.Panel.Seconds, "300 ms after that release: the second, told on the press" );
+
+		Frame( false, OnThePanel, 1950 );
+		Assert.AreEqual( 0, _window.PanelClicks, "and its release is no click" );
+	}
+
+	/// <summary>
+	/// <b>The stray is judged only while the pointer is over the control the press landed on</b>: a move goes to the
+	/// control under the pointer and nothing captures it (<c>FUN_006588ef</c>), so a press dragged straight off its
+	/// control and let go within the limit is still that control's click.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the stray judged wherever the pointer is.</remarks>
+	[TestMethod]
+	public void AStrayOffTheControlIsNotJudged()
+	{
+		Frame( true, OnThePanel, 1000 );
+		Frame( true, Nowhere, 1050 );
+		Frame( false, Nowhere, 1100 );
+		Assert.AreEqual( 1, _window.PanelClicks, "dragged off the panel and let go: its click" );
+	}
+
+	/// <summary>
+	/// <b>A lobby player slot and Quit Game answer a click of either button and no held press</b>: neither is a button
+	/// to the original (type 1 in the stream at <c>0x00753c68</c>), and their callbacks answer the base proc's click
+	/// (<c>0x004a6104</c>, <c>0x004a61e9</c>). The front end is a stand-in made without its constructor, holding the
+	/// stack; an empty slot opens the new player's dialog and Quit Game its question.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> a slot answering a release of any length; Quit Game answering one; Quit Game deaf to the right
+	/// button.
+	/// </remarks>
+	[TestMethod]
+	public void TheLobbysSlotsAndQuitGameAnswerAClickOfEitherButtonAndNoHeldPress()
+	{
+		var frontEnd = (FrontEnd)RuntimeHelpers.GetUninitializedObject( typeof( FrontEnd ) );
+		typeof( FrontEnd ).GetField( "_stack", BindingFlags.NonPublic | BindingFlags.Instance )!.SetValue( frontEnd, _stack );
+
+		Assert.IsNull( Players.Roster[0], "the first slot is empty, so its click asks for a name and selects nobody" );
+
+		var slots = new PlayerSlots( _stack, frontEnd );
+
+		_stack.Open( slots );
+		Frame( false, Nowhere, 500 );
+
+		foreach ( var (id, at, opens) in new[] { (0x7a14, new Vector2( 900, 120 ), typeof( NewPlayerDialog )), (0x7a1c, new Vector2( 1300, 960 ), typeof( MessageBox )) } )
+		{
+			var control = slots.Root.Children.Single( child => child.Id == id );
+			Assert.AreSame( control, slots.Root.HitTest( at.X, at.Y ), $"{id:x} takes the pointer" );
+
+			int Opened() => _stack.Windows.Count( window => window.GetType() == opens );
+
+			void CloseIt()
+			{
+				foreach ( var window in _stack.Windows.Where( window => window.GetType() == opens ).ToList() )
+					_stack.Close( window );
+			}
+
+			Frame( true, at, 1000 );
+			Frame( false, at, 1600 );
+			Assert.AreEqual( 0, Opened(), $"{id:x}: the left button held 600 ms asks nothing" );
+
+			Frame( true, at, 3000 );
+			Frame( false, at, 3100 );
+			Assert.AreEqual( 1, Opened(), $"{id:x}: a left click asks" );
+			CloseIt();
+
+			Frame( true, at, 5000, right: true );
+			Frame( false, at, 5600, right: true );
+			Assert.AreEqual( 0, Opened(), $"{id:x}: the right button held 600 ms asks nothing" );
+
+			Frame( true, at, 7000, right: true );
+			Frame( false, at, 7100, right: true );
+			Assert.AreEqual( 1, Opened(), $"{id:x}: and a right click asks" );
+			CloseIt();
+
+			Frame( false, Nowhere, 9000 );
+		}
 	}
 
 	/// <summary>

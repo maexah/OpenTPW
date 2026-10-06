@@ -57,7 +57,7 @@ public class ParkVisitorsScreenTests
 	/// <remarks>
 	/// <b>Mutations:</b> the rewrite clearing and refilling the list (the build before Q200b) throws the top row back to
 	/// nought; no subscription leaves the row count unmoved by an arrival; no unsubscription keeps adding rows after
-	/// the screen closes.
+	/// the screen closes; the first rewrite timed from nought and not from the opening; each later one too.
 	/// </remarks>
 	[TestMethod]
 	public void TheListKeepsItsScrollAndFollowsGuestsWhileOpen()
@@ -70,6 +70,9 @@ public class ParkVisitorsScreenTests
 
 		for ( var n = 0; n < 20; ++n )
 			Assert.AreNotEqual( 0, people.Admit( 42, 5 ), "the park takes a guest at the bus stop" );
+
+		// Opened five seconds into real time: the rewrite is two seconds from the opening, not from nought.
+		Time.PinWall( 5000 );
 
 		var stack = AStack();
 		var screen = new UI.ParkVisitorsScreen( stack );
@@ -85,17 +88,23 @@ public class ParkVisitorsScreenTests
 
 		// The rewrite's two seconds are real time (a control's timer, FUN_00661fe5), whatever the frame clock does.
 		var values = list.Rows[4].Values;
-		Time.PinWall( 1999 );
+		Time.PinWall( 6999 );
 		Time.Now += 10f;
 		screen.Update();
 		Assert.AreSame( values, list.Rows[4].Values, "1999 ms of real time, ten seconds on the frame clock: not rewritten" );
 
-		Time.PinWall( 2000 );
+		Time.PinWall( 7000 );
 		screen.Update();
 		Assert.AreNotSame( values, list.Rows[4].Values, "2000 ms: rewritten" );
 
-		Time.PinWall( 3000 );
+		values = list.Rows[4].Values;
+		Time.PinWall( 8999 );
 		screen.Update();
+		Assert.AreSame( values, list.Rows[4].Values, "and not again for two seconds" );
+
+		Time.PinWall( 9000 );
+		screen.Update();
+		Assert.AreNotSame( values, list.Rows[4].Values, "then again" );
 
 		Assert.AreEqual( 4, list.ScrollTop, "the two-second rewrite keeps the scroll" );
 		Assert.AreEqual( first, list.Rows[4].Id, "and the row there" );
