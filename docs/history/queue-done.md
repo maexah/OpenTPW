@@ -4685,8 +4685,11 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   process kept the tool (3 of 3) and first person (2 of 2). Seventeen restored bugs each fail.
 - [x] **Q123b. A left click has no time limit.** Found by Q123. The base proc makes the left button's click as it
   makes the right's: a release under 500 ms from its press, not strayed more than 6 (`hud.md`, "A click and a double
-  click"). Here a left press and release on a control is a click however long it is held. **Decode first** which
-  controls act on the click message `0x10006` and which on the release itself.
+  click"). Here a left press and release on a control is a click however long it is held (`WindowStack`, the object
+  window's preview among them, `park-engine.md`, "The camera goes to a thing"). **Decode first** which controls act
+  on the click message `0x10006` and which on the release itself: a button's own handler may not use the click at
+  all. Then build what the decode finds on `Time.WallMilliseconds`. Confirm: a press held 600 ms on each kind of
+  control beside the original's.
   Done 2026-10-06, decode only: a button answers its own release and reads no clock (`FUN_00668f9c`), so it has no
   limit; a list's rows, a slider's track, the game menu's rows and an object window's preview act on the click, which
   reaches a list and a slider as `0x11006` (`FUN_0065dcaf`). In the original, 6 of 6: Buy held 1.0 s opened the buy
@@ -4743,13 +4746,36 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   half at each stop). The original's first load, thirteen guests, each first seen on (53,5). Six restored bugs fail.
 - [x] **Q128. A guest going home stops at the park's edge: the stop's cells are now proven.** Found by Q68's decode.
   `PickingACellOutside` (19) and `AtTheBusStop` (21) walk to cells from `FUN_004d8650`, and `PeepBehaviour` leaves
-  both unbuilt; `ParkPeople` treats 19 as the end of the walk. Check the two states' decode is whole, then build them.
+  both unbuilt; `ParkPeople` treats 19 as the end of the walk and starts a new guest `AtGate`. The slot table proves
+  the pair is `FixedItemInfo.BusStopA/B` (`park.md`, "Arrivals"), and both files say so. Check the two states' decode
+  is whole, then build them and retire what `ParkPeople` says waits on Q128. Confirm: a guest who has decided to leave
+  walks to the stop and is removed there; `peeps` and a screenshot.
+  From Q109: a guest who leaves from inside the park now aims at the crossing's park side, (47,9) or (48,9), as the
+  original's does, and is taken out there on reaching state 19: four rows short of the stop until this is built. The
+  gate's two leavers (`PeepBehaviour.Judge`, `Wait`) still aim at a bus stop, where the listing sends them to the
+  same `FUN_004d86d0` cells (`ride-operation.md`, "Q109"): move them with this build.
   Done 2026-10-06, the decode only (the build is Q128b): the four cells are stop A's, a pair for the bus and a pair
   two rows out for a larger vehicle; a leaver waits at the crossing while the bus loads (`FUN_0051a760`), stands at
   the stop until the vehicle's status is 4, and goes only as the head of their cell; the manager's tail summons a
   vehicle for them and sends it on when nobody waits. In the original, the park shut and 300 s watched: sixteen of
   sixteen went from `0x15` on a cell of the current vehicle's pair. `ride-operation.md`, "Q128".
-
+- [x] **Q131. A spent vehicle is sent round again, and waits at the stop for the next load. Decode first.** Found by
+  Q68b's review. `FUN_0051a690` answers a vehicle at state 6 by writing its script's variable 1 (`FUN_0055a070`,
+  `FUN_0055a0b0`; decode what) and clearing `mCurrentArrivalVehicle`, and nudges nothing, so the vehicle waits at its
+  last spin (`bus.RSE` 117, its object killed) until the next load's `FUN_0051a2f0` summons it, and every load has the
+  drive in. Lost Kingdom's save holds its bus there, at pc 120 with `VAR_STATUS` 0. `ParkPeople.StepVehicle` releases
+  state 6 and forgets the vehicle, so the bus drives back and waits at the stop at 2: in Q68b's run it stood there
+  from its first circuit to the next call, and that load's guest came on the call's own sweep. While a load is held
+  the original's -1 arm summons the load's vehicle by size again at once (`0x004cf489`), where `StepArrivals` asks
+  vehicle 0, which `ParkFixedItems.VehicleName` answers as the bus. Confirm: the bus photographed away from the stop
+  between loads, and the log's call-to-drop run-in the same on every load.
+  Moved here ahead of Q128b on Alexah's word, 2026-10-06: the leavers' road cannot work while the bus stands at the
+  stop.
+  Done 2026-10-06, the decode only (the build is Q131b): a 6 is answered by writing `VAR_STATUS` nought and clearing
+  the current vehicle, and nothing triggers the script until `FUN_0051a2f0` summons it, for a load by size or for a
+  waiting leaver at random; an existing vehicle is summoned by `VAR_TRIGGER`, a new one by `VAR_STATUS` 1. In the
+  original the bus's script was read through its first load: 1, 2, 3, 4, 0, 5, summoned again for a leaver and round
+  once more, then not current with status 0. `park.md`, "The spent vehicle".
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

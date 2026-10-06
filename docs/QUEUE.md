@@ -38,6 +38,14 @@ the original.
 
 ## A. Bugs first
 
+- [ ] **Q131b. Build the spent vehicle: it stays away until it is summoned.** From Q131 (`park.md`, "The spent
+  vehicle"). `ParkPeople.StepVehicle` and `ReleasesVehicle`: a 6 writes the script's `VAR_STATUS` nought and clears
+  the current vehicle, with no trigger; the summons is the one place a waiting script is triggered (an existing
+  vehicle's `VAR_TRIGGER`, a new one's `VAR_STATUS` 1), for a load by its size; status 4 is triggered when nobody
+  waits at the stop (nobody can, until Q128b); `GATE_HURRY_FORGETS_SPENT_VEHICLE` and `BusStatus` follow. Keep the
+  current vehicle as its own word, apart from the load's size, so Q128b and `ArrivalCell` can ask it. Confirm: the
+  log's call-to-drop run-in the same on every load; the bus's status through a load read with `rides` or a new
+  census line beside the original's sequence in `park.md`; the bus photographed away from the stops between loads.
 - [ ] **Q128b. Build the leavers' road to the stop.** From Q128 (`ride-operation.md`, "Q128: from the crossing to
   the stop, and out"). States `0x13`, `0x14` and `0x15` in `PeepBehaviour`: the wait at the crossing on
   `FUN_0051a760`, the four cells of stop A, the facing, the shuffle to the current vehicle's pair, and the going at
@@ -66,16 +74,6 @@ the original.
   `ParkStaffPool` fills the opening pool only and reads none of the three keys, and no `Unimplemented.Report` says so
   (`CLAUDE.md` rule 4). Count it now; decode the refresh (`FUN_005084f0`, `FUN_00507600`), then build it on Q68b's
   counter. Confirm: the hire screen's candidates over a timed run, a screenshot before and after a refresh.
-- [ ] **Q131. A spent vehicle is sent round again, and waits at the stop for the next load. Decode first.** Found by
-  Q68b's review. `FUN_0051a690` answers a vehicle at state 6 by writing its script's variable 1 (`FUN_0055a070`,
-  `FUN_0055a0b0`; decode what) and clearing `mCurrentArrivalVehicle`, and nudges nothing, so the vehicle waits at its
-  last spin (`bus.RSE` 117, its object killed) until the next load's `FUN_0051a2f0` summons it, and every load has the
-  drive in. Lost Kingdom's save holds its bus there, at pc 120 with `VAR_STATUS` 0. `ParkPeople.StepVehicle` releases
-  state 6 and forgets the vehicle, so the bus drives back and waits at the stop at 2: in Q68b's run it stood there
-  from its first circuit to the next call, and that load's guest came on the call's own sweep. While a load is held
-  the original's -1 arm summons the load's vehicle by size again at once (`0x004cf489`), where `StepArrivals` asks
-  vehicle 0, which `ParkFixedItems.VehicleName` answers as the bus. Confirm: the bus photographed away from the stop
-  between loads, and the log's call-to-drop run-in the same on every load.
 - [ ] **Q132. Guests and rides take their turns on the game clock over eight, where the original hands them
   `mGameTick`. Decode first.** Found by Q68b. `ParkPeople.OnUpdate` hands `Peep.Tick`, `PeepBehaviour.Step` and the
   rides' turns `GameClock.Ticks / 8`, which runs from the program's start and is not reset on entering a park
