@@ -43,6 +43,74 @@ public class UiListTests
 
 	private static int[] Keys( UiList list ) => list.Rows.Select( row => row.Value ).ToArray();
 
+	/// <summary>
+	/// <b>A right click names the selected row, having first selected the one under it</b> (<c>FUN_0066563d</c>): so a
+	/// click that misses every row names the row chosen before, and with none chosen names nothing and is counted.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the row under the click not selected first; a miss naming nothing though a row is selected; a
+	/// miss with nothing selected naming the first row uncounted.
+	/// </remarks>
+	[TestMethod]
+	public void ARightClickNamesTheSelectedRowAfterSelectingTheOneUnderIt()
+	{
+		var list = ListOf( 1, 2, 3 );
+		var named = new System.Collections.Generic.List<int>();
+		var selections = 0;
+
+		list.RowRightClicked = named.Add;
+		list.SelectionChanged = _ => ++selections;
+
+		var before = Times( "LIST_RIGHT_CLICK_FIRST_ROW_NOT_SELECTED" );
+
+		list.RightClickedAt( 50, (6 * 44) + 22 );
+		Assert.AreEqual( 0, named.Count, "a miss with no row chosen names nothing" );
+		Assert.AreEqual( before + 1, Times( "LIST_RIGHT_CLICK_FIRST_ROW_NOT_SELECTED" ), "and is counted" );
+
+		list.RightClickedAt( 50, (1 * 44) + 22 );
+		CollectionAssert.AreEqual( new[] { 101 }, named, "the row under the click" );
+		Assert.AreEqual( 101, list.Selected, "which it selects" );
+		Assert.AreEqual( 1, selections );
+
+		list.RightClickedAt( 50, (6 * 44) + 22 );
+		CollectionAssert.AreEqual( new[] { 101, 101 }, named, "a miss names the row still selected" );
+
+		Press( list, 2 );
+		list.RightClickedAt( 200, 22 );
+		CollectionAssert.AreEqual( new[] { 101, 101, 102 }, named, "beside the rows too" );
+		Assert.AreEqual( before + 1, Times( "LIST_RIGHT_CLICK_FIRST_ROW_NOT_SELECTED" ) );
+	}
+
+	/// <summary>
+	/// <b>The strip left under the last whole row is no row's</b>, and a row is as tall under the pointer as it is
+	/// drawn (<c>FUN_0066552e</c>, <c>FUN_0066525c</c>).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the slot clamped onto the last row; the area divided evenly among the rows.</remarks>
+	[TestMethod]
+	public void TheStripUnderTheLastWholeRowIsNoRows()
+	{
+		// Ten whole rows and 30 over, eleven rows in the list.
+		var list = new UiList { RowArea = new UiRect( 0, 0, 100, 470 ), Columns = [(0, 100)] };
+		list.Build();
+
+		for ( var at = 0; at < 11; ++at )
+			list.Insert( Row( 100 + at, at ), Key );
+
+		Assert.AreEqual( 10, list.VisibleRows );
+
+		list.PointerPressed( 50, 455 );
+		Assert.AreEqual( -1, list.Selected, "the strip selects nothing" );
+
+		list.PointerPressed( 50, 439 );
+		Assert.AreEqual( 109, list.Selected, "the tenth row ends at 440, where it is drawn to" );
+
+		list.PointerPressed( 50, 396 );
+		Assert.AreEqual( 109, list.Selected, "and begins at 396" );
+
+		list.PointerPressed( 50, 395 );
+		Assert.AreEqual( 108, list.Selected );
+	}
+
 	[TestMethod]
 	public void ARewriteKeepsTheScrollAndTheOrder()
 	{

@@ -117,6 +117,9 @@ internal sealed class UiList : UiControl
 	/// <summary>The selection moved - message <c>0x401</c>. Handed the row's id.</summary>
 	internal Action<int>? SelectionChanged { get; set; }
 
+	/// <summary>The original's <c>0x402</c>: a right click on the list, with the selected row's id. See <see cref="RightClickedAt"/>.</summary>
+	internal Action<int>? RowRightClicked { get; set; }
+
 	/// <summary>How far down the list the visible window starts.</summary>
 	private int _scrollTop;
 
@@ -324,7 +327,8 @@ internal sealed class UiList : UiControl
 
 	/// <summary>
 	/// The original's add selects the first row of an empty list (<c>FUN_0066403b</c>: <c>FUN_0066525c( 0 )</c> once
-	/// the count reaches 1). Whether that draws a highlight on each list is not decoded: counted, not built.
+	/// the count reaches 1), and its visitors list opens with a row highlighted (<c>docs/exe/hud.md</c>, "A right click
+	/// on a list"): counted, not built.
 	/// </summary>
 	private void FirstRow()
 	{
@@ -428,26 +432,58 @@ internal sealed class UiList : UiControl
 	/// </remarks>
 	internal override void PointerPressed( float x, float y )
 	{
+		if ( RowAt( x, y ) is not (var index and >= 0) )
+			return;
+
+		Select( index );
+
+		Activated?.Invoke( _rows[index].Id );
+	}
+
+	/// <summary>
+	/// A right click on the list, as the class answers a click of any button but the left (<c>FUN_0066563d</c>, from
+	/// <c>0x00665dbd</c>): the row under the click's point is selected if there is one, and then the selected row,
+	/// whichever it is, is handed to <see cref="RowRightClicked"/> - the original's <c>0x402</c>. So a click that
+	/// misses every row still names the row already selected, and names nothing only when none is.
+	/// </summary>
+	/// <remarks>
+	/// The original's list opens with a row selected and highlighted (<see cref="FirstRow"/>, not built), so there a
+	/// miss before any row was chosen names that row. Here it names nothing: counted.
+	/// </remarks>
+	internal override void RightClickedAt( float x, float y )
+	{
+		if ( RowAt( x, y ) is var index and >= 0 )
+			Select( index );
+
+		if ( Selected is var id and >= 0 )
+			RowRightClicked?.Invoke( id );
+		else if ( _rows.Count > 0 && RowRightClicked != null )
+			Unimplemented.Report( "LIST_RIGHT_CLICK_FIRST_ROW_NOT_SELECTED" );
+	}
+
+	/// <summary>The index of the row under a point in window pixels, or -1 where there is none.</summary>
+	private int RowAt( float x, float y )
+	{
 		var area = VirtualScreen.ToPixels( RowArea, Anchor, VerticalAnchor );
 
 		if ( !area.Contains( x, y ) )
+			return -1;
+
+		// A row is as tall on the screen as it is drawn (OnDraw), and the strip left under the last whole row is no
+		// row's: FUN_0066552e divides by the row's height and FUN_0066525c takes no slot past the visible count.
+		var slot = (int)((y - area.Y) / Math.Max( area.Height * RowHeight / Math.Max( RowArea.Height, 1 ), 1f ));
+		var index = _scrollTop + slot;
+
+		return slot < VisibleRows && index < _rows.Count ? index : -1;
+	}
+
+	private void Select( int index )
+	{
+		if ( index == _selected )
 			return;
 
-		var slot = (int)((y - area.Y) / Math.Max( area.Height / VisibleRows, 1f ));
-		var index = _scrollTop + Math.Clamp( slot, 0, VisibleRows - 1 );
-
-		if ( index < 0 || index >= _rows.Count )
-			return;
-
-		var id = _rows[index].Id;
-
-		if ( index != _selected )
-		{
-			_selected = index;
-			SelectionChanged?.Invoke( id );
-		}
-
-		Activated?.Invoke( id );
+		_selected = index;
+		SelectionChanged?.Invoke( _rows[index].Id );
 	}
 
 	/// <summary>

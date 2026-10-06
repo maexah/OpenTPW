@@ -113,9 +113,9 @@ internal sealed class ParkStaffScreen : UiWindow
 			Mesh = UiMesh.Get( "list_allstaff" ),
 			RowArea = new UiRect( 294, 418, 1734, 777 ),
 
-			// A right click on a row moves the camera to that member of staff and closes the screen
-			// (0x0049602f; docs/QUEUE.md Q117). Not built: counted on the press.
-			RightPressed = () => Unimplemented.Report( "LIST_ROW_RIGHT_CLICK" ),
+			// A right click on the list moves the camera to the selected row's member of staff and closes the screen
+			// (0x0049602f).
+			RowRightClicked = GoTo,
 
 			// The stream's own op 0xb record. The builder right-aligns columns 2, 3 and 4 and leaves
 			// nought and one reading from the left - FUN_006636b2( n, rightAligned ) - which is what
@@ -225,6 +225,16 @@ internal sealed class ParkStaffScreen : UiWindow
 		};
 
 	/// <summary>Fills the list with everyone of one kind - the original's <c>FUN_00496d20</c>.</summary>
+	/// <summary>
+	/// The list's right click (<c>0x402</c>, <c>0x00495feb</c>): the camera to the row's member of staff, then the screen
+	/// closed (message 4, <c>0x00496044</c>).
+	/// </summary>
+	private void GoTo( int member )
+	{
+		ParkOrbitCameraMode.GoToThing( member );
+		Stack.Close( this );
+	}
+
 	private void Show( int kind )
 	{
 		_kind = Math.Clamp( kind, 0, Tabs.Length - 1 );

@@ -220,6 +220,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0048c868` | | OpenTPW/Global/GameClock.cs OpenTPW/World/Level.cs  |
 | `0x0048cd10` | | OpenTPW/Client/GameOptions.cs  |
 | `0x0048ceca` | Object window base FUN_0048cea0: UI_LoadTree onto the park's layer 0 | OpenTPW/UI/Park/ParkObjectWindow.cs  |
+| `0x0048d1a0` | Object windows' preview handler: a click 0x10006 of either button moves the camera to the window's thing and closes it | OpenTPW.Tests/ParkCameraToThingTests.cs OpenTPW/UI/Park/ParkObjectWindow.cs  |
+| `0x0048d1c0` | Preview handler's click arm: FUN_004867b0 on the thing shown, then the window's vtable +0x2c (close) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x0048f4a6` | | OpenTPW/UI/VirtualScreen.cs  |
 | `0x0048f830` | | OpenTPW/UI/UiText.cs  |
 | `0x0048ff8f` | The number painter FUN_0048fde0's handler: swprintf "%d" of the value, the ride window's Users last month | OpenTPW/UI/Park/ParkObjectWindow.cs  |
@@ -230,14 +232,20 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00492f60` | | OpenTPW/UI/Screens/GameMenu.cs  |
 | `0x00493171` | MenuList_Show: closes the open park screen (FUN_00485b40) before the menu is shown | OpenTPW.Tests/ParkScreenTests.cs OpenTPW/UI/Screens/GameMenu.cs OpenTPW/UI/UiWindow.cs  |
 | `0x00493270` | All-visitors handler, the 2000 ms timer 0x80083: each existing row rewritten in place by FUN_006644ea, no clear or scroll | OpenTPW.Tests/UiListTests.cs OpenTPW/UI/Park/ParkVisitorsScreen.cs  |
+| `0x00493483` | Visitors handler's 0x402 arm: the row's guest id, FUN_004867b0, then message 4 | OpenTPW/UI/Park/ParkVisitorsScreen.cs  |
 | `0x004934c5` | Visitors handler: a right-clicked row (0x402) moves the camera to that guest (FUN_004867b0) | OpenTPW/UI/Park/ParkVisitorsScreen.cs  |
+| `0x004934da` | Visitors handler: message 4 closes the screen after a right-clicked row | OpenTPW/UI/Park/ParkVisitorsScreen.cs  |
 | `0x0049353e` | Visitors screen FUN_00493530: UI_LoadTree onto the park's layer 0 | OpenTPW/UI/Park/ParkVisitorsScreen.cs  |
 | `0x0049383e` | All-visitors row adder FUN_00493800: Time In Park, the park time since the arrival stamp over 36,000,000,000 | OpenTPW/UI/Park/ParkVisitorsScreen.cs  |
 | `0x00493850` | All-visitors row adder FUN_00493800: Rides Ridden is mNumRides +0x1c4 | OpenTPW/UI/Park/ParkVisitorsScreen.cs  |
 | `0x0049385a` | FUN_00493800: the "?" column is the last thought +0x30 less one, 999 for none | OpenTPW/UI/Park/ParkVisitorsScreen.cs  |
+| `0x00495554` | All-items handler's 0x402 arm: the row's thing id, FUN_004867b0, then message 4 | OpenTPW/UI/Park/ParkItemsScreen.cs  |
 | `0x00495584` | All-items handler: a right-clicked row (0x402) moves the camera to that thing (FUN_004867b0) | OpenTPW/UI/Park/ParkItemsScreen.cs  |
+| `0x00495599` | All-items handler: message 4 closes the screen after a right-clicked row | OpenTPW/UI/Park/ParkItemsScreen.cs  |
 | `0x00495abe` | All-items screen FUN_00495aa0: UI_LoadTree onto the park's layer 0 | OpenTPW/UI/Park/ParkItemsScreen.cs  |
+| `0x00495feb` | All-staff handler's 0x402 arm: the row's member id, FUN_004867b0, then message 4 | OpenTPW/UI/Park/ParkStaffScreen.cs  |
 | `0x0049602f` | All-staff handler: a right-clicked row (0x402) moves the camera to that member of staff (FUN_004867b0) | OpenTPW/UI/Park/ParkStaffScreen.cs  |
+| `0x00496044` | All-staff handler: message 4 closes the screen after a right-clicked row | OpenTPW/UI/Park/ParkStaffScreen.cs  |
 | `0x00496643` | All-staff screen FUN_00496620: UI_LoadTree onto the park's layer 0 | OpenTPW/UI/Park/ParkStaffScreen.cs  |
 | `0x00498d33` | The entry-price screen's `b_door`: `FUN_00519ef0( down != 1, 0 )`, so down closes the park | OpenTPW/UI/Park/ParkEntryPriceScreen.cs  |
 | `0x00498db5` | Entry-price screen FUN_00498d80: UI_LoadTree onto the park's layer 0 | OpenTPW/UI/Park/ParkEntryPriceScreen.cs  |
@@ -1110,6 +1118,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0065f8c7` | Base control proc: a press within 500 ms of the button's stamp is a double click's second (0x10007) | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
 | `0x0065f8d3` | Base control proc: the double click's compare, strictly less than 500 ms | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
 | `0x0065f969` | Base control proc: a release under 500 ms after its press posts the click 0x10006 | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
+| `0x0065f977` | Base control proc: the click 0x10006 is posted with the press's point | OpenTPW/UI/UiControl.cs  |
 | `0x0065f9af` | Base control proc: an unspoiled release stamps the button with its time | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
 | `0x0065f9bd` | Base control proc: any other release clears the button's stamp | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
 | `0x0065fa33` | Base control proc: a move spoils a press that strayed more than 6 units | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
@@ -1119,6 +1128,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0065fd58` | | OpenTPW/UI/UiControl.cs  |
 | `0x0065fe75` | | OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x006644d2` | FUN_00664495, after a list add or removal: with count <= visible the slider is disabled and the top row left | OpenTPW.Tests/UiListTests.cs OpenTPW/UI/UiList.cs  |
+| `0x00665dbd` | List proc FUN_00665c35: a click of any button but the left goes to FUN_0066563d (select the row under it, post 0x402) | OpenTPW/UI/UiList.cs  |
 | `0x006662b7` | | OpenTPW/UI/UiControl.cs  |
 | `0x0066656c` | | OpenTPW/UI/UiControl.cs  |
 | `0x006677ae` | | OpenTPW/UI/UiControl.cs  |
@@ -1311,6 +1321,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00786ba4` | | OpenTPW/Global/GameClock.cs OpenTPW/UI/UiWindow.cs OpenTPW/World/Advisor/Advisor.cs OpenTPW/World/Level.cs  |
 | `0x0078d8d8` | | OpenTPW.Files/Formats/Save/ConfigFile.cs OpenTPW/Client/GameOptions.cs  |
 | `0x0078d90e` | | OpenTPW/UI/ButtonGlint.cs  |
+| `0x00790a88` | Camera scroll term, the first of three FUN_0042aab0 zeroes when it places the look-at | OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
+| `0x00790a90` | Camera scroll term, the last of the three FUN_0042aab0 zeroes | OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
 | `0x007c24c8` | The open park screen's control, nought when none is | OpenTPW/World/Level.cs  |
 | `0x007cb2fc` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x007cc4b8` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |

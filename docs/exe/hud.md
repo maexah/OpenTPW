@@ -470,11 +470,13 @@ Read first-hand for the build (Q200b, 2026-09-30):
   `FUN_00663edc( new, row )` answers 1, which for a numeric ascending column is `new < row`, strictly. So equal
   values keep the order they came in, and an arrival not yet numbered (visitor 0) goes after the other noughts and
   before every numbered visitor.
-- **An add that makes the count 1 selects the first row** (`FUN_0066525c( 0 )` in `FUN_0066403b`). Whether each list
-  draws a highlight for it (`list+0x174`) is not decoded; OpenTPW counts it (`LIST_FIRST_ROW_SELECTED`).
+- **An add that makes the count 1 selects the first row** (`FUN_0066525c( 0 )` in `FUN_0066403b`). The original's
+  visitors list opens with a row highlighted, not always the first ("A right click on a list"); OpenTPW counts the
+  add's selection and builds none (`LIST_FIRST_ROW_SELECTED`, `docs/QUEUE.md` Q232).
 - **`FUN_0066525c( slot )`** selects `slot + top` when `slot < visible` and `slot < count`; otherwise, with
-  `list+0x48 & 0x100` clear, it returns and the old index stands, and with it set it selects nothing. Which this list
-  has is not decoded; OpenTPW counts that branch (`LIST_RESELECT_PAST_THE_WINDOW`) and drops the selection.
+  `list+0x48 & 0x100` clear, it returns and the old index stands, and with it set it selects nothing. This list's
+  flags are `0x291`, the bit clear ("A right click on a list"); OpenTPW still counts that branch
+  (`LIST_RESELECT_PAST_THE_WINDOW`) and drops the selection (`docs/QUEUE.md` Q232).
 
 **OpenTPW keeps it current as the original does** (Q200b): `ParkVisitorsScreen` fills the list once, rewrites each row
 in place on the two-second timer, and adds and removes a row on `ParkPeople`'s `GuestArrived` and `GuestLeaving`;
@@ -924,8 +926,30 @@ the list is sorted, which is what `FUN_00664c71` is for.
 Three further messages are implemented by the class and handled by **neither** screen: `0x402`
 right-click a row, `0x404` column hit, `0x405` visible range changed. By this project's own rule they
 are dead by CONTENT, not by CODE. The all-staff, visitors and all-items screens do answer `0x402`: the camera goes to
-the row's thing and the screen closes (`FUN_004867b0`, the all-staff screen's call at `0x0049602f`), which is a GAP here,
-counted as `LIST_ROW_RIGHT_CLICK` (`docs/QUEUE.md` Q117).
+the row's thing and the screen closes (`park-engine.md`, "The camera goes to a thing").
+
+### A right click on a list
+
+The list's proc `FUN_00665c35` answers the message `0x11006`, which carries a button and a point: the left button
+(`param_3` nought) goes to `FUN_006655a2`, the row click above; any other goes to **`FUN_0066563d`** (`0x00665dbd`).
+What turns the base proc's click `0x10006` into `0x11006` is not traced. `FUN_0066563d` does nothing unless the list's
+flags `+0x48` have `0x80`. Then `FUN_0066552e` hit-tests the point against the row region (`+0x138`), divides its
+height above the rows' top (`+0x13e`) by the row height (`+0x170`), and hands the slot to `FUN_0066525c`, which
+selects it only when it is under the visible count (`+0x172`) and the row count; and then, **if any row is selected**
+(`+0x14c` not negative), it posts `0x402` to the parent with the list's id and the selected row.
+
+So the right click names the selected row, having first selected the one under it: a click on the list that misses
+every row still names the row selected before. All five trees of the three list screens carry flags `0x291`
+(`0x00750716`, `0x00750e5e`, `0x00750ab8`, `0x00750ba0`, `0x00750ca0`): `0x80` set, and `0x100` clear, so a slot past
+the rows leaves the selection where it was.
+
+**In the original**: the visitors list opens with one row highlighted (the first on one opening, the second and the
+tenth on two others; what chooses it is not decoded, `docs/QUEUE.md` Q232), and a quick right click on the strip under
+its tenth row went to that row's guest, not to an eleventh row's.
+
+**OpenTPW**: `UiList.RightClickedAt`, called by `WindowStack.RightClick` with the press's point, and
+`UiList.RowRightClicked`. The strip under the last whole row is no row's for either button. A list here opens with no
+row selected, so a miss before any row is chosen names nothing: counted, `LIST_RIGHT_CLICK_FIRST_ROW_NOT_SELECTED`.
 
 **With flag `0x80` set — buy is `0x91`, hire `0x291`, both have it — `0x400` fires twice per click**,
 once on press and once on release. The buy handler's first one closes the screen, so the second finds

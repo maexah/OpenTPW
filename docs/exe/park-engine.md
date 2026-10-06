@@ -2057,8 +2057,8 @@ opens keeps the capture on the layer (`0x004882ba`), so its release can still le
 (`UiWindow.ParkScreen`, `WindowStack.OnParkScreen`) takes it, and `Level.RightPressTaken` adds first person (and gives
 the park every press while F2 hides the HUD). A left press reads the same three (`WindowStack.PointerTaken`). No park
 screen is modal, so the gadget answers beside one. The gadget's body takes a press inside its outline,
-and its arm, handle and aerial take theirs (`hud.md`, "The arm and the aerial as built"). A right press on a list row is counted,
-`LIST_ROW_RIGHT_CLICK` (Q117). `Level.LeftPressTaken` keeps a left press off the park in first person too (Q116): the
+and its arm, handle and aerial take theirs (`hud.md`, "The arm and the aerial as built"). A right click on a list row and a click on an object window's
+preview move the camera and close the window ("The camera goes to a thing"). `Level.LeftPressTaken` keeps a left press off the park in first person too (Q116): the
 viewfinder layer's `FUN_00488a00` gives a press (`0x10005`) to the key table (`FUN_0040c900`) and every message to
 `FUN_0042a760`, where a left press only sets bit 1 of the camera's button state `DAT_00790aac` (what reads that bit is
 not traced here).
@@ -2183,6 +2183,55 @@ when a screen opens. Where it parts from the original:
   (`docs/QUEUE.md` Q119). **First person** leaves the screen open (Q122).
 - **F1 over a screen** and **the wheel over a screen's body** are not decoded, and neither is built or counted
   (`docs/QUEUE.md` Q231). The wheel zooms the camera wherever the pointer is.
+
+### The camera goes to a thing
+
+Decoded for `docs/QUEUE.md` Q117, first-hand, and run in the original.
+
+**`FUN_004867b0( thing id )`** does nothing for nought or an id with no thing (`[0x007cfb90 + id * 20]`). Otherwise it
+packs the thing's cell from bytes `+5` and `+7` (`0x004867f2`, the whole part of its position), takes the column and
+the row back out, multiplies each by ten and converts it to a float (`FILD`, `0x00486831`, `0x00486843`), and hands
+the pair to `FUN_0042aab0` with three null pointers. So the camera is put on the **corner of the thing's cell**, in
+whole tens, not on the thing's own position and not on the cell's middle.
+
+**`FUN_0042aab0( x, z, a, b, c )`** zeroes the three terms at `0x00790a88`, `0x00790a8c` and `0x00790a90` (the camera
+update `FUN_0042b1c0` reads and writes them: its scroll), writes the look-at point `0x007908f0` and `0x007908f8` from the
+first two, and writes `0x007909ec`, `0x00790a38` and `0x0074c9bc` only from a pointer that is not null. From here none
+is, so the spin and the zoom stay.
+
+**Four callers.** Each of the three list screens' handlers answers the list's `0x402` (`hud.md`, "The messages"): the
+list must exist and the row not be -1, the row's record id comes from `FUN_00664c71`, the thing's id word from
+`FUN_0050b350`, then the call, then message 4 to the screen, which closes it whether or not the thing was found -
+all staff `0x00495feb` (the call `0x0049602f`, the close `0x00496044`), visitors `0x00493483` (`0x004934c5`,
+`0x004934da`), all items `0x00495554` (`0x00495584`, `0x00495599`). And the object windows' base `FUN_0048cea0` gives
+its preview panel (`a`, `0x3e24` in the ride window) the handler `0x0048d1a0` and the window as its slot 6
+(`0x0048cf21`, `0x0048cf31`): on a click `0x10006`, **whatever the button**, it calls `FUN_004867b0` with the id of
+the thing shown (`[0x007c2658]`) and then the window's vtable `+0x2c`, `FUN_0048cf70`, which sends the window's tree
+message 4. Every other message goes to the control's own proc.
+
+**In the original** (Lost Kingdom, read from memory with a frame each): a quick right click on the visitors list's
+third row took the look-at from (475.0, 175.007) to **(560.0, 280.0)**, ten times the cell (56,28) of visitor 3's
+thing read 0.5 s either side, the open screen `[0x007c24c8]` to 0, and `0x007909ec`, `0x00790a38`, `0x0074c9bc` as they
+were (110, 0, 1). A left click on a visitor window's preview, and a quick right click on another's, did the same: to
+(420, 280) and (520, 230), each ten times that visitor's cell, the window shut. A quick right click on the strip
+under the tenth row, with no row clicked since the screen opened, went to the **highlighted** row's guest
+((480, 250), ten times the cell of visitor 14, the tenth row, highlighted on that opening) and shut the screen.
+
+**OpenTPW.** `ParkOrbitCameraMode.GoToThing` writes the point of interest, the cell from
+`ParkOrbitCameraMode.CellOfThing`: a person's from where they walk, a placed object's from its origin. The lists hand
+their right click to `UiList.RowRightClicked` (`hud.md`, "A right click on a list") and each screen closes itself;
+the object window's preview answers `Clicked` and `RightClicked`. Differences, each said at its site:
+
+- **The scroll terms**: this camera keeps none, so nothing is zeroed.
+- **The miscellaneous tab** of the all-items list holds a row for each item type with a count, not a row a thing, so
+  its right click goes nowhere: counted, `ALL_ITEMS_MISC_ROW_RIGHT_CLICK`. What the original's rows there are is not
+  decoded (`FUN_00495110` fills them through `FUN_00481bc0( 0x400, 0x004941e0 )`).
+- **The preview's left click** is a press and a release on the panel with no limit on its time, where the original's
+  is the 500 ms click (`docs/QUEUE.md` Q123).
+- **In first person** the original's two words are where the viewer stands, and no screen is open there; here a
+  screen can be (Q122) and only the orbit's point moves.
+- **The status label** inside the preview (`0x3e25`) does not take the pointer here, so a click on it is the
+  preview's; whether the original's label takes it is not measured.
 
 ### Leaving a park with something in the hand
 

@@ -253,6 +253,56 @@ public sealed class ParkOrbitCameraMode : CameraMode
 	}
 
 	/// <summary>
+	/// Puts the point of interest on a thing, as a right click on a list's row and a click on an object window's
+	/// preview do (<c>FUN_004867b0</c>; <c>docs/exe/park-engine.md</c>, "The camera goes to a thing"): on the corner of
+	/// the cell the thing stands in, ten times the cell's column and row, not on the thing's own position. The spin and
+	/// the zoom are left as they are. False, and nothing moved, for nought or an id nothing in the park has.
+	/// </summary>
+	/// <remarks>
+	/// The original's write (<c>FUN_0042aab0</c>) also zeroes the camera's three scroll terms
+	/// (<c>0x00790a88</c>..<c>0x00790a90</c>); this camera keeps none. In first person the same two words are where
+	/// the viewer stands, and no screen is open there in the original; here only the orbit's point moves.
+	/// </remarks>
+	public static bool GoToThing( int thingId )
+	{
+		if ( CellOfThing( thingId, ParkPeople.Current, Level.Current?.ParkState ) is not var (x, y) )
+			return false;
+
+		PointOfInterest = new Vector3( x * 10f, y * 10f, 0f );
+
+		Log.Info( $"Camera: to thing {thingId} on cell ({x},{y}), point of interest ({PointOfInterest.X:F0},{PointOfInterest.Y:F0})" );
+
+		return true;
+	}
+
+	/// <summary>
+	/// The cell a thing stands in - the original's thing bytes <c>+5</c> and <c>+7</c>, the whole part of its
+	/// position: a person's from where they walk, a placed object's from its own origin.
+	/// </summary>
+	internal static (int X, int Y)? CellOfThing( int thingId, ParkPeople? people, ParkState? state )
+	{
+		if ( thingId == 0 )
+			return null;
+
+		if ( people != null )
+		{
+			if ( people.Guests.TryGetValue( thingId, out var guest ) )
+				return guest.Navigator.Position.Cell;
+
+			foreach ( var member in people.Staff )
+			{
+				if ( member.ThingId == thingId )
+					return member.Navigator.Position.Cell;
+			}
+		}
+
+		if ( state != null && state.TryObject( thingId, out var placed ) )
+			return (placed.CellX, placed.CellY);
+
+		return null;
+	}
+
+	/// <summary>
 	/// Drops where this camera was looking as a scene ends, so the next park does not open wherever
 	/// the last one was left - see <see cref="Level.Unload"/>.
 	///

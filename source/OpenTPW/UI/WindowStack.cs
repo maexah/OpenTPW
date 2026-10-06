@@ -487,6 +487,7 @@ internal sealed class WindowStack : Panel
 		{
 			_rightPress.Answer?.Invoke();
 			_rightPress.On?.RightClicked?.Invoke();
+			_rightPress.On?.RightClickedAt( _rightPress.Where.X * VirtualScreen.Scale, _rightPress.Where.Y * VirtualScreen.Scale );
 		}
 	}
 

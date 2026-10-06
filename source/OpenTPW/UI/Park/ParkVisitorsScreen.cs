@@ -90,9 +90,8 @@ internal sealed class ParkVisitorsScreen : UiWindow
 			Mesh = UiMesh.Get( "list_kids" ),
 			RowArea = new UiRect( 294, 315, 1720, 914 ),
 
-			// A right click on a row moves the camera to that guest and closes the screen
-			// (0x004934c5; docs/QUEUE.md Q117). Not built: counted on the press.
-			RightPressed = () => Unimplemented.Report( "LIST_ROW_RIGHT_CLICK" ),
+			// A right click on the list moves the camera to the selected row's guest and closes the screen (0x004934c5).
+			RowRightClicked = GoTo,
 			Columns = [(297, 689), (701, 948), (966, 1213), (1233, 1358), (1372, 1474), (1478, 1718)],
 
 			// All six from the right - see the class remarks.
@@ -173,6 +172,16 @@ internal sealed class ParkVisitorsScreen : UiWindow
 	}
 
 	/// <summary>A guest's row - the original's row adder <c>FUN_00493800</c>.</summary>
+	/// <summary>
+	/// The list's right click (<c>0x402</c>, <c>0x00493483</c>): the camera to the row's guest, then the screen closed
+	/// (message 4, <c>0x004934da</c>), whether or not the guest is still there to go to.
+	/// </summary>
+	private void GoTo( int guest )
+	{
+		ParkOrbitCameraMode.GoToThing( guest );
+		Stack.Close( this );
+	}
+
 	private static UiList.Row RowOf( Peep guest )
 		=> new( guest.ThingId, $"{guest.VisitorNumber}", guest.VisitorNumber, Values:
 		[

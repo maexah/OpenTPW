@@ -56,12 +56,6 @@ the original.
   window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
   together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
 
-- [ ] **Q117. A right click on a list row or an object window's preview.** Found by Q56. The all-staff, visitors and
-  all-items lists answer a right click on a row (`0x402`) by moving the camera to that thing and closing the screen
-  (`FUN_004867b0`: `0x0049602f`, `0x004934c5`, `0x00495584`); an object window's preview answers any click the same way
-  (`LAB_0048d1a0`). The click is the UI library's (`hud.md`, "A click and a double click"; `WindowStack.RightClick`). Counted on the
-  press as `LIST_ROW_RIGHT_CLICK`; the preview is no control of its own here, so its click is not counted. Confirm: a right
-  click on a guest's row, the camera on that guest and the screen shut; a screenshot.
 - [ ] **Q119. A plain Escape does not close the park screen in front.** Found by Q57's review. In the original the six
   management screens, an object window and the map take the focus as they open (`FUN_00485b70`, `FUN_004862a0`), and
   their key handler answers a plain Escape let go by closing the screen, and nothing more (`FUN_00488ba0`, `0x00488bc6`;
@@ -615,6 +609,17 @@ the original.
   taken on the press here, where the original skips the press and commits on the release (`Level.KeptFromThePark`),
   which is `RunBuildMode`'s standing difference. Decode the two, count each where it is reached, then build. Confirm:
   F1 and the wheel over the buy screen beside the original's, read from memory.
+- [ ] **Q232. A list opens with no row selected, where the original's opens with one highlighted. Decode first.**
+  Found by Q117 (`hud.md`, "A right click on a list"). The original's add selects the first row as a list fills
+  (`FUN_0066525c( 0 )` in `FUN_0066403b`), and its visitors list opened with a row highlighted every time: the first
+  on one opening, the second and the tenth on two others, so something else moves it (the all-items builders call
+  `FUN_00664d2a` and `FUN_00665739` with a thing; the two-second rewrite and the sorted insert are the other
+  candidates). `UiList.FirstRow` counts the add's selection and builds none (`LIST_FIRST_ROW_SELECTED`), so a right
+  click that misses every row before one is chosen goes nowhere here (`LIST_RIGHT_CLICK_FIRST_ROW_NOT_SELECTED`),
+  and `Remove` drops the selection on the `0x100` branch though all five list trees have the bit clear
+  (`LIST_RESELECT_PAST_THE_WINDOW`). Decode which row each of the five lists opens on and what the buy and hire
+  lists do, then build it. Confirm: the visitors list opened beside the original's, the highlighted row predicted
+  first; a screenshot.
 
 ## B. Docs and comments
 

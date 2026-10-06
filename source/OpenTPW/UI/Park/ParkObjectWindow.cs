@@ -236,7 +236,13 @@ internal sealed class ParkObjectWindow : UiWindow
 		{
 			Id = 0x3e24,
 			Rect = new UiRect( 348, 162, 762, 576 ),
-			Mesh = UiMesh.Get( "!frame" )
+			Mesh = UiMesh.Get( "!frame" ),
+
+			// A click on the preview, with either button, moves the camera to the window's thing and closes the
+			// window: the base's handler for this panel, 0x0048d1a0, answers the click 0x10006 whatever its button.
+			// The left one here is a press and a release on the panel, with no limit on its time (docs/QUEUE.md Q123).
+			Clicked = GoToThing,
+			RightClicked = GoToThing
 		} );
 
 		// FUN_004ad720 starts the status box hidden; ShowTheDoor supplies the current warning.
@@ -602,6 +608,13 @@ internal sealed class ParkObjectWindow : UiWindow
 			$" users {users?.Text ?? "-"}, scrap {item.BuildPrice}," +
 			$" built {placed.Built.Year}-{placed.Built.Month:D2}-{placed.Built.Day:D2}," +
 			$" repair {placed.StateOfRepair:R}, life {placed.RemainingLife:R}" );
+	}
+
+	/// <summary>The preview's click (<c>0x0048d1c0</c>): the camera to the thing shown, then the window closed.</summary>
+	private void GoToThing()
+	{
+		ParkOrbitCameraMode.GoToThing( ThingId );
+		Stack.Close( this );
 	}
 
 	/// <summary>

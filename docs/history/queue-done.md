@@ -4536,6 +4536,23 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   where the original's screen handler runs the key tables (`FUN_00488ba0`) unless the screen switched them off as it
   opened (`FUN_00486b70`, eleven callers, not decoded screen by screen): decode which, and let F3 hide a screen that
   leaves them on (`park-engine.md`, "The full-screen view: F3").
+- [x] **Q117. A right click on a list row or an object window's preview.** Done 2026-10-05,
+  `alexah/298-list-row-right-click`. Decoded first-hand: `FUN_004867b0` puts the camera on the corner of the thing's
+  cell (bytes `+5`, `+7`, times ten) and leaves the spin and zoom; the list's `FUN_0066563d` selects the row under the
+  click and posts `0x402` with the selected row, so a miss names the row selected before; the preview's handler
+  `0x0048d1a0` answers either button. Built: `ParkOrbitCameraMode.GoToThing`, `UiList.RowRightClicked`, the three
+  screens and the preview. Predicted and read in Lost Kingdom with real clicks, **10 of 10**: a guest's row, the
+  camera from (300,300) to (480,170), ten times the paused census's cell (48,17), the screen shut, photographed;
+  the unchanged build 5 of 5 the other way (`LIST_ROW_RIGHT_CLICK` 3). **In the original**: visitor 3's row, the
+  look-at (475,175) to (560,280), ten times its cell, the screen shut; the preview with each button the same.
+  Nine tests new, 29 restored bugs each fail. Not built: the miscellaneous tab's rows (counted) and the row a list
+  opens with selected (Q232). `park-engine.md`, "The camera goes to a thing"; `hud.md`, "A right click on a list".
+  The item as written: Found by Q56. The all-staff, visitors and
+  all-items lists answer a right click on a row (`0x402`) by moving the camera to that thing and closing the screen
+  (`FUN_004867b0`: `0x0049602f`, `0x004934c5`, `0x00495584`); an object window's preview answers any click the same way
+  (`LAB_0048d1a0`). The click is the UI library's (`hud.md`, "A click and a double click"; `WindowStack.RightClick`). Counted on the
+  press as `LIST_ROW_RIGHT_CLICK`; the preview is no control of its own here, so its click is not counted. Confirm: a right
+  click on a guest's row, the camera on that guest and the screen shut; a screenshot.
 
 ## B. Docs and comments
 

@@ -199,9 +199,8 @@ internal sealed class ParkItemsScreen : UiWindow
 			RowArea = rows,
 			Columns = edges,
 
-			// A right click on a row moves the camera to that thing and closes the screen
-			// (0x00495584; docs/QUEUE.md Q117). Not built: counted on the press.
-			RightPressed = () => Unimplemented.Report( "LIST_ROW_RIGHT_CLICK" )
+			// A right click on the list moves the camera to the selected row's thing and closes the screen (0x00495584).
+			RowRightClicked = GoTo
 		} );
 
 		for ( var column = 0; column < headings.Length; ++column )
@@ -210,6 +209,26 @@ internal sealed class ParkItemsScreen : UiWindow
 		list.Build();
 
 		_lists[columns] = list;
+	}
+
+	/// <summary>
+	/// The list's right click (<c>0x402</c>, <c>0x00495554</c>): the camera to the row's thing, then the screen closed
+	/// (message 4, <c>0x00495599</c>).
+	/// </summary>
+	/// <remarks>
+	/// The miscellaneous tab's rows here are item types with a count, not things, so there is nothing to go to: counted,
+	/// and the screen stays.
+	/// </remarks>
+	private void GoTo( int thing )
+	{
+		if ( Tabs[_tab].Index == ItemDescriptionFile.Feature )
+		{
+			Unimplemented.Report( "ALL_ITEMS_MISC_ROW_RIGHT_CLICK" );
+			return;
+		}
+
+		ParkOrbitCameraMode.GoToThing( thing );
+		Stack.Close( this );
 	}
 
 	private UiButton CrossLink( int id, int top, int help, string mesh, int screen )

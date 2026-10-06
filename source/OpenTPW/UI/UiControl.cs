@@ -293,6 +293,12 @@ internal class UiControl
 	/// <summary>The pointer went down on it, at (<paramref name="x"/>, <paramref name="y"/>) on the window.</summary>
 	internal virtual void PointerPressed( float x, float y ) { }
 
+	/// <summary>
+	/// A right click whose press landed on it, with the press's point in window pixels: the click's own point, which the
+	/// base control proc posts with <c>0x10006</c> (<c>0x0065f977</c>). Called after <see cref="RightClicked"/>.
+	/// </summary>
+	internal virtual void RightClickedAt( float x, float y ) { }
+
 	/// <summary>The pointer moved to (<paramref name="x"/>, <paramref name="y"/>) while held down after going down on it.</summary>
 	internal virtual void PointerDragged( float x, float y ) { }
 
