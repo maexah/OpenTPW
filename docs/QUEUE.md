@@ -38,12 +38,6 @@ the original.
 
 ## A. Bugs first
 
-- [ ] **Q125. `CacheFileSystem` is set, and nothing in the game reads it.** Found by Q67's sweep. `Game.Run` creates
-  `OpenTPW/cache` under the local application data folder on every launch and mounts it as `CacheFileSystem`
-  (`Game.cs`, "mainly for editor-related stuff"). Its one reader is ModKit's thumbnail cache (`Editor.cs`), a separate
-  program that never sets it and would read null. Dead by CODE in the game, and making the folder is all it does.
-  Label the game's side (rule 3); the property stays, since ModKit, which is Alexah's call, reads it.
-  Confirm: a grep for readers, and a launch, listing the folder before and after.
 - [ ] **Q126. A long frame runs every thing sweep it owes, where the original runs three.** Found by Q68's review.
   The park loop counts a frame's sweeps (`[0x00879064]`, `0x0054f680`) and drops any past the third: the step and its
   counter move on, `mGameTick` does not, and nothing makes it up (`park-engine.md`, "What the 31 ms tick drives").

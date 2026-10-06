@@ -4716,6 +4716,14 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Done 2026-10-06: labelled at `Material.Default`, kept. The grep finds the `Delete` guard and nothing else; `assets
   list` shows one material and its shader on `3d.shader` in the lobby (845 assets) and in Lost Kingdom (2204). A
   comment only, so "before and after" are one build.
+- [x] **Q125. `CacheFileSystem` is set, and nothing in the game reads it.** Found by Q67's sweep. `Game.Run` creates
+  `OpenTPW/cache` under the local application data folder on every launch and mounts it as `CacheFileSystem`
+  (`Game.cs`, "mainly for editor-related stuff"). Its one reader is ModKit's thumbnail cache (`Editor.cs`), a separate
+  program that never sets it and would read null. Dead by CODE in the game, and making the folder is all it does.
+  Label the game's side (rule 3); the property stays, since ModKit, which is Alexah's call, reads it.
+  Confirm: a grep for readers, and a launch, listing the folder before and after.
+  Done 2026-10-06: labelled at `Game.Run`, kept with the property. The grep finds the setter, the property and
+  ModKit's one reader; the folder was empty with the same time either side of a launch to the lobby.
 
 ## B. Docs and comments
 

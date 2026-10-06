@@ -64,9 +64,12 @@ internal static class Game
 		Players.Roster.Load();
 
 		//
-		// Custom OpenTPW cache directory (mainly for editor-related stuff). Kept with the player rather than
-		// in whatever directory the game was started from: a copy of the game may sit somewhere nothing may
-		// write to, and nothing in here is worth keeping if it is lost.
+		// Dead by CODE in the game: nothing in it reads CacheFileSystem, so making the folder is all this does.
+		// Its one reader is ModKit's thumbnail cache (Editor.cs), a separate program that never sets it. Kept and
+		// labelled, not deleted, with the property, which ModKit names.
+		//
+		// The folder is kept with the player rather than in whatever directory the game was started from: a copy
+		// of the game may sit somewhere nothing may write to, and nothing in here is worth keeping if it is lost.
 		//
 		var cacheFolder = Path.Join(
 			Environment.GetFolderPath( Environment.SpecialFolder.LocalApplicationData ), "OpenTPW", "cache" );
