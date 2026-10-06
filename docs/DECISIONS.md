@@ -54,6 +54,14 @@ over. Copying the original would mean decoding each window's build order to repr
 glitch, so **Alexah chose to keep ours as a fix** ("Option 1", after the pros and cons were put to them, Q69). The
 deviation is said at `WindowStack.OnUpdate`.
 
+## F2 stays beside F3 (2026-10-05)
+
+The original's full-screen view is F3 (`docs/exe/park-engine.md`, "The full-screen view: F3"), and F2 is bound to
+nothing in it. OpenTPW's F2 hides the whole interface, pointer included, in the lobby and in a park, and it is how a
+clean frame is taken. When F3 was built (Q114b) the choice was put to Alexah with what F2 was measured to do: keep it
+as it is, keep it in the lobby only, or remove it. **Alexah chose to keep F2 as it is.** It is said at
+`InputButton.HideUI`.
+
 ## The reference executable is 2.0 (2026-09-27)
 
 Alexah asked for the reverse-engineering base to move from `testme.exe`, thought to be 1.0, to a decrypted 2.0 exe

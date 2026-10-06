@@ -20,8 +20,8 @@ public class RootPanel
 
 	/// <summary>
 	/// Hides the whole HUD, so a screenshot shows the scene with nothing in front of it.
-	/// Toggled with <see cref="InputButton.HideUI"/> (F2). Static so it survives the panel
-	/// being rebuilt when a level is loaded.
+	/// Toggled with <see cref="InputButton.HideUI"/> (F2), OpenTPW's own key, kept beside the original's full-screen
+	/// view on F3 (<c>docs/DECISIONS.md</c>). Static so it survives the panel being rebuilt when a level is loaded.
 	/// </summary>
 	public static bool Hidden { get; set; }
 

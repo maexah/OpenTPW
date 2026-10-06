@@ -46,6 +46,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0040be9c` | Backspace handler: end of the idle branch | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x0040c35f` | Escape handler `0x0040c180`: installs the idle mode through the setter over any mode but 0 or 1, which runs the outgoing mode's uninstall | OpenTPW.Tests/ParkHandTests.cs  |
 | `0x0040c368` | Escape handler `0x0040c180`: after the idle install, `FUN_0052f200(0,1)` zeroes the tool and the rotation, and the handler answers 1 so the menu does not open | OpenTPW.Tests/ParkHandTests.cs OpenTPW/UI/Park/ParkFrontEnd.cs  |
+| `0x0040c4b0` | Game table row 4's handler (key 0x72, F3): the thunk to 0x00481490, a bare JMP to the full-screen toggle FUN_004a29d0 | OpenTPW/UI/Park/ParkFrontEnd.cs  |
 | `0x0040c4d0` | | OpenTPW/UI/Park/ParkFrontEnd.cs  |
 | `0x0040c5c0` | | OpenTPW.Tests/ParkCamcorderKeyOnReleaseTests.cs OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
 | `0x0040c5d0` | The system table's Ctrl+H handler, Popup Help, run on the key's release by the window procedure | OpenTPW/UI/HelpBar.cs  |
@@ -238,6 +239,10 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004a2057` | FUN_004a1d70: the aerial mast 0x2d's top set to its bottom less 8, so the mast is built eight high | OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x004a23da` | FUN_004a1d70: the arm 0x21's right edge moved by its left less the handle's (-645), so the arm is built in | OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x004a2529` | | OpenTPW/UI/Park/ParkGadget.cs  |
+| `0x004a2905` | The full-screen view's control handler 0x004a2840, key up: the camera table, then F3 or a plain Escape off, else Ctrl+P the postcard | OpenTPW/UI/Park/ParkFrontEnd.cs  |
+| `0x004a2918` | The full-screen view's handler, key up: FUN_0040c990 on the camera table alone | OpenTPW/World/Level.cs OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
+| `0x004a2942` | The full-screen view's handler at the end of a park (world state 4): a plain Escape opens the game menu, the view stays on | OpenTPW/UI/Park/ParkFrontEnd.cs  |
+| `0x004a29e6` | FUN_004a29d0, off to on: refused while gui_CameraFlags & 0x16 (first person, a ride view) | OpenTPW/UI/Park/ParkFrontEnd.cs  |
 | `0x004a2ac0` | FUN_004a2ac0( a ): message 6 with a to the park's layer 0 and 1 - a to layer 1; first person's entry passes 0 | OpenTPW.Tests/ParkHandTests.cs OpenTPW/UI/Park/ParkGadget.cs OpenTPW/World/Level.cs  |
 | `0x004a2bf0` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x004a2e90` | | OpenTPW/UI/Screens/OptionsScreen.cs  |

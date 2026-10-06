@@ -4496,6 +4496,23 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   The screens `FUN_0048ac40` and `FUN_0048adb0` build are the end of a park's. In the original: F2 nothing, F3
   `[0x007cb2e8]` 0 to 1 and the gadget gone, F3 or Escape back with no menu, each predicted. `park-engine.md`, "The
   full-screen view: F3".
+- [x] **Q114b. Build the full-screen view on F3.** Done 2026-10-05, `alexah/296-full-screen-view-f3`:
+  `ParkFrontEnd.ToggleFullScreen` over `WindowStack.Covered`. F2 measured first (10 of 11 predictions; the miss was
+  the harness's pixel ruler) and kept at Alexah's word (`docs/DECISIONS.md`). Predicted and read in Lost Kingdom with
+  real keys and buttons: F3 held nothing, let go the gadget's blue 4775 pixels to 0 and `windows` "under the
+  full-screen view"; B, a left click on grass, Backspace, Delete, a quick right click with the Belly Bounce in the
+  hand and C changed nothing; the Left arrow, W and the wheel moved the camera; Escape put the interface back, hand
+  and tool as they were, no GameMenu; refused in first person. In the original the same day: B, a click, C and Escape
+  under F3, every reading as predicted (one control click, outside the park after the camera turned, run again). Twelve new tests; nineteen restored bugs each fail. The item as written:
+  Split from Q114, whose decode is `park-engine.md`, "The full-screen
+  view: F3". First measure what F2 does here now (the hand, a tool, a shortcut, Escape, first person, F2 sent
+  through XTEST), predicted first. Then build the original's: F3 let go toggles it in a park, refused in first person;
+  on, the park's layer is hidden and a full-screen layer keeps the focus, so the camera's keys and mouse work, F3 or
+  a plain Escape puts the interface back and opens no menu, Ctrl+P is the postcard's (counted), and no other key or
+  press reaches the park. Whether F2 stays as OpenTPW's own key beside it (it also works in the lobby) is Alexah's
+  call: ask first. The end of a park's use of the view waits for an end of a park. Confirm: F3 in Lost Kingdom, the
+  frame without the gadget beside the original's (`q114/orig/k2-F3.png`), `windows` and `tool` either side; B and a
+  left click on grass under it change nothing; Escape, the gadget back and no GameMenu.
 
 ## B. Docs and comments
 

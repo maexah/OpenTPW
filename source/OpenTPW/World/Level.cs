@@ -630,8 +630,10 @@ public class Level
 			return;
 
 		// Idle, the pointer already says what a click would do over ground a path can go on
-		// (FUN_0052f950 with the hover category, cursor 3).
-		var wanted = ParkBuildMode.Current switch
+		// (FUN_0052f950 with the hover category, cursor 3). Under the full-screen view the park's mouse proc hears
+		// nothing and the pointer is the plain arrow, as the original's frame shows it over grass; with a tool armed
+		// there it is not measured.
+		var wanted = FullScreenView ? Input.CursorTypes.Normal : ParkBuildMode.Current switch
 		{
 			ParkBuildMode.Queue => QueueCursor(),
 			ParkBuildMode.Path => PathCursor(),
@@ -776,7 +778,8 @@ public class Level
 	/// <summary>
 	/// The build keys, on release as the original's game table fires them: Backspace and Delete. Not
 	/// while a box has the keyboard, and not while a window holds the park - which is inferred: the
-	/// original's table-enable gate is decoded, but not whether a park window switches it off.
+	/// original's table-enable gate is decoded, but not whether a park window switches it off. And not under the
+	/// full-screen view, whose control runs the camera's table alone (<c>0x004a2918</c>).
 	/// </summary>
 	/// <remarks>
 	/// The release edge here also fires when a modifier changes while the key is held, which the
@@ -784,7 +787,7 @@ public class Level
 	/// </remarks>
 	private void BuildKeys()
 	{
-		if ( Input.TextCaptured || PausedByWindow() )
+		if ( Input.TextCaptured || PausedByWindow() || FullScreenView )
 			return;
 
 		if ( Input.Released( InputButton.Delete ) )
@@ -1084,6 +1087,12 @@ public class Level
 	/// </para>
 	/// </summary>
 	internal bool PausedByWindow() => Kind == Scene.Park && _windows is { AnyPausing: true };
+
+	/// <summary>
+	/// Whether the park's full-screen view is on (F3, <c>FUN_004a29d0</c>): the interface's layer hidden under a control
+	/// that hears the camera's keys and mouse and nothing else - see <see cref="UI.ParkFrontEnd.ToggleFullScreen"/>.
+	/// </summary>
+	internal bool FullScreenView => Kind == Scene.Park && _windows is { Covered: true };
 
 	/// <summary>
 	/// Opens the purchase menu on this scene's own window stack.

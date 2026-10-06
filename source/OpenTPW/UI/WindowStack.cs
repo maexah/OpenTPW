@@ -23,7 +23,8 @@ namespace OpenTPW.UI;
 /// from it.
 /// </para>
 /// <para>
-/// It is a panel on the HUD, so F2 hides it with everything else there.
+/// It is a panel on the HUD, so F2 hides it with everything else there. The park's full-screen view, F3, is
+/// <see cref="Covered"/>.
 /// </para>
 /// <para>
 /// <b>Engine and content.</b> All of it is engine: opening and closing windows, the hit test and the modal
@@ -151,6 +152,28 @@ internal sealed class WindowStack : Panel
 	/// <summary>The control the pointer is over, if any, for the debug console.</summary>
 	internal UiControl? Hovered => _hovered;
 
+	/// <summary>
+	/// Whether a full-screen control over the stack's layer has the keys and the pointer, the layer hidden under it, as
+	/// the park's full-screen view makes one (<c>FUN_004a29d0</c>; <c>docs/exe/park-engine.md</c>, "The full-screen
+	/// view: F3"). Nothing of the stack is drawn, the help bar included, and nothing in it is pointed at or pressed: every
+	/// press is the cover's, so the scene gets none, and the wheel is left to the camera. The keys are the scene's
+	/// (<see cref="KeysWithoutFocus"/>). The pointer is not the stack's and stays.
+	/// </summary>
+	internal bool Covered { get; private set; }
+
+	/// <summary>Puts the cover over the stack or takes it off. A control held down as it goes on is let go of unclicked.</summary>
+	internal void Cover( bool covered )
+	{
+		Covered = covered;
+
+		if ( !covered || _pressed == null )
+			return;
+
+		_pressed.Pressed = false;
+		_pressed.PointerReleased();
+		_pressed = null;
+	}
+
 	/// <summary>Whether a modal window is up, which takes every press that misses its controls - see <see cref="PointerTaken"/>.</summary>
 	internal bool ModalUp => _windows.Exists( window => window.Modal && !window.Hidden && !window.PutAway );
 
@@ -218,6 +241,7 @@ internal sealed class WindowStack : Panel
 		_pressed = null;
 		_mouseWasDown = false;
 		_rightWasDown = false;
+		Covered = false;
 		_helpBar.ReleaseText();
 		Input.TextCaptured = false;
 	}
@@ -238,7 +262,7 @@ internal sealed class WindowStack : Panel
 		// (FUN_006589f9), so a press made after a window opens, before the pointer moves, can go to the old
 		// hover (docs/exe/lobby.md, "The lobby's keys act on the release", Unsettled). Kept as a fix (docs/DECISIONS.md).
 		var mouse = Input.Mouse.Position;
-		var hit = HitTest( mouse.X, mouse.Y );
+		var hit = Covered ? null : HitTest( mouse.X, mouse.Y );
 
 		if ( hit != _hovered )
 		{
@@ -269,7 +293,7 @@ internal sealed class WindowStack : Panel
 
 		if ( mouseDown && !_mouseWasDown )
 		{
-			PointerTaken = hit != null || ModalUp;
+			PointerTaken = Covered || hit != null || ModalUp;
 
 			Press( hit, mouse.X, mouse.Y );
 
@@ -287,7 +311,7 @@ internal sealed class WindowStack : Panel
 
 		if ( rightDown && !_rightWasDown )
 		{
-			RightPointerTaken = TakesRightPress( mouse.X, mouse.Y );
+			RightPointerTaken = Covered || TakesRightPress( mouse.X, mouse.Y );
 			hit?.RightPressed?.Invoke();
 		}
 
@@ -313,12 +337,16 @@ internal sealed class WindowStack : Panel
 
 		Keyboard();
 
-		// The world's row only where a click would reach the world: over no control, and no modal up.
+		// The world's row only where a click would reach the world: over no control, and no modal up. Under the cover the
+		// bar is not drawn, and its own key is still heard: the window procedure matches the system table on every key.
 		_helpBar.Update( _hovered?.HelpText ?? (ModalUp ? -1 : WorldHelpText) );
 	}
 
 	protected override void OnRender()
 	{
+		if ( Covered )
+			return;
+
 		// Each window's effects straight after it, so the windows over it cover them.
 		foreach ( var window in _windows )
 		{
@@ -350,8 +378,8 @@ internal sealed class WindowStack : Panel
 	/// </returns>
 	internal bool ClickAt( float x, float y )
 	{
-		var hit = HitTest( x, y );
-		var taken = hit != null || ModalUp;
+		var hit = Covered ? null : HitTest( x, y );
+		var taken = Covered || hit != null || ModalUp;
 
 		Press( hit, x, y );
 		ViewTook = !taken && ViewPressed?.Invoke() == true;

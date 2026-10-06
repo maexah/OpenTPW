@@ -191,14 +191,80 @@ internal sealed class ParkFrontEnd : Panel
 	/// 0x00488921) and only latches a row on its press, so a held Escape, its repeats included, does nothing until it
 	/// comes up (<c>docs/exe/scenes.md</c>, "The park Escape route"). The menu and the viewfinder take the key on its
 	/// release too. The build keys are read in <see cref="Level"/>, and the camcorder key by the camera modes.
+	/// <para>
+	/// F3 let go with no modifier held is the game table's row 4 (key 0x72, <c>0x0040c4b0</c>), the full-screen view's
+	/// toggle - see <see cref="ToggleFullScreen"/>. While the view is on every key is its control's
+	/// (<see cref="FullScreenKey"/>), each in the order it came up, so an Escape that turns it off opens no menu.
+	/// </para>
 	/// </summary>
 	private void ParkKeys()
 	{
 		foreach ( var key in Input.KeysReleased )
 		{
-			if ( key == Key.Escape )
+			if ( _stack.Covered )
+				FullScreenKey( key );
+			else if ( key == Key.Escape )
 				MenuKey( _stack.Windows.Count > 0 ? _stack.Windows[^1] : null );
+			else if ( key == Key.F3 && Input.NoModifierHeld )
+				ToggleFullScreen();
 		}
+	}
+
+	/// <summary>
+	/// The full-screen view's toggle, <c>FUN_004a29d0</c> (<c>docs/exe/park-engine.md</c>, "The full-screen view: F3").
+	/// Turning it on puts a full-screen control over the park's layer, which takes the focus, and hides the layer: the
+	/// gadget, the money, the help bar and any park screen go, and the pointer stays (<see cref="WindowStack.Covered"/>).
+	/// It is refused in first person (<c>gui_CameraFlags &amp; 0x16</c>, <c>0x004a29e6</c>; the ride view the same test
+	/// refuses does not exist here). Turning it off shows the layer and hands the focus back.
+	/// </summary>
+	/// <remarks>
+	/// <b>Not the original's over a window that has the keys.</b> The game menu, a message box, the options screen and the
+	/// map are not on the park's layer and keep their keys, so F3 does nothing over one. A park screen is on the layer
+	/// and its handler runs the tables on a key-up (<c>FUN_00488ba0</c>), so the original's F3 hides it with the rest
+	/// unless the screen switched the tables off as it opened (<c>FUN_00486b70</c>, not decoded screen by screen); the six
+	/// management screens are modal here (<c>docs/QUEUE.md</c> Q115), and F3 over one is counted and does nothing. An
+	/// object window, which is not modal, is hidden with the rest.
+	/// <para>
+	/// The end of a park also turns the view on and off, and there Escape opens the game menu under it
+	/// (<c>0x004a2942</c>); no park ends here yet.
+	/// </para>
+	/// </remarks>
+	internal void ToggleFullScreen()
+	{
+		if ( _stack.Covered )
+		{
+			_stack.Cover( false );
+			Log.Info( "Full-screen view: off" );
+			return;
+		}
+
+		if ( ParkCamcorderCameraMode.Active )
+			return;
+
+		if ( (_stack.Windows.Count > 0 ? _stack.Windows[^1] : null) is { Modal: true } front )
+		{
+			if ( front.ParkScreen )
+				Unimplemented.Report( "FULL_SCREEN_VIEW_OVER_PARK_SCREEN" );
+
+			return;
+		}
+
+		_stack.Cover( true );
+		Log.Info( "Full-screen view: on" );
+	}
+
+	/// <summary>
+	/// A key let go while the full-screen view is on, as its control's handler answers one (<c>0x004a2905</c>): F3 or
+	/// Escape with no modifier held turns the view off and does nothing more, so no menu opens and the hand keeps what
+	/// it holds; else Ctrl+P is the postcard's (<c>FUN_004a9380</c>, counted). No other key is heard but the camera's,
+	/// which the camera reads itself.
+	/// </summary>
+	private void FullScreenKey( Key key )
+	{
+		if ( key is (Key.F3 or Key.Escape) && Input.NoModifierHeld )
+			ToggleFullScreen();
+		else if ( key == Key.P && Input.ControlAlone )
+			Unimplemented.Report( "FULL_SCREEN_VIEW_POSTCARD" );
 	}
 
 	/// <summary>

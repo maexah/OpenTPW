@@ -56,15 +56,6 @@ the original.
   window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
   together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
 
-- [ ] **Q114b. Build the full-screen view on F3.** Split from Q114, whose decode is `park-engine.md`, "The full-screen
-  view: F3". First measure what F2 does here now (the hand, a tool, a shortcut, Escape, first person, F2 sent
-  through XTEST), predicted first. Then build the original's: F3 let go toggles it in a park, refused in first person;
-  on, the park's layer is hidden and a full-screen layer keeps the focus, so the camera's keys and mouse work, F3 or
-  a plain Escape puts the interface back and opens no menu, Ctrl+P is the postcard's (counted), and no other key or
-  press reaches the park. Whether F2 stays as OpenTPW's own key beside it (it also works in the lobby) is Alexah's
-  call: ask first. The end of a park's use of the view waits for an end of a park. Confirm: F3 in Lost Kingdom, the
-  frame without the gadget beside the original's (`q114/orig/k2-F3.png`), `windows` and `tool` either side; B and a
-  left click on grass under it change nothing; Escape, the gadget back and no GameMenu.
 - [ ] **Q115. The park screens are modal here and are not in the original.** Found by Q56's review. The original builds
   the six management screens and the nine object windows onto layer 0 (`park-engine.md`, "Whose a right press is"): its
   gadget answers beside a screen (`FUN_004a0940` tests only the game menu), a left press on the park beside one is kept
@@ -73,6 +64,10 @@ the original.
   window's bare frame lets a left press through to `ClickWorldAt`, and a left press beside it acts on the park; and the
   buy screen opens over an object window and leaves it. One hit reading for both buttons. Confirm: with a ride's window
   open, a left click on its frame over a path does nothing; the gadget's Info beside the buy screen switches screens.
+  From Q114b: F3 over a management screen does nothing here and is counted (`FULL_SCREEN_VIEW_OVER_PARK_SCREEN`),
+  where the original's screen handler runs the key tables (`FUN_00488ba0`) unless the screen switched them off as it
+  opened (`FUN_00486b70`, eleven callers, not decoded screen by screen): decode which, and let F3 hide a screen that
+  leaves them on (`park-engine.md`, "The full-screen view: F3").
 - [ ] **Q117. A right click on a list row or an object window's preview.** Found by Q56. The all-staff, visitors and
   all-items lists answer a right click on a row (`0x402`) by moving the camera to that thing and closing the screen
   (`FUN_004867b0`: `0x0049602f`, `0x004934c5`, `0x00495584`); an object window's preview answers any click the same way
@@ -251,6 +246,8 @@ the original.
   The sixth is the gadget's postcard (the 2026-09-26 staleness audit): `ParkGadget.SendPostcard` (`b_postcard`,
   `FUN_004a9380`, which pauses the game and writes a picture out; the game ships `Postcard.wad`, `postcard.jpg` and an
   HTML template) only logs and closes the arm.
+  From Q114b: Ctrl+P under the full-screen view reaches the same `FUN_004a9380` and is counted
+  (`FULL_SCREEN_VIEW_POSTCARD`).
 - [ ] **Q140. The camcorder walks onto entrances the original shuts. Decode first.** Found by Q69's sweep. The
   original's edge test `FUN_004d8750` in mode 2, stepping into a type-9 cell, reads the entrance's owner chain
   (`0x004d8883`-`0x004d8b28`, as read by the sweep, not checked): it shuts the step unless the first catalogue object's

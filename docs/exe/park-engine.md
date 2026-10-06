@@ -654,10 +654,37 @@ back; F3 then Escape put them back with the game menu (`[0x007c2534]`) still shu
 turned it on all the same. Each as predicted from the listing. The refusal in first person was not reached (the
 click that enters it missed twice), so it is the listing's alone.
 
-**OpenTPW.** `InputButton.HideUI` is F2, OpenTPW's own key: `RootPanel.Hidden` stops the interface drawing and
-updating, and `Level.RightPressTaken` gives the park every right press while it is set. It is not this view: the key
-differs, nothing refuses it in first person, no layer takes the keys and the presses, and Escape is not its way out.
-What the hand, the tools and the shortcuts do under it here is not measured. The build is `docs/QUEUE.md` Q114b.
+**Under the view in the original** (`docs/QUEUE.md` Q114b; the reference park under Proton, each predicted from the
+listing and read from memory after the key or the click, a frame with it): B opened no screen (`[0x007c24c8]` stayed
+nought, where the same key with the view off set it); a left click on grass installed no tool (the mode object
+`[0x007b05d8]` and its vtable unchanged, where the same click with the view off installed the path tool, vtable
+`0x006fe9e0`); C changed neither the mode nor `gui_CameraFlags`; the Left arrow turned the camera a quarter turn; Escape
+took the view off with the menu shut. With the path tool armed first, F3, a click and Escape left its mode object
+standing, and the next Escape put it away. In those frames the pointer is the plain arrow, the armed tool's square is
+still drawn, and the advisor is drawn while he speaks: he is not on layer 0.
+
+**OpenTPW builds it** as `ParkFrontEnd.ToggleFullScreen` over `WindowStack.Covered`: F3 let go with no modifier
+toggles it, refused in first person; on, nothing of the window stack is drawn or pointed at, every press is the
+cover's, and `Level.BuildKeys` and the orbit camera's C are not heard; the camera's keys and wheel are; F3 or a plain
+Escape takes it off and is spent doing it; Ctrl+P is counted, `FULL_SCREEN_VIEW_POSTCARD`. The pointer wears the plain
+arrow. Where it parts from the original:
+
+- **Over a modal window F3 does nothing.** That is the original's for the game menu, a message box, the options screen
+  and the map, which are not on layer 0 and keep their keys. A park screen is on layer 0 and its handler `FUN_00488ba0`
+  runs the tables on a key-up, so the original's F3 hides it with the rest, unless the screen switched the tables off
+  as it opened (`FUN_00486b70`, called from eleven sites, not decoded screen by screen). The six management screens
+  are modal here (`docs/QUEUE.md` Q115), and F3 over one is counted, `FULL_SCREEN_VIEW_OVER_PARK_SCREEN`. An object
+  window, which is not modal, is hidden with the rest and is back when the view goes off.
+- **The armed tool's squares still follow the pointer** under the view, since the pointer's cell is picked every frame;
+  the original's mouse proc hears nothing there, so its square should stand still. Not measured.
+- **The end of a park** turns the view on and off and gives Escape the game menu under it; no park ends here.
+
+**F2 stays, at Alexah's word** (`docs/DECISIONS.md`): `InputButton.HideUI`, OpenTPW's own key beside F3. Measured
+before the build, each predicted from the code: it acts on the press, in the lobby too; it hides the pointer with the
+interface; under it B does nothing, a left click on grass arms the path tool, Backspace and a quick right click reach
+the park, C enters first person, Escape does nothing at all (not even leaving first person), and F2 in first person
+hides the viewfinder. `RootPanel.Hidden` stops the interface drawing and updating, and `Level.RightPressTaken` gives
+the park every right press while it is set.
 
 ---
 

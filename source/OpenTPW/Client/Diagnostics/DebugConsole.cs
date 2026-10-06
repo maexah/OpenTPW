@@ -495,6 +495,7 @@ public static class DebugConsole
 			case "windows":
 				Reply( Level.Current?.Hud?.Children.OfType<UI.WindowStack>().FirstOrDefault() is { } shown
 					? $"windows: {(shown.Windows.Count == 0 ? "none" : string.Join( ", ", shown.Windows.Select( window => window.GetType().Name ) ))}"
+						+ (shown.Covered ? " - under the full-screen view" : "")
 					: "windows: no window stack" );
 				break;
 
@@ -1369,7 +1370,7 @@ public static class DebugConsole
 					Reply( $"pointer: cursor {pointed.ParkCursor}, help row {UI.WindowStack.WorldHelpText}, at "
 						+ $"({Input.Mouse.Position.X:F0},{Input.Mouse.Position.Y:F0}) over "
 						+ (pointerStack?.Hovered is { } under ? $"control 0x{under.Id:x}" : "no control")
-						+ $"; a right press here is {(Level.RightPressTaken( pointerStack?.TakesRightPress( Input.Mouse.Position.X, Input.Mouse.Position.Y ) == true ) ? "the interface's" : "the park's")}" );
+						+ $"; a right press here is {(Level.RightPressTaken( pointerStack is { Covered: true } || pointerStack?.TakesRightPress( Input.Mouse.Position.X, Input.Mouse.Position.Y ) == true ) ? "the interface's" : "the park's")}" );
 					break;
 				}
 
