@@ -210,9 +210,7 @@ internal sealed class ParkObjectWindow : UiWindow
 		Modal = false;
 		Pauses = false;
 
-		// Built onto the park's own layer (0x0048ceca), so a right press beside it is the park's. A deviation: a left
-		// press on its bare frame, or beside it, reaches the park here, where the original's root takes the one and its
-		// park proc keeps the other from the hand (docs/QUEUE.md Q115).
+		// Built onto the park's own layer (0x0048ceca) - see UiWindow.ParkScreen.
 		ParkScreen = true;
 
 		Root = new UiControl

@@ -4513,6 +4513,29 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   call: ask first. The end of a park's use of the view waits for an end of a park. Confirm: F3 in Lost Kingdom, the
   frame without the gadget beside the original's (`q114/orig/k2-F3.png`), `windows` and `tool` either side; B and a
   left click on grass under it change nothing; Escape, the gadget back and no GameMenu.
+- [x] **Q115. The park screens are modal here and are not in the original.** Done 2026-10-05,
+  `alexah/297-park-screens-not-modal`: no park screen is modal (`UiWindow.ParkScreen`, `WindowStack.OnParkScreen`,
+  `ParkScreenOpen`, `Level.KeptFromThePark`). Decoded first-hand: `FUN_00485b70` switches the camera, cheat and game
+  tables off as a screen opens and its handler runs the shortcuts' alone, so **F3 over a screen is the original's
+  nothing** and `FULL_SCREEN_VIEW_OVER_PARK_SCREEN` is gone; a press beside a screen is skipped but its release still
+  commits an armed tool. Predicted and read in Lost Kingdom with real clicks and keys, 12 of 12 (the unchanged build
+  the other way on each): Info beside the buy screen left `windows` ending ParkStaffScreen; a click on the ride
+  window's bare frame and on grass beside it, `tool` mode 0; the same grass click with no screen, mode 1 anchored at
+  (47,20); with the tool armed beside the buy screen, a run laid to (49,20); F3, the Left arrow and Backspace over a
+  screen, nothing; the window's all-items button, the buy screen alone. In the original the same day, 13 of 13 read
+  from memory (`park-engine.md`, "A park screen is open"). Eleven tests new or re-aimed; twenty-seven restored bugs
+  each fail (one only after a test was tightened). Filed: Q231. The item as written: Found by Q56's review. The original builds
+  the six management screens and the nine object windows onto layer 0 (`park-engine.md`, "Whose a right press is"): its
+  gadget answers beside a screen (`FUN_004a0940` tests only the game menu), a left press on the park beside one is kept
+  from the hand (`0x00488741`) but reaches the layer, a screen's root takes a press anywhere on it, and opening one
+  closes the one open (`FUN_00485b40`, `DAT_007c24c8`). Here the six are `Modal`, which shuts out the gadget; the object
+  window's bare frame lets a left press through to `ClickWorldAt`, and a left press beside it acts on the park; and the
+  buy screen opens over an object window and leaves it. One hit reading for both buttons. Confirm: with a ride's window
+  open, a left click on its frame over a path does nothing; the gadget's Info beside the buy screen switches screens.
+  From Q114b: F3 over a management screen does nothing here and is counted (`FULL_SCREEN_VIEW_OVER_PARK_SCREEN`),
+  where the original's screen handler runs the key tables (`FUN_00488ba0`) unless the screen switched them off as it
+  opened (`FUN_00486b70`, eleven callers, not decoded screen by screen): decode which, and let F3 hide a screen that
+  leaves them on (`park-engine.md`, "The full-screen view: F3").
 
 ## B. Docs and comments
 

@@ -218,12 +218,10 @@ internal sealed class ParkFrontEnd : Panel
 	/// refuses does not exist here). Turning it off shows the layer and hands the focus back.
 	/// </summary>
 	/// <remarks>
-	/// <b>Not the original's over a window that has the keys.</b> The game menu, a message box, the options screen and the
-	/// map are not on the park's layer and keep their keys, so F3 does nothing over one. A park screen is on the layer
-	/// and its handler runs the tables on a key-up (<c>FUN_00488ba0</c>), so the original's F3 hides it with the rest
-	/// unless the screen switched the tables off as it opened (<c>FUN_00486b70</c>, not decoded screen by screen); the six
-	/// management screens are modal here (<c>docs/QUEUE.md</c> Q115), and F3 over one is counted and does nothing. An
-	/// object window, which is not modal, is hidden with the rest.
+	/// <b>Over a window that has the keys F3 is not heard.</b> The game menu, a message box, the options screen and the
+	/// map are not on the park's layer and keep their keys. A park screen is on the layer, but it has the focus, the
+	/// game table is switched off while it is open (<c>FUN_00485b70</c>, <c>0x00485ce6</c>) and its handler runs the
+	/// shortcuts' table alone (<c>FUN_00488ba0</c>, <c>0x00488c13</c>); F3 is the game table's.
 	/// <para>
 	/// The end of a park also turns the view on and off, and there Escape opens the game menu under it
 	/// (<c>0x004a2942</c>); no park ends here yet.
@@ -241,13 +239,8 @@ internal sealed class ParkFrontEnd : Panel
 		if ( ParkCamcorderCameraMode.Active )
 			return;
 
-		if ( (_stack.Windows.Count > 0 ? _stack.Windows[^1] : null) is { Modal: true } front )
-		{
-			if ( front.ParkScreen )
-				Unimplemented.Report( "FULL_SCREEN_VIEW_OVER_PARK_SCREEN" );
-
+		if ( _stack.ModalUp || _stack.ParkScreenUp )
 			return;
-		}
 
 		_stack.Cover( true );
 		Log.Info( "Full-screen view: on" );
@@ -275,8 +268,8 @@ internal sealed class ParkFrontEnd : Panel
 	/// <para>
 	/// <b>Not the original's over a park screen.</b> The six management screens, an object window and the map take the
 	/// focus as they open, and their key handler closes the screen on a plain Escape let go (0x00488bc6).
-	/// Here those screens are modal and keep the key, and an object window, which is not, lets it through to the hand and
-	/// the menu (<c>docs/QUEUE.md</c> Q119).
+	/// Here a management screen keeps the key and does nothing with it, and an object window lets it through to the hand
+	/// and the menu (<c>docs/QUEUE.md</c> Q119).
 	/// </para>
 	/// </summary>
 	private void MenuKey( UiWindow? front )
@@ -288,7 +281,7 @@ internal sealed class ParkFrontEnd : Panel
 			return;
 		}
 
-		if ( front is { Modal: true } )
+		if ( front is { Modal: true } or { ParkScreen: true } and not ParkObjectWindow )
 			return;
 
 		// In first person the key is the viewfinder layer's, which leaves first person on a key-up whose key is

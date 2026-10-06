@@ -58,6 +58,9 @@ internal sealed class GameMenu : UiWindow
 	{
 		Modal = true;
 		Pauses = true;
+
+		// MenuList_Show closes a park's open screen before the menu is shown (0x00493171).
+		ClosesParkScreen = true;
 		_firstTop = firstTop;
 
 		Root = Backdrop();

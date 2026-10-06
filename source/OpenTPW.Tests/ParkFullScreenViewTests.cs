@@ -219,13 +219,13 @@ public class ParkFullScreenViewTests
 	}
 
 	/// <summary>
-	/// <b>Over a window that has the keys F3 does nothing</b>: the game menu, and a message box. Over a modal park
-	/// screen it does nothing and is counted, since the original's screen runs the tables; over a window that is not
-	/// modal the view goes on, the window still open under it.
+	/// <b>Over a window that has the keys F3 does nothing</b>: the game menu, and a message box, and a park screen, whose
+	/// handler runs the shortcuts' table alone (<c>FUN_00488ba0</c>) while the game table is off. Over a window that is
+	/// neither the view goes on, the window still open under it.
 	/// </summary>
 	/// <remarks>
-	/// <b>Mutations:</b> taking out the modal test turns the view on over the menu; counting every refusal counts the
-	/// menu's; refusing every window in front refuses the plain one.
+	/// <b>Mutations:</b> taking out the modal test turns the view on over the menu; taking out the park screen's turns
+	/// it on over the screen; refusing every window in front refuses the plain one.
 	/// </remarks>
 	[TestMethod]
 	public void OverAWindowWithTheKeysF3DoesNothing()
@@ -237,21 +237,19 @@ public class ParkFullScreenViewTests
 
 		Press( stack, Key.F3 );
 		Assert.IsFalse( stack.Covered, "over the game menu: nothing" );
-		Assert.AreEqual( 0, Times( "FULL_SCREEN_VIEW_OVER_PARK_SCREEN" ), "and not counted" );
 
 		Press( stack, Key.Escape );
-		var screen = new AWindow( stack, modal: true, parkScreen: true );
+		var screen = new AWindow( stack, modal: false, parkScreen: true );
 		stack.Open( screen );
 
 		Press( stack, Key.F3 );
-		Assert.IsFalse( stack.Covered, "over a modal park screen: nothing" );
-		Assert.AreEqual( 1, Times( "FULL_SCREEN_VIEW_OVER_PARK_SCREEN" ), "and counted" );
+		Assert.IsFalse( stack.Covered, "over a park screen, whose handler runs the shortcuts' table alone: nothing" );
 
 		stack.Close( screen );
-		stack.Open( new AWindow( stack, modal: false, parkScreen: true ) );
+		stack.Open( new AWindow( stack, modal: false, parkScreen: false ) );
 
 		Press( stack, Key.F3 );
-		Assert.IsTrue( stack.Covered, "over a window that is not modal: on" );
+		Assert.IsTrue( stack.Covered, "over a window that is neither: on" );
 		Assert.AreEqual( "ParkGadget, ParkViewfinder, AWindow", Names( stack ), "the window still open under it" );
 	}
 

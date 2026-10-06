@@ -182,10 +182,16 @@ public sealed class ParkOrbitCameraMode : CameraMode
 		// Spin and zoom. These reuse bindings that already exist rather than inventing new ones: what
 		// the original binds is not traced yet, so the controls are provisional and the geometry below
 		// is the part that matches it.
-		if ( Input.Pressed( InputButton.RotateLeft ) )
+		//
+		// Not while one of the park's screens is open: opening one switches the camera's table off and clears its
+		// rows' latches (FUN_00485b70, 0x00485ccd), and the screen's handler runs the shortcuts' table alone, so no
+		// camera key is heard until it closes. The mouse still reaches the camera from the park beside the screen.
+		var keys = !UI.WindowStack.ParkScreenOpen;
+
+		if ( keys && Input.Pressed( InputButton.RotateLeft ) )
 			Yaw -= MathF.PI / 4f;
 
-		if ( Input.Pressed( InputButton.RotateRight ) )
+		if ( keys && Input.Pressed( InputButton.RotateRight ) )
 			Yaw += MathF.PI / 4f;
 
 		// Not if the interface already used it, or the wheel over a scrolling list would scroll the list
@@ -199,7 +205,7 @@ public sealed class ParkOrbitCameraMode : CameraMode
 
 		// Scroll the point of interest across the ground, in whatever direction the camera faces, so
 		// that "forward" means forward on the screen rather than forward on the map.
-		if ( Input.Forward != 0f || Input.Right != 0f )
+		if ( keys && (Input.Forward != 0f || Input.Right != 0f) )
 		{
 			var scroll = ScrollSpeed * Time.Delta;
 

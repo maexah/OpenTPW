@@ -56,30 +56,19 @@ the original.
   window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
   together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
 
-- [ ] **Q115. The park screens are modal here and are not in the original.** Found by Q56's review. The original builds
-  the six management screens and the nine object windows onto layer 0 (`park-engine.md`, "Whose a right press is"): its
-  gadget answers beside a screen (`FUN_004a0940` tests only the game menu), a left press on the park beside one is kept
-  from the hand (`0x00488741`) but reaches the layer, a screen's root takes a press anywhere on it, and opening one
-  closes the one open (`FUN_00485b40`, `DAT_007c24c8`). Here the six are `Modal`, which shuts out the gadget; the object
-  window's bare frame lets a left press through to `ClickWorldAt`, and a left press beside it acts on the park; and the
-  buy screen opens over an object window and leaves it. One hit reading for both buttons. Confirm: with a ride's window
-  open, a left click on its frame over a path does nothing; the gadget's Info beside the buy screen switches screens.
-  From Q114b: F3 over a management screen does nothing here and is counted (`FULL_SCREEN_VIEW_OVER_PARK_SCREEN`),
-  where the original's screen handler runs the key tables (`FUN_00488ba0`) unless the screen switched them off as it
-  opened (`FUN_00486b70`, eleven callers, not decoded screen by screen): decode which, and let F3 hide a screen that
-  leaves them on (`park-engine.md`, "The full-screen view: F3").
 - [ ] **Q117. A right click on a list row or an object window's preview.** Found by Q56. The all-staff, visitors and
   all-items lists answer a right click on a row (`0x402`) by moving the camera to that thing and closing the screen
   (`FUN_004867b0`: `0x0049602f`, `0x004934c5`, `0x00495584`); an object window's preview answers any click the same way
   (`LAB_0048d1a0`). The click is the UI library's (`hud.md`, "A click and a double click"; `WindowStack.RightClick`). Counted on the
-  press as `LIST_ROW_RIGHT_CLICK`; the preview takes no pointer here (Q115), so its click is not counted. Confirm: a right
+  press as `LIST_ROW_RIGHT_CLICK`; the preview is no control of its own here, so its click is not counted. Confirm: a right
   click on a guest's row, the camera on that guest and the screen shut; a screenshot.
 - [ ] **Q119. A plain Escape does not close the park screen in front.** Found by Q57's review. In the original the six
   management screens, an object window and the map take the focus as they open (`FUN_00485b70`, `FUN_004862a0`), and
   their key handler answers a plain Escape let go by closing the screen, and nothing more (`FUN_00488ba0`, `0x00488bc6`;
-  the map at `0x005f17ef`; `scenes.md`, "The park Escape route"). Here those screens are modal and keep Escape
-  (`ParkFrontEnd.MenuKey`), and an object window, which is not modal, lets it through to the hand and the menu. Said at
-  the site. Confirm: the buy screen, then an object window with the path tool armed - Escape let go closes each, `tool`
+  the map at `0x005f17ef`; `scenes.md`, "The park Escape route"). Here a management screen keeps Escape and does
+  nothing with it (`ParkFrontEnd.MenuKey`), and an object window lets it through to the hand and the menu. Said at
+  the site. Measured in the original by Q115: Escape over the entry-price screen and over Park Information closed each,
+  the menu shut, an armed path tool kept (`park-engine.md`, "A park screen is open"). Confirm: the buy screen, then an object window with the path tool armed - Escape let go closes each, `tool`
   still Path and `windows` without GameMenu; a screenshot.
 - [ ] **Q120. The modifiers are judged as the frame ends, not at each key.** Found by Q57's review. The original reads
   Shift, Ctrl and Alt with `GetKeyState` at each key-up (`0x0046bb0b`, `scenes.md`, "The park Escape route"), so a
@@ -100,6 +89,8 @@ the original.
   layer 0 with anything else on it. Here an object window or a management screen stays up over first person, and a right
   press on its body is the screen's, so it does not leave (said at `ParkViewfinder.RightClickAnswer`). Add the call to
   `park-engine.md`'s decode of `FUN_00481a10`. Confirm: a ride's window open, C, the window gone; a screenshot.
+  From Q115: `WindowStack.Open` closes the open park screen for any window that sets `UiWindow.ClosesParkScreen`
+  (the game menu and the map do); entering first person opens no window, so it needs the close called.
 - [ ] **Q123. The click limits run on the frame clock.** Found by Q59's review. `WindowStack.RightClick`'s 500 ms and
   `Level.RightButton`'s 200 ms read `Time.Now`, whose frames are clamped to 0.1 s and which the console's `pause` holds;
   the original times both in milliseconds of wall time (`FUN_0065968e`, `hud.md`, "A click and a double click"). Below
@@ -616,6 +607,14 @@ the original.
   the states, the step and its clock, and how a mesh is drawn on a narrowed control; measure the slide's length in the
   original's frames; then build it on `Time.Delta` (rule 10). Confirm: frames every 50 ms of the arm going out, beside
   the original's.
+- [ ] **Q231. Under an open park screen: F1, the wheel and the release. Decode first.** Found by Q115
+  (`park-engine.md`, "A park screen is open"). The screens' key handler answers a plain F1 let go by calling
+  `FUN_005194d0` on the world and `FUN_0059ab50` on what it answers (`0x00488bfb`), not traced; nothing here reads F1 in
+  a park. Where the wheel's message goes with the pointer over a screen's body is not decoded: here the wheel zooms
+  the camera wherever the pointer is, unless a list or a slider takes it. And an armed tool's click beside a screen is
+  taken on the press here, where the original skips the press and commits on the release (`Level.KeptFromThePark`),
+  which is `RunBuildMode`'s standing difference. Decode the two, count each where it is reached, then build. Confirm:
+  F1 and the wheel over the buy screen beside the original's, read from memory.
 
 ## B. Docs and comments
 

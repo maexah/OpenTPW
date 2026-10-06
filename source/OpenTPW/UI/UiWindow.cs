@@ -27,16 +27,27 @@ internal abstract class UiWindow
 	public bool Modal { get; protected init; }
 
 	/// <summary>
-	/// Whether it is one of the park's screens, which the original builds onto the park's own layer rather than over it
-	/// (the buy screen's, <c>0x004acd62</c>): its root takes a press anywhere in its rectangle, and a press beside it is
-	/// still the park's, modal or not. Only the right press reads it - see <see cref="WindowStack.TakesRightPress"/>.
-	/// <para>
-	/// <b>A deviation:</b> the six management screens are also <see cref="Modal"/> here, so beside one neither a left
-	/// press nor the gadget is reached; the original's are not modal, its gadget answers beside a screen, and its park
-	/// proc only keeps a left press from the hand (<c>docs/QUEUE.md</c> Q115).
-	/// </para>
+	/// Whether it is one of the park's screens - the six management screens and the object windows - which the original
+	/// builds onto the park's own layer rather than over it (the buy screen's, <c>0x004acd62</c>) and keeps one of at a
+	/// time in <c>DAT_007c24c8</c> (<c>docs/exe/park-engine.md</c>, "A park screen is open"). None is modal:
+	/// <list type="bullet">
+	/// <item>its root takes a press of either button anywhere in its rectangle (<see cref="WindowStack.OnParkScreen"/>);</item>
+	/// <item>the gadget beside it answers, and a right press beside it is the park's;</item>
+	/// <item>a left press beside it is kept from the park's idle click and reaches only what the hand holds
+	/// (<c>Level.KeptFromThePark</c>);</item>
+	/// <item>opening another closes it (<see cref="WindowStack.Open"/>), and so do the windows that set
+	/// <see cref="ClosesParkScreen"/>;</item>
+	/// <item>while it is open only the shortcuts' keys are run (<see cref="WindowStack.ParkScreenUp"/>).</item>
+	/// </list>
 	/// </summary>
 	public bool ParkScreen { get; protected init; }
+
+	/// <summary>
+	/// Whether opening it closes the park screen that is open, as the game menu's and the map's openers do before anything
+	/// else (<c>FUN_00485b40</c> from <c>MenuList_Show</c>, <c>0x00493171</c>, and <c>FUN_005f0b40</c>, <c>0x005f0bd1</c>).
+	/// A <see cref="ParkScreen"/> does without saying so.
+	/// </summary>
+	public bool ClosesParkScreen { get; protected init; }
 
 	/// <summary>
 	/// Whether the game is paused while it is open. The original's message box (0x0047f020) and options

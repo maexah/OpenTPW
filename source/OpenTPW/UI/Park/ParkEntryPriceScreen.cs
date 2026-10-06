@@ -52,11 +52,8 @@ internal sealed class ParkEntryPriceScreen : UiWindow
 
 	public ParkEntryPriceScreen( WindowStack stack ) : base( stack )
 	{
-		// Modal, and NOT pausing - the same reading as the buy and hire screens, whose builders likewise
-		// ask for no pause where the map screen's plainly does.
-		Modal = true;
-
-		// Built onto the park's own layer (0x00498db5), so a right press beside it is the park's.
+		// Not modal and not pausing: built onto the park's own layer (0x00498db5), as the buy and hire screens are,
+		// where the map screen's builder plainly asks for a pause.
 		ParkScreen = true;
 
 		// w_small. The stream asks for this frame as hash 0xf76e42eb, which matches no file stem in

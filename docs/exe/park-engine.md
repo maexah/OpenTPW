@@ -554,7 +554,10 @@ The table object itself is `0x18` bytes: `+0x00` rows, `+0x04` u16 count, `+0x06
 | `FUN_0040cf60` | Sets `+0x06` of each *table object* back to 1. `FrontEnd_ClosePlayerSlots` calls it (`0x004a6a98`) |
 | `FUN_00486b60` | The "give the keys back" path: `FUN_0040cf60(); DAT_007c24d0 = 0;`. Its siblings are `FrontEnd_ClosePlayerSlots` and four unnamed sites near `0x0048a8xx` |
 
-**OpenTPW has no equivalent of the enable gate**, which matters before blaming a binding that does not fire.
+**OpenTPW has no table to switch off**, which matters before blaming a binding that does not fire: each reader asks
+what the gate would have said. While one of a park's screens is open the camera, cheat and game tables are off and only
+the shortcuts' is run ("A park screen is open"), which here is `WindowStack.ParkScreenOpen`, asked by `Level.BuildKeys`,
+the orbit camera's keys and `ParkFrontEnd.ToggleFullScreen`.
 
 ### How a key is matched — exact, and first match wins
 
@@ -669,12 +672,10 @@ cover's, and `Level.BuildKeys` and the orbit camera's C are not heard; the camer
 Escape takes it off and is spent doing it; Ctrl+P is counted, `FULL_SCREEN_VIEW_POSTCARD`. The pointer wears the plain
 arrow. Where it parts from the original:
 
-- **Over a modal window F3 does nothing.** That is the original's for the game menu, a message box, the options screen
-  and the map, which are not on layer 0 and keep their keys. A park screen is on layer 0 and its handler `FUN_00488ba0`
-  runs the tables on a key-up, so the original's F3 hides it with the rest, unless the screen switched the tables off
-  as it opened (`FUN_00486b70`, called from eleven sites, not decoded screen by screen). The six management screens
-  are modal here (`docs/QUEUE.md` Q115), and F3 over one is counted, `FULL_SCREEN_VIEW_OVER_PARK_SCREEN`. An object
-  window, which is not modal, is hidden with the rest and is back when the view goes off.
+- **Over a window that has the keys F3 does nothing**, and that is the original's: the game menu, a message box, the
+  options screen and the map are not on layer 0 and keep their keys, and a park screen, which is on layer 0, has the
+  focus, with the `game` table off and a handler that runs the `shortcuts` table alone ("A park screen is open"). F3
+  over the entry-price screen left `[0x007cb2e8]` at 0 in the original.
 - **The armed tool's squares still follow the pointer** under the view, since the pointer's cell is picked every frame;
   the original's mouse proc hears nothing there, so its square should stand still. Not measured.
 - **The end of a park** turns the view on and off and gives Escape the game menu under it; no park ends here.
@@ -2044,7 +2045,8 @@ pause, a modal flag or an open screen (`0x004881a0`..`0x0048833a`). What keeps a
 | first person | the viewfinder's full-screen layer 1, whose handler `FUN_00488a00` gives it to the camera table, where no row binds a mouse key, and answers its click with RMB cancel on by leaving first person (`hud.md`, "Four ways out of camcorder mode"): entering (`FUN_0042ab20( 2, 1, ... )`, `0x0042ac7f`) calls `FUN_004a2ac0( 0 )`, which hides layer 0 and shows layer 1 | never |
 | a management screen (buy, hire, all staff, visitors, all items, entry price) or any of the nine object windows | built onto the layer by `UI_LoadTree` (`0x004acd62`, `0x0049bf34`, `0x00496643`, `0x0049353e`, `0x00495abe`, `0x00498db5`, `0x0048ceca`), not modal, and none hides the layer. Each root is one plain rectangle - big (186,30)-(2018,1007), medium (248,30)-(1800,1007), small (328,130)-(1720,901) - so the window takes a press anywhere on it | beside the window, and the window stays open; on it, never |
 
-The one test of an open screen on a press's path, `0x00488741`, keeps it from the mode's button slots, after the arm. A right
+The one test of an open screen on a press's path, `0x00488741`, is in the left and middle buttons' case, after the arm:
+it keeps the press from the idle click and the mode's button-down slot ("A park screen is open"). A right
 click on a row of the all-staff, visitors or all-items list, or on an object window's preview, moves the camera and
 closes the window (the 500 ms click limit `[0x0077c480]`), never touching the hand. The full-screen view, F3
 (`FUN_004a29d0`), hides the layer under a full-screen control whose handler `0x004a2840` gives a right press to the
@@ -2052,10 +2054,9 @@ camera and arms nothing ("The full-screen view: F3"). A press made before a wind
 opens keeps the capture on the layer (`0x004882ba`), so its release can still let go.
 
 **OpenTPW.** `WindowStack.TakesRightPress`: a control under the pointer, a modal window, or a park screen's root
-(`UiWindow.ParkScreen`) takes it, and `Level.RightPressTaken` adds first person (and gives the park every press while
-F2 hides the HUD). The screens are modal here for the left press, which the original's `0x00488741` keeps from the
-hand, but that also shuts out the gadget beside them, and the object window's frame lets a left press through (Q115);
-`ParkScreen` gives the right press beside them back to the park. The gadget's body takes a press inside its outline,
+(`UiWindow.ParkScreen`, `WindowStack.OnParkScreen`) takes it, and `Level.RightPressTaken` adds first person (and gives
+the park every press while F2 hides the HUD). A left press reads the same three (`WindowStack.PointerTaken`). No park
+screen is modal, so the gadget answers beside one. The gadget's body takes a press inside its outline,
 and its arm, handle and aerial take theirs (`hud.md`, "The arm and the aerial as built"). A right press on a list row is counted,
 `LIST_ROW_RIGHT_CLICK` (Q117). `Level.LeftPressTaken` keeps a left press off the park in first person too (Q116): the
 viewfinder layer's `FUN_00488a00` gives a press (`0x10005`) to the key table (`FUN_0040c900`) and every message to
@@ -2105,6 +2106,83 @@ and nothing more; and a sale lets go when no item is held and no build tool arme
 tool 0 does (`0x0052818d`).
 `ParkPeople.PutBack` puts a worker down in their own cell through the drop. **Not the original's**: the rotation is not the one
 global, so a purchase always starts at nought; and a mechanic put down goes idle (`MECHANIC_PUT_DOWN_JOB_SEARCH`).
+
+### A park screen is open
+
+Decoded for `docs/QUEUE.md` Q115, first-hand, and run in the original.
+
+**One at a time.** The six management screens and the nine object windows are built onto layer 0 and the one that is
+open is `DAT_007c24c8`. Every opener first calls `FUN_00485b40`, which sends the open one message 5 (close), zeroes the
+global and hands the focus back (`FUN_004862a0`): buy `0x004acd5d`, hire `0x0049bdec`, all staff `0x00496635`, all items
+`0x00495ab0`, visitors `0x00493530`, entry price `0x00498da7`, the object windows' shared opener `0x0048cebb`, park
+status, finances, loans, staff costs and research among its 22 callers, and beside them the game menu (`MenuList_Show`, `0x00493171`), the
+map (`FUN_005f0b40`, `0x005f0bd1`) and first person (`FUN_00481a10`, `0x00481a2b`). The buy opener is the one that
+looks first: with its screen already up (`DAT_007cc1f8`) it picks the tab again and returns (`0x004acca0`). The
+gadget's category opener `FUN_004a0940` has one gate, the game menu (`FUN_0048c8d0`), so its buttons answer beside an
+open screen and the screen they open replaces it.
+
+**What opening one does**, `FUN_00485b70( screen )`, called by each opener once its tree is loaded:
+
+| Step | Site |
+|---|---|
+| a mode of type 9, the camcorder's pick, is replaced by the idle mode; every other mode stays, the build tools and the hand included | `0x00485c1b` |
+| the layer's cursor goes to 0, the plain arrow (`FUN_004a2aa0( 0 )`) | `0x00485cc8` |
+| the `camera`, `cheat` and `game` tables are switched off and their rows' latches cleared (`FUN_0040cb50`) | `0x00485ccd`, `0x00485cdb`, `0x00485ce6` |
+| the gadget's arm is folded and its camcorder button lifted (`FUN_004a25f0( 1 )`) | `0x00485cf3` |
+| `DAT_007c24c8` is the screen, and the focus goes to it (`FUN_004862a0`, `0x0048638e`) | `0x00485d02` |
+
+Closing sends the screen's handler message `0x14`, which calls `FUN_00485b70( 0 )`: the global is zeroed and
+`FUN_004862a0` switches the three tables back on (`0x004863af`..`0x004863c5`) and gives the layer the focus.
+
+**The keys go to the screen**, whose handler is `FUN_00488ba0` for every one of them. A key down latches the
+`shortcuts` table (`0x00488c2e`). A key up: a plain Escape closes the screen (message 4 to itself, `0x00488bdd`); a
+plain F1 calls `FUN_005194d0` and `FUN_0059ab50` (`0x00488bfb`, not traced); anything else runs the `shortcuts` table
+and no other (`0x00488c13`). So with a screen open no camera key turns or scrolls the view, Backspace, Delete and F3
+(the `game` table's) do nothing, and a shortcut still works, B opening the buy screen over whatever was open.
+`FUN_00486b70`, which switches five tables off, is not part of this: its eleven callers are the message box and the
+name boxes (the object window's rename `FUN_0048d370`, the park's `FUN_004990f0`, and the like), none of them a
+screen's opener.
+
+**The pointer.** A press on the screen goes to the screen (its root takes one anywhere on its rectangle; "Whose a right
+press is"). A press on the layer beside it reaches `Park_MouseMessageProc`, whose left and middle case
+(`0x0048872c`) latches the camera table and then tests the screen: `CMP [0x007c24c8]` at `0x00488741` leaves the case,
+so the hover is not taken (`FUN_00486d90`), the idle click `FUN_004879d0` is not run (no window opens, no path tool is
+picked up) and the mode's button-down slot is not called. The hover is skipped the same way on the layer's timer and on
+the pointer's entry (`0x00488569`, `0x0048884e`), so the cursor stays the arrow. **The release has no such test**
+(its case, `0x004885a5`): it runs the camera table, moves the mode's preview (`FUN_0046c2a0`) and calls the mode's
+button-up slot (`FUN_0046c210`, `0x00488841`). For the idle mode that is a `RET`. For a carry shell it is `FUN_00524960`, the commit, whose one read
+of the flag the down slot sets (`DAT_008186d8`, `0x00524a77`) gates a sound and nothing else. So with a build tool
+armed or something in the hand, a click beside an open screen still lays the run or puts the thing down. The right
+button is untouched by any of it.
+
+**In the original** (the reference park under Proton, each predicted from the listing and read from memory after the
+click or the key, a frame with it; 13 of 13):
+
+| Done | Read |
+|---|---|
+| the gadget's Money button | `[0x007c24c8]` nought to a control; the `camera`, `game` and `cheat` tables' `+6` 1 to 0, `shortcuts` still 1 |
+| a left click on grass beside the entry-price screen, idle | the mode object and its vtable (`0x006fea10`) unchanged, tool 0; the same click with no screen had installed the path tool (`0x006fe9e0`, anchor (55,24)) |
+| F3 | `[0x007cb2e8]` still 0 |
+| the gadget's Info button beside the screen | `[0x007c24c8]` a different control, Park Information in the frame, the entry-price screen gone |
+| Escape | `[0x007c24c8]` 0, the menu shut, the three tables back to 1 |
+| the path tool armed, then Money | the screen open, the mode object and tool 1 as they were |
+| a left click on grass beside the screen, four cells from the anchor | the anchor (55,24) to (55,20), the new path in the frame |
+| the Left arrow over the screen | the frame as before (1.3% of its pixels differ; the same key with no screen, 51.5%) |
+
+**OpenTPW** (`UiWindow.ParkScreen`): no park screen is modal. `WindowStack.Open` closes the open one before a park
+screen, the game menu or the map opens (`UiWindow.ClosesParkScreen`); the gadget's Buy does nothing over an open buy
+screen; `WindowStack.OnParkScreen` gives the screen's whole rectangle to the interface for both buttons and hides the
+controls behind it; `Level.KeptFromThePark` keeps a left press beside a screen from the park unless a tool is armed or
+the hand holds something; `Level.BuildKeys`, the orbit camera's keys and F3 are not heard while one is open
+(`WindowStack.ParkScreenOpen`); the idle pointer and its help row are the plain ones; `ParkGadget.Update` folds the arm
+when a screen opens. Where it parts from the original:
+
+- **A click acts on its press here**, so the armed tool's click beside a screen is taken on the press, where the
+  original skips the press and commits on the release.
+- **Escape**: a management screen keeps the key and does nothing, and an object window lets it through
+  (`docs/QUEUE.md` Q119). **First person** leaves the screen open (Q122).
+- **F1 over a screen** and **the wheel over a screen's body** are not decoded, and neither is built or counted
+  (`docs/QUEUE.md` Q231). The wheel zooms the camera wherever the pointer is.
 
 ### Leaving a park with something in the hand
 

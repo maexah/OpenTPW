@@ -182,17 +182,26 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00481ad0` | Camcorder button `FUN_00481a10`: installs the camcorder mode through the setter, letting go of the hand | OpenTPW.Tests/ParkHandTests.cs  |
 | `0x00485780` | | OpenTPW/UI/ButtonGlint.cs OpenTPW/UI/UiControl.cs OpenTPW/UI/UiSounds.cs OpenTPW/UI/WindowStack.cs  |
 | `0x00485a70` | The font in a slot of the current set: none from slot 13 up, by an unsigned compare (`lobby.md`, "Meshes and fonts") | OpenTPW.Tests/UiFontsTests.cs OpenTPW/UI/UiFonts.cs  |
+| `0x00485cc8` | FUN_00485b70, a park screen opening: the layer's cursor set to 0, the plain arrow (FUN_004a2aa0) | OpenTPW/World/Level.cs  |
+| `0x00485ccd` | FUN_00485b70, a park screen opening: the camera table switched off and its latches cleared (FUN_0040cb50); the cheat table's follows | OpenTPW.Tests/ParkScreenTests.cs OpenTPW/UI/WindowStack.cs OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
+| `0x00485ce6` | FUN_00485b70, a park screen opening: the game table switched off | OpenTPW.Tests/ParkScreenTests.cs OpenTPW/UI/Park/ParkFrontEnd.cs OpenTPW/World/Level.cs  |
+| `0x00485cf3` | FUN_00485b70, a park screen opening: the gadget's arm folded, FUN_004a25f0( 1 ) | OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x00485d20` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x00486bce` | | OpenTPW/Global/GameClock.cs  |
 | `0x004873b3` | Hover category: a type-12 track cell under a type-25 parent gets no category | OpenTPW/World/Level.cs  |
 | `0x004882ba` | Park mouse proc: a right press with RMB cancel on takes the mouse capture | OpenTPW/UI/WindowStack.cs  |
 | `0x0048833a` | Park mouse proc: a right press with RMB cancel on arms the quick click (DAT_007c2500 = 1) | OpenTPW.Tests/ParkHandTests.cs OpenTPW/UI/WindowStack.cs  |
 | `0x0048842b` | Park mouse proc: a quick right click with RMB cancel on installs the idle mode over whatever mode is current | OpenTPW.Tests/ParkHandTests.cs OpenTPW/World/Level.cs  |
+| `0x00488569` | Park_MouseMessageProc, the timer: the hover FUN_00486d90 only while no park screen is open | OpenTPW/World/Level.cs  |
+| `0x004885a5` | Park_MouseMessageProc, a button's release: the camera table, the mode's move and its button-up slot, with no test of an open screen | OpenTPW/World/Level.cs  |
+| `0x00488741` | Park_MouseMessageProc, a left or middle press: CMP [0x007c24c8], an open park screen leaves the case before the idle click and the mode's button-down slot | OpenTPW.Tests/ParkScreenTests.cs OpenTPW/UI/WindowStack.cs OpenTPW/World/Level.cs  |
+| `0x0048884e` | Park_MouseMessageProc, the pointer's entry: the hover only while no park screen is open | OpenTPW/World/Level.cs  |
 | `0x00488921` | `Park_MouseMessageProc` key-up case (`0x1000b`): the binding tables through `FUN_0040c990` - `scenes.md`, "The park Escape route" | OpenTPW/UI/Park/ParkFrontEnd.cs OpenTPW/UI/WindowStack.cs  |
 | `0x00488a00` | | OpenTPW.Tests/ParkCamcorderKeyOnReleaseTests.cs OpenTPW.Tests/ParkEscapeOnReleaseTests.cs OpenTPW/UI/Park/ParkFrontEnd.cs OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x00488aa1` | Layer 1 (first person) handler FUN_00488a00: its 0x10006 click case, right button and RMB cancel, leaves first person | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs OpenTPW/UI/Park/ParkViewfinder.cs  |
 | `0x00488aa8` | FUN_00488a00: the 0x10006 case's RMB cancel test | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
 | `0x00488bc6` | `FUN_00488ba0`, the park screens' key handler: a plain Escape let go closes the screen (message 4) | OpenTPW/UI/Park/ParkFrontEnd.cs  |
+| `0x00488c13` | Park screen key handler FUN_00488ba0, a key up: runs the shortcuts table and no other | OpenTPW/UI/Park/ParkFrontEnd.cs OpenTPW/UI/WindowStack.cs  |
 | `0x00489ca0` | | OpenTPW/UI/WindowStack.cs  |
 | `0x00489de1` | | OpenTPW/Client/Renderer.cs  |
 | `0x0048b220` | | OpenTPW/UI/Screens/GameMenu.cs  |
@@ -219,6 +228,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00492d80` | | OpenTPW/UI/Screens/GameMenu.cs OpenTPW/UI/UiSounds.cs  |
 | `0x00492e80` | | OpenTPW/UI/Screens/GameMenu.cs  |
 | `0x00492f60` | | OpenTPW/UI/Screens/GameMenu.cs  |
+| `0x00493171` | MenuList_Show: closes the open park screen (FUN_00485b40) before the menu is shown | OpenTPW.Tests/ParkScreenTests.cs OpenTPW/UI/Screens/GameMenu.cs OpenTPW/UI/UiWindow.cs  |
 | `0x00493270` | All-visitors handler, the 2000 ms timer 0x80083: each existing row rewritten in place by FUN_006644ea, no clear or scroll | OpenTPW.Tests/UiListTests.cs OpenTPW/UI/Park/ParkVisitorsScreen.cs  |
 | `0x004934c5` | Visitors handler: a right-clicked row (0x402) moves the camera to that guest (FUN_004867b0) | OpenTPW/UI/Park/ParkVisitorsScreen.cs  |
 | `0x0049353e` | Visitors screen FUN_00493530: UI_LoadTree onto the park's layer 0 | OpenTPW/UI/Park/ParkVisitorsScreen.cs  |
@@ -241,8 +251,10 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004a2529` | | OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x004a2905` | The full-screen view's control handler 0x004a2840, key up: the camera table, then F3 or a plain Escape off, else Ctrl+P the postcard | OpenTPW/UI/Park/ParkFrontEnd.cs  |
 | `0x004a2918` | The full-screen view's handler, key up: FUN_0040c990 on the camera table alone | OpenTPW/World/Level.cs OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
+| `0x004a2938` | The full-screen view's handler 0x004a2840, a key up at the end of a park: a plain Escape opens the game menu | OpenTPW.Tests/ParkFullScreenViewTests.cs  |
 | `0x004a2942` | The full-screen view's handler at the end of a park (world state 4): a plain Escape opens the game menu, the view stays on | OpenTPW/UI/Park/ParkFrontEnd.cs  |
-| `0x004a29e6` | FUN_004a29d0, off to on: refused while gui_CameraFlags & 0x16 (first person, a ride view) | OpenTPW/UI/Park/ParkFrontEnd.cs  |
+| `0x004a2990` | The full-screen view's handler 0x004a2840: game action 4 or a plain Escape turns the view off | OpenTPW.Tests/ParkFullScreenViewTests.cs  |
+| `0x004a29e6` | FUN_004a29d0, off to on: refused while gui_CameraFlags & 0x16 (first person, a ride view) | OpenTPW.Tests/ParkFullScreenViewTests.cs OpenTPW/UI/Park/ParkFrontEnd.cs  |
 | `0x004a2ac0` | FUN_004a2ac0( a ): message 6 with a to the park's layer 0 and 1 - a to layer 1; first person's entry passes 0 | OpenTPW.Tests/ParkHandTests.cs OpenTPW/UI/Park/ParkGadget.cs OpenTPW/World/Level.cs  |
 | `0x004a2bf0` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x004a2e90` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
@@ -268,6 +280,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004ab023` | | OpenTPW/UI/Park/ParkBuyScreen.cs OpenTPW/World/Park/ParkResearch.cs  |
 | `0x004ab063` | | OpenTPW/UI/Park/ParkBuyScreen.cs  |
 | `0x004ab086` | | OpenTPW/UI/Park/ParkBuyScreen.cs  |
+| `0x004acca0` | Buy screen opener FUN_004acc70: with the screen already up it picks the tab again and returns | OpenTPW.Tests/ParkScreenTests.cs OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x004acd62` | Buy screen FUN_004acc70: UI_LoadTree onto the park's layer 0, not modal | OpenTPW.Tests/ParkHandTests.cs OpenTPW/UI/Park/ParkBuyScreen.cs OpenTPW/UI/UiWindow.cs  |
 | `0x004ad606` | The ride window sets its door down while `mCanLoad` is nought (`Button_SetDown`, from here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004ad622` | The ride window's door position (to here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
@@ -721,6 +734,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00522360` | | OpenTPW.Files/Formats/Particle/ParticleLibraryFile.cs OpenTPW/World/Particles/ParticleSystem.cs  |
 | `0x005224f0` | | OpenTPW/World/Particles/ParticleSystem.cs  |
 | `0x00524a63` | Build commit: a red preview (`DAT_00816d48`) lays nothing, sound `0xaf` | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x00524a77` | Carry shell's button-up FUN_00524960: its one read of the down slot's flag DAT_008186d8, gating a sound | OpenTPW/World/Level.cs  |
 | `0x00524aae` | Place commit: a click on a red cell plays sound `0xaf` and leaves the hand as it is | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x00524acd` | Build commit: end of the red-preview refusal | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00524db7` | Place commit: karts and the water ride lay their first track cells | OpenTPW/World/Park/ParkBuilding.cs  |
@@ -1082,6 +1096,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005ed920` | | OpenTPW/UI/ButtonGlint.cs  |
 | `0x005edac0` | | OpenTPW/UI/ButtonGlint.cs  |
 | `0x005f0ad0` | | OpenTPW/UI/Park/ParkMapScreen.cs  |
+| `0x005f0bd1` | Map opener FUN_005f0b40: closes the open park screen (FUN_00485b40) before it hides the layer | OpenTPW/UI/Park/ParkMapScreen.cs OpenTPW/UI/UiWindow.cs  |
 | `0x005f17ef` | The map's handler `FUN_005f1130`, key-up case: a plain Escape let go closes the map | OpenTPW/UI/Park/ParkMapScreen.cs  |
 | `0x005f2565` | Map overlay FUN_005f2380: a thing's satisfaction average, FUN_004e1e30 | OpenTPW/UI/Park/ParkMapScreen.cs  |
 | `0x005f5fa0` | The sound clock: wall-time milliseconds | OpenTPW/World/Park/ParkAudio.cs  |
@@ -1296,6 +1311,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00786ba4` | | OpenTPW/Global/GameClock.cs OpenTPW/UI/UiWindow.cs OpenTPW/World/Advisor/Advisor.cs OpenTPW/World/Level.cs  |
 | `0x0078d8d8` | | OpenTPW.Files/Formats/Save/ConfigFile.cs OpenTPW/Client/GameOptions.cs  |
 | `0x0078d90e` | | OpenTPW/UI/ButtonGlint.cs  |
+| `0x007c24c8` | The open park screen's control, nought when none is | OpenTPW/World/Level.cs  |
 | `0x007cb2fc` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x007cc4b8` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
 | `0x007cdb98` | | OpenTPW/World/Park/ParkState.cs  |

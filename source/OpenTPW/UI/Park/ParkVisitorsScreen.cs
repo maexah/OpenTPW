@@ -61,9 +61,7 @@ internal sealed class ParkVisitorsScreen : UiWindow
 
 	public ParkVisitorsScreen( WindowStack stack ) : base( stack )
 	{
-		Modal = true;
-
-		// Built onto the park's own layer (0x0049353e), so a right press beside it is the park's.
+		// Built onto the park's own layer (0x0049353e) - see UiWindow.ParkScreen.
 		ParkScreen = true;
 
 		// w_big, the node "window4" inside w_big.MD2 - the frame five screens share. Without it this

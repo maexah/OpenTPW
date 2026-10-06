@@ -719,10 +719,12 @@ public class Level
 	/// <summary>
 	/// Whether a click here with nothing armed and an empty hand would pick up the path tool - the
 	/// original's hover categories 2 (bare ground) and 1 (path), which <c>FUN_004879d0</c> answers by
-	/// installing the path tool. See <see cref="ArmsThePathTool"/>.
+	/// installing the path tool. See <see cref="ArmsThePathTool"/>. Never while a park screen is open: the hover is
+	/// not taken then (<c>0x00488569</c>, <c>0x0048884e</c>), and opening one puts the plain arrow on the layer
+	/// (<c>FUN_004a2aa0( 0 )</c>, <c>0x00485cc8</c>).
 	/// </summary>
 	private bool IdleOverPath()
-		=> ParkBuildMode.Current == ParkBuildMode.None && ParkHand.Empty
+		=> ParkBuildMode.Current == ParkBuildMode.None && ParkHand.Empty && !UI.WindowStack.ParkScreenOpen
 			&& ParkPicking.TryCell( out var x, out var y ) && ArmsThePathTool( x, y, ParkPicking.ThingUnderCursor );
 
 	/// <summary>
@@ -777,8 +779,9 @@ public class Level
 
 	/// <summary>
 	/// The build keys, on release as the original's game table fires them: Backspace and Delete. Not
-	/// while a box has the keyboard, and not while a window holds the park - which is inferred: the
-	/// original's table-enable gate is decoded, but not whether a park window switches it off. And not under the
+	/// while a box has the keyboard, and not while a window holds the park - which is inferred for the pausing
+	/// windows. Not while a park screen is open: opening one switches the game table off (<c>FUN_00485b70</c>,
+	/// <c>0x00485ce6</c>) and its handler runs the shortcuts' alone (<c>FUN_00488ba0</c>). And not under the
 	/// full-screen view, whose control runs the camera's table alone (<c>0x004a2918</c>).
 	/// </summary>
 	/// <remarks>
@@ -787,7 +790,7 @@ public class Level
 	/// </remarks>
 	private void BuildKeys()
 	{
-		if ( Input.TextCaptured || PausedByWindow() || FullScreenView )
+		if ( Input.TextCaptured || PausedByWindow() || FullScreenView || UI.WindowStack.ParkScreenOpen )
 			return;
 
 		if ( Input.Released( InputButton.Delete ) )
@@ -861,7 +864,7 @@ public class Level
 			return;
 		}
 
-		if ( !pressed || LeftPressTaken( UI.WindowStack.PointerTaken ) )
+		if ( !pressed || LeftPressTaken( UI.WindowStack.PointerTaken ) || KeptFromThePark( UI.WindowStack.ParkScreenOpen ) )
 			return;
 
 		if ( ParkPicking.TryCell( out var cellX, out var cellY ) )
@@ -876,6 +879,19 @@ public class Level
 	/// </summary>
 	internal static bool LeftPressTaken( bool byAWindow )
 		=> ParkCamcorderCameraMode.Active || byAWindow;
+
+	/// <summary>
+	/// Whether a left press that landed on the park is kept from it because one of the park's screens is open
+	/// (<see cref="UI.WindowStack.ParkScreenOpen"/>): with nothing held and no tool armed, always. The park's mouse proc
+	/// skips the press while a screen is open (<c>CMP [0x007c24c8]</c>, <c>0x00488741</c>): no hover is taken, the idle
+	/// click <c>FUN_004879d0</c> is not run, so no window opens and no path tool is picked up, and the mode's
+	/// button-down slot is not called. The release has no such test (<c>0x004885a5</c>) and reaches the mode's
+	/// button-up slot, which is where a carry shell commits (<c>FUN_00524960</c>; its one read of the down's flag,
+	/// <c>0x00524a77</c>, gates a sound), so a click beside a screen still puts down what the hand holds and still
+	/// lays an armed tool's run. Here every click acts on its press, so that is this press.
+	/// </summary>
+	internal static bool KeptFromThePark( bool parkScreenOpen )
+		=> parkScreenOpen && ParkHand.Empty && ParkBuildMode.Current == ParkBuildMode.None;
 
 	/// <summary>
 	/// Whether a right press is the interface's rather than the park's, given whether a window took it

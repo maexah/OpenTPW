@@ -7,7 +7,8 @@ namespace OpenTPW.UI;
 ///
 /// <para>
 /// A click is a press and a release on the same control. Only the front window takes the pointer
-/// when it is modal; otherwise the pointer goes to whatever is front-most under it, in any window.
+/// when it is modal; otherwise the pointer goes to whatever is front-most under it, in any window. A park's screens
+/// are not modal, and one is open at a time - see <see cref="UiWindow.ParkScreen"/>.
 /// </para>
 /// <para>
 /// The original sets this up once, in UI_Init (0x00489ca0, reached only from Boot_Init through 0x004813c0):
@@ -97,10 +98,23 @@ internal sealed class WindowStack : Panel
 	/// <b>An open MODAL window counts as having taken it, even where nothing was hit.</b> The hit test
 	/// stops at a modal and answers null for a press outside it, so "nothing was hit" and "a modal
 	/// swallowed it" arrive here looking identical - and treating them the same would let a click pass
-	/// straight through a dimmed screen into the park behind.
+	/// straight through a dimmed screen into the park behind. A park screen's bare frame takes it the same way
+	/// (<see cref="OnParkScreen"/>).
 	/// </para>
 	/// </summary>
 	internal static bool PointerTaken { get; private set; }
+
+	/// <summary>
+	/// Whether one of the park's screens is open (the original's <c>DAT_007c24c8</c>), for the park's own frame, which
+	/// runs after the stack's: written every frame the stack updates, as <see cref="PointerTaken"/> is. While one is
+	/// open the original has its camera, game and cheat tables switched off (<c>FUN_00485b70</c>, <c>0x00485ccd</c>)
+	/// and the screen's handler runs the shortcuts' alone (<c>FUN_00488ba0</c>, <c>0x00488c13</c>), and its park proc
+	/// keeps a left press from the idle click (<c>0x00488741</c>).
+	/// </summary>
+	internal static bool ParkScreenOpen { get; private set; }
+
+	/// <summary>Whether one of the park's screens is open in this stack - see <see cref="ParkScreenOpen"/>.</summary>
+	internal bool ParkScreenUp => _windows.Exists( window => window.ParkScreen );
 
 	/// <summary>
 	/// Whether the interface took this frame's RIGHT press, so the park does not arm its quick click on it
@@ -190,6 +204,14 @@ internal sealed class WindowStack : Panel
 		if ( _windows.Contains( window ) )
 			return;
 
+		// One park screen at a time: each opener first sends the open one its close (FUN_00485b40, message 5 to
+		// DAT_007c24c8), as the game menu's and the map's do.
+		if ( window.ParkScreen || window.ClosesParkScreen )
+		{
+			foreach ( var open in _windows.Where( open => open.ParkScreen ).ToArray() )
+				Close( open );
+		}
+
 		_windows.Add( window );
 		window.Shown();
 	}
@@ -242,6 +264,7 @@ internal sealed class WindowStack : Panel
 		_mouseWasDown = false;
 		_rightWasDown = false;
 		Covered = false;
+		ParkScreenOpen = false;
 		_helpBar.ReleaseText();
 		Input.TextCaptured = false;
 	}
@@ -256,6 +279,8 @@ internal sealed class WindowStack : Panel
 
 		foreach ( var window in _windows.ToArray() )
 			window.Update();
+
+		ParkScreenOpen = ParkScreenUp;
 
 		// Ours: the hover is hit-tested every frame, and a press goes to it, so a press always reaches what the
 		// pointer is over. The original works its hover out only on a move and when its interface changes
@@ -293,7 +318,7 @@ internal sealed class WindowStack : Panel
 
 		if ( mouseDown && !_mouseWasDown )
 		{
-			PointerTaken = Covered || hit != null || ModalUp;
+			PointerTaken = Covered || hit != null || ModalUp || OnParkScreen( mouse.X, mouse.Y );
 
 			Press( hit, mouse.X, mouse.Y );
 
@@ -379,7 +404,7 @@ internal sealed class WindowStack : Panel
 	internal bool ClickAt( float x, float y )
 	{
 		var hit = Covered ? null : HitTest( x, y );
-		var taken = Covered || hit != null || ModalUp;
+		var taken = Covered || hit != null || ModalUp || OnParkScreen( x, y );
 
 		Press( hit, x, y );
 		ViewTook = !taken && ViewPressed?.Invoke() == true;
@@ -389,8 +414,17 @@ internal sealed class WindowStack : Panel
 	}
 
 	/// <summary>
+	/// Whether a point is on a park screen's body: its root is one plain rectangle that takes a press of either button
+	/// anywhere on it, bare frame included (<c>docs/exe/park-engine.md</c>, "Whose a right press is").
+	/// </summary>
+	internal bool OnParkScreen( float x, float y )
+		=> _windows.Exists( window => window.ParkScreen && !window.Hidden && !window.PutAway
+			&& window.Root.Visible && window.Root.Holds( x, y ) );
+
+	/// <summary>
 	/// Whether a right press at a point is the interface's rather than the park's: over a control that takes the
-	/// pointer, over a park screen's body, or anywhere while a modal window other than a park screen is up.
+	/// pointer, over a park screen's body, or anywhere while a modal window is up - the reading a left press gets
+	/// (<see cref="PointerTaken"/>).
 	/// </summary>
 	/// <remarks>
 	/// The original's press goes to the control under the pointer and on to no parent, so only one that lands on the
@@ -399,9 +433,8 @@ internal sealed class WindowStack : Panel
 	/// one still arms. See <c>docs/exe/park-engine.md</c>, "Whose a right press is".
 	/// </remarks>
 	internal bool TakesRightPress( float x, float y )
-		=> _windows.Exists( window => !window.Hidden && !window.PutAway
-			&& (window.Root.HitTest( x, y ) != null
-				|| (window.ParkScreen ? window.Root.Visible && window.Root.Holds( x, y ) : window.Modal)) );
+		=> OnParkScreen( x, y ) || _windows.Exists( window => !window.Hidden && !window.PutAway
+			&& (window.Root.HitTest( x, y ) != null || window.Modal) );
 
 	/// <summary>
 	/// The right button's click, this frame, as the base control proc makes one for button 1 (<c>docs/exe/hud.md</c>, "A
@@ -467,7 +500,8 @@ internal sealed class WindowStack : Panel
 			if ( _windows[i].Root.HitTest( x, y ) is { } hit )
 				return hit;
 
-			if ( _windows[i].Modal )
+			// A modal window shuts out everything behind it; a park screen only what its own rectangle covers.
+			if ( _windows[i].Modal || (_windows[i].ParkScreen && _windows[i].Root.Visible && _windows[i].Root.Holds( x, y )) )
 				return null;
 		}
 

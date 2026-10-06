@@ -83,6 +83,9 @@ internal sealed class ParkMapScreen : UiWindow
 		Pauses = true;
 		Modal = true;
 
+		// FUN_005f0b40 closes the park screen that is open before it hides the layer (0x005f0bd1).
+		ClosesParkScreen = true;
+
 		Root = new UiControl { Id = 0x980, Rect = new UiRect( 0, 0, 2047, 1537 ) };
 
 		// The map itself, and the one control with a handler of its own in the original (LAB_005f0b20).

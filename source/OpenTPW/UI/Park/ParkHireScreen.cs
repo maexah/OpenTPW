@@ -71,11 +71,8 @@ internal sealed class ParkHireScreen : UiWindow
 
 	public ParkHireScreen( WindowStack stack ) : base( stack )
 	{
-		// Modal, and NOT pausing - the same reading as the buy screen: nothing in either builder asks
-		// for a pause, unlike the map screen, which plainly does.
-		Modal = true;
-
-		// Built onto the park's own layer (0x0049bf34), so a right press beside it is the park's.
+		// Not modal and not pausing - the same reading as the buy screen: nothing in either builder asks
+		// for a pause, unlike the map screen, which plainly does. Built onto the park's own layer (0x0049bf34).
 		ParkScreen = true;
 
 		// w_big, the node "window4" - the same frame the buy screen and the three Information lists

@@ -352,14 +352,19 @@ internal sealed class ParkGadget : UiWindow
 		// In the original FUN_004a0940( 1 ) opens whichever of buy and hire that category was last left
 		// on, from a remembered-tab global seeded to 1 - so buy is what a park opens on, and the hire
 		// screen is its sibling rather than a second button. See docs/exe/hud.md. A deviation: this
-		// button always opens buy.
+		// button always opens buy. With the buy screen already up the opener only picks its tab again
+		// (0x004acca0), so nothing is closed or opened.
 		buttons.Add( new UiButton
 		{
 			Id = 0x26,
 			Rect = new UiRect( 170, 1122, 288, 1240 ),
 			HelpText = 469,
 			Mesh = UiMesh.Get( "b_buy" ),
-			Clicked = () => Stack.Open( new ParkBuyScreen( Stack ) )
+			Clicked = () =>
+			{
+				if ( !Stack.Windows.Any( window => window is ParkBuyScreen ) )
+					Stack.Open( new ParkBuyScreen( Stack ) );
+			}
 		} );
 
 		// It does not enter first person itself. FUN_004a0840's case 0x27 splits on whether the button
@@ -658,8 +663,20 @@ internal sealed class ParkGadget : UiWindow
 		CloseArm();
 	}
 
+	/// <summary>The park screen that was open when the gadget last looked - see <see cref="Update"/>.</summary>
+	private UiWindow? _screenSeen;
+
 	protected internal override void Update()
 	{
+		// A park screen opening folds the arm away and lifts the camcorder button (FUN_004a25f0( 1 ) from
+		// FUN_00485b70, 0x00485cf3).
+		var screen = Stack.Windows.LastOrDefault( window => window.ParkScreen );
+
+		if ( screen != null && screen != _screenSeen )
+			CloseArm();
+
+		_screenSeen = screen;
+
 		ShowDate();
 		ShowEarned();
 		ShowMoney();
