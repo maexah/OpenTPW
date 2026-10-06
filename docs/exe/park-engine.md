@@ -2450,8 +2450,74 @@ item's own model posed as built, wearing the name board where both models name b
 fitted and placed by the arithmetic above. Differences, each said at its site: the light is OpenTPW's own; the turn
 and the clip run on the frame clock, so the console's `pause` holds them; the first angle is nought
 (`OBJECT_PREVIEW_START_ANGLE`). Only the ride window exists here: the shop window's and the buy screen's panels
-(Q158) take the same path when they are built. The buy screen's preview also draws a small blue square at its
-panel's lower left, with every item tried, which the windows' do not; it is not decoded.
+(Q158) take the same path when they are built. The buy screen also paints a small picture of the item's footprint
+at its panel's lower left, which the windows do not: the next section.
+
+### The buy screen's footprint picture
+
+**It is the item's `Info.Shape` picture, a square a cell, painted by the buy screen's own preview fill and by nothing
+else** (Q233). `FUN_0052c5b0`, which makes its grid, has one caller, `FUN_004ab1b0` (`0x004ab311`), and that has one,
+the buy screen's handler `FUN_004ac270` (`0x004ac44f`). The ride window, the shop window and the four other windows
+that call `FUN_00486410` have no such control and paint none. It is not part of the turning model: it is a flat
+picture in a control of its own, so it does not turn.
+
+**When.** The list's message `0x401` with a row hands the handler that row's item id (`FUN_00664c71`); a different id
+is kept as pending at `[0x007cc1e4]` with the millisecond clock's reading at `[0x007cc1f0]` (`0x004aca16`). On the
+frame message `0x1e`, once more than 500 ms have passed (`0x004ac443`), the handler calls `FUN_004ab1b0` with it and
+clears it, then steps the model (`FUN_004864f0`). So the panel changes half a second after the pointer settles on a
+row.
+
+**Where.** The layout stream (`0x00754cf8`) gives the panel `0x1ea` two children: `0x1eb`, type 1, at
+(440,407)-(594,561), and the name `0x1ec`. The builder `FUN_004acc70` gives `0x1eb` a painted surface for a skin
+(`FUN_0048f150`, set by `FUN_0065d1c8`, `0x004acf1f`) and hands `FUN_0065f16b` the control's depth word (`+0xe0`)
+plus 12 (`0x004acf2d`); the model is handed the panel's plus 10 (`0x004ab2be`). The surface is the control's rectangle in screen
+pixels, `154 * screen width / 2048` by `154 * screen height / 1536`, each truncated (`FUN_0048f420`,
+`[0x00faa5c4]`, `[0x00faa5c0]`): 48 by 48 at 640 x 480, 77 by 77 at 1024 x 768. Its lock answers the buffer, the
+width and the height (`0x0048f650`).
+
+**The grid.** `FUN_0052c5b0( item )` reads the parsed shape at item `+0x18` (width, depth, then eight bytes a cell in
+rows of twenty) into a 16 by 16 grid of dwords at `0x00818800`, a column after a column, with the width at
+`0x00818c00` and the depth at `0x00818c04`. Row 0 is the last row of the picture as the file draws it ("The
+characters are the executable's own alphabet", above). A cell's kind becomes a code:
+
+| Kind | Characters | Code | Painted |
+|---|---|---|---|
+| 4, `0x17` | `*`, `D`, `>`, `<` | 1 | blue, `1e aa ff` |
+| 1 | `@` | 4 | blue, the same |
+| 9 | `8 6 2 4 O` | 2 | green, `0f dc 32`: the entrance |
+| 10 | `N E S W X` | 3 | brown, `dc 64 0f`: the exit |
+| 0, 3, `0x0b`, `0x10` | `.`, `Q`, `+`, `#` | 0 | nothing |
+
+**The paint.** `FUN_004ab1b0` clears the whole surface to nought, then for column `i` and row `j` with a code fills
+`( cw * i, H - ch - ch * j - 1 )` to `( cw * ( i + 1 ), H - ch * j - 1 )` through `FUN_005f9a80`, with
+`cw = W / 8` and `ch = H / 8`, alpha `0x80` (`0x004ab403`). So the block grows from the surface's lower left, row 0
+at the bottom, eight cells fill it each way, and the lowest row of pixels stays clear. A code outside 1 to 4 keeps
+the colour of the cell before it (`0x004ab408`); none can arise.
+
+**Rows with no picture.** For a row id below nought (the two land rows) and for an item with a golden-ticket cost
+(`+0xc4`) not yet bought with tickets (`FUN_004d4b70`), the fill clears the surface and paints nothing
+(`0x004ab4c8`); the model is then item 101 for id -1, item 102 for any other id below 1 and item 100, the mystery
+ride, for the rest, and the name row `0x1ec` takes string `0x86`, `0x87` or `0x89` (`FUN_00485b00`). `FUN_0052c5b0` is not called, so the
+grid keeps the item before.
+
+**Over every shipped shape** (274 blocks in the 310 archives searched): the widest is 6 and the deepest 5, so none passes the
+eight cells; 1,831 `*`, 137 `2`, 44 `S`, 26 `N`, 2 `E`, 12 `>` and 12 `<` (the twelve coasters) are painted, and 65
+`.` (eleven archive names) and 76 `+` (ten archive names, Lost Kingdom's `lavajump` among them, all `+`) are not. No shape uses
+`@`, `D`, `Q` or `#`.
+
+**Measured in the original** (2026-10-06, 640 x 480 off screen, each row hovered, the grid read from memory,
+four predicted first from the item's `.sam`, 4 of 4, the Belly Bounce read beside them): Aztec Mayhem 4 by 4, row 0 `1 2 3 1`; Crazy Ape 4 by 4, row 0
+`1 2 1 1`, row 3 `1 1 3 1`; Belly Bounce 3 by 4, row 0 `1 2 1`, row 3 `1 3 1`; Balloon Shop 3 by 3, row 0 `1 2 1`;
+Staff Room 2 by 2, row 0 `1 2`; every other cell 1. Buy Land and Clear Land left the grid as it was and the picture
+empty. With the ride window open and no buy screen opened since the start, the grid was all nought. In the frames,
+scaled 1.6 to 1024 x 768: the Aztec Mayhem's block 38.5 wide and high (4 cells of 6 game pixels), its left edge at
+220.7 and its lowest at 278.4, where the arithmetic gives 220.0 and 278.9; the Staff Room's 19.2 wide. Blue reads
+(8,89,140), green (0,117,25) and brown (115,53,0) on the panel's black: about half strength.
+
+Not established: what `FUN_005f9a80`'s fifth byte (nought here) and the surface's pixel format do with the alpha
+beyond the half strength measured over black; whether the picture or the model is in front where they overlap (no
+frame shows them overlapping); a shape with `.` or `+` cells, which no row of the reference park's buy list has.
+OpenTPW paints none of it: the buy screen's panel is empty (Q158).
 
 ### Every diagnostic string goes to a bare `RET`
 

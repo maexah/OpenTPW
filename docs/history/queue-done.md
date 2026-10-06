@@ -4584,6 +4584,24 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   reader, Q191); loop M. The buy screen's missing preview (Q158) takes the same path. Confirm: the Inca Totem's
   window beside the original's, the difference predicted first. Alexah asked to work the ride preview's strangeness
   together (a wide base under a thin figure, 2026-09-21), and this may be its cause: start this item with Alexah.
+- [x] **Q233. The preview's footprint picture: the item's size, entrance and exit. Decode first.** Asked for by
+  Alexah, 2026-10-06, as the next item. Beside the turning model the original draws a small flat picture of the
+  item's footprint at the panel's lower left: a blue block the footprint's size with a green and a brown mark on
+  its edge, which do not turn with the model. Seen in Q188's frames of the buy screen with the Aztec Mayhem (a large
+  block), the Crazy Ape and the Balloon Shop (a small one); not seen in the Belly Bounce's ride window, so where it
+  shows is the first thing to settle (`~/.cache/tpw-harnesses/q188/orig/`, `sim*`, `buy*`, `shops.png`, `bbc*`).
+  Nothing of it is decoded: `park-engine.md`, "The object window's preview" names the blue square and no more.
+  Decode what draws it (start from `FUN_004ab1b0`'s four calls of `FUN_00486410` and the instance `FUN_004689f0`
+  makes), what the colours stand for and where each mark is taken from (`Info.Shape`, the `.hmp`'s mark plane, the
+  entry and exit cells), and which panels show it; write it to `docs/exe/` and stop. The build is the session after:
+  `ParkObjectPreview` draws it, and the buy screen's panel (Q158) with it if that is where it lives. Confirm: the
+  panel beside the original's for a ride and a shop, the block's size and each mark's place predicted first.
+  Done 2026-10-06, decode only, nothing built: the buy screen's own fill `FUN_004ab1b0` paints the item's
+  `Info.Shape` grid (`FUN_0052c5b0`) into control `0x1eb`, a square a cell, an eighth of the control each way, row 0
+  at the bottom: blue a footprint cell, green the entrance (kind 9), brown the exit (kind 10), `.` and `+` nothing;
+  no other window has it. In the original, the grid read from memory with each row hovered, predicted first, 4 of 4
+  (Aztec Mayhem row 0 `1 2 3 1`), and the block 38.5 px for four cells of 6 game pixels. `park-engine.md`, "The buy
+  screen's footprint picture". Q233b is the build.
 
 ## B. Docs and comments
 
