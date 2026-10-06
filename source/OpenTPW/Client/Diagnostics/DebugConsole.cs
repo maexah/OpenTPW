@@ -490,6 +490,13 @@ public static class DebugConsole
 					+ $"middle ({at.X + (at.Width / 2f):F0},{at.Y + (at.Height / 2f):F0})" );
 				break;
 
+			// The level the crowd has the park's music at, and how many times it has been set (ParkAudio.MusicLevel).
+			case "music":
+				Reply( ParkAudio.Current is { } playing
+					? $"music: level {playing.LevelNow} set {playing.LevelSets} times, {ParkPeople.Current?.Peeps.Count ?? 0} guests, tick {GameClock.Ticks}"
+					: "music: a park has to be loaded" );
+				break;
+
 			// The park's own clock and what the three-a-frame cap has cost it (ParkPeople.SweepsAFrame).
 			case "sweeps":
 				Reply( ParkPeople.Current is { } swept

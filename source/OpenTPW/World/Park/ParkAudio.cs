@@ -155,8 +155,8 @@ public sealed class ParkAudio : Entity
 	/// <b>It counts GUESTS, not people, and reading it as people would have made a park twice as loud as
 	/// the original.</b> <c>FUN_004c7fa0</c> walks the thing list and counts a thing only where
 	/// <c>*(thing + 2) == 1</c> - the model byte, and model 1 is a guest - so the five staff are not in it.
-	/// The caller clamps the result again to 89, below this hundred, which binds from 180 guests; that
-	/// second clamp is not applied here.
+	/// The caller clamps the result again to 89, below this hundred, which binds from 180 guests
+	/// (<see cref="MusicLevel"/>).
 	/// </para>
 	/// <para>
 	/// <b>One term is deliberately missing and is named rather than quietly dropped.</b> The original
@@ -170,6 +170,44 @@ public sealed class ParkAudio : Entity
 	/// </para>
 	/// </summary>
 	public static int CrowdLevel( int guests ) => Math.Clamp( guests / 2, 0, LoudestCrowd );
+
+	/// <summary>The most the park loop hands the music: 89 (<c>CMP EAX,0x59</c>, <c>0x0054f84e</c>).</summary>
+	public const int LoudestMusic = 89;
+
+	/// <summary>The world state in which the music is sent nought (<c>+0x1da738</c> against 4, <c>0x0054f860</c>).</summary>
+	public const int SilentWorldState = 4;
+
+	/// <summary>How often the level is set, in 31 ms ticks: every 32nd (<c>TEST [0x00877d34],0x1f</c>, <c>0x0054f82d</c>).</summary>
+	public const int MusicLevelEvery = 32;
+
+	/// <summary>
+	/// What the park loop hands the music's level setter <c>FUN_0051e790</c>: the crowd's level held to
+	/// <see cref="LoudestMusic"/>, and nought while the world's state is <see cref="SilentWorldState"/>.
+	/// </summary>
+	public static int MusicLevel( int guests, int worldState )
+		=> worldState == SilentWorldState ? 0 : Math.Min( CrowdLevel( guests ), LoudestMusic );
+
+	/// <summary>
+	/// Whether a frame that ran <paramref name="ticksDue"/> ticks ending on <paramref name="lastTick"/> ran one the
+	/// level is set on, a tick whose low five bits are nought. The loop tests every tick, so a long frame's 32nd is
+	/// not missed.
+	/// </summary>
+	public static bool SetsMusicLevel( int lastTick, int ticksDue )
+	{
+		for ( var tick = lastTick - ticksDue + 1; tick <= lastTick; ++tick )
+		{
+			if ( (tick & (MusicLevelEvery - 1)) == 0 )
+				return true;
+		}
+
+		return false;
+	}
+
+	/// <summary>The level the music was last set to, nought until the first set, as the original turns its voice down as it starts it.</summary>
+	internal int LevelNow { get; private set; }
+
+	/// <summary>How many times the level has been set since the park's sound was made, for the console.</summary>
+	internal int LevelSets { get; private set; }
 
 	private readonly SoundCategory? _music;
 	private Voice? _voice;
@@ -735,10 +773,22 @@ public sealed class ParkAudio : Entity
 		if ( !Audio.Ready || _music is not { IsValid: true } )
 			return;
 
-		// Re-counted rather than told when the crowd changes, as the original does: FUN_0051e790 runs from
-		// the park loop at 0x0054f870 on every 32nd pass, where this asks every frame. Guests arrive by bus
-		// and leave, so the level moves with them.
-		var volume = MusicVolume * CrowdLevel( ParkPeople.Current?.Peeps.Count ?? 0 ) / (float)LoudestCrowd;
+		// Re-counted rather than told when the crowd changes, as the original does, and on its beat: FUN_0051e790
+		// runs from the park loop at 0x0054f870 on every 32nd tick, about once a second, and not while the game
+		// is held, when no tick runs. Guests arrive by bus and leave, so the level moves with them.
+		if ( SetsMusicLevel( GameClock.Ticks, GameClock.TicksDue ) )
+		{
+			var guests = ParkPeople.Current?.Peeps.Count ?? 0;
+			var level = MusicLevel( guests, Level.Current?.Park?.WorldState ?? 0 );
+
+			if ( level != LevelNow )
+				Log.Info( $"Park music: level {LevelNow} to {level} for {guests} guests on tick {GameClock.Ticks}" );
+
+			LevelNow = level;
+			++LevelSets;
+		}
+
+		var volume = MusicVolume * LevelNow / (float)LoudestCrowd;
 
 		if ( _voice is not { Playing: true } )
 			_voice = _music.Play( MusicEffect, volume, bus: AudioBus.Music );

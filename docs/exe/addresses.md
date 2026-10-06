@@ -925,6 +925,9 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0054f680` | | OpenTPW.Tests/ParkSweepCapTests.cs OpenTPW/Global/GameCalendar.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x0054f683` | Re-stamps the peep beat's baseline `[0x00878a1c]` inside the every-eighth-tick gate | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x0054f7bb` | | OpenTPW/Global/GameCalendar.cs  |
+| `0x0054f82d` | Game_StateMachine: TEST [0x00877d34],0x1f, the every-32nd-step block that sets the music's level | OpenTPW.Tests/ParkScreamTests.cs OpenTPW/World/Park/ParkAudio.cs  |
+| `0x0054f84e` | Game_StateMachine: the crowd's level held to 89 (0x59) before it is handed to the music | OpenTPW.Tests/ParkScreamTests.cs OpenTPW/World/Park/ParkAudio.cs  |
+| `0x0054f860` | Game_StateMachine: the music's level made nought while the world's state +0x1da738 is 4 | OpenTPW.Tests/ParkScreamTests.cs OpenTPW/World/Park/ParkAudio.cs  |
 | `0x0054f870` | | OpenTPW/World/Park/ParkAudio.cs  |
 | `0x0054f9f9` | | OpenTPW/World/Advisor/Advisor.cs OpenTPW/World/Level.cs  |
 | `0x0054fa08` | The park frame's one call of `FUN_00557ab0`, after the 31 ms catch-up loop: every script's walks stepped once a frame | OpenTPW/VM/RideScript.cs OpenTPW/World/Park/ParkRides.cs  |
@@ -1384,7 +1387,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0080cef8` | | OpenTPW/World/Particles/ParticleSystem.cs  |
 | `0x00818800` | The footprint grid FUN_0052c5b0 fills: 16 columns of 16 dwords, the width at +0x400 and the depth at +0x404 | OpenTPW/UI/Park/ParkFootprintPicture.cs  |
 | `0x0081b740` | The pending list of run ends Backspace pops; count `DAT_00820a8c` | OpenTPW.Tests/ParkBuildModeTests.cs OpenTPW/World/Park/ParkBuildMode.cs  |
-| `0x00877d34` | | OpenTPW/Global/GameCalendar.cs OpenTPW/Global/GameClock.cs OpenTPW/World/Park/ParkPeople.cs  |
+| `0x00877d34` | | OpenTPW/Global/GameCalendar.cs OpenTPW/Global/GameClock.cs OpenTPW/World/Park/ParkAudio.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x00878128` | | OpenTPW/Global/GameClock.cs  |
 | `0x008786bc` | The per-frame clock sample the three beat fractions share | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x00878a1c` | The peep beat's baseline, re-stamped at `0x0054f683` | OpenTPW/World/Park/ParkPeople.cs  |

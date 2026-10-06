@@ -38,15 +38,6 @@ the original.
 
 ## A. Bugs first
 
-- [ ] **Q129. The crowd sets the music's level every frame, where the original sets it once a second.** Found by Q68's
-  review. The park loop reaches `FUN_0051e790` only on every 32nd tick (`TEST [0x00877d34],0x1f`, `0x0054f82d`) and
-  clamps the crowd's level, half its count, to 89 before it (`0x0054f84e`), which binds from 180 guests; the park holds 1,500.
-  `ParkAudio` asks every frame, and does not apply the clamp, as its
-  comments say. Build the cadence and the clamp. Confirm: the
-  level's changes counted over a timed run, and guests added with `load` past 180.
-  The same call also sends nought while `mWorldState` (`+0x1da738`) is 4 (`CMP [EDX+0x1da738],EBP` at `0x0054f860`,
-  `EBP` set to 4 at `0x0054f4ba`; `scenes.md`, the `FUN_0051e790` row), which `ParkAudio` does not do either (the
-  2026-09-26 staleness audit): build it with them.
 - [ ] **Q130. The staff pool never refreshes, and nothing counts it. Decode first.** Found by Q68's review. Every
   sweep the original runs `FUN_005084f0` (`0x004d7b30`), which drops a candidate left in the pool longer than
   `StaffTimeoutTime` plus up to half again, and every `TimeBetweenStaffUpdates` tops the pool up by at most

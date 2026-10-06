@@ -144,4 +144,49 @@ public class ParkScreamTests
 					Assert.AreNotEqual( first, ParkAudio.SingleScreamEffectFor( band, level ),
 						$"band {band} level {level} reached column nought, which no level can" );
 	}
+
+	/// <summary>
+	/// <b>The music's level is the crowd's held to 89, and nought in world state 4</b> (<c>0x0054f84e</c>,
+	/// <c>0x0054f860</c>): half the guests up to 178, then 89 however many, where the crowd's own level goes on to 100.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> no clamp at 89; a clamp at 90 or 88; world state 4 ignored; another state silenced.</remarks>
+	[TestMethod]
+	public void TheMusicsLevelIsHeldToEightyNineAndNoughtInWorldStateFour()
+	{
+		Assert.AreEqual( 0, ParkAudio.MusicLevel( 0, 0 ) );
+		Assert.AreEqual( 6, ParkAudio.MusicLevel( 13, 0 ), "Lost Kingdom's thirteen" );
+		Assert.AreEqual( 88, ParkAudio.MusicLevel( 177, 0 ) );
+		Assert.AreEqual( 89, ParkAudio.MusicLevel( 178, 0 ) );
+		Assert.AreEqual( 89, ParkAudio.MusicLevel( 180, 0 ), "held from 180 guests" );
+		Assert.AreEqual( 89, ParkAudio.MusicLevel( 1500, 0 ), "and at a full park" );
+		Assert.AreEqual( 100, ParkAudio.CrowdLevel( 1500 ), "the crowd's own level is not held" );
+
+		Assert.AreEqual( 0, ParkAudio.MusicLevel( 1500, 4 ), "world state 4: nought" );
+		Assert.AreEqual( 89, ParkAudio.MusicLevel( 1500, 3 ) );
+		Assert.AreEqual( 89, ParkAudio.MusicLevel( 1500, 5 ) );
+	}
+
+	/// <summary>
+	/// <b>The level is set on a tick whose low five bits are nought, and on no other</b> (<c>0x0054f82d</c>): once
+	/// in 32 one-tick frames, and in a long frame whenever one of its ticks is such a tick.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> set every frame; every 16th or 64th tick; only the frame's last tick asked.</remarks>
+	[TestMethod]
+	public void TheMusicsLevelIsSetOnEveryThirtySecondTick()
+	{
+		var sets = 0;
+
+		for ( var tick = 1; tick <= 320; ++tick )
+			sets += ParkAudio.SetsMusicLevel( tick, 1 ) ? 1 : 0;
+
+		Assert.AreEqual( 10, sets, "ten times in 320 one-tick frames" );
+		Assert.IsTrue( ParkAudio.SetsMusicLevel( 64, 1 ) );
+		Assert.IsFalse( ParkAudio.SetsMusicLevel( 63, 1 ) );
+		Assert.IsFalse( ParkAudio.SetsMusicLevel( 65, 1 ) );
+		Assert.IsFalse( ParkAudio.SetsMusicLevel( 64, 0 ), "a frame with no tick sets nothing" );
+
+		Assert.IsTrue( ParkAudio.SetsMusicLevel( 70, 8 ), "a frame of ticks 63 to 70 holds the 64th" );
+		Assert.IsFalse( ParkAudio.SetsMusicLevel( 72, 8 ), "one of ticks 65 to 72 does not" );
+		Assert.IsTrue( ParkAudio.SetsMusicLevel( 127, 64 ) );
+	}
 }

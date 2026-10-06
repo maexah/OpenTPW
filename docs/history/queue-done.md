@@ -4808,6 +4808,19 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   took all nine out at the crossing. Twenty-one of twenty-two restored bugs fail. Not done here: the ferry and the
   seaplane are still stood as the park loads (a first summons finds them at their first spin and sets no trigger);
   making them on demand is Q26's. The puff as a guest goes is counted.
+- [x] **Q129. The crowd sets the music's level every frame, where the original sets it once a second.** Found by Q68's
+  review. The park loop reaches `FUN_0051e790` only on every 32nd tick (`TEST [0x00877d34],0x1f`, `0x0054f82d`) and
+  clamps the crowd's level, half its count, to 89 before it (`0x0054f84e`), which binds from 180 guests; the park holds 1,500.
+  `ParkAudio` asks every frame, and does not apply the clamp, as its
+  comments say. Build the cadence and the clamp. Confirm: the
+  level's changes counted over a timed run, and guests added with `load` past 180.
+  The same call also sends nought while `mWorldState` (`+0x1da738`) is 4 (`CMP [EDX+0x1da738],EBP` at `0x0054f860`,
+  `EBP` set to 4 at `0x0054f4ba`; `scenes.md`, the `FUN_0051e790` row), which `ParkAudio` does not do either (the
+  2026-09-26 staleness audit): build it with them.
+  Done 2026-10-06: `ParkAudio.MusicLevel` (held to 89, nought in world state 4) and `SetsMusicLevel` (every 32nd
+  tick). In Lost Kingdom: level 6 with thirteen guests, 20 sets in 646 ticks; `load 190`, the level 89 from 179
+  guests and still 89 at 203 (the unchanged build: every frame, 96 and 100). Nine restored bugs each fail. Not
+  measured in the original (the level is inside the sound library's voice).
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.
