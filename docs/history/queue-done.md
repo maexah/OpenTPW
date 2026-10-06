@@ -4871,6 +4871,20 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   sweeps, the failure quoted. Seeded, the two members' whole 400 sweeps are the same alone, in the class and in the
   whole suite (`GameClock` at 0 or at 137,495, a staff pool left behind or none), so the test now seeds all four of
   the park's generators. The "0 of 40 alone" against "2 of 9 in the suite" was chance on a rare draw.
+- [x] **Q235. A walk stops short of its aim. DECODE FIRST.** Found by the review's fix 1 (`docs/exe/park.md`,
+  "From the stop to the booths"). In the original the thirteen guests of a load, aimed by `FUN_004fa5f0` at points up
+  to 245 of 256 across their roadside cell and walking in from the east, all stood on the cell aimed at
+  (`~/.cache/tpw-harnesses/rv1/orig/a.log`). Here a walk ends up to about a sixth of a cell short: guest 43, aimed at
+  (47.89,5.78), stands on (47,5) in the game but on (48,5) in `ParkTickTests`' sweeps, and of 30 leavers' walks into a
+  stop's second cell 7 ended one cell east and were sent again
+  (`~/.cache/tpw-harnesses/review-run-2026-10-06/game/lean-probe.txt`). Decode where `FUN_004fa2a0` and the mover
+  count a walk done (`0x00510100` on) against `PeepWalk.Step`'s `Progress() == One`, write it to `docs/exe/` and
+  stop. Two tests allow the cell beyond until then (`ParkTickTests`, `ParkDecidingTests`).
+  **Done 2026-10-06 (decode): there is no difference.** The original ends a walk as `PeepWalk.Step` does: the
+  finished byte, set before the move inside 1.6 radii, then one slowed step (`ride-operation.md`, "Where a walk ends,
+  measured"). In the original the thirteen ended 0.019 to 0.158 of a cell short, and guest 53, aimed at (47,5),
+  stands on (48,5) (`~/.cache/tpw-harnesses/q235/orig/a.log`). The premise came from a wrong draw order: Q235b. The
+  two tests' allowance stays, as the original's behaviour.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

@@ -335,6 +335,23 @@ target, and **arriving is a radius, not a snap**: `FUN_0050ed10` flags it once t
 `radius`: `0x3333` as constructed, the saved value for a loaded guest). It is tested on the position before that
 step's move, so the guest ends the tick near the point, not on it; nothing snaps them there.
 
+**Where a walk ends, measured (Q235).** The walk tick `FUN_004fa2a0` runs the step `FUN_0050f3b0` and then answers 2
+on the give-up flag (`+0x18c`), else 0 when `FUN_0050fd40` answers `0x10000`, which it does on the finished byte
+(`+0x60`), on a route of no length (`+0xa0` nought), or when what is left is under 1/65536 of the route. The finished
+byte has one writer in the walk, `follow_path` at `0x0050ef37`, inside that same step: on the last waypoint, the
+octagonal distance from the position **before the move** to the target below 1.6 radii. The same call then still
+steers at the target, at the lesser of the top speed and **half the distance** (`0x00700990` × `0x00700998`, 2.0 ×
+65536.0), the force weighted a half, and the step is taken. So a walk ends one slowed step inside 0.32 of a cell, and
+`FUN_00510100` (the route's entry, `FUN_0050f8e0( target, 0 )`) counts nothing. `PeepWalk.Step`, `PeepJourney.Steer`
+and `PeepNavigator.Progress` are this, test for test: **there is no difference to build.** In the original under
+Proton, predicted first (finished byte set, no snap, 0 to about 0.15 of a cell left; `q235/orig/walkend.py`, `a.log`):
+the thirteen of a load ended their walk in 0.019 to 0.158 of a cell short, octagonal, the byte 1, radius `0x3333`; 61
+ended walks of all kinds in the run, median 0.074. Guest 52's last step is the listing's to the unit: at 0.190 it is
+flagged, wants 0.094 a tick against its 0.160, and moves 0.127. **Guest 53, aimed at (47.969,5.781), stands on
+(48,5)**, at 48.024: the original's guests stand a cell east of a high aim too, as its leavers do (Q128's log). Q235's
+premise, that its thirteen all stood on the cell aimed at, came from a wrong draw order (`park.md`, "From the stop to
+the booths"). OpenTPW's guest 43 ends 0.052 short by the same arithmetic (`rv1/run-fix/run.log`).
+
 **State 12.** SetState(0xc) writes the state, `+0xc2` = 0 (the first word of the speed table at `0x0075c7f0`, one of
 three percentage terms `FUN_004fa870` sums) and `+0x10` = 1, and nothing else: no idle stamp, no delay. Its turn
 (`FUN_005019f0` case 0xc) runs the walk tick and on arrival, **or on 2** (the route failed, a failed re-plan

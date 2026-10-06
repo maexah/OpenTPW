@@ -40,15 +40,13 @@ the original.
 
 **The 2026-10-06 review's leftovers come first, at Alexah's word (2026-10-06).**
 
-- [ ] **Q235. A walk stops short of its aim. DECODE FIRST.** Found by the review's fix 1 (`docs/exe/park.md`,
-  "From the stop to the booths"). In the original the thirteen guests of a load, aimed by `FUN_004fa5f0` at points up
-  to 245 of 256 across their roadside cell and walking in from the east, all stood on the cell aimed at
-  (`~/.cache/tpw-harnesses/rv1/orig/a.log`). Here a walk ends up to about a sixth of a cell short: guest 43, aimed at
-  (47.89,5.78), stands on (47,5) in the game but on (48,5) in `ParkTickTests`' sweeps, and of 30 leavers' walks into a
-  stop's second cell 7 ended one cell east and were sent again
-  (`~/.cache/tpw-harnesses/review-run-2026-10-06/game/lean-probe.txt`). Decode where `FUN_004fa2a0` and the mover
-  count a walk done (`0x00510100` on) against `PeepWalk.Step`'s `Progress() == One`, write it to `docs/exe/` and
-  stop. Two tests allow the cell beyond until then (`ParkTickTests`, `ParkDecidingTests`).
+- [ ] **Q235b. A new guest's walk in is aimed by the wrong two draws.** Found by Q235. `PeepBehaviour.WalkInDraws`
+  takes the fourth draw from the id for the roadside cell and the fifth for the place across; the original's are
+  the second and the third, thirteen of thirteen on both by the walkers' own targets (`docs/exe/park.md`, "From the
+  stop to the booths"; `~/.cache/tpw-harnesses/q235/orig/a.log`: guest 43 is aimed at (47.742,5.781), not
+  (47.895,5.781)). Take the two draws after the child's bank, and correct the remarks and `ParkPeopleTests` that
+  say fourth. Confirm: guest 43's aim in the `peeps` census, predicted first, and a screenshot of them at the
+  roadside.
 - [ ] **Q237. One Full Simulation test failed twice with no message kept.** Found by the 2026-10-06 review (fix 6).
   `LevelFullSimulationParkTests.FullSimulationCreatesTwelveThingsWithRegularLoans` failed once in the review's
   put-back runs and once at a gate, about two whole-suite runs in a hundred and twenty, and neither output was kept.

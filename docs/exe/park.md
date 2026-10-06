@@ -1592,8 +1592,9 @@ and are made deciding, state 6. Anywhere else, which the bus stop is, they are s
 point on it is a second draw's low byte across and a fixed 200 of 256 down (`0x004fb22b`), through `FUN_004fa5f0`;
 state 0 with a route, state 6 with none (`0x004fb252`), then particle `0x13`. **Both draws are the guest's own**: the
 constructor has just reseeded the generator with the guest's id word (`FUN_00516370`, `0x004fb19e`), and the cell is
-the fourth draw from there (the child's bank is the first; the two between are made inside the sprite's set-up
-`FUN_004d4140` and are not traced), the place across the fifth. State 0 (`0x00501a0f`) walks; arrived, it writes
+the **second** draw from there (the child's bank, `FUN_00541f70`, is the first; the sprite's set-up `FUN_004d4140`
+makes none), the place across the **third**: measured on thirteen guests' walker targets, thirteen of thirteen on
+both (Q235, `q235/orig/a.log`). OpenTPW's `WalkInDraws` still takes the fourth and fifth (Q235b). State 0 (`0x00501a0f`) walks; arrived, it writes
 the facing `0x400` and state 1. State 1 is `FUN_004ff520`: **nothing at all while `FUN_0051a760` answers no**
 (`0x004ff52c`, `JZ 0x004ff5ab`), the leavers' own test, so they stand by the road while the bus drives in, unloads
 or moves on (unless ten or more are still to drop); then a ticket booth by `draw & 1` (`FUN_004d8610`), a point on
@@ -1601,16 +1602,18 @@ its cell by the low bytes of two more draws, across then down, the walk and stat
 callers and no other (`0x004ff52c`, `0x00500b47`). **In the original, predicted first** (the reader `arrivals.py`,
 2026-10-06): the load of thirteen was called and the bus summoned on `mGameTick` 1264 with no vehicle current; the
 thirteen were made in state 0 on (53,5), one a sweep from 1300; each entered state 1 on (47,5) or (48,5) between 1326
-and 1359, on the cell the fourth draw from its id picks, thirteen of thirteen; the load was let go on 1313 and the
+and 1359, on the cell the fourth draw from its id picks, thirteen of thirteen (a fit to where they stood: guest 53
+is aimed at (47,5), 248 of 256 across, and stands just short of it on (48,5); the second draw is the cell); the load
+was let go on 1313 and the
 bus read 3 from 1321; **all thirteen went to state 2 on 1360, the tick the bus first read 4, and none before**; they
 reached the booths from 1389. **OpenTPW** (the review's fix 1): `ParkPeople.Admit` makes the guest so
 (`PeepBehaviour.WalkInFromTheStop`, `WalkInDraws`), `AtGate` waits on `MayCrossTheRoad` and aims at a point on a
 booth's cell. Measured in Lost Kingdom, whose load is one guest: made on 1300 walking, aimed at (47.89,5.78); standing
 on (47,5) from 1327 (the original's guest 43: 1326); let go 1301, the bus at 3 from 1308 and at 4 on 1348, and the
 guest heading for a booth on 1348. On the unchanged build it headed for the booth's centre on 1303, the bus still
-unloading. **Not the original's**: a walk here stops up to a sixth of a cell short of its aim, so a guest aimed
-high across a cell can stand one cell east of it, where the original's thirteen all stood on the cell aimed at
-(`docs/QUEUE.md`, the walk's stopping distance); and particle `0x13` is not made.
+unloading. A walk stops short of its aim here as it does in the original, so a guest aimed high across a cell can
+stand one cell east of it in both (`ride-operation.md`, "Where a walk ends, measured"). **Not the original's**: the
+two draws (above), and particle `0x13` is not made.
 
 **Which balance keys these globals are, proven.** Nothing writes them by name: the balance loader stores each
 value at a slot its descriptor's place in the table gives it (`park-engine.md`, "How a key finds its global"; the

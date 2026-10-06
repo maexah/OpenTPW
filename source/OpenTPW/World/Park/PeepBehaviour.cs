@@ -2878,8 +2878,9 @@ public sealed class PeepBehaviour
 	/// park's generator with the id word (<c>0x004fb19e</c>), and the fourth draw from there picks the roadside cell
 	/// by its low bit (<c>0x004fb206</c>) and the fifth's low byte the place across it (<c>0x004fb221</c>). The
 	/// first of the three before them is the child's bank (<see cref="ParkSpriteBanks.ChildOf"/>); the other two
-	/// are made inside the sprite's set-up (<c>FUN_004d4140</c>) and are not traced. In the original, guests 38
-	/// and 43 to 54 chose (47,5) and (48,5) exactly as this answers (<c>docs/exe/park.md</c>, "Arrivals").
+	/// are taken as made inside the sprite's set-up (<c>FUN_004d4140</c>). <b>Not the original's</b>: measured on
+	/// thirteen walker targets, its cell is the second draw and its place the third (<c>docs/exe/park.md</c>,
+	/// "From the stop to the booths"; <c>docs/QUEUE.md</c> Q235b).
 	/// </summary>
 	internal static (bool SideB, int Across) WalkInDraws( int thingId )
 	{

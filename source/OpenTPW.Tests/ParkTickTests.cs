@@ -1155,9 +1155,9 @@ public class ParkTickTests
 
 			Assert.AreEqual( PeepState.AtGate, guest.State, "and stands there" );
 
-			// The walk here stops up to a sixth of a cell short of its aim, so one aimed high across the cell, coming
-			// from the stop, stands just over its far edge. The original's thirteen all stood on the cell aimed at
-			// (docs/QUEUE.md, the walk's stopping distance).
+			// A walk stops up to a sixth of a cell short of its aim, so one aimed high across the cell, coming from
+			// the stop, stands just over its far edge, as the original's guest 53 does (docs/exe/ride-operation.md,
+			// "Where a walk ends, measured").
 			var stoodOn = people.WalkFor( guest.ThingId )!.Position.Cell;
 
 			Assert.IsTrue( stoodOn == roadside || stoodOn == (roadside.X + 1, roadside.Y),
