@@ -685,9 +685,14 @@ is never judged: the list's does (`0x00665d22`), so a press on a list is a click
 | `0x005d58e0` (a control of `FrontEnd_Init`) | `0x10006` | `FUN_004bc710`, or message box `0x1d9`; not identified |
 | the two park's-end views, `0x0048a740` | `0x10006` | after their 2000 ms |
 | two lobby objects, `FUN_005dd530`, `FUN_005dd840` | `0x10006` | the middle button toggles a flag |
+| a third of that kind, the handler at `0x005dced0` (in no function; the slot at `0x00702bdc`) | `0x10006` | the middle button toggles its flag `+0x58` (`FUN_004c57e0`, `FUN_004c5800`) |
+| the message bar's ten entries (records of `0x208` bytes at `0x007c26b0`), a handler in no function, the test at `0x0048de67` | `0x10006` | the left button: sound `0xc0`, then the message is shown (`FUN_0048d9c0`), or, if it is the one on show (`[0x007ca090]`), the arm is retracted (`FUN_004a25f0( 0 )`); the right button: an entry other than `[0x007ca094]` is hidden (vtable `+0x14`), and the arm retracted if it was the one on show |
 
-The table is every `CMP` or `SUB` against `0x10006` or `0x11006` in the listing, the handlers that reach it by a
-chain of `SUB`s (`SUB 0x10002`, then `SUB 4`: the lobby's two and the three after them, found by a second scan), and
+The table is every `CMP` or `SUB` against `0x10006` or `0x11006` in the image: every place the four bytes
+`06 00 01 00` or `06 10 01 00` stand in code (a byte search, 14 and 3, the base proc's own post at `0x0065f996`
+among them; it reaches the two handlers that sit in no function, `0x0048de67` and `0x005dced0`, which a walk by
+function does not), the handlers that reach the message by
+a chain of `SUB`s (`SUB 0x10002`, then `SUB 4`: the lobby's two and the three after them, found by a second scan), and
 `FUN_00488a00`, which reaches its case through a jump table. A handler that switches on the message that last way is
 not found by either scan, so the table can be short.
 

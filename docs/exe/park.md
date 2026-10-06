@@ -1661,19 +1661,22 @@ Where each guest is made is the original's (Q127): `ParkPeople.ArrivalCell`, sto
 other than the bus. Measured: the original's first load, thirteen guests on `mGameTick` 1300 to 1312, each first seen
 on (53,5) with the current vehicle the small crowd's (`+0x1da72a` and `+0x1da72c` both 15); OpenTPW's first load, one
 guest, (53,5), a bus load of six by hand all (53,5), and forty by the second vehicle all (53,3), which the original
-was not made to send. **Not the original's in two ways**: the original asks which vehicle is current, and a current
-vehicle is reused whatever size the load asked for (`0x0051a314`), where the vehicle here is the one the load's size
-names; `ArrivalCell` asks the current vehicle since Q131b, and a vehicle summoned for a leaver can be the one a load
-then finds current; and when the
-wanted feature is missing `FUN_0051a2f0` falls back through the ferry, the seaplane and the bus, where a vehicle with
-no script here still has its guests made at the wanted vehicle's cell.
+was not made to send. A current vehicle is reused whatever size the load asked for, there (`0x0051a314`) and here
+(`Summon`), and `ArrivalCell` asks the vehicle that is current, so a vehicle summoned for a leaver can be the one a
+load then finds. **Not the original's in one way**: when the wanted feature is missing `FUN_0051a2f0` falls back
+through the ferry, the seaplane and the bus, where a vehicle with no script here still has its guests made at the
+wanted vehicle's cell.
 
 **The spent vehicle** (Q131, decoded first-hand and run in the original; the build is Q131b). A vehicle's script
 ends its circuit at status 6 and then spins on `VAR_TRIGGER` (`bus.RSE` 112 to 120). Whoever next asks its status
-through `FUN_0051a690` or `FUN_0051a760` is answered -1, and the asking itself writes the script's variable 1,
-`VAR_STATUS`, to nought (`FUN_0055a0b0( script, 1, 0 )`) and clears `mCurrentArrivalVehicle`; the manager asks on
-every sweep (its tail, `0x004cf4b6` on), so a 6 does not outlive the sweep. Nothing drives the vehicle anywhere: it
-stands spent, off the stops, until a summons. `FUN_0051a2f0` is the summons: with a vehicle current it sets that
+through `FUN_0051a690` is answered -1, and `FUN_0051a760`, which reads the status the same way and answers only 0 or
+1, takes it as no vehicle (and only for the small crowd's vehicle: it answers 1 for any other before it reads a
+status, `0x0051a774`). Either asking writes the script's variable 1, `VAR_STATUS`, to nought
+(`FUN_0055a0b0( script, 1, 0 )`) and clears `mCurrentArrivalVehicle`; the manager asks on every sweep (its tail,
+`0x004cf4b6` on), so a 6 does not outlive the sweep. Nothing drives the vehicle anywhere after that: its last
+animation is played (`WAITANIM 5`, 109), its tagged effects are stopped (`KILLOBJ 1`, 115: a kill tag, not a model,
+"ADDOBJ", above) and its script spins until a summons. Where that leaves its model was not read or photographed in
+the original. `FUN_0051a2f0` is the summons: with a vehicle current it sets that
 script's variable 0, `VAR_TRIGGER`, to 1 (`0x0051a663`) and nothing else; with none it picks the slot (the size asked
 for, or at random of the three for size 0, `% 3` of the save's seed), and for a vehicle thing that exists sets its
 `VAR_TRIGGER` to 1, for one it has just made sets `VAR_STATUS` to 1 (both at `0x0051a5ed`, the variable pushed by the
@@ -1685,12 +1688,13 @@ leaver stands there, at 0 when one does, and at 2 when one does and the load is 
 
 Measured in the original, the bus's script variables read from memory through its first load (`bus.py`; a script is
 the node of the list at `[0x008791b0]` whose `+8` is the thing's `+0x24`, its variables the dwords at `[node + 0x1c]`):
-on entry not current, status 0; made current with trigger 1 on `mGameTick` 1279 and status 1 on 1281; 2 on 1315;
-triggered on 1328, the load's thirteen dropped; 3 on 1337; 4 on 1376, triggered on the same sweep, 0 on 1378; 5 on
-1392; then on 1421 status 0 with trigger 1 and still current: **summoned again at once, for a leaver waiting at the
-stop**, and round a second time (1, 2 triggered on arrival, 3, 4, 0, 5), and on 1550 status 0, trigger 0 and no
-vehicle current. Status 6 was never caught at a 10 ms poll, as the same-sweep answer says. **Two predictions were
-wrong**: that the bus would stay away after its first circuit (a leaver summoned it), and that its thing's cell
+on entry no vehicle current and the bus's status 0; on 1094 another vehicle current (thing 43, the bus's script
+untouched); the bus current with trigger 1 on `mGameTick` 1279 and status 1 on 1281; 2 on 1315;
+triggered on 1328 (its load dropped: `bus.py` reads the script, not the guests); 3 on 1337; 4 on 1376, triggered on the same sweep, 0 on 1378; 5 on
+1392; then on 1421 status 0 with trigger 1 and still current: **summoned again at once** (for a leaver waiting at
+the stop, by the listing; this log reads no guest), and round a second time (1, 2 triggered on arrival, 3, 4, 0, 5), and on 1550 status 0, trigger 0 and no
+vehicle current; on 1591 another vehicle was (thing 32). Status 6 was never caught at a 10 ms poll, as the
+same-sweep answer says. **Two predictions were wrong**: that the bus would stay away after its first circuit (a leaver summoned it), and that its thing's cell
 would show where it stands (the thing's position bytes read (0,0) throughout: the vehicle is drawn by its script's
 object, not placed as a thing).
 

@@ -434,9 +434,10 @@ public class ParkTickTests
 	/// fours are 151 past the let-go's, 602 to 605 sweeps after that drop.
 	///
 	/// <para>
-	/// <b>No script is bound here</b>, so the manager takes OpenTPW's no-script fallback and drops on the sweep that
-	/// calls the load, where the original would summon the vehicle and wait for it to answer 2. The handshake with a
-	/// bound bus is <see cref="TheBusIsHeldAtTheStopUntilTheSweepAfterItsLastGuest"/>.
+	/// <b>No script is bound here</b>, so the manager takes OpenTPW's no-script fallback: the sweep that calls the
+	/// load is the summons, and with no script to wait for its guest is dropped on the next, where the original would
+	/// wait for the vehicle to answer 2. The handshake with a bound bus is
+	/// <see cref="TheBusIsHeldAtTheStopUntilTheSweepAfterItsLastGuest"/>.
 	/// </para>
 	/// </summary>
 	/// <remarks>

@@ -2024,14 +2024,16 @@ after the arrival manager (`0x004d7b30`):
    picks a kind by those weights, the first free slot takes a new candidate of it (`FUN_00507600`), and that kind's
    want and the total go down one. Then `FUN_00508170` makes up the minimums: for the mechanics, the handymen, the
    entertainers, the guards and the researchers in that order, round and round until none is short, a kind whose
-   staff in the park plus candidates in the pool is under `Min<Kind>InPool` gets one more. Last, the pool's mark is
-   set to this sweep.
+   staff in the park plus candidates in the pool is under `Min<Kind>InPool` gets one more. A short kind that is full,
+   or short with no slot free, gets nobody and still calls for another round (`0x005081a3`, `0x005081c8`, both to
+   `0x005081d8`), so that loop has no end for it. Last, the pool's mark is set to this sweep.
 
 `FUN_00507600( kind, slot )` makes a candidate: the costume from `FUN_00541f70`, two draws of which the second, modulo
 3, plus `AvgGradeOf<Kind>` less one is the grade, held to 4; a name (`FUN_00507580`, a draw modulo 35, fifteen draws at the
 most while `FUN_005083f0` finds it in use); occupied; the hire list told; the mark; and the lifetime, a
-draw modulo half `StaffTimeoutTime` plus `StaffTimeoutTime`. The keys are the `StaffPoolInfo` block, in the order the
-balance file lists them, four bytes each from `0x00785284`: `AvgGradeOf` at `0x00785298`, `Max<Kind>` at `0x007852c0`,
+draw modulo half `StaffTimeoutTime` plus `StaffTimeoutTime`. The keys are the `StaffPoolInfo` block, four bytes each
+from `0x00785284`, in the order of the executable's own key table (handymen, mechanics, entertainers, guards,
+researchers in every group, `0x00740bec` on; `Standard.sam` lists `BeginningNumberOf` mechanics first): `AvgGradeOf` at `0x00785298`, `Max<Kind>` at `0x007852c0`,
 `Min<Kind>InPool` at `0x007852d4`, `Max<Kind>InPark` at `0x007852e8`, `TimeBetweenStaffUpdates` at `0x00785304`,
 `MaxNumberOfStaffPerUpdate` at `0x00785308`, `StaffTimeoutTime` at `0x0078530c`.
 
@@ -2039,7 +2041,9 @@ The opening pool is `FUN_005087d0`, from the park's creation (`FUN_005156a0`, wh
 `FUN_004d7af0` and `FUN_00507bb0`): `BeginningNumberOf<Kind>` candidates of each kind in turn through `FUN_00507600`,
 so each marked nought with its own lifetime, then the pool's mark; it runs before any save is read.
 
-**In the original**, predicted first, the pool read from memory every 100 ms for 240 s (`pool.py`). The keys as
+**In the original**, predicted first, the pool read from memory every 100 ms for 240 s (`pool.py`; **two of the
+prediction's numbers were wrong**: 360 sweeps for the top-up, where it is the first sweep more than 360 past the
+mark, 361, and "at most 12", where the key loaded is 10). The keys as
 Lost Kingdom's Instant Action loads them: 90, 10 and 120; `Max` 6, 5, 6, 4, 3; `Min` 1, 1, 1, 1, 0; in the park 30,
 15, 30, 15, 6. The pool stood at fourteen when the read began on 868 (the save holds sixteen, below), made on `mGameTick` 361 and 722, its mark 722. **Twenty-four
 of twenty-four candidates went on the first sweep past four times their lifetime** (one of lifetime 141 made on 361
@@ -2063,11 +2067,13 @@ five `mPeopleInCat` and `mStopProducing` pairs, the pool's `mTimeSig` (`FUN_0041
 `saves.md`, "The staff pool". `ParkWorld.StaffPool` and `StaffPoolTimeSig` are that, and `ParkStaffPool` built
 with a save takes its occupied records as they stand: kind, the name by its row of the kind's table, grade,
 costume, mark and lifetime, and the pool's mark. A park with no save still rolls. Lost Kingdom's file holds
-sixteen (the original's log above began on 868, after two of lifetime 124 had gone on 858). Predicted and read in
+sixteen (the original's log above began on 868 with fourteen: the two of lifetime 124 made on 361 are due on 858
+by the rule, before that log began, so those two are not measured). Predicted and read in
 OpenTPW: sixteen made on 361 and 722; gone on 858, 858, 926, 934, 946, 1066, 1239, 1259, 1263, 1279, 1327, 1355,
-1383, 1387, 1387 and 1403; topped up on 1083 by ten to twenty and on 1444 by ten, each the original's own tick and
-count; the build before it rolled twenty-two on 755 and topped up on 1116 and 1477. **Beside the original's hire
-screen** on `mGameTick` 980 to 1054: the same people at the same wages on four tabs (Chris Battson 63 and Rajan Tande
+1383, 1387, 1387 and 1403; topped up on 1083 by ten to twenty and on 1444 by ten, from 926 on each the original's
+own tick and count; the build before it rolled twenty-two on 755 and topped up on 1116 and 1477. **Beside the original's hire
+screen** on `mGameTick` 980 to 1054: the same people at the same wages on four of its five tabs, the guards' not
+photographed (Chris Battson 63 and Rajan Tande
 45; mechanics at 92, 115, 115; entertainers at 60, 60; researchers at 100, 100). Two differences, neither the
 pool's: the reference install reads the `american` name tables, where three of those rows hold other names than
 `English`'s (mechanic row 12 is Alex Cullum there, Rob O'Farrell here), and its list stands in name order on all

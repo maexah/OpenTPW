@@ -291,10 +291,10 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004a43b0` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x004a4490` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x004a6000` | | OpenTPW/Client/Locale/UIStrings.cs OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/FrontEnd/Screens/PlayerSlots.cs  |
-| `0x004a6104` | Player slot callback 0x004a6000: SUB 0x10002 then SUB 4, the click 0x10006 of any button | OpenTPW/UI/FrontEnd/Screens/PlayerSlots.cs  |
+| `0x004a6104` | Player slot callback 0x004a6000: SUB 0x10002 then SUB 4, the click 0x10006 of any button | OpenTPW.Tests/LeftClickTests.cs OpenTPW/UI/FrontEnd/Screens/PlayerSlots.cs  |
 | `0x004a61b0` | | OpenTPW/Client/Players.cs OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/FrontEnd/Screens/PlayerSlots.cs  |
 | `0x004a61d0` | | OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/FrontEnd/Screens/PlayerSlots.cs OpenTPW/UI/Screens/MessageBox.cs  |
-| `0x004a61e9` | Quit Game callback 0x004a61d0: the click 0x10006 of any button | OpenTPW/UI/FrontEnd/Screens/PlayerSlots.cs  |
+| `0x004a61e9` | Quit Game callback 0x004a61d0: the click 0x10006 of any button | OpenTPW.Tests/LeftClickTests.cs OpenTPW/UI/FrontEnd/Screens/PlayerSlots.cs  |
 | `0x004a6290` | | OpenTPW/UI/FrontEnd/FrontEnd.cs  |
 | `0x004a62b0` | | OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/FrontEnd/Screens/PlayerSlots.cs  |
 | `0x004a6580` | | OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/FrontEnd/FrontEndLines.cs OpenTPW/UI/FrontEnd/Screens/PlayerSlots.cs  |
@@ -339,9 +339,10 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004b9840` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
 | `0x004cf3f6` | Arrival manager `FUN_004cf3e0`: `FUN_0041a990`'s elapsed count against the period `[0x00785314]`; `JBE` skips the call, so the count must be more than the period | OpenTPW.Tests/ParkPeopleTests.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004cf455` | Arrival manager: re-tests the offloading flag (`+0x10`) after a load is called, so the same call goes on to ask the vehicle | OpenTPW/World/Park/ParkPeople.cs  |
-| `0x004cf489` | Arrival manager FUN_004cf3e0: with a load held and no vehicle answering, the load's vehicle summoned by its size | OpenTPW/World/Park/ParkPeople.cs  |
-| `0x004cf4b6` | FUN_004cf3e0, its tail, every sweep: FUN_0051a9d0, then the vehicle's status asked and the trigger by who waits at the stop | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x004cf489` | Arrival manager FUN_004cf3e0: with a load held and no vehicle answering, the load's vehicle summoned by its size | OpenTPW.Tests/ParkTickTests.cs OpenTPW/World/Park/ParkPeople.cs  |
+| `0x004cf4b6` | FUN_004cf3e0, its tail, every sweep: FUN_0051a9d0, then the vehicle's status asked and the trigger by who waits at the stop | OpenTPW.Tests/ParkTickTests.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004cf4cb` | FUN_004cf3e0's tail, somebody at the stop: the vehicle's status asked; none, 0, or 2 with the load off summons or triggers | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x004cf4de` | FUN_004cf3e0's tail, a leaver at the stop and the vehicle at 2: the load's still-to-drop [ESI+0xc] read; only nought sends it on | OpenTPW.Tests/ParkTickTests.cs  |
 | `0x004cf526` | FUN_004cf3e0's tail: FUN_0051a2f0( 0 ), the summons at random, for a leaver with no vehicle current | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004cf533` | Arrival manager's tail, the arm with nobody at the stop (`FUN_0051a9d0` nought): lets the vehicle go at state 4 alone | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004cf56b` | Arrival manager, vehicle at 2: `JLE` on `mPeopleOnBus`; at nought or below the load is let go (`FUN_0041a960` re-marks `mTimeSig`, the flag cleared) | OpenTPW/World/Park/ParkPeople.cs  |
@@ -733,6 +734,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00506cda` | | OpenTPW/World/Park/StaffBehaviour.cs  |
 | `0x00506cf4` | | OpenTPW/World/Park/StaffBehaviour.cs  |
 | `0x0050701f` | | OpenTPW.Tests/ParkStaffBehaviourTests.cs OpenTPW/World/Park/StaffBehaviour.cs  |
+| `0x0050819d` | FUN_00508170, the minimums' round: ADD EAX,EDX, the kind's staff in the park added to its candidates before the compare with its minimum | OpenTPW.Tests/ParkStaffPoolRefreshTests.cs  |
 | `0x0050b7f9` | Thing delete FUN_0050b780: broadcasts message 0x1b before the free (the all-visitors list removes a guest's row) | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x0050c039` | | OpenTPW/World/Park/Thoughts.cs  |
 | `0x0050cd80` | | OpenTPW/World/Park/FixedVector.cs  |
@@ -764,6 +766,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0051a314` | Summons FUN_0051a2f0: a vehicle already current is reused whatever size is asked | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x0051a5ed` | FUN_0051a2f0, no vehicle current: the slot's existing thing has script variable 0, VAR_TRIGGER, set to 1; one just made has variable 1, VAR_STATUS | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x0051a663` | FUN_0051a2f0, a vehicle current: its script variable 0, VAR_TRIGGER, set to 1 | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x0051a774` | FUN_0051a760: CMP AX,[ESI+0x1da72c], the current vehicle against the small crowd's; any other answers 1 before a status is read | OpenTPW.Tests/ParkTickTests.cs  |
 | `0x0051b920` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x0051bcb0` | | OpenTPW/Audio/Audio.cs OpenTPW/World/Level.cs  |
 | `0x0051bd70` | | OpenTPW/Audio/Audio.cs OpenTPW/World/Advisor/Advisor.cs OpenTPW/World/Park/ParkAudio.cs  |
@@ -941,6 +944,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0054f4bf` | | OpenTPW/Global/GameClock.cs  |
 | `0x0054f4c4` | | OpenTPW/Global/GameClock.cs  |
 | `0x0054f56b` | | OpenTPW/VM/RideScriptScheduler.cs  |
+| `0x0054f5fb` | Game_StateMachine: CALL FUN_00475360, the sprites' step, before the thing gate and outside the three-sweep cap | OpenTPW.Tests/ParkSweepCapTests.cs  |
 | `0x0054f668` | | OpenTPW/Global/GameCalendar.cs OpenTPW/World/Level.cs OpenTPW/World/Park/ParkWeather.cs  |
 | `0x0054f680` | | OpenTPW.Tests/ParkSweepCapTests.cs OpenTPW/Global/GameCalendar.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x0054f683` | Re-stamps the peep beat's baseline `[0x00878a1c]` inside the every-eighth-tick gate | OpenTPW/World/Park/ParkPeople.cs  |
@@ -1178,7 +1182,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0065f8d3` | Base control proc: the double click's compare, strictly less than 500 ms | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
 | `0x0065f969` | Base control proc: a release under 500 ms after its press posts the click 0x10006 | OpenTPW.Tests/LeftClickTests.cs OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
 | `0x0065f977` | Base control proc: the click 0x10006 is posted with the press's point | OpenTPW.Tests/LeftClickTests.cs OpenTPW/UI/UiControl.cs  |
-| `0x0065f9af` | Base control proc: an unspoiled release stamps the button with its time | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
+| `0x0065f9af` | Base control proc: an unspoiled release stamps the button with its time | OpenTPW.Tests/LeftClickTests.cs OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
 | `0x0065f9bd` | Base control proc: any other release clears the button's stamp | OpenTPW.Tests/LeftClickTests.cs OpenTPW.Tests/ParkFirstPersonRightClickTests.cs OpenTPW/UI/WindowStack.cs  |
 | `0x0065fa33` | Base control proc: a move spoils a press that strayed more than 6 units | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
 | `0x0065fab7` | Base control proc: the stray compare across, more than 6 | OpenTPW.Tests/LeftClickTests.cs OpenTPW.Tests/ParkFirstPersonRightClickTests.cs OpenTPW/UI/UiControl.cs OpenTPW/UI/WindowStack.cs  |
@@ -1324,7 +1328,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00752f10` | | OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x00752f24` | | OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x00752f30` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
-| `0x00753c68` | | OpenTPW/UI/FrontEnd/Screens/PlayerSlots.cs  |
+| `0x00753c68` | | OpenTPW.Tests/LeftClickTests.cs OpenTPW/UI/FrontEnd/Screens/PlayerSlots.cs  |
 | `0x00753f50` | | OpenTPW/UI/FrontEnd/Screens/NewPlayerDialog.cs  |
 | `0x007540c0` | | OpenTPW/UI/FrontEnd/Screens/PlayerSlots.cs  |
 | `0x007540cc` | | OpenTPW/UI/FrontEnd/Screens/PlayerSlots.cs  |

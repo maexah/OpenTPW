@@ -1439,21 +1439,29 @@ status 2, no; else yes. So leavers stand at the crossing while the bus drives in
 `FUN_0051a9d0` answers whether any of the four cells' head is a guest in state `0x15`. Nobody waiting and the vehicle
 at status 4: `FUN_0051a2f0( 0 )`, which with a vehicle current sets its script's variable 0, `VAR_TRIGGER`, to 1
 (`0x0051a663`), so it drives off. Somebody waiting: with no vehicle (-1), `FUN_0051a2f0( 0 )` summons one **at random**
-of the three (`park.md`, "Arrivals"); at status 0, or at 2 with the load all dropped, the same call nudges it on.
+of the three (`park.md`, "Arrivals"); at status 0, or at 2 with the load all dropped, the same call sets its trigger.
+At 2 that sends it on; at 0 it does nothing for a bus driving off, whose script clears `VAR_TRIGGER` (`bus.RSE` 103)
+before it is next tested (117).
 `bus.RSE` gives the statuses their meaning: 1 driving in, 2 standing at the arrivals' stop until triggered, 3 moving
 on, **4 standing for the leavers until triggered**, 0 then 5 driving off, 6 spent and waiting for a trigger (Q131).
 
 **In the original**, predicted first, the park shut with the entry-price screen's door and every guest watched from
-memory for 300 s (`leavers.py`): nine guests stood in `0x13` on (47,9) and (48,9) from `mGameTick` 1152 and all set off
-on 1191, as the bus's three earlier leavers went from (42,5) and (43,5); the first to stand in `0x15` with no vehicle
-current (1237) had one summoned on the next sweep, and it was not the bus (thing 38 against size 1's 15); guests who
-had reached (42,5) or (43,5) went `0x15`, `0x14`, `0x15` and ended on (42,3) or (43,3); ten went from those two cells
-on ticks 1356 to 1358; later a bus (15) took two from (42,5) and (43,5). Every guest that went, went from `0x15` on a
-cell of the current vehicle's pair: sixteen of sixteen. **One prediction was wrong**: "at most one a cell a sweep".
-Five went on one tick from two cells: a guest deleted leaves the next on the cell the head, and the same sweep
-reaches them. One guest was first seen in `0x15` on (44,3), a cell of none of the pairs, and walked on to (43,3): the
-walk's end is drawn inside the cell and can stand over its edge. Guests turned away at the shut gate afterwards took
-the same road.
+memory for 300 s (`leavers.py`, `q128/orig/a.log`). The first three leavers (33, 37, 38) each passed `0x13` in one
+sweep (`mGameTick` 1074 to 1104) with no vehicle current. The bus was current on 1108, the tick the first of them
+stood in `0x15`, and the next nine, who reached `0x13` on (47,9) and (48,9) between 1119 and 1158, stood there 33 to
+72 sweeps and all set off on 1191, as the bus took the first three from (42,5) and (43,5) (1191, 1192). On 1237 no
+vehicle was current, with a guest standing in `0x15` at the stop since 1227, and on 1238 one was: thing 38, not the
+bus (size 1's is 15). Guests who had reached (42,5) or (43,5) went `0x15`, `0x14`, `0x15` and ended on (42,3) or
+(43,3); ten went from those two cells on ticks 1356 to 1358. Twice more a guest came to stand in `0x15` with no
+vehicle current and one was current on the same reading: thing 36 on 1640, which took one guest from (42,3) on 1714,
+and the bus on 1770, which took two from (42,5) and (43,5) on 1853. Every guest that went, went from `0x15` on a cell
+of the current vehicle's pair: sixteen of sixteen. (A bus was current again on 1924 with nobody logged at the stop;
+whose summons that was the log does not show.) **One prediction was wrong**: "at most one a cell a sweep". Five went
+on one tick from two cells: a guest deleted leaves the next on the cell the head, and the same sweep reaches them.
+Two guests were first seen in `0x15` one cell east of a stop cell, 37 on (44,5) on 1135 and 32 on (44,3) on 1237,
+and each walked on to a cell of the pair on the next sweeps. Why their walks ended there is not decoded (the aim is a
+drawn point inside the cell; Q235 asks the same of this side's walk). Guests turned away at the shut gate afterwards
+took the same road.
 
 **OpenTPW** (Q128b): `PeepBehaviour`'s cases for `PickingACellOutside`, `WalkingOutside` and `AtTheBusStop` are the
 three turns above, on `StopCells`; `ParkPeople.MayCrossTheRoad` is `FUN_0051a760`, `LeaverAtTheStop` is
