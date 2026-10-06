@@ -5,11 +5,20 @@
 # Enable once per clone: git config core.hooksPath tools/hooks
 root=$(git rev-parse --show-toplevel) || exit 1
 if ! git diff --cached --quiet -- source; then
-	if git diff --quiet -- docs/STATUS.md; then
-		python3 "$root/tools/status-numbers.py" && git add -- "$root/docs/STATUS.md"
-	else
-		echo "status-numbers: docs/STATUS.md has unstaged changes; its numbers were not refreshed" >&2
-	fi
+	case "$GIT_INDEX_FILE" in
+	*next-index*)
+		# "git commit <path>" commits from a copy of the index. Staging STATUS.md here would leave the real index
+		# behind it, so this only says what to do.
+		python3 "$root/tools/status-numbers.py" --check >&2 || echo "status-numbers: run tools/status-numbers.py and commit docs/STATUS.md" >&2
+		;;
+	*)
+		if git diff --quiet -- docs/STATUS.md; then
+			python3 "$root/tools/status-numbers.py" && git add -- "$root/docs/STATUS.md"
+		else
+			echo "status-numbers: docs/STATUS.md has unstaged changes; its numbers were not refreshed" >&2
+		fi
+		;;
+	esac
 fi
 git diff --cached --quiet -- docs/QUEUE.md && exit 0
 if ! git diff --quiet -- docs/QUEUE.md docs/history/queue-done.md; then

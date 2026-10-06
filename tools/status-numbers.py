@@ -2,7 +2,10 @@
 """Count two numbers from the source and write them into the "Numbers" table of docs/STATUS.md.
 
   Opcodes      how many members of the Opcode enum RideScript.cs has a `case Opcode.` label for, of how many there are
-  Known gaps   how many different names the source passes to Unimplemented.Report( "NAME" ), outside the tests
+  Known gaps   how many different names the source passes to Unimplemented.Report( "NAME" ), outside the tests.
+               Only a call whose argument starts with a plain string is counted. A name chosen by a `?:` or a
+               switch, held in a variable, or built with $"..." is not, so the true number is a little higher;
+               the website says so beside the figure.
 
 The website's Ride Status page reads these two rows, so they are counted, never typed. Run from anywhere in the repo;
 the pre-commit hook (tools/hooks/pre-commit) runs it when a commit changes source. A row is rewritten, with today's
@@ -40,7 +43,9 @@ rows = {
 }
 
 lines = read( 'docs', 'STATUS.md' ).split( '\n' )
-start = next( i for i, line in enumerate( lines ) if line.startswith( '## Numbers' ) )
+start = next( ( i for i, line in enumerate( lines ) if line.startswith( '## Numbers' ) ), None )
+if start is None:
+	sys.exit( 'status-numbers: docs/STATUS.md has no "## Numbers" heading; nothing was written' )
 end = next( ( i for i in range( start + 1, len( lines ) ) if lines[i].startswith( '## ' ) ), len( lines ) )
 changed = []
 
