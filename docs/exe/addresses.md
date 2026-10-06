@@ -340,6 +340,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004cf533` | Arrival manager's tail, the arm with nobody at the stop (`FUN_0051a9d0` nought): lets the vehicle go at state 4 alone | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004cf56b` | Arrival manager, vehicle at 2: `JLE` on `mPeopleOnBus`; at nought or below the load is let go (`FUN_0041a960` re-marks `mTimeSig`, the flag cleared) | OpenTPW.Tests/ParkPeopleTests.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004cf594` | Arrival manager: after dropping a guest, on to the tail at `0x004cf4b6`; the load is not let go on the drop's sweep | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x004cf745` | Guest maker FUN_004cf720: FUN_004d8650 asked for stop B (argument 1) on both arms | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x004cf75c` | FUN_004cf720: 0x100, two rows, off the packed cell while FUN_0051aad0 reports a vehicle other than the small crowd's | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004cf81a` | Bank constructor FUN_004cf7c0: mWithdrawalsEnabled +0x114 = 1; mLastBalance, mTurnEnteredRed, mProfitThisYear nought before it | OpenTPW.Tests/ParkBankTests.cs  |
 | `0x004d01f3` | `FUN_004d01f0`, the bank's withdrawal: nothing at all while `mWithdrawalsEnabled` (`+0x114`) is nought | OpenTPW.Tests/ParkBankTests.cs  |
 | `0x004d0205` | Withdrawal FUN_004d01f0: mBalance +0xc less the amount, from | OpenTPW.Tests/ParkBankTests.cs  |

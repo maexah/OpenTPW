@@ -943,6 +943,23 @@ public sealed class ParkPeople : Entity
 	internal static int VehicleFor( int people )
 		=> people < 36 ? 1 : people > 60 ? 3 : 2;
 
+	/// <summary>
+	/// The cell a guest of this load is made on - <c>FUN_004cf720</c>. Every one is made at the second bus stop
+	/// (<c>FUN_004d8650( 1 )</c>, <c>0x004cf745</c>), and two rows nearer the map's edge while a vehicle other than
+	/// the small crowd's stands (<c>FUN_0051aad0</c>: the current vehicle is not <c>mArrivalVehicle_Size1</c>'s; the
+	/// packed id less <c>0x100</c>, <c>0x004cf75c</c>): (53,5) for a bus load in Lost Kingdom, (53,3) for a larger one.
+	/// The first stop is never an arrival's (<c>docs/exe/park.md</c>, "Arrivals"). No vehicle current is the bus's
+	/// answer, as the original's test reads it.
+	/// </summary>
+	/// <remarks>
+	/// The original asks which vehicle is CURRENT, and a current vehicle is reused whatever size the load asked for
+	/// (<c>FUN_0051a2f0</c>, <c>0x0051a314</c>), so a load of one can be dropped two rows out by a larger vehicle still
+	/// standing. Here the vehicle is the one the load's size names (<see cref="VehicleFor"/>), which is the same
+	/// until a vehicle outlives its load: the leavers' summons (<c>docs/QUEUE.md</c> Q128b) and the headcount (Q26).
+	/// </remarks>
+	internal static (int X, int Y) ArrivalCell( (int X, int Y) stopB, int vehicle )
+		=> vehicle is 2 or 3 ? (stopB.X, stopB.Y - 2) : stopB;
+
 	/// <summary>The variable a vehicle's script reports itself through, as its own file declares it.</summary>
 	private const string VehicleState = "VAR_STATUS";
 
@@ -1293,10 +1310,10 @@ public sealed class ParkPeople : Entity
 	/// <see cref="MostPeopleInAPark"/>, the original still calls a load, of nobody or of what fits
 	/// (<c>FUN_004cf5b0</c>), and its vehicle still comes and restarts the wait; here neither calls a load, and world
 	/// state 4 stops a load already held. Lost Kingdom reaches neither: it is saved in world state 0 with 13 guests.
-	/// Where each guest is made is Q127's.
+	/// Where each guest is made is <see cref="ArrivalCell"/>.
 	/// </para>
 	/// </summary>
-	private void StepArrivals( int thingTick )
+	private void StepArrivals()
 	{
 		if ( _blocked == null || _behaviour.Park is not { } park )
 			return;
@@ -1338,15 +1355,7 @@ public sealed class ParkPeople : Entity
 
 		if ( _arrivalsRemaining > 0 )
 		{
-			var useA = (thingTick & 1) == 0;
-			var stopX = 42;
-			var stopY = 5;
-
-			if ( _behaviour.Admission is { } admission )
-			{
-				stopX = useA ? admission.BusStopA.X : admission.BusStopB.X;
-				stopY = useA ? admission.BusStopA.Y : admission.BusStopB.Y;
-			}
+			var (stopX, stopY) = ArrivalCell( _behaviour.Admission?.BusStopB ?? (53, 5), _arrivalVehicle );
 
 			// A stop that will not take one ends the load rather than retrying it for ever.
 			if ( Admit( stopX, stopY ) == 0 )
@@ -1860,7 +1869,7 @@ public sealed class ParkPeople : Entity
 					Depart( _peeps[at].ThingId );
 			}
 
-			StepArrivals( thingTick );
+			StepArrivals();
 
 			// After the load, and on every sweep rather than only while one is running - the original
 			// reaches its own tail the same way, from every arm above. Without this the vehicle is

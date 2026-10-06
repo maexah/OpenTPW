@@ -38,11 +38,6 @@ the original.
 
 ## A. Bugs first
 
-- [ ] **Q127. A new guest is made at each stop in turn, where the original makes every one at stop B.** Found by
-  Q68's decode (`park.md`, "Arrivals"). `FUN_004cf720` always asks `FUN_004d8650` for `BusStopB` (`0x004cf745`) and,
-  while `FUN_0051aad0` reports a vehicle standing, takes two rows off the packed id (`0x004cf75c`): (53,3) in Lost
-  Kingdom. `ParkPeople.StepArrivals` alternates `BusStopA` and `BusStopB` by the tick's parity, which nothing cites.
-  Decode `FUN_0051aad0` first, then build it. Confirm: the `arrived at` log lines of a timed run, and a screenshot.
 - [ ] **Q128. A guest going home stops at the park's edge: the stop's cells are now proven.** Found by Q68's decode.
   `PickingACellOutside` (19) and `AtTheBusStop` (21) walk to cells from `FUN_004d8650`, and `PeepBehaviour` leaves
   both unbuilt; `ParkPeople` treats 19 as the end of the walk and starts a new guest `AtGate`. The slot table proves

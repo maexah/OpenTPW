@@ -922,9 +922,9 @@ public static class DebugConsole
 				Reply( ParkPeople.Current is { } timer ? timer.ArrivalCensus() : "arrivals: none - a park has to be loaded" );
 				break;
 
-			// Puts one new guest at the bus stop, which is what an arrival does - the original makes one
-			// per thing tick while a vehicle unloads. Driven by hand here so an arrival can be made on demand,
-			// at any cell.
+			// Puts one new guest at a cell, the first bus stop unless one is named. An arrival's own cell is the
+			// second stop (ParkPeople.ArrivalCell) - the original makes one per thing tick there while a vehicle
+			// unloads. Driven by hand here so a guest can be made on demand, at any cell.
 			case "arrive":
 				if ( ParkPeople.Current is not { } arrivals )
 				{
@@ -932,7 +932,7 @@ public static class DebugConsole
 					break;
 				}
 
-				// BusStopA, which Standard.sam puts at (42,5).
+				// BusStopA, which Standard.sam puts at (42,5): the stop guests leave from.
 				var arrivedAt = arrivals.Admit( (int)Argument( 1, 42 ), (int)Argument( 2, 5 ) );
 
 				Reply( arrivedAt == 0

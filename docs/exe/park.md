@@ -1625,8 +1625,17 @@ first: the first load called on `mGameTick` **1264**, 509 sweeps after 755 and 1
 (126.23 predicted); its guest dropped on 1300, the bus having driven in; the load let go on **1301**; the next called
 on **1904**, 604 sweeps after the drop and 149.54 s after the let-go; that one dropped on 1904 and let go on 1905.
 
-What it does not reproduce, each said at its site: the headcount, the floor alone (Q26); where each guest is made,
-stop A and stop B in turn (Q127); the two refusals, in world state 4 and at the cap, where the original calls a load
+Where each guest is made is the original's (Q127): `ParkPeople.ArrivalCell`, stop B, and two rows out for a vehicle
+other than the bus. Measured: the original's first load, thirteen guests on `mGameTick` 1300 to 1312, each first seen
+on (53,5) with the current vehicle the small crowd's (`+0x1da72a` and `+0x1da72c` both 15); OpenTPW's first load, one
+guest, (53,5), a bus load of six by hand all (53,5), and forty by the second vehicle all (53,3), which the original
+was not made to send. **Not the original's in two ways**: the original asks which vehicle is current, and a current
+vehicle is reused whatever size the load asked for (`0x0051a314`), where the vehicle here is the one the load's size
+names, the same until a vehicle outlives its load (the leavers' summons, Q128b; the headcount, Q26); and when the
+wanted feature is missing `FUN_0051a2f0` falls back through the ferry, the seaplane and the bus, where a vehicle with
+no script here still has its guests made at the wanted vehicle's cell.
+
+What it does not reproduce, each said at its site: the headcount, the floor alone (Q26); the two refusals, in world state 4 and at the cap, where the original calls a load
 of nobody or of what fits and still sends its vehicle (neither reached in Lost Kingdom); a load saved half-dropped,
 counted as `SAVED_ARRIVAL_LOAD` and not resumed; guests made with no script to ask, on the sweep that calls the load;
 and the spent vehicle, which is sent round again and waits at the stop (Q131), which is why the second load above

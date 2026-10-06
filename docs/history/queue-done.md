@@ -4733,6 +4733,14 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Done 2026-10-06: `ParkPeople.SweepsAFrame`, counted and dropped in `OnUpdate`. The game stopped 2.5 s, three
   times: the log's "3 run and 5 dropped in a frame of 64 ticks", `mGameTick` `+5`, `+5`, `+6` half a second on (the
   unchanged build `+10`, `+11`, `+10`); the original's, read from memory, `+5`, `+5`, `+5`. Six restored bugs each fail.
+- [x] **Q127. A new guest is made at each stop in turn, where the original makes every one at stop B.** Found by
+  Q68's decode (`park.md`, "Arrivals"). `FUN_004cf720` always asks `FUN_004d8650` for `BusStopB` (`0x004cf745`) and,
+  while `FUN_0051aad0` reports a vehicle standing, takes two rows off the packed id (`0x004cf75c`): (53,3) in Lost
+  Kingdom. `ParkPeople.StepArrivals` alternates `BusStopA` and `BusStopB` by the tick's parity, which nothing cites.
+  Decode `FUN_0051aad0` first, then build it. Confirm: the `arrived at` log lines of a timed run, and a screenshot.
+  Done 2026-10-06: `FUN_0051aad0` is "a vehicle is current and it is not the small crowd's". `ParkPeople.ArrivalCell`:
+  the timed first load's guest at (53,5), `load 6` six at (53,5), `load 40` forty at (53,3) (the unchanged build
+  half at each stop). The original's first load, thirteen guests, each first seen on (53,5). Six restored bugs fail.
 
 ## B. Docs and comments
 
