@@ -1418,6 +1418,48 @@ nought or less from any state, is gone. Read with it, first-hand:
   nought with no destination. OpenTPW writes the nought on all three and still aims the first two at a bus stop
   (Q128).
 
+**Q128: from the crossing to the stop, and out.** Decoded first-hand and run in the original; nothing of it is built
+(Q128b). A leaver's four cells are **stop A's**: `FUN_004d8650( 0 )`, `FixedItemInfo.BusStopA`, then one across
+(`+1`), two rows out (`-0x100`) and both (`-0xff`): in Lost Kingdom (42,5), (43,5), (42,3), (43,3). Stop B is never a
+leaver's. The first pair is the bus's and the second a larger vehicle's, by `FUN_0051aad0` (a vehicle current and not
+`mArrivalVehicle_Size1`'s).
+
+| State | Turn | What it does |
+|---|---|---|
+| `0x12` | `FUN_00500a50` | the walk to the crossing done (`FUN_004fa2a0` 0): state `0x13`; stuck (2): back to deciding ("Q109", above) |
+| `0x13` | `FUN_00500ad0` | **waits at the crossing until `FUN_0051a760` answers 1**; then the cell `[draw & 3]` of the four, two more draws for where on it, the walk (`FUN_004fa5f0`), state `0x14` |
+| `0x14` | case `0x14` of `FUN_005019f0` | the walk done: the facing `+0x1c` = `0x7ff` if `FUN_0051aad0`, else `0x400`, and state `0x15`; stuck: "Got stuck walking around outside", logged to the bare `RET`, and nothing else |
+| `0x15` | `FUN_00500bd0` | by the vehicle's status (`FUN_0051a690`). **4**: if the guest is the head of their cell's list (the word at cell `* 0x44 - 0x20` from `[0x008023a0]` is their id), particle `0x13` at them (`FUN_004fa470`) and the guest is deleted (`FUN_0050b780`). **1, 2 or 3**: if they are on neither cell of the current vehicle's pair, a walk to one of the pair (`draw & 1`) and state `0x14` again. Anything else, the vehicle away included: they stand |
+
+**`FUN_0051a760`, may a leaver set off:** yes with no vehicle current, or one that is not the small crowd's. With
+the bus current: its status 6 clears the current vehicle (as `FUN_0051a690` does) and reads as none; status 3, no;
+then yes if more than nine of the load are still to drop (the manager block's `+0xc`, world `+0x2d0`); status 1, no;
+status 2, no; else yes. So leavers stand at the crossing while the bus drives in, unloads and moves on.
+
+**The vehicle's side is the arrival manager's tail**, every sweep (`FUN_004cf3e0`, `0x004cf4b6` on).
+`FUN_0051a9d0` answers whether any of the four cells' head is a guest in state `0x15`. Nobody waiting and the vehicle
+at status 4: `FUN_0051a2f0( 0 )`, which with a vehicle current sets its script's variable 0, `VAR_TRIGGER`, to 1
+(`0x0051a5ed`), so it drives off. Somebody waiting: with no vehicle (-1), `FUN_0051a2f0( 0 )` summons one **at random**
+of the three (`park.md`, "Arrivals"); at status 0, or at 2 with the load all dropped, the same call nudges it on.
+`bus.RSE` gives the statuses their meaning: 1 driving in, 2 standing at the arrivals' stop until triggered, 3 moving
+on, **4 standing for the leavers until triggered**, 0 then 5 driving off, 6 spent and waiting for a trigger (Q131).
+
+**In the original**, predicted first, the park shut with the entry-price screen's door and every guest watched from
+memory for 300 s (`leavers.py`): nine guests stood in `0x13` on (47,9) and (48,9) from `mGameTick` 1152 and all set off
+on 1191, as the bus's three earlier leavers went from (42,5) and (43,5); the first to stand in `0x15` with no vehicle
+current (1237) had one summoned on the next sweep, and it was not the bus (thing 38 against size 1's 15); guests who
+had reached (42,5) or (43,5) went `0x15`, `0x14`, `0x15` and ended on (42,3) or (43,3); ten went from those two cells
+on ticks 1356 to 1358; later a bus (15) took two from (42,5) and (43,5). Every guest that went, went from `0x15` on a
+cell of the current vehicle's pair: sixteen of sixteen. **One prediction was wrong**: "at most one a cell a sweep".
+Five went on one tick from two cells: a guest deleted leaves the next on the cell the head, and the same sweep
+reaches them. One guest was first seen in `0x15` on (44,3), a cell of none of the pairs, and walked on to (43,3): the
+walk's end is drawn inside the cell and can stand over its edge. Guests turned away at the shut gate afterwards took
+the same road.
+
+**OpenTPW** takes a leaver out on reaching `0x13` at the crossing, four rows short (`ParkPeople`); the gate's two
+leavers aim at either bus stop (`PeepBehaviour.Judge`, `Wait`), where the listing sends them to the crossing first.
+The build is Q128b.
+
 **Q111: the arms either side of the leave test are counted**, none built, the listing re-read first-hand
 (`0x004fecb9`..`0x004ff3ae`; the corrections are in the list above). `PeepBehaviour.CountBeforeLeaving` counts
 `DECIDE_HAPPY_SPOT_ANIMATION`, `DECIDE_VOMIT` and, for litter, `DECIDE_LITTER_BIN_ERRAND` with a `HoldsLitter` thing

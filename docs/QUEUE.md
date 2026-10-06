@@ -38,16 +38,17 @@ the original.
 
 ## A. Bugs first
 
-- [ ] **Q128. A guest going home stops at the park's edge: the stop's cells are now proven.** Found by Q68's decode.
-  `PickingACellOutside` (19) and `AtTheBusStop` (21) walk to cells from `FUN_004d8650`, and `PeepBehaviour` leaves
-  both unbuilt; `ParkPeople` treats 19 as the end of the walk and starts a new guest `AtGate`. The slot table proves
-  the pair is `FixedItemInfo.BusStopA/B` (`park.md`, "Arrivals"), and both files say so. Check the two states' decode
-  is whole, then build them and retire what `ParkPeople` says waits on Q128. Confirm: a guest who has decided to leave
-  walks to the stop and is removed there; `peeps` and a screenshot.
-  From Q109: a guest who leaves from inside the park now aims at the crossing's park side, (47,9) or (48,9), as the
-  original's does, and is taken out there on reaching state 19: four rows short of the stop until this is built. The
-  gate's two leavers (`PeepBehaviour.Judge`, `Wait`) still aim at a bus stop, where the listing sends them to the
-  same `FUN_004d86d0` cells (`ride-operation.md`, "Q109"): move them with this build.
+- [ ] **Q128b. Build the leavers' road to the stop.** From Q128 (`ride-operation.md`, "Q128: from the crossing to
+  the stop, and out"). States `0x13`, `0x14` and `0x15` in `PeepBehaviour`: the wait at the crossing on
+  `FUN_0051a760`, the four cells of stop A, the facing, the shuffle to the current vehicle's pair, and the going at
+  status 4 as the head of the cell with particle `0x13`; `ParkPeople` stops taking a guest out at `0x13`. The arrival
+  manager's tail in `StepArrivals`/`StepVehicle`: `FUN_0051a9d0`, the summons at random for a waiting leaver, the
+  trigger at status 4 with nobody waiting and at 0 or a spent 2 with somebody. The current vehicle then outlives its
+  load, so `ArrivalCell` and the gate's hurry must ask which vehicle is current (Q127's remark). Move the gate's two
+  leavers (`Judge`, `Wait`) to the crossing's cells. Q131's spent vehicle is the same machine: read it before
+  building, and build what the two share once. Confirm: the park shut with the door, `peeps` showing guests in 19,
+  20 and 21 on stop A's cells and going from there, beside the original's log in `ride-operation.md`; a screenshot
+  of guests standing at the stop.
 - [ ] **Q129. The crowd sets the music's level every frame, where the original sets it once a second.** Found by Q68's
   review. The park loop reaches `FUN_0051e790` only on every 32nd tick (`TEST [0x00877d34],0x1f`, `0x0054f82d`) and
   clamps the crowd's level, half its count, to 89 before it (`0x0054f84e`), which binds from 180 guests; the park holds 1,500.

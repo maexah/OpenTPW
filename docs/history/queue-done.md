@@ -4741,6 +4741,14 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Done 2026-10-06: `FUN_0051aad0` is "a vehicle is current and it is not the small crowd's". `ParkPeople.ArrivalCell`:
   the timed first load's guest at (53,5), `load 6` six at (53,5), `load 40` forty at (53,3) (the unchanged build
   half at each stop). The original's first load, thirteen guests, each first seen on (53,5). Six restored bugs fail.
+- [x] **Q128. A guest going home stops at the park's edge: the stop's cells are now proven.** Found by Q68's decode.
+  `PickingACellOutside` (19) and `AtTheBusStop` (21) walk to cells from `FUN_004d8650`, and `PeepBehaviour` leaves
+  both unbuilt; `ParkPeople` treats 19 as the end of the walk. Check the two states' decode is whole, then build them.
+  Done 2026-10-06, the decode only (the build is Q128b): the four cells are stop A's, a pair for the bus and a pair
+  two rows out for a larger vehicle; a leaver waits at the crossing while the bus loads (`FUN_0051a760`), stands at
+  the stop until the vehicle's status is 4, and goes only as the head of their cell; the manager's tail summons a
+  vehicle for them and sends it on when nobody waits. In the original, the park shut and 300 s watched: sixteen of
+  sixteen went from `0x15` on a cell of the current vehicle's pair. `ride-operation.md`, "Q128".
 
 ## B. Docs and comments
 
