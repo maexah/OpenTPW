@@ -285,6 +285,15 @@ public sealed class ParkStaffPool
 	/// pointless until something depends on the sequence, and a repeatable pool is what lets a harness
 	/// predict a wage before reading it.
 	/// </param>
+	/// <summary>
+	/// The pool's turn, once a thing sweep - the original's <c>FUN_005084f0</c>, which <c>FUN_004d7b20</c> calls on
+	/// every sweep (<c>0x004d7b30</c>). It drops each candidate older than four times its own lifetime in sweeps, and
+	/// every <c>TimeBetweenStaffUpdates</c> times four sweeps tops the pool up by at most
+	/// <c>MaxNumberOfStaffPerUpdate</c> (<c>docs/exe/park-engine.md</c>, "The staff pool's refresh"). <b>Unbuilt and
+	/// counted</b>: the pool here is the opening one for good (<c>docs/QUEUE.md</c> Q130b).
+	/// </summary>
+	internal void Sweep() => Unimplemented.Report( "STAFF_POOL_REFRESH" );
+
 	public ParkStaffPool( ParkBalance? balance, int seed = 20260920 )
 	{
 		_balance = balance;

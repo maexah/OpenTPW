@@ -361,6 +361,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004d655d` | `FUN_004d6410`: the guard's walk-or-stay, `mGameTick & 3` | OpenTPW.Tests/ParkStaffBehaviourTests.cs OpenTPW/World/Park/StaffBehaviour.cs  |
 | `0x004d72f7` | | OpenTPW/World/Park/StaffBehaviour.cs  |
 | `0x004d7b29` | `FUN_004d7b20`: the arrival manager's one call, through its thunk, once a thing sweep | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x004d7b30` | Sweep tail FUN_004d7b20: the staff pool's turn FUN_005084f0, after the arrival manager | OpenTPW.Tests/ParkSweepCapTests.cs OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/ParkStaffPool.cs  |
 | `0x004d8a37` | Edge test FUN_004d8750: CMP ESI,1, mode 1's clause letting a step leave a path for a cell not path, queue or footprint | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004d8b8f` | FUN_004d8b40, a route's length: -1 when FUN_00511ef0 answers 0x70000000 | OpenTPW/World/Park/CellSearch.cs  |
 | `0x004d8ba0` | FUN_004d8b40: | OpenTPW/World/Park/CellSearch.cs  |

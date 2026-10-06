@@ -1927,6 +1927,9 @@ public sealed class ParkPeople : Entity
 			// released once and parks at the next of its three spins for ever.
 			StepVehicle();
 
+			// The staff pool's turn follows the arrival manager's in the sweep's tail (0x004d7b30).
+			ParkStaffPool.Current?.Sweep();
+
 			TakeTheRidesTurns( thingTick );
 			RetryGateClose();
 		}

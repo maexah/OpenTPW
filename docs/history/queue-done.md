@@ -4821,6 +4821,20 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   tick). In Lost Kingdom: level 6 with thirteen guests, 20 sets in 646 ticks; `load 190`, the level 89 from 179
   guests and still 89 at 203 (the unchanged build: every frame, 96 and 100). Nine restored bugs each fail. Not
   measured in the original (the level is inside the sound library's voice).
+- [x] **Q130. The staff pool never refreshes, and nothing counts it. Decode first.** Found by Q68's review. Every
+  sweep the original runs `FUN_005084f0` (`0x004d7b30`), which drops a candidate left in the pool longer than
+  `StaffTimeoutTime` plus up to half again, and every `TimeBetweenStaffUpdates` tops the pool up by at most
+  `MaxNumberOfStaffPerUpdate`, both keys counted in fours of sweeps, as the arrival timer's is (`FUN_0041a970`
+  against the key times four, `0x0050850f`, `0x00508549`; the lifetime drawn at `0x005077b9`).
+  `ParkStaffPool` fills the opening pool only and reads none of the three keys, and no `Unimplemented.Report` says so
+  (`CLAUDE.md` rule 4). Count it now; decode the refresh (`FUN_005084f0`, `FUN_00507600`), then build it on Q68b's
+  counter. Confirm: the hire screen's candidates over a timed run, a screenshot before and after a refresh.
+  Done 2026-10-06, the decode and the count (the build is Q130b): `FUN_005084f0` drops a candidate older than four
+  times its lifetime in sweeps and tops the pool up every `TimeBetweenStaffUpdates * 4` sweeps by at most
+  `MaxNumberOfStaffPerUpdate`, weighted by what each kind wants, then makes up the minimums. In the original, the
+  pool read from memory for 240 s: 24 of 24 went on the first sweep past four times their lifetime, and the pool was
+  topped up by ten on `mGameTick` 1083 and 1444, 361 apart. `ParkStaffPool.Sweep` counts the turn
+  (`STAFF_POOL_REFRESH`). `park-engine.md`, "The staff pool's refresh".
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

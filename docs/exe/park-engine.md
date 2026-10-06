@@ -1984,6 +1984,45 @@ click**, even one whose allocation failed; every other ending returns them. Whil
 expire (`FUN_005084f0` skips a taken record), and a hire list built then still shows them
 (`FUN_0049b5b0` never reads `+0xb`).
 
+**The staff pool's refresh** (Q130, decoded first-hand and run in the original; the build is Q130b). The pool is
+32 records of `0x14` bytes at the very start of the world object: `+0` the kind, `+4` the name's row, `+8` the grade,
+`+9` the costume, `+0xa` occupied, `+0xb` taken into the hand, `+0xc` the `mGameTick` it was made on, `+0x10` its
+lifetime; the pool's own mark is at world `+0x294`. `FUN_005084f0` runs on every thing sweep, from the sweep's tail
+after the arrival manager (`0x004d7b30`):
+
+1. **Each record that is occupied, not taken, and older than four times its lifetime in sweeps is dropped**
+   (`mGameTick - mark > lifetime * 4`, unsigned, through `FUN_0041a970`), and its hire-list row with it
+   (`FUN_00481550`).
+2. **When the pool's mark is more than `TimeBetweenStaffUpdates * 4` sweeps old it is topped up.** The budget is
+   `MaxNumberOfStaffPerUpdate`, or the free slots if fewer. `FUN_00508000` counts the staff in the park by kind and
+   marks a kind full at `Max<Kind>InPark`. Each kind then wants `Max<Kind>` less its candidates in the pool, nought
+   when it is full; while the budget and the total wanted last, one draw of the world's generator modulo the total
+   picks a kind by those weights, the first free slot takes a new candidate of it (`FUN_00507600`), and that kind's
+   want and the total go down one. Then `FUN_00508170` makes up the minimums: for the mechanics, the handymen, the
+   entertainers, the guards and the researchers in that order, round and round until none is short, a kind whose
+   staff in the park plus candidates in the pool is under `Min<Kind>InPool` gets one more. Last, the pool's mark is
+   set to this sweep.
+
+`FUN_00507600( kind, slot )` makes a candidate: the costume from `FUN_00541f70`, two draws of which the second, modulo
+3, plus `AvgGradeOf<Kind>` less one is the grade, held to 4; a name (`FUN_00507580`, a draw modulo 35, drawn again up
+to fifteen times while `FUN_005083f0` finds it in use); occupied; the hire list told; the mark; and the lifetime, a
+draw modulo half `StaffTimeoutTime` plus `StaffTimeoutTime`. The keys are the `StaffPoolInfo` block, in the order the
+balance file lists them, four bytes each from `0x00785284`: `AvgGradeOf` at `0x00785298`, `Max<Kind>` at `0x007852c0`,
+`Min<Kind>InPool` at `0x007852d4`, `Max<Kind>InPark` at `0x007852e8`, `TimeBetweenStaffUpdates` at `0x00785304`,
+`MaxNumberOfStaffPerUpdate` at `0x00785308`, `StaffTimeoutTime` at `0x0078530c`.
+
+**In the original**, predicted first, the pool read from memory every 100 ms for 240 s (`pool.py`). The keys as
+Lost Kingdom's Instant Action loads them: 90, 10 and 120; `Max` 6, 5, 6, 4, 3; `Min` 1, 1, 1, 1, 0; in the park 30,
+15, 30, 15, 6. The park's save holds a pool of fourteen, made on `mGameTick` 361 and 722, its mark 722. **Twenty-four
+of twenty-four candidates went on the first sweep past four times their lifetime** (one of lifetime 141 made on 361
+went on 926, 565 sweeps old), their lifetimes 126 to 176. **The pool was topped up on `mGameTick` 1083 and 1444, 361
+sweeps apart, by ten each time**, no kind past its `Max`. Not seen: a kind full in the park, the minimums' pass
+adding one, a candidate in the hand outliving its time.
+
+**OpenTPW** rolls an opening pool of `BeginningNumberOf<Kind>` each and keeps it for good; `ParkStaffPool.Sweep`
+counts the turn it does not take (`STAFF_POOL_REFRESH`). It does not read the save's pool either: Lost Kingdom's
+fourteen, with their marks and lifetimes, are in the file.
+
 **Every way out without a drop returns the candidate**: a quick right click with RMB cancel on, which is
 the default (`0x0048842b` installs the idle mode whatever the current one is); Escape (`0x0040c180`),
 unless the staff/visitor locator is open (`DAT_007cc2f0`), which it closes instead, and the menu does not open; the extended
