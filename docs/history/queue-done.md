@@ -4602,6 +4602,17 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   no other window has it. In the original, the grid read from memory with each row hovered, predicted first, 4 of 4
   (Aztec Mayhem row 0 `1 2 3 1`), and the block 38.5 px for four cells of 6 game pixels. `park-engine.md`, "The buy
   screen's footprint picture". Q233b is the build.
+- [x] **Q233b. Build the buy screen's footprint picture.** Done 2026-10-06. `ParkFootprintPicture` is control `0x1eb`
+  in the buy screen's panel: the row's `Info.Shape` cells, an eighth of the control each, row 0 at the bottom, blue,
+  green the entrance, brown the exit, at the 8/15 the original's frames read; cleared for the land rows and a mystery
+  ride; shown more than 500 ms after the pointer moves onto a row, which selects it as the list's flag `0x80` does
+  (`FUN_006656a0`, new in the decode). In Lost Kingdom, real pointer moves, **12 of 12 predicted** on the second run:
+  Aztec Mayhem row 0 `1 2 3 1`, block (366,225)-(402,261) in a 1280 by 720 window, a cell 9 by 9; Crazy Ape's exit in
+  row 3; Staff Room 2 by 2; Buy Land nothing; the unchanged build paints none. Beside the original's frames the blocks
+  agree to a pixel of its 640 by 480 screen. Found on the way and fixed: the panel's `!frame` was drawn in the stats
+  panel's shape (`hud.md`, "A frame worn at two sizes"). **The turning model was not put in the panel, and Alexah was
+  not asked** (the session ran unattended): it stays Q158's. Nine tests new; thirty-three restored bugs each fail. `park-engine.md`, "The buy
+  screen's footprint picture".
 
 ## B. Docs and comments
 

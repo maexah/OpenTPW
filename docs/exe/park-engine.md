@@ -2514,10 +2514,43 @@ scaled 1.6 to 1024 x 768: the Aztec Mayhem's block 38.5 wide and high (4 cells o
 220.7 and its lowest at 278.4, where the arithmetic gives 220.0 and 278.9; the Staff Room's 19.2 wide. Blue reads
 (8,89,140), green (0,117,25) and brown (115,53,0) on the panel's black: about half strength.
 
-Not established: what `FUN_005f9a80`'s fifth byte (nought here) and the surface's pixel format do with the alpha
-beyond the half strength measured over black; whether the picture or the model is in front where they overlap (no
-frame shows them overlapping); a shape with `.` or `+` cells, which no row of the reference park's buy list has.
-OpenTPW paints none of it: the buy screen's panel is empty (Q158).
+**The picture is in front of the model, and lets it through.** In the Aztec Mayhem's frame the corner of the model's
+grass plate lies under the block's upper right, and reads there as the plate's green under the blue: the picture is
+drawn over the model at part strength, as the depth words say (the control's plus 12 against the panel's plus 10).
+
+**The strength.** The nine colour channels measured over black each read 8/15 of the fill's byte, not a half:
+`0xdc` 117 (a half is 110), `0xff` 140 on a 16-bit screen (136; a half is 128), `0xaa` 89, `0x64` 53, `0x32` 25. So
+the alpha byte `0x80` reaches the screen as 8/15, which is what a surface with four bits of alpha would give.
+
+**What chooses the row.** The buy list carries the list flag `0x80`, and under it the list's proc answers the
+pointer's move (`0x10001`, and `0x10003`) through `FUN_006656a0`: the row under the pointer is selected with no press,
+which posts `0x401` when the row changes (`hud.md`, "The pointer over a list"). So a row is shown by resting the
+pointer on it, and the add's selection of the first row (`docs/QUEUE.md` Q232) shows the top row half a second after
+the list is filled.
+
+**OpenTPW** (Q233b): `ParkFootprintPicture` is control `0x1eb`, a child of the panel; its `Grid` is `FUN_0052c5b0`
+and its `Squares` the paint's arithmetic, on a surface the control's rectangle in whole pixels, drawn at 8/15.
+`ParkBuyScreen.RowSelected` and `Update` keep the waiting row and show it after more than 500 ms;
+`UiList.SelectsUnderPointer` is the flag, set on the buy list, and `WindowStack` sends the move. It differs in three
+ways, each said at its site: the wait reads the frame clock where the original's reads wall time (Q123); no row is
+selected as the list fills, so the panel stays empty until the pointer has been over a row (Q232); and the hire
+list, which carries the flag too, does not set it. The model and the name row `0x1ec` are not in the panel (Q158).
+The console's `footprint` prints the row shown, the row waiting, the cells and the block's place.
+
+**Confirmed in Lost Kingdom** (2026-10-06, a 1280 by 720 window, the pointer moved by XTEST, each number predicted
+first, 12 of 12 on the second run): the pointer on the Aztec Mayhem's row, read at once, the row waiting 174 ms and
+the row before still shown; 0.9 s on, 4 by 4, row 0 `1 2 3 1`, the surface (366,190) 72 by 72, a cell 9 by 9, the
+block (366,225)-(402,261); the Crazy Ape's exit in row 3; the Staff Room 2 by 2, its block (366,243)-(384,261);
+Buy Land, nothing; a row crossed in 0.15 s was shown 500 ms later though the pointer had left it. In the frames
+every cell's middle reads its colour at 8/15 over black, blue (16,91,136). Beside the original's three frames, on
+the 2048 by 1536 layout: the original's blocks stand at (442,480)-(518,556) and (442,520)-(480,556), ours at
+(439.5,480)-(516.3,556.8) and (439.5,518.4)-(477.9,556.8), a pixel of the original's 640 by 480 screen apart. The
+first run's colours were not as predicted: the panel's frame was drawn in the stats panel's shape, so the picture
+stood on the screen's green (`hud.md`, "A frame worn at two sizes").
+
+Not established: what `FUN_005f9a80`'s fifth byte (nought here) does, and the surface's pixel format, which the
+8/15 suggests and no listing gives; a shape with `.` or `+` cells, which no row of the reference park's buy list
+has; what the list's `+0x11c`, which must be nought for the move to select, holds; the message `0x10003`.
 
 ### Every diagnostic string goes to a bare `RET`
 

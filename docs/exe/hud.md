@@ -928,6 +928,27 @@ right-click a row, `0x404` column hit, `0x405` visible range changed. By this pr
 are dead by CONTENT, not by CODE. The all-staff, visitors and all-items screens do answer `0x402`: the camera goes to
 the row's thing and the screen closes (`park-engine.md`, "The camera goes to a thing").
 
+### The pointer over a list
+
+Under the list flag `0x80` the proc `FUN_00665c35` answers the pointer's move, `0x10001`, and `0x10003`, through
+**`FUN_006656a0`**: when the list's `+0x11c` is nought and the point is inside the control's region (`+0x2c`), it
+hands the point to `FUN_0066552e`, the same row test the clicks use. So the row under a moving pointer is selected
+with no press, `FUN_0066525c` posts `0x401` when that changes the selected row, and a point over no row leaves the
+selection where it was. The buy and hire lists carry the flag, as the five list trees below do. What `+0x11c` holds
+and what sends `0x10003` are not traced.
+
+**OpenTPW**: `UiList.SelectsUnderPointer` and `PointerMoved`; `WindowStack` sends the move to the control under the
+pointer on a frame the pointer moved. Only the buy list sets the flag (Q233b); the others' rows are selected by a
+press alone.
+
+### A frame worn at two sizes
+
+A `!` mesh is a nine-slice frame grown to its control's size (`0x00477310`). `UiMesh` kept one set of vertices for
+each frame part and re-wrote it for whichever control drew next, so two controls of different sizes wearing the same
+frame on one screen were both drawn with the last size written: the buy screen's description panel, 414 by 414, was
+drawn 712 by 281, the stats panel's shape, squeezed into its own rectangle's corner. Each size now has vertices of
+its own (`UiMesh.Sized`). Photographed before and after (Q233b); no test, as a part needs a graphics device.
+
 ### A right click on a list
 
 The list's proc `FUN_00665c35` answers the message `0x11006`, which carries a button and a point: the left button

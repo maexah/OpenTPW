@@ -314,6 +314,11 @@ internal sealed class WindowStack : Panel
 
 		_glint.Update();
 
+		// The original's move message 0x10001, which goes to the control under the pointer. Sent only on a frame the
+		// pointer moved, so what a list rewrites under a pointer at rest is not chosen until it moves.
+		if ( hit != null && Input.Mouse.Delta != Vector2.Zero )
+			hit.PointerMoved( mouse.X, mouse.Y );
+
 		var mouseDown = Input.Mouse.Left;
 
 		if ( mouseDown && !_mouseWasDown )

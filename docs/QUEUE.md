@@ -38,15 +38,6 @@ the original.
 
 ## A. Bugs first
 
-- [ ] **Q233b. Build the buy screen's footprint picture.** Split from Q233, which decoded it (`park-engine.md`,
-  "The buy screen's footprint picture"). In the buy screen's panel `0x1ea`, control `0x1eb` at (440,407)-(594,561):
-  the row's `Info.Shape` cells a square each, an eighth of the control each way, from its lower left with row 0 at the
-  bottom; blue `1e aa ff` for kinds 4, `0x17` and 1, green `0f dc 32` for the entrance, brown `dc 64 0f` for the exit,
-  at half strength, nothing for the other kinds; cleared for the land rows and a mystery ride; shown 500 ms after the
-  pointer settles on a row. It lives on the buy screen alone, so `ParkObjectPreview` does not draw it; whether the
-  turning model goes into the panel in the same session (Q158, Q188's note there) is Alexah's call, asked first.
-  Confirm: the panel beside the original's for the Aztec Mayhem, the Crazy Ape and the Staff Room, the block's size
-  and each mark's place predicted first, and the cells read in a census.
 - [ ] **Q119. A plain Escape does not close the park screen in front.** Found by Q57's review. In the original the six
   management screens, an object window and the map take the focus as they open (`FUN_00485b70`, `FUN_004862a0`), and
   their key handler answers a plain Escape let go by closing the screen, and nothing more (`FUN_00488ba0`, `0x00488bc6`;
@@ -421,8 +412,8 @@ the original.
   where it is drawn. Confirm: `unimplemented` after opening a ride's window, the entry-price screen and the buy
   screen.
   From Q188: the buy screen's panel is the object window's preview (`ParkObjectPreview`, which wants a placed thing
-  today: give it an item); in the original it is (437,162) 360 by 363, and it also paints the footprint picture (Q233b) at its
-  lower left with every item tried, not decoded (`park-engine.md`, "The object window's preview").
+  today: give it an item); in the original it is (437,162) 360 by 363. The footprint picture at its lower left is
+  built (Q233b) and is drawn in front of the model; the name row `0x1ec` above it is not built.
 - [ ] **Q159. `SdtArchive.GetFile` matches a truncated name the wrong way round.** Found by the 2026-09-26 staleness
   audit. It tests `x.Name.StartsWith( name )`, the stored name against the one asked for. A `.sdt` name field is 16
   bytes and a longer name is cut to fit, so asking for "TP SCREECH 11.mp2", stored as "TP SCREECH 11.m", never
@@ -614,6 +605,10 @@ the original.
   (`LIST_RESELECT_PAST_THE_WINDOW`). Decode which row each of the five lists opens on and what the buy and hire
   lists do, then build it. Confirm: the visitors list opened beside the original's, the highlighted row predicted
   first; a screenshot.
+  From Q233b: the buy list now selects the row under a moving pointer (`UiList.SelectsUnderPointer`, the flag `0x80`);
+  the hire list carries the flag too and does not set it, and the three list screens' trees carry it (`0x291`). With
+  no first row selected, the buy screen's panel stays empty until the pointer has been over a row, where the
+  original's shows the top row half a second after the list fills.
 
 ## B. Docs and comments
 

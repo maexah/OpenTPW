@@ -1669,6 +1669,15 @@ public static class DebugConsole
 				Reply( "buyscreen: opened" );
 				break;
 
+			// What the buy screen's panel shows: the row shown and the row waiting, and the footprint picture's cells
+			// and its block on the window.
+			case "footprint":
+				Reply( Level.Current?.Hud?.Children.OfType<UI.WindowStack>().FirstOrDefault()?.Windows
+					.OfType<UI.ParkBuyScreen>().FirstOrDefault() is { } buying
+						? $"footprint: {buying.PreviewCensus()}"
+						: "footprint: the buy screen is not open" );
+				break;
+
 			// The other half of the same gadget button - the two screens are siblings and reach each
 			// other directly, which is what FUN_004a0940( 1 ) does from a remembered-tab global.
 			case "hirescreen":

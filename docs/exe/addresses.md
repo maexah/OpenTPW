@@ -292,6 +292,12 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004ab023` | | OpenTPW/UI/Park/ParkBuyScreen.cs OpenTPW/World/Park/ParkResearch.cs  |
 | `0x004ab063` | | OpenTPW/UI/Park/ParkBuyScreen.cs  |
 | `0x004ab086` | | OpenTPW/UI/Park/ParkBuyScreen.cs  |
+| `0x004ab386` | Buy screen fill FUN_004ab1b0: the footprint picture's cell, the surface's width and height each over 8 (SAR 3) | OpenTPW/UI/Park/ParkFootprintPicture.cs  |
+| `0x004ab403` | Buy screen fill FUN_004ab1b0: the footprint squares' alpha byte, 0x80 | OpenTPW/UI/Park/ParkFootprintPicture.cs  |
+| `0x004ab4c8` | Buy screen fill FUN_004ab1b0: a land row or a mystery ride clears the footprint surface and paints nothing | OpenTPW/UI/Park/ParkBuyScreen.cs  |
+| `0x004ac42e` | Buy screen handler FUN_004ac270, the frame message 0x1e: a waiting row is shown by FUN_004ab1b0 and cleared | OpenTPW/UI/Park/ParkBuyScreen.cs  |
+| `0x004ac443` | Buy screen handler FUN_004ac270: the waiting row is shown only after more than 500 ms (CMP 0x1f4, JLE) | OpenTPW/UI/Park/ParkBuyScreen.cs  |
+| `0x004aca16` | Buy screen handler FUN_004ac270, message 0x401: a row other than the waiting one is kept as waiting and stamped | OpenTPW/UI/Park/ParkBuyScreen.cs  |
 | `0x004acca0` | Buy screen opener FUN_004acc70: with the screen already up it picks the tab again and returns | OpenTPW.Tests/ParkScreenTests.cs OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x004acd62` | Buy screen FUN_004acc70: UI_LoadTree onto the park's layer 0, not modal | OpenTPW.Tests/ParkHandTests.cs OpenTPW/UI/Park/ParkBuyScreen.cs OpenTPW/UI/UiWindow.cs  |
 | `0x004ad606` | The ride window sets its door down while `mCanLoad` is nought (`Button_SetDown`, from here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
@@ -1334,6 +1340,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x007afd08` | The preview record FUN_004689f0 fills: instance, root matrix, angle, panel, the fit's five floats, the clock | OpenTPW.Tests/ParkObjectPreviewTests.cs OpenTPW/UI/Park/ParkObjectPreview.cs  |
 | `0x007c24c8` | The open park screen's control, nought when none is | OpenTPW/World/Level.cs  |
 | `0x007cb2fc` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
+| `0x007cc1e4` | The buy screen's waiting row, an item id as a word; nought is none | OpenTPW/UI/Park/ParkBuyScreen.cs  |
+| `0x007cc1f0` | The millisecond reading (FUN_0065968e) taken when the buy screen's waiting row was set | OpenTPW/UI/Park/ParkBuyScreen.cs  |
 | `0x007cc4b8` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
 | `0x007cdb98` | | OpenTPW/World/Park/ParkState.cs  |
 | `0x007cdba0` | The static initialisers of the eight ring-order directions | OpenTPW/World/Park/ParkPathNeighbours.cs  |
@@ -1349,6 +1357,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00803a3c` | | OpenTPW/World/Park/ParkAudio.cs  |
 | `0x0080ced8` | | OpenTPW.Files/Formats/Particle/ParticleLibraryFile.cs  |
 | `0x0080cef8` | | OpenTPW/World/Particles/ParticleSystem.cs  |
+| `0x00818800` | The footprint grid FUN_0052c5b0 fills: 16 columns of 16 dwords, the width at +0x400 and the depth at +0x404 | OpenTPW/UI/Park/ParkFootprintPicture.cs  |
 | `0x0081b740` | The pending list of run ends Backspace pops; count `DAT_00820a8c` | OpenTPW.Tests/ParkBuildModeTests.cs OpenTPW/World/Park/ParkBuildMode.cs  |
 | `0x00877d34` | | OpenTPW/Global/GameCalendar.cs OpenTPW/Global/GameClock.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x00878128` | | OpenTPW/Global/GameClock.cs  |

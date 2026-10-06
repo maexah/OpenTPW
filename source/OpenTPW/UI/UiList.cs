@@ -101,6 +101,13 @@ internal sealed class UiList : UiControl
 	/// </summary>
 	internal string? StateMesh { get; init; }
 
+	/// <summary>
+	/// The list's flag <c>0x80</c>: the pointer moving over a row selects it, with no press (<c>FUN_006656a0</c>, from
+	/// the proc's <c>0x10001</c>), and <see cref="SelectionChanged"/> hears it as it does any other selection. Over no
+	/// row the selection stays. The buy and hire screens' lists carry the flag; only the buy screen's sets this.
+	/// </summary>
+	internal bool SelectsUnderPointer { get; init; }
+
 	/// <summary>The row the pointer last chose, by id, or -1.</summary>
 	/// <remarks>
 	/// <b>The original keeps the selection as an INDEX</b> (<c>list+0x14c</c>), so a row inserted or removed above it
@@ -438,6 +445,13 @@ internal sealed class UiList : UiControl
 		Select( index );
 
 		Activated?.Invoke( _rows[index].Id );
+	}
+
+	/// <summary>The pointer moved over the list: under <see cref="SelectsUnderPointer"/> the row under it is selected.</summary>
+	internal override void PointerMoved( float x, float y )
+	{
+		if ( SelectsUnderPointer && RowAt( x, y ) is var index and >= 0 )
+			Select( index );
 	}
 
 	/// <summary>

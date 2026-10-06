@@ -48,6 +48,14 @@ internal sealed class UiMesh
 	private readonly Part[] _parts;
 	private readonly bool _isFrame;
 
+	/// <summary>
+	/// A frame's parts grown to each size a control has asked for. Each size has vertices of its own: two controls of
+	/// different sizes wearing one frame are both drawn in a frame, and one buffer would hold only the last size written.
+	/// </summary>
+	private readonly Dictionary<(int Part, int Width, int Height), Part> _stretched = [];
+
+	private readonly ModelFile.Mesh[] _meshes;
+
 	public string Name { get; }
 
 	public int PartCount => _parts.Length;
@@ -77,7 +85,8 @@ internal sealed class UiMesh
 		_isFrame = name.StartsWith( '!' );
 
 		var file = new ModelFile( $"ui/{name}.md2" );
-		_parts = file.Meshes.Select( mesh => new Part( mesh, _isFrame ) ).ToArray();
+		_meshes = file.Meshes.ToArray();
+		_parts = _meshes.Select( mesh => new Part( mesh, _isFrame ) ).ToArray();
 	}
 
 	/// <summary>
@@ -90,10 +99,23 @@ internal sealed class UiMesh
 		if ( part < 0 || part >= _parts.Length )
 			return;
 
-		if ( _isFrame )
-			_parts[part].Stretch( size.Width, size.Height );
+		Sized( part, size ).Draw( pixels, opacity );
+	}
 
-		_parts[part].Draw( pixels, opacity );
+	/// <summary>The part a control of this size draws: the part itself, or for a frame its copy grown to the size.</summary>
+	private Part Sized( int part, UiRect size )
+	{
+		if ( !_isFrame )
+			return _parts[part];
+
+		if ( !_stretched.TryGetValue( (part, size.Width, size.Height), out var sized ) )
+		{
+			sized = new Part( _meshes[part], true );
+			sized.Stretch( size.Width, size.Height );
+			_stretched[(part, size.Width, size.Height)] = sized;
+		}
+
+		return sized;
 	}
 
 	private sealed class Part

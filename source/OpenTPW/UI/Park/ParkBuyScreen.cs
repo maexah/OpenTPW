@@ -70,6 +70,25 @@ internal sealed class ParkBuyScreen : UiWindow
 	private readonly UiControl _money;
 	private readonly UiRadioGroup _tabs;
 
+	private readonly ParkFootprintPicture _footprint;
+
+	/// <summary>The footprint picture as the panel has it.</summary>
+	internal ParkFootprintPicture Footprint => _footprint;
+
+	/// <summary>
+	/// The row waiting to be shown in the panel, by its id, and when it began to wait - the original's
+	/// <c>[0x007cc1e4]</c> and <c>[0x007cc1f0]</c>. Nought is no row: no item has that id.
+	/// </summary>
+	private int _pending;
+
+	private float _pendingSince;
+
+	/// <summary>How long a row waits before the panel shows it: more than 500 ms (<c>0x004ac443</c>).</summary>
+	internal const float PreviewDelay = 0.5f;
+
+	/// <summary>The row the panel shows, by its id, or nought before any has been shown.</summary>
+	internal int Previewed { get; private set; }
+
 	private int _tab;
 
 	/// <summary>Which tab the screen was last left on - the original keeps the same in a global.</summary>
@@ -105,13 +124,19 @@ internal sealed class ParkBuyScreen : UiWindow
 			TextAcross = TextAlign.End
 		} );
 
-		// The description panel. Its frame is real art the theme ships; what goes IN it is the item's
-		// own preview, which wants a model rendered into the screen and is not built.
-		Root.Add( new UiControl
+		// The description panel. Its frame is real art the theme ships; of what goes IN it, the footprint picture is
+		// built and the item's turning model and its name row 0x1ec are not.
+		var panel = Root.Add( new UiControl
 		{
 			Id = 0x1ea,
 			Rect = new UiRect( 408, 179, 822, 593 ),
 			Mesh = UiMesh.Get( "!frame" )
+		} );
+
+		_footprint = panel.Add( new ParkFootprintPicture
+		{
+			Id = 0x1eb,
+			Rect = new UiRect( 440, 407, 594, 561 )
 		} );
 
 		// The stats panel, kept as backing art with nothing in it - see the class remarks, and see
@@ -134,7 +159,9 @@ internal sealed class ParkBuyScreen : UiWindow
 			// third is 51 units wide because it is a TICK-BOX, not a number - see UiList.StateMesh.
 			Columns = [(1039, 1447), (1460, 1664), (1673, 1724)],
 			StateMesh = "i_boxtick",
-			Activated = Chose
+			SelectsUnderPointer = true,
+			Activated = Chose,
+			SelectionChanged = RowSelected
 		} );
 
 		_tabs = _list.Add( new UiRadioGroup
@@ -335,5 +362,53 @@ internal sealed class ParkBuyScreen : UiWindow
 	private void ShowMoney()
 		=> _money.Text = Level.Current?.ParkState is { } state ? $"{state.Balance}" : null;
 
-	protected internal override void Update() => ShowMoney();
+	/// <summary>
+	/// The list's selection moved to a row - the handler's <c>0x401</c> arm (<c>0x004aca16</c>): a row other than the
+	/// one waiting takes its place and starts the wait again.
+	/// </summary>
+	/// <remarks>
+	/// The original times the wait in milliseconds of wall time (<c>FUN_0065968e</c>); this reads the frame clock, as
+	/// the interface's click limits do (<c>docs/QUEUE.md</c> Q123). The original's list also selects its first row as
+	/// it is filled, so there the panel shows the top row half a second after the screen or a tab opens; here a row is
+	/// shown only once the pointer has been over one (<c>UiList.FirstRow</c>).
+	/// </remarks>
+	internal void RowSelected( int rowId )
+	{
+		if ( rowId == _pending )
+			return;
+
+		_pending = rowId;
+		_pendingSince = Time.Now;
+	}
+
+	/// <summary>
+	/// Fills the panel for a row - the footprint picture's half of <c>FUN_004ab1b0</c>. A land row and a mystery ride
+	/// clear the picture (<c>0x004ab4c8</c>); any other item's shape is painted.
+	/// </summary>
+	private void Preview( int rowId )
+	{
+		Previewed = rowId;
+
+		_footprint.Shape = rowId > 0 && Level.Current?.Catalogue is { } catalogue && catalogue.TryGet( rowId, out var item )
+			&& !IsMystery( item )
+				? item.Shape
+				: null;
+	}
+
+	/// <summary>What the panel shows and what waits, for the console.</summary>
+	internal string PreviewCensus()
+		=> $"row {Previewed} shown, {(_pending != 0 ? $"row {_pending} waiting {(Time.Now - _pendingSince) * 1000f:F0} ms" : "none waiting")}, "
+			+ $"list selection {_list.Selected}: {_footprint.Census()}";
+
+	protected internal override void Update()
+	{
+		ShowMoney();
+
+		// The frame message's arm (0x004ac42e): a row that has waited long enough is shown, and waits no longer.
+		if ( _pending != 0 && Time.Now - _pendingSince > PreviewDelay )
+		{
+			Preview( _pending );
+			_pending = 0;
+		}
+	}
 }

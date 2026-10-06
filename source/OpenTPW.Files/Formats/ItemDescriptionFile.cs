@@ -613,6 +613,14 @@ public sealed partial class ItemDescriptionFile
 	/// </summary>
 	public IReadOnlyList<int> CellKinds => _cellKinds ?? _category?.CellKinds ?? [];
 
+	private ItemShape? _shape;
+
+	/// <summary>
+	/// The picture itself, a kind a cell, as the loader keeps it at descriptor <c>+0x18</c>: its own width and depth,
+	/// whatever the footprint overrides say, with row nought the picture's last line. Null where the item draws none.
+	/// </summary>
+	public ItemShape? Shape => _shape ?? _category?.Shape;
+
 	private ItemHoarding? _hoarding;
 	public ItemHoarding? Hoarding => _hoarding ?? _category?.Hoarding;
 
@@ -976,6 +984,7 @@ public sealed partial class ItemDescriptionFile
 		depth = rows.Count;
 
 		_cellKinds = rows.SelectMany( row => row ).Select( cell => cell.Kind ).Distinct().Order().ToArray();
+		_shape = new ItemShape( width, depth, rows.Select( row => row.Select( cell => cell.Kind ).ToArray() ).ToArray() );
 
 		// FUN_00413410 walks COLUMN by column, each column top to bottom, and takes the first of each kind.
 		// No shipped picture has two of either, so the order is kept for its own sake.
