@@ -4707,6 +4707,15 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   A slider's track pages on the click too (tested only). A read-only review then found, and the commit builds: a list
   judges no stray, a slider's thumb leaves the stamp alone, the lobby's player slots and Quit Game are click-driven
   (Quit Game held 600 ms asked nothing in both games; a right click asked). Thirty-two restored bugs each fail.
+- [x] **Q124. `Material.Default` compiles a shader nothing draws with.** Found by Q67's sweep. `Material.UI.cs` builds
+  it from `content/shaders/3d.shader` the first time `Material` is touched and keeps it for the life of the process.
+  Its one reader is the guard in `Material.Delete`, which can fire only if something holds it, and nothing does. The
+  summaries of `Model.Delete` and `Material.Delete` say so: the park's ground, the lobby's models and the paths build
+  their own `test.shader` materials, and the sea its `water.shader`. Dead by CODE: label it (rule 3). Confirm: a grep
+  for readers, and `assets list` in the lobby and a park, before and after.
+  Done 2026-10-06: labelled at `Material.Default`, kept. The grep finds the `Delete` guard and nothing else; `assets
+  list` shows one material and its shader on `3d.shader` in the lobby (845 assets) and in Lost Kingdom (2204). A
+  comment only, so "before and after" are one build.
 
 ## B. Docs and comments
 

@@ -38,12 +38,6 @@ the original.
 
 ## A. Bugs first
 
-- [ ] **Q124. `Material.Default` compiles a shader nothing draws with.** Found by Q67's sweep. `Material.UI.cs` builds
-  it from `content/shaders/3d.shader` the first time `Material` is touched and keeps it for the life of the process.
-  Its one reader is the guard in `Material.Delete`, which can fire only if something holds it, and nothing does. The
-  summaries of `Model.Delete` and `Material.Delete` say so: the park's ground, the lobby's models and the paths build
-  their own `test.shader` materials, and the sea its `water.shader`. Dead by CODE: label it (rule 3). Confirm: a grep
-  for readers, and `assets list` in the lobby and a park, before and after.
 - [ ] **Q125. `CacheFileSystem` is set, and nothing in the game reads it.** Found by Q67's sweep. `Game.Run` creates
   `OpenTPW/cache` under the local application data folder on every launch and mounts it as `CacheFileSystem`
   (`Game.cs`, "mainly for editor-related stuff"). Its one reader is ModKit's thumbnail cache (`Editor.cs`), a separate
