@@ -914,7 +914,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0054f4c4` | | OpenTPW/Global/GameClock.cs  |
 | `0x0054f56b` | | OpenTPW/VM/RideScriptScheduler.cs  |
 | `0x0054f668` | | OpenTPW/Global/GameCalendar.cs OpenTPW/World/Level.cs OpenTPW/World/Park/ParkWeather.cs  |
-| `0x0054f680` | | OpenTPW/Global/GameCalendar.cs  |
+| `0x0054f680` | | OpenTPW.Tests/ParkSweepCapTests.cs OpenTPW/Global/GameCalendar.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x0054f683` | Re-stamps the peep beat's baseline `[0x00878a1c]` inside the every-eighth-tick gate | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x0054f7bb` | | OpenTPW/Global/GameCalendar.cs  |
 | `0x0054f870` | | OpenTPW/World/Park/ParkAudio.cs  |
@@ -923,6 +923,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0054fa0d` | Per-frame block: placed objects' fraction, 1/31 against its own baseline | OpenTPW/Global/GameClock.cs OpenTPW/World/Park/ParkBumperBoats.cs  |
 | `0x0054fa38` | Per-frame block: particles' fraction, 1/62 | OpenTPW/Global/GameClock.cs  |
 | `0x0054fa5c` | Per-frame block: peeps' and staff's fraction, 1/248.000007, driving `FUN_00518f90` | OpenTPW/Global/GameClock.cs OpenTPW/World/Park/ParkPeople.cs  |
+| `0x0054fc2a` | Game_StateMachine, once a pass of the park's loop, drawn or not: the pass's sweep count [0x00879064] zeroed | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x005502f6` | | OpenTPW/Client/Players.cs  |
 | `0x00551241` | STARTSCREAM: `(a + b) / 2`, clamped, for parameter 6 | OpenTPW/World/Park/ParkAudio.cs  |
 | `0x00551265` | STARTSCREAM: sets parameter 6 on the new handle | OpenTPW/VM/RideScript.cs OpenTPW/World/Park/ParkAudio.cs  |
@@ -1379,6 +1380,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00878128` | | OpenTPW/Global/GameClock.cs  |
 | `0x008786bc` | The per-frame clock sample the three beat fractions share | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x00878a1c` | The peep beat's baseline, re-stamped at `0x0054f683` | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x00879064` | The thing sweeps run in this pass of the park's loop, held to three (0x0054f680) | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x008791a0` | | OpenTPW.Files/Formats/Save/ParkScriptStates.cs OpenTPW.Tests/ParkScriptStateTests.cs  |
 | `0x008bcbcc` | | OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x00f82884` | The lobby's front-end object pointer; the message box's pause test wants it gone | OpenTPW/Global/GameClock.cs OpenTPW/World/Level.cs  |

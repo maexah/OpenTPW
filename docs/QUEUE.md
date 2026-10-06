@@ -38,12 +38,6 @@ the original.
 
 ## A. Bugs first
 
-- [ ] **Q126. A long frame runs every thing sweep it owes, where the original runs three.** Found by Q68's review.
-  The park loop counts a frame's sweeps (`[0x00879064]`, `0x0054f680`) and drops any past the third: the step and its
-  counter move on, `mGameTick` does not, and nothing makes it up (`park-engine.md`, "What the 31 ms tick drives").
-  `ParkPeople` runs one sweep for every eight ticks `GameClock` owes, up to its 2 s cap, so eight after a stall.
-  Reachable only in a frame longer than about 0.74 s. Build the cap where the sweeps are counted, said at the site.
-  Confirm: a long frame forced, and the sweeps it ran counted in the log.
 - [ ] **Q127. A new guest is made at each stop in turn, where the original makes every one at stop B.** Found by
   Q68's decode (`park.md`, "Arrivals"). `FUN_004cf720` always asks `FUN_004d8650` for `BusStopB` (`0x004cf745`) and,
   while `FUN_0051aad0` reports a vehicle standing, takes two rows off the packed id (`0x004cf75c`): (53,3) in Lost
@@ -96,6 +90,9 @@ the original.
   predicted first.
   Q82 found the guests' needs gate reads `mGameTick & 3` (`FUN_00501650`, `0x00501669`), as `ParkPeople.OnUpdate`'s
   thing-tick note says.
+  From Q126: a dropped sweep makes the handed tick jump (n, n+1, n+2, then n+8 after a 64-tick frame), so the
+  guests of one needs slot miss a turn the original's `mGameTick` gives them on its next sweep, and stamps taken
+  from it jump five sweeps.
 - [ ] **Q133. The mechanic, the handyman and the entertainer stand once their saved walk ends, where the original's
   walk about.** Found by Q82 (`ride-operation.md`, "Leaving idle, or a walk: the choice by kind"). With no work the
   mechanic's `FUN_004da5b0` and the handyman's `FUN_004d7100` take a random walk every time (`0x004da6fa`,
@@ -268,6 +265,11 @@ the original.
   177 s in, where the original's first after the load is at tick 1383, 3.1 (measured). A load reads the month and the
   day but not the year, which keeps the entry's seed, 2000 (`weather.md`), so a park saved in another year gets `0xd`
   on its first sweep and zeroes `mProfitThisYear` (decoded, not measured).
+  From Q126: the thing sweep is capped at three a frame now and `ParkState.GameTick` with it, so after a 2 s stall
+  `GameCalendar` (which carries its advances over) runs five ahead of `ParkState.CalendarNow`, and the weather's
+  tick and the day's, month's and year's work with it; the original drops all of them with the sweep
+  (`FUN_004d7b20`, `FUN_00512880`). `LongestCatchUp`'s remark ("loses time and can never gain it") is not what
+  `Update` does.
 - [ ] **Q150. Scripts and the thing sweep take a frame's ticks in two loops, where the original takes both per tick.**
   Found by the 2026-09-26 staleness audit. The original's park loop runs the scripts (`0x0054f56b`) and the thing
   sweep (`0x0054f7bb`) inside one loop over the frame's ticks. `ParkRides` and `ParkPeople` each loop over
@@ -356,6 +358,9 @@ the original.
   first.
   - **Note (fork review, 2026-09-30):** `EntertainerConstsPerGrade[g].HappinessEffectOnCell` (4, 8, 12, 16, 20; `Standard.sam`)
     has no reader in our decode; find it before building the entertainer's half of the region term. Review item peeps-v3.
+  From Q126: `FUN_0055a470` (`0x0054f828`, every eighth step, a dropped sweep's too) finds the ride the camera is
+  on (`FUN_0042a4e0`, the list at `[0x008791b0]`) and hands its `+0xd8`, or the default `[0x0078578c]`, to
+  `FUN_0051c8d0`, a sound setting not decoded. Nothing here has it, counted or not.
 - [ ] **Q158. Five park-screen readouts are stand-ins, and nothing counts them.** Found by the 2026-09-26 staleness
   audit (`CLAUDE.md` rule 4). `ParkObjectWindow`'s Age row prints a bare number: its wording, `FUN_006acd60` with
   `0x1b1`, is not decoded. Its scrap row prints the build price, where `FUN_004e2400` scales it by the age bucket's

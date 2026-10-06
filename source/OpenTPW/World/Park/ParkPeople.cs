@@ -1610,6 +1610,25 @@ public sealed class ParkPeople : Entity
 	public const int ThingTickEvery = 8;
 
 	/// <summary>
+	/// How many thing sweeps one pass of the park's loop may run: three. The loop counts a pass's sweeps
+	/// (<c>[0x00879064]</c>, zeroed once a pass at <c>0x0054fc2a</c>, drawn or not) and a step that comes due with
+	/// three already run skips the sweep (<c>0x0054f680</c>): the loop's own step counter moves on,
+	/// <c>mGameTick</c> does not, and nothing makes it up (<c>docs/exe/park-engine.md</c>, "What the 31 ms tick
+	/// drives"). The first three of a frame run. It binds only in a frame longer than about 0.74 s.
+	/// <para>
+	/// The tick number the sweep hands its things here is still the 31 ms count over eight, which jumps over a dropped
+	/// step where the original's things read <c>mGameTick</c>, which does not (<c>docs/QUEUE.md</c> Q132).
+	/// </para>
+	/// </summary>
+	internal const int SweepsAFrame = 3;
+
+	/// <summary>The sweeps run and the sweeps dropped by <see cref="SweepsAFrame"/> since the park was made, for the console.</summary>
+	internal int SweepsRun { get; private set; }
+
+	/// <inheritdoc cref="SweepsRun"/>
+	internal int SweepsDropped { get; private set; }
+
+	/// <summary>
 	/// How many of the game's 31ms ticks pass between turns of the sprite system, which plays the
 	/// animations - see <see cref="SpriteScript"/>.
 	///
@@ -1680,6 +1699,9 @@ public sealed class ParkPeople : Entity
 				peep.StrandedTime = 0;
 		}
 
+		var sweeps = 0;
+		var dropped = 0;
+
 		for ( var i = 0; i < GameClock.TicksDue; ++i )
 		{
 			var tick = GameClock.Ticks - GameClock.TicksDue + 1 + i;
@@ -1703,6 +1725,16 @@ public sealed class ParkPeople : Entity
 
 			if ( (tick & (ThingTickEvery - 1)) != 0 )
 				continue;
+
+			// A fourth sweep in one frame is dropped, not owed - see SweepsAFrame.
+			if ( sweeps == SweepsAFrame )
+			{
+				++dropped;
+				continue;
+			}
+
+			++sweeps;
+			++SweepsRun;
 
 			// The park's own clock goes one up before anything in the sweep runs (FUN_00516380, 0x00516394).
 			State.AdvanceGameTick();
@@ -1838,6 +1870,12 @@ public sealed class ParkPeople : Entity
 			TakeTheRidesTurns( thingTick );
 			RetryGateClose();
 		}
+
+		if ( dropped == 0 )
+			return;
+
+		SweepsDropped += dropped;
+		Log.Info( $"Park sweep: {sweeps} run and {dropped} dropped in a frame of {GameClock.TicksDue} ticks, mGameTick {State.GameTick}" );
 	}
 
 	/// <summary>

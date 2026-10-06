@@ -4724,6 +4724,15 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Confirm: a grep for readers, and a launch, listing the folder before and after.
   Done 2026-10-06: labelled at `Game.Run`, kept with the property. The grep finds the setter, the property and
   ModKit's one reader; the folder was empty with the same time either side of a launch to the lobby.
+- [x] **Q126. A long frame runs every thing sweep it owes, where the original runs three.** Found by Q68's review.
+  The park loop counts a frame's sweeps (`[0x00879064]`, `0x0054f680`) and drops any past the third: the step and its
+  counter move on, `mGameTick` does not, and nothing makes it up (`park-engine.md`, "What the 31 ms tick drives").
+  `ParkPeople` runs one sweep for every eight ticks `GameClock` owes, up to its 2 s cap, so eight after a stall.
+  Reachable only in a frame longer than about 0.74 s. Build the cap where the sweeps are counted, said at the site.
+  Confirm: a long frame forced, and the sweeps it ran counted in the log.
+  Done 2026-10-06: `ParkPeople.SweepsAFrame`, counted and dropped in `OnUpdate`. The game stopped 2.5 s, three
+  times: the log's "3 run and 5 dropped in a frame of 64 ticks", `mGameTick` `+5`, `+5`, `+6` half a second on (the
+  unchanged build `+10`, `+11`, `+10`); the original's, read from memory, `+5`, `+5`, `+5`. Six restored bugs each fail.
 
 ## B. Docs and comments
 

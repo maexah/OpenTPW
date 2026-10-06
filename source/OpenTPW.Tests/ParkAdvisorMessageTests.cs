@@ -241,8 +241,8 @@ public class ParkAdvisorMessageTests
 			state.SetParkClosed( true );
 			SimulationClockScope.Frame( 2f );
 			people.Update();
-			Assert.AreEqual( 8, state.GameTick, "64 ticks include eight world sweeps" );
-			Assert.AreEqual( 1, state.AdvisorMessages.Attempts, "all eight sweeps see one instant, so the one-second wait cannot expire" );
+			Assert.AreEqual( 3, state.GameTick, "64 ticks owe eight world sweeps, and a frame runs three" );
+			Assert.AreEqual( 1, state.AdvisorMessages.Attempts, "all three sweeps see one instant, so the one-second wait cannot expire" );
 			Assert.AreEqual( 1, state.AdvisorMessages.PendingCount );
 			Assert.IsTrue( state.AdvisorMessages.Census().Contains( "message=128/score=26/line=0/lastTick=1" ) );
 		}

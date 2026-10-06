@@ -490,6 +490,13 @@ public static class DebugConsole
 					+ $"middle ({at.X + (at.Width / 2f):F0},{at.Y + (at.Height / 2f):F0})" );
 				break;
 
+			// The park's own clock and what the three-a-frame cap has cost it (ParkPeople.SweepsAFrame).
+			case "sweeps":
+				Reply( ParkPeople.Current is { } swept
+					? $"sweeps: mGameTick {swept.State.GameTick}, {swept.SweepsRun} run, {swept.SweepsDropped} dropped"
+					: "sweeps: a park has to be loaded" );
+				break;
+
 			// The windows open in the interface, back to front - the front one last. A pure getter, and the lobby's
 			// only way to say whether the island panel or the game menu is up.
 			case "windows":
