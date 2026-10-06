@@ -74,8 +74,11 @@ the modifiers as they stood when it came up.
 **OpenTPW** (`ParkFrontEnd.ParkKeys`, `MenuKey`): Escape is read from the frame's releases, once for each, with the
 front window read again for each; the menu and first person take it whatever the modifiers, and the hand and the menu
 only with none held. The lobby's is `FrontEnd.LobbyKeys` (`lobby.md`, "The lobby's keys act on the release").
-**Not the original's:** the park screens are modal here and keep Escape, and an object window lets it through to the
-hand and the menu (Q119); the modifiers are judged as the frame ends, as every binding here is (Q120).
+Over a park screen or the map in front, a plain Escape closes it and nothing more, and one with a modifier held does
+nothing (`MenuKey`'s first arm after the menu's; Q119, measured in both games: `park-engine.md`, "A park screen is
+open"). **Not the original's:** the modifiers are judged as the frame ends, as every binding here is (Q120); a screen
+left open over first person takes the key before the viewfinder does, where the original has closed it on the way in
+(Q122).
 
 ## The advisor
 

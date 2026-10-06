@@ -342,26 +342,6 @@ public class ParkScreenTests
 		Assert.AreEqual( ParkBuildMode.None, ParkBuildMode.Current, "and Delete puts the tool away" );
 	}
 
-	/// <summary>
-	/// <b>A management screen keeps a plain Escape and does nothing with it</b>, as it did while it was modal: the tool
-	/// stays armed and no menu opens. Closing the screen on that key is the original's and is not built
-	/// (<c>docs/QUEUE.md</c> Q119).
-	/// </summary>
-	/// <remarks><b>Mutations:</b> asking only for a modal window lets the key through, which puts the tool away.</remarks>
-	[TestMethod]
-	public void AManagementScreenStillKeepsEscape()
-	{
-		var stack = APark();
-		stack.Open( new UI.ParkBuyScreen( stack ) );
-		ParkBuildMode.Arm( ParkBuildMode.Path );
-
-		Keys( stack, Down( Key.Escape ) );
-		Keys( stack, Up( Key.Escape ) );
-
-		Assert.AreEqual( ParkBuildMode.Path, ParkBuildMode.Current, "the tool is still armed" );
-		Assert.AreEqual( "ParkGadget, ParkViewfinder, ParkBuyScreen", Names( stack ), "and nothing opened or closed" );
-	}
-
 	/// <summary>A park's interface: the real front end over a real stack, its gadget and viewfinder up.</summary>
 	private static UI.WindowStack APark()
 	{

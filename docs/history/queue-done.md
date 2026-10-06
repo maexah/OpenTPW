@@ -4613,6 +4613,20 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   panel's shape (`hud.md`, "A frame worn at two sizes"). **The turning model was not put in the panel, and Alexah was
   not asked** (the session ran unattended): it stays Q158's. Nine tests new; thirty-three restored bugs each fail. `park-engine.md`, "The buy
   screen's footprint picture".
+- [x] **Q119. A plain Escape does not close the park screen in front.** Found by Q57's review. In the original the six
+  management screens, an object window and the map take the focus as they open (`FUN_00485b70`, `FUN_004862a0`), and
+  their key handler answers a plain Escape let go by closing the screen, and nothing more (`FUN_00488ba0`, `0x00488bc6`;
+  the map at `0x005f17ef`; `scenes.md`, "The park Escape route"). Here a management screen keeps Escape and does
+  nothing with it (`ParkFrontEnd.MenuKey`), and an object window lets it through to the hand and the menu. Said at
+  the site. Measured in the original by Q115: Escape over the entry-price screen and over Park Information closed each,
+  the menu shut, an armed path tool kept (`park-engine.md`, "A park screen is open"). Confirm: the buy screen, then an object window with the path tool armed - Escape let go closes each, `tool`
+  still Path and `windows` without GameMenu; a screenshot.
+  Done 2026-10-06: `ParkFrontEnd.MenuKey` closes the park screen in front, or the map, on a plain Escape let go and
+  is spent doing it; with a modifier held it does nothing there. Predicted and read in Lost Kingdom with real keys,
+  **7 of 7** (the unchanged build 8 of 8 the other way): the path tool armed at (47,20), the buy screen, Escape,
+  `windows` ParkGadget, ParkViewfinder and `tool` mode 1 at (47,20); the same over the Belly Bounce's window and the
+  map; Shift+Escape, nothing. In the original, 7 of 7 from memory: the buy screen, a visitor's window and the map
+  each closed, the menu shut, the tool and its anchor kept. Fourteen restored bugs each fail a test.
 
 ## B. Docs and comments
 

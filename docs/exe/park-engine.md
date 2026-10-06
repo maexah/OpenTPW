@@ -2169,18 +2169,35 @@ click or the key, a frame with it; 13 of 13):
 | a left click on grass beside the screen, four cells from the anchor | the anchor (55,24) to (55,20), the new path in the frame |
 | the Left arrow over the screen | the frame as before (1.3% of its pixels differ; the same key with no screen, 51.5%) |
 
+**Escape over a screen, with the path tool armed** (`docs/QUEUE.md` Q119; the same park, each predicted from the
+listing and read from memory after the key, a frame with it; 7 of 7). The tool was armed by a click on grass (mode
+vtable `0x006fe9e0`, tool `[0x0081ae2c]` 1, anchor (43,23)), and stayed so through every row but the last two:
+
+| Done | Read |
+|---|---|
+| the gadget's Buy, then Escape | `[0x007c24c8]` a control, then 0; the menu `[0x007c2534]` 0; the mode, tool and anchor as they were |
+| Buy, then Shift+Escape | the screen still open, the menu 0 |
+| Info, its visitors link, a left click on visitor 3's row, then Shift+Escape | the visitor's window open and unchanged |
+| Escape over that window | `[0x007c24c8]` 0, the menu 0, the mode, tool and anchor as they were |
+| Escape with no screen | the idle mode (`0x006fea10`), tool 0, the menu 0 |
+| Escape again | the menu open |
+| the gadget's map button, then Escape (idle) | `[0x007c24c8]` a control while the map is up, then 0, the menu 0, the park back in the frame |
+
+The map's own key-up case is the same test as the screens' (`FUN_005f1130`, `0x005f17ef`: key `0x1b`, `TEST
+0xff0000`, message 4 to itself).
+
 **OpenTPW** (`UiWindow.ParkScreen`): no park screen is modal. `WindowStack.Open` closes the open one before a park
 screen, the game menu or the map opens (`UiWindow.ClosesParkScreen`); the gadget's Buy does nothing over an open buy
 screen; `WindowStack.OnParkScreen` gives the screen's whole rectangle to the interface for both buttons and hides the
 controls behind it; `Level.KeptFromThePark` keeps a left press beside a screen from the park unless a tool is armed or
 the hand holds something; `Level.BuildKeys`, the orbit camera's keys and F3 are not heard while one is open
 (`WindowStack.ParkScreenOpen`); the idle pointer and its help row are the plain ones; `ParkGadget.Update` folds the arm
-when a screen opens. Where it parts from the original:
+when a screen opens. A plain Escape let go closes the screen in front, or the map, and is spent doing it; with a
+modifier held it does nothing (`ParkFrontEnd.MenuKey`). Where it parts from the original:
 
 - **A click acts on its press here**, so the armed tool's click beside a screen is taken on the press, where the
   original skips the press and commits on the release.
-- **Escape**: a management screen keeps the key and does nothing, and an object window lets it through
-  (`docs/QUEUE.md` Q119). **First person** leaves the screen open (Q122).
+- **First person** leaves the screen open (`docs/QUEUE.md` Q122).
 - **F1 over a screen** and **the wheel over a screen's body** are not decoded, and neither is built or counted
   (`docs/QUEUE.md` Q231). The wheel zooms the camera wherever the pointer is.
 

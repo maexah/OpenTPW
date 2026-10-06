@@ -11,8 +11,8 @@ namespace OpenTPW.Tests;
 /// <summary>
 /// A park takes Escape on its release, as the original's does (message 0x1000b; the press only latches its binding row,
 /// <c>FUN_0040c900</c>): held, its repeats included, it lets go of nothing, opens nothing and closes nothing, and each
-/// time it comes up it does one thing - leaves first person, closes the menu, empties the hand or opens the menu. With a
-/// modifier held only the menu and the viewfinder answer it. See <c>ParkFrontEnd.ParkKeys</c> and
+/// time it comes up it does one thing - closes the park screen in front, leaves first person, closes the menu, empties the hand
+/// or opens the menu. With a modifier held only the menu and the viewfinder answer it. See <c>ParkFrontEnd.ParkKeys</c> and
 /// <c>docs/exe/park-engine.md</c>, "The hand's ways out".
 ///
 /// <para>
@@ -205,6 +205,156 @@ public class ParkEscapeOnReleaseTests
 
 		Assert.AreEqual( "ParkGadget, ParkViewfinder, GameMenu", Names( stack ), "the first closed it and the second opened one" );
 		Assert.AreNotSame( menu, stack.Windows[^1], "a new one" );
+	}
+
+	/// <summary>The shipped park's Belly Bounce, whose window is the object window here.</summary>
+	private const int BellyBounceThing = 13;
+
+	/// <summary>The park's screens that take the key as they open, and the map, which takes it itself.</summary>
+	private static UI.UiWindow AScreen( string name, UI.WindowStack stack ) => name switch
+	{
+		"buy" => new UI.ParkBuyScreen( stack ),
+		"hire" => new UI.ParkHireScreen( stack ),
+		"all staff" => new UI.ParkStaffScreen( stack ),
+		"visitors" => new UI.ParkVisitorsScreen( stack ),
+		"all items" => new UI.ParkItemsScreen( stack ),
+		"entry price" => new UI.ParkEntryPriceScreen( stack ),
+		"object window" => new UI.ParkObjectWindow( stack, BellyBounceThing ),
+		"map" => new UI.ParkMapScreen( stack ),
+		_ => throw new ArgumentException( name )
+	};
+
+	/// <summary>
+	/// <b>A plain Escape let go closes the park screen in front, and nothing more</b>: the armed tool stays armed and
+	/// no menu opens, for each of the six management screens, an object window and the map. Held, it closes nothing. The
+	/// screen has the focus and its handler sends itself the close (<c>FUN_00488ba0</c>, <c>0x00488bc6</c>; the map's,
+	/// <c>0x005f17ef</c>). The Escape after it is the park's own again.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> a management screen keeping the key and doing nothing leaves it open; the object window or the
+	/// map left out of the arm, the same or the tool put away; the key handed on to the hand after the close puts the
+	/// tool away; closing on the press closes it while the key is held.
+	/// </remarks>
+	[DataTestMethod]
+	[DataRow( "buy" )]
+	[DataRow( "hire" )]
+	[DataRow( "all staff" )]
+	[DataRow( "visitors" )]
+	[DataRow( "all items" )]
+	[DataRow( "entry price" )]
+	[DataRow( "object window" )]
+	[DataRow( "map" )]
+	public void APlainEscapeClosesTheScreenInFrontAndNothingMore( string name )
+	{
+		var stack = APark();
+		var screen = AScreen( name, stack );
+		ParkBuildMode.Arm( ParkBuildMode.Path );
+		stack.Open( screen );
+
+		HoldEscape( stack );
+		Assert.AreSame( screen, stack.Windows[^1], $"held over the {name} screen: it stays" );
+
+		Frame( stack, Up( Key.Escape ) );
+		Assert.AreEqual( "ParkGadget, ParkViewfinder", Names( stack ), $"let go: the {name} screen closes, and no menu opens" );
+		Assert.AreEqual( ParkBuildMode.Path, ParkBuildMode.Current, "and the tool is still armed" );
+
+		Frame( stack, Down( Key.Escape ) );
+		Frame( stack, Up( Key.Escape ) );
+		Assert.AreEqual( ParkBuildMode.None, ParkBuildMode.Current, "the next Escape is the park's own: the tool is put away" );
+		Assert.AreEqual( "ParkGadget, ParkViewfinder", Names( stack ) );
+	}
+
+	/// <summary>
+	/// <b>With a modifier held, Escape over a park screen or the map does nothing</b>: the screen's handler asks for no
+	/// modifier byte (<c>TEST EAX,0xff0000</c>, <c>0x00488bcb</c>) and hands the key on to the shortcuts' table, whose
+	/// Escape row names none. The screen stays, the tool stays and no menu opens.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> taking out the modifier test closes the screen; putting the modifier test first and falling
+	/// through to the park's own road is caught by the plain test's hand.
+	/// </remarks>
+	[DataTestMethod]
+	[DataRow( "buy", Key.ShiftLeft )]
+	[DataRow( "object window", Key.ControlLeft )]
+	[DataRow( "map", Key.AltLeft )]
+	[DataRow( "entry price", Key.ShiftRight )]
+	public void WithAModifierHeldAScreenInFrontKeepsEscape( string name, Key modifier )
+	{
+		var stack = APark();
+		var screen = AScreen( name, stack );
+		ParkBuildMode.Arm( ParkBuildMode.Path );
+		stack.Open( screen );
+
+		Frame( stack, Down( modifier ), Down( Key.Escape ) );
+		Frame( stack, Up( Key.Escape ) );
+
+		Assert.AreSame( screen, stack.Windows[^1], $"{modifier}+Escape leaves the {name} screen open" );
+		Assert.AreEqual( 3, stack.Windows.Count, "and opens nothing" );
+		Assert.AreEqual( ParkBuildMode.Path, ParkBuildMode.Current, "and the tool is still armed" );
+
+		Frame( stack, Up( modifier ) );
+		Frame( stack, Down( Key.Escape ) );
+		Frame( stack, Up( Key.Escape ) );
+		Assert.AreEqual( "ParkGadget, ParkViewfinder", Names( stack ), "a plain one then closes it" );
+	}
+
+	/// <summary>
+	/// <b>Two releases in one frame over a screen are two keys</b>: the first closes the screen, and the second, which
+	/// finds no screen in front, is the park's and puts the tool away. A third would open the menu; none does here.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the front window read once for the frame spends both on the screen and the tool stays.</remarks>
+	[TestMethod]
+	public void TwoReleasesOverAScreenCloseItAndThenEmptyTheHand()
+	{
+		var stack = APark();
+		ParkBuildMode.Arm( ParkBuildMode.Path );
+		stack.Open( new UI.ParkBuyScreen( stack ) );
+
+		Frame( stack, Down( Key.Escape ), Up( Key.Escape ), Down( Key.Escape ), Up( Key.Escape ) );
+
+		Assert.AreEqual( "ParkGadget, ParkViewfinder", Names( stack ), "the first closed the screen, and no menu opened" );
+		Assert.AreEqual( ParkBuildMode.None, ParkBuildMode.Current, "the second put the tool away" );
+	}
+
+	/// <summary>
+	/// <b>A message box over a park screen keeps Escape</b>, as it does over the menu: the box has the focus and drops
+	/// the key, so the screen behind it stays.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> closing any open park screen, not the one in front, closes it under the box.</remarks>
+	[TestMethod]
+	public void AMessageBoxOverAParkScreenKeepsEscape()
+	{
+		var stack = APark();
+
+		stack.Open( new UI.ParkBuyScreen( stack ) );
+		stack.Open( new UI.MessageBox( stack, "Restart this park?", () => { } ) );
+
+		Frame( stack, Down( Key.Escape ) );
+		Frame( stack, Up( Key.Escape ) );
+
+		Assert.AreEqual( "ParkGadget, ParkViewfinder, ParkBuyScreen, MessageBox", Names( stack ), "the box and the screen stay" );
+	}
+
+	/// <summary>
+	/// <b>A screen left open over first person takes the key first</b>, which is ours alone (the original closes the
+	/// screen on the way in): the first Escape closes the screen and the viewer stays down, the second leaves.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> first person's arm put before the screen's leaves first person with the window still open.</remarks>
+	[TestMethod]
+	public void AScreenOverFirstPersonClosesBeforeTheViewerLeaves()
+	{
+		var stack = APark();
+		stack.Open( new UI.ParkObjectWindow( stack, BellyBounceThing ) );
+		InFirstPerson( true );
+
+		Frame( stack, Down( Key.Escape ) );
+		Frame( stack, Up( Key.Escape ) );
+		Assert.AreEqual( "ParkGadget, ParkViewfinder", Names( stack ), "the window closes" );
+		Assert.IsTrue( ParkCamcorderCameraMode.Active, "and the viewer is still down" );
+
+		Frame( stack, Down( Key.Escape ) );
+		Frame( stack, Up( Key.Escape ) );
+		Assert.IsFalse( ParkCamcorderCameraMode.Active, "the next leaves first person" );
 	}
 
 	/// <summary>A park's interface: the real front end over a stack made without its constructor, with its gadget and viewfinder up.</summary>

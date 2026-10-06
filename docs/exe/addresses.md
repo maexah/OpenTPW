@@ -204,7 +204,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00488a00` | | OpenTPW.Tests/ParkCamcorderKeyOnReleaseTests.cs OpenTPW.Tests/ParkEscapeOnReleaseTests.cs OpenTPW/UI/Park/ParkFrontEnd.cs OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x00488aa1` | Layer 1 (first person) handler FUN_00488a00: its 0x10006 click case, right button and RMB cancel, leaves first person | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs OpenTPW/UI/Park/ParkViewfinder.cs  |
 | `0x00488aa8` | FUN_00488a00: the 0x10006 case's RMB cancel test | OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |
-| `0x00488bc6` | `FUN_00488ba0`, the park screens' key handler: a plain Escape let go closes the screen (message 4) | OpenTPW/UI/Park/ParkFrontEnd.cs  |
+| `0x00488bc6` | `FUN_00488ba0`, the park screens' key handler: a plain Escape let go closes the screen (message 4) | OpenTPW.Tests/ParkEscapeOnReleaseTests.cs OpenTPW/UI/Park/ParkFrontEnd.cs  |
+| `0x00488bcb` | FUN_00488ba0, the key-up case: TEST EAX,0xff0000, so the Escape that closes a park screen carries no modifier | OpenTPW.Tests/ParkEscapeOnReleaseTests.cs  |
 | `0x00488c13` | Park screen key handler FUN_00488ba0, a key up: runs the shortcuts table and no other | OpenTPW/UI/Park/ParkFrontEnd.cs OpenTPW/UI/WindowStack.cs  |
 | `0x00489ca0` | | OpenTPW/UI/WindowStack.cs  |
 | `0x00489de1` | | OpenTPW/Client/Renderer.cs  |
@@ -1115,7 +1116,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005edac0` | | OpenTPW/UI/ButtonGlint.cs  |
 | `0x005f0ad0` | | OpenTPW/UI/Park/ParkMapScreen.cs  |
 | `0x005f0bd1` | Map opener FUN_005f0b40: closes the open park screen (FUN_00485b40) before it hides the layer | OpenTPW/UI/Park/ParkMapScreen.cs OpenTPW/UI/UiWindow.cs  |
-| `0x005f17ef` | The map's handler `FUN_005f1130`, key-up case: a plain Escape let go closes the map | OpenTPW/UI/Park/ParkMapScreen.cs  |
+| `0x005f17ef` | The map's handler `FUN_005f1130`, key-up case: a plain Escape let go closes the map | OpenTPW.Tests/ParkEscapeOnReleaseTests.cs OpenTPW/UI/Park/ParkFrontEnd.cs OpenTPW/UI/Park/ParkMapScreen.cs  |
 | `0x005f2565` | Map overlay FUN_005f2380: a thing's satisfaction average, FUN_004e1e30 | OpenTPW/UI/Park/ParkMapScreen.cs  |
 | `0x005f5fa0` | The sound clock: wall-time milliseconds | OpenTPW/World/Park/ParkAudio.cs  |
 | `0x005f8ae0` | | OpenTPW/Client/GameDir.cs  |

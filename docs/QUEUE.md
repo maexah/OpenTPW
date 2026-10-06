@@ -38,14 +38,6 @@ the original.
 
 ## A. Bugs first
 
-- [ ] **Q119. A plain Escape does not close the park screen in front.** Found by Q57's review. In the original the six
-  management screens, an object window and the map take the focus as they open (`FUN_00485b70`, `FUN_004862a0`), and
-  their key handler answers a plain Escape let go by closing the screen, and nothing more (`FUN_00488ba0`, `0x00488bc6`;
-  the map at `0x005f17ef`; `scenes.md`, "The park Escape route"). Here a management screen keeps Escape and does
-  nothing with it (`ParkFrontEnd.MenuKey`), and an object window lets it through to the hand and the menu. Said at
-  the site. Measured in the original by Q115: Escape over the entry-price screen and over Park Information closed each,
-  the menu shut, an armed path tool kept (`park-engine.md`, "A park screen is open"). Confirm: the buy screen, then an object window with the path tool armed - Escape let go closes each, `tool`
-  still Path and `windows` without GameMenu; a screenshot.
 - [ ] **Q120. The modifiers are judged as the frame ends, not at each key.** Found by Q57's review. The original reads
   Shift, Ctrl and Alt with `GetKeyState` at each key-up (`0x0046bb0b`, `scenes.md`, "The park Escape route"), so a
   modifier let go in the same frame as Escape but after it still counts. `Input.BindingMatches` and

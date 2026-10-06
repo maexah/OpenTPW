@@ -266,10 +266,16 @@ internal sealed class ParkFrontEnd : Panel
 	/// and letting the park run again. A modal window in front keeps Escape from it, as in the lobby.
 	///
 	/// <para>
-	/// <b>Not the original's over a park screen.</b> The six management screens, an object window and the map take the
-	/// focus as they open, and their key handler closes the screen on a plain Escape let go (0x00488bc6).
-	/// Here a management screen keeps the key and does nothing with it, and an object window lets it through to the hand
-	/// and the menu (<c>docs/QUEUE.md</c> Q119).
+	/// <b>A park screen in front has the key</b>, and so has the map. The six management screens and an object window
+	/// take the focus as they open (<c>FUN_00485b70</c>, <c>FUN_004862a0</c>), and their key handler answers a key let go
+	/// that is Escape with no modifier by sending the screen its close, and nothing more (<c>FUN_00488ba0</c>,
+	/// <c>0x00488bc6</c>); the map's does the same (<c>0x005f17ef</c>). So the hand keeps what it holds, an armed tool
+	/// stays armed and no menu opens. With a modifier held the key goes to the shortcuts' table, whose Escape row names
+	/// none, so nothing answers it (<c>docs/exe/scenes.md</c>, "The park Escape route").
+	/// </para>
+	/// <para>
+	/// A park screen open over first person is ours alone, since the original closes it on the way in
+	/// (<c>docs/QUEUE.md</c> Q122): the screen in front takes the key there too, and the next Escape leaves.
 	/// </para>
 	/// </summary>
 	private void MenuKey( UiWindow? front )
@@ -281,7 +287,18 @@ internal sealed class ParkFrontEnd : Panel
 			return;
 		}
 
-		if ( front is { Modal: true } or { ParkScreen: true } and not ParkObjectWindow )
+		if ( front is { ParkScreen: true } or ParkMapScreen )
+		{
+			if ( Input.NoModifierHeld )
+			{
+				_stack.Close( front );
+				Log.Info( $"Escape: closed {front.GetType().Name}" );
+			}
+
+			return;
+		}
+
+		if ( front is { Modal: true } )
 			return;
 
 		// In first person the key is the viewfinder layer's, which leaves first person on a key-up whose key is
