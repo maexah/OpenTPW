@@ -300,6 +300,47 @@ public class ParkCameraToThingTests
 	}
 
 	/// <summary>
+	/// <b>A left click on a title that the original renames from is counted</b>: an object window's title asks for
+	/// the thing's rename box (<c>FUN_0048d2e0</c>) and the entry price screen's heading for the park's
+	/// (<c>FUN_00499060</c>). Neither box is built (Q28), so each click is counted, and a press held 600 ms, which is
+	/// no click, is not.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> either title deaf to the click; counted on a release of any length.</remarks>
+	[TestMethod]
+	public void AClickOnATitleTheOriginalRenamesFromIsCounted()
+	{
+		foreach ( var (make, id, counted) in new (System.Func<UiWindow> Make, int Id, string Counted)[]
+			{ (() => new ParkObjectWindow( _stack, 13 ), 0x3e28, "RENAME_OBJECT"), (() => new ParkEntryPriceScreen( _stack ), 0x4f3af, "RENAME_PARK") } )
+		{
+			var window = make();
+			_stack.Open( window );
+
+			var title = Find( window.Root, id );
+			var middle = new Vector2( (title.Rect.Left + title.Rect.Right) / 2f, (title.Rect.Top + title.Rect.Bottom) / 2f );
+			Assert.AreSame( title, window.Root.HitTest( middle.X, middle.Y ), $"{id:x} takes the pointer" );
+
+			var before = Times( counted );
+
+			foreach ( var (from, to, clicks) in new[] { (20000L, 20600L, 0), (30000L, 30080L, 1) } )
+			{
+				Time.PinWall( from );
+				Input.Mouse = new() { Left = true, LeftWentDown = true, Position = middle };
+				_stack.Update();
+				Time.PinWall( to );
+				Input.Mouse = new() { Position = middle };
+				_stack.Update();
+
+				Assert.AreEqual( before + clicks, Times( counted ), $"{counted} after a press held {to - from} ms" );
+			}
+
+			_stack.Close( window );
+			Input.Mouse = new();
+			Time.PinWall( 40000 );
+			_stack.Update();
+		}
+	}
+
+	/// <summary>
 	/// <b>A click on an object window's preview, with either button, goes to the window's thing and closes it</b>
 	/// (<c>0x0048d1a0</c>).
 	/// </summary>

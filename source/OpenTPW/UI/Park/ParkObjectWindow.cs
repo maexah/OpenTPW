@@ -205,7 +205,11 @@ internal sealed class ParkObjectWindow : UiWindow
 			Rect = new UiRect( 746, 74, 1219, 153 ),
 			HelpText = 3,
 			Font = 5,
-			TextColour = UiColour.White
+			TextColour = UiColour.White,
+
+			// A left click on the title opens the thing's rename box (FUN_0048d2e0, the helper every object
+			// window's title is given by FUN_0048d290). Renaming is not built (docs/QUEUE.md Q28): counted.
+			LeftClicked = static () => Unimplemented.Report( "RENAME_OBJECT" )
 		} );
 
 		_preview = Root.Add( new UiControl

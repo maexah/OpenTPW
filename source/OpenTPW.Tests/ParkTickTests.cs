@@ -618,7 +618,7 @@ public class ParkTickTests
 	/// sent on for them; gone at a status other than 4; left standing at 4; the wrong pair of cells for the vehicle that came; a guest on
 	/// the stop who is not going home counted as waiting; a vehicle stood at its first spin triggered when summoned; the
 	/// more-than-nine arm of the wait dropped or moved; a guest who goes left on their cell until the sweep's end; one who is not
-	/// the head of their cell going; the vehicle sent off from 4 while one still stands there.
+	/// the head of their cell going; the vehicle sent off from 4 while one still stands there; the stay's sample not counted.
 	/// </remarks>
 	[TestMethod]
 	public void ALeaverWaitsAtTheCrossingWalksToTheStopAndGoesWhenTheVehicleStands()
@@ -673,6 +673,9 @@ public class ParkTickTests
 			var guest = people.Guests[id];
 			guest.SetState( PeepState.PickingACellOutside, people.State.GameTick, new Random( 1 ) );
 
+			static int StaysCounted() => Unimplemented.Summary.FirstOrDefault( gap => gap.What == "LEAVER_STAY_SAMPLE" ).Times;
+			var staysBefore = StaysCounted();
+
 			foreach ( var status in new[] { 1, 2, 3 } )
 			{
 				Plays( status );
@@ -702,6 +705,7 @@ public class ParkTickTests
 				Sweep( people );
 
 			Assert.AreEqual( PeepState.AtTheBusStop, guest.State, "they reach the stop" );
+			Assert.IsTrue( StaysCounted() > staysBefore, "and the stay they would hand the park analyser there is counted, not built" );
 			Assert.IsTrue( cells.Any( cell => Near( cell, guest.Navigator.Position.Cell ) ),
 				$"on one of stop A's four cells, not at {guest.Navigator.Position.Cell}" );
 			Assert.IsTrue( people.LeaverAtTheStop() );

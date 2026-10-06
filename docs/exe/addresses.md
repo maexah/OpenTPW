@@ -717,6 +717,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00502156` | FUN_00501db0 case 0x10: the balloon's sprite deleted (FUN_00475550), its life kept, from | OpenTPW/World/Park/Peep.cs  |
 | `0x00502169` | FUN_00501db0 case 0x10: +0x210 zeroed, to here | OpenTPW/World/Park/Peep.cs  |
 | `0x005022ef` | FUN_00501db0 case 0x11: the balloon let go (FUN_004fe950) | OpenTPW/World/Park/Peep.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x00502333` | FUN_00501db0, entering state 0x15: a guest whose +0x204 is set hands the park analyser their stay (FUN_004c7600) | OpenTPW/World/Park/Peep.cs  |
 | `0x005026cb` | `FUN_00502600`: the researcher's decide at hire, on a world draw | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x00502ba9` | `FUN_005029f0`: the researcher's walk-or-stay, a world draw `& 3` | OpenTPW.Tests/ParkStaffBehaviourTests.cs OpenTPW/World/Park/StaffBehaviour.cs  |
 | `0x00502be4` | `FUN_005029f0`: the researcher staying takes state `0xf`, research | OpenTPW/World/Park/StaffBehaviour.cs  |
@@ -1428,4 +1429,5 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00faa598` | The base control proc's record for button 0: state word, press point, then the stamp at +8 (stride 0xc a button) | OpenTPW/UI/WindowStack.cs  |
 | `0x00faa5a0` | The left button's click stamp: the press's time, the release's after a click, nought after any other release | OpenTPW/UI/WindowStack.cs  |
 | `0x00faa5ac` | UI: the right button's time stamp (0x00faa5a0 + 1 * 0xc) | OpenTPW/UI/WindowStack.cs  |
+| `0x00faa638` | The hold on every control's timer: set by FUN_00662411, read by FUN_006622d2, cleared by FUN_00662420 | OpenTPW/UI/UiTimer.cs  |
 | `0x00fb1f20` | The sound engine's one random seed | OpenTPW/World/Park/ParkAudio.cs OpenTPW/World/Park/ParkScreams.cs  |

@@ -3015,6 +3015,11 @@ Five constructors join set `0xc`: model 9's (`0x00508a08`), the tag system's, th
 3. **Thing 5**, the park analyser, closes the month (`FUN_004c7720`, its one call `0x004c739c`): it samples the
    balance into its ring (`+0x1f104`), then pushes and zeroes the month's costs `+0x1f5a0`, staff `+0x1f7f0`, training
    `+0x1fa40` and cash in `+0x1fc90`, each into a 144-month ring (`FUN_004ce290`), and rolls a dozen totals besides.
+   One of them is the guests' stay: the mean of its ring of the last fifty stays (`FUN_004cef30` over `+0x21600`,
+   `0x004c79e5`) goes into a history ring at `+0x21164`. A stay is put there as a guest enters state `0x15`, at the
+   stop to go home, if their `+0x204` is set (`FUN_00501db0`, `0x00502333`): `mGameTick` less their arrival `+0x1d4`,
+   to a four of sweeps (`FUN_004fd950`), through `FUN_004c7600`, the ring's only writer. What sets `+0x204` and who
+   reads the history are not decoded. OpenTPW counts the write, `LEAVER_STAY_SAMPLE`, and keeps no such ring.
 4. **Thing 8**, the bank, runs its month turn (`FUN_004d02d0` → `FUN_004d0370`, `0x004d035f`).
 5. **Each member of staff** pays a month's wage (`FUN_00504c70`, `0x00504cb9`).
 

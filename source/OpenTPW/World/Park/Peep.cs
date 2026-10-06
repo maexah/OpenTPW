@@ -803,6 +803,13 @@ public sealed class Peep
 			case PeepState.HeadingForExit:
 				MajorDest = 0;
 				break;
+
+			// Standing at the stop to go home, a guest whose +0x204 is set hands the park analyser how long they
+			// stayed: mGameTick less their arrival, in fours of sweeps, into its ring of the last fifty stays
+			// (FUN_004c7600, from 0x00502333), which the month's close averages. Neither is built: counted.
+			case PeepState.AtTheBusStop:
+				Unimplemented.Report( "LEAVER_STAY_SAMPLE" );
+				break;
 		}
 	}
 

@@ -76,7 +76,11 @@ internal sealed class ParkEntryPriceScreen : UiWindow
 			Rect = new UiRect( 749, 174, 1221, 253 ),
 			HelpText = 191,
 			Font = 5,
-			TextColour = UiColour.White
+			TextColour = UiColour.White,
+
+			// A left click on the heading opens the park's rename box (FUN_00499060 to FUN_004990f0). Renaming is
+			// not built (docs/QUEUE.md Q28): counted.
+			LeftClicked = static () => Unimplemented.Report( "RENAME_PARK" )
 		} );
 
 		// The spinner itself - control type 12. Its own rect is the frame; the number sits in the text

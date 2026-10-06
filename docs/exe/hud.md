@@ -677,8 +677,8 @@ is never judged: the list's does (`0x00665d22`), so a press on a list is a click
 | the plain list class, `FUN_0065bb6b` (made by `FUN_0065ab64`) | `0x11006` | with flag `0x80`, posts `0x200` with the row; without, the row under the point (`FUN_0065b93f`, `0x201`) |
 | a slider's track, `Slider_Callback` | `0x11006` | whatever the button: pages towards the point (`Slider_PageTowards`) |
 | the lobby's player slots and Quit Game, `0x004a6000`, `0x004a61d0` (type 1 in the stream at `0x00753c68`, not buttons) | `0x10006` | whatever the button: the slot, or the quit question |
-| `FUN_0048d2e0` (installed by `FUN_0048d290`) | `0x10006` | the left button: vtable `+0x38` of control 0; not identified |
-| `FUN_00499060` (installed by `FUN_00498d80`) | `0x10006` | the left button: `FUN_004990f0`; not identified |
+| an object window's title, `FUN_0048d2e0` (installed by `FUN_0048d290`, which eight windows call with their title's id; the ride window's is `0x3e28`) | `0x10006` | the left button: slot `+0x38` of the helper kept in the control's slot 0, the thing's rename box (`park-engine.md`, the name boxes). The move turns the title white (`FUN_0065c5d5`) and the leave puts it back (`FUN_00492d20`). OpenTPW counts the click, `RENAME_OBJECT` (Q28) |
+| the entry price screen's heading `0x4f3af`, `FUN_00499060` (installed by `FUN_00498d80`) | `0x10006` | the left button: `FUN_004990f0`, the park's rename box; the same white on the move. OpenTPW counts the click, `RENAME_PARK` (Q28) |
 | `FUN_004b3c10` (installed by `FUN_004b3cf0`, the staff and visitor locator) | `0x10006` | the left button: `FUN_004b79b0` or `FUN_004b6080` |
 | the game menu's rows, `MenuList_ChoiceCallback` | `0x10006` | **whatever the button**: sound `0xc1`, then the choice (`0x100001`) |
 | an object window's preview, `0x0048d1a0` | `0x10006` | whatever the button: the camera to the thing |
