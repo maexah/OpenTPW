@@ -40,16 +40,6 @@ the original.
 
 **The 2026-10-06 review's leftovers come first, at Alexah's word (2026-10-06).**
 
-- [ ] **Q237. One Full Simulation test failed twice with no message kept.** Found by the 2026-10-06 review (fix 6).
-  `LevelFullSimulationParkTests.FullSimulationCreatesTwelveThingsWithRegularLoans` failed once in the review's
-  put-back runs and once at a gate, about two whole-suite runs in a hundred and twenty, and neither output was kept.
-  Nothing it reads is drawn (`FreshPark` takes no generator; its `RandomSeed` is the clock's and nothing in the test
-  reads it), and forty whole-suite runs after Q234's fix were green (`~/.cache/tpw-harnesses/rv6/loop.log`). When it
-  next fails, keep the run's output first: the loop in `rv6` saves any failing run whole. No game run.
-  From Q235b: `ParkTickTests.TheBusIsHeldAtTheStopUntilTheSweepAfterItsLastGuest` failed once in 25 runs of its
-  class beside `ParkPeopleTests` ("Expected:<0>. Actual:<1>. so the bus is NOT let go on the last drop's sweep"),
-  never alone. Its `ParkPeople` takes no generators, and a leaver standing at the stop triggers a bus at 2 with
-  nobody left to drop (`StepVehicle`): a likely cause, not shown.
 - [ ] **Q238. Seven leads from the 2026-10-06 review that nobody checked.** They were low and unverified, so they
   were left off its list (`~/.cache/tpw-harnesses/review-run-2026-10-06/LEDGER.md`, the lines marked OPEN, "lead" or
   "not checked", and what fixes 8 and 9 counted without a queue item). Check each first-hand; then mend it, say it
@@ -100,6 +90,9 @@ the original.
   From Q126: a dropped sweep makes the handed tick jump (n, n+1, n+2, then n+8 after a 64-tick frame), so the
   guests of one needs slot miss a turn the original's `mGameTick` gives them on its next sweep, and stamps taken
   from it jump five sweeps.
+  From Q237: because that clock is never reset, a test with every generator seeded still plays out by how many
+  ticks the tests before it ran (`ParkTickTests.PinTheClock` sets it to nought for one test). On the park's clock a
+  seeded run would repeat by itself.
 - [ ] **Q133. The mechanic, the handyman and the entertainer stand once their saved walk ends, where the original's
   walk about.** Found by Q82 (`ride-operation.md`, "Leaving idle, or a walk: the choice by kind"). With no work the
   mechanic's `FUN_004da5b0` and the handyman's `FUN_004d7100` take a random walk every time (`0x004da6fa`,

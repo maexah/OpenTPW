@@ -4900,6 +4900,32 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   original's thirteen logged aims (`q235/orig/a.log`), cell and place; the fourth and fifth draws, and the first and
   second, each put back, fail it (`~/.cache/tpw-harnesses/q235b/`). Not compared afresh with the original: its
   load makes other ids (38, 33, 44 to 54), never 43, so 43's aim is the generator's, checked on those thirteen.
+- [x] **Q237. One Full Simulation test failed twice with no message kept.** Found by the 2026-10-06 review (fix 6).
+  `LevelFullSimulationParkTests.FullSimulationCreatesTwelveThingsWithRegularLoans` failed once in the review's
+  put-back runs and once at a gate, about two whole-suite runs in a hundred and twenty, and neither output was kept.
+  Nothing it reads is drawn (`FreshPark` takes no generator; its `RandomSeed` is the clock's and nothing in the test
+  reads it), and forty whole-suite runs after Q234's fix were green (`~/.cache/tpw-harnesses/rv6/loop.log`). When it
+  next fails, keep the run's output first: the loop in `rv6` saves any failing run whole. No game run.
+  From Q235b: `ParkTickTests.TheBusIsHeldAtTheStopUntilTheSweepAfterItsLastGuest` failed once in 25 runs of its
+  class beside `ParkPeopleTests` ("Expected:<0>. Actual:<1>. so the bus is NOT let go on the last drop's sweep"),
+  never alone. Its `ParkPeople` takes no generators, and a leaver standing at the stop triggers a bus at 2 with
+  nobody left to drop (`StepVehicle`): a likely cause, not shown.
+  **Done 2026-10-06.** The bus test's cause is shown and mended; the Full Simulation test's is not found. **The bus:**
+  by the draw a saved guest (39, once 32) goes home and stands at the stop before the load is called on 1264, and the
+  manager's tail answers them: a bus at 2 with its load off is sent on (the message quoted), or another vehicle was
+  summoned first ("Expected:<1>. Actual:<0>. and the waiting bus summoned on the same sweep", the one failure in
+  180 whole-suite runs of the build before, kept whole: `~/.cache/tpw-harnesses/q237/suiteB-fail-20.log`). Seeding
+  alone did not pin it: guests take turns on `GameClock.Ticks / 8` (Q132), which no scene entry resets, so one seed
+  passed or failed by the tests run before it. With the clock set to nought too, seven of seeds 0 to 599 put a guest
+  at the stop, the same seven on a second pass. The test now seeds all four generators, pins the clock and asserts the
+  stop empty, and `TheBusHandshakeNamesALeaverAtTheStop` holds one of the seven to that message. Four bugs put back,
+  four caught (a failing seed, the assertions out, the generators unseeded, the clock unpinned). **The Full
+  Simulation test** did not fail in those 180 runs (three at a time for 120 of them), nor in 150 runs of the two
+  classes; at two in 120 that is about one chance in twenty of seeing none. Read and ruled out: no test runs in
+  parallel, no generator or clock reaches `FreshPark`, the catalogue or `ParkState`'s two answers, the path art is not
+  drawn, the archives are read into memory, and the test host held 200 file handles of a million. The one trace of an
+  old failure is its duration, 121 ms (a passing run takes about 200). Nothing was changed for it. If it fails
+  again: `~/.cache/tpw-harnesses/q237/loop.sh NAME COUNT` keeps a failing run's whole output.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

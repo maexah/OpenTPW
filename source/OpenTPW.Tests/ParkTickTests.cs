@@ -64,6 +64,17 @@ public class ParkTickTests
 		Frame( 0f );
 	}
 
+	/// <summary>
+	/// The frame clock's count and its seconds set to nought, as a fresh process has them. Guests take their turns
+	/// on <c>GameClock.Ticks / 8</c>, which no scene entry resets, so without this a seeded run still plays out by
+	/// however many ticks the tests before it ran.
+	/// </summary>
+	private static void PinTheClock()
+	{
+		typeof( GameClock ).GetProperty( nameof( GameClock.Ticks ) )!.SetValue( null, 0 );
+		typeof( GameClock ).GetProperty( nameof( GameClock.Now ) )!.SetValue( null, 0f );
+	}
+
 	/// <summary>A sixtieth of a second, which is about two frames to a 31ms tick.</summary>
 	private const float AFrame = 1f / 60f;
 
@@ -526,9 +537,37 @@ public class ParkTickTests
 	/// <remarks>
 	/// <b>Mutations:</b> <c>StepVehicle</c> passing <c>loadHeld: false</c>, which lets the bus go on the drop's sweep;
 	/// the let-go not waiting for 2.
+	///
+	/// <para>
+	/// <b>The generators are seeded, the frame clock is pinned, and the stop is asserted empty.</b> The load is
+	/// called 509 sweeps in, and by then the draw can have sent a saved guest home: one standing at the stop has a
+	/// vehicle summoned for them and a bus at 2 with its load off sent on (<see cref="ParkPeople.LeaverAtTheStop"/>),
+	/// which is the original's and not this test's subject. Of seeds 0 to 599 given to all four generators, seven
+	/// put a guest there (<see cref="SeedWithALeaverAtTheStop"/> is one), the same seven on a second pass; without
+	/// the clock pinned (<see cref="PinTheClock"/>) a seed's outcome changes with the tests run before it.
+	/// </para>
 	/// </remarks>
 	[TestMethod]
-	public void TheBusIsHeldAtTheStopUntilTheSweepAfterItsLastGuest()
+	public void TheBusIsHeldAtTheStopUntilTheSweepAfterItsLastGuest() => TheBusIsHeld( seed: 1 );
+
+	/// <summary>A seed whose draws stand a saved guest at the stop before the first load is called.</summary>
+	private const int SeedWithALeaverAtTheStop = 164;
+
+	/// <summary>
+	/// <b>The handshake above says why it stops when a guest going home stands at the stop</b>, where its own
+	/// assertions would name the bus's trigger or pass.
+	/// </summary>
+	[TestMethod]
+	public void TheBusHandshakeNamesALeaverAtTheStop()
+	{
+		var failure = Assert.ThrowsException<AssertFailedException>( () => TheBusIsHeld( SeedWithALeaverAtTheStop ) );
+
+		StringAssert.Contains( failure.Message, NobodyIsGoingHome );
+	}
+
+	private const string NobodyIsGoingHome = "no guest stands at the stop to go home";
+
+	private void TheBusIsHeld( int seed )
 	{
 		var world = World();
 		var catalogue = new ParkItemCatalogue( Theme, data );
@@ -546,13 +585,16 @@ public class ParkTickTests
 
 		var people = new ParkPeople( world, new ParkBalance( Theme, easyMode: true ),
 			() => ParkRides.GateIsOpen, new ParkState( world ), catalogue,
-			thingId => thingId == busThing ? bus : rides.Scheduler.Find( rides.ScriptFor( thingId ) ) );
+			thingId => thingId == busThing ? bus : rides.Scheduler.Find( rides.ScriptFor( thingId ) ),
+			random: new Random( seed ), behaviourRandom: new Random( seed ), rideRandom: new Random( seed ),
+			staffRandom: new Random( seed ) );
 
 		try
 		{
 			Assert.IsNotNull( bus, $"the bus, thing {busThing}, should run {ParkRides.ScriptPathFor( busItem )}" );
 
 			EnterPark();
+			PinTheClock();
 
 			Assert.IsTrue( bus.Set( "VAR_STATUS", 0 ) && bus.Set( "VAR_TRIGGER", 0 ),
 				"bus.RSE declares both variables the handshake turns on" );
@@ -562,6 +604,7 @@ public class ParkTickTests
 			for ( var sweep = 0; sweep < 600 && !people.LoadHeld; ++sweep )
 				Sweep( people );
 
+			Assert.IsFalse( people.LeaverAtTheStop(), $"{NobodyIsGoingHome} with seed {seed}, or the bus answers them too" );
 			Assert.AreEqual( 1264, people.State.GameTick, "the load is called on mGameTick 1264" );
 			Assert.AreEqual( 1, bus["VAR_TRIGGER"], "and the waiting bus summoned on the same sweep" );
 			Assert.AreEqual( newest, people.Peeps.Max( peep => peep.ThingId ), "nobody is dropped before it answers 2" );
@@ -579,6 +622,7 @@ public class ParkTickTests
 			bus.Set( "VAR_STATUS", 2 );
 			Sweep( people );
 
+			Assert.IsFalse( people.LeaverAtTheStop(), $"{NobodyIsGoingHome} with seed {seed} as the load drops" );
 			Assert.IsTrue( people.Peeps.Max( peep => peep.ThingId ) > newest, "at the stop, its one guest is dropped" );
 			Assert.IsTrue( people.LoadHeld && people.StillToDrop == 0, "and the load is held with nobody left" );
 			Assert.AreEqual( 0, bus["VAR_TRIGGER"], "so the bus is NOT let go on the last drop's sweep" );
