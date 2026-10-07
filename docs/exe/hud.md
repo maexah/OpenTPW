@@ -1063,6 +1063,50 @@ right-click a row, `0x404` column hit, `0x405` visible range changed. By this pr
 are dead by CONTENT, not by CODE. The all-staff, visitors and all-items screens do answer `0x402`: the camera goes to
 the row's thing and the screen closes (`park-engine.md`, "The camera goes to a thing").
 
+### A list's order: the sorted insert, and a heading's click (Q130d)
+
+Decoded and measured 2026-10-06. **Every list whose flags `+0x48` hold `0x10` keeps itself in order**, and all seven
+list records do (buy `0x91`, the rest `0x291`). The sort is two words on the list: the column `+0x168` and the
+direction `+0x16a` (0 ascending, 1 descending).
+
+- **The add is a sorted insert.** `FUN_0066403b` with an insert-after of -1 takes a free node, then walks from the
+  head until `FUN_00663edc( new, row )` answers 1 and links the new row before that one, or after the last. For a
+  numeric column (type 1) that is `new < row` ascending and `row < new` descending, both strict, so **equal rows stand
+  in the order they were added**. For a text column (type 0) it is 1 when the row's text is null, else
+  `FUN_0067c290( new, row ) < 0` ascending (the arguments swapped for descending): a compare of 16-bit characters by
+  their plain values, with no case folding and no locale, so every capital stands before every small letter.
+- **A heading's click re-sorts.** The headings are the list's children `0x10 + column`; a child's click reaches the
+  list's proc `FUN_00665c35` as message `0x100` and goes to `FUN_00665a44( id )`. On the column already sorted on it
+  flips the direction (`FUN_0066594d( -1 )`); on another it sets ascending, then the column (`FUN_0066590f`). Either
+  way it sorts the whole list (`FUN_006628f4`), commits (`FUN_00663324`) and, with a row selected, posts `0x401` for
+  the selected index, which now names a different row. Each setter that changed its word posts `0x406` with the column
+  + 1, negated when descending (`FUN_006658b9`).
+- **`FUN_006628f4` keeps equal rows as they stood.** It moves the first least row to the head, then takes each row
+  from the third on and links it before the first row it is strictly less than. So a click on Monthly Wage from name
+  order leaves equal wages in name order, where a fresh fill leaves them in the order added.
+- **A screen remembers its sort in one word of its own**, for the session: its handler stores `0x406`'s value, and
+  its opener hands the word to `FUN_006659af( word, 0 )` while the list is still empty, which sets both words and
+  sorts nothing. Hire: `[0x007523e4]` (written `0x0049b85e`, read `0x0049c0f0`). Buy: `[0x00755140]` (`0x004ad057`).
+  Visitors: `[0x007508bc]`. All three are 1 in the file: the first column, ascending.
+
+**So the hire list stands in name order because its first column is the name.** `FUN_0049b5b0` clears the list and
+adds the tab's candidates in slot order, 0 to 31, each through the sorted insert, the slot as the row's id; a
+candidate who joins while the screen is open (`FUN_00481550`, `FUN_0049c970`) goes through the same insert. Nothing in
+the hire screen's own code orders anything. The name handed over is `FUN_005074a0`'s text, held to 39 characters on a
+fill and 40 on a join.
+
+**In the original** (under Proton, the stock Lost Kingdom park, each predicted first; `q130d/orig`): the word read 1
+with the screen open; a click on Candidate Name made it -1 and reversed the rows, on Monthly Wage 2 and by wage
+rising, again -2 and falling; another tab, and the screen closed and opened again, kept -2 and the order. With the
+word back at 1 all five tabs stood in name order, and four of them not in slot order, each row tied to its slot
+through the pool's name index and the `american` tables (janitors: slots 19, 1, 17, 2, 14, 7). Ties, on six
+entertainers: a click on Monthly Wage from name order gave Duncan Kershaw, Shintaro Kanaoya, Simon Carter at 48
+(name order), and another tab and back gave Shintaro Kanaoya, Simon Carter, Duncan Kershaw (slots 0, 8, 13). The buy
+list reversed on a click on Name and was still reversed when opened again.
+
+**OpenTPW**: `UiList.Insert` is the sorted insert and only the visitors list calls it; `ParkHireScreen.Show` and the
+buy list add in the order given, and no list answers a click on a heading. The build is `docs/QUEUE.md` Q130e.
+
 ### The pointer over a list
 
 Under the list flag `0x80` the proc `FUN_00665c35` answers the pointer's move, `0x10001`, and `0x10003`, through

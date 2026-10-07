@@ -40,13 +40,14 @@ the original.
 
 **The 2026-10-06 review's leftovers come first, at Alexah's word (2026-10-06).**
 
-- [ ] **Q130d. The hire list stands in name order in the original. Decode first.** From Q130c. On four tabs the
-  original lists its candidates by name (Chris Battson above Rajan Tande, who holds the earlier slot); OpenTPW's
-  `ParkHireScreen` lists them in the pool's order. Decode what orders the list (`FUN_00481550` adds a row;
-  `UiList.Insert` already models the sorted insert `FUN_0066403b`) and whether a heading's click re-sorts it. Confirm
-  beside the original's screen, whose reference install reads the `american` name tables. Q130c's review: the
-  list's builder is `FUN_0049b5b0`, which adds rows in slot order with the slot as the row's key; the pool here
-  keeps no slots (`ParkStaffPool.Candidates`), which matters if the order turns out to be the slots'.
+- [ ] **Q130e. Build the lists' order: the sorted insert on the hire and buy lists, and a heading's click.** From
+  Q130d (`hud.md`, "A list's order"). Give `UiList` the column and direction it sorts on, make `Add` the sorted
+  insert whenever they are set (text by plain character value, equal rows after their equals), and re-sort on a
+  heading's click, keeping equal rows as they stood: the same column flips the direction, another sets ascending.
+  Each screen keeps its word for the session (hire, buy, visitors: all start at the first column, ascending). The
+  slot stays the row's id, so the pool needs no slots for this. Confirm: the hire screen beside the original's on
+  each tab, then a click on each heading, the rows read from the picture and the order logged, predicted first;
+  ties after a click on Monthly Wage, and after another tab and back.
 - [ ] **Q132. Guests and rides take their turns on the game clock over eight, where the original hands them
   `mGameTick`. Decode first.** Found by Q68b. `ParkPeople.OnUpdate` hands `Peep.Tick`, `PeepBehaviour.Step` and the
   rides' turns `GameClock.Ticks / 8`, which runs from the program's start and is not reset on entering a park

@@ -4995,6 +4995,18 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the original's crowd at about 0.12 of its music (0.09 to 0.17). 27 bugs put back, 27 caught. Found on the way:
   `Voice.SetVolume` with no time never arrived (mended). Not explained: the original's samples differ in gain, one
   from another, 0.022 to 0.046 (`audio.md`).
+- [x] **Q130d. The hire list stands in name order in the original. Decode first.** From Q130c. On four tabs the
+  original lists its candidates by name (Chris Battson above Rajan Tande, who holds the earlier slot); OpenTPW's
+  `ParkHireScreen` lists them in the pool's order. Decode what orders the list (`FUN_00481550` adds a row;
+  `UiList.Insert` already models the sorted insert `FUN_0066403b`) and whether a heading's click re-sorts it. Confirm
+  beside the original's screen, whose reference install reads the `american` name tables. Q130c's review: the
+  list's builder is `FUN_0049b5b0`, which adds rows in slot order with the slot as the row's key; the pool here
+  keeps no slots (`ParkStaffPool.Candidates`), which matters if the order turns out to be the slots'.
+  **Done 2026-10-06 (decode only).** `hud.md`, "A list's order". The list orders itself: every add is a sorted
+  insert on the list's own column and direction, the hire screen's word `[0x007523e4]` is 1 (the name, ascending),
+  and a heading's click flips or changes it and re-sorts. In the original, predicted first (`q130d/orig`): the word
+  read 1, then -1, 2, -2 on three heading clicks with the rows following, kept across a tab and a reopening; all five
+  tabs in name order, four not in slot order. Nothing built; the build is Q130e.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

@@ -2080,7 +2080,8 @@ photographed (Chris Battson 63 and Rajan Tande
 45; mechanics at 92, 115, 115; entertainers at 60, 60; researchers at 100, 100). Two differences, neither the
 pool's: the reference install reads the `american` name tables, where three of those rows hold other names than
 `English`'s (mechanic row 12 is Alex Cullum there, Rob O'Farrell here), and its list stands in name order on all
-four tabs where OpenTPW's is in the pool's order (Q130d).
+four tabs where OpenTPW's is in the pool's order: the list sorts itself (`hud.md`, "A list's order"; the build is
+Q130e).
 
 **Every way out without a drop returns the candidate**: a quick right click with RMB cancel on, which is
 the default (`0x0048842b` installs the idle mode whatever the current one is); Escape (`0x0040c180`),
