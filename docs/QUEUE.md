@@ -40,16 +40,15 @@ the original.
 
 **The 2026-10-06 review's leftovers come first, at Alexah's word (2026-10-06).**
 
-- [ ] **Q236. The crowd's own voice and `FUN_0055ab50` are counted, not built. DECODE FIRST.** Found by the
-  2026-10-06 review (fix 4). On every 32nd step, after the music's level, the park loop hands kids 91 the guests
-  within four cells of the cell at `[0x007b05cc]`, held to 100 (`FUN_004c8d30`, then `FUN_0051e7b0`: it plays the
-  effect from `[0x00803a24]` while `[0x00803aa8]` is set, sets its parameter 7 and stops it at nought), and calls
-  `FUN_0055ab50`, which scales four words at `0x007660b8` (`park-engine.md`, "The music's level"). OpenTPW counts both
-  (`CROWD_VOICE_LEVEL`, `PARK_LOOP_FUN_0055AB50`) and plays no crowd. Kids 91 is of the music's class: twelve
-  variations in bands of 16, the first six naming controller 7 over a volume range of 14 to 22. Decode what that
-  controller does to the volume (`FUN_006bc090`), which cell `[0x007b05cc]` holds, and what the four words feed.
-  Confirm: the crowd found in a capture beside the original's (`rv4/orig/xcorr.py` is the method), near a crowd and
-  away from one.
+- [ ] **Q236b. Build the crowd's voice.** From Q236 (`audio.md`, "The crowd's voice"). On the music's beat, count the
+  guests on the cells within four of the cell under the pointer (a 9 by 9 square cut at the map's edge, nought with
+  no cell), hold it to 100, nought in world state 4; above nought play kids 91 flat as a chain of the music's class
+  whose parameter 7 is the count (the variation by the zones, the volume `level × 8 / 100 + 14` on variations 1 to
+  6 and a draw from 14 to 21 on the twins, the pitch a draw from 0 to 5), start it again if it ends, and fade it out
+  at nought. Where `CROWD_VOICE_LEVEL` is counted; `PARK_LOOP_FUN_0055AB50` stays counted until something flies.
+  The gain past the variation's volume is not decoded: set it by measurement. Confirm: the crowd found in a capture
+  beside the original's (`rv4/orig/xcorr.py` is the method), with the pointer over the Belly Bounce's queue and over
+  empty ground, the level predicted first and read in the log; a screenshot of each.
 - [ ] **Q130d. The hire list stands in name order in the original. Decode first.** From Q130c. On four tabs the
   original lists its candidates by name (Chris Battson above Rajan Tande, who holds the earlier slot); OpenTPW's
   `ParkHireScreen` lists them in the pool's order. Decode what orders the list (`FUN_00481550` adds a row;

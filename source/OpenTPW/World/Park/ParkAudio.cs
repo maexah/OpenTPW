@@ -805,8 +805,8 @@ public sealed class ParkAudio : Entity
 			++LevelSets;
 
 			// The block's other half is not built (0x0054f875 to 0x0054f8c8): the crowd's own voice, kids 91, whose
-			// parameter 7 is the guests within four cells of the cell at [0x007b05cc], held to a hundred
-			// (FUN_004c8d30, FUN_0051e7b0), and FUN_0055ab50's four words.
+			// parameter 7 is the guests within four cells of the cell under the pointer, [0x007b05cc], held to a
+			// hundred (docs/exe/audio.md, "The crowd's voice"), and FUN_0055ab50, the flying cars' rectangle.
 			Unimplemented.Report( "CROWD_VOICE_LEVEL" );
 			Unimplemented.Report( "PARK_LOOP_FUN_0055AB50" );
 		}

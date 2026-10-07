@@ -1403,7 +1403,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00790a88` | Camera scroll term, the first of three FUN_0042aab0 zeroes when it places the look-at | OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
 | `0x00790a90` | Camera scroll term, the last of the three FUN_0042aab0 zeroes | OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
 | `0x007afd08` | The preview record FUN_004689f0 fills: instance, root matrix, angle, panel, the fit's five floats, the clock | OpenTPW.Tests/ParkObjectPreviewTests.cs OpenTPW/UI/Park/ParkObjectPreview.cs  |
-| `0x007b05cc` | The packed cell (a word) whose neighbourhood the crowd voice's level is counted in (read at 0x0054f875) | OpenTPW/World/Park/ParkAudio.cs  |
+| `0x007b05cc` | The packed cell under the pointer (a word, written by FUN_0045d560), whose neighbourhood the crowd voice's level is counted in (read at 0x0054f875) | OpenTPW/World/Park/ParkAudio.cs  |
 | `0x007c24c8` | The open park screen's control, nought when none is | OpenTPW/World/Level.cs  |
 | `0x007cb2fc` | | OpenTPW/UI/Screens/OptionsScreen.cs  |
 | `0x007cc1e4` | The buy screen's waiting row, an item id as a word; nought is none | OpenTPW/UI/Park/ParkBuyScreen.cs  |

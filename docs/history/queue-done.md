@@ -4963,6 +4963,21 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   are the park status screen's graph; the count now asks the flag. (f) The cap's "owed to the next frame" put back:
   caught; the double click's test restaged with the move that selects. (g) The cache folder's failure is logged
   and the boot goes on (run with the folder unmakeable). Sixteen bugs put back, sixteen caught (`q238/mutate.py`).
+- [x] **Q236. The crowd's own voice and `FUN_0055ab50` are counted, not built. DECODE FIRST.** Found by the
+  2026-10-06 review (fix 4). On every 32nd step, after the music's level, the park loop hands kids 91 the guests
+  within four cells of the cell at `[0x007b05cc]`, held to 100 (`FUN_004c8d30`, then `FUN_0051e7b0`: it plays the
+  effect from `[0x00803a24]` while `[0x00803aa8]` is set, sets its parameter 7 and stops it at nought), and calls
+  `FUN_0055ab50`, which scales four words at `0x007660b8` (`park-engine.md`, "The music's level"). OpenTPW counts both
+  (`CROWD_VOICE_LEVEL`, `PARK_LOOP_FUN_0055AB50`) and plays no crowd. Kids 91 is of the music's class: twelve
+  variations in bands of 16, the first six naming controller 7 over a volume range of 14 to 22. Decode what that
+  controller does to the volume (`FUN_006bc090`), which cell `[0x007b05cc]` holds, and what the four words feed.
+  Confirm: the crowd found in a capture beside the original's (`rv4/orig/xcorr.py` is the method), near a crowd and
+  away from one.
+  **Done 2026-10-06 (decode only).** `audio.md`, "The crowd's voice"; `park-engine.md`, "The music's level". The cell
+  is the one under the pointer (`FUN_0045d560`); the level picks the variation by bands of 16 and is the volume of
+  variations 1 to 6, `level × 8 / 100 + 14` of 100; the four words are the flying cars' rectangle. In the original
+  (memory, 75 s, `q236/orig/a.log`) the level word followed the count of guests within four cells of the pointer's
+  cell, 12 over the Belly Bounce's queue and 0 on empty ground, predicted first. No capture made; the build is Q236b.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

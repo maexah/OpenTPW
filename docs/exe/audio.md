@@ -232,6 +232,27 @@ moved and pitched each tick, faded with 60 taken as milliseconds. The volume's f
 (`FUN_006bb860`) and QMixer's own volume scale are not read. The coasters', tour ride's and go-karts' slots are not
 built.
 
+## The crowd's voice
+
+Decoded and measured in the original by Q236; nothing of it is built (`CROWD_VOICE_LEVEL`).
+
+**It is the crowd under the pointer.** On every 32nd step, after the music's level (`park-engine.md`, "The music's level"), the park loop reads the word at `[0x007b05cc]` (`0x0054f875`), which is the cell the pointer is over, `y × 128 + x + 1`: the ground pick `FUN_0045d560` writes it each time it runs, nought when the pick finds no cell, and `FUN_0046c0b0` resets it to 1. `FUN_004c8d30( 1, cell, 4, 0 )` then counts the things of kind 1, guests, on the lists of the cells from four before to four after it each way, a 9 by 9 square cut at the map's edges; cell nought counts nothing. The count is held to 100 (`0x0054f89e`), made nought while the world's state `+0x1da738` is 4 (`0x0054f8b0`), and handed to `FUN_0051e7b0`.
+
+**`FUN_0051e7b0( level )`** keeps the level at `[0x00803ab0]`. While sound is up (`[0x00803aa8]`, set by `FUN_0051b660`): above nought, with no handle at `[0x00803aa4]` it plays kids 91 at (0,0,0) (`Sound_PlayEffect( 0, [0x00803a24], 0x5b, 0, 0, 0 )`), then sets the voice's parameter 7 to the level (`FUN_0051bc40`) and keeps what that answers as the handle, nought once the voice is gone, so a voice that ends is started again on the next beat; at nought it stops a live voice with `Sound_StopFading` and clears the handle.
+
+**What parameter 7 does to kids 91** (global `cat_kidsSFX.map`; flags `0x0606`, the music's class, above; the effect's own parameter id, `+0x12`, is 7). Twelve variations, every one with volume bytes 14 and 22 and pitch bytes 0 and 6:
+
+| Variations | Key `+0x16`, mask `+0x18` | Weight | Zones (parameter range to variation) |
+|---|---|---|---|
+| 1 to 6 | 7, 1 (the volume) | 5904 each | 0-15 to 1, 16-31 to 2, 32-47 to 3, 48-63 to 4, 64-79 to 5, 80-100 to 6, and its own band again to its twin, 7 to 12 |
+| 7 to 12 | 0, 0 | 590 for 7, 5904 for 8 to 12 | the six bands to 1 to 6 only |
+
+So the level does two things. As the class's zone parameter (controller slot 0) it picks each next sample's variation: the band's own variation, or from that one its twin, by weight (5904 to 590 in the first band, even in the others), and from a twin always back. As controller slot 1 of variations 1 to 6 it is the volume: `level × (22 − 14) / 100 + 14` in whole numbers (`FUN_006bc090`, `0x006bc040`), 14 from 1 to 12, 15 from 13, up to 22 at 100, of 100; and because the match is past slot 0 the set applies it to the playing sample at once (`0x006bbb80`, `0x006bbbe0`). A twin names no controller, so its volume is a draw from 14 to 21. The pitch is a draw from 0 to 5 on all twelve.
+
+**Measured in the original** (Proton, off-screen, memory only; `q236/orig/crowd.py`, `a.log`, 75 s), predicted first and as predicted: the level word followed this script's own count of guests within four cells of the pointer's cell at every beat (12 over the Belly Bounce's queue, 0 on empty ground, 1 and 2 as a walker came by); the handle was nought exactly while the level was; the voice is of class `0x0070a498` with keys 7, 7 and both values the level; its variation went between 1 (key 7, mask 1) and 7 (key 0), both with volume bytes 14 and 22. **Not predicted:** once, at level 11, the voice ended by itself and was started again a beat later with a new handle; what ended it was not read. Not measured: the sound itself (no capture was made), state 4's nought, and a level past 15 (the stock park has thirteen guests), so the other five bands are the file's and the listing's alone.
+
+**For the build:** the volume's further scale by the groups' levels is not read (above), so set the gain by a capture beside the original's, near a crowd and away from one (`rv4/orig/xcorr.py` is the method).
+
 ## Node lookup is by id AND a capability flag
 
 `FUN_0044b220` walks the `.MD2` id table for a record whose **id matches** *and* whose **flag word shares a bit** with a given mask, and answers the first such record. Not by id alone. The masks include `0x200` sound, `0x100` particles and `0x400` costume; walk nodes take `0x800` and heads `0x80`. A mask sharing no bit with `0x3da1f83` is swapped for `0x3da1f82` first (`0x0044b226`..`0x0044b22e`); none of the masks above is.
