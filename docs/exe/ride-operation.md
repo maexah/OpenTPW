@@ -1517,7 +1517,7 @@ content in Lost Kingdom), else `DECIDE_ENTERTAINER_BESIDE`, then `DECIDE_PRANK_S
 held**, and differs from the original's reach in four ways, said at the site: no arm ends the turn; nothing clears a
 test (the jump's stamp, the levels zeroed), so a guest counts on every turn it holds; the bin's route is not asked;
 and the entertainer's count is of one standing beside the guest, where the original goes on to ask for staff state
-`0xe`, which nobody takes here (Q133c). The fireworks' script variable is not read. The console's `need` sets
+`0xe`, which nobody takes here (Q133d). The fireworks' script variable is not read. The console's `need` sets
 illness, litter or prankery.
 
 Predicted and read in Lost Kingdom (`q111confirm.py`, `q111/run1`). The stock park left alone 120 s: vomit, litter,
@@ -2416,6 +2416,100 @@ and Walking, every idle stamp a multiple of four; all five on 16 cells or more. 
 every reading. Where it parts from the original is the work: the entertainer here never performs, so it walks
 through the sweeps the original's stands performing.
 
+### The entertainer's performance - `FUN_004d46d0`, `FUN_004c8d30` and state `0xe`
+
+Decoded for the build (`docs/QUEUE.md` Q133c); nothing here is built.
+
+**The look answers yes or no and names nobody.** `FUN_004c8d30( kind, cell, reach, first )` (`RET 0x10`) unpacks
+`cell − 1` to x (`& 0x7f`) and y (`>> 7`) and takes the square from `reach` before to `reach` after each way, held
+to 0..127 (`0x004c8d63`..`0x004c8da5`). For each cell, x outside and y inside, it walks the cell's thing list: the head
+word at `[0x008023a0] + id × 68 − 0x20`, each thing's next at `+0xa`. A thing whose kind byte `+2` is `kind` is
+counted, or with `first` set answers 1 at once (`0x004c8e21`, `0x004c8e89`). Cell nought leaves y's lower bound above
+its upper, so nothing is walked. `FUN_004c8eb0( kind, cell, reach )` is that with `first` 1. Whether a rider or a
+queuer is on a cell's list is not read here.
+
+**The decide `FUN_004d46d0`**, in order:
+
+1. `FUN_00506a40`, the strike and the tired arm: non-zero returns.
+2. `FUN_00506680`, too tired to work: "Too tired to entertain", then step 5.
+3. A draw, unsigned mod 3 (`0x004d4756`): not nought, step 5.
+4. `FUN_004c8eb0( 1, cell, [0x007853a0 + 16 × grade] )` on the entertainer's own cell, `+7` × 128 + `+5` + 1
+   (`0x004d47a2`; the `this` it is handed, the thing at world `+0x1da720`, is not used). Kind 1 is a guest. Nobody:
+   step 5. Somebody: **a second draw, taken whatever follows** (`0x004d47b5`); `n` = `FUN_00541fa0( +0x24, +0x20 )`,
+   the sprite's kind and bank; the animation is `0xd` when `n` is 1 and `0xd` + draw mod (`n` − 1), unsigned,
+   otherwise (`n` of nought divides by `0xffffffff`); it is queued on the sprite (`FUN_004217f0` on `+0xc`), and
+   `+0x19c` = `0xe` and `+0x214` = mGameTick are written inline, with no SetState, so `+0x200` is not stamped.
+5. The stay on `mGameTick & 3` of nought or the walk ("The no-work walk, in both games").
+
+Nothing is kept of whom: no id, no facing, no destination. The entertainer performs where they stand.
+
+**The per-grade record** is 16 bytes at `0x00785398`: WorkDuration `+0`; `+4`, which nothing in the image
+references (HappinessEffectOnCell by the balance file's order, 4, 8, 12, 16, 20; the loader's table is not read, and
+a read through another base is not ruled out); ActivationDistance `+8`, 3, 3, 4, 4, 5 (read in the original's
+memory); PoundsPerTrainingPoint `+0xc`, which training reads (`FUN_00505a10`, `0x00505a81`).
+
+**State `0xe`'s turn** (`FUN_004d4810`, case `0xe`): the work turn's cost `FUN_00506760` (rest loses (6 − grade) ×
+0.025, mood (6 − grade) × 0.01), with no draw and no sound; then, while mGameTick <= `+0x214` + WorkDuration,
+unsigned, it returns. Past it: cat_staff effect `0x87` at the sprite's position (`FUN_004754e0`, then
+`Sound_PlayEffect( 0, [0x00803a30], 0x87, x, y, z )`), and the decide again in the same turn, which can start
+another performance on a fresh stamp. So a spell is the stamp's sweep and the 50 after it at grade 3, 51 work turns.
+
+**What animation `0xd` shows.** Entries 13 to 16 of the animation table `0x0075a418` are the literals 0 to 3, a
+state. `FUN_004d4190` hands the queued number's entry to `FUN_00475b80( sprite, entry )`, which for 0 to 3 asks the
+sprite's bank (`[0x00876b48 + (base of kind +0xac + bank +0xb0) × 4]`) for that state's group of four bytes
+(`FUN_00540c70`, bank `+0x20e + 4 × state`): the first byte − 1 picks one of four scripts at `0x0074f7c8` (array
+words 1760, 1800, 1812, 1824); the second − 1 is the set, written to `+0xb4`, and that set's frames per direction to
+`+0xbc` (`FUN_00540c60`); the third and fourth land in two stack slots and are lost (`0x00475bd1`, `0x00475bd5`).
+They reach a sprite only when it is made on a state (`FUN_00475a10` to `FUN_004758f0`, `+0xc8` and `+0xcc`, locals
+17 and 18), and staff are made on animation 3, a script address (`FUN_004d4140( 3, … )`), which leaves both nought.
+`FUN_00541fa0` is the bank's word `+0x20c`: how many of its four groups have a first byte that is not nought,
+counted as the bank loads (`SpriteBank_Load`, `0x00540f52`..`0x0054109a`).
+
+Script 0, word 1760 (`0x0074f638`), and the words 1726 to 1759 it jumps into (`0x0074f5b0`):
+
+| Word | Instruction |
+|---|---|
+| 1760 | SetLocal 16, `0x1200`; SetLocal 13, 0 |
+| 1766 | If local 17 > 0 (`0x00476050`, comparison 7 of its table `0x004762b0`; false skips to the EndIf, `FUN_00475130`) |
+| 1770 | LoopStart; FrameFromLocal 13 (`0x004768d0`: the frame `+0xb8` from a local, and yields); AddLocal 13, 1 (`0x00476750`); LoopWhile local 13 <= local 17 (comparison 3, `0x0047650b`) |
+| 1780 | EndIf (`0x004762f0`); Jump 1726 |
+| 1726 | CopyLocal 13 from 17 (`0x00476870`) |
+| 1729 | LoopStart; FrameFromLocal 13; AddLocal 13, 1; LoopWhile local 13 != local 14 (comparison 1, `0x004764d7`; local 14 is `+0xbc`) |
+| 1739 | If local 18 > 0: SetLocal 0, 0; LoopStart; Frame 0; AddLocal 0, 1; LoopWhile local 0 <= local 18; EndIf |
+| 1757 | Jump 1726 |
+
+So: frames 0 to local 17 once, then frames local 17 to the set's last round and round, frame 0 held local 18 + 1
+turns between rounds. With both nought, as a member of staff has them, it is the set's frames 0 to the last, one each
+turn the sprite is due, until another animation is queued. `SpriteScript` has none of If, EndIf, FrameFromLocal,
+AddLocal and CopyLocal, nor LoopWhile's comparisons 1 and 3.
+
+**In the shipped banks** (all 46 `.ESP` of `esprites.wad`; `facing-esp-groups.py`, `q133c/groups.txt`): 34 have no
+group and 12 have one, always state 0, script 0, set 4: bytes 1, 5, 0, 0 in eleven and 1, 5, 2, 40 in
+`Hallow\Entertainers\SPR_DR`. The twelve are the four themes' `Entertainers` banks, three each, and no other
+kind of bank has a group. So `n` is 1 for every entertainer the game ships, the animation is always `0xd` and the
+second draw picks nothing; in `Jungle\Entertainers`, `SPR_DI` and `SPR_NA` have eight frames a direction in set 4
+and `SPR_EX` seventeen.
+
+**The original under Proton**, stock Lost Kingdom left alone, entertainer 27 (grade 3; sprite kind 4, bank 0, `n` 1)
+read once a sweep from 986 to 1947 with the look replayed read-only over the same lists, predicted first, 5 of 5
+(`q133c/orig/watch.py`, `a.log`, `PREDICTION.txt`):
+
+- **Fifteen performances began, each with a guest in the nine by nine** (1 to 15 of them). Eight decides with
+  guests in reach walked or stood instead, as the draw allows.
+- **Eleven spells left alone ran from the stamp to the stamp + 51 exactly**, five of them straight into another on a
+  new stamp. One spell took 3.825 off rest and 1.53 off mood (60.247 to 56.422, 83.255 to 81.725). Rest fell from 67.5
+  to 9.4 over the run; on 2149 the entertainer went to rest at 1.59.
+- **682 of 682 readings after a spell's first: set 4, eight frames, the program counter at 1732** (1760 on a second
+  reading), `+0xc8` and `+0xcc` nought. On the reading of the start itself the sprite is still on its old script;
+  the queued animation is applied after the decide. The frame moved four a sweep (1, 5, 1, 5, 3, 7 …), one each
+  62 ms sprite turn; the sprite's interval was not read.
+- **The cell and the facing did not change inside any of the sixteen spells.**
+- Not predicted, not explained: one spell ended two sweeps early (1039 to 1088, state 0 with no work turn charged),
+  and two of 3 and 2 sweeps followed, while the camera was being steered with the pointer on the entertainer. The
+  repeat did not reach him (`c-pointer-repeat-not-reached.log`, whose four more spells are 51 each).
+
+Photographed performing: `q133c/orig/p0.png` to `p3.png`, `sheet-performing.png` (the green dinosaur, a guest beside).
+
 ### Where OpenTPW differs
 
 | What | The original | OpenTPW | Reached in Lost Kingdom |
@@ -2424,7 +2518,7 @@ through the sweeps the original's stands performing.
 | The mechanic, the handyman and the entertainer with no work | walk about | walk about: the mechanic and the handyman on every decide, the entertainer on `mGameTick & 3` (`StaffBehaviour.WalkAbout`, `Entertain`; "The no-work walk, in both games") | from their saved walks' ends |
 | The mechanic's search for a ride | `FUN_004daa90` on every decide not too tired | counted, `MECHANIC_RIDE_SEARCH`, and answers none | every mechanic decide; nothing here breaks down |
 | The handyman's searches | litter `FUN_004c8ed0` at his decide and at his idle pre-step, then a toilet `FUN_004d7880` | the litter search counted, `HANDYMAN_LITTER_SEARCH`, and answers none; the toilet search built (`StaffBehaviour.FindToilet`; "A toilet's dirt") | every handyman decide; no cell here holds litter (Q225) |
-| The entertainer's performance | a draw mod 3 of nought, a guest in reach: state `0xe` for WorkDuration + 1 sweeps | the look counted, `ENTERTAINER_GUEST_SEARCH`, and answers nobody; the entertainer walks instead | a third of the entertainer's decides (Q133c) |
+| The entertainer's performance | a draw mod 3 of nought, a guest in reach: a second draw, the bank's state animation, state `0xe` for WorkDuration + 1 sweeps, effect `0x87` ("The entertainer's performance") | the look counted, `ENTERTAINER_GUEST_SEARCH`, and answers nobody; the entertainer walks instead | a third of the entertainer's decides (Q133d) |
 | The entertainer's region effect | the pre-step `FUN_004d4660` moves `RegionFX[0]` with them, cell by cell | none, uncounted | every cell the entertainer crosses (Q157) |
 | The researcher's fourth decide | researches, state `0xf` | stands | every fourth researcher decide (Q134) |
 | Staff sounds | fourteen cat_staff effects | none, uncounted | every idle and walking turn; a performance's end; a guard's chase and catch (Q135) |

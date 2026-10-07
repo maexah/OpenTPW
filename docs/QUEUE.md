@@ -40,14 +40,14 @@ the original.
 
 **The 2026-10-06 review's leftovers come first, at Alexah's word (2026-10-06).**
 
-- [ ] **Q133c. The entertainer never performs.** Split from Q133, which counted the look (`ENTERTAINER_GUEST_SEARCH`).
-  On a decide's draw mod 3 of nought, `FUN_004c8eb0` (`FUN_004c8d30` with a last argument of 1) looks for a guest in
-  the square of `EntertainerConstsPerGrade.ActivationDistance`; one found draws again for animation `0xd` and up
-  (`FUN_00541fa0`), state `0xe`, `+0x214` = mGameTick, for WorkDuration + 1 sweeps (51 at grade 3), each turn through
-  `FUN_00506760`, then effect `0x87` and the decide again (`ride-operation.md`, "The jobs, on the same clock" and
-  "The no-work walk, in both games"). Decode `FUN_004c8d30` first. The original's entertainer performed on 382 of 578
-  sweeps (`q133/orig/a.log`). Confirm: `staff` showing state `0xe` for 51 sweeps beside a guest, predicted first; a
-  screenshot of the performance beside the original's. Q227 follows it.
+- [ ] **Q133d. Build the entertainer's performance.** Decoded by Q133c (`ride-operation.md`, "The entertainer's
+  performance"). In `StaffBehaviour.Entertain`, where `ENTERTAINER_GUEST_SEARCH` is counted: the look (any guest on
+  the cells within `ActivationDistance` each way, which nothing reads from the balance file yet), the second draw,
+  state `0xe` stamped inline (no idle stamp), 51 work turns at grade 3 (`Work`'s cost), effect `0x87` counted (Q135),
+  and the decide again in the same turn. The picture is the bank's own: read the four groups at `.ESP` `0x14e`, give
+  `SpriteScript` words 1726 to 1783 and their five opcodes, and loop set 4. Confirm: `staff` showing `0xe` for 51
+  sweeps beside a guest and never without one in reach, predicted first; a screenshot of the performance beside
+  `q133c/orig/sheet-performing.png`. Q227 follows it.
 - [ ] **Q134. The researcher researches, where ours stands. Alexah's call first.** Found by Q82. On a nought from its
   draw, or no destination, the researcher takes state `0xf` (animation 10, `+0x214` = mGameTick) for
   `ResearcherConstsPerGrade.WorkDuration` + 1 sweeps (31 at grade 2), then walks or researches again; it never idles of
@@ -470,7 +470,7 @@ the original.
   within a few turns, `peeps` showing illness 0; a screenshot.
 - [ ] **Q227. Nobody stops to watch the entertainer.** Found by Q111, arm (e). An entertainer on the nine cells
   around a deciding guest, and the nearest one performing (staff state `0xe`): event `0xe`, the guest turned to face
-  them, and the turn ends. The original's stock park did it eight times in 964 sweeps. After Q133c, which builds the
+  them, and the turn ends. The original's stock park did it eight times in 964 sweeps. After Q133d, which builds the
   performance; counted meanwhile as `DECIDE_ENTERTAINER_BESIDE`, whoever the entertainer is doing. The fireworks half
   (`DECIDE_WATCH_FIREWORKS`) is dead by content in Lost Kingdom. Confirm: a guest beside the performing entertainer
   facing them; `facing 1` and a screenshot.

@@ -5085,6 +5085,18 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   (no walk, dirty to the end). The original, 4 of 5: `0xb` on 1398, done on 1409, repair 100. 41 bugs put back, 41
   caught. Found: the stock park's handyman is never in range of a toilet (`ride-operation.md`, "A toilet's dirt").
   The request's control: none here for a toilet; the search and the clean read and clear a saved `+0x64`.
+- [x] **Q133c. The entertainer never performs. (The decode.)** Split from Q133, which counted the look (`ENTERTAINER_GUEST_SEARCH`).
+  On a decide's draw mod 3 of nought, `FUN_004c8eb0` (`FUN_004c8d30` with a last argument of 1) looks for a guest in
+  the square of `EntertainerConstsPerGrade.ActivationDistance`; one found draws again for animation `0xd` and up
+  (`FUN_00541fa0`), state `0xe`, `+0x214` = mGameTick, for WorkDuration + 1 sweeps (51 at grade 3), each turn through
+  `FUN_00506760`, then effect `0x87` and the decide again (`ride-operation.md`, "The jobs, on the same clock" and
+  "The no-work walk, in both games"). Decode `FUN_004c8d30` first. The original's entertainer performed on 382 of 578
+  sweeps (`q133/orig/a.log`). Confirm: `staff` showing state `0xe` for 51 sweeps beside a guest, predicted first; a
+  screenshot of the performance beside the original's. Q227 follows it.
+  **Decoded 2026-10-07** (`ride-operation.md`, "The entertainer's performance"): the look answers yes or no and keeps
+  nobody; a second draw picks among the bank's state groups, one in every jungle bank, so always animation `0xd`,
+  the bank's set 4 looped by script word 1760. In the original, predicted first, 5 of 5: 15 starts each with a guest
+  in the nine by nine, 11 spells of 51 sweeps exactly, 682 of 682 readings on set 4. The build is Q133d.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.
