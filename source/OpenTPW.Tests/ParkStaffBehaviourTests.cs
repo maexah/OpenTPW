@@ -39,8 +39,14 @@ public class ParkStaffBehaviourTests
 
 	private const int Researcher = 30;
 
-	/// <summary>The three whose work-finding is a kind-specific function this does not build.</summary>
-	private static readonly int[] WithoutWork = [25, 26, 27];
+	/// <summary>The mechanic, the handyman and the entertainer, whose work-finding is counted and not built.</summary>
+	private const int Handyman = 25;
+
+	private const int Mechanic = 26;
+
+	private const int Entertainer = 27;
+
+	private static readonly int[] WithoutWork = [Handyman, Mechanic, Entertainer];
 
 	/// <summary>
 	/// Steps every member of staff <paramref name="turns"/> sweeps on the park's clock: <c>mGameTick</c> carries on
@@ -131,20 +137,237 @@ public class ParkStaffBehaviourTests
 			"the shared spine can only leave a guard walking or standing" );
 	}
 
+	/// <summary>The saved ids are the kinds the tests take them for.</summary>
+	[TestMethod]
+	public void TheThreeIdsAreTheMechanicTheHandymanAndTheEntertainer()
+	{
+		var staff = ParkPeople.StaffIn( Park() ).ToDictionary( member => member.ThingId, member => member.Model );
+
+		Assert.AreEqual( 4, staff[Mechanic] );
+		Assert.AreEqual( 5, staff[Handyman] );
+		Assert.AreEqual( 6, staff[Entertainer] );
+	}
+
+	/// <summary>One member standing on the path at (48,22) in the live park, idle with the stamp given.</summary>
+	private (Staff Member, PeepWalk Walk, ParkState State) OnThePath( int thing, int stamp = 0, bool shut = false,
+		StaffActivity activity = StaffActivity.Idle )
+	{
+		var world = Park();
+		var state = new ParkState( world );
+		var saved = world.People.Single( person => person.ThingId == thing );
+		var member = new Staff( saved.ThingId, saved.Model, saved.Staff!.Value with
+		{
+			State = (int)activity, TimeStartedIdling = stamp,
+			PatrolBottomLeft = MapStep.CellId( 0, 0 ), PatrolTopRight = MapStep.CellId( 127, 127 )
+		}, saved.Navigator );
+
+		member.Happiness = 50f;
+		member.Tiredness = 80f;
+		member.Navigator.Position = new FixedVector( PeepNavigator.WaypointCentre( 48 ), PeepNavigator.WaypointCentre( 22 ) );
+		member.Navigator.Target = member.Navigator.Position;
+
+		var walk = shut
+			? new PeepWalk( member.Navigator, ( _, _, _ ) => true )
+			: new PeepWalk( member.Navigator, new CellEdge( state.Record, ParkPeople.WalkingMode ).Blocked );
+
+		return (member, walk, state);
+	}
+
 	/// <summary>
-	/// The three kinds whose work-finding is not built end up standing, rather than in some state the
-	/// shared switch cannot produce. <b>This asserts the deferral rather than hiding it.</b>
+	/// With no work the mechanic and the handyman set off on a random walk on every decide, whatever the clock's low
+	/// bits and whatever the draws (<c>0x004da6fa</c>, <c>0x004d712d</c>): on a multiple of four, where a guard
+	/// stays, they walk.
+	/// </summary>
+	[DataTestMethod]
+	[DataRow( Mechanic )]
+	[DataRow( Handyman )]
+	public void TheMechanicAndTheHandymanWalkOnEveryDecide( int thing )
+	{
+		for ( var tick = 1000; tick < 1004; ++tick )
+		{
+			foreach ( var draws in new Random[] { new Random( tick ), new ConstantDraw(), new CountedDraw( 0 ) } )
+			{
+				var (member, walk, state) = OnThePath( thing );
+
+				new StaffBehaviour( Balance(), draws, state ).Step( member, walk, playing: null, tick );
+
+				Assert.AreEqual( StaffActivity.Walking, member.Activity, $"mGameTick {tick}" );
+				Assert.AreNotEqual( (48, 22), member.Navigator.Target.Cell, "and has somewhere else to go" );
+			}
+		}
+	}
+
+	/// <summary>
+	/// The three kinds keep moving in the shipped park: over four hundred sweeps each ends somewhere the save did
+	/// not leave them, and the mechanic and the handyman stand on none of the last hundred.
 	/// </summary>
 	[TestMethod]
-	public void TheKindsWithNoWorkToFindFinishTheirWalkAndStand()
+	public void TheKindsWithNoWorkToFindWalkAbout()
 	{
-		var (_, staff, _) = Run( Park(), turns: 400 );
+		var world = Park();
+		var state = new ParkState( world );
+		var behaviour = new StaffBehaviour( Balance(), new Random( 1234 ), state );
+		var blocked = new CellEdge( state.Record, ParkPeople.WalkingMode ).Blocked;
+		var staff = ParkPeople.StaffIn( world ).ToDictionary( member => member.ThingId );
+		var walks = staff.Values.ToDictionary( member => member.ThingId, member => new PeepWalk( member.Navigator, blocked ) );
+		var cells = WithoutWork.ToDictionary( thing => thing, _ => new HashSet<(int, int)>() );
+		var stood = WithoutWork.ToDictionary( thing => thing, _ => 0 );
+
+		for ( var tick = world.GameTick + 1; tick <= world.GameTick + 400; ++tick )
+		{
+			foreach ( var member in staff.Values )
+				behaviour.Step( member, walks[member.ThingId], playing: null, tick );
+
+			foreach ( var thing in WithoutWork )
+			{
+				cells[thing].Add( staff[thing].Navigator.Position.Cell );
+
+				if ( tick > world.GameTick + 300 && staff[thing].Activity == StaffActivity.Idle )
+					++stood[thing];
+			}
+		}
 
 		foreach ( var thing in WithoutWork )
+			Assert.IsTrue( cells[thing].Count >= 5, $"staff {thing} stood on {cells[thing].Count} cells in four hundred sweeps" );
+
+		Assert.AreEqual( 0, stood[Mechanic], "the mechanic never stands" );
+		Assert.AreEqual( 0, stood[Handyman], "the handyman never stands" );
+		Assert.IsTrue( stood[Entertainer] > 0, "the entertainer stands on the clock's multiples of four" );
+	}
+
+	/// <summary>
+	/// A mechanic or a handyman who finds nowhere to walk is set idle (<c>FUN_004da370( 0 )</c>,
+	/// <c>FUN_004d7330( 0 )</c>): stamped nought from standing, the clock from a walk. An entertainer is left as
+	/// they were, state and stamp, since <c>FUN_004d46d0</c> calls no setter there.
+	/// </summary>
+	[DataTestMethod]
+	[DataRow( Mechanic, StaffActivity.Idle, StaffActivity.Idle, 0 )]
+	[DataRow( Handyman, StaffActivity.Idle, StaffActivity.Idle, 0 )]
+	[DataRow( Entertainer, StaffActivity.Idle, StaffActivity.Idle, 5 )]
+	[DataRow( Mechanic, StaffActivity.Walking, StaffActivity.Idle, 1001 )]
+	[DataRow( Handyman, StaffActivity.Walking, StaffActivity.Idle, 1001 )]
+	[DataRow( Entertainer, StaffActivity.Walking, StaffActivity.Walking, 5 )]
+	public void FindingNowhereToWalkSetsIdleButLeavesAnEntertainerAsTheyWere(
+		int thing, StaffActivity from, StaffActivity to, int stamp )
+	{
+		var (member, walk, state) = OnThePath( thing, stamp: 5, shut: true, activity: from );
+
+		new StaffBehaviour( Balance(), new ConstantDraw(), state ).Step( member, walk, playing: null, tick: 1001 );
+
+		Assert.AreEqual( to, member.Activity );
+		Assert.AreEqual( stamp, member.TimeStartedIdling );
+	}
+
+	/// <summary>
+	/// The entertainer's choice (<c>FUN_004d46d0</c>): on a multiple of four they stay, stamped, after one draw for
+	/// the performance and one thrown away; on any other sweep they walk, after the performance's draw, the
+	/// walk's own - as many as a guard's walk from the same cell takes - and one thrown away. The look for a guest
+	/// is counted on a draw that divides by three, and only then.
+	/// </summary>
+	[DataTestMethod]
+	[DataRow( 1000, 3, StaffActivity.Idle, 1 )]
+	[DataRow( 1000, 4, StaffActivity.Idle, 0 )]
+	[DataRow( 1001, 3, StaffActivity.Walking, 1 )]
+	[DataRow( 1002, 4, StaffActivity.Walking, 0 )]
+	[DataRow( 1003, 5, StaffActivity.Walking, 0 )]
+	public void AnEntertainerStaysOnAMultipleOfFourAndLooksForGuestsOnADrawInThree(
+		int tick, int draw, StaffActivity to, int looks )
+	{
+		// A guard's decide draws nothing but its walk's own.
+		var (guard, guardWalk, guardState) = OnThePath( Guard, activity: StaffActivity.Walking );
+		var walkDraws = new CountedDraw( draw );
+
+		new StaffBehaviour( Balance(), walkDraws, guardState ).Step( guard, guardWalk, playing: null, tick );
+
+		var (member, walk, state) = OnThePath( Entertainer, activity: StaffActivity.Walking );
+		var random = new CountedDraw( draw );
+		var before = Counted( "ENTERTAINER_GUEST_SEARCH" );
+
+		new StaffBehaviour( Balance(), random, state ).Step( member, walk, playing: null, tick );
+
+		Assert.AreEqual( to, member.Activity );
+		Assert.AreEqual( guard.Activity, member.Activity, "the guard's choice, by the same clock" );
+		Assert.AreEqual( looks, Counted( "ENTERTAINER_GUEST_SEARCH" ) - before );
+		Assert.AreEqual( walkDraws.Asked + 2, random.Asked );
+
+		if ( to == StaffActivity.Idle )
 		{
-			Assert.AreEqual( StaffActivity.Idle, staff[thing].Activity,
-				$"staff {thing} has no work-finding arm built, so they should have come to a stand" );
+			Assert.AreEqual( 0, walkDraws.Asked );
+			Assert.AreEqual( tick, member.TimeStartedIdling, "idle from a walk stamps the clock" );
 		}
+	}
+
+	/// <summary>
+	/// Each search for work is counted where the original makes it: the mechanic's ride on every decide
+	/// (<c>FUN_004daa90</c>), the handyman's litter and then toilet on every decide (<c>FUN_004c8ed0</c>,
+	/// <c>FUN_004d7880</c>), and nobody else's.
+	/// </summary>
+	[DataTestMethod]
+	[DataRow( Mechanic, 1, 0, 0 )]
+	[DataRow( Handyman, 0, 1, 1 )]
+	[DataRow( Entertainer, 0, 0, 0 )]
+	[DataRow( Guard, 0, 0, 0 )]
+	[DataRow( Researcher, 0, 0, 0 )]
+	public void EachSearchForWorkIsCountedAtItsOwnKindsDecide( int thing, int ride, int litter, int toilet )
+	{
+		var (member, walk, state) = OnThePath( thing );
+		var before = (Counted( "MECHANIC_RIDE_SEARCH" ), Counted( "HANDYMAN_LITTER_SEARCH" ), Counted( "HANDYMAN_TOILET_SEARCH" ));
+
+		// 1001 divides by no grade's idle duration, so the handyman's pre-step is not counted beside it.
+		new StaffBehaviour( Balance(), new ConstantDraw(), state ).Step( member, walk, playing: null, tick: 1001 );
+
+		Assert.AreEqual( ride, Counted( "MECHANIC_RIDE_SEARCH" ) - before.Item1 );
+		Assert.AreEqual( litter, Counted( "HANDYMAN_LITTER_SEARCH" ) - before.Item2 );
+		Assert.AreEqual( toilet, Counted( "HANDYMAN_TOILET_SEARCH" ) - before.Item3 );
+	}
+
+	/// <summary>
+	/// An idle handyman's pre-step looks for litter on the sweeps the clock divides by his grade's idle duration,
+	/// while he still waits (<c>FUN_004d7060</c>, <c>0x004d7087</c>), and on no other sweep and in no other state.
+	/// </summary>
+	[DataTestMethod]
+	[DataRow( Handyman, StaffActivity.Idle, 1000, 1 )]
+	[DataRow( Handyman, StaffActivity.Idle, 1001, 0 )]
+	[DataRow( Handyman, StaffActivity.Resting, 1000, 0 )]
+	[DataRow( Mechanic, StaffActivity.Idle, 1000, 0 )]
+	public void AnIdleHandymansPreStepLooksForLitterWhenTheClockDividesByHisIdleDuration(
+		int thing, StaffActivity activity, int tick, int looks )
+	{
+		// Stamped at the clock, so the wait is not over and no decide runs.
+		var (member, walk, state) = OnThePath( thing, stamp: tick, activity: activity );
+		var behaviour = new StaffBehaviour( Balance(), new ConstantDraw(), state );
+		var before = Counted( "HANDYMAN_LITTER_SEARCH" );
+
+		Assert.AreEqual( 0, tick % 1000 == 0 ? 1000 % behaviour.IdleDurationAt( member.PayGrade ) : 0,
+			"1000 divides by the member's idle duration" );
+
+		behaviour.Step( member, walk, playing: null, tick );
+
+		Assert.AreEqual( looks, Counted( "HANDYMAN_LITTER_SEARCH" ) - before );
+	}
+
+	/// <summary>
+	/// Every kind's decide opens with the tired test (<c>FUN_00506a40</c>): a tired mechanic, handyman or
+	/// entertainer sets off for the Staff Room and looks for no work.
+	/// </summary>
+	[DataTestMethod]
+	[DataRow( Mechanic )]
+	[DataRow( Handyman )]
+	[DataRow( Entertainer )]
+	public void ATiredMemberOfAnyKindGoesToRestAndLooksForNoWork( int thing )
+	{
+		var (member, walk, state) = OnThePath( thing );
+		var before = Counted( "MECHANIC_RIDE_SEARCH" ) + Counted( "HANDYMAN_LITTER_SEARCH" )
+			+ Counted( "HANDYMAN_TOILET_SEARCH" ) + Counted( "ENTERTAINER_GUEST_SEARCH" );
+
+		member.Tiredness = 0.5f;
+
+		new StaffBehaviour( Balance(), new CountedDraw( 0 ), state ).Step( member, walk, playing: null, tick: 1001 );
+
+		Assert.AreEqual( StaffActivity.GoingToRest, member.Activity );
+		Assert.AreNotEqual( 0, member.RestArea );
+		Assert.AreEqual( before, Counted( "MECHANIC_RIDE_SEARCH" ) + Counted( "HANDYMAN_LITTER_SEARCH" )
+			+ Counted( "HANDYMAN_TOILET_SEARCH" ) + Counted( "ENTERTAINER_GUEST_SEARCH" ) );
 	}
 
 	/// <summary>
@@ -855,10 +1078,10 @@ public class ParkStaffBehaviourTests
 
 	private static int Counted( string gap ) => Unimplemented.Summary.FirstOrDefault( entry => entry.What == gap ).Times;
 
-	/// <summary>One idle member of staff with no work to find, about to decide.</summary>
+	/// <summary>One idle guard about to decide; on a multiple of four the mood's draw is the only one taken.</summary>
 	private (Staff Member, PeepWalk Walk) Deciding( ParkWorld world, float happiness, float tiredness )
 	{
-		var saved = world.People.Single( person => person.ThingId == WithoutWork[0] );
+		var saved = world.People.Single( person => person.ThingId == Guard );
 		var member = new Staff( saved.ThingId, saved.Model, saved.Staff!.Value with
 		{
 			State = (int)StaffActivity.Idle, TimeStartedIdling = 0
@@ -886,7 +1109,7 @@ public class ParkStaffBehaviourTests
 		var world = Park();
 		var (member, walk) = Deciding( world, happiness, tiredness: 80f );
 		var random = new CountedDraw( draw );
-		new StaffBehaviour( Balance(), random ).Step( member, walk, playing: null, tick: 1001 );
+		new StaffBehaviour( Balance(), random ).Step( member, walk, playing: null, tick: 1000 );
 
 		Assert.AreEqual( unhappy == 1 ? 0x13 : veryHappy == 1 ? 0x12 : 0, member.Thoughts.Last,
 			"0x13 unhappy, 0x12 very happy, and a rested member never 0x14" );

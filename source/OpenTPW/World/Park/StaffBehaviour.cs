@@ -15,17 +15,16 @@ namespace OpenTPW;
 /// not five machines, and the shared part moves every kind.
 /// </para>
 /// <para>
-/// <b>What is built.</b> Every shared state but on strike (5, Q138), and the decide arm of the two
-/// kinds whose decide arm is itself shared: a guard walks on three sweeps in four by the park's clock,
-/// <c>mGameTick &amp; 3</c>, and a researcher three decides in four by a draw. That is what makes Lost
-/// Kingdom's guard and researcher patrol.
+/// <b>What is built.</b> Every shared state but on strike (5, Q138), and every kind's decide with no work
+/// found: the mechanic and the handyman set off on a random walk every time, the guard and the entertainer on
+/// three sweeps in four by the park's clock, <c>mGameTick &amp; 3</c>, and the researcher on three decides in
+/// four by a draw.
 /// </para>
 /// <para>
-/// <b>What is deliberately not built, each for a named reason.</b> A handyman, a mechanic and an
-/// entertainer finish a walk by jumping into a work-finding function of their own
-/// (<c>FUN_004d7100</c>, <c>FUN_004da5b0</c>, <c>FUN_004d46d0</c>), and those want litter on map cells, a
-/// broken ride and guests close enough to entertain - none of which this project looks for. With no work
-/// the original's three walk about; these finish the walk the save left them on and then stand (Q133).
+/// <b>What is deliberately not built, each for a named reason.</b> The work itself: a mechanic's broken ride
+/// (<c>FUN_004daa90</c>), a handyman's litter and dirty toilet (<c>FUN_004c8ed0</c>, <c>FUN_004d7880</c>) and
+/// an entertainer's guests to perform to (<c>FUN_004c8eb0</c>). Each search is counted where the original
+/// makes it and answers as finding nothing.
 /// The strike arms are absent too (Q138): reaching them means asking <c>mStaffHQ</c>'s own flag for the
 /// kind, which nothing here keeps, and the gate's status, which <c>ParkRides.GateStatus</c> answers.
 /// </para>
@@ -154,6 +153,12 @@ public sealed class StaffBehaviour
 		ArgumentNullException.ThrowIfNull( staff );
 		ArgumentNullException.ThrowIfNull( walk );
 
+		// An idle handyman's pre-step looks for litter in range on every sweep the clock divides by his grade's
+		// idle duration, and decides at once when it finds some (FUN_004d7060, 0x004d7087). Not built.
+		if ( staff.Model == HandymanModel && staff.Activity == StaffActivity.Idle
+			&& (uint)tick % (uint)IdleDurationAt( staff.PayGrade ) == 0 )
+			Unimplemented.Report( "HANDYMAN_LITTER_SEARCH" );
+
 		switch ( staff.Activity )
 		{
 			// Standing about. They wait out their grade's idle duration and then look for something to do: the
@@ -234,32 +239,19 @@ public sealed class StaffBehaviour
 	}
 
 	/// <summary>
-	/// What a staff member does when they have finished a walk or run out of idling.
+	/// What a staff member does when they have finished a walk or run out of idling - each kind's decide, which
+	/// opens with the shared <c>FUN_00506a40</c> (strike, tired, mood) and then makes the kind's own choice
+	/// (<c>docs/exe/ride-operation.md</c>, "Leaving idle, or a walk: the choice by kind").
 	///
 	/// <para>
-	/// <b>Only a guard and a researcher get past the first line, and that is a limit of this build
-	/// (Q133).</b> In the original the other three kinds jump into a work-finding function of their own
-	/// here, and walk about when it finds them none; see the class remarks for what each of those wants.
+	/// <b>Every kind walks about when it has no work.</b> The mechanic and the handyman look for work and, with
+	/// none, set off on a random walk every time; the entertainer, the guard and the researcher stay on one
+	/// choice in four. Nothing here finds any work: each search is counted where the original makes it.
 	/// </para>
 	/// </summary>
 	private void Decide( Staff staff, PeepWalk walk, int tick )
 	{
 		ThinkOfTheMood( staff );
-
-		if ( staff.Model is not (GuardModel or ResearcherModel) )
-		{
-			// The handyman's decide looks for a toilet to clean once no litter is in range (FUN_004d7880 from
-			// 0x004d72f7; docs/exe/ride-operation.md, "A toilet's dirt"). Nothing here finds litter, so every one
-			// of his decides is counted.
-			if ( staff.Model == HandymanModel )
-				Unimplemented.Report( "HANDYMAN_TOILET_SEARCH" );
-
-			// They have arrived somewhere and have no work to look for, so they stand. Going to Idle from a
-			// walk stamps the clock; from an idle it stamps 0, so after that they are asked again every sweep.
-			staff.SetActivity( StaffActivity.Idle, tick );
-
-			return;
-		}
 
 		// Too tired to carry on: find the nearest rest area and set off for it - the tired branch of
 		// FUN_00506a40, which asks FUN_00506910 for the nearest object flagged as one.
@@ -271,8 +263,9 @@ public sealed class StaffBehaviour
 		// line and the same one-in-sixteen loss of heart. GoAndRest returning false covers both.
 		//
 		// A deviation Q136 (d) holds: after that the original answers 0 and the kind's own choice follows,
-		// so the member walks on (docs/exe/ride-operation.md, "Leaving idle, or a walk: the choice by kind");
-		// here they stand idle.
+		// so the member walks on; here they stand idle. There the three kinds with work to find skip their
+		// searches when the rest byte is under RestLevel (FUN_00506680); that test is this one's, so no
+		// member who gets past here is too tired to work.
 		//
 		// The original also shows thought 0x14, tired, on the way into this branch, before it knows whether it
 		// will find anything (FUN_0050be80 at 0x00506b50): ThinkOfTheMood's.
@@ -293,10 +286,101 @@ public sealed class StaffBehaviour
 			return;
 		}
 
-		// A guard walks on unless mGameTick's low two bits are nought (0x004d655d); a researcher unless its
-		// draw's are (0x00502ba9). Staying, or finding nowhere, sets idle, which stamps only from a walk.
-		// <b>A deviation (Q134):</b> there the original's researcher researches, state 0xf (0x00502be4), unless
-		// too tired; this one stands, and research never completes (FUN_00504630), counted here.
+		switch ( staff.Model )
+		{
+			// FUN_004da5b0: a ride to fix (FUN_004daa90), which nothing here looks for, else a random walk.
+			case MechanicModel:
+				Unimplemented.Report( "MECHANIC_RIDE_SEARCH" );
+				WalkAbout( staff, walk, tick );
+
+				break;
+
+			// FUN_004d7100: litter in range (FUN_004c8ed0), else a toilet to clean (FUN_004d7880 from
+			// 0x004d72f7; docs/exe/ride-operation.md, "A toilet's dirt"), else a random walk. Neither search is
+			// built, and no cell here holds litter.
+			case HandymanModel:
+				Unimplemented.Report( "HANDYMAN_LITTER_SEARCH" );
+				Unimplemented.Report( "HANDYMAN_TOILET_SEARCH" );
+				WalkAbout( staff, walk, tick );
+
+				break;
+
+			case EntertainerModel:
+				Entertain( staff, walk, tick );
+
+				break;
+
+			default:
+				PatrolOrStay( staff, walk, tick );
+
+				break;
+		}
+	}
+
+	/// <summary>
+	/// The mechanic's and the handyman's choice with no work: a random walk every time, whatever the clock reads
+	/// (<c>0x004da6fa</c>, <c>0x004d712d</c>), and idle only when no destination is found. Idle stamps the clock
+	/// from a walk and nought from an idle, so one who finds nowhere from standing is asked again every sweep.
+	/// </summary>
+	private void WalkAbout( Staff staff, PeepWalk walk, int tick )
+	{
+		var walking = SetRandomDest( staff, walk );
+
+		staff.SetActivity( walking ? StaffActivity.Walking : StaffActivity.Idle, tick );
+
+		if ( !walking )
+			Log.Info( $"Staff: {staff.ThingId} stands on mGameTick {tick}, finding nowhere to walk" );
+	}
+
+	/// <summary>
+	/// The entertainer's choice - <c>FUN_004d46d0</c>. A draw mod 3 of nought looks for a guest within the
+	/// grade's <c>ActivationDistance</c> to perform to (<c>FUN_004c8eb0</c>, <c>0x004d4756</c>); the search and
+	/// the performance, state <c>0xe</c>, are not built, so the look is counted and finds nobody. Then the
+	/// guard's choice by <c>mGameTick &amp; 3</c>: nought stays, anything else looks for somewhere to walk.
+	/// </summary>
+	/// <remarks>
+	/// Staying and a walk found each take one more draw the original throws away (<c>0x004d4734</c>,
+	/// <c>0x004d4718</c>). <b>Finding nowhere leaves the state as it was</b>, with its stamp: no setter is called,
+	/// so the entertainer is asked again on the next sweep.
+	/// </remarks>
+	private void Entertain( Staff staff, PeepWalk walk, int tick )
+	{
+		if ( _random.Next() % PerformShare == 0 )
+			Unimplemented.Report( "ENTERTAINER_GUEST_SEARCH" );
+
+		if ( (tick & (StayPutShare - 1)) == 0 )
+		{
+			_random.Next();
+			staff.SetActivity( StaffActivity.Idle, tick );
+
+			Log.Info( $"Staff: {staff.ThingId} stands on mGameTick {tick}, its choice's low two bits nought" );
+
+			return;
+		}
+
+		if ( !SetRandomDest( staff, walk ) )
+		{
+			Log.Info( $"Staff: {staff.ThingId} is left {staff.Activity} on mGameTick {tick}, finding nowhere to walk" );
+
+			return;
+		}
+
+		_random.Next();
+		staff.SetActivity( StaffActivity.Walking, tick );
+	}
+
+	/// <summary>
+	/// The guard's and the researcher's choice: a guard walks on unless <c>mGameTick</c>'s low two bits are
+	/// nought (<c>0x004d655d</c>); a researcher unless its draw's are (<c>0x00502ba9</c>). Staying, or finding
+	/// nowhere, sets idle, which stamps only from a walk.
+	/// </summary>
+	/// <remarks>
+	/// <b>A deviation (Q134):</b> where this researcher stays the original's researches, state <c>0xf</c>
+	/// (<c>0x00502be4</c>), unless too tired; this one stands, and research never completes
+	/// (<c>FUN_00504630</c>), counted here.
+	/// </remarks>
+	private void PatrolOrStay( Staff staff, PeepWalk walk, int tick )
+	{
 		if ( staff.Model == ResearcherModel )
 			Unimplemented.Report( "RESEARCH_COMPLETING" );
 
@@ -313,14 +397,23 @@ public sealed class StaffBehaviour
 		}
 	}
 
+	/// <summary>The mechanic's thing model.</summary>
+	private const int MechanicModel = 4;
+
 	/// <summary>The handyman's thing model.</summary>
 	private const int HandymanModel = 5;
 
-	/// <summary>The thing models whose decide arm is answered inline by the shared switch.</summary>
+	/// <summary>The entertainer's thing model.</summary>
+	private const int EntertainerModel = 6;
+
+	/// <summary>The guard's thing model.</summary>
 	private const int GuardModel = 7;
 
-	/// <inheritdoc cref="GuardModel"/>
+	/// <summary>The researcher's thing model.</summary>
 	private const int ResearcherModel = 8;
+
+	/// <summary>An entertainer looks for a guest to perform to on one decide's draw in three (<c>0x004d4756</c>).</summary>
+	public const int PerformShare = 3;
 
 	/// <summary>
 	/// One turn of recovering - <c>FUN_005061d0</c>, which climbs both stats by this grade's own rates and

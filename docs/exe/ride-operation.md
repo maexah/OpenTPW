@@ -1517,7 +1517,7 @@ content in Lost Kingdom), else `DECIDE_ENTERTAINER_BESIDE`, then `DECIDE_PRANK_S
 held**, and differs from the original's reach in four ways, said at the site: no arm ends the turn; nothing clears a
 test (the jump's stamp, the levels zeroed), so a guest counts on every turn it holds; the bin's route is not asked;
 and the entertainer's count is of one standing beside the guest, where the original goes on to ask for staff state
-`0xe`, which nobody takes here (Q133). The fireworks' script variable is not read. The console's `need` sets
+`0xe`, which nobody takes here (Q133c). The fireworks' script variable is not read. The console's `need` sets
 illness, litter or prankery.
 
 Predicted and read in Lost Kingdom (`q111confirm.py`, `q111/run1`). The stock park left alone 120 s: vomit, litter,
@@ -2385,12 +2385,47 @@ three.
   standing at the corner of the path at (40.04, 28.03) on mGameTick 792, idle since 792, a paused control identical;
   turned to set off on 803; and walking at (39.48, 28.51) on 807. The first load came on mGameTick 1264, as Q68b's.
 
+### The no-work walk, in both games
+
+Read again for the build (`docs/QUEUE.md` Q133). **"Too tired to work", `FUN_00506680`, tests the same word as the
+tired arm**: the rest byte (`+0x1fc` truncated) against `[0x00785324]`, `SETL` where `FUN_00506a40` has `JG`
+(`0x00506698`, `0x00506b41`), so with `RestLevel` 1 only a rest byte of nought is too tired to work, and each of the
+three decides skips its search then and goes straight to the walk. The mechanic's and the handyman's own setters
+(`FUN_004da370`, `FUN_004d7330`) pass 0 and 1 to `FUN_005054d0` unchanged. The entertainer's performance queues
+animation `0xd`, or `0xd` + a draw mod (`FUN_00541fa0` − 1) where that count is over 1 (`0x004d47b5`), and writes
+state `0xe` and `+0x214` inline. Its pre-step `FUN_004d4660` unstamps region effect 0 at the cell it stood on
+(`FUN_004f9460`) and stamps it at its own whenever the two differ, before the shared tick.
+
+**The original under Proton**, stock Lost Kingdom left alone, each member's `+0x19c` read once a sweep from 755 to
+1352, predicted first, 3 of 3 (`q133/orig/watch.py`, `a.log`):
+
+| | State over the 578 sweeps from 775 on | Cells | Entered state 0 on |
+|---|---|---|---|
+| handyman 25 | 1 on all 578 | 26 | never |
+| mechanic 26 | 1 on all 578 | 43 | never |
+| entertainer 27 | 0 on 56, 1 on 140, `0xe` on 382 | 15 | 820, 832, 1032, 1072, 1116, 1140: six, each a multiple of four |
+| guard 28 | 0 on 126, 1 on 452 | 34 | thirteen sweeps, each a multiple of four |
+| researcher 30 | 1 on 249, `0xf` on 329 | 29 | never |
+
+The entertainer began performing on 769, 855, 915 and 1169, each from a walk: 51 sweeps, or several back to back
+(915 to 1017; 1169 to the run's end).
+
+**OpenTPW after the build**, the same park for 150 s, `staff` and `sweeps` read about twice a second, predicted
+first (`q133/confirm.py`): the handyman and the mechanic Walking on every reading from 775 on; the entertainer Idle
+and Walking, every idle stamp a multiple of four; all five on 16 cells or more. The build before: the three Idle on
+every reading. Where it parts from the original is the work: the entertainer here never performs, so it walks
+through the sweeps the original's stands performing.
+
 ### Where OpenTPW differs
 
 | What | The original | OpenTPW | Reached in Lost Kingdom |
 |---|---|---|---|
 | A hire's first decide | at once: the guard's on `mGameTick & 3` (`0x004d5e76`), the researcher's on a draw (`0x005026cb`) | Idle at stamp 0, decided on the next sweep | every guard or researcher hired (Q136) |
-| The mechanic, the handyman and the entertainer with no work | walk about | stand, uncounted | from their saved walks' ends (Q133) |
+| The mechanic, the handyman and the entertainer with no work | walk about | walk about: the mechanic and the handyman on every decide, the entertainer on `mGameTick & 3` (`StaffBehaviour.WalkAbout`, `Entertain`; "The no-work walk, in both games") | from their saved walks' ends |
+| The mechanic's search for a ride | `FUN_004daa90` on every decide not too tired | counted, `MECHANIC_RIDE_SEARCH`, and answers none | every mechanic decide; nothing here breaks down |
+| The handyman's searches | litter `FUN_004c8ed0` at his decide and at his idle pre-step, then a toilet `FUN_004d7880` | counted, `HANDYMAN_LITTER_SEARCH` and `HANDYMAN_TOILET_SEARCH`, and answer none | every handyman decide; no cell here holds litter (Q225), a dirty toilet is Q133b |
+| The entertainer's performance | a draw mod 3 of nought, a guest in reach: state `0xe` for WorkDuration + 1 sweeps | the look counted, `ENTERTAINER_GUEST_SEARCH`, and answers nobody; the entertainer walks instead | a third of the entertainer's decides (Q133c) |
+| The entertainer's region effect | the pre-step `FUN_004d4660` moves `RegionFX[0]` with them, cell by cell | none, uncounted | every cell the entertainer crosses (Q157) |
 | The researcher's fourth decide | researches, state `0xf` | stands | every fourth researcher decide (Q134) |
 | Staff sounds | fourteen cat_staff effects | none, uncounted | every idle and walking turn; a performance's end; a guard's chase and catch (Q135) |
 | Tired | the byte `<=` 1 | the float `<` 1 | a rest in [1, 2) (Q136) |
@@ -2492,7 +2527,7 @@ does (`0x004e24bc`..`0x004e252a`).
 | The arrival's answer of 100 | `FUN_004fd4e0` | built in `PeepBehaviour.TurnsAwayFrom`; dead by content in Lost Kingdom |
 | `VAR_WORN` to a dirty toilet | every turn | built, `ParkRideOperation.TellTheWorn`, by name; `Toilet.rse` adds its two objects, kept as records and not drawn (Q20b) |
 | Effects 1 and 6 | stamped into the cells | counted on the use that dirties, `TOILET_DIRTY_REGION_EFFECTS`; no stamping at all; the save's cell record is read (`MapCell.NearbyEffects`) |
-| The handyman's search, walk and clean | states `0xa`, `0xb` | the search counted at his decide, `HANDYMAN_TOILET_SEARCH`; none built, the handyman stands (Q133), so **a toilet here never becomes clean again** |
+| The handyman's search, walk and clean | states `0xa`, `0xb` | the search counted at his decide, `HANDYMAN_TOILET_SEARCH`; none built, the handyman walks on (Q133b), so **a toilet here never becomes clean again** |
 | The request for service | shuts the object and calls a member | none |
 | The online game's clean | mode 1 | none; there is no online game |
 

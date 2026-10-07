@@ -5054,6 +5054,24 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   queuers stood 11 to 169 behind at that reading; a queuer's stamp is the sweep they last took a place on).
   `PinTheClock` is gone: the bus test's seeds come out the same wherever the frame clock stands (five of 600).
   18 bugs put back, 14 caught, four equivalent (`q132b/mutations.txt`). 2052 tests.
+- [x] **Q133. The mechanic, the handyman and the entertainer stand once their saved walk ends, where the original's
+  walk about.** Found by Q82 (`ride-operation.md`, "Leaving idle, or a walk: the choice by kind"). With no work the
+  mechanic's `FUN_004da5b0` and the handyman's `FUN_004d7100` take a random walk every time (`0x004da6fa`,
+  `0x004d712d`), and SetState(0) only when none is found; the entertainer's `FUN_004d46d0`, after a draw mod 3 and no
+  guest within `ActivationDistance`, takes the guard's `mGameTick & 3`. `StaffBehaviour.Decide` stands all three, and
+  none of their searches is counted (`CLAUDE.md` rule 4): a broken ride, litter, a loo, guests to perform to.
+  From Q100: the handyman's loo search and his states `0xa` and `0xb` are decoded (`ride-operation.md`, "A toilet's
+  dirt"); building them belongs with this decide.
+  Build the no-work walk and count each search where the original makes it; every kind's decide calls
+  `FUN_00506a40` first (`0x004da5b8`, `0x004d7108`, `0x004d46d5`), as `StaffActivity.Idle` says. `Decide`'s summary
+  and the class remarks already say the original's three walk about (`e0462c9`). Confirm: all five staff walking in
+  a timed run, the `staff` census and `unimplemented`, photographed.
+  **Done 2026-10-07.** `StaffBehaviour.Decide` is each kind's own: the mechanic and the handyman walk on every
+  decide, the entertainer on `mGameTick & 3`, every kind asks the tired arm first, and `MECHANIC_RIDE_SEARCH`,
+  `HANDYMAN_LITTER_SEARCH`, `HANDYMAN_TOILET_SEARCH` and `ENTERTAINER_GUEST_SEARCH` are counted. In the game,
+  predicted first (`q133/confirm.py`): over 150 s and 330 readings from mGameTick 775 on, the handyman and the mechanic Walking on every one, on 39 and 45 cells (the build before: Idle on all 337, one cell each); the entertainer Idle and Walking, its fourteen idle stamps each a multiple of four; the guard and the researcher on 56 and 35 cells; counted 48, 51, 51 and 17; each of the three photographed somewhere else eight seconds on. 4 of 5, the miss mine: one pre-step look on 770, which the handyman, never idle now, does not make. **Beside the original under Proton**, 3 of 3 predicted
+  (`q133/orig/a.log`): its handyman and mechanic in state 1 on all 578 sweeps, its entertainer idle only from a
+  multiple of four (6 of 6) and performing on 382. 17 bugs put back, 17 caught (`q133/mutate.py`). The work itself was split off: Q133b and Q133c.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

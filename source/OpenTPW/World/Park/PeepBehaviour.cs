@@ -1776,7 +1776,7 @@ public sealed class PeepBehaviour
 	/// <item><b>Wait.</b> At the front and invited but not the nominee: the whole turn is nothing (<c>0x005001d8</c>).</item>
 	/// <item><b>The dirt gate</b> (<c>0x005001f0</c>) puts out a queuer for a dirty toilet
 	/// (<see cref="ParkState.IsDirty"/>), which use makes one (<see cref="ParkRideOperation.WearByUse"/>), with
-	/// thought <c>0xe</c>. A handyman's cleaning restores it and is not built (Q133), so a toilet here stays
+	/// thought <c>0xe</c>. A handyman's cleaning restores it and is not built (Q133b), so a toilet here stays
 	/// dirty (<c>ride-operation.md</c>, "A toilet's dirt").</item>
 	/// <item><b>The lost place.</b> The queue walk cannot reach them - they are unlinked, or somebody in front has
 	/// stopped queueing: put out. The original's log says it closes and reopens the ride; nothing does.</item>

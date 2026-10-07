@@ -40,18 +40,21 @@ the original.
 
 **The 2026-10-06 review's leftovers come first, at Alexah's word (2026-10-06).**
 
-- [ ] **Q133. The mechanic, the handyman and the entertainer stand once their saved walk ends, where the original's
-  walk about.** Found by Q82 (`ride-operation.md`, "Leaving idle, or a walk: the choice by kind"). With no work the
-  mechanic's `FUN_004da5b0` and the handyman's `FUN_004d7100` take a random walk every time (`0x004da6fa`,
-  `0x004d712d`), and SetState(0) only when none is found; the entertainer's `FUN_004d46d0`, after a draw mod 3 and no
-  guest within `ActivationDistance`, takes the guard's `mGameTick & 3`. `StaffBehaviour.Decide` stands all three, and
-  none of their searches is counted (`CLAUDE.md` rule 4): a broken ride, litter, a loo, guests to perform to.
-  From Q100: the handyman's loo search and his states `0xa` and `0xb` are decoded (`ride-operation.md`, "A toilet's
-  dirt"); building them belongs with this decide.
-  Build the no-work walk and count each search where the original makes it; every kind's decide calls
-  `FUN_00506a40` first (`0x004da5b8`, `0x004d7108`, `0x004d46d5`), as `StaffActivity.Idle` says. `Decide`'s summary
-  and the class remarks already say the original's three walk about (`e0462c9`). Confirm: all five staff walking in
-  a timed run, the `staff` census and `unimplemented`, photographed.
+- [ ] **Q133b. The handyman never cleans a toilet.** Split from Q133, which built the walk and counted the search
+  (`HANDYMAN_TOILET_SEARCH`). The search `FUN_004d7880`, his states `0xa` (to a loo) and `0xb` (cleaning) and the
+  clean `FUN_004dfd80` are decoded (`ride-operation.md`, "A toilet's dirt"): build them where the search is counted,
+  with `mAssignedStaffMember` and its 100-tick forgetting. The request for service (`+0x64`) has no control here:
+  count it. Confirm: a toilet dirtied by sixteen uses (`q100bconfirm.py`'s way) with the handyman in range, `staff`
+  showing him walk to it and clean for 11 sweeps, `objects` showing `repair 100` and its queue taking guests again;
+  a screenshot; the same in the original under Proton.
+- [ ] **Q133c. The entertainer never performs.** Split from Q133, which counted the look (`ENTERTAINER_GUEST_SEARCH`).
+  On a decide's draw mod 3 of nought, `FUN_004c8eb0` (`FUN_004c8d30` with a last argument of 1) looks for a guest in
+  the square of `EntertainerConstsPerGrade.ActivationDistance`; one found draws again for animation `0xd` and up
+  (`FUN_00541fa0`), state `0xe`, `+0x214` = mGameTick, for WorkDuration + 1 sweeps (51 at grade 3), each turn through
+  `FUN_00506760`, then effect `0x87` and the decide again (`ride-operation.md`, "The jobs, on the same clock" and
+  "The no-work walk, in both games"). Decode `FUN_004c8d30` first. The original's entertainer performed on 382 of 578
+  sweeps (`q133/orig/a.log`). Confirm: `staff` showing state `0xe` for 51 sweeps beside a guest, predicted first; a
+  screenshot of the performance beside the original's. Q227 follows it.
 - [ ] **Q134. The researcher researches, where ours stands. Alexah's call first.** Found by Q82. On a nought from its
   draw, or no destination, the researcher takes state `0xf` (animation 10, `+0x214` = mGameTick) for
   `ResearcherConstsPerGrade.WorkDuration` + 1 sweeps (31 at grade 2), then walks or researches again; it never idles of
@@ -81,7 +84,9 @@ the original.
   base by rest.
   (d) Tired with no rest area found or reached, `FUN_00506a40` answers 0 and the kind's own choice follows (the guard's
   at `0x004d6554`, the researcher's at `0x00502b9f`); `Decide` stands them instead, so a tired member with no reachable
-  Staff Room never walks again. (e) At the end of a rest the original runs the kind's decide in the same sweep
+  Staff Room never walks again; when the kind's choice follows, the three kinds' searches need `FUN_00506680`'s gate
+  (the rest byte under `RestLevel`: no search, straight to the walk), which `Decide` leaves out because nobody so
+  tired gets that far today. (e) At the end of a rest the original runs the kind's decide in the same sweep
   (`FUN_005061d0`, `0x00506298`); `Rest` sets Idle at stamp 0 and decides a sweep later, which after Q82b reads the
   guard's `mGameTick & 3` a sweep late. (f) Found by Q82b: at hire the guard and the researcher decide at once, after
   `FUN_00506a40` (the guard's `0x004d5e76` on `mGameTick & 3`, the researcher's `0x005026cb` on a draw); `Hire` sets
@@ -472,7 +477,7 @@ the original.
   within a few turns, `peeps` showing illness 0; a screenshot.
 - [ ] **Q227. Nobody stops to watch the entertainer.** Found by Q111, arm (e). An entertainer on the nine cells
   around a deciding guest, and the nearest one performing (staff state `0xe`): event `0xe`, the guest turned to face
-  them, and the turn ends. The original's stock park did it eight times in 964 sweeps. After Q133, which builds the
+  them, and the turn ends. The original's stock park did it eight times in 964 sweeps. After Q133c, which builds the
   performance; counted meanwhile as `DECIDE_ENTERTAINER_BESIDE`, whoever the entertainer is doing. The fireworks half
   (`DECIDE_WATCH_FIREWORKS`) is dead by content in Lost Kingdom. Confirm: a guest beside the performing entertainer
   facing them; `facing 1` and a screenshot.

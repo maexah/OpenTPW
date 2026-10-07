@@ -26,8 +26,8 @@ public enum StaffActivity
 	/// <summary>
 	/// Standing about with nothing to do. They wait out their grade's <c>IdleDuration</c> from
 	/// <c>mTimeStartedIdling</c> and then look for something. Every kind asks
-	/// <c>FUN_00506a40</c> first (strike, tired, mood); here only the guard and the researcher ask, and only
-	/// whether they are too tired (Q133).
+	/// <c>FUN_00506a40</c> first (strike, tired, mood); here the tired and mood halves are asked, the strike is
+	/// not (Q138).
 	/// </summary>
 	Idle = 0,
 

@@ -863,7 +863,7 @@ public sealed class ParkRideOperation
 	/// <summary>
 	/// The toilet's worn flag, on every turn of a thing not in state 3 or 4 - <c>FUN_004e0b90</c>,
 	/// <c>0x004e0d10</c>: a dirty toilet (<see cref="ParkState.IsDirty"/>) has <see cref="WornVariable"/> written 1.
-	/// Nothing here writes nought; the handyman's clean does, and it is not built (Q133).
+	/// Nothing here writes nought; the handyman's clean does, and it is not built (Q133b).
 	/// </summary>
 	/// <returns>Whether the variable was written.</returns>
 	public bool TellTheWorn( RideScript? script, int thingId )
