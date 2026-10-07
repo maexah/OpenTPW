@@ -64,15 +64,205 @@ public class ParkTickTests
 		Frame( 0f );
 	}
 
-	/// <summary>
-	/// The frame clock's count and its seconds set to nought, as a fresh process has them. Guests take their turns
-	/// on <c>GameClock.Ticks / 8</c>, which no scene entry resets, so without this a seeded run still plays out by
-	/// however many ticks the tests before it ran.
-	/// </summary>
-	private static void PinTheClock()
+	/// <summary>The frame clock's 31 ms count set outright, as a program that has run for a while has it.</summary>
+	private static void SetTheFrameClock( int ticks )
+		=> typeof( GameClock ).GetProperty( nameof( GameClock.Ticks ) )!.SetValue( null, ticks );
+
+	/// <summary>A park's people with every generator seeded, on the shipped park's own state.</summary>
+	private ParkPeople SeededPeople( int seed )
 	{
-		typeof( GameClock ).GetProperty( nameof( GameClock.Ticks ) )!.SetValue( null, 0 );
-		typeof( GameClock ).GetProperty( nameof( GameClock.Now ) )!.SetValue( null, 0f );
+		var world = World();
+
+		return new ParkPeople( world, new ParkBalance( Theme, easyMode: true ), () => ParkRides.GateIsOpen,
+			new ParkState( world ), new ParkItemCatalogue( Theme, data ), random: new Random( seed ),
+			behaviourRandom: new Random( seed ), rideRandom: new Random( seed ), staffRandom: new Random( seed ) );
+	}
+
+	/// <summary>
+	/// <b>A guest's turn in four is taken on the park's clock, <c>mGameTick</c>, wherever the frame clock stands</b>
+	/// (<c>FUN_00501650</c>, <c>0x00501669</c>). The shipped park loads at 755, so its first four sweeps are 756 to
+	/// 759, and on each the exit level falls by one for the guests whose id shares its low two bits and for nobody
+	/// else: the same guests with the frame clock at nought and 8, 16 and 24 ticks on, which move the 31 ms count
+	/// over eight through all four of its own.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the sweep handing its guests the frame clock's count over eight.</remarks>
+	[TestMethod]
+	public void AGuestsTurnInFourIsOnTheParksClockWhereverTheFrameClockStands()
+	{
+		foreach ( var ahead in new[] { 0, 8, 16, 24 } )
+		{
+			var people = SeededPeople( seed: 1 );
+
+			try
+			{
+				EnterPark();
+				SetTheFrameClock( ahead );
+
+				Assert.AreEqual( 755, people.State.GameTick, "the save's clock" );
+
+				for ( var sweep = 0; sweep < 4; ++sweep )
+				{
+					var before = people.Peeps.ToDictionary( peep => peep.ThingId, peep => peep.ExitLevel );
+
+					Sweep( people );
+
+					var clock = people.State.GameTick;
+
+					foreach ( var peep in people.Peeps.Where( peep => before.ContainsKey( peep.ThingId ) ) )
+					{
+						var due = (peep.ThingId & 3) == (clock & 3);
+
+						Assert.AreEqual( before[peep.ThingId] - (due ? 1 : 0), peep.ExitLevel,
+							$"guest {peep.ThingId} on mGameTick {clock}, the frame clock {ahead} ticks ahead" );
+					}
+				}
+			}
+			finally
+			{
+				people.Delete();
+				Entity.ApplyDeletions();
+			}
+		}
+	}
+
+	/// <summary>
+	/// <b>Every stamp a guest takes in the running park is the park's clock at that sweep</b> (<c>FUN_00501db0</c>
+	/// cases 8 and <c>0xb</c>, <c>0x00502375</c> and <c>0x00501ea9</c>; the deciding turn's <c>0x004ff3fa</c>), and a
+	/// loaded guest starts from the save's three. Over 200 sweeps from the load at 755, each change of a guest's idle
+	/// or spot stamp writes the clock of the sweep it changed on, or nought to the idle stamp, with the frame clock
+	/// far from the park's.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the sweep handing on the frame clock's count; the constructor dropping the save's.</remarks>
+	[TestMethod]
+	public void EveryStampAGuestTakesIsTheParksClockAtThatSweep()
+	{
+		var people = SeededPeople( seed: 1 );
+
+		try
+		{
+			EnterPark();
+			SetTheFrameClock( 8 * 5000 );
+
+			CollectionAssert.AreEqual( Enumerable.Range( 648, 13 ).ToArray(),
+				people.Peeps.OrderBy( peep => peep.ThingId ).Select( peep => peep.ArrivalDate ).ToArray(),
+				"the save's arrival stamps are kept" );
+
+			var changes = 0;
+
+			for ( var sweep = 0; sweep < 200; ++sweep )
+			{
+				var before = people.Peeps.ToDictionary( peep => peep.ThingId,
+					peep => (peep.TimeStartedIdling, peep.TimeOfLastSpotAnim) );
+
+				Sweep( people );
+
+				var clock = people.State.GameTick;
+
+				foreach ( var peep in people.Peeps.Where( peep => before.ContainsKey( peep.ThingId ) ) )
+				{
+					var (idle, spot) = before[peep.ThingId];
+
+					if ( peep.TimeStartedIdling != idle )
+					{
+						++changes;
+						Assert.IsTrue( peep.TimeStartedIdling == clock || peep.TimeStartedIdling == 0,
+							$"guest {peep.ThingId}'s idle stamp {peep.TimeStartedIdling} on mGameTick {clock}" );
+					}
+
+					if ( peep.TimeOfLastSpotAnim != spot )
+					{
+						++changes;
+						Assert.AreEqual( clock, peep.TimeOfLastSpotAnim, $"guest {peep.ThingId}'s spot stamp" );
+					}
+				}
+			}
+
+			Assert.IsTrue( changes > 10, $"the run should stamp its guests many times, and did {changes}" );
+		}
+		finally
+		{
+			people.Delete();
+			Entity.ApplyDeletions();
+		}
+	}
+
+	/// <summary>
+	/// <b>A guest is stamped with the park's clock as they are made</b> (<c>FUN_004faec0</c>, <c>0x004fafcf</c>), and
+	/// the <c>peeps</c> census prints it beside the other two.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the making leaving the stamp nought; the census printing another field.</remarks>
+	[TestMethod]
+	public void AGuestIsStampedWithTheParksClockAsTheyAreMade()
+	{
+		var people = SeededPeople( seed: 1 );
+
+		try
+		{
+			EnterPark();
+			SetTheFrameClock( 8 * 5000 );
+
+			for ( var sweep = 0; sweep < 3; ++sweep )
+				Sweep( people );
+
+			var made = people.Admit( 47, 5 );
+
+			Assert.AreNotEqual( 0, made, "a guest is made at the stop" );
+			Assert.AreEqual( 758, people.State.GameTick, "three sweeps from the load" );
+			Assert.AreEqual( 758, people.Guests[made].ArrivalDate, "mArrivalDate is the clock they were made on" );
+
+			var line = people.Census().Single( row => row.StartsWith( $"thing {made,2} " ) );
+
+			StringAssert.Contains( line, "idle    0 arrived  758 spot    0 ", "the census prints the three stamps" );
+			StringAssert.Contains( people.Census().Single( row => row.StartsWith( "thing 29 " ) ), " arrived  648 ",
+				"and a saved guest's own" );
+		}
+		finally
+		{
+			people.Delete();
+			Entity.ApplyDeletions();
+		}
+	}
+
+	/// <summary>
+	/// <b>The console's <c>why</c> asks the chooser on the park's clock</b>, whose bottom bit settles an equal score
+	/// (<c>0x004fcba9</c>). With a full toilet need guest 42 scores toilets 23 and 22 alike, 30: on the load's odd
+	/// 755 the later of the walk, 22, takes it, and a sweep's count on, on 756, the first keeps it. The frame clock's
+	/// own bottom bit changes neither answer.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> <c>WhyCensus</c> handing on the 31 ms count.</remarks>
+	[TestMethod]
+	public void WhyAsksTheChooserOnTheParksClock()
+	{
+		var people = SeededPeople( seed: 1 );
+
+		try
+		{
+			EnterPark();
+
+			people.Guests[42].Toilet = Peep.Most;
+
+			string Why() => people.WhyCensus().Single( row => row.StartsWith( "thing  42 " ) );
+
+			foreach ( var frameClock in new[] { 8 * 5000, 8 * 5000 + 1 } )
+			{
+				SetTheFrameClock( frameClock );
+				StringAssert.Contains( Why(), "chose thing 22 ", $"on mGameTick 755, the frame clock at {frameClock}" );
+				StringAssert.Contains( Why(), "scores [23:30 22:30 ", "the two toilets level" );
+			}
+
+			people.State.AdvanceGameTick();
+
+			foreach ( var frameClock in new[] { 8 * 5000, 8 * 5000 + 1 } )
+			{
+				SetTheFrameClock( frameClock );
+				StringAssert.Contains( Why(), "chose thing 23 ", $"on mGameTick 756, the frame clock at {frameClock}" );
+			}
+		}
+		finally
+		{
+			people.Delete();
+			Entity.ApplyDeletions();
+		}
 	}
 
 	/// <summary>A sixtieth of a second, which is about two frames to a 31ms tick.</summary>
@@ -539,19 +729,19 @@ public class ParkTickTests
 	/// the let-go not waiting for 2.
 	///
 	/// <para>
-	/// <b>The generators are seeded, the frame clock is pinned, and the stop is asserted empty.</b> The load is
+	/// <b>The generators are seeded and the stop is asserted empty.</b> The load is
 	/// called 509 sweeps in, and by then the draw can have sent a saved guest home: one standing at the stop has a
 	/// vehicle summoned for them and a bus at 2 with its load off sent on (<see cref="ParkPeople.LeaverAtTheStop"/>),
-	/// which is the original's and not this test's subject. Of seeds 0 to 599 given to all four generators, seven
-	/// put a guest there (<see cref="SeedWithALeaverAtTheStop"/> is one), the same seven on a second pass; without
-	/// the clock pinned (<see cref="PinTheClock"/>) a seed's outcome changes with the tests run before it.
+	/// which is the original's and not this test's subject. Of seeds 0 to 599 given to all four generators, five
+	/// put a guest there (<see cref="SeedWithALeaverAtTheStop"/> is one), the same five wherever the frame clock
+	/// stands, as the guests take their turns on the park's own.
 	/// </para>
 	/// </remarks>
 	[TestMethod]
 	public void TheBusIsHeldAtTheStopUntilTheSweepAfterItsLastGuest() => TheBusIsHeld( seed: 1 );
 
 	/// <summary>A seed whose draws stand a saved guest at the stop before the first load is called.</summary>
-	private const int SeedWithALeaverAtTheStop = 164;
+	private const int SeedWithALeaverAtTheStop = 260;
 
 	/// <summary>
 	/// <b>The handshake above says why it stops when a guest going home stands at the stop</b>, where its own
@@ -594,7 +784,6 @@ public class ParkTickTests
 			Assert.IsNotNull( bus, $"the bus, thing {busThing}, should run {ParkRides.ScriptPathFor( busItem )}" );
 
 			EnterPark();
-			PinTheClock();
 
 			Assert.IsTrue( bus.Set( "VAR_STATUS", 0 ) && bus.Set( "VAR_TRIGGER", 0 ),
 				"bus.RSE declares both variables the handshake turns on" );

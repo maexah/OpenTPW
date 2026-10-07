@@ -659,4 +659,58 @@ public class ParkWorldTests
 			Assert.IsTrue( cell.TileIndex is >= 0 and <= 21,
 				$"path tile {cell.TileIndex} is outside the PathTex table" );
 	}
+
+	/// <summary>
+	/// <b>A saved guest carries three stamps of the park's clock</b>: <c>mArrivalDate</c> at <c>+398</c>,
+	/// <c>mTimeOfLastSpotAnim</c> at <c>+513</c> and <c>mTimeStartedIdling</c> at <c>+517</c>. The shipped park's
+	/// thirteen arrived one a sweep, 648 to 660 in id order, before the save's <c>mGameTick</c> of 755, and none had
+	/// played a spot animation or stood in a queue.
+	/// </summary>
+	[TestMethod]
+	public void ASavedGuestCarriesItsThreeStampsOfTheParksClock()
+	{
+		var world = World();
+
+		var guests = world.People.Where( person => person.Guest != null ).OrderBy( person => person.ThingId ).ToList();
+
+		CollectionAssert.AreEqual( new[] { 29 }.Concat( Enumerable.Range( 31, 12 ) ).ToArray(),
+			guests.Select( guest => guest.ThingId ).ToArray(), "the thirteen saved guests" );
+		CollectionAssert.AreEqual( Enumerable.Range( 648, 13 ).ToArray(),
+			guests.Select( guest => guest.Guest!.Value.ArrivalDate ).ToArray(), "mArrivalDate, a sweep apart in id order" );
+		Assert.IsTrue( guests.All( guest => guest.Guest!.Value.ArrivalDate < world.GameTick ), "each before the save's clock" );
+		Assert.IsTrue( guests.All( guest => guest.Guest!.Value is { TimeOfLastSpotAnim: 0, TimeStartedIdling: 0 } ),
+			"and neither other stamp written" );
+	}
+
+	/// <summary>
+	/// <b>Each of the three stamps is read from its own four bytes and carried into the running guest.</b> The shipped
+	/// park holds nought in two of them, so guest 29's record (arrival 648, cash 570, exit level 148) is given 700 at
+	/// <c>+513</c> and 701 at <c>+517</c> and read again.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the two offsets exchanged; <c>Peep</c>'s constructor leaving either stamp nought.</remarks>
+	[TestMethod]
+	public void TheSpotAndIdleStampsAreReadFromTheirOwnBytesAndKeptByTheGuest()
+	{
+		using var stream = new MemoryStream( data.ReadAllBytes( ShippedPark ) );
+		var payload = new SaveReader( stream ).ReadFile();
+
+		int At( int offset ) => System.BitConverter.ToInt32( payload, offset );
+
+		var records = Enumerable.Range( 0, payload.Length - 533 )
+			.Where( start => At( start + 398 ) == 648 && At( start + 414 ) == 570 && At( start + 418 ) == 148 ).ToList();
+
+		Assert.AreEqual( 1, records.Count, "guest 29's record" );
+
+		System.BitConverter.GetBytes( 700 ).CopyTo( payload, records[0] + 513 );
+		System.BitConverter.GetBytes( 701 ).CopyTo( payload, records[0] + 517 );
+
+		var person = new ParkWorld( payload ).People.Single( p => p.ThingId == 29 );
+		var saved = person.Guest!.Value;
+
+		Assert.AreEqual( (648, 700, 701), (saved.ArrivalDate, saved.TimeOfLastSpotAnim, saved.TimeStartedIdling), "as read" );
+
+		var peep = new Peep( person.ThingId, saved, person.Navigator );
+
+		Assert.AreEqual( (648, 700, 701), (peep.ArrivalDate, peep.TimeOfLastSpotAnim, peep.TimeStartedIdling), "as kept" );
+	}
 }

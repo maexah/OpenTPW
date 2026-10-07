@@ -351,7 +351,16 @@ public sealed class Peep
 	/// </summary>
 	public bool BeenAdmitted { get; internal set; }
 
-	/// <summary>When the guest last began a one-off animation, so that its end can be noticed.</summary>
+	/// <summary>
+	/// The park's clock when the guest was made - <c>mArrivalDate</c> (<c>+0x1d4</c>), which the constructor stamps
+	/// (<c>0x004fafcf</c>) and the save keeps. The stay is counted from it (<c>FUN_004fd950</c>).
+	/// </summary>
+	public int ArrivalDate { get; }
+
+	/// <summary>
+	/// The park's clock when the guest last began a one-off animation, so that its end can be noticed -
+	/// <c>mTimeOfLastSpotAnim</c> (<c>+0x208</c>).
+	/// </summary>
 	public int TimeOfLastSpotAnim { get; private set; }
 
 	/// <summary>
@@ -473,6 +482,10 @@ public sealed class Peep
 		NumSideshows = saved.NumSideshows;
 		NumSideshowsWon = saved.NumSideshowsWon;
 
+		ArrivalDate = saved.ArrivalDate;
+		TimeOfLastSpotAnim = saved.TimeOfLastSpotAnim;
+		TimeStartedIdling = saved.TimeStartedIdling;
+
 		StrandedTime = saved.StrandedTime;
 		Thoughts.Restore( saved.LastThought, saved.TimeBubbleShown );
 
@@ -512,7 +525,7 @@ public sealed class Peep
 	/// <b>The tick counted here is the thing engine's, not the game's 31ms beat</b> - see
 	/// <see cref="ParkPeople.ThingTickEvery"/>, which is eight of those to one of these. The original
 	/// reads <c>mGameTick</c>, one a sweep, for this test rather than the loop tick the engine is gated on
-	/// (this is handed <c>GameClock.Ticks</c> over eight instead, Q132), and the distinction is
+	/// (<c>0x00501669</c>), and <see cref="ParkPeople"/> hands in <see cref="ParkState.GameTick"/>. The distinction is
 	/// load-bearing: four divides eight, so a share taken over game ticks would be true only for guests
 	/// whose id is a multiple of four, and the other three quarters would never age at all.
 	/// </para>
@@ -679,6 +692,7 @@ public sealed class Peep
 	/// change through what happens to them. That is what the original does, so it is what this does.
 	/// </para>
 	/// </summary>
+	/// <param name="tick">The park's clock, <c>mGameTick</c> (<see cref="ParkState.GameTick"/>).</param>
 	/// <param name="onACountingCell">
 	/// Whether the cell they stand on passes <c>FUN_004fa990</c>, as <see cref="CountsOn"/> answers of its type. False
 	/// by default, which leaves the balloon's countdown alone for a caller asking about the needs.

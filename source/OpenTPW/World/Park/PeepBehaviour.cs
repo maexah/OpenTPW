@@ -382,11 +382,10 @@ public sealed class PeepBehaviour
 	/// </para>
 	/// </summary>
 	/// <param name="tick">
-	/// The thing tick, the same counter <see cref="Peep.Tick"/> is spread across, and the clock the states that
-	/// record a time compare against: the original's <c>mGameTick</c> goes up by one per thing sweep
-	/// (<c>0x00516394</c>). It is <see cref="GameClock.Ticks"/> over eight, which runs from the program's start
-	/// and is not reset on entering a park, so a park's first sweep carries the lobby's; the original zeroes
-	/// <c>mGameTick</c> at level start (<c>0x00515865</c>) and loads the save's (<c>0x00517bec</c>).
+	/// The park's clock, the same counter <see cref="Peep.Tick"/> is spread across, and the one the states that
+	/// record a time compare against: the original's <c>mGameTick</c>, <see cref="ParkState.GameTick"/>, which goes
+	/// up by one per thing sweep (<c>0x00516394</c>), is zeroed at level start (<c>0x00515865</c>) and takes the
+	/// save's on a load (<c>0x00517bec</c>).
 	/// </param>
 	public void Step( Peep peep, PeepWalk walk, SpriteScript? playing, int tick )
 	{

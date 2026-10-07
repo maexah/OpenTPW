@@ -108,7 +108,7 @@ public sealed class ParkRideChooser
 	/// </summary>
 	/// <param name="gameTick">
 	/// The count whose <b>bottom bit alone</b> settles a tie - see <see cref="Beats"/>: the original's <c>mGameTick</c>,
-	/// where <see cref="PeepBehaviour"/> hands in the thing tick (Q132).
+	/// <see cref="ParkState.GameTick"/>.
 	/// </param>
 	/// <param name="queueLength">
 	/// How long each object's queue is. <b>Null walks the save's queue</b> - from the object's

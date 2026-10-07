@@ -602,6 +602,12 @@ public sealed class ParkWorld : IParkInitialState
 	/// <see cref="TimeBubbleShown"/> of the person base: the stranded stamp, the thought last set, the bubble's
 	/// slot in the sprite table and the park's clock when it was made.
 	/// </param>
+	/// <param name="ArrivalDate">
+	/// <c>mArrivalDate</c> (<c>+0x1d4</c>) - the park's clock, <c>mGameTick</c>, when the guest was made;
+	/// <see cref="TimeOfLastSpotAnim"/> (<c>+0x208</c>) and <see cref="TimeStartedIdling"/> (<c>+0x1fc</c>) are the
+	/// same clock when they last began a one-off animation and last began standing about
+	/// (<c>docs/exe/ride-operation.md</c>, "The guests' and the objects' clock").
+	/// </param>
 	/// <param name="LastPosX">
 	/// <c>mLastPosX</c> (<c>+0x218</c>) - where the held balloon goes next frame, across, in world units;
 	/// <see cref="LastPosY"/> (<c>+0x21c</c>) is down. Only a placement writes them.
@@ -616,7 +622,8 @@ public sealed class ParkWorld : IParkInitialState
 		int SavedMajorDest = 0, int WalkingTurns = 0,
 		int NumRides = 0, int NumShops = 0, int NumSideshows = 0, int NumSideshowsWon = 0,
 		int BalloonScript = 0, int RemainingBalloonLife = 0, float LastPosX = 0f, float LastPosY = 0f,
-		uint StrandedTime = 0, int LastThought = 0, int ThoughtScript = 0, int TimeBubbleShown = 0 )
+		uint StrandedTime = 0, int LastThought = 0, int ThoughtScript = 0, int TimeBubbleShown = 0,
+		int ArrivalDate = 0, int TimeOfLastSpotAnim = 0, int TimeStartedIdling = 0 )
 	{
 		/// <summary>How many things each of the two histories holds - <c>mPreviousRides[4]</c> and its twin.</summary>
 		public const int Remembered = 4;
@@ -2066,6 +2073,10 @@ public sealed class ParkWorld : IParkInitialState
 			LastThought: ReadInt32At( start + 386 ),
 			ThoughtScript: ReadInt32At( start + 390 ),
 			TimeBubbleShown: ReadInt32At( start + 394 ),
+			// The three stamps, each a reading of the save's own mGameTick.
+			ArrivalDate: ReadInt32At( start + 398 ),        // mArrivalDate
+			TimeOfLastSpotAnim: ReadInt32At( start + 513 ), // mTimeOfLastSpotAnim
+			TimeStartedIdling: ReadInt32At( start + 517 ),  // mTimeStartedIdling
 			// What the visitor window counts, bumped by the settle-up (docs/exe/ride-operation.md, "The settle-up's
 			// bookkeeping", steps 1 and 3), in the block's alphabetical order after mMajorDest.
 			NumRides: ReadInt32At( start + 444 ),        // mNumRides

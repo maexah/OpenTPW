@@ -477,7 +477,9 @@ public sealed class ParkPeople : Entity
 			State: (int)(inThePark ? PeepState.Deciding : PeepState.Walking), SavedState: ParkWorld.GuestState.Deciding,
 			PersonType: type, Cash: cash, ExitLevel: exitLevel,
 			Happiness: 50f, Thirst: thirst, Hunger: hunger, Toilet: toilet, Vomit: 0f, Litter: 0f,
-			MajorDest: 0, QueuePos: 0, PrankeryIndex: prankery ? 100 + (thingId & 0xffff) % 3 : 0 );
+			MajorDest: 0, QueuePos: 0, PrankeryIndex: prankery ? 100 + (thingId & 0xffff) % 3 : 0,
+			// The constructor's stamp of the park's clock (0x004fafcf).
+			ArrivalDate: State.GameTick );
 
 		// The child they arrive as, by their id alone (FUN_004faec0, 0x004fb18d..0x004fb1bc).
 		var child = _banks.ChildOf( thingId );
@@ -505,7 +507,7 @@ public sealed class ParkPeople : Entity
 		if ( !inThePark && !_behaviour.WalkInFromTheStop( peep, walk, sideB, across ) )
 		{
 			peep.SetState( _behaviour.Admission == null ? PeepState.AtGate : PeepState.Deciding,
-				GameClock.Ticks / ThingTickEvery, _arrivalRandom );
+				State.GameTick, _arrivalRandom );
 		}
 
 		var person = new ParkWorld.Person(
@@ -1115,7 +1117,7 @@ public sealed class ParkPeople : Entity
 		var thingId = Admit( cellX, cellY, personType );
 
 		if ( thingId != 0 )
-			_behaviour.AdmitAsEntered( _byId[thingId], GameClock.Ticks / ThingTickEvery );
+			_behaviour.AdmitAsEntered( _byId[thingId], State.GameTick );
 
 		return thingId;
 	}
@@ -1129,7 +1131,7 @@ public sealed class ParkPeople : Entity
 		if ( !_byId.TryGetValue( guestId, out var peep ) || !_walks.TryGetValue( guestId, out var walk ) )
 			return $"no guest {guestId}";
 
-		return _behaviour.SendAsChosen( peep, walk, thingId, GameClock.Ticks / ThingTickEvery );
+		return _behaviour.SendAsChosen( peep, walk, thingId, State.GameTick );
 	}
 
 	/// <summary>
@@ -1727,11 +1729,16 @@ public sealed class ParkPeople : Entity
 	/// <c>mGameTick</c> does not, and nothing makes it up (<c>docs/exe/park-engine.md</c>, "What the 31 ms tick
 	/// drives"). The first three of a frame run. It binds only in a frame longer than about 0.74 s.
 	/// <para>
-	/// The tick number the sweep hands its things here is still the 31 ms count over eight, which jumps over a dropped
-	/// step where the original's things read <c>mGameTick</c>, which does not (<c>docs/QUEUE.md</c> Q132).
+	/// The sweep hands its things <see cref="ParkState.GameTick"/>, which a dropped step does not move.
 	/// </para>
 	/// </summary>
 	internal const int SweepsAFrame = 3;
+
+	/// <summary>
+	/// The sprites' clock at the sweep being run, in milliseconds of the 31 ms tick: what the sprite step is handed,
+	/// and so what a balloon built on a ride's turn starts from (<see cref="ParkRideOperation.SpriteNow"/>).
+	/// </summary>
+	private int _sweepSpriteClock;
 
 	/// <summary>The sweeps run and the sweeps dropped by <see cref="SweepsAFrame"/> since the park was made, for the console.</summary>
 	internal int SweepsRun { get; private set; }
@@ -1854,13 +1861,16 @@ public sealed class ParkPeople : Entity
 			State.AdvisorMessages?.Tick( State.GameTick, (long)(GameClock.Now * 1000),
 				(response, sample) => Advisor.Current?.PlayParkResponse( response, sample ) ?? 0 );
 
-			// <b>The number handed on is the THING tick, not the game tick, and that is not cosmetic.</b>
-			// Peep.Tick spreads guests across four slots by (id & 3) == (tick & 3); every 31 ms game tick that
-			// reaches here is a multiple of eight, and four divides eight, so passing the game tick would
-			// make that test true only for guests whose id is a multiple of four and starve the other three
-			// quarters of their needs for ever. The original's needs gate (FUN_00501650) reads mGameTick,
-			// the park's own clock, one up a sweep; handing on this count instead is Q132.
-			var thingTick = tick / ThingTickEvery;
+			// <b>The number handed on is the park's clock, mGameTick, not the 31 ms tick, and that is not
+			// cosmetic.</b> Peep.Tick spreads guests across four slots by (id & 3) == (tick & 3); every 31 ms
+			// tick that reaches here is a multiple of eight, and four divides eight, so passing that would make
+			// the test true only for guests whose id is a multiple of four and starve the other three quarters
+			// of their needs for ever. Every clock a guest's handler reads is mGameTick, one up a sweep
+			// (docs/exe/ride-operation.md, "The guests' and the objects' clock").
+			var thingTick = State.GameTick;
+
+			// The sprites' clock at this sweep, the 31 ms tick's milliseconds, for a balloon built on a ride's turn.
+			_sweepSpriteClock = tick * MillisecondsPerTick;
 
 			foreach ( var peep in _peeps )
 			{
@@ -2041,7 +2051,10 @@ public sealed class ParkPeople : Entity
 		// multiplier on what winning is worth, and the excitement match's four - and the score what each kind
 		// likes. Without them those arms leave happiness alone rather than moving it by an invented number.
 		var operation = new ParkRideOperation( _behaviour.State, Guests, _behaviour.Admission, _behaviour.Score,
-			_banks );
+			_banks )
+		{
+			SpriteNow = _sweepSpriteClock
+		};
 
 		// <b>The park as it stands, not as the file left it.</b> A thing bought this session lives in
 		// ParkState's list and in no other, so a sweep over the save's list hands it no turn at all - it
@@ -2357,7 +2370,7 @@ public sealed class ParkPeople : Entity
 				continue;
 
 			yield return $"thing {thingId,3} {peep.State,-18} "
-				+ _behaviour.Explain( peep, walk, GameClock.Ticks );
+				+ _behaviour.Explain( peep, walk, State.GameTick );
 		}
 	}
 
@@ -2393,7 +2406,7 @@ public sealed class ParkPeople : Entity
 	/// </remarks>
 	internal void ThingRemoved( ParkWorld.CatalogueObject thing )
 	{
-		var thingTick = GameClock.Ticks / ThingTickEvery;
+		var thingTick = State.GameTick;
 
 		foreach ( var peep in _peeps )
 		{
@@ -2449,7 +2462,7 @@ public sealed class ParkPeople : Entity
 		var room = cells * ParkRideChoice.QueueRoomPerCell;
 		var nominee = State.PersonBeingLoaded( objectId );
 		var script = _scriptFor?.Invoke( objectId );
-		var thingTick = GameClock.Ticks / ThingTickEvery;
+		var thingTick = State.GameTick;
 		var steps = 0;
 
 		for ( var id = State.FirstInQueue( objectId ); id != 0 && steps < ParkState.LongestQueue; ++steps )
@@ -2954,8 +2967,9 @@ public sealed class ParkPeople : Entity
 				+ $"dest {peep.MajorDest,2} place {place,2} recorded {peep.QueuePos & 0xff,2} "
 				// The major a minor decision put by, and the walking turns counted toward the next decision.
 				+ $"saved-major {peep.SavedMajorDest,2} turns {peep.WalkingTurns,2} "
-				// mTimeStartedIdling, which the thinking gap in front of the chooser is measured from.
-				+ $"idle {peep.TimeStartedIdling,4} "
+				// mTimeStartedIdling, which the thinking gap in front of the chooser is measured from, with the other
+				// two stamps of the park's clock: mArrivalDate and mTimeOfLastSpotAnim.
+				+ $"idle {peep.TimeStartedIdling,4} arrived {peep.ArrivalDate,4} spot {peep.TimeOfLastSpotAnim,4} "
 				+ $"(saved {peep.SavedState}) cash {peep.Cash,4} exit {peep.ExitLevel,4} "
 				+ $"happy {peep.Happiness,3:0} thirst {peep.Thirst,3:0} hunger {peep.Hunger,3:0} "
 				+ $"toilet {peep.Toilet,3:0} vomit {peep.Vomit,3:0} litter {peep.Litter,3:0} prankery {peep.PrankeryIndex} "

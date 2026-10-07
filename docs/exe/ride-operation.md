@@ -1002,8 +1002,8 @@ with its thought `0xb` (Q110b). New arrivals start at the constructor's 50
 dead by content: the shipped park places nothing tracked, nothing here sets `mIsTrackRideValid`, and the choice
 sends nobody to a car track without it, so only a save holding a queue for an invalid Dino Karts (item 1150, the
 jungle's one car track) reaches it. A guest who has played no spot animation has `TimeOfLastSpotAnim` at nought, and the
-thing tick is `GameClock.Ticks` over eight, which is not reset on entering a park: their mood is read on their first turn
-in a queue once the lobby has run about seven seconds, and the window is reached only after a spot animation.
+clock is `ParkState.GameTick`, 755 at the shipped park's load: their mood is read on their first turn
+in a queue, and the window is reached only after a spot animation.
 
 **Q99: the board arm's no route (1b)** is built in `QueueTurn`: a failed `SendTo` runs `ParkRideOperation.Forget`
 and `LeaveQueue`, then the common put-out, and the guest does not enter state 13. Two things differ and are said at
@@ -2117,22 +2117,22 @@ its reader `FUN_00402d70`; the same ranges refer to the world pointer `[0x008023
 
 **The guests' reads**, each read in the listing:
 
-| Site | In | What it does | OpenTPW today |
+| Site | In | What it does | OpenTPW |
 |---|---|---|---|
-| `0x004fafcf` | `FUN_004faec0`, the constructor | `+0x1d4` (`mArrivalDate`) = mGameTick | no field; `ParkWorld.ReadGuest` skips the save's (record `+398`) |
-| `0x00501669` | `FUN_00501650`, the needs turn | the turn in four, `(mGameTick & 3) == (id & 3)` | `Peep.DueOn`, on the frame clock over eight |
-| `0x00501792` | the same, inside that block | toilet, hunger and thirst drift when `mGameTick & 0xf` is nought | `Peep.Tick`, the same clock |
+| `0x004fafcf` | `FUN_004faec0`, the constructor | `+0x1d4` (`mArrivalDate`) = mGameTick | `Peep.ArrivalDate`, stamped in `ParkPeople.Admit`; the save's read (record `+398`) |
+| `0x00501669` | `FUN_00501650`, the needs turn | the turn in four, `(mGameTick & 3) == (id & 3)` | `Peep.DueOn` |
+| `0x00501792` | the same, inside that block | toilet, hunger and thirst drift when `mGameTick & 0xf` is nought | `Peep.Tick` |
 | `0x004fdc9d` | `FUN_004fdc90`, its last call | a nought onto the refusals when `mGameTick % 20` is nought | built on `ParkState.GameTick` |
 | `0x0050be50`, `0x0050c03c` | `FUN_0050be40`, `FUN_0050be80` | a thought's bubble against `+0x8c` | built on `ParkState.GameTick` |
-| `0x00502375` | `FUN_00501db0` (SetState), case 8 | `+0x208` (`mTimeOfLastSpotAnim`) = mGameTick | `Peep.SetState`, the frame clock over eight |
+| `0x00502375` | `FUN_00501db0` (SetState), case 8 | `+0x208` (`mTimeOfLastSpotAnim`) = mGameTick | `Peep.SetState` |
 | `0x00501ea9` | SetState, case `0xb` | `+0x1fc` (`mTimeStartedIdling`) = mGameTick | the same |
 | `0x004fc869` | `FUN_004fc800`, a spot animation | `+0x208` = mGameTick | the same, through `SetState` |
-| `0x00501d35` | `FUN_005019f0`, case 8 | over when mGameTick > `+0x208` + 10, unsigned | `PeepBehaviour.Step`, the same |
-| `0x004fecca` | `FUN_004fec90`, the deciding turn | the happy jump's gap, mGameTick − `+0x208` > 100 | `CountBeforeLeaving`, the same |
-| `0x004ff3fa`, `0x004ff49d` | the same | `+0x1fc` = mGameTick (no wander; empty-handed) | `Decide`, the same |
-| `0x004ff428` | the same | the chooser asked when mGameTick > `+0x1fc` + 30 | `Decide`, the same |
-| `0x005002fe` | `FUN_004ffff0`, the queue turn | the mood gap, mGameTick − `+0x208` > 30, and the window on `+0x1fc` | `QueueTurn`, the same |
-| `0x004fcba9`, `0x004fd760` | `FUN_004fcb10`, `FUN_004fd570`, the choosers | an equal score wins on an odd mGameTick | `ParkRideChooser`, the same; the console's `why` hands it the 31 ms tick itself |
+| `0x00501d35` | `FUN_005019f0`, case 8 | over when mGameTick > `+0x208` + 10, unsigned | `PeepBehaviour.Step` |
+| `0x004fecca` | `FUN_004fec90`, the deciding turn | the happy jump's gap, mGameTick − `+0x208` > 100 | `CountBeforeLeaving`, the gap counted, the jump not built (Q224) |
+| `0x004ff3fa`, `0x004ff49d` | the same | `+0x1fc` = mGameTick (no wander; empty-handed) | `Decide` |
+| `0x004ff428` | the same | the chooser asked when mGameTick > `+0x1fc` + 30 | `Decide` |
+| `0x005002fe` | `FUN_004ffff0`, the queue turn | the mood gap, mGameTick − `+0x208` > 30, and the window on `+0x1fc` | `QueueTurn` |
+| `0x004fcba9`, `0x004fd760` | `FUN_004fcb10`, `FUN_004fd570`, the choosers | an equal score wins on an odd mGameTick | `ParkRideChooser`; the console's `why` asks on the same clock |
 | `0x004fd95b` | `FUN_004fd950` | the stay, `(mGameTick − +0x1d4) >> 2` (the leaver's sample `0x00502345`, the visitor's window) | counted (`LEAVER_STAY_SAMPLE`) |
 
 SetState stamps in cases 8 and `0xb` only; its case `0x15` reads the stay. `+0x1fc` is also written nought by the
@@ -2167,18 +2167,27 @@ polling the guests' fields beside the counter; five predictions written first, a
   of the guests never grow a need by drift. Theirs only fell, at a toilet's use (sixteen falls in all).
 - 25 guests made (1300 to 1312, 2002 to 2013): each `+0x1d4` the mGameTick it was made on.
 
-**OpenTPW today, measured** (`baseline.py`, the build of `b51621e`, predicted first): 60 s into the park `sweeps`
-read mGameTick **997** and the thirteen guests' idle stamps in `peeps` read 70 and 197 to 217, the frame clock over
-eight; the original's queuers stand within about 30 of the counter. The guests' turn in four, the drift's sixteenth,
-the chooser's tie and every stamp are therefore out of step with the park's clock by however long the program ran
-before the park, a different amount each run.
+**Built** (Q132b). `ParkPeople`'s sweep hands `ParkState.GameTick` to `Peep.Tick`, `DueOn`, `PeepBehaviour.Step` and
+the rides' turns, and `Admit`, `AdmitInside`, `SendAsChosen`, `ThingRemoved`, `QueueRemeasured` and `WhyCensus` read
+the same; `ParkWorld.ReadGuest` reads the save's `mArrivalDate` (`+398`), `mTimeOfLastSpotAnim` (`+513`) and
+`mTimeStartedIdling` (`+517`), `Peep` keeps all three and the `peeps` census prints them (`idle`, `arrived`, `spot`).
+A balloon built on a ride's turn still starts on the sprites' clock, the 31 ms tick's milliseconds
+(`ParkRideOperation.SpriteNow`), and the sprite gate and the sweep gate stay on the 31 ms tick, which is the engine's.
 
-**What the build is** (Q132b): hand `ParkState.GameTick` to `Peep.Tick`, `DueOn`, `PeepBehaviour.Step` and the rides'
-turns, and to the six other callers that work the frame clock out for themselves (`Admit`, `AdmitAsEntered`,
-`SendAsChosen`, `ThingRemoved`, `QueueRemeasured`, and `WhyCensus`, which hands on the 31 ms tick undivided);
-keep `SpriteClock` on the frame clock; read the save's `mArrivalDate` (`+398`), `mTimeOfLastSpotAnim` (`+513`) and
-`mTimeStartedIdling` (`+517`) into the guest and stamp the arrival at making. The sprite gate and the sweep gate stay
-on the 31 ms tick, which is the engine's.
+**Measured in OpenTPW** (2026-10-07, `q132b/confirm.py`, predicted first, beside the build before it):
+
+| | The build before | Q132b | The original (`q132/orig/a.log`) |
+|---|---|---|---|
+| The thirteen saved guests' arrival, on mGameTick 755 | not read | 648 to 660 in id order | 648 to 660 in id order |
+| Eight single sweeps, 104 checks: `exit` falls on `(mGameTick & 3) == (id & 3)` | 52 off: every fall a sweep early, in this run | none off, 26 falls | 8,654 falls, none off |
+| Idle stamps on mGameTick 1004 | 60 to 208 | 820 to 986 | 835 to 993 |
+| A guest made (`admit`) on mGameTick 1004 | no stamp | `arrived` 1004 | each of 25 the clock it was made on |
+
+The build before is out of step by however long the program ran before the park, a different amount each run: one
+run in four it would have looked right. **A queuer's idle stamp is the sweep they last took a place on**, re-stamped
+each time the queue moves, so how far it stands behind the clock is the queue's own business: on mGameTick 1004 the
+original's queuers stood 11 to 169 behind and OpenTPW's ten, in a queue that had not moved since the ride loaded,
+44 to 57.
 
 ## The staff turn - `CStaff`, every clock `mGameTick`
 

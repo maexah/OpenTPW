@@ -77,6 +77,7 @@ public class ParkBalloonTests
 
 		Assert.IsTrue( new ParkRideOperation( new ParkState( parkIsClosed: false, visitorsToDate: 0, balance: 1000 ),
 				new Dictionary<int, Peep> { [peep.ThingId] = peep }, banks: new ParkSpriteBanks( 6, 1, sets ) )
+				{ SpriteNow = 9 * 8 * 31 }
 			.Dismiss( script, shop, tick: 9, new Random( 1 ), catalogue: Catalogue() ),
 			"the guest should have been let off" );
 
@@ -127,7 +128,7 @@ public class ParkBalloonTests
 		Assert.AreEqual( (Balloon.ColourFor( 7, Sets ), Balloon.HeldScript, 255), (peep.Balloon.Sprite.Set,
 			peep.Balloon.Sprite.Script, peep.Balloon.Sprite.Alpha), "their colour, on the held script, opaque" );
 		Assert.AreEqual( (9 * 8 * 31) + SpriteScript.DefaultInterval, peep.Balloon.Sprite.Due,
-			"its first turn an interval after the sweep's sprite clock, sweep 9's game tick at 31 ms" );
+			"its first turn an interval after the sweep's sprite clock, and not after the park's clock it was handed" );
 		Assert.AreEqual( 153, peep.BalloonLife, "the shop's quality of 60, whatever was left" );
 		Assert.AreEqual( events + 1, Times( "SETTLE_UP_BALLOON_EVENT" ), "the event, counted" );
 		Assert.AreEqual( ParkSpriteBanks.ChildKind, peep.SpriteKind, "a balloon is not a costume" );
@@ -517,6 +518,56 @@ public class ParkBalloonTests
 	}
 
 	/// <summary>One frame, through both clocks, as <c>ParkTickTests</c> runs one.</summary>
+	/// <summary>
+	/// <b>A balloon built on a ride's turn starts on the sprites' clock, the 31 ms tick's milliseconds, and not on the
+	/// park's</b>, which the same turn stamps its guest with: a guest holding a life let off the Belly Bounce, the
+	/// frame clock far from <c>mGameTick</c>. The frames are one tick long, so the sweep's own tick is the last run.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the rides' turn not handed the sweep's sprite clock; handed the park's clock.</remarks>
+	[TestMethod]
+	public void InTheParkABalloonBuiltOnARidesTurnStartsOnTheSpritesClock()
+	{
+		const int BellyBounce = 13;
+
+		var world = Park();
+		var script = Script();
+		var people = new ParkPeople( world, new ParkBalance( "jungle", easyMode: true ), null, new ParkState( world ),
+			Catalogue(), id => id == BellyBounce ? script : null, new Random( 1 ), new ParkSpriteBanks( 6, 1, Sets ),
+			rideRandom: new Random( 1 ) );
+
+		try
+		{
+			EnterPark();
+			typeof( GameClock ).GetProperty( nameof( GameClock.Ticks ) )!.SetValue( null, 8 * 5000 + 1 );
+
+			var peep = people.Guests[people.Admit( 55, 30 )];
+
+			peep.SetState( PeepState.Riding, people.State.GameTick, new Random( 1 ) );
+			peep.BalloonLife = 100;
+			script.Set( ParkRideOperation.DismissVariable, peep.ThingId );
+
+			var from = people.State.GameTick;
+
+			for ( var frame = 0; frame < 40 && people.State.GameTick == from; ++frame )
+			{
+				Frame( 0.031f );
+				Assert.IsTrue( GameClock.TicksDue <= 1, "a frame of one tick at most" );
+				people.Update();
+			}
+
+			Assert.AreEqual( (from + 1, 0), (people.State.GameTick, GameClock.Ticks % ParkPeople.ThingTickEvery), "one sweep, on its own tick" );
+			Assert.AreEqual( PeepState.LeavingRide, peep.State, "let off" );
+			Assert.IsNotNull( peep.Balloon, "and the balloon built again" );
+			Assert.AreEqual( (GameClock.Ticks * ParkPeople.MillisecondsPerTick) + SpriteScript.DefaultInterval, peep.Balloon.Sprite.Due,
+				"its first turn an interval after the sweep's tick in milliseconds" );
+		}
+		finally
+		{
+			people.Delete();
+			Entity.ApplyDeletions();
+		}
+	}
+
 	private static void Frame( float seconds )
 	{
 		Time.Update( seconds );

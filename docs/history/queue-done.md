@@ -5036,6 +5036,24 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   660 against 755 (the file's bytes agree), 514 stamps all the sweep's tick, 8,654 exit-level falls all on the
   guest's own sweep in four, the toilet's drift only on `& 0xf` nought and only for ids that divide by four. Today's
   build: stamps near 200 beside a park clock of 997. The build is Q132b.
+- [x] **Q132b. Hand the guests and the rides the park's clock, and read the save's three stamps.** Decoded by Q132
+  (`ride-operation.md`, "The guests' and the objects' clock"). Pass `ParkState.GameTick` to `Peep.Tick`, `DueOn`,
+  `PeepBehaviour.Step` and `TakeTheRidesTurns`, and to the six callers that work the frame clock out themselves
+  (`Admit`, `AdmitAsEntered`, `SendAsChosen`, `ThingRemoved`, `QueueRemeasured`, `WhyCensus`, which hands on the
+  31 ms tick undivided). `ParkRideOperation.SpriteClock` stays on the frame clock: it is a sprite's milliseconds.
+  Read `mArrivalDate` (`+398`), `mTimeOfLastSpotAnim` (`+513`) and `mTimeStartedIdling` (`+517`) in
+  `ParkWorld.ReadGuest`, keep the arrival on the guest and stamp it at making (`0x004fafcf`); print all three in
+  `peeps`. `ParkTickTests.PinTheClock` and the comments that name Q132 go with it. Confirm: `peeps` on entering Lost
+  Kingdom, the thirteen saved guests' arrival 648 to 660 beside `sweeps`' 755 and a queuer's idle stamp within 30
+  of it, predicted first; the falls of `exit` on each guest's own sweep in four; a screenshot. Beside the original:
+  `q132/orig/a.log` holds its run, `clock.py` reads it again.
+  **Done 2026-10-07.** In the game, predicted first (`q132b/confirm.py`): on mGameTick 755 the thirteen saved guests'
+  `arrived` 648 to 660 in id order; eight single sweeps, 104 checks, 26 falls of `exit`, none off the guest's own
+  sweep in four (the build before: 52 off); 60 s on, on 1004, idle stamps 820 to 986 (before: 60 to 208); a guest
+  made stamped 1004. 3 of 4: the miss is this item's own "within 30", which is not the original's either (its
+  queuers stood 11 to 169 behind at that reading; a queuer's stamp is the sweep they last took a place on).
+  `PinTheClock` is gone: the bus test's seeds come out the same wherever the frame clock stands (five of 600).
+  18 bugs put back, 14 caught, four equivalent (`q132b/mutations.txt`). 2052 tests.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

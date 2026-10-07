@@ -40,17 +40,6 @@ the original.
 
 **The 2026-10-06 review's leftovers come first, at Alexah's word (2026-10-06).**
 
-- [ ] **Q132b. Hand the guests and the rides the park's clock, and read the save's three stamps.** Decoded by Q132
-  (`ride-operation.md`, "The guests' and the objects' clock"). Pass `ParkState.GameTick` to `Peep.Tick`, `DueOn`,
-  `PeepBehaviour.Step` and `TakeTheRidesTurns`, and to the six callers that work the frame clock out themselves
-  (`Admit`, `AdmitAsEntered`, `SendAsChosen`, `ThingRemoved`, `QueueRemeasured`, `WhyCensus`, which hands on the
-  31 ms tick undivided). `ParkRideOperation.SpriteClock` stays on the frame clock: it is a sprite's milliseconds.
-  Read `mArrivalDate` (`+398`), `mTimeOfLastSpotAnim` (`+513`) and `mTimeStartedIdling` (`+517`) in
-  `ParkWorld.ReadGuest`, keep the arrival on the guest and stamp it at making (`0x004fafcf`); print all three in
-  `peeps`. `ParkTickTests.PinTheClock` and the comments that name Q132 go with it. Confirm: `peeps` on entering Lost
-  Kingdom, the thirteen saved guests' arrival 648 to 660 beside `sweeps`' 755 and a queuer's idle stamp within 30
-  of it, predicted first; the falls of `exit` on each guest's own sweep in four; a screenshot. Beside the original:
-  `q132/orig/a.log` holds its run, `clock.py` reads it again.
 - [ ] **Q133. The mechanic, the handyman and the entertainer stand once their saved walk ends, where the original's
   walk about.** Found by Q82 (`ride-operation.md`, "Leaving idle, or a walk: the choice by kind"). With no work the
   mechanic's `FUN_004da5b0` and the handyman's `FUN_004d7100` take a random walk every time (`0x004da6fa`,

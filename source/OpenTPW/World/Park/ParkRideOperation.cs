@@ -397,7 +397,7 @@ public sealed class ParkRideOperation
 		if ( ride.ExitPos != 0 && walkFor?.Invoke( leaving ) is { } walk )
 			PutDownAtTheExit( peep, walk, ride, park );
 
-		SettleUp( peep, ride, catalogue, random, tick );
+		SettleUp( peep, ride, catalogue, random );
 
 		peep.SetState( PeepState.LeavingRide, tick, random );
 
@@ -405,7 +405,7 @@ public sealed class ParkRideOperation
 		// left and the thing left does not give balloons itself (0x00501fd3..0x0050208a): no event, the life as it was.
 		// The original asks it of mMajorDest, the thing being left.
 		if ( peep.BalloonLife != 0 && ItemOf( ride, catalogue )?.AppearanceEffect != Balloon.AppearanceEffect )
-			peep.Balloon = Balloon.Make( peep.ThingId, _banks.BalloonSets, SpriteClock( tick ) );
+			peep.Balloon = Balloon.Make( peep.ThingId, _banks.BalloonSets, SpriteNow );
 
 		return script.Set( DismissVariable, 0 );
 	}
@@ -544,7 +544,7 @@ public sealed class ParkRideOperation
 	/// <see cref="Dismiss"/>) is remembered and charged anyway.
 	/// </para>
 	/// </summary>
-	private void SettleUp( Peep peep, ParkWorld.CatalogueObject ride, ParkItemCatalogue? catalogue, Random random, int tick )
+	private void SettleUp( Peep peep, ParkWorld.CatalogueObject ride, ParkItemCatalogue? catalogue, Random random )
 	{
 		peep.RememberVisit( ride.ThingId );
 
@@ -615,7 +615,7 @@ public sealed class ParkRideOperation
 		switch ( item.AppearanceEffect )
 		{
 			case Balloon.AppearanceEffect:
-				GiveABalloon( peep, ride, tick );
+				GiveABalloon( peep, ride );
 				break;
 
 			case CostumeEffect:
@@ -761,20 +761,19 @@ public sealed class ParkRideOperation
 	}
 
 	/// <summary>
-	/// The sprite clock at a thing sweep, in milliseconds: the sweep's game tick, eight to a sweep, at 31 each - what
-	/// <see cref="ParkPeople"/> steps the sprites on.
+	/// The sprite clock at this turn's sweep, in milliseconds of the 31 ms tick - what <see cref="ParkPeople"/> steps
+	/// the sprites on, and not the park's clock a guest's state is stamped with.
 	/// </summary>
-	private static int SpriteClock( int thingTick )
-		=> thingTick * ParkPeople.ThingTickEvery * ParkPeople.MillisecondsPerTick;
+	internal int SpriteNow { get; init; }
 
 	/// <summary>
 	/// A Balloon Shop's arm of the settle-up - <c>FUN_004fe1e0</c>, <c>0x004fe6ba</c>..<c>0x004fe78a</c>: a balloon in
 	/// the guest's own colour, and a life from the shop's quality (<see cref="Balloon.LifeFor"/>), whatever it had
 	/// left. The original asserts the guest holds none into a bare <c>RET</c>, and boarding has put any away.
 	/// </summary>
-	private void GiveABalloon( Peep peep, ParkWorld.CatalogueObject shop, int tick )
+	private void GiveABalloon( Peep peep, ParkWorld.CatalogueObject shop )
 	{
-		peep.Balloon = Balloon.Make( peep.ThingId, _banks.BalloonSets, SpriteClock( tick ) );
+		peep.Balloon = Balloon.Make( peep.ThingId, _banks.BalloonSets, SpriteNow );
 		peep.BalloonLife = Balloon.LifeFor( shop.QualityOfGoods );
 
 		// The guest's event history takes event 0xc naming the shop (FUN_0050c100, 0x004fe775).
