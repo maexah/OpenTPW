@@ -2423,7 +2423,7 @@ through the sweeps the original's stands performing.
 | A hire's first decide | at once: the guard's on `mGameTick & 3` (`0x004d5e76`), the researcher's on a draw (`0x005026cb`) | Idle at stamp 0, decided on the next sweep | every guard or researcher hired (Q136) |
 | The mechanic, the handyman and the entertainer with no work | walk about | walk about: the mechanic and the handyman on every decide, the entertainer on `mGameTick & 3` (`StaffBehaviour.WalkAbout`, `Entertain`; "The no-work walk, in both games") | from their saved walks' ends |
 | The mechanic's search for a ride | `FUN_004daa90` on every decide not too tired | counted, `MECHANIC_RIDE_SEARCH`, and answers none | every mechanic decide; nothing here breaks down |
-| The handyman's searches | litter `FUN_004c8ed0` at his decide and at his idle pre-step, then a toilet `FUN_004d7880` | counted, `HANDYMAN_LITTER_SEARCH` and `HANDYMAN_TOILET_SEARCH`, and answer none | every handyman decide; no cell here holds litter (Q225), a dirty toilet is Q133b |
+| The handyman's searches | litter `FUN_004c8ed0` at his decide and at his idle pre-step, then a toilet `FUN_004d7880` | the litter search counted, `HANDYMAN_LITTER_SEARCH`, and answers none; the toilet search built (`StaffBehaviour.FindToilet`; "A toilet's dirt") | every handyman decide; no cell here holds litter (Q225) |
 | The entertainer's performance | a draw mod 3 of nought, a guest in reach: state `0xe` for WorkDuration + 1 sweeps | the look counted, `ENTERTAINER_GUEST_SEARCH`, and answers nobody; the entertainer walks instead | a third of the entertainer's decides (Q133c) |
 | The entertainer's region effect | the pre-step `FUN_004d4660` moves `RegionFX[0]` with them, cell by cell | none, uncounted | every cell the entertainer crosses (Q157) |
 | The researcher's fourth decide | researches, state `0xf` | stands | every fourth researcher decide (Q134) |
@@ -2498,8 +2498,19 @@ The other call sites, callers not read here, pass 0, 2, 3, 4, 5 and 7.
    in range the last in the list wins; the distance is cell to cell, the toilet's `+5`, `+7`;
 3. the handyman can route to its entry cell `mEntryPos` (`+0x36`, `FUN_004fa530`).
 
+The route test is the destination setter itself (`FUN_004fa530` writes the walker's `+0x18`, `+0x1a` and then asks
+`FUN_00510100`), so the handyman is left aimed at the last candidate tested, which is the winner unless a later
+candidate's route failed. `+0x60` is the save's `mTimeMarkedForMaintenance` (file 1082: the serialiser handles
+`+0x64` and then `+0x60`, `0x004dc710`, `0x004dc736`).
+
 The winner is assigned (`FUN_004e01f0`: `+0x5e` = the handyman, `+0x60` = mGameTick) and written to the handyman's
-`+0x21a`; `"Handyman found dirty loo, walkin..."`, SetState(`0xa`).
+`+0x21a`; `"Handyman found dirty loo, walkin..."`, SetState(`0xa`). The decide writes `+0x21a` whenever it has no
+litter, nought when the search finds nothing (`0x004d7302`), which is what lets `FUN_004e0220` forget him.
+
+**In the stock park the handyman is never in range.** Toilets 21, 22 and 23 stand on (55,17), (55,16) and (55,15),
+each its own entry cell (`mEntryPos` 2232 for 21); his patrol area is (39,21) to (56,28), so the nearest he comes is
+four rows off, 16 squared, and grade 3's range is under 16. Left alone he cleans nothing until the month's training
+makes him grade 4 (25), or the player puts him down nearer.
 
 | State | Entered | Each turn | Ends |
 |---|---|---|---|
@@ -2527,8 +2538,28 @@ does (`0x004e24bc`..`0x004e252a`).
 | The arrival's answer of 100 | `FUN_004fd4e0` | built in `PeepBehaviour.TurnsAwayFrom`; dead by content in Lost Kingdom |
 | `VAR_WORN` to a dirty toilet | every turn | built, `ParkRideOperation.TellTheWorn`, by name; `Toilet.rse` adds its two objects, kept as records and not drawn (Q20b) |
 | Effects 1 and 6 | stamped into the cells | counted on the use that dirties, `TOILET_DIRTY_REGION_EFFECTS`; no stamping at all; the save's cell record is read (`MapCell.NearbyEffects`) |
-| The handyman's search, walk and clean | states `0xa`, `0xb` | the search counted at his decide, `HANDYMAN_TOILET_SEARCH`; none built, the handyman walks on (Q133b), so **a toilet here never becomes clean again** |
-| The request for service | shuts the object and calls a member | none |
+| The handyman's search, walk and clean | states `0xa`, `0xb` | built: `StaffBehaviour.FindToilet`, `ArriveAtTheLoo`, `CleanOn`, `ParkRideOperation.Clean` and the open after it; the save's `mToiletToClean`, `mTimeStartedCleaning` and `mTimeMarkedForMaintenance` are read |
+| The aim after the search | left on the last candidate tested | aimed at the winner again; counted where they differ, `HANDYMAN_TOILET_AIM_LEFT_ON_A_LATER_TOILET` |
+| The clean's region effects | 6 unstamped, 1 stamped | counted with the dirtying's, `TOILET_DIRTY_REGION_EFFECTS` |
+| The hurry speed on the walk to a toilet | `+0xc2` = 25 | written, read by nothing: staff are not eased (Q136) |
+| A mechanic assigned to a thing | kept while his `+0x218` names it | reads as aiming elsewhere and is forgotten after 100 sweeps; nobody here assigns one |
+| The request for service | shuts the object and calls a member | the search and the clean read and clear a saved `+0x64`; no control here sets one on a toilet (the ride window's `b_callmech` draws and reports itself) |
+
+### The clean, in both games
+
+`docs/QUEUE.md` Q133b. **The original under Proton** (`q133b/orig/watch.py`, `a.log`, `o09.png`), toilet 21's
+`+0x44` written to 20.0 in the running game's memory (`poke.py`: the one write, nothing on disk), four predictions of
+five. Left on his patrol the handyman stayed in state 1 with `+0x21a` nought for 205 sweeps, the toilet unassigned.
+Picked up with the staff window's hand and put down on (56,18), he read `0xa` with `+0x21a` 21 on tick 1389, the
+tick after the put-down, and the toilet was stamped again on 1390 (the put-down's second decide, Q229): **no
+eleven-sweep wait, which was the prediction that missed**. He walked (56,18), (56,17), (55,17) with his rest
+unchanged, read `0xb` on 1398 with `+0x214` 1398, and state 0 on 1409, S + 11: `+0x44` 100, `+0x5e` 0, `+0x68` 1,
+`+0x60` still 1390, his rest down 0.825 (11 x 0.075). State 1 on 1410.
+
+**OpenTPW** (`q133b/confirm.py`), toilet 21 dirtied by sixteen uses, predicted first: on patrol for 30 s he never
+went; put down on (56,19) with `pickup` and `putstaff` he found it on the next sweep, cleaned on (55,17) from S to
+S + 11, the toilet read 100, unassigned and open, `VAR_WORN` 0 and its two script objects gone, and two guests sent
+after used it, 100 to 95 to 90. The build before: no walk, the toilet dirty to the run's end.
 | The online game's clean | mode 1 | none; there is no online game |
 
 ### Q100b: the build, and what the running game showed

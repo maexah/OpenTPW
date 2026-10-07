@@ -294,7 +294,11 @@ public sealed class ParkPeople : Entity
 		// Staff take the balance stack alone: every constant they run on is a per-grade entry in it, and
 		// none of what a guest needs - the fee, the gate - means anything to them.
 		_staff = StaffIn( park );
-		_staffBehaviour = new StaffBehaviour( balance, staffRandom, State );
+		_staffBehaviour = new StaffBehaviour( balance, staffRandom, State )
+		{
+			ScriptFor = scriptFor,
+			StaffById = id => _staff.Find( member => member.ThingId == id )
+		};
 
 		// A cell edit that measures a queue again tells the people in it - see QueueRemeasured - and the
 		// park's door closes and opens the rides through their scripts - see DoorMoved.
@@ -3032,7 +3036,8 @@ public sealed class ParkPeople : Entity
 				// specifier, so "global::" would otherwise split into the expression "global" and a
 				// format string - which is a compile error rather than a wrong answer, thankfully.
 				+ $"walks {(global::OpenTPW.Staff.IsAWalkingState( member.Activity ))} "
-				+ $"has {(walk == null ? "no-walk" : walk.HasRoute ? "route" : "no-route")}";
+				+ $"has {(walk == null ? "no-walk" : walk.HasRoute ? "route" : "no-route")} "
+				+ $"loo {member.ToiletToClean} cleaningSince {member.TimeStartedCleaning}";
 		}
 	}
 }

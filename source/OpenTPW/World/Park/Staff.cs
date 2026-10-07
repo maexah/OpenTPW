@@ -13,9 +13,9 @@ namespace OpenTPW;
 /// meaningless for half the instances.
 /// </para>
 /// <para>
-/// <b>What is NOT here is the kind-specific half.</b> A handyman's target litter cell, a mechanic's object
-/// to repair and a guard's perp are all saved and all decoded - see <c>ParkWorld.ReadStaff</c> - and none
-/// of them is read, because the behaviour built on this is the part all five kinds share. See
+/// <b>Of the kind-specific half only the handyman's toilet job is here</b> (<see cref="ToiletToClean"/>,
+/// <see cref="TimeStartedCleaning"/>). A handyman's target litter cell, a mechanic's object to repair and a
+/// guard's perp are all saved and all decoded - see <c>ParkWorld.ReadStaff</c> - and none of them is read. See
 /// <see cref="StaffBehaviour"/> for which arms that leaves out and why.
 /// </para>
 /// </summary>
@@ -80,6 +80,18 @@ public sealed class Staff
 	public int RestArea { get; internal set; }
 
 	/// <summary>
+	/// The toilet a handyman is walking to or cleaning, a thing id, or nought - <c>mToiletToClean</c>
+	/// (<c>+0x21a</c>). His decide writes it every time it looks, nought when it finds none.
+	/// </summary>
+	public int ToiletToClean { get; internal set; }
+
+	/// <summary>
+	/// The park clock when a handyman began cleaning - <c>mTimeStartedCleaning</c> (<c>+0x214</c>), stamped on
+	/// entering <see cref="StaffActivity.Cleaning"/>.
+	/// </summary>
+	public int TimeStartedCleaning { get; internal set; }
+
+	/// <summary>
 	/// When they last started standing about, read against the park's own clock.
 	///
 	/// <para>
@@ -106,8 +118,8 @@ public sealed class Staff
 	/// <summary>
 	/// How fast they mean to walk, written into the thing's <c>+0xc2</c> before the walk runs. Staff take
 	/// the unhurried speed, 0, everywhere the shared spine reaches but going on strike, which writes the
-	/// hurried 25 (<c>FUN_005054d0</c> case 4); a guard chasing somebody hurries too. Neither arm is built,
-	/// and nothing here writes or reads this.
+	/// hurried 25 (<c>FUN_005054d0</c> case 4); a guard chasing somebody hurries too, and a handyman walking to
+	/// a toilet, the one arm that writes it here. Nothing reads it: staff are not eased (Q136).
 	/// </summary>
 	public int PurposeSpeed { get; internal set; }
 
@@ -134,6 +146,8 @@ public sealed class Staff
 		PercentageThroughGrade = saved.PercentageThroughGrade;
 		RestArea = saved.RestArea;
 		TimeStartedIdling = saved.TimeStartedIdling;
+		ToiletToClean = saved.ToiletToClean;
+		TimeStartedCleaning = saved.TimeStartedCleaning;
 		PatrolBottomLeft = saved.PatrolBottomLeft;
 		PatrolTopRight = saved.PatrolTopRight;
 		Name = saved.Name;
@@ -173,11 +187,12 @@ public sealed class Staff
 	///
 	/// <para>
 	/// Three of the eight shared states walk: going somewhere, going to a rest area, and going to the
-	/// strike. The rest stand, sit or are being carried.
+	/// strike; and a handyman's walk to a toilet. The rest stand, sit, work or are being carried.
 	/// </para>
 	/// </summary>
 	public static bool IsAWalkingState( StaffActivity activity ) => activity is
-		StaffActivity.Walking or StaffActivity.GoingToRest or StaffActivity.GoingOnStrike;
+		StaffActivity.Walking or StaffActivity.GoingToRest or StaffActivity.GoingOnStrike
+		or StaffActivity.GoingToLoo;
 
 	/// <summary>
 	/// Moves this member of staff into a new state, doing what the original's <c>FUN_005054d0</c> does on
@@ -195,6 +210,14 @@ public sealed class Staff
 		if ( next == StaffActivity.Waiting )
 			TimeStartedIdling = tick;
 
+		// The handyman's own setter, FUN_004d7330: the walk to a toilet takes the hurry speed (0x0075c7f2),
+		// and cleaning stamps the clock.
+		if ( next == StaffActivity.GoingToLoo )
+			PurposeSpeed = HurryingSpeed;
+
+		if ( next == StaffActivity.Cleaning )
+			TimeStartedCleaning = tick;
+
 		var wanted = AnimationFor( next );
 
 		if ( wanted != 0 )
@@ -209,19 +232,24 @@ public sealed class Staff
 	/// <para>
 	/// <b>These are not a guest's numbers and are deliberately left as numbers.</b> A guest's walk is 1 and
 	/// their stand is 3; a staff member walking asks for 9, going to a rest area asks for 1, striking asks
-	/// for 0x13 and waiting for 0x14. Which script each one runs is <see cref="SpriteScript"/>'s table, the
+	/// for 0x13 and waiting for 0x14; a handyman walking to a toilet asks for 9 and cleaning for 0x11
+	/// (<c>FUN_004d7330</c>). Which script each one runs is <see cref="SpriteScript"/>'s table, the
 	/// one a guest's animations use too; what the pictures show is up to each kind's own bank, so naming
 	/// them would be inventing meanings rather than recording the calls.
 	/// </para>
 	/// </summary>
 	public static int AnimationFor( StaffActivity activity ) => activity switch
 	{
-		StaffActivity.Walking or StaffActivity.GoingOnStrike => 9,
+		StaffActivity.Walking or StaffActivity.GoingOnStrike or StaffActivity.GoingToLoo => 9,
+		StaffActivity.Cleaning => 0x11,
 		StaffActivity.GoingToRest => 1,
 		StaffActivity.OnStrike => 0x13,
 		StaffActivity.Waiting => 0x14,
 		_ => 0
 	};
+
+	/// <summary>The hurry speed, 25 - the word at <c>0x0075c7f2</c>.</summary>
+	public const int HurryingSpeed = 25;
 
 	/// <summary>The range happiness and tiredness are held in, the same clamp a guest's needs take.</summary>
 	public const float Most = 100f;

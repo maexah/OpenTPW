@@ -5072,6 +5072,19 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   predicted first (`q133/confirm.py`): over 150 s and 330 readings from mGameTick 775 on, the handyman and the mechanic Walking on every one, on 39 and 45 cells (the build before: Idle on all 337, one cell each); the entertainer Idle and Walking, its fourteen idle stamps each a multiple of four; the guard and the researcher on 56 and 35 cells; counted 48, 51, 51 and 17; each of the three photographed somewhere else eight seconds on. 4 of 5, the miss mine: one pre-step look on 770, which the handyman, never idle now, does not make. **Beside the original under Proton**, 3 of 3 predicted
   (`q133/orig/a.log`): its handyman and mechanic in state 1 on all 578 sweeps, its entertainer idle only from a
   multiple of four (6 of 6) and performing on 382. 17 bugs put back, 17 caught (`q133/mutate.py`). The work itself was split off: Q133b and Q133c.
+- [x] **Q133b. The handyman never cleans a toilet.** Split from Q133, which built the walk and counted the search
+  (`HANDYMAN_TOILET_SEARCH`). The search `FUN_004d7880`, his states `0xa` (to a loo) and `0xb` (cleaning) and the
+  clean `FUN_004dfd80` are decoded (`ride-operation.md`, "A toilet's dirt"): build them where the search is counted,
+  with `mAssignedStaffMember` and its 100-tick forgetting. The request for service (`+0x64`) has no control here:
+  count it. Confirm: a toilet dirtied by sixteen uses (`q100bconfirm.py`'s way) with the handyman in range, `staff`
+  showing him walk to it and clean for 11 sweeps, `objects` showing `repair 100` and its queue taking guests again;
+  a screenshot; the same in the original under Proton.
+  **Done 2026-10-07.** Built: `StaffBehaviour.FindToilet`, `ArriveAtTheLoo`, `CleanOn`, `ParkRideOperation.Clean`.
+  In the game, predicted first, 8 of 8: put down on (56,19) on mGameTick 1865, found toilet 21 on 1866, cleaning from
+  1880, finished on 1891 (S + 11), repair 20.95 to 100, two guests after 100 to 95 to 90; the build before 3 of 3
+  (no walk, dirty to the end). The original, 4 of 5: `0xb` on 1398, done on 1409, repair 100. 41 bugs put back, 41
+  caught. Found: the stock park's handyman is never in range of a toilet (`ride-operation.md`, "A toilet's dirt").
+  The request's control: none here for a toilet; the search and the clean read and clear a saved `+0x64`.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

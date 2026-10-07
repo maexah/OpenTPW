@@ -21,10 +21,15 @@ namespace OpenTPW;
 /// four by a draw.
 /// </para>
 /// <para>
-/// <b>What is deliberately not built, each for a named reason.</b> The work itself: a mechanic's broken ride
-/// (<c>FUN_004daa90</c>), a handyman's litter and dirty toilet (<c>FUN_004c8ed0</c>, <c>FUN_004d7880</c>) and
-/// an entertainer's guests to perform to (<c>FUN_004c8eb0</c>). Each search is counted where the original
-/// makes it and answers as finding nothing.
+/// <b>The handyman's toilet job is built</b>: the search (<c>FUN_004d7880</c>), the walk to the toilet
+/// (state <c>0xa</c>) and the clean (state <c>0xb</c>, <c>FUN_004dfd80</c>) - <see cref="FindToilet"/>,
+/// <see cref="ArriveAtTheLoo"/>, <see cref="CleanOn"/>.
+/// </para>
+/// <para>
+/// <b>What is deliberately not built, each for a named reason.</b> The rest of the work: a mechanic's broken
+/// ride (<c>FUN_004daa90</c>), a handyman's litter (<c>FUN_004c8ed0</c>) and an entertainer's guests to
+/// perform to (<c>FUN_004c8eb0</c>). Each search is counted where the original makes it and answers as
+/// finding nothing.
 /// The strike arms are absent too (Q138): reaching them means asking <c>mStaffHQ</c>'s own flag for the
 /// kind, which nothing here keeps, and the gate's status, which <c>ParkRides.GateStatus</c> answers.
 /// </para>
@@ -46,7 +51,18 @@ public sealed class StaffBehaviour
 	/// </summary>
 	private readonly ParkState? _state;
 
+	/// <summary>A thing's own ride script, for the clean's <c>VAR_WORN</c> and the open that follows it.</summary>
+	public Func<int, RideScript?>? ScriptFor { get; init; }
+
+	/// <summary>
+	/// The member of staff with a thing id, which a toilet's forgetting asks of whoever it is assigned to
+	/// (<c>FUN_004e0220</c>).
+	/// </summary>
+	public Func<int, Staff?>? StaffById { get; init; }
+
 	private readonly int[] _idleDuration = new int[ParkWorld.StaffState.PayGrades];
+	private readonly int[] _handymanWork = new int[ParkWorld.StaffState.PayGrades];
+	private readonly int[] _handymanRange = new int[ParkWorld.StaffState.PayGrades];
 	private readonly float[] _recuperation = new float[ParkWorld.StaffState.PayGrades];
 	private readonly float[] _happinessRecuperation = new float[ParkWorld.StaffState.PayGrades];
 
@@ -72,6 +88,8 @@ public sealed class StaffBehaviour
 		int[] idleFallback = [40, 30, 20, 10, 5];
 		float[] restFallback = [0.2f, 0.3f, 0.4f, 0.5f, 0.75f];
 		float[] moodFallback = [1f, 2f, 2f, 3f, 3f];
+		int[] workFallback = [40, 30, 20, 10, 5];
+		int[] rangeFallback = [2, 3, 3, 4, 5];
 
 		for ( var grade = 0; grade < ParkWorld.StaffState.PayGrades; ++grade )
 		{
@@ -84,6 +102,13 @@ public sealed class StaffBehaviour
 			_happinessRecuperation[grade] =
 				balance?.Float( $"{key}.HappinessRecuperationRate", moodFallback[grade] )
 				?? moodFallback[grade];
+
+			var handyman = $"HandymanConstsPerGrade[{grade}]";
+
+			_handymanWork[grade] = balance?.Int( $"{handyman}.WorkDuration", workFallback[grade] )
+				?? workFallback[grade];
+			_handymanRange[grade] = balance?.Int( $"{handyman}.DetectionRange", rangeFallback[grade] )
+				?? rangeFallback[grade];
 		}
 	}
 
@@ -105,6 +130,32 @@ public sealed class StaffBehaviour
 	/// <inheritdoc cref="RecuperationAt"/>
 	public float HappinessRecuperationAt( int grade )
 		=> _happinessRecuperation[Math.Clamp( grade, 0, _happinessRecuperation.Length - 1 )];
+
+	/// <summary>
+	/// How long a handyman of this grade cleans - <c>HandymanConstsPerGrade.WorkDuration</c>, the table at
+	/// <c>0x007853ec</c>: 40, 30, 20, 10, 5.
+	/// </summary>
+	public int HandymanWorkDurationAt( int grade )
+		=> _handymanWork[Math.Clamp( grade, 0, _handymanWork.Length - 1 )];
+
+	/// <summary>
+	/// How many cells off a handyman of this grade notices a dirty toilet -
+	/// <c>HandymanConstsPerGrade.DetectionRange</c>, the table at <c>0x007853f0</c>: 2, 3, 3, 4, 5.
+	/// </summary>
+	public int HandymanDetectionRangeAt( int grade )
+		=> _handymanRange[Math.Clamp( grade, 0, _handymanRange.Length - 1 )];
+
+	/// <summary>How much rest one turn of work costs, before the grade multiplier - the float at <c>0x00700858</c>.</summary>
+	public const float TirednessPerWorkingTurn = 0.025f;
+
+	/// <summary>The same for mood - the double at <c>0x00700860</c>.</summary>
+	public const float HappinessPerWorkingTurn = 0.01f;
+
+	/// <summary>
+	/// How many sweeps a thing keeps the member assigned to it once that member aims elsewhere - the 100 of
+	/// <c>FUN_004e0220</c>.
+	/// </summary>
+	public const int AssignmentKept = 100;
 
 	/// <summary>
 	/// How much rest one turn of walking costs, before the grade multiplier - the double at
@@ -231,6 +282,37 @@ public sealed class StaffBehaviour
 
 				break;
 
+			// A handyman on the way to a toilet - FUN_004d7790. The walk costs no rest or mood here: the arm
+			// has no FUN_005066a0.
+			case StaffActivity.GoingToLoo:
+				switch ( Walked( staff, walk, playing ) )
+				{
+					case WalkVerdict.Arrived:
+						ArriveAtTheLoo( staff, walk, tick );
+						break;
+
+					case WalkVerdict.CannotReach:
+						staff.SetActivity( StaffActivity.Idle, tick );
+						break;
+
+					default:
+						break;
+				}
+
+				break;
+
+			// A handyman cleaning - FUN_004d73c0's case 0xb: a turn of work, then the end on the first sweep
+			// past stamp + WorkDuration (0x004d7462).
+			case StaffActivity.Cleaning:
+				Work( staff );
+
+				if ( (uint)tick <= (uint)(staff.TimeStartedCleaning + HandymanWorkDurationAt( staff.PayGrade )) )
+					break;
+
+				CleanOn( staff, tick );
+
+				break;
+
 			// On strike and being carried both do nothing here. The original ends a strike in state 5's
 			// FUN_00506300, which is not built (Q138), and its own case 7 has an empty body.
 			default:
@@ -246,7 +328,8 @@ public sealed class StaffBehaviour
 	/// <para>
 	/// <b>Every kind walks about when it has no work.</b> The mechanic and the handyman look for work and, with
 	/// none, set off on a random walk every time; the entertainer, the guard and the researcher stay on one
-	/// choice in four. Nothing here finds any work: each search is counted where the original makes it.
+	/// choice in four. Only the handyman's toilet search finds work; the others are counted where the original
+	/// makes them.
 	/// </para>
 	/// </summary>
 	private void Decide( Staff staff, PeepWalk walk, int tick )
@@ -296,11 +379,22 @@ public sealed class StaffBehaviour
 				break;
 
 			// FUN_004d7100: litter in range (FUN_004c8ed0), else a toilet to clean (FUN_004d7880 from
-			// 0x004d72f7; docs/exe/ride-operation.md, "A toilet's dirt"), else a random walk. Neither search is
-			// built, and no cell here holds litter.
+			// 0x004d72f7; docs/exe/ride-operation.md, "A toilet's dirt"), else a random walk. The litter search
+			// is not built, and no cell here holds litter. The toilet found, or nought, is written every time.
 			case HandymanModel:
 				Unimplemented.Report( "HANDYMAN_LITTER_SEARCH" );
-				Unimplemented.Report( "HANDYMAN_TOILET_SEARCH" );
+
+				staff.ToiletToClean = FindToilet( staff, walk, tick );
+
+				if ( staff.ToiletToClean != 0 )
+				{
+					Log.Info( $"Staff: {staff.ThingId} found dirty loo {staff.ToiletToClean}, walking to it "
+						+ $"on mGameTick {tick}" );
+					staff.SetActivity( StaffActivity.GoingToLoo, tick );
+
+					break;
+				}
+
 				WalkAbout( staff, walk, tick );
 
 				break;
@@ -315,6 +409,180 @@ public sealed class StaffBehaviour
 
 				break;
 		}
+	}
+
+	/// <summary>
+	/// The handyman's search for a toilet to clean - <c>FUN_004d7880</c>, over the park's live objects in chain
+	/// order (<c>docs/exe/ride-operation.md</c>, "A toilet's dirt"). A toilet is a candidate when nobody else
+	/// is assigned to it (<see cref="AssignedTo"/>) and either it has asked for service and is nearer than the
+	/// best so far, at any distance, or it is dirty and nearer than the grade's
+	/// <see cref="HandymanDetectionRangeAt"/> in cells, squared and strictly - a test that does not ask the best
+	/// so far, so among dirty toilets in range the last in the chain wins (<c>0x004d79a9</c>..<c>0x004d79cb</c>).
+	/// A candidate is taken only when a route to its entry cell exists. The winner is assigned to this
+	/// handyman, stamped with the clock (<c>FUN_004e01f0</c>).
+	/// </summary>
+	/// <remarks>
+	/// The distance is cell to cell, the toilet's own cell, not its entry.
+	/// <para>
+	/// <b>A deviation, counted.</b> The original's route test is the destination setter itself
+	/// (<c>FUN_004fa530</c>), so the handyman is left aimed at the last candidate tested, which is the winner
+	/// unless a later candidate's route failed. Here he is aimed at the winner again, and the case is counted,
+	/// <c>HANDYMAN_TOILET_AIM_LEFT_ON_A_LATER_TOILET</c>.
+	/// </para>
+	/// <para>
+	/// A thing in the hand (<see cref="ParkWorld.CatalogueObject.IsPlaced"/>) is passed over, as
+	/// <see cref="GoAndRest"/> passes it over.
+	/// </para>
+	/// </remarks>
+	/// <returns>The toilet's thing id, or nought.</returns>
+	private int FindToilet( Staff staff, PeepWalk walk, int tick )
+	{
+		if ( _state == null )
+			return 0;
+
+		var (x, y) = walk.Position.Cell;
+		var range = HandymanDetectionRangeAt( staff.PayGrade );
+		var winner = 0;
+		var tested = 0;
+		var best = uint.MaxValue;
+
+		foreach ( var candidate in _state.ObjectsInChainOrder().ToArray() )
+		{
+			if ( !candidate.IsToilet || !candidate.IsPlaced )
+				continue;
+
+			var assigned = AssignedTo( candidate, tick );
+
+			if ( assigned != 0 && assigned != staff.ThingId )
+				continue;
+
+			var acrossBy = candidate.CellX - x;
+			var downBy = candidate.CellY - y;
+			var distance = (uint)((acrossBy * acrossBy) + (downBy * downBy));
+
+			if ( !(candidate.RequestedService != 0 && distance < best)
+				&& !(ParkState.IsDirty( candidate ) && distance < (uint)(range * range)) )
+				continue;
+
+			tested = candidate.ThingId;
+
+			if ( !AimAtEntryOf( staff, walk, candidate ) )
+				continue;
+
+			winner = candidate.ThingId;
+			best = distance;
+		}
+
+		if ( winner == 0 || !_state.TryObject( winner, out var toilet ) )
+			return 0;
+
+		if ( tested != winner )
+		{
+			Unimplemented.Report( "HANDYMAN_TOILET_AIM_LEFT_ON_A_LATER_TOILET" );
+			AimAtEntryOf( staff, walk, toilet );
+		}
+
+		_state.ReplaceObject( toilet with
+		{
+			AssignedStaff = (ushort)staff.ThingId, TimeMarkedForMaintenance = tick
+		} );
+
+		return winner;
+	}
+
+	/// <summary>Aims a member at a thing's entry cell and says whether a route exists - <c>FUN_004fa530</c>.</summary>
+	private static bool AimAtEntryOf( Staff staff, PeepWalk walk, ParkWorld.CatalogueObject thing )
+	{
+		staff.Navigator.Target = new FixedVector(
+			PeepNavigator.WaypointCentre( thing.EntryCellX ), PeepNavigator.WaypointCentre( thing.EntryCellY ) );
+
+		return walk.PlanRoute();
+	}
+
+	/// <summary>
+	/// The member of staff assigned to a thing - <c>FUN_004e0220</c>, the getter every reader of
+	/// <c>mAssignedStaffMember</c> goes through. An assignment more than <see cref="AssignmentKept"/> sweeps old
+	/// whose member no longer aims at this thing (<c>FUN_00506580</c>: a handyman's
+	/// <see cref="Staff.ToiletToClean"/>) is forgotten there and then, member and stamp both.
+	/// </summary>
+	/// <remarks>
+	/// A mechanic's aim is his <c>+0x218</c>, which nothing here keeps: an assigned mechanic reads as aiming
+	/// elsewhere. Nobody here assigns one; only a save can.
+	/// </remarks>
+	private int AssignedTo( ParkWorld.CatalogueObject thing, int tick )
+	{
+		if ( thing.AssignedStaff == 0 )
+			return 0;
+
+		if ( (uint)(thing.TimeMarkedForMaintenance + AssignmentKept) >= (uint)tick )
+			return thing.AssignedStaff;
+
+		if ( StaffById?.Invoke( thing.AssignedStaff ) is { Model: HandymanModel } member
+			&& member.ToiletToClean == thing.ThingId )
+			return thing.AssignedStaff;
+
+		Log.Info( $"Object {thing.ThingId}: removing staff member {thing.AssignedStaff} from it, "
+			+ $"assigned on mGameTick {thing.TimeMarkedForMaintenance}" );
+
+		_state!.ReplaceObject( thing with { AssignedStaff = 0, TimeMarkedForMaintenance = 0 } );
+
+		return 0;
+	}
+
+	/// <summary>
+	/// The end of a handyman's walk to a toilet - <c>FUN_004d7790</c>: standing on the toilet's entry cell
+	/// (<c>mEntryPos</c> against his own packed cell) and still its assigned member, he starts cleaning;
+	/// otherwise he is idle.
+	/// </summary>
+	private void ArriveAtTheLoo( Staff staff, PeepWalk walk, int tick )
+	{
+		var (x, y) = walk.Position.Cell;
+
+		if ( _state != null && _state.TryObject( staff.ToiletToClean, out var toilet )
+			&& toilet.EntryPos == (y * ParkWorld.MapSize) + x + 1
+			&& AssignedTo( toilet, tick ) == staff.ThingId )
+		{
+			staff.SetActivity( StaffActivity.Cleaning, tick );
+			Log.Info( $"Staff: {staff.ThingId} starts cleaning loo {toilet.ThingId} on mGameTick {tick}" );
+
+			return;
+		}
+
+		Log.Info( $"Staff: {staff.ThingId} got to loo {staff.ToiletToClean} on mGameTick {tick} and does not clean it" );
+		staff.SetActivity( StaffActivity.Idle, tick );
+	}
+
+	/// <summary>
+	/// The end of a clean - <c>0x004d7462</c>..<c>0x004d74c8</c>: the toilet is cleaned
+	/// (<see cref="ParkRideOperation.Clean"/>) and opened whatever its state
+	/// (<see cref="ParkRideOperation.Open(ParkState, RideScript?, int)"/>), the stand is queued, and the handyman
+	/// is idle at stamp nought, so he decides again on the next sweep.
+	/// </summary>
+	private void CleanOn( Staff staff, int tick )
+	{
+		if ( _state != null && _state.TryObject( staff.ToiletToClean, out var toilet ) )
+		{
+			var script = ScriptFor?.Invoke( toilet.ThingId );
+
+			ParkRideOperation.Clean( _state, script, toilet.ThingId );
+			ParkRideOperation.Open( _state, script, toilet.ThingId );
+		}
+
+		Log.Info( $"Staff: {staff.ThingId} finished cleaning loo {staff.ToiletToClean} on mGameTick {tick}" );
+
+		staff.NextAnimation = SpriteScript.Standing;
+		staff.SetActivity( StaffActivity.Idle, tick );
+	}
+
+	/// <summary>
+	/// What one turn of work costs - <c>FUN_00506760</c>, scaled by <c>(6 - grade)</c> as a walking turn is.
+	/// </summary>
+	private static void Work( Staff staff )
+	{
+		var scale = TiringBase - staff.PayGrade;
+
+		staff.Tiredness = Staff.Change( staff.Tiredness, -( scale * TirednessPerWorkingTurn ) );
+		staff.Happiness = Staff.Change( staff.Happiness, -( scale * HappinessPerWorkingTurn ) );
 	}
 
 	/// <summary>
@@ -743,9 +1011,12 @@ public sealed class StaffBehaviour
 	/// route exists. They stay Idle either way (<c>0x00504d8f</c>), so the claim goes unused until they are
 	/// next sent to rest. <b>One on the way there</b> gives the claim up and goes Idle.
 	/// <para>
-	/// <b>Not built, and each has nothing here to act on.</b> A mechanic's ride job (<c>+0x218</c>) and a
-	/// handyman's toilet job (<c>+0x21a</c>) are dropped by their own arms first; no staff member holds a
-	/// job on a thing in this build. <c>FUN_00506d10</c> also takes one off the rest area's
+	/// <b>A handyman whose toilet job (<c>+0x21a</c>) is the thing drops it first and goes idle</b>, in any
+	/// state, by his own arm. A mechanic's ride job (<c>+0x218</c>) goes the same way and is not built: no
+	/// mechanic holds one here.
+	/// </para>
+	/// <para>
+	/// <b>Not built, and each has nothing here to act on.</b> <c>FUN_00506d10</c> also takes one off the rest area's
 	/// <c>VAR_STAFFIN</c>, tells the resting-staff list (message 15) and rebuilds the sprite; the count and
 	/// the list are unbuilt wherever the original touches them, and each site counts
 	/// <c>REST_AREA_OCCUPANCY</c>.
@@ -759,6 +1030,14 @@ public sealed class StaffBehaviour
 	internal void ThingRemoved( Staff staff, PeepWalk? walk, int thingId, int tick )
 	{
 		ArgumentNullException.ThrowIfNull( staff );
+
+		if ( thingId != 0 && staff.Model == HandymanModel && staff.ToiletToClean == thingId )
+		{
+			staff.ToiletToClean = 0;
+			staff.SetActivity( StaffActivity.Idle, tick );
+
+			Log.Info( $"Staff: {staff.ThingId} dropped the job on loo {thingId}, now {staff.Activity}" );
+		}
 
 		if ( thingId == 0 || staff.RestArea != thingId )
 			return;

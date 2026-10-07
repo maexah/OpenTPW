@@ -863,12 +863,36 @@ public sealed class ParkRideOperation
 	/// <summary>
 	/// The toilet's worn flag, on every turn of a thing not in state 3 or 4 - <c>FUN_004e0b90</c>,
 	/// <c>0x004e0d10</c>: a dirty toilet (<see cref="ParkState.IsDirty"/>) has <see cref="WornVariable"/> written 1.
-	/// Nothing here writes nought; the handyman's clean does, and it is not built (Q133b).
+	/// Nothing here writes nought; the handyman's clean does (<see cref="Clean"/>).
 	/// </summary>
 	/// <returns>Whether the variable was written.</returns>
 	public bool TellTheWorn( RideScript? script, int thingId )
 		=> _state.TryObject( thingId, out var thing ) && ParkState.IsDirty( thing )
 			&& script?.Set( WornVariable, 1 ) == true;
+
+	/// <summary>
+	/// The handyman's clean - <c>FUN_004dfd80</c>, whose one caller is his cleaning state's end: the script's
+	/// <see cref="WornVariable"/> nought, the State of repair (<c>+0x44</c>) 100, and the assigned member
+	/// (<c>+0x5e</c>) and the request for service (<c>+0x64</c>) forgotten, toilet or not
+	/// (<c>docs/exe/ride-operation.md</c>, "A toilet's dirt").
+	/// </summary>
+	/// <remarks>
+	/// Counted and not kept: for a toilet found dirty the original unstamps region effect 6 and stamps effect 1
+	/// at its cell; no cell effects are stamped here.
+	/// </remarks>
+	public static void Clean( ParkState state, RideScript? script, int thingId )
+	{
+		if ( !state.TryObject( thingId, out var thing ) )
+			return;
+
+		if ( ParkState.IsDirty( thing ) )
+			Unimplemented.Report( "TOILET_DIRTY_REGION_EFFECTS" );
+
+		script?.Set( WornVariable, 0 );
+		state.ReplaceObject( thing with { StateOfRepair = 100f, AssignedStaff = 0, RequestedService = 0 } );
+
+		Log.Info( $"Object {thingId}: cleaned, State of repair {thing.StateOfRepair:R} to 100" );
+	}
 
 	/// <summary>
 	/// The illness a toilet leaves alone - <c>CMP AL,0x5a</c> / <c>JBE</c> at <c>0x004fe7dc</c>: 91 and over is emptied.
@@ -1318,19 +1342,22 @@ public sealed class ParkRideOperation
 	/// The redundant diagnostic-only asking is left out. <c>FUN_004547c0( model )</c>, the model's side of opening,
 	/// retracts the hoarding panels.
 	/// </remarks>
-	public void Open( RideScript? script, int rideId )
+	public void Open( RideScript? script, int rideId ) => Open( _state, script, rideId );
+
+	/// <inheritdoc cref="Open(RideScript?, int)"/>
+	public static void Open( ParkState state, RideScript? script, int rideId )
 	{
-		if ( !_state.TryObject( rideId, out var ride ) )
+		if ( !state.TryObject( rideId, out var ride ) )
 			return;
 
 		Log.Info( $"Object {rideId}: opened" );
 
-		_state.ReplaceObject( ride with { CanLoad = 1 } );
-		_state.HoardingFor( rideId )?.Open();
+		state.ReplaceObject( ride with { CanLoad = 1 } );
+		state.HoardingFor( rideId )?.Open();
 		script?.Set( ClosedVariable, 0 );
 
-		if ( _state.TryObject( rideId, out var opened ) )
-			_state.ReplaceObject( opened with { State = 0 } );
+		if ( state.TryObject( rideId, out var opened ) )
+			state.ReplaceObject( opened with { State = 0 } );
 	}
 
 	/// <summary>

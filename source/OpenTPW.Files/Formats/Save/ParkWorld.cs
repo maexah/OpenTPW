@@ -99,7 +99,8 @@ public sealed class ParkWorld : IParkInitialState
 		int QueueSizeInCells = 0, int TotalTakings = 0,
 		float StateOfRepair = 0f, float RemainingLife = 0f, BuiltWhen Built = default, int RequestedService = 0,
 		int UpgradeLevel = 0, int MeshInstance = 0, ObjectRings? Rings = null, int QualityOfGoods = 0,
-		int AmountOfSpecialIngredient = 0, int TotalCosts = 0, int CostOfGoods = 0, int ChanceOfWinning = 100 )
+		int AmountOfSpecialIngredient = 0, int TotalCosts = 0, int CostOfGoods = 0, int ChanceOfWinning = 100,
+		int TimeMarkedForMaintenance = 0 )
 	{
 		/// <summary>
 		/// The bit that makes an object somewhere a guest can be <i>offered</i> - <c>FUN_004fcb10</c>, the
@@ -709,7 +710,7 @@ public sealed class ParkWorld : IParkInitialState
 	public readonly record struct StaffState(
 		int State, int PayGrade, float Happiness, float Tiredness, int JobsDone,
 		int PatrolBottomLeft, int PatrolTopRight, int RestArea, int PercentageThroughGrade,
-		int TimeStartedIdling, string Name = "" )
+		int TimeStartedIdling, string Name = "", int ToiletToClean = 0, int TimeStartedCleaning = 0 )
 	{
 		/// <summary>
 		/// How many behaviours a member of staff has. Eight are shared by every kind; the numbers above
@@ -1869,6 +1870,10 @@ public sealed class ParkWorld : IParkInitialState
 			// opens the ride (FUN_004df290). Placed by the chain above: the dword after the third float.
 			RequestedService: ReadInt32At( start + 1078 ),   // mRequestedService
 
+			// +0x60, the dword the serialiser handles after it (0x004dc736): the mGameTick on which
+			// mAssignedStaffMember was last written (FUN_004e01f0).
+			TimeMarkedForMaintenance: ReadInt32At( start + 1082 ),   // mTimeMarkedForMaintenance
+
 			TotalTakings: ReadInt32At( start + 1090 ),       // mTotalTakings
 
 			// Three more of the chain's dwords, placed by it: mQualityOfGoods after mCostOfGoods, mAmountOfSpecialIngredient
@@ -1962,7 +1967,7 @@ public sealed class ParkWorld : IParkInitialState
 			Angle: ReadUInt16At( start + 0xf2 ),        // mSpriteAngle
 			Navigator: ReadNavigator( start ),          // every person has one, staff included
 			Guest: model == GuestModel ? ReadGuest( start ) : null,
-			Staff: model == GuestModel ? null : ReadStaff( start ),
+			Staff: model == GuestModel ? null : ReadStaff( start, model ),
 			// The person base's read arm, alphabetical like the rest (FUN_004f8b10; ride-operation.md, the person
 			// +0xc0 row).
 			Pace: new PaceState(
@@ -2143,8 +2148,8 @@ public sealed class ParkWorld : IParkInitialState
 	/// text. <c>mTimeHired</c> fills <c>+491</c> to <c>+498</c> and is not read: nothing here asks for it.
 	/// </para>
 	/// <para>
-	/// <b>What each kind adds after this block is decoded and deliberately not read</b>, because the
-	/// behaviour built on top of this is the part all five kinds share and none of these fields reaches it.
+	/// <b>What each kind adds after this block is decoded, and only the handyman's toilet job is read</b>
+	/// (<c>mToiletToClean</c> and <c>mTimeStartedCleaning</c>): no other kind's work is built.
 	/// They are recorded here so the next reader need not find them again. A mechanic adds
 	/// <c>mDurationOfRepair</c> (+503, 4), <c>mObjectToRepair</c> (+507, 2) and <c>mNext</c> (+509, 2); a
 	/// handyman <c>mTargetLitterCell</c> (+503, 2), <c>mTimeStartedCleaning</c> (+505, 4),
@@ -2155,7 +2160,7 @@ public sealed class ParkWorld : IParkInitialState
 	/// which are exactly what <see cref="RecordSizes"/>'s five numbers leave over 503.
 	/// </para>
 	/// </summary>
-	private StaffState ReadStaff( int start )
+	private StaffState ReadStaff( int start, int model )
 		=> new(
 			State: ReadInt32At( start + 483 ),                  // mState
 			PayGrade: ReadInt32At( start + 398 ),               // mCurrentPayGrade
@@ -2167,7 +2172,12 @@ public sealed class ParkWorld : IParkInitialState
 			RestArea: ReadUInt16At( start + 481 ),              // mRestArea
 			PercentageThroughGrade: ReadByteAt( start + 480 ),  // mPercentageThroughGrade
 			TimeStartedIdling: ReadInt32At( start + 487 ),      // mTimeStartedIdling
-			Name: ReadStaffName( start + 410 ) );               // mName[0..32]
+			Name: ReadStaffName( start + 410 ),                 // mName[0..32]
+			ToiletToClean: model == HandymanModel ? ReadUInt16At( start + 509 ) : 0,        // mToiletToClean
+			TimeStartedCleaning: model == HandymanModel ? ReadInt32At( start + 505 ) : 0 ); // mTimeStartedCleaning
+
+	/// <summary>The handyman's thing model, the one kind whose own fields are read.</summary>
+	private const int HandymanModel = 5;
 
 	/// <summary>How many characters <c>mName</c> holds, the ending nought among them.</summary>
 	private const int StaffNameLength = 33;

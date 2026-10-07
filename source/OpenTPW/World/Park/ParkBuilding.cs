@@ -1325,11 +1325,12 @@ public static class ParkBuilding
 			// The UI TYPE is here because it is what decides which of the nine object windows a click
 			// opens, and a test that wants a ride should not have to probe the park one thing at a time
 			// to find one. The state and mCanLoad say whether it is operating and whether it is closed
-			// (ParkRideOperation.Close). The State of repair is the park's own, which use lowers.
+			// (ParkRideOperation.Close). The State of repair is the park's own, which use lowers; staff is
+			// the member assigned to it and marked the park clock when they were.
 			yield return $"thing {placed.ThingId,3} '{name}' item {placed.CatalogueId} type {type} " +
 				$"at ({placed.CellX},{placed.CellY}) turned {placed.Angle}" +
 				$"{(placed.IsPlaced ? "" : " (not placed)")} state {placed.State} canload {placed.CanLoad}" +
-				$" repair {placed.StateOfRepair:R}";
+				$" repair {placed.StateOfRepair:R} staff {placed.AssignedStaff} marked {placed.TimeMarkedForMaintenance}";
 		}
 	}
 }

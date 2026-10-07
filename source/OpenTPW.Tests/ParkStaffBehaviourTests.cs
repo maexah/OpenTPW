@@ -39,7 +39,7 @@ public class ParkStaffBehaviourTests
 
 	private const int Researcher = 30;
 
-	/// <summary>The mechanic, the handyman and the entertainer, whose work-finding is counted and not built.</summary>
+	/// <summary>The mechanic, the handyman and the entertainer, who find no work in the park as it ships.</summary>
 	private const int Handyman = 25;
 
 	private const int Mechanic = 26;
@@ -299,26 +299,25 @@ public class ParkStaffBehaviourTests
 
 	/// <summary>
 	/// Each search for work is counted where the original makes it: the mechanic's ride on every decide
-	/// (<c>FUN_004daa90</c>), the handyman's litter and then toilet on every decide (<c>FUN_004c8ed0</c>,
-	/// <c>FUN_004d7880</c>), and nobody else's.
+	/// (<c>FUN_004daa90</c>), the handyman's litter on every decide (<c>FUN_004c8ed0</c>), and nobody else's. His
+	/// toilet search is built (<see cref="ParkHandymanCleanTests"/>).
 	/// </summary>
 	[DataTestMethod]
-	[DataRow( Mechanic, 1, 0, 0 )]
-	[DataRow( Handyman, 0, 1, 1 )]
-	[DataRow( Entertainer, 0, 0, 0 )]
-	[DataRow( Guard, 0, 0, 0 )]
-	[DataRow( Researcher, 0, 0, 0 )]
-	public void EachSearchForWorkIsCountedAtItsOwnKindsDecide( int thing, int ride, int litter, int toilet )
+	[DataRow( Mechanic, 1, 0 )]
+	[DataRow( Handyman, 0, 1 )]
+	[DataRow( Entertainer, 0, 0 )]
+	[DataRow( Guard, 0, 0 )]
+	[DataRow( Researcher, 0, 0 )]
+	public void EachSearchForWorkIsCountedAtItsOwnKindsDecide( int thing, int ride, int litter )
 	{
 		var (member, walk, state) = OnThePath( thing );
-		var before = (Counted( "MECHANIC_RIDE_SEARCH" ), Counted( "HANDYMAN_LITTER_SEARCH" ), Counted( "HANDYMAN_TOILET_SEARCH" ));
+		var before = (Counted( "MECHANIC_RIDE_SEARCH" ), Counted( "HANDYMAN_LITTER_SEARCH" ));
 
 		// 1001 divides by no grade's idle duration, so the handyman's pre-step is not counted beside it.
 		new StaffBehaviour( Balance(), new ConstantDraw(), state ).Step( member, walk, playing: null, tick: 1001 );
 
 		Assert.AreEqual( ride, Counted( "MECHANIC_RIDE_SEARCH" ) - before.Item1 );
 		Assert.AreEqual( litter, Counted( "HANDYMAN_LITTER_SEARCH" ) - before.Item2 );
-		Assert.AreEqual( toilet, Counted( "HANDYMAN_TOILET_SEARCH" ) - before.Item3 );
 	}
 
 	/// <summary>
@@ -358,7 +357,7 @@ public class ParkStaffBehaviourTests
 	{
 		var (member, walk, state) = OnThePath( thing );
 		var before = Counted( "MECHANIC_RIDE_SEARCH" ) + Counted( "HANDYMAN_LITTER_SEARCH" )
-			+ Counted( "HANDYMAN_TOILET_SEARCH" ) + Counted( "ENTERTAINER_GUEST_SEARCH" );
+			+ Counted( "ENTERTAINER_GUEST_SEARCH" );
 
 		member.Tiredness = 0.5f;
 
@@ -367,7 +366,7 @@ public class ParkStaffBehaviourTests
 		Assert.AreEqual( StaffActivity.GoingToRest, member.Activity );
 		Assert.AreNotEqual( 0, member.RestArea );
 		Assert.AreEqual( before, Counted( "MECHANIC_RIDE_SEARCH" ) + Counted( "HANDYMAN_LITTER_SEARCH" )
-			+ Counted( "HANDYMAN_TOILET_SEARCH" ) + Counted( "ENTERTAINER_GUEST_SEARCH" ) );
+			+ Counted( "ENTERTAINER_GUEST_SEARCH" ) );
 	}
 
 	/// <summary>

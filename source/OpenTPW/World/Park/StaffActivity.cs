@@ -73,5 +73,18 @@ public enum StaffActivity
 	/// Doing nothing and not being asked again - the shared switch's case 7 has an empty body. A staff
 	/// member being carried by the player is put here.
 	/// </summary>
-	Held = 7
+	Held = 7,
+
+	/// <summary>
+	/// A handyman walking to the toilet his search found - his own state <c>0xa</c> (<c>FUN_004d7790</c>).
+	/// Arriving on its entry cell while still its assigned member starts <see cref="Cleaning"/>; anything
+	/// else is <see cref="Idle"/>.
+	/// </summary>
+	GoingToLoo = 0xa,
+
+	/// <summary>
+	/// A handyman cleaning a toilet - his own state <c>0xb</c>: his grade's <c>WorkDuration</c> + 1 sweeps
+	/// from <c>mTimeStartedCleaning</c>, then the toilet is clean and open and he is <see cref="Idle"/>.
+	/// </summary>
+	Cleaning = 0xb
 }

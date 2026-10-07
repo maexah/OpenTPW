@@ -40,13 +40,6 @@ the original.
 
 **The 2026-10-06 review's leftovers come first, at Alexah's word (2026-10-06).**
 
-- [ ] **Q133b. The handyman never cleans a toilet.** Split from Q133, which built the walk and counted the search
-  (`HANDYMAN_TOILET_SEARCH`). The search `FUN_004d7880`, his states `0xa` (to a loo) and `0xb` (cleaning) and the
-  clean `FUN_004dfd80` are decoded (`ride-operation.md`, "A toilet's dirt"): build them where the search is counted,
-  with `mAssignedStaffMember` and its 100-tick forgetting. The request for service (`+0x64`) has no control here:
-  count it. Confirm: a toilet dirtied by sixteen uses (`q100bconfirm.py`'s way) with the handyman in range, `staff`
-  showing him walk to it and clean for 11 sweeps, `objects` showing `repair 100` and its queue taking guests again;
-  a screenshot; the same in the original under Proton.
 - [ ] **Q133c. The entertainer never performs.** Split from Q133, which counted the look (`ENTERTAINER_GUEST_SEARCH`).
   On a decide's draw mod 3 of nought, `FUN_004c8eb0` (`FUN_004c8d30` with a last argument of 1) looks for a guest in
   the square of `EntertainerConstsPerGrade.ActivationDistance`; one found draws again for animation `0xd` and up
@@ -497,6 +490,9 @@ the original.
   then build it. In the second run the walk also stopped on grass at (43,27) eight sweeps in and the no-links arm ran
   again from there: read why. Confirm: `staff` after `putstaff`, `idleSince` and the sweep the walk starts, predicted
   first; a screenshot.
+  From Q133b: the original's handyman, put down two cells from a dirty toilet, read `0xa` on the tick after the
+  put-down and the toilet's stamp was written again a tick later (1389, then 1390: `q133b/orig/a.log`), so the
+  second decide runs for him too; from `0xa` the idle between stamps nought, and he does not stand eleven.
 - [ ] **Q230. The gadget's arm jumps out and in, where the original's slides. Decode first.** Found by Q113. The
   arm's handler `LAB_004a14f0` (installed at `0x004a2387`) is a jump table over messages `0xa` to `0x100` working a
   state in the control's own `+0x134`; `FUN_004a25f0` reads states 3 and 4 as "still moving", and `FUN_004a2590` is
