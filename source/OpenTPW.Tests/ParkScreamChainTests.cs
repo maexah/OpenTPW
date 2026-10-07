@@ -418,6 +418,290 @@ public class ParkScreamChainTests
 		}
 	}
 
+	/// <summary>
+	/// <b>What the park loop hands the crowd's voice, and what a sample's volume and pitch are under it</b>
+	/// (<c>docs/exe/audio.md</c>, "The crowd's voice"): the guests round the pointer held to a hundred and nought in
+	/// world state 4; on kids 91's first six variations the volume is <c>level × 8 / 100 + 14</c> in whole numbers,
+	/// on their twins a draw from 14 to 21, and the pitch a draw from 0 to 5 on all twelve.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the hold left off; state 4 not read; the volume not floored; the twins' volume the level's;
+	/// the draw reaching its top; the pitch the level's.
+	/// </remarks>
+	[TestMethod]
+	public void TheCrowdsVoiceTakesItsVolumeFromTheLevelOnTheFirstSixVariationsAndADrawOnTheirTwins()
+	{
+		Assert.AreEqual( 0, ParkAudio.CrowdVoiceLevel( 0, 0 ) );
+		Assert.AreEqual( 12, ParkAudio.CrowdVoiceLevel( 12, 0 ) );
+		Assert.AreEqual( 100, ParkAudio.CrowdVoiceLevel( 100, 0 ) );
+		Assert.AreEqual( 100, ParkAudio.CrowdVoiceLevel( 250, 0 ), "held to a hundred" );
+		Assert.AreEqual( 0, ParkAudio.CrowdVoiceLevel( 40, ParkAudio.SilentWorldState ), "nought in world state 4" );
+
+		var headers = new SoundCategoryFile( "global/sound", "kids" ).ReadVariations()
+			[new SoundCategoryFile( "global/sound", "kids" ).IndexOf( ParkAudio.CrowdVoiceEffect )];
+		var random = new Random( 5 );
+
+		Assert.AreEqual( 12, headers.Count, "kids 91 has twelve variations" );
+
+		for ( var variation = 0; variation < 6; ++variation )
+		{
+			foreach ( var (level, volume) in new[] { (1, 14), (12, 14), (13, 15), (24, 15), (25, 16), (50, 18), (99, 21), (100, 22) } )
+			{
+				Assert.AreEqual( volume, ParkAudio.Controlled( headers[variation], 1, ParkAudio.CrowdVoiceParameter, level, random ),
+					$"variation {variation + 1} at level {level}" );
+			}
+		}
+
+		for ( var variation = 0; variation < 12; ++variation )
+		{
+			var volumes = new HashSet<int>();
+			var pitches = new HashSet<int>();
+
+			for ( var draw = 0; draw < 400; ++draw )
+			{
+				volumes.Add( ParkAudio.Controlled( headers[variation], 1, ParkAudio.CrowdVoiceParameter, 100, random ) );
+				pitches.Add( ParkAudio.Controlled( headers[variation], 2, ParkAudio.CrowdVoiceParameter, 100, random ) );
+			}
+
+			CollectionAssert.AreEquivalent( new[] { 0, 1, 2, 3, 4, 5 }, pitches.ToList(), $"variation {variation + 1}'s pitch is drawn from 0 to 5" );
+
+			if ( variation >= 6 )
+				CollectionAssert.AreEquivalent( new[] { 14, 15, 16, 17, 18, 19, 20, 21 }, volumes.ToList(), $"twin {variation + 1}'s volume is drawn from 14 to 21" );
+		}
+	}
+
+	/// <summary>
+	/// <b>The guests round a cell</b> (<c>FUN_004c8d30( 1, cell, 4, 0 )</c>): those on the cells from four before
+	/// to four after it each way, and nobody for cell nought.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the reach one short; one long; cell nought read as the map's first cell; staff counted.</remarks>
+	[TestMethod]
+	public void TheGuestsRoundACellAreThoseWithinFourCellsEachWay()
+	{
+		var data = GameData.Required();
+		FileSystem = data;
+
+		using var stream = new System.IO.MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var people = new ParkPeople( new ParkWorld( new SaveReader( stream ).ReadFile() ), new ParkBalance( "jungle", easyMode: true ),
+			random: new Random( 1 ), behaviourRandom: new Random( 1 ), rideRandom: new Random( 1 ), staffRandom: new Random( 1 ) );
+
+		try
+		{
+			static int Cell( int x, int y ) => (y * 128) + x + 1;
+
+			int Stood( int x, int y, int reach = 4 )
+				=> people.Peeps.Count( peep => Math.Abs( peep.Navigator.Position.Cell.X - x ) <= reach
+					&& Math.Abs( peep.Navigator.Position.Cell.Y - y ) <= reach );
+
+			// What the save's own guests give each cell asked about, then three more made on the stop's cell.
+			var cells = new[] { (42, 5), (46, 9), (38, 1), (47, 5), (42, 10), (37, 5), (42, 0) };
+			var before = cells.Select( cell => people.GuestsNear( Cell( cell.Item1, cell.Item2 ), 4 ) ).ToArray();
+
+			for ( var i = 0; i < cells.Length; ++i )
+				Assert.AreEqual( Stood( cells[i].Item1, cells[i].Item2 ), before[i], $"the save's guests round {cells[i]}" );
+
+			Assert.AreEqual( 0, Stood( 42, 5, 0 ), "nobody of the save stands on the stop's cell" );
+
+			for ( var i = 0; i < 3; ++i )
+				Assert.AreNotEqual( 0, people.Admit( 42, 5 ) );
+
+			Assert.AreEqual( 3, Stood( 42, 5, 0 ), "the three stand on the stop's cell" );
+
+			var more = cells.Select( ( cell, i ) => people.GuestsNear( Cell( cell.Item1, cell.Item2 ), 4 ) - before[i] ).ToArray();
+
+			CollectionAssert.AreEqual( new[] { 3, 3, 3, 0, 0, 0, 0 }, more,
+				"counted on the cell, four away both ways and four the other way; not five away along a row or a column" );
+			Assert.AreEqual( 3, people.GuestsNear( Cell( 42, 5 ), 0 ), "the reach is the caller's" );
+			Assert.AreEqual( 0, people.GuestsNear( 0, 128 ), "no cell, nobody" );
+			Assert.AreEqual( people.Peeps.Count, people.GuestsNear( Cell( 0, 0 ), 128 ), "every guest and no member of staff" );
+			Assert.AreNotEqual( 0, people.Staff.Count, "the save has staff to leave out" );
+
+			foreach ( var (x, y) in new[] { (50, 24), (52, 22), (48, 17), (0, 0), (127, 127) } )
+				Assert.AreEqual( Stood( x, y ), people.GuestsNear( Cell( x, y ), 4 ), $"round ({x},{y})" );
+		}
+		finally
+		{
+			people.Delete();
+			Entity.ApplyDeletions();
+		}
+	}
+
+	/// <summary>
+	/// <b>The crowd's voice, through <c>ParkAudio.OnUpdate</c> as the game runs it</b> (<c>docs/exe/audio.md</c>,
+	/// "The crowd's voice"). On the music's beat the guests within four cells of the pointer's cell are its level.
+	/// Above nought the voice is started, flat, with a sample of kids 91's first variation at the level's volume;
+	/// as a sample ends the next is drawn from the variation the level's zone gives; a new level is the playing
+	/// sample's volume at once; at nought, or in world state 4, the voice is faded and let go, and started again it
+	/// begins from the first variation.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the level set off the beat; every guest counted, not those near; the pointer's cell not
+	/// read; the voice started with no level; the volume not following a new level; the next sample never drawn; a
+	/// sample drawn while one plays; the zone not followed; the voice not let go at nought; state 4 not handed in; a
+	/// restart keeping its variation; the gain left at one; a sample left at its own pitch.
+	/// </remarks>
+	[TestMethod]
+	public void TheCrowdsVoiceFollowsTheGuestsRoundThePointerOnTheBeat()
+	{
+		var data = GameData.Required();
+		FileSystem = data;
+
+		using var stream = new System.IO.MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
+		var levelBefore = Level.Current;
+		var pointer = typeof( ParkPicking ).GetProperty( nameof( ParkPicking.Cell ) )!;
+		var cellBefore = ParkPicking.Cell;
+		var people = new ParkPeople( world, new ParkBalance( "jungle", easyMode: true ), random: new Random( 1 ),
+			behaviourRandom: new Random( 1 ), rideRandom: new Random( 1 ), staffRandom: new Random( 1 ) );
+
+		try
+		{
+			var samples = SamplesOf( ParkAudio.CrowdVoiceEffect );
+
+			InAPark( "jungle", park =>
+			{
+				Voice? Crowd()
+				{
+					lock ( Audio.Lock )
+						return Audio.Voices.LastOrDefault( voice => voice.Bus == AudioBus.Effects && samples.Any( set => set.Contains( voice.Name ) ) );
+				}
+
+				void ToTheBeat()
+				{
+					var beat = (GameClock.Ticks | 0x1f) + 1;
+
+					while ( GameClock.Ticks < beat )
+					{
+						Frame( held: false, GameClock.TickSeconds );
+						park.Update();
+					}
+				}
+
+				float Gain( int volume ) => volume / 100f * 0.30f;
+
+				// No cell under the pointer: nobody is counted, whoever is in the park.
+				pointer.SetValue( null, 0 );
+				park.Update();
+				ToTheBeat();
+				Assert.AreEqual( (0, false, 0), (park.CrowdVoiceLevelNow, park.CrowdVoiceHeld, park.CrowdVoicePlays.Starts), "no cell, no voice" );
+				Assert.IsNull( Crowd() );
+
+				// Thirteen at the stop, the pointer four cells off both ways: thirteen of the park's twenty-six.
+				for ( var i = 0; i < 13; ++i )
+					Assert.AreNotEqual( 0, people.Admit( 42, 5 ) );
+
+				Assert.AreEqual( 13, people.GuestsNear( (1 * 128) + 38 + 1, 4 ), "none of the save's guests stands within four of (38,1)" );
+				pointer.SetValue( null, (1 * 128) + 38 + 1 );
+				Frame( held: false, GameClock.TickSeconds );
+				park.Update();
+				Assert.AreEqual( (0, false), (park.CrowdVoiceLevelNow, park.CrowdVoiceHeld), "not before the beat" );
+
+				ToTheBeat();
+				Assert.AreEqual( (13, 13, (1 * 128) + 38 + 1), (park.CrowdVoiceLevelNow, park.CrowdVoiceGuests, park.CrowdVoiceCell) );
+				Assert.AreEqual( (true, 1, 1, 0), (park.CrowdVoiceHeld, park.CrowdVoicePlays.Starts, park.CrowdVoicePlays.Samples, park.CrowdVoiceVariation),
+					"started on the beat, its first sample the first variation's" );
+
+				var first = Crowd()!;
+
+				Assert.IsTrue( samples[0].Contains( first.Name ) );
+				Assert.IsFalse( first.IsPlaced, "flat, as the original plays it at (0,0,0)" );
+				Assert.AreEqual( Gain( 15 ), first.Volume, 0.00001f, "level 13 is volume 15" );
+				Assert.AreEqual( park.CrowdVoiceSample.Pitch == 0 ? 1.0 : Math.Pow( 2, (park.CrowdVoiceSample.Pitch + 1) / 96.0 ), first.Rate, 0.00001, "at its drawn pitch" );
+
+				Frame( held: false, GameClock.TickSeconds );
+				park.Update();
+				Assert.AreSame( first, Crowd(), "while a sample plays no other is started" );
+
+				// As each ends the next is drawn: at level 13 the first variation again or its twin, the seventh.
+				var seen = new HashSet<int>();
+				var pitches = new HashSet<int>();
+
+				for ( var i = 0; i < 200; ++i )
+				{
+					var last = Crowd()!;
+
+					last.Stop();
+					park.Update();
+
+					var next = Crowd()!;
+
+					Assert.AreNotSame( last, next, "the sample ended, the next is started" );
+					Assert.IsTrue( park.CrowdVoiceVariation is 0 or 6, $"variation {park.CrowdVoiceVariation + 1} at level 13" );
+					Assert.IsTrue( samples[park.CrowdVoiceVariation].Contains( next.Name ) );
+					Assert.AreEqual( Gain( park.CrowdVoiceSample.Volume ), next.Volume, 0.00001f );
+					Assert.AreEqual( park.CrowdVoiceSample.Pitch == 0 ? 1.0 : Math.Pow( 2, (park.CrowdVoiceSample.Pitch + 1) / 96.0 ), next.Rate, 0.00001 );
+					pitches.Add( park.CrowdVoiceSample.Pitch );
+					Assert.IsTrue( park.CrowdVoiceVariation == 0 ? park.CrowdVoiceSample.Volume == 15 : park.CrowdVoiceSample.Volume is >= 14 and <= 21 );
+					seen.Add( park.CrowdVoiceVariation );
+				}
+
+				Assert.AreEqual( 2, seen.Count, "both the first and its twin in two hundred draws" );
+				Assert.AreEqual( 201, park.CrowdVoicePlays.Samples );
+				CollectionAssert.AreEquivalent( new[] { 0, 1, 2, 3, 4, 5 }, pitches.ToList(), "every pitch from 0 to 5" );
+
+				// A sample of the first variation playing, then the crowd grows past a hundred: its volume at once.
+				while ( park.CrowdVoiceVariation != 0 )
+				{
+					Crowd()!.Stop();
+					park.Update();
+				}
+
+				var playing = Crowd()!;
+
+				while ( people.Peeps.Count < 13 + 13 + 110 )
+					Assert.AreNotEqual( 0, people.Admit( 42, 5 ) );
+
+				ToTheBeat();
+				Assert.AreEqual( (100, 123), (park.CrowdVoiceLevelNow, park.CrowdVoiceGuests), "held to a hundred" );
+				Assert.AreSame( playing, Crowd(), "no new sample for a new level" );
+				Assert.AreEqual( Gain( 22 ), playing.Volume, 0.00001f, "the playing sample takes volume 22 at once" );
+
+				playing.Stop();
+				park.Update();
+				Assert.AreEqual( 5, park.CrowdVoiceVariation, "the next from the sixth variation, whose zone holds 100" );
+				Assert.IsTrue( samples[5].Contains( Crowd()!.Name ) );
+				Assert.AreEqual( Gain( 22 ), Crowd()!.Volume, 0.00001f );
+
+				// World state 4: nought, the voice faded and let go.
+				var level = (Level)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject( typeof( Level ) );
+
+				typeof( Level ).GetProperty( nameof( Level.Park ) )!.SetValue( level, new InWorldStateFour( world ) );
+				Level.Current = level;
+
+				var last6 = Crowd()!;
+				var starts = park.CrowdVoicePlays;
+
+				ToTheBeat();
+				Assert.AreEqual( (0, 123, false), (park.CrowdVoiceLevelNow, park.CrowdVoiceGuests, park.CrowdVoiceHeld), "world state 4: nought" );
+				Assert.IsTrue( last6.Ending, "its sample fades out" );
+
+				last6.Stop();
+				Frame( held: false, GameClock.TickSeconds );
+				park.Update();
+				Assert.AreEqual( starts, park.CrowdVoicePlays, "and nothing follows it" );
+
+				// Out of state 4 it is started again, from the first variation whatever the level.
+				Level.Current = levelBefore!;
+				ToTheBeat();
+				Assert.AreEqual( (100, true, 0), (park.CrowdVoiceLevelNow, park.CrowdVoiceHeld, park.CrowdVoiceVariation) );
+				Assert.AreEqual( (starts.Samples + 1, starts.Starts + 1), park.CrowdVoicePlays );
+				Assert.AreEqual( Gain( 22 ), Crowd()!.Volume, 0.00001f );
+
+				// The pointer moved off them: nought on the next beat.
+				pointer.SetValue( null, (100 * 128) + 100 + 1 );
+				ToTheBeat();
+				Assert.AreEqual( (0, 0, false), (park.CrowdVoiceLevelNow, park.CrowdVoiceGuests, park.CrowdVoiceHeld), "far from everybody, nobody" );
+			} );
+		}
+		finally
+		{
+			pointer.SetValue( null, cellBefore );
+			Level.Current = levelBefore!;
+			people.Delete();
+			Entity.ApplyDeletions();
+		}
+	}
+
 	/// <summary>Lost Kingdom's save with its world state read as 4, and nothing else changed.</summary>
 	private sealed class InWorldStateFour( ParkWorld source ) : IParkInitialState
 	{

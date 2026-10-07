@@ -4978,6 +4978,23 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   variations 1 to 6, `level × 8 / 100 + 14` of 100; the four words are the flying cars' rectangle. In the original
   (memory, 75 s, `q236/orig/a.log`) the level word followed the count of guests within four cells of the pointer's
   cell, 12 over the Belly Bounce's queue and 0 on empty ground, predicted first. No capture made; the build is Q236b.
+- [x] **Q236b. Build the crowd's voice.** From Q236 (`audio.md`, "The crowd's voice"). On the music's beat, count the
+  guests on the cells within four of the cell under the pointer (a 9 by 9 square cut at the map's edge, nought with
+  no cell), hold it to 100, nought in world state 4; above nought play kids 91 flat as a chain of the music's class
+  whose parameter 7 is the count (the variation by the zones, the volume `level × 8 / 100 + 14` on variations 1 to
+  6 and a draw from 14 to 21 on the twins, the pitch a draw from 0 to 5), start it again if it ends, and fade it out
+  at nought. Where `CROWD_VOICE_LEVEL` is counted; `PARK_LOOP_FUN_0055AB50` stays counted until something flies.
+  The gain past the variation's volume is not decoded: set it by measurement. Confirm: the crowd found in a capture
+  beside the original's (`rv4/orig/xcorr.py` is the method), with the pointer over the Belly Bounce's queue and over
+  empty ground, the level predicted first and read in the log; a screenshot of each.
+  **Done 2026-10-06** (`ParkAudio.SetCrowdVoice`, `NextCrowdSample`, `ParkPeople.GuestsNear`; console `crowd` and
+  `bus`). In the game, predicted first, 4 of 4 (`q236b/fix`): over the queue level 13 from 13 guests, held, 70
+  samples of kids 91 found in 30 s of the mix at a median gain of 0.0218; over empty ground level 0, not held, none
+  found; the build before finds none (`q236b/control`, 2 of 2). In the original (`q236b/orig`): level 9 over the
+  queue, 53 samples matched at 0.6 or better, all six pitches; level 0 over empty ground, one. The gain is 0.30, from
+  the original's crowd at about 0.12 of its music (0.09 to 0.17). 27 bugs put back, 27 caught. Found on the way:
+  `Voice.SetVolume` with no time never arrived (mended). Not explained: the original's samples differ in gain, one
+  from another, 0.022 to 0.046 (`audio.md`).
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

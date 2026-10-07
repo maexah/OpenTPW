@@ -40,15 +40,6 @@ the original.
 
 **The 2026-10-06 review's leftovers come first, at Alexah's word (2026-10-06).**
 
-- [ ] **Q236b. Build the crowd's voice.** From Q236 (`audio.md`, "The crowd's voice"). On the music's beat, count the
-  guests on the cells within four of the cell under the pointer (a 9 by 9 square cut at the map's edge, nought with
-  no cell), hold it to 100, nought in world state 4; above nought play kids 91 flat as a chain of the music's class
-  whose parameter 7 is the count (the variation by the zones, the volume `level × 8 / 100 + 14` on variations 1 to
-  6 and a draw from 14 to 21 on the twins, the pitch a draw from 0 to 5), start it again if it ends, and fade it out
-  at nought. Where `CROWD_VOICE_LEVEL` is counted; `PARK_LOOP_FUN_0055AB50` stays counted until something flies.
-  The gain past the variation's volume is not decoded: set it by measurement. Confirm: the crowd found in a capture
-  beside the original's (`rv4/orig/xcorr.py` is the method), with the pointer over the Belly Bounce's queue and over
-  empty ground, the level predicted first and read in the log; a screenshot of each.
 - [ ] **Q130d. The hire list stands in name order in the original. Decode first.** From Q130c. On four tabs the
   original lists its candidates by name (Chris Battson above Rajan Tande, who holds the earlier slot); OpenTPW's
   `ParkHireScreen` lists them in the pool's order. Decode what orders the list (`FUN_00481550` adds a row;

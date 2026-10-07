@@ -102,6 +102,31 @@ public class VoicePlacementTests
 	}
 
 	/// <summary>
+	/// A volume set with no time is the voice's volume at once: the mixer steps only a volume that has a rate, so a
+	/// snap left to it never arrived. And a voice already silent, asked to fade, has ended: it has no rate to fade at.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the snap left to the mixer; a silent voice's fade given a rate of nought.</remarks>
+	[TestMethod]
+	public void AVolumeSetWithNoTimeIsSetAtOnceAndASilentVoiceFadesToItsEnd()
+	{
+		var voice = new Voice( AScream(), 0.5f, loop: true, 0f, AudioBus.Effects, null );
+
+		voice.SetVolume( 0.2f );
+		Assert.AreEqual( 0.2f, voice.Volume, "set at once" );
+
+		voice.SetVolume( 0.4f, seconds: 1f );
+		Assert.AreEqual( 0.2f, voice.Volume, "with a time it is the mixer's to move" );
+
+		voice.FadeOut( 0.06f );
+		Assert.IsTrue( voice.Playing, "a sounding voice fades before it ends" );
+
+		var silent = new Voice( AScream(), 0f, loop: true, 0f, AudioBus.Effects, null );
+
+		silent.FadeOut( 0.06f );
+		Assert.IsFalse( silent.Playing, "a silent one has ended" );
+	}
+
+	/// <summary>
 	/// A voice given somewhere to sound from is placed - so a pause takes it, as the listener would.
 	/// </summary>
 	[TestMethod]

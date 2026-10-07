@@ -172,6 +172,13 @@ public sealed class Voice
 
 		lock ( Audio.Lock )
 		{
+			// A silent voice has no rate to fade at, and would never reach its end.
+			if ( _volume <= 0f )
+			{
+				_stopped = true;
+				return;
+			}
+
 			_targetVolume = 0f;
 			_volumeRate = _volume / seconds;
 			_stopWhenFaded = true;
@@ -236,6 +243,10 @@ public sealed class Voice
 			_targetVolume = volume;
 			_volumeRate = seconds <= 0f ? 0f : MathF.Abs( volume - _volume ) / seconds;
 			_stopWhenFaded = false;
+
+			// The mixer only steps a volume that has a rate, so a snap is made here.
+			if ( seconds <= 0f )
+				_volume = volume;
 		}
 	}
 

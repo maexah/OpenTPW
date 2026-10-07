@@ -1,7 +1,7 @@
 namespace OpenTPW;
 
 /// <summary>
-/// A park's sounds - its music, its weather, its rides' screams and a guest put off something.
+/// A park's sounds - its music, the crowd's voice, its weather, its rides' screams and a guest put off something.
 ///
 /// <para>
 /// The original loads four categories as a park comes up and plays one thing. Its state machine
@@ -228,6 +228,168 @@ public sealed class ParkAudio : Entity
 
 	private readonly SoundCategory? _music;
 	private Voice? _voice;
+
+	/// <summary>The kids' effect that is the crowd's voice, <c>0x5b</c> (<c>FUN_0051e7b0</c>, <c>0x0051e7ea</c>).</summary>
+	public const int CrowdVoiceEffect = 0x5b;
+
+	/// <summary>The parameter the park loop sets on it (<c>PUSH 0x7</c>, <c>0x0051e7fd</c>), which is the effect's own id.</summary>
+	public const int CrowdVoiceParameter = 7;
+
+	/// <summary>How many cells each way from the pointer's the crowd is counted over (<c>FUN_004c8d30</c>'s third argument).</summary>
+	public const int CrowdVoiceReach = 4;
+
+	/// <summary>What <c>Sound_StopFading</c> hands the library (<c>0x3c</c>, <c>0x0051c300</c>), taken as milliseconds.</summary>
+	private const float CrowdVoiceFadeSeconds = 0.06f;
+
+	/// <summary>What a variation's volume of a hundred plays at here, before <see cref="Audio.MasterVolume"/>.</summary>
+	/// <remarks>
+	/// <b>Set by measurement, not decoded</b>: the original's scale past the variation's byte is not read. In a
+	/// capture of its mix a crowd sample at volume 14 sits at about 0.12 of a music sample's gain (0.09 to 0.17), and
+	/// this puts it at <c>0.14 × 0.30 / <see cref="MusicVolume"/></c>, 0.13, here
+	/// (<c>docs/exe/audio.md</c>, "The crowd's voice").
+	/// </remarks>
+	internal const float CrowdVoiceGain = 0.30f;
+
+	/// <summary>
+	/// What the park loop hands the crowd's voice (<c>0x0054f875</c>..<c>0x0054f8b9</c>): the guests counted round the
+	/// pointer's cell, held to a hundred, and nought while the world's state is <see cref="SilentWorldState"/>.
+	/// </summary>
+	public static int CrowdVoiceLevel( int guestsNear, int worldState )
+		=> worldState == SilentWorldState ? 0 : Math.Clamp( guestsNear, 0, LoudestCrowd );
+
+	/// <summary>
+	/// A sample's volume (<paramref name="bit"/> 1, <c>FUN_006bc090</c>) or pitch (2, <c>FUN_006bc170</c>) under one
+	/// parameter set to <paramref name="level"/>: the first of the variation's two controllers whose mask has the bit
+	/// gives <c>value × range / 100 + low</c>, its value the level where its key is the parameter's and nought
+	/// otherwise; with neither, a draw from <c>low</c> up to, not including, <c>high</c>.
+	/// </summary>
+	internal static int Controlled( SoundCategoryFile.Variation header, int bit, int parameter, int level, Random random )
+	{
+		var range = bit == 1 ? header.Volume : header.Pitch;
+
+		if ( (header.GapByParameter & bit) != 0 )
+			return ParkCarSounds.Controlled( header.FirstKey == parameter ? level : 0, range );
+
+		if ( (header.SecondMask & bit) != 0 )
+			return ParkCarSounds.Controlled( header.SecondKey == parameter ? level : 0, range );
+
+		var (low, high) = range.High < range.Low ? (range.High, range.Low) : range;
+
+		return high == low ? low : low + random.Next( high - low );
+	}
+
+	/// <summary>The level the crowd's voice was last set to (<c>[0x00803ab0]</c>).</summary>
+	internal int CrowdVoiceLevelNow { get; private set; }
+
+	/// <summary>How many guests the last count found round the pointer's cell, before the hold.</summary>
+	internal int CrowdVoiceGuests { get; private set; }
+
+	/// <summary>The pointer's cell at the last count, packed, nought for none.</summary>
+	internal int CrowdVoiceCell { get; private set; }
+
+	/// <summary>Whether the voice is held, the original's handle at <c>[0x00803aa4]</c>.</summary>
+	internal bool CrowdVoiceHeld { get; private set; }
+
+	/// <summary>The variation the voice's last sample was drawn from, zero-based; -1 with none since it was started.</summary>
+	internal int CrowdVoiceVariation { get; private set; } = -1;
+
+	/// <summary>The last sample's volume, of a hundred, and its pitch in 96ths of an octave.</summary>
+	internal (int Volume, int Pitch) CrowdVoiceSample { get; private set; }
+
+	/// <summary>How many samples the voice has played, and how many times it has been started, for the console.</summary>
+	internal (int Samples, int Starts) CrowdVoicePlays { get; private set; }
+
+	private readonly Random _crowdRandom = new();
+	private Voice? _crowd;
+
+	/// <summary>
+	/// <c>FUN_0051e7b0</c>, on the music's beat: above nought the voice is started if it is not held and its
+	/// parameter set, which a sample whose variation names it as a controller takes at once (<c>0x006bbb80</c>); at
+	/// nought a held voice is faded out and let go.
+	/// </summary>
+	private void SetCrowdVoice( int level )
+	{
+		CrowdVoiceLevelNow = level;
+
+		if ( level == 0 )
+		{
+			if ( !CrowdVoiceHeld )
+				return;
+
+			_crowd?.FadeOut( CrowdVoiceFadeSeconds );
+			_crowd = null;
+			CrowdVoiceHeld = false;
+
+			Log.Info( $"Crowd voice: stopped at level 0 on tick {GameClock.Ticks}" );
+			return;
+		}
+
+		if ( !CrowdVoiceHeld )
+		{
+			// A new voice has no variation yet, so its first sample is the first variation's (FUN_006be450).
+			CrowdVoiceHeld = true;
+			CrowdVoiceVariation = -1;
+			CrowdVoicePlays = (CrowdVoicePlays.Samples, CrowdVoicePlays.Starts + 1);
+
+			Log.Info( $"Crowd voice: started at level {level} on tick {GameClock.Ticks}" );
+			return;
+		}
+
+		var headers = _kids?.VariationsOf( CrowdVoiceEffect ) ?? [];
+
+		if ( _crowd is not { Playing: true } || CrowdVoiceVariation < 0 || CrowdVoiceVariation >= headers.Count )
+			return;
+
+		// The set applies volume and pitch again only where the parameter is one of the variation's own controllers.
+		var header = headers[CrowdVoiceVariation];
+
+		if ( header.FirstKey == CrowdVoiceParameter || header.SecondKey == CrowdVoiceParameter )
+			ApplyCrowdVoice( _crowd, header );
+	}
+
+	/// <summary>
+	/// The volume and pitch of a sample of the crowd's voice, from the level or drawn (<c>0x006bbbe0</c>), set on
+	/// <paramref name="voice"/> when there is one. Answers the volume as a gain.
+	/// </summary>
+	private float ApplyCrowdVoice( Voice? voice, SoundCategoryFile.Variation header )
+	{
+		var volume = Controlled( header, 1, CrowdVoiceParameter, CrowdVoiceLevelNow, _crowdRandom );
+		var pitch = Controlled( header, 2, CrowdVoiceParameter, CrowdVoiceLevelNow, _crowdRandom );
+		var gain = volume / 100f * CrowdVoiceGain;
+
+		CrowdVoiceSample = (volume, pitch);
+		voice?.SetVolume( gain );
+		voice?.SetRate( ParkCarSounds.Rate( pitch ) );
+
+		return gain;
+	}
+
+	/// <summary>
+	/// The held voice's next sample once the last has ended, drawn as the music's is (<see cref="NextMusic"/>): the
+	/// level's zone picks the variation. Flat, as the original plays it at (0,0,0), and on a frame's edge, where the
+	/// original's service pass starts it.
+	/// </summary>
+	private void NextCrowdSample()
+	{
+		if ( !CrowdVoiceHeld || _crowd is { Playing: true } || _kids is not { IsValid: true } )
+			return;
+
+		var headers = _kids.VariationsOf( CrowdVoiceEffect );
+		var next = ParkScreams.NextVariation( headers, CrowdVoiceVariation, CrowdVoiceLevelNow, _crowdRandom );
+
+		if ( next < 0 )
+			return;
+
+		CrowdVoiceVariation = next;
+		_crowd = Audio.Play( _kids.PickFrom( CrowdVoiceEffect, next ), ApplyCrowdVoice( null, headers[next] ),
+			bus: AudioBus.Effects );
+
+		if ( _crowd is null )
+			return;
+
+		_crowd.SetRate( ParkCarSounds.Rate( CrowdVoiceSample.Pitch ) );
+		CrowdVoicePlays = (CrowdVoicePlays.Samples + 1, CrowdVoicePlays.Starts);
+	}
 
 	/// <summary>
 	/// The global ambient category, which is where a park's weather sounds live. Global rather than
@@ -744,6 +906,10 @@ public sealed class ParkAudio : Entity
 		// cuts it. The effects hold nothing to let go of.
 		_screams.StopAll();
 
+		_crowd?.FadeOut( StopSeconds );
+		_crowd = null;
+		CrowdVoiceHeld = false;
+
 		// The voice was holding the effect - see SoundCategory.Play - so the category has to be told
 		// it may start again, or the next park in this process waits out a delay counted against a
 		// voice that is no longer playing.
@@ -787,7 +953,7 @@ public sealed class ParkAudio : Entity
 		if ( Audio.Ready && !GameClock.Paused )
 			_screams.Pump( Time.Now );
 
-		if ( !Audio.Ready || _music is not { IsValid: true } )
+		if ( !Audio.Ready )
 			return;
 
 		// Re-counted rather than told when the crowd changes, as the original does, and on its beat: FUN_0051e790
@@ -795,21 +961,41 @@ public sealed class ParkAudio : Entity
 		// is held, when no tick runs. Guests arrive by bus and leave, so the level moves with them.
 		if ( SetsMusicLevel( GameClock.Ticks, GameClock.TicksDue ) )
 		{
-			var guests = ParkPeople.Current?.Peeps.Count ?? 0;
-			var level = MusicLevel( guests, Level.Current?.Park?.WorldState ?? 0 );
+			var worldState = Level.Current?.Park?.WorldState ?? 0;
 
-			if ( level != LevelNow )
-				Log.Info( $"Park music: level {LevelNow} to {level} for {guests} guests on tick {GameClock.Ticks}" );
+			if ( _music is { IsValid: true } )
+			{
+				var guests = ParkPeople.Current?.Peeps.Count ?? 0;
+				var level = MusicLevel( guests, worldState );
 
-			LevelNow = level;
-			++LevelSets;
+				if ( level != LevelNow )
+					Log.Info( $"Park music: level {LevelNow} to {level} for {guests} guests on tick {GameClock.Ticks}" );
 
-			// The block's other half is not built (0x0054f875 to 0x0054f8c8): the crowd's own voice, kids 91, whose
-			// parameter 7 is the guests within four cells of the cell under the pointer, [0x007b05cc], held to a
-			// hundred (docs/exe/audio.md, "The crowd's voice"), and FUN_0055ab50, the flying cars' rectangle.
-			Unimplemented.Report( "CROWD_VOICE_LEVEL" );
+				LevelNow = level;
+				++LevelSets;
+			}
+
+			// The same block's second call (0x0054f875 to 0x0054f8b9): the crowd's own voice, set from the guests
+			// within four cells of the cell under the pointer (docs/exe/audio.md, "The crowd's voice").
+			var cell = ParkPicking.Cell;
+			var near = ParkPeople.Current?.GuestsNear( cell, CrowdVoiceReach ) ?? 0;
+			var crowd = CrowdVoiceLevel( near, worldState );
+
+			if ( crowd != CrowdVoiceLevelNow )
+				Log.Info( $"Crowd voice: level {CrowdVoiceLevelNow} to {crowd} for {near} guests near cell {cell} on tick {GameClock.Ticks}" );
+
+			CrowdVoiceGuests = near;
+			CrowdVoiceCell = cell;
+			SetCrowdVoice( crowd );
+
+			// And its third (0x0054f8c8): FUN_0055ab50, the flying cars' rectangle, which nothing here flies in.
 			Unimplemented.Report( "PARK_LOOP_FUN_0055AB50" );
 		}
+
+		NextCrowdSample();
+
+		if ( _music is not { IsValid: true } )
+			return;
 
 		if ( _voice is { Playing: true } )
 			return;

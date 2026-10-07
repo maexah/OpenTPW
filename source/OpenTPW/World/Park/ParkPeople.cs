@@ -2281,6 +2281,27 @@ public sealed class ParkPeople : Entity
 		return Peep.CountsOn( State.Record( x, y ).Type );
 	}
 
+	/// <summary>
+	/// How many guests stand on the cells from <paramref name="reach"/> before to <paramref name="reach"/> after a
+	/// packed cell each way, a square cut at the map's edges - <c>FUN_004c8d30( 1, cell, reach, 0 )</c>, which walks
+	/// those cells' lists for things of kind 1. Cell nought, no cell, counts nobody.
+	/// </summary>
+	internal int GuestsNear( int cell, int reach )
+	{
+		if ( cell <= 0 )
+			return 0;
+
+		var (x, y) = ((cell - 1) % ParkWorld.MapSize, (cell - 1) / ParkWorld.MapSize);
+
+		return _peeps.Count( peep =>
+		{
+			var (px, py) = State.CellOf( peep.ThingId )
+				?? (peep.Navigator.Position.X >> 16, peep.Navigator.Position.Y >> 16);
+
+			return Math.Abs( px - x ) <= reach && Math.Abs( py - y ) <= reach;
+		} );
+	}
+
 	/// <summary>A balloon a guest has let go goes on bursting here, where it was.</summary>
 	private void TakeLetGo( Peep peep )
 	{

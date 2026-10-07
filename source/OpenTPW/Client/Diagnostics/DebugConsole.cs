@@ -497,6 +497,16 @@ public static class DebugConsole
 					: "music: a park has to be loaded" );
 				break;
 
+			// The crowd's voice: its level, the count behind it and what it is playing (ParkAudio.CrowdVoiceLevel).
+			case "crowd":
+				Reply( ParkAudio.Current is { } crowded
+					? $"crowd: level {crowded.CrowdVoiceLevelNow} from {crowded.CrowdVoiceGuests} guests near cell {crowded.CrowdVoiceCell}"
+						+ $" ({(crowded.CrowdVoiceCell > 0 ? $"{(crowded.CrowdVoiceCell - 1) % ParkWorld.MapSize},{(crowded.CrowdVoiceCell - 1) / ParkWorld.MapSize}" : "none")}),"
+						+ $" {(crowded.CrowdVoiceHeld ? "held" : "not held")}, variation {crowded.CrowdVoiceVariation + 1} volume {crowded.CrowdVoiceSample.Volume}"
+						+ $" pitch {crowded.CrowdVoiceSample.Pitch}, {crowded.CrowdVoicePlays.Samples} samples, started {crowded.CrowdVoicePlays.Starts} times, tick {GameClock.Ticks}"
+					: "crowd: a park has to be loaded" );
+				break;
+
 			// The park's own clock and what the three-a-frame cap has cost it (ParkPeople.SweepsAFrame).
 			case "sweeps":
 				Reply( ParkPeople.Current is { } swept
@@ -518,6 +528,21 @@ public static class DebugConsole
 					Audio.MasterVolume = Argument( 1, Audio.MasterVolume );
 
 				Reply( $"volume={Audio.MasterVolume:0.00}" );
+				break;
+
+			// One group's level as a multiple of its layers' (Audio.SetBusVolume), so a capture can hold one group
+			// alone: `bus music 0`. The options screen sets the same three; a change there replaces this.
+			case "bus":
+				if ( parts.Length > 2 && Enum.TryParse<AudioBus>( parts[1], ignoreCase: true, out var bus ) )
+				{
+					Audio.SetBusVolume( bus, Argument( 2 ) );
+					Reply( $"bus: {bus} at {Argument( 2 ):0.00}" );
+				}
+				else
+				{
+					Reply( "bus: bus <effects|music|speech> <gain>" );
+				}
+
 				break;
 
 			case "mute":
