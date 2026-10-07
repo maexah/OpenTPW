@@ -37,6 +37,10 @@ Machine-specific paths live in `CLAUDE.local.md` (not committed). Long-form know
 17. **Show the next five queue items before every clear** (2026-09-23). When Alexah says they are about to clear the session, show the next five unticked items in `docs/QUEUE.md`, in queue order, each with what it asks for. **Read the file and show what it says**, rather than reciting it from memory; a half-remembered list handed over at a clear is the one place a stale claim cannot be caught later.
 18. **Spend subagent tokens where they buy accuracy** (2026-09-26). Pick each agent's model by its stage, fan out only after a script has done what a script can, audit incrementally, and check `/usage` before a large run. The table and the rules are `docs/WORKFLOW.md`, "Subagents".
 
+19. **Codex's model and effort are chosen by stage too** (2026-10-06). Every `codex-worker` assignment names its
+    `model` and `effort` for the job it is, as an agent names its type, and Codex's tokens are spent as carefully as
+    these. The table and the rules are `docs/WORKFLOW.md`, "Codex".
+
 ## Build, test, run
 
 ```sh

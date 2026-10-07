@@ -31,6 +31,34 @@ Four things about that gate, each of which has cost a session:
 - **`git add -p` is unavailable here.** When one file carries changes belonging to two commits, re-cut the commits so their file sets are *disjoint*; do not try to split a file.
 - **A test count in a commit message is a claim about that commit standing alone**, and a full-suite run cannot check it. Either gate the commit alone or do not quote a count.
 
+## Codex
+
+Set by Alexah 2026-10-06. Codex is the second developer, reached through the `codex-worker` bridge; the lead may
+assign to it without asking and may change the bridge when the work needs it. Its tokens are not unlimited: the
+subagent rules below hold for it, stage by stage.
+
+**Model and effort by stage.** Every `assign` names both; `models` lists the pairs the runtime offers, and there is
+no fallback, so a pair the account lacks fails the task.
+
+| Stage | Model, effort | Why |
+|---|---|---|
+| A connectivity check, one or two bridge calls | `gpt-6-astra`, low | About 16k tokens a call, measured 2026-10-04 |
+| Gathering and first-pass sweeps whose every finding is then verified | the catalogue's smaller model (`gpt-6-luna`), low or medium | A verifier checks the result. Not yet used here: read the first run's cost and quality from `status` and write them in this row |
+| An un-anchored second read of a commit, a refutation hunt | `gpt-6-astra`, high | About 1.2 million tokens a commit, nine tenths cached reads (two runs, 2026-10-04 and 2026-10-06) |
+| A code change | `gpt-6-astra`, high or above | The bridge refuses anything less |
+| `xhigh`, `max`, `ultra` | only when high has failed to settle a question that blocks the work, said before it is launched | The same rule as Fable's |
+
+**What it cannot do.** A worker here has no shell: no build, no test, no game, no Ghidra. Decoding, verifying by
+running and anything in Ghidra go to `tpw-verify` or stay with the lead.
+
+**Budget.** One or two assignments a task at the most, and none for what a grep settles. Each names one commit,
+the narrow `paths` it needs and a `timeout_seconds`; one review of 2026-10-06 ran into the task's runtime limit with
+nothing handed back. Read `status` after a run for its `token_usage`, as `bytype.py` is read after a workflow.
+
+**Its findings are leads.** Each is checked first-hand before it is acted on, a cheaper model's by the lead or by
+Astra, never by itself. Nothing personal and no machine path goes into an assignment: its text and its worktree's
+files leave the machine.
+
 ## Subagents
 
 Set by Alexah 2026-09-26, after one staleness audit spent about 40M subagent tokens and hit the weekly limit. None of
