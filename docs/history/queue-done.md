@@ -4926,6 +4926,8 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   drawn, the archives are read into memory, and the test host held 200 file handles of a million. The one trace of an
   old failure is its duration, 121 ms (a passing run takes about 200). Nothing was changed for it. If it fails
   again: `~/.cache/tpw-harnesses/q237/loop.sh NAME COUNT` keeps a failing run's whole output.
+  The mechanism in the running game, predicted first (Q128b's `confirm.py`, `q237/game`): the park shut, guests
+  stand in `AtTheBusStop`, four summonses "at random" answer them and 13 go from the stop; photographed.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.
