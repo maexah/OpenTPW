@@ -40,22 +40,17 @@ the original.
 
 **The 2026-10-06 review's leftovers come first, at Alexah's word (2026-10-06).**
 
-- [ ] **Q132. Guests and rides take their turns on the game clock over eight, where the original hands them
-  `mGameTick`. Decode first.** Found by Q68b. `ParkPeople.OnUpdate` hands `Peep.Tick`, `PeepBehaviour.Step` and the
-  rides' turns `GameClock.Ticks / 8`, which runs from the program's start and is not reset on entering a park
-  (`PeepBehaviour.Step`'s `tick` note); the original's handlers read `mGameTick`, which `ParkState.GameTick` now
-  carries from the save's 755. The needs share `(id & 3) == (tick & 3)`, the behaviours' time stamps and the chooser's
-  tie on `mGameTick & 1` (`ParkRideChooser.Beats`) turn on it. Decode which of them read `mGameTick`, then pass the
-  park's clock, as Q82b did for the staff. Confirm: a saved guest's stamp read against 755, in the `peeps` census,
-  predicted first.
-  Q82 found the guests' needs gate reads `mGameTick & 3` (`FUN_00501650`, `0x00501669`), as `ParkPeople.OnUpdate`'s
-  thing-tick note says.
-  From Q126: a dropped sweep makes the handed tick jump (n, n+1, n+2, then n+8 after a 64-tick frame), so the
-  guests of one needs slot miss a turn the original's `mGameTick` gives them on its next sweep, and stamps taken
-  from it jump five sweeps.
-  From Q237: because that clock is never reset, a test with every generator seeded still plays out by how many
-  ticks the tests before it ran (`ParkTickTests.PinTheClock` sets it to nought for one test). On the park's clock a
-  seeded run would repeat by itself.
+- [ ] **Q132b. Hand the guests and the rides the park's clock, and read the save's three stamps.** Decoded by Q132
+  (`ride-operation.md`, "The guests' and the objects' clock"). Pass `ParkState.GameTick` to `Peep.Tick`, `DueOn`,
+  `PeepBehaviour.Step` and `TakeTheRidesTurns`, and to the six callers that work the frame clock out themselves
+  (`Admit`, `AdmitAsEntered`, `SendAsChosen`, `ThingRemoved`, `QueueRemeasured`, `WhyCensus`, which hands on the
+  31 ms tick undivided). `ParkRideOperation.SpriteClock` stays on the frame clock: it is a sprite's milliseconds.
+  Read `mArrivalDate` (`+398`), `mTimeOfLastSpotAnim` (`+513`) and `mTimeStartedIdling` (`+517`) in
+  `ParkWorld.ReadGuest`, keep the arrival on the guest and stamp it at making (`0x004fafcf`); print all three in
+  `peeps`. `ParkTickTests.PinTheClock` and the comments that name Q132 go with it. Confirm: `peeps` on entering Lost
+  Kingdom, the thirteen saved guests' arrival 648 to 660 beside `sweeps`' 755 and a queuer's idle stamp within 30
+  of it, predicted first; the falls of `exit` on each guest's own sweep in four; a screenshot. Beside the original:
+  `q132/orig/a.log` holds its run, `clock.py` reads it again.
 - [ ] **Q133. The mechanic, the handyman and the entertainer stand once their saved walk ends, where the original's
   walk about.** Found by Q82 (`ride-operation.md`, "Leaving idle, or a walk: the choice by kind"). With no work the
   mechanic's `FUN_004da5b0` and the handyman's `FUN_004d7100` take a random walk every time (`0x004da6fa`,

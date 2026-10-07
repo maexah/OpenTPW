@@ -2105,6 +2105,81 @@ its own footprint, so every guest let off anything gave up on the spot.
 | A toilet dirtied by use | `FUN_004e2440` | built, `ParkRideOperation.WearByUse` (Q100b) | every toilet use |
 | An exit that will not route | ExitRide closes the ride, no state 15 | dismissed anyway, then the walk off gives up, keeping `+0x1de` | none in the stock park |
 
+## The guests' and the objects' clock - every one `mGameTick`
+
+Decoded 2026-10-07 (`docs/QUEUE.md` Q132). **Every clock a guest's handler or an object's turn reads is `mGameTick`**
+(`[0x0080239c] + 0x1da70c`), one count a thing sweep, the save's own after a load. The executable holds the
+displacement `0x1da70c` in **85** places, counted two ways that agree: a walk over all 881,780 instructions, and a
+search of the image for the four bytes, each of the 85 inside one of those instructions. None of the code of the
+guests (`0x004f9000`..`0x00502600`), the objects (`0x004db000`..`0x004e2800`) or the thing switch and the thoughts
+(`0x0050b300`..`0x0050c200`) refers to the 31 ms step counter `[0x00877d34]`, the millisecond clock `0x00785970` or
+its reader `FUN_00402d70`; the same ranges refer to the world pointer `[0x0080239c]` 155 times, which is the control.
+
+**The guests' reads**, each read in the listing:
+
+| Site | In | What it does | OpenTPW today |
+|---|---|---|---|
+| `0x004fafcf` | `FUN_004faec0`, the constructor | `+0x1d4` (`mArrivalDate`) = mGameTick | no field; `ParkWorld.ReadGuest` skips the save's (record `+398`) |
+| `0x00501669` | `FUN_00501650`, the needs turn | the turn in four, `(mGameTick & 3) == (id & 3)` | `Peep.DueOn`, on the frame clock over eight |
+| `0x00501792` | the same, inside that block | toilet, hunger and thirst drift when `mGameTick & 0xf` is nought | `Peep.Tick`, the same clock |
+| `0x004fdc9d` | `FUN_004fdc90`, its last call | a nought onto the refusals when `mGameTick % 20` is nought | built on `ParkState.GameTick` |
+| `0x0050be50`, `0x0050c03c` | `FUN_0050be40`, `FUN_0050be80` | a thought's bubble against `+0x8c` | built on `ParkState.GameTick` |
+| `0x00502375` | `FUN_00501db0` (SetState), case 8 | `+0x208` (`mTimeOfLastSpotAnim`) = mGameTick | `Peep.SetState`, the frame clock over eight |
+| `0x00501ea9` | SetState, case `0xb` | `+0x1fc` (`mTimeStartedIdling`) = mGameTick | the same |
+| `0x004fc869` | `FUN_004fc800`, a spot animation | `+0x208` = mGameTick | the same, through `SetState` |
+| `0x00501d35` | `FUN_005019f0`, case 8 | over when mGameTick > `+0x208` + 10, unsigned | `PeepBehaviour.Step`, the same |
+| `0x004fecca` | `FUN_004fec90`, the deciding turn | the happy jump's gap, mGameTick − `+0x208` > 100 | `CountBeforeLeaving`, the same |
+| `0x004ff3fa`, `0x004ff49d` | the same | `+0x1fc` = mGameTick (no wander; empty-handed) | `Decide`, the same |
+| `0x004ff428` | the same | the chooser asked when mGameTick > `+0x1fc` + 30 | `Decide`, the same |
+| `0x005002fe` | `FUN_004ffff0`, the queue turn | the mood gap, mGameTick − `+0x208` > 30, and the window on `+0x1fc` | `QueueTurn`, the same |
+| `0x004fcba9`, `0x004fd760` | `FUN_004fcb10`, `FUN_004fd570`, the choosers | an equal score wins on an odd mGameTick | `ParkRideChooser`, the same; the console's `why` hands it the 31 ms tick itself |
+| `0x004fd95b` | `FUN_004fd950` | the stay, `(mGameTick − +0x1d4) >> 2` (the leaver's sample `0x00502345`, the visitor's window) | counted (`LEAVER_STAY_SAMPLE`) |
+
+SetState stamps in cases 8 and `0xb` only; its case `0x15` reads the stay. `+0x1fc` is also written nought by the
+arrival's refusal (`PeepBehaviour.JoinTheQueue`), which is no clock read.
+
+**The objects' reads.** `FUN_004e0b90`'s wear and breakdown step on `mGameTick & 7` (`0x004e0c2c`) and the wear inside
+it on `mGameTick & 0x3f` (`FUN_004df670`, `0x004df719`), both unbuilt (Q157); a staff claim stamped `+0x60`
+(`FUN_004e01f0`, `0x004e01ff`) and let go 100 on (`FUN_004e0220`, `0x004e024d`), with the staff; the constructor's stamp
+of an item's first build (`FUN_004db090`, `0x004db69c`, the record `FUN_004d3d10` answers, `+0x1c`, when nought).
+`FUN_004e0900` (`0x004e0941`, `0x004e09fe`) and `FUN_004ddf50` (`0x004ddfe6`) only print it through `FUN_005da3c0`.
+So **an object's turn takes no clock of its own that OpenTPW builds**: the number `ParkPeople.TakeTheRidesTurns` is
+handed reaches only the guests' `SetState` and the balloon's sprite clock (`ParkRideOperation.SpriteClock`), and the
+sprite clock is the millisecond one, not this.
+
+**The rest of the 85**, by owner: the increment and the gate's retry on `% 30` (`FUN_00516380`, `0x00516388`,
+`0x00516398`, `0x0051644b`), the zero at level start (`0x00515865`), the save's write and read (`0x00516f06`,
+`0x00517bd8`), the sweep's tail on `% 100` for the golden tickets (`FUN_004d7b20`, `0x004d7b49`), the three stamp
+helpers (`FUN_0041a960`, `FUN_0041a970`, `FUN_0041a990`: the arrivals, the staff pool, the music and the advisor),
+the calendar's eight (`FUN_004f8260` to `FUN_004f88b0`), the bank's five (`FUN_004d01f0` to `FUN_004d0850`), the
+challenge's day (`FUN_004d1e90`), the staff's thirty-four (`FUN_004d46d0` to `FUN_004da490`, `FUN_00502600` to
+`FUN_005056e0`, `FUN_00508e70`, `FUN_00508f70`; "The staff turn", below) and a debug print (`FUN_004041d0`).
+
+**Measured in the original under Proton** (2026-10-07, stock Lost Kingdom, 1,604 sweeps from the load, `clock.py`
+polling the guests' fields beside the counter; five predictions written first, all five held):
+
+- At the first read, on mGameTick 755, the thirteen saved guests held `+0x1d4` **648 to 660** in id order (29, then
+  31 to 42), and `+0x1fc` and `+0x208` nought: the file's, as nothing after the load writes below 755.
+- **514** changes of `+0x1fc` or `+0x208`: every one wrote the mGameTick of its sweep, or nought to `+0x1fc`.
+- **8,654** falls of `mExitLevel` (`+0x1bc`), each by one, every one on a sweep where `(mGameTick & 3) == (id & 3)`.
+- The toilet need (`+0x1ac`) rose **449** times, by 1.0, every time on a sweep with `mGameTick & 0xf` nought and
+  **only for a guest whose id divides by four**: the drift sits inside the turn in four, so the other three quarters
+  of the guests never grow a need by drift. Theirs only fell, at a toilet's use (sixteen falls in all).
+- 25 guests made (1300 to 1312, 2002 to 2013): each `+0x1d4` the mGameTick it was made on.
+
+**OpenTPW today, measured** (`baseline.py`, the build of `b51621e`, predicted first): 60 s into the park `sweeps`
+read mGameTick **997** and the thirteen guests' idle stamps in `peeps` read 70 and 197 to 217, the frame clock over
+eight; the original's queuers stand within about 30 of the counter. The guests' turn in four, the drift's sixteenth,
+the chooser's tie and every stamp are therefore out of step with the park's clock by however long the program ran
+before the park, a different amount each run.
+
+**What the build is** (Q132b): hand `ParkState.GameTick` to `Peep.Tick`, `DueOn`, `PeepBehaviour.Step` and the rides'
+turns, and to the six other callers that work the frame clock out for themselves (`Admit`, `AdmitAsEntered`,
+`SendAsChosen`, `ThingRemoved`, `QueueRemeasured`, and `WhyCensus`, which hands on the 31 ms tick undivided);
+keep `SpriteClock` on the frame clock; read the save's `mArrivalDate` (`+398`), `mTimeOfLastSpotAnim` (`+513`) and
+`mTimeStartedIdling` (`+517`) into the guest and stamp the arrival at making. The sprite gate and the sweep gate stay
+on the 31 ms tick, which is the engine's.
+
 ## The staff turn - `CStaff`, every clock `mGameTick`
 
 Decoded 2026-09-25 (`docs/QUEUE.md` Q82): the guard's handler read by hand, then six decoders (the researcher, the

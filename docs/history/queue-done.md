@@ -5014,6 +5014,28 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the buy list -1, 2, -2, 3); the one miss was mine, the features tab's names, which the `american` tables give the
   original differently. Beside the original under Proton on the save's own sixteen candidates: the same rows at
   every step. 28 bugs put back, 28 caught.
+- [x] **Q132. Guests and rides take their turns on the game clock over eight, where the original hands them
+  `mGameTick`. Decode first.** Found by Q68b. `ParkPeople.OnUpdate` hands `Peep.Tick`, `PeepBehaviour.Step` and the
+  rides' turns `GameClock.Ticks / 8`, which runs from the program's start and is not reset on entering a park
+  (`PeepBehaviour.Step`'s `tick` note); the original's handlers read `mGameTick`, which `ParkState.GameTick` now
+  carries from the save's 755. The needs share `(id & 3) == (tick & 3)`, the behaviours' time stamps and the chooser's
+  tie on `mGameTick & 1` (`ParkRideChooser.Beats`) turn on it. Decode which of them read `mGameTick`, then pass the
+  park's clock, as Q82b did for the staff. Confirm: a saved guest's stamp read against 755, in the `peeps` census,
+  predicted first.
+  Q82 found the guests' needs gate reads `mGameTick & 3` (`FUN_00501650`, `0x00501669`), as `ParkPeople.OnUpdate`'s
+  thing-tick note says.
+  From Q126: a dropped sweep makes the handed tick jump (n, n+1, n+2, then n+8 after a 64-tick frame), so the
+  guests of one needs slot miss a turn the original's `mGameTick` gives them on its next sweep, and stamps taken
+  from it jump five sweeps.
+  From Q237: because that clock is never reset, a test with every generator seeded still plays out by how many
+  ticks the tests before it ran (`ParkTickTests.PinTheClock` sets it to nought for one test). On the park's clock a
+  seeded run would repeat by itself.
+  **Decoded 2026-10-07** (`ride-operation.md`, "The guests' and the objects' clock"): every one of the guests' 18
+  reads and the objects' 8 is `mGameTick`, of 85 in the executable; none of their code reads the 31 ms counter or
+  the millisecond clock. In the original, five predictions of five: the thirteen saved guests' `mArrivalDate` 648 to
+  660 against 755 (the file's bytes agree), 514 stamps all the sweep's tick, 8,654 exit-level falls all on the
+  guest's own sweep in four, the toilet's drift only on `& 0xf` nought and only for ids that divide by four. Today's
+  build: stamps near 200 beside a park clock of 997. The build is Q132b.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.
