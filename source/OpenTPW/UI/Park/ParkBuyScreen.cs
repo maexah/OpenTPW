@@ -94,6 +94,17 @@ internal sealed class ParkBuyScreen : UiWindow
 	/// <summary>Which tab the screen was last left on - the original keeps the same in a global.</summary>
 	private static int _lastTab;
 
+	/// <summary>
+	/// The list's sort, kept for the session: the column + 1, negated when descending - the original's
+	/// <c>[0x00755140]</c>, which starts at 1, the name ascending.
+	/// </summary>
+	private static int _sort = 1;
+
+	/// <summary>The headings' font slot and colour, as the opener hands them to <c>FUN_00486660</c> (<c>[0x00755138]</c>).</summary>
+	private const int HeadingFont = 8;
+
+	private static readonly UiColour HeadingColour = new( 255, 239, 0 );
+
 	public ParkBuyScreen( WindowStack stack ) : base( stack )
 	{
 		// Not modal and not pausing - see the class remarks. Built onto the park's own layer (0x004acd62): the gadget
@@ -158,11 +169,36 @@ internal sealed class ParkBuyScreen : UiWindow
 			// The stream's own column edges, op 0xb: name, price, and the owned/researched state. The
 			// third is 51 units wide because it is a TICK-BOX, not a number - see UiList.StateMesh.
 			Columns = [(1039, 1447), (1460, 1664), (1673, 1724)],
+
+			// The name is text; the price and the state are numbers (0x004ad033).
+			TextColumns = [true, false, false],
 			StateMesh = "i_boxtick",
 			SelectsUnderPointer = true,
 			Activated = Chose,
-			SelectionChanged = RowSelected
+			SelectionChanged = RowSelected,
+
+			// The screen's handler keeps the list's 0x406.
+			SortChanged = word => _sort = word
 		} );
+
+		// Handed over while the list is still empty, so it sorts nothing (0x004ad057).
+		_list.SetSort( _sort );
+
+		// UITEXT 123, 124 and 138; the rects are the stream's.
+		(int Text, int Help, UiRect Rect)[] headings =
+		[
+			(123, 0x90, new UiRect( 1032, 317, 1454, 422 )),
+			(124, 0x91, new UiRect( 1458, 317, 1664, 422 )),
+			(138, 0x92, new UiRect( 1669, 317, 1729, 422 )),
+		];
+
+		for ( var column = 0; column < headings.Length; ++column )
+		{
+			var heading = headings[column];
+
+			_list.AddHeading( column, heading.Rect, Localization.Text( heading.Text ), "!cbut", HeadingFont, HeadingColour, heading.Help )
+				.Clicked += LogOrder;
+		}
 
 		_tabs = _list.Add( new UiRadioGroup
 		{
@@ -249,6 +285,8 @@ internal sealed class ParkBuyScreen : UiWindow
 
 		_list.Clear();
 
+		// Each row goes in by the list's sort. A deviation: they are handed over in name order, where the original
+		// walks its catalogue (FUN_00412e60), which shows only among rows equal on the sorted column.
 		// A deviation: the price is the item file's, where the original shows its control record's +0x04 (0x004ab086),
 		// which the record takes from the same key; the two agree in all 50 of the shipped park's records.
 		if ( Level.Current is { Catalogue: { } catalogue, Research: { } research } )
@@ -268,7 +306,10 @@ internal sealed class ParkBuyScreen : UiWindow
 			_list.Add( new UiList.Row( ClearLandRow, Localization.Get( UIStrings.ClearLand ), 0 ) );
 		}
 
+		LogOrder();
 	}
+
+	private void LogOrder() => Log.Info( $"Buy list: tab {_tab}, {_list.Census()}" );
 
 	/// <summary>
 	/// The items one tab lists: its kind, and <b>only a researched item</b> (<c>0x004ab023</c>), the park's flag - see

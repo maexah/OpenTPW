@@ -40,14 +40,6 @@ the original.
 
 **The 2026-10-06 review's leftovers come first, at Alexah's word (2026-10-06).**
 
-- [ ] **Q130e. Build the lists' order: the sorted insert on the hire and buy lists, and a heading's click.** From
-  Q130d (`hud.md`, "A list's order"). Give `UiList` the column and direction it sorts on, make `Add` the sorted
-  insert whenever they are set (text by plain character value, equal rows after their equals), and re-sort on a
-  heading's click, keeping equal rows as they stood: the same column flips the direction, another sets ascending.
-  Each screen keeps its word for the session (hire, buy, visitors: all start at the first column, ascending). The
-  slot stays the row's id, so the pool needs no slots for this. Confirm: the hire screen beside the original's on
-  each tab, then a click on each heading, the rows read from the picture and the order logged, predicted first;
-  ties after a click on Monthly Wage, and after another tab and back.
 - [ ] **Q132. Guests and rides take their turns on the game clock over eight, where the original hands them
   `mGameTick`. Decode first.** Found by Q68b. `ParkPeople.OnUpdate` hands `Peep.Tick`, `PeepBehaviour.Step` and the
   rides' turns `GameClock.Ticks / 8`, which runs from the program's start and is not reset on entering a park
@@ -348,6 +340,9 @@ the original.
   screen.
   From Q238: the buy list's prices are bare numbers where the original letters "$ 2500" (UITEXT `0x1c1`,
   `UIStrings.Dollar`; `q238/fix/b-buy-screen.png` beside `rv8/orig/b1.png`), and nothing counts it.
+  From Q130e, seen beside the original's lists: the hire list's wages are bare numbers too ("$ 63" there); a buy
+  row with no state shows an empty box there and nothing here; Buy Land's price is `[0x0078560c]`, 10 there and 0
+  here; and the headings' lettering is larger there than the rows', here the same.
   From Q188: the buy screen's panel is the object window's preview (`ParkObjectPreview`, which wants a placed thing
   today: give it an item); in the original it is (437,162) 360 by 363. The footprint picture at its lower left is
   built (Q233b) and is drawn in front of the model; the name row `0x1ec` above it is not built.

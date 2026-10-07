@@ -408,6 +408,55 @@ public class ParkFootprintPictureTests
 		Assert.IsNull( screen.Footprint.Shape, mystery.Name );
 	}
 
+	/// <summary>
+	/// <b>The buy list stands in its sort, and the screen keeps the sort for the session</b> (<c>[0x00755140]</c>): the
+	/// rides in name order as it opens, by price after a click on Price, and the next screen opened sorted the same.
+	/// The name sorted on is the row's own, so a mystery ride's "???" stands first; the price is a number, so 500
+	/// stands before 2000.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the list given no sort; the price column text; the screen not keeping the word; the headings not built.</remarks>
+	[TestMethod]
+	public void TheBuyListKeepsItsSortForTheSession()
+	{
+		var sort = typeof( ParkBuyScreen ).GetField( "_sort", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic )!;
+		UiList ListOf( ParkBuyScreen from ) => (UiList)typeof( ParkBuyScreen ).GetField( "_list", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance )!.GetValue( from )!;
+
+		sort.SetValue( null, 1 );
+		typeof( ParkBuyScreen ).GetField( "_lastTab", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic )!.SetValue( null, 0 );
+
+		try
+		{
+			var (_, screen, stack) = BuyScreen();
+			var list = ListOf( screen );
+
+			static bool Rising<T>( System.Collections.Generic.IEnumerable<T> values, System.Comparison<T> compare )
+				=> values.Zip( values.Skip( 1 ), ( a, b ) => compare( a, b ) <= 0 ).All( ordered => ordered );
+
+			Assert.IsTrue( list.Rows.Count > 3 );
+			Assert.IsTrue( Rising( list.Rows.Select( row => row.Name ), string.CompareOrdinal ), "by the rows' names" );
+			Assert.AreEqual( Localization.Get( UIStrings.MysteryRide ), list.Rows[0].Name );
+			Assert.IsFalse( Rising( list.Rows.Select( row => row.Value ), ( a, b ) => a.CompareTo( b ) ) );
+			Assert.IsFalse( Rising( list.Rows.Select( row => $"{row.Value}" ), string.CompareOrdinal ), "prices that text would order otherwise" );
+
+			var price = (UiButton)list.Children.Single( child => child.Id == 0x11 );
+
+			Assert.AreEqual( Localization.Text( 124 ), price.Text );
+			price.Clicked!();
+			Assert.IsTrue( Rising( list.Rows.Select( row => row.Value ), ( a, b ) => a.CompareTo( b ) ), "by price, as numbers" );
+
+			stack.Close( screen );
+
+			var again = ListOf( new ParkBuyScreen( stack ) );
+
+			Assert.AreEqual( 2, again.SortWord, "the next screen opened keeps it" );
+			Assert.IsTrue( Rising( again.Rows.Select( row => row.Value ), ( a, b ) => a.CompareTo( b ) ) );
+		}
+		finally
+		{
+			sort.SetValue( null, 1 );
+		}
+	}
+
 	/// <summary>The pointer moved onto the buy list's first row, through the stack: half a second on, its picture is there.</summary>
 	/// <remarks><b>Mutations:</b> the buy list without the flag; the selection not wired to the wait; the picture not in the panel.</remarks>
 	[TestMethod]
@@ -415,12 +464,17 @@ public class ParkFootprintPictureTests
 	{
 		var (catalogue, screen, stack) = BuyScreen();
 		var list = (UiList)typeof( ParkBuyScreen ).GetField( "_list", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance )!.GetValue( screen )!;
-		var first = catalogue.All.Single( item => item.Id == list.Rows[0].Id );
+
+		// The first row with a picture: the mystery rides' rows stand first, their name beginning "???", and show none.
+		var slot = Enumerable.Range( 0, list.Rows.Count ).First( at => list.Rows[at].Name != Localization.Get( UIStrings.MysteryRide ) );
+		var first = catalogue.All.Single( item => item.Id == list.Rows[slot].Id );
+
+		Assert.IsTrue( slot < list.VisibleRows );
 
 		Time.PinWall( 32000 );
 		Input.Mouse = new()
 		{
-			Position = new Vector2( (list.RowArea.Left + list.RowArea.Right) / 2f, list.RowArea.Top + (list.RowHeight / 2f) ),
+			Position = new Vector2( (list.RowArea.Left + list.RowArea.Right) / 2f, list.RowArea.Top + (slot * list.RowHeight) + (list.RowHeight / 2f) ),
 			Delta = new Vector2( 1, 0 )
 		};
 		stack.Update();

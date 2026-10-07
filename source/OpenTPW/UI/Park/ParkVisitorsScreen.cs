@@ -55,6 +55,12 @@ internal sealed class ParkVisitorsScreen : UiWindow
 
 	private readonly UiList _list;
 
+	/// <summary>
+	/// The list's sort, kept for the session: the column + 1, negated when descending - the original's
+	/// <c>[0x007508bc]</c>, which starts at 1, the Visitor Number ascending.
+	/// </summary>
+	private static int _sort = 1;
+
 	/// <summary>The park whose guests arriving and going this list is told of, let go of as it closes.</summary>
 	private readonly ParkPeople? _people;
 
@@ -94,6 +100,16 @@ internal sealed class ParkVisitorsScreen : UiWindow
 
 			// A right click on the list moves the camera to the selected row's guest and closes the screen (0x004934c5).
 			RowRightClicked = GoTo,
+
+			// The screen's handler keeps the list's 0x406 (0x00493479). Time In Park and the fifth column are not
+			// built, so a sort on either leaves the rows as they stand: counted.
+			SortChanged = word =>
+			{
+				_sort = word;
+
+				if ( Math.Abs( word ) is 3 or 5 )
+					Unimplemented.Report( "VISITOR_SORT_ON_UNBUILT_COLUMN" );
+			},
 			Columns = [(297, 689), (701, 948), (966, 1213), (1233, 1358), (1372, 1474), (1478, 1718)],
 
 			// All six from the right - see the class remarks.
@@ -104,8 +120,11 @@ internal sealed class ParkVisitorsScreen : UiWindow
 			]
 		} );
 
+		// Handed over while the list is still empty, so it sorts nothing.
+		_list.SetSort( _sort );
+
 		for ( var column = 0; column < Headings.Length; ++column )
-			_list.AddHeading( column, Headings[column], Localization.Text( 113 + column ) );
+			_list.AddHeading( column, Headings[column], Localization.Text( 113 + column ) ).Clicked += LogOrder;
 
 		Root.Add( CrossLink( 0x1e49b, 360, 136, "b_allthings", 5 ) );
 		Root.Add( CrossLink( 0x1e499, 467, 137, "b_parkinfo", 3 ) );
@@ -157,9 +176,8 @@ internal sealed class ParkVisitorsScreen : UiWindow
 	/// <see cref="ParkPeople.Peeps"/> is guests only - staff are a list of their own - so this needs no
 	/// filter, where the staff screen's walk does.
 	/// <para>
-	/// <b>The sort is always Visitor Number ascending</b>, the static default of the remembered sort
-	/// <c>DAT_007508bc</c> (1): the headings here do not sort (<see cref="UiList.AddHeading"/>), so nothing can
-	/// store another.
+	/// <b>The sort is the screen's kept one</b>, <see cref="_sort"/>: Visitor Number ascending until a heading is
+	/// clicked.
 	/// </para>
 	/// </remarks>
 	private void Show()
@@ -168,8 +186,12 @@ internal sealed class ParkVisitorsScreen : UiWindow
 			return;
 
 		foreach ( var guest in _people.Peeps )
-			_list.Insert( RowOf( guest ), SortKey );
+			_list.Add( RowOf( guest ) );
+
+		LogOrder();
 	}
+
+	private void LogOrder() => Log.Info( $"Visitors list: {_list.Census()}" );
 
 	/// <summary>A guest's row - the original's row adder <c>FUN_00493800</c>.</summary>
 	/// <summary>
@@ -182,6 +204,10 @@ internal sealed class ParkVisitorsScreen : UiWindow
 		Stack.Close( this );
 	}
 
+	/// <remarks>
+	/// Every column is a number, and the list sorts on it. The original's happiness is its whole part as a bar,
+	/// <c>(byte) &lt;&lt; 10 / 100</c> (<c>0x00493870</c>), which stands in the same order as the whole part.
+	/// </remarks>
 	private static UiList.Row RowOf( Peep guest )
 		=> new( guest.ThingId, $"{guest.VisitorNumber}", guest.VisitorNumber, Values:
 		[
@@ -190,15 +216,13 @@ internal sealed class ParkVisitorsScreen : UiWindow
 			$"{guest.NumRides}",
 			"",
 			$"{(int)guest.Happiness}"
-		] );
-
-	/// <summary>What the list is sorted on: the Visitor Number, which <see cref="RowOf"/> keeps as the row's value.</summary>
-	private static int SortKey( UiList.Row row ) => row.Value;
+		],
+		Numbers: [guest.VisitorNumber, guest.Cash, 0, guest.NumRides, 0, (int)guest.Happiness] );
 
 	/// <summary>A guest was made while the list is open: their row goes in by sort order (<c>FUN_00493c50</c>).</summary>
 	private void Arrived( Peep guest )
 	{
-		var at = _list.Insert( RowOf( guest ), SortKey );
+		var at = _list.Add( RowOf( guest ) );
 
 		Log.Info( $"Visitors list: row added for guest {guest.ThingId} (visitor {guest.VisitorNumber}) at {at} - "
 			+ $"{_list.Rows.Count} rows, top row {_list.ScrollTop}" );

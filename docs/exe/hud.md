@@ -313,8 +313,8 @@ What each shows, from its own decoded labels:
 ### The four built screens, and what walking their streams alone could not give
 
 **Column headings are in CODE, not in the layout stream.** Every `op 0xc` header child carries a rect
-and nothing else; each builder then fetches it by id **`0x10 + index`** and hands it a UITEXT row
-through `FUN_00485b00( row, …, sortMessage )`. A stream walk therefore yields the right number of
+and nothing else; each builder then fetches it by id **`0x10 + index`** and hands it the text of a UITEXT row
+(`FUN_00485b00( row )`) through `FUN_00486660` ("A list's order"). A stream walk therefore yields the right number of
 unnamed boxes and no labels at all. The rows, read back from `UITEXT.str`:
 
 | Screen | Header ids | UITEXT rows | Headings |
@@ -337,8 +337,9 @@ the original either; it is not a decode failure.
     case 2 sideshows  FUN_00494250 -> tree 0x750ba0   6 columns
     case 3 misc       FUN_00495110 -> tree 0x750ca0   2 columns
 
-`FUN_006636b2( column, rightAligned )` sets alignment per column: allstaff passes 0,0,1,1,1 and
-allitems 0,1,1,1,1, but **allpeeps passes 1 for all six** — its name column is a visitor *number*.
+`FUN_006636b2( column, type )` sets each column's type, 0 text and 1 a number, which is what the list sorts it as
+(`FUN_00663edc` reads it back through `FUN_006636f6`) and what the screens here take the alignment from: allstaff
+passes 0,0,1,1,1 and allitems 0,1,1,1,1, but **allpeeps passes 1 for all six** — its name column is a visitor *number*.
 
 **Tab ids are not in screen order.** allitems' switch takes case 1 to `0x12c4bc` (at x 1521–1623) and
 case 2 to `0x12c4bb` (at 1402–1504), so laying the tabs out as a stride from the first one puts shops
@@ -1104,8 +1105,40 @@ entertainers: a click on Monthly Wage from name order gave Duncan Kershaw, Shint
 (name order), and another tab and back gave Shintaro Kanaoya, Simon Carter, Duncan Kershaw (slots 0, 8, 13). The buy
 list reversed on a click on Name and was still reversed when opened again.
 
-**OpenTPW**: `UiList.Insert` is the sorted insert and only the visitors list calls it; `ParkHireScreen.Show` and the
-buy list add in the order given, and no list answers a click on a heading. The build is `docs/QUEUE.md` Q130e.
+**The hire and buy lists' headings** are the stream's `op 0xc` children, lettered and framed by `FUN_00486660(
+control, text, font, r, g, b, help )`: a label skin, the nine-slice frame `!cbut`, the text centred both ways, the font
+slot and colour handed over, and the help row at `+0x90`. Both openers hand font slot 8 (`[0x007523e0]`,
+`[0x00755138]`) and the colour 255, 239, 0.
+
+| List | Column | Rect | UITEXT | Help | Type |
+|---|---|---|---|---|---|
+| hire (`0x00751fa8`) | 0 | 1039, 331, 1460, 436 | 144 "Candidate Name" | 159 | text |
+| | 1 | 1471, 331, 1731, 436 | 145 "Monthly Wage" | 160 | number |
+| buy (`0x00754cf8`) | 0 | 1032, 317, 1454, 422 | 123 "Name" | 144 | text |
+| | 1 | 1458, 317, 1664, 422 | 124 "Price" | 145 | number |
+| | 2 | 1669, 317, 1729, 422 | 138 "." | 146 | number, the tick's state |
+
+The types are `FUN_006636b2`'s (hire `0x0049c0cf`, buy `0x004ad033`); the visitors list leaves all six columns
+numbers. The buy list sorts on the text its row shows, so a mystery ride's "??? Mystery Ride! ???" stands first, and
+the two land rows are sorted in with the rest (`FUN_004aaf70` adds them through the same insert, Buy Land priced at
+`[0x0078560c]`).
+
+**OpenTPW** (Q130e): `UiList` keeps the column and direction (`SetSort`, `SortWord`), `Add` is the sorted insert
+whenever a sort is set, `HeadingClicked` is `FUN_00665a44` and `Sort` `FUN_006628f4`; a heading is a button
+(`AddHeading`). The hire, buy and visitors screens each keep their word in a static for the session. The all-staff
+and all-items lists are given no sort, stand as added, and count a heading's click (`LIST_HEADING_SORT_NOT_BUILT`).
+A sort on the visitors' Time In Park or fifth column, neither built, leaves the rows as they stand
+(`VISITOR_SORT_ON_UNBUILT_COLUMN`). The buy list's rows are handed over in name order, where the original walks its
+catalogue (`FUN_00412e60`): that shows only among rows equal on the sorted column.
+
+**Measured, both games side by side** (Q130e, 2026-10-07, each predicted first; `q130e/`). The original, on the save's
+own sixteen candidates (every photograph before `mGameTick` 858, when the first times out), and OpenTPW with the park
+paused, gave the same rows on all five tabs, apart from three names the `american` tables give differently, which
+stand where their own letters put them. The entertainers (slots 5, 9, 13 at 60, slot 23 at 84): Monthly Wage, word 2,
+the three at 60 in name order then 84; the mechanics' tab and back, word 2, the three in slot order; Monthly Wage
+again, -2, the 84 first and the three as they stood; Candidate Name, 1; again, -1. The buy list's rides: Name -1,
+Price 2, Price -2, the tick 3, the four rows the same in both at each step. The original's features tab at -1 reads
+Small bathroom, Small Tree, Small Bush: a small letter after every capital.
 
 ### The pointer over a list
 

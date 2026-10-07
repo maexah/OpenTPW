@@ -1,6 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
@@ -53,6 +54,45 @@ public class ParkVisitorsScreenTests
 	private static UI.UiList ListOf( UI.ParkVisitorsScreen screen )
 		=> (UI.UiList)typeof( UI.ParkVisitorsScreen ).GetField( "_list", BindingFlags.Instance | BindingFlags.NonPublic )!
 			.GetValue( screen )!;
+
+	/// <summary>
+	/// <b>The visitors list stands by Visitor Number as it opens, and a click on Cash Remaining sorts it by cash</b>
+	/// (<c>[0x007508bc]</c>, <c>docs/exe/hud.md</c>, "A list's order"): every column is a number.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the list given no sort; the cash sorted as the visitor number; the word not kept.</remarks>
+	[TestMethod]
+	public void TheListSortsOnTheHeadingClicked()
+	{
+		var sort = typeof( UI.ParkVisitorsScreen ).GetField( "_sort", BindingFlags.Static | BindingFlags.NonPublic )!;
+
+		using var stream = new MemoryStream( FileSystem.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
+
+		people = new ParkPeople( world, new ParkBalance( "jungle", easyMode: true ), null, new ParkState( world ) );
+		sort.SetValue( null, 1 );
+
+		try
+		{
+			var stack = AStack();
+			var list = ListOf( new UI.ParkVisitorsScreen( stack ) );
+
+			int[] Cash() => list.Rows.Select( row => people!.Guests[row.Id].Cash ).ToArray();
+			static bool Rising( int[] values ) => values.Zip( values.Skip( 1 ), ( a, b ) => a <= b ).All( ordered => ordered );
+
+			Assert.AreEqual( 1, list.SortWord );
+			Assert.IsTrue( Rising( list.Rows.Select( row => row.Value ).ToArray() ), "by visitor number" );
+			Assert.IsFalse( Rising( Cash() ), "which is not by cash" );
+
+			((UI.UiButton)list.Children.Single( child => child.Id == 0x11 )).Clicked!();
+
+			Assert.IsTrue( Rising( Cash() ), "by cash" );
+			Assert.AreEqual( 2, ListOf( new UI.ParkVisitorsScreen( stack ) ).SortWord, "the next screen opened keeps it" );
+		}
+		finally
+		{
+			sort.SetValue( null, 1 );
+		}
+	}
 
 	/// <remarks>
 	/// <b>Mutations:</b> the rewrite clearing and refilling the list (the build before Q200b) throws the top row back to

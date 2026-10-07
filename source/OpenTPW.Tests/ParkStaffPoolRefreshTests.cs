@@ -351,6 +351,76 @@ public class ParkStaffPoolRefreshTests
 	}
 
 	/// <summary>
+	/// <b>The hire screen's list stands in its sort, and the screen keeps the sort for the session</b>
+	/// (<c>[0x007523e4]</c>, <c>docs/exe/hud.md</c>, "A list's order"): name order as it opens, by wage after a click on
+	/// Monthly Wage, a candidate who joins put in by it, and the next screen opened sorted the same.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the list given no sort; the name column a number; the screen not keeping the word; the headings
+	/// not built; the wage heading on column nought.
+	/// </remarks>
+	[TestMethod]
+	public void TheHireListKeepsItsSortForTheSession()
+	{
+		var levelBefore = Level.Current;
+		var screenBefore = Screen.Size;
+		var sort = typeof( UI.ParkHireScreen ).GetField( "_sort", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic )!;
+
+		Screen.Size = new Point2( 2048, 1536 );
+
+		var pool = new ParkStaffPool( new ParkBalance( "jungle", easyMode: true ), gameTick: 0 );
+		var level = (Level)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject( typeof( Level ) );
+		typeof( Level ).GetProperty( nameof( Level.StaffPool ) )!.SetValue( level, pool );
+		Level.Current = level;
+
+		UI.UiList ListOf( UI.ParkHireScreen screen ) => (UI.UiList)typeof( UI.ParkHireScreen )
+			.GetField( "_list", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic )!.GetValue( screen )!;
+
+		static bool Rising<T>( System.Collections.Generic.IEnumerable<T> values, System.Comparison<T> compare )
+			=> values.Zip( values.Skip( 1 ), ( a, b ) => compare( a, b ) <= 0 ).All( ordered => ordered );
+
+		try
+		{
+			sort.SetValue( null, 1 );
+
+			var stack = new UI.WindowStack();
+			var screen = new UI.ParkHireScreen( stack );
+			var list = ListOf( screen );
+
+			stack.Open( screen );
+
+			// Enough sweeps for the kind shown to hold several candidates, each put in as they joined.
+			for ( var tick = 1; tick <= 400; ++tick )
+				pool.Sweep( tick, _ => 0 );
+
+			Assert.IsTrue( list.Rows.Count > 2, "several candidates of the kind shown" );
+			Assert.AreEqual( 1, list.SortWord );
+			Assert.IsTrue( Rising( list.Rows.Select( row => row.Name ), string.CompareOrdinal ), "in name order, joiners too" );
+
+			var wage = (UI.UiButton)list.Children.Single( child => child.Id == 0x11 );
+
+			Assert.AreEqual( Localization.Text( 145 ), wage.Text );
+			wage.Clicked!();
+			Assert.AreEqual( 2, list.SortWord );
+			Assert.IsTrue( Rising( list.Rows.Select( row => row.Value ), ( a, b ) => a.CompareTo( b ) ), "by wage" );
+			Assert.IsFalse( Rising( list.Rows.Select( row => row.Name ), string.CompareOrdinal ), "and no longer by name" );
+
+			stack.Close( screen );
+
+			var again = ListOf( new UI.ParkHireScreen( stack ) );
+
+			Assert.AreEqual( 2, again.SortWord, "the next screen opened keeps it" );
+			Assert.IsTrue( Rising( again.Rows.Select( row => row.Value ), ( a, b ) => a.CompareTo( b ) ) );
+		}
+		finally
+		{
+			sort.SetValue( null, 1 );
+			Level.Current = levelBefore!;
+			Screen.Size = screenBefore;
+		}
+	}
+
+	/// <summary>
 	/// <b>The hire screen's list follows the pool while it is open</b>: a candidate of the kind shown who joins gets a
 	/// row, one of another kind does not, and one whose time runs out loses theirs (<c>FUN_00481550</c>).
 	/// </summary>

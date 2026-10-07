@@ -5007,6 +5007,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   and a heading's click flips or changes it and re-sorts. In the original, predicted first (`q130d/orig`): the word
   read 1, then -1, 2, -2 on three heading clicks with the rows following, kept across a tab and a reopening; all five
   tabs in name order, four not in slot order. Nothing built; the build is Q130e.
+- [x] **Q130e. Build the lists' order: the sorted insert on the hire and buy lists, and a heading's click.** From
+  Q130d (`hud.md`, "A list's order"). Done 2026-10-07: `UiList` keeps the sort, `Add` is the sorted insert, a
+  heading is a button that re-sorts; hire, buy and visitors keep their word for the session. In the game, predicted
+  first: 21 of 22 (five tabs in name order, words 2, 2, -2, 1, -1 on the entertainers with the ties as predicted,
+  the buy list -1, 2, -2, 3); the one miss was mine, the features tab's names, which the `american` tables give the
+  original differently. Beside the original under Proton on the save's own sixteen candidates: the same rows at
+  every step. 28 bugs put back, 28 caught.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

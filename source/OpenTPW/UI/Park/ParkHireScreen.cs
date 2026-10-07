@@ -69,6 +69,17 @@ internal sealed class ParkHireScreen : UiWindow
 	/// <summary>Which tab the screen was last left on - the original keeps the same in a global.</summary>
 	private static int _lastKind;
 
+	/// <summary>
+	/// The list's sort, kept for the session: the column + 1, negated when descending - the original's
+	/// <c>[0x007523e4]</c>, which starts at 1, the name ascending.
+	/// </summary>
+	private static int _sort = 1;
+
+	/// <summary>The headings' font slot and colour, as the opener hands them to <c>FUN_00486660</c> (<c>[0x007523e0]</c>).</summary>
+	private const int HeadingFont = 8;
+
+	private static readonly UiColour HeadingColour = new( 255, 239, 0 );
+
 	public ParkHireScreen( WindowStack stack ) : base( stack )
 	{
 		// Not modal and not pausing - the same reading as the buy screen: nothing in either builder asks
@@ -160,11 +171,24 @@ internal sealed class ParkHireScreen : UiWindow
 			Mesh = UiMesh.Get( "list_hirestaff" ),
 			RowArea = new UiRect( 1043, 441, 1729, 911 ),
 
-			// TWO columns - name and wage. See the class remarks.
+			// TWO columns - name and wage. See the class remarks. The name is text and the wage a number (0x0049c0cf).
 			Columns = [(1043, 1456), (1477, 1724)],
+			TextColumns = [true, false],
 			Activated = Chose,
-			SelectionChanged = Selected
+			SelectionChanged = Selected,
+
+			// The screen's handler keeps the list's 0x406 (0x0049b85e).
+			SortChanged = word => _sort = word
 		} );
+
+		// Handed over while the list is still empty, so it sorts nothing (0x0049c0f0).
+		_list.SetSort( _sort );
+
+		// UITEXT 144 and 145, "Candidate Name" and "Monthly Wage"; the rects are the stream's.
+		_list.AddHeading( 0, new UiRect( 1039, 331, 1460, 436 ), Localization.Text( 144 ), "!cbut", HeadingFont, HeadingColour, 159 )
+			.Clicked += LogOrder;
+		_list.AddHeading( 1, new UiRect( 1471, 331, 1731, 436 ), Localization.Text( 145 ), "!cbut", HeadingFont, HeadingColour, 160 )
+			.Clicked += LogOrder;
 
 		_tabs = _list.Add( new UiRadioGroup
 		{
@@ -255,7 +279,8 @@ internal sealed class ParkHireScreen : UiWindow
 
 	/// <summary>
 	/// Fills the list with one kind's candidates - the original's <c>FUN_0049b5b0</c>, whose filter is
-	/// the candidate record's own first field against the tab being shown.
+	/// the candidate record's own first field against the tab being shown. Each goes in by the list's sort, so the
+	/// order they are handed over in shows only among equal rows.
 	/// </summary>
 	private void Show( int kind )
 	{
@@ -276,8 +301,11 @@ internal sealed class ParkHireScreen : UiWindow
 				_list.Add( new UiList.Row( person.Id, person.Name, person.Wage ) );
 		}
 
+		LogOrder();
 		ShowMoney();
 	}
+
+	private void LogOrder() => Log.Info( $"Hire list: kind {_kind}, {_list.Census()}" );
 
 	/// <summary>
 	/// The list follows the pool while the screen is open: a candidate who joins it gets a row and one whose time

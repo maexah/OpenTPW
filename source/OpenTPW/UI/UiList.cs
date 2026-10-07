@@ -41,14 +41,41 @@ internal sealed class UiList : UiControl
 	/// <b><see cref="Values"/> carries a value per column</b>, which is what lets a five-column staff
 	/// list be expressed. <see cref="Value"/> fills the first of them for a row with no
 	/// <see cref="Values"/> - the shape the buy and hire screens and the items screen's counted rows push.
+	/// <para>
+	/// <b><see cref="Numbers"/> is what a numeric column is sorted on</b>, a number per column, for a row whose
+	/// columns hold more than one. Without it a numeric column's number is <see cref="Value"/>, and the tick-box
+	/// column's <see cref="State"/>.
+	/// </para>
 	/// </remarks>
 	internal readonly record struct Row( int Id, string Name, int Value, int State = 0,
-		IReadOnlyList<string>? Values = null, UiColour? Colour = null );
+		IReadOnlyList<string>? Values = null, UiColour? Colour = null, IReadOnlyList<int>? Numbers = null );
 
 	private readonly List<Row> _rows = [];
 
-	/// <summary>Every row the list holds, in the order it was given them.</summary>
+	/// <summary>Every row the list holds, in the order it stands in.</summary>
 	internal IReadOnlyList<Row> Rows => _rows;
+
+	/// <summary>
+	/// Which columns hold text, by column: the original's column type 0, sorted as text, where every other column is
+	/// type 1, a number (<c>FUN_006636b2</c>; the layout stream leaves every column a number). Empty is every column
+	/// a number.
+	/// </summary>
+	internal bool[] TextColumns { get; init; } = [];
+
+	/// <summary>The column the list is sorted on (<c>list+0x168</c>), or -1 for a list no screen has given a sort.</summary>
+	private int _sortColumn = -1;
+
+	/// <summary>The sort's direction (<c>list+0x16a</c>).</summary>
+	private bool _descending;
+
+	/// <summary>
+	/// The sort as the original tells it and each screen keeps it: the column + 1, negated when descending
+	/// (<c>FUN_006658b9</c>). Nought is a list with no sort, which stands in the order it was given its rows.
+	/// </summary>
+	internal int SortWord => _sortColumn < 0 ? 0 : _descending ? -(_sortColumn + 1) : _sortColumn + 1;
+
+	/// <summary>The sort changed - the original's message <c>0x406</c>. Handed <see cref="SortWord"/>.</summary>
+	internal Action<int>? SortChanged { get; set; }
 
 	/// <summary>
 	/// Where the rows are drawn, which the original carries as a rect of its own - stream op <c>0xa</c>,
@@ -202,25 +229,33 @@ internal sealed class UiList : UiControl
 	/// <b>The heading TEXT is not in the layout stream at all</b>, which is why walking the stream alone
 	/// leaves five unnamed boxes. Each builder fetches the child by id <c>0x10 + index</c> and hands it a
 	/// UITEXT row - <c>FUN_00485b00( row, ..., sortMessage )</c> - so the headings live in code and the
-	/// rects live in data. The sort message each carries is the other half of that call and is not
-	/// reproduced here; these headings label, they do not sort.
+	/// rects live in data. A heading is a button, and its click is the list's: <see cref="HeadingClicked"/>.
+	/// <para>
+	/// <b>The hire and buy lists' headings are lettered and framed by <c>FUN_00486660</c></b>: the frame
+	/// <c>!cbut</c>, the text centred both ways in the font and colour handed over, and a help row. A caller that
+	/// names a <paramref name="mesh"/> gets that; one that does not keeps a bare label.
+	/// </para>
 	/// <para>
 	/// They are children of the LIST, and they survive <see cref="Build"/> because it clears only the row
 	/// cells it made itself - the same reason the tab groups survive it.
 	/// </para>
 	/// </remarks>
-	internal UiControl AddHeading( int column, UiRect rect, string text )
-		=> Add( new UiControl
+	internal UiButton AddHeading( int column, UiRect rect, string text, string? mesh = null, int? font = null,
+		UiColour? colour = null, int help = -1 )
+		=> Add( new UiButton
 		{
 			Id = 0x10 + column,
 			Rect = rect,
-			Font = RowFont,
-			TextColour = UiColour.White,
-			TextAcross = column < ColumnAligns.Length
-				? ColumnAligns[column]
+			Mesh = mesh == null ? null : UiMesh.Get( mesh ),
+			Font = font ?? RowFont,
+			TextColour = colour ?? UiColour.White,
+			TextAcross = mesh != null ? TextAlign.Centre
+				: column < ColumnAligns.Length ? ColumnAligns[column]
 				: column == 0 ? TextAlign.Start : TextAlign.End,
 			TextWraps = true,
 			Text = text,
+			HelpText = help,
+			Clicked = () => HeadingClicked( column ),
 
 			// PINNED TO THE LIST, rather than to whichever third of the virtual screen each heading's
 			// own middle happens to land in.
@@ -245,28 +280,18 @@ internal sealed class UiList : UiControl
 		Refresh();
 	}
 
-	/// <summary>Adds a row at the end - <c>FUN_0066403b</c> with an insert-after of -1.</summary>
-	internal void Add( Row row )
-	{
-		_rows.Add( row );
-		FirstRow();
-		SettleTop();
-		Refresh();
-	}
-
 	/// <summary>
-	/// Adds a row in ascending order of <paramref name="key"/>, after every row that is not greater - the
-	/// original's sorted insert (<c>FUN_0066403b</c> with <c>list+0x48 &amp; 0x10</c>, which walks until
-	/// <c>FUN_00663edc</c> finds a row the new one is strictly less than). Answers where it went. Nothing
-	/// already in the list moves, re-sorts or is scrolled to, and the selection keeps its index.
+	/// Adds a row - <c>FUN_0066403b</c> with an insert-after of -1 - and answers where it went. On a sorted list
+	/// that is the original's sorted insert (<c>list+0x48 &amp; 0x10</c>): before the first row it
+	/// <see cref="SortsBefore"/>, so after every row equal to it, or at the end. Nothing already in the list
+	/// moves, re-sorts or is scrolled to, and the selection keeps its index. A list with no sort takes it at the end.
 	/// </summary>
-	internal int Insert( Row row, Func<Row, int> key )
+	internal int Add( Row row )
 	{
-		var value = key( row );
-		var at = 0;
+		var at = _sortColumn < 0 ? _rows.Count : _rows.FindIndex( standing => SortsBefore( row, standing ) );
 
-		while ( at < _rows.Count && key( _rows[at] ) <= value )
-			++at;
+		if ( at < 0 )
+			at = _rows.Count;
 
 		_rows.Insert( at, row );
 		FirstRow();
@@ -274,6 +299,129 @@ internal sealed class UiList : UiControl
 		Refresh();
 
 		return at;
+	}
+
+	/// <summary>
+	/// Whether <paramref name="row"/> stands strictly before <paramref name="other"/> under the list's sort -
+	/// <c>FUN_00663edc</c>. A number column compares the two numbers; a text column compares the two texts character
+	/// by character on their plain values (<c>FUN_0067c290</c>), with no case folding, so every capital stands before
+	/// every small letter. Descending swaps the two. Equal rows are before neither.
+	/// </summary>
+	private bool SortsBefore( in Row row, in Row other )
+	{
+		var (first, second) = _descending ? (other, row) : (row, other);
+
+		return _sortColumn < TextColumns.Length && TextColumns[_sortColumn]
+			? string.CompareOrdinal( TextOf( first, _sortColumn ), TextOf( second, _sortColumn ) ) < 0
+			: NumberOf( first, _sortColumn ) < NumberOf( second, _sortColumn );
+	}
+
+	private static string TextOf( in Row row, int column )
+		=> column == 0 ? row.Name : row.Values is { } values && column - 1 < values.Count ? values[column - 1] : string.Empty;
+
+	private int NumberOf( in Row row, int column )
+		=> row.Numbers is { } numbers ? column < numbers.Count ? numbers[column] : 0
+			: StateMesh != null && Columns.Length > 2 && column == Columns.Length - 1 ? row.State
+			: row.Value;
+
+	/// <summary>
+	/// Gives the list its sort from a screen's kept word - <c>FUN_006659af( word, 0 )</c>, which each opener calls
+	/// while the list is still empty: the column, then the direction, and nothing sorted. Each of the two that
+	/// changed tells <see cref="SortChanged"/>.
+	/// </summary>
+	internal void SetSort( int word )
+	{
+		SetSortColumn( Math.Abs( word ) - 1 );
+		SetDescending( word < 0 );
+	}
+
+	/// <summary><c>FUN_0066590f</c>.</summary>
+	private void SetSortColumn( int column )
+	{
+		if ( column == _sortColumn )
+			return;
+
+		_sortColumn = column;
+		SortChanged?.Invoke( SortWord );
+	}
+
+	/// <summary><c>FUN_0066594d</c>.</summary>
+	private void SetDescending( bool descending )
+	{
+		if ( descending == _descending )
+			return;
+
+		_descending = descending;
+		SortChanged?.Invoke( SortWord );
+	}
+
+	/// <summary>
+	/// A heading was clicked - <c>FUN_00665a44</c>, reached from the list's proc as its child's <c>0x100</c>. The
+	/// column already sorted on flips the direction; another column sets ascending, then the column. Either way the
+	/// whole list is sorted again, and with a row selected <see cref="SelectionChanged"/> is told the selected index,
+	/// which now names a different row.
+	/// </summary>
+	/// <remarks>
+	/// Every list of the original's carries the sort flag <c>0x10</c>. One whose screen has given it no sort here
+	/// (the all-staff and all-items lists) does not sort: counted.
+	/// </remarks>
+	internal void HeadingClicked( int column )
+	{
+		if ( column < 0 || column >= Math.Max( Columns.Length, 1 ) )
+			return;
+
+		if ( _sortColumn < 0 )
+		{
+			Unimplemented.Report( "LIST_HEADING_SORT_NOT_BUILT" );
+			return;
+		}
+
+		if ( column == _sortColumn )
+		{
+			SetDescending( !_descending );
+		}
+		else
+		{
+			SetDescending( false );
+			SetSortColumn( column );
+		}
+
+		Sort();
+		Refresh();
+
+		if ( _selected >= 0 && _selected < _rows.Count )
+			SelectionChanged?.Invoke( _rows[_selected].Id );
+	}
+
+	/// <summary>
+	/// The sort and the rows as they stand, for a log line: each row's id, name and number - the sorted column's
+	/// where that is a number, the row's own otherwise.
+	/// </summary>
+	internal string Census()
+	{
+		var numbered = _sortColumn >= 0 && !(_sortColumn < TextColumns.Length && TextColumns[_sortColumn]);
+
+		return $"sort {SortWord}, {_rows.Count} rows: " + string.Join( ", ",
+			_rows.Select( row => $"{row.Id} {row.Name} {(numbered ? NumberOf( row, _sortColumn ) : row.Value)}" ) );
+	}
+
+	/// <summary>
+	/// Sorts every row - <c>FUN_006628f4</c>: the first least row goes to the head, then each row from the third on
+	/// is put before the first row it <see cref="SortsBefore"/>. So <b>equal rows keep the order they stood in</b>,
+	/// in either direction.
+	/// </summary>
+	private void Sort()
+	{
+		var standing = _rows.ToArray();
+
+		_rows.Clear();
+
+		foreach ( var row in standing )
+		{
+			var at = _rows.FindIndex( placed => SortsBefore( row, placed ) );
+
+			_rows.Insert( at < 0 ? _rows.Count : at, row );
+		}
 	}
 
 	/// <summary>
