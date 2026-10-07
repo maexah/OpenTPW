@@ -715,6 +715,7 @@ public class ParkTickTests
 
 			var id = people.Admit( 47, 9 );
 			var guest = people.Guests[id];
+			guest.PaidAdmission = true;
 			guest.SetState( PeepState.PickingACellOutside, people.State.GameTick, new Random( 1 ) );
 
 			static int StaysCounted() => Unimplemented.Summary.FirstOrDefault( gap => gap.What == "LEAVER_STAY_SAMPLE" ).Times;
@@ -749,7 +750,7 @@ public class ParkTickTests
 				Sweep( people );
 
 			Assert.AreEqual( PeepState.AtTheBusStop, guest.State, "they reach the stop" );
-			Assert.IsTrue( StaysCounted() > staysBefore, "and the stay they would hand the park analyser there is counted, not built" );
+			Assert.IsTrue( StaysCounted() > staysBefore, "and the stay they would hand the park analyser there, having paid at the gate, is counted, not built" );
 			Assert.IsTrue( cells.Any( cell => Near( cell, guest.Navigator.Position.Cell ) ),
 				$"on one of stop A's four cells, not at {guest.Navigator.Position.Cell}" );
 			Assert.IsTrue( people.LeaverAtTheStop() );
@@ -787,41 +788,45 @@ public class ParkTickTests
 			Assert.AreEqual( 1, Triggered(), "at 2 with its load off, it is sent on for them" );
 			Assert.IsTrue( people.Guests.ContainsKey( id ), "they do not go at 2" );
 
-			// A second guest on the same cell, linked after them and so the head of its list, and visited after them
-			// in the sweep: at 4 only the head goes, and the vehicle is not sent off while one still stands there.
+			// A second guest on the same cell, newer and so visited before them in the sweep, with the first stood
+			// there again as the head of its list: at 4 only the head goes, and the vehicle is not sent off while one
+			// still stands there.
 			var (cellX, cellY) = guest.Navigator.Position.Cell;
 			var second = people.Admit( cellX, cellY );
+			var staysSoFar = StaysCounted();
 
 			people.Guests[second].SetState( PeepState.AtTheBusStop, people.State.GameTick, new Random( 1 ) );
+			Assert.AreEqual( staysSoFar, StaysCounted(), "one who never paid at the gate hands the analyser no stay" );
 			Assert.AreEqual( second, (int)people.State.CellAt( cellX, cellY ).Occupant, "the newcomer heads the cell" );
+			Assert.AreEqual( second, people.Peeps[0].ThingId, "and the sweep" );
+			people.State.Forget( id );
+			people.State.StandOn( id, cellX, cellY );
+			Assert.AreEqual( id, (int)people.State.CellAt( cellX, cellY ).Occupant, "the first guest heads the cell again" );
 
 			// They hold a balloon, which the original deletes with them (FUN_004fb330): it is not let go to burst.
 			people.Guests[second].Balloon = Balloon.Make( second, sets: 4, now: 0 );
 			people.Guests[id].Balloon = Balloon.Make( id, sets: 4, now: 0 );
-			Assert.IsNotNull( people.Guests[second].Balloon );
 			Assert.AreEqual( 0, people.Bursting.Count );
 
 			Plays( 4 );
 			Sweep( people );
-			Assert.IsFalse( people.Guests.ContainsKey( second ), "at 4 the head of the cell is gone" );
+			Assert.IsFalse( people.Guests.ContainsKey( id ), "at 4 the head of the cell is gone" );
 			Assert.AreEqual( 0, people.Bursting.Count, "and the balloon they held is gone with them, not let go" );
-			Assert.IsNotNull( people.Guests[id].Balloon, "the one behind, who stays, keeps theirs" );
-			Assert.IsTrue( people.Guests.ContainsKey( id ), "and the one behind, whose turn came first, is not" );
+			Assert.IsTrue( people.Guests.ContainsKey( second ), "and the one behind, whose turn came first, is not" );
+			Assert.IsNotNull( people.Guests[second].Balloon, "and keeps theirs" );
 			Assert.AreEqual( 0, Triggered(), "with one still at the stop the vehicle is not sent off" );
 
-			// A third behind the first, who now heads the cell and is visited first: they go inside their own turn,
-			// so the one behind is the head later in the same sweep and goes too; and with nobody left at the stop
-			// the vehicle is sent off on that sweep, the manager's turn coming after every guest's.
+			// A third, the newest, who heads the cell and is visited first: they go inside their own turn, so the
+			// one behind is the head later in the same sweep and goes too; and with nobody left at the stop the
+			// vehicle is sent off on that sweep, the manager's turn coming after every guest's.
 			var third = people.Admit( cellX, cellY );
 
 			people.Guests[third].SetState( PeepState.AtTheBusStop, people.State.GameTick, new Random( 1 ) );
-			people.State.Forget( id );
-			people.State.StandOn( id, cellX, cellY );
-			Assert.AreEqual( id, (int)people.State.CellAt( cellX, cellY ).Occupant, "the first guest heads the cell" );
+			Assert.AreEqual( third, (int)people.State.CellAt( cellX, cellY ).Occupant, "the newest heads the cell" );
 
 			Sweep( people );
-			Assert.IsFalse( people.Guests.ContainsKey( id ), "they are gone" );
-			Assert.IsFalse( people.Guests.ContainsKey( third ), "and so is the one who stood behind them, on the same sweep" );
+			Assert.IsFalse( people.Guests.ContainsKey( third ), "they are gone" );
+			Assert.IsFalse( people.Guests.ContainsKey( second ), "and so is the one who stood behind them, on the same sweep" );
 			Assert.AreEqual( 1, Triggered(), "and with nobody left at the stop it is sent off" );
 
 			// A vehicle found standing at its first spin, unloading, when it is first summoned is made current and

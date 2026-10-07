@@ -207,6 +207,47 @@ public class ParkFootprintPictureTests
 		Assert.AreEqual( 1, window.Moves, "nor one moving over no control" );
 	}
 
+	/// <summary>
+	/// <b>The buy screen's own timer writes the balance, once a second</b> (<c>0x80080</c>, <c>0x004ac2db</c>): "Cash  $ "
+	/// and the balance as the screen opens, as the original's first frame has it, a purchase shown on the next tick
+	/// and not before, and a park that owes lettered with the other string and no sign.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the balance written every frame; a period of two seconds; the plain number; a debt's sign
+	/// kept; the corner left empty as the screen opens.</remarks>
+	[TestMethod]
+	public void TheBuyScreensTimerWritesTheBalanceOnceASecond()
+	{
+		Time.PinWall( 5000 );
+
+		var (_, screen, _) = BuyScreen();
+		var state = Level.Current!.ParkState!;
+
+		Assert.AreEqual( 87987, state.Balance );
+		Assert.AreEqual( "money \"Cash  $ 87987\"", screen.MoneyCensus(), "lettered as the screen opens" );
+
+		state.Spend( 500 );
+		screen.Update();
+		Time.PinWall( 5999 );
+		screen.Update();
+		Assert.AreEqual( "money \"Cash  $ 87987\"", screen.MoneyCensus(), "a purchase does not show before the next tick" );
+
+		Time.PinWall( 6000 );
+		screen.Update();
+		Assert.AreEqual( "money \"Cash  $ 87487\"", screen.MoneyCensus() );
+
+		state.Spend( 87 );
+		Time.PinWall( 6999 );
+		screen.Update();
+		Assert.AreEqual( "money \"Cash  $ 87487\"", screen.MoneyCensus() );
+
+		Time.PinWall( 7000 );
+		screen.Update();
+		Assert.AreEqual( "money \"Cash  $ 87400\"", screen.MoneyCensus(), "and a second on again" );
+
+		Assert.AreEqual( "Cash  -$ 250", ParkBuyScreen.MoneyText( -250 ), "a debt takes the other string and loses its sign" );
+		Assert.AreEqual( "Cash  $ 0", ParkBuyScreen.MoneyText( 0 ) );
+	}
+
 	/// <summary>Lost Kingdom's catalogue and research around the buy screen, as the game has them.</summary>
 	private static (ParkItemCatalogue Catalogue, ParkBuyScreen Screen, WindowStack Stack) BuyScreen()
 	{

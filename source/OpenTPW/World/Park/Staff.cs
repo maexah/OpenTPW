@@ -35,6 +35,12 @@ public sealed class Staff
 	/// </remarks>
 	public int Model { get; }
 
+	/// <summary>
+	/// Their name, as text - the saved <c>mName</c>, which a hire copies from the candidate. No new candidate is
+	/// given a name a member of staff in the park has (<c>FUN_005083f0</c>).
+	/// </summary>
+	public string Name { get; }
+
 	/// <summary>What they are doing - the saved <c>mState</c>. Written only by <see cref="SetActivity"/>.</summary>
 	public StaffActivity Activity { get; private set; }
 
@@ -130,6 +136,7 @@ public sealed class Staff
 		TimeStartedIdling = saved.TimeStartedIdling;
 		PatrolBottomLeft = saved.PatrolBottomLeft;
 		PatrolTopRight = saved.PatrolTopRight;
+		Name = saved.Name;
 	}
 
 	/// <summary>Whether this member of staff is penned into a patch of the map at all.</summary>

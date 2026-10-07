@@ -1692,6 +1692,14 @@ public static class DebugConsole
 						: "footprint: the buy screen is not open" );
 				break;
 
+			// What the buy screen's corner shows of the park's money, which its own timer writes once a second.
+			case "buymoney":
+				Reply( Level.Current?.Hud?.Children.OfType<UI.WindowStack>().FirstOrDefault()?.Windows
+					.OfType<UI.ParkBuyScreen>().FirstOrDefault() is { } paying
+						? $"buymoney: {paying.MoneyCensus()}, balance {Level.Current?.ParkState?.Balance}"
+						: "buymoney: the buy screen is not open" );
+				break;
+
 			// The other half of the same gadget button - the two screens are siblings and reach each
 			// other directly, which is what FUN_004a0940( 1 ) does from a remembered-tab global.
 			case "hirescreen":

@@ -302,9 +302,10 @@ public class LeftClickTests
 
 	/// <summary>
 	/// <b>The double click's second press chooses the selected row again, on the press</b> (<c>FUN_006656fa</c> on
-	/// <c>0x11007</c>).
+	/// <c>0x11007</c>). The selected row is the one the pointer was last moved over (<c>FUN_006656a0</c>), so a second
+	/// press on another row finds that row selected by the move that brought the pointer there.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the list not answering the second press.</remarks>
+	/// <remarks><b>Mutations:</b> the list not answering the second press; the second press choosing the row first clicked.</remarks>
 	[TestMethod]
 	public void AListsDoubleClickChoosesAgainOnThePress()
 	{
@@ -312,11 +313,18 @@ public class LeftClickTests
 		Frame( false, Row( 0 ), 1100 );
 		CollectionAssert.AreEqual( new[] { 100 }, _window.Chosen );
 
-		Frame( true, Row( 2 ), 1300 );
-		CollectionAssert.AreEqual( new[] { 100, 100 }, _window.Chosen, "the second press: the SELECTED row, not the one under it" );
+		Frame( true, Row( 0 ), 1300 );
+		CollectionAssert.AreEqual( new[] { 100, 100 }, _window.Chosen, "the second press, on the press" );
 
-		Frame( false, Row( 2 ), 1350 );
+		Frame( false, Row( 0 ), 1350 );
 		CollectionAssert.AreEqual( new[] { 100, 100 }, _window.Chosen, "and its release nothing" );
+
+		// On to another row between the two presses: the move selects it, and the second press chooses it.
+		Frame( true, Row( 0 ), 3000 );
+		Frame( false, Row( 0 ), 3100 );
+		Frame( false, Row( 2 ), 3200, moved: true );
+		Frame( true, Row( 2 ), 3300 );
+		CollectionAssert.AreEqual( new[] { 100, 100, 100, 102 }, _window.Chosen, "the second press: the row the pointer moved onto" );
 	}
 
 	/// <summary>

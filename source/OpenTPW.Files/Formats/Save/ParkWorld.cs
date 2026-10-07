@@ -702,7 +702,7 @@ public sealed class ParkWorld : IParkInitialState
 	public readonly record struct StaffState(
 		int State, int PayGrade, float Happiness, float Tiredness, int JobsDone,
 		int PatrolBottomLeft, int PatrolTopRight, int RestArea, int PercentageThroughGrade,
-		int TimeStartedIdling )
+		int TimeStartedIdling, string Name = "" )
 	{
 		/// <summary>
 		/// How many behaviours a member of staff has. Eight are shared by every kind; the numbers above
@@ -2128,9 +2128,8 @@ public sealed class ParkWorld : IParkInitialState
 	///
 	/// <para>
 	/// Each offset is the sum of the sizes before it, and every size is stated outright by the original's
-	/// own serialiser. <c>mName[0..32]</c> fills <c>+410</c> to <c>+475</c> and is deliberately not read: it
-	/// is 33 shorts rather than text, and nothing here puts a staff member's name on screen. <c>mTimeHired</c>
-	/// fills <c>+491</c> to <c>+498</c> and is skipped for the same reason.
+	/// own serialiser. <c>mName[0..32]</c> fills <c>+410</c> to <c>+475</c>: 33 characters of 16 bits, the name as
+	/// text. <c>mTimeHired</c> fills <c>+491</c> to <c>+498</c> and is not read: nothing here asks for it.
 	/// </para>
 	/// <para>
 	/// <b>What each kind adds after this block is decoded and deliberately not read</b>, because the
@@ -2156,7 +2155,29 @@ public sealed class ParkWorld : IParkInitialState
 			PatrolTopRight: ReadUInt16At( start + 478 ),        // mPatrolRegionTR
 			RestArea: ReadUInt16At( start + 481 ),              // mRestArea
 			PercentageThroughGrade: ReadByteAt( start + 480 ),  // mPercentageThroughGrade
-			TimeStartedIdling: ReadInt32At( start + 487 ) );    // mTimeStartedIdling
+			TimeStartedIdling: ReadInt32At( start + 487 ),      // mTimeStartedIdling
+			Name: ReadStaffName( start + 410 ) );               // mName[0..32]
+
+	/// <summary>How many characters <c>mName</c> holds, the ending nought among them.</summary>
+	private const int StaffNameLength = 33;
+
+	/// <summary>A member of staff's name: <c>mName</c>'s 16-bit characters up to its first nought.</summary>
+	private string ReadStaffName( int at )
+	{
+		var name = new System.Text.StringBuilder();
+
+		for ( var i = 0; i < StaffNameLength; ++i )
+		{
+			var letter = (char)ReadUInt16At( at + (2 * i) );
+
+			if ( letter == 0 )
+				break;
+
+			name.Append( letter );
+		}
+
+		return name.ToString();
+	}
 
 	/// <summary>The model number of the staff HQ - see <see cref="StaffHqState"/>.</summary>
 	private const int StaffHqModel = 9;

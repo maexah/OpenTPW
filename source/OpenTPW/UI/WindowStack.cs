@@ -210,13 +210,18 @@ internal sealed class WindowStack : Panel
 	internal bool ModalUp => _windows.Exists( window => window.Modal && !window.Hidden && !window.PutAway );
 
 	/// <summary>
-	/// Whether the controls' timers are held (<see cref="UiTimer"/>): a message box, the game menu or the options
-	/// screen is up, each of which sets the original's hold as it opens (<c>FUN_00662411</c>, from
-	/// <c>MessageBox_Open</c>, <c>GameMenu_Open</c> and <c>OptionsScreen_Open</c>). Three more callers set it
-	/// (<c>FUN_0048a6e0</c>, <c>FUN_0048a720</c>, <c>FUN_005f0b40</c>) and are not identified.
+	/// Whether the controls' timers are held (<see cref="UiTimer"/>): a message box, the game menu, the options
+	/// screen or the park's map is up, each of which sets the original's hold as it opens (<c>FUN_00662411</c>, from
+	/// <c>MessageBox_Open</c>, <c>GameMenu_Open</c>, <c>OptionsScreen_Open</c> and the map's <c>FUN_005f0b40</c>,
+	/// <c>0x005f0b8a</c>). The other two that set it put up the pause overlay, which is not built
+	/// (<c>FUN_0048a6e0</c>, <c>FUN_0048a720</c>; <c>docs/exe/hud.md</c>).
 	/// </summary>
+	/// <remarks>
+	/// The original's hold is one flag, so a message box closed over the map lets the timers go with the map still
+	/// up; here they stay held until the map closes too. No timer shows under the map, which closes the park's screens.
+	/// </remarks>
 	internal bool HoldsTimers
-		=> _windows.Exists( window => window is MessageBox or GameMenu or OptionsScreen && !window.Hidden && !window.PutAway );
+		=> _windows.Exists( window => window is MessageBox or GameMenu or OptionsScreen or ParkMapScreen && !window.Hidden && !window.PutAway );
 
 	/// <summary>The open windows, back to front.</summary>
 	public IReadOnlyList<UiWindow> Windows => _windows;

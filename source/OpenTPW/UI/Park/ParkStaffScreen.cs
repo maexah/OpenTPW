@@ -26,12 +26,9 @@ namespace OpenTPW.UI;
 /// </para>
 ///
 /// <para>
-/// <b>A NAME IS A DECLARED STAND-IN.</b> A placed member of staff carries no name in the save - only a
-/// hire-pool candidate does, and the name is spent when they are taken out of the pool. So the first
-/// column shows the kind and the thing id, in the game's own words for the kind
-/// (<c>STAFF_TYPES.str</c>), rather than leaving the column blank or inventing a person. Everything
-/// else in the row is real: the wage is the one the park is actually paying and the skill is the
-/// grade.
+/// <b>The name is the member's own</b> (<see cref="Staff.Name"/>): the save's <c>mName</c>, or the candidate's
+/// at a hire. One with none, which only a test makes, shows the kind and the thing id in the game's own words
+/// for the kind (<c>STAFF_TYPES.str</c>). The wage is the one the park is paying and the skill is the grade.
 /// </para>
 /// </summary>
 internal sealed class ParkStaffScreen : UiWindow
@@ -255,8 +252,7 @@ internal sealed class ParkStaffScreen : UiWindow
 			if ( ParkStaffPool.KindFor( member.Model ) != _kind )
 				continue;
 
-			// The name is a stand-in - see the class remarks. The wage and the grade are not.
-			var name = $"{ParkStaffPool.NameOfKind( _kind )} {member.ThingId}";
+			var name = member.Name.Length > 0 ? member.Name : $"{ParkStaffPool.NameOfKind( _kind )} {member.ThingId}";
 			var wage = pool?.WageFor( _kind, member.PayGrade ) ?? 0;
 
 			_list.Add( new UiList.Row( member.ThingId, name, 0, Values:
@@ -274,9 +270,6 @@ internal sealed class ParkStaffScreen : UiWindow
 		// original letters that column from a table this project has not found, and an English enum
 		// name is a stand-in for it.
 		Unimplemented.Report( "STAFF_STATUS_TEXT" );
-
-		// And a placed member of staff carries no name index at all - see the class remarks.
-		Unimplemented.Report( "STAFF_NAMES_NOT_IN_SAVE" );
 	}
 
 	/// <summary>

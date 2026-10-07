@@ -277,6 +277,11 @@ public sealed class ParkState
 	/// Counting also stops an id being handed out twice after the thing holding it is sold, which a
 	/// rescan would do as soon as the highest-numbered object was demolished.
 	/// </para>
+	/// <para>
+	/// <b>A deviation:</b> the original takes the first slot of its free list (<c>FUN_00516270</c>), so an id a
+	/// thing gave up is handed out again: measured, the first guest of a load took 38, which a leaver had freed, and
+	/// the rest 43 on (<c>docs/exe/ride-operation.md</c>, "Where a ride's turn comes from"). Here no id is used twice.
+	/// </para>
 	/// </summary>
 	public int NextThingId()
 	{

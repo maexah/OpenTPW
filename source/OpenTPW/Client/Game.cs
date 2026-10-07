@@ -66,7 +66,8 @@ internal static class Game
 		//
 		// Dead by CODE in the game: nothing in it reads CacheFileSystem, so making the folder is all this does.
 		// Its one reader is ModKit's thumbnail cache (Editor.cs), a separate program that never sets it. Kept and
-		// labelled, not deleted, with the property, which ModKit names.
+		// labelled, not deleted, with the property, which ModKit names. A folder that cannot be made is logged and
+		// the game goes on without it.
 		//
 		// The folder is kept with the player rather than in whatever directory the game was started from: a copy
 		// of the game may sit somewhere nothing may write to, and nothing in here is worth keeping if it is lost.
@@ -74,8 +75,15 @@ internal static class Game
 		var cacheFolder = Path.Join(
 			Environment.GetFolderPath( Environment.SpecialFolder.LocalApplicationData ), "OpenTPW", "cache" );
 
-		Directory.CreateDirectory( cacheFolder );
-		CacheFileSystem = new BaseFileSystem( cacheFolder );
+		try
+		{
+			Directory.CreateDirectory( cacheFolder );
+			CacheFileSystem = new BaseFileSystem( cacheFolder );
+		}
+		catch ( Exception e ) when ( e is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException )
+		{
+			Log.Warning( $"Cache folder: {cacheFolder} cannot be made ({e.GetType().Name}: {e.Message}); nothing in the game reads it" );
+		}
 
 		//
 		// Init renderer

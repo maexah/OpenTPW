@@ -228,6 +228,9 @@ internal sealed class ParkBuyScreen : UiWindow
 
 		_list.Build();
 		Show( _lastTab );
+
+		// The opener letters the corner itself, as the tick does (FUN_004acc70, 0x004acdae).
+		_money.Text = MoneyText();
 	}
 
 	/// <summary>
@@ -265,7 +268,6 @@ internal sealed class ParkBuyScreen : UiWindow
 			_list.Add( new UiList.Row( ClearLandRow, Localization.Get( UIStrings.ClearLand ), 0 ) );
 		}
 
-		ShowMoney();
 	}
 
 	/// <summary>
@@ -358,9 +360,35 @@ internal sealed class ParkBuyScreen : UiWindow
 		// the pointer.
 	}
 
-	/// <summary>What the park has, in the corner the stream puts it - control 0x200.</summary>
-	private void ShowMoney()
-		=> _money.Text = Level.Current?.ParkState is { } state ? $"{state.Balance}" : null;
+	/// <summary>How often the screen's own timer ticks, in real milliseconds (<c>0x80080</c>, armed at <c>0x004ac3ee</c>).</summary>
+	internal const long TickEvery = 1000;
+
+	private readonly UiTimer _tick = new( TickEvery );
+
+	/// <summary>
+	/// The timer's tick, the screen's message <c>0x10</c> (<c>0x004ac2db</c>): the list's rows are drawn again
+	/// (<c>FUN_00663324</c> on <c>0x1f8</c>) and the balance is written. No other arm of the screen's handler writes
+	/// it, so a change in the park's money shows there on the next tick, the first a second after the screen opens.
+	/// </summary>
+	private void Tick()
+	{
+		_list.Refresh();
+		_money.Text = MoneyText();
+	}
+
+	/// <summary>
+	/// What the park has, as control <c>0x200</c> letters it: UITEXT <c>0x1ca</c> and the balance, or <c>0x1cb</c>
+	/// and the balance without its sign when the park owes (<c>0x004ac31e</c>).
+	/// </summary>
+	internal static string? MoneyText()
+		=> Level.Current?.ParkState is { } state ? MoneyText( state.Balance ) : null;
+
+	/// <inheritdoc cref="MoneyText()"/>
+	internal static string MoneyText( long balance )
+		=> Localization.Get( balance < 0 ? UIStrings.CashNegativeDollar : UIStrings.CashDollar ) + Math.Abs( balance );
+
+	/// <summary>What the corner shows now, for the console.</summary>
+	internal string MoneyCensus() => $"money \"{_money.Text}\"";
 
 	/// <summary>
 	/// The list's selection moved to a row - the handler's <c>0x401</c> arm (<c>0x004aca16</c>): a row other than the
@@ -402,7 +430,8 @@ internal sealed class ParkBuyScreen : UiWindow
 
 	protected internal override void Update()
 	{
-		ShowMoney();
+		if ( _tick.Owed( Stack.HoldsTimers ) > 0 )
+			Tick();
 
 		// The frame message's arm (0x004ac42e): a row that has waited long enough is shown, and waits no longer.
 		if ( _pending != 0 && Time.WallMilliseconds - _pendingSince > PreviewDelay )

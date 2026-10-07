@@ -318,9 +318,11 @@ public sealed class ParkStaffPool
 	/// </summary>
 	/// <param name="gameTick">The park's own clock, one a sweep.</param>
 	/// <param name="inPark">How many of a kind the park employs now - what <c>FUN_00508000</c> counts.</param>
-	internal void Sweep( int gameTick, Func<int, int> inPark )
+	/// <param name="employed">Whether a member of staff in the park has this name - the second half of <c>FUN_005083f0</c>.</param>
+	internal void Sweep( int gameTick, Func<int, int> inPark, Func<string, bool>? employed = null )
 	{
 		++Turns;
+		_employed = employed;
 
 		// From the first on, as the original walks its slots.
 		for ( var at = 0; at < _candidates.Count; ++at )
@@ -563,25 +565,26 @@ public sealed class ParkStaffPool
 		return 0;
 	}
 
+	/// <summary>Whether a member of staff in the park has a name, as the sweep in hand was told; none before the first.</summary>
+	private Func<string, bool>? _employed;
+
 	/// <summary>The most draws a new candidate's name is given (<c>0x0f</c>, <c>FUN_00507580</c>).</summary>
 	internal const int NameDraws = 15;
 
 	/// <summary>
 	/// A name for a new candidate - <c>FUN_00507580</c>: one of the kind's 35 rows is drawn, and drawn again, fifteen
 	/// draws at the most, while the name is in use (<c>FUN_005083f0</c>): a candidate in the pool has it, or, in the
-	/// original, a member of staff in the park does. A hired member keeps no name here, so that half is counted.
+	/// member of staff in the park does, of any kind.
 	/// </summary>
 	private string RollName( int kind )
 	{
-		Unimplemented.Report( "STAFF_NAME_IN_USE_IN_THE_PARK" );
-
 		var name = "";
 
 		for ( var draw = 0; draw < NameDraws; ++draw )
 		{
 			name = NameAt( kind, _random.Next( 35 ) );
 
-			if ( !_candidates.Exists( person => person.Name == name ) )
+			if ( !_candidates.Exists( person => person.Name == name ) && _employed?.Invoke( name ) != true )
 				break;
 		}
 

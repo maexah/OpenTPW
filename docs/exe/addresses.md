@@ -130,6 +130,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0046a82c` | | OpenTPW/World/Park/ParkObjects.cs  |
 | `0x0046a838` | | OpenTPW/World/Park/ParkObjects.cs  |
 | `0x0046b600` | | OpenTPW.Common/Client/Window.cs  |
+| `0x0046b74c` | WndProc, WM_ACTIVATEAPP losing the focus: the pause FUN_004092a0( 1, 1 ), which puts the pause overlay up | OpenTPW.Common/Client/Window.cs  |
 | `0x0046bb0b` | Window procedure `FUN_0046b600`: `GetKeyState` for Shift, Ctrl and Alt at each key, before `UI_PostKey` | OpenTPW.Tests/ParkCamcorderKeyOnReleaseTests.cs OpenTPW.Tests/ParkEscapeOnReleaseTests.cs OpenTPW.Tests/ParkFullScreenViewTests.cs OpenTPW/Global/Input.cs  |
 | `0x0046c480` | Place-staff mode (type 5, vtable `0x006fea40`) MOVE: carries the candidate's sprite under the pointer and draws a red square over a cell the click would refuse | OpenTPW/World/Park/ParkStaffPool.cs  |
 | `0x0046c730` | Place-staff mode OnInstall: carry cursor 9, and a sprite of the candidate's kind in their costume | OpenTPW/World/Park/ParkStaffPool.cs  |
@@ -310,12 +311,16 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004ab386` | Buy screen fill FUN_004ab1b0: the footprint picture's cell, the surface's width and height each over 8 (SAR 3) | OpenTPW/UI/Park/ParkFootprintPicture.cs  |
 | `0x004ab403` | Buy screen fill FUN_004ab1b0: the footprint squares' alpha byte, 0x80 | OpenTPW/UI/Park/ParkFootprintPicture.cs  |
 | `0x004ab4c8` | Buy screen fill FUN_004ab1b0: a land row or a mystery ride clears the footprint surface and paints nothing | OpenTPW/UI/Park/ParkBuyScreen.cs  |
+| `0x004ac2db` | Buy screen handler FUN_004ac270, message 0x10 with 0x80080: the timer's tick redraws the list (FUN_00663324 on 0x1f8) and letters the balance on 0x200 | OpenTPW.Tests/ParkFootprintPictureTests.cs OpenTPW/UI/Park/ParkBuyScreen.cs  |
+| `0x004ac31e` | FUN_004ac270, the tick: a balance under nought takes UITEXT 0x1cb and loses its sign, else 0x1ca | OpenTPW/UI/Park/ParkBuyScreen.cs  |
+| `0x004ac3ee` | FUN_004ac270, message 0x15: timer 0x80080 armed at 1000 ms (FUN_0065ef90) | OpenTPW/UI/Park/ParkBuyScreen.cs  |
 | `0x004ac42e` | Buy screen handler FUN_004ac270, the frame message 0x1e: a waiting row is shown by FUN_004ab1b0 and cleared | OpenTPW/UI/Park/ParkBuyScreen.cs  |
 | `0x004ac438` | Buy screen handler FUN_004ac270, the frame message: FUN_0065968e less the row's stamp, shown past 500 ms | OpenTPW.Tests/ParkFootprintPictureTests.cs  |
 | `0x004ac443` | Buy screen handler FUN_004ac270: the waiting row is shown only after more than 500 ms (CMP 0x1f4, JLE) | OpenTPW/UI/Park/ParkBuyScreen.cs  |
 | `0x004aca16` | Buy screen handler FUN_004ac270, message 0x401: a row other than the waiting one is kept as waiting and stamped | OpenTPW/UI/Park/ParkBuyScreen.cs  |
 | `0x004acca0` | Buy screen opener FUN_004acc70: with the screen already up it picks the tab again and returns | OpenTPW.Tests/ParkScreenTests.cs OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x004acd62` | Buy screen FUN_004acc70: UI_LoadTree onto the park's layer 0, not modal | OpenTPW.Tests/ParkHandTests.cs OpenTPW/UI/Park/ParkBuyScreen.cs OpenTPW/UI/UiWindow.cs  |
+| `0x004acdae` | Buy screen opener FUN_004acc70: letters control 0x200 with the balance as the screen is made, as the timer's tick does | OpenTPW/UI/Park/ParkBuyScreen.cs  |
 | `0x004ad606` | The ride window sets its door down while `mCanLoad` is nought (`Button_SetDown`, from here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004ad622` | The ride window's door position (to here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004ad890` | The object windows' shared base, vtable `+0xc`: fills the stats table's labels | OpenTPW/UI/Park/ParkObjectWindow.cs  |
@@ -752,6 +757,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00516330` | The park's generator: the state at world +0x1da708 times 0x19660d plus 0x3c6ef35f, rolled right 13 and kept; answers its magnitude | OpenTPW.Tests/ParkPeopleTests.cs  |
 | `0x0051635f` | World generator FUN_00516330: NEG leaves 0x80000000 unchanged, which RAND and FINDSCRIPTRAND then halve | OpenTPW.Tests/RideScriptClockTests.cs OpenTPW/VM/RideScript.cs OpenTPW/World/Park/ParkGenerator.cs  |
 | `0x00516394` | Thing sweep `FUN_00516380`: `mGameTick` up by one | OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/ParkState.cs OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x005163a4` | Thing sweep FUN_00516380: the walk starts at the used list's head [0x007cf56c], the newest thing | OpenTPW/World/Park/ParkPeople.cs  |
 | `0x00516695` | World tick FUN_00516380: FUN_004d7b20 after every thing's turn, where the calendar sends the day's change | OpenTPW/World/Level.cs  |
 | `0x00516d13` | World save `FUN_00516c80`: installs the idle mode before anything is written, so leaving a park lets go of the hand | OpenTPW/World/Level.cs  |
 | `0x00517bec` | World load: `mGameTick` read from the save | OpenTPW/World/Park/PeepBehaviour.cs  |
@@ -1167,6 +1173,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005ed920` | | OpenTPW/UI/ButtonGlint.cs  |
 | `0x005edac0` | | OpenTPW/UI/ButtonGlint.cs  |
 | `0x005f0ad0` | | OpenTPW/UI/Park/ParkMapScreen.cs  |
+| `0x005f0b8a` | Map opener FUN_005f0b40: the interface's timers held (FUN_00662411) | OpenTPW.Tests/ParkVisitorsScreenTests.cs OpenTPW/UI/WindowStack.cs  |
 | `0x005f0bd1` | Map opener FUN_005f0b40: closes the open park screen (FUN_00485b40) before it hides the layer | OpenTPW/UI/Park/ParkMapScreen.cs OpenTPW/UI/UiWindow.cs  |
 | `0x005f17ef` | The map's handler `FUN_005f1130`, key-up case: a plain Escape let go closes the map | OpenTPW.Tests/ParkEscapeOnReleaseTests.cs OpenTPW/UI/Park/ParkFrontEnd.cs OpenTPW/UI/Park/ParkMapScreen.cs  |
 | `0x005f2565` | Map overlay FUN_005f2380: a thing's satisfaction average, FUN_004e1e30 | OpenTPW/UI/Park/ParkMapScreen.cs  |

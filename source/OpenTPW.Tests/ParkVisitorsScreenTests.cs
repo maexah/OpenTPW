@@ -131,6 +131,7 @@ public class ParkVisitorsScreenTests
 
 		stack.Close( box );
 		Assert.IsFalse( stack.HoldsTimers );
+
 		Time.PinWall( 20500 );
 		screen.Update();
 		Assert.AreSame( values, list.Rows[4].Values, "nor as it goes: the period starts again there" );
@@ -156,5 +157,9 @@ public class ParkVisitorsScreenTests
 
 		people.Admit( 42, 5 );
 		Assert.AreEqual( rows, list.Rows.Count, "a closed list hears of no one" );
+
+		// The park's map holds the timers too (FUN_005f0b40, 0x005f0b8a).
+		stack.Open( (UI.ParkMapScreen)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject( typeof( UI.ParkMapScreen ) ) );
+		Assert.IsTrue( stack.HoldsTimers, "the map is up" );
 	}
 }

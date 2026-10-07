@@ -68,6 +68,10 @@ public class Window
 		{
 			_focusLeft = true;
 			Log.Info( "Window: the focus left" );
+
+			// The original pauses the game and puts up its pause overlay as its window loses the focus
+			// (FUN_004092a0( 1, 1 ) from WM_ACTIVATEAPP, 0x0046b74c). Not built: counted.
+			Unimplemented.Report( "FOCUS_LOSS_PAUSE_OVERLAY" );
 		};
 
 		SdlWindow.FocusGained += () => Log.Info( "Window: the focus came back" );

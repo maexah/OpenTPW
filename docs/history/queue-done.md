@@ -4928,6 +4928,41 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   again: `~/.cache/tpw-harnesses/q237/loop.sh NAME COUNT` keeps a failing run's whole output.
   The mechanism in the running game, predicted first (Q128b's `confirm.py`, `q237/game`): the park shut, guests
   stand in `AtTheBusStop`, four summonses "at random" answer them and 13 go from the stop; photographed.
+- [x] **Q238. Seven leads from the 2026-10-06 review that nobody checked.** They were low and unverified, so they
+  were left off its list (`~/.cache/tpw-harnesses/review-run-2026-10-06/LEDGER.md`, the lines marked OPEN, "lead" or
+  "not checked", and what fixes 8 and 9 counted without a queue item). Check each first-hand; then mend it, say it
+  at the site, or strike it here:
+  (a) whether guests at the stop go in the original's order: a newcomer heads its cell's list and the sweep visits
+  guests by descending id, which reproduces Q128's log exactly; nobody has compared `ParkState`'s head and the
+  sweep's order with it;
+  (b) the buy screen's own 1000 ms timer (`0x80080`, `0x004ac3ee`), not decoded, against a balance rewritten every
+  frame here;
+  (c) the three callers of the timers' hold that are not identified (`FUN_0048a6e0`, `FUN_0048a720`,
+  `FUN_005f0b40`; `hud.md`);
+  (d) a hired member of staff keeps no name here, so a new candidate can be given one in use in the park
+  (`STAFF_NAME_IN_USE_IN_THE_PARK`);
+  (e) the leaver's stay and the analyser's ring of fifty are counted with nothing built (`LEAVER_STAY_SAMPLE`): what
+  sets a guest's `+0x204`, and who reads the history ring at `+0x21164`;
+  (f) `ParkSweepCapTests`' remarks name a bug that was never put back, and one of Q123c's tests stages a state the
+  original cannot reach;
+  (g) Q125: the cache folder's `CreateDirectory` runs before the renderer and can stop the boot for a folder nothing
+  reads.
+  No game run for (c), (f) and (g).
+  **Done 2026-10-06.** Each read first-hand; five mended, two said. (a) A difference: the original links a new
+  thing in at the head of the used list (`FUN_00516270`) and the sweep walks from the head, so the newest goes
+  first; `ParkPeople` appended. Now a new guest and a hire head their lists. Measured in the original: 54, 53 ... 43,
+  38, 42 ... after the first load. In the game, predicted first: six guests made stand first in `peeps`, 48 to 43,
+  and every tick's leavers go in descending id (20 gone; the build before logged 38, 33, 48 on one tick). (b) The
+  timer redraws the list and letters the corner "Cash  $ " and the balance (UITEXT `0x1ca`, `0x1cb`) once a second;
+  built, read with `buymoney` and photographed beside the original's. One prediction was wrong: the original's
+  corner is lettered in its first frame, not a second on: its opener letters it too (`FUN_004acc70`, `0x004acdae`, found by the review), and the build follows. (c) The map
+  (`WindowStack.HoldsTimers` has it now) and the pause overlay's two doors, the overlay unbuilt and the focus's
+  leaving counted (`FOCUS_LOSS_PAUSE_OVERLAY`); `hud.md`. (d) `Staff.Name`: the save's `mName` is text (87 staff
+  in eleven saves), a hire keeps the candidate's, the pool asks the park, and the staff screen shows it ("Duke
+  Mighten" predicted and photographed). (e) `+0x204` is `mPaidAdmission`, set at the gate; the history's readers
+  are the park status screen's graph; the count now asks the flag. (f) The cap's "owed to the next frame" put back:
+  caught; the double click's test restaged with the move that selects. (g) The cache folder's failure is logged
+  and the boot goes on (run with the folder unmakeable). Sixteen bugs put back, sixteen caught (`q238/mutate.py`).
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

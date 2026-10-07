@@ -488,7 +488,9 @@ public sealed class ParkPeople : Entity
 			SpriteBank = child
 		};
 
-		_peeps.Add( peep );
+		// A new thing heads the used-thing list (FUN_00516270), which the sweep walks from its head, so the
+		// newest guest takes the first turn. The save's guests are already in that list's order.
+		_peeps.Insert( 0, peep );
 		_byId[thingId] = peep;
 		var walk = _walks[thingId] = new PeepWalk( peep.Navigator, _blocked )
 		{
@@ -645,11 +647,12 @@ public sealed class ParkPeople : Entity
 			State: (int)StaffActivity.Idle, PayGrade: candidate.Grade,
 			Happiness: 100f, Tiredness: 100f, JobsDone: 0,
 			PatrolBottomLeft: 0, PatrolTopRight: 0, RestArea: 0,
-			PercentageThroughGrade: 0, TimeStartedIdling: 0 );
+			PercentageThroughGrade: 0, TimeStartedIdling: 0, Name: candidate.Name );
 
 		var member = new global::OpenTPW.Staff( thingId, model, state, navigator );
 
-		_staff.Add( member );
+		// At the head, as a new guest is (FUN_00516270).
+		_staff.Insert( 0, member );
 		_staffWalks[thingId] = new PeepWalk( member.Navigator, _blocked ) { Ground = State };
 
 		var person = new ParkWorld.Person(
@@ -1666,7 +1669,18 @@ public sealed class ParkPeople : Entity
 				.Select( person => new Staff(
 					person.ThingId, person.Model, person.Staff!.Value, person.Navigator ) )];
 
-	/// <summary>Every guest, in the order the save lists them.</summary>
+	/// <summary>Whether a member of staff in the park has this name - what the staff pool asks before it gives one out (<c>FUN_005083f0</c>).</summary>
+	internal bool StaffNamed( string name ) => _staff.Exists( member => member.Name == name );
+
+	/// <summary>
+	/// Every guest, in the order the sweep gives them their turns: the original's used-thing list from its head
+	/// (<c>FUN_00516380</c>, <c>0x005163a4</c>), the newest thing first, then the save's in the order it lists them.
+	/// </summary>
+	/// <remarks>
+	/// The original keeps every kind of thing in that one list, so a hire made after a guest takes their turn before
+	/// them; here the guests, the staff and the rides are swept apart, each in the list's order among its own
+	/// (<c>docs/QUEUE.md</c>, Q150).
+	/// </remarks>
 	internal IReadOnlyList<Peep> Peeps => _peeps;
 
 	/// <summary>
@@ -1962,7 +1976,8 @@ public sealed class ParkPeople : Entity
 
 			// The staff pool's turn follows the arrival manager's in the sweep's tail (0x004d7b30).
 			ParkStaffPool.Current?.Sweep( State.GameTick,
-				kind => _staff.Count( member => ParkStaffPool.KindFor( member.Model ) == kind ) );
+				kind => _staff.Count( member => ParkStaffPool.KindFor( member.Model ) == kind ),
+				StaffNamed );
 
 			TakeTheRidesTurns( thingTick );
 			RetryGateClose();
@@ -2971,7 +2986,7 @@ public sealed class ParkPeople : Entity
 			var walk = _staffWalks.GetValueOrDefault( member.ThingId );
 			var nav = member.Navigator;
 
-			yield return $"thing {member.ThingId,2} model {member.Model} {member.Activity} "
+			yield return $"thing {member.ThingId,2} model {member.Model} \"{member.Name}\" {member.Activity} "
 				+ $"grade {member.PayGrade} tired {member.Tiredness,3:0} happy {member.Happiness,3:0} "
 				+ $"idleSince {member.TimeStartedIdling,4} jobs {member.JobsDone} rest {member.RestArea} "
 				+ $"patrol {(member.HasPatrolArea ? $"{member.PatrolFrom}-{member.PatrolTo}" : "anywhere")} "

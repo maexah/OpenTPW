@@ -694,7 +694,7 @@ public class ParkBankTests
 
 		mechanic.PayGrade = 4;
 		Assert.AreNotEqual( 0, people.Hire( hire, 47, 21 ) );
-		var hired = people.Staff[^1];
+		var hired = people.Staff[0];
 
 		people.TrainingBudgets[1] = 50;
 		TurnTheMonth( bank, people );

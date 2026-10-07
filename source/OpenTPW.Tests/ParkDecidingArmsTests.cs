@@ -190,7 +190,7 @@ public class ParkDecidingArmsTests
 		// A mechanic hired well away from everybody is nobody to watch.
 		var (_, alone, park) = DecidingAt( 55, 30, seed );
 		Assert.AreNotEqual( 0, park.Hire( new ParkStaffPool.Candidate( Id: 999, Kind: 1, Name: "Test", Grade: 0, Costume: 0, Wage: 69 ), 55, 30 ) );
-		Assert.AreEqual( (4, (55, 30)), (park.Staff[^1].Model, park.StaffWalkFor( park.Staff[^1].ThingId )!.Position.Cell) );
+		Assert.AreEqual( (4, (55, 30)), (park.Staff[0].Model, park.StaffWalkFor( park.Staff[0].ThingId )!.Position.Cell) );
 		alone( 2 );
 		Assert.AreEqual( from + 1, Counted( "DECIDE_ENTERTAINER_BESIDE" ), "a mechanic on the guest's own cell" );
 

@@ -618,10 +618,28 @@ runs on the same clock (`FUN_0065ef90` arms one, `FUN_00661fe5` fires it on `FUN
 until a whole period has gone since its stamp, then message `0x10` once for each whole period gone, and the stamp
 left the remainder behind now, so a late pass does not move its phase. `FUN_006622d2` runs every timer, and none
 while `[0x00faa638]` is set: `FUN_00662411` sets it, called as a message box, the game menu and the options screen
-open (and from `FUN_0048a6e0`, `FUN_0048a720` and `FUN_005f0b40`, not identified), and `FUN_00662420` clears it and
-stamps every timer afresh (`FUN_0066213e`). OpenTPW: `UiTimer`, held by `WindowStack.HoldsTimers` for those three
-screens: the visitors list's 2000 ms and an object window's 4000 ms. Not read here: the buy screen's own 1000 ms timer (`0x80080`, `0x004ac3ee`, what it does not
-decoded) and the two park's-end views' 2000 ms. The limit
+open, and by three more (Q238): the park's map as it opens (`FUN_005f0b40`, `0x005f0b8a`, let go by its closer
+`FUN_005f1130` at `0x005f121b`), and the pause overlay's two doors. `FUN_0048a6e0` (`0x0048a6e9`) holds and puts the
+overlay up (`FUN_004a2790`, tree `0x00752e00`); its one caller is the pause `FUN_004092a0` when its first argument is
+1, which only the window losing the focus passes (`WM_ACTIVATEAPP`, `0x0046b74c`); `FUN_0048a700` lets go and takes
+it down on every resume (`FUN_00409300`, `0x00409315`). `FUN_0048a720` (`0x0048a72e`, `0x0048a733`) toggles the
+overlay and holds or lets go with it, from `Game_TogglePause` (`0x0040935e`), which the overlay's own proc calls on a
+key let go (`0x004a2706`). What the overlay draws and which key reaches the toggle are not read. `FUN_00662420` clears
+the hold and stamps every timer afresh (`FUN_0066213e`). OpenTPW: `UiTimer`, held by `WindowStack.HoldsTimers` for the
+message box, the game menu, the options screen and the map: the visitors list's 2000 ms, an object window's 4000 ms
+and the buy screen's 1000 ms. The pause overlay is not built; the focus leaving is counted
+(`FOCUS_LOSS_PAUSE_OVERLAY`).
+
+**The buy screen's own timer** (Q238) is `0x80080` at 1000 ms, armed on the screen's message `0x15`
+(`FUN_004ac270`, `0x004ac3ee`). Its tick, message `0x10` (`0x004ac2db`), draws the list's rows again
+(`FUN_00663324` on control `0x1f8`) and letters the corner, control `0x200`, with the bank's balance: UITEXT `0x1ca`
+("Cash  $ ") and the balance, or `0x1cb` ("Cash  -$ ") and the balance without its sign when it is under nought
+(`0x004ac31e`). No other arm of the handler writes `0x200`, and the tab builder `FUN_004ab6b0` does not. The opener
+`FUN_004acc70` letters it once itself, the same way (`0x004acdae`): measured in the original, the corner reads
+"Cash  $ 88112" in the first frame its screen is drawn (`q238/orig-buy-sheet.png`). The timer is made stopped
+(`FUN_00661ece`) and started and stamped by `FUN_0065f024` (`0x004ac403`), so its first tick is a second on. That
+the number follows the string rests on the frame; the formatter `FUN_006acd60` is not decoded. OpenTPW:
+`ParkBuyScreen.Tick` on a `UiTimer`, and the same lettering once as the screen is made. Not read: the two park's-end views' 2000 ms. The limit
 `[0x0077c480] = 500`, and the points the interface's 2048x1536 units.
 
 - **The press**, only from state 0: sets the mask bit, keeps the point, state 1. If the control's flags `+0x48` lack

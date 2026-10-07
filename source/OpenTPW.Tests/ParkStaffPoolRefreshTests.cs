@@ -317,6 +317,40 @@ public class ParkStaffPoolRefreshTests
 	}
 
 	/// <summary>
+	/// <b>Nor is a new candidate given a name a member of staff in the park has</b> (<c>FUN_005083f0</c>'s walk of the
+	/// things): a pool emptied and topped up names its first newcomer one thing left alone, and never that with
+	/// somebody of the name employed. And the save's own staff carry their names (<c>mName</c>).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the park's staff not asked; the save's name not read.</remarks>
+	[TestMethod]
+	public void ANewCandidateIsNotGivenANameInUseInThePark()
+	{
+		FileSystem = GameData.Required();
+
+		var balance = new ParkBalance( "jungle", easyMode: true );
+
+		for ( var seed = 1; seed <= 10; ++seed )
+		{
+			var alone = new ParkStaffPool( balance, seed, gameTick: 0 );
+			alone.Sweep( 100000, _ => 0 );
+
+			var first = alone.Candidates[0].Name;
+			Assert.AreEqual( 100000, alone.Candidates[0].Mark, "the pool is all newcomers" );
+
+			var employing = new ParkStaffPool( balance, seed, gameTick: 0 );
+			employing.Sweep( 100000, _ => 0, name => name == first );
+
+			Assert.IsFalse( employing.Candidates.Any( person => person.Name == first ), $"seed {seed}: {first} is employed and was given again" );
+		}
+
+		using var stream = new System.IO.MemoryStream( FileSystem.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
+		var names = world.People.Where( person => person.Staff != null ).Select( person => $"{person.ThingId}:{person.Staff!.Value.Name}" ).ToArray();
+
+		Assert.AreEqual( "30:Nicholas Ricks, 28:Mike Man, 27:Pierre Hintze, 26:Mike Cooper, 25:Duke Mighten", string.Join( ", ", names ) );
+	}
+
+	/// <summary>
 	/// <b>The hire screen's list follows the pool while it is open</b>: a candidate of the kind shown who joins gets a
 	/// row, one of another kind does not, and one whose time runs out loses theirs (<c>FUN_00481550</c>).
 	/// </summary>

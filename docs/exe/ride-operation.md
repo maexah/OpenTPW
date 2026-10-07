@@ -9,6 +9,7 @@ Two kinds of offset appear on this page and they are **not** interchangeable. A 
 | Address / offset | Original name | What it is | Evidence |
 |---|---|---|---|
 | `FUN_00516380` | — | The park's whole thing sweep. Increments the global tick counter at `+0x1da70c`, then walks the thing list once from its head calling `FUN_0050b360` on every live thing. Guests, staff and rides all come off this one loop. | Disassembly |
+| `FUN_00516270` | — | Makes a thing: takes the free list's first slot and links it in as the HEAD of the used list (`[0x007cf56c]`; a node is thing, id, next, previous). So the sweep visits the newest thing first, then the save's in the order it lists them (`Used Thing Next`). Measured in the original (Q238, `q238/usedlist.sh`): on entering Lost Kingdom the list reads 42, 41 ... 31, 30, 29, 15, 28 ... 1; after the first load 54, 53 ... 43, 38, 42, 41 ... (the load's first guest took 38, an id a leaver had freed). OpenTPW: `ParkPeople` puts a new guest and a new hire at the head of their own lists; the three kinds are still swept apart (Q150), and a freed id is not taken again. | Decompile; memory |
 | `FUN_0050b360` | — | Switches on a thing's model byte. Model 3 (a placed catalogue object) is handed to `FUN_004e0b90` then `FUN_004e0e00` — the same needs-then-behaviour shape every person kind gets. | Disassembly |
 | `0054f56b` | — | `CALL 0x005516b0`, the SCRIPT system, in `Game_StateMachine`. | Disassembly of the straight-line region |
 | `0x005516b0` | — | The ride-script system entry point. | Call site above |
@@ -3035,8 +3036,13 @@ Five constructors join set `0xc`: model 9's (`0x00508a08`), the tag system's, th
    One of them is the guests' stay: the mean of its ring of the last fifty stays (`FUN_004cef30` over `+0x21600`,
    `0x004c79e5`) goes into a history ring at `+0x21164`. A stay is put there as a guest enters state `0x15`, at the
    stop to go home, if their `+0x204` is set (`FUN_00501db0`, `0x00502333`): `mGameTick` less their arrival `+0x1d4`,
-   to a four of sweeps (`FUN_004fd950`), through `FUN_004c7600`, the ring's only writer. What sets `+0x204` and who
-   reads the history are not decoded. OpenTPW counts the write, `LEAVER_STAY_SAMPLE`, and keeps no such ring.
+   to a four of sweeps (`FUN_004fd950`), through `FUN_004c7600`, the ring's only writer. `+0x204` is
+   `mPaidAdmission` (the save's name for it, `FUN_004fb530`): the constructor zeroes it (`0x004faf81`) and the gate
+   sets it as a guest pays (`FUN_004ff9d0`, `0x004ffaee`), so only a guest who paid hands in a stay. The history
+   ring's readers are the park status screen's graph (`FUN_004a4b90`, `FUN_004a51d0`, the draw at `0x004a47bf`, and
+   `FUN_004a5e10` from the date's change, `0x004f8435`), which is not built (`docs/PLAYER-GAPS.md`); that the series
+   is the one the screen calls the average time in the park is not read from a label. OpenTPW counts the write for a
+   guest whose `Peep.PaidAdmission` is set, `LEAVER_STAY_SAMPLE`, and keeps no such ring (Q238).
 4. **Thing 8**, the bank, runs its month turn (`FUN_004d02d0` → `FUN_004d0370`, `0x004d035f`).
 5. **Each member of staff** pays a month's wage (`FUN_00504c70`, `0x00504cb9`).
 

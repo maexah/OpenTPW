@@ -150,10 +150,10 @@ public class ParkStaffPlacementTests
 			ParkStaffPool.Carry( candidate.Id );
 			var reply = ParkStaffPool.PlaceCarried( 47, 18 );
 			Assert.AreEqual( kind + 1, people.Staff.Count, reply );
-			Assert.AreEqual( models[kind], people.Staff[^1].Model );
+			Assert.AreEqual( models[kind], people.Staff[0].Model );
 			Assert.AreEqual( 0, ParkStaffPool.Carrying );
 			Assert.IsNull( pool.Find( candidate.Id ) );
-			Assert.IsNotNull( people.SpriteFor( people.Staff[^1].ThingId ), "a live animation" );
+			Assert.IsNotNull( people.SpriteFor( people.Staff[0].ThingId ), "a live animation" );
 			Assert.IsTrue( packed.Contains( (kinds[kind], 0) ), "the empty park atlas includes the hire's bank" );
 		}
 		Assert.AreEqual( waiting - 5, pool.Candidates.Count );
@@ -252,12 +252,16 @@ public class ParkStaffPlacementTests
 		ParkStaffPool.Carry( candidate.Id );
 
 		var reply = ParkStaffPool.PlaceCarried( OnMapX, OnMapY );
-		var member = people.Staff[^1];
+		var member = people.Staff[0];
 
 		Assert.AreEqual( 0, ParkStaffPool.Carrying, $"the hand is empty: {reply}" );
 		Assert.IsNull( pool.Find( candidate.Id ), "they left the pool" );
 		Assert.AreEqual( waiting - 1, pool.Candidates.Count, "and only they did" );
 		Assert.AreEqual( ParkStaffPool.ModelFor( candidate.Kind ), member.Model, "the new worker is of their kind" );
+		Assert.AreEqual( candidate.Name, member.Name, "and keeps the candidate's name" );
+		Assert.IsTrue( people.StaffNamed( candidate.Name ) && people.StaffNamed( "Pierre Hintze" ), "which the pool is told is in use, as a saved member's is" );
+		Assert.IsFalse( people.StaffNamed( "Nobody Atall" ) );
+		Assert.AreSame( member, people.Staff[0], "at the head of the sweep, as a new thing is" );
 		StringAssert.Contains( reply, $"as thing {member.ThingId} at ({OnMapX},{OnMapY})" );
 	}
 
@@ -272,7 +276,7 @@ public class ParkStaffPlacementTests
 
 		Assert.AreNotEqual( 0, pool.Hire( people, pool.Candidates.Last(), OnMapX, OnMapY ) );
 
-		var hired = people.Staff[^1].Navigator;
+		var hired = people.Staff[0].Navigator;
 
 		Assert.AreEqual( (18350, 36700), (hired.MaxSpeed, hired.MaxForce) );
 	}

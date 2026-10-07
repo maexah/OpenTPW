@@ -40,26 +40,6 @@ the original.
 
 **The 2026-10-06 review's leftovers come first, at Alexah's word (2026-10-06).**
 
-- [ ] **Q238. Seven leads from the 2026-10-06 review that nobody checked.** They were low and unverified, so they
-  were left off its list (`~/.cache/tpw-harnesses/review-run-2026-10-06/LEDGER.md`, the lines marked OPEN, "lead" or
-  "not checked", and what fixes 8 and 9 counted without a queue item). Check each first-hand; then mend it, say it
-  at the site, or strike it here:
-  (a) whether guests at the stop go in the original's order: a newcomer heads its cell's list and the sweep visits
-  guests by descending id, which reproduces Q128's log exactly; nobody has compared `ParkState`'s head and the
-  sweep's order with it;
-  (b) the buy screen's own 1000 ms timer (`0x80080`, `0x004ac3ee`), not decoded, against a balance rewritten every
-  frame here;
-  (c) the three callers of the timers' hold that are not identified (`FUN_0048a6e0`, `FUN_0048a720`,
-  `FUN_005f0b40`; `hud.md`);
-  (d) a hired member of staff keeps no name here, so a new candidate can be given one in use in the park
-  (`STAFF_NAME_IN_USE_IN_THE_PARK`);
-  (e) the leaver's stay and the analyser's ring of fifty are counted with nothing built (`LEAVER_STAY_SAMPLE`): what
-  sets a guest's `+0x204`, and who reads the history ring at `+0x21164`;
-  (f) `ParkSweepCapTests`' remarks name a bug that was never put back, and one of Q123c's tests stages a state the
-  original cannot reach;
-  (g) Q125: the cache folder's `CreateDirectory` runs before the renderer and can stop the boot for a folder nothing
-  reads.
-  No game run for (c), (f) and (g).
 - [ ] **Q236. The crowd's own voice and `FUN_0055ab50` are counted, not built. DECODE FIRST.** Found by the
   2026-10-06 review (fix 4). On every 32nd step, after the music's level, the park loop hands kids 91 the guests
   within four cells of the cell at `[0x007b05cc]`, held to 100 (`FUN_004c8d30`, then `FUN_0051e7b0`: it plays the
@@ -278,6 +258,10 @@ the original.
   guests react to what rides did in the same tick, and they do now: a shut ride turns its queue away (`c54e848`). Run
   the park's systems from one loop, one tick at a time, in the original's order, with Q126. Confirm: a long frame
   forced, the log's ride and guest lines interleaved tick by tick.
+  From Q238: inside one sweep the original walks ONE list, every kind of thing in it, the newest first
+  (`FUN_00516270`; `ride-operation.md`, "Where a ride's turn comes from"). `ParkPeople` sweeps the guests, then the
+  staff, then the rides, each in that order among its own, so a hire or a thing bought after a guest still takes
+  its turn after every guest.
 - [ ] **Q151. A park's sky draws the lobby's horizon band. Decode first.** Found by the 2026-09-26 staleness audit.
   `FUN_005863c0` gives the band's four rings, per half, 0.99, `c08` + 0.5, `c0c` + 0.5, `v` + 0.5 and then 0.49,
   `c08`, `c0c`, `v`, with `c08`, `c0c`, `v` 0.34, 0.17, 0.01 (`0x00701f88`) by default and 0.19, 0.01, 0.49
@@ -371,6 +355,8 @@ the original.
   of a format not read back. `ParkBuyScreen`'s description panel `0x1ea` draws its frame and no preview. Count each
   where it is drawn. Confirm: `unimplemented` after opening a ride's window, the entry-price screen and the buy
   screen.
+  From Q238: the buy list's prices are bare numbers where the original letters "$ 2500" (UITEXT `0x1c1`,
+  `UIStrings.Dollar`; `q238/fix/b-buy-screen.png` beside `rv8/orig/b1.png`), and nothing counts it.
   From Q188: the buy screen's panel is the object window's preview (`ParkObjectPreview`, which wants a placed thing
   today: give it an item); in the original it is (437,162) 360 by 363. The footprint picture at its lower left is
   built (Q233b) and is drawn in front of the model; the name row `0x1ec` above it is not built.
@@ -729,6 +715,9 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   `park.md`, "Arrivals: who comes, on what, and how often"); the
   headcount score (`FUN_004c8240`) is not decoded. Q68 found the rest of the headcount: `NewParkBonus` is added to
   the score on every call and the sum scaled by 1.2 or 0.8, so even a score of nought brings 3 or 4 to Lost Kingdom.
+  From Q238: the original hands a new thing the id last freed (its load's first guest took 38, a leaver's, the
+  rest 43 on); `ParkState.NextThingId` never uses one twice, said at the site, so a load's ids part from the
+  original's once anybody has gone.
   Decode the score, then build create-on-demand and the bus / ferry / plane ordering; the pause between loads is
   built (Q68b).
   The same score is the park's worth every guest judges the gate's fee against (`PeepBehaviour.ParkExcitement`, nought
