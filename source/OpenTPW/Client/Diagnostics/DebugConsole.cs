@@ -1027,9 +1027,9 @@ public static class DebugConsole
 				break;
 
 			// Brings a whole load in, of whatever size is asked for, which is the only way to see the
-			// second and third vehicles at all: the headcount is floored at Arrival.MinPeople and a
-			// crowd of one always takes the bus. The banding is the original's own - under 36 the bus,
-			// up to 60 the seaplane, beyond that the ferry.
+			// second and third vehicles in the stock park: its loads are 13 and fewer, and a crowd under 36
+			// takes the bus. The banding is the original's own - under 36 the bus, up to 60 the seaplane,
+			// beyond that the ferry.
 			case "load":
 				if ( ParkPeople.Current is not { } loading )
 				{

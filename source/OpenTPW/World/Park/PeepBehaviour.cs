@@ -245,12 +245,11 @@ public sealed class PeepBehaviour
 	/// <c>FUN_004c8240</c> makes.
 	///
 	/// <para>
-	/// <b>Nought, because nothing computes it.</b> The sum is decoded and unbuilt (<c>docs/exe/park.md</c>,
-	/// "The headcount score"; <c>docs/QUEUE.md</c> Q26b), so every guest judges the fee against a park worth
-	/// nothing. It is settable so that the term is visible and testable rather than a zero nobody can see.
+	/// <b>Taken afresh at each asking</b> (<see cref="ParkWorth.Of"/>), as the original's two callers take it: a
+	/// guest judging while the offer gate refuses the park's one ride judges a park worth nought.
 	/// </para>
 	/// </summary>
-	public int ParkExcitement { get; set; }
+	public int ParkExcitement => ParkWorth.Of( State, Park, _catalogue, QueueCount );
 
 	/// <summary>
 	/// Whether the gate will let anybody through - the pair of questions at the top of

@@ -5320,6 +5320,23 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   own age (`park.md`, "The headcount score"). The stock park is worth 35, then 32 from tick 1398. In the original,
   predicted first: loads of **13** on tick 1264 and **12** on 1916 (`q26/orig/a.log`; three predictions held, and the refused ride's did not arise).
   The control record's count and first-build stamp are in FileFormats `saves.md`. Nothing built.
+- [x] **Q26b. Build the headcount and the park's worth.** From Q26's decode (`park.md`, "The headcount score"):
+  both readers of the score, the load's size in `StepArrivals` and `PeepBehaviour.ParkExcitement`, taken afresh at
+  each call. It needs the control record's count and first-build stamp read from the save (`ParkWorld.ObjectControl`,
+  `+0x18` and `+0x1c`) and kept as things are bought and sold, and the items' `Info.AttractionValue`,
+  `Info.NewAttractionDecayTime` and `Attraction[0..2].NewBonus`; the gate is `ParkRideChoice.CanBeOffered`. Confirm:
+  the stock park left alone, the first two loads' sizes in `guests` beside the original's, 13 called on tick 1264
+  and 12 on 1916 (`q26/orig/a.log`), predicted first; a screenshot. The park is then worth more than nought to a guest
+  at the gate, so Q145's fees (30 on the expensive line) move: re-check the gate's tests and `q145`'s harness.
+  **Done 2026-10-08.** `ParkWorth` is the sum and the load's arithmetic; the record's count and stamp are read
+  (`ParkWorld.ObjectControl`) and kept by `ParkState.BuiltOf`. In the game, the stock park left alone, predicted
+  first: **13** called on tick 1264, let go on 1313, **12** called on 1916, the park worth 35 then 32; the unchanged
+  build calls 1 and 1 (`q26b/run1`, `control`). A second run (`gate`) called 13 and then **4**: the Belly Bounce's
+  queue was full on that sweep, so the park was worth nought (Q222's crowd, noted there). The original, read again the same hour: 13 on 1264, 1313, 12 on
+  1916, 3 of 3, and photographed at the stop (`q26b/orig`, `sheet-ours-beside-original.png`). The booth guests judge
+  a fair fee of 25 to 28 where they judged 20; a fee of 30 is now paid (Q145's 30 sulked against a park worth
+  nought). 37 bugs put back, 36 caught; the one left, a shop counted as a sideshow, changes nothing while no shop
+  file sets a value.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

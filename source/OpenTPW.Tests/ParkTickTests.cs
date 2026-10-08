@@ -636,9 +636,13 @@ public class ParkTickTests
 	///
 	/// <para>
 	/// <b>No script is bound here</b>, so the manager takes OpenTPW's no-script fallback: the sweep that calls the
-	/// load is the summons, and with no script to wait for its guest is dropped on the next, where the original would
-	/// wait for the vehicle to answer 2. The handshake with a bound bus is
+	/// load is the summons, and with no script to wait for its guests are dropped from the next on, one a sweep,
+	/// where the original would wait for the vehicle to answer 2. The handshake with a bound bus is
 	/// <see cref="TheBusIsHeldAtTheStopUntilTheSweepAfterItsLastGuest"/>.
+	/// </para>
+	/// <para>
+	/// <b>With no catalogue the park is worth nought, and the load is four</b>: <c>Arrival.NewParkBonus</c> 20 times
+	/// 1.2, over <c>Arrival.PointsPerVisitor</c> 6, the defaults of a park with no balance file.
 	/// </para>
 	/// </summary>
 	/// <remarks>
@@ -661,7 +665,7 @@ public class ParkTickTests
 			Assert.AreEqual( 661, people.ArrivalMark, "and its wait from the save's mark" );
 
 			var newest = people.Peeps.Max( peep => peep.ThingId );
-			int? call = null, drop = null, letGo = null, next = null;
+			int? call = null, firstDrop = null, drop = null, letGo = null, next = null;
 
 			for ( var frame = 0; frame < 4000 && next == null; ++frame )
 			{
@@ -685,11 +689,18 @@ public class ParkTickTests
 						next = tick;
 				}
 
-				if ( drop == null && people.Peeps.Max( peep => peep.ThingId ) > newest )
+				if ( call == tick )
+					Assert.AreEqual( 4, people.StillToDrop, "a park worth nought brings four: 20 x 1.2 over 6" );
+
+				if ( firstDrop == null && people.Peeps.Max( peep => peep.ThingId ) > newest )
+					firstDrop = tick;
+
+				if ( drop == null && firstDrop != null && people.StillToDrop == 0 )
 				{
 					drop = tick;
 
-					Assert.IsTrue( people.LoadHeld && people.StillToDrop == 0,
+					Assert.AreEqual( newest + 4, people.Peeps.Max( peep => peep.ThingId ), "all four are made" );
+					Assert.IsTrue( people.LoadHeld,
 						"the last guest's sweep leaves the load held with nobody left: the flag is apart from the count" );
 				}
 
@@ -702,11 +713,41 @@ public class ParkTickTests
 			}
 
 			Assert.AreEqual( 1264, call, "the first load is called on the 509th sweep after 755" );
-			Assert.AreEqual( call + 1, drop, "the call's own sweep is the summons; with no script to wait for, its one guest comes on the next" );
+			Assert.AreEqual( call + 1, firstDrop, "the call's own sweep is the summons; with no script to wait for, its first guest comes on the next" );
+			Assert.AreEqual( call + 4, drop, "and the fourth three sweeps on, one a sweep" );
 			Assert.AreEqual( drop + 1, letGo, "the load is let go on the sweep after the last drop, not on it" );
 			Assert.AreEqual( ParkPeople.FirstDueTick( letGo!.Value, 150 ), next,
 				"and the next is called on the first tick whose fours are 151 past the let-go's" );
 			Assert.IsTrue( next - drop is >= 602 and <= 605, $"{next - drop} sweeps from the drop to the next call" );
+		}
+		finally
+		{
+			people.Delete();
+			Entity.ApplyDeletions();
+		}
+	}
+
+	/// <summary>
+	/// <b>A load called while drops fall is smaller</b> (<c>FUN_004cf5b0</c>, the 0.8 at <c>0x00700368</c>): the same
+	/// park with no catalogue, worth nought, brings two in rain, 20 times 0.8 over 6, where fair weather brings four.
+	/// </summary>
+	[TestMethod]
+	public void ALoadCalledInRainIsSmaller()
+	{
+		var people = new ParkPeople( World() );
+
+		try
+		{
+			EnterPark();
+			people.Raining = static () => true;
+
+			for ( var sweep = 0; sweep < 600 && !people.LoadHeld; ++sweep )
+				Sweep( people );
+
+			Assert.AreEqual( 1264, people.State.GameTick, "the load is called on mGameTick 1264" );
+			Assert.AreEqual( 2, people.StillToDrop, "sixteen points over six" );
+			Assert.AreEqual( ParkPeople.MostPeopleInAPark - people.Peeps.Count, people.LoadSize( 1_000_000, raining: false ),
+				"and a load is never more than the park has room for" );
 		}
 		finally
 		{
@@ -804,16 +845,22 @@ public class ParkTickTests
 				bus.Set( "VAR_STATUS", status );
 				Sweep( people );
 				Assert.AreEqual( newest, people.Peeps.Max( peep => peep.ThingId ), $"nobody is dropped while it answers {status}" );
-				Assert.IsTrue( people.LoadHeld && people.StillToDrop == 1, "and the load is held whole" );
+				Assert.IsTrue( people.LoadHeld && people.StillToDrop == 13,
+					$"and the load is held whole: thirteen, the park worth 35 with its Belly Bounce new, not {people.StillToDrop}" );
 			}
 
 			bus.Set( "VAR_TRIGGER", 0 );
 			bus.Set( "VAR_STATUS", 2 );
-			Sweep( people );
 
-			Assert.IsFalse( people.LeaverAtTheStop(), $"{NobodyIsGoingHome} with seed {seed} as the load drops" );
-			Assert.IsTrue( people.Peeps.Max( peep => peep.ThingId ) > newest, "at the stop, its one guest is dropped" );
-			Assert.IsTrue( people.LoadHeld && people.StillToDrop == 0, "and the load is held with nobody left" );
+			for ( var dropped = 1; dropped <= 13; ++dropped )
+			{
+				Sweep( people );
+
+				Assert.IsFalse( people.LeaverAtTheStop(), $"{NobodyIsGoingHome} with seed {seed} as the load drops" );
+				Assert.AreEqual( newest + dropped, people.Peeps.Max( peep => peep.ThingId ), "at the stop, one guest is dropped a sweep" );
+				Assert.IsTrue( people.LoadHeld && people.StillToDrop == 13 - dropped, "and the load is held for the rest" );
+			}
+
 			Assert.AreEqual( 0, bus["VAR_TRIGGER"], "so the bus is NOT let go on the last drop's sweep" );
 
 			bus.Set( "VAR_STATUS", 3 );

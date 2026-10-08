@@ -218,6 +218,37 @@ public sealed class ParkState
 	/// <summary>The head of the object chain - the save's <c>mFirstObject</c>, the engine's <c>+0x1da746</c>.</summary>
 	private int _firstObject;
 
+	/// <summary>Each item's standing count and first-build stamp, by item id - see <see cref="BuiltOf"/>.</summary>
+	private readonly Dictionary<int, (int Standing, uint FirstBuilt)> _built = [];
+
+	/// <summary>
+	/// How many of an item stand in the park and <c>mGameTick</c> as the first of them was built - its control
+	/// record's <c>+0x18</c> and <c>+0x1c</c>, seeded from the save (<see cref="ParkWorld.ObjectControl"/>) and kept
+	/// as things are bought and sold. An item never built reads nought and nought. The park's worth divides by the
+	/// one and ages a ride by the other (<see cref="ParkWorth"/>).
+	/// </summary>
+	public (int Standing, uint FirstBuilt) BuiltOf( int itemId ) => _built.GetValueOrDefault( itemId );
+
+	/// <summary>
+	/// The object constructor's two writes to the item's record (<c>FUN_004db090</c>): the stamp takes the clock
+	/// only while it reads nought (<c>0x004db690</c>), so a sold item keeps its first build's and one built on
+	/// tick nought takes the next build's; then the count goes one up (<c>0x004db6d0</c>).
+	/// </summary>
+	private void CountBuilt( int itemId )
+	{
+		var (standing, firstBuilt) = BuiltOf( itemId );
+
+		_built[itemId] = (standing + 1, firstBuilt == 0 ? unchecked((uint)GameTick) : firstBuilt);
+	}
+
+	/// <summary>The object destructor's first act: the count goes one down, the stamp stays (<c>0x004dd0e1</c>).</summary>
+	private void CountSold( int itemId )
+	{
+		var (standing, firstBuilt) = BuiltOf( itemId );
+
+		_built[itemId] = (standing - 1, firstBuilt);
+	}
+
 	/// <summary>
 	/// Each object's link to the next, by thing id - the save's <c>mNext</c>, which is the engine's
 	/// thing <c>+0xc</c>.
@@ -324,6 +355,7 @@ public sealed class ParkState
 	public void AddObject( ParkWorld.CatalogueObject placed )
 	{
 		_objects.Add( placed );
+		CountBuilt( placed.CatalogueId );
 		_rings[placed.ThingId] = new ParkObjectRings();
 
 		_nextObject[placed.ThingId] = _firstObject;
@@ -341,6 +373,7 @@ public sealed class ParkState
 		if ( at < 0 )
 			return false;
 
+		CountSold( _objects[at].CatalogueId );
 		_objects.RemoveAt( at );
 		_hoardings.Remove( thingId );
 		_rings.Remove( thingId );
@@ -525,6 +558,11 @@ public sealed class ParkState
 		// Everything the file placed, copied so that what is built and sold afterwards moves here rather
 		// than in ParkWorld, which describes a file.
 		_objects.AddRange( park.Objects );
+
+		// The save's word on how many of each item stand and when the first was built: the file's objects are
+		// counted in it already, so none of them is counted here.
+		foreach ( var record in park.ObjectControlRecords )
+			_built.TryAdd( record.ItemId, (record.Standing, record.FirstBuilt) );
 
 		// And the chain that threads them, which the original keeps live and this one now does too - see
 		// ObjectsInChainOrder. Seeded from the save's own head and links, so a park straight out of the

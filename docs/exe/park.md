@@ -1712,8 +1712,8 @@ then at status 0 again, off the stops; a second load by hand summoned on 1499, i
 Before it, the bus was sent round after its first circuit and stood at the arrivals' stop at status 2, and the second
 load's first guest was made on the call's own sweep.
 
-What it does not reproduce, each said at its site: the headcount, the floor alone (Q26b); the two refusals, in world state 4 and at the cap, where the original calls a load
-of nobody or of what fits and still sends its vehicle (neither reached in Lost Kingdom); a load saved half-dropped,
+What it does not reproduce, each said at its site: the two refusals, in world state 4 and with the park full, where the original calls a load
+of nobody and still sends its vehicle (neither reached in Lost Kingdom; a load that would pass the cap is cut to what fits, counted here on everybody and not on `FUN_004c7fa0`'s crowd); a load saved half-dropped,
 counted as `SAVED_ARRIVAL_LOAD` and not resumed; guests made with no script to ask, on the sweep after the one that calls the load;
 and the ferry
 and the seaplane, stood as the park loads where the original makes each at its first summons: they stand at their
@@ -1776,11 +1776,36 @@ bonus index past 2.
 entryprice row): the same sum, taken afresh at each judgement, so a guest judging while the gate refuses the one
 ride judges a park worth nought.
 
-**OpenTPW builds neither** (Q26b): `StepArrivals` sizes every load at the floor, and `ParkExcitement` is nought.
-What the build needs that is not read today: the record's count and stamp (`ParkWorld.ObjectControl` keeps the id,
-the researched flag and the tier), kept as things are bought and sold, and the three item keys. The gate is
-`ParkRideChoice.CanBeOffered`, the age's clock `ParkState.CalendarNow`'s. With a load above one, the vehicle is
-chosen by its size (36 and 61), which no stock park reaches: three rides in their first 60 days make 30 a load.
+**The record's two writers.** The count goes one up in the object constructor (`FUN_004db090`, `0x004db6d0`),
+just after the stamp's write-while-nought (`0x004db690`), and one down as the object destructor's first act
+(`FUN_004dd0a0`, `0x004dd0e1`), which leaves the stamp. So an item built on tick nought (a fresh park's gates and
+lights) keeps a stamp of nought and takes the next build's.
+
+**The load's arithmetic** (`0x004cf623`..`0x004cf648`): `NewParkBonus + score` is loaded as a whole number (`FILD`),
+multiplied by the float 1.2 (`0x00700364`) or 0.8 (`0x00700368`), cut to a whole number (`FUN_0067a830`), divided
+signed by `PointsPerVisitor` held to 1 or more, and raised to `MinPeople`.
+
+**OpenTPW builds both** (Q26b): `ParkWorth.Of` is the sum, taken afresh by `PeepBehaviour.ParkExcitement` for a
+guest's judgement and for `ParkPeople.StepArrivals` as it calls a load; `ParkWorth.LoadSize` is the arithmetic.
+`ParkWorld.ObjectControl` reads the count and the stamp, `ParkState.BuiltOf` keeps them as things are bought and
+sold, and the item's three bonuses are `ItemDescriptionFile.NewBonusAt`. The gate is `ParkRideChoice.CanBeOffered`
+and a track ride's age `ParkState.AgeInDays`. With a load above one, the vehicle is chosen by its size (36 and 61),
+which no stock park reaches: three rides in their first 60 days make 30 a load.
+
+**In the running game, predicted first** (`q26b/confirm.py`, the stock park left alone, 2026-10-08): the first load
+called on `mGameTick` **1264** with **13**, the park worth 35, dropped one a sweep on 1300 to 1312 and let go on
+**1313**; the second called on **1916** with **12**, the park worth 32: the original's two sizes and its three
+ticks (`q26/orig/a.log`: 1264, 1313, 1916), read again in the original the same hour, predicted first, 3 of 3
+(`q26b/orig/a.log`), and photographed there at the stop on tick 1327 beside OpenTPW's
+(`q26b/sheet-ours-beside-original.png`). The unchanged build calls 1 on 1264 and 1 on 1904.
+**The second load is not steady here**: a second run of the same build (`q26b/gate`) called 13 on 1264 and then
+**4** on 1916, the park worth nought, because sixteen guests filled the Belly Bounce's sixteen places on that
+sweep and the offer gate refused it: the listing's own arm, reached by a crowd on the Belly Bounce the original
+does not have (Q222; its ride passed the gate on every sweep of both of today's runs). The five guests the
+save leaves at the booths judge `GP` 25, 27 or 28 against the fee of 25 where the unchanged build's read 20, and
+from tick 1398 the arrivals judge 25, 26 or 28. One fact the item's note asked to be re-checked: with the park worth
+35 a fee of 30 is under easy mode's expensive line (37.5 at the least) and is paid; 30 sulked only against a park
+worth nought (Q145).
 
 **What a new guest's fields come from** is decoded in
 [guest-arrivals.md](guest-arrivals.md): the constructor's initial meters, cash and exit variation,

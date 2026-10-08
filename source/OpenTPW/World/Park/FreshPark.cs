@@ -43,7 +43,9 @@ public sealed class FreshPark : IParkInitialState
 		Objects = Array.AsReadOnly( new[] { FixedObject( catalogue, "gates", ParkGates, 0 ),
 			FixedObject( catalogue, "lights", TrafficLights, ParkGates ) } );
 		ObjectControlRecords = Array.AsReadOnly( catalogue.All
-			.Select( item => new ParkWorld.ObjectControl( item.Id, item.ResearchCost == 0, 0 ) ).ToArray() );
+			.Select( item => new ParkWorld.ObjectControl( item.Id, item.ResearchCost == 0, 0,
+				// The two fixed objects are counted as the original's constructor counts them, made on tick nought.
+				Objects.Count( placed => placed.CatalogueId == item.Id ) ) ).ToArray() );
 
 		var loans = Enumerable.Range( 0, ParkWorld.EconomyState.LoanSlots ).Select( at => Loan( balance, at ) ).ToArray();
 		Economy = new( balance.Int( "BankAccountInfo.InitialAdmissionFee" ), balance.Int( "BankAccountInfo.InitialCash" ),

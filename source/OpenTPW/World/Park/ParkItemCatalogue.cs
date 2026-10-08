@@ -116,8 +116,14 @@ public sealed class ParkItemCatalogue
 		ItemHoarding? Hoarding = null,
 
 		// The footprint picture, a kind a cell - ItemDescriptionFile.Shape. The buy screen paints it: ParkFootprintPicture.
-		ItemShape? Shape = null )
+		ItemShape? Shape = null,
+
+		// What being new adds to AttractionValue, a step of the age each - ItemDescriptionFile.NewBonusAt. ParkWorth reads it.
+		int NewBonus0 = 0, int NewBonus1 = 0, int NewBonus2 = 0 )
 	{
+		/// <summary>The bonus of one step of the age, nought past the third - <see cref="ItemDescriptionFile.NewBonusAt"/>.</summary>
+		public int NewBonusAt( int step ) => step switch { 0 => NewBonus0, 1 => NewBonus1, 2 => NewBonus2, _ => 0 };
+
 		/// <summary>The placer's arena adjust for a turn - <see cref="ItemDescriptionFile.BumperAdjust"/>.</summary>
 		public (int X, int Y) BumperAdjustAt( int angle ) => BumperAdjusts is { Count: 4 } adjusts
 			? angle switch { 0 => adjusts[0], 90 => adjusts[1], 180 => adjusts[2], 270 => adjusts[3], _ => (0, 0) }
@@ -332,7 +338,8 @@ public sealed class ParkItemCatalogue
 					description.DoHeadProcessing, description.ResearchCost,
 					[description.BumperAdjust( 0 ), description.BumperAdjust( 90 ), description.BumperAdjust( 180 ),
 						description.BumperAdjust( 270 )],
-					description.SupplementalMeshes, description.Hoarding, description.Shape );
+					description.SupplementalMeshes, description.Hoarding, description.Shape,
+					description.NewBonusAt( 0 ), description.NewBonusAt( 1 ), description.NewBonusAt( 2 ) );
 
 			return true;
 		}

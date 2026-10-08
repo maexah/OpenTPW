@@ -106,6 +106,12 @@ public sealed partial class ItemDescriptionFile
 	/// <summary>The value <see cref="WhichUIType"/> takes for a feature, which is what an unknown item reads as.</summary>
 	public const int Feature = 3;
 
+	/// <summary>The value <see cref="WhichUIType"/> takes for a ride.</summary>
+	public const int Ride = 0;
+
+	/// <summary>The value <see cref="WhichUIType"/> takes for a sideshow.</summary>
+	public const int SideShow = 2;
+
 	/// <summary>
 	/// Whether a guest may choose to come here - <c>Info.IsChoosable</c>, whose own comment reads "People
 	/// CAN use this" where it is set and "People CANNOT choose to use most features in their decision
@@ -191,6 +197,17 @@ public sealed partial class ItemDescriptionFile
 	/// <summary>How long it stays "new" - <c>Info.NewAttractionDecayTime</c>, 60 for rides and 30 for features.</summary>
 	/// <remarks>A key no file sets reads its lower bound, 1, which is what every shop and sideshow has (<c>0x0040153a</c>).</remarks>
 	public int NewAttractionDecayTime => _newAttractionDecayTime ?? _category?.NewAttractionDecayTime ?? 1;
+
+	/// <summary>How many steps <c>Attraction</c> has: the three the park's worth reads (<c>0x004c83b5</c>).</summary>
+	public const int NewBonusSteps = 3;
+
+	/// <summary>
+	/// What being new adds to <see cref="AttractionValue"/> in one step of its age -
+	/// <c>Attraction[step].NewBonus</c>, descriptor <c>+0x268 + 4 × step</c>, the category's showing through and
+	/// nought when neither states it. The step is the age in days over <see cref="NewAttractionDecayTime"/>
+	/// (<c>docs/exe/park.md</c>, "The headcount score").
+	/// </summary>
+	public int NewBonusAt( int step ) => _newBonus[step] ?? _category?.NewBonusAt( step ) ?? 0;
 
 	/// <summary>
 	/// The particle effect a demolished one gives off - <c>Info.DestroyParticleEffect</c>, the descriptor's
@@ -518,6 +535,7 @@ public sealed partial class ItemDescriptionFile
 	private readonly List<string?> _supplementalMeshes = [];
 	private int? _attractionValue;
 	private int? _newAttractionDecayTime;
+	private readonly int?[] _newBonus = new int?[NewBonusSteps];
 	private int? _destroyParticleEffect;
 	private int? _thirstEffect;
 	private int? _hungerEffect;
@@ -743,6 +761,18 @@ public sealed partial class ItemDescriptionFile
 
 				case "Info.NewAttractionDecayTime":
 					_newAttractionDecayTime = Number( line );
+					break;
+
+				case "Attraction[0].NewBonus":
+					_newBonus[0] = Number( line );
+					break;
+
+				case "Attraction[1].NewBonus":
+					_newBonus[1] = Number( line );
+					break;
+
+				case "Attraction[2].NewBonus":
+					_newBonus[2] = Number( line );
 					break;
 
 				case "Info.DestroyParticleEffect":

@@ -21,10 +21,12 @@ namespace OpenTPW;
 /// </para>
 /// <para>
 /// <b>Which balance stack is loaded changes the answer for the shipped park, so it is not a detail.</b>
-/// Lost Kingdom charges 25 against an ideal price of 20, and
+/// Lost Kingdom charges 25, and against a park worth nought, an ideal price of 20,
 /// <c>PeepInfo.AveragePriceMultiplier</c> is 1.25 in the standard game and 1.5 in easy mode - so the
 /// standard stack puts 25 in "expensive" territory and easy mode calls it about right. The park is an
-/// easy-mode park; <see cref="ParkBalance"/> records the two fields of the save that prove it.
+/// easy-mode park; <see cref="ParkBalance"/> records the two fields of the save that prove it. With its Belly
+/// Bounce on offer the park is worth 35 (<see cref="ParkWorth"/>), the ideal price 25 to 28, and 25 is about
+/// right on either stack.
 /// </para>
 /// </summary>
 public sealed class ParkAdmission
@@ -263,10 +265,7 @@ public sealed class ParkAdmission
 	/// </para>
 	/// </summary>
 	/// <param name="excitement">
-	/// What the park's rides are worth, summed by <c>FUN_004c8240</c>.
-	///
-	/// <b>Nothing here computes the sum</b> (decoded in <c>docs/exe/park.md</c>, "The headcount score", and
-	/// unbuilt: <c>docs/QUEUE.md</c> Q26b), so the game passes nought. It is named and passed rather than being a zero nobody sees.
+	/// What the park's rides are worth, summed by <c>FUN_004c8240</c> (<see cref="ParkWorth.Of"/>).
 	/// </param>
 	public int IdealPrice( int excitement, Random random )
 	{
@@ -289,8 +288,8 @@ public sealed class ParkAdmission
 	/// <para>
 	/// <b>The comparisons are in floating point while both prices arrive as integers</b>, which is the
 	/// original's own arrangement and matters at the boundaries: 25 against an average multiplier of 1.25
-	/// and an ideal price of 20 is <c>25.0 &lt;= 25.0</c>, which is true, so the standard game puts this
-	/// park in the expensive band by a hair. Easy mode's 1.5 does not.
+	/// and an ideal price of 20 is <c>25.0 &lt;= 25.0</c>, which is true, so the standard game puts a
+	/// park worth nought at this fee in the expensive band by a hair. Easy mode's 1.5 does not.
 	/// </para>
 	/// </summary>
 	public Opinion OpinionOf( int idealPrice )

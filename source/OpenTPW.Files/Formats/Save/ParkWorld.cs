@@ -1480,11 +1480,14 @@ public sealed class ParkWorld : IParkInitialState
 
 	/// <summary>
 	/// One of <c>mObjectControls</c>' records, <c>CControlManager</c>'s per kind of item (FileFormats <c>saves.md</c>,
-	/// "The object controls"): the item's id, whether it is researched (<c>+0x10</c>) and the upgrade tier
-	/// researched (<c>+0x14</c>). What the park load keeps of them is <c>docs/exe/hud.md</c>, "What the buy list
-	/// actually filters on".
+	/// "The object controls"): the item's id, whether it is researched (<c>+0x10</c>), the upgrade tier
+	/// researched (<c>+0x14</c>), how many of the item stand in the park (<c>+0x18</c>) and <c>mGameTick</c> as the
+	/// first of them was built (<c>+0x1c</c>, nought until one is). What the park load keeps of the first two is
+	/// <c>docs/exe/hud.md</c>, "What the buy list actually filters on"; the last two are the park's worth's
+	/// (<c>docs/exe/park.md</c>, "The headcount score").
 	/// </summary>
-	public readonly record struct ObjectControl( int ItemId, bool Researched, int TierResearched );
+	public readonly record struct ObjectControl( int ItemId, bool Researched, int TierResearched, int Standing = 0,
+		uint FirstBuilt = 0 );
 
 	/// <summary>The used records, the first <c>mNumObjectControls</c> of the 150, in the file's order.</summary>
 	public IReadOnlyList<ObjectControl> ObjectControlRecords { get; private set; } = [];
@@ -1505,7 +1508,8 @@ public sealed class ParkWorld : IParkInitialState
 		for ( var i = 0; i < used; ++i )
 		{
 			var at = start + i * ObjectControlSize;
-			records[i] = new ObjectControl( ReadUInt16At( at ), ReadByteAt( at + 0x10 ) != 0, ReadInt32At( at + 0x14 ) );
+			records[i] = new ObjectControl( ReadUInt16At( at ), ReadByteAt( at + 0x10 ) != 0, ReadInt32At( at + 0x14 ),
+				ReadInt32At( at + 0x18 ), unchecked((uint)ReadInt32At( at + 0x1c )) );
 		}
 
 		ObjectControlRecords = records;

@@ -1324,7 +1324,8 @@ public sealed class ParkPeople : Entity
 	/// held or the <c>mGameTick</c> the next is due on. Answering the console rather than the park.
 	/// </summary>
 	internal string ArrivalCensus()
-		=> $"arrivals: mGameTick {State.GameTick} mark {_arrivalMark} " + (_offloading
+		=> $"arrivals: mGameTick {State.GameTick} mark {_arrivalMark} worth {_behaviour.ParkExcitement} "
+			+ $"load now {LoadSize( _behaviour.ParkExcitement, Raining() )} " + (_offloading
 			? $"load held, vehicle {_arrivalVehicle}, {_arrivalsRemaining} still to drop"
 			: $"next load due on mGameTick {FirstDueTick( _arrivalMark, ArrivalPeriod )}");
 
@@ -1373,18 +1374,16 @@ public sealed class ParkPeople : Entity
 	/// next load is called 602 to 605 sweeps after the last guest got off (<c>docs/exe/park.md</c>, "Arrivals").
 	///
 	/// <para>
-	/// <b>The headcount is a deviation.</b> The original sizes a load from <c>Arrival.NewParkBonus</c> plus a
-	/// score summed over the rides and sideshows a guest may be offered (<c>FUN_004c8240</c>: each item's
-	/// <c>Info.AttractionValue</c> plus a bonus while it is new; <c>docs/exe/park.md</c>, "The headcount score"),
-	/// times 0.8 in rain or 1.2, divided by <c>Arrival.PointsPerVisitor</c> and floored at <c>Arrival.MinPeople</c>.
-	/// The score is unbuilt, so what is reproduced here is the floor alone (Q26b).
+	/// <b>The headcount is the original's</b> (<c>FUN_004cf5b0</c>, <see cref="LoadSize"/>): what the park is worth
+	/// on the calling sweep (<see cref="ParkWorth.Of"/>) with <c>Arrival.NewParkBonus</c>, more in fair weather
+	/// than in rain, over <c>Arrival.PointsPerVisitor</c>. The stock park's first two loads are 13 and 12.
 	/// </para>
 	/// <para>
-	/// <b>So are its two refusals.</b> In world state 4, and where the crowd would pass
-	/// <see cref="MostPeopleInAPark"/>, the original still calls a load, of nobody or of what fits
-	/// (<c>FUN_004cf5b0</c>), and its vehicle still comes and restarts the wait; here neither calls a load, and world
-	/// state 4 stops a load already held. Lost Kingdom reaches neither: it is saved in world state 0 with 13 guests.
-	/// Where each guest is made is <see cref="ArrivalCell"/>.
+	/// <b>Its two refusals are a deviation.</b> In world state 4, and with the park at
+	/// <see cref="MostPeopleInAPark"/>, the original still calls a load, of nobody (<c>FUN_004cf5b0</c>), and its
+	/// vehicle still comes and restarts the wait; here neither calls a load, and world state 4 stops a load already
+	/// held. Lost Kingdom reaches neither: it is saved in world state 0 with 13 guests. Where each guest is made is
+	/// <see cref="ArrivalCell"/>.
 	/// </para>
 	/// </summary>
 	private void StepArrivals()
@@ -1405,10 +1404,14 @@ public sealed class ParkPeople : Entity
 			if ( _peeps.Count >= MostPeopleInAPark )
 				return;
 
-			_arrivalsRemaining = Math.Max( 1, _balance?.Int( "Arrival.MinPeople", 1 ) ?? 1 );
+			var worth = _behaviour.ParkExcitement;
+			var raining = Raining();
+
+			_arrivalsRemaining = LoadSize( worth, raining );
 			_offloading = true;
 
-			Log.Info( $"People: {_arrivalsRemaining} arriving on mGameTick {tick} (mark {_arrivalMark})" );
+			Log.Info( $"People: {_arrivalsRemaining} arriving on mGameTick {tick} (mark {_arrivalMark}), "
+				+ $"the park worth {worth}, {(raining ? "in rain" : "no rain")}" );
 
 			// And on in the same turn to ask the vehicle, as the original does from 0x004cf455.
 		}
@@ -1464,6 +1467,22 @@ public sealed class ParkPeople : Entity
 		// One with no script reports nothing ever again, so it cannot be left current to answer for the next load.
 		if ( vehicle == null )
 			_arrivalVehicle = 0;
+	}
+
+	/// <summary>
+	/// How many the load called now brings: <see cref="ParkWorth.LoadSize"/> on the balance file's three numbers,
+	/// then held to what the park has room for, as the original caps it against <see cref="MostPeopleInAPark"/>
+	/// (<c>FUN_004cf5b0</c>'s tail). <b>The room is counted on everybody here</b>, where the original's count is its crowd
+	/// census <c>FUN_004c7fa0</c>, the guests on a counting cell; no shipped park comes near the cap.
+	/// </summary>
+	internal int LoadSize( int worth, bool raining )
+	{
+		var size = ParkWorth.LoadSize( worth, raining,
+			_balance?.Int( "Arrival.NewParkBonus", 20 ) ?? 20,
+			_balance?.Int( "Arrival.PointsPerVisitor", 6 ) ?? 6,
+			_balance?.Int( "Arrival.MinPeople", 1 ) ?? 1 );
+
+		return Math.Min( size, MostPeopleInAPark - _peeps.Count );
 	}
 
 	/// <summary>What <see cref="VehicleStatus"/> answers with no vehicle current.</summary>

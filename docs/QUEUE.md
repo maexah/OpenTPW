@@ -44,14 +44,6 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q26b. Build the headcount and the park's worth.** From Q26's decode (`park.md`, "The headcount score"):
-  both readers of the score, the load's size in `StepArrivals` and `PeepBehaviour.ParkExcitement`, taken afresh at
-  each call. It needs the control record's count and first-build stamp read from the save (`ParkWorld.ObjectControl`,
-  `+0x18` and `+0x1c`) and kept as things are bought and sold, and the items' `Info.AttractionValue`,
-  `Info.NewAttractionDecayTime` and `Attraction[0..2].NewBonus`; the gate is `ParkRideChoice.CanBeOffered`. Confirm:
-  the stock park left alone, the first two loads' sizes in `guests` beside the original's, 13 called on tick 1264
-  and 12 on 1916 (`q26/orig/a.log`), predicted first; a screenshot. The park is then worth more than nought to a guest
-  at the gate, so Q145's fees (30 on the expensive line) move: re-check the gate's tests and `q145`'s harness.
 - [ ] **Q241. Load Game and Save Game. Decode first.** From Q139 and `docs/PLAYER-GAPS.md` gap 7 (section F names
   it; this is its item). The park menu's two rows are counted (`LOAD_GAME`, `SAVE_GAME`) and close the menu. Decode
   the rows' handlers (ids 1 and 2 of `0x0048b6a0`), the screens they open and the writer, to `docs/exe/saves.md`; then
@@ -236,7 +228,7 @@ the research lab), then the rest of this section in its old order.
   arm, both built by Q102; `AtGate` asks nothing of `FUN_0051a760`, the arrival vehicle's gate; `HeadingForExit` has no
   change of mind (`FUN_00500a50`), which a saved guest can take; states 19 and 21 stand silently, 19 on every
   departure and 21 after `WalkingOutside`, which Q128 builds; `Decide` did nothing when the chooser finds nothing,
-  built by Q107; and `Judge` reads `ParkExcitement`, nought until Q26 decodes `FUN_004c8240`. `CellReroute` never
+  built by Q107; and `Judge` read `ParkExcitement` as nought, built by Q26b. `CellReroute` never
   runs `FUN_005108a0`'s diagonal pass after a scan that splices nothing, which is how most routes end.
   `CellEdge.Blocked`'s mode-2 entrance arm always answered nothing, whenever the camcorder walks at an entrance: built
   by Q140b. `Peep.Tick` leaves out the cell's `RegionFX` term (`FUN_00501650`) on every needs turn.
@@ -391,6 +383,9 @@ the research lab), then the rest of this section in its old order.
   never compared with the original. Read one guest's scores in the original at a known cell (a break in
   `FUN_004fcc30`, or its inputs from memory) beside `why` for the same guest and cell, find the term that differs,
   then file its build. Instruments: `q107/orig/watch.py` and `watch1.log`, `q107/base`.
+  From Q26b: the crowd on the Belly Bounce now sizes the loads. With thirteen arrivals its sixteen places fill, the
+  offer gate refuses it, and a load called on that sweep is 4, not 12 (one run of two, `q26b/gate`); the original's
+  passed the gate on every sweep of two runs.
 
 - [ ] **Q224. A happy guest does not jump on their deciding turn.** Found by Q111 (`ride-operation.md`, "The state-6
   turn, in order", (a)). More than 100 sweeps past `+0x208` and happiness above 80: spot animation 5 and the turn ends
@@ -630,7 +625,8 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   are the zoom's, Up and Down (bits `0x20` and `0x40` of the button word, measured); here W and S walk and the arrows
   do not.
 - [ ] **Q26c. Ferry, seaplane and bus are always there.** `ParkFixedItems.Items` stands all three
-  permanently, and `VehicleFor` gives one person the bus, so only the bus is ever called until Q26b sizes the loads.
+  permanently, and `VehicleFor` gives a load under 36 the bus, so only the bus is called in the stock park (its
+  loads are 13 and fewer since Q26b; three new rides make 30).
   The original creates the vehicle on demand (`FUN_0051a2f0`,
   `park.md`, "Arrivals: who comes, on what, and how often").
   From Q238: the original hands a new thing the id last freed (its load's first guest took 38, a leaver's, the

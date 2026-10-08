@@ -10,8 +10,8 @@ namespace OpenTPW.Tests;
 /// admission states walk to.
 ///
 /// <para>
-/// <b>The test that matters most is the one that discriminates.</b> Lost Kingdom charges 25 against an
-/// ideal price of 20, and that lands in a different band depending on which balance stack is loaded: the
+/// <b>The test that matters most is the one that discriminates.</b> Lost Kingdom charges 25, against an
+/// ideal price of 20 for a park worth nought, and that lands in a different band depending on which balance stack is loaded: the
 /// standard game calls it expensive, easy mode calls it about right. So this file asserts <i>both</i>
 /// answers rather than only the one we ship, because a test that pinned the shipped answer alone would
 /// pass just as happily if the stack were being chosen wrongly.
@@ -419,6 +419,43 @@ public class ParkAdmissionTests
 		}
 
 		Assert.AreEqual( 0, state.Takings, "nobody paid" );
+	}
+
+	/// <summary>
+	/// <b>The judgement reads what the park is worth</b> (<c>FUN_004ff5b0</c> calls <c>FUN_004c8240</c>,
+	/// <c>0x004ff5d2</c>): with the catalogue in hand the stock park's Belly Bounce makes it worth 35, a fair fee 25
+	/// to 28, so 30 is under easy mode's expensive line (37.5 at the least) and all five at the booths pay it; with
+	/// no catalogue the park is worth nought, 30 is on the line, and nobody pays however often they judge.
+	/// </summary>
+	[TestMethod]
+	public void AFeeOfThirtyIsPaidOnceTheParkIsWorthItsRide()
+	{
+		FileSystem = data;
+
+		var world = Park();
+		var state = new ParkState( world );
+		var people = new ParkPeople( world, new ParkBalance( "jungle", easyMode: true ), () => ParkRides.GateIsOpen,
+			state, catalogue: new ParkItemCatalogue( "jungle", instantAction: true ), behaviourRandom: new Random( 1234 ) );
+
+		Assert.IsTrue( state.SetAdmissionFee( 30 ) );
+
+		var guests = Step( world, people.Behaviour, turns: 200 );
+
+		foreach ( var id in AtTheBooths )
+			Assert.IsTrue( guests[id].PaidAdmission, $"guest {id} finds 30 about right against a park worth 35" );
+
+		Assert.AreEqual( AtTheBooths.Length * 30, state.Takings );
+
+		var worthless = new ParkState( world );
+		var unaware = new ParkPeople( world, new ParkBalance( "jungle", easyMode: true ), () => ParkRides.GateIsOpen,
+			worthless, behaviourRandom: new Random( 1234 ) );
+
+		Assert.IsTrue( worthless.SetAdmissionFee( 30 ) );
+
+		var sulking = Step( world, unaware.Behaviour, turns: 200 );
+
+		foreach ( var id in AtTheBooths )
+			Assert.IsFalse( sulking[id].PaidAdmission, $"guest {id} finds 30 expensive against a park worth nought" );
 	}
 
 	private static readonly int[] AtTheBooths = [42, 39, 35, 31, 29];
