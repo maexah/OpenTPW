@@ -44,10 +44,33 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q241. Load Game and Save Game. Decode first.** From Q139 and `docs/PLAYER-GAPS.md` gap 7 (section F names
-  it; this is its item). The park menu's two rows are counted (`LOAD_GAME`, `SAVE_GAME`) and close the menu. Decode
-  the rows' handlers (ids 1 and 2 of `0x0048b6a0`), the screens they open and the writer, to `docs/exe/saves.md`; then
-  split the build into its sessions. Q167's saves are the reference files.
+- [ ] **Q241b. Entering a park loads the player's own park file.** From Q241. `Level` reads
+  `data/levels/<theme>/Easymode.TPWI` on every entry. The original loads the newest `*.TPW*` in the player's folder
+  for the theme (`FUN_005accf0`; `park.md`, "Arrivals"), which for a new Instant Action player is the copy
+  `SaveFolder` already makes there. Read `FUN_005accf0` first (newest by which time, and what an empty folder
+  does), then hand `Level` that file. Confirm: `q241/orig/New-Save-written-by-the-original.TPWS` put in a throwaway
+  player's jungle folder in a private game folder, the park entered, the park clock's first reading the file's own
+  `mGameTick` (read from the file and predicted; not the shipped 755); a screenshot beside `q241/orig/l2.png`.
+- [ ] **Q241c. The Load Park screen.** From Q241 (`saves.md`, "One screen, two uses" to "What the handlers answer").
+  After Q241b and Q143, whose reader the date's row needs. Build the screen from the stream (the `window2` frame,
+  the `f_load` list, `b_exit`; title UITEXT 202), fill it from the folder (`*.TPWS`: the name, then UITEXT 448's
+  date and the time), and load the clicked row over the running park with no question. The original changes no
+  scene and shows no loading screen; if one is kept here, say so at the site. `LOAD_GAME` goes. Confirm: the list
+  photographed beside `q241/orig/l1.png`, a row clicked, the park clock the file's, predicted first.
+- [ ] **Q241d. The Save Park screen, up to the writer.** From Q241. The same screen titled UITEXT 201 with its OK
+  button and name box: fifteen characters, `\ / * ? : | < > "` refused, "New Save" to begin with, Enter and Escape,
+  the shortcuts off while it is open; a row's click puts its name in the box; OK over a name in the list asks
+  UITEXT 205 first. The save itself is counted (`SAVE_GAME_WRITER`) until Q241e. Run the parts Q241 did not in the
+  original first (a typed name, Enter, Escape, a refused character, the sixteenth, a row's click). Confirm: the
+  screen beside `q241/orig/s1.png`, `s3.png` and `s4.png`, and the count after OK.
+- [ ] **Q241e. What a park file must hold to be written. Decode first.** From Q241. The container is known and
+  comes out byte for byte; the body is nineteen modules of the original's memory, live handles among them
+  (FileFormats `saves.md`, "Inside the stream"). Decode the World writer `FUN_00516c80` for what play changes here
+  (cells, things made and gone, money, the clock), and settle module by module which can be carried through from
+  the file the park was loaded from and which must be made afresh. Measure first: a file read and written back
+  unchanged through OpenTPW's container, then loaded by the original under Proton. The preamble's legal text is the
+  game's own and is copied from the file loaded, never shipped. Then split the writer's build, and file what the
+  other callers need (`gms.dat` first, `autosave` on leaving, the quicksave keys, `restart.INTS`).
 - [ ] **Q149. The calendar keeps its own game tick, from nought, and makes up the advances the original loses.** Found
   by the 2026-09-26 staleness audit. The original's calendar counter is `mGameTick` (`+0x1da70c`, `weather.md`, "The
   calendar"), which a loaded save sets to its own (755 in `Easymode.TPWI`, as `GameCalendar.Rebase` says);
@@ -119,6 +142,12 @@ the research lab), then the rest of this section in its old order.
   american, which reads empty) and row 417 (`SoftwareCopyright`, 615 and 614, cut to 103 and 102). Nothing reads either
   row yet, so no screen shows the cut. Read all three bytes; the reader's copy of the layout, which says "3 bytes" and
   "Unknown", becomes a pointer to `strings.md`. A test on rows 400 and 417.
+  From Q241: the reader also takes a string's first text part alone, so each of the 474 parameter strings is cut
+  at its first parameter (FileFormats `strings.md`, "The note on parts"). UITEXT 399, the delete-player question,
+  reads empty that way, and `FrontEnd.AskToDeletePlayer` fills it with words of its own in the belief that the
+  original ships it blank; it is parameter 4, then "Are you sure you want to / delete this player ?". UITEXT 205
+  (the overwrite question) and 448 (a save's date) are two more. Read every part, give `Localization` a way to be
+  handed the parameters, and let the delete box say the original's words. `q241/strraw.py` prints a row's parts.
 - [ ] **Q144. Three hollow ride-script tests.** Found by the 2026-09-26 staleness audit, whose comment fixes now say
   what each asserts. `RideScriptWalkTests.AWalkIsCollectedOnlyOnceItHasFinished`: its second script ends on its first
   turn, so the stepper never runs and neither `WALKGET` is checked. `MorePeopleThanLanesCannotAllBeWalkedOn` asserts a

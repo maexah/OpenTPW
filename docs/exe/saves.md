@@ -60,11 +60,13 @@ falls back to defaults (mode 0); a partial read keeps whatever was read. It crea
 **Select (`FUN_005c83b0`)** loads `gms.dat` and applies its options.
 
 **Save / deselect (`FUN_005c8650`)**, reached by Select New Player, and by exit only when a player is current, writes
-`addrbook.dat`, `outbox.dat`, `gms.dat`, then `Config.tcf` — in that order. `gms.dat` is also rewritten after every
-park save.
+`addrbook.dat`, `outbox.dat`, `gms.dat`, then `Config.tcf` — in that order. `gms.dat` is also rewritten at the start
+of every park save, before the park file is opened ("Load Game and Save Game" below).
 
-**Delete (`b_dellog`)** shows message box text UITEXT 399 — empty in the shipped files — then recursively deletes the
-player directory. The slot is emptied and nothing else is written.
+**Delete (`b_dellog`)** shows message box text UITEXT 399, then recursively deletes the player directory. The slot is
+emptied and nothing else is written. Row 399 is not empty: it is a parameter string, parameter 4 then
+"Are you sure you want to / delete this player ?", in both language folders; a reader that takes a string's first
+text part alone reads it as empty, which is what OpenTPW's does (`QUEUE.md` Q143).
 
 ## `gms.dat` — the player profile
 
@@ -160,7 +162,7 @@ an author header comes first (`FUN_00418da0`). All nine park files here agree wi
 it: the shipped `Easymode.TPWI` and the eight Alexah's Full Simulation play wrote (`CLAUDE.local.md`). The body
 inflates to modules, each **followed** by a four-character marker (`WRLD`, `PART`, `CLOK`, ...).
 
-The compression routine `FUN_005f8050` has not been identified.
+The compression is zlib 1.1.3 ("Load Game and Save Game", "The writer").
 
 ### Loading the modules
 
@@ -191,6 +193,178 @@ else but the constructor `FUN_004053b0`; its meaning is unknown. `Easymode.TPWI`
 
 **Action ids.** The action recorder's ids, and the names `FUN_004041d0` gives them, are `park-engine.md`, "There is no
 drag".
+
+## Load Game and Save Game
+
+The park menu's rows 1 and 2 (`FUN_0048b6a0`, `scenes.md`). Decoded in Ghidra and run in the original under Proton
+on 2026-10-08 (Q241); what was only read is listed at the end. OpenTPW builds none of it: both rows are counted
+(`LOAD_GAME`, `SAVE_GAME`) and close the menu.
+
+### The two rows
+
+Each row first does what Resume Game does: with `g_ParkRunning` (`0x00786ba4`) nought and the flag at `0x007c2518`
+clear, it sets the park running and resumes the clock (`FUN_00409300`), then hides and destroys the menu list
+(`MenuList_Hide`, `MenuList_Destroy`, `0x007c2534`). Then Load calls `FUN_0049efb0( 0 )` (`0x0048b731`) and Save
+`FUN_0049f280( 0 )` (`0x0048b809`). Row `0x16` is a second Load that hands `FUN_0049efb0` a 1; the function reads
+no argument, so the two are alike.
+
+### One screen, two uses
+
+Both openers pause the game as a message box does (`FUN_004092a0( 0, 0 )`: the clock held, the advisor's voice
+paused), set `g_ParkRunning` to nought, close the park screen that is open (`FUN_00485b40`), and load the stream at
+`0x007523f0` with `UI_LoadModalTree`, so the screen is modal and has the focus. Load's handler is `FUN_0049e880` and
+its window is kept at `0x007cb244`; Save's handler is the code at `0x0049ea30` and its window at `0x007cb248`.
+
+The stream, walked clean by `treewalk.py` (rects in the 2048 by 1536 space):
+
+| Control | Type, flags | Id | Rect | Mesh (`ui.wad` node) |
+|---|---|---|---|---|
+| the frame | 1, `0x1` | `0x23bcdf` | 248, 30, 1800, 1007 | `window2` (`w_med.MD2`) |
+| cancel | 2, `0x1` | -2 | 1671, 818, 1754, 901 | `b_exit` |
+| OK | 2, `0x1` | -1 | 1660, 730, 1743, 813 | `b_okay` |
+| the list | 7, `0x81` | `0x23bce0` | 341, 203, 1614, 772 | `f_load`; rows in 371, 229, 1511, 733 |
+| its scrollbar | 3 | 1 | 1528, 285, 1587, 691 | skin `!slider`; `b_up`, `b_scroller`, `b_down` |
+| the title | 1, `0x1` | `0x23bce1` | 746, 83, 1218, 162 | none |
+| the name box | 5, `0x1` | `0x23bce2` | 605, 811, 1343, 895 | `!frame`; text in 638, 830, 1317, 874 |
+
+The list has two columns, 371 to 1015 and 1041 to 1511, both typed text (`FUN_006636b2( 0, 0 )`, `( 1, 0 )`), and
+no headings: the stream has no `op 0xc`, and UITEXT 203 "Filename" and 204 "Date" are read by neither opener. Its
+flags carry `0x80`, so a row is selected under the moving pointer and `0x400` is posted on a click (`hud.md`, "The
+pointer over a list"). The row widgets are font 7 (`FUN_00485a70( 7 )`), white, the second column's text set by
+`FUN_0065c428( 2, 1 )`; the row's height is the font's height times `0x600` over `[0x00faa5c0]`, plus 6
+(`FUN_0049f0b0`, kept at `0x007cb24c`); the selection is the `hilight` skin.
+
+**Load** titles it UITEXT 202, "Load Park", and hides the OK button and the name box (`UI_SetVisible( 0 )`,
+`0x0049f02a`, `0x0049f043`). **Save** titles it UITEXT 201, "Save Park", and sets the name box up: font 7, the
+buffer `0x007ca720` with room for 15 characters (`FUN_006662b7`), the `hilight` skin for its selection, the text
+UITEXT 206, "New Save" (the box's vtable `+0x24`), and the characters it refuses, `\ / * ? : | < > "` (the wide
+string at `0x00752588`, stored at the box's `+0x144`). Then it turns the keyboard shortcut tables off
+(`FUN_00486b70`: `FUN_0040cfa0` and `[0x007c24d0]` 1), so a typed letter is a letter; closing turns them on again
+(`FUN_00486b60`).
+
+### The list is the folder
+
+`FUN_005ac8f0` (on the save manager at `0x00f7b560`) empties the manager's list and reads the player's folder for
+the theme afresh every time it is called: `FUN_005c8890` gives `<player's folder>\<theme>`, and the pattern is
+`*` with `.TPWS` (`0x00f7b948`, `0x00f7b548`). Each entry found is kept unless it is a folder whose name does not
+begin with a dot (`FUN_005c5230`); its name less the extension's five characters, and its last write time (the find
+record's `+8`, which `FUN_00619bc0` takes from `WIN32_FIND_DATA.ftLastWriteTime`), go on the end of the list. So
+the rows stand in the order Windows hands the files over, `autosave.TPWS` and the quicksave `<theme>.TPWS` among
+them; `easymode.TPWI` and `restart.INTS` do not match. `FUN_005accb0( entry )` is the entry after one.
+
+Both fills (`FUN_0049ec80` for Load, `FUN_0049edf0` for Save) add one row an entry, its id the entry's place in the
+list: the name, then the time as local time (`FileTimeToLocalFileTime`) written by UITEXT 448 with the day as
+parameter 16, the month as 17 and the year as 18, then a space and `%02.2d:%02.2d` of the hour and the minute
+(`0x00752564`). Row 448 is `{16}.{17}.{18}` in the English folder and `{17}.{16}.{18}` in the american one, the
+numbers not padded: the original, which reads the american tables here, showed "10.8.2026 12:28" for a file
+written on 8 October.
+
+### What the handlers answer
+
+| Message | Load (`FUN_0049e880`) | Save (`0x0049ea30`) |
+|---|---|---|
+| `0x100`, a button | -2: close | -2: close. -1: save (below) |
+| `0x400`, a click on a row | load that entry (`FUN_005ac5d0`), then close | put that entry's name in the box (its vtable `+0x24`) |
+| `0x802`, `0x804`, Enter and Escape in the name box (`lobby.md`) | | posts `0x100` with -1, with -2 |
+| 5, "close yourself" (`FUN_00485b40` sends it) | close, answer 1 | close, answer 1 |
+| `0x14`, the window going | window pointer nought, `FUN_004862a0`, `g_ParkRunning` 1, `FUN_00409300` | the same, after `FUN_00486b60` |
+
+"Close" is `FUN_00658d9f( window, 4, 0, 0 )`. Each walks to the entry by counting `FUN_005accb0` from a fresh
+`FUN_005ac8f0`, so a click re-reads the folder.
+
+**Load asks nothing.** The click loads over the running park at once.
+
+**Save's OK** re-reads the folder and compares the box's text with each entry's name (`FUN_0067c290`). With no
+match it saves (`FUN_0049e9b0`). With one it opens a message box, UITEXT 205 handed the name as parameter 2 -
+"New Save exists / Overwrite ?" - whose yes is `FUN_0049e9b0`. `FUN_0049e9b0` makes a string of the buffer, calls
+`FUN_005ac610` on the save manager and closes the screen; it does not look at what the save answered.
+
+### The save
+
+`FUN_005ac610( name )` is `FUN_005ac780( name, L".TPWS" )` (`0x00f7ad98`); `FUN_005ac630` is the same with
+`L".INTS"` (`0x00f7adf8`), and `FUN_005ac5d0` / `FUN_005ac5f0` are the two loads through `FUN_005ac650`.
+
+1. **The player first.** `FUN_005c8a10` writes the current player's `gms.dat` (`FUN_005c8a20`, `FUN_005afc60`),
+   before the park file is opened. Under Proton `gms.dat` was written 28 ms before the park file, its bytes unchanged.
+2. **The path** is `FUN_005c8890`'s folder, `\` (`0x00f7b888`), the name, the extension.
+3. **`FUN_00414920( path, 0, 2 )`** on the object at `0x0078a450`, whose `+4` takes a failure's number: 1 the file
+   would not open, 2 no memory, 3 a write failed, 5 a module failed. A failure deletes the file (`FUN_005f5d60`).
+   Nothing was found that shows the number to the player.
+
+`FUN_00414920`'s third argument is the mode, which must not be nought; 1 writes the action recording alone (the
+Publish Park upload at `0x0048b4b0`, which also hands it an author header), 2 everything. Its second is the
+author header, nought for none.
+
+### The writer
+
+- The version, 500 (`0x006fd928`).
+- **`FUN_00415f50`, the preamble**: one byte for the running language (English 0, Spanish 1, Italian 2, Swedish 3,
+  German 4, French 5, Japanese 6, anything else 0); `0x500` bytes of that language's legal text from the table at
+  `0x0078a460` (stride `0x14`: the length at `+4`, the text at `+8`), zero-filled; `0x100` bytes of zeros with 32
+  bytes from `0x00802080` at their head; the magic `0x01221985` through `htonl`; the flag dword, nought here. With
+  the flag set the author header follows (`FUN_00418da0`).
+- The file is closed. **The body** is written to a memory file (`FUN_005f72c0`, `0x200` to begin with) by
+  `FUN_004164c0`, after `FUN_00402e60` stamps two clock readings into the saver.
+- **The body is deflated** (`FUN_005f8050`, the compressor's vtable `0x00703128`, slot 1, the code at
+  `0x00619280`): `deflateInit2_( strm, -1, 8, 15, 9, 0, "1.1.3", 0x38 )` and one `deflate( Z_FINISH )` into a
+  buffer as large as the body, behind a 28-byte header: `BILZ`, the body's length, the stream's length plus 28,
+  then 15, 9, 0, 0. A stream that would not fit asserts "Save game is too small to be saved".
+- The file is opened again and the block written at its end.
+
+**`FUN_004164c0` writes the modules in this order, each followed by its tag:** the action recording
+(`FUN_00403780`, no tag); World `FUN_00516c80` `WRLD`; sprite scripts `FUN_00475650` `SPSC`; particles
+`FUN_0051f680` `PART`; the message centre `FUN_0040fc80` `MESS`; the clock `FUN_00402e00` `CLOK`; vanilla time
+`FUN_00403220` `VANT`; the game system `FUN_00550520` `GSYS`; the ride system `FUN_00464140` `RSYS`; track rides
+`FUN_005428e0` `TRAK`; flying rides `FUN_0055de70` `FLYR`; ride scripts `FUN_00559350` `RSSE`; the camera
+`FUN_0042cdc0` `KAME`; coasters `FUN_00437300` `COAS`; the advisor `FUN_00599c30` `ADVS`; sound `FUN_0051c350`
+`SOUN`; cheats `FUN_004055d0` `CHTS`; advisor scoring `FUN_0059c890` `ADSC`; and the UI block `FUN_004816a0`, no
+tag. That is the order the files hold (FileFormats `saves.md`, "Inside the stream"). In mode 1 only the action
+recording is written.
+
+**Measured.** In all ten park files here (the shipped park, the eight of Alexah's Full Simulation play, and one
+Instant Action save the original wrote under Proton on 2026-10-08) the stream opens `78 9C`, the header's last four
+dwords are 15, 9, 0, 0, and deflating the inflated body again at level 6, window bits 15, memory level 9 gives the
+stored stream back byte for byte; at memory level 8 it does not in any (`measure.py`, predicted first). .NET's
+`ZLibStream` has no memory level to set, so a file OpenTPW writes with it will inflate the same and differ in its
+compressed bytes.
+
+### The load
+
+`FUN_005ac650` builds the same path and calls `FUN_00414d40( path, 0, 2 )`: the version (above 500 is refused in
+mode 2, failure 9), the preamble (`FUN_00416240`, failure 7), the rest of the file read whole and inflated
+(`FUN_005f8120` for the size, `FUN_005f8100`; failures 4 and 6). Then, in any mode but 1, **the running park is
+taken down where it stands** - `FUN_00457e10`, `FUN_004d8330`, `FUN_0052f8d0( 0x80, 0x80 )`, `FUN_005191e0`,
+`FUN_00515fb0`, `FUN_00515f30`, `FUN_0042a190`, `FUN_005445d0`, `FUN_00437150`, `FUN_005584b0`,
+`Advisor_StopQuietly( 0 )`, `FUN_004815d0` - the modules are read over it (`FUN_00415270`, "Loading the modules"
+above), and `FUN_00415140` puts it back together (its calls run from `FUN_005508c0` to `FUN_0051c1c0( 0 )`, with
+the loaded fonts dropped on the way; none is decoded here). A module that fails leaves "Loading failed. System state now undefined" in the log and
+failure 6. There is no loading screen and no change of scene: under Proton the park was back four seconds after
+the click, its date gone from 2.9.2000 to the save's 2.7.2000.
+
+### The other callers, not this item's
+
+| Site | What |
+|---|---|
+| `FUN_0040bf90`, `FUN_0040c040` (reached through a table, no direct caller) | Quicksave and quickload: the name is the theme's (`FUN_005c5520`), so `<theme>.TPWS` |
+| `0x0054ff10` in `Game_StateMachine`; `0x00424bd7` | `FUN_005ac610( L"autosave" )` |
+| `0x00550c23`; `0x0055036c` | `restart.INTS` written when the folder has none; read by Restart Park |
+| `0x00407eae` in `FUN_00407e00` | a `.TPWS` loaded by name as the world is made |
+| `FUN_005accf0`, `0x0054f12b` | entering a park: the newest `*.TPW*` in the folder (`park.md`, "Arrivals") |
+
+OpenTPW's `Level` reads `data/levels/<theme>/Easymode.TPWI` on every entry, not the player's folder.
+
+### Read, not run
+
+A typed name, Enter and Escape in the box, a row's click on the save screen, a refused character, the sixteenth
+character, a failed save or load, and a folder with more than one save (the rows' order) were not run in the
+original: the listing's alone. The `0x100`-byte field's 32 bytes at `0x00802080` and the failure number's reader
+are not traced. `FUN_00415140` and the twelve teardown calls are named, not decoded. `addresses.md` is not
+regenerated.
+
+**The harness** is `q241/` in the harness folder: `ghidra/` (the dumps), `treewalk.py <address>` (any layout
+stream in the executable), `strraw.py <file.str> <row>...` (a row's parts, parameters shown as `{n}`),
+`measure.py`, `PREDICTION.txt`, and `orig/` (`lib.sh`, the frames `s1` to `s5`, `l1`, `l2`,
+`PREDICTION-result.txt`, and `New-Save-written-by-the-original.TPWS`, an Instant Action Lost Kingdom save).
 
 ## What OpenTPW builds
 
@@ -244,6 +418,5 @@ other contents during a session is kept, and a successful reload then saves norm
 
 ## Unresolved
 
-- The park body's compression (`FUN_005f8050`).
 - What "tcf" stands for.
 - The theme list's own names.

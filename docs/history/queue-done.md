@@ -5337,6 +5337,12 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   a fair fee of 25 to 28 where they judged 20; a fee of 30 is now paid (Q145's 30 sulked against a park worth
   nought). 37 bugs put back, 36 caught; the one left, a shop counted as a sideshow, changes nothing while no shop
   file sets a value.
+- [x] **Q241. Load Game and Save Game. Decode first.** Done 2026-10-08, the decode: `docs/exe/saves.md`, "Load Game
+  and Save Game". One screen serves both (the stream at `0x007523f0`), its list read from the player's folder each
+  time; Load loads at a row's click with no question, over the running park; Save writes `gms.dat`, then the park
+  through `FUN_00414920`. The compressor is zlib 1.1.3 at memory level 9: deflating the body again gives each of
+  ten park files back byte for byte, and at level 8 none (five predictions of five). Run in the original under
+  Proton: five of five again (`q241/orig/PREDICTION-result.txt`). The build is Q241b to Q241e.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.
