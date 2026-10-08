@@ -5171,6 +5171,20 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   cells. The build before, 6 of 6: none of it. In the original under Proton, 3 of 4 (the miss mine): state 2 on
   907 from a 1.99 written on 896, state 1 on 981 from a rest ended there, the tired guard on 22 cells with no rest
   area and the researcher never `0xf`; a mechanic hired by hand read 0.0, 0.35, 0.6125, 0.8094.
+- [x] **Q137. A guest going home under the `facing` overlay crashes the park.** Found by Q82's first run: an
+  `IndexOutOfRangeException` in `ParkGuestSprites.Collapse` in the frame guest 37 went home. `Remove` rebuilds the
+  vertex array at two quads a person, and the draw after it collapses every quad up to the last frame's `_uploaded`,
+  which with the overlay's dash was two a person of the crowd before: past the new end. Without the overlay it waits
+  for more than half the drawn crowd, staff included, to go before one draw, one going to none being the single case.
+  Confirm: `facing 1`, a guest sent home with `depart`, the park still drawing, photographed.
+  **Fixed 2026-10-07.** The fault is the upload count kept across a rebuild of the vertex array: `Resize` makes
+  the array and zeroes the count, `Fold` is the draw's fold of the leftover quads. The recipe as written had
+  stopped crashing already: Q177e's sixteen quads of room closed one guest's reach and Q110b's four quads a person
+  widened it, so main needed many gone inside one frame. In the game, predicted first, 7 of 8 (the miss mine: the
+  build before Q110b lives through the recipe): main lives through `facing 1` and one `depart`, 18 people to 17,
+  and dies in `Collapse` with 42 of 62 gone in one frame under the overlay and with 104 of 128 without it; the fix
+  lives through all three, 17, 20 and 24 people drawn, photographed; the build before Q177e dies on the recipe as
+  filed. 4 bugs put back, 4 caught.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

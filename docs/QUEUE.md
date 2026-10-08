@@ -40,12 +40,6 @@ the original.
 
 **The 2026-10-06 review's leftovers come first, at Alexah's word (2026-10-06).**
 
-- [ ] **Q137. A guest going home under the `facing` overlay crashes the park.** Found by Q82's first run: an
-  `IndexOutOfRangeException` in `ParkGuestSprites.Collapse` in the frame guest 37 went home. `Remove` rebuilds the
-  vertex array at two quads a person, and the draw after it collapses every quad up to the last frame's `_uploaded`,
-  which with the overlay's dash was two a person of the crowd before: past the new end. Without the overlay it waits
-  for more than half the drawn crowd, staff included, to go before one draw, one going to none being the single case.
-  Confirm: `facing 1`, a guest sent home with `depart`, the park still drawing, photographed.
 - [ ] **Q138. The staff strike is neither built nor counted. Decode first.** Found by Q82's review
   (`ride-operation.md`, "Drawn on the way", the strike). `mStaffHQ`'s month handler `FUN_00508e70` runs every month
   the park is open: for each kind with staff it clears a set flag `[HQ + 0x28 + kind × 12]` or calls `FUN_00508f70`,

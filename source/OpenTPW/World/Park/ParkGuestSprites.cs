@@ -410,11 +410,10 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// Stops drawing somebody who has gone home. Answers whether there was one to stop drawing.
 	///
 	/// <para>
-	/// A crowd that shrinks needs no more care than one that grows: the draw pass counts what it wrote
-	/// this frame and collapses every quad between that and what it wrote last, so the departed one's
-	/// triangles are folded to nothing rather than left hanging. <see cref="Build"/> is still re-run,
-	/// because the vertex array is sized from the crowd and leaving it long would waste an upload's
-	/// worth of it every frame.
+	/// <see cref="Build"/> is re-run, because the vertex array is sized from the crowd and leaving it long
+	/// would waste an upload's worth of it every frame. The model it makes starts with every quad a point,
+	/// so the departed one's triangles go with the old model and nothing of the last frame is left to fold
+	/// (<see cref="Resize"/>).
 	/// </para>
 	/// </summary>
 	internal bool Remove( int thingId )
@@ -450,7 +449,7 @@ public sealed class ParkGuestSprites : ModelEntity
 		// thought bubble - and room for the balloons bursting, which outlast their guests.
 		var quads = (_people.Count * QuadsAPerson) + bursting;
 
-		_vertices = new Vertex[quads * 4];
+		Resize( quads );
 
 		var indices = new uint[quads * 6];
 
@@ -478,6 +477,35 @@ public sealed class ParkGuestSprites : ModelEntity
 		TranslucentModel?.Delete();
 		TranslucentModel = new Model( _vertices, indices, material );
 		TranslucentModel.EnableFrequentUpdates( _vertices );
+	}
+
+	/// <summary>
+	/// A fresh vertex array of that many quads, every one a point, and no quad counted as uploaded: the model
+	/// <see cref="Build"/> makes over it starts from the array, so there is nothing of the last frame to fold, and
+	/// a count kept from a longer array would fold past this one's end.
+	/// </summary>
+	internal void Resize( int quads )
+	{
+		_vertices = new Vertex[quads * 4];
+		_uploaded = 0;
+	}
+
+	/// <summary>
+	/// Folds to nothing every quad the last frame wrote and this one did not, and answers how many quads the upload
+	/// has to reach: the larger of the two frames' counts. A count past the array's end is the array's, as the
+	/// writers skip a quad there and still count it.
+	/// </summary>
+	internal int Fold( int used )
+	{
+		used = Math.Min( used, _vertices.Length / 4 );
+
+		for ( int i = used; i < _uploaded; ++i )
+			Collapse( i );
+
+		var reach = Math.Max( used, _uploaded );
+		_uploaded = used;
+
+		return reach;
 	}
 
 	/// <summary>
@@ -657,11 +685,7 @@ public sealed class ParkGuestSprites : ModelEntity
 
 		used = DrawBalloons( people, field, cellX, cellY, alpha, used );
 
-		for ( int i = used; i < _uploaded; ++i )
-			Collapse( i );
-
-		var reach = Math.Max( used, _uploaded );
-		_uploaded = used;
+		var reach = Fold( used );
 
 		if ( reach == 0 )
 			return;
