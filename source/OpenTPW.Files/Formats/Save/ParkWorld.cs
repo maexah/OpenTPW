@@ -1222,10 +1222,10 @@ public sealed class ParkWorld : IParkInitialState
 	///
 	/// <para>
 	/// Only two combinations occur in the shipped park - 3 on 16,134 cells and 7 on the other 250, coming
-	/// to 84 and 94 bytes - but adding the bits up costs nothing and reads the six combinations no
-	/// shipped park happens to contain. A cell that is entirely default writes its status byte and
-	/// nothing else, which is where the block's variable length comes from and why no fixed stride was
-	/// ever going to walk it.
+	/// to 84 and 94 bytes - and the original's writer makes no other: it gives every cell its map and its
+	/// track record and tests only the effects (<c>docs/exe/saves.md</c>, "The World writer"). Adding the
+	/// bits up costs nothing and reads the six combinations it never writes. The effects record is where
+	/// the block's variable length comes from and why no fixed stride was ever going to walk it.
 	/// </para>
 	/// <para>
 	/// These sizes are confirmed cell by cell and not merely in total: measured this way, all 16,384 of
@@ -1372,6 +1372,83 @@ public sealed class ParkWorld : IParkInitialState
 
 	/// <summary>Where the economy thing's record begins in the body, at its <c>Used Thing Next</c>; -1 where the walk met none.</summary>
 	internal int EconomyAt { get; private set; } = -1;
+
+	/// <summary>Where the first cell's status byte sits in the body; -1 where the walk never reached the map.</summary>
+	internal int MapAt { get; private set; } = -1;
+
+	/// <summary>
+	/// Writes cells over their records in <paramref name="body"/>, a copy of <see cref="Body"/>: of each, the map
+	/// record's direction, flags, neighbours, overlap counter, parent, tile and type, and the track record's flags,
+	/// neighbours, parent and type. The key is the cell's place in <see cref="Cells"/>.
+	///
+	/// <para>
+	/// A record is written where it lies and no cell changes size: the original's writer gives every cell its map and
+	/// its track record (<c>FUN_004d7ea0</c>, whose test for a default one, <c>FUN_0050c1f0</c>, answers that none
+	/// is), and the effects record is not written here. The rest of a record is left as the file's: the mesh
+	/// instance, the hoarding neighbours, the litter block and <c>mWho</c>.
+	/// </para>
+	/// </summary>
+	/// <exception cref="InvalidOperationException">
+	/// The walk never reached the map, or a cell to write has no map record, or track fields and no track record.
+	/// </exception>
+	internal void PutCells( byte[] body, IReadOnlyDictionary<int, MapCell> cells )
+	{
+		if ( cells.Count == 0 )
+			return;
+
+		if ( MapAt < 0 || _cells.Length != MapCellCount )
+			throw new InvalidOperationException( "the park file it was loaded from holds no map" );
+
+		var at = MapAt;
+
+		for ( var index = 0; index < MapCellCount; ++index )
+		{
+			var status = body[at];
+
+			if ( cells.TryGetValue( index, out var cell ) )
+			{
+				if ( (status & MapRecord) == 0 )
+					throw new InvalidOperationException( $"cell {index} of the park file it was loaded from has no map record" );
+
+				var map = at + 1;
+
+				body[map + CellDirection] = cell.Direction;
+				PutUInt16( body, map + CellFlags, cell.Flags );
+				body[map + CellNeighbours] = cell.Neighbours;
+				PutUInt16( body, map + CellOverlapCounter, unchecked((ushort)cell.OverlapCounter) );
+				PutUInt16( body, map + CellParent, cell.ParentId );
+				PutInt32( body, map + CellTileData, cell.TileSet );
+				PutInt32( body, map + CellTileData + 4, cell.TileIndex );
+				PutInt32( body, map + CellTileData + 8, cell.TileAngle );
+				PutInt32( body, map + CellType, cell.Type );
+
+				if ( (status & TrackRecord) != 0 )
+				{
+					var track = map + MapCellSize;
+
+					PutUInt16( body, track + CellFlags, cell.TrackFlags );
+					body[track + CellNeighbours] = cell.TrackNeighbours;
+					PutUInt16( body, track + CellParent, cell.TrackParentId );
+					PutInt32( body, track + CellType, cell.TrackType );
+				}
+				else if ( cell.TrackType != 0 || cell.TrackFlags != 0 || cell.TrackParentId != 0 || cell.TrackNeighbours != 0 )
+				{
+					throw new InvalidOperationException( $"cell {index} of the park file it was loaded from has no track record" );
+				}
+			}
+
+			at += 1
+				+ ((status & MapRecord) != 0 ? MapCellSize : 0)
+				+ ((status & TrackRecord) != 0 ? TrackCellSize : 0)
+				+ ((status & EffectsRecord) != 0 ? EffectsCellSize : 0);
+		}
+	}
+
+	private static void PutUInt16( byte[] body, int at, ushort value ) =>
+		System.Buffers.Binary.BinaryPrimitives.WriteUInt16LittleEndian( body.AsSpan( at, 2 ), value );
+
+	private static void PutInt32( byte[] body, int at, int value ) =>
+		System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian( body.AsSpan( at, 4 ), value );
 
 	/// <summary>How far into the World header a field sits: the sizes of the fields before it.</summary>
 	private static int HeaderFieldAt( int field ) => HeaderFieldSizes.Take( field ).Sum();
@@ -1638,6 +1715,7 @@ public sealed class ParkWorld : IParkInitialState
 	private void ReadMap()
 	{
 		_cells = new MapCell[MapCellCount];
+		MapAt = _at;
 
 		for ( var cell = 0; cell < MapCellCount; ++cell )
 		{

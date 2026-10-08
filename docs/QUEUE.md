@@ -44,10 +44,6 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q241g. The writer: the cells.** From Q241e. A path or queue laid or cleared, land bought, a footprint, and
-  the chain of who stands on each cell, patched into the carried map; a cell's record gains or loses its parts by
-  its status bits. Confirm: a path laid and one cleared here, written, the same cells in the original under
-  Proton; a screenshot of each.
 - [ ] **Q241h. The writer: the people.** From Q241e. Guests' and staff's records patched from `ParkPeople`, one
   made here written whole and one gone left out; the sprite table; message sets `0xa`, `0xc` and `0x1b`; the staff
   pool, the arrival block and the staff heads. Measure first which bytes of a made guest's record may be nought,
@@ -56,12 +52,25 @@ the research lab), then the rest of this section in its old order.
   From Q241f: until this is built a written park holds its first file's people under the running park's visitor
   count, so the thirteen saved guests, back outside the gate, walk in and are counted again after a load (14 to 26
   in the original, `q241f/orig/a-load.log`).
+  From Q241g: a cell's `mWho` and each thing's `mMapChild` and `mMapParent` are read as the file has them
+  (`FUN_0050b090`; `saves.md`, "What ties the modules together"), so this item writes the people's links and, for
+  every cell a guest or a member of staff heads, its `mWho` (`ParkState.CellAt( x, y ).Occupant`,
+  `ParkState.NextOnCell`); until then a written park holds the file's people on the file's cells. Read first
+  whether a thing's constructor enters it in a cell on a load before its links are read over. The saved guests
+  pay at the gate again too: $ 88177 seven seconds after a load of a file holding 88052 (`q241g/orig/c2.png`).
 - [ ] **Q241i. The writer: the objects, their scripts and their models.** From Q241e. Object records patched, one
   bought written whole and one sold left out; the object controls and `mFirstObject`; a script record made or
   taken out of `RSSE` and each running script's counter, variables and deadlines; a slot of `RSYS` and its
   channels; set `0xb`; the clock module moved with them. A track ride or an emitter bought or sold is counted
   (`TRAK`'s car is not decoded). Confirm: a ride bought and a shop sold here, written, standing and running in
   the original under Proton, its script's wait predicted; a screenshot of each.
+  From Q241g: three things of the cells wait here. **A footprint**: `Level.WrittenCells` leaves a cell that has
+  joined or left a footprint, or changed its type or parent inside one, as the file's
+  (`SAVE_PARK_FOOTPRINT_CELL`); write those cells with the object's record. **The object's `mWho`** on its own
+  cell, with its `mMapChild` and `mMapParent`. **A queue cell's model**: a queue cell laid, cleared or tiled
+  again is written with the file's `mMeshInstance` (`SAVE_PARK_QUEUE_CELL_MODEL`), the handle of the model the
+  retile made (`FUN_005365d0`, `FUN_005229e0`); decode what that handle names (a slot of `RSYS` or another
+  table) and write a queue's with it. Confirm with a queue laid here standing fenced in the original.
 - [ ] **Q241j. The writer: the managers, then Save Game saves.** From Q241e. The economy thing's loans and rings,
   the staff HQ's strikes, the calendar's and the weather's fields; then `ParkSaveScreen.Save` writes
   (`SAVE_GAME_WRITER` gone), an overwrite replaces the file, and the Load Park list shows it. Confirm: a park

@@ -10,7 +10,8 @@ namespace OpenTPW;
 /// <para>
 /// <b>Every module is carried</b>: the body goes out as the file's own, with the fields under <see cref="Running"/>
 /// written over it. Nothing else the running park has changed is written yet, so a park loaded from the file this
-/// writes has the people, objects and ground of the file it was loaded from under the new clock and cash.
+/// writes has the people and objects of the file it was loaded from, on the running park's ground and under its
+/// clock and cash.
 /// </para>
 /// <para>
 /// <b>The container</b> is the version, 500 (<c>0x006fd928</c>), whatever the file loaded carried; the rest of that
@@ -39,10 +40,12 @@ public static class ParkFileWriter
 
 	/// <summary>
 	/// What of the running park is written over the carried body: <c>mGameTick</c>, <c>mParkClosed</c>,
-	/// <c>mNumberOfVisitorsToDate</c>, the economy thing's <c>mBalance</c>, and the camera.
+	/// <c>mNumberOfVisitorsToDate</c>, the economy thing's <c>mBalance</c>, the camera, and the cells to write over
+	/// the file's, by their place in <see cref="ParkWorld.Cells"/> (<see cref="ParkWorld.PutCells"/> says which of a
+	/// cell's fields); none where it is null.
 	/// </summary>
 	public readonly record struct Running( int GameTick, bool ParkClosed, int VisitorsToDate, int Balance,
-		ParkCameraModule.View Camera );
+		ParkCameraModule.View Camera, IReadOnlyDictionary<int, ParkWorld.MapCell>? Cells = null );
 
 	/// <summary>
 	/// The inflated body of the file: a copy of <paramref name="loaded"/>'s with <paramref name="running"/> written
@@ -50,7 +53,7 @@ public static class ParkFileWriter
 	/// </summary>
 	/// <exception cref="InvalidOperationException">
 	/// The body was not walked to its end, or holds no economy thing or no camera module, so a field's place in it is
-	/// not known.
+	/// not known; or a cell to write has no record in it.
 	/// </exception>
 	public static byte[] Body( ParkWorld loaded, Running running )
 	{
@@ -73,6 +76,9 @@ public static class ParkFileWriter
 		PutInt32( body, loaded.EconomyAt + ParkWorld.BalanceAt, running.Balance );
 
 		loaded.Camera.Put( body, running.Camera );
+
+		if ( running.Cells is { } cells )
+			loaded.PutCells( body, cells );
 
 		return body;
 	}

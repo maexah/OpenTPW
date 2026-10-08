@@ -199,6 +199,12 @@ public sealed class ParkState
 		_records.Remove( (y * ParkWorld.MapSize) + x );
 	}
 
+	/// <summary>
+	/// The cells changed since the park was loaded, by their place in <see cref="ParkWorld.Cells"/>, each as
+	/// <see cref="Record"/> answers it: what a park file written from this park says of its ground.
+	/// </summary>
+	public IReadOnlyDictionary<int, ParkWorld.MapCell> ChangedRecords => _records;
+
 	/// <summary>Whether any cell has been changed at all - what a rebuild can skip on.</summary>
 	public int ChangedCells => _records.Count;
 

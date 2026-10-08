@@ -465,9 +465,9 @@ public class Level
 	/// or null where nothing was written.
 	///
 	/// <para>
-	/// <b>Only the first stage of the writer is built</b> (<see cref="ParkFileWriter"/>): the file the park was loaded
-	/// from goes out again with the park's clock, its door, its visitor count, its cash and the camera written over
-	/// it. What else play has changed is not written.
+	/// <b>Two of the writer's five stages are built</b> (<see cref="ParkFileWriter"/>): the file the park was loaded
+	/// from goes out again with the park's clock, its door, its visitor count, its cash, the camera and the ground
+	/// (<see cref="WrittenCells"/>) written over it. What else play has changed is not written.
 	/// </para>
 	/// <para>
 	/// <b>Deviations.</b> The original writes the player's <c>gms.dat</c> first and puts the pointer back to its
@@ -504,8 +504,10 @@ public class Level
 
 		// The file's rotation turns the other way from the orbit camera's yaw: nought is the same view in both, and a
 		// quarter turn written as it stands puts the original's camera on the far side of the point.
+		var cells = WrittenCells( loaded, state );
+
 		var running = new ParkFileWriter.Running( state.GameTick, state.ParkIsClosed, state.VisitorsToDate, state.Balance,
-			new ParkCameraModule.View( ParkOrbitCameraMode.Zoom, -ParkOrbitCameraMode.Yaw, point.X, point.Y ) );
+			new ParkCameraModule.View( ParkOrbitCameraMode.Zoom, -ParkOrbitCameraMode.Yaw, point.X, point.Y ), cells );
 
 		byte[] file;
 
@@ -524,10 +526,72 @@ public class Level
 
 		Log.Info( $"Save: wrote {path}, {file.Length} bytes: mGameTick {running.GameTick}, " +
 			$"{(running.ParkClosed ? "closed" : "open")}, {running.VisitorsToDate} visitors to date, balance {running.Balance}, " +
-			$"camera {ParkOrbitCameraMode.State()}" );
+			$"camera {ParkOrbitCameraMode.State()}, {cells.Count} cells of ground" );
 
 		return path;
 	}
+
+	/// <summary>
+	/// The cells a park file written from <paramref name="state"/> holds in place of the file's own: every cell the
+	/// running park has changed (<see cref="ParkState.ChangedRecords"/>) that differs from the file's in a field the
+	/// writer writes, but a footprint's (<c>docs/exe/saves.md</c>, "OpenTPW's writer, the cells").
+	///
+	/// <para>
+	/// <b>A cell that has joined or left a footprint, or changed its footprint's owner, is left as the file's and
+	/// counted</b>: the thing that stands there is not written yet, and neither is the cell's <c>mWho</c>, so the file
+	/// would hold a footprint with nothing on it, or a thing on bare ground. An entrance that has only gained or lost
+	/// a link is written.
+	/// </para>
+	/// <para>
+	/// <b>A queue cell laid, cleared or tiled again is written and counted</b>: its <c>mMeshInstance</c> is the handle
+	/// of the model the original's retile makes for it (<c>FUN_005365d0</c>), which no load makes again, and the file's
+	/// is left there.
+	/// </para>
+	/// </summary>
+	internal static Dictionary<int, ParkWorld.MapCell> WrittenCells( ParkWorld loaded, ParkState state )
+	{
+		var written = new Dictionary<int, ParkWorld.MapCell>();
+
+		// A file whose map was never reached is refused by the writer, which says why.
+		if ( loaded.Cells.Count != ParkWorld.MapSize * ParkWorld.MapSize )
+			return written;
+
+		foreach ( var (index, now) in state.ChangedRecords )
+		{
+			var was = loaded.Cells[index];
+
+			if ( SameGround( was, now ) )
+				continue;
+
+			var footprintWas = IsFootprint( was.Type );
+			var footprintNow = IsFootprint( now.Type );
+
+			if ( footprintWas != footprintNow || (footprintNow && (was.Type != now.Type || was.ParentId != now.ParentId)) )
+			{
+				Unimplemented.Report( "SAVE_PARK_FOOTPRINT_CELL" );
+				continue;
+			}
+
+			var queueWas = was.Type == ParkRideChoice.QueueCellType;
+			var queueNow = now.Type == ParkRideChoice.QueueCellType;
+
+			if ( queueWas != queueNow || (queueNow && (was.TileIndex != now.TileIndex || was.TileAngle != now.TileAngle)) )
+				Unimplemented.Report( "SAVE_PARK_QUEUE_CELL_MODEL" );
+
+			written[index] = now;
+		}
+
+		return written;
+	}
+
+	private static bool IsFootprint( int type ) => type is CellEdge.Footprint or CellEdge.RideEnd or CellEdge.RideFarEnd;
+
+	/// <summary>Whether two records agree in every field <see cref="ParkWorld.PutCells"/> writes.</summary>
+	private static bool SameGround( ParkWorld.MapCell a, ParkWorld.MapCell b ) =>
+		(a.Type, a.Flags, a.Neighbours, a.Direction, a.TileSet, a.TileIndex, a.TileAngle, a.OverlapCounter, a.ParentId)
+			== (b.Type, b.Flags, b.Neighbours, b.Direction, b.TileSet, b.TileIndex, b.TileAngle, b.OverlapCounter, b.ParentId)
+		&& (a.TrackType, a.TrackFlags, a.TrackParentId, a.TrackNeighbours)
+			== (b.TrackType, b.TrackFlags, b.TrackParentId, b.TrackNeighbours);
 
 	/// <summary>
 	/// A park's interface: the windows its menu opens in, the park's own build of that menu, and the

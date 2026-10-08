@@ -5411,6 +5411,22 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the camera module written from the running park. A console command writes it into the player's folder;
   `ParkSaveScreen.Save` stays counted until Q241j. Confirm: a stock park run to a known tick and balance, written,
   then loaded by the original under Proton and by OpenTPW, the tick and the cash predicted; a screenshot of each.
+- [x] **Q241g. The writer: the cells.** Done 2026-10-08, `alexah/365-park-writer-cells`: `ParkWorld.PutCells`
+  and `Level.WrittenCells` (`saves.md`, "OpenTPW's writer, the cells"). A spur of three laid and a gap of two
+  cleared at `mGameTick` 1000, then `savepark`: "8 cells of ground", exactly those eight cells differing from
+  easymode's in the file and each as the console's `cell` printed it, 44 bytes changed and none outside the
+  fields written; loaded by OpenTPW (the cells the same; the unchanged build's load puts the road back) and by
+  the original under Proton, whose cells read from memory went from easymode's to the file's on all ten read,
+  field for field, its clock from 1028 to 1000 and on, its frame showing the spur and the gap. One prediction
+  wrong, mine (ten cells: the road beside the spur gains no diagonal bit). **Decoded, against the item as
+  written:** the original's writer gives every cell its map and track record (only the effects part is a test),
+  so no cell gains or loses a part here; a load takes `mWho` and the things' two links as the file has them, so
+  the chain is written with the things (Q241h, Q241i); a queue cell's `mMeshInstance` is a live model's handle.
+  A footprint and a queue cell's model are counted. 32 of 33 bugs put back fail a test (one test was hollow on `mWho` and is fixed); the other is an equivalent.
+  The item as written: From Q241e. A path or queue laid or cleared, land bought, a footprint, and
+  the chain of who stands on each cell, patched into the carried map; a cell's record gains or loses its parts by
+  its status bits. Confirm: a path laid and one cleared here, written, the same cells in the original under
+  Proton; a screenshot of each.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

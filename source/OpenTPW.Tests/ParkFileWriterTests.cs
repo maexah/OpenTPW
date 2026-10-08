@@ -1,5 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -7,8 +8,8 @@ using System.Text;
 namespace OpenTPW.Tests;
 
 /// <summary>
-/// The park file's writer, first stage: the shipped park written back with a running park's clock, door, visitor
-/// count, cash and camera, and read again by the readers. These read real game files and are skipped where there is
+/// The park file's writer: the shipped park written back with a running park's clock, door, visitor count, cash,
+/// camera and changed cells, and read again by the readers. These read real game files and are skipped where there is
 /// no installation - see <see cref="GameData"/>.
 /// </summary>
 [TestClass]
@@ -295,6 +296,225 @@ public class ParkFileWriterTests
 
 		Assert.IsNull( Level.WritePark( shipped, new ParkState( shipped ), "jungle", "Nobody's" ) );
 		Assert.AreEqual( 0, Directory.GetFiles( root!, "*", SearchOption.AllDirectories ).Length );
+	}
+
+	/// <summary>Where a cell's status byte sits in a body whose every cell has a map and a track record, or those and effects.</summary>
+	private static int CellAt( byte[] body, int index )
+	{
+		var at = 8 + BitConverter.ToInt32( body, 4 ) + 64 + (150 * 32) + 6 + (32 * 20) + 76;
+
+		for ( var cell = 0; cell < index; ++cell )
+			at += 1 + ((body[at] & 1) != 0 ? 52 : 0) + ((body[at] & 2) != 0 ? 31 : 0) + ((body[at] & 4) != 0 ? 10 : 0);
+
+		return at;
+	}
+
+	private static int Index( int x, int y ) => (y * ParkWorld.MapSize) + x;
+
+	/// <summary>The Belly Bounce's queue cell at (49,22), with every field the writer writes moved off the file's.</summary>
+	private ParkWorld.MapCell Moved() => shipped.CellAt( 49, 22 ) with
+	{
+		Direction = 0x10, Flags = 0x20, Neighbours = 0x55, OverlapCounter = -1, ParentId = 1234,
+		TileSet = 1, TileIndex = 7, TileAngle = 180, Type = 1,
+		TrackType = 25, TrackFlags = 3, TrackParentId = 4321, TrackNeighbours = 0x11
+	};
+
+	/// <summary>
+	/// A cell handed to the writer reads back field for field, the rest of its record as the file's (the reader's
+	/// record holds its litter block and <c>mWho</c> too), and no other cell moves.
+	/// </summary>
+	[TestMethod]
+	public void ACellWrittenReadsBackFieldForFieldAndNoOtherCellMoves()
+	{
+		var was = shipped.CellAt( 49, 22 );
+		var moved = Moved();
+
+		// Each of the thirteen is another value than the file's, so none reads back from a field left alone.
+		Assert.AreEqual( (3, (ushort)0, (byte)68, (byte)4, 2, 5, 270, (short)0, (ushort)2996),
+			(was.Type, was.Flags, was.Neighbours, was.Direction, was.TileSet, was.TileIndex, was.TileAngle, was.OverlapCounter, was.ParentId) );
+		Assert.AreEqual( (0, (ushort)0, (ushort)0, (byte)0), (was.TrackType, was.TrackFlags, was.TrackParentId, was.TrackNeighbours) );
+
+		// The Jungle Spray's own cell, which names it: a cell's mWho is not the writer's to move.
+		var stoodOn = shipped.CellAt( 55, 15 ) with { TileIndex = 9 };
+		Assert.AreEqual( 23, stoodOn.Occupant );
+
+		var cells = new Dictionary<int, ParkWorld.MapCell> { [Index( 49, 22 )] = moved, [Index( 55, 15 )] = stoodOn with { Occupant = 0 } };
+		var written = Read( ParkFileWriter.Write( shipped, AsShipped() with { Cells = cells } ) );
+
+		Assert.IsNull( written.Problem );
+		Assert.IsTrue( written.ClosedOnTrailer );
+		Assert.AreEqual( moved, written.CellAt( 49, 22 ) );
+		Assert.AreEqual( stoodOn, written.CellAt( 55, 15 ), "the tile written, mWho the file's 23" );
+
+		for ( var index = 0; index < shipped.Cells.Count; ++index )
+			if ( index != Index( 49, 22 ) && index != Index( 55, 15 ) )
+				Assert.AreEqual( shipped.Cells[index], written.Cells[index], $"cell {index}" );
+	}
+
+	/// <summary>
+	/// The bytes: only the cell's own thirteen fields differ from the body read. Its mesh instance (a queue cell's is
+	/// a handle), its hoarding neighbours, its litter block, <c>mWho</c> and its track record's segment are the file's.
+	/// </summary>
+	[TestMethod]
+	public void OnlyTheCellsWrittenFieldsDifferFromTheBodyRead()
+	{
+		var before = Inflate( raw );
+		var cells = new Dictionary<int, ParkWorld.MapCell> { [Index( 49, 22 )] = Moved() };
+		var body = ParkFileWriter.Body( shipped, AsShipped() with { Cells = cells } );
+
+		Assert.AreEqual( before.Length, body.Length );
+
+		var map = CellAt( before, Index( 49, 22 ) ) + 1;
+		var track = map + 52;
+
+		Assert.AreEqual( 3, before[map - 1], "a map and a track record" );
+		Assert.AreNotEqual( 0, BitConverter.ToInt32( before, map + 3 ), "the queue cell's mesh instance" );
+
+		// mDirection and mFlags; mNeighbours to mTileData; mType; then the track record's flags, neighbours, parent, type.
+		(int At, int Size)[] fields =
+			[(map, 3), (map + 7, 17), (map + 24, 4), (track + 1, 2), (track + 7, 1), (track + 10, 2), (track + 24, 4)];
+
+		var changed = Enumerable.Range( 0, body.Length ).Where( at => body[at] != before[at] ).ToArray();
+		var outside = changed.Where( at => !fields.Any( field => at >= field.At && at < field.At + field.Size ) ).ToArray();
+
+		Assert.AreEqual( 0, outside.Length, $"bytes changed outside the fields written, the first at 0x{outside.FirstOrDefault():x}" );
+
+		foreach ( var field in fields )
+			Assert.IsTrue( changed.Any( at => at >= field.At && at < field.At + field.Size ), $"nothing changed in the field at +{field.At - map}" );
+	}
+
+	/// <summary>The last cell is found as the first is: the walk to a cell steps over every record before it.</summary>
+	[TestMethod]
+	public void TheFirstAndTheLastCellAreWrittenWhereTheyLie()
+	{
+		var last = (ParkWorld.MapSize * ParkWorld.MapSize) - 1;
+		var cells = new Dictionary<int, ParkWorld.MapCell>
+		{
+			[0] = shipped.Cells[0] with { TileIndex = 41 },
+			[last] = shipped.Cells[last] with { TileIndex = 42 }
+		};
+
+		var written = Read( ParkFileWriter.Write( shipped, AsShipped() with { Cells = cells } ) );
+
+		Assert.IsNull( written.Problem );
+		Assert.AreEqual( 41, written.Cells[0].TileIndex );
+		Assert.AreEqual( 42, written.Cells[last].TileIndex );
+		Assert.AreEqual( shipped.Cells[1], written.Cells[1] );
+		Assert.AreEqual( shipped.Cells[last - 1], written.Cells[last - 1] );
+	}
+
+	/// <summary>The first cell's record with one of its parts cut out, and its status byte saying so.</summary>
+	private ParkWorld Without( int part )
+	{
+		var body = Inflate( raw ).ToList();
+		var at = CellAt( Inflate( raw ), 0 );
+
+		body[at] = (byte)(3 & ~part);
+		body.RemoveRange( part == 1 ? at + 1 : at + 53, part == 1 ? 52 : 31 );
+
+		var world = new ParkWorld( body.ToArray(), raw[..Preamble] );
+
+		Assert.IsNull( world.Problem );
+		Assert.IsTrue( world.ClosedOnTrailer );
+		return world;
+	}
+
+	/// <summary>
+	/// The original's writer gives every cell a map and a track record, so a file without one is none of its own: a
+	/// cell is not written where its record is not.
+	/// </summary>
+	[TestMethod]
+	public void ACellWithNoRecordToWriteOverIsRefused()
+	{
+		var mapless = Without( 1 );
+		var cells = new Dictionary<int, ParkWorld.MapCell> { [0] = shipped.Cells[0] with { TileIndex = 41 } };
+
+		Assert.ThrowsException<InvalidOperationException>( () => ParkFileWriter.Body( mapless, AsShipped() with { Cells = cells } ) );
+
+		var trackless = Without( 2 );
+		var tracked = new Dictionary<int, ParkWorld.MapCell> { [0] = shipped.Cells[0] with { TrackType = 25 } };
+
+		Assert.ThrowsException<InvalidOperationException>( () => ParkFileWriter.Body( trackless, AsShipped() with { Cells = tracked } ) );
+
+		// With no track field to write the map record is written, and the cell after it is found.
+		var body = ParkFileWriter.Body( trackless, AsShipped() with { Cells = new Dictionary<int, ParkWorld.MapCell>
+		{
+			[0] = shipped.Cells[0] with { TileIndex = 41 },
+			[1] = shipped.Cells[1] with { TileIndex = 42 }
+		} } );
+		var written = new ParkWorld( body, raw[..Preamble] );
+
+		Assert.AreEqual( (41, 42), (written.Cells[0].TileIndex, written.Cells[1].TileIndex) );
+		Assert.AreEqual( shipped.Cells[2], written.Cells[2] );
+	}
+
+	/// <summary>
+	/// The level's half: of the cells the running park has changed, a path laid, a path cleared, a link on an entrance
+	/// and a queue cell go into the file; a cell put back as the file has it is not counted among them; a cell that
+	/// joins or leaves a footprint is left as the file's and counted, and a queue cell is counted for its model.
+	/// </summary>
+	[TestMethod]
+	public void TheLevelWritesTheGroundThePlayerChangedButAFootprint()
+	{
+		SetCurrentPlayer( new Player( 0, "Test", new PlayerFile { InstantAction = true } ) );
+
+		var state = new ParkState( shipped );
+		var grass = Enumerable.Range( 0, shipped.Cells.Count ).Where( index => shipped.Cells[index] is { Type: 0, Flags: 0 } ).Take( 4 )
+			.Select( index => (X: index % ParkWorld.MapSize, Y: index / ParkWorld.MapSize) ).ToArray();
+		var entrance = Enumerable.Range( 0, shipped.Cells.Count ).Last( index => shipped.Cells[index].Type == CellEdge.RideEnd );
+		var (entranceX, entranceY) = (entrance % ParkWorld.MapSize, entrance / ParkWorld.MapSize);
+
+		Assert.AreEqual( (CellEdge.Path, CellEdge.RideEnd, ParkRideChoice.QueueCellType),
+			(shipped.CellAt( 39, 21 ).Type, shipped.CellAt( 55, 15 ).Type, shipped.CellAt( 51, 22 ).Type) );
+		Assert.AreNotEqual( Index( 55, 15 ), entrance );
+
+		var laid = shipped.CellAt( grass[0].X, grass[0].Y ) with { Type = CellEdge.Path, TileSet = 1, TileIndex = 2, Neighbours = 0x44, Direction = 0x04 };
+		var cleared = ParkPathBuilding.Cleared( shipped.CellAt( 39, 21 ) ) with { OverlapCounter = 0 };
+		var linked = shipped.Cells[entrance] with { Neighbours = (byte)(shipped.Cells[entrance].Neighbours ^ 0x04) };
+		var queued = shipped.CellAt( grass[1].X, grass[1].Y ) with { Type = ParkRideChoice.QueueCellType, TileSet = 2, TileIndex = 2, ParentId = 2996 };
+
+		state.SetRecord( grass[0].X, grass[0].Y, laid );
+		state.SetRecord( 39, 21, cleared );
+		state.SetRecord( entranceX, entranceY, linked );
+		state.SetRecord( grass[1].X, grass[1].Y, queued );
+		state.SetRecord( 51, 22, shipped.CellAt( 51, 22 ) with { TileIndex = 3 } );                       // a queue cell tiled again
+		state.SetRecord( 40, 21, shipped.CellAt( 40, 21 ) );                                              // changed and put back
+		state.SetRecord( 55, 15, ParkPathBuilding.Cleared( shipped.CellAt( 55, 15 ) ) );                  // a thing sold
+		state.SetRecord( grass[2].X, grass[2].Y, shipped.CellAt( grass[2].X, grass[2].Y ) with { Type = CellEdge.Footprint, ParentId = 77 } ); // one bought
+		state.SetRecord( grass[3].X, grass[3].Y, shipped.CellAt( grass[3].X, grass[3].Y ) with { Type = CellEdge.RideEnd } );
+
+		var cells = Level.WrittenCells( shipped, state );
+
+		CollectionAssert.AreEquivalent(
+			new[] { Index( grass[0].X, grass[0].Y ), Index( 39, 21 ), entrance, Index( grass[1].X, grass[1].Y ), Index( 51, 22 ) },
+			cells.Keys.ToArray() );
+
+		Unimplemented.Forget();
+		Assert.IsNotNull( Level.WritePark( shipped, state, "jungle", "Ground" ) );
+
+		Assert.AreEqual( 3, Unimplemented.Summary.Single( gap => gap.What == "SAVE_PARK_FOOTPRINT_CELL" ).Times );
+		Assert.AreEqual( 2, Unimplemented.Summary.Single( gap => gap.What == "SAVE_PARK_QUEUE_CELL_MODEL" ).Times );
+
+		var written = Read( File.ReadAllBytes( Path.Combine( Jungle, "Ground.TPWS" ) ) );
+
+		Assert.AreEqual( laid, written.CellAt( grass[0].X, grass[0].Y ) );
+		Assert.AreEqual( cleared, written.CellAt( 39, 21 ) );
+		Assert.AreEqual( linked, written.Cells[entrance] );
+		Assert.AreEqual( queued, written.CellAt( grass[1].X, grass[1].Y ) );
+		Assert.AreEqual( 3, written.CellAt( 51, 22 ).TileIndex );
+		Assert.AreEqual( shipped.CellAt( 55, 15 ), written.CellAt( 55, 15 ), "the sold thing's cell is the file's" );
+		Assert.AreEqual( shipped.CellAt( grass[2].X, grass[2].Y ), written.CellAt( grass[2].X, grass[2].Y ), "the bought thing's cell is the file's" );
+		Assert.AreEqual( 5, Enumerable.Range( 0, shipped.Cells.Count ).Count( index => shipped.Cells[index] != written.Cells[index] ) );
+	}
+
+	/// <summary>A park nobody has built in writes no cell and counts nothing.</summary>
+	[TestMethod]
+	public void AParkWithItsGroundUntouchedWritesNoCell()
+	{
+		var state = new ParkState( shipped );
+
+		Assert.AreEqual( 0, Level.WrittenCells( shipped, state ).Count );
+		Assert.IsFalse( Unimplemented.Summary.Any( gap => gap.What.StartsWith( "SAVE_PARK_" ) ) );
 	}
 
 	private static int Find( byte[] data, string tag )

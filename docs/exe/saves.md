@@ -496,8 +496,8 @@ frames), `confirm.py`, `mutate.py` and the sheet of OpenTPW's screen beside the 
 
 ## What a park file must hold to be written
 
-Decoded and measured on 2026-10-08 (Q241e). `ParkSaveScreen.Save` still counts `SAVE_GAME_WRITER`; the first of
-the writer's five stages is built ("OpenTPW's writer, the first stage", below). The bytes are the FileFormats
+Decoded and measured on 2026-10-08 (Q241e). `ParkSaveScreen.Save` still counts `SAVE_GAME_WRITER`; two of the
+writer's five stages are built ("OpenTPW's writer, the first stage" and "OpenTPW's writer, the cells", below). The bytes are the FileFormats
 `saves.md`'s; this section is what the original does with them and what a writer here has to get right.
 
 ### The container takes another deflate, and a changed body
@@ -530,7 +530,14 @@ file was changed for 8.11.2000. The clock module was left as saved under a tick 
 3. `FUN_004d3aa0`: the 150 object controls, their count and the search key (`mControlManager`).
 4. `FUN_004d7a70`, which is three calls: `FUN_00507850` the staff pool, `FUN_004f7f30` the park clock's fields
    and `FUN_004cf050` the arrival block (`mMacroAI`).
-5. `FUN_004d7ea0`: the 16,384 cells (`mMap`).
+5. `FUN_004d7ea0`: the 16,384 cells (`mMap`), on the world's member at `+0x2d8` (`LEA ECX,[EDI + 0x2d8]`,
+   `0x005175a2`): a cell's 0x44 bytes at `+0`, its track cell's 0x28 at `+0x110000`, its ten bytes of effects at
+   `+0x1b1104`. **Every cell is written with its map and its track record**: the status byte takes bit 1 and
+   bit 2 when `FUN_0050c1f0` says the cell differs from a default one built beside it (`FUN_00536490`,
+   `FUN_0053af00`), and `FUN_0050c1f0` is `return 1`. Only bit 4 is a test: the ten bytes against a default's
+   (`FUN_00502470`). So a file the original wrote opens every cell with 3 or 7, and the three log lines that count
+   "cells as default" count none for the map and the track. The reader takes each part its bit names and, after
+   the last cell, zeroes the 33 x 33 block stamps at `+0x1b0000`.
 6. **The thing list.** "Used Thing Head" is the id in the head node of the used list (`DAT_007cf56c`; a node is
    five dwords: the thing, its id, the next node, the previous, one more). Then, node by node along the list: the
    **next** node's id, or nought at the end; the thing's model, the byte at thing `+2`; and the model's own
@@ -584,7 +591,14 @@ gone:
 - **Clocks.** Every deadline in `RSSE` and every stamp in `RSYS` is a reading of the clock `CLOK` holds, so those
   three move together. `mGameTick` is not tied to them (the Tick 5000 file).
 - **The cells.** A thing's `mMapChild` and `mMapParent` and a cell's `mWho` are one chain of ids per cell, and an
-  object's footprint is in the cells' types, parents and occupants.
+  object's footprint is in the cells' types, parents and occupants. The reader takes all three as the file has
+  them (`FUN_0050b090` reads the two links into the thing's `+10` and `+8`, the cell's reader `mWho` into its
+  `+0x24`), so a cell's `mWho` can only be written with the records of the things it names. Not read: whether a
+  thing's constructor enters it in a cell before its links are read over.
+- **A queue cell's model.** A queue cell's `mMeshInstance` (the cell's `+4`) is the handle of the model the retile
+  made for it (`FUN_005365d0`: tile set 2 frees the handle held and stores `FUN_005229e0`'s). No load calls the
+  retile, so the handle in the file is the one used: 4 of 4 queue cells in the shipped park and 78 of 78 in a
+  played one hold one, and no other cell of either does (`q241g/cells.py`).
 
 ### Module by module
 
@@ -622,7 +636,7 @@ OpenTPW runs written over and records added and taken out. **Afresh** means writ
 | The object controls | an item's standing count and first-build stamp, its researched flags | patched |
 | The staff pool | every candidate | afresh from `ParkStaffPool` |
 | The clock and arrival fields | the date, the arrival timer | patched |
-| The cells | a path or queue laid or cleared, land, a footprint, the chain of who stands where | patched cell by cell; a cell's record gains or loses its map, track and effects parts by its status bits |
+| The cells | a path or queue laid or cleared, land, a footprint, the chain of who stands where | patched cell by cell, each record where it lies (every cell has its map and track parts); `mWho` with the things it names; the effects part carried |
 | A guest, a member of staff | everything they do | carried records patched from `ParkPeople`; one made here written whole; one gone left out |
 | A catalogue object | its door, price, counts, rings, queue, script handle | carried records patched; one bought here written whole; one sold left out |
 | The economy thing, the staff HQ | the balance, the loans, the rings; the strikes | patched |
@@ -652,9 +666,9 @@ over the copy, never the one held.
   view; a file holding +π/2 for OpenTPW's quarter turn put the original's camera on the far side of the point, and
   one holding -π/2 on the same side as OpenTPW's. OpenTPW turns an eighth a press (Q23), which the original's
   loader rounds to a quarter (above, "Loading the modules", Camera).
-- **Everything else is carried**, so a park loaded from the file has the people, objects, ground and scripts of
-  the file it was first loaded from, under the new clock, count, cash and camera. Stages two to five write the
-  rest (Q241g to Q241j).
+- **Everything else was carried** at this stage, so a park loaded from the file had the people, objects, ground
+  and scripts of the file it was first loaded from, under the new clock, count, cash and camera. The ground is
+  the second stage's ("OpenTPW's writer, the cells"); stages three to five write the rest (Q241h to Q241j).
 - **Where.** `Level.WritePark( name )` writes `<player's folder>/<theme>/<name>.TPWS`, replacing a file of that
   name in another case. The console's `savepark <name>` is its one caller; the Save Park screen's OK stays counted
   until Q241j. **Deviations:** the player's `gms.dat` is not written first (Q248) and the pointer is not put back
@@ -675,6 +689,44 @@ original, the rotation's sense (the first file held +1.5708) and an eighth turn 
 **Seen and not built here:** the thirteen saved guests are back outside the gate in the file, so after a load
 they walk in and are counted again, 14 to 26, in the original; the people are Q241h's.
 
+### OpenTPW's writer, the cells
+
+The second stage (Q241g). `Level.WrittenCells` hands the writer every cell the running park has changed
+(`ParkState.ChangedRecords`) that differs from the file's, and `ParkWorld.PutCells` writes each over its record
+in the copied body, where it lies.
+
+- **Written of a cell:** the map record's `mDirection`, `mFlags`, `mNeighbours`, `mOverlapCounter`, `mParentID`,
+  `mTileData` and `mType`, and the track record's flags, neighbours, parent and type. **Left as the file's:** the
+  status byte, `mMeshInstance`, `mHoardingNeighbours`, the litter block, `mWho`, the track's segment and the
+  effects part. A file whose cell has no map record, or track fields to write and no track record, is refused:
+  the original writes none such.
+- **`mWho` is not written, a deviation until Q241h and Q241i.** The chain is the cell's head and the things' two
+  links together (above), and the things' records are still the file's. A written park holds the file's people on
+  the file's cells.
+- **A footprint is not written, and is counted** (`SAVE_PARK_FOOTPRINT_CELL`, one a cell): a cell that has joined
+  or left a footprint (types 4, 9 and 10), or changed its type or parent inside one, is left as the file's,
+  because the thing bought, sold or moved is not written yet (Q241i). An entrance that only gained or lost a link
+  is written.
+- **A queue cell is written without its model, and is counted** (`SAVE_PARK_QUEUE_CELL_MODEL`): a queue cell
+  laid, cleared or tiled again goes out with the file's `mMeshInstance`, so a new one names no model and a
+  cleared one still names its old (Q241i, with the model slots).
+- **Land** is not bought here (`BUY_LAND_TOOL`), so no cell's `0x40` flag moves but as the path tool moves it.
+
+**Measured (Q241g, `q241g/`).** Lost Kingdom at `mGameTick` 1000, a spur of three laid north off the south road
+(`path 45 27`, `45 26`, `45 25`) and a gap of two cleared in the west road (`delpath 39 24`, `39 25`), then
+`savepark Q241g`: the log read "8 cells of ground", the three laid, (45,28) which gains its link, the two cleared
+and (39,23) and (39,26) which each lose one. A Python reader found exactly those eight cells differing from
+easymode's, each reading what the console's `cell` printed, 44 bytes of the body differing and none outside the
+fields written. Loaded from OpenTPW's Load Park screen the cells read the same; the unchanged build's file held
+easymode's cells and its load put the road back. **The original under Proton** listed the file and loaded it over
+its running park: `mGameTick` went from 1028 to 1000 and on to 1168, and its cells, read from memory (world
+`+0x2d8`, each cell's own id checked), went from easymode's to the file's on all ten read, field for field: (45,27)
+type 1, neighbours `0x11`, tile (1, 2, 0); (39,24) type 0, tile (0, 55, 0). Its frame shows the spur and the gap.
+**One prediction wrong, mine:** ten cells; the road cells either side of the spur's foot gain no diagonal bit.
+**Found there:** the zoom read 70 where the file holds 60 (not decoded: a floor in its loader or its camera), and
+the cash read $ 88177 seven seconds on, the saved guests paying at the gate again (Q241h).
+**Not run in the original:** a queue cell written without its model, an entrance's link, a cell laid over.
+
 ### Read, not run
 
 A thing made or gone was not written and loaded: the rules above are the ten files' and the listing's. The
@@ -687,7 +739,9 @@ container), `patch.py` (one change to a body), `census.py <park file>...` (the t
 `PREDICTION.txt`, and `orig/` (the four logs, the frames `l1`, `l3`, `h2`, `c1`, `PREDICTION-result.txt`).
 Q241f's is `q241f/`: `confirm.py` (the write and the load, with its own reader of the file), `PREDICTION.txt`
 (the three runs and their results), `mutate.py`, `orig/` (`read.py`, the three load logs, the frames) and the
-sheet of OpenTPW's frames beside the original's.
+sheet of OpenTPW's frames beside the original's. Q241g's is `q241g/`: `cells.py` (a file's cells by type: the
+fields no reader here holds), `confirm.py`, `PREDICTION.txt`, `mutate.py`, `orig/` (`cellread.py`, the original's
+cells from memory; the logs before and after the load; the frames) and the sheet.
 
 ## What OpenTPW builds
 
