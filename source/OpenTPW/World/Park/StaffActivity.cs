@@ -26,8 +26,7 @@ public enum StaffActivity
 	/// <summary>
 	/// Standing about with nothing to do. They wait out their grade's <c>IdleDuration</c> from
 	/// <c>mTimeStartedIdling</c> and then look for something. Every kind asks
-	/// <c>FUN_00506a40</c> first (strike, tired, mood); here the tired and mood halves are asked, the strike is
-	/// not (Q138).
+	/// <c>FUN_00506a40</c> first (strike, tired, mood).
 	/// </summary>
 	Idle = 0,
 
@@ -58,8 +57,8 @@ public enum StaffActivity
 	GoingOnStrike = 4,
 
 	/// <summary>
-	/// On strike, milling about the strike area and turning on the spot until the dispute ends, at which
-	/// point they walk back to the park entrance.
+	/// On strike, standing where the walk to the strike area ended and turning on the spot until the kind's
+	/// strike ends, at which point they walk back to the park entrance.
 	/// </summary>
 	OnStrike = 5,
 

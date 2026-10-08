@@ -5204,6 +5204,28 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   predictions of six (the miss my timetable): stamps 715 kept with 8 guests inside, {0, 0, 2097} forced under 24
   months, {1, 0, 16837} then {2, 1, 16843} past them, all five staff in state 5 on (42,9) to (45,9), {2, 0, 17557}
   and back to work, {3, 1, 18202}. `q138/orig/`.
+- [x] **Q138b. Build the staff strike.** From Q138's decode (`ride-operation.md`, "The strike"). Read the save's
+  model-9 strike fields (`mForceStrike`, the five {level, flag, stamp}); at the month's change run the look as the
+  original's: the gate (park shut, or a guest inside by Q148's filter, unless forced), the stamp, the flag's month
+  off, the 24 months from `ParkState.GameTick`, the causes (the handymen's cell ratio is counted until Q225 reads
+  the cell's dword), the levels; the three posts are counted until the park advisor speaks (`docs/PLAYER-GAPS.md`
+  gap 4). In `StaffBehaviour`, the decide's strike arm through `ParkRides.GateStatus`, the four draws, state 4 with
+  thought `0x15`, state 5's turn, its end by a shut and empty park, and the walk to `EntranceA`. Move the counter
+  to where `FUN_00508f70` is reached. A console `strike <kind>` that sets the force and a way to set the clock are
+  the run's instruments, as the original's run used. Confirm: `staff` and a new `strikes` census beside
+  `q138/orig/a.log` (the records on each month and the sweeps to state 4 and 5), predicted first; a screenshot of
+  the picket beside `q138/orig/s4-strike.png`.
+  **Built 2026-10-08.** `ParkStrikes` (the HQ's records, read from the save: `Look`, `Consider`, `HasCause`),
+  `StaffBehaviour.GoOnStrike` and `Picket`, state 4's thought; the three posts and the handymen's cell ratio are
+  counted where `FUN_00508f70` and `FUN_00509360` reach them, and the month's own counter is gone. The force is one
+  word for the park, so the instrument is `forcestrike <0|1>` (`strike` is the lobby's bolt), with `clock <tick>`
+  and the `strikes` census. In the game, predicted first, 8 of 9 beside `q138/orig/a.log`: stamps 715 kept on two
+  months with 5 and 12 guests inside; {0, 0, 2097} forced; {1, 0, 16837}, {2, 1, 16843}, {2, 0, 17557},
+  {3, 1, 18202} on the original's ticks; four in state 4 within 30 sweeps and on (41,9) to (45,9) by 17013, all
+  five state 1 on 17558 and state 4 again by 18241. The miss, mine: the entertainer was on the way to rest and
+  joined at that rest's end, 287 sweeps on. Control, the look taken out: records 715, nobody on strike. The picket
+  photographed, all five on row 9 (`q138b/photo/p2-picket.png`). 71 bugs put back, 71 caught, nine of them only
+  after two tests were added and a cleanup that had aborted the run was fixed.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

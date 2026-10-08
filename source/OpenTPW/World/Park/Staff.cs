@@ -113,6 +113,12 @@ public sealed class Staff
 	public int TimeStartedResearching { get; internal set; }
 
 	/// <summary>
+	/// The dword at <c>+0x188</c>: set as a member sets off for the picket (<c>0x00506a89</c>) and cleared as that
+	/// walk ends (<c>FUN_005056e0</c>). The <c>staff</c> census prints it; what reads it in the original is not traced.
+	/// </summary>
+	public bool SettingOffForTheStrike { get; internal set; }
+
+	/// <summary>
 	/// When they last started standing about, read against the park's own clock.
 	///
 	/// <para>

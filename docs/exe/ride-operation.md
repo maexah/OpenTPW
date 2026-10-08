@@ -2695,11 +2695,11 @@ was cleared instead), and the mechanic's, handyman's and entertainer's too-tired
 
 ### The strike - `FUN_00508e70`, `FUN_00508f70`, `FUN_00509360`, and states 4 and 5
 
-Decoded for Q138 and measured in the original (below). Nothing of it is built.
+Decoded for Q138 and measured in the original (below); built by Q138b ("The strike, in both games", below).
 
 **The record.** `mStaffHQ` (thing 1, model 9, the thing word at world `+0x1da718`, `FUN_00519450`) keeps
 `mForceStrike` at `+0x64` and five 12-byte records from `+0x24`, the save's `mStrikeLevel[i]` (`FUN_00508bb0`;
-FileFormats `saves.md`, "The staff HQ"): the **level** `+0x24 + kind × 12`, the **flag** `+0x28 + kind × 12`
+FileFormats `saves.md`, "The staff HQ"; the constructor `FUN_005089c0` zeroes all sixteen dwords): the **level** `+0x24 + kind × 12`, the **flag** `+0x28 + kind × 12`
 ("this kind is on strike", read through `FUN_00509990`) and a **stamp** `+0x2c + kind × 12`, the `mGameTick` of the
 kind's last look. The kinds are 0 handyman, 1 mechanic, 2 entertainer, 3 guard, 4 researcher (`FUN_00506490` from
 the member's model byte 5, 4, 6, 7, 8), their staff lists headed at world `+0x1da73c`, `+0x1da73e`, `+0x1da740`,
@@ -2769,10 +2769,51 @@ state 4 again within 18. `s4-strike.png` is the picket. Not run: a park open and
 forced one, a calling-off, a strike ended by shutting the park, a walk that fails; the advisor's lines were not
 listened to.
 
-**Reach, for the build** (`CLAUDE.md` rule 3). The month's look is reached every month and is counted
-(`STAFF_HQ_MONTHLY_STRIKE_CHECK`, at the handler, before the gate). `FUN_00508f70` is reached only in an open park
-with no guest inside as a month turns, and does anything only past 66.5 minutes; no Lost Kingdom park left to run
-gets there, and a player's can.
+**Reach** (`CLAUDE.md` rule 3). The month's look is reached every month. `FUN_00508f70` is reached only in an
+open park with no guest inside as a month turns, and does anything only past 66.5 minutes; no Lost Kingdom park
+left to run gets there, and a player's can.
+
+#### The strike, in both games (Q138b)
+
+**Built.** `ParkWorld.StaffHqState` reads `mForceStrike` and the five records; `ParkStrikes` keeps them and is
+the look: `Look` (`FUN_00508e70` past the training, called from `ParkPeople.TrainTheStaff` with
+`ParkState.GameTick`, the door and `ParkPeople.GateGuestCensus`), `Consider` (`FUN_00508f70`), `HasCause`
+(`FUN_00509360`), `MonthsSinceTheFirstSweep` (`FUN_004f8800` over thirty days), `IsOnStrike` and `EndStrike`
+(`FUN_00509990`, `FUN_005099a0`). `StaffBehaviour.GoOnStrike` is the decide's first arm, with
+`ParkRides.GateStatus` and the four draws; state 4 thinks `0x15` every turn and ends on strike, arrived or
+failed; `Picket` is state 5's turn, the facing held in `PeepWalk.Heading`, the end by a shut and empty park, and
+the walk to `EntranceA`. `Staff.SettingOffForTheStrike` is `+0x188`.
+
+**Counted, not built.** The three posts, where `FUN_00508f70` makes them: `STRIKE_WARNING_TO_THE_ADVISOR`,
+`STRIKE_TO_THE_ADVISOR`, `STRIKE_CALLED_OFF_TO_THE_ADVISOR` (`docs/PLAYER-GAPS.md` gap 4: the park's advisor
+does not speak). The handymen's cell ratio, `STRIKE_HANDYMEN_CELL_RATIO`, which answers as no cause (Q225).
+`STAFF_HQ_MONTHLY_STRIKE_CHECK` is gone. The ride window's three strike statuses (`FUN_00485f60`) are Q212's.
+
+**Differences, each said at its site.** The look's guest count is taken as the month turns, where the
+original's is the analyser's, up to five of its timer's units old (`FUN_004c7fa0( 5 )`). The month's change
+itself still comes from `GameCalendar`, which counts from nought (Q149), so a park left alone turns its months
+on other ticks than the original's; the console's `clock <tick>` writes `ParkState.GameTick` and the calendar's
+counter together, which puts them on the original's. A striker walking back is in state 1, so the walk is
+stepped under the wander's filters (`staff-wandering.md`).
+
+**Instruments.** `forcestrike <0|1>` writes the force (one word for the park; `strike` was taken by the lobby's
+bolt), `clock <tick>` the clock, `strikes` prints the clock, the months, the door, the guests inside and the
+records; `staff` prints `st`, `s188`, `cell` and `heading`.
+
+**Measured in OpenTPW** (`q138b/`: `confirm.py`, `PREDICTION.txt`, `run1/`, `control/`, `photo/`; eight
+predictions of nine, the miss mine), beside `q138/orig/a.log`. The save read {0, 0, 715} five times and no
+force. With 5 and then 12 guests inside, the months on ticks 768 (the clock's write) and 1383 were not
+considered and the stamps stayed 715. Forced: {0, 0, 2097} on 2097; the clock written 16,836: {1, 0, 16837},
+then {2, 1, 16843}, as the original's. Four members read state 4 with the mark set within 30 sweeps (16851 to
+16873; the original's five within 18) and state 5 on (41,9) to (45,9) by 17013 (the original's by 16989). **The
+miss:** the entertainer was walking to the Staff Room when the strike was called and joined at the end of that
+rest, on 17130, on strike by 17318; the arm is asked only at a decide, in both games, and the original's run
+had nobody resting. All five stood until {2, 0, 17557}, read state 1 on 17558 and were inside the gate by 17660
+(the original's by about 17640); {3, 1, 18202} and all five in state 4 again by 18241 (18220). The counters read
+5 warnings and 10 strikes. With the look taken out (`control/`): the records stayed 715 and nobody left their
+work. `photo/p2-picket.png` is the picket, all five on row 9 beside the road with their placards, beside
+`q138/orig/s4-strike.png`. Not run: a cause without the force, a calling-off, a strike ended by shutting the
+park, a walk that fails (tested only).
 
 ### Where OpenTPW differs
 
@@ -2793,8 +2834,8 @@ gets there, and a player's can.
 | The end of a rest | the kind's decide in the same sweep | the same (`StaffBehaviour.Rest`) | every rest |
 | The patrol roll | path cells only | path cells only (Q206) | verified in `staff-wandering.md` |
 | Speed by rest | `+0xc0`, 60 to 140, one of `FUN_004fa870`'s three terms | the same: `Staff.Pace` every sweep, the base set by a decide that finds the member not tired | every decide |
-| Thoughts `0x12` to `0x16` | shown | `0x14`, `0x13`, `0x12` at every kind's decide (`StaffBehaviour.TiredOrCarryingOn`, the last with its one draw) and `0x16` where the patrol roll fails, each a pink bubble (Q110b); `0x15` waits on the strike walk (Q138) | tired, unhappy, very happy staff; a failed roll ("Thoughts and their pictures") |
-| Strikes | `mStaffHQ`'s monthly look, the levels, the strike walk, state 5's end ("The strike") | none: the month's look counted at the handler (`STAFF_HQ_MONTHLY_STRIKE_CHECK`), the model-9 strike fields unread | an open park with no guest inside as a month turns, 24 thirty-day months past its first sweep (Q138b) |
+| Thoughts `0x12` to `0x16` | shown | `0x14`, `0x13`, `0x12` at every kind's decide (`StaffBehaviour.TiredOrCarryingOn`, the last with its one draw) and `0x16` where the patrol roll fails, and `0x15` on every turn of the strike walk, each a pink bubble (Q110b, Q138b) | tired, unhappy, very happy staff; a failed roll; a strike ("Thoughts and their pictures") |
+| Strikes | `mStaffHQ`'s monthly look, the levels, the strike walk, state 5's end ("The strike") | built (`ParkStrikes`, `StaffBehaviour.GoOnStrike`, `Picket`; "The strike, in both games"); the three posts to the advisor and the handymen's cell ratio counted | an open park with no guest inside as a month turns, 24 thirty-day months past its first sweep |
 
 ## A toilet's dirt - `FUN_004e2440`, `FUN_004e0390` and the handyman's `FUN_004d7880`
 
@@ -3642,8 +3683,8 @@ the budgets read from the save's staff HQ, `ParkWorld.StaffHq`; each kind's budg
 `ParkPeople.Train` is `TrainMe`), `ParkState.TurnTheMonth` (the analyser's close, counted `ANALYSER_MONTH_CLOSE`; the
 batch deposited, the bought loans paid with the unsigned division, and `MonthsInTheRed` as `FUN_004f88b0` and the
 thirty-day divisor count it), then `ParkPeople.PayTheWages` (`ParkStaffPool.WageFrom` through `ParkState.Spend`, in
-ascending thing id). Counted, not built: the strike check thing 1 makes after the training
-(`STAFF_HQ_MONTHLY_STRIKE_CHECK`), the analyser's training and staff totals (`STAFF_TRAINING_ANALYSER_TOTAL`,
+ascending thing id). The strike look thing 1 makes after the training is built (`ParkStrikes.Look`, Q138b). Counted, not built: the
+analyser's training and staff totals (`STAFF_TRAINING_ANALYSER_TOTAL`,
 `STAFF_WAGE_ANALYSER_TOTAL`), and the end of a park six months in the red with the advisor's record `0x6a`
 (`BANK_PARK_ENDS_IN_THE_RED`, `ADVISOR_PARK_ENDED_IN_THE_RED`). A grade with no `PoundsPerTrainingPoint`, which the
 original divides by unguarded and no shipped file has below grade 4, is counted (`STAFF_TRAINING_NO_POINT_COST`) and
@@ -3804,7 +3845,7 @@ Sets 22 to 25, the four arrows, are named by no thought. **All 22 callers**, and
 | `0x00501496`, a shortened queue | `0xd` | `PeepBehaviour.QueueShortened` |
 | `0x00506b50`, `0x00506ccd`, `0x00506cf4`, every staff decide (`FUN_00506a40`) | `0x14` tired; else `0x13` at a happiness byte of 10 or less; else `0x12` above 97 when a draw's low four bits are nought | `StaffBehaviour.ThinkOfTheMood` |
 | `0x0050701f`, the patrol roll's thirty failures | `0x16` | `StaffBehaviour`'s patrol roll |
-| `0x00505709`, the strike walk `FUN_005056e0` | `0x15` | not reached: no strike (Q138b) |
+| `0x00505709`, the strike walk `FUN_005056e0` | `0x15` | built: every turn of state 4 (`StaffBehaviour.Step`, Q138b) |
 
 ### Q110: what is counted, and whether a guest is ever stranded
 

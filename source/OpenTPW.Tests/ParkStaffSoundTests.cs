@@ -179,7 +179,6 @@ public class ParkStaffSoundTests
 	[DataRow( Entertainer, StaffActivity.Performing )]
 	[DataRow( Guard, StaffActivity.Waiting )]
 	[DataRow( Guard, StaffActivity.Held )]
-	[DataRow( Guard, StaffActivity.OnStrike )]
 	public void NoOtherStateDrawsForASound( int thing, StaffActivity activity )
 	{
 		var (member, walk, state) = Standing( thing, activity, stamp: 1000 );

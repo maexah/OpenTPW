@@ -15,7 +15,7 @@ namespace OpenTPW;
 /// not five machines, and the shared part moves every kind.
 /// </para>
 /// <para>
-/// <b>What is built.</b> Every shared state but on strike (5, Q138), and every kind's decide with no work
+/// <b>What is built.</b> Every shared state, and every kind's decide with no work
 /// found: the mechanic and the handyman set off on a random walk every time, the guard and the entertainer on
 /// three sweeps in four by the park's clock, <c>mGameTick &amp; 3</c>, and the researcher on three decides in
 /// four by a draw.
@@ -37,8 +37,11 @@ namespace OpenTPW;
 /// <b>What is deliberately not built, each for a named reason.</b> The rest of the work: a mechanic's broken
 /// ride (<c>FUN_004daa90</c>) and a handyman's litter (<c>FUN_004c8ed0</c>). Each search is counted where the
 /// original makes it and answers as finding nothing.
-/// The strike arms are absent too (Q138): reaching them means asking <c>mStaffHQ</c>'s own flag for the
-/// kind, which nothing here keeps, and the gate's status, which <c>ParkRides.GateStatus</c> answers.
+/// </para>
+/// <para>
+/// <b>The strike is built</b>: the arm every decide opens with, the walk to the picket (state 4) and the
+/// picket's turn with its two ends (state 5) - <see cref="GoOnStrike"/>, <see cref="Picket"/>. The records
+/// are <see cref="ParkStrikes"/>'s.
 /// </para>
 /// <para>
 /// <b>Rest areas are built.</b> The flag naming one is read - bit 1
@@ -84,6 +87,30 @@ public sealed class StaffBehaviour
 	/// </summary>
 	public Action<Staff, int>? Sound { get; init; }
 
+	/// <summary>The staff HQ's strike records, which the decide's first arm and a striker's turn ask. Null: nobody strikes.</summary>
+	public ParkStrikes? Strikes { get; init; }
+
+	/// <summary>
+	/// What the gate's script says it is doing - <c>FUN_0051a290</c>, <c>ParkRides.GateStatus</c>. A member
+	/// sets off for the picket only while it reads <see cref="ParkRides.GateIsOpen"/>.
+	/// </summary>
+	public Func<int>? GateStatus { get; init; }
+
+	/// <summary>
+	/// How many guests are inside the park, counted afresh - <c>FUN_004c9130</c>
+	/// (<see cref="ParkPeople.GateGuestCensus"/>). A strike ends in a park shut with none.
+	/// </summary>
+	public Func<int>? GuestsInside { get; init; }
+
+	/// <summary>
+	/// The strike area: its first cell and its size in cells - <c>FixedItemInfo.StrikeAreaStartX</c>,
+	/// <c>StartY</c>, <c>SizeX</c> and <c>SizeY</c> (<c>0x007855ec</c> on): (40,9), six by one.
+	/// </summary>
+	public (int X, int Y, int Across, int Down) StrikeArea { get; }
+
+	/// <summary>Where a striker goes back to - <c>FixedItemInfo.EntranceAPosX</c> and <c>Y</c> (<c>0x007855bc</c>): (47,17).</summary>
+	public (int X, int Y) EntranceA { get; }
+
 	private readonly int[] _researcherWork = new int[ParkWorld.StaffState.PayGrades];
 	private readonly int[] _researchAbility = new int[ParkWorld.StaffState.PayGrades];
 	private readonly int[] _entertainerWork = new int[ParkWorld.StaffState.PayGrades];
@@ -112,6 +139,13 @@ public sealed class StaffBehaviour
 		// again on every single turn.
 		RestLevel = balance?.Int( "AllStaffConstants.RestLevel", 1 ) ?? 1;
 		HappinessHitForNoRestArea = balance?.Int( "AllStaffConstants.HappyHitCosNoRestArea", 2 ) ?? 2;
+
+		StrikeArea = (balance?.Int( "FixedItemInfo.StrikeAreaStartX", 40 ) ?? 40,
+			balance?.Int( "FixedItemInfo.StrikeAreaStartY", 9 ) ?? 9,
+			balance?.Int( "FixedItemInfo.StrikeAreaSizeX", 6 ) ?? 6,
+			balance?.Int( "FixedItemInfo.StrikeAreaSizeY", 1 ) ?? 1);
+		EntranceA = (balance?.Int( "FixedItemInfo.EntranceAPosX", 47 ) ?? 47,
+			balance?.Int( "FixedItemInfo.EntranceAPosY", 17 ) ?? 17);
 
 		int[] idleFallback = [40, 30, 20, 10, 5];
 		float[] restFallback = [0.2f, 0.3f, 0.4f, 0.5f, 0.75f];
@@ -365,11 +399,28 @@ public sealed class StaffBehaviour
 
 				break;
 
-			// Walking to the picket. Arriving and giving up are treated alike, as they are for a guest
-			// shuffling up a queue: somebody who cannot reach the picket is still on strike.
+			// Walking to the picket - FUN_005056e0's case 4: a step of the walk, thought 0x15 every turn, and at
+			// the walk's end, arrived or failed alike, the mark at +0x188 is cleared and the member is on strike.
 			case StaffActivity.GoingOnStrike:
-				if ( Walked( staff, walk, playing ) != WalkVerdict.Walking )
+				var picketWalk = Walked( staff, walk, playing );
+
+				Think( staff, 0x15 );
+
+				if ( picketWalk != WalkVerdict.Walking )
+				{
+					var (picketX, picketY) = walk.Position.Cell;
+
+					staff.SettingOffForTheStrike = false;
 					staff.SetActivity( StaffActivity.OnStrike, tick );
+
+					Log.Info( $"Staff: {staff.ThingId} is on strike at ({picketX},{picketY}) on mGameTick {tick}, "
+						+ $"the walk {picketWalk}" );
+				}
+
+				break;
+
+			case StaffActivity.OnStrike:
+				Picket( staff, walk, tick );
 
 				break;
 
@@ -460,8 +511,7 @@ public sealed class StaffBehaviour
 
 				break;
 
-			// On strike and being carried both do nothing here. The original ends a strike in state 5's
-			// FUN_00506300, which is not built (Q138), and its own case 7 has an empty body.
+			// Being carried does nothing here: the original's case 7 has an empty body.
 			default:
 				break;
 		}
@@ -550,9 +600,13 @@ public sealed class StaffBehaviour
 	}
 
 	/// <summary>
-	/// What every kind's decide opens with - <c>FUN_00506a40</c> past its strike arm (Q138), which answers
-	/// whether it set a state (<c>docs/exe/ride-operation.md</c>, "Drawn on the way").
+	/// What every kind's decide opens with - <c>FUN_00506a40</c>, which answers whether it set a state
+	/// (<c>docs/exe/ride-operation.md</c>, "Drawn on the way").
 	///
+	/// <para>
+	/// <b>The strike comes first</b> (<see cref="GoOnStrike"/>): a member whose kind is on strike sets off for the
+	/// picket and this answers true; with no route there the rest of this follows.
+	/// </para>
 	/// <para>
 	/// <b>Tired</b> is the rest byte, the float truncated, at or under <see cref="RestLevel"/>
 	/// (<c>0x00506b41</c>): thought <c>0x14</c>, then the nearest rest area (<see cref="GoAndRest"/>). Found and
@@ -570,6 +624,9 @@ public sealed class StaffBehaviour
 	/// </summary>
 	private bool TiredOrCarryingOn( Staff staff, PeepWalk walk, int tick )
 	{
+		if ( GoOnStrike( staff, walk, tick ) )
+			return true;
+
 		var rest = RestByte( staff );
 
 		if ( rest > RestLevel )
@@ -605,6 +662,79 @@ public sealed class StaffBehaviour
 
 		return false;
 	}
+
+	/// <summary>
+	/// The decide's strike arm - <c>0x00506a4d</c>..<c>0x00506b25</c> (<c>docs/exe/ride-operation.md</c>, "The
+	/// strike"). The member's kind on strike and the gate's status reading open: the mark at <c>+0x188</c> is
+	/// set and the world random is drawn four times, for a cell across the strike area and a byte inside it, then
+	/// a cell down it and a byte inside that. A route there takes state 4 and answers true; none answers false.
+	/// </summary>
+	private bool GoOnStrike( Staff staff, PeepWalk walk, int tick )
+	{
+		if ( Strikes == null || !Strikes.IsOnStrike( ParkStaffPool.KindFor( staff.Model ) )
+			|| GateStatus?.Invoke() != ParkRides.GateIsOpen )
+			return false;
+
+		staff.SettingOffForTheStrike = true;
+
+		var x = StrikeArea.X + (int)((uint)_random.Next() % (uint)StrikeArea.Across);
+		var withinX = _random.Next() & 0xff;
+		var y = StrikeArea.Y + (int)((uint)_random.Next() % (uint)StrikeArea.Down);
+		var withinY = _random.Next() & 0xff;
+
+		staff.Navigator.Target = new FixedVector(
+			(x * PeepNavigator.One) + (withinX * (PeepNavigator.One / 256)),
+			(y * PeepNavigator.One) + (withinY * (PeepNavigator.One / 256)) );
+
+		if ( !walk.PlanRoute() )
+		{
+			Log.Info( $"Staff: {staff.ThingId} is fed up on mGameTick {tick} and finds no route to the strike area "
+				+ $"at ({x},{y})" );
+
+			return false;
+		}
+
+		Log.Info( $"Staff: {staff.ThingId} is fed up and goes on strike on mGameTick {tick}, to ({x},{y})" );
+		staff.SetActivity( StaffActivity.GoingOnStrike, tick );
+
+		return true;
+	}
+
+	/// <summary>
+	/// A striker's turn - state 5, <c>FUN_00506300</c>. One draw: on its low three bits nought the facing moves
+	/// by the draw's low byte less 128, and a sum past <c>0x7ff</c> unsigned, a turn below nought among them, is
+	/// held at <c>0x7ff</c>. Then, with the park shut and no guest inside it, the kind's strike is ended
+	/// (<see cref="ParkStrikes.EndStrike"/>). Then, the kind not on strike, a route to
+	/// <see cref="EntranceA"/>'s cell takes the walk and none takes idle.
+	/// </summary>
+	private void Picket( Staff staff, PeepWalk walk, int tick )
+	{
+		var draw = _random.Next();
+
+		if ( (draw & PicketTurnMask) == 0 )
+			walk.Heading = (int)Math.Min( (uint)((draw & 0xff) - 0x80 + walk.Heading), PeepHeading.FullTurn - 1 );
+
+		var kind = ParkStaffPool.KindFor( staff.Model );
+
+		if ( _state is { ParkIsClosed: true } && (GuestsInside?.Invoke() ?? 0) == 0 )
+			Strikes?.EndStrike( kind );
+
+		if ( Strikes?.IsOnStrike( kind ) == true )
+			return;
+
+		staff.Navigator.Target = new FixedVector(
+			PeepNavigator.WaypointCentre( EntranceA.X ), PeepNavigator.WaypointCentre( EntranceA.Y ) );
+
+		var routed = walk.PlanRoute();
+
+		staff.SetActivity( routed ? StaffActivity.Walking : StaffActivity.Idle, tick );
+
+		Log.Info( $"Staff: {staff.ThingId} leaves the picket on mGameTick {tick}, "
+			+ (routed ? "walking to the park entrance" : "finding no route to the park entrance") );
+	}
+
+	/// <summary>A striker turns on a draw whose low three bits are nought (<c>TEST AL,0x7</c>, <c>FUN_00506300</c>).</summary>
+	public const int PicketTurnMask = 7;
 
 	/// <summary>How rested a member is as the original tests it: the float truncated to a byte (<c>__ftol</c>, <c>AND 0xff</c>).</summary>
 	private static int RestByte( Staff staff ) => (byte)(int)staff.Tiredness;

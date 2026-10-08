@@ -665,6 +665,12 @@ public sealed class ParkState
 	public int AdvanceGameTick() => ++GameTick;
 
 	/// <summary>
+	/// Writes the park's clock, for the console's <c>clock</c>: an instrument, as a write to <c>mGameTick</c> in
+	/// the original's memory is. Every stamp already taken stays as it was.
+	/// </summary>
+	internal void SetGameTick( int tick ) => GameTick = tick;
+
+	/// <summary>
 	/// Now on the park's own calendar - <c>FUN_004f8690</c>: <c>mFunnyTimeStart</c> plus <c>mGameTick ×
 	/// mFunnySecsPerRealSec / 4</c> whole seconds, the tick taken unsigned. A thing built is stamped with it
 	/// (<c>FUN_004db090</c>, <c>0x004db66a</c>) and its age is measured against it (<see cref="AgeInDays"/>).

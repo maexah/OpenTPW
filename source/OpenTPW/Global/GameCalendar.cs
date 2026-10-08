@@ -165,6 +165,19 @@ public static class GameCalendar
 	}
 
 	/// <summary>
+	/// Writes the counter, for the console's <c>clock</c>, which puts the park's <c>mGameTick</c> and this on one
+	/// reading as the original's are. The date and its edges follow on the next <see cref="Update"/>, so a write
+	/// into another month is itself a month's change, as a write to the original's memory is. The next advance
+	/// comes on the next game tick that divides by <see cref="TicksPerAdvance"/>, the thing sweep's own, so the
+	/// two count together from here.
+	/// </summary>
+	internal static void SetCounter( int counter )
+	{
+		Counter = counter;
+		_ticksAtStart = (GameClock.Ticks & ~(TicksPerAdvance - 1)) - (counter * TicksPerAdvance);
+	}
+
+	/// <summary>
 	/// Brings the calendar up to whatever <see cref="GameClock"/> has counted, and says whether the day
 	/// turned. Driven from <see cref="Level.Update"/> after the clock, and only in a park - the
 	/// original's counter is advanced from the park loop and nowhere else, so the lobby has no calendar.

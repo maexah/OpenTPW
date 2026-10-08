@@ -294,8 +294,12 @@ public sealed class ParkPeople : Entity
 		// Staff take the balance stack alone: every constant they run on is a per-grade entry in it, and
 		// none of what a guest needs - the fee, the gate - means anything to them.
 		_staff = StaffIn( park );
+		Strikes = new ParkStrikes( park?.StaffHq );
 		_staffBehaviour = new StaffBehaviour( balance, staffRandom, State )
 		{
+			Strikes = Strikes,
+			GateStatus = gateStatus,
+			GuestsInside = () => GateGuestCensus,
 			ScriptFor = scriptFor,
 			StaffById = id => _staff.Find( member => member.ThingId == id ),
 			GuestsNear = GuestsNear,
@@ -715,11 +719,15 @@ public sealed class ParkPeople : Entity
 	/// </summary>
 	internal int[] TrainingBudgets { get; } = new int[ParkWorld.StaffHqState.Kinds];
 
+	/// <summary>Thing 1's strike records, read from the save's staff HQ and looked at as each month turns.</summary>
+	internal ParkStrikes Strikes { get; }
+
 	/// <summary>
 	/// The month's change reaches thing 1, the staff HQ - message <c>0xc</c>, the first to hear it, whose training
 	/// <c>FUN_0050c800</c> divides each kind's budget among that kind's members (signed) and trains every member with
 	/// the share (<see cref="Train"/>), whether the park is open or shut (<c>docs/exe/ride-operation.md</c>, "The
-	/// month's change"). A nought budget still trains, with nought.
+	/// month's change"). A nought budget still trains, with nought. Then its look at strikes
+	/// (<see cref="ParkStrikes.Look"/>).
 	/// </summary>
 	public void TrainTheStaff()
 	{
@@ -741,7 +749,7 @@ public sealed class ParkPeople : Entity
 				Train( member, kind, TrainingBudgets[kind] / counts[kind] );
 		}
 
-		Unimplemented.Report( "STAFF_HQ_MONTHLY_STRIKE_CHECK" );
+		Strikes.Look( State.GameTick, State.ParkIsClosed, GateGuestCensus, _staff );
 	}
 
 	/// <summary>
@@ -3102,6 +3110,8 @@ public sealed class ParkPeople : Entity
 				// specifier, so "global::" would otherwise split into the expression "global" and a
 				// format string - which is a compile error rather than a wrong answer, thankfully.
 				+ $"walks {(global::OpenTPW.Staff.IsAWalkingState( member.Activity ))} "
+				+ $"st 0x{(int)member.Activity:x} s188 {(member.SettingOffForTheStrike ? 1 : 0)} "
+				+ $"cell ({nav.Position.Cell.X},{nav.Position.Cell.Y}) heading {walk?.Heading ?? -1} "
 				+ $"has {(walk == null ? "no-walk" : walk.HasRoute ? "route" : "no-route")} "
 				+ $"loo {member.ToiletToClean} cleaningSince {member.TimeStartedCleaning} "
 				+ $"performingSince {member.TimeStartedEntertaining} "

@@ -389,22 +389,33 @@ public sealed class ParkWorld : IParkInitialState
 	public EconomyState? Economy { get; private set; }
 
 	/// <summary>
-	/// The staff HQ - model 9, thing 1 in every park file, which the header's <c>mStaffHQ</c> names. Only its
-	/// five monthly training budgets are read (FileFormats <c>saves.md</c>, "The staff HQ"); its strike fields are
-	/// not. Null where the walk never reached one.
+	/// The staff HQ - model 9, thing 1 in every park file, which the header's <c>mStaffHQ</c> names: its strike
+	/// fields and its five monthly training budgets (FileFormats <c>saves.md</c>, "The staff HQ"). Null where the
+	/// walk never reached one.
 	/// </summary>
 	public StaffHqState? StaffHq { get; private set; }
 
 	/// <summary>
-	/// The staff HQ's training block: <c>mBudget[0..4]</c>, what each kind's training may spend a month - the
-	/// handymen's, mechanics', entertainers', guards' and researchers' in that order, the same order as
-	/// <c>PerTypeStaffConsts</c>.
+	/// The staff HQ's record. <c>mBudget[0..4]</c> is what each kind's training may spend a month, and
+	/// <c>mStrikeLevel[0..4]</c> each kind's strike record - both the handymen's, mechanics', entertainers', guards'
+	/// and researchers' in that order, the same order as <c>PerTypeStaffConsts</c>.
 	/// </summary>
-	public readonly record struct StaffHqState( IReadOnlyList<int> Budgets )
+	/// <param name="ForceStrike"><c>mForceStrike</c>: not nought makes every month's look find a cause.</param>
+	/// <param name="Strikes">The five strike records, or null for five of noughts, as the constructor leaves them (<c>FUN_005089c0</c>).</param>
+	public readonly record struct StaffHqState( IReadOnlyList<int> Budgets, int ForceStrike = 0,
+		IReadOnlyList<StrikeRecord>? Strikes = null )
 	{
-		/// <summary>How many budgets the record holds, one a kind of staff.</summary>
+		/// <summary>How many budgets and strike records the record holds, one a kind of staff.</summary>
 		public const int Kinds = 5;
 	}
+
+	/// <summary>
+	/// One kind's <c>mStrikeLevel</c>: three dwords.
+	/// </summary>
+	/// <param name="Level">How far the dispute has gone, 0 to 4.</param>
+	/// <param name="OnStrike">Not nought while the kind is on strike.</param>
+	/// <param name="Stamp">The <c>mGameTick</c> of the month's change the kind was last looked at on.</param>
+	public readonly record struct StrikeRecord( int Level, int OnStrike, int Stamp );
 
 	/// <summary>
 	/// One of the park's people: a guest, or one of the five kinds of staff.
@@ -2213,18 +2224,30 @@ public sealed class ParkWorld : IParkInitialState
 	/// <summary>The model number of the staff HQ - see <see cref="StaffHqState"/>.</summary>
 	private const int StaffHqModel = 9;
 
+	/// <summary>Where <c>mForceStrike</c> sits in the staff HQ's record.</summary>
+	private const int StaffHqForceStrikeAt = 16;
+
+	/// <summary>Where <c>mStrikeLevel[0]</c> sits in the staff HQ's record; each is twelve bytes.</summary>
+	private const int StaffHqStrikesAt = 22;
+
 	/// <summary>Where <c>mBudget[0]</c> sits in the staff HQ's record, after the strike fields.</summary>
 	private const int StaffHqBudgetsAt = 82;
 
-	/// <summary>The staff HQ's five training budgets, from the record at <paramref name="start"/>.</summary>
+	/// <summary>The staff HQ's strike fields and five training budgets, from the record at <paramref name="start"/>.</summary>
 	private StaffHqState ReadStaffHq( int start )
 	{
 		var budgets = new int[StaffHqState.Kinds];
+		var strikes = new StrikeRecord[StaffHqState.Kinds];
 
 		for ( var i = 0; i < budgets.Length; ++i )
-			budgets[i] = ReadInt32At( start + StaffHqBudgetsAt + (4 * i) );   // mBudget[i]
+		{
+			var at = start + StaffHqStrikesAt + (12 * i);
 
-		return new StaffHqState( budgets );
+			strikes[i] = new StrikeRecord( ReadInt32At( at ), ReadInt32At( at + 4 ), ReadInt32At( at + 8 ) );   // mStrikeLevel[i]
+			budgets[i] = ReadInt32At( start + StaffHqBudgetsAt + (4 * i) );   // mBudget[i]
+		}
+
+		return new StaffHqState( budgets, ReadInt32At( start + StaffHqForceStrikeAt ), strikes );
 	}
 
 	/// <summary>

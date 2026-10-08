@@ -1342,6 +1342,45 @@ public static class DebugConsole
 					: "pickup <thingId>" );
 				break;
 
+			// The staff HQ's strike records: the force and {level, flag, stamp} a kind, handymen, mechanics,
+			// entertainers, guards, researchers, with the clock and what the month's look would ask.
+			case "strikes":
+				Reply( ParkPeople.Current is { } striking
+					? $"strikes: tick {striking.State.GameTick} {striking.State.CalendarNow:d/M/yyyy} "
+						+ $"months {ParkStrikes.MonthsSinceTheFirstSweep( striking.State.GameTick )} "
+						+ $"closed {(striking.State.ParkIsClosed ? 1 : 0)} guests {striking.GateGuestCensus} "
+						+ striking.Strikes.Describe()
+					: "strikes: a park has to be loaded" );
+				break;
+
+			// An instrument: sets or clears the staff HQ's mForceStrike, one word for the whole park, which only
+			// a save sets in the original.
+			case "forcestrike":
+				if ( parts.Length > 1 && ParkPeople.Current is { } forced )
+				{
+					forced.Strikes.Force = (int)Argument( 1 ) != 0;
+					Reply( $"forcestrike: force {(forced.Strikes.Force ? 1 : 0)}" );
+				}
+				else
+					Reply( "forcestrike <0|1>" );
+
+				break;
+
+			// An instrument: writes the park's clock, mGameTick, and puts the calendar's counter on the same
+			// reading, so the months turn on the ticks the original's do. A write into another month is a
+			// month's change.
+			case "clock":
+				if ( parts.Length > 1 && Level.Current?.ParkState is { } clocked )
+				{
+					clocked.SetGameTick( (int)Argument( 1 ) );
+					GameCalendar.SetCounter( (int)Argument( 1 ) );
+					Reply( $"clock: mGameTick {clocked.GameTick}, {clocked.CalendarNow:d/M/yyyy}" );
+				}
+				else
+					Reply( "clock <mGameTick>" );
+
+				break;
+
 			// An instrument, as `happy` is for guests: sets how rested one member of staff is, 0 to 100, so the
 			// tired arms of their decide can be reached without waiting a member out.
 			case "staffrest":
