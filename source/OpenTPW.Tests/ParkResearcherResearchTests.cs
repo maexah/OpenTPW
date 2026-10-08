@@ -131,7 +131,7 @@ public class ParkResearcherResearchTests
 		Assert.AreEqual( tick, member.TimeStartedResearching );
 		Assert.AreEqual( 10, member.NextAnimation );
 		Assert.AreEqual( 5, member.TimeStartedIdling, "no setter runs" );
-		Assert.AreEqual( 1, random.Asked, "the choice's one draw" );
+		Assert.AreEqual( 2, random.Asked, "the turn's draw for a sound, then the choice's one" );
 		Assert.AreEqual( (48, 22), member.Navigator.Position.Cell );
 		Assert.AreEqual( 80f, member.Tiredness, "the start costs nothing" );
 		Assert.IsFalse( global::OpenTPW.Staff.IsAWalkingState( member.Activity ) );
@@ -205,7 +205,7 @@ public class ParkResearcherResearchTests
 		}
 
 		Assert.AreEqual( 0, member.NextAnimation, "the animation is queued once" );
-		Assert.AreEqual( 1, random.Asked, "a turn of research draws nothing here" );
+		Assert.AreEqual( 2 + 30, random.Asked, "the first turn's two, then a draw for a sound on each turn of research" );
 
 		behaviour.Step( member, walk, playing: null, tick: 1032 );
 

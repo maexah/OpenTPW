@@ -299,7 +299,12 @@ public sealed class ParkPeople : Entity
 			ScriptFor = scriptFor,
 			StaffById = id => _staff.Find( member => member.ThingId == id ),
 			GuestsNear = GuestsNear,
-			StateGroupsOf = member => BankOf( member.ThingId )?.StateGroupsInUse ?? 0
+			StateGroupsOf = member => BankOf( member.ThingId )?.StateGroupsInUse ?? 0,
+			Sound = static ( member, effect ) =>
+			{
+				if ( ParkGuestSprites.Feet( member.Navigator.Position ) is { } feet )
+					ParkAudio.Current?.StaffSound( effect, feet );
+			}
 		};
 
 		// A cell edit that measures a queue again tells the people in it - see QueueRemeasured - and the
@@ -3088,7 +3093,8 @@ public sealed class ParkPeople : Entity
 				+ $"has {(walk == null ? "no-walk" : walk.HasRoute ? "route" : "no-route")} "
 				+ $"loo {member.ToiletToClean} cleaningSince {member.TimeStartedCleaning} "
 				+ $"performingSince {member.TimeStartedEntertaining} "
-				+ $"researchingSince {member.TimeStartedResearching}";
+				+ $"researchingSince {member.TimeStartedResearching} "
+				+ $"sounds {member.Sounds.Played} draws {member.Sounds.Draws}";
 		}
 	}
 }

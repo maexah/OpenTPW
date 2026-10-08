@@ -1,5 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
@@ -112,7 +113,7 @@ public class ParkEntertainerPerformanceTests
 		Assert.AreEqual( 1001, member.TimeStartedEntertaining );
 		Assert.AreEqual( 0xd, member.NextAnimation );
 		Assert.AreEqual( 5, member.TimeStartedIdling, "no setter ran" );
-		Assert.AreEqual( 2, random.Asked, "the look's draw and the animation's" );
+		Assert.AreEqual( 3, random.Asked, "the walking turn's draw for a sound, the look's and the animation's" );
 		Assert.AreEqual( (48, 22), member.Navigator.Position.Cell );
 		Assert.AreEqual( (48, 22), member.Navigator.Target.Cell, "nowhere to walk to" );
 	}
@@ -183,15 +184,17 @@ public class ParkEntertainerPerformanceTests
 	{
 		var (member, walk, state) = OnThePath();
 		var guests = 1;
+		var sounded = new List<(int Thing, int Effect)>();
 		var behaviour = new StaffBehaviour( Balance(), new CountedDraw( 0 ), state )
 		{
-			GuestsNear = ( _, _ ) => guests, StateGroupsOf = _ => 1
+			GuestsNear = ( _, _ ) => guests, StateGroupsOf = _ => 1, Sound = ( who, effect ) => sounded.Add( (who.ThingId, effect) )
 		};
-		var before = Counted( "STAFF_SOUND_PERFORMANCE_END" );
 
 		behaviour.Step( member, walk, playing: null, tick: 1001 );
 
 		Assert.AreEqual( 80f, member.Tiredness, "the start costs nothing" );
+		CollectionAssert.AreEqual( new[] { (member.ThingId, 0xa4) }, sounded, "the walking turn's draw of nought" );
+		sounded.Clear();
 
 		member.NextAnimation = 0;
 		guests = 0;
@@ -204,17 +207,20 @@ public class ParkEntertainerPerformanceTests
 			Assert.AreEqual( 80f - ((tick - 1001) * 0.075f), member.Tiredness, 0.001f );
 		}
 
-		Assert.AreEqual( 0, Counted( "STAFF_SOUND_PERFORMANCE_END" ) - before );
+		Assert.AreEqual( 0, sounded.Count, "a performing turn sounds nothing" );
 		Assert.AreEqual( 0, member.NextAnimation );
 
 		behaviour.Step( member, walk, playing: null, tick: 1052 );
+
+		Assert.AreEqual( (1, 2), member.Sounds, "the end's sound takes no draw: the one was the walking turn's" );
 
 		Assert.AreEqual( StaffActivity.Idle, member.Activity );
 		Assert.AreEqual( 0, member.TimeStartedIdling, "idle from anything but a walk stamps nought" );
 		Assert.AreEqual( SpriteScript.Standing, member.NextAnimation );
 		Assert.AreEqual( 80f - 3.825f, member.Tiredness, 0.001f );
 		Assert.AreEqual( 50f - 1.53f, member.Happiness, 0.001f );
-		Assert.AreEqual( 1, Counted( "STAFF_SOUND_PERFORMANCE_END" ) - before );
+		CollectionAssert.AreEqual( new[] { (member.ThingId, StaffBehaviour.PerformanceEndSound) }, sounded );
+		Assert.AreEqual( 0x87, StaffBehaviour.PerformanceEndSound );
 		Assert.AreEqual( 1001, member.TimeStartedEntertaining );
 	}
 
@@ -223,9 +229,15 @@ public class ParkEntertainerPerformanceTests
 	public void ASpellEndingBesideAGuestRunsStraightIntoAnother()
 	{
 		var (member, walk, state) = OnThePath();
+		var stampsAtTheEndsSound = new List<int>();
 		var behaviour = new StaffBehaviour( Balance(), new CountedDraw( 0 ), state )
 		{
-			GuestsNear = ( _, _ ) => 1, StateGroupsOf = _ => 1
+			GuestsNear = ( _, _ ) => 1, StateGroupsOf = _ => 1,
+			Sound = ( who, effect ) =>
+			{
+				if ( effect == StaffBehaviour.PerformanceEndSound )
+					stampsAtTheEndsSound.Add( who.TimeStartedEntertaining );
+			}
 		};
 
 		for ( var tick = 1001; tick <= 1051; ++tick )
@@ -235,6 +247,8 @@ public class ParkEntertainerPerformanceTests
 
 		member.NextAnimation = 0;
 		behaviour.Step( member, walk, playing: null, tick: 1052 );
+
+		CollectionAssert.AreEqual( new[] { 1001 }, stampsAtTheEndsSound, "the end sounds before the decide starts the next spell" );
 
 		Assert.AreEqual( StaffActivity.Performing, member.Activity );
 		Assert.AreEqual( 1052, member.TimeStartedEntertaining );

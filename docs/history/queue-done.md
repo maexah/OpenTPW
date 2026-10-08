@@ -5128,6 +5128,22 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   sweeps and ended in a walk, 199 of 199 readings on script 402 set 4, never Idle, fifty lots of 12 points; the build
   before stands on 168 readings of 596, 2 of 2. 43 bugs put back, 41 caught; the two left read another kind's `+503` as the researcher's stamp, nought in every other member of the shipped save (`q134/mutate.py`). The lab itself, and the research
   screen, are still not built (`docs/PLAYER-GAPS.md`); the note above is its data.
+- [x] **Q135. The staff's sounds are neither played nor counted.** Found by Q82. Every idle and walking turn draws
+  the world random and on one in sixteen plays a cat_staff effect at the member's position (`FUN_004faa00`): idle
+  `0xa1`, `0xa3`, `0xa5`, `0xa7`, `0xa9` and walking `0xa0`, `0xa2`, `0xa4`, `0xa6`, `0xa8` (handyman, mechanic,
+  entertainer, guard, researcher), `0x8a` a researching turn; and with no draw `0x87` a performance's end, the guard's
+  `0x88` (`Oi.mp2`) as a chase starts and `0x89` on a catch, both waiting on the chase, itself unbuilt. Count them first
+  (`CLAUDE.md` rule 4); then decode each effect's samples and build. What a sample says is known only by listening.
+  Confirm: `voices` and `unimplemented` over a timed run.
+  **Built 2026-10-07** (`ride-operation.md`, "The staff's sounds, in both games"; `audio.md`, "The staff's voices"):
+  `StaffBehaviour.DrawForSound` on every idle, walking and researching turn, the end's `0x87` with no draw,
+  `ParkAudio.StaffSound` (the variation's own volume and pitch, placed). In the game, 240 s, predicted first, 6 of
+  8, both misses the audio measure's: 4,262 draws and 258 drawn sounds (0.0605), each its member's own effect; 276
+  voices for 276 sounds; `0x87` on each of thirteen ends and `TADA.mp2` in the mix at all thirteen;
+  `STAFF_SOUND_PERFORMANCE_END` gone. The build before: none, 3 of 3. In the original: `TADA.mp2` in its own mix
+  on five of ten ends, the kinds' voices not found for want of an instrument. The samples carry no words (an
+  offline transcriber's reading; no person listened). `0x88` and `0x89` wait on the guard's chase, which has no
+  site here to count them at. 41 bugs put back, 41 caught, one of them by the game run alone.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

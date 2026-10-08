@@ -413,6 +413,15 @@ public sealed class ParkAudio : Entity
 	/// </remarks>
 	private readonly SoundCategory? _kids;
 
+	/// <summary>The staff's voices, the global <c>cat_staff</c> at <c>[0x00803a30]</c>.</summary>
+	private readonly SoundCategory? _staff;
+
+	/// <summary>The draws a staff sound's variation, volume and pitch take.</summary>
+	private readonly Random _staffRandom = new();
+
+	/// <summary>How many staff sounds have started, and how many of those were a sample other than the blank one.</summary>
+	internal (int Started, int Voiced) StaffSounds { get; private set; }
+
 	/// <summary>The park's <c>cat_rides</c>, which every <c>EventMap.rse</c> slot names an effect of.</summary>
 	private readonly SoundCategory? _rides;
 
@@ -575,6 +584,11 @@ public sealed class ParkAudio : Entity
 		// And the guests' voices, which is where the screams are. Loaded now that something asks for
 		// them: the note above says a category with nowhere for its sounds to go is waste, and this one
 		// has somewhere - see Scream.
+		_staff = new SoundCategory( "global", "global/sound", "staff" );
+
+		if ( !_staff.IsValid )
+			Log.Warning( "Park audio: the global staff category would not load, so the staff are silent" );
+
 		_kids = new SoundCategory( "global", "global/sound", "kids" );
 
 		if ( !_kids.IsValid )
@@ -788,6 +802,48 @@ public sealed class ParkAudio : Entity
 
 		return true;
 	}
+
+	/// <summary>
+	/// A <c>cat_staff</c> effect where a member of staff stands (<c>FUN_004faa00</c>, <c>Sound_PlayEffect</c> with no
+	/// handle): a variation evenly, a sample of it by weight, and the volume and pitch drawn from the variation's
+	/// own bytes (<c>0x006bbbe0</c>; <c>docs/exe/audio.md</c>, "The staff's voices"). Most draws land on the bank's
+	/// 9 ms blank sample, which is played as any other.
+	/// </summary>
+	/// <remarks>
+	/// The volume's scale past the byte is <see cref="CrowdVoiceGain"/>, measured for the crowd's flat voice and not
+	/// for a placed one-shot. It is not held back by the repeat delay, which the original does not have.
+	/// </remarks>
+	/// <returns>Whether anything started.</returns>
+	internal bool StaffSound( int effect, Vector3 at )
+	{
+		if ( !Audio.Ready || _staff is not { IsValid: true } )
+			return false;
+
+		var headers = _staff.VariationsOf( effect );
+
+		if ( headers.Count == 0 )
+			return false;
+
+		var variation = _staffRandom.Next( headers.Count );
+		var volume = Controlled( headers[variation], 1, 0, 0, _staffRandom );
+		var pitch = Controlled( headers[variation], 2, 0, 0, _staffRandom );
+		var voice = Audio.Play( _staff.PickFrom( effect, variation ), volume / 100f * CrowdVoiceGain,
+			bus: AudioBus.Effects, position: at );
+
+		if ( voice == null )
+			return false;
+
+		voice.SetRate( ParkCarSounds.Rate( pitch ) );
+		StaffSounds = (StaffSounds.Started + 1, StaffSounds.Voiced + (voice.Name.StartsWith( BlankSample ) ? 0 : 1));
+
+		Log.Info( $"Park audio: staff effect 0x{effect:x} sample '{voice.Name}' volume {volume} pitch {pitch} "
+			+ $"at ({at.X:0.0},{at.Y:0.0},{at.Z:0.0})" );
+
+		return true;
+	}
+
+	/// <summary>The 9 ms silent sample most of a staff effect's weight lands on, by its name's start.</summary>
+	private const string BlankSample = "blank44";
 
 	/// <summary>The kids' category effect a guest put off something plays - see <see cref="PutOff"/>.</summary>
 	private const int PutOffEffect = 0x80;

@@ -2305,14 +2305,18 @@ booth or entrance A or B in states `0x10`, `0x12` and `0x13`. `mTimeHired` is mG
 
 ### Drawn on the way: sounds, thoughts, the random and the strike
 
-- **Every idle and walking turn of every kind draws the world random once**, and at `(r & 0xf) == 0` plays a
-  cat_staff effect at the member's position through `FUN_004faa00` (a thiscall: `FUN_004754e0` for the position, then
-  `Sound_PlayEffect`): idle `0xa1` handyman, `0xa3` mechanic, `0xa5` entertainer, `0xa7` guard, `0xa9` researcher;
-  walking `0xa0`, `0xa2`, `0xa4`, `0xa6`, `0xa8`; `0x8a` a researching turn. The draw is taken whether or not anything
-  plays. Three more play every time, with no draw: `0x87` (`TADA.mp2`) at a performance's end, the guard's `0x88`
-  (`Oi.mp2`) as a chase starts (`FUN_004d6260`, `0x004d62a1`, reached only from `mStaffHQ`'s `FUN_00508a30`) and
-  `0x89` on a catch (`FUN_004d6790`, `0x004d692e`). The guard's `0xa6` is `blank44.mp2` 60% and `gd_wk01`..`gd_wk05`,
-  `0xa7` `blank44.mp2` about 79% and `gd_st01`, `gd_st02`; `0x89` and `0x8a` hold only the 9 ms `blank44.mp2`.
+- **Every idle and walking turn of every kind draws the world random once**, the turn's first act (case 0 and case 1
+  of each kind's handler open with it, before the idle test and before the walk's step), and at `(r & 0xf) == 0` plays
+  a cat_staff effect at the member's position through `FUN_004faa00` (a thiscall: `FUN_004754e0` for the position,
+  then `Sound_PlayEffect`): idle `0xa1` handyman (`0x004d74fc`), `0xa3` mechanic (`0x004da524`), `0xa5` entertainer
+  (`0x004d492e`), `0xa7` guard (`0x004d651b`), `0xa9` researcher (`0x00502b66`); walking the id before each, `0xa0`
+  (`0x004d73ef`), `0xa2`, `0xa4`, `0xa6`, `0xa8`. A researching turn that does not end draws the same way for `0x8a`
+  (`0x00502a61`); the turn that ends draws nothing. The draw is taken whether or not anything plays, and no other
+  state takes it. Three more play every time, with no draw: `0x87` (`TADA.mp2`) at a performance's end, by
+  `Sound_PlayEffect` itself (`0x004d48b0`), the guard's `0x88` (`Oi.mp2`) as a chase starts (`FUN_004d6260`,
+  `0x004d62a1`, reached only from `mStaffHQ`'s `FUN_00508a30`) and `0x89` on a catch (`FUN_004d6790`, `0x004d692e`).
+  What each effect holds, and how it is played here: `audio.md`, "The staff's voices". **Built** (Q135,
+  `StaffBehaviour.DrawForSound`, `ParkAudio.StaffSound`), all but the chase's two, which no code here reaches.
 - **Thoughts** go through `FUN_0050be80` on the member's `+0x30`, with a second argument of 0 at every staff call.
   Past two early outs whose meaning is open (`[0x00790ab0] & 0x16`; `[0x00fb3b7c]` = 1), it first frees whatever
   balloon `+0x84` holds (`0x0050bee3`), then shows the new one only when mGameTick >= `+0x8c` + 20 × class, unsigned
@@ -2533,7 +2537,7 @@ about twice a second, predicted first (`q133d/confirm.py`, `PREDICTION.txt`; `fi
 - **406 of 406 readings inside a spell: script 1760 at 1732, set 4, a frame of 0 to 7**, all eight seen; out of a
   spell the sprite was never on 1760.
 - The place did not change inside any spell, and the whole-number rest fell 3 or 4 over each (3.825).
-- `STAFF_SOUND_PERFORMANCE_END` counted once a spell's end.
+- The end's effect `0x87` is played (Q135; "Drawn on the way").
 
 The build before, the same 240 s: `Idle` and `Walking` on all 593 readings, script 2 on every one, the look counted
 41 times. **Away from every guest** (`far/`): put down on (56,19) fourteen times, the six put-downs with nobody
@@ -2600,6 +2604,41 @@ readings of 596 and Walking on the rest, never off the walk's script, `RESEARCH_
 raised over what they hold; the two cameras are not at the same height, and OpenTPW's is cut along its lower edge by
 the ground, as every sprite is.
 
+### The staff's sounds, in both games
+
+Built by `docs/QUEUE.md` Q135 ("Drawn on the way" above; what the effects hold is `audio.md`, "The staff's voices").
+**OpenTPW**, stock Lost Kingdom left alone 240 s, the music group at nought, the game's own mix kept by SDL's disk
+driver, predicted first (`q135/confirm.py`, `PREDICTION.txt`; `gate/`, 6 of 8, both misses the measure's):
+
+- **The draws**: over 988 sweeps the handyman, the mechanic and the guard drew 988 times each, the researcher 973
+  (every turn but each spell's last), the entertainer 325 (a performing turn draws nothing).
+- **One in sixteen**: 258 drawn sounds of 4,262 draws, 0.0605; every one its member's own effect and state (`0xa0`
+  59, `0xa2` 69, `0xa4` 10, `0xa5` 7, `0xa6` 49, `0xa7` 7, `0xa8` 34, `0x8a` 28), and `0x87` on each of the thirteen
+  sweeps a performance ended, by the same clock.
+- **A voice every time**: 276 placed voices for 276 sounds, volume 24, 16, 21 or 30 and pitch -10 to 9 by the
+  variation; 88 of the kinds' 235 a voice and not the blank (0.37), 23 samples heard; `voices` showed one placed on
+  the effects group on 209 readings; `STAFF_SOUND_PERFORMANCE_END` gone from `unimplemented`.
+- **In the mix**: `TADA.mp2` at every one of the thirteen ends at a gain of 0.027 to 0.031 (0.21 × 0.30 × the
+  master's 0.5), but for the first, 0.010 under the advisor's opening line, which ducks the group. Of the 103 voiced
+  samples marked, 41 reach a normalised score of 0.5 (17 of them 0.9), and the same template five seconds later
+  never 0.3. **Two predictions wrong, both the measure's**: the score sinks under a louder sound over it (the Belly
+  Bounce's screams at 0.175 against 0.03), so "0.5 on four in five" failed; and a peak counted in deviations of the
+  correlation answers to any loud sound (31 of 103 five seconds later).
+- **The build before**, 3 of 3: no such line, no voice, `STAFF_SOUND_PERFORMANCE_END` counted twelve times for
+  twelve ends, and `TADA.mp2` at 0.05 at every one.
+
+**The original under Proton** (`q135/orig/`, three runs; `watch.py` reads the five states once a sweep with the mix
+file's size beside each; `PREDICTION-result.txt`). The states are as the listing has them: over 1,258 sweeps the
+handyman and the mechanic read 1 on every one, the guard 0 or 1, the entertainer 0, 1 or `0xe`, the researcher 1 or
+`0xf`. **Its performance's end was found in its own mix on five of ten ends** (camera on the entertainer's patrol,
+the Music switch off): `TADA.mp2` 0.12 to 0.23 s after the reading on each, at the sample's own rate and no other,
+its level by the envelope 0.022 to 0.032 of the sample's, left and right within a fifth of each other; the windows
+twenty sweeps earlier hold nothing. The score there is 0.21 to 0.24 and never more, so what the library does to a
+placed voice is not a plain copy of the sample. **Not explained**: of the other five ends, two fall where the mix is
+near silent. **Not found, for want of an instrument**: the kinds' voices, which have no known moment to look at and
+would score no better. With the music on nothing so quiet is found at all, and neither a count of deviations nor a
+template played backwards tells a sample from a loud noise there: only the normalised score at a known moment did.
+
 ### Where OpenTPW differs
 
 | What | The original | OpenTPW | Reached in Lost Kingdom |
@@ -2612,8 +2651,8 @@ the ground, as every sprite is.
 | The stand as a member goes idle | SetState(0) queues animation 3 every time (`FUN_004fa460`) | queued from a performance and after a clean only; any other idle keeps the picture it had | every idle |
 | State scripts 1 to 3 (words 1800, 1812, 1824) and a bank with no group | played; an animation past the table | not copied, counted `SPRITE_STATE_ANIMATION_NOT_STARTED`; counted `ENTERTAINER_BANK_WITHOUT_A_STATE_GROUP` | no shipped bank |
 | The entertainer's region effect | the pre-step `FUN_004d4660` moves `RegionFX[0]` with them, cell by cell | none, uncounted | every cell the entertainer crosses (Q157) |
-| The researcher's research | state `0xf` on a draw of nought or with nowhere to walk, WorkDuration + 1 sweeps, then a walk or the same again; the points to the lab every 20 sweeps ("The research, in both games") | built (`StaffBehaviour.Research`); the points counted, `RESEARCH_POINTS_TO_THE_LAB`, and spent by nothing: there is no lab; a researching turn's draw for effect `0x8a` not taken (Q135); the too-tired gate unreached (Q136) | a quarter of the researcher's decides; the points every 20 sweeps |
-| Staff sounds | fourteen cat_staff effects | none, uncounted | every idle and walking turn; a performance's end; a guard's chase and catch (Q135) |
+| The researcher's research | state `0xf` on a draw of nought or with nowhere to walk, WorkDuration + 1 sweeps, then a walk or the same again; the points to the lab every 20 sweeps ("The research, in both games") | built (`StaffBehaviour.Research`); the points counted, `RESEARCH_POINTS_TO_THE_LAB`, and spent by nothing: there is no lab; the too-tired gate unreached (Q136) | a quarter of the researcher's decides; the points every 20 sweeps |
+| Staff sounds | fourteen cat_staff effects | twelve built (`StaffBehaviour.DrawForSound`, `ParkAudio.StaffSound`; `audio.md`, "The staff's voices"); the chase's `0x88` and `0x89` have no site | every idle and walking turn, a researching turn; a performance's end; a guard's chase and catch wait on the chase |
 | Tired | the byte `<=` 1 | the float `<` 1 | a rest in [1, 2) (Q136) |
 | Tired with no rest area found or reached | `FUN_00506a40` answers 0 and the kind's choice follows | the guard and the researcher stand and ask again after the idle wait | once the Staff Room at (58,16) is sold or cannot be routed to (Q136) |
 | The end of a rest | the kind's decide in the same sweep | Idle at stamp 0, decided on the next sweep | every rest (Q136) |

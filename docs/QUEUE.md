@@ -40,13 +40,6 @@ the original.
 
 **The 2026-10-06 review's leftovers come first, at Alexah's word (2026-10-06).**
 
-- [ ] **Q135. The staff's sounds are neither played nor counted.** Found by Q82. Every idle and walking turn draws
-  the world random and on one in sixteen plays a cat_staff effect at the member's position (`FUN_004faa00`): idle
-  `0xa1`, `0xa3`, `0xa5`, `0xa7`, `0xa9` and walking `0xa0`, `0xa2`, `0xa4`, `0xa6`, `0xa8` (handyman, mechanic,
-  entertainer, guard, researcher), `0x8a` a researching turn; and with no draw `0x87` a performance's end, the guard's
-  `0x88` (`Oi.mp2`) as a chase starts and `0x89` on a catch, both waiting on the chase, itself unbuilt. Count them first
-  (`CLAUDE.md` rule 4); then decode each effect's samples and build. What a sample says is known only by listening.
-  Confirm: `voices` and `unimplemented` over a timed run.
 - [ ] **Q136. Six small differences in the staff's decide.** Found by Q82 (`ride-operation.md`, "Drawn on the way").
   (a) Tired is `(u8)trunc( rest ) <= RestLevel`, signed and inclusive (`0x00506b41`); `StaffBehaviour.Decide` tests
   the float `< RestLevel` and misses [1, 2). (b) The patrol roll `FUN_00506f30` takes only a path cell (`mType` 1,
@@ -725,6 +718,9 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   - whether parameter 6 is also a level (OpenTPW hears it as the scream's gain);
   - replacing `ReadSamples`' scan with the structural walk.
 
+  From Q135: in the original's mix the performance's end (`TADA.mp2`, staff `0x87`) was found on five of ten ends
+  and two of the others fell where the mix was near silent (`ride-operation.md`, "The staff's sounds, in both
+  games"): the voice pool may be why, and it is not read. A placed voice there matches its sample at 0.24 at best.
   Decode the `0x4|0x2` class first. Confirm: capture the lobby's mix and a park's mix, before and after.
   The class's `0x400` constructor is decoded and the park's music follows it (the 2026-10-06 review's fix 4;
   `audio.md`, "The music's class"): parameter 4 picks the variation and an empty park is not silent. Its other

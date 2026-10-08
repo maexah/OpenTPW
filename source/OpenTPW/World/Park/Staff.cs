@@ -70,6 +70,12 @@ public sealed class Staff
 	public int JobsDone { get; internal set; }
 
 	/// <summary>
+	/// How many draws they have taken for a <c>cat_staff</c> sound, and how many sounds they have started, the
+	/// undrawn ones among them - the <c>staff</c> census's two counts, kept by no save.
+	/// </summary>
+	public (int Draws, int Played) Sounds { get; internal set; }
+
+	/// <summary>
 	/// How far through their grade their training is, as a percentage - the one-byte <c>mPercentageThroughGrade</c>
 	/// (<c>+0x1e8</c>). The month's training adds to it and takes 100 off at a promotion.
 	/// </summary>

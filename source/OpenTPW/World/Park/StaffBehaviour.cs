@@ -79,6 +79,12 @@ public sealed class StaffBehaviour
 	/// </summary>
 	public Func<Staff, int>? StateGroupsOf { get; init; }
 
+	/// <summary>
+	/// Plays a <c>cat_staff</c> effect where a member stands - <c>FUN_004faa00</c> on <c>[0x00803a30]</c>
+	/// (<see cref="ParkAudio.StaffSound"/>). Null plays nothing; the draw before it is taken all the same.
+	/// </summary>
+	public Action<Staff, int>? Sound { get; init; }
+
 	private readonly int[] _researcherWork = new int[ParkWorld.StaffState.PayGrades];
 	private readonly int[] _researchAbility = new int[ParkWorld.StaffState.PayGrades];
 	private readonly int[] _entertainerWork = new int[ParkWorld.StaffState.PayGrades];
@@ -306,6 +312,8 @@ public sealed class StaffBehaviour
 			// Standing about. They wait out their grade's idle duration and then look for something to do: the
 			// first sweep past stamp + IdleDuration, so IdleDuration + 1 sweeps after a walk's stamp (0x004d6545).
 			case StaffActivity.Idle:
+				DrawForSound( staff, IdleSoundOf( staff.Model ), tick );
+
 				if ( (uint)tick <= (uint)(staff.TimeStartedIdling + IdleDurationAt( staff.PayGrade )) )
 					break;
 
@@ -316,6 +324,8 @@ public sealed class StaffBehaviour
 			// Walking somewhere. Still going costs them rest and mood; arriving or giving up both end in
 			// the same decision, which is the original's own shape - it falls out of the switch either way.
 			case StaffActivity.Walking:
+				DrawForSound( staff, IdleSoundOf( staff.Model ) - 1, tick );
+
 				if ( Walked( staff, walk, playing ) == WalkVerdict.Walking )
 				{
 					Tire( staff );
@@ -413,8 +423,8 @@ public sealed class StaffBehaviour
 				if ( (uint)tick <= (uint)(staff.TimeStartedEntertaining + EntertainerWorkDurationAt( staff.PayGrade )) )
 					break;
 
-				// cat_staff effect 0x87 at the sprite's position (0x004d48f0), not built (Q135).
-				Unimplemented.Report( "STAFF_SOUND_PERFORMANCE_END" );
+				// cat_staff effect 0x87 at the sprite's position, with no draw (0x004d48b0).
+				PlaySound( staff, PerformanceEndSound, tick );
 				Log.Info( $"Staff: {staff.ThingId} ends the performance of mGameTick {staff.TimeStartedEntertaining} "
 					+ $"on mGameTick {tick}" );
 
@@ -425,12 +435,16 @@ public sealed class StaffBehaviour
 			// A researcher researching - FUN_005029f0's case 0xf: a turn of work, then, on the first sweep past
 			// stamp + WorkDuration, a walk if somewhere is found (0x00502a40, with no FUN_00506a40 and no draw)
 			// and otherwise a fresh stamp and the same again. A turn that does not end draws for cat_staff
-			// effect 0x8a (0x00502a61), not built (Q135).
+			// effect 0x8a (0x00502a61).
 			case StaffActivity.Researching:
 				Work( staff );
 
 				if ( (uint)tick <= (uint)(staff.TimeStartedResearching + ResearcherWorkDurationAt( staff.PayGrade )) )
+				{
+					DrawForSound( staff, ResearchingSound, tick );
+
 					break;
+				}
 
 				if ( SetRandomDest( staff, walk ) )
 				{
@@ -872,6 +886,53 @@ public sealed class StaffBehaviour
 
 		Log.Info( $"Staff: {staff.ThingId} researches on mGameTick {tick}, "
 			+ (walks ? "finding nowhere to walk" : "its choice's low two bits nought") );
+	}
+
+	/// <summary>
+	/// A kind's idle <c>cat_staff</c> effect; its walking one is the id before it: handyman <c>0xa1</c>
+	/// (<c>0x004d74fc</c>) and <c>0xa0</c>, mechanic <c>0xa3</c> and <c>0xa2</c>, entertainer <c>0xa5</c> and
+	/// <c>0xa4</c>, guard <c>0xa7</c> and <c>0xa6</c>, researcher <c>0xa9</c> and <c>0xa8</c>.
+	/// </summary>
+	public static int IdleSoundOf( int model ) => model switch
+	{
+		HandymanModel => 0xa1,
+		MechanicModel => 0xa3,
+		EntertainerModel => 0xa5,
+		GuardModel => 0xa7,
+		ResearcherModel => 0xa9,
+		_ => 0
+	};
+
+	/// <summary>The effect at a performance's end, <c>TADA.mp2</c> (<c>0x004d48a8</c>).</summary>
+	public const int PerformanceEndSound = 0x87;
+
+	/// <summary>The effect a researching turn draws for (<c>0x00502a73</c>); the shipped one holds only a blank sample.</summary>
+	public const int ResearchingSound = 0x8a;
+
+	/// <summary>A drawn sound plays when the draw's low four bits are nought (<c>TEST AL,0xf</c>, <c>0x004d74f2</c>).</summary>
+	public const int SoundDrawMask = 0xf;
+
+	/// <summary>
+	/// The draw an idle, walking or researching turn opens with, and the effect on one in sixteen
+	/// (<c>docs/exe/ride-operation.md</c>, "Drawn on the way"). The draw is taken whatever the effect.
+	/// </summary>
+	private void DrawForSound( Staff staff, int effect, int tick )
+	{
+		var draw = _random.Next();
+
+		staff.Sounds = (staff.Sounds.Draws + 1, staff.Sounds.Played);
+
+		if ( (draw & SoundDrawMask) == 0 && effect > 0 )
+			PlaySound( staff, effect, tick );
+	}
+
+	/// <summary>A <c>cat_staff</c> effect at the member, counted and logged.</summary>
+	private void PlaySound( Staff staff, int effect, int tick )
+	{
+		staff.Sounds = (staff.Sounds.Draws, staff.Sounds.Played + 1);
+
+		Log.Info( $"Staff: {staff.ThingId} sounds cat_staff effect 0x{effect:x} on mGameTick {tick}" );
+		Sound?.Invoke( staff, effect );
 	}
 
 	/// <summary>The mechanic's thing model.</summary>

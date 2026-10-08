@@ -255,6 +255,48 @@ So the level does two things. As the class's zone parameter (controller slot 0) 
 
 **OpenTPW** (`ParkAudio.SetCrowdVoice`, `NextCrowdSample`, `ParkPeople.GuestsNear`): on the music's beat the guests on the cells within four of `ParkPicking.Cell` are counted (nought with no cell), held to 100 and made nought in world state 4. Above nought the voice is held: a flat sample of kids 91 from the first variation, then, as each ends, one from the variation the level's zone gives (`ParkScreams.NextVariation`, the music's rule), its volume and pitch from `ParkAudio.Controlled` (the level on variations 1 to 6, a draw on the twins; the pitch a draw). A new level is the playing sample's volume at once where its variation names parameter 7. At nought the sample is faded over 0.06 s (`Sound_StopFading`'s 60) and the voice let go; started again it begins from the first variation. A variation's volume of 100 plays at `CrowdVoiceGain`, 0.30 beside the music's 0.33, which puts a sample at volume 14 at 0.13 of the music. **Said:** the next sample is started on the frame after the last has ended, where the original's service pass starts it (rate not measured); the voice that ended by itself in Q236's log is not modelled, a held voice here never ends; the count reads each guest's linked cell (`ParkState.CellOf`), the original the cells' own lists. Console: `crowd`.
 
+## The staff's voices
+
+Fourteen effects of the global `cat_staff` (`cat_staffSFX.map`, bank `Sound\Staff`, `[0x00803a30]`) are named by the
+staff's code; where each is asked for is `ride-operation.md`, "Drawn on the way". Each has one variation, no
+controller on its volume or pitch (both masks nought), so the volume is the variation's byte and the pitch a draw
+from its range (`0x006bbbe0`, "A voice's two controllers" above). Read from the shipped file (`q98/fx`), the weights
+turned into shares of 65,535:
+
+| Effect | Asked by | Volume | Pitch | Samples |
+|---|---|---|---|---|
+| `0xa0` | handyman walking | 24 | -10..10 | `cl_wk03`..`cl_wk06` 8.7% each, `blank44` 65% |
+| `0xa1` | handyman idle | 24 | -10..10 | `cl_st01`, `03`, `04`, `05`, `06` 8% each, `blank44` 60% |
+| `0xa2` | mechanic walking | 24 | -10..10 | `blank44` 60%, `mc_wk01`..`04`, `mc_wk08` 8% each |
+| `0xa3` | mechanic idle | 24 | -10..10 | `mc_st04`, `07`, `08`, `11`, `12` 8% each, `blank44` 60% |
+| `0xa4` | entertainer walking | 24 | -10..10 | `blank44` 66.7%, `jj_wk05`, `07`, `08`, `09`, `10` 6.7% each |
+| `0xa5` | entertainer idle | 24 | -10..10 | `blank44` 66.7%, `jj_st01`..`jj_st05` 6.7% each |
+| `0xa6` | guard walking | 24 | -10..10 | `blank44` 60%, `gd_wk01`..`gd_wk05` 8% each |
+| `0xa7` | guard idle | 24 | -10..10 | `blank44` 79%, `gd_st01`, `gd_st02` 10.5% each |
+| `0xa8` | researcher walking | 16 | -10..10 | `blank44` 60%, `sc_wk02`, `04`, `06`, `08`, `09` 8% each |
+| `0xa9` | researcher idle | 16 | -10..10 | `blank44` 60%, `sc_st02`, `04`, `08`, `09`, `12` 8% each |
+| `0x87` | a performance's end | 21 | 0 | `TADA` |
+| `0x88` | a guard's chase starting | 30 | -5..5 | `Oi` |
+| `0x89` | a guard's catch | 30 | -5..5 | `blank44` |
+| `0x8a` | a researching turn | 30 | -5..5 | `blank44` |
+
+`blank44.mp2` is 9 ms of silence, so with the draw's one in sixteen a kind's turn is heard about once in forty.
+**What the samples say**: nothing in words. All 46 were put through an offline transcriber (Vosk's small English
+model, `q135/listen/transcripts.tsv`), which made no sentence of any: the `_wk` ones run 0.2 to 2.9 s and come out
+as strings of syllables ("lam lam lam", "do do do", "whoa whoa whoa"), the `_st` ones 0.2 to 2.3 s and mostly as
+nothing or one syllable. No person has listened to them.
+
+**OpenTPW** (`ParkAudio.StaffSound`): a variation evenly, a sample by weight, one placed one-shot on the effects
+group at the member's feet, its rate from the drawn pitch (`ParkCarSounds.Rate`), the blank played as any other.
+**The gain past the byte is not decoded**: it is `ParkAudio.CrowdVoiceGain`, 0.30 for a byte of 100, measured for the
+crowd's flat voice, and a park's placed sounds do not fade with distance here ("The listener", below).
+
+**Measured** (`ride-operation.md`, "The staff's sounds, in both games"): in OpenTPW's mix `TADA.mp2` sits at 0.027 to
+0.031, the byte's 0.21 × 0.30 × the master's 0.5. In the original's, with the camera on the entertainer's patrol,
+its envelope is 0.022 to 0.032 of the sample's, where Q236b's crowd samples read 0.022 to 0.046 at bytes 14 to 22:
+the same scale to within the spread, at that one camera. How the original's level falls with distance was not
+measured, and its placed voice matches the sample at 0.24 at best, so the library changes it on the way.
+
 ## Node lookup is by id AND a capability flag
 
 `FUN_0044b220` walks the `.MD2` id table for a record whose **id matches** *and* whose **flag word shares a bit** with a given mask, and answers the first such record. Not by id alone. The masks include `0x200` sound, `0x100` particles and `0x400` costume; walk nodes take `0x800` and heads `0x80`. A mask sharing no bit with `0x3da1f83` is swapped for `0x3da1f82` first (`0x0044b226`..`0x0044b22e`); none of the masks above is.

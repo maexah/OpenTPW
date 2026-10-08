@@ -300,7 +300,7 @@ public class ParkStaffBehaviourTests
 
 		if ( to == StaffActivity.Idle )
 		{
-			Assert.AreEqual( 0, walkDraws.Asked );
+			Assert.AreEqual( 1, walkDraws.Asked, "the walking turn's draw for a sound and no other" );
 			Assert.AreEqual( tick, member.TimeStartedIdling, "idle from a walk stamps the clock" );
 		}
 	}
@@ -1075,7 +1075,8 @@ public class ParkStaffBehaviourTests
 
 		Assert.AreEqual( StaffActivity.Idle, member.Activity );
 		Assert.AreEqual( 0, member.Thoughts.Last, "a patrol roll would have thought 0x16" );
-		Assert.AreEqual( 1 + (2 * PeepBehaviour.NowhereTries), draws.Asked, "the call's pass draw, then x and y of five tries" );
+		Assert.AreEqual( 2 + (2 * PeepBehaviour.NowhereTries), draws.Asked,
+			"the turn's draw for a sound, the call's pass draw, then x and y of five tries" );
 	}
 
 	private sealed class ConstantDraw : Random
@@ -1133,7 +1134,7 @@ public class ParkStaffBehaviourTests
 
 		Assert.AreEqual( unhappy == 1 ? 0x13 : veryHappy == 1 ? 0x12 : 0, member.Thoughts.Last,
 			"0x13 unhappy, 0x12 very happy, and a rested member never 0x14" );
-		Assert.AreEqual( draws, random.Asked, "the draw is taken only above 97" );
+		Assert.AreEqual( 1 + draws, random.Asked, "after the idle turn's draw for a sound, the mood's is taken only above 97" );
 	}
 
 	/// <summary>A tired member thinks <c>0x14</c> and nothing of their mood (<c>0x00506b50</c>).</summary>
