@@ -5395,6 +5395,22 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the box's text as it stands: not trimmed, compared with the folder by case, and empty if the player emptied it
   (the original then writes `.TPWS`; on a folder that tells case apart "new save" beside "New Save" is a second
   file, where Windows rewrites the first). The list is not read again after a save, since the screen closes.
+- [x] **Q241f. The park file's writer: the container, every module carried, the clock and the cash.** Done
+  2026-10-08, `alexah/364-park-file-writer-container`: `ParkFileWriter` (`saves.md`, "OpenTPW's writer, the first
+  stage"), reached by the console's `savepark <name>`. A stock park stepped to `mGameTick` 1000 with $ 88112, 13
+  visitors and the camera turned a quarter was written (version 500, 15 bytes of the body changed, none outside
+  the fields written) and loaded by OpenTPW (the clock starts at 1000, balance 88112) and by the original under
+  Proton over a park at tick 1836 and $ 88162 (1000 at the click and counting, $ 88112, 13 visitors, zoom 90, the
+  point (480, 280), the frame from the same side as ours). Fifteen predictions of fifteen here; two of mine wrong
+  in the original: the file's rotation is the orbit camera's yaw negated (fixed, and run again), and its loader
+  rounds the rotation to a quarter turn. The control build has no `savepark`. 30 of 31 bugs put back fail a test; the other is an equivalent.
+  The item as written: From Q241e
+  (`saves.md`, "Module by module"). `ParkWorld` keeps the inflated body it read. Write it back out: the preamble
+  copied from the file loaded, a fresh `BILZ` header, the body through `ZLibStream` (no memory level 9 there:
+  said at the site), with `mGameTick`, `mParkClosed`, `mNumberOfVisitorsToDate`, the economy thing's balance and
+  the camera module written from the running park. A console command writes it into the player's folder;
+  `ParkSaveScreen.Save` stays counted until Q241j. Confirm: a stock park run to a known tick and balance, written,
+  then loaded by the original under Proton and by OpenTPW, the tick and the cash predicted; a screenshot of each.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

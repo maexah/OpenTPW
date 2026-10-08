@@ -439,7 +439,8 @@ public class Level
 		try
 		{
 			using var stream = files.OpenRead( path );
-			var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
+			var reader = new SaveReader( stream );
+			var world = new ParkWorld( reader.ReadFile(), reader.Preamble );
 
 			if ( world.Problem != null )
 				Log.Warning( $"{themeName}: the park file stopped being readable partway - {world.Problem}" );
@@ -456,6 +457,76 @@ public class Level
 			Log.Warning( $"{themeName}: the park file would not read, so the park is empty - {e.Message}" );
 			return null;
 		}
+	}
+
+	/// <summary>
+	/// Writes the running park into the player's folder for the theme as <c>&lt;name&gt;.TPWS</c>, the park file
+	/// <c>FUN_005ac610</c> writes (<c>docs/exe/saves.md</c>, "The save" and "Module by module"), and answers where,
+	/// or null where nothing was written.
+	///
+	/// <para>
+	/// <b>Only the first stage of the writer is built</b> (<see cref="ParkFileWriter"/>): the file the park was loaded
+	/// from goes out again with the park's clock, its door, its visitor count, its cash and the camera written over
+	/// it. What else play has changed is not written.
+	/// </para>
+	/// <para>
+	/// <b>Deviations.</b> The original writes the player's <c>gms.dat</c> first and puts the pointer back to its
+	/// default mode; neither is done here. A park made fresh, with no file behind it, is counted and not written.
+	/// With nobody playing there is no folder, and nothing is written; the original has a player on every entry.
+	/// </para>
+	/// </summary>
+	internal string? WritePark( string name )
+	{
+		if ( Kind == Scene.Park && ParkState is { } state )
+			return WritePark( Park, state, ThemeName, name );
+
+		Log.Warning( $"Save: '{name}' is not written - no park is running" );
+		return null;
+	}
+
+	/// <summary><see cref="WritePark(string)"/> for a park's own parts, the camera's being the orbit camera's.</summary>
+	internal static string? WritePark( IParkInitialState? park, ParkState state, string theme, string name )
+	{
+		if ( Players.Roster.Current is not { } player )
+		{
+			Log.Warning( $"Save: '{name}' is not written - nobody is playing, so there is no folder to write it in" );
+			return null;
+		}
+
+		if ( park?.Save is not { } loaded )
+		{
+			Unimplemented.Report( "SAVE_PARK_WITH_NO_FILE" );
+			Log.Warning( $"Save: '{name}' is not written - this park was made fresh, and only a loaded park's file is written back" );
+			return null;
+		}
+
+		var point = ParkOrbitCameraMode.PointOfInterest;
+
+		// The file's rotation turns the other way from the orbit camera's yaw: nought is the same view in both, and a
+		// quarter turn written as it stands puts the original's camera on the far side of the point.
+		var running = new ParkFileWriter.Running( state.GameTick, state.ParkIsClosed, state.VisitorsToDate, state.Balance,
+			new ParkCameraModule.View( ParkOrbitCameraMode.Zoom, -ParkOrbitCameraMode.Yaw, point.X, point.Y ) );
+
+		byte[] file;
+
+		try
+		{
+			file = ParkFileWriter.Write( loaded, running );
+		}
+		catch ( InvalidOperationException e )
+		{
+			Log.Warning( $"Save: '{name}' is not written - {e.Message}" );
+			return null;
+		}
+
+		if ( SaveFolder.WritePark( player.Slot, player.Name, theme, name, file ) is not { } path )
+			return null;
+
+		Log.Info( $"Save: wrote {path}, {file.Length} bytes: mGameTick {running.GameTick}, " +
+			$"{(running.ParkClosed ? "closed" : "open")}, {running.VisitorsToDate} visitors to date, balance {running.Balance}, " +
+			$"camera {ParkOrbitCameraMode.State()}" );
+
+		return path;
 	}
 
 	/// <summary>

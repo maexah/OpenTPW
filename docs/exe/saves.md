@@ -191,6 +191,18 @@ writes them (`0x00416c98`). `+0x0a` is the cheats flag (getter `FUN_00405560`): 
 play (from `FUN_004993e0`, `0x0049960a`, after two compares with obfuscated strings). `+0x0b` is touched by nothing
 else but the constructor `FUN_004053b0`; its meaning is unknown. `Easymode.TPWI` ships the flag set.
 
+**Camera.** `FUN_0042cec0` reads the zoom, the rotation, the flags, the point looked at, a saved point and a saved
+rotation into `0x007909ec`, `0x00790a38`, `0x00790ab0`, `0x007908f0`, `0x00790ad0` and `0x00790a9c`
+(`FUN_0042cdc0` writes them). Then it zeroes the flags (`0x0042d04c`), copies the rotation
+to `0x007909e0`, and, when the options byte `0x0078d912` is set, **rounds the rotation to a quarter turn**
+(`0x0042d05e`): `FUN_0067b24a` of the rotation and the double π/2 at `0x006fdd88`, taken to be the remainder
+(not read), is taken off, and the rotation moved on to the next quarter when that is past an eighth
+(`0x006fdd98`, `0x006fdd90`). The rotation is in radians: with the byte set (`0x0042b471`) the camera's update
+turns it a quarter turn a press (`0x0042b489`, `0x0042b4a4`, the constants `0x006fdd94` and `0x006fdd68`). Which
+option the byte is was not traced (`OptionsScreen_ControlChanged` writes it, `0x004a37f9`); the options screen's
+90-degree rotation is the likely one (Q23). Measured under Proton (Q241f): a file holding -0.7854 read 0.0 after the load, and one holding
+±1.5708 read as written.
+
 **Action ids.** The action recorder's ids, and the names `FUN_004041d0` gives them, are `park-engine.md`, "There is no
 drag".
 
@@ -199,7 +211,8 @@ drag".
 The park menu's rows 1 and 2 (`FUN_0048b6a0`, `scenes.md`). Decoded in Ghidra and run in the original under Proton
 on 2026-10-08 (Q241, Q241d); what was only read is listed at the end. OpenTPW builds the Load Park screen and the
 Save Park screen ("OpenTPW's Load Park" and "OpenTPW's Save Park", below); the save itself is counted
-(`SAVE_GAME_WRITER`), and what it must write is "What a park file must hold to be written".
+(`SAVE_GAME_WRITER`), what it must write is "What a park file must hold to be written", and the first stage of the
+writer, reached from the console alone, is "OpenTPW's writer, the first stage".
 
 ### The two rows
 
@@ -483,9 +496,9 @@ frames), `confirm.py`, `mutate.py` and the sheet of OpenTPW's screen beside the 
 
 ## What a park file must hold to be written
 
-Decoded and measured on 2026-10-08 (Q241e). Nothing is built: `ParkSaveScreen.Save` still counts
-`SAVE_GAME_WRITER`. The bytes are the FileFormats `saves.md`'s; this section is what the original does with them
-and what a writer here has to get right.
+Decoded and measured on 2026-10-08 (Q241e). `ParkSaveScreen.Save` still counts `SAVE_GAME_WRITER`; the first of
+the writer's five stages is built ("OpenTPW's writer, the first stage", below). The bytes are the FileFormats
+`saves.md`'s; this section is what the original does with them and what a writer here has to get right.
 
 ### The container takes another deflate, and a changed body
 
@@ -621,6 +634,47 @@ original. A person in the middle of a walk carries the original's navigator (177
 not keep. A park that was never loaded from a file (the fresh world) has nothing to carry: every module would be
 afresh, the legal text taken from the level's shipped park file.
 
+### OpenTPW's writer, the first stage
+
+`ParkFileWriter` (Q241f) writes a park file from the one the park was loaded from. `ParkWorld` keeps the inflated
+body it read and the file's first `0x60D` bytes (`SaveReader.Preamble`); the writer copies the body and writes
+over the copy, never the one held.
+
+- **The container.** The version, 500, whatever the file loaded carried (the shipped park's 400 goes out as 500,
+  as the original's save of it does); the loaded file's preamble after the version, where the original writes its
+  running language's legal text; `BILZ`, the body's length, the block's length, then 15, 9, 0, 0; and the body
+  through .NET's `ZLibStream`. **A deviation:** the stream is not the original's byte for byte, having no memory
+  level 9 ("The writer", "Measured"); the header still reads 9, and the original loads it.
+- **Written from the running park:** `mGameTick`, `mParkClosed` (1 or 0), `mNumberOfVisitorsToDate`, the economy
+  thing's `mBalance`, and of the camera module the zoom, the rotation and the point's two ground coordinates. The
+  camera's flags, the point's height, the saved point and the saved rotation are the file's.
+- **The rotation is written as the orbit camera's yaw negated.** Measured: at nought the two games show the same
+  view; a file holding +π/2 for OpenTPW's quarter turn put the original's camera on the far side of the point, and
+  one holding -π/2 on the same side as OpenTPW's. OpenTPW turns an eighth a press (Q23), which the original's
+  loader rounds to a quarter (above, "Loading the modules", Camera).
+- **Everything else is carried**, so a park loaded from the file has the people, objects, ground and scripts of
+  the file it was first loaded from, under the new clock, count, cash and camera. Stages two to five write the
+  rest (Q241g to Q241j).
+- **Where.** `Level.WritePark( name )` writes `<player's folder>/<theme>/<name>.TPWS`, replacing a file of that
+  name in another case. The console's `savepark <name>` is its one caller; the Save Park screen's OK stays counted
+  until Q241j. **Deviations:** the player's `gms.dat` is not written first (Q248) and the pointer is not put back
+  to its default mode; a park made fresh, with no file behind it, is counted (`SAVE_PARK_WITH_NO_FILE`, Q249) and
+  not written; with nobody playing, which only the console's `park` reaches, nothing is written.
+- **The load does not read the camera module**: a park loaded here opens on the default view (Q247).
+
+**Measured (Q241f, `q241f/`).** Lost Kingdom entered by a player holding `easymode.TPWI` alone (755, 87987, no
+visitors), stepped under `pause` to `mGameTick` 1000, the camera at `camera 480 280 90 90`, then `savepark Q241f`:
+the log read "mGameTick 1000, open, 13 visitors to date, balance 88112"; a Python reader found version 500, the
+lengths closing, those four numbers and the camera in the body, and 15 bytes of the body differing from
+easymode's, none outside the fields written. Loaded from OpenTPW's Load Park screen the clock started at 1000 and
+the balance read 88112. **The original under Proton** listed the file and loaded it over a park standing at tick
+1836 and $ 88162: `mGameTick` read 1000 at the click and 1150 forty seconds on, the visitor count 13, the cash
+$ 88112 on the first frame, the zoom 90, the rotation -1.5708 and the point (480, 280), the frame from the same
+side as OpenTPW's photograph. Three runs: fifteen predictions of fifteen here, and two of mine wrong in the
+original, the rotation's sense (the first file held +1.5708) and an eighth turn standing (it is rounded).
+**Seen and not built here:** the thirteen saved guests are back outside the gate in the file, so after a load
+they walk in and are counted again, 14 to 26, in the original; the people are Q241h's.
+
 ### Read, not run
 
 A thing made or gone was not written and loaded: the rules above are the ten files' and the listing's. The
@@ -631,6 +685,9 @@ fresh world's save was not looked at. `addresses.md` is not regenerated.
 **The harness** is `q241e/`: `ghidra/` (the dumps of every module's writer and reader), `roundtrip/` (the .NET
 container), `patch.py` (one change to a body), `census.py <park file>...` (the ties above, read-only),
 `PREDICTION.txt`, and `orig/` (the four logs, the frames `l1`, `l3`, `h2`, `c1`, `PREDICTION-result.txt`).
+Q241f's is `q241f/`: `confirm.py` (the write and the load, with its own reader of the file), `PREDICTION.txt`
+(the three runs and their results), `mutate.py`, `orig/` (`read.py`, the three load logs, the frames) and the
+sheet of OpenTPW's frames beside the original's.
 
 ## What OpenTPW builds
 
@@ -643,6 +700,7 @@ container), `patch.py` (one change to a body), `census.py <park file>...` (the t
 | Atomic writes (write a `.tmp`, then move it over) | `OpenTPW.Common/Files/BaseFileSystem.cs`, `WriteAllBytes` |
 | Player slots, persisted | `OpenTPW/Client/Players.cs` |
 | `.TPWS` / `.TPWI` container | `OpenTPW.Files/Formats/Save/SaveReader.cs` |
+| The park file written back, first stage; the camera module | `OpenTPW.Files/Formats/Save/ParkFileWriter.cs`, `ParkCameraModule.cs`; `Level.WritePark`, `SaveFolder.WritePark` |
 | The inflated body: the World block, and what each thing and script was doing | `OpenTPW.Files/Formats/Save/ParkWorld.cs`, `ParkThingStates.cs`, `ParkScriptStates.cs` |
 
 Themes are taken to be the `data/levels` folders containing a `global.sam`. This is **inferred** — the original's own

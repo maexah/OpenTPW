@@ -510,6 +510,22 @@ public static class DebugConsole
 				break;
 
 			// The park's own clock and what the three-a-frame cap has cost it (ParkPeople.SweepsAFrame).
+			// Writes the running park into the player's folder under the name given, spaces and all, as far as the
+			// writer is built (Level.WritePark). The park menu's Save Game does not reach it yet.
+			case "savepark":
+				var saveName = line.Trim()[parts[0].Length..].Trim();
+
+				if ( saveName.Length == 0 )
+				{
+					Reply( "savepark: a name is needed" );
+					break;
+				}
+
+				Reply( Level.Current?.WritePark( saveName ) is { } written
+					? $"savepark: wrote {written}"
+					: $"savepark: '{saveName}' was not written - the log says why" );
+				break;
+
 			case "sweeps":
 				Reply( ParkPeople.Current is { } swept
 					? $"sweeps: mGameTick {swept.State.GameTick}, {swept.SweepsRun} run, {swept.SweepsDropped} dropped"

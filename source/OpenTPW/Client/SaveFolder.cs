@@ -439,6 +439,28 @@ internal static class SaveFolder
 		}
 	}
 
+	/// <summary>
+	/// Writes a saved park into a player's folder for a theme as <c>&lt;name&gt;.TPWS</c> - the path 0x005ac780
+	/// builds (<c>docs/exe/saves.md</c>, "The save") - and answers its path, or null where it could not be written.
+	/// A file of that name in another case is the one replaced, as on the original's file system.
+	/// </summary>
+	public static string? WritePark( int slot, string name, string theme, string saveName, byte[] file )
+	{
+		var folder = Path.Join( PlayerFolder( slot, name ), theme );
+		var path = Find( saveName + SavedParkExtension, folder ) ?? Path.Join( folder, saveName + SavedParkExtension );
+
+		try
+		{
+			SaveFileSystem.WriteAllBytes( path, file );
+			return path;
+		}
+		catch ( Exception e )
+		{
+			Log.Warning( $"Saves: {path} could not be written - {e.Message}" );
+			return null;
+		}
+	}
+
 	/// <summary>Whether a player's folder holds a gms.dat at all, readable or not.</summary>
 	public static bool HasPlayerFile( int slot, string name ) => Find( PlayerFileName, PlayerFolder( slot, name ) ) != null;
 

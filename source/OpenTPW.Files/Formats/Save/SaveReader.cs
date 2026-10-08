@@ -41,6 +41,14 @@ public class SaveReader : BaseFormat
 	/// </summary>
 	private const int BlockStart = 0x60D;
 
+	/// <summary>
+	/// The file's bytes before the 'BILZ' block, as read: what a park written back from this one opens with
+	/// (<see cref="ParkFileWriter"/>).
+	/// </summary>
+	public byte[] Preamble => buffer.Length < BlockStart
+		? throw new Exception( $"A {buffer.Length}-byte file is shorter than a park file's {BlockStart}-byte preamble" )
+		: buffer[..BlockStart];
+
 	public byte[] ReadFile()
 	{
 		memoryStream.Seek( 0, SeekOrigin.Begin );

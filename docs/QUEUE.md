@@ -44,13 +44,6 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q241f. The park file's writer: the container, every module carried, the clock and the cash.** From Q241e
-  (`saves.md`, "Module by module"). `ParkWorld` keeps the inflated body it read. Write it back out: the preamble
-  copied from the file loaded, a fresh `BILZ` header, the body through `ZLibStream` (no memory level 9 there:
-  said at the site), with `mGameTick`, `mParkClosed`, `mNumberOfVisitorsToDate`, the economy thing's balance and
-  the camera module written from the running park. A console command writes it into the player's folder;
-  `ParkSaveScreen.Save` stays counted until Q241j. Confirm: a stock park run to a known tick and balance, written,
-  then loaded by the original under Proton and by OpenTPW, the tick and the cash predicted; a screenshot of each.
 - [ ] **Q241g. The writer: the cells.** From Q241e. A path or queue laid or cleared, land bought, a footprint, and
   the chain of who stands on each cell, patched into the carried map; a cell's record gains or loses its parts by
   its status bits. Confirm: a path laid and one cleared here, written, the same cells in the original under
@@ -60,6 +53,9 @@ the research lab), then the rest of this section in its old order.
   pool, the arrival block and the staff heads. Measure first which bytes of a made guest's record may be nought,
   and what a person in the middle of a walk is written as (the navigator's 177 bytes). Confirm: a load of arrivals
   and a hire here, written, counted and walking in the original under Proton; a screenshot of each.
+  From Q241f: until this is built a written park holds its first file's people under the running park's visitor
+  count, so the thirteen saved guests, back outside the gate, walk in and are counted again after a load (14 to 26
+  in the original, `q241f/orig/a-load.log`).
 - [ ] **Q241i. The writer: the objects, their scripts and their models.** From Q241e. Object records patched, one
   bought written whole and one sold left out; the object controls and `mFirstObject`; a script record made or
   taken out of `RSSE` and each running script's counter, variables and deadlines; a slot of `RSYS` and its
@@ -71,6 +67,9 @@ the research lab), then the rest of this section in its old order.
   (`SAVE_GAME_WRITER` gone), an overwrite replaces the file, and the Load Park list shows it. Confirm: a park
   played, saved from the menu under a typed name, loaded by OpenTPW and by the original under Proton; the tick,
   the cash and the guest count predicted; a screenshot of each.
+  From Q241f: `Level.WritePark` is the call to make. Of the economy thing only `mBalance` is written, so a loaded
+  park reads the first file's profit under the new balance (`money`: profit -12013 beside 88112). The original puts
+  the pointer back to its default mode before it writes (`FUN_00516c80`, step 1); `WritePark` does not.
 - [ ] **Q248. The writer's other callers.** From Q241 and Q241e (`saves.md`, "The other callers"). `gms.dat`
   written before every park file; `autosave.TPWS` on leaving a park, which entering then finds as the newest
   file; the quicksave and quickload keys (`<theme>.TPWS`); `restart.INTS` written when the folder has none, and
@@ -507,12 +506,16 @@ the research lab), then the rest of this section in its old order.
   is built on no list here: a list longer than its window is counted as `LOAD_PARK_LIST_SCROLLBAR` on this screen
   and the wheel scrolls it. Decode the teardown first, then decide with Alexah whether the park is rebuilt in
   place. Confirm: a load timed against the original's 1.3 s, and a folder of fourteen saves scrolled by the bar.
+  From Q241f: no load here reads the camera module, which the writer now writes (`ParkWorld.Camera` holds it,
+  `FUN_0042cec0`; `saves.md`, "Loading the modules", Camera): a loaded park opens on the default view, where the
+  original's opens where the save's camera stood. The file's rotation is the orbit camera's yaw negated.
 
 - [ ] **Q249. A park that was never loaded from a file has nothing to carry.** From Q241e. The fresh world (a
   Full Simulation park, or a player whose folder holds no park file) is made by `FreshPark`, so the writer's
   carried modules have no source. Decode what each module holds in a `restart.INTS` written at tick nought
   (three are in Alexah's saves), make each afresh, and take the legal text from the level's shipped park file.
   After Q241j. Confirm: a fresh Full Simulation park saved and loaded by the original under Proton.
+  From Q241f: `Level.WritePark` counts such a park as `SAVE_PARK_WITH_NO_FILE` and writes nothing.
 
 ## B. Docs and comments
 
@@ -659,6 +662,10 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   option exists (`GameOptions.NinetyDegreeRotation`) and is read by nothing. Decode the original's step
   and its easing (`park-engine.md`, "The park camera", has the saved and required rotation, not the rate). Build what
   the decode says, driven by `Time.SmoothingFactor`. Alexah: match the original, do not invent.
+  From Q241f: with the options byte `0x0078d912` set the original's update turns a quarter turn a press
+  (`0x0042b489`, `0x0042b4a4`) and its loader rounds a saved rotation to a quarter (`saves.md`, "Loading the
+  modules", Camera), so a park saved here at an eighth turn opens a quarter away there. Seen beside the original
+  at the same zoom and point (`q241f/sheet-ours-beside-original.png`): OpenTPW's view takes in far more ground.
 - [ ] **Q24. Nothing highlights a thing under the mouse.** The idle pointer already follows the hover category over
   ground and path (`Level.IdleOverPath`). Picking is decoded (`park-engine.md`, "Picking is a real ray cast, not a
   grid lookup"): the hit point comes from a ray against the terrain and then object meshes, and the hovered THING is

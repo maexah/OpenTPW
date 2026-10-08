@@ -1325,9 +1325,15 @@ public sealed class ParkWorld : IParkInitialState
 	/// its shops.
 	/// </para>
 	/// </summary>
-	public ParkWorld( byte[] inflatedPayload )
+	/// <param name="inflatedPayload">The inflated body.</param>
+	/// <param name="preamble">
+	/// The file's bytes before its compressed block (<see cref="SaveReader.Preamble"/>), kept for a park written back
+	/// from this one. Null for a body with no file behind it, which <see cref="ParkFileWriter"/> then refuses.
+	/// </param>
+	public ParkWorld( byte[] inflatedPayload, byte[]? preamble = null )
 	{
 		_data = inflatedPayload ?? throw new ArgumentNullException( nameof( inflatedPayload ) );
+		Preamble = preamble;
 
 		try
 		{
@@ -1350,7 +1356,43 @@ public sealed class ParkWorld : IParkInitialState
 
 		// And the fifth, the clock every saved deadline and time stamp is a reading of.
 		Clock = new ParkClock( _data );
+
+		// The twelfth, where the camera stood.
+		Camera = new ParkCameraModule( _data );
 	}
+
+	/// <summary>The file's bytes before its compressed block, or null where this body came from no file.</summary>
+	internal byte[]? Preamble { get; }
+
+	/// <summary>The inflated body as read. <see cref="ParkFileWriter"/> copies it; nothing writes to it.</summary>
+	internal byte[] Body => _data;
+
+	/// <summary>Where the World header's first field, <c>version</c>, sits in the body; -1 where the walk never reached it.</summary>
+	internal int HeaderAt { get; private set; } = -1;
+
+	/// <summary>Where the economy thing's record begins in the body, at its <c>Used Thing Next</c>; -1 where the walk met none.</summary>
+	internal int EconomyAt { get; private set; } = -1;
+
+	/// <summary>How far into the World header a field sits: the sizes of the fields before it.</summary>
+	private static int HeaderFieldAt( int field ) => HeaderFieldSizes.Take( field ).Sum();
+
+	/// <summary>Where <c>mGameTick</c> sits past <see cref="HeaderAt"/>.</summary>
+	internal static int GameTickAt => HeaderFieldAt( GameTickField );
+
+	/// <summary>Where <c>mParkClosed</c> sits past <see cref="HeaderAt"/>.</summary>
+	internal static int ParkClosedAt => HeaderFieldAt( ParkClosedField );
+
+	/// <summary>Where <c>mNumberOfVisitorsToDate</c> sits past <see cref="HeaderAt"/>.</summary>
+	internal static int NumberOfVisitorsToDateAt => HeaderFieldAt( NumberOfVisitorsToDateField );
+
+	/// <summary>Where <c>mBalance</c> sits past <see cref="EconomyAt"/>.</summary>
+	internal const int BalanceAt = EconomyFieldsAt + 4;
+
+	/// <summary>
+	/// Where the camera stood when this park was saved - see <see cref="ParkCameraModule"/>. Never null; ask it for its
+	/// own <see cref="ParkCameraModule.Problem"/>.
+	/// </summary>
+	public ParkCameraModule Camera { get; }
 
 	/// <summary>
 	/// The clock's reading when this park was saved - see <see cref="ParkClock"/>. Never null; ask it for its own
@@ -1567,6 +1609,8 @@ public sealed class ParkWorld : IParkInitialState
 	{
 		var fields = new int[HeaderFieldSizes.Length];
 
+		HeaderAt = _at;
+
 		for ( var i = 0; i < HeaderFieldSizes.Length; ++i )
 			fields[i] = HeaderFieldSizes[i] == 4 ? ReadInt32() : ReadUInt16();
 
@@ -1730,7 +1774,10 @@ public sealed class ParkWorld : IParkInitialState
 			else if ( Array.IndexOf( PersonModels, model ) >= 0 )
 				_people.Add( ReadPerson( id, model, start ) );
 			else if ( model == EconomyModel )
+			{
 				Economy = ReadEconomy( start );
+				EconomyAt = start;
+			}
 			else if ( model == StaffHqModel )
 				StaffHq = ReadStaffHq( start );
 
