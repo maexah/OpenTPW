@@ -1713,8 +1713,8 @@ Before it, the bus was sent round after its first circuit and stood at the arriv
 load's first guest was made on the call's own sweep.
 
 What it does not reproduce, each said at its site: the two refusals, in world state 4 and with the park full, where the original calls a load
-of nobody and still sends its vehicle (neither reached in Lost Kingdom; a load that would pass the cap is cut to what fits, counted here on everybody and not on `FUN_004c7fa0`'s crowd); a load saved half-dropped,
-counted as `SAVED_ARRIVAL_LOAD` and not resumed; guests made with no script to ask, on the sweep after the one that calls the load;
+of nobody and still sends its vehicle (neither reached in Lost Kingdom; a load that would pass the cap is cut to what fits, counted here on everybody and not on `FUN_004c7fa0`'s crowd); a load saved half-dropped is carried on by its count and flag, but the vehicle the save names current is not
+(`SAVED_CURRENT_ARRIVAL_VEHICLE`), so the rest come by the vehicle their number summons, driving in again; guests made with no script to ask, on the sweep after the one that calls the load;
 and the ferry
 and the seaplane, stood as the park loads where the original makes each at its first summons: they stand at their
 first spin at status 2 from the start, in view at the arrivals' stop, and a first summons finds the drive in done

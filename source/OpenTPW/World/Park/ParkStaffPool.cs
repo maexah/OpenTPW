@@ -187,8 +187,10 @@ public sealed class ParkStaffPool
 	/// How long they wait to be hired, in fours of sweeps - the record's <c>+0x10</c>: <c>StaffTimeoutTime</c> plus a
 	/// draw of up to half as much again.
 	/// </param>
+	/// <param name="NameRow">The row of the kind's name table the name is - the record's <c>mName</c>.</param>
+	/// <param name="Slot">Which of the pool's 32 slots holds them, or -1 for one made outside a pool.</param>
 	public readonly record struct Candidate( int Id, int Kind, string Name, int Grade, int Costume, int Wage,
-		int Mark = 0, int Lifetime = 0 );
+		int Mark = 0, int Lifetime = 0, int NameRow = 0, int Slot = -1 );
 
 	/// <summary>A candidate joined the pool while it was running - the hire list's row is added (<c>FUN_00481550</c>).</summary>
 	internal event Action<Candidate>? Joined;
@@ -209,7 +211,9 @@ public sealed class ParkStaffPool
 
 	/// <summary>
 	/// Everybody currently available to hire: a save's in the order of its slots, then each who joins after the last.
-	/// The original keeps 32 slots and puts a newcomer in the lowest free one; the slots are not kept here.
+	/// The original keeps 32 slots and puts a newcomer in the lowest free one (<c>FUN_005084f0</c>); each candidate
+	/// here names the slot that would be theirs (<see cref="Candidate.Slot"/>), which is where a park file holds them,
+	/// and the list keeps its own order.
 	/// </summary>
 	public IReadOnlyList<Candidate> Candidates => _candidates;
 
@@ -346,6 +350,14 @@ public sealed class ParkStaffPool
 
 		TopUp( gameTick, inPark );
 		Mark = gameTick;
+
+		// The counts the top-up took are kept as it left them (FUN_00508000 writes them into the pool, +0x280 and
+		// +0x299), which is how a park file holds them.
+		for ( var kind = 0; kind < Kinds; ++kind )
+		{
+			_peopleInCat[kind] = inPark( kind );
+			_stopProducing[kind] = _peopleInCat[kind] > 0 && _peopleInCat[kind] >= MostInPark( kind );
+		}
 
 		Log.Info( $"Staff pool: topped up on mGameTick {gameTick} by {_candidates.Count - before} to {_candidates.Count} - "
 			+ string.Join( ", ", Enumerable.Range( 0, Kinds ).Select( kind => $"{OfKind( kind ).Count()} {NameOfKind( kind, plural: true ).ToLowerInvariant()}" ) ) );
@@ -490,8 +502,16 @@ public sealed class ParkStaffPool
 		{
 			Mark = saved.StaffPoolTimeSig;
 
-			foreach ( var record in saved.StaffPool )
+			for ( var kind = 0; kind < Kinds && kind < saved.StaffPoolPeopleInCat.Count; ++kind )
 			{
+				_peopleInCat[kind] = saved.StaffPoolPeopleInCat[kind];
+				_stopProducing[kind] = saved.StaffPoolStopProducing[kind];
+			}
+
+			for ( var slot = 0; slot < saved.StaffPool.Count; ++slot )
+			{
+				var record = saved.StaffPool[slot];
+
 				if ( !record.Valid )
 					continue;
 
@@ -509,7 +529,7 @@ public sealed class ParkStaffPool
 				// (ParkPeople.StaffPicture, a deviation said there).
 				_candidates.Add( new Candidate( Id: _nextId++, Kind: record.Type, Name: NameAt( record.Type, record.Name ),
 					Grade: record.PayGrade, Costume: record.SubType, Wage: WageFor( record.Type, record.PayGrade ),
-					Mark: record.TimeSig, Lifetime: record.TimeoutTime ) );
+					Mark: record.TimeSig, Lifetime: record.TimeoutTime, NameRow: record.Name, Slot: slot ) );
 			}
 		}
 		else
@@ -544,17 +564,59 @@ public sealed class ParkStaffPool
 	{
 		var average = _balance?.Int( $"StaffPoolInfo.AvgGradeOf{BalanceNames[kind]}", 2 ) ?? 2;
 		var grade = Math.Clamp( average + _random.Next( 3 ) - 1, 0, TopGrade );
+		var (row, name) = RollName( kind );
 
 		return new Candidate(
 			Id: _nextId++,
 			Kind: kind,
-			Name: RollName( kind ),
+			Name: name,
 			Grade: grade,
 			// The original draws the costume here (FUN_00541f70( kind ), stored at the record's +9); not built: Q214.
 			Costume: RolledCostume(),
 			Wage: WageFor( kind, grade ),
 			Mark: gameTick,
-			Lifetime: LifetimeFrom( Key( "StaffTimeoutTime", 120 ), (uint)_random.Next() ) );
+			Lifetime: LifetimeFrom( Key( "StaffTimeoutTime", 120 ), (uint)_random.Next() ),
+			NameRow: row,
+			Slot: LowestFreeSlot() );
+	}
+
+	/// <summary>The lowest of the 32 slots no candidate holds, which is where the original puts a newcomer (<c>0x0050876f</c>); -1 with none free.</summary>
+	private int LowestFreeSlot()
+	{
+		for ( var slot = 0; slot < Slots; ++slot )
+		{
+			if ( !_candidates.Exists( person => person.Slot == slot ) )
+				return slot;
+		}
+
+		return -1;
+	}
+
+	/// <summary>How many of each kind the park employed as the last top-up counted them, and whether that was the kind's limit - the pool's <c>+0x280</c> and <c>+0x299</c>.</summary>
+	private readonly int[] _peopleInCat = new int[Kinds];
+	private readonly bool[] _stopProducing = new bool[Kinds];
+
+	/// <summary>
+	/// The pool as a park file holds it (<c>docs/exe/saves.md</c>, "OpenTPW's writer, the staff pool and the arrival
+	/// timer"): each candidate in their slot with their kind, name row, grade, costume, mark and lifetime, the last
+	/// top-up's counts and the pool's mark. A candidate on the cursor is written as any other: the original puts
+	/// the hand's thing back before it writes (<c>FUN_00516c80</c>, step 1).
+	/// </summary>
+	internal ParkWorld.WrittenStaffPool Written()
+	{
+		var slots = new ParkWorld.StaffCandidate?[Slots];
+
+		foreach ( var person in _candidates )
+		{
+			if ( person.Slot is >= 0 and < Slots )
+			{
+				slots[person.Slot] = new ParkWorld.StaffCandidate( Type: person.Kind, Name: person.NameRow,
+					PayGrade: person.Grade, SubType: person.Costume, Valid: true, OnPointer: false, TimeSig: person.Mark,
+					TimeoutTime: person.Lifetime );
+			}
+		}
+
+		return new ParkWorld.WrittenStaffPool( slots, [.. _peopleInCat], [.. _stopProducing], Mark );
 	}
 
 	/// <summary>Every rolled candidate's costume is nought, and each one made is counted.</summary>
@@ -576,19 +638,21 @@ public sealed class ParkStaffPool
 	/// draws at the most, while the name is in use (<c>FUN_005083f0</c>): a candidate in the pool has it, or, in the
 	/// member of staff in the park does, of any kind.
 	/// </summary>
-	private string RollName( int kind )
+	private (int Row, string Name) RollName( int kind )
 	{
+		var row = 0;
 		var name = "";
 
 		for ( var draw = 0; draw < NameDraws; ++draw )
 		{
-			name = NameAt( kind, _random.Next( 35 ) );
+			row = _random.Next( 35 );
+			name = NameAt( kind, row );
 
 			if ( !_candidates.Exists( person => person.Name == name ) && _employed?.Invoke( name ) != true )
 				break;
 		}
 
-		return name;
+		return (row, name);
 	}
 
 	/// <summary>A row of the kind's name table, which is what a record keeps of a name (<c>mName</c>).</summary>

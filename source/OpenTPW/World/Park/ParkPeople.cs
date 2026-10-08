@@ -228,14 +228,17 @@ public sealed partial class ParkPeople : Entity
 		// against ParkState.GameTick, the save's mGameTick, as FUN_005179c0 loads both (park.md, "Arrivals").
 		_arrivalMark = park?.Arrival.TimeSig ?? 0;
 
-		// <b>A load saved half-dropped is not carried on.</b> The original resumes it from mPeopleOnBus with
-		// mOffloading set, on whichever vehicle mCurrentArrivalVehicle names. No save the game ships holds one,
-		// so resuming it could not be checked, and it is counted instead: the park starts with no load held.
-		if ( park?.Arrival.Offloading == true )
-			Unimplemented.Report( "SAVED_ARRIVAL_LOAD" );
+		// A load saved half-dropped is carried on: the manager's turn reads mOffloading and mPeopleOnBus as it
+		// finds them (FUN_004cf3e0), so the rest are dropped once a vehicle answers that it is unloading.
+		if ( park?.Arrival is { Offloading: true } savedLoad )
+		{
+			_offloading = true;
+			_arrivalsRemaining = savedLoad.PeopleOnBus;
+		}
 
-		// Nor is a vehicle the save holds current (mCurrentArrivalVehicle, a thing id; nought in the park the game
-		// ships): the park starts with none, and a save that names one is counted.
+		// A vehicle the save holds current (mCurrentArrivalVehicle, a thing id; nought in the park the game
+		// ships) is not: the park starts with none, and a save that names one is counted. A load held is then
+		// brought by the vehicle its size summons.
 		if ( park is { CurrentArrivalVehicle: not 0 } )
 			Unimplemented.Report( "SAVED_CURRENT_ARRIVAL_VEHICLE" );
 
@@ -997,6 +1000,24 @@ public sealed partial class ParkPeople : Entity
 
 	/// <summary>How many of the load held are still to be dropped - <c>mPeopleOnBus</c>.</summary>
 	internal int StillToDrop => _arrivalsRemaining;
+
+	/// <summary>
+	/// The arrival timer as a park file holds it: the mark, the count still to drop and whether a load is held.
+	///
+	/// <para>
+	/// <b>The vehicle is not written, and one that is current is counted</b> (<c>SAVE_PARK_ARRIVAL_VEHICLE</c>): the
+	/// header's <c>mCurrentArrivalVehicle</c> and the vehicle's script are one state, and the scripts are still the
+	/// file's (Q241i). A file written with a load held so names no vehicle unless its first file did, and the load
+	/// is brought by the one its size summons, driving in again.
+	/// </para>
+	/// </summary>
+	internal ParkFileWriter.ArrivalTimer WrittenArrival()
+	{
+		if ( _arrivalVehicle != 0 )
+			Unimplemented.Report( "SAVE_PARK_ARRIVAL_VEHICLE" );
+
+		return new ParkFileWriter.ArrivalTimer( _arrivalMark, _arrivalsRemaining, _offloading );
+	}
 
 	/// <summary>How long a load waits after the last, in fours of sweeps - <c>Arrival.TimeBetweenArrivals</c>, 150.</summary>
 	private int ArrivalPeriod => _balance?.Int( "Arrival.TimeBetweenArrivals", 150 ) ?? 150;

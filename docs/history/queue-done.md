@@ -5435,6 +5435,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   original under Proton, where the thirteen made guests were counted 14 to 26, queued and rode, the hire walked,
   and no guest of the file's was counted again. Measured first: a load enters nobody in a cell (`FUN_00518e00`),
   and a made record's unnamed bytes may be nought, as the constructors leave them.
+- [x] **Q250. The writer: the staff pool and the arrival block.** Split from Q241h, and split again: the people's
+  leftovers are Q251. The pool of candidates is written slot for slot from `ParkStaffPool`, with the last
+  top-up's counts and mark, and the arrival timer's mark, count and flag from `ParkPeople`; a load held is
+  carried on by a load here. Done 2026-10-08 (`saves.md`, "OpenTPW's writer, the staff pool and the arrival
+  timer"): a park written at tick 1453 with the timer's mark 1313 and the pool's 1444 was topped up on 1805 and
+  called its next load, of twelve, on 1916, in OpenTPW and in the original under Proton, whose hire screen
+  listed the file's candidates; the build before called a load and topped the pool up on the first sweeps after
+  its load. Decoded: every stamp is a reading of `mGameTick`; `mPeopleInCat` and `mStopProducing` are the staff
+  as the last top-up counted them (`FUN_00508000`). The vehicle is not written, and counted
+  (`SAVE_PARK_ARRIVAL_VEHICLE`): Q241i.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

@@ -497,7 +497,8 @@ frames), `confirm.py`, `mutate.py` and the sheet of OpenTPW's screen beside the 
 ## What a park file must hold to be written
 
 Decoded and measured on 2026-10-08 (Q241e). `ParkSaveScreen.Save` still counts `SAVE_GAME_WRITER`; three of the
-writer's five stages are built ("OpenTPW's writer, the first stage", "the cells" and "the people", below). The bytes are the FileFormats
+writer's five stages are built ("OpenTPW's writer, the first stage", "the cells" and "the people", below), with the
+pool of candidates and the arrival timer ("the staff pool and the arrival timer"). The bytes are the FileFormats
 `saves.md`'s; this section is what the original does with them and what a writer here has to get right.
 
 ### The container takes another deflate, and a changed body
@@ -645,8 +646,8 @@ OpenTPW runs written over and records added and taken out. **Afresh** means writ
 |---|---|---|
 | The header | `mGameTick`, `mParkClosed`, `mNumberOfVisitorsToDate`; the five staff heads and `mFirstObject` as things are made and gone; the arrival vehicles' handles | patched. `mRandomSeed` is carried: the generators here are not the original's |
 | The object controls | an item's standing count and first-build stamp, its researched flags | patched |
-| The staff pool | every candidate | afresh from `ParkStaffPool` |
-| The clock and arrival fields | the date, the arrival timer | patched |
+| The staff pool | every candidate, the top-up's counts and mark | written slot for slot from `ParkStaffPool`; an empty slot keeps its bytes and loses `mValid` |
+| The clock and arrival fields | the date, the arrival timer | patched: the timer's mark, count and flag are written; the clock's fields are still the file's (Q241j) |
 | The cells | a path or queue laid or cleared, land, a footprint, the chain of who stands where | patched cell by cell, each record where it lies (every cell has its map and track parts); `mWho` with the things it names; the effects part carried |
 | A guest, a member of staff | everything they do | carried records patched from `ParkPeople`; one made here written whole; one gone left out |
 | A catalogue object | its door, price, counts, rings, queue, script handle | carried records patched; one bought here written whole; one sold left out |
@@ -679,8 +680,9 @@ over the copy, never the one held.
   loader rounds to a quarter (above, "Loading the modules", Camera).
 - **Everything else was carried** at this stage, so a park loaded from the file had the people, objects, ground
   and scripts of the file it was first loaded from, under the new clock, count, cash and camera. The ground is
-  the second stage's ("OpenTPW's writer, the cells"), the people the third's ("the people"); the rest is Q250,
-  Q241i and Q241j.
+  the second stage's ("OpenTPW's writer, the cells"), the people the third's ("the people"), the pool of
+  candidates and the arrival timer theirs ("the staff pool and the arrival timer"); the rest is Q251, Q241i and
+  Q241j.
 - **Where.** `Level.WritePark( name )` writes `<player's folder>/<theme>/<name>.TPWS`, replacing a file of that
   name in another case. The console's `savepark <name>` is its one caller; the Save Park screen's OK stays counted
   until Q241j. **Deviations:** the player's `gms.dat` is not written first (Q248) and the pointer is not put back
@@ -780,12 +782,12 @@ follow the list. It runs last, because it alone changes the body's length.
   its queue head and its script, is still the file's (Q241i). A handle to a thing the file does not hold, which
   is anything bought here, is written as nought, and a guest bound for it decides
   (`SAVE_PARK_HANDLE_TO_AN_UNWRITTEN_THING`). No balloon and no thought bubble is written: both slots are nought
-  and the file's sprites for them are let go (`SAVE_PARK_BALLOON`, `SAVE_PARK_THOUGHT_BUBBLE`; Q250). A member
+  and the file's sprites for them are let go (`SAVE_PARK_BALLOON`, `SAVE_PARK_THOUGHT_BUBBLE`; Q251). A member
   of staff in the hand is written idle where they were picked up, as the original puts the hand's thing down
   first.
-- **Not written yet:** the staff pool and the arrival block (Q250). **So a load is followed by a load of
-  arrivals**: both games called one of thirteen within 30 s of loading a file written at tick 1334, where the
-  park written was about 580 ticks from its next.
+- **The staff pool and the arrival block were not written at this stage**, so a load was followed by a load of
+  arrivals: both games called one of thirteen within 30 s of loading a file written at tick 1334, where the
+  park written was about 580 ticks from its next. They are written now (below).
 
 **Measured (Q241h, `q241h/`).** Lost Kingdom left alone until its first load of thirteen was walking in from the
 stop, a researcher hired at (45,28), held at `mGameTick` 1334, `savepark Q241h`: the log read "18 people kept, 14
@@ -803,6 +805,67 @@ every guest of the file's held the index the file gave. Left running, the first 
 and 180 visitors. **Predictions wrong, mine:** a visitor count that "never passes 26" (the next load came, in both
 games); 32 people at the save where one run had 31 (a guest of the file's had gone home); and two of my own
 checks of OpenTPW's load, which read a sweep after it (walkers 0.1 to 0.5 of a cell on, one guest setting off).
+
+### OpenTPW's writer, the staff pool and the arrival timer
+
+Split from the people's stage (Q250). Both blocks lie before the map, so they are written where the file has
+them and move nothing.
+
+**Every stamp in them is a reading of `mGameTick`.** `FUN_0041a960` sets a mark to the clock
+(`[[0x0080239c] + 0x1da70c]`), `FUN_0041a970` answers the clock less the mark, and `FUN_0041a990` the same in
+fours (`park.md`, "Arrivals"). The pool's turn `FUN_005084f0`, once a sweep, takes each valid candidate not on
+the pointer whose `mTimeoutTime × 4` is less than the sweeps since their `mTimeSig`: it clears `mValid` alone
+and tells the hire list (`FUN_00481550`). Then, when the pool's own mark (world `+0x294`) is more than
+`TimeBetweenStaffUpdates × 4` sweeps old, it counts the staff (`FUN_00508000`), tops the pool up, each newcomer
+into the lowest slot with `mValid` nought (`0x0050876f`), makes up the minimums and sets the mark.
+**`mPeopleInCat` and `mStopProducing` are that count as the last top-up left it**: `FUN_00508000` zeroes the
+five dwords at `+0x280` and the five bytes at `+0x299`, walks the thing list and counts each member by model,
+5, 4, 6, 7 and 8 into slots 0 to 4 (the kinds' own order), setting a kind's byte once its count reaches its
+`Max<Kind>InPark`. So a file holds the staff as they stood at the pool's mark.
+`mOpeningStaffPoolGenerated` (`+0x298`) follows the mark in the file.
+
+So a file whose clock is written and whose marks are not is a park whose waits have all run out, which is what
+the people's stage wrote.
+
+- **The pool** (`ParkStaffPool.Written`, `ParkWorld.PutStaffPool`). Each candidate keeps the slot the file had
+  them in, and one who joins here is given the lowest slot nobody holds, as the original gives it. A slot with
+  a candidate is written whole: kind, name row, grade, costume, valid, off the pointer, their mark and their
+  lifetime. A slot with none loses `mValid` and keeps its other bytes, as the original's does. The five counts
+  and flags are the pool's as its last top-up took them, the file's own until one has run; the mark is the
+  pool's. `mOpeningStaffPoolGenerated` is the file's. A candidate on the cursor is written as any other: the
+  original puts the hand's thing back before it writes.
+- **The arrival timer** (`ParkPeople.WrittenArrival`, `ParkWorld.PutArrival`). `mTimeSig`, `mPeopleOnBus` and
+  `mOffloading` are the running park's; `mArrivalRate`, `mTargetVehicleCapacity` and `mGatesOpen` are the file's
+  (0, 5 and 1 in every file measured; nothing here runs them).
+- **A load held is carried on by a load here**: `ParkPeople` takes the count and the flag as the manager's turn
+  reads them (`FUN_004cf3e0`), and the rest are dropped once a vehicle answers that it is unloading.
+- **A deviation, counted: the vehicle is not written** (`SAVE_PARK_ARRIVAL_VEHICLE`, once a save with one
+  current). The header's `mCurrentArrivalVehicle` and the vehicle's script are one state: `FUN_0051a690` reads
+  the script's variable 1 of the thing the header names (`park.md`, "Arrivals"). The scripts are still the
+  file's (Q241i), so the header's handle is left the file's too, and a park saved with the bus on its circuit
+  loads with no vehicle current and its bus where the first file had it. A load held is then brought by the
+  vehicle its size summons, which drives in again; a guest by the road has no vehicle to wait for.
+
+**Measured (Q250, `q250/`).** Lost Kingdom left alone from easymode's 755 to `mGameTick` 1453 (1455 in a second
+run), `savepark Q250`. Before the save the log held the pool's top-ups on 1083 and 1444 and the first load's
+let-go on 1313; the save read "20 candidates in the pool, topped up on mGameTick 1444" and "the arrival timer's
+mark 1313, no load held". A Python reader found 20 valid records, each kind, grade, mark and lifetime a line of
+the `candidates` census, the pool's `mTimeSig` 1444, the counts 1 five times, and the arrival block
+(0, 1313, 5, 0, 0, 1). Loaded from OpenTPW's Load Park screen, `arrivals` read mark 1313 and "next load due on
+mGameTick 1916" and `candidates` the same twenty; run on, the pool was topped up on 1805 and a load of twelve
+called on 1916, and neither before. **The build before** wrote the shipped pool and timer (722, 661) under
+tick 1454: after its load `arrivals` read mark 661, a load of twelve was called and the pool topped up on 1455,
+the first sweep, and ten of the save's twenty candidates were left.
+**The original under Proton** loaded the first run's file over a park standing at tick 830: at the click
+`mGameTick` read 1453, the arrival block (0, 1313, 5, 0, 0, 1), the pool's mark 1444 with 20 valid records and
+the counts 1 five times; its Hire Janitors tab listed the five cleaners of OpenTPW's own screen at the same
+wages; its candidates timed out one by one, to ten by 1752; the pool's mark read 1805 on `mGameTick` 1805, with
+twenty again; and `mOffloading` read 1 on `mGameTick` 1916 with `mPeopleOnBus` 12, dropped one a sweep from
+1947 and let go on 1959. **One prediction wrong, mine:** no vehicle current at the save; the bus was, at status
+3 on its way round, so `SAVE_PARK_ARRIVAL_VEHICLE` was counted once. **Seen in the original and not
+predicted:** `mCurrentArrivalVehicle` went from nought to 32 on the first sweep after the load, a vehicle made
+anew, then 40 on 1583, the bus on 1768, nought on 1896 and 32 on 1898, which brought the load: the tail's
+summons for a guest waiting at the stop to go home (`FUN_004cf3e0`, read; the guest was not looked for).
 
 ### Read, not run
 
@@ -826,7 +889,9 @@ cells from memory; the logs before and after the load; the frames) and the sheet
 (a park file taken apart in Python), `chains.py` and `fields.py` (the ten files' chains, staff lists and unnamed
 fields), `ghidra/` (the constructors and serialisers read), `confirm.py`, `PREDICTION.txt` (every run and its
 result), `mutate.py`, and `orig/` (`things.py`, the original's node table from memory; the logs at the load, 30 s
-and 60 s on; the frames; `first/`, the first run's).
+and 60 s on; the frames; `first/`, the first run's). Q250's is `q250/`: `confirm.py`, `PREDICTION.txt`,
+`mutate.py`, and `orig/` (`pool.py`, the original's pool and arrival block from memory, once or polled;
+`a-load.log`, the poll across the load; the hire screen's frames `h1` and `h2`).
 
 ## What OpenTPW builds
 

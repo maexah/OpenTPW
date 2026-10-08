@@ -1664,6 +1664,8 @@ public sealed partial class ParkWorld : IParkInitialState
 
 	private void ReadStaffPool()
 	{
+		StaffPoolAt = _at;
+
 		var records = new StaffCandidate[PoolRecords];
 
 		for ( var i = 0; i < PoolRecords; ++i )
@@ -1674,12 +1676,25 @@ public sealed partial class ParkWorld : IParkInitialState
 		}
 
 		StaffPool = records;
-		Skip( PoolCountsSize );
+
+		var counts = new int[PoolKinds];
+		var stops = new bool[PoolKinds];
+
+		for ( var kind = 0; kind < PoolKinds; ++kind )
+		{
+			counts[kind] = ReadInt32();
+			stops[kind] = ReadByteAt( _at++ ) != 0;
+		}
+
+		StaffPoolPeopleInCat = counts;
+		StaffPoolStopProducing = stops;
 		StaffPoolTimeSig = ReadInt32();
 	}
 
 	private void ReadArrivalBlock()
 	{
+		ArrivalAt = _at;
+
 		var rate = ReadInt32();
 		var timeSig = ReadInt32();
 		var capacity = ReadInt32();

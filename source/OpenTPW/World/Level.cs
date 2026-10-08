@@ -467,7 +467,9 @@ public class Level
 	/// <para>
 	/// <b>Three of the writer's five stages are built</b> (<see cref="ParkFileWriter"/>): the file the park was loaded
 	/// from goes out again with the park's clock, its door, its visitor count, its cash, the camera, the ground
-	/// (<see cref="WrittenCells"/>) and the people (<see cref="ParkPeople.Written"/>) written over it. What else
+	/// (<see cref="WrittenCells"/>), the people (<see cref="ParkPeople.Written"/>), the pool of candidates
+	/// (<see cref="ParkStaffPool.Written"/>) and the arrival timer (<see cref="ParkPeople.WrittenArrival"/>) written
+	/// over it. What else
 	/// play has changed is not written.
 	/// </para>
 	/// <para>
@@ -479,7 +481,7 @@ public class Level
 	internal string? WritePark( string name )
 	{
 		if ( Kind == Scene.Park && ParkState is { } state )
-			return WritePark( Park, state, ThemeName, name, ParkPeople.Current );
+			return WritePark( Park, state, ThemeName, name, ParkPeople.Current, ParkStaffPool.Current );
 
 		Log.Warning( $"Save: '{name}' is not written - no park is running" );
 		return null;
@@ -487,7 +489,7 @@ public class Level
 
 	/// <summary><see cref="WritePark(string)"/> for a park's own parts, the camera's being the orbit camera's.</summary>
 	internal static string? WritePark( IParkInitialState? park, ParkState state, string theme, string name,
-		ParkPeople? people = null )
+		ParkPeople? people = null, ParkStaffPool? pool = null )
 	{
 		if ( Players.Roster.Current is not { } player )
 		{
@@ -510,7 +512,7 @@ public class Level
 
 		var running = new ParkFileWriter.Running( state.GameTick, state.ParkIsClosed, state.VisitorsToDate, state.Balance,
 			new ParkCameraModule.View( ParkOrbitCameraMode.Zoom, -ParkOrbitCameraMode.Yaw, point.X, point.Y ), cells,
-			people?.Written( WrittenThings( loaded ).Contains ) );
+			people?.Written( WrittenThings( loaded ).Contains ), pool?.Written(), people?.WrittenArrival() );
 
 		byte[] file;
 		ParkWorld.PeopleWritten? peopleWritten;
@@ -531,6 +533,18 @@ public class Level
 		Log.Info( $"Save: wrote {path}, {file.Length} bytes: mGameTick {running.GameTick}, " +
 			$"{(running.ParkClosed ? "closed" : "open")}, {running.VisitorsToDate} visitors to date, balance {running.Balance}, " +
 			$"camera {ParkOrbitCameraMode.State()}, {cells.Count} cells of ground" );
+
+		if ( running.StaffPool is { } candidates )
+		{
+			Log.Info( $"Save: {candidates.Slots.Count( slot => slot != null )} candidates in the pool, topped up on mGameTick "
+				+ $"{candidates.TimeSig}" );
+		}
+
+		if ( running.Arrival is { } arrival )
+		{
+			Log.Info( $"Save: the arrival timer's mark {arrival.TimeSig}, "
+				+ (arrival.Offloading ? $"a load held with {arrival.PeopleOnBus} still to drop" : "no load held") );
+		}
 
 		if ( peopleWritten is { } report )
 		{

@@ -44,23 +44,15 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q250. The writer: the staff pool, the arrival block and the people's leftovers.** Split from Q241h.
-  (1) **The arrival block and the staff pool** are still the file's (`saves.md`, "Module by module": the pool
-  afresh from `ParkStaffPool`, the arrival fields patched from `ParkPeople`'s timer): a load is followed at once
-  by a load of arrivals, thirteen within 30 s in both games after a file written at tick 1334, where the park
-  written was about 580 ticks from its next (`q241h/orig/a-30s.log`, `q241h/gate/confirm.txt`); and the hire
-  list after a load is the file's. Decode what each stamp is a reading of (`mMacroAI`'s `TimeSig`, a
-  candidate's `TimeSig` and `TimeoutTime`), and whether the arrival vehicle's state (its script, the header's
-  `mCurrentArrivalVehicle`) must move with it: the bus at the kerb at the save is gone after OpenTPW's load
-  (`q241h/gate/1b` beside `3b`). (2) **A balloon and a thought bubble** are counted and not written
-  (`SAVE_PARK_BALLOON`, `SAVE_PARK_THOUGHT_BUBBLE`): write each as its own sprite, kind 10 and the bubble's, on
-  the slot the guest's record names. (3) **`mTimeHired`** is nought on a hire: eight bytes, the shipped five
-  hold two values of a `FILETIME`'s shape near the park's own date; decode what writes and reads it.
-  (4) **A made sprite's `+0xbc`** is copied from a like sprite of the file's or counted
+- [ ] **Q251. The writer: the people's leftovers.** Split from Q250. (1) **A balloon and a thought bubble** are
+  counted and not written (`SAVE_PARK_BALLOON`, `SAVE_PARK_THOUGHT_BUBBLE`): write each as its own sprite, kind
+  10 and the bubble's, on the slot the guest's record names. (2) **`mTimeHired`** is nought on a hire: eight
+  bytes, the shipped five hold two values of a `FILETIME`'s shape near the park's own date; decode what writes
+  and reads it. (3) **A made sprite's `+0xbc`** is copied from a like sprite of the file's or counted
   (`SAVE_PARK_SPRITE_SET_BYTE`): it is the loaded bank's byte at `+0x222 + 4 × sprite number`
-  (`FUN_00540c60`); find it in the `.sprite` bank and write it. Confirm: a park saved 100 ticks after a load of
-  arrivals, loaded in OpenTPW and in the original under Proton: the next load on the tick predicted, the hire
-  screen's candidates the save's; a guest's balloon held after the load; a screenshot of each.
+  (`FUN_00540c60`); find it in the `.sprite` bank and write it. Confirm: a park with a guest holding a balloon
+  and a hire, written, loaded in OpenTPW and in the original under Proton: the balloon held after the load, the
+  count of `SAVE_PARK_SPRITE_SET_BYTE` nought; a screenshot of each.
 - [ ] **Q241i. The writer: the objects, their scripts and their models.** From Q241e. Object records patched, one
   bought written whole and one sold left out; the object controls and `mFirstObject`; a script record made or
   taken out of `RSSE` and each running script's counter, variables and deadlines; a slot of `RSYS` and its
@@ -81,6 +73,12 @@ the research lab), then the rest of this section in its old order.
   as nought** (`SAVE_PARK_HANDLE_TO_AN_UNWRITTEN_THING`; `Level.WrittenThings` is the list to widen). A made
   thing's id is one past the park's highest, where the original uses a freed id again (Q26c). `PutPeople`
   chains a person ahead of the file's objects on a cell; an object bought goes behind the people there.
+  From Q250: **the arrival vehicle is not written** (`SAVE_PARK_ARRIVAL_VEHICLE`). The header's
+  `mCurrentArrivalVehicle` and the vehicle's script are one state (`FUN_0051a690`), and both are left the
+  file's, so a park saved with the bus on its circuit loads with none current and the bus where the first file
+  had it (`q250/run2/1-at-the-save.png`); write the handle with the scripts, and read it back
+  (`SAVED_CURRENT_ARRIVAL_VEHICLE`). In the original a load of that file made a vehicle anew on its first sweep
+  (`q250/orig/a-load.log`): look for the leaver at the stop that summons it.
 - [ ] **Q241j. The writer: the managers, then Save Game saves.** From Q241e. The economy thing's loans and rings,
   the staff HQ's strikes, the calendar's and the weather's fields; then `ParkSaveScreen.Save` writes
   (`SAVE_GAME_WRITER` gone), an overwrite replaces the file, and the Load Park list shows it. Confirm: a park

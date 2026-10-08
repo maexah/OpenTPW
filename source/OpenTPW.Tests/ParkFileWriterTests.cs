@@ -249,6 +249,44 @@ public class ParkFileWriterTests
 		Assert.IsFalse( Unimplemented.Summary.Any( gap => gap.What == "SAVE_PARK_WITH_NO_FILE" ) );
 	}
 
+	/// <summary>The level hands the writer the park's pool of candidates and its arrival timer.</summary>
+	[TestMethod]
+	public void TheLevelWritesThePoolAndTheArrivalTimer()
+	{
+		SetCurrentPlayer( new Player( 0, "Test", new PlayerFile { InstantAction = true } ) );
+
+		var people = new ParkPeople( shipped );
+		var pool = new ParkStaffPool( new ParkBalance( "jungle", easyMode: true ), gameTick: shipped.GameTick, saved: shipped );
+
+		try
+		{
+			for ( var tick = shipped.GameTick + 1; tick <= 1083; ++tick )
+				pool.Sweep( tick, _ => 1 );
+
+			people.HoldTheLoad( 3 );
+
+			Assert.IsNotNull( Level.WritePark( shipped, people.State, "jungle", "Pooled", people, pool ) );
+
+			var written = Read( File.ReadAllBytes( Path.Combine( Jungle, "Pooled.TPWS" ) ) );
+
+			Assert.AreEqual( 1083, written.StaffPoolTimeSig );
+			Assert.AreEqual( pool.Candidates.Count, written.StaffPool.Count( record => record.Valid ) );
+			Assert.AreEqual( shipped.Arrival with { PeopleOnBus = 3, Offloading = true }, written.Arrival );
+
+			Assert.IsNotNull( Level.WritePark( shipped, people.State, "jungle", "Carried" ) );
+
+			var carried = Read( File.ReadAllBytes( Path.Combine( Jungle, "Carried.TPWS" ) ) );
+
+			Assert.AreEqual( 722, carried.StaffPoolTimeSig, "with no pool handed over the file's own goes out" );
+			Assert.AreEqual( shipped.Arrival, carried.Arrival );
+		}
+		finally
+		{
+			TestRun.DeleteEvery<ParkPeople>();
+			ParkStaffPool.ForgetCurrent();
+		}
+	}
+
 	/// <summary>
 	/// The level hands the writer the park's people: a guest made here is in the file it writes, and one written
 	/// without a like sprite in the file to copy its set byte from is counted.

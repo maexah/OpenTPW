@@ -9,7 +9,7 @@ namespace OpenTPW;
 ///
 /// <para>
 /// <b>Every module is carried</b>: the body goes out as the file's own, with the fields under <see cref="Running"/>
-/// written over it and the park's people in place of the file's. Nothing else the running park has changed is
+/// written over it, the park's people in place of the file's, and its staff pool and arrival timer. Nothing else the running park has changed is
 /// written yet, so a park loaded from the file this writes has the objects and scripts of the file it was loaded
 /// from, among the running park's people, on its ground and under its clock and cash.
 /// </para>
@@ -44,10 +44,20 @@ public static class ParkFileWriter
 	/// the file's, by their place in <see cref="ParkWorld.Cells"/> (<see cref="ParkWorld.PutCells"/> says which of a
 	/// cell's fields); none where it is null. <see cref="People"/> is every guest and member of staff the park
 	/// holds, written in place of the file's (<see cref="ParkWorld.PutPeople"/>); the file's own where it is null.
+	/// <see cref="StaffPool"/> is the pool of candidates (<see cref="ParkWorld.PutStaffPool"/>) and
+	/// <see cref="Arrival"/> the arrival timer (<see cref="ParkWorld.PutArrival"/>), each the file's where it is null.
 	/// </summary>
 	public readonly record struct Running( int GameTick, bool ParkClosed, int VisitorsToDate, int Balance,
 		ParkCameraModule.View Camera, IReadOnlyDictionary<int, ParkWorld.MapCell>? Cells = null,
-		IReadOnlyList<ParkWorld.WrittenPerson>? People = null );
+		IReadOnlyList<ParkWorld.WrittenPerson>? People = null, ParkWorld.WrittenStaffPool? StaffPool = null,
+		ArrivalTimer? Arrival = null );
+
+	/// <summary>
+	/// The arrival timer as it is written: the <c>mGameTick</c> the next load's wait is counted from
+	/// (<c>mTimeSig</c>), how many of a load held are still to drop (<c>mPeopleOnBus</c>) and whether one is held
+	/// (<c>mOffloading</c>).
+	/// </summary>
+	public readonly record struct ArrivalTimer( int TimeSig, int PeopleOnBus, bool Offloading );
 
 	/// <summary>
 	/// The inflated body of the file: a copy of <paramref name="loaded"/>'s with <paramref name="running"/> written
@@ -85,6 +95,12 @@ public static class ParkFileWriter
 
 		if ( running.Cells is { } cells )
 			loaded.PutCells( body, cells );
+
+		if ( running.StaffPool is { } pool )
+			loaded.PutStaffPool( body, pool );
+
+		if ( running.Arrival is { } arrival )
+			loaded.PutArrival( body, arrival.TimeSig, arrival.PeopleOnBus, arrival.Offloading );
 
 		people = null;
 
