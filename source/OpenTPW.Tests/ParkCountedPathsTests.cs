@@ -61,15 +61,14 @@ public class ParkCountedPathsTests
 	}
 
 	/// <summary>
-	/// <b>Save Game and Publish Park each close the menu and are counted under their own name</b>, once a
-	/// choice, and the choices that work are not counted.
+	/// <b>Publish Park closes the menu and is counted under its own name</b>, once a choice, and the choices that
+	/// work are not counted.
 	/// </summary>
 	/// <remarks>
 	/// <b>Mutations:</b> the report taken out of <c>NotYet</c> counts nothing; two rows sharing a name leaves one at
 	/// nought; a report in Resume Game's row counts a fourth.
 	/// </remarks>
 	[TestMethod]
-	[DataRow( 1, "SAVE_GAME" )]
 	[DataRow( 3, "PUBLISH_PARK" )]
 	public void AMenuChoiceThatIsNotBuiltIsCounted( int row, string name )
 	{

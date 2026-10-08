@@ -197,8 +197,9 @@ drag".
 ## Load Game and Save Game
 
 The park menu's rows 1 and 2 (`FUN_0048b6a0`, `scenes.md`). Decoded in Ghidra and run in the original under Proton
-on 2026-10-08 (Q241); what was only read is listed at the end. OpenTPW builds the Load Park screen ("OpenTPW's
-Load Park", below); Save Game is counted (`SAVE_GAME`) and closes the menu.
+on 2026-10-08 (Q241, Q241d); what was only read is listed at the end. OpenTPW builds the Load Park screen and the
+Save Park screen ("OpenTPW's Load Park" and "OpenTPW's Save Park", below); the save itself is counted
+(`SAVE_GAME_WRITER`).
 
 ### The two rows
 
@@ -242,6 +243,14 @@ string at `0x00752588`, stored at the box's `+0x144`). Then it turns the keyboar
 (`FUN_00486b70`: `FUN_0040cfa0` and `[0x007c24d0]` 1), so a typed letter is a letter; closing turns them on again
 (`FUN_00486b60`).
 
+**The name box.** A character typed with nothing selected is inserted only while the text is shorter than the
+room `FUN_006662b7` gave (`0x006679dc`, the box's `+0x13c`, 15), and not at all when it is in the refused list
+(`0x006678ca`, `+0x144`); Enter, Tab, Backspace and Escape are not characters (`0x0066786a`). The box's setter
+(`FUN_00666308`, vtable `+0x24`) copies at most that many characters and ends in `FUN_006668e9( -5, 0, -1 )`,
+where the select-all `FUN_006677ae` ends in `( -5, 1, -1 )`: text put in by the setter is not selected, and the
+caret stands at its end. The opening's "New Save" is selected because the opener gives the box the focus after
+setting it (`FUN_0065e59b`, `0x0049f3a6`).
+
 ### The list is the folder
 
 `FUN_005ac8f0` (on the save manager at `0x00f7b560`) empties the manager's list and reads the player's folder for
@@ -269,12 +278,17 @@ written on 8 October.
 | 5, "close yourself" (`FUN_00485b40` sends it) | close, answer 1 | close, answer 1 |
 | `0x14`, the window going | window pointer nought, `FUN_004862a0`, `g_ParkRunning` 1, `FUN_00409300` | the same, after `FUN_00486b60` |
 
+Enter and Escape reach the handler as `0x802` and `0x804` and it posts itself the button's message
+(`FUN_00658ccc`, `0x0049ec4d`), which `UI_MessageHook_ClickSound` clicks for like any `0x100`.
+
 "Close" is `FUN_00658d9f( window, 4, 0, 0 )`. Each walks to the entry by counting `FUN_005accb0` from a fresh
 `FUN_005ac8f0`, so a click re-reads the folder.
 
 **Load asks nothing.** The click loads over the running park at once.
 
-**Save's OK** re-reads the folder and compares the box's text with each entry's name (`FUN_0067c290`). With no
+**Save's OK** re-reads the folder and compares the box's text with each entry's name (`FUN_0067c290`, the 16-bit
+characters one for one, so case counts). Nothing else is asked of the name: an empty one is saved as `.TPWS`, and
+trailing spaces are kept. With no
 match it saves (`FUN_0049e9b0`). With one it opens a message box, UITEXT 205 handed the name as parameter 2 -
 "New Save exists / Overwrite ?" - whose yes is `FUN_0049e9b0`. `FUN_0049e9b0` makes a string of the buffer, calls
 `FUN_005ac610` on the save manager and closes the screen; it does not look at what the save answered.
@@ -371,6 +385,45 @@ tables, 21 px apart on a 768-line picture of its 480; the clock held at 955 unde
 1.3 s of the second row's click, the world pointer unchanged (`q241c/orig/l1.png`, `a.log`; three predictions of
 four held, the row pitch wrong because the screen height was taken as 768).
 
+### OpenTPW's Save Park
+
+`ParkSaveScreen` is the same frame, title, list and cancel button (`ParkFileScreen`, which `ParkLoadScreen` shares)
+with the stream's OK button and name box, opened by the menu's second row. The box is a `UiEdit` of fifteen
+characters refusing the nine, opening on UITEXT 206 selected and holding the focus, which is what keeps the
+park's shortcuts from hearing the keys (`WindowStack.Keyboard`). A row's click puts the entry's name in the box
+unselected; OK, and Enter, compare the box with the folder as it stands then, by ordinal, and ask UITEXT 205
+through `Localization.Format( 205, (2, name) )` in a `MessageBox` when the name is there; Escape and the cross
+close. Opening the question takes the focus from the box and nothing gives it back but a click on the box, as
+measured below.
+
+**The save is not built.** Where `FUN_0049e9b0` calls `FUN_005ac610`, `ParkSaveScreen.Save` counts
+`SAVE_GAME_WRITER`, logs the name and closes the screen; nothing is written (Q241e).
+
+**Measured (Q241d).** In the original, the reference player's folder holding one save, "New Save", the box read
+from its buffer `0x007ca720` (`q241d/orig`, nine predictions of nine):
+
+- opened, the buffer reads "New Save", shown selected; "ab" typed leaves "ab";
+- `\ / : < > | * ? "` each change nothing (a shifted "!" was taken, so shifted keys reach it);
+- fifteen characters and no more ("aba!cdefghijklm"; four more letters and a space each dropped); Backspace
+  takes one off the end; a space and a capital are taken where there is room;
+- Escape closes the screen, the clock runs again and no file is written;
+- a row's click puts "New Save" in the box, not selected, the caret at its end: "x" then reads "New Savex";
+- Enter over "New Save" asks "New Save exists / Overwrite ?", and its cross leaves the screen and the file;
+- **after that cross the box no longer has the keys**: no caret, a letter changes nothing, Enter and Escape do
+  nothing (both come from the box), and no menu opens; a click on the box gives them back, the caret at the end;
+- "new save" and Enter asks nothing and writes at once (under Wine onto `New Save.TPWS`, its folder being
+  blind to case); "zz" and Enter writes `zz.TPWS`; the box emptied and Enter writes `.TPWS`, which the list then
+  shows as a row with no name. `gms.dat` was written 28 ms before each.
+
+In OpenTPW, a private game folder whose player holds "New Save" and "Old Park" (`q241d/run1`, nine of nine):
+the screen opened on both rows with the box holding "New Save" and the keys, the clock held under it; "ab", then
+the slash and backslash dropped, then "abc" with no camcorder entered, then fifteen; Escape closed it with
+nothing counted and no menu; the second row's click read "Old Park", "x" made it "Old Parkx"; Enter asked "Old
+Park exists / Overwrite ?"; after its cross the box was without the keys and "y" and Escape did nothing until
+the box was clicked, then "Old Parky"; Enter closed the screen with `1x SAVE_GAME_WRITER` and the folder
+unchanged; OK over "New Save" and the question's tick closed both, `2x`. The unchanged build's Save row opened
+nothing and counted `SAVE_GAME` (`q241d/control`).
+
 ### The other callers, not this item's
 
 | Site | What |
@@ -413,8 +466,9 @@ candidates in name order, so a tie goes to the first by name. With nobody playin
 
 ### Read, not run
 
-A typed name, Enter and Escape in the box, a row's click on the save screen, a refused character, the sixteenth
-character and a failed save or load were not run in the original: the listing's alone. A folder with two saves
+A failed save or load was not run in the original: the listing's alone. Nor was the box's selection after the
+overwrite question when the name in it is the opening's own, still selected (here it stays selected once the box
+is clicked), nor a click heard for Enter and Escape (the reference runs silent). A folder with two saves
 was (Q241c), under Wine, whose listing order need not be Windows'. The `0x100`-byte field's 32 bytes at `0x00802080` and the failure number's reader
 are not traced. `FUN_00415140` and the twelve teardown calls are named, not decoded. `addresses.md` is not
 regenerated.
@@ -423,6 +477,8 @@ regenerated.
 stream in the executable), `strraw.py <file.str> <row>...` (a row's parts, parameters shown as `{n}`),
 `measure.py`, `PREDICTION.txt`, and `orig/` (`lib.sh`, the frames `s1` to `s5`, `l1`, `l2`,
 `PREDICTION-result.txt`, and `New-Save-written-by-the-original.TPWS`, an Instant Action Lost Kingdom save).
+Q241d's is `q241d/`: `orig/` (`lib.sh`, whose `box` reads the name box's buffer, the predictions and the
+frames), `confirm.py`, `mutate.py` and the sheet of OpenTPW's screen beside the original's.
 
 ## What OpenTPW builds
 

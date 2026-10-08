@@ -44,12 +44,6 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q241d. The Save Park screen, up to the writer.** From Q241. The same screen titled UITEXT 201 with its OK
-  button and name box: fifteen characters, `\ / * ? : | < > "` refused, "New Save" to begin with, Enter and Escape,
-  the shortcuts off while it is open; a row's click puts its name in the box; OK over a name in the list asks
-  UITEXT 205 first. The save itself is counted (`SAVE_GAME_WRITER`) until Q241e. Run the parts Q241 did not in the
-  original first (a typed name, Enter, Escape, a refused character, the sixteenth, a row's click). Confirm: the
-  screen beside `q241/orig/s1.png`, `s3.png` and `s4.png`, and the count after OK.
 - [ ] **Q241e. What a park file must hold to be written. Decode first.** From Q241. The container is known and
   comes out byte for byte; the body is nineteen modules of the original's memory, live handles among them
   (FileFormats `saves.md`, "Inside the stream"). Decode the World writer `FUN_00516c80` for what play changes here
@@ -58,6 +52,10 @@ the research lab), then the rest of this section in its old order.
   unchanged through OpenTPW's container, then loaded by the original under Proton. The preamble's legal text is the
   game's own and is copied from the file loaded, never shipped. Then split the writer's build, and file what the
   other callers need (`gms.dat` first, `autosave` on leaving, the quicksave keys, `restart.INTS`).
+  From Q241d: the writer's one call site is `ParkSaveScreen.Save`, which counts `SAVE_GAME_WRITER` and hands over
+  the box's text as it stands: not trimmed, compared with the folder by case, and empty if the player emptied it
+  (the original then writes `.TPWS`; on a folder that tells case apart "new save" beside "New Save" is a second
+  file, where Windows rewrites the first). The list is not read again after a save, since the screen closes.
 - [ ] **Q149. The calendar keeps its own game tick, from nought, and makes up the advances the original loses.** Found
   by the 2026-09-26 staleness audit. The original's calendar counter is `mGameTick` (`+0x1da70c`, `weather.md`, "The
   calendar"), which a loaded save sets to its own (755 in `Easymode.TPWI`, as `GameCalendar.Rebase` says);

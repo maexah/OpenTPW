@@ -112,7 +112,7 @@ internal sealed class ParkFrontEnd : Panel
 		"b_shandy", "b_smech", "b_senter", "b_sguard", "b_sresrhcer",
 		"b_scroller", "b_up", "b_down", "b_allstaff", "b_allthings", "i_boxtick",
 
-		// The Load Park screen's list, stream 0x007523f0 - see <see cref="ParkLoadScreen"/>.
+		// The Load Park and Save Park screen's list, stream 0x007523f0 - see <see cref="ParkFileScreen"/>.
 		"f_load",
 
 		// The Information and Money categories' own screens - allstaff (0x750e10), allitems (0x7508e0
@@ -386,7 +386,13 @@ internal sealed class ParkFrontEnd : Panel
 				_stack.Close( menu );
 				_stack.Open( new ParkLoadScreen( _stack, _themeName ) );
 			} ),
-			new( UIStrings.Save, 2, menu => NotYet( menu, "SAVE_GAME", "Save Game", "nothing writes a park back yet" ) ),
+
+			// Save Game closes the menu and opens the Save Park screen (0x0048b809).
+			new( UIStrings.Save, 2, menu =>
+			{
+				_stack.Close( menu );
+				_stack.Open( new ParkSaveScreen( _stack, _themeName ) );
+			} ),
 
 			new( UIStrings.RestartPark, 3, menu => _stack.Open( new MessageBox( _stack,
 				Localization.Get( UIStrings.ConfirmRestartPark ), () => RestartPark( menu ) ) ) ),

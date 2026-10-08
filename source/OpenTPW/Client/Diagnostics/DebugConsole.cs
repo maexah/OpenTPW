@@ -469,8 +469,8 @@ public static class DebugConsole
 				break;
 
 			// Where a control of an open window is on screen, in window pixels, by its id in hex - so that a harness
-			// can `click` the middle of a button rather than work out the virtual screen's anchoring for itself. A pure
-			// getter.
+			// can `click` the middle of a button rather than work out the virtual screen's anchoring for itself, and what
+			// it letters: a box's text and whether it has the keys, any other control's text. A pure getter.
 			case "control":
 				if ( parts.Length < 2 || !int.TryParse( parts[1].Replace( "0x", "" ), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var controlId ) )
 				{
@@ -487,7 +487,9 @@ public static class DebugConsole
 
 				var at = control.Pixels;
 				Reply( $"control 0x{controlId:x} at ({at.X:F0},{at.Y:F0}) size ({at.Width:F0},{at.Height:F0}) "
-					+ $"middle ({at.X + (at.Width / 2f):F0},{at.Y + (at.Height / 2f):F0})" );
+					+ $"middle ({at.X + (at.Width / 2f):F0},{at.Y + (at.Height / 2f):F0})"
+					+ (control is UI.UiEdit typedInto ? $" holds '{typedInto.Value}' {(typedInto.HasFocus ? "with" : "without")} the keys"
+						: control.Text is { Length: > 0 } lettered ? $" reads '{lettered.Replace( "\n", " / " )}'" : "") );
 				break;
 
 			// The level the crowd has the park's music at, and how many times it has been set (ParkAudio.MusicLevel).

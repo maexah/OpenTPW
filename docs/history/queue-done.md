@@ -5365,6 +5365,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the original with the same two files listed them in the same order and read 755 after the same click (`q241c/`;
   `saves.md`, "OpenTPW's Load Park"). The scene is built again behind the loading screen, said at the site. 24 of
   27 bugs put back fail a test; one is equivalent and two are the game run's. The leftovers are Q247.
+- [x] **Q241d. The Save Park screen, up to the writer.** Done 2026-10-08, `alexah/362-save-park-screen`:
+  `ParkSaveScreen` on `ParkFileScreen`, which Load shares; the original run first, nine predictions of nine, and the
+  box found to lose the keys to the overwrite question until clicked; OpenTPW nine of nine in a private game
+  folder, `2x SAVE_GAME_WRITER` after two saves and the folder unchanged; the unchanged build `1x SAVE_GAME`;
+  29 of 30 bugs put back fail a test (`saves.md`, "OpenTPW's Save Park"). The item as written: From Q241. The same screen titled UITEXT 201 with its OK
+  button and name box: fifteen characters, `\ / * ? : | < > "` refused, "New Save" to begin with, Enter and Escape,
+  the shortcuts off while it is open; a row's click puts its name in the box; OK over a name in the list asks
+  UITEXT 205 first. The save itself is counted (`SAVE_GAME_WRITER`) until Q241e. Run the parts Q241 did not in the
+  original first (a typed name, Enter, Escape, a refused character, the sixteenth, a row's click). Confirm: the
+  screen beside `q241/orig/s1.png`, `s3.png` and `s4.png`, and the count after OK.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.
