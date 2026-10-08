@@ -575,6 +575,14 @@ the original.
   (`docs/exe/lobby.md`, "Escape cancels the fly-in"), so do not re-pace it. Confirm: screenshot burst from the
   click to the loading screen.
 
+- [ ] **Q239. Research's two message boxes.** From Q139. The gadget's Research button and R both reach
+  `FUN_004aa480`, which with the game menu down closes the open park screen (`FUN_00485b40`) and opens a message box:
+  UITEXT `0x1d4`, "Research is automatic in Instant Action mode.", when the game type is 2 (Lost Kingdom's Easymode),
+  else UITEXT `0x1d3` when `mFirstResearcher` is nought (`hud.md`, "The nine screens behind Info, Money and
+  Research"). The message box is built; both sites only count (`RESEARCH_BUTTON`, `RESEARCH_SHORTCUT`). Build the two
+  boxes at both; the research screen behind them stays counted (blocked: `docs/PLAYER-GAPS.md`). Confirm: R and the
+  button in Lost Kingdom, the box photographed beside the original's.
+
 ## D. Alexah's list: decode first, then build (two sessions each)
 
 The decode session writes the finding to `docs/exe/` and stops. The build is the next session.
@@ -757,6 +765,24 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   still ends at the panel's outline, so nothing but the hover differs. Before changing the hit test, check every park
   window whose root takes no pointer: a press on a greyed button there would fall through to the world. Confirm: an
   Instant Action player's pointer on a grey arrow, no help row; a screenshot.
+
+- [ ] **Q240. The postcard. Decode first.** From Q139. The gadget's postcard button is counted
+  (`POSTCARD_BUTTON`), Ctrl+P under the full-screen view is counted (`FULL_SCREEN_VIEW_POSTCARD`), and Ctrl+P over
+  the park (the shortcuts' row 15) and in first person (`FUN_00488a00`, action 15) is read by nothing: count those
+  two first. All four reach `FUN_004a9380`: sound `0x95`, the game paused, the interface hidden, a screen chosen by
+  `DAT_007cc150 = 3`, and a picture written out with `Postcard.wad`, `postcard.jpg` and an HTML template
+  (`park-engine.md`). Decode the screen and what is written, to `docs/exe/`; the build is the next session.
+- [ ] **Q241. Load Game and Save Game. Decode first.** From Q139 and `docs/PLAYER-GAPS.md` gap 7 (section F names
+  it; this is its item). The park menu's two rows are counted (`LOAD_GAME`, `SAVE_GAME`) and close the menu. Decode
+  the rows' handlers (ids 1 and 2 of `0x0048b6a0`), the screens they open and the writer, to `docs/exe/saves.md`; then
+  split the build into its sessions. Q167's saves are the reference files.
+- [ ] **Q242. Go Online and Publish Park. Alexah's call.** From Q139. Both are counted (`GO_ONLINE`,
+  `PUBLISH_PARK`) and close the menu; the original starts connecting (`0x005b5cc0`) to servers that are gone. Ask
+  Alexah: leave them counted, say so in the game's own style (rule 11), or something else. Then build the answer.
+- [ ] **Q243. Every counted name against this queue.** Asked by Alexah, 2026-10-08: a thing "counted, not built"
+  must have an item here, or it may never be come back to. List every `Unimplemented.Report` name in the source by
+  script, find each in this file, and file an item (or add the name to the item it belongs to) for each one that has
+  none; names dead by content say so in their item. No game run.
 
 ## E. Large
 - [ ] **Q31. The other eight object windows.** `Level.OpenObjectWindow` opens only a ride's (`UiType 0`). Shops,
