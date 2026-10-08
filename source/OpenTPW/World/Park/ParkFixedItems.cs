@@ -140,7 +140,7 @@ public sealed class ParkFixedItems : Entity
 		// The three vehicles, which are not scenery - see the remarks on this class. Lost Kingdom's save
 		// names only the bus; the ferry and the seaplane are given ids below and stood anyway, so all three
 		// run their own scripts. The original makes a vehicle only when a crowd first needs it -
-		// docs/QUEUE.md Q26.
+		// docs/QUEUE.md Q26c.
 		("bus", false, world => ThingByCatalogue( world, BusCatalogueId )),
 		("ferry", false, world => ThingByCatalogue( world, FerryCatalogueId )),
 		("seaplane", false, world => ThingByCatalogue( world, SeaplaneCatalogueId ))

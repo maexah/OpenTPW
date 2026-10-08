@@ -5307,6 +5307,19 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   thirteen: visitors **14 and 15** on the fix, **16 and 17** on the bug put back, in `peeps`, the log and the
   visitors screen (`q146/run3`, `control2`, 3 of 3 each; `sheet-fix-over-control.png`). The original: 1 to 26, no
   gap, thirteen made at the stop unnumbered until the gate (`q146/orig/a.log`). 5 bugs put back, 5 caught.
+- [x] **Q26. How many arrive in a load, and what the park is worth. Decode first.** `ParkPeople.StepArrivals` sizes
+  every load at `Arrival.MinPeople` (1), so a park left alone gains one guest a load. The original asks a headcount
+  score (`FUN_004c8240`), which is not decoded. Q68 found the rest of the headcount: `NewParkBonus` is added to
+  the score on every call and the sum scaled by 1.2 or 0.8, so even a score of nought brings 3 or 4 to Lost Kingdom
+  (`park.md`, "Arrivals: who comes, on what, and how often"). The same score is the park's worth every guest judges
+  the gate's fee against (`PeepBehaviour.ParkExcitement`, nought until it is built; the 2026-09-26 staleness audit).
+  Decode the score to `docs/exe/park.md` and stop.
+  **Done 2026-10-08, the decode.** `FUN_004c8240` sums, over the rides and sideshows the offer gate passes,
+  `( Info.AttractionValue + Attraction[i].NewBonus ) / n`: for a flat ride `n` is how many of the item stand and
+  `i` the days since the item's first build over `Info.NewAttractionDecayTime`; a track ride counts whole, by its
+  own age (`park.md`, "The headcount score"). The stock park is worth 35, then 32 from tick 1398. In the original,
+  predicted first: loads of **13** on tick 1264 and **12** on 1916 (`q26/orig/a.log`; three predictions held, and the refused ride's did not arise).
+  The control record's count and first-build stamp are in FileFormats `saves.md`. Nothing built.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

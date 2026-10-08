@@ -1374,10 +1374,10 @@ public sealed class ParkPeople : Entity
 	///
 	/// <para>
 	/// <b>The headcount is a deviation.</b> The original sizes a load from <c>Arrival.NewParkBonus</c> plus a
-	/// park-attractiveness score summed over the rides (<c>FUN_004c8240</c>: per ride a capacity, a duration divided
-	/// down, and a three-entry table indexed off it), times 0.8 or 1.2, divided by <c>Arrival.PointsPerVisitor</c> and
-	/// floored at <c>Arrival.MinPeople</c>. That score reads four ride fields this project has not named, so what is
-	/// reproduced here is the floor alone (Q26).
+	/// score summed over the rides and sideshows a guest may be offered (<c>FUN_004c8240</c>: each item's
+	/// <c>Info.AttractionValue</c> plus a bonus while it is new; <c>docs/exe/park.md</c>, "The headcount score"),
+	/// times 0.8 in rain or 1.2, divided by <c>Arrival.PointsPerVisitor</c> and floored at <c>Arrival.MinPeople</c>.
+	/// The score is unbuilt, so what is reproduced here is the floor alone (Q26b).
 	/// </para>
 	/// <para>
 	/// <b>So are its two refusals.</b> In world state 4, and where the crowd would pass

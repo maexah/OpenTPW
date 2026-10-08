@@ -245,10 +245,9 @@ public sealed class PeepBehaviour
 	/// <c>FUN_004c8240</c> makes.
 	///
 	/// <para>
-	/// <b>Nought, because nothing computes it.</b> <c>FUN_004c8240</c> is not decoded (<c>docs/exe/park.md</c>,
-	/// "What the balance file supplies, and the one score that is not decoded"), so every guest judges the
-	/// fee against a park worth nothing. It is settable so that the term is visible and testable rather
-	/// than a zero nobody can see.
+	/// <b>Nought, because nothing computes it.</b> The sum is decoded and unbuilt (<c>docs/exe/park.md</c>,
+	/// "The headcount score"; <c>docs/QUEUE.md</c> Q26b), so every guest judges the fee against a park worth
+	/// nothing. It is settable so that the term is visible and testable rather than a zero nobody can see.
 	/// </para>
 	/// </summary>
 	public int ParkExcitement { get; set; }

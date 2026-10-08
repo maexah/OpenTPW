@@ -44,16 +44,14 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q26. How many arrive in a load, and what the park is worth. Decode first.** `ParkPeople.StepArrivals` sizes
-  every load at `Arrival.MinPeople` (1), so a park left alone gains one guest a load. The original asks a headcount
-  score (`FUN_004c8240`), which is not decoded. Q68 found the rest of the headcount: `NewParkBonus` is added to
-  the score on every call and the sum scaled by 1.2 or 0.8, so even a score of nought brings 3 or 4 to Lost Kingdom
-  (`park.md`, "Arrivals: who comes, on what, and how often"). The same score is the park's worth every guest judges
-  the gate's fee against (`PeepBehaviour.ParkExcitement`, nought until it is built; the 2026-09-26 staleness audit).
-  Decode the score to `docs/exe/park.md` and stop.
-- [ ] **Q26b. Build the headcount and the park's worth.** From Q26's decode: both readers of the score, the load's
-  size in `StepArrivals` and `PeepBehaviour.ParkExcitement`. Confirm: the stock park left alone, the first load's
-  size in `guests` beside the original's (its one watched load was thirteen, Q127), predicted first; a screenshot.
+- [ ] **Q26b. Build the headcount and the park's worth.** From Q26's decode (`park.md`, "The headcount score"):
+  both readers of the score, the load's size in `StepArrivals` and `PeepBehaviour.ParkExcitement`, taken afresh at
+  each call. It needs the control record's count and first-build stamp read from the save (`ParkWorld.ObjectControl`,
+  `+0x18` and `+0x1c`) and kept as things are bought and sold, and the items' `Info.AttractionValue`,
+  `Info.NewAttractionDecayTime` and `Attraction[0..2].NewBonus`; the gate is `ParkRideChoice.CanBeOffered`. Confirm:
+  the stock park left alone, the first two loads' sizes in `guests` beside the original's, 13 called on tick 1264
+  and 12 on 1916 (`q26/orig/a.log`), predicted first; a screenshot. The park is then worth more than nought to a guest
+  at the gate, so Q145's fees (30 on the expensive line) move: re-check the gate's tests and `q145`'s harness.
 - [ ] **Q241. Load Game and Save Game. Decode first.** From Q139 and `docs/PLAYER-GAPS.md` gap 7 (section F names
   it; this is its item). The park menu's two rows are counted (`LOAD_GAME`, `SAVE_GAME`) and close the menu. Decode
   the rows' handlers (ids 1 and 2 of `0x0048b6a0`), the screens they open and the writer, to `docs/exe/saves.md`; then

@@ -1636,7 +1636,7 @@ where they should.
 header's writer `FUN_00516c80` pushes the string `mParkAnalyser` at `0x00516f8c` and pairs it with
 `LEA ECX,[EDI+0x1da720]` at `0x00516fa0`.
 
-### What the balance file supplies, and the one score that is not decoded
+### What the balance file supplies
 
 The global `Standard.sam`; jungle's own `Standard.sam` overrides none of these, and its `Easy_Standard.sam`, read
 over both for an Instant Action park, sets `PointsPerVisitor` to 5:
@@ -1712,23 +1712,75 @@ then at status 0 again, off the stops; a second load by hand summoned on 1499, i
 Before it, the bus was sent round after its first circuit and stood at the arrivals' stop at status 2, and the second
 load's first guest was made on the call's own sweep.
 
-What it does not reproduce, each said at its site: the headcount, the floor alone (Q26); the two refusals, in world state 4 and at the cap, where the original calls a load
+What it does not reproduce, each said at its site: the headcount, the floor alone (Q26b); the two refusals, in world state 4 and at the cap, where the original calls a load
 of nobody or of what fits and still sends its vehicle (neither reached in Lost Kingdom); a load saved half-dropped,
 counted as `SAVED_ARRIVAL_LOAD` and not resumed; guests made with no script to ask, on the sweep after the one that calls the load;
 and the ferry
 and the seaplane, stood as the park loads where the original makes each at its first summons: they stand at their
 first spin at status 2 from the start, in view at the arrivals' stop, and a first summons finds the drive in done
-and sets no trigger (`ParkPeople.Summon`; making them on demand is Q26's). (The second load in the older measurement above dropped on the sweep that called
+and sets no trigger (`ParkPeople.Summon`; making them on demand is Q26c's). (The second load in the older measurement above dropped on the sweep that called
 it because the spent bus was then sent round again: Q131b took that out.)
 
-**The score in the headcount is `FUN_004c8240`, and it is NOT decoded**. (`FUN_00519590`'s `+0x30` is the weather
-thing's `mCurrentDrops`; `ride-operation.md`, "What a thing is worth to a guest".) It sums a
-park-attractiveness score over the rides — per ride a capacity, a duration divided down, and a
-three-entry table at `+0x268`. It reads four ride fields this project has not named. **OpenTPW reproduces the
-floor alone**, which is a declared deviation with a visible consequence: `MinPeople` is 1 in every theme the game
-ships, where even a score of nought brings `ftol( 20 * 1.2 ) / 5` = 4 to an Instant Action Lost Kingdom (3 at 0.8), and
-the vehicle is chosen by crowd size, so a park left to itself **never** selects the seaplane or the ferry. Deciding
-the real headcount is what would change that (`docs/QUEUE.md` Q26).
+### The headcount score
+
+`FUN_004c8240` is the park's worth, one whole number, and it has two callers: the load's size (`FUN_004cf5b0`,
+`0x004cf5fc`) and a guest's judgement of the gate's fee (`FUN_004ff5b0`, `0x004ff5d2`, logged as "Working out how
+exciting park is"). It takes nothing but the world. It walks `mFirstObject`'s chain (world `+0x1da746`, next at thing
+`+0xc`), and an object adds to the sum only when all three hold:
+
+1. its item's `Info.WhichUIType` (the descriptor's copy at `+0x4ac`) is **0 or 2**, a ride or a sideshow
+   (`0x004c82a9`): a shop, a feature and the unlisted kinds add nothing;
+2. it passes the offer gate `FUN_004dd920` (`0x004c82be`), the chooser's own (`ride-operation.md`, "Where an object's state
+   comes from"): choosable, not broken down or condemned, `mCanLoad` set, a back of queue with room behind it, and for a
+   track ride its track;
+3. its item's control record counts at least one standing (`+0x18` above nought, signed, `0x004c82ee`; the record is
+   `FUN_004d3d80`'s, `hud.md`, "What the buy list actually filters on").
+
+What it adds is **`( AttractionValue + bonus ) / n`**, a signed whole division (`0x004c83fe`..`0x004c8406`):
+
+| | `Bumper.WhichTrackType` (`+0x9c`) nought | any track type |
+|---|---|---|
+| `n` | the item's standing count, record `+0x18` | 1 |
+| the age, in days | since the item's **first** build: `FUN_004f88b0` of record `+0x1c`, `( mGameTick − stamp ) × mFunnySecsPerRealSec / 4` seconds (the subtraction unsigned), over 86,400 | this object's own, `FUN_004dd670` (`0x004c8391`) |
+
+`bonus` is `Attraction[ age / NewAttractionDecayTime ].NewBonus` while that index is 0, 1 or 2 and nought past it
+(`0x004c83b5`..`0x004c83e4`, signed). The fields are the item descriptor's `Info.AttractionValue` (`+0x58`),
+`Info.NewAttractionDecayTime` (`+0x5c`, at least 1 by its bound) and `Attraction[0..2].NewBonus` (`+0x268`, `+0x26c`,
+`+0x270`), named by counting the compiled schema's four-byte slots between `WhichUIType` at `+0x4c` and
+`WhichTrackType` at `+0x9c`, both known from their readers. So **two of one flat ride are worth what one is**, each
+adding half, and all of them stay new, or stop being new, together, by the day the first was built, a sold one
+included: the stamp is written only while it reads nought (`0x004db69c`) and the count alone goes down. Each track
+ride adds its whole value and is new from its own purchase. A day is 23.04 sweeps at the shipped rate of 15,000.
+
+**Lost Kingdom's values** (the category files, each item's own and its `Easy_` file; `attraction.py`): every ride
+has `AttractionValue` 25 and a decay time of 60 days, with bonuses 10, 7, 4, or 15, 10, 5 for the three track rides
+(Dino Karts, Temple Of Gloom, Splish Splash). `SideShow.sam` and the four sideshows set none of the keys, so **a
+sideshow adds nought**: value 0, decay 1, no bonus. A ride is therefore worth 35 for its first 60 days (1,383 sweeps,
+5 min 43 s), 32 for the next 60, 29 for the next, and 25 from day 180 on.
+
+**The stock park is worth 35, then 32.** `Easymode.TPWI` has one ride, the Belly Bounce, its record's count 1 and
+stamp 15 (FileFormats `saves.md`, "The object controls"). At the first load's call, `mGameTick` 1264, it is 54 days
+old: 35, and `ftol( ( 20 + 35 ) × 1.2 ) / 5` is **13**, the load Q127 watched. The bonus steps down on tick 1398, so
+the second load is `ftol( 52 × 1.2 ) / 5`, **12**; in rain they are 8 and 8. With the Belly Bounce shut, not loading
+(`mCanLoad` nought) or its queue full on the calling sweep, the park is worth nought and the load is 4, or 3 in rain.
+
+**In the original, predicted first** (`q26/orig/watch.py`, read-only, 2026-10-08): the load called on `mGameTick`
+1264 held **13** people and the next, called on 1916, **12**, neither in rain; record 1100 read count 1 and stamp 15
+and the rate 15,000 throughout, and the Belly Bounce stood at state 0 with `mCanLoad` 1 on both calling sweeps.
+The function keeps no result, so the 35 and the 32 are the listing's sum over the memory's inputs, stepping on tick
+1398 as worked out above; the two headcounts are the game's own. Not met: a load called in rain (it rained from
+1398 to 1567, between the two), a ride the gate refuses on the calling sweep, a track ride, two of one item, and a
+bonus index past 2.
+
+**The fee's reader** is built already (`PeepBehaviour.Judge`, `ParkAdmission.IdealPrice`; `hud.md`, the
+entryprice row): the same sum, taken afresh at each judgement, so a guest judging while the gate refuses the one
+ride judges a park worth nought.
+
+**OpenTPW builds neither** (Q26b): `StepArrivals` sizes every load at the floor, and `ParkExcitement` is nought.
+What the build needs that is not read today: the record's count and stamp (`ParkWorld.ObjectControl` keeps the id,
+the researched flag and the tier), kept as things are bought and sold, and the three item keys. The gate is
+`ParkRideChoice.CanBeOffered`, the age's clock `ParkState.CalendarNow`'s. With a load above one, the vehicle is
+chosen by its size (36 and 61), which no stock park reaches: three rides in their first 60 days make 30 a load.
 
 **What a new guest's fields come from** is decoded in
 [guest-arrivals.md](guest-arrivals.md): the constructor's initial meters, cash and exit variation,

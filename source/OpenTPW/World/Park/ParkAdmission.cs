@@ -265,8 +265,8 @@ public sealed class ParkAdmission
 	/// <param name="excitement">
 	/// What the park's rides are worth, summed by <c>FUN_004c8240</c>.
 	///
-	/// <b>Nothing here computes the sum</b> (<c>FUN_004c8240</c> is not decoded, <c>docs/QUEUE.md</c> Q26),
-	/// so the game passes nought. It is named and passed rather than being a zero nobody sees.
+	/// <b>Nothing here computes the sum</b> (decoded in <c>docs/exe/park.md</c>, "The headcount score", and
+	/// unbuilt: <c>docs/QUEUE.md</c> Q26b), so the game passes nought. It is named and passed rather than being a zero nobody sees.
 	/// </param>
 	public int IdealPrice( int excitement, Random random )
 	{
