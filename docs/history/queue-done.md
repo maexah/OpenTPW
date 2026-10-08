@@ -5247,6 +5247,22 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   which counts none (`q139/run1`, `control`); the boot's own mix silent to the lobby's first sound, and the click at
   0.46 s, 1.00, in a build at volume 1. 15 bugs put back, 15 caught. One prediction wrong: the control click in the
   original's lobby matched at 0.26, not 0.4. Ctrl+P over the park and in first person is still read by nothing.
+- [x] **Q140. The camcorder walks onto entrances the original shuts. Decode first.** Found by Q69's sweep. The
+  original's edge test `FUN_004d8750` in mode 2, stepping into a type-9 cell, reads the entrance's owner chain
+  (`0x004d8883`-`0x004d8b28`, as read by the sweep, not checked): it shuts the step unless the first catalogue object's
+  ride has a view (`FUN_0042a440`: a coaster handle, a script camera, or a model node flagged `0x1000`) and its
+  `UsageInfo.CannotRide` is nought, and opens it if both hold, whatever the neighbour bits say. `CellEdge.For` declines
+  this (`queueAhead` always answers nothing there), so our viewer walks onto the Staff Room's, the toilets', the Drinks
+  Shop's, the Jungle Spray's and the bin's entrances. Decode `FUN_0042a440` and the arm, then build the gate. Whether the
+  original's viewer reaches the Belly Bounce's entrance by walking rests on `FUN_0042a440` for its model.
+  **Decoded 2026-10-08, nothing built** (`park-engine.md`, "An entrance is shut to the viewer"). The sweep's reading
+  of the arm holds: the first catalogue object on the owner's chain decides alone, shut without a view or with
+  `CannotRide`, open with both, the cell left and the link bits unread. `FUN_0042a440`'s four are the track ride's
+  lead car (`+0x28`, not a coaster's), the TOUR record's first car, a coaster's node, and the model's lookup record
+  of id 1 with `0x1000`, which 100 of the 2,129 shipped `.md2` carry, the Belly Bounce's among them. In the
+  original, three predictions of three: parked at 299.999 against the Drinks Shop's and the Jungle Spray's
+  entrances from their linked paths, and across into the Belly Bounce's from its footprint, the camera flags
+  `0x202` to `0x604`. `q140/orig/`.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

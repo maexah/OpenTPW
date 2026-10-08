@@ -40,14 +40,16 @@ the original.
 
 **The 2026-10-06 review's leftovers come first, at Alexah's word (2026-10-06).**
 
-- [ ] **Q140. The camcorder walks onto entrances the original shuts. Decode first.** Found by Q69's sweep. The
-  original's edge test `FUN_004d8750` in mode 2, stepping into a type-9 cell, reads the entrance's owner chain
-  (`0x004d8883`-`0x004d8b28`, as read by the sweep, not checked): it shuts the step unless the first catalogue object's
-  ride has a view (`FUN_0042a440`: a coaster handle, a script camera, or a model node flagged `0x1000`) and its
-  `UsageInfo.CannotRide` is nought, and opens it if both hold, whatever the neighbour bits say. `CellEdge.For` declines
-  this (`queueAhead` always answers nothing there), so our viewer walks onto the Staff Room's, the toilets', the Drinks
-  Shop's, the Jungle Spray's and the bin's entrances. Decode `FUN_0042a440` and the arm, then build the gate. Whether the
-  original's viewer reaches the Belly Bounce's entrance by walking rests on `FUN_0042a440` for its model.
+- [ ] **Q140b. Build the entrance gate of the edge test.** From Q140's decode (`park-engine.md`, "An entrance is shut
+  to the viewer"). Give `CellEdge.For` the `queueAhead` it declines, for mode 2: on a type-9 cell, the first
+  catalogue object anchored on the owner's cell; `InTheWay` unless it has a view and its item's `CannotRide` is
+  nought, `LetThemThrough` if both, `NothingThere` with no such object. The view is `FUN_0042a440`'s four: build the
+  model's node (`ModelFile.FindNode( 1, 0x1000 )` on the placed thing's model) and count the three that need a track
+  ride's lead car, a TOUR record's car and a coaster's node where each is asked, none of them met in Lost Kingdom's
+  stock park. Confirm: `camcorder`, then the walk from (43,28) at the Drinks Shop's entrance and from (52,29) at the
+  Jungle Spray's, the stand parked at 299.999 as the original's (`q140/orig/a.log`); from the footprint (52,24) into
+  the Belly Bounce's, `FIRST_PERSON_WALK_INTO_RIDE` counted; each predicted first; a screenshot of the viewer held at
+  the Drinks Shop's door.
 - [ ] **Q141. Golden tickets are never awarded. Decode first, and Alexah's call on when.** Found by Q69. What reaches
   the advisor's glints in the original is a golden-ticket award: only gesture rows 1 and 13 carry the glint flags, and
   only its lines use them (`docs/exe/scenes.md`, "Gesture table"). Those lines play on the park's own advisor, model slot

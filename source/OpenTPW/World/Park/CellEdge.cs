@@ -246,8 +246,9 @@ public sealed class CellEdge
 	/// </para>
 	/// </param>
 	/// <param name="queueAhead">
-	/// What a thing standing on the cell ahead says. Not modelled: the arm it stands for is not yet decoded
-	/// (<c>docs/QUEUE.md</c> Q140). Left out, it answers <see cref="QueueVerdict.NothingThere"/>.
+	/// What the thing that owns an entrance ahead says, asked on mode 2 alone (<c>0x004d8883</c>;
+	/// docs/exe/park-engine.md, "An entrance is shut to the viewer"). Left out, it answers
+	/// <see cref="QueueVerdict.NothingThere"/>.
 	/// </param>
 	public CellEdge( Func<int, int, ParkWorld.MapCell> cellAt, int mode,
 		Func<ParkWorld.MapCell, bool>? trackCloses = null,
@@ -270,10 +271,11 @@ public sealed class CellEdge
 	/// park's cells.
 	/// </para>
 	/// <para>
-	/// <b>The third is still declined, and deliberately.</b> <c>queueAhead</c> stands for an arm of the
-	/// original's that is not yet decoded (<c>docs/QUEUE.md</c> Q140), so it keeps answering
-	/// <see cref="QueueVerdict.NothingThere"/>. Answering it by guessing which things are where would be
-	/// worse than not answering it, and it only bears on mode 2.
+	/// <b>The third is not built</b> (<c>docs/QUEUE.md</c> Q140b). <c>queueAhead</c> stands for the original's
+	/// entrance arm, which shuts an entrance to the camcorder unless its thing can be ridden and has a view
+	/// (docs/exe/park-engine.md, "An entrance is shut to the viewer"), so it keeps answering
+	/// <see cref="QueueVerdict.NothingThere"/> and the viewer walks onto entrances the original shuts. It bears
+	/// on mode 2 alone.
 	/// </para>
 	/// </summary>
 	public static CellEdge For( IParkInitialState park, int mode )

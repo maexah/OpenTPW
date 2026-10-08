@@ -894,6 +894,66 @@ standing for the chain) and counts each yes as `FIRST_PERSON_WALK_INTO_RIDE`, tw
 in the cell, moved or stopped by a shut side, and walks on. In Lost Kingdom the one such cell is the Belly Bounce's entrance
 (52,23).
 
+**An entrance is shut to the viewer unless its thing can be ridden and seen from** (`docs/QUEUE.md` Q140; read as
+disassembly, then walked in the original). Mode 2 alone has this arm. It sits after the approach's two tests and before the solid types (`0x004d8883`..`0x004d8901`, its
+verdict at `0x004d8b00`..`0x004d8b28`), and it is asked of the cell being **entered** (`EDI`):
+
+1. The cell is an entrance, type 9 (`FUN_00536340`). Any other type goes on to the ordinary tests.
+2. Its owner's cell is the one `mParentID` (`+0x10`) names, and the things on that cell are walked from its `+0x24`,
+   each next at the thing's `+0xa`, to the **first** catalogue object (kind byte `+2` is 3). An owner's cell with no
+   such thing goes on to the ordinary tests (`0x004d8901` puts the mode back in `ESI`).
+3. That one thing decides, and nothing after it is asked: **shut** if `FUN_0042a440( thing, thing[+0x20] )` answers
+   nought, **shut** if its item's `UsageInfo.CannotRide` (`+0x118`, the item by `FUN_004dd4e0`) is not nought,
+   otherwise **open** (`XOR EAX,EAX` at `0x004d8b25`).
+
+So neither the cell left nor any `mNeighbours` bit is read: an open entrance is open from grass and from its own
+footprint, and a shut one is shut from the path it is linked to. `FUN_0042a340` (above) walks the same chain but
+passes over a thing that cannot be ridden and takes the next; the edge test stops at the first.
+
+**`FUN_0042a440( thing, model instance )` is "has this a ride view"**, its one caller the arm above. It answers 1 at
+the first of four that holds, and `FUN_004e15b0` ("Ride it!") picks its camera's model in the same order:
+
+| | Asked | What it is |
+|---|---|---|
+| 1 | `thing[+0x28]` not nought and `FUN_00549d30` of it not nought | The track ride's lead car (`park.md`, "`BUMP` works on the track-ride record"): the `GFEJ` magic, the record `DAT_00877b60 + (h & 0xff) * 0xd0` whose own handle is `h`, its lead car `+0x58` flagged `0x400000`, and that car's model `+8` |
+| 2 | the script of `thing[+0x24]` (`FUN_0055a070`), its `+0x9c` (`FUN_0055a360`), and `FUN_0055a570` of that | The TOUR record's first car: for a record number 1 to 99, `[0x008791f8 + 4n] + 0x11c`, the model `FUN_0055cda0` frees for car 0 |
+| 3 | `FUN_00436840( instance )` and `FUN_00436880( instance )` | A coaster: the instance's flag `0x40000` (`[0x007a4610 + 4i] + 4`), then the node on `DAT_00790fe0` whose `+0x10` is the instance, its flag `0x800`, and `[[node + 0x124] + 0x34] + 0xc` not nought. What `+0x124` holds is not traced |
+| 4 | `FUN_0044b220( [0x007a4610 + 4i], 0x1000, 1 ) != -1` | The model's own view node: a lookup record of id 1 whose flag word has `0x1000` (`audio.md`, "Node lookup is by id AND a capability flag") |
+
+A null thing skips 1 and 2. The queue item's "coaster handle" for `+0x28` was the track ride's, and its "script
+camera" the TOUR record's car.
+
+**The view node across the shipped models** (`viewnodes.py`, the raw table of every `.md2`: 2,118 in the wads and
+the 11 loose ones, which carry no table). 100 models answer `( 0x1000, 1 )`: 25 in jungle, 20 in fantasy, 26 in
+hallow, 29 in space. The flag words carrying `0x1000` are `0x1031` (69 records), `0x10b1` (12), `0x41071` (9) and
+eight rarer ones; 101 such records have id 1 and three have id 2. In jungle the models are the rides' own
+(`bouncy`, `incagod`, `lookout`, `monkey`, `mumbo`, `porkpie`, `spider`, `totem`, `tvsim`, `volcano`), cars and
+pieces (`b_car`, `CrocCar`, `ape`, the four go-karts, `cart`, `Bird`, `wr_ring`), three features (`camera`, `End`,
+`gates`) and one sideshow, the Jungle Spray (`Junspray`, `PJunspray`).
+
+**Lost Kingdom's eight entrances, from the original's memory** (`q140/orig/probe.py`, read only). Each owner's cell
+holds one catalogue object, with `+0x28` nought on all eight:
+
+| Entrance | Owner's cell | Item | View node | Step in |
+|---|---|---|---|---|
+| (52,23) | (51,23) | 1100, the Belly Bounce | record 13, `0x1031` | **open** |
+| (52,30) | (51,30) | 1303, the Jungle Spray | record 11, `0x1031` | shut: `CannotRide` |
+| (43,30) | itself | 1203, the Drinks Shop | none | shut |
+| (55,15), (55,16), (55,17) | itself | 1402, a toilet | none | shut |
+| (58,15) | (58,16) | 1411, the Staff Room | none | shut |
+| (44,29) | itself | 1406, the bin | none | shut |
+
+**Walked in the original** (`q140/orig/a.log`, three predictions written first, three held). In first person, the
+position written to `0x007908f0` and `0x007908f8` and a key held: from the path (43,28) the viewer crossed (43,29)
+and parked at 299.999 against the Drinks Shop's entrance; from (52,29) they parked at 299.999 against the Jungle
+Spray's, which has the view node, so `CannotRide` alone shuts it; and from the Belly Bounce's footprint cell (52,24)
+they crossed into (52,23) at 239.29 and `gui_CameraFlags` went from `0x202` to `0x604`, the ride view. A path cell
+to the next (the control) is crossed freely.
+
+**OpenTPW** declines the arm: `CellEdge.For` hands no `queueAhead`, so a type-9 cell falls to the ordinary tests,
+and the viewer walks onto any entrance from a path or queue cell its `mNeighbours` links, and from nowhere else. The build is
+`docs/QUEUE.md` Q140b.
+
 **Nothing of the edge test is kept, and the world it reads dies with the park.** Read for `docs/QUEUE.md` Q10 and
 put to a refuter, then re-read by hand. `FUN_004d8750` writes no global, and neither do the functions it calls.
 On every call it reaches the world afresh, by three routes:
@@ -1032,6 +1092,9 @@ in these places, of which a walk in the park reaches only `FUN_0042a340`'s branc
   (`FST` at `0x0042c12e`) for the nudge's direction (`0x0042c14d`) and the loop's test (`0x0042c24c`); the two
   differ only if it underflows.
 - `FUN_0042a340`'s branch is not built (above): walking onto a ride's entrance is counted, `FIRST_PERSON_WALK_INTO_RIDE`.
+- **The entrance arm of the edge test is not built** (above, "An entrance is shut to the viewer"): the viewer walks
+  onto the seven entrances the original shuts, from the path or queue cell linked to each, and cannot step onto the
+  Belly Bounce's from its footprint (`docs/QUEUE.md` Q140b).
 - **At the margins**, read by a review of the port (`docs/QUEUE.md` Q48b). `Slide` is handed the stored float step,
   so a step that rounds to exactly -1e-4 is zeroed where the original may keep it (the dead band above). Every test
   of a step against nought reads C3, which an unordered compare also sets, and every "smaller" reads C0, likewise:
