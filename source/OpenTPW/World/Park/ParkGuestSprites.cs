@@ -883,6 +883,9 @@ public sealed class ParkGuestSprites : ModelEntity
 	private (int Kind, int Bank) LookOf( ParkPeople? people, ParkWorld.Person person, ParkWorld.Sprite sprite )
 		=> LookOf( people, _counts, person, sprite );
 
+	/// <summary>A packed bank by its kind and its number among the kind's, or null when it is not packed.</summary>
+	internal SpriteBankFile? BankAt( int kind, int bank ) => _banks.TryGetValue( (kind, bank), out var loaded ) ? loaded.Bank : null;
+
 	/// <summary>
 	/// The bank a person's sprite is drawn from now, for a state animation's group (<c>FUN_00475b80</c> reads the
 	/// sprite's kind <c>+0xac</c> and bank <c>+0xb0</c>), or null when it is not packed.

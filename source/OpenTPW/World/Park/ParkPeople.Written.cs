@@ -21,6 +21,11 @@ public sealed partial class ParkPeople
 	/// it is written deciding and a member of staff resting in or cleaning it idle.
 	/// </para>
 	/// <para>
+	/// A held balloon and a thought bubble go as sprites of their own (<see cref="BalloonOf"/>,
+	/// <see cref="BubbleOf"/>). <b>A balloon let go and still bursting is not written, and counted</b>
+	/// (<c>SAVE_PARK_BALLOON_LET_GO</c>): nobody's record names it.
+	/// </para>
+	/// <para>
 	/// A member of staff in the hand is written idle where they were picked up: the original puts the hand's thing
 	/// down before it writes (<c>FUN_00516c80</c>, step 1).
 	/// </para>
@@ -73,17 +78,14 @@ public sealed partial class ParkPeople
 				ArrivalDate: peep.ArrivalDate, TimeOfLastSpotAnim: peep.TimeOfLastSpotAnim,
 				TimeStartedIdling: peep.TimeStartedIdling, ArrivalIndex: peep.VisitorNumber );
 
-			if ( peep.Balloon != null )
-				Unimplemented.Report( "SAVE_PARK_BALLOON" );
-
-			if ( peep.Thoughts.Bubble != null )
-				Unimplemented.Report( "SAVE_PARK_THOUGHT_BUBBLE" );
-
 			people.Add( Person( id, ParkWorld.GuestModel, peep.Navigator, heading, decides, guest, null,
 				new ParkWorld.PaceState( peep.AdjustorSpeed, peep.BaseSpeed, peep.PreviousSpeed, peep.PurposeSpeed ),
 				(peep.SpriteKind, peep.SpriteBank), drawn: true, peep.NextAnimation, peep.NextInterval,
-				peep.SetDestSuccessfully, peep.Thoughts, peep.StrandedTime ) );
+				peep.SetDestSuccessfully, peep.Thoughts, peep.StrandedTime ) with { Balloon = BalloonOf( peep ) } );
 		}
+
+		foreach ( var _ in _bursting )
+			Unimplemented.Report( "SAVE_PARK_BALLOON_LET_GO" );
 
 		foreach ( var member in _staff )
 		{
@@ -96,9 +98,6 @@ public sealed partial class ParkPeople
 				|| (member.Activity is StaffActivity.GoingToRest or StaffActivity.Resting && rest == 0)
 				|| (member.Activity is StaffActivity.GoingToLoo or StaffActivity.Cleaning && toilet == 0);
 
-			if ( member.Thoughts.Bubble != null )
-				Unimplemented.Report( "SAVE_PARK_THOUGHT_BUBBLE" );
-
 			var staff = new ParkWorld.StaffState(
 				State: (int)(stands ? StaffActivity.Idle : member.Activity), PayGrade: member.PayGrade,
 				Happiness: member.Happiness, Tiredness: member.Tiredness, JobsDone: member.JobsDone,
@@ -107,7 +106,7 @@ public sealed partial class ParkPeople
 				TimeStartedIdling: member.TimeStartedIdling, Name: member.Name,
 				ToiletToClean: stands ? 0 : toilet, TimeStartedCleaning: member.TimeStartedCleaning,
 				TimeStartedEntertaining: member.TimeStartedEntertaining,
-				TimeStartedResearching: member.TimeStartedResearching );
+				TimeStartedResearching: member.TimeStartedResearching, TimeHired: member.TimeHired );
 
 			// One resting inside a rest area has no sprite, in the files as here.
 			var drawn = stands || member.Activity != StaffActivity.Resting;
@@ -120,6 +119,53 @@ public sealed partial class ParkPeople
 
 		return people;
 	}
+
+	/// <summary>
+	/// A guest's held balloon as its own sprite: kind 10 of the one balloon bank, on the script, the set and the
+	/// frame it is on and where it was last placed. Its <c>+0xbc</c> is its own set's frames a direction, the set
+	/// it was made on (<c>FUN_00475a10( 0x0074f480, 10, bank, set, ... )</c>).
+	/// </summary>
+	private ParkWorld.WrittenSprite? BalloonOf( Peep peep )
+	{
+		if ( peep.Balloon is not { } balloon )
+			return null;
+
+		var sprite = balloon.Sprite;
+
+		return new ParkWorld.WrittenSprite(
+			new ParkWorld.Sprite( Slot: 0, Type: Balloon.SpriteKind, Bank: 0, SpriteNumber: sprite.SpriteNumber,
+				X: balloon.X, Height: balloon.Height, Y: balloon.Y, Facing: 0, Frame: sprite.Frame, Alpha: sprite.Alpha,
+				State: 0, Script: sprite.Script, Pc: sprite.Pc ),
+			sprite.Interval, SetByteOf( Balloon.SpriteKind, 0, sprite.Set ) );
+	}
+
+	/// <summary>
+	/// The bubble over a person as its own sprite: kind 9, bank 0, on its picture's script where one that has
+	/// shown its frame rests, over the person at <see cref="Thoughts.Lift"/>. The original makes every bubble on
+	/// bank 0's set 0 (<c>FUN_00475a10( script, 9, 0, 0, ... )</c>, <c>0x0050c062</c>) and the script sets the
+	/// picture, so its <c>+0xbc</c> is that set's frames a direction whatever the picture. The bubble here runs no
+	/// script (<see cref="Thoughts"/>); it is written as one that has run its first two instructions.
+	/// </summary>
+	private ParkWorld.WrittenSprite? BubbleOf( Thoughts thoughts, FixedVector position )
+	{
+		if ( thoughts.Bubble is not { } bubble )
+			return null;
+
+		var script = Thoughts.ScriptOf( bubble.Bank, bubble.Set );
+
+		return new ParkWorld.WrittenSprite(
+			new ParkWorld.Sprite( Slot: 0, Type: Thoughts.SpriteKind, Bank: 0, SpriteNumber: (bubble.Bank << 4) | bubble.Set,
+				X: position.X * 10f / FixedVector.One, Height: Thoughts.Lift, Y: position.Y * 10f / FixedVector.One,
+				Facing: 0, Frame: 0, Alpha: 0xff, State: 0, Script: script, Pc: script + Thoughts.ShownAt ),
+			MadeSetByte: SetByteOf( Thoughts.SpriteKind, 0, 0 ) );
+	}
+
+	/// <summary>
+	/// The frames a direction of a bank's set - the byte the original keeps in a sprite's <c>+0xbc</c>
+	/// (<c>FUN_00540c60</c>) - or null when the bank is not to hand.
+	/// </summary>
+	private int? SetByteOf( int kind, int bank, int set )
+		=> BankAt( kind, bank ) is { } file && set >= 0 && set < file.Sets.Length ? file.Sets[set].FramesPerDirection : null;
 
 	/// <summary>
 	/// One person for the writer. <paramref name="stands"/> writes them standing where they are, on no route and
@@ -156,6 +202,7 @@ public sealed partial class ParkPeople
 
 		ParkWorld.Sprite? picture = null;
 		var interval = SpriteScript.DefaultInterval;
+		int? stateSetByte = null;
 
 		if ( drawn )
 		{
@@ -170,6 +217,7 @@ public sealed partial class ParkPeople
 			}
 
 			interval = script.Interval;
+			stateSetByte = script.FramesPerDirection > 0 ? script.FramesPerDirection : null;
 			picture = new ParkWorld.Sprite(
 				Slot: 0, Type: look.Kind, Bank: look.Bank, SpriteNumber: script.SpriteNumber,
 				X: 0f, Height: 0f, Y: 0f, Facing: person.Facing, Frame: script.Frame, Alpha: script.Alpha, State: 0,
@@ -185,6 +233,9 @@ public sealed partial class ParkPeople
 			PreviousX: stands ? position.X : navigator.Previous.X, PreviousY: stands ? position.Y : navigator.Previous.Y,
 			NextAnim: stands ? 0 : nextAnimation, NextServiceInterval: nextInterval,
 			SetDestSuccessfully: stands ? false : setDest, LastThought: thoughts.Last, TimeBubbleShown: thoughts.TimeBubbleShown,
-			StrandedTime: strandedTime, SpriteInterval: interval );
+			StrandedTime: strandedTime, SpriteInterval: interval,
+			// A person's sprite is made on set 0 of their bank, and a state's animation writes its own set's over it.
+			MadeSetByte: SetByteOf( look.Kind, look.Bank, 0 ), StateSetByte: stateSetByte,
+			Bubble: BubbleOf( thoughts, position ) );
 	}
 }

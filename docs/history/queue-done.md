@@ -5445,6 +5445,17 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   its load. Decoded: every stamp is a reading of `mGameTick`; `mPeopleInCat` and `mStopProducing` are the staff
   as the last top-up counted them (`FUN_00508000`). The vehicle is not written, and counted
   (`SAVE_PARK_ARRIVAL_VEHICLE`): Q241i.
+- [x] **Q251. The writer: the people's leftovers.** Split from Q250. A held balloon and a thought bubble are each
+  written as a sprite of their own on the slot the person's record names; a hire's `mTimeHired` is the park's
+  calendar as they were made, a `FILETIME` (`FUN_00504b90`, read by the staff window's days employed,
+  `FUN_00505b70`); a made sprite's `+0xbc` is the frames a direction of the set it is made on, the third byte of
+  that set in its bank's `.esp`, which for a person is set 0's. Done 2026-10-08 (`saves.md`, "`mTimeHired`", "A
+  sprite's `+0xbc`" and the people's "Measured (Q251)"): a park written with nine guests holding balloons, a
+  researcher hired on tick 783 and a bubble over them held the nine after OpenTPW's load, and in the original
+  under Proton each holder named the file's slot, a balloon of the file's colour, the hire read 3.2.2000 23:37:30
+  and the bubble picture 18; `SAVE_PARK_SPRITE_SET_BYTE` nought, where the build before counted four and eleven
+  balloons. All 1,053 sprites of the six park files to hand obey the set byte's rule. The original caught one
+  decode of mine wrong, the bubble's script (the scripts set pictures 0 to 15, 21, 16 to 20).
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

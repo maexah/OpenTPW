@@ -674,7 +674,8 @@ public sealed partial class ParkPeople : Entity
 			State: (int)StaffActivity.Idle, PayGrade: candidate.Grade,
 			Happiness: 100f, Tiredness: 100f, JobsDone: 0,
 			PatrolBottomLeft: 0, PatrolTopRight: 0, RestArea: 0,
-			PercentageThroughGrade: 0, TimeStartedIdling: 0, Name: candidate.Name );
+			PercentageThroughGrade: 0, TimeStartedIdling: 0, Name: candidate.Name,
+			TimeHired: ParkWorld.StaffState.FileTimeOf( State.CalendarNow ) );
 
 		var member = new global::OpenTPW.Staff( thingId, model, state, navigator, pace );
 
@@ -2960,6 +2961,12 @@ public sealed partial class ParkPeople : Entity
 	internal Func<int, SpriteBankFile?> BankOf { get; set; } = static id => ParkGuestSprites.Current?.BankOf( id );
 
 	/// <summary>
+	/// A sprite bank by its kind and its number among the kind's, which the park file's writer asks for the frames
+	/// a direction of the set a sprite was made on. The drawing's own unless a test hands another.
+	/// </summary>
+	internal Func<int, int, SpriteBankFile?> BankAt { get; set; } = static ( kind, bank ) => ParkGuestSprites.Current?.BankAt( kind, bank );
+
+	/// <summary>
 	/// Hands a queued animation to a person's sprite - <c>FUN_004d4190</c> into <c>FUN_00475b80</c>: a script by
 	/// its number, or for 13 to 16 the state group of the sprite's own bank, with that set's frames a direction
 	/// (<c>FUN_00540c60</c>). A state the bank has no group for, or whose script is not copied, is counted and
@@ -3167,6 +3174,7 @@ public sealed partial class ParkPeople : Entity
 				+ $"loo {member.ToiletToClean} cleaningSince {member.TimeStartedCleaning} "
 				+ $"performingSince {member.TimeStartedEntertaining} "
 				+ $"researchingSince {member.TimeStartedResearching} "
+				+ $"hired {(ParkWorld.StaffState.HiredWhenOf( member.TimeHired ) is { } hired ? hired.ToString( "d/M/yyyy HH:mm:ss" ) : $"0x{member.TimeHired:x}")} "
 				+ $"sounds {member.Sounds.Played} draws {member.Sounds.Draws} "
 				+ $"base {member.BaseSpeed} purpose {member.PurposeSpeed} adjustor {member.AdjustorSpeed} "
 				+ $"pace {member.PreviousSpeed:0.0000} speed {nav.MaxSpeed} restExact {member.Tiredness:0.000}";

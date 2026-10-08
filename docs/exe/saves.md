@@ -681,7 +681,7 @@ over the copy, never the one held.
 - **Everything else was carried** at this stage, so a park loaded from the file had the people, objects, ground
   and scripts of the file it was first loaded from, under the new clock, count, cash and camera. The ground is
   the second stage's ("OpenTPW's writer, the cells"), the people the third's ("the people"), the pool of
-  candidates and the arrival timer theirs ("the staff pool and the arrival timer"); the rest is Q251, Q241i and
+  candidates and the arrival timer theirs ("the staff pool and the arrival timer"); the rest is Q241i and
   Q241j.
 - **Where.** `Level.WritePark( name )` writes `<player's folder>/<theme>/<name>.TPWS`, replacing a file of that
   name in another case. The console's `savepark <name>` is its one caller; the Save Park screen's OK stays counted
@@ -741,6 +741,48 @@ type 1, neighbours `0x11`, tile (1, 2, 0); (39,24) type 0, tile (0, 55, 0). Its 
 the cash read $ 88177 seven seconds on, the saved guests paying at the gate again (Q241h).
 **Not run in the original:** a queue cell written without its model, an entrance's link, a cell laid over.
 
+### `mTimeHired`
+
+A member of staff's `+0x1f0`, eight bytes, file 491. **It is the park's calendar as the member was made, a
+`FILETIME`.** The staff constructor's tail `FUN_00504b90` calls the calendar's now, `FUN_004f8690` on world `+0x2a0`
+(`0x00504bb8`), and stores both dwords (`0x00504bc4`, `0x00504bd6`); a load reads the file's over it. `FUN_004f8690` is
+`mFunnyTimeStart` + `mGameTick` × `mFunnySecsPerRealSec` / 4 × 10,000,000 (`0x00989680`), added as 64 bits by
+`FUN_005fc530`, and only broken into a date for a caller that passes somewhere to put one (`FUN_005fc660`,
+`FileTimeToSystemTime`); this caller passes nought eight times. **One reader:** `FUN_00505b70`, now less `+0x1f0`
+(`FUN_005fc550`) over 864,000,000,000 (`0x00c92a69c000`), the days employed, which the staff window's refresh
+`FUN_004b58b0` hands to UITEXT `0x1bb` (`0x004b58d5`).
+
+Measured: the shipped park's four first members read 1.1.2000 15:37:30, tick 15 at 3,750 s a tick, and its
+researcher 29.1.2000 03:00:00, tick 648; all 53 of the played jungle park's and all 12 of the fantasy park's are a
+whole number of ticks, no two alike, the newest thing the latest (`q251/look.py`). OpenTPW stamps a hire with
+`ParkState.CalendarNow` as `ParkPeople` makes the member, reads the file's (`ParkWorld.StaffState.TimeHired`) and
+writes both back; the console's `staff` prints it. Nothing here shows the days employed: the staff window is unbuilt.
+
+### A sprite's `+0xbc`
+
+`FUN_00540c60( bank, n )` answers the byte at the bank object's `+0x222 + 4 × n`. `SpriteBank_Load` reads the sixteen
+sets of the `.esp` (file `0x10E`, four bytes a set) to `+0x220`: the first picture's word, **the frames a direction at
+`+0x222`** and the directions flag at `+0x223` (`0x00540ee3`..`0x00540f1d`), which is how `Sprites_LookUp` uses them
+(`0x005423f0`). The byte is written to a sprite's `+0xbc` in three places and no other:
+
+| Where | With |
+|---|---|
+| the constructor `FUN_004758f0` (`0x004759f2`) | the bank of the kind and bank it is made with, and **the set it is made on**, its fifth argument |
+| `FUN_00475b80` handed a state 0 to 3 (`0x00475c16`) | the set that state's group has just written to `+0xb4` (`FUN_00540c70`). Handed a script's address, it leaves `+0xbc` alone |
+| `FUN_00475e10` (`0x00475edd`) | a copy of another sprite's |
+
+**A script that changes the set does not write it**, so it is not the frames a direction of the set at `+0xb4`: a
+walking child on set 1, eight frames a direction, holds 1, set 0's. The sprite script reads `+0xbc` as one of its
+locals (`SpriteScript.FramesPerDirection`), which is what a state's animation steps its frames by. A bubble is made
+by `FUN_00475a10( script, 9, 0, 0, ... )` (`0x0050c062`), on bank 0's set 0 whatever its picture, and its script sets
+the picture; so a bubble whose `+0xb4` is 16 or more (the second bank's) still holds bank 0's set 0's byte, and
+nothing reads past a bank's sixteen sets. A balloon is made on its colour's set.
+
+Measured over every live sprite of the six park files to hand that hold any, 1,053 (`q251/fpd2.py`, each `.esp`'s own
+bytes): a person's `+0xbc` is their bank's set 0's, but for 26 of the 27 entertainers, who hold their group's set's (8, or 17
+on `SPR_EX`), having performed; the one who holds set 0's is the shipped park's; every balloon holds its own set's, 2;
+every bubble 1; the litter and effects sprites their own set's. None differs.
+
 ### OpenTPW's writer, the people
 
 The third stage (Q241h). `ParkPeople.Written` hands the writer every guest and member of staff the park holds,
@@ -761,8 +803,8 @@ follow the list. It runs last, because it alone changes the body's length.
   visitors, which the reader now gives back to `Peep.VisitorNumber`).
 - **What a made record leaves at nought** is what the original's own constructors leave there: the navigator's
   force, formation, axes, mode, last progress and timestamp, `mLastRecordedMapId`, `mSpriteUnderRideCtrl`, the
-  event ring, a guest's tiredness. **`mTimeHired` is nought on a hire**: nothing here holds the date, and what
-  reads it is not decoded.
+  event ring, a guest's tiredness. A hire's `mTimeHired` is the park's calendar as they were made ("`mTimeHired`",
+  below).
 - **The chains.** A person is written on the cell their `mX` and `mY` name. Whoever has come onto a cell heads
   its chain, the newest first; whoever the file had there and is there still follows in the file's order; then
   the file's things that are no person. `mWho` is written for each cell whose head changes.
@@ -771,18 +813,29 @@ follow the list. It runs last, because it alone changes the body's length.
   by fifty when it is full; a gone one's is emptied. A made record is the constructor's (`FUN_004758f0`): its
   slot, state 1, the timer `0x14`, alpha 255, scale 1, the program and the place, and nought in `+0x7c`, a time
   already past. A live slot's handle is the slot's own number, which the reader only tests against nought.
-  **`+0xbc` is a byte of the loaded bank** (`FUN_00540c60`: the bank object's `+0x222 + 4 × the sprite number`),
-  which no reader here holds: a made sprite takes it from the nearest sprite the file holds (the same kind,
-  bank and set, then the same set, then the same kind) and one with no such sprite is counted
-  (`SAVE_PARK_SPRITE_SET_BYTE`). The original writes it again at every change of program (`FUN_00475b80`).
+  **`+0xbc` is the frames a direction of the set the sprite was made on** ("A sprite's `+0xbc`", below): a made
+  person's is their bank's set 0's, and a state's animation started since writes its own set's over a made
+  sprite's and a kept one's alike. Only where the bank is not to hand is it copied from the nearest sprite the
+  file holds (the same kind, bank and set, then the same set, then the same kind), and counted where there is
+  no such sprite (`SAVE_PARK_SPRITE_SET_BYTE`).
+- **A balloon and a thought bubble** are each a sprite of the table, named by the slot at the guest's
+  `mBalloonScript` and the person's `mThoughtScript`. One the file holds for that person, of that kind, which
+  the park still shows keeps its slot and is written over; one made takes the lowest free slot after the
+  people's own, the lower id first; one gone is let go. A balloon is kind 10, bank 0, on the script, the set,
+  the frame and the alpha it is on, where it was last placed, with its interval. A bubble is kind 9, bank 0,
+  its picture at `+0xb4`, frame 0, over the person at 2.5, on its picture's script four words in, where one
+  that has shown its frame rests. The 22 thought scripts are six words apart from word 1462 (`0x0074f190`):
+  set the picture, show frame 0, jump back; they set pictures 0 to 15 in order, then 21, then 16 to 20
+  (`Thoughts.ScriptOf`). The bubble here runs no script, so it is written as one that has run its first two
+  instructions, which all but one of the 46 saved bubbles to hand have.
 - **The message sets.** `0xa`, `0xc` and `0x1b` hold every person, every member of staff and every guard beside
   the file's members that are no person, in rising id.
 - **Deviations, each counted.** A guest on a thing (queueing, called forward, walking on or off, riding) is
   written deciding where they stand, with no queue links (`SAVE_PARK_GUEST_ON_A_THING`): the thing's own half,
   its queue head and its script, is still the file's (Q241i). A handle to a thing the file does not hold, which
   is anything bought here, is written as nought, and a guest bound for it decides
-  (`SAVE_PARK_HANDLE_TO_AN_UNWRITTEN_THING`). No balloon and no thought bubble is written: both slots are nought
-  and the file's sprites for them are let go (`SAVE_PARK_BALLOON`, `SAVE_PARK_THOUGHT_BUBBLE`; Q251). A member
+  (`SAVE_PARK_HANDLE_TO_AN_UNWRITTEN_THING`). A balloon let go and still bursting is nobody's and is not
+  written (`SAVE_PARK_BALLOON_LET_GO`). A member
   of staff in the hand is written idle where they were picked up, as the original puts the hand's thing down
   first.
 - **The staff pool and the arrival block were not written at this stage**, so a load was followed by a load of
@@ -805,6 +858,40 @@ every guest of the file's held the index the file gave. Left running, the first 
 and 180 visitors. **Predictions wrong, mine:** a visitor count that "never passes 26" (the next load came, in both
 games); 32 people at the save where one run had 31 (a guest of the file's had gone home); and two of my own
 checks of OpenTPW's load, which read a sweep after it (walkers 0.1 to 0.5 of a cell on, one guest setting off).
+
+**Measured (Q251, `q251/`): the balloons, a bubble, the hire's date and the set bytes.** Lost Kingdom with a Balloon
+Shop bought at (43,22) and a researcher hired under `pause` at `mGameTick` 783, left until its first load of thirteen
+had been made and nine guests held a balloon, the hire tired with `staffrest` and the park held on the first poll that
+showed their bubble, `savepark Q251` at 1329: the log read "17 people kept, 14 made, 1 gone; 41 sprites in 100 slots,
+9 of them balloons and 1 bubbles", and neither `SAVE_PARK_SPRITE_SET_BYTE`, `SAVE_PARK_BALLOON` nor
+`SAVE_PARK_THOUGHT_BUBBLE` was counted. A Python reader found each of the nine holders naming a kind-10 sprite of the
+set `guests` had printed, `+0xbc` 2, on slots 32 to 40, and nobody else naming one; the hire naming a kind-9 sprite
+on slot 41, picture 18, script 1576 at 1580, 2.5 up, `+0xbc` 1; the hire's `mTimeHired` 3.2.2000 23:37:30, which is
+783 x 3,750 s, and the file's five their own; and all 41 sprites' `+0xbc` by the rule above, the thirteen made
+children 1 and the researcher 4. Loaded from OpenTPW's Load Park screen the same nine held a balloon of the same set
+and `staff` printed the hire's date again. The unchanged build's file held no kind-10 and no kind-9 sprite and a
+nought for the hire's date, counted `SAVE_PARK_BALLOON` eleven times, `SAVE_PARK_SPRITE_SET_BYTE` four and
+`SAVE_PARK_THOUGHT_BUBBLE` once, and after its load nobody held a balloon. That is the third run of five; the
+commit's own build read the same way at tick 1316 with eight balloons (`gate2`).
+**The original under Proton** loaded two of the files over a running park (`orig/a-load.log`, `b-load.log`): on its
+first read that showed the file's `mGameTick`, each holder's `+0x210` named the file's slot and
+that slot held a kind-10 sprite of the file's set, `+0xbc` 2, state 2 and shown; the hire's `+0x1f0` read the file's
+`FILETIME`; and the hire's `+0xb4` named slot 41, a kind-9 sprite on script 1576 at 1580 showing picture 18. Its
+frames show the balloons over their guests.
+**One decode wrong, mine, and the original caught it:** the first file wrote the bubble's script as 1462 + 6 x the
+picture, 1570 for picture 18; the original ran it and read picture 17. The scripts set 0 to 15, then 21, then 16 to
+20, as the executable's words and the played saves' own pairs say; the checks of the first two runs carried the same
+mistake and passed. **Two predictions wrong, mine:** a saved bubble counted at OpenTPW's load (the bubble was a
+member of staff's, whose thought a load does not read at all; only a guest's is counted, `SAVED_THOUGHT_BUBBLE`), and
+no bubble at all after the load (in one run of five a guest thought anew on the sweep after it).
+**Found by tests, not runs:** a slot a record names that holds a sprite of another kind was written over (it is
+left and a new slot taken); and a hire put down thinks "very happy" on one draw in sixteen, a bubble that is now a
+sprite of the file.
+**Not run in either game, tested only:** a balloon or a bubble the file already held (kept on its slot, or let go),
+a guest's bubble, an entertainer's set byte after a performance, a balloon bursting at the save (counted), a slot
+naming another kind's sprite. **Not looked at:** the original's staff window and its days employed for the hire; the
+bubble was read from memory and is in no photograph of the original (it is freed 12 sweeps past its stamp).
+**No bubble shows after OpenTPW's own load**: the reader makes none. `docs/exe/addresses.md` not regenerated.
 
 ### OpenTPW's writer, the staff pool and the arrival timer
 
@@ -871,8 +958,7 @@ summons for a guest waiting at the stop to go home (`FUN_004cf3e0`, read; the gu
 
 A thing bought or sold was not written and loaded: the objects' rules above are the ten files' and the listing's.
 **Not run in either game:** a guest gone (tested; one run met one), a table grown past its hundred slots, a
-person written on an object's cell, a file holding a balloon or a bubble, a member of staff resting or in the
-hand at the save, a guard hired. **Not read:** what `mLastRecordedMapId`, `mNextServiceInterval` and the sprite
+person written on an object's cell, a member of staff resting or in the hand at the save, a guard hired. **Not read:** what `mLastRecordedMapId`, `mNextServiceInterval` and the sprite
 record's words past `+0xcc` hold, which a made record leaves at nought and the original walked on with. The
 readers of the sound module, the advisor scoring and the UI block were not read, only their writers. What
 `VANT`'s clock is for, what the action recording is read by after a load, and `FUN_005408f0` are not traced. The

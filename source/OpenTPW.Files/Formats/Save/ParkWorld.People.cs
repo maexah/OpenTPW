@@ -163,20 +163,42 @@ public sealed partial class ParkWorld
 	/// </summary>
 	/// <param name="SetDestSuccessfully"><c>mSetDestSuccessfully</c>; null leaves the record's, for a kind that keeps none here.</param>
 	/// <param name="SpriteInterval">The sprite record's <c>+0x80</c>, the milliseconds between its turns.</param>
+	/// <param name="MadeSetByte">
+	/// The sprite record's <c>+0xbc</c> as its constructor leaves it (<c>FUN_004758f0</c>): the frames a direction
+	/// of the set the sprite is made on, which for a person is their bank's set 0. Written to a made sprite; null
+	/// where the bank is not to hand.
+	/// </param>
+	/// <param name="StateSetByte">
+	/// The same field as a state's animation has left it since the sprite was made or loaded
+	/// (<c>FUN_00475b80</c> handed 0 to 3), written to a made sprite and a kept one alike; null with none started.
+	/// </param>
+	/// <param name="Balloon">The balloon a guest holds, a sprite of its own on the slot <c>mBalloonScript</c> names.</param>
+	/// <param name="Bubble">The thought bubble over them, a sprite of its own on the slot <c>mThoughtScript</c> names.</param>
 	public readonly record struct WrittenPerson( Person Person, Sprite? Sprite,
 		IReadOnlyList<(int X, int Y)>? Waypoints = null, IReadOnlyList<int>? LegLengths = null,
 		int PreviousX = 0, int PreviousY = 0, int NextAnim = 0, int NextServiceInterval = 0,
 		bool? SetDestSuccessfully = null, int LastThought = 0, int TimeBubbleShown = 0,
-		uint StrandedTime = 0, int SpriteInterval = 0x3e );
+		uint StrandedTime = 0, int SpriteInterval = 0x3e, int? MadeSetByte = null, int? StateSetByte = null,
+		WrittenSprite? Balloon = null, WrittenSprite? Bubble = null );
+
+	/// <summary>
+	/// A sprite that is no person's own picture, as the writer takes it: a balloon or a thought bubble. All of
+	/// <see cref="Picture"/> but its slot and state is written, its place among it.
+	/// </summary>
+	/// <param name="Interval">The sprite record's <c>+0x80</c>.</param>
+	/// <param name="MadeSetByte">The record's <c>+0xbc</c> where the sprite is made; see <see cref="WrittenPerson"/>.</param>
+	public readonly record struct WrittenSprite( Sprite Picture, int Interval = 0x3e, int? MadeSetByte = null );
 
 	/// <summary>What <see cref="PutPeople"/> did, for the log.</summary>
 	/// <param name="UnmatchedSpriteSets">
-	/// Made sprites whose <c>+0xbc</c>, a byte of the loaded bank the original looks up as a sprite is started
-	/// (<c>FUN_00540c60</c>), was taken from a sprite of another set or kind, or left at one, for want of a sprite
-	/// of the same kind, bank and set in the file to copy it from.
+	/// Made sprites that were handed no <c>+0xbc</c>, their bank not being to hand, and found no sprite of the same
+	/// kind, bank and set in the file to copy it from: it was taken from a sprite of another set or kind, or left
+	/// at one.
 	/// </param>
+	/// <param name="Balloons">Balloons written, each on its guest's <c>mBalloonScript</c>.</param>
+	/// <param name="Bubbles">Thought bubbles written, each on its person's <c>mThoughtScript</c>.</param>
 	public readonly record struct PeopleWritten( int Kept, int Made, int Gone, int SpriteSlots, int LiveSprites,
-		int CellsHeaded, int UnmatchedSpriteSets );
+		int CellsHeaded, int UnmatchedSpriteSets, int Balloons = 0, int Bubbles = 0 );
 
 	/// <summary>The first header field of the five staff lists' heads, in the header's order.</summary>
 	private const int FirstHandymanField = 20;
@@ -222,10 +244,13 @@ public sealed partial class ParkWorld
 	/// things of the file's that are no person, in rising id.
 	/// </para>
 	/// <para>
-	/// <b>Deviations.</b> No balloon and no thought bubble is written: both slots are nought on everybody and the
-	/// file's sprites for them are let go. A made record's bytes that nothing here holds are nought, as the
-	/// original's own constructors leave them (<c>FUN_00518e00</c>, <c>FUN_0050ffe0</c>, <c>FUN_004758f0</c>),
-	/// <c>mTimeHired</c> among them.
+	/// <b>A balloon and a thought bubble</b> are each a sprite of the table, named by the slot in the person's
+	/// record: one the file holds for that person and the park still shows keeps its slot and is written over, one
+	/// made takes the lowest free after the people's own, and one gone is let go.
+	/// </para>
+	/// <para>
+	/// A made record's bytes that nothing here holds are nought, as the original's own constructors leave them
+	/// (<c>FUN_00518e00</c>, <c>FUN_0050ffe0</c>, <c>FUN_004758f0</c>).
 	/// </para>
 	/// </summary>
 	/// <exception cref="InvalidOperationException">The file's list, sprites or sets were not read whole, or a person cannot be written.</exception>
@@ -311,7 +336,7 @@ public sealed partial class ParkWorld
 			if ( IsPerson( record.Model ) && !running.ContainsKey( record.Id ) )
 			{
 				// Gone: their record is left out, and their sprite, balloon and bubble let go.
-				FreeSlots( body, record, sprites, own: true );
+				FreeSlots( body, record, sprites, own: true, balloon: true, bubble: true );
 				++gone;
 				continue;
 			}
@@ -319,7 +344,13 @@ public sealed partial class ParkWorld
 			list.Add( (record.Id, record.Model, body.AsSpan( record.At, record.Size ).ToArray(), false) );
 
 			if ( IsPerson( record.Model ) )
-				FreeSlots( body, record, sprites, own: running[record.Id].Sprite == null );
+			{
+				var kept = running[record.Id];
+
+				// A balloon's or a bubble's slot is let go only where the person shows none now: one they show is
+				// written over where it lies, or left alone where the slot holds another kind of sprite.
+				FreeSlots( body, record, sprites, own: kept.Sprite == null, balloon: kept.Balloon == null, bubble: kept.Bubble == null );
+			}
 		}
 
 		// The sprites: a kept person's slot is theirs still; a made one's is the lowest free, oldest first.
@@ -337,19 +368,60 @@ public sealed partial class ParkWorld
 
 			if ( slot == 0 || !sprites.ContainsKey( slot ) )
 			{
-				slot = 1;
-
-				while ( sprites.ContainsKey( slot ) )
-					++slot;
-
-				while ( slot >= slots )
-					slots += SpriteSlotsStep;
-
-				sprites[slot] = MadeSprite( slot, picture, sprites.Values, ref unmatched );
+				slot = FreeSlot();
+				sprites[slot] = MadeSprite( slot, picture, sprites.Values, person.StateSetByte ?? person.MadeSetByte, ref unmatched );
+			}
+			else if ( person.StateSetByte is { } setByte )
+			{
+				Put32( sprites[slot], SpriteSetByteAt, setByte );
 			}
 
 			PutSprite( sprites[slot], person, picture );
 			slotOf[id] = slot;
+		}
+
+		// The balloons and the bubbles, after the people's own: one the file holds for its person keeps its slot.
+		var balloonOf = new Dictionary<int, int>();
+		var bubbleOf = new Dictionary<int, int>();
+
+		foreach ( var (id, model, record, isMade) in list.Where( entry => IsPerson( entry.Model ) ).OrderBy( entry => entry.Id ) )
+		{
+			var person = running[id];
+
+			if ( person.Balloon is { } balloon && model == GuestModel )
+				balloonOf[id] = PutOther( isMade ? 0 : BinaryPrimitives.ReadInt32LittleEndian( record.AsSpan( BalloonScriptAt ) ), balloon );
+
+			if ( person.Bubble is { } bubble )
+				bubbleOf[id] = PutOther( isMade ? 0 : BinaryPrimitives.ReadInt32LittleEndian( record.AsSpan( ThoughtScriptAt ) ), bubble );
+		}
+
+		int FreeSlot()
+		{
+			var slot = 1;
+
+			while ( sprites.ContainsKey( slot ) )
+				++slot;
+
+			while ( slot >= slots )
+				slots += SpriteSlotsStep;
+
+			return slot;
+		}
+
+		int PutOther( int slot, WrittenSprite other )
+		{
+			// The file's slot is kept only where it holds a sprite of this kind: a slot let go, or one that names
+			// somebody's own picture, is not written over.
+			if ( !sprites.TryGetValue( slot, out var held )
+				|| BinaryPrimitives.ReadInt32LittleEndian( held.AsSpan( SpriteType ) ) != other.Picture.Type )
+			{
+				slot = FreeSlot();
+				sprites[slot] = MadeSprite( slot, other.Picture, sprites.Values, other.MadeSetByte, ref unmatched );
+			}
+
+			PutOtherSprite( sprites[slot], other );
+
+			return slot;
 		}
 
 		// The records.
@@ -362,7 +434,8 @@ public sealed partial class ParkWorld
 
 			var person = running[id];
 
-			PutPerson( record, person, slotOf.GetValueOrDefault( id ), isMade );
+			PutPerson( record, person, slotOf.GetValueOrDefault( id ), isMade,
+				balloonOf.GetValueOrDefault( id ), bubbleOf.GetValueOrDefault( id ) );
 
 			var cell = ((person.Person.RawY >> 8) * MapSize) + (person.Person.RawX >> 8);
 
@@ -472,7 +545,8 @@ public sealed partial class ParkWorld
 		writer.Flush();
 
 		report = new PeopleWritten( Kept: running.Count - made, Made: made, Gone: gone, SpriteSlots: slots,
-			LiveSprites: sprites.Count, CellsHeaded: headed, UnmatchedSpriteSets: unmatched );
+			LiveSprites: sprites.Count, CellsHeaded: headed, UnmatchedSpriteSets: unmatched,
+			Balloons: balloonOf.Count, Bubbles: bubbleOf.Count );
 
 		return stream.ToArray();
 	}
@@ -487,14 +561,19 @@ public sealed partial class ParkWorld
 
 	private const int ThoughtScriptAt = 390;
 
+	/// <summary>Where a member of staff's <c>mTimeHired</c> sits, eight bytes.</summary>
+	private const int TimeHiredAt = 491;
+
 	private const int BalloonScriptAt = 406;
 
-	/// <summary>Lets go of the slots a file's person names: the bubble's and the balloon's, and their own where <paramref name="own"/>.</summary>
-	private static void FreeSlots( byte[] body, ThingRecord record, SortedDictionary<int, byte[]> sprites, bool own )
+	/// <summary>Lets go of the slots a file's person names, each where its flag says so: their own, the balloon's and the bubble's.</summary>
+	private static void FreeSlots( byte[] body, ThingRecord record, SortedDictionary<int, byte[]> sprites, bool own,
+		bool balloon, bool bubble )
 	{
-		sprites.Remove( BinaryPrimitives.ReadInt32LittleEndian( body.AsSpan( record.At + ThoughtScriptAt ) ) );
+		if ( bubble )
+			sprites.Remove( BinaryPrimitives.ReadInt32LittleEndian( body.AsSpan( record.At + ThoughtScriptAt ) ) );
 
-		if ( record.Model == GuestModel )
+		if ( balloon && record.Model == GuestModel )
 			sprites.Remove( BinaryPrimitives.ReadInt32LittleEndian( body.AsSpan( record.At + BalloonScriptAt ) ) );
 
 		if ( own )
@@ -626,11 +705,17 @@ public sealed partial class ParkWorld
 
 	/// <summary>
 	/// A sprite record as the original's constructor leaves one (<c>FUN_004758f0</c>): its slot, state 1, the timer,
-	/// alpha 255 and scale 1, and nought where the constructor writes nought or nothing. Its <c>+0xbc</c> is copied
-	/// from the nearest sprite the file holds (<see cref="PeopleWritten.UnmatchedSpriteSets"/>), and its
-	/// <c>+0x7c</c> is nought, a time already past, so it takes its first turn at once.
+	/// alpha 255 and scale 1, and nought where the constructor writes nought or nothing. Its <c>+0x7c</c> is
+	/// nought, a time already past, so it takes its first turn at once.
+	///
+	/// <para>
+	/// Its <c>+0xbc</c> is <paramref name="setByte"/>, the frames a direction of the set it is made on
+	/// (<c>docs/exe/saves.md</c>, "A sprite's `+0xbc`"). Handed none, it is copied from the nearest sprite the file
+	/// holds and counted where that is no sprite of the same kind, bank and set
+	/// (<see cref="PeopleWritten.UnmatchedSpriteSets"/>).
+	/// </para>
 	/// </summary>
-	private static byte[] MadeSprite( int slot, Sprite picture, IEnumerable<byte[]> held, ref int unmatched )
+	private static byte[] MadeSprite( int slot, Sprite picture, IEnumerable<byte[]> held, int? setByte, ref int unmatched )
 	{
 		var record = new byte[SpriteRecordSize];
 
@@ -640,10 +725,16 @@ public sealed partial class ParkWorld
 		PutSingle( record, SpriteScaleAt, 1f );
 		PutSingle( record, SpriteScaleAt + 4, 1f );
 
+		if ( setByte is { } known )
+		{
+			Put32( record, SpriteSetByteAt, known );
+			return record;
+		}
+
 		int Field( byte[] other, int at ) => BinaryPrimitives.ReadInt32LittleEndian( other.AsSpan( at ) );
 
 		var best = 0;
-		var setByte = 1;
+		var copied = 1;
 
 		foreach ( var other in held )
 		{
@@ -655,13 +746,13 @@ public sealed partial class ParkWorld
 				+ (Field( other, SpriteBank ) == picture.Bank && Field( other, SpriteNumberAt ) == picture.SpriteNumber ? 4 : 0);
 
 			if ( score > best )
-				(best, setByte) = (score, Field( other, SpriteSetByteAt ));
+				(best, copied) = (score, Field( other, SpriteSetByteAt ));
 		}
 
 		if ( best < 7 )
 			++unmatched;
 
-		Put32( record, SpriteSetByteAt, setByte );
+		Put32( record, SpriteSetByteAt, copied );
 
 		return record;
 	}
@@ -684,13 +775,31 @@ public sealed partial class ParkWorld
 		Put32( record, SpriteFacing, picture.Facing );
 	}
 
+	/// <summary>Writes a balloon or a bubble over its sprite's record: the program, the interval, the place, alpha, kind, bank, set and frame.</summary>
+	private static void PutOtherSprite( byte[] record, WrittenSprite other )
+	{
+		var picture = other.Picture;
+
+		Put32( record, SpritePcAt, picture.Pc );
+		Put32( record, SpriteScriptAt, picture.Script );
+		Put32( record, SpriteIntervalAt, other.Interval );
+		PutSingle( record, SpriteX, picture.X );
+		PutSingle( record, SpriteHeight, picture.Height );
+		PutSingle( record, SpriteY, picture.Y );
+		Put32( record, SpriteAlpha, picture.Alpha );
+		Put32( record, SpriteType, picture.Type );
+		Put32( record, SpriteBank, picture.Bank );
+		Put32( record, SpriteNumberAt, picture.SpriteNumber );
+		Put32( record, SpriteFrame, picture.Frame );
+	}
+
 	/// <summary>
 	/// Writes a person over their record, at the offsets <see cref="ReadPerson"/>, <see cref="ReadNavigator"/>,
 	/// <see cref="ReadGuest"/> and <see cref="ReadStaff"/> read them at (FileFormats <c>saves.md</c>, "The person
 	/// base"). What is not named here is left as the record has it: the file's on a kept person, nought on a made
 	/// one.
 	/// </summary>
-	private static void PutPerson( byte[] record, WrittenPerson written, int slot, bool made )
+	private static void PutPerson( byte[] record, WrittenPerson written, int slot, bool made, int balloonSlot, int bubbleSlot )
 	{
 		var person = written.Person;
 		var navigator = person.Navigator;
@@ -714,7 +823,7 @@ public sealed partial class ParkWorld
 		Put32( record, 242, person.Angle & 0x7ff );              // mSpriteAngle
 		Put32( record, 246, person.SpriteBank );                 // mSpriteID
 		Put32( record, 386, written.LastThought );               // mLastThought
-		Put32( record, ThoughtScriptAt, 0 );                     // mThoughtScript: no bubble is written
+		Put32( record, ThoughtScriptAt, bubbleSlot );            // mThoughtScript
 		Put32( record, 394, written.TimeBubbleShown );           // mTimeBubbleShown
 
 		if ( person.Pace is { } pace )
@@ -769,7 +878,7 @@ public sealed partial class ParkWorld
 			record[36] = (byte)guest.WalkingTurns;               // mCount
 			Put32( record, 398, guest.ArrivalDate );
 			Put32( record, 402, guest.ArrivalIndex );            // mArrivalIndex
-			Put32( record, BalloonScriptAt, 0 );                 // mBalloonScript: no balloon is written
+			Put32( record, BalloonScriptAt, balloonSlot );       // mBalloonScript
 			Put32( record, 410, guest.BeenAdmitted );
 			Put32( record, 414, guest.Cash );
 			Put32( record, 418, guest.ExitLevel );
@@ -823,6 +932,7 @@ public sealed partial class ParkWorld
 			Put16( record, 481, staff.RestArea );
 			Put32( record, 483, staff.State );
 			Put32( record, 487, staff.TimeStartedIdling );
+			BinaryPrimitives.WriteInt64LittleEndian( record.AsSpan( TimeHiredAt, 8 ), staff.TimeHired );
 			PutSingle( record, 499, staff.Tiredness );
 
 			switch ( person.Model )

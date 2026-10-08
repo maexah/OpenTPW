@@ -113,6 +113,13 @@ public sealed class Staff
 	public int TimeStartedResearching { get; internal set; }
 
 	/// <summary>
+	/// The park's calendar as they were made - <c>mTimeHired</c>, <c>+0x1f0</c>, a <c>FILETIME</c>: the staff
+	/// constructor stamps it (<c>FUN_00504b90</c>, <c>0x00504bb8</c>) and a load reads the file's over it. The staff
+	/// window's days employed are measured from it (<c>FUN_00505b70</c>), which nothing here shows yet.
+	/// </summary>
+	public long TimeHired { get; }
+
+	/// <summary>
 	/// The dword at <c>+0x188</c>: set as a member sets off for the picket (<c>0x00506a89</c>) and cleared as that
 	/// walk ends (<c>FUN_005056e0</c>). The <c>staff</c> census prints it; what reads it in the original is not traced.
 	/// </summary>
@@ -230,6 +237,7 @@ public sealed class Staff
 		TimeStartedCleaning = saved.TimeStartedCleaning;
 		TimeStartedEntertaining = saved.TimeStartedEntertaining;
 		TimeStartedResearching = saved.TimeStartedResearching;
+		TimeHired = saved.TimeHired;
 		PatrolBottomLeft = saved.PatrolBottomLeft;
 		PatrolTopRight = saved.PatrolTopRight;
 		Name = saved.Name;

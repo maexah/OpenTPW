@@ -42,6 +42,28 @@ public sealed class Thoughts
 		(4, 0), (2, 0), (6, 1), (7, 0), (11, 0), (15, 0), (16, 3), (17, 2), (18, 0), (19, 0), (20, 0)
 	];
 
+	/// <summary>
+	/// The script a bubble of a picture is made on, as a word of the sprite scripts' array, which a park file names
+	/// it by. SetThought's 22 are six words apart from <c>0x0074f190</c>: set the picture, show frame 0, jump back.
+	/// They set pictures 0 to 15 in order, then 21, then 16 to 20.
+	/// </summary>
+	public static int ScriptOf( int bank, int set )
+	{
+		var picture = (bank << 4) | set;
+
+		return FirstScript + (WordsAScript * (picture < 16 ? picture : picture == 21 ? 16 : picture + 1));
+	}
+
+	/// <summary>
+	/// How far into its script a bubble that has shown its frame rests, in words: past the two instructions that
+	/// set the picture and show it, on the jump back. Every saved bubble but one just made rests there.
+	/// </summary>
+	public const int ShownAt = 4;
+
+	private const int FirstScript = 1462;
+
+	private const int WordsAScript = 6;
+
 	/// <summary>The thought last set, shown or not - <c>mLastThought</c>. Nought before any.</summary>
 	public int Last { get; private set; }
 

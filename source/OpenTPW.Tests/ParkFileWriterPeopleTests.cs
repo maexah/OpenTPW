@@ -155,7 +155,8 @@ public class ParkFileWriterPeopleTests
 	[TestMethod]
 	public void AGuestMadeAndAHireAreWrittenWholeAheadOfTheFilesThings()
 	{
-		var people = new ParkPeople( shipped );
+		// Seeded: a hire put down thinks "very happy" on one draw in sixteen, and that bubble is a sprite of the file's.
+		var people = new ParkPeople( shipped, staffRandom: new Random( 1 ) );
 		var guest = people.Admit( 47, 21 );
 		var hire = people.Hire( new ParkStaffPool.Candidate( Id: 999, Kind: 4, Name: "Ada Test", Grade: 2, Costume: 0, Wage: 69 ), 47, 21 );
 		var member = people.Staff.Single( staff => staff.ThingId == hire );
@@ -166,6 +167,7 @@ public class ParkFileWriterPeopleTests
 		var written = Written( people, out var report );
 		var free = Enumerable.Range( 1, 99 ).Where( slot => shipped.Sprites.All( sprite => sprite.Slot != slot ) ).Take( 2 ).ToArray();
 
+		Assert.AreEqual( 0, report.Bubbles, "this seed's hire has no thought, or the counts below prove nothing" );
 		Assert.AreEqual( (18, 2, 0, 100, 20), (report.Kept, report.Made, report.Gone, report.SpriteSlots, report.LiveSprites) );
 		CollectionAssert.AreEqual( new[] { hire, guest }.Concat( shipped.Things.Select( thing => thing.ThingId ) ).ToList(),
 			written.Things.Select( thing => thing.ThingId ).ToList(), "the made first, the newest of them first" );
@@ -218,7 +220,8 @@ public class ParkFileWriterPeopleTests
 			BitConverter.ToInt32( record, 390 ), BitConverter.ToInt32( record, 406 )) );
 		Assert.IsTrue( record.AsSpan( 43, 32 ).ToArray().All( b => b == 0 ) && record.AsSpan( 254, 132 ).ToArray().All( b => b == 0 ),
 			"the navigator's force, formation and axes and the event ring are nought, as the constructors leave them" );
-		Assert.IsTrue( written.RecordOf( hire )!.AsSpan( 491, 8 ).ToArray().All( b => b == 0 ), "mTimeHired is not written" );
+		Assert.AreEqual( ParkWorld.StaffState.FileTimeOf( people.State.CalendarNow ), BitConverter.ToInt64( written.RecordOf( hire )!, 491 ),
+			"mTimeHired is the park's calendar as the hire was made" );
 
 		var chain = written.ChainAt( 47, 21 );
 
@@ -522,22 +525,364 @@ public class ParkFileWriterPeopleTests
 		Assert.AreEqual( 17, report.LiveSprites );
 	}
 
-	/// <summary>No balloon and no thought bubble is written: each is counted, the guest's slots are nought and the
-	/// file's sprites for them are let go.</summary>
-	[TestMethod]
-	public void ABalloonIsCountedAndNotWritten()
+	/// <summary>The game's own sprite bank by its kind and its number among the kind's, as the drawing packs them.</summary>
+	private static SpriteBankFile? Bank( int kind, int bank )
 	{
-		var people = new ParkPeople( shipped );
-		var peep = people.Guests.Values.First();
+		if ( ParkGuestSprites.FolderFor( kind, "Jungle" ) is not { } folder )
+			return null;
 
-		peep.Balloon = Balloon.Make( peep.ThingId, 4, now: 0 );
+		var files = ParkGuestSprites.BanksIn( FileSystem, folder, kind );
+
+		if ( bank < 0 || bank >= files.Length )
+			return null;
+
+		using var stream = FileSystem.OpenRead( files[bank] );
+
+		return new SpriteBankFile( stream );
+	}
+
+	private int[] FreeSlots( ParkWorld park, int count ) =>
+		[.. Enumerable.Range( 1, 99 ).Where( slot => park.Sprites.All( sprite => sprite.Slot != slot ) ).Take( count )];
+
+	private static int SetByte( ParkWorld park, int slot ) => BitConverter.ToInt32( park.SpriteRecordOf( slot )!, 0xbc );
+
+	/// <summary>
+	/// A held balloon is written as a sprite of its own on the lowest free slot, which the guest's
+	/// <c>mBalloonScript</c> names: kind 10, bank 0, the script, the set and the frame it is on, where it was last
+	/// placed, and its own set's frames a direction at <c>+0xbc</c>. Nobody else's slot is set and nothing is counted.
+	/// </summary>
+	[TestMethod]
+	public void AHeldBalloonIsWrittenAsItsOwnSprite()
+	{
+		var people = new ParkPeople( shipped ) { BankAt = Bank };
+		var peep = people.Guests.Values.First();
+		var balloon = Balloon.Make( peep.ThingId, 4, now: 0 )!;
+
+		(balloon.X, balloon.Height, balloon.Y) = (431.5f, 1.125f, 222.25f);
+		balloon.Sprite.Interval = 0x4a;
+		balloon.Sprite.Step( 1000 );
+		Assert.AreEqual( Balloon.HeldScript + 2, balloon.Sprite.Pc, "its script has shown its frame, or the program counter below proves nothing" );
+		peep.Balloon = balloon;
 		peep.BalloonLife = 40;
 
 		var written = Written( people, out var report );
-		var guest = written.People.Single( person => person.ThingId == peep.ThingId ).Guest!.Value;
+		var slot = FreeSlots( shipped, 1 )[0];
+		var colour = Balloon.ColourFor( peep.ThingId, 4 );
 
-		Assert.AreEqual( (0, 40, 18), (guest.BalloonScript, guest.RemainingBalloonLife, report.LiveSprites) );
-		Assert.AreEqual( 1, Unimplemented.Summary.Single( gap => gap.What == "SAVE_PARK_BALLOON" ).Times );
+		foreach ( var person in written.People.Where( person => person.Guest != null ) )
+			Assert.AreEqual( person.ThingId == peep.ThingId ? slot : 0, person.Guest!.Value.BalloonScript, $"mBalloonScript of {person.ThingId}" );
+
+		Assert.AreEqual( (40, 19, 1, 0, 0), (written.People.Single( person => person.ThingId == peep.ThingId ).Guest!.Value.RemainingBalloonLife,
+			report.LiveSprites, report.Balloons, report.Bubbles, report.UnmatchedSpriteSets) );
+		Assert.AreEqual( Carried + 0x118, length, "one sprite more" );
+
+		var sprite = written.Sprites.Single( one => one.Slot == slot );
+
+		Assert.AreEqual( (Balloon.SpriteKind, 0, colour, 0, Balloon.HeldScript, Balloon.HeldScript + 2, 255),
+			(sprite.Type, sprite.Bank, sprite.SpriteNumber, sprite.Frame, sprite.Script, sprite.Pc, sprite.Alpha) );
+		Assert.AreEqual( (431.5f, 1.125f, 222.25f), (sprite.X, sprite.Height, sprite.Y), "where it was last placed" );
+
+		var raw = written.SpriteRecordOf( slot )!;
+
+		Assert.AreEqual( (slot, 0x4a, 1f, Bank( Balloon.SpriteKind, 0 )!.Sets[colour].FramesPerDirection, 2),
+			(BitConverter.ToInt32( raw, 4 ), BitConverter.ToInt32( raw, 0x80 ), BitConverter.ToSingle( raw, 0xa4 ), SetByte( written, slot ), SetByte( written, slot )),
+			"its slot, its interval, the scale, and two frames a direction: whole and burst" );
+		Assert.IsFalse( Unimplemented.Summary.Any( gap => gap.What.StartsWith( "SAVE_PARK_BALLOON" ) || gap.What == "SAVE_PARK_THOUGHT_BUBBLE" ) );
+
+		// The written park's balloon is the guest's again on a load.
+		TestRun.DeleteEvery<ParkPeople>();
+
+		var again = new ParkPeople( written ).Guests[peep.ThingId].Balloon;
+
+		Assert.IsNotNull( again );
+		Assert.AreEqual( (colour, 431.5f, 222.25f), (again.Sprite.Set, again.X, again.Y) );
+	}
+
+	/// <summary>
+	/// A balloon the file holds for a guest who holds it still keeps its slot and is written over where it lies; one
+	/// whose guest holds none now is let go, and its slot is the next sprite's to take.
+	/// </summary>
+	[TestMethod]
+	public void ABalloonTheFileHoldsKeepsItsSlotAndOneGoneIsLetGo()
+	{
+		var first = new ParkPeople( shipped ) { BankAt = Bank };
+		var keeper = first.Guests.Values.First();
+		var loser = first.Guests.Values.Last();
+
+		keeper.Balloon = Balloon.Make( keeper.ThingId, 4, now: 0 );
+		loser.Balloon = Balloon.Make( loser.ThingId, 4, now: 0 );
+
+		var held = Written( first, out _ );
+		var slots = FreeSlots( shipped, 2 );
+		var order = new[] { keeper.ThingId, loser.ThingId }.Order().ToArray();
+		int Named( ParkWorld park, int thing ) => park.People.Single( person => person.ThingId == thing ).Guest!.Value.BalloonScript;
+
+		Assert.AreEqual( (slots[0], slots[1]), (Named( held, order[0] ), Named( held, order[1] )), "the lowest free slots, the lower id first" );
+		TestRun.DeleteEvery<ParkPeople>();
+
+		var people = new ParkPeople( held ) { BankAt = Bank };
+
+		Assert.IsNotNull( people.Guests[keeper.ThingId].Balloon );
+		people.Guests[keeper.ThingId].Balloon!.X = 99.5f;
+		people.Guests[loser.ThingId].Balloon = null;
+
+		var again = new ParkWorld( ParkFileWriter.Body( held, new ParkFileWriter.Running( held.GameTick, false, 0, 0, held.Camera.Saved!.Value,
+			People: people.Written( Level.WrittenThings( held ).Contains ) ), out var report ) );
+
+		Assert.IsNull( again.Problem );
+		Assert.AreEqual( (Named( held, keeper.ThingId ), 0, 19, 1), (Named( again, keeper.ThingId ), Named( again, loser.ThingId ), report!.Value.LiveSprites, report.Value.Balloons) );
+		Assert.AreEqual( 99.5f, again.Sprites.Single( sprite => sprite.Slot == Named( again, keeper.ThingId ) ).X );
+		Assert.AreEqual( 1, again.Sprites.Count( sprite => sprite.Type == Balloon.SpriteKind ) );
+		Assert.IsNull( again.SpriteRecordOf( Named( held, loser.ThingId ) ), "the slot is empty" );
+	}
+
+	/// <summary>
+	/// A thought bubble is written as a sprite of its own on the slot the person's <c>mThoughtScript</c> names, a
+	/// guest's and a member of staff's alike: kind 9, bank 0, its picture, the picture's script four words in, over
+	/// the person at 2.5, and bank 0's set 0's frames a direction at <c>+0xbc</c> whatever the picture.
+	/// </summary>
+	[TestMethod]
+	public void AThoughtBubbleIsWrittenAsItsOwnSprite()
+	{
+		var people = new ParkPeople( shipped ) { BankAt = Bank };
+		var peep = people.Guests.Values.First();
+		var member = people.Staff[0];
+
+		Assert.IsTrue( peep.Thoughts.Set( Thoughts.Confused, shipped.GameTick ) && member.Thoughts.Set( 0x14, shipped.GameTick ) );
+		Assert.AreEqual( ((0, 15), (1, 2)), (peep.Thoughts.Bubble!.Value, member.Thoughts.Bubble!.Value), "a blue question mark and a pink sleeper of the second bank" );
+
+		var written = Written( people, out var report );
+		var slots = FreeSlots( shipped, 2 );
+		var lower = peep.ThingId < member.ThingId;
+
+		Assert.AreEqual( (19 + 1, 0, 2, 0), (report.LiveSprites, report.Balloons, report.Bubbles, report.UnmatchedSpriteSets) );
+
+		// The scripts' own words: 0x0074f2f8 sets picture 15, and 0x0074f358, the twentieth, picture 18.
+		foreach ( var (thing, slot, picture, script, position) in new[]
+		{
+			(peep.ThingId, slots[lower ? 0 : 1], 15, 1552, peep.Navigator.Position),
+			(member.ThingId, slots[lower ? 1 : 0], 18, 1576, member.Navigator.Position)
+		} )
+		{
+			var record = written.RecordOf( thing )!;
+
+			Assert.AreEqual( (slot, shipped.GameTick), (BitConverter.ToInt32( record, 390 ), BitConverter.ToInt32( record, 394 )), $"mThoughtScript and mTimeBubbleShown of {thing}" );
+
+			var sprite = written.Sprites.Single( one => one.Slot == slot );
+
+			Assert.AreEqual( (Thoughts.SpriteKind, 0, picture, 0, script, script + 4, 255),
+				(sprite.Type, sprite.Bank, sprite.SpriteNumber, sprite.Frame, sprite.Script, sprite.Pc, sprite.Alpha), $"the bubble of {thing}" );
+			Assert.AreEqual( (position.X * 10f / FixedVector.One, 2.5f, position.Y * 10f / FixedVector.One), (sprite.X, sprite.Height, sprite.Y) );
+			Assert.AreEqual( (1, Bank( Thoughts.SpriteKind, 0 )!.Sets[0].FramesPerDirection), (SetByte( written, slot ), SetByte( written, slot )) );
+		}
+
+		Assert.AreEqual( 0, written.People.Single( person => person.ThingId == people.Guests.Values.Last().ThingId ).Guest!.Value.ThoughtScript );
+		Assert.IsFalse( Unimplemented.Summary.Any( gap => gap.What == "SAVE_PARK_THOUGHT_BUBBLE" ) );
+	}
+
+	/// <summary>
+	/// The 22 thought scripts are six words apart from word 1462 (<c>0x0074f190</c>) and set these pictures, read
+	/// from the executable's own words: 0 to 15 in order, then 21, then 16 to 20. The played saves' bubbles pair the
+	/// same way (script 1558 with picture 21, 1564 with 16, 1576 with 18).
+	/// </summary>
+	[TestMethod]
+	public void AThoughtsScriptIsTheOneThatSetsItsPicture()
+	{
+		int[] sets = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 21, 16, 17, 18, 19, 20];
+
+		for ( var script = 0; script < sets.Length; ++script )
+			Assert.AreEqual( 1462 + (6 * script), Thoughts.ScriptOf( sets[script] >> 4, sets[script] & 0xf ), $"picture {sets[script]}" );
+
+		for ( var thought = 1; thought <= 22; ++thought )
+		{
+			var (bank, set, _) = Thoughts.PictureOf( thought );
+
+			Assert.IsTrue( Thoughts.ScriptOf( bank, set ) is >= 1462 and <= 1462 + (6 * 21) );
+		}
+	}
+
+	/// <summary>
+	/// A bubble the file holds for a person who shows one still keeps its slot and takes the new picture; and a slot
+	/// a guest's <c>mBalloonScript</c> names that holds no balloon is not written over: the balloon goes on a slot of
+	/// its own.
+	/// </summary>
+	[TestMethod]
+	public void AKeptBubbleKeepsItsSlotAndASlotOfAnotherKindIsNotWrittenOver()
+	{
+		var first = new ParkPeople( shipped ) { BankAt = Bank };
+		var thinker = first.Guests.Values.First();
+		var holder = first.Guests.Values.Last();
+
+		Assert.IsTrue( thinker.Thoughts.Set( Thoughts.Confused, shipped.GameTick ) );
+
+		var body = ParkFileWriter.Body( shipped, Running( first ) );
+		var held = new ParkWorld( body );
+		var slot = BitConverter.ToInt32( held.RecordOf( thinker.ThingId )!, 390 );
+		var own = held.People.Single( person => person.ThingId == thinker.ThingId ).SpriteSlot;
+
+		Assert.AreEqual( FreeSlots( shipped, 1 )[0], slot );
+
+		// The holder's record is made to name the thinker's own sprite as its balloon.
+		BitConverter.TryWriteBytes( body.AsSpan( body.AsSpan().IndexOf( held.RecordOf( holder.ThingId ) ) + 406 ), own );
+		TestRun.DeleteEvery<ParkPeople>();
+
+		var doctored = new ParkWorld( body );
+		var people = new ParkPeople( doctored ) { BankAt = Bank };
+
+		Assert.IsNull( people.Guests[holder.ThingId].Balloon, "a slot that holds no balloon gives none at a load" );
+		people.Guests[holder.ThingId].Balloon = Balloon.Make( holder.ThingId, 4, now: 0 );
+		Assert.IsTrue( people.Guests[thinker.ThingId].Thoughts.Set( 1, doctored.GameTick + 100 ) );
+
+		var again = new ParkWorld( ParkFileWriter.Body( doctored, new ParkFileWriter.Running( doctored.GameTick, false, 0, 0, doctored.Camera.Saved!.Value,
+			People: people.Written( Level.WrittenThings( doctored ).Contains ) ), out var report ) );
+
+		Assert.IsNull( again.Problem );
+		Assert.AreEqual( (slot, 8, 1, 1), (BitConverter.ToInt32( again.RecordOf( thinker.ThingId )!, 390 ),
+			again.Sprites.Single( sprite => sprite.Slot == slot ).SpriteNumber, report!.Value.Bubbles, report.Value.Balloons), "the same slot, thought 1's picture" );
+
+		var balloon = again.People.Single( person => person.ThingId == holder.ThingId ).Guest!.Value.BalloonScript;
+
+		Assert.IsTrue( balloon != own && balloon != slot && balloon != 0 );
+		Assert.AreEqual( (2, 2), (BitConverter.ToInt32( doctored.SpriteRecordOf( own )!, 0x18 ), BitConverter.ToInt32( again.SpriteRecordOf( own )!, 0x18 )),
+			"and is the file's record still, not one made anew" );
+		Assert.AreEqual( (ParkSpriteBanks.ChildKind, Balloon.SpriteKind),
+			(again.Sprites.Single( sprite => sprite.Slot == own ).Type, again.Sprites.Single( sprite => sprite.Slot == balloon ).Type), "the thinker's own sprite is theirs still" );
+	}
+
+	/// <summary>
+	/// A bubble the file holds over somebody who shows none now is let go: its slot is empty, the record names none
+	/// and the table holds no bubble. A load here makes no bubble again, so the loaded park's people show none.
+	/// </summary>
+	[TestMethod]
+	public void ABubbleTheFileHoldsIsLetGoWhenItsPersonShowsNone()
+	{
+		var first = new ParkPeople( shipped ) { BankAt = Bank };
+		var thinker = first.Guests.Values.First();
+
+		Assert.IsTrue( thinker.Thoughts.Set( Thoughts.Confused, shipped.GameTick ) );
+
+		var held = Written( first, out var before );
+		var slot = BitConverter.ToInt32( held.RecordOf( thinker.ThingId )!, 390 );
+
+		Assert.AreEqual( (1, 19, Thoughts.SpriteKind), (before.Bubbles, before.LiveSprites, held.Sprites.Single( sprite => sprite.Slot == slot ).Type) );
+		TestRun.DeleteEvery<ParkPeople>();
+
+		var people = new ParkPeople( held ) { BankAt = Bank };
+
+		Assert.IsNull( people.Guests[thinker.ThingId].Thoughts.Bubble );
+
+		var again = new ParkWorld( ParkFileWriter.Body( held, new ParkFileWriter.Running( held.GameTick, false, 0, 0, held.Camera.Saved!.Value,
+			People: people.Written( Level.WrittenThings( held ).Contains ) ), out var report ) );
+
+		Assert.IsNull( again.Problem );
+		Assert.AreEqual( (0, 18, 0), (report!.Value.Bubbles, report.Value.LiveSprites, BitConverter.ToInt32( again.RecordOf( thinker.ThingId )!, 390 )) );
+		Assert.IsNull( again.SpriteRecordOf( slot ), "the slot is empty" );
+		Assert.IsFalse( again.Sprites.Any( sprite => sprite.Type == Thoughts.SpriteKind ) );
+	}
+
+	/// <summary>A balloon let go and still bursting is nobody's, is not written, and is counted.</summary>
+	[TestMethod]
+	public void ABurstingBalloonIsCountedAndNotWritten()
+	{
+		var people = new ParkPeople( shipped ) { BankAt = Bank };
+		var bursting = (List<Balloon>)typeof( ParkPeople ).GetField( "_bursting", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance )!.GetValue( people )!;
+
+		bursting.Add( Balloon.Make( 20, 4, now: 0 )! );
+
+		Written( people, out var report );
+
+		Assert.AreEqual( (18, 0), (report.LiveSprites, report.Balloons) );
+		Assert.AreEqual( 1, Unimplemented.Summary.Single( gap => gap.What == "SAVE_PARK_BALLOON_LET_GO" ).Times );
+	}
+
+	/// <summary>
+	/// A made sprite's <c>+0xbc</c> is the frames a direction of the set it is made on, which for a person is their
+	/// bank's set 0: nothing is left to copy and nothing unmatched. A kept sprite keeps the file's until a state's
+	/// animation starts on it, which writes its own set's.
+	/// </summary>
+	[TestMethod]
+	public void ASpritesSetByteIsItsBanksAndAStateAnimationsAfterOne()
+	{
+		var people = new ParkPeople( shipped ) { BankAt = Bank };
+		var guest = people.Admit( 47, 21 );
+		var hire = people.Hire( new ParkStaffPool.Candidate( Id: 999, Kind: 4, Name: "Ada Test", Grade: 2, Costume: 0, Wage: 69 ), 47, 21 );
+		var entertainer = shipped.People.Single( person => person.Model == 6 );
+		var bank = Bank( entertainer.SpriteKind, entertainer.SpriteBank )!;
+		var group = bank.StateGroups[0];
+
+		// The made guest walks: the set at +0xb4 is the walk's, eight frames a direction, and +0xbc is still set 0's.
+		var walking = people.SpriteFor( guest )!;
+
+		walking.Start( SpriteScript.Walking );
+		walking.Step( 1_000_000 );
+		Assert.AreEqual( 8, Bank( ParkSpriteBanks.ChildKind, people.Guests[guest].SpriteBank )!.Sets[walking.Set].FramesPerDirection,
+			"the made guest is on a set of another count, or the next assertions prove nothing" );
+
+		var written = Written( people, out var report );
+		int Of( ParkWorld park, int thing ) => SetByte( park, park.People.Single( person => person.ThingId == thing ).SpriteSlot );
+
+		Assert.AreEqual( 0, report.UnmatchedSpriteSets );
+		Assert.AreEqual( (Bank( ParkSpriteBanks.ChildKind, people.Guests[guest].SpriteBank )!.Sets[0].FramesPerDirection, 1), (Of( written, guest ), Of( written, guest )), "a child stands on one frame a direction" );
+		Assert.AreEqual( (Bank( 8, 0 )!.Sets[0].FramesPerDirection, 4), (Of( written, hire ), Of( written, hire )), "a researcher on four" );
+		Assert.AreEqual( Of( shipped, entertainer.ThingId ), Of( written, entertainer.ThingId ), "a kept sprite keeps the file's" );
+
+		var performing = bank.Sets[group.Set - 1].FramesPerDirection;
+
+		Assert.AreNotEqual( performing, Of( shipped, entertainer.ThingId ), "the group's set has another count, or this proves nothing" );
+		Assert.IsTrue( people.SpriteFor( entertainer.ThingId )!.StartState( group, performing ) );
+		Assert.IsTrue( people.SpriteFor( hire )!.StartState( group, 6 ) );
+
+		var after = Written( people, out _ );
+
+		Assert.AreEqual( performing, Of( after, entertainer.ThingId ), "a state's animation leaves its own set's" );
+		Assert.AreEqual( 6, Of( after, hire ), "over a made sprite's too" );
+	}
+
+	/// <summary>
+	/// The rule the made sprites are written by holds for every sprite of the shipped park: each person's
+	/// <c>+0xbc</c> is the frames a direction of their bank's set 0.
+	/// </summary>
+	[TestMethod]
+	public void EveryShippedSpritesSetByteIsItsBanksSetNoughts()
+	{
+		Assert.AreEqual( 18, shipped.Sprites.Count );
+
+		foreach ( var sprite in shipped.Sprites )
+			Assert.AreEqual( Bank( sprite.Type, sprite.Bank )!.Sets[0].FramesPerDirection, SetByte( shipped, sprite.Slot ), $"slot {sprite.Slot}, kind {sprite.Type} bank {sprite.Bank}" );
+	}
+
+	/// <summary>
+	/// <c>mTimeHired</c> is read as a <c>FILETIME</c>: the shipped four were made on tick 15 and the researcher on 648,
+	/// at 3,750 seconds of the calendar a tick. A hire is stamped with the park's calendar, the file's keep theirs, and
+	/// a load reads both back.
+	/// </summary>
+	[TestMethod]
+	public void TimeHiredIsTheParksCalendarAsAMemberIsMade()
+	{
+		var start = new DateTime( 2000, 1, 1 );
+
+		CollectionAssert.AreEquivalent(
+			new[] { start.AddSeconds( 15 * 3750 ), start.AddSeconds( 15 * 3750 ), start.AddSeconds( 15 * 3750 ), start.AddSeconds( 15 * 3750 ), start.AddSeconds( 648 * 3750 ) },
+			shipped.People.Where( person => person.Staff != null ).Select( person => ParkWorld.StaffState.HiredWhenOf( person.Staff!.Value.TimeHired )!.Value ).ToList() );
+		Assert.AreEqual( 0x1bf546e1d0a1900, ParkWorld.StaffState.FileTimeOf( start.AddSeconds( 15 * 3750 ) ) );
+		Assert.IsNull( ParkWorld.StaffState.HiredWhenOf( -1 ) );
+
+		var people = new ParkPeople( shipped );
+		var hire = people.Hire( new ParkStaffPool.Candidate( Id: 999, Kind: 4, Name: "Ada Test", Grade: 2, Costume: 0, Wage: 69 ), 47, 21 );
+		var stamp = ParkWorld.StaffState.FileTimeOf( start.AddSeconds( shipped.GameTick * 3750L ) );
+
+		Assert.AreEqual( stamp, people.Staff.Single( member => member.ThingId == hire ).TimeHired );
+
+		var written = Written( people, out _ );
+
+		foreach ( var person in written.People.Where( person => person.Staff != null ) )
+		{
+			Assert.AreEqual( person.ThingId == hire ? stamp : shipped.People.Single( one => one.ThingId == person.ThingId ).Staff!.Value.TimeHired,
+				person.Staff!.Value.TimeHired, $"mTimeHired of {person.ThingId}" );
+		}
+
+		TestRun.DeleteEvery<ParkPeople>();
+		Assert.AreEqual( stamp, new ParkPeople( written ).Staff.Single( member => member.ThingId == hire ).TimeHired, "and a load reads it back" );
 	}
 
 	/// <summary>When every slot is taken the table grows by fifty, as the original's does.</summary>

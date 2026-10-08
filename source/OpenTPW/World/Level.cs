@@ -548,13 +548,14 @@ public class Level
 
 		if ( peopleWritten is { } report )
 		{
-			// A made sprite's +0xbc is a byte of its bank no reader here holds; one written without a like sprite
-			// in the file to copy it from is counted.
+			// A made sprite's +0xbc is a byte of its bank; one whose bank was not to hand, written without a like
+			// sprite in the file to copy it from, is counted.
 			for ( var i = 0; i < report.UnmatchedSpriteSets; ++i )
 				Unimplemented.Report( "SAVE_PARK_SPRITE_SET_BYTE" );
 
 			Log.Info( $"Save: {report.Kept} people kept, {report.Made} made, {report.Gone} gone; " +
-				$"{report.LiveSprites} sprites in {report.SpriteSlots} slots; {report.CellsHeaded} cells headed anew" );
+				$"{report.LiveSprites} sprites in {report.SpriteSlots} slots, {report.Balloons} of them balloons and " +
+				$"{report.Bubbles} bubbles; {report.CellsHeaded} cells headed anew" );
 		}
 
 		return path;

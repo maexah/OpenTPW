@@ -715,6 +715,9 @@ public sealed partial class ParkWorld : IParkInitialState
 	/// keeps to, each as a <b>packed cell id</b> - <c>y * 128 + 1 + x</c>, the same one-based packing the
 	/// destination setter takes. Nought means no area, which is the whole map.
 	/// </param>
+	/// <param name="TimeHired">
+	/// <c>mTimeHired</c> - the park's calendar as the member was made, a <c>FILETIME</c> (<see cref="FileTimeOf"/>).
+	/// </param>
 	/// <param name="RestArea">
 	/// <c>mRestArea</c> - the thing id of the rest area they are walking to or sitting in, or nought. A
 	/// handle compared with <c>==</c>, not an index.
@@ -726,8 +729,20 @@ public sealed partial class ParkWorld : IParkInitialState
 		int State, int PayGrade, float Happiness, float Tiredness, int JobsDone,
 		int PatrolBottomLeft, int PatrolTopRight, int RestArea, int PercentageThroughGrade,
 		int TimeStartedIdling, string Name = "", int ToiletToClean = 0, int TimeStartedCleaning = 0,
-		int TimeStartedEntertaining = 0, int TimeStartedResearching = 0 )
+		int TimeStartedEntertaining = 0, int TimeStartedResearching = 0, long TimeHired = 0 )
 	{
+		/// <summary>
+		/// A time on the park's calendar as <c>mTimeHired</c> holds one: a <c>FILETIME</c>, the hundreds of
+		/// nanoseconds since 1601 (<c>FUN_004f8690</c>'s answer, stored whole at <c>0x00504bc4</c>).
+		/// </summary>
+		public static long FileTimeOf( DateTime when ) => (when - FileTimeEpoch).Ticks;
+
+		/// <summary>An <c>mTimeHired</c> as a date, or null where it is out of a date's range.</summary>
+		public static DateTime? HiredWhenOf( long timeHired )
+			=> timeHired >= 0 && timeHired <= (DateTime.MaxValue - FileTimeEpoch).Ticks ? FileTimeEpoch.AddTicks( timeHired ) : null;
+
+		private static readonly DateTime FileTimeEpoch = new( 1601, 1, 1 );
+
 		/// <summary>
 		/// How many behaviours a member of staff has. Eight are shared by every kind; the numbers above
 		/// these belong to one kind each, so a state outside the whole range reads as a bad record.
@@ -2311,7 +2326,8 @@ public sealed partial class ParkWorld : IParkInitialState
 	/// <para>
 	/// Each offset is the sum of the sizes before it, and every size is stated outright by the original's
 	/// own serialiser. <c>mName[0..32]</c> fills <c>+410</c> to <c>+475</c>: 33 characters of 16 bits, the name as
-	/// text. <c>mTimeHired</c> fills <c>+491</c> to <c>+498</c> and is not read: nothing here asks for it.
+	/// text. <c>mTimeHired</c> fills <c>+491</c> to <c>+498</c>: the park's calendar as the member was made, a
+	/// <c>FILETIME</c> (<c>docs/exe/saves.md</c>, "`mTimeHired`").
 	/// </para>
 	/// <para>
 	/// <b>What each kind adds after this block is decoded, and the handyman's toilet job, the entertainer's
@@ -2343,7 +2359,8 @@ public sealed partial class ParkWorld : IParkInitialState
 			ToiletToClean: model == HandymanModel ? ReadUInt16At( start + 509 ) : 0,        // mToiletToClean
 			TimeStartedCleaning: model == HandymanModel ? ReadInt32At( start + 505 ) : 0,   // mTimeStartedCleaning
 			TimeStartedEntertaining: model == EntertainerModel ? ReadInt32At( start + 503 ) : 0,   // mTimeStartedEntertaining
-			TimeStartedResearching: model == ResearcherModel ? ReadInt32At( start + 503 ) : 0 );   // mTimeStartedResearching
+			TimeStartedResearching: model == ResearcherModel ? ReadInt32At( start + 503 ) : 0,     // mTimeStartedResearching
+			TimeHired: System.Buffers.Binary.BinaryPrimitives.ReadInt64LittleEndian( _data.AsSpan( start + 491, 8 ) ) ); // mTimeHired
 
 	/// <summary>The handyman's thing model.</summary>
 	private const int HandymanModel = 5;

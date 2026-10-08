@@ -44,15 +44,6 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q251. The writer: the people's leftovers.** Split from Q250. (1) **A balloon and a thought bubble** are
-  counted and not written (`SAVE_PARK_BALLOON`, `SAVE_PARK_THOUGHT_BUBBLE`): write each as its own sprite, kind
-  10 and the bubble's, on the slot the guest's record names. (2) **`mTimeHired`** is nought on a hire: eight
-  bytes, the shipped five hold two values of a `FILETIME`'s shape near the park's own date; decode what writes
-  and reads it. (3) **A made sprite's `+0xbc`** is copied from a like sprite of the file's or counted
-  (`SAVE_PARK_SPRITE_SET_BYTE`): it is the loaded bank's byte at `+0x222 + 4 × sprite number`
-  (`FUN_00540c60`); find it in the `.sprite` bank and write it. Confirm: a park with a guest holding a balloon
-  and a hire, written, loaded in OpenTPW and in the original under Proton: the balloon held after the load, the
-  count of `SAVE_PARK_SPRITE_SET_BYTE` nought; a screenshot of each.
 - [ ] **Q241i. The writer: the objects, their scripts and their models.** From Q241e. Object records patched, one
   bought written whole and one sold left out; the object controls and `mFirstObject`; a script record made or
   taken out of `RSSE` and each running script's counter, variables and deadlines; a slot of `RSYS` and its
@@ -79,6 +70,12 @@ the research lab), then the rest of this section in its old order.
   had it (`q250/run2/1-at-the-save.png`); write the handle with the scripts, and read it back
   (`SAVED_CURRENT_ARRIVAL_VEHICLE`). In the original a load of that file made a vehicle anew on its first sweep
   (`q250/orig/a-load.log`): look for the leaver at the stop that summons it.
+  From Q251: **a balloon let go and still bursting at the save is not written** (`SAVE_PARK_BALLOON_LET_GO`):
+  no record names it, and what the original's file holds for one was not looked for (a kind-10 sprite on frame
+  1 that nobody's `mBalloonScript` names). **A load here reads no member of staff's thought**: `mLastThought`
+  and `mTimeBubbleShown` are a guest's alone in `ParkPeople`, so a kept member is written with nought for both
+  until they think again, and no saved bubble is shown again, a guest's (`SAVED_THOUGHT_BUBBLE`) or a
+  member's (uncounted). Read both back, and make the bubble from its sprite's picture.
 - [ ] **Q241j. The writer: the managers, then Save Game saves.** From Q241e. The economy thing's loans and rings,
   the staff HQ's strikes, the calendar's and the weather's fields; then `ParkSaveScreen.Save` writes
   (`SAVE_GAME_WRITER` gone), an overwrite replaces the file, and the Load Park list shows it. Confirm: a park
@@ -874,6 +871,8 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
 ## E. Large
 - [ ] **Q31b. The other seven object windows.** After Q31's shop window: the sideshow's, the toilet's and the rest
   of `park-engine.md`'s nine, one window per session. Q31 carries the decoded figures and the `UIStrings` rows.
+  From Q251: the staff window's days employed are `FUN_00505b70`, the calendar's now less `mTimeHired` over a
+  day, handed to UITEXT `0x1bb` by `FUN_004b58b0` (`saves.md`, "`mTimeHired`"); `Staff.TimeHired` holds it.
 - [ ] **Q32. Graphics tiers.** Only `Level.SetupParticles` and `Level.NumKids` read the detail files (`low.sam`,
   `med.sam`, `high.sam`), and only `GameOptions.PARTICLEDENSITY` and `NUMKIDS` (the kid and staff bank caps) from them; nothing reads their `GraphicalOptions.*` keys (texture quality and
   filtering, sky, shadows, fog, mipmaps, view distance). The detail-file loader is `0x00423bc0` (`OptionsScreen`'s
