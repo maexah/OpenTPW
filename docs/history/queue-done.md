@@ -5283,6 +5283,18 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   does not park in the entrance at 230.0 with 54 counts but walks on into the queue cell (52,22), 16 counts, an
   entrance being one of the edge test's two queue types; the original's walk ends there in its ride view (Q246).
   17 bugs put back, 16 caught; the one left is the gate's read of a `TOUR` script through `ParkRides.Current`, no test.
+- [x] **Q145. A fee set on the entry-price screen never reaches the gate.** Found by the 2026-09-26 staleness audit.
+  Guests judge and pay `ParkAdmission.Fee` (`PeepBehaviour.Judge`: `OpinionAt`, then `State.Take( admission.Fee )`),
+  which `ParkPeople` captures once from the save's economy thing. The screen's plus and minus move
+  `ParkState.AdmissionFee`, which only the screen and the `money` census read, so the price shown and the price
+  charged part the moment the player changes it. The remark over `ENTRY_PRICE_REJUDGE_WAITING_GUESTS` ("The gate reads
+  the fee through ParkState") and `SetAdmissionFee`'s remark become true when the judgement and the charge both read
+  `ParkState.AdmissionFee`. Confirm: the fee raised by five on the screen, `money` showing it, then the next guest
+  through the turnstile, `money`'s takings up by the new fee, predicted first; a screenshot.
+  **Done 2026-10-08**: the gate reads the running park's fee (`ParkAdmission.Fee`), as the original's two reads of the
+  bank's `+0x118` (`hud.md`). Five more is 30, the expensive line, so the next guest sulked and paid nothing; one
+  less and the same guest paid 29: takings 125 to 154, 5 of 5 predicted (`q145/run1`, `gate`), and the unchanged
+  build charged 25 with the screen at 30 (`q145/control`). 4 bugs put back, 4 caught.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

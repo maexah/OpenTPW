@@ -44,14 +44,6 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q145. A fee set on the entry-price screen never reaches the gate.** Found by the 2026-09-26 staleness audit.
-  Guests judge and pay `ParkAdmission.Fee` (`PeepBehaviour.Judge`: `OpinionAt`, then `State.Take( admission.Fee )`),
-  which `ParkPeople` captures once from the save's economy thing. The screen's plus and minus move
-  `ParkState.AdmissionFee`, which only the screen and the `money` census read, so the price shown and the price
-  charged part the moment the player changes it. The remark over `ENTRY_PRICE_REJUDGE_WAITING_GUESTS` ("The gate reads
-  the fee through ParkState") and `SetAdmissionFee`'s remark become true when the judgement and the charge both read
-  `ParkState.AdmissionFee`. Confirm: the fee raised by five on the screen, `money` showing it, then the next guest
-  through the turnstile, `money`'s takings up by the new fee, predicted first; a screenshot.
 - [ ] **Q146. Every guest who arrives is counted twice as a visitor.** Found by the 2026-09-26 staleness audit.
   `ParkPeople.Admit` calls `ParkState.Admit` when the vehicle drops a guest and throws the answer away, and the
   `Entering` case calls it again when they come through the gate and keeps it as `Peep.VisitorNumber`. The original

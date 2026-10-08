@@ -48,16 +48,27 @@ public sealed class ParkAdmission
 		AboutRight = 3
 	}
 
+	/// <summary>The gate of a running park: the fee is whatever the park charges as it is asked.</summary>
+	/// <param name="balance">The park's balance stack, for the five numbers that turn a fee into a band.</param>
+	/// <param name="state">The running park, whose <see cref="ParkState.AdmissionFee"/> the entry-price screen moves.</param>
+	public ParkAdmission( ParkBalance balance, ParkState state ) : this( balance, () => state.AdmissionFee )
+	{
+		ArgumentNullException.ThrowIfNull( state );
+	}
+
 	/// <param name="balance">The park's balance stack, for the five numbers that turn a fee into a band.</param>
 	/// <param name="fee">
-	/// What the park charges, from its economy thing. Taken as a number rather than as the thing, so that a
-	/// test can ask what a guest would make of a price this park does not charge.
+	/// A fee that stays as given, so that a test can ask what a guest would make of a price no park charges.
 	/// </param>
-	public ParkAdmission( ParkBalance balance, int fee )
+	public ParkAdmission( ParkBalance balance, int fee ) : this( balance, () => fee )
+	{
+	}
+
+	private ParkAdmission( ParkBalance balance, Func<int> fee )
 	{
 		ArgumentNullException.ThrowIfNull( balance );
 
-		Fee = fee;
+		_fee = fee;
 
 		// The fallbacks are the global file's own values rather than zeros: a missing key should leave the
 		// simulation playable, and a zero divisor here would be a division by nought a few lines below.
@@ -95,8 +106,14 @@ public sealed class ParkAdmission
 	private static (int X, int Y) Cell( ParkBalance balance, string name )
 		=> (balance.Int( $"FixedItemInfo.{name}PosX", -1 ), balance.Int( $"FixedItemInfo.{name}PosY", -1 ));
 
-	/// <summary>What the park charges - the economy thing's <c>mAdmissionFee</c>.</summary>
-	public int Fee { get; }
+	private readonly Func<int> _fee;
+
+	/// <summary>
+	/// What the park charges - the economy thing's <c>mAdmissionFee</c>, read as it is asked for: the judgement
+	/// (<c>FUN_004ff5b0</c>, <c>0x004ff602</c>) and the charge (<c>FUN_004d0600</c>, <c>0x004d0609</c>) each read
+	/// the bank's <c>+0x118</c> afresh, so a price the entry-price screen sets is the next guest's.
+	/// </summary>
+	public int Fee => _fee();
 
 	/// <summary>"Scaling factor for entry fee", and the base of the jitter the ideal price is divided by.</summary>
 	public int ExcitementToCostDivisor { get; }

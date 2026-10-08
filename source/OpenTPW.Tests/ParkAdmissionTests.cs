@@ -28,6 +28,9 @@ public class ParkAdmissionTests
 	[TestInitialize]
 	public void MountTheGame() => FileSystem = data = GameData.Required();
 
+	[TestCleanup]
+	public void LetThePeopleGo() => TestRun.DeleteEvery<ParkPeople>();
+
 	/// <summary>What the park actually charges, taken from the save rather than typed in here.</summary>
 	private int ShippedFee()
 	{
@@ -360,7 +363,81 @@ public class ParkAdmissionTests
 	}
 
 	/// <summary>The five guests the save leaves standing at the ticket booths.</summary>
+	/// <summary>
+	/// <b>A fee moved on the running park is the fee the gate charges</b>: the park's people build their gate on
+	/// the running park's fee, not on the save's, so four more on <see cref="ParkState.AdmissionFee"/> is four
+	/// more from each of the five guests at the booths (<c>FUN_004d0600</c> reads the bank's <c>+0x118</c> as it
+	/// takes it).
+	/// </summary>
+	[TestMethod]
+	public void AFeeRaisedOnTheRunningParkIsWhatTheNextGuestPays()
+	{
+		var world = Park();
+		var state = new ParkState( world );
+		var people = new ParkPeople( world, new ParkBalance( "jungle", easyMode: true ), () => ParkRides.GateIsOpen,
+			state, behaviourRandom: new Random( 1234 ) );
+
+		Assert.AreEqual( 25, people.Admission!.Fee, "the gate starts at the save's fee" );
+		Assert.IsTrue( state.SetAdmissionFee( 29 ) );
+		Assert.AreEqual( 29, people.Admission.Fee, "and follows the running park's" );
+
+		// A park's people made with no state of their own make one, and their gate reads that one.
+		var alone = new ParkPeople( world, new ParkBalance( "jungle", easyMode: true ) );
+		Assert.IsTrue( alone.State.SetAdmissionFee( 27 ) );
+		Assert.AreEqual( 27, alone.Admission!.Fee, "the gate reads the state the guests pay into" );
+
+		var guests = Step( world, people.Behaviour, turns: 200 );
+
+		foreach ( var id in AtTheBooths )
+			Assert.IsTrue( guests[id].PaidAdmission, $"guest {id} finds 29 about right against 20 in easy mode (30 is the expensive line), and pays" );
+
+		Assert.AreEqual( AtTheBooths.Length * 29, state.Takings, "five admissions at the new fee, not the save's 25" );
+	}
+
+	/// <summary>
+	/// <b>And it is the fee they judge</b> (<c>FUN_004ff5b0</c> reads the same <c>+0x118</c>): at 50, easy mode's
+	/// expensive line against an ideal 20, every guest at the booths finds the park far too expensive, pays
+	/// nothing and turns for home; the save's 25 would have let all five in.
+	/// </summary>
+	[TestMethod]
+	public void AFeeRaisedOnTheRunningParkIsWhatTheNextGuestJudges()
+	{
+		var world = Park();
+		var state = new ParkState( world );
+		var people = new ParkPeople( world, new ParkBalance( "jungle", easyMode: true ), () => ParkRides.GateIsOpen,
+			state, behaviourRandom: new Random( 1234 ) );
+
+		Assert.AreEqual( 2.5f, people.Admission!.ExpensiveMultiplier, "easy mode's far-too-expensive line is 2.5 times" );
+		Assert.IsTrue( state.SetAdmissionFee( 50 ) );
+
+		var guests = Step( world, people.Behaviour, turns: 200 );
+
+		foreach ( var id in AtTheBooths )
+		{
+			Assert.IsFalse( guests[id].PaidAdmission, $"guest {id} should not pay 50" );
+			Assert.AreEqual( 0, guests[id].VisitorNumber, $"guest {id} should not have come in" );
+		}
+
+		Assert.AreEqual( 0, state.Takings, "nobody paid" );
+	}
+
 	private static readonly int[] AtTheBooths = [42, 39, 35, 31, 29];
+
+	/// <summary>Steps every guest of the park with a behaviour already made, as <see cref="Run"/> does.</summary>
+	private static System.Collections.Generic.Dictionary<int, Peep> Step( ParkWorld world, PeepBehaviour behaviour, int turns )
+	{
+		var blocked = CellEdge.For( world, ParkPeople.WalkingMode ).Blocked;
+		var guests = ParkPeople.PeepsIn( world ).ToDictionary( peep => peep.ThingId );
+		var walks = guests.Values.ToDictionary( peep => peep.ThingId, peep => new PeepWalk( peep.Navigator, blocked ) );
+
+		for ( var tick = 1; tick <= turns; ++tick )
+		{
+			foreach ( var peep in guests.Values )
+				behaviour.Step( peep, walks[peep.ThingId], playing: null, tick );
+		}
+
+		return guests;
+	}
 
 	private ParkWorld Park()
 	{

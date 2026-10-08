@@ -710,9 +710,8 @@ public sealed class ParkState
 	///
 	/// <para>
 	/// <b>It lives on the running state for the reason <see cref="Balance"/> does.</b>
-	/// <see cref="ParkWorld"/> describes a file and may never be written to, and
-	/// <c>ParkAdmission.Fee</c> is read-only and captured once when the gate is built - so the ticket price
-	/// the entry-price screen sets is kept here.
+	/// <see cref="ParkWorld"/> describes a file and may never be written to. The gate reads it here each time a
+	/// guest judges the price or pays it (<see cref="ParkAdmission.Fee"/>).
 	/// </para>
 	/// </summary>
 	public int AdmissionFee { get; private set; }

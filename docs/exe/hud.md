@@ -308,7 +308,11 @@ What each shows, from its own decoded labels:
 - **staffcosts** — "Staff Training Budgets": Cash in / − Staff costs / − Other costs / − Loan
   payments / Balance.
 - **entryprice** — one "Ticket Price" row. It writes the park object's `+0x118` through
-  `FUN_004d05d0`, whose format string reads *"Admission fee set to %d"*.
+  `FUN_004d05d0`, whose format string reads *"Admission fee set to %d"*. The setter does that and no more
+  (`0x004d05e8`); the fee's two readers each take `+0x118` as they run, a guest's judgement (`FUN_004ff5b0`,
+  `0x004ff602`, logged as *"GP: %d, AF: %d"*) and the charge (`FUN_004d0600`, `0x004d0609`), so a new price is the
+  next judgement's, a sulking guest's second one included. OpenTPW's gate reads the running park's fee the same way
+  (`ParkAdmission.Fee`, Q145).
 
 ### The four built screens, and what walking their streams alone could not give
 

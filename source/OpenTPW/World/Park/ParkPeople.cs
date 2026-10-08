@@ -239,10 +239,12 @@ public sealed class ParkPeople : Entity
 		if ( park is { CurrentArrivalVehicle: not 0 } )
 			Unimplemented.Report( "SAVED_CURRENT_ARRIVAL_VEHICLE" );
 
-		// What the park charges is on its economy thing and what a guest will put up with is in the
-		// balance file, so it takes both - and neither on its own is enough to price the gate.
-		var admission = park?.Economy is { } money && balance != null
-			? new ParkAdmission( balance, money.AdmissionFee )
+		// What the park charges is on its economy thing, kept by the running park so the entry-price screen can
+		// move it, and what a guest will put up with is in the balance file: the gate takes both, and reads the
+		// fee from the running park each time it is asked.
+		var running = state ?? new ParkState( park );
+		var admission = park?.Economy != null && balance != null
+			? new ParkAdmission( balance, running )
 			: null;
 
 		// Built from the park rather than from the guests: what a guest does on arrival turns on whether
@@ -251,7 +253,7 @@ public sealed class ParkPeople : Entity
 		// admission needs both halves that PeepBehaviour lacks - the ride's script, and the park's guests
 		// by thing id - and handing it a delegate keeps the guest's turn from depending on ride operation
 		// for anything more than a yes or no.
-		_behaviour = new PeepBehaviour( park, behaviourRandom, admission, gateStatus, state, catalogue,
+		_behaviour = new PeepBehaviour( park, behaviourRandom, admission, gateStatus, running, catalogue,
 			( ride, personId ) => new ParkRideOperation( State, Guests )
 				.AdmitPerson( _scriptFor?.Invoke( ride.ThingId ), ride, personId ),
 			( ride, tick ) => new ParkRideOperation( State, Guests )

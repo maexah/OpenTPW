@@ -954,7 +954,11 @@ public sealed class PeepBehaviour
 	/// </summary>
 	private void Judge( Peep peep, PeepWalk walk, ParkAdmission admission, int tick )
 	{
-		var opinion = admission.OpinionAt( ParkExcitement, _random );
+		// The original's own line here is "GP: %d, AF: %d" (the string at 0x0075d8bc).
+		var ideal = admission.IdealPrice( ParkExcitement, _random );
+		var opinion = admission.OpinionOf( ideal );
+
+		Log.Info( $"Person {peep.ThingId}: GP: {ideal}, AF: {admission.Fee}, {opinion}, tick {tick}" );
 
 		switch ( opinion )
 		{

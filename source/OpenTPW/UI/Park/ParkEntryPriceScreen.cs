@@ -156,10 +156,9 @@ internal sealed class ParkEntryPriceScreen : UiWindow
 			Clicked = () => Stack.Close( this )
 		} );
 
-		// The gate reads the fee through ParkState, so a price changed here is charged at the turnstile
-		// immediately - but nothing yet re-judges a guest who has ALREADY decided the old price was too
-		// much, which the original does by leaving the judgement to the guest's own state each time.
-		Unimplemented.Report( "ENTRY_PRICE_REJUDGE_WAITING_GUESTS" );
+		// The gate reads the fee through ParkState, so a price changed here is judged and charged at the turnstile
+		// from the next guest's turn there, and a guest sulking at the old price judges the new one when their
+		// wait runs out. The original's setter does no more: it writes the bank's +0x118 (FUN_004d05d0).
 
 		Show();
 	}
