@@ -265,24 +265,23 @@ public sealed class CellEdge
 	/// reason this class exists at all.
 	///
 	/// <para>
-	/// Of the three questions the constructor takes, a live park can answer two. The map is
+	/// Of the three questions the constructor takes, a live park answers two by itself. The map is
 	/// <see cref="Live"/> - the running park's cells, not the file's. The track record is parsed by the
 	/// save reader, so the branch is given its real answer: left out it is wrong for 568 of the shipped
 	/// park's cells.
 	/// </para>
 	/// <para>
-	/// <b>The third is not built</b> (<c>docs/QUEUE.md</c> Q140b). <c>queueAhead</c> stands for the original's
-	/// entrance arm, which shuts an entrance to the camcorder unless its thing can be ridden and has a view
-	/// (docs/exe/park-engine.md, "An entrance is shut to the viewer"), so it keeps answering
-	/// <see cref="QueueVerdict.NothingThere"/> and the viewer walks onto entrances the original shuts. It bears
-	/// on mode 2 alone.
+	/// The third, <paramref name="queueAhead"/>, is the original's entrance arm, which bears on mode 2 alone and
+	/// needs the placed things and their models: the camcorder hands it <see cref="ParkEntranceGate.Ahead"/>.
+	/// Left out it answers <see cref="QueueVerdict.NothingThere"/>, which is all the other modes ever hear.
 	/// </para>
 	/// </summary>
-	public static CellEdge For( IParkInitialState park, int mode )
+	public static CellEdge For( IParkInitialState park, int mode,
+		Func<ParkWorld.MapCell, QueueVerdict>? queueAhead = null )
 	{
 		ArgumentNullException.ThrowIfNull( park );
 
-		return new CellEdge( Live( park ), mode, cell => TrackCloses( cell, ById( park ) ) );
+		return new CellEdge( Live( park ), mode, cell => TrackCloses( cell, ById( park ) ), queueAhead );
 	}
 
 	/// <summary>

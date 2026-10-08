@@ -298,6 +298,12 @@ public sealed class RideScript
 	/// </summary>
 	public bool UsesHeads => _file.Instructions.Any( instruction => instruction.Opcode is Opcode.ADDHEAD or Opcode.DELHEAD );
 
+	/// <summary>
+	/// Whether the script carries <c>TOUR</c>, whose record's first car is a ride view the engine asks for
+	/// (<see cref="ParkEntranceGate.HasView"/>).
+	/// </summary>
+	public bool UsesTour => _file.Instructions.Any( instruction => instruction.Opcode is Opcode.TOUR );
+
 	/// <summary>How many head slots the script has - the engine's <c>+0x4c</c>.</summary>
 	public int HeadSlots => _heads.Length;
 

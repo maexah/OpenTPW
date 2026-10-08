@@ -44,16 +44,6 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q140b. Build the entrance gate of the edge test.** From Q140's decode (`park-engine.md`, "An entrance is shut
-  to the viewer"). Give `CellEdge.For` the `queueAhead` it declines, for mode 2: on a type-9 cell, the first
-  catalogue object anchored on the owner's cell; `InTheWay` unless it has a view and its item's `CannotRide` is
-  nought, `LetThemThrough` if both, `NothingThere` with no such object. The view is `FUN_0042a440`'s four: build the
-  model's node (`ModelFile.FindNode( 1, 0x1000 )` on the placed thing's model) and count the three that need a track
-  ride's lead car, a TOUR record's car and a coaster's node where each is asked, none of them met in Lost Kingdom's
-  stock park. Confirm: `camcorder`, then the walk from (43,28) at the Drinks Shop's entrance and from (52,29) at the
-  Jungle Spray's, the stand parked at 299.999 as the original's (`q140/orig/a.log`); from the footprint (52,24) into
-  the Belly Bounce's, `FIRST_PERSON_WALK_INTO_RIDE` counted; each predicted first; a screenshot of the viewer held at
-  the Drinks Shop's door.
 - [ ] **Q145. A fee set on the entry-price screen never reaches the gate.** Found by the 2026-09-26 staleness audit.
   Guests judge and pay `ParkAdmission.Fee` (`PeepBehaviour.Judge`: `OpinionAt`, then `State.Take( admission.Fee )`),
   which `ParkPeople` captures once from the save's economy thing. The screen's plus and minus move
@@ -264,8 +254,8 @@ the research lab), then the rest of this section in its old order.
   departure and 21 after `WalkingOutside`, which Q128 builds; `Decide` did nothing when the chooser finds nothing,
   built by Q107; and `Judge` reads `ParkExcitement`, nought until Q26 decodes `FUN_004c8240`. `CellReroute` never
   runs `FUN_005108a0`'s diagonal pass after a scan that splices nothing, which is how most routes end.
-  `CellEdge.Blocked`'s mode-2 entrance arm always answers nothing, whenever the camcorder walks at an entrance, which
-  Q140 decodes. `Peep.Tick` leaves out the cell's `RegionFX` term (`FUN_00501650`) on every needs turn.
+  `CellEdge.Blocked`'s mode-2 entrance arm always answered nothing, whenever the camcorder walks at an entrance: built
+  by Q140b. `Peep.Tick` leaves out the cell's `RegionFX` term (`FUN_00501650`) on every needs turn.
   `ParkRideOperation` makes no breakdown request and sets no worn flag (`ride-operation.md`, "The first half of the
   turn"), `Invite` reads no `RunsContinuously` (`+0x33` bit 0), and nothing wrote `mPreviousRides` (`+0x1e0`) - Q165c
   built that. `ParkRideChoice.CanBeOffered`'s coaster arm (`FUN_00441970`)
@@ -813,6 +803,16 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   must have an item here, or it may never be come back to. List every `Unimplemented.Report` name in the source by
   script, find each in this file, and file an item (or add the name to the item it belongs to) for each one that has
   none; names dead by content say so in their item. No game run.
+- [ ] **Q246. The ride view from first person, and its three other cameras. Decode first.** From Q140b. Walking
+  into an open entrance starts the ride's view in the original (`FUN_0042a340`, then `FUN_004e15b0( 1 )`, the ride
+  window's "Ride it!"; `park-engine.md`, "An entrance is shut to the viewer") and ends the walk; here each pass in the
+  cell is counted (`FIRST_PERSON_WALK_INTO_RIDE`) and the viewer walks on, out of the Belly Bounce's entrance into its
+  queue. `ParkEntranceGate.HasView` builds the fourth of `FUN_0042a440`'s views, the model's node, and counts the
+  other three as not holding: `RIDE_VIEW_TRACK_RIDE_LEAD_CAR`, `RIDE_VIEW_TOUR_CAR`, `RIDE_VIEW_COASTER_NODE`, each
+  dead by content in Lost Kingdom's stock park (no placed thing has a track-ride handle, a `TOUR` script or a
+  coaster's track; which bought things would meet them was not looked at, but jungle's `coaster1`, `Coaster3`,
+  `Tourride` and `wateride` models carry no view node, so their entrances are shut here until this is built). Decode the ride view's camera and what a
+  coaster node's `+0x124` holds, to `docs/exe/`; the build is the next session.
 
 ## E. Large
 - [ ] **Q31b. The other seven object windows.** After Q31's shop window: the sideshow's, the toilet's and the rest

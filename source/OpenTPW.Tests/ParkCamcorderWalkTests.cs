@@ -604,8 +604,9 @@ public class ParkCamcorderWalkTests
 	}
 
 	/// <summary>
-	/// Against the real park: <b>walking up the Belly Bounce's queue into its entrance (52,23) is counted, and walking into
-	/// the Staff Room's entrance is not</b>, a feature whose category sets <c>UsageInfo.CannotRide</c>. From the queue's
+	/// Against the real park: <b>walking up the Belly Bounce's queue into its entrance (52,23) is counted, and the walk at
+	/// the Staff Room's entrance is held out of it</b>, a feature with no view (<see cref="ParkEntranceGate"/>) whose
+	/// category sets <c>UsageInfo.CannotRide</c>. From the queue's
 	/// head facing south the viewer spends seven frames on the queue cell (52,22), which shares the entrance's owner, so
 	/// only the cell's type keeps them out; crosses in on the eighth, two passes; then moves in the cell fourteen frames,
 	/// one pass each, and parks against the footprint's shut side for the other thirty-eight, one pass each: 54. The
@@ -613,7 +614,7 @@ public class ParkCamcorderWalkTests
 	/// </summary>
 	/// <remarks>
 	/// <b>Mutations:</b> the report taken out counts none; the type test taken out counts the queue cell's seven frames too;
-	/// the <c>CannotRide</c> test taken out counts the Staff Room's walk and a second cell.
+	/// the <c>CannotRide</c> test taken out finds a second cell that rides.
 	/// </remarks>
 	[TestMethod]
 	public void WalkingIntoTheBellyBouncesEntranceIsCounted()
@@ -646,7 +647,7 @@ public class ParkCamcorderWalkTests
 			ParkCamcorderCameraMode.Yaw = 5.497786045074463f;
 			ParkCamcorderCameraMode.DebugWalk( 1f, 0f, 40 );
 
-			Assert.AreEqual( (58, 15), Cell( ParkCamcorderCameraMode.Stand ), "into the Staff Room's entrance" );
+			Assert.AreEqual( (57, 16), Cell( ParkCamcorderCameraMode.Stand ), "held out of the Staff Room's entrance" );
 			Assert.AreEqual( before, Times( "FIRST_PERSON_WALK_INTO_RIDE" ), "a feature: it cannot be ridden" );
 
 			ParkCamcorderCameraMode.Stand = new Vector3( 525f, 225f, 0f );

@@ -487,7 +487,8 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 
 		// No park means no cells to ask about - a scene that is not a park cannot reach this camera, but
 		// the sweep is written so that the answer without one is the plain step, taken whole.
-		var walked = Slide( Stand, dx, dy, EdgeTest( Level.Current?.ParkState?.Park ),
+		var walked = Slide( Stand, dx, dy,
+			EdgeTest( Level.Current?.ParkState?.Park, Level.Current?.ParkState, Level.Current?.Catalogue ),
 			RideAt( Level.Current?.ParkState, Level.Current?.Catalogue ) );
 
 		// The clamp is ours. The original clamps nothing: its bound is soft, on the velocity, at the 96 by 85
@@ -512,15 +513,25 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	/// The park's own edge test, built once per park rather than once per frame, and let go of by
 	/// <see cref="Forget"/>. Null for no park, which leaves what is kept alone.
 	/// </summary>
-	internal static Func<int, int, StepDirection, bool>? EdgeTest( IParkInitialState? park )
+	/// <param name="state">
+	/// The running park and its <paramref name="catalogue"/>, whose placed things answer for their entrances
+	/// (<see cref="ParkEntranceGate"/>). Without both, no entrance is asked about and each falls to the ordinary
+	/// tests.
+	/// </param>
+	internal static Func<int, int, StepDirection, bool>? EdgeTest( IParkInitialState? park, ParkState? state = null,
+		ParkItemCatalogue? catalogue = null )
 	{
 		if ( park == null )
 			return null;
 
 		if ( !ReferenceEquals( park, _blockedFor ) )
 		{
+			Func<ParkWorld.MapCell, QueueVerdict>? entrance = state != null && catalogue != null
+				? ParkEntranceGate.For( state, catalogue ).Ahead
+				: null;
+
 			_blockedFor = park;
-			_blocked = CellEdge.For( park, WalkingMode ).Blocked;
+			_blocked = CellEdge.For( park, WalkingMode, entrance ).Blocked;
 		}
 
 		return _blocked;

@@ -950,9 +950,18 @@ Spray's, which has the view node, so `CannotRide` alone shuts it; and from the B
 they crossed into (52,23) at 239.29 and `gui_CameraFlags` went from `0x202` to `0x604`, the ride view. A path cell
 to the next (the control) is crossed freely.
 
-**OpenTPW** declines the arm: `CellEdge.For` hands no `queueAhead`, so a type-9 cell falls to the ordinary tests,
-and the viewer walks onto any entrance from a path or queue cell its `mNeighbours` links, and from nowhere else. The build is
-`docs/QUEUE.md` Q140b.
+**OpenTPW** builds the arm (`docs/QUEUE.md` Q140b): the camcorder's edge test hands `CellEdge` a
+`ParkEntranceGate`, whose `Ahead` is the three steps above, the placed objects anchored on the owner's cell standing
+for the chain. Of `FUN_0042a440`'s four only the fourth is built, the item's own model asked `FindNode( 1, 0x1000 )`
+once an item. The first three are counted where the original would ask each and taken as not holding:
+`RIDE_VIEW_TRACK_RIDE_LEAD_CAR` for a thing with a track-ride handle, `RIDE_VIEW_TOUR_CAR` for one whose script carries
+`TOUR`, `RIDE_VIEW_COASTER_NODE` for an item on a coaster's track; Lost Kingdom's stock park meets none
+(`docs/QUEUE.md` Q246). The same three walks here (`q140b/run1`, each predicted first): parked at 299.999 at the
+Drinks Shop's entrance and the Jungle Spray's, as the original's, and from the footprint (52,24) across into the Belly
+Bounce's, counted `FIRST_PERSON_WALK_INTO_RIDE`. There the two part: the original's ride view starts at 239.29 and the
+walk ends, and with no ride view here the viewer walks on, out of the entrance into the queue cell (52,22), which the
+ordinary queue rule allows an entrance (16 passes counted, then parked at 220.0). The unchanged build walked into
+both shops' entrances, to 309.999, and stopped at 240.0 in the footprint (`q140b/control`).
 
 **Nothing of the edge test is kept, and the world it reads dies with the park.** Read for `docs/QUEUE.md` Q10 and
 put to a refuter, then re-read by hand. `FUN_004d8750` writes no global, and neither do the functions it calls.
@@ -1092,9 +1101,8 @@ in these places, of which a walk in the park reaches only `FUN_0042a340`'s branc
   (`FST` at `0x0042c12e`) for the nudge's direction (`0x0042c14d`) and the loop's test (`0x0042c24c`); the two
   differ only if it underflows.
 - `FUN_0042a340`'s branch is not built (above): walking onto a ride's entrance is counted, `FIRST_PERSON_WALK_INTO_RIDE`.
-- **The entrance arm of the edge test is not built** (above, "An entrance is shut to the viewer"): the viewer walks
-  onto the seven entrances the original shuts, from the path or queue cell linked to each, and cannot step onto the
-  Belly Bounce's from its footprint (`docs/QUEUE.md` Q140b).
+- **Three of the four ride views are counted, not built** (above, "An entrance is shut to the viewer"): a track
+  ride's lead car, a TOUR record's car and a coaster's node (`docs/QUEUE.md` Q246).
 - **At the margins**, read by a review of the port (`docs/QUEUE.md` Q48b). `Slide` is handed the stored float step,
   so a step that rounds to exactly -1e-4 is zeroed where the original may keep it (the dead band above). Every test
   of a step against nought reads C3, which an unordered compare also sets, and every "smaller" reads C0, likewise:

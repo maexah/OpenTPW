@@ -5263,6 +5263,26 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   original, three predictions of three: parked at 299.999 against the Drinks Shop's and the Jungle Spray's
   entrances from their linked paths, and across into the Belly Bounce's from its footprint, the camera flags
   `0x202` to `0x604`. `q140/orig/`.
+- [x] **Q140b. Build the entrance gate of the edge test.** From Q140's decode (`park-engine.md`, "An entrance is shut
+  to the viewer"). Give `CellEdge.For` the `queueAhead` it declines, for mode 2: on a type-9 cell, the first
+  catalogue object anchored on the owner's cell; `InTheWay` unless it has a view and its item's `CannotRide` is
+  nought, `LetThemThrough` if both, `NothingThere` with no such object. The view is `FUN_0042a440`'s four: build the
+  model's node (`ModelFile.FindNode( 1, 0x1000 )` on the placed thing's model) and count the three that need a track
+  ride's lead car, a TOUR record's car and a coaster's node where each is asked, none of them met in Lost Kingdom's
+  stock park. Confirm: `camcorder`, then the walk from (43,28) at the Drinks Shop's entrance and from (52,29) at the
+  Jungle Spray's, the stand parked at 299.999 as the original's (`q140/orig/a.log`); from the footprint (52,24) into
+  the Belly Bounce's, `FIRST_PERSON_WALK_INTO_RIDE` counted; each predicted first; a screenshot of the viewer held at
+  the Drinks Shop's door.
+  **Done 2026-10-08.** `ParkEntranceGate` is the arm, handed to `CellEdge` by the camcorder's edge test: the first
+  placed object on the owner's cell decides, open only with the model's view node (`FindNode( 1, 0x1000 )`, read once
+  an item) and `CannotRide` nought. The three other views are counted where asked and taken as none
+  (`RIDE_VIEW_TRACK_RIDE_LEAD_CAR`, `RIDE_VIEW_TOUR_CAR`, `RIDE_VIEW_COASTER_NODE`; Q246). In the game, predicted
+  first (`q140b/run1`, `gate`, `control`): parked at 299.999 at the Drinks Shop's entrance and the Jungle Spray's, the
+  original's 299.99899 (`q140/orig/a.log`), where the unchanged build walks in to 309.999; from the footprint (52,24)
+  into the Belly Bounce's, counted, where the unchanged build stops at 240.0. Two predictions wrong, mine: the viewer
+  does not park in the entrance at 230.0 with 54 counts but walks on into the queue cell (52,22), 16 counts, an
+  entrance being one of the edge test's two queue types; the original's walk ends there in its ride view (Q246).
+  17 bugs put back, 16 caught; the one left is the gate's read of a `TOUR` script through `ParkRides.Current`, no test.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

@@ -167,6 +167,9 @@ public sealed class ParkItemCatalogue
 	/// </summary>
 	private readonly BaseFileSystem _files;
 
+	/// <summary>The file system the items were read from, where their models are too.</summary>
+	public BaseFileSystem Files => _files;
+
 	/// <summary>
 	/// Whether this is Instant Action's catalogue: each item's <c>Easy_&lt;stem&gt;.sam</c> laid over its own file, and
 	/// an item whose wad has none left out, as the original does in game type 2 (<c>FUN_00413930</c>,
