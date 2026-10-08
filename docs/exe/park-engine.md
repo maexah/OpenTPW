@@ -1935,7 +1935,7 @@ fail two and four regression cases; wrong sprite mapping fails one. Original-pri
 restorations fail three and one. Restored full suite: **1,764 passed, zero failed/skipped**.
 
 **Limits retained:** the candidate pool still generates costume 0 rather than native costume variation;
-shared RNG parity, staff carry preview, placement-cell filters and the existing Q136 behavior deviations are
+shared RNG parity, staff carry preview and placement-cell filters are
 outside this repair. Staff bank content/order and detail limits are documented in FileFormats `sprites.md`.
 
 #### Putting a candidate down: the type-5 mode

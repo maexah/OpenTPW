@@ -638,31 +638,30 @@ public sealed class ParkPeople : Entity
 		var x = (cellX * one) + (one / 2);
 		var y = (cellY * one) + (one / 2);
 
-		// <b>A deviation (Q136):</b> staff are not eased (Peep.Pace), so a hire walks at once at the speed a rested
-		// member settles at, base 140 (FUN_00506a40 at the hire's rest of 100), where the original eases up to it.
-		var rested = Peep.BaseSpeeds[^1] / (float)Peep.SpeedDivisor;
+		// The person base's speed words as the staff constructor leaves them (FUN_00504b90): no hurry, no
+		// adjustor, a speed of nought to ease up from, and the hire's base, which the decide below replaces.
+		var pace = new ParkWorld.PaceState(
+			AdjustorSpeed: 0, BaseSpeed: global::OpenTPW.Staff.HiredBaseSpeed( model, candidate.Grade ),
+			PreviousSpeed: 0f, PurposeSpeed: 0 );
 
 		var navigator = new ParkWorld.NavigatorState(
 			X: x, Y: y, VelocityX: 0, VelocityY: 0, TargetX: x, TargetY: y,
 			Mass: ParkWorld.NavigatorState.DefaultMass,
 			Radius: ParkWorld.NavigatorState.DefaultRadius,
-			MaxForce: (int)(rested * Peep.MaxForcePerSpeed), MaxSpeed: (int)(rested * Peep.MaxSpeedPerSpeed),
+			MaxForce: Peep.LeastMaxSpeed, MaxSpeed: Peep.LeastMaxSpeed,
 			NavMode: 0, CantReachDest: 0, PathFinished: true,
 			PathCount: 0, PathTotalCount: 0, PathBufferCount: 0,
 			BufferedDistance: 0, TailDistance: 0, TotalDistance: 0, StuckBits: 0 );
 
 		// Idle, with no patrol area - nought and nought is the whole map, which is what a staff member
 		// hired without one keeps. Their training starts at the grade they were hired at.
-		//
-		// <b>A deviation (Q136):</b> the original's guard and researcher decide at hire (0x004d5e76 on
-		// mGameTick & 3, 0x005026cb on a draw); idle at stamp 0, these decide on the next sweep.
 		var state = new ParkWorld.StaffState(
 			State: (int)StaffActivity.Idle, PayGrade: candidate.Grade,
 			Happiness: 100f, Tiredness: 100f, JobsDone: 0,
 			PatrolBottomLeft: 0, PatrolTopRight: 0, RestArea: 0,
 			PercentageThroughGrade: 0, TimeStartedIdling: 0, Name: candidate.Name );
 
-		var member = new global::OpenTPW.Staff( thingId, model, state, navigator );
+		var member = new global::OpenTPW.Staff( thingId, model, state, navigator, pace );
 
 		// At the head, as a new guest is (FUN_00516270).
 		_staff.Insert( 0, member );
@@ -685,11 +684,25 @@ public sealed class ParkPeople : Entity
 		// StandOn is for guests, and nothing re-stands a member of staff as they walk.
 		_behaviour.State.StandOn( thingId, cellX, cellY );
 
+		// Every kind's constructor ends in its decide, where they were put.
+		_staffBehaviour.Hired( member, _staffWalks[thingId], State.GameTick );
+
 		Log.Info( $"People: hired {candidate.Name}, a grade {candidate.Grade} " +
 			$"{ParkStaffPool.NameOfKind( candidate.Kind ).ToLowerInvariant()} at {candidate.Wage} a month, " +
 			$"as thing {thingId} at ({cellX},{cellY}) - {_staff.Count} staff now" );
 
 		return thingId;
+	}
+
+	/// <summary>Sets how rested a member of staff is, for the console's <c>staffrest</c>. Says whether there is such a member.</summary>
+	internal bool SetStaffRest( int thingId, float rest )
+	{
+		if ( _staff.Find( person => person.ThingId == thingId ) is not { } member )
+			return false;
+
+		member.Tiredness = Math.Clamp( rest, global::OpenTPW.Staff.Least, global::OpenTPW.Staff.Most );
+
+		return true;
 	}
 
 	/// <summary>Whether a thing id is one of the park's staff.</summary>
@@ -1680,7 +1693,7 @@ public sealed class ParkPeople : Entity
 			: [.. park.People
 				.Where( person => person.Staff != null )
 				.Select( person => new Staff(
-					person.ThingId, person.Model, person.Staff!.Value, person.Navigator ) )];
+					person.ThingId, person.Model, person.Staff!.Value, person.Navigator, person.Pace ) )];
 
 	/// <summary>Whether a member of staff in the park has this name - what the staff pool asks before it gives one out (<c>FUN_005083f0</c>).</summary>
 	internal bool StaffNamed( string name ) => _staff.Exists( member => member.Name == name );
@@ -1940,9 +1953,8 @@ public sealed class ParkPeople : Entity
 			{
 				// The same stamp, for the same reason: the original gives every person kind a needs call
 				// and a behaviour call back to back off one switch, and FUN_00505490 opens with
-				// FUN_004fa870 at 0x00505495 exactly as the guest handler does. Only its stamp is run here:
-				// staff are not eased (Peep.Pace), and keep the speed they were saved or hired with, as their
-				// base follows their rest, which is unbuilt (Q136).
+				// FUN_004fa870 at 0x00505495 exactly as the guest handler does: the speed eased, then the stamp.
+				member.Pace();
 				member.Navigator.StampPrevious();
 
 				// The staff handler's own bubble call, on the member's sweep in four of the park's clock
@@ -3094,7 +3106,9 @@ public sealed class ParkPeople : Entity
 				+ $"loo {member.ToiletToClean} cleaningSince {member.TimeStartedCleaning} "
 				+ $"performingSince {member.TimeStartedEntertaining} "
 				+ $"researchingSince {member.TimeStartedResearching} "
-				+ $"sounds {member.Sounds.Played} draws {member.Sounds.Draws}";
+				+ $"sounds {member.Sounds.Played} draws {member.Sounds.Draws} "
+				+ $"base {member.BaseSpeed} purpose {member.PurposeSpeed} adjustor {member.AdjustorSpeed} "
+				+ $"pace {member.PreviousSpeed:0.0000} speed {nav.MaxSpeed} restExact {member.Tiredness:0.000}";
 		}
 	}
 }

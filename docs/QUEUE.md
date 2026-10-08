@@ -40,24 +40,6 @@ the original.
 
 **The 2026-10-06 review's leftovers come first, at Alexah's word (2026-10-06).**
 
-- [ ] **Q136. Six small differences in the staff's decide.** Found by Q82 (`ride-operation.md`, "Drawn on the way").
-  (a) Tired is `(u8)trunc( rest ) <= RestLevel`, signed and inclusive (`0x00506b41`); `StaffBehaviour.Decide` tests
-  the float `< RestLevel` and misses [1, 2). (b) The patrol roll `FUN_00506f30` takes only a path cell (`mType` 1,
-  `FUN_00536310`) before it routes; **built in Q206**, with queue/approach wandering containment. (c) Not
-  tired, `FUN_00506a40` sets the speed word `+0xc0` from the rest byte (60 to 140, `[0x0075c7f8]`), one of
-  `FUN_004fa870`'s three terms. From Q177d: how the terms reach the walk is decoded (`ride-operation.md`, "Where a
-  WALKING peep is drawn") and every person's four speed words are read (`ParkWorld.PaceState`); guests are eased
-  (`Peep.Pace`), staff keep the saved speed and a hire a rested member's 1.4. The build is `Pace` for staff, with this
-  base by rest.
-  (d) Tired with no rest area found or reached, `FUN_00506a40` answers 0 and the kind's own choice follows (the guard's
-  at `0x004d6554`, the researcher's at `0x00502b9f`); `Decide` stands them instead, so a tired member with no reachable
-  Staff Room never walks again; when the kind's choice follows, the three kinds' searches need `FUN_00506680`'s gate
-  (the rest byte under `RestLevel`: no search, straight to the walk), which `Decide` leaves out because nobody so
-  tired gets that far today. (e) At the end of a rest the original runs the kind's decide in the same sweep
-  (`FUN_005061d0`, `0x00506298`); `Rest` sets Idle at stamp 0 and decides a sweep later, which after Q82b reads the
-  guard's `mGameTick & 3` a sweep late. (f) Found by Q82b: at hire the guard and the researcher decide at once, after
-  `FUN_00506a40` (the guard's `0x004d5e76` on `mGameTick & 3`, the researcher's `0x005026cb` on a draw); `Hire` sets
-  Idle at stamp 0, so they decide a sweep later. Confirm each in the `staff` census.
 - [ ] **Q137. A guest going home under the `facing` overlay crashes the park.** Found by Q82's first run: an
   `IndexOutOfRangeException` in `ParkGuestSprites.Collapse` in the frame guest 37 went home. `Remove` rebuilds the
   vertex array at two quads a person, and the draw after it collapses every quad up to the last frame's `_uploaded`,

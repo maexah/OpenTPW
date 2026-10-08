@@ -467,7 +467,7 @@ public class ParkStaffBehaviourTests
 		for ( var tick = 3; tick < 1000 && member.Activity == StaffActivity.Resting; ++tick )
 			behaviour.Step( member, walk, playing: null, tick );
 
-		Assert.AreEqual( StaffActivity.Idle, member.Activity, "a rested staff member goes back to work" );
+		Assert.AreNotEqual( StaffActivity.Resting, member.Activity, "a rested staff member goes back to work" );
 		Assert.AreEqual( 100f, member.Tiredness, 0.001f, "and is fully rested" );
 		Assert.AreEqual( 0, member.RestArea, "and has let go of the rest area" );
 	}
@@ -1143,9 +1143,323 @@ public class ParkStaffBehaviourTests
 	{
 		var world = Park();
 		var (member, walk) = Deciding( world, happiness: 5f, tiredness: 0.5f );
-		new StaffBehaviour( Balance(), new ConstantDraw() ).Step( member, walk, playing: null, tick: 1001 );
+		// A multiple of four, where the guard who finds no rest area stays and no patrol roll thinks 0x16.
+		new StaffBehaviour( Balance(), new ConstantDraw() ).Step( member, walk, playing: null, tick: 1000 );
 
 		Assert.AreEqual( 0x14, member.Thoughts.Last, "tired, though their happiness of 5 would think 0x13" );
 	}
 
+	/// <summary>
+	/// Tired is the rest byte, the float truncated, at or under RestLevel, 1 (<c>0x00506b41</c>): a rest anywhere in
+	/// [1, 2) is tired, and 2 is not.
+	/// </summary>
+	[DataTestMethod]
+	[DataRow( 0.99f, true )]
+	[DataRow( 1f, true )]
+	[DataRow( 1.99f, true )]
+	[DataRow( 2f, false )]
+	public void TiredIsTheRestByteAtOrUnderTheRestLevel( float rest, bool tired )
+	{
+		var (member, walk, state) = OnThePath( Guard );
+
+		member.Tiredness = rest;
+
+		new StaffBehaviour( Balance(), new Random( 3 ), state ).Step( member, walk, playing: null, tick: 1001 );
+
+		Assert.AreEqual( tired, member.Activity == StaffActivity.GoingToRest, $"at rest {rest} the guard is {member.Activity}" );
+		Assert.AreEqual( tired ? 0x14 : 0, member.Thoughts.Last );
+	}
+
+	/// <summary>
+	/// Not tired, a decide sets the base speed from the rest byte by fifths, 140 at a hundred
+	/// (<c>FUN_00506a40</c>); tired, it is left as it was.
+	/// </summary>
+	[DataTestMethod]
+	[DataRow( 2f, 60 )]
+	[DataRow( 19.99f, 60 )]
+	[DataRow( 20f, 80 )]
+	[DataRow( 39.99f, 80 )]
+	[DataRow( 40f, 100 )]
+	[DataRow( 60f, 120 )]
+	[DataRow( 79.99f, 120 )]
+	[DataRow( 80f, 140 )]
+	[DataRow( 99.99f, 140 )]
+	[DataRow( 100f, 140 )]
+	[DataRow( 1.5f, 77 )]
+	public void ADecideSetsTheBaseSpeedByTheRest( float rest, int speed )
+	{
+		var (member, walk, state) = OnThePath( Mechanic );
+
+		member.Tiredness = rest;
+		member.BaseSpeed = 77;
+
+		new StaffBehaviour( Balance(), new Random( 3 ), state ).Step( member, walk, playing: null, tick: 1001 );
+
+		Assert.AreEqual( speed, member.BaseSpeed );
+	}
+
+	/// <summary>The saved guard as the save has him, speed words and all.</summary>
+	private Staff Saved( int thing )
+		=> ParkPeople.StaffIn( Park() ).Single( member => member.ThingId == thing );
+
+	/// <summary>
+	/// A member's speed is eased as a guest's is (<c>FUN_004fa870</c>): a quarter of the way each sweep to the three
+	/// words' sum over a hundred, and the mover's speed and force written from it. The save's four words are read.
+	/// </summary>
+	[TestMethod]
+	public void AMembersSpeedIsEasedFromTheirThreeWords()
+	{
+		var world = Park();
+		var saved = world.People.Single( person => person.ThingId == Guard );
+		var member = new Staff( saved.ThingId, saved.Model, saved.Staff!.Value, saved.Navigator,
+			new ParkWorld.PaceState( AdjustorSpeed: 0, BaseSpeed: 120, PreviousSpeed: 0f, PurposeSpeed: 0 ) );
+
+		member.Pace();
+		Assert.AreEqual( 0.3f, member.PreviousSpeed, 0.00001f );
+		Assert.AreEqual( (3932, 7864), (member.Navigator.MaxSpeed, member.Navigator.MaxForce) );
+
+		member.Pace();
+		Assert.AreEqual( 0.525f, member.PreviousSpeed, 0.00001f );
+
+		// The hurry is one of the three: 25 on the walk to a toilet, so 145 in all.
+		member.SetActivity( StaffActivity.GoingToLoo, tick: 1 );
+		member.Pace();
+		Assert.AreEqual( (1.45f + (3 * 0.525f)) / 4, member.PreviousSpeed, 0.00001f );
+
+		// The adjustor is the third, and falls to 99 hundredths of itself a sweep.
+		var sweet = new Staff( saved.ThingId, saved.Model, saved.Staff!.Value, saved.Navigator,
+			new ParkWorld.PaceState( AdjustorSpeed: 200, BaseSpeed: 100, PreviousSpeed: 1f, PurposeSpeed: 0 ) );
+
+		sweet.Pace();
+		Assert.AreEqual( (3f + 3f) / 4, sweet.PreviousSpeed, 0.00001f );
+		Assert.AreEqual( 198, sweet.AdjustorSpeed );
+
+		var loaded = Saved( Guard );
+
+		Assert.IsTrue( loaded.Paced );
+		Assert.AreEqual( (saved.Pace!.Value.BaseSpeed, saved.Pace.Value.PreviousSpeed, saved.Pace.Value.PurposeSpeed, saved.Pace.Value.AdjustorSpeed),
+			(loaded.BaseSpeed, loaded.PreviousSpeed, loaded.PurposeSpeed, loaded.AdjustorSpeed) );
+		Assert.AreEqual( 120, loaded.BaseSpeed, "the guard was saved at a rest of 79" );
+
+		// The shipped save's hurry and adjustor are nought, so each of the four is told apart on a made-up record.
+		var kept = new Staff( saved.ThingId, saved.Model, saved.Staff!.Value, saved.Navigator,
+			new ParkWorld.PaceState( AdjustorSpeed: 11, BaseSpeed: 22, PreviousSpeed: 3.5f, PurposeSpeed: 44 ) );
+
+		Assert.AreEqual( (11, 22, 3.5f, 44), (kept.AdjustorSpeed, kept.BaseSpeed, kept.PreviousSpeed, kept.PurposeSpeed) );
+	}
+
+	/// <summary>A member a test builds from a bare record is not eased, and keeps the mover's speed.</summary>
+	[TestMethod]
+	public void AMemberBuiltWithoutSpeedWordsIsNotEased()
+	{
+		var (member, _, _) = OnThePath( Guard );
+		var speed = member.Navigator.MaxSpeed;
+
+		member.BaseSpeed = 60;
+		member.Pace();
+
+		Assert.IsFalse( member.Paced );
+		Assert.AreEqual( speed, member.Navigator.MaxSpeed );
+	}
+
+	/// <summary>
+	/// The hurry is written by the shared setter: nought on going idle and on strike, 25 on setting off for the
+	/// strike, and left alone by a walk (<c>FUN_005054d0</c>).
+	/// </summary>
+	[TestMethod]
+	public void TheSharedSetterWritesTheHurry()
+	{
+		var (member, _, _) = OnThePath( Handyman );
+
+		member.SetActivity( StaffActivity.GoingToLoo, tick: 1 );
+		Assert.AreEqual( 25, member.PurposeSpeed );
+
+		member.SetActivity( StaffActivity.Walking, tick: 2 );
+		Assert.AreEqual( 25, member.PurposeSpeed, "a walk leaves it" );
+
+		member.SetActivity( StaffActivity.Idle, tick: 3 );
+		Assert.AreEqual( 0, member.PurposeSpeed );
+
+		member.SetActivity( StaffActivity.GoingOnStrike, tick: 4 );
+		Assert.AreEqual( 25, member.PurposeSpeed );
+
+		member.SetActivity( StaffActivity.OnStrike, tick: 5 );
+		Assert.AreEqual( 0, member.PurposeSpeed );
+	}
+
+	/// <summary>The live park with no rest area in it: the Staff Room's flag taken off.</summary>
+	private (Staff Member, PeepWalk Walk, ParkState State) WithNoRestArea( int thing, float rest,
+		StaffActivity activity = StaffActivity.Idle )
+	{
+		var (member, walk, state) = OnThePath( thing, activity: activity );
+
+		foreach ( var room in state.ObjectsInChainOrder().Where( placed => placed.IsRestArea ).ToArray() )
+			state.ReplaceObject( room with { Flags = 0 } );
+
+		member.Tiredness = rest;
+
+		return (member, walk, state);
+	}
+
+	/// <summary>
+	/// Tired with no rest area found, <c>FUN_00506a40</c> answers 0 and the kind's own choice follows: the guard
+	/// walks on a sweep that is not a multiple of four, and stays on one that is. A draw whose low four bits are
+	/// nought costs the happiness the balance file names; any other costs nothing.
+	/// </summary>
+	[DataTestMethod]
+	[DataRow( 1001, StaffActivity.Walking )]
+	[DataRow( 1000, StaffActivity.Idle )]
+	public void ATiredGuardWithNoRestAreaTakesTheirOwnChoice( int tick, StaffActivity then )
+	{
+		var (member, walk, state) = WithNoRestArea( Guard, rest: 0.5f );
+
+		new StaffBehaviour( Balance(), new Random( 3 ), state ).Step( member, walk, playing: null, tick );
+
+		Assert.AreEqual( then, member.Activity );
+		Assert.AreEqual( 0, member.RestArea );
+		Assert.AreEqual( 0x14, member.Thoughts.Last );
+	}
+
+	/// <inheritdoc cref="ATiredGuardWithNoRestAreaTakesTheirOwnChoice"/>
+	[DataTestMethod]
+	[DataRow( 0, 48f )]
+	[DataRow( 16, 48f )]
+	[DataRow( 8, 50f )]
+	[DataRow( 3, 50f )]
+	public void FindingNoRestAreaCostsHappinessOnOneDrawInSixteen( int draw, float happiness )
+	{
+		var (member, walk, state) = WithNoRestArea( Guard, rest: 0.5f );
+
+		new StaffBehaviour( Balance(), new CountedDraw( draw ), state ).Step( member, walk, playing: null, tick: 1000 );
+
+		Assert.AreEqual( happiness, member.Happiness );
+	}
+
+	/// <summary>
+	/// Too tired to work is the rest byte under RestLevel, strictly (<c>FUN_00506680</c>): at a byte of nought the
+	/// mechanic and the handyman make no search and the handyman's toilet is not written; at a byte of 1, tired
+	/// but not too tired, both search.
+	/// </summary>
+	[DataTestMethod]
+	[DataRow( 0.99f, 0 )]
+	[DataRow( 1.5f, 1 )]
+	public void OneTooTiredToWorkMakesNoSearch( float rest, int searches )
+	{
+		var mechanicBefore = Counted( "MECHANIC_RIDE_SEARCH" );
+		var (mechanic, mechanicWalk, mechanicState) = WithNoRestArea( Mechanic, rest );
+
+		new StaffBehaviour( Balance(), new Random( 3 ), mechanicState ).Step( mechanic, mechanicWalk, playing: null, tick: 1001 );
+
+		Assert.AreEqual( searches, Counted( "MECHANIC_RIDE_SEARCH" ) - mechanicBefore );
+		Assert.AreEqual( StaffActivity.Walking, mechanic.Activity, "and walks either way" );
+
+		var litterBefore = Counted( "HANDYMAN_LITTER_SEARCH" );
+		var (handyman, handymanWalk, handymanState) = WithNoRestArea( Handyman, rest );
+
+		handyman.ToiletToClean = 77;
+
+		new StaffBehaviour( Balance(), new Random( 3 ), handymanState ).Step( handyman, handymanWalk, playing: null, tick: 1001 );
+
+		Assert.AreEqual( searches, Counted( "HANDYMAN_LITTER_SEARCH" ) - litterBefore );
+		Assert.AreEqual( searches == 0 ? 77 : 0, handyman.ToiletToClean, "the toilet found is written only when the search is made" );
+		Assert.AreEqual( StaffActivity.Walking, handyman.Activity );
+	}
+
+	/// <summary>An entertainer too tired to work takes neither the draw in three nor the look (<c>0x004d46e0</c>).</summary>
+	[DataTestMethod]
+	[DataRow( 0.99f, 0 )]
+	[DataRow( 1.5f, 1 )]
+	public void AnEntertainerTooTiredToWorkDoesNotLook( float rest, int looks )
+	{
+		var (member, walk, state) = WithNoRestArea( Entertainer, rest );
+		var asked = 0;
+
+		// Every draw nought: the draw in three would look.
+		new StaffBehaviour( Balance(), new CountedDraw( 0 ), state )
+		{
+			GuestsNear = ( _, _ ) => { ++asked; return 0; }
+		}.Step( member, walk, playing: null, tick: 1000 );
+
+		Assert.AreEqual( looks, asked );
+	}
+
+	/// <summary>
+	/// A researcher too tired to work, whose draw says stay, does not research: the state is left as it was
+	/// (<c>0x00502bca</c>). Tired but not too tired, they research.
+	/// </summary>
+	[DataTestMethod]
+	[DataRow( 0.99f, 0, StaffActivity.Idle )]
+	[DataRow( 1.5f, 0, StaffActivity.Researching )]
+	[DataRow( 0.99f, 3, StaffActivity.Walking )]
+	public void AResearcherTooTiredToWorkDoesNotResearch( float rest, int draw, StaffActivity then )
+	{
+		var (member, walk, state) = WithNoRestArea( Researcher, rest );
+
+		// A draw of nought: the choice's low two bits say stay. A draw of 3 walks, too tired or not.
+		new StaffBehaviour( Balance(), new CountedDraw( draw ), state ).Step( member, walk, playing: null, tick: 1001 );
+
+		Assert.AreEqual( then, member.Activity );
+	}
+
+	/// <summary>
+	/// The rest ends in the kind's decide, in the same sweep (<c>0x00506298</c>): the guard walks at once on a sweep
+	/// that is not a multiple of four, and on one that is stands idle at stamp nought. The decide finds them rested,
+	/// so the base speed is 140.
+	/// </summary>
+	[DataTestMethod]
+	[DataRow( 1001, StaffActivity.Walking )]
+	[DataRow( 1002, StaffActivity.Walking )]
+	[DataRow( 1000, StaffActivity.Idle )]
+	public void TheRestEndsInTheKindsDecideInTheSameSweep( int tick, StaffActivity then )
+	{
+		var (member, walk, state) = OnThePath( Guard, activity: StaffActivity.Resting );
+
+		member.Tiredness = 99.9f;
+		member.RestArea = 20;
+		member.BaseSpeed = 60;
+
+		new StaffBehaviour( Balance(), new Random( 3 ), state ).Step( member, walk, playing: null, tick );
+
+		Assert.AreEqual( then, member.Activity );
+		Assert.AreEqual( 0, member.TimeStartedIdling );
+		Assert.AreEqual( 0, member.RestArea );
+		Assert.AreEqual( 140, member.BaseSpeed, "the decide ran" );
+	}
+
+	/// <summary>
+	/// Every kind's constructor ends in its decide (<c>StaffBehaviour.Hired</c>): the mechanic and the handyman walk
+	/// whatever the clock, the guard by its low two bits, and the researcher walks or researches, never idle.
+	/// </summary>
+	[DataTestMethod]
+	[DataRow( Mechanic, 1000, StaffActivity.Walking )]
+	[DataRow( Handyman, 1000, StaffActivity.Walking )]
+	[DataRow( Guard, 1001, StaffActivity.Walking )]
+	[DataRow( Guard, 1000, StaffActivity.Idle )]
+	public void AHireDecidesAtOnce( int thing, int tick, StaffActivity then )
+	{
+		var (member, walk, state) = OnThePath( thing );
+
+		member.Tiredness = 100f;
+
+		new StaffBehaviour( Balance(), new Random( 3 ), state ).Hired( member, walk, tick );
+
+		Assert.AreEqual( then, member.Activity );
+		Assert.AreEqual( 140, member.BaseSpeed );
+	}
+
+	/// <inheritdoc cref="AHireDecidesAtOnce"/>
+	[DataTestMethod]
+	[DataRow( 0, StaffActivity.Researching )]
+	[DataRow( 3, StaffActivity.Walking )]
+	public void AResearcherHiredWalksOrResearches( int draw, StaffActivity then )
+	{
+		var (member, walk, state) = OnThePath( Researcher );
+
+		member.Tiredness = 100f;
+
+		// A draw of 3 walks, and every later draw of 3 takes the wander one cell.
+		new StaffBehaviour( Balance(), new CountedDraw( draw ), state ).Hired( member, walk, tick: 1000 );
+
+		Assert.AreEqual( then, member.Activity );
+	}
 }

@@ -111,8 +111,8 @@ public class ParkRestAreaTests
 
 	/// <summary>
 	/// <b>The control, and it is what stops the test above being vacuous.</b> The same worn-out guard,
-	/// given a behaviour that knows of no park, cannot find a rest area - so they stand about
-	/// instead, where the original goes on to the guard's own choice (Q136). If the arm fired regardless
+	/// given a behaviour that knows of no park, cannot find a rest area - so the guard's own choice
+	/// follows, which on a sweep that is a multiple of four is to stay. If the arm fired regardless
 	/// of what the park holds, this would fail.
 	/// </summary>
 	[TestMethod]
@@ -123,7 +123,7 @@ public class ParkRestAreaTests
 		behaviour.Step( member, walk, playing: null, tick: 500 );
 
 		Assert.AreEqual( StaffActivity.Idle, member.Activity,
-			"with nowhere to rest they stand about, which is the original's own other arm" );
+			"with nowhere to rest the guard's own choice follows, and sweep 500 is a multiple of four" );
 		Assert.AreEqual( 0, member.RestArea, "and claim nothing" );
 	}
 

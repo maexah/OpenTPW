@@ -629,8 +629,7 @@ public sealed class Peep
 	/// a sweep below a hundred.
 	/// </para>
 	/// <para>
-	/// A member of staff is not eased here, and keeps the speed the save gave them: their base follows their rest,
-	/// which is unbuilt (Q136).
+	/// A member of staff is eased the same way (<see cref="Staff.Pace"/>): the function is the person base's.
 	/// </para>
 	/// </summary>
 	public void Pace()
@@ -640,19 +639,34 @@ public sealed class Peep
 
 		var sum = (PurposeSpeed & 0xffff) + (BaseSpeed & 0xffff) + (AdjustorSpeed & 0xffff);
 
-		PreviousSpeed = ((float)sum / SpeedDivisor - PreviousSpeed * -3f) * 0.25f;
-
-		var speed = PreviousSpeed > MostSpeed ? MostSpeed : PreviousSpeed;
-
-		// __ftol: truncated through a 64-bit integer, its low dword kept.
-		Navigator.MaxForce = Math.Max( LeastMaxSpeed, unchecked((int)(long)(speed * MaxForcePerSpeed)) );
-		Navigator.MaxSpeed = Math.Max( LeastMaxSpeed, unchecked((int)(long)(speed * MaxSpeedPerSpeed)) );
+		PreviousSpeed = Ease( sum, PreviousSpeed, Navigator );
 
 		if ( AdjustorSpeed != 0 )
 			Log.Info( $"Person {ThingId}: pace {sum} eased to {PreviousSpeed}, speed {Navigator.MaxSpeed}, adjustor {AdjustorSpeed}" );
 
-		AdjustorSpeed = ((AdjustorSpeed * 99) & 0xffff) / 100;
+		AdjustorSpeed = Fade( AdjustorSpeed );
 	}
+
+	/// <summary>
+	/// Moves a person's walking speed a quarter of the way to the sum of their three speed words over
+	/// <see cref="SpeedDivisor"/>, and writes the mover's force and speed from it - <c>FUN_004fa870</c> down to its
+	/// call of <c>FUN_00510190</c>, for a guest and a member of staff alike.
+	/// </summary>
+	/// <returns>The eased speed, the person's new <c>mPreviousSpeed</c>.</returns>
+	internal static float Ease( int sum, float previous, PeepNavigator navigator )
+	{
+		var eased = ((float)sum / SpeedDivisor - previous * -3f) * 0.25f;
+		var speed = eased > MostSpeed ? MostSpeed : eased;
+
+		// __ftol: truncated through a 64-bit integer, its low dword kept.
+		navigator.MaxForce = Math.Max( LeastMaxSpeed, unchecked((int)(long)(speed * MaxForcePerSpeed)) );
+		navigator.MaxSpeed = Math.Max( LeastMaxSpeed, unchecked((int)(long)(speed * MaxSpeedPerSpeed)) );
+
+		return eased;
+	}
+
+	/// <summary>The adjustor word a sweep on: 99 hundredths of itself, taken as a word (<c>0x004fa8ea</c>).</summary>
+	internal static int Fade( int adjustor ) => ((adjustor * 99) & 0xffff) / 100;
 
 	/// <summary>
 	/// What each place further back in a queue costs in <see cref="QueueMoveDelay"/> - the float at

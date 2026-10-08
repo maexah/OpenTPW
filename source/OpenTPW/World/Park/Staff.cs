@@ -58,8 +58,8 @@ public sealed class Staff
 
 	/// <summary>
 	/// How rested they are, 0 to 100 - and the name runs the opposite way to what it measures, which is the
-	/// original's own. It falls as they work and is recovered by resting, and "too tired" is
-	/// <c>value &lt; AllStaffConstants.RestLevel</c>.
+	/// original's own. It falls as they work and is recovered by resting. Tired is its truncated byte at or
+	/// under <c>AllStaffConstants.RestLevel</c>; too tired to work is that byte under it.
 	/// </summary>
 	public float Tiredness { get; internal set; }
 
@@ -137,12 +137,54 @@ public sealed class Staff
 	public PeepNavigator Navigator { get; }
 
 	/// <summary>
-	/// How fast they mean to walk, written into the thing's <c>+0xc2</c> before the walk runs. Staff take
-	/// the unhurried speed, 0, everywhere the shared spine reaches but going on strike, which writes the
-	/// hurried 25 (<c>FUN_005054d0</c> case 4); a guard chasing somebody hurries too, and a handyman walking to
-	/// a toilet, the one arm that writes it here. Nothing reads it: staff are not eased (Q136).
+	/// The hurry, <c>mPurposeSpeed</c> at <c>+0xc2</c>: nought on going idle and on strike (<c>FUN_005054d0</c>
+	/// cases 0 and 5), the hurried 25 on setting off for the strike (case 4) and for a toilet
+	/// (<c>FUN_004d7330</c>), and left as it was by every other state. One of the three words
+	/// <see cref="Pace"/> sums.
 	/// </summary>
 	public int PurposeSpeed { get; internal set; }
+
+	/// <summary>
+	/// Their walking speed in hundredths by how rested they are - <c>mBaseSpeed</c>, the word at <c>+0xc0</c>:
+	/// 60 at hire below grade 3 and for every entertainer, 100 otherwise (<c>FUN_00504b90</c>,
+	/// <c>0x004d43fa</c>), and one of <see cref="Peep.BaseSpeeds"/> by fifths of the rest byte on every decide
+	/// that finds them not tired (<see cref="StaffBehaviour"/>, <c>FUN_00506a40</c>).
+	/// </summary>
+	public int BaseSpeed { get; internal set; }
+
+	/// <summary><c>mAdjustorSpeed</c>, the word at <c>+0xc4</c>: read from the save, and nothing gives staff any.</summary>
+	public int AdjustorSpeed { get; internal set; }
+
+	/// <summary>The speed the walk was last eased to - <c>mPreviousSpeed</c>, the float at <c>+0xc8</c>.</summary>
+	public float PreviousSpeed { get; private set; }
+
+	/// <summary>
+	/// Whether <see cref="Pace"/> eases this member's walking speed: everyone read from a save or hired. One a
+	/// test builds from a bare record keeps the navigator's speed as it was given.
+	/// </summary>
+	public bool Paced { get; }
+
+	/// <summary>
+	/// Eases their walking speed and hands it to the walk - <c>FUN_004fa870</c>, the first call of the shared
+	/// staff tick <c>FUN_00505490</c> every sweep, whatever they are doing (<see cref="Peep.Ease"/>).
+	/// </summary>
+	public void Pace()
+	{
+		if ( !Paced )
+			return;
+
+		var sum = (PurposeSpeed & 0xffff) + (BaseSpeed & 0xffff) + (AdjustorSpeed & 0xffff);
+
+		PreviousSpeed = Peep.Ease( sum, PreviousSpeed, Navigator );
+		AdjustorSpeed = Peep.Fade( AdjustorSpeed );
+	}
+
+	/// <summary>The base speed a member is hired with (<c>FUN_00504b90</c>; an entertainer's at <c>0x004d43fa</c>).</summary>
+	public static int HiredBaseSpeed( int model, int grade )
+		=> model == EntertainerModel || grade < 3 ? Peep.BaseSpeeds[0] : Peep.BaseSpeeds[2];
+
+	/// <summary>The entertainer's thing model.</summary>
+	private const int EntertainerModel = 6;
 
 	/// <summary>The animation this staff member's state has asked for, or nought for none.</summary>
 	/// <remarks>
@@ -154,9 +196,20 @@ public sealed class Staff
 	/// <inheritdoc cref="Peep.NextInterval"/>
 	public int NextInterval { get; set; }
 
-	public Staff( int thingId, int model, ParkWorld.StaffState saved, ParkWorld.NavigatorState navigator )
+	public Staff( int thingId, int model, ParkWorld.StaffState saved, ParkWorld.NavigatorState navigator,
+		ParkWorld.PaceState? pace = null )
 	{
 		Navigator = new PeepNavigator( navigator );
+
+		if ( pace is { } speeds )
+		{
+			Paced = true;
+			AdjustorSpeed = speeds.AdjustorSpeed;
+			BaseSpeed = speeds.BaseSpeed;
+			PreviousSpeed = speeds.PreviousSpeed;
+			PurposeSpeed = speeds.PurposeSpeed;
+		}
+
 		ThingId = thingId;
 		Model = model;
 		Activity = (StaffActivity)saved.State;
@@ -229,6 +282,14 @@ public sealed class Staff
 		// asymmetry is why three of the shipped park's staff carry no stamp at all.
 		if ( next == StaffActivity.Idle )
 			TimeStartedIdling = Activity == StaffActivity.Walking ? tick : 0;
+
+		// The hurry: off on going idle and on strike, on for the walk to the strike (0x00505555, 0x00505590,
+		// 0x0050556c).
+		if ( next is StaffActivity.Idle or StaffActivity.OnStrike )
+			PurposeSpeed = 0;
+
+		if ( next == StaffActivity.GoingOnStrike )
+			PurposeSpeed = HurryingSpeed;
 
 		if ( next == StaffActivity.Waiting )
 			TimeStartedIdling = tick;

@@ -2330,7 +2330,7 @@ booth or entrance A or B in states `0x10`, `0x12` and `0x13`. `mTimeHired` is mG
   always 117 (P(9) = 119/128), and every later world draw in the park goes on from that seed.
 - **Tired is `(u8)trunc( rest ) <= RestLevel`**, signed and inclusive (`0x00506b41`); "too tired to work",
   `FUN_00506680`, is strict. Not tired, `FUN_00506a40` sets the speed word `+0xc0` from the rest byte: 60, 80, 100,
-  120, 140 by fifths (`[0x0075c7f8]`).
+  120, 140 by fifths (`[0x0075c7f8]`), and 140 (`[0x0075c800]`) at a byte of 100; tired, the word is left.
 - **The patrol roll `FUN_00506f30`** takes a cell only when it is on the map and path, `mType` 1 (`FUN_00536310`),
   before it routes. A member of staff whose corners are both 0 is outside every cell (`FUN_00506ed0` has no case for
   it); every Lost Kingdom member carries an area.
@@ -2639,11 +2639,69 @@ near silent. **Not found, for want of an instrument**: the kinds' voices, which 
 would score no better. With the music on nothing so quiet is found at all, and neither a count of deviations nor a
 template played backwards tells a sample from a loud noise there: only the normalised score at a known moment did.
 
+### The decide's differences, in both games
+
+Built by `docs/QUEUE.md` Q136: the tired test, the speed by rest, the tired member who finds no rest area, the
+rest's end and the hire. Read again in the listing first, and all of it as written above, with three things added.
+**Every kind's constructor ends in its decide**, not the guard's and the researcher's alone: the mechanic's
+`FUN_004d9eb0` at `0x004d9fc4` (after its own `SetState( 0 )`), the handyman's `FUN_004d6b60` at `0x004d6c73`, the
+entertainer's `FUN_004d4340` at `0x004d4430`. **The staff constructor `FUN_00504b90` sets rest and happiness to 100,
+`+0xc2` to 0 and `+0xc0` to 60 below grade 3 and 100 from it**; the entertainer's writes 60 again (`0x004d43fa`); the
+person base under it leaves `+0xc8` at 0.0. So a hire's base is 140 before their first sweep and their speed eases up
+from nought. **"Too tired to work" is asked at four places**: the mechanic's, the handyman's and the entertainer's
+decides before their searches (`0x004da5c7`, `0x004d7113`, `0x004d46e0`: the entertainer's draw mod 3 is skipped
+with the look, and the handyman's `+0x21a` is not written), and the researcher's only before it researches
+(`0x00502bca`, `0x00502afd`, `0x00502cad`, `0x005026f6`), where it leaves the state as it was. The guard's has none.
+
+In OpenTPW: `StaffBehaviour.TiredOrCarryingOn` (`FUN_00506a40` past the strike), `TooTiredToWork`, `Rest`'s decide,
+`Hired`; `Staff.Pace` on `Peep.Ease`, the park's sweep calling it before the stamp; the shared setter's hurry. The
+`staff` census prints `base`, `purpose`, `adjustor`, `pace`, `speed` and `restExact`, and the console's `staffrest
+<thing> <0-100>` sets a member's rest.
+
+**OpenTPW**, stock Lost Kingdom, predicted first, 6 of 7 (`q136/confirm.py`, `run1/`; from the gate's build, `gate/`,
+5 of 7, the second miss the entertainer's, as in the original below):
+
+- Every member's base is the table's entry for their rest and their mover's speed is the eased speed's, on all 80
+  readings; the guard 120, 1.2000 and 15728.
+- The mechanic's rest set to 8: base 60 four sweeps on, the speed settling on 0.6 and 7864, and his steps 0.097 to
+  0.121 cells a sweep. **The miss, mine**: 25 sweeps on the speed was still 0.0003 from settled (7867).
+- The guard's rest set to 1.99 while idle on stamp 980: "tired on mGameTick 991, rest 1.990, and sets off for rest
+  area 20".
+- Resting, his rest set to 99.9 on 1109: on 1110 he reads Walking, base 140, no rest area.
+- Five hires, one of each kind, on 1110 with the park held: all five Walking, base 140, speed 0, the mover at its
+  floor of 655; then 0.3500, 0.6125 and 0.8094 on the next three sweeps.
+- The Staff Room sold and five rests set: every one of the five "found or reached no rest area: carries on"; the
+  guard and the mechanic Walking on every reading, on 23 and 8 cells; the mechanic "too tired to work" at 14
+  decides; the researcher never Researching and twice "left Walking, too tired to research"; the entertainer made
+  no look.
+
+The build before, with the instruments alone added, 6 of 6: no member's speed ever changes; the guard at 1.99 does
+not go to rest; the rest ends Idle and the walk begins a sweep later; five hires stand Idle at speed 18350; and with
+no Staff Room the tired guard and mechanic stand for good.
+
+**The original under Proton**, the same park, predicted first, 3 of 4 (`q136/orig/watch.py`, `a.log`; four writes
+to its memory, none to disk):
+
+- From 815 to 895 every settled speed is its three words' sum over a hundred (380 of 380), the guard's 120 and 1.2.
+  **The miss, mine**: the entertainer's base read 140 on three sweeps at a rest of 77.9. A base is as old as the
+  last decide, and a performance runs 51 sweeps without one.
+- The guard's rest written 1.99 on 896, idle on stamp 896: state 2 on 907, his rest still 1.99.
+- In state 3, his rest written 99.9 on 980: on 981 state 1, `+0xc0` 140, `+0x200` 0.
+- The Staff Room's rest-area bit cleared (`+0x32`, `0x22` to `0x20`) and the guard's and the researcher's rest
+  written 0.5 on 1010: over 100 sweeps the guard reads state 1 on 78 and 0 on 22, on 22 cells, never 2 or 3; the
+  researcher reads state 1 on all 100, where it had read `0xf` on 155 of the 256 before.
+- A mechanic hired by hand from the hire screen (`hire.py`, read-only): first seen on 1386 in state 1, `+0xc0`
+  140, `+0xc8` 0.0, then 0.35, 0.6125 and 0.8094 on 1387 to 1389. The figures are the build's; they were not
+  written down before the read. The new thing took id 32, a freed one (Q26).
+
+Not run in the original: the other four kinds' hires, a tired member whose route to a rest area fails (the flag
+was cleared instead), and the mechanic's, handyman's and entertainer's too-tired gates.
+
 ### Where OpenTPW differs
 
 | What | The original | OpenTPW | Reached in Lost Kingdom |
 |---|---|---|---|
-| A hire's first decide | at once: the guard's on `mGameTick & 3` (`0x004d5e76`), the researcher's on a draw (`0x005026cb`) | Idle at stamp 0, decided on the next sweep | every guard or researcher hired (Q136) |
+| A hire's first decide | at once, in every kind's constructor: the mechanic's `0x004d9fc4`, the handyman's `0x004d6c73`, the entertainer's `0x004d4430`, the guard's on `mGameTick & 3` (`0x004d5e76`), the researcher's on a draw (`0x005026cb`) | the same (`StaffBehaviour.Hired`, from `ParkPeople.Hire`; "The decide's differences, in both games") | every hire |
 | The mechanic, the handyman and the entertainer with no work | walk about | walk about: the mechanic and the handyman on every decide, the entertainer on `mGameTick & 3` (`StaffBehaviour.WalkAbout`, `Entertain`; "The no-work walk, in both games") | from their saved walks' ends |
 | The mechanic's search for a ride | `FUN_004daa90` on every decide not too tired | counted, `MECHANIC_RIDE_SEARCH`, and answers none | every mechanic decide; nothing here breaks down |
 | The handyman's searches | litter `FUN_004c8ed0` at his decide and at his idle pre-step, then a toilet `FUN_004d7880` | the litter search counted, `HANDYMAN_LITTER_SEARCH`, and answers none; the toilet search built (`StaffBehaviour.FindToilet`; "A toilet's dirt") | every handyman decide; no cell here holds litter (Q225) |
@@ -2651,14 +2709,14 @@ template played backwards tells a sample from a loud noise there: only the norma
 | The stand as a member goes idle | SetState(0) queues animation 3 every time (`FUN_004fa460`) | queued from a performance and after a clean only; any other idle keeps the picture it had | every idle |
 | State scripts 1 to 3 (words 1800, 1812, 1824) and a bank with no group | played; an animation past the table | not copied, counted `SPRITE_STATE_ANIMATION_NOT_STARTED`; counted `ENTERTAINER_BANK_WITHOUT_A_STATE_GROUP` | no shipped bank |
 | The entertainer's region effect | the pre-step `FUN_004d4660` moves `RegionFX[0]` with them, cell by cell | none, uncounted | every cell the entertainer crosses (Q157) |
-| The researcher's research | state `0xf` on a draw of nought or with nowhere to walk, WorkDuration + 1 sweeps, then a walk or the same again; the points to the lab every 20 sweeps ("The research, in both games") | built (`StaffBehaviour.Research`); the points counted, `RESEARCH_POINTS_TO_THE_LAB`, and spent by nothing: there is no lab; the too-tired gate unreached (Q136) | a quarter of the researcher's decides; the points every 20 sweeps |
+| The researcher's research | state `0xf` on a draw of nought or with nowhere to walk, WorkDuration + 1 sweeps, then a walk or the same again; the points to the lab every 20 sweeps ("The research, in both games") | built (`StaffBehaviour.Research`); the points counted, `RESEARCH_POINTS_TO_THE_LAB`, and spent by nothing: there is no lab | a quarter of the researcher's decides; the points every 20 sweeps |
 | Staff sounds | fourteen cat_staff effects | twelve built (`StaffBehaviour.DrawForSound`, `ParkAudio.StaffSound`; `audio.md`, "The staff's voices"); the chase's `0x88` and `0x89` have no site | every idle and walking turn, a researching turn; a performance's end; a guard's chase and catch wait on the chase |
-| Tired | the byte `<=` 1 | the float `<` 1 | a rest in [1, 2) (Q136) |
-| Tired with no rest area found or reached | `FUN_00506a40` answers 0 and the kind's choice follows | the guard and the researcher stand and ask again after the idle wait | once the Staff Room at (58,16) is sold or cannot be routed to (Q136) |
-| The end of a rest | the kind's decide in the same sweep | Idle at stamp 0, decided on the next sweep | every rest (Q136) |
+| Tired | the byte `<=` 1 | the same (`StaffBehaviour.TiredOrCarryingOn`) | a rest under 2 |
+| Tired with no rest area found or reached | `FUN_00506a40` answers 0 and the kind's choice follows; three kinds' searches and the research ask `FUN_00506680` first | the same (`TooTiredToWork`) | once the Staff Room at (58,16) is sold or cannot be routed to |
+| The end of a rest | the kind's decide in the same sweep | the same (`StaffBehaviour.Rest`) | every rest |
 | The patrol roll | path cells only | path cells only (Q206) | verified in `staff-wandering.md` |
-| Speed by rest | `+0xc0`, 60 to 140, one of `FUN_004fa870`'s three terms | none: staff are not eased and keep the saved `max_speed` (a guest's is, `Peep.Pace`) | every decide (Q136) |
-| Thoughts `0x12` to `0x16` | shown | `0x14`, `0x13`, `0x12` at every kind's decide (`StaffBehaviour.ThinkOfTheMood`, the last with its one draw) and `0x16` where the patrol roll fails, each a pink bubble (Q110b); `0x15` waits on the strike walk (Q138) | tired, unhappy, very happy staff; a failed roll ("Thoughts and their pictures") |
+| Speed by rest | `+0xc0`, 60 to 140, one of `FUN_004fa870`'s three terms | the same: `Staff.Pace` every sweep, the base set by a decide that finds the member not tired | every decide |
+| Thoughts `0x12` to `0x16` | shown | `0x14`, `0x13`, `0x12` at every kind's decide (`StaffBehaviour.TiredOrCarryingOn`, the last with its one draw) and `0x16` where the patrol roll fails, each a pink bubble (Q110b); `0x15` waits on the strike walk (Q138) | tired, unhappy, very happy staff; a failed roll ("Thoughts and their pictures") |
 | Strikes | `mStaffHQ`'s monthly flag, the strike walk, state 5's end | none, uncounted, the model-9 record unread | the monthly consideration every month the park is open; a strike only past the 24-month gate (Q138) |
 
 ## A toilet's dirt - `FUN_004e2440`, `FUN_004e0390` and the handyman's `FUN_004d7880`
@@ -2766,7 +2824,7 @@ does (`0x004e24bc`..`0x004e252a`).
 | The handyman's search, walk and clean | states `0xa`, `0xb` | built: `StaffBehaviour.FindToilet`, `ArriveAtTheLoo`, `CleanOn`, `ParkRideOperation.Clean` and the open after it; the save's `mToiletToClean`, `mTimeStartedCleaning` and `mTimeMarkedForMaintenance` are read |
 | The aim after the search | left on the last candidate tested | aimed at the winner again; counted where they differ, `HANDYMAN_TOILET_AIM_LEFT_ON_A_LATER_TOILET` |
 | The clean's region effects | 6 unstamped, 1 stamped | counted with the dirtying's, `TOILET_DIRTY_REGION_EFFECTS` |
-| The hurry speed on the walk to a toilet | `+0xc2` = 25 | written, read by nothing: staff are not eased (Q136) |
+| The hurry speed on the walk to a toilet | `+0xc2` = 25 | the same, one of the three words `Staff.Pace` sums; taken off on going idle |
 | A mechanic assigned to a thing | kept while his `+0x218` names it | reads as aiming elsewhere and is forgotten after 100 sweeps; nobody here assigns one |
 | The request for service | shuts the object and calls a member | the search and the clean read and clear a saved `+0x64`; no control here sets one on a toilet (the ride window's `b_callmech` draws and reports itself) |
 
@@ -4224,9 +4282,9 @@ and it is the answer to why a peep would otherwise step rather than walk.
 |---|---|---|
 | person `+0x190` / `+0x194` | `mPreviousX` / `mPreviousY` — the position as it stood at the **last** thing sweep. `+0x194` is the one that pairs with the Z axis. | Named by the person-base serialiser `FUN_004f8b10` |
 | person `+0xd4`, its `+0x8` / `+0xc` | the mover sub-object's live position, 16.16 fixed point, `0x10000` = one cell (the constructor seeds `(cellX << 16) + 0x8000`, the cell centre) | Disassembly |
-| `FUN_004fa870` | Works out the speed first: the words `+0xc2`, `+0xc0` and `+0xc4`, each zero-extended, summed and divided by the word at `0x0075c7fc` (100, the middle of `{60, 80, 100, 120, 140}` at `0x0075c7f8`), then `(that − +0xc8 × −3.0) × 0.25` (`0x007006f0`, `0x007006f4`), a quarter of the way on from `+0xc8`; stored back at `+0xc8` and passed to `FUN_00510190`; then `+0xc4` becomes `((+0xc4 × 99) & 0xffff) / 100`, a 16-bit `IMUL` (`0x004fa8ea`), one less a sweep below a hundred. Then it stamps `previous := current` with `FUN_00510160( person+0x190, person+0x194 )` — a **thiscall** on the mover (`person+0xd4`), so the decompiler drops `ECX` and it reads as two args — and ends with `FUN_004d4190` on `person+0xc`. It is **the first call of every person kind's tick handler** — `FUN_00501650` at `0x00501658` (guests), `FUN_00505490` at `0x00505495` (staff) — and in the guest handler it sits **ahead of the `(id & 3)` needs stagger**, so it is unconditional: every peep, every sweep. Straight-line, no early return. A third caller, `0x004f7c63`, is the online person's (model 18). OpenTPW eases a guest's speed (`Peep.Pace`, Q177d), in single precision (`park-engine.md`, "Which rounding is live"); staff keep the saved one or, hired, a rested member's 1.4 (Q136). | Disassembly |
+| `FUN_004fa870` | Works out the speed first: the words `+0xc2`, `+0xc0` and `+0xc4`, each zero-extended, summed and divided by the word at `0x0075c7fc` (100, the middle of `{60, 80, 100, 120, 140}` at `0x0075c7f8`), then `(that − +0xc8 × −3.0) × 0.25` (`0x007006f0`, `0x007006f4`), a quarter of the way on from `+0xc8`; stored back at `+0xc8` and passed to `FUN_00510190`; then `+0xc4` becomes `((+0xc4 × 99) & 0xffff) / 100`, a 16-bit `IMUL` (`0x004fa8ea`), one less a sweep below a hundred. Then it stamps `previous := current` with `FUN_00510160( person+0x190, person+0x194 )` — a **thiscall** on the mover (`person+0xd4`), so the decompiler drops `ECX` and it reads as two args — and ends with `FUN_004d4190` on `person+0xc`. It is **the first call of every person kind's tick handler** — `FUN_00501650` at `0x00501658` (guests), `FUN_00505490` at `0x00505495` (staff) — and in the guest handler it sits **ahead of the `(id & 3)` needs stagger**, so it is unconditional: every peep, every sweep. Straight-line, no early return. A third caller, `0x004f7c63`, is the online person's (model 18). OpenTPW eases a guest's speed (`Peep.Pace`, Q177d) and a member of staff's (`Staff.Pace`, Q136), in single precision (`park-engine.md`, "Which rounding is live"). | Disassembly |
 | `FUN_00510190` | A thiscall on the mover with one float, held to at most 2.0 (`0x007009a0`; the argument only, `+0xc8` keeps its own), then `max_force` `+0x18` = `__ftol( s × 26214.4 )` and `max_speed` `+0x1c` = `__ftol( s × 13107.2 )` (the doubles at `0x007009a8`, `0x007009b0`), each at least 655 (`0x28f`, `0x005101d0`..`0x005101e3`); `__ftol` truncates. One caller, `0x004fa8d9`. The steering step reads both from the mover every step (`0x0050f3f8`, `0x0050f450`, `0x0050f496`), and two behaviours cap with `max_speed` (`0x0050f10b` in follow_path, `0x0050def9`), so the speed written at the top of a sweep governs that sweep's walk. The save's two fields are exactly this of `mPreviousSpeed` on all 18 people of the shipped park and all 392 of each of Alexah's two played Lost Kingdom saves. | Disassembly, `read_memory`, the saves |
-| person `+0xc0`, `+0xc2`, `+0xc4`, `+0xc8` | `mBaseSpeed`, the hurry `mPurposeSpeed`, `mAdjustorSpeed` (words) and `mPreviousSpeed` (a float): file 34, 236, 32 and 220, all four loaded (`0x004f91a6`, `0x004f931e`, `0x004f9161`, `0x004f9282`). A guest's base is drawn `% 5` from the table as the person base is made (`FUN_004f8940`, `0x004f89e1`..`0x004f89f7`; the played saves hold 74, 56, 70, 62 and 77 guests at the five), the guest's constructor sets the hurry to 25 (`0x004fb1c9`), and the speed starts at 0.0 (`0x004f89ab`), so an arrival walks off slowly. Staff get 60 or 100 at hire (`FUN_00504b90`), an entertainer 60, and a base by rest in the staff decide (`FUN_00506a40`, Q136). | Disassembly |
+| person `+0xc0`, `+0xc2`, `+0xc4`, `+0xc8` | `mBaseSpeed`, the hurry `mPurposeSpeed`, `mAdjustorSpeed` (words) and `mPreviousSpeed` (a float): file 34, 236, 32 and 220, all four loaded (`0x004f91a6`, `0x004f931e`, `0x004f9161`, `0x004f9282`). A guest's base is drawn `% 5` from the table as the person base is made (`FUN_004f8940`, `0x004f89e1`..`0x004f89f7`; the played saves hold 74, 56, 70, 62 and 77 guests at the five), the guest's constructor sets the hurry to 25 (`0x004fb1c9`), and the speed starts at 0.0 (`0x004f89ab`), so an arrival walks off slowly. Staff get 60 below grade 3 and 100 from it at hire (`FUN_00504b90`), an entertainer 60 whatever the grade (`0x004d43fa`), and a base by rest in the staff decide (`FUN_00506a40`), which every constructor ends in, so a hire's is 140 before the first sweep. | Disassembly |
 | `FUN_004f9f00` | **The blend.** `0x004f9f89`–`0x004f9fd2`: `MOV EAX,[ESI+0x194]` / `SUB` / `FILD` / `FMUL [ESP+0x14]` / `FIADD`, then the identical six instructions for `[ESI+0x190]` — i.e. `prev + (cur − prev) · t` per axis. | Disassembly |
 | — | **Height is forced to nought, not interpolated**: `0x004f9ffd MOV dword ptr [EAX],0x0`. The ground under the sprite is resolved separately. | Disassembly |
 | — | **Facing is NOT interpolated**: `0x004fa015 MOV EDX,[ESI+0x1c]` goes straight to the out-param. So a peep's position glides while its octant **snaps** at sweep boundaries. | Disassembly |

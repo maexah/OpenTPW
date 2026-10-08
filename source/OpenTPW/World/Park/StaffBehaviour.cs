@@ -43,9 +43,8 @@ namespace OpenTPW;
 /// <para>
 /// <b>Rest areas are built.</b> The flag naming one is read - bit 1
 /// of a catalogue object's <c>mFlags</c> - so a tired staff member does what
-/// <c>FUN_00506a40</c> does: looks for the nearest object flagged as a rest area and walks to it. The
-/// "couldn't find a rest area" path is still here, because the original still takes it when there is none
-/// in reach.
+/// <c>FUN_00506a40</c> does: looks for the nearest object flagged as a rest area and walks to it. With none
+/// found or reached the kind's own choice follows, so they walk on (<see cref="TiredOrCarryingOn"/>).
 /// </para>
 /// </summary>
 public sealed class StaffBehaviour
@@ -362,7 +361,7 @@ public sealed class StaffBehaviour
 
 			// Sitting down recovering. Both stats climb by the grade's own rates until Tiredness is full.
 			case StaffActivity.Resting:
-				Rest( staff, tick );
+				Rest( staff, walk, tick );
 
 				break;
 
@@ -482,54 +481,40 @@ public sealed class StaffBehaviour
 	/// </summary>
 	private void Decide( Staff staff, PeepWalk walk, int tick )
 	{
-		ThinkOfTheMood( staff );
-
-		// Too tired to carry on: find the nearest rest area and set off for it - the tired branch of
-		// FUN_00506a40, which asks FUN_00506910 for the nearest object flagged as one.
-		// <b>A deviation (Q136 (a)):</b> the original tests the rest byte, truncated, <= RestLevel (0x00506b41);
-		// this tests the float <, so a rest in [1, 2) is tired there and not here.
-		//
-		// FAILING TO FIND ONE AND FAILING TO REACH IT ARE THE SAME PATH IN THE ORIGINAL, and that is worth
-		// not tidying into two: both fall through to the same "Staff member couldn't find a rest area"
-		// line and the same one-in-sixteen loss of heart. GoAndRest returning false covers both.
-		//
-		// A deviation Q136 (d) holds: after that the original answers 0 and the kind's own choice follows,
-		// so the member walks on; here they stand idle. There the three kinds with work to find skip their
-		// searches when the rest byte is under RestLevel (FUN_00506680); that test is this one's, so no
-		// member who gets past here is too tired to work.
-		//
-		// The original also shows thought 0x14, tired, on the way into this branch, before it knows whether it
-		// will find anything (FUN_0050be80 at 0x00506b50): ThinkOfTheMood's.
-		if ( staff.Tiredness < RestLevel )
-		{
-			if ( GoAndRest( staff, walk ) )
-			{
-				staff.SetActivity( StaffActivity.GoingToRest, tick );
-
-				return;
-			}
-
-			if ( (_random.Next() & 0xf) == 0 )
-				staff.Happiness = Staff.Change( staff.Happiness, -HappinessHitForNoRestArea );
-
-			staff.SetActivity( StaffActivity.Idle, tick );
-
+		if ( TiredOrCarryingOn( staff, walk, tick ) )
 			return;
-		}
+
+		// The mechanic's, the handyman's and the entertainer's decides skip their search for work when the
+		// member is too tired for it and go straight to the walk (0x004da5c7, 0x004d7113, 0x004d46e0); the
+		// researcher's asks only before it researches, and the guard's not at all.
+		var tooTired = TooTiredToWork( staff );
+
+		if ( tooTired )
+			Log.Info( $"Staff: {staff.ThingId} is too tired to work on mGameTick {tick}, rest {staff.Tiredness:0.000}" );
 
 		switch ( staff.Model )
 		{
 			// FUN_004da5b0: a ride to fix (FUN_004daa90), which nothing here looks for, else a random walk.
 			case MechanicModel:
-				Unimplemented.Report( "MECHANIC_RIDE_SEARCH" );
+				if ( !tooTired )
+					Unimplemented.Report( "MECHANIC_RIDE_SEARCH" );
+
 				WalkAbout( staff, walk, tick );
 
 				break;
 
 			// FUN_004d7100: litter in range (FUN_004c8ed0), else a toilet to clean (FUN_004d7880 from
 			// 0x004d72f7; docs/exe/ride-operation.md, "A toilet's dirt"), else a random walk. The litter search
-			// is not built, and no cell here holds litter. The toilet found, or nought, is written every time.
+			// is not built, and no cell here holds litter. The toilet found, or nought, is written every time
+			// the search is made.
 			case HandymanModel:
+				if ( tooTired )
+				{
+					WalkAbout( staff, walk, tick );
+
+					break;
+				}
+
 				Unimplemented.Report( "HANDYMAN_LITTER_SEARCH" );
 
 				staff.ToiletToClean = FindToilet( staff, walk, tick );
@@ -548,12 +533,12 @@ public sealed class StaffBehaviour
 				break;
 
 			case EntertainerModel:
-				Entertain( staff, walk, tick );
+				Entertain( staff, walk, tick, tooTired );
 
 				break;
 
 			case ResearcherModel:
-				Research( staff, walk, tick );
+				Research( staff, walk, tick, tooTired );
 
 				break;
 
@@ -563,6 +548,75 @@ public sealed class StaffBehaviour
 				break;
 		}
 	}
+
+	/// <summary>
+	/// What every kind's decide opens with - <c>FUN_00506a40</c> past its strike arm (Q138), which answers
+	/// whether it set a state (<c>docs/exe/ride-operation.md</c>, "Drawn on the way").
+	///
+	/// <para>
+	/// <b>Tired</b> is the rest byte, the float truncated, at or under <see cref="RestLevel"/>
+	/// (<c>0x00506b41</c>): thought <c>0x14</c>, then the nearest rest area (<see cref="GoAndRest"/>). Found and
+	/// routed to, the member sets off for it and this answers true. Not found and not reached are one path in the
+	/// original, down to the same log line: a draw whose low four bits are nought takes
+	/// <see cref="HappinessHitForNoRestArea"/> off their happiness, and the answer is false, so the kind's own
+	/// choice follows and the member walks on.
+	/// </para>
+	/// <para>
+	/// <b>Not tired</b>, the base speed is set from the rest byte, one of <see cref="Peep.BaseSpeeds"/> by
+	/// fifths and the last at a hundred (<c>0x00506c84</c>), and then the mood's thought: unhappy, <c>0x13</c>,
+	/// at a happiness byte of 10 or less (<c>0x00506ccd</c>); else very happy, <c>0x12</c>, above 97 on one draw
+	/// in sixteen (<c>0x00506cf4</c>), a draw taken only above 97. The answer is false.
+	/// </para>
+	/// </summary>
+	private bool TiredOrCarryingOn( Staff staff, PeepWalk walk, int tick )
+	{
+		var rest = RestByte( staff );
+
+		if ( rest > RestLevel )
+		{
+			staff.BaseSpeed = Peep.BaseSpeeds[Math.Min( rest / RestPerBaseSpeed, Peep.BaseSpeeds.Length - 1 )];
+
+			var happiness = (byte)(int)staff.Happiness;
+
+			if ( happiness <= UnhappyThoughtAtMost )
+				Think( staff, 0x13 );
+			else if ( happiness > VeryHappyThoughtAbove && (_random.Next() & 0xf) == 0 )
+				Think( staff, 0x12 );
+
+			return false;
+		}
+
+		Think( staff, 0x14 );
+
+		if ( GoAndRest( staff, walk ) )
+		{
+			Log.Info( $"Staff: {staff.ThingId} is tired on mGameTick {tick}, rest {staff.Tiredness:0.000}, "
+				+ $"and sets off for rest area {staff.RestArea}" );
+			staff.SetActivity( StaffActivity.GoingToRest, tick );
+
+			return true;
+		}
+
+		if ( (_random.Next() & 0xf) == 0 )
+			staff.Happiness = Staff.Change( staff.Happiness, -HappinessHitForNoRestArea );
+
+		Log.Info( $"Staff: {staff.ThingId} is tired on mGameTick {tick}, rest {staff.Tiredness:0.000}, "
+			+ "and found or reached no rest area: carries on" );
+
+		return false;
+	}
+
+	/// <summary>How rested a member is as the original tests it: the float truncated to a byte (<c>__ftol</c>, <c>AND 0xff</c>).</summary>
+	private static int RestByte( Staff staff ) => (byte)(int)staff.Tiredness;
+
+	/// <summary>
+	/// Too tired to work - <c>FUN_00506680</c>: the rest byte under <see cref="RestLevel"/>, strictly
+	/// (<c>0x00506698</c>), where tired is at or under it. With the shipped level of 1, a rest byte of nought.
+	/// </summary>
+	private bool TooTiredToWork( Staff staff ) => RestByte( staff ) < RestLevel;
+
+	/// <summary>How much of the rest byte each of <see cref="Peep.BaseSpeeds"/> covers - the 20 of <c>FUN_00506a40</c>'s divide.</summary>
+	public const int RestPerBaseSpeed = 20;
 
 	/// <summary>
 	/// The handyman's search for a toilet to clean - <c>FUN_004d7880</c>, over the park's live objects in chain
@@ -757,6 +811,7 @@ public sealed class StaffBehaviour
 	/// The entertainer's choice - <c>FUN_004d46d0</c>. A draw mod 3 of nought looks for a guest within the
 	/// grade's <c>ActivationDistance</c> and, finding one, performs (<see cref="Perform"/>). Otherwise the
 	/// guard's choice by <c>mGameTick &amp; 3</c>: nought stays, anything else looks for somewhere to walk.
+	/// One too tired to work takes neither the draw nor the look (<c>0x004d46e0</c>).
 	/// </summary>
 	/// <remarks>
 	/// Staying and a walk found each take one more draw the original throws away (<c>0x004d4734</c>,
@@ -764,9 +819,9 @@ public sealed class StaffBehaviour
 	/// so the entertainer is asked again on the next sweep, and one who was performing takes another turn of
 	/// work and its end again.
 	/// </remarks>
-	private void Entertain( Staff staff, PeepWalk walk, int tick )
+	private void Entertain( Staff staff, PeepWalk walk, int tick, bool tooTired )
 	{
-		if ( _random.Next() % PerformShare == 0 && Perform( staff, walk, tick ) )
+		if ( !tooTired && _random.Next() % PerformShare == 0 && Perform( staff, walk, tick ) )
 			return;
 
 		if ( (tick & (StayPutShare - 1)) == 0 )
@@ -867,17 +922,23 @@ public sealed class StaffBehaviour
 	/// (<see cref="Staff.StartResearching"/>). So a researcher never stands idle by this choice.
 	/// </summary>
 	/// <remarks>
-	/// Before it researches the original asks whether the member is too tired to work (<c>FUN_00506680</c>, the
-	/// rest byte under <c>RestLevel</c>) and, if so, leaves the state as it was. <see cref="Decide"/>'s tired
-	/// test is that one and comes first, so nobody that tired gets here (Q136 (d)).
+	/// <b>One too tired to work does not research</b> (<c>FUN_00506680</c>, <c>0x00502bca</c>): the state is left
+	/// as it was, with its stamp, so they are asked again on the next sweep.
 	/// </remarks>
-	private void Research( Staff staff, PeepWalk walk, int tick )
+	private void Research( Staff staff, PeepWalk walk, int tick, bool tooTired )
 	{
 		var walks = (_random.Next() & (StayPutShare - 1)) != 0;
 
 		if ( walks && SetRandomDest( staff, walk ) )
 		{
 			staff.SetActivity( StaffActivity.Walking, tick );
+
+			return;
+		}
+
+		if ( tooTired )
+		{
+			Log.Info( $"Staff: {staff.ThingId} is left {staff.Activity} on mGameTick {tick}, too tired to research" );
 
 			return;
 		}
@@ -960,9 +1021,10 @@ public sealed class StaffBehaviour
 	/// <remarks>
 	/// <b>The rest ends when a stat reaches a hundred exactly</b>, which the original tests by truncating
 	/// to a byte and comparing against 'd' - the character whose code is 100. It reads as a character in
-	/// the decompiler and is a number.
+	/// the decompiler and is a number. The member is then idle at stamp nought and takes their kind's decide
+	/// in the same sweep (<c>0x00506298</c>).
 	/// </remarks>
-	private void Rest( Staff staff, int tick )
+	private void Rest( Staff staff, PeepWalk walk, int tick )
 	{
 		staff.Tiredness = Staff.Change( staff.Tiredness, RecuperationAt( staff.PayGrade ) );
 		staff.Happiness = Staff.Change( staff.Happiness, HappinessRecuperationAt( staff.PayGrade ) );
@@ -976,6 +1038,26 @@ public sealed class StaffBehaviour
 		Unimplemented.Report( "REST_AREA_OCCUPANCY" );
 		staff.RestArea = 0;
 		staff.SetActivity( StaffActivity.Idle, tick );
+
+		Log.Info( $"Staff: {staff.ThingId} ends the rest on mGameTick {tick} and decides" );
+
+		// The kind's decide in the same sweep (0x00506298), from idle at stamp nought.
+		Decide( staff, walk, tick );
+	}
+
+	/// <summary>
+	/// A member just hired: every kind's constructor ends in its decide, on the clock as it stands - the
+	/// mechanic's <c>0x004d9fc4</c>, the handyman's <c>0x004d6c73</c>, the entertainer's <c>0x004d4430</c>, the
+	/// guard's inline at <c>0x004d5e76</c> and the researcher's at <c>0x005026cb</c>.
+	/// </summary>
+	internal void Hired( Staff staff, PeepWalk walk, int tick )
+	{
+		ArgumentNullException.ThrowIfNull( staff );
+		ArgumentNullException.ThrowIfNull( walk );
+
+		Decide( staff, walk, tick );
+
+		Log.Info( $"Staff: {staff.ThingId} decides at hire on mGameTick {tick}: {staff.Activity}, base speed {staff.BaseSpeed}" );
 	}
 
 	/// <summary>
@@ -1121,33 +1203,6 @@ public sealed class StaffBehaviour
 			|| (from.Type == CellEdge.Path && CellEdge.IsQueue( to.Type ))
 			|| (from.Type == 3 && from.Direction == bit)
 			|| to.Type == CellEdge.RideFarEnd;
-	}
-
-	/// <summary>
-	/// The thought every kind's decide may show before it chooses - <c>FUN_00506a40</c>, which each kind's decide
-	/// calls first: tired, <c>0x14</c> (<c>0x00506b50</c>); else unhappy, <c>0x13</c>, at a happiness byte of 10
-	/// or less (<c>0x00506ccd</c>); else very happy, <c>0x12</c>, above 97 on one draw in sixteen
-	/// (<c>0x00506cf4</c>), a draw taken only above 97. Their pictures are in <c>docs/exe/ride-operation.md</c>, "Thoughts and their pictures".
-	/// </summary>
-	/// <remarks>
-	/// Tired is this file's own test (<see cref="RestLevel"/>, Q136 (a)), so the thought and the walk to a rest
-	/// area agree with each other.
-	/// </remarks>
-	private void ThinkOfTheMood( Staff staff )
-	{
-		if ( staff.Tiredness < RestLevel )
-		{
-			Think( staff, 0x14 );
-
-			return;
-		}
-
-		var happiness = (byte)(int)staff.Happiness;
-
-		if ( happiness <= UnhappyThoughtAtMost )
-			Think( staff, 0x13 );
-		else if ( happiness > VeryHappyThoughtAbove && (_random.Next() & 0xf) == 0 )
-			Think( staff, 0x12 );
 	}
 
 	/// <summary>Sets a member's thought - SetThought, <c>FUN_0050be80</c>, on the park's clock.</summary>

@@ -1342,6 +1342,16 @@ public static class DebugConsole
 					: "pickup <thingId>" );
 				break;
 
+			// An instrument, as `happy` is for guests: sets how rested one member of staff is, 0 to 100, so the
+			// tired arms of their decide can be reached without waiting a member out.
+			case "staffrest":
+				Reply( parts.Length > 2 && ParkPeople.Current is { } tiring
+					? tiring.SetStaffRest( (int)Argument( 1 ), Argument( 2 ) )
+						? $"staffrest: thing {(int)Argument( 1 )} rest {Argument( 2 )}"
+						: $"staffrest: nobody on the staff is thing {(int)Argument( 1 )}"
+					: "staffrest <thingId> <0-100>" );
+				break;
+
 			case "putstaff":
 				Reply( parts.Length > 2 && ParkPeople.Current is { } dropper
 					? dropper.DropStaff( (int)Argument( 1 ), (int)Argument( 2 ) )

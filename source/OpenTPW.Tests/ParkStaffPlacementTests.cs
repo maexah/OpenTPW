@@ -266,20 +266,67 @@ public class ParkStaffPlacementTests
 	}
 
 	/// <summary>
-	/// <b>A hire walks at the speed a rested member settles at</b>, base 140: a mover speed of 18350 and a force of 36700,
-	/// whoever else the park holds, as staff are not eased (Q136).
+	/// <b>A hire decides where they are put and eases up to their speed.</b> Every kind's constructor ends in its
+	/// decide, which gives a rested member the base speed 140 in place of the constructor's 60 or 100; the speed
+	/// itself starts at nought, so the mover holds the floor until the park's sweep eases it a quarter of the way
+	/// each time: 0.35, 0.6125, 0.809375.
 	/// </summary>
-	[TestMethod]
-	public void AHireWalksAtARestedMembersSpeed()
+	[DataTestMethod]
+	[DataRow( 0 )]
+	[DataRow( 1 )]
+	[DataRow( 2 )]
+	[DataRow( 3 )]
+	[DataRow( 4 )]
+	public void AHireDecidesAtOnceAndEasesUpToARestedMembersSpeed( int kind )
 	{
-		var (people, pool) = Park();
+		var (people, _) = Park();
+		var candidate = new ParkStaffPool.Candidate( Id: 999, Kind: kind, Name: "Test", Grade: 0, Costume: 0, Wage: 1 );
 
-		Assert.AreNotEqual( 0, pool.Hire( people, pool.Candidates.Last(), OnMapX, OnMapY ) );
+		Assert.AreNotEqual( 0, people.Hire( candidate, OnMapX, OnMapY ) );
 
-		var hired = people.Staff[0].Navigator;
+		var hired = people.Staff[0];
 
-		Assert.AreEqual( (18350, 36700), (hired.MaxSpeed, hired.MaxForce) );
+		Assert.IsTrue( hired.Paced );
+		Assert.AreEqual( 140, hired.BaseSpeed, "the decide's base for a rest of 100, not the constructor's 60" );
+
+		// The decide reads the clock as it stands, the save's 755: its low bits are 3, so a guard walks, where
+		// a sweep on, on 756, they would stay.
+		Assert.AreEqual( 755, people.State.GameTick );
+
+		if ( kind == 3 )
+			Assert.AreEqual( StaffActivity.Walking, hired.Activity );
+		Assert.AreEqual( (0f, 0, 0), (hired.PreviousSpeed, hired.PurposeSpeed, hired.AdjustorSpeed) );
+		Assert.AreEqual( (Peep.LeastMaxSpeed, Peep.LeastMaxSpeed), (hired.Navigator.MaxSpeed, hired.Navigator.MaxForce) );
+
+		Time.Paused = false;
+		Time.StepFrames = 0;
+		GameClock.Rebase();
+		Time.Update( 0f );
+		GameClock.Update( paused: false, GameClock.ParkCatchUp );
+
+		var from = people.State.GameTick;
+
+		while ( people.State.GameTick < from + 3 )
+		{
+			Time.Update( GameClock.TickSeconds );
+			GameClock.Update( paused: false, GameClock.ParkCatchUp );
+			people.Update();
+		}
+
+		Assert.AreEqual( 0.809375f, hired.PreviousSpeed, 0.00001f, "three sweeps of the park ease it three times" );
+		Assert.AreEqual( (int)(0.809375 * Peep.MaxSpeedPerSpeed), hired.Navigator.MaxSpeed, 1 );
 	}
+
+	/// <summary>The base speed a constructor leaves: 60 below grade 3 and for every entertainer, 100 otherwise.</summary>
+	[DataTestMethod]
+	[DataRow( 4, 0, 60 )]
+	[DataRow( 4, 2, 60 )]
+	[DataRow( 4, 3, 100 )]
+	[DataRow( 7, 4, 100 )]
+	[DataRow( 6, 0, 60 )]
+	[DataRow( 6, 4, 60 )]
+	public void TheConstructorsBaseSpeedIsByGradeAndSixtyForAnEntertainer( int model, int grade, int speed )
+		=> Assert.AreEqual( speed, Staff.HiredBaseSpeed( model, grade ) );
 
 	/// <summary>
 	/// <b>The body the place-staff click and the console's <c>hire</c> share refuses the same way</b>:

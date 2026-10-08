@@ -5144,6 +5144,33 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   on five of ten ends, the kinds' voices not found for want of an instrument. The samples carry no words (an
   offline transcriber's reading; no person listened). `0x88` and `0x89` wait on the guard's chase, which has no
   site here to count them at. 41 bugs put back, 41 caught, one of them by the game run alone.
+- [x] **Q136. Six small differences in the staff's decide.** Found by Q82 (`ride-operation.md`, "Drawn on the way").
+  (a) Tired is `(u8)trunc( rest ) <= RestLevel`, signed and inclusive (`0x00506b41`); `StaffBehaviour.Decide` tests
+  the float `< RestLevel` and misses [1, 2). (b) The patrol roll `FUN_00506f30` takes only a path cell (`mType` 1,
+  `FUN_00536310`) before it routes; **built in Q206**, with queue/approach wandering containment. (c) Not
+  tired, `FUN_00506a40` sets the speed word `+0xc0` from the rest byte (60 to 140, `[0x0075c7f8]`), one of
+  `FUN_004fa870`'s three terms. From Q177d: how the terms reach the walk is decoded (`ride-operation.md`, "Where a
+  WALKING peep is drawn") and every person's four speed words are read (`ParkWorld.PaceState`); guests are eased
+  (`Peep.Pace`), staff keep the saved speed and a hire a rested member's 1.4. The build is `Pace` for staff, with this
+  base by rest.
+  (d) Tired with no rest area found or reached, `FUN_00506a40` answers 0 and the kind's own choice follows (the guard's
+  at `0x004d6554`, the researcher's at `0x00502b9f`); `Decide` stands them instead, so a tired member with no reachable
+  Staff Room never walks again; when the kind's choice follows, the three kinds' searches need `FUN_00506680`'s gate
+  (the rest byte under `RestLevel`: no search, straight to the walk), which `Decide` leaves out because nobody so
+  tired gets that far today. (e) At the end of a rest the original runs the kind's decide in the same sweep
+  (`FUN_005061d0`, `0x00506298`); `Rest` sets Idle at stamp 0 and decides a sweep later, which after Q82b reads the
+  guard's `mGameTick & 3` a sweep late. (f) Found by Q82b: at hire the guard and the researcher decide at once, after
+  `FUN_00506a40` (the guard's `0x004d5e76` on `mGameTick & 3`, the researcher's `0x005026cb` on a draw); `Hire` sets
+  Idle at stamp 0, so they decide a sweep later. Confirm each in the `staff` census.
+  **Built 2026-10-07** (`ride-operation.md`, "The decide's differences, in both games"): (a), (c), (d), (e) and (f);
+  (b) was Q206's. Read again first: every kind's constructor ends in its decide, not the guard's and the
+  researcher's alone, and a hire starts at base 60 or 100 with a speed of nought. In the game, predicted first, 6
+  of 7 and 5 of 7 from the gate's build (each miss my own tolerance): the guard at a rest of 1.99 "tired on mGameTick 991, rest 1.990, and sets off
+  for rest area 20"; his rest's end on 1110 read Walking on 1110, base 140; five hires on 1110 all Walking with the
+  park held, then 0.3500, 0.6125, 0.8094; the Staff Room sold, all five tired members carry on, the guard on 23
+  cells. The build before, 6 of 6: none of it. In the original under Proton, 3 of 4 (the miss mine): state 2 on
+  907 from a 1.99 written on 896, state 1 on 981 from a rest ended there, the tired guard on 22 cells with no rest
+  area and the researcher never `0xf`; a mechanic hired by hand read 0.0, 0.35, 0.6125, 0.8094.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.
