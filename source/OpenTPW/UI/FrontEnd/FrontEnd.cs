@@ -85,6 +85,10 @@ internal sealed class FrontEnd : Panel
 		}
 
 		Players.Roster.Select( slot );
+
+		if ( Players.Roster.Current is { } player )
+			Log.Info( $"Front end: '{player.Name}' is playing in slot {slot + 1}, {(player.InstantAction ? "Instant Action" : "Full Simulation")}" );
+
 		ClosePlayerSlots( newPlayer: false );
 	}
 

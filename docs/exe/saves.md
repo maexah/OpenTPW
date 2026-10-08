@@ -349,9 +349,37 @@ the click, its date gone from 2.9.2000 to the save's 2.7.2000.
 | `0x0054ff10` in `Game_StateMachine`; `0x00424bd7` | `FUN_005ac610( L"autosave" )` |
 | `0x00550c23`; `0x0055036c` | `restart.INTS` written when the folder has none; read by Restart Park |
 | `0x00407eae` in `FUN_00407e00` | a `.TPWS` loaded by name as the world is made |
-| `FUN_005accf0`, `0x0054f12b` | entering a park: the newest `*.TPW*` in the folder (`park.md`, "Arrivals") |
+| `FUN_005accf0`, `0x0054f12b` | entering a park: the newest `*.TPW*` in the folder ("Entering a park", below) |
 
-OpenTPW's `Level` reads `data/levels/<theme>/Easymode.TPWI` on every entry, not the player's folder.
+### Entering a park
+
+`FUN_005accf0` (on the save manager `0x00f7b560`, called at `0x0054f12b` in state 9 for every game type but 1, the
+online one) runs after the new world is made, and loads a park file over it:
+
+1. **The folder** is `FUN_005c8890`'s, `<player's folder>\<theme>`, and **the pattern** `*` (`0x00f7b948`) with
+   `.TPW*` (`0x00f7b398`, set from `0x007479f8`). So the copied `easymode.TPWI` and every `.TPWS` are candidates,
+   the quicksave and `autosave.TPWS` among them; `restart.INTS` is not.
+2. Each entry found is passed over if it is a folder whose name does not begin with a dot (`FUN_005c5230`), as in
+   the list's read.
+3. **The first candidate is held; a later one replaces it only when its last write time is later**
+   (`FUN_005f5bc0`, `CompareFileTime` of the find record's `+8`, greater than nought, `0x005acf3a`). Two files
+   written at the same instant leave the one Windows listed first.
+4. With one held, the path is the folder, `\` (`0x00f7aed0`), the name, and `FUN_00414d40( path, 0, 2 )`
+   (`0x005ad054`) loads it as "The load" above does. **With none held nothing is loaded** (`0x005ad00b`), and the
+   world just made stands: the fresh park of `park.md`, "A fresh Full Simulation park", whatever the game type.
+
+Nothing asks which mode the player is in: a Full Simulation player's saved park is loaded the same way, and an
+Instant Action player whose folder has lost its `easymode.TPWI` gets the empty world.
+
+**Measured in the original (Q241b).** With `New Save.TPWS` (its `mGameTick` 840, written 8 October) put beside
+`easymode.TPWI` (755, 1 October) in the reference player's jungle folder, and Lost Kingdom entered from the lobby,
+`mGameTick` read 0 in the new world, 840 ten seconds later and one more a sweep from there, never 755; the frame
+showed $ 88112, the save's balance (`q241b/orig/a.log`, `l-entered.png`; predicted first). An empty folder and two
+files of one time were not run there.
+
+**OpenTPW** does the same for whoever is playing (`SaveFolder.NewestPark`, `Level.CreatePark`), taking the
+candidates in name order, so a tie goes to the first by name. With nobody playing, which only the debug console's
+`park` reaches, it reads `data/levels/<theme>/Easymode.TPWI`; the original has a player on every entry.
 
 ### Read, not run
 

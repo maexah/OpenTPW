@@ -279,6 +279,7 @@ public class Level
 		{
 			AdvisorMessages = new ParkAdvisorMessages( new SettingsFile( "Advisor/Advisor.sam" ) )
 		};
+		Log.Info( $"{ThemeName}: the park's clock starts at mGameTick {ParkState.GameTick}" );
 		// Saved advisor histories are not restored yet; fresh histories follow FUN_00599e70.
 		if ( park?.Save != null ) Unimplemented.Report( "PARK_ADVISOR_SAVED_HISTORY" );
 		load.Mark( "park state" );
@@ -380,46 +381,50 @@ public class Level
 	internal static ParkStaffPool StaffPoolFor( IParkInitialState? park, ParkBalance? balance, int gameTick )
 		=> new( balance, gameTick: gameTick, saved: park as ParkWorld );
 
-	/// <summary>Selects the original's new-world or Instant Action file path for the current player.</summary>
+	/// <summary>
+	/// The park a theme is entered with: the newest park file in the player's own folder for it, or a world made
+	/// fresh where that folder holds none, as the original's (0x0054f12b; <c>docs/exe/saves.md</c>, "Entering a park").
+	/// </summary>
+	/// <remarks>
+	/// <b>A deviation with nobody playing</b>, which only the console's <c>park</c> reaches: the copy of the park that
+	/// ships beside the level is read, the file a new Instant Action player's folder is given. The original has a
+	/// player on every entry.
+	/// </remarks>
 	internal static IParkInitialState? CreatePark( string theme, ParkBalance balance, ParkItemCatalogue catalogue )
 	{
-		if ( InstantAction )
-			return ReadPark( theme );
+		if ( Players.Roster.Current is not { } player )
+			return ReadPark( theme, FileSystem, $"levels/{theme.ToLowerInvariant()}/Easymode.TPWI" );
 
+		if ( SaveFolder.NewestPark( player.Slot, player.Name, theme.ToLowerInvariant() ) is { } own )
+			return ReadPark( theme, SaveFileSystem, own );
+
+		Log.Info( $"{theme}: {player.Name} has no park file for this theme, so the park is made fresh" );
 		var park = new FreshPark( theme, balance, catalogue );
 		Log.Info( $"{theme}: {park.Census()}" );
 		return park;
 	}
 
 	/// <summary>
-	/// The park file for a theme, walked, or null where there is nothing to read.
+	/// A park file, walked, or null where there is nothing to read.
 	///
 	/// <para>
-	/// Only the jungle ships one of these, which is also why Lost Kingdom is the only park an Instant
-	/// Action player can start in. The other three themes have no saved park at all, so they get their
-	/// ground and their gate and nothing else - which is a fact about the game's data, not a failure, and
-	/// is reported as such.
-	/// </para>
-	/// <para>
-	/// This reads the copy that ships beside the level rather than the player's own, for every player. For an
-	/// Instant Action player the two are identical, as nothing writes a park back yet. <b>A deviation for a Full
-	/// Simulation player</b>, whose first park the original builds fresh and loads no file for. When saving exists, this is the line that has to start asking which player
-	/// is playing.
+	/// Only the jungle ships one beside its level, which is also why Lost Kingdom is the only park a new Instant
+	/// Action player's folder is given a park for.
 	/// </para>
 	/// </summary>
-	private static ParkWorld? ReadPark( string themeName )
+	private static ParkWorld? ReadPark( string themeName, BaseFileSystem files, string path )
 	{
-		var path = $"levels/{themeName.ToLowerInvariant()}/Easymode.TPWI";
-
-		if ( !FileSystem.FileExists( path ) )
+		if ( !files.FileExists( path ) )
 		{
 			Log.Info( $"{themeName}: no park file ships with this theme, so nothing is placed in it" );
 			return null;
 		}
 
+		Log.Info( $"{themeName}: reading the park from {path}" );
+
 		try
 		{
-			using var stream = FileSystem.OpenRead( path );
+			using var stream = files.OpenRead( path );
 			var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
 
 			if ( world.Problem != null )

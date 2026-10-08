@@ -1543,7 +1543,7 @@ a new world (`FUN_00407d80`, `0x0054eccb`), whose constructor builds this block 
 `mGatesOpen` (`+0x11`): the last 18 bytes of the World block's 76 bytes of arrival and clock fields (FileFormats,
 `saves.md`, "The arrival block", on its `docs/arrival-block` branch). Entering a park zeroes `mGameTick` (`FUN_005156a0`, `0x00515865`, from `FUN_00407e00` at `0x0054ed3f`).
 Later in the same pass of state 9, `FUN_005accf0` (`0x0054f12b`) loads the newest `*.TPW*` in the player's folder for
-the theme over it, through `FUN_00414d40( path, 0, 2 )` (`0x005ad054`), `FUN_00415270` and `FUN_005179c0`, which reads
+the theme over it (`saves.md`, "Entering a park"), through `FUN_00414d40( path, 0, 2 )` (`0x005ad054`), `FUN_00415270` and `FUN_005179c0`, which reads
 `mGameTick` at `0x00517bec` and this block at `0x00518202`. Nothing writes either between that load and the first
 sweep. On an Instant Action player's first entry the file is the copied `Easymode.TPWI`, which holds `mGameTick` 755
 and `mTimeSig` 661, so **Lost Kingdom's first load is called on the 509th sweep after entering, 126.2 s in** (1264 is

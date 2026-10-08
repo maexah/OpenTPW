@@ -51,19 +51,16 @@ public class LevelFullSimulationParkTests
 	}
 
 	[TestMethod]
-	public void InstantActionAndConsoleKeepTheShippedPark()
+	public void TheConsoleWithNobodyPlayingKeepsTheShippedPark()
 	{
 		FileSystem = GameData.Required();
-		foreach ( var player in new Player?[] { null, new( 0, "Test", new PlayerFile { InstantAction = true } ) } )
-		{
-			SetCurrentPlayer( player );
-			Assert.IsTrue( Level.InstantAction );
-			var park = Level.CreatePark( "jungle", new ParkBalance( "jungle", easyMode: Level.InstantAction ),
-				new ParkItemCatalogue( "jungle", instantAction: Level.InstantAction ) )!;
-			Assert.IsInstanceOfType( park, typeof( ParkWorld ) );
-			Assert.IsTrue( park.Objects.Count > 2 );
-			Assert.IsTrue( park.Economy!.Value.Loans.All( l => l.AprPercent == 0 ) );
-		}
+		SetCurrentPlayer( null );
+		Assert.IsTrue( Level.InstantAction );
+		var park = Level.CreatePark( "jungle", new ParkBalance( "jungle", easyMode: Level.InstantAction ),
+			new ParkItemCatalogue( "jungle", instantAction: Level.InstantAction ) )!;
+		Assert.IsInstanceOfType( park, typeof( ParkWorld ) );
+		Assert.IsTrue( park.Objects.Count > 2 );
+		Assert.IsTrue( park.Economy!.Value.Loans.All( l => l.AprPercent == 0 ) );
 	}
 
 	[TestMethod]

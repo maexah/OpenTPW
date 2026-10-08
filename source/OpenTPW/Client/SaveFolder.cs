@@ -32,6 +32,9 @@ internal static class SaveFolder
 	private const string PlayerFileName = "gms.dat";
 	private const string EasyModeName = "easymode.TPWI";
 
+	// What a park file's name holds: the original's search is "*" and then ".TPW*" (0x00f7b948, 0x007479f8).
+	private const string ParkPattern = ".TPW";
+
 	private static string[]? _themes;
 
 	// A failed load leaves defaults in memory. A later readable destination does not make those
@@ -342,6 +345,55 @@ internal static class SaveFolder
 		{
 			Log.Warning( $"Saves: {path} could not be written - {e.Message}" );
 			return false;
+		}
+	}
+
+	/// <summary>
+	/// The park file a player enters a theme with - 0x005accf0 (<c>docs/exe/saves.md</c>, "Entering a park"): of the
+	/// files in their folder for the theme named <c>*.TPW*</c>, the one written last. That takes in the copied
+	/// easymode.TPWI and every saved park, and leaves restart.INTS out. A file written at the same instant as the
+	/// one held does not replace it. Null where the folder holds none: the original loads nothing then.
+	/// </summary>
+	/// <remarks>
+	/// The original keeps the first of two equal times in the order Windows lists the folder, which is not known
+	/// here: the files are taken in name order.
+	/// </remarks>
+	public static string? NewestPark( int slot, string name, string theme )
+	{
+		var folder = Path.Join( PlayerFolder( slot, name ), theme );
+
+		try
+		{
+			if ( !SaveFileSystem.DirectoryExists( folder ) )
+				return null;
+
+			string? newest = null;
+			var written = DateTime.MinValue;
+
+			var parks = SaveFileSystem.GetFiles( folder )
+				.Select( Path.GetFileName )
+				.OfType<string>()
+				.Where( file => file.Contains( ParkPattern, StringComparison.OrdinalIgnoreCase ) )
+				.OrderBy( file => file, StringComparer.OrdinalIgnoreCase );
+
+			foreach ( var file in parks )
+			{
+				var path = Path.Join( folder, file );
+				var time = File.GetLastWriteTimeUtc( SaveFileSystem.GetAbsolutePath( path ) );
+
+				if ( newest != null && time <= written )
+					continue;
+
+				newest = path;
+				written = time;
+			}
+
+			return newest;
+		}
+		catch ( Exception e )
+		{
+			Log.Warning( $"Saves: {folder} could not be looked through for a park - {e.Message}" );
+			return null;
 		}
 	}
 

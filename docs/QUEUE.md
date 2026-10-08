@@ -44,13 +44,6 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q241b. Entering a park loads the player's own park file.** From Q241. `Level` reads
-  `data/levels/<theme>/Easymode.TPWI` on every entry. The original loads the newest `*.TPW*` in the player's folder
-  for the theme (`FUN_005accf0`; `park.md`, "Arrivals"), which for a new Instant Action player is the copy
-  `SaveFolder` already makes there. Read `FUN_005accf0` first (newest by which time, and what an empty folder
-  does), then hand `Level` that file. Confirm: `q241/orig/New-Save-written-by-the-original.TPWS` put in a throwaway
-  player's jungle folder in a private game folder, the park entered, the park clock's first reading the file's own
-  `mGameTick` (read from the file and predicted; not the shipped 755); a screenshot beside `q241/orig/l2.png`.
 - [ ] **Q241c. The Load Park screen.** From Q241 (`saves.md`, "One screen, two uses" to "What the handlers answer").
   After Q241b and Q143, whose reader the date's row needs. Build the screen from the stream (the `window2` frame,
   the `f_load` list, `b_exit`; title UITEXT 202), fill it from the folder (`*.TPWS`: the name, then UITEXT 448's

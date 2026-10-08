@@ -5343,6 +5343,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   through `FUN_00414920`. The compressor is zlib 1.1.3 at memory level 9: deflating the body again gives each of
   ten park files back byte for byte, and at level 8 none (five predictions of five). Run in the original under
   Proton: five of five again (`q241/orig/PREDICTION-result.txt`). The build is Q241b to Q241e.
+- [x] **Q241b. Entering a park loads the player's own park file.** From Q241. `Level` reads
+  `data/levels/<theme>/Easymode.TPWI` on every entry. The original loads the newest `*.TPW*` in the player's folder
+  for the theme (`FUN_005accf0`; `park.md`, "Arrivals"), which for a new Instant Action player is the copy
+  `SaveFolder` already makes there. Read `FUN_005accf0` first (newest by which time, and what an empty folder
+  does), then hand `Level` that file. Confirm: `q241/orig/New-Save-written-by-the-original.TPWS` put in a throwaway
+  player's jungle folder in a private game folder, the park entered, the park clock's first reading the file's own
+  `mGameTick` (read from the file and predicted; not the shipped 755); a screenshot beside `q241/orig/l2.png`.
+  **Done 2026-10-08:** the newest by last write time, a tie keeping the first found, nothing loaded from an empty
+  folder (`saves.md`, "Entering a park"). The clock's first reading 840 and cash 88112, here and in the original
+  (predicted first; the control build 755 and 87987); 8 of 8 bugs put back fail a test (`q241b/`).
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.
