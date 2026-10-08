@@ -646,7 +646,8 @@ public sealed class ParkState
 
 	/// <summary>
 	/// How many guests this park has ever admitted, counting on from what the save recorded - the
-	/// original's <c>world + 0x1da714</c>, moved in exactly one place, by a guest finishing at the gate.
+	/// original's <c>world + 0x1da714</c>, moved once a guest by <c>FUN_0051aaf0</c>: as one finishes at the gate,
+	/// or as one is made on a cell that counts as the park's (<c>docs/exe/guest-arrivals.md</c>).
 	/// </summary>
 	public int VisitorsToDate { get; private set; }
 
@@ -873,7 +874,14 @@ public sealed class ParkState
 	}
 
 	/// <summary>Admits one guest and hands back which visitor they are, counting from one.</summary>
-	public int Admit() => ++VisitorsToDate;
+	public int Admit()
+	{
+		++VisitorsToDate;
+
+		Log.Info( $"Park: visitor {VisitorsToDate} received" );
+
+		return VisitorsToDate;
+	}
 
 	/// <summary>What this object has taken, counting on from what the save recorded.</summary>
 	public int TakingsFor( int objectId ) => _takings.GetValueOrDefault( objectId );

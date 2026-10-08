@@ -556,7 +556,11 @@ public sealed class ParkPeople : Entity
 		ParkGuestSprites.Current?.Add( person, picture );
 
 		_behaviour.State.StandOn( thingId, cellX, cellY );
-		_behaviour.State.Admit();
+
+		// Made on a cell that counts as the park's, they are a visitor from the start (0x004fb1df); made outside,
+		// which every arrival is, they become one as they come through the gate (PeepBehaviour, Entering).
+		if ( inThePark )
+			peep.VisitorNumber = _behaviour.State.Admit();
 
 		Log.Info( $"People: guest {thingId} arrived at ({cellX},{cellY}) on mGameTick {State.GameTick} - "
 			+ $"{_peeps.Count} guests now; kind {type} happy {peep.Happiness:0} "
@@ -1142,9 +1146,10 @@ public sealed class ParkPeople : Entity
 
 	/// <summary>
 	/// Makes a guest on a cell who has already come through the gate, for the debug console's <c>admit</c>: an
-	/// INSTRUMENT. <see cref="Admit"/> starts them <see cref="PeepState.AtGate"/>, to pay at a booth and walk in;
+	/// INSTRUMENT. <see cref="Admit"/> leaves one made outside the park to walk to the gate and pay at a booth;
 	/// this then does what <see cref="PeepState.Entering"/>'s arrival does (<see cref="PeepBehaviour.AdmitAsEntered"/>),
-	/// so they stand where they were made, deciding. No player reaches it. Answers their thing id, or nought.
+	/// so they stand where they were made, deciding, numbered a visitor once. No player reaches it. Answers their
+	/// thing id, or nought.
 	/// </summary>
 	internal int AdmitInside( int cellX, int cellY, int? personType )
 	{
@@ -3058,8 +3063,9 @@ public sealed class ParkPeople : Entity
 				// The three speed words, the eased speed and what it gave the walk (Peep.Pace).
 				+ $"speed {peep.PurposeSpeed} base {peep.BaseSpeed} adjustor {peep.AdjustorSpeed} "
 				+ $"eased {peep.PreviousSpeed} max {nav.MaxSpeed} "
-				// The visitor window's four counts, and the happiness the settle-up measures a visit against.
-				+ $"rides {peep.NumRides} shops {peep.NumShops} sideshows {peep.NumSideshows} won {peep.NumSideshowsWon} "
+				// Which visitor they are, nought until they are inside; then the visitor window's four counts, and the
+				// happiness the settle-up measures a visit against.
+				+ $"visitor {peep.VisitorNumber} rides {peep.NumRides} shops {peep.NumShops} sideshows {peep.NumSideshows} won {peep.NumSideshowsWon} "
 				+ $"joined {peep.JoinHappiness:0} "
 				// What they wear, the sprite kind and bank: 0 a child, 2 a costume.
 				+ $"sprite {peep.SpriteKind}/{peep.SpriteBank} "

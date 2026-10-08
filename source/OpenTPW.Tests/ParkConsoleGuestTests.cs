@@ -42,6 +42,33 @@ public class ParkConsoleGuestTests
 	}
 
 	/// <summary>
+	/// <b>A guest made on a cell of the park is a visitor as they are made</b>, the constructor's own count
+	/// (<c>0x004fb1df</c>): the next number, theirs, with no gate walked through.
+	/// </summary>
+	[TestMethod]
+	public void AGuestMadeInsideTheParkIsNumberedAsTheyAreMade()
+	{
+		var world = World();
+		var state = new ParkState( world );
+		var people = People( world, state );
+
+		try
+		{
+			var visitors = state.VisitorsToDate;
+			var id = people.Admit( 55, 30 );
+			var guest = people.Peeps.Single( peep => peep.ThingId == id );
+
+			Assert.AreEqual( PeepState.Deciding, guest.State, "deciding where they stand" );
+			Assert.AreEqual( visitors + 1, state.VisitorsToDate, "the park has had one more" );
+			Assert.AreEqual( visitors + 1, guest.VisitorNumber, "and it is them" );
+		}
+		finally
+		{
+			Done( people );
+		}
+	}
+
+	/// <summary>
 	/// <b>A guest made by <c>admit</c> has come through the gate</b>: deciding, paid, numbered a visitor, of the kind
 	/// asked for, on the cell asked for - where <see cref="ParkPeople.Admit"/> leaves one at the gate, unpaid.
 	/// </summary>
@@ -54,12 +81,14 @@ public class ParkConsoleGuestTests
 
 		try
 		{
+			var visitors = state.VisitorsToDate;
 			var id = people.AdmitInside( 55, 30, personType: 5 );
 			var guest = people.Peeps.Single( peep => peep.ThingId == id );
 
 			Assert.AreEqual( PeepState.Deciding, guest.State, "through the gate and deciding" );
 			Assert.IsTrue( guest.PaidAdmission, "paid" );
-			Assert.AreEqual( state.VisitorsToDate, guest.VisitorNumber, "the latest visitor" );
+			Assert.AreEqual( visitors + 1, state.VisitorsToDate, "counted once" );
+			Assert.AreEqual( visitors + 1, guest.VisitorNumber, "the latest visitor" );
 			Assert.AreEqual( 5, guest.PersonType, "the kind asked for" );
 			Assert.AreEqual( (55, 30), people.WalkFor( id )!.Position.Cell, "where it was asked for" );
 		}

@@ -64,8 +64,9 @@ public class ParkPeopleTests
 	/// Somebody who was never in the save. <see cref="ParkPeople.Admit"/> is what an arrival is, and what
 	/// this is really testing is the wiring rather than the guest: several separate structures have to
 	/// learn about them, and each one fails quietly, and differently, when it does not. A guest missing
-	/// from the walk table stands still; one missing from the visitor count is invisible to the park's
-	/// own arithmetic; one given a saved thing's id overwrites somebody.
+	/// from the walk table stands still; one given a saved thing's id overwrites somebody. And one list
+	/// must NOT learn of them yet: made at the stop they are outside the park, and it is coming through
+	/// the gate that makes them a visitor.
 	///
 	/// <para>
 	/// The sprite pool is the one wiring left to the running game. It needs a graphics device, which is
@@ -105,7 +106,8 @@ public class ParkPeopleTests
 		Assert.AreNotEqual( 0, id, "the park should take a guest at the bus stop" );
 		Assert.AreEqual( before + 1, people.Peeps.Count, "the simulation list" );
 		Assert.IsNotNull( people.WalkFor( id ), "the walk, without which they never move" );
-		Assert.AreEqual( visitors + 1, state.VisitorsToDate, "the park's own count of who has come" );
+		Assert.AreEqual( visitors, state.VisitorsToDate, "nobody is a visitor at the bus stop" );
+		Assert.AreEqual( 0, people.Peeps.Single( peep => peep.ThingId == id ).VisitorNumber, "and they have no number" );
 
 		// Not a thing the file already named.
 		Assert.IsFalse( world.People.Any( person => person.ThingId == id ),

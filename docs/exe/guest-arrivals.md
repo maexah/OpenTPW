@@ -59,6 +59,27 @@ in the original; do not silently claim an invented fallback reproduces it.
 The guest ID used for prankery and the reseed is the zero-extended 16-bit object ID
 (`FUN_0050b350`, then `0x004fb146` and `0x004fb194`); preserve that narrowing.
 
+## The visitor count (Q146)
+
+`FUN_0051aaf0` adds one to world `+0x1da714` (`mNumberOfVisitorsToDate`) and answers the new count. It has two
+callers, and each keeps the answer at the guest's `+0x1d8`, the visitors list's first column:
+
+| Caller | When |
+|---|---|
+| `0x004fb1df`, the constructor `FUN_004faec0` | the guest is made on a cell that counts as the park's (`FUN_004fa990`) |
+| `0x004ffb55`, `FUN_004ffb20`, the `Entering` turn | the walk through the gate has ended (`FUN_004fa2a0` answers nought), just before state 6 |
+
+So every guest is counted once. An arrival is made at the stop, outside the park, and takes the constructor's other
+arm: no number until the gate.
+
+Measured in the original (stock Lost Kingdom, read-only, `q146/orig/a.log`, 2026-10-08): the count is 0 at the load;
+all thirteen saved guests take 1 to 13 as state 5 becomes 6 (ticks 763 to 822); the first load's thirteen are made on
+ticks 1312 to 1324 with `+0x1d8` nought and the count still 13; each takes the next number at the gate (ticks 1386 to
+1482); 26 at the end, 1 to 26 with no gap.
+
+OpenTPW: `ParkPeople.Admit` numbers a guest only where `Peep.CountsOn` passes, and `PeepBehaviour`'s `Entering`
+numbers the rest. The console's `admit` makes a guest on a park cell, so it is numbered by the first.
+
 ## Draw order and the reseed
 
 The eight direct draws before the guest constructor's sprite setup are:

@@ -5295,6 +5295,18 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   bank's `+0x118` (`hud.md`). Five more is 30, the expensive line, so the next guest sulked and paid nothing; one
   less and the same guest paid 29: takings 125 to 154, 5 of 5 predicted (`q145/run1`, `gate`), and the unchanged
   build charged 25 with the screen at 30 (`q145/control`). 4 bugs put back, 4 caught.
+- [x] **Q146. Every guest who arrives is counted twice as a visitor.** Found by the 2026-09-26 staleness audit.
+  `ParkPeople.Admit` calls `ParkState.Admit` when the vehicle drops a guest and throws the answer away, and the
+  `Entering` case calls it again when they come through the gate and keeps it as `Peep.VisitorNumber`. The original
+  moves `mNumberOfVisitorsToDate` in one place, a guest finishing `Entering` (`FUN_0051aaf0`), as `ParkState`'s
+  `VisitorsToDate` and `PeepBehaviour.VisitorsToDate` both say. Take out the arrival's call. Confirm: `arrive` twice,
+  both guests through the gate, the visitors screen's numbers for them one apart, predicted first; a screenshot.
+  **Done 2026-10-08.** The item's "one place" was wrong: `FUN_0051aaf0` has two callers, the `Entering` turn and the
+  constructor of a guest made on a park cell (`guest-arrivals.md`, "The visitor count"), so the arrival's call is
+  kept for a park cell alone and its answer is the guest's number. In the game, `arrive` twice after the save's
+  thirteen: visitors **14 and 15** on the fix, **16 and 17** on the bug put back, in `peeps`, the log and the
+  visitors screen (`q146/run3`, `control2`, 3 of 3 each; `sheet-fix-over-control.png`). The original: 1 to 26, no
+  gap, thirteen made at the stop unnumbered until the gate (`q146/orig/a.log`). 5 bugs put back, 5 caught.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

@@ -44,12 +44,6 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q146. Every guest who arrives is counted twice as a visitor.** Found by the 2026-09-26 staleness audit.
-  `ParkPeople.Admit` calls `ParkState.Admit` when the vehicle drops a guest and throws the answer away, and the
-  `Entering` case calls it again when they come through the gate and keeps it as `Peep.VisitorNumber`. The original
-  moves `mNumberOfVisitorsToDate` in one place, a guest finishing `Entering` (`FUN_0051aaf0`), as `ParkState`'s
-  `VisitorsToDate` and `PeepBehaviour.VisitorsToDate` both say. Take out the arrival's call. Confirm: `arrive` twice,
-  both guests through the gate, the visitors screen's numbers for them one apart, predicted first; a screenshot.
 - [ ] **Q26. How many arrive in a load, and what the park is worth. Decode first.** `ParkPeople.StepArrivals` sizes
   every load at `Arrival.MinPeople` (1), so a park left alone gains one guest a load. The original asks a headcount
   score (`FUN_004c8240`), which is not decoded. Q68 found the rest of the headcount: `NewParkBonus` is added to

@@ -282,11 +282,11 @@ public sealed class PeepBehaviour
 	/// How many guests this park has ever admitted, counting on from what the save recorded.
 	///
 	/// <para>
-	/// The original keeps it on the world at <c>0x1da714</c> and moves it in exactly one place -
-	/// <c>FUN_0051aaf0</c>, which adds one and announces "Your park has received its %dth visitor". Its only
-	/// caller is a guest finishing <see cref="PeepState.Entering"/>, so this counts admissions and not
-	/// arrivals. It is held here rather than written back because <see cref="ParkWorld"/> describes a file
-	/// and is deliberately immutable.
+	/// The original keeps it on the world at <c>0x1da714</c> and moves it in exactly one function -
+	/// <c>FUN_0051aaf0</c>, which adds one and announces "Your park has received its %dth visitor". Its callers
+	/// are a guest finishing <see cref="PeepState.Entering"/> and the constructor of one made on a cell that
+	/// counts as the park's, so every guest is counted once, as they come to be inside. It is held here rather
+	/// than written back because <see cref="ParkWorld"/> describes a file and is deliberately immutable.
 	/// </para>
 	/// </summary>
 	public int VisitorsToDate => State.VisitorsToDate;
@@ -441,7 +441,8 @@ public sealed class PeepBehaviour
 
 				break;
 
-			// Coming through the gate - seven of the thirteen. Arriving is what makes somebody a visitor.
+			// Coming through the gate - seven of the thirteen. Arriving is what makes somebody a visitor
+			// (FUN_0051aaf0 at 0x004ffb55, its answer kept at guest +0x1d8).
 			//
 			// The guard this does NOT have is the one at the top of FUN_004ffb20: a guest whose park has
 			// shut under them, or whose gate is not open, is sent back to head for the gate again. Both
@@ -2496,7 +2497,11 @@ public sealed class PeepBehaviour
 	internal void AdmitAsEntered( Peep peep, int tick )
 	{
 		peep.PaidAdmission = true;
-		peep.VisitorNumber = State.Admit();
+
+		// One made on a park cell took their number as they were made (ParkPeople.Admit).
+		if ( peep.VisitorNumber == 0 )
+			peep.VisitorNumber = State.Admit();
+
 		peep.SetState( PeepState.Deciding, tick, _random );
 	}
 
