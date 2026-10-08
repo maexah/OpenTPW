@@ -40,17 +40,6 @@ the original.
 
 **The 2026-10-06 review's leftovers come first, at Alexah's word (2026-10-06).**
 
-- [ ] **Q134. The researcher researches, where ours stands. Alexah's call first.** Found by Q82. On a nought from its
-  draw, or no destination, the researcher takes state `0xf` (animation 10, `+0x214` = mGameTick) for
-  `ResearcherConstsPerGrade.WorkDuration` + 1 sweeps (31 at grade 2), then walks or researches again; it never idles of
-  its own accord, and every 20 sweeps it adds `ResearchAbility` to the lab (`0x00502984`). OpenTPW has no state `0xf`,
-  so the fourth decide stands. Research waits on a research system this game lacks (`docs/PLAYER-GAPS.md`), but the
-  state and its timer need no lab: ask whether to build that half now, and count the points meanwhile.
-  - **Note (fork review, 2026-09-30), data for the build:** the global `Standard.sam` holds Research Effort by category (100, 15, 30,
-    15, 10) and `ResearchTech`; `Easy_Standard.sam` overrides categories 3 and 4 (25 and 0). `Upgrades[n].CostOfResearch`
-    is research points; `DurationOfUpgrade`, only in the category files, is the mechanic's upgrade time. In Instant
-    Action the research screen shows UITEXT `0x1d4`, "research is automatic". Why the screen has six sliders for five
-    categories is not decoded: read how the lab spends points by category first. Review items economy-1, economy-v3.
 - [ ] **Q135. The staff's sounds are neither played nor counted.** Found by Q82. Every idle and walking turn draws
   the world random and on one in sixteen plays a cat_staff effect at the member's position (`FUN_004faa00`): idle
   `0xa1`, `0xa3`, `0xa5`, `0xa7`, `0xa9` and walking `0xa0`, `0xa2`, `0xa4`, `0xa6`, `0xa8` (handyman, mechanic,

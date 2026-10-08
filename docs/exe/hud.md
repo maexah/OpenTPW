@@ -1351,7 +1351,8 @@ Mayhem; shops Balloon, Burger, Drinks; sideshows Jungle Spray, Strength Bird. **
 Kingdom** (Instant Action, under Proton, 2026-09-30, Q178b): exactly those, and features Buy Land, Clear Land and the
 eight whose cost is nought, and no mystery row. **OpenTPW lists the same** (Q201b, `ParkResearch`: the save's
 records, an item it lacks seeded from its cost; `q201b/run2/`: rides 4, sideshows 2, shops 3). Research completing is
-not built; `RESEARCH_COMPLETING` is counted where a researcher would research.
+not built; the points a researcher hands the lab are counted, `RESEARCH_POINTS_TO_THE_LAB` (`ride-operation.md`,
+"The research, in both games").
 
 **The row state is {0,1,2} and both non-zero values are pinned**: 1 = you already own at least one
 (`desc+0x18`, incremented on placement and decremented on demolition), 2 = one of the three most

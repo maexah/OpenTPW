@@ -579,8 +579,8 @@ public class ParkStaffBehaviourTests
 	}
 
 	/// <summary>
-	/// <b>A researcher's walk-or-stay is still a draw</b> (<c>0x00502ba9</c>): on a sweep that is a multiple of four,
-	/// where a guard always stays, some draws send the researcher walking and some keep them standing.
+	/// <b>A researcher's walk-or-research is a draw</b> (<c>0x00502ba9</c>): on a sweep that is a multiple of four,
+	/// where a guard always stays, some draws send the researcher walking and some set them researching.
 	/// </summary>
 	[TestMethod]
 	public void AResearchersChoiceIsADrawNotTheClock()
@@ -603,8 +603,8 @@ public class ParkStaffBehaviourTests
 			outcomes.Add( member.Activity );
 		}
 
-		CollectionAssert.AreEquivalent( new[] { StaffActivity.Idle, StaffActivity.Walking }, outcomes.ToArray(),
-			"across sixteen draws on mGameTick 1000 the researcher both stays and walks" );
+		CollectionAssert.AreEquivalent( new[] { StaffActivity.Researching, StaffActivity.Walking }, outcomes.ToArray(),
+			"across sixteen draws on mGameTick 1000 the researcher both researches and walks" );
 	}
 
 	/// <summary>
@@ -662,8 +662,9 @@ public class ParkStaffBehaviourTests
 	/// the 31 ms counter, eight to a sweep from wherever the process left it, fails here.
 	/// <para>
 	/// Read after every sweep: the guard keeps the save's 752 through 762; every idle spell after a walk is stamped
-	/// with the sweep's <c>mGameTick</c> and holds it 11 sweeps for the guard (grade 3) and 21 for the researcher
-	/// (grade 2); and the guard never sets off from idle on a multiple of four.
+	/// with the sweep's <c>mGameTick</c> and holds it 11 sweeps for the guard (grade 3); every spell of research
+	/// after a walk is stamped the same way and holds it 31 sweeps for the researcher (grade 2), who is never idle
+	/// once the first walk has ended; and the guard never sets off from idle on a multiple of four.
 	/// </para>
 	/// </summary>
 	[TestMethod]
@@ -697,7 +698,9 @@ public class ParkStaffBehaviourTests
 
 				last = people.State.GameTick;
 				seen.Add( (last, people.Staff.ToDictionary( member => member.ThingId,
-					member => (member.Activity, member.TimeStartedIdling) )) );
+					member => (member.Activity, member.Activity == StaffActivity.Researching
+						? member.TimeStartedResearching
+						: member.TimeStartedIdling) )) );
 			}
 
 			Assert.AreEqual( 756, seen[0].Tick, "the first sweep is one past the save's mGameTick" );
@@ -710,14 +713,15 @@ public class ParkStaffBehaviourTests
 
 			Assert.AreNotEqual( (StaffActivity.Idle, 752), seen[7].Staff[Guard], "the guard on mGameTick 763" );
 
-			foreach ( var (thing, holds) in new[] { (Guard, 11), (Researcher, 21) } )
+			foreach ( var (thing, holds, spell) in new[]
+				{ (Guard, 11, StaffActivity.Idle), (Researcher, 31, StaffActivity.Researching) } )
 			{
 				var spells = 0;
 
 				for ( var i = 1; i + holds < seen.Count; ++i )
 				{
 					if ( seen[i - 1].Staff[thing].Activity != StaffActivity.Walking
-						|| seen[i].Staff[thing].Activity != StaffActivity.Idle )
+						|| seen[i].Staff[thing].Activity != spell )
 						continue;
 
 					var tick = seen[i].Tick;
@@ -726,16 +730,21 @@ public class ParkStaffBehaviourTests
 
 					for ( var j = i; j < i + holds; ++j )
 					{
-						Assert.AreEqual( (StaffActivity.Idle, tick), seen[j].Staff[thing],
+						Assert.AreEqual( (spell, tick), seen[j].Staff[thing],
 							$"staff {thing}'s spell from mGameTick {tick}, read on {seen[j].Tick}" );
 					}
 
-					Assert.AreNotEqual( (StaffActivity.Idle, tick), seen[i + holds].Staff[thing],
+					Assert.AreNotEqual( (spell, tick), seen[i + holds].Staff[thing],
 						$"staff {thing}'s spell from mGameTick {tick} is over on {seen[i + holds].Tick}" );
 				}
 
 				Assert.IsTrue( spells >= 3, $"staff {thing} ended only {spells} walks in {sweeps} sweeps" );
 			}
+
+			var firstResearch = seen.FindIndex( sweep => sweep.Staff[Researcher].Activity == StaffActivity.Researching );
+
+			Assert.IsFalse( seen.Skip( firstResearch ).Any( sweep => sweep.Staff[Researcher].Activity == StaffActivity.Idle ),
+				"the researcher never stands idle of its own accord" );
 
 			var setOff = 0;
 
@@ -817,7 +826,8 @@ public class ParkStaffBehaviourTests
 		state.SetRecord( 49, 22, state.Record( 49, 22 ) with { Type = type, Neighbours = 0x44 } );
 		// An entrance source may route into another queue cell; the path-only patrol gate must reject it.
 		state.SetRecord( 48, 22, state.Record( 48, 22 ) with { Type = CellEdge.RideEnd, Neighbours = 0x04 } );
-		var saved = world.People.Single( person => person.ThingId == Researcher );
+		// The guard, whose choice with nowhere found is to stand; a researcher's is to research.
+		var saved = world.People.Single( person => person.ThingId == Guard );
 		var member = new Staff( saved.ThingId, saved.Model, saved.Staff!.Value with
 		{
 			State = (int)StaffActivity.Idle, TimeStartedIdling = 0,

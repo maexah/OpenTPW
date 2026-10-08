@@ -21,6 +21,10 @@ namespace OpenTPW;
 /// four by a draw.
 /// </para>
 /// <para>
+/// <b>The researcher's research is built</b>: state <c>0xf</c> on the fourth decide or with nowhere to walk,
+/// its stamp and its end - <see cref="Research"/>. The lab it works for is not: the points are counted.
+/// </para>
+/// <para>
 /// <b>The handyman's toilet job is built</b>: the search (<c>FUN_004d7880</c>), the walk to the toilet
 /// (state <c>0xa</c>) and the clean (state <c>0xb</c>, <c>FUN_004dfd80</c>) - <see cref="FindToilet"/>,
 /// <see cref="ArriveAtTheLoo"/>, <see cref="CleanOn"/>.
@@ -75,6 +79,8 @@ public sealed class StaffBehaviour
 	/// </summary>
 	public Func<Staff, int>? StateGroupsOf { get; init; }
 
+	private readonly int[] _researcherWork = new int[ParkWorld.StaffState.PayGrades];
+	private readonly int[] _researchAbility = new int[ParkWorld.StaffState.PayGrades];
 	private readonly int[] _entertainerWork = new int[ParkWorld.StaffState.PayGrades];
 	private readonly int[] _entertainerReach = new int[ParkWorld.StaffState.PayGrades];
 	private readonly int[] _idleDuration = new int[ParkWorld.StaffState.PayGrades];
@@ -109,6 +115,8 @@ public sealed class StaffBehaviour
 		int[] rangeFallback = [2, 3, 3, 4, 5];
 		int[] performFallback = [10, 20, 30, 50, 75];
 		int[] reachFallback = [3, 3, 4, 4, 5];
+		int[] researchFallback = [10, 20, 30, 40, 50];
+		int[] abilityFallback = [2, 3, 4, 5, 6];
 
 		for ( var grade = 0; grade < ParkWorld.StaffState.PayGrades; ++grade )
 		{
@@ -135,6 +143,13 @@ public sealed class StaffBehaviour
 				?? performFallback[grade];
 			_entertainerReach[grade] = balance?.Int( $"{entertainer}.ActivationDistance", reachFallback[grade] )
 				?? reachFallback[grade];
+
+			var researcher = $"ResearcherConstsPerGrade[{grade}]";
+
+			_researcherWork[grade] = balance?.Int( $"{researcher}.WorkDuration", researchFallback[grade] )
+				?? researchFallback[grade];
+			_researchAbility[grade] = balance?.Int( $"{researcher}.ResearchAbility", abilityFallback[grade] )
+				?? abilityFallback[grade];
 		}
 	}
 
@@ -185,6 +200,29 @@ public sealed class StaffBehaviour
 	public int EntertainerActivationDistanceAt( int grade )
 		=> _entertainerReach[Math.Clamp( grade, 0, _entertainerReach.Length - 1 )];
 
+	/// <summary>
+	/// How long a researcher of this grade researches - <c>ResearcherConstsPerGrade.WorkDuration</c>, the table at
+	/// <c>0x00785458</c>: 10, 20, 30, 40, 50.
+	/// </summary>
+	public int ResearcherWorkDurationAt( int grade )
+		=> _researcherWork[Math.Clamp( grade, 0, _researcherWork.Length - 1 )];
+
+	/// <summary>
+	/// How many points a researcher of this grade hands the lab at a time -
+	/// <c>ResearcherConstsPerGrade.ResearchAbility</c>, the table at <c>0x0078545c</c>: 2, 3, 4, 5, 6.
+	/// </summary>
+	public int ResearchAbilityAt( int grade )
+		=> _researchAbility[Math.Clamp( grade, 0, _researchAbility.Length - 1 )];
+
+	/// <summary>A researcher hands the lab points on every sweep the clock divides by this - <c>0x0050297f</c>.</summary>
+	public const int ResearchPointsEvery = 20;
+
+	/// <summary>
+	/// The points researchers have been counted as handing the lab since the park loaded, which nothing
+	/// spends: there is no lab.
+	/// </summary>
+	public int ResearchPointsCounted { get; private set; }
+
 	/// <summary>How much rest one turn of work costs, before the grade multiplier - the float at <c>0x00700858</c>.</summary>
 	public const float TirednessPerWorkingTurn = 0.025f;
 
@@ -225,8 +263,7 @@ public sealed class StaffBehaviour
 	/// <summary>
 	/// A guard or researcher stays put when the low two bits of its choice are nought, and otherwise looks for
 	/// somewhere to walk. The guard's are <c>mGameTick</c>'s (<c>0x004d655d</c>), so it stays on one sweep in four
-	/// by the clock; the researcher's are a draw's (<c>0x00502ba9</c>), and where this one stays the original's
-	/// researches (Q134).
+	/// by the clock; the researcher's are a draw's (<c>0x00502ba9</c>), and where it would stay it researches.
 	/// </summary>
 	public const int StayPutShare = 4;
 
@@ -249,6 +286,20 @@ public sealed class StaffBehaviour
 		if ( staff.Model == HandymanModel && staff.Activity == StaffActivity.Idle
 			&& (uint)tick % (uint)IdleDurationAt( staff.PayGrade ) == 0 )
 			Unimplemented.Report( "HANDYMAN_LITTER_SEARCH" );
+
+		// A researcher's pre-step hands the lab the grade's ResearchAbility on every sweep the clock divides by
+		// twenty, in any state but going to rest, resting, the two strike states and carried (FUN_00502960,
+		// FUN_005064f0 answering 3, 4 or 5). The lab's spending of them, FUN_00503430, is not built: counted.
+		if ( staff.Model == ResearcherModel && (uint)tick % ResearchPointsEvery == 0
+			&& staff.Activity is not (StaffActivity.GoingToRest or StaffActivity.Resting
+				or StaffActivity.GoingOnStrike or StaffActivity.OnStrike or StaffActivity.Held) )
+		{
+			Unimplemented.Report( "RESEARCH_POINTS_TO_THE_LAB" );
+			ResearchPointsCounted += ResearchAbilityAt( staff.PayGrade );
+
+			Log.Info( $"Staff: {staff.ThingId} hands the lab {ResearchAbilityAt( staff.PayGrade )} research points "
+				+ $"on mGameTick {tick}, counted and not spent: {ResearchPointsCounted} so far" );
+		}
 
 		switch ( staff.Activity )
 		{
@@ -371,6 +422,31 @@ public sealed class StaffBehaviour
 
 				break;
 
+			// A researcher researching - FUN_005029f0's case 0xf: a turn of work, then, on the first sweep past
+			// stamp + WorkDuration, a walk if somewhere is found (0x00502a40, with no FUN_00506a40 and no draw)
+			// and otherwise a fresh stamp and the same again. A turn that does not end draws for cat_staff
+			// effect 0x8a (0x00502a61), not built (Q135).
+			case StaffActivity.Researching:
+				Work( staff );
+
+				if ( (uint)tick <= (uint)(staff.TimeStartedResearching + ResearcherWorkDurationAt( staff.PayGrade )) )
+					break;
+
+				if ( SetRandomDest( staff, walk ) )
+				{
+					Log.Info( $"Staff: {staff.ThingId} ends the research of mGameTick {staff.TimeStartedResearching} "
+						+ $"on mGameTick {tick} and walks" );
+					staff.SetActivity( StaffActivity.Walking, tick );
+
+					break;
+				}
+
+				Log.Info( $"Staff: {staff.ThingId} ends the research of mGameTick {staff.TimeStartedResearching} "
+					+ $"on mGameTick {tick} and researches again, finding nowhere to walk" );
+				staff.TimeStartedResearching = tick;
+
+				break;
+
 			// On strike and being carried both do nothing here. The original ends a strike in state 5's
 			// FUN_00506300, which is not built (Q138), and its own case 7 has an empty body.
 			default:
@@ -385,9 +461,9 @@ public sealed class StaffBehaviour
 	///
 	/// <para>
 	/// <b>Every kind walks about when it has no work.</b> The mechanic and the handyman look for work and, with
-	/// none, set off on a random walk every time; the entertainer, the guard and the researcher stay on one
-	/// choice in four. The handyman's toilet search and the entertainer's look find work; the others are counted
-	/// where the original makes them.
+	/// none, set off on a random walk every time; the entertainer and the guard stay on one choice in four, where
+	/// the researcher researches. The handyman's toilet search and the entertainer's look find work; the others
+	/// are counted where the original makes them.
 	/// </para>
 	/// </summary>
 	private void Decide( Staff staff, PeepWalk walk, int tick )
@@ -459,6 +535,11 @@ public sealed class StaffBehaviour
 
 			case EntertainerModel:
 				Entertain( staff, walk, tick );
+
+				break;
+
+			case ResearcherModel:
+				Research( staff, walk, tick );
 
 				break;
 
@@ -748,22 +829,12 @@ public sealed class StaffBehaviour
 	}
 
 	/// <summary>
-	/// The guard's and the researcher's choice: a guard walks on unless <c>mGameTick</c>'s low two bits are
-	/// nought (<c>0x004d655d</c>); a researcher unless its draw's are (<c>0x00502ba9</c>). Staying, or finding
-	/// nowhere, sets idle, which stamps only from a walk.
+	/// The guard's choice: a walk unless <c>mGameTick</c>'s low two bits are nought (<c>0x004d655d</c>). Staying,
+	/// or finding nowhere, sets idle, which stamps only from a walk.
 	/// </summary>
-	/// <remarks>
-	/// <b>A deviation (Q134):</b> where this researcher stays the original's researches, state <c>0xf</c>
-	/// (<c>0x00502be4</c>), unless too tired; this one stands, and research never completes
-	/// (<c>FUN_00504630</c>), counted here.
-	/// </remarks>
 	private void PatrolOrStay( Staff staff, PeepWalk walk, int tick )
 	{
-		if ( staff.Model == ResearcherModel )
-			Unimplemented.Report( "RESEARCH_COMPLETING" );
-
-		var choice = staff.Model == GuardModel ? tick : _random.Next();
-		var walks = (choice & (StayPutShare - 1)) != 0;
+		var walks = (tick & (StayPutShare - 1)) != 0;
 		var walking = walks && SetRandomDest( staff, walk );
 
 		staff.SetActivity( walking ? StaffActivity.Walking : StaffActivity.Idle, tick );
@@ -773,6 +844,34 @@ public sealed class StaffBehaviour
 			Log.Info( $"Staff: {staff.ThingId} stands on mGameTick {tick}, "
 				+ (walks ? "finding nowhere to walk" : "its choice's low two bits nought") );
 		}
+	}
+
+	/// <summary>
+	/// The researcher's choice - <c>FUN_005029f0</c>'s idle and walking arms and <c>FUN_00502c70</c> after a
+	/// rest, the same three tests each: a draw whose low two bits are not nought looks for somewhere to walk
+	/// (<c>0x00502ba9</c>), and a nought, or nowhere found, researches where they stand
+	/// (<see cref="Staff.StartResearching"/>). So a researcher never stands idle by this choice.
+	/// </summary>
+	/// <remarks>
+	/// Before it researches the original asks whether the member is too tired to work (<c>FUN_00506680</c>, the
+	/// rest byte under <c>RestLevel</c>) and, if so, leaves the state as it was. <see cref="Decide"/>'s tired
+	/// test is that one and comes first, so nobody that tired gets here (Q136 (d)).
+	/// </remarks>
+	private void Research( Staff staff, PeepWalk walk, int tick )
+	{
+		var walks = (_random.Next() & (StayPutShare - 1)) != 0;
+
+		if ( walks && SetRandomDest( staff, walk ) )
+		{
+			staff.SetActivity( StaffActivity.Walking, tick );
+
+			return;
+		}
+
+		staff.StartResearching( tick );
+
+		Log.Info( $"Staff: {staff.ThingId} researches on mGameTick {tick}, "
+			+ (walks ? "finding nowhere to walk" : "its choice's low two bits nought") );
 	}
 
 	/// <summary>The mechanic's thing model.</summary>

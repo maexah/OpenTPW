@@ -14,8 +14,9 @@ namespace OpenTPW;
 /// </para>
 /// <para>
 /// <b>Of the kind-specific half the handyman's toilet job is here</b> (<see cref="ToiletToClean"/>,
-/// <see cref="TimeStartedCleaning"/>) <b>and the entertainer's performance</b>
-/// (<see cref="TimeStartedEntertaining"/>). A handyman's target litter cell, a mechanic's object to repair and a
+/// <see cref="TimeStartedCleaning"/>)<b>, the entertainer's performance</b>
+/// (<see cref="TimeStartedEntertaining"/>) <b>and the researcher's research</b>
+/// (<see cref="TimeStartedResearching"/>). A handyman's target litter cell, a mechanic's object to repair and a
 /// guard's perp are all saved and all decoded - see <c>ParkWorld.ReadStaff</c> - and none of them is read. See
 /// <see cref="StaffBehaviour"/> for which arms that leaves out and why.
 /// </para>
@@ -99,6 +100,13 @@ public sealed class Staff
 	public int TimeStartedEntertaining { get; internal set; }
 
 	/// <summary>
+	/// The park clock when a researcher began researching - <c>mTimeStartedResearching</c>, the same
+	/// <c>+0x214</c>, stamped by <see cref="StartResearching"/> and again at the end of a spell that finds
+	/// nowhere to walk.
+	/// </summary>
+	public int TimeStartedResearching { get; internal set; }
+
+	/// <summary>
 	/// When they last started standing about, read against the park's own clock.
 	///
 	/// <para>
@@ -156,6 +164,7 @@ public sealed class Staff
 		ToiletToClean = saved.ToiletToClean;
 		TimeStartedCleaning = saved.TimeStartedCleaning;
 		TimeStartedEntertaining = saved.TimeStartedEntertaining;
+		TimeStartedResearching = saved.TimeStartedResearching;
 		PatrolBottomLeft = saved.PatrolBottomLeft;
 		PatrolTopRight = saved.PatrolTopRight;
 		Name = saved.Name;
@@ -248,6 +257,21 @@ public sealed class Staff
 		Activity = StaffActivity.Performing;
 		TimeStartedEntertaining = tick;
 	}
+
+	/// <summary>
+	/// Starts a researcher's research - the three writes of <c>FUN_00502c20</c>'s <c>0xf</c> arm, which the
+	/// decide after a walk and after a rest makes inline (<c>0x00502b17</c>, <c>0x00502cc7</c>): the stamp,
+	/// animation 10 queued and the state. The shared setter does not run, so the idle stamp is left as it was.
+	/// </summary>
+	internal void StartResearching( int tick )
+	{
+		TimeStartedResearching = tick;
+		NextAnimation = ResearchingAnimation;
+		Activity = StaffActivity.Researching;
+	}
+
+	/// <summary>The animation a researcher researching is put on - the 10 of <c>0x00502c43</c>.</summary>
+	public const int ResearchingAnimation = 10;
 
 	/// <summary>
 	/// Which animation a state queues as it is entered, by the original's own numbers.

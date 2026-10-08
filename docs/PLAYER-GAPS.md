@@ -51,7 +51,8 @@ open something.**
 **ONLY RESEARCH REMAINS, AND IT IS BLOCKED BY ABSENCE, NOT BY EFFORT.** It is not a category
 (`FUN_004a0840`'s case `0x2b` goes straight to `FUN_004aa480`, as the map does) and its screen is six
 effort sliders over research groups, or a message box in Instant Action or with no researcher hired. This game has no
-research and no groups; Lost Kingdom's one researcher (thing 30) walks, with nothing to research. It only logs, and
+research and no groups; Lost Kingdom's one researcher (thing 30) walks and researches as the original's does (Q134),
+the points for the lab counted and spent by nothing. It only logs, and
 counts each click as `RESEARCH_BUTTON`. **Do not open it as a task until a research system exists.**
 
 **Park status (screen 3) is deferred by Alexah, 2026-09-21** — *"I'm okay delaying work on the Info

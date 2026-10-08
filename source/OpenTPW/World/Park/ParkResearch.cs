@@ -14,8 +14,8 @@ namespace OpenTPW;
 ///
 /// <para>
 /// <b>Research completing is not built</b> (<c>FUN_00504630</c>, which sets the flag and the tier): this game has no
-/// research, and nothing here changes after the load. It is counted where a researcher would research,
-/// <c>RESEARCH_COMPLETING</c> in <see cref="StaffBehaviour"/>.
+/// research, and nothing here changes after the load. The points a researcher would hand the lab are counted where
+/// the original hands them, <c>RESEARCH_POINTS_TO_THE_LAB</c> in <see cref="StaffBehaviour"/>.
 /// </para>
 /// </summary>
 public sealed class ParkResearch

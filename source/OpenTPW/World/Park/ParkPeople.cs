@@ -3087,7 +3087,8 @@ public sealed class ParkPeople : Entity
 				+ $"walks {(global::OpenTPW.Staff.IsAWalkingState( member.Activity ))} "
 				+ $"has {(walk == null ? "no-walk" : walk.HasRoute ? "route" : "no-route")} "
 				+ $"loo {member.ToiletToClean} cleaningSince {member.TimeStartedCleaning} "
-				+ $"performingSince {member.TimeStartedEntertaining}";
+				+ $"performingSince {member.TimeStartedEntertaining} "
+				+ $"researchingSince {member.TimeStartedResearching}";
 		}
 	}
 }

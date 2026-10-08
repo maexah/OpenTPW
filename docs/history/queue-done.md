@@ -5110,6 +5110,24 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the first run, both misses the harness's): 15 performances in 240 s, each with a guest within four cells, 14 of 14
   finished spells 51 sweeps, 406 of 406 readings on set 4 at script 1760; the build before never performs, 2 of 2.
   Away from guests no performance began (6 put-downs, where 8 were predicted). 46 bugs put back, 44 caught, the two left an equivalent and a save field the shipped save holds nought in (`q133d/mutate.py`).
+- [x] **Q134. The researcher researches, where ours stands. Alexah's call first.** Found by Q82. On a nought from its
+  draw, or no destination, the researcher takes state `0xf` (animation 10, `+0x214` = mGameTick) for
+  `ResearcherConstsPerGrade.WorkDuration` + 1 sweeps (31 at grade 2), then walks or researches again; it never idles of
+  its own accord, and every 20 sweeps it adds `ResearchAbility` to the lab (`0x00502984`). OpenTPW has no state `0xf`,
+  so the fourth decide stands. Research waits on a research system this game lacks (`docs/PLAYER-GAPS.md`), but the
+  state and its timer need no lab: ask whether to build that half now, and count the points meanwhile.
+  - **Note (fork review, 2026-09-30), data for the build:** the global `Standard.sam` holds Research Effort by category (100, 15, 30,
+    15, 10) and `ResearchTech`; `Easy_Standard.sam` overrides categories 3 and 4 (25 and 0). `Upgrades[n].CostOfResearch`
+    is research points; `DurationOfUpgrade`, only in the category files, is the mechanic's upgrade time. In Instant
+    Action the research screen shows UITEXT `0x1d4`, "research is automatic". Why the screen has six sliders for five
+    categories is not decoded: read how the lab spends points by category first. Review items economy-1, economy-v3.
+  **Built 2026-10-07, at Alexah's word ("build it now")** (`ride-operation.md`, "The research, in both games"):
+  `StaffBehaviour.Research`, state `0xf` by three inline writes, its turn and its end, the save's stamp (697) read;
+  the lab's points counted, `RESEARCH_POINTS_TO_THE_LAB`, and spent by nothing. In the original, predicted first, 5 of
+  5: eight spells of 31 sweeps, never idle. In the game, predicted first, 7 of 7: twelve spells in 240 s, each 31
+  sweeps and ended in a walk, 199 of 199 readings on script 402 set 4, never Idle, fifty lots of 12 points; the build
+  before stands on 168 readings of 596, 2 of 2. 43 bugs put back, 41 caught; the two left read another kind's `+503` as the researcher's stamp, nought in every other member of the shipped save (`q134/mutate.py`). The lab itself, and the research
+  screen, are still not built (`docs/PLAYER-GAPS.md`); the note above is its data.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

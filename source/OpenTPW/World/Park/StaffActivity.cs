@@ -93,5 +93,12 @@ public enum StaffActivity
 	/// with no SetState: a turn of work a sweep until the clock passes <c>mTimeStartedEntertaining</c> + the
 	/// grade's <c>WorkDuration</c>, then the decide again in the same turn.
 	/// </summary>
-	Performing = 0xe
+	Performing = 0xe,
+
+	/// <summary>
+	/// A researcher researching where they stand - their own state <c>0xf</c> (<c>FUN_005029f0</c>): a turn of
+	/// work a sweep until the clock passes <c>mTimeStartedResearching</c> + the grade's <c>WorkDuration</c>, then
+	/// a walk if somewhere is found and the same again on a fresh stamp if not.
+	/// </summary>
+	Researching = 0xf
 }

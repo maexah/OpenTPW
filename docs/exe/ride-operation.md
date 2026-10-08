@@ -2413,8 +2413,8 @@ The entertainer began performing on 769, 855, 915 and 1169, each from a walk: 51
 **OpenTPW after the build**, the same park for 150 s, `staff` and `sweeps` read about twice a second, predicted
 first (`q133/confirm.py`): the handyman and the mechanic Walking on every reading from 775 on; the entertainer Idle
 and Walking, every idle stamp a multiple of four; all five on 16 cells or more. The build before: the three Idle on
-every reading. Where it parts from the original is the work: the entertainer here never performs, so it walks
-through the sweeps the original's stands performing.
+every reading. Where it parted from the original was the work, built since: the entertainer's performance (Q133d) and the
+researcher's research (Q134).
 
 ### The entertainer's performance - `FUN_004d46d0`, `FUN_004c8d30` and state `0xe`
 
@@ -2546,6 +2546,60 @@ name.
 the same green dinosaur turning through set 4's poses where it stands. OpenTPW's is cut along its lower edge by the
 ground at that camera, as every sprite's is in the build before too, and has no shadow.
 
+### The research, in both games
+
+Read again in the listing for the build (`docs/QUEUE.md` Q134), whole: the handler `FUN_005029f0`, its setter
+`FUN_00502c20`, the decide after a rest `FUN_00502c70`, the hire's `0x005026cb` and the pre-step `FUN_00502960`.
+
+**The choice is the same three tests at all four sites** (idle `0x00502b9a`, a walk's end `0x00502abf`, after a rest
+`0x00502c73`, at hire `0x005026bc`): `FUN_00506a40`, returning at once on a 1; a world draw `& 3`, not nought, asks
+`FUN_004f9490` for somewhere to walk and takes state 1 on a yes; a nought, **or nowhere found**, asks `FUN_00506680`
+(too tired to work) and on a 1 returns with the state as it was, and otherwise researches. So a researcher is never
+stood idle by its own choice: it leaves a walk for another walk or for research.
+
+**Research is three writes**: `+0x214` = mGameTick, animation 10 queued (`FUN_004217f0` on `+0xc`) and `+0x19c` =
+`0xf`. `FUN_00502c20( 0xf )` makes them and so do the three inline copies (`0x00502b17`, `0x00502cc7`, the hire's);
+none calls `FUN_005054d0`, so the idle stamp `+0x200` is left as it was. `FUN_00502c20` with any other number is
+`FUN_005054d0` and the state.
+
+**A turn of state `0xf`** (`0x00502a11`): a turn of work, `FUN_00506760`, every sweep, the ending one too. While
+mGameTick <= `+0x214` + WorkDuration (`JBE`, `0x00502a3c`) it draws the world random and on one in sixteen plays
+cat_staff `0x8a`. Past it, `FUN_004f9490` at once with no `FUN_00506a40` and no draw: somewhere found is
+`FUN_005054d0( 1 )` and state 1 (`0x00502ae6`); nowhere writes `+0x214` = mGameTick again and leaves the rest, the
+animation not queued again. So a spell is WorkDuration + 1 sweeps in state `0xf`, 31 at grade 2.
+
+**The pre-step** `FUN_00502960` asks `FUN_005064f0` for the state's class (0 idle, 1 walking, 3 for states 2 and 3,
+4 for 4 and 5, 5 for 7, 2 for 6 and everything above) and on any class but 3, 4 and 5, on every sweep where
+mGameTick % 20 is nought (`0x00502984`), hands `ResearcherConstsPerGrade[grade].ResearchAbility` (`0x0078545c`,
+stride 12) to the lab: `FUN_00519550` for the lab, then `FUN_00503430( ability )`, which shares the points among
+the five categories being researched by each one's effort and calls `FUN_00504630` for each. `Standard.sam` gives
+2, 3, 4, 5, 6 and jungle's `Easy_Standard.sam` 6, 9, 12, 16, 20, which the original's memory held in the park.
+
+**The original under Proton**, stock Lost Kingdom left alone, researcher 30 (grade 2) read once a sweep from 755 to
+1581, none missed, predicted first, 5 of 5 (`q134/orig/watch.py`, `a.log`):
+
+- From 775 on, state 1 on 561 sweeps and `0xf` on 246, never 0.
+- Eight spells (from 773, 824, 876, 954, 1055, 1217, 1298, 1350), each entered from state 1 and stamped with its
+  first sweep, `0xf` on S to S + 30 and state 1 on S + 31. No spell ended with nowhere to walk.
+- In a spell: the sprite on script word 402 (animation 10), set 4, frames 0 to 3 with 0 on more than half; the cell
+  still.
+- Rest down 0.1 a sweep in `0xf` and 0.048 walking.
+- The save's `mTimeStartedResearching` is 697, held in `+0x214` until the first spell.
+
+A second watch, with the pointer steered onto the researcher for a photograph, read state 0 on five sweeps (1775 to
+1779, idle stamp 1774) between a walk and a spell: the pointer's effect Q133c met on the entertainer, not explained.
+
+**OpenTPW after the build** (`StaffBehaviour.Research` and its `Researching` turn, `Staff.StartResearching`), the
+same park for 240 s, `sweeps`, `staff` and `guests` read about three times a second, predicted first, 7 of 7
+(`q134/confirm.py`, `run1/`): Walking on 365 readings and Researching on 217 from 775 on, never Idle; twelve
+spells, each ended on its stamp + 31 in a walk; 199 of 199 readings in a spell on script 402, set 4, frames 0 to 3;
+the place still in each; the whole-number rest down 3 or 4 a spell; fifty lots of 12 points counted,
+`RESEARCH_POINTS_TO_THE_LAB`, one for each multiple of twenty from 755 to 1740. The build before, 2 of 2: Idle on 168
+readings of 596 and Walking on the rest, never off the walk's script, `RESEARCH_COMPLETING` counted 83 times.
+**Beside the original** (`q134/sheet-beside-original.png`): the same white-coated researcher seen from behind, arm
+raised over what they hold; the two cameras are not at the same height, and OpenTPW's is cut along its lower edge by
+the ground, as every sprite is.
+
 ### Where OpenTPW differs
 
 | What | The original | OpenTPW | Reached in Lost Kingdom |
@@ -2558,7 +2612,7 @@ ground at that camera, as every sprite's is in the build before too, and has no 
 | The stand as a member goes idle | SetState(0) queues animation 3 every time (`FUN_004fa460`) | queued from a performance and after a clean only; any other idle keeps the picture it had | every idle |
 | State scripts 1 to 3 (words 1800, 1812, 1824) and a bank with no group | played; an animation past the table | not copied, counted `SPRITE_STATE_ANIMATION_NOT_STARTED`; counted `ENTERTAINER_BANK_WITHOUT_A_STATE_GROUP` | no shipped bank |
 | The entertainer's region effect | the pre-step `FUN_004d4660` moves `RegionFX[0]` with them, cell by cell | none, uncounted | every cell the entertainer crosses (Q157) |
-| The researcher's fourth decide | researches, state `0xf` | stands | every fourth researcher decide (Q134) |
+| The researcher's research | state `0xf` on a draw of nought or with nowhere to walk, WorkDuration + 1 sweeps, then a walk or the same again; the points to the lab every 20 sweeps ("The research, in both games") | built (`StaffBehaviour.Research`); the points counted, `RESEARCH_POINTS_TO_THE_LAB`, and spent by nothing: there is no lab; a researching turn's draw for effect `0x8a` not taken (Q135); the too-tired gate unreached (Q136) | a quarter of the researcher's decides; the points every 20 sweeps |
 | Staff sounds | fourteen cat_staff effects | none, uncounted | every idle and walking turn; a performance's end; a guard's chase and catch (Q135) |
 | Tired | the byte `<=` 1 | the float `<` 1 | a rest in [1, 2) (Q136) |
 | Tired with no rest area found or reached | `FUN_00506a40` answers 0 and the kind's choice follows | the guard and the researcher stand and ask again after the idle wait | once the Staff Room at (58,16) is sold or cannot be routed to (Q136) |
