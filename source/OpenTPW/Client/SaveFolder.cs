@@ -397,6 +397,48 @@ internal static class SaveFolder
 		}
 	}
 
+	// A saved park's extension: the Load and Save screens' search is "*" and then ".TPWS" (0x00f7b948, 0x00f7b548).
+	private const string SavedParkExtension = ".TPWS";
+
+	/// <summary>A saved park as the Load Park screen lists it: its name, where it is, and when it was last written, in local time.</summary>
+	public readonly record struct SavedPark( string Name, string Path, DateTime Written );
+
+	/// <summary>
+	/// The saved parks in a player's folder for a theme, read afresh on every call - 0x005ac8f0
+	/// (<c>docs/exe/saves.md</c>, "The list is the folder"): every <c>*.TPWS</c>, the quicksave and autosave.TPWS
+	/// among them, each with its name less the extension and its last write time. easymode.TPWI and restart.INTS
+	/// are not saved parks.
+	/// </summary>
+	/// <remarks>
+	/// The original keeps the order Windows lists the folder in, which is not known here: the files are taken in
+	/// name order, as <see cref="NewestPark"/> takes them.
+	/// </remarks>
+	public static IReadOnlyList<SavedPark> SavedParks( int slot, string name, string theme )
+	{
+		var folder = Path.Join( PlayerFolder( slot, name ), theme );
+
+		try
+		{
+			if ( !SaveFileSystem.DirectoryExists( folder ) )
+				return [];
+
+			return SaveFileSystem.GetFiles( folder )
+				.Select( Path.GetFileName )
+				.OfType<string>()
+				.Where( file => file.EndsWith( SavedParkExtension, StringComparison.OrdinalIgnoreCase ) )
+				.OrderBy( file => file, StringComparer.OrdinalIgnoreCase )
+				.Select( file => Path.Join( folder, file ) )
+				.Select( path => new SavedPark( Path.GetFileName( path )[..^SavedParkExtension.Length], path,
+					File.GetLastWriteTimeUtc( SaveFileSystem.GetAbsolutePath( path ) ).ToLocalTime() ) )
+				.ToArray();
+		}
+		catch ( Exception e )
+		{
+			Log.Warning( $"Saves: {folder} could not be looked through for saved parks - {e.Message}" );
+			return [];
+		}
+	}
+
 	/// <summary>Whether a player's folder holds a gms.dat at all, readable or not.</summary>
 	public static bool HasPlayerFile( int slot, string name ) => Find( PlayerFileName, PlayerFolder( slot, name ) ) != null;
 

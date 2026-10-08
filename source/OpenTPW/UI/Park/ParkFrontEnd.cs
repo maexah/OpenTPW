@@ -112,6 +112,9 @@ internal sealed class ParkFrontEnd : Panel
 		"b_shandy", "b_smech", "b_senter", "b_sguard", "b_sresrhcer",
 		"b_scroller", "b_up", "b_down", "b_allstaff", "b_allthings", "i_boxtick",
 
+		// The Load Park screen's list, stream 0x007523f0 - see <see cref="ParkLoadScreen"/>.
+		"f_load",
+
 		// The Information and Money categories' own screens - allstaff (0x750e10), allitems (0x7508e0
 		// and its three list trees), allpeeps (0x7506c8) and entryprice (0x751798). Every one of these
 		// names was RESOLVED from the hash its layout stream carries, against ui.wad's own table, rather
@@ -377,7 +380,12 @@ internal sealed class ParkFrontEnd : Panel
 	{
 		return
 		[
-			new( UIStrings.Load, 1, menu => NotYet( menu, "LOAD_GAME", "Load Game", "no park has been saved to read back" ) ),
+			// Load Game closes the menu and opens the Load Park screen (0x0048b731).
+			new( UIStrings.Load, 1, menu =>
+			{
+				_stack.Close( menu );
+				_stack.Open( new ParkLoadScreen( _stack, _themeName ) );
+			} ),
 			new( UIStrings.Save, 2, menu => NotYet( menu, "SAVE_GAME", "Save Game", "nothing writes a park back yet" ) ),
 
 			new( UIStrings.RestartPark, 3, menu => _stack.Open( new MessageBox( _stack,

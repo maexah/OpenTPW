@@ -9,7 +9,7 @@ using System.Reflection;
 namespace OpenTPW.Tests;
 
 /// <summary>
-/// The park's reached paths that are counted and do nothing more: the game menu's Load Game, Save Game and Publish
+/// The park's reached paths that are counted and do nothing more: the game menu's Save Game and Publish
 /// Park, the gadget's postcard button, and R, the shortcuts table's research row (<c>0x0040c5b0</c>, into
 /// <c>FUN_004aa480</c>). Each is counted where the player reaches it and only there. See <c>ParkFrontEnd.NotYet</c>,
 /// <c>ParkFrontEnd.ResearchKey</c> and <c>ParkGadget.SendPostcard</c>.
@@ -61,7 +61,7 @@ public class ParkCountedPathsTests
 	}
 
 	/// <summary>
-	/// <b>Load Game, Save Game and Publish Park each close the menu and are counted under their own name</b>, once a
+	/// <b>Save Game and Publish Park each close the menu and are counted under their own name</b>, once a
 	/// choice, and the choices that work are not counted.
 	/// </summary>
 	/// <remarks>
@@ -69,7 +69,6 @@ public class ParkCountedPathsTests
 	/// nought; a report in Resume Game's row counts a fourth.
 	/// </remarks>
 	[TestMethod]
-	[DataRow( 0, "LOAD_GAME" )]
 	[DataRow( 1, "SAVE_GAME" )]
 	[DataRow( 3, "PUBLISH_PARK" )]
 	public void AMenuChoiceThatIsNotBuiltIsCounted( int row, string name )

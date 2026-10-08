@@ -413,9 +413,10 @@ from the crossing. So the arrival path they would take is the one the shipped sa
 
 ## 7. A park cannot be saved
 
-- [ ] **Seen:** Load, Save and Publish do nothing, which a player meets at the moment they try to stop.
-- **Lives:** `ParkFrontEnd`'s game menu, where Load Game, Save Game and Publish Park each call `NotYet(...)`,
-  counted as `LOAD_GAME`, `SAVE_GAME` and `PUBLISH_PARK`.
+- [ ] **Seen:** Save and Publish do nothing, which a player meets at the moment they try to stop. Load opens
+  the Load Park screen and loads the row clicked (Q241c).
+- **Lives:** `ParkFrontEnd`'s game menu, where Save Game and Publish Park each call `NotYet(...)`,
+  counted as `SAVE_GAME` and `PUBLISH_PARK`.
 - **Decoded (Q241):** the two screens, the folder's list, the load in place and the writer's container are in
   `docs/exe/saves.md`, "Load Game and Save Game"; the build is `QUEUE.md` Q241b to Q241e.
 - **The real cost is not the button.** **Only Alexah's own `.TPWS` saves have been read**, in harnesses — the

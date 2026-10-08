@@ -5353,6 +5353,18 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   **Done 2026-10-08:** the newest by last write time, a tie keeping the first found, nothing loaded from an empty
   folder (`saves.md`, "Entering a park"). The clock's first reading 840 and cash 88112, here and in the original
   (predicted first; the control build 755 and 87987); 8 of 8 bugs put back fail a test (`q241b/`).
+- [x] **Q241c. The Load Park screen.** From Q241 (`saves.md`, "One screen, two uses" to "What the handlers answer").
+  After Q241b and Q143, whose reader the date's row needs. Build the screen from the stream (the `window2` frame,
+  the `f_load` list, `b_exit`; title UITEXT 202), fill it from the folder (`*.TPWS`: the name, then UITEXT 448's
+  date and the time), and load the clicked row over the running park with no question. The original changes no
+  scene and shows no loading screen; if one is kept here, say so at the site. `LOAD_GAME` goes. Confirm: the list
+  photographed beside `q241/orig/l1.png`, a row clicked, the park clock the file's, predicted first.
+  **Done 2026-10-08:** built without Q143: the date's row needed a string's parts alone, which `StringFile.Parts`
+  and `Localization.Format` read; Q143 keeps the rest. Two rows listed, "New Save 8.10.2026 12:28" and "Old Park
+  1.10.2026 14:18"; the second's click started the clock at 755 and the first's at 840, each predicted first, and
+  the original with the same two files listed them in the same order and read 755 after the same click (`q241c/`;
+  `saves.md`, "OpenTPW's Load Park"). The scene is built again behind the loading screen, said at the site. 24 of
+  27 bugs put back fail a test; one is equivalent and two are the game run's. The leftovers are Q247.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

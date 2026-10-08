@@ -33,6 +33,28 @@ public static class Localization
 	/// </remarks>
 	public static string Text( int row ) => row >= 0 && row < UIStrings.Entries.Length ? UIStrings[row] : string.Empty;
 
+	/// <summary>
+	/// A row of UITEXT.str with its parameters filled, as the original writes a save.s date (<c>docs/exe/saves.md</c>, "The list is the folder"): each
+	/// parameter part is replaced by the value handed over for its number, and one handed no value by nothing.
+	/// </summary>
+	public static string Format( int row, params (int Parameter, string Value)[] values )
+	{
+		if ( row < 0 || row >= UIStrings.Parts.Length )
+			return string.Empty;
+
+		var text = new StringBuilder();
+
+		foreach ( var part in UIStrings.Parts[row] )
+		{
+			if ( part.Text != null )
+				text.Append( part.Text );
+			else
+				text.Append( values.FirstOrDefault( value => value.Parameter == part.Parameter ).Value );
+		}
+
+		return text.ToString();
+	}
+
 	private class LocalizationParser : BaseParser
 	{
 		public LocalizationParser( string input ) : base( input ) { }

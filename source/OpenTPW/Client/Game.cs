@@ -177,8 +177,11 @@ internal static class Game
 		{
 			_parkAsked = null;
 
+			var parkFile = _parkFileAsked;
+			_parkFileAsked = null;
+
 			Level.Current.Unload();
-			LoadPark( themeName );
+			LoadPark( themeName, parkFile );
 
 			return;
 		}
@@ -205,7 +208,18 @@ internal static class Game
 	/// built from this name before a Level exists, so normalising further down would leave the bar
 	/// captioned "Jungle" while everything the level itself logs says "jungle".
 	/// </remarks>
-	internal static void RequestParkLoad( string themeName ) => _parkAsked = themeName.ToLowerInvariant();
+	/// <param name="parkFile">
+	/// The park file to load, a path in the save folder, for the Load Park screen's row; null for the file or the
+	/// fresh world a park is entered with (<see cref="Level.CreatePark"/>).
+	/// </param>
+	internal static void RequestParkLoad( string themeName, string? parkFile = null )
+	{
+		_parkAsked = themeName.ToLowerInvariant();
+		_parkFileAsked = parkFile;
+	}
+
+	/// <summary>The park file asked for with <see cref="_parkAsked"/>, or null for the one the park is entered with.</summary>
+	private static string? _parkFileAsked;
 
 	/// <summary>
 	/// What the loading bar expects a park to take on a <b>first-ever run</b>.
@@ -230,11 +244,11 @@ internal static class Game
 	private const int ParkLoadSteps = 918;
 
 	/// <summary>Builds a park behind the loading screen, the way <see cref="LoadLobby"/> builds the lobby.</summary>
-	private static void LoadPark( string themeName )
+	private static void LoadPark( string themeName, string? parkFile = null )
 	{
 		using ( new LoadingScreen( themeName, ParkLoadSteps ) )
 		{
-			_ = new Level( themeName, Level.Scene.Park );
+			_ = new Level( themeName, Level.Scene.Park, parkFile );
 		}
 
 		Audio.Duck( 1f, 0f );

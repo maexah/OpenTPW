@@ -4,6 +4,12 @@ public sealed class StringFile : BaseFormat
 {
 	public string[] Entries { get; private set; }
 
+	/// <summary>
+	/// Each string's parts, text and parameters in the order they stand. <see cref="Entries"/> holds a string's
+	/// first text part alone.
+	/// </summary>
+	public StringPart[][] Parts { get; private set; } = [];
+
 	public StringFile( string path )
 	{
 		ReadFromFile( path );
@@ -20,5 +26,6 @@ public sealed class StringFile : BaseFormat
 	{
 		var reader = new BFSTReader( stream );
 		Entries = reader.ReadFile();
+		Parts = reader.ReadParts();
 	}
 }

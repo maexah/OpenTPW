@@ -197,8 +197,8 @@ drag".
 ## Load Game and Save Game
 
 The park menu's rows 1 and 2 (`FUN_0048b6a0`, `scenes.md`). Decoded in Ghidra and run in the original under Proton
-on 2026-10-08 (Q241); what was only read is listed at the end. OpenTPW builds none of it: both rows are counted
-(`LOAD_GAME`, `SAVE_GAME`) and close the menu.
+on 2026-10-08 (Q241); what was only read is listed at the end. OpenTPW builds the Load Park screen ("OpenTPW's
+Load Park", below); Save Game is counted (`SAVE_GAME`) and closes the menu.
 
 ### The two rows
 
@@ -341,6 +341,36 @@ the loaded fonts dropped on the way; none is decoded here). A module that fails 
 failure 6. There is no loading screen and no change of scene: under Proton the park was back four seconds after
 the click, its date gone from 2.9.2000 to the save's 2.7.2000.
 
+### OpenTPW's Load Park
+
+`ParkLoadScreen` is the stream's frame, title, list and cancel button, opened by the menu's first row, modal,
+pausing, closing the park screen that is open. The title is lettered as `UI_SetTitle` letters one (`0x00485d20`):
+font 5 in (234, 239, 102), in the stream's rectangle widened by half its width either side. The rows are
+`SaveFolder.SavedParks`, the folder's `*.TPWS` read afresh at the opening and again at the click, in name order
+where the original's are in the order Windows lists them. A row's date is `Localization.Format( 448, ... )`, which
+fills a string's parameter parts by number (`StringFile.Parts`; FileFormats `strings.md`, "The note on parts");
+OpenTPW reads the English tables, so a file of 8 October reads "8.10.2026 12:28".
+
+**The row's height** is the factory's sum: font 7's line height (the `.bf4` header's byte 5) times `0x600` over the
+height of the screen its font set is drawn for, plus 6. The original at 640 by 480 keeps 41 at `0x007cb24c`
+(`GAME8.bf4`, 11), read from its memory.
+
+**Two deviations, said at the site.** A row's click ends the park's scene and builds it again from the file behind
+the loading screen (`Game.RequestParkLoad( theme, file )`, `Level.CreatePark`'s `parkFile`), where the original
+reads the file over the running park. And the list's scrollbar is not built: the wheel scrolls it, and a list
+longer than its window is counted (`LOAD_PARK_LIST_SCROLLBAR`). Row `0x16`, the second Load, is reached by
+nothing here.
+
+**Measured (Q241c).** In OpenTPW, a private game folder whose player holds `New Save.TPWS` (`mGameTick` 840,
+balance 88112) and `Old Park.TPWS` (a copy of `easymode.TPWI`: 755, 87987): the list read "New Save 8.10.2026
+12:28" and "Old Park 1.10.2026 14:18", the clock stood at 859 while the screen was open, the cross closed it with
+nothing loaded, the second row's click started the clock at 755 with 87987 in the bank and the first row's at 840
+with 88112, each predicted first (`q241c/run1`, seven of seven). In the original, the same two files in the
+reference player's folder: the same two rows in the same order, dated 10.8.2026 and 10.1.2026 by its american
+tables, 21 px apart on a 768-line picture of its 480; the clock held at 955 under the screen and read 755 inside
+1.3 s of the second row's click, the world pointer unchanged (`q241c/orig/l1.png`, `a.log`; three predictions of
+four held, the row pitch wrong because the screen height was taken as 768).
+
 ### The other callers, not this item's
 
 | Site | What |
@@ -384,8 +414,8 @@ candidates in name order, so a tie goes to the first by name. With nobody playin
 ### Read, not run
 
 A typed name, Enter and Escape in the box, a row's click on the save screen, a refused character, the sixteenth
-character, a failed save or load, and a folder with more than one save (the rows' order) were not run in the
-original: the listing's alone. The `0x100`-byte field's 32 bytes at `0x00802080` and the failure number's reader
+character and a failed save or load were not run in the original: the listing's alone. A folder with two saves
+was (Q241c), under Wine, whose listing order need not be Windows'. The `0x100`-byte field's 32 bytes at `0x00802080` and the failure number's reader
 are not traced. `FUN_00415140` and the twelve teardown calls are named, not decoded. `addresses.md` is not
 regenerated.
 

@@ -97,11 +97,17 @@ public class Level
 	/// </summary>
 	private WindowStack? _windows;
 
+	/// <summary>The park file this park was asked to be built from, or null for the one it is entered with.</summary>
+	private readonly string? _parkFile;
+
 	/// <summary>The theme folder this level was built from - "jungle", "fantasy", "hallow" or "space".</summary>
 	public string ThemeName { get; private init; }
 
-	public Level( string levelName, Scene kind = Scene.Lobby )
+	/// <param name="parkFile">A park file in the save folder to build the park from, the Load Park screen's; null for the one the park is entered with.</param>
+	public Level( string levelName, Scene kind = Scene.Lobby, string? parkFile = null )
 	{
+		_parkFile = parkFile;
+
 		// Lower-cased once here rather than at each place that builds a path out of it. The two ways
 		// into a park disagree about case: the debug console passes "jungle" and the island panel
 		// passes the island's own name, "Jungle". Everything downstream lower-cases anyway, so the
@@ -273,7 +279,7 @@ public class Level
 		load.Mark( "catalogue" );
 		var catalogue = Catalogue;
 
-		var park = CreatePark( ThemeName, Balance, catalogue );
+		var park = CreatePark( ThemeName, Balance, catalogue, _parkFile );
 		Park = park;
 		ParkState = new ParkState( park )
 		{
@@ -390,8 +396,16 @@ public class Level
 	/// ships beside the level is read, the file a new Instant Action player's folder is given. The original has a
 	/// player on every entry.
 	/// </remarks>
-	internal static IParkInitialState? CreatePark( string theme, ParkBalance balance, ParkItemCatalogue catalogue )
+	/// <param name="parkFile">
+	/// A park file in the save folder to read instead, the row clicked on the Load Park screen (0x005ac5d0). One that
+	/// will not read leaves the park with nothing placed in it; the original's failed load leaves its state undefined.
+	/// </param>
+	internal static IParkInitialState? CreatePark( string theme, ParkBalance balance, ParkItemCatalogue catalogue,
+		string? parkFile = null )
 	{
+		if ( parkFile != null )
+			return ReadPark( theme, SaveFileSystem, parkFile );
+
 		if ( Players.Roster.Current is not { } player )
 			return ReadPark( theme, FileSystem, $"levels/{theme.ToLowerInvariant()}/Easymode.TPWI" );
 

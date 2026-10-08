@@ -124,4 +124,56 @@ internal sealed class BFSTReader : BaseFormat
 
 		return outputList.ToArray();
 	}
+
+	/// <summary>
+	/// Every string as its run of parts (FileFormats <c>strings.md</c>, "The note on parts"): a part is a four-byte
+	/// word on a four-byte boundary, its type in the low byte and a value in the three above. Type 1 is text of
+	/// that many characters, padded to four bytes; type 2 a parameter of that number, which the caller fills; type 0
+	/// ends the string. A type this does not know ends the string where it stands.
+	/// </summary>
+	public StringPart[][] ReadParts()
+	{
+		var count = BitConverter.ToInt32( buffer, 8 );
+		var strings = new StringPart[count][];
+
+		for ( var row = 0; row < count; ++row )
+		{
+			var at = 12 + BitConverter.ToInt32( buffer, 12 + (4 * row) );
+			var parts = new List<StringPart>();
+
+			while ( at + 4 <= buffer.Length )
+			{
+				var word = BitConverter.ToUInt32( buffer, at );
+				var type = (int)(word & 0xff);
+				var value = (int)(word >> 8);
+				at += 4;
+
+				if ( type == 1 && at + value <= buffer.Length )
+				{
+					var text = new StringBuilder( value );
+
+					for ( var index = 0; index < value; ++index )
+						text.Append( LookupTable.Value.GetCharacter( buffer[at + index] ) );
+
+					parts.Add( new StringPart( text.ToString(), 0 ) );
+					at += (value + 3) & ~3;
+				}
+				else if ( type == 2 )
+				{
+					parts.Add( new StringPart( null, value ) );
+				}
+				else
+				{
+					break;
+				}
+			}
+
+			strings[row] = parts.ToArray();
+		}
+
+		return strings;
+	}
 }
+
+/// <summary>One part of a string: its text, or with <see cref="Text"/> null the number of the parameter that goes there.</summary>
+public readonly record struct StringPart( string? Text, int Parameter );

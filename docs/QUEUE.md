@@ -44,12 +44,6 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q241c. The Load Park screen.** From Q241 (`saves.md`, "One screen, two uses" to "What the handlers answer").
-  After Q241b and Q143, whose reader the date's row needs. Build the screen from the stream (the `window2` frame,
-  the `f_load` list, `b_exit`; title UITEXT 202), fill it from the folder (`*.TPWS`: the name, then UITEXT 448's
-  date and the time), and load the clicked row over the running park with no question. The original changes no
-  scene and shows no loading screen; if one is kept here, say so at the site. `LOAD_GAME` goes. Confirm: the list
-  photographed beside `q241/orig/l1.png`, a row clicked, the park clock the file's, predicted first.
 - [ ] **Q241d. The Save Park screen, up to the writer.** From Q241. The same screen titled UITEXT 201 with its OK
   button and name box: fifteen characters, `\ / * ? : | < > "` refused, "New Save" to begin with, Enter and Escape,
   the shortcuts off while it is open; a row's click puts its name in the box; OK over a name in the list asks
@@ -141,6 +135,9 @@ the research lab), then the rest of this section in its old order.
   original ships it blank; it is parameter 4, then "Are you sure you want to / delete this player ?". UITEXT 205
   (the overwrite question) and 448 (a save's date) are two more. Read every part, give `Localization` a way to be
   handed the parameters, and let the delete box say the original's words. `q241/strraw.py` prints a row's parts.
+  From Q241c: every part is read now (`BFSTReader.ReadParts`, `StringFile.Parts`, with the three-byte length) and
+  `Localization.Format( row, (parameter, value)... )` fills them; `ReadFile` and `Localization.Get` still give the
+  first part by the one-byte length, and nothing but the Load Park screen's date uses the parts.
 - [ ] **Q144. Three hollow ride-script tests.** Found by the 2026-09-26 staleness audit, whose comment fixes now say
   what each asserts. `RideScriptWalkTests.AWalkIsCollectedOnlyOnceItHasFinished`: its second script ends on its first
   turn, so the stepper never runs and neither `WALKGET` is checked. `MorePeopleThanLanesCannotAllBeWalkedOn` asserts a
@@ -484,6 +481,15 @@ the research lab), then the rest of this section in its old order.
   the hire list carries the flag too and does not set it, and the three list screens' trees carry it (`0x291`). With
   no first row selected, the buy screen's panel stays empty until the pointer has been over a row, where the
   original's shows the top row half a second after the list fills.
+
+- [ ] **Q247. A loaded park is built again behind the loading screen, and the list has no scrollbar.** Left by
+  Q241c (`saves.md`, "OpenTPW's Load Park"). The original reads a park file over the running park, with no loading
+  screen and no change of scene (`FUN_00414d40`: twelve teardown calls, the modules, `FUN_00415140`), where
+  `ParkLoadScreen.Load` asks `Game.RequestParkLoad` for the whole scene again; Restart Park is the same
+  (`ParkFrontEnd.RestartPark`). And the stream's scrollbar (control 1: `!slider`, `b_up`, `b_scroller`, `b_down`)
+  is built on no list here: a list longer than its window is counted as `LOAD_PARK_LIST_SCROLLBAR` on this screen
+  and the wheel scrolls it. Decode the teardown first, then decide with Alexah whether the park is rebuilt in
+  place. Confirm: a load timed against the original's 1.3 s, and a folder of fourteen saves scrolled by the bar.
 
 ## B. Docs and comments
 
