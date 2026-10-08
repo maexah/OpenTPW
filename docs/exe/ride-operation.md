@@ -2334,12 +2334,8 @@ booth or entrance A or B in states `0x10`, `0x12` and `0x13`. `mTimeHired` is mG
 - **The patrol roll `FUN_00506f30`** takes a cell only when it is on the map and path, `mType` 1 (`FUN_00536310`),
   before it routes. A member of staff whose corners are both 0 is outside every cell (`FUN_00506ed0` has no case for
   it); every Lost Kingdom member carries an area.
-- **The strike.** `mStaffHQ`'s month handler `FUN_00508e70` runs every month the park is open (its park-closed gate is
-  `0x00508e7e`..`0x00508ec1`): for each kind with staff it clears a set flag `[HQ + 0x28 + kind × 12]`, or calls
-  `FUN_00508f70`, which returns until the date passes 24 months; past that, `FUN_00509360` raises the kind's level and
-  levels 1 to 4 set the flag. Every decide opens with `FUN_00506a40`'s strike arm (`0x00506a4d`..`0x00506a77`: the flag,
-  and `FUN_0051a290`, the gate's `VAR_STATUS`, reading 1), which aims at the strike area with four draws and takes
-  state 4; state 5's `FUN_00506300` ends it. The epoch of the 24-month gate (`FUN_004f8800`) is not traced.
+- **The strike** is decoded whole under "The strike", below: the month's look, its gate, the 24 months, the levels and
+  states 4 and 5.
 
 ### Measured in the game before the build, nothing changed
 
@@ -2697,6 +2693,87 @@ to its memory, none to disk):
 Not run in the original: the other four kinds' hires, a tired member whose route to a rest area fails (the flag
 was cleared instead), and the mechanic's, handyman's and entertainer's too-tired gates.
 
+### The strike - `FUN_00508e70`, `FUN_00508f70`, `FUN_00509360`, and states 4 and 5
+
+Decoded for Q138 and measured in the original (below). Nothing of it is built.
+
+**The record.** `mStaffHQ` (thing 1, model 9, the thing word at world `+0x1da718`, `FUN_00519450`) keeps
+`mForceStrike` at `+0x64` and five 12-byte records from `+0x24`, the save's `mStrikeLevel[i]` (`FUN_00508bb0`;
+FileFormats `saves.md`, "The staff HQ"): the **level** `+0x24 + kind × 12`, the **flag** `+0x28 + kind × 12`
+("this kind is on strike", read through `FUN_00509990`) and a **stamp** `+0x2c + kind × 12`, the `mGameTick` of the
+kind's last look. The kinds are 0 handyman, 1 mechanic, 2 entertainer, 3 guard, 4 researcher (`FUN_00506490` from
+the member's model byte 5, 4, 6, 7, 8), their staff lists headed at world `+0x1da73c`, `+0x1da73e`, `+0x1da740`,
+`+0x1da744`, `+0x1da742`, each member's next at `+0x210`.
+
+**The month's look, `FUN_00508e70`** (message `0xc`; "The month's change", below). After the training
+(`0x00508e79`), unless `mForceStrike` is set (`0x00508e85`), it returns when the park is shut (`mParkClosed`,
+`0x00508e94`) **or when any guest is inside it** (`0x00508eac`: `FUN_004c7fa0( 5 )` on the analyser, the count of
+guests `FUN_004fa990` passes, kept and counted again when it is more than five fours of sweeps old), logging "The
+park is closed, so I'm not considering striking" for both. So a kind is looked at only in an open park with nobody
+in it. Past that, for each kind with a member whose stamp is not this tick: the stamp
+is written; a set flag is cleared and nothing else is done; a clear one calls `FUN_00508f70( kind )`
+(`0x00508f39`, its only caller). A strike therefore lasts one month and the kind is looked at again the month
+after.
+
+**The 24 months, `FUN_004f8800`.** It adds `mGameTick × mFunnySecsPerRealSec / 4 × 10,000,000` to
+`mFunnyTimeStart` (`FUN_005fc530`, `0x004f884d`) and takes `mFunnyTimeStart` off again (`FUN_005fc550`,
+`0x004f888a`), so it answers the time since `mGameTick` nought, the park's first sweep, whatever the calendar's
+start. `FUN_00508f70` divides it by `0x1792F8648000`, thirty days, and returns under 24 (`0x00508fbb`..). At 15,000
+a tick is 3,750 s, so the gate opens on tick 16,589; the first month to change past it in a park begun on
+1 January 2000 is 1 January 2002, tick 16,843, which is 66.5 minutes of running park past Lost Kingdom's 755. The
+challenges' daily tick and `FUN_004d4bc0` read the same span (`0x004d1f22`, `0x004d4dec`).
+
+**The cause, `FUN_00509360( kind )`**, answers 1 for: `mForceStrike` set (`0x00509367`; no writer but the save's
+reader was found, looking after each `FUN_00519450` call); for kind 0 alone and first, the analyser's two sums over its 1,024 region records
+(`+0x1efa4` down by `0x7c`), cells whose dword at `[0x008023a0] + id × 68 − 0x18` is set (`FUN_004c8180`) over
+cells of kind 1, 3 or 9 (`FUN_004c8150`), above 0.2 (`[0x007008dc]`, `0x005093c2`); then, for every kind, more
+than three members whose rest bytes (`(u8)trunc( +0x1fc )`) average under 15 by unsigned division ("striking
+through fatigue"), or more than three whose happiness bytes (`+0x1f8`) do ("through unhappiness"). What the cell
+dword is, most likely litter, is not read (Q225).
+
+**The levels, `FUN_00508f70`.** With a cause, by the level: 0 becomes 1 and posts a warning; 1, 2 and 3 become 2,
+3 and 4, set the flag and post a strike; 4 stays 4, sets the flag and posts a strike. With no cause the level and
+the flag are zeroed, and a level of exactly 1 posts a calling-off first. Each post is message `0x17` carrying
+(kind, 0 warning / 2 strike / 3 called off) (`FUN_0040f6f0`, `FUN_0040fb10`); 1 is never sent. Its one receiver is
+the advisor (`FUN_00599e70` joins set `0x17`, `0x00599f08`), whose `FUN_0059afc0` turns it into advisor message
+`0x22`, `0x21`, `0x24`, `0x23`, `0x25` for kinds 0 to 4, plus five times the second number. By the transcripts of
+the response groups two on from those ids (`advisor-park.md`: no arithmetic gives a group, so this is by the
+lines alone, all fifteen agreeing with the kind): the warning is "...they say they'll go on strike if things
+don't improve" (first takes 95, 98, 101, 104, 107 for mechanics, janitors, guards, entertainers, researchers), the
+strike "...have gone on strike" (125, 128, 131, 134, 137) and the calling-off "...have decided not to strike after
+all" (140, 143, 146 and on). The message ids' own rows in the metadata table were not read.
+
+**The staff's side.** Every decide opens with `FUN_00506a40`'s arm (`0x00506a4d`..`0x00506b25`): the kind's
+flag set and the gate's `VAR_STATUS` reading 1 (`FUN_0051a290`) log "Right, I'm fed up, I'm going on strike", set
+the member's `+0x188` to 1, and draw the world random four times: a cell x of `StrikeAreaStartX` + draw mod
+`StrikeAreaSizeX` (`0x007855ec`, `0x007855f4`: 40 and 6), a byte inside it, a cell y of `StrikeAreaStartY` + draw
+mod `StrikeAreaSizeY` (`0x007855f0`, `0x007855f8`: 9 and 1), a byte inside it. A route there (`FUN_004fa5f0`)
+takes state 4 and answers 1; none logs and falls through to the tired arm. State 4 (`FUN_005056e0`) steps the walk
+and shows thought `0x15` every turn; at its end, arrived or failed, `+0x188` is zeroed and the state is 5. State 5,
+`FUN_00506300`, every turn: one draw, and on its low three bits nought the facing `+0x1c` moves by the draw's low
+byte less 128, held to `0x7ff` unsigned; then, with the park shut and nobody inside it (`FUN_004c9130`, the count
+taken afresh), the kind's flag is cleared (`FUN_005099a0`, its only caller); then, the flag clear, a route to
+`EntranceA`'s cell (`0x007855bc`, `0x007855c0`: (47,17)) takes state 1, and none takes state 0. The only other
+reader of a flag is the ride window's status (`FUN_00485f60`: 7 and `0x13` for the mechanics', `0xd` for the
+handymen's). What reads `+0x188` is not traced.
+
+**Measured in the original** (`q138/orig/`: `watch.py`, `a.log`, `PREDICTION.txt`, `PREDICTION-result.txt`; five
+predictions of six, the miss a timetable of mine). The shipped save's five records read {0, 0, 715}: the month
+that turned on tick 715, 1 February 2000, before its guests were inside, was looked at. Left alone, the month
+turned on tick 1383 with 8 guests inside and the park open, and the stamps stayed 715. With `mForceStrike`
+written 1, the month on tick 2097 gave {0, 0, 2097} on all five: three months, no level. With `mGameTick` then
+written 16,836, the write's own month change gave {1, 0, 16837} and 1 January 2002 {2, 1, 16843}: all five staff
+read state 4 within 18 sweeps, `+0x188` 1, and state 5 on (42,9) to (45,9) by 146, where they stood until 1
+February, tick 17,557, gave {2, 0, 17557} and all five read state 1 a sweep later; 1 March gave {3, 1, 18202} and
+state 4 again within 18. `s4-strike.png` is the picket. Not run: a park open and empty, a cause other than the
+forced one, a calling-off, a strike ended by shutting the park, a walk that fails; the advisor's lines were not
+listened to.
+
+**Reach, for the build** (`CLAUDE.md` rule 3). The month's look is reached every month and is counted
+(`STAFF_HQ_MONTHLY_STRIKE_CHECK`, at the handler, before the gate). `FUN_00508f70` is reached only in an open park
+with no guest inside as a month turns, and does anything only past 66.5 minutes; no Lost Kingdom park left to run
+gets there, and a player's can.
+
 ### Where OpenTPW differs
 
 | What | The original | OpenTPW | Reached in Lost Kingdom |
@@ -2717,7 +2794,7 @@ was cleared instead), and the mechanic's, handyman's and entertainer's too-tired
 | The patrol roll | path cells only | path cells only (Q206) | verified in `staff-wandering.md` |
 | Speed by rest | `+0xc0`, 60 to 140, one of `FUN_004fa870`'s three terms | the same: `Staff.Pace` every sweep, the base set by a decide that finds the member not tired | every decide |
 | Thoughts `0x12` to `0x16` | shown | `0x14`, `0x13`, `0x12` at every kind's decide (`StaffBehaviour.TiredOrCarryingOn`, the last with its one draw) and `0x16` where the patrol roll fails, each a pink bubble (Q110b); `0x15` waits on the strike walk (Q138) | tired, unhappy, very happy staff; a failed roll ("Thoughts and their pictures") |
-| Strikes | `mStaffHQ`'s monthly flag, the strike walk, state 5's end | none, uncounted, the model-9 record unread | the monthly consideration every month the park is open; a strike only past the 24-month gate (Q138) |
+| Strikes | `mStaffHQ`'s monthly look, the levels, the strike walk, state 5's end ("The strike") | none: the month's look counted at the handler (`STAFF_HQ_MONTHLY_STRIKE_CHECK`), the model-9 strike fields unread | an open park with no guest inside as a month turns, 24 thirty-day months past its first sweep (Q138b) |
 
 ## A toilet's dirt - `FUN_004e2440`, `FUN_004e0390` and the handyman's `FUN_004d7880`
 
@@ -3461,7 +3538,7 @@ Five constructors join set `0xc`: model 9's (`0x00508a08`), the tag system's, th
 4, 5 and 8 and then every member of staff, so a month's change runs, in this order:
 
 1. **Thing 1**, model 9, the header's `mStaffHQ`, pays the training (`FUN_00508a30` → `FUN_00508e70` → `FUN_0050c800`,
-   `0x00508e79`), whether the park is open or shut, and then looks at strikes (not decoded).
+   `0x00508e79`), whether the park is open or shut, and then looks at strikes ("The strike", above).
 2. **Thing 4**, the tag system, ignores it.
 3. **Thing 5**, the park analyser, closes the month (`FUN_004c7720`, its one call `0x004c739c`): it samples the
    balance into its ring (`+0x1f104`), then pushes and zeroes the month's costs `+0x1f5a0`, staff `+0x1f7f0`, training
@@ -3727,7 +3804,7 @@ Sets 22 to 25, the four arrows, are named by no thought. **All 22 callers**, and
 | `0x00501496`, a shortened queue | `0xd` | `PeepBehaviour.QueueShortened` |
 | `0x00506b50`, `0x00506ccd`, `0x00506cf4`, every staff decide (`FUN_00506a40`) | `0x14` tired; else `0x13` at a happiness byte of 10 or less; else `0x12` above 97 when a draw's low four bits are nought | `StaffBehaviour.ThinkOfTheMood` |
 | `0x0050701f`, the patrol roll's thirty failures | `0x16` | `StaffBehaviour`'s patrol roll |
-| `0x00505709`, the strike walk `FUN_005056e0` | `0x15` | not reached: no strike (Q138) |
+| `0x00505709`, the strike walk `FUN_005056e0` | `0x15` | not reached: no strike (Q138b) |
 
 ### Q110: what is counted, and whether a guest is ever stranded
 

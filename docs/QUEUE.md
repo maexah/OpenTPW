@@ -40,16 +40,17 @@ the original.
 
 **The 2026-10-06 review's leftovers come first, at Alexah's word (2026-10-06).**
 
-- [ ] **Q138. The staff strike is neither built nor counted. Decode first.** Found by Q82's review
-  (`ride-operation.md`, "Drawn on the way", the strike). `mStaffHQ`'s month handler `FUN_00508e70` runs every month
-  the park is open: for each kind with staff it clears a set flag `[HQ + 0x28 + kind × 12]` or calls `FUN_00508f70`,
-  which returns until the date passes 24 months; past that `FUN_00509360` raises the level, and levels 1 to 4 set the
-  flag and post the warnings. Every decide opens with `FUN_00506a40`'s strike arm (the flag and the gate's
-  `VAR_STATUS`), a walk to the strike area in state 4; state 5's `FUN_00506300` ends it. OpenTPW has none of it,
-  counts none of it, and reads nothing of the save's model-9 record (`mForceStrike`, `mStrikeLevel[i]`). Decode the
-  reach first: the epoch of `FUN_004f8800`'s 24-month gate. Count the monthly consideration where `FUN_00508f70` is
-  reached (`CLAUDE.md` rule 4). The flag is `mStaffHQ`'s own, and the arm's one script read is the gate's status,
-  which `ParkRides.GateStatus` answers, as `StaffBehaviour`'s class remarks say (`e0462c9`).
+- [ ] **Q138b. Build the staff strike.** From Q138's decode (`ride-operation.md`, "The strike"). Read the save's
+  model-9 strike fields (`mForceStrike`, the five {level, flag, stamp}); at the month's change run the look as the
+  original's: the gate (park shut, or a guest inside by Q148's filter, unless forced), the stamp, the flag's month
+  off, the 24 months from `ParkState.GameTick`, the causes (the handymen's cell ratio is counted until Q225 reads
+  the cell's dword), the levels; the three posts are counted until the park advisor speaks (`docs/PLAYER-GAPS.md`
+  gap 4). In `StaffBehaviour`, the decide's strike arm through `ParkRides.GateStatus`, the four draws, state 4 with
+  thought `0x15`, state 5's turn, its end by a shut and empty park, and the walk to `EntranceA`. Move the counter
+  to where `FUN_00508f70` is reached. A console `strike <kind>` that sets the force and a way to set the clock are
+  the run's instruments, as the original's run used. Confirm: `staff` and a new `strikes` census beside
+  `q138/orig/a.log` (the records on each month and the sweeps to state 4 and 5), predicted first; a screenshot of
+  the picket beside `q138/orig/s4-strike.png`.
 - [ ] **Q139. Six more reached paths only log, and the boot's one sound is unheard.** Found by Q69's sweep, the same
   shape as its seven (`CLAUDE.md` rule 4): the lobby menu's Go Online (`FrontEnd`, only logs); the park menu's Load Game,
   Save Game and Publish Park (`ParkFrontEnd.NotYet`, only logs); and R, research's shortcut, bound and consumed by

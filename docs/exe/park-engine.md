@@ -2201,7 +2201,10 @@ he was before he was picked up" and puts them down on **their own current cell**
 then goes to state 0 **except the mechanic, whose job search runs at once** (`FUN_004da5b0`). The right-button
 slots are `RET 8`.
 
-**Open.** What the world's hand thing at `+0x1da718` is; whether anything moves a carried worker (a carried
+The thing at world `+0x1da718` is `mStaffHQ`, thing 1 (`FUN_00519450`; `ride-operation.md`, "The strike"), whose
+`+0x60` the save names `mStaffMemberPickedUp`.
+
+**Open.** Whether anything moves a carried worker (a carried
 mechanic or handyman whose ride or toilet is deleted leaves state 7 by message 10 and can then walk; whether
 anything deletes one while a worker is carried without first changing the mode is not traced); what sends the park
 window message `0x15`, which also disarms the click.

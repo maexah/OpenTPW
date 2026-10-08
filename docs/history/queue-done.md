@@ -5185,6 +5185,25 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   and dies in `Collapse` with 42 of 62 gone in one frame under the overlay and with 104 of 128 without it; the fix
   lives through all three, 17, 20 and 24 people drawn, photographed; the build before Q177e dies on the recipe as
   filed. 4 bugs put back, 4 caught.
+- [x] **Q138. The staff strike is neither built nor counted. Decode first.** Found by Q82's review
+  (`ride-operation.md`, "Drawn on the way", the strike). `mStaffHQ`'s month handler `FUN_00508e70` runs every month
+  the park is open: for each kind with staff it clears a set flag `[HQ + 0x28 + kind × 12]` or calls `FUN_00508f70`,
+  which returns until the date passes 24 months; past that `FUN_00509360` raises the level, and levels 1 to 4 set the
+  flag and post the warnings. Every decide opens with `FUN_00506a40`'s strike arm (the flag and the gate's
+  `VAR_STATUS`), a walk to the strike area in state 4; state 5's `FUN_00506300` ends it. OpenTPW has none of it,
+  counts none of it, and reads nothing of the save's model-9 record (`mForceStrike`, `mStrikeLevel[i]`). Decode the
+  reach first: the epoch of `FUN_004f8800`'s 24-month gate. Count the monthly consideration where `FUN_00508f70` is
+  reached (`CLAUDE.md` rule 4). The flag is `mStaffHQ`'s own, and the arm's one script read is the gate's status,
+  which `ParkRides.GateStatus` answers, as `StaffBehaviour`'s class remarks say (`e0462c9`).
+  **Decoded 2026-10-08, nothing built** (`ride-operation.md`, "The strike"). The gate's epoch is `mGameTick` nought:
+  `FUN_004f8800` adds `mFunnyTimeStart` and takes it off again, so 24 thirty-day months is tick 16,589 and the first
+  month to turn past it tick 16,843, 66.5 minutes past Lost Kingdom's 755. In front of it is a gate nobody had read:
+  unless `mForceStrike` is set the look returns when the park is shut or any guest is inside it. The record is
+  {level, flag, stamp}; a strike lasts a month and is looked at again the month after; the posts go to the advisor
+  alone. The month's look was counted already (`STAFF_HQ_MONTHLY_STRIKE_CHECK`, Q198b). In the original, five
+  predictions of six (the miss my timetable): stamps 715 kept with 8 guests inside, {0, 0, 2097} forced under 24
+  months, {1, 0, 16837} then {2, 1, 16843} past them, all five staff in state 5 on (42,9) to (45,9), {2, 0, 17557}
+  and back to work, {3, 1, 18202}. `q138/orig/`.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.
