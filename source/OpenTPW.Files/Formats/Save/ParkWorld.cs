@@ -710,7 +710,8 @@ public sealed class ParkWorld : IParkInitialState
 	public readonly record struct StaffState(
 		int State, int PayGrade, float Happiness, float Tiredness, int JobsDone,
 		int PatrolBottomLeft, int PatrolTopRight, int RestArea, int PercentageThroughGrade,
-		int TimeStartedIdling, string Name = "", int ToiletToClean = 0, int TimeStartedCleaning = 0 )
+		int TimeStartedIdling, string Name = "", int ToiletToClean = 0, int TimeStartedCleaning = 0,
+		int TimeStartedEntertaining = 0 )
 	{
 		/// <summary>
 		/// How many behaviours a member of staff has. Eight are shared by every kind; the numbers above
@@ -2148,8 +2149,9 @@ public sealed class ParkWorld : IParkInitialState
 	/// text. <c>mTimeHired</c> fills <c>+491</c> to <c>+498</c> and is not read: nothing here asks for it.
 	/// </para>
 	/// <para>
-	/// <b>What each kind adds after this block is decoded, and only the handyman's toilet job is read</b>
-	/// (<c>mToiletToClean</c> and <c>mTimeStartedCleaning</c>): no other kind's work is built.
+	/// <b>What each kind adds after this block is decoded, and the handyman's toilet job and the entertainer's
+	/// stamp are read</b> (<c>mToiletToClean</c>, <c>mTimeStartedCleaning</c>, <c>mTimeStartedEntertaining</c>): no
+	/// other kind's work is built.
 	/// They are recorded here so the next reader need not find them again. A mechanic adds
 	/// <c>mDurationOfRepair</c> (+503, 4), <c>mObjectToRepair</c> (+507, 2) and <c>mNext</c> (+509, 2); a
 	/// handyman <c>mTargetLitterCell</c> (+503, 2), <c>mTimeStartedCleaning</c> (+505, 4),
@@ -2174,10 +2176,14 @@ public sealed class ParkWorld : IParkInitialState
 			TimeStartedIdling: ReadInt32At( start + 487 ),      // mTimeStartedIdling
 			Name: ReadStaffName( start + 410 ),                 // mName[0..32]
 			ToiletToClean: model == HandymanModel ? ReadUInt16At( start + 509 ) : 0,        // mToiletToClean
-			TimeStartedCleaning: model == HandymanModel ? ReadInt32At( start + 505 ) : 0 ); // mTimeStartedCleaning
+			TimeStartedCleaning: model == HandymanModel ? ReadInt32At( start + 505 ) : 0,   // mTimeStartedCleaning
+			TimeStartedEntertaining: model == EntertainerModel ? ReadInt32At( start + 503 ) : 0 ); // mTimeStartedEntertaining
 
-	/// <summary>The handyman's thing model, the one kind whose own fields are read.</summary>
+	/// <summary>The handyman's thing model.</summary>
 	private const int HandymanModel = 5;
+
+	/// <summary>The entertainer's thing model.</summary>
+	private const int EntertainerModel = 6;
 
 	/// <summary>How many characters <c>mName</c> holds, the ending nought among them.</summary>
 	private const int StaffNameLength = 33;

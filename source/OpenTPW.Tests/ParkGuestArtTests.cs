@@ -111,6 +111,34 @@ public class ParkGuestArtTests
 			"a plain sweep must resolve the same banks to different children, or this test proves nothing" );
 	}
 
+	/// <summary>
+	/// The four state groups at <c>0x14E</c> over all 46 banks: one in use on each of the twelve
+	/// <c>Entertainers</c> banks, always the first, script 1 and set 5, and none on any other bank.
+	/// </summary>
+	[TestMethod]
+	public void OnlyTheTwelveEntertainerBanksHaveAStateGroupAndItIsScriptOneSetFive()
+	{
+		var banks = EveryBank().ToDictionary( bank => bank,
+			bank => new SpriteBankFile( new MemoryStream( data.ReadAllBytes( bank ) ) ) );
+		var grouped = banks.Where( bank => bank.Value.StateGroupsInUse > 0 ).ToArray();
+
+		Assert.AreEqual( 46, banks.Count );
+		Assert.AreEqual( 12, grouped.Length );
+
+		foreach ( var (path, bank) in grouped )
+		{
+			StringAssert.Contains( path.Replace( '\\', '/' ).ToUpperInvariant(), "/ENTERTAINERS/" );
+			Assert.AreEqual( 1, bank.StateGroupsInUse, path );
+			Assert.AreEqual( 4, bank.StateGroups.Length );
+			Assert.AreEqual( (1, 5), (bank.StateGroups[0].Script, bank.StateGroups[0].Set), path );
+			Assert.IsTrue( bank.Sets[4].FramesPerDirection > 0, path );
+		}
+
+		Assert.AreEqual( 11, grouped.Count( bank => bank.Value.StateGroups[0] == new SpriteStateGroup( 1, 5, 0, 0 ) ) );
+		Assert.AreEqual( new SpriteStateGroup( 1, 5, 2, 40 ),
+			grouped.Single( bank => bank.Value.StateGroups[0].LeadIn != 0 ).Value.StateGroups[0] );
+	}
+
 	/// <summary>Every <c>.ESP</c> in <c>esprites.wad</c>, theme folder by kind folder.</summary>
 	private string[] EveryBank() =>
 		[.. data.GetDirectories( "esprites" ).SelectMany( data.GetDirectories ).SelectMany( Swept )];

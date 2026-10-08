@@ -26,6 +26,69 @@ public class SpriteScriptTests
 	/// <summary>A sprite on no script at all, ready to be put on one.</summary>
 	private static SpriteScript Fresh() => new( SpriteScript.None, SpriteScript.None, 0, 0 );
 
+	/// <summary>
+	/// A bank's state 0 as every shipped entertainer bank has it, script 1 and set 5, both stored one up: the
+	/// set's frames from first to last round and round, one a turn, on script 1760 with the counter left past the
+	/// frame at word 1730.
+	/// </summary>
+	[DataTestMethod]
+	[DataRow( 8 )]
+	[DataRow( 17 )]
+	public void AStateAnimationShowsItsSetsFramesRoundAndRound( int framesPerDirection )
+	{
+		var sprite = Fresh();
+
+		sprite.Interval = 1;
+
+		Assert.IsTrue( sprite.StartState( new SpriteStateGroup( 1, 5, 0, 0 ), framesPerDirection ) );
+		Assert.AreEqual( 1760, sprite.Script );
+		Assert.IsTrue( sprite.IsOnAState );
+
+		var seen = FramesOver( sprite, (framesPerDirection * 2) + 3 );
+
+		CollectionAssert.AreEqual(
+			Enumerable.Range( 0, (framesPerDirection * 2) + 3 ).Select( turn => turn % framesPerDirection ).ToList(), seen );
+		Assert.AreEqual( 4, sprite.Set );
+		Assert.AreEqual( 1732, sprite.Pc );
+		Assert.AreEqual( 1760, sprite.Script, "a jump does not change the script" );
+		Assert.IsTrue( sprite.Shown );
+	}
+
+	/// <summary>Animations 13 to 16 are states 0 to 3 and name no script; a state whose script is not copied does not start.</summary>
+	[TestMethod]
+	public void AStateIsNotAScriptAndOnlyTheFirstStateScriptIsCopied()
+	{
+		CollectionAssert.AreEqual( new[] { -1, 0, 1, 2, 3, -1 },
+			new[] { 12, 13, 14, 15, 16, 17 }.Select( SpriteScript.StateOf ).ToArray() );
+
+		for ( var animation = 13; animation <= 16; ++animation )
+			Assert.AreEqual( SpriteScript.None, SpriteScript.EntryFor( animation ) );
+
+		var sprite = Fresh();
+
+		sprite.Start( SpriteScript.Walking );
+
+		foreach ( var script in new[] { 0, 2, 3, 4, 5 } )
+			Assert.IsFalse( sprite.StartState( new SpriteStateGroup( script, 5, 0, 0 ), 8 ), $"script byte {script}" );
+
+		Assert.IsTrue( sprite.IsOn( SpriteScript.Walking ) );
+		Assert.IsFalse( sprite.IsOnAState );
+	}
+
+	/// <summary>The state script's instructions stand at the executable's own words, 1726 to 1781.</summary>
+	[TestMethod]
+	public void TheStateScriptStandsAtTheExecutablesWords()
+	{
+		int[] starts =
+		[
+			1726, 1729, 1730, 1732, 1735, 1739, 1743, 1746, 1747, 1749, 1752, 1756, 1757,
+			1760, 1763, 1766, 1770, 1771, 1773, 1776, 1780, 1781
+		];
+
+		for ( var word = 1726; word <= 1783; ++word )
+			Assert.AreEqual( starts.Contains( word ), SpriteScript.HasInstructionAt( word ), $"word {word}" );
+	}
+
 	/// <summary>Turns of the sprite system, 62ms apart, from a sprite that has just been scheduled.</summary>
 	private static List<int> FramesOver( SpriteScript sprite, int turns, int every = 62 )
 	{

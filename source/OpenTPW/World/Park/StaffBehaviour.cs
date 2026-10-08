@@ -26,10 +26,13 @@ namespace OpenTPW;
 /// <see cref="ArriveAtTheLoo"/>, <see cref="CleanOn"/>.
 /// </para>
 /// <para>
+/// <b>The entertainer's performance is built</b>: the look for a guest in reach (<c>FUN_004c8eb0</c>), the
+/// bank's own animation and state <c>0xe</c> - <see cref="Perform"/>.
+/// </para>
+/// <para>
 /// <b>What is deliberately not built, each for a named reason.</b> The rest of the work: a mechanic's broken
-/// ride (<c>FUN_004daa90</c>), a handyman's litter (<c>FUN_004c8ed0</c>) and an entertainer's guests to
-/// perform to (<c>FUN_004c8eb0</c>). Each search is counted where the original makes it and answers as
-/// finding nothing.
+/// ride (<c>FUN_004daa90</c>) and a handyman's litter (<c>FUN_004c8ed0</c>). Each search is counted where the
+/// original makes it and answers as finding nothing.
 /// The strike arms are absent too (Q138): reaching them means asking <c>mStaffHQ</c>'s own flag for the
 /// kind, which nothing here keeps, and the gate's status, which <c>ParkRides.GateStatus</c> answers.
 /// </para>
@@ -60,6 +63,20 @@ public sealed class StaffBehaviour
 	/// </summary>
 	public Func<int, Staff?>? StaffById { get; init; }
 
+	/// <summary>
+	/// How many guests stand on the cells from a reach before to a reach after a packed cell each way -
+	/// <c>FUN_004c8d30</c> for kind 1 (<see cref="ParkPeople.GuestsNear"/>). Null finds nobody.
+	/// </summary>
+	public Func<int, int, int>? GuestsNear { get; init; }
+
+	/// <summary>
+	/// How many of a member's sprite bank's four state groups are in use - <c>FUN_00541fa0</c> on the sprite's
+	/// kind and bank - or nought when the bank is not known.
+	/// </summary>
+	public Func<Staff, int>? StateGroupsOf { get; init; }
+
+	private readonly int[] _entertainerWork = new int[ParkWorld.StaffState.PayGrades];
+	private readonly int[] _entertainerReach = new int[ParkWorld.StaffState.PayGrades];
 	private readonly int[] _idleDuration = new int[ParkWorld.StaffState.PayGrades];
 	private readonly int[] _handymanWork = new int[ParkWorld.StaffState.PayGrades];
 	private readonly int[] _handymanRange = new int[ParkWorld.StaffState.PayGrades];
@@ -90,6 +107,8 @@ public sealed class StaffBehaviour
 		float[] moodFallback = [1f, 2f, 2f, 3f, 3f];
 		int[] workFallback = [40, 30, 20, 10, 5];
 		int[] rangeFallback = [2, 3, 3, 4, 5];
+		int[] performFallback = [10, 20, 30, 50, 75];
+		int[] reachFallback = [3, 3, 4, 4, 5];
 
 		for ( var grade = 0; grade < ParkWorld.StaffState.PayGrades; ++grade )
 		{
@@ -109,6 +128,13 @@ public sealed class StaffBehaviour
 				?? workFallback[grade];
 			_handymanRange[grade] = balance?.Int( $"{handyman}.DetectionRange", rangeFallback[grade] )
 				?? rangeFallback[grade];
+
+			var entertainer = $"EntertainerConstsPerGrade[{grade}]";
+
+			_entertainerWork[grade] = balance?.Int( $"{entertainer}.WorkDuration", performFallback[grade] )
+				?? performFallback[grade];
+			_entertainerReach[grade] = balance?.Int( $"{entertainer}.ActivationDistance", reachFallback[grade] )
+				?? reachFallback[grade];
 		}
 	}
 
@@ -144,6 +170,20 @@ public sealed class StaffBehaviour
 	/// </summary>
 	public int HandymanDetectionRangeAt( int grade )
 		=> _handymanRange[Math.Clamp( grade, 0, _handymanRange.Length - 1 )];
+
+	/// <summary>
+	/// How long an entertainer of this grade performs - <c>EntertainerConstsPerGrade.WorkDuration</c>, the table
+	/// at <c>0x00785398</c>: 10, 20, 30, 50, 75.
+	/// </summary>
+	public int EntertainerWorkDurationAt( int grade )
+		=> _entertainerWork[Math.Clamp( grade, 0, _entertainerWork.Length - 1 )];
+
+	/// <summary>
+	/// How many cells each way an entertainer of this grade looks for a guest -
+	/// <c>EntertainerConstsPerGrade.ActivationDistance</c>, the table at <c>0x007853a0</c>: 3, 3, 4, 4, 5.
+	/// </summary>
+	public int EntertainerActivationDistanceAt( int grade )
+		=> _entertainerReach[Math.Clamp( grade, 0, _entertainerReach.Length - 1 )];
 
 	/// <summary>How much rest one turn of work costs, before the grade multiplier - the float at <c>0x00700858</c>.</summary>
 	public const float TirednessPerWorkingTurn = 0.025f;
@@ -313,6 +353,24 @@ public sealed class StaffBehaviour
 
 				break;
 
+			// An entertainer performing - FUN_004d4810's case 0xe: a turn of work, then, on the first sweep past
+			// stamp + WorkDuration, the end's sound and the decide again in the same turn, which may start another
+			// performance on a fresh stamp.
+			case StaffActivity.Performing:
+				Work( staff );
+
+				if ( (uint)tick <= (uint)(staff.TimeStartedEntertaining + EntertainerWorkDurationAt( staff.PayGrade )) )
+					break;
+
+				// cat_staff effect 0x87 at the sprite's position (0x004d48f0), not built (Q135).
+				Unimplemented.Report( "STAFF_SOUND_PERFORMANCE_END" );
+				Log.Info( $"Staff: {staff.ThingId} ends the performance of mGameTick {staff.TimeStartedEntertaining} "
+					+ $"on mGameTick {tick}" );
+
+				Decide( staff, walk, tick );
+
+				break;
+
 			// On strike and being carried both do nothing here. The original ends a strike in state 5's
 			// FUN_00506300, which is not built (Q138), and its own case 7 has an empty body.
 			default:
@@ -328,8 +386,8 @@ public sealed class StaffBehaviour
 	/// <para>
 	/// <b>Every kind walks about when it has no work.</b> The mechanic and the handyman look for work and, with
 	/// none, set off on a random walk every time; the entertainer, the guard and the researcher stay on one
-	/// choice in four. Only the handyman's toilet search finds work; the others are counted where the original
-	/// makes them.
+	/// choice in four. The handyman's toilet search and the entertainer's look find work; the others are counted
+	/// where the original makes them.
 	/// </para>
 	/// </summary>
 	private void Decide( Staff staff, PeepWalk walk, int tick )
@@ -602,23 +660,29 @@ public sealed class StaffBehaviour
 
 	/// <summary>
 	/// The entertainer's choice - <c>FUN_004d46d0</c>. A draw mod 3 of nought looks for a guest within the
-	/// grade's <c>ActivationDistance</c> to perform to (<c>FUN_004c8eb0</c>, <c>0x004d4756</c>); the search and
-	/// the performance, state <c>0xe</c>, are not built, so the look is counted and finds nobody. Then the
+	/// grade's <c>ActivationDistance</c> and, finding one, performs (<see cref="Perform"/>). Otherwise the
 	/// guard's choice by <c>mGameTick &amp; 3</c>: nought stays, anything else looks for somewhere to walk.
 	/// </summary>
 	/// <remarks>
 	/// Staying and a walk found each take one more draw the original throws away (<c>0x004d4734</c>,
 	/// <c>0x004d4718</c>). <b>Finding nowhere leaves the state as it was</b>, with its stamp: no setter is called,
-	/// so the entertainer is asked again on the next sweep.
+	/// so the entertainer is asked again on the next sweep, and one who was performing takes another turn of
+	/// work and its end again.
 	/// </remarks>
 	private void Entertain( Staff staff, PeepWalk walk, int tick )
 	{
-		if ( _random.Next() % PerformShare == 0 )
-			Unimplemented.Report( "ENTERTAINER_GUEST_SEARCH" );
+		if ( _random.Next() % PerformShare == 0 && Perform( staff, walk, tick ) )
+			return;
 
 		if ( (tick & (StayPutShare - 1)) == 0 )
 		{
 			_random.Next();
+
+			// The setter's stand, animation 3 (FUN_005054d0 case 0, FUN_004fa460), which Staff.SetActivity
+			// queues for no idle; queued here from a performance, whose picture would otherwise play on.
+			if ( staff.Activity == StaffActivity.Performing )
+				staff.NextAnimation = SpriteScript.Standing;
+
 			staff.SetActivity( StaffActivity.Idle, tick );
 
 			Log.Info( $"Staff: {staff.ThingId} stands on mGameTick {tick}, its choice's low two bits nought" );
@@ -635,6 +699,52 @@ public sealed class StaffBehaviour
 
 		_random.Next();
 		staff.SetActivity( StaffActivity.Walking, tick );
+	}
+
+	/// <summary>
+	/// The entertainer's look and the start of a performance - <c>0x004d4762</c>..<c>0x004d47e2</c>
+	/// (<c>docs/exe/ride-operation.md</c>, "The entertainer's performance"). Any guest on the cells within the
+	/// grade's <c>ActivationDistance</c> each way of the entertainer's own cell will do; nobody is kept, faced
+	/// or walked to. Somebody there: a second draw, taken whatever follows; the animation is <c>0xd</c>, the
+	/// bank's state 0, when the bank has one state group, and <c>0xd</c> + the draw mod (groups - 1) otherwise;
+	/// then state <c>0xe</c> and its stamp, written inline.
+	/// </summary>
+	/// <remarks>
+	/// <b>A bank with no state group</b> divides the draw by <c>0xffffffff</c> in the original and queues an
+	/// animation past the table. No entertainer bank the game ships is one; here it is counted,
+	/// <c>ENTERTAINER_BANK_WITHOUT_A_STATE_GROUP</c>, and no animation is queued.
+	/// </remarks>
+	/// <returns>Whether a performance began.</returns>
+	private bool Perform( Staff staff, PeepWalk walk, int tick )
+	{
+		var (x, y) = walk.Position.Cell;
+		var reach = EntertainerActivationDistanceAt( staff.PayGrade );
+		var near = GuestsNear?.Invoke( (y * ParkWorld.MapSize) + x + 1, reach ) ?? 0;
+
+		if ( near == 0 )
+		{
+			Log.Info( $"Staff: {staff.ThingId} looks from ({x},{y}) on mGameTick {tick} and finds no guest within {reach}" );
+
+			return false;
+		}
+
+		var draw = _random.Next();
+		var groups = StateGroupsOf?.Invoke( staff ) ?? 0;
+		var animation = 0;
+
+		if ( groups == 1 )
+			animation = SpriteScript.FirstState;
+		else if ( groups > 1 )
+			animation = SpriteScript.FirstState + (draw % (groups - 1));
+		else
+			Unimplemented.Report( "ENTERTAINER_BANK_WITHOUT_A_STATE_GROUP" );
+
+		staff.StartPerforming( animation, tick );
+
+		Log.Info( $"Staff: {staff.ThingId} performs at ({x},{y}) on mGameTick {tick}, {near} guests within {reach}, "
+			+ $"animation 0x{animation:x}" );
+
+		return true;
 	}
 
 	/// <summary>

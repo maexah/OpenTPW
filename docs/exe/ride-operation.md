@@ -2418,7 +2418,8 @@ through the sweeps the original's stands performing.
 
 ### The entertainer's performance - `FUN_004d46d0`, `FUN_004c8d30` and state `0xe`
 
-Decoded for the build (`docs/QUEUE.md` Q133c); nothing here is built.
+Decoded by `docs/QUEUE.md` Q133c and built by Q133d: `StaffBehaviour.Perform` and its `Performing` turn,
+`Staff.StartPerforming`, `SpriteScript.StartState` ("The performance, in both games").
 
 **The look answers yes or no and names nobody.** `FUN_004c8d30( kind, cell, reach, first )` (`RET 0x10`) unpacks
 `cell − 1` to x (`& 0x7f`) and y (`>> 7`) and takes the square from `reach` before to `reach` after each way, held
@@ -2480,8 +2481,18 @@ Script 0, word 1760 (`0x0074f638`), and the words 1726 to 1759 it jumps into (`0
 
 So: frames 0 to local 17 once, then frames local 17 to the set's last round and round, frame 0 held local 18 + 1
 turns between rounds. With both nought, as a member of staff has them, it is the set's frames 0 to the last, one each
-turn the sprite is due, until another animation is queued. `SpriteScript` has none of If, EndIf, FrameFromLocal,
-AddLocal and CopyLocal, nor LoopWhile's comparisons 1 and 3.
+turn the sprite is due, until another animation is queued.
+
+**The two comparison tables are not one.** LoopWhile's (`0x00476678`), by its second operand: 1 `!=`, 2 `==`, 3 `<=`,
+4 `>=` against another local (the third operand indexes the locals, `0x004764d7`..`0x00476535`); 5 `!=`, 6 `==`, 7
+`<=`, 8 `>=` against the operand itself. A first operand of 1 to 6 goes to a float table instead (`0x0047653f`,
+`0x00476698`); local 0 and locals from 7 up are integers. If's (`0x004762b0`), read at entries 1 to 5, 7 and 8: 1 `==`,
+2 `!=`, 3 `>`, 4 `<` against another local; 5 `==`, 7 `>`, 8 `<` against the operand; the body runs when it holds,
+and otherwise `FUN_00475130` walks the words to the closing EndIf (`0x004762f0`) or the word `0x00476320`, counting
+nested Ifs, and leaves the program counter on it. If counts a depth up at `+0x70` and EndIf down; past ten it only
+logs. A state start (`FUN_00475b80`, `0x00475c23`) zeroes `+0x70`, `+0x74` and the loop count `+0x78`, sets `+0x1c`
+to `0x14`, and writes the set whole into `+0xb4`; a set's frames per direction are the byte at bank `+0x222 + 4 ×
+set` (`FUN_00540c60`).
 
 **In the shipped banks** (all 46 `.ESP` of `esprites.wad`; `facing-esp-groups.py`, `q133c/groups.txt`): 34 have no
 group and 12 have one, always state 0, script 0, set 4: bytes 1, 5, 0, 0 in eleven and 1, 5, 2, 40 in
@@ -2510,6 +2521,31 @@ read once a sweep from 986 to 1947 with the look replayed read-only over the sam
 
 Photographed performing: `q133c/orig/p0.png` to `p3.png`, `sheet-performing.png` (the green dinosaur, a guest beside).
 
+### The performance, in both games
+
+Built by `docs/QUEUE.md` Q133d. **OpenTPW**, stock Lost Kingdom left alone 240 s, `sweeps`, `staff` and `guests` read
+about twice a second, predicted first (`q133d/confirm.py`, `PREDICTION.txt`; `fix/`, 7 of 7):
+
+- **Fifteen performances began** (mGameTick 771 to 1739; the original's fifteen were in 986 to 1947), each with 1 to
+  13 guests within four cells each way by the game's own line and at least one by the census on the nearest reading.
+- **Every finished spell ended on its stamp + 51**, fourteen of fourteen, several straight into another on the
+  ending sweep's stamp; no reading showed `Performing` outside its spell.
+- **406 of 406 readings inside a spell: script 1760 at 1732, set 4, a frame of 0 to 7**, all eight seen; out of a
+  spell the sprite was never on 1760.
+- The place did not change inside any spell, and the whole-number rest fell 3 or 4 over each (3.825).
+- `STAFF_SOUND_PERFORMANCE_END` counted once a spell's end.
+
+The build before, the same 240 s: `Idle` and `Walking` on all 593 readings, script 2 on every one, the look counted
+41 times. **Away from every guest** (`far/`): put down on (56,19) fourteen times, the six put-downs with nobody
+within four began no performance and two of their looks found nobody; one put-down with guests in reach began one.
+The prediction asked for eight such put-downs and got six, the guests having walked that way. The first run's two
+misses (`run1/`) were the harness's: it read a guest's saved cell for their place, and matched another counter's
+name.
+
+**Beside the original** (`q133d/sheet-beside-original.png`, its `sheet-performing.png` above OpenTPW's four frames):
+the same green dinosaur turning through set 4's poses where it stands. OpenTPW's is cut along its lower edge by the
+ground at that camera, as every sprite's is in the build before too, and has no shadow.
+
 ### Where OpenTPW differs
 
 | What | The original | OpenTPW | Reached in Lost Kingdom |
@@ -2518,7 +2554,9 @@ Photographed performing: `q133c/orig/p0.png` to `p3.png`, `sheet-performing.png`
 | The mechanic, the handyman and the entertainer with no work | walk about | walk about: the mechanic and the handyman on every decide, the entertainer on `mGameTick & 3` (`StaffBehaviour.WalkAbout`, `Entertain`; "The no-work walk, in both games") | from their saved walks' ends |
 | The mechanic's search for a ride | `FUN_004daa90` on every decide not too tired | counted, `MECHANIC_RIDE_SEARCH`, and answers none | every mechanic decide; nothing here breaks down |
 | The handyman's searches | litter `FUN_004c8ed0` at his decide and at his idle pre-step, then a toilet `FUN_004d7880` | the litter search counted, `HANDYMAN_LITTER_SEARCH`, and answers none; the toilet search built (`StaffBehaviour.FindToilet`; "A toilet's dirt") | every handyman decide; no cell here holds litter (Q225) |
-| The entertainer's performance | a draw mod 3 of nought, a guest in reach: a second draw, the bank's state animation, state `0xe` for WorkDuration + 1 sweeps, effect `0x87` ("The entertainer's performance") | the look counted, `ENTERTAINER_GUEST_SEARCH`, and answers nobody; the entertainer walks instead | a third of the entertainer's decides (Q133d) |
+| The entertainer's performance | a draw mod 3 of nought, a guest in reach: a second draw, the bank's state animation, state `0xe` for WorkDuration + 1 sweeps, effect `0x87` ("The entertainer's performance") | built (`StaffBehaviour.Perform`; "The performance, in both games"); the look is `ParkPeople.GuestsNear`, each guest at the cell the park has them linked into; effect `0x87` counted, `STAFF_SOUND_PERFORMANCE_END` (Q135) | a third of the entertainer's decides |
+| The stand as a member goes idle | SetState(0) queues animation 3 every time (`FUN_004fa460`) | queued from a performance and after a clean only; any other idle keeps the picture it had | every idle |
+| State scripts 1 to 3 (words 1800, 1812, 1824) and a bank with no group | played; an animation past the table | not copied, counted `SPRITE_STATE_ANIMATION_NOT_STARTED`; counted `ENTERTAINER_BANK_WITHOUT_A_STATE_GROUP` | no shipped bank |
 | The entertainer's region effect | the pre-step `FUN_004d4660` moves `RegionFX[0]` with them, cell by cell | none, uncounted | every cell the entertainer crosses (Q157) |
 | The researcher's fourth decide | researches, state `0xf` | stands | every fourth researcher decide (Q134) |
 | Staff sounds | fourteen cat_staff effects | none, uncounted | every idle and walking turn; a performance's end; a guard's chase and catch (Q135) |

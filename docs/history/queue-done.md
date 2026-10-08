@@ -5097,6 +5097,19 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   nobody; a second draw picks among the bank's state groups, one in every jungle bank, so always animation `0xd`,
   the bank's set 4 looped by script word 1760. In the original, predicted first, 5 of 5: 15 starts each with a guest
   in the nine by nine, 11 spells of 51 sweeps exactly, 682 of 682 readings on set 4. The build is Q133d.
+- [x] **Q133d. Build the entertainer's performance.** Decoded by Q133c (`ride-operation.md`, "The entertainer's
+  performance"). In `StaffBehaviour.Entertain`, where `ENTERTAINER_GUEST_SEARCH` is counted: the look (any guest on
+  the cells within `ActivationDistance` each way, which nothing reads from the balance file yet), the second draw,
+  state `0xe` stamped inline (no idle stamp), 51 work turns at grade 3 (`Work`'s cost), effect `0x87` counted (Q135),
+  and the decide again in the same turn. The picture is the bank's own: read the four groups at `.ESP` `0x14e`, give
+  `SpriteScript` words 1726 to 1783 and their five opcodes, and loop set 4. Confirm: `staff` showing `0xe` for 51
+  sweeps beside a guest and never without one in reach, predicted first; a screenshot of the performance beside
+  `q133c/orig/sheet-performing.png`. Q227 follows it.
+  **Built 2026-10-07** (`ride-operation.md`, "The performance, in both games"): `StaffBehaviour.Perform`, state
+  `0xe` inline, the bank's state group and script words 1726 to 1781. In the game, predicted first, 7 of 7 (5 of 7
+  the first run, both misses the harness's): 15 performances in 240 s, each with a guest within four cells, 14 of 14
+  finished spells 51 sweeps, 406 of 406 readings on set 4 at script 1760; the build before never performs, 2 of 2.
+  Away from guests no performance began (6 put-downs, where 8 were predicted). 46 bugs put back, 44 caught, the two left an equivalent and a save field the shipped save holds nought in (`q133d/mutate.py`).
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

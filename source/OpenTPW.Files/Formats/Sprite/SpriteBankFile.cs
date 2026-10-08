@@ -22,7 +22,7 @@ namespace OpenTPW;
 /// counted: <c>FUN_00540c70</c> takes a state of 0 to 3 and hands back that group's first two bytes as a
 /// script and a set, and its last two to the sprite it makes. Only group 0 is ever in use, and only on the
 /// twelve Entertainer banks - every one reads (1, 5, 0, 0) but <c>Hallow\Entertainers\SPR_DR</c>, which
-/// reads (1, 5, 2, 40). Measured over all 46 banks; nothing here uses them yet.</description></item>
+/// reads (1, 5, 2, 40). Measured over all 46 banks; see <see cref="SpriteStateGroup"/>.</description></item>
 /// </list>
 /// <para>
 /// The game asks for a sprite by a number whose top part is the bank and whose low four bits are the
@@ -46,6 +46,15 @@ public sealed class SpriteBankFile : BaseFormat
 	/// docs/exe/park-engine.md, "Entering and leaving first person").
 	/// </summary>
 	public bool UsesFirstPersonPictures { get; private set; }
+
+	/// <summary>The four state groups at <c>0x14E</c>, in file order.</summary>
+	public SpriteStateGroup[] StateGroups { get; private set; } = [];
+
+	/// <summary>
+	/// How many of the four groups name a script - the bank's word <c>+0x20c</c>, counted as it loads
+	/// (<c>FUN_00541fa0</c>).
+	/// </summary>
+	public int StateGroupsInUse => StateGroups.Count( group => group.InUse );
 
 	public SpriteBankFile( string path )
 	{
@@ -75,6 +84,13 @@ public sealed class SpriteBankFile : BaseFormat
 		Sets = new SpriteSet[16];
 		for ( int i = 0; i < Sets.Length; ++i )
 			Sets[i] = new SpriteSet( reader.ReadUInt16(), reader.ReadByte(), reader.ReadByte() );
+
+		StateGroups = new SpriteStateGroup[4];
+		for ( int i = 0; i < StateGroups.Length; ++i )
+		{
+			StateGroups[i] = new SpriteStateGroup(
+				reader.ReadByte(), reader.ReadByte(), reader.ReadByte(), reader.ReadByte() );
+		}
 	}
 }
 
@@ -103,4 +119,15 @@ public readonly record struct SpriteSet( int First, int FramesPerDirection, int 
 {
 	/// <summary>Whether this set stores a run per direction, whatever the count.</summary>
 	public bool Directional => Directions > 0;
+}
+
+/// <summary>
+/// One of a <see cref="SpriteBankFile"/>'s four state groups: the animation a sprite of this bank plays for a
+/// state of 0 to 3 (<c>FUN_00540c70</c>). <see cref="Script"/> and <see cref="Set"/> are stored one up, nought
+/// meaning none; the last two bytes reach only a sprite made on a state.
+/// </summary>
+public readonly record struct SpriteStateGroup( int Script, int Set, int LeadIn, int Hold )
+{
+	/// <summary>Whether the group names a script at all.</summary>
+	public bool InUse => Script != 0;
 }

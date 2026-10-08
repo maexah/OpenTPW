@@ -13,8 +13,9 @@ namespace OpenTPW;
 /// meaningless for half the instances.
 /// </para>
 /// <para>
-/// <b>Of the kind-specific half only the handyman's toilet job is here</b> (<see cref="ToiletToClean"/>,
-/// <see cref="TimeStartedCleaning"/>). A handyman's target litter cell, a mechanic's object to repair and a
+/// <b>Of the kind-specific half the handyman's toilet job is here</b> (<see cref="ToiletToClean"/>,
+/// <see cref="TimeStartedCleaning"/>) <b>and the entertainer's performance</b>
+/// (<see cref="TimeStartedEntertaining"/>). A handyman's target litter cell, a mechanic's object to repair and a
 /// guard's perp are all saved and all decoded - see <c>ParkWorld.ReadStaff</c> - and none of them is read. See
 /// <see cref="StaffBehaviour"/> for which arms that leaves out and why.
 /// </para>
@@ -92,6 +93,12 @@ public sealed class Staff
 	public int TimeStartedCleaning { get; internal set; }
 
 	/// <summary>
+	/// The park clock when an entertainer began performing - <c>mTimeStartedEntertaining</c>, the same
+	/// <c>+0x214</c>, stamped by <see cref="StartPerforming"/>.
+	/// </summary>
+	public int TimeStartedEntertaining { get; internal set; }
+
+	/// <summary>
 	/// When they last started standing about, read against the park's own clock.
 	///
 	/// <para>
@@ -148,6 +155,7 @@ public sealed class Staff
 		TimeStartedIdling = saved.TimeStartedIdling;
 		ToiletToClean = saved.ToiletToClean;
 		TimeStartedCleaning = saved.TimeStartedCleaning;
+		TimeStartedEntertaining = saved.TimeStartedEntertaining;
 		PatrolBottomLeft = saved.PatrolBottomLeft;
 		PatrolTopRight = saved.PatrolTopRight;
 		Name = saved.Name;
@@ -224,6 +232,21 @@ public sealed class Staff
 			NextAnimation = wanted;
 
 		Activity = next;
+	}
+
+	/// <summary>
+	/// Starts an entertainer's performance - the three inline writes at the end of <c>FUN_004d46d0</c>'s look:
+	/// the animation queued, the state <c>0xe</c> and the stamp. No setter runs, so the idle stamp is left as
+	/// it was.
+	/// </summary>
+	/// <param name="animation">The animation to queue, or nought for none.</param>
+	internal void StartPerforming( int animation, int tick )
+	{
+		if ( animation != 0 )
+			NextAnimation = animation;
+
+		Activity = StaffActivity.Performing;
+		TimeStartedEntertaining = tick;
 	}
 
 	/// <summary>

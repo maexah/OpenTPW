@@ -6,9 +6,9 @@ namespace OpenTPW;
 /// <para>
 /// The executable has <b>eighteen</b> of these, and the person scripts use exactly the first four - counted, not
 /// assumed: a decode of all 1,857 words of the script array agrees with a tally taken independently by value
-/// on every one of the eighteen. The let-go balloon adds three more and the end word. The other eleven (the rest
-/// of the locals arithmetic, a gosub on the same twenty-deep stack and an eight-way comparison jump table at
-/// <c>0x004762b0</c>) are reached only by scripts that belong to things this project does not draw yet, so they
+/// on every one of the eighteen. The let-go balloon adds three more and the end word, and a bank's state
+/// animation five more. The other six (the rest of the locals arithmetic, an else and a gosub on the same
+/// twenty-deep stack) are reached only by scripts that belong to things this project does not draw yet, so they
 /// are left out rather than written blind.
 /// </para>
 /// </summary>
@@ -55,10 +55,34 @@ internal enum SpriteOp
 	/// <summary>
 	/// Loops while a word compares true - <c>0x004763d0</c>, three operands: the word, the comparison and the
 	/// value. True jumps back to the pushed start and keeps it pushed; false pops it (<c>0x00476673</c>), and
-	/// with nothing pushed it only logs. Comparison 8 is <c>word &gt;= value</c>, signed (the table at
-	/// <c>0x00476678</c>, entry 7, <c>0x004764c2</c>), the only one in any script copied here.
+	/// with nothing pushed it only logs. The table at <c>0x00476678</c>: comparisons 1 to 4 read the third
+	/// operand as another word, 5 to 8 as a value. Copied here: 1, <c>word != word</c> (<c>0x004764d7</c>); 3,
+	/// <c>word &lt;= word</c> (<c>0x0047650b</c>); 8, <c>word &gt;= value</c> (<c>0x004764c2</c>); all signed.
 	/// </summary>
 	LoopWhile,
+
+	/// <summary>
+	/// Runs what follows only when a word compares true - <c>0x00476050</c>, three operands as
+	/// <see cref="LoopWhile"/>'s, on a table of its own (<c>0x004762b0</c>). False moves the program counter onto
+	/// the <see cref="EndIf"/> that closes it (<c>FUN_00475130</c>). Comparison 7 is <c>word &gt; value</c>,
+	/// signed (<c>0x004761ac</c>), the only one in any script copied here.
+	/// </summary>
+	If,
+
+	/// <summary>Closes an <see cref="If"/> - <c>0x004762f0</c>, no operand: it only counts the depth down.</summary>
+	EndIf,
+
+	/// <summary>
+	/// Shows the frame a word holds and yields - <c>0x004768d0</c>, one operand, the word. <see cref="Frame"/>
+	/// with its picture read from a local.
+	/// </summary>
+	FrameFromLocal,
+
+	/// <summary>Adds a value to one of the instance's words - <c>0x00476750</c>, two operands.</summary>
+	AddLocal,
+
+	/// <summary>Copies one of the instance's words into another - <c>0x00476870</c>, two operands, to and from.</summary>
+	CopyLocal,
 
 	/// <summary>
 	/// The end of a script - the word <c>0x005da3c0</c>, a bare <c>RET</c> that the VM spots rather than calls
@@ -156,8 +180,8 @@ public sealed class SpriteScript
 	/// <b>Four of its entries are not scripts and must not be read as addresses.</b> Entries 13 to 16 hold the
 	/// literals 0, 1, 2 and 3, and <c>FUN_00475b80</c> tells them apart by range: an argument of 0 to 3 is a
 	/// <i>state</i>, looked up through the sprite bank's own four groups of bytes at <c>0x14E</c>, and
-	/// anything larger is a script address. Those groups are not parsed by this project, so those four
-	/// animations are <see cref="None"/> here rather than guessed at.
+	/// anything larger is a script address. Those four are <see cref="None"/> here: <see cref="StateOf"/> names
+	/// the state and <see cref="StartState"/> starts it from the bank's group.
 	/// </para>
 	/// </summary>
 	private static readonly int[] Table =
@@ -187,9 +211,15 @@ public sealed class SpriteScript
 
 	private const int FrameLocal = 13;          // +0xb8
 
+	private const int FramesLocal = 14;         // +0xbc, the set's frames a direction, which a state start writes
+
 	private const int PaceLocal = 16;           // +0xc4, the draw's flags (0x00542075), which every person script sets
 
-	private const int LocalCount = 17;
+	private const int LeadInLocal = 17;         // +0xc8, a state group's third byte, on a sprite made on a state
+
+	private const int HoldLocal = 18;           // +0xcc, its fourth
+
+	private const int LocalCount = 19;
 
 	/// <summary>
 	/// The value every person script writes into <see cref="PaceLocal"/>. Its <c>0x200</c> bit is one the draw tests
@@ -230,14 +260,23 @@ public sealed class SpriteScript
 	/// <summary>How many words an instruction occupies: the opcode plus its operands.</summary>
 	private static int LengthOf( SpriteOp op ) => op switch
 	{
-		SpriteOp.SetLocal or SpriteOp.SubLocal => 3,
-		SpriteOp.LoopWhile => 4,
-		SpriteOp.LoopStart or SpriteOp.End => 1,
+		SpriteOp.SetLocal or SpriteOp.SubLocal or SpriteOp.AddLocal or SpriteOp.CopyLocal => 3,
+		SpriteOp.LoopWhile or SpriteOp.If => 4,
+		SpriteOp.LoopStart or SpriteOp.End or SpriteOp.EndIf => 1,
 		_ => 2
 	};
 
 	/// <summary><see cref="SpriteOp.LoopWhile"/>'s comparison 8, <c>word &gt;= value</c>.</summary>
 	private const int AtLeast = 8;
+
+	/// <summary><see cref="SpriteOp.LoopWhile"/>'s comparison 1, <c>word != word</c>.</summary>
+	private const int NotWord = 1;
+
+	/// <summary><see cref="SpriteOp.LoopWhile"/>'s comparison 3, <c>word &lt;= word</c>.</summary>
+	private const int AtMostWord = 3;
+
+	/// <summary><see cref="SpriteOp.If"/>'s comparison 7, <c>word &gt; value</c>.</summary>
+	private const int Above = 7;
 
 	/// <summary>
 	/// The let-go balloon's script, <c>0x0074f4c0</c> (word 1666), and the loop it jumps into at <c>0x0074f490</c>
@@ -255,6 +294,55 @@ public sealed class SpriteScript
 		(1666, new( SpriteOp.SetLocal, AlphaLocal, 250 )),
 		(1669, new( SpriteOp.Jump, 1654, 0 ))
 	];
+
+	/// <summary>
+	/// A bank's state script 0, <c>0x0074f638</c> (word 1760), and the loop it jumps into at <c>0x0074f5b0</c>
+	/// (word 1726), read out of <c>DAT_0074dab8</c> word for word (<c>docs/exe/ride-operation.md</c>, "The
+	/// entertainer's performance"): frames nought to the lead-in once, then the lead-in to the set's last round and
+	/// round, frame nought held the hold + 1 turns between rounds. With the lead-in and the hold nought, as every
+	/// sprite here has them, it is the set's frames from first to last, one a turn. Words 1759 and 1783 are nought.
+	/// </summary>
+	private static readonly (int At, ScriptStep Step)[] StateScript =
+	[
+		(1726, new( SpriteOp.CopyLocal, FrameLocal, LeadInLocal )),
+		(1729, new( SpriteOp.LoopStart, 0, 0 )),
+		(1730, new( SpriteOp.FrameFromLocal, FrameLocal, 0 )),
+		(1732, new( SpriteOp.AddLocal, FrameLocal, 1 )),
+		(1735, new( SpriteOp.LoopWhile, FrameLocal, NotWord, FramesLocal )),
+		(1739, new( SpriteOp.If, HoldLocal, Above, 0 )),
+		(1743, new( SpriteOp.SetLocal, 0, 0 )),
+		(1746, new( SpriteOp.LoopStart, 0, 0 )),
+		(1747, new( SpriteOp.Frame, 0, 0 )),
+		(1749, new( SpriteOp.AddLocal, 0, 1 )),
+		(1752, new( SpriteOp.LoopWhile, 0, AtMostWord, HoldLocal )),
+		(1756, new( SpriteOp.EndIf, 0, 0 )),
+		(1757, new( SpriteOp.Jump, 1726, 0 )),
+		(1760, new( SpriteOp.SetLocal, PaceLocal, PaceValue )),
+		(1763, new( SpriteOp.SetLocal, FrameLocal, 0 )),
+		(1766, new( SpriteOp.If, LeadInLocal, Above, 0 )),
+		(1770, new( SpriteOp.LoopStart, 0, 0 )),
+		(1771, new( SpriteOp.FrameFromLocal, FrameLocal, 0 )),
+		(1773, new( SpriteOp.AddLocal, FrameLocal, 1 )),
+		(1776, new( SpriteOp.LoopWhile, FrameLocal, AtMostWord, LeadInLocal )),
+		(1780, new( SpriteOp.EndIf, 0, 0 )),
+		(1781, new( SpriteOp.Jump, 1726, 0 ))
+	];
+
+	/// <summary>
+	/// Where each of the four state scripts starts - the table at <c>0x0074f7c8</c>, indexed by a state group's
+	/// first byte less one. Only the first is copied here; no shipped bank names another.
+	/// </summary>
+	private static readonly int[] StateScripts = [1760, 1800, 1812, 1824];
+
+	/// <summary>The first animation number that is a state, not a script - entries 13 to 16 of the table.</summary>
+	public const int FirstState = 13;
+
+	/// <summary>How many states a bank has groups for.</summary>
+	public const int States = 4;
+
+	/// <summary>Which state an animation number names, or -1 when it names a script or nothing.</summary>
+	public static int StateOf( int animation )
+		=> animation >= FirstState && animation < FirstState + States ? animation - FirstState : -1;
 
 	/// <summary>Where the let-go balloon's script starts - <c>0x0074f4c0</c>, which <c>FUN_004fe950</c> hands the sprite.</summary>
 	public const int LetGoBalloonEntry = 1666;
@@ -295,6 +383,9 @@ public sealed class SpriteScript
 		foreach ( var (at, step) in LetGoBalloon )
 			program[at] = step;
 
+		foreach ( var (at, step) in StateScript )
+			program[at] = step;
+
 		return program;
 	}
 
@@ -310,9 +401,9 @@ public sealed class SpriteScript
 	/// than trusted.
 	///
 	/// <para>
-	/// Only the twenty-one scripts people use and the let-go balloon's are copied out of the executable, so this is
-	/// false for a position inside any of the other sixty-one - which is the honest answer, not a denial that they
-	/// exist.
+	/// Only the twenty-one scripts people use, the let-go balloon's and a bank's first state script are copied out of
+	/// the executable, so this is false for a position inside any of the others - which is the honest answer, not a
+	/// denial that they exist.
 	/// </para>
 	/// </summary>
 	public static bool HasInstructionAt( int pc ) => Program.ContainsKey( pc );
@@ -431,6 +522,37 @@ public sealed class SpriteScript
 		_loops.Clear();
 	}
 
+	/// <summary>
+	/// Puts this sprite on a state's animation, as its bank gives it - <c>FUN_00475b80</c> handed 0 to 3: the
+	/// group's script from the start, its set written to <c>+0xb4</c> and that set's frames a direction to
+	/// <c>+0xbc</c> (<c>0x00475bfb</c>..<c>0x00475c1b</c>). The group's last two bytes are not written.
+	/// </summary>
+	/// <returns>Whether the group names a script copied here.</returns>
+	public bool StartState( SpriteStateGroup group, int framesPerDirection )
+	{
+		var script = group.Script - 1;
+
+		if ( script < 0 || script >= StateScripts.Length || !HasInstructionAt( StateScripts[script] ) )
+			return false;
+
+		_locals[SpriteNumberLocal] = group.Set - 1;
+		_locals[FramesLocal] = framesPerDirection;
+
+		StartAt( StateScripts[script] );
+
+		return true;
+	}
+
+	/// <summary>Whether this sprite is on a state's script, the bank's own animation.</summary>
+	public bool IsOnAState => Array.IndexOf( StateScripts, Script ) >= 0;
+
+	/// <summary>The frames a direction of the set a state start chose - the instance's <c>+0xbc</c>.</summary>
+	public int FramesPerDirection
+	{
+		get => _locals[FramesLocal];
+		set => _locals[FramesLocal] = value;
+	}
+
 	/// <summary>Whether this sprite is already running the script a given animation names.</summary>
 	public bool IsOn( int animation ) => Script != None && Script == EntryFor( animation );
 
@@ -533,12 +655,46 @@ public sealed class SpriteScript
 
 				var start = _loops.Pop();
 
-				if ( step.B == AtLeast && _locals[step.A] >= step.C )
+				var again = step.B switch
+				{
+					AtLeast => _locals[step.A] >= step.C,
+					NotWord => _locals[step.A] != _locals[step.C],
+					AtMostWord => _locals[step.A] <= _locals[step.C],
+					_ => false
+				};
+
+				if ( again )
 				{
 					_loops.Push( start );
 					Pc = start;
 				}
 
+				return false;
+
+			case SpriteOp.If:
+				if ( step.B == Above && _locals[step.A] > step.C )
+					return false;
+
+				// Onto the EndIf that closes it. No copied script nests one inside another.
+				while ( Program.TryGetValue( Pc, out var skipped ) && skipped.Op != SpriteOp.EndIf )
+					Pc += LengthOf( skipped.Op );
+
+				return false;
+
+			case SpriteOp.EndIf:
+				return false;
+
+			case SpriteOp.FrameFromLocal:
+				_locals[FrameLocal] = _locals[step.A];
+				Shown = _locals[step.A] != -1;
+				return true;
+
+			case SpriteOp.AddLocal:
+				_locals[step.A] += step.B;
+				return false;
+
+			case SpriteOp.CopyLocal:
+				_locals[step.A] = _locals[step.B];
 				return false;
 
 			case SpriteOp.End:

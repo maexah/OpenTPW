@@ -86,5 +86,12 @@ public enum StaffActivity
 	/// A handyman cleaning a toilet - his own state <c>0xb</c>: his grade's <c>WorkDuration</c> + 1 sweeps
 	/// from <c>mTimeStartedCleaning</c>, then the toilet is clean and open and he is <see cref="Idle"/>.
 	/// </summary>
-	Cleaning = 0xb
+	Cleaning = 0xb,
+
+	/// <summary>
+	/// An entertainer performing where they stand - their own state <c>0xe</c>, written inline by the decide
+	/// with no SetState: a turn of work a sweep until the clock passes <c>mTimeStartedEntertaining</c> + the
+	/// grade's <c>WorkDuration</c>, then the decide again in the same turn.
+	/// </summary>
+	Performing = 0xe
 }

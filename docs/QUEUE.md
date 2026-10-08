@@ -40,14 +40,6 @@ the original.
 
 **The 2026-10-06 review's leftovers come first, at Alexah's word (2026-10-06).**
 
-- [ ] **Q133d. Build the entertainer's performance.** Decoded by Q133c (`ride-operation.md`, "The entertainer's
-  performance"). In `StaffBehaviour.Entertain`, where `ENTERTAINER_GUEST_SEARCH` is counted: the look (any guest on
-  the cells within `ActivationDistance` each way, which nothing reads from the balance file yet), the second draw,
-  state `0xe` stamped inline (no idle stamp), 51 work turns at grade 3 (`Work`'s cost), effect `0x87` counted (Q135),
-  and the decide again in the same turn. The picture is the bank's own: read the four groups at `.ESP` `0x14e`, give
-  `SpriteScript` words 1726 to 1783 and their five opcodes, and loop set 4. Confirm: `staff` showing `0xe` for 51
-  sweeps beside a guest and never without one in reach, predicted first; a screenshot of the performance beside
-  `q133c/orig/sheet-performing.png`. Q227 follows it.
 - [ ] **Q134. The researcher researches, where ours stands. Alexah's call first.** Found by Q82. On a nought from its
   draw, or no destination, the researcher takes state `0xf` (animation 10, `+0x214` = mGameTick) for
   `ResearcherConstsPerGrade.WorkDuration` + 1 sweeps (31 at grade 2), then walks or researches again; it never idles of

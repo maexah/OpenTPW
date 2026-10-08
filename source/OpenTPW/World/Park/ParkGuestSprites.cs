@@ -859,6 +859,23 @@ public sealed class ParkGuestSprites : ModelEntity
 	private (int Kind, int Bank) LookOf( ParkPeople? people, ParkWorld.Person person, ParkWorld.Sprite sprite )
 		=> LookOf( people, _counts, person, sprite );
 
+	/// <summary>
+	/// The bank a person's sprite is drawn from now, for a state animation's group (<c>FUN_00475b80</c> reads the
+	/// sprite's kind <c>+0xac</c> and bank <c>+0xb0</c>), or null when it is not packed.
+	/// </summary>
+	internal SpriteBankFile? BankOf( int thingId )
+	{
+		var at = _people.FindIndex( entry => entry.Person.ThingId == thingId );
+
+		if ( at < 0 )
+			return null;
+
+		var (person, sprite) = _people[at];
+		var (kind, bank) = LookOf( ParkPeople.Current, person, sprite );
+
+		return _banks.TryGetValue( (kind, bank + sprite.BankOffset), out var loaded ) ? loaded.Bank : null;
+	}
+
 	/// <inheritdoc cref="LookOf(ParkPeople?, ParkWorld.Person, ParkWorld.Sprite)"/>
 	internal static (int Kind, int Bank) LookOf( ParkPeople? people, ParkSpriteBanks? counts, ParkWorld.Person person,
 		ParkWorld.Sprite sprite )

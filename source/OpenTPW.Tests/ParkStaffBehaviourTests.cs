@@ -281,13 +281,21 @@ public class ParkStaffBehaviourTests
 
 		var (member, walk, state) = OnThePath( Entertainer, activity: StaffActivity.Walking );
 		var random = new CountedDraw( draw );
-		var before = Counted( "ENTERTAINER_GUEST_SEARCH" );
+		var asked = 0;
 
-		new StaffBehaviour( Balance(), random, state ).Step( member, walk, playing: null, tick );
+		new StaffBehaviour( Balance(), random, state )
+		{
+			GuestsNear = ( _, _ ) =>
+			{
+				++asked;
+
+				return 0;
+			}
+		}.Step( member, walk, playing: null, tick );
 
 		Assert.AreEqual( to, member.Activity );
 		Assert.AreEqual( guard.Activity, member.Activity, "the guard's choice, by the same clock" );
-		Assert.AreEqual( looks, Counted( "ENTERTAINER_GUEST_SEARCH" ) - before );
+		Assert.AreEqual( looks, asked );
 		Assert.AreEqual( walkDraws.Asked + 2, random.Asked );
 
 		if ( to == StaffActivity.Idle )
@@ -356,17 +364,20 @@ public class ParkStaffBehaviourTests
 	public void ATiredMemberOfAnyKindGoesToRestAndLooksForNoWork( int thing )
 	{
 		var (member, walk, state) = OnThePath( thing );
-		var before = Counted( "MECHANIC_RIDE_SEARCH" ) + Counted( "HANDYMAN_LITTER_SEARCH" )
-			+ Counted( "ENTERTAINER_GUEST_SEARCH" );
+		var before = Counted( "MECHANIC_RIDE_SEARCH" ) + Counted( "HANDYMAN_LITTER_SEARCH" );
+		var asked = 0;
 
 		member.Tiredness = 0.5f;
 
-		new StaffBehaviour( Balance(), new CountedDraw( 0 ), state ).Step( member, walk, playing: null, tick: 1001 );
+		new StaffBehaviour( Balance(), new CountedDraw( 0 ), state )
+		{
+			GuestsNear = ( _, _ ) => ++asked
+		}.Step( member, walk, playing: null, tick: 1001 );
 
 		Assert.AreEqual( StaffActivity.GoingToRest, member.Activity );
 		Assert.AreNotEqual( 0, member.RestArea );
-		Assert.AreEqual( before, Counted( "MECHANIC_RIDE_SEARCH" ) + Counted( "HANDYMAN_LITTER_SEARCH" )
-			+ Counted( "ENTERTAINER_GUEST_SEARCH" ) );
+		Assert.AreEqual( before, Counted( "MECHANIC_RIDE_SEARCH" ) + Counted( "HANDYMAN_LITTER_SEARCH" ) );
+		Assert.AreEqual( 0, asked, "and the entertainer does not look" );
 	}
 
 	/// <summary>

@@ -297,7 +297,9 @@ public sealed class ParkPeople : Entity
 		_staffBehaviour = new StaffBehaviour( balance, staffRandom, State )
 		{
 			ScriptFor = scriptFor,
-			StaffById = id => _staff.Find( member => member.ThingId == id )
+			StaffById = id => _staff.Find( member => member.ThingId == id ),
+			GuestsNear = GuestsNear,
+			StateGroupsOf = member => BankOf( member.ThingId )?.StateGroupsInUse ?? 0
 		};
 
 		// A cell edit that measures a queue again tells the people in it - see QueueRemeasured - and the
@@ -1953,9 +1955,25 @@ public sealed class ParkPeople : Entity
 				if ( playing == null )
 					continue;
 
+				// A sprite read from a save part-way through a state's script carries no frames a direction here
+				// (+0xbc; whether the save keeps it is not decoded), and the script loops on it: it is read from
+				// the bank again, and with no bank the sprite stands.
+				if ( playing.IsOnAState && playing.FramesPerDirection <= 0 )
+				{
+					playing.FramesPerDirection = BankOf( member.ThingId ) is { } bank
+						? bank.Sets[playing.Set].FramesPerDirection
+						: 0;
+
+					if ( playing.FramesPerDirection <= 0 )
+					{
+						Unimplemented.Report( "SPRITE_STATE_ANIMATION_NOT_STARTED" );
+						playing.Start( SpriteScript.Standing );
+					}
+				}
+
 				if ( member.NextAnimation != 0 )
 				{
-					playing.Start( member.NextAnimation );
+					StartAnimation( member.ThingId, playing, member.NextAnimation );
 					member.NextAnimation = 0;
 				}
 
@@ -2860,6 +2878,37 @@ public sealed class ParkPeople : Entity
 		yield return $"park balance {State.Balance} gate takings {State.Takings}";
 	}
 
+	/// <summary>
+	/// The sprite bank a person is drawn from, which a state animation asks for its group. The drawing's own
+	/// (<see cref="ParkGuestSprites.BankOf"/>) unless a test hands another.
+	/// </summary>
+	internal Func<int, SpriteBankFile?> BankOf { get; set; } = static id => ParkGuestSprites.Current?.BankOf( id );
+
+	/// <summary>
+	/// Hands a queued animation to a person's sprite - <c>FUN_004d4190</c> into <c>FUN_00475b80</c>: a script by
+	/// its number, or for 13 to 16 the state group of the sprite's own bank, with that set's frames a direction
+	/// (<c>FUN_00540c60</c>). A state the bank has no group for, or whose script is not copied, is counted and
+	/// leaves the sprite as it was.
+	/// </summary>
+	private void StartAnimation( int thingId, SpriteScript playing, int animation )
+	{
+		var state = SpriteScript.StateOf( animation );
+
+		if ( state < 0 )
+		{
+			playing.Start( animation );
+
+			return;
+		}
+
+		if ( BankOf( thingId ) is { } bank && bank.StateGroups[state] is { InUse: true, Set: > 0 } group
+			&& group.Set <= bank.Sets.Length
+			&& playing.StartState( group, bank.Sets[group.Set - 1].FramesPerDirection ) )
+			return;
+
+		Unimplemented.Report( "SPRITE_STATE_ANIMATION_NOT_STARTED" );
+	}
+
 	/// <summary>This guest's animation, for the drawing, the tests and the debug console.</summary>
 	internal SpriteScript? SpriteFor( int thingId ) => _sprites.GetValueOrDefault( thingId );
 
@@ -3037,7 +3086,8 @@ public sealed class ParkPeople : Entity
 				// format string - which is a compile error rather than a wrong answer, thankfully.
 				+ $"walks {(global::OpenTPW.Staff.IsAWalkingState( member.Activity ))} "
 				+ $"has {(walk == null ? "no-walk" : walk.HasRoute ? "route" : "no-route")} "
-				+ $"loo {member.ToiletToClean} cleaningSince {member.TimeStartedCleaning}";
+				+ $"loo {member.ToiletToClean} cleaningSince {member.TimeStartedCleaning} "
+				+ $"performingSince {member.TimeStartedEntertaining}";
 		}
 	}
 }
