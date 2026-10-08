@@ -44,18 +44,37 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q241e. What a park file must hold to be written. Decode first.** From Q241. The container is known and
-  comes out byte for byte; the body is nineteen modules of the original's memory, live handles among them
-  (FileFormats `saves.md`, "Inside the stream"). Decode the World writer `FUN_00516c80` for what play changes here
-  (cells, things made and gone, money, the clock), and settle module by module which can be carried through from
-  the file the park was loaded from and which must be made afresh. Measure first: a file read and written back
-  unchanged through OpenTPW's container, then loaded by the original under Proton. The preamble's legal text is the
-  game's own and is copied from the file loaded, never shipped. Then split the writer's build, and file what the
-  other callers need (`gms.dat` first, `autosave` on leaving, the quicksave keys, `restart.INTS`).
-  From Q241d: the writer's one call site is `ParkSaveScreen.Save`, which counts `SAVE_GAME_WRITER` and hands over
-  the box's text as it stands: not trimmed, compared with the folder by case, and empty if the player emptied it
-  (the original then writes `.TPWS`; on a folder that tells case apart "new save" beside "New Save" is a second
-  file, where Windows rewrites the first). The list is not read again after a save, since the screen closes.
+- [ ] **Q241f. The park file's writer: the container, every module carried, the clock and the cash.** From Q241e
+  (`saves.md`, "Module by module"). `ParkWorld` keeps the inflated body it read. Write it back out: the preamble
+  copied from the file loaded, a fresh `BILZ` header, the body through `ZLibStream` (no memory level 9 there:
+  said at the site), with `mGameTick`, `mParkClosed`, `mNumberOfVisitorsToDate`, the economy thing's balance and
+  the camera module written from the running park. A console command writes it into the player's folder;
+  `ParkSaveScreen.Save` stays counted until Q241j. Confirm: a stock park run to a known tick and balance, written,
+  then loaded by the original under Proton and by OpenTPW, the tick and the cash predicted; a screenshot of each.
+- [ ] **Q241g. The writer: the cells.** From Q241e. A path or queue laid or cleared, land bought, a footprint, and
+  the chain of who stands on each cell, patched into the carried map; a cell's record gains or loses its parts by
+  its status bits. Confirm: a path laid and one cleared here, written, the same cells in the original under
+  Proton; a screenshot of each.
+- [ ] **Q241h. The writer: the people.** From Q241e. Guests' and staff's records patched from `ParkPeople`, one
+  made here written whole and one gone left out; the sprite table; message sets `0xa`, `0xc` and `0x1b`; the staff
+  pool, the arrival block and the staff heads. Measure first which bytes of a made guest's record may be nought,
+  and what a person in the middle of a walk is written as (the navigator's 177 bytes). Confirm: a load of arrivals
+  and a hire here, written, counted and walking in the original under Proton; a screenshot of each.
+- [ ] **Q241i. The writer: the objects, their scripts and their models.** From Q241e. Object records patched, one
+  bought written whole and one sold left out; the object controls and `mFirstObject`; a script record made or
+  taken out of `RSSE` and each running script's counter, variables and deadlines; a slot of `RSYS` and its
+  channels; set `0xb`; the clock module moved with them. A track ride or an emitter bought or sold is counted
+  (`TRAK`'s car is not decoded). Confirm: a ride bought and a shop sold here, written, standing and running in
+  the original under Proton, its script's wait predicted; a screenshot of each.
+- [ ] **Q241j. The writer: the managers, then Save Game saves.** From Q241e. The economy thing's loans and rings,
+  the staff HQ's strikes, the calendar's and the weather's fields; then `ParkSaveScreen.Save` writes
+  (`SAVE_GAME_WRITER` gone), an overwrite replaces the file, and the Load Park list shows it. Confirm: a park
+  played, saved from the menu under a typed name, loaded by OpenTPW and by the original under Proton; the tick,
+  the cash and the guest count predicted; a screenshot of each.
+- [ ] **Q248. The writer's other callers.** From Q241 and Q241e (`saves.md`, "The other callers"). `gms.dat`
+  written before every park file; `autosave.TPWS` on leaving a park, which entering then finds as the newest
+  file; the quicksave and quickload keys (`<theme>.TPWS`); `restart.INTS` written when the folder has none, and
+  read by Restart Park. After Q241j. Confirm: a park left and entered again at the tick it was left on.
 - [ ] **Q149. The calendar keeps its own game tick, from nought, and makes up the advances the original loses.** Found
   by the 2026-09-26 staleness audit. The original's calendar counter is `mGameTick` (`+0x1da70c`, `weather.md`, "The
   calendar"), which a loaded save sets to its own (755 in `Easymode.TPWI`, as `GameCalendar.Rebase` says);
@@ -488,6 +507,12 @@ the research lab), then the rest of this section in its old order.
   is built on no list here: a list longer than its window is counted as `LOAD_PARK_LIST_SCROLLBAR` on this screen
   and the wheel scrolls it. Decode the teardown first, then decide with Alexah whether the park is rebuilt in
   place. Confirm: a load timed against the original's 1.3 s, and a folder of fourteen saves scrolled by the bar.
+
+- [ ] **Q249. A park that was never loaded from a file has nothing to carry.** From Q241e. The fresh world (a
+  Full Simulation park, or a player whose folder holds no park file) is made by `FreshPark`, so the writer's
+  carried modules have no source. Decode what each module holds in a `restart.INTS` written at tick nought
+  (three are in Alexah's saves), make each afresh, and take the legal text from the level's shipped park file.
+  After Q241j. Confirm: a fresh Full Simulation park saved and loaded by the original under Proton.
 
 ## B. Docs and comments
 

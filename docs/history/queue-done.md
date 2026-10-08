@@ -5375,6 +5375,26 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   UITEXT 205 first. The save itself is counted (`SAVE_GAME_WRITER`) until Q241e. Run the parts Q241 did not in the
   original first (a typed name, Enter, Escape, a refused character, the sixteenth, a row's click). Confirm: the
   screen beside `q241/orig/s1.png`, `s3.png` and `s4.png`, and the count after OK.
+- [x] **Q241e. What a park file must hold to be written. Decode first.** Done 2026-10-08, the decode,
+  `alexah/363-what-a-park-file-must-hold`: `docs/exe/saves.md`, "What a park file must hold to be written". The
+  original under Proton loaded four files it did not write, five predictions of five: its own save deflated again
+  by .NET's zlib (840 at the click), the same with `mGameTick` 5000 (5000, and the date 8.11.2000), with every
+  saved address replaced by junk (running 40 s on), and with the balance 12345 ($ 12345). The World writer
+  `FUN_00516c80` uses each record's reader for the write, so the layouts are the FileFormats page's; the ten park
+  files give the rules that tie the modules together (`census.py`); each of the nineteen modules is settled as
+  carried, patched or afresh. Nothing is built. The build is Q241f to Q241j, the other callers Q248, a park with
+  no file to carry Q249. The item as written: From Q241. The container is known and
+  comes out byte for byte; the body is nineteen modules of the original's memory, live handles among them
+  (FileFormats `saves.md`, "Inside the stream"). Decode the World writer `FUN_00516c80` for what play changes here
+  (cells, things made and gone, money, the clock), and settle module by module which can be carried through from
+  the file the park was loaded from and which must be made afresh. Measure first: a file read and written back
+  unchanged through OpenTPW's container, then loaded by the original under Proton. The preamble's legal text is the
+  game's own and is copied from the file loaded, never shipped. Then split the writer's build, and file what the
+  other callers need (`gms.dat` first, `autosave` on leaving, the quicksave keys, `restart.INTS`).
+  From Q241d: the writer's one call site is `ParkSaveScreen.Save`, which counts `SAVE_GAME_WRITER` and hands over
+  the box's text as it stands: not trimmed, compared with the folder by case, and empty if the player emptied it
+  (the original then writes `.TPWS`; on a folder that tells case apart "new save" beside "New Save" is a second
+  file, where Windows rewrites the first). The list is not read again after a save, since the screen closes.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

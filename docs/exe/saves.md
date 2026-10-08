@@ -199,7 +199,7 @@ drag".
 The park menu's rows 1 and 2 (`FUN_0048b6a0`, `scenes.md`). Decoded in Ghidra and run in the original under Proton
 on 2026-10-08 (Q241, Q241d); what was only read is listed at the end. OpenTPW builds the Load Park screen and the
 Save Park screen ("OpenTPW's Load Park" and "OpenTPW's Save Park", below); the save itself is counted
-(`SAVE_GAME_WRITER`).
+(`SAVE_GAME_WRITER`), and what it must write is "What a park file must hold to be written".
 
 ### The two rows
 
@@ -397,7 +397,8 @@ close. Opening the question takes the focus from the box and nothing gives it ba
 measured below.
 
 **The save is not built.** Where `FUN_0049e9b0` calls `FUN_005ac610`, `ParkSaveScreen.Save` counts
-`SAVE_GAME_WRITER`, logs the name and closes the screen; nothing is written (Q241e).
+`SAVE_GAME_WRITER`, logs the name and closes the screen; nothing is written ("What a park file must hold to be
+written", below; Q241f on).
 
 **Measured (Q241d).** In the original, the reference player's folder holding one save, "New Save", the box read
 from its buffer `0x007ca720` (`q241d/orig`, nine predictions of nine):
@@ -479,6 +480,157 @@ stream in the executable), `strraw.py <file.str> <row>...` (a row's parts, param
 `PREDICTION-result.txt`, and `New-Save-written-by-the-original.TPWS`, an Instant Action Lost Kingdom save).
 Q241d's is `q241d/`: `orig/` (`lib.sh`, whose `box` reads the name box's buffer, the predictions and the
 frames), `confirm.py`, `mutate.py` and the sheet of OpenTPW's screen beside the original's.
+
+## What a park file must hold to be written
+
+Decoded and measured on 2026-10-08 (Q241e). Nothing is built: `ParkSaveScreen.Save` still counts
+`SAVE_GAME_WRITER`. The bytes are the FileFormats `saves.md`'s; this section is what the original does with them
+and what a writer here has to get right.
+
+### The container takes another deflate, and a changed body
+
+Measured in the original under Proton (`q241e/orig`, five predictions of five). The original's own Instant Action
+save (`mGameTick` 840, cash 88112) was put back through four writers and each result loaded from the Load Park
+screen over a running park:
+
+| File | What was changed | The original |
+|---|---|---|
+| Round Trip | the body deflated again by .NET's `ZLibStream`: 39,239 bytes of stream where the original's is 37,210, behind a fresh `BILZ` header, the preamble copied | listed and loaded: 840 at the click and counting, the world pointer unchanged |
+| Tick 5000 | the same, with `mGameTick` set to 5000 and nothing else | 5000 at the click, 5100 thirty seconds on; the gadget's date 8.11.2000 |
+| Handles | every non-zero handle of the sprite table set to 1, the script module's saved list pointer to `0xDEADBEEF`, the game system's dword 5 to 0 | 840 and counting, the people drawn and walking 40 s on |
+| Cash | the economy thing's balance set to 12345 | $ 12345 on the first frame |
+
+So the loader does not need the stream the original would have written, only one that inflates to the length the
+header gives; the three values that are addresses or stack contents of the saving session are read and not used;
+and a field of the World module can be changed alone. The date follows `mGameTick` (Q149): nothing else of the
+file was changed for 8.11.2000. The clock module was left as saved under a tick 4,160 later, and the park ran.
+
+### The World writer
+
+`FUN_00516c80( stream )`, on the world:
+
+1. **The pointer mode is put back to the default first**: a new mode object of vtable `0x006fea10` is installed
+   through `FUN_0046c350`, which calls the vtable `+0x2c` of the mode in force and deletes it. A saved park never
+   holds a tool or a thing in the hand.
+2. `version`, the dword 2, then the other 25 header fields in the file's order, each from its own place in the
+   world (`+0x1da708` to `+0x1da746`; the FileFormats table). Logged as "World vars".
+3. `FUN_004d3aa0`: the 150 object controls, their count and the search key (`mControlManager`).
+4. `FUN_004d7a70`, which is three calls: `FUN_00507850` the staff pool, `FUN_004f7f30` the park clock's fields
+   and `FUN_004cf050` the arrival block (`mMacroAI`).
+5. `FUN_004d7ea0`: the 16,384 cells (`mMap`).
+6. **The thing list.** "Used Thing Head" is the id in the head node of the used list (`DAT_007cf56c`; a node is
+   five dwords: the thing, its id, the next node, the previous, one more). Then, node by node along the list: the
+   **next** node's id, or nought at the end; the thing's model, the byte at thing `+2`; and the model's own
+   serialiser. That is the list the sweep walks, newest first (`ride-operation.md`, "Where a ride's turn comes
+   from"), so a file's order is the park's turn order.
+
+**Every serialiser is one function for both directions**: `( stream, direction, 1, version )`, direction 1 here and
+0 from the reader `FUN_005179c0`. So a record's write layout is its read layout by construction, and what the
+FileFormats page takes from the readers holds for the writer.
+
+| Model | Serialiser | |
+|---|---|---|
+| 1 | `FUN_004fb530` | a guest |
+| 3 | `FUN_004db7d0` | a catalogue object |
+| 4, 5, 6, 7, 8 | `FUN_004da110`, `FUN_004d6d60`, `FUN_004d4460`, `FUN_004d6000`, `FUN_00502760` | mechanic, handyman, entertainer, guard, researcher |
+| 9 | `FUN_00508bb0` | the staff HQ |
+| 10 | `FUN_004da960` | the map base (`FUN_0050b090`) and `mNextObject` |
+| 11 | `FUN_00599f60` | thing 3 |
+| 12, 17 | `FUN_00509bc0` | the map base alone |
+| 13, 14, 15, 16, 19 | `FUN_004c5d70`, `FUN_00502dc0`, `FUN_00512010`, `FUN_004cf920`, `FUN_004d2320` | the analyser, the research lab, the weather, the economy thing, the challenge manager |
+| 18 | none | refused: "Should not be able to save online persons" |
+
+**The reader makes every thing again.** For each record it allocates the model's object, runs its constructor and
+then the serialiser, and hangs it on the node `0x007cfb90 + id × 20`; after the last it rebuilds the free list
+from every node with no thing, in rising id (10,239 ids). So a file may use any ids it likes, a thing's id is
+its place in no array, and nothing of a thing but what its serialiser writes survives a save. Then it calls
+`FUN_005408f0` when `mWorldState` is 4 and `FUN_005408e0` otherwise (not decoded).
+
+### What ties the modules together
+
+Measured with `census.py` over the ten park files, and each a rule a writer must keep when a thing is made or
+gone:
+
+- **Ids.** In every file the highest id is the number of things (42 of 42, 526 of 526, 12 of 12): the original
+  uses a freed id again. The list mostly falls by id and is not sorted (396 of 525 steps fall in the played
+  park).
+- **The message sets** (`MESS`) follow the thing list by model, in all ten: set `0xa` holds every guest and every
+  member of staff, and the one model-17 thing; `0xb` every catalogue object and the challenge manager; `0xc` every
+  member of staff and things of models 9, 12, 13 and 16; `0x1b` every guard and the model-17 thing. The other
+  sets hold singletons only. Each set is written in rising id.
+- **Sprites** (`SPSC`). A person's record names its slot; the slot's handle is only tested against nought on the
+  way in (the Handles file), and the record's `+0x14` is pointed again at the built-in programs. A played park
+  holds more live slots than people (435 and 439 against 392): a balloon, a rider's head and the like take slots
+  too, and those are not walked here.
+- **Scripts** (`RSSE`). One record per script, found by the handle an object's `mRideScriptHandle` holds; a played
+  park holds 130 for 124 objects, its companions. The header's tick and next handle carry on from the file. Its
+  fourth dword is not the count the reader walks by: the Instant Action save reads 28 there over fourteen
+  records, and loads.
+- **Models** (`RSYS`). An object's model handle is its slot plus one; a slot is one byte when empty.
+- **Track rides and coasters** (`TRAK`, `COAS`) are found by `mTrackRideHandle` and `MeshInstanceID`.
+- **Clocks.** Every deadline in `RSSE` and every stamp in `RSYS` is a reading of the clock `CLOK` holds, so those
+  three move together. `mGameTick` is not tied to them (the Tick 5000 file).
+- **The cells.** A thing's `mMapChild` and `mMapParent` and a cell's `mWho` are one chain of ids per cell, and an
+  object's footprint is in the cells' types, parents and occupants.
+
+### Module by module
+
+**Carried** means the bytes of the file the park was loaded from go out again as they were: nothing OpenTPW runs
+changes what they say, and they keep what OpenTPW does not model. **Patched** means carried, with the fields
+OpenTPW runs written over and records added and taken out. **Afresh** means written from the running park alone.
+
+| Module | Holds | Play here changes | A writer here |
+|---|---|---|---|
+| The action recording | `mLoadedPublishedPark`, a length, the recorder's buffer | nothing: no action is recorded here | carried |
+| `WRLD` | the park | nearly all of it | patched, part by part (below) |
+| `SPSC` | a 280-byte record per sprite | a guest or hire made, one gone, every position and frame | patched: a slot filled for a person made, emptied for one gone |
+| `PART` | the live emitters and the effect library | emitters of things bought or sold | carried; a thing bought or sold with an emitter is counted |
+| `MESS` | 29 listener sets | every set a made or gone thing belongs to | afresh from the thing list for sets `0xa`, `0xb`, `0xc` and `0x1b` by the rule above; the singletons carried |
+| `CLOK` | two clock readings | the clock runs | afresh: the file's readings plus the game time run since the load, so every carried deadline keeps its distance |
+| `VANT` | one reading of the real-time clock (`FUN_005f5f10`); the reader keeps its distance from its own | nothing | carried |
+| `GSYS` | nine dwords (above) | nothing read here | carried |
+| `RSYS` | a record per model slot, its channels | every running clip; a slot for a thing bought, one freed for a thing sold | patched |
+| `TRAK` | track rides, their sections and cars | a Hot Pot or another bumper ride bought or sold | carried; a track ride bought or sold is counted until a car's 208 bytes are decoded |
+| `FLYR` | the flyers (FileFormats `saves.md`) | nothing built here | carried |
+| `RSSE` | every running script | every script's counter, variables, stack and deadlines; a script for a thing bought, none for one sold | patched |
+| `KAME` | zoom, rotation, flags, two points of interest, a saved rotation | the camera | afresh |
+| `COAS` | the coasters | nothing: none can be built here | carried |
+| `ADVS` | 360 bytes of the advisor and a buffer | nothing kept here | carried |
+| `SOUN` | two dwords, 84 bytes, then records not decoded | nothing kept here | carried |
+| `CHTS` | two bytes | nothing | carried |
+| `ADSC` | one dword | nothing | carried |
+| The UI block | a count and 540 bytes for each message standing | nothing: no message stands here | carried |
+
+**Inside `WRLD`:**
+
+| Part | Play here changes | A writer here |
+|---|---|---|
+| The header | `mGameTick`, `mParkClosed`, `mNumberOfVisitorsToDate`; the five staff heads and `mFirstObject` as things are made and gone; the arrival vehicles' handles | patched. `mRandomSeed` is carried: the generators here are not the original's |
+| The object controls | an item's standing count and first-build stamp, its researched flags | patched |
+| The staff pool | every candidate | afresh from `ParkStaffPool` |
+| The clock and arrival fields | the date, the arrival timer | patched |
+| The cells | a path or queue laid or cleared, land, a footprint, the chain of who stands where | patched cell by cell; a cell's record gains or loses its map, track and effects parts by its status bits |
+| A guest, a member of staff | everything they do | carried records patched from `ParkPeople`; one made here written whole; one gone left out |
+| A catalogue object | its door, price, counts, rings, queue, script handle | carried records patched; one bought here written whole; one sold left out |
+| The economy thing, the staff HQ | the balance, the loans, the rings; the strikes | patched |
+| The analyser, the research lab, the weather, the challenge manager, things of models 10, 11, 12 and 17 | what the calendar and weather run here | carried, patched where a field is run here |
+
+**What is not settled, and belongs to the build that meets it.** A record made here has bytes no reader here
+names: whether nought is safe in each is to be measured by loading a made guest and a bought ride in the
+original. A person in the middle of a walk carries the original's navigator (177 bytes), which OpenTPW's walk does
+not keep. A park that was never loaded from a file (the fresh world) has nothing to carry: every module would be
+afresh, the legal text taken from the level's shipped park file.
+
+### Read, not run
+
+A thing made or gone was not written and loaded: the rules above are the ten files' and the listing's. The
+readers of the sound module, the advisor scoring and the UI block were not read, only their writers. What
+`VANT`'s clock is for, what the action recording is read by after a load, and `FUN_005408f0` are not traced. The
+fresh world's save was not looked at. `addresses.md` is not regenerated.
+
+**The harness** is `q241e/`: `ghidra/` (the dumps of every module's writer and reader), `roundtrip/` (the .NET
+container), `patch.py` (one change to a body), `census.py <park file>...` (the ties above, read-only),
+`PREDICTION.txt`, and `orig/` (the four logs, the frames `l1`, `l3`, `h2`, `c1`, `PREDICTION-result.txt`).
 
 ## What OpenTPW builds
 
