@@ -9,9 +9,9 @@ namespace OpenTPW;
 ///
 /// <para>
 /// <b>Every module is carried</b>: the body goes out as the file's own, with the fields under <see cref="Running"/>
-/// written over it. Nothing else the running park has changed is written yet, so a park loaded from the file this
-/// writes has the people and objects of the file it was loaded from, on the running park's ground and under its
-/// clock and cash.
+/// written over it and the park's people in place of the file's. Nothing else the running park has changed is
+/// written yet, so a park loaded from the file this writes has the objects and scripts of the file it was loaded
+/// from, among the running park's people, on its ground and under its clock and cash.
 /// </para>
 /// <para>
 /// <b>The container</b> is the version, 500 (<c>0x006fd928</c>), whatever the file loaded carried; the rest of that
@@ -42,10 +42,12 @@ public static class ParkFileWriter
 	/// What of the running park is written over the carried body: <c>mGameTick</c>, <c>mParkClosed</c>,
 	/// <c>mNumberOfVisitorsToDate</c>, the economy thing's <c>mBalance</c>, the camera, and the cells to write over
 	/// the file's, by their place in <see cref="ParkWorld.Cells"/> (<see cref="ParkWorld.PutCells"/> says which of a
-	/// cell's fields); none where it is null.
+	/// cell's fields); none where it is null. <see cref="People"/> is every guest and member of staff the park
+	/// holds, written in place of the file's (<see cref="ParkWorld.PutPeople"/>); the file's own where it is null.
 	/// </summary>
 	public readonly record struct Running( int GameTick, bool ParkClosed, int VisitorsToDate, int Balance,
-		ParkCameraModule.View Camera, IReadOnlyDictionary<int, ParkWorld.MapCell>? Cells = null );
+		ParkCameraModule.View Camera, IReadOnlyDictionary<int, ParkWorld.MapCell>? Cells = null,
+		IReadOnlyList<ParkWorld.WrittenPerson>? People = null );
 
 	/// <summary>
 	/// The inflated body of the file: a copy of <paramref name="loaded"/>'s with <paramref name="running"/> written
@@ -55,7 +57,11 @@ public static class ParkFileWriter
 	/// The body was not walked to its end, or holds no economy thing or no camera module, so a field's place in it is
 	/// not known; or a cell to write has no record in it.
 	/// </exception>
-	public static byte[] Body( ParkWorld loaded, Running running )
+	public static byte[] Body( ParkWorld loaded, Running running ) => Body( loaded, running, out _ );
+
+	/// <inheritdoc cref="Body(ParkWorld, Running)"/>
+	/// <param name="people">What was done with the people; null where <see cref="Running.People"/> is.</param>
+	public static byte[] Body( ParkWorld loaded, Running running, out ParkWorld.PeopleWritten? people )
 	{
 		ArgumentNullException.ThrowIfNull( loaded );
 
@@ -80,19 +86,31 @@ public static class ParkFileWriter
 		if ( running.Cells is { } cells )
 			loaded.PutCells( body, cells );
 
+		people = null;
+
+		// Last: the people change the body's length, and everything above is written where the file has it.
+		if ( running.People is { } written )
+		{
+			body = loaded.PutPeople( body, written, out var report );
+			people = report;
+		}
+
 		return body;
 	}
 
 	/// <summary>The whole file: <see cref="Body"/> in its container.</summary>
 	/// <exception cref="InvalidOperationException"><see cref="Body"/>'s, or the park was loaded from no file.</exception>
-	public static byte[] Write( ParkWorld loaded, Running running )
+	public static byte[] Write( ParkWorld loaded, Running running ) => Write( loaded, running, out _ );
+
+	/// <inheritdoc cref="Write(ParkWorld, Running)"/>
+	public static byte[] Write( ParkWorld loaded, Running running, out ParkWorld.PeopleWritten? people )
 	{
 		ArgumentNullException.ThrowIfNull( loaded );
 
 		if ( loaded.Preamble is not { } preamble )
 			throw new InvalidOperationException( "the park was loaded from no file, so there is no preamble to carry" );
 
-		return Container( preamble, Body( loaded, running ) );
+		return Container( preamble, Body( loaded, running, out people ) );
 	}
 
 	/// <summary>A body behind a preamble: the version, the preamble's own bytes after its version, the block.</summary>

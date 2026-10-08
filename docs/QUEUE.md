@@ -44,20 +44,23 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q241h. The writer: the people.** From Q241e. Guests' and staff's records patched from `ParkPeople`, one
-  made here written whole and one gone left out; the sprite table; message sets `0xa`, `0xc` and `0x1b`; the staff
-  pool, the arrival block and the staff heads. Measure first which bytes of a made guest's record may be nought,
-  and what a person in the middle of a walk is written as (the navigator's 177 bytes). Confirm: a load of arrivals
-  and a hire here, written, counted and walking in the original under Proton; a screenshot of each.
-  From Q241f: until this is built a written park holds its first file's people under the running park's visitor
-  count, so the thirteen saved guests, back outside the gate, walk in and are counted again after a load (14 to 26
-  in the original, `q241f/orig/a-load.log`).
-  From Q241g: a cell's `mWho` and each thing's `mMapChild` and `mMapParent` are read as the file has them
-  (`FUN_0050b090`; `saves.md`, "What ties the modules together"), so this item writes the people's links and, for
-  every cell a guest or a member of staff heads, its `mWho` (`ParkState.CellAt( x, y ).Occupant`,
-  `ParkState.NextOnCell`); until then a written park holds the file's people on the file's cells. Read first
-  whether a thing's constructor enters it in a cell on a load before its links are read over. The saved guests
-  pay at the gate again too: $ 88177 seven seconds after a load of a file holding 88052 (`q241g/orig/c2.png`).
+- [ ] **Q250. The writer: the staff pool, the arrival block and the people's leftovers.** Split from Q241h.
+  (1) **The arrival block and the staff pool** are still the file's (`saves.md`, "Module by module": the pool
+  afresh from `ParkStaffPool`, the arrival fields patched from `ParkPeople`'s timer): a load is followed at once
+  by a load of arrivals, thirteen within 30 s in both games after a file written at tick 1334, where the park
+  written was about 580 ticks from its next (`q241h/orig/a-30s.log`, `q241h/gate/confirm.txt`); and the hire
+  list after a load is the file's. Decode what each stamp is a reading of (`mMacroAI`'s `TimeSig`, a
+  candidate's `TimeSig` and `TimeoutTime`), and whether the arrival vehicle's state (its script, the header's
+  `mCurrentArrivalVehicle`) must move with it: the bus at the kerb at the save is gone after OpenTPW's load
+  (`q241h/gate/1b` beside `3b`). (2) **A balloon and a thought bubble** are counted and not written
+  (`SAVE_PARK_BALLOON`, `SAVE_PARK_THOUGHT_BUBBLE`): write each as its own sprite, kind 10 and the bubble's, on
+  the slot the guest's record names. (3) **`mTimeHired`** is nought on a hire: eight bytes, the shipped five
+  hold two values of a `FILETIME`'s shape near the park's own date; decode what writes and reads it.
+  (4) **A made sprite's `+0xbc`** is copied from a like sprite of the file's or counted
+  (`SAVE_PARK_SPRITE_SET_BYTE`): it is the loaded bank's byte at `+0x222 + 4 × sprite number`
+  (`FUN_00540c60`); find it in the `.sprite` bank and write it. Confirm: a park saved 100 ticks after a load of
+  arrivals, loaded in OpenTPW and in the original under Proton: the next load on the tick predicted, the hire
+  screen's candidates the save's; a guest's balloon held after the load; a screenshot of each.
 - [ ] **Q241i. The writer: the objects, their scripts and their models.** From Q241e. Object records patched, one
   bought written whole and one sold left out; the object controls and `mFirstObject`; a script record made or
   taken out of `RSSE` and each running script's counter, variables and deadlines; a slot of `RSYS` and its
@@ -71,6 +74,13 @@ the research lab), then the rest of this section in its old order.
   again is written with the file's `mMeshInstance` (`SAVE_PARK_QUEUE_CELL_MODEL`), the handle of the model the
   retile made (`FUN_005365d0`, `FUN_005229e0`); decode what that handle names (a slot of `RSYS` or another
   table) and write a queue's with it. Confirm with a queue laid here standing fenced in the original.
+  From Q241h: **a guest on a thing is written deciding where they stand** (`SAVE_PARK_GUEST_ON_A_THING`:
+  queueing, called forward, walking on or off, riding; eight or nine of 26 in the confirm runs), because the
+  thing's half, `mFirstInQ`, `mPersonBeingLoaded` and its script's riders, is the file's: write both halves
+  here and let `ParkPeople.Written` hand them over as they are. **A handle to a thing bought here is written
+  as nought** (`SAVE_PARK_HANDLE_TO_AN_UNWRITTEN_THING`; `Level.WrittenThings` is the list to widen). A made
+  thing's id is one past the park's highest, where the original uses a freed id again (Q26c). `PutPeople`
+  chains a person ahead of the file's objects on a cell; an object bought goes behind the people there.
 - [ ] **Q241j. The writer: the managers, then Save Game saves.** From Q241e. The economy thing's loans and rings,
   the staff HQ's strikes, the calendar's and the weather's fields; then `ParkSaveScreen.Save` writes
   (`SAVE_GAME_WRITER` gone), an overwrite replaces the file, and the Load Park list shows it. Confirm: a park
@@ -79,6 +89,8 @@ the research lab), then the rest of this section in its old order.
   From Q241f: `Level.WritePark` is the call to make. Of the economy thing only `mBalance` is written, so a loaded
   park reads the first file's profit under the new balance (`money`: profit -12013 beside 88112). The original puts
   the pointer back to its default mode before it writes (`FUN_00516c80`, step 1); `WritePark` does not.
+  From Q241h: a member of staff in the hand is written idle where they were picked up, and stays in the
+  running park's hand; the default mode's install is what puts them down in the original.
 - [ ] **Q248. The writer's other callers.** From Q241 and Q241e (`saves.md`, "The other callers"). `gms.dat`
   written before every park file; `autosave.TPWS` on leaving a park, which entering then finds as the newest
   file; the quicksave and quickload keys (`<theme>.TPWS`); `restart.INTS` written when the folder has none, and

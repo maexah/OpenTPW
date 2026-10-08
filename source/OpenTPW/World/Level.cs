@@ -465,9 +465,10 @@ public class Level
 	/// or null where nothing was written.
 	///
 	/// <para>
-	/// <b>Two of the writer's five stages are built</b> (<see cref="ParkFileWriter"/>): the file the park was loaded
-	/// from goes out again with the park's clock, its door, its visitor count, its cash, the camera and the ground
-	/// (<see cref="WrittenCells"/>) written over it. What else play has changed is not written.
+	/// <b>Three of the writer's five stages are built</b> (<see cref="ParkFileWriter"/>): the file the park was loaded
+	/// from goes out again with the park's clock, its door, its visitor count, its cash, the camera, the ground
+	/// (<see cref="WrittenCells"/>) and the people (<see cref="ParkPeople.Written"/>) written over it. What else
+	/// play has changed is not written.
 	/// </para>
 	/// <para>
 	/// <b>Deviations.</b> The original writes the player's <c>gms.dat</c> first and puts the pointer back to its
@@ -478,14 +479,15 @@ public class Level
 	internal string? WritePark( string name )
 	{
 		if ( Kind == Scene.Park && ParkState is { } state )
-			return WritePark( Park, state, ThemeName, name );
+			return WritePark( Park, state, ThemeName, name, ParkPeople.Current );
 
 		Log.Warning( $"Save: '{name}' is not written - no park is running" );
 		return null;
 	}
 
 	/// <summary><see cref="WritePark(string)"/> for a park's own parts, the camera's being the orbit camera's.</summary>
-	internal static string? WritePark( IParkInitialState? park, ParkState state, string theme, string name )
+	internal static string? WritePark( IParkInitialState? park, ParkState state, string theme, string name,
+		ParkPeople? people = null )
 	{
 		if ( Players.Roster.Current is not { } player )
 		{
@@ -507,13 +509,15 @@ public class Level
 		var cells = WrittenCells( loaded, state );
 
 		var running = new ParkFileWriter.Running( state.GameTick, state.ParkIsClosed, state.VisitorsToDate, state.Balance,
-			new ParkCameraModule.View( ParkOrbitCameraMode.Zoom, -ParkOrbitCameraMode.Yaw, point.X, point.Y ), cells );
+			new ParkCameraModule.View( ParkOrbitCameraMode.Zoom, -ParkOrbitCameraMode.Yaw, point.X, point.Y ), cells,
+			people?.Written( WrittenThings( loaded ).Contains ) );
 
 		byte[] file;
+		ParkWorld.PeopleWritten? peopleWritten;
 
 		try
 		{
-			file = ParkFileWriter.Write( loaded, running );
+			file = ParkFileWriter.Write( loaded, running, out peopleWritten );
 		}
 		catch ( InvalidOperationException e )
 		{
@@ -528,8 +532,26 @@ public class Level
 			$"{(running.ParkClosed ? "closed" : "open")}, {running.VisitorsToDate} visitors to date, balance {running.Balance}, " +
 			$"camera {ParkOrbitCameraMode.State()}, {cells.Count} cells of ground" );
 
+		if ( peopleWritten is { } report )
+		{
+			// A made sprite's +0xbc is a byte of its bank no reader here holds; one written without a like sprite
+			// in the file to copy it from is counted.
+			for ( var i = 0; i < report.UnmatchedSpriteSets; ++i )
+				Unimplemented.Report( "SAVE_PARK_SPRITE_SET_BYTE" );
+
+			Log.Info( $"Save: {report.Kept} people kept, {report.Made} made, {report.Gone} gone; " +
+				$"{report.LiveSprites} sprites in {report.SpriteSlots} slots; {report.CellsHeaded} cells headed anew" );
+		}
+
 		return path;
 	}
+
+	/// <summary>
+	/// The things a park file written from <paramref name="loaded"/> holds that are no person: the file's own, since
+	/// nothing bought or sold is written yet. A person's handle to any other thing is written as nought.
+	/// </summary>
+	internal static HashSet<int> WrittenThings( ParkWorld loaded ) =>
+		[.. loaded.Things.Where( thing => thing.Model is not (ParkWorld.GuestModel or (>= 4 and <= 8)) ).Select( thing => thing.ThingId )];
 
 	/// <summary>
 	/// The cells a park file written from <paramref name="state"/> holds in place of the file's own: every cell the

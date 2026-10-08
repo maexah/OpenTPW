@@ -27,7 +27,7 @@ namespace OpenTPW;
 /// for why, and <see cref="CatalogueObject.IsPlaced"/> for how they read.
 /// </para>
 /// </summary>
-public sealed class ParkWorld : IParkInitialState
+public sealed partial class ParkWorld : IParkInitialState
 {
 	public ParkWorld Save => this;
 	public IReadOnlyList<ParkThingIdentity> Things => _things;
@@ -620,6 +620,10 @@ public sealed class ParkWorld : IParkInitialState
 	/// same clock when they last began a one-off animation and last began standing about
 	/// (<c>docs/exe/ride-operation.md</c>, "The guests' and the objects' clock").
 	/// </param>
+	/// <param name="ArrivalIndex">
+	/// <c>mArrivalIndex</c> - the guest's number among the park's visitors, the count as the gate let them in, or
+	/// nought for one not yet through it: 1 to 13 on the thirteen guests of a park saved with thirteen visitors.
+	/// </param>
 	/// <param name="LastPosX">
 	/// <c>mLastPosX</c> (<c>+0x218</c>) - where the held balloon goes next frame, across, in world units;
 	/// <see cref="LastPosY"/> (<c>+0x21c</c>) is down. Only a placement writes them.
@@ -635,7 +639,7 @@ public sealed class ParkWorld : IParkInitialState
 		int NumRides = 0, int NumShops = 0, int NumSideshows = 0, int NumSideshowsWon = 0,
 		int BalloonScript = 0, int RemainingBalloonLife = 0, float LastPosX = 0f, float LastPosY = 0f,
 		uint StrandedTime = 0, int LastThought = 0, int ThoughtScript = 0, int TimeBubbleShown = 0,
-		int ArrivalDate = 0, int TimeOfLastSpotAnim = 0, int TimeStartedIdling = 0 )
+		int ArrivalDate = 0, int TimeOfLastSpotAnim = 0, int TimeStartedIdling = 0, int ArrivalIndex = 0 )
 	{
 		/// <summary>How many things each of the two histories holds - <c>mPreviousRides[4]</c> and its twin.</summary>
 		public const int Remembered = 4;
@@ -1534,9 +1538,13 @@ public sealed class ParkWorld : IParkInitialState
 		ReadMap();
 
 		// The thing list proper. Its head is an id, not an offset - see ReadThings.
+		ThingHeadAt = _at;
+
 		var head = ReadInt32();
 
 		ReadThings( head );
+
+		WorldEndAt = _at;
 
 		ClosedOnTrailer = Problem == null
 			&& _at + Trailer.Length <= _data.Length
@@ -1860,6 +1868,7 @@ public sealed class ParkWorld : IParkInitialState
 				StaffHq = ReadStaffHq( start );
 
 			_things.Add( new( id, model ) );
+			_records.Add( new( id, model, start, size ) );
 			++ThingCount;
 
 			_at = start + size;
@@ -2221,6 +2230,7 @@ public sealed class ParkWorld : IParkInitialState
 			TimeBubbleShown: ReadInt32At( start + 394 ),
 			// The three stamps, each a reading of the save's own mGameTick.
 			ArrivalDate: ReadInt32At( start + 398 ),        // mArrivalDate
+			ArrivalIndex: ReadInt32At( start + 402 ),       // mArrivalIndex
 			TimeOfLastSpotAnim: ReadInt32At( start + 513 ), // mTimeOfLastSpotAnim
 			TimeStartedIdling: ReadInt32At( start + 517 ),  // mTimeStartedIdling
 			// What the visitor window counts, bumped by the settle-up (docs/exe/ride-operation.md, "The settle-up's
@@ -2574,6 +2584,8 @@ public sealed class ParkWorld : IParkInitialState
 
 		var handles = new int[slots];
 
+		SpritesAt = _at - 12;
+
 		for ( var slot = 0; slot < slots; ++slot )
 			handles[slot] = ReadInt32();
 
@@ -2603,8 +2615,12 @@ public sealed class ParkWorld : IParkInitialState
 				Script: ReadInt32At( _at + SpriteScriptAt ),
 				Pc: ReadInt32At( _at + SpritePcAt ) ) );
 
+			_spriteRecords[slot] = _at;
 			_at += recordSize;
 		}
+
+		SpriteSlots = slots;
+		SpritesEndAt = _at;
 
 		ClosedOnSpriteTrailer = _at + SpriteTrailer.Length <= _data.Length
 			&& System.Text.Encoding.ASCII.GetString( _data, _at, SpriteTrailer.Length ) == SpriteTrailer;

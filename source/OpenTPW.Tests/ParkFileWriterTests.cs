@@ -249,6 +249,46 @@ public class ParkFileWriterTests
 		Assert.IsFalse( Unimplemented.Summary.Any( gap => gap.What == "SAVE_PARK_WITH_NO_FILE" ) );
 	}
 
+	/// <summary>
+	/// The level hands the writer the park's people: a guest made here is in the file it writes, and one written
+	/// without a like sprite in the file to copy its set byte from is counted.
+	/// </summary>
+	[TestMethod]
+	public void TheLevelWritesTheParksPeople()
+	{
+		SetCurrentPlayer( new Player( 0, "Test", new PlayerFile { InstantAction = true } ) );
+
+		var people = new ParkPeople( shipped );
+
+		try
+		{
+			var made = people.Admit( 47, 21 );
+
+			Assert.IsNotNull( Level.WritePark( shipped, people.State, "jungle", "Peopled", people ) );
+
+			var written = Read( File.ReadAllBytes( Path.Combine( Jungle, "Peopled.TPWS" ) ) );
+
+			Assert.AreEqual( shipped.ThingCount + 1, written.ThingCount );
+			Assert.AreEqual( made, written.Things[0].ThingId, "the newest thing takes the list's head" );
+			Assert.AreEqual( 19, written.Sprites.Count );
+
+			ParkFileWriter.Body( shipped, new ParkFileWriter.Running( 0, false, 0, 0, shipped.Camera.Saved!.Value,
+				People: people.Written( Level.WrittenThings( shipped ).Contains ) ), out var report );
+
+			Assert.AreEqual( 1, report!.Value.UnmatchedSpriteSets, "the file holds no child standing on the made guest's bank" );
+			Assert.AreEqual( 1, Unimplemented.Summary.Single( gap => gap.What == "SAVE_PARK_SPRITE_SET_BYTE" ).Times );
+			Assert.IsTrue( written.ClosedOnTrailer && written.ClosedOnSpriteTrailer );
+
+			Assert.IsNotNull( Level.WritePark( shipped, people.State, "jungle", "Carried" ) );
+			Assert.AreEqual( shipped.ThingCount, Read( File.ReadAllBytes( Path.Combine( Jungle, "Carried.TPWS" ) ) ).ThingCount,
+				"with no people handed over the file's own go out" );
+		}
+		finally
+		{
+			TestRun.DeleteEvery<ParkPeople>();
+		}
+	}
+
 	/// <summary>The park the level itself reads for a player can be written back: it keeps its file's preamble.</summary>
 	[TestMethod]
 	public void TheParkTheLevelReadsForAPlayerCanBeWrittenBack()

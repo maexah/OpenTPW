@@ -27,7 +27,7 @@ namespace OpenTPW;
 /// </para>
 /// </para>
 /// </summary>
-public sealed class ParkPeople : Entity
+public sealed partial class ParkPeople : Entity
 {
 	/// <summary>
 	/// The simulation this park is running, so the debug console can read the census back and a sale can
@@ -392,8 +392,10 @@ public sealed class ParkPeople : Entity
 					sprite.ScheduleFrom( 0 );
 
 					_sprites[member.ThingId] = sprite;
-
+					_staffLooks[member.ThingId] = (picture.Type, picture.Bank);
 				}
+				else
+					_staffLooks[member.ThingId] = (person.SpriteKind, person.SpriteBank);
 			}
 		}
 
@@ -687,6 +689,7 @@ public sealed class ParkPeople : Entity
 		animation.ScheduleFrom( 0 );
 
 		_sprites[thingId] = animation;
+		_staffLooks[thingId] = (picture.Type, picture.Bank);
 
 		ParkGuestSprites.Current?.Add( person, picture with { Slot = slot, X = cellX, Y = cellY } );
 

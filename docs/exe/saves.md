@@ -496,8 +496,8 @@ frames), `confirm.py`, `mutate.py` and the sheet of OpenTPW's screen beside the 
 
 ## What a park file must hold to be written
 
-Decoded and measured on 2026-10-08 (Q241e). `ParkSaveScreen.Save` still counts `SAVE_GAME_WRITER`; two of the
-writer's five stages are built ("OpenTPW's writer, the first stage" and "OpenTPW's writer, the cells", below). The bytes are the FileFormats
+Decoded and measured on 2026-10-08 (Q241e). `ParkSaveScreen.Save` still counts `SAVE_GAME_WRITER`; three of the
+writer's five stages are built ("OpenTPW's writer, the first stage", "the cells" and "the people", below). The bytes are the FileFormats
 `saves.md`'s; this section is what the original does with them and what a writer here has to get right.
 
 ### The container takes another deflate, and a changed body
@@ -593,8 +593,19 @@ gone:
 - **The cells.** A thing's `mMapChild` and `mMapParent` and a cell's `mWho` are one chain of ids per cell, and an
   object's footprint is in the cells' types, parents and occupants. The reader takes all three as the file has
   them (`FUN_0050b090` reads the two links into the thing's `+10` and `+8`, the cell's reader `mWho` into its
-  `+0x24`), so a cell's `mWho` can only be written with the records of the things it names. Not read: whether a
-  thing's constructor enters it in a cell before its links are read over.
+  `+0x24`), so a cell's `mWho` can only be written with the records of the things it names. **A load enters
+  nobody in a cell**: the reader's constructors for a guest and for the five staff (`FUN_00518e00`,
+  `FUN_00518e20`) zero the event ring (`FUN_0050ba80`) and build the navigator (`FUN_0050ffe0`), the id is set
+  (`FUN_0050b080`), and the serialiser reads the rest, links and all. **Every thing is in one chain, and a person
+  in the chain of the cell their `mX` and `mY` name, ahead of any object there**: 18 of 18 in the shipped park,
+  392 of 392 and 65 of 65 in the played ones, riders and resting staff with no sprite among them
+  (`q241h/chains.py`).
+- **The staff lists.** The header's `mFirstHandyman`, `mFirstMechanic`, `mFirstEntertainer`, `mFirstGuard` and
+  `mFirstResearcher` each name the first thing of the model in the thing list, and each member's `mNext` the
+  next of it: the lists run in the list's order, newest first, in all ten files.
+- **The sprite table grows by fifty.** A new sprite takes the lowest empty slot from 1 and stores it in its own
+  `+4`; with none empty the table is made fifty slots longer (`FUN_00475a10`, `FUN_00475cf0`). The reader makes
+  its table of the file's own count (`FUN_00475730`).
 - **A queue cell's model.** A queue cell's `mMeshInstance` (the cell's `+4`) is the handle of the model the retile
   made for it (`FUN_005365d0`: tile set 2 frees the handle held and stores `FUN_005229e0`'s). No load calls the
   retile, so the handle in the file is the one used: 4 of 4 queue cells in the shipped park and 78 of 78 in a
@@ -668,7 +679,8 @@ over the copy, never the one held.
   loader rounds to a quarter (above, "Loading the modules", Camera).
 - **Everything else was carried** at this stage, so a park loaded from the file had the people, objects, ground
   and scripts of the file it was first loaded from, under the new clock, count, cash and camera. The ground is
-  the second stage's ("OpenTPW's writer, the cells"); stages three to five write the rest (Q241h to Q241j).
+  the second stage's ("OpenTPW's writer, the cells"), the people the third's ("the people"); the rest is Q250,
+  Q241i and Q241j.
 - **Where.** `Level.WritePark( name )` writes `<player's folder>/<theme>/<name>.TPWS`, replacing a file of that
   name in another case. The console's `savepark <name>` is its one caller; the Save Park screen's OK stays counted
   until Q241j. **Deviations:** the player's `gms.dat` is not written first (Q248) and the pointer is not put back
@@ -700,9 +712,9 @@ in the copied body, where it lies.
   status byte, `mMeshInstance`, `mHoardingNeighbours`, the litter block, `mWho`, the track's segment and the
   effects part. A file whose cell has no map record, or track fields to write and no track record, is refused:
   the original writes none such.
-- **`mWho` is not written, a deviation until Q241h and Q241i.** The chain is the cell's head and the things' two
-  links together (above), and the things' records are still the file's. A written park holds the file's people on
-  the file's cells.
+- **`mWho` is not written here.** The chain is the cell's head and the things' two links together (above): the
+  people's stage writes it for every cell a person stood on or stands on ("OpenTPW's writer, the people"), and
+  an object's place in it is still the file's (Q241i).
 - **A footprint is not written, and is counted** (`SAVE_PARK_FOOTPRINT_CELL`, one a cell): a cell that has joined
   or left a footprint (types 4, 9 and 10), or changed its type or parent inside one, is left as the file's,
   because the thing bought, sold or moved is not written yet (Q241i). An entrance that only gained or lost a link
@@ -727,9 +739,78 @@ type 1, neighbours `0x11`, tile (1, 2, 0); (39,24) type 0, tile (0, 55, 0). Its 
 the cash read $ 88177 seven seconds on, the saved guests paying at the gate again (Q241h).
 **Not run in the original:** a queue cell written without its model, an entrance's link, a cell laid over.
 
+### OpenTPW's writer, the people
+
+The third stage (Q241h). `ParkPeople.Written` hands the writer every guest and member of staff the park holds,
+and `ParkWorld.PutPeople` puts the thing list together again around them, with the three parts of the file that
+follow the list. It runs last, because it alone changes the body's length.
+
+- **The thing list.** A person the file holds and the park still has keeps their record, written over field by
+  field. One made here is written whole, ahead of the file's things and newest first, the park's own turn order.
+  One gone is left out. Every other thing's record goes out as it lies. Each record's first dword and `Used
+  Thing Head` are written from the new order. **A deviation:** a made thing's id is the park's own, one past
+  the highest it has given, where the original gives a freed id out again (Q26c); the reader takes any id.
+- **A record's fields** are the FileFormats page's, from `ParkPeople`: `mX` and `mY`, the slot, `mNextAnim`,
+  `mNextServiceInterval`, `mAccurateDestX`/`Y` (the target in `mX`'s units, as 18 of 18 and 392 of 392 hold it),
+  the four speeds, `mCount`, `mESPSprite`, `mSpriteID`, `mPreviousX`/`Y` (the navigator's fixed point),
+  `mStrandedTime`, `mSetDestSuccessfully`, `mSpriteAngle`, the thought and its stamp; the navigator's position,
+  velocity, target, limits, counts, distances, stuck bits and, where a route was planned here, its waypoints and
+  legs; then a guest's block or a member's, `mArrivalIndex` among them (the guest's number among the park's
+  visitors, which the reader now gives back to `Peep.VisitorNumber`).
+- **What a made record leaves at nought** is what the original's own constructors leave there: the navigator's
+  force, formation, axes, mode, last progress and timestamp, `mLastRecordedMapId`, `mSpriteUnderRideCtrl`, the
+  event ring, a guest's tiredness. **`mTimeHired` is nought on a hire**: nothing here holds the date, and what
+  reads it is not decoded.
+- **The chains.** A person is written on the cell their `mX` and `mY` name. Whoever has come onto a cell heads
+  its chain, the newest first; whoever the file had there and is there still follows in the file's order; then
+  the file's things that are no person. `mWho` is written for each cell whose head changes.
+- **The staff lists** are written from the list's order, as the files' run.
+- **The sprite table.** A kept person keeps their slot; a made one takes the lowest empty, and the table grows
+  by fifty when it is full; a gone one's is emptied. A made record is the constructor's (`FUN_004758f0`): its
+  slot, state 1, the timer `0x14`, alpha 255, scale 1, the program and the place, and nought in `+0x7c`, a time
+  already past. A live slot's handle is the slot's own number, which the reader only tests against nought.
+  **`+0xbc` is a byte of the loaded bank** (`FUN_00540c60`: the bank object's `+0x222 + 4 × the sprite number`),
+  which no reader here holds: a made sprite takes it from the nearest sprite the file holds (the same kind,
+  bank and set, then the same set, then the same kind) and one with no such sprite is counted
+  (`SAVE_PARK_SPRITE_SET_BYTE`). The original writes it again at every change of program (`FUN_00475b80`).
+- **The message sets.** `0xa`, `0xc` and `0x1b` hold every person, every member of staff and every guard beside
+  the file's members that are no person, in rising id.
+- **Deviations, each counted.** A guest on a thing (queueing, called forward, walking on or off, riding) is
+  written deciding where they stand, with no queue links (`SAVE_PARK_GUEST_ON_A_THING`): the thing's own half,
+  its queue head and its script, is still the file's (Q241i). A handle to a thing the file does not hold, which
+  is anything bought here, is written as nought, and a guest bound for it decides
+  (`SAVE_PARK_HANDLE_TO_AN_UNWRITTEN_THING`). No balloon and no thought bubble is written: both slots are nought
+  and the file's sprites for them are let go (`SAVE_PARK_BALLOON`, `SAVE_PARK_THOUGHT_BUBBLE`; Q250). A member
+  of staff in the hand is written idle where they were picked up, as the original puts the hand's thing down
+  first.
+- **Not written yet:** the staff pool and the arrival block (Q250). **So a load is followed by a load of
+  arrivals**: both games called one of thirteen within 30 s of loading a file written at tick 1334, where the
+  park written was about 580 ticks from its next.
+
+**Measured (Q241h, `q241h/`).** Lost Kingdom left alone until its first load of thirteen was walking in from the
+stop, a researcher hired at (45,28), held at `mGameTick` 1334, `savepark Q241h`: the log read "18 people kept, 14
+made, 0 gone; 32 sprites in 100 slots", and a Python reader found 56 things, 26 of them guests, every chain whole
+with all 32 people on their own cells, 33 ids in set `0xa`, and each of the 32 within 0.0005 of a cell of where
+`peeps` and `staff` had them, on the program, counter, set and frame `guests` printed. Loaded from OpenTPW's Load
+Park screen the clock started at 1334 with all 32 in place; 45 s on no visitor number was held twice, the guests
+of the file held their own and the made held 14 to 22, the rest still outside. The unchanged build's file held
+easymode's 18 people, and 45 s after its load those thirteen guests had been counted again, 14 to 26.
+**The original under Proton** listed the file and loaded it over a running park, twice (two builds' files):
+`mGameTick` read 1334 at the click and counted on, the visitor count 13, its node table 56 things with 26 guests
+and two researchers; 30 s on all thirteen made guests stood elsewhere and the hire had walked from (47.4,28.3) to
+(42.4,28.4); 60 s on the made guests held arrival indices 14 to 26, ten of them in a queue, one stepping up it and two riding, and
+every guest of the file's held the index the file gave. Left running, the first file's park reached tick 11,735
+and 180 visitors. **Predictions wrong, mine:** a visitor count that "never passes 26" (the next load came, in both
+games); 32 people at the save where one run had 31 (a guest of the file's had gone home); and two of my own
+checks of OpenTPW's load, which read a sweep after it (walkers 0.1 to 0.5 of a cell on, one guest setting off).
+
 ### Read, not run
 
-A thing made or gone was not written and loaded: the rules above are the ten files' and the listing's. The
+A thing bought or sold was not written and loaded: the objects' rules above are the ten files' and the listing's.
+**Not run in either game:** a guest gone (tested; one run met one), a table grown past its hundred slots, a
+person written on an object's cell, a file holding a balloon or a bubble, a member of staff resting or in the
+hand at the save, a guard hired. **Not read:** what `mLastRecordedMapId`, `mNextServiceInterval` and the sprite
+record's words past `+0xcc` hold, which a made record leaves at nought and the original walked on with. The
 readers of the sound module, the advisor scoring and the UI block were not read, only their writers. What
 `VANT`'s clock is for, what the action recording is read by after a load, and `FUN_005408f0` are not traced. The
 fresh world's save was not looked at. `addresses.md` is not regenerated.
@@ -741,7 +822,11 @@ Q241f's is `q241f/`: `confirm.py` (the write and the load, with its own reader o
 (the three runs and their results), `mutate.py`, `orig/` (`read.py`, the three load logs, the frames) and the
 sheet of OpenTPW's frames beside the original's. Q241g's is `q241g/`: `cells.py` (a file's cells by type: the
 fields no reader here holds), `confirm.py`, `PREDICTION.txt`, `mutate.py`, `orig/` (`cellread.py`, the original's
-cells from memory; the logs before and after the load; the frames) and the sheet.
+cells from memory; the logs before and after the load; the frames) and the sheet. Q241h's is `q241h/`: `pk.py`
+(a park file taken apart in Python), `chains.py` and `fields.py` (the ten files' chains, staff lists and unnamed
+fields), `ghidra/` (the constructors and serialisers read), `confirm.py`, `PREDICTION.txt` (every run and its
+result), `mutate.py`, and `orig/` (`things.py`, the original's node table from memory; the logs at the load, 30 s
+and 60 s on; the frames; `first/`, the first run's).
 
 ## What OpenTPW builds
 

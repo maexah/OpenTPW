@@ -5427,6 +5427,14 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the chain of who stands on each cell, patched into the carried map; a cell's record gains or loses its parts by
   its status bits. Confirm: a path laid and one cleared here, written, the same cells in the original under
   Proton; a screenshot of each.
+- [x] **Q241h. The writer: the people.** From Q241e. Guests' and staff's records patched from `ParkPeople`, one
+  made here written whole and one gone left out; the sprite table; message sets `0xa`, `0xc` and `0x1b`; the cell
+  chains and the staff heads. **Split**: the staff pool, the arrival block, the balloons' and bubbles' sprites and
+  `mTimeHired` are Q250. Done 2026-10-08 (`saves.md`, "OpenTPW's writer, the people"): a park written at tick 1334
+  with thirteen arrivals walking in and a researcher hired read 56 things and 32 people in OpenTPW and in the
+  original under Proton, where the thirteen made guests were counted 14 to 26, queued and rode, the hire walked,
+  and no guest of the file's was counted again. Measured first: a load enters nobody in a cell (`FUN_00518e00`),
+  and a made record's unnamed bytes may be nought, as the constructors leave them.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

@@ -302,8 +302,7 @@ public sealed class Peep
 	/// <para>
 	/// The original keeps it at <c>person + 0x1d8</c> and writes it once, as a guest finishes coming
 	/// through the gate: <c>FUN_004ffb20</c> stores what <c>FUN_0051aaf0</c> hands back, which is the
-	/// world's running total after the increment. Not parsed from the save - a guest who was already inside
-	/// when the park was written carries a number this cannot know.
+	/// world's running total after the increment. The save's <c>mArrivalIndex</c> on a guest read from one.
 	/// </para>
 	/// </summary>
 	public int VisitorNumber { get; internal set; }
@@ -483,6 +482,7 @@ public sealed class Peep
 		NumSideshowsWon = saved.NumSideshowsWon;
 
 		ArrivalDate = saved.ArrivalDate;
+		VisitorNumber = saved.ArrivalIndex;
 		TimeOfLastSpotAnim = saved.TimeOfLastSpotAnim;
 		TimeStartedIdling = saved.TimeStartedIdling;
 
