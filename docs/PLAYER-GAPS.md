@@ -53,7 +53,7 @@ open something.**
 effort sliders over research groups, or a message box in Instant Action or with no researcher hired. This game has no
 research and no groups; Lost Kingdom's one researcher (thing 30) walks and researches as the original's does (Q134),
 the points for the lab counted and spent by nothing. It only logs, and
-counts each click as `RESEARCH_BUTTON`. **Do not open it as a task until a research system exists.**
+counts each click as `RESEARCH_BUTTON`. **Do not open it as a task until a research system exists** (the system is `docs/QUEUE.md` Q245).
 
 **Park status (screen 3) is deferred by Alexah, 2026-09-21** — *"I'm okay delaying work on the Info
 screen. It's not important at the moment."* The Information category is therefore seeded to screen **4**

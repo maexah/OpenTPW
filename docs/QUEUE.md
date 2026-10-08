@@ -40,6 +40,10 @@ the original.
 
 **The 2026-10-06 review's leftovers come first, at Alexah's word (2026-10-06).**
 
+**Reordered at Alexah's word (2026-10-08), after Q140b:** what a playable Lost Kingdom park needs most comes next
+(the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
+the research lab), then the rest of this section in its old order.
+
 - [ ] **Q140b. Build the entrance gate of the edge test.** From Q140's decode (`park-engine.md`, "An entrance is shut
   to the viewer"). Give `CellEdge.For` the `queueAhead` it declines, for mode 2: on a type-9 cell, the first
   catalogue object anchored on the owner's cell; `InTheWay` unless it has a view and its item's `CannotRide` is
@@ -50,6 +54,76 @@ the original.
   Jungle Spray's, the stand parked at 299.999 as the original's (`q140/orig/a.log`); from the footprint (52,24) into
   the Belly Bounce's, `FIRST_PERSON_WALK_INTO_RIDE` counted; each predicted first; a screenshot of the viewer held at
   the Drinks Shop's door.
+- [ ] **Q145. A fee set on the entry-price screen never reaches the gate.** Found by the 2026-09-26 staleness audit.
+  Guests judge and pay `ParkAdmission.Fee` (`PeepBehaviour.Judge`: `OpinionAt`, then `State.Take( admission.Fee )`),
+  which `ParkPeople` captures once from the save's economy thing. The screen's plus and minus move
+  `ParkState.AdmissionFee`, which only the screen and the `money` census read, so the price shown and the price
+  charged part the moment the player changes it. The remark over `ENTRY_PRICE_REJUDGE_WAITING_GUESTS` ("The gate reads
+  the fee through ParkState") and `SetAdmissionFee`'s remark become true when the judgement and the charge both read
+  `ParkState.AdmissionFee`. Confirm: the fee raised by five on the screen, `money` showing it, then the next guest
+  through the turnstile, `money`'s takings up by the new fee, predicted first; a screenshot.
+- [ ] **Q146. Every guest who arrives is counted twice as a visitor.** Found by the 2026-09-26 staleness audit.
+  `ParkPeople.Admit` calls `ParkState.Admit` when the vehicle drops a guest and throws the answer away, and the
+  `Entering` case calls it again when they come through the gate and keeps it as `Peep.VisitorNumber`. The original
+  moves `mNumberOfVisitorsToDate` in one place, a guest finishing `Entering` (`FUN_0051aaf0`), as `ParkState`'s
+  `VisitorsToDate` and `PeepBehaviour.VisitorsToDate` both say. Take out the arrival's call. Confirm: `arrive` twice,
+  both guests through the gate, the visitors screen's numbers for them one apart, predicted first; a screenshot.
+- [ ] **Q26. How many arrive in a load, and what the park is worth. Decode first.** `ParkPeople.StepArrivals` sizes
+  every load at `Arrival.MinPeople` (1), so a park left alone gains one guest a load. The original asks a headcount
+  score (`FUN_004c8240`), which is not decoded. Q68 found the rest of the headcount: `NewParkBonus` is added to
+  the score on every call and the sum scaled by 1.2 or 0.8, so even a score of nought brings 3 or 4 to Lost Kingdom
+  (`park.md`, "Arrivals: who comes, on what, and how often"). The same score is the park's worth every guest judges
+  the gate's fee against (`PeepBehaviour.ParkExcitement`, nought until it is built; the 2026-09-26 staleness audit).
+  Decode the score to `docs/exe/park.md` and stop.
+- [ ] **Q26b. Build the headcount and the park's worth.** From Q26's decode: both readers of the score, the load's
+  size in `StepArrivals` and `PeepBehaviour.ParkExcitement`. Confirm: the stock park left alone, the first load's
+  size in `guests` beside the original's (its one watched load was thirteen, Q127), predicted first; a screenshot.
+- [ ] **Q241. Load Game and Save Game. Decode first.** From Q139 and `docs/PLAYER-GAPS.md` gap 7 (section F names
+  it; this is its item). The park menu's two rows are counted (`LOAD_GAME`, `SAVE_GAME`) and close the menu. Decode
+  the rows' handlers (ids 1 and 2 of `0x0048b6a0`), the screens they open and the writer, to `docs/exe/saves.md`; then
+  split the build into its sessions. Q167's saves are the reference files.
+- [ ] **Q149. The calendar keeps its own game tick, from nought, and makes up the advances the original loses.** Found
+  by the 2026-09-26 staleness audit. The original's calendar counter is `mGameTick` (`+0x1da70c`, `weather.md`, "The
+  calendar"), which a loaded save sets to its own (755 in `Easymode.TPWI`, as `GameCalendar.Rebase` says);
+  `GameCalendar.Counter` starts at nought beside `ParkState.GameTick`, which carries the 755, so the date and the
+  weather's days run about 33 days behind the original's. And `GameCalendar.Update` adds at most three advances a
+  frame but carries the rest to later frames (`wanted - Counter`), where `0x0054f680` drops them for good, as
+  `LongestCatchUp`'s own remark says. Check that the published calendar (`0x007ced58`) adds the counter to
+  `mFunnyTimeStart` alone, then drive the calendar from `ParkState.GameTick`, so Q126's cap holds the date too.
+  Confirm: the gadget's date on entering Lost Kingdom, predicted from 755 advances; a screenshot.
+  Q165c gave the ride score and the object window's Age the original's calendar (`ParkState.CalendarNow`, from the
+  save's `mGameTick`); the gadget's date and the weather's days still count from nought.
+  From Q177b: the objects' day rings roll on `GameCalendar.DayRolled` too, so their days turn about 18 world ticks
+  later than the original's after Lost Kingdom's load (its first changes at ticks 761, 784, 807), and a load never
+  rolls on its first tick where the file's `mDayAtLastUpdate` differs from the loaded date.
+  From Q198: the month's change comes to the bank and the staff on `GameCalendar.MonthRolled`, so here on 2/1/2000,
+  177 s in, where the original's first after the load is at tick 1383, 3.1 (measured). A load reads the month and the
+  day but not the year, which keeps the entry's seed, 2000 (`weather.md`), so a park saved in another year gets `0xd`
+  on its first sweep and zeroes `mProfitThisYear` (decoded, not measured).
+  From Q126: the thing sweep is capped at three a frame now and `ParkState.GameTick` with it, so after a 2 s stall
+  `GameCalendar` (which carries its advances over) runs five ahead of `ParkState.CalendarNow`, and the weather's
+  tick and the day's, month's and year's work with it; the original drops all of them with the sweep
+  (`FUN_004d7b20`, `FUN_00512880`). `LongestCatchUp`'s remark ("loses time and can never gain it") is not what
+  `Update` does.
+- [ ] **Q31. The shop's object window.** `Level.OpenObjectWindow` opens only a ride's (`UiType 0`). Shops,
+  sideshows and the rest stop at `SHOP_WINDOW`, `SIDESHOW_WINDOW` and `FEATURE_WINDOW`, and a staff member at
+  `STAFF_WINDOW` (`Level.ClickWorldAt`); a clicked visitor reaches nothing counted. `park-engine.md`, "The
+  per-object management screen is nine screens", lists the nine. This item is the shop's; the other seven are Q31b.
+  From Q177: the shop, sideshow and toilet windows' figures are decoded (`ride-operation.md`, "The settle-up's
+  bookkeeping"): customer satisfaction, profit last month, customers as "C of M", winners last month, the cost of
+  goods from the window's pending sliders (applied on close, on stepping to the next or by apply to all), and a
+  toilet's users last month. `UIStrings` 37 to 39 are one row off: UITEXT 37 is "Scrap value", 38 "Local happiness",
+  39 "Quality of goods", 40 "Sale price"; nothing uses the three members yet.
+- [ ] **Q244. The happiness gauge draws two copies of its bar.** `docs/PLAYER-GAPS.md` gap 5, found by Alexah playing:
+  the bar draws in the wrong place, split down the middle. That page holds a lead read from the code and not
+  measured (`UiMeter.OnDraw`'s sampler); measure before touching the meter's arithmetic. The number it shows is
+  not the fault, and which guests it counts is Q148's. Confirm: the gauge photographed beside the original's.
+- [ ] **Q245. The research lab. Decode first.** Nothing spends the researcher's points (`RESEARCH_POINTS_TO_THE_LAB`,
+  Q134, which read no further than `FUN_00503430`'s share-out) and nothing completes an item (`FUN_00504630`, which
+  sets the researched flag and the tier; `ParkResearch` says so). UITEXT `0x1d4` says research is automatic in
+  Instant Action, Lost Kingdom's Easymode; what that does is not decoded. Decode the lab's spending, the automatic
+  mode and the completion to `docs/exe/`, then split the build into its sessions. The research screen (six effort
+  sliders, `FUN_004aa480`) waits on it; Q239 is its two message boxes.
 - [ ] **Q141. Golden tickets are never awarded. Decode first, and Alexah's call on when.** Found by Q69. What reaches
   the advisor's glints in the original is a golden-ticket award: only gesture rows 1 and 13 carry the glint flags, and
   only its lines use them (`docs/exe/scenes.md`, "Gesture table"). Those lines play on the park's own advisor, model slot
@@ -85,20 +159,6 @@ the original.
   floor, not the ceiling its name claims. `RideScriptRunTests.WhatIsNotImplementedIsCountedRatherThanGuessed` asserts a
   count is not below nought, which cannot fail. Make each assert its claim, and put the bug back to prove it (`CLAUDE.md`
   rule 6). No game run.
-- [ ] **Q145. A fee set on the entry-price screen never reaches the gate.** Found by the 2026-09-26 staleness audit.
-  Guests judge and pay `ParkAdmission.Fee` (`PeepBehaviour.Judge`: `OpinionAt`, then `State.Take( admission.Fee )`),
-  which `ParkPeople` captures once from the save's economy thing. The screen's plus and minus move
-  `ParkState.AdmissionFee`, which only the screen and the `money` census read, so the price shown and the price
-  charged part the moment the player changes it. The remark over `ENTRY_PRICE_REJUDGE_WAITING_GUESTS` ("The gate reads
-  the fee through ParkState") and `SetAdmissionFee`'s remark become true when the judgement and the charge both read
-  `ParkState.AdmissionFee`. Confirm: the fee raised by five on the screen, `money` showing it, then the next guest
-  through the turnstile, `money`'s takings up by the new fee, predicted first; a screenshot.
-- [ ] **Q146. Every guest who arrives is counted twice as a visitor.** Found by the 2026-09-26 staleness audit.
-  `ParkPeople.Admit` calls `ParkState.Admit` when the vehicle drops a guest and throws the answer away, and the
-  `Entering` case calls it again when they come through the gate and keeps it as `Peep.VisitorNumber`. The original
-  moves `mNumberOfVisitorsToDate` in one place, a guest finishing `Entering` (`FUN_0051aaf0`), as `ParkState`'s
-  `VisitorsToDate` and `PeepBehaviour.VisitorsToDate` both say. Take out the arrival's call. Confirm: `arrive` twice,
-  both guests through the gate, the visitors screen's numbers for them one apart, predicted first; a screenshot.
 - [ ] **Q147. `MP2File.Duration` reads every sample as MPEG-2, and five shipped samples are MPEG-1.** Found by the
   2026-09-26 staleness audit. The getter never reads the header's version bits (`(SoundData[1] >> 3) & 3`) and always
   takes the MPEG-2 bitrate tables. By the audit's census of all 47 `.sdt`, five entries are MPEG-1 Layer I (header
@@ -122,29 +182,6 @@ the original.
   established, which the disassembly does not bear out. Build the filter once for both, and for `HeadingForExit`'s
   change of mind when it is built. Confirm: the Belly Bounce full, the music level and the gauge read before and
   after, predicted first; a screenshot of the gauge.
-- [ ] **Q149. The calendar keeps its own game tick, from nought, and makes up the advances the original loses.** Found
-  by the 2026-09-26 staleness audit. The original's calendar counter is `mGameTick` (`+0x1da70c`, `weather.md`, "The
-  calendar"), which a loaded save sets to its own (755 in `Easymode.TPWI`, as `GameCalendar.Rebase` says);
-  `GameCalendar.Counter` starts at nought beside `ParkState.GameTick`, which carries the 755, so the date and the
-  weather's days run about 33 days behind the original's. And `GameCalendar.Update` adds at most three advances a
-  frame but carries the rest to later frames (`wanted - Counter`), where `0x0054f680` drops them for good, as
-  `LongestCatchUp`'s own remark says. Check that the published calendar (`0x007ced58`) adds the counter to
-  `mFunnyTimeStart` alone, then drive the calendar from `ParkState.GameTick`, so Q126's cap holds the date too.
-  Confirm: the gadget's date on entering Lost Kingdom, predicted from 755 advances; a screenshot.
-  Q165c gave the ride score and the object window's Age the original's calendar (`ParkState.CalendarNow`, from the
-  save's `mGameTick`); the gadget's date and the weather's days still count from nought.
-  From Q177b: the objects' day rings roll on `GameCalendar.DayRolled` too, so their days turn about 18 world ticks
-  later than the original's after Lost Kingdom's load (its first changes at ticks 761, 784, 807), and a load never
-  rolls on its first tick where the file's `mDayAtLastUpdate` differs from the loaded date.
-  From Q198: the month's change comes to the bank and the staff on `GameCalendar.MonthRolled`, so here on 2/1/2000,
-  177 s in, where the original's first after the load is at tick 1383, 3.1 (measured). A load reads the month and the
-  day but not the year, which keeps the entry's seed, 2000 (`weather.md`), so a park saved in another year gets `0xd`
-  on its first sweep and zeroes `mProfitThisYear` (decoded, not measured).
-  From Q126: the thing sweep is capped at three a frame now and `ParkState.GameTick` with it, so after a 2 s stall
-  `GameCalendar` (which carries its advances over) runs five ahead of `ParkState.CalendarNow`, and the weather's
-  tick and the day's, month's and year's work with it; the original drops all of them with the sweep
-  (`FUN_004d7b20`, `FUN_00512880`). `LongestCatchUp`'s remark ("loses time and can never gain it") is not what
-  `Update` does.
 - [ ] **Q150. Scripts and the thing sweep take a frame's ticks in two loops, where the original takes both per tick.**
   Found by the 2026-09-26 staleness audit. The original's park loop runs the scripts (`0x0054f56b`) and the thing
   sweep (`0x0054f7bb`) inside one loop over the frame's ticks. `ParkRides` and `ParkPeople` each loop over
@@ -618,19 +655,14 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   (`hud.md`, "Four ways out of camcorder mode"): decode it with this, then set the speed. The original's walk keys
   are the zoom's, Up and Down (bits `0x20` and `0x40` of the button word, measured); here W and S walk and the arrows
   do not.
-- [ ] **Q26. Ferry, seaplane and bus are always there.** `ParkFixedItems.Items` stands all three
-  permanently. `ParkPeople.StepArrivals` sizes every load at `Arrival.MinPeople` (1), and `VehicleFor` gives one
-  person the bus, so only the bus is ever called. The original creates the vehicle on demand (`FUN_0051a2f0`,
-  `park.md`, "Arrivals: who comes, on what, and how often"); the
-  headcount score (`FUN_004c8240`) is not decoded. Q68 found the rest of the headcount: `NewParkBonus` is added to
-  the score on every call and the sum scaled by 1.2 or 0.8, so even a score of nought brings 3 or 4 to Lost Kingdom.
+- [ ] **Q26c. Ferry, seaplane and bus are always there.** `ParkFixedItems.Items` stands all three
+  permanently, and `VehicleFor` gives one person the bus, so only the bus is ever called until Q26b sizes the loads.
+  The original creates the vehicle on demand (`FUN_0051a2f0`,
+  `park.md`, "Arrivals: who comes, on what, and how often").
   From Q238: the original hands a new thing the id last freed (its load's first guest took 38, a leaver's, the
   rest 43 on); `ParkState.NextThingId` never uses one twice, said at the site, so a load's ids part from the
   original's once anybody has gone.
-  Decode the score, then build create-on-demand and the bus / ferry / plane ordering; the pause between loads is
-  built (Q68b).
-  The same score is the park's worth every guest judges the gate's fee against (`PeepBehaviour.ParkExcitement`, nought
-  until it is built; the 2026-09-26 staleness audit): build both readers.
+  Build create-on-demand and the bus / ferry / plane ordering; the pause between loads is built (Q68b).
 - [ ] **Q27. Pushing the mouse at the screen edge does not scroll.** The "push scroll" option exists and
   is read by nothing. `ParkOrbitCameraMode.Update` scrolls from keys only. Decode the camera
   binding table at `0x00748158` (`park-engine.md`, "The park camera"), then build.
@@ -774,10 +806,6 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   two first. All four reach `FUN_004a9380`: sound `0x95`, the game paused, the interface hidden, a screen chosen by
   `DAT_007cc150 = 3`, and a picture written out with `Postcard.wad`, `postcard.jpg` and an HTML template
   (`park-engine.md`). Decode the screen and what is written, to `docs/exe/`; the build is the next session.
-- [ ] **Q241. Load Game and Save Game. Decode first.** From Q139 and `docs/PLAYER-GAPS.md` gap 7 (section F names
-  it; this is its item). The park menu's two rows are counted (`LOAD_GAME`, `SAVE_GAME`) and close the menu. Decode
-  the rows' handlers (ids 1 and 2 of `0x0048b6a0`), the screens they open and the writer, to `docs/exe/saves.md`; then
-  split the build into its sessions. Q167's saves are the reference files.
 - [ ] **Q242. Go Online and Publish Park. Alexah's call.** From Q139. Both are counted (`GO_ONLINE`,
   `PUBLISH_PARK`) and close the menu; the original starts connecting (`0x005b5cc0`) to servers that are gone. Ask
   Alexah: leave them counted, say so in the game's own style (rule 11), or something else. Then build the answer.
@@ -787,15 +815,8 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   none; names dead by content say so in their item. No game run.
 
 ## E. Large
-- [ ] **Q31. The other eight object windows.** `Level.OpenObjectWindow` opens only a ride's (`UiType 0`). Shops,
-  sideshows and the rest stop at `SHOP_WINDOW`, `SIDESHOW_WINDOW` and `FEATURE_WINDOW`, and a staff member at
-  `STAFF_WINDOW` (`Level.ClickWorldAt`); a clicked visitor reaches nothing counted. `park-engine.md`, "The
-  per-object management screen is nine screens", lists the nine. One window per session, shop first.
-  From Q177: the shop, sideshow and toilet windows' figures are decoded (`ride-operation.md`, "The settle-up's
-  bookkeeping"): customer satisfaction, profit last month, customers as "C of M", winners last month, the cost of
-  goods from the window's pending sliders (applied on close, on stepping to the next or by apply to all), and a
-  toilet's users last month. `UIStrings` 37 to 39 are one row off: UITEXT 37 is "Scrap value", 38 "Local happiness",
-  39 "Quality of goods", 40 "Sale price"; nothing uses the three members yet.
+- [ ] **Q31b. The other seven object windows.** After Q31's shop window: the sideshow's, the toilet's and the rest
+  of `park-engine.md`'s nine, one window per session. Q31 carries the decoded figures and the `UIStrings` rows.
 - [ ] **Q32. Graphics tiers.** Only `Level.SetupParticles` and `Level.NumKids` read the detail files (`low.sam`,
   `med.sam`, `high.sam`), and only `GameOptions.PARTICLEDENSITY` and `NUMKIDS` (the kid and staff bank caps) from them; nothing reads their `GraphicalOptions.*` keys (texture quality and
   filtering, sky, shadows, fog, mipmaps, view distance). The detail-file loader is `0x00423bc0` (`OptionsScreen`'s
@@ -841,8 +862,8 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
 
 ## F. Then
 
-Back to `docs/PLAYER-GAPS.md`: gap 5 (happiness gauge), gap 4 (advisor in a park), gap 7 (saving a
-park, decode first). Also litter and the day ending, whose deferral reasons expired
+Back to `docs/PLAYER-GAPS.md`: gap 4 (advisor in a park); gap 5 (happiness gauge) is Q244 and gap 7 (saving a
+park) is Q241, both in section A. Also litter and the day ending, whose deferral reasons expired
 (`docs/REVIEW-2026-09-21.md` section 6).
 
 ## G. The lobby plan's open items
