@@ -5226,6 +5226,27 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   joined at that rest's end, 287 sweeps on. Control, the look taken out: records 715, nobody on strike. The picket
   photographed, all five on row 9 (`q138b/photo/p2-picket.png`). 71 bugs put back, 71 caught, nine of them only
   after two tests were added and a cleanup that had aborted the run was fixed.
+- [x] **Q139. Six more reached paths only log, and the boot's one sound is unheard.** Found by Q69's sweep, the same
+  shape as its seven (`CLAUDE.md` rule 4): the lobby menu's Go Online (`FrontEnd`, only logs); the park menu's Load Game,
+  Save Game and Publish Park (`ParkFrontEnd.NotYet`, only logs); and R, research's shortcut, bound and consumed by
+  nothing (`InputButton.Research`; the original's shortcuts row 11 runs `0x0040c5b0`, a thunk to `FUN_004aa480`, as
+  read by the sweep). `Boot_Init` also plays `cat_ui` effect `0xd2` after sound starts (`docs/exe/boot.md`, step 4),
+  which nobody has listened to: listen first, then count it or build it. Count each where it is reached. Confirm: the
+  `unimplemented` census after choosing each.
+  The sixth is the gadget's postcard (the 2026-09-26 staleness audit): `ParkGadget.SendPostcard` (`b_postcard`,
+  `FUN_004a9380`, which pauses the game and writes a picture out; the game ships `Postcard.wad`, `postcard.jpg` and an
+  HTML template) only logs and closes the arm.
+  From Q114b: Ctrl+P under the full-screen view reaches the same `FUN_004a9380` and is counted
+  (`FULL_SCREEN_VIEW_POSTCARD`).
+  **Done 2026-10-08.** Counted where each is reached: `GO_ONLINE`, `LOAD_GAME`, `SAVE_GAME`, `PUBLISH_PARK`,
+  `POSTCARD_BUTTON`, and `RESEARCH_SHORTCUT` for R let go with no modifier over the park or under a park screen
+  (the shortcuts' row 11, key `0x52`, `0x0040c5b0` into `FUN_004aa480`, read in Ghidra). The boot's sound was listened
+  to by measurement and built, not counted: `cat_ui` `0xd2` is `BUTTON01` on a variation of volume (0, 0), the
+  original's mix is exact zeros through its boot (76.8 s of the file), and `UiSounds.Boot` plays it at nought
+  (`boot.md`, step 4). In the game, predicted first: 16 of 16 on the change and 16 of 16 on the unchanged build,
+  which counts none (`q139/run1`, `control`); the boot's own mix silent to the lobby's first sound, and the click at
+  0.46 s, 1.00, in a build at volume 1. 15 bugs put back, 15 caught. One prediction wrong: the control click in the
+  original's lobby matched at 0.26, not 0.4. Ctrl+P over the park and in first person is still read by nothing.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

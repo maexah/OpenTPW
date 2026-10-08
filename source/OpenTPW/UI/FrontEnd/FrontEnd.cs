@@ -396,7 +396,7 @@ internal sealed class FrontEnd : Panel
 	/// </para>
 	/// <para>
 	/// Go Online would start connecting (0x005b5cc0), but the online world is a dead end here, so it only closes
-	/// the menu. Options closes it and opens the <see cref="OptionsScreen"/>. Select New Player and Quit Game ask
+	/// the menu, counted as <c>GO_ONLINE</c>. Options closes it and opens the <see cref="OptionsScreen"/>. Select New Player and Quit Game ask
 	/// first, in a message box over the menu (UITEXT 14 and 9), and the menu stays until the tick (0x0048bc50,
 	/// 0x0048bc30). Resume Game closes it, and so does Escape.
 	/// </para>
@@ -408,6 +408,7 @@ internal sealed class FrontEnd : Panel
 			new( UIStrings.GoOnline, 9, menu =>
 			{
 				_stack.Close( menu );
+				Unimplemented.Report( "GO_ONLINE" );
 				Log.Info( "Front end: Go Online - the online world is a dead end, so nothing more happens" );
 			} ),
 

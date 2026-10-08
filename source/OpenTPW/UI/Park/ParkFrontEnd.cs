@@ -191,6 +191,7 @@ internal sealed class ParkFrontEnd : Panel
 	/// 0x00488921) and only latches a row on its press, so a held Escape, its repeats included, does nothing until it
 	/// comes up (<c>docs/exe/scenes.md</c>, "The park Escape route"). The menu and the viewfinder take the key on its
 	/// release too. The build keys are read in <see cref="Level"/>, and the camcorder key by the camera modes.
+	/// R is the shortcuts table's research row - see <see cref="ResearchKey"/>.
 	/// <para>
 	/// F3 let go with no modifier held is the game table's row 4 (key 0x72, <c>0x0040c4b0</c>), the full-screen view's
 	/// toggle - see <see cref="ToggleFullScreen"/>. While the view is on every key is its control's
@@ -210,7 +211,30 @@ internal sealed class ParkFrontEnd : Panel
 				MenuKey( _stack.Windows.Count > 0 ? _stack.Windows[^1] : null, release.Plain );
 			else if ( release.Key == Key.F3 && release.Plain )
 				ToggleFullScreen();
+			else if ( release.Key == Key.R && release.Plain )
+				ResearchKey( _stack.Windows.Count > 0 ? _stack.Windows[^1] : null );
 		}
+	}
+
+	/// <summary>
+	/// R let go with no modifier held, the shortcuts table's row 11 (key 0x52, <c>0x0040c5b0</c>), which runs
+	/// <c>FUN_004aa480</c>, the gadget's Research button's own function: a message box in Instant Action or with no
+	/// researcher hired, else the research screen (<c>docs/exe/hud.md</c>, "The nine screens behind Info, Money and
+	/// Research"). None of the three is built, so the key is counted where the table is heard: over the park with
+	/// nothing in front, and under a park screen, whose handler runs the shortcuts' table alone
+	/// (<c>FUN_00488ba0</c>, <c>0x00488c13</c>). The game menu, a message box, the options screen and the map keep
+	/// their keys, and in first person the viewfinder's layer answers only the camcorder's and the postcard's rows
+	/// (<c>0x00488a00</c>).
+	/// </summary>
+	private static void ResearchKey( UiWindow? front )
+	{
+		if ( front is GameMenu or ParkMapScreen or { Modal: true } )
+			return;
+
+		if ( ParkCamcorderCameraMode.Active )
+			return;
+
+		Unimplemented.Report( "RESEARCH_SHORTCUT" );
 	}
 
 	/// <summary>
@@ -353,13 +377,13 @@ internal sealed class ParkFrontEnd : Panel
 	{
 		return
 		[
-			new( UIStrings.Load, 1, menu => NotYet( menu, "Load Game", "no park has been saved to read back" ) ),
-			new( UIStrings.Save, 2, menu => NotYet( menu, "Save Game", "nothing writes a park back yet" ) ),
+			new( UIStrings.Load, 1, menu => NotYet( menu, "LOAD_GAME", "Load Game", "no park has been saved to read back" ) ),
+			new( UIStrings.Save, 2, menu => NotYet( menu, "SAVE_GAME", "Save Game", "nothing writes a park back yet" ) ),
 
 			new( UIStrings.RestartPark, 3, menu => _stack.Open( new MessageBox( _stack,
 				Localization.Get( UIStrings.ConfirmRestartPark ), () => RestartPark( menu ) ) ) ),
 
-			new( UIStrings.PublishPark, 4, menu => NotYet( menu, "Publish Park", "the online world is a dead end here" ) ),
+			new( UIStrings.PublishPark, 4, menu => NotYet( menu, "PUBLISH_PARK", "Publish Park", "the online world is a dead end here" ) ),
 
 			new( UIStrings.Options, 5, menu =>
 			{
@@ -415,13 +439,15 @@ internal sealed class ParkFrontEnd : Panel
 	}
 
 	/// <summary>
-	/// A choice the original has and this cannot do yet: the menu closes and the reason is said out loud.
-	/// The lobby's Go Online already works this way. Leaving them out would misreport the menu's shape,
-	/// and making them look as though they had worked would be worse than either.
+	/// A choice the original has and this cannot do yet: the menu closes, the choice is counted under
+	/// <paramref name="gap"/> and the reason is said out loud. The lobby's Go Online works this way too. Leaving
+	/// them out would misreport the menu's shape, and making them look as though they had worked would be worse
+	/// than either.
 	/// </summary>
-	private void NotYet( GameMenu menu, string choice, string why )
+	private void NotYet( GameMenu menu, string gap, string choice, string why )
 	{
 		_stack.Close( menu );
+		Unimplemented.Report( gap );
 		Log.Info( $"Park menu: {choice} - {why}, so nothing more happens" );
 	}
 

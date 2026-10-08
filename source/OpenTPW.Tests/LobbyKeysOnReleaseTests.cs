@@ -418,6 +418,52 @@ public class LobbyKeysOnReleaseTests
 	}
 
 	/// <summary>
+	/// <b>The lobby menu's Go Online closes the menu and is counted</b>, each time it is chosen, and Resume Game is not.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the report taken out of the choice counts nothing; one on every choice counts Resume Game.</remarks>
+	[TestMethod]
+	public void GoOnlineIsCounted()
+	{
+		var (_, stack, _) = APlayersLobby( keys: 1 );
+
+		Unimplemented.Forget();
+
+		try
+		{
+			Frame( stack, released: [Key.Escape] );
+			Assert.AreEqual( "IslandPanel, GameMenu", Names( stack ) );
+			Choose( stack, 0 );
+			Assert.AreEqual( "IslandPanel", Names( stack ), "Go Online closes the menu" );
+			Assert.AreEqual( 1, Times( "GO_ONLINE" ), "and is counted" );
+
+			Frame( stack, released: [Key.Escape] );
+			Choose( stack, 0 );
+			Assert.AreEqual( 2, Times( "GO_ONLINE" ), "chosen again: counted again" );
+
+			Frame( stack, released: [Key.Escape] );
+			Choose( stack, 3 );
+			Assert.AreEqual( "IslandPanel", Names( stack ), "Resume Game closes it too" );
+			Assert.AreEqual( 2, Times( "GO_ONLINE" ), "and counts nothing" );
+			Assert.AreEqual( 1, Unimplemented.Summary.Count, "nor does anything else" );
+		}
+		finally
+		{
+			Unimplemented.Forget();
+		}
+	}
+
+	/// <summary>Chooses the open game menu's row, as a click let go on it does.</summary>
+	private static void Choose( UI.WindowStack stack, int row )
+	{
+		var menu = stack.Windows.OfType<UI.GameMenu>().Single();
+		var choices = (System.Collections.IList)typeof( UI.GameMenu ).GetField( "_choices", BindingFlags.Instance | BindingFlags.NonPublic )!.GetValue( menu )!;
+
+		((UI.UiControl)choices[row]!).LeftClicked!();
+	}
+
+	private static int Times( string what ) => Unimplemented.Summary.FirstOrDefault( entry => entry.What == what ).Times;
+
+	/// <summary>
 	/// Holds Escape down for a few frames, its repeats included, without letting it go - its binding newly down on the
 	/// first frame and held after, as <see cref="Input.UpdateFrom"/> has it, so a handler on the press would fire.
 	/// </summary>

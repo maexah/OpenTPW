@@ -143,7 +143,10 @@ internal static class Game
 			// is not a reason to stop, so Audio.Init reports it and leaves everything a no-op.
 			//
 			if ( openAudio )
+			{
 				Audio.Init();
+				UI.UiSounds.Boot();
+			}
 
 			//
 			// Create level

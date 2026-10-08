@@ -36,7 +36,7 @@ How the original game boots: `WinMain` takes a single-instance lock, builds the 
    - 0x0040f000 parses options, probably the command line: `version quickload nodebug noload SAVEDEBUG flmouse bwcursor`. If it fails, the game aborts.
    - 0x0040cb80 reads the settings sections `system camera cheat coaster shortcuts`.
 3. **Log and random seed:** logs "Compiled Mar 24 2000 at 15:14:05" and seeds the random number generator from `GetTickCount`.
-4. **Sound:** 0x0051b660 initialises it, volumes coming from the settings. It then plays effect 0xd2 (210) from category `DAT_00803a2c` — that may be a boot jingle, but **nobody has listened to it**. Then `Sound_ApplyGroupVolumes`.
+4. **Sound:** 0x0051b660 initialises it, volumes coming from the settings. It then plays effect 0xd2 (210) from category `DAT_00803a2c`, flat (`Sound_PlayEffect( 0, cat, 0xd2, 0, 0, 0 )`). **It is silent** (Q139): the effect is one variation of one sample, `BUTTON01.mp2`, the click's own (effect 31), with the variation's volume at (0, 0) where effect 31's is (100, 100); and the original's mix, written to a file from the device's opening (`q139/orig/`, `measure.py`), is exact zeros through the whole boot, 76.8 s on the file's axis, until the first sound after it. The control was weak: the one click made in the lobby afterwards matched `BUTTON01` at 0.26 under the lobby's own sound, below the 0.4 asked for, so the reading rests on the zeros and the file's volume, not on a match. What a play at volume nought is for was not read. OpenTPW plays it at that volume (`UiSounds.Boot`). Then `Sound_ApplyGroupVolumes`.
 5. **Loading screen and UI:** `LoadingScreen_Begin` (500 steps) shows the Bullfrog `splash_<lang>.tga` for at least 2.5 s, then `welcome.tga` with the `legal_<lang>.tga` copyright strip and no bar. Behind it, `UI_Init` 0x00489ca0 hides the cursor, loads the UI meshes ("Loaded %d UI meshes"), sets up the UI and calls `Dialup::Initialise`. `LoadingScreen_End` holds the screen until 3 s after it appeared.
 6. **Finish:** 0x005989c0 (the advisor reset). The first state is 4 if flag 0x200 is set, else 9.
 
@@ -265,7 +265,7 @@ Evidence is a Ghidra trace of `/testme.exe` throughout; the column names what in
 | 0x0040f000 | | Parses options, probably the command line: `version quickload nodebug noload SAVEDEBUG flmouse bwcursor`. Failure aborts the game. | Option strings |
 | 0x0040cb80 | | Reads settings sections `system camera cheat coaster shortcuts`. | Section strings |
 | 0x0051b660 | | Initialises sound; volumes come from the settings. | Decompile |
-| `DAT_00803a2c` | `cat_ui` | The UI sound category (see `lobby.md`); boot plays its effect 0xd2 (210). | Call argument |
+| `DAT_00803a2c` | `cat_ui` | The UI sound category (see `lobby.md`); boot plays its effect 0xd2 (210), `BUTTON01` at volume nought. | Call argument; the sound map; a capture |
 | 0x00489ca0 | `UI_Init` | Hides the cursor, loads the UI meshes, sets up the UI, calls `Dialup::Initialise`. | "Loaded %d UI meshes" |
 | 0x005989c0 | | The per-scene advisor reset (`scenes.md`, "The advisor"). Last call of boot init, before the first state is chosen. | Call order; `scenes.md` |
 | `DAT_0087906c` | | The current state. | State machine |

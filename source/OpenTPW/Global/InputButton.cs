@@ -139,6 +139,10 @@ public enum InputButton
 	/// Research (R)
 	/// Manages park research.
 	/// </summary>
+	/// <remarks>
+	/// Read by nothing: the park takes R from <see cref="Input.Releases"/>, as it takes Escape, and counts it
+	/// (<c>ParkFrontEnd.ResearchKey</c>).
+	/// </remarks>
 	[DefaultKey( Key.R )]
 	Research,
 

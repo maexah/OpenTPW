@@ -216,7 +216,7 @@ The constants in the code are only seeds for a first-ever run. **Do not re-measu
 
 It is built in code, not from a layout tree: a LOLIGHT full-screen control plus `MenuList_AddItem` items, font 0 with the purple skin, centred, first item at y = 5 and each next at y + h + 5, where `h = (line height + 5) * 0x600 / screen height`. That is the lobby's; in a park `GameMenu_BuildPark` (`0x0048c150`) puts the first at 10, except where `FUN_005b6450()` answers non-zero, which puts it at 0 and each next at y + h.
 
-Go Online is a dead end — it only closes. Escape over a message box goes to the box: `UI_LoadModalTree` gives it the focus (`0x0047ee67`) and a key goes to the focus alone (`0x006698e6`), so it never reaches `IslandLobby_OnKey` (`lobby.md`, "Escape cancels the fly-in"). Over the options screen no key reaches the lobby: the screen hides the lobby's root (`0x004a3ae0`), which keeps the focus, so a key goes to the last control pressed, which drops it (`lobby.md`, "The lobby's keys act on the release").
+Go Online is a dead end — it only closes, counted as `GO_ONLINE`. Escape over a message box goes to the box: `UI_LoadModalTree` gives it the focus (`0x0047ee67`) and a key goes to the focus alone (`0x006698e6`), so it never reaches `IslandLobby_OnKey` (`lobby.md`, "Escape cancels the fly-in"). Over the options screen no key reaches the lobby: the screen hides the lobby's root (`0x004a3ae0`), which keeps the focus, so a key goes to the last control pressed, which drops it (`lobby.md`, "The lobby's keys act on the release").
 
 The click's level was measured by disk capture rather than read from the `.sdt`.
 

@@ -138,7 +138,8 @@ laid and verified; and Info and Money now open real screens - **all four of thei
 drew in a running park and were photographed**. Research is not a category at all (`FUN_004a0840`'s
 case `0x2b` goes straight to `FUN_004aa480`, as the map does), and its one screen is six effort
 sliders over research groups: this game has **no research and no groups**, so there is nothing to put behind the
-button. It only logs, and counts each click as `RESEARCH_BUTTON`.
+button. It only logs, and counts each click as `RESEARCH_BUTTON`; R, the shortcut to the same function, is counted as
+`RESEARCH_SHORTCUT`.
 
 - [x] **Buy** opens `ParkBuyScreen` (stream `0x00754cf8`), which cross-links to `ParkHireScreen`
       (stream `0x00751fa8`). Both are built on the original's control **type 7**, a scrolling
@@ -413,7 +414,8 @@ from the crossing. So the arrival path they would take is the one the shipped sa
 ## 7. A park cannot be saved
 
 - [ ] **Seen:** Load, Save and Publish do nothing, which a player meets at the moment they try to stop.
-- **Lives:** `ParkFrontEnd`'s game menu, where Load Game, Save Game and Publish Park each call `NotYet(...)`.
+- **Lives:** `ParkFrontEnd`'s game menu, where Load Game, Save Game and Publish Park each call `NotYet(...)`,
+  counted as `LOAD_GAME`, `SAVE_GAME` and `PUBLISH_PARK`.
 - **The real cost is not the button.** **Only Alexah's own `.TPWS` saves have been read**, in harnesses — the
   reader must not be assumed to generalise from them and the one file the game ships. `docs/exe/saves.md` also records an unreconciled
   divergence between the traced preamble byte counts and what the shipped file measures.

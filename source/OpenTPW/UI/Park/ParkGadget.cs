@@ -655,10 +655,11 @@ internal sealed class ParkGadget : UiWindow
 	/// <summary>
 	/// b_postcard, the panel's id 100: FUN_004a9380, which pauses the game and writes a picture out - the
 	/// game ships Postcard.wad, postcard.jpg and an HTML template for it. Nothing here writes one yet, and
-	/// it is deliberately out of scope, so it says so and closes the arm as the other one does.
+	/// it is deliberately out of scope, so it is counted, says so and closes the arm as the other one does.
 	/// </summary>
 	private void SendPostcard()
 	{
+		Unimplemented.Report( "POSTCARD_BUTTON" );
 		Log.Info( "Park gadget: Postcard - nothing writes a postcard out yet, so nothing more happens" );
 		CloseArm();
 	}

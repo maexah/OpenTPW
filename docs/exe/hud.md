@@ -416,7 +416,11 @@ money-in/out split and the graph history), **staffcosts** (training budgets, oth
 **parkstatus** (Top 3 Thoughts, arrival rate, park rating, multi-year history), each counted when opened
 (`LOANS_SCREEN`, `FINANCE_SCREEN`, `STAFF_COSTS_SCREEN`, `PARK_STATUS_SCREEN`), and **research** (`mResearchDone`,
 `mResearchGroup`, `mFirstResearcher`, and per-group research points), whose gadget button only logs, and counts
-each click as `RESEARCH_BUTTON`: neither the screen nor its two message boxes is built.
+each click as `RESEARCH_BUTTON`: neither the screen nor its two message boxes is built. The key reaches the same
+function: the shortcuts' row 11 is `R` (`0x52`) with no modifier, handler `0x0040c5b0` (`MOV ECX, 0x007b51f0; CALL
+0x004817e0`, a `JMP` to `FUN_004aa480`), counted as `RESEARCH_SHORTCUT` where that table is run: over the park and
+under a park screen, not under the game menu, a message box, the options, the map, the full-screen view or first
+person.
 
 The original's staffcosts screen, headed "Staff Training Budgets", has one row a kind (handymen, mechanics,
 entertainers, guards, researchers), each a minus, a budget and a plus over 0 to 10000 in steps of 25

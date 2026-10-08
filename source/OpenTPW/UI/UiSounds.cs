@@ -16,6 +16,12 @@ namespace OpenTPW.UI;
 /// data\Particle\Tp2.plb, drawn by <see cref="ScreenParticles"/>.
 /// </para>
 /// <para>
+/// <b>The boot's own.</b> Boot_Init plays effect 210 flat as soon as the categories are registered
+/// (<c>0x0054dcf0</c>; <c>docs/exe/boot.md</c>, step 4). It is BUTTON01 again, on a variation whose volume is
+/// nought of a hundred where the click's is a hundred, and the original's mix is silent through its boot:
+/// <see cref="Boot"/> plays it at that volume.
+/// </para>
+/// <para>
 /// <b>How loud.</b> Set from the samples' measured loudness, the way <see cref="LobbyAudio"/>'s layers
 /// are, rather than by ear. BUTTON01 measures -21.7 dBFS RMS and peaks at +0.6, Select3 -17.8, and
 /// goldkey -17.7 peaking at -0.3. A click is put at -30 dBFS, under the park's theme (-26) and over
@@ -37,6 +43,7 @@ internal static class UiSounds
 	private const int ToggleClick = 189;
 	private const int GoldKey = 198;
 	private const int MenuChoiceSound = 193;
+	private const int BootSound = 210;
 
 	private const float ButtonClickVolume = 0.385f;
 	private const float ToggleClickVolume = 0.245f;
@@ -51,6 +58,26 @@ internal static class UiSounds
 		if ( Audio.Ready )
 			_category ??= new SoundCategory( "global", "global/sound", "ui" );
 	}
+
+	/// <summary>
+	/// The boot's play of effect 210, once sound is up, at its variation's own volume - see the class remarks.
+	/// </summary>
+	public static void Boot()
+	{
+		Preload();
+
+		if ( _category == null )
+			return;
+
+		var volume = BootVolume( _category.VariationsOf( BootSound ) );
+		var voice = _category.Play( BootSound, volume, respectDelay: false );
+
+		Log.Info( $"UI sounds: the boot's effect {BootSound} at volume {volume:0.00}, {(voice == null ? "no voice" : "a voice")}" );
+	}
+
+	/// <summary>The volume an effect's first variation asks for, its low bound of a hundred; nought with no header.</summary>
+	internal static float BootVolume( IReadOnlyList<SoundCategoryFile.Variation> variations )
+		=> variations.Count > 0 ? variations[0].Volume.Low / 100f : 0f;
 
 	/// <summary>A button was clicked - see the class remarks for which sound.</summary>
 	public static void Click( bool toggle )
