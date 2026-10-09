@@ -136,6 +136,38 @@ say so before launching it.
 - End the session when the task is committed, its `docs/QUEUE.md` item ticked and `docs/STATUS.md` updated. The pre-commit hook (`tools/hooks/pre-commit`, enabled once per clone with `git config core.hooksPath tools/hooks`) runs `tools/queue-sweep.py`, which moves every ticked item to `docs/history/queue-done.md` and stages both files; do not move one by hand. Do not carry the next task in the same context. When Alexah says a clear is coming, read `docs/QUEUE.md` and show the next five unticked items with what each asks (rule 17).
 - Memory files hold rules and the live plan only, each under 300 lines, and nothing that is finished. Facts go in `docs/`. Corrections replace old text.
 
+## Unattended runs
+
+Alexah, 2026-10-09: the queue may be worked with nobody at the desk, one fresh session per item, committing locally
+until told to stop. The overnight run of 2026-10-06 was fifteen items in one session with no plan; this is the plan.
+
+- **Alexah starts a run; a session never starts one on its own.** `autorun.py start N` (`CLAUDE.local.md` says where
+  it lives) checks both clones, the desktop and Ghidra, then starts up to N headless sessions one after another, each
+  with an empty context, the same model and effort, and the permission mode a session at the desk has. `status` shows
+  it, `stop` ends it after the item in hand, `abort` ends it now, and `smoke` is one short session that touches
+  nothing: run it after Claude Code or the script changes.
+- **A session inside a run** sees `OPENTPW_AUTORUN=1` and is told what `prompt.md` beside the script says: one item,
+  every rule, nothing trimmed. Its last line is `DONE <Qn>`, `BLOCKED <Qn>`, `STOPPED <reason>` or `NOTHING-LEFT`.
+- **An item that needs Alexah is skipped, never guessed:** a decision that is theirs, their eyes or ears, or an item
+  that follows one not done. The session adds `**Needs Alexah (<date>):** <the question>` as the item's last line and
+  takes the next item it can finish alone. An item that turns out to need them halfway stays on its branch, unmerged,
+  with the same line naming the branch. The session Alexah answers takes the line out.
+- **Nothing is pushed.** Rule 1 stands. In a run three guards hold it (a hook, a deny rule, and origin's push address
+  pointed at a path that does not exist for everything the session runs), and the script reads origin before and
+  after each session.
+- **The script believes git over the session.** It ends the run on: no last line (a crash, the usage limit, the
+  five-hour limit), a clone left dirty, off its branch, with a new untracked file or an extra worktree, origin moved,
+  `DONE` said with `main` where it was, two `BLOCKED` running, or a `STOP` file. A session writes `STOP` when a tool
+  is broken (rule 7); `autorun.py clear` removes it once the tool is mended.
+- **While a run is live, every other session leaves the repo alone:** no build, no test, no git, no game, no Ghidra
+  call. Looking is fine (`autorun.py status`, `report.md`).
+- **Ghidra's lock is the trap.** A session's Ghidra server takes the project at its first call and keeps it until that
+  session's process ends, which a clear does not do (on 2026-10-09 one had held it for three days). A headless
+  session then finds the project locked. Before a run, the session at the desk calls `release_project` and makes no
+  Ghidra call until the run is over; the script probes Ghidra before every session and names the holder's remedy.
+- Each session appends its account to `report.md` beside the script, and the script adds its own line under it: the
+  last line, both tips before and after, the hours, and the id `claude --resume` takes.
+
 ## Commits
 
 - Small. One behaviour per commit.

@@ -9,6 +9,8 @@ Tick it in the commit that lands it, with the number that proves it; the pre-com
 its section in `history/queue-done.md`, which holds every finished item. A page citing a Q-number that is not here
 means that finished entry. If an item turns out to be two,
 split it into two lines here and stop after the first. Alexah may reorder; nobody else does.
+A line **Needs Alexah (date):** at the end of an item is a question an unattended run left (`WORKFLOW.md`,
+"Unattended runs"): the item waits for the answer, and the session Alexah answers takes the line out.
 
 **Every item, no exceptions.**
 

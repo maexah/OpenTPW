@@ -40,6 +40,10 @@ Machine-specific paths live in `CLAUDE.local.md` (not committed). Long-form know
 19. **Codex's model and effort are chosen by stage too** (2026-10-06). Every `codex-worker` assignment names its
     `model` and `effort` for the job it is, as an agent names its type, and Codex's tokens are spent as carefully as
     these. The table and the rules are `docs/WORKFLOW.md`, "Codex".
+20. **An unattended queue run is started by Alexah, never by a session on its own** (2026-10-09). `autorun.py` starts
+    one fresh session per queue item. A session inside a run sees `OPENTPW_AUTORUN=1`: it does one item under every
+    rule here, pushes nothing, and skips an item that needs Alexah, leaving a "Needs Alexah" line under it. While a
+    run is live, every other session leaves the repo alone. `docs/WORKFLOW.md`, "Unattended runs".
 
 ## Build, test, run
 
