@@ -196,6 +196,45 @@ public sealed partial class ParkWorld
 	public readonly record struct WrittenSprite( Sprite Picture, int Interval = 0x3e, int? MadeSetByte = null,
 		IReadOnlyList<int>? Loops = null, bool Ended = false );
 
+	/// <summary>
+	/// A rider's head hung on a ride's node, as the writer takes it: a sprite of its own on <paramref name="Slot"/>,
+	/// which the node's lookup record names (<c>docs/exe/saves.md</c>, "OpenTPW's writer, a rider's head").
+	/// </summary>
+	/// <param name="Kind">The sprite kind: 1, a child's head, or 3, a costume's (<c>FUN_0044b410</c>).</param>
+	/// <param name="Bank">The rider's own bank of that kind.</param>
+	public readonly record struct WrittenHead( int Slot, int Kind, int Bank );
+
+	/// <summary>
+	/// The heads to write and the file's to let go: <see cref="Hung"/> each on its slot, and <see cref="Gone"/> the
+	/// slots of the file's heads that hang no longer.
+	/// </summary>
+	public sealed record HeadEdits( IReadOnlyList<WrittenHead> Hung, IReadOnlySet<int> Gone );
+
+	/// <summary>
+	/// The lowest <paramref name="count"/> slots of the sprite table that the file leaves empty and
+	/// <paramref name="taken"/> does not name, from 1, as <c>FUN_00475a10</c> looks for one.
+	/// </summary>
+	public int[] EmptySpriteSlots( int count, IReadOnlySet<int> taken )
+	{
+		var slots = new int[count];
+		var slot = 0;
+
+		for ( var i = 0; i < count; ++i )
+		{
+			do
+				++slot;
+			while ( _spriteRecords.ContainsKey( slot ) || taken.Contains( slot ) );
+
+			slots[i] = slot;
+		}
+
+		return slots;
+	}
+
+	/// <summary>The sprite kind in the file's slot, or null for an empty slot.</summary>
+	public int? SpriteKindIn( int slot )
+		=> _spriteRecords.TryGetValue( slot, out var at ) ? ReadInt32At( at + SpriteType ) : null;
+
 	/// <summary>What <see cref="PutPeople"/> did, for the log.</summary>
 	/// <param name="UnmatchedSpriteSets">
 	/// Made sprites that were handed no <c>+0xbc</c>, their bank not being to hand, and found no sprite of the same
@@ -205,8 +244,9 @@ public sealed partial class ParkWorld
 	/// <param name="Balloons">Balloons written, each on its guest's <c>mBalloonScript</c>.</param>
 	/// <param name="Bubbles">Thought bubbles written, each on its person's <c>mThoughtScript</c>.</param>
 	/// <param name="LetGo">Balloons let go and still bursting written, each on a slot nobody names.</param>
+	/// <param name="Heads">Riders' heads written, each on the slot its node's lookup record names.</param>
 	public readonly record struct PeopleWritten( int Kept, int Made, int Gone, int SpriteSlots, int LiveSprites,
-		int CellsHeaded, int UnmatchedSpriteSets, int Balloons = 0, int Bubbles = 0, int LetGo = 0 );
+		int CellsHeaded, int UnmatchedSpriteSets, int Balloons = 0, int Bubbles = 0, int LetGo = 0, int Heads = 0 );
 
 	/// <summary>The first header field of the five staff lists' heads, in the header's order.</summary>
 	private const int FirstHandymanField = 20;
@@ -291,6 +331,16 @@ public sealed partial class ParkWorld
 	/// </summary>
 	internal byte[] PutPeople( byte[] body, IReadOnlyList<WrittenPerson> people, ObjectEdits? objects,
 		IReadOnlyList<WrittenSprite>? letGo, out PeopleWritten report )
+		=> PutPeople( body, people, objects, letGo, null, out report );
+
+	/// <summary>
+	/// <see cref="PutPeople(byte[], IReadOnlyList{WrittenPerson}, ObjectEdits?, IReadOnlyList{WrittenSprite}?, out PeopleWritten)"/>,
+	/// with the riders' heads. Each is written on the slot it is given, before any slot is dealt to a person made:
+	/// over the file's record where the slot holds a head already, its kind and bank alone, and on a record made
+	/// anew where it does not (<see cref="HeadSprite"/>). A head gone gives its slot up.
+	/// </summary>
+	internal byte[] PutPeople( byte[] body, IReadOnlyList<WrittenPerson> people, ObjectEdits? objects,
+		IReadOnlyList<WrittenSprite>? letGo, HeadEdits? heads, out PeopleWritten report )
 	{
 		var madeObjects = objects?.Made ?? [];
 		var goneObjects = objects?.Gone ?? new HashSet<int>();
@@ -417,6 +467,28 @@ public sealed partial class ParkWorld
 			}
 		}
 
+		// The heads, on the slots their lookup records name, before a slot is dealt to anybody made.
+		foreach ( var slot in heads?.Gone ?? new HashSet<int>() )
+			sprites.Remove( slot );
+
+		foreach ( var rider in heads?.Hung ?? [] )
+		{
+			if ( rider.Slot < 1 )
+				throw new InvalidOperationException( $"a rider's head is given sprite slot {rider.Slot}" );
+
+			if ( sprites.TryGetValue( rider.Slot, out var held ) && IsHeadKind( BinaryPrimitives.ReadInt32LittleEndian( held.AsSpan( SpriteType ) ) ) )
+			{
+				Put32( held, SpriteType, rider.Kind );
+				Put32( held, SpriteBank, rider.Bank );
+			}
+			else if ( held != null )
+				throw new InvalidOperationException( $"a rider's head is given sprite slot {rider.Slot}, which holds another sprite" );
+			else
+				sprites[rider.Slot] = HeadSprite( rider );
+
+			Room( rider.Slot );
+		}
+
 		// The sprites: a kept person's slot is theirs still; a made one's is the lowest free, oldest first.
 		var slotOf = new Dictionary<int, int>();
 		var unmatched = 0;
@@ -478,10 +550,16 @@ public sealed partial class ParkWorld
 			while ( sprites.ContainsKey( slot ) )
 				++slot;
 
-			while ( slot >= slots )
-				slots += SpriteSlotsStep;
+			Room( slot );
 
 			return slot;
+		}
+
+		// The table grows by fifty until it has the slot.
+		void Room( int slot )
+		{
+			while ( slot >= slots )
+				slots += SpriteSlotsStep;
 		}
 
 		int PutOther( int slot, WrittenSprite other )
@@ -674,7 +752,7 @@ public sealed partial class ParkWorld
 
 		report = new PeopleWritten( Kept: running.Count - made, Made: made, Gone: gone, SpriteSlots: slots,
 			LiveSprites: sprites.Count, CellsHeaded: headed, UnmatchedSpriteSets: unmatched,
-			Balloons: balloonOf.Count, Bubbles: bubbleOf.Count, LetGo: letGo?.Count ?? 0 );
+			Balloons: balloonOf.Count, Bubbles: bubbleOf.Count, LetGo: letGo?.Count ?? 0, Heads: heads?.Hung.Count ?? 0 );
 
 		return stream.ToArray();
 	}
@@ -925,6 +1003,63 @@ public sealed partial class ParkWorld
 			++unmatched;
 
 		Put32( record, SpriteSetByteAt, copied );
+
+		return record;
+	}
+
+	/// <summary>The sprite kinds of a head: a child's and a costume's.</summary>
+	public const int ChildHeadKind = 1;
+
+	public const int CostumeHeadKind = 3;
+
+	private static bool IsHeadKind( int kind ) => kind is ChildHeadKind or CostumeHeadKind;
+
+	/// <summary>The word of the programs' array a head's sprite is made on, <c>0x0074f558</c> (<c>FUN_0044b410</c>).</summary>
+	private const int HeadProgram = 1704;
+
+	/// <summary>Where a head's program rests once it has run its first turn, and the word at <c>+0x10</c> beside it.</summary>
+	private const int HeadRestingWord = 1698;
+
+	private const int HeadRestingBase = 1696;
+
+	/// <summary>The one word a resting head's program has pushed, at the stack's first place.</summary>
+	private const int HeadPushedWord = 1714;
+
+	/// <summary>The record's <c>+0x74</c>, one on a resting head, and its drawing flags at <c>+0xc4</c>.</summary>
+	private const int SpriteDepthAt = 0x74;
+
+	private const int SpriteFlagsAt = 0xc4;
+
+	private const int HeadFlags = 0x3000080;
+
+	/// <summary>The frames a direction of a head's set, its <c>+0xbc</c>.</summary>
+	private const int HeadSetByte = 8;
+
+	/// <summary>
+	/// A head's sprite record, as every head of the park files to hand rests (<c>docs/exe/saves.md</c>,
+	/// "OpenTPW's writer, a rider's head"): made on <see cref="HeadProgram"/> with no place, set or frame
+	/// (<c>FUN_00475a10</c> handed noughts), then run its first turn, so state 2 and shown, one word pushed, and
+	/// the program's own drawing flags. What the record keeps of its last drawing is left nought, as on every
+	/// sprite made here.
+	/// </summary>
+	private static byte[] HeadSprite( WrittenHead head )
+	{
+		var unmatched = 0;
+		var record = MadeSprite( head.Slot, default, [], HeadSetByte, ref unmatched );
+
+		Put32( record, SpritePcAt, HeadRestingWord );
+		Put32( record, SpriteScriptAt, HeadProgram );
+		Put32( record, SpriteScriptAt + 4, HeadRestingBase );
+		Put32( record, SpriteState, SpriteRunningState );
+		Put32( record, SpriteLoopRoomAt, SpriteLoopDepth - 1 );
+		Put32( record, SpriteLoopsAt + ((SpriteLoopDepth - 1) * 4), HeadPushedWord );
+		Put32( record, SpriteDepthAt, 1 );
+		Put32( record, SpriteIntervalAt, 0x3e );
+		Put32( record, SpriteAlpha, 0xff );
+		Put32( record, SpriteType, head.Kind );
+		Put32( record, SpriteBank, head.Bank );
+		Put32( record, SpriteFlagsAt, HeadFlags );
+		Put32( record, SpriteShownAt, 1 );
 
 		return record;
 	}

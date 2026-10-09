@@ -93,11 +93,12 @@ public static class ParkFileWriter
 	/// <summary>
 	/// An object bought since the load with its other two records (<c>docs/exe/saves.md</c>, "OpenTPW's writer, a
 	/// thing bought and a thing sold"): its footprint in cells for its model's record, its script as it runs (null
-	/// for a thing with none), and its model's channels, hoarding and two tables (null declares none).
+	/// for a thing with none), and its model's channels, hoarding and two tables (null declares none), with the
+	/// riders' heads hung on its nodes, each written into the tables' lookup records.
 	/// </summary>
 	public sealed record MadeThing( ParkWorld.MadeObject Object, int Across, int Down, MadeScript? Script,
 		IReadOnlyList<SavedChannel> Channels, uint HoardingFlags = 0, float HoardingProgress = 0f,
-		ParkThingStates.ModelTables? Tables = null );
+		ParkThingStates.ModelTables? Tables = null, WrittenHeads? Heads = null );
 
 	/// <summary>What was done with <see cref="RunningThings"/>: the records written over, the script tables left the file's, the things made and taken out, and each queue cell's new handle beside the one it gave up.</summary>
 	public readonly record struct ThingsWritten( int Objects, int Scripts, int ScriptTablesLeft, int Models,
@@ -167,12 +168,20 @@ public static class ParkFileWriter
 		things = null;
 
 		ParkWorld.ObjectEdits? edits = null;
+		ParkWorld.HeadEdits? heads = null;
+		var headSlots = new Dictionary<(int Slot, int Record), int>();
+		var madeHeadSlots = new Dictionary<(int Thing, int Record), int>();
 
 		if ( running.Things is { } run )
 		{
 			var objects = loaded.PutObjects( body, run.Objects );
 			var scripts = loaded.ScriptStates.Put( body, run.SchedulerTick, run.NextHandle, run.Scripts );
-			var models = run.ModelStates.Put( body, run.Models );
+
+			// The heads are sprites, so they are written with the people or not at all.
+			if ( running.People != null )
+				heads = PlanHeads( loaded, run, running.People, headSlots, madeHeadSlots );
+
+			var models = run.ModelStates.Put( body, run.Models, heads != null ? headSlots : null );
 
 			loaded.Clock.Put( body, run.Clock );
 			things = new ThingsWritten( objects, scripts.Scripts, scripts.TablesLeft, models );
@@ -238,7 +247,8 @@ public static class ParkFileWriter
 
 					madeModels.Add( (slots[i], ParkThingStates.MadeRecord( placed.CatalogueId, cell % ParkWorld.MapSize,
 						cell / ParkWorld.MapSize, thing.Across, thing.Down, handle, thing.HoardingFlags,
-						thing.HoardingProgress, placed.Angle, thing.Channels, thing.Tables )) );
+						thing.HoardingProgress, placed.Angle, thing.Channels,
+						heads != null ? WithHeads( thing, madeHeadSlots ) : thing.Tables )) );
 
 					if ( thing.Script is { } script )
 						scriptRecords.Add( (handle, ParkScriptStates.MadeRecord( script, slots[i] + 1, loaded.ScriptStates.StructSize )) );
@@ -288,11 +298,124 @@ public static class ParkFileWriter
 		// Last: the people change the body's length, and everything above is written where the file has it.
 		if ( running.People is { } written )
 		{
-			body = loaded.PutPeople( body, written, edits, running.LetGo, out var report );
+			body = loaded.PutPeople( body, written, edits, running.LetGo, heads, out var report );
 			people = report;
 		}
 
 		return body;
+	}
+
+	/// <summary>
+	/// Gives every head hung a sprite slot (<c>docs/exe/saves.md</c>, "OpenTPW's writer, a rider's head"). A head
+	/// on a lookup record the file has a head on keeps that slot; every other takes the lowest slot the file's
+	/// sprite table leaves empty, the kept models' first and then the made things', oldest first. A head the file
+	/// has on a record of a head table that holds none now, or on any record of a thing sold, gives its slot up.
+	///
+	/// <para>
+	/// A deviation: the original deals a head the lowest empty slot as it is hung, among the people's as they
+	/// come and go. Here a new head takes none the file's table holds, a person gone since or not, so the slots
+	/// are not the original's; every lookup record still names its own head's sprite, which is all a load reads.
+	/// </para>
+	/// </summary>
+	private static ParkWorld.HeadEdits PlanHeads( ParkWorld loaded, RunningThings run, IReadOnlyList<ParkWorld.WrittenPerson> people,
+		Dictionary<(int Slot, int Record), int> kept, Dictionary<(int Thing, int Record), int> made )
+	{
+		var looks = people.ToDictionary( person => person.Person.ThingId, person => (person.Person.SpriteKind, person.Person.SpriteBank) );
+		var hung = new List<ParkWorld.WrittenHead>();
+		var gone = new HashSet<int>();
+		var taken = new HashSet<int>();
+		var fresh = new List<(int Visitor, Action<int> Take)>();
+
+		// The head a visitor's look gives: a costume's where they wear one, else a child's, on their own bank
+		// (FUN_004fcac0); a visitor the park no longer holds is bank nought, as a head hung for nobody is.
+		ParkWorld.WrittenHead Head( int slot, int visitor )
+		{
+			var (kind, bank) = looks.GetValueOrDefault( visitor );
+
+			return new ParkWorld.WrittenHead( slot, kind == CostumeSpriteKind ? ParkWorld.CostumeHeadKind : ParkWorld.ChildHeadKind, bank );
+		}
+
+		foreach ( var model in run.Models )
+		{
+			if ( model.Heads is not { } heads )
+				continue;
+
+			var file = run.ModelStates.AttachedOn( model.Slot, heads.Records );
+			var still = new HashSet<int>();
+
+			foreach ( var (record, visitor) in heads.Hung )
+			{
+				still.Add( record );
+
+				// The file's slot is the head's still where it holds a head and no other record has taken it.
+				if ( file.TryGetValue( record, out var slot ) && loaded.SpriteKindIn( slot ) is ParkWorld.ChildHeadKind or ParkWorld.CostumeHeadKind
+					&& taken.Add( slot ) )
+				{
+					kept[(model.Slot, record)] = slot;
+					hung.Add( Head( slot, visitor ) );
+				}
+				else
+				{
+					var (at, who) = (model.Slot, visitor);
+
+					fresh.Add( (who, dealt => kept[(at, record)] = dealt) );
+				}
+			}
+
+			foreach ( var (record, slot) in file )
+			{
+				if ( !still.Contains( record ) )
+					gone.Add( slot );
+			}
+		}
+
+		// A thing sold takes its model with it, and whatever hung on it.
+		foreach ( var thing in loaded.Objects.Where( thing => run.Gone?.Contains( thing.ThingId ) == true && thing.MeshInstance > 0 ) )
+			gone.UnionWith( run.ModelStates.AttachedOn( thing.MeshInstance - 1 ).Values );
+
+		foreach ( var thing in (run.Made ?? []).OrderBy( thing => thing.Object.Object.ThingId ) )
+		{
+			foreach ( var (record, visitor) in thing.Heads?.Hung ?? [] )
+			{
+				var id = thing.Object.Object.ThingId;
+
+				fresh.Add( (visitor, dealt => made[(id, record)] = dealt) );
+			}
+		}
+
+		var empty = loaded.EmptySpriteSlots( fresh.Count, taken );
+
+		for ( var i = 0; i < fresh.Count; ++i )
+		{
+			fresh[i].Take( empty[i] );
+			hung.Add( Head( empty[i], fresh[i].Visitor ) );
+		}
+
+		return new ParkWorld.HeadEdits( hung, gone );
+	}
+
+	/// <summary>The person base's <c>mESPSprite</c> of somebody in a costume (<c>FUN_004fcac0</c>).</summary>
+	private const int CostumeSpriteKind = 2;
+
+	/// <summary>A made thing's tables with each head hung in its lookup record: <c>0x2</c> and the sprite's slot, and the shared <c>0x4</c>.</summary>
+	private static ParkThingStates.ModelTables? WithHeads( MadeThing thing, Dictionary<(int Thing, int Record), int> slots )
+	{
+		if ( thing.Tables is not { } tables || thing.Heads is not { } heads )
+			return thing.Tables;
+
+		var lookups = tables.Lookups.ToArray();
+		var any = false;
+
+		foreach ( var (record, _) in heads.Hung )
+		{
+			if ( record < 0 || record >= lookups.Length || !slots.TryGetValue( (thing.Object.Object.ThingId, record), out var slot ) )
+				continue;
+
+			lookups[record] = (lookups[record].Flags | ParkThingStates.LookupAttached, slot);
+			any = true;
+		}
+
+		return tables with { Lookups = lookups, Shared = tables.Shared | (any ? ParkThingStates.SharedAttached : 0) };
 	}
 
 	/// <summary>The whole file: <see cref="Body"/> in its container.</summary>

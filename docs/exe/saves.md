@@ -1105,9 +1105,8 @@ and a model's channels their count, so nothing moves, and they go in before the 
   own word and clip time**: the engine's `0x10` on a held channel comes and goes (FileFormats `saves.md`, "Bit
   `0x10`"), where a channel here keeps it for good. With nothing queued the last queue's leftovers are the
   file's. The hoarding's seven bits and its progress are the thing's as they stand. The node flag words are written
-  as the clips started since the load have left them ("OpenTPW's writer, the two tables"). **Not written,
-  counted:** the lookup records' attached handles, which hold a head `ADDHEAD` hung
-  (`SAVE_PARK_HEAD_ON_A_MODEL_NODE`; no thing of the shipped park's hangs one).
+  as the clips started since the load have left them ("OpenTPW's writer, the two tables"), and a head `ADDHEAD`
+  hung goes into its node's lookup record ("OpenTPW's writer, a rider's head").
 - **An object** (`ParkState.WrittenObjects`, `ParkWorld.PutObjects`): its door (`mCanLoad`), the member assigned
   and the tick they were, the queue's head, back cell and size, the guest being loaded, the six day rings and
   the two counts, the operating three, the goods' cost, quality, chance and ingredient, the price, the two
@@ -1243,8 +1242,8 @@ and the object constructor `FUN_004db090` was read beside the two files.
   one once the gone are let go, the older of two made taking the lower; the item, the `mTopLeft` cell, the item's
   footprint, the placer's flags `0x32f`, the script, the hoarding as it stands, the angle and the channels as
   they run. **It carries both tables** ("OpenTPW's writer, the two tables"): a word a node as its clips
-  have left them, and a pair a lookup record with nothing attached, so a head hung on a node is not in it
-  (`SAVE_PARK_HEAD_ON_A_MODEL_NODE`), and a running channel's keep-shown bit is not known
+  have left them, and a pair a lookup record, a head hung on a node among them ("OpenTPW's writer, a rider's
+  head"); a running channel's keep-shown bit is not known
   (`SAVE_PARK_CHANNEL_KEEP_SHOWN_BIT`). The header's three counts are kept.
 - **The controls** (`ParkWorld.PutControls`): every item's standing count and first-build stamp as
   `ParkState.BuiltItems` runs them.
@@ -1471,7 +1470,7 @@ player's hand reaches the writer yet. `docs/exe/addresses.md` not regenerated.
 
 ### A model record's two tables, and a head on a node
 
-Decoded and measured on 2026-10-09 (Q257, the decode); the two tables are built (Q257b, "OpenTPW's writer, the two tables"), a head is not (Q257d). The bytes are the FileFormats
+Decoded and measured on 2026-10-09 (Q257, the decode); the two tables are built (Q257b, "OpenTPW's writer, the two tables"), and a head (Q257d, "OpenTPW's writer, a rider's head"). The bytes are the FileFormats
 `saves.md`'s ("The ride system module", "The node flag words", "A head on a node"); this is what the original does
 with them. Harness `q257/` (`census.py`, `bychannel.py`, `heads.py`, `one.py`, the listings `*.c`).
 
@@ -1532,11 +1531,10 @@ own order, so the two are not index for index: the ape's table holds riders in s
 where its records 1, 3, 4, 11, 13, 15 and 16 hold handles. The Aztec Mayhem's five heads (`WALKON` action 4) and a
 coaster's and a tour's cars' are records with a handle and no head table.
 
-**What a writer must do for a head** (the build, Q257d): the node words and the lookup records whole for the
+**What a writer must do for a head**: the node words and the lookup records whole for the
 record, the counts the model's own; `0x2` and the sprite's slot on the record of each head hung, `0x4` in the
-shared flags and the count; and the head's sprite in the sprite table at that slot. **Not measured:** the original
-loading a file made so; a made record's words for a thing just bought (the original's own bought Crazy Ape is one
-record, held on its building clip); a head's sprite made from nothing (the 122 are the game's own).
+shared flags and the count; and the head's sprite in the sprite table at that slot. Built and loaded in the
+original: "OpenTPW's writer, a rider's head".
 
 ### The rule for a record's two tables
 
@@ -1595,8 +1593,8 @@ lookup records are left the file's.
 queue is bound whether or not its model is in view. A channel here keeps no keep-shown bit of its own, so a clip
 started since the load applies its hide list (`SAVE_PARK_CHANNEL_KEEP_SHOWN_BIT`, Q257c). Where a channel the file
 had idle is started, its unnamed last clip's marks cannot be told from another idle channel's, and all go. A
-thing bought whose model will not read declares no tables (`SAVE_PARK_MADE_MODEL_TABLES`, counted). A head hung
-is still in no lookup record (`SAVE_PARK_HEAD_ON_A_MODEL_NODE`, Q257d).
+thing bought whose model will not read declares no tables (`SAVE_PARK_MADE_MODEL_TABLES`, counted), and so no
+head.
 
 **Confirmed in both games** (`q257b/`, `PREDICTION.txt` holds every prediction and miss). A Crazy Ape bought in
 the shipped park and saved on its held build clip: the record declares 34 words and 24 pairs, shared flags 3,
@@ -1612,6 +1610,65 @@ tells nothing apart; with the ape running it keeps the build clip's marks throug
 original's frames of the fix's ape and the control's show the same ape from the saved camera (`q257b/sheet-original-fix-control-full.png`),
 so what the leftover marks and the dummy's bit change in the picture, if anything, is not known; the difference is
 the original's memory's.
+
+### OpenTPW's writer, a rider's head
+
+Built on 2026-10-09 (Q257d). The bytes are the FileFormats `saves.md`'s ("A head on a node"); harness `q257d/`
+(`census.py`, `confirm.py`, `PREDICTION.txt`, `mutations.py`, `orig/`).
+
+**A head's sprite is made on program word 1704 and rests on 1698.** `FUN_0044b410` hands `FUN_00475a10` the
+program at `0x0074f558`, and the constructor `FUN_004758f0` stores `(program - 0x0074dab8) / 4` at the record's
+`+0x08` and `+0x0c`: 1704, which `+0x0c` keeps for good. It is made with no place, set or frame (the five noughts
+of the call), state 1, the stack's room 20. Every one of the 122 heads in the files to hand has run its first
+turn since and reads alike: `+0x08` 1698, `+0x10` 1696, state 2, room 19 with word 1714 in the stack's first
+place, `+0x74` 1 (the loop count beside it, `+0x78`, is nought: the word pushed is no loop's start), `+0xbc` 8,
+`+0xc4` `0x3000080`, shown. Of the dwords that differ among the 122 only three are the head's own: its slot,
+its kind and its bank. The place (`+0x88` to `+0x90`), the scale (`+0xa4`, `+0xa8`) and the frame (`+0xb8`) are
+nought, one and nought on every head a script's head table holds and are set only on a head the engine hangs
+with no table (a car's, the Aztec Mayhem's); the rest are what the record keeps of its last drawing and two
+pointers of the run (`q257d/census.py`).
+
+**The kind and the bank are the rider's** (`FUN_004fcac0`): kind 3 on the rider's bank where their `mESPSprite`
+is 2, a costume, else kind 1 on their `mSpriteID`.
+
+**What is written** (`ParkRides.WrittenHeads`, `ParkFileWriter.PlanHeads`, `ParkThingStates.Put`,
+`ParkWorld.PutPeople`). For a script with a head table, each head hung is found on its node's lookup record,
+`FindNode( head id, 0x80 )` less the model's first lookup node (`FUN_0044b220`): the record is written `0x2` and
+the sprite's slot, on a made record and a kept one alike, the shared `0x4` and the count following from the
+record's pairs as they then stand. Every other record the head table can hang on is written as `FUN_0044b4c0`
+leaves one: `0x2` off and the handle `-1`. The sprite is written at its slot as the 122 rest, with what a record
+keeps of its last drawing nought, as on every sprite made here. A head on a record the file has a head on keeps
+the file's slot, its kind and bank written over; a new one takes the lowest slot the file's table leaves empty,
+before any slot is dealt to a person made; a head gone, and every head of a thing sold, gives its slot up. A
+script with no head table rules no lookup record: its model's are left the file's, and its heads' sprites with
+them.
+
+**Deviations, each said at its site.** The original deals a head the lowest empty slot as it is hung, among the
+people's as they come and go; here a new head takes none of the file's slots, a person gone since or not, so
+the slots are not the original's own. A head the engine hangs with no head table is not built here, so a
+written park holds the file's and no new one. Written with no people (`Running.People` null) the sprite table is
+left alone and the lookup records with it.
+
+**Confirmed in both games** (`q257d/`, `PREDICTION.txt` holds every prediction and miss). A Crazy Ape bought in
+the shipped park, its queue joined, saved with four riders' heads hung (head ids 2, 3, 6 and 10): the record
+reads shared flags 7, four attached, `(0x23, 11)`, `(0x23, 20)`, `(0x23, 21)`, `(0x23, 22)` on lookup records
+10, 1, 12 and 13, and the four slots hold resting heads of kind 1 on banks 4, 0, 1 and 5, named by no person.
+Loaded here and saved again the kept record reads the same on the same slots; saved after the ride let them
+off, shared 3, nothing attached, no head left. **The original under Proton**, loading the first file from the
+Load Park list, held at its first poll shared 7, four attached and the same four pairs, each slot of its sprite
+table a live sprite of kind 1 on the file's bank, state 2, word 1698, flags `0x3000080`, shown; 66 seconds on
+its own script took the four off, one a poll, to shared 3 and none attached, and hung its next rider on record
+2 with a sprite it made itself on slot 42 (`orig/a-load.log`). The commit's own build gave the same again (`gate/`, `orig/g-load.log`: four held, then 4, 3, 2, 1, 0).
+**The control** (the build before, no head written; `control/`, `orig/c-load.log`): the file's script names three
+riders in its head table and its record holds shared 3 and nothing attached, and the original read exactly that
+after the load; at the ride's end its script's delete, finding no head for those three, still took one off the
+count each time, to 4294967293, and the count stood three short from then on. **On screen**
+(`sheet-original-gate-control.png`, the original off-screen under llvmpipe, the same camera): three seconds after
+the load the fix's ape holds riders' heads in both its bananas, one in the left and three in the right, and the
+control's bananas are empty; the head in the control's right banana at six seconds is a rider the original
+boarded itself at 3.4 s. A pale speck at the tip of the control's right banana is in both its frames and was not
+identified. **Seen in the first run only** (`run1/C-off.TPWS`, the build before two small simplifications): the
+file saved after the riders got off; the gate's run did not catch the ride empty in its 200 seconds.
 
 ### Read, not run
 

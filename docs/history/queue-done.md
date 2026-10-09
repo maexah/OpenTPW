@@ -5627,6 +5627,19 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   ape's; saved running, the original's running apes' words; the original under Proton held each file's words on
   the model at the first poll, where the control's file left it the build clip's marks for good; on screen the two
   read alike.
+- [x] **Q257d. The writer: a rider's head.** From Q257 and Q257b (`saves.md`, "A model record's two tables, and a
+  head on a node": "What a writer must do for a head"). Each head hung is `0x2` and its sprite's slot on its
+  node's lookup record, with the shared `0x4` and the count, on a made record and a kept one
+  (`ParkThingStates.LookupsOf` reads a kept record's pairs; `Put` writes none yet); and the head's sprite in the
+  sprite table at that slot, as the 122 read (kind 1 or 3, the eighteen dwords that vary still to be named:
+  `q257/heads.py`), on a slot the people's writer is told is taken; a head gone since the load gives its slot up
+  (`SAVE_PARK_HEAD_ON_A_MODEL_NODE` gone). The original, loading Q257b's file, hung its own two heads as shared
+  flags 7 and pairs `(0x23, 11)`, `(0x23, 10)` (`q257b/orig/fixb-load.log`). Confirm: a ride with riders' heads on
+  its nodes bought and written, the heads on the same nodes in the original under Proton.
+  **Done 2026-10-09:** a bought Crazy Ape saved with four heads hung reads shared 7, four attached, `(0x23, 11)`,
+  `(0x23, 20)`, `(0x23, 21)`, `(0x23, 22)` on records 10, 1, 12, 13, each slot a resting head; the original held
+  the same at its first poll, drew them, and took all four off with its own script (`saves.md`, "OpenTPW's
+  writer, a rider's head").
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

@@ -1206,9 +1206,9 @@ public class ParkFileWriterThingsTests
 		Assert.IsTrue( players.Clip( 5, 1 )!.Tracks.All( track => (written[track.Node] & ParkModelTables.Tracked) != 0 ) );
 	}
 
-	/// <summary>A head hung on a model's node is in the model's lookup records, which are not written: counted.</summary>
+	/// <summary>A head slot whose node the model lacks holds its visitor in the script's table and hangs nothing on the model.</summary>
 	[TestMethod]
-	public void AHeadOnAModelNodeIsCounted()
+	public void AHeadSlotWhoseNodeTheModelLacksHangsNothing()
 	{
 		var rides = Bind( shipped );
 		var state = new ParkState( shipped );
@@ -1216,9 +1216,12 @@ public class ParkFileWriterThingsTests
 		rides.Scheduler.Find( rides.ScriptFor( BellyBounce ) )!.RestoreHeads( [0, 31] );
 
 		var things = rides.Written( shipped, state.WrittenObjects( shipped ), ChannelsFor, state.HoardingFor )!;
+		var heads = things.Models.Single( model => model.Slot == BouncyModelSlot ).Heads!.Value;
 
-		Assert.AreEqual( 1, Unimplemented.Summary.Single( gap => gap.What == "SAVE_PARK_HEAD_ON_A_MODEL_NODE" ).Times );
+		Assert.AreEqual( (0, 0), (heads.Records.Count, heads.Hung.Count) );
+		Assert.IsFalse( Unimplemented.Summary.Any( gap => gap.What == "SAVE_PARK_HEAD_ON_A_MODEL_NODE" ) );
 		CollectionAssert.AreEqual( new[] { 0, 31 }, things.Scripts.Single( script => script.Handle == BouncyScript ).Heads );
+		Assert.IsTrue( things.Models.Where( model => model.Slot != BouncyModelSlot ).All( model => model.Heads == null ), "a script with no head table rules no lookup record" );
 	}
 
 	/// <summary>With the file's clock unread no moment here has a reading there, and nothing is handed over.</summary>

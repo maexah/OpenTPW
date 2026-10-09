@@ -887,7 +887,7 @@ public sealed class ParkRides : Entity
 	/// start, a running one's the moment of the save, the third stamp the save's. Of the flag word the loop,
 	/// frozen, held, <c>0x10</c> and <c>0x20</c> bits are the running channel's; the rest are left the file's,
 	/// because a channel here does not keep the keep-shown request (<c>0x8</c>), counted where the clip is no
-	/// longer the file's. A head hung on a model's node is in its lookup records, which are not written: counted.
+	/// longer the file's. A head hung on a model's node goes into its node's lookup record (<see cref="WrittenHeads(RideScript?, int)"/>).
 	/// The hoarding's bits are the thing's as they stand, the Closed kind a load gives one that names none among
 	/// them: the original's own file of a loaded park holds it on the same things.
 	/// </para>
@@ -931,9 +931,6 @@ public sealed class ParkRides : Entity
 				madeHandles.Add( handle );
 				animations = script.Animations;
 
-				if ( script.Heads().Any() )
-					Unimplemented.Report( "SAVE_PARK_HEAD_ON_A_MODEL_NODE" );
-
 				// A walk here keeps no facing, so a made slot in use goes out facing nought.
 				if ( record.Script.Walk?.Any( slot => slot.State != 0 ) == true )
 					Unimplemented.Report( "SAVE_PARK_WALK_SLOT_FACING" );
@@ -967,7 +964,8 @@ public sealed class ParkRides : Entity
 				Unimplemented.Report( "SAVE_PARK_MADE_MODEL_TABLES" );
 
 			made.Add( new ParkFileWriter.MadeThing( thing.Object, thing.Across, thing.Down, record, channels,
-				raised?.Flags ?? 0, raised?.Progress ?? 0f, tables ) );
+				raised?.Flags ?? 0, raised?.Progress ?? 0f, tables,
+				tables != null && _scripts.TryGetValue( placed.ThingId, out var own ) ? WrittenHeads( Scheduler.Find( own ), placed.CatalogueId ) : null ) );
 		}
 
 		var goneHandles = new HashSet<int>( (gone ?? new HashSet<int>()).SelectMany( loaded.ScriptStates.HandlesOf ) );
@@ -988,9 +986,6 @@ public sealed class ParkRides : Entity
 			}
 
 			scripts.Add( script.Written( Reading ) );
-
-			if ( script.Heads().Any() )
-				Unimplemented.Report( "SAVE_PARK_HEAD_ON_A_MODEL_NODE" );
 		}
 
 		foreach ( var handle in loaded.ScriptStates.Order )
@@ -1020,11 +1015,30 @@ public sealed class ParkRides : Entity
 			// The node words, the file's as the clips started since the load have left them.
 			var words = players.Nodes?.Words( players.NodeFrames() );
 
-			models.Add( new WrittenModel( record.Slot, channels, hoarding?.Flags, hoarding?.Progress ?? 0f, words ) );
+			models.Add( new WrittenModel( record.Slot, channels, hoarding?.Flags, hoarding?.Progress ?? 0f, words,
+				WrittenHeads( Scheduler.Find( handle ), thing.CatalogueId ) ) );
 		}
 
 		return new ParkFileWriter.RunningThings( objects, Scheduler.Tick, Scheduler.NextHandle, scripts, states, models,
 			Reading( now ), made, gone, built );
+	}
+
+	/// <summary>
+	/// The heads a script's head table has hung on its model's nodes, each by its node's lookup record, with every
+	/// record the table can hang one on; null for a script with no head table, whose model's lookup records are
+	/// not its to write (a head the engine hangs with no table, a car's or the Aztec Mayhem's, is kept by nothing
+	/// here), and for an item whose model will not read.
+	/// </summary>
+	private WrittenHeads? WrittenHeads( RideScript? script, int catalogueId )
+	{
+		if ( script is not { HeadSlots: > 0 } || TableModel( catalogueId ) is not { } model )
+			return null;
+
+		int Record( int head ) => model.Model.FindNode( head, RideNodes.HeadSpace ) is var node && node >= 0 ? node - model.Model.LookupFirst : -1;
+
+		return new WrittenHeads(
+			[.. Enumerable.Range( 1, script.HeadSlots ).Select( Record ).Where( record => record >= 0 )],
+			[.. script.Heads().Where( head => head.Hung && Record( head.Node ) >= 0 ).Select( head => (Record( head.Node ), head.Handle) )] );
 	}
 
 	/// <summary>

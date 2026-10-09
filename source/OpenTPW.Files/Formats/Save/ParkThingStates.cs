@@ -58,8 +58,18 @@ public readonly record struct SavedThing( int CatalogueId, int Slot, SavedChanne
 /// <param name="NodeWords">
 /// A flag word a node, written over the record's own where the record holds as many; null leaves the file's.
 /// </param>
+/// <param name="Heads">The riders' heads hung on its nodes; null leaves the record's lookup records the file's.</param>
 public readonly record struct WrittenModel( int Slot, SavedChannel[] Channels, uint? HoardingFlags = null,
-	float HoardingProgress = 0f, IReadOnlyList<uint>? NodeWords = null );
+	float HoardingProgress = 0f, IReadOnlyList<uint>? NodeWords = null, WrittenHeads? Heads = null );
+
+/// <summary>
+/// The riders' heads on a model's nodes, as a park file's writer takes them (<c>docs/exe/saves.md</c>,
+/// "OpenTPW's writer, a rider's head"). A head is a sprite of its own, and its node's lookup record holds the
+/// sprite's slot (<c>FUN_0044b410</c>).
+/// </summary>
+/// <param name="Records">Every lookup record a head of the script's head table can hang on, by its place in the model's lookup table.</param>
+/// <param name="Hung">Each head hung: its lookup record, and the visitor whose head it is.</param>
+public readonly record struct WrittenHeads( IReadOnlyList<int> Records, IReadOnlyList<(int Record, int Visitor)> Hung );
 
 /// <summary>
 /// The <c>RSYS</c> module of a park save: what every thing's model was doing when it was saved.
@@ -137,7 +147,7 @@ public sealed partial class ParkThingStates
 	private const int SharedOffset = 0x2f;
 
 	/// <summary>A lookup record's runtime flag for something attached to it.</summary>
-	private const int LookupAttached = 0x2;
+	public const int LookupAttached = 0x2;
 
 	/// <summary>Where the variable-length tail begins.</summary>
 	private const int TailOffset = 0x37;
@@ -251,7 +261,14 @@ public sealed partial class ParkThingStates
 	/// </summary>
 	/// <returns>How many records were written over.</returns>
 	/// <exception cref="InvalidOperationException">The module was not read whole, so no record's place is known.</exception>
-	public int Put( byte[] body, IEnumerable<WrittenModel> models )
+	/// <param name="headSprites">
+	/// The sprite slot of each head hung, by its model's slot and its lookup record (<see cref="WrittenModel.Heads"/>):
+	/// each such record is written <c>0x2</c> and the slot, every other record of <see cref="WrittenHeads.Records"/>
+	/// as <c>FUN_0044b4c0</c> leaves one whose head is taken off, and the shared <c>0x4</c> and the count of things
+	/// attached follow. Null leaves every record's lookup records the file's.
+	/// </param>
+	public int Put( byte[] body, IEnumerable<WrittenModel> models,
+		IReadOnlyDictionary<(int Slot, int Record), int>? headSprites = null )
 	{
 		ArgumentNullException.ThrowIfNull( body );
 		ArgumentNullException.ThrowIfNull( models );
@@ -297,6 +314,41 @@ public sealed partial class ParkThingStates
 					PutInt32( body, at + (index * 4), (int)words[index] );
 			}
 
+			if ( model.Heads is { } heads && headSprites != null )
+			{
+				var count = ReadInt16At( place.Record + CountsOffset + 2 );
+				var at = place.Record + TailOffset;
+
+				foreach ( var record in heads.Records.Where( record => record >= 0 && record < count ) )
+				{
+					PutInt32( body, at + (record * 8), ReadInt32At( at + (record * 8) ) & ~LookupAttached );
+					PutInt32( body, at + (record * 8) + 4, NothingAttached );
+				}
+
+				foreach ( var (record, _) in heads.Hung.Where( head => head.Record >= 0 && head.Record < count ) )
+				{
+					if ( !headSprites.TryGetValue( (model.Slot, record), out var sprite ) )
+						continue;
+
+					PutInt32( body, at + (record * 8), ReadInt32At( at + (record * 8) ) | LookupAttached );
+					PutInt32( body, at + (record * 8) + 4, sprite );
+				}
+
+				// Written back through the body: the record's own bytes are what count now.
+				var attached = 0;
+
+				for ( var record = 0; record < count; ++record )
+				{
+					if ( (System.Buffers.Binary.BinaryPrimitives.ReadInt32LittleEndian( body.AsSpan( at + (record * 8), 4 ) ) & LookupAttached) != 0 )
+						++attached;
+				}
+
+				var shared = ReadInt32At( place.Record + SharedOffset ) & ~SharedAttached;
+
+				PutInt32( body, place.Record + SharedOffset, shared | (attached > 0 ? SharedAttached : 0) );
+				PutInt32( body, place.Record + SharedOffset + 4, attached );
+			}
+
 			if ( model.HoardingFlags is { } hoarding )
 			{
 				var packed = (uint)ReadInt32At( place.Record + FlagsOffset );
@@ -309,6 +361,32 @@ public sealed partial class ParkThingStates
 		}
 
 		return written;
+	}
+
+	/// <summary>The lookup records' shared flag for a model with something attached (<c>FUN_0044b410</c>).</summary>
+	public const int SharedAttached = 0x4;
+
+	/// <summary>The handle <c>FUN_0044b4c0</c> stores on a lookup record as what it held is taken off.</summary>
+	public const int NothingAttached = -1;
+
+	/// <summary>
+	/// The sprite slots the file's record in <paramref name="slot"/> names on <paramref name="records"/>, the
+	/// lookup records carrying <c>0x2</c> among them, by record; empty where the slot holds none.
+	/// </summary>
+	public IReadOnlyDictionary<int, int> AttachedOn( int slot, IEnumerable<int>? records = null )
+	{
+		var held = new Dictionary<int, int>();
+
+		if ( LookupsOf( slot ) is not { } lookups )
+			return held;
+
+		foreach ( var record in records ?? Enumerable.Range( 0, lookups.Records.Length ) )
+		{
+			if ( record >= 0 && record < lookups.Records.Length && (lookups.Records[record].Flags & LookupAttached) != 0 )
+				held[record] = lookups.Records[record].Handle;
+		}
+
+		return held;
 	}
 
 	/// <summary>

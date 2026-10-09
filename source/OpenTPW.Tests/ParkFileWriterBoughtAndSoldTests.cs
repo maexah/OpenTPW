@@ -900,4 +900,341 @@ public class ParkFileWriterBoughtAndSoldTests
 		Assert.IsTrue( at > 0, "the body is in the park file, byte for byte" );
 		Assert.IsTrue( payload.AsSpan().IndexOf( file.StringBlob ) > at, "and the blob after it" );
 	}
+
+	/// <summary>The lookup records a Crazy Ape's head ids 2, 3, 6 and 10 hang on, as the model's own table has them.</summary>
+	private static readonly Dictionary<int, int> ApeHeadRecord = new() { [2] = 10, [3] = 1, [6] = 12, [10] = 13 };
+
+	/// <summary>A bought Crazy Ape with heads hung for <paramref name="heads"/> (head id, visitor), handed to the writer.</summary>
+	private ParkFileWriter.RunningThings ApeWithHeads( ParkState state, ParkRides rides, out int apeId, params (int Head, int Visitor)[] heads )
+		=> ApeWithHeads( shipped, state, rides, out apeId, heads );
+
+	private ParkFileWriter.RunningThings ApeWithHeads( ParkWorld world, ParkState state, ParkRides rides, out int apeId, params (int Head, int Visitor)[] heads )
+	{
+		var ape = Buy( state, rides, CrazyApe, 41, 22 );
+		var script = rides.Scheduler.Find( rides.ScriptFor( ape.ThingId ) )!;
+		var table = new int[script.HeadSlots];
+
+		foreach ( var (head, visitor) in heads )
+			table[head - 1] = visitor;
+
+		script.RestoreHeads( table );
+		apeId = ape.ThingId;
+
+		var kept = state.WrittenObjects( world, id => true, out var bought, out var gone );
+		Assert.IsTrue( catalogue.TryGet( CrazyApe, out var item ) );
+
+		return rides.Written( world, kept, ChannelsFor, state.HoardingFor,
+			[new ParkRides.BoughtThing( new ParkWorld.MadeObject( bought[0], "Crazy", "Ape" ), item.Width, item.Depth, "there\\" )], gone, state.BuiltItems )!;
+	}
+
+	/// <summary>A head's sprite record's dword at <paramref name="at"/>, read from the written body's sprite table.</summary>
+	private static int HeadField( ParkWorld written, byte[] body, int slot, int at )
+	{
+		// The record opens with a dword and then its own slot; a head's is the only record whose slot and flags both match.
+		for ( var i = 0; i + 0x118 <= body.Length; ++i )
+		{
+			if ( BinaryPrimitives.ReadInt32LittleEndian( body.AsSpan( i + 4 ) ) == slot
+				&& BinaryPrimitives.ReadInt32LittleEndian( body.AsSpan( i + 0xc4 ) ) == 0x3000080
+				&& BinaryPrimitives.ReadInt32LittleEndian( body.AsSpan( i + 0x0c ) ) == 1704 )
+				return BinaryPrimitives.ReadInt32LittleEndian( body.AsSpan( i + at ) );
+		}
+
+		Assert.Fail( $"no head's sprite on slot {slot}" );
+		return 0;
+	}
+
+	/// <summary>
+	/// A head hung on a bought ride's node goes into that node's lookup record with the slot of a sprite of its own, a
+	/// child's head on the rider's bank or a costume's, on the lowest slots the file leaves empty in head order.
+	/// </summary>
+	[TestMethod]
+	public void ABoughtRidesHeadsGoIntoItsLookupRecordsAndTheSpriteTable()
+	{
+		var state = new ParkState( shipped );
+		var rides = Bind( shipped );
+		var guests = shipped.People.Where( person => person.Guest != null ).Take( 2 ).ToArray();
+		var things = ApeWithHeads( state, rides, out var apeId, (3, guests[0].ThingId), (10, guests[1].ThingId) );
+
+		Assert.AreEqual( 0, Times( "SAVE_PARK_HEAD_ON_A_MODEL_NODE" ) );
+
+		var heads = things.Made!.Single().Heads!.Value;
+
+		CollectionAssert.AreEqual( new[] { (ApeHeadRecord[3], guests[0].ThingId), (ApeHeadRecord[10], guests[1].ThingId) }, heads.Hung.ToArray() );
+		Assert.AreEqual( 16, heads.Records.Count );
+		CollectionAssert.IsSubsetOf( ApeHeadRecord.Values.ToArray(), heads.Records.ToArray() );
+
+		// The second rider wears a costume: their head is the costume's.
+		var people = new ParkPeople( shipped ).Written( id => true )
+			.Select( person => person.Person.ThingId == guests[1].ThingId ? person with { Person = person.Person with { SpriteKind = 2, SpriteBank = 0 } } : person ).ToList();
+
+		var body = ParkFileWriter.Body( shipped, Running( things ) with { People = people }, out var report, out _ );
+		var written = new ParkWorld( body );
+		var lookups = Models( written ).LookupsOf( 90 )!.Value;
+		var fresh = ParkModelTables.Lookups( new ModelFile( data.OpenRead( "levels/jungle/Rides/monkey/monkey.MD2" )! ), false );
+
+		Assert.IsNull( written.Problem );
+		Assert.AreEqual( (7, 2, 2), (lookups.Shared, lookups.Attached, report!.Value.Heads) );
+		Assert.AreEqual( (0x23, 11), lookups.Records[ApeHeadRecord[3]] );
+		Assert.AreEqual( (0x23, 20), lookups.Records[ApeHeadRecord[10]] );
+
+		for ( var record = 0; record < fresh.Length; ++record )
+		{
+			if ( record != ApeHeadRecord[3] && record != ApeHeadRecord[10] )
+				Assert.AreEqual( fresh[record], lookups.Records[record], $"record {record} holds nothing" );
+		}
+
+		Assert.AreEqual( shipped.Sprites.Count + 2, written.Sprites.Count );
+
+		var first = written.Sprites.Single( sprite => sprite.Slot == 11 );
+		var second = written.Sprites.Single( sprite => sprite.Slot == 20 );
+
+		Assert.AreEqual( (1, guests[0].SpriteBank, 3, 0), (first.Type, first.Bank, second.Type, second.Bank) );
+		Assert.AreEqual( (1698, 1704, 2, 255, 0f, 0f, 0f, 0), (first.Pc, first.Script, first.State, first.Alpha, first.X, first.Y, first.Height, first.Frame) );
+		CollectionAssert.AreEqual( new[] { 1714 }, written.SpriteLoopsOf( 11 ).ToArray() );
+
+		// The rest of a resting head's record, as every head of the original's files reads.
+		foreach ( var (at, value) in new[] { (0x10, 1696), (0x1c, 19), (0x74, 1), (0x78, 0), (0x80, 0x3e), (0xbc, 8), (0x114, 1), (0xa4, BitConverter.SingleToInt32Bits( 1f )), (0xa8, BitConverter.SingleToInt32Bits( 1f )) } )
+			Assert.AreEqual( value, HeadField( written, body, 20, at ), $"+0x{at:x}" );
+
+		Assert.IsFalse( written.People.Any( person => person.SpriteSlot is 11 or 20 ), "no person is given a head's slot" );
+	}
+
+	/// <summary>
+	/// Loaded again, the record is a kept one: a head still hung keeps its slot, one hung since takes an empty one,
+	/// and one taken off gives its slot up and leaves the record as the engine's delete does.
+	/// </summary>
+	[TestMethod]
+	public void AKeptRecordsHeadsKeepTheirSlotsAndGiveThemUp()
+	{
+		var guests = shipped.People.Where( person => person.Guest != null ).Take( 3 ).ToArray();
+		var body = ParkFileWriter.Body( shipped, Running( ApeWithHeads( new ParkState( shipped ), Bind( shipped ), out var apeId,
+			(3, guests[0].ThingId), (10, guests[1].ThingId) ) ), out _, out _ );
+
+		var loaded = new ParkWorld( body );
+		var rides = Bind( loaded );
+		var state = new ParkState( loaded );
+		var script = rides.Scheduler.Find( rides.ScriptFor( apeId ) )!;
+
+		ParkFileWriter.Running Run( int costumed = 0 )
+		{
+			var things = rides.Written( loaded, state.WrittenObjects( loaded ), ChannelsFor, state.HoardingFor )!;
+
+			return new( loaded.GameTick, false, 13, 0, loaded.Camera.Saved!.Value, Things: things, People: [.. new ParkPeople( loaded ).Written( id => true )
+				.Select( person => person.Person.ThingId == costumed ? person with { Person = person.Person with { SpriteKind = 2, SpriteBank = 7 } } : person )] );
+		}
+
+		CollectionAssert.AreEquivalent( new[] { (3, guests[0].ThingId), (10, guests[1].ThingId) }, script.Heads().Where( head => head.Hung ).Select( head => (head.Node, head.Handle) ).ToArray(), "the load hangs them again" );
+
+		// As it stands: the same slots.
+		var same = Models( new ParkWorld( ParkFileWriter.Body( loaded, Run() ) ) ).LookupsOf( 90 )!.Value;
+
+		Assert.AreEqual( ((0x23, 11), (0x23, 20), 7, 2), (same.Records[ApeHeadRecord[3]], same.Records[ApeHeadRecord[10]], same.Shared, same.Attached) );
+
+		// Head 3 taken off and head 6 hung: 11 is given up, 20 kept, and the new head takes the lowest the FILE leaves empty.
+		var table = new int[script.HeadSlots];
+
+		// And head 10 is another rider's now, in a costume: its slot is kept and written over.
+		table[10 - 1] = guests[0].ThingId;
+		table[6 - 1] = guests[2].ThingId;
+		script.RestoreHeads( table );
+
+		var changed = ParkFileWriter.Body( loaded, Run( guests[0].ThingId ), out var report, out _ );
+		var written = new ParkWorld( changed );
+		var lookups = Models( written ).LookupsOf( 90 )!.Value;
+
+		Assert.AreEqual( (0x21, -1), lookups.Records[ApeHeadRecord[3]], "as FUN_0044b4c0 leaves it" );
+		Assert.AreEqual( (0x23, 20), lookups.Records[ApeHeadRecord[10]] );
+		Assert.AreEqual( (0x23, 21), lookups.Records[ApeHeadRecord[6]] );
+		Assert.AreEqual( (7, 2, 2), (lookups.Shared, lookups.Attached, report!.Value.Heads) );
+		Assert.IsFalse( written.Sprites.Any( sprite => sprite.Slot == 11 && sprite.Type == 1 && sprite.Script == 1704 ), "the head gone gives its slot up" );
+		Assert.AreEqual( guests[2].SpriteBank, written.Sprites.Single( sprite => sprite.Slot == 21 ).Bank );
+		Assert.AreEqual( (3, 7), (written.Sprites.Single( sprite => sprite.Slot == 20 ).Type, written.Sprites.Single( sprite => sprite.Slot == 20 ).Bank), "a kept slot is written over with the rider's own kind and bank" );
+		Assert.AreEqual( 1, loaded.Sprites.Single( sprite => sprite.Slot == 20 ).Type, "which were another rider's" );
+
+		// Every head off: nothing attached, the shared bit gone, no head's sprite left.
+		script.RestoreHeads( new int[script.HeadSlots] );
+
+		var bare = new ParkWorld( ParkFileWriter.Body( loaded, Run(), out report, out _ ) );
+		var none = Models( bare ).LookupsOf( 90 )!.Value;
+
+		Assert.AreEqual( (3, 0, 0), (none.Shared, none.Attached, report!.Value.Heads) );
+		Assert.IsFalse( none.Records.Any( record => (record.Flags & 2) != 0 ) );
+		Assert.IsFalse( bare.Sprites.Any( sprite => sprite.Script == 1704 ) );
+		Assert.AreEqual( shipped.Sprites.Count, bare.Sprites.Count );
+	}
+
+	/// <summary>A thing sold takes its heads' sprites with it; and with no people given no head is written at all.</summary>
+	[TestMethod]
+	public void AThingSoldGivesItsHeadsSlotsUp()
+	{
+		var guests = shipped.People.Where( person => person.Guest != null ).Take( 2 ).ToArray();
+		var body = ParkFileWriter.Body( shipped, Running( ApeWithHeads( new ParkState( shipped ), Bind( shipped ), out var apeId,
+			(3, guests[0].ThingId), (10, guests[1].ThingId) ) ), out _, out _ );
+
+		var loaded = new ParkWorld( body );
+		var rides = Bind( loaded );
+		var state = new ParkState( loaded );
+
+		// Without the people the sprite table is not written, so the lookup records are left the file's.
+		var kept = rides.Written( loaded, state.WrittenObjects( loaded ), ChannelsFor, state.HoardingFor )!;
+
+		rides.Scheduler.Find( rides.ScriptFor( apeId ) )!.RestoreHeads( new int[16] );
+		kept = rides.Written( loaded, state.WrittenObjects( loaded ), ChannelsFor, state.HoardingFor )!;
+
+		var alone = Models( new ParkWorld( ParkFileWriter.Body( loaded, new ParkFileWriter.Running( loaded.GameTick, false, 13, 0, loaded.Camera.Saved!.Value, Things: kept ) ) ) ).LookupsOf( 90 )!.Value;
+
+		Assert.AreEqual( (7, 2), (alone.Shared, alone.Attached) );
+
+		Assert.IsTrue( catalogue.TryGet( CrazyApe, out var item ) );
+		rides.Unbind( apeId, item );
+		Assert.IsTrue( state.RemoveObject( apeId ) );
+
+		var objects = state.WrittenObjects( loaded, id => true, out var bought, out var gone );
+		var things = rides.Written( loaded, objects, ChannelsFor, state.HoardingFor, [], gone, state.BuiltItems )!;
+
+		var sold = new ParkWorld( ParkFileWriter.Body( loaded, new ParkFileWriter.Running( loaded.GameTick, false, 13, 0, loaded.Camera.Saved!.Value,
+			People: new ParkPeople( loaded ).Written( id => id != apeId ), Things: things ) ) );
+
+		Assert.IsNull( sold.Problem );
+		Assert.IsNull( Models( sold ).LookupsOf( 90 ) );
+		Assert.IsFalse( sold.Sprites.Any( sprite => sprite.Script == 1704 ), "its heads' sprites go with it" );
+		Assert.AreEqual( shipped.Sprites.Count, sold.Sprites.Count );
+	}
+
+	/// <summary>The records a head table rules are the only ones written: a thing attached to another record stays.</summary>
+	[TestMethod]
+	public void OnlyTheHeadTablesRecordsAreWritten()
+	{
+		var guests = shipped.People.Where( person => person.Guest != null ).Take( 2 ).ToArray();
+		var body = ParkFileWriter.Body( shipped, Running( ApeWithHeads( new ParkState( shipped ), Bind( shipped ), out _,
+			(3, guests[0].ThingId), (10, guests[1].ThingId) ) ), out _, out _ );
+
+		var states = Models( new ParkWorld( body ) );
+		var record = states.Things.Single( thing => thing.Slot == 90 );
+		var probe = (byte[])body.Clone();
+
+		CollectionAssert.AreEquivalent( new[] { (ApeHeadRecord[3], 11), (ApeHeadRecord[10], 20) }, states.AttachedOn( 90 ).Select( held => (held.Key, held.Value) ).ToArray() );
+		Assert.AreEqual( 0, states.AttachedOn( 90, [ApeHeadRecord[6]] ).Count );
+		Assert.AreEqual( 0, states.AttachedOn( 5 ).Count );
+
+		// The table rules record 1 alone here, and holds nothing: record 13's head is not its to take off.
+		states.Put( probe, [new WrittenModel( 90, record.Channels, Heads: new WrittenHeads( [ApeHeadRecord[3], 99, -2], [(99, 1), (-2, 1)] ) )],
+			new Dictionary<(int, int), int> { [(90, 99)] = 30, [(90, -2)] = 31 } );
+
+		var lookups = Models( new ParkWorld( probe ) ).LookupsOf( 90 )!.Value;
+		var after = Models( new ParkWorld( probe ) ).Things.Single( thing => thing.Slot == 90 );
+
+		Assert.IsNull( Models( new ParkWorld( probe ) ).Problem, "a record the model has none of is not written, before the table or past it" );
+		CollectionAssert.AreEqual( record.NodeWords, after.NodeWords );
+		CollectionAssert.AreEqual( record.Channels, after.Channels );
+		Assert.AreEqual( 24, lookups.Records.Length );
+		Assert.AreEqual( 6, Enumerable.Range( 0, body.Length ).Count( at => body[at] != probe[at] ), "one flag, one handle and the count, and not a byte beside them" );
+
+		Assert.AreEqual( ((0x21, -1), (0x23, 20), 7, 1), (lookups.Records[ApeHeadRecord[3]], lookups.Records[ApeHeadRecord[10]], lookups.Shared, lookups.Attached) );
+
+		// With no slots given the lookup records are left alone, whatever heads the model names.
+		probe = (byte[])body.Clone();
+		states.Put( probe, [new WrittenModel( 90, record.Channels, Heads: new WrittenHeads( [ApeHeadRecord[3]], [] ) )] );
+		CollectionAssert.AreEqual( body, probe );
+	}
+
+	/// <summary>The sprite table's empty slots are dealt lowest first, past what is taken.</summary>
+	[TestMethod]
+	public void AHeadsSlotIsTheLowestEmpty()
+	{
+		CollectionAssert.AreEqual( new[] { 11, 20, 21 }, shipped.EmptySpriteSlots( 3, new HashSet<int>() ) );
+		CollectionAssert.AreEqual( new[] { 20, 22 }, shipped.EmptySpriteSlots( 2, new HashSet<int> { 11, 21 } ) );
+		Assert.AreEqual( (5, (int?)null, (int?)null), (shipped.SpriteKindIn( 1 )!.Value, shipped.SpriteKindIn( 11 ), shipped.SpriteKindIn( 0 )) );
+
+	}
+
+	/// <summary>A file's lookup record that names a slot holding no head is not kept: the head takes an empty slot and the sprite there stands.</summary>
+	[TestMethod]
+	public void ASlotThatHoldsNoHeadIsNotKept()
+	{
+		var guests = shipped.People.Where( person => person.Guest != null ).Take( 2 ).ToArray();
+		var body = ParkFileWriter.Body( shipped, Running( ApeWithHeads( new ParkState( shipped ), Bind( shipped ), out var apeId,
+			(3, guests[0].ThingId), (10, guests[1].ThingId) ) ), out _, out _ );
+
+		var states = Models( new ParkWorld( body ) );
+		var record = states.Things.Single( thing => thing.Slot == 90 );
+
+		// Head 3's record made to name slot 1, a member of staff's own picture.
+		states.Put( body, [new WrittenModel( 90, record.Channels, Heads: new WrittenHeads( [ApeHeadRecord[3]], [(ApeHeadRecord[3], 0)] ) )],
+			new Dictionary<(int, int), int> { [(90, ApeHeadRecord[3])] = 1 } );
+
+		var loaded = new ParkWorld( body );
+		var rides = Bind( loaded );
+		var state = new ParkState( loaded );
+
+		Assert.AreEqual( (0x23, 1), Models( loaded ).LookupsOf( 90 )!.Value.Records[ApeHeadRecord[3]] );
+
+		var written = new ParkWorld( ParkFileWriter.Body( loaded, new ParkFileWriter.Running( loaded.GameTick, false, 13, 0, loaded.Camera.Saved!.Value,
+			People: new ParkPeople( loaded ).Written( id => true ), Things: rides.Written( loaded, state.WrittenObjects( loaded ), ChannelsFor, state.HoardingFor )! ) ) );
+
+		// 11 and 20 are the file's still (11 a head nobody names now), so the lowest empty is 21.
+		Assert.AreEqual( (0x23, 21), Models( written ).LookupsOf( 90 )!.Value.Records[ApeHeadRecord[3]] );
+		Assert.AreEqual( (0x23, 20), Models( written ).LookupsOf( 90 )!.Value.Records[ApeHeadRecord[10]] );
+		Assert.AreEqual( loaded.Sprites.Single( sprite => sprite.Slot == 1 ), written.Sprites.Single( sprite => sprite.Slot == 1 ) with { X = loaded.Sprites.Single( sprite => sprite.Slot == 1 ).X, Y = loaded.Sprites.Single( sprite => sprite.Slot == 1 ).Y, Height = loaded.Sprites.Single( sprite => sprite.Slot == 1 ).Height, Facing = loaded.Sprites.Single( sprite => sprite.Slot == 1 ).Facing, Frame = loaded.Sprites.Single( sprite => sprite.Slot == 1 ).Frame } );
+		Assert.AreEqual( 5, written.Sprites.Single( sprite => sprite.Slot == 1 ).Type );
+	}
+
+	/// <summary>Two rides bought, a head on each: the older ride's head is dealt its slot first.</summary>
+	[TestMethod]
+	public void TwoBoughtRidesHeadsAreDealtOldestFirst()
+	{
+		var state = new ParkState( shipped );
+		var rides = Bind( shipped );
+		var guests = shipped.People.Where( person => person.Guest != null ).Take( 2 ).ToArray();
+		var older = Buy( state, rides, CrazyApe, 41, 22 );
+		var newer = Buy( state, rides, CrazyApe, 60, 40 );
+
+		Assert.IsTrue( older.ThingId < newer.ThingId );
+
+		foreach ( var (ape, guest) in new[] { (older, guests[0]), (newer, guests[1]) } )
+		{
+			var script = rides.Scheduler.Find( rides.ScriptFor( ape.ThingId ) )!;
+			var table = new int[script.HeadSlots];
+
+			table[3 - 1] = guest.ThingId;
+			script.RestoreHeads( table );
+		}
+
+		var kept = state.WrittenObjects( shipped, id => true, out var bought, out var gone );
+		Assert.IsTrue( catalogue.TryGet( CrazyApe, out var item ) );
+
+		var things = rides.Written( shipped, kept, ChannelsFor, state.HoardingFor,
+			[.. bought.Select( placed => new ParkRides.BoughtThing( new ParkWorld.MadeObject( placed, "Crazy", "Ape" ), item.Width, item.Depth, "there\\" ) )], gone, state.BuiltItems )!;
+
+		var written = new ParkWorld( ParkFileWriter.Body( shipped, Running( things ) ) );
+		var slotOf = written.Objects.ToDictionary( thing => thing.ThingId, thing => thing.MeshInstance - 1 );
+
+		Assert.AreEqual( (0x23, 11), Models( written ).LookupsOf( slotOf[older.ThingId] )!.Value.Records[ApeHeadRecord[3]] );
+		Assert.AreEqual( (0x23, 20), Models( written ).LookupsOf( slotOf[newer.ThingId] )!.Value.Records[ApeHeadRecord[3]] );
+		Assert.AreEqual( (guests[0].SpriteBank, guests[1].SpriteBank), (written.Sprites.Single( sprite => sprite.Slot == 11 ).Bank, written.Sprites.Single( sprite => sprite.Slot == 20 ).Bank) );
+	}
+
+	/// <summary>A head whose slot lies past the table's end grows the table by fifty, as a person's does.</summary>
+	[TestMethod]
+	public void AHeadPastTheTablesEndGrowsIt()
+	{
+		var crowd = new ParkPeople( shipped );
+
+		for ( var i = 0; i < 81; ++i )
+			crowd.Admit( 47, 21 );
+
+		var full = new ParkWorld( ParkFileWriter.Body( shipped, Running( Things() ) with { People = crowd.Written( id => true ) }, out var before, out _ ) );
+
+		Assert.AreEqual( (100, 99), (before!.Value.SpriteSlots, before.Value.LiveSprites), "every slot of the file's table is taken" );
+		TestRun.DeleteEvery<ParkPeople>();
+
+		var things = ApeWithHeads( full, new ParkState( full ), Bind( full ), out _, (3, full.People.First( person => person.Guest != null ).ThingId) );
+
+		var written = new ParkWorld( ParkFileWriter.Body( full, new ParkFileWriter.Running( full.GameTick, false, 13, 0, full.Camera.Saved!.Value,
+			People: new ParkPeople( full ).Written( id => true ), Things: things ), out var report, out _ ) );
+
+		Assert.IsNull( written.Problem );
+		Assert.AreEqual( (150, 100, 1), (report!.Value.SpriteSlots, report.Value.LiveSprites, report.Value.Heads) );
+		Assert.AreEqual( 1, written.Sprites.Single( sprite => sprite.Slot == 100 ).Type );
+	}
 }

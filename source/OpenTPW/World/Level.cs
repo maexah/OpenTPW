@@ -652,7 +652,7 @@ public class Level
 
 			Log.Info( $"Save: {report.Kept} people kept, {report.Made} made, {report.Gone} gone; " +
 				$"{report.LiveSprites} sprites in {report.SpriteSlots} slots, {report.Balloons} of them balloons and " +
-				$"{report.Bubbles} bubbles, {report.LetGo} balloons let go; {report.CellsHeaded} cells headed anew" );
+				$"{report.Bubbles} bubbles, {report.LetGo} balloons let go, {report.Heads} riders' heads; {report.CellsHeaded} cells headed anew" );
 		}
 
 		return path;

@@ -48,15 +48,6 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q257d. The writer: a rider's head.** From Q257 and Q257b (`saves.md`, "A model record's two tables, and a
-  head on a node": "What a writer must do for a head"). Each head hung is `0x2` and its sprite's slot on its
-  node's lookup record, with the shared `0x4` and the count, on a made record and a kept one
-  (`ParkThingStates.LookupsOf` reads a kept record's pairs; `Put` writes none yet); and the head's sprite in the
-  sprite table at that slot, as the 122 read (kind 1 or 3, the eighteen dwords that vary still to be named:
-  `q257/heads.py`), on a slot the people's writer is told is taken; a head gone since the load gives its slot up
-  (`SAVE_PARK_HEAD_ON_A_MODEL_NODE` gone). The original, loading Q257b's file, hung its own two heads as shared
-  flags 7 and pairs `(0x23, 11)`, `(0x23, 10)` (`q257b/orig/fixb-load.log`). Confirm: a ride with riders' heads on
-  its nodes bought and written, the heads on the same nodes in the original under Proton.
 - [ ] **Q257c. The writer: what else a made record leaves out.** From Q253 (`saves.md`, "What OpenTPW writes"),
   each counted or said there. A running channel's keep-shown bit `0x8`
   is kept by no channel here (`SAVE_PARK_CHANNEL_KEEP_SHOWN_BIT`, counted for every made channel that runs). A
@@ -78,6 +69,12 @@ the research lab), then the rest of this section in its old order.
   load here, counted (`SAVED_SPRITE_LOOP_STACK`), and the writer leaves a kept sprite's stack the file's and a
   made one's empty: read the stack with `ParkWorld.SpriteLoopsOf` and the script's own words (`+0xbc`, `+0xc8`,
   `+0xcc`), and write them from the running sprite, as a balloon let go is.
+  From Q257d: a head the engine hangs with no head table (a `WALKON` of action 4, the Aztec Mayhem's five; a
+  coaster's and a tour's cars') is hung by nothing here, is not counted, and a written park holds only the
+  file's: find who calls `FUN_0044b410` for one, count it where the script reaches it, then write it as a
+  table's head is (`ParkRides.WrittenHeads` hands over none for such a script). And a new head's slot is the
+  lowest the FILE leaves empty, not the lowest empty as it was hung: keep the slots as heads are hung if that
+  order is ever read.
 - [ ] **Q241j. The writer: the managers, then Save Game saves.** From Q241e. The economy thing's loans and rings,
   the staff HQ's strikes, the calendar's and the weather's fields; then `ParkSaveScreen.Save` writes
   (`SAVE_GAME_WRITER` gone), an overwrite replaces the file, and the Load Park list shows it. Confirm: a park
