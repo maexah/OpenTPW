@@ -734,7 +734,7 @@ public class ParkRidesTests
 	/// <b>A bound script walks between its own thing's nodes, where the thing stands.</b> The stock park's Jungle Spray,
 	/// bound from the save, finds its <c>entrance</c> at the world x and z the original held it at live in the same
 	/// park (docs/exe/ride-operation.md, "How long a leg lasts, and where its ends are"); the Drinks Shop, whose script
-	/// walks nobody, is given no nodes.
+	/// walks nobody and starts an effect on a node, is given them too, and a script that does none of the three none.
 	/// </summary>
 	[TestMethod]
 	public void TheJungleSprayWalksBetweenItsOwnNodesWhereItStands()
@@ -753,6 +753,12 @@ public class ParkRidesTests
 
 		Assert.IsNotNull( shop, "the Drinks Shop, thing 16, should be bound" );
 		Assert.AreEqual( 0, shop!.WalkSlots, "its script declares no walk slot" );
-		Assert.IsNull( shop.Nodes, "so it reads no model for one" );
+		Assert.IsTrue( shop.UsesEffectNodes, "but it starts an effect on a node" );
+		Assert.IsNotNull( shop.Nodes, "so it reads its model for that" );
+
+		var plain = rides.Scheduler.Scripts.Where( script => script.WalkSlots == 0 && !script.UsesHeads && !script.UsesEffectNodes ).ToList();
+
+		Assert.IsTrue( plain.Count > 0, "the shipped park binds a script that walks nobody, seats nobody and starts no effect" );
+		Assert.IsTrue( plain.All( script => script.Nodes == null ), "and such a script reads no model" );
 	}
 }

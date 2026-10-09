@@ -5682,6 +5682,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   **Proof:** a bought Jungle Spray's walker on lane 1 reads `facing 7` in `rides` and in the file, where the build
   before's file held 0, and the original held 7 on the slot at its first poll with this build's file and 0 with
   the build before's, then walked its own guests on 7, 0 and 1, standing 0, and off 3, 4 and 5.
+- [x] **Q257i. The writer: a script's started effects.** Split from the old Q257i at its first piece (2026-10-09);
+  the rest is Q257j. A script's object list is the effects its `ADDOBJ`s have started: 28-byte records, newest
+  first, each the type, the spawn's handle, the node, the node's lookup record in the model and the tag
+  (`saves.md`, "OpenTPW's writer, a script's started effects"; 140 records in thirteen files, 138 of 138 on the
+  lookup record the rule gives). A script here keeps each record's lookup record, a load puts the file's list
+  back, and the writer writes it: a made script's, and a kept script's whether or not it is as long as the file's.
+  **Proof:** a bought Litter Bin, a bought Coconut Kiosk and the file's toilet told it is dirty read
+  `5:93@10/-1/-1`, `1:58@1/1/0` and two `@1/1/1` in `rides` and in the file, where the build before's file held
+  the three lists empty, and the original held 7 live records at its first poll with this build's file, the
+  three scripts' among them word for word, and 3 with the build before's.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

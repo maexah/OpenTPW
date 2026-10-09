@@ -179,4 +179,43 @@ public class RideNodesTests
 		Assert.AreNotEqual( 0u, head.IdFlags & 0x40, "Head01 carries the face bit" );
 		Assert.AreEqual( NodeEnd.OnAFace, nodes!.Find( head.Id, RideNodes.HeadSpace, out _ ) );
 	}
+
+	/// <summary>
+	/// <b>An effect's node is kept as its lookup record</b> (<c>FUN_00557970</c>, record <c>+0x14</c>), found in the
+	/// particles' space for types 1 and 2 and the sounds' for the rest, counted from the model's first lookup node, and
+	/// -1 with no node. The pairs are the Full Simulation park file's own records: the Gift Shop's three smokes, the
+	/// Staff Room's, the bus's engine, the Jungle Spray's water and the Inca God's two fires.
+	/// </summary>
+	[TestMethod]
+	[DataRow( "shops/giftshop", "giftshop", 1, 3, 0 )]
+	[DataRow( "shops/giftshop", "giftshop", 1, 2, 1 )]
+	[DataRow( "shops/giftshop", "giftshop", 1, 1, 2 )]
+	[DataRow( "features/staff", "staff", 1, 1, 0 )]
+	[DataRow( "features/bus", "bus", 8, 1, 0 )]
+	[DataRow( "sideshow/junspray", "junspray", 2, 2, 1 )]
+	[DataRow( "rides/incagod", "incagod", 1, 1, 34 )]
+	[DataRow( "rides/incagod", "incagod", 1, 2, 35 )]
+	[DataRow( "rides/incagod", "incagod", 3, -1, -1 )]
+	[DataRow( "features/staff", "staff", 7, -1, -1 )]
+	public void AnEffectsNodeIsItsLookupRecordInItsTypesSpace( string folder, string stem, int type, int node, int index )
+	{
+		var nodes = RideNodes.Load( $"levels/jungle/{folder}", stem, _data, false, [] );
+
+		Assert.IsNotNull( nodes, $"{stem}'s model should read" );
+		Assert.AreEqual( index, nodes!.EffectIndex( type, node ) );
+	}
+
+	/// <summary>A particle's node and a sound's are looked for apart: the bus's node 1 is a sound's and no particle's.</summary>
+	[TestMethod]
+	public void AParticleAndASoundAreLookedForInTheirOwnSpaces()
+	{
+		var nodes = RideNodes.Load( "levels/jungle/features/bus", "bus", _data, false, [] )!;
+		var shop = RideNodes.Load( "levels/jungle/shops/giftshop", "giftshop", _data, false, [] )!;
+
+		Assert.AreEqual( 0, nodes.EffectIndex( 3, 1 ) );
+		Assert.AreEqual( 0, nodes.EffectIndex( 10, 1 ) );
+		Assert.AreNotEqual( 0, nodes.EffectIndex( 2, 1 ) );
+		Assert.AreEqual( 2, shop.EffectIndex( 2, 1 ) );
+		Assert.AreNotEqual( 2, shop.EffectIndex( 3, 1 ) );
+	}
 }

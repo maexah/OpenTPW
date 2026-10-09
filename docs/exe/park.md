@@ -917,6 +917,11 @@ builds. No `TRIGWAITANIM`, trigger or `WAIT4ANIM` decided apart in either phase.
 jungle `incagod` (word 332) and hallow `bumper` (word 188) run `EVENT 3 -1 43` (no theme's `cat_rides` has 43). What
 `Sound_PlayEffect`'s category lookup does with a missing id (the manager's vtable `+8`) is not read.
 
+**`ADDOBJ` hands its record to `FUN_00557970`** (`0x005520d5`), which spawns through `FUN_005573d0`, keeps the
+answer at `+0xc`, looks the node up for `+0x14` (`FUN_0044b220` under `0x100` for types 1 and 2, `0x200` for 3 to
+10) and writes the tag last; **where the spawn answered nought it unlinks and frees the record instead**. The
+whole record, and how a park file holds the list, is `saves.md`, the same section.
+
 ### `SETOBJPARAM` (12) and `DIPMUSIC` (104) — both buildable with no world
 
 `SETOBJPARAM` at `0x005524d9` is `<tag> <param> <value>`, walking **`+0xb0`** — the same record list `ADDOBJ` fills — and matching the record's tag at `+0x18`. Type dispatch (byte map `0x5569c4`, jump table `0x5569b8`) has **two cases only: particle types 1-2 do nothing**, sound types 3-10 call `FUN_0051bc40(record+0xc, param, value)` and store the answer back at `+0xc`. **That call returns 0 when the sound system is down** (`DAT_00802bc8`/`DAT_00802bd4`, written only by the sound init and its teardown), so with no world the record's handle becomes nought — the engine's own answer. All 20 uses are in `bus.RSE`, **one copy per theme — four scripts, not one** — as `(1, 20, 0)` x12 and `(1, 20, 75)` x8. It is a **third reader** of the list and rewrites `+0xc`, the handle itself. **Its byte table is `[0,0,1,1,...]`, NOT `KILLOBJ`/`FADEOBJ`'s `[0,1,2,2,...]`** — do not carry the one over to the other. It is a no-op on a particle record. The handler has not been read in full.

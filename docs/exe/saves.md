@@ -1093,7 +1093,8 @@ and a model's channels their count, so nothing moves, and they go in before the 
   limbo with its count, the bounce slots with the two words beside them and the node base, the walk slots and
   the head table; and in the header the scheduler's tick and the next handle. The record's other bytes stay the
   file's: the links to other scripts, the name's offset, the speed word, the play rate, the scream's handle, the
-  body, the strings and the effects. A slot let go keeps what it held but its guest and its state, as the
+  body and the strings. The effects it has started are written where the list is as long as the file's, and
+  spliced in where it is not ("OpenTPW's writer, a script's started effects"). A slot let go keeps what it held but its guest and its state, as the
   engine's does (FileFormats `saves.md`, "A bounce slot"). A walk slot's facing (`+0x14`) is not kept here and
   stays the file's. **Counted:** a script the file holds no record for (`SAVE_PARK_SCRIPT_MADE_SINCE_THE_LOAD`:
   a thing bought, a child spawned, and the ferry's and the seaplane's, which a load here makes, two a save), and
@@ -1237,8 +1238,8 @@ and the object constructor `FUN_004db090` was read beside the two files.
   `FUN_005587f0` fills it with the running state laid over, the addresses nought, the body and the string blob
   as the `.RSE` file holds them, and its tables. The speed word is the object's operating speed, or the
   loader's 50 where that is nought. The directory is OpenTPW's own path, in lower case (`rides`). A walk slot
-  in use holds its facing, one let go is all nought where the engine's keeps its leftovers, and no started effect
-  is written. A gone
+  in use holds its facing, one let go is all nought where the engine's keeps its leftovers, and the effects it
+  has started follow its guard ("OpenTPW's writer, a script's started effects"). A gone
   thing's records, its own and any its script started, are taken out, and the count the records are walked by
   is kept.
 - **A made model** (`ParkThingStates.Plan`, `MadeRecord`, `Splice`): the slot at the cursor, the lowest empty
@@ -1748,7 +1749,7 @@ control: flags are not drawn. `docs/exe/addresses.md` not regenerated.
 
 ### OpenTPW's writer, the region effects
 
-Q257e, split by the session: the staff's are the next section's and the item's other pieces Q257i. The rule, its eight effects and who stamps each
+Q257e, split by the session: the staff's are the next section's and the item's other pieces Q257j. The rule, its eight effects and who stamps each
 are `ride-operation.md`, "The region effects"; a cell's ten bytes are five words, and every cell of thirteen of
 the original's files is what the file's own things stamp.
 
@@ -1792,12 +1793,12 @@ camera, the view being turned, and the second opened a passing member of staff's
 next two clicks confirmed; the running park only, nothing saved, the save sum the same before and after.
 **Not run in either game:** fireworks (no Instant Action item was tried, no file holds one), a toilet bought, a
 toilet dirtied or cleaned and then written (tests only), a thing bought and left out of the file, the objects
-going out as the file's. **Not built:** the fireworks' spent turn (`FIREWORKS_SPENT_REGION_EFFECT`), any reader of the running grid (Q257i,
+going out as the file's. **Not built:** the fireworks' spent turn (`FIREWORKS_SPENT_REGION_EFFECT`), any reader of the running grid (Q257j,
 Q157). `docs/exe/addresses.md` not regenerated.
 
 ### OpenTPW's writer, the staff's region effects
 
-Q257f, split by the session: the item's other pieces are Q257i. The rule is `ride-operation.md`, "The region
+Q257f, split by the session: the item's other pieces are Q257j. The rule is `ride-operation.md`, "The region
 effects", "The staff's two, read whole".
 
 **What OpenTPW writes.** The running grid already holds each entertainer's and guard's effect round
@@ -1904,6 +1905,77 @@ the fix from the control. The file's own Jungle Spray held nobody at any pause, 
 written in the tests alone. A node whose file flags carry `0x400` is read turned about on the listing alone: no
 shipped script carries a rider on one (three walk-space nodes carry it, in Wonder Land's Well Drop and
 Halloween World's Devils Disc).
+
+### OpenTPW's writer, a script's started effects
+
+Q257i, split by the session: the item's other pieces are Q257j. **A script's object list is the effects its
+`ADDOBJ`s have started and no `KILLOBJ` has stopped** (`park.md`, "ADDOBJ"): a doubly linked list at `+0xb0` of
+28-byte records, the newest at the head.
+
+| Record | What | Who writes it |
+|---|---|---|
+| `+0x00`, `+0x04` | next, previous | addresses; the reader replaces both |
+| `+0x08` | the type: 1 and 2 a particle, 3 to 10 a sound | `ADDOBJ`'s first operand (`0x00551fe4`) |
+| `+0x0c` | the handle the spawn answered | `FUN_00557970`, from `FUN_005573d0` |
+| `+0x10` | the node asked for, -1 for none | the second operand (`0x00552031`) |
+| `+0x14` | that node's lookup record in the model, -1 for none | `FUN_00557970`: `FUN_0044b220( model, 0x100 for a particle or 0x200 for a sound, node )` |
+| `+0x18` | the tag a `KILLOBJ` matches | the fourth operand, written last |
+
+- **A record whose spawn answered nought is freed at once** (`FUN_00557970`, `0x005579f9`): unlinked, the live
+  count `DAT_008791b4` taken down, the tag never written. So no record a file holds has a handle of nought: 140
+  of 140.
+- **The writer** `FUN_00559350` writes, after the guard `OBJ `, the count, 28, and each record raw from the head:
+  the newest first. **The reader** `FUN_005597a0` links each record in at the head as it reads it (`0x00559fd9`),
+  so a loaded list stands the other way round from its file, and a list saved, loaded and saved again turns
+  round each time. It starts nothing: the record keeps the handle its file held, and the particle it names is the
+  `PART` module's to bring back.
+- **The handle is kept from file to file.** The Drinks Shop's smoke is `0x7a0014` in the shipped park and in
+  the three files the original wrote from it; a particle's is its slot below and a count above, and
+  `FUN_0051ff70` acts on one only where the slot's own count matches, and never on nought.
+- **Each sweep the engine walks every list** (`FUN_005516b0`, `0x0055188f`) and, for a record with a node, puts
+  its particle or sound where lookup record `+0x14` stands. A record with no node is passed over.
+
+**Measured on the thirteen files** (`q257i/objs.py`, `objs.out`; `q257i/census`, the prediction written first):
+140 records in 100 of 440 scripts, types 1, 2, 3, 4, 5, 7 and 8; 79 with no node, each holding -1 for its
+record; and of the 138 whose thing's model reads, **138 hold the lookup record `RideNodes.EffectIndex` gives**
+(two skipped, one script in two files: its thing, 200, gave no item or model here).
+
+**What OpenTPW writes.** `RideEffects` keeps each record's lookup index as `ADDOBJ` adds it
+(`RideNodes.EffectIndex`: `ModelFile.FindNode` in the type's space, counted from the model's first lookup node),
+so a script that carries `ADDOBJ` is given its model's nodes as one that walks or seats riders is
+(`ParkRides.NodesFor`). A load puts the file's list back in the reader's order (`RideEffects.Restore`), so a
+script's own `KILLOBJ` finds what it started before the save. A made script's list follows its guard
+(`ParkScriptStates.MadeRecord`); a kept script's is written over the file's where it is as long (`Put`: the five
+words, the two links left), and where it is not the record is written again with the list it has
+(`ParkScriptStates.Relisted`, `Splice`). `rides` prints each record as `type:effect@tag/node/lookup record`, the
+effect `?` on one a load put back, since the file does not hold it.
+
+**A deviation, said at `RideEffects.Record.SavedHandle`:** a record started here is written with a handle of
+nought, where the engine's holds what its spawn answered and never nought. Nothing here spawns a particle or a
+sound, and no `PART` emitter is written for it, so there is nothing for a handle to name; nought is the one
+value no particle call acts on. A record a load put back goes out with its file's handle.
+
+**Confirmed in the game** (`q257i/confirm.py`, 4 of 4 off-screen and 4 of 4 on the desktop, and the control's 3
+of 3, each predicted in `PREDICTION.txt`). Lost Kingdom from `easymode.TPWI`: a Litter Bin and a Coconut Kiosk
+bought, the file's Small Toilet 21 told `VAR_WORN` as a dirty one is, and the park paused. `rides` read the bin
+`5:93@10/-1/-1`, the kiosk `1:58@1/1/0`, the toilet `1:69@1/1/1 1:9@1/1/1`, and the file's own three as the load
+put them back, `1:?@1/1/0`, `5:?@10/-1/-1` and `3:?@1/-1/-1`. The file holds the bin's script with one record
+`(5, 0, -1, -1, 10)`, the kiosk's `(1, 0, 1, 0, 1)`, the toilet's two `(1, 0, 1, 1, 1)`, a kept script whose
+list the file had empty, and scripts 6, 7 and 14 theirs with the file's handles; the build before's file holds
+the first three empty. Loaded here, the six lists read the same again. **In the original under Proton**
+(`q257i/orig/go.sh`, off-screen, entering the park on the file, every script's list read from memory every
+0.05 s): on the first poll of the park the live count is 7 and script 11 holds two records, 18 one and 19 one,
+each word as written, beside 6, 7 and 14 with the file's handles; with the build before's file the count is 3
+and the three lists are empty. Its own Jungle Spray then started and stopped `(3, -1, -1, 11)` and
+`(2, 2, 1, 2)` each ride, the sound at the head, as the files hold them.
+
+**Not seen:** what the original then does with a record whose handle is nought (no `KILLOBJ` reached one in
+100 s; on the listing it frees it, and the sweep's move acts on no particle); a two-record list turned round by
+a load (the toilet's two are the same five words; the rule is the reader's listing and the tests). No effect is
+drawn or heard in OpenTPW, and the original draws no smoke on a made kiosk with either file, so the photographs
+show the things bought and do not tell the fix from the control. **Not built:** the engine's spawn that fails
+and frees its record (every `ADDOBJ` of a known type keeps one here); the handle `SETOBJPARAM` stores back; the
+emitter itself (`PART`, Q257j).
 
 ### Read, not run
 

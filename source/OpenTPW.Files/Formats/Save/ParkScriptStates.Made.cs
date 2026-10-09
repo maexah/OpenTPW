@@ -23,11 +23,11 @@ public sealed partial class ParkScriptStates
 	/// <summary>
 	/// A whole record for a script the file does not hold (FileFormats <c>saves.md</c>, "The ride script module"):
 	/// the struct as the loader <c>FUN_005587f0</c> fills it with the running state laid over, then its blocks, and
-	/// an empty object list. The addresses the game replaces as it loads are nought.
+	/// its object list, the effects it has started, newest first. The addresses the game replaces as it loads are
+	/// nought, an effect's two list links among them.
 	///
 	/// <para>
-	/// <b>A walk slot's last dword is nought</b>, since a walk here does not keep it, and the script's started
-	/// effects are not written.
+	/// <b>A walk slot's last dword is nought</b>, since a walk here does not keep it.
 	/// </para>
 	/// </summary>
 	public static byte[] MadeRecord( MadeScript made, int modelHandle, int structSize = MadeStructSize )
@@ -150,11 +150,47 @@ public sealed partial class ParkScriptStates
 		writer.Write( directory.Length );
 		writer.Write( directory );
 		writer.Write( Encoding.ASCII.GetBytes( ObjectGuard ) );
-		writer.Write( 0 );
-		writer.Write( EffectRecordSize );
+
+		WriteEffects( writer, script.Effects ?? [] );
 		writer.Flush();
 
 		return stream.ToArray();
+	}
+
+	/// <summary>An object list as it follows the guard: the count, a record's size, and each record with its two links nought.</summary>
+	private static void WriteEffects( BinaryWriter writer, SavedEffect[] effects )
+	{
+		writer.Write( effects.Length );
+		writer.Write( EffectRecordSize );
+
+		foreach ( var effect in effects )
+		{
+			writer.Write( 0 );
+			writer.Write( 0 );
+			writer.Write( effect.Type );
+			writer.Write( effect.Handle );
+			writer.Write( effect.Node );
+			writer.Write( effect.Index );
+			writer.Write( effect.Tag );
+		}
+	}
+
+	/// <summary>
+	/// The running scripts of <paramref name="scripts"/> whose object list holds another count of records than the
+	/// file's, each with its list: what <see cref="Put"/> leaves and <see cref="Splice"/> writes.
+	/// </summary>
+	public Dictionary<int, SavedEffect[]> Relisted( IEnumerable<WrittenScript> scripts )
+	{
+		var relisted = new Dictionary<int, SavedEffect[]>();
+
+		foreach ( var script in scripts )
+		{
+			if ( script.Effects is { } effects && _byHandle.TryGetValue( script.Handle, out var saved ) && saved.Effects is { } held
+				&& effects.Length != held.Length && _places[script.Handle].Effects >= 0 )
+				relisted[script.Handle] = effects;
+		}
+
+		return relisted;
 	}
 
 	/// <summary>The size of one record of a script's object list, the effects it has started.</summary>
@@ -167,15 +203,18 @@ public sealed partial class ParkScriptStates
 	/// <summary>
 	/// <paramref name="body"/> with <paramref name="made"/> ahead of the file's records, the newest first as the
 	/// game writes its list, the records of <paramref name="gone"/> taken out, and the count the records are walked
-	/// by kept.
+	/// by kept. A kept script of <paramref name="relisted"/> takes that object list for the file's, its record's
+	/// other bytes as they stand.
 	/// </summary>
 	/// <exception cref="InvalidOperationException">The module was not read whole.</exception>
-	public byte[] Splice( byte[] body, IReadOnlyList<byte[]> made, IReadOnlyCollection<int> gone )
+	public byte[] Splice( byte[] body, IReadOnlyList<byte[]> made, IReadOnlyCollection<int> gone,
+		IReadOnlyDictionary<int, SavedEffect[]>? relisted = null )
 	{
 		if ( Problem != null || !ClosedOnGuard || _countAt < 0 || _recordsAt < 0 )
 			throw new InvalidOperationException( $"the park file's scripts were not read whole: {Problem}" );
 
 		using var stream = new MemoryStream( body.Length + made.Sum( record => record.Length ) );
+		using var writer = new BinaryWriter( stream );
 
 		stream.Write( body, 0, _recordsAt );
 
@@ -197,7 +236,16 @@ public sealed partial class ParkScriptStates
 			if ( gone.Contains( handle ) )
 				continue;
 
-			stream.Write( body, start, stop - start );
+			if ( relisted != null && relisted.TryGetValue( handle, out var effects ) && _places[handle].Effects >= 0 )
+			{
+				// Up to the guard's end; the count and the size are the two dwords before the first record.
+				stream.Write( body, start, _places[handle].Effects - 8 - start );
+				WriteEffects( writer, effects );
+				writer.Flush();
+			}
+			else
+				stream.Write( body, start, stop - start );
+
 			++kept;
 		}
 

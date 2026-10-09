@@ -309,6 +309,24 @@ public sealed class RideNodes
 		return RidesAClip( node ) ? NodeEnd.RestPose : NodeEnd.Posed;
 	}
 
+	/// <summary>The space a particle's node is found in (<c>FUN_00557970</c>, types 1 and 2).</summary>
+	public const uint ParticleSpace = 0x100;
+
+	/// <summary>The space a sound's node is found in (<c>FUN_00557970</c>, types 3 to 10).</summary>
+	public const uint SoundSpace = 0x200;
+
+	/// <summary>
+	/// The lookup record of the node an effect of <paramref name="type"/> asks for by <paramref name="id"/>, as a
+	/// script's effect record keeps it at <c>+0x14</c>: the node found in the type's space, counted from the model's
+	/// first lookup node, or -1.
+	/// </summary>
+	public int EffectIndex( int type, int id )
+	{
+		var node = _model.FindNode( id, type <= RideEffects.LastParticleType ? ParticleSpace : SoundSpace );
+
+		return node < 0 ? -1 : node - _model.LookupFirst;
+	}
+
 	/// <summary>The index of head node <paramref name="id"/> in the model's nodes, or -1 - the drawn model's index too.</summary>
 	public int HeadIndex( int id ) => _model.FindNode( id, HeadSpace );
 

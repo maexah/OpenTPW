@@ -193,7 +193,10 @@ public static class ParkFileWriter
 
 			var pieces = run.QueueCells ?? new Dictionary<int, QueuePiece?>();
 
-			if ( made.Count > 0 || gone.Count > 0 || pieces.Count > 0 )
+			// A kept script whose object list is another length: its record is written again with the rest.
+			var relisted = loaded.ScriptStates.Relisted( run.Scripts );
+
+			if ( made.Count > 0 || gone.Count > 0 || pieces.Count > 0 || relisted.Count > 0 )
 			{
 				if ( running.People == null && (made.Count > 0 || gone.Count > 0) )
 					throw new InvalidOperationException( "a thing bought or sold is written with the people, and none were given" );
@@ -275,7 +278,8 @@ public static class ParkFileWriter
 				loaded.PutCellModels( body, handles );
 
 				body = loaded.ScriptStates.Splice( body,
-					[.. scriptRecords.OrderByDescending( entry => entry.Handle ).Select( entry => entry.Record )], goneScripts );
+					[.. scriptRecords.OrderByDescending( entry => entry.Handle ).Select( entry => entry.Record )], goneScripts,
+					relisted );
 
 				body = run.ModelStates.Splice( body, goneSlots, madeModels );
 

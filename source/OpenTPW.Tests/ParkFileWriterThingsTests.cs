@@ -1259,4 +1259,168 @@ public class ParkFileWriterThingsTests
 		Assert.IsNull( Bind( broken ).Written( broken, new ParkState( broken ).WrittenObjects( broken ), ChannelsFor, _ => null ) );
 		Assert.ThrowsException<InvalidOperationException>( () => broken.Clock.Put( (byte[])body.Clone(), 1 ) );
 	}
+
+	/// <summary>Where the object list's records lie in script <paramref name="handle"/>'s record: past the head table, the directory and the guard's three dwords.</summary>
+	private int EffectsOf( byte[] body, int handle )
+	{
+		var at = PlaceOf( body, handle ).Heads;
+
+		at += Int( body, at - 4 );
+		at += 4 + Int( body, at );
+
+		Assert.AreEqual( "OBJ ", Encoding.ASCII.GetString( body, at, 4 ) );
+
+		return at + 12;
+	}
+
+	/// <summary>
+	/// <b>A kept script's started effects are written where the list is as long as the file's</b>: each record's five
+	/// words over the file's, its two links left. A list of another length is left for the splice, and a script
+	/// handing over none leaves the file's.
+	/// </summary>
+	[TestMethod]
+	public void AKeptScriptsStartedEffectsAreWrittenInPlace()
+	{
+		const int fountain = 14;
+
+		var saved = shipped.ScriptStates.For( fountain )!.Value;
+		var body = (byte[])payload.Clone();
+		var at = EffectsOf( body, fountain );
+
+		Assert.AreEqual( (1, 28), (Int( body, at - 8 ), Int( body, at - 4 )) );
+		Put( body, at, 0x1111 );
+		Put( body, at + 4, 0x2222 );
+
+		var done = shipped.ScriptStates.Put( body, 0, 0, [AsWritten( saved ) with { Effects = [new SavedEffect( 4, 0x77, 2, 5, 20 )] }] );
+
+		Assert.AreEqual( new ParkScriptStates.Written( 1, 0 ), done );
+		CollectionAssert.AreEqual( new[] { 0x1111, 0x2222, 4, 0x77, 2, 5, 20 }, Enumerable.Range( 0, 7 ).Select( word => Int( body, at + (word * 4) ) ).ToArray(),
+			"the two links are the file's" );
+		CollectionAssert.AreEqual( new[] { new SavedEffect( 4, 0x77, 2, 5, 20 ) }, new ParkScriptStates( body ).For( fountain )!.Value.Effects );
+
+		// Two records, each over its own: the Staff Room's list spliced in, then written again in place.
+		var twice = shipped.ScriptStates.Splice( payload, [], [],
+			new Dictionary<int, SavedEffect[]> { [10] = [new SavedEffect( 7, 0, -1, -1, 1 ), new SavedEffect( 1, 0, 1, 0, 1 )] } );
+		var spliced = new ParkScriptStates( twice );
+		var pair = new[] { new SavedEffect( 3, 0x11, 4, 9, 30 ), new SavedEffect( 2, 0x22, 5, 8, 40 ) };
+
+		Assert.AreEqual( new ParkScriptStates.Written( 1, 0 ), spliced.Put( twice, spliced.Tick, spliced.NextHandle, [AsWritten( spliced.For( 10 )!.Value ) with { Effects = pair }] ) );
+		CollectionAssert.AreEqual( pair, new ParkScriptStates( twice ).For( 10 )!.Value.Effects );
+
+		var shorter = (byte[])twice.Clone();
+
+		spliced.Put( shorter, spliced.Tick, spliced.NextHandle, [AsWritten( spliced.For( 10 )!.Value ) with { Effects = [new SavedEffect( 9, 9, 9, 9, 9 )] }] );
+		CollectionAssert.AreEqual( pair, new ParkScriptStates( shorter ).For( 10 )!.Value.Effects, "a shorter list is not written over the first of the two" );
+
+		// A list of another length is not Put's: the record's own length changes, so it is Splice's.
+		var longer = new[] { new SavedEffect( 4, 0x77, 2, 5, 20 ), new SavedEffect( 1, 0, 1, 0, 1 ) };
+		var other = (byte[])payload.Clone();
+
+		done = shipped.ScriptStates.Put( other, shipped.ScriptStates.Tick, shipped.ScriptStates.NextHandle, [AsWritten( saved ) with { Effects = longer }] );
+
+		Assert.AreEqual( new ParkScriptStates.Written( 1, 0 ), done );
+		CollectionAssert.AreEqual( payload, other, "left for the splice" );
+
+		done = shipped.ScriptStates.Put( other, shipped.ScriptStates.Tick, shipped.ScriptStates.NextHandle, [AsWritten( saved )] );
+
+		Assert.AreEqual( new ParkScriptStates.Written( 1, 0 ), done );
+		CollectionAssert.AreEqual( payload, other, "and none handed over leaves the file's" );
+	}
+
+	/// <summary>
+	/// <b>A kept script's list of another length is written with the record made again</b>: the record up to its
+	/// guard as it stands, then the count and the records, each with its links nought; every script behind it reads as
+	/// it did, and a list as long as the file's, or none handed over, is nobody's to splice.
+	/// </summary>
+	[TestMethod]
+	public void AKeptScriptsListOfAnotherLengthIsSplicedIn()
+	{
+		const int fountain = 14, staffRoom = 10;
+
+		var longer = new[] { new SavedEffect( 7, 0, -1, -1, 1 ), new SavedEffect( 1, 0, 1, 0, 1 ) };
+		var scripts = shipped.ScriptStates.Order.Select( handle => AsWritten( shipped.ScriptStates.For( handle )!.Value ) ).ToList();
+
+		Assert.AreEqual( 0, shipped.ScriptStates.Relisted( scripts ).Count, "none handed over" );
+		Assert.AreEqual( 0, shipped.ScriptStates.Relisted( scripts.Select( script => script with { Effects = shipped.ScriptStates.For( script.Handle )!.Value.Effects } ) ).Count,
+			"each as long as the file's" );
+
+		var changed = scripts.Select( script => script.Handle == staffRoom ? script with { Effects = longer }
+			: script.Handle == fountain ? script with { Effects = [] } : script ).ToList();
+		var relisted = shipped.ScriptStates.Relisted( changed );
+
+		CollectionAssert.AreEquivalent( new[] { staffRoom, fountain }, relisted.Keys.ToArray() );
+
+		var body = shipped.ScriptStates.Splice( payload, [], [], relisted );
+		var read = new ParkScriptStates( body );
+
+		Assert.IsNull( read.Problem );
+		Assert.IsTrue( read.ClosedOnGuard );
+		Assert.AreEqual( payload.Length + 56 - 28, body.Length );
+		CollectionAssert.AreEqual( shipped.ScriptStates.Order.ToArray(), read.Order.ToArray() );
+		CollectionAssert.AreEqual( longer, read.For( staffRoom )!.Value.Effects );
+		Assert.AreEqual( 0, read.For( fountain )!.Value.Effects!.Length );
+
+		var at = EffectsOf( body, staffRoom );
+
+		CollectionAssert.AreEqual( new[] { 2, 28, 0, 0, 7, 0, -1, -1, 1, 0, 0, 1, 0, 1, 0, 1 },
+			Enumerable.Range( -2, 16 ).Select( word => Int( body, at + (word * 4) ) ).ToArray() );
+
+		foreach ( var handle in shipped.ScriptStates.Order.Where( handle => handle != staffRoom && handle != fountain ) )
+		{
+			var (was, now) = (shipped.ScriptStates.For( handle )!.Value, read.For( handle )!.Value);
+
+			Assert.AreEqual( (was.Position, was.Thing, was.ModelHandle), (now.Position, now.Thing, now.ModelHandle) );
+			CollectionAssert.AreEqual( was.Variables, now.Variables );
+			CollectionAssert.AreEqual( was.Effects, now.Effects );
+		}
+
+		// A script gone is gone, whatever list it was handed with.
+		var sold = new ParkScriptStates( shipped.ScriptStates.Splice( payload, [], [staffRoom], relisted ) );
+
+		Assert.IsNull( sold.For( staffRoom ) );
+		Assert.AreEqual( shipped.ScriptStates.Order.Count - 1, sold.Order.Count );
+		Assert.AreEqual( 0, sold.For( fountain )!.Value.Effects!.Length );
+
+		Assert.AreEqual( shipped.ScriptStates.For( staffRoom )!.Value.Position, read.For( staffRoom )!.Value.Position );
+		CollectionAssert.AreEqual( shipped.ScriptStates.For( staffRoom )!.Value.Variables, read.For( staffRoom )!.Value.Variables );
+	}
+
+	/// <summary>
+	/// <b>The running park's lists reach the writer</b>: a load puts the fountain's record back with its handle, and
+	/// the file written from the park as it stands holds each list as the file's; with the record killed and two
+	/// started the list is another length, and the file holds it.
+	/// </summary>
+	[TestMethod]
+	public void TheRunningParksEffectsReachTheWriter()
+	{
+		const int fountainThing = 24, fountain = 14;
+
+		var rides = Bind( shipped );
+		var state = new ParkState( shipped );
+		var script = rides.Scheduler.Find( rides.ScriptFor( fountainThing ) )!;
+
+		Assert.AreEqual( fountain, script.Id );
+		Assert.AreEqual( 0, rides.Scheduler.Find( 6 )!.Nodes!.EffectIndex( 1, 1 ), "a script that starts effects is given its model's nodes: the Drinks Shop's" );
+		CollectionAssert.AreEqual( new[] { new SavedEffect( 3, 0x1320063, -1, -1, 1 ) }, script.Effects!.Written(), "put back by the load" );
+
+		var things = rides.Written( shipped, state.WrittenObjects( shipped ), ChannelsFor, state.HoardingFor )!;
+
+		CollectionAssert.AreEqual( new[] { new SavedEffect( 3, 0x1320063, -1, -1, 1 ) }, things.Scripts.Single( written => written.Handle == fountain ).Effects );
+
+		Assert.AreEqual( 0, shipped.ScriptStates.Relisted( things.Scripts ).Count );
+
+		script.Effects.Kill( 1 );
+		script.Effects.Add( 5, -1, 43, 10 );
+		script.Effects.Add( 1, 2, 16, 7, 4 );
+		things = rides.Written( shipped, state.WrittenObjects( shipped ), ChannelsFor, state.HoardingFor )!;
+
+		var written = new ParkWorld( ParkFileWriter.Body( shipped, Carried with { Things = things }, out _, out _ ) );
+
+		Assert.IsNull( written.Problem );
+		Assert.IsNull( written.ScriptStates.Problem );
+		CollectionAssert.AreEqual( new[] { new SavedEffect( 1, 0, 2, 4, 7 ), new SavedEffect( 5, 0, -1, -1, 10 ) }, written.ScriptStates.For( fountain )!.Value.Effects,
+			"the newest first, with no handle" );
+		Assert.AreEqual( shipped.Objects.Count, written.Objects.Count );
+		Assert.IsNull( written.ThingStates( ChannelsFor ).Problem, "the models behind the scripts read" );
+	}
 }

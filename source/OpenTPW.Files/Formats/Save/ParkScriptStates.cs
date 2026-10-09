@@ -55,7 +55,15 @@ public readonly record struct SavedScript( int Handle, int Position, int BodyWor
 	uint WaitDeadline, uint AnimationDeadline, int LoopingKey, int AnimationMark, uint TimerDeadline,
 	int[]? Heads = null, SavedLimboSlot[]? Limbo = null, int InLimbo = 0,
 	SavedBounceSlot[]? Bounce = null, int Bouncing = 0, int BounceBase = 0, int BounceNode = 0,
-	SavedWalkSlot[]? Walk = null, int Thing = 0, int ModelHandle = 0 );
+	SavedWalkSlot[]? Walk = null, int Thing = 0, int ModelHandle = 0, SavedEffect[]? Effects = null );
+
+/// <summary>
+/// One record of a script's object list, an effect <c>ADDOBJ</c> started (<c>docs/exe/saves.md</c>, "OpenTPW's
+/// writer, a made script's started effects"): the type (1 and 2 a particle, 3 to 10 a sound), the handle the spawn
+/// answered, the node asked for, that node's lookup record in the model (-1 with no node) and the tag a
+/// <c>KILLOBJ</c> matches. The file holds them newest first.
+/// </summary>
+public readonly record struct SavedEffect( int Type, int Handle, int Node, int Index, int Tag );
 
 /// <summary>One limbo slot, eight bytes of block 4: who is held, nought for a free slot, and the clock reading they are due back at.</summary>
 public readonly record struct SavedLimboSlot( int Handle, uint Due );
@@ -82,7 +90,7 @@ public readonly record struct SavedWalkSlot( short WalkNode, short HeadNode, sho
 public readonly record struct WrittenScript( int Handle, int Position, int CallIndex, int HeapIndex, int Result,
 	int[] Stack, int[] Variables, uint WaitDeadline, uint AnimationDeadline, int LoopingKey, int AnimationMark,
 	uint TimerDeadline, SavedLimboSlot[]? Limbo, int InLimbo, SavedBounceSlot[]? Bounce, int Bouncing, int BounceBase,
-	int BounceNode, SavedWalkSlot[]? Walk, int[]? Heads );
+	int BounceNode, SavedWalkSlot[]? Walk, int[]? Heads, SavedEffect[]? Effects = null );
 
 /// <summary>
 /// The <c>RSSE</c> module of a park save: every running script's program counter and variables.
@@ -139,11 +147,11 @@ public readonly record struct WrittenScript( int Handle, int Position, int CallI
 /// </list>
 ///
 /// <para>
-/// <b>What is deliberately not read.</b> The original restores more per script - the string blob, the effects it
-/// has started, and the struct's other fields. The counter, the body length, the variables, the stack with its two
+/// <b>What is deliberately not read.</b> The original restores more per script - the string blob and the struct's
+/// other fields. The counter, the body length, the variables, the stack with its two
 /// indices, the result register, the five fields a clock or an animation keeps (the two wait deadlines, the looping
-/// key, <c>TRIGWAITANIM</c>'s mark and the timer), the limbo, bounce and walk slots with their counts and the head
-/// table are taken, because they are what this program models; the rest are stepped over by length so that the walk
+/// key, <c>TRIGWAITANIM</c>'s mark and the timer), the limbo, bounce and walk slots with their counts, the head
+/// table and the object list (<see cref="SavedEffect"/>) are taken, because they are what this program models; the rest are stepped over by length so that the walk
 /// still has to add up. A script's <i>name</i> is not in the struct at all
 /// and is recovered a different way - see <see cref="RideScript.TakeDeclaredName"/>.
 /// </para>
@@ -270,7 +278,7 @@ public sealed partial class ParkScriptStates
 	/// <summary>Where the count of records lies, where the first record begins, and the struct's size.</summary>
 	private int _countAt = -1, _recordsAt = -1, _structSize;
 
-	private readonly record struct Place( int Struct, int Stack, int Variables, int Limbo, int Bounce, int Walk, int Heads );
+	private readonly record struct Place( int Struct, int Stack, int Variables, int Limbo, int Bounce, int Walk, int Heads, int Effects );
 
 	/// <summary>Where the header block's dwords begin, and how many bytes it holds; -1 where the module did not read.</summary>
 	private int _headerAt = -1;
@@ -499,11 +507,29 @@ public sealed partial class ParkScriptStates
 			throw new InvalidDataException(
 				$"script handle {handle} should have ended on '{ObjectGuard}' and ended on '{guard}'" );
 
-		// The script's own object list, which this does not read.
+		// The script's own object list (0x00559f8b): a count, a record's size, then the records, newest first.
 		var objects = ReadInt32();
 		var objectSize = ReadInt32();
+		SavedEffect[]? effects = null;
+		var effectsAt = -1;
 
-		Skip( objects * objectSize );
+		if ( objectSize == EffectRecordSize )
+		{
+			effects = new SavedEffect[Slots( checked(objects * (long)EffectRecordSize), EffectRecordSize )];
+			effectsAt = _at;
+
+			for ( var index = 0; index < effects.Length; ++index )
+			{
+				var at = _at;
+
+				Skip( EffectRecordSize );
+
+				effects[index] = new SavedEffect( ReadInt32At( at + 0x08 ), ReadInt32At( at + 0x0c ),
+					ReadInt32At( at + 0x10 ), ReadInt32At( at + 0x14 ), ReadInt32At( at + 0x18 ) );
+			}
+		}
+		else
+			Skip( objects * objectSize );
 
 		// A handle twice over would make For() answer whichever came first, so the second is refused
 		// rather than quietly dropped.
@@ -512,12 +538,12 @@ public sealed partial class ParkScriptStates
 			limbo, ReadInt32At( start + (InLimboDword * 4) ),
 			bounce, ReadInt16At( start + BouncingAt ), ReadInt16At( start + BouncingAt + 2 ),
 			ReadInt32At( start + (BounceNodeDword * 4) ), walk,
-			(ushort)ReadInt16At( start + ThingAt ), ReadInt32At( start + (ModelHandleDword * 4) ) );
+			(ushort)ReadInt16At( start + ThingAt ), ReadInt32At( start + (ModelHandleDword * 4) ), effects );
 
 		if ( !_byHandle.TryAdd( handle, saved ) )
 			throw new InvalidDataException( $"two saved scripts both call themselves handle {handle}" );
 
-		_places[handle] = new Place( start, stackAt, variablesAt, limboAt, bounceAt, walkAt, headsAt );
+		_places[handle] = new Place( start, stackAt, variablesAt, limboAt, bounceAt, walkAt, headsAt, effectsAt );
 		_extents[handle] = (start, _at);
 
 		_order.Add( handle );
@@ -541,7 +567,9 @@ public sealed partial class ParkScriptStates
 	/// <paramref name="body"/>, a copy of the payload this was read from: the struct's fields
 	/// <see cref="SavedScript"/> reads, and the stack, the variables, limbo, the bounce slots, the walk slots and
 	/// the head table where they lie. The record's other bytes stay the file's: the links to other scripts, the
-	/// name's offset, the speed word, the play rate, the body, the strings and the effects.
+	/// name's offset, the speed word, the play rate, the body and the strings. The object list, the effects the
+	/// script has started, is written where it holds as many records as the file's; one of another length is
+	/// <see cref="Splice"/>'s (<see cref="Relisted"/>).
 	///
 	/// <para>
 	/// A walk slot's last dword is not written. A free slot of any of the three
@@ -665,6 +693,22 @@ public sealed partial class ParkScriptStates
 				PutInts( body, place.Heads, heads );
 			else
 				++left;
+
+			// The object list, where it is as long as the file's: each record's five words, its two links the file's.
+			// One of another length changes the record's own, and is Splice's.
+			if ( script.Effects is { } effects && saved.Effects is { } held && effects.Length == held.Length && place.Effects >= 0 )
+			{
+				for ( var index = 0; index < effects.Length; ++index )
+				{
+					var to = place.Effects + (index * EffectRecordSize);
+
+					PutInt32( body, to + 0x08, effects[index].Type );
+					PutInt32( body, to + 0x0c, effects[index].Handle );
+					PutInt32( body, to + 0x10, effects[index].Node );
+					PutInt32( body, to + 0x14, effects[index].Index );
+					PutInt32( body, to + 0x18, effects[index].Tag );
+				}
+			}
 
 			++written;
 		}

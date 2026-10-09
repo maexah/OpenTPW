@@ -2984,9 +2984,10 @@ public sealed partial class ParkPeople : Entity
 				// How often it took a lock on the last unit of its budget, and the longest section it then ran in
 				// that same turn: the arrival the budget's charging decides.
 				+ $"lastunit {script.LastUnitLocks} ran {script.LongestLastUnitSection} "
-				// What ADDOBJ has started and no KILLOBJ stopped, each as type:effect@tag - records only, since
-				// nothing draws or plays them (RideEffects).
-				+ $"effects [{string.Join( ' ', (script.Effects?.Records ?? []).Select( record => $"{record.Type}:{record.Effect}@{record.Tag}" ) )}] "
+				// What ADDOBJ has started and no KILLOBJ stopped, from the head of the list, each as
+				// type:effect@tag/node/lookup record, the effect "?" on a record a load put back - records only,
+				// since nothing draws or plays them (RideEffects).
+				+ $"effects [{string.Join( ' ', (script.Effects?.Records ?? []).Select( record => $"{record.Type}:{(record.Restored ? "?" : record.Effect.ToString())}@{record.Tag}/{record.Node}/{record.Index}" ) )}] "
 				// WHICH scream, not just whether: a ride that replays a fresh sample every pass and one
 				// that loops a single clip for ever both read "screaming True". The sample name and the pass
 				// count tell them apart.

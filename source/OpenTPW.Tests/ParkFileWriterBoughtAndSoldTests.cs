@@ -1250,4 +1250,49 @@ public class ParkFileWriterBoughtAndSoldTests
 		Assert.AreEqual( (150, 100, 1), (report!.Value.SpriteSlots, report.Value.LiveSprites, report.Value.Heads) );
 		Assert.AreEqual( 1, written.Sprites.Single( sprite => sprite.Slot == 100 ).Type );
 	}
+
+	/// <summary>
+	/// <b>A made script's started effects are written</b>: after the guard the count, 28, and a record an effect from
+	/// the head of the list, its two links nought and then the type, the handle, the node, the lookup record and the
+	/// tag. The shipped park's own are read the same: its fountain's one sound with no node.
+	/// </summary>
+	[TestMethod]
+	public void AMadeScriptsStartedEffectsAreWritten()
+	{
+		var ape = Ape();
+		var effects = new[] { new SavedEffect( 7, 0, -1, -1, 1 ), new SavedEffect( 1, 0, 3, 2, 10 ), new SavedEffect( 2, 0x1b280022, 2, 35, 500 ) };
+		var made = ape.Script! with { Script = ape.Script.Script with { Effects = effects } };
+		var record = ParkScriptStates.MadeRecord( made, 91 );
+		var at = record.Length - 12 - (3 * 28);
+
+		Assert.AreEqual( "OBJ ", Encoding.ASCII.GetString( record, at, 4 ) );
+		Assert.AreEqual( (3, 28), (Int( record, at + 4 ), Int( record, at + 8 )) );
+		CollectionAssert.AreEqual( new[] { 0, 0, 7, 0, -1, -1, 1 }, Enumerable.Range( 0, 7 ).Select( word => Int( record, at + 12 + (word * 4) ) ).ToArray() );
+		CollectionAssert.AreEqual( new[] { 0, 0, 1, 0, 3, 2, 10 }, Enumerable.Range( 0, 7 ).Select( word => Int( record, at + 40 + (word * 4) ) ).ToArray() );
+		CollectionAssert.AreEqual( new[] { 0, 0, 2, 0x1b280022, 2, 35, 500 }, Enumerable.Range( 0, 7 ).Select( word => Int( record, at + 68 + (word * 4) ) ).ToArray() );
+
+		var written = Written( Things( [ape with { Script = made }] ), out _ );
+
+		CollectionAssert.AreEqual( effects, written.ScriptStates.For( 16 )!.Value.Effects );
+		CollectionAssert.AreEqual( new[] { new SavedEffect( 3, 0x1320063, -1, -1, 1 ) }, written.ScriptStates.For( 14 )!.Value.Effects,
+			"the fountain's, behind the made record, as the file's" );
+
+		var none = ParkScriptStates.MadeRecord( ape.Script, 91 );
+
+		Assert.AreEqual( "OBJ ", Encoding.ASCII.GetString( none, none.Length - 12, 4 ) );
+		Assert.AreEqual( (0, 28), (Int( none, none.Length - 8 ), Int( none, none.Length - 4 )) );
+	}
+
+	/// <summary>The shipped park's three scripts with a list, and the eleven with none.</summary>
+	[TestMethod]
+	public void TheShippedParksStartedEffectsAreRead()
+	{
+		var held = shipped.ScriptStates.Order.ToDictionary( handle => handle, handle => shipped.ScriptStates.For( handle )!.Value.Effects! );
+
+		CollectionAssert.AreEqual( new[] { new SavedEffect( 1, 0x7a0014, 1, 0, 1 ) }, held[DrinksScript], "the Drinks Shop's smoke on its first lookup record" );
+		CollectionAssert.AreEqual( new[] { new SavedEffect( 5, 0x1330061, -1, -1, 10 ) }, held[7], "the litter bin's sound" );
+		CollectionAssert.AreEqual( new[] { new SavedEffect( 3, 0x1320063, -1, -1, 1 ) }, held[14], "the fountain's" );
+		Assert.AreEqual( 11, held.Values.Count( list => list.Length == 0 ) );
+		Assert.AreEqual( 14, held.Count );
+	}
 }

@@ -41,12 +41,13 @@ namespace OpenTPW;
 /// guessed at either subsystem's numbering.</item>
 /// <item>There is no position. The engine resolves one through <c>FUN_00556b90</c> from the model and
 /// the node, and <b>walks this whole list every tick</b> (in <c>FUN_005516b0</c>) to move what is
-/// playing as the ride moves. With nothing started there is nothing to move; the node lookup exists
-/// (<see cref="ModelFile.FindNode"/>, <see cref="RideNodes"/>) and nothing here asks it for an effect's node.</item>
-/// <item>Two of the list's other writers are not here: <c>ADDOBJ_EXT</c>, which no shipped script
-/// uses at all, and the save-state reader (<c>FUN_005597a0</c>), which rebuilds it from an
-/// <c>"OBJ "</c> section - a section none of the 308 shipped scripts carries, because that is written
-/// by the save file rather than by the script.</item>
+/// playing as the ride moves. With nothing started there is nothing to move; a record keeps the lookup
+/// record the engine would move it by (<see cref="Record.Index"/>, <see cref="RideNodes.EffectIndex"/>).</item>
+/// <item>One of the list's other writers is not here: <c>ADDOBJ_EXT</c>, which no shipped script
+/// uses at all. The save-state reader (<c>FUN_005597a0</c>), which rebuilds the list from a park file's
+/// <c>"OBJ "</c> section, is <see cref="Restore"/>, and <see cref="Written"/> is what goes back into one.</item>
+/// <item>A spawn that answers nought leaves no record in the engine: <c>FUN_00557970</c> frees the node it
+/// has just linked. Nothing here spawns, so every <c>ADDOBJ</c> of a known type keeps its record.</item>
 /// </list>
 /// </summary>
 public sealed class RideEffects
@@ -75,6 +76,12 @@ public sealed class RideEffects
 		/// </summary>
 		public int Node { get; init; }
 
+		/// <summary>
+		/// The node's lookup record in the model - the engine's field <c>+0x14</c>, which <c>FUN_00557970</c> takes
+		/// from <c>FUN_0044b220</c> in the particles' space or the sounds' - or -1 with no node or no model.
+		/// </summary>
+		public int Index { get; init; } = -1;
+
 		/// <summary>A particle id or a sample index, depending on <see cref="Type"/>, and bounded by neither.</summary>
 		public int Effect { get; init; }
 
@@ -98,6 +105,16 @@ public sealed class RideEffects
 		/// </para>
 		/// </summary>
 		public int Handle { get; internal set; }
+
+		/// <summary>
+		/// The engine's handle as a park file holds it at <c>+0x0c</c>: the file's own for a record a load put back,
+		/// and nought for one started here, where nothing spawns a particle or a sound to answer one. Nought names
+		/// no particle (<c>FUN_0051ff70</c>).
+		/// </summary>
+		public int SavedHandle { get; init; }
+
+		/// <summary>Whether a load put this record back; its file does not say which effect it started.</summary>
+		public bool Restored { get; init; }
 
 		/// <summary>Whether this is one of the two particle types rather than one of the eight sound types.</summary>
 		public bool IsParticle => Type <= LastParticleType;
@@ -134,7 +151,8 @@ public sealed class RideEffects
 	/// <c>ADDOBJ</c>: start something and keep a record of it, so that a later <c>KILLOBJ</c> naming the
 	/// same tag can stop it.
 	/// </summary>
-	public void Add( int type, int node, int effect, int tag )
+	/// <param name="index">The node's lookup record in the script's model (<see cref="RideNodes.EffectIndex"/>), -1 for none.</param>
+	public void Add( int type, int node, int effect, int tag, int index = -1 )
 	{
 		if ( !IsKnown( type ) )
 		{
@@ -154,11 +172,40 @@ public sealed class RideEffects
 		{
 			Type = type,
 			Node = node,
+			Index = index,
 			Effect = effect,
 			Tag = tag,
 			Handle = ++_handle
 		} );
 	}
+
+	/// <summary>
+	/// Puts back the list a park file holds, <paramref name="saved"/> in the file's order: each record goes in at
+	/// the head as it is read, as the reader <c>FUN_005597a0</c> links them (<c>0x00559fd9</c>), so the list stands
+	/// the other way round from the file. Nothing is started and nothing counted.
+	/// </summary>
+	public void Restore( IEnumerable<SavedEffect> saved )
+	{
+		_records.Clear();
+
+		foreach ( var record in saved )
+		{
+			_records.Insert( 0, new Record
+			{
+				Type = record.Type,
+				Node = record.Node,
+				Index = record.Index,
+				Tag = record.Tag,
+				Handle = ++_handle,
+				SavedHandle = record.Handle,
+				Restored = true
+			} );
+		}
+	}
+
+	/// <summary>The list as a park file holds it, from the head: the newest first.</summary>
+	public SavedEffect[] Written()
+		=> [.. _records.Select( record => new SavedEffect( record.Type, record.SavedHandle, record.Node, record.Index, record.Tag ) )];
 
 	/// <summary>
 	/// <c>EVENT</c>: start something and keep nothing.

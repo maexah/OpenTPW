@@ -299,6 +299,12 @@ public sealed class RideScript
 	public bool UsesHeads => _file.Instructions.Any( instruction => instruction.Opcode is Opcode.ADDHEAD or Opcode.DELHEAD );
 
 	/// <summary>
+	/// Whether the script carries <c>ADDOBJ</c>, whose record keeps its node's lookup record in the model
+	/// (<see cref="RideNodes.EffectIndex"/>).
+	/// </summary>
+	public bool UsesEffectNodes => _file.Instructions.Any( instruction => instruction.Opcode is Opcode.ADDOBJ );
+
+	/// <summary>
 	/// Whether the script carries <c>TOUR</c>, whose record's first car is a ride view the engine asks for
 	/// (<see cref="ParkEntranceGate.HasView"/>).
 	/// </summary>
@@ -1135,7 +1141,8 @@ public sealed class RideScript
 				? default
 				: new SavedWalkSlot( slot.WalkNode, slot.HeadNode, slot.OffFrom, slot.OffTo, reading( slot.Start ),
 					reading( slot.Due ), slot.Handle, slot.Action, (short)slot.State, slot.Flags, slot.Facing ) )],
-			Heads: [.. _heads] );
+			Heads: [.. _heads],
+			Effects: Effects?.Written() );
 	}
 
 	/// <summary>
@@ -2176,7 +2183,11 @@ public sealed class RideScript
 			return;
 		}
 
-		Effects.Add( Value( operands[0] ), Value( operands[1] ), Value( operands[2] ), Value( operands[3] ) );
+		var type = Value( operands[0] );
+		var node = Value( operands[1] );
+
+		Effects.Add( type, node, Value( operands[2] ), Value( operands[3] ),
+			RideEffects.IsKnown( type ) ? Nodes?.EffectIndex( type, node ) ?? -1 : -1 );
 	}
 
 	/// <summary>

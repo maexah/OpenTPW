@@ -851,6 +851,10 @@ public sealed class ParkRides : Entity
 
 		RidersRestored += riders;
 
+		// And the effects it had started, kept so that its own KILLOBJ finds them.
+		if ( saved.Effects is { } effects )
+			script.Effects?.Restore( effects );
+
 		// And the deadlines it keeps in its own variables, a deviation said at RideScript.MoveKeptReadings.
 		// Only where the save's clock reads, as the struct's own deadlines are moved.
 		var kept = _clock?.Reading is not null ? script.MoveKeptReadings( reading => Moved( unchecked((uint)reading) )!.Value ) : 0;
@@ -1230,9 +1234,9 @@ public sealed class ParkRides : Entity
 
 	/// <summary>
 	/// The model nodes a bound script walks its riders between or hangs their heads on, standing where its thing
-	/// stands - read only for a script that declares walk slots or carries <c>ADDHEAD</c>, the two families that ask
-	/// (<see cref="RideNodes"/>), and giving the second its head slots. Null where the model will not read, which
-	/// leaves every leg the shortest, counted, and no head slot.
+	/// stands - read only for a script that declares walk slots or carries <c>ADDHEAD</c> or <c>ADDOBJ</c>, the
+	/// three families that ask (<see cref="RideNodes"/>), and giving the second its head slots. Null where the model
+	/// will not read, which leaves every leg the shortest, counted, no head slot, and an effect on no lookup record.
 	/// </summary>
 	/// <remarks>
 	/// <para>
@@ -1247,7 +1251,7 @@ public sealed class ParkRides : Entity
 	/// </remarks>
 	private RideNodes? NodesFor( RideScript script, ParkWorld.CatalogueObject placed, ParkItemCatalogue.Item item )
 	{
-		if ( script.WalkSlots == 0 && !script.UsesHeads )
+		if ( script.WalkSlots == 0 && !script.UsesHeads && !script.UsesEffectNodes )
 			return null;
 
 		RideNodes? nodes;
@@ -1267,8 +1271,11 @@ public sealed class ParkRides : Entity
 
 		if ( nodes is null )
 		{
-			Log.Warning( $"{ThemeName}: thing {placed.ThingId} ('{item.Name}') walks or seats riders but has no model, "
-				+ "so every leg is the shortest and no head is hung" );
+			if ( script.WalkSlots != 0 || script.UsesHeads )
+			{
+				Log.Warning( $"{ThemeName}: thing {placed.ThingId} ('{item.Name}') walks or seats riders but has no model, "
+					+ "so every leg is the shortest and no head is hung" );
+			}
 
 			return null;
 		}

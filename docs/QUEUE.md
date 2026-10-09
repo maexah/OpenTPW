@@ -48,9 +48,8 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q257i. The writer: what else a made record leaves out.** The old Q257h's other pieces, from Q253
-  (`saves.md`, "What OpenTPW writes"), each counted or said there. A made script's started effects
-  are not written. A track ride (its `TRAK` record)
+- [ ] **Q257j. The writer: what else a made record leaves out.** The old Q257i's other pieces, from Q253
+  (`saves.md`, "What OpenTPW writes"), each counted or said there. A track ride (its `TRAK` record)
   and a thing with an emitter (`PART`) are left as the file has them, bought or sold (`SAVE_PARK_OBJECT_BOUGHT`,
   `SAVE_PARK_OBJECT_SOLD`). Confirm: each
   piece's bytes beside a file of the original's own, and the file loaded in the original under Proton.
@@ -88,6 +87,12 @@ the research lab), then the rest of this section in its old order.
   handle alone): keep the slot as `WalkGet` lets it go. A rider carried on a node a clip moves faces as the node
   does at rest (`WALK_FACING_REST_POSE`, counted). The shake's turn of a carried rider is not built, with its
   instruction (`WALKST_FLOAT`, Space Zone's Zero G alone: after Lost Kingdom).
+  From Q257i (`saves.md`, "OpenTPW's writer, a script's started effects"): a record started here is written with
+  a handle of nought, and the emitter it would name is not written (the `PART` module, above): write the emitter,
+  then the handle the file's slot gives. The engine frees a record whose spawn answers nought (`FUN_00557970`);
+  every `ADDOBJ` of a known type keeps one here: decode when `Particles_Spawn` and `Sound_PlayEffect` answer
+  nought (a category without the id, `park.md`, "ADDOBJ"), then keep no record there. `SETOBJPARAM`'s handle
+  stored back is not kept. And not seen in the original: what its scripts do with a record whose handle is nought.
 - [ ] **Q241j. The writer: the managers, then Save Game saves.** From Q241e. The economy thing's loans and rings,
   the staff HQ's strikes, the calendar's and the weather's fields; then `ParkSaveScreen.Save` writes
   (`SAVE_GAME_WRITER` gone), an overwrite replaces the file, and the Load Park list shows it. Confirm: a park

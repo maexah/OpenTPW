@@ -1,5 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace OpenTPW.Tests;
@@ -308,5 +309,99 @@ public class RideScriptEffectTests
 		Assert.AreEqual( 1, script.NotImplemented, "only the fade should be counted now" );
 		Assert.AreEqual( 1, script.Effects!.Count, "and the record a fade would have taken is still there" );
 		Assert.AreEqual( 0, script.Effects!.Parameters, "the particle carrying that tag was not walked past" );
+	}
+
+	/// <summary>
+	/// <b>A load puts the file's list back the other way round</b>: the reader links each record in at the head as it
+	/// reads it (<c>0x00559fd9</c>), so the file's first is the list's last, and a save writes from the head. Each
+	/// keeps the handle its file held; one started since holds nought, where nothing here spawns one.
+	/// </summary>
+	[TestMethod]
+	public void ALoadPutsTheListBackTheOtherWayRoundAndKeepsItsHandles()
+	{
+		var script = WithEffects(
+			Word( Opcode.ADDOBJ ), Lit( 5 ), Lit( -1 ), Lit( 43 ), Lit( 10 ),
+			Word( Opcode.END ) );
+
+		script.Effects!.Restore( [new SavedEffect( 7, 0x500057, -1, -1, 1 ), new SavedEffect( 1, 0xe00008, 1, 0, 1 )] );
+
+		CollectionAssert.AreEqual(
+			new[] { new SavedEffect( 1, 0xe00008, 1, 0, 1 ), new SavedEffect( 7, 0x500057, -1, -1, 1 ) },
+			script.Effects.Written(), "the file's second record is at the head" );
+		Assert.IsTrue( script.Effects.Records.All( record => record.Restored ) );
+		Assert.AreEqual( (0, 0), (script.Effects.Started, script.Effects.Stopped), "nothing was started by the load" );
+
+		script.Turn( 0f );
+
+		CollectionAssert.AreEqual(
+			new[] { new SavedEffect( 5, 0, -1, -1, 10 ), new SavedEffect( 1, 0xe00008, 1, 0, 1 ), new SavedEffect( 7, 0x500057, -1, -1, 1 ) },
+			script.Effects.Written(), "the one started since is the newest, with no handle" );
+		Assert.IsFalse( script.Effects.Records[0].Restored );
+	}
+
+	/// <summary>A record a load put back is the script's to stop: its own <c>KILLOBJ</c> takes it by its tag.</summary>
+	[TestMethod]
+	public void AKillTakesARecordALoadPutBack()
+	{
+		var script = WithEffects(
+			Word( Opcode.KILLOBJ ), Lit( 1 ),
+			Word( Opcode.END ) );
+
+		script.Effects!.Restore( [new SavedEffect( 7, 0x500057, -1, -1, 1 ), new SavedEffect( 3, 9, -1, -1, 20 ), new SavedEffect( 1, 0xe00008, 1, 0, 1 )] );
+		script.Turn( 0f );
+
+		CollectionAssert.AreEqual( new[] { new SavedEffect( 3, 9, -1, -1, 20 ) }, script.Effects.Written() );
+		Assert.AreEqual( 2, script.Effects.Stopped );
+	}
+
+	/// <summary>A second load's list replaces the first's.</summary>
+	[TestMethod]
+	public void ASecondLoadsListReplacesTheFirsts()
+	{
+		var effects = new RideEffects();
+
+		effects.Restore( [new SavedEffect( 7, 1, -1, -1, 1 )] );
+		effects.Restore( [new SavedEffect( 3, 2, -1, -1, 5 )] );
+
+		CollectionAssert.AreEqual( new[] { new SavedEffect( 3, 2, -1, -1, 5 ) }, effects.Written() );
+	}
+
+	/// <summary>With no model a record's lookup index is -1, and an unknown type keeps no record.</summary>
+	[TestMethod]
+	public void WithNoModelARecordsIndexIsMinusOne()
+	{
+		var script = WithEffects(
+			Word( Opcode.ADDOBJ ), Lit( 1 ), Lit( 2 ), Lit( 16 ), Lit( 10 ),
+			Word( Opcode.ADDOBJ ), Lit( 11 ), Lit( 2 ), Lit( 16 ), Lit( 10 ),
+			Word( Opcode.END ) );
+
+		script.Turn( 0f );
+
+		CollectionAssert.AreEqual( new[] { new SavedEffect( 1, 0, 2, -1, 10 ) }, script.Effects!.Written() );
+	}
+
+	/// <summary>
+	/// <b><c>ADDOBJ</c> keeps the node's lookup record</b>, as <c>FUN_00557970</c> does at <c>+0x14</c>: the Gift
+	/// Shop's script on the Gift Shop's model keeps its three smokes on records 0, 1 and 2, the newest at the head,
+	/// and a sound with no node -1 - the list the original's own park file holds for that shop.
+	/// </summary>
+	[TestMethod]
+	public void AddingAnObjectKeepsItsNodesLookupRecord()
+	{
+		var data = GameData.Required();
+		var script = WithEffects(
+			Word( Opcode.ADDOBJ ), Lit( 1 ), Lit( 1 ), Lit( 16 ), Lit( 1 ),
+			Word( Opcode.ADDOBJ ), Lit( 1 ), Lit( 2 ), Lit( 16 ), Lit( 1 ),
+			Word( Opcode.ADDOBJ ), Lit( 1 ), Lit( 3 ), Lit( 16 ), Lit( 1 ),
+			Word( Opcode.ADDOBJ ), Lit( 5 ), Lit( -1 ), Lit( 43 ), Lit( 10 ),
+			Word( Opcode.END ) );
+
+		script.Nodes = RideNodes.Load( "levels/jungle/shops/giftshop", "giftshop", data, false, [] );
+		Assert.IsNotNull( script.Nodes );
+		script.Turn( 0f );
+
+		CollectionAssert.AreEqual(
+			new[] { new SavedEffect( 5, 0, -1, -1, 10 ), new SavedEffect( 1, 0, 3, 0, 1 ), new SavedEffect( 1, 0, 2, 1, 1 ), new SavedEffect( 1, 0, 1, 2, 1 ) },
+			script.Effects!.Written() );
 	}
 }
