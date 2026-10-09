@@ -187,6 +187,85 @@ public sealed class RideNodes
 	}
 
 	/// <summary>
+	/// Which of eight ways a walker faces going from <paramref name="from"/> to <paramref name="to"/>, a walk slot's
+	/// <c>+0x14</c> (<c>0x005570b2</c>; <c>docs/exe/ride-operation.md</c>, "How long a leg lasts, and where its ends are").
+	/// </summary>
+	public static short Facing( Numerics.Vector3 from, Numerics.Vector3 to )
+		=> Octant( (double)to.X - from.X, (double)to.Z - from.Z );
+
+	/// <summary>
+	/// The octant of a direction on the ground: trunc( 10.5 − 4θ/π ) mod 8, θ = atan2( z, x ), through the build's own
+	/// four constants (<c>0x00700fe8</c>) in its order. A direction that is no number gives nought, as the build's
+	/// truncation of one does.
+	/// </summary>
+	public static short Octant( double x, double z )
+	{
+		var turned = OctantHalf - ((OctantTurn - (Math.Atan2( z, x ) - OctantQuarter)) * OctantScale);
+
+		if ( double.IsNaN( turned ) )
+			return 0;
+
+		var whole = (int)turned;
+
+		// The build's signed remainder: the magnitude's low three bits under the value's sign.
+		return (short)(whole < 0 ? -(-whole & 7) : whole & 7);
+	}
+
+	/// <summary>The build's quarter turn, <c>0x00700fe8</c>: 1.5707963.</summary>
+	private static readonly double OctantQuarter = BitConverter.Int64BitsToDouble( 0x3ff921f9f01b866e );
+
+	/// <summary>Its whole turn, <c>0x00700ff0</c>: 6.2831853.</summary>
+	private static readonly double OctantTurn = BitConverter.Int64BitsToDouble( 0x401921f9f01b866e );
+
+	/// <summary>Its octants a radian, negated, <c>0x00700ff8</c>: −1.2732395.</summary>
+	private static readonly double OctantScale = BitConverter.Int64BitsToDouble( unchecked((long)0xbff45f318e7adaf5) );
+
+	/// <summary>Its half, <c>0x00701000</c>.</summary>
+	private const double OctantHalf = 0.5;
+
+	/// <summary>A lookup record's runtime flag <c>0x10</c>: its node's file flags carry this, and its direction is read turned about.</summary>
+	private const uint TurnedAbout = 0x400;
+
+	/// <summary>
+	/// Which of eight ways a rider carried on the node <paramref name="id"/> in <paramref name="space"/> faces: the
+	/// octant of the third row of the node's stored matrix, negated where its lookup record carries <c>0x10</c>
+	/// (<c>FUN_00556b90</c>'s third argument, <c>0x00557f4a</c>). A node with no matrix faces along z, which is nought.
+	/// </summary>
+	public NodeEnd FindFacing( int id, uint space, out short facing )
+	{
+		facing = 0;
+
+		if ( id < 0 )
+			return NodeEnd.NegativeId;
+
+		var node = _model.FindNode( id, space );
+
+		if ( node < 0 )
+			return NodeEnd.Missing;
+
+		var flags = _nodes[node].IdFlags;
+
+		if ( (flags & HasMatrix) == 0 )
+			return NodeEnd.Unposed;
+
+		// A matrix the pose walk never stores is all noughts, whose direction is no number.
+		if ( !_hasChild[node] && (flags & StoredWhenChildless) == 0 && !_doHeadProcessing )
+			return NodeEnd.Unposed;
+
+		var world = Stored( node );
+		var about = (_nodes[node].Flags & TurnedAbout) != 0 ? -1.0 : 1.0;
+
+		facing = Octant( about * world.M31, about * world.M33 );
+
+		var parent = _nodes[node].ParentIndex;
+
+		if ( (flags & FromAFace) != 0 && parent >= 0 && parent < _nodes.Length && _morphed[parent] )
+			return NodeEnd.OnAFace;
+
+		return RidesAClip( node ) ? NodeEnd.RestPose : NodeEnd.Posed;
+	}
+
+	/// <summary>
 	/// How many head slots the script loader gives a script on this model, <c>+0x4c</c>: the run of ids from 1 that the
 	/// head space finds, stopping at the first it does not (<c>FUN_005587f0</c>, <c>0x00558d8a</c>..<c>0x00558db7</c>).
 	/// </summary>

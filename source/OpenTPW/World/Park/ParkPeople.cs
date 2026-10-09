@@ -2949,7 +2949,7 @@ public sealed partial class ParkPeople : Entity
 			var walks = walking.Length == 0
 				? "nobody"
 				: string.Join( ", ", walking.Select( slot =>
-					$"{slot.Slot}:{slot.Handle} {slot.State} {slot.From}->{slot.To} leg {slot.Leg?.ToString() ?? "-"}" ) );
+					$"{slot.Slot}:{slot.Handle} {slot.State} {slot.From}->{slot.To} leg {slot.Leg?.ToString() ?? "-"} facing {slot.Facing}" ) );
 
 			var seats = aboard.Length == 0
 				? "nobody"

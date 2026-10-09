@@ -364,9 +364,9 @@ public sealed class RideScript
 
 	/// <summary>
 	/// Every walk slot in use - the console's ride census, and what a test reads a leg from. The leg is the one being
-	/// walked, or for a slot done the walk off it walked, and null for a slot carried.
+	/// walked, or for a slot done the walk off it walked, and null for a slot carried; the facing is the slot's own.
 	/// </summary>
-	public IEnumerable<(int Slot, int Handle, WalkState State, int From, int To, int? Leg)> Walking()
+	public IEnumerable<(int Slot, int Handle, WalkState State, int From, int To, int? Leg, int Facing)> Walking()
 	{
 		for ( var slot = 0; slot < _walk.Length; ++slot )
 		{
@@ -380,7 +380,7 @@ public sealed class RideScript
 			var walked = walking.State is not WalkState.Carried;
 
 			yield return (slot, walking.Handle, walking.State, off ? walking.OffFrom : walking.WalkNode,
-				off ? walking.OffTo : walking.HeadNode, walked ? (int)(walking.Due - walking.Start) : null);
+				off ? walking.OffTo : walking.HeadNode, walked ? (int)(walking.Due - walking.Start) : null, walking.Facing);
 		}
 	}
 
@@ -515,6 +515,13 @@ public sealed class RideScript
 		/// shipped <c>WALKON</c> passes 1.
 		/// </summary>
 		public short Flags;
+
+		/// <summary>
+		/// Which of eight ways the walker faces - <c>+0x14</c>: along the leg from <c>WALKON</c> and <c>WALKOFF</c>,
+		/// and for a rider carried under an action other than 1, 2 or 4 the way the head node points, taken again at
+		/// every step (<c>0x00557f80</c>).
+		/// </summary>
+		public short Facing;
 	}
 
 	/// <summary>
@@ -1069,6 +1076,7 @@ public sealed class RideScript
 						Action = walk[slot].Action,
 						State = (WalkState)walk[slot].State,
 						Flags = walk[slot].Flags,
+						Facing = walk[slot].Facing,
 					};
 
 				riders += walk[slot].State != 0 ? 1 : 0;
@@ -1126,7 +1134,7 @@ public sealed class RideScript
 			Walk: [.. _walk.Select( slot => slot.State == WalkState.Free
 				? default
 				: new SavedWalkSlot( slot.WalkNode, slot.HeadNode, slot.OffFrom, slot.OffTo, reading( slot.Start ),
-					reading( slot.Due ), slot.Handle, slot.Action, (short)slot.State, slot.Flags ) )],
+					reading( slot.Due ), slot.Handle, slot.Action, (short)slot.State, slot.Flags, slot.Facing ) )],
 			Heads: [.. _heads] );
 	}
 
@@ -1366,7 +1374,9 @@ public sealed class RideScript
 	/// <c>FUN_005580a0</c> interpolating between two node positions and handing them to the sprite
 	/// placer, from the same nodes <see cref="Leg"/> finds (<see cref="Nodes"/>). Nothing here draws a walking
 	/// rider (docs/QUEUE.md Q22), so the bookkeeping is reproduced and the placement is not, the same split
-	/// <see cref="_bounceBase"/> already lives with.
+	/// <see cref="_bounceBase"/> already lives with. The slot's facing is kept, for the park file: a carried
+	/// rider's is taken again here, and the turn <c>WALKST_FLOAT</c>'s shake gives it each frame is not built,
+	/// counted with that instruction.
 	/// </para>
 	/// </summary>
 	public void StepTheWalks( float now )
@@ -1374,6 +1384,13 @@ public sealed class RideScript
 		for ( var slot = 0; slot < _walk.Length; ++slot )
 		{
 			ref var walking = ref _walk[slot];
+
+			// A rider carried under an action other than 1, 2 or 4 faces the way the head node points, taken again
+			// at every step; a miss writes nothing, so the facing stays.
+			if ( walking.State == WalkState.Carried && walking.Action is not (1 or 2 or 4)
+				&& Nodes?.FindFacing( walking.HeadNode, RideNodes.WalkSpace, out var pointed ) is { } found
+				&& found is not (NodeEnd.Missing or NodeEnd.NegativeId) )
+				walking.Facing = pointed;
 
 			if ( walking.State is not (WalkState.WalkingOn or WalkState.WalkingOff) )
 				continue;
@@ -1393,12 +1410,38 @@ public sealed class RideScript
 				{
 					walking.State = WalkState.Carried;
 					walking.Start = now;
+
+					if ( walking.Action is not (1 or 2 or 4) )
+						CountTheFacing( walking.HeadNode );
 				}
 				else
 				{
 					walking.State = WalkState.Done;
 				}
 			}
+		}
+	}
+
+	/// <summary>
+	/// Counts what a carried rider's facing on <paramref name="headNode"/> is not the engine's for, once as they
+	/// arrive: the engine reads the direction its last drawn frame stored, and this the node's at rest.
+	/// </summary>
+	private void CountTheFacing( int headNode )
+	{
+		switch ( Nodes?.FindFacing( headNode, RideNodes.WalkSpace, out _ ) )
+		{
+			case NodeEnd.RestPose:
+				Unimplemented.Report( "WALK_FACING_REST_POSE" );
+				break;
+
+			case NodeEnd.OnAFace:
+				Unimplemented.Report( "WALK_FACING_ON_A_FACE" );
+				break;
+
+			case NodeEnd.Missing or NodeEnd.NegativeId:
+				// FUN_00556b90 writes no direction, and the facing is worked from whatever the stack held.
+				Unimplemented.Report( "WALK_FACING_NODE_MISS" );
+				break;
 		}
 	}
 
@@ -2295,7 +2338,7 @@ public sealed class RideScript
 	private void WalkOn( float now, int handle, int walkNode, int headNode, int offFrom, int offTo,
 		int action, int flags )
 	{
-		var leg = Leg( walkNode, RideNodes.WalkSpace, headNode, SpaceOf( action ) );
+		var leg = Leg( walkNode, RideNodes.WalkSpace, headNode, SpaceOf( action ), out var facing );
 
 		for ( var slot = 0; slot < _walk.Length; ++slot )
 		{
@@ -2314,9 +2357,10 @@ public sealed class RideScript
 				Start = now,
 				Due = now + leg,
 				State = WalkState.WalkingOn,
+				Facing = facing,
 			};
 
-			Log?.Info( $"{Name}: WALKON slot {slot} handle {handle} node {walkNode} -> {headNode} leg {leg}" );
+			Log?.Info( $"{Name}: WALKON slot {slot} handle {handle} node {walkNode} -> {headNode} leg {leg} facing {facing}" );
 
 			return;
 		}
@@ -2348,13 +2392,14 @@ public sealed class RideScript
 			if ( walking.State == WalkState.Free || walking.Handle != handle )
 				continue;
 
-			var leg = Leg( walking.OffFrom, SpaceOf( walking.Action ), walking.OffTo, RideNodes.WalkSpace );
+			var leg = Leg( walking.OffFrom, SpaceOf( walking.Action ), walking.OffTo, RideNodes.WalkSpace, out var facing );
 
+			walking.Facing = facing;
 			walking.Start = now;
 			walking.Due = now + leg;
 			walking.State = WalkState.WalkingOff;
 
-			Log?.Info( $"{Name}: WALKOFF slot {slot} handle {handle} node {walking.OffFrom} -> {walking.OffTo} leg {leg}" );
+			Log?.Info( $"{Name}: WALKOFF slot {slot} handle {handle} node {walking.OffFrom} -> {walking.OffTo} leg {leg} facing {facing}" );
 
 			return;
 		}
@@ -2366,7 +2411,8 @@ public sealed class RideScript
 
 	/// <summary>
 	/// How long walking from one node to another takes, in milliseconds: trunc( the distance between them ) × 100,
-	/// and <see cref="WalkFloor"/> for anything under a unit (<c>0x00556fce</c>).
+	/// and <see cref="WalkFloor"/> for anything under a unit (<c>0x00556fce</c>); and which way the walker faces
+	/// along it (<see cref="RideNodes.Facing"/>), nought where an end is not found.
 	///
 	/// <para>
 	/// The distance is the engine's arithmetic: the x and z differences each rounded to a float once and multiplied
@@ -2380,8 +2426,10 @@ public sealed class RideScript
 	/// which the engine does not survive; each is counted rather than built, and the leg is the floor.
 	/// </para>
 	/// </summary>
-	private int Leg( int fromId, uint fromSpace, int toId, uint toSpace )
+	private int Leg( int fromId, uint fromSpace, int toId, uint toSpace, out short facing )
 	{
+		facing = 0;
+
 		if ( Nodes is not { } nodes )
 		{
 			Unimplemented.Report( "WALK_NODES_NO_MODEL" );
@@ -2391,6 +2439,8 @@ public sealed class RideScript
 		// Both ends are looked up whatever the first gives, as the engine's are, so each is counted.
 		if ( !End( nodes, fromId, fromSpace, out var from ) | !End( nodes, toId, toSpace, out var to ) )
 			return WalkFloor;
+
+		facing = RideNodes.Facing( from, to );
 
 		var dx = (double)to.X - from.X;
 		var dy = (double)to.Y - from.Y;

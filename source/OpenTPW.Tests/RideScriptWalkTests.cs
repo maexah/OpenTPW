@@ -613,6 +613,126 @@ public class RideScriptWalkTests
 	}
 
 	/// <summary>
+	/// <b>Each lane of the Jungle Spray faces as the original's saves hold it</b> (docs/exe/ride-operation.md, "How
+	/// long a leg lasts, and where its ends are"): turned 0, walking on 7, 0 and 1, walking off 3, 4 and 5, and
+	/// carried 0, the way the lane's node points, taken again at the step after the arrival; turned 270, as the
+	/// Jungle Spray of Alexah's Lost Kingdom park stands, carried 6 and walking off lane one 1.
+	/// </summary>
+	[TestMethod]
+	public void EachJungleSprayLaneFacesAsTheOriginalsSavesHoldIt()
+	{
+		(Dictionary<int, int> On, Dictionary<int, int> Carried, Dictionary<int, int> Arrived, Dictionary<int, int> Off) Faced( int angle )
+		{
+			var animations = RideAnimations.Load( "levels/jungle/sideshow/junspray", "Junspray", _data, JunsprayLanes );
+
+			var script = new RideScript( JunsprayFile() )
+			{
+				Animations = animations,
+				Nodes = Nodes( "levels/jungle/sideshow/junspray", "Junspray", false, animations, 51, 30, angle )
+			};
+
+			var on = new Dictionary<int, int>();
+			var arrived = new Dictionary<int, int>();
+			var carried = new Dictionary<int, int>();
+			var off = new Dictionary<int, int>();
+			var handed = 0;
+			var clock = 0f;
+
+			for ( var turn = 0; turn < 40000 && off.Count < JunsprayLanes; ++turn )
+			{
+				if ( script["VAR_LETMEON"] == 0 && handed < JunsprayLanes )
+					script.Set( "VAR_LETMEON", Rider + ++handed );
+
+				if ( script["VAR_LETMEOFF"] != 0 )
+					script.Set( "VAR_LETMEOFF", 0 );
+
+				clock += 31f;
+				animations.Advance( (int)clock );
+				script.Turn( clock );
+				script.StepTheWalks( clock );
+
+				foreach ( var walking in script.Walking() )
+				{
+					if ( walking.State == RideScript.WalkState.WalkingOn )
+						on[walking.To] = walking.Facing;
+					else if ( walking.State == RideScript.WalkState.Carried && !arrived.ContainsKey( walking.To ) )
+						arrived[walking.To] = walking.Facing;
+					else if ( walking.State == RideScript.WalkState.Carried )
+						carried[walking.To] = walking.Facing;
+					else if ( walking.State == RideScript.WalkState.WalkingOff )
+						off[walking.From] = walking.Facing;
+				}
+			}
+
+			return (on, carried, arrived, off);
+		}
+
+		static string Said( Dictionary<int, int> lanes ) => string.Join( ", ", lanes.OrderBy( lane => lane.Key ) );
+
+		var level = Faced( 0 );
+
+		Assert.AreEqual( "[1, 7], [2, 0], [3, 1]", Said( level.On ), "walking on" );
+		Assert.AreEqual( "[1, 7], [2, 0], [3, 1]", Said( level.Arrived ), "the step that finds them arrived leaves the walk's facing" );
+		Assert.AreEqual( "[1, 0], [2, 0], [3, 0]", Said( level.Carried ), "carried" );
+		Assert.AreEqual( "[1, 3], [2, 4], [3, 5]", Said( level.Off ), "walking off" );
+
+		var turned = Faced( 270 );
+
+		Assert.AreEqual( "[1, 6], [2, 6], [3, 6]", Said( turned.Carried ), "carried, turned 270" );
+		Assert.AreEqual( 1, turned.Off[1], "walking off lane one, turned 270" );
+	}
+
+	/// <summary>
+	/// <b>A node whose file flags carry <c>0x400</c> is read turned about</b> (<c>FUN_00556b90</c>): Wonder Land's Well
+	/// Drop has one in the walk space, modelled pointing the other way from its neighbour, and both face nought.
+	/// This stands on the listing alone: no shipped script carries a rider on such a node, in any theme.
+	/// </summary>
+	[TestMethod]
+	public void ANodeTurnedAboutFacesTheOtherWay()
+	{
+		var nodes = RideNodes.Load( "levels/fantasy/rides/welldrop", "welldrop", _data, false, [] );
+
+		Assert.IsNotNull( nodes );
+		nodes.Place( ParkObjects.OriginFor( 51, 30, 0 ), 0 );
+
+		var flagged = nodes.Model.Nodes[nodes.Model.FindNode( 2, RideNodes.WalkSpace )];
+		var plain = nodes.Model.Nodes[nodes.Model.FindNode( 1, RideNodes.WalkSpace )];
+
+		Assert.AreEqual( (0x400u, 0u), (flagged.Flags & 0x400, plain.Flags & 0x400), "which of the two carries the flag" );
+		Assert.AreEqual( NodeEnd.Posed, nodes.FindFacing( 2, RideNodes.WalkSpace, out var about ) );
+		Assert.AreEqual( NodeEnd.Posed, nodes.FindFacing( 1, RideNodes.WalkSpace, out var straight ) );
+		Assert.AreEqual( (0, 0), (about, straight) );
+	}
+
+	/// <summary>
+	/// <b>A rider carried under action 4 keeps the facing they walked on with</b>: the Aztec Mayhem's five, 0, 1, 0, 7
+	/// and 1 in both of the original's saves of Alexah's Lost Kingdom park, where a Jungle Spray's are turned to their
+	/// lane's node.
+	/// </summary>
+	[TestMethod]
+	public void AnAztecMayhemRiderKeepsTheFacingTheyWalkedOnWith()
+	{
+		var item = "levels/jungle/rides/tvsim";
+		var animations = RideAnimations.Load( item, "tvsim", _data );
+		var nodes = Nodes( item, "tvsim", true, animations, 40, 22, 0 );
+
+		var words = Enumerable.Range( 1, 5 ).SelectMany( k =>
+			new[] { Word( Opcode.WALKON ), Rider + k, 1, k, k, 2, 4, 1 } ).ToList();
+
+		var script = new RideScript( Build( walkSlots: 5, [.. words, Word( Opcode.END )] ) ) { Nodes = nodes };
+
+		script.Turn( 0f );
+
+		CollectionAssert.AreEqual( new[] { 0, 1, 0, 7, 1 }, script.Walking().Select( walking => walking.Facing ).ToArray(), "walking on" );
+
+		script.StepTheWalks( 5000f );
+		script.StepTheWalks( 5031f );
+
+		Assert.IsTrue( script.Walking().All( walking => walking.State == RideScript.WalkState.Carried ) );
+		CollectionAssert.AreEqual( new[] { 0, 1, 0, 7, 1 }, script.Walking().Select( walking => walking.Facing ).ToArray(), "carried" );
+	}
+
+	/// <summary>
 	/// <b>The Aztec Mayhem, as the original walked it</b>: bought in the reference install's stock park and watched in
 	/// its memory, riders one to five walked on in 1400, 1300, 900, 1000 and 2000 ms, three times, and off in 2000, 900,
 	/// 1300, 1700 and 1500, twice. Its <c>WALKON</c> passes action 4, so each head is found in the head space and the walk

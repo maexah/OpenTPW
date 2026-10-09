@@ -4282,6 +4282,24 @@ snapshot, so two reads back to back can part by one clock step. **The facing** i
 θ = atan2( Δz, Δx ) from the first node to the second, with the build's truncated π constants
 (`0x005570b2`..`0x005570fd`, `0x00700fe8`); it turns with the ride.
 
+**Who writes a slot's facing (`+0x14`), all four.** `WALKON` along its leg, and `WALKOFF` along its own
+(`0x0055728b`..`0x005572cb`, the same arithmetic). The stepper, for a slot in state 2 whose action is not 1, 2 or 4,
+at every frame (`0x00557f30`..`0x00557f80`): `FUN_00556b90` is asked for the head node's **direction** in space
+`0x800`, its third argument, which is the third row of the node's stored matrix (`+0x20`..`+0x28`), negated where the
+lookup record's runtime flags carry `0x10` (the node's file flags carry `0x400`), normalised and times 1024; a record
+with no matrix gives (0, 0, 1024), and the facing is the same formula on atan2( z, x ) of it. The frame that finds a
+walker arrived only changes the state, so the walk's facing stands one frame more. And `FUN_005580a0`, for a slot in
+state 2 while the script's shake runs (`+0x84` not nought; set by `FUN_00557160`, which is `WALKST_FLOAT`'s
+handler at `0x00555b72`, three operands): the facing plus `(short)( clock / trunc( … ) )`, mod 8, every frame. A
+slot let go keeps its facing (`WALKGET` clears the state and the handle alone).
+**Counted in the original's files** (`q257h/census`, thirteen files): every slot holding a walk is the rule's, 36 in
+use (one walking on, 13 carried under action 1 and 10 under 4 on their walk's facing, 10 carried under 5 or 6 on
+their node's direction, two walking off) and 64 let go on their walk off's, none wrong. The Jungle Spray turned 0
+walks on facing 7, 0 and 1, stands 0, and walks off 3, 4 and 5; turned 270 it stands 6.
+OpenTPW keeps it (`RideNodes.Facing`, `Octant`, `FindFacing`; `RideScript.WalkSlot.Facing`), taking a carried
+rider's again once a tick from the node at rest (`WALK_FACING_REST_POSE` counts a node a clip moves, as a rider
+arrives); the shake's turn is not built, counted with `WALKST_FLOAT`, which only Space Zone's Zero G carries.
+
 **The ends are the nodes' stored matrices, in the world.** `FUN_00556b90` reads the translation row of a matrix kept
 per node-lookup record: the script's model (`[0x7a4610 + handle × 4]`) `+8` → `+0x28` → `+4`, 20 bytes a record, the
 matrix pointer at `+4` (that `+8` object's `+4` is the file header). Only the pose walk `FUN_0044ab30` writes their

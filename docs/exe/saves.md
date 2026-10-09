@@ -1236,8 +1236,9 @@ and the object constructor `FUN_004db090` was read beside the two files.
 - **A made script** (`RideScript.Made`, `ParkScriptStates.MadeRecord`, `Splice`): the struct as the loader
   `FUN_005587f0` fills it with the running state laid over, the addresses nought, the body and the string blob
   as the `.RSE` file holds them, and its tables. The speed word is the object's operating speed, or the
-  loader's 50 where that is nought. The directory is OpenTPW's own path, in lower case (`rides`). A walk slot's
-  facing is nought (`SAVE_PARK_WALK_SLOT_FACING` where one is in use) and no started effect is written. A gone
+  loader's 50 where that is nought. The directory is OpenTPW's own path, in lower case (`rides`). A walk slot
+  in use holds its facing, one let go is all nought where the engine's keeps its leftovers, and no started effect
+  is written. A gone
   thing's records, its own and any its script started, are taken out, and the count the records are walked by
   is kept.
 - **A made model** (`ParkThingStates.Plan`, `MadeRecord`, `Splice`): the slot at the cursor, the lowest empty
@@ -1747,7 +1748,7 @@ control: flags are not drawn. `docs/exe/addresses.md` not regenerated.
 
 ### OpenTPW's writer, the region effects
 
-Q257e, split by the session: the staff's are the next section's and the item's other pieces Q257h. The rule, its eight effects and who stamps each
+Q257e, split by the session: the staff's are the next section's and the item's other pieces Q257i. The rule, its eight effects and who stamps each
 are `ride-operation.md`, "The region effects"; a cell's ten bytes are five words, and every cell of thirteen of
 the original's files is what the file's own things stamp.
 
@@ -1791,12 +1792,12 @@ camera, the view being turned, and the second opened a passing member of staff's
 next two clicks confirmed; the running park only, nothing saved, the save sum the same before and after.
 **Not run in either game:** fireworks (no Instant Action item was tried, no file holds one), a toilet bought, a
 toilet dirtied or cleaned and then written (tests only), a thing bought and left out of the file, the objects
-going out as the file's. **Not built:** the fireworks' spent turn (`FIREWORKS_SPENT_REGION_EFFECT`), any reader of the running grid (Q257h,
+going out as the file's. **Not built:** the fireworks' spent turn (`FIREWORKS_SPENT_REGION_EFFECT`), any reader of the running grid (Q257i,
 Q157). `docs/exe/addresses.md` not regenerated.
 
 ### OpenTPW's writer, the staff's region effects
 
-Q257f, split by the session: the item's other pieces are Q257h. The rule is `ride-operation.md`, "The region
+Q257f, split by the session: the item's other pieces are Q257i. The rule is `ride-operation.md`, "The region
 effects", "The staff's two, read whole".
 
 **What OpenTPW writes.** The running grid already holds each entertainer's and guard's effect round
@@ -1868,6 +1869,41 @@ tell the fix from the control. OpenTPW writes `0x1c` where the original's own fi
 comes and goes on the engine's held channel and stays on one here. The 22 items whose only clips are role 0's
 are still held on role 0 here where the engine parks them idle (`park.md`, "the stall"), so a bought one of
 those is written held with the mark, where the original's is idle.
+
+### OpenTPW's writer, a walk slot's facing
+
+**A walk slot's `+0x14` is which of eight ways its walker is drawn, and the engine writes it in four places**
+(`ride-operation.md`, "How long a leg lasts, and where its ends are", "Who writes a slot's facing"): `WALKON` and
+`WALKOFF` along their legs, the stepper for a rider carried under an action other than 1, 2 or 4 from the way the
+head node points, and `WALKST_FLOAT`'s shake. **Measured on the thirteen files** (`q257h/census`, the prediction
+written first): all 36 slots in use and all 64 let go with a walk's leftovers hold the rule's facing.
+
+Built on 2026-10-09 (Q257h). `RideScript.WalkSlot.Facing`, set by `WalkOn` and `WalkOff` from the leg's two ends
+(`RideNodes.Facing`), taken again for a carried rider at each `StepTheWalks` from the node at rest
+(`RideNodes.FindFacing`), read from a file's slot at a load (`SavedWalkSlot.Facing`) and written into a kept
+script's record (`ParkScriptStates.Put`) and a made one's (`MadeRecord`). `rides` prints each slot's facing.
+`SAVE_PARK_WALK_SLOT_FACING` is gone. **Counted, not built:** a carried rider on a node a clip moves faces as the
+node does at rest, where the engine reads its last drawn frame (`WALK_FACING_REST_POSE`, as they arrive); the
+shake's turn, with its instruction (`WALKST_FLOAT`: of the four themes' catalogued items' scripts only Space Zone's Zero G
+carries it, `q257h/about`, so it is dead by content in Lost Kingdom). **Left:** a made script's slot let go is
+written all nought, where the engine's keeps its nodes, stamps and facing; a kept script's keeps the file's.
+
+**Confirmed in the game** (`q257h/confirm.py`, 5 of 5 off-screen and 5 of 5 on the desktop, and the control's 3
+of 3, each predicted). A Jungle Spray bought on (41,22), turned 0, and the park paused with a guest walking on to
+lane 1: `rides` reads `0:33 Carried 4->2 leg - facing 0, 1:32 WalkingOn 4->1 leg 1100 facing 7`; the file's
+record of script 18 holds facing 0 and 7 on those slots, where the build before's held 0 and 0 and counted the
+gap once; loaded here both slots read the same again. **In the original under Proton** (`q257h/orig/go.sh`,
+off-screen, entering the park on the file, the slots read from memory every 0.05 s): slot 1 held state 1 facing 7
+at the first poll with this build's file and facing 0 with the build before's. The original then walked its own
+guests as the rule says, which is the table measured live: on to lanes 1, 2 and 3 facing 7, 0 and 1; arrived,
+the walk's facing for one poll and then 0; off 3, 4 and 5 (`orig/a-load.log`, 40 lines).
+
+**Not seen:** the walker drawn the wrong way in the original with the build before's file (0.7 s of a leg, not
+filmed); OpenTPW draws no walker on a ride's nodes (Q22), so its two photographs show the stall and do not tell
+the fix from the control. The file's own Jungle Spray held nobody at any pause, so a kept script's facing is
+written in the tests alone. A node whose file flags carry `0x400` is read turned about on the listing alone: no
+shipped script carries a rider on one (three walk-space nodes carry it, in Wonder Land's Well Drop and
+Halloween World's Devils Disc).
 
 ### Read, not run
 

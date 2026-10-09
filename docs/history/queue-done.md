@@ -5673,6 +5673,15 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   here keeps it, a load puts it back and the writer writes it; `SAVE_PARK_CHANNEL_KEEP_SHOWN_BIT` is gone.
   **Proof:** a bought Crazy Ape's record holds `0x1c` where the build before's held `0x14`, and the original's
   model read `0xc` at its first poll with this build's file and `0x4` with the build before's.
+- [x] **Q257h. The writer: a walk slot's facing.** Split from the old Q257h at its first piece (2026-10-09); the
+  rest is Q257i. A walk slot's `+0x14` is which of eight ways its walker is drawn: along the leg from `WALKON` and
+  `WALKOFF`, and for a rider carried under an action other than 1, 2 or 4 the way the head node points
+  (`ride-operation.md`, "Who writes a slot's facing"; `saves.md`, "OpenTPW's writer, a walk slot's facing"; all
+  100 slots holding a walk in thirteen files). A slot here keeps it, a load reads it and the writer writes it, in a
+  kept script's record and a made one's; `SAVE_PARK_WALK_SLOT_FACING` is gone.
+  **Proof:** a bought Jungle Spray's walker on lane 1 reads `facing 7` in `rides` and in the file, where the build
+  before's file held 0, and the original held 7 on the slot at its first poll with this build's file and 0 with
+  the build before's, then walked its own guests on 7, 0 and 1, standing 0, and off 3, 4 and 5.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

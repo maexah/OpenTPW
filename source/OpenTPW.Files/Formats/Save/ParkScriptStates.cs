@@ -69,10 +69,10 @@ public readonly record struct SavedBounceSlot( int Handle, int Node, uint Due, u
 /// <summary>
 /// One walk slot, thirty-two bytes (FileFormats <c>saves.md</c>, "The walk slots"): its four node ids, the clock
 /// readings its leg began and is due at, the walker, the action, the state (0 free, 1 walking on, 2 on the ride, 3
-/// walking off, 4 off) and the flags. The facing at <c>+0x14</c> and the dword at <c>+0x1c</c> are not taken.
+/// walking off, 4 off), the flags and the facing, one of eight ways. The dword at <c>+0x1c</c> is not taken.
 /// </summary>
 public readonly record struct SavedWalkSlot( short WalkNode, short HeadNode, short OffFrom, short OffTo,
-	uint Start, uint Due, int Handle, short Action, short State, short Flags );
+	uint Start, uint Due, int Handle, short Action, short State, short Flags, short Facing = 0 );
 
 /// <summary>
 /// One running script as a park file's writer takes it (<see cref="ParkScriptStates.Put"/>): what
@@ -483,7 +483,7 @@ public sealed partial class ParkScriptStates
 				OffFrom: ReadInt16At( at + 0x04 ), OffTo: ReadInt16At( at + 0x06 ),
 				Start: (uint)ReadInt32At( at + 0x08 ), Due: (uint)ReadInt32At( at + 0x0c ),
 				Handle: ReadInt32At( at + 0x10 ), Action: ReadInt16At( at + 0x16 ),
-				State: ReadInt16At( at + 0x18 ), Flags: ReadInt16At( at + 0x1a ) );
+				State: ReadInt16At( at + 0x18 ), Flags: ReadInt16At( at + 0x1a ), Facing: ReadInt16At( at + 0x14 ) );
 		}
 
 		// The head table, by its length in bytes (0x00559d3d..0x00559da7), then the script's directory string (+0x38).
@@ -544,7 +544,7 @@ public sealed partial class ParkScriptStates
 	/// name's offset, the speed word, the play rate, the body, the strings and the effects.
 	///
 	/// <para>
-	/// A walk slot's facing (<c>+0x14</c>) and its last dword are not written. A free slot of any of the three
+	/// A walk slot's last dword is not written. A free slot of any of the three
 	/// tables keeps all but its handle and its state, as the engine's does a slot let go. A script the file holds
 	/// no record for is not written.
 	/// </para>
@@ -653,6 +653,7 @@ public sealed partial class ParkScriptStates
 					PutInt32( body, to + 0x08, (int)walk[slot].Start );
 					PutInt32( body, to + 0x0c, (int)walk[slot].Due );
 					PutInt32( body, to + 0x10, walk[slot].Handle );
+					PutInt16( body, to + 0x14, walk[slot].Facing );
 					PutInt16( body, to + 0x16, walk[slot].Action );
 					PutInt16( body, to + 0x1a, walk[slot].Flags );
 				}

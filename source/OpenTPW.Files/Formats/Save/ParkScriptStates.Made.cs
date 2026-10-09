@@ -26,8 +26,8 @@ public sealed partial class ParkScriptStates
 	/// an empty object list. The addresses the game replaces as it loads are nought.
 	///
 	/// <para>
-	/// <b>A walk slot's facing and last dword are nought</b>, since a walk here keeps neither, and the script's
-	/// started effects are not written.
+	/// <b>A walk slot's last dword is nought</b>, since a walk here does not keep it, and the script's started
+	/// effects are not written.
 	/// </para>
 	/// </summary>
 	public static byte[] MadeRecord( MadeScript made, int modelHandle, int structSize = MadeStructSize )
@@ -129,6 +129,7 @@ public sealed partial class ParkScriptStates
 				PutInt32( bytes, 0x08, (int)slot.Start );
 				PutInt32( bytes, 0x0c, (int)slot.Due );
 				PutInt32( bytes, 0x10, slot.Handle );
+				PutInt16( bytes, 0x14, slot.Facing );
 				PutInt16( bytes, 0x16, slot.Action );
 				PutInt16( bytes, 0x18, slot.State );
 				PutInt16( bytes, 0x1a, slot.Flags );

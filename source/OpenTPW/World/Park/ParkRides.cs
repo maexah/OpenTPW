@@ -931,10 +931,6 @@ public sealed class ParkRides : Entity
 					thing.Directory );
 				madeHandles.Add( handle );
 				animations = script.Animations;
-
-				// A walk here keeps no facing, so a made slot in use goes out facing nought.
-				if ( record.Script.Walk?.Any( slot => slot.State != 0 ) == true )
-					Unimplemented.Report( "SAVE_PARK_WALK_SLOT_FACING" );
 			}
 
 			var channels = new SavedChannel[Math.Max( channelsFor( placed.CatalogueId ), 1 )];

@@ -48,9 +48,8 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q257h. The writer: what else a made record leaves out.** The old Q257g's other pieces, from Q253
-  (`saves.md`, "What OpenTPW writes"), each counted or said there. A
-  made walk slot in use goes out facing nought (`SAVE_PARK_WALK_SLOT_FACING`). A made script's started effects
+- [ ] **Q257i. The writer: what else a made record leaves out.** The old Q257h's other pieces, from Q253
+  (`saves.md`, "What OpenTPW writes"), each counted or said there. A made script's started effects
   are not written. A track ride (its `TRAK` record)
   and a thing with an emitter (`PART`) are left as the file has them, bought or sold (`SAVE_PARK_OBJECT_BOUGHT`,
   `SAVE_PARK_OBJECT_SOLD`). Confirm: each
@@ -84,6 +83,11 @@ the research lab), then the rest of this section in its old order.
   flag `0x800` on the model's nodes holding `0x100`, once (`0x00473d3c`): counted
   (`MODEL_NODES_AFTER_ROLE_NOUGHT_ENDED`), the two flags not read. And an item whose only clips are role 0's is
   held on role 0 here where the engine parks it idle, so a bought one is written held with the mark.
+  From Q257h (`saves.md`, "OpenTPW's writer, a walk slot's facing"): a made script's walk slot let go is
+  written all nought, where the engine's keeps its nodes, stamps and facing (`WALKGET` clears the state and the
+  handle alone): keep the slot as `WalkGet` lets it go. A rider carried on a node a clip moves faces as the node
+  does at rest (`WALK_FACING_REST_POSE`, counted). The shake's turn of a carried rider is not built, with its
+  instruction (`WALKST_FLOAT`, Space Zone's Zero G alone: after Lost Kingdom).
 - [ ] **Q241j. The writer: the managers, then Save Game saves.** From Q241e. The economy thing's loans and rings,
   the staff HQ's strikes, the calendar's and the weather's fields; then `ParkSaveScreen.Save` writes
   (`SAVE_GAME_WRITER` gone), an overwrite replaces the file, and the Load Park list shows it. Confirm: a park

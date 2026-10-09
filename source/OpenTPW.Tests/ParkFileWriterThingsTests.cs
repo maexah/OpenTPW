@@ -248,7 +248,7 @@ public class ParkFileWriterThingsTests
 		Assert.AreEqual( 10, saved.Bounce!.Length, "Bouncy's ten slots" );
 		Assert.AreEqual( new SavedBounceSlot( 31, 7, 1000, 900 ), saved.Bounce[4] );
 		Assert.AreEqual( (BellyBounce, 110), (saved.Thing, saved.ModelHandle), "its thing and its model's handle" );
-		Assert.AreEqual( new SavedWalkSlot( 11, 12, 13, 14, 2000, 2100, 33, 4, 3, 1 ), read.For( SprayScript )!.Value.Walk![1] );
+		Assert.AreEqual( new SavedWalkSlot( 11, 12, 13, 14, 2000, 2100, 33, 4, 3, 1, Facing: 5 ), read.For( SprayScript )!.Value.Walk![1] );
 		Assert.AreEqual( 3, read.For( SprayScript )!.Value.Walk!.Length );
 
 		Assert.AreEqual( 0, saved.Limbo!.Length, "no shipped script declares limbo" );
@@ -318,14 +318,14 @@ public class ParkFileWriterThingsTests
 		}
 	}
 
-	/// <summary>A walk slot and a limbo slot in use are written whole; the facing and the last dword of a walk slot stay the file's.</summary>
+	/// <summary>A walk slot and a limbo slot in use are written whole, the walk slot's facing with it; its last dword stays the file's.</summary>
 	[TestMethod]
 	public void AWalkSlotAndALimboSlotAreWritten()
 	{
 		var saved = shipped.ScriptStates.For( SprayScript )!.Value;
 		var walk = (SavedWalkSlot[])saved.Walk!.Clone();
 
-		walk[2] = new SavedWalkSlot( 21, 22, 23, 24, 3000, 3100, 36, 5, 1, 1 );
+		walk[2] = new SavedWalkSlot( 21, 22, 23, 24, 3000, 3100, 36, 5, 1, 1, Facing: 3 );
 
 		var body = (byte[])payload.Clone();
 		var at = PlaceOf( body, SprayScript ).Walk + 64;
@@ -337,8 +337,8 @@ public class ParkFileWriterThingsTests
 
 		Assert.AreEqual( (21, 22, 23, 24), (BitConverter.ToInt16( body, at ), BitConverter.ToInt16( body, at + 2 ), BitConverter.ToInt16( body, at + 4 ), BitConverter.ToInt16( body, at + 6 )) );
 		Assert.AreEqual( (3000, 3100, 36), (Int( body, at + 8 ), Int( body, at + 12 ), Int( body, at + 16 )) );
-		Assert.AreEqual( (6, 5, 1, 1), (BitConverter.ToInt16( body, at + 0x14 ), BitConverter.ToInt16( body, at + 0x16 ), BitConverter.ToInt16( body, at + 0x18 ), BitConverter.ToInt16( body, at + 0x1a )),
-			"the facing is the file's; the action, the state and the flags the slot's" );
+		Assert.AreEqual( (3, 5, 1, 1), (BitConverter.ToInt16( body, at + 0x14 ), BitConverter.ToInt16( body, at + 0x16 ), BitConverter.ToInt16( body, at + 0x18 ), BitConverter.ToInt16( body, at + 0x1a )),
+			"the facing, the action, the state and the flags are the slot's, over the file's facing of 6" );
 		Assert.AreEqual( 0x1234, Int( body, at + 0x1c ), "the last dword is the file's" );
 
 		// Limbo, over a file whose record holds two slots, the first let go with its reading left behind.
@@ -373,6 +373,7 @@ public class ParkFileWriterThingsTests
 		Put16( body, spray.Walk, 9 );
 		Put( body, spray.Walk + 8, 800 );
 		Put( body, spray.Walk + 16, 32 );
+		Put16( body, spray.Walk + 0x14, 5 );
 		Put16( body, spray.Walk + 0x18, 2 );
 
 		var file = new ParkWorld( body );
@@ -384,6 +385,7 @@ public class ParkFileWriterThingsTests
 
 		Assert.AreEqual( (0, 1, 700, 600), (Int( written, bouncy.Bounce ), Int( written, bouncy.Bounce + 4 ), Int( written, bouncy.Bounce + 8 ), Int( written, bouncy.Bounce + 12 )) );
 		Assert.AreEqual( (9, 800, 0, 0), (BitConverter.ToInt16( written, spray.Walk ), Int( written, spray.Walk + 8 ), Int( written, spray.Walk + 16 ), (int)BitConverter.ToInt16( written, spray.Walk + 0x18 )) );
+		Assert.AreEqual( 5, BitConverter.ToInt16( written, spray.Walk + 0x14 ), "the facing it was let go with" );
 	}
 
 	/// <summary>A table of another length than the file's record holds is left, and said; a script the file does not hold is not written.</summary>
@@ -691,7 +693,7 @@ public class ParkFileWriterThingsTests
 		var none = spray.Written( moment => (uint)moment );
 		var walk = (SavedWalkSlot[])none.Walk!.Clone();
 
-		walk[1] = new SavedWalkSlot( 3, 4, 5, 6, 7000, 7400, Rider, 5, 2, 1 );
+		walk[1] = new SavedWalkSlot( 3, 4, 5, 6, 7000, 7400, Rider, 5, 2, 1, Facing: 6 );
 
 		var shop = catalogue.All.Select( item => Script( item ) ).First( script => script is { LimboSpace: > 0 } )!;
 		var limbo = new SavedLimboSlot[shop.LimboSpace];
