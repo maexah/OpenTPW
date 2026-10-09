@@ -275,6 +275,11 @@ public sealed class RideAnimations
 	/// </summary>
 	private int StartOn( AnimTimeControl channel, int role, int entry, int flags, float speed, int now )
 	{
+		// The model's nodes are marked as the clip's only where the start binds it, which the caller's 0x8 says it
+		// does not (0x00473117); the frame the outgoing clip stood on is what its visibility tracks leave behind.
+		if ( (flags & AnimTimeControl.KeepShownFlag) == 0 && Clip( role, entry ) is { } clip )
+			Nodes?.Started( Array.IndexOf( _channels, channel ), clip, channel.IsIdle ? float.MaxValue : channel.AnimFrame );
+
 		// Where the outgoing clip had already run past its end, the new one starts that far in rather than
 		// at nought, so a chain of clips does not lose a fraction of a frame at every join.
 		var carry = !channel.IsIdle && channel.IsFinished
@@ -287,6 +292,16 @@ public sealed class RideAnimations
 			? DurationMilliseconds( channel.AnimID, channel.SubAnim )
 			: UnknownLength;
 	}
+
+	/// <summary>
+	/// The model's node words as its clips start, for a park file's model record (<see cref="ParkModelTables.Running"/>);
+	/// null where nobody keeps them. Set once the channels stand as they began: a load's own starts are not a
+	/// clip bound, the file's words already holding them.
+	/// </summary>
+	public ParkModelTables.Running? Nodes { get; set; }
+
+	/// <summary>The frame each channel stands on, past the end for an idle one: what <see cref="ParkModelTables.Running.Words"/> takes.</summary>
+	public float[] NodeFrames() => [.. _channels.Select( channel => channel.IsIdle ? float.MaxValue : channel.AnimFrame )];
 
 	/// <summary>Whether this model actually has a clip for that role and entry.</summary>
 	private bool Carries( int role, int entry )
@@ -343,6 +358,11 @@ public sealed class RideAnimations
 				// The promotion is a full start, so the clip that ran past its end hands its overshoot to this
 				// one, clamped to this clip's own length - and it clears three of the four queue fields,
 				// leaving the flags stale.
+				// The engine binds a promoted clip while its model is in view and not otherwise (FUN_004735d0's
+				// per-frame argument); here it is bound as the caller's flags say, in view or not.
+				if ( (channel.DeferredFlags & AnimTimeControl.KeepShownFlag) == 0 && Clip( channel.DeferredAnimID, channel.DeferredSubAnim ) is { } promoted )
+					Nodes?.Started( Array.IndexOf( _channels, channel ), promoted, channel.AnimFrame );
+
 				StartOn( channel, channel.DeferredAnimID, channel.DeferredSubAnim,
 					channel.DeferredFlags | AnimTimeControl.KeepShownFlag,
 					channel.DeferredSpeed <= 0f ? channel.Speed : channel.DeferredSpeed, now );

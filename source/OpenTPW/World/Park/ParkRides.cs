@@ -109,6 +109,10 @@ public sealed class ParkRides : Entity
 		script.Nodes = NodesFor( script, placed, item );
 		BindTrackRide( script, placed, item, Scheduler );
 
+		// A thing made here has no file's words to start from: a fresh model's, kept from its first clip on.
+		if ( TableModel( placed.CatalogueId ) is { } fresh )
+			script.Animations.Nodes = new ParkModelTables.Running( fresh.Model, script.Animations.ChannelCount );
+
 		if ( script.Animations.Loaded > 0 )
 			_animated.Add( placed.ThingId );
 
@@ -245,6 +249,7 @@ public sealed class ParkRides : Entity
 
 		_files = files ?? FileSystem;
 		_objects = objects;
+		_catalogue = catalogue;
 
 		// The scripts' own way of reaching another script. It is set even where there is nothing to bind,
 		// because it is the scheduler's property and not the park's.
@@ -677,7 +682,16 @@ public sealed class ParkRides : Entity
 				player.Restamp( start, time, noPause );
 			}
 
+
 			++ChannelsRestored;
+		}
+
+		// From here on a clip started is a clip bound: the file's words hold what the starts above stand for.
+		if ( saved.NodeWords is { } words )
+		{
+			players.Nodes = new ParkModelTables.Running( words, [.. Enumerable.Range( 0, players.ChannelCount ).Select( index =>
+				index < saved.Channels.Length && saved.Channels[index].Role != ParkThingStates.NoRole
+					? players.Clip( saved.Channels[index].Role, saved.Channels[index].Entry ) : null )] );
 		}
 	}
 
@@ -940,8 +954,20 @@ public sealed class ParkRides : Entity
 
 			var raised = hoardingFor( placed.ThingId );
 
+			// Both tables: the node words as the model's clips have left them, the lookup records from its file.
+			// A thing whose model did not read declares none, and the engine keeps the fresh model's own.
+			ParkThingStates.ModelTables? tables = null;
+
+			if ( animations?.Nodes is { } kept && TableModel( placed.CatalogueId ) is { } model && kept.Count == model.Model.Nodes.Count )
+			{
+				tables = new ParkThingStates.ModelTables( kept.Words( animations.NodeFrames() ),
+					ParkModelTables.Lookups( model.Model, model.DoHeadProcessing ), ParkModelTables.SharedFlags( model.Model ) );
+			}
+			else
+				Unimplemented.Report( "SAVE_PARK_MADE_MODEL_TABLES" );
+
 			made.Add( new ParkFileWriter.MadeThing( thing.Object, thing.Across, thing.Down, record, channels,
-				raised?.Flags ?? 0, raised?.Progress ?? 0f ) );
+				raised?.Flags ?? 0, raised?.Progress ?? 0f, tables ) );
 		}
 
 		var goneHandles = new HashSet<int>( (gone ?? new HashSet<int>()).SelectMany( loaded.ScriptStates.HandlesOf ) );
@@ -991,7 +1017,10 @@ public sealed class ParkRides : Entity
 
 			var hoarding = hoardingFor( thing.ThingId );
 
-			models.Add( new WrittenModel( record.Slot, channels, hoarding?.Flags, hoarding?.Progress ?? 0f ) );
+			// The node words, the file's as the clips started since the load have left them.
+			var words = players.Nodes?.Words( players.NodeFrames() );
+
+			models.Add( new WrittenModel( record.Slot, channels, hoarding?.Flags, hoarding?.Progress ?? 0f, words ) );
 		}
 
 		return new ParkFileWriter.RunningThings( objects, Scheduler.Tick, Scheduler.NextHandle, scripts, states, models,
@@ -1007,6 +1036,40 @@ public sealed class ParkRides : Entity
 	/// <summary>A channel with nothing started on it and nothing queued, at speed 1: what a made model's record starts from.</summary>
 	private static readonly SavedChannel MadeChannel =
 		new( ParkThingStates.NoRole, 0, 0, 1f, 0, 0, 0, ParkThingStates.NoRole, 0, 0, 1f );
+
+	/// <summary>The park's items, for a model's own file as the park file's two tables are written.</summary>
+	private readonly ParkItemCatalogue? _catalogue;
+
+	private readonly Dictionary<int, (ModelFile Model, bool DoHeadProcessing)?> _tableModels = [];
+
+	/// <summary>
+	/// An item's own model as its file gives it, for the park file's two tables, read once an item; null where the
+	/// catalogue has no such item or its model will not read.
+	/// </summary>
+	private (ModelFile Model, bool DoHeadProcessing)? TableModel( int catalogueId )
+	{
+		if ( _tableModels.TryGetValue( catalogueId, out var known ) )
+			return known;
+
+		(ModelFile, bool)? read = null;
+
+		if ( _catalogue != null && _catalogue.TryGet( catalogueId, out var item ) )
+		{
+			try
+			{
+				using var stream = _files.OpenRead( $"{item.Directory}/{item.Stem}.MD2" );
+
+				if ( stream != null )
+					read = (new ModelFile( stream ), item.DoHeadProcessing);
+			}
+			catch ( Exception e )
+			{
+				Log.Warning( $"{ThemeName}: '{item.Name}' is written with its file's model tables - its model will not read: {e.Message}" );
+			}
+		}
+
+		return _tableModels[catalogueId] = read;
+	}
 
 	/// <summary>The bits of a channel's flag word a running channel keeps as the engine does: loop, frozen, held, <c>0x10</c> and <c>0x20</c>.</summary>
 	private const int ChannelFlagsKept = 0x37;

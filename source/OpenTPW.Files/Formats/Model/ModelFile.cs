@@ -873,6 +873,15 @@ public partial class ModelFile : BaseFormat
 		return normals;
 	}
 
+	/// <summary>The node the first lookup record belongs to, the header's ushort at <c>0x46</c>; record <c>r</c> is node <c>LookupFirst + r</c>'s.</summary>
+	public int LookupFirst { get; private set; }
+
+	/// <summary>
+	/// How many lookup records the header declares, its ushort at <c>0x48</c>: the count the engine keeps for the
+	/// model and a park file's model record repeats, whether or not the table was read here.
+	/// </summary>
+	public int LookupCount { get; private set; }
+
 	/// <summary>
 	/// Attaches each node's lookup id and flags, from the table the engine searches by id and flag
 	/// (0x0044b220).
@@ -900,6 +909,9 @@ public partial class ModelFile : BaseFormat
 		stream.Seek( 0x46, SeekOrigin.Begin );
 		var firstNode = reader.ReadUInt16();
 		var count = reader.ReadUInt16();
+
+		LookupFirst = firstNode;
+		LookupCount = count;
 
 		stream.Seek( 0x7C, SeekOrigin.Begin );
 		var table = reader.ReadUInt32();

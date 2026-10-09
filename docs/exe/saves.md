@@ -1104,8 +1104,9 @@ and a model's channels their count, so nothing moves, and they go in before the 
   longer the file's (`SAVE_PARK_CHANNEL_KEEP_SHOWN_BIT`). **A channel held since before the load keeps the file's
   own word and clip time**: the engine's `0x10` on a held channel comes and goes (FileFormats `saves.md`, "Bit
   `0x10`"), where a channel here keeps it for good. With nothing queued the last queue's leftovers are the
-  file's. The hoarding's seven bits and its progress are the thing's as they stand. **Not written, counted:** the
-  node flag words and the lookup records' attached handles, which hold a head `ADDHEAD` hung
+  file's. The hoarding's seven bits and its progress are the thing's as they stand. The node flag words are written
+  as the clips started since the load have left them ("OpenTPW's writer, the two tables"). **Not written,
+  counted:** the lookup records' attached handles, which hold a head `ADDHEAD` hung
   (`SAVE_PARK_HEAD_ON_A_MODEL_NODE`; no thing of the shipped park's hangs one).
 - **An object** (`ParkState.WrittenObjects`, `ParkWorld.PutObjects`): its door (`mCanLoad`), the member assigned
   and the tick they were, the queue's head, back cell and size, the guest being loaded, the six day rings and
@@ -1241,8 +1242,8 @@ and the object constructor `FUN_004db090` was read beside the two files.
 - **A made model** (`ParkThingStates.Plan`, `MadeRecord`, `Splice`): the slot at the cursor, the lowest empty
   one once the gone are let go, the older of two made taking the lower; the item, the `mTopLeft` cell, the item's
   footprint, the placer's flags `0x32f`, the script, the hoarding as it stands, the angle and the channels as
-  they run. **It declares no node words and no lookup records**, which the reader answers by keeping the fresh
-  model's own (above), so a head hung on a node and a node a script has hidden are not in it
+  they run. **It carries both tables** ("OpenTPW's writer, the two tables"): a word a node as its clips
+  have left them, and a pair a lookup record with nothing attached, so a head hung on a node is not in it
   (`SAVE_PARK_HEAD_ON_A_MODEL_NODE`), and a running channel's keep-shown bit is not known
   (`SAVE_PARK_CHANNEL_KEEP_SHOWN_BIT`). The header's three counts are kept.
 - **The controls** (`ParkWorld.PutControls`): every item's standing count and first-build stamp as
@@ -1470,7 +1471,7 @@ player's hand reaches the writer yet. `docs/exe/addresses.md` not regenerated.
 
 ### A model record's two tables, and a head on a node
 
-Decoded and measured on 2026-10-09 (Q257, the decode; nothing of it is built). The bytes are the FileFormats
+Decoded and measured on 2026-10-09 (Q257, the decode); the two tables are built (Q257b, "OpenTPW's writer, the two tables"), a head is not (Q257d). The bytes are the FileFormats
 `saves.md`'s ("The ride system module", "The node flag words", "A head on a node"); this is what the original does
 with them. Harness `q257/` (`census.py`, `bychannel.py`, `heads.py`, `one.py`, the listings `*.c`).
 
@@ -1485,16 +1486,16 @@ is laid over the fresh node's: the reader clears the eleven bits below on the no
 | File | Node | What sets it |
 |---|---|---|
 | `0x1` | `0x10` | hidden. A clip's hide list, as the clip is bound (`FUN_00472d70`), on a node without `0x80000000`; taken off again, for the hide list and the tracks of the clip a channel last ran, by `FUN_004726d0`, which then binds every running channel's clip again (its callers were not read) |
-| `0x2` | `0x20` | not found |
-| `0x4` | `0x8000` | not found; in no record of 7,688 |
+| `0x2` | `0x20` | every child of the node is a childless transform-only node: the item loader's closing loop over the nodes (`FUN_004629d0`, `0x00462fbc`), which walks the child chain and tests each child's file flag `0x200` and its own first child. The Crazy Ape's two arms, which hold only head and nose markers |
+| `0x4` | `0x8000` | not looked for; in no record of 7,688 |
 | `0x8` | `0x10000` | the mesh was morphed and its face normals are stale: set by the morph (`FUN_00471860`, `FUN_004714a0`), cleared by `FUN_00473a40`, which works the normals out again, from the pose walk (`0x0044afd8`, for a node with `0x10000000`) and `FUN_00473c30` |
 | `0x20` | `0x40000` | a clip bound to a channel has a track for the node (`FUN_00472d70`) |
-| `0x40` | `0x80000` | not found |
+| `0x40` | `0x80000` | the md2 loader with its flag `0x20` (`FUN_00461f10`, `0x004625c5`, on the node at mesh `+0x78`) and two more writers (`FUN_00461ed0`, `FUN_00424ef0`, its test not read); 62 words of seven items hold it, none of them an item a player buys |
 | `0x80` | `0x200000` | that track's flags hold `0x1000`, a morph |
 | `0x100` | `0x400000` | that track's flags hold `0x10000` |
 | `0x800` | `0x100000` | that track's flags hold any of `0x289` |
-| `0x200` | `0x20000000` | not found; as many words hold it as lookup records hold `0x1`, 3,578 each |
-| `0x400` | `0x80000000` | not found; a node with it is not hidden or shown by a clip |
+| `0x200` | `0x20000000` | the node's lookup record has a position, its file flags meeting `0x30`: the md2 loader's pass over the lookup records (`FUN_0044a870`, `0x0044a90c`), which sets the record's `0x1` and its handle `-1` in the same breath |
+| `0x400` | `0x80000000` | the node is transform-only, its file flags holding `0x200`: the same closing loop (`0x00462f47`), one `OR` of `0x80000010`, so such a node is hidden as it is marked. A hide list spares a node with it; a visibility track does not (`FUN_00471860` tests no such bit). The head pass (`FUN_0044ba60`) writes the same on each head record's node |
 
 `FUN_00472d70( clip, model )` runs as a clip is started on a channel without the caller's flag `0x8`
 (`FUN_00472f60`, `0x00473117`) and from `FUN_004726d0`. **A load does not run it**: the
@@ -1507,8 +1508,7 @@ but for `0x2`. Grouped by item and by each channel's role, clip and loop, frozen
 records are in a group whose node words are all alike, and the other 527 are in fourteen groups that differ in
 `0x8` alone, but for one word of item 1181's in `0x400`. **So a record's node words follow
 from its item and what its channels play, the stale-normals bit apart**; nothing else a thing has done shows in
-them. Not done: the rule itself, from a model's file and its clips' tracks (the build's first step), and the three
-setters not found.
+them. The rule itself is the next section but one, "The rule for a record's two tables".
 
 **A head on a node is a sprite of its own, and the lookup record holds its slot.** A model's lookup state is
 `{ flags, records, count }` at `+0x28` of the model's mesh (the model's `+8`), a record twenty bytes: its flags, and at `+0xc` what is
@@ -1532,11 +1532,86 @@ own order, so the two are not index for index: the ape's table holds riders in s
 where its records 1, 3, 4, 11, 13, 15 and 16 hold handles. The Aztec Mayhem's five heads (`WALKON` action 4) and a
 coaster's and a tour's cars' are records with a handle and no head table.
 
-**What a writer must do for a head** (the build, Q257b): the node words and the lookup records whole for the
+**What a writer must do for a head** (the build, Q257d): the node words and the lookup records whole for the
 record, the counts the model's own; `0x2` and the sprite's slot on the record of each head hung, `0x4` in the
 shared flags and the count; and the head's sprite in the sprite table at that slot. **Not measured:** the original
 loading a file made so; a made record's words for a thing just bought (the original's own bought Crazy Ape is one
 record, held on its building clip); a head's sprite made from nothing (the 122 are the game's own).
+
+### The rule for a record's two tables
+
+Measured and read on 2026-10-09 (Q257b). The setters are the listing's (a `tpw-verify` pass over every `OR` with an
+immediate holding each bit); the counts are `q257b/check.py` and `looks.py` over the same 45 files, against each
+item's own `.md2` and clips (`q257b/files/`). Only 870 of the 7,688 records are of a catalogue item, 95 items less
+the scenery and track pieces a theme lays itself: the rule is checked on those.
+
+**At rest** a model's words are its file's: `0x400` and `0x1` on a transform-only node, `0x200` where its lookup
+record has a position, `0x2` where its children are all childless transform-only nodes (the rows above).
+**A clip bound** to a channel (`FUN_00472d70`, a start without the caller's `0x8`) marks each track's node `0x20`,
+with `0x80`, `0x100` and `0x800` by the track's flags, and hides each node of its hide list but a transform-only
+one. **The next clip started on the channel** first takes the last one's marks off (`FUN_00472310`, the clip kept
+at the channel's `+0x34`): the track bits of its tracks' nodes, and the hidden bit of its tracks' and its list's
+nodes, a transform-only node's apart. **A clip that ends** takes nothing off: a thing whose model has clips in
+role 0 only (model flag `0x10`, `FUN_00473e30`) parks its channel on role 12 with flag `0x20` and keeps the build
+clip's marks for good, which is the Staff Room's `0xa2` on an idle channel; a held channel keeps them too. **A
+visibility track** hides and shows its node as the clip is posed, a transform-only node among them, and what it
+left stands after its clip is replaced (the Crazy Ape's `Dummy01`, the parent of its arms, is shown by the build
+clip and reads `0x420`, then `0xc20` under the ride clip, in every record).
+
+Against the 870 records, bit `0x8` apart: 836 read exactly as a model made, each channel's clip bound (an idle
+channel's taken as its build clip) and its visibility tracks laid over at the saved frame. The other 34: 30 are a
+transform-only node a visibility track of some earlier clip left shown or hidden (the Security Camera's, the
+Aztec Mayhem's heads, the ferry's), which the saved channels do not name; 4 are a running clip whose tracks are
+not marked (the Rocky Racers' `pp_dum`, the TV simulator's `seats`, in two saves of one park), and 2 a shop's
+idle channel with no build marks. The engine binds a clip promoted from a channel's queue only when its per-frame
+argument is set (`FUN_004735d0`; otherwise it passes `0x8` and nothing is taken off or bound), which would leave
+exactly those; what the argument is was not traced.
+
+**A lookup record's pair on a model with nothing attached**, 870 of 870: flags `0x1` its file flags meet `0x30`,
+`0x8` they meet `0x580f00` or its item sets `DoHeadProcessing`, `0x10` its node's file flags hold `0x400`, `0x20`
+its node has no child (`FUN_0044aa10`, `0x0044aaa5`); the handle `-1` with a position and nought without. **The
+shared flags**: `0x1` some record has a position, `0x8` some record's file flags hold `0x2`, and `0x2` where the
+item's model was loaded with the head pass (`FUN_0044ba60`, from `FUN_004629d0` on its `param_5 & 0x80`) and a
+record is a head's (file flag `0x80`): all 17 records of the seven such items, and none of the ferry's four, an
+arrival vehicle's model being loaded without it.
+
+**Not found:** who calls `FUN_004726d0` in play (its one caller, `FUN_0044e380`, runs from a callback the model
+maker stores, on model flag `0x800000`, whose setter was not found); what sets the stale-normals bit's leftovers
+apart from a morph; what `FUN_004735d0`'s per-frame argument is.
+
+### OpenTPW's writer, the two tables
+
+Built on 2026-10-09 (Q257b). `ParkModelTables` holds the rule: `NodeWordsAtRest`, `Bind`, `Unbind`, `Show`,
+`Lookups`, `SharedFlags`, and `Running`, a model's words kept as its clips start. `RideAnimations.Nodes` is a
+model's `Running`: made fresh from the item's `.md2` as a thing is bought (`ParkRides.BindNew`), and from the
+file's own words and each channel's clip as a load ends (`ParkRides.Restore`, the words read into
+`SavedThing.NodeWords`). `RideAnimations.StartOn` tells it of each clip started without the keep-shown flag, and
+`Advance` of a clip promoted from the queue; a loop's wrap and a hold bind nothing. The writer takes
+`Nodes.Words( frames )`: for a made record with `Lookups` and `SharedFlags` (`ParkThingStates.MadeRecord`'s
+`ModelTables`), for a kept one over the record's own words (`WrittenModel.NodeWords`, `Put`). A kept record's
+lookup records are left the file's.
+
+**Deviations, each said at its site.** Bit `0x8` is never set, and a file's is kept. A clip promoted from the
+queue is bound whether or not its model is in view. A channel here keeps no keep-shown bit of its own, so a clip
+started since the load applies its hide list (`SAVE_PARK_CHANNEL_KEEP_SHOWN_BIT`, Q257c). Where a channel the file
+had idle is started, its unnamed last clip's marks cannot be told from another idle channel's, and all go. A
+thing bought whose model will not read declares no tables (`SAVE_PARK_MADE_MODEL_TABLES`, counted). A head hung
+is still in no lookup record (`SAVE_PARK_HEAD_ON_A_MODEL_NODE`, Q257d).
+
+**Confirmed in both games** (`q257b/`, `PREDICTION.txt` holds every prediction and miss). A Crazy Ape bought in
+the shipped park and saved on its held build clip: the record declares 34 words and 24 pairs, shared flags 3,
+nothing attached, the words `0 a0 a0 20 a0 a2 a2 a1 a1`, `601` 24 times, `420`, which are the original's own
+bought ape's (`q253/orig/bought-by-the-original.TPWS`) bit `0x8` apart, and the pairs its 24. Saved again with the
+ape running, no load between: `0 0 0 0 a0 a2 a2 1 1 .. c20` on role 3 (the arms `8a2` on role 2), the words of
+the original's two running apes. The original under Proton, loading each from the Load Park list, held the
+file's words on the ape's model at the first poll and went on from them (role 2, role 3, then two heads hung:
+shared flags 7, pairs `(0x23, 11)` and `(0x23, 10)`). **The control** (the build before, no tables): on the build
+clip the original reads the same words, a loader-made model having its build clip bound and posed, so that scene
+tells nothing apart; with the ape running it keeps the build clip's marks through every later clip
+(`0 a0 a0 20 a0 a2 a2 a1 a1 .. c21`) and the dummy's hidden bit stays set. **On screen the two read alike**: the
+original's frames of the fix's ape and the control's show the same ape from the saved camera (`q257b/sheet-original-fix-control-full.png`),
+so what the leftover marks and the dummy's bit change in the picture, if anything, is not known; the difference is
+the original's memory's.
 
 ### Read, not run
 

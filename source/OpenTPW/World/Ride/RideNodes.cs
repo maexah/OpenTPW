@@ -58,6 +58,12 @@ public sealed class RideNodes
 	private float _cos = 1f;
 	private float _sin;
 
+	/// <summary>The thing's own model, as its file gives it.</summary>
+	public ModelFile Model => _model;
+
+	/// <summary>The item's <see cref="ItemDescriptionFile.DoHeadProcessing"/>.</summary>
+	public bool DoHeadProcessing => _doHeadProcessing;
+
 	/// <summary>The model's own name, for the log.</summary>
 	public string Stem { get; }
 

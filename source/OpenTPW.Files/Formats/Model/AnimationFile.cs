@@ -704,6 +704,20 @@ public class AnimationFile : BaseFormat
 	public List<RotationTrack> RotationTracks { get; } = new();
 
 	/// <summary>
+	/// Every track of the table as the file gives it, read or not: the node it poses and its flag word, the bits of
+	/// the table in this class's remarks. What the engine marks a model's nodes from as it binds the clip
+	/// (<c>FUN_00472d70</c>).
+	/// </summary>
+	public List<(int Node, uint Flags)> Tracks { get; } = new();
+
+	/// <summary>
+	/// The nodes the clip hides as it is bound: the animation block's ushorts at its <c>+0x38</c>, counted at its
+	/// <c>+0x1a</c> (<c>FUN_00472d70</c>). Each is a node's number, its record's <c>+0x50</c>, which is the node's
+	/// index in every model an item ships.
+	/// </summary>
+	public ushort[] HideList { get; private set; } = Array.Empty<ushort>();
+
+	/// <summary>
 	/// False when this file holds no rotation, morph or UV track this reader can read - callers must check
 	/// it. Position, visibility and path tracks are read either way, so a clip carrying only those reads
 	/// false although those lists are filled.
@@ -881,6 +895,21 @@ public class AnimationFile : BaseFormat
 		int trackCount = BitConverter.ToUInt16( data, (int)blockOffset + 0x12 );
 		var tableOffset = BitConverter.ToUInt32( data, (int)blockOffset + 0x2C );
 
+		// The hide list, which a clip with no track still carries.
+		if ( blockOffset + 0x3C <= data.Length )
+		{
+			int hidden = BitConverter.ToUInt16( data, (int)blockOffset + 0x1A );
+			var hiddenAt = BitConverter.ToUInt32( data, (int)blockOffset + 0x38 );
+
+			if ( hidden > 0 && hiddenAt >= 0x9C && hiddenAt + (2L * hidden) <= data.Length )
+			{
+				HideList = new ushort[hidden];
+
+				for ( int i = 0; i < hidden; ++i )
+					HideList[i] = BitConverter.ToUInt16( data, (int)hiddenAt + (2 * i) );
+			}
+		}
+
 		if ( trackCount <= 0 || tableOffset < 0x9C )
 			return false;
 
@@ -898,6 +927,8 @@ public class AnimationFile : BaseFormat
 
 			var flags = BitConverter.ToUInt32( data, offset + 0x04 );
 			int target = BitConverter.ToUInt16( data, offset + 0x14 );
+
+			Tracks.Add( (target, flags) );
 
 			if ( (flags & 0x8) != 0 )
 				ReadRotationChannel( data, offset, target );

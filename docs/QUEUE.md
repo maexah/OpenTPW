@@ -48,15 +48,15 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q257b. The writer: a model record's node words and lookup records, and a rider's head.** From Q257's
-  decode (`saves.md`, "A model record's two tables, and a head on a node"). First the rule for a record's node
-  words from the model's file and its channels' clips (a clip's tracks give `0x20`, `0x80`, `0x100` and `0x800`,
-  its hide list `0x1`), checked against all 7,688 records of the 45 files (`q257/files-original.txt`,
-  `bychannel.py`); the setters of `0x2`, `0x40`, `0x200` and `0x400` were not found, so read them off the model's
-  file or find them. Then write both tables for a made record and for a kept one, each head hung as `0x2` and
-  its sprite's slot with the shared `0x4` and the count, and the head's sprite in the sprite table as the 122
-  read (`SAVE_PARK_HEAD_ON_A_MODEL_NODE` gone). Confirm: a ride with riders' heads on its nodes bought and
-  written, the heads on the same nodes in the original under Proton.
+- [ ] **Q257d. The writer: a rider's head.** From Q257 and Q257b (`saves.md`, "A model record's two tables, and a
+  head on a node": "What a writer must do for a head"). Each head hung is `0x2` and its sprite's slot on its
+  node's lookup record, with the shared `0x4` and the count, on a made record and a kept one
+  (`ParkThingStates.LookupsOf` reads a kept record's pairs; `Put` writes none yet); and the head's sprite in the
+  sprite table at that slot, as the 122 read (kind 1 or 3, the eighteen dwords that vary still to be named:
+  `q257/heads.py`), on a slot the people's writer is told is taken; a head gone since the load gives its slot up
+  (`SAVE_PARK_HEAD_ON_A_MODEL_NODE` gone). The original, loading Q257b's file, hung its own two heads as shared
+  flags 7 and pairs `(0x23, 11)`, `(0x23, 10)` (`q257b/orig/fixb-load.log`). Confirm: a ride with riders' heads on
+  its nodes bought and written, the heads on the same nodes in the original under Proton.
 - [ ] **Q257c. The writer: what else a made record leaves out.** From Q253 (`saves.md`, "What OpenTPW writes"),
   each counted or said there. A running channel's keep-shown bit `0x8`
   is kept by no channel here (`SAVE_PARK_CHANNEL_KEEP_SHOWN_BIT`, counted for every made channel that runs). A

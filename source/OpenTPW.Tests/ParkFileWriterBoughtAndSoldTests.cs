@@ -412,6 +412,21 @@ public class ParkFileWriterBoughtAndSoldTests
 		Assert.AreEqual( ParkThingStates.NoRole, Int( record, 0x37 + 44 + 4 ) );
 	}
 
+	/// <summary>A made model's record with its two tables: the counts, the shared flags, the count of things attached, a pair a lookup record, a word a node, and the channels behind them.</summary>
+	[TestMethod]
+	public void AMadeModelsRecordHoldsItsTwoTables()
+	{
+		var tables = new ParkThingStates.ModelTables( [0x601, 0xa2, 0x20], [(0x21, -1), (0x2b, 7)], 0x7 );
+		var record = ParkThingStates.MadeRecord( CrazyApe, 41, 22, 4, 5, 16, 0, 0f, 0,
+			[new SavedChannel( 2, 3, 0x14, 1.5f, 100, 200, 300, 4, 5, 6, 2.5f )], tables );
+
+		Assert.AreEqual( 0x37 + 16 + 12 + 44, record.Length );
+		Assert.AreEqual( (3, 2, 0x7, 1), (Short( record, 0x2b ), Short( record, 0x2d ), Int( record, 0x2f ), Int( record, 0x33 )), "three nodes, two lookup records, the shared flags, one thing attached" );
+		Assert.AreEqual( (0x21, -1, 0x2b, 7), (Int( record, 0x37 ), Int( record, 0x3b ), Int( record, 0x3f ), Int( record, 0x43 )) );
+		Assert.AreEqual( (0x601, 0xa2, 0x20), (Int( record, 0x47 ), Int( record, 0x4b ), Int( record, 0x4f )) );
+		Assert.AreEqual( (0x14, 2, 3), (Int( record, 0x53 ), Int( record, 0x57 ), Int( record, 0x5b )) );
+	}
+
 	/// <summary>A made model takes the slot at the cursor, the lowest empty one, and the header's three counts are kept.</summary>
 	[TestMethod]
 	public void AMadeModelTakesTheLowestEmptySlot()
@@ -436,7 +451,8 @@ public class ParkFileWriterBoughtAndSoldTests
 		Assert.IsTrue( at > 0, "item 1101 on (41,22), four by four" );
 		Assert.AreEqual( new SavedChannel( 0, 0, 0x14, 1f, ShippedClock - 9000, ShippedClock - 1000, ShippedClock, ParkThingStates.NoRole, 0, 0, 1f ), record.Channels.Single() );
 		Assert.AreEqual( before.Things.Count + 1, models.Things.Count );
-		Assert.AreEqual( before.Things.Single( thing => thing.Slot == 109 ), models.Things.Single( thing => thing.Slot == 109 ) with { Channels = before.Things.Single( thing => thing.Slot == 109 ).Channels }, "the Belly Bounce's record is where it was" );
+		Assert.AreEqual( before.Things.Single( thing => thing.Slot == 109 ), models.Things.Single( thing => thing.Slot == 109 ) with { Channels = before.Things.Single( thing => thing.Slot == 109 ).Channels, NodeWords = before.Things.Single( thing => thing.Slot == 109 ).NodeWords }, "the Belly Bounce's record is where it was" );
+		CollectionAssert.AreEqual( before.Things.Single( thing => thing.Slot == 109 ).NodeWords, models.Things.Single( thing => thing.Slot == 109 ).NodeWords );
 	}
 
 	/// <summary>A table with no empty slot grows by the made, and the cursor is the count.</summary>
@@ -709,6 +725,20 @@ public class ParkFileWriterBoughtAndSoldTests
 		Assert.AreEqual( state.BuiltItems, things.Built );
 
 		Assert.IsTrue( thing.Script.NameAt >= 0, "the script had named itself, and its name's offset goes with it" );
+
+		// Its model's two tables, from its own file: nothing started on it yet, so the words are a fresh model's.
+		Assert.IsTrue( catalogue.TryGet( CrazyApe, out var apeItem ) );
+
+		using ( var modelFile = data.OpenRead( $"{apeItem.Directory}/{apeItem.Stem}.MD2" ) )
+		{
+			var model = new ModelFile( modelFile! );
+
+			CollectionAssert.AreEqual( ParkModelTables.NodeWordsAtRest( model ), thing.Tables!.Value.NodeWords.ToArray() );
+			CollectionAssert.AreEqual( ParkModelTables.Lookups( model, apeItem.DoHeadProcessing ), thing.Tables.Value.Lookups.ToArray() );
+			Assert.AreEqual( (34, 24, 3), (thing.Tables.Value.NodeWords.Count, thing.Tables.Value.Lookups.Count, thing.Tables.Value.Shared) );
+		}
+
+		Assert.AreEqual( 0, Times( "SAVE_PARK_MADE_MODEL_TABLES" ) );
 		Assert.AreEqual( 0u, thing.HoardingFlags, "with no hoarding bound" );
 
 		// Its hoarding is the thing's as it stands, and a model of three channels is handed three.
@@ -735,7 +765,27 @@ public class ParkFileWriterBoughtAndSoldTests
 
 		Assert.IsNull( written.Problem );
 		Assert.AreEqual( (ape.ThingId, 91), ((int)written.ScriptStates.For( handle )!.Value.Thing, written.ScriptStates.For( handle )!.Value.ModelHandle) );
+		CollectionAssert.AreEqual( thing.Tables!.Value.NodeWords.ToArray(), Models( written ).Things.Single( model => model.Slot == 90 ).NodeWords, "the tables are in the file, where the reader's walk finds them" );
+		CollectionAssert.AreEqual( thing.Tables.Value.Lookups.ToArray(), Models( written ).LookupsOf( 90 )!.Value.Records );
+		Assert.AreEqual( (3, 0), (Models( written ).LookupsOf( 90 )!.Value.Shared, Models( written ).LookupsOf( 90 )!.Value.Attached) );
 		Assert.IsNull( written.ScriptStates.For( DrinksScript ) );
+	}
+
+	/// <summary>A bought thing whose item sets DoHeadProcessing is handed over with every lookup record posed.</summary>
+	[TestMethod]
+	public void ABoughtThingsLookupRecordsFollowItsItem()
+	{
+		var rides = Bind( shipped );
+		var state = new ParkState( shipped );
+		var simulator = Buy( state, rides, 1104, 20, 60 );
+
+		Assert.IsTrue( catalogue.TryGet( 1104, out var item ) && item.DoHeadProcessing );
+
+		var kept = state.WrittenObjects( shipped, id => true, out var bought, out var gone );
+		var things = rides.Written( shipped, kept, ChannelsFor, state.HoardingFor,
+			[new ParkRides.BoughtThing( new ParkWorld.MadeObject( bought.Single( placed => placed.ThingId == simulator.ThingId ), "A", "B" ), item.Width, item.Depth, "x" )], gone, null )!;
+
+		Assert.IsTrue( things.Made!.Single().Tables!.Value.Lookups.All( lookup => (lookup.Flags & 0x8) != 0 ) );
 	}
 
 	/// <summary>A script with no thing bought behind it is still counted, and a file's script that has ended with its thing standing.</summary>

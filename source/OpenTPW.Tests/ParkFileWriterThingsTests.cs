@@ -1119,6 +1119,93 @@ public class ParkFileWriterThingsTests
 		Assert.AreEqual( (file.Role, 0, AnimTimeControl.LoopFlag, 0.75f), (queued.QueuedRole, queued.QueuedEntry, queued.QueuedFlags, queued.QueuedSpeed) );
 	}
 
+	/// <summary>
+	/// A kept model's node words: the file's own where nothing was started on it, and with a clip started the file's
+	/// clip's marks taken off and the new clip's put on, written over the record's words.
+	/// </summary>
+	[TestMethod]
+	public void AKeptModelsNodeWordsFollowItsClips()
+	{
+		var rides = Bind( shipped );
+		var state = new ParkState( shipped );
+		var bounce = rides.Scheduler.Find( rides.ScriptFor( BellyBounce ) )!;
+		var slot = Models( shipped ).ForScript( BouncyScript )!.Value.Slot;
+		var file = Models( shipped ).ForScript( BouncyScript )!.Value.NodeWords!;
+		var fileChannel = Models( shipped ).ForScript( BouncyScript )!.Value.Channels[0];
+
+		var untouched = rides.Written( shipped, state.WrittenObjects( shipped ), ChannelsFor, state.HoardingFor )!;
+
+		foreach ( var model in untouched.Models.Where( model => model.NodeWords != null ) )
+			CollectionAssert.AreEqual( Models( shipped ).Things.Single( thing => thing.Slot == model.Slot ).NodeWords, model.NodeWords!.ToArray(), $"slot {model.Slot}, nothing started" );
+
+		Console.WriteLine( $"models handed over {untouched.Models.Count}, with node words {untouched.Models.Count( model => model.NodeWords != null )}" );
+		Assert.IsNotNull( untouched.Models.Single( model => model.Slot == slot ).NodeWords );
+
+		// Another clip of the ride's, with tracks the file's clip lacks or the other way about.
+		var players = bounce.Animations!;
+		var fileClip = players.Clip( fileChannel.Role, fileChannel.Entry )!;
+		var (role, clip) = Enumerable.Range( 0, RideAnimations.RoleCount ).Where( candidate => players.EntryCount( candidate ) > 0 )
+			.Select( candidate => (candidate, players.Clip( candidate, 0 )!) )
+			.First( other => !other.Item2.Tracks.Select( track => track.Node ).ToHashSet().SetEquals( fileClip.Tracks.Select( track => track.Node ) ) );
+
+		players.Trigger( role, 0, AnimTimeControl.StartAtOnceFlag, 1f, rides.LoadedAt + 400 );
+
+		var things = rides.Written( shipped, state.WrittenObjects( shipped ), ChannelsFor, state.HoardingFor )!;
+		var words = things.Models.Single( model => model.Slot == slot ).NodeWords!;
+		var tracked = clip.Tracks.Select( track => track.Node ).ToHashSet();
+		var mesh = Enumerable.Range( 0, words.Count ).Where( node => (file[node] & ParkModelTables.TransformOnly) == 0 ).ToArray();
+
+		Assert.IsTrue( mesh.All( node => ((words[node] & ParkModelTables.Tracked) != 0) == tracked.Contains( node ) ), "marked as the new clip's tracks, and no other" );
+		Assert.IsFalse( words.SequenceEqual( file ) );
+
+		var body = (byte[])payload.Clone();
+
+		Models( shipped ).Put( body, things.Models );
+		CollectionAssert.AreEqual( words.ToArray(), new ParkWorld( body ).ThingStates( ChannelsFor ).Things.Single( thing => thing.Slot == slot ).NodeWords );
+
+		// Words of another count are no words of this record's, and are left out.
+		var probe = (byte[])payload.Clone();
+
+		Models( shipped ).Put( probe, [things.Models.Single( model => model.Slot == slot ) with { NodeWords = words.Take( words.Count - 1 ).ToArray() }] );
+		CollectionAssert.AreEqual( file, new ParkWorld( probe ).ThingStates( ChannelsFor ).Things.Single( thing => thing.Slot == slot ).NodeWords );
+	}
+
+	/// <summary>
+	/// A load hands the node words each channel's own clip of the file's: with the Jungle Spray's first lane saved on
+	/// a clip with tracks, a clip started on its second lane leaves the first lane's marks standing.
+	/// </summary>
+	[TestMethod]
+	public void ALoadNamesEachChannelsClipToTheNodeWords()
+	{
+		const int SprayScript = 4;
+		var record = Models( shipped ).ForScript( SprayScript )!.Value;
+
+		Assert.IsTrue( catalogue.TryGet( record.CatalogueId, out var item ) );
+
+		var lane = RideAnimations.Load( item.Directory, item.Stem, data, item.AnimationChannels ).Clip( 5, 0 )!;
+		var words = (uint[])record.NodeWords!.Clone();
+
+		ParkModelTables.Bind( words, lane, hide: true );
+		Assert.IsFalse( words.SequenceEqual( record.NodeWords ) );
+
+		var body = (byte[])payload.Clone();
+		var channels = (SavedChannel[])record.Channels.Clone();
+
+		channels[0] = channels[0] with { Role = 5, Entry = 0 };
+		Models( shipped ).Put( body, [new WrittenModel( record.Slot, channels, NodeWords: words )] );
+
+		var world = new ParkWorld( body );
+		var rides = Bind( world );
+		var players = rides.Scheduler.Find( rides.ScriptFor( world.Objects.Single( placed => placed.RideScript == SprayScript ).ThingId ) )!.Animations!;
+
+		players.Trigger( 5, 1, AnimTimeControl.StartAtOnceFlag, 1f, rides.LoadedAt + 400, 1 );
+
+		var written = players.Nodes!.Words( players.NodeFrames() );
+
+		Assert.IsTrue( lane.Tracks.All( track => (written[track.Node] & ParkModelTables.Tracked) != 0 ), "the first lane's marks stand" );
+		Assert.IsTrue( players.Clip( 5, 1 )!.Tracks.All( track => (written[track.Node] & ParkModelTables.Tracked) != 0 ) );
+	}
+
 	/// <summary>A head hung on a model's node is in the model's lookup records, which are not written: counted.</summary>
 	[TestMethod]
 	public void AHeadOnAModelNodeIsCounted()

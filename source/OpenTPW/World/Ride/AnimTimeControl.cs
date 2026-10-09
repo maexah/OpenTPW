@@ -39,7 +39,7 @@ public sealed class AnimTimeControl
 	/// The elapsed-frames factor, <c>_DAT_006fec0c</c> - written out to the digit because it is
 	/// <b>not</b> a thirtieth. Reproducing it as <c>1f / 30f</c> would drift a frame over a long clip.
 	/// </summary>
-	private const float FramesPerMillisecond = 0.029999999329447746f;
+	internal const float FramesPerMillisecond = 0.029999999329447746f;
 
 	/// <summary>Loop when the clip ends, rather than holding its last frame - the engine's flag <c>0x1</c>.</summary>
 	public const int LoopFlag = 0x1;

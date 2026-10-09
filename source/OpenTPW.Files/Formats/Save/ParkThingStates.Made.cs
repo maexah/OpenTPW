@@ -40,20 +40,28 @@ public sealed partial class ParkThingStates
 	}
 
 	/// <summary>
+	/// A model record's two tables: a flag word a node, the lookup records' pairs, and their shared flags
+	/// (<see cref="ParkModelTables"/>). The count of things attached is the pairs carrying <c>0x2</c>.
+	/// </summary>
+	public readonly record struct ModelTables( IReadOnlyList<uint> NodeWords,
+		IReadOnlyList<(int Flags, int Handle)> Lookups, int Shared );
+
+	/// <summary>
 	/// A whole record for a model the file does not hold (FileFormats <c>saves.md</c>, "The ride system module"):
 	/// its item, cell, footprint, <see cref="PlacedObjectFlags"/>, its thing's script, the hoarding's bits and
-	/// progress, its angle and its channels.
+	/// progress, its angle, its two tables and its channels.
 	///
 	/// <para>
-	/// <b>It declares no node flag words and no lookup records.</b> The reader makes the model afresh and keeps
-	/// the fresh model's own tables where the record's counts differ from them (<c>FUN_004647a0</c>), so a head
-	/// hung on a node, or a node a script has hidden, is not in it.
+	/// <b>Without <paramref name="tables"/> it declares no node flag words and no lookup records.</b> The reader
+	/// makes the model afresh and keeps the fresh model's own tables where the record's counts differ from them
+	/// (<c>FUN_004647a0</c>), so a node its clip has hidden is shown again and none is marked as a clip's.
 	/// </para>
 	/// </summary>
 	public static byte[] MadeRecord( int item, int cellX, int cellY, int across, int down, int scriptHandle,
-		uint hoardingFlags, float hoardingProgress, int angle, IReadOnlyList<SavedChannel> channels )
+		uint hoardingFlags, float hoardingProgress, int angle, IReadOnlyList<SavedChannel> channels,
+		ModelTables? tables = null )
 		=> Record( item, cellX, cellY, across, down, PlacedObjectFlags, scriptHandle, hoardingFlags, hoardingProgress,
-			angle, 0, channels );
+			angle, tables?.NodeWords ?? [], tables?.Lookups ?? [], tables?.Shared ?? 0, channels );
 
 	/// <summary>The flags the retile makes a queue piece's model with (<c>FUN_005229e0</c>).</summary>
 	public const int QueuePieceFlags = 0x33a;
@@ -91,7 +99,7 @@ public sealed partial class ParkThingStates
 			throw new ArgumentOutOfRangeException( nameof( tileIndex ), tileIndex, "no queue piece has this index" );
 
 		return Record( FirstQueuePieceItem + tileIndex, cellX, cellY, 1, 1, QueuePieceFlags, 0, 0, 0f,
-			(360 - tileAngle) % 360, QueuePieceNodeWords[tileIndex], [QueuePieceChannel] );
+			(360 - tileAngle) % 360, new uint[QueuePieceNodeWords[tileIndex]], [], 0, [QueuePieceChannel] );
 	}
 
 	/// <summary>The item of the present record in <paramref name="slot"/>, or null where the slot is empty or past the table.</summary>
@@ -107,9 +115,11 @@ public sealed partial class ParkThingStates
 	}
 
 	private static byte[] Record( int item, int cellX, int cellY, int across, int down, int flags, int scriptHandle,
-		uint hoardingFlags, float hoardingProgress, int angle, int nodeWords, IReadOnlyList<SavedChannel> channels )
+		uint hoardingFlags, float hoardingProgress, int angle, IReadOnlyList<uint> nodeWords,
+		IReadOnlyList<(int Flags, int Handle)> lookups, int shared, IReadOnlyList<SavedChannel> channels )
 	{
-		var tail = TailOffset + (nodeWords * 4);
+		var words = TailOffset + (lookups.Count * 8);
+		var tail = words + (nodeWords.Count * 4);
 		var record = new byte[tail + (channels.Count * ChannelDwords * 4)];
 
 		record[0] = 1;
@@ -123,7 +133,19 @@ public sealed partial class ParkThingStates
 		PutInt32( record, FlagsOffset, (int)(hoardingFlags & HoardingBits) );
 		PutInt32( record, ProgressOffset, BitConverter.SingleToInt32Bits( hoardingProgress ) );
 		PutInt32( record, 0x27, angle );
-		BinaryPrimitives.WriteInt16LittleEndian( record.AsSpan( CountsOffset, 2 ), (short)nodeWords );
+		BinaryPrimitives.WriteInt16LittleEndian( record.AsSpan( CountsOffset, 2 ), (short)nodeWords.Count );
+		BinaryPrimitives.WriteInt16LittleEndian( record.AsSpan( CountsOffset + 2, 2 ), (short)lookups.Count );
+		PutInt32( record, SharedOffset, shared );
+		PutInt32( record, SharedOffset + 4, lookups.Count( lookup => (lookup.Flags & LookupAttached) != 0 ) );
+
+		for ( var index = 0; index < lookups.Count; ++index )
+		{
+			PutInt32( record, TailOffset + (index * 8), lookups[index].Flags );
+			PutInt32( record, TailOffset + (index * 8) + 4, lookups[index].Handle );
+		}
+
+		for ( var index = 0; index < nodeWords.Count; ++index )
+			PutInt32( record, words + (index * 4), (int)nodeWords[index] );
 
 		for ( var index = 0; index < channels.Count; ++index )
 			PutChannel( record, tail + (index * ChannelDwords * 4), channels[index] );

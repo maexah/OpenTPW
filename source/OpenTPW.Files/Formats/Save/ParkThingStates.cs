@@ -46,16 +46,20 @@ public readonly record struct SavedChannel( int Role, int Entry, int Flags, floa
 /// The record's <c>0x19</c>: the script handle of the thing it is the model of, an object's
 /// <c>mRideScriptHandle</c>; nought for a piece of queue and other scenery.
 /// </param>
+/// <param name="NodeWords">A flag word a node, as the record holds them (FileFormats <c>saves.md</c>, "The node flag words").</param>
 public readonly record struct SavedThing( int CatalogueId, int Slot, SavedChannel[] Channels,
-	uint HoardingFlags = 0, float HoardingProgress = 0f, int ScriptHandle = 0 );
+	uint HoardingFlags = 0, float HoardingProgress = 0f, int ScriptHandle = 0, uint[]? NodeWords = null );
 
 /// <summary>
 /// One model as a park file's writer takes it (<see cref="ParkThingStates.Put"/>): the slot its record lies in, its
 /// channels as they run, each stamp a reading of the clock the file is written under, and the hoarding's seven
 /// bits and progress; null leaves the file's hoarding.
 /// </summary>
+/// <param name="NodeWords">
+/// A flag word a node, written over the record's own where the record holds as many; null leaves the file's.
+/// </param>
 public readonly record struct WrittenModel( int Slot, SavedChannel[] Channels, uint? HoardingFlags = null,
-	float HoardingProgress = 0f );
+	float HoardingProgress = 0f, IReadOnlyList<uint>? NodeWords = null );
 
 /// <summary>
 /// The <c>RSYS</c> module of a park save: what every thing's model was doing when it was saved.
@@ -82,12 +86,12 @@ public readonly record struct WrittenModel( int Slot, SavedChannel[] Channels, u
 /// </para>
 ///
 /// <para>
-/// <b>The per-node flag words are read past rather than read, and that is a deviation.</b> The engine
+/// <b>The per-node flag words are not laid over a loaded model, and that is a deviation.</b> The engine
 /// restores them here too - bit <c>0x10</c> is the one that hides a node - so the original gets a
 /// built item's visibility from the save. This does not: <c>ParkObjects.PoseAsBuilt</c> works it out
 /// from the last frame of the construction clip instead, which is a stand-in for the same answer and
-/// is where that decision is written down. Their lengths are still walked, because the channels sit
-/// behind them and the walk has to add up.
+/// is where that decision is written down. The writer keeps them as clips start and writes them
+/// (<see cref="SavedThing.NodeWords"/>, <see cref="ParkModelTables.Running"/>).
 /// </para>
 ///
 /// <para>
@@ -128,6 +132,12 @@ public sealed partial class ParkThingStates
 	/// <summary>Two counts, as shorts: the model's nodes (one flag word each) and its node-lookup records (eight bytes each,
 	/// ahead of the flag words) - FileFormats saves.md, the ride system's record.</summary>
 	private const int CountsOffset = 0x2b;
+
+	/// <summary>The lookup records' shared flags, and behind them the count of things attached.</summary>
+	private const int SharedOffset = 0x2f;
+
+	/// <summary>A lookup record's runtime flag for something attached to it.</summary>
+	private const int LookupAttached = 0x2;
 
 	/// <summary>Where the variable-length tail begins.</summary>
 	private const int TailOffset = 0x37;
@@ -279,6 +289,14 @@ public sealed partial class ParkThingStates
 				PutInt32( body, at + 40, BitConverter.SingleToInt32Bits( channel.QueuedSpeed ) );
 			}
 
+			if ( model.NodeWords is { } words && words.Count == ReadInt16At( place.Record + CountsOffset ) )
+			{
+				var at = place.Record + TailOffset + (ReadInt16At( place.Record + CountsOffset + 2 ) * 8);
+
+				for ( var index = 0; index < words.Count; ++index )
+					PutInt32( body, at + (index * 4), (int)words[index] );
+			}
+
 			if ( model.HoardingFlags is { } hoarding )
 			{
 				var packed = (uint)ReadInt32At( place.Record + FlagsOffset );
@@ -291,6 +309,24 @@ public sealed partial class ParkThingStates
 		}
 
 		return written;
+	}
+
+	/// <summary>
+	/// The lookup records of the record in <paramref name="slot"/> as the file holds them, each its runtime flags
+	/// and the handle of what is attached, with their shared flags and the count of things attached; null where
+	/// the slot holds no record.
+	/// </summary>
+	public ((int Flags, int Handle)[] Records, int Shared, int Attached)? LookupsOf( int slot )
+	{
+		if ( !_places.TryGetValue( slot, out var place ) )
+			return null;
+
+		var records = new (int Flags, int Handle)[ReadInt16At( place.Record + CountsOffset + 2 )];
+
+		for ( var index = 0; index < records.Length; ++index )
+			records[index] = (ReadInt32At( place.Record + TailOffset + (index * 8) ), ReadInt32At( place.Record + TailOffset + (index * 8) + 4 ));
+
+		return (records, ReadInt32At( place.Record + SharedOffset ), ReadInt32At( place.Record + SharedOffset + 4 ));
 	}
 
 	private static void PutInt32( byte[] body, int at, int value ) =>
@@ -359,6 +395,11 @@ public sealed partial class ParkThingStates
 			throw new InvalidDataException( $"slot {slot} declares {flagWords} and {before} nodes" );
 
 		// The tail is each lookup record's runtime flags and attached handle, then one flag word per node, then the channels.
+		var words = new uint[flagWords];
+
+		for ( var index = 0; index < flagWords; ++index )
+			words[index] = (uint)ReadInt32At( record + TailOffset + (before * 2 * 4) + (index * 4) );
+
 		_at = record + TailOffset + (before * 2 * 4) + (flagWords * 4);
 
 		var count = Math.Max( channelsFor( catalogueId ), 1 );
@@ -395,7 +436,7 @@ public sealed partial class ParkThingStates
 		// FUN_004647a0 maps the packed RSYS word to model bits 0x20..0x800 and restores +0xb8.
 		_things.Add( new SavedThing( catalogueId, slot, channels,
 			(uint)ReadInt32At( record + FlagsOffset ) & HoardingBits, ReadSingleAt( record + ProgressOffset ),
-			ReadInt32At( record + ScriptHandleOffset ) ) );
+			ReadInt32At( record + ScriptHandleOffset ), words ) );
 	}
 
 	/// <summary>The module's start, found the same way and for the same reason as the script module's.</summary>

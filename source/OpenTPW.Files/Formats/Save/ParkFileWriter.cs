@@ -93,10 +93,11 @@ public static class ParkFileWriter
 	/// <summary>
 	/// An object bought since the load with its other two records (<c>docs/exe/saves.md</c>, "OpenTPW's writer, a
 	/// thing bought and a thing sold"): its footprint in cells for its model's record, its script as it runs (null
-	/// for a thing with none), and its model's channels and hoarding.
+	/// for a thing with none), and its model's channels, hoarding and two tables (null declares none).
 	/// </summary>
 	public sealed record MadeThing( ParkWorld.MadeObject Object, int Across, int Down, MadeScript? Script,
-		IReadOnlyList<SavedChannel> Channels, uint HoardingFlags = 0, float HoardingProgress = 0f );
+		IReadOnlyList<SavedChannel> Channels, uint HoardingFlags = 0, float HoardingProgress = 0f,
+		ParkThingStates.ModelTables? Tables = null );
 
 	/// <summary>What was done with <see cref="RunningThings"/>: the records written over, the script tables left the file's, the things made and taken out, and each queue cell's new handle beside the one it gave up.</summary>
 	public readonly record struct ThingsWritten( int Objects, int Scripts, int ScriptTablesLeft, int Models,
@@ -237,7 +238,7 @@ public static class ParkFileWriter
 
 					madeModels.Add( (slots[i], ParkThingStates.MadeRecord( placed.CatalogueId, cell % ParkWorld.MapSize,
 						cell / ParkWorld.MapSize, thing.Across, thing.Down, handle, thing.HoardingFlags,
-						thing.HoardingProgress, placed.Angle, thing.Channels )) );
+						thing.HoardingProgress, placed.Angle, thing.Channels, thing.Tables )) );
 
 					if ( thing.Script is { } script )
 						scriptRecords.Add( (handle, ParkScriptStates.MadeRecord( script, slots[i] + 1, loaded.ScriptStates.StructSize )) );

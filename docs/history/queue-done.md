@@ -5611,6 +5611,22 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   words follow from its item and what its channels play, the stale-normals bit apart: 7,161 of 7,688 records in
   a group all alike, the other 527 differing in that bit (`saves.md`, "A model record's two tables, and a head
   on a node"; FileFormats `saves.md`, "The node flag words", "A head on a node"). Decode only: no code, no run.
+- [x] **Q257b. The writer: a model record's node words and lookup records, and a rider's head.** From Q257's
+  decode (`saves.md`, "A model record's two tables, and a head on a node"). First the rule for a record's node
+  words from the model's file and its channels' clips (a clip's tracks give `0x20`, `0x80`, `0x100` and `0x800`,
+  its hide list `0x1`), checked against all 7,688 records of the 45 files (`q257/files-original.txt`,
+  `bychannel.py`); the setters of `0x2`, `0x40`, `0x200` and `0x400` were not found, so read them off the model's
+  file or find them. Then write both tables for a made record and for a kept one, each head hung as `0x2` and
+  its sprite's slot with the shared `0x4` and the count, and the head's sprite in the sprite table as the 122
+  read (`SAVE_PARK_HEAD_ON_A_MODEL_NODE` gone). Confirm: a ride with riders' heads on its nodes bought and
+  written, the heads on the same nodes in the original under Proton.
+  **Done 2026-10-09, the two tables; the head is Q257d (split by the session, not by Alexah).** The rule is found
+  and its setters read (`saves.md`, "The rule for a record's two tables"): 836 of the 870 catalogue items' records
+  exact, bit `0x8` apart, the lookup pairs 870 of 870; the other 6,818 records are scenery and track pieces no
+  catalogue holds, not checked. A Crazy Ape bought and saved: 34 words and 24 pairs, the original's own bought
+  ape's; saved running, the original's running apes' words; the original under Proton held each file's words on
+  the model at the first poll, where the control's file left it the build clip's marks for good; on screen the two
+  read alike.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.
