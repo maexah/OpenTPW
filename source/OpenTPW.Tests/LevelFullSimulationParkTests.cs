@@ -38,7 +38,7 @@ public class LevelFullSimulationParkTests
 		var normalized = park.Cells.Select( c => c with { TileIndex = c.TileIndex == 20 ? 10 : c.TileIndex == 19 ? 2 : c.TileIndex } );
 		var hash = System.Convert.ToHexString( System.Security.Cryptography.SHA256.HashData(
 			System.Text.Json.JsonSerializer.SerializeToUtf8Bytes( normalized ) ) );
-		Assert.AreEqual( "CE6D735C46A27C7FB16458974BEE6F1DED0CE55598161A2C0534091A8150D7B2", hash );
+		Assert.AreEqual( "BA5550C083CBF1139ED44083C59FD41B08DD6BD8DFBF5DF6C4030EF176C6A8A9", hash );
 		var economy = park.Economy!.Value;
 		Assert.AreEqual( 20, economy.AdmissionFee );
 		Assert.AreEqual( 50000, economy.Balance );

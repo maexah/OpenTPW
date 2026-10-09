@@ -52,8 +52,65 @@ public sealed partial class ParkThingStates
 	/// </summary>
 	public static byte[] MadeRecord( int item, int cellX, int cellY, int across, int down, int scriptHandle,
 		uint hoardingFlags, float hoardingProgress, int angle, IReadOnlyList<SavedChannel> channels )
+		=> Record( item, cellX, cellY, across, down, PlacedObjectFlags, scriptHandle, hoardingFlags, hoardingProgress,
+			angle, 0, channels );
+
+	/// <summary>The flags the retile makes a queue piece's model with (<c>FUN_005229e0</c>).</summary>
+	public const int QueuePieceFlags = 0x33a;
+
+	/// <summary>The item a queue piece's record names for the first of the eight pieces; a cell's tile index counts on from it.</summary>
+	public const int FirstQueuePieceItem = 17000;
+
+	/// <summary>How many pieces the table at <c>0x00763388</c> holds.</summary>
+	public const int QueuePieces = 8;
+
+	/// <summary>
+	/// The node flag words a piece's record declares, by tile index: two for the dead end, the straight and the two
+	/// bends, four for the end and the two bins, in every piece of the park files to hand (FileFormats
+	/// <c>saves.md</c>, "A queue piece's record"). No file holds index 0, which names the dead end's model as index 1
+	/// does.
+	/// </summary>
+	private static readonly int[] QueuePieceNodeWords = [2, 2, 2, 2, 2, 4, 4, 4];
+
+	/// <summary>A queue piece's one channel in every file: nothing playing, nothing queued, every stamp nought.</summary>
+	private static readonly SavedChannel QueuePieceChannel = new( NoRole, 0, 0, 0f, 0, 0, 0, NoRole, 0, 0, 0f );
+
+	/// <summary>Whether <paramref name="item"/> is one of the eight queue pieces.</summary>
+	public static bool IsQueuePiece( int item ) => item >= FirstQueuePieceItem && item < FirstQueuePieceItem + QueuePieces;
+
+	/// <summary>
+	/// The record of the model the retile makes for a queue cell (<c>FUN_005365d0</c>, <c>FUN_005229e0</c>;
+	/// FileFormats <c>saves.md</c>, "A queue piece's record"): item 17000 plus the cell's tile index, on the cell,
+	/// one cell square, <see cref="QueuePieceFlags"/>, no script, turned 360 less the tile's angle, its node words
+	/// nought and its one channel idle. Each of the shipped park's four is these bytes.
+	/// </summary>
+	/// <exception cref="ArgumentOutOfRangeException">The tile index names none of the eight pieces.</exception>
+	public static byte[] QueuePieceRecord( int cellX, int cellY, int tileIndex, int tileAngle )
 	{
-		var record = new byte[TailOffset + (channels.Count * ChannelDwords * 4)];
+		if ( tileIndex < 0 || tileIndex >= QueuePieces )
+			throw new ArgumentOutOfRangeException( nameof( tileIndex ), tileIndex, "no queue piece has this index" );
+
+		return Record( FirstQueuePieceItem + tileIndex, cellX, cellY, 1, 1, QueuePieceFlags, 0, 0, 0f,
+			(360 - tileAngle) % 360, QueuePieceNodeWords[tileIndex], [QueuePieceChannel] );
+	}
+
+	/// <summary>The item of the present record in <paramref name="slot"/>, or null where the slot is empty or past the table.</summary>
+	public int? ItemIn( int slot )
+	{
+		foreach ( var thing in _things )
+		{
+			if ( thing.Slot == slot )
+				return thing.CatalogueId;
+		}
+
+		return null;
+	}
+
+	private static byte[] Record( int item, int cellX, int cellY, int across, int down, int flags, int scriptHandle,
+		uint hoardingFlags, float hoardingProgress, int angle, int nodeWords, IReadOnlyList<SavedChannel> channels )
+	{
+		var tail = TailOffset + (nodeWords * 4);
+		var record = new byte[tail + (channels.Count * ChannelDwords * 4)];
 
 		record[0] = 1;
 		PutInt32( record, IdOffset, item );
@@ -61,14 +118,15 @@ public sealed partial class ParkThingStates
 		PutInt32( record, 0x09, cellY );
 		PutInt32( record, 0x0d, across );
 		PutInt32( record, 0x11, down );
-		PutInt32( record, 0x15, PlacedObjectFlags );
+		PutInt32( record, 0x15, flags );
 		PutInt32( record, ScriptHandleOffset, scriptHandle );
 		PutInt32( record, FlagsOffset, (int)(hoardingFlags & HoardingBits) );
 		PutInt32( record, ProgressOffset, BitConverter.SingleToInt32Bits( hoardingProgress ) );
 		PutInt32( record, 0x27, angle );
+		BinaryPrimitives.WriteInt16LittleEndian( record.AsSpan( CountsOffset, 2 ), (short)nodeWords );
 
 		for ( var index = 0; index < channels.Count; ++index )
-			PutChannel( record, TailOffset + (index * ChannelDwords * 4), channels[index] );
+			PutChannel( record, tail + (index * ChannelDwords * 4), channels[index] );
 
 		return record;
 	}

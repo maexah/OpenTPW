@@ -472,7 +472,8 @@ public class Level
 	/// (<see cref="ParkStaffPool.Written"/>), the arrival timer (<see cref="ParkPeople.WrittenArrival"/>) and the
 	/// file's objects, scripts and models as they run (<see cref="ParkState.WrittenObjects"/>,
 	/// <see cref="ParkRides.Written"/>) written over it; an object bought since the load is written whole and one
-	/// sold taken out, but a track ride and a thing with an emitter, which stay as the file has them, counted.
+	/// sold taken out, but a track ride and a thing with an emitter, which stay as the file has them, counted; and
+	/// a queue cell laid, cleared or tiled again goes out with its model made, or let go.
 	/// </para>
 	/// <para>
 	/// <b>Deviations.</b> The original writes the player's <c>gms.dat</c> first and puts the pointer back to its
@@ -547,8 +548,13 @@ public class Level
 			gone.Clear();
 		}
 
-		var cells = WrittenCells( loaded, state, made, gone );
+		// A queue cell's piece is a model, written with the things; without them it is left the file's, counted.
+		var pieces = things != null ? new Dictionary<int, ParkFileWriter.QueuePiece?>() : null;
+		var cells = WrittenCells( loaded, state, made, gone, pieces );
 		var written = WrittenThings( loaded, made, gone );
+
+		if ( things != null && pieces!.Count > 0 )
+			things = things with { QueueCells = pieces };
 
 		var running = new ParkFileWriter.Running( state.GameTick, state.ParkIsClosed, state.VisitorsToDate, state.Balance,
 			new ParkCameraModule.View( ParkOrbitCameraMode.Zoom, -ParkOrbitCameraMode.Yaw, point.X, point.Y ), cells,
@@ -594,6 +600,17 @@ public class Level
 						+ $", channels {string.Join( ",", thing.Channels.Select( channel => $"{channel.Role}/{channel.Entry}" ) )}, "
 						+ $"hoarding 0x{thing.HoardingFlags:x} at {thing.HoardingProgress}" );
 				}
+			}
+
+			foreach ( var (cell, handle, freed) in wrote.QueueCells ?? [] )
+			{
+				var piece = things.QueueCells![cell];
+
+				Log.Info( $"Save: queue cell ({cell % ParkWorld.MapSize},{cell / ParkWorld.MapSize}) "
+					+ (freed != 0 ? $"gives up model {freed} and " : "")
+					+ (piece is { } laid
+						? $"names model {handle}, item {ParkThingStates.FirstQueuePieceItem + laid.TileIndex} turned {(360 - laid.TileAngle) % 360}"
+						: "names none") );
 			}
 
 			Log.Info( $"Save: {wrote.Objects} objects, {wrote.Scripts} scripts and {wrote.Models} models written as they run, "
@@ -687,9 +704,9 @@ public class Level
 	/// a link is written.
 	/// </para>
 	/// <para>
-	/// <b>A queue cell laid, cleared or tiled again is written and counted</b>: its <c>mMeshInstance</c> is the handle
-	/// of the model the original's retile makes for it (<c>FUN_005365d0</c>), which no load makes again, and the file's
-	/// is left there.
+	/// <b>A queue cell laid, cleared or tiled again is written and counted</b> here: its <c>mMeshInstance</c> is the
+	/// handle of the model the original's retile makes for it (<c>FUN_005365d0</c>), which no load makes again, and
+	/// the file's is left there. The overload that is handed somewhere to put the pieces writes them instead.
 	/// </para>
 	/// </summary>
 	internal static Dictionary<int, ParkWorld.MapCell> WrittenCells( ParkWorld loaded, ParkState state )
@@ -701,9 +718,18 @@ public class Level
 	/// <paramref name="gone"/> has left, is written too. A cell that has joined a footprint goes out on the tile the
 	/// original stamps one with (<see cref="FootprintTile"/>), which the park here does not keep; one left bare
 	/// is on bare ground's already (<see cref="ParkPathBuilding"/>).
+	///
+	/// <para>
+	/// <b>A queue cell laid, cleared or tiled again goes into <paramref name="pieces"/></b> with the piece it holds
+	/// now, or null where it has left the queue (<c>docs/exe/saves.md</c>, "OpenTPW's writer, a queue cell's model"),
+	/// for the writer to make its model and free the one the file's cell names. A tile index outside the eight
+	/// pieces draws nothing here and has no model to make: that cell is counted and left naming the file's. With
+	/// nowhere to put them every such cell is counted and left.
+	/// </para>
 	/// </summary>
 	internal static Dictionary<int, ParkWorld.MapCell> WrittenCells( ParkWorld loaded, ParkState state,
-		IReadOnlyList<ParkWorld.CatalogueObject> made, IReadOnlySet<int> gone )
+		IReadOnlyList<ParkWorld.CatalogueObject> made, IReadOnlySet<int> gone,
+		Dictionary<int, ParkFileWriter.QueuePiece?>? pieces = null )
 	{
 		var written = new Dictionary<int, ParkWorld.MapCell>();
 		var madeAnchors = new HashSet<int>( made.Select( thing => MapStep.CellId( thing.RawX >> 8, thing.RawY >> 8 ) ) );
@@ -734,21 +760,32 @@ public class Level
 					continue;
 				}
 
+				NotePiece( index, was, now );
 				written[index] = footprintNow ? now with { TileSet = 0, TileIndex = FootprintTile, TileAngle = 0 } : now;
 
 				continue;
 			}
 
-			var queueWas = was.Type == ParkRideChoice.QueueCellType;
-			var queueNow = now.Type == ParkRideChoice.QueueCellType;
-
-			if ( queueWas != queueNow || (queueNow && (was.TileIndex != now.TileIndex || was.TileAngle != now.TileAngle)) )
-				Unimplemented.Report( "SAVE_PARK_QUEUE_CELL_MODEL" );
-
+			NotePiece( index, was, now );
 			written[index] = now;
 		}
 
 		return written;
+
+		// A cell whose queue piece is not the file's: handed on, or counted where it cannot be.
+		void NotePiece( int index, ParkWorld.MapCell was, ParkWorld.MapCell now )
+		{
+			var queueWas = was.Type == ParkRideChoice.QueueCellType;
+			var queueNow = now.Type == ParkRideChoice.QueueCellType;
+
+			if ( queueWas == queueNow && (!queueNow || (was.TileIndex == now.TileIndex && was.TileAngle == now.TileAngle)) )
+				return;
+
+			if ( pieces == null || (queueNow && (now.TileIndex < 0 || now.TileIndex >= ParkThingStates.QueuePieces)) )
+				Unimplemented.Report( "SAVE_PARK_QUEUE_CELL_MODEL" );
+			else
+				pieces[index] = queueNow ? new ParkFileWriter.QueuePiece( now.TileIndex, now.TileAngle ) : null;
+		}
 	}
 
 	private static bool IsFootprint( int type ) => type is CellEdge.Footprint or CellEdge.RideEnd or CellEdge.RideFarEnd;

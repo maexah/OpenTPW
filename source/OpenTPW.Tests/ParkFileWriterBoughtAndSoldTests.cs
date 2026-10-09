@@ -480,6 +480,20 @@ public class ParkFileWriterBoughtAndSoldTests
 		Assert.AreEqual( (161, 7, 90), Models( written ).Header );
 	}
 
+	/// <summary>A thing bought and a queue cell laid in one file: the thing's model takes the lower slot, as the original's bought ride and its queue's first cell do.</summary>
+	[TestMethod]
+	public void ABoughtThingsModelComesBeforeAQueueCells()
+	{
+		var cell = (21 * ParkWorld.MapSize) + 42;
+		var written = Written( Things( [Ape()] ) with { QueueCells = new Dictionary<int, ParkFileWriter.QueuePiece?> { [cell] = new( 1, 0 ) } }, out var body );
+		var models = Models( written );
+
+		Assert.AreEqual( (91, 92), (written.Objects.Single( thing => thing.ThingId == 43 ).MeshInstance, written.CellAt( 42, 21 ).MeshInstance) );
+		Assert.AreEqual( (CrazyApe, 17001), (models.ItemIn( 90 ), models.ItemIn( 91 )) );
+		Assert.AreEqual( (163, 5, 92), models.Header, "the original's own counts after it bought an ape" );
+		Assert.IsTrue( Find( body, ParkThingStates.QueuePieceRecord( 42, 21, 1, 0 ) ) > 0 );
+	}
+
 	/// <summary>Two made, the older takes the lower slot; their script records fall newest first.</summary>
 	[TestMethod]
 	public void TheOlderOfTwoMadeTakesTheLowerSlot()

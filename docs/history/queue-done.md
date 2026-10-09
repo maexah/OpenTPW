@@ -5537,6 +5537,22 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   (`SAVE_PARK_HANDLE_TO_AN_UNWRITTEN_THING`; `Level.WrittenThings` is the list to widen). A made thing's id is
   one past the park's highest, where the original uses a freed id again (Q26c). `PutPeople` chains a person
   ahead of the file's objects on a cell; an object bought goes behind the people there.
+- [x] **Q254. The writer: a queue cell's model.** Done 2026-10-09,
+  `alexah/372-the-writer-a-queue-cells-model`; `docs/exe/saves.md`, "OpenTPW's writer, a queue cell's model".
+  A piece's record is fixed bytes but its item, cell and angle (225 of 225 in nine of the original's files), so
+  the writer makes one for a cell laid or tiled again and empties the slot of a cell cleared. Written with two
+  cells of the Belly Bounce's queue cleared and three laid by the queue tool: the cells name handles 91, 92 and
+  93, items 17003, 17005 and 17004, slots 113 and 114 empty, the table 162, 6, 93; the original read the same
+  from its memory after its load and drew the fence along the new cells with grass on the cleared one, where the
+  build before's file left two cells black. One prediction wrong, mine (six pieces drawn for five). Of 31 bugs
+  put back 28 failed at first; two showed guards that did nothing, taken out; 29 of 29 fail now. Leftovers are a
+  note under Q257. The item as written: From Q241g and Q241i. A queue cell laid, cleared or tiled
+  again is written with the file's `mMeshInstance` (`SAVE_PARK_QUEUE_CELL_MODEL`), and the original draws a
+  queue cell that names no model black, ground and all (`q241i/orig/e2-made-and-gone.png`). The handle is a
+  slot of `RSYS` plus one: a cell laid takes the slot at the cursor, a record of item 17000 plus the tile's
+  index made with flags `0x33a` at 360 less the tile's angle (`FUN_005229e0`); a cell cleared empties its slot;
+  a cell tiled again does both (`FUN_005365d0`). After Q253, which builds a slot's making. Confirm: a queue
+  laid here standing fenced in the original under Proton, and one cleared gone; a screenshot.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

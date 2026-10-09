@@ -12,7 +12,8 @@ namespace OpenTPW;
 /// written over it, the park's people in place of the file's, its staff pool and arrival timer, and each object,
 /// script and model the file holds as it runs, under the clock moved on (<see cref="RunningThings"/>). An object
 /// bought since the load is written whole, its three records made, and one sold is taken out
-/// (<see cref="MadeThing"/>).
+/// (<see cref="MadeThing"/>); a queue cell laid or tiled again names a model made for it, and one cleared names none
+/// (<see cref="QueuePiece"/>).
 /// </para>
 /// <para>
 /// <b>The container</b> is the version, 500 (<c>0x006fd928</c>), whatever the file loaded carried; the rest of that
@@ -71,10 +72,22 @@ public static class ParkFileWriter
 	/// <param name="Made">The objects bought since the load, each written whole (<see cref="MadeThing"/>).</param>
 	/// <param name="Gone">The file's objects sold since: each one's three records are left out.</param>
 	/// <param name="Built">Each touched item's standing count and first-build stamp (<see cref="ParkWorld.PutControls"/>).</param>
+	/// <param name="QueueCells">
+	/// Each cell whose queue piece is not the file's, by its place in <see cref="ParkWorld.Cells"/>: the piece it
+	/// holds now, or null where it holds none (<see cref="QueuePiece"/>).
+	/// </param>
 	public sealed record RunningThings( IReadOnlyList<ParkWorld.CatalogueObject> Objects, int SchedulerTick,
 		int NextHandle, IReadOnlyList<WrittenScript> Scripts, ParkThingStates ModelStates,
 		IReadOnlyList<WrittenModel> Models, uint Clock, IReadOnlyList<MadeThing>? Made = null,
-		IReadOnlySet<int>? Gone = null, IReadOnlyDictionary<int, (int Standing, uint FirstBuilt)>? Built = null );
+		IReadOnlySet<int>? Gone = null, IReadOnlyDictionary<int, (int Standing, uint FirstBuilt)>? Built = null,
+		IReadOnlyDictionary<int, QueuePiece?>? QueueCells = null );
+
+	/// <summary>
+	/// The piece a queue cell holds: its tile's index and angle (<c>docs/exe/saves.md</c>, "OpenTPW's writer, a queue
+	/// cell's model"). The original's retile frees the model the cell names and makes this one's in the slot at the
+	/// cursor (<c>FUN_005365d0</c>); a cell that leaves the queue frees its own and names none.
+	/// </summary>
+	public readonly record struct QueuePiece( int TileIndex, int TileAngle );
 
 	/// <summary>
 	/// An object bought since the load with its other two records (<c>docs/exe/saves.md</c>, "OpenTPW's writer, a
@@ -84,9 +97,9 @@ public static class ParkFileWriter
 	public sealed record MadeThing( ParkWorld.MadeObject Object, int Across, int Down, MadeScript? Script,
 		IReadOnlyList<SavedChannel> Channels, uint HoardingFlags = 0, float HoardingProgress = 0f );
 
-	/// <summary>What was done with <see cref="RunningThings"/>: the records written over, the script tables left the file's, and the things made and taken out.</summary>
+	/// <summary>What was done with <see cref="RunningThings"/>: the records written over, the script tables left the file's, the things made and taken out, and each queue cell's new handle beside the one it gave up.</summary>
 	public readonly record struct ThingsWritten( int Objects, int Scripts, int ScriptTablesLeft, int Models,
-		int Made = 0, int Gone = 0, int ModelSlots = 0 );
+		int Made = 0, int Gone = 0, int ModelSlots = 0, IReadOnlyList<(int Cell, int Handle, int Freed)>? QueueCells = null );
 
 	/// <summary>
 	/// The arrival timer as it is written: the <c>mGameTick</c> the next load's wait is counted from
@@ -164,9 +177,11 @@ public static class ParkFileWriter
 			var made = run.Made ?? [];
 			var gone = run.Gone ?? new HashSet<int>();
 
-			if ( made.Count > 0 || gone.Count > 0 )
+			var pieces = run.QueueCells ?? new Dictionary<int, QueuePiece?>();
+
+			if ( made.Count > 0 || gone.Count > 0 || pieces.Count > 0 )
 			{
-				if ( running.People == null )
+				if ( running.People == null && (made.Count > 0 || gone.Count > 0) )
 					throw new InvalidOperationException( "a thing bought or sold is written with the people, and none were given" );
 
 				// From the back of the file forwards, so each module is still where the file has it when its turn
@@ -182,9 +197,31 @@ public static class ParkFileWriter
 					goneScripts.UnionWith( loaded.ScriptStates.HandlesOf( thing.ThingId ) );
 				}
 
+				// A cell gives up the piece the file has it name, whether it takes another or none. A handle
+				// that names no queue piece's record is not the cell's to free, and its slot is left alone.
+				var cellsInOrder = pieces.OrderBy( entry => entry.Key ).ToList();
+				var freed = new Dictionary<int, int>();
+
+				foreach ( var (cell, _) in cellsInOrder )
+				{
+					var held = loaded.Cells[cell].MeshInstance;
+
+					if ( held > 0 && run.ModelStates.ItemIn( held - 1 ) is { } item && ParkThingStates.IsQueuePiece( item ) )
+					{
+						goneSlots.Add( held - 1 );
+						freed[cell] = held;
+					}
+				}
+
 				// The oldest takes the first slot, as it did when it was bought.
+				//
+				// A deviation: the original gives each model the lowest empty slot as it is made, in the order
+				// things were bought and cells tiled. Here the slots are dealt as the file is written: the
+				// objects first, the oldest first, then the queue cells in the map's order. Every handle still
+				// names its own record, which is all a load reads.
 				var oldestFirst = made.OrderBy( thing => thing.Object.Object.ThingId ).ToList();
-				var slots = run.ModelStates.Plan( goneSlots, oldestFirst.Count );
+				var laid = cellsInOrder.Where( entry => entry.Value != null ).ToList();
+				var slots = run.ModelStates.Plan( goneSlots, oldestFirst.Count + laid.Count );
 				var madeModels = new List<(int Slot, byte[] Record)>();
 				var records = new List<(int Id, byte[] Record)>();
 				var scriptRecords = new List<(int Handle, byte[] Record)>();
@@ -207,15 +244,39 @@ public static class ParkFileWriter
 						thing.Object with { Object = placed with { RideScript = handle } }, slots[i] + 1 )) );
 				}
 
+				var handles = cellsInOrder.ToDictionary( entry => entry.Key, _ => 0 );
+
+				for ( var i = 0; i < laid.Count; ++i )
+				{
+					var (cell, piece) = laid[i];
+					var slot = slots[oldestFirst.Count + i];
+
+					madeModels.Add( (slot, ParkThingStates.QueuePieceRecord( cell % ParkWorld.MapSize, cell / ParkWorld.MapSize,
+						piece!.Value.TileIndex, piece.Value.TileAngle )) );
+					handles[cell] = slot + 1;
+				}
+
+				// Where it lies, so before anything ahead of the map changes length.
+				loaded.PutCellModels( body, handles );
+
 				body = loaded.ScriptStates.Splice( body,
 					[.. scriptRecords.OrderByDescending( entry => entry.Handle ).Select( entry => entry.Record )], goneScripts );
+
 				body = run.ModelStates.Splice( body, goneSlots, madeModels );
 
 				if ( run.Built is { } built )
 					loaded.PutControls( body, built );
 
-				edits = new ParkWorld.ObjectEdits( records, gone );
-				things = things.Value with { Made = made.Count, Gone = gone.Count, ModelSlots = slots.Length > 0 ? slots.Max() + 1 : 0 };
+				if ( made.Count > 0 || gone.Count > 0 )
+					edits = new ParkWorld.ObjectEdits( records, gone );
+
+				things = things.Value with
+				{
+					Made = made.Count,
+					Gone = gone.Count,
+					ModelSlots = slots.Length > 0 ? slots.Max() + 1 : 0,
+					QueueCells = [.. cellsInOrder.Select( entry => (entry.Key, handles[entry.Key], freed.GetValueOrDefault( entry.Key )) )]
+				};
 			}
 		}
 

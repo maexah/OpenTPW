@@ -44,13 +44,6 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q254. The writer: a queue cell's model.** From Q241g and Q241i. A queue cell laid, cleared or tiled
-  again is written with the file's `mMeshInstance` (`SAVE_PARK_QUEUE_CELL_MODEL`), and the original draws a
-  queue cell that names no model black, ground and all (`q241i/orig/e2-made-and-gone.png`). The handle is a
-  slot of `RSYS` plus one: a cell laid takes the slot at the cursor, a record of item 17000 plus the tile's
-  index made with flags `0x33a` at 360 less the tile's angle (`FUN_005229e0`); a cell cleared empties its slot;
-  a cell tiled again does both (`FUN_005365d0`). After Q253, which builds a slot's making. Confirm: a queue
-  laid here standing fenced in the original under Proton, and one cleared gone; a screenshot.
 - [ ] **Q255. The writer: the arrival vehicle, a balloon let go and a thought read back.** From Q250 and Q251.
   **The arrival vehicle is not written** (`SAVE_PARK_ARRIVAL_VEHICLE`). The header's
   `mCurrentArrivalVehicle` and the vehicle's script are one state (`FUN_0051a690`), and both are left the
@@ -87,6 +80,13 @@ the research lab), then the rest of this section in its old order.
   and a thing with an emitter (`PART`) are left as the file has them, bought or sold (`SAVE_PARK_OBJECT_BOUGHT`,
   `SAVE_PARK_OBJECT_SOLD`). A camera bought lacks `mFlags` `0x10` (`BOUGHT_OBJECT_FLAG_BITS`). Confirm: a ride
   with riders' heads on its nodes bought and written, the heads on the same nodes in the original under Proton.
+  From Q254: a queue cell on a tile outside the eight pieces, and every changed queue cell of a park written
+  with its things as the file's, is still left naming the file's model and counted
+  (`SAVE_PARK_QUEUE_CELL_MODEL`). The model slots are dealt as the file is written (objects, then cells in the
+  map's order), where the original's are in the order things were made: keep a running table if that order is
+  ever read. And not decoded: the original, loading a file whose queue cell names a record of another tile
+  (or a bare cell naming one), reads no handle on that cell afterwards and still draws the piece
+  (`saves.md`, "OpenTPW's writer, a queue cell's model", the control).
 - [ ] **Q241j. The writer: the managers, then Save Game saves.** From Q241e. The economy thing's loans and rings,
   the staff HQ's strikes, the calendar's and the weather's fields; then `ParkSaveScreen.Save` writes
   (`SAVE_GAME_WRITER` gone), an overwrite replaces the file, and the Load Park list shows it. Confirm: a park

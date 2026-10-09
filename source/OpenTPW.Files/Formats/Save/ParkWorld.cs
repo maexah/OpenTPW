@@ -930,7 +930,8 @@ public sealed partial class ParkWorld : IParkInitialState
 		int TrackType = 0, ushort TrackFlags = 0, ushort TrackParentId = 0,
 		int Litter = 0, ushort LitterCollector = 0, ushort PylonIndex = 0,
 		byte StatusFlags = 0, int TimeMarkedForLitterCollection = 0, ushort Occupant = 0,
-		ushort NearbyEffects = 0, ushort ParentId = 0, short OverlapCounter = 0, byte TrackNeighbours = 0 )
+		ushort NearbyEffects = 0, ushort ParentId = 0, short OverlapCounter = 0, byte TrackNeighbours = 0,
+		int MeshInstance = 0 )
 	{
 		/// <summary>
 		/// Whether anything has been dropped here. <b>Nought on every cell of the park the game ships</b>,
@@ -1276,6 +1277,9 @@ public sealed partial class ParkWorld : IParkInitialState
 
 	private const int CellFlags = 1;
 
+	/// <summary><c>mMeshInstance</c>: the handle of a queue cell's model, a slot of the model module plus one; nought on every other cell.</summary>
+	private const int CellMeshInstance = 3;
+
 	private const int CellNeighbours = 7;
 
 	/// <summary>
@@ -1403,8 +1407,8 @@ public sealed partial class ParkWorld : IParkInitialState
 	/// <para>
 	/// A record is written where it lies and no cell changes size: the original's writer gives every cell its map and
 	/// its track record (<c>FUN_004d7ea0</c>, whose test for a default one, <c>FUN_0050c1f0</c>, answers that none
-	/// is), and the effects record is not written here. The rest of a record is left as the file's: the mesh
-	/// instance, the hoarding neighbours, the litter block and <c>mWho</c>.
+	/// is), and the effects record is not written here. The rest of a record is left as the file's: the hoarding
+	/// neighbours, the litter block and <c>mWho</c>, and the mesh instance, which is <see cref="PutCellModels"/>'s.
 	/// </para>
 	/// </summary>
 	/// <exception cref="InvalidOperationException">
@@ -1454,6 +1458,41 @@ public sealed partial class ParkWorld : IParkInitialState
 				{
 					throw new InvalidOperationException( $"cell {index} of the park file it was loaded from has no track record" );
 				}
+			}
+
+			at += 1
+				+ ((status & MapRecord) != 0 ? MapCellSize : 0)
+				+ ((status & TrackRecord) != 0 ? TrackCellSize : 0)
+				+ ((status & EffectsRecord) != 0 ? EffectsCellSize : 0);
+		}
+	}
+
+	/// <summary>
+	/// Writes each cell's <c>mMeshInstance</c> over its map record in <paramref name="body"/>, a copy of
+	/// <see cref="Body"/>: the handle of the queue piece the cell names, or nought. The key is the cell's place in
+	/// <see cref="Cells"/>.
+	/// </summary>
+	/// <exception cref="InvalidOperationException">The walk never reached the map, or a cell to write has no map record.</exception>
+	public void PutCellModels( byte[] body, IReadOnlyDictionary<int, int> handles )
+	{
+		if ( handles.Count == 0 )
+			return;
+
+		if ( MapAt < 0 || _cells.Length != MapCellCount )
+			throw new InvalidOperationException( "the park file it was loaded from holds no map" );
+
+		var at = MapAt;
+
+		for ( var index = 0; index < MapCellCount; ++index )
+		{
+			var status = body[at];
+
+			if ( handles.TryGetValue( index, out var handle ) )
+			{
+				if ( (status & MapRecord) == 0 )
+					throw new InvalidOperationException( $"cell {index} of the park file it was loaded from has no map record" );
+
+				PutInt32( body, at + 1 + CellMeshInstance, handle );
 			}
 
 			at += 1
@@ -1830,6 +1869,7 @@ public sealed partial class ParkWorld : IParkInitialState
 			StatusFlags: _data[at + CellStatusFlags],
 			TimeMarkedForLitterCollection: ReadInt32At( at + CellTimeMarkedForLitterCollection ),
 			Occupant: (ushort)ReadUInt16At( at + CellOccupant ),
+			MeshInstance: ReadInt32At( at + CellMeshInstance ),
 
 			// The EFFECTS sub-record, which the walk sizes and otherwise steps over. It follows the map
 			// record and the track record, so where it begins depends on whether this cell has a track.

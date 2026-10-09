@@ -726,9 +726,10 @@ in the copied body, where it lies.
   or left a footprint (types 4, 9 and 10), or changed its type or parent inside one, is left as the file's,
   unless the thing bought or sold is written with it (the fifth stage). An entrance that only gained or lost a link
   is written.
-- **A queue cell is written without its model, and is counted** (`SAVE_PARK_QUEUE_CELL_MODEL`): a queue cell
-  laid, cleared or tiled again goes out with the file's `mMeshInstance`, so a new one names no model and a
-  cleared one still names its old (Q254, with the model slots).
+- **A queue cell's model is written with the things** ("OpenTPW's writer, a queue cell's model"): a cell laid or
+  tiled again names a model made for it and a cell cleared names none. Where the things go out as the file's
+  (no scripts to hand, or a module that did not read), and for a cell on a tile outside the eight pieces, the
+  cell is left naming the file's and counted (`SAVE_PARK_QUEUE_CELL_MODEL`).
 - **Land** is not bought here (`BUY_LAND_TOOL`), so no cell's `0x40` flag moves but as the path tool moves it.
 
 **Measured (Q241g, `q241g/`).** Lost Kingdom at `mGameTick` 1000, a spur of three laid north off the south road
@@ -1058,7 +1059,7 @@ s of game time, after script 8's, the file's own camera, where the file puts the
 there the two ran the camera's four waits in step. The frames show a camera on (46,29) and none on (40,29),
 beside the control's the other way about; the queue's piece on (52,22) drawn; and **the cell (49,22) drawn
 black**, with no ground under the piece it does not name, guests still queueing across it. That is what a queue
-cell laid here and written with the file's `mMeshInstance` would be (`SAVE_PARK_QUEUE_CELL_MODEL`).
+cell written naming no model is (`SAVE_PARK_QUEUE_CELL_MODEL`).
 
 The second file: the same, but the made script's struct is the loader's own (the fields above and nothing else,
 the counter at word 0) and its model record declares no nodes and no lookup records, with one idle channel (role
@@ -1301,6 +1302,63 @@ before the save, a save with no people handed over (refused). **Not run in the o
 guest queueing or riding (the ape was shut), a made thing turned, a made shop. **In the original the things, the
 slots and the scripts are its memory's** (`orig/look.py`); the two things in its frame are told from the file's
 own by where they stand, by eye. `docs/exe/addresses.md` not regenerated.
+
+### OpenTPW's writer, a queue cell's model
+
+`Level.WrittenCells` hands the writer every cell whose queue piece is not the file's (`ParkFileWriter.QueuePiece`):
+a cell that has joined the queue, left it, or changed its tile's index or angle. `ParkFileWriter.Body` does for
+each what the retile `FUN_005365d0` does: the slot the file's cell names is emptied, and a cell still in the queue
+is given a record in an empty slot (`ParkThingStates.QueuePieceRecord`) and names it in its `mMeshInstance`
+(`ParkWorld.PutCellModels`); a cell that has left names none.
+
+- **The record is the original's, byte for byte** (FileFormats `saves.md`, "A queue piece's record"): item 17000
+  plus the tile's index, the cell, one cell square, flags `0x33a`, no script, 360 less the tile's angle, its node
+  words nought (two of them; four for the end and the two bins) and one idle channel. Every queue piece of the
+  nine park files of the original's to hand is the bytes `QueuePieceRecord` makes for its cell, 225 of 225
+  (`q254/pieces.py`: the shipped park's four, 208 in four played saves, none in a fifth, and 13 in three saved under Proton), the
+  original's own dead end among them (index 1, the piece of a queue that has not reached a path:
+  `q253/orig/bought-by-the-original.TPWS`, handle 92). No file holds index 0, which names the same model.
+- **A deviation: the slots are dealt as the file is written**, not as the things were made. The original gives
+  each model the lowest empty slot at its making, so its table holds the order the player built in. Here the
+  objects bought take the lowest empty slots first, the oldest first, then the queue cells in the map's order.
+  Every handle names its own record, which is all a load reads. The original's bought ape took handle 91 and its
+  queue piece 92, as here.
+- **A handle that names no queue piece's record is not freed**: a cell whose `mMeshInstance` names an object's
+  model, or a slot past the table, is written naming none and the slot is left.
+- **Still counted** (`SAVE_PARK_QUEUE_CELL_MODEL`): a cell on a tile outside the eight pieces, which draws
+  nothing here either (`QUEUE_TILE_INDEX_OUTSIDE_TABLE`), and every changed queue cell of a park written with
+  its things as the file's.
+
+**Measured (Q254, `q254/`).** Lost Kingdom from `easymode.TPWI`, held with `pause`. The Belly Bounce's queue runs
+(52,22), (51,22), (50,22), (49,22) to the path. `delqueue 49 22` and `delqueue 50 22` cut two cells; the queue
+tool (`tool queue 13`, then `worldclick` on (51,22), (50,22), (50,23) and (48,23)) laid (50,22) again, (50,23)
+and (49,23) and joined the path at (48,23); `savepark Q254`. The log at the save: (49,22) gives up model 114 and
+names none; (50,22) gives up 113 and names 91, item 17003 turned 0; (49,23) names 92, item 17005 turned 90;
+(50,23) names 93, item 17004 turned 180; nothing counted. A Python reader of the file: the six cells' handles 0,
+91, 112, 111, 92 and 93, the module's header 162 present, 6 empty, cursor 93, slots 113 and 114 empty, and the
+three records as above (`PREDICTION.txt`, P2 and P3). OpenTPW's own load of the file draws five pieces on the
+tiles written. **The original under Proton**, the file loaded from its Load Park screen: its memory on the first
+poll after the load reads the same header, handles 91, 92 and 93 as items 17003, 17005 and 17004 on their cells,
+113 and 114 empty, and the six cells' handles as written; its frame shows the fence from the torches at the path
+along (49,23), round (50,23) and (50,22) to the ride, grass on (49,22) and no black cell
+(`q254/sheet-ours-beside-original.png`).
+
+**The control, the build before**, the same clicks: four cells counted; the file's (49,23) and (50,23) name no
+model, (50,22) still names 113, a straight's record, and (49,22), bare ground, still names 114. The original
+drew (49,23) and (50,23) black, a straight on (50,22) where the bend belongs and the old end piece with its
+torches on the bare cell (49,22). **Not predicted, and not decoded:** in its memory after that load the cells
+(49,22) and (50,22) read no handle, though the file gives them 114 and 113 and both slots still hold their
+records and are drawn. Something in the load lets go of a cell's handle where the cell's tile and the record
+disagree; it was not looked for.
+
+**One prediction wrong, mine:** six pieces drawn; five stand (four, less two, and three more). The cells' tiles
+in the first prediction were seen in a trial of the same clicks before it was written; the handles, the file and
+both loads were not. **Not run in either game, tested only:** a cell under a thing bought, a cell a thing sold
+has left for a queue, a handle that names another thing's model, a piece written with no people handed over, a
+piece beside a thing bought in one file (the tests' ape and its stub: 91 and 92). **Not run in the original:**
+a dead end's record written by OpenTPW (the run's queue was joined), a bin's. The edits were the console's
+`delqueue`, `tool` and `worldclick`, the save `savepark` under `pause`: no player's hand reaches the writer yet.
+`docs/exe/addresses.md` not regenerated.
 
 ### Read, not run
 
