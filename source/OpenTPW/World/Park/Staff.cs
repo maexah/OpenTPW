@@ -238,6 +238,9 @@ public sealed class Staff
 		TimeStartedEntertaining = saved.TimeStartedEntertaining;
 		TimeStartedResearching = saved.TimeStartedResearching;
 		TimeHired = saved.TimeHired;
+
+		// The bubble showing when the park was saved is a slot of the sprite table (mThoughtScript), which ParkPeople joins.
+		Thoughts.Restore( saved.LastThought, saved.TimeBubbleShown );
 		PatrolBottomLeft = saved.PatrolBottomLeft;
 		PatrolTopRight = saved.PatrolTopRight;
 		Name = saved.Name;

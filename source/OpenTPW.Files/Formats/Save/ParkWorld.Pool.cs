@@ -80,10 +80,11 @@ public sealed partial class ParkWorld
 	/// <summary>
 	/// Writes the arrival timer's mark, the count still to drop and whether a load is held over the file's in
 	/// <paramref name="body"/>, a copy of <see cref="Body"/>. <c>mArrivalRate</c>, <c>mTargetVehicleCapacity</c> and
-	/// <c>mGatesOpen</c> are left as the file's: nothing here runs them.
+	/// <c>mGatesOpen</c> are left as the file's: nothing here runs them. <paramref name="currentVehicle"/> is the
+	/// header's <c>mCurrentArrivalVehicle</c>, the thing of the vehicle that is current; null leaves the file's.
 	/// </summary>
 	/// <exception cref="InvalidOperationException">The walk never reached the block.</exception>
-	internal void PutArrival( byte[] body, int timeSig, int peopleOnBus, bool offloading )
+	internal void PutArrival( byte[] body, int timeSig, int peopleOnBus, bool offloading, int? currentVehicle = null )
 	{
 		if ( ArrivalAt < 0 )
 			throw new InvalidOperationException( "the park file it was loaded from was not read as far as its arrival block" );
@@ -91,5 +92,8 @@ public sealed partial class ParkWorld
 		PutInt32( body, ArrivalAt + 4, timeSig );
 		PutInt32( body, ArrivalAt + 0x0c, peopleOnBus );
 		body[ArrivalAt + 0x10] = (byte)(offloading ? 1 : 0);
+
+		if ( currentVehicle is { } vehicle )
+			Put16( body, HeaderAt + HeaderFieldAt( CurrentArrivalVehicleField ), vehicle );
 	}
 }

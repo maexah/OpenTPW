@@ -26,6 +26,9 @@ public sealed class Balloon
 	/// </summary>
 	public const int HeldScript = 1650;
 
+	/// <summary>A sprite's state once its script has reached its end word (<c>0x004750a2</c>).</summary>
+	public const int EndedState = 4;
+
 	/// <summary>The fewest needs sweeps a new balloon lasts - <c>DAT_0075d0f0</c>.</summary>
 	public const int ShortestLife = 25;
 
@@ -99,9 +102,11 @@ public sealed class Balloon
 	/// <c>mBalloonScript</c> names its slot (<c>FUN_00475730</c>). Its first turn is one interval after the load,
 	/// as a person's is; the save's own due time was read off the clock of the session that wrote it.
 	/// </summary>
-	public static Balloon Saved( ParkWorld.Sprite saved )
+	/// <param name="loops">The record's loop stack (<c>ParkWorld.SpriteLoopsOf</c>): a balloon let go rests inside its fade's loop.</param>
+	public static Balloon Saved( ParkWorld.Sprite saved, IReadOnlyList<int>? loops = null )
 	{
-		var sprite = new SpriteScript( saved.Script, saved.Pc, saved.SpriteNumber, saved.Frame, saved.Alpha );
+		var sprite = new SpriteScript( saved.Script, saved.Pc, saved.SpriteNumber, saved.Frame, saved.Alpha, loops,
+			ended: saved.State == EndedState );
 
 		sprite.ScheduleFrom( 0 );
 

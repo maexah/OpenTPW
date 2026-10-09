@@ -3913,7 +3913,8 @@ square seven frames on and two off at 30 frames a second. A save's `mStrandedTim
 **Where it parts from the original, each said at its site.** The counter is not taken at the staff's wander or its
 route's sites, since nothing but a save can stamp a member of staff; the square is drawn under guests only, for the
 same reason. A bubble runs no sprite script: it shows from the sweep it is made, where the original's shows a
-sprite interval later. A saved bubble's sprite (`mThoughtScript`) is not made again (`SAVED_THOUGHT_BUBBLE`). The
+sprite interval later. A saved bubble (`mThoughtScript`) is shown again after a load, its picture its sprite's script's (`saves.md`,
+"OpenTPW's writer, the arrival vehicle, a balloon let go and a thought read back"). The
 picker's litter arm is counted and never taken (`NEEDS_THOUGHT_LITTER_SHARE`), and its sound (`NEEDS_THOUGHT_4_SOUND`).
 A rider drawn as a head has the bubble over the head. The blink and the wave run on the frame clock at an assumed
 30 frames a second. **A failed route is not revived by a stamp** ("Q104"): `PeepBehaviour.Walked` gives up before

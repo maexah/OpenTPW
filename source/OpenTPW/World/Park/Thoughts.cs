@@ -126,11 +126,30 @@ public sealed class Thoughts
 			Bubble = null;
 	}
 
-	/// <summary>What a save kept: the thought and the bubble's time. The bubble's own sprite is not restored.</summary>
-	public void Restore( int last, int timeBubbleShown )
+	/// <summary>
+	/// What a save kept: the thought, the bubble's time, and the bubble itself where the person's
+	/// <c>mThoughtScript</c> names a sprite: its picture is its script's (<see cref="PictureOfScript"/>), which
+	/// holds from the sprite's making, where its <c>+0xb4</c> does only once the script has run.
+	/// </summary>
+	/// <param name="bubbleScript">The script the bubble's sprite was made on, or null with none showing.</param>
+	public void Restore( int last, int timeBubbleShown, int? bubbleScript = null )
 	{
 		Last = last;
 		TimeBubbleShown = timeBubbleShown;
+		Bubble = bubbleScript is { } script ? PictureOfScript( script ) : null;
+	}
+
+	/// <summary>The bank and set a thought script shows, <see cref="ScriptOf"/> the other way; null for a word that starts none of the 22.</summary>
+	public static (int Bank, int Set)? PictureOfScript( int script )
+	{
+		var index = (script - FirstScript) / WordsAScript;
+
+		if ( script < FirstScript || (script - FirstScript) % WordsAScript != 0 || index >= Table.Length )
+			return null;
+
+		var picture = index < 16 ? index : index == 16 ? 21 : index - 1;
+
+		return (picture >> 4, picture & 0xf);
 	}
 
 	/// <summary>

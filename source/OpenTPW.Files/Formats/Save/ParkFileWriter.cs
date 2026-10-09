@@ -49,11 +49,12 @@ public static class ParkFileWriter
 	/// <see cref="StaffPool"/> is the pool of candidates (<see cref="ParkWorld.PutStaffPool"/>) and
 	/// <see cref="Arrival"/> the arrival timer (<see cref="ParkWorld.PutArrival"/>), each the file's where it is null.
 	/// <see cref="Things"/> is the objects, their scripts and their models as they run; the file's where it is null.
+	/// <see cref="LetGo"/> is the balloons let go and still bursting, written with the people; the file's where it is null.
 	/// </summary>
 	public readonly record struct Running( int GameTick, bool ParkClosed, int VisitorsToDate, int Balance,
 		ParkCameraModule.View Camera, IReadOnlyDictionary<int, ParkWorld.MapCell>? Cells = null,
 		IReadOnlyList<ParkWorld.WrittenPerson>? People = null, ParkWorld.WrittenStaffPool? StaffPool = null,
-		ArrivalTimer? Arrival = null, RunningThings? Things = null );
+		ArrivalTimer? Arrival = null, RunningThings? Things = null, IReadOnlyList<ParkWorld.WrittenSprite>? LetGo = null );
 
 	/// <summary>
 	/// The file's objects, scripts and models as the running park has them (<c>docs/exe/saves.md</c>, "OpenTPW's
@@ -103,10 +104,11 @@ public static class ParkFileWriter
 
 	/// <summary>
 	/// The arrival timer as it is written: the <c>mGameTick</c> the next load's wait is counted from
-	/// (<c>mTimeSig</c>), how many of a load held are still to drop (<c>mPeopleOnBus</c>) and whether one is held
-	/// (<c>mOffloading</c>).
+	/// (<c>mTimeSig</c>), how many of a load held are still to drop (<c>mPeopleOnBus</c>), whether one is held
+	/// (<c>mOffloading</c>), and the thing of the vehicle that is current (the header's
+	/// <c>mCurrentArrivalVehicle</c>), nought with none and null to leave the file's.
 	/// </summary>
-	public readonly record struct ArrivalTimer( int TimeSig, int PeopleOnBus, bool Offloading );
+	public readonly record struct ArrivalTimer( int TimeSig, int PeopleOnBus, bool Offloading, int? CurrentVehicle = null );
 
 	/// <summary>
 	/// The inflated body of the file: a copy of <paramref name="loaded"/>'s with <paramref name="running"/> written
@@ -159,7 +161,7 @@ public static class ParkFileWriter
 			loaded.PutStaffPool( body, pool );
 
 		if ( running.Arrival is { } arrival )
-			loaded.PutArrival( body, arrival.TimeSig, arrival.PeopleOnBus, arrival.Offloading );
+			loaded.PutArrival( body, arrival.TimeSig, arrival.PeopleOnBus, arrival.Offloading, arrival.CurrentVehicle );
 
 		things = null;
 
@@ -285,7 +287,7 @@ public static class ParkFileWriter
 		// Last: the people change the body's length, and everything above is written where the file has it.
 		if ( running.People is { } written )
 		{
-			body = loaded.PutPeople( body, written, edits, out var report );
+			body = loaded.PutPeople( body, written, edits, running.LetGo, out var report );
 			people = report;
 		}
 

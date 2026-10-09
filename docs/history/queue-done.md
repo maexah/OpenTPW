@@ -5553,6 +5553,33 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   index made with flags `0x33a` at 360 less the tile's angle (`FUN_005229e0`); a cell cleared empties its slot;
   a cell tiled again does both (`FUN_005365d0`). After Q253, which builds a slot's making. Confirm: a queue
   laid here standing fenced in the original under Proton, and one cleared gone; a screenshot.
+- [x] **Q255. The writer: the arrival vehicle, a balloon let go and a thought read back.** Done 2026-10-09,
+  `alexah/373-writer-vehicle-balloon-thought`; `docs/exe/saves.md`, "OpenTPW's writer, the arrival vehicle, a
+  balloon let go and a thought read back". The header's `mCurrentArrivalVehicle` is written with the things and
+  read back; a balloon let go is a sprite nobody names, written inside its fade's loop (a sprite record's
+  `+0x1c` is its loop stack's room) and burst on after a load; a member of staff's thought is read and a saved
+  bubble shows again. Written at tick 1280 with the bus driving in at status 1, thirteen to drop, one balloon at
+  alpha 250 and a bubble over the hire: after OpenTPW's load status 1 on word 30, the balloon at 190, the
+  bubble since 1277, the bus spent on 1405 as an unsaved one; the original read handle 15 and status 1 on its
+  first poll, kept 15 until status 6 on 1402, faded the balloon to state 4 and freed slot 29 within a second,
+  and showed the bubble on slot 28, picture 18. The leaver was found: Q250's file holds guest 40 in state
+  `0x15` on stop A. Four predictions wrong, mine (the circuit's length twice, a poll, the control). Of 62 bugs
+  put back 57 failed at first, one line that did nothing taken out, two fail after tests, two of
+  `Level.WritePark`'s hand fail none. Leftovers are notes under Q26c and Q257. The item as written: From Q250
+  and Q251.
+  **The arrival vehicle is not written** (`SAVE_PARK_ARRIVAL_VEHICLE`). The header's
+  `mCurrentArrivalVehicle` and the vehicle's script are one state (`FUN_0051a690`), and both are left the
+  file's, so a park saved with the bus on its circuit loads with none current and the bus where the first file
+  had it (`q250/run2/1-at-the-save.png`); the bus's script is written as it runs now (Q252), so the bus drives on
+  with none current: write the handle with it, and read it back
+  (`SAVED_CURRENT_ARRIVAL_VEHICLE`). In the original a load of that file made a vehicle anew on its first sweep
+  (`q250/orig/a-load.log`): look for the leaver at the stop that summons it.
+  **A balloon let go and still bursting at the save is not written** (`SAVE_PARK_BALLOON_LET_GO`):
+  no record names it, and what the original's file holds for one was not looked for (a kind-10 sprite on frame
+  1 that nobody's `mBalloonScript` names). **A load here reads no member of staff's thought**: `mLastThought`
+  and `mTimeBubbleShown` are a guest's alone in `ParkPeople`, so a kept member is written with nought for both
+  until they think again, and no saved bubble is shown again, a guest's (`SAVED_THOUGHT_BUBBLE`) or a
+  member's (uncounted). Read both back, and make the bubble from its sprite's picture.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

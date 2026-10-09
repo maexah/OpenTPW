@@ -236,11 +236,21 @@ public sealed partial class ParkPeople : Entity
 			_arrivalsRemaining = savedLoad.PeopleOnBus;
 		}
 
-		// A vehicle the save holds current (mCurrentArrivalVehicle, a thing id; nought in the park the game
-		// ships) is not: the park starts with none, and a save that names one is counted. A load held is then
-		// brought by the vehicle its size summons.
+		// The vehicle the save holds current (mCurrentArrivalVehicle, a thing id) is current here: whichever of the
+		// three sizes' things it is. Its script is resumed with the others, so its status is the save's. One that
+		// is none of the three's is counted and not current.
+		_vehicleThings = [park?.ArrivalVehicleForSmallCrowd ?? 0, park?.ArrivalVehicleForMediumCrowd ?? 0, park?.ArrivalVehicleForLargeCrowd ?? 0];
+
 		if ( park is { CurrentArrivalVehicle: not 0 } )
-			Unimplemented.Report( "SAVED_CURRENT_ARRIVAL_VEHICLE" );
+		{
+			_arrivalVehicle = Array.IndexOf( _vehicleThings, park.CurrentArrivalVehicle ) + 1;
+
+			if ( _arrivalVehicle == 0 )
+				Unimplemented.Report( "SAVED_CURRENT_ARRIVAL_VEHICLE" );
+
+			Log.Info( $"People: the save's current arrival vehicle is thing {park.CurrentArrivalVehicle}, "
+				+ (_arrivalVehicle != 0 ? $"vehicle {_arrivalVehicle} ({ParkFixedItems.VehicleName( _arrivalVehicle )})" : "none of its three: no vehicle current") );
+		}
 
 		// What the park charges is on its economy thing, kept by the running park so the entry-price screen can
 		// move it, and what a guest will put up with is in the balance file: the gate takes both, and reads the
@@ -329,6 +339,9 @@ public sealed partial class ParkPeople : Entity
 			var saved = park.People.ToDictionary( person => person.ThingId, person => person );
 			var pictures = park.Sprites.ToDictionary( picture => picture.Slot );
 
+			// The balloon slots a guest's record names; a balloon on any other was let go.
+			var named = new HashSet<int>();
+
 			foreach ( var peep in _peeps )
 			{
 				if ( !saved.TryGetValue( peep.ThingId, out var person ) )
@@ -363,15 +376,31 @@ public sealed partial class ParkPeople : Entity
 					sprite.ScheduleFrom( 0 );
 
 					_sprites[peep.ThingId] = sprite;
+					CountSavedLoops( park, person.SpriteSlot );
 				}
 
 				// And the balloon, by the slot the guest names: the table is saved slot for slot, the balloon's own
-				// sprite with it (FUN_00475730). A slot that is not a balloon's is not taken for one. A balloon saved
-				// bursting is not restored: no guest names it any more (0x004fe96b), and its loop stack is not read.
+				// sprite with it (FUN_00475730). A slot that is not a balloon's is not taken for one.
 				if ( person.Guest is { BalloonScript: not 0 } guest
 					&& pictures.TryGetValue( guest.BalloonScript, out var held ) && held.Type == Balloon.SpriteKind )
+				{
 					peep.Balloon = Balloon.Saved( held );
+					named.Add( guest.BalloonScript );
+				}
+
+				// And the bubble over them, by its slot, as the script its sprite was made on shows it.
+				if ( person.Guest is { ThoughtScript: not 0 } thinker
+					&& pictures.TryGetValue( thinker.ThoughtScript, out var thought ) && thought.Type == Thoughts.SpriteKind )
+					peep.Thoughts.Restore( thinker.LastThought, thinker.TimeBubbleShown, thought.Script );
 			}
+
+			// A balloon saved let go and still bursting is a sprite of the table that no guest names any more
+			// (0x004fe96b): it goes on bursting where it was, inside its fade's loop.
+			foreach ( var orphan in pictures.Values.Where( sprite => sprite.Type == Balloon.SpriteKind && !named.Contains( sprite.Slot ) ).OrderBy( sprite => sprite.Slot ) )
+				_bursting.Add( Balloon.Saved( orphan, (park as ParkWorld)?.SpriteLoopsOf( orphan.Slot ) ) );
+
+			if ( _bursting.Count > 0 )
+				Log.Info( $"People: {_bursting.Count} balloons of the save's let go and still bursting" );
 
 			// And the staff, seeded exactly as the guests are and for the same two reasons: they are saved
 			// facing a particular way and part-way through a picture, and starting either afresh would turn
@@ -396,9 +425,14 @@ public sealed partial class ParkPeople : Entity
 
 					_sprites[member.ThingId] = sprite;
 					_staffLooks[member.ThingId] = (picture.Type, picture.Bank);
+					CountSavedLoops( park, person.SpriteSlot );
 				}
 				else
 					_staffLooks[member.ThingId] = (person.SpriteKind, person.SpriteBank);
+
+				if ( person.Staff is { ThoughtScript: not 0 } thinker
+					&& pictures.TryGetValue( thinker.ThoughtScript, out var thought ) && thought.Type == Thoughts.SpriteKind )
+					member.Thoughts.Restore( thinker.LastThought, thinker.TimeBubbleShown, thought.Script );
 			}
 		}
 
@@ -1003,21 +1037,51 @@ public sealed partial class ParkPeople : Entity
 	internal int StillToDrop => _arrivalsRemaining;
 
 	/// <summary>
-	/// The arrival timer as a park file holds it: the mark, the count still to drop and whether a load is held.
+	/// A person's own sprite saved inside a loop of its script, a bank's state animation, is put on its word with
+	/// an empty stack and the script's words as a start leaves them: counted (<c>SAVED_SPRITE_LOOP_STACK</c>).
+	/// A balloon let go keeps its stack (<see cref="Balloon.Saved"/>).
+	/// </summary>
+	private static void CountSavedLoops( IParkInitialState park, int slot )
+	{
+		if ( park is ParkWorld file && file.SpriteLoopsOf( slot ).Count > 0 )
+			Unimplemented.Report( "SAVED_SPRITE_LOOP_STACK" );
+	}
+
+	/// <summary>The things the save's <c>mArrivalVehicle_Size1..3</c> name, nought where it names none.</summary>
+	private readonly int[] _vehicleThings;
+
+	/// <summary>Which of the three vehicles is current, 1 to 3, or nought - the slot <c>mCurrentArrivalVehicle</c>'s thing is in.</summary>
+	internal int CurrentVehicle => _arrivalVehicle;
+
+	/// <summary>
+	/// The arrival timer as a park file holds it: the mark, the count still to drop, whether a load is held, and
+	/// the vehicle that is current, as the thing the file's <c>mArrivalVehicle_Size1..3</c> names for it
+	/// (<c>mCurrentArrivalVehicle</c>), nought with none.
 	///
 	/// <para>
-	/// <b>The vehicle is not written, and one that is current is counted</b> (<c>SAVE_PARK_ARRIVAL_VEHICLE</c>): the
-	/// header's <c>mCurrentArrivalVehicle</c> and the vehicle's script are one state, and the scripts are still the
-	/// file's (Q255). A file written with a load held so names no vehicle unless its first file did, and the load
-	/// is brought by the one its size summons, driving in again.
+	/// The handle and the vehicle's script are one state (<c>FUN_0051a690</c>), so the handle is written only with
+	/// the scripts: where <paramref name="written"/> is null it is left the file's. <b>A vehicle that is current and
+	/// is not a thing of the file is counted</b> (<c>SAVE_PARK_ARRIVAL_VEHICLE</c>) and written as none: the ferry
+	/// and the seaplane where the file names neither, which are stood here and made on demand by the original. A
+	/// load it held is then brought by the vehicle its size summons.
 	/// </para>
 	/// </summary>
-	internal ParkFileWriter.ArrivalTimer WrittenArrival()
+	/// <param name="written">Whether a thing that is no person is in the file being written; null where the things go out as the file's.</param>
+	internal ParkFileWriter.ArrivalTimer WrittenArrival( Func<int, bool>? written = null )
 	{
-		if ( _arrivalVehicle != 0 )
-			Unimplemented.Report( "SAVE_PARK_ARRIVAL_VEHICLE" );
+		int? current = written != null ? 0 : null;
 
-		return new ParkFileWriter.ArrivalTimer( _arrivalMark, _arrivalsRemaining, _offloading );
+		if ( _arrivalVehicle != 0 )
+		{
+			var thing = _vehicleThings[_arrivalVehicle - 1];
+
+			if ( written != null && thing != 0 && written( thing ) )
+				current = thing;
+			else
+				Unimplemented.Report( "SAVE_PARK_ARRIVAL_VEHICLE" );
+		}
+
+		return new ParkFileWriter.ArrivalTimer( _arrivalMark, _arrivalsRemaining, _offloading, current );
 	}
 
 	/// <summary>How long a load waits after the last, in fours of sweeps - <c>Arrival.TimeBetweenArrivals</c>, 150.</summary>
@@ -1346,13 +1410,17 @@ public sealed partial class ParkPeople : Entity
 
 	/// <summary>
 	/// The arrival timer, for the debug console's <c>arrivals</c>: the park's clock, the mark, and either the load
-	/// held or the <c>mGameTick</c> the next is due on. Answering the console rather than the park.
+	/// held or the <c>mGameTick</c> the next is due on, then the vehicle that is current, with its thing where the
+	/// save names one. Answering the console rather than the park.
 	/// </summary>
 	internal string ArrivalCensus()
 		=> $"arrivals: mGameTick {State.GameTick} mark {_arrivalMark} worth {_behaviour.ParkExcitement} "
 			+ $"load now {LoadSize( _behaviour.ParkExcitement, Raining() )} " + (_offloading
 			? $"load held, vehicle {_arrivalVehicle}, {_arrivalsRemaining} still to drop"
-			: $"next load due on mGameTick {FirstDueTick( _arrivalMark, ArrivalPeriod )}");
+			: $"next load due on mGameTick {FirstDueTick( _arrivalMark, ArrivalPeriod )}")
+			+ (_arrivalVehicle != 0
+				? $"; current vehicle {_arrivalVehicle} ({ParkFixedItems.VehicleName( _arrivalVehicle )}, thing {_vehicleThings[_arrivalVehicle - 1]}) status {VehicleScript( _arrivalVehicle )?[VehicleState] ?? NoVehicle}"
+				: "; no vehicle current");
 
 	/// <summary>
 	/// What each of the three vehicles is doing right now - the thing it was stood as, whether a script

@@ -687,7 +687,8 @@ over the copy, never the one held.
   the second stage's ("OpenTPW's writer, the cells"), the people the third's ("the people"), the pool of
   candidates and the arrival timer theirs ("the staff pool and the arrival timer"), the file's objects, scripts
   and models as they run the fourth's ("OpenTPW's writer, the objects"); a thing bought and a thing sold the
-  fifth's; the rest is Q254, Q255 and Q241j.
+  fifth's; a queue cell's model the sixth's; the arrival vehicle, a balloon let go and a thought read back
+  the seventh's; the rest is Q256, Q257 and Q241j.
 - **Where.** `Level.WritePark( name )` writes `<player's folder>/<theme>/<name>.TPWS`, replacing a file of that
   name in another case. The console's `savepark <name>` is its one caller; the Save Park screen's OK stays counted
   until Q241j. **Deviations:** the player's `gms.dat` is not written first (Q248) and the pointer is not put back
@@ -841,8 +842,7 @@ follow the list. It runs last, because it alone changes the body's length.
   ("OpenTPW's writer, the objects").
 - **Deviations, each counted.** A handle to a thing the file does not hold, which
   is anything bought here, is written as nought, and a guest bound for it or on it decides where they stand
-  (`SAVE_PARK_HANDLE_TO_AN_UNWRITTEN_THING`, and `SAVE_PARK_GUEST_ON_A_THING` for one on it). A balloon let go and still bursting is nobody's and is not
-  written (`SAVE_PARK_BALLOON_LET_GO`). A member
+  (`SAVE_PARK_HANDLE_TO_AN_UNWRITTEN_THING`, and `SAVE_PARK_GUEST_ON_A_THING` for one on it). A member
   of staff in the hand is written idle where they were picked up, as the original puts the hand's thing down
   first.
 - **The staff pool and the arrival block were not written at this stage**, so a load was followed by a load of
@@ -898,7 +898,8 @@ sprite of the file.
 a guest's bubble, an entertainer's set byte after a performance, a balloon bursting at the save (counted), a slot
 naming another kind's sprite. **Not looked at:** the original's staff window and its days employed for the hire; the
 bubble was read from memory and is in no photograph of the original (it is freed 12 sweeps past its stamp).
-**No bubble shows after OpenTPW's own load**: the reader makes none. `docs/exe/addresses.md` not regenerated.
+A load here shows a saved bubble again and reads a member of staff's thought ("OpenTPW's writer, the arrival
+vehicle, a balloon let go and a thought read back"). `docs/exe/addresses.md` not regenerated.
 
 ### OpenTPW's writer, the staff pool and the arrival timer
 
@@ -933,12 +934,9 @@ the people's stage wrote.
   (0, 5 and 1 in every file measured; nothing here runs them).
 - **A load held is carried on by a load here**: `ParkPeople` takes the count and the flag as the manager's turn
   reads them (`FUN_004cf3e0`), and the rest are dropped once a vehicle answers that it is unloading.
-- **A deviation, counted: the vehicle is not written** (`SAVE_PARK_ARRIVAL_VEHICLE`, once a save with one
-  current). The header's `mCurrentArrivalVehicle` and the vehicle's script are one state: `FUN_0051a690` reads
-  the script's variable 1 of the thing the header names (`park.md`, "Arrivals"). The bus's script is written
-  as it runs ("OpenTPW's writer, the objects") and the header's handle is still the file's (Q255), so a park
-  saved with the bus on its circuit loads with no vehicle current and its bus driving on. A load held is then brought by the
-  vehicle its size summons, which drives in again; a guest by the road has no vehicle to wait for.
+- **The vehicle that is current is written with the things** ("OpenTPW's writer, the arrival vehicle, a balloon
+  let go and a thought read back"): the header's `mCurrentArrivalVehicle` and the vehicle's script are one
+  state.
 
 **Measured (Q250, `q250/`).** Lost Kingdom left alone from easymode's 755 to `mGameTick` 1453 (1455 in a second
 run), `savepark Q250`. Before the save the log held the pool's top-ups on 1083 and 1444 and the first load's
@@ -1359,6 +1357,118 @@ piece beside a thing bought in one file (the tests' ape and its stub: 91 and 92)
 a dead end's record written by OpenTPW (the run's queue was joined), a bin's. The edits were the console's
 `delqueue`, `tool` and `worldclick`, the save `savepark` under `pause`: no player's hand reaches the writer yet.
 `docs/exe/addresses.md` not regenerated.
+
+### OpenTPW's writer, the arrival vehicle, a balloon let go and a thought read back
+
+The seventh stage (Q255): three things the earlier stages counted and left.
+
+**The arrival vehicle.** The header's `mCurrentArrivalVehicle` is the thing of the vehicle that is current, one
+of the three `mArrivalVehicle_Size1..3` name, and `FUN_0051a690` reads that thing's script for its status
+(`park.md`, "Arrivals"), so the handle and the script are one state.
+- **Written** (`ParkPeople.WrittenArrival`, `ParkWorld.PutArrival`): the thing the file names for the current
+  vehicle's size, nought with none current, and only with the things, whose scripts go out as they run; without
+  them the handle is left the file's. **Counted, and written as none** (`SAVE_PARK_ARRIVAL_VEHICLE`): a vehicle
+  the file names no thing for, which is the ferry and the seaplane in a park that has only had the bus (they
+  are stood here from the load; the original makes each at its first summons, Q26c), and any vehicle where the
+  things are the file's.
+- **Read back** (`ParkPeople`'s constructor): the size whose thing the handle is becomes current, and its
+  script is resumed with the others, so its status is the save's. A handle that is none of the three is
+  counted and none is current (`SAVED_CURRENT_ARRIVAL_VEHICLE`).
+- **What the old file did in the original, explained.** Q250's file was written with the bus on its circuit and
+  a handle of nought, and the original made thing 32 current on its first sweep. That file holds guest 40 in
+  state `0x15` on (42,5), stop A: the manager's tail summons at random for a leaver at the stop when no vehicle
+  is current (`FUN_004cf3e0`, `FUN_0051a9d0`; `park.md`, "The spent vehicle"), and the draw took a size whose
+  thing the park did not have yet. The second run's file holds no such guest.
+
+**A balloon let go.** `FUN_004fe950` puts the balloon's own sprite on the let-go script (word 1666) and clears
+the guest's `mBalloonScript` (`0x004fe96b`), so a balloon still bursting is a sprite of the table that no record
+names. No file of the original's to hand holds one (twelve files, 1,154 sprites); what one holds is the
+record's own layout, and the original's memory after it let balloons go (below).
+- **A sprite's loop stack.** The record's `+0x1c` is how much room its stack has left, 20 with nothing pushed:
+  a loop's start (`0x004763b0`) takes one off it, stores the program's word at `+0x20` plus four times what is
+  left (`FUN_00475230`), so the first start pushed lies at `+0x6c`, and counts the loop in `+0x78`
+  (`0x004763c6`). The end word leaves state 4 and `+0x114`, shown, nought (`0x0047509d`), and the next due turn
+  frees the slot (`FUN_00475360`). The twelve files agree: 1,018 sprites hold 20 and nothing pushed, 122 hold 19
+  with word 1714 pushed (program 1704, which counts in `+0x74`: another opcode's count, not decoded) and 14 hold
+  19 with 1730 and a count of one (program 1760, a bank's first state script).
+- **Written** (`ParkPeople.WrittenLetGo`, `ParkWorld.PutPeople`): each on the lowest slot free after the
+  people's, the balloons' and the bubbles': kind 10, bank 0, its set, frame, alpha and place, on the let-go
+  script where it rests. Past its frame that is word 1657 inside the fade's loop: room 19, word 1655 at
+  `+0x6c`, a count of one, state 2 and shown. Just let go it is word 1666 with an empty stack; at its end word
+  it is state 4 and hidden. A balloon of the file's that nobody names any more is let go of its slot.
+- **Read back**: a kind-10 sprite no guest's `mBalloonScript` names goes on bursting where it was, with its
+  stack (`ParkWorld.SpriteLoopsOf`, `Balloon.Saved`), and one at its end word is freed on its first due turn.
+- **Not read:** the loop stack of a person's own sprite. One saved inside a state script's loop (the 14 of
+  the 1,154 on program 1760) is put on its script's word with an empty stack, as before.
+
+**A thought read back.** `mLastThought`, `mThoughtScript` and `mTimeBubbleShown` are the person base's (file
+`+386`, `+390`, `+394`), a member of staff's as a guest's.
+- **A member of staff's are read** (`ParkWorld.StaffState`, `Staff`): the shipped guard holds thought 18 and a
+  stamp of 180, the entertainer 18 and 92, the mechanic 18 and 73. So a thought's class holds off a member's
+  next bubble from the save's stamp, where it was counted from nought.
+- **A saved bubble shows again**, a guest's and a member's (`Thoughts.Restore`): the slot `mThoughtScript`
+  names, where it holds a kind-9 sprite, gives the bubble the picture of the script that sprite was made on
+  (`Thoughts.PictureOfScript`), which holds from its first word, where its `+0xb4` does only once the script
+  has run. It is taken away as any bubble, twelve sweeps past its stamp on a needs turn. `SAVED_THOUGHT_BUBBLE`
+  is gone.
+
+**Measured (Q255, `q255/`).** Lost Kingdom with a Balloon Shop bought at (43,22) and a researcher hired under
+`pause`, left until the first load's bus was summoned (`mGameTick` 1264) and guests held balloons, the hire tired
+with `staffrest`, held on the first poll that showed their bubble, the balloons' lives set to 1 with `balloon`
+and the park stepped until one was let go and had shown its burst, `savepark Q255` at 1280: `arrivals` ended
+"current vehicle 1 (bus, thing 15) status 1", the log read "a load held with 13 still to drop,
+mCurrentArrivalVehicle 15" and "8 of them balloons and 1 bubbles, 1 balloons let go", and neither
+`SAVE_PARK_ARRIVAL_VEHICLE` nor `SAVE_PARK_BALLOON_LET_GO` was counted. A Python reader found the header's
+handle 15; slot 29 a kind-10 sprite nobody names, script 1666 at 1657, alpha 250, `+0x1c` 19, `+0x6c` 1655,
+`+0x78` 1, state 2, shown; and the hire naming slot 28, a kind-9 sprite of picture 18 on script 1576 at 1580,
+with `mLastThought` 20 and `mTimeBubbleShown` 1277. Loaded from OpenTPW's Load Park screen and held at once, the
+log read "the save's current arrival vehicle is thing 15, vehicle 1 (bus)" and "1 balloons of the save's let go
+and still bursting"; `arrivals` ended with status 1 and the bus's script stood on its saved word, 30; `guests`
+printed the bubble over the hire, bank 1 set 2 since 1277, and the balloon at alpha 190; nothing was summoned,
+and neither `SAVED_THOUGHT_BUBBLE` nor `SAVED_CURRENT_ARRIVAL_VEHICLE` was counted. Run on, the bubble and the
+balloon went and the bus was spent on 1405, the tick an unsaved bus with a load of thirteen is spent on
+(`q250/run1`). That is the first run of three; the commit's own build read the same way at 1273 with two
+balloons let go, and was spent on 1406 (`gate`, 4 of 4). A second run saved the bus on a leaver's circuit,
+summoned at random on 1103 with no load held, at status 3 and word 71 on 1148: after its load the status and
+the word were the same, nothing was summoned, and the bus was spent on 1232, 129 sweeps past its summons, as an
+unsaved one is. **The build before** counted the vehicle once and the balloons let go twice at its save, wrote
+a handle of nought and no balloon nobody names, and after its load showed no bubble over the hire and summoned the bus again on its first sweep, for the load
+the file held (`control2`).
+**The original under Proton** loaded the file over a running park (`orig/a-load.log`, polled every 20 ms). On
+the first poll that showed `mGameTick` 1280, `mCurrentArrivalVehicle` read 15 and the bus's script variable 1
+read 1; slot 29 held a kind-10 sprite on 1666 at 1657, alpha 250, state 2, shown, `+0x1c` 19 and `+0x6c` 1655;
+and the hire's `+0xb4` named slot 28, a kind-9 sprite on 1576 at 1580 showing picture 18, with thought 20 and
+stamp 1277. The balloon's alpha fell 20 a turn to 10, then read -10 in state 4, hidden, with `+0x1c` 20 again,
+and the slot was empty a second after the load. The bubble was last read on 1287. The handle stayed 15 while the
+bus's status read 2 on 1298, 3 on 1318, 4 on 1357, nought on 1359, 5 on 1373 and 6 on 1402, and was nought on
+1403, the circuit's end; the thirteen of the load held were made from 1298 (the highest thing went from 44 to
+57), and no other vehicle was made or made current. Its frames show the bus driving in at the right of the
+first, further in two seconds on, and at the stop with the guests getting off fourteen seconds on. Balloons the
+original let go itself in that run (the file's holders had a life of 1) read 1666 at 1666 with alpha 255, state
+2, shown and `+0x1c` 20 on the sweep they were let go, as the writer puts one just let go. It loaded the
+commit's own file the same way (`orig/g-load.log`): 15 and status 1 on the first poll of 1273, slots 27 and 28
+fading from 250 and last read on 1276, the bubble on slot 26, and the handle 15 to status 6 on 1403; there the bus
+was summoned again on 1404, the handle still 15, for a leaver at the stop.
+**Predictions wrong, mine** (`PREDICTION.txt`): the bus spent 125 to 135 sweeps past its summons (141: the 130
+was measured with a load of one, and thirteen take twelve sweeps more to drop); the bubble gone by sixteen
+sweeps past its stamp as my poll read it (the poll was four sweeps apart); and two of the control's: no balloon
+let go after its load (three were, new ones, the file's holders having a life of 1) and a bus nobody forgets
+(with a load held the old build summons the bus again on its first sweep, which makes it current); and the
+circuit's length a second time, restated as 141 for every circuit where one with no load is 129.
+**Not predicted:** the original's bubble was last read six and ten sweeps past its stamp in the two runs, sooner
+than the twelve a needs turn waits: the tired hire's next thought frees it (`FUN_0050be80`). And the original's
+sprite turns came 62 ms apart, where a sprite on the made interval of 62
+sits every other turn out here; under Proton's 30 frames a second its clock passes the due time each turn.
+**Not run in either game, tested only:** a balloon written at its end word, one just let go written by OpenTPW,
+a file's own let-go balloon let go of its slot, a guest's saved bubble, a bubble saved just made, a current
+vehicle whose thing is not written, a handle that is none of the three. **Not run in the original:** a vehicle
+current with no load held. **No test:** `Level.WritePark`'s hand of the things and of the let-go list to the
+writer (the run's two log lines). **Not looked at:** the original's bubble and balloons are its memory's and in
+no photograph of it: the first file's camera was on the bus stop, and the second's, put between the balloons
+and the hire, takes in less ground there and shows neither (`sheet-ours-beside-original.png`). Of 62 bugs put
+back 57 failed a test at first; one showed a line that did nothing, taken out; two fail after tests were added;
+the two of `Level.WritePark`'s hand fail none. The save was `savepark` under `pause`, the shop `buy`, the hire `hire`: no
+player's hand reaches the writer yet. `docs/exe/addresses.md` not regenerated.
 
 ### Read, not run
 

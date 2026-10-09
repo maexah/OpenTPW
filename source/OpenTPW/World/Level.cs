@@ -558,7 +558,7 @@ public class Level
 
 		var running = new ParkFileWriter.Running( state.GameTick, state.ParkIsClosed, state.VisitorsToDate, state.Balance,
 			new ParkCameraModule.View( ParkOrbitCameraMode.Zoom, -ParkOrbitCameraMode.Yaw, point.X, point.Y ), cells,
-			people?.Written( written.Contains ), pool?.Written(), people?.WrittenArrival(), things );
+			people?.Written( written.Contains ), pool?.Written(), people?.WrittenArrival( things != null ? written.Contains : null ), things, people?.WrittenLetGo() );
 
 		byte[] file;
 		ParkWorld.PeopleWritten? peopleWritten;
@@ -639,7 +639,8 @@ public class Level
 		if ( running.Arrival is { } arrival )
 		{
 			Log.Info( $"Save: the arrival timer's mark {arrival.TimeSig}, "
-				+ (arrival.Offloading ? $"a load held with {arrival.PeopleOnBus} still to drop" : "no load held") );
+				+ (arrival.Offloading ? $"a load held with {arrival.PeopleOnBus} still to drop" : "no load held")
+				+ (arrival.CurrentVehicle is { } vehicle ? $", mCurrentArrivalVehicle {vehicle}" : ", the vehicle left the file's") );
 		}
 
 		if ( peopleWritten is { } report )
@@ -651,7 +652,7 @@ public class Level
 
 			Log.Info( $"Save: {report.Kept} people kept, {report.Made} made, {report.Gone} gone; " +
 				$"{report.LiveSprites} sprites in {report.SpriteSlots} slots, {report.Balloons} of them balloons and " +
-				$"{report.Bubbles} bubbles; {report.CellsHeaded} cells headed anew" );
+				$"{report.Bubbles} bubbles, {report.LetGo} balloons let go; {report.CellsHeaded} cells headed anew" );
 		}
 
 		return path;

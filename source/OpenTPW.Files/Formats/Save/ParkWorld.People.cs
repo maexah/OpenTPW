@@ -187,7 +187,14 @@ public sealed partial class ParkWorld
 	/// </summary>
 	/// <param name="Interval">The sprite record's <c>+0x80</c>.</param>
 	/// <param name="MadeSetByte">The record's <c>+0xbc</c> where the sprite is made; see <see cref="WrittenPerson"/>.</param>
-	public readonly record struct WrittenSprite( Sprite Picture, int Interval = 0x3e, int? MadeSetByte = null );
+	/// <param name="Loops">
+	/// The loop starts its program has pushed and not popped, the oldest first, each a word of the programs' array
+	/// (the record's stack, <see cref="SpriteLoopsOf"/>). Null leaves the record's stack and state as they are,
+	/// which is right for a program with no loop; given, the record is written as one that has run: state 2 and
+	/// shown, or with <paramref name="Ended"/> state 4 and hidden, as the end word leaves it (<c>0x0047509d</c>).
+	/// </param>
+	public readonly record struct WrittenSprite( Sprite Picture, int Interval = 0x3e, int? MadeSetByte = null,
+		IReadOnlyList<int>? Loops = null, bool Ended = false );
 
 	/// <summary>What <see cref="PutPeople"/> did, for the log.</summary>
 	/// <param name="UnmatchedSpriteSets">
@@ -197,8 +204,9 @@ public sealed partial class ParkWorld
 	/// </param>
 	/// <param name="Balloons">Balloons written, each on its guest's <c>mBalloonScript</c>.</param>
 	/// <param name="Bubbles">Thought bubbles written, each on its person's <c>mThoughtScript</c>.</param>
+	/// <param name="LetGo">Balloons let go and still bursting written, each on a slot nobody names.</param>
 	public readonly record struct PeopleWritten( int Kept, int Made, int Gone, int SpriteSlots, int LiveSprites,
-		int CellsHeaded, int UnmatchedSpriteSets, int Balloons = 0, int Bubbles = 0 );
+		int CellsHeaded, int UnmatchedSpriteSets, int Balloons = 0, int Bubbles = 0, int LetGo = 0 );
 
 	/// <summary>The first header field of the five staff lists' heads, in the header's order.</summary>
 	private const int FirstHandymanField = 20;
@@ -272,6 +280,17 @@ public sealed partial class ParkWorld
 	/// </para>
 	/// </summary>
 	internal byte[] PutPeople( byte[] body, IReadOnlyList<WrittenPerson> people, ObjectEdits? objects, out PeopleWritten report )
+		=> PutPeople( body, people, objects, null, out report );
+
+	/// <summary>
+	/// <see cref="PutPeople(byte[], IReadOnlyList{WrittenPerson}, ObjectEdits?, out PeopleWritten)"/>, with the
+	/// balloons let go and still bursting. One is a sprite of the table that no record names (a guest's
+	/// <c>mBalloonScript</c> is cleared as they let go, <c>0x004fe96b</c>): each is written on a record made anew, on the lowest free slot
+	/// after the people's, the balloons' and the bubbles', and every balloon of the file's that nobody names now is
+	/// let go. Null leaves the file's as they lie.
+	/// </summary>
+	internal byte[] PutPeople( byte[] body, IReadOnlyList<WrittenPerson> people, ObjectEdits? objects,
+		IReadOnlyList<WrittenSprite>? letGo, out PeopleWritten report )
 	{
 		var madeObjects = objects?.Made ?? [];
 		var goneObjects = objects?.Gone ?? new HashSet<int>();
@@ -438,6 +457,18 @@ public sealed partial class ParkWorld
 
 			if ( person.Bubble is { } bubble )
 				bubbleOf[id] = PutOther( isMade ? 0 : BinaryPrimitives.ReadInt32LittleEndian( record.AsSpan( ThoughtScriptAt ) ), bubble );
+		}
+
+		if ( letGo != null )
+		{
+			var held = balloonOf.Values.ToHashSet();
+
+			foreach ( var slot in sprites.Where( entry => !held.Contains( entry.Key )
+				&& BinaryPrimitives.ReadInt32LittleEndian( entry.Value.AsSpan( SpriteType ) ) == BalloonSpriteKind ).Select( entry => entry.Key ).ToList() )
+				sprites.Remove( slot );
+
+			foreach ( var bursting in letGo )
+				PutOther( 0, bursting );
 		}
 
 		int FreeSlot()
@@ -643,7 +674,7 @@ public sealed partial class ParkWorld
 
 		report = new PeopleWritten( Kept: running.Count - made, Made: made, Gone: gone, SpriteSlots: slots,
 			LiveSprites: sprites.Count, CellsHeaded: headed, UnmatchedSpriteSets: unmatched,
-			Balloons: balloonOf.Count, Bubbles: bubbleOf.Count );
+			Balloons: balloonOf.Count, Bubbles: bubbleOf.Count, LetGo: letGo?.Count ?? 0 );
 
 		return stream.ToArray();
 	}
@@ -785,7 +816,52 @@ public sealed partial class ParkWorld
 	// The sprite record's fields the constructor writes that the reader does not hold (FUN_004758f0).
 	private const int SpriteSlotAt = 0x04;
 
-	private const int SpriteTimerAt = 0x1c;
+	/// <summary>
+	/// How much room the sprite's loop stack has left, of <see cref="SpriteLoopDepth"/>: a loop's start is pushed
+	/// by taking one off this and storing the program's word at <see cref="SpriteLoopsAt"/> plus four times what is
+	/// left (<c>FUN_00475230</c>), so the first pushed lies last.
+	/// </summary>
+	private const int SpriteLoopRoomAt = 0x1c;
+
+	private const int SpriteLoopsAt = 0x20;
+
+	private const int SpriteLoopDepth = 20;
+
+	/// <summary>How many loops the program is inside, counted up by each loop start (<c>0x004763c6</c>) and down as one ends.</summary>
+	private const int SpriteLoopCountAt = 0x78;
+
+	/// <summary>Whether the sprite is showing a frame (<c>FUN_00540b90</c>); the end word clears it.</summary>
+	private const int SpriteShownAt = 0x114;
+
+	/// <summary>The state of a sprite whose program has run a turn, and of one that has reached its end word (<c>0x004750a2</c>).</summary>
+	private const int SpriteRunningState = 2;
+
+	private const int SpriteEndedState = 4;
+
+	/// <summary>The sprite kind of a balloon, the table's "balloons" (<c>0x00764090</c>).</summary>
+	private const int BalloonSpriteKind = 10;
+
+	/// <summary>
+	/// The loop starts a live sprite's program has pushed and not popped, the oldest first, each a word of the
+	/// programs' array; empty for an empty slot or a stack that does not read.
+	/// </summary>
+	public IReadOnlyList<int> SpriteLoopsOf( int slot )
+	{
+		if ( !_spriteRecords.TryGetValue( slot, out var at ) )
+			return [];
+
+		var room = ReadInt32At( at + SpriteLoopRoomAt );
+
+		if ( room < 0 || room > SpriteLoopDepth )
+			return [];
+
+		var loops = new int[SpriteLoopDepth - room];
+
+		for ( var i = 0; i < loops.Length; ++i )
+			loops[i] = ReadInt32At( at + SpriteLoopsAt + ((SpriteLoopDepth - 1 - i) * 4) );
+
+		return loops;
+	}
 
 	private const int SpriteDueAt = 0x7c;
 
@@ -795,13 +871,12 @@ public sealed partial class ParkWorld
 
 	private const int SpriteSetByteAt = 0xbc;
 
-	/// <summary>The state and the timer a sprite is constructed with (<c>FUN_004758f0</c>).</summary>
+	/// <summary>The state a sprite is constructed with (<c>FUN_004758f0</c>), its loop stack empty.</summary>
 	private const int SpriteConstructedState = 1;
 
-	private const int SpriteConstructedTimer = 0x14;
 
 	/// <summary>
-	/// A sprite record as the original's constructor leaves one (<c>FUN_004758f0</c>): its slot, state 1, the timer,
+	/// A sprite record as the original's constructor leaves one (<c>FUN_004758f0</c>): its slot, state 1, an empty loop stack,
 	/// alpha 255 and scale 1, and nought where the constructor writes nought or nothing. Its <c>+0x7c</c> is
 	/// nought, a time already past, so it takes its first turn at once.
 	///
@@ -818,7 +893,7 @@ public sealed partial class ParkWorld
 
 		Put32( record, SpriteSlotAt, slot );
 		Put32( record, SpriteState, SpriteConstructedState );
-		Put32( record, SpriteTimerAt, SpriteConstructedTimer );
+		Put32( record, SpriteLoopRoomAt, SpriteLoopDepth );
 		PutSingle( record, SpriteScaleAt, 1f );
 		PutSingle( record, SpriteScaleAt + 4, 1f );
 
@@ -872,7 +947,7 @@ public sealed partial class ParkWorld
 		Put32( record, SpriteFacing, picture.Facing );
 	}
 
-	/// <summary>Writes a balloon or a bubble over its sprite's record: the program, the interval, the place, alpha, kind, bank, set and frame.</summary>
+	/// <summary>Writes a balloon or a bubble over its sprite's record: the program, the interval, the place, alpha, kind, bank, set and frame, and with <see cref="WrittenSprite.Loops"/> its loop stack and state.</summary>
 	private static void PutOtherSprite( byte[] record, WrittenSprite other )
 	{
 		var picture = other.Picture;
@@ -888,6 +963,20 @@ public sealed partial class ParkWorld
 		Put32( record, SpriteBank, picture.Bank );
 		Put32( record, SpriteNumberAt, picture.SpriteNumber );
 		Put32( record, SpriteFrame, picture.Frame );
+
+		if ( other.Loops is not { } loops )
+			return;
+
+		if ( loops.Count > SpriteLoopDepth )
+			throw new InvalidOperationException( $"a sprite inside {loops.Count} loops is past the {SpriteLoopDepth} a record holds" );
+
+		for ( var i = 0; i < loops.Count; ++i )
+			Put32( record, SpriteLoopsAt + ((SpriteLoopDepth - 1 - i) * 4), loops[i] );
+
+		Put32( record, SpriteLoopRoomAt, SpriteLoopDepth - loops.Count );
+		Put32( record, SpriteLoopCountAt, loops.Count );
+		Put32( record, SpriteState, other.Ended ? SpriteEndedState : SpriteRunningState );
+		Put32( record, SpriteShownAt, other.Ended ? 0 : 1 );
 	}
 
 	/// <summary>

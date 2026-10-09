@@ -1008,13 +1008,14 @@ public class ParkStaffBehaviourTests
 
 			var walk = new PeepWalk( member.Navigator, new CellEdge( state.Record, ParkPeople.WalkingMode ).Blocked );
 			var behaviour = new StaffBehaviour( Balance(), new Random( seed ), state );
+			var thought = member.Thoughts.Last;
 
 			behaviour.Step( member, walk, playing: null, tick: 1001 );
 
 			Assert.AreEqual( StaffActivity.Walking, member.Activity, $"seed {seed}" );
 			Assert.AreEqual( PeepNavigator.WaypointCentre( toX ), member.Navigator.Target.X, $"seed {seed}: the cell's centre, x" );
 			Assert.AreEqual( PeepNavigator.WaypointCentre( toY ), member.Navigator.Target.Y, $"seed {seed}: the cell's centre, y" );
-			Assert.AreEqual( 0, member.Thoughts.Last, "the arm thinks nothing" );
+			Assert.AreEqual( thought, member.Thoughts.Last, "the arm thinks nothing: the save's thought stands" );
 
 			for ( var tick = 1002; tick < 1100 && member.Navigator.Position.Cell != (toX, toY); ++tick )
 				behaviour.Step( member, walk, playing: null, tick );
@@ -1070,11 +1071,13 @@ public class ParkStaffBehaviourTests
 		// Every edge shut, so no aim routes.
 		var walk = new PeepWalk( member.Navigator, ( _, _, _ ) => true );
 		var draws = new CountedDraw( 3 );
+		var thought = member.Thoughts.Last;
 
 		new StaffBehaviour( Balance(), draws, state ).Step( member, walk, playing: null, tick: 1001 );
 
 		Assert.AreEqual( StaffActivity.Idle, member.Activity );
-		Assert.AreEqual( 0, member.Thoughts.Last, "a patrol roll would have thought 0x16" );
+		Assert.AreNotEqual( 0x16, thought );
+		Assert.AreEqual( thought, member.Thoughts.Last, "a patrol roll would have thought 0x16" );
 		Assert.AreEqual( 2 + (2 * PeepBehaviour.NowhereTries), draws.Asked,
 			"the turn's draw for a sound, the call's pass draw, then x and y of five tries" );
 	}
@@ -1105,7 +1108,7 @@ public class ParkStaffBehaviourTests
 		var saved = world.People.Single( person => person.ThingId == Guard );
 		var member = new Staff( saved.ThingId, saved.Model, saved.Staff!.Value with
 		{
-			State = (int)StaffActivity.Idle, TimeStartedIdling = 0
+			State = (int)StaffActivity.Idle, TimeStartedIdling = 0, LastThought = 0, TimeBubbleShown = 0
 		}, saved.Navigator );
 
 		member.Happiness = happiness;
@@ -1164,10 +1167,13 @@ public class ParkStaffBehaviourTests
 
 		member.Tiredness = rest;
 
+		var thought = member.Thoughts.Last;
+
+		Assert.AreNotEqual( 0x14, thought );
 		new StaffBehaviour( Balance(), new Random( 3 ), state ).Step( member, walk, playing: null, tick: 1001 );
 
 		Assert.AreEqual( tired, member.Activity == StaffActivity.GoingToRest, $"at rest {rest} the guard is {member.Activity}" );
-		Assert.AreEqual( tired ? 0x14 : 0, member.Thoughts.Last );
+		Assert.AreEqual( tired ? 0x14 : thought, member.Thoughts.Last );
 	}
 
 	/// <summary>

@@ -27,8 +27,8 @@ public sealed partial class ParkPeople
 	/// </para>
 	/// <para>
 	/// A held balloon and a thought bubble go as sprites of their own (<see cref="BalloonOf"/>,
-	/// <see cref="BubbleOf"/>). <b>A balloon let go and still bursting is not written, and counted</b>
-	/// (<c>SAVE_PARK_BALLOON_LET_GO</c>): nobody's record names it.
+	/// <see cref="BubbleOf"/>); a balloon let go and still bursting is nobody's, and goes with
+	/// <see cref="WrittenLetGo"/>.
 	/// </para>
 	/// <para>
 	/// A member of staff in the hand is written idle where they were picked up: the original puts the hand's thing
@@ -93,9 +93,6 @@ public sealed partial class ParkPeople
 				peep.SetDestSuccessfully, peep.Thoughts, peep.StrandedTime ) with { Balloon = BalloonOf( peep ) } );
 		}
 
-		foreach ( var _ in _bursting )
-			Unimplemented.Report( "SAVE_PARK_BALLOON_LET_GO" );
-
 		foreach ( var member in _staff )
 		{
 			var id = member.ThingId;
@@ -130,15 +127,27 @@ public sealed partial class ParkPeople
 	}
 
 	/// <summary>
+	/// The balloons let go and still bursting, each as a sprite no record names: where it was, on the let-go script
+	/// where it rests, with its alpha and the loop it is inside, or at its end word and hidden for one that waits
+	/// only to be freed.
+	/// </summary>
+	internal List<ParkWorld.WrittenSprite> WrittenLetGo()
+		=> [.. _bursting.Where( balloon => !balloon.Sprite.Freed ).Select( balloon => Sprite( balloon ) with
+		{
+			Loops = balloon.Sprite.Loops, Ended = balloon.Sprite.Ended
+		} )];
+
+	/// <summary>
 	/// A guest's held balloon as its own sprite: kind 10 of the one balloon bank, on the script, the set and the
 	/// frame it is on and where it was last placed. Its <c>+0xbc</c> is its own set's frames a direction, the set
 	/// it was made on (<c>FUN_00475a10( 0x0074f480, 10, bank, set, ... )</c>).
 	/// </summary>
 	private ParkWorld.WrittenSprite? BalloonOf( Peep peep )
-	{
-		if ( peep.Balloon is not { } balloon )
-			return null;
+		=> peep.Balloon is { } balloon ? Sprite( balloon ) : null;
 
+	/// <summary>A balloon's sprite as the table holds it, held or let go.</summary>
+	private ParkWorld.WrittenSprite Sprite( Balloon balloon )
+	{
 		var sprite = balloon.Sprite;
 
 		return new ParkWorld.WrittenSprite(

@@ -44,20 +44,6 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q255. The writer: the arrival vehicle, a balloon let go and a thought read back.** From Q250 and Q251.
-  **The arrival vehicle is not written** (`SAVE_PARK_ARRIVAL_VEHICLE`). The header's
-  `mCurrentArrivalVehicle` and the vehicle's script are one state (`FUN_0051a690`), and both are left the
-  file's, so a park saved with the bus on its circuit loads with none current and the bus where the first file
-  had it (`q250/run2/1-at-the-save.png`); the bus's script is written as it runs now (Q252), so the bus drives on
-  with none current: write the handle with it, and read it back
-  (`SAVED_CURRENT_ARRIVAL_VEHICLE`). In the original a load of that file made a vehicle anew on its first sweep
-  (`q250/orig/a-load.log`): look for the leaver at the stop that summons it.
-  **A balloon let go and still bursting at the save is not written** (`SAVE_PARK_BALLOON_LET_GO`):
-  no record names it, and what the original's file holds for one was not looked for (a kind-10 sprite on frame
-  1 that nobody's `mBalloonScript` names). **A load here reads no member of staff's thought**: `mLastThought`
-  and `mTimeBubbleShown` are a guest's alone in `ParkPeople`, so a kept member is written with nought for both
-  until they think again, and no saved bubble is shown again, a guest's (`SAVED_THOUGHT_BUBBLE`) or a
-  member's (uncounted). Read both back, and make the bubble from its sprite's picture.
 - [ ] **Q256. A ride bought with its entrance facing a path has no link to its queue.** Found by Q253, whose
   file lay beside the original's own save of the same purchase (`q253/orig/bought-by-the-original.TPWS`,
   `q253/gate/Q253.TPWS`; `saves.md`, "OpenTPW's placer parts from the original"). A Crazy Ape bought on (41,22)
@@ -87,6 +73,11 @@ the research lab), then the rest of this section in its old order.
   ever read. And not decoded: the original, loading a file whose queue cell names a record of another tile
   (or a bare cell naming one), reads no handle on that cell afterwards and still draws the piece
   (`saves.md`, "OpenTPW's writer, a queue cell's model", the control).
+  From Q255: a person's own sprite saved inside a loop of its script (a bank's state animation: 14 of the
+  1,154 sprites in the original's twelve files, on program 1760) is put on its word with an empty stack at a
+  load here, counted (`SAVED_SPRITE_LOOP_STACK`), and the writer leaves a kept sprite's stack the file's and a
+  made one's empty: read the stack with `ParkWorld.SpriteLoopsOf` and the script's own words (`+0xbc`, `+0xc8`,
+  `+0xcc`), and write them from the running sprite, as a balloon let go is.
 - [ ] **Q241j. The writer: the managers, then Save Game saves.** From Q241e. The economy thing's loans and rings,
   the staff HQ's strikes, the calendar's and the weather's fields; then `ParkSaveScreen.Save` writes
   (`SAVE_GAME_WRITER` gone), an overwrite replaces the file, and the Load Park list shows it. Confirm: a park
@@ -722,6 +713,10 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   rest 43 on); `ParkState.NextThingId` never uses one twice, said at the site, so a load's ids part from the
   original's once anybody has gone.
   Build create-on-demand and the bus / ferry / plane ordering; the pause between loads is built (Q68b).
+  From Q255: a ferry or a seaplane that is current at a save is written as none and counted
+  (`SAVE_PARK_ARRIVAL_VEHICLE`) where the file names no thing for its size, as every Lost Kingdom file to hand
+  does: the thing made on demand is what gives the writer a handle to write (`saves.md`, "OpenTPW's writer, the
+  arrival vehicle").
 - [ ] **Q27. Pushing the mouse at the screen edge does not scroll.** The "push scroll" option exists and
   is read by nothing. `ParkOrbitCameraMode.Update` scrolls from keys only. Decode the camera
   binding table at `0x00748158` (`park-engine.md`, "The park camera"), then build.

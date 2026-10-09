@@ -530,7 +530,7 @@ public class ThoughtsTests
 		Assert.AreEqual( 5u, peep.StrandedTime );
 		Assert.AreEqual( 9, peep.Thoughts.Last );
 		Assert.AreEqual( 700, peep.Thoughts.TimeBubbleShown );
-		Assert.IsNull( peep.Thoughts.Bubble, "the bubble's own sprite is not made again" );
+		Assert.IsNull( peep.Thoughts.Bubble, "the bubble is joined by its slot, which is the park's to do, not the guest's own" );
 	}
 
 	/// <summary>Red squares show seven frames and are gone two (<c>0x0053c7b1</c>..<c>0x0053c7f6</c>).</summary>

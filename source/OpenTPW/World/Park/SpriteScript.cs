@@ -483,14 +483,24 @@ public sealed class SpriteScript
 	/// <param name="alpha">
 	/// The instance's alpha, <c>+0xa0</c>: 255 as the constructor <c>FUN_004758f0</c> writes it, or what the save kept.
 	/// </param>
-	public SpriteScript( int script, int pc, int spriteNumber, int frame, int alpha = 0xff )
+	/// <param name="loops">The loop starts the save kept pushed, the oldest first; none for a program outside any loop.</param>
+	/// <param name="ended">Whether the save kept it at its end word, state 4: hidden, and freed on its next due turn.</param>
+	public SpriteScript( int script, int pc, int spriteNumber, int frame, int alpha = 0xff,
+		IEnumerable<int>? loops = null, bool ended = false )
 	{
 		Script = script;
 		Pc = pc;
 		_locals[SpriteNumberLocal] = spriteNumber;
 		_locals[FrameLocal] = frame;
 		_locals[AlphaLocal] = alpha;
+		Ended = ended;
+
+		foreach ( var start in loops ?? [] )
+			_loops.Push( start );
 	}
+
+	/// <summary>The loop starts pushed and not yet popped, the oldest first, as a park file's record holds them.</summary>
+	public IReadOnlyList<int> Loops => [.. _loops.Reverse()];
 
 	/// <summary>
 	/// Puts this sprite on an animation, from the start - <c>FUN_00475b80</c>, which writes both the script

@@ -1147,11 +1147,11 @@ public class ParkTickTests
 			Assert.IsTrue( people.LargerVehicleIsCurrent, "the load's own vehicle is current" );
 			Assert.AreEqual( 1, Triggered(), "and triggered" );
 
-			// A park file holds the load and not its vehicle, which is counted.
+			// A park file holds the load and not this vehicle, which the file names no thing for: counted, and none written.
 			var reported = Unimplemented.Summary.Where( gap => gap.What == "SAVE_PARK_ARRIVAL_VEHICLE" ).Sum( gap => gap.Times );
-			var timer = people.WrittenArrival();
+			var timer = people.WrittenArrival( _ => true );
 
-			Assert.AreEqual( (61, true), (timer.PeopleOnBus, timer.Offloading) );
+			Assert.AreEqual( (61, true, 0), (timer.PeopleOnBus, timer.Offloading, timer.CurrentVehicle) );
 			Assert.AreEqual( reported + 1, Unimplemented.Summary.Single( gap => gap.What == "SAVE_PARK_ARRIVAL_VEHICLE" ).Times );
 
 			// Whatever it reports, a vehicle that is not the bus holds nobody at the road.

@@ -815,26 +815,47 @@ public class ParkFileWriterPeopleTests
 	}
 
 	/// <summary>
-	/// A bubble the file holds over somebody who shows none now is let go: its slot is empty, the record names none
-	/// and the table holds no bubble. A load here makes no bubble again, so the loaded park's people show none.
+	/// A load shows the bubble a file holds again, a guest's and a member of staff's, each with its thought and its
+	/// time, so it is taken away on the sweep it would have been. Once its person shows none it is let go: its slot
+	/// is empty, the record names none and the table holds no bubble.
 	/// </summary>
 	[TestMethod]
-	public void ABubbleTheFileHoldsIsLetGoWhenItsPersonShowsNone()
+	public void ABubbleTheFileHoldsShowsAgainAfterALoadAndIsLetGoWhenItsPersonShowsNone()
 	{
 		var first = new ParkPeople( shipped ) { BankAt = Bank };
 		var thinker = first.Guests.Values.First();
+		var member = first.Staff.First( staff => staff.Model == 8 );
 
 		Assert.IsTrue( thinker.Thoughts.Set( Thoughts.Confused, shipped.GameTick ) );
+		Assert.IsTrue( member.Thoughts.Set( 0x14, shipped.GameTick - 3 ) );
 
 		var held = Written( first, out var before );
 		var slot = BitConverter.ToInt32( held.RecordOf( thinker.ThingId )!, 390 );
+		var staffSlot = BitConverter.ToInt32( held.RecordOf( member.ThingId )!, 390 );
 
-		Assert.AreEqual( (1, 19, Thoughts.SpriteKind), (before.Bubbles, before.LiveSprites, held.Sprites.Single( sprite => sprite.Slot == slot ).Type) );
+		Assert.AreEqual( (2, 20, Thoughts.SpriteKind, Thoughts.SpriteKind), (before.Bubbles, before.LiveSprites,
+			held.Sprites.Single( sprite => sprite.Slot == slot ).Type, held.Sprites.Single( sprite => sprite.Slot == staffSlot ).Type) );
 		TestRun.DeleteEvery<ParkPeople>();
 
 		var people = new ParkPeople( held ) { BankAt = Bank };
+		var guest = people.Guests[thinker.ThingId].Thoughts;
+		var staff = people.Staff.Single( other => other.ThingId == member.ThingId ).Thoughts;
 
-		Assert.IsNull( people.Guests[thinker.ThingId].Thoughts.Bubble );
+		Assert.AreEqual( (thinker.Thoughts.Bubble, Thoughts.Confused, shipped.GameTick), (guest.Bubble, guest.Last, guest.TimeBubbleShown), "the guest's" );
+		Assert.AreEqual( (member.Thoughts.Bubble, 0x14, shipped.GameTick - 3), (staff.Bubble, staff.Last, staff.TimeBubbleShown), "the member's" );
+		Assert.IsNotNull( guest.Bubble );
+		Assert.IsNotNull( staff.Bubble );
+		Assert.IsFalse( Unimplemented.Summary.Any( gap => gap.What == "SAVED_THOUGHT_BUBBLE" ) );
+
+		// The member's is twelve sweeps old three sweeps before the guest's.
+		staff.Expire( shipped.GameTick - 3 + Thoughts.BubbleSweeps );
+		Assert.IsNotNull( staff.Bubble, "twelve sweeps on it stands" );
+		staff.Expire( shipped.GameTick - 3 + Thoughts.BubbleSweeps + 1 );
+		guest.Expire( shipped.GameTick - 3 + Thoughts.BubbleSweeps + 1 );
+		Assert.IsNull( staff.Bubble, "thirteen on it is gone" );
+		Assert.IsNotNull( guest.Bubble );
+		guest.Expire( shipped.GameTick + Thoughts.BubbleSweeps + 1 );
+		Assert.IsNull( guest.Bubble );
 
 		var again = new ParkWorld( ParkFileWriter.Body( held, new ParkFileWriter.Running( held.GameTick, false, 0, 0, held.Camera.Saved!.Value,
 			People: people.Written( Level.WrittenThings( held ).Contains ) ), out var report ) );
@@ -845,19 +866,282 @@ public class ParkFileWriterPeopleTests
 		Assert.IsFalse( again.Sprites.Any( sprite => sprite.Type == Thoughts.SpriteKind ) );
 	}
 
-	/// <summary>A balloon let go and still bursting is nobody's, is not written, and is counted.</summary>
+	/// <summary>
+	/// A bubble's picture is its script's, so one saved just made, its sprite's <c>+0xb4</c> still nought, shows the
+	/// picture it was made for; a slot that holds no bubble shows none. Each of the 22 scripts gives back the
+	/// picture it is made for, and a word that starts none gives nothing.
+	/// </summary>
 	[TestMethod]
-	public void ABurstingBalloonIsCountedAndNotWritten()
+	public void ASavedBubblesPictureIsItsScripts()
+	{
+		for ( var thought = 1; thought <= 22; ++thought )
+		{
+			var (bank, set, _) = Thoughts.PictureOf( thought );
+
+			Assert.AreEqual( (bank, set), Thoughts.PictureOfScript( Thoughts.ScriptOf( bank, set ) ), $"thought {thought}" );
+		}
+
+		foreach ( var word in new[] { 1461, 1463, 1456, 1462 - (17 * 6), 1462 + (22 * 6), 0, -6, 1650 } )
+			Assert.IsNull( Thoughts.PictureOfScript( word ), $"word {word}" );
+
+		var first = new ParkPeople( shipped ) { BankAt = Bank };
+		var thinker = first.Guests.Values.First();
+
+		var member = first.Staff.First( staff => staff.Model == 7 );
+
+		Assert.IsTrue( thinker.Thoughts.Set( 0x13, shipped.GameTick ) );
+		Assert.IsTrue( member.Thoughts.Set( 0x14, shipped.GameTick ) );
+
+		var body = ParkFileWriter.Body( shipped, Running( first ) );
+		var held = new ParkWorld( body );
+		var slot = BitConverter.ToInt32( held.RecordOf( thinker.ThingId )!, 390 );
+		var at = body.AsSpan().IndexOf( held.SpriteRecordOf( slot )! );
+
+		Assert.IsTrue( at > 0 );
+
+		var script = BitConverter.ToInt32( body, at + 0x0c );
+
+		// As the constructor leaves it: at its script's first word, the picture not yet set.
+		BitConverter.GetBytes( script ).CopyTo( body, at + 0x08 );
+		BitConverter.GetBytes( 0 ).CopyTo( body, at + 0xb4 );
+		TestRun.DeleteEvery<ParkPeople>();
+
+		var justMade = new ParkPeople( new ParkWorld( body ) ).Guests[thinker.ThingId].Thoughts;
+
+		Assert.AreEqual( thinker.Thoughts.Bubble, justMade.Bubble );
+		Assert.AreNotEqual( (0, 0), justMade.Bubble!.Value );
+		TestRun.DeleteEvery<ParkPeople>();
+
+		// The slot holding another kind of sprite is nobody's bubble, a guest's or a member of staff's.
+		var staffAt = body.AsSpan().IndexOf( held.SpriteRecordOf( BitConverter.ToInt32( held.RecordOf( member.ThingId )!, 390 ) )! );
+
+		Assert.IsTrue( staffAt > 0 );
+		BitConverter.GetBytes( Balloon.SpriteKind ).CopyTo( body, at + 0xac );
+
+		var guestOnly = new ParkPeople( new ParkWorld( body ) );
+
+		Assert.IsNull( guestOnly.Guests[thinker.ThingId].Thoughts.Bubble );
+		Assert.AreEqual( member.Thoughts.Bubble, guestOnly.Staff.Single( staff => staff.ThingId == member.ThingId ).Thoughts.Bubble, "the member's stands" );
+		TestRun.DeleteEvery<ParkPeople>();
+		BitConverter.GetBytes( ParkSpriteBanks.ChildKind ).CopyTo( body, staffAt + 0xac );
+
+		Assert.IsNull( new ParkPeople( new ParkWorld( body ) ).Staff.Single( staff => staff.ThingId == member.ThingId ).Thoughts.Bubble );
+	}
+
+	/// <summary>A member of staff's thought and its time are read from the person base, as a guest's are.</summary>
+	[TestMethod]
+	public void AMemberOfStaffsThoughtIsRead()
+	{
+		var guard = new ParkPeople( shipped ).Staff.Single( staff => staff.Model == 7 );
+
+		Assert.AreEqual( (18, 180), (guard.Thoughts.Last, guard.Thoughts.TimeBubbleShown), "the shipped guard's" );
+		Assert.IsNull( guard.Thoughts.Bubble );
+
+		// So a thought of class 1 makes no bubble until twenty sweeps past the save's.
+		Assert.IsFalse( guard.Thoughts.Set( 1, 199 ) );
+		Assert.IsTrue( guard.Thoughts.Set( 1, 200 ) );
+	}
+
+	private static List<Balloon> BurstingOf( ParkPeople people )
+		=> (List<Balloon>)typeof( ParkPeople ).GetField( "_bursting", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance )!.GetValue( people )!;
+
+	private ParkWorld WrittenWithLetGo( ParkWorld from, ParkPeople people, out ParkWorld.PeopleWritten report )
+	{
+		var written = new ParkWorld( ParkFileWriter.Body( from, new ParkFileWriter.Running( from.GameTick, false, 0, 0, from.Camera.Saved!.Value,
+			People: people.Written( Level.WrittenThings( from ).Contains ), LetGo: people.WrittenLetGo() ), out var done ) );
+
+		Assert.IsNull( written.Problem );
+		Assert.IsTrue( written.ClosedOnTrailer && written.ClosedOnSpriteTrailer );
+		report = done!.Value;
+
+		return written;
+	}
+
+	/// <summary>
+	/// A balloon let go and still bursting is written on a slot nobody names: on the let-go script past its frame,
+	/// with its alpha, inside the fade's loop (the stack's room 19, the loop's start in its last place, a count of
+	/// one), state 2 and shown. A load takes it up where it was and it bursts on for the turns its alpha has left;
+	/// written again once it is freed, its slot is let go.
+	/// </summary>
+	[TestMethod]
+	public void ABalloonLetGoIsWrittenInsideItsLoopAndBurstsOnAfterALoad()
 	{
 		var people = new ParkPeople( shipped ) { BankAt = Bank };
-		var bursting = (List<Balloon>)typeof( ParkPeople ).GetField( "_bursting", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance )!.GetValue( people )!;
+		var balloon = Balloon.Make( 20, 4, now: 0 )!;
 
-		bursting.Add( Balloon.Make( 20, 4, now: 0 )! );
+		(balloon.X, balloon.Y, balloon.Height) = (431.5f, 262.25f, 1.75f);
+		balloon.LetGo();
 
-		Written( people, out var report );
+		// Four shown turns: 250, 230, 210 and 190 behind it, 190 the alpha it rests on.
+		for ( var turn = 1; turn <= 4; ++turn )
+			Assert.IsTrue( balloon.Sprite.Step( turn * 1000 ) );
 
-		Assert.AreEqual( (18, 0), (report.LiveSprites, report.Balloons) );
-		Assert.AreEqual( 1, Unimplemented.Summary.Single( gap => gap.What == "SAVE_PARK_BALLOON_LET_GO" ).Times );
+		Assert.AreEqual( (1657, 190, 1), (balloon.Sprite.Pc, balloon.Sprite.Alpha, balloon.Sprite.Frame) );
+		BurstingOf( people ).Add( balloon );
+
+		var written = WrittenWithLetGo( shipped, people, out var report );
+
+		Assert.AreEqual( (19, 0, 1), (report.LiveSprites, report.Balloons, report.LetGo) );
+		Assert.IsFalse( Unimplemented.Summary.Any( gap => gap.What == "SAVE_PARK_BALLOON_LET_GO" ) );
+
+		var sprite = written.Sprites.Single( other => other.Type == Balloon.SpriteKind );
+		var record = written.SpriteRecordOf( sprite.Slot )!;
+
+		Assert.AreEqual( 11, sprite.Slot, "the lowest slot free: the shipped eighteen hold 1 to 19 but 11" );
+		Assert.AreEqual( (SpriteScript.LetGoBalloonEntry, 1657, 190, 1, balloon.Sprite.SpriteNumber, 431.5f, 262.25f, 1.75f),
+			(sprite.Script, sprite.Pc, sprite.Alpha, sprite.Frame, sprite.SpriteNumber, sprite.X, sprite.Y, sprite.Height) );
+		Assert.AreEqual( (2, 19, 1655, 1, 1, 2), (sprite.State, BitConverter.ToInt32( record, 0x1c ), BitConverter.ToInt32( record, 0x6c ),
+			BitConverter.ToInt32( record, 0x78 ), BitConverter.ToInt32( record, 0x114 ), BitConverter.ToInt32( record, 0xbc )) );
+		Assert.IsTrue( Enumerable.Range( 0, 19 ).All( place => BitConverter.ToInt32( record, 0x20 + (place * 4) ) == 0 ), "the stack's other places are nought" );
+		CollectionAssert.AreEqual( new[] { 1655 }, written.SpriteLoopsOf( sprite.Slot ).ToArray() );
+		Assert.IsFalse( written.People.Any( person => person.Guest?.BalloonScript == sprite.Slot ), "nobody names it" );
+		TestRun.DeleteEvery<ParkPeople>();
+
+		var loaded = new ParkPeople( written ) { BankAt = Bank };
+		var again = loaded.Bursting.Single();
+
+		Assert.AreEqual( (1657, 190, 431.5f, 262.25f, 1.75f, false), (again.Sprite.Pc, again.Sprite.Alpha, again.X, again.Y, again.Height, again.Sprite.Ended) );
+		CollectionAssert.AreEqual( new[] { 1655 }, again.Sprite.Loops.ToArray() );
+		Assert.IsFalse( loaded.Guests.Values.Any( guest => guest.Balloon != null ), "and nobody holds it" );
+
+		// 170 down to 10 is nine more shown turns, the tenth ends it, the eleventh frees it.
+		var turns = 0;
+
+		while ( !again.Sprite.Freed && turns < 40 )
+		{
+			again.Sprite.Step( ++turns * 1000 );
+			Assert.AreEqual( turns <= 9, again.Sprite.Shown, $"turn {turns}" );
+		}
+
+		Assert.AreEqual( 11, turns );
+
+		// Written while it waits to be freed it would still be a sprite; freed, it is none, and the file's is let go.
+		var after = WrittenWithLetGo( written, loaded, out var last );
+
+		Assert.AreEqual( (18, 0), (last.LiveSprites, last.LetGo) );
+		Assert.IsFalse( after.Sprites.Any( other => other.Type == Balloon.SpriteKind ) );
+		Assert.IsNull( after.SpriteRecordOf( 11 ) );
+	}
+
+	/// <summary>
+	/// A balloon just let go is written at its script's first word with an empty stack, and one at its end word in
+	/// state 4 and hidden, which a load frees on its first due turn. Handed no list, the writer leaves the file's
+	/// own let-go balloons where they lie; a held balloon is never taken for one.
+	/// </summary>
+	[TestMethod]
+	public void ABalloonJustLetGoAndOneEndedAreWrittenAsTheyStand()
+	{
+		var people = new ParkPeople( shipped ) { BankAt = Bank };
+		var holder = people.Guests.Values.First();
+		var fresh = Balloon.Make( 20, 4, now: 0 )!;
+		var ended = Balloon.Make( 21, 4, now: 0 )!;
+
+		holder.Balloon = Balloon.Make( holder.ThingId, 4, now: 0 );
+		fresh.LetGo();
+		ended.LetGo();
+
+		for ( var turn = 1; turn <= 14; ++turn )
+			ended.Sprite.Step( turn * 1000 );
+
+		Assert.IsTrue( ended.Sprite.Ended && !ended.Sprite.Freed );
+		BurstingOf( people ).AddRange( [fresh, ended] );
+
+		var written = WrittenWithLetGo( shipped, people, out var report );
+
+		Assert.AreEqual( (21, 1, 2), (report.LiveSprites, report.Balloons, report.LetGo) );
+
+		var held = written.People.Single( person => person.ThingId == holder.ThingId ).Guest!.Value.BalloonScript;
+		var loose = written.Sprites.Where( sprite => sprite.Type == Balloon.SpriteKind && sprite.Slot != held ).OrderBy( sprite => sprite.Slot ).ToArray();
+
+		Assert.AreEqual( (11, 20, 21), (held, loose[0].Slot, loose[1].Slot), "the held balloon first, on the one slot free under 20, then those let go" );
+		Assert.AreEqual( (1666, 1666, 2, 20, 0, 1), (loose[0].Script, loose[0].Pc, loose[0].State, BitConverter.ToInt32( written.SpriteRecordOf( 20 )!, 0x1c ),
+			BitConverter.ToInt32( written.SpriteRecordOf( 20 )!, 0x78 ), BitConverter.ToInt32( written.SpriteRecordOf( 20 )!, 0x114 )), "just let go" );
+		Assert.AreEqual( (1666, 4, 20, 0, 0), (loose[1].Script, loose[1].State, BitConverter.ToInt32( written.SpriteRecordOf( 21 )!, 0x1c ),
+			BitConverter.ToInt32( written.SpriteRecordOf( 21 )!, 0x78 ), BitConverter.ToInt32( written.SpriteRecordOf( 21 )!, 0x114 )), "ended" );
+		TestRun.DeleteEvery<ParkPeople>();
+
+		var loaded = new ParkPeople( written ) { BankAt = Bank };
+
+		Assert.AreEqual( 2, loaded.Bursting.Count );
+		Assert.IsNotNull( loaded.Guests[holder.ThingId].Balloon, "the held one is its guest's" );
+		Assert.AreEqual( (false, true), (loaded.Bursting[0].Sprite.Ended, loaded.Bursting[1].Sprite.Ended) );
+		loaded.Bursting[1].Sprite.Step( 1000 );
+		Assert.IsTrue( loaded.Bursting[1].Sprite.Freed, "freed on its first due turn" );
+
+		// With no list the file's own are left: the same three balloons, the freed one too.
+		var left = new ParkWorld( ParkFileWriter.Body( written, new ParkFileWriter.Running( written.GameTick, false, 0, 0, written.Camera.Saved!.Value,
+			People: loaded.Written( Level.WrittenThings( written ).Contains ) ), out var kept ) );
+
+		Assert.AreEqual( (21, 0), (kept!.Value.LiveSprites, kept.Value.LetGo) );
+		Assert.AreEqual( 3, left.Sprites.Count( sprite => sprite.Type == Balloon.SpriteKind ) );
+
+		// With one, the freed is gone and the other is written again.
+		var again = WrittenWithLetGo( written, loaded, out var last );
+
+		Assert.AreEqual( (20, 1, 1), (last.LiveSprites, last.Balloons, last.LetGo) );
+		Assert.AreEqual( 2, again.Sprites.Count( sprite => sprite.Type == Balloon.SpriteKind ) );
+	}
+
+	/// <summary>A sprite inside more loops than a record's stack holds is refused.</summary>
+	[TestMethod]
+	public void ASpriteInsideMoreLoopsThanARecordHoldsIsRefused()
+	{
+		var people = new ParkPeople( shipped ) { BankAt = Bank };
+		var letGo = new ParkWorld.WrittenSprite( new ParkWorld.Sprite( 0, Balloon.SpriteKind, 0, 0, 0f, 0f, 0f, 0, 1, 250, 0, 1666, 1657 ),
+			Loops: [.. Enumerable.Repeat( 1655, 21 )] );
+
+		Assert.ThrowsException<InvalidOperationException>( () => ParkFileWriter.Body( shipped, Running( people ) with { LetGo = [letGo] } ) );
+
+		var full = new ParkWorld( ParkFileWriter.Body( shipped, Running( people ) with { LetGo = [letGo with { Loops = [.. Enumerable.Range( 1, 20 )] }] } ) );
+		var slot = full.Sprites.Single( sprite => sprite.Type == Balloon.SpriteKind ).Slot;
+
+		CollectionAssert.AreEqual( Enumerable.Range( 1, 20 ).ToArray(), full.SpriteLoopsOf( slot ).ToArray(), "twenty fill it, the oldest in its last place" );
+		Assert.AreEqual( (0, 20, 1), (BitConverter.ToInt32( full.SpriteRecordOf( slot )!, 0x1c ), BitConverter.ToInt32( full.SpriteRecordOf( slot )!, 0x20 ),
+			BitConverter.ToInt32( full.SpriteRecordOf( slot )!, 0x6c )) );
+		Assert.AreEqual( 0, full.SpriteLoopsOf( 99 ).Count, "an empty slot has none" );
+
+		// A sprite takes its loops up oldest first and gives them back so.
+		CollectionAssert.AreEqual( new[] { 7, 8, 9 }, new SpriteScript( 1666, 1657, 0, 1, loops: [7, 8, 9] ).Loops.ToArray() );
+
+		// A record whose room is no count of twenty gives no loops.
+		var body = ParkFileWriter.Body( shipped, Running( people ) with { LetGo = [letGo with { Loops = [1655] }] } );
+		var at = body.AsSpan().IndexOf( new ParkWorld( body ).SpriteRecordOf( slot )! );
+
+		foreach ( var room in new[] { 21, -1 } )
+		{
+			BitConverter.GetBytes( room ).CopyTo( body, at + 0x1c );
+			Assert.AreEqual( 0, new ParkWorld( body ).SpriteLoopsOf( slot ).Count, $"room {room}" );
+		}
+	}
+
+	/// <summary>A person's own sprite saved inside a loop is counted at the load: its stack is not taken up.</summary>
+	[TestMethod]
+	public void APersonsSpriteSavedInsideALoopIsCounted()
+	{
+		int Counted() => Unimplemented.Summary.Where( gap => gap.What == "SAVED_SPRITE_LOOP_STACK" ).Sum( gap => gap.Times );
+
+		_ = new ParkPeople( shipped );
+		Assert.AreEqual( 0, Counted(), "none of the shipped eighteen is inside one" );
+		TestRun.DeleteEvery<ParkPeople>();
+
+		var body = ParkFileWriter.Body( shipped, Running( new ParkPeople( shipped ) { BankAt = Bank } ) );
+		var guard = shipped.People.Single( person => person.Model == 7 );
+		var guest = shipped.People.First( person => person.Model == 1 );
+
+		var written = new ParkWorld( body );
+
+		foreach ( var slot in new[] { guard.SpriteSlot, guest.SpriteSlot } )
+		{
+			var at = body.AsSpan().IndexOf( written.SpriteRecordOf( slot )! );
+
+			Assert.IsTrue( at > 0 );
+			BitConverter.GetBytes( 19 ).CopyTo( body, at + 0x1c );
+			BitConverter.GetBytes( 1730 ).CopyTo( body, at + 0x6c );
+		}
+
+		TestRun.DeleteEvery<ParkPeople>();
+		_ = new ParkPeople( new ParkWorld( body ) );
+		Assert.AreEqual( 2, Counted(), "a member of staff's and a guest's" );
 	}
 
 	/// <summary>

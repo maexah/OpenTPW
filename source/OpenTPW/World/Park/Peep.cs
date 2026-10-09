@@ -487,11 +487,8 @@ public sealed class Peep
 		TimeStartedIdling = saved.TimeStartedIdling;
 
 		StrandedTime = saved.StrandedTime;
+		// The bubble showing when the park was saved is a slot of the sprite table (mThoughtScript), which ParkPeople joins.
 		Thoughts.Restore( saved.LastThought, saved.TimeBubbleShown );
-
-		// A bubble showing when the park was saved is a slot of the sprite table (mThoughtScript); it is not made again.
-		if ( saved.ThoughtScript != 0 )
-			Unimplemented.Report( "SAVED_THOUGHT_BUBBLE" );
 
 		// The balloon's life and its next place; its sprite is the table's, which ParkPeople joins by the slot.
 		BalloonLife = saved.RemainingBalloonLife;

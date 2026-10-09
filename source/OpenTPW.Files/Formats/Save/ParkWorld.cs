@@ -715,6 +715,10 @@ public sealed partial class ParkWorld : IParkInitialState
 	/// keeps to, each as a <b>packed cell id</b> - <c>y * 128 + 1 + x</c>, the same one-based packing the
 	/// destination setter takes. Nought means no area, which is the whole map.
 	/// </param>
+	/// <param name="LastThought">
+	/// <c>mLastThought</c>, with <see cref="ThoughtScript"/> (the bubble's slot in the sprite table, nought with none
+	/// showing) and <see cref="TimeBubbleShown"/>: the person base's three, at the offsets a guest's are.
+	/// </param>
 	/// <param name="TimeHired">
 	/// <c>mTimeHired</c> - the park's calendar as the member was made, a <c>FILETIME</c> (<see cref="FileTimeOf"/>).
 	/// </param>
@@ -729,7 +733,8 @@ public sealed partial class ParkWorld : IParkInitialState
 		int State, int PayGrade, float Happiness, float Tiredness, int JobsDone,
 		int PatrolBottomLeft, int PatrolTopRight, int RestArea, int PercentageThroughGrade,
 		int TimeStartedIdling, string Name = "", int ToiletToClean = 0, int TimeStartedCleaning = 0,
-		int TimeStartedEntertaining = 0, int TimeStartedResearching = 0, long TimeHired = 0 )
+		int TimeStartedEntertaining = 0, int TimeStartedResearching = 0, long TimeHired = 0,
+		int LastThought = 0, int ThoughtScript = 0, int TimeBubbleShown = 0 )
 	{
 		/// <summary>
 		/// A time on the park's calendar as <c>mTimeHired</c> holds one: a <c>FILETIME</c>, the hundreds of
@@ -2409,7 +2414,10 @@ public sealed partial class ParkWorld : IParkInitialState
 			TimeStartedCleaning: model == HandymanModel ? ReadInt32At( start + 505 ) : 0,   // mTimeStartedCleaning
 			TimeStartedEntertaining: model == EntertainerModel ? ReadInt32At( start + 503 ) : 0,   // mTimeStartedEntertaining
 			TimeStartedResearching: model == ResearcherModel ? ReadInt32At( start + 503 ) : 0,     // mTimeStartedResearching
-			TimeHired: System.Buffers.Binary.BinaryPrimitives.ReadInt64LittleEndian( _data.AsSpan( start + 491, 8 ) ) ); // mTimeHired
+			TimeHired: System.Buffers.Binary.BinaryPrimitives.ReadInt64LittleEndian( _data.AsSpan( start + 491, 8 ) ), // mTimeHired
+			LastThought: ReadInt32At( start + 386 ),            // mLastThought, the person base's as a guest's
+			ThoughtScript: ReadInt32At( start + 390 ),          // mThoughtScript
+			TimeBubbleShown: ReadInt32At( start + 394 ) );      // mTimeBubbleShown
 
 	/// <summary>The handyman's thing model.</summary>
 	private const int HandymanModel = 5;

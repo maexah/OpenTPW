@@ -297,6 +297,80 @@ public class ParkFileWriterPoolTests
 		Assert.AreEqual( 0, none.StillToDrop );
 	}
 
+	/// <summary>
+	/// The vehicle that is current is the header's <c>mCurrentArrivalVehicle</c>, the thing the file names for its
+	/// size: written with the things, read back as the same vehicle, and written as none once none is. Without the
+	/// things the handle is left the file's.
+	/// </summary>
+	[TestMethod]
+	public void TheCurrentArrivalVehicleIsWrittenAndReadBack()
+	{
+		var bus = shipped.ArrivalVehicleForSmallCrowd;
+
+		Assert.AreEqual( (15, 0, 0, 0), (bus, shipped.ArrivalVehicleForMediumCrowd, shipped.ArrivalVehicleForLargeCrowd, shipped.CurrentArrivalVehicle) );
+
+		var none = new ParkPeople( shipped );
+
+		Assert.AreEqual( 0, none.CurrentVehicle );
+		Assert.AreEqual( new ParkFileWriter.ArrivalTimer( 661, 0, false, 0 ), none.WrittenArrival( _ => true ), "none current is written as nought" );
+		Assert.IsNull( none.WrittenArrival().CurrentVehicle, "and left the file's without the things" );
+
+		// Two bytes of the header move, and nothing else.
+		var before = ParkFileWriter.Body( shipped, AsShipped );
+		var after = ParkFileWriter.Body( shipped, AsShipped with { Arrival = none.WrittenArrival() with { CurrentVehicle = 0x1234 } } );
+		var moved = Enumerable.Range( 0, before.Length ).Where( at => before[at] != after[at] ).ToArray();
+
+		Assert.AreEqual( 2, moved.Length );
+		Assert.AreEqual( (0x34, 0x12, 1), (after[moved[0]], after[moved[1]], moved[1] - moved[0]) );
+		Assert.AreEqual( 0x1234, new ParkWorld( after ).CurrentArrivalVehicle );
+		TestRun.DeleteEvery<ParkPeople>();
+
+		var withBus = Written( AsShipped with { Arrival = none.WrittenArrival() with { CurrentVehicle = bus } } );
+
+		Assert.AreEqual( bus, withBus.CurrentArrivalVehicle );
+
+		var people = new ParkPeople( withBus );
+
+		Assert.AreEqual( 1, people.CurrentVehicle, "the small crowd's" );
+		Assert.IsFalse( people.LargerVehicleIsCurrent );
+		Assert.AreEqual( bus, people.WrittenArrival( _ => true ).CurrentVehicle, "and written as its thing again" );
+		Assert.IsFalse( Unimplemented.Summary.Any( gap => gap.What is "SAVED_CURRENT_ARRIVAL_VEHICLE" or "SAVE_PARK_ARRIVAL_VEHICLE" ) );
+
+		// A file whose own handle is the bus, written by a park with none current, holds none.
+		TestRun.DeleteEvery<ParkPeople>();
+
+		var cleared = new ParkWorld( ParkFileWriter.Body( withBus, AsShipped with { Arrival = new ParkPeople( shipped ).WrittenArrival( _ => true ) } ) );
+
+		Assert.AreEqual( 0, cleared.CurrentArrivalVehicle );
+	}
+
+	/// <summary>
+	/// A vehicle that is current and cannot be written is counted and written as none: one whose thing is not in
+	/// the file being written, and one written without the things, whose handle is left. A file naming a current
+	/// vehicle that is none of its three is counted at the load, and none is current.
+	/// </summary>
+	[TestMethod]
+	public void ACurrentVehicleThatCannotBeWrittenOrReadIsCounted()
+	{
+		int Counted( string what ) => Unimplemented.Summary.Where( gap => gap.What == what ).Sum( gap => gap.Times );
+
+		var withBus = Written( AsShipped with { Arrival = new ParkFileWriter.ArrivalTimer( 661, 0, false, shipped.ArrivalVehicleForSmallCrowd ) } );
+		var people = new ParkPeople( withBus );
+
+		Assert.AreEqual( 0, people.WrittenArrival( thing => thing != shipped.ArrivalVehicleForSmallCrowd ).CurrentVehicle, "its thing is not written" );
+		Assert.AreEqual( 1, Counted( "SAVE_PARK_ARRIVAL_VEHICLE" ) );
+		Assert.IsNull( people.WrittenArrival().CurrentVehicle, "the things are the file's" );
+		Assert.AreEqual( 2, Counted( "SAVE_PARK_ARRIVAL_VEHICLE" ) );
+		Assert.AreEqual( 0, Counted( "SAVED_CURRENT_ARRIVAL_VEHICLE" ) );
+		TestRun.DeleteEvery<ParkPeople>();
+
+		var stranger = new ParkPeople( Written( AsShipped with { Arrival = new ParkFileWriter.ArrivalTimer( 661, 0, false, 16 ) } ) );
+
+		Assert.AreEqual( 0, stranger.CurrentVehicle );
+		Assert.AreEqual( 1, Counted( "SAVED_CURRENT_ARRIVAL_VEHICLE" ) );
+		Assert.AreEqual( 0, stranger.WrittenArrival( _ => true ).CurrentVehicle );
+	}
+
 	[TestMethod]
 	public void APoolOrATimerThatCannotBeWrittenIsRefused()
 	{
