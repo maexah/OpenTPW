@@ -616,6 +616,40 @@ public class ParkFileWriterBoughtAndSoldTests
 		Assert.AreEqual( (14, 0, 0), (kept.Count, bought.Count, gone.Count) );
 	}
 
+	/// <summary>
+	/// A ride bought with its entrance facing a path keeps its link to the queue cell laid over that path,
+	/// and no other: the cells read as the original's own file of the same purchase, and the queue is one cell.
+	/// </summary>
+	[TestMethod]
+	public void ARideBoughtFacingAPathKeepsItsLinkToItsQueue()
+	{
+		var state = new ParkState( shipped );
+
+		Assert.AreEqual( (CellEdge.Path, 0x44), (state.Record( 42, 21 ).Type, (int)state.Record( 42, 21 ).Neighbours), "a path runs before the entrance" );
+
+		var ape = Buy( state, null, CrazyApe, 41, 22 );
+
+		// Each walk of a queue, with the entrance's links as the walk found them.
+		var walks = new List<(int Thing, int Links)>();
+
+		state.QueueRemeasured = thing => walks.Add( (thing, state.Record( 42, 22 ).Neighbours) );
+
+		Assert.IsTrue( catalogue.TryGet( CrazyApe, out var item ) );
+		Assert.AreEqual( (42, 21), ParkBuilding.LayEnds( state, shipped, item, ape.ThingId, 41, 22, 0 ) );
+		Assert.AreEqual( (ape.ThingId, 0x01), walks[^1], "the queue is walked last, with the link back" );
+
+		var entrance = state.Record( 42, 22 );
+		var node = state.Record( 42, 21 );
+
+		Assert.AreEqual( (CellEdge.RideEnd, 0x01, 0x01), (entrance.Type, (int)entrance.Neighbours, (int)entrance.Direction) );
+		Assert.AreEqual( (ParkRideChoice.QueueCellType, 0x10, 0x10, 0x20), (node.Type, (int)node.Neighbours, (int)node.Direction, (int)node.Flags) );
+		Assert.AreEqual( (0x40, 0x04), ((int)state.Record( 41, 21 ).Neighbours, (int)state.Record( 43, 21 ).Neighbours), "the paths either side end there" );
+
+		state.WrittenObjects( shipped, id => true, out var bought, out _ );
+
+		Assert.AreEqual( (MapStep.CellId( 42, 21 ), 1), ((int)bought[0].BackOfQueue, bought[0].QueueSizeInCells) );
+	}
+
 	/// <summary>A bought thing's queue is read off the map, whatever its record holds.</summary>
 	[TestMethod]
 	public void ABoughtThingsQueueIsMeasured()

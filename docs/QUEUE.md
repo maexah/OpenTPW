@@ -48,17 +48,6 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q256. A ride bought with its entrance facing a path has no link to its queue.** Found by Q253, whose
-  file lay beside the original's own save of the same purchase (`q253/orig/bought-by-the-original.TPWS`,
-  `q253/gate/Q253.TPWS`; `saves.md`, "OpenTPW's placer parts from the original"). A Crazy Ape bought on (41,22)
-  lays its queue's first cell on (42,21), a path: the original's entrance cell (42,22) then holds links `0x01`,
-  OpenTPW's `0x82`. `ParkBuilding.LayQueueStub` clears the path under the stub (`ForceClearPath`) after
-  `MarkWaysInAndOut` has written the entrance's half, which takes it away again, and the path cells either side
-  then link to the entrance diagonally, which the original's do not. So `ParkRideChoice.StartOfQueue` finds no
-  queue, `mBackOfQueue` and `mQueueSizeInCells` read nought, and the queue tool has nothing to grow from. Read
-  the placer's order in `FUN_00528a70` (`0x005297e7`..`0x00529890`) and what the path linker does at an entrance,
-  then build it. Confirm: `buy 1101 41 22 0`, `cell 42 22` reading links `0x01`, the queue grown to a path and
-  the ride open; the written file's three bytes the original's; a screenshot.
 - [ ] **Q257. The writer: what a made record leaves out.** From Q253 (`saves.md`, "What OpenTPW writes"), each
   counted or said there. A made model's record declares no node words and no lookup records, so a head hung on
   a node and a node a script has hidden are not in it (`SAVE_PARK_HEAD_ON_A_MODEL_NODE`; the kept records' tables

@@ -139,11 +139,14 @@ public static class ParkPathNeighbours
 		write( x, y, self with { Neighbours = (byte)(self.Neighbours | bit) } );
 		write( nx, ny, nb with { Neighbours = (byte)(nb.Neighbours | back) } );
 
-		WeakFixUp( read, write, nx, ny, back );
+		// The fix-up is in the type 1 arm alone (0x0053498c..0x00534a0d for the north side): a ride's end
+		// gains the one bit and no diagonal.
+		if ( nb.Type == PathType )
+			WeakFixUp( read, write, nx, ny, back );
 	}
 
 	/// <summary>
-	/// The one-sided diagonal fix-up applied to the NEIGHBOUR that has just gained this cell.
+	/// The one-sided diagonal fix-up applied to a PATH neighbour that has just gained this cell.
 	///
 	/// <para>
 	/// <b>It is weaker than the strict rule and it sets ONE bit</b>, never the partner bit on the far

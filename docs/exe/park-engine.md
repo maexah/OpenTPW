@@ -1436,6 +1436,13 @@ queue cells so flagged — its exit's path (52,27), and a path before each of th
     0x00525296  FUN_0052fbd0()            the pending list emptied, then the anchor pushed
     0x0052529e  FUN_0052f580( 3, 0 )      mode 3 - the setter that KEEPS the anchor
 
+**OpenTPW does the first write for every purchase**, the console's `buy` included, which has no commit:
+`ParkBuilding.LayEnds` lays the two ends, puts the entrance's bit back (`RejoinEntrance`) and walks the queue
+once. The placer's own walk (`0x00529890`) comes before the bit is back, so over a path it finds no queue, and
+is left out: a deviation in order, with the same cells and the same count at the end. A Crazy Ape bought on
+(41,22), its queue cell laid over the path on (42,21), holds entrance links `0x01`, back of queue 2731 and one
+cell, here and in the original's own file of the same purchase (Q256).
+
 `FUN_0052f580(3)` withdraws ten advisor ids, posts advisor message **`0xcb`** and sets cursor **4**,
 `c_queue.ani` (`FUN_00489720` registers it). Ops `0x85`, `0x86`, `0x83` and `0x81` then run on the
 anchor as a one-cell line, the queue is rewalked, and `DAT_00763ac0`/`ac4` get the `0x80` sentinel so
@@ -3001,7 +3008,12 @@ North as `0x01`. `ParkRideChoice.StartSides` already records the same mirror. **
 - **diagonals have two non-equivalent rules** — a strict symmetric one on this cell (the diagonal and
   both intervening cardinals all mType 1), and a **weak one-sided** fix-up applied to the neighbour
   whose intervening cardinal need only be "not 3 and not 9". The weak one sets a single bit and never
-  its partner, so **`mNeighbours` is legitimately asymmetric**;
+  its partner, so **`mNeighbours` is legitimately asymmetric**. **The weak one is inside the mType 1 arm
+  of each cardinal block alone** (north: `0x0053498c`..`0x00534a0d`; the mType 10 and mType 9 arms after
+  it, `0x00534a1b` and `0x00534a4a`, write the two bits and retile): a ride's end a path joins gains the
+  one bit toward it and no diagonal. Of the 249 ride ends in the original's park files to hand (the
+  shipped Lost Kingdom, the eight Full Simulation files, two saved under Proton) none holds a diagonal
+  bit (`q256/ends.py`; its control, a file of OpenTPW's from before Q256, shows one, `0x82`);
 - a final **prune loop clears the two diagonals flanking any cardinal that points at an mType 3 or 9
   cell**.
 

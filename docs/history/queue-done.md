@@ -5580,6 +5580,30 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   and `mTimeBubbleShown` are a guest's alone in `ParkPeople`, so a kept member is written with nought for both
   until they think again, and no saved bubble is shown again, a guest's (`SAVED_THOUGHT_BUBBLE`) or a
   member's (uncounted). Read both back, and make the bubble from its sprite's picture.
+- [x] **Q256. A ride bought with its entrance facing a path has no link to its queue.** Done 2026-10-09,
+  `alexah/375-a-bought-rides-entrance-keeps-its-queue-link`; `docs/exe/park-engine.md`, "The commit hands the
+  player the queue tool" and "Why no sweep could ever reproduce `mNeighbours`". Two causes. The linker's
+  one-sided diagonal fix-up is in its path arm alone (`FUN_005348d0`, all four cardinal blocks), and was run
+  here for a ride's end too: the `0x82`. And the commit's put-back of the entrance's bit (`FUN_0052a050`) was
+  done by the hand's put-down alone, after the queue's walk: `ParkBuilding.LayEnds` does it for every purchase,
+  before the walk. `buy 1101 41 22 0`: `cell 42 22` links `0x01`, `spend` cells 1 back 2731, the file's record
+  the original's own with bytes 212, 213 and 1062 compared; two clicks join the queue to the path, links
+  `0x50`, and the ride opens. The original, loading that file, read links `0x01`, back 2731 and one cell. On
+  main as it was: `0x82`, no cells, the three bytes nought. Two predictions wrong, mine (the census's record
+  field stays 0 in the running park; and with the bug the queue tool's first click still bonded the entrance
+  and opened the ride, so "nothing to grow from" below was wrong). Of 9 bugs put back 6 failed at first and 3
+  after a test was added and one made to watch the walk. No ride end of the 249 in the original's files to
+  hand holds a diagonal link. The item as written: Found by Q253, whose
+  file lay beside the original's own save of the same purchase (`q253/orig/bought-by-the-original.TPWS`,
+  `q253/gate/Q253.TPWS`; `saves.md`, "OpenTPW's placer parts from the original"). A Crazy Ape bought on (41,22)
+  lays its queue's first cell on (42,21), a path: the original's entrance cell (42,22) then holds links `0x01`,
+  OpenTPW's `0x82`. `ParkBuilding.LayQueueStub` clears the path under the stub (`ForceClearPath`) after
+  `MarkWaysInAndOut` has written the entrance's half, which takes it away again, and the path cells either side
+  then link to the entrance diagonally, which the original's do not. So `ParkRideChoice.StartOfQueue` finds no
+  queue, `mBackOfQueue` and `mQueueSizeInCells` read nought, and the queue tool has nothing to grow from. Read
+  the placer's order in `FUN_00528a70` (`0x005297e7`..`0x00529890`) and what the path linker does at an entrance,
+  then build it. Confirm: `buy 1101 41 22 0`, `cell 42 22` reading links `0x01`, the queue grown to a path and
+  the ride open; the written file's three bytes the original's; a screenshot.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

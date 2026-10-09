@@ -163,17 +163,7 @@ public static class ParkBuilding
 		// twelfth would overwrite the first.
 		state.EnterCell( cellX, cellY, thingId );
 
-		// After the footprint, never before: Stamp types every cell it covers, and the way in and the way
-		// out are two of those cells wearing a different type. A picture with no entrance has neither.
-		var node = item.HasEntrance
-			? MarkWaysInAndOut( state, park, cellX + entryX, cellY + entryY, cellX + exitX, cellY + exitY,
-				item.EntryDirection, item.ExitDirection, angle, item.HasQueue, MapStep.CellId( cellX, cellY ) )
-			: null;
-
-		// The placer rewalks the queue once its stub is down (FUN_004de1f0 at 0x00529890), so the ride
-		// measures the one cell it already has.
-		if ( node != null )
-			state.RemeasureQueue( thingId );
+		var node = LayEnds( state, park, item, thingId, cellX, cellY, angle );
 
 		PayFor( state, item );
 
@@ -191,6 +181,42 @@ public static class ParkBuilding
 		return new( $"buy: '{item.Name}' built as thing {thingId} at ({cellX},{cellY}) for {item.BuildPrice}, " +
 			$"balance {state.Balance}" + (node is { } at ? $", queue node at ({at.X},{at.Y})" : ""), thingId, node,
 			item.HasQueue, item.TrackType );
+	}
+
+	/// <summary>
+	/// Types a standing thing's way in and way out, lays the cells before them and measures its queue.
+	/// Answers the queue cell laid, or null. A picture with no entrance has neither end.
+	/// </summary>
+	/// <remarks>
+	/// After the footprint, never before: <see cref="Stamp"/> types every cell it covers, and the way in
+	/// and the way out are two of those cells wearing a different type.
+	/// <para>
+	/// The commit puts the entrance's bit toward the queue cell back (<c>FUN_0052a050</c> at
+	/// <c>0x00525264</c>): a path cleared from under that cell took it. Then the queue is walked, and the
+	/// ride measures the one cell it has. <b>The original walks it twice</b>, in the placer before the bit
+	/// is back (<c>0x00529890</c>) and as the commit seeds the queue tool after; the first finds nothing
+	/// where the cell was laid over a path, and is left out here.
+	/// </para>
+	/// </remarks>
+	internal static (int X, int Y)? LayEnds( ParkState state, IParkInitialState park, ParkItemCatalogue.Item item,
+		int thingId, int cellX, int cellY, int angle )
+	{
+		if ( !item.HasEntrance )
+			return null;
+
+		var (entryX, entryY) = RotateDelta( item.EntryDeltaX, item.EntryDeltaY, angle );
+		var (exitX, exitY) = RotateDelta( item.ExitDeltaX, item.ExitDeltaY, angle );
+
+		var node = MarkWaysInAndOut( state, park, cellX + entryX, cellY + entryY, cellX + exitX, cellY + exitY,
+			item.EntryDirection, item.ExitDirection, angle, item.HasQueue, MapStep.CellId( cellX, cellY ) );
+
+		if ( node is { } laid )
+		{
+			RejoinEntrance( state, cellX + entryX, cellY + entryY, laid.X, laid.Y );
+			state.RemeasureQueue( thingId );
+		}
+
+		return node;
 	}
 
 	/// <summary>
@@ -989,7 +1015,23 @@ public static class ParkBuilding
 		_ => (x, y)
 	};
 
-	/// <summary>The compass bit for the one cardinal step from a cell to its neighbour, or nought.</summary>
+	/// <summary>
+	/// Gives a queued thing's entrance its bit toward the queue cell laid before it - the first write of
+	/// the commit's <c>FUN_0052a050</c> (<c>0x0052a0a1</c>), <c>mNeighbours |= Opposite( H )</c>.
+	/// </summary>
+	internal static void RejoinEntrance( ParkState state, int entryCellX, int entryCellY, int nodeX, int nodeY )
+	{
+		if ( !ParkState.OnMap( entryCellX, entryCellY ) )
+			return;
+
+		var entrance = state.Record( entryCellX, entryCellY );
+
+		state.SetRecord( entryCellX, entryCellY, entrance with
+		{
+			Neighbours = (byte)(entrance.Neighbours | BitToward( entryCellX, entryCellY, nodeX, nodeY ))
+		} );
+	}
+
 	private static int BitToward( int x, int y, int toX, int toY ) => (toX - x, toY - y) switch
 	{
 		(0, -1) => 0x01,
@@ -1279,18 +1321,6 @@ public static class ParkBuilding
 		}
 
 		Carrying = 0;
-
-		// FUN_0052a050 ORs the entrance's bit toward the node back in before it anchors there, which
-		// matters when the node was laid over a path: clearing that path unlinked the entrance from it.
-		if ( state.TryObject( built.ThingId, out var placed )
-			&& ParkState.OnMap( placed.EntryCellX, placed.EntryCellY ) )
-		{
-			var towardNode = BitToward( placed.EntryCellX, placed.EntryCellY, node.X, node.Y );
-			var entrance = state.Record( placed.EntryCellX, placed.EntryCellY );
-
-			state.SetRecord( placed.EntryCellX, placed.EntryCellY,
-				entrance with { Neighbours = (byte)(entrance.Neighbours | towardNode) } );
-		}
 
 		Unimplemented.Report( "QUEUE_MODE_ADVISOR_MESSAGE_0xCB" );
 

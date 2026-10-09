@@ -97,6 +97,59 @@ public class ParkPathNeighbourTests
 	}
 
 	/// <summary>
+	/// A ride's end a new path joins gains the one bit toward it and no diagonal, with a path either
+	/// side of the new cell: the diagonal fix-up is the path neighbour's alone. An entrance links on its
+	/// direction byte's own bit, an exit on the opposite one.
+	/// </summary>
+	[TestMethod]
+	[DataRow( CellEdge.RideEnd, 0x10 )]
+	[DataRow( CellEdge.RideFarEnd, 0x01 )]
+	public void ARidesEndGainsNoDiagonalFromThePathsBesideItsLink( int end, int direction )
+	{
+		var park = World();
+		var state = new ParkState( park );
+
+		foreach ( var (x, y) in new[] { (10, 10), (11, 10), (12, 10), (10, 11), (11, 11), (12, 11) } )
+			Assert.AreEqual( 0, ParkState.CellFor( park, x, y ).Type, $"({x},{y}) should be bare ground" );
+
+		Lay( state, park, 10, 10 );
+		Lay( state, park, 12, 10 );
+		state.SetRecord( 11, 11, ParkState.CellFor( park, 11, 11 ) with { Type = end, Direction = (byte)direction } );
+
+		Lay( state, park, 11, 10 );
+
+		Assert.AreEqual( 0x54, MaskAt( park, 11, 10 ), "the new cell joins west, east and the end to its south" );
+		Assert.AreEqual( 0x01, MaskAt( park, 11, 11 ), "the end gains north alone" );
+		Assert.AreEqual( 0x04, MaskAt( park, 10, 10 ) );
+		Assert.AreEqual( 0x40, MaskAt( park, 12, 10 ) );
+	}
+
+	/// <summary>
+	/// A path neighbour that gains a new cell gains, on its own side alone, the diagonal to a path beside
+	/// that link: the fix-up a ride's end does not get.
+	/// </summary>
+	[TestMethod]
+	public void APathNeighbourGainsTheDiagonalBesideItsNewLink()
+	{
+		var park = World();
+		var state = new ParkState( park );
+
+		foreach ( var (x, y) in new[] { (10, 10), (11, 10), (10, 11), (11, 11) } )
+			Assert.AreEqual( 0, ParkState.CellFor( park, x, y ).Type, $"({x},{y}) should be bare ground" );
+
+		Lay( state, park, 10, 10 );
+		Lay( state, park, 11, 11 );
+
+		Assert.AreEqual( (0, 0), ((int)MaskAt( park, 10, 10 ), (int)MaskAt( park, 11, 11 )), "two paths corner to corner are not joined" );
+
+		Lay( state, park, 11, 10 );
+
+		Assert.AreEqual( 0x50, MaskAt( park, 11, 10 ), "the new cell joins west and south" );
+		Assert.AreEqual( 0x04 | 0x08, MaskAt( park, 10, 10 ), "the west one gains east, and south-east to the path there" );
+		Assert.AreEqual( 0x01 | 0x80, MaskAt( park, 11, 11 ), "the south one gains north, and north-west" );
+	}
+
+	/// <summary>
 	/// A queue cell beside a new path <b>never forms a link</b>, and that is measured rather than
 	/// assumed: the original's cardinal block for an mType 3 neighbour only lets it retile.
 	/// </summary>

@@ -1281,11 +1281,9 @@ sweeps on both things and both scripts were as they had been. The frame after th
 hoardings, the camera's pole and the litter bin with no shop beside it, as OpenTPW's frames at the save and after
 its own load do (`q253/sheet-ours-beside-original.png`).
 
-**OpenTPW's placer parts from the original where a queue's first cell is laid over a path**, found by the file's
-three differing bytes: the ape's entrance cell (42,22) holds links `0x82` here and `0x01` in the original's file.
-Clearing the path under the stub takes the entrance's link to it, and the path cells either side then link to
-the entrance diagonally. With no link the queue is not measured, so `mBackOfQueue` and `mQueueSizeInCells` go out
-nought where the original's hold the stub's cell and 1 (Q256). A camera bought here has `mFlags` nought where the
+**A queue's first cell laid over a path is the original's**: the ape's entrance cell (42,22) holds links `0x01`
+and the thing's `mBackOfQueue` and `mQueueSizeInCells` the cell (42,21) and 1, in OpenTPW's file and in the
+original's (`park-engine.md`, "The commit hands the player the queue tool"; Q256). A camera bought here has `mFlags` nought where the
 file's own hold `0x10`, a bit of the description not read (`BOUGHT_OBJECT_FLAG_BITS`).
 
 **Predictions wrong, mine:** the queue's back cell and size (above: three bytes, restated after the first run);
