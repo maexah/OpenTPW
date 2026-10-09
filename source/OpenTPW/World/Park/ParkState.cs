@@ -44,6 +44,31 @@ public sealed class ParkState
 
 	private readonly RuntimeCell[] _cells;
 
+	private readonly short[] _effects = new short[ParkWorld.MapSize * ParkWorld.MapSize * ParkWorld.EffectWords];
+
+	/// <summary>The eight region effects' numbers: the park's balance's, or <c>Standard.sam</c>'s until one is given.</summary>
+	public ParkRegionEffects RegionEffects { get; init; } = ParkRegionEffects.Standard;
+
+	/// <summary>
+	/// Every cell's region effects as the park runs, <see cref="ParkWorld.EffectWords"/> words a cell in the map's
+	/// order: the file's, with what a thing bought, sold, dirtied or cleaned since has stamped and taken off
+	/// (the world's <c>+0x1b1104</c>). The staff's and the litter's are the file's and do not move.
+	/// </summary>
+	public IReadOnlyList<short> Effects => _effects;
+
+	/// <summary>A copy of <see cref="Effects"/>, for a caller that will stamp on it.</summary>
+	public short[] EffectsCopy() => [.. _effects];
+
+	/// <summary>One cell's five words: happiness, illness, hunger, security, attraction.</summary>
+	public ReadOnlySpan<short> EffectsAt( int x, int y )
+		=> _effects.AsSpan( ((y * ParkWorld.MapSize) + x) * ParkWorld.EffectWords, ParkWorld.EffectWords );
+
+	/// <summary>Stamps a region effect round a cell - <c>FUN_004d8440</c>.</summary>
+	public void StampEffect( int effect, int x, int y ) => RegionEffects.Stamp( _effects, effect, x, y );
+
+	/// <summary>Takes a region effect off round a cell - <c>FUN_004d8460</c>.</summary>
+	public void UnstampEffect( int effect, int x, int y ) => RegionEffects.Stamp( _effects, effect, x, y, off: true );
+
 	/// <summary>
 	/// The park being played, or null outside one - the arrangement <see cref="ParkObjects.Current"/>
 	/// and <see cref="ParkPeople.Current"/> use. The ground
@@ -634,6 +659,12 @@ public sealed class ParkState
 
 		if ( park == null )
 			return;
+
+		if ( park.Save?.CellEffects is { Count: > 0 } effects && effects.Count == _effects.Length )
+		{
+			for ( var i = 0; i < _effects.Length; ++i )
+				_effects[i] = effects[i];
+		}
 
 		for ( var i = 0; i < _cells.Length && i < park.Cells.Count; ++i )
 		{

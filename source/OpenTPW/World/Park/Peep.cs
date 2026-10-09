@@ -690,10 +690,9 @@ public sealed class Peep
 	/// <b>One term is deliberately missing, and it is named rather than quietly left out.</b> Between the
 	/// countdown and the drift the original adds the guest's <i>cell's</i> own influence to happiness,
 	/// illness and hunger - three signed shorts of a ten-byte per-cell record that placed objects and
-	/// walking staff stamp into the cells around them. Those values are the balance file's
-	/// <c>RegionFX[0..7]</c> and are well understood, but which of the eight a given thing stamps is
-	/// chosen at each call site in the executable and is read only for a toilet's and the fireworks'
-	/// (<c>ride-operation.md</c>, "A toilet's dirt"), so modelling it now would mean inventing the rest. Nothing here reads a cell, and nothing pretends to.
+	/// walking staff stamp into the cells around them. The park keeps those cells
+	/// (<see cref="ParkState.Effects"/>; <c>ride-operation.md</c>, "The region effects"), the staff's part of them
+	/// still where the file has it; this turn does not read them yet.
 	/// </para>
 	/// <para>
 	/// <b>A quirk worth not tidying away.</b> The drift is gated on the same counter as the whole tick,

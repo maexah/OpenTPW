@@ -5651,6 +5651,14 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   file and in the original's memory, whose window for the bought camera has the button the control's lacks
   (`saves.md`, "OpenTPW's writer, a made object's flags and corner"). The rock is not in Instant Action: its
   offset is not run in either game.
+- [x] **Q257e. The writer: the region effects of a thing bought and a thing sold.** Split by the session
+  (2026-10-09): the old Q257e's other pieces are Q257f. A cell's ten effect bytes are five words (happiness,
+  illness, hunger, security, attraction) and are what the things round it stamp: 0 cells wrong of 212,992 in
+  thirteen of the original's files. The running park keeps the grid (`ParkState.Effects`), a purchase stamps
+  and a sale, a dirtying and a clean move it, and the writer writes it. Confirmed: a camera bought and a toilet
+  sold read 303 then 302 cells and `cell 46 27` `0,0,0,20,0`; the file rebuilds from its own things with 0
+  cells wrong; the original held it with 0 wrong and, the bought camera sold there, left the cell nought, where
+  the build before's file left it at -40.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

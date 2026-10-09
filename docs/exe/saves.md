@@ -717,9 +717,9 @@ The second stage (Q241g). `Level.WrittenCells` hands the writer every cell the r
 in the copied body, where it lies.
 
 - **Written of a cell:** the map record's `mDirection`, `mFlags`, `mNeighbours`, `mOverlapCounter`, `mParentID`,
-  `mTileData` and `mType`, and the track record's flags, neighbours, parent and type. **Left as the file's:** the
-  status byte, `mMeshInstance`, `mHoardingNeighbours`, the litter block, `mWho`, the track's segment and the
-  effects part. A file whose cell has no map record, or track fields to write and no track record, is refused:
+  `mTileData` and `mType`, and the track record's flags, neighbours, parent and type. **Left as the file's:**
+  `mMeshInstance`, `mHoardingNeighbours`, the litter block, `mWho` and the track's segment. The effects part and
+  its bit of the status byte are the last stage's ("OpenTPW's writer, the region effects"). A file whose cell has no map record, or track fields to write and no track record, is refused:
   the original writes none such.
 - **`mWho` is not written here.** The chain is the cell's head and the things' two links together (above): the
   people's stage writes it for every cell a person stood on or stands on ("OpenTPW's writer, the people"), and
@@ -1714,11 +1714,8 @@ offset stands at 180 or 270 degrees in any file**, so those two arms are the lis
 **What OpenTPW builds.** `ItemDescriptionFile.ObjectFlags` and `MapOffset` (each key the item's own, or its
 category's where its file leaves it out), carried by `ParkItemCatalogue.Item`; `ParkBuilding.Constructed`
 gives a purchase and a move's put-down the item's flags, `TopLeftFor`'s corner and `mState`, in the running
-park and so in the record `ParkWorld.MadeObjectRecord` writes. `BOUGHT_OBJECT_FLAG_BITS` is gone. **Not
-built, counted:** the three region effects (`BOUGHT_OBJECT_REGION_EFFECT`, at a purchase of a toilet, a
-security thing or fireworks; no cell effect is kept here, `ride-operation.md`, "The region effects"), so a
-written park's cells hold no effect round a bought camera or toilet, and the original, selling one loaded
-from such a file, takes off an effect that was never put on (filed under Q257e).
+park and so in the record `ParkWorld.MadeObjectRecord` writes. `BOUGHT_OBJECT_FLAG_BITS` is gone. **The three region
+effects** the constructor stamps are built since Q257e ("OpenTPW's writer, the region effects").
 
 **Measured (Q257c, `q257c/`).** Lost Kingdom from `easymode.TPWI`: `buy 1413 46 27 0` (a Security Camera, thing
 43), `buy 1406 46 26 270` (a Litter Bin, 44), `buy 1411 36 25 90` (a Staff Room, 45), `savepark Q257C` under
@@ -1748,6 +1745,60 @@ game:** an item with an offset (the Huge Hollow Rock is not in Instant Action's 
 thirteen files only), a thing with `0x1`, `0x8`, `0x20`, `0x80` or `0x100` bought (the files and tests
 only), a thing moved. OpenTPW's frames show the three things standing and do not tell the fix from the
 control: flags are not drawn. `docs/exe/addresses.md` not regenerated.
+
+### OpenTPW's writer, the region effects
+
+Q257e, split by the session: the item's other pieces are Q257f. The rule, its eight effects and who stamps each
+are `ride-operation.md`, "The region effects"; a cell's ten bytes are five words, and every cell of thirteen of
+the original's files is what the file's own things stamp.
+
+**What OpenTPW writes.** `Level.WrittenEffects` hands the writer the running park's grid (`ParkState.Effects`)
+with each object's effect as its written record has it: a thing bought and left out of the file (a track ride,
+a thing with an emitter) holds none, a thing sold and still written holds the file's, and where the objects go
+out as the file's a toilet dirtied or cleaned since holds the file's too. `ParkWorld.PutEffects` then writes
+the map again, last of all, since the map lies before the thing list: a cell takes the effects record and bit
+`0x4` of its status where a word is not nought and loses both where all are, so the body changes length by ten
+bytes a cell. **Not written:** an entertainer's and a guard's effect stays on the cells the file has it on, with
+their `mLastRecordedMapId` the file's, so the two agree and the original moves the effect at the member's next
+step; a member hired here is written with that field nought and no effect, and the original's pre-step, which
+unstamps nothing for a cell off the map, stamps theirs at their first step (the listing; not run); **a member
+fired here leaves the file's effect on the cells** (Q257f).
+
+**Measured (Q257e, `q257e/`).** Lost Kingdom from `easymode.TPWI`: `effects` read 250 cells and sums 6, 3, -3,
+930, 0; after `buy 1413 46 27 0` (a Security Camera, thing 43) 303 cells and security 1338, `cell 46 27`
+`0,0,0,20,0`, `cell 51 32` `0,0,0,3,0`; after `sell 21` (the Small Toilet on (55,17)) 302 cells, illness 2 and
+hunger -2, `cell 55 17` nought; `savepark Q257E` at `mGameTick` 850. **In the file every cell is what the file's
+own things stamp** (`fx.py`, the checker the thirteen files pass: 0 wrong of 16,384), 302 cells open with status
+7 and 122 differ from easymode's. OpenTPW's own load read 302 cells, security 1338 and `cell 46 27` `0,0,0,20,0`
+(`run1/`, 5 of 5). **The control** (`main` before it; `control/`): the purchase counted
+`BOUGHT_OBJECT_REGION_EFFECT`, and its file holds easymode's 250 records, 122 cells wrong against its own things.
+
+**The original under Proton** (`orig/go.sh`, off-screen; `look.py` reads the world's `+0x2d8 + 0x1b1104` and
+rebuilds it from the things in memory, each member of staff fitted on a cell; `a-*` the fix's file, `c-*` the
+control's). **The fix's:** on the first poll, at the load from the Load Park list and 75 s on, 302 cells,
+(46,27) `0,0,0,20,0` and 0 cells wrong against the things in memory, the staff's effects moving with them. The
+bought camera sold from its window (the bomb, then the question's tick): (46,27) nought, no cell under nought,
+0 wrong; the file's own camera 19, sold before it by my misplaced click, the same. **The control's:** on
+entering the park 250 cells, (46,27) nought, 122 wrong; **after the load from the list over that running park
+(46,27) read security -20 with the camera standing**, 53 cells under nought, and after its sale -40, 77 under
+nought (`sheet-original-sale-fix-control.png`: the window and the ground after, fix then control; nothing of an
+effect is drawn in either game).
+
+**A load over a running park keeps what memory holds on a cell the file gives no effects record.** Inferred
+from those two runs and not read in the reader's listing: the old park's things are taken down first, each
+destructor unstamping, and the control's cell, which has no record, was left holding the old camera's -20, where
+the fix's, which has one, read the file's 20. A file of the original's own always holds the record, so it never
+shows.
+
+**Predictions wrong, mine:** the control's cell in the original, 0 to 10 at the load and -20 to -10 after the
+sale; it read -20 and -40 (above). **My mistakes in the original's run:** the first click sold the file's
+camera, the view being turned, and the second opened a passing member of staff's window, whose dismissal my
+next two clicks confirmed; the running park only, nothing saved, the save sum the same before and after.
+**Not run in either game:** fireworks (no Instant Action item was tried, no file holds one), a toilet bought, a
+toilet dirtied or cleaned and then written (tests only), a thing bought and left out of the file, the objects
+going out as the file's, a member of staff hired or fired and then written. **Not built:** the staff's effects
+moving, the fireworks' spent turn (`FIREWORKS_SPENT_REGION_EFFECT`), any reader of the running grid (Q257f,
+Q157). `docs/exe/addresses.md` not regenerated.
 
 ### Read, not run
 

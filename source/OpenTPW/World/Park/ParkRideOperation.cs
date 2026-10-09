@@ -830,8 +830,8 @@ public sealed class ParkRideOperation
 	/// (<c>docs/exe/ride-operation.md</c>, "A toilet's dirt").
 	/// </summary>
 	/// <remarks>
-	/// Counted and not kept: on that use the original unstamps region effect 1 and stamps effect 6 at the toilet's
-	/// cell (<c>FUN_004d8460</c>, <c>FUN_004d8440</c>); no cell effects are stamped here. The online game's arm,
+	/// On that use the clean toilet's region effect comes off the cells round it and the dirty one's goes on
+	/// (<c>FUN_004d8460</c>, <c>FUN_004d8440</c>). The online game's arm,
 	/// which cleans instead, is not built: there is no online game.
 	/// </remarks>
 	/// <returns>Whether this use made a toilet dirty.</returns>
@@ -851,8 +851,10 @@ public sealed class ParkRideOperation
 		if ( was || !ParkState.IsDirty( worn ) )
 			return false;
 
+		// The clean toilet's effect comes off the cells round it and the dirty one's goes on (0x004e24e2..0x004e2500).
 		Log.Info( $"Object {thingId}: Toilet has become dirty and smelly" );
-		Unimplemented.Report( "TOILET_DIRTY_REGION_EFFECTS" );
+		_state.UnstampEffect( ParkRegionEffects.CleanToilet, used.CellX, used.CellY );
+		_state.StampEffect( ParkRegionEffects.DirtyToilet, used.CellX, used.CellY );
 
 		return true;
 	}
@@ -877,8 +879,8 @@ public sealed class ParkRideOperation
 	/// (<c>docs/exe/ride-operation.md</c>, "A toilet's dirt").
 	/// </summary>
 	/// <remarks>
-	/// Counted and not kept: for a toilet found dirty the original unstamps region effect 6 and stamps effect 1
-	/// at its cell; no cell effects are stamped here.
+	/// For a toilet found dirty the dirty one's region effect comes off the cells round it and the clean one's
+	/// goes back on (<c>0x004dfdcf</c>, <c>0x004dfdf7</c>).
 	/// </remarks>
 	public static void Clean( ParkState state, RideScript? script, int thingId )
 	{
@@ -886,7 +888,10 @@ public sealed class ParkRideOperation
 			return;
 
 		if ( ParkState.IsDirty( thing ) )
-			Unimplemented.Report( "TOILET_DIRTY_REGION_EFFECTS" );
+		{
+			state.UnstampEffect( ParkRegionEffects.DirtyToilet, thing.CellX, thing.CellY );
+			state.StampEffect( ParkRegionEffects.CleanToilet, thing.CellX, thing.CellY );
+		}
 
 		script?.Set( WornVariable, 0 );
 		state.ReplaceObject( thing with { StateOfRepair = 100f, AssignedStaff = 0, RequestedService = 0 } );

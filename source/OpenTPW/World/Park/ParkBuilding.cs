@@ -102,11 +102,6 @@ public static class ParkBuilding
 		// queue-path bit (0x004db712..0x004db793, as ParkRideOperation.Close does), and the first queue measure
 		// that finds its back connected opens it; BindOperation applies the close after binding the script.
 		//
-		// A toilet, a thing that provides security and fireworks each stamp a region effect round their cell as
-		// they are constructed (1, 4 and 7: 0x004db3ee, 0x004db458, 0x004db48c). No cell effect is kept here.
-		if ( StampsRegionEffect( item ) )
-			Unimplemented.Report( "BOUGHT_OBJECT_REGION_EFFECT" );
-
 		// Where a guest walks up to it, and where one is put down leaving it. The original derives both in
 		// the same constructor, from the item's own footprint picture turned by the angle it is being
 		// built at: mEntryPos is the anchor cell plus MapDelta::Rotate( entrance delta, angle ), and
@@ -154,6 +149,8 @@ public static class ParkBuilding
 		}
 
 		state.AddObject( placed );
+
+		StampEffects( state, placed );
 		BindOperation( state, rides, placed, item );
 		Stamp( state, footprint, cellX, cellY );
 
@@ -237,9 +234,20 @@ public static class ParkBuilding
 		}
 	}
 
-	/// <summary>Whether a thing of this item stamps a region effect as it is constructed: a toilet, security, fireworks.</summary>
-	internal static bool StampsRegionEffect( ParkItemCatalogue.Item item )
-		=> (item.ObjectFlags & (ParkWorld.CatalogueObject.ToiletFlag | 0x10 | ParkWorld.CatalogueObject.IsFireworksFlag)) != 0;
+	/// <summary>
+	/// The region effects the object constructor stamps round a new thing's cell: a toilet's 1, security's 4 and
+	/// fireworks' 7 (<c>0x004db3ee</c>, <c>0x004db458</c>, <c>0x004db48c</c>).
+	/// </summary>
+	internal static void StampEffects( ParkState state, ParkWorld.CatalogueObject placed )
+	{
+		foreach ( var effect in ParkRegionEffects.Of( placed ) )
+			state.StampEffect( effect, placed.CellX, placed.CellY );
+
+		// Fireworks' is taken off again on the turn their script's variable 0 reads 1 (FUN_004e0b90), which is
+		// not built: theirs stays until they are sold.
+		if ( placed.IsFireworks )
+			Unimplemented.Report( "FIREWORKS_SPENT_REGION_EFFECT" );
+	}
 
 	/// <summary>
 	/// An object's <c>mTopLeft</c> as the object constructor <c>FUN_004db090</c> writes it (<c>0x004db2da</c>): the
@@ -467,6 +475,13 @@ public static class ParkBuilding
 		people?.ThingRemoved( placed );
 
 		state.Deposit( refund );
+
+		// The destructor takes off what the thing holds on the cells round it, by its flags (FUN_004dd0a0,
+		// 0x004dd1cd..0x004dd286): security's, a toilet's clean or dirty one, and fireworks'. A deviation: the
+		// original takes fireworks' off only while their script's variable 0 reads under 2, having taken it off
+		// itself on the turn it read 1; that turn is not built, so theirs always goes here.
+		foreach ( var effect in ParkRegionEffects.Of( placed ) )
+			state.UnstampEffect( effect, placed.CellX, placed.CellY );
 
 		// The demolisher puts back the tool it was called under (0x0052818d). With no tool that is the idle mode,
 		// installed through the setter, so a candidate or a worker in the hand is let go of; an item in the hand

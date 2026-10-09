@@ -123,19 +123,6 @@ public class ParkBoughtFlagsAndCornerTests
 		Assert.AreEqual( 1, catalogue.All.Count( item => item.MapOffsetX != 0 || item.MapOffsetY != 0 ), "one has an offset" );
 	}
 
-	/// <summary>A toilet, a thing that provides security and fireworks stamp a region effect as they are built, and nothing else does.</summary>
-	[TestMethod]
-	[DataRow( 0x1, true )]
-	[DataRow( 0x10, true )]
-	[DataRow( 0x80, true )]
-	[DataRow( 0x25, true )]
-	[DataRow( 0x40, false )]
-	[DataRow( 0x22, false )]
-	[DataRow( 0x12c, false )]
-	[DataRow( 0, false )]
-	public void AToiletSecurityAndFireworksStampARegionEffect( int flags, bool stamps )
-		=> Assert.AreEqual( stamps, ParkBuilding.StampsRegionEffect( new ParkItemCatalogue.Item( 9, "x", "", "", 1, 1, null, ObjectFlags: flags ) ) );
-
 	/// <summary>Every placed object of the shipped park holds the corner its item and its angle give.</summary>
 	[TestMethod]
 	public void EveryPlacedObjectsCornerIsItsItems()

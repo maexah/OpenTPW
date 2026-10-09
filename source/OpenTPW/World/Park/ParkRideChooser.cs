@@ -304,7 +304,7 @@ public sealed class ParkRideChooser
 		var downBy = fromY - backY;
 		var distanceSquared = (acrossBy * acrossBy) + (downBy * downBy);
 
-		// The back cell's own effects count, which divides the distance term.
+		// The back cell's attraction, which divides the distance term: the file's, not the running park's.
 		var effects = 0;
 
 		if ( ParkState.OnMap( backX, backY ) )

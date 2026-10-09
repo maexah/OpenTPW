@@ -48,7 +48,7 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q257e. The writer: what else a made record leaves out.** The old Q257c's other pieces, from Q253
+- [ ] **Q257f. The writer: what else a made record leaves out.** The old Q257e's other pieces, from Q253
   (`saves.md`, "What OpenTPW writes"), each counted or said there. A running channel's keep-shown bit `0x8`
   is kept by no channel here (`SAVE_PARK_CHANNEL_KEEP_SHOWN_BIT`, counted for every made channel that runs). A
   made walk slot in use goes out facing nought (`SAVE_PARK_WALK_SLOT_FACING`). A made script's started effects
@@ -56,11 +56,7 @@ the research lab), then the rest of this section in its old order.
   and a thing with an emitter (`PART`) are left as the file has them, bought or sold (`SAVE_PARK_OBJECT_BOUGHT`,
   `SAVE_PARK_OBJECT_SOLD`). Confirm: each
   piece's bytes beside a file of the original's own, and the file loaded in the original under Proton.
-  From Q257c: a toilet, a thing that provides security and fireworks stamp a region effect round their cell as
-  they are built (1, 4 and 7) and take it off as they are sold, by the flag; nothing here keeps a cell's
-  effects, a purchase counts it (`BOUGHT_OBJECT_REGION_EFFECT`), a sale does not, and a written park's cells
-  hold none round a bought camera or toilet, so the original, selling one loaded from such a file, takes off
-  what was never put on (`saves.md`, "OpenTPW's writer, a made object's flags and corner"). And the offset's
+  From Q257c: the offset's
   arms at 180 and 270 degrees stand on the listing alone: no file holds such an object.
   From Q254: a queue cell on a tile outside the eight pieces, and every changed queue cell of a park written
   with its things as the file's, is still left naming the file's model and counted
@@ -80,6 +76,14 @@ the research lab), then the rest of this section in its old order.
   table's head is (`ParkRides.WrittenHeads` hands over none for such a script). And a new head's slot is the
   lowest the FILE leaves empty, not the lowest empty as it was hung: keep the slots as heads are hung if that
   order is ever read.
+  From Q257e (`saves.md`, "OpenTPW's writer, the region effects"; `ride-operation.md`, "The region effects"): an
+  entertainer's effect 0 and a guard's 3 do not move with them here (the pre-steps `FUN_004d4660`,
+  `FUN_004d6360`), a member hired stamps none and one fired leaves the file's on the cells, written so: move
+  them on `ParkState.Effects`, write `mLastRecordedMapId` (the person's `+41`), and check a written park with
+  `q257e/fx.py`, which wants 0 cells wrong. Fireworks' effect is not taken off on the turn their script's
+  variable 0 reads 1 (`FIREWORKS_SPENT_REGION_EFFECT`, counted at their purchase). The chooser divides by the
+  FILE's attraction word, not the running grid's (`ParkRideChooser.ScoreOf`). And not read in the listing: that
+  a load over a running park leaves a cell with no effects record holding what memory held.
 - [ ] **Q241j. The writer: the managers, then Save Game saves.** From Q241e. The economy thing's loans and rings,
   the staff HQ's strikes, the calendar's and the weather's fields; then `ParkSaveScreen.Save` writes
   (`SAVE_GAME_WRITER` gone), an overwrite replaces the file, and the Load Park list shows it. Confirm: a park

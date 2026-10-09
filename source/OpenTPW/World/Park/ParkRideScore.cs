@@ -103,8 +103,8 @@ public sealed class ParkRideScore
 	/// <c>FUN_004ddf50( 0 )</c>, <see cref="ParkState.QueueCount"/>.
 	/// </param>
 	/// <param name="EffectsNearby">
-	/// The cell's own effects count, which <b>divides</b> the distance term when it is not nought - see
-	/// <see cref="ParkWorld.MapCell.NearbyEffects"/>, which is read but unconfirmed.
+	/// The cell's attraction, which <b>divides</b> the distance term when it is not nought - see
+	/// <see cref="ParkWorld.MapCell.NearbyEffects"/>: fireworks' region effect is the one that adds to it.
 	/// </param>
 	/// <param name="DaysOld">
 	/// How many whole days old the thing is on the park's calendar - <see cref="ParkState.AgeInDays"/>. Compared

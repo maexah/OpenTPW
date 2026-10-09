@@ -178,6 +178,9 @@ public sealed partial class ParkWorld : IParkInitialState
 		/// </summary>
 		public const int IsFireworksFlag = 0x80;
 
+		/// <summary>The bit of a thing that provides security - <c>UsageInfo.ProvidesSecurity</c>; a Security Camera carries it.</summary>
+		public const int ProvidesSecurityFlag = 0x10;
+
 		/// <summary>Whether a guest can put litter in this - see <see cref="HoldsLitterFlag"/>.</summary>
 		public bool HoldsLitter => (Flags & HoldsLitterFlag) != 0;
 
@@ -992,6 +995,18 @@ public sealed partial class ParkWorld : IParkInitialState
 	/// </summary>
 	public IReadOnlyList<MapCell> Cells => _cells;
 
+	/// <summary>How many signed words a cell's effects are: happiness, illness, hunger, security and attraction, in the record's order.</summary>
+	public const int EffectWords = 5;
+
+	/// <summary>
+	/// Every cell's region effects, <see cref="EffectWords"/> words a cell in the map's order: what the things,
+	/// the staff and the litter around a cell have stamped on it (<c>docs/exe/ride-operation.md</c>, "The region
+	/// effects"). A cell with no effects record reads nought in all five.
+	/// </summary>
+	public IReadOnlyList<short> CellEffects => _effects;
+
+	private short[] _effects = [];
+
 	private MapCell[] _cells = [];
 
 	/// <summary>How many cells the map is across and down, whatever size the park inside it is.</summary>
@@ -1336,8 +1351,8 @@ public sealed partial class ParkWorld : IParkInitialState
 	private const int CellOccupant = 50;
 
 	/// <summary>
-	/// Where the wanted short sits inside the ten-byte EFFECTS sub-record - its last two bytes. See
-	/// <see cref="MapCell.NearbyEffects"/>; the rest of that record is still stepped over.
+	/// Where the attraction word sits inside the ten-byte effects record - its last two bytes. See
+	/// <see cref="MapCell.NearbyEffects"/>.
 	/// </summary>
 	private const int EffectsNearby = 8;
 
@@ -1505,6 +1520,53 @@ public sealed partial class ParkWorld : IParkInitialState
 				+ ((status & TrackRecord) != 0 ? TrackCellSize : 0)
 				+ ((status & EffectsRecord) != 0 ? EffectsCellSize : 0);
 		}
+	}
+
+	/// <summary>
+	/// Writes every cell's effects into <paramref name="body"/>, whose map lies where <see cref="Body"/>'s does:
+	/// <see cref="EffectWords"/> words a cell in the map's order. A cell takes an effects record where any of its
+	/// words is not nought and none where all are, as the original's writer tests it against a default's
+	/// (<c>FUN_004d7ea0</c>, <c>FUN_00502470</c>), so the map changes length and a new body is answered.
+	/// </summary>
+	/// <exception cref="InvalidOperationException">The walk never reached the map, or the words are not a map's.</exception>
+	internal byte[] PutEffects( byte[] body, IReadOnlyList<short> effects )
+	{
+		if ( MapAt < 0 || _cells.Length != MapCellCount )
+			throw new InvalidOperationException( "the park file it was loaded from holds no map" );
+
+		if ( effects.Count != MapCellCount * EffectWords )
+			throw new InvalidOperationException( $"{effects.Count} effect words were given for a map of {MapCellCount * EffectWords}" );
+
+		var map = new List<byte>( MapCellCount * (1 + MapCellSize + TrackCellSize) );
+		var at = MapAt;
+
+		for ( var index = 0; index < MapCellCount; ++index )
+		{
+			var status = body[at];
+			var kept = 1
+				+ ((status & MapRecord) != 0 ? MapCellSize : 0)
+				+ ((status & TrackRecord) != 0 ? TrackCellSize : 0);
+
+			var any = false;
+
+			for ( var word = 0; word < EffectWords; ++word )
+				any |= effects[(index * EffectWords) + word] != 0;
+
+			map.Add( (byte)(any ? status | EffectsRecord : status & ~EffectsRecord) );
+			map.AddRange( body.AsSpan( at + 1, kept - 1 ) );
+
+			for ( var word = 0; any && word < EffectWords; ++word )
+			{
+				var value = unchecked((ushort)effects[(index * EffectWords) + word]);
+
+				map.Add( (byte)value );
+				map.Add( (byte)(value >> 8) );
+			}
+
+			at += kept + ((status & EffectsRecord) != 0 ? EffectsCellSize : 0);
+		}
+
+		return [.. body.AsSpan( 0, MapAt ), .. map, .. body.AsSpan( at )];
 	}
 
 	private static void PutUInt16( byte[] body, int at, ushort value ) =>
@@ -1802,6 +1864,7 @@ public sealed partial class ParkWorld : IParkInitialState
 	private void ReadMap()
 	{
 		_cells = new MapCell[MapCellCount];
+		_effects = new short[MapCellCount * EffectWords];
 		MapAt = _at;
 
 		for ( var cell = 0; cell < MapCellCount; ++cell )
@@ -1828,6 +1891,12 @@ public sealed partial class ParkWorld : IParkInitialState
 			// tile's, and no cell of the one park the game ships is shaped that way.
 			if ( (status & MapRecord) != 0 )
 				_cells[cell] = ReadCell( _at + 1, status );
+
+			if ( (status & EffectsRecord) != 0 )
+			{
+				for ( var word = 0; word < EffectWords; ++word )
+					_effects[(cell * EffectWords) + word] = (short)ReadUInt16At( _at + size - EffectsCellSize + (word * 2) );
+			}
 
 			_at += size;
 		}
@@ -1876,19 +1945,9 @@ public sealed partial class ParkWorld : IParkInitialState
 			Occupant: (ushort)ReadUInt16At( at + CellOccupant ),
 			MeshInstance: ReadInt32At( at + CellMeshInstance ),
 
-			// The EFFECTS sub-record, which the walk sizes and otherwise steps over. It follows the map
-			// record and the track record, so where it begins depends on whether this cell has a track.
-			//
-			// The field wanted is the short at its offset 8 - the last two bytes of the ten. The original
-			// divides a candidate's distance score by it when it is not nought, and its own log line for
-			// that branch reads "dist inc nearby fireworks", which is as much as is known about what it
-			// counts. Only 250 of this park's 16,384 cells carry an effects record at all.
-			//
-			// READ BUT NOT CONFIRMED. Every cell of the one
-			// park that ships reads nought here, and an all-nought field is equally what a correct read of
-			// an unused value looks like and what a wrong offset landing in padding looks like. The only
-			// thing actually established is that nothing non-zero ever appears in a cell carrying no
-			// effects record, which is a check on the STRIDE rather than on this offset within it.
+			// The effects record's fifth word, its attraction, which only fireworks stamp (RegionFX[7]); the
+			// record follows the map record and the track record. The original divides a candidate's distance
+			// score by it where it is not nought ("dist inc nearby fireworks"). All five words are CellEffects.
 			NearbyEffects: (status & EffectsRecord) != 0
 				? (ushort)ReadUInt16At( at + MapCellSize + (tracked ? TrackCellSize : 0) + EffectsNearby )
 				: (ushort)0 );

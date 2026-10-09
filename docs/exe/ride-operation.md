@@ -2826,7 +2826,7 @@ park, a walk that fails (tested only).
 | The entertainer's performance | a draw mod 3 of nought, a guest in reach: a second draw, the bank's state animation, state `0xe` for WorkDuration + 1 sweeps, effect `0x87` ("The entertainer's performance") | built (`StaffBehaviour.Perform`; "The performance, in both games"); the look is `ParkPeople.GuestsNear`, each guest at the cell the park has them linked into; effect `0x87` counted, `STAFF_SOUND_PERFORMANCE_END` (Q135) | a third of the entertainer's decides |
 | The stand as a member goes idle | SetState(0) queues animation 3 every time (`FUN_004fa460`) | queued from a performance and after a clean only; any other idle keeps the picture it had | every idle |
 | State scripts 1 to 3 (words 1800, 1812, 1824) and a bank with no group | played; an animation past the table | not copied, counted `SPRITE_STATE_ANIMATION_NOT_STARTED`; counted `ENTERTAINER_BANK_WITHOUT_A_STATE_GROUP` | no shipped bank |
-| The entertainer's region effect | the pre-step `FUN_004d4660` moves `RegionFX[0]` with them, cell by cell | none, uncounted | every cell the entertainer crosses (Q157) |
+| The entertainer's region effect | the pre-step `FUN_004d4660` moves `RegionFX[0]` with them, cell by cell | not moved, uncounted: the file's stays where the file has it | every cell the entertainer crosses (Q257f) |
 | The researcher's research | state `0xf` on a draw of nought or with nowhere to walk, WorkDuration + 1 sweeps, then a walk or the same again; the points to the lab every 20 sweeps ("The research, in both games") | built (`StaffBehaviour.Research`); the points counted, `RESEARCH_POINTS_TO_THE_LAB`, and spent by nothing: there is no lab | a quarter of the researcher's decides; the points every 20 sweeps |
 | Staff sounds | fourteen cat_staff effects | twelve built (`StaffBehaviour.DrawForSound`, `ParkAudio.StaffSound`; `audio.md`, "The staff's voices"); the chase's `0x88` and `0x89` have no site | every idle and walking turn, a researching turn; a performance's end; a guard's chase and catch wait on the chase |
 | Tired | the byte `<=` 1 | the same (`StaffBehaviour.TiredOrCarryingOn`) | a rest under 2 |
@@ -2878,14 +2878,39 @@ read of an object's `+0x44` found is the mechanic's repair time (`0x004da42a`).
 
 **The region effects.** `FUN_004d8440( fx, cell )` stamps and `FUN_004d8460( fx, cell )` unstamps, both
 `FUN_004d8480( sign, fx, cell )`, whose `this` is `[0x008023a0]`, the world `+0x2d8`: over the square of the effect's
-radius (the byte at `+0x1d910e + 12 × fx` from it) around the cell, clipped to the map, each of the effect's five words
+radius (the byte at `+0x1d910e + 12 × fx` from it) around the cell, held to the map, each of the effect's five words
 (`+0x1d9104 + 12 × fx`) is added to or taken from the cell's five (`+0x1b1104`, ten bytes a cell), divided by
-`|dx| + |dy| + 1`. A toilet's constructor stamps 1
-(`0x004db3ee`); the balance file's comments call `RegionFX[1]` "Clean Toilet" (radius 3, Illness 1, Hunger −1) and
-`RegionFX[6]` "Dirty Toilet" (radius 3, Illness 2, Hunger −2). Which of the five words is which key was not read.
-The object constructor also stamps 4 for a thing with `UsageInfo.ProvidesSecurity` (`0x004db458`) and 7 for
-fireworks (`0x004db48c`), and the destructor `FUN_004dd0a0` unstamps each by the object's flag (`saves.md`,
-"OpenTPW's writer, a made object's flags and corner"). The other call sites, callers not read here, pass 0, 2, 3 and 5.
+`|dx| + |dy| + 1` and cut towards nought (`IDIV`), so an unstamp takes off exactly what a stamp put on. **The five
+words are the balance file's keys in its own order**: `RegionFX[n].Happiness`, `Illness`, `Hunger`, `Security`,
+`Attraction`, with `Radius` the byte; `Standard.sam` holds the eight and no theme's file changes one.
+
+| Effect | Radius | Words | Stamped by | Taken off by |
+|---|---|---|---|---|
+| 0 | 3 | happiness 2 | an entertainer's constructor (`0x004d42f1`, `0x004d441f`) and their pre-step `FUN_004d4660`, at the cell they have moved onto | the pre-step, at the cell last recorded (`FUN_004f9460`); their destructor `FUN_004d4620` |
+| 1 | 3 | illness 1, hunger -1 | a toilet's constructor (`0x004db3ee`); the clean `FUN_004dfd80` | the use that dirties (`FUN_004e2440`); a clean toilet's sale (`0x004dd286`) |
+| 2 | 1 | happiness -1, illness 1, hunger -1 | litter of kind 7 dropped on a cell (`FUN_004d93b0`) | that litter removed (`FUN_004d9620`) |
+| 3 | 3 | security 10 | a guard's constructor (`0x004d5e3f`) and pre-step `FUN_004d6360` | the pre-step; their destructor `FUN_004d5eb0` |
+| 4 | 5 | security 20 | the constructor of a thing with `UsageInfo.ProvidesSecurity` (`0x004db458`) | its destructor, by the flag (`0x004dd1cd`) |
+| 5 | 3 | happiness -3, illness 3, hunger -1 | litter of kind 8, which also starts particle effect `0x32` | that litter removed |
+| 6 | 3 | illness 2, hunger -2 | the use that dirties a toilet | the clean; a dirty toilet's sale (`0x004dd222`) |
+| 7 | 6 | happiness 2, attraction 10 | fireworks' constructor (`0x004db48c`) | the thing's turn `FUN_004e0b90` on the sweep its script's variable 0 reads 1, which then writes it 2; its destructor while that variable reads under 2 (`0x004dd217`) |
+
+**Measured on every cell of thirteen of the original's park files** (`q257e/fx.py`, the files of `q257e/files13.txt`;
+212,992 cells): the ten bytes are what the file's own things stamp, 0 cells wrong: each object by its `mFlags`, a
+toilet on 1 or on 6 by its State of repair (one of the 47 toilets is dirty, at 19.0, in Alexah's two Lost Kingdom
+saves), each entertainer and guard at their `mLastRecordedMapId` (the person record's `+41`; in three files a member
+stands a cell off it), and litter of kind 7 (four cells). **A cell has an effects record exactly where a word is not
+nought** (0 of 212,992 otherwise). No file holds fireworks or litter of kind 8, so effects 5 and 7 and the attraction
+word are the listing's alone.
+
+**What OpenTPW builds** (Q257e). `ParkRegionEffects` (the eight from the park's balance, the stamp) and
+`ParkState.Effects`, the running park's grid, seeded from the file's (`ParkWorld.CellEffects`): a purchase stamps a
+toilet's 1, security's 4 and fireworks' 7 (`ParkBuilding.StampEffects`), a sale takes off what the thing holds, the
+use that dirties a toilet swaps 1 for 6 and the clean swaps them back; the console's `effects` and `cell` print it.
+**Not built:** an entertainer's and a guard's do not move with them (the file's stay where the file has them; Q257f),
+no litter is dropped, fireworks' is not taken off on their spent turn (`FIREWORKS_SPENT_REGION_EFFECT`, counted at
+their purchase; a sale always takes it off), and nothing reads the grid: a guest's needs leave the cell's term out
+(Q157) and the chooser still divides by the file's attraction word.
 
 **The handyman's cleaning.** With no litter in range (`FUN_004c8ed0` answers 0) the decide `FUN_004d7100` calls
 `FUN_004d7880` (`0x004d72f7`), which walks every object from `mFirstObject` and keeps the nearest toilet that
@@ -2940,10 +2965,10 @@ does (`0x004e24bc`..`0x004e252a`).
 | The queue's dirt gate | reads `+0x44` | built in `PeepBehaviour.QueueTurn` on `ParkState.IsDirty`; with thought `0xe` |
 | The arrival's answer of 100 | `FUN_004fd4e0` | built in `PeepBehaviour.TurnsAwayFrom`; dead by content in Lost Kingdom |
 | `VAR_WORN` to a dirty toilet | every turn | built, `ParkRideOperation.TellTheWorn`, by name; `Toilet.rse` adds its two objects, kept as records and not drawn (Q20b) |
-| Effects 1 and 6 | stamped into the cells | counted on the use that dirties, `TOILET_DIRTY_REGION_EFFECTS`; no stamping at all; the save's cell record is read (`MapCell.NearbyEffects`) |
+| Effects 1 and 6 | stamped into the cells | built: the use that dirties swaps 1 for 6 on `ParkState.Effects` (Q257e, "The region effects") |
 | The handyman's search, walk and clean | states `0xa`, `0xb` | built: `StaffBehaviour.FindToilet`, `ArriveAtTheLoo`, `CleanOn`, `ParkRideOperation.Clean` and the open after it; the save's `mToiletToClean`, `mTimeStartedCleaning` and `mTimeMarkedForMaintenance` are read |
 | The aim after the search | left on the last candidate tested | aimed at the winner again; counted where they differ, `HANDYMAN_TOILET_AIM_LEFT_ON_A_LATER_TOILET` |
-| The clean's region effects | 6 unstamped, 1 stamped | counted with the dirtying's, `TOILET_DIRTY_REGION_EFFECTS` |
+| The clean's region effects | 6 unstamped, 1 stamped | built, `ParkRideOperation.Clean` (Q257e) |
 | The hurry speed on the walk to a toilet | `+0xc2` = 25 | the same, one of the three words `Staff.Pace` sums; taken off on going idle |
 | A mechanic assigned to a thing | kept while his `+0x218` names it | reads as aiming elsewhere and is forgotten after 100 sweeps; nobody here assigns one |
 | The request for service | shuts the object and calls a member | the search and the clean read and clear a saved `+0x64`; no control here sets one on a toilet (the ride window's `b_callmech` draws and reports itself) |

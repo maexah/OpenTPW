@@ -50,11 +50,13 @@ public static class ParkFileWriter
 	/// <see cref="Arrival"/> the arrival timer (<see cref="ParkWorld.PutArrival"/>), each the file's where it is null.
 	/// <see cref="Things"/> is the objects, their scripts and their models as they run; the file's where it is null.
 	/// <see cref="LetGo"/> is the balloons let go and still bursting, written with the people; the file's where it is null.
+	/// <see cref="Effects"/> is every cell's region effects (<see cref="ParkWorld.PutEffects"/>); the file's where it is null.
 	/// </summary>
 	public readonly record struct Running( int GameTick, bool ParkClosed, int VisitorsToDate, int Balance,
 		ParkCameraModule.View Camera, IReadOnlyDictionary<int, ParkWorld.MapCell>? Cells = null,
 		IReadOnlyList<ParkWorld.WrittenPerson>? People = null, ParkWorld.WrittenStaffPool? StaffPool = null,
-		ArrivalTimer? Arrival = null, RunningThings? Things = null, IReadOnlyList<ParkWorld.WrittenSprite>? LetGo = null );
+		ArrivalTimer? Arrival = null, RunningThings? Things = null, IReadOnlyList<ParkWorld.WrittenSprite>? LetGo = null,
+		IReadOnlyList<short>? Effects = null );
 
 	/// <summary>
 	/// The file's objects, scripts and models as the running park has them (<c>docs/exe/saves.md</c>, "OpenTPW's
@@ -301,6 +303,10 @@ public static class ParkFileWriter
 			body = loaded.PutPeople( body, written, edits, running.LetGo, heads, out var report );
 			people = report;
 		}
+
+		// The map lies before the thing list, so it is still where the file has it; its length changes last of all.
+		if ( running.Effects is { } effects )
+			body = loaded.PutEffects( body, effects );
 
 		return body;
 	}

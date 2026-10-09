@@ -283,6 +283,7 @@ public class Level
 		Park = park;
 		ParkState = new ParkState( park )
 		{
+			RegionEffects = ParkRegionEffects.From( Balance ),
 			AdvisorMessages = new ParkAdvisorMessages( new SettingsFile( "Advisor/Advisor.sam" ) )
 		};
 		Log.Info( $"{ThemeName}: the park's clock starts at mGameTick {ParkState.GameTick}" );
@@ -558,7 +559,8 @@ public class Level
 
 		var running = new ParkFileWriter.Running( state.GameTick, state.ParkIsClosed, state.VisitorsToDate, state.Balance,
 			new ParkCameraModule.View( ParkOrbitCameraMode.Zoom, -ParkOrbitCameraMode.Yaw, point.X, point.Y ), cells,
-			people?.Written( written.Contains ), pool?.Written(), people?.WrittenArrival( things != null ? written.Contains : null ), things, people?.WrittenLetGo() );
+			people?.Written( written.Contains ), pool?.Written(), people?.WrittenArrival( things != null ? written.Contains : null ), things, people?.WrittenLetGo(),
+			WrittenEffects( loaded, state, written.Contains, asTheFile: things == null ) );
 
 		byte[] file;
 		ParkWorld.PeopleWritten? peopleWritten;
@@ -712,6 +714,43 @@ public class Level
 	/// </summary>
 	internal static Dictionary<int, ParkWorld.MapCell> WrittenCells( ParkWorld loaded, ParkState state )
 		=> WrittenCells( loaded, state, [], new HashSet<int>() );
+
+	/// <summary>
+	/// Every cell's region effects as the file holds its things (<c>docs/exe/saves.md</c>, "OpenTPW's writer, the
+	/// region effects"): the running park's, with each object's effect as its written record has it. A thing
+	/// bought and not written holds none; a thing sold and still written holds the file's; and where the objects
+	/// go out as the file's, a toilet dirtied or cleaned since holds the file's too.
+	/// </summary>
+	/// <param name="written">Whether an object goes into the file: a kept one, or one bought and written whole.</param>
+	/// <param name="asTheFile">Whether the kept objects' records are left as the file has them.</param>
+	internal static short[] WrittenEffects( ParkWorld loaded, ParkState state, Func<int, bool> written, bool asTheFile = false )
+	{
+		var effects = state.EffectsCopy();
+
+		void Move( ParkWorld.CatalogueObject thing, bool off )
+		{
+			foreach ( var effect in ParkRegionEffects.Of( thing ) )
+				state.RegionEffects.Stamp( effects, effect, thing.CellX, thing.CellY, off );
+		}
+
+		foreach ( var thing in state.Objects.Where( thing => !written( thing.ThingId ) ) )
+			Move( thing, off: true );
+
+		foreach ( var thing in loaded.Objects.Where( thing => written( thing.ThingId ) ) )
+		{
+			var runs = state.TryObject( thing.ThingId, out var running );
+
+			if ( runs && !asTheFile )
+				continue;
+
+			if ( runs )
+				Move( running, off: true );
+
+			Move( thing, off: false );
+		}
+
+		return effects;
+	}
 
 	/// <summary>
 	/// <see cref="WrittenCells(ParkWorld, ParkState)"/> where objects bought are written whole and objects sold are

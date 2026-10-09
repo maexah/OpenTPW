@@ -438,13 +438,13 @@ public class ParkHandymanCleanTests
 	}
 
 	/// <summary>
-	/// The clean itself (<c>FUN_004dfd80</c>) counts the region effects it does not stamp only for a toilet found
-	/// dirty, and clears the request and the assignment of any thing.
+	/// The clean itself (<c>FUN_004dfd80</c>) swaps the dirty toilet's region effect for the clean one's only for a
+	/// toilet found dirty, and clears the request and the assignment of any thing.
 	/// </summary>
 	[DataTestMethod]
-	[DataRow( 20f, 1 )]
+	[DataRow( 20f, -1 )]
 	[DataRow( 60f, 0 )]
-	public void TheCleanCountsTheRegionEffectsOnlyForADirtyToilet( float repair, int counted )
+	public void TheCleanSwapsTheRegionEffectsOnlyForADirtyToilet( float repair, int illness )
 	{
 		var state = new ParkState( World() );
 
@@ -453,11 +453,15 @@ public class ParkHandymanCleanTests
 			StateOfRepair = repair, AssignedStaff = Handyman, RequestedService = 1
 		} );
 
-		var before = Counted( "TOILET_DIRTY_REGION_EFFECTS" );
+		var toilet = Thing( state, Toilet );
+		var before = state.EffectsAt( toilet.CellX, toilet.CellY ).ToArray();
 
 		ParkRideOperation.Clean( state, script: null, Toilet );
 
-		Assert.AreEqual( counted, Counted( "TOILET_DIRTY_REGION_EFFECTS" ) - before );
+		var after = state.EffectsAt( toilet.CellX, toilet.CellY ).ToArray();
+
+		Assert.AreEqual( illness, after[1] - before[1], "illness: the dirty one's 2 off and the clean one's 1 on" );
+		Assert.AreEqual( -illness, after[2] - before[2], "hunger" );
 		Assert.AreEqual( 100f, Thing( state, Toilet ).StateOfRepair );
 		Assert.AreEqual( 0, Thing( state, Toilet ).AssignedStaff );
 		Assert.AreEqual( 0, Thing( state, Toilet ).RequestedService );

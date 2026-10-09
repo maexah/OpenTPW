@@ -1733,7 +1733,39 @@ public static class DebugConsole
 						? $" = ({MapStep.CellAt( probed.ParentId ).X},{MapStep.CellAt( probed.ParentId ).Y})"
 						: "") +
 					$" occupant {ParkState.Current?.CellAt( probeX, probeY ).Occupant ?? 0}" +
-					$" overlap {probed.OverlapCounter} track type {probed.TrackType} links 0x{probed.TrackNeighbours:x2}" );
+					$" overlap {probed.OverlapCounter} track type {probed.TrackType} links 0x{probed.TrackNeighbours:x2}" +
+					(ParkState.Current is { } effectState && ParkState.OnMap( probeX, probeY )
+						? $" effects {string.Join( ",", effectState.EffectsAt( probeX, probeY ).ToArray() )}"
+						: "") );
+				break;
+
+			// The region effects' census: how many cells hold any, and each of the five words summed over the map
+			// (happiness, illness, hunger, security, attraction). `cell` prints one cell's.
+			case "effects":
+				if ( ParkState.Current is not { } effectsOf )
+				{
+					Reply( "effects: a park has to be loaded" );
+					break;
+				}
+
+				var holding = 0;
+				var sums = new int[ParkWorld.EffectWords];
+
+				for ( var i = 0; i < effectsOf.Effects.Count; i += ParkWorld.EffectWords )
+				{
+					var any = false;
+
+					for ( var word = 0; word < ParkWorld.EffectWords; ++word )
+					{
+						sums[word] += effectsOf.Effects[i + word];
+						any |= effectsOf.Effects[i + word] != 0;
+					}
+
+					if ( any )
+						++holding;
+				}
+
+				Reply( $"effects: {holding} cells hold one; sums happiness {sums[0]} illness {sums[1]} hunger {sums[2]} security {sums[3]} attraction {sums[4]}" );
 				break;
 
 			// Opens the park's own game menu - the thing that actually HOLDS THE WORLD. A window with
