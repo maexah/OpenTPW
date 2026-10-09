@@ -48,17 +48,24 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q257. The writer: what a made record leaves out.** From Q253 (`saves.md`, "What OpenTPW writes"), each
-  counted or said there. A made model's record declares no node words and no lookup records, so a head hung on
-  a node and a node a script has hidden are not in it (`SAVE_PARK_HEAD_ON_A_MODEL_NODE`; the kept records' tables
-  are left the file's too): write both tables from the running model. A running channel's keep-shown bit `0x8`
+- [ ] **Q257b. The writer: a model record's node words and lookup records, and a rider's head.** From Q257's
+  decode (`saves.md`, "A model record's two tables, and a head on a node"). First the rule for a record's node
+  words from the model's file and its channels' clips (a clip's tracks give `0x20`, `0x80`, `0x100` and `0x800`,
+  its hide list `0x1`), checked against all 7,688 records of the 45 files (`q257/files-original.txt`,
+  `bychannel.py`); the setters of `0x2`, `0x40`, `0x200` and `0x400` were not found, so read them off the model's
+  file or find them. Then write both tables for a made record and for a kept one, each head hung as `0x2` and
+  its sprite's slot with the shared `0x4` and the count, and the head's sprite in the sprite table as the 122
+  read (`SAVE_PARK_HEAD_ON_A_MODEL_NODE` gone). Confirm: a ride with riders' heads on its nodes bought and
+  written, the heads on the same nodes in the original under Proton.
+- [ ] **Q257c. The writer: what else a made record leaves out.** From Q253 (`saves.md`, "What OpenTPW writes"),
+  each counted or said there. A running channel's keep-shown bit `0x8`
   is kept by no channel here (`SAVE_PARK_CHANNEL_KEEP_SHOWN_BIT`, counted for every made channel that runs). A
   made walk slot in use goes out facing nought (`SAVE_PARK_WALK_SLOT_FACING`). A made script's started effects
   are not written. `mTopLeft` is the anchor's id, wrong for an item whose description holds the pair at `+0x168`
   (the Huge Hollow Rock and the Dino Karts Tunnel: name the key and read it). A track ride (its `TRAK` record)
   and a thing with an emitter (`PART`) are left as the file has them, bought or sold (`SAVE_PARK_OBJECT_BOUGHT`,
-  `SAVE_PARK_OBJECT_SOLD`). A camera bought lacks `mFlags` `0x10` (`BOUGHT_OBJECT_FLAG_BITS`). Confirm: a ride
-  with riders' heads on its nodes bought and written, the heads on the same nodes in the original under Proton.
+  `SAVE_PARK_OBJECT_SOLD`). A camera bought lacks `mFlags` `0x10` (`BOUGHT_OBJECT_FLAG_BITS`). Confirm: each
+  piece's bytes beside a file of the original's own, and the file loaded in the original under Proton.
   From Q254: a queue cell on a tile outside the eight pieces, and every changed queue cell of a park written
   with its things as the file's, is still left naming the file's model and counted
   (`SAVE_PARK_QUEUE_CELL_MODEL`). The model slots are dealt as the file is written (objects, then cells in the

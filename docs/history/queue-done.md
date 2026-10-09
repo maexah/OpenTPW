@@ -5604,6 +5604,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the placer's order in `FUN_00528a70` (`0x005297e7`..`0x00529890`) and what the path linker does at an entrance,
   then build it. Confirm: `buy 1101 41 22 0`, `cell 42 22` reading links `0x01`, the queue grown to a path and
   the ride open; the written file's three bytes the original's; a screenshot.
+- [x] **Q257. The writer: a model record's two tables and a head on a node, decoded.** Split from "what a made
+  record leaves out" when its first piece turned out to need a decode; the build is Q257b and the other pieces
+  Q257c. A head is a sprite of its own and its node's lookup record holds the sprite's slot: 122 of 122 in four
+  played saves. The reader takes the node words and the lookup records together or not at all. A record's node
+  words follow from its item and what its channels play, the stale-normals bit apart: 7,161 of 7,688 records in
+  a group all alike, the other 527 differing in that bit (`saves.md`, "A model record's two tables, and a head
+  on a node"; FileFormats `saves.md`, "The node flag words", "A head on a node"). Decode only: no code, no run.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

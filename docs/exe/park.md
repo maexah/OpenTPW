@@ -1016,7 +1016,8 @@ anchors lands at rest on its node's stored place within 0.05 units but the Squar
 
 **After a load the head the save names is hung**: the Sun God's `head08`, which Alexah's save's table holds a rider on,
 read runtime flags `0x23` (attached) where its 31 others read `0x21` (`ride-operation.md`, "How long a leg lasts"). No
-caller of `FUN_0044b410` is on the load path, so what re-hangs it is not traced.
+caller of `FUN_0044b410` is on the load path: the model's record holds the head's sprite slot and the load puts it
+back (`saves.md`, "A model record's two tables, and a head on a node").
 
 **OpenTPW builds it** (Q190): `RideScript.AddHead`, `DeleteHead` and `Heads`, the table sized by `RideNodes.HeadCount`
 when `ParkRides.NodesFor` reads the model and put back from `SavedScript.Heads` at a load; `ParkGuestSprites.HeadOnRide`

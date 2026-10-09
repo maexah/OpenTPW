@@ -688,7 +688,7 @@ over the copy, never the one held.
   candidates and the arrival timer theirs ("the staff pool and the arrival timer"), the file's objects, scripts
   and models as they run the fourth's ("OpenTPW's writer, the objects"); a thing bought and a thing sold the
   fifth's; a queue cell's model the sixth's; the arrival vehicle, a balloon let go and a thought read back
-  the seventh's; the rest is Q256, Q257 and Q241j.
+  the seventh's; the rest is Q256, Q257b, Q257c and Q241j.
 - **Where.** `Level.WritePark( name )` writes `<player's folder>/<theme>/<name>.TPWS`, replacing a file of that
   name in another case. The console's `savepark <name>` is its one caller; the Save Park screen's OK stays counted
   until Q241j. **Deviations:** the player's `gms.dat` is not written first (Q248) and the pointer is not put back
@@ -1467,6 +1467,76 @@ and the hire, takes in less ground there and shows neither (`sheet-ours-beside-o
 back 57 failed a test at first; one showed a line that did nothing, taken out; two fail after tests were added;
 the two of `Level.WritePark`'s hand fail none. The save was `savepark` under `pause`, the shop `buy`, the hire `hire`: no
 player's hand reaches the writer yet. `docs/exe/addresses.md` not regenerated.
+
+### A model record's two tables, and a head on a node
+
+Decoded and measured on 2026-10-09 (Q257, the decode; nothing of it is built). The bytes are the FileFormats
+`saves.md`'s ("The ride system module", "The node flag words", "A head on a node"); this is what the original does
+with them. Harness `q257/` (`census.py`, `bychannel.py`, `heads.py`, `one.py`, the listings `*.c`).
+
+**The reader takes both tables or neither.** `FUN_004647a0` compares the record's node word count and its lookup
+record count with the fresh model's (`+0x42`, `+0x48`) in one test: where either differs it steps
+over both by the file's counts. So a record that is to carry a head must carry every node word too, and each word
+is laid over the fresh node's: the reader clears the eleven bits below on the node and sets them from the file.
+
+**A node word is eleven bits of the node's own flags** (`FUN_00464140` writes; the reader's mask is
+`0x5f827fcf`):
+
+| File | Node | What sets it |
+|---|---|---|
+| `0x1` | `0x10` | hidden. A clip's hide list, as the clip is bound (`FUN_00472d70`), on a node without `0x80000000`; taken off again, for the hide list and the tracks of the clip a channel last ran, by `FUN_004726d0`, which then binds every running channel's clip again (its callers were not read) |
+| `0x2` | `0x20` | not found |
+| `0x4` | `0x8000` | not found; in no record of 7,688 |
+| `0x8` | `0x10000` | the mesh was morphed and its face normals are stale: set by the morph (`FUN_00471860`, `FUN_004714a0`), cleared by `FUN_00473a40`, which works the normals out again, from the pose walk (`0x0044afd8`, for a node with `0x10000000`) and `FUN_00473c30` |
+| `0x20` | `0x40000` | a clip bound to a channel has a track for the node (`FUN_00472d70`) |
+| `0x40` | `0x80000` | not found |
+| `0x80` | `0x200000` | that track's flags hold `0x1000`, a morph |
+| `0x100` | `0x400000` | that track's flags hold `0x10000` |
+| `0x800` | `0x100000` | that track's flags hold any of `0x289` |
+| `0x200` | `0x20000000` | not found; as many words hold it as lookup records hold `0x1`, 3,578 each |
+| `0x400` | `0x80000000` | not found; a node with it is not hidden or shown by a clip |
+
+`FUN_00472d70( clip, model )` runs as a clip is started on a channel without the caller's flag `0x8`
+(`FUN_00472f60`, `0x00473117`) and from `FUN_004726d0`. **A load does not run it**: the
+reader puts each channel back and calls only `FUN_00472cb0`, the clip's length and frame, so after a load the node
+words are what say which nodes the running clips move, until a clip is next started.
+
+**Measured, the 45 park files to hand that the original wrote**, copies of the shipped park among them (Alexah's
+played saves, the saves made under Proton: `files-original.txt`), 7,688 records of 95 items. Every item's lookup flags are the same in every record
+but for `0x2`. Grouped by item and by each channel's role, clip and loop, frozen and held bits, 127 groups: 7,161
+records are in a group whose node words are all alike, and the other 527 are in fourteen groups that differ in
+`0x8` alone, but for one word of item 1181's in `0x400`. **So a record's node words follow
+from its item and what its channels play, the stale-normals bit apart**; nothing else a thing has done shows in
+them. Not done: the rule itself, from a model's file and its clips' tracks (the build's first step), and the three
+setters not found.
+
+**A head on a node is a sprite of its own, and the lookup record holds its slot.** A model's lookup state is
+`{ flags, records, count }` at `+0x28` of the model's mesh (the model's `+8`), a record twenty bytes: its flags, and at `+0xc` what is
+attached. `FUN_0044b410( model, record, visitor )` sets `0x4` in the shared flags, counts one more attached, sets
+`0x2` in the record, and stores the handle `FUN_00475a10( 0x0074f558, kind, bank )` answers: a world sprite in the
+first free slot of the sprite table from 1, kind 1 with the rider's child for its bank or kind 3 with their
+costume (`FUN_004fcac0`), or bank 0 where no visitor is given. `FUN_0044b4c0( model, record )` counts one fewer,
+clears the shared `0x4` when none is left, clears the record's `0x2`, frees the sprite (`FUN_00475550`) and stores
+`-1`. The writer puts each record's flags and handle in the file and the reader puts both back, with the shared
+flags and the count; the sprite itself comes back with the sprite table. **That is what hangs a head again after a
+load** (`park.md`, "The head table"): no call, the handle.
+
+Measured: in Alexah's four played jungle and fantasy saves 122 lookup records hold `0x2`, on fifteen items, and
+every one names a live sprite that no person's record names; those 122 are every sprite of kinds 1 and 3 the four
+files hold with `0x3000080` at `+0xc4`, and all 122 read the same at `+0x08`, `+0x0c`, `+0x10`, `+0x18`, `+0x1c`,
+`+0x6c`, `+0x74`, `+0xb4`, `+0xbc` and `+0x114` (1698, 1704, 1696, 2, 19, 1714, 1, 0, 8, 1). In every record of the four files the count is the number of
+records holding `0x2`, and the shared `0x4` is set exactly where there is one. A head's node word is
+`0x601` whether a head hangs on it or not (the Crazy Ape's sixteen), so hanging one changes no node word. The
+script's head table is by head node (slot *n* is head-space id *n* + 1) and the lookup records are in the model's
+own order, so the two are not index for index: the ape's table holds riders in slots 2, 3, 6, 8, 9, 13 and 15
+where its records 1, 3, 4, 11, 13, 15 and 16 hold handles. The Aztec Mayhem's five heads (`WALKON` action 4) and a
+coaster's and a tour's cars' are records with a handle and no head table.
+
+**What a writer must do for a head** (the build, Q257b): the node words and the lookup records whole for the
+record, the counts the model's own; `0x2` and the sprite's slot on the record of each head hung, `0x4` in the
+shared flags and the count; and the head's sprite in the sprite table at that slot. **Not measured:** the original
+loading a file made so; a made record's words for a thing just bought (the original's own bought Crazy Ape is one
+record, held on its building clip); a head's sprite made from nothing (the 122 are the game's own).
 
 ### Read, not run
 
