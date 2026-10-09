@@ -165,6 +165,13 @@ until told to stop. The overnight run of 2026-10-06 was fifteen items in one ses
   session's process ends, which a clear does not do (on 2026-10-09 one had held it for three days). A headless
   session then finds the project locked. Before a run, the session at the desk calls `release_project` and makes no
   Ghidra call until the run is over; the script probes Ghidra before every session and names the holder's remedy.
+- **A headless session is kept open, or it dies at its first wait.** Started with its prompt as a plain argument,
+  `claude -p` ends at the first end of turn and kills the background commands it started (measured 2026-10-09: out at
+  9 s of a 20 s `sleep`), where a session at the desk is woken when they finish. The script starts it with
+  `--input-format stream-json` and keeps the input open: a finished background command (woken at 22 s) or agent then
+  wakes it the same way. The session is over at the turn that holds its last line as a whole line; a turn that ends
+  with no last line and nothing running is nudged after two minutes, three times at most. `AskUserQuestion` does not
+  exist in a headless session.
 - Each session appends its account to `report.md` beside the script, and the script adds its own line under it: the
   last line, both tips before and after, the hours, and the id `claude --resume` takes.
 
