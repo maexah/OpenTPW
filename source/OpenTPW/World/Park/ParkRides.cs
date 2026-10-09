@@ -643,9 +643,9 @@ public sealed class ParkRides : Entity
 			if ( channel.Role == ParkThingStates.NoRole )
 				continue;
 
-			// <b>The saved word is the engine's INTERNAL flag field, and only two of its bits mean the
-			// same thing to a caller.</b> 0x1 (loop) and 0x8 (do not apply the hide list) carry across
-			// unchanged; 0x2 and 0x4 do not. Internally those two say the channel was FROZEN at frame
+			// <b>The saved word is the engine's INTERNAL flag field, and only one of its bits means the
+			// same thing to a caller.</b> 0x1 (loop) carries across unchanged; 0x2, 0x4 and 0x8 do not.
+			// Internally 0x8 says a role nought clip has ended on the channel, put back below, and the other two say the channel was FROZEN at frame
 			// nought or HELD at its last frame, and a caller's 0x2 and 0x4 mean "start at once" and "do
 			// not lay the rest pose down" - different questions entirely. Passed through, the word would
 			// read a held channel as a keep-pose request, and AnimTimeControl.Start clears 0x6 on the way
@@ -657,7 +657,7 @@ public sealed class ParkRides : Entity
 			var speed = channel.Speed > 0f ? channel.Speed : 1f;
 
 			players.Trigger( channel.Role, channel.Entry,
-				channel.Flags & (AnimTimeControl.LoopFlag | AnimTimeControl.KeepShownFlag),
+				(channel.Flags & AnimTimeControl.LoopFlag) | AnimTimeControl.KeepShownFlag,
 				speed, _loaded, index );
 
 			// And then the state it was left in. The engine's restore copies the saved word whole and adds
@@ -671,6 +671,8 @@ public sealed class ParkRides : Entity
 
 			if ( players.Channel( index ) is not { } player )
 				continue;
+
+			player.RestoreEnded( (channel.Flags & AnimTimeControl.RoleNoughtEndedFlag) != 0 );
 
 			// The stamps where the save left them, so the clip goes on from the frame it had reached rather than
 			// from nought. A channel the trigger above parked (a role or clip its model lacks) keeps nothing.
@@ -884,10 +886,9 @@ public sealed class ParkRides : Entity
 	/// </para>
 	/// <para>
 	/// <b>A channel is written as the engine keeps one</b>: a held channel's clip time a whole clip after its
-	/// start, a running one's the moment of the save, the third stamp the save's. Of the flag word the loop,
-	/// frozen, held, <c>0x10</c> and <c>0x20</c> bits are the running channel's; the rest are left the file's,
-	/// because a channel here does not keep the keep-shown request (<c>0x8</c>), counted where the clip is no
-	/// longer the file's. A head hung on a model's node goes into its node's lookup record (<see cref="WrittenHeads(RideScript?, int)"/>).
+	/// start, a running one's the moment of the save, the third stamp the save's. Of the flag word the low six
+	/// bits are the running channel's (loop, frozen, held, a role nought clip ended, <c>0x10</c> and <c>0x20</c>);
+	/// the rest are left the file's. A head hung on a model's node goes into its node's lookup record (<see cref="WrittenHeads(RideScript?, int)"/>).
 	/// The hoarding's bits are the thing's as they stand, the Closed kind a load gives one that names none among
 	/// them: the original's own file of a loaded park holds it on the same things.
 	/// </para>
@@ -943,10 +944,6 @@ public sealed class ParkRides : Entity
 				channels[index] = animations?.Channel( index ) is { } channel
 					? WrittenChannel( channel, MadeChannel, Reading, now )
 					: MadeChannel;
-
-				// The engine's keep-shown request is kept by no channel here, and a made record has no file's to keep.
-				if ( channels[index].Role != ParkThingStates.NoRole )
-					Unimplemented.Report( "SAVE_PARK_CHANNEL_KEEP_SHOWN_BIT" );
 			}
 
 			var raised = hoardingFor( placed.ThingId );
@@ -1085,8 +1082,11 @@ public sealed class ParkRides : Entity
 		return _tableModels[catalogueId] = read;
 	}
 
-	/// <summary>The bits of a channel's flag word a running channel keeps as the engine does: loop, frozen, held, <c>0x10</c> and <c>0x20</c>.</summary>
-	private const int ChannelFlagsKept = 0x37;
+	/// <summary>
+	/// The bits of a channel's flag word a running channel keeps as the engine does: loop, frozen, held, a role
+	/// nought clip ended, <c>0x10</c> and <c>0x20</c>.
+	/// </summary>
+	private const int ChannelFlagsKept = 0x3f;
 
 	/// <summary>One channel as the engine keeps it - see <see cref="Written"/>.</summary>
 	private static SavedChannel WrittenChannel( AnimTimeControl channel, SavedChannel file, Func<float, uint> reading, int now )
@@ -1106,9 +1106,6 @@ public sealed class ParkRides : Entity
 				: new SavedChannel( ParkThingStates.NoRole, 0, (file.Flags & ~ChannelFlagsKept) | (channel.Flags & ChannelFlagsKept),
 					channel.Speed, 0, 0, 0, queued.Role, queued.Entry, queued.Flags, queued.Speed );
 		}
-
-		if ( (channel.AnimID, channel.SubAnim) != (file.Role, file.Entry) && (file.Flags & AnimTimeControl.KeepShownFlag) != 0 )
-			Unimplemented.Report( "SAVE_PARK_CHANNEL_KEEP_SHOWN_BIT" );
 
 		var start = reading( channel.StartAnimTime );
 

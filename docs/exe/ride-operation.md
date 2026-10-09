@@ -4620,8 +4620,9 @@ object record's own `mOperatingCapacity`. The byte layout is in the FileFormats 
 
 **A channel's flag word is the engine's own field, and it is NOT the flag word a caller passes in.** The
 two overlap and disagree. A caller's flags are `0x1` loop, `0x2` start at once, `0x4` do not lay the rest
-pose down, `0x8` do not apply the hide list. The field stored on the channel uses `0x1` and `0x8` the
-same way, but its `0x2` means **frozen at frame nought** and its `0x4` means **held on the last frame** —
+pose down, `0x8` do not apply the hide list. The field stored on the channel uses `0x1` the
+same way, but its `0x2` means **frozen at frame nought**, its `0x4` means **held on the last frame** and its
+`0x8` that **a role 0 clip has run past its end there** (`saves.md`, "OpenTPW's writer, a channel's `0x8`") —
 states rather than requests. A start of a loaded role's in-range entry over a channel that is not idle
 clears both (`FUN_00472f60`, `0x0047302b`, `0x0047303b`); the pseudo-roles instead OR in `0x2` (role 13)
 or `0x14` (role 14) without clearing, and role 14 sets the clip time a whole clip past the start stamp

@@ -374,6 +374,61 @@ public class ParkModelTablesTests
 	}
 
 	/// <summary>
+	/// A channel's own <c>0x8</c>: set as a clip of role nought runs past its end, kept through the hold or the
+	/// loop that follows, kept by a start of another role, and taken off by that role's first advance. A clip of
+	/// another role that ends sets nothing, and neither does a caller's <c>0x8</c>.
+	/// </summary>
+	[TestMethod]
+	public void AChannelMarksARoleNoughtClipEndedUntilAnotherRoleIsAdvanced()
+	{
+		var (_, clips, _) = Load( CrazyApe );
+		var channel = clips.Channel( 0 )!;
+		var other = Enumerable.Range( 1, RideAnimations.RoleCount - 1 ).First( role => clips.EntryCount( role ) > 0 );
+		var build = clips.DurationMilliseconds( 0, 0 );
+
+		clips.Trigger( 0, 0, AnimTimeControl.StartAtOnceFlag | AnimTimeControl.KeepShownFlag, 1f, 0 );
+		clips.Advance( build / 2 );
+		Assert.AreEqual( 0, channel.Flags, "running, and the caller's 0x8 is not the channel's" );
+
+		clips.Advance( build + 100 );
+		Assert.AreEqual( (0, 0x1c), (channel.AnimID, channel.Flags), "held on its last frame, the end marked" );
+
+		clips.Advance( build + 200 );
+		Assert.AreEqual( 0x1c, channel.Flags, "and the mark stands while it is held" );
+
+		clips.Trigger( other, 0, AnimTimeControl.StartAtOnceFlag, 1f, build + 300 );
+		Assert.AreEqual( (other, AnimTimeControl.RoleNoughtEndedFlag), (channel.AnimID, channel.Flags & AnimTimeControl.RoleNoughtEndedFlag), "a start takes nothing off" );
+
+		int NodePasses() => Unimplemented.Summary.Where( gap => gap.What == "MODEL_NODES_AFTER_ROLE_NOUGHT_ENDED" ).Sum( gap => gap.Times );
+
+		var passes = NodePasses();
+
+		clips.Advance( build + 310 );
+		Assert.AreEqual( 0, channel.Flags & AnimTimeControl.RoleNoughtEndedFlag, "the other role's first advance does" );
+
+		clips.Advance( build + 320 );
+		Assert.AreEqual( passes + 1, NodePasses(), "and the engine's pass over the model's nodes is counted, once" );
+
+		clips.Advance( build + 310 + clips.DurationMilliseconds( other, 0 ) + 100 );
+		Assert.AreEqual( (other, 0x4, 0), (channel.AnimID, channel.Flags & 0x4, channel.Flags & AnimTimeControl.RoleNoughtEndedFlag), "another role's end marks nothing" );
+
+		// A clip of role nought promoted from the queue as another role's ends is not one that has ended.
+		var (_, queued, _) = Load( CrazyApe );
+
+		queued.Trigger( other, 0, AnimTimeControl.StartAtOnceFlag, 1f, 0 );
+		queued.Trigger( 0, 0, 0, 1f, 10 );
+		queued.Advance( queued.DurationMilliseconds( other, 0 ) + 20 );
+		Assert.AreEqual( (0, 0), (queued.Channel( 0 )!.AnimID, queued.Channel( 0 )!.Flags & AnimTimeControl.RoleNoughtEndedFlag) );
+
+		// A loop of role nought is marked at its first wrap and stays marked.
+		var (_, looping, _) = Load( CrazyApe );
+
+		looping.Trigger( 0, 0, AnimTimeControl.StartAtOnceFlag | AnimTimeControl.LoopFlag, 1f, 0 );
+		looping.Advance( build + 100 );
+		Assert.AreEqual( (0, 0x9), (looping.Channel( 0 )!.AnimID, looping.Channel( 0 )!.Flags & 0xf) );
+	}
+
+	/// <summary>
 	/// A model's players tell its node words of each clip bound: a start binds, a start with the caller's keep-shown
 	/// does not, a loop's wrap does not, a clip queued is bound as it is promoted, and a pseudo-role is no clip.
 	/// </summary>

@@ -1084,7 +1084,8 @@ public class ParkFileWriterThingsTests
 	/// <summary>
 	/// A clip started since the load goes out as the engine keeps a running one: its role, clip and speed, its start
 	/// where it began, its clip time and third stamp the save's moment, the file's leftover queue behind it; and the
-	/// keep-shown bit a channel here does not keep is counted where the file's is another clip's.
+	/// mark of a role nought clip ended, which a load puts back on the channel, stands until the channel's next
+	/// advance on another role.
 	/// </summary>
 	[TestMethod]
 	public void AClipStartedSinceTheLoadIsWrittenRunning()
@@ -1095,7 +1096,17 @@ public class ParkFileWriterThingsTests
 		var players = rides.Scheduler.Find( rides.ScriptFor( bin.ThingId ) )!.Animations!;
 		var file = Models( shipped ).ForScript( 7 )!.Value.Channels[0];
 
-		Assert.AreEqual( 0xc, file.Flags, "the Litter Bin's channel, held with the keep-shown bit" );
+		Assert.AreEqual( (0, 0xc), (file.Role, file.Flags), "the Litter Bin's channel, held on a role nought clip that has ended" );
+		Assert.AreEqual( 0x1c, players.Channel( 0 )!.Flags, "and the load puts the mark back with the hold" );
+
+		// On no other channel: one held on another role is given none.
+		var others = Models( shipped ).Things
+			.Where( thing => thing.Channels.Length > 0 && thing.Channels[0].Role is > 0 and < RideAnimations.RoleCount && (thing.Channels[0].Flags & 0xc) == 0x4 )
+			.Select( thing => rides.Scheduler.Find( thing.ScriptHandle )?.Animations?.Channel( 0 ) )
+			.Where( channel => channel is { IsIdle: false } )
+			.ToArray();
+
+		Assert.IsTrue( others.Length > 0 && others.All( channel => (channel!.Flags & 0xc) == 0x4 ), $"{others.Length} held on another role" );
 
 		var role = Enumerable.Range( 0, RideAnimations.RoleCount ).First( candidate => candidate != file.Role && players.EntryCount( candidate ) > 0 );
 
@@ -1105,10 +1116,17 @@ public class ParkFileWriterThingsTests
 		var written = things.Models.Single( model => model.Slot == Models( shipped ).ForScript( 7 )!.Value.Slot ).Channels[0];
 
 		Assert.AreEqual( (role, 0, 1.5f), (written.Role, written.Entry, written.Speed) );
-		Assert.AreEqual( 0x19, written.Flags, "looping, not held; the 0x10 a hold leaves behind, as the original's files hold it on a channel running since; the file's 0x8 left" );
+		Assert.AreEqual( 0x19, written.Flags, "looping, not held; the 0x10 a hold leaves behind, as the original's files hold it on a channel running since; the mark not yet taken off by an advance" );
 		Assert.AreEqual( (ShippedClock + 400, ShippedClock, ShippedClock), (written.StartTime, written.Time, written.NoPauseTime) );
 		Assert.AreEqual( (ParkThingStates.NoRole, file.QueuedEntry, file.QueuedFlags, file.QueuedSpeed), (written.QueuedRole, written.QueuedEntry, written.QueuedFlags, written.QueuedSpeed) );
-		Assert.AreEqual( 1, Unimplemented.Summary.Single( gap => gap.What == "SAVE_PARK_CHANNEL_KEEP_SHOWN_BIT" ).Times );
+
+		// The channel's next advance, on a role that is not nought, takes the mark off.
+		players.Advance( rides.LoadedAt + 500 );
+
+		var advanced = rides.Written( shipped, state.WrittenObjects( shipped ), ChannelsFor, state.HoardingFor )!
+			.Models.Single( model => model.Slot == Models( shipped ).ForScript( 7 )!.Value.Slot ).Channels[0];
+
+		Assert.AreEqual( 0x11, advanced.Flags );
 
 		// And one queued behind it goes out as queued.
 		players.Channel( 0 )!.Queue( file.Role, 0, AnimTimeControl.LoopFlag, 0.75f );

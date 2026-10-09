@@ -67,6 +67,13 @@ public sealed class AnimTimeControl
 	public const int KeepShownFlag = 0x8;
 
 	/// <summary>
+	/// The channel's own <c>0x8</c>, which is not the caller's: a clip of role nought has run past its end on it.
+	/// The advance sets it (<c>0x00473758</c>) and takes it off a channel on any other role (<c>0x004738ce</c>),
+	/// and a park file holds it on every channel held on a role nought clip.
+	/// </summary>
+	public const int RoleNoughtEndedFlag = 0x8;
+
+	/// <summary>
 	/// <b>Freeze on frame nought.</b> Not a role: the engine reserves 13 and 14 as instructions to the
 	/// channel itself, handled before any role slot is looked at (<c>FUN_00472f60</c>, <c>0x00472fdd</c>).
 	/// </summary>
@@ -80,7 +87,10 @@ public sealed class AnimTimeControl
 	/// </summary>
 	public const int HoldAtEnd = 14;
 
-	/// <summary>The engine's <c>Flags</c> - see the <c>...Flag</c> constants, plus 0x10 and 0x20 it sets itself.</summary>
+	/// <summary>
+	/// The engine's <c>Flags</c>, its own word and not a caller's: <c>0x1</c> loop, <c>0x2</c> frozen, <c>0x4</c>
+	/// held, <see cref="RoleNoughtEndedFlag"/>, and <c>0x10</c> and <c>0x20</c>.
+	/// </summary>
 	public int Flags { get; private set; }
 
 	/// <summary>The engine's <c>AnimID</c>: which of the twelve roles is playing, or 12 for none.</summary>
@@ -279,6 +289,31 @@ public sealed class AnimTimeControl
 
 		AnimFrame = (uint)(AnimTime - StartAnimTime) * Speed * FramesPerMillisecond;
 	}
+
+	/// <summary>Marks a clip of role nought that has run past its end, before the advance deals with the ending.</summary>
+	internal void MarkEnded()
+	{
+		if ( AnimID == 0 )
+			Flags |= RoleNoughtEndedFlag;
+	}
+
+	/// <summary>
+	/// Takes the mark off a channel that is on any role but nought, as each advance of the engine's does. The
+	/// engine then clears <c>0x800</c> on the model's nodes that hold <c>0x100</c>, once (<c>0x00473d3c</c>):
+	/// node flags nothing here keeps, so that pass is counted.
+	/// </summary>
+	internal void SettleEnded()
+	{
+		if ( AnimID == 0 || (Flags & RoleNoughtEndedFlag) == 0 )
+			return;
+
+		Flags &= ~RoleNoughtEndedFlag;
+		Unimplemented.Report( "MODEL_NODES_AFTER_ROLE_NOUGHT_ENDED" );
+	}
+
+	/// <summary>Puts back the mark a save left on this channel, the engine's restore copying the word whole.</summary>
+	internal void RestoreEnded( bool ended )
+		=> Flags = ended ? Flags | RoleNoughtEndedFlag : Flags & ~RoleNoughtEndedFlag;
 
 	/// <summary>
 	/// Puts back the three time stamps a save left on this channel, already moved onto the clock it is advanced on,

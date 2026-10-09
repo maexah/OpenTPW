@@ -350,42 +350,51 @@ public sealed class RideAnimations
 
 			channel.MoveTo( now );
 
-			if ( !channel.IsFinished )
-				continue;
-
-			if ( channel.HasQueued )
+			if ( channel.IsFinished )
 			{
-				// The promotion is a full start, so the clip that ran past its end hands its overshoot to this
-				// one, clamped to this clip's own length - and it clears three of the four queue fields,
-				// leaving the flags stale.
-				// The engine binds a promoted clip while its model is in view and not otherwise (FUN_004735d0's
-				// per-frame argument); here it is bound as the caller's flags say, in view or not.
-				if ( (channel.DeferredFlags & AnimTimeControl.KeepShownFlag) == 0 && Clip( channel.DeferredAnimID, channel.DeferredSubAnim ) is { } promoted )
-					Nodes?.Started( Array.IndexOf( _channels, channel ), promoted, channel.AnimFrame );
-
-				StartOn( channel, channel.DeferredAnimID, channel.DeferredSubAnim,
-					channel.DeferredFlags | AnimTimeControl.KeepShownFlag,
-					channel.DeferredSpeed <= 0f ? channel.Speed : channel.DeferredSpeed, now );
-
-				channel.ClearQueue();
-
-				continue;
+				channel.MarkEnded();
+				End( channel, now );
 			}
 
-			if ( (channel.Flags & AnimTimeControl.LoopFlag) != 0 )
-			{
-				// A loop is expressed as starting the same clip again rather than as rewinding it, which is
-				// what carries the overshoot across the join.
-				StartOn( channel, channel.AnimID, channel.SubAnim,
-					AnimTimeControl.LoopFlag | AnimTimeControl.KeepShownFlag, channel.Speed, now );
-
-				continue;
-			}
-
-			// Not looping and nothing waiting: the engine re-enters with the hold pseudo-role, which parks
-			// the timebase on the last frame rather than marking the channel done.
-			channel.Start( AnimTimeControl.HoldAtEnd, 0, AnimTimeControl.KeepShownFlag, channel.Speed, now, 0f );
+			channel.SettleEnded();
 		}
+	}
+
+	/// <summary>Deals with a channel whose clip has run past its end: its queue, its loop, or a hold.</summary>
+	private void End( AnimTimeControl channel, int now )
+	{
+		if ( channel.HasQueued )
+		{
+			// The promotion is a full start, so the clip that ran past its end hands its overshoot to this
+			// one, clamped to this clip's own length - and it clears three of the four queue fields,
+			// leaving the flags stale.
+			// The engine binds a promoted clip while its model is in view and not otherwise (FUN_004735d0's
+			// per-frame argument); here it is bound as the caller's flags say, in view or not.
+			if ( (channel.DeferredFlags & AnimTimeControl.KeepShownFlag) == 0 && Clip( channel.DeferredAnimID, channel.DeferredSubAnim ) is { } promoted )
+				Nodes?.Started( Array.IndexOf( _channels, channel ), promoted, channel.AnimFrame );
+
+			StartOn( channel, channel.DeferredAnimID, channel.DeferredSubAnim,
+				channel.DeferredFlags | AnimTimeControl.KeepShownFlag,
+				channel.DeferredSpeed <= 0f ? channel.Speed : channel.DeferredSpeed, now );
+
+			channel.ClearQueue();
+
+			return;
+		}
+
+		if ( (channel.Flags & AnimTimeControl.LoopFlag) != 0 )
+		{
+			// A loop is expressed as starting the same clip again rather than as rewinding it, which is
+			// what carries the overshoot across the join.
+			StartOn( channel, channel.AnimID, channel.SubAnim,
+				AnimTimeControl.LoopFlag | AnimTimeControl.KeepShownFlag, channel.Speed, now );
+
+			return;
+		}
+
+		// Not looping and nothing waiting: the engine re-enters with the hold pseudo-role, which parks
+		// the timebase on the last frame rather than marking the channel done.
+		channel.Start( AnimTimeControl.HoldAtEnd, 0, AnimTimeControl.KeepShownFlag, channel.Speed, now, 0f );
 	}
 
 	/// <summary>

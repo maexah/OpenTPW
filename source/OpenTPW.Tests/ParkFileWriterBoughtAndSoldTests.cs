@@ -758,6 +758,19 @@ public class ParkFileWriterBoughtAndSoldTests
 		Assert.AreEqual( sprayItem.AnimationChannels, again.Made!.Single( placed => placed.Object.Object.ThingId == spray.ThingId ).Channels.Count );
 		Assert.AreEqual( 3, sprayItem.AnimationChannels );
 
+		// A made model's channel held on its build clip carries the mark of a role nought clip ended, as the
+		// original's own bought ape's does.
+		var apePlayers = rides.Scheduler.Find( handle )!.Animations!;
+
+		apePlayers.Trigger( 0, 0, AnimTimeControl.StartAtOnceFlag, 1f, rides.LoadedAt );
+		apePlayers.Advance( rides.LoadedAt + apePlayers.DurationMilliseconds( 0, 0 ) + 100 );
+
+		var held = rides.Written( shipped, kept, ChannelsFor, state.HoardingFor,
+			[.. bought.Select( placed => new ParkRides.BoughtThing( new ParkWorld.MadeObject( placed, "A", "B" ), 1, 1, "x" ) )], gone, null )!
+			.Made!.Single( placed => placed.Object.Object.ThingId == ape.ThingId ).Channels[0];
+
+		Assert.AreEqual( (0, 0x1c), (held.Role, held.Flags) );
+
 		var body = ParkFileWriter.Body( shipped, new ParkFileWriter.Running( shipped.GameTick, false, 13, 0, shipped.Camera.Saved!.Value,
 			People: new ParkPeople( shipped ).Written( id => true ), Things: things ) );
 

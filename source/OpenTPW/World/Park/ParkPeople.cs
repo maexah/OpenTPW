@@ -2907,7 +2907,7 @@ public sealed partial class ParkPeople : Entity
 					var next = channel.HasQueued ? $" then {channel.DeferredAnimID}/{channel.DeferredSubAnim}" : "";
 
 					return $"{index}:role {channel.AnimID} entry {channel.SubAnim} "
-						+ $"frame {channel.AnimFrame:0.0}/{channel.TotalAnimFrames:0.0}{held}{loop}{next}";
+						+ $"frame {channel.AnimFrame:0.0}/{channel.TotalAnimFrames:0.0}{held}{loop}{next} flags 0x{channel.Flags:x}";
 				} ) );
 			}
 

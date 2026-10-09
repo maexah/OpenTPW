@@ -5666,6 +5666,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `+41`. Confirmed: an entertainer and a guard hired read happiness 12 and security 1044, the file's pair fired 6
   and 930, the file 0 cells wrong against its own things, and the original held it with 0 wrong on eight polls
   over 70 s, where the build before's file read 54 wrong on every one.
+- [x] **Q257g. The writer: a channel's `0x8`.** Split from the old Q257g at its first piece (2026-10-09); the
+  rest is Q257h. Bit `0x8` of a channel's flag word is not a caller's keep-shown request: the engine's advance
+  sets it as a role 0 clip runs past its end and takes it off a channel on another role (`saves.md`, "OpenTPW's
+  writer, a channel's `0x8`"; 12 of 12 held role 0 channels and none of 2,870 others in thirteen files). A channel
+  here keeps it, a load puts it back and the writer writes it; `SAVE_PARK_CHANNEL_KEEP_SHOWN_BIT` is gone.
+  **Proof:** a bought Crazy Ape's record holds `0x1c` where the build before's held `0x14`, and the original's
+  model read `0xc` at its first poll with this build's file and `0x4` with the build before's.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

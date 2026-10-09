@@ -1101,9 +1101,9 @@ and a model's channels their count, so nothing moves, and they go in before the 
 - **A model** (`ParkRides.Written`, `ParkThingStates.Put`), into the record that names its thing's script: each
   channel as the engine keeps one. A running channel's clip time and third stamp are the save's moment and its
   start where it began; a held one's clip time is a whole clip past its start (`AnimTimeControl.HeldTime`). Of
-  the flag word the loop, frozen, held, `0x10` and `0x20` bits are the running channel's and the rest the
-  file's, because a channel here does not keep the keep-shown request (`0x8`): counted where the clip is no
-  longer the file's (`SAVE_PARK_CHANNEL_KEEP_SHOWN_BIT`). **A channel held since before the load keeps the file's
+  the flag word the low six bits are the running channel's (loop, frozen, held, `0x8`, `0x10` and `0x20`) and the
+  rest the file's; `0x8` is the channel's own mark that a role nought clip has ended on it ("OpenTPW's writer, a
+  channel's `0x8`"). **A channel held since before the load keeps the file's
   own word and clip time**: the engine's `0x10` on a held channel comes and goes (FileFormats `saves.md`, "Bit
   `0x10`"), where a channel here keeps it for good. With nothing queued the last queue's leftovers are the
   file's. The hoarding's seven bits and its progress are the thing's as they stand. The node flag words are written
@@ -1245,8 +1245,7 @@ and the object constructor `FUN_004db090` was read beside the two files.
   footprint, the placer's flags `0x32f`, the script, the hoarding as it stands, the angle and the channels as
   they run. **It carries both tables** ("OpenTPW's writer, the two tables"): a word a node as its clips
   have left them, and a pair a lookup record, a head hung on a node among them ("OpenTPW's writer, a rider's
-  head"); a running channel's keep-shown bit is not known
-  (`SAVE_PARK_CHANNEL_KEEP_SHOWN_BIT`). The header's three counts are kept.
+  head"). The header's three counts are kept.
 - **The controls** (`ParkWorld.PutControls`): every item's standing count and first-build stamp as
   `ParkState.BuiltItems` runs them.
 - **Not written, counted, and left as the file has them:** a track ride, whose record in the track-rides module
@@ -1592,8 +1591,7 @@ file's own words and each channel's clip as a load ends (`ParkRides.Restore`, th
 lookup records are left the file's.
 
 **Deviations, each said at its site.** Bit `0x8` is never set, and a file's is kept. A clip promoted from the
-queue is bound whether or not its model is in view. A channel here keeps no keep-shown bit of its own, so a clip
-started since the load applies its hide list (`SAVE_PARK_CHANNEL_KEEP_SHOWN_BIT`, Q257e). Where a channel the file
+queue is bound whether or not its model is in view. Where a channel the file
 had idle is started, its unnamed last clip's marks cannot be told from another idle channel's, and all go. A
 thing bought whose model will not read declares no tables (`SAVE_PARK_MADE_MODEL_TABLES`, counted), and so no
 head.
@@ -1749,7 +1747,7 @@ control: flags are not drawn. `docs/exe/addresses.md` not regenerated.
 
 ### OpenTPW's writer, the region effects
 
-Q257e, split by the session: the staff's are the next section's and the item's other pieces Q257g. The rule, its eight effects and who stamps each
+Q257e, split by the session: the staff's are the next section's and the item's other pieces Q257h. The rule, its eight effects and who stamps each
 are `ride-operation.md`, "The region effects"; a cell's ten bytes are five words, and every cell of thirteen of
 the original's files is what the file's own things stamp.
 
@@ -1793,12 +1791,12 @@ camera, the view being turned, and the second opened a passing member of staff's
 next two clicks confirmed; the running park only, nothing saved, the save sum the same before and after.
 **Not run in either game:** fireworks (no Instant Action item was tried, no file holds one), a toilet bought, a
 toilet dirtied or cleaned and then written (tests only), a thing bought and left out of the file, the objects
-going out as the file's. **Not built:** the fireworks' spent turn (`FIREWORKS_SPENT_REGION_EFFECT`), any reader of the running grid (Q257g,
+going out as the file's. **Not built:** the fireworks' spent turn (`FIREWORKS_SPENT_REGION_EFFECT`), any reader of the running grid (Q257h,
 Q157). `docs/exe/addresses.md` not regenerated.
 
 ### OpenTPW's writer, the staff's region effects
 
-Q257f, split by the session: the item's other pieces are Q257g. The rule is `ride-operation.md`, "The region
+Q257f, split by the session: the item's other pieces are Q257h. The rule is `ride-operation.md`, "The region
 effects", "The staff's two, read whole".
 
 **What OpenTPW writes.** The running grid already holds each entertainer's and guard's effect round
@@ -1829,6 +1827,47 @@ loaded with nought, had theirs stamped by their first pre-step, as the listing s
 one stood on (30,50) in both games; the entertainer's is the same code and the tests move a guard). Nothing of
 an effect is drawn in either game, so the frames show the staff hired and gone and do not tell the fix from the
 control. A member in the hand at the save was not run.
+
+### OpenTPW's writer, a channel's `0x8`
+
+**Bit `0x8` of a channel's flag word is the channel's own, and it says a clip of role nought has run past its
+end there.** It is not the caller's `0x8` (do not apply the hide list): the start `FUN_00472f60` copies the
+caller's `0x1` and, as `0x20`, its `0x4`, and never its `0x8`. The advance `FUN_004735d0` sets the bit as a
+channel on role 0 is found past its clip's end (`0x00473754`: `CMP EBP,ECX`, the role against nought, then
+`OR EBX,0x8`), before it deals with the ending, so the hold or the loop that follows keeps it. Every advance of a
+channel on any other role takes it off (`0x004738b2`) and sets `0x40000000` in the model's flag word (`+4`);
+the stall of a model with `0x10` takes it off too (`0x004737f3`). An idle channel is not advanced, so one stopped
+from outside keeps it. The model's advance `FUN_00473c70` answers `0x40000000` once: every node holding `0x100`
+loses `0x800`, `DAT_008bd508` gains `0x80000000` if any did, and the bit is cleared (`0x00473d3c`). What those
+two node flags are was not read; neither is among the eleven a park file keeps.
+
+**Measured on the thirteen files** (`chan8.py`, 2,882 channels, the prediction written first): the 12 channels
+held on a role 0 clip all carry `0x8`; none of the 720 on another role does; none of the 2,150 idle ones does; no
+channel is on role 0 without it. The Litter Bin's `0xc` in `Easymode.TPWI` is that, and so is the original's own
+bought Crazy Ape's, held on its build clip.
+
+Built on 2026-10-09 (Q257g). `AnimTimeControl.RoleNoughtEndedFlag`: `RideAnimations.Advance` marks a role 0
+clip's end before the ending (`MarkEnded`) and takes the mark off a channel on another role (`SettleEnded`);
+`ParkRides.Restore` puts the file's back (`RestoreEnded`) and starts the file's clip with the caller's `0x8`
+whatever the file's word holds; the writer's kept bits are `0x3f`. `rides` prints each channel's flag word.
+`SAVE_PARK_CHANNEL_KEEP_SHOWN_BIT` is gone. **Counted, not built:** the node pass as the mark comes off
+(`MODEL_NODES_AFTER_ROLE_NOUGHT_ENDED`); OpenTPW keeps neither node flag.
+
+**Confirmed in the game** (`q257g/confirm.py`, 7 of 7 and the control's 4 of 4, each predicted). A Crazy Ape
+bought and left to build: `rides` reads its channel `role 0 entry 0 frame 215.0/215.0 HELD flags 0x1c`, and the
+Litter Bin's `0x1c`; the file's record on slot 90 holds `0x1c`, where the build before's held `0x14`; no running
+channel of the file breaks the rule above, where the build before's broke it once, on the ape; loaded here the
+ape's channel reads `0x1c` again; with its queue joined and the ape on role 2 the census and the file read
+`0x10`, and the node pass is counted once. **In the original under Proton** (`q257g/orig/go.sh`, off-screen, entering the park on the file): the
+ape's model, handle 91, held `(0, 0, 0xc)` from its first poll with this build's file and `(0, 0, 0x4)` with the
+build before's, bit `0x10` left out of the comparison; the Litter Bin's `0xc` with both.
+
+**Not seen:** the mark coming off in the original (the loaded ape's queue is not joined, so its script starts no
+other role); the node pass's effect on the picture, in either game: the two frames show the ape built and do not
+tell the fix from the control. OpenTPW writes `0x1c` where the original's own file holds `0xc`: bit `0x10`, which
+comes and goes on the engine's held channel and stays on one here. The 22 items whose only clips are role 0's
+are still held on role 0 here where the engine parks them idle (`park.md`, "the stall"), so a bought one of
+those is written held with the mark, where the original's is idle.
 
 ### Read, not run
 
