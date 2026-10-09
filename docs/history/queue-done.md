@@ -5659,6 +5659,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   sold read 303 then 302 cells and `cell 46 27` `0,0,0,20,0`; the file rebuilds from its own things with 0
   cells wrong; the original held it with 0 wrong and, the bought camera sold there, left the cell nought, where
   the build before's file left it at -40.
+- [x] **Q257f. The writer: an entertainer's and a guard's region effect.** Split by the session (2026-10-09):
+  the old Q257f's other pieces are Q257g. The pre-steps `FUN_004d4660` and `FUN_004d6360` move effect 0 and 3
+  from `mLastRecordedMapId` to the cell stood on, the constructors stamp and the destructors unstamp; built on
+  `ParkState.Effects` (`ParkPeople.MoveEffect`, `Hire`, `Fire`, `Staff.RecordedCell`) and written to the person's
+  `+41`. Confirmed: an entertainer and a guard hired read happiness 12 and security 1044, the file's pair fired 6
+  and 930, the file 0 cells wrong against its own things, and the original held it with 0 wrong on eight polls
+  over 70 s, where the build before's file read 54 wrong on every one.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

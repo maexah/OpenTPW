@@ -47,6 +47,17 @@ public class MapStepTests
 		}
 	}
 
+	/// <summary>A cell's number runs from one to the map's last; nought, which a person made on no cell records, is none.</summary>
+	[TestMethod]
+	public void OnlyOneToTheLastIsACellsNumber()
+	{
+		Assert.IsFalse( MapStep.IsCellId( 0 ) );
+		Assert.IsTrue( MapStep.IsCellId( 1 ) );
+		Assert.IsTrue( MapStep.IsCellId( 16384 ) );
+		Assert.IsFalse( MapStep.IsCellId( 16385 ) );
+		Assert.IsFalse( MapStep.IsCellId( -1 ) );
+	}
+
 	/// <summary>
 	/// Each direction goes where its name says. North is towards row zero, which is the convention the
 	/// original's boundary checks give away.

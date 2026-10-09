@@ -2826,7 +2826,7 @@ park, a walk that fails (tested only).
 | The entertainer's performance | a draw mod 3 of nought, a guest in reach: a second draw, the bank's state animation, state `0xe` for WorkDuration + 1 sweeps, effect `0x87` ("The entertainer's performance") | built (`StaffBehaviour.Perform`; "The performance, in both games"); the look is `ParkPeople.GuestsNear`, each guest at the cell the park has them linked into; effect `0x87` counted, `STAFF_SOUND_PERFORMANCE_END` (Q135) | a third of the entertainer's decides |
 | The stand as a member goes idle | SetState(0) queues animation 3 every time (`FUN_004fa460`) | queued from a performance and after a clean only; any other idle keeps the picture it had | every idle |
 | State scripts 1 to 3 (words 1800, 1812, 1824) and a bank with no group | played; an animation past the table | not copied, counted `SPRITE_STATE_ANIMATION_NOT_STARTED`; counted `ENTERTAINER_BANK_WITHOUT_A_STATE_GROUP` | no shipped bank |
-| The entertainer's region effect | the pre-step `FUN_004d4660` moves `RegionFX[0]` with them, cell by cell | not moved, uncounted: the file's stays where the file has it | every cell the entertainer crosses (Q257f) |
+| The entertainer's region effect | the pre-step `FUN_004d4660` moves `RegionFX[0]` with them, cell by cell | built, `ParkPeople.MoveEffect`, before the member's turn ("The region effects") | every cell the entertainer crosses |
 | The researcher's research | state `0xf` on a draw of nought or with nowhere to walk, WorkDuration + 1 sweeps, then a walk or the same again; the points to the lab every 20 sweeps ("The research, in both games") | built (`StaffBehaviour.Research`); the points counted, `RESEARCH_POINTS_TO_THE_LAB`, and spent by nothing: there is no lab | a quarter of the researcher's decides; the points every 20 sweeps |
 | Staff sounds | fourteen cat_staff effects | twelve built (`StaffBehaviour.DrawForSound`, `ParkAudio.StaffSound`; `audio.md`, "The staff's voices"); the chase's `0x88` and `0x89` have no site | every idle and walking turn, a researching turn; a performance's end; a guard's chase and catch wait on the chase |
 | Tired | the byte `<=` 1 | the same (`StaffBehaviour.TiredOrCarryingOn`) | a rest under 2 |
@@ -2903,12 +2903,26 @@ stands a cell off it), and litter of kind 7 (four cells). **A cell has an effect
 nought** (0 of 212,992 otherwise). No file holds fireworks or litter of kind 8, so effects 5 and 7 and the attraction
 word are the listing's alone.
 
-**What OpenTPW builds** (Q257e). `ParkRegionEffects` (the eight from the park's balance, the stamp) and
+**The staff's two, read whole** (Q257f). The person base's constructor `FUN_004f8940` writes the cell id it is
+handed to `+0xcc`, `mLastRecordedMapId`, so every person records the cell they are made on, and an arrival made on
+no cell records nought (19 guests of one of the original's files). Four functions call the one swap
+`FUN_004f9460`, which answers `+0xcc` and writes the id of the cell stood on (`+5`, `+7`) over it: an
+entertainer's pre-step `FUN_004d4660` and a guard's `FUN_004d6360`, each before the staff's own `FUN_00505490`,
+which unstamp their effect round the old id and stamp it round the new when the two differ; and their destructors
+`FUN_004d4620` and `FUN_004d5eb0`, which unstamp round the old. No other kind's is ever moved: a mechanic's, a
+handyman's and a researcher's stay the cell they were made on in every file. **An id of nought walks no cell**
+(`FUN_004d8480`: its row is 511 less the radius, past 127), so a member loaded with nought has nothing taken off
+and theirs stamped at the first pre-step. An entertainer's effect is five cells and sums to 6; a guard's is 49
+cells and sums to 114.
+
+**What OpenTPW builds** (Q257e, Q257f). `ParkRegionEffects` (the eight from the park's balance, the stamp) and
 `ParkState.Effects`, the running park's grid, seeded from the file's (`ParkWorld.CellEffects`): a purchase stamps a
 toilet's 1, security's 4 and fireworks' 7 (`ParkBuilding.StampEffects`), a sale takes off what the thing holds, the
 use that dirties a toilet swaps 1 for 6 and the clean swaps them back; the console's `effects` and `cell` print it.
-**Not built:** an entertainer's and a guard's do not move with them (the file's stay where the file has them; Q257f),
-no litter is dropped, fireworks' is not taken off on their spent turn (`FIREWORKS_SPENT_REGION_EFFECT`, counted at
+An entertainer's and a guard's is stamped where they are hired, moved before their turn on the sweep that finds them
+on another cell than `Staff.RecordedCell` (`ParkPeople.MoveEffect`), and taken off round that cell as they are
+fired; `staff` prints the cell recorded. Measured in `saves.md`, "OpenTPW's writer, the staff's region effects".
+**Not built:** no litter is dropped, fireworks' is not taken off on their spent turn (`FIREWORKS_SPENT_REGION_EFFECT`, counted at
 their purchase; a sale always takes it off), and nothing reads the grid: a guest's needs leave the cell's term out
 (Q157) and the chooser still divides by the file's attraction word.
 

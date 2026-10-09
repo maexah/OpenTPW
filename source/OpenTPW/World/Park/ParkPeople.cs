@@ -711,7 +711,11 @@ public sealed partial class ParkPeople : Entity
 			PercentageThroughGrade: 0, TimeStartedIdling: 0, Name: candidate.Name,
 			TimeHired: ParkWorld.StaffState.FileTimeOf( State.CalendarNow ) );
 
-		var member = new global::OpenTPW.Staff( thingId, model, state, navigator, pace );
+		var member = new global::OpenTPW.Staff( thingId, model, state, navigator, pace, MapStep.CellId( cellX, cellY ) );
+
+		// An entertainer's and a guard's constructor stamps their effect round the cell they are made on.
+		if ( ParkRegionEffects.OfStaff( model ) is { } effect )
+			State.StampEffect( effect, cellX, cellY );
 
 		// At the head, as a new guest is (FUN_00516270).
 		_staff.Insert( 0, member );
@@ -883,6 +887,14 @@ public sealed partial class ParkPeople : Entity
 		_staffWalks.Remove( thingId );
 		_sprites.Remove( thingId );
 
+		// The destructor takes their effect off the cell it was last stamped round (FUN_004d4620, FUN_004d5eb0).
+		if ( ParkRegionEffects.OfStaff( member.Model ) is { } effect && MapStep.IsCellId( member.RecordedCell ) )
+		{
+			var (x, y) = MapStep.CellAt( member.RecordedCell );
+
+			State.UnstampEffect( effect, x, y );
+		}
+
 		_behaviour.State.Forget( thingId );
 		ParkGuestSprites.Current?.Remove( thingId );
 
@@ -893,6 +905,34 @@ public sealed partial class ParkPeople : Entity
 			$"{_staff.Count} staff left" );
 
 		return true;
+	}
+
+	/// <summary>
+	/// An entertainer's and a guard's pre-step, before the staff's own (<c>FUN_004d4660</c>, <c>FUN_004d6360</c>):
+	/// on a sweep that finds them on another cell than the one recorded, their region effect is taken off round the
+	/// recorded cell and stamped round the one they stand on, which is recorded. A recorded id that is no cell of the
+	/// map has nothing taken off, as the original's stamp walks no cell for one.
+	/// </summary>
+	internal void MoveEffect( Staff member )
+	{
+		if ( ParkRegionEffects.OfStaff( member.Model ) is not { } effect )
+			return;
+
+		var (cellX, cellY) = member.Navigator.Position.Cell;
+		var now = MapStep.CellId( cellX, cellY );
+
+		if ( member.RecordedCell == now )
+			return;
+
+		if ( MapStep.IsCellId( member.RecordedCell ) )
+		{
+			var (x, y) = MapStep.CellAt( member.RecordedCell );
+
+			State.UnstampEffect( effect, x, y );
+		}
+
+		State.StampEffect( effect, cellX, cellY );
+		member.RecordedCell = now;
 	}
 
 	/// <summary>The staff member in the player's hand, or nought - the save's <c>mStaffMemberPickedUp</c>.</summary>
@@ -1820,7 +1860,8 @@ public sealed partial class ParkPeople : Entity
 			: [.. park.People
 				.Where( person => person.Staff != null )
 				.Select( person => new Staff(
-					person.ThingId, person.Model, person.Staff!.Value, person.Navigator, person.Pace ) )];
+					person.ThingId, person.Model, person.Staff!.Value, person.Navigator, person.Pace,
+					person.LastRecordedMapId ) )];
 
 	/// <summary>Whether a member of staff in the park has this name - what the staff pool asks before it gives one out (<c>FUN_005083f0</c>).</summary>
 	internal bool StaffNamed( string name ) => _staff.Exists( member => member.Name == name );
@@ -2081,6 +2122,7 @@ public sealed partial class ParkPeople : Entity
 				// The same stamp, for the same reason: the original gives every person kind a needs call
 				// and a behaviour call back to back off one switch, and FUN_00505490 opens with
 				// FUN_004fa870 at 0x00505495 exactly as the guest handler does: the speed eased, then the stamp.
+				MoveEffect( member );
 				member.Pace();
 				member.Navigator.StampPrevious();
 
@@ -3246,7 +3288,9 @@ public sealed partial class ParkPeople : Entity
 				+ $"hired {(ParkWorld.StaffState.HiredWhenOf( member.TimeHired ) is { } hired ? hired.ToString( "d/M/yyyy HH:mm:ss" ) : $"0x{member.TimeHired:x}")} "
 				+ $"sounds {member.Sounds.Played} draws {member.Sounds.Draws} "
 				+ $"base {member.BaseSpeed} purpose {member.PurposeSpeed} adjustor {member.AdjustorSpeed} "
-				+ $"pace {member.PreviousSpeed:0.0000} speed {nav.MaxSpeed} restExact {member.Tiredness:0.000}";
+				+ $"pace {member.PreviousSpeed:0.0000} speed {nav.MaxSpeed} restExact {member.Tiredness:0.000} "
+				// The cell recorded for them, where an entertainer's or a guard's region effect stands.
+				+ $"recorded {(MapStep.IsCellId( member.RecordedCell ) ? $"({MapStep.CellAt( member.RecordedCell ).X},{MapStep.CellAt( member.RecordedCell ).Y})" : "none")}";
 		}
 	}
 }

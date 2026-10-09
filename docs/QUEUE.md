@@ -48,7 +48,7 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q257f. The writer: what else a made record leaves out.** The old Q257e's other pieces, from Q253
+- [ ] **Q257g. The writer: what else a made record leaves out.** The old Q257f's other pieces, from Q253
   (`saves.md`, "What OpenTPW writes"), each counted or said there. A running channel's keep-shown bit `0x8`
   is kept by no channel here (`SAVE_PARK_CHANNEL_KEEP_SHOWN_BIT`, counted for every made channel that runs). A
   made walk slot in use goes out facing nought (`SAVE_PARK_WALK_SLOT_FACING`). A made script's started effects
@@ -76,11 +76,8 @@ the research lab), then the rest of this section in its old order.
   table's head is (`ParkRides.WrittenHeads` hands over none for such a script). And a new head's slot is the
   lowest the FILE leaves empty, not the lowest empty as it was hung: keep the slots as heads are hung if that
   order is ever read.
-  From Q257e (`saves.md`, "OpenTPW's writer, the region effects"; `ride-operation.md`, "The region effects"): an
-  entertainer's effect 0 and a guard's 3 do not move with them here (the pre-steps `FUN_004d4660`,
-  `FUN_004d6360`), a member hired stamps none and one fired leaves the file's on the cells, written so: move
-  them on `ParkState.Effects`, write `mLastRecordedMapId` (the person's `+41`), and check a written park with
-  `q257e/fx.py`, which wants 0 cells wrong. Fireworks' effect is not taken off on the turn their script's
+  From Q257e (`saves.md`, "OpenTPW's writer, the region effects"; `ride-operation.md`, "The region effects"):
+  check a written park with `q257f/fx.py`, which wants 0 cells wrong. Fireworks' effect is not taken off on the turn their script's
   variable 0 reads 1 (`FIREWORKS_SPENT_REGION_EFFECT`, counted at their purchase). The chooser divides by the
   FILE's attraction word, not the running grid's (`ParkRideChooser.ScoreOf`). And not read in the listing: that
   a load over a running park leaves a cell with no effects record holding what memory held.

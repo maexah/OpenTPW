@@ -7,13 +7,13 @@ namespace OpenTPW;
 /// </summary>
 public sealed class ParkRegionEffects
 {
-	/// <summary>An entertainer's, moved with them cell by cell. Not stamped here.</summary>
+	/// <summary>An entertainer's, moved with them cell by cell.</summary>
 	public const int Entertainer = 0;
 
 	/// <summary>A toilet's while it is clean.</summary>
 	public const int CleanToilet = 1;
 
-	/// <summary>A guard's, moved with them cell by cell. Not stamped here.</summary>
+	/// <summary>A guard's, moved with them cell by cell.</summary>
 	public const int Guard = 3;
 
 	/// <summary>A thing's that provides security.</summary>
@@ -106,6 +106,20 @@ public sealed class ParkRegionEffects
 			}
 		}
 	}
+
+	/// <summary>
+	/// The effect a member of staff carries with them by their thing model, or null: an entertainer's and a guard's,
+	/// the two kinds whose constructor stamps one (<c>0x004d42f1</c>, <c>0x004d5e3f</c>).
+	/// </summary>
+	public static int? OfStaff( int model ) => model switch
+	{
+		EntertainerModel => Entertainer,
+		GuardModel => Guard,
+		_ => null
+	};
+
+	private const int EntertainerModel = 6;
+	private const int GuardModel = 7;
 
 	/// <summary>
 	/// The effects a standing object holds on the cells round it, by its flags as the object's constructor and

@@ -810,8 +810,9 @@ follow the list. It runs last, because it alone changes the body's length.
   legs; then a guest's block or a member's, `mArrivalIndex` among them (the guest's number among the park's
   visitors, which the reader now gives back to `Peep.VisitorNumber`).
 - **What a made record leaves at nought** is what the original's own constructors leave there: the navigator's
-  force, formation, axes, mode, last progress and timestamp, `mLastRecordedMapId`, `mSpriteUnderRideCtrl`, the
-  event ring, a guest's tiredness. A hire's `mTimeHired` is the park's calendar as they were made ("`mTimeHired`",
+  force, formation, axes, mode, last progress and timestamp, `mSpriteUnderRideCtrl`, the event ring, a guest's
+  tiredness, and a guest's `mLastRecordedMapId` (a member of staff's is written: "OpenTPW's writer, the staff's
+  region effects"). A hire's `mTimeHired` is the park's calendar as they were made ("`mTimeHired`",
   below).
 - **The chains.** A person is written on the cell their `mX` and `mY` name. Whoever has come onto a cell heads
   its chain, the newest first; whoever the file had there and is there still follows in the file's order; then
@@ -1748,7 +1749,7 @@ control: flags are not drawn. `docs/exe/addresses.md` not regenerated.
 
 ### OpenTPW's writer, the region effects
 
-Q257e, split by the session: the item's other pieces are Q257f. The rule, its eight effects and who stamps each
+Q257e, split by the session: the staff's are the next section's and the item's other pieces Q257g. The rule, its eight effects and who stamps each
 are `ride-operation.md`, "The region effects"; a cell's ten bytes are five words, and every cell of thirteen of
 the original's files is what the file's own things stamp.
 
@@ -1758,11 +1759,7 @@ a thing with an emitter) holds none, a thing sold and still written holds the fi
 out as the file's a toilet dirtied or cleaned since holds the file's too. `ParkWorld.PutEffects` then writes
 the map again, last of all, since the map lies before the thing list: a cell takes the effects record and bit
 `0x4` of its status where a word is not nought and loses both where all are, so the body changes length by ten
-bytes a cell. **Not written:** an entertainer's and a guard's effect stays on the cells the file has it on, with
-their `mLastRecordedMapId` the file's, so the two agree and the original moves the effect at the member's next
-step; a member hired here is written with that field nought and no effect, and the original's pre-step, which
-unstamps nothing for a cell off the map, stamps theirs at their first step (the listing; not run); **a member
-fired here leaves the file's effect on the cells** (Q257f).
+bytes a cell. An entertainer's and a guard's are the next section's.
 
 **Measured (Q257e, `q257e/`).** Lost Kingdom from `easymode.TPWI`: `effects` read 250 cells and sums 6, 3, -3,
 930, 0; after `buy 1413 46 27 0` (a Security Camera, thing 43) 303 cells and security 1338, `cell 46 27`
@@ -1796,15 +1793,48 @@ camera, the view being turned, and the second opened a passing member of staff's
 next two clicks confirmed; the running park only, nothing saved, the save sum the same before and after.
 **Not run in either game:** fireworks (no Instant Action item was tried, no file holds one), a toilet bought, a
 toilet dirtied or cleaned and then written (tests only), a thing bought and left out of the file, the objects
-going out as the file's, a member of staff hired or fired and then written. **Not built:** the staff's effects
-moving, the fireworks' spent turn (`FIREWORKS_SPENT_REGION_EFFECT`), any reader of the running grid (Q257f,
+going out as the file's. **Not built:** the fireworks' spent turn (`FIREWORKS_SPENT_REGION_EFFECT`), any reader of the running grid (Q257g,
 Q157). `docs/exe/addresses.md` not regenerated.
+
+### OpenTPW's writer, the staff's region effects
+
+Q257f, split by the session: the item's other pieces are Q257g. The rule is `ride-operation.md`, "The region
+effects", "The staff's two, read whole".
+
+**What OpenTPW writes.** The running grid already holds each entertainer's and guard's effect round
+`Staff.RecordedCell`, and the people's writer writes that cell to every member of staff's `mLastRecordedMapId`
+(the record's `+41`): the file's on a kept member of another kind, the cell of the hire on a hired one, the
+pre-step's last on an entertainer and a guard. A guest's is left the record's, the file's or nought, as an
+arrival's is in the original's own files. A member fired is in neither the list nor the cells.
+
+**Measured (`q257f/`).** Lost Kingdom from `easymode.TPWI`, whose entertainer is thing 27 on (47,25) and guard
+thing 28 on (39,28). `effects` sums happiness 6 and security 930 throughout the walk; paused with 27 on (48,22),
+`staff` printed it recorded there, `cell 48 22` read happiness 2 and `cell 47 25` nought. An entertainer hired on
+(30,40) and a guard on (30,50): 12 and 1044, `cell 30 40` `2,0,0,0,0`, `cell 30 50` `0,0,0,10,0`, `cell 33 53`
+`0,0,0,1,0`. `fire 27` and `fire 28`: 6 and 930, (48,22) nought. `savepark Q257F`: `fx.py` rebuilds every cell
+from the file's own things, 0 wrong of 16,384, the hires' `mLastRecordedMapId` 5151 and 6431. OpenTPW's load read
+6 and 930 and (30,40) `2,0,0,0,0`, and 20 s on happiness 2 on (30,42), where the hired entertainer had walked
+(`run1/`, 7 of 7). **The control** (`main` before it; `control/`, 5 of 5): (47,25) kept happiness 2 with 27 on
+(48,22); the hires stamped none and the firings took none off, the sums 6 and 930 all through; its file is 54
+cells wrong against its own things (27's five and 28's 49), the hires' field nought.
+
+**The original under Proton** (`orig/go.sh`, off-screen; `look.py` rebuilds the grid from the things in memory,
+each entertainer and guard at their own `+0xcc`). **The fix's file**, entered: on the first poll and at each of
+seven more over 70 s, 0 cells wrong, happiness 6 and security 930, the hired entertainer's effect following them
+over (30,41), (31,40), (29,43), (29,46). **The control's file:** 54 cells wrong on all eight polls, happiness 12
+and security 1044: the fired pair's effects stay on the ground with nobody to take them off, and the hires,
+loaded with nought, had theirs stamped by their first pre-step, as the listing says.
+
+**Not seen:** a guard walk with their effect in either game (the file's stood still in the fix's run, the hired
+one stood on (30,50) in both games; the entertainer's is the same code and the tests move a guard). Nothing of
+an effect is drawn in either game, so the frames show the staff hired and gone and do not tell the fix from the
+control. A member in the hand at the save was not run.
 
 ### Read, not run
 
 The objects' other rules above are the ten files' and the listing's.
 **Not run in either game:** a guest gone (tested; one run met one), a table grown past its hundred slots, a
-person written on an object's cell, a member of staff resting or in the hand at the save, a guard hired. **Not read:** what `mLastRecordedMapId`, `mNextServiceInterval` and the sprite
+person written on an object's cell, a member of staff resting or in the hand at the save. **Not read:** what `mNextServiceInterval` and the sprite
 record's words past `+0xcc` hold, which a made record leaves at nought and the original walked on with. The
 readers of the sound module, the advisor scoring and the UI block were not read, only their writers. What
 `VANT`'s clock is for, what the action recording is read by after a load, and `FUN_005408f0` are not traced. The

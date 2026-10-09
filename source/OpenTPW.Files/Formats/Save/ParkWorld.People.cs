@@ -174,12 +174,16 @@ public sealed partial class ParkWorld
 	/// </param>
 	/// <param name="Balloon">The balloon a guest holds, a sprite of its own on the slot <c>mBalloonScript</c> names.</param>
 	/// <param name="Bubble">The thought bubble over them, a sprite of its own on the slot <c>mThoughtScript</c> names.</param>
+	/// <param name="LastRecordedMapId">
+	/// The record's <c>mLastRecordedMapId</c>, written for a member of staff; null leaves the record's, the file's
+	/// on a kept person and nought on a made one, as an arrival's is in the original's own files.
+	/// </param>
 	public readonly record struct WrittenPerson( Person Person, Sprite? Sprite,
 		IReadOnlyList<(int X, int Y)>? Waypoints = null, IReadOnlyList<int>? LegLengths = null,
 		int PreviousX = 0, int PreviousY = 0, int NextAnim = 0, int NextServiceInterval = 0,
 		bool? SetDestSuccessfully = null, int LastThought = 0, int TimeBubbleShown = 0,
 		uint StrandedTime = 0, int SpriteInterval = 0x3e, int? MadeSetByte = null, int? StateSetByte = null,
-		WrittenSprite? Balloon = null, WrittenSprite? Bubble = null );
+		WrittenSprite? Balloon = null, WrittenSprite? Bubble = null, int? LastRecordedMapId = null );
 
 	/// <summary>
 	/// A sprite that is no person's own picture, as the writer takes it: a balloon or a thought bubble. All of
@@ -1134,6 +1138,10 @@ public sealed partial class ParkWorld
 		Put16( record, 28, (navigator.TargetX >> 8) & 0xffff );  // mAccurateDestX: the target, in mX's units
 		Put16( record, 30, (navigator.TargetY >> 8) & 0xffff );  // mAccurateDestY
 		Put32( record, 37, person.SpriteKind );                  // mESPSprite
+
+		if ( written.LastRecordedMapId is { } recorded )
+			Put16( record, 41, recorded );                       // mLastRecordedMapId
+
 		Put32( record, 224, written.PreviousX );                 // mPreviousX, the navigator's fixed point
 		Put32( record, 228, written.PreviousY );                 // mPreviousY
 		Put32( record, 232, (int)written.StrandedTime );         // mStrandedTime

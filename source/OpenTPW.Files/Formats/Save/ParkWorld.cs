@@ -444,11 +444,16 @@ public sealed partial class ParkWorld : IParkInitialState
 	/// <c>+0x24</c>) and <c>mSpriteID</c> (file 246, <c>+0x20</c>): which kind of sprite they wear (0 a child, 2 a
 	/// costume, the staff theirs) and which bank of it, what the sprite is built again from.
 	/// </para>
+	/// <para>
+	/// <see cref="LastRecordedMapId"/> is the person base's <c>mLastRecordedMapId</c> (file 41, <c>+0xcc</c>), a
+	/// packed cell id: the cell they were made on, and for an entertainer and a guard the cell their region effect
+	/// was last stamped round (<c>docs/exe/ride-operation.md</c>, "The region effects").
+	/// </para>
 	/// </summary>
 	public readonly record struct Person(
 		int ThingId, int Model, int RawX, int RawY, int SpriteSlot, int Angle,
 		NavigatorState Navigator, GuestState? Guest, StaffState? Staff = null, PaceState? Pace = null,
-		int SpriteKind = 0, int SpriteBank = 0 )
+		int SpriteKind = 0, int SpriteBank = 0, int LastRecordedMapId = 0 )
 	{
 		/// <inheritdoc cref="CatalogueObject.CellX"/>
 		public int CellX => RawX >> 8;
@@ -2269,7 +2274,8 @@ public sealed partial class ParkWorld : IParkInitialState
 				PreviousSpeed: ReadSingleAt( start + 220 ),
 				PurposeSpeed: ReadUInt16At( start + 236 ) ),
 			SpriteKind: ReadInt32At( start + 37 ),       // mESPSprite
-			SpriteBank: ReadInt32At( start + 246 ) );    // mSpriteID
+			SpriteBank: ReadInt32At( start + 246 ),      // mSpriteID
+			LastRecordedMapId: ReadUInt16At( start + 41 ) );
 
 	/// <summary>
 	/// The navigator's block, which begins at <c>+43</c> - after the eight-byte thing head and the

@@ -120,7 +120,7 @@ public sealed partial class ParkPeople
 			people.Add( Person( id, member.Model, member.Navigator, heading, stands, null, staff,
 				member.Paced ? new ParkWorld.PaceState( member.AdjustorSpeed, member.BaseSpeed, member.PreviousSpeed, member.PurposeSpeed ) : null,
 				_staffLooks.GetValueOrDefault( id ), drawn, member.NextAnimation, member.NextInterval,
-				setDest: stands ? false : null, member.Thoughts, 0 ) );
+				setDest: stands ? false : null, member.Thoughts, 0 ) with { LastRecordedMapId = member.RecordedCell } );
 		}
 
 		return people;

@@ -209,10 +209,18 @@ public sealed class Staff
 	/// <inheritdoc cref="Peep.NextInterval"/>
 	public int NextInterval { get; set; }
 
+	/// <summary>
+	/// The packed id of the cell they were made on and, for an entertainer and a guard, of the cell their region
+	/// effect stands round: the person base's <c>mLastRecordedMapId</c>, <c>+0xcc</c>, which only those two kinds'
+	/// pre-steps move (<c>FUN_004f9460</c>; <see cref="ParkPeople.MoveEffect"/>). Nought is no cell.
+	/// </summary>
+	public int RecordedCell { get; set; }
+
 	public Staff( int thingId, int model, ParkWorld.StaffState saved, ParkWorld.NavigatorState navigator,
-		ParkWorld.PaceState? pace = null )
+		ParkWorld.PaceState? pace = null, int recordedCell = 0 )
 	{
 		Navigator = new PeepNavigator( navigator );
+		RecordedCell = recordedCell;
 
 		if ( pace is { } speeds )
 		{

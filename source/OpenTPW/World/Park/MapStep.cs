@@ -68,6 +68,9 @@ public static class MapStep
 	/// </summary>
 	public static int CellId( int x, int y ) => y * MapSize + x + 1;
 
+	/// <summary>Whether a number is a cell's: one to the map's last.</summary>
+	public static bool IsCellId( int cellId ) => cellId >= 1 && cellId <= MapSize * MapSize;
+
 	/// <summary>Where a cell number sits on the map.</summary>
 	public static (int X, int Y) CellAt( int cellId )
 	{

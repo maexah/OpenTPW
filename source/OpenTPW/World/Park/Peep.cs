@@ -691,8 +691,8 @@ public sealed class Peep
 	/// countdown and the drift the original adds the guest's <i>cell's</i> own influence to happiness,
 	/// illness and hunger - three signed shorts of a ten-byte per-cell record that placed objects and
 	/// walking staff stamp into the cells around them. The park keeps those cells
-	/// (<see cref="ParkState.Effects"/>; <c>ride-operation.md</c>, "The region effects"), the staff's part of them
-	/// still where the file has it; this turn does not read them yet.
+	/// (<see cref="ParkState.Effects"/>; <c>ride-operation.md</c>, "The region effects"); this turn does not read
+	/// them yet.
 	/// </para>
 	/// <para>
 	/// <b>A quirk worth not tidying away.</b> The drift is gated on the same counter as the whole tick,
