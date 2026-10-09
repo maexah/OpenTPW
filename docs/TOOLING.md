@@ -38,6 +38,21 @@ The harness, named by file here (`CLAUDE.local.md` says where it lives):
 | `tpwmem.py read 0x00877d34 0x00785988:d` | Reads addresses (`I` u32 default, `i h H B f d`, `sN` raw bytes) |
 | `tpwmem.py watch ADDR [s]` | Prints each change |
 | `gmove.py align` / `gmove.py X Y [click]` | Lines the game's cursor up with the pointer, and glides in small steps |
+| `record.sh start NAME` / `stop` | Films the off-screen display, lossless, 30 frames a second, with the wall clock at its start |
+| `record.sh frames NAME FROM TO` / `sheet NAME FROM TO` | Every frame of the film between two of its seconds, each with its wall-clock time, or the same as one contact sheet |
+| `watch.sh 'EXPR' SIZE [HITS] [SECS]` | Which code writes a piece of memory: a hardware watchpoint through `gdb`, attached and detached again |
+
+**Film what lasts under a second.** A timed still misses it: a balloon's burst lasts a second there, and Q255's
+three stills caught none of it. Start `record.sh` before the click and pull the frames after; a frame's wall-clock
+time (good to 0.2 s) lines it up with a memory poll that prints its own. Tried 2026-10-09: 158 frames in 5.3 s.
+
+**Ask who wrote it, do not infer it.** `watch.sh` prints the program counter after each write to an address and
+the value written; the instruction before that counter is the writer, at the listing's own address (the game is
+a 32-bit process, loaded at its image base). Tried 2026-10-09 on `mGameTick`
+(`'*(unsigned*)0x7cf83c + 0x1da70c'`): five writes, 806 to 810, each from `0x0051639e`, after the
+`MOV [EDI+0x1da70c],ECX` at `0x00516398` in `FUN_00516380`, and the game ran on after the detach. The game is
+held while `gdb` attaches (about a second) and for a few milliseconds a hit, so a count of sweeps across a watch
+is the park clock's, not the wall's. Four watchpoints at most, the processor's.
 
 **Getting to a park:** "Welcome to Sim Theme Park" (click once if it waits) → intro films on a fresh `save/` (click
 through) → player screen. **The first click on the player screen is ignored**, so click again. Then type a name,

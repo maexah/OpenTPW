@@ -1,11 +1,21 @@
 #!/bin/sh
-# Moves ticked queue items to docs/history/queue-done.md (tools/queue-sweep.py).
+# Moves ticked queue items to docs/history/queue-done.md (tools/queue-sweep.py), and every account but the newest
+# of STATUS's "Not verified on screen" to docs/history/not-verified.md (tools/status-sweep.py).
 # Enable once per clone: git config core.hooksPath tools/hooks
 root=$(git rev-parse --show-toplevel) || exit 1
-git diff --cached --quiet -- docs/QUEUE.md && exit 0
-if ! git diff --quiet -- docs/QUEUE.md docs/history/queue-done.md; then
-	echo "queue-sweep: docs/QUEUE.md or queue-done.md has unstaged changes; stage them or sweep by hand" >&2
-	exit 1
+if ! git diff --cached --quiet -- docs/QUEUE.md; then
+	if ! git diff --quiet -- docs/QUEUE.md docs/history/queue-done.md; then
+		echo "queue-sweep: docs/QUEUE.md or queue-done.md has unstaged changes; stage them or sweep by hand" >&2
+		exit 1
+	fi
+	python3 "$root/tools/queue-sweep.py" || exit 1
+	git add -- "$root/docs/QUEUE.md" "$root/docs/history/queue-done.md"
 fi
-python3 "$root/tools/queue-sweep.py" || exit 1
-git add -- "$root/docs/QUEUE.md" "$root/docs/history/queue-done.md"
+if ! git diff --cached --quiet -- docs/STATUS.md; then
+	if ! git diff --quiet -- docs/STATUS.md docs/history/not-verified.md; then
+		echo "status-sweep: docs/STATUS.md or not-verified.md has unstaged changes; stage them or sweep by hand" >&2
+		exit 1
+	fi
+	python3 "$root/tools/status-sweep.py" || exit 1
+	git add -- "$root/docs/STATUS.md" "$root/docs/history/not-verified.md"
+fi

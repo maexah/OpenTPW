@@ -51,6 +51,9 @@ no fallback, so a pair the account lacks fails the task.
 **What it cannot do.** A worker here has no shell: no build, no test, no game, no Ghidra. Decoding, verifying by
 running and anything in Ghidra go to `tpw-verify` or stay with the lead.
 
+**When.** The second read of an item's own diff is assigned at its work-in-progress commit, before the game runs
+and the bugs are put back, so it reads while they run; assigned after them it only adds to the wait.
+
 **Budget.** One or two assignments a task at the most, and none for what a grep settles. Each names one commit,
 the narrow `paths` it needs and a `timeout_seconds`; one review of 2026-10-06 ran into the task's runtime limit with
 nothing handed back. Read `status` after a run for its `token_usage`, as `bytype.py` is read after a workflow.
@@ -127,8 +130,9 @@ say so before launching it.
 
 ## Sessions
 
-- **One task per session.** Start Claude Code from the repo root. Read `CLAUDE.md` (automatic) and `docs/STATUS.md`, take the first unticked item in `docs/QUEUE.md` (unless Alexah names another), then read the one `docs/exe/` page for its area. Check the Ghidra headless server at the start of work (`CLAUDE.md` rule 7).
+- **One task per session.** Start Claude Code from the repo root. Read `CLAUDE.md` (automatic) and `docs/STATUS.md`, take the first unticked item in `docs/QUEUE.md` (unless Alexah names another; read the file's head and that item, not the whole queue), then read the one `docs/exe/` page for its area. Check the Ghidra headless server at the start of work (`CLAUDE.md` rule 7).
 - Keep a multi-step task's checklist in the live plan and tick each step before moving on (rule 16).
+- `docs/STATUS.md`'s "Not verified on screen" holds the item just landed and no other. Write a new item's account above the one before it; the same pre-commit hook runs `tools/status-sweep.py`, which moves every earlier account to `docs/history/not-verified.md`.
 - End the session when the task is committed, its `docs/QUEUE.md` item ticked and `docs/STATUS.md` updated. The pre-commit hook (`tools/hooks/pre-commit`, enabled once per clone with `git config core.hooksPath tools/hooks`) runs `tools/queue-sweep.py`, which moves every ticked item to `docs/history/queue-done.md` and stages both files; do not move one by hand. Do not carry the next task in the same context. When Alexah says a clear is coming, read `docs/QUEUE.md` and show the next five unticked items with what each asks (rule 17).
 - Memory files hold rules and the live plan only, each under 300 lines, and nothing that is finished. Facts go in `docs/`. Corrections replace old text.
 
@@ -157,5 +161,7 @@ The two READMEs (this repo's and the FileFormats clone's) are written for player
 
 - Build with `--no-incremental`, then `dotnet test --no-build` with `OPENTPW_GAME_PATH` set; without it the game-data tests skip, so read the skip count, not just "Passed!". Take the counts fresh; never compare against a remembered number.
 - Confirm in the running game, launched with `--game` or `OPENTPW_GAME_PATH`, with `OPENTPW_DEBUG_CONSOLE=1` and `SDL_AUDIODRIVER=dummy`. Predict the number before observing it.
-- Put the bug back and re-run. If the suite stays green, the test is hollow: extract the decision into a pure function and pin that.
+- Put the bug back and re-run. If the suite stays green, the test is hollow: extract the decision into a pure function and pin that. An item's bugs go in a list for `mutate.py`, which checks every pattern, proves each copy of the tree green unchanged, and runs eight copies at once (61 bugs in 9.4 minutes, 2026-10-09); a bug that does not compile was never run and counts for nothing. `stryker.sh` adds Stryker.NET's mechanical bugs on the files an item changed (a comparison turned, a statement dropped): it finds the boundary nobody thought of and does not replace the list, which holds the bugs that mean something.
+- A run that needs no photograph (a control, a census) can go on a private display beside the one on the desktop (`CLAUDE.local.md`, "Off-screen runs"). Its pictures are not evidence: the software driver draws every texture white.
+- Before predicting a number, grep the earlier runs' logs for the same scene. A figure measured under other conditions (a load of one, a load of thirteen) is not this scene's.
 - Say what was **not** verified.

@@ -12,7 +12,9 @@ split it into two lines here and stop after the first. Alexah may reorder; nobod
 
 **Every item, no exceptions.**
 
-- Start from the repo root. Read `CLAUDE.md`, `docs/STATUS.md`, then this file.
+- Start from the repo root. Read `CLAUDE.md`, `docs/STATUS.md`, then this file's head and its first unticked item:
+  the first hundred lines or so. The rest of the queue is other sessions'; grep it for a Q-number when a note
+  is to be filed under one.
 - Branch from `main`, named for the item, next free number: `alexah/N-<what-it-changes>`.
 - "Confirm" means the running game: a screenshot **and** the census or log line that goes with it,
   both. Predict the number before reading it. A test is added for regression only. It is never the proof.
