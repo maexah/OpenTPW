@@ -357,7 +357,7 @@ public class ParkFileWriterBoughtAndSoldTests
 		var script = ape.Script!.Script with
 		{
 			Limbo = [new( 31, 5000 ), default], InLimbo = 1,
-			Bounce = [default, new( 32, 2, 7000, 6000 )], Bouncing = 1, BounceBase = 8,
+			Bounce = [new( 0, 1, 5000, 4000 ), new( 32, 2, 7000, 6000 )], Bouncing = 1, BounceBase = 8,
 			Walk = [new( 1, 2, 3, 4, 100, 200, 33, 5, 2, 6, Facing: 7 ), new( 4, 2, 2, 4, 300, 1000, 0, 6, 0, 1, Facing: 4 )],
 			Heads = [0, 34],
 		};
@@ -371,7 +371,7 @@ public class ParkFileWriterBoughtAndSoldTests
 		Assert.AreEqual( (2, 0x00080001), (Int( record, 0x64 ), Int( record, 0x6c )) );
 		Assert.AreEqual( (2, 2), (Int( record, 0x7c ), Int( record, 0x4c )) );
 		CollectionAssert.AreEqual( new SavedLimboSlot[] { new( 31, 5000 ), default }, saved.Limbo );
-		CollectionAssert.AreEqual( new SavedBounceSlot[] { default, new( 32, 2, 7000, 6000 ) }, saved.Bounce );
+		CollectionAssert.AreEqual( new SavedBounceSlot[] { new( 0, 1, 5000, 4000 ), new( 32, 2, 7000, 6000 ) }, saved.Bounce, "a slot let go, whole" );
 		Assert.AreEqual( new SavedWalkSlot( 1, 2, 3, 4, 100, 200, 33, 5, 2, 6, Facing: 7 ), saved.Walk![0] );
 		Assert.AreEqual( new SavedWalkSlot( 4, 2, 2, 4, 300, 1000, 0, 6, 0, 1, Facing: 4 ), saved.Walk[1], "a slot let go, whole" );
 		CollectionAssert.AreEqual( new[] { 0, 34 }, saved.Heads );

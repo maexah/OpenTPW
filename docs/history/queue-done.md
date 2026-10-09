@@ -5701,6 +5701,15 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the same twelve fields in the file, where the build before's file held the collected slot as 32 nought bytes,
   and the original held the file's slot in memory at its first poll with this build's file and noughts with the
   build before's, then let twelve of its own go the same way.
+- [x] **Q257k. The writer: a bounce slot let go.** Split from the old Q257k at its last piece (2026-10-09);
+  the rest is Q257l. `UNBOUNCE` and `FORCEUNBOUNCE` clear a slot's handle and nothing else (`0x005558c6`), so a
+  slot let go holds its last rider's node, due and start until a `BOUNCE` takes it (`saves.md`, "OpenTPW's
+  writer, a bounce slot let go"; 8 of 8 let-go slots in thirteen files, 37 never used all nought). A script here
+  lets a slot go the same way, a load reads a free slot's leftovers, and the writer writes a free slot whole.
+  **Proof:** the Belly Bounce with a rider let off reads `off: 0:1 ride 30000` in `rides` and handle 0, node 1,
+  due 114418816, start 114388816 in the file, where the build before's file held the slot as 16 nought bytes,
+  and the original held the file's slot in memory at its first poll with this build's file and nothing with the
+  build before's, then let ten of its own go the same way.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

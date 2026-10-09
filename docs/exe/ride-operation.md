@@ -4425,7 +4425,7 @@ It declares **3 walk slots** and dismisses with `WALKGET VAR_LETMEOFF` at instru
 | `0x00555618` | `RSSE_BOUNCESETBASE` | Opcode **71**. Writes **`+0x6e`**, a separate 16-bit field read only by the positioner `FUN_00557ab0` — presentation, not bookkeeping. | Dispatch table + body decode |
 | `0x00555674` | `RSSE_BOUNCE` | Opcode **72**, 2 operands. Only RECORDS a rider; it places nobody. | Dispatch table + body decode |
 | `0x005557a3` | `RSSE_UNBOUNCE` | Opcode **73**. **WRITES** its operand (an outbox), it does not read it as "who to remove". | Dispatch table + body decode |
-| `0x00555842` | `RSSE_FORCEUNBOUNCE` | Opcode **74**. Drops the deadline test and **keeps the release window**. | Dispatch table + body decode |
+| `0x00555842` | `RSSE_FORCEUNBOUNCE` | Opcode **74**. Drops the deadline test and **keeps the release window**. Both release through `0x005558c6`: `+0x6c` less one and the slot's handle set to nought; its node, due and start stay (`saves.md`, "OpenTPW's writer, a bounce slot let go"). | Dispatch table + body decode |
 | `0x00555910` | `RSSE_BOUNCING` | Opcode **75**. Sign-extends the 16-bit tally at `+0x6c`. | Dispatch table + body decode |
 
 **The two setters are swapped relative to their names**: `BOUNCESETNODE` writes the node base, `BOUNCESETBASE` writes a presentation field nothing in the family reads.

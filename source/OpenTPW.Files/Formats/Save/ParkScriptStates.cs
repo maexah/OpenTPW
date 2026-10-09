@@ -574,8 +574,8 @@ public sealed partial class ParkScriptStates
 	/// <see cref="Splice"/>'s (<see cref="Relisted"/>).
 	///
 	/// <para>
-	/// A walk slot's last dword is not written. A free slot of any of the three
-	/// tables keeps all but its handle and its state, as the engine's does a slot let go. A script the file holds
+	/// A walk slot's last dword is not written. A bounce slot and a walk slot are written whole, in use or free,
+	/// as the script hands them over; a free limbo slot keeps the file's reading. A script the file holds
 	/// no record for is not written.
 	/// </para>
 	/// </summary>
@@ -650,10 +650,6 @@ public sealed partial class ParkScriptStates
 					var to = place.Bounce + (slot * BounceSlotSize);
 
 					PutInt32( body, to, bounce[slot].Handle );
-
-					if ( bounce[slot].Handle == 0 )
-						continue;
-
 					PutInt32( body, to + 4, bounce[slot].Node );
 					PutInt32( body, to + 8, (int)bounce[slot].Due );
 					PutInt32( body, to + 12, (int)bounce[slot].Start );

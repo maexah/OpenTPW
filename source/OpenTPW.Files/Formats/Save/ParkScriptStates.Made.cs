@@ -107,9 +107,9 @@ public sealed partial class ParkScriptStates
 		foreach ( var slot in bounce )
 		{
 			writer.Write( slot.Handle );
-			writer.Write( slot.Handle != 0 ? slot.Node : 0 );
-			writer.Write( slot.Handle != 0 ? slot.Due : 0u );
-			writer.Write( slot.Handle != 0 ? slot.Start : 0u );
+			writer.Write( slot.Node );
+			writer.Write( slot.Due );
+			writer.Write( slot.Start );
 		}
 
 		var walk = script.Walk ?? [];

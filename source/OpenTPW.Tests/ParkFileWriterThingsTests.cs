@@ -358,11 +358,11 @@ public class ParkFileWriterThingsTests
 	}
 
 	/// <summary>
-	/// A bounce slot let go keeps what the file held but its guest. A walk slot is written as the script hands it over,
-	/// free or not: one let go since the load goes out with the walk it was let go from, not the file's before it.
+	/// A bounce slot and a walk slot are written as the script hands them over, free or not: one let go since the load
+	/// goes out with its own last rider's node and readings, or the walk it was let go from, not the file's before it.
 	/// </summary>
 	[TestMethod]
-	public void AFreeSlotKeepsItsStaleReadings()
+	public void AFreeSlotIsWrittenAsTheScriptHoldsIt()
 	{
 		var body = (byte[])payload.Clone();
 		var bouncy = PlaceOf( body, BouncyScript );
@@ -383,10 +383,11 @@ public class ParkFileWriterThingsTests
 		var written = (byte[])body.Clone();
 
 		file.ScriptStates.Put( written, 0, 0, [
-			AsWritten( file.ScriptStates.For( BouncyScript )!.Value ) with { Bounce = new SavedBounceSlot[10] },
+			AsWritten( file.ScriptStates.For( BouncyScript )!.Value ) with { Bounce = [new SavedBounceSlot( 0, 1, 31000, 1000 ), .. new SavedBounceSlot[9]] },
 			AsWritten( file.ScriptStates.For( SprayScript )!.Value ) with { Walk = [new SavedWalkSlot( 4, 2, 2, 4, 900, 1600, 0, 6, 0, 1, Facing: 4 ), default, default] }] );
 
-		Assert.AreEqual( (0, 1, 700, 600), (Int( written, bouncy.Bounce ), Int( written, bouncy.Bounce + 4 ), Int( written, bouncy.Bounce + 8 ), Int( written, bouncy.Bounce + 12 )) );
+		Assert.AreEqual( (0, 1, 31000, 1000), (Int( written, bouncy.Bounce ), Int( written, bouncy.Bounce + 4 ), Int( written, bouncy.Bounce + 8 ), Int( written, bouncy.Bounce + 12 )),
+			"the rider it was let go of since the load, whole" );
 		Assert.AreEqual( new SavedWalkSlot( 4, 2, 2, 4, 900, 1600, 0, 6, 0, 1, Facing: 4 ), new ParkWorld( written ).ScriptStates.For( SprayScript )!.Value.Walk![0],
 			"the walk it was let go from since the load, whole" );
 	}
@@ -670,6 +671,63 @@ public class ParkFileWriterThingsTests
 
 		Assert.IsTrue( off is >= 45 and <= 55, $"thirty seconds of 600 ms turns, less the boarding: turn {off}" );
 		Assert.AreEqual( off, OffAt( second ) );
+	}
+
+	/// <summary>
+	/// <c>UNBOUNCE</c> clears a slot's handle alone (<c>0x005558d6</c>): the slot let go keeps its rider's node and both
+	/// readings, is handed over so, comes back from a save so, and is taken again by the next rider.
+	/// </summary>
+	[TestMethod]
+	public void ABounceSlotLetGoKeepsItsNodeAndItsReadings()
+	{
+		var script = new RideScript( ScriptOf( BellyBounce ) ) { Id = BouncyScript };
+
+		Assert.IsFalse( script.BouncedOff().Any(), "a slot never used is not one let go" );
+
+		var clock = Aboard( script, 2 );
+		var aboard = script.Written( moment => (uint)(moment + 1_000_000f) ).Bounce![0];
+
+		Assert.IsFalse( script.BouncedOff().Any(), "a slot in use is still held" );
+
+		for ( var turn = 0; turn < 400 && script.TryBounceNode( Rider, out _ ); ++turn )
+			script.Turn( clock += 600f );
+
+		Assert.IsFalse( script.TryBounceNode( Rider, out _ ), "the rider never came off" );
+		Assert.AreEqual( (0, 1, 2000), script.BouncedOff().Single(), "the slot, the node and the ride's length" );
+
+		var written = script.Written( moment => (uint)(moment + 1_000_000f) );
+
+		Assert.AreEqual( aboard with { Handle = 0 }, written.Bounce![0], "all but the handle" );
+		Assert.AreEqual( 0, written.Bouncing, "and one off the count" );
+		Assert.AreEqual( default, written.Bounce[1], "a slot never used holds nought" );
+
+		var second = new RideScript( ScriptOf( BellyBounce ) ) { Id = BouncyScript };
+
+		var saved = new SavedScript( BouncyScript, written.Position, 0, written.Variables, written.CallIndex, written.HeapIndex,
+			written.Result, written.Stack, written.WaitDeadline, written.AnimationDeadline, written.LoopingKey, written.AnimationMark,
+			written.TimerDeadline, written.Heads, written.Limbo, written.InLimbo, written.Bounce, written.Bouncing, written.BounceBase,
+			written.BounceNode, written.Walk );
+
+		Assert.AreEqual( 0, second.RestoreRiders( saved, reading => reading != 0 ? reading - 1_000_000f : null ), "nobody is in its tables" );
+		Assert.AreEqual( (0, 1, 2000), second.BouncedOff().Single(), "a load reads the leftovers" );
+		CollectionAssert.AreEqual( written.Bounce, second.Written( moment => (uint)(moment + 1_000_000f) ).Bounce, "and they go out again the same" );
+
+		// Either reading alone marks a slot as used: one of them can land on this clock's nought.
+		var edge = new RideScript( ScriptOf( BellyBounce ) ) { Id = BouncyScript };
+		var slots = new SavedBounceSlot[written.Bounce.Length];
+
+		slots[0] = new SavedBounceSlot( 0, 1, 1_030_000, 1_000_000 );
+		slots[1] = new SavedBounceSlot( 0, 2, 1_000_000, 970_000 );
+		edge.RestoreRiders( saved with { Bounce = slots }, reading => reading != 0 ? reading - 1_000_000f : null );
+
+		CollectionAssert.AreEqual( new[] { (0, 1, 30000), (1, 2, 30000) }, edge.BouncedOff().ToArray() );
+		CollectionAssert.AreEqual( slots, edge.Written( moment => (uint)(moment + 1_000_000f) ).Bounce );
+
+		Aboard( second, 3 );
+
+		Assert.IsFalse( second.BouncedOff().Any(), "the next rider takes the first free slot, the one let go" );
+		Assert.IsTrue( second.TryBounceNode( Rider, out var node ) );
+		Assert.AreEqual( 1, node );
 	}
 
 	/// <summary>A table of another length than the script declares is not the script's, and is left.</summary>

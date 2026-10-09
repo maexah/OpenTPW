@@ -209,7 +209,7 @@ public sealed class RideScript
 	/// One place on the ride itself - sixteen bytes of the engine's array at <c>+0x28</c>: who is on it,
 	/// which node of the ride they were put on, when they are due off, and when they got on. <b>A slot is
 	/// free when its handle is nought</b>, and the scan starts from the beginning every time, exactly as
-	/// <see cref="LimboSlot"/>'s does.
+	/// <see cref="LimboSlot"/>'s does. A slot let go keeps the other three (<see cref="Unbounce"/>).
 	/// </summary>
 	private struct BounceSlot
 	{
@@ -217,6 +217,9 @@ public sealed class RideScript
 		public int Node;
 		public float Expiry;
 		public float Start;
+
+		/// <summary>Whether a rider has been put on this slot: one never used holds nought.</summary>
+		public readonly bool Stamped => Start != 0f || Expiry != 0f;
 	}
 
 	/// <summary>
@@ -277,6 +280,21 @@ public sealed class RideScript
 		{
 			if ( slot.Handle != 0 )
 				yield return (slot.Handle, slot.Node);
+		}
+	}
+
+	/// <summary>
+	/// Every bounce slot let go and not taken again, with the leftovers <c>UNBOUNCE</c> leaves in it: the node its
+	/// last rider was on and how long their ride was to be. The console's ride census, and what a test reads.
+	/// </summary>
+	public IEnumerable<(int Slot, int Node, int Ride)> BouncedOff()
+	{
+		for ( var slot = 0; slot < _bounce.Length; ++slot )
+		{
+			var left = _bounce[slot];
+
+			if ( left.Handle == 0 && left.Stamped )
+				yield return (slot, left.Node, (int)(left.Expiry - left.Start));
 		}
 	}
 
@@ -1041,7 +1059,7 @@ public sealed class RideScript
 	///
 	/// <para>
 	/// Each reading arrives through <paramref name="onThisClock"/>, moved as the struct's own deadlines are
-	/// (<see cref="RestoreClockState"/>); one it cannot move reads nought. A free slot's stale readings are not kept.
+	/// (<see cref="RestoreClockState"/>); one it cannot move reads nought. A free limbo slot's stale reading is not kept.
 	/// </para>
 	/// </summary>
 	/// <returns>How many guests the three tables hold.</returns>
@@ -1067,15 +1085,14 @@ public sealed class RideScript
 		{
 			for ( var slot = 0; slot < bounce.Length; ++slot )
 			{
-				_bounce[slot] = bounce[slot].Handle == 0
-					? default
-					: new BounceSlot
-					{
-						Handle = bounce[slot].Handle,
-						Node = bounce[slot].Node,
-						Expiry = onThisClock( bounce[slot].Due ) ?? 0f,
-						Start = onThisClock( bounce[slot].Start ) ?? 0f,
-					};
+				// A free slot too: one let go holds its last rider's leftovers, and one never used holds nought.
+				_bounce[slot] = new BounceSlot
+				{
+					Handle = bounce[slot].Handle,
+					Node = bounce[slot].Node,
+					Expiry = onThisClock( bounce[slot].Due ) ?? 0f,
+					Start = onThisClock( bounce[slot].Start ) ?? 0f,
+				};
 
 				riders += bounce[slot].Handle != 0 ? 1 : 0;
 			}
@@ -1153,9 +1170,10 @@ public sealed class RideScript
 			TimerDeadline: _timerUntil != 0f ? reading( _timerUntil ) : 0,
 			Limbo: [.. _limbo.Select( slot => slot.Handle == 0 ? default : new SavedLimboSlot( slot.Handle, reading( slot.Release ) ) )],
 			InLimbo: _inLimbo,
-			Bounce: [.. _bounce.Select( slot => slot.Handle == 0
-				? default
-				: new SavedBounceSlot( slot.Handle, slot.Node, reading( slot.Expiry ), reading( slot.Start ) ) )],
+			// A slot no rider has been put on holds nought, and one let go its last rider's node and readings.
+			Bounce: [.. _bounce.Select( slot => slot.Stamped
+				? new SavedBounceSlot( slot.Handle, slot.Node, reading( slot.Expiry ), reading( slot.Start ) )
+				: new SavedBounceSlot( slot.Handle, slot.Node, 0, 0 ) )],
 			Bouncing: _bouncing, BounceBase: _bounceBase, BounceNode: _bounceNode,
 			// A slot no walk has stamped holds nought, and one let go the stamps of the walk off it was let go from.
 			Walk: [.. _walk.Select( slot => new SavedWalkSlot( slot.WalkNode, slot.HeadNode, slot.OffFrom, slot.OffTo,
@@ -2627,7 +2645,8 @@ public sealed class RideScript
 
 			var handle = _bounce[slot].Handle;
 
-			_bounce[slot] = default;
+			// The handle alone is cleared (0x005558d6): the node and the two readings stay until BOUNCE takes the slot again.
+			_bounce[slot].Handle = 0;
 			--_bouncing;
 
 			return handle;

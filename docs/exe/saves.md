@@ -1094,9 +1094,8 @@ and a model's channels their count, so nothing moves, and they go in before the 
   the head table; and in the header the scheduler's tick and the next handle. The record's other bytes stay the
   file's: the links to other scripts, the name's offset, the speed word, the play rate, the scream's handle, the
   body and the strings. The effects it has started are written where the list is as long as the file's, and
-  spliced in where it is not ("OpenTPW's writer, a script's started effects"). A bounce slot let go keeps what the file
-  held but its guest (FileFormats `saves.md`, "A bounce slot"); a walk slot is written whole, in use or let go
-  ("OpenTPW's writer, a walk slot's facing", "a walk slot let go"). **Counted:** a script the file holds no record for (`SAVE_PARK_SCRIPT_MADE_SINCE_THE_LOAD`:
+  spliced in where it is not ("OpenTPW's writer, a script's started effects"). A bounce slot and a walk slot are written
+  whole, in use or let go ("OpenTPW's writer, a bounce slot let go", "a walk slot's facing", "a walk slot let go"). **Counted:** a script the file holds no record for (`SAVE_PARK_SCRIPT_MADE_SINCE_THE_LOAD`:
   a thing bought, a child spawned, and the ferry's and the seaplane's, which a load here makes, two a save), and
   a record whose script has ended (`SAVE_PARK_SCRIPT_ENDED`), left the file's.
 - **A model** (`ParkRides.Written`, `ParkThingStates.Put`), into the record that names its thing's script: each
@@ -1237,8 +1236,8 @@ and the object constructor `FUN_004db090` was read beside the two files.
 - **A made script** (`RideScript.Made`, `ParkScriptStates.MadeRecord`, `Splice`): the struct as the loader
   `FUN_005587f0` fills it with the running state laid over, the addresses nought, the body and the string blob
   as the `.RSE` file holds them, and its tables. The speed word is the object's operating speed, or the
-  loader's 50 where that is nought. The directory is OpenTPW's own path, in lower case (`rides`). A walk slot
-  is written whole, in use or let go ("OpenTPW's writer, a walk slot let go"), and the effects it
+  loader's 50 where that is nought. The directory is OpenTPW's own path, in lower case (`rides`). A walk slot and a bounce slot
+  are written whole, in use or let go ("OpenTPW's writer, a walk slot let go", "a bounce slot let go"), and the effects it
   has started follow its guard ("OpenTPW's writer, a script's started effects"). A gone
   thing's records, its own and any its script started, are taken out, and the count the records are walked by
   is kept.
@@ -1749,7 +1748,7 @@ control: flags are not drawn. `docs/exe/addresses.md` not regenerated.
 
 ### OpenTPW's writer, the region effects
 
-Q257e, split by the session: the staff's are the next section's and the item's other pieces Q257k. The rule, its eight effects and who stamps each
+Q257e, split by the session: the staff's are the next section's and the item's other pieces Q257l. The rule, its eight effects and who stamps each
 are `ride-operation.md`, "The region effects"; a cell's ten bytes are five words, and every cell of thirteen of
 the original's files is what the file's own things stamp.
 
@@ -1793,12 +1792,12 @@ camera, the view being turned, and the second opened a passing member of staff's
 next two clicks confirmed; the running park only, nothing saved, the save sum the same before and after.
 **Not run in either game:** fireworks (no Instant Action item was tried, no file holds one), a toilet bought, a
 toilet dirtied or cleaned and then written (tests only), a thing bought and left out of the file, the objects
-going out as the file's. **Not built:** the fireworks' spent turn (`FIREWORKS_SPENT_REGION_EFFECT`), any reader of the running grid (Q257k,
+going out as the file's. **Not built:** the fireworks' spent turn (`FIREWORKS_SPENT_REGION_EFFECT`), any reader of the running grid (Q257l,
 Q157). `docs/exe/addresses.md` not regenerated.
 
 ### OpenTPW's writer, the staff's region effects
 
-Q257f, split by the session: the item's other pieces are Q257k. The rule is `ride-operation.md`, "The region
+Q257f, split by the session: the item's other pieces are Q257l. The rule is `ride-operation.md`, "The region
 effects", "The staff's two, read whole".
 
 **What OpenTPW writes.** The running grid already holds each entertainer's and guard's effect round
@@ -1905,9 +1904,45 @@ written in the tests alone. A node whose file flags carry `0x400` is read turned
 shipped script carries a rider on one (three walk-space nodes carry it, in Wonder Land's Well Drop and
 Halloween World's Devils Disc).
 
+### OpenTPW's writer, a bounce slot let go
+
+Q257k, split by the session: the item's other pieces are Q257l. **`UNBOUNCE` and `FORCEUNBOUNCE` clear a slot's
+handle and nothing else.** Both end in one arm (`0x005558c6`): one off the count at `+0x6c`, the slot's first
+dword read for the answer and set to nought (`0x005558d6`); the node at `+4`, the due at `+8` and the start at
+`+0xc` are not touched, and `BOUNCE` takes the first slot whose handle is nought and writes all four. So a slot
+let go holds its last rider's node and readings until it is taken again. **Counted in the thirteen files**
+(`q257k/bounce.py`, the prediction written first): seven scripts hold bounce slots, 70 in all; 25 are in use, 37
+are 16 nought bytes, and all 8 let go hold handle nought, a node of the slot's index plus the base at `+0x70`, a
+due 30,000 ms past its start and at or before the file's clock (by 75 ms to 61 s); the count at `+0x6c` is the
+slots in use in all seven.
+
+Built on 2026-10-09 (Q257k). `RideScript.Unbounce` clears the handle alone; a load reads a free slot as it reads
+one in use (`RestoreRiders`), its readings moved as every reading is; `Written` hands every slot over, the
+readings of one no rider has been put on nought (`BounceSlot.Stamped`), and `ParkScriptStates.Put` and
+`MadeRecord` write a free slot whole. So a slot used and let go since the load is written with that rider's node
+and readings, where it was left holding the file's before it. `RideScript.BouncedOff` lists them and `rides`
+prints `off:` with each one's slot, node and ride length.
+
+**Confirmed in the game** (`q257k/confirm.py`, 4 of 4 on the desktop and the control's 2 of 2 off-screen, each
+predicted). Lost Kingdom from easymode, paused once the Belly Bounce had let a rider off: `rides` reads `off: 0:1
+ride 30000`; the file's record of script 3 holds on slot 0 handle 0, node 1, due 114418816, start 114388816, 752
+ms before its clock, a count of nought and nine slots of 16 nought bytes; loaded here the census reads the same.
+The build before's file, written after guest 38 had come off slot 0, holds that slot as 16 nought bytes. **In
+the original under Proton** (`q257k/orig/go.sh`, off-screen, entering the park on the file, every slot not all
+nought read from memory each 0.05 s): at the first poll script 3's slot 0 held guest 0, node 1 and the file's due
+and start with this build's file (`orig/a-load.log`), and with the build before's nothing until its first rider
+boarded (`orig/c-load.log`). The original then let its own riders go, which is `UNBOUNCE` measured live: slot 0
+went from guest 33 to guest 0 with node 1, 114451066 and 114421066 untouched and the count from 5 to 4, and so
+did each of the ten let go in the two runs.
+
+**Not seen:** any difference on screen, in either game: nothing reads a free slot before `BOUNCE` rewrites it,
+so the photographs show the park and do not tell the fix from the control. A made script's bounce slot (a bought
+Belly Bounce) was in no run: `MadeRecord`'s half is written in the tests alone. The scene's one slot was slot 0;
+the original's own log has slots 0 to 4.
+
 ### OpenTPW's writer, a walk slot let go
 
-Q257j, split by the session: the item's other pieces are Q257k. **`WALKGET` clears a slot's state and its handle and nothing else** (`FUN_00557110`: `+0x18` at `0x0055713f`,
+Q257j, split by the session: the item's other pieces are Q257l. **`WALKGET` clears a slot's state and its handle and nothing else** (`FUN_00557110`: `+0x18` at `0x0055713f`,
 `+0x10` at `0x00557149`), and `WALKON` takes the first slot whose state is nought and writes every field of it
 (`ride-operation.md`, "The machine"). So a slot let go holds the walk it was let go from until it is taken again:
 its four nodes, the walk off's two stamps, its action, its flags and its facing. **Counted in the thirteen files**
@@ -1942,7 +1977,7 @@ at a pause here (lane 1's leftovers, leg 1100 facing 3, are the original's own i
 
 ### OpenTPW's writer, a script's started effects
 
-Q257i, split by the session: the item's other pieces are Q257k. **A script's object list is the effects its
+Q257i, split by the session: the item's other pieces are Q257l. **A script's object list is the effects its
 `ADDOBJ`s have started and no `KILLOBJ` has stopped** (`park.md`, "ADDOBJ"): a doubly linked list at `+0xb0` of
 28-byte records, the newest at the head.
 
@@ -2009,7 +2044,7 @@ a load (the toilet's two are the same five words; the rule is the reader's listi
 drawn or heard in OpenTPW, and the original draws no smoke on a made kiosk with either file, so the photographs
 show the things bought and do not tell the fix from the control. **Not built:** the engine's spawn that fails
 and frees its record (every `ADDOBJ` of a known type keeps one here); the handle `SETOBJPARAM` stores back; the
-emitter itself (`PART`, Q257k).
+emitter itself (`PART`, Q257l).
 
 ### Read, not run
 

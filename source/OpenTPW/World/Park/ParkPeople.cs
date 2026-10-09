@@ -2955,6 +2955,9 @@ public sealed partial class ParkPeople : Entity
 			var letGo = string.Join( ", ", script.LetGo().Select( slot =>
 				$"{slot.Slot}:{slot.From}->{slot.To} leg {slot.Leg} facing {slot.Facing}" ) );
 
+			// And each bounce slot let go and not taken again, with the node and the ride's length it keeps.
+			var off = string.Join( ", ", script.BouncedOff().Select( slot => $"{slot.Slot}:{slot.Node} ride {slot.Ride}" ) );
+
 			var seats = aboard.Length == 0
 				? "nobody"
 				: string.Join( ", ", aboard.Select( slot =>
@@ -3004,6 +3007,7 @@ public sealed partial class ParkPeople : Entity
 				+ $"onride {Read( ParkRideOperation.OnRideVariable )} "
 				+ $"bouncing {aboard.Length}: {seats} "
 				+ $"walking {walking.Length}: {walks} let go: {(letGo.Length == 0 ? "none" : letGo)} "
+				+ $"off: {(off.Length == 0 ? "none" : off)} "
 				+ $"heads {heads.Length}/{script.HeadSlots}: {(heads.Length == 0 ? "nobody" : string.Join( ", ", heads ))} "
 				+ $"channels [{Players()}]";
 		}

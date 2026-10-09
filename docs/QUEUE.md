@@ -48,7 +48,7 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q257k. The writer: what else a made record leaves out.** The old Q257j's other pieces, from Q253
+- [ ] **Q257l. The writer: what else a made record leaves out.** The old Q257k's other pieces, from Q253
   (`saves.md`, "What OpenTPW writes"), each counted or said there. A track ride (its `TRAK` record)
   and a thing with an emitter (`PART`) are left as the file has them, bought or sold (`SAVE_PARK_OBJECT_BOUGHT`,
   `SAVE_PARK_OBJECT_SOLD`). Confirm: each
@@ -91,9 +91,6 @@ the research lab), then the rest of this section in its old order.
   every `ADDOBJ` of a known type keeps one here: decode when `Particles_Spawn` and `Sound_PlayEffect` answer
   nought (a category without the id, `park.md`, "ADDOBJ"), then keep no record there. `SETOBJPARAM`'s handle
   stored back is not kept. And not seen in the original: what its scripts do with a record whose handle is nought.
-  From Q257j (`saves.md`, "OpenTPW's writer, a walk slot let go"): a bounce slot let go since the load is still
-  written with the file's leftovers, not its own last rider's (`ParkScriptStates.Put` skips a free one): read
-  what `UNBOUNCE` clears, count the files' free bounce slots, then write it as a walk slot is.
 - [ ] **Q241j. The writer: the managers, then Save Game saves.** From Q241e. The economy thing's loans and rings,
   the staff HQ's strikes, the calendar's and the weather's fields; then `ParkSaveScreen.Save` writes
   (`SAVE_GAME_WRITER` gone), an overwrite replaces the file, and the Load Park list shows it. Confirm: a park
