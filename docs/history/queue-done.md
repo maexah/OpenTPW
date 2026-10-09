@@ -5456,6 +5456,25 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   and the bubble picture 18; `SAVE_PARK_SPRITE_SET_BYTE` nought, where the build before counted four and eleven
   balloons. All 1,053 sprites of the six park files to hand obey the set byte's rule. The original caught one
   decode of mine wrong, the bubble's script (the scripts set pictures 0 to 15, 21, 16 to 20).
+- [x] **Q241i. The writer: the objects, their scripts and their models. The decode.** Done 2026-10-08, the
+  decode alone, `alexah/369-objects-scripts-models-decode`: `docs/exe/saves.md`, "The objects, their scripts and
+  their models". An object is three records that name each other, measured over six park files: its
+  `MeshInstanceID` is a slot of `RSYS` plus one, whose record holds its item, cell, angle and its script's
+  handle (360 of 360), and its script's record holds its id and its model handle (360 of 360); a queue cell's
+  `mMeshInstance` is a slot of the same table (82 of 82), item 17000 plus the tile. The model maker
+  `FUN_00463060`, the script loader `FUN_005587f0` and both modules' readers are read. **The original under
+  Proton loaded two files made by hand**: a Security Camera made (thing 43, model handle 91, script 16) and one
+  gone, a queue piece moved to another slot and one taken out; its memory read every tie as written, the made
+  script waited the 20,000 ms it was given (71 sweeps after the file's own camera, the file's 17,671 ms), and the
+  frames show the camera on (46,29), none on (40,29), and the queue cell with no model black. A second file with
+  the made script's struct the loader's own and a model record of no nodes loaded and ran the same. Two
+  predictions wrong, mine (`q241i/PREDICTION.txt`). Nothing is built: the build is Q252 to Q255. The item as
+  written: From Q241e. Object records patched, one bought written whole and one sold left out; the object
+  controls and `mFirstObject`; a script record made or taken out of `RSSE` and each running script's counter,
+  variables and deadlines; a slot of `RSYS` and its channels; set `0xb`; the clock module moved with them. A
+  track ride or an emitter bought or sold is counted (`TRAK`'s car is not decoded). Confirm: a ride bought and a
+  shop sold here, written, standing and running in the original under Proton, its script's wait predicted; a
+  screenshot of each.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

@@ -16,7 +16,7 @@ public sealed partial class ParkPeople
 	/// <b>A deviation: a guest on a thing is written deciding where they stand, and counted</b>
 	/// (<c>SAVE_PARK_GUEST_ON_A_THING</c>). A queuer, one called forward, one walking on or off and a rider are each
 	/// one half of a pair whose other half is the thing's own record, its queue head and its script, and those are
-	/// still the file's (Q241i). <b>A handle to a thing the file does not hold is written as nought, and counted</b>
+	/// still the file's (Q252). <b>A handle to a thing the file does not hold is written as nought, and counted</b>
 	/// (<c>SAVE_PARK_HANDLE_TO_AN_UNWRITTEN_THING</c>): what was bought here is not written yet, so a guest bound for
 	/// it is written deciding and a member of staff resting in or cleaning it idle.
 	/// </para>

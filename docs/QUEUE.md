@@ -44,33 +44,56 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q241i. The writer: the objects, their scripts and their models.** From Q241e. Object records patched, one
-  bought written whole and one sold left out; the object controls and `mFirstObject`; a script record made or
-  taken out of `RSSE` and each running script's counter, variables and deadlines; a slot of `RSYS` and its
-  channels; set `0xb`; the clock module moved with them. A track ride or an emitter bought or sold is counted
-  (`TRAK`'s car is not decoded). Confirm: a ride bought and a shop sold here, written, standing and running in
-  the original under Proton, its script's wait predicted; a screenshot of each.
-  From Q241g: three things of the cells wait here. **A footprint**: `Level.WrittenCells` leaves a cell that has
-  joined or left a footprint, or changed its type or parent inside one, as the file's
-  (`SAVE_PARK_FOOTPRINT_CELL`); write those cells with the object's record. **The object's `mWho`** on its own
-  cell, with its `mMapChild` and `mMapParent`. **A queue cell's model**: a queue cell laid, cleared or tiled
-  again is written with the file's `mMeshInstance` (`SAVE_PARK_QUEUE_CELL_MODEL`), the handle of the model the
-  retile made (`FUN_005365d0`, `FUN_005229e0`); decode what that handle names (a slot of `RSYS` or another
-  table) and write a queue's with it. Confirm with a queue laid here standing fenced in the original.
+- [ ] **Q252. The writer: the kept objects, their scripts and their models as they run.** From Q241i
+  (`saves.md`, "The objects, their scripts and their models"). Nothing bought or sold yet. Each kept object's
+  record written over from the running park (its door, price, the operating three, goods, counts and rings,
+  queue size, `mFirstInQ`, `mBackOfQueue`, `mPersonBeingLoaded`, the assigned member and the service fields);
+  each kept script's record from `RideScript` (the counter, both stack indices and the stack, the result, the
+  variables, limbo, the bounce slots, the walk slots, the heads, the five clock fields) and the header's tick
+  and next handle; each kept model's channels, hoarding bits and progress; the clock module moved, so every
+  deadline keeps its distance. `ParkRides.PairSavedThings` pairs a thing with its model record by the record's
+  script handle. Confirm: a park played until guests queue for and ride the Belly Bounce, written, loaded here
+  and by the original under Proton; the ride's counter, its bounce slots and its wait predicted; a screenshot
+  of each.
   From Q241h: **a guest on a thing is written deciding where they stand** (`SAVE_PARK_GUEST_ON_A_THING`:
   queueing, called forward, walking on or off, riding; eight or nine of 26 in the confirm runs), because the
   thing's half, `mFirstInQ`, `mPersonBeingLoaded` and its script's riders, is the file's: write both halves
-  here and let `ParkPeople.Written` hand them over as they are. **A handle to a thing bought here is written
-  as nought** (`SAVE_PARK_HANDLE_TO_AN_UNWRITTEN_THING`; `Level.WrittenThings` is the list to widen). A made
-  thing's id is one past the park's highest, where the original uses a freed id again (Q26c). `PutPeople`
-  chains a person ahead of the file's objects on a cell; an object bought goes behind the people there.
-  From Q250: **the arrival vehicle is not written** (`SAVE_PARK_ARRIVAL_VEHICLE`). The header's
+  here and let `ParkPeople.Written` hand them over as they are. A file's two halves agree (`q241i/riders.py`):
+  every queue runs `mFirstInQ` down `mQNext`, and every handle in a script's tables is a guest riding its
+  thing. A toilet's user is in a script variable. **OpenTPW's load reads no limbo, bounce or walk slot**
+  (`ParkScriptStates` steps over blocks 4 and 5 and the walk slots): read them back, or a rider written is a
+  rider lost on OpenTPW's own load. A rider of a track ride is in `TRAK`, not decoded: counted.
+- [ ] **Q253. The writer: a thing bought and a thing sold.** From Q241i. After Q252. A bought object's record
+  written whole at the head of the thing list and of the object list (`mFirstObject`, `mNext`), in set `0xb`,
+  its item's object control counted and stamped; its footprint's cells with the object's `mWho`, `mMapChild`
+  and `mMapParent`; a script record made from its `RideScript` under the scheduler's handle, first in `RSSE`;
+  a model slot at the cursor of `RSYS`, the header's three counts kept. A sold one's three records left out,
+  its cells bare, its slot empty. A track ride or an emitter bought or sold is counted (`TRAK`'s car is not
+  decoded; `FUN_004368f0`). Measure first what an object record made from nothing may leave at nought: Q241i's
+  made camera was a copy of another's record. Confirm: a ride bought and a shop sold here, written, standing
+  and running in the original under Proton, its script's wait predicted; a screenshot of each.
+  From Q241g: **a footprint**: `Level.WrittenCells` leaves a cell that has joined or left a footprint, or
+  changed its type or parent inside one, as the file's (`SAVE_PARK_FOOTPRINT_CELL`); write those cells with
+  the object's record.
+  From Q241h: **a handle to a thing bought here is written as nought**
+  (`SAVE_PARK_HANDLE_TO_AN_UNWRITTEN_THING`; `Level.WrittenThings` is the list to widen). A made thing's id is
+  one past the park's highest, where the original uses a freed id again (Q26c). `PutPeople` chains a person
+  ahead of the file's objects on a cell; an object bought goes behind the people there.
+- [ ] **Q254. The writer: a queue cell's model.** From Q241g and Q241i. A queue cell laid, cleared or tiled
+  again is written with the file's `mMeshInstance` (`SAVE_PARK_QUEUE_CELL_MODEL`), and the original draws a
+  queue cell that names no model black, ground and all (`q241i/orig/e2-made-and-gone.png`). The handle is a
+  slot of `RSYS` plus one: a cell laid takes the slot at the cursor, a record of item 17000 plus the tile's
+  index made with flags `0x33a` at 360 less the tile's angle (`FUN_005229e0`); a cell cleared empties its slot;
+  a cell tiled again does both (`FUN_005365d0`). After Q253, which builds a slot's making. Confirm: a queue
+  laid here standing fenced in the original under Proton, and one cleared gone; a screenshot.
+- [ ] **Q255. The writer: the arrival vehicle, a balloon let go and a thought read back.** From Q250 and Q251.
+  **The arrival vehicle is not written** (`SAVE_PARK_ARRIVAL_VEHICLE`). The header's
   `mCurrentArrivalVehicle` and the vehicle's script are one state (`FUN_0051a690`), and both are left the
   file's, so a park saved with the bus on its circuit loads with none current and the bus where the first file
-  had it (`q250/run2/1-at-the-save.png`); write the handle with the scripts, and read it back
+  had it (`q250/run2/1-at-the-save.png`); write the handle with the scripts (Q252), and read it back
   (`SAVED_CURRENT_ARRIVAL_VEHICLE`). In the original a load of that file made a vehicle anew on its first sweep
   (`q250/orig/a-load.log`): look for the leaver at the stop that summons it.
-  From Q251: **a balloon let go and still bursting at the save is not written** (`SAVE_PARK_BALLOON_LET_GO`):
+  **A balloon let go and still bursting at the save is not written** (`SAVE_PARK_BALLOON_LET_GO`):
   no record names it, and what the original's file holds for one was not looked for (a kind-10 sprite on frame
   1 that nobody's `mBalloonScript` names). **A load here reads no member of staff's thought**: `mLastThought`
   and `mTimeBubbleShown` are a guest's alone in `ParkPeople`, so a kept member is written with nought for both

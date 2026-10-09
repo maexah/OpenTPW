@@ -498,7 +498,8 @@ frames), `confirm.py`, `mutate.py` and the sheet of OpenTPW's screen beside the 
 
 Decoded and measured on 2026-10-08 (Q241e). `ParkSaveScreen.Save` still counts `SAVE_GAME_WRITER`; three of the
 writer's five stages are built ("OpenTPW's writer, the first stage", "the cells" and "the people", below), with the
-pool of candidates and the arrival timer ("the staff pool and the arrival timer"). The bytes are the FileFormats
+pool of candidates and the arrival timer ("the staff pool and the arrival timer"); the fourth's decode is "The
+objects, their scripts and their models". The bytes are the FileFormats
 `saves.md`'s; this section is what the original does with them and what a writer here has to get right.
 
 ### The container takes another deflate, and a changed body
@@ -587,7 +588,9 @@ gone:
   park holds 130 for 124 objects, its companions. The header's tick and next handle carry on from the file. Its
   fourth dword is not the count the reader walks by: the Instant Action save reads 28 there over fourteen
   records, and loads.
-- **Models** (`RSYS`). An object's model handle is its slot plus one; a slot is one byte when empty.
+- **Models** (`RSYS`). An object's model handle is its slot plus one; a slot is one byte when empty. A slot's
+  record names the script of the thing it is the model of, and a queue cell's model is a slot of the same table
+  ("The objects, their scripts and their models", below).
 - **Track rides and coasters** (`TRAK`, `COAS`) are found by `mTrackRideHandle` and `MeshInstanceID`.
 - **Clocks.** Every deadline in `RSSE` and every stamp in `RSYS` is a reading of the clock `CLOK` holds, so those
   three move together. `mGameTick` is not tied to them (the Tick 5000 file).
@@ -610,7 +613,8 @@ gone:
 - **A queue cell's model.** A queue cell's `mMeshInstance` (the cell's `+4`) is the handle of the model the retile
   made for it (`FUN_005365d0`: tile set 2 frees the handle held and stores `FUN_005229e0`'s). No load calls the
   retile, so the handle in the file is the one used: 4 of 4 queue cells in the shipped park and 78 of 78 in a
-  played one hold one, and no other cell of either does (`q241g/cells.py`).
+  played one hold one, and no other cell of either does (`q241g/cells.py`). The handle is a slot of `RSYS` plus
+  one (below).
 
 ### Module by module
 
@@ -681,8 +685,8 @@ over the copy, never the one held.
 - **Everything else was carried** at this stage, so a park loaded from the file had the people, objects, ground
   and scripts of the file it was first loaded from, under the new clock, count, cash and camera. The ground is
   the second stage's ("OpenTPW's writer, the cells"), the people the third's ("the people"), the pool of
-  candidates and the arrival timer theirs ("the staff pool and the arrival timer"); the rest is Q241i and
-  Q241j.
+  candidates and the arrival timer theirs ("the staff pool and the arrival timer"); the rest is Q252 to
+  Q255 and Q241j.
 - **Where.** `Level.WritePark( name )` writes `<player's folder>/<theme>/<name>.TPWS`, replacing a file of that
   name in another case. The console's `savepark <name>` is its one caller; the Save Park screen's OK stays counted
   until Q241j. **Deviations:** the player's `gms.dat` is not written first (Q248) and the pointer is not put back
@@ -716,14 +720,14 @@ in the copied body, where it lies.
   the original writes none such.
 - **`mWho` is not written here.** The chain is the cell's head and the things' two links together (above): the
   people's stage writes it for every cell a person stood on or stands on ("OpenTPW's writer, the people"), and
-  an object's place in it is still the file's (Q241i).
+  an object's place in it is still the file's (Q253).
 - **A footprint is not written, and is counted** (`SAVE_PARK_FOOTPRINT_CELL`, one a cell): a cell that has joined
   or left a footprint (types 4, 9 and 10), or changed its type or parent inside one, is left as the file's,
-  because the thing bought, sold or moved is not written yet (Q241i). An entrance that only gained or lost a link
+  because the thing bought, sold or moved is not written yet (Q253). An entrance that only gained or lost a link
   is written.
 - **A queue cell is written without its model, and is counted** (`SAVE_PARK_QUEUE_CELL_MODEL`): a queue cell
   laid, cleared or tiled again goes out with the file's `mMeshInstance`, so a new one names no model and a
-  cleared one still names its old (Q241i, with the model slots).
+  cleared one still names its old (Q254, with the model slots).
 - **Land** is not bought here (`BUY_LAND_TOOL`), so no cell's `0x40` flag moves but as the path tool moves it.
 
 **Measured (Q241g, `q241g/`).** Lost Kingdom at `mGameTick` 1000, a spur of three laid north off the south road
@@ -832,7 +836,7 @@ follow the list. It runs last, because it alone changes the body's length.
   the file's members that are no person, in rising id.
 - **Deviations, each counted.** A guest on a thing (queueing, called forward, walking on or off, riding) is
   written deciding where they stand, with no queue links (`SAVE_PARK_GUEST_ON_A_THING`): the thing's own half,
-  its queue head and its script, is still the file's (Q241i). A handle to a thing the file does not hold, which
+  its queue head and its script, is still the file's (Q252). A handle to a thing the file does not hold, which
   is anything bought here, is written as nought, and a guest bound for it decides
   (`SAVE_PARK_HANDLE_TO_AN_UNWRITTEN_THING`). A balloon let go and still bursting is nobody's and is not
   written (`SAVE_PARK_BALLOON_LET_GO`). A member
@@ -929,7 +933,7 @@ the people's stage wrote.
 - **A deviation, counted: the vehicle is not written** (`SAVE_PARK_ARRIVAL_VEHICLE`, once a save with one
   current). The header's `mCurrentArrivalVehicle` and the vehicle's script are one state: `FUN_0051a690` reads
   the script's variable 1 of the thing the header names (`park.md`, "Arrivals"). The scripts are still the
-  file's (Q241i), so the header's handle is left the file's too, and a park saved with the bus on its circuit
+  file's (Q252, Q255), so the header's handle is left the file's too, and a park saved with the bus on its circuit
   loads with no vehicle current and its bus where the first file had it. A load held is then brought by the
   vehicle its size summons, which drives in again; a guest by the road has no vehicle to wait for.
 
@@ -954,9 +958,125 @@ predicted:** `mCurrentArrivalVehicle` went from nought to 32 on the first sweep 
 anew, then 40 on 1583, the bus on 1768, nought on 1896 and 32 on 1898, which brought the load: the tail's
 summons for a guest waiting at the stop to go home (`FUN_004cf3e0`, read; the guest was not looked for).
 
+### The objects, their scripts and their models
+
+Decoded and measured on 2026-10-08 (Q241i, the decode; nothing of it is built). An object is three records that
+name each other: its thing record in `WRLD`, a script record in `RSSE` and a model slot in `RSYS`. The bytes are
+the FileFormats `saves.md`'s ("The ride script module", "The ride system module"); this is what the original does
+with them and what the writer's next stages must keep.
+
+**The model table.** `FUN_00463060( type, flags, { x, y, angle, ... }, ..., handle, restoring )` makes every model
+instance and answers its handle, the slot plus one. Asked for no slot (`-1`), it takes the slot at the cursor
+`DAT_007aedf4`: when that is the count of present slots `DAT_007a4084` both go up by one, and otherwise the cursor
+moves on to the next empty slot, the free count `DAT_007a3ebc` goes down and the present count up. The three
+globals are the module's header, in the order present, free, cursor (`FUN_00464140`): the shipped park reads 161,
+7, 90 with slots 90 to 96 empty, and in all six files the cursor is the lowest empty slot, or the count where
+none is. The slots are the pointers at `0x007a4614`.
+
+**The reader makes every model again** (`FUN_004647a0`): for each present record it finds the model type whose
+`+0xf8` is the record's item id (the list at `0x007ae6a8`), and calls `FUN_00463060` with the record's own flags,
+cell, angle and footprint, **the slot it lies in plus one for the handle**, and 1 for restoring. Then it lays the
+saved state over the fresh model: the hoarding bits and progress, the lookup records' flags and attached handles,
+the nodes' flag words, and each channel. **The node and lookup counts are tested first** (`param_1 + 4` and
+`+ 6` against the model's `+0x42` and `+0x48`): where they differ it logs "Node Embedded node count changed" and
+steps over both tables by the FILE's counts, keeping the fresh model's own. The channels are read by the model's
+count (`+0xe`), which the record does not hold.
+
+| Record | Model | What it is |
+|---|---|---|
+| `0x01` | `+0xf8` | the item id |
+| `0x05`, `0x09` | `+0xe8`, `+0xec` | the cell: an object's `mTopLeft`, a queue piece's own cell |
+| `0x0d`, `0x11` | `+0xf0`, `+0xf4` | the footprint, cells across and down (whether turned with the angle was not measured: no turned object to hand is longer one way) |
+| `0x15` | `+0xe4` | the flags it was made with: `0x32f` a placed object, `0x361` a fixed one (gates, lights, a vehicle), `0x33a` a queue piece |
+| `0x19` | `+0xd4` | **the script handle of the thing it is the model of**; nought for a queue piece and the other scenery |
+| `0x27` | the mesh's `+0x10` | the angle: an object's `mAngle`; a queue piece's 360 less its tile's angle |
+
+Measured over all six park files to hand that hold objects (`q241i/rsys.py`): an object's `MeshInstanceID` names
+a present slot whose record holds its item, its script handle, its angle and its `mTopLeft` cell, 360 of 360
+(the cell 337 of 337 placed). So two things of one item are told apart: the three Small Toilets' records name
+scripts 11, 12 and 13. `ParkRides.PairSavedThings` still pairs them by their order.
+
+**A queue cell's model is a slot of the same table.** The retile `FUN_005365d0`, for tile set 2, frees the handle
+the cell holds (`FUN_00522a90`) and stores `FUN_005229e0`'s, which is `FUN_00463060( [0x00763388 + 12 x tile],
+0x33a, { x, y, 360 - angle }, ..., -1, 0 )`: a new slot at the cursor. Its record's item is 17000 plus the tile's
+index (17002 to 17007 in the files), its cell the cell's: 4 of 4 queue cells in the shipped park and 78 of 78 in
+a played one name such a slot, at their own cell. The other records, the most of them (items 173xx in the shipped park,
+143 of its 161, and 171xx too in a played one), are named by no thing and by no cell's `mMeshInstance`; what
+makes them was not looked for.
+
+**A script's record is its struct, raw, and its tables** (`FUN_00559350` writes, `FUN_005597a0` reads). The
+loader `FUN_005587f0( path, thing, quiet )` makes the struct: all nought, then the counts from the `.RSE` header
+(variables `+0x8c`, stack `+0x54`, limbo `+0x58`, bounce `+0x64`, walk slots `+0x7c`, body `+0x50`, strings
+`+0x90`, and one more of the header's dwords into `+0x94`, 50 in every record), the call index `+0x40` at the stack's
+size less one, **the handle `+0x08` from the counter `DAT_008791a8`, which only counts up**, 1000 in the words
+at `+0x88`, `+0x8a` and `+0xe4`, the speed word 50 at `+0xc0`, 1 at `+0x70`, -1 at `+0x74` (the name's offset)
+and `+0xd8`, `0xffff` at `+0xa8` and `+0xe6`, the thing at `+0xac`, **the thing's model handle at `+0xc8`**
+(the thing's `+0x20`), and one head slot for each head node of the model (`+0x4c`). The reader reads the struct
+back whole and then replaces what are addresses: the list links, the nine table pointers (each table read from
+its own block: the body, the stack, the variables, the strings, limbo at 8 bytes a slot, bounce at 16, the walk
+slots at 32, the heads, the directory), the effects list (`+0xb0`, read from the records after `OBJ `, 28 bytes
+each) and the sound at `+0xd4`, made again where it was set. The header's count is read over the global
+`DAT_008791ac` and then counted up once a record, so a park loaded and saved holds twice its scripts there (28
+over fourteen records), and nothing walks by it.
+
+Measured over the six files' 374 records (`q241i/rsse.py`, `rsse-census.txt`): the records fall by handle, the
+newest first; every object's `mRideScriptHandle` names a record that holds the object's id at `+0xac` and its
+`MeshInstanceID` at `+0xc8`, 360 of 360; of the other fourteen records six share a thing and its model with
+that thing's own script and eight have no thing. `+0x0c`, `+0x10` and `+0x14` hold another script's handle on a
+few records, in pairs (Mumbo's 122 and 123 name each other, the mine cart's 115 names 116): the links between a
+script and one it started, not read in the listing. `+0x60` is the count in limbo and
+`+0x6c` the count bouncing with `+0x6e` beside it (`0x80006` on a Belly Bounce with six aboard).
+
+**Who is on a thing is in both halves, and a file agrees with itself** (`q241i/riders.py`, the played jungle and
+fantasy parks). Every queue runs from the object's `mFirstInQ` down the guests' `mQNext`, each guest's `mQPrev`
+the one before and `mMajorDest` the object: 112 guests in 26 queues, no fault; a queue of one has no link. The
+queuers are in states 11, 12, 13, 14 and 8 (a spot animation in the queue). `mPersonBeingLoaded` is set on seven
+objects and names the head of the queue each time. A rider is state 16, and **every handle in a script's tables
+is a guest riding that script's thing**: the heap below the heap index, a limbo slot, a bounce slot, a walk slot
+in use, a head slot; 37 of the jungle park's 82 riders are in one or more. Twelve more, the eleven in the Small
+Toilets and one on item 1307 (`puzzle`), have their id in one of the script's variables. The other 33 are on
+the go-karts (a track ride), the mine cart (a coaster) and the tour ride, in no table and no variable of the
+script: where those are held (`TRAK`, `COAS`, the tour's record) was not looked for.
+
+**Measured in the original under Proton** (`q241i/`, two files made by hand from the shipped park with `make.py`
+and a control with only its camera moved; `PREDICTION.txt`). The first file: a Security Camera made, thing 43 on
+(46,29), a copy of thing 18's record at the head of the thing list and of the object list, in set `0xb`, its
+cell a footprint's (type 4, the parent its own packed id, `mWho` 43), a copy of 18's model record in the slot at
+the cursor (handle 91) naming a new script, and a copy of 18's script record first in the module under the
+header's next handle, 16, with the thing, the model handle and a `WAIT` deadline 20,000 ms past the file's clock;
+a camera gone, thing 19, its three records out, its cell bare and its slot empty; the queue piece of (52,22)
+moved to another empty slot with the cell's `mMeshInstance`; and the piece of (49,22) taken out, the cell left
+a queue's with nought. Loaded from the Load Park screen over a running park, the original's memory read, on the
+first poll after the load: `mGameTick` 755 and counting; 42 things, 14 objects, `mFirstObject` 43; thing 43 item
+1413 on (46,29) with model handle 91 and no thing 19; the model table 160 present, 8 free, cursor 92, handle 91
+item 1413 naming script 16, handle 92 item 17003 on (52,22), handles 111, 114 and 119 empty; fourteen scripts,
+the next handle 17, script 16 on thing 43 and model 91 at word 14 with the deadline written, and no script 9;
+the four cells as written. **The made script waited the wait it was given**: its deadline passed 71 sweeps, 17.6
+s of game time, after script 8's, the file's own camera, where the file puts the two 17,671 ms apart, and from
+there the two ran the camera's four waits in step. The frames show a camera on (46,29) and none on (40,29),
+beside the control's the other way about; the queue's piece on (52,22) drawn; and **the cell (49,22) drawn
+black**, with no ground under the piece it does not name, guests still queueing across it. That is what a queue
+cell laid here and written with the file's `mMeshInstance` would be (`SAVE_PARK_QUEUE_CELL_MODEL`).
+
+The second file: the same, but the made script's struct is the loader's own (the fields above and nothing else,
+the counter at word 0) and its model record declares no nodes and no lookup records, with one idle channel (role
+12). It loaded the same; the script read word 0 on the first poll, waited 1.4 s at word 2 and joined the cycle,
+and the camera stands in the frame. **So a made model record need not hold the model's node and lookup tables,
+and a made script record need hold no more than the loader sets.**
+
+**Two predictions wrong, mine:** the made script after its wait (word 5 on about 1.5 s, not word 14 again: the
+loop is four waits), and the from-scratch one's stop at word 2. **Not measured:** a thing with riders or a queue
+made or gone; a thing whose model has emitters (`FUN_004368f0`, reached under flag `0x200` for a type whose
+`+4` has bit `0x40000`) or whose script has effect records; an object record made from nothing (the made one
+is a copy of another camera's); an object control's count (one camera in and one out leaves it 2); a freed
+thing id used again; what frees a slot and where it leaves the cursor (the file's cursor was set to the lowest
+empty slot and read back so). **OpenTPW was not run**: `ParkWorld` was not asked to read the three files.
+
 ### Read, not run
 
-A thing bought or sold was not written and loaded: the objects' rules above are the ten files' and the listing's.
+A thing bought or sold has been loaded by the original from a file made by hand, not from one OpenTPW wrote
+("The objects, their scripts and their models"); the objects' other rules above are the ten files' and the
+listing's.
 **Not run in either game:** a guest gone (tested; one run met one), a table grown past its hundred slots, a
 person written on an object's cell, a member of staff resting or in the hand at the save, a guard hired. **Not read:** what `mLastRecordedMapId`, `mNextServiceInterval` and the sprite
 record's words past `+0xcc` hold, which a made record leaves at nought and the original walked on with. The
@@ -977,7 +1097,11 @@ fields), `ghidra/` (the constructors and serialisers read), `confirm.py`, `PREDI
 result), `mutate.py`, and `orig/` (`things.py`, the original's node table from memory; the logs at the load, 30 s
 and 60 s on; the frames; `first/`, the first run's). Q250's is `q250/`: `confirm.py`, `PREDICTION.txt`,
 `mutate.py`, and `orig/` (`pool.py`, the original's pool and arrival block from memory, once or polled;
-`a-load.log`, the poll across the load; the hire screen's frames `h1` and `h2`).
+`a-load.log`, the poll across the load; the hire screen's frames `h1` and `h2`). Q241i's is `q241i/`: `rsys.py` and `rsse.py` (the model
+and script modules walked record by record; `rsse-census.txt`), `riders.py` (who is on a thing, both halves),
+`make.py` (the hand-made files), `ghidra/` (the loader, the retile and the object serialiser), `PREDICTION.txt`,
+and `orig/` (`look.py`, the original's objects, model slots and scripts from memory, once or polled; `a-load.log`
+and `b-load.log`, the polls across the two loads; the frames `e1`, `e2`, `f2`) with the sheet of the three.
 
 ## What OpenTPW builds
 

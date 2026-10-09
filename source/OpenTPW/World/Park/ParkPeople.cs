@@ -1008,7 +1008,7 @@ public sealed partial class ParkPeople : Entity
 	/// <para>
 	/// <b>The vehicle is not written, and one that is current is counted</b> (<c>SAVE_PARK_ARRIVAL_VEHICLE</c>): the
 	/// header's <c>mCurrentArrivalVehicle</c> and the vehicle's script are one state, and the scripts are still the
-	/// file's (Q241i). A file written with a load held so names no vehicle unless its first file did, and the load
+	/// file's (Q255). A file written with a load held so names no vehicle unless its first file did, and the load
 	/// is brought by the one its size summons, driving in again.
 	/// </para>
 	/// </summary>
