@@ -56,14 +56,14 @@ public class ParkRiderSeatTests
 	}
 
 	/// <summary>
-	/// The naming rule itself: node nought is <c>body</c> and the rest count up in two digits.
+	/// The naming rule itself: node id 1 is <c>body</c> and the rest count up in two digits.
 	/// </summary>
 	[TestMethod]
 	public void ABounceNodeIsNamedForItsNumber()
 	{
-		Assert.AreEqual( "body", ParkPeople.BounceNodeName( 0 ), "the first has no number at all" );
-		Assert.AreEqual( "body01", ParkPeople.BounceNodeName( 1 ) );
-		Assert.AreEqual( "body09", ParkPeople.BounceNodeName( 9 ), "and the last of Bouncy's ten" );
+		Assert.AreEqual( "body", ParkPeople.BounceNodeName( 1 ), "the first has no number at all" );
+		Assert.AreEqual( "body01", ParkPeople.BounceNodeName( 2 ) );
+		Assert.AreEqual( "body09", ParkPeople.BounceNodeName( 10 ), "and the last of Bouncy's ten" );
 	}
 
 	/// <summary>
@@ -82,7 +82,7 @@ public class ParkRiderSeatTests
 
 		for ( var slot = 0; slot < Slots; ++slot )
 		{
-			var name = ParkPeople.BounceNodeName( slot );
+			var name = ParkPeople.BounceNodeName( slot + 1 );
 
 			Assert.IsTrue( named.Contains( name ),
 				$"slot {slot} wants a node called '{name}' and bouncy.MD2 does not carry one - " +
@@ -99,7 +99,7 @@ public class ParkRiderSeatTests
 	{
 		var model = ModelOf( Item( BellyBounce ) );
 
-		var wanted = Enumerable.Range( 0, Slots )
+		var wanted = Enumerable.Range( 1, Slots )
 			.Select( ParkPeople.BounceNodeName )
 			.ToHashSet( System.StringComparer.OrdinalIgnoreCase );
 
@@ -132,7 +132,7 @@ public class ParkRiderSeatTests
 	{
 		var model = ModelOf( Item( BellyBounce ) );
 
-		var wanted = Enumerable.Range( 0, Slots )
+		var wanted = Enumerable.Range( 1, Slots )
 			.Select( ParkPeople.BounceNodeName )
 			.ToHashSet( System.StringComparer.OrdinalIgnoreCase );
 

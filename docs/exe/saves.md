@@ -685,8 +685,8 @@ over the copy, never the one held.
 - **Everything else was carried** at this stage, so a park loaded from the file had the people, objects, ground
   and scripts of the file it was first loaded from, under the new clock, count, cash and camera. The ground is
   the second stage's ("OpenTPW's writer, the cells"), the people the third's ("the people"), the pool of
-  candidates and the arrival timer theirs ("the staff pool and the arrival timer"); the rest is Q252 to
-  Q255 and Q241j.
+  candidates and the arrival timer theirs ("the staff pool and the arrival timer"), the file's objects, scripts
+  and models as they run the fourth's ("OpenTPW's writer, the objects"); the rest is Q253 to Q255 and Q241j.
 - **Where.** `Level.WritePark( name )` writes `<player's folder>/<theme>/<name>.TPWS`, replacing a file of that
   name in another case. The console's `savepark <name>` is its one caller; the Save Park screen's OK stays counted
   until Q241j. **Deviations:** the player's `gms.dat` is not written first (Q248) and the pointer is not put back
@@ -834,11 +834,12 @@ follow the list. It runs last, because it alone changes the body's length.
   instructions, which all but one of the 46 saved bubbles to hand have.
 - **The message sets.** `0xa`, `0xc` and `0x1b` hold every person, every member of staff and every guard beside
   the file's members that are no person, in rising id.
-- **Deviations, each counted.** A guest on a thing (queueing, called forward, walking on or off, riding) is
-  written deciding where they stand, with no queue links (`SAVE_PARK_GUEST_ON_A_THING`): the thing's own half,
-  its queue head and its script, is still the file's (Q252). A handle to a thing the file does not hold, which
-  is anything bought here, is written as nought, and a guest bound for it decides
-  (`SAVE_PARK_HANDLE_TO_AN_UNWRITTEN_THING`). A balloon let go and still bursting is nobody's and is not
+- **A guest on a thing is written as they are** (queueing, called forward, walking on or off, riding), with
+  their thing, their place and their links in its queue: the thing's own half is written with the things
+  ("OpenTPW's writer, the objects").
+- **Deviations, each counted.** A handle to a thing the file does not hold, which
+  is anything bought here, is written as nought, and a guest bound for it or on it decides where they stand
+  (`SAVE_PARK_HANDLE_TO_AN_UNWRITTEN_THING`, and `SAVE_PARK_GUEST_ON_A_THING` for one on it). A balloon let go and still bursting is nobody's and is not
   written (`SAVE_PARK_BALLOON_LET_GO`). A member
   of staff in the hand is written idle where they were picked up, as the original puts the hand's thing down
   first.
@@ -932,9 +933,9 @@ the people's stage wrote.
   reads them (`FUN_004cf3e0`), and the rest are dropped once a vehicle answers that it is unloading.
 - **A deviation, counted: the vehicle is not written** (`SAVE_PARK_ARRIVAL_VEHICLE`, once a save with one
   current). The header's `mCurrentArrivalVehicle` and the vehicle's script are one state: `FUN_0051a690` reads
-  the script's variable 1 of the thing the header names (`park.md`, "Arrivals"). The scripts are still the
-  file's (Q252, Q255), so the header's handle is left the file's too, and a park saved with the bus on its circuit
-  loads with no vehicle current and its bus where the first file had it. A load held is then brought by the
+  the script's variable 1 of the thing the header names (`park.md`, "Arrivals"). The bus's script is written
+  as it runs ("OpenTPW's writer, the objects") and the header's handle is still the file's (Q255), so a park
+  saved with the bus on its circuit loads with no vehicle current and its bus driving on. A load held is then brought by the
   vehicle its size summons, which drives in again; a guest by the road has no vehicle to wait for.
 
 **Measured (Q250, `q250/`).** Lost Kingdom left alone from easymode's 755 to `mGameTick` 1453 (1455 in a second
@@ -994,7 +995,7 @@ count (`+0xe`), which the record does not hold.
 Measured over all six park files to hand that hold objects (`q241i/rsys.py`): an object's `MeshInstanceID` names
 a present slot whose record holds its item, its script handle, its angle and its `mTopLeft` cell, 360 of 360
 (the cell 337 of 337 placed). So two things of one item are told apart: the three Small Toilets' records name
-scripts 11, 12 and 13. `ParkRides.PairSavedThings` still pairs them by their order.
+scripts 11, 12 and 13, and `ParkRides.PairSavedThings` pairs each thing with the record that names its script.
 
 **A queue cell's model is a slot of the same table.** The retile `FUN_005365d0`, for tile set 2, frees the handle
 the cell holds (`FUN_00522a90`) and stores `FUN_005229e0`'s, which is `FUN_00463060( [0x00763388 + 12 x tile],
@@ -1072,6 +1073,112 @@ is a copy of another camera's); an object control's count (one camera in and one
 thing id used again; what frees a slot and where it leaves the cursor (the file's cursor was set to the lowest
 empty slot and read back so). **OpenTPW was not run**: `ParkWorld` was not asked to read the three files.
 
+### OpenTPW's writer, the objects
+
+The fourth stage (Q252), for the things the file holds; nothing bought or sold is written yet (Q253). Every
+record is written over where it lies: an object's is its fixed 1,099 bytes, a script's tables keep their lengths
+and a model's channels their count, so nothing moves, and they go in before the people.
+
+- **The clock moves on** (`ParkRides.Written`, `ParkClock.Put`). The load here puts the file's moment on this
+  park's own clock and moves every saved reading by its distance from it ("moved, not copied", `ParkRides.Moved`);
+  the writer turns it round. A moment on this park's clock goes out as the file's reading plus the time since the
+  load, the clock module's first dword as the reading of now and its second moved by as much, so every deadline
+  and stamp keeps its distance from the save's moment, as it does in a file of the original's. The readings a
+  script keeps in its variables are turned the same way (`RideScript.Written`).
+- **A script** (`RideScript.Written`, `ParkScriptStates.Put`), under the handle the scheduler runs it on: the
+  counter, both stack indices and the stack, the result, the variables, the five clock and animation fields,
+  limbo with its count, the bounce slots with the two words beside them and the node base, the walk slots and
+  the head table; and in the header the scheduler's tick and the next handle. The record's other bytes stay the
+  file's: the links to other scripts, the name's offset, the speed word, the play rate, the scream's handle, the
+  body, the strings and the effects. A slot let go keeps what it held but its guest and its state, as the
+  engine's does (FileFormats `saves.md`, "A bounce slot"). A walk slot's facing (`+0x14`) is not kept here and
+  stays the file's. **Counted:** a script the file holds no record for (`SAVE_PARK_SCRIPT_MADE_SINCE_THE_LOAD`:
+  a thing bought, a child spawned, and the ferry's and the seaplane's, which a load here makes, two a save), and
+  a record whose script has ended (`SAVE_PARK_SCRIPT_ENDED`), left the file's.
+- **A model** (`ParkRides.Written`, `ParkThingStates.Put`), into the record that names its thing's script: each
+  channel as the engine keeps one. A running channel's clip time and third stamp are the save's moment and its
+  start where it began; a held one's clip time is a whole clip past its start (`AnimTimeControl.HeldTime`). Of
+  the flag word the loop, frozen, held, `0x10` and `0x20` bits are the running channel's and the rest the
+  file's, because a channel here does not keep the keep-shown request (`0x8`): counted where the clip is no
+  longer the file's (`SAVE_PARK_CHANNEL_KEEP_SHOWN_BIT`). **A channel held since before the load keeps the file's
+  own word and clip time**: the engine's `0x10` on a held channel comes and goes (FileFormats `saves.md`, "Bit
+  `0x10`"), where a channel here keeps it for good. With nothing queued the last queue's leftovers are the
+  file's. The hoarding's seven bits and its progress are the thing's as they stand. **Not written, counted:** the
+  node flag words and the lookup records' attached handles, which hold a head `ADDHEAD` hung
+  (`SAVE_PARK_HEAD_ON_A_MODEL_NODE`; no thing of the shipped park's hangs one).
+- **An object** (`ParkState.WrittenObjects`, `ParkWorld.PutObjects`): its door (`mCanLoad`), the member assigned
+  and the tick they were, the queue's head, back cell and size, the guest being loaded, the six day rings and
+  the two counts, the operating three, the goods' cost, quality, chance and ingredient, the price, the two
+  repair floats, the service request and the two totals. The back cell and size are the file's until the queue
+  is edited, and measured off the map from then (`ParkRideChoice.QueueCellsFor`). The rest of the record stays
+  the file's. An object sold is left the file's and counted (`SAVE_PARK_OBJECT_SOLD`).
+- **Who is on a thing is written in both halves** (`ParkPeople.Written`): the guest as they are, and a rider with
+  no sprite on a thing that keeps none (`mFlags` `0x20`), as admission leaves them.
+- **OpenTPW's load reads the other half back.** `ParkScriptStates` takes limbo, the bounce slots and the walk
+  slots with their counts, and `RideScript.RestoreRiders` puts them back with each reading moved; `ParkState`
+  takes `mPersonBeingLoaded`; and a person with no sprite holds slot nought, which is nobody's
+  (`ParkGuestSprites.Taken`): a file with two such people, two members of staff resting or two riders in a
+  shop, killed the load before.
+- **A bounce node is numbered as the engine numbers it**, the slot's index plus the base the loader sets to 1
+  (`0x00558c45`), where it was counted from nought; `ParkPeople.BounceNodeName` names id 1 `body`.
+
+**Measured (Q252, `q252/`).** Lost Kingdom left alone from easymode's 755 until a guest rode the Belly Bounce
+with others queueing behind, past the first load of arrivals; `savepark Q252` under `pause` at `mGameTick` 1344.
+`rides` read script 3 at word 100 with guest 36 on node 1, and `peeps` seven guests queueing for thing 13. A
+Python reader of the file found: the clock 146,165 ms past the first file's (1344 less 755 sweeps of 248 ms is
+146,072) and the second stopwatch moved by as much; the script header's tick 10,770 and next handle 18; script
+3's record at word 100, its bounce slot 0 guest 36 on node 1, due 22,839 ms after the clock and begun 7,161 ms
+before it, 30,000 apart, the word at `+0x6c` 1 and `+0x6e` 8; guest 36 in state 16 with `mMajorDest` 13 and no
+queue link; thing 13's `mFirstInQ` 35, the head of a chain of seven down `mQNext` with every `mQPrev` and
+`mMajorDest` agreeing, no fault in either half; the Belly Bounce's model record on role 5, looping, begun 967 ms
+before the clock with its clip time and third stamp the clock's; hoarding `0x8` on the records of things 13,
+14, 16, 21, 22 and 23 and nought on the other eight; the gates' held channel `0x4` and the bin's `0xc`, the
+file's own. An earlier run saved with a guest called forward wrote `mPersonBeingLoaded` 36 beside `mFirstInQ`
+36, state 13. **Loaded from OpenTPW's Load Park screen**, the log read "thing 13 (script 3 at word 100) holds
+1 guests in its limbo, bounce and walk slots"; a sweep on, `rides` read guest 36 on node 1 and the script a
+turn further, at word 46 on a fresh `WAIT 500`; all eight guests were on the thing as they had been; and left
+to run, guest 36 came off 23.5 s on. **The build before** (`9ee7fc2`), saved with one riding and seven queueing,
+wrote the first file's script 3 (word 46, nobody aboard) under the first file's clock and counted
+`SAVE_PARK_GUEST_ON_A_THING` eight times; after its load nobody rode and nobody queued.
+
+**The original under Proton** took the file twice. Entering the park loads the newest file in the folder
+("Entering a park"), and 27 sweeps on its memory read guest 36 still in slot 0 and three of the file's queuers,
+35, 33 and 34, aboard on nodes 2 to 4. Loaded again from its Load Park screen and polled every 50 ms: on the
+first poll `mGameTick` 1344, script 3 at word 100, slot 0 guest 36 on node 1, `+0x6c` 1, guest 36 in state 16
+and the queuers in 11; guest 35 went 11, 13, 14, 16 and into slot 1 five sweeps on, 33 into slot 2 fourteen
+on, then 34 and 29; and guest 36 left slot 0 for state 15 on `mGameTick` 1440, 96 sweeps after the load, where
+their due is 92. The first frame after the load shows a guest on the Belly Bounce and the queue in its fence
+(`q252/sheet-ours-beside-original.png`).
+
+**A rider overstays in the original, whoever wrote the file.** The file of an earlier run put its rider 5,107 ms
+from their due, and after the load from the list they rode 57 sweeps, 9 s over. As a control the original saved
+its own park with three aboard from its Save Park screen and loaded it back: one rider came off on the sweep of
+their due, two came off 32 sweeps late each, and one who boarded after the load rode 154 sweeps for a ride of
+121. `UNBOUNCE` lets a rider go only in the first fifth of each second aboard (`BounceWindow`), and the script's
+passes come round about once a second, so a rider just outside the window waits for the passes to drift into
+it. **The original's own file beside ours** (`q252/orig/ctl-written-by-the-original.TPWS`): the same fields in
+use; its riders stand where ours do; its held channels read `0x4` where it had loaded `0x14` from ours, and its
+model records `0x8` on the six things a guest may be offered where ours held the first file's nought, which is
+why a held channel now keeps the file's word and the hoarding goes out as it stands. Its bounce riders' sprites
+are on program 66, picture set 2, where OpenTPW's rider stands (program 90) and is written so (Q52's note); its
+Belly Bounce loops clip 1 at speed 1.1 where ours loops clip 0 at 1.0 (Q155).
+
+**Predictions wrong, mine:** the script's counter at the save is 46 (it stands on 46 or on 100, its two turn
+ends); a wait reads nought to 1000 (one stands up to a sweep overdue: -89 and -120 were written); the next
+handle 16 (18: the ferry's and the seaplane's scripts took 16 and 17); today's takings above nought (the Belly
+Bounce's price is nought in Easymode); the loop's role 2 (5 with riders); a rider off within 1.5 s of their due
+in the original (above); and the same word after OpenTPW's load (the census comes a sweep after it). **Found
+by the first run, which it killed:** two members of staff resting at the save, each written with no sprite, as
+the original writes them, and OpenTPW's load keyed its people by sprite slot. That run's file, loaded by the
+final build: "thing 14 (script 4 at word 216) holds 1 guests" and "thing 13 (script 3 at word 46) holds 1
+guests", `rides` the Jungle Spray's walk slot 0 carrying guest 50 and guest 51 on the Belly Bounce's node 1,
+`staff` two resting; 40 s on the walker and the rider were off and the next of the queue was riding. **Seen and not this item's:**
+OpenTPW's Belly Bounce carries one rider at a time with fifteen queueing, where the original boarded five from
+the same file in twelve seconds (Q222's note). **Not run in the original:** a guest in a walk slot at the save (OpenTPW's own load of one is above). **Not
+run in either game, tested only:** a guest in limbo (no script of the shipped park declares any); a kept
+reading in a variable; a hoarding raised; a clip queued; an object sold; a queue edited; a
+head on a node; a file whose clock will not read. `docs/exe/addresses.md` not regenerated.
+
 ### Read, not run
 
 A thing bought or sold has been loaded by the original from a file made by hand, not from one OpenTPW wrote
@@ -1115,7 +1222,7 @@ and `b-load.log`, the polls across the two loads; the frames `e1`, `e2`, `f2`) w
 | Player slots, persisted | `OpenTPW/Client/Players.cs` |
 | `.TPWS` / `.TPWI` container | `OpenTPW.Files/Formats/Save/SaveReader.cs` |
 | The park file written back, first stage; the camera module | `OpenTPW.Files/Formats/Save/ParkFileWriter.cs`, `ParkCameraModule.cs`; `Level.WritePark`, `SaveFolder.WritePark` |
-| The inflated body: the World block, and what each thing and script was doing | `OpenTPW.Files/Formats/Save/ParkWorld.cs`, `ParkThingStates.cs`, `ParkScriptStates.cs` |
+| The inflated body: the World block, and what each thing and script was doing, read and written over | `OpenTPW.Files/Formats/Save/ParkWorld.cs` (`.People.cs`, `.Pool.cs`, `.Objects.cs`), `ParkThingStates.cs`, `ParkScriptStates.cs`, `ParkClock.cs` |
 
 Themes are taken to be the `data/levels` folders containing a `global.sam`. This is **inferred** — the original's own
 theme list names could not be read out of the executable.

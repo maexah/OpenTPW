@@ -60,6 +60,11 @@ public sealed class ParkObjectRings
 		NumWalkAways = saved.NumWalkAways;
 	}
 
+	/// <summary>The rings and the two counts as a park file's record holds them.</summary>
+	public ParkWorld.ObjectRings Written()
+		=> new( Costs.Written(), Takings.Written(), NumCustomers, Customers.Written(), NumWalkAways,
+			WalkAways.Written(), Served.Written(), Satisfaction.Written() );
+
 	/// <summary>A visit counted - <c>FUN_004e1690</c>: <c>mNumCustomers</c> and today's customers, one each.</summary>
 	public void CountCustomer()
 	{
@@ -138,6 +143,10 @@ public sealed class ParkObjectRings
 
 			saved.Days.Take( _days.Length ).ToArray().CopyTo( _days, 0 );
 		}
+
+		/// <summary>The ring as a park file's record holds it, every slot as it stands.</summary>
+		public ParkWorld.DayRing Written()
+			=> new( CurrentEntry, ParkWorld.DayRing.Length, WrappedAround, Today, [.. _days] );
 
 		/// <summary>How many finished days it holds - <c>FUN_00495d40</c>: all of them once wrapped, else the entry
 		/// plus one.</summary>

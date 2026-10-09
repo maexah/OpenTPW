@@ -5475,6 +5475,33 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   track ride or an emitter bought or sold is counted (`TRAK`'s car is not decoded). Confirm: a ride bought and a
   shop sold here, written, standing and running in the original under Proton, its script's wait predicted; a
   screenshot of each.
+- [x] **Q252. The writer: the kept objects, their scripts and their models as they run.** Done 2026-10-08,
+  `alexah/370-writer-kept-objects-scripts-models`; `docs/exe/saves.md`, "OpenTPW's writer, the objects". Saved at
+  `mGameTick` 1344 with guest 36 on the Belly Bounce's node 1 (due 22,839 ms on) and seven queueing: the file's two
+  halves agree with no fault, its clock 146,165 ms past the first file's; OpenTPW's load held the rider on node 1 and
+  let them off 23.5 s on; the original read script 3 at the file's word 100 with guest 36 in slot 0 in state 16, boarded
+  three of the queue in 27 sweeps and let 36 off 96 sweeps after the load, due 92. Its own save and reload, the
+  control, kept two of three riders 32 sweeps over. Seven predictions wrong, mine. The first run died on its own load
+  (two people on sprite slot nought), fixed. Of 156 bugs put back all fail a test. The item as written:
+  From Q241i
+  (`saves.md`, "The objects, their scripts and their models"). Nothing bought or sold yet. Each kept object's
+  record written over from the running park (its door, price, the operating three, goods, counts and rings,
+  queue size, `mFirstInQ`, `mBackOfQueue`, `mPersonBeingLoaded`, the assigned member and the service fields);
+  each kept script's record from `RideScript` (the counter, both stack indices and the stack, the result, the
+  variables, limbo, the bounce slots, the walk slots, the heads, the five clock fields) and the header's tick
+  and next handle; each kept model's channels, hoarding bits and progress; the clock module moved, so every
+  deadline keeps its distance. `ParkRides.PairSavedThings` pairs a thing with its model record by the record's
+  script handle. Confirm: a park played until guests queue for and ride the Belly Bounce, written, loaded here
+  and by the original under Proton; the ride's counter, its bounce slots and its wait predicted; a screenshot
+  of each.
+  From Q241h: **a guest on a thing is written deciding where they stand** (`SAVE_PARK_GUEST_ON_A_THING`:
+  queueing, called forward, walking on or off, riding; eight or nine of 26 in the confirm runs), because the
+  thing's half, `mFirstInQ`, `mPersonBeingLoaded` and its script's riders, is the file's: write both halves
+  here and let `ParkPeople.Written` hand them over as they are. A file's two halves agree (`q241i/riders.py`):
+  every queue runs `mFirstInQ` down `mQNext`, and every handle in a script's tables is a guest riding its
+  thing. A toilet's user is in a script variable. **OpenTPW's load reads no limbo, bounce or walk slot**
+  (`ParkScriptStates` steps over blocks 4 and 5 and the walk slots): read them back, or a rider written is a
+  rider lost on OpenTPW's own load. A rider of a track ride is in `TRAK`, not decoded: counted.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

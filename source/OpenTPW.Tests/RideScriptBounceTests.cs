@@ -271,8 +271,8 @@ public class RideScriptBounceTests
 			"the ride is carrying the rider and cannot say where" );
 
 		// Lost Kingdom's Bouncy never sets a node base - it calls BOUNCESETBASE, which is the field
-		// nothing in the family reads - so a rider's node here is their slot index, one of the ten.
-		Assert.IsTrue( node is >= 0 and < BouncySlots,
+		// nothing in the family reads - so a rider's node is their slot index past the loader's base of 1.
+		Assert.IsTrue( node is >= 1 and <= BouncySlots,
 			$"node {node} is outside the ten slots the ride declares" );
 
 		// Anti-vacuity: it answers about THIS rider rather than about anybody at all.

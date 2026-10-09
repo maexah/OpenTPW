@@ -89,6 +89,31 @@ public sealed class ParkGuestSprites : ModelEntity
 	private sealed record Loaded( SpriteBankFile Bank, Region[] Pictures );
 
 	private readonly List<(ParkWorld.Person Person, ParkWorld.Sprite Sprite)> _people = [];
+
+	/// <summary>
+	/// The save's people who have a sprite of their own, each with it. Only the people: the table's balloons are
+	/// taken by their guests (ParkPeople, by mBalloonScript) and drawn by DrawBalloons, and a thought bubble is its
+	/// person's (DrawBubble); litter has no thing of its own to take a position from yet.
+	/// </summary>
+	/// <remarks>
+	/// Slot nought is nobody's: a person with no sprite holds it, a rider on a thing that keeps none and a member
+	/// of staff resting, and a played park holds many.
+	/// </remarks>
+	internal static List<(ParkWorld.Person Person, ParkWorld.Sprite Sprite)> Taken( IParkInitialState park )
+	{
+		var byPerson = park.People.Where( person => person.SpriteSlot != 0 )
+			.ToDictionary( person => person.SpriteSlot, person => person );
+
+		var taken = new List<(ParkWorld.Person Person, ParkWorld.Sprite Sprite)>();
+
+		foreach ( var sprite in park.Sprites )
+		{
+			if ( byPerson.TryGetValue( sprite.Slot, out var person ) )
+				taken.Add( (person, sprite) );
+		}
+
+		return taken;
+	}
 	private readonly Dictionary<(int Type, int Bank), Loaded> _banks = [];
 
 	/// <summary>How many banks of each guest kind the park draws over, or null - see the constructor.</summary>
@@ -234,15 +259,7 @@ public sealed class ParkGuestSprites : ModelEntity
 		if ( park == null )
 			return;
 
-		// Only the people. The table's balloons are taken by their guests (ParkPeople, by mBalloonScript) and
-		// drawn by DrawBalloons, and a thought bubble is its person's (DrawBubble); litter has no thing of its own to take a position from yet.
-		var byPerson = park.People.ToDictionary( person => person.SpriteSlot, person => person );
-
-		foreach ( var sprite in park.Sprites )
-		{
-			if ( byPerson.TryGetValue( sprite.Slot, out var person ) )
-				_people.Add( (person, sprite) );
-		}
+		_people.AddRange( Taken( park ) );
 
 		Current = this;
 		_themeName = themeName;

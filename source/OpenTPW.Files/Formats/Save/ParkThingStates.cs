@@ -42,8 +42,20 @@ public readonly record struct SavedChannel( int Role, int Entry, int Flags, floa
 /// <param name="CatalogueId">The item definition this model uses; Slot identifies the saved model instance.</param>
 /// <param name="Slot">Where it sat in the module, kept so a caller can say which record it took.</param>
 /// <param name="Channels">Its channels, in order.</param>
+/// <param name="ScriptHandle">
+/// The record's <c>0x19</c>: the script handle of the thing it is the model of, an object's
+/// <c>mRideScriptHandle</c>; nought for a piece of queue and other scenery.
+/// </param>
 public readonly record struct SavedThing( int CatalogueId, int Slot, SavedChannel[] Channels,
-	uint HoardingFlags = 0, float HoardingProgress = 0f );
+	uint HoardingFlags = 0, float HoardingProgress = 0f, int ScriptHandle = 0 );
+
+/// <summary>
+/// One model as a park file's writer takes it (<see cref="ParkThingStates.Put"/>): the slot its record lies in, its
+/// channels as they run, each stamp a reading of the clock the file is written under, and the hoarding's seven
+/// bits and progress; null leaves the file's hoarding.
+/// </summary>
+public readonly record struct WrittenModel( int Slot, SavedChannel[] Channels, uint? HoardingFlags = null,
+	float HoardingProgress = 0f );
 
 /// <summary>
 /// The <c>RSYS</c> module of a park save: what every thing's model was doing when it was saved.
@@ -87,12 +99,10 @@ public readonly record struct SavedThing( int CatalogueId, int Slot, SavedChanne
 /// </para>
 ///
 /// <para>
-/// <b>Records are matched to things by catalogue id and order, which is measured rather than decoded.</b>
-/// The module's own records carry an item id, not a thing id, so three Small Toilets are three records
-/// that read alike. In the shipped park the records of placed things appear in ascending script-handle
-/// order, which pairs them off - and <b>within one catalogue id the pairing is unobservable</b>, because
-/// those records' channels differ only in their time stamps, which a held channel does not show. Anything
-/// relying on telling two Toilets apart would need the thing handle decoded first; nothing here does.
+/// <b>A record names its thing by the thing's script.</b> The module's own records carry an item id, not a thing
+/// id, so three Small Toilets are three records of one item; what tells them apart is the script handle at
+/// <c>0x19</c>, the object's <c>mRideScriptHandle</c> (<see cref="ForScript"/>; <c>docs/exe/saves.md</c>, "The
+/// objects, their scripts and their models").
 /// </para>
 /// </summary>
 public sealed class ParkThingStates
@@ -126,6 +136,20 @@ public sealed class ParkThingStates
 	private int _at;
 
 	private readonly List<SavedThing> _things = [];
+
+	/// <summary>Where each present record begins and where its channels do, by slot - what <see cref="Put"/> writes over.</summary>
+	private readonly Dictionary<int, (int Record, int Channels)> _places = [];
+
+	/// <summary>The record's script handle.</summary>
+	private const int ScriptHandleOffset = 0x19;
+
+	/// <summary>The packed model flags, whose low seven bits are the hoarding's.</summary>
+	private const int FlagsOffset = 0x1d;
+
+	/// <summary>The hoarding's progress, a float.</summary>
+	private const int ProgressOffset = 0x23;
+
+	private const uint HoardingBits = 0x7f;
 
 	/// <summary>Why the read stopped, or null. Recorded rather than thrown - see <see cref="ParkScriptStates"/>.</summary>
 	public string? Problem { get; private set; }
@@ -182,6 +206,87 @@ public sealed class ParkThingStates
 
 		return null;
 	}
+
+	/// <summary>
+	/// The saved record of the model whose thing runs the script with this handle, or null where no record names
+	/// it. Nought names no thing: a piece of queue and other scenery hold it.
+	/// </summary>
+	public SavedThing? ForScript( int handle )
+	{
+		if ( handle == 0 )
+			return null;
+
+		foreach ( var thing in _things )
+		{
+			if ( thing.ScriptHandle == handle )
+				return thing;
+		}
+
+		return null;
+	}
+
+	/// <summary>
+	/// Writes each model's channels, and its hoarding where one is given, over the record in its slot of
+	/// <paramref name="body"/>, a copy of the payload this was read from. A channel is the record's eleven dwords in
+	/// the file's order (<see cref="ReadThing"/>). A model whose slot holds no record, or one of another count of
+	/// channels, is left as the file's. The hoarding's bits go into the low seven of the packed flags, the rest kept.
+	/// </summary>
+	/// <returns>How many records were written over.</returns>
+	/// <exception cref="InvalidOperationException">The module was not read whole, so no record's place is known.</exception>
+	public int Put( byte[] body, IEnumerable<WrittenModel> models )
+	{
+		ArgumentNullException.ThrowIfNull( body );
+		ArgumentNullException.ThrowIfNull( models );
+
+		if ( Problem != null || !ClosedOnEnd )
+			throw new InvalidOperationException( $"the park file's models were not read whole: {Problem}" );
+
+		var written = 0;
+
+		foreach ( var model in models )
+		{
+			if ( !_places.TryGetValue( model.Slot, out var place ) )
+				continue;
+
+			var saved = _things.Find( thing => thing.Slot == model.Slot );
+
+			if ( saved.Channels.Length != model.Channels.Length )
+				continue;
+
+			for ( var index = 0; index < model.Channels.Length; ++index )
+			{
+				var channel = model.Channels[index];
+				var at = place.Channels + (index * ChannelDwords * 4);
+
+				PutInt32( body, at, channel.Flags );
+				PutInt32( body, at + 4, channel.Role );
+				PutInt32( body, at + 8, channel.Entry );
+				PutInt32( body, at + 12, (int)channel.StartTime );
+				PutInt32( body, at + 16, (int)channel.Time );
+				PutInt32( body, at + 20, (int)channel.NoPauseTime );
+				PutInt32( body, at + 24, BitConverter.SingleToInt32Bits( channel.Speed ) );
+				PutInt32( body, at + 28, channel.QueuedRole );
+				PutInt32( body, at + 32, channel.QueuedEntry );
+				PutInt32( body, at + 36, channel.QueuedFlags );
+				PutInt32( body, at + 40, BitConverter.SingleToInt32Bits( channel.QueuedSpeed ) );
+			}
+
+			if ( model.HoardingFlags is { } hoarding )
+			{
+				var packed = (uint)ReadInt32At( place.Record + FlagsOffset );
+
+				PutInt32( body, place.Record + FlagsOffset, (int)((packed & ~HoardingBits) | (hoarding & HoardingBits)) );
+				PutInt32( body, place.Record + ProgressOffset, BitConverter.SingleToInt32Bits( model.HoardingProgress ) );
+			}
+
+			++written;
+		}
+
+		return written;
+	}
+
+	private static void PutInt32( byte[] body, int at, int value ) =>
+		System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian( body.AsSpan( at, 4 ), value );
 
 	private void Walk( Func<int, int> channelsFor )
 	{
@@ -245,6 +350,8 @@ public sealed class ParkThingStates
 		var count = Math.Max( channelsFor( catalogueId ), 1 );
 		var channels = new SavedChannel[count];
 
+		_places[slot] = (record, _at);
+
 		for ( var index = 0; index < count; ++index )
 		{
 			var at = _at + (index * ChannelDwords * 4);
@@ -273,7 +380,8 @@ public sealed class ParkThingStates
 
 		// FUN_004647a0 maps the packed RSYS word to model bits 0x20..0x800 and restores +0xb8.
 		_things.Add( new SavedThing( catalogueId, slot, channels,
-			(uint)ReadInt32At( record + 0x1d ) & 0x7f, ReadSingleAt( record + 0x23 ) ) );
+			(uint)ReadInt32At( record + FlagsOffset ) & HoardingBits, ReadSingleAt( record + ProgressOffset ),
+			ReadInt32At( record + ScriptHandleOffset ) ) );
 	}
 
 	/// <summary>The module's start, found the same way and for the same reason as the script module's.</summary>

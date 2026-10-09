@@ -13,12 +13,17 @@ public sealed partial class ParkPeople
 	/// Every guest and member of staff, each as their record and their sprite are written.
 	///
 	/// <para>
-	/// <b>A deviation: a guest on a thing is written deciding where they stand, and counted</b>
-	/// (<c>SAVE_PARK_GUEST_ON_A_THING</c>). A queuer, one called forward, one walking on or off and a rider are each
-	/// one half of a pair whose other half is the thing's own record, its queue head and its script, and those are
-	/// still the file's (Q252). <b>A handle to a thing the file does not hold is written as nought, and counted</b>
-	/// (<c>SAVE_PARK_HANDLE_TO_AN_UNWRITTEN_THING</c>): what was bought here is not written yet, so a guest bound for
-	/// it is written deciding and a member of staff resting in or cleaning it idle.
+	/// <b>A guest on a thing is written as they are</b>: queueing, called forward, walking on or off or riding,
+	/// with their thing, their place and their links in its queue. The thing's half, its queue head, the guest it
+	/// is loading and its script's tables, is written with the things (<c>ParkRides.Written</c>). A rider on a
+	/// thing that does not keep its riders' sprites (<see cref="ParkWorld.CatalogueObject.KeepsRidersSpriteFlag"/>)
+	/// is written with none, as admission leaves them.
+	/// </para>
+	/// <para>
+	/// <b>A deviation: a handle to a thing the file does not hold is written as nought, and counted</b>
+	/// (<c>SAVE_PARK_HANDLE_TO_AN_UNWRITTEN_THING</c>): what was bought here is not written yet, so a guest bound
+	/// for it or on it is written deciding where they stand (the second counted too,
+	/// <c>SAVE_PARK_GUEST_ON_A_THING</c>) and a member of staff resting in or cleaning it idle.
 	/// </para>
 	/// <para>
 	/// A held balloon and a thought bubble go as sprites of their own (<see cref="BalloonOf"/>,
@@ -52,12 +57,16 @@ public sealed partial class ParkPeople
 			var onAThing = peep.State is PeepState.InQueue or PeepState.SteppingUpQueue or PeepState.BeingAdmitted
 				or PeepState.EnteringRide or PeepState.LeavingRide or PeepState.Riding;
 
-			if ( onAThing )
-				Unimplemented.Report( "SAVE_PARK_GUEST_ON_A_THING" );
-
 			var major = Handle( peep.MajorDest );
 			var bound = peep.State is PeepState.GoingToRide or PeepState.GoingToMinorDestination;
-			var decides = onAThing || (bound && major == 0);
+			var decides = (onAThing || bound) && major == 0;
+
+			if ( onAThing && decides )
+				Unimplemented.Report( "SAVE_PARK_GUEST_ON_A_THING" );
+
+			// A rider's sprite is the thing's to keep: admission destroys it on a thing without the bit (0x00502147).
+			var drawn = decides || peep.State != PeepState.Riding
+				|| (State.TryObject( major, out var ridden ) && (ridden.Flags & ParkWorld.CatalogueObject.KeepsRidersSpriteFlag) != 0);
 
 			var guest = new ParkWorld.GuestState(
 				State: (int)(decides ? PeepState.Deciding : peep.State),
@@ -80,7 +89,7 @@ public sealed partial class ParkPeople
 
 			people.Add( Person( id, ParkWorld.GuestModel, peep.Navigator, heading, decides, guest, null,
 				new ParkWorld.PaceState( peep.AdjustorSpeed, peep.BaseSpeed, peep.PreviousSpeed, peep.PurposeSpeed ),
-				(peep.SpriteKind, peep.SpriteBank), drawn: true, peep.NextAnimation, peep.NextInterval,
+				(peep.SpriteKind, peep.SpriteBank), drawn, peep.NextAnimation, peep.NextInterval,
 				peep.SetDestSuccessfully, peep.Thoughts, peep.StrandedTime ) with { Balloon = BalloonOf( peep ) } );
 		}
 

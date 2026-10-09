@@ -698,21 +698,10 @@ public sealed class ParkRides : Entity
 	private Dictionary<int, SavedThing> _saved = [];
 
 	/// <summary>
-	/// Matches each placed thing to its saved model state.
-	///
-	/// <para>
-	/// <b>The module names an ITEM, not a thing</b>, so three Small Toilets are three records that read
-	/// alike and something has to say which is which. In the shipped park the records of placed things
-	/// run in ascending script-handle order, so pairing them off in that order lines them up - and this
-	/// walks the objects in that order deliberately, because <see cref="ParkWorld.Objects"/> is in the
-	/// file's own order, which is the reverse. Pairing in the order the objects happen to arrive would
-	/// hand the toilets each other's records.
-	/// </para>
-	/// <para>
-	/// <b>Within one catalogue id the pairing is unobservable</b> - those records in this park differ only in
-	/// their time stamps, which a held channel does not show - so this is an ordering that matches rather than a
-	/// decoded thing handle, and nothing here relies on telling two of a kind apart.
-	/// </para>
+	/// Matches each placed thing to its saved model state: the record that names the thing's script
+	/// (<see cref="ParkThingStates.ForScript"/>; <c>docs/exe/saves.md</c>, "The objects, their scripts and their
+	/// models"), which is what tells three Small Toilets' records apart. A record of another item than the thing's
+	/// is not its model's, and is left.
 	/// </summary>
 	private Dictionary<int, SavedThing> PairSavedThings( ParkWorld world, ParkItemCatalogue catalogue )
 	{
@@ -731,16 +720,10 @@ public sealed class ParkRides : Entity
 			return paired;
 		}
 
-		var taken = new Dictionary<int, int>();
-
-		foreach ( var placed in world.Objects.OrderBy( o => o.RideScript ) )
+		foreach ( var placed in world.Objects )
 		{
-			var ordinal = taken.TryGetValue( placed.CatalogueId, out var seen ) ? seen : 0;
-
-			if ( states.For( placed.CatalogueId, ordinal ) is { } saved )
+			if ( states.ForScript( placed.RideScript ) is { } saved && saved.CatalogueId == placed.CatalogueId )
 				paired[placed.ThingId] = saved;
-
-			taken[placed.CatalogueId] = ordinal + 1;
 		}
 
 		return paired;
@@ -844,6 +827,14 @@ public sealed class ParkRides : Entity
 			channels ? saved.LoopingKey : script.LoopingKey, channels ? saved.AnimationMark : script.AnimationMark,
 			OnThisClock( saved.TimerDeadline ) ?? 0f );
 
+		// And who it was carrying, each reading moved as the deadlines are.
+		var riders = script.RestoreRiders( saved, reading => reading != 0 ? Moved( reading ) : null );
+
+		if ( riders > 0 )
+			Log.Info( $"{ThemeName}: thing {placed.ThingId} (script {saved.Handle} at word {saved.Position}) holds {riders} guests in its limbo, bounce and walk slots" );
+
+		RidersRestored += riders;
+
 		// And the deadlines it keeps in its own variables, a deviation said at RideScript.MoveKeptReadings.
 		// Only where the save's clock reads, as the struct's own deadlines are moved.
 		var kept = _clock?.Reading is not null ? script.MoveKeptReadings( reading => Moved( unchecked((uint)reading) )!.Value ) : 0;
@@ -855,6 +846,148 @@ public sealed class ParkRides : Entity
 
 		++Resumed;
 		return true;
+	}
+
+	/// <summary>How many guests the resumed scripts' limbo, bounce and walk slots were read holding.</summary>
+	public int RidersRestored { get; private set; }
+
+	/// <summary>
+	/// The file's objects' scripts and models as they run, for a park file's writer (<c>docs/exe/saves.md</c>,
+	/// "OpenTPW's writer, the objects"), or null where the file's clock did not read, so no moment here has a
+	/// reading there.
+	///
+	/// <para>
+	/// <b>The clock is moved on, the other way round from the load</b> (<see cref="Moved"/>): a moment on this
+	/// park's clock is written as the file's own reading plus the time since the load, and the file's clock as the
+	/// reading of now, so every deadline and stamp keeps its distance from the save's moment.
+	/// </para>
+	/// <para>
+	/// A script is written under the handle the scheduler runs it on, into the file's record of that handle; one
+	/// the file holds no record for (a thing bought, a child spawned) is not written, and a record whose script
+	/// has ended is left as the file's, each counted (the scheduler drops a script as it ends). A model is written into the record that names its thing's
+	/// script.
+	/// </para>
+	/// <para>
+	/// <b>A channel is written as the engine keeps one</b>: a held channel's clip time a whole clip after its
+	/// start, a running one's the moment of the save, the third stamp the save's. Of the flag word the loop,
+	/// frozen, held, <c>0x10</c> and <c>0x20</c> bits are the running channel's; the rest are left the file's,
+	/// because a channel here does not keep the keep-shown request (<c>0x8</c>), counted where the clip is no
+	/// longer the file's. A head hung on a model's node is in its lookup records, which are not written: counted.
+	/// The hoarding's bits are the thing's as they stand, the Closed kind a load gives one that names none among
+	/// them: the original's own file of a loaded park holds it on the same things.
+	/// </para>
+	/// </summary>
+	/// <param name="objects">The file's objects as they run, in the file's order.</param>
+	/// <param name="channelsFor">How many channels an item's model runs, its <c>NumSimultAnims</c>.</param>
+	/// <param name="hoardingFor">A thing's hoarding, or null for a thing with none.</param>
+	internal ParkFileWriter.RunningThings? Written( ParkWorld loaded, IReadOnlyList<ParkWorld.CatalogueObject> objects,
+		Func<int, int> channelsFor, Func<int, RideHoardingState?> hoardingFor )
+	{
+		if ( _clock?.Reading is not { } saved || loaded.ScriptStates.Problem != null )
+			return null;
+
+		var states = loaded.ThingStates( channelsFor );
+
+		if ( states.Problem != null )
+			return null;
+
+		var now = (int)(GameClock.Ticks * MillisecondsPerTick);
+
+		uint Reading( float moment ) => unchecked(saved + (uint)(int)(moment - _loaded));
+
+		var scripts = new List<WrittenScript>();
+		var running = new HashSet<int>();
+
+		foreach ( var script in Scheduler.Scripts )
+		{
+			running.Add( script.Id );
+
+			if ( loaded.ScriptStates.For( script.Id ) is null )
+			{
+				Unimplemented.Report( "SAVE_PARK_SCRIPT_MADE_SINCE_THE_LOAD" );
+				continue;
+			}
+
+			scripts.Add( script.Written( Reading ) );
+
+			if ( script.Heads().Any() )
+				Unimplemented.Report( "SAVE_PARK_HEAD_ON_A_MODEL_NODE" );
+		}
+
+		foreach ( var handle in loaded.ScriptStates.Order )
+		{
+			if ( !running.Contains( handle ) )
+				Unimplemented.Report( "SAVE_PARK_SCRIPT_ENDED" );
+		}
+
+		var models = new List<WrittenModel>();
+
+		foreach ( var thing in objects )
+		{
+			if ( !_scripts.TryGetValue( thing.ThingId, out var handle ) || Scheduler.Find( handle )?.Animations is not { } players )
+				continue;
+
+			if ( states.ForScript( handle ) is not { } record || record.CatalogueId != thing.CatalogueId
+				|| record.Channels.Length != players.ChannelCount )
+				continue;
+
+			var channels = new SavedChannel[record.Channels.Length];
+
+			for ( var index = 0; index < channels.Length; ++index )
+				channels[index] = WrittenChannel( players.Channel( index )!, record.Channels[index], Reading, now );
+
+			var hoarding = hoardingFor( thing.ThingId );
+
+			models.Add( new WrittenModel( record.Slot, channels, hoarding?.Flags, hoarding?.Progress ?? 0f ) );
+		}
+
+		return new ParkFileWriter.RunningThings( objects, Scheduler.Tick, Scheduler.NextHandle, scripts, states, models,
+			Reading( now ) );
+	}
+
+	/// <summary>The bits of a channel's flag word a running channel keeps as the engine does: loop, frozen, held, <c>0x10</c> and <c>0x20</c>.</summary>
+	private const int ChannelFlagsKept = 0x37;
+
+	/// <summary>One channel as the engine keeps it - see <see cref="Written"/>.</summary>
+	private static SavedChannel WrittenChannel( AnimTimeControl channel, SavedChannel file, Func<float, uint> reading, int now )
+	{
+		// What is queued behind it; with nothing queued the engine leaves the last queue's clip, flags and speed
+		// behind, which a channel here does not keep, so the file's stay.
+		var queued = channel.HasQueued
+			? (Role: channel.DeferredAnimID, Entry: channel.DeferredSubAnim, Flags: channel.DeferredFlags, Speed: channel.DeferredSpeed)
+			: (Role: ParkThingStates.NoRole, Entry: file.QueuedEntry, Flags: file.QueuedFlags, Speed: file.QueuedSpeed);
+
+		if ( channel.IsIdle )
+		{
+			// One idle in the file and idle still has had nothing started on it: the file's word and speed stand.
+			// One stopped since holds nought in its three stamps, as every idle channel in the files does.
+			return file.Role == ParkThingStates.NoRole
+				? file with { QueuedRole = queued.Role, QueuedEntry = queued.Entry, QueuedFlags = queued.Flags, QueuedSpeed = queued.Speed }
+				: new SavedChannel( ParkThingStates.NoRole, 0, (file.Flags & ~ChannelFlagsKept) | (channel.Flags & ChannelFlagsKept),
+					channel.Speed, 0, 0, 0, queued.Role, queued.Entry, queued.Flags, queued.Speed );
+		}
+
+		if ( (channel.AnimID, channel.SubAnim) != (file.Role, file.Entry) && (file.Flags & AnimTimeControl.KeepShownFlag) != 0 )
+			Unimplemented.Report( "SAVE_PARK_CHANNEL_KEEP_SHOWN_BIT" );
+
+		var start = reading( channel.StartAnimTime );
+
+		// A channel held since before the load, on the clip and from the start the file gives it, keeps the file's
+		// word and clip time: the engine's 0x10 on a held channel comes and goes with its posing (a file of the
+		// original's holds 0x4 and 0x14 alike, and its load sets the bit again), and a channel here keeps it for
+		// good. One held here is given a whole clip past its start, which this build's truncation can leave a
+		// millisecond short of the engine's.
+		var heldAsTheFile = (file.Flags & HeldAtEnd) != 0 && (channel.Flags & HeldAtEnd) != 0
+			&& (file.Role, file.Entry, file.StartTime) == (channel.AnimID, channel.SubAnim, start);
+
+		var flags = heldAsTheFile ? file.Flags : (file.Flags & ~ChannelFlagsKept) | (channel.Flags & ChannelFlagsKept);
+
+		var time = (channel.Flags & FrozenAtStart) != 0 ? start
+			: (channel.Flags & HeldAtEnd) != 0 ? heldAsTheFile ? file.Time : reading( channel.HeldTime )
+			: reading( now );
+
+		return new SavedChannel( channel.AnimID, channel.SubAnim, flags, channel.Speed, start, time, reading( now ),
+			queued.Role, queued.Entry, queued.Flags, queued.Speed );
 	}
 
 	/// <summary>

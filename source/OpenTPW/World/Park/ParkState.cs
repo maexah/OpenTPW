@@ -473,6 +473,45 @@ public sealed class ParkState
 	}
 
 	/// <summary>
+	/// The file's objects as they run, for a park file's writer (<c>docs/exe/saves.md</c>, "OpenTPW's writer, the
+	/// objects"): each object <paramref name="loaded"/> holds that still stands, as the park's own record has it,
+	/// with its queue's head, the guest it is loading, its two totals and its rings; and its queue's back cell and
+	/// size as measured since the queue was last edited, the file's where it was not
+	/// (<see cref="ParkRideChoice.QueueCellsFor"/>). An object sold since the load is left out, and counted: its
+	/// record is still the file's.
+	/// </summary>
+	internal List<ParkWorld.CatalogueObject> WrittenObjects( ParkWorld loaded )
+	{
+		var written = new List<ParkWorld.CatalogueObject>( loaded.Objects.Count );
+
+		foreach ( var file in loaded.Objects )
+		{
+			if ( !TryObject( file.ThingId, out var now ) )
+			{
+				Unimplemented.Report( "SAVE_PARK_OBJECT_SOLD" );
+				continue;
+			}
+
+			var (back, cells) = QueueWasInvalidated( now.ThingId )
+				? ParkRideChoice.QueueCellsFor( _park, now )
+				: (now.BackOfQueue, now.QueueSizeInCells);
+
+			written.Add( now with
+			{
+				FirstInQueue = (ushort)FirstInQueue( now.ThingId ),
+				PersonBeingLoaded = (ushort)PersonBeingLoaded( now.ThingId ),
+				BackOfQueue = (ushort)back,
+				QueueSizeInCells = cells,
+				TotalTakings = TakingsFor( now.ThingId ),
+				TotalCosts = CostsFor( now.ThingId ),
+				Rings = RingsFor( now.ThingId ).Written(),
+			} );
+		}
+
+		return written;
+	}
+
+	/// <summary>
 	/// The State of repair below which a toilet is dirty - 25.0 (<c>0x00700550</c>), which the original holds the
 	/// float's truncated low byte against.
 	/// </summary>
@@ -585,6 +624,10 @@ public sealed class ParkState
 		{
 			if ( thing.FirstInQueue != 0 )
 				_queueHead[thing.ThingId] = thing.FirstInQueue;
+
+			// And the guest it had called forward, the head of its queue wherever a file sets it.
+			if ( thing.PersonBeingLoaded != 0 )
+				_beingLoaded[thing.ThingId] = thing.PersonBeingLoaded;
 
 			// And what each has taken so far. Nought on every object in the park that ships - nobody has
 			// ever paid for anything in it - so this seeds nothing today, for the same reason the queues

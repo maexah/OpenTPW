@@ -44,25 +44,6 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q252. The writer: the kept objects, their scripts and their models as they run.** From Q241i
-  (`saves.md`, "The objects, their scripts and their models"). Nothing bought or sold yet. Each kept object's
-  record written over from the running park (its door, price, the operating three, goods, counts and rings,
-  queue size, `mFirstInQ`, `mBackOfQueue`, `mPersonBeingLoaded`, the assigned member and the service fields);
-  each kept script's record from `RideScript` (the counter, both stack indices and the stack, the result, the
-  variables, limbo, the bounce slots, the walk slots, the heads, the five clock fields) and the header's tick
-  and next handle; each kept model's channels, hoarding bits and progress; the clock module moved, so every
-  deadline keeps its distance. `ParkRides.PairSavedThings` pairs a thing with its model record by the record's
-  script handle. Confirm: a park played until guests queue for and ride the Belly Bounce, written, loaded here
-  and by the original under Proton; the ride's counter, its bounce slots and its wait predicted; a screenshot
-  of each.
-  From Q241h: **a guest on a thing is written deciding where they stand** (`SAVE_PARK_GUEST_ON_A_THING`:
-  queueing, called forward, walking on or off, riding; eight or nine of 26 in the confirm runs), because the
-  thing's half, `mFirstInQ`, `mPersonBeingLoaded` and its script's riders, is the file's: write both halves
-  here and let `ParkPeople.Written` hand them over as they are. A file's two halves agree (`q241i/riders.py`):
-  every queue runs `mFirstInQ` down `mQNext`, and every handle in a script's tables is a guest riding its
-  thing. A toilet's user is in a script variable. **OpenTPW's load reads no limbo, bounce or walk slot**
-  (`ParkScriptStates` steps over blocks 4 and 5 and the walk slots): read them back, or a rider written is a
-  rider lost on OpenTPW's own load. A rider of a track ride is in `TRAK`, not decoded: counted.
 - [ ] **Q253. The writer: a thing bought and a thing sold.** From Q241i. After Q252. A bought object's record
   written whole at the head of the thing list and of the object list (`mFirstObject`, `mNext`), in set `0xb`,
   its item's object control counted and stamped; its footprint's cells with the object's `mWho`, `mMapChild`
@@ -75,6 +56,14 @@ the research lab), then the rest of this section in its old order.
   From Q241g: **a footprint**: `Level.WrittenCells` leaves a cell that has joined or left a footprint, or
   changed its type or parent inside one, as the file's (`SAVE_PARK_FOOTPRINT_CELL`); write those cells with
   the object's record.
+  From Q252: the kept things' stage counts what is this item's: an object sold is left the file's
+  (`SAVE_PARK_OBJECT_SOLD`; `ParkState.WrittenObjects`), and a script the file holds no record for is not written
+  (`SAVE_PARK_SCRIPT_MADE_SINCE_THE_LOAD`: a thing bought, a child spawned, and the ferry's and the seaplane's,
+  which a load here makes afresh, two a save; a record whose script has ended is `SAVE_PARK_SCRIPT_ENDED`). **A
+  head hung on a ride's node is not in its model's record** (`SAVE_PARK_HEAD_ON_A_MODEL_NODE`): the lookup records'
+  attached handles and the node flag words are left the file's, and the rides that hang heads are all bought ones
+  in Easymode. A channel's keep-shown bit (`0x8`) and a walk slot's facing (`+0x14`) are kept by nothing here and
+  go out as the file's (`SAVE_PARK_CHANNEL_KEEP_SHOWN_BIT` for the first): for a made record they must be made.
   From Q241h: **a handle to a thing bought here is written as nought**
   (`SAVE_PARK_HANDLE_TO_AN_UNWRITTEN_THING`; `Level.WrittenThings` is the list to widen). A made thing's id is
   one past the park's highest, where the original uses a freed id again (Q26c). `PutPeople` chains a person
@@ -90,7 +79,8 @@ the research lab), then the rest of this section in its old order.
   **The arrival vehicle is not written** (`SAVE_PARK_ARRIVAL_VEHICLE`). The header's
   `mCurrentArrivalVehicle` and the vehicle's script are one state (`FUN_0051a690`), and both are left the
   file's, so a park saved with the bus on its circuit loads with none current and the bus where the first file
-  had it (`q250/run2/1-at-the-save.png`); write the handle with the scripts (Q252), and read it back
+  had it (`q250/run2/1-at-the-save.png`); the bus's script is written as it runs now (Q252), so the bus drives on
+  with none current: write the handle with it, and read it back
   (`SAVED_CURRENT_ARRIVAL_VEHICLE`). In the original a load of that file made a vehicle anew on its first sweep
   (`q250/orig/a-load.log`): look for the leaver at the stop that summons it.
   **A balloon let go and still bursting at the save is not written** (`SAVE_PARK_BALLOON_LET_GO`):
@@ -457,6 +447,10 @@ the research lab), then the rest of this section in its old order.
   never compared with the original. Read one guest's scores in the original at a known cell (a break in
   `FUN_004fcc30`, or its inputs from memory) beside `why` for the same guest and cell, find the term that differs,
   then file its build. Instruments: `q107/orig/watch.py` and `watch1.log`, `q107/base`.
+  From Q252: **OpenTPW's Belly Bounce carries one rider at a time.** Every `rides` census of every run to hand
+  reads bouncing 0 or 1, with fifteen queueing (`q252/run2`); the original, given the same file, had five aboard
+  twelve seconds after its load, a guest boarding every three (`q252/orig/a-load.log`), and its riders ride 121
+  sweeps, or 32 more. So the crowd on the queue is boarding's, not the chooser's alone: read the boarding turn first.
   From Q26b: the crowd on the Belly Bounce now sizes the loads. With thirteen arrivals its sixteen places fill, the
   offer gate refuses it, and a load called on that sweep is 4, not 12 (one run of two, `q26b/gate`); the original's
   passed the gate on every sweep of two runs.
@@ -805,6 +799,10 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   it; a thing bought this session carries none of the bits whose keys are not read (`BOUGHT_OBJECT_FLAG_BITS`).
   `0x20` is `RideHandlesSprite`, descriptor `+0x104` (`0x004db414`; `park-engine.md`, "Still open"): read it, then
   build both. Confirm: a guest riding a bought Belly Bounce, `guests`, photographed.
+  From Q252: **a rider on a thing WITH the bit is not standing.** In two files of the original's (Alexah's played
+  jungle park and `q252/orig/ctl-written-by-the-original.TPWS`) all nine bounce riders' sprites are on program 66,
+  the second state script, picture set 2; OpenTPW's rider stands on program 90, and a park file is written so.
+  `Peep.AnimationFor`'s remark reads the setter's case `0x10` as "the stand": read it again with these files.
 - [ ] **Q54. The `.sam` reader against the original's parser.** Found by Q36's decode (`park-engine.md`, "How a key
   finds its global"). In the original the first bad line ends the file - an unknown key, a bounded value out of
   range, or a negative in a non-negative field - and an array's count is the highest index written plus one, so

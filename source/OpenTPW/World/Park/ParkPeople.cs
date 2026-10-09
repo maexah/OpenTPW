@@ -2709,8 +2709,8 @@ public sealed partial class ParkPeople : Entity
 	}
 
 	/// <summary>
-	/// What a ride's bounce node is called in its model - node nought is <c>body</c> and the rest are
-	/// <c>body01</c> upwards.
+	/// What a ride's bounce node is called in its model, by the node's id as a bounce slot holds it - id 1 is
+	/// <c>body</c> and the rest are <c>body01</c> upwards.
 	/// </summary>
 	/// <remarks>
 	/// <b>Measured off <c>bouncy.MD2</c>, and corroborated twice over.</b> Its ten rider nodes are named
@@ -2722,12 +2722,12 @@ public sealed partial class ParkPeople : Entity
 	/// <c>0x800</c> (<c>FUN_00557ab0</c>, <c>0x00557b3a</c>; docs/exe/ride-operation.md, "Where a rider is
 	/// drawn"), where id 1 is only <c>body</c>; <c>air</c>, <c>camera</c> and <c>body11</c> share it under other
 	/// flags. The drawing here finds a seat by name, not by <see cref="ModelFile.FindNode"/> (docs/QUEUE.md Q22), and in
-	/// this model the names give the same nodes: node n here is id n + 1 there. The names carry no such ambiguity, and <c>body10</c> upwards belong to other groups
-	/// and are never reached because the slots stop at nine.
+	/// this model the names give the same nodes. The names carry no such ambiguity, and <c>body10</c> upwards belong to other groups
+	/// and are never reached because the slots stop at ten.
 	/// </para>
 	/// </remarks>
 	internal static string BounceNodeName( int node )
-		=> node == 0 ? "body" : $"body{node:00}";
+		=> node <= 1 ? "body" : $"body{node - 1:00}";
 
 	/// <summary>
 	/// What each placed thing's script is doing, and who it is carrying.
@@ -2859,6 +2859,8 @@ public sealed partial class ParkPeople : Entity
 			yield return $"thing {thing.ThingId,2} cat {thing.CatalogueId} '{script.Name}' "
 				// Its handle, which decides its turns with the scheduler's tick, and where it stands.
 				+ $"script {script.Id} at {script.Position} "
+				// How long its WAIT has left, in milliseconds of the clock the scripts run on; "none" off a wait.
+				+ $"wait {(script.WaitDeadline is { } due ? ((int)(due - (GameClock.Ticks * GameClock.TickSeconds * 1000f))).ToString() : "none")} "
 				// The nominee, because a stale one is invisible otherwise: Invite bails while somebody is
 				// nominated, and the only thing that clears a stale nomination is DropUnreadyNominee,
 				// run on a turn that does not invite. A queue stuck on that would look exactly like a quiet ride.

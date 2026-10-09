@@ -420,12 +420,11 @@ public sealed class RideScript
 	/// passes a literal 3. Since every use is a literal the raw store can never differ from a resolved
 	/// one in the shipped corpus, which is what makes reproducing the missing test free rather than
 	/// risky - and it is pinned by a test, because the day that stops being true this stops being safe.
-	/// In Lost Kingdom nothing sets it, so the engine's stays at the 1 its loader gives every script
-	/// (<c>0x00558c45</c>) and a rider's node id is their slot index plus one. Here it starts at nought and
-	/// <see cref="ParkPeople.BounceNodeName"/> names node 0 <c>body</c>, id 1: the same node.
+	/// In Lost Kingdom nothing sets it, so it stays at the 1 the loader gives every script (<c>0x00558c45</c>) and a
+	/// rider's node id is their slot index plus one (<see cref="ParkPeople.BounceNodeName"/>).
 	/// </para>
 	/// </summary>
-	private int _bounceNode;
+	private int _bounceNode = 1;
 
 	/// <summary>
 	/// The four states a walk slot passes through - the engine's <c>+0x18</c>, and the whole of the
@@ -998,6 +997,137 @@ public sealed class RideScript
 		_looping = looping;
 		_animationMark = mark;
 		_timerUntil = timerUntil;
+	}
+
+	/// <summary>
+	/// Puts back who a save left on the thing: limbo with its count (<c>+0x60</c>), the bounce slots with the two
+	/// words beside them (<c>+0x6c</c>, <c>+0x6e</c>) and the node base (<c>+0x70</c>), and the walk slots, which
+	/// <c>FUN_005597a0</c> reads back each from its own block. A table of another length than this script declares
+	/// is not the script's, and is left as the loader made it.
+	///
+	/// <para>
+	/// Each reading arrives through <paramref name="onThisClock"/>, moved as the struct's own deadlines are
+	/// (<see cref="RestoreClockState"/>); one it cannot move reads nought. A free slot's stale readings are not kept.
+	/// </para>
+	/// </summary>
+	/// <returns>How many guests the three tables hold.</returns>
+	internal int RestoreRiders( SavedScript saved, Func<uint, float?> onThisClock )
+	{
+		var riders = 0;
+
+		if ( saved.Limbo is { } limbo && limbo.Length == _limbo.Length )
+		{
+			for ( var slot = 0; slot < limbo.Length; ++slot )
+			{
+				_limbo[slot] = limbo[slot].Handle == 0
+					? default
+					: new LimboSlot { Handle = limbo[slot].Handle, Release = onThisClock( limbo[slot].Due ) ?? 0f };
+
+				riders += limbo[slot].Handle != 0 ? 1 : 0;
+			}
+
+			_inLimbo = saved.InLimbo;
+		}
+
+		if ( saved.Bounce is { } bounce && bounce.Length == _bounce.Length )
+		{
+			for ( var slot = 0; slot < bounce.Length; ++slot )
+			{
+				_bounce[slot] = bounce[slot].Handle == 0
+					? default
+					: new BounceSlot
+					{
+						Handle = bounce[slot].Handle,
+						Node = bounce[slot].Node,
+						Expiry = onThisClock( bounce[slot].Due ) ?? 0f,
+						Start = onThisClock( bounce[slot].Start ) ?? 0f,
+					};
+
+				riders += bounce[slot].Handle != 0 ? 1 : 0;
+			}
+
+			_bouncing = (short)saved.Bouncing;
+			_bounceBase = (short)saved.BounceBase;
+			_bounceNode = saved.BounceNode;
+		}
+
+		if ( saved.Walk is { } walk && walk.Length == _walk.Length )
+		{
+			for ( var slot = 0; slot < walk.Length; ++slot )
+			{
+				_walk[slot] = walk[slot].State == 0
+					? default
+					: new WalkSlot
+					{
+						Handle = walk[slot].Handle,
+						WalkNode = walk[slot].WalkNode,
+						HeadNode = walk[slot].HeadNode,
+						OffFrom = walk[slot].OffFrom,
+						OffTo = walk[slot].OffTo,
+						Start = onThisClock( walk[slot].Start ) ?? 0f,
+						Due = onThisClock( walk[slot].Due ) ?? 0f,
+						Action = walk[slot].Action,
+						State = (WalkState)walk[slot].State,
+						Flags = walk[slot].Flags,
+					};
+
+				riders += walk[slot].State != 0 ? 1 : 0;
+			}
+		}
+
+		return riders;
+	}
+
+	/// <summary>
+	/// This script as a park file's writer takes it: everything <see cref="ParkScriptStates"/> reads of a record,
+	/// as it stands now. Each deadline and stamp goes through <paramref name="reading"/>, which turns a moment on
+	/// the clock this script is driven with into a reading of the clock the file is written under; an empty
+	/// deadline is the engine's nought, and a free slot's readings are nought.
+	///
+	/// <para>
+	/// <b>The readings a script keeps in its variables are turned too</b>, each one <see cref="MoveKeptReadings"/>
+	/// moved at the load or <c>GETTIME</c> has written since, and the register with a split pair: the other way
+	/// round from the load, and the same deviation.
+	/// </para>
+	/// </summary>
+	internal WrittenScript Written( Func<float, uint> reading )
+	{
+		var variables = (int[])_variables.Clone();
+		var result = Result;
+		var kept = new HashSet<int>( KeptReadings( _file ) );
+		var split = SplitReading();
+
+		if ( split is { } pending )
+			kept.Add( pending );
+
+		foreach ( var slot in kept )
+		{
+			if ( slot >= 0 && slot < variables.Length && variables[slot] != 0 )
+				variables[slot] = unchecked((int)reading( variables[slot] ));
+		}
+
+		if ( split is not null && result != 0 )
+			result = unchecked((int)reading( result ));
+
+		uint Stamp( float? moment ) => moment is { } at ? reading( at ) : 0;
+
+		return new WrittenScript(
+			Handle: Id, Position: Position, CallIndex: _calls, HeapIndex: _values, Result: result,
+			Stack: [.. _stack], Variables: variables,
+			WaitDeadline: Stamp( _waitUntil ), AnimationDeadline: Stamp( _animationUntil ),
+			LoopingKey: _looping, AnimationMark: _animationMark,
+			TimerDeadline: _timerUntil != 0f ? reading( _timerUntil ) : 0,
+			Limbo: [.. _limbo.Select( slot => slot.Handle == 0 ? default : new SavedLimboSlot( slot.Handle, reading( slot.Release ) ) )],
+			InLimbo: _inLimbo,
+			Bounce: [.. _bounce.Select( slot => slot.Handle == 0
+				? default
+				: new SavedBounceSlot( slot.Handle, slot.Node, reading( slot.Expiry ), reading( slot.Start ) ) )],
+			Bouncing: _bouncing, BounceBase: _bounceBase, BounceNode: _bounceNode,
+			Walk: [.. _walk.Select( slot => slot.State == WalkState.Free
+				? default
+				: new SavedWalkSlot( slot.WalkNode, slot.HeadNode, slot.OffFrom, slot.OffTo, reading( slot.Start ),
+					reading( slot.Due ), slot.Handle, slot.Action, (short)slot.State, slot.Flags ) )],
+			Heads: [.. _heads] );
 	}
 
 	/// <summary>

@@ -32,6 +32,9 @@ public sealed class ParkClock
 
 	private readonly byte[] _data;
 
+	/// <summary>Where the module's two dwords lie in the payload; -1 where it was refused.</summary>
+	private int _at = -1;
+
 	/// <summary>Why the module was refused, or null where it was not. A refused module has no reading.</summary>
 	public string? Problem { get; private set; }
 
@@ -51,7 +54,8 @@ public sealed class ParkClock
 
 		try
 		{
-			Reading = BitConverter.ToUInt32( _data, FindModule() );
+			_at = FindModule();
+			Reading = BitConverter.ToUInt32( _data, _at );
 		}
 		catch ( Exception e )
 		{
@@ -65,6 +69,26 @@ public sealed class ParkClock
 	/// the difference taken in 32 bits, as the clock itself counts. Null where the module was refused.
 	/// </summary>
 	public int? Since( uint reading ) => Reading is { } saved ? unchecked((int)(reading - saved)) : null;
+
+	/// <summary>
+	/// Writes <paramref name="reading"/> over the clock's in <paramref name="body"/>, a copy of the payload this was
+	/// read from, and moves the second stopwatch's by as much: the two run together in the game, and a file's
+	/// second lies wherever play left it from the first.
+	/// </summary>
+	/// <exception cref="InvalidOperationException">The module was refused, so its place is not known.</exception>
+	public void Put( byte[] body, uint reading )
+	{
+		ArgumentNullException.ThrowIfNull( body );
+
+		if ( Reading is not { } saved || _at < 0 )
+			throw new InvalidOperationException( $"the park file's clock was not read: {Problem}" );
+
+		var second = BitConverter.ToUInt32( _data, _at + 4 );
+
+		System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian( body.AsSpan( _at, 4 ), reading );
+		System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian( body.AsSpan( _at + 4, 4 ),
+			unchecked(second + (reading - saved)) );
+	}
 
 	/// <summary>The module's start: right after an <c>SSEM</c> tag with a <c>KOLC</c> tag the module's size after it.</summary>
 	private int FindModule()

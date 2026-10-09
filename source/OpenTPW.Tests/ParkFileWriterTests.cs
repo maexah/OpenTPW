@@ -249,6 +249,79 @@ public class ParkFileWriterTests
 		Assert.IsFalse( Unimplemented.Summary.Any( gap => gap.What == "SAVE_PARK_WITH_NO_FILE" ) );
 	}
 
+	/// <summary>
+	/// The level hands the writer the park's things: with its scripts bound and two seconds gone, the file's clock
+	/// has moved on by them and the Belly Bounce's queue head is the park's; without them the file's go out, and with
+	/// a file whose clock will not read they go out counted.
+	/// </summary>
+	[TestMethod]
+	public void TheLevelWritesTheThings()
+	{
+		SetCurrentPlayer( new Player( 0, "Test", new PlayerFile { InstantAction = true } ) );
+
+		Time.Paused = false;
+		GameClock.Rebase();
+		Time.Update( 0f );
+		GameClock.Update( paused: false, GameClock.ParkCatchUp );
+
+		var catalogue = new ParkItemCatalogue( "jungle", FileSystem );
+		var state = new ParkState( shipped );
+		var rides = new ParkRides( "jungle", shipped, catalogue, FileSystem );
+
+		try
+		{
+			for ( var frame = 0; frame < 4; ++frame )
+			{
+				Time.Update( 0.5f );
+				GameClock.Update( paused: false, GameClock.ParkCatchUp );
+			}
+
+			state.JoinQueue( 13, 31 );
+
+			Assert.IsNotNull( Level.WritePark( shipped, state, "jungle", "Things", rides: rides, catalogue: catalogue ) );
+
+			var written = Read( File.ReadAllBytes( Path.Combine( Jungle, "Things.TPWS" ) ) );
+
+			Assert.AreEqual( shipped.Clock.Reading + (64u * 31u), written.Clock.Reading );
+			Assert.AreEqual( 31, written.Objects.Single( placed => placed.ThingId == 13 ).FirstInQueue );
+			Assert.IsNull( written.ThingStates( id => catalogue.TryGet( id, out var item ) ? item.AnimationChannels : 1 ).Problem, "the Jungle Spray's three channels are walked as three" );
+			Assert.IsFalse( Unimplemented.Summary.Any( gap => gap.What == "SAVE_PARK_THINGS_AS_THE_FILE" ) );
+
+			Assert.IsNotNull( Level.WritePark( shipped, state, "jungle", "Carried" ) );
+
+			var carried = Read( File.ReadAllBytes( Path.Combine( Jungle, "Carried.TPWS" ) ) );
+
+			Assert.AreEqual( shipped.Clock.Reading, carried.Clock.Reading, "with no scripts handed over the file's own go out" );
+			Assert.AreEqual( 0, carried.Objects.Single( placed => placed.ThingId == 13 ).FirstInQueue );
+			Assert.IsFalse( Unimplemented.Summary.Any( gap => gap.What == "SAVE_PARK_THINGS_AS_THE_FILE" ) );
+
+			// A file whose clock will not read: its things go out as the file's, and that is counted.
+			using var stream = new MemoryStream( raw );
+			var reader = new SaveReader( stream );
+			var body = reader.ReadFile();
+
+			body[body.AsSpan().IndexOf( "KOLC"u8 )] = (byte)'X';
+
+			var broken = new ParkWorld( body, reader.Preamble );
+			var unread = new ParkRides( "jungle", broken, catalogue, FileSystem );
+
+			try
+			{
+				Assert.IsNotNull( Level.WritePark( broken, new ParkState( broken ), "jungle", "Unread", rides: unread, catalogue: catalogue ) );
+				Assert.AreEqual( 1, Unimplemented.Summary.Single( gap => gap.What == "SAVE_PARK_THINGS_AS_THE_FILE" ).Times );
+			}
+			finally
+			{
+				unread.Delete();
+			}
+		}
+		finally
+		{
+			rides.Delete();
+			Entity.ApplyDeletions();
+		}
+	}
+
 	/// <summary>The level hands the writer the park's pool of candidates and its arrival timer.</summary>
 	[TestMethod]
 	public void TheLevelWritesThePoolAndTheArrivalTimer()

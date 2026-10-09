@@ -394,17 +394,81 @@ public class ParkFileWriterPeopleTests
 	}
 
 	/// <summary>
-	/// A guest on a thing is written deciding where they stand, with no queue links, and counted: the thing's own
-	/// record is still the file's.
+	/// A guest on a thing is written as they are: their state, their thing, their place and their links in its
+	/// queue, on the route and the sprite they have.
 	/// </summary>
 	[TestMethod]
-	public void AQueuerIsWrittenDecidingAndCounted()
+	public void AQueuerIsWrittenAsTheyAre()
+	{
+		var people = new ParkPeople( shipped );
+		var peep = people.Guests.Values.First();
+		var behind = people.Guests.Values.Last();
+		var thing = shipped.Objects.First( placed => placed.IsVisitable ).ThingId;
+
+		foreach ( var queuer in new[] { peep, behind } )
+		{
+			queuer.SetState( PeepState.InQueue, 800, new Random( 1 ) );
+			queuer.MajorDest = thing;
+			people.State.JoinQueue( thing, queuer.ThingId );
+		}
+
+		peep.QueuePos = 3;
+		peep.BeenAdmitted = true;
+		peep.QueueMoveDelay = 4;
+
+		var written = Written( people, out _ );
+		var guest = written.People.Single( person => person.ThingId == peep.ThingId ).Guest!.Value;
+		var second = written.People.Single( person => person.ThingId == behind.ThingId ).Guest!.Value;
+
+		Assert.AreEqual( ((int)PeepState.InQueue, thing, 3, behind.ThingId, 0, 1, 4),
+			(guest.State, guest.MajorDest, guest.QueuePos, guest.QNext, guest.QPrev, guest.BeenAdmitted, guest.QueueMoveDelay) );
+		Assert.AreEqual( ((int)PeepState.InQueue, thing, 0, peep.ThingId), (second.State, second.MajorDest, second.QNext, second.QPrev) );
+		Assert.IsFalse( Unimplemented.Summary.Any( gap => gap.What == "SAVE_PARK_GUEST_ON_A_THING" ) );
+		Assert.AreNotEqual( 0, written.People.Single( person => person.ThingId == peep.ThingId ).SpriteSlot, "a queuer keeps their sprite" );
+	}
+
+	/// <summary>
+	/// A rider keeps their sprite on a thing that keeps its riders' (<c>mFlags</c> <c>0x20</c>) and is written with
+	/// none on a thing that does not, as admission leaves them; and a file with two such people reads back.
+	/// </summary>
+	[TestMethod]
+	public void ARiderIsWrittenWithTheSpriteTheirThingKeeps()
+	{
+		var people = new ParkPeople( shipped );
+		var guests = people.Guests.Values.Take( 3 ).ToList();
+		var keeps = shipped.Objects.First( placed => (placed.Flags & ParkWorld.CatalogueObject.KeepsRidersSpriteFlag) != 0 ).ThingId;
+		var keepsNone = shipped.Objects.First( placed => placed.IsPlaced && (placed.Flags & ParkWorld.CatalogueObject.KeepsRidersSpriteFlag) == 0 ).ThingId;
+
+		foreach ( var (guest, thing) in guests.Zip( new[] { keeps, keepsNone, keepsNone } ) )
+		{
+			guest.SetState( PeepState.Riding, 800, new Random( 1 ) );
+			guest.MajorDest = thing;
+		}
+
+		var written = Written( people, out var report );
+
+		int Slot( Peep guest ) => written.People.Single( person => person.ThingId == guest.ThingId ).SpriteSlot;
+
+		Assert.AreNotEqual( 0, Slot( guests[0] ) );
+		Assert.AreEqual( (0, 0), (Slot( guests[1] ), Slot( guests[2] )) );
+		Assert.AreEqual( 16, report.LiveSprites, "eighteen people, two with no sprite" );
+
+		foreach ( var guest in guests )
+			Assert.AreEqual( (int)PeepState.Riding, written.People.Single( person => person.ThingId == guest.ThingId ).Guest!.Value.State );
+
+		// Slot nought is nobody's: the park's sprites are taken over two people who hold it.
+		Assert.AreEqual( 16, ParkGuestSprites.Taken( written ).Count );
+	}
+
+	/// <summary>A guest on a thing the file does not hold is written deciding where they stand, with no queue links, and counted.</summary>
+	[TestMethod]
+	public void AGuestOnAThingNotWrittenDecidesAndIsCounted()
 	{
 		var people = new ParkPeople( shipped );
 		var peep = people.Guests.Values.First();
 
 		peep.SetState( PeepState.InQueue, 800, new Random( 1 ) );
-		peep.MajorDest = shipped.Objects[0].ThingId;
+		peep.MajorDest = 500;
 		peep.QueuePos = 3;
 
 		var written = Written( people, out _ );
@@ -412,6 +476,7 @@ public class ParkFileWriterPeopleTests
 
 		Assert.AreEqual( ((int)PeepState.Deciding, (int)PeepState.Deciding, 0, 0, 0, 0), (guest.State, guest.SavedState, guest.MajorDest, guest.QueuePos, guest.QNext, guest.QPrev) );
 		Assert.AreEqual( 1, Unimplemented.Summary.Single( gap => gap.What == "SAVE_PARK_GUEST_ON_A_THING" ).Times );
+		Assert.AreEqual( 1, Unimplemented.Summary.Single( gap => gap.What == "SAVE_PARK_HANDLE_TO_AN_UNWRITTEN_THING" ).Times );
 		Assert.IsTrue( written.People.Single( person => person.ThingId == peep.ThingId ).Navigator.PathFinished, "standing, on no route" );
 	}
 

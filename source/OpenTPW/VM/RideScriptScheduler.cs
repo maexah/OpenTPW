@@ -210,6 +210,9 @@ public sealed class RideScriptScheduler
 	/// reads them over <c>DAT_008791a4</c> and <c>DAT_008791a8</c>, <c>0x005598d7</c>), so each loaded script
 	/// takes its turns on the ticks it had and a new one is numbered past every saved one.
 	/// </summary>
+	/// <summary>The handle the next new script will be given - the engine's <c>DAT_008791a8</c>, which a park file's header holds.</summary>
+	public int NextHandle => _lastId + 1;
+
 	public void Restore( int tick, int nextHandle )
 	{
 		Tick = tick;

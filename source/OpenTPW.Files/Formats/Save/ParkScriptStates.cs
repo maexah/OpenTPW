@@ -53,7 +53,36 @@ namespace OpenTPW;
 public readonly record struct SavedScript( int Handle, int Position, int BodyWords, int[] Variables,
 	int CallIndex, int HeapIndex, int Result, int[] Stack,
 	uint WaitDeadline, uint AnimationDeadline, int LoopingKey, int AnimationMark, uint TimerDeadline,
-	int[]? Heads = null );
+	int[]? Heads = null, SavedLimboSlot[]? Limbo = null, int InLimbo = 0,
+	SavedBounceSlot[]? Bounce = null, int Bouncing = 0, int BounceBase = 0, int BounceNode = 0,
+	SavedWalkSlot[]? Walk = null, int Thing = 0, int ModelHandle = 0 );
+
+/// <summary>One limbo slot, eight bytes of block 4: who is held, nought for a free slot, and the clock reading they are due back at.</summary>
+public readonly record struct SavedLimboSlot( int Handle, uint Due );
+
+/// <summary>
+/// One bounce slot, sixteen bytes of block 5: who is on it, nought for a free slot, the node they are on, and the clock
+/// readings they are due off at and got on at. A slot let go keeps the last three.
+/// </summary>
+public readonly record struct SavedBounceSlot( int Handle, int Node, uint Due, uint Start );
+
+/// <summary>
+/// One walk slot, thirty-two bytes (FileFormats <c>saves.md</c>, "The walk slots"): its four node ids, the clock
+/// readings its leg began and is due at, the walker, the action, the state (0 free, 1 walking on, 2 on the ride, 3
+/// walking off, 4 off) and the flags. The facing at <c>+0x14</c> and the dword at <c>+0x1c</c> are not taken.
+/// </summary>
+public readonly record struct SavedWalkSlot( short WalkNode, short HeadNode, short OffFrom, short OffTo,
+	uint Start, uint Due, int Handle, short Action, short State, short Flags );
+
+/// <summary>
+/// One running script as a park file's writer takes it (<see cref="ParkScriptStates.Put"/>): what
+/// <see cref="SavedScript"/> reads, each deadline and stamp a reading of the clock the file is written under. A table
+/// that is null, or not the length the file's record holds, leaves the file's.
+/// </summary>
+public readonly record struct WrittenScript( int Handle, int Position, int CallIndex, int HeapIndex, int Result,
+	int[] Stack, int[] Variables, uint WaitDeadline, uint AnimationDeadline, int LoopingKey, int AnimationMark,
+	uint TimerDeadline, SavedLimboSlot[]? Limbo, int InLimbo, SavedBounceSlot[]? Bounce, int Bouncing, int BounceBase,
+	int BounceNode, SavedWalkSlot[]? Walk, int[]? Heads );
 
 /// <summary>
 /// The <c>RSSE</c> module of a park save: every running script's program counter and variables.
@@ -110,12 +139,12 @@ public readonly record struct SavedScript( int Handle, int Position, int BodyWor
 /// </list>
 ///
 /// <para>
-/// <b>What is deliberately not read.</b> The original restores a great deal more per script - the
-/// limbo, bounce and walk tables, the string blob and a run of 32-byte records - and the struct's other
-/// fields with them. Only the counter, the body length, the variables, the stack with its two indices, the
-/// result register, the five fields a clock or an animation keeps (the two wait deadlines, the looping
-/// key, <c>TRIGWAITANIM</c>'s mark and the timer) and the head table are taken, because they are what this program models; the
-/// rest are stepped over by length so that the walk still has to add up. A script's <i>name</i> is not in the struct at all
+/// <b>What is deliberately not read.</b> The original restores more per script - the string blob, the effects it
+/// has started, and the struct's other fields. The counter, the body length, the variables, the stack with its two
+/// indices, the result register, the five fields a clock or an animation keeps (the two wait deadlines, the looping
+/// key, <c>TRIGWAITANIM</c>'s mark and the timer), the limbo, bounce and walk slots with their counts and the head
+/// table are taken, because they are what this program models; the rest are stepped over by length so that the walk
+/// still has to add up. A script's <i>name</i> is not in the struct at all
 /// and is recovered a different way - see <see cref="RideScript.TakeDeclaredName"/>.
 /// </para>
 /// </summary>
@@ -185,6 +214,31 @@ public sealed class ParkScriptStates
 	/// <summary><c>SETTIMER</c>'s deadline - <c>+0xc4</c>, so dword 49.</summary>
 	private const int TimerDeadlineDword = 49;
 
+	/// <summary>How many limbo slots are taken - <c>+0x60</c>, so dword 24.</summary>
+	private const int InLimboDword = 24;
+
+	/// <summary>Two words at <c>+0x6c</c>: how many are bouncing, and <c>BOUNCESETBASE</c>'s value above it.</summary>
+	private const int BouncingAt = 0x6c;
+
+	/// <summary>The base node numbers are counted from, which <c>BOUNCESETNODE</c> sets - <c>+0x70</c>, so dword 28.</summary>
+	private const int BounceNodeDword = 28;
+
+	/// <summary>The id of the script's thing, a word at <c>+0xac</c>.</summary>
+	private const int ThingAt = 0xac;
+
+	/// <summary>The model handle of the script's thing - <c>+0xc8</c>, so dword 50.</summary>
+	private const int ModelHandleDword = 50;
+
+	/// <summary>Which block holds limbo, eight bytes a slot, counting the body as nought.</summary>
+	private const int LimboBlock = 4;
+
+	/// <summary>Which block holds the bounce slots, sixteen bytes a slot.</summary>
+	private const int BounceBlock = 5;
+
+	private const int LimboSlotSize = 8;
+
+	private const int BounceSlotSize = 16;
+
 	/// <summary>
 	/// Length-prefixed blocks between a script's body and its run of 32-byte records. The variables
 	/// are the second of them.
@@ -205,6 +259,17 @@ public sealed class ParkScriptStates
 
 	private readonly Dictionary<int, SavedScript> _byHandle = [];
 	private readonly List<int> _order = [];
+
+	/// <summary>Where each record's struct and tables lie in the payload, by handle - what <see cref="Put"/> writes over.</summary>
+	private readonly Dictionary<int, Place> _places = [];
+
+	/// <summary>A record's struct and the first byte of each table's data; -1 for a table the record lacks.</summary>
+	private readonly record struct Place( int Struct, int Stack, int Variables, int Limbo, int Bounce, int Walk, int Heads );
+
+	/// <summary>Where the header block's dwords begin, and how many bytes it holds; -1 where the module did not read.</summary>
+	private int _headerAt = -1;
+
+	private int _headerBytes;
 
 	/// <summary>
 	/// Why the read stopped, or null where it did not. A surprise here is recorded rather than thrown:
@@ -274,6 +339,9 @@ public sealed class ParkScriptStates
 		var header = ReadInt32();
 		var headerAt = _at;
 
+		_headerAt = headerAt;
+		_headerBytes = header;
+
 		Skip( header );
 
 		var tick = header > TickDword * 4 ? ReadInt32At( headerAt + (TickDword * 4) ) : 0;
@@ -284,7 +352,7 @@ public sealed class ParkScriptStates
 
 		var structSize = ReadInt32();
 
-		if ( Declared < 0 || structSize < (TimerDeadlineDword + 1) * 4 )
+		if ( Declared < 0 || structSize < (ModelHandleDword + 1) * 4 )
 			throw new InvalidDataException( $"the script module says {Declared} scripts of {structSize} bytes" );
 
 		for ( var script = 0; script < Declared; ++script )
@@ -352,23 +420,66 @@ public sealed class ParkScriptStates
 
 		var variables = Array.Empty<int>();
 		var stack = Array.Empty<int>();
+		var limbo = Array.Empty<SavedLimboSlot>();
+		var bounce = Array.Empty<SavedBounceSlot>();
+		int stackAt = -1, variablesAt = -1, limboAt = -1, bounceAt = -1;
 
 		for ( var block = 1; block <= BlocksAfterBody; ++block )
 		{
 			var bytes = ReadInt32();
 
 			if ( block == VariableBlock )
+			{
+				variablesAt = _at;
 				variables = ReadInts( bytes / 4 );
+			}
 			else if ( block == StackBlock )
+			{
+				stackAt = _at;
 				stack = ReadInts( bytes / 4 );
+			}
+			else if ( block == LimboBlock )
+			{
+				limboAt = _at;
+				limbo = new SavedLimboSlot[Slots( bytes, LimboSlotSize )];
+
+				for ( var slot = 0; slot < limbo.Length; ++slot )
+					limbo[slot] = new SavedLimboSlot( ReadInt32(), (uint)ReadInt32() );
+			}
+			else if ( block == BounceBlock )
+			{
+				bounceAt = _at;
+				bounce = new SavedBounceSlot[Slots( bytes, BounceSlotSize )];
+
+				for ( var slot = 0; slot < bounce.Length; ++slot )
+					bounce[slot] = new SavedBounceSlot( ReadInt32(), ReadInt32(), (uint)ReadInt32(), (uint)ReadInt32() );
+			}
 			else
 				Skip( bytes );
 		}
 
-		Skip( ReadInt32() * SubRecordSize );
+		// The walk slots, by their count (FUN_005597a0 reads count << 5 bytes).
+		var walk = new SavedWalkSlot[Slots( checked(ReadInt32() * (long)SubRecordSize), SubRecordSize )];
+		var walkAt = _at;
+
+		for ( var slot = 0; slot < walk.Length; ++slot )
+		{
+			var at = _at;
+
+			Skip( SubRecordSize );
+
+			walk[slot] = new SavedWalkSlot(
+				WalkNode: ReadInt16At( at ), HeadNode: ReadInt16At( at + 0x02 ),
+				OffFrom: ReadInt16At( at + 0x04 ), OffTo: ReadInt16At( at + 0x06 ),
+				Start: (uint)ReadInt32At( at + 0x08 ), Due: (uint)ReadInt32At( at + 0x0c ),
+				Handle: ReadInt32At( at + 0x10 ), Action: ReadInt16At( at + 0x16 ),
+				State: ReadInt16At( at + 0x18 ), Flags: ReadInt16At( at + 0x1a ) );
+		}
 
 		// The head table, by its length in bytes (0x00559d3d..0x00559da7), then the script's directory string (+0x38).
-		var heads = ReadInts( ReadInt32() / 4 );
+		var headBytes = ReadInt32();
+		var headsAt = _at;
+		var heads = ReadInts( headBytes / 4 );
 
 		Skip( ReadInt32() );
 
@@ -387,12 +498,186 @@ public sealed class ParkScriptStates
 		// A handle twice over would make For() answer whichever came first, so the second is refused
 		// rather than quietly dropped.
 		var saved = new SavedScript( handle, position, length, variables, callIndex, heapIndex, result, stack,
-			waitDeadline, animationDeadline, loopingKey, animationMark, timerDeadline, heads );
+			waitDeadline, animationDeadline, loopingKey, animationMark, timerDeadline, heads,
+			limbo, ReadInt32At( start + (InLimboDword * 4) ),
+			bounce, ReadInt16At( start + BouncingAt ), ReadInt16At( start + BouncingAt + 2 ),
+			ReadInt32At( start + (BounceNodeDword * 4) ), walk,
+			(ushort)ReadInt16At( start + ThingAt ), ReadInt32At( start + (ModelHandleDword * 4) ) );
 
 		if ( !_byHandle.TryAdd( handle, saved ) )
 			throw new InvalidDataException( $"two saved scripts both call themselves handle {handle}" );
 
+		_places[handle] = new Place( start, stackAt, variablesAt, limboAt, bounceAt, walkAt, headsAt );
+
 		_order.Add( handle );
+	}
+
+	/// <summary>How many whole slots a block of <paramref name="bytes"/> holds, refused where it runs past the payload.</summary>
+	private int Slots( long bytes, int size )
+	{
+		if ( bytes < 0 || bytes > _data.Length - _at )
+			throw new InvalidDataException( $"a block of {bytes} bytes, with {_data.Length - _at} bytes of payload left" );
+
+		return (int)(bytes / size);
+	}
+
+	/// <summary>What <see cref="Put"/> did: the records written over, and the tables left as the file's because the
+	/// running script's was another length.</summary>
+	public readonly record struct Written( int Scripts, int TablesLeft );
+
+	/// <summary>
+	/// Writes the scheduler's tick and next handle over the header's, and each running script over its record in
+	/// <paramref name="body"/>, a copy of the payload this was read from: the struct's fields
+	/// <see cref="SavedScript"/> reads, and the stack, the variables, limbo, the bounce slots, the walk slots and
+	/// the head table where they lie. The record's other bytes stay the file's: the links to other scripts, the
+	/// name's offset, the speed word, the play rate, the body, the strings and the effects.
+	///
+	/// <para>
+	/// A walk slot's facing (<c>+0x14</c>) and its last dword are not written. A free slot of any of the three
+	/// tables keeps all but its handle and its state, as the engine's does a slot let go. A script the file holds
+	/// no record for is not written.
+	/// </para>
+	/// </summary>
+	/// <exception cref="InvalidOperationException">The module was not read whole, so no record's place is known.</exception>
+	public Written Put( byte[] body, int tick, int nextHandle, IEnumerable<WrittenScript> scripts )
+	{
+		ArgumentNullException.ThrowIfNull( body );
+		ArgumentNullException.ThrowIfNull( scripts );
+
+		if ( Problem != null || !ClosedOnGuard || _headerAt < 0 )
+			throw new InvalidOperationException( $"the park file's scripts were not read whole: {Problem}" );
+
+		if ( _headerBytes >= (TickDword + 1) * 4 )
+			PutInt32( body, _headerAt + (TickDword * 4), tick );
+
+		if ( _headerBytes >= (NextHandleDword + 1) * 4 )
+			PutInt32( body, _headerAt + (NextHandleDword * 4), nextHandle );
+
+		var written = 0;
+		var left = 0;
+
+		foreach ( var script in scripts )
+		{
+			if ( !_places.TryGetValue( script.Handle, out var place ) || !_byHandle.TryGetValue( script.Handle, out var saved ) )
+				continue;
+
+			var at = place.Struct;
+
+			PutInt32( body, at + (PositionDword * 4), script.Position );
+			PutInt32( body, at + (CallIndexDword * 4), script.CallIndex );
+			PutInt32( body, at + (HeapIndexDword * 4), script.HeapIndex );
+			PutInt32( body, at + (ResultDword * 4), script.Result );
+			PutInt32( body, at + (WaitDeadlineDword * 4), (int)script.WaitDeadline );
+			PutInt32( body, at + (AnimationDeadlineDword * 4), (int)script.AnimationDeadline );
+			PutInt32( body, at + (LoopingKeyDword * 4), script.LoopingKey );
+			PutInt32( body, at + (AnimationMarkDword * 4), script.AnimationMark );
+			PutInt32( body, at + (TimerDeadlineDword * 4), (int)script.TimerDeadline );
+
+			if ( script.Stack.Length == saved.Stack.Length )
+				PutInts( body, place.Stack, script.Stack );
+			else
+				++left;
+
+			if ( script.Variables.Length == saved.Variables.Length )
+				PutInts( body, place.Variables, script.Variables );
+			else
+				++left;
+
+			if ( script.Limbo is { } limbo && limbo.Length == saved.Limbo!.Length )
+			{
+				PutInt32( body, at + (InLimboDword * 4), script.InLimbo );
+
+				for ( var slot = 0; slot < limbo.Length; ++slot )
+				{
+					PutInt32( body, place.Limbo + (slot * LimboSlotSize), limbo[slot].Handle );
+
+					if ( limbo[slot].Handle != 0 )
+						PutInt32( body, place.Limbo + (slot * LimboSlotSize) + 4, (int)limbo[slot].Due );
+				}
+			}
+			else
+				++left;
+
+			if ( script.Bounce is { } bounce && bounce.Length == saved.Bounce!.Length )
+			{
+				PutInt16( body, at + BouncingAt, script.Bouncing );
+				PutInt16( body, at + BouncingAt + 2, script.BounceBase );
+				PutInt32( body, at + (BounceNodeDword * 4), script.BounceNode );
+
+				for ( var slot = 0; slot < bounce.Length; ++slot )
+				{
+					var to = place.Bounce + (slot * BounceSlotSize);
+
+					PutInt32( body, to, bounce[slot].Handle );
+
+					if ( bounce[slot].Handle == 0 )
+						continue;
+
+					PutInt32( body, to + 4, bounce[slot].Node );
+					PutInt32( body, to + 8, (int)bounce[slot].Due );
+					PutInt32( body, to + 12, (int)bounce[slot].Start );
+				}
+			}
+			else
+				++left;
+
+			if ( script.Walk is { } walk && walk.Length == saved.Walk!.Length )
+			{
+				for ( var slot = 0; slot < walk.Length; ++slot )
+				{
+					var to = place.Walk + (slot * SubRecordSize);
+
+					PutInt16( body, to + 0x18, walk[slot].State );
+
+					if ( walk[slot].State == 0 )
+					{
+						PutInt32( body, to + 0x10, 0 );
+						continue;
+					}
+
+					PutInt16( body, to, walk[slot].WalkNode );
+					PutInt16( body, to + 0x02, walk[slot].HeadNode );
+					PutInt16( body, to + 0x04, walk[slot].OffFrom );
+					PutInt16( body, to + 0x06, walk[slot].OffTo );
+					PutInt32( body, to + 0x08, (int)walk[slot].Start );
+					PutInt32( body, to + 0x0c, (int)walk[slot].Due );
+					PutInt32( body, to + 0x10, walk[slot].Handle );
+					PutInt16( body, to + 0x16, walk[slot].Action );
+					PutInt16( body, to + 0x1a, walk[slot].Flags );
+				}
+			}
+			else
+				++left;
+
+			if ( script.Heads is { } heads && heads.Length == saved.Heads!.Length )
+				PutInts( body, place.Heads, heads );
+			else
+				++left;
+
+			++written;
+		}
+
+		return new Written( written, left );
+	}
+
+	private static void PutInts( byte[] body, int at, int[] values )
+	{
+		for ( var i = 0; i < values.Length; ++i )
+			PutInt32( body, at + (i * 4), values[i] );
+	}
+
+	private static void PutInt32( byte[] body, int at, int value ) =>
+		System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian( body.AsSpan( at, 4 ), value );
+
+	private static void PutInt16( byte[] body, int at, int value ) =>
+		System.Buffers.Binary.BinaryPrimitives.WriteInt16LittleEndian( body.AsSpan( at, 2 ), unchecked((short)value) );
+
+	private short ReadInt16At( int offset )
+	{
+		if ( offset < 0 || offset + 2 > _data.Length )
+			throw new InvalidDataException( $"a word at 0x{offset:x} runs past the end of the payload" );
+
+		return BitConverter.ToInt16( _data, offset );
 	}
 
 	private int[] ReadInts( int count )

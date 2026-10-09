@@ -328,6 +328,12 @@ public sealed class AnimTimeControl
 		DeferredSpeed = 0f;
 	}
 
+	/// <summary>
+	/// The clip time the engine keeps for a channel held on its last frame: a whole clip after its start stamp
+	/// (<c>0x00473193</c>), which a park file holds; <see cref="AnimTime"/> here lies a clip before it.
+	/// </summary>
+	internal int HeldTime => StartAnimTime + MillisecondsFor( TotalAnimFrames, Speed );
+
 	/// <summary>Whether something is waiting behind the clip that is playing.</summary>
 	public bool HasQueued => DeferredAnimID != RideAnimations.NoRole;
 

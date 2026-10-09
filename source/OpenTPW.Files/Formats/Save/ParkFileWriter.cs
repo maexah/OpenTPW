@@ -9,9 +9,10 @@ namespace OpenTPW;
 ///
 /// <para>
 /// <b>Every module is carried</b>: the body goes out as the file's own, with the fields under <see cref="Running"/>
-/// written over it, the park's people in place of the file's, and its staff pool and arrival timer. Nothing else the running park has changed is
-/// written yet, so a park loaded from the file this writes has the objects and scripts of the file it was loaded
-/// from, among the running park's people, on its ground and under its clock and cash.
+/// written over it, the park's people in place of the file's, its staff pool and arrival timer, and each object,
+/// script and model the file holds as it runs, under the clock moved on (<see cref="RunningThings"/>). Nothing
+/// bought or sold is written yet, so a park loaded from the file this writes has the things of the file it was
+/// loaded from, doing what the running park's were.
 /// </para>
 /// <para>
 /// <b>The container</b> is the version, 500 (<c>0x006fd928</c>), whatever the file loaded carried; the rest of that
@@ -46,11 +47,33 @@ public static class ParkFileWriter
 	/// holds, written in place of the file's (<see cref="ParkWorld.PutPeople"/>); the file's own where it is null.
 	/// <see cref="StaffPool"/> is the pool of candidates (<see cref="ParkWorld.PutStaffPool"/>) and
 	/// <see cref="Arrival"/> the arrival timer (<see cref="ParkWorld.PutArrival"/>), each the file's where it is null.
+	/// <see cref="Things"/> is the objects, their scripts and their models as they run; the file's where it is null.
 	/// </summary>
 	public readonly record struct Running( int GameTick, bool ParkClosed, int VisitorsToDate, int Balance,
 		ParkCameraModule.View Camera, IReadOnlyDictionary<int, ParkWorld.MapCell>? Cells = null,
 		IReadOnlyList<ParkWorld.WrittenPerson>? People = null, ParkWorld.WrittenStaffPool? StaffPool = null,
-		ArrivalTimer? Arrival = null );
+		ArrivalTimer? Arrival = null, RunningThings? Things = null );
+
+	/// <summary>
+	/// The file's objects, scripts and models as the running park has them (<c>docs/exe/saves.md</c>, "OpenTPW's
+	/// writer, the objects"): each written over its own record where it lies.
+	/// </summary>
+	/// <param name="Objects">Each object's record as it runs (<see cref="ParkWorld.PutObjects"/>).</param>
+	/// <param name="SchedulerTick">The script scheduler's tick, the module header's second dword.</param>
+	/// <param name="NextHandle">The handle the next new script will be given, its third.</param>
+	/// <param name="Scripts">Each running script (<see cref="ParkScriptStates.Put"/>).</param>
+	/// <param name="ModelStates">The file's model module, walked with each item's count of channels.</param>
+	/// <param name="Models">Each model's channels and hoarding (<see cref="ParkThingStates.Put"/>).</param>
+	/// <param name="Clock">
+	/// The game clock's reading as the file is written (<see cref="ParkClock.Put"/>): every deadline and stamp in
+	/// <paramref name="Scripts"/> and <paramref name="Models"/> is a reading of it.
+	/// </param>
+	public sealed record RunningThings( IReadOnlyList<ParkWorld.CatalogueObject> Objects, int SchedulerTick,
+		int NextHandle, IReadOnlyList<WrittenScript> Scripts, ParkThingStates ModelStates,
+		IReadOnlyList<WrittenModel> Models, uint Clock );
+
+	/// <summary>What was done with <see cref="RunningThings"/>: the records written over, and the script tables left the file's.</summary>
+	public readonly record struct ThingsWritten( int Objects, int Scripts, int ScriptTablesLeft, int Models );
 
 	/// <summary>
 	/// The arrival timer as it is written: the <c>mGameTick</c> the next load's wait is counted from
@@ -72,6 +95,16 @@ public static class ParkFileWriter
 	/// <inheritdoc cref="Body(ParkWorld, Running)"/>
 	/// <param name="people">What was done with the people; null where <see cref="Running.People"/> is.</param>
 	public static byte[] Body( ParkWorld loaded, Running running, out ParkWorld.PeopleWritten? people )
+		=> Body( loaded, running, out people, out _ );
+
+	/// <inheritdoc cref="Body(ParkWorld, Running)"/>
+	/// <param name="people">What was done with the people; null where <see cref="Running.People"/> is.</param>
+	/// <param name="things">What was done with the things; null where <see cref="Running.Things"/> is.</param>
+	/// <exception cref="InvalidOperationException">
+	/// And where <see cref="Running.Things"/> is given: the file's scripts, models or clock were not read whole.
+	/// </exception>
+	public static byte[] Body( ParkWorld loaded, Running running, out ParkWorld.PeopleWritten? people,
+		out ThingsWritten? things )
 	{
 		ArgumentNullException.ThrowIfNull( loaded );
 
@@ -102,6 +135,18 @@ public static class ParkFileWriter
 		if ( running.Arrival is { } arrival )
 			loaded.PutArrival( body, arrival.TimeSig, arrival.PeopleOnBus, arrival.Offloading );
 
+		things = null;
+
+		if ( running.Things is { } run )
+		{
+			var objects = loaded.PutObjects( body, run.Objects );
+			var scripts = loaded.ScriptStates.Put( body, run.SchedulerTick, run.NextHandle, run.Scripts );
+			var models = run.ModelStates.Put( body, run.Models );
+
+			loaded.Clock.Put( body, run.Clock );
+			things = new ThingsWritten( objects, scripts.Scripts, scripts.TablesLeft, models );
+		}
+
 		people = null;
 
 		// Last: the people change the body's length, and everything above is written where the file has it.
@@ -120,13 +165,18 @@ public static class ParkFileWriter
 
 	/// <inheritdoc cref="Write(ParkWorld, Running)"/>
 	public static byte[] Write( ParkWorld loaded, Running running, out ParkWorld.PeopleWritten? people )
+		=> Write( loaded, running, out people, out _ );
+
+	/// <inheritdoc cref="Write(ParkWorld, Running)"/>
+	public static byte[] Write( ParkWorld loaded, Running running, out ParkWorld.PeopleWritten? people,
+		out ThingsWritten? things )
 	{
 		ArgumentNullException.ThrowIfNull( loaded );
 
 		if ( loaded.Preamble is not { } preamble )
 			throw new InvalidOperationException( "the park was loaded from no file, so there is no preamble to carry" );
 
-		return Container( preamble, Body( loaded, running, out people ) );
+		return Container( preamble, Body( loaded, running, out people, out things ) );
 	}
 
 	/// <summary>A body behind a preamble: the version, the preamble's own bytes after its version, the block.</summary>

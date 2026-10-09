@@ -100,7 +100,7 @@ public sealed partial class ParkWorld : IParkInitialState
 		float StateOfRepair = 0f, float RemainingLife = 0f, BuiltWhen Built = default, int RequestedService = 0,
 		int UpgradeLevel = 0, int MeshInstance = 0, ObjectRings? Rings = null, int QualityOfGoods = 0,
 		int AmountOfSpecialIngredient = 0, int TotalCosts = 0, int CostOfGoods = 0, int ChanceOfWinning = 100,
-		int TimeMarkedForMaintenance = 0 )
+		int TimeMarkedForMaintenance = 0, ushort PersonBeingLoaded = 0 )
 	{
 		/// <summary>
 		/// The bit that makes an object somewhere a guest can be <i>offered</i> - <c>FUN_004fcb10</c>, the
@@ -2024,6 +2024,10 @@ public sealed partial class ParkWorld : IParkInitialState
 			// lands on 1054 - exactly where mPricePerUse is read below, and that agreement is what
 			// makes this an offset rather than a hope.
 			OperatingSpeed: ReadInt32At( start + 1036 ),     // mOperatingSpeed, one dword
+
+			// mPersonBeingLoaded, +0x6c: the guest the object has called forward, a handle; the head of its queue
+			// wherever a file sets it.
+			PersonBeingLoaded: (ushort)ReadUInt16At( start + 1040 ),
 			CostOfGoods: ReadInt32At( start + 1042 ),        // object +0x188, FUN_004db7d0
 			ChanceOfWinning: ReadInt32At( start + 1050 ),    // object +0x190; consumers read its low byte
 			PricePerUse: ReadInt32At( start + 1054 ),        // mPricePerUse - the original clamps it to 0..500

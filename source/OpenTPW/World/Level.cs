@@ -465,12 +465,13 @@ public class Level
 	/// or null where nothing was written.
 	///
 	/// <para>
-	/// <b>Three of the writer's five stages are built</b> (<see cref="ParkFileWriter"/>): the file the park was loaded
+	/// <b>Three of the writer's five stages are built, and the fourth for the things the file holds</b>
+	/// (<see cref="ParkFileWriter"/>): the file the park was loaded
 	/// from goes out again with the park's clock, its door, its visitor count, its cash, the camera, the ground
 	/// (<see cref="WrittenCells"/>), the people (<see cref="ParkPeople.Written"/>), the pool of candidates
-	/// (<see cref="ParkStaffPool.Written"/>) and the arrival timer (<see cref="ParkPeople.WrittenArrival"/>) written
-	/// over it. What else
-	/// play has changed is not written.
+	/// (<see cref="ParkStaffPool.Written"/>), the arrival timer (<see cref="ParkPeople.WrittenArrival"/>) and the
+	/// file's objects, scripts and models as they run (<see cref="ParkState.WrittenObjects"/>,
+	/// <see cref="ParkRides.Written"/>) written over it. A thing bought or sold is not written.
 	/// </para>
 	/// <para>
 	/// <b>Deviations.</b> The original writes the player's <c>gms.dat</c> first and puts the pointer back to its
@@ -481,7 +482,7 @@ public class Level
 	internal string? WritePark( string name )
 	{
 		if ( Kind == Scene.Park && ParkState is { } state )
-			return WritePark( Park, state, ThemeName, name, ParkPeople.Current, ParkStaffPool.Current );
+			return WritePark( Park, state, ThemeName, name, ParkPeople.Current, ParkStaffPool.Current, ParkRides.Current, Catalogue );
 
 		Log.Warning( $"Save: '{name}' is not written - no park is running" );
 		return null;
@@ -489,7 +490,7 @@ public class Level
 
 	/// <summary><see cref="WritePark(string)"/> for a park's own parts, the camera's being the orbit camera's.</summary>
 	internal static string? WritePark( IParkInitialState? park, ParkState state, string theme, string name,
-		ParkPeople? people = null, ParkStaffPool? pool = null )
+		ParkPeople? people = null, ParkStaffPool? pool = null, ParkRides? rides = null, ParkItemCatalogue? catalogue = null )
 	{
 		if ( Players.Roster.Current is not { } player )
 		{
@@ -510,16 +511,28 @@ public class Level
 		// quarter turn written as it stands puts the original's camera on the far side of the point.
 		var cells = WrittenCells( loaded, state );
 
+		// The things: each of the file's objects, its script and its model as it runs. Without the park's scripts, or
+		// where the file's clock, scripts or models did not read, they go out as the file's, and are counted.
+		var things = rides?.Written( loaded, state.WrittenObjects( loaded ),
+			id => catalogue != null && catalogue.TryGet( id, out var item ) ? item.AnimationChannels : 1, state.HoardingFor );
+
+		if ( rides != null && things == null )
+		{
+			Unimplemented.Report( "SAVE_PARK_THINGS_AS_THE_FILE" );
+			Log.Warning( $"Save: '{name}' holds its things as the file had them - the file's clock, scripts or models did not read" );
+		}
+
 		var running = new ParkFileWriter.Running( state.GameTick, state.ParkIsClosed, state.VisitorsToDate, state.Balance,
 			new ParkCameraModule.View( ParkOrbitCameraMode.Zoom, -ParkOrbitCameraMode.Yaw, point.X, point.Y ), cells,
-			people?.Written( WrittenThings( loaded ).Contains ), pool?.Written(), people?.WrittenArrival() );
+			people?.Written( WrittenThings( loaded ).Contains ), pool?.Written(), people?.WrittenArrival(), things );
 
 		byte[] file;
 		ParkWorld.PeopleWritten? peopleWritten;
+		ParkFileWriter.ThingsWritten? thingsWritten;
 
 		try
 		{
-			file = ParkFileWriter.Write( loaded, running, out peopleWritten );
+			file = ParkFileWriter.Write( loaded, running, out peopleWritten, out thingsWritten );
 		}
 		catch ( InvalidOperationException e )
 		{
@@ -533,6 +546,25 @@ public class Level
 		Log.Info( $"Save: wrote {path}, {file.Length} bytes: mGameTick {running.GameTick}, " +
 			$"{(running.ParkClosed ? "closed" : "open")}, {running.VisitorsToDate} visitors to date, balance {running.Balance}, " +
 			$"camera {ParkOrbitCameraMode.State()}, {cells.Count} cells of ground" );
+
+		if ( things != null && thingsWritten is { } wrote )
+		{
+			Log.Info( $"Save: {wrote.Objects} objects, {wrote.Scripts} scripts and {wrote.Models} models written as they run, "
+				+ $"the script scheduler on tick {things.SchedulerTick} with handle {things.NextHandle} next, the clock reading {things.Clock}"
+				+ (wrote.ScriptTablesLeft > 0 ? $"; {wrote.ScriptTablesLeft} script tables of another length left the file's" : "") );
+
+			foreach ( var script in things.Scripts )
+			{
+				var riders = (script.Limbo?.Count( slot => slot.Handle != 0 ) ?? 0)
+					+ (script.Bounce?.Count( slot => slot.Handle != 0 ) ?? 0)
+					+ (script.Walk?.Count( slot => slot.State != 0 ) ?? 0);
+
+				Log.Info( $"Save: script {script.Handle} at word {script.Position}, result {script.Result}, "
+					+ $"wait {(script.WaitDeadline != 0 ? unchecked((int)(script.WaitDeadline - things.Clock)).ToString() : "none")}, "
+					+ $"{riders} in its slots (bouncing {script.Bouncing}: "
+					+ string.Join( ",", (script.Bounce ?? []).Where( slot => slot.Handle != 0 ).Select( slot => $"{slot.Handle}@{slot.Node}" ) ) + ")" );
+			}
+		}
 
 		if ( running.StaffPool is { } candidates )
 		{
