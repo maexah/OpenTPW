@@ -2678,8 +2678,7 @@ public sealed partial class ParkPeople : Entity
 	/// <see cref="ParkWorld.CatalogueObject.KeepsRidersSpriteFlag"/> the ride holds the sprite: a bounce rider
 	/// is on the seat node. Without the flag, admission destroyed the sprite; the eviction makes a new one
 	/// whose position is still nought when the sound reads it (<c>0x004fb3cd</c>, then <c>FUN_004faa00</c>),
-	/// so it plays at the world's origin. A thing bought this session carries no such flag yet
-	/// (<c>BOUGHT_OBJECT_FLAG_BITS</c>).
+	/// so it plays at the world's origin.
 	/// <para>
 	/// <b>A deviation:</b> a walk-on rider (the Jungle Spray's <c>WALKON</c>) is where the <c>WALK</c> stepper
 	/// last put their sprite (<c>FUN_005580a0</c>, <c>FUN_004f9e60</c>). Nothing here places a walk-on rider, so

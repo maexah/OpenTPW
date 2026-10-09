@@ -136,6 +136,32 @@ public sealed partial class ItemDescriptionFile
 	public bool IsIndoors => (_isIndoors ?? _category?._isIndoors ?? 0) != 0;
 
 	/// <summary>
+	/// The bits of an object's <c>mFlags</c> the object constructor <c>FUN_004db090</c> sets from this description,
+	/// a key a bit (<c>0x004db3c0</c>..<c>0x004db496</c>): <c>0x1</c> <c>UsageInfo.ProvidesRelief</c>, <c>0x2</c>
+	/// <c>UsageInfo.ChillsYouOut</c>, <c>0x4</c> <c>Info.IsChoosable</c>, <c>0x8</c> <c>Info.HasQueue</c>, <c>0x10</c>
+	/// <c>UsageInfo.ProvidesSecurity</c>, <c>0x20</c> <c>UsageInfo.RideHandlesSprite</c>, <c>0x40</c>
+	/// <c>UsageInfo.HoldsLitter</c>, <c>0x80</c> <c>UsageInfo.IsFireworks</c> and <c>0x100</c>
+	/// <c>Info.RunsContinuously</c> (docs/exe/saves.md, "OpenTPW's writer, a made object's flags and corner").
+	/// </summary>
+	public int ObjectFlags
+		=> (ProvidesRelief ? 0x1 : 0) | (Set( ChillsYouOutBit ) ? 0x2 : 0) | (IsChoosable ? 0x4 : 0) | (HasQueue ? 0x8 : 0)
+			| (Set( ProvidesSecurityBit ) ? 0x10 : 0) | (Set( RideHandlesSpriteBit ) ? 0x20 : 0)
+			| (Set( HoldsLitterBit ) ? 0x40 : 0) | (Set( IsFireworksBit ) ? 0x80 : 0) | (Set( RunsContinuouslyBit ) ? 0x100 : 0);
+
+	/// <summary>
+	/// <c>Info.MapOffsetX</c> and <c>Info.MapOffsetY</c>, descriptor <c>+0x30</c> and <c>+0x34</c>: the cells from an
+	/// object's anchor to its <c>mTopLeft</c>, which the constructor turns by the object's angle and a half turn
+	/// more (<c>0x004db2da</c>).
+	/// </summary>
+	public (int X, int Y) MapOffset => (_mapOffsetX ?? _category?._mapOffsetX ?? 0, _mapOffsetY ?? _category?._mapOffsetY ?? 0);
+
+	private const int ChillsYouOutBit = 0, ProvidesSecurityBit = 1, RideHandlesSpriteBit = 2, HoldsLitterBit = 3,
+		IsFireworksBit = 4, RunsContinuouslyBit = 5;
+
+	/// <summary>Whether this description, or its category's where it does not say, sets one of <see cref="_flagKeys"/>.</summary>
+	private bool Set( int key ) => (_flagKeys[key] ?? _category?._flagKeys[key] ?? 0) != 0;
+
+	/// <summary>
 	/// Whether a viewer walking in first person may not ride this from its entrance - <c>UsageInfo.CannotRide</c>,
 	/// descriptor <c>+0x118</c>, which <c>FUN_0042a340</c> reads. Its values in the shipped files are FileFormats
 	/// <c>sam.md</c>'s.
@@ -526,6 +552,9 @@ public sealed partial class ItemDescriptionFile
 	private int? _providesRelief;
 	private int? _hasQueue;
 	private int? _isIndoors;
+	private readonly int?[] _flagKeys = new int?[6];
+	private int? _mapOffsetX;
+	private int? _mapOffsetY;
 	private int? _cannotRide;
 	private int? _doHeadProcessing;
 	private int? _excitementLevel;
@@ -741,6 +770,38 @@ public sealed partial class ItemDescriptionFile
 
 				case "UsageInfo.ISIndoors":
 					_isIndoors = Number( line );
+					break;
+
+				case "UsageInfo.ChillsYouOut":
+					_flagKeys[ChillsYouOutBit] = Number( line );
+					break;
+
+				case "UsageInfo.ProvidesSecurity":
+					_flagKeys[ProvidesSecurityBit] = Number( line );
+					break;
+
+				case "UsageInfo.RideHandlesSprite":
+					_flagKeys[RideHandlesSpriteBit] = Number( line );
+					break;
+
+				case "UsageInfo.HoldsLitter":
+					_flagKeys[HoldsLitterBit] = Number( line );
+					break;
+
+				case "UsageInfo.IsFireworks":
+					_flagKeys[IsFireworksBit] = Number( line );
+					break;
+
+				case "Info.RunsContinuously":
+					_flagKeys[RunsContinuouslyBit] = Number( line );
+					break;
+
+				case "Info.MapOffsetX":
+					_mapOffsetX = Number( line );
+					break;
+
+				case "Info.MapOffsetY":
+					_mapOffsetY = Number( line );
 					break;
 
 				case "UsageInfo.CannotRide":

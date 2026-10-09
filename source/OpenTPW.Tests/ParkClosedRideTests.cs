@@ -507,9 +507,9 @@ public class ParkClosedRideTests
 	}
 
 	/// <summary>
-	/// The flags a bought thing is given (<see cref="ParkBuilding.FlagsFor"/>) agree with the save's own on the
-	/// visitable, toilet and queue-path bits for every placed object: the Belly Bounce has a queue on the ground
-	/// and its item <c>Info.HasQueue</c>, the Jungle Spray neither.
+	/// The flags a bought thing is given (<see cref="ParkItemCatalogue.Item.ObjectFlags"/>) are the save's own, the
+	/// whole word, for every placed object: the Belly Bounce has a queue on the ground and its item
+	/// <c>Info.HasQueue</c>, the Jungle Spray neither.
 	/// </summary>
 	[TestMethod]
 	public void ABoughtThingIsFlaggedAsTheSaveFlagsItsOwn()
@@ -518,9 +518,6 @@ public class ParkClosedRideTests
 
 		try
 		{
-			const int Bits = ParkWorld.CatalogueObject.VisitableFlag | ParkWorld.CatalogueObject.ToiletFlag
-				| ParkWorld.CatalogueObject.QueuePathFlag;
-
 			var compared = 0;
 
 			foreach ( var thing in park.World.Objects.Where( thing => thing.IsPlaced ) )
@@ -528,8 +525,7 @@ public class ParkClosedRideTests
 				if ( !park.Catalogue.TryGet( thing.CatalogueId, out var item ) )
 					continue;
 
-				Assert.AreEqual( thing.Flags & Bits, ParkBuilding.FlagsFor( item ) & Bits,
-					$"thing {thing.ThingId} '{item.Name}'" );
+				Assert.AreEqual( thing.Flags, item.ObjectFlags, $"thing {thing.ThingId} '{item.Name}'" );
 				++compared;
 			}
 
@@ -555,7 +551,7 @@ public class ParkClosedRideTests
 		try
 		{
 			Assert.IsTrue( park.Catalogue.TryGet( Thing( park, BellyBounce ).CatalogueId, out var item ), "the item" );
-			Change( park, BellyBounce, thing => thing with { Flags = (ushort)ParkBuilding.FlagsFor( item ), BackOfQueue = 0 } );
+			Change( park, BellyBounce, thing => thing with { Flags = (ushort)item.ObjectFlags, BackOfQueue = 0 } );
 
 			park.State.SetParkClosed( true );
 

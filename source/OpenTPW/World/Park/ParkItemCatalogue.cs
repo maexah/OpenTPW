@@ -119,7 +119,11 @@ public sealed class ParkItemCatalogue
 		ItemShape? Shape = null,
 
 		// What being new adds to AttractionValue, a step of the age each - ItemDescriptionFile.NewBonusAt. ParkWorth reads it.
-		int NewBonus0 = 0, int NewBonus1 = 0, int NewBonus2 = 0 )
+		int NewBonus0 = 0, int NewBonus1 = 0, int NewBonus2 = 0,
+
+		// What an object built of it starts its mFlags at, and the cells from its anchor to its mTopLeft -
+		// ItemDescriptionFile.ObjectFlags and MapOffset. See ParkBuilding.Constructed.
+		int ObjectFlags = 0, int MapOffsetX = 0, int MapOffsetY = 0 )
 	{
 		/// <summary>The bonus of one step of the age, nought past the third - <see cref="ItemDescriptionFile.NewBonusAt"/>.</summary>
 		public int NewBonusAt( int step ) => step switch { 0 => NewBonus0, 1 => NewBonus1, 2 => NewBonus2, _ => 0 };
@@ -343,7 +347,8 @@ public sealed class ParkItemCatalogue
 					[description.BumperAdjust( 0 ), description.BumperAdjust( 90 ), description.BumperAdjust( 180 ),
 						description.BumperAdjust( 270 )],
 					description.SupplementalMeshes, description.Hoarding, description.Shape,
-					description.NewBonusAt( 0 ), description.NewBonusAt( 1 ), description.NewBonusAt( 2 ) );
+					description.NewBonusAt( 0 ), description.NewBonusAt( 1 ), description.NewBonusAt( 2 ),
+					description.ObjectFlags, description.MapOffset.X, description.MapOffset.Y );
 
 			return true;
 		}

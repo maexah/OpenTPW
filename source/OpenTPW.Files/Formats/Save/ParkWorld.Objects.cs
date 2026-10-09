@@ -94,12 +94,6 @@ public sealed partial class ParkWorld
 	/// <c>mTopLeft</c>, its two ends, <c>mIsTrackRideValid</c> 1, six rings of thirty days, the running fields
 	/// (<see cref="PutObject"/>) and 100 in the float no reader here names. Its links are
 	/// <see cref="PutPeople"/>'s to write.
-	///
-	/// <para>
-	/// <b><c>mTopLeft</c> is the anchor cell's id unless the record names one</b>: the constructor adds a pair of
-	/// the item's description that nothing here reads (<c>+0x168</c>), nought for every object of seven park
-	/// files but two (345 of 349).
-	/// </para>
 	/// </summary>
 	public static byte[] MadeObjectRecord( MadeObject made, int meshHandle )
 	{
@@ -132,7 +126,7 @@ public sealed partial class ParkWorld
 		PutInt32( record, 192, thing.RideScript );
 		PutInt32( record, 196, thing.TrackRide );
 		PutInt32( record, 200, thing.IsVisitable ? 0 : 3 );
-		PutUInt16( record, 204, thing.TopLeft != 0 ? thing.TopLeft : (ushort)((cellY * MapSize) + cellX + 1) );
+		PutUInt16( record, 204, thing.TopLeft );
 		PutUInt16( record, 206, thing.EntryPos );
 		PutUInt16( record, 218, thing.ExitPos );
 		PutInt32( record, 222, 1 );

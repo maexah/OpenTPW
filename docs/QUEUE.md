@@ -48,15 +48,20 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q257c. The writer: what else a made record leaves out.** From Q253 (`saves.md`, "What OpenTPW writes"),
-  each counted or said there. A running channel's keep-shown bit `0x8`
+- [ ] **Q257e. The writer: what else a made record leaves out.** The old Q257c's other pieces, from Q253
+  (`saves.md`, "What OpenTPW writes"), each counted or said there. A running channel's keep-shown bit `0x8`
   is kept by no channel here (`SAVE_PARK_CHANNEL_KEEP_SHOWN_BIT`, counted for every made channel that runs). A
   made walk slot in use goes out facing nought (`SAVE_PARK_WALK_SLOT_FACING`). A made script's started effects
-  are not written. `mTopLeft` is the anchor's id, wrong for an item whose description holds the pair at `+0x168`
-  (the Huge Hollow Rock and the Dino Karts Tunnel: name the key and read it). A track ride (its `TRAK` record)
+  are not written. A track ride (its `TRAK` record)
   and a thing with an emitter (`PART`) are left as the file has them, bought or sold (`SAVE_PARK_OBJECT_BOUGHT`,
-  `SAVE_PARK_OBJECT_SOLD`). A camera bought lacks `mFlags` `0x10` (`BOUGHT_OBJECT_FLAG_BITS`). Confirm: each
+  `SAVE_PARK_OBJECT_SOLD`). Confirm: each
   piece's bytes beside a file of the original's own, and the file loaded in the original under Proton.
+  From Q257c: a toilet, a thing that provides security and fireworks stamp a region effect round their cell as
+  they are built (1, 4 and 7) and take it off as they are sold, by the flag; nothing here keeps a cell's
+  effects, a purchase counts it (`BOUGHT_OBJECT_REGION_EFFECT`), a sale does not, and a written park's cells
+  hold none round a bought camera or toilet, so the original, selling one loaded from such a file, takes off
+  what was never put on (`saves.md`, "OpenTPW's writer, a made object's flags and corner"). And the offset's
+  arms at 180 and 270 degrees stand on the listing alone: no file holds such an object.
   From Q254: a queue cell on a tile outside the eight pieces, and every changed queue cell of a park written
   with its things as the file's, is still left naming the file's model and counted
   (`SAVE_PARK_QUEUE_CELL_MODEL`). The model slots are dealt as the file is written (objects, then cells in the
@@ -786,8 +791,8 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
 - [ ] **Q52. A rider on a thing without flag `0x20` is hidden in the original.** Found by Q36's decode. Admission
   tests the object's flag bit `0x20` (`0x0050212b`) and, without it, destroys the rider's sprite (`0x00502147`);
   OpenTPW never hides a rider. Every visitable thing in Lost Kingdom's save carries the bit, so nothing there shows
-  it; a thing bought this session carries none of the bits whose keys are not read (`BOUGHT_OBJECT_FLAG_BITS`).
-  `0x20` is `RideHandlesSprite`, descriptor `+0x104` (`0x004db414`; `park-engine.md`, "Still open"): read it, then
+  it; a thing bought this session carries the bit its item gives it (`UsageInfo.RideHandlesSprite`, read since
+  Q257c), so a bought Crazy Ape, whose item leaves it clear, is the case to run. Then
   build both. Confirm: a guest riding a bought Belly Bounce, `guests`, photographed.
   From Q252: **a rider on a thing WITH the bit is not standing.** In two files of the original's (Alexah's played
   jungle park and `q252/orig/ctl-written-by-the-original.TPWS`) all nine bounce riders' sprites are on program 66,

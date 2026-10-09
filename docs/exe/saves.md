@@ -688,7 +688,8 @@ over the copy, never the one held.
   candidates and the arrival timer theirs ("the staff pool and the arrival timer"), the file's objects, scripts
   and models as they run the fourth's ("OpenTPW's writer, the objects"); a thing bought and a thing sold the
   fifth's; a queue cell's model the sixth's; the arrival vehicle, a balloon let go and a thought read back
-  the seventh's; the rest is Q256, Q257b, Q257c and Q241j.
+  the seventh's; a model record's two tables, a rider's head and a made object's flags and corner their own
+  sections' below; the rest is Q257e and Q241j.
 - **Where.** `Level.WritePark( name )` writes `<player's folder>/<theme>/<name>.TPWS`, replacing a file of that
   name in another case. The console's `savepark <name>` is its one caller; the Save Park screen's OK stays counted
   until Q241j. **Deviations:** the player's `gms.dat` is not written first (Q248) and the pointer is not put back
@@ -1200,7 +1201,8 @@ and the object constructor `FUN_004db090` was read beside the two files.
   nought, script variable 6, the hoardings raised). In seven park files `mX` and `mY` hold `0x80` in the low
   byte, `mState` is 0 or 3 by that rule and the first float reads 100.0 on all 349 placed objects, and `mTopLeft`
   is the anchor's id on 345 (the two items with a pair that is not nought are the Huge Hollow Rock, 1427, and
-  the Dino Karts Tunnel, 1501).
+  the Dino Karts Tunnel, 1501; the pair is `Info.MapOffsetX` and `Y`, "OpenTPW's writer, a made object's flags
+  and corner").
 - **The name** is two rows of the running language's `OBJECT_NAMES.str`. `FUN_004147f0` and `FUN_00414870` walk a
   table in the executable, twelve bytes an item (`0x007488d8`: the item's id, the first line's row, the second's),
   281 items; a ride's name is two rows and any other's one, its second the empty row 1. Each line is copied to 32
@@ -1219,8 +1221,7 @@ and the object constructor `FUN_004db090` was read beside the two files.
 **What OpenTPW writes.**
 
 - **A made object** (`ParkWorld.MadeObjectRecord`): the record as the constructor and the serialiser leave one.
-  `mTopLeft` is the anchor's id, which is wrong for an item whose description holds the pair (not read here; two
-  items of Lost Kingdom's). The bytes past a name's terminator are nought. The date is the park's own stamp of
+  `mTopLeft` and `mFlags` are the item's ("OpenTPW's writer, a made object's flags and corner"). The bytes past a name's terminator are nought. The date is the park's own stamp of
   the purchase. Its queue's back cell and size are read off the map (`ParkState.WrittenObjects`).
 - **The lists** (`ParkWorld.PutPeople`): the made go into the thing list newest first, people and objects by id
   together, and to the head of the object list; the gone are left out of both and the list closes over them. A
@@ -1283,8 +1284,8 @@ its own load do (`q253/sheet-ours-beside-original.png`).
 
 **A queue's first cell laid over a path is the original's**: the ape's entrance cell (42,22) holds links `0x01`
 and the thing's `mBackOfQueue` and `mQueueSizeInCells` the cell (42,21) and 1, in OpenTPW's file and in the
-original's (`park-engine.md`, "The commit hands the player the queue tool"; Q256). A camera bought here has `mFlags` nought where the
-file's own hold `0x10`, a bit of the description not read (`BOUGHT_OBJECT_FLAG_BITS`).
+original's (`park-engine.md`, "The commit hands the player the queue tool"; Q256). A camera bought here held `mFlags` nought in that
+run where the file's own hold `0x10`; it holds `0x10` since Q257c.
 
 **Predictions wrong, mine:** the queue's back cell and size (above: three bytes, restated after the first run);
 and a control's stamp one tick after the tick read before the command (two). **Not predicted:** the camera at
@@ -1591,7 +1592,7 @@ lookup records are left the file's.
 
 **Deviations, each said at its site.** Bit `0x8` is never set, and a file's is kept. A clip promoted from the
 queue is bound whether or not its model is in view. A channel here keeps no keep-shown bit of its own, so a clip
-started since the load applies its hide list (`SAVE_PARK_CHANNEL_KEEP_SHOWN_BIT`, Q257c). Where a channel the file
+started since the load applies its hide list (`SAVE_PARK_CHANNEL_KEEP_SHOWN_BIT`, Q257e). Where a channel the file
 had idle is started, its unnamed last clip's marks cannot be told from another idle channel's, and all go. A
 thing bought whose model will not read declares no tables (`SAVE_PARK_MADE_MODEL_TABLES`, counted), and so no
 head.
@@ -1669,6 +1670,84 @@ control's bananas are empty; the head in the control's right banana at six secon
 boarded itself at 3.4 s. A pale speck at the tip of the control's right banana is in both its frames and was not
 identified. **Seen in the first run only** (`run1/C-off.TPWS`, the build before two small simplifications): the
 file saved after the riders got off; the gate's run did not catch the ride empty in its 200 seconds.
+
+### OpenTPW's writer, a made object's flags and corner
+
+Q257c, split by the session: the item's other pieces are Q257e. A made object's `mFlags`
+and `mTopLeft` come from its item's description, as the object constructor `FUN_004db090` builds them.
+
+**`mFlags`, a key a bit** (`0x004db3c0`..`0x004db496`; the keys by the compiled schema at `0x00744b30`, a
+four-byte slot a key from `Shape` at `+0x18`):
+
+| Bit | Descriptor | Key | The constructor also |
+|---|---|---|---|
+| `0x1` | `+0xf4` | `UsageInfo.ProvidesRelief` | stamps region effect 1 at its cell |
+| `0x2` | `+0xfc` | `UsageInfo.ChillsYouOut` | |
+| `0x4` | `+0x3c` | `Info.IsChoosable` | |
+| `0x8` | `+0x40` | `Info.HasQueue` | closes it (`0x004db712`) |
+| `0x10` | `+0xf0` | `UsageInfo.ProvidesSecurity` | stamps region effect 4 |
+| `0x20` | `+0x104` | `UsageInfo.RideHandlesSprite` | |
+| `0x40` | `+0xf8` | `UsageInfo.HoldsLitter` | |
+| `0x80` | `+0x110` | `UsageInfo.IsFireworks` | stamps region effect 7 |
+| `0x100` | `+0x48` | `Info.RunsContinuously` | |
+
+The destructor `FUN_004dd0a0` unstamps what the constructor stamped, by the flag: effect 4 with `0x10`, effect
+7 with `0x80` while script variable 0 reads under 2, and a toilet's 1 or 6. **Who else reads `0x10`:** the
+object window's opener `FUN_00499b40` shows its control `0x1581` only for a thing carrying it (the round
+button at the window's lower right), and the map's grid filler `FUN_005f3940` (`0x005f4053`) and the loose
+code at `0x004bd828` test it, neither read here.
+
+**`mTopLeft`** (`0x004db2da`): the anchor's packed id plus `MapDelta::Rotate( descriptor + 0x4b0, angle + 180 )`,
+a row 128 and a column 1, not held to the map. `FUN_00413410` copies `+0x4b0`/`+0x4b4` from `+0x30`/`+0x34`,
+which the schema names `Info.MapOffsetX` and `Info.MapOffsetY` (`EngineMapOffsetOverrideX` is `+0x20`,
+`DontApplyOffset` `+0x38`, read by neither function). `mState` is nought with `0x4` and 3 without
+(`0x004db4fb`).
+
+**Measured on every placed object of thirteen of the original's park files** (`q257c/census/`, the files of
+`q257/files-original.txt`; 382 placed): `mFlags` is the nine keys' word and `mTopLeft` the rule's cell on all
+378 whose item the catalogue holds, 0 wrong of each. The four others are upgrades the catalogue does not walk
+(items 1500 and 1501 in Alexah's two Lost Kingdom saves), read by hand from their own files: flags nought, and
+the Dino Karts Tunnel's `Info.MapOffsetY 1` at 90 degrees gives the file's cell, a column before its anchor.
+The Huge Hollow Rock (1427, the same offset) stands unturned a row before its anchor. **No object with an
+offset stands at 180 or 270 degrees in any file**, so those two arms are the listing's alone.
+
+**What OpenTPW builds.** `ItemDescriptionFile.ObjectFlags` and `MapOffset` (each key the item's own, or its
+category's where its file leaves it out), carried by `ParkItemCatalogue.Item`; `ParkBuilding.Constructed`
+gives a purchase and a move's put-down the item's flags, `TopLeftFor`'s corner and `mState`, in the running
+park and so in the record `ParkWorld.MadeObjectRecord` writes. `BOUGHT_OBJECT_FLAG_BITS` is gone. **Not
+built, counted:** the three region effects (`BOUGHT_OBJECT_REGION_EFFECT`, at a purchase of a toilet, a
+security thing or fireworks; no cell effect is kept here, `ride-operation.md`, "The region effects"), so a
+written park's cells hold no effect round a bought camera or toilet, and the original, selling one loaded
+from such a file, takes off an effect that was never put on (filed under Q257e).
+
+**Measured (Q257c, `q257c/`).** Lost Kingdom from `easymode.TPWI`: `buy 1413 46 27 0` (a Security Camera, thing
+43), `buy 1406 46 26 270` (a Litter Bin, 44), `buy 1411 36 25 90` (a Staff Room, 45), `savepark Q257C` under
+`pause` at `mGameTick` 841. `objects` read flags `0x10`, `0x40`, `0x22`, topleft 3503, 3375, 3237 (each its
+anchor's id) and state 3 on the three; `unimplemented` held `BOUGHT_OBJECT_REGION_EFFECT` once and no
+`BOUGHT_OBJECT_FLAG_BITS`. In the file each made record holds the same three fields, and **beside the file's
+own record of the same item** (things 19, 17 and 20) differs nowhere outside the link, the place, the angle,
+the date, the model handle, the script handle, the three cells, `mNext`, the rings and the name's bytes past
+its terminator. OpenTPW's own load read the three back on the same flags and corners (`run2/`, 4 of 4).
+**The control** (`main` with the census's two fields added; `control/`): flags `0x0` and topleft 0 on the three
+and state 0 before the save, `BOUGHT_OBJECT_FLAG_BITS` three times, and byte 58 the one place each record
+differs from the file's own.
+
+**The original under Proton** (`orig/go.sh`, off-screen; `a-load.log` the fix's file, `c-load.log` the
+control's): on the first poll after the load from its Load Park list, and 45 s on, things 43, 44 and 45 hold
+`+0x32` = `0x10`, `0x40`, `0x22` from the fix's file and nought from the control's, and `+0x34` = 3503, 3375,
+3237 from both. **On screen** (`sheet-original-windows.png`): the bought camera's window from the fix's file
+has the round button at its lower right, as the window of the file's own camera has; from the control's file
+the button is missing.
+
+**Predictions wrong, mine:** the upgrade 1501 is not a catalogued item (the census's four "no item" records);
+and two faults of the confirm script, not the game's (a record read one byte long; the gap's count read from
+the wrong wording). **Not predicted:** a bought thing nobody is offered read state 0 in the running park
+before the save and 3 after the load, which the first run's census showed and the constructor's rule mended;
+the bought camera's scrap value reads $ 250 in the original and the file's own $ 125. **Not run in either
+game:** an item with an offset (the Huge Hollow Rock is not in Instant Action's catalogue; tests and the
+thirteen files only), a thing with `0x1`, `0x8`, `0x20`, `0x80` or `0x100` bought (the files and tests
+only), a thing moved. OpenTPW's frames show the three things standing and do not tell the fix from the
+control: flags are not drawn. `docs/exe/addresses.md` not regenerated.
 
 ### Read, not run
 

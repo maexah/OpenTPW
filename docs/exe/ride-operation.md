@@ -2883,7 +2883,9 @@ radius (the byte at `+0x1d910e + 12 × fx` from it) around the cell, clipped to 
 `|dx| + |dy| + 1`. A toilet's constructor stamps 1
 (`0x004db3ee`); the balance file's comments call `RegionFX[1]` "Clean Toilet" (radius 3, Illness 1, Hunger −1) and
 `RegionFX[6]` "Dirty Toilet" (radius 3, Illness 2, Hunger −2). Which of the five words is which key was not read.
-The other call sites, callers not read here, pass 0, 2, 3, 4, 5 and 7.
+The object constructor also stamps 4 for a thing with `UsageInfo.ProvidesSecurity` (`0x004db458`) and 7 for
+fireworks (`0x004db48c`), and the destructor `FUN_004dd0a0` unstamps each by the object's flag (`saves.md`,
+"OpenTPW's writer, a made object's flags and corner"). The other call sites, callers not read here, pass 0, 2, 3 and 5.
 
 **The handyman's cleaning.** With no litter in range (`FUN_004c8ed0` answers 0) the decide `FUN_004d7100` calls
 `FUN_004d7880` (`0x004d72f7`), which walks every object from `mFirstObject` and keeps the nearest toilet that

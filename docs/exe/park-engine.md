@@ -1533,7 +1533,8 @@ first kind **10** into `+0x4a0`/`+0x4a4` as the exit, bit at `+0x4a8`. Two fallb
 reproduced rather than tidied: **no 10 leaves the exit on the entrance**, bit and all, which is why
 `mExitPos == mEntryPos` on ten of Lost Kingdom's eleven placed objects; and **no 9 leaves both at
 nought**, the anchor cell itself, with bits `1` and `0x10`. `+0x4b0`/`+0x4b4` is copied straight from
-`+0x30`/`+0x34`.
+`+0x30`/`+0x34`, `Info.MapOffsetX` and `Info.MapOffsetY` (`saves.md`, "OpenTPW's writer, a made object's flags
+and corner").
 
 **The characters are the executable's own alphabet, and `S` is NOT the entrance.** The shape reader
 `FUN_00402720` looks each character up in a nineteen-row `{ character, kind, bit }` table at
@@ -1886,8 +1887,7 @@ object with flag bit `0x02` by squared cell distance along the live chain, **tes
 **What OpenTPW builds** (`PeepBehaviour.ThingRemoved`, `StaffBehaviour.ThingRemoved`, called through
 `ParkPeople.ThingRemoved` from the demolisher): all of the guest's answer but the event ring, which it does not keep -
 a saved major naming the thing is let go of by every guest (`Peep.SavedMajorDest`, `0x004fb4a6`..`0x004fb4b3`), and
-`mPreviousRides` and the refusal beside it are cleared (`Peep.ForgetThing`, `0x004fb4ba`); the sound, at the seat node, the origin by flag `0x20` (which a thing bought
-this session does not carry yet, `BOUGHT_OBJECT_FLAG_BITS`), or - a deviation - at the feet of a walk-on rider, whom
+`mPreviousRides` and the refusal beside it are cleared (`Peep.ForgetThing`, `0x004fb4ba`); the sound, at the seat node, the origin by flag `0x20`, or - a deviation - at the feet of a walk-on rider, whom
 the original's `WALK` stepper places and nothing here does; and the staff rest-area arms. Nothing here holds a job on a
 thing. The `VAR_STAFFIN` count and message 15 are unbuilt wherever the original touches them - arriving to rest
 (`FUN_00505fe0`), the end of a rest (`FUN_005061d0` at `0x00506286`) and the eviction - and all three count

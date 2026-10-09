@@ -5640,6 +5640,17 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `(0x23, 20)`, `(0x23, 21)`, `(0x23, 22)` on records 10, 1, 12, 13, each slot a resting head; the original held
   the same at its first poll, drew them, and took all four off with its own script (`saves.md`, "OpenTPW's
   writer, a rider's head").
+- [x] **Q257c. The writer: a made object's flags and corner.** From Q253 (`saves.md`, "What OpenTPW writes"). A
+  camera bought lacks `mFlags` `0x10` (`BOUGHT_OBJECT_FLAG_BITS`), and `mTopLeft` is the anchor's id, wrong for an
+  item whose description holds the pair at `+0x4b0` (the Huge Hollow Rock and the Dino Karts Tunnel: name the key
+  and read it). Split by the session from the old Q257c, whose other pieces are Q257e. Confirm: each piece's
+  bytes beside a file of the original's own, and the file loaded in the original under Proton.
+  **Done 2026-10-09:** `mFlags` is nine keys of the description and `mTopLeft` the anchor moved by
+  `Info.MapOffsetX` and `Y` turned a half turn past the angle, 378 of 378 placed objects in thirteen of the
+  original's files; a camera, a bin and a Staff Room bought read `0x10`, `0x40`, `0x22` in the census, in the
+  file and in the original's memory, whose window for the bought camera has the button the control's lacks
+  (`saves.md`, "OpenTPW's writer, a made object's flags and corner"). The rock is not in Instant Action: its
+  offset is not run in either game.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

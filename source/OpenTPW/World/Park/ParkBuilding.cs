@@ -98,11 +98,14 @@ public static class ParkBuilding
 		// single script variable, and ParkRideChoice.CanBeOffered refuses anything without the visitable
 		// bit - so the thing stands and animates and is never used.
 		//
-		// The bits come from FlagsFor, which Constructed asks. The constructor then CLOSES a thing carrying the
+		// The bits are the item's ObjectFlags, which Constructed takes. The constructor then CLOSES a thing carrying the
 		// queue-path bit (0x004db712..0x004db793, as ParkRideOperation.Close does), and the first queue measure
 		// that finds its back connected opens it; BindOperation applies the close after binding the script.
-		Unimplemented.Report( "BOUGHT_OBJECT_FLAG_BITS" );
-
+		//
+		// A toilet, a thing that provides security and fireworks each stamp a region effect round their cell as
+		// they are constructed (1, 4 and 7: 0x004db3ee, 0x004db458, 0x004db48c). No cell effect is kept here.
+		if ( StampsRegionEffect( item ) )
+			Unimplemented.Report( "BOUGHT_OBJECT_REGION_EFFECT" );
 
 		// Where a guest walks up to it, and where one is put down leaving it. The original derives both in
 		// the same constructor, from the item's own footprint picture turned by the angle it is being
@@ -111,9 +114,7 @@ public static class ParkBuilding
 		// nought, so both land on the anchor cell itself - which is what the shipped park stores for each
 		// of its placed things that has none.
 		//
-		// mTopLeft is NOT set. The original writes it from a third descriptor pair this project has not
-		// named, and nothing in this tree reads the field, so setting it would be a guess with no
-		// consequence either way.
+		// mTopLeft is Constructed's, from the item's map offset.
 		var (entryX, entryY) = RotateDelta( item.EntryDeltaX, item.EntryDeltaY, angle );
 		var (exitX, exitY) = RotateDelta( item.ExitDeltaX, item.ExitDeltaY, angle );
 
@@ -236,32 +237,20 @@ public static class ParkBuilding
 		}
 	}
 
+	/// <summary>Whether a thing of this item stamps a region effect as it is constructed: a toilet, security, fireworks.</summary>
+	internal static bool StampsRegionEffect( ParkItemCatalogue.Item item )
+		=> (item.ObjectFlags & (ParkWorld.CatalogueObject.ToiletFlag | 0x10 | ParkWorld.CatalogueObject.IsFireworksFlag)) != 0;
+
 	/// <summary>
-	/// The flags word the object constructor <c>FUN_004db090</c> builds bit by bit out of an item's own
-	/// description (<c>0x004db3f3</c>..<c>0x004db425</c>), as far as this project reads its keys.
+	/// An object's <c>mTopLeft</c> as the object constructor <c>FUN_004db090</c> writes it (<c>0x004db2da</c>): the
+	/// anchor cell's id plus the item's <c>Info.MapOffsetX</c> and <c>Y</c>, turned by the angle and a half turn more.
+	/// The sum is the packed id's own arithmetic, a row 128 and a column 1, and is not held to the map.
 	/// </summary>
-	/// <remarks>
-	/// <b>Three bits are set.</b> <c>Info.IsChoosable</c> (<c>+0x3c</c>) is the visitable bit and
-	/// <c>UsageInfo.ProvidesRelief</c> the toilet bit; <c>Info.HasQueue</c> is the queue-path bit, read from
-	/// <c>+0x40</c> (<c>0x004db420</c>), the entry after <c>IsChoosable</c> in the compiled schema
-	/// (<c>0x00744e3c</c>), two before <c>RunsContinuously</c> at <c>+0x48</c>. The other bits come from
-	/// descriptor fields the item reader does not read (<c>docs/exe/park-engine.md</c>, "Still open"), and are
-	/// left clear and counted (<c>BOUGHT_OBJECT_FLAG_BITS</c>).
-	/// </remarks>
-	internal static int FlagsFor( ParkItemCatalogue.Item item )
+	internal static ushort TopLeftFor( ParkItemCatalogue.Item item, int cellX, int cellY, int angle )
 	{
-		var flags = 0;
+		var (x, y) = RotateDelta( item.MapOffsetX, item.MapOffsetY, (angle + 180) % 360 );
 
-		if ( item.IsChoosable )
-			flags |= ParkWorld.CatalogueObject.VisitableFlag;
-
-		if ( item.ProvidesRelief )
-			flags |= ParkWorld.CatalogueObject.ToiletFlag;
-
-		if ( item.HasQueue )
-			flags |= ParkWorld.CatalogueObject.QueuePathFlag;
-
-		return flags;
+		return unchecked((ushort)(MapStep.CellId( cellX, cellY ) + (y * ParkWorld.MapSize) + x));
 	}
 
 	/// <summary>
@@ -288,7 +277,11 @@ public static class ParkBuilding
 		return new ParkWorld.CatalogueObject(
 			ThingId: thingId, CatalogueId: item.Id,
 			RawX: cellX << 8, RawY: cellY << 8, Angle: angle,
-			Flags: (ushort)FlagsFor( item ),
+			Flags: (ushort)item.ObjectFlags,
+			TopLeft: TopLeftFor( item, cellX, cellY, angle ),
+
+			// mState starts at nought on a thing a guest may be offered and at 3 on any other (0x004db4fb).
+			State: (item.ObjectFlags & ParkWorld.CatalogueObject.VisitableFlag) != 0 ? 0 : 3,
 			CanLoad: 1,
 			EntryPos: (ushort)entryPos,
 			ExitPos: (ushort)exitPos,
@@ -1361,11 +1354,13 @@ public static class ParkBuilding
 			// opens, and a test that wants a ride should not have to probe the park one thing at a time
 			// to find one. The state and mCanLoad say whether it is operating and whether it is closed
 			// (ParkRideOperation.Close). The State of repair is the park's own, which use lowers; staff is
-			// the member assigned to it and marked the park clock when they were.
+			// the member assigned to it and marked the park clock when they were. The flags and the top left
+			// are the record's mFlags and mTopLeft.
 			yield return $"thing {placed.ThingId,3} '{name}' item {placed.CatalogueId} type {type} " +
 				$"at ({placed.CellX},{placed.CellY}) turned {placed.Angle}" +
 				$"{(placed.IsPlaced ? "" : " (not placed)")} state {placed.State} canload {placed.CanLoad}" +
-				$" repair {placed.StateOfRepair:R} staff {placed.AssignedStaff} marked {placed.TimeMarkedForMaintenance}";
+				$" repair {placed.StateOfRepair:R} staff {placed.AssignedStaff} marked {placed.TimeMarkedForMaintenance}" +
+				$" flags 0x{placed.Flags:x} topleft {placed.TopLeft}";
 		}
 	}
 }
