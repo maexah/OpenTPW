@@ -1094,9 +1094,9 @@ and a model's channels their count, so nothing moves, and they go in before the 
   the head table; and in the header the scheduler's tick and the next handle. The record's other bytes stay the
   file's: the links to other scripts, the name's offset, the speed word, the play rate, the scream's handle, the
   body and the strings. The effects it has started are written where the list is as long as the file's, and
-  spliced in where it is not ("OpenTPW's writer, a script's started effects"). A slot let go keeps what it held but its guest and its state, as the
-  engine's does (FileFormats `saves.md`, "A bounce slot"). A walk slot's facing (`+0x14`) is not kept here and
-  stays the file's. **Counted:** a script the file holds no record for (`SAVE_PARK_SCRIPT_MADE_SINCE_THE_LOAD`:
+  spliced in where it is not ("OpenTPW's writer, a script's started effects"). A bounce slot let go keeps what the file
+  held but its guest (FileFormats `saves.md`, "A bounce slot"); a walk slot is written whole, in use or let go
+  ("OpenTPW's writer, a walk slot's facing", "a walk slot let go"). **Counted:** a script the file holds no record for (`SAVE_PARK_SCRIPT_MADE_SINCE_THE_LOAD`:
   a thing bought, a child spawned, and the ferry's and the seaplane's, which a load here makes, two a save), and
   a record whose script has ended (`SAVE_PARK_SCRIPT_ENDED`), left the file's.
 - **A model** (`ParkRides.Written`, `ParkThingStates.Put`), into the record that names its thing's script: each
@@ -1238,7 +1238,7 @@ and the object constructor `FUN_004db090` was read beside the two files.
   `FUN_005587f0` fills it with the running state laid over, the addresses nought, the body and the string blob
   as the `.RSE` file holds them, and its tables. The speed word is the object's operating speed, or the
   loader's 50 where that is nought. The directory is OpenTPW's own path, in lower case (`rides`). A walk slot
-  in use holds its facing, one let go is all nought where the engine's keeps its leftovers, and the effects it
+  is written whole, in use or let go ("OpenTPW's writer, a walk slot let go"), and the effects it
   has started follow its guard ("OpenTPW's writer, a script's started effects"). A gone
   thing's records, its own and any its script started, are taken out, and the count the records are walked by
   is kept.
@@ -1749,7 +1749,7 @@ control: flags are not drawn. `docs/exe/addresses.md` not regenerated.
 
 ### OpenTPW's writer, the region effects
 
-Q257e, split by the session: the staff's are the next section's and the item's other pieces Q257j. The rule, its eight effects and who stamps each
+Q257e, split by the session: the staff's are the next section's and the item's other pieces Q257k. The rule, its eight effects and who stamps each
 are `ride-operation.md`, "The region effects"; a cell's ten bytes are five words, and every cell of thirteen of
 the original's files is what the file's own things stamp.
 
@@ -1793,12 +1793,12 @@ camera, the view being turned, and the second opened a passing member of staff's
 next two clicks confirmed; the running park only, nothing saved, the save sum the same before and after.
 **Not run in either game:** fireworks (no Instant Action item was tried, no file holds one), a toilet bought, a
 toilet dirtied or cleaned and then written (tests only), a thing bought and left out of the file, the objects
-going out as the file's. **Not built:** the fireworks' spent turn (`FIREWORKS_SPENT_REGION_EFFECT`), any reader of the running grid (Q257j,
+going out as the file's. **Not built:** the fireworks' spent turn (`FIREWORKS_SPENT_REGION_EFFECT`), any reader of the running grid (Q257k,
 Q157). `docs/exe/addresses.md` not regenerated.
 
 ### OpenTPW's writer, the staff's region effects
 
-Q257f, split by the session: the item's other pieces are Q257j. The rule is `ride-operation.md`, "The region
+Q257f, split by the session: the item's other pieces are Q257k. The rule is `ride-operation.md`, "The region
 effects", "The staff's two, read whole".
 
 **What OpenTPW writes.** The running grid already holds each entertainer's and guard's effect round
@@ -1886,8 +1886,7 @@ script's record (`ParkScriptStates.Put`) and a made one's (`MadeRecord`). `rides
 `SAVE_PARK_WALK_SLOT_FACING` is gone. **Counted, not built:** a carried rider on a node a clip moves faces as the
 node does at rest, where the engine reads its last drawn frame (`WALK_FACING_REST_POSE`, as they arrive); the
 shake's turn, with its instruction (`WALKST_FLOAT`: of the four themes' catalogued items' scripts only Space Zone's Zero G
-carries it, `q257h/about`, so it is dead by content in Lost Kingdom). **Left:** a made script's slot let go is
-written all nought, where the engine's keeps its nodes, stamps and facing; a kept script's keeps the file's.
+carries it, `q257h/about`, so it is dead by content in Lost Kingdom). A slot let go is the next section's.
 
 **Confirmed in the game** (`q257h/confirm.py`, 5 of 5 off-screen and 5 of 5 on the desktop, and the control's 3
 of 3, each predicted). A Jungle Spray bought on (41,22), turned 0, and the park paused with a guest walking on to
@@ -1906,9 +1905,44 @@ written in the tests alone. A node whose file flags carry `0x400` is read turned
 shipped script carries a rider on one (three walk-space nodes carry it, in Wonder Land's Well Drop and
 Halloween World's Devils Disc).
 
+### OpenTPW's writer, a walk slot let go
+
+Q257j, split by the session: the item's other pieces are Q257k. **`WALKGET` clears a slot's state and its handle and nothing else** (`FUN_00557110`: `+0x18` at `0x0055713f`,
+`+0x10` at `0x00557149`), and `WALKON` takes the first slot whose state is nought and writes every field of it
+(`ride-operation.md`, "The machine"). So a slot let go holds the walk it was let go from until it is taken again:
+its four nodes, the walk off's two stamps, its action, its flags and its facing. **Counted in the thirteen files**
+(`q257j/letgo.py`, the prediction written first): of 281 slots 181 are 32 nought bytes, 36 are in use, and all 64
+let go hold state and handle nought, their nodes, a due past its start and at or before the file's clock, flags
+1 and an action of 1, 6 or 5 (46, 16, 2); the dword at `+0x1c` is nought on all 281.
+
+Built on 2026-10-09 (Q257j). `RideScript.WalkGet` clears the two fields alone; a load reads a free slot as it
+reads one in use (`RestoreRiders`), its stamps moved as every reading is; `Written` hands every slot over, the
+stamps of one no walk has stamped nought (`WalkSlot.Stamped`), and `ParkScriptStates.Put` and `MadeRecord` write a
+free slot whole. So a kept script's slot used and let go since the load is written with that walk, where it was
+left holding the file's before it. `RideScript.LetGo` lists them and `rides` prints `let go:` with each one's
+walk off, leg and facing.
+
+**Confirmed in the game** (`q257j/confirm.py`, 4 of 4 off-screen and 4 of 4 on the desktop, and the control's 2
+of 2, each predicted). A Jungle Spray bought on (41,22), turned 0, and the park paused once a rider had been
+collected: `rides` reads `let go: 0:2->4 leg 700 facing 4`, lane 2's walk off; the file's record of script 18
+holds on slot 0 walk 4, head 2, off 2 to 4, start 114394737, due 114395437, handle 0, facing 4, action 6, state
+0, flags 1, and its never-used slot 32 nought bytes; loaded here the census reads the same. The build before's
+file, written after slot 1's rider was collected, holds that slot as 32 nought bytes. **In the original under
+Proton** (`q257j/orig/go.sh`, off-screen, entering the park on the file, every slot not all nought read from
+memory each 0.05 s): at the first poll script 18's slot 0 held the file's twelve fields with this build's file
+(`orig/a-load.log`), and with the build before's the collected slot was all nought (`orig/c-load.log`). The
+original then let its own riders go, which is `WALKGET` measured live: slot 1 went from state 4, guest 33 to state
+0, guest 0 with its nodes, 114396982, 114398082, facing 3, action 6 and flags 1 untouched, and so
+did each of the twelve let go in the two runs.
+
+**Not seen:** any difference on screen, in either game: nothing reads a free slot before `WALKON` rewrites it, so
+the photographs show the stall and do not tell the fix from the control. The file's own Jungle Spray let nobody go
+before either pause, so a kept script's let-go slot is written in the tests alone. Lanes 1 and 3 were not let go
+at a pause here (lane 1's leftovers, leg 1100 facing 3, are the original's own in the log).
+
 ### OpenTPW's writer, a script's started effects
 
-Q257i, split by the session: the item's other pieces are Q257j. **A script's object list is the effects its
+Q257i, split by the session: the item's other pieces are Q257k. **A script's object list is the effects its
 `ADDOBJ`s have started and no `KILLOBJ` has stopped** (`park.md`, "ADDOBJ"): a doubly linked list at `+0xb0` of
 28-byte records, the newest at the head.
 
@@ -1975,7 +2009,7 @@ a load (the toilet's two are the same five words; the rule is the reader's listi
 drawn or heard in OpenTPW, and the original draws no smoke on a made kiosk with either file, so the photographs
 show the things bought and do not tell the fix from the control. **Not built:** the engine's spawn that fails
 and frees its record (every `ADDOBJ` of a known type keeps one here); the handle `SETOBJPARAM` stores back; the
-emitter itself (`PART`, Q257j).
+emitter itself (`PART`, Q257k).
 
 ### Read, not run
 

@@ -358,7 +358,7 @@ public class ParkFileWriterBoughtAndSoldTests
 		{
 			Limbo = [new( 31, 5000 ), default], InLimbo = 1,
 			Bounce = [default, new( 32, 2, 7000, 6000 )], Bouncing = 1, BounceBase = 8,
-			Walk = [new( 1, 2, 3, 4, 100, 200, 33, 5, 2, 6, Facing: 7 ), default],
+			Walk = [new( 1, 2, 3, 4, 100, 200, 33, 5, 2, 6, Facing: 7 ), new( 4, 2, 2, 4, 300, 1000, 0, 6, 0, 1, Facing: 4 )],
 			Heads = [0, 34],
 		};
 
@@ -373,7 +373,7 @@ public class ParkFileWriterBoughtAndSoldTests
 		CollectionAssert.AreEqual( new SavedLimboSlot[] { new( 31, 5000 ), default }, saved.Limbo );
 		CollectionAssert.AreEqual( new SavedBounceSlot[] { default, new( 32, 2, 7000, 6000 ) }, saved.Bounce );
 		Assert.AreEqual( new SavedWalkSlot( 1, 2, 3, 4, 100, 200, 33, 5, 2, 6, Facing: 7 ), saved.Walk![0] );
-		Assert.AreEqual( default, saved.Walk[1] );
+		Assert.AreEqual( new SavedWalkSlot( 4, 2, 2, 4, 300, 1000, 0, 6, 0, 1, Facing: 4 ), saved.Walk[1], "a slot let go, whole" );
 		CollectionAssert.AreEqual( new[] { 0, 34 }, saved.Heads );
 		Assert.AreEqual( (1, 1, 8), (saved.InLimbo, saved.Bouncing, saved.BounceBase) );
 	}

@@ -120,20 +120,18 @@ public sealed partial class ParkScriptStates
 		{
 			var bytes = new byte[SubRecordSize];
 
-			if ( slot.State != 0 )
-			{
-				PutInt16( bytes, 0x00, slot.WalkNode );
-				PutInt16( bytes, 0x02, slot.HeadNode );
-				PutInt16( bytes, 0x04, slot.OffFrom );
-				PutInt16( bytes, 0x06, slot.OffTo );
-				PutInt32( bytes, 0x08, (int)slot.Start );
-				PutInt32( bytes, 0x0c, (int)slot.Due );
-				PutInt32( bytes, 0x10, slot.Handle );
-				PutInt16( bytes, 0x14, slot.Facing );
-				PutInt16( bytes, 0x16, slot.Action );
-				PutInt16( bytes, 0x18, slot.State );
-				PutInt16( bytes, 0x1a, slot.Flags );
-			}
+			// A free slot whole too: one let go keeps all but its state and its handle, and one never used is nought.
+			PutInt16( bytes, 0x00, slot.WalkNode );
+			PutInt16( bytes, 0x02, slot.HeadNode );
+			PutInt16( bytes, 0x04, slot.OffFrom );
+			PutInt16( bytes, 0x06, slot.OffTo );
+			PutInt32( bytes, 0x08, (int)slot.Start );
+			PutInt32( bytes, 0x0c, (int)slot.Due );
+			PutInt32( bytes, 0x10, slot.Handle );
+			PutInt16( bytes, 0x14, slot.Facing );
+			PutInt16( bytes, 0x16, slot.Action );
+			PutInt16( bytes, 0x18, slot.State );
+			PutInt16( bytes, 0x1a, slot.Flags );
 
 			writer.Write( bytes );
 		}

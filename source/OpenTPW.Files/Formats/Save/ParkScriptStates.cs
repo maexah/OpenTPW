@@ -77,7 +77,9 @@ public readonly record struct SavedBounceSlot( int Handle, int Node, uint Due, u
 /// <summary>
 /// One walk slot, thirty-two bytes (FileFormats <c>saves.md</c>, "The walk slots"): its four node ids, the clock
 /// readings its leg began and is due at, the walker, the action, the state (0 free, 1 walking on, 2 on the ride, 3
-/// walking off, 4 off), the flags and the facing, one of eight ways. The dword at <c>+0x1c</c> is not taken.
+/// walking off, 4 off), the flags and the facing, one of eight ways. A free slot is nought where no walk has used
+/// it, and holds its last walk's all but the state and the walker where it was let go. The dword at <c>+0x1c</c> is
+/// not taken.
 /// </summary>
 public readonly record struct SavedWalkSlot( short WalkNode, short HeadNode, short OffFrom, short OffTo,
 	uint Start, uint Due, int Handle, short Action, short State, short Flags, short Facing = 0 );
@@ -666,14 +668,8 @@ public sealed partial class ParkScriptStates
 				{
 					var to = place.Walk + (slot * SubRecordSize);
 
+					// A free slot whole too: one let go keeps all but its state and its handle (FUN_00557110).
 					PutInt16( body, to + 0x18, walk[slot].State );
-
-					if ( walk[slot].State == 0 )
-					{
-						PutInt32( body, to + 0x10, 0 );
-						continue;
-					}
-
 					PutInt16( body, to, walk[slot].WalkNode );
 					PutInt16( body, to + 0x02, walk[slot].HeadNode );
 					PutInt16( body, to + 0x04, walk[slot].OffFrom );

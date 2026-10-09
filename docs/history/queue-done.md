@@ -5692,6 +5692,15 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `5:93@10/-1/-1`, `1:58@1/1/0` and two `@1/1/1` in `rides` and in the file, where the build before's file held
   the three lists empty, and the original held 7 live records at its first poll with this build's file, the
   three scripts' among them word for word, and 3 with the build before's.
+- [x] **Q257j. The writer: a walk slot let go.** Split from the old Q257j at its first piece (2026-10-09);
+  the rest is Q257k. `WALKGET` clears a slot's state and its handle and nothing else (`FUN_00557110`), so a slot
+  let go holds its last walk until a `WALKON` takes it (`saves.md`, "OpenTPW's writer, a walk slot let go"; 64 of
+  64 let-go slots in thirteen files, 181 never used all nought). A script here lets a slot go the same way, a
+  load reads a free slot's leftovers, and the writer writes a free slot whole, a made script's and a kept one's.
+  **Proof:** a bought Jungle Spray with a rider collected reads `let go: 0:2->4 leg 700 facing 4` in `rides` and
+  the same twelve fields in the file, where the build before's file held the collected slot as 32 nought bytes,
+  and the original held the file's slot in memory at its first poll with this build's file and noughts with the
+  build before's, then let twelve of its own go the same way.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

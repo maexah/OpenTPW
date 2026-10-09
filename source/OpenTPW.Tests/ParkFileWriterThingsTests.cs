@@ -357,7 +357,10 @@ public class ParkFileWriterThingsTests
 		Assert.AreEqual( 1, Int( written, place.Struct + 0x60 ), "the count taken" );
 	}
 
-	/// <summary>A slot let go keeps what it held but its guest and its state, as the engine's does.</summary>
+	/// <summary>
+	/// A bounce slot let go keeps what the file held but its guest. A walk slot is written as the script hands it over,
+	/// free or not: one let go since the load goes out with the walk it was let go from, not the file's before it.
+	/// </summary>
 	[TestMethod]
 	public void AFreeSlotKeepsItsStaleReadings()
 	{
@@ -381,11 +384,11 @@ public class ParkFileWriterThingsTests
 
 		file.ScriptStates.Put( written, 0, 0, [
 			AsWritten( file.ScriptStates.For( BouncyScript )!.Value ) with { Bounce = new SavedBounceSlot[10] },
-			AsWritten( file.ScriptStates.For( SprayScript )!.Value ) with { Walk = new SavedWalkSlot[3] }] );
+			AsWritten( file.ScriptStates.For( SprayScript )!.Value ) with { Walk = [new SavedWalkSlot( 4, 2, 2, 4, 900, 1600, 0, 6, 0, 1, Facing: 4 ), default, default] }] );
 
 		Assert.AreEqual( (0, 1, 700, 600), (Int( written, bouncy.Bounce ), Int( written, bouncy.Bounce + 4 ), Int( written, bouncy.Bounce + 8 ), Int( written, bouncy.Bounce + 12 )) );
-		Assert.AreEqual( (9, 800, 0, 0), (BitConverter.ToInt16( written, spray.Walk ), Int( written, spray.Walk + 8 ), Int( written, spray.Walk + 16 ), (int)BitConverter.ToInt16( written, spray.Walk + 0x18 )) );
-		Assert.AreEqual( 5, BitConverter.ToInt16( written, spray.Walk + 0x14 ), "the facing it was let go with" );
+		Assert.AreEqual( new SavedWalkSlot( 4, 2, 2, 4, 900, 1600, 0, 6, 0, 1, Facing: 4 ), new ParkWorld( written ).ScriptStates.For( SprayScript )!.Value.Walk![0],
+			"the walk it was let go from since the load, whole" );
 	}
 
 	/// <summary>A table of another length than the file's record holds is left, and said; a script the file does not hold is not written.</summary>

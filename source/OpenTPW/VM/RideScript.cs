@@ -391,6 +391,21 @@ public sealed class RideScript
 	}
 
 	/// <summary>
+	/// Every walk slot let go and not taken again, with the leftovers <c>WALKGET</c> leaves in it: the walk off it
+	/// was let go from, that leg's length and its facing. The console's ride census, and what a test reads.
+	/// </summary>
+	public IEnumerable<(int Slot, int From, int To, int Leg, int Facing)> LetGo()
+	{
+		for ( var slot = 0; slot < _walk.Length; ++slot )
+		{
+			var left = _walk[slot];
+
+			if ( left.State == WalkState.Free && left.Stamped )
+				yield return (slot, left.OffFrom, left.OffTo, (int)(left.Due - left.Start), left.Facing);
+		}
+	}
+
+	/// <summary>
 	/// How many are bouncing - the engine's <c>+0x6c</c>, and <b>sixteen bits</b>, which is why
 	/// <c>BOUNCING</c> sign-extends it (<c>MOVSX</c>) rather than simply loading it.
 	/// </summary>
@@ -528,6 +543,12 @@ public sealed class RideScript
 		/// every step (<c>0x00557f80</c>).
 		/// </summary>
 		public short Facing;
+
+		/// <summary>
+		/// Whether a walk has stamped this slot: a leg is never shorter than <see cref="WalkFloor"/>, so the two
+		/// stamps of one that has are never both nought.
+		/// </summary>
+		public readonly bool Stamped => Start != 0f || Due != 0f;
 	}
 
 	/// <summary>
@@ -1068,22 +1089,21 @@ public sealed class RideScript
 		{
 			for ( var slot = 0; slot < walk.Length; ++slot )
 			{
-				_walk[slot] = walk[slot].State == 0
-					? default
-					: new WalkSlot
-					{
-						Handle = walk[slot].Handle,
-						WalkNode = walk[slot].WalkNode,
-						HeadNode = walk[slot].HeadNode,
-						OffFrom = walk[slot].OffFrom,
-						OffTo = walk[slot].OffTo,
-						Start = onThisClock( walk[slot].Start ) ?? 0f,
-						Due = onThisClock( walk[slot].Due ) ?? 0f,
-						Action = walk[slot].Action,
-						State = (WalkState)walk[slot].State,
-						Flags = walk[slot].Flags,
-						Facing = walk[slot].Facing,
-					};
+				// A free slot too: one let go holds its last walk's leftovers, and one never used holds nought.
+				_walk[slot] = new WalkSlot
+				{
+					Handle = walk[slot].Handle,
+					WalkNode = walk[slot].WalkNode,
+					HeadNode = walk[slot].HeadNode,
+					OffFrom = walk[slot].OffFrom,
+					OffTo = walk[slot].OffTo,
+					Start = onThisClock( walk[slot].Start ) ?? 0f,
+					Due = onThisClock( walk[slot].Due ) ?? 0f,
+					Action = walk[slot].Action,
+					State = (WalkState)walk[slot].State,
+					Flags = walk[slot].Flags,
+					Facing = walk[slot].Facing,
+				};
 
 				riders += walk[slot].State != 0 ? 1 : 0;
 			}
@@ -1096,7 +1116,7 @@ public sealed class RideScript
 	/// This script as a park file's writer takes it: everything <see cref="ParkScriptStates"/> reads of a record,
 	/// as it stands now. Each deadline and stamp goes through <paramref name="reading"/>, which turns a moment on
 	/// the clock this script is driven with into a reading of the clock the file is written under; an empty
-	/// deadline is the engine's nought, and a free slot's readings are nought.
+	/// deadline is the engine's nought, and so are the readings of a walk slot no walk has stamped.
 	///
 	/// <para>
 	/// <b>The readings a script keeps in its variables are turned too</b>, each one <see cref="MoveKeptReadings"/>
@@ -1137,10 +1157,10 @@ public sealed class RideScript
 				? default
 				: new SavedBounceSlot( slot.Handle, slot.Node, reading( slot.Expiry ), reading( slot.Start ) ) )],
 			Bouncing: _bouncing, BounceBase: _bounceBase, BounceNode: _bounceNode,
-			Walk: [.. _walk.Select( slot => slot.State == WalkState.Free
-				? default
-				: new SavedWalkSlot( slot.WalkNode, slot.HeadNode, slot.OffFrom, slot.OffTo, reading( slot.Start ),
-					reading( slot.Due ), slot.Handle, slot.Action, (short)slot.State, slot.Flags, slot.Facing ) )],
+			// A slot no walk has stamped holds nought, and one let go the stamps of the walk off it was let go from.
+			Walk: [.. _walk.Select( slot => new SavedWalkSlot( slot.WalkNode, slot.HeadNode, slot.OffFrom, slot.OffTo,
+				slot.Stamped ? reading( slot.Start ) : 0, slot.Stamped ? reading( slot.Due ) : 0, slot.Handle, slot.Action,
+				(short)slot.State, slot.Flags, slot.Facing ) )],
 			Heads: [.. _heads],
 			Effects: Effects?.Written() );
 	}
@@ -2507,7 +2527,9 @@ public sealed class RideScript
 	/// <c>ADD VAR_ONRIDE, 65535</c> - minus one - when somebody was collected.
 	/// </para>
 	/// <para>
-	/// Only a slot in <see cref="WalkState.Done"/> answers, and collecting it frees the slot outright.
+	/// Only a slot in <see cref="WalkState.Done"/> answers, and collecting it clears its state and its handle
+	/// alone (<c>0x0055713f</c>, <c>0x00557149</c>): the slot keeps its nodes, its two stamps, its action, its flags
+	/// and its facing until the next <c>WALKON</c> takes it, and a park file is written with them.
 	/// </para>
 	/// </summary>
 	private int WalkGet()
@@ -2519,7 +2541,8 @@ public sealed class RideScript
 
 			var handle = _walk[slot].Handle;
 
-			_walk[slot] = default;
+			_walk[slot].State = WalkState.Free;
+			_walk[slot].Handle = 0;
 
 			return handle;
 		}

@@ -387,6 +387,87 @@ public class RideScriptWalkTests
 		Assert.AreEqual( 100, done.Leg, "a finished walk off keeps the leg it walked" );
 	}
 
+	/// <summary>A script's riders as a park file holds them, with these walk slots and nothing else.</summary>
+	private static SavedScript Holding( params SavedWalkSlot[] walk )
+		=> new( 1, 0, 0, [], 0, 0, 0, [], 0, 0, 0, 0, 0, Walk: walk );
+
+	/// <summary>
+	/// <b><c>WALKGET</c> clears a slot's state and its handle alone</b> (<c>0x0055713f</c>, <c>0x00557149</c>): the
+	/// slot keeps its four nodes, its two stamps, its action, its flags and its facing, and is written with them; a
+	/// slot no walk has used is nought. Emptying the slot whole fails this.
+	/// </summary>
+	[TestMethod]
+	public void ASlotLetGoKeepsAllButItsWalkerAndItsState()
+	{
+		var script = new RideScript( Build( walkSlots: 2,
+			Word( Opcode.WALKGET ), Var( 0 ),
+			Word( Opcode.END ) ) );
+
+		var done = new SavedWalkSlot( 4, 2, 2, 4, 5000, 5700, Rider, 6, (short)RideScript.WalkState.Done, 1, Facing: 4 );
+
+		// The file's moment is the walk off's start, so that stamp is nought on this clock and the slot is stamped still.
+		Assert.AreEqual( 1, script.RestoreRiders( Holding( done, default ), reading => reading != 0 ? reading - 5000f : null ) );
+		Assert.IsFalse( script.LetGo().Any(), "a slot done is still held" );
+
+		script.Turn( 1000f );
+
+		Assert.IsFalse( script.Walking().Any(), "the slot is free" );
+		Assert.AreEqual( (0, 2, 4, 700, 4), script.LetGo().Single(), "and keeps the walk off it was let go from" );
+
+		var written = script.Written( moment => (uint)(moment + 5000f) ).Walk!;
+
+		Assert.AreEqual( done with { Handle = 0, State = 0 }, written[0] );
+		Assert.AreEqual( default, written[1], "a slot no walk has used is nought, stamps and all" );
+	}
+
+	/// <summary>
+	/// A let-go slot read from a park file comes back with its leftovers and goes out again the same, and it holds
+	/// nobody. Dropping a free slot at the load fails this.
+	/// </summary>
+	[TestMethod]
+	public void ASlotLetGoComesBackFromAFileAndGoesOutAgain()
+	{
+		var script = new RideScript( Build( walkSlots: 3, Word( Opcode.END ) ) );
+		var left = new SavedWalkSlot( 4, 1, 1, 4, 114453842, 114454942, 0, 6, 0, 1, Facing: 3 );
+		var carried = new SavedWalkSlot( 4, 2, 2, 4, 114800000, 114800700, Rider, 6, 2, 1 );
+
+		// The file's moment is 114,803,355 and the load's here 2,000: each reading keeps its distance from it.
+		Assert.AreEqual( 1, script.RestoreRiders( Holding( left, carried, default ),
+			reading => reading != 0 ? 2000f + (int)(reading - 114803355u) : null ), "a slot let go holds nobody" );
+
+		Assert.AreEqual( (0, 1, 4, 1100, 3), script.LetGo().Single() );
+		Assert.AreEqual( 1, script.Walking().Single().Slot );
+
+		var written = script.Written( moment => unchecked(114803355u + (uint)(int)(moment - 2000f)) ).Walk!;
+
+		CollectionAssert.AreEqual( new[] { left, carried, default }, written );
+	}
+
+	/// <summary>
+	/// <c>WALKON</c> takes the first slot whose state is nought, a let-go one as readily as one never used, and
+	/// leaves nothing of the walk before in it.
+	/// </summary>
+	[TestMethod]
+	public void AWalkOnTakesASlotLetGoAndLeavesNothingOfTheWalkBefore()
+	{
+		var script = new RideScript( Build( walkSlots: 2,
+			Word( Opcode.WALKON ), Rider, 1, 1, 1, 1, 1, 1,
+			Word( Opcode.END ) ) );
+
+		script.RestoreRiders( Holding( new SavedWalkSlot( 4, 2, 2, 4, 5000, 5700, 0, 6, 0, 1, Facing: 4 ), default ),
+			reading => reading != 0 ? reading : null );
+
+		// A hundred milliseconds before this clock's nought, so the leg is due on it and the slot is stamped still.
+		script.Turn( -100f );
+
+		Assert.IsFalse( script.LetGo().Any() );
+
+		var taken = script.Written( moment => (uint)(moment + 9100f) ).Walk!;
+
+		Assert.AreEqual( new SavedWalkSlot( 1, 1, 1, 1, 9000, 9100, Rider, 1, 1, 1 ), taken[0] );
+		Assert.AreEqual( default, taken[1] );
+	}
+
 	/// <summary>
 	/// <b>The whole round trip, on the shipped script: a rider walks on, the lane's clip runs, and the ride
 	/// gives him back.</b> This is what the <c>_CH</c> family is for.
