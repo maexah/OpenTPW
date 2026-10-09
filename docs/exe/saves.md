@@ -686,7 +686,8 @@ over the copy, never the one held.
   and scripts of the file it was first loaded from, under the new clock, count, cash and camera. The ground is
   the second stage's ("OpenTPW's writer, the cells"), the people the third's ("the people"), the pool of
   candidates and the arrival timer theirs ("the staff pool and the arrival timer"), the file's objects, scripts
-  and models as they run the fourth's ("OpenTPW's writer, the objects"); the rest is Q253 to Q255 and Q241j.
+  and models as they run the fourth's ("OpenTPW's writer, the objects"); a thing bought and a thing sold the
+  fifth's; the rest is Q254, Q255 and Q241j.
 - **Where.** `Level.WritePark( name )` writes `<player's folder>/<theme>/<name>.TPWS`, replacing a file of that
   name in another case. The console's `savepark <name>` is its one caller; the Save Park screen's OK stays counted
   until Q241j. **Deviations:** the player's `gms.dat` is not written first (Q248) and the pointer is not put back
@@ -720,10 +721,10 @@ in the copied body, where it lies.
   the original writes none such.
 - **`mWho` is not written here.** The chain is the cell's head and the things' two links together (above): the
   people's stage writes it for every cell a person stood on or stands on ("OpenTPW's writer, the people"), and
-  an object's place in it is still the file's (Q253).
+  an object's place in it is the fifth stage's ("OpenTPW's writer, a thing bought and a thing sold").
 - **A footprint is not written, and is counted** (`SAVE_PARK_FOOTPRINT_CELL`, one a cell): a cell that has joined
   or left a footprint (types 4, 9 and 10), or changed its type or parent inside one, is left as the file's,
-  because the thing bought, sold or moved is not written yet (Q253). An entrance that only gained or lost a link
+  unless the thing bought or sold is written with it (the fifth stage). An entrance that only gained or lost a link
   is written.
 - **A queue cell is written without its model, and is counted** (`SAVE_PARK_QUEUE_CELL_MODEL`): a queue cell
   laid, cleared or tiled again goes out with the file's `mMeshInstance`, so a new one names no model and a
@@ -1075,7 +1076,8 @@ empty slot and read back so). **OpenTPW was not run**: `ParkWorld` was not asked
 
 ### OpenTPW's writer, the objects
 
-The fourth stage (Q252), for the things the file holds; nothing bought or sold is written yet (Q253). Every
+The fourth stage (Q252), for the things the file holds; a thing bought or sold is the fifth's ("OpenTPW's
+writer, a thing bought and a thing sold"). Every
 record is written over where it lies: an object's is its fixed 1,099 bytes, a script's tables keep their lengths
 and a model's channels their count, so nothing moves, and they go in before the people.
 
@@ -1179,11 +1181,130 @@ run in either game, tested only:** a guest in limbo (no script of the shipped pa
 reading in a variable; a hoarding raised; a clip queued; an object sold; a queue edited; a
 head on a node; a file whose clock will not read. `docs/exe/addresses.md` not regenerated.
 
+### OpenTPW's writer, a thing bought and a thing sold
+
+The fifth stage (Q253). An object the park holds and the file does not is written whole, its three records made;
+one the file holds and the park does not is taken out. Both lengths change, so the scripts and the models are
+built again from the back of the file forwards and the world goes out with the people.
+
+**What the game leaves in a record it has just made** was measured first: the original bought a Crazy Ape on
+(41,22), saved, sold it and saved again (`q253/orig/bought-by-the-original.TPWS`, `sold-by-the-original.TPWS`),
+and the object constructor `FUN_004db090` was read beside the two files.
+
+- **The object.** The constructor joins set `0xb` (`FUN_0040f9e0`), writes `mTopLeft`, the entry and the exit as
+  the anchor cell plus a pair of the item's description each, turned by the angle, and the three floats `+0x44`,
+  `+0x48` and `+0x4c` as 100.0; builds `mFlags` from the description; sets `mState` nought for a thing a guest may
+  be offered and 3 for any other (`0x004db4fb`, `FUN_004e0e60`); pushes the item's starting speed into the script
+  and keeps it; stamps the date from the park's calendar; adds one to its item's object control and stamps the
+  control with `mGameTick` where it reads nought (`FUN_004d3d10`); copies the two lines of its name
+  (`FUN_00413020` into `+0x3c8`, `FUN_004130b0` into `+0x40a`); and closes a thing with a queue (`mCanLoad`
+  nought, script variable 6, the hoardings raised). In seven park files `mX` and `mY` hold `0x80` in the low
+  byte, `mState` is 0 or 3 by that rule and the first float reads 100.0 on all 349 placed objects, and `mTopLeft`
+  is the anchor's id on 345 (the two items with a pair that is not nought are the Huge Hollow Rock, 1427, and
+  the Dino Karts Tunnel, 1501).
+- **The name** is two rows of the running language's `OBJECT_NAMES.str`. `FUN_004147f0` and `FUN_00414870` walk a
+  table in the executable, twelve bytes an item (`0x007488d8`: the item's id, the first line's row, the second's),
+  281 items; a ride's name is two rows and any other's one, its second the empty row 1. Each line is copied to 32
+  characters. The fresh record's bytes past each terminator are unwritten memory.
+- **The cells.** All sixteen cells of the ape's footprint hold type 4 (9 on the entrance, 10 on the exit), the
+  anchor's packed id as their parent and tile `(0, 8, 0)`; only the anchor names the thing in `mWho`. The sale
+  left all sixteen bare on tile `(0, 55, 0)`. Every footprint cell of seven park files is on tile 8 and every
+  bare cell on 55. The entrance holds one link, `0x01`, to the queue cell the placer laid over the path before
+  it, and that cell `mMeshInstance` 92, its own model.
+- **The script and the model.** The fresh script record is first in its module under the header's next handle,
+  with `-1` at `+0x98` (369 of 374 records in six files), the object's speed 60 as its speed word and its
+  directory `data\levels\jungle\Rides\monkey\`. The model took the slot at the cursor, 90, and the queue piece
+  91; the sale emptied both and left the cursor on 90, the lowest empty slot. The sale also took the item's count
+  to nought and left its stamp.
+
+**What OpenTPW writes.**
+
+- **A made object** (`ParkWorld.MadeObjectRecord`): the record as the constructor and the serialiser leave one.
+  `mTopLeft` is the anchor's id, which is wrong for an item whose description holds the pair (not read here; two
+  items of Lost Kingdom's). The bytes past a name's terminator are nought. The date is the park's own stamp of
+  the purchase. Its queue's back cell and size are read off the map (`ParkState.WrittenObjects`).
+- **The lists** (`ParkWorld.PutPeople`): the made go into the thing list newest first, people and objects by id
+  together, and to the head of the object list; the gone are left out of both and the list closes over them. A
+  made object stands on its anchor cell's chain behind whoever stands there, and a gone one's cell is headed
+  anew. Set `0xb` takes the made and every set loses the gone.
+- **The cells** (`Level.WrittenCells`): a cell that has joined the footprint of a thing written, or left the
+  footprint of a thing taken out, is written, on tile 8 under a footprint, which the park here does not keep;
+  a cell left bare is on tile 55 already, as a sale here leaves it. A footprint of a thing that is not written
+  is still counted and left
+  (`SAVE_PARK_FOOTPRINT_CELL`).
+- **A made script** (`RideScript.Made`, `ParkScriptStates.MadeRecord`, `Splice`): the struct as the loader
+  `FUN_005587f0` fills it with the running state laid over, the addresses nought, the body and the string blob
+  as the `.RSE` file holds them, and its tables. The speed word is the object's operating speed, or the
+  loader's 50 where that is nought. The directory is OpenTPW's own path, in lower case (`rides`). A walk slot's
+  facing is nought (`SAVE_PARK_WALK_SLOT_FACING` where one is in use) and no started effect is written. A gone
+  thing's records, its own and any its script started, are taken out, and the count the records are walked by
+  is kept.
+- **A made model** (`ParkThingStates.Plan`, `MadeRecord`, `Splice`): the slot at the cursor, the lowest empty
+  one once the gone are let go, the older of two made taking the lower; the item, the `mTopLeft` cell, the item's
+  footprint, the placer's flags `0x32f`, the script, the hoarding as it stands, the angle and the channels as
+  they run. **It declares no node words and no lookup records**, which the reader answers by keeping the fresh
+  model's own (above), so a head hung on a node and a node a script has hidden are not in it
+  (`SAVE_PARK_HEAD_ON_A_MODEL_NODE`), and a running channel's keep-shown bit is not known
+  (`SAVE_PARK_CHANNEL_KEEP_SHOWN_BIT`). The header's three counts are kept.
+- **The controls** (`ParkWorld.PutControls`): every item's standing count and first-build stamp as
+  `ParkState.BuiltItems` runs them.
+- **Not written, counted, and left as the file has them:** a track ride, whose record in the track-rides module
+  is not made or taken out, and a thing whose folder holds an emitter (`SAVE_PARK_OBJECT_BOUGHT`,
+  `SAVE_PARK_OBJECT_SOLD`); with them stay their cells. A queue cell's model is Q254's.
+- **A bought thing's state of repair and remaining life start at 100** in the running park too
+  (`ParkBuilding.Constructed`): they started at nought, so a bought toilet was dirty before anyone had used it.
+
+**Measured (Q253, `q253/`).** Lost Kingdom from `easymode.TPWI`: `buy 1101 41 22 0` (a Crazy Ape, thing 43, on
+the cell the original built its own on), `buy 1413 46 27 0` (a Security Camera, thing 44), `sell 16` (the Drinks
+Shop), `savepark Q253` under `pause` at `mGameTick` 848. `rides` read script 18 at word 26 with no wait for the ape
+and script 19 at word 8 with 384 ms to wait for the camera. A Python reader of the file found 43 things headed 44,
+43, 42; fifteen objects, the chain 44, 43, 15, 24 and on; **thing 43's record the same as the original's own
+bought ape's in every byte** outside the list link, the date, the name's tail, the script handle (18 for 16: the
+ferry's and the seaplane's scripts take 16 and 17 at a load here), the rings, and the queue's back cell and size
+(below); the names `Crazy` and `Ape`; **the script's record the original's own in every dword of the struct** but
+the addresses and the handle, with the same body, strings, variables and head table (its stack's twenty slots,
+none of them live, are nought here and mostly `0xFFFFFFFF` there, and its folder reads `rides` for `Rides`);
+model handle 91 item 1101 on (41,22), four by four, flags `0x32f`, script 18, hoarding `0x9` at 1.0, no tables, one
+channel on role 0 held; the camera in handle 92; no thing 16, no script 6, handle 116 empty, the header 162, 6, 92;
+set `0xb` without 16 and with 43 and 44; the shop's four cells bare on tile `(0, 55, 0)`; the ape's sixteen cells
+the same as the original's file's in model, parent, tile, type and `mWho`; the controls 1203 at 0 with its stamp
+15, 1101 at 1 stamped 778, 1413 at 3. **OpenTPW's own load** of the file read fifteen things in `rides`, 43 on
+script 18 at word 26, 44 on script 19, no 16, and both still there 82 sweeps on.
+
+**The original under Proton**, the file loaded from its Load Park screen and its memory polled every 50 ms: on the
+first poll `mGameTick` 848; 43 things and `mFirstObject` 44; thing 43 item 1101 on (41,22) on model handle 91 and
+thing 44 item 1413 on (46,27) on handle 92; no thing 16; the model table 162 present, 6 empty, cursor 92, handle
+91 naming script 18 and 92 script 19; script 18 on thing 43 and model 91 at word 26 with no wait; and **script 19
+on thing 44 at word 8 with its deadline 384 ms past the file's clock, the wait written**. Its counter moved to
+word 11 between 0.51 and 0.56 s after the load, two sweeps on, and it went on through the camera's four waits,
+1,669, 5,138, 1,579 and 10,031 ms, as the file's own camera did beside it (1,669, 5,089, 1,552, 10,028). 178
+sweeps on both things and both scripts were as they had been. The frame after the load shows the ape under its
+hoardings, the camera's pole and the litter bin with no shop beside it, as OpenTPW's frames at the save and after
+its own load do (`q253/sheet-ours-beside-original.png`).
+
+**OpenTPW's placer parts from the original where a queue's first cell is laid over a path**, found by the file's
+three differing bytes: the ape's entrance cell (42,22) holds links `0x82` here and `0x01` in the original's file.
+Clearing the path under the stub takes the entrance's link to it, and the path cells either side then link to
+the entrance diagonally. With no link the queue is not measured, so `mBackOfQueue` and `mQueueSizeInCells` go out
+nought where the original's hold the stub's cell and 1 (Q256). A camera bought here has `mFlags` nought where the
+file's own hold `0x10`, a bit of the description not read (`BOUGHT_OBJECT_FLAG_BITS`).
+
+**Predictions wrong, mine:** the queue's back cell and size (above: three bytes, restated after the first run);
+and a control's stamp one tick after the tick read before the command (two). **Not predicted:** the camera at
+zoom 50 from the north stood inside the ape's head in both games; the frames are from the south at 110. **Found
+by the bugs put back:** a bought thing's queue is read off the map already (the placer's rewalk marks it), a sold
+thing's cells are on bare ground's tile already, and no name is longer than a line: three lines of this stage
+that did nothing were taken out. **Not run in either game, tested only:** a thing sold whose slot a thing bought
+then takes, two things bought on one cell's chain with a person, a made script with riders or a walker, a table
+with no empty slot, a track ride or an emitter bought or sold (counted and left), a thing bought and sold again
+before the save, a save with no people handed over (refused). **Not run in the original:** a made thing with a
+guest queueing or riding (the ape was shut), a made thing turned, a made shop. **In the original the things, the
+slots and the scripts are its memory's** (`orig/look.py`); the two things in its frame are told from the file's
+own by where they stand, by eye. `docs/exe/addresses.md` not regenerated.
+
 ### Read, not run
 
-A thing bought or sold has been loaded by the original from a file made by hand, not from one OpenTPW wrote
-("The objects, their scripts and their models"); the objects' other rules above are the ten files' and the
-listing's.
+The objects' other rules above are the ten files' and the listing's.
 **Not run in either game:** a guest gone (tested; one run met one), a table grown past its hundred slots, a
 person written on an object's cell, a member of staff resting or in the hand at the save, a guard hired. **Not read:** what `mLastRecordedMapId`, `mNextServiceInterval` and the sprite
 record's words past `+0xcc` hold, which a made record leaves at nought and the original walked on with. The
@@ -1208,7 +1329,11 @@ and 60 s on; the frames; `first/`, the first run's). Q250's is `q250/`: `confirm
 and script modules walked record by record; `rsse-census.txt`), `riders.py` (who is on a thing, both halves),
 `make.py` (the hand-made files), `ghidra/` (the loader, the retile and the object serialiser), `PREDICTION.txt`,
 and `orig/` (`look.py`, the original's objects, model slots and scripts from memory, once or polled; `a-load.log`
-and `b-load.log`, the polls across the two loads; the frames `e1`, `e2`, `f2`) with the sheet of the three.
+and `b-load.log`, the polls across the two loads; the frames `e1`, `e2`, `f2`) with the sheet of the three. Q253's is `q253/`: `look.py` (a made object's three records, its cells and its control),
+`orig/bought-by-the-original.TPWS` and `sold-by-the-original.TPWS` (the original's own saves of a Crazy Ape bought
+and sold), `004db090.c` (the object constructor), `gen_names.py` (the name rows out of the executable),
+`confirm.py`, `loadonly.py`, `PREDICTION.txt`, `mutate.py`, and `orig/` (`go.sh`, `look.py`, the polls
+`g-load.log` and `r2-load.log`, the frames) with the sheet.
 
 ## What OpenTPW builds
 

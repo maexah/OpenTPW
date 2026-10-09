@@ -44,30 +44,6 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q253. The writer: a thing bought and a thing sold.** From Q241i. After Q252. A bought object's record
-  written whole at the head of the thing list and of the object list (`mFirstObject`, `mNext`), in set `0xb`,
-  its item's object control counted and stamped; its footprint's cells with the object's `mWho`, `mMapChild`
-  and `mMapParent`; a script record made from its `RideScript` under the scheduler's handle, first in `RSSE`;
-  a model slot at the cursor of `RSYS`, the header's three counts kept. A sold one's three records left out,
-  its cells bare, its slot empty. A track ride or an emitter bought or sold is counted (`TRAK`'s car is not
-  decoded; `FUN_004368f0`). Measure first what an object record made from nothing may leave at nought: Q241i's
-  made camera was a copy of another's record. Confirm: a ride bought and a shop sold here, written, standing
-  and running in the original under Proton, its script's wait predicted; a screenshot of each.
-  From Q241g: **a footprint**: `Level.WrittenCells` leaves a cell that has joined or left a footprint, or
-  changed its type or parent inside one, as the file's (`SAVE_PARK_FOOTPRINT_CELL`); write those cells with
-  the object's record.
-  From Q252: the kept things' stage counts what is this item's: an object sold is left the file's
-  (`SAVE_PARK_OBJECT_SOLD`; `ParkState.WrittenObjects`), and a script the file holds no record for is not written
-  (`SAVE_PARK_SCRIPT_MADE_SINCE_THE_LOAD`: a thing bought, a child spawned, and the ferry's and the seaplane's,
-  which a load here makes afresh, two a save; a record whose script has ended is `SAVE_PARK_SCRIPT_ENDED`). **A
-  head hung on a ride's node is not in its model's record** (`SAVE_PARK_HEAD_ON_A_MODEL_NODE`): the lookup records'
-  attached handles and the node flag words are left the file's, and the rides that hang heads are all bought ones
-  in Easymode. A channel's keep-shown bit (`0x8`) and a walk slot's facing (`+0x14`) are kept by nothing here and
-  go out as the file's (`SAVE_PARK_CHANNEL_KEEP_SHOWN_BIT` for the first): for a made record they must be made.
-  From Q241h: **a handle to a thing bought here is written as nought**
-  (`SAVE_PARK_HANDLE_TO_AN_UNWRITTEN_THING`; `Level.WrittenThings` is the list to widen). A made thing's id is
-  one past the park's highest, where the original uses a freed id again (Q26c). `PutPeople` chains a person
-  ahead of the file's objects on a cell; an object bought goes behind the people there.
 - [ ] **Q254. The writer: a queue cell's model.** From Q241g and Q241i. A queue cell laid, cleared or tiled
   again is written with the file's `mMeshInstance` (`SAVE_PARK_QUEUE_CELL_MODEL`), and the original draws a
   queue cell that names no model black, ground and all (`q241i/orig/e2-made-and-gone.png`). The handle is a
@@ -89,6 +65,28 @@ the research lab), then the rest of this section in its old order.
   and `mTimeBubbleShown` are a guest's alone in `ParkPeople`, so a kept member is written with nought for both
   until they think again, and no saved bubble is shown again, a guest's (`SAVED_THOUGHT_BUBBLE`) or a
   member's (uncounted). Read both back, and make the bubble from its sprite's picture.
+- [ ] **Q256. A ride bought with its entrance facing a path has no link to its queue.** Found by Q253, whose
+  file lay beside the original's own save of the same purchase (`q253/orig/bought-by-the-original.TPWS`,
+  `q253/gate/Q253.TPWS`; `saves.md`, "OpenTPW's placer parts from the original"). A Crazy Ape bought on (41,22)
+  lays its queue's first cell on (42,21), a path: the original's entrance cell (42,22) then holds links `0x01`,
+  OpenTPW's `0x82`. `ParkBuilding.LayQueueStub` clears the path under the stub (`ForceClearPath`) after
+  `MarkWaysInAndOut` has written the entrance's half, which takes it away again, and the path cells either side
+  then link to the entrance diagonally, which the original's do not. So `ParkRideChoice.StartOfQueue` finds no
+  queue, `mBackOfQueue` and `mQueueSizeInCells` read nought, and the queue tool has nothing to grow from. Read
+  the placer's order in `FUN_00528a70` (`0x005297e7`..`0x00529890`) and what the path linker does at an entrance,
+  then build it. Confirm: `buy 1101 41 22 0`, `cell 42 22` reading links `0x01`, the queue grown to a path and
+  the ride open; the written file's three bytes the original's; a screenshot.
+- [ ] **Q257. The writer: what a made record leaves out.** From Q253 (`saves.md`, "What OpenTPW writes"), each
+  counted or said there. A made model's record declares no node words and no lookup records, so a head hung on
+  a node and a node a script has hidden are not in it (`SAVE_PARK_HEAD_ON_A_MODEL_NODE`; the kept records' tables
+  are left the file's too): write both tables from the running model. A running channel's keep-shown bit `0x8`
+  is kept by no channel here (`SAVE_PARK_CHANNEL_KEEP_SHOWN_BIT`, counted for every made channel that runs). A
+  made walk slot in use goes out facing nought (`SAVE_PARK_WALK_SLOT_FACING`). A made script's started effects
+  are not written. `mTopLeft` is the anchor's id, wrong for an item whose description holds the pair at `+0x168`
+  (the Huge Hollow Rock and the Dino Karts Tunnel: name the key and read it). A track ride (its `TRAK` record)
+  and a thing with an emitter (`PART`) are left as the file has them, bought or sold (`SAVE_PARK_OBJECT_BOUGHT`,
+  `SAVE_PARK_OBJECT_SOLD`). A camera bought lacks `mFlags` `0x10` (`BOUGHT_OBJECT_FLAG_BITS`). Confirm: a ride
+  with riders' heads on its nodes bought and written, the heads on the same nodes in the original under Proton.
 - [ ] **Q241j. The writer: the managers, then Save Game saves.** From Q241e. The economy thing's loans and rings,
   the staff HQ's strikes, the calendar's and the weather's fields; then `ParkSaveScreen.Save` writes
   (`SAVE_GAME_WRITER` gone), an overwrite replaces the file, and the Load Park list shows it. Confirm: a park

@@ -481,22 +481,38 @@ public sealed class ParkState
 	/// record is still the file's.
 	/// </summary>
 	internal List<ParkWorld.CatalogueObject> WrittenObjects( ParkWorld loaded )
+		=> WrittenObjects( loaded, null, out _, out _ );
+
+	/// <summary>
+	/// <see cref="WrittenObjects(ParkWorld)"/>, with the objects bought and sold since the load
+	/// (<c>docs/exe/saves.md</c>, "OpenTPW's writer, a thing bought and a thing sold"): in <paramref name="made"/>
+	/// each object the park holds and the file does not, the newest first, as it runs; in <paramref name="gone"/>
+	/// the id of each object of the file's that no longer stands.
+	///
+	/// <para>
+	/// <b>Only an item <paramref name="writable"/> passes is written so.</b> A thing of any other item (a track
+	/// ride, a thing with an emitter) is counted and left as it was: one sold stays in the file, one bought is not
+	/// in it. With no test given nothing is made or taken out.
+	/// </para>
+	/// </summary>
+	internal List<ParkWorld.CatalogueObject> WrittenObjects( ParkWorld loaded, Func<int, bool>? writable,
+		out List<ParkWorld.CatalogueObject> made, out HashSet<int> gone )
 	{
 		var written = new List<ParkWorld.CatalogueObject>( loaded.Objects.Count );
+		var held = new HashSet<int>();
 
-		foreach ( var file in loaded.Objects )
+		made = [];
+		gone = [];
+
+		// A thing bought has had its queue rewalked by the placer once the first cell was down (FUN_004de1f0 at
+		// 0x00529890), so its pair is read off the map as an edited queue's is.
+		ParkWorld.CatalogueObject AsItRuns( ParkWorld.CatalogueObject now )
 		{
-			if ( !TryObject( file.ThingId, out var now ) )
-			{
-				Unimplemented.Report( "SAVE_PARK_OBJECT_SOLD" );
-				continue;
-			}
-
 			var (back, cells) = QueueWasInvalidated( now.ThingId )
 				? ParkRideChoice.QueueCellsFor( _park, now )
 				: (now.BackOfQueue, now.QueueSizeInCells);
 
-			written.Add( now with
+			return now with
 			{
 				FirstInQueue = (ushort)FirstInQueue( now.ThingId ),
 				PersonBeingLoaded = (ushort)PersonBeingLoaded( now.ThingId ),
@@ -505,11 +521,42 @@ public sealed class ParkState
 				TotalTakings = TakingsFor( now.ThingId ),
 				TotalCosts = CostsFor( now.ThingId ),
 				Rings = RingsFor( now.ThingId ).Written(),
-			} );
+			};
+		}
+
+		foreach ( var file in loaded.Objects )
+		{
+			held.Add( file.ThingId );
+
+			if ( !TryObject( file.ThingId, out var now ) )
+			{
+				if ( writable?.Invoke( file.CatalogueId ) == true )
+					gone.Add( file.ThingId );
+				else
+					Unimplemented.Report( "SAVE_PARK_OBJECT_SOLD" );
+
+				continue;
+			}
+
+			written.Add( AsItRuns( now ) );
+		}
+
+		if ( writable == null )
+			return written;
+
+		foreach ( var now in _objects.Where( thing => !held.Contains( thing.ThingId ) ).OrderByDescending( thing => thing.ThingId ) )
+		{
+			if ( writable( now.CatalogueId ) )
+				made.Add( AsItRuns( now ) );
+			else
+				Unimplemented.Report( "SAVE_PARK_OBJECT_BOUGHT" );
 		}
 
 		return written;
 	}
+
+	/// <summary>Every item's standing count and first-build stamp as the park runs them, for a park file's object controls.</summary>
+	internal IReadOnlyDictionary<int, (int Standing, uint FirstBuilt)> BuiltItems => _built;
 
 	/// <summary>
 	/// The State of repair below which a toilet is dirty - 25.0 (<c>0x00700550</c>), which the original holds the

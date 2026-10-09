@@ -1634,9 +1634,14 @@ public sealed partial class ParkWorld : IParkInitialState
 	/// <summary>The used records, the first <c>mNumObjectControls</c> of the 150, in the file's order.</summary>
 	public IReadOnlyList<ObjectControl> ObjectControlRecords { get; private set; } = [];
 
+	/// <summary>Where the 150 object controls begin in the payload.</summary>
+	private int _controlsAt = -1;
+
 	private void ReadObjectControls()
 	{
 		var start = _at;
+
+		_controlsAt = start;
 
 		Skip( ObjectControls * ObjectControlSize );
 

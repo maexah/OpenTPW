@@ -863,9 +863,10 @@ public sealed class ParkRides : Entity
 	/// </para>
 	/// <para>
 	/// A script is written under the handle the scheduler runs it on, into the file's record of that handle; one
-	/// the file holds no record for (a thing bought, a child spawned) is not written, and a record whose script
-	/// has ended is left as the file's, each counted (the scheduler drops a script as it ends). A model is written into the record that names its thing's
-	/// script.
+	/// the file holds no record for (a child spawned) is not written, and a record whose script has ended is left
+	/// as the file's, each counted (the scheduler drops a script as it ends). A model is written into the record
+	/// that names its thing's script. A thing bought is handed over whole, its script as it runs with what its
+	/// loader took from its file and its model's channels, and a thing sold by its id.
 	/// </para>
 	/// <para>
 	/// <b>A channel is written as the engine keeps one</b>: a held channel's clip time a whole clip after its
@@ -880,8 +881,12 @@ public sealed class ParkRides : Entity
 	/// <param name="objects">The file's objects as they run, in the file's order.</param>
 	/// <param name="channelsFor">How many channels an item's model runs, its <c>NumSimultAnims</c>.</param>
 	/// <param name="hoardingFor">A thing's hoarding, or null for a thing with none.</param>
+	/// <param name="bought">The objects bought since the load, each written whole with its script and its model.</param>
+	/// <param name="gone">The file's objects sold since, whose records are taken out.</param>
+	/// <param name="built">Each item's standing count and first-build stamp.</param>
 	internal ParkFileWriter.RunningThings? Written( ParkWorld loaded, IReadOnlyList<ParkWorld.CatalogueObject> objects,
-		Func<int, int> channelsFor, Func<int, RideHoardingState?> hoardingFor )
+		Func<int, int> channelsFor, Func<int, RideHoardingState?> hoardingFor, IReadOnlyList<BoughtThing>? bought = null,
+		IReadOnlySet<int>? gone = null, IReadOnlyDictionary<int, (int Standing, uint FirstBuilt)>? built = null )
 	{
 		if ( _clock?.Reading is not { } saved || loaded.ScriptStates.Problem != null )
 			return null;
@@ -895,12 +900,60 @@ public sealed class ParkRides : Entity
 
 		uint Reading( float moment ) => unchecked(saved + (uint)(int)(moment - _loaded));
 
+		// The things bought: each one's script whole, and its model's channels with no record of the file's under them.
+		var made = new List<ParkFileWriter.MadeThing>();
+		var madeHandles = new HashSet<int>();
+
+		foreach ( var thing in bought ?? [] )
+		{
+			var placed = thing.Object.Object;
+			MadeScript? record = null;
+			RideAnimations? animations = null;
+
+			if ( _scripts.TryGetValue( placed.ThingId, out var handle ) && Scheduler.Find( handle ) is { } script )
+			{
+				record = script.Made( Reading, placed.OperatingSpeed > 0 ? placed.OperatingSpeed : ParkScriptStates.LoaderSpeed,
+					thing.Directory );
+				madeHandles.Add( handle );
+				animations = script.Animations;
+
+				if ( script.Heads().Any() )
+					Unimplemented.Report( "SAVE_PARK_HEAD_ON_A_MODEL_NODE" );
+
+				// A walk here keeps no facing, so a made slot in use goes out facing nought.
+				if ( record.Script.Walk?.Any( slot => slot.State != 0 ) == true )
+					Unimplemented.Report( "SAVE_PARK_WALK_SLOT_FACING" );
+			}
+
+			var channels = new SavedChannel[Math.Max( channelsFor( placed.CatalogueId ), 1 )];
+
+			for ( var index = 0; index < channels.Length; ++index )
+			{
+				channels[index] = animations?.Channel( index ) is { } channel
+					? WrittenChannel( channel, MadeChannel, Reading, now )
+					: MadeChannel;
+
+				// The engine's keep-shown request is kept by no channel here, and a made record has no file's to keep.
+				if ( channels[index].Role != ParkThingStates.NoRole )
+					Unimplemented.Report( "SAVE_PARK_CHANNEL_KEEP_SHOWN_BIT" );
+			}
+
+			var raised = hoardingFor( placed.ThingId );
+
+			made.Add( new ParkFileWriter.MadeThing( thing.Object, thing.Across, thing.Down, record, channels,
+				raised?.Flags ?? 0, raised?.Progress ?? 0f ) );
+		}
+
+		var goneHandles = new HashSet<int>( (gone ?? new HashSet<int>()).SelectMany( loaded.ScriptStates.HandlesOf ) );
 		var scripts = new List<WrittenScript>();
 		var running = new HashSet<int>();
 
 		foreach ( var script in Scheduler.Scripts )
 		{
 			running.Add( script.Id );
+
+			if ( madeHandles.Contains( script.Id ) )
+				continue;
 
 			if ( loaded.ScriptStates.For( script.Id ) is null )
 			{
@@ -916,7 +969,7 @@ public sealed class ParkRides : Entity
 
 		foreach ( var handle in loaded.ScriptStates.Order )
 		{
-			if ( !running.Contains( handle ) )
+			if ( !running.Contains( handle ) && !goneHandles.Contains( handle ) )
 				Unimplemented.Report( "SAVE_PARK_SCRIPT_ENDED" );
 		}
 
@@ -942,8 +995,18 @@ public sealed class ParkRides : Entity
 		}
 
 		return new ParkFileWriter.RunningThings( objects, Scheduler.Tick, Scheduler.NextHandle, scripts, states, models,
-			Reading( now ) );
+			Reading( now ), made, gone, built );
 	}
+
+	/// <summary>
+	/// An object bought since the load, for <see cref="Written"/>: its record and name, its item's footprint in cells
+	/// and the folder its script was loaded from, as the engine keeps one (<c>data\levels\jungle\Rides\monkey\</c>).
+	/// </summary>
+	internal readonly record struct BoughtThing( ParkWorld.MadeObject Object, int Across, int Down, string Directory );
+
+	/// <summary>A channel with nothing started on it and nothing queued, at speed 1: what a made model's record starts from.</summary>
+	private static readonly SavedChannel MadeChannel =
+		new( ParkThingStates.NoRole, 0, 0, 1f, 0, 0, 0, ParkThingStates.NoRole, 0, 0, 1f );
 
 	/// <summary>The bits of a channel's flag word a running channel keeps as the engine does: loop, frozen, held, <c>0x10</c> and <c>0x20</c>.</summary>
 	private const int ChannelFlagsKept = 0x37;

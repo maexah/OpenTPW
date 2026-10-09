@@ -105,7 +105,7 @@ public readonly record struct WrittenModel( int Slot, SavedChannel[] Channels, u
 /// objects, their scripts and their models").
 /// </para>
 /// </summary>
-public sealed class ParkThingStates
+public sealed partial class ParkThingStates
 {
 	/// <summary>The engine's "no animation" sentinel - the same 12 <c>AnimTimeControl</c> uses.</summary>
 	public const int NoRole = 12;
@@ -139,6 +139,14 @@ public sealed class ParkThingStates
 
 	/// <summary>Where each present record begins and where its channels do, by slot - what <see cref="Put"/> writes over.</summary>
 	private readonly Dictionary<int, (int Record, int Channels)> _places = [];
+
+	/// <summary>Where the module's length lies, and each slot's bytes in order, an empty slot's one byte among them - what <see cref="Splice"/> rebuilds.</summary>
+	private int _moduleAt = -1;
+
+	private readonly List<(int At, int End, bool Present)> _extents = [];
+
+	/// <summary>The module's three counts: the present slots, the empty ones, and the cursor, the slot the next model made takes.</summary>
+	public (int Present, int Empty, int Cursor) Header { get; private set; }
 
 	/// <summary>The record's script handle.</summary>
 	private const int ScriptHandleOffset = 0x19;
@@ -294,6 +302,8 @@ public sealed class ParkThingStates
 
 		_at = start;
 
+		_moduleAt = start;
+
 		var bytes = ReadInt32();
 		var body = _at;
 		var end = body + bytes;
@@ -304,7 +314,7 @@ public sealed class ParkThingStates
 		var placed = ReadInt32();
 		var free = ReadInt32();
 
-		Skip( 4 );                                  // the high-water mark, which nothing here needs
+		Header = (placed, free, ReadInt32());
 
 		Slots = placed + free;
 
@@ -316,13 +326,17 @@ public sealed class ParkThingStates
 			// An ABSENT slot costs exactly one byte. The engine computes the next cursor before it tests
 			// the tag, so a slot that holds nothing advances by the tag alone - which is what makes 161
 			// present records fit in a module with far more slots than that.
+			var at = _at;
+
 			if ( _data[_at] != 1 )
 			{
 				++_at;
+				_extents.Add( (at, _at, false) );
 				continue;
 			}
 
 			ReadThing( slot, channelsFor );
+			_extents.Add( (at, _at, true) );
 		}
 
 		// The one check that says the whole walk was right: the engine writes this module's length and

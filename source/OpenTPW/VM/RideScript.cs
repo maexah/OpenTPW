@@ -1131,6 +1131,16 @@ public sealed class RideScript
 	}
 
 	/// <summary>
+	/// This script as a park file holds one the file it was loaded from does not (<c>docs/exe/saves.md</c>,
+	/// "OpenTPW's writer, a thing bought and a thing sold"): <see cref="Written"/>, with what its loader took from
+	/// its <c>.RSE</c> file and the offset of its name.
+	/// </summary>
+	/// <param name="speed">The speed word, which no script here keeps: its thing's operating speed, or the loader's 50.</param>
+	/// <param name="directory">The folder it was loaded from, as the engine keeps it at <c>+0x38</c>.</param>
+	internal MadeScript Made( Func<float, uint> reading, int speed, string directory )
+		=> new( Written( reading ), ThingId, _file.Body, _file.StringBlob, _nameOffset, _file.TimeSlice, speed, directory );
+
+	/// <summary>
 	/// Moves every clock reading a load hands this script in its variables or its result register onto the clock it
 	/// runs on, by <paramref name="move"/>, as the caller moves the struct's own deadlines (<c>ParkRides.Resume</c>).
 	///

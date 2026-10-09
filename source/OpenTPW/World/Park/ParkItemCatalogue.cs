@@ -258,6 +258,10 @@ public sealed class ParkItemCatalogue
 			+ (InstantAction ? $", {leftOut} left out of Instant Action" : "") );
 	}
 
+	/// <summary>Whether an item's folder holds a particle emitter (an <c>.emt</c>), so its model is made with one.</summary>
+	public bool HasEmitters( Item item ) => _files.GetFiles( item.Directory ).Any( path =>
+		Path.GetExtension( path ).Equals( ".emt", StringComparison.OrdinalIgnoreCase ) );
+
 	/// <summary>FUN_0051fa20: item emitters occupy the first unnamed library slots, in catalogue order.</summary>
 	internal void RegisterParticleEffects( ParticleLibraryFile? library )
 	{

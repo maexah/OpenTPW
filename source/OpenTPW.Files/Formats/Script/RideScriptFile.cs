@@ -222,6 +222,12 @@ public sealed class RideScriptFile : BaseFormat
 	public IReadOnlyDictionary<int, string> Strings { get; private set; }
 		= new Dictionary<int, string>();
 
+	/// <summary>The body as the file holds it, four bytes a word: what a park file's record of the script carries.</summary>
+	public byte[] Body { get; private set; } = [];
+
+	/// <summary>The string blob as the file holds it, which a park file's record carries byte for byte.</summary>
+	public byte[] StringBlob { get; private set; } = [];
+
 	public RideScriptFile( string path )
 	{
 		ReadFromFile( path );
@@ -311,6 +317,8 @@ public sealed class RideScriptFile : BaseFormat
 		}
 
 		Instructions = instructions;
+		Body = data.AsSpan( BodyOffset, length * 4 ).ToArray();
+		StringBlob = data.AsSpan( blobAt, blobLength ).ToArray();
 		Strings = ReadStrings( data, blobAt, blobLength );
 		VariableNames = ReadVariableNames( data, blobAt + blobLength );
 		IsValid = true;

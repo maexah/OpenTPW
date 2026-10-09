@@ -5502,6 +5502,41 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   thing. A toilet's user is in a script variable. **OpenTPW's load reads no limbo, bounce or walk slot**
   (`ParkScriptStates` steps over blocks 4 and 5 and the walk slots): read them back, or a rider written is a
   rider lost on OpenTPW's own load. A rider of a track ride is in `TRAK`, not decoded: counted.
+- [x] **Q253. The writer: a thing bought and a thing sold.** Done 2026-10-08,
+  `alexah/371-writer-bought-and-sold`; `docs/exe/saves.md`, "OpenTPW's writer, a thing bought and a thing sold".
+  Measured first: the original bought a Crazy Ape, saved, sold it and saved, and its fresh record gave the rules
+  (the cell's middle, `mState` 0 or 3, three floats of 100, the two name rows of `OBJECT_NAMES`, footprint tile 8
+  and bare tile 55, the slot at the cursor, the control's count and stamp). Written at `mGameTick` 848 with a Crazy
+  Ape and a Security Camera bought and the Drinks Shop sold: the ape's record is the original's own byte for byte
+  but its queue's two fields, its script record dword for dword; OpenTPW's load read both things and no shop; the
+  original read things 43 and 44 on model handles 91 and 92, the table 162, 6, 92, no thing 16, script 18 at the
+  file's word 26 and script 19 waiting the 384 ms written, on to word 11 two sweeps later. Two predictions wrong,
+  mine. Of 172 bugs put back 156 failed at first; three showed lines that did nothing, taken out; 168 of 168 fail
+  now. Split: Q256 (the placer's unlinked entrance, found here) and Q257 (what a made record leaves out). The
+  item as written: From Q241i. After Q252. A bought object's record
+  written whole at the head of the thing list and of the object list (`mFirstObject`, `mNext`), in set `0xb`,
+  its item's object control counted and stamped; its footprint's cells with the object's `mWho`, `mMapChild`
+  and `mMapParent`; a script record made from its `RideScript` under the scheduler's handle, first in `RSSE`;
+  a model slot at the cursor of `RSYS`, the header's three counts kept. A sold one's three records left out,
+  its cells bare, its slot empty. A track ride or an emitter bought or sold is counted (`TRAK`'s car is not
+  decoded; `FUN_004368f0`). Measure first what an object record made from nothing may leave at nought: Q241i's
+  made camera was a copy of another's record. Confirm: a ride bought and a shop sold here, written, standing
+  and running in the original under Proton, its script's wait predicted; a screenshot of each.
+  From Q241g: **a footprint**: `Level.WrittenCells` leaves a cell that has joined or left a footprint, or
+  changed its type or parent inside one, as the file's (`SAVE_PARK_FOOTPRINT_CELL`); write those cells with
+  the object's record.
+  From Q252: the kept things' stage counts what is this item's: an object sold is left the file's
+  (`SAVE_PARK_OBJECT_SOLD`; `ParkState.WrittenObjects`), and a script the file holds no record for is not written
+  (`SAVE_PARK_SCRIPT_MADE_SINCE_THE_LOAD`: a thing bought, a child spawned, and the ferry's and the seaplane's,
+  which a load here makes afresh, two a save; a record whose script has ended is `SAVE_PARK_SCRIPT_ENDED`). **A
+  head hung on a ride's node is not in its model's record** (`SAVE_PARK_HEAD_ON_A_MODEL_NODE`): the lookup records'
+  attached handles and the node flag words are left the file's, and the rides that hang heads are all bought ones
+  in Easymode. A channel's keep-shown bit (`0x8`) and a walk slot's facing (`+0x14`) are kept by nothing here and
+  go out as the file's (`SAVE_PARK_CHANNEL_KEEP_SHOWN_BIT` for the first): for a made record they must be made.
+  From Q241h: **a handle to a thing bought here is written as nought**
+  (`SAVE_PARK_HANDLE_TO_AN_UNWRITTEN_THING`; `Level.WrittenThings` is the list to widen). A made thing's id is
+  one past the park's highest, where the original uses a freed id again (Q26c). `PutPeople` chains a person
+  ahead of the file's objects on a cell; an object bought goes behind the people there.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

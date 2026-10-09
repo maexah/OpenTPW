@@ -280,6 +280,11 @@ public static class ParkBuilding
 			// shop's cost of goods is the item's own; mTotalCosts starts at nought (0x004db169).
 			QualityOfGoods: 50,
 			AmountOfSpecialIngredient: 50,
+
+			// State of repair and remaining life both start at 100.0 (+0x44 and +0x48, written beside the entry's
+			// cell): left at nought a bought toilet would be dirty before anyone had used it.
+			StateOfRepair: 100f,
+			RemainingLife: 100f,
 			TrackRide: trackRide,
 			Built: built );
 	}

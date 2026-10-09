@@ -322,6 +322,126 @@ public class ParkFileWriterTests
 		}
 	}
 
+	/// <summary>
+	/// The level hands the writer a thing bought and a thing sold: the bought one's three records under its item's
+	/// two lines of name, its cells and its control; the sold one's taken out; and a thing whose item will not write
+	/// (a track ride) counted and left out.
+	/// </summary>
+	[TestMethod]
+	public void TheLevelWritesAThingBoughtAndAThingSold()
+	{
+		SetCurrentPlayer( new Player( 0, "Test", new PlayerFile { InstantAction = true } ) );
+
+		var catalogue = new ParkItemCatalogue( "jungle", FileSystem );
+		var people = new ParkPeople( shipped );
+		var state = people.State;
+		var rides = new ParkRides( "jungle", shipped, catalogue, FileSystem );
+
+		int Buy( int itemId, int x, int y )
+		{
+			Assert.IsTrue( catalogue.TryGet( itemId, out var item ) );
+
+			var id = state.NextThingId();
+
+			var placed = ParkBuilding.Constructed( item, id, x, y, 0, MapStep.CellId( x + item.EntryDeltaX, y + item.EntryDeltaY ),
+				MapStep.CellId( x + item.ExitDeltaX, y + item.ExitDeltaY ), ParkWorld.BuiltWhen.At( state.CalendarNow ),
+				ParkBuilding.TakeTrackRide( state, item ) );
+
+			state.AddObject( placed );
+			ParkBuilding.BindOperation( state, rides, placed, item );
+			ParkBuilding.Stamp( state, ParkObjects.FootprintAt( item, x, y, 0 ), x, y );
+			state.EnterCell( x, y, id );
+
+			return id;
+		}
+
+		try
+		{
+			state.SetGameTick( 900 );
+
+			var ape = Buy( 1101, 41, 22 );
+			var racers = catalogue.All.First( item => item.BumperType != 0 );
+			var karts = Buy( racers.Id, 20, 20 );
+			var fountain = catalogue.All.First( item => item.BumperType == 0 && item.TrackType == 0 && catalogue.HasEmitters( item ) );
+			var spout = Buy( fountain.Id, 70, 70 );
+			var bounce = Buy( 1100, 30, 60 );
+
+			// A guest walking to the bought ride names it, and the file keeps the name.
+			var walker = people.Guests.First();
+
+			walker.Value.MajorDest = ape;
+
+
+			StringAssert.StartsWith( ParkBuilding.Sell( state, shipped, catalogue, null, rides, 16, people ), "sell: 'Drinks Shop' thing 16 sold" );
+			Unimplemented.Forget();
+
+			Assert.IsNotNull( Level.WritePark( shipped, state, "jungle", "Bought", people, null, rides, catalogue ) );
+
+			var written = Read( File.ReadAllBytes( Path.Combine( Jungle, "Bought.TPWS" ) ) );
+			var made = written.Objects.Single( thing => thing.ThingId == ape );
+			var record = written.RecordOf( ape )!;
+
+			Assert.IsNull( written.Problem );
+			Assert.AreEqual( (1101, 91, rides.ScriptFor( ape )), (made.CatalogueId, made.MeshInstance, made.RideScript) );
+			Assert.AreEqual( "Crazy", Encoding.Unicode.GetString( [.. Enumerable.Range( 0, 5 ).SelectMany( i => record.AsSpan( 60 + (i * 4), 2 ).ToArray() )] ) );
+			Assert.AreEqual( "Ape", Encoding.Unicode.GetString( [.. Enumerable.Range( 0, 3 ).SelectMany( i => record.AsSpan( 62 + (i * 4), 2 ).ToArray() )] ) );
+			Assert.AreEqual( bounce, written.FirstObject, "the newest heads the object list" );
+			Assert.IsFalse( written.Objects.Any( thing => thing.ThingId is 16 || thing.ThingId == karts || thing.ThingId == spout ), "the shop sold, and the track ride and the emitter left out" );
+			Assert.AreEqual( 15, written.Objects.Count );
+			Assert.AreEqual( ape, written.People.Single( person => person.ThingId == walker.Key ).Guest!.Value.MajorDest, "a handle to a thing bought" );
+
+			// The script's folder as the engine keeps one, and the model's footprint across then down.
+			var body = Inflate( File.ReadAllBytes( Path.Combine( Jungle, "Bought.TPWS" ) ) );
+			var folder = "data\\levels\\jungle\\rides\\monkey\\\0";
+			var folderAt = body.AsSpan().IndexOf( Encoding.ASCII.GetBytes( folder ) );
+
+			Assert.IsTrue( folderAt > 4 && BitConverter.ToInt32( body, folderAt - 4 ) == folder.Length, "its length before it" );
+			Assert.IsTrue( body.AsSpan().IndexOf( (byte[])[1, .. BitConverter.GetBytes( 1100 ), .. BitConverter.GetBytes( 30 ), .. BitConverter.GetBytes( 60 ), .. BitConverter.GetBytes( 3 ), .. BitConverter.GetBytes( 4 )] ) > 0, "the Belly Bounce's model, three by four" );
+
+			var script = written.ScriptStates.For( rides.ScriptFor( ape ) )!.Value;
+
+			Assert.AreEqual( (ape, 91), ((int)script.Thing, script.ModelHandle) );
+			Assert.IsNull( written.ScriptStates.For( 6 ), "the shop's script" );
+
+			var models = written.ThingStates( id => catalogue.TryGet( id, out var item ) ? item.AnimationChannels : 1 );
+
+			Assert.IsNull( models.Problem );
+			Assert.AreEqual( (1101, rides.ScriptFor( ape )), (models.Things.Single( thing => thing.Slot == 90 ).CatalogueId, models.Things.Single( thing => thing.Slot == 90 ).ScriptHandle) );
+			Assert.IsFalse( models.Things.Any( thing => thing.Slot == 115 ), "the shop's model" );
+			Assert.AreEqual( (162, 6, 92), models.Header );
+
+			var anchor = written.Cells[(22 * 128) + 41];
+			var sold = written.Cells[(30 * 128) + 43];
+
+			Assert.AreEqual( (4, MapStep.CellId( 41, 22 ), 8, ape), ((int)anchor.Type, (int)anchor.ParentId, (int)anchor.TileIndex, (int)anchor.Occupant) );
+			Assert.AreEqual( (0, 0, 55, 0), ((int)sold.Type, (int)sold.ParentId, (int)sold.TileIndex, (int)sold.Occupant) );
+			Assert.AreEqual( (1, 900u), (written.ObjectControlRecords.Single( control => control.ItemId == 1101 ).Standing, written.ObjectControlRecords.Single( control => control.ItemId == 1101 ).FirstBuilt) );
+			Assert.AreEqual( (0, 15u), (written.ObjectControlRecords.Single( control => control.ItemId == 1203 ).Standing, written.ObjectControlRecords.Single( control => control.ItemId == 1203 ).FirstBuilt) );
+			CollectionAssert.Contains( written.MessageSets()![0xb].ToList(), ape );
+			CollectionAssert.DoesNotContain( written.MessageSets()![0xb].ToList(), 16 );
+
+			Assert.AreEqual( 2, Unimplemented.Summary.Single( gap => gap.What == "SAVE_PARK_OBJECT_BOUGHT" ).Times, "the track ride and the emitter" );
+			Assert.AreNotEqual( bounce, karts );
+			Assert.IsFalse( Unimplemented.Summary.Any( gap => gap.What == "SAVE_PARK_OBJECT_SOLD" ) );
+			Assert.IsTrue( written.Cells[(20 * 128) + 20].Type != 4, "and its cells are the file's" );
+
+			// Without the people nothing bought or sold is written, and each is counted.
+			Unimplemented.Forget();
+			Assert.IsNotNull( Level.WritePark( shipped, state, "jungle", "NoPeople", rides: rides, catalogue: catalogue ) );
+
+			var plain = Read( File.ReadAllBytes( Path.Combine( Jungle, "NoPeople.TPWS" ) ) );
+
+			Assert.IsTrue( plain.Objects.Any( thing => thing.ThingId == 16 ) && plain.Objects.All( thing => thing.ThingId != ape ) );
+			Assert.AreEqual( 1, Unimplemented.Summary.Single( gap => gap.What == "SAVE_PARK_OBJECT_SOLD" ).Times );
+		}
+		finally
+		{
+			rides.Delete();
+			Entity.ApplyDeletions();
+			TestRun.DeleteEvery<ParkPeople>();
+		}
+	}
+
 	/// <summary>The level hands the writer the park's pool of candidates and its arrival timer.</summary>
 	[TestMethod]
 	public void TheLevelWritesThePoolAndTheArrivalTimer()

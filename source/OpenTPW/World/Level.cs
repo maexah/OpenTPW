@@ -471,7 +471,8 @@ public class Level
 	/// (<see cref="WrittenCells"/>), the people (<see cref="ParkPeople.Written"/>), the pool of candidates
 	/// (<see cref="ParkStaffPool.Written"/>), the arrival timer (<see cref="ParkPeople.WrittenArrival"/>) and the
 	/// file's objects, scripts and models as they run (<see cref="ParkState.WrittenObjects"/>,
-	/// <see cref="ParkRides.Written"/>) written over it. A thing bought or sold is not written.
+	/// <see cref="ParkRides.Written"/>) written over it; an object bought since the load is written whole and one
+	/// sold taken out, but a track ride and a thing with an emitter, which stay as the file has them, counted.
 	/// </para>
 	/// <para>
 	/// <b>Deviations.</b> The original writes the player's <c>gms.dat</c> first and puts the pointer back to its
@@ -509,22 +510,49 @@ public class Level
 
 		// The file's rotation turns the other way from the orbit camera's yaw: nought is the same view in both, and a
 		// quarter turn written as it stands puts the original's camera on the far side of the point.
-		var cells = WrittenCells( loaded, state );
+		// The things: each of the file's objects, its script and its model as it runs, each object bought since the
+		// load written whole and each sold taken out. Without the park's scripts, or where the file's clock, scripts
+		// or models did not read, they go out as the file's, and are counted.
+		var names = ObjectNames();
 
-		// The things: each of the file's objects, its script and its model as it runs. Without the park's scripts, or
-		// where the file's clock, scripts or models did not read, they go out as the file's, and are counted.
-		var things = rides?.Written( loaded, state.WrittenObjects( loaded ),
-			id => catalogue != null && catalogue.TryGet( id, out var item ) ? item.AnimationChannels : 1, state.HoardingFor );
+		// A thing bought or sold is written with the people, the scripts and the catalogue to hand. A track ride's
+		// record in the track-rides module and an emitter's in the particles are not written, so those stay as they
+		// were, counted.
+		Func<int, bool>? writable = rides != null && people != null && catalogue != null
+			? id => catalogue.TryGet( id, out var item ) && item.BumperType == 0 && item.TrackType == 0
+				&& !catalogue.HasEmitters( item ) && ParkObjectNames.Lines( id, names ) != null
+			: null;
+
+		var objects = state.WrittenObjects( loaded, writable, out var made, out var gone );
+
+		var bought = made.Select( thing =>
+		{
+			catalogue!.TryGet( thing.CatalogueId, out var item );
+
+			var (lineA, lineB) = ParkObjectNames.Lines( thing.CatalogueId, names )!.Value;
+
+			return new ParkRides.BoughtThing( new ParkWorld.MadeObject( thing, lineA, lineB ), item.Width, item.Depth,
+				"data\\" + item.Directory.Replace( '/', '\\' ).TrimEnd( '\\' ) + "\\" );
+		} ).ToList();
+
+		var things = rides?.Written( loaded, objects,
+			id => catalogue != null && catalogue.TryGet( id, out var item ) ? item.AnimationChannels : 1, state.HoardingFor,
+			bought, gone, state.BuiltItems );
 
 		if ( rides != null && things == null )
 		{
 			Unimplemented.Report( "SAVE_PARK_THINGS_AS_THE_FILE" );
 			Log.Warning( $"Save: '{name}' holds its things as the file had them - the file's clock, scripts or models did not read" );
+			made.Clear();
+			gone.Clear();
 		}
+
+		var cells = WrittenCells( loaded, state, made, gone );
+		var written = WrittenThings( loaded, made, gone );
 
 		var running = new ParkFileWriter.Running( state.GameTick, state.ParkIsClosed, state.VisitorsToDate, state.Balance,
 			new ParkCameraModule.View( ParkOrbitCameraMode.Zoom, -ParkOrbitCameraMode.Yaw, point.X, point.Y ), cells,
-			people?.Written( WrittenThings( loaded ).Contains ), pool?.Written(), people?.WrittenArrival(), things );
+			people?.Written( written.Contains ), pool?.Written(), people?.WrittenArrival(), things );
 
 		byte[] file;
 		ParkWorld.PeopleWritten? peopleWritten;
@@ -549,6 +577,25 @@ public class Level
 
 		if ( things != null && thingsWritten is { } wrote )
 		{
+			if ( wrote.Made > 0 || wrote.Gone > 0 )
+			{
+				Log.Info( $"Save: {wrote.Made} things bought written whole and {wrote.Gone} sold taken out" );
+
+				foreach ( var thing in things.Made ?? [] )
+				{
+					var placed = thing.Object.Object;
+
+					Log.Info( $"Save: thing {placed.ThingId} made, item {placed.CatalogueId} '{thing.Object.NameA}' '{thing.Object.NameB}' "
+						+ $"at ({placed.RawX >> 8},{placed.RawY >> 8}) turned {placed.Angle}, door {placed.CanLoad}, "
+						+ (thing.Script is { } script
+							? $"script {script.Script.Handle} from {script.Directory} at word {script.Script.Position}, wait "
+								+ (script.Script.WaitDeadline != 0 ? unchecked((int)(script.Script.WaitDeadline - things.Clock)).ToString() : "none")
+							: "no script")
+						+ $", channels {string.Join( ",", thing.Channels.Select( channel => $"{channel.Role}/{channel.Entry}" ) )}, "
+						+ $"hoarding 0x{thing.HoardingFlags:x} at {thing.HoardingProgress}" );
+				}
+			}
+
 			Log.Info( $"Save: {wrote.Objects} objects, {wrote.Scripts} scripts and {wrote.Models} models written as they run, "
 				+ $"the script scheduler on tick {things.SchedulerTick} with handle {things.NextHandle} next, the clock reading {things.Clock}"
 				+ (wrote.ScriptTablesLeft > 0 ? $"; {wrote.ScriptTablesLeft} script tables of another length left the file's" : "") );
@@ -600,6 +647,34 @@ public class Level
 	internal static HashSet<int> WrittenThings( ParkWorld loaded ) =>
 		[.. loaded.Things.Where( thing => thing.Model is not (ParkWorld.GuestModel or (>= 4 and <= 8)) ).Select( thing => thing.ThingId )];
 
+	/// <summary><see cref="WrittenThings(ParkWorld)"/> with the objects bought written whole and without the ones sold taken out.</summary>
+	internal static HashSet<int> WrittenThings( ParkWorld loaded, IEnumerable<ParkWorld.CatalogueObject> made, IReadOnlySet<int> gone )
+	{
+		var things = WrittenThings( loaded );
+
+		things.ExceptWith( gone );
+		things.UnionWith( made.Select( thing => thing.ThingId ) );
+
+		return things;
+	}
+
+	/// <summary>The running language's table of object names, or null where it will not read.</summary>
+	private static StringFile? ObjectNames()
+	{
+		try
+		{
+			return new StringFile( ParkObjectNames.TablePath );
+		}
+		catch ( Exception e ) when ( e is IOException or InvalidDataException or ArgumentException or NullReferenceException )
+		{
+			Log.Warning( $"Save: {ParkObjectNames.TablePath} did not read - {e.Message}" );
+			return null;
+		}
+	}
+
+	/// <summary>The ground tile the original gives a cell under a footprint (set 0, turned 0): every such cell of seven park files.</summary>
+	internal const int FootprintTile = 8;
+
 	/// <summary>
 	/// The cells a park file written from <paramref name="state"/> holds in place of the file's own: every cell the
 	/// running park has changed (<see cref="ParkState.ChangedRecords"/>) that differs from the file's in a field the
@@ -618,8 +693,23 @@ public class Level
 	/// </para>
 	/// </summary>
 	internal static Dictionary<int, ParkWorld.MapCell> WrittenCells( ParkWorld loaded, ParkState state )
+		=> WrittenCells( loaded, state, [], new HashSet<int>() );
+
+	/// <summary>
+	/// <see cref="WrittenCells(ParkWorld, ParkState)"/> where objects bought are written whole and objects sold are
+	/// taken out: a cell under the footprint of one of <paramref name="made"/>, and a cell one of
+	/// <paramref name="gone"/> has left, is written too. A cell that has joined a footprint goes out on the tile the
+	/// original stamps one with (<see cref="FootprintTile"/>), which the park here does not keep; one left bare
+	/// is on bare ground's already (<see cref="ParkPathBuilding"/>).
+	/// </summary>
+	internal static Dictionary<int, ParkWorld.MapCell> WrittenCells( ParkWorld loaded, ParkState state,
+		IReadOnlyList<ParkWorld.CatalogueObject> made, IReadOnlySet<int> gone )
 	{
 		var written = new Dictionary<int, ParkWorld.MapCell>();
+		var madeAnchors = new HashSet<int>( made.Select( thing => MapStep.CellId( thing.RawX >> 8, thing.RawY >> 8 ) ) );
+
+		var goneAnchors = new HashSet<int>( loaded.Objects.Where( thing => gone.Contains( thing.ThingId ) )
+			.Select( thing => MapStep.CellId( thing.RawX >> 8, thing.RawY >> 8 ) ) );
 
 		// A file whose map was never reached is refused by the writer, which says why.
 		if ( loaded.Cells.Count != ParkWorld.MapSize * ParkWorld.MapSize )
@@ -637,7 +727,15 @@ public class Level
 
 			if ( footprintWas != footprintNow || (footprintNow && (was.Type != now.Type || was.ParentId != now.ParentId)) )
 			{
-				Unimplemented.Report( "SAVE_PARK_FOOTPRINT_CELL" );
+				// Written where the thing that stands there now is, and the thing that stood there is not.
+				if ( (footprintNow && !madeAnchors.Contains( now.ParentId )) || (footprintWas && !goneAnchors.Contains( was.ParentId )) )
+				{
+					Unimplemented.Report( "SAVE_PARK_FOOTPRINT_CELL" );
+					continue;
+				}
+
+				written[index] = footprintNow ? now with { TileSet = 0, TileIndex = FootprintTile, TileAngle = 0 } : now;
+
 				continue;
 			}
 

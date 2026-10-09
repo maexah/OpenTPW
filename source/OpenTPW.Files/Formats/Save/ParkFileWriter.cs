@@ -10,9 +10,9 @@ namespace OpenTPW;
 /// <para>
 /// <b>Every module is carried</b>: the body goes out as the file's own, with the fields under <see cref="Running"/>
 /// written over it, the park's people in place of the file's, its staff pool and arrival timer, and each object,
-/// script and model the file holds as it runs, under the clock moved on (<see cref="RunningThings"/>). Nothing
-/// bought or sold is written yet, so a park loaded from the file this writes has the things of the file it was
-/// loaded from, doing what the running park's were.
+/// script and model the file holds as it runs, under the clock moved on (<see cref="RunningThings"/>). An object
+/// bought since the load is written whole, its three records made, and one sold is taken out
+/// (<see cref="MadeThing"/>).
 /// </para>
 /// <para>
 /// <b>The container</b> is the version, 500 (<c>0x006fd928</c>), whatever the file loaded carried; the rest of that
@@ -68,12 +68,25 @@ public static class ParkFileWriter
 	/// The game clock's reading as the file is written (<see cref="ParkClock.Put"/>): every deadline and stamp in
 	/// <paramref name="Scripts"/> and <paramref name="Models"/> is a reading of it.
 	/// </param>
+	/// <param name="Made">The objects bought since the load, each written whole (<see cref="MadeThing"/>).</param>
+	/// <param name="Gone">The file's objects sold since: each one's three records are left out.</param>
+	/// <param name="Built">Each touched item's standing count and first-build stamp (<see cref="ParkWorld.PutControls"/>).</param>
 	public sealed record RunningThings( IReadOnlyList<ParkWorld.CatalogueObject> Objects, int SchedulerTick,
 		int NextHandle, IReadOnlyList<WrittenScript> Scripts, ParkThingStates ModelStates,
-		IReadOnlyList<WrittenModel> Models, uint Clock );
+		IReadOnlyList<WrittenModel> Models, uint Clock, IReadOnlyList<MadeThing>? Made = null,
+		IReadOnlySet<int>? Gone = null, IReadOnlyDictionary<int, (int Standing, uint FirstBuilt)>? Built = null );
 
-	/// <summary>What was done with <see cref="RunningThings"/>: the records written over, and the script tables left the file's.</summary>
-	public readonly record struct ThingsWritten( int Objects, int Scripts, int ScriptTablesLeft, int Models );
+	/// <summary>
+	/// An object bought since the load with its other two records (<c>docs/exe/saves.md</c>, "OpenTPW's writer, a
+	/// thing bought and a thing sold"): its footprint in cells for its model's record, its script as it runs (null
+	/// for a thing with none), and its model's channels and hoarding.
+	/// </summary>
+	public sealed record MadeThing( ParkWorld.MadeObject Object, int Across, int Down, MadeScript? Script,
+		IReadOnlyList<SavedChannel> Channels, uint HoardingFlags = 0, float HoardingProgress = 0f );
+
+	/// <summary>What was done with <see cref="RunningThings"/>: the records written over, the script tables left the file's, and the things made and taken out.</summary>
+	public readonly record struct ThingsWritten( int Objects, int Scripts, int ScriptTablesLeft, int Models,
+		int Made = 0, int Gone = 0, int ModelSlots = 0 );
 
 	/// <summary>
 	/// The arrival timer as it is written: the <c>mGameTick</c> the next load's wait is counted from
@@ -137,6 +150,8 @@ public static class ParkFileWriter
 
 		things = null;
 
+		ParkWorld.ObjectEdits? edits = null;
+
 		if ( running.Things is { } run )
 		{
 			var objects = loaded.PutObjects( body, run.Objects );
@@ -145,6 +160,63 @@ public static class ParkFileWriter
 
 			loaded.Clock.Put( body, run.Clock );
 			things = new ThingsWritten( objects, scripts.Scripts, scripts.TablesLeft, models );
+
+			var made = run.Made ?? [];
+			var gone = run.Gone ?? new HashSet<int>();
+
+			if ( made.Count > 0 || gone.Count > 0 )
+			{
+				if ( running.People == null )
+					throw new InvalidOperationException( "a thing bought or sold is written with the people, and none were given" );
+
+				// From the back of the file forwards, so each module is still where the file has it when its turn
+				// comes: the scripts, the models, then the world with the people.
+				var goneSlots = new HashSet<int>();
+				var goneScripts = new HashSet<int>();
+
+				foreach ( var thing in loaded.Objects.Where( thing => gone.Contains( thing.ThingId ) ) )
+				{
+					if ( thing.MeshInstance > 0 )
+						goneSlots.Add( thing.MeshInstance - 1 );
+
+					goneScripts.UnionWith( loaded.ScriptStates.HandlesOf( thing.ThingId ) );
+				}
+
+				// The oldest takes the first slot, as it did when it was bought.
+				var oldestFirst = made.OrderBy( thing => thing.Object.Object.ThingId ).ToList();
+				var slots = run.ModelStates.Plan( goneSlots, oldestFirst.Count );
+				var madeModels = new List<(int Slot, byte[] Record)>();
+				var records = new List<(int Id, byte[] Record)>();
+				var scriptRecords = new List<(int Handle, byte[] Record)>();
+
+				for ( var i = 0; i < oldestFirst.Count; ++i )
+				{
+					var thing = oldestFirst[i];
+					var placed = thing.Object.Object;
+					var handle = thing.Script?.Script.Handle ?? 0;
+					var cell = placed.TopLeft != 0 ? placed.TopLeft - 1 : ((placed.RawY >> 8) * ParkWorld.MapSize) + (placed.RawX >> 8);
+
+					madeModels.Add( (slots[i], ParkThingStates.MadeRecord( placed.CatalogueId, cell % ParkWorld.MapSize,
+						cell / ParkWorld.MapSize, thing.Across, thing.Down, handle, thing.HoardingFlags,
+						thing.HoardingProgress, placed.Angle, thing.Channels )) );
+
+					if ( thing.Script is { } script )
+						scriptRecords.Add( (handle, ParkScriptStates.MadeRecord( script, slots[i] + 1, loaded.ScriptStates.StructSize )) );
+
+					records.Add( (placed.ThingId, ParkWorld.MadeObjectRecord(
+						thing.Object with { Object = placed with { RideScript = handle } }, slots[i] + 1 )) );
+				}
+
+				body = loaded.ScriptStates.Splice( body,
+					[.. scriptRecords.OrderByDescending( entry => entry.Handle ).Select( entry => entry.Record )], goneScripts );
+				body = run.ModelStates.Splice( body, goneSlots, madeModels );
+
+				if ( run.Built is { } built )
+					loaded.PutControls( body, built );
+
+				edits = new ParkWorld.ObjectEdits( records, gone );
+				things = things.Value with { Made = made.Count, Gone = gone.Count, ModelSlots = slots.Length > 0 ? slots.Max() + 1 : 0 };
+			}
 		}
 
 		people = null;
@@ -152,7 +224,7 @@ public static class ParkFileWriter
 		// Last: the people change the body's length, and everything above is written where the file has it.
 		if ( running.People is { } written )
 		{
-			body = loaded.PutPeople( body, written, out var report );
+			body = loaded.PutPeople( body, written, edits, out var report );
 			people = report;
 		}
 

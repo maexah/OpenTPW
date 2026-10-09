@@ -148,7 +148,7 @@ public readonly record struct WrittenScript( int Handle, int Position, int CallI
 /// and is recovered a different way - see <see cref="RideScript.TakeDeclaredName"/>.
 /// </para>
 /// </summary>
-public sealed class ParkScriptStates
+public sealed partial class ParkScriptStates
 {
 	/// <summary>
 	/// The tag closing the module before this one, little-endian - so it reads <c>RYLF</c> in a dump.
@@ -264,6 +264,12 @@ public sealed class ParkScriptStates
 	private readonly Dictionary<int, Place> _places = [];
 
 	/// <summary>A record's struct and the first byte of each table's data; -1 for a table the record lacks.</summary>
+	/// <summary>Where each record begins and ends, by handle - what <see cref="Splice"/> takes out.</summary>
+	private readonly Dictionary<int, (int Start, int End)> _extents = [];
+
+	/// <summary>Where the count of records lies, where the first record begins, and the struct's size.</summary>
+	private int _countAt = -1, _recordsAt = -1, _structSize;
+
 	private readonly record struct Place( int Struct, int Stack, int Variables, int Limbo, int Bounce, int Walk, int Heads );
 
 	/// <summary>Where the header block's dwords begin, and how many bytes it holds; -1 where the module did not read.</summary>
@@ -348,9 +354,13 @@ public sealed class ParkScriptStates
 		var nextHandle = header > NextHandleDword * 4 ? ReadInt32At( headerAt + (NextHandleDword * 4) ) : 0;
 		Skip( DiscardedDwords * 4 );
 
+		_countAt = _at;
 		Declared = ReadInt32();
 
 		var structSize = ReadInt32();
+
+		_structSize = structSize;
+		_recordsAt = _at;
 
 		if ( Declared < 0 || structSize < (ModelHandleDword + 1) * 4 )
 			throw new InvalidDataException( $"the script module says {Declared} scripts of {structSize} bytes" );
@@ -508,6 +518,7 @@ public sealed class ParkScriptStates
 			throw new InvalidDataException( $"two saved scripts both call themselves handle {handle}" );
 
 		_places[handle] = new Place( start, stackAt, variablesAt, limboAt, bounceAt, walkAt, headsAt );
+		_extents[handle] = (start, _at);
 
 		_order.Add( handle );
 	}

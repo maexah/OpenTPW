@@ -216,6 +216,9 @@ public sealed partial class ParkWorld
 
 	private const int StaffSet = 0xc;
 
+	/// <summary>The day's change: every catalogue object and the model-19 thing.</summary>
+	private const int ObjectSet = 0xb;
+
 	private const int GuardSet = 0x1b;
 
 	private static bool IsPerson( int model ) => Array.IndexOf( PersonModels, model ) >= 0;
@@ -255,7 +258,24 @@ public sealed partial class ParkWorld
 	/// </summary>
 	/// <exception cref="InvalidOperationException">The file's list, sprites or sets were not read whole, or a person cannot be written.</exception>
 	internal byte[] PutPeople( byte[] body, IReadOnlyList<WrittenPerson> people, out PeopleWritten report )
+		=> PutPeople( body, people, null, out report );
+
+	/// <summary>
+	/// <see cref="PutPeople(byte[], IReadOnlyList{WrittenPerson}, out PeopleWritten)"/>, with the objects bought and
+	/// sold since the load (<c>docs/exe/saves.md</c>, "OpenTPW's writer, a thing bought and a thing sold").
+	///
+	/// <para>
+	/// <b>An object made</b> goes into the thing list among the made, newest first, and to the head of the object
+	/// list (<c>mFirstObject</c>, <c>mNext</c>), as the original's constructor puts one; onto its anchor cell's
+	/// chain behind whoever stands there; and into set <c>0xb</c>, the day's change. <b>An object gone</b> is left
+	/// out of all four.
+	/// </para>
+	/// </summary>
+	internal byte[] PutPeople( byte[] body, IReadOnlyList<WrittenPerson> people, ObjectEdits? objects, out PeopleWritten report )
 	{
+		var madeObjects = objects?.Made ?? [];
+		var goneObjects = objects?.Gone ?? new HashSet<int>();
+
 		if ( ThingHeadAt < 0 || WorldEndAt < 0 || MapAt < 0 || !ClosedOnTrailer )
 			throw new InvalidOperationException( "the park file it was loaded from holds no thing list" );
 
@@ -287,6 +307,24 @@ public sealed partial class ParkWorld
 				throw new InvalidOperationException( $"thing {id} is in the park twice" );
 		}
 
+		var boughtIds = new HashSet<int>();
+
+		foreach ( var (id, record) in madeObjects )
+		{
+			if ( id < 1 || id > HighestThingId )
+				throw new InvalidOperationException( $"thing {id} is past the {HighestThingId} ids a park file can name" );
+
+			if ( fileRecords.ContainsKey( id ) || running.ContainsKey( id ) || !boughtIds.Add( id )
+				|| record.Length != RecordSizes[CatalogueObjectModel] )
+				throw new InvalidOperationException( $"thing {id}, an object bought, is in the file or the park already" );
+		}
+
+		foreach ( var id in goneObjects )
+		{
+			if ( !fileRecords.TryGetValue( id, out var held ) || held.Model != CatalogueObjectModel )
+				throw new InvalidOperationException( $"thing {id}, an object sold, is no object of the file's" );
+		}
+
 		// The sprite table, slot by slot: the file's records, to be written over, let go and added to.
 		var sprites = new SortedDictionary<int, byte[]>();
 
@@ -298,11 +336,15 @@ public sealed partial class ParkWorld
 		// The list: the made, newest first, then the file's without the gone.
 		var list = new List<(int Id, int Model, byte[] Record, bool Made)>();
 
-		foreach ( var person in people.Where( person => !fileRecords.ContainsKey( person.Person.ThingId ) )
-			.OrderByDescending( person => person.Person.ThingId ) )
+		foreach ( var person in people.Where( person => !fileRecords.ContainsKey( person.Person.ThingId ) ) )
 			list.Add( (person.Person.ThingId, person.Person.Model, new byte[RecordSizes[person.Person.Model]], true) );
 
 		var made = list.Count;
+
+		foreach ( var (id, record) in madeObjects )
+			list.Add( (id, CatalogueObjectModel, (byte[])record.Clone(), true) );
+
+		list.Sort( ( a, b ) => b.Id.CompareTo( a.Id ) );
 		var gone = 0;
 
 		// The file's chains, before anything is moved: which cells held a person, and each cell's other things in order.
@@ -326,13 +368,16 @@ public sealed partial class ParkWorld
 
 				chain.Add( who );
 
-				if ( IsPerson( linked.Model ) )
+				if ( IsPerson( linked.Model ) || goneObjects.Contains( who ) )
 					touched.Add( cell );
 			}
 		}
 
 		foreach ( var record in _records )
 		{
+			if ( goneObjects.Contains( record.Id ) )
+				continue;
+
 			if ( IsPerson( record.Model ) && !running.ContainsKey( record.Id ) )
 			{
 				// Gone: their record is left out, and their sprite, balloon and bubble let go.
@@ -446,6 +491,23 @@ public sealed partial class ParkWorld
 			touched.Add( cell );
 		}
 
+		// An object made stands on its anchor cell, behind whoever stands there.
+		var objectsOn = new Dictionary<int, List<int>>();
+
+		foreach ( var (id, record) in madeObjects )
+		{
+			var cell = (record[11] * MapSize) + record[9];
+
+			if ( cell >= _cells.Length )
+				throw new InvalidOperationException( $"thing {id}, an object bought, stands off the map" );
+
+			if ( !objectsOn.TryGetValue( cell, out var standing ) )
+				objectsOn[cell] = standing = [];
+
+			standing.Add( id );
+			touched.Add( cell );
+		}
+
 		// The list's own links, and each staff kind's.
 		var byId = list.ToDictionary( entry => entry.Id, entry => entry.Record );
 
@@ -467,6 +529,29 @@ public sealed partial class ParkWorld
 				Put16( members[i].Record, StaffNextAt( model ), i + 1 < members.Count ? members[i + 1].Id : 0 );
 		}
 
+		// The object list: the made, newest first, then the file's own chain without the gone.
+		if ( madeObjects.Count > 0 || goneObjects.Count > 0 )
+		{
+			var chain = madeObjects.Select( entry => entry.Id ).OrderByDescending( id => id ).ToList();
+			var steps = 0;
+
+			for ( var id = (int)BinaryPrimitives.ReadUInt16LittleEndian( body.AsSpan( HeaderAt + HeaderFieldAt( FirstObjectField ) ) ); id != 0; )
+			{
+				if ( !fileRecords.TryGetValue( id, out var linked ) || linked.Model != CatalogueObjectModel || ++steps > _records.Count )
+					throw new InvalidOperationException( $"the object list names thing {id}, which is no object of the file's, or runs round" );
+
+				if ( !goneObjects.Contains( id ) )
+					chain.Add( id );
+
+				id = BinaryPrimitives.ReadUInt16LittleEndian( body.AsSpan( linked.At + ObjectNextAt ) );
+			}
+
+			Put16( head, HeaderAt + HeaderFieldAt( FirstObjectField ), chain.Count > 0 ? chain[0] : 0 );
+
+			for ( var i = 0; i < chain.Count; ++i )
+				Put16( byId[chain[i]], ObjectNextAt, i + 1 < chain.Count ? chain[i + 1] : 0 );
+		}
+
 		// The chains of every cell a person stood on or stands on now.
 		var cellAt = CellRecordsAt( body );
 		var headed = 0;
@@ -480,7 +565,8 @@ public sealed partial class ParkWorld
 			var chain = here.Where( id => !before.Contains( id ) ).ToList();
 
 			chain.AddRange( before.Where( here.Contains ) );
-			chain.AddRange( others.GetValueOrDefault( cell ) ?? [] );
+			chain.AddRange( (others.GetValueOrDefault( cell ) ?? []).Where( id => !goneObjects.Contains( id ) ) );
+			chain.AddRange( objectsOn.GetValueOrDefault( cell ) ?? [] );
 
 			for ( var i = 0; i < chain.Count; ++i )
 			{
@@ -506,6 +592,17 @@ public sealed partial class ParkWorld
 		sets[EverybodySet] = Members( sets[EverybodySet], fileRecords, list.Where( entry => IsPerson( entry.Model ) ).Select( entry => entry.Id ) );
 		sets[StaffSet] = Members( sets[StaffSet], fileRecords, isStaff );
 		sets[GuardSet] = Members( sets[GuardSet], fileRecords, list.Where( entry => entry.Model == GuardModel ).Select( entry => entry.Id ) );
+
+		if ( madeObjects.Count > 0 || goneObjects.Count > 0 )
+		{
+			for ( var set = 0; set < sets.Count; ++set )
+				sets[set] = [.. sets[set].Where( id => !goneObjects.Contains( id ) )];
+
+			if ( sets.Count <= ObjectSet )
+				throw new InvalidOperationException( "the park file it was loaded from holds no set for the day's change" );
+
+			sets[ObjectSet] = [.. sets[ObjectSet].Concat( madeObjects.Select( entry => entry.Id ) ).Distinct().Order()];
+		}
 
 		// Put together: the world up to the list's head, the list, what lies between it and the sprite table's
 		// handles, the table, what lies between it and the sets, the sets, the rest.
