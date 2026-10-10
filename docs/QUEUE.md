@@ -48,13 +48,16 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q257y. The writer: what else a made record leaves out.** The old Q257x's other pieces, each counted or
+- [ ] **Q257z. The writer: what else a made record leaves out.** The old Q257y's other pieces, each counted or
   said in `saves.md`. Confirm: each piece's bytes beside a file of the original's own, and the file loaded in
   the original under Proton.
-  From Q257x (`saves.md`, "OpenTPW's writer, a smoking car"): the original ends the go as a ride breaks and
-  lets its riders off within a third of a second (the object's turn sets it broken down and shut), and its
-  mechanic mends it; here the go runs on with its riders seated and nothing mends it (not counted: count it
-  at `ParkRideOperation`'s turn, with the breakdown request that item names). A smoking car's emitter is put
+  From Q257y (`saves.md`, "OpenTPW's writer, a broken ride's state"): nothing mends a broken ride here, so one
+  stays shut for good (the mechanic's search is `MECHANIC_RIDE_SEARCH`, counted; the original's mechanic was
+  assigned two ticks after a load and had the pot open 32 ticks on); SetState's post to the event bus is
+  counted (`RIDE_BROKEN_DOWN_EVENT`, `RIDE_CONDEMNED_EVENT`); a ride condemned, one broken with its door shut
+  and any ride but the Hot Pot were in no game run; whether nobody is seated inside a second of a break here
+  was not resolved (a poll each half second; the original's is 0.3 s).
+  From Q257x (`saves.md`, "OpenTPW's writer, a smoking car"): a smoking car's emitter is put
   where its boat is drawn, not where its last tick left it, and dealt after the scripts'; with no boat drawn
   it is counted and written as none (`SAVE_PARK_CAR_SMOKE`). Nothing draws the smoke (`BUMPER_CAR_SMOKE`).
   **An `EVENT`'s puff needs no writing:** the original's own file of a bought Loudspeaker holds its two puffs

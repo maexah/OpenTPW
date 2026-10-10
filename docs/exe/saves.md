@@ -1109,7 +1109,8 @@ and a model's channels their count, so nothing moves, and they go in before the 
   file's. The hoarding's seven bits and its progress are the thing's as they stand. The node flag words are written
   as the clips started since the load have left them ("OpenTPW's writer, the two tables"), and a head `ADDHEAD`
   hung goes into its node's lookup record ("OpenTPW's writer, a rider's head").
-- **An object** (`ParkState.WrittenObjects`, `ParkWorld.PutObjects`): its door (`mCanLoad`), the member assigned
+- **An object** (`ParkState.WrittenObjects`, `ParkWorld.PutObjects`): `mState` ("OpenTPW's writer, a broken
+  ride's state"), its door (`mCanLoad`), the member assigned
   and the tick they were, the queue's head, back cell and size, the guest being loaded, the six day rings and
   the two counts, the operating three, the goods' cost, quality, chance and ingredient, the price, the two
   repair floats, the service request and the two totals. The back cell and size are the file's until the queue
@@ -2839,10 +2840,9 @@ the first poll, and all four are killed when its mechanic fixes the pot, inside 
 control's leaves four columns of smoke over the pot for good**: no car names them, so the fix kills none, and
 they are still in use 55 s on, where the boats stood at the save (`orig/sheet-fix-left-control-right-15s.png`).
 
-**Found on the way, not built** (filed under Q257y): the original ends the go as the ride breaks and lets
-its riders off within a third of a second (the object's turn sets it broken down and shut,
-`ride-operation.md`, "Where an object's state comes from"); OpenTPW's go runs on with its riders seated, so the
-bought file holds four riders where the original's own holds none. And OpenTPW's mechanic mends nothing.
+**Found on the way:** the original ends the go as the ride breaks and lets its riders off within a third of a
+second (the object's turn sets it broken down and shut); built since ("OpenTPW's writer, a broken ride's
+state"). OpenTPW's mechanic still mends nothing.
 
 **Not run in either game, tested only:** a boat fixed or a ride sold with its smoke in the file; a handle that
 names another effect's emitter; an effect that will not start. Of 35 bugs put back all 35 fail a test, one after a case was added (a file whose particles module did not
@@ -2881,6 +2881,64 @@ and `b-load.log`, the polls across the two loads; the frames `e1`, `e2`, `f2`) w
 and sold), `004db090.c` (the object constructor), `gen_names.py` (the name rows out of the executable),
 `confirm.py`, `loadonly.py`, `PREDICTION.txt`, `mutate.py`, and `orig/` (`go.sh`, `look.py`, the polls
 `g-load.log` and `r2-load.log`, the frames) with the sheet.
+
+### OpenTPW's writer, a broken ride's state
+
+Q257y, split by the session: the item's other pieces are Q257z. **A ride whose script says it has broken is
+broken down and shut on its own turn, and an object's `mState` is written as it runs.** The decode is
+`ride-operation.md`, "The second half" and "A ride broken down, in both games"; this is the file's side.
+
+**What the original's own file holds.** `q257x/orig/broken-by-the-original.TPWS`, saved from its menu seven
+seconds after a break: the Hot Pot's `mState` (record `+200`) 1, `mCanLoad` (`+214`) 0, `mFirstInQ` 0, the
+script's `VAR_BREAKSTAT`, `VAR_RIDECLOSED` and `VAR_BROKEN` 1. `fixed-by-the-original.TPWS`, after its mechanic:
+0 and 1, the three variables nought. The same scene written here before read `mState` 0, `mCanLoad` 1 and a
+guest at the queue's head, with four riders seated.
+
+**What OpenTPW writes.** `ParkPeople.BreakDown` sets the running object's state and shuts it
+(`ride-operation.md`), and `ParkWorld.PutObject` writes `mState` with the object's other running fields, for a
+thing of the file's and for a made one. Before, the writer left `mState` the file's, and a made record's the
+constructor's 0 or 3: nothing here moved it but an open, which stores nought.
+
+**Confirmed in the game** (`q257y/confirm.py`, each predicted in `PREDICTION.txt`; the fix 7 of 8 off-screen and
+on the desktop, the control 2 of 2 on each). Lost Kingdom from `easymode.TPWI`, `buy 1140 41 23 0`, its queue
+joined, five guests sent, and in the go `scriptvar 43 VAR_BREAKSTAT 1`. The log: one `Object 43: Setting state
+BROKEN_DOWN`, then one `Closing...`. `objects` read `state 1 canload 0`, `VAR_RIDECLOSED` 1, `VAR_BROKEN` 1;
+`bumpers` read four seated 0.6 to 0.7 s after the break and none at 1.1 to 1.2 s, `VAR_ONRIDE` nought half a second later, in three runs; every queuer
+was turned away, a head a sweep (five to eight a run: the park's own guests had joined); `hoardings` read the
+pot's eighteen panels up, `flags=0x11`; `RIDE_BROKEN_DOWN_EVENT` counted once. **The file: `mState` 1,
+`mCanLoad` 0, `mFirstInQ` 0, the original's own three.** Loaded here from the Load Park list it reads
+`state 1 canload 0` and `VAR_RIDECLOSED` 1. In the frame the pot stands behind its hoardings with its boats
+empty and its riders walking away (`q257y/pot-fix-left-control-right.png`). **The control, the build before:**
+`state 0 canload 1`, `VAR_RIDECLOSED` 0, `VAR_ONRIDE` 4 eleven seconds after the break, no hoarding, the four
+seated in the frame, and the file's `mState` 0.
+
+**The original under Proton** (`loadfile.sh` with the new `original/object.py` polling thing 43 and its
+script's variables 4, 6, 7 and 9; `q257y/orig/a-load.log`, `c-load.log`). **The fix's file:** on the first poll
+after the load, tick 916, `mState` 1, `mCanLoad` 0, the three variables 1; mechanic 26 assigned two ticks on;
+`VAR_BREAKSTAT` nought on tick 947 and **the pot mended and open on 948**, 8.3 s after the load; a guest called
+forward on tick 1062 and a go running from 1110. **The control's file:** `mState` 0 and `mCanLoad` 1 on the
+load's tick 925 with `VAR_BROKEN` 1 and `VAR_RUNNING` 1, and on tick 926 the original's own turn set state 1,
+shut it and wrote `VAR_RIDECLOSED`; the queue's head changed on each of the next three ticks (48, 33, 32, 35,
+then nobody) and `VAR_RUNNING` read nought on tick 930. So the control's file is one the original puts right
+in a tick, and the fix's is one it has nothing to put right in. Its `save/` ended as it began.
+
+**Predicted and missed** (`PREDICTION.txt` keeps each): nobody seated inside a second (a poll each half second
+read four at 0.6 to 0.7 s and none at 1.1 to 1.2 s, in three runs; the original's is 0.3 s, and this run's poll cannot say
+which side of a second OpenTPW's falls); one guest turned away (my scene's: five to eight were queueing); and
+the first fix run's file read `mState` 0, which is how the writer's gap was found.
+
+**Still not the original's, each said where it is:**
+
+- **Nothing mends a broken ride here.** The mechanic's ride search answers nothing (`MECHANIC_RIDE_SEARCH`'s
+  count, `StaffBehaviour`), so a ride broken down stays shut for good; only the console's `scriptvar` breaks
+  one, the breakdown request being unbuilt (`ride-operation.md`, "The first half of the turn", step 3).
+- SetState's post to the event bus is counted, not built (`RIDE_BROKEN_DOWN_EVENT`, `RIDE_CONDEMNED_EVENT`).
+- The original's file reads `+0x48` 99.0 and `+0x44` 92.0 on the pot where OpenTPW's reads 100 and 100: the wear
+  by use (`FUN_004df670`) is unbuilt (Q157). In the load above one wear, on tick 1152 with a go running, took 1.55 and 0.03 off.
+
+**Not run in either game, tested only:** a ride condemned (a remaining life under 1: no file holds one and
+nothing here lowers it); a ride broken with its door already shut; a ride other than the Hot Pot. Of 18 bugs
+put back all 18 fail a test (`q257y/mutations.py`). `docs/exe/addresses.md` not regenerated.
 
 ## What OpenTPW builds
 

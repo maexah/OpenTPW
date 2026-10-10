@@ -2261,7 +2261,7 @@ public sealed partial class ParkPeople : Entity
 	/// rather than this one.
 	/// </para>
 	/// </summary>
-	private void TakeTheRidesTurns( int thingTick )
+	internal void TakeTheRidesTurns( int thingTick )
 	{
 		if ( _scriptFor == null )
 			return;
@@ -2298,8 +2298,8 @@ public sealed partial class ParkPeople : Entity
 			// FUN_004e0e00 is a switch on mState and nothing else.
 			switch ( thing.State )
 			{
-				// FUN_004e14e0: invite, then let anybody off unless the ride has broken. Everything else
-				// that function does is the breakdown and condemned transitions, which nothing here models.
+				// FUN_004e14e0: invite, then let anybody off, or with the script's VAR_BROKEN set take the ride
+				// to broken down or condemned (BreakDown).
 				case 0:
 					// <b>The watchdog the tail of FUN_004e1220 runs on every turn that does not
 					// invite.</b> Invite bails while the ride already holds a nominee, and otherwise only
@@ -2324,9 +2324,14 @@ public sealed partial class ParkPeople : Entity
 					else if ( operation.Invite( script, thing, TrackTypeOf( thing ) ) == 0 )
 						operation.DropUnreadyNominee( thing );
 
-					if ( script != null && script[ParkRideOperation.BrokenVariable] == 0 )
+					if ( script == null )
+						break;
+
+					if ( script[ParkRideOperation.BrokenVariable] == 0 )
 						operation.Dismiss( script, thing, thingTick, _rideRandom, WalkFor, _behaviour.Park,
 							_behaviour.Catalogue );
+					else
+						BreakDown( operation, script, thing, thingTick );
 
 					break;
 
@@ -2337,8 +2342,8 @@ public sealed partial class ParkPeople : Entity
 					break;
 
 				// Broken down (1), waiting for an upgrade (2) or condemned (4): finish whoever was
-				// mid-admission or put the head out (FUN_004e0450), then let them off. Nothing here moves a
-				// ride into these states - the breakdown request and the upgrade are unbuilt.
+				// mid-admission or put the head out (FUN_004e0450), then let them off. A ride reaches 1 and 4
+				// through BreakDown; nothing here moves one into 2, the upgrade being unbuilt.
 				case ParkRideChoice.StateRefusedOne:
 				case 2:
 				case ParkRideChoice.StateRefusedFour:
@@ -2349,6 +2354,39 @@ public sealed partial class ParkPeople : Entity
 					break;
 			}
 		}
+	}
+
+	/// <summary>
+	/// A ride whose script says it has broken, on its own turn - the tail of <c>FUN_004e14e0</c> and
+	/// <c>FUN_004e0e60</c>'s arms 1 and 4 (<c>docs/exe/ride-operation.md</c>, "The second half").
+	///
+	/// <para>
+	/// The remaining life (<c>+0x48</c>) cut to a byte decides (<c>0x004e1508</c>): above nought the ride is
+	/// broken down, its hoardings raised with the broken picture (<c>FUN_00454550( model, 2 )</c>) and its state
+	/// set 1; at nought it is condemned, the picture and the state 4. Setting either state runs one completion,
+	/// shuts the ride as every close does (<see cref="ParkRideOperation.Close"/>) and posts to the event bus,
+	/// which is counted. The script reads <see cref="ParkRideOperation.ClosedVariable"/> and ends its go, and the
+	/// turns after this one are the state's own: a completion and a rider let off on each.
+	/// </para>
+	/// </summary>
+	internal void BreakDown( ParkRideOperation operation, RideScript script, ParkWorld.CatalogueObject thing,
+		int thingTick )
+	{
+		var condemned = (byte)(int)thing.RemainingLife == 0;
+		var state = condemned ? ParkRideChoice.StateRefusedFour : ParkRideChoice.StateRefusedOne;
+
+		Log.Info( $"Object {thing.ThingId}: Setting state {(condemned ? "CONDEMNED" : "BROKEN_DOWN")}" );
+		State.HoardingFor( thing.ThingId )?.Close( condemned ? 4 : 2 );
+
+		if ( condemned )
+			Log.Info( "Ride has become CONDEMNED!!!" );
+
+		CompleteOrTurnAway( operation, script, thing, thingTick );
+		operation.Close( script, thing.ThingId );
+		Unimplemented.Report( condemned ? "RIDE_CONDEMNED_EVENT" : "RIDE_BROKEN_DOWN_EVENT" );
+
+		if ( State.TryObject( thing.ThingId, out var shut ) )
+			State.ReplaceObject( shut with { State = state } );
 	}
 
 	/// <summary>

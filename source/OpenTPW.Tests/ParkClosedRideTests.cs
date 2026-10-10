@@ -567,6 +567,94 @@ public class ParkClosedRideTests
 		}
 	}
 
+	private static int Times( string what ) => Unimplemented.Summary.FirstOrDefault( entry => entry.What == what ).Times;
+
+	/// <summary>
+	/// A ride whose script reads <c>VAR_BROKEN</c> set is broken down on its own turn (<c>FUN_004e14e0</c>,
+	/// <c>0x004e1508</c>, and <c>FUN_004e0e60( 1 )</c>): the broken picture on its hoardings, one head put out,
+	/// shut as every close shuts it, the event counted and <c>mState</c> 1. The turns after are state 1's, a head
+	/// each.
+	/// </summary>
+	[TestMethod]
+	public void ARideWhoseScriptSaysBrokenIsBrokenDownAndShutOnItsTurn()
+	{
+		var park = Open();
+
+		try
+		{
+			var queued = Queue( park, 3 );
+			var hoarding = park.State.BindHoarding( BellyBounce );
+			var counted = Times( "RIDE_BROKEN_DOWN_EVENT" );
+
+			park.State.NominateForLoading( BellyBounce, queued[0].ThingId );
+			park.People.TakeTheRidesTurns( thingTick: 10 );
+
+			Assert.AreEqual( (0, 1, 0u), (Thing( park, BellyBounce ).State, Thing( park, BellyBounce ).CanLoad, hoarding.Flags),
+				"a ride whose script says nothing is left as it was" );
+
+			Assert.IsTrue( park.Scripts[BellyBounce].Set( ParkRideOperation.BrokenVariable, 1 ) );
+			park.People.TakeTheRidesTurns( thingTick: 11 );
+
+			var broken = Thing( park, BellyBounce );
+
+			Assert.AreEqual( (ParkRideChoice.StateRefusedOne, 0), (broken.State, broken.CanLoad), "broken down, and its door shut" );
+			Assert.AreEqual( 1, park.Scripts[BellyBounce][ParkRideOperation.ClosedVariable], "the script is told it is closed" );
+			Assert.AreEqual( 0, park.State.PersonBeingLoaded( BellyBounce ), "the nominee is let go of" );
+			Assert.AreEqual( 0x13u, hoarding.Flags, "the hoardings go up with the broken picture, kind 2, kept by the close's kind 1" );
+			Assert.AreEqual( 1, hoarding.Texture );
+			Assert.AreEqual( counted + 1, Times( "RIDE_BROKEN_DOWN_EVENT" ), "the post to the event bus is counted, once" );
+			AssertTurnedAway( park, queued[0], "the completion SetState runs puts the head out" );
+			AssertStillQueueing( park, queued[1], "one head a call" );
+
+			foreach ( var other in Visitable( park ).Where( thing => thing.ThingId != BellyBounce ) )
+				Assert.AreEqual( (0, 1), (other.State, other.CanLoad), $"thing {other.ThingId}, whose script says nothing, is left open" );
+
+			park.People.TakeTheRidesTurns( thingTick: 12 );
+
+			AssertTurnedAway( park, queued[1], "a broken ride's own turn puts out the next head" );
+			AssertStillQueueing( park, queued[2], "and one a turn" );
+			Assert.AreEqual( counted + 1, Times( "RIDE_BROKEN_DOWN_EVENT" ), "a ride already broken down is not set so again" );
+			Assert.AreEqual( 0x13u, hoarding.Flags );
+		}
+		finally
+		{
+			Close( park );
+		}
+	}
+
+	/// <summary>
+	/// The remaining life (<c>+0x48</c>) cut to a byte decides between the two: at nought the ride is condemned,
+	/// <c>mState</c> 4 and the hoardings' fourth-kind picture (<c>0x004e1556</c>); at one it is broken down.
+	/// </summary>
+	[TestMethod]
+	[DataRow( 0.99f, ParkRideChoice.StateRefusedFour, 0x23u, "RIDE_CONDEMNED_EVENT" )]
+	[DataRow( 0f, ParkRideChoice.StateRefusedFour, 0x23u, "RIDE_CONDEMNED_EVENT" )]
+	[DataRow( 1f, ParkRideChoice.StateRefusedOne, 0x13u, "RIDE_BROKEN_DOWN_EVENT" )]
+	[DataRow( 100f, ParkRideChoice.StateRefusedOne, 0x13u, "RIDE_BROKEN_DOWN_EVENT" )]
+	public void ABrokenRideWithNoLifeLeftIsCondemned( float life, int state, uint flags, string gap )
+	{
+		var park = Open();
+
+		try
+		{
+			var hoarding = park.State.BindHoarding( BellyBounce );
+			var counted = Times( gap );
+
+			Change( park, BellyBounce, thing => thing with { RemainingLife = life } );
+			Assert.IsTrue( park.Scripts[BellyBounce].Set( ParkRideOperation.BrokenVariable, 1 ) );
+			park.People.TakeTheRidesTurns( thingTick: 10 );
+
+			Assert.AreEqual( (state, 0), (Thing( park, BellyBounce ).State, Thing( park, BellyBounce ).CanLoad) );
+			Assert.AreEqual( flags, hoarding.Flags );
+			Assert.AreEqual( counted + 1, Times( gap ) );
+			Assert.AreEqual( 1, park.Scripts[BellyBounce][ParkRideOperation.ClosedVariable] );
+		}
+		finally
+		{
+			Close( park );
+		}
+	}
+
 	/// <summary>
 	/// <c>mRequestedService</c> is read from file offset 1078, the dword after the three floats; the shipped
 	/// park has no mechanic called on any of its fourteen objects. This pins the offset against the float

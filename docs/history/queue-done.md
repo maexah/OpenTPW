@@ -5825,6 +5825,14 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   of a unit of the original's; the original under Proton read the written handles live on its first poll after
   the load and killed them at its mechanic's fix, where the build before's file left four columns of smoke over
   the pot for good (`saves.md`, "OpenTPW's writer, a smoking car").
+- [x] **Q257y. The writer: a broken ride's state.** Done 2026-10-10, `alexah/401-a-broken-ride-shuts`.
+  Split by the session: the item's other pieces are Q257z. A ride whose script reads `VAR_BROKEN` set is broken
+  down and shut on its own turn (`FUN_004e14e0`, SetState 1; condemned with no life left), and an object's
+  `mState` is written as it runs: in the game a bought Hot Pot broken in a go read state 1, `mCanLoad` 0,
+  predicted, its riders off by 1.2 s, its queue put out a head a sweep and its hoardings up in the frame, where
+  the build before kept four seated and the door open; the file's `mState` 1 and `mCanLoad` 0 are the
+  original's own file's, and the original under Proton read them on its first poll after the load and had its
+  mechanic mend the pot 32 ticks on (`saves.md`, "OpenTPW's writer, a broken ride's state").
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

@@ -21,6 +21,7 @@ place to look for tools. Each file's docstring is its manual.
 | `original/heads.py PID SECS ITEM` | The original's memory: every model of an item with its lookup state (shared flags, heads attached, each record holding one) and each head's sprite, place, scale and frame, a line a change. A `POLL` for `loadfile.sh` |
 | `original/emitters.py PID SECS` | The original's memory: the particle system's live emitters by the used chain (slot, count, handle, effect, place, aim, life, particles alive), a block a change and the particle counts a second. A `POLL` for `loadfile.sh` |
 | `original/scriptvar.py PID THING [INDEX [VALUE]]` | A ride script's variables in the running original, by thing: read, or **written** (the one tool that writes its memory). It is how a ride is broken on demand |
+| `original/object.py PID SECS THING [VAR ...]` | The original's memory: one object's `mState`, `mCanLoad`, the guest being loaded, the queue's head, the member assigned, the State of repair and the remaining life, and those variables of its script, a line a change with `mGameTick`. A `POLL` for `loadfile.sh` |
 | `original/research.py <in> <out> <item>` | A copy of a jungle park file with one item marked researched, so Instant Action's buy list offers it |
 | `original/original.sh`, `tpwmem.py`, `gmove.py`, `record.sh`, `watch.sh` | Starting, reading, clicking, filming and watchpointing the original ("The original under Proton", below) |
 | `q119/lib.py` | What `parkrun.py` is built on: the launch, the console pipe, XTEST clicks and keys, the frame grab. Use it through `parkrun.py` |
@@ -92,6 +93,9 @@ GH=766` there, or the pointer is off):
   common twelve). Write it inside a go: only a car carrying riders smokes, and the go ends at once. Its
   mechanic mends the ride about 25 s later, so save (the menu pauses the game) before then; the mended file is
   evidence too. A script's variables are the dwords at `[frame + 0x1c]`, not `+0x20` (Q257x).
+- **A broken ride is mended fast:** loaded from a file, a broken Hot Pot had its mechanic assigned two ticks on and
+  was open again 32 ticks (8 s) after the load. Poll from before the click (`loadfile.sh`'s `POLL`); the poll's first
+  line is the park before the load, its second the file's (Q257y).
 - **Instant Action offers only researched items:** patch a copy with `research.py`, never the reference
   `easymode.TPWI` (Q257n).
 - **For the first seconds after a load its camera is not on the saved view**, so a thing that lasts under five

@@ -500,7 +500,7 @@ public class ParkFileWriterThingsTests
 
 		var now = was with
 		{
-			AssignedStaff = 30, BackOfQueue = 3000, CanLoad = 0, FirstInQueue = 31, PersonBeingLoaded = 32,
+			State = 1, AssignedStaff = 30, BackOfQueue = 3000, CanLoad = 0, FirstInQueue = 31, PersonBeingLoaded = 32,
 			OperatingCapacity = 7, OperatingDuration = 40, OperatingSpeed = 75, CostOfGoods = 11, QualityOfGoods = 12,
 			ChanceOfWinning = 13, PricePerUse = 14, AmountOfSpecialIngredient = 15, QueueSizeInCells = 16,
 			RemainingLife = 17.5f, StateOfRepair = 18.5f, RequestedService = 1, TimeMarkedForMaintenance = 19,

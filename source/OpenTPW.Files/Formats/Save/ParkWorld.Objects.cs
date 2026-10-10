@@ -6,7 +6,7 @@ public sealed partial class ParkWorld
 {
 	/// <summary>
 	/// Writes each object as it runs over its record in <paramref name="body"/>, a copy of the payload this was
-	/// read from (<c>docs/exe/saves.md</c>, "OpenTPW's writer, the objects"): its door (<c>mCanLoad</c>), the member
+	/// read from (<c>docs/exe/saves.md</c>, "OpenTPW's writer, the objects"): <c>mState</c>, its door (<c>mCanLoad</c>), the member
 	/// of staff assigned and the tick they were, the queue's back cell, size and head, the guest being loaded, the
 	/// six day rings and the two counts between them, the operating three, the goods' cost, quality, chance and
 	/// ingredient, the price, the two repair floats, the service request and the two totals, each where
@@ -14,7 +14,7 @@ public sealed partial class ParkWorld
 	///
 	/// <para>
 	/// The rest of a record stays the file's: where the object stands, its item, its model and its script, its
-	/// flags, <c>mState</c>, its entry and exit, its link in the object list and its upgrade. An object the file
+	/// flags, its entry and exit, its link in the object list and its upgrade. An object the file
 	/// holds no record for is not written here: <see cref="MadeObjectRecord"/> makes its record.
 	/// </para>
 	/// </summary>
@@ -41,6 +41,7 @@ public sealed partial class ParkWorld
 	/// <summary>The fields of an object's record that follow the running park, each where <see cref="ReadCatalogueObject"/> reads it.</summary>
 	private static void PutObject( byte[] body, int start, CatalogueObject thing )
 	{
+		PutInt32( body, start + 200, thing.State );
 		PutUInt16( body, start + 210, thing.AssignedStaff );
 		PutUInt16( body, start + 212, thing.BackOfQueue );
 		PutInt32( body, start + 214, thing.CanLoad );
@@ -90,8 +91,7 @@ public sealed partial class ParkWorld
 	/// A whole record for an object the file does not hold, as the object constructor <c>FUN_004db090</c> and the
 	/// serialiser <c>FUN_004db7d0</c> leave one: the thing's place at the middle of its anchor cell, its angle,
 	/// item and date, <paramref name="meshHandle"/>, its flags, the two lines of its name, its script, its track
-	/// ride, <c>mState</c> (nought for one a guest may be offered and 3 for any other, <c>0x004db4fb</c>),
-	/// <c>mTopLeft</c>, its two ends, <c>mIsTrackRideValid</c> 1, six rings of thirty days, the running fields
+	/// ride, <c>mTopLeft</c>, its two ends, <c>mIsTrackRideValid</c> 1, six rings of thirty days, the running fields
 	/// (<see cref="PutObject"/>) and 100 in the float no reader here names. Its links are
 	/// <see cref="PutPeople"/>'s to write.
 	/// </summary>
@@ -125,7 +125,6 @@ public sealed partial class ParkWorld
 
 		PutInt32( record, 192, thing.RideScript );
 		PutInt32( record, 196, thing.TrackRide );
-		PutInt32( record, 200, thing.IsVisitable ? 0 : 3 );
 		PutUInt16( record, 204, thing.TopLeft );
 		PutUInt16( record, 206, thing.EntryPos );
 		PutUInt16( record, 218, thing.ExitPos );

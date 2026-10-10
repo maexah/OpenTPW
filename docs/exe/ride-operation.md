@@ -98,6 +98,29 @@ In order:
 
 **So a healthy object's whole turn is: drop a stale queue head → maybe request a breakdown → Invite → Dismiss.** In the shipped Lost Kingdom park every VISITABLE object is state 0 and everything else is state 3, so that path is the live one.
 
+### A ride broken down, in both games
+
+Q257y. **OpenTPW runs step 3**: `ParkPeople.TakeTheRidesTurns`, on a state 0 thing whose script reads
+`VAR_BROKEN` set, calls `ParkPeople.BreakDown` in Dismiss's place. The remaining life `+0x48` cut to a byte
+decides (`FLD [ESI+0x48]`, `__ftol`, `TEST AL,AL`, `0x004e1508`..`0x004e1512`): above nought the hoardings take
+kind 2 and the state is 1; at nought kind 4 and state 4. Then SetState's arm in its order: one completion
+(`CompleteOrTurnAway`), the close (`ParkRideOperation.Close`: `mCanLoad` and the nominee nought,
+`VAR_RIDECLOSED` 1, the hoardings' kind 1, which keeps the picture already up), the post to the event bus
+counted (`RIDE_BROKEN_DOWN_EVENT`, `RIDE_CONDEMNED_EVENT`), and the state stored. From the next turn the thing
+is on the states-1/2/4 arm: a completion and a dismissal a turn.
+
+**Which scripts reach it.** Of Lost Kingdom's 81 scripts seventeen write `VAR_BROKEN` 1, the seventeen rides',
+each behind `VAR_BREAKSTAT`; no shop's, sideshow's or feature's does (`rselisting` over the corpus, 2026-10-10).
+The Hot Pot's (`bumper.RSE`): `BUMP 8` and `COPY VAR_BROKEN, 1` at words 167 and 187 while `VAR_BREAKSTAT` is
+set, and `BUMP 6`, which ends the go, at word 143 while `VAR_RIDECLOSED` is. So the engine's close is what ends
+a broken ride's go: the script only reports the break.
+
+**In both games** (`saves.md`, "OpenTPW's writer, a broken ride's state"): a Hot Pot broken in a go here reads
+state 1, `mCanLoad` 0 and nobody seated by 1.2 s on (four at 0.6 s), its queue put out a head a sweep and its
+hoardings up; the original, loading a file written before this was built, did the same on its first tick and
+had the go over four ticks later, and loading one written since had its mechanic mend the pot in 32 ticks.
+**Nothing here mends one**: the mechanic's search is counted and answers nothing.
+
 ### Where an object's state comes from
 
 `FUN_004e0e60` (SetState) is the only store to `mState` at run time (`0x004e11b5`); the constructor and the save's serialiser are the others. Its nine call sites, by the value each writes:
