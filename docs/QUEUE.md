@@ -48,15 +48,19 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q261. The writer: what else a made record leaves out.** The old Q259's other pieces, each counted or
+- [ ] **Q262. The writer: what else a made record leaves out.** The old Q261's other pieces, each counted or
   said in `saves.md`. Confirm: each piece's bytes beside a file of the original's own, and the file loaded in
   the original under Proton.
-  From Q259 (`park.md`, "A broken boat's smoke"): the Hot Pot's own two smokes (effect 16, its script's
-  `ADDOBJ 2`) run at the original's places and are not seen in the frame, where the original's shows dark smoke
-  at the pot's foot: find why. A boat's smoke is started and moved a frame at a time, not on the track tick; a
-  boat with no emitter node is counted (`BUMPER_CAR_NO_SMOKE_NODE`). The wiring in `ParkBumperBoats.Sync` is
-  held by the game run alone (no test stands a boat). In no game run: a boat taken off while it smokes, a second
-  break after a fix, a full particle system.
+  From Q261 (`park.md`, "The sprite pass, and the Hot Pot's own smoke"): the original's cloud at the pot's
+  doorway is wider and blacker than this one, the lens (Q260) and the blend not told apart: read which state
+  word set 10's texture carries in the running original. Nothing here sorts see-through surfaces and sprites by
+  distance, and the people's sprites are still drawn in the see-through pass, in the order things were made
+  (not looked at: a guest standing in front of a bought thing's see-through half). The far cloud, at the fire
+  arch, was a wisp in the frame.
+  From Q259 (`park.md`, "A broken boat's smoke"): a boat's smoke is started and moved a frame at a time, not on
+  the track tick; a boat with no emitter node is counted (`BUMPER_CAR_NO_SMOKE_NODE`). The wiring in
+  `ParkBumperBoats.Sync` is held by the game run alone (no test stands a boat). In no game run: a boat taken off
+  while it smokes, a second break after a fix, a full particle system.
   From Q258 (`park.md`, "A park's particles, started and drawn"): nothing moves or aims a running emitter to
   its node each tick, so the Jungle Spray's jet stays where its node rests (`PARK_PARTICLE_NODE_ON_A_CLIP`);
   counted and started nowhere: `PARK_PARTICLE_ITEM_EFFECT`, `PARK_PARTICLE_NO_PLACE`,

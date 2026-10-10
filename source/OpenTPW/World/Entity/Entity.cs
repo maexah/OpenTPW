@@ -69,6 +69,42 @@ public class Entity
 	}
 
 	/// <summary>
+	/// The sprite pass, after every entity has drawn its see-through half - see <see cref="RenderWorld"/>. The
+	/// world's particles draw here: they write no depth, so a see-through surface drawn after one would paint
+	/// over it even from behind.
+	/// </summary>
+	public void RenderSprites()
+	{
+		OnRenderSprites();
+	}
+
+	/// <summary>
+	/// Draws the world, a pass at a time over every entity in the order they were made: the solid geometry,
+	/// then everything see-through, then the sprites. The original hands its particles' quads to the batches
+	/// after the scene's models and draws the batches furthest first (FUN_00576a00; park.md, "The sprite pass");
+	/// nothing here is sorted, so the sprites take a pass of their own, last.
+	/// </summary>
+	internal static void RenderWorld()
+	{
+		All.ForEach( entity => entity.Render() );
+
+		// Everything see-through comes after everything solid, so a graded surface blends over a
+		// finished picture rather than into a half-drawn one.
+		//
+		// This pass is not sorted within itself. These surfaces write depth, so two of them resolve by
+		// distance rather than by the order their entities were created in.
+		//
+		// What a sort would still buy is blend order between two genuinely graded surfaces that
+		// overlap. The original does sort for exactly that, per triangle and back to front, and
+		// only for its graded and additive batches (FUN_00565590). Nothing in the lobby needs it:
+		// the graded surfaces here are the shoreline ripples and the Space dish's cone, each a
+		// single layer that does not overlap another.
+		All.ForEach( entity => entity.RenderTranslucent() );
+
+		All.ForEach( entity => entity.RenderSprites() );
+	}
+
+	/// <summary>
 	/// Third render pass, over the finished world with depth cleared - see
 	/// <see cref="Level.Render"/>. For things that belong to the screen rather than the scene; the
 	/// advisor is the one that uses it.
@@ -123,6 +159,7 @@ public class Entity
 
 	protected virtual void OnRender() { }
 	protected virtual void OnRenderTranslucent() { }
+	protected virtual void OnRenderSprites() { }
 	protected virtual void OnRenderOverlay() { }
 	protected virtual void OnUpdate() { }
 	protected virtual void OnDelete() { }

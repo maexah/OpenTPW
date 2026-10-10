@@ -5857,6 +5857,15 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   boat; none is left five seconds after the mechanic's fix; the control reads none and `4x BUMPER_CAR_SMOKE`; the
   original's own broken file loaded here smokes at its four places to the unit (`park.md`, "A broken boat's
   smoke"). 5 of 5 predictions at the second run; the first's miss was the script's.
+- [x] **Q261. The Hot Pot's own smoke is drawn over the see-through surfaces in front of it.** Split by the
+  session from the old Q261: its other pieces are Q262. Done 2026-10-10: the two games' clouds of effect 16 agree
+  (117 and 120 particles in the original's, 103 and 102 here four seconds younger, the same reach, sizes and
+  alphas); Q259's frame was taken from the pot's far side, and the particles were painted over by the see-through
+  half of anything made after them. They are drawn in a sprite pass of their own, last: `particles` reads the two
+  emitters at (434,0,233) and (434,1,276) holding 103 each, all drawn, and the sign over the doorway reads a mean
+  of 52.2 and 57.7 with the smoke over it, 64.7 and 64.5 in the control, where it is cut off at the sign's edge
+  (`park.md`, "The sprite pass, and the Hot Pot's own smoke"). 1 of 2 predictions in the fix's run: the box's
+  thresholds were mine and missed.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

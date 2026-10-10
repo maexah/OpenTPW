@@ -1780,20 +1780,8 @@ public class Level
 		// moves here, so a listener set during the update pass would be a frame behind the picture.
 		Audio.SetListener( Camera.Position, Camera.Rotation.Forward );
 
-		Entity.All.ForEach( entity => entity.Render() );
-
-		// Everything see-through comes after everything solid, so a graded surface blends over a
-		// finished picture rather than into a half-drawn one.
-		//
-		// This pass is not sorted within itself. These surfaces write depth, so two of them resolve by
-		// distance rather than by the order their entities were created in.
-		//
-		// What a sort would still buy is blend order between two genuinely graded surfaces that
-		// overlap. The original does sort for exactly that, per triangle and back to front, and
-		// only for its graded and additive batches (FUN_00565590). Nothing in the lobby needs it:
-		// the graded surfaces here are the shoreline ripples and the Space dish's cone, each a
-		// single layer that does not overlap another.
-		Entity.All.ForEach( entity => entity.RenderTranslucent() );
+		// The solid geometry, then everything see-through, then the sprites.
+		Entity.RenderWorld();
 
 		// And the HUD on top of the finished world. Nothing in either pass above can reach it,
 		// because it is not an entity at all - see RootPanel.

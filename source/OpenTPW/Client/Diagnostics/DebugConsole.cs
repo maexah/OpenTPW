@@ -1773,11 +1773,37 @@ public static class DebugConsole
 
 			// The running particle system's census: each emitter of the world's with its effect, where it stands in
 			// park units, its life and how many particles it holds, then how many the last frame drew. `emitters`
-			// is the loaded FILE's.
+			// is the loaded FILE's. `particles <slot>` prints every particle of that emitter instead: its place less
+			// the emitter's in park units, its velocity, size, frame, colour and the ticks it has left of its life.
 			case "particles":
 				if ( ParticleSystem.Current is not { } particleSystem )
 				{
 					Reply( "particles: no particle system is running" );
+					break;
+				}
+
+				if ( parts.Length > 1 )
+				{
+					var cloudSlot = (int)Argument( 1 );
+
+					if ( cloudSlot < 0 || cloudSlot >= ParticleSystem.EmitterCount || !particleSystem.Emitters[cloudSlot].Active )
+					{
+						Reply( $"particles: no emitter is running in slot {cloudSlot}" );
+						break;
+					}
+
+					var cloud = particleSystem.Emitters[cloudSlot];
+
+					Reply( $"particles: slot {cloudSlot} effect {cloud.Effect} holds {cloud.Count}" );
+
+					for ( var index = cloud.FirstParticle; index >= 0; index = particleSystem.Particles[index].Next )
+					{
+						var one = particleSystem.Particles[index];
+
+						Reply( $"particles: particle {index} off ({(one.X - cloud.X) / 64f:0.00},{(one.Y - cloud.Y) / 64f:0.00},{(one.Z - cloud.Z) / 64f:0.00}) "
+							+ $"vel ({one.VX},{one.VY},{one.VZ}) size {one.Size} frame {one.Frame} colour 0x{one.Colour:x8} life {one.Life} of {one.Lifetime}" );
+					}
+
 					break;
 				}
 

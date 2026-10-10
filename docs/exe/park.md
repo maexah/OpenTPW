@@ -1976,10 +1976,57 @@ on; its frame then shows grey smoke over each boat, as OpenTPW's does (`smoke-op
 **A load**: the park entered on the original's own broken file read four emitters of effect 2 at (442,30,263),
 (431,30,268), (424,30,261) and (422,30,251), the file's own places to the unit (`q259/loaded.py`).
 
-**Not looked into:** the pot's own two smokes (effect 16, the script's `ADDOBJ 2`) run here at the original's
-places and aims, (434,0,233) and (434,1,276), and are not seen in OpenTPW's frame, where the original's shows dark
-smoke at the pot's foot. The original starts four more emitters inside half a second of a break (effect 19 at the
+**Not looked into:** the original starts four more emitters inside half a second of a break (effect 19 at the
 boats, the riders' puffs, `BUMPER_RIDER_PARTICLE`).
+
+### The sprite pass, and the Hot Pot's own smoke
+
+Q261, split by the session: the item's other pieces are Q262. The question was Q259's: the pot's own two smokes
+(effect 16, `Smoke2`, its script's `ADDOBJ 2` at a break) ran here and were not seen in the frame.
+
+| Address / value | Name | What it is | Evidence |
+|---|---|---|---|
+| `FUN_00576a00` | | A scene's frame. The six model lists are walked first; `SpriteBatch_DrawParticles` is called after them (`0x00576cbd`), handing each particle's quad to the batches; `FUN_0058a660` and then `FUN_00582170` draw | Decompiled |
+| `0x00582170` | | `FUN_00581db0`, then `FUN_00582ad0`: the per-batch sort, furthest first (`render-states.md`, "Three back-to-front sorts") | Decompiled |
+| `0x0051ef30` | `Particles_Render` | A particle's colour word goes into its sprite record as it stands, whatever the effect's draw flags | Decompiled |
+| `0x0057c620` | `SpriteBatch_DrawParticles` | An effect without draw flag `0x4` takes its state word from its picture's texture (`Texture_BlendStateWord`), so `0x2000` alone changes nothing in the draw | Decompiled |
+
+**The two clouds are the same** (`particledump.py` on the original, `particles <slot>` here; `q261/cloud.py`).
+The original's own pot broken in a go, seven seconds on: 117 and 120 particles, 12.6 units out from the emitter
+at the far end and 4.4 at the middle, up to 22 high, sizes 1222 to 3500, ten alphas from 0 to 255. Here, three
+seconds on: 103 and 102, 9.9 out and 4.45 at the middle, up to 18 high, sizes 1216 to 3407, the same ten alphas.
+Nothing was wrong with what runs.
+
+**Why it was not seen, two things.** Q259's frame of OpenTPW was taken from the far side of the pot
+(`camera 435 320 110 180`), where the original's file looks from the near one: from that side, OpenTPW yaw 0,
+the cloud at the doorway was there before any change. And a real fault beside it: the particles were drawn in the
+see-through pass in the order entities were made, writing no depth, so the see-through half of anything made
+later (a bought pot's sign, its doorway and its hoardings) was drawn after them and painted over the smoke
+standing in front of it. The smoke showed only through the doorway, cut off at the sign's edge.
+
+**What OpenTPW does.** `Entity.RenderWorld` draws the world a pass at a time: every solid half, every
+see-through half, then the sprites (`Entity.OnRenderSprites`), where `WorldParticles` now draws. **Deviation, said
+at `Entity.RenderWorld`:** the original sorts its batches furthest first, sprites among them; nothing here is
+sorted, so a sprite standing behind a blended surface that it shows through is blended in the wrong order. The
+people's sprites are still drawn in the see-through pass.
+
+**Run, 2026-10-10** (`q261/confirm.py`, the desktop). A Hot Pot bought, filled and broken in its go, three
+seconds on, `camera 435 228 35 0`: `particles` read two emitters of effect 16 at (434,0,233) aim (0,7,-30) and
+(434,1,276) aim (0,11,28) holding 103 and 103, every particle of the world's 455 drawn. The sign over the
+doorway, the frame's box (590,200)-(690,262), read a mean of 52.2 and 57.7 in two runs of the fix and 64.7 and
+64.5 in two of the control (the particles back in the see-through pass): the smoke lies over the sign, the
+doorway's posts and the hoardings in the fix's frame and is cut off at their edges in the control's
+(`sign-fix-left-control-right.png`). **Predicted and missed:** the mean under 55 (57.7 in the second run) and
+the box's dark pixels doubled (1.7 times, then no more than the control's: the count was of the sign's lettering,
+a poor measure). From the fire arch's side (`camera 435 270 60 180`) the far cloud is a wisp at the arch's mouth
+in the frame, not the cloud in front of the logs that was predicted.
+
+**Against the original** (`foot-opentpw-left-original-right.png`, its own file `hotpot-later2.TPWS` broken 3.5 s
+after the load): both show a dark cloud at the pot's doorway. The original's is wider on its screen and blacker.
+**Not settled:** how much of that is the lens (Q260: everything stands larger in its frame) and how much the
+blend. Set 10's eight pictures are dark grey (a mean of 32 to 42) and faint, no alpha over 121 of 255 and half
+of each under 25 (`spritesheet.py`); which of `Texture_BlendStateWord`'s words their texture carries in the
+running original was not read.
 
 ## The save's world block: map cells
 

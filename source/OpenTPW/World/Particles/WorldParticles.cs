@@ -27,8 +27,9 @@ namespace OpenTPW;
 /// <para>
 /// <b>How.</b> The picture times the particle's colour. An effect whose draw flags carry 0x4 is added to what
 /// is behind it, scaled by its alpha; any other is blended over it. Tested against the scene's depth and never
-/// written to it (the pass sets state bit 0x800 for every world sprite). Counted and drawn scaled by its alpha
-/// all the same: an effect added without it (0x4 with no 0x2000).
+/// written to it (the pass sets state bit 0x800 for every world sprite), and so drawn in the sprite pass, after
+/// every see-through surface: one drawn later would paint over a sprite standing in front of it. Counted and
+/// drawn scaled by its alpha all the same: an effect added without it (0x4 with no 0x2000).
 /// </para>
 /// <para>
 /// <b>Engine and content.</b> Drawing is engine. Which effects are started and where is up to whoever starts
@@ -91,7 +92,7 @@ internal sealed class WorldParticles : Entity
 	/// <summary>Whether <paramref name="emitter"/> is one this draws: running, holding particles, shown, and of the world.</summary>
 	internal static bool Draws( Emitter emitter ) => emitter.Active && emitter.Count > 0 && !emitter.Hidden && !emitter.Template.OnScreen;
 
-	protected override void OnRenderTranslucent()
+	protected override void OnRenderSprites()
 	{
 		Drawn = 0;
 
