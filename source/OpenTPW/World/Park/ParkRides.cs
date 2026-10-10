@@ -884,7 +884,10 @@ public sealed class ParkRides : Entity
 
 		// And the effects it had started, kept so that its own KILLOBJ finds them.
 		if ( saved.Effects is { } effects )
+		{
 			script.Effects?.Restore( effects );
+			script.StartRestoredParticles( world.Particles );
+		}
 
 		// And the deadlines it keeps in its own variables, a deviation said at RideScript.MoveKeptReadings.
 		// Only where the save's clock reads, as the struct's own deadlines are moved.

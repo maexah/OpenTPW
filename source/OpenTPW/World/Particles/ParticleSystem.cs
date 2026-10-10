@@ -36,8 +36,9 @@ namespace OpenTPW;
 /// pin, so what an effect decorates and the effect stay together.
 /// </para>
 /// <para>
-/// Not built: drawing effects in the world, and the ground an emitter or effector bounces off, which
-/// is flat at zero - what the system's default callback (0x005d60c0) answers.
+/// <b>In the world.</b> Any other effect is drawn where it stands in a park - see <see cref="WorldParticles"/>.
+/// Not built: the ground an emitter or effector bounces off, which is flat at zero - what the system's
+/// default callback (0x005d60c0) answers.
 /// </para>
 /// <para>
 /// <b>Engine and content.</b> The system is engine, the same in the lobby and a park. The effects are
@@ -121,8 +122,14 @@ internal sealed class ParticleSystem
 	/// returns its handle, or 0 if there is no such effect or no free emitter. An on-screen effect is
 	/// pinned by <paramref name="anchor"/>, or by where it starts when that is not given, and drawn with
 	/// <paramref name="owner"/> when it belongs to a window (see <see cref="Emitter.Owner"/>).
+	///
+	/// <para>
+	/// With <paramref name="aim"/> it is the directed start (Particles_SpawnFull, 0x00521930): the same, but it
+	/// draws nothing for the emitter's own velocity, and every particle it throws out starts at
+	/// <paramref name="aim"/> where the effect's own velocity would be.
+	/// </para>
 	/// </summary>
-	public int Spawn( int effect, int x, int y, int z, Anchor? anchor = null, UiWindow? owner = null )
+	public int Spawn( int effect, int x, int y, int z, Anchor? anchor = null, UiWindow? owner = null, ParticleVector? aim = null )
 	{
 		if ( effect < 0 || effect >= Library.Effects.Length )
 			return 0;
@@ -143,9 +150,10 @@ internal sealed class ParticleSystem
 		emitter.X = x >> 4;
 		emitter.Y = y >> 4;
 		emitter.Z = z >> 4;
-		emitter.VX = template.EmitterVelocity.X + Signed( template.EmitterVelocityRandom );
-		emitter.VY = template.EmitterVelocity.Y + Signed( template.EmitterVelocityRandom );
-		emitter.VZ = template.EmitterVelocity.Z + Signed( template.EmitterVelocityRandom );
+		emitter.Aim = aim;
+		emitter.VX = template.EmitterVelocity.X + (aim is null ? Signed( template.EmitterVelocityRandom ) : 0);
+		emitter.VY = template.EmitterVelocity.Y + (aim is null ? Signed( template.EmitterVelocityRandom ) : 0);
+		emitter.VZ = template.EmitterVelocity.Z + (aim is null ? Signed( template.EmitterVelocityRandom ) : 0);
 		emitter.EndSpawn = template.EndSpawn;
 		emitter.Countdown = 0;
 		emitter.OrbitAngle = template.OrbitAngle;
@@ -310,7 +318,7 @@ internal sealed class ParticleSystem
 	}
 
 	/// <summary>One step of the whole system - 0x00520130.</summary>
-	private void Tick()
+	internal void Tick()
 	{
 		// The first step after the system starts does nothing.
 		if ( ++_ticks < 2 )
@@ -554,9 +562,11 @@ internal sealed class ParticleSystem
 
 		if ( template.RadialSpeed == 0 )
 		{
-			particle.VX = template.Velocity.X + Signed( template.VelocityRandom );
-			particle.VY = template.Velocity.Y + Signed( template.VelocityRandom );
-			particle.VZ = template.Velocity.Z + Signed( template.VelocityRandom );
+			var velocity = emitter.Aim ?? template.Velocity;
+
+			particle.VX = velocity.X + Signed( template.VelocityRandom );
+			particle.VY = velocity.Y + Signed( template.VelocityRandom );
+			particle.VZ = velocity.Z + Signed( template.VelocityRandom );
 		}
 		else
 		{
@@ -954,6 +964,13 @@ internal sealed class Emitter : ILinked
 
 	public int X, Y, Z;
 	public int VX, VY, VZ;
+
+	/// <summary>
+	/// The velocity its particles start at where a script aimed it, the emitter's own words at +0x38, or null
+	/// for the effect's own.
+	/// </summary>
+	public ParticleVector? Aim;
+
 	public int Lifetime;
 	public int FirstLifetime;
 	public int EndSpawn;

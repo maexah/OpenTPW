@@ -35,13 +35,14 @@ namespace OpenTPW;
 /// </para>
 ///
 /// <list type="bullet">
-/// <item>Nothing is actually drawn or heard. The engine hands the spawn to <c>Particles_Spawn</c> or
+/// <item>Nothing is started or heard here. The engine hands the spawn to <c>Particles_Spawn</c> or
 /// <c>Sound_PlayEffect</c> and keeps what they answer; this keeps the request and answers a handle of
-/// its own, so a world can later start them for real from <see cref="Records"/> without this having
-/// guessed at either subsystem's numbering.</item>
+/// its own. The script that owns the list starts a particle's emitter in the park's particle system and
+/// keeps its handle on the record (<see cref="Record.Emitter"/>, <c>RideScript.StartParticle</c>); no
+/// sound is started from a record.</item>
 /// <item>There is no position. The engine resolves one through <c>FUN_00556b90</c> from the model and
 /// the node, and <b>walks this whole list every tick</b> (in <c>FUN_005516b0</c>) to move what is
-/// playing as the ride moves. With nothing started there is nothing to move; a record keeps the lookup
+/// playing as the ride moves. Nothing here moves one; a record keeps the lookup
 /// record the engine would move it by (<see cref="Record.Index"/>, <see cref="RideNodes.EffectIndex"/>).</item>
 /// <item>One of the list's other writers is not here: <c>ADDOBJ_EXT</c>, which no shipped script
 /// uses at all. The save-state reader (<c>FUN_005597a0</c>), which rebuilds the list from a park file's
@@ -117,6 +118,12 @@ public sealed class RideEffects
 		/// <summary>Whether a load put this record back; its file does not say which effect it started.</summary>
 		public bool Restored { get; init; }
 
+		/// <summary>
+		/// The handle of the emitter the park's particle system is running for this record, or nought: a sound,
+		/// a particle with no particle system to start in, or one that could not be placed.
+		/// </summary>
+		public int Emitter { get; internal set; }
+
 		/// <summary>Whether this is one of the two particle types rather than one of the eight sound types.</summary>
 		public bool IsParticle => Type <= LastParticleType;
 	}
@@ -153,7 +160,8 @@ public sealed class RideEffects
 	/// same tag can stop it.
 	/// </summary>
 	/// <param name="index">The node's lookup record in the script's model (<see cref="RideNodes.EffectIndex"/>), -1 for none.</param>
-	public void Add( int type, int node, int effect, int tag, int index = -1 )
+	/// <returns>The record kept, or null for a type the engine does not have.</returns>
+	public Record? Add( int type, int node, int effect, int tag, int index = -1 )
 	{
 		if ( !IsKnown( type ) )
 		{
@@ -164,12 +172,12 @@ public sealed class RideEffects
 			// And it complains, so this reports the gap as well as counting it.
 			Unimplemented.Report( $"effect type {type} (ADDOBJ)" );
 
-			return;
+			return null;
 		}
 
 		++Started;
 
-		_records.Insert( 0, new Record
+		var record = new Record
 		{
 			Type = type,
 			Node = node,
@@ -177,7 +185,11 @@ public sealed class RideEffects
 			Effect = effect,
 			Tag = tag,
 			Handle = ++_handle
-		} );
+		};
+
+		_records.Insert( 0, record );
+
+		return record;
 	}
 
 	/// <summary>
@@ -219,7 +231,8 @@ public sealed class RideEffects
 	/// bookkeeping at all.
 	/// </para>
 	/// </summary>
-	public void Trigger( int type, int node, int effect )
+	/// <returns>Whether the type is one the engine has, and so something was started.</returns>
+	public bool Trigger( int type, int node, int effect )
 	{
 		if ( !IsKnown( type ) )
 		{
@@ -227,10 +240,12 @@ public sealed class RideEffects
 
 			Unimplemented.Report( $"effect type {type} (TRIGGEREVENT)" );
 
-			return;
+			return false;
 		}
 
 		++Started;
+
+		return true;
 	}
 
 	/// <summary>

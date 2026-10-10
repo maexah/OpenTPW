@@ -24,6 +24,7 @@ place to look for tools. Each file's docstring is its manual.
 | `original/scriptvar.py PID THING [INDEX [VALUE]]` | A ride script's variables in the running original, by thing: read, or **written** (the one tool that writes its memory). It is how a ride is broken on demand |
 | `original/object.py PID SECS THING [VAR ...]` | The original's memory: one object's `mState`, `mCanLoad`, the guest being loaded, the queue's head, the member assigned, the State of repair and the remaining life, and those variables of its script, a line a change with `mGameTick`. A `POLL` for `loadfile.sh` |
 | `original/thingwords.py PID SECS THING:OFFSET[:FMT[:NAME]] ...` | The original's memory: any words of any things, a line a change with `mGameTick`. Use it for a field or two before writing a poller: the mechanics' search cursor is `2:0xc`, a mechanic's state, job and count `26:0x19c:I`, `26:0x218`, `26:0x214:I`. A `POLL` for `loadfile.sh` |
+| `original/spritepass.py PID`, `particleheights.py PID SECS EFFECT [STEP]`, `particleoverlay.py PID OUT.png [EFFECT]` | The original's world particles: the sprite pass's matrix (`[0x0087b088]`) with every emitter's draw words and its particles projected to pixels; how high and wide an effect's particles go over a time; and a frame grabbed with each particle's sprite marked on it, which proves a projection rule against the picture |
 | `original/research.py <in> <out> <item>` | A copy of a jungle park file with one item marked researched, so Instant Action's buy list offers it |
 | `original/original.sh`, `tpwmem.py`, `gmove.py`, `record.sh`, `watch.sh` | Starting, reading, clicking, filming and watchpointing the original ("The original under Proton", below) |
 | `q119/lib.py` | What `parkrun.py` is built on: the launch, the console pipe, XTEST clicks and keys, the frame grab. Use it through `parkrun.py` |
@@ -54,7 +55,8 @@ whole list):
 - **A Balloon Shop a guest can reach:** `buy 1209 43 22 0` (the review of 2026-10-06, fix 2).
 - **Particles a script starts:** `buy 1203 44 33 0` is a second Drinks Shop, whose script opens on its bubbles
   (effect 58 on node 1); `scriptvar 21 VAR_WORN 1` makes the file's Small Toilet 21 start two (9, then 69).
-  `emitters` prints the LOADED FILE's emitters, not the running park's: nothing draws a park's particles here.
+  `emitters` prints the LOADED FILE's emitters; `particles` the running park's, with how many were drawn.
+  `camera 445 335 45 180` shows both Drinks Shops' bubbles, `camera 555 170 25 180` the toilet's stink (Q258).
   In the original's frame the bubbles are a few pixels: crop the shop and enlarge it four times (Q257v).
 - **The Jungle Spray's jet:** `admit 52 34` four times, each `send <guest> 14`; poll `rides` for a `2:37@`
   record on thing 14 and `pause` at the first: one jet (node 2) is running, for about four seconds (Q257w).
@@ -105,6 +107,11 @@ GH=766` there, or the pointer is off):
   thing bought goes on the front. Read an order from the file's `mNext` links, never from the ids (Q257z).
 - **Instant Action offers only researched items:** patch a copy with `research.py`, never the reference
   `easymode.TPWI` (Q257n).
+- **A point's place on its screen** is its park place (x, the height, z) through the matrix at `[0x0087b088]`,
+  then `x / w` and `y / w` as the screen's -1 to 1 (`spritepass.py` does it): how to find a thing in its frame, or
+  to prove a drawing rule on it (Q258).
+- **A highest or widest reading grows with the time looked.** Compare the two games over the same time, or
+  predict a count, never a maximum (Q258: a bubble's height read 31 in ten seconds and 42 in forty).
 - **For the first seconds after a load its camera is not on the saved view**, so a thing that lasts under five
   seconds from the load is in its memory and not in its picture: poll it, do not film it (Q257w).
 - **Its camera stands further back than OpenTPW's for the same numbers.** A file saved under

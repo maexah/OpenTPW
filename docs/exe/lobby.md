@@ -166,6 +166,8 @@ handle can be 0). Keys look near-white because the art is additive gold over a l
 
 ### World sprites (decoded; the park's people and their balloons are drawn, the rest is not built)
 
+A park's particle effects in the world are drawn: `park.md`, "A park's particles, started and drawn" (Q258).
+
 Drawing effects **in the world** is a whole subsystem, not a variant of the screen path — nothing in
 it reaches `Sprites_LookUp`, whose only caller is `Particles_Render`.
 

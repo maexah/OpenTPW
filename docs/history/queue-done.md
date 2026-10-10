@@ -5843,6 +5843,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Proton, loading the file saved as he set off, read him assigned on its first tick and had the pot open 42
   ticks on, as the run that wrote it, and its own cursor steps one object a decide as read
   (`ride-operation.md`, "The mechanic's repair"; `saves.md`, "OpenTPW's writer, the mechanic's job").
+- [x] **Q258. A script's particles are started in the park's particle system and drawn in the world.** Split by
+  the session from the old Q258: its other pieces are Q259. Done 2026-10-10: `particles` reads 4 emitters of the
+  world (the shipped Drinks Shop's bubbles carried on at (440,6,312), a bought shop's at (450,6,342), a worn
+  toilet's flies and stink at (555,10,174)), the bubbles holding 10 to 12 and 11 particles where the original's
+  hold 9 to 15, every particle drawn, and the picture shows them over both shops; the original's sprite pass is
+  read and its matrix measured (`park.md`, "A park's particles, started and drawn"). 4 of 5 predictions: the
+  bubbles' highest was predicted from too short a look.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

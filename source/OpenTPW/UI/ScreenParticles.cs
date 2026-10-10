@@ -236,8 +236,14 @@ internal sealed class ScreenParticles : Panel
 		}
 	}
 
+	/// <summary>The one texture every particle picture is in, which the world's particles are drawn from too.</summary>
+	internal Texture Atlas => _atlas;
+
+	/// <summary>The small white square an effect with no frames is drawn with.</summary>
+	internal Region Plain => _plain;
+
 	/// <summary>Frame <paramref name="frame"/> of sprite set <paramref name="set"/> - 0x005423a0.</summary>
-	private Region? Picture( int set, int frame )
+	internal Region? Picture( int set, int frame )
 	{
 		var bank = set >> 4;
 		if ( bank < 0 || bank >= _banks.Count )
@@ -291,7 +297,7 @@ internal sealed class ScreenParticles : Panel
 	}
 
 	/// <summary>Where a picture is in the texture, and how wide it is for its height.</summary>
-	private sealed record Region( float Left, float Top, float Right, float Bottom, float Aspect );
+	internal sealed record Region( float Left, float Top, float Right, float Bottom, float Aspect );
 
 	/// <summary>
 	/// A pool of quads for one blend, built into clip space every frame and drawn in one go. Quads not

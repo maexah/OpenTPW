@@ -283,6 +283,9 @@ public sealed class RideScriptScheduler
 		// destructor stops what +0xd0 holds (FUN_00558500), so a scream a second start let go is not reached.
 		if ( script.Screaming )
 			ParkAudio.Current?.StopScream( script.Id );
+
+		// And every particle its records hold is stopped (FUN_0051ff70 with -2, from the same destructor).
+		script.StopParticles();
 	}
 
 	/// <summary>

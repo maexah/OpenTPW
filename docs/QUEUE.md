@@ -48,9 +48,22 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q258. The writer: what else a made record leaves out.** The old Q257z's other pieces, each counted or
+- [ ] **Q259. The writer: what else a made record leaves out.** The old Q258's other pieces, each counted or
   said in `saves.md`. Confirm: each piece's bytes beside a file of the original's own, and the file loaded in
   the original under Proton.
+  From Q258 (`park.md`, "A park's particles, started and drawn"): nothing moves or aims a running emitter to
+  its node each tick, so the Jungle Spray's jet stays where its node rests (`PARK_PARTICLE_NODE_ON_A_CLIP`);
+  counted and started nowhere: `PARK_PARTICLE_ITEM_EFFECT`, `PARK_PARTICLE_NO_PLACE`,
+  `PARK_PARTICLE_NO_DIRECTION`, `PARK_PARTICLE_NOT_STARTED`; a loaded emitter begins again
+  (`LOADED_EMITTER_LIFE_PART_RUN`); an effect added without its alpha (`WORLD_PARTICLE_ADDED_WITHOUT_ALPHA`).
+  Not started and not counted: a file's emitter no script's record names (the shipped park's effect 20 at
+  (532,4,526): find what owns it), a broken boat's smoke (`BUMPER_CAR_SMOKE`), the riders' and leavers' puffs
+  (`BUMPER_RIDER_PARTICLE`, `LEAVER_BOARDING_PARTICLE`), a sold thing's (`DESTROY_PARTICLE_EFFECT`). The writer
+  still writes an emitter as it starts, not as the running one stands. A sprite's width on the screen was not
+  settled by the original's picture (the listing's rule is built). An effect with no picture is 0.75 wide for
+  its height in the pass (`DAT_008bcbcc`), and `ScreenParticles` draws its own as 1. In no game run: the jet,
+  an `EVENT`'s puff, a `KILLOBJ` (the tests alone); the toilet's stink and flies were not held against the
+  original's picture.
   From Q257z (`saves.md`, "OpenTPW's writer, the mechanic's job"; `ride-operation.md`, "The mechanic's
   repair"): an upgrade job is passed over and its completion left (`MECHANIC_UPGRADE_JOB`,
   `RIDE_UPGRADE_COMPLETION`: nothing here puts a ride in state 2), advisor message `0x46` is counted
@@ -157,6 +170,13 @@ the research lab), then the rest of this section in its old order.
   written before every park file; `autosave.TPWS` on leaving a park, which entering then finds as the newest
   file; the quicksave and quickload keys (`<theme>.TPWS`); `restart.INTS` written when the folder has none, and
   read by Restart Park. After Q241j. Confirm: a park left and entered again at the tick it was left on.
+- [ ] **Q260. The park's lens: 90 degrees or 53.** Decode first. From Q258 (`park.md`, "A park's particles,
+  started and drawn"): the matrix the original draws by, read in its memory, is a 90 degree projection times a
+  scale of 1.5 across and 2 down (`0x0087b0d0`, `FUN_005781d0`), and a point through it lands in the frame with
+  the screen as -1 to 1: 53.13 degrees top to bottom. `ParkOrbitCameraMode` asks for 90, from the culling
+  frustum. Find which the picture is (a known point's pixel in both games at one camera), whether the lobby and
+  the camcorder are the same, and what `TOOLING.md`'s "its camera stands further back" then is. Confirm: the
+  decode written down; the build is the next session.
 - [ ] **Q149. The calendar keeps its own game tick, from nought, and makes up the advances the original loses.** Found
   by the 2026-09-26 staleness audit. The original's calendar counter is `mGameTick` (`+0x1da70c`, `weather.md`, "The
   calendar"), which a loaded save sets to its own (755 in `Easymode.TPWI`, as `GameCalendar.Rebase` says);

@@ -1771,6 +1771,44 @@ public static class DebugConsole
 
 				break;
 
+			// The running particle system's census: each emitter of the world's with its effect, where it stands in
+			// park units, its life and how many particles it holds, then how many the last frame drew. `emitters`
+			// is the loaded FILE's.
+			case "particles":
+				if ( ParticleSystem.Current is not { } particleSystem )
+				{
+					Reply( "particles: no particle system is running" );
+					break;
+				}
+
+				var ofTheWorld = 0;
+				var alive = 0;
+
+				for ( var slot = 0; slot < ParticleSystem.EmitterCount; ++slot )
+				{
+					var emitter = particleSystem.Emitters[slot];
+
+					if ( !emitter.Active || emitter.Template.OnScreen )
+						continue;
+
+					++ofTheWorld;
+					alive += emitter.Count;
+
+					// How far over the emitter its highest particle stands, in park units.
+					var highest = 0;
+
+					for ( var index = emitter.FirstParticle; index >= 0; index = particleSystem.Particles[index].Next )
+						highest = Math.Max( highest, (particleSystem.Particles[index].Y - emitter.Y) / 64 );
+
+					Reply( $"particles: slot {slot} effect {emitter.Effect} at ({emitter.X / 64},{emitter.Y / 64},{emitter.Z / 64}) "
+						+ $"aim {(emitter.Aim is { } aimed ? $"({aimed.X},{aimed.Y},{aimed.Z})" : "none")} life {emitter.Lifetime} particles {emitter.Count} highest {highest} "
+						+ $"flags 0x{emitter.Template.DrawFlags:x} set {emitter.Template.SpriteSet} frames {emitter.Template.Frames}" );
+				}
+
+				Reply( $"particles: {ofTheWorld} emitters of the world, {alive} particles alive, {WorldParticles.Current?.Drawn ?? 0} drawn last frame" );
+
+				break;
+
 			// The region effects' census: how many cells hold any, and each of the five words summed over the map
 			// (happiness, illness, hunger, security, attraction). `cell` prints one cell's.
 			case "effects":

@@ -1245,41 +1245,196 @@ public sealed class RideScript
 			if ( !record.IsParticle || record.Restored )
 				continue;
 
-			if ( (record.Effect & ItemEffectBit) != 0 )
+			switch ( Placed( record.Type, record.Node, record.Effect, out var spawn, out _ ) )
 			{
-				Unimplemented.Report( "SAVE_PARK_EMITTER_ITEM_EFFECT" );
-				continue;
-			}
+				case Unplaced.ItemEffect:
+					Unimplemented.Report( "SAVE_PARK_EMITTER_ITEM_EFFECT" );
+					break;
 
-			var place = System.Numerics.Vector3.Zero;
+				case Unplaced.NoPlace:
+					Unimplemented.Report( "SAVE_PARK_EMITTER_NO_PLACE" );
+					break;
 
-			// A node with no matrix kept reads as the origin in the engine, and the emitter is put there.
-			if ( record.Node < 0 || Nodes?.Find( record.Node, RideNodes.ParticleSpace, out place ) is not { } end
-				|| end is NodeEnd.Missing or NodeEnd.NegativeId )
-			{
-				Unimplemented.Report( "SAVE_PARK_EMITTER_NO_PLACE" );
-				continue;
-			}
-
-			(int, int, int)? direction = null;
-
-			// A type 2 is aimed the way its node points, each of the three times 1024 and cut to a whole number
-			// (0x005519d8). A node whose matrix is never stored has no direction to cut.
-			if ( record.Type != RideEffects.FirstType )
-			{
-				if ( Nodes!.FindDirection( record.Node, RideNodes.ParticleSpace, out var way ) is NodeEnd.Unposed )
-				{
+				case Unplaced.NoDirection:
 					Unimplemented.Report( "SAVE_PARK_EMITTER_DIRECTED" );
-					continue;
-				}
+					break;
 
-				direction = ((int)(way.X * 1024f), (int)(way.Y * 1024f), (int)(way.Z * 1024f));
+				default:
+					spawns[index] = spawn;
+					break;
 			}
-
-			spawns[index] = new ParkParticles.Spawn( record.Effect, (int)place.X << 10, (int)place.Y << 10, (int)place.Z << 10, direction );
 		}
 
 		return spawns;
+	}
+
+	/// <summary>Why a particle a script asks for has no emitter to start.</summary>
+	private enum Unplaced
+	{
+		/// <summary>It has one.</summary>
+		None,
+
+		/// <summary>The effect is one of the item's own (bit 15 of the id).</summary>
+		ItemEffect,
+
+		/// <summary>No node, or a node the model does not hold.</summary>
+		NoPlace,
+
+		/// <summary>A type 2 whose node's matrix is never stored, so it points nowhere.</summary>
+		NoDirection
+	}
+
+	/// <summary>
+	/// The emitter a particle of <paramref name="type"/> on <paramref name="node"/> starts: the effect at the node's
+	/// place cut to whole units and, for a type 2, the way the node points, each of the three times 1024 and cut
+	/// to a whole number (<c>0x005519d8</c>). <paramref name="atRest"/> says the node rides a clip and was taken
+	/// where it rests.
+	/// </summary>
+	private Unplaced Placed( int type, int node, int effect, out ParkParticles.Spawn spawn, out bool atRest )
+	{
+		spawn = default;
+		atRest = false;
+
+		if ( (effect & ItemEffectBit) != 0 )
+			return Unplaced.ItemEffect;
+
+		var place = System.Numerics.Vector3.Zero;
+
+		// A node with no matrix kept reads as the origin in the engine, and the emitter is put there.
+		if ( node < 0 || Nodes?.Find( node, RideNodes.ParticleSpace, out place ) is not { } end
+			|| end is NodeEnd.Missing or NodeEnd.NegativeId )
+			return Unplaced.NoPlace;
+
+		atRest = end is NodeEnd.RestPose;
+
+		(int, int, int)? direction = null;
+
+		if ( type != RideEffects.FirstType )
+		{
+			if ( Nodes!.FindDirection( node, RideNodes.ParticleSpace, out var way ) is NodeEnd.Unposed )
+				return Unplaced.NoDirection;
+
+			direction = ((int)(way.X * 1024f), (int)(way.Y * 1024f), (int)(way.Z * 1024f));
+		}
+
+		spawn = new ParkParticles.Spawn( effect, (int)place.X << 10, (int)place.Y << 10, (int)place.Z << 10, direction );
+
+		return Unplaced.None;
+	}
+
+	/// <summary>
+	/// Starts the emitter of a particle this script asks for in the park's particle system
+	/// (<c>FUN_005573d0</c>'s cases 1 and 2), and answers its handle, or nought where none was started: with no
+	/// particle system, or counted, an effect of the item's own, a node with no place or no direction, and a start
+	/// the system refuses. A node that rides a clip is counted too, and its emitter stays where the node rests:
+	/// the engine's sweep moves and aims an emitter to its node every tick (<c>0x0055190f</c>), and nothing here does.
+	/// </summary>
+	private int StartParticle( int type, int node, int effect )
+	{
+		if ( ParticleSystem.Current is not { } system )
+			return 0;
+
+		switch ( Placed( type, node, effect, out var spawn, out var atRest ) )
+		{
+			case Unplaced.ItemEffect:
+				Unimplemented.Report( "PARK_PARTICLE_ITEM_EFFECT" );
+				return 0;
+
+			case Unplaced.NoPlace:
+				Unimplemented.Report( "PARK_PARTICLE_NO_PLACE" );
+				return 0;
+
+			case Unplaced.NoDirection:
+				Unimplemented.Report( "PARK_PARTICLE_NO_DIRECTION" );
+				return 0;
+		}
+
+		if ( atRest )
+			Unimplemented.Report( "PARK_PARTICLE_NODE_ON_A_CLIP" );
+
+		ParticleVector? aim = null;
+
+		// A directed start's own velocity: the direction times the effect's speed, over 1024 toward nought.
+		if ( spawn.Direction is { } direction && effect >= 0 && effect < system.Library.Effects.Length )
+		{
+			var speed = system.Library.Effects[effect].VelocityScale;
+
+			aim = new ParticleVector( direction.X * speed / 1024, direction.Height * speed / 1024, direction.Z * speed / 1024 );
+		}
+
+		var handle = system.Spawn( spawn.Template, spawn.X, spawn.Height, spawn.Z, aim: aim );
+
+		if ( handle == 0 )
+			Unimplemented.Report( "PARK_PARTICLE_NOT_STARTED" );
+		else
+			Log.Info( $"Particles: script {Id} of thing {ThingId} started effect {effect} (type {type}, node {node}) at ({spawn.X >> 10},{spawn.Height >> 10},{spawn.Z >> 10}), handle 0x{handle:x}" );
+
+		return handle;
+	}
+
+	/// <summary>
+	/// Starts again the emitter of each particle record a load put back, from the file's own emitter the record's
+	/// handle names: its effect, at its place, aimed as it was. A killed emitter and a handle naming none are left.
+	/// The emitter begins its effect afresh; what the file's held of a life part run is counted and not read.
+	/// </summary>
+	internal void StartRestoredParticles( ParkParticles particles )
+	{
+		if ( Effects is null || ParticleSystem.Current is not { } system || particles.Problem is not null )
+			return;
+
+		foreach ( var record in Effects.Records )
+		{
+			if ( !record.IsParticle || !record.Restored || record.Emitter != 0 || !particles.Names( record.SavedHandle ) )
+				continue;
+
+			var slot = record.SavedHandle & 0xffff;
+			var saved = particles.At( slot );
+
+			if ( saved.Life < 0 || saved.Template < 0 || saved.Template >= system.Library.Effects.Length )
+				continue;
+
+			if ( saved.Life != system.Library.Effects[saved.Template].Lifetime )
+				Unimplemented.Report( "LOADED_EMITTER_LIFE_PART_RUN" );
+
+			ParticleVector? aim = null;
+
+			if ( record.Type != RideEffects.FirstType )
+			{
+				var (x, height, z) = particles.Aim( slot );
+
+				aim = new ParticleVector( x, height, z );
+			}
+
+			// The file's place is in the emitter's own units, a sixteenth of what a start is handed.
+			record.Emitter = system.Spawn( saved.Template, saved.X << 4, saved.Height << 4, saved.Z << 4, aim: aim );
+
+			if ( record.Emitter == 0 )
+				Unimplemented.Report( "PARK_PARTICLE_NOT_STARTED" );
+			else
+				Log.Info( $"Particles: script {Id} of thing {ThingId} carries on the file's effect {saved.Template} at ({saved.X >> 6},{saved.Height >> 6},{saved.Z >> 6}), handle 0x{record.Emitter:x}" );
+		}
+	}
+
+	/// <summary>
+	/// Stops every emitter this script's records hold, as its end does (<c>FUN_0051ff70( handle, -2 )</c>): each
+	/// stops emitting, and what it threw out lives out its time.
+	/// </summary>
+	internal void StopParticles()
+	{
+		if ( Effects is null )
+			return;
+
+		foreach ( var record in Effects.Records )
+			StopParticle( record );
+	}
+
+	private static void StopParticle( RideEffects.Record record )
+	{
+		if ( record.Emitter == 0 )
+			return;
+
+		ParticleSystem.Current?.Kill( record.Emitter );
+		record.Emitter = 0;
 	}
 
 	/// <summary>The bit of an effect id that names one of the item's own, by its place among them (<c>0x00557414</c>).</summary>
@@ -2327,8 +2482,13 @@ public sealed class RideScript
 		var type = Value( operands[0] );
 		var node = Value( operands[1] );
 
-		Effects.Add( type, node, Value( operands[2] ), Value( operands[3] ),
+		var effect = Value( operands[2] );
+
+		var record = Effects.Add( type, node, effect, Value( operands[3] ),
 			RideEffects.IsKnown( type ) ? Nodes?.EffectIndex( type, node ) ?? -1 : -1 );
+
+		if ( record is { IsParticle: true } )
+			record.Emitter = StartParticle( type, node, effect );
 	}
 
 	/// <summary>
@@ -2344,7 +2504,12 @@ public sealed class RideScript
 			return;
 		}
 
-		Effects.Trigger( Value( operands[0] ), Value( operands[1] ), Value( operands[2] ) );
+		var type = Value( operands[0] );
+		var node = Value( operands[1] );
+		var effect = Value( operands[2] );
+
+		if ( Effects.Trigger( type, node, effect ) && type <= RideEffects.LastParticleType )
+			StartParticle( type, node, effect );
 	}
 
 	/// <summary>
@@ -2360,7 +2525,15 @@ public sealed class RideScript
 			return;
 		}
 
-		Effects.Kill( Value( tag ) );
+		var killed = Value( tag );
+
+		foreach ( var record in Effects.Records )
+		{
+			if ( record.Tag == killed )
+				StopParticle( record );
+		}
+
+		Effects.Kill( killed );
 	}
 
 	/// <summary>

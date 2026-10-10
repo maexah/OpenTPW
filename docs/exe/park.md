@@ -1874,6 +1874,78 @@ prankery, draw order and ID reseed. The exit counter loses one per needs tick, w
 the state-6 turn sends a guest home when it reads exactly zero
 (`ride-operation.md`, "The state-6 turn, in order", arm (d)).
 
+## A park's particles, started and drawn
+
+Q258. The particle system is the lobby's (`lobby.md`, "Particle system"); this is what a park adds: who starts an
+effect in the world, and how a world particle becomes a sprite.
+
+| Address / value | Name | What it is | Evidence |
+|---|---|---|---|
+| `0x0051ef30` | `Particles_Render` | Packs one emitter's particles into 28-byte sprite records. Its world arm (the effect's `+0x05` nought): each coordinate times 16, the size word doubled (`<< 1`, kept as sixteen bits), the effect's draw flags with `0x4000` | Decompiled |
+| `0x0057c620` | `SpriteBatch_DrawParticles` | The sprite pass over all 120 emitters. A record without `0x40000` has its place over 1024 put through `FUN_00578d20` (case 0) with the matrix `[0x0087b088]`; the quad's corners are then set out round that point: half height the size over 1024 times 0.5 (`0x00701ac8`, `0x00701b28`), half width that times the picture's float at `+8`, or `DAT_008bcbcc` with no picture; turned by the rotation word over 65536 (`0x00701ad0`) | Decompiled; the call's `ECX` read in the listing (`0x0057c875`) |
+| `0x0087b158` | | The matrix `[0x0087b088]` names (`FUN_005781d0`). `FUN_005783b0` builds it: the camera's matrix `0x0087aff0` inverted, times the projection `0x0087b110`, times `0x0087b0d0` | Decompiled; all three read in the running original |
+| `0x0087b0d0` | | A scale: `2 x DAT_008bcbcc` across, `-2` down (`FUN_005781d0`: `0x0087b0e4 = 0xc0000000`). Read live: 1.5, -2, 1, 1 | Decompiled; memory |
+| `DAT_008bcbcc` | | 0.75 in the running original at 1024 x 768: the screen's height over its width | Memory |
+| sprite record `+8` | | A picture's width over its height: 1.0 for set 8's 61 x 61, 1.0357 for its 58 x 56 (`Sprites_LookUp`'s 24-byte records) | Memory |
+| state bit `0x800` | | Set for every record carrying `0x4000`, so every world sprite: no depth write (`render-states.md`). Draw flags `0x4` give the word `0x200522`, with `0x2000` plus `0x30` (source alpha, one) | Decompiled |
+
+**The matrices, read in the running original** (`orig/look.py`, the park camera on a bought Drinks Shop): the
+projection is `diag( 0.70711, 0.70711, . )` with the fourth taken as 0.70711 of the depth, a 90 degree lens
+(cos 45 and sin 45); the third matrix scales it by 1.5 and -2. A point's `x / w` and `y / w` after the product
+are the screen's -1 to 1: the bought shop at (450, 6, 342) comes out 587 px across of 1024, and stands there in
+the frame; with the screen at -2 to 2 it would be at 550.
+
+**So the sprite's size in the park** follows from the matrix alone, because the corners are added after it: a half
+height of one is `1 / (2 cos 45)` = 0.707 park units, a half width of one `1 / (1.5 cos 45)` = 0.943. A bubble
+(effect 58, size 1024, so a half height of 1.0) is 0.707 units up and down, 5.4 to 5.9 px of 768 at the reference
+view's depth of 65 to 71 units, where the original's own frame shows its rings about 11 px tall. A picture is so
+drawn a third wider on the screen than it is authored, as the lobby's are. **Not settled by the picture:** that
+width. The frame at 1024 x 768 shows a bubble's ring too faintly to tell 13 px from 10 (`orig/overlay.py` marks
+both on it); the rule is the listing's.
+
+**What follows for the lens, and is NOT acted on here:** a product of `1.5 x` and `2 x` over a 90 degree
+projection draws a vertical half-angle of `atan( 1 / 2 )`, 53.13 degrees top to bottom, not 90. OpenTPW's park
+camera asks for 90 (`ParkOrbitCameraMode`, from the culling frustum `FUN_0056bb00`). Filed as Q260, decode first;
+the sprites here are built at their size in the park, so they are right under either lens.
+
+**Who starts one.** `FUN_005573d0` (`ADDOBJ`'s and `EVENT`'s worker) cases 1 and 2 call `Particles_Spawn` and
+`Particles_SpawnFull` with the node's place times 1024 (`saves.md`, "OpenTPW's writer, an emitter started" and
+"a particle with a direction"). The loader keeps a file's emitters and empties their particles (`FUN_0051f7a0`).
+
+**Measured in the original** (`q258/orig/`, Q257v's file loaded under Proton): the Drinks Shops' bubbles hold 9 to
+15 particles each and reach 38.4 and 42.2 units over their emitters in 40 s (27.4 to 33.8 in a ten second look:
+the highest seen grows with the time looked), 4.8 aside; the toilet's stink (69) 9.4 over and 8.7 aside.
+
+**What OpenTPW does.** `RideScript.StartParticle` starts a type 1 or 2 in the park's `ParticleSystem` at the
+node's place cut to whole units, a type 2 aimed (`Emitter.Aim`: the direction times the effect's speed over 1024
+toward nought, no draw for the emitter's own velocity), and keeps the handle on the record
+(`RideEffects.Record.Emitter`); `KILLOBJ` and a script's end kill it. A load starts again the emitter each
+particle record names in the file, at the file's place and aim (`RideScript.StartRestoredParticles`).
+`WorldParticles` draws every emitter not flagged for the screen as quads in the world turned to the camera, the
+size above, blended or added, depth tested and not written. The console's `particles` prints the running
+emitters, their particles and how many were drawn; `emitters` is still the loaded file's.
+
+**Run, 2026-10-10** (`q258/confirm.py`, 4 of 5 predictions on the desktop). The shipped shop's bubbles carried on
+at (440,6,312), a bought shop's started at (450,6,342), a worn toilet's flies and stink at (555,10,174): four
+emitters, the bubbles holding 10 to 12 and 11 particles, every particle drawn; the shop sold, its emitter was gone
+inside seven seconds; the save still wrote its three. The bubbles' highest read 42 and 41 units in 25 s, the
+original's 42.2 and 38.4 in 40 s; the prediction's band (26 to 36, taken from a twelve second look) was wrong.
+`bubbles-opentpw-left-original-right.png` is the two games' shop.
+
+**Deviations and gaps, each counted where it is reached.** The engine's sweep moves and aims an emitter to its
+node every tick (`0x0055190f`); nothing here does, so one on a node that rides a clip stays where the node rests
+(`PARK_PARTICLE_NODE_ON_A_CLIP`: the Jungle Spray's jet). Started nowhere: an effect of the item's own
+(`PARK_PARTICLE_ITEM_EFFECT`), a record with no node or one the model lacks (`PARK_PARTICLE_NO_PLACE`), a type 2
+whose node's matrix is never stored (`PARK_PARTICLE_NO_DIRECTION`), a start the system refuses, whose record the
+engine frees and this keeps (`PARK_PARTICLE_NOT_STARTED`). A loaded emitter begins its effect again: the file's
+running words are not read (`LOADED_EMITTER_LIFE_PART_RUN` where its life is not the template's). An effect added
+without its alpha (flags `0x4` with no `0x2000`) is drawn scaled by it (`WORLD_PARTICLE_ADDED_WITHOUT_ALPHA`).
+Not started at all, and not counted: a file's emitter no script's record names (the shipped park's effect 20 at
+(532,4,526)), a broken boat's smoke (`BUMPER_CAR_SMOKE` is its own count), a rider's and a leaver's puffs. The
+writer is as it was: an emitter is written as it starts, not as the running one stands. The density is the
+options' (1000 at medium), where the file loaded in the original carries its own (500), so a density-scaled
+effect holds about twice the particles here: the stink 17 to 19 against 8 to 9.
+
 ## The save's world block: map cells
 
 Derived from an emulator field log (`fields_005179c0.txt`, i.e. the fields of `FUN_005179c0`) **which names every field of every one of the 16,384 cells**. Both record sizes match `ParkWorld`'s independently measured skip **to the byte**.

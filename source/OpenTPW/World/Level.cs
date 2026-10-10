@@ -327,6 +327,9 @@ public class Level
 		// The bumper rides' cars, drawn from what the rides' track tick leaves them - so after the rides.
 		_ = new ParkBumperBoats( ThemeName, catalogue );
 
+		// And the particles the park's scripts start, drawn where they stand.
+		_ = new WorldParticles();
+
 		// And the park's people. After the ground, because a guest stands on the land and has to ask how
 		// high it is under them; they are sprites rather than models, so they are nothing to do with the
 		// objects above and only need the save that named them.
