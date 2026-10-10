@@ -461,6 +461,12 @@ public sealed class SpriteScript
 	public int Alpha => _locals[AlphaLocal] & 0xff;
 
 	/// <summary>
+	/// The drawing flags - the instance's <c>+0xc4</c>, nought until a person's program has run its first word
+	/// and kept through every start after it (<c>FUN_00475b80</c> writes no local but a state's two).
+	/// </summary>
+	public int DrawFlags => _locals[PaceLocal];
+
+	/// <summary>
 	/// Whether the script has reached its end word: hidden and stopped, the instance's state 4. Nothing a person
 	/// runs ends.
 	/// </summary>
@@ -486,8 +492,9 @@ public sealed class SpriteScript
 	/// <param name="loops">The loop starts the save kept pushed, the oldest first; none for a program outside any loop.</param>
 	/// <param name="ended">Whether the save kept it at its end word, state 4: hidden, and freed on its next due turn.</param>
 	/// <param name="state">The three words a state's script reads, as the save kept them; noughts for a sprite made here.</param>
+	/// <param name="flags">The drawing flags, <c>+0xc4</c>, as the save kept them; nought as the constructor writes it.</param>
 	public SpriteScript( int script, int pc, int spriteNumber, int frame, int alpha = 0xff,
-		IEnumerable<int>? loops = null, bool ended = false, ParkWorld.SpriteStateWords state = default )
+		IEnumerable<int>? loops = null, bool ended = false, ParkWorld.SpriteStateWords state = default, int flags = 0 )
 	{
 		Script = script;
 		Pc = pc;
@@ -497,6 +504,7 @@ public sealed class SpriteScript
 		_locals[FramesLocal] = state.FramesPerDirection;
 		_locals[LeadInLocal] = state.LeadIn;
 		_locals[HoldLocal] = state.Hold;
+		_locals[PaceLocal] = flags;
 		Ended = ended;
 
 		foreach ( var start in loops ?? [] )

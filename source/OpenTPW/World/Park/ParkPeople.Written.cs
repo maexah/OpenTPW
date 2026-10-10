@@ -222,6 +222,7 @@ public sealed partial class ParkPeople
 		var interval = SpriteScript.DefaultInterval;
 		int? stateSetByte = null;
 		IReadOnlyList<int> loops = [];
+		var flags = 0;
 
 		if ( drawn )
 		{
@@ -231,12 +232,14 @@ public sealed partial class ParkPeople
 			if ( script == null || script.Freed || script.Script == SpriteScript.None
 				|| (stands && !script.IsOn( SpriteScript.Standing )) )
 			{
-				script = new SpriteScript( SpriteScript.None, 0, spriteNumber: 0, frame: 0 );
+				// A start keeps the sprite's drawing flags.
+				script = new SpriteScript( SpriteScript.None, 0, spriteNumber: 0, frame: 0, flags: script?.DrawFlags ?? 0 );
 				script.Start( SpriteScript.Standing );
 			}
 
 			interval = script.Interval;
 			loops = script.Loops;
+			flags = script.DrawFlags;
 			stateSetByte = script.FramesPerDirection > 0 ? script.FramesPerDirection : null;
 			picture = new ParkWorld.Sprite(
 				Slot: 0, Type: look.Kind, Bank: look.Bank, SpriteNumber: script.SpriteNumber,
@@ -257,6 +260,6 @@ public sealed partial class ParkPeople
 			// A person's sprite is made on set 0 of their bank, and a state's animation writes its own set's over it.
 			MadeSetByte: SetByteOf( look.Kind, look.Bank, 0 ), StateSetByte: stateSetByte,
 			Bubble: BubbleOf( thoughts, position ),
-			SpriteLoops: drawn ? loops : null );
+			SpriteLoops: drawn ? loops : null, SpriteFlags: drawn ? flags : null );
 	}
 }

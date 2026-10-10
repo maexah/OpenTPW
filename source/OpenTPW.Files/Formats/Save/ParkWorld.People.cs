@@ -183,13 +183,17 @@ public sealed partial class ParkWorld
 	/// (<see cref="SpriteLoopsOf"/>): one word inside a state script's loop, none on any other. Null leaves the
 	/// record's stack as it is.
 	/// </param>
+	/// <param name="SpriteFlags">
+	/// The drawing flags of the person's own sprite, its local 16 (<see cref="SpriteFlagsOf"/>). Null leaves the
+	/// record's.
+	/// </param>
 	public readonly record struct WrittenPerson( Person Person, Sprite? Sprite,
 		IReadOnlyList<(int X, int Y)>? Waypoints = null, IReadOnlyList<int>? LegLengths = null,
 		int PreviousX = 0, int PreviousY = 0, int NextAnim = 0, int NextServiceInterval = 0,
 		bool? SetDestSuccessfully = null, int LastThought = 0, int TimeBubbleShown = 0,
 		uint StrandedTime = 0, int SpriteInterval = 0x3e, int? MadeSetByte = null, int? StateSetByte = null,
 		WrittenSprite? Balloon = null, WrittenSprite? Bubble = null, int? LastRecordedMapId = null,
-		IReadOnlyList<int>? SpriteLoops = null );
+		IReadOnlyList<int>? SpriteLoops = null, int? SpriteFlags = null );
 
 	/// <summary>
 	/// A sprite that is no person's own picture, as the writer takes it: a balloon or a thought bubble. All of
@@ -968,6 +972,14 @@ public sealed partial class ParkWorld
 			? new SpriteStateWords( ReadInt32At( at + SpriteSetByteAt ), ReadInt32At( at + SpriteLeadInAt ), ReadInt32At( at + SpriteHoldAt ) )
 			: default;
 
+	/// <summary>
+	/// A live sprite's drawing flags, the word at <c>+0xc4</c> its program writes as local 16 and the draw reads
+	/// (<c>0x00542075</c>): nought as the constructor leaves it (<c>FUN_004758f0</c>), <c>0x1200</c> once a
+	/// person's program has run its first word. Nought for an empty slot.
+	/// </summary>
+	public int SpriteFlagsOf( int slot )
+		=> _spriteRecords.TryGetValue( slot, out var at ) ? ReadInt32At( at + SpriteFlagsAt ) : 0;
+
 	private const int SpriteDueAt = 0x7c;
 
 	private const int SpriteIntervalAt = 0x80;
@@ -1095,7 +1107,7 @@ public sealed partial class ParkWorld
 	/// interval, the place (the navigator's, ten world units to a cell), alpha, kind, bank, set, frame and facing,
 	/// and with <see cref="WrittenPerson.SpriteLoops"/> its loop stack: the room left, the words pushed and the
 	/// count of loops it is inside (<c>0x004763c6</c>), the words below the room left as they lie, as a pop leaves them
-	/// (<c>FUN_00475260</c>).</summary>
+	/// (<c>FUN_00475260</c>), and with <see cref="WrittenPerson.SpriteFlags"/> its drawing flags.</summary>
 	private static void PutSprite( byte[] record, WrittenPerson person, Sprite picture )
 	{
 		Put32( record, SpritePcAt, picture.Pc );
@@ -1110,6 +1122,9 @@ public sealed partial class ParkWorld
 		Put32( record, SpriteNumberAt, picture.SpriteNumber );
 		Put32( record, SpriteFrame, picture.Frame );
 		Put32( record, SpriteFacing, picture.Facing );
+
+		if ( person.SpriteFlags is { } flags )
+			Put32( record, SpriteFlagsAt, flags );
 
 		if ( person.SpriteLoops is not { } loops )
 			return;

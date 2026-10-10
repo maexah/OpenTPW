@@ -1200,6 +1200,81 @@ public class ParkFileWriterPeopleTests
 	}
 
 	/// <summary>
+	/// A person's sprite is written with its drawing flags, the running sprite's local 16 at <c>+0xc4</c>: nought on
+	/// one made and not yet run, <c>0x1200</c> once its program has run its first word, and a kept one's as the load
+	/// read them, through a new start and through being written standing on a fresh program.
+	/// </summary>
+	[TestMethod]
+	public void APersonsSpriteIsWrittenWithItsDrawingFlagsAndALoadReadsThem()
+	{
+		static int Flags( ParkWorld park, int thing )
+			=> BitConverter.ToInt32( park.SpriteRecordOf( park.People.Single( person => person.ThingId == thing ).SpriteSlot )!, 0xc4 );
+
+		foreach ( var person in shipped.People )
+		{
+			Assert.AreEqual( 0x1200, Flags( shipped, person.ThingId ), $"the file's thing {person.ThingId}" );
+			Assert.AreEqual( 0x1200, shipped.SpriteFlagsOf( person.SpriteSlot ) );
+		}
+
+		Assert.AreEqual( 0, shipped.SpriteFlagsOf( 99 ), "an empty slot" );
+
+		// The file with three kept sprites' flags changed, so that what a load reads is told from what a program writes.
+		var held = shipped.People.First( person => person.Model == 6 ).ThingId;
+		var walker = shipped.People.First( person => person.Guest != null ).ThingId;
+		var other = shipped.People.Last( person => person.Guest != null ).ThingId;
+		var body = ParkFileWriter.Body( shipped, Running( new ParkPeople( shipped ) { BankAt = Bank } ) );
+
+		TestRun.DeleteEvery<ParkPeople>();
+
+		foreach ( var (thing, value) in new[] { (held, 0x1234), (walker, 0x4321), (other, 0x2468) } )
+		{
+			var record = new ParkWorld( body ).SpriteRecordOf( shipped.People.Single( person => person.ThingId == thing ).SpriteSlot )!;
+
+			BitConverter.GetBytes( value ).CopyTo( body, body.AsSpan().IndexOf( record ) + 0xc4 );
+		}
+
+		var park = new ParkWorld( body );
+		var people = new ParkPeople( park ) { BankAt = Bank };
+
+		Assert.AreEqual( (0x1234, 0x4321, 0x2468), (people.SpriteFor( held )!.DrawFlags, people.SpriteFor( walker )!.DrawFlags, people.SpriteFor( other )!.DrawFlags), "a load reads them" );
+
+		// One made: nought as the constructor leaves it, and the program's own once it has run a turn.
+		var fresh = people.Hire( new ParkStaffPool.Candidate( Id: 999, Kind: 4, Name: "Ada Test", Grade: 2, Costume: 0, Wage: 69 ), 47, 21 );
+		var ran = people.Hire( new ParkStaffPool.Candidate( Id: 998, Kind: 4, Name: "Bea Test", Grade: 2, Costume: 0, Wage: 69 ), 46, 21 );
+
+		Assert.AreEqual( (0, 0), (people.SpriteFor( fresh )!.DrawFlags, people.SpriteFor( ran )!.DrawFlags) );
+		Assert.IsTrue( people.SpriteFor( ran )!.Step( 100000 ) );
+		Assert.AreEqual( 0x1200, people.SpriteFor( ran )!.DrawFlags );
+
+		// A new start keeps them; a program come round to its first word writes its own, and not a turn sooner;
+		// one in the hand is written on a fresh standing program, with them still.
+		Assert.IsTrue( people.SpriteFor( walker )!.Start( SpriteScript.Standing ) );
+		Assert.IsTrue( people.SpriteFor( other )!.Step( 100000 ) );
+		Assert.AreEqual( 0x2468, people.SpriteFor( other )!.DrawFlags, "inside its round still" );
+
+		for ( var turn = 2; turn < 20; ++turn )
+			Assert.IsTrue( people.SpriteFor( other )!.Step( 100000 * turn ) );
+
+		Assert.IsFalse( people.SpriteFor( held )!.IsOn( SpriteScript.Standing ), "or the writer makes no fresh program for it" );
+		Assert.IsTrue( people.PickUp( held ) );
+
+		var written = new ParkWorld( ParkFileWriter.Body( park, new ParkFileWriter.Running( park.GameTick, false, 0, 0, park.Camera.Saved!.Value,
+			People: people.Written( Level.WrittenThings( park ).Contains ) ) ) );
+
+		Assert.AreEqual( 0, Flags( written, fresh ), "made and not run" );
+		Assert.AreEqual( 0x1200, Flags( written, ran ), "made and run" );
+		Assert.AreEqual( 0x4321, Flags( written, walker ), "kept, started again" );
+		Assert.AreEqual( 0x1200, Flags( written, other ), "kept, run" );
+		Assert.AreEqual( 0x1234, Flags( written, held ), "kept, written standing" );
+
+		TestRun.DeleteEvery<ParkPeople>();
+
+		var loaded = new ParkPeople( written ) { BankAt = Bank };
+
+		Assert.AreEqual( (0, 0x1200, 0x4321), (loaded.SpriteFor( fresh )!.DrawFlags, loaded.SpriteFor( ran )!.DrawFlags, loaded.SpriteFor( walker )!.DrawFlags) );
+	}
+
+	/// <summary>
 	/// A sprite's three state words are read from its record: the frames a direction at <c>+0xbc</c> and the lead-in
 	/// and the hold at <c>+0xc8</c> and <c>+0xcc</c>, which the state script holds frame 0 by between rounds.
 	/// </summary>

@@ -5720,6 +5720,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Confirmed: saved on frame 2, the file held 19, 1730 and 1, three turns after the load the census read frame
   5 (the build before, saved on 3, read 2), and the original showed the file's record at its first poll and
   then frames 3, 4, 5, where the build before's file gave it 20, 0, 0 and then frames 0, 1, 2.
+- [x] **Q257m. The writer: a made person's sprite's drawing flags.** Done 2026-10-09,
+  `alexah/388-a-made-persons-sprite-flags`. I split the item: this is the piece from Q257l, and every other
+  piece is Q257n. A sprite's `+0xc4` is its program's local 16, the flags the draw reads: the constructor
+  writes nought, every person program's first word `0x1200`, and all 902 people's sprites of ten files hold
+  `0x1200`. A load reads the word and the writer writes the running sprite's, on a made record and a kept one.
+  Confirmed: with the first load of 13 arrivals off the bus the census read `flags 0x1200` on all 31 people,
+  the file held `0x1200` on all 31 sprite records (the build before: 18 and 13 noughts), the census after the
+  load 31 of 31 (the build before: 15), and the original held `0x1200` on the 13 made slots from its first
+  poll, where the build before's file gave it nought on all 13 for the 5.6 s of its loading and until each
+  program came round, 0.9 s.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

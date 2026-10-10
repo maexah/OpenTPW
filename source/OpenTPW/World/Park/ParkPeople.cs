@@ -1061,7 +1061,7 @@ public sealed partial class ParkPeople : Entity
 
 	/// <summary>
 	/// A person's own sprite picked up where the save left it: its script, word, set and frame, the loop starts
-	/// its program had pushed, and the three words a bank's state script reads. One saved inside a state
+	/// its program had pushed, its drawing flags, and the three words a bank's state script reads. One saved inside a state
 	/// animation's loop goes round it from the frame it was on.
 	/// </summary>
 	private static SpriteScript SavedSprite( IParkInitialState park, ParkWorld.Sprite picture )
@@ -1069,7 +1069,8 @@ public sealed partial class ParkPeople : Entity
 		var file = park as ParkWorld;
 
 		var sprite = new SpriteScript( picture.Script, picture.Pc, picture.SpriteNumber, picture.Frame,
-			loops: file?.SpriteLoopsOf( picture.Slot ), state: file?.SpriteStateWordsOf( picture.Slot ) ?? default );
+			loops: file?.SpriteLoopsOf( picture.Slot ), state: file?.SpriteStateWordsOf( picture.Slot ) ?? default,
+			flags: file?.SpriteFlagsOf( picture.Slot ) ?? 0 );
 
 		// And when it first comes due, which the original's constructor does as the sprite is made. Nought is
 		// the clock at load, the only moment this is built.

@@ -48,7 +48,7 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q257m. The writer: what else a made record leaves out.** The old Q257l's other pieces, from Q253
+- [ ] **Q257n. The writer: what else a made record leaves out.** The old Q257m's other pieces, from Q253
   (`saves.md`, "What OpenTPW writes"), each counted or said there. A track ride (its `TRAK` record)
   and a thing with an emitter (`PART`) are left as the file has them, bought or sold (`SAVE_PARK_OBJECT_BOUGHT`,
   `SAVE_PARK_OBJECT_SOLD`). Confirm: each
@@ -62,11 +62,11 @@ the research lab), then the rest of this section in its old order.
   ever read. And not decoded: the original, loading a file whose queue cell names a record of another tile
   (or a bare cell naming one), reads no handle on that cell afterwards and still draws the piece
   (`saves.md`, "OpenTPW's writer, a queue cell's model", the control).
-  From Q257l (`saves.md`, "OpenTPW's writer, a person's sprite inside a loop"): a made person's sprite is
-  written with nought at `+0xc4`, the draw's flags, where all 902 people's sprites of the original's ten files
-  hold `0x1200` (14 of the 32 in `q241h/run3/Q241h.TPWS`): write the running sprite's local 16. A saved sprite's
-  local 0 (`+0x84`, the hold loop's counter, where local 18 is not nought) and local 16 are not read at a load.
+  From Q257l (`saves.md`, "OpenTPW's writer, a person's sprite inside a loop"): a saved sprite's
+  local 0 (`+0x84`, the hold loop's counter, where local 18 is not nought) is not read at a load.
   And a made person's sprite inside a loop (a hired entertainer performing) was in no game run: the tests alone.
+  From Q257m (`saves.md`, "OpenTPW's writer, a person's sprite's drawing flags"): what bit `0x200` of a
+  sprite's flags draws is not decoded (`0x005422fb`), and the drawing here reads none of the word.
   From Q257d: a head the engine hangs with no head table (a `WALKON` of action 4, the Aztec Mayhem's five; a
   coaster's and a tour's cars') is hung by nothing here, is not counted, and a written park holds only the
   file's: find who calls `FUN_0044b410` for one, count it where the script reaches it, then write it as a
