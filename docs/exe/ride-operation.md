@@ -4605,6 +4605,7 @@ The family's dispatch-table handlers sit at **`0x00555e5e`** (86), **`0x00555ef7
 | `FUN_0051bc40` | — | Sets a sound parameter on a handle. For a held scream, parameter 6 binds to the voice's slot 0, which picks each later child's variation (`0x006c3e1c`). **Whether anything also reads it as a volume is not established.** | Disassembly |
 | `FUN_00466b70` | — | The thing's box, with eleven callers: indexes `DAT_007a4610` by the script's model handle and fills SIX floats — x and z from the cell rectangle at `+0xc0`/`+0xc4` (max + 1), ×10, and the heights from the `.hmp` at `+0xcc` (its `+0x1c`/`+0x28`) plus the base Y. The sound position (`FUN_00556b90`) takes its x and z centre and drops the heights. **It is the RIDE's position, never a rider's.** | Decompile |
 | `+0xc8` | — | The script's model handle, which is where the position comes from. | Disassembly |
+| `FUN_00556af0` | — | Where a scream is sounded: `( &script+0xc8, &x, &height, &z )`, two callers, `STARTSCREAM` (`0x00555ea0`) and `SINGLESCREAM` (`0x00555f5d`). With a model and a box, x and z are the box's two ends added and halved (`0x00700fd0`, 0.5) and the height is the model's base height, `[[[record + 8] + 4] + 0x78] + 0x44`; with neither, all three nought and it answers 1. Each is truncated to a whole number before `Sound_PlayEffect`. | Decompile, disassembly |
 
 **Parameter 6 is `(operand + the script's SPEED) / 2`, clamped 0..100.** `+0xc0` is not a scream field. It is the script's speed word, a short the loader sets to 50, the same one `WAIT` divides by. All three instructions READ it and none writes it. So `Bouncy`'s `STARTSCREAM VAR_TEMP, 20` at default speed gives `(20+50)/2 = 35`, which the zones of all four scream effects send to **variation 2**. The first child of a chain always plays variation 1. The only reader found is the variation pick, and OpenTPW's use of it as a gain is a choice, Q43. `SCREAMLEVEL` does not write the speed field.
 
@@ -4626,6 +4627,22 @@ The family's dispatch-table handlers sit at **`0x00555e5e`** (86), **`0x00555ef7
 Only **Bouncy** is placed in Lost Kingdom, and **Bouncy never calls `SCREAMLEVEL`** — so that opcode is dead by CONTENT there while being unavoidable corpus-wide.
 
 **The category listing corroborates the decode from an unrelated direction**: `global/sound/kids` declares `[105x1, 106x1, 108x2, 109x1, … 71x25, …]` — exactly the `0x69`, `0x6a`, `0x6c`, `0x6d` of the negative branch, **with 107 (`0x6b`) absent**, matching the gap in the original's own switch. That gap was read off the disassembly before the category was ever loaded. `cat_kidsSFX.map` declares 71-74 at offsets 312/332/352/372, a 20-byte stride.
+
+### Where a scream is sounded
+
+At the middle of the cells its thing covers, never at its corner: `FUN_00466b70`'s box runs from the least cell's
+near edge, `+0xc0` (x the high word, z the low) times 10, to the greatest cell's far edge, `+0xc4` plus one
+(`0x006fe760` is -1.0, taken away) times 10 (`0x006fe75c`), and `FUN_00556af0` halves each sum. **Read in the
+running original** (Q266, `original/modelboxes.py` on the loaded stock park, predicted first, 11 of 11): the
+eleven objects' rectangles are the cells OpenTPW's `ParkObjects.FootprintOf` gives them, a turned one included
+(the Round Fountain, (57,17)..(59,19); the Staff Room, (58,15)..(59,16)), and the Belly Bounce's, (51,23)..(53,26),
+has its middle at (525, 250), the place its scream channels read in the mixer (`audio.md`, "A voice's range, and
+the rectangle it follows the listener in"). Each record's base height read nought, to seven places. A fixed item's
+record (the gate's) reads (0,0)..(0,0). OpenTPW: `ParkObjects.TrySoundPlace`, the middle of the footprint kept as
+the thing is stood, at the anchor cell's ground height; a thing stood with no footprint is counted
+(`SOUND_PLACE_NO_CELL_RECTANGLE`) and sounded where its model stands. In the running game the Belly Bounce's
+scream reads (525.0,250.0,0.0) in the log and, under `camera 515 235 60 180`, 24.26 units off at a gain of 0.8034
+in `voices`, where the build before read (510,230), 34.09 and 0.7128 (`q266/confirm.py`, 5 of 5 and 3 of 3).
 
 ## How a scream VARIES, and it is the script that does it
 

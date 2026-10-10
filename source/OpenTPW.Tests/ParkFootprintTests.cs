@@ -134,6 +134,35 @@ public class ParkFootprintTests
 	}
 
 	/// <summary>
+	/// A thing's own voice is sounded at the middle of the cells it covers (<c>FUN_00556af0</c>): the
+	/// numbers are the running original's own records' middles, read for the shipped park's things.
+	/// </summary>
+	[TestMethod]
+	public void AThingsVoiceIsSoundedAtTheMiddleOfItsCells()
+	{
+		// anchor cell, angle, footprint, and the middle the original's box gives.
+		var placements = new[]
+		{
+			(Name: "belly bounce", X: 51, Y: 23, Angle: 0, Width: 3, Depth: 4, MiddleX: 525f, MiddleY: 250f),
+			(Name: "jungle spray", X: 51, Y: 30, Angle: 0, Width: 3, Depth: 3, MiddleX: 525f, MiddleY: 315f),
+			(Name: "drinks shop", X: 43, Y: 30, Angle: 0, Width: 2, Depth: 2, MiddleX: 440f, MiddleY: 310f),
+			(Name: "staff room", X: 58, Y: 16, Angle: 90, Width: 2, Depth: 2, MiddleX: 590f, MiddleY: 160f),
+			(Name: "fountain", X: 57, Y: 19, Angle: 90, Width: 3, Depth: 3, MiddleX: 585f, MiddleY: 185f),
+			(Name: "a toilet", X: 55, Y: 16, Angle: 270, Width: 1, Depth: 1, MiddleX: 555f, MiddleY: 165f),
+		};
+
+		foreach ( var placed in placements )
+		{
+			var middle = ParkObjects.BoxMiddle( Covers( placed.X, placed.Y, placed.Angle, placed.Width, placed.Depth ), 7f );
+
+			Assert.AreEqual( new Vector3( placed.MiddleX, placed.MiddleY, 7f ), middle, $"the {placed.Name}" );
+		}
+
+		// A rectangle that is not square and not at the origin, each edge its own number.
+		Assert.AreEqual( new Vector3( 35f, 85f, -2f ), ParkObjects.BoxMiddle( (2, 5, 4, 11), -2f ) );
+	}
+
+	/// <summary>
 	/// Which cells a footprint of this size, anchored here and turned this far, ends up on.
 	///
 	/// <para>

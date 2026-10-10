@@ -5907,6 +5907,18 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   samples at range 95, 34.09 off, at a gain of 0.7128, the law's; 800 units off seventeen ranged voices read
   0.0000 and the mix's loudest pieces fell from 0.0329 to nought, where the build before read 0.908 of the
   near window (fix 4 of 4 on the first run, control 2 of 2).
+- [x] **Q266. A scream is sounded at the middle of its thing's cells.** Split by the session from the old
+  Q266: its other pieces are Q267. Done 2026-10-10: `STARTSCREAM` and `SINGLESCREAM` are the two callers of
+  `FUN_00556af0`, which answers the middle of the thing's box in x and z (`FUN_00466b70`: the model record's
+  cell rectangle, the greatest cell's far edge counted) at the model's base height (`ride-operation.md`,
+  "Where a scream is sounded"). In the running original the eleven stock objects' rectangles read OpenTPW's
+  footprints, 11 of 11 predicted first, and the Belly Bounce's middle (525, 250), where Q265 read its scream
+  channels. Built: `ParkObjects.TrySoundPlace` and `BoxMiddle`. In the running game, predicted first, 5 of 5
+  at the second run (the first died in the confirm script, its readings the same): the log's scream at
+  (525.0,250.0,0.0) and `voices` reading it there 24.26 off at a gain of 0.8034 (24.25 and 0.804 owed), over
+  a frame of the ride with its rider in the air; the control, main before it, 3 of 3: (510,230), 34.09,
+  0.7128. Ten bugs put back: seven fail the new test, and the three in the wiring fail none (no test stands
+  a `ParkObjects`; the control run is that bug).
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

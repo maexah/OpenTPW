@@ -48,12 +48,18 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q266. The writer: what else a made record leaves out.** The old Q265's other pieces, each counted or
+- [ ] **Q267. The writer: what else a made record leaves out.** The old Q266's other pieces, each counted or
   said in `saves.md`. Confirm: each piece's bytes beside a file of the original's own, and the file loaded in
   the original under Proton.
-  From Q265 (`audio.md`, "A voice's range, and the rectangle it follows the listener in"): the original sounds
-  the Belly Bounce's scream at (525, 250) and OpenTPW at its thing's cell, (510, 230): which place a scream is
-  given is not read. Its scream channel's volume read 35 of 127, the variation's 47 times the sound effects'
+  From Q266 (`ride-operation.md`, "Where a scream is sounded"): a fixed item's scream is counted and sounded
+  where its model stands (`SOUND_PLACE_NO_CELL_RECTANGLE`; the original's record holds cell (0,0) alone,
+  so (5, 5)); the wiring from the script to the place is held by the game run alone; a single scream, a
+  bought ride's scream and a turned ride's were in no game run; the height is the anchor cell's ground,
+  where the original's is its model's base height, nought on the stock park's flat land and not read on a
+  hill; a script's own started sound with no node (`FUN_00556b90`'s other arm, the same middle) was not
+  looked at here; the scream was not measured in the mix, its place and gain read from `voices` alone.
+  From Q265 (`audio.md`, "A voice's range, and the rectangle it follows the listener in"): the scream
+  channel's volume read 35 of 127, the variation's 47 times the sound effects'
   75 over a hundred; the levels here (`ScreamVolume`, `SingleScreamVolume`, `CrowdVoiceGain` for the staff)
   were not held against that. Not identified: the original's channels at the listener's own place with a
   mapping of 2.0, 95.0, 0.80 and a volume of 10 of 127. Held by the tests alone, in no game run: thunder, a

@@ -54,6 +54,12 @@ public sealed class ParkObjects : Entity
 		/// <summary>The name board painted for it, or null where it has none - what its window's preview wears too.</summary>
 		public IReadOnlyDictionary<string, Texture>? Sign { get; } = sign;
 
+		/// <summary>
+		/// The cells it covers, inclusive at both ends - the engine's rectangle on the model's record,
+		/// <c>+0xc0</c> and <c>+0xc4</c> - or null for a fixed item, which is placed on no cell.
+		/// </summary>
+		public (int Left, int Top, int Right, int Bottom)? Footprint { get; init; }
+
 		public LobbyModel Model { get; } = model;
 
 		public RideAnimations Animations { get; } = animations;
@@ -114,25 +120,54 @@ public sealed class ParkObjects : Entity
 	}
 
 	/// <summary>
-	/// Where a placed thing stands, for a sound that belongs to the thing rather than to a node of it.
+	/// Where a placed thing's own voice is sounded: the middle of the cells it covers, at its base height
+	/// (<c>FUN_00556af0</c>, docs/exe/ride-operation.md, "Where a scream is sounded").
 	/// </summary>
 	/// <remarks>
 	/// <see cref="TryNodeOn"/> wants a node by name, which is right for a rider on a seat and wrong for
 	/// a ride's own voice: the engine takes a scream's position from the script's model handle at
-	/// <c>+0xc8</c>, not from any node. This answers that.
+	/// <c>+0xc8</c>, not from any node. A fixed item covers no cell here, where the engine's record holds
+	/// cell (0,0) alone: it is counted and answers where the model stands.
 	/// </remarks>
-	internal bool TryPlacedOrigin( int thingId, out Vector3 world )
+	internal bool TrySoundPlace( int thingId, out Vector3 world )
 	{
-		if ( _standing.TryGetValue( thingId, out var standing ) )
+		if ( !_standing.TryGetValue( thingId, out var standing ) )
 		{
-			world = standing.Model.PlacedOrigin;
+			world = default;
 
-			return true;
+			return false;
 		}
 
-		world = default;
+		var origin = standing.Model.PlacedOrigin;
 
-		return false;
+		if ( standing.Footprint is { } footprint )
+		{
+			world = BoxMiddle( footprint, origin.Z );
+		}
+		else
+		{
+			Unimplemented.Report( "SOUND_PLACE_NO_CELL_RECTANGLE" );
+			world = origin;
+		}
+
+		return true;
+	}
+
+	/// <summary>
+	/// The middle of a cell rectangle in world units, as the engine takes it from the thing's box
+	/// (<c>FUN_00466b70</c>): halfway from the least cell's near edge to the greatest cell's far edge.
+	/// </summary>
+	public static Vector3 BoxMiddle( (int Left, int Top, int Right, int Bottom) footprint, float height )
+	{
+		var field = ParkGround.Current?.Heightfield;
+
+		var cellX = field?.CellSizeX ?? DefaultCellSize;
+		var cellY = field?.CellSizeY ?? DefaultCellSize;
+
+		return new Vector3(
+			(footprint.Left + footprint.Right + 1) * 0.5f * cellX,
+			(footprint.Top + footprint.Bottom + 1) * 0.5f * cellY,
+			height );
 	}
 
 	/// <summary>
@@ -328,8 +363,10 @@ public sealed class ParkObjects : Entity
 
 			model.SetTransform( origin, turn );
 
+			var footprint = FootprintOf( item, origin, turn );
+
 			_models.Add( model );
-			_standing[placed.ThingId] = new Standing( model, animations, placed.CatalogueId, sign );
+			_standing[placed.ThingId] = new Standing( model, animations, placed.CatalogueId, sign ) { Footprint = footprint };
 
 			// The original gates on the base vertices FUN_00469a80 counts (0x0046a838) and reads the mesh with the
 			// most of them (0x0046a82c). The node count and the first mesh stand in for both: the same mesh in
@@ -353,8 +390,6 @@ public sealed class ParkObjects : Entity
 			// from completely separate things - this from the item's own footprint carried through its
 			// turn, and the save's from the cells it marks as built on - so when they agree the placement
 			// is right for a reason rather than by eye.
-			var footprint = FootprintOf( item, origin, turn );
-
 			Log.Info( $"{ThemeName}: '{item.Name}' anchored at ({placed.CellX},{placed.CellY}) turned " +
 				$"{placed.Angle} covers ({footprint.Left},{footprint.Top})..({footprint.Right},{footprint.Bottom})" );
 		}

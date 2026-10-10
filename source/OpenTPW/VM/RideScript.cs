@@ -3027,7 +3027,8 @@ public sealed class RideScript
 	/// <para>
 	/// The first operand bands the sample and the second is averaged with the script's speed into the
 	/// voice's parameter 6 (<c>0x00551265</c>); the sound belongs to the RIDE, whose position the engine
-	/// takes from the script's own model handle at <c>+0xc8</c>. See <see cref="ParkAudio.ScreamEffectFor"/>
+	/// takes from the script's own model handle at <c>+0xc8</c>: the middle of the cells it covers
+	/// (<see cref="ParkObjects.TrySoundPlace"/>). See <see cref="ParkAudio.ScreamEffectFor"/>
 	/// for the bands and <see cref="ParkScreams"/> for what the parameter does.
 	/// </para>
 	///
@@ -3056,7 +3057,7 @@ public sealed class RideScript
 		var band = Value( operands[0] );
 		var level = Value( operands[1] );
 
-		if ( ParkObjects.Current is not { } objects || !objects.TryPlacedOrigin( ThingId, out var at ) )
+		if ( ParkObjects.Current is not { } objects || !objects.TrySoundPlace( ThingId, out var at ) )
 		{
 			// Nowhere for it to sound from. Counted and said, as COAST is without a ride - this is the
 			// sink ParkAudio's own note warns about rather than a gap in the instruction.
@@ -3107,7 +3108,7 @@ public sealed class RideScript
 		var band = Value( operands[0] );
 		var level = Value( operands[1] );
 
-		if ( ParkObjects.Current is not { } objects || !objects.TryPlacedOrigin( ThingId, out var at ) )
+		if ( ParkObjects.Current is not { } objects || !objects.TrySoundPlace( ThingId, out var at ) )
 		{
 			++NotImplemented;
 			Unimplemented.Report( $"{Name}: SINGLESCREAM, with no placed thing {ThingId} to sound from" );
