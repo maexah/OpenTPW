@@ -882,9 +882,9 @@ public sealed class ParkBumperCars
 			if ( !car.IsLive || car.Ride != handle || (car.Flags & CarFlags.Active) == 0 || car.Smoking )
 				continue;
 
-			// The b_car's emitter, 0x100 id 2, is Head03: there is always one to smoke from.
+			// The b_car's emitter, 0x100 id 2, is Head03: there is always one to smoke from. The smoke itself is
+			// started where the boat is drawn (ParkBumperBoats.Smoke).
 			car.Smoking = true;
-			Unimplemented.Report( "BUMPER_CAR_SMOKE" );
 
 			if ( ride.BumperType == -1 )
 				car.Animation = RideAnimations.NoRole;

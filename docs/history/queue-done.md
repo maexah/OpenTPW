@@ -5850,6 +5850,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   hold 9 to 15, every particle drawn, and the picture shows them over both shops; the original's sprite pass is
   read and its matrix measured (`park.md`, "A park's particles, started and drawn"). 4 of 5 predictions: the
   bubbles' highest was predicted from too short a look.
+- [x] **Q259. A broken boat's smoke runs in the park's particle system and is drawn.** Split by the session
+  from the old Q259: its other pieces are Q261. Done 2026-10-10: a Hot Pot broken in its go, `particles` reads
+  four emitters of effect 2 at height 30 over the pot holding 56, 58, 59 and 60 particles, every one drawn, where
+  the original's own pot broken the same way holds 59, 61, 58 and 60, and both pictures show grey smoke over each
+  boat; none is left five seconds after the mechanic's fix; the control reads none and `4x BUMPER_CAR_SMOKE`; the
+  original's own broken file loaded here smokes at its four places to the unit (`park.md`, "A broken boat's
+  smoke"). 5 of 5 predictions at the second run; the first's miss was the script's.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

@@ -417,6 +417,105 @@ public class ParkParticleTests
 	}
 
 	/// <summary>
+	/// <b>A smoking car's smoke</b> is effect 2 started where the boat's emitter node is drawn, the height the
+	/// system's second axis, each times 1024 and cut; the next frame moves that emitter and starts no other.
+	/// </summary>
+	[TestMethod]
+	public void ASmokingCarsSmokeStartsAtItsNodeAndIsMovedWithIt()
+	{
+		var before = Running.Length;
+		var held = ParkBumperBoats.Smoke( system, 0, smoking: true, new Vector3( 442.6575f, 263.3747f, 30.4622f ) );
+
+		Assert.AreNotEqual( 0, held );
+		Assert.AreEqual( before + 1, Running.Length );
+		Assert.IsTrue( system.TryEmitter( held, out var emitter ) );
+		Assert.AreEqual( 2, emitter.Effect, "the library's Smoke" );
+		Assert.AreEqual( (28330, 1949, 16855), (emitter.X, emitter.Y, emitter.Z), "the original's own file's first car: times 1024, cut, shifted down four" );
+		Assert.IsNull( emitter.Aim );
+		Assert.IsFalse( emitter.Template.OnScreen );
+
+		var moved = ParkBumperBoats.Smoke( system, held, smoking: true, new Vector3( 431.5f, 268.25f, 30.75f ) );
+
+		Assert.AreEqual( held, moved );
+		Assert.AreEqual( before + 1, Running.Length );
+		Assert.AreEqual( (27616, 1968, 17168), (emitter.X, emitter.Y, emitter.Z) );
+		Assert.AreEqual( system.Library.Effects[ParkBumperCars.SmokeEffect].Lifetime, emitter.Lifetime, "still running" );
+
+		// It emits from where it stands now.
+		for ( var tick = 0; tick < 8; ++tick )
+			system.Tick();
+
+		Assert.IsTrue( emitter.Count > 0 );
+		Assert.IsFalse( Counted( "PARK_PARTICLE" ) );
+	}
+
+	/// <summary>A car that smokes no more has its emitter stopped and its handle let go; one that never smoked starts none.</summary>
+	[TestMethod]
+	public void ACarFixedHasItsSmokeStopped()
+	{
+		var before = Running.Length;
+
+		Assert.AreEqual( 0, ParkBumperBoats.Smoke( system, 0, smoking: false, new Vector3( 1, 2, 3 ) ) );
+		Assert.AreEqual( before, Running.Length );
+
+		var held = ParkBumperBoats.Smoke( system, 0, smoking: true, new Vector3( 1, 2, 3 ) );
+
+		Assert.IsTrue( system.TryEmitter( held, out var emitter ) );
+		Assert.AreEqual( 0, ParkBumperBoats.Smoke( system, held, smoking: false, new Vector3( 1, 2, 3 ) ) );
+		Assert.AreEqual( -2, emitter.Lifetime, "stopped as a kill stops it" );
+
+		// Broken again, it smokes from a fresh emitter.
+		var again = ParkBumperBoats.Smoke( system, 0, smoking: true, new Vector3( 1, 2, 3 ) );
+
+		Assert.AreNotEqual( 0, again );
+		Assert.AreNotEqual( held, again );
+	}
+
+	/// <summary>
+	/// With no node drawn nothing is started and a running smoke is left as it is; with no particle system the handle
+	/// is kept; a handle whose emitter has gone is started again; and a start the system refuses is counted.
+	/// </summary>
+	[TestMethod]
+	public void ASmokeWithNoNodeOrNoSystemIsLeftAndARefusedStartCounted()
+	{
+		var before = Running.Length;
+
+		Assert.AreEqual( 0, ParkBumperBoats.Smoke( system, 0, smoking: true, null ) );
+		Assert.AreEqual( before, Running.Length );
+
+		var held = ParkBumperBoats.Smoke( system, 0, smoking: true, new Vector3( 10, 20, 30 ) );
+
+		Assert.IsTrue( system.TryEmitter( held, out var emitter ) );
+
+		var at = (emitter.X, emitter.Y, emitter.Z);
+
+		Assert.AreEqual( held, ParkBumperBoats.Smoke( system, held, smoking: true, null ) );
+		Assert.AreEqual( at, (emitter.X, emitter.Y, emitter.Z) );
+		Assert.AreEqual( held, ParkBumperBoats.Smoke( null, held, smoking: false, new Vector3( 10, 20, 30 ) ) );
+		Assert.AreNotEqual( -2, emitter.Lifetime );
+
+		// A handle of another count names no emitter: the smoke is started afresh.
+		var stale = held + 0x20000;
+
+		Assert.AreNotEqual( 0, stale );
+		Assert.IsFalse( system.TryEmitter( stale, out _ ) );
+
+		var fresh = ParkBumperBoats.Smoke( system, stale, smoking: true, new Vector3( 10, 20, 30 ) );
+
+		Assert.AreNotEqual( 0, fresh );
+		Assert.AreNotEqual( stale, fresh );
+		Assert.AreEqual( before + 2, Running.Length );
+		Assert.IsFalse( Counted( "PARK_PARTICLE_NOT_STARTED" ) );
+
+		// Every emitter taken: the start is refused.
+		for ( var taken = 0; taken < ParticleSystem.EmitterCount; ++taken )
+			system.Spawn( ParkBumperCars.SmokeEffect, 0, 0, 0 );
+
+		Assert.AreEqual( 0, ParkBumperBoats.Smoke( system, 0, smoking: true, new Vector3( 10, 20, 30 ) ) );
+		Assert.IsTrue( Counted( "PARK_PARTICLE_NOT_STARTED" ) );
+	}
+
+	/// <summary>
 	/// <b>A sprite's place and size in the park</b>: the particle's position over 64, a half height of its size
 	/// doubled over 2048 and then over 2 cos 45, a half width of that times the picture's shape and over 1.5 cos 45.
 	/// The doubled size is a sixteen-bit word. An effect with a scale draws a particle that far out from its emitter.

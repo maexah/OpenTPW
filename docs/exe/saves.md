@@ -2816,7 +2816,8 @@ car's smoke and `emitters` names the car's ride beside its emitter.
   before its script's own two. Every handle names its own emitter, which is all a load reads.
 - With no boat drawn (the tests) a car that began to smoke here is written with -1 and counted
   (`SAVE_PARK_CAR_SMOKE`, now this case alone).
-- Nothing draws the smoke here (`BUMPER_CAR_SMOKE`, counted at the break as before).
+- The smoke runs and is drawn since Q259 (`park.md`, "A broken boat's smoke"); the file's place is still the
+  drawn boat's node as the file is written, which is where the running emitter was last moved to.
 
 **Confirmed in the game** (`q257x/confirm.py`, each predicted in `PREDICTION.txt`; the fix's bought scene 4 of 4 off-screen and on the desktop, theirs 2 of 2 on the desktop, each control 1 of 1). **Bought:** Lost
 Kingdom from `easymode.TPWI`, `buy 1140 41 23 0`, its queue joined, five guests sent, and in the go

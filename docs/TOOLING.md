@@ -62,7 +62,8 @@ whole list):
   record on thing 14 and `pause` at the first: one jet (node 2) is running, for about four seconds (Q257w).
 - **A broken Hot Pot with smoking boats:** fill the pot (above), and once `bumpers` reads `state Running` with
   riders seated, `scriptvar <thing> VAR_BREAKSTAT 1`; every boat reads `smoke started`. A break between goes
-  smokes no boat (Q257x).
+  smokes no boat (Q257x). `particles` then reads an emitter of effect 2 a boat; `camera 435 320 110 180` shows
+  the smoke over the pot, cropped at (560,90)-(730,260) of the 1280 x 720 frame (Q259).
 - **The mechanic mending a pot:** `broken_pot()` (`lib/parkscene.py`), then wait for the log's `mechanic 26 found
   ride`, `starts repairing` and `finished repairing`: under a minute in all. He stands on (43,23), inside the
   pot's doorway, hidden from yaw 180: `camera 435 235 30 0` looks in at him (Q257z).
@@ -99,7 +100,9 @@ GH=766` there, or the pointer is off):
 - **Breaking a ride:** `scriptvar.py PID <thing> 4 1` writes `VAR_BREAKSTAT` (variable 4 of every ride's
   common twelve). Write it inside a go: only a car carrying riders smokes, and the go ends at once. Its
   mechanic mends the ride about 25 s later, so save (the menu pauses the game) before then; the mended file is
-  evidence too. A script's variables are the dwords at `[frame + 0x1c]`, not `+0x20` (Q257x).
+  evidence too. A script's variables are the dwords at `[frame + 0x1c]`, not `+0x20` (Q257x). As a `POLL` of
+  `loadfile.sh` on `q257o/orig/hotpot-later2.TPWS`, `sleep 3.5; scriptvar.py %PID% 43 4 1` lands inside its go,
+  and the load's own frame at 15 s shows the pot broken, on the saved view (Q259).
 - **A broken ride is mended fast:** loaded from a file, a broken Hot Pot had its mechanic assigned two ticks on and
   was open again 32 ticks (8 s) after the load. Poll from before the click (`loadfile.sh`'s `POLL`); the poll's first
   line is the park before the load, its second the file's (Q257y).

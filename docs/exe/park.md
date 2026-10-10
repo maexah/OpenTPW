@@ -1941,10 +1941,45 @@ engine frees and this keeps (`PARK_PARTICLE_NOT_STARTED`). A loaded emitter begi
 running words are not read (`LOADED_EMITTER_LIFE_PART_RUN` where its life is not the template's). An effect added
 without its alpha (flags `0x4` with no `0x2000`) is drawn scaled by it (`WORLD_PARTICLE_ADDED_WITHOUT_ALPHA`).
 Not started at all, and not counted: a file's emitter no script's record names (the shipped park's effect 20 at
-(532,4,526)), a broken boat's smoke (`BUMPER_CAR_SMOKE` is its own count), a rider's and a leaver's puffs. The
+(532,4,526)), a rider's and a leaver's puffs (a broken boat's smoke is started since Q259, below). The
 writer is as it was: an emitter is written as it starts, not as the running one stands. The density is the
 options' (1000 at medium), where the file loaded in the original carries its own (500), so a density-scaled
 effect holds about twice the particles here: the stink 17 to 19 against 8 to 9.
+
+### A broken boat's smoke
+
+Q259, split by the session: the item's other pieces are Q261. The decode is `saves.md`, "OpenTPW's writer, a
+smoking car": a break starts effect 2 (`Smoke`: one particle a tick, each living 60) at each flagged car's
+emitter node (`FUN_00544c80`, `0x00544dd8`), the car's step moves it there every track tick (`Bumper_StepCar`,
+`0x00548587`), and a fix or the car's removal kills it (`FUN_00544e50`, `0x0054b077`).
+
+**What OpenTPW does.** `ParkBumperBoats.Sync` asks `ParkBumperBoats.Smoke` for each boat it stands: while the
+car smokes, effect 2 is started in the park's particle system where the boat's emitter node of id 2 is drawn
+(each of the three times 1024 and cut), and moved there on every frame after; once the car smokes no more, or its
+boat is let go, the emitter is killed. A car a file held smoking smokes from the park's first frame. A boat whose
+model has no such node is counted once (`BUMPER_CAR_NO_SMOKE_NODE`; no Lost Kingdom boat), and a start the system
+refuses each time it is tried (`PARK_PARTICLE_NOT_STARTED`). `BUMPER_CAR_SMOKE` is gone.
+
+**Deviation, said at `ParkBumperBoats`:** the smoke is started on the first frame after the break and moved a
+frame at a time to where the node is drawn, eased between ticks as the boat is; the original's is started in the
+break and moved once a track tick to the node's place on that tick.
+
+**Run, 2026-10-10** (`q259/confirm.py`, 5 of 5 on the desktop at the second run; the first's one miss was the
+script's own pattern). A Hot Pot bought, filled and broken in its go: four log lines `smokes`, and 2.5 s on
+`particles` read four emitters of effect 2 at height 30 over the pot holding 56, 58, 59 and 60 particles, every
+particle drawn, seven emitters of the world in all (the shop's bubbles, the pot's own two of effect 16); the save
+wrote four cars' smoke as before; the mechanic had it mended 11 s on (23 s in the first run) and five seconds
+later no emitter of effect 2 was left. **The control** (the tip before): no emitter of effect 2,
+`4x BUMPER_CAR_SMOKE`. **The original**, its own pot (`hotpot-later2.TPWS`) broken 3.5 s after the load's click:
+four emitters of effect 2 at height 30 holding 59, 61, 58 and 60 five seconds on, and 60, 60, 60 and 62 fifteen
+on; its frame then shows grey smoke over each boat, as OpenTPW's does (`smoke-opentpw-left-original-right.png`).
+**A load**: the park entered on the original's own broken file read four emitters of effect 2 at (442,30,263),
+(431,30,268), (424,30,261) and (422,30,251), the file's own places to the unit (`q259/loaded.py`).
+
+**Not looked into:** the pot's own two smokes (effect 16, the script's `ADDOBJ 2`) run here at the original's
+places and aims, (434,0,233) and (434,1,276), and are not seen in OpenTPW's frame, where the original's shows dark
+smoke at the pot's foot. The original starts four more emitters inside half a second of a break (effect 19 at the
+boats, the riders' puffs, `BUMPER_RIDER_PARTICLE`).
 
 ## The save's world block: map cells
 

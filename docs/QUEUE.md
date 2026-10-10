@@ -48,16 +48,22 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q259. The writer: what else a made record leaves out.** The old Q258's other pieces, each counted or
+- [ ] **Q261. The writer: what else a made record leaves out.** The old Q259's other pieces, each counted or
   said in `saves.md`. Confirm: each piece's bytes beside a file of the original's own, and the file loaded in
   the original under Proton.
+  From Q259 (`park.md`, "A broken boat's smoke"): the Hot Pot's own two smokes (effect 16, its script's
+  `ADDOBJ 2`) run at the original's places and are not seen in the frame, where the original's shows dark smoke
+  at the pot's foot: find why. A boat's smoke is started and moved a frame at a time, not on the track tick; a
+  boat with no emitter node is counted (`BUMPER_CAR_NO_SMOKE_NODE`). The wiring in `ParkBumperBoats.Sync` is
+  held by the game run alone (no test stands a boat). In no game run: a boat taken off while it smokes, a second
+  break after a fix, a full particle system.
   From Q258 (`park.md`, "A park's particles, started and drawn"): nothing moves or aims a running emitter to
   its node each tick, so the Jungle Spray's jet stays where its node rests (`PARK_PARTICLE_NODE_ON_A_CLIP`);
   counted and started nowhere: `PARK_PARTICLE_ITEM_EFFECT`, `PARK_PARTICLE_NO_PLACE`,
   `PARK_PARTICLE_NO_DIRECTION`, `PARK_PARTICLE_NOT_STARTED`; a loaded emitter begins again
   (`LOADED_EMITTER_LIFE_PART_RUN`); an effect added without its alpha (`WORLD_PARTICLE_ADDED_WITHOUT_ALPHA`).
   Not started and not counted: a file's emitter no script's record names (the shipped park's effect 20 at
-  (532,4,526): find what owns it), a broken boat's smoke (`BUMPER_CAR_SMOKE`), the riders' and leavers' puffs
+  (532,4,526): find what owns it), the riders' and leavers' puffs
   (`BUMPER_RIDER_PARTICLE`, `LEAVER_BOARDING_PARTICLE`), a sold thing's (`DESTROY_PARTICLE_EFFECT`). The writer
   still writes an emitter as it starts, not as the running one stands. A sprite's width on the screen was not
   settled by the original's picture (the listing's rule is built). An effect with no picture is 0.75 wide for
@@ -78,7 +84,7 @@ the research lab), then the rest of this section in its old order.
   was not resolved (a poll each half second; the original's is 0.3 s).
   From Q257x (`saves.md`, "OpenTPW's writer, a smoking car"): a smoking car's emitter is put
   where its boat is drawn, not where its last tick left it, and dealt after the scripts'; with no boat drawn
-  it is counted and written as none (`SAVE_PARK_CAR_SMOKE`). Nothing draws the smoke (`BUMPER_CAR_SMOKE`).
+  it is counted and written as none (`SAVE_PARK_CAR_SMOKE`).
   **An `EVENT`'s puff needs no writing:** the original's own file of a bought Loudspeaker holds its two puffs
   spent (lives of -38 and -62, a particle each), and a load frees an emitter with a life under nought on its
   first tick (`Particles_Tick`, `0x00520130`); only a puff of an effect with a life still running would show,

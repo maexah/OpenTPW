@@ -17,6 +17,12 @@ namespace OpenTPW;
 /// <b>Two departures, said here.</b> The rocking the original works out from the four corners' heights is not drawn
 /// (<c>BUMPER_CAR_ROCK</c>), nor the wake under a boat (<c>BUMPER_CAR_WAKE</c>).
 /// </para>
+/// <para>
+/// <b>A smoking car's smoke</b> runs in the park's particle system from the boat's emitter node (<see cref="Smoke"/>;
+/// <c>docs/exe/saves.md</c>, "OpenTPW's writer, a smoking car"). A third departure: the original starts it in the
+/// break itself and moves it on each track tick to where the node stood on that tick; here it is started and moved as
+/// the boat is stood each frame, to where the node is drawn.
+/// </para>
 /// </summary>
 public sealed class ParkBumperBoats : Entity
 {
@@ -25,6 +31,11 @@ public sealed class ParkBumperBoats : Entity
 
 	/// <summary>What a car's seat id is looked up under in its model: the seat space, <c>0x80</c> (<c>FUN_00549c60</c>).</summary>
 	private const uint SeatSpace = 0x80;
+
+	/// <summary>What a car's emitter node is looked up under in its model, <c>0x100</c>; the smoke's is its id 2.</summary>
+	private const uint EmitterSpace = 0x100;
+
+	private const int SmokeNodeId = 2;
 
 	/// <summary>The bob's scale - <c>DAT_00700ef0</c>, 0.00125 of a sine step, about a third of a unit at the peak.</summary>
 	private const float BobScale = 0.00125f;
@@ -49,6 +60,12 @@ public sealed class ParkBumperBoats : Entity
 
 		/// <summary>The height it was last stood at - the car's <c>+0xa0</c>.</summary>
 		public float Height { get; set; }
+
+		/// <summary>The model's node its smoke rises from, the emitter space's id 2 (the car's <c>+0x24</c>); -1 with none.</summary>
+		public int SmokeNode { get; init; } = -1;
+
+		/// <summary>The running emitter of its smoke, or nought with none.</summary>
+		public int Smoke { get; set; }
 	}
 
 	/// <summary>A seat node: its name, and its own transform in the car's model space (the original's axes, y up).</summary>
@@ -166,6 +183,14 @@ public sealed class ParkBumperBoats : Entity
 
 			Pose( boat, car, now );
 			Put( boat, car, state );
+
+			var smoke = Smoke( ParticleSystem.Current, boat.Smoke, car.Smoking,
+				boat.SmokeNode >= 0 && boat.Model.TryGetDrawnNode( boat.SmokeNode, out var at ) != DrawnNode.Missing ? at : null );
+
+			if ( smoke != boat.Smoke && smoke != 0 )
+				Log.Info( $"Bumper boats: car {slot} of ride 0x{car.Ride:x} smokes, handle 0x{smoke:x}" );
+
+			boat.Smoke = smoke;
 			ParkBumperCars.Landed( car );
 		}
 	}
@@ -194,7 +219,8 @@ public sealed class ParkBumperBoats : Entity
 				sharedTextureDirectory: $"levels/{_theme}/sharetex",
 				clips: animations.AllClips );
 
-			var boat = new Boat( model, animations, SeatsOf( path, out var read ), car.Ride );
+			var seats = SeatsOf( path, out var read );
+			var boat = new Boat( model, animations, seats, car.Ride ) { SmokeNode = read?.FindNode( SmokeNodeId, EmitterSpace ) ?? -1 };
 
 			// The model's node words, kept as its clips start, for the park file's record of it.
 			if ( read != null )
@@ -208,7 +234,10 @@ public sealed class ParkBumperBoats : Entity
 
 			_boats[slot] = boat;
 
-			// Counted once a boat: the rocking its corners' bob gives it, and its wake.
+			// Counted once a boat: no emitter node for its smoke, the rocking its corners' bob gives it, and its wake.
+			if ( boat.SmokeNode < 0 )
+				Unimplemented.Report( "BUMPER_CAR_NO_SMOKE_NODE" );
+
 			if ( (car.Flags & ParkBumperCars.CarFlags.Bobs) != 0 )
 				Unimplemented.Report( "BUMPER_CAR_ROCK" );
 
@@ -229,6 +258,48 @@ public sealed class ParkBumperBoats : Entity
 			Unimplemented.Report( "BUMPER_CAR_NO_MESH" );
 			return null;
 		}
+	}
+
+	/// <summary>
+	/// A smoking car's smoke for this frame, and the handle to keep for it: effect 2 started where the car's emitter node
+	/// stands, each of the three times 1024 and cut to a whole number (<c>FUN_00544c80</c>, <c>0x00544dd8</c>), then
+	/// moved there (<c>Bumper_StepCar</c>, <c>0x00548587</c>); and stopped once the car smokes no more, by a fix or a
+	/// launch (<c>FUN_00544e50</c>). With no node to rise from none runs; a start the system refuses is counted, and
+	/// tried again the next frame, as the ride's script tries on its every pass.
+	/// </summary>
+	/// <param name="held">The running emitter's handle, or nought.</param>
+	/// <param name="node">Where the emitter node is drawn, in this map's axes (z up); null with none.</param>
+	internal static int Smoke( ParticleSystem? system, int held, bool smoking, Vector3? node )
+	{
+		if ( system is null )
+			return held;
+
+		if ( !smoking )
+		{
+			if ( held != 0 )
+				system.Kill( held );
+
+			return 0;
+		}
+
+		if ( node is not { } at )
+			return held;
+
+		// The particle system's axes are the original's: x, the height, z.
+		var (x, height, z) = ((int)(at.X * 1024f), (int)(at.Z * 1024f), (int)(at.Y * 1024f));
+
+		if ( held != 0 && system.TryEmitter( held, out _ ) )
+		{
+			system.Move( held, x, height, z );
+			return held;
+		}
+
+		var started = system.Spawn( ParkBumperCars.SmokeEffect, x, height, z );
+
+		if ( started == 0 )
+			Unimplemented.Report( "PARK_PARTICLE_NOT_STARTED" );
+
+		return started;
 	}
 
 	/// <summary>
@@ -449,6 +520,10 @@ public sealed class ParkBumperBoats : Entity
 
 	private void Drop( int slot, Boat boat )
 	{
+		// A car taken off has its smoke stopped (FUN_0054ae50, 0x0054b077).
+		if ( boat.Smoke != 0 )
+			ParticleSystem.Current?.Kill( boat.Smoke );
+
 		foreach ( var entity in boat.Model.Entities )
 			entity.Delete();
 
