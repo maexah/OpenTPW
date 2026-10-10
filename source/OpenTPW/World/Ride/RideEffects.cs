@@ -109,7 +109,8 @@ public sealed class RideEffects
 		/// <summary>
 		/// The engine's handle as a park file holds it at <c>+0x0c</c>: the file's own for a record a load put back,
 		/// and nought for one started here, where nothing spawns a particle or a sound to answer one. Nought names
-		/// no particle (<c>FUN_0051ff70</c>).
+		/// no particle (<c>FUN_0051ff70</c>). The park file's writer starts a particle's emitter in the file and
+		/// writes that handle over this one (<c>RideScript.WrittenEmitters</c>).
 		/// </summary>
 		public int SavedHandle { get; init; }
 

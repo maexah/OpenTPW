@@ -627,7 +627,7 @@ OpenTPW runs written over and records added and taken out. **Afresh** means writ
 | The action recording | `mLoadedPublishedPark`, a length, the recorder's buffer | nothing: no action is recorded here | carried |
 | `WRLD` | the park | nearly all of it | patched, part by part (below) |
 | `SPSC` | a 280-byte record per sprite | a guest or hire made, one gone, every position and frame | patched: a slot filled for a person made, emptied for one gone |
-| `PART` | the live emitters and the effect library | each emitter a script's `ADDOBJ` or `EVENT` has alive | carried: no emitter is made or taken out ("OpenTPW's writer, a thing with emitter files") |
+| `PART` | the live emitters and the effect library | each emitter a script's `ADDOBJ` or `EVENT` has alive | the file's, with an emitter started for each particle a script here has started and one killed for each of the file's whose record is gone ("OpenTPW's writer, an emitter started"); a puff alive at the save is not made |
 | `MESS` | 29 listener sets | every set a made or gone thing belongs to | afresh from the thing list for sets `0xa`, `0xb`, `0xc` and `0x1b` by the rule above; the singletons carried |
 | `CLOK` | two clock readings | the clock runs | afresh: the file's readings plus the game time run since the load, so every carried deadline keeps its distance |
 | `VANT` | one reading of the real-time clock (`FUN_005f5f10`); the reader keeps its distance from its own | nothing | carried |
@@ -2022,10 +2022,11 @@ words, the two links left), and where it is not the record is written again with
 (`ParkScriptStates.Relisted`, `Splice`). `rides` prints each record as `type:effect@tag/node/lookup record`, the
 effect `?` on one a load put back, since the file does not hold it.
 
-**A deviation, said at `RideEffects.Record.SavedHandle`:** a record started here is written with a handle of
-nought, where the engine's holds what its spawn answered and never nought. Nothing here spawns a particle or a
-sound, and no `PART` emitter is written for it, so there is nothing for a handle to name; nought is the one
-value no particle call acts on. A record a load put back goes out with its file's handle.
+**A deviation, said at `RideEffects.Record.SavedHandle`:** a sound's record started here is written with a
+handle of nought, where the engine's holds what its spawn answered and never nought. Nothing here plays a
+script's sound, so there is nothing for a handle to name; nought is the one value no call acts on. A
+particle's record is written with the handle of the emitter the writer starts for it ("OpenTPW's writer, an
+emitter started"), and a record a load put back goes out with its file's handle.
 
 **Confirmed in the game** (`q257i/confirm.py`, 4 of 4 off-screen and 4 of 4 on the desktop, and the control's 3
 of 3, each predicted in `PREDICTION.txt`). Lost Kingdom from `easymode.TPWI`: a Litter Bin and a Coconut Kiosk
@@ -2046,8 +2047,8 @@ and the three lists are empty. Its own Jungle Spray then started and stopped `(3
 a load (the toilet's two are the same five words; the rule is the reader's listing and the tests). No effect is
 drawn or heard in OpenTPW, and the original draws no smoke on a made kiosk with either file, so the photographs
 show the things bought and do not tell the fix from the control. **Not built:** the engine's spawn that fails
-and frees its record (every `ADDOBJ` of a known type keeps one here); the handle `SETOBJPARAM` stores back; the
-emitter itself (`PART`, Q257n).
+and frees its record (every `ADDOBJ` of a known type keeps one here); the handle `SETOBJPARAM` stores back. The
+emitter itself is "OpenTPW's writer, an emitter started".
 
 ### OpenTPW's writer, a person's sprite inside a loop
 
@@ -2169,10 +2170,9 @@ screen effect's. In memory the live system is at `0x0080ced0` and emitter slot *
 folder holds `.emt` files; `ParkItemCatalogue.HasEmitters` is gone. A bought Loudspeaker goes out as any thing
 bought does ("OpenTPW's writer, a thing bought and a thing sold"), and one sold is taken out.
 
-**A deviation, said at `Level.WritePark`:** the particles module goes out as the loaded file's, so an emitter
-alive at the save is not in it: the two puffs above, and the emitter an `ADDOBJ` of type 1 or 2 started here
-(its record is written with a handle of nought, "OpenTPW's writer, a script's started effects"). Nothing in an
-OpenTPW park spawns a particle yet, so there is no live emitter to write.
+**A deviation, said at `Level.WritePark`:** an `EVENT`'s puff alive at the save is not in the written file (the
+two above), and the file's own puffs go out as the file has them. An `ADDOBJ`'s emitter is written ("OpenTPW's
+writer, an emitter started").
 
 **Confirmed in the game** (`q257n/confirm.py`, the fix's 7 of 7 on the desktop at the second run and the
 control's 4 of 4; `PREDICTION.txt` holds every prediction and miss). Lost Kingdom from `easymode.TPWI`:
@@ -2601,6 +2601,106 @@ rider arrived between the load and its census, so the kept record was held again
 one. Of 22 bugs put back 20 fail a test (one after an assertion was added); the two that live change nothing that
 can happen: a head on no record is refused twice over, and no Lost Kingdom item sets `DoHeadProcessing` without
 walk slots (`mut-run1.out`, `mut-run2.log`). `docs/exe/addresses.md` not regenerated.
+
+### OpenTPW's writer, an emitter started
+
+Q257v, split by the session: the item's other pieces are Q257w. **The particles module's live emitters follow
+the scripts' records**: a particle a script here has started with `ADDOBJ` is written with an emitter and the
+handle that names it, and an emitter of the file's whose record is gone is written killed.
+
+**What a start does** (`Particles_Spawn`, `0x00521e60`, read whole; FileFormats `saves.md`, "A live emitter and
+its handle", has the table). The slot at the head of the free chain (`0x00816d20`) is taken off it and put at
+the head of the used one (`0x00816d1c`), the two links at `+0xd0` and `+0xd2` kept through the copy of the
+template's 320 bytes. Where the template's `+0xc0` is nought its rates, its most and its burst are scaled by the
+density (`Particles_ScaleByDensity`, `0x00521d60`: the live header's `+0x20` over 1024, never down to nought).
+Then the life is copied to `+0xd4`, the place written (each of the three shifted down four bits: the caller
+hands in the park's units times 1024, `0x00557481`), the box emptied, `+0x08` cleared, the template's slot and
+`+0x00` = 1 written, three draws of the system's own generator (the header's `+0x10`, times `0x343fd` plus
+`0x269ec3`, its high word modulo the template's `+0x12`) added to the velocity, the count taken from the
+header's `+0x18`, `+0x06` = -1, `+0xab` = 0 and `+0x6f` set from the force. A template with a burst and mode
+nought then emits it; and one that links an effect (`+0xb4`) starts that too, an emitter (put off by the linked
+template's velocity and marked `+0xab` where `+0xb8` says it follows) or an effector (`+0xba`), and keeps its
+handle. It answers `count << 16 | slot`; nought for an effect of the world's (`+0xc1`) while the header's
+`+0x08` is set; -1 with no slot free or no such effect.
+
+- **A type 2 record** is started by `Particles_SpawnFull` (`0x00521930`), the same with the three words at
+  `+0x38` set from a direction and no draw.
+- **The sweep moves it** (`FUN_005516b0`, `0x0055190f`): each record with a node has its emitter put where its
+  lookup record stands, every tick, each coordinate through `__ftol` and then shifted up ten bits, so the place
+  in a file is in whole units, toward nought (`Particles_Move`, `0x0051fe30`, shifts down four).
+- **A kill** (`KILLOBJ`, `FADEOBJ`, a script's end: `FUN_0051ff70( handle, -2 )`, `Particles_Kill`'s own body)
+  sets the life to -2 on the emitter the handle names, by `FUN_005222e0`'s test: not nought, a slot under 120
+  and the slot's count. The tick (`Particles_Tick`, `0x00520130`) frees an emitter whose life is under nought
+  once it holds no particle (`Particles_FreeEmitter`, `0x005204c0`: unlinked, `+0x00` and the count cleared,
+  pushed on the free chain).
+- **The loader** `FUN_0051f7a0` reads both images raw, makes the particle pool empty and sets `+0x08` to nought
+  and `+0x06` to -1 on every emitter of the used chain. So a file's emitter needs no particle, and a killed one
+  is freed by the first tick after a load.
+
+**Measured on eighteen files** (`q257v/census`, `census.out`: the shipped park, nine saved from it under Proton
+and Alexah's eight). 61 particle records, each naming an emitter in use. **61 of 61 are the bytes
+`ParkParticles.Edit.Start` makes** from the emitter's template at its place, outside the count, the links and
+the words that run on (the particles at `+0x06` and `+0x08`, the life of the four that have one, the countdown
+at `+0x66`, the box, and a type 2's `+0x38` to `+0x42`). **61 of 61 stand on whole units**, and of the 59 whose
+model reads 55 stand where `RideNodes.Find` puts the record's node, cut to whole units, across and down; the
+four that do not are the Huge Hollow Rock's two in two files, a cell out in one axis (its origin, not looked
+into). The height agrees in 44, on the shipped park's flat ground; the other 15 are on the hills of the played
+park, which the census did not load.
+
+**What OpenTPW writes.** `RideScript.WrittenEmitters` hands the writer, beside each list, the emitter each
+particle started here asks for: its effect at its node's place in whole units (`WrittenScript.Emitters`).
+`ParkFileWriter.PutEmitters` works on a copy of the file's live image (`ParkParticles.Begin`): it kills the
+emitter of every particle record the file's script held and the running one does not, and of every record of a
+script sold with its thing; starts each emitter asked for and writes its handle into the record; and puts the
+image back where it lies (`ParkParticles.Put`). `ParkWorld.Particles` reads the module; the console's
+`emitters` prints the loaded file's used chain with the record that names each.
+
+**Deviations, said at `ParkFileWriter.PutEmitters` and `ParkParticles.Edit.Start`:**
+
+- The slots and counts are dealt as the file is written (the kept scripts in the scheduler's order, then the
+  things bought, oldest first, each list from its oldest record), where the original's are in the order the
+  `ADDOBJ`s ran. Every handle names its own emitter, which is all a load reads.
+- An emitter is written as it starts: an effect with a life begins it again at the load (the dirty toilet's
+  stink, 100,000 ticks), and no particle is in the air on the load's first frame, as none is after any load.
+- A burst's draws of the generator are not made, so the seed written is behind the engine's by them.
+- A node that rides a clip is taken where it rests.
+- **Counted, and written with no emitter and a handle of nought:** a type 2 record
+  (`SAVE_PARK_EMITTER_DIRECTED`: the Jungle Spray's jet while it runs), an effect of the item's own, bit 15 of
+  its id (`SAVE_PARK_EMITTER_ITEM_EFFECT`), a record with no node or a node the model lacks
+  (`SAVE_PARK_EMITTER_NO_PLACE`; none of the 61 has no node), and an effect that links an effector, itself or
+  down its chain (`SAVE_PARK_EMITTER_NOT_STARTED`: templates 84, 86, 90 and 98).
+- An `EVENT`'s puff alive at the save is not written, and the file's own puffs go out as the file has them.
+
+**Confirmed in the game** (`q257v/confirm.py`, 3 of 3 off-screen and 3 of 3 on the desktop, each predicted in
+`PREDICTION.txt`). Lost Kingdom from `easymode.TPWI`: `buy 1203 44 33 0` (a second Drinks Shop, thing 43,
+script 18), `scriptvar 21 VAR_WORN 1` (the file's Small Toilet 21 starts effect 9 and then 69 on its node 1),
+paused, saved. The save's log: three emitters started, none killed, none not started: slot 69 count 218 handle
+`0xda0045` effect 9 at (555,10,174) life 100000; slot 107 count 219 handle `0xdb006b` effect 69 at the same
+place; slot 1 count 220 handle `0xdc0001` effect 58 at (450,6,342). The file, by a Python reader
+(`q257v/emitters.py`): seven emitters on the used chain, 1, 107, 69, 8, 13, 20, 0, the free chain's head 12,
+the next count 221; script 11's list `(1, 0xdb006b, 1, 1, 1)`, `(1, 0xda0045, 1, 1, 1)` and script 18's
+`(1, 0xdc0001, 1, 0, 1)`; each new emitter its template's bytes outside the start's words. Loaded here from
+the Load Park list, `emitters` reads seven in use, the three named by scripts 11 and 18, the file's bubbles
+(`0x7a0014`) by script 6, and the frame shows both shops (nothing draws a park's particles here).
+
+**The control, the build before** (1 of 1): no emitter line; the file's module the loaded file's (four in
+use, next count 218) and the three records' handles nought.
+
+**The original under Proton** (`loadfile.sh` with the new `original/emitters.py` polling its live system every
+0.05 s). The fix's file, from the Load Park list: on the first poll after the load the three emitters in slots
+1, 107 and 69 under counts 220, 219 and 218, at (450,6,342) and (555,10,174), no particle on any; **0.05 s
+later each has particles** (1, 3 and 3) and ten or so within two seconds, and the places stay as written
+through its own sweeps, which put each emitter where its node stands every tick. Its frame shows bubbles
+rising over the bought shop. The control's file: no emitter on the bought shop or the toilet in 30 s, and no
+bubble over the bought shop (`orig/sheet-fix-left-control-right.png`, `a-load.log`, `c-load.log`). Not
+predicted: the file's two effect 35 emitters (the pointer's, named by no record) read a life of -2 on the first
+poll after either load and are freed by the next.
+
+**Not run in either game, tested only:** an emitter killed (a record gone, a thing sold), a linked effect, an
+effect with a range, the four counted cases. Of 72 bugs put back 71 fail a test; the one that fails none
+leaves a started emitter's particle count as the template's, which is nought in every effect of the library
+(`q257v/mutations.py`). **Not seen:** the toilet's two effects in the original's frame
+(off the picture; its memory holds 9 and 19 particles on them). `docs/exe/addresses.md` not regenerated.
 
 ### Read, not run
 

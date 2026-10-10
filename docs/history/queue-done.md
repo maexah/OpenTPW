@@ -5802,6 +5802,15 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   on records 5, 7, 8, 9; the original under Proton read the four at the first poll, placed where this build's
   census has them, and took them off 4, 3, 2, 1, 0; with the build before's file its count fell to 4294967292
   (`saves.md`, "OpenTPW's writer, a walk's head").
+- [x] **Q257v. The writer: an emitter started.** Split by the session from the old Q257v, whose other pieces
+  are Q257w. The particles module's live emitters follow the scripts' records: a particle a script here started
+  with `ADDOBJ` is written with an emitter as `Particles_Spawn` leaves one (`0x00521e60`) and the handle that
+  names it, and an emitter of the file's whose record is gone is written killed (`ParkParticles`,
+  `ParkFileWriter.PutEmitters`, `RideScript.WrittenEmitters`). **Proved:** a bought Drinks Shop and a toilet
+  told it is worn are written with emitters in slots 1, 107 and 69 under counts 220, 219 and 218; the original
+  under Proton reads the three at the first poll after the load, each emitting 0.05 s on, and its frame shows
+  bubbles over the bought shop; with the build before's file it has none in 30 s. 61 of 61 emitters in eighteen
+  of the original's files are the bytes the start makes (`saves.md`, "OpenTPW's writer, an emitter started").
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

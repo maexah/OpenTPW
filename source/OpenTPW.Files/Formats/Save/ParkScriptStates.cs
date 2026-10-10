@@ -87,12 +87,15 @@ public readonly record struct SavedWalkSlot( short WalkNode, short HeadNode, sho
 /// <summary>
 /// One running script as a park file's writer takes it (<see cref="ParkScriptStates.Put"/>): what
 /// <see cref="SavedScript"/> reads, each deadline and stamp a reading of the clock the file is written under. A table
-/// that is null, or not the length the file's record holds, leaves the file's.
+/// that is null, or not the length the file's record holds, leaves the file's. <paramref name="Emitters"/> lies beside
+/// <paramref name="Effects"/>: where it holds one, the writer starts that emitter and writes its handle into the
+/// record (<see cref="ParkParticles.Edit.Start"/>).
 /// </summary>
 public readonly record struct WrittenScript( int Handle, int Position, int CallIndex, int HeapIndex, int Result,
 	int[] Stack, int[] Variables, uint WaitDeadline, uint AnimationDeadline, int LoopingKey, int AnimationMark,
 	uint TimerDeadline, SavedLimboSlot[]? Limbo, int InLimbo, SavedBounceSlot[]? Bounce, int Bouncing, int BounceBase,
-	int BounceNode, SavedWalkSlot[]? Walk, int[]? Heads, SavedEffect[]? Effects = null );
+	int BounceNode, SavedWalkSlot[]? Walk, int[]? Heads, SavedEffect[]? Effects = null,
+	ParkParticles.Spawn?[]? Emitters = null );
 
 /// <summary>
 /// The <c>RSSE</c> module of a park save: every running script's program counter and variables.

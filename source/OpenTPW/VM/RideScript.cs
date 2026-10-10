@@ -1214,8 +1214,66 @@ public sealed class RideScript
 				slot.Stamped ? reading( slot.Start ) : 0, slot.Stamped ? reading( slot.Due ) : 0, slot.Handle, slot.Action,
 				(short)slot.State, slot.Flags, slot.Facing ) )],
 			Heads: [.. _heads],
-			Effects: Effects?.Written() );
+			Effects: Effects?.Written(),
+			Emitters: WrittenEmitters() );
 	}
+
+	/// <summary>
+	/// The emitter each particle this script has started is written with, beside <see cref="RideEffects.Written"/>
+	/// (<c>docs/exe/saves.md</c>, "OpenTPW's writer, an emitter started"): the record's effect at its node's place
+	/// in whole units, as the sweep's move leaves an emitter (<c>0x0055190f</c>). None for a sound, and none for a
+	/// record a load put back, whose emitter is the file's.
+	///
+	/// <para>
+	/// Counted, and left with no emitter and a handle of nought: a particle with a direction (type 2), an effect
+	/// of the item's own (bit 15 of the id), and a record with no node or whose node the model does not hold. A
+	/// node that rides a clip is taken where it rests.
+	/// </para>
+	/// </summary>
+	private ParkParticles.Spawn?[]? WrittenEmitters()
+	{
+		if ( Effects is not { Count: > 0 } effects )
+			return null;
+
+		var spawns = new ParkParticles.Spawn?[effects.Count];
+
+		for ( var index = 0; index < spawns.Length; ++index )
+		{
+			var record = effects.Records[index];
+
+			if ( !record.IsParticle || record.Restored )
+				continue;
+
+			if ( record.Type != RideEffects.FirstType )
+			{
+				Unimplemented.Report( "SAVE_PARK_EMITTER_DIRECTED" );
+				continue;
+			}
+
+			if ( (record.Effect & ItemEffectBit) != 0 )
+			{
+				Unimplemented.Report( "SAVE_PARK_EMITTER_ITEM_EFFECT" );
+				continue;
+			}
+
+			var place = System.Numerics.Vector3.Zero;
+
+			// A node with no matrix kept reads as the origin in the engine, and the emitter is put there.
+			if ( record.Node < 0 || Nodes?.Find( record.Node, RideNodes.ParticleSpace, out place ) is not { } end
+				|| end is NodeEnd.Missing or NodeEnd.NegativeId )
+			{
+				Unimplemented.Report( "SAVE_PARK_EMITTER_NO_PLACE" );
+				continue;
+			}
+
+			spawns[index] = new ParkParticles.Spawn( record.Effect, (int)place.X << 10, (int)place.Y << 10, (int)place.Z << 10 );
+		}
+
+		return spawns;
+	}
+
+	/// <summary>The bit of an effect id that names one of the item's own, by its place among them (<c>0x00557414</c>).</summary>
+	private const int ItemEffectBit = 0x8000;
 
 	/// <summary>
 	/// This script as a park file holds one the file it was loaded from does not (<c>docs/exe/saves.md</c>,

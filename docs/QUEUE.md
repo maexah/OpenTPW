@@ -48,9 +48,17 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q257v. The writer: what else a made record leaves out.** The old Q257u's other pieces, each counted or
+- [ ] **Q257w. The writer: what else a made record leaves out.** The old Q257v's other pieces, each counted or
   said in `saves.md`. Confirm: each piece's bytes beside a file of the original's own, and the file loaded in
   the original under Proton.
+  From Q257v (`saves.md`, "OpenTPW's writer, an emitter started"): counted and written with no emitter: a
+  particle with a direction (`SAVE_PARK_EMITTER_DIRECTED`: `Particles_SpawnFull`, the Jungle Spray's jet), an
+  item's own effect (`SAVE_PARK_EMITTER_ITEM_EFFECT`), a record with no node (`SAVE_PARK_EMITTER_NO_PLACE`) and
+  an effect that links an effector (`SAVE_PARK_EMITTER_NOT_STARTED`). An emitter is written as it starts, its
+  life begun again; an `EVENT`'s puff alive at the save is not written; a burst's draws are not made. In no
+  game run: an emitter killed (a record gone, a thing sold). Nothing draws a park's particles here: a script's
+  `ADDOBJ` and `EVENT` start none in `ParticleSystem` (not counted where they would be drawn; count it there).
+  The Huge Hollow Rock's two particle nodes stand a cell out in one axis against the original's files.
   From Q257u (`saves.md`, "OpenTPW's writer, a walk's head"): the Inca Totem, a Mayhem sold or moved with riders
   carried and a head in a costume were in no game run; which of a head's 56 pictures each game shows is not
   compared; the rider's body is not drawn where the original leaves it standing.
@@ -68,10 +76,9 @@ the research lab), then the rest of this section in its old order.
   `SAVE_PARK_TRACK_RIDE_AS_THE_FILE`). Which of the three writers puts node word `0x40` on a car's first node
   was not traced, nor a car's `+0x14` to `+0x1c`. In no game run: a ride sold with boats out, a peep on the
   leaving or boarding list at the save, a turned track ride.
-  From Q257n (`saves.md`, "OpenTPW's writer, a thing with emitter files"): the particles module goes out as
-  the loaded file's, so no emitter alive at the save is written: a script's `EVENT` puff (the original's file
-  of a bought Loudspeaker holds two of template 36) and an `ADDOBJ`'s (below). A handle is the emitter's
-  `+0xa` word over its slot. Nothing spawns a particle in a park here yet. A Loudspeaker sold was in no game run.
+  From Q257n (`saves.md`, "OpenTPW's writer, a thing with emitter files"): a script's `EVENT` puff alive at
+  the save is not written (the original's file of a bought Loudspeaker holds two of template 36). A Loudspeaker
+  sold was in no game run.
   From Q257c: the offset's
   arms at 180 and 270 degrees stand on the listing alone: no file holds such an object.
   From Q254: a queue cell on a tile outside the eight pieces, and every changed queue cell of a park written
@@ -104,9 +111,8 @@ the research lab), then the rest of this section in its old order.
   From Q257h (`saves.md`, "OpenTPW's writer, a walk slot's facing"): a rider carried on a node a clip moves
   faces as the node does at rest (`WALK_FACING_REST_POSE`, counted). The shake's turn of a carried rider is not built, with its
   instruction (`WALKST_FLOAT`, Space Zone's Zero G alone: after Lost Kingdom).
-  From Q257i (`saves.md`, "OpenTPW's writer, a script's started effects"): a record started here is written with
-  a handle of nought, and the emitter it would name is not written (the `PART` module, above): write the emitter,
-  then the handle the file's slot gives. The engine frees a record whose spawn answers nought (`FUN_00557970`);
+  From Q257i (`saves.md`, "OpenTPW's writer, a script's started effects"): a sound's record started here is
+  written with a handle of nought. The engine frees a record whose spawn answers nought (`FUN_00557970`);
   every `ADDOBJ` of a known type keeps one here: decode when `Particles_Spawn` and `Sound_PlayEffect` answer
   nought (a category without the id, `park.md`, "ADDOBJ"), then keep no record there. `SETOBJPARAM`'s handle
   stored back is not kept. And not seen in the original: what its scripts do with a record whose handle is nought.

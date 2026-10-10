@@ -130,7 +130,16 @@ public static class ParkFileWriter
 
 	/// <summary>What was done with <see cref="RunningThings"/>: the records written over, the script tables left the file's, the things made and taken out, and each queue cell's new handle beside the one it gave up.</summary>
 	public readonly record struct ThingsWritten( int Objects, int Scripts, int ScriptTablesLeft, int Models,
-		int Made = 0, int Gone = 0, int ModelSlots = 0, IReadOnlyList<(int Cell, int Handle, int Freed)>? QueueCells = null );
+		int Made = 0, int Gone = 0, int ModelSlots = 0, IReadOnlyList<(int Cell, int Handle, int Freed)>? QueueCells = null,
+		EmittersWritten? Emitters = null );
+
+	/// <summary>
+	/// What was done with the particles module (<c>docs/exe/saves.md</c>, "OpenTPW's writer, an emitter started"):
+	/// each emitter started with the script whose record names it, each of the file's killed, and how many asked
+	/// for were not started, their effect linking an effector or the module unread. Null where there is none of the three.
+	/// </summary>
+	public sealed record EmittersWritten( IReadOnlyList<(int Script, ParkParticles.Emitter Emitter)> Started,
+		IReadOnlyList<ParkParticles.Emitter> Killed, int NotStarted );
 
 	/// <summary>
 	/// The arrival timer as it is written: the <c>mGameTick</c> the next load's wait is counted from
@@ -203,6 +212,9 @@ public static class ParkFileWriter
 
 		if ( running.Things is { } run )
 		{
+			// First: a started emitter's handle goes into its script's record, which is written below.
+			var emitters = PutEmitters( loaded, body, ref run );
+
 			var objects = loaded.PutObjects( body, run.Objects );
 			var scripts = loaded.ScriptStates.Put( body, run.SchedulerTick, run.NextHandle, run.Scripts );
 
@@ -222,7 +234,7 @@ public static class ParkFileWriter
 
 			loaded.Clock.Put( body, run.Clock );
 			loaded.TrackRides.Put( body, run.KeptTracks ?? [] );
-			things = new ThingsWritten( objects, scripts.Scripts, scripts.TablesLeft, models );
+			things = new ThingsWritten( objects, scripts.Scripts, scripts.TablesLeft, models, Emitters: emitters );
 
 			var made = run.Made ?? [];
 			var gone = run.Gone ?? new HashSet<int>();
@@ -390,7 +402,103 @@ public static class ParkFileWriter
 	}
 
 	/// <summary>
-	/// Gives every head hung a sprite slot (<c>docs/exe/saves.md</c>, "OpenTPW's writer, a rider's head"). A head
+	/// Makes the file's live emitters follow the scripts' records (<c>docs/exe/saves.md</c>, "OpenTPW's writer, an
+	/// emitter started"), and writes the live image where it lies. A particle record the file's script held and the
+	/// running one does not, and every one of a script sold with its thing, has its emitter killed as
+	/// <c>KILLOBJ</c> and the script's end kill it; each record that asks for an emitter is given one, and its
+	/// handle, in <paramref name="run"/>.
+	///
+	/// <para>
+	/// A deviation: the original starts each emitter as its <c>ADDOBJ</c> runs, so its slots and counts are in
+	/// the order the scripts ran in. Here they are dealt as the file is written: the kept scripts in the
+	/// scheduler's order, then the bought things' oldest first, each list from its oldest record. Every handle
+	/// names its own emitter, which is all a load reads. And each is written as it starts: one whose effect has a
+	/// life begins it again at the load.
+	/// </para>
+	/// </summary>
+	private static EmittersWritten? PutEmitters( ParkWorld loaded, byte[] body, ref RunningThings run )
+	{
+		var made = run.Made ?? [];
+		var asked = run.Scripts.Sum( script => script.Emitters?.Count( spawn => spawn != null ) ?? 0 )
+			+ made.Sum( thing => thing.Script?.Script.Emitters?.Count( spawn => spawn != null ) ?? 0 );
+
+		if ( loaded.Particles.Problem != null )
+			return asked > 0 ? new EmittersWritten( [], [], asked ) : null;
+
+		var edit = loaded.Particles.Begin();
+		var started = new List<(int Script, ParkParticles.Emitter Emitter)>();
+		var killed = new List<ParkParticles.Emitter>();
+		var notStarted = 0;
+
+		void Kill( IEnumerable<SavedEffect> records )
+		{
+			foreach ( var record in records.Where( record => record.Type <= LastParticleType ) )
+			{
+				if ( edit.Kill( record.Handle ) )
+					killed.Add( edit.At( record.Handle & 0xffff ) );
+			}
+		}
+
+		var gone = run.Gone ?? new HashSet<int>();
+
+		foreach ( var thing in loaded.Objects.Where( thing => gone.Contains( thing.ThingId ) ) )
+		{
+			foreach ( var handle in loaded.ScriptStates.HandlesOf( thing.ThingId ) )
+				Kill( loaded.ScriptStates.For( handle )?.Effects ?? [] );
+		}
+
+		foreach ( var script in run.Scripts )
+		{
+			if ( script.Effects is { } now && loaded.ScriptStates.For( script.Handle )?.Effects is { } held )
+				Kill( held.Where( record => !now.Any( kept => kept.Type == record.Type && kept.Handle == record.Handle ) ) );
+		}
+
+		WrittenScript Started( WrittenScript script )
+		{
+			if ( script.Effects is not { } effects || script.Emitters is not { } spawns || !spawns.Any( spawn => spawn != null ) )
+				return script;
+
+			var records = (SavedEffect[])effects.Clone();
+
+			// The list's head is its newest record.
+			for ( var index = Math.Min( records.Length, spawns.Length ) - 1; index >= 0; --index )
+			{
+				if ( spawns[index] is not { } spawn )
+					continue;
+
+				if ( !edit.Starts( spawn.Template ) )
+				{
+					++notStarted;
+					continue;
+				}
+
+				var handle = edit.Start( spawn );
+
+				records[index] = records[index] with { Handle = handle };
+
+				if ( handle is not (0 or ParkParticles.NoSlot) )
+					started.Add( (script.Handle, edit.At( handle & 0xffff )) );
+			}
+
+			return script with { Effects = records };
+		}
+
+		run = run with
+		{
+			Scripts = [.. run.Scripts.Select( Started )],
+			Made = made.Count == 0 ? run.Made : [.. made.OrderBy( thing => thing.Object.Object.ThingId )
+				.Select( thing => thing.Script is { } script ? thing with { Script = script with { Script = Started( script.Script ) } } : thing )]
+		};
+
+		loaded.Particles.Put( body, edit );
+
+		return started.Count > 0 || killed.Count > 0 || notStarted > 0 ? new EmittersWritten( started, killed, notStarted ) : null;
+	}
+
+	/// <summary>The last of a script record's types that is a particle; the rest are sounds.</summary>
+	private const int LastParticleType = 2;
+
+
 	/// on a lookup record the file has a head on keeps that slot; every other takes the lowest slot the file's
 	/// sprite table leaves empty, the kept models' first and then the made things', oldest first. A head the file
 	/// has on a record of a head table that holds none now, or on any record of a thing sold, gives its slot up.

@@ -1614,6 +1614,14 @@ public sealed partial class ParkWorld : IParkInitialState
 	public ParkScriptStates ScriptStates { get; }
 
 	/// <summary>
+	/// The particle system as this park was saved, its live emitters and its effect library - see
+	/// <see cref="ParkParticles"/>. Never null; ask it for its own <see cref="ParkParticles.Problem"/>.
+	/// </summary>
+	public ParkParticles Particles => _particles ??= new ParkParticles( _data, ClosedOnSpriteTrailer ? SpritesEndAt + SpriteTrailer.Length : -1 );
+
+	private ParkParticles? _particles;
+
+	/// <summary>
 	/// Every track ride this park held, with the track laid for it - see <see cref="ParkTrackRides"/>. Never null;
 	/// ask it for its own <see cref="ParkTrackRides.Problem"/>.
 	/// </summary>

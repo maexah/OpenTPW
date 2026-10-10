@@ -1743,6 +1743,31 @@ public static class DebugConsole
 						: "") );
 				break;
 
+			// The live emitters of the park file this park was loaded from, the newest first: each one's slot, count,
+			// handle, effect, place in the park's units and life, and the script record that names it.
+			case "emitters":
+				if ( Level.Current?.Park?.Save is not { Particles.Problem: null } emittersOf )
+				{
+					Reply( "emitters: a park loaded from a file has to be running" );
+					break;
+				}
+
+				var inUse = emittersOf.Particles.Used;
+
+				Reply( $"emitters: {inUse.Count} in use in the file" );
+
+				foreach ( var emitter in inUse )
+				{
+					var namedBy = emittersOf.ScriptStates.Order.Select( emittersOf.ScriptStates.For )
+						.FirstOrDefault( script => script?.Effects?.Any( record => record.Type <= RideEffects.LastParticleType && record.Handle == emitter.Handle ) == true );
+
+					Reply( $"emitters: slot {emitter.Slot} count {emitter.Count} handle 0x{emitter.Handle:x} effect {emitter.Template} "
+						+ $"at ({emitter.X / 64},{emitter.Height / 64},{emitter.Z / 64}) life {emitter.Life}, "
+						+ (namedBy is { } owner ? $"named by script {owner.Handle} of thing {owner.Thing}" : "named by no record") );
+				}
+
+				break;
+
 			// The region effects' census: how many cells hold any, and each of the five words summed over the map
 			// (happiness, illness, hunger, security, attraction). `cell` prints one cell's.
 			case "effects":

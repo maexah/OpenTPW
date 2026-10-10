@@ -275,6 +275,11 @@ public class ParkFileWriterBoughtAndSoldTests
 		Assert.AreEqual( 0, written.ChainAt( 43, 30 ).Count, "nobody and nothing on its anchor cell" );
 		Assert.IsFalse( written.MessageSets()!.Any( set => set.Contains( DrinksShop ) ) );
 		CollectionAssert.AreEqual( shipped.MessageSets()![0xb].Where( id => id != DrinksShop ).ToArray(), written.MessageSets()![0xb].ToArray() );
+
+		// Its script's bubbles are killed with it, and nobody else's emitter is.
+		Assert.AreEqual( 0, shipped.Particles.At( 20 ).Life );
+		Assert.AreEqual( ParkParticles.KilledLife, written.Particles.At( 20 ).Life );
+		CollectionAssert.AreEqual( new[] { 30, 30, 0 }, new[] { 8, 13, 0 }.Select( slot => written.Particles.At( slot ).Life ).ToArray() );
 	}
 
 	/// <summary>The last object of the chain gone leaves the one before it the last; the first gone moves the head.</summary>

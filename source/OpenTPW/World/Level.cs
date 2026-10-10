@@ -521,8 +521,9 @@ public class Level
 		// A thing bought or sold is written with the people, the scripts and the catalogue to hand. A thing whose
 		// folder holds emitter files is written as any other: those are the particle library's templates, which the
 		// file holds whatever stands in the park (docs/exe/saves.md, "OpenTPW's writer, a thing with emitter files").
-		// A deviation: the particles module goes out as the file's, so a puff a script's EVENT had alive at the
-		// save is not in it, where the original's file holds each one.
+		// The particles module's live emitters follow the scripts' records (docs/exe/saves.md, "OpenTPW's writer,
+		// an emitter started"). A deviation: a puff a script's EVENT had alive at the save is not in it, where the
+		// original's file holds each one, and the file's own puffs stay as the file has them.
 		//
 		// A track ride is written where its record in the track-rides module can be: a ride of the bumper family
 		// with a record here, made, with its cars; and one of the file's, taken out, with no car under its handle
@@ -690,6 +691,24 @@ public class Level
 					+ (piece is { } laid
 						? $"names model {handle}, item {ParkThingStates.FirstQueuePieceItem + laid.TileIndex} turned {(360 - laid.TileAngle) % 360}"
 						: "names none") );
+			}
+
+			if ( wrote.Emitters is { } emitters )
+			{
+				// An effect that links an effector is not started, and neither is any where the module did not read.
+				for ( var i = 0; i < emitters.NotStarted; ++i )
+					Unimplemented.Report( "SAVE_PARK_EMITTER_NOT_STARTED" );
+
+				foreach ( var (script, emitter) in emitters.Started )
+				{
+					Log.Info( $"Save: emitter started for script {script}: slot {emitter.Slot} count {emitter.Count} handle 0x{emitter.Handle:x} "
+						+ $"effect {emitter.Template} at ({emitter.X / 64},{emitter.Height / 64},{emitter.Z / 64}) life {emitter.Life}" );
+				}
+
+				foreach ( var emitter in emitters.Killed )
+					Log.Info( $"Save: emitter killed: slot {emitter.Slot} count {emitter.Count} effect {emitter.Template}" );
+
+				Log.Info( $"Save: {emitters.Started.Count} emitters started, {emitters.Killed.Count} killed, {emitters.NotStarted} not started" );
 			}
 
 			Log.Info( $"Save: {wrote.Objects} objects, {wrote.Scripts} scripts and {wrote.Models} models written as they run, "
