@@ -61,12 +61,14 @@ public sealed class ParkParticles
 	private const int ZAt = 0x1c;
 	private const int LifeAt = 0x20;
 	private const int VelocityAt = 0x2c;
+	private const int DirectedAt = 0x38;
 	private const int BurstAt = 0x60;
 	private const int MostAt = 0x64;
 	private const int RatesAt = 0x68;
 	private const int ForcedAt = 0x6f;
 	private const int ForceAt = 0x84;
 	private const int FollowsAt = 0xab;
+	private const int SpeedAt = 0xb0;
 	private const int LinkedAt = 0xb4;
 	private const int LinkedFollowsAt = 0xb8;
 	private const int LinkedIsEffectorAt = 0xba;
@@ -126,8 +128,13 @@ public sealed class ParkParticles
 	/// <summary>
 	/// An emitter to start: the effect's slot in the library and the place, each of the three as
 	/// <c>Particles_Spawn</c> takes it, the park's units times 1024 (<c>0x00557481</c>).
+	///
+	/// <para>
+	/// <see cref="Direction"/> makes it <c>Particles_SpawnFull</c>'s (<c>0x00521930</c>), a script's type 2: the
+	/// way its node points, each of the three times 1024 and cut to a whole number, x, the height, z.
+	/// </para>
 	/// </summary>
-	public readonly record struct Spawn( int Template, int X, int Height, int Z );
+	public readonly record struct Spawn( int Template, int X, int Height, int Z, (int X, int Height, int Z)? Direction = null );
 
 	/// <summary>The file's emitter in <paramref name="slot"/>.</summary>
 	public Emitter At( int slot ) => Read( _live, slot );
@@ -137,6 +144,17 @@ public sealed class ParkParticles
 
 	/// <summary>The 320 bytes of the file's emitter in <paramref name="slot"/>.</summary>
 	public ReadOnlySpan<byte> Bytes( int slot ) => _live.AsSpan( EmittersAt + (slot * EmitterSize), EmitterSize );
+
+	/// <summary>
+	/// The own velocity of the file's emitter in <paramref name="slot"/>, the three words at <c>+0x38</c>: its
+	/// effect's, or where a script aims it (type 2) its node's direction times the effect's speed.
+	/// </summary>
+	public (int X, int Height, int Z) Aim( int slot )
+	{
+		var at = EmittersAt + (slot * EmitterSize) + DirectedAt;
+
+		return (Int32( _live, at ), Int32( _live, at + 4 ), Int32( _live, at + 8 ));
+	}
 
 	/// <summary>The 320 bytes of the effect in <paramref name="slot"/> of the file's library.</summary>
 	public ReadOnlySpan<byte> Template( int slot ) => _templates.AsSpan( slot * EmitterSize, EmitterSize );
@@ -280,8 +298,9 @@ public sealed class ParkParticles
 			Put16( Live, at + TemplateAt, template );
 			Put16( Live, at + InUseAt, 1 );
 
-			// Three draws of the system's own generator, one an axis, each under the effect's range.
-			var range = Int16( Live, at + RandomRangeAt );
+			// Three draws of the system's own generator, one an axis, each under the effect's range. A directed
+			// start makes none.
+			var range = spawn.Direction is null ? Int16( Live, at + RandomRangeAt ) : (short)0;
 
 			for ( var axis = 0; axis < 3; ++axis )
 			{
@@ -300,6 +319,17 @@ public sealed class ParkParticles
 			Put16( Live, NextCountAt, unchecked((short)(count + 1)) );
 			Put16( Live, at + FirstParticleAt, -1 );
 			Live[at + FollowsAt] = 0;
+
+			// A directed start's own velocity: the direction times the effect's speed, over 1024 toward nought, as
+			// the sweep writes it again every tick (Particles_SetVelocity, 0x0051fd90).
+			if ( spawn.Direction is { } direction )
+			{
+				var speed = Int32( Live, at + SpeedAt );
+
+				Put32( Live, at + DirectedAt, direction.X * speed / 1024 );
+				Put32( Live, at + DirectedAt + 4, direction.Height * speed / 1024 );
+				Put32( Live, at + DirectedAt + 8, direction.Z * speed / 1024 );
+			}
 
 			Live[at + ForcedAt] = (byte)(Int32( Live, at + ForceAt ) != 0 || Int32( Live, at + ForceAt + 4 ) != 0
 				|| Int32( Live, at + ForceAt + 8 ) != 0 ? 1 : 0);

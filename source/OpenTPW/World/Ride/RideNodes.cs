@@ -266,6 +266,53 @@ public sealed class RideNodes
 	}
 
 	/// <summary>
+	/// The way the node <paramref name="id"/> in <paramref name="space"/> points, a unit vector in the model's own
+	/// axes: the third row of its stored matrix over its length, negated where its lookup record carries <c>0x10</c>
+	/// (<c>FUN_00551b30</c>, which the sweep aims a type 2 particle by every tick). A node with no matrix points along
+	/// z. <see cref="NodeEnd.Unposed"/> is a matrix the pose walk never stores, whose direction is no number, and
+	/// <paramref name="direction"/> is then nought.
+	/// </summary>
+	public NodeEnd FindDirection( int id, uint space, out Numerics.Vector3 direction )
+	{
+		direction = default;
+
+		if ( id < 0 )
+			return NodeEnd.NegativeId;
+
+		var node = _model.FindNode( id, space );
+
+		if ( node < 0 )
+			return NodeEnd.Missing;
+
+		var flags = _nodes[node].IdFlags;
+
+		if ( (flags & HasMatrix) == 0 )
+		{
+			direction = Numerics.Vector3.UnitZ;
+			return NodeEnd.Posed;
+		}
+
+		if ( !_hasChild[node] && (flags & StoredWhenChildless) == 0 && !_doHeadProcessing )
+			return NodeEnd.Unposed;
+
+		var world = Stored( node );
+		var about = (_nodes[node].Flags & TurnedAbout) != 0 ? -1f : 1f;
+		float x = about * world.M31, y = about * world.M32, z = about * world.M33;
+
+		// The length as the build sums it, the third element's square first, and each element over it kept as a float.
+		var length = Math.Sqrt( ((double)z * z + (double)y * y) + (double)x * x );
+
+		direction = new Numerics.Vector3( (float)(x / length), (float)(y / length), (float)(z / length) );
+
+		var parent = _nodes[node].ParentIndex;
+
+		if ( (flags & FromAFace) != 0 && parent >= 0 && parent < _nodes.Length && _morphed[parent] )
+			return NodeEnd.OnAFace;
+
+		return RidesAClip( node ) ? NodeEnd.RestPose : NodeEnd.Posed;
+	}
+
+	/// <summary>
 	/// How many head slots the script loader gives a script on this model, <c>+0x4c</c>: the run of ids from 1 that the
 	/// head space finds, stopping at the first it does not (<c>FUN_005587f0</c>, <c>0x00558d8a</c>..<c>0x00558db7</c>).
 	/// </summary>

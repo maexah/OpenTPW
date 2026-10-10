@@ -5811,6 +5811,12 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   under Proton reads the three at the first poll after the load, each emitting 0.05 s on, and its frame shows
   bubbles over the bought shop; with the build before's file it has none in 30 s. 61 of 61 emitters in eighteen
   of the original's files are the bytes the start makes (`saves.md`, "OpenTPW's writer, an emitter started").
+- [x] **Q257w. The writer: a particle with a direction.** Done 2026-10-10, `alexah/399-a-directed-particle-is-written`.
+  Split by the session: the item's other pieces are Q257x. A type 2 particle (`Particles_SpawnFull`, the Jungle
+  Spray's jet) is written with its emitter, aimed the way its node points: 6 of 6 type 2 records in the
+  original's eighteen files hold the words the rule gives; in the game the Spray's jet was saved as slot 69
+  count 218 effect 37 at (525,5,311) aim (0, 25, 30), predicted, and the original under Proton read it live with
+  that aim and two particles 0.05 s after the load (`saves.md`, "OpenTPW's writer, a particle with a direction").
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

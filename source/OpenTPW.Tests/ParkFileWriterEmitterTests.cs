@@ -283,6 +283,51 @@ public class ParkFileWriterEmitterTests
 		Assert.AreEqual( Dword( shipped.Particles.Template( 35 ), 0x2c ), Dword( edit.Bytes( still ), 0x2c ) );
 	}
 
+	/// <summary>
+	/// A start with a direction is <c>Particles_SpawnFull</c>'s: the three words at <c>+0x38</c> are the direction
+	/// times the effect's speed, over 1024 toward nought, and the generator is not drawn. The Jungle Spray's jet at
+	/// its node 2 is the original's own emitter, turned 0 and turned 270.
+	/// </summary>
+	[TestMethod]
+	public void ADirectedStartIsAimedAndDrawsNothing()
+	{
+		const int jet = 37, ranged = 3;
+
+		Assert.AreEqual( 40, Dword( shipped.Particles.Template( jet ), 0xb0 ), "the jet's speed" );
+		Assert.AreEqual( (0, 40, 0), (Dword( shipped.Particles.Template( jet ), 0x38 ), Dword( shipped.Particles.Template( jet ), 0x3c ), Dword( shipped.Particles.Template( jet ), 0x40 )) );
+
+		var edit = shipped.Particles.Begin();
+		var north = edit.Start( At( jet, 525, 5, 311 ) with { Direction = (-11, 656, 785) } ) & 0xffff;
+		var west = edit.Start( At( jet, 418, 5, 265 ) with { Direction = (-785, 656, -11) } ) & 0xffff;
+
+		(int, int, int) Aim( int slot ) => (Dword( edit.Bytes( slot ), 0x38 ), Dword( edit.Bytes( slot ), 0x3c ), Dword( edit.Bytes( slot ), 0x40 ));
+
+		Assert.AreEqual( (0, 25, 30), Aim( north ), "-11 x 40 over 1024 is cut to nought, not down to -1" );
+		Assert.AreEqual( (-30, 25, 0), Aim( west ) );
+		Assert.AreEqual( new ParkParticles.Emitter( north, true, 218, jet, 525 * 64, 5 * 64, 311 * 64, Dword( shipped.Particles.Template( jet ), 0x20 ) ), edit.At( north ) );
+
+		// Outside the aim it is the plain start's emitter.
+		var plain = shipped.Particles.Begin();
+		var same = plain.Start( At( jet, 525, 5, 311 ) ) & 0xffff;
+
+		Assert.AreEqual( north, same );
+		CollectionAssert.AreEqual( new[] { 0x3c, 0x40 }, Differing( plain.Bytes( same ), edit.Bytes( north ) ).Where( at => at != 0xd2 ).ToArray() );
+
+		// An effect with a range: a plain start draws three times, a directed one not at all.
+		var seed = Dword( payload.AsSpan( shipped.Particles.LiveAt ), 0x10 );
+		var aimed = shipped.Particles.Begin();
+		var slot = aimed.Start( At( ranged, 1, 1, 1 ) with { Direction = (0, 0, 1024) } ) & 0xffff;
+		var body = (byte[])payload.Clone();
+
+		shipped.Particles.Put( body, aimed );
+		Assert.AreEqual( seed, Dword( body.AsSpan( shipped.Particles.LiveAt ), 0x10 ) );
+
+		for ( var axis = 0; axis < 3; ++axis )
+			Assert.AreEqual( Dword( shipped.Particles.Template( ranged ), 0x2c + (axis * 4) ), Dword( aimed.Bytes( slot ), 0x2c + (axis * 4) ) );
+
+		Assert.AreEqual( (0, 0, Dword( shipped.Particles.Template( ranged ), 0xb0 )), (Dword( aimed.Bytes( slot ), 0x38 ), Dword( aimed.Bytes( slot ), 0x3c ), Dword( aimed.Bytes( slot ), 0x40 )) );
+	}
+
 	/// <summary>While the system keeps to the screen's effects, an effect of the world's is not started and answers nought; one of the screen's is.</summary>
 	[TestMethod]
 	public void AStartOfAWorldEffectAnswersNoughtWhileTheSystemKeepsToTheScreens()
@@ -529,20 +574,74 @@ public class ParkFileWriterEmitterTests
 		CollectionAssert.AreEqual( new[] { 0xdb006b, 0, 0xda0045 }, file.ScriptStates.For( ToiletScript )!.Value.Effects!.Select( record => record.Handle ).ToArray() );
 		Assert.AreEqual( new ParkParticles.Emitter( 107, true, 219, 69, 555 * 64, 10 * 64, 174 * 64, 0 ), file.Particles.At( 107 ) );
 
-		// The three that ask for none, each counted once.
+		// The two that ask for none, each counted.
 		script.Effects.Kill( 1 );
 		script.Effects.Kill( 10 );
-		script.Effects.Add( 2, 1, 37, 1, script.Nodes.EffectIndex( 2, 1 ) );
 		script.Effects.Add( 1, 1, 0x8001, 2, script.Nodes.EffectIndex( 1, 1 ) );
 		script.Effects.Add( 1, -1, 58, 3 );
 		script.Effects.Add( 1, 77, 58, 4 );
 
 		written = rides.Written( shipped, state.WrittenObjects( shipped ), ChannelsFor, state.HoardingFor )!.Scripts.Single( entry => entry.Handle == ToiletScript );
 
-		CollectionAssert.AreEqual( new ParkParticles.Spawn?[] { null, null, null, null }, written.Emitters );
+		CollectionAssert.AreEqual( new ParkParticles.Spawn?[] { null, null, null }, written.Emitters );
 
 		int Times( string what ) => Unimplemented.Summary.Where( entry => entry.What == what ).Sum( entry => entry.Times );
 
-		Assert.AreEqual( (1, 1, 2), (Times( "SAVE_PARK_EMITTER_DIRECTED" ), Times( "SAVE_PARK_EMITTER_ITEM_EFFECT" ), Times( "SAVE_PARK_EMITTER_NO_PLACE" )) );
+		Assert.AreEqual( (0, 1, 2), (Times( "SAVE_PARK_EMITTER_DIRECTED" ), Times( "SAVE_PARK_EMITTER_ITEM_EFFECT" ), Times( "SAVE_PARK_EMITTER_NO_PLACE" )) );
+	}
+
+	/// <summary>
+	/// <b>A particle with a direction is written aimed</b>: the Jungle Spray's jet, a type 2 on its node 2, is
+	/// handed over at its node's place with the way the node points, and the file written holds the emitter the
+	/// original's own file of the same park holds while the jet runs: at (525, 5, 311), aimed (0, 25, 30).
+	/// </summary>
+	[TestMethod]
+	public void TheJungleSpraysJetIsWrittenAimed()
+	{
+		const int spray = 14, jet = 37;
+
+		var rides = new ParkRides( Theme, shipped, catalogue, data );
+
+		made.Add( rides );
+
+		var state = new ParkState( shipped );
+		var script = rides.Scheduler.Find( rides.ScriptFor( spray ) )!;
+
+		script.Effects!.Add( 2, 2, jet, 1, script.Nodes!.EffectIndex( 2, 2 ) );
+
+		var things = rides.Written( shipped, state.WrittenObjects( shipped ), ChannelsFor, state.HoardingFor )!;
+		var written = things.Scripts.Single( entry => entry.Handle == script.Id );
+
+		Assert.AreEqual( At( jet, 525, 5, 311 ) with { Direction = (-11, 656, 785) }, written.Emitters!.Single( emitter => emitter is not null ) );
+		Assert.IsFalse( Unimplemented.Summary.Any( entry => entry.What.StartsWith( "SAVE_PARK_EMITTER" ) ) );
+
+		var file = new ParkWorld( ParkFileWriter.Body( shipped, Carried with { Things = things }, out _, out _ ) );
+
+		Assert.IsNull( file.Problem );
+
+		var record = file.ScriptStates.For( script.Id )!.Value.Effects!.Single( entry => entry.Type == 2 );
+
+		Assert.IsTrue( file.Particles.Names( record.Handle ) );
+
+		var slot = record.Handle & 0xffff;
+
+		Assert.AreEqual( new ParkParticles.Emitter( slot, true, 218, jet, 525 * 64, 5 * 64, 311 * 64, 1 ), file.Particles.At( slot ) );
+		Assert.AreEqual( (0, 25, 30), file.Particles.Aim( slot ) );
+		Assert.AreEqual( (0, 18, 0), file.Particles.Aim( Bubbles & 0xffff ), "an emitter no script aims keeps its effect's" );
+
+		// Its other two lanes, as the original's own starts of them stand in its memory: node 1 at (515, 5, 311)
+		// aimed (0, 19, 34) and node 3 at (534, 5, 311) aimed (0, 25, 30).
+		script.Effects.Add( 2, 1, jet, 2, script.Nodes.EffectIndex( 2, 1 ) );
+		script.Effects.Add( 2, 3, jet, 3, script.Nodes.EffectIndex( 2, 3 ) );
+
+		var lanes = new ParkWorld( ParkFileWriter.Body( shipped, Carried with
+		{
+			Things = rides.Written( shipped, state.WrittenObjects( shipped ), ChannelsFor, state.HoardingFor )!
+		}, out _, out _ ) );
+
+		var aimed = lanes.Particles.Used.Where( emitter => emitter.Template == jet )
+			.Select( emitter => (emitter.X / 64, emitter.Height / 64, emitter.Z / 64, lanes.Particles.Aim( emitter.Slot )) ).OrderBy( lane => lane.Item1 ).ToArray();
+
+		CollectionAssert.AreEqual( new[] { (515, 5, 311, (0, 19, 34)), (525, 5, 311, (0, 25, 30)), (534, 5, 311, (0, 25, 30)) }, aimed );
 	}
 }

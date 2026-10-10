@@ -48,11 +48,14 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q257w. The writer: what else a made record leaves out.** The old Q257v's other pieces, each counted or
+- [ ] **Q257x. The writer: what else a made record leaves out.** The old Q257w's other pieces, each counted or
   said in `saves.md`. Confirm: each piece's bytes beside a file of the original's own, and the file loaded in
   the original under Proton.
-  From Q257v (`saves.md`, "OpenTPW's writer, an emitter started"): counted and written with no emitter: a
-  particle with a direction (`SAVE_PARK_EMITTER_DIRECTED`: `Particles_SpawnFull`, the Jungle Spray's jet), an
+  From Q257w (`saves.md`, "OpenTPW's writer, a particle with a direction"): a type 2's node that rides a clip is
+  aimed as it rests; one whose matrix is never stored is counted (`SAVE_PARK_EMITTER_DIRECTED`, no Lost Kingdom
+  node); the file's own jet was not seen in the original's picture (its camera is elsewhere for the load's first
+  seconds); a Spray turned and the Laughing Hyenas were in no game run.
+  From Q257v (`saves.md`, "OpenTPW's writer, an emitter started"): counted and written with no emitter: an
   item's own effect (`SAVE_PARK_EMITTER_ITEM_EFFECT`), a record with no node (`SAVE_PARK_EMITTER_NO_PLACE`) and
   an effect that links an effector (`SAVE_PARK_EMITTER_NOT_STARTED`). An emitter is written as it starts, its
   life begun again; an `EVENT`'s puff alive at the save is not written; a burst's draws are not made. In no

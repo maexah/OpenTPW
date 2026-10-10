@@ -2624,7 +2624,7 @@ handle. It answers `count << 16 | slot`; nought for an effect of the world's (`+
 `+0x08` is set; -1 with no slot free or no such effect.
 
 - **A type 2 record** is started by `Particles_SpawnFull` (`0x00521930`), the same with the three words at
-  `+0x38` set from a direction and no draw.
+  `+0x38` set from a direction and no draw ("OpenTPW's writer, a particle with a direction", below).
 - **The sweep moves it** (`FUN_005516b0`, `0x0055190f`): each record with a node has its emitter put where its
   lookup record stands, every tick, each coordinate through `__ftol` and then shifted up ten bits, so the place
   in a file is in whole units, toward nought (`Particles_Move`, `0x0051fe30`, shifts down four).
@@ -2664,8 +2664,7 @@ image back where it lies (`ParkParticles.Put`). `ParkWorld.Particles` reads the 
   stink, 100,000 ticks), and no particle is in the air on the load's first frame, as none is after any load.
 - A burst's draws of the generator are not made, so the seed written is behind the engine's by them.
 - A node that rides a clip is taken where it rests.
-- **Counted, and written with no emitter and a handle of nought:** a type 2 record
-  (`SAVE_PARK_EMITTER_DIRECTED`: the Jungle Spray's jet while it runs), an effect of the item's own, bit 15 of
+- **Counted, and written with no emitter and a handle of nought:** an effect of the item's own, bit 15 of
   its id (`SAVE_PARK_EMITTER_ITEM_EFFECT`), a record with no node or a node the model lacks
   (`SAVE_PARK_EMITTER_NO_PLACE`; none of the 61 has no node), and an effect that links an effector, itself or
   down its chain (`SAVE_PARK_EMITTER_NOT_STARTED`: templates 84, 86, 90 and 98).
@@ -2701,6 +2700,68 @@ effect with a range, the four counted cases. Of 72 bugs put back 71 fail a test;
 leaves a started emitter's particle count as the template's, which is nought in every effect of the library
 (`q257v/mutations.py`). **Not seen:** the toilet's two effects in the original's frame
 (off the picture; its memory holds 9 and 19 particles on them). `docs/exe/addresses.md` not regenerated.
+
+### OpenTPW's writer, a particle with a direction
+
+Q257w, split by the session: the item's other pieces are Q257x. **A type 2 particle a script here has started
+is written with its emitter, aimed**: the Jungle Spray's jet while it runs.
+
+**What a directed start does** (`FUN_005573d0`'s case 2, `0x005574bb`; `Particles_SpawnFull`, `0x00521930`,
+read whole). `FUN_00556b90` answers the node's place and, through its third argument, its direction: the third
+row of the node's stored matrix (`+0x20`, `+0x24`, `+0x28`), negated where the lookup record's flag byte
+carries `0x10`, over its length (summed z, y, x), times 1024 (`0x00700fdc`); a record with no matrix gives
+(0, 0, 1). Each of the three is cut to a whole number (`__ftol`) and handed over after the place.
+`Particles_SpawnFull` is `Particles_Spawn` but for two things: it makes no draw of the generator, and it writes
+the emitter's own velocity at `+0x38`, `+0x3c` and `+0x40`, each the direction's component times the effect's
+speed (`+0xb0`), over 1024 toward nought (`(v + (v >> 31 & 0x3ff)) >> 10`).
+
+**The sweep aims it again every tick** (`FUN_005516b0`, case 2 at `0x00551943`): after the move, `FUN_00551b30`
+answers the node's direction the same way and `Particles_SetVelocity` (`0x0051fd90`) writes the same three
+words on the emitter the handle names. So a file's words are the node's direction at the save's last tick.
+
+**Measured** (`q257w/census`, `census.out`): the eighteen files hold six type 2 records, four of the Jungle
+Spray (effect 37, speed 40) and one of the Laughing Hyenas (effect 73, speed 31) among them, turned 0, 180 and
+270. **6 of 6 hold the three words `RideNodes.FindDirection` and `ParkParticles.Edit.Start` make**, and differ
+from that start in no other word outside the running ones: (0, 25, 30) for the Spray's node 2 turned nought,
+(-30, 25, 0) turned 270, (-34, 19, 0) for its node 1, (0, 23, -19) for the Hyenas' node 5. The Spray's
+direction's x is -0.0113: -11 times 40 over 1024 is nought, where a shift down would give -1.
+
+**What OpenTPW writes.** `RideScript.WrittenEmitters` asks for a type 2 record's emitter with the direction of
+its node (`ParkParticles.Spawn.Direction`), and `Edit.Start` then makes no draw and writes the three words.
+`ParkParticles.Aim` reads them; the console's `emitters` prints each emitter's.
+
+**Deviations, said at `RideScript.WrittenEmitters`:** a node that rides a clip is aimed as it rests (the
+Spray's jet nodes ride one, and all six of the files' records are the rest pose's words); and a node whose
+matrix the pose walk never stores, whose direction is no number, is counted and written with no emitter
+(`SAVE_PARK_EMITTER_DIRECTED`: no Lost Kingdom particle node is one).
+
+**Confirmed in the game** (`q257w/confirm.py`, 3 of 3 twice off-screen and 3 of 3 on the desktop, each
+predicted in `PREDICTION.txt`). Lost Kingdom from `easymode.TPWI`: four guests made at (52,34) and sent to the
+Jungle Spray, thing 14; paused at the first sweep its script 4 holds a type 2 record (node 2), saved. The
+save's log: one emitter started, slot 69 count 218 handle `0xda0045` effect 37 at (525,5,311) life 1, none
+killed, none not started, `SAVE_PARK_EMITTER_DIRECTED` not counted. The file: script 4's record names
+`0xda0045`, and the emitter's aim is (0, 25, 30). Loaded here from the Load Park list, `emitters` reads it with
+that aim, named by script 4 of thing 14. **The control, the build before** (1 of 1 off-screen and on the
+desktop): no emitter line, `SAVE_PARK_EMITTER_DIRECTED` counted once, the record's handle nought, no effect 37
+emitter in the file.
+
+**The original under Proton** (`loadfile.sh` with `original/emitters.py`, which now prints each emitter's
+aim). The fix's file, from the Load Park list, twice: on the first poll after the load slot 69 under count 218,
+effect 37 at (525,5,311), aim (0, 25, 30), life 1, no particle; **0.05 s later it holds two particles** and 29
+within three seconds, the aim the same on every poll; 3.8 s after the load the Spray's script ends its jet
+(life -2) and the slot is freed, as predicted. The control's file: no effect 37 emitter after the load until
+the original's own script starts its next jet 1.7 s on. **The original's own starts agree with the rule on the
+other two lanes**: node 1 at (515,5,311) aimed (0, 19, 34) and node 3 at (534,5,311) aimed (0, 25, 30), which
+a test holds OpenTPW's written emitters against (`orig/a-load.log`, `c-load.log`).
+
+**Not seen:** the file's own jet in the original's picture. For the first seconds after a load its camera is
+not yet on the saved view, and the jet from the file lasts under four; a film of both loads (`record.sh`)
+showed the Spray only after that, with the original's own later jets in fix and control alike. OpenTPW draws
+no park particle, so its own frames show the Spray and no water. **Not run in either game, tested only:** nodes
+1 and 3 written here (held against the original's own starts), a Spray turned, the Laughing Hyenas. Of 25 bugs
+put back 22 fail a test (`q257w/mutations.py`); the three that fail none are the direction left its own length
+(every third row in the jungle's and the fantasy's models is a unit long already, `q257w/probe`), a node with
+no matrix pointed along y, and the unstored node not counted (no model there has either in any space). `docs/exe/addresses.md` not regenerated.
 
 ### Read, not run
 

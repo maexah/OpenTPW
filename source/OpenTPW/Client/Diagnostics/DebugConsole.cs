@@ -1762,7 +1762,7 @@ public static class DebugConsole
 						.FirstOrDefault( script => script?.Effects?.Any( record => record.Type <= RideEffects.LastParticleType && record.Handle == emitter.Handle ) == true );
 
 					Reply( $"emitters: slot {emitter.Slot} count {emitter.Count} handle 0x{emitter.Handle:x} effect {emitter.Template} "
-						+ $"at ({emitter.X / 64},{emitter.Height / 64},{emitter.Z / 64}) life {emitter.Life}, "
+						+ $"at ({emitter.X / 64},{emitter.Height / 64},{emitter.Z / 64}) aim {emittersOf.Particles.Aim( emitter.Slot )} life {emitter.Life}, "
 						+ (namedBy is { } owner ? $"named by script {owner.Handle} of thing {owner.Thing}" : "named by no record") );
 				}
 

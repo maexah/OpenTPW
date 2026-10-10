@@ -1225,9 +1225,10 @@ public sealed class RideScript
 	/// record a load put back, whose emitter is the file's.
 	///
 	/// <para>
-	/// Counted, and left with no emitter and a handle of nought: a particle with a direction (type 2), an effect
-	/// of the item's own (bit 15 of the id), and a record with no node or whose node the model does not hold. A
-	/// node that rides a clip is taken where it rests.
+	/// A particle with a direction (type 2) is aimed the way its node points. Counted, and left with no emitter
+	/// and a handle of nought: one whose node has no direction, an effect of the item's own (bit 15 of the id),
+	/// and a record with no node or whose node the model does not hold. A node that rides a clip is taken where
+	/// it rests, and aimed as it rests.
 	/// </para>
 	/// </summary>
 	private ParkParticles.Spawn?[]? WrittenEmitters()
@@ -1243,12 +1244,6 @@ public sealed class RideScript
 
 			if ( !record.IsParticle || record.Restored )
 				continue;
-
-			if ( record.Type != RideEffects.FirstType )
-			{
-				Unimplemented.Report( "SAVE_PARK_EMITTER_DIRECTED" );
-				continue;
-			}
 
 			if ( (record.Effect & ItemEffectBit) != 0 )
 			{
@@ -1266,7 +1261,22 @@ public sealed class RideScript
 				continue;
 			}
 
-			spawns[index] = new ParkParticles.Spawn( record.Effect, (int)place.X << 10, (int)place.Y << 10, (int)place.Z << 10 );
+			(int, int, int)? direction = null;
+
+			// A type 2 is aimed the way its node points, each of the three times 1024 and cut to a whole number
+			// (0x005519d8). A node whose matrix is never stored has no direction to cut.
+			if ( record.Type != RideEffects.FirstType )
+			{
+				if ( Nodes!.FindDirection( record.Node, RideNodes.ParticleSpace, out var way ) is NodeEnd.Unposed )
+				{
+					Unimplemented.Report( "SAVE_PARK_EMITTER_DIRECTED" );
+					continue;
+				}
+
+				direction = ((int)(way.X * 1024f), (int)(way.Y * 1024f), (int)(way.Z * 1024f));
+			}
+
+			spawns[index] = new ParkParticles.Spawn( record.Effect, (int)place.X << 10, (int)place.Y << 10, (int)place.Z << 10, direction );
 		}
 
 		return spawns;

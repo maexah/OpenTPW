@@ -218,4 +218,37 @@ public class RideNodesTests
 		Assert.AreEqual( 2, shop.EffectIndex( 2, 1 ) );
 		Assert.AreNotEqual( 2, shop.EffectIndex( 3, 1 ) );
 	}
+
+	/// <summary>
+	/// <b>A node points along the third row of its stored matrix, a unit long</b>: the Jungle Spray's jet node as the
+	/// original's files hold its emitter aimed, turned nought and three quarters; a record carrying <c>0x10</c>
+	/// points the other way; and a matrix never stored has no direction.
+	/// </summary>
+	[TestMethod]
+	public void ANodePointsAlongItsStoredMatrixsThirdRow()
+	{
+		Assert.AreEqual( NodeEnd.RestPose, Stand( 1303, 52, 31, 0 ).FindDirection( 2, RideNodes.ParticleSpace, out var north ) );
+		Assert.AreEqual( NodeEnd.RestPose, Stand( 1303, 42, 25, 270 ).FindDirection( 2, RideNodes.ParticleSpace, out var west ) );
+
+		Assert.AreEqual( new System.Numerics.Vector3( -0.011314017f, 0.64135724f, 0.767159f ), north );
+		Assert.AreEqual( new System.Numerics.Vector3( -0.767159f, 0.64135724f, -0.011314017f ), west );
+		Assert.AreEqual( 1f, north.Length(), 1e-6f );
+
+		// The Well Drop's walk node 2 carries the flag and its node 1 does not.
+		var well = RideNodes.Load( "levels/fantasy/rides/welldrop", "welldrop", _data, false, [] )!;
+
+		well.Place( ParkObjects.OriginFor( 51, 30, 0 ), 0 );
+
+		Assert.AreEqual( NodeEnd.Posed, well.FindDirection( 2, RideNodes.WalkSpace, out var about ) );
+		Assert.AreEqual( NodeEnd.Posed, well.FindDirection( 1, RideNodes.WalkSpace, out var straight ) );
+		Assert.AreEqual( new System.Numerics.Vector3( -8.742278e-08f, -0f, 1f ), about, "its row is turned about" );
+		Assert.AreEqual( System.Numerics.Vector3.UnitZ, straight );
+
+		var god = Stand( 1106, 15, 26, 270 );
+
+		Assert.AreEqual( NodeEnd.Unposed, god.FindDirection( 6, RideNodes.HeadSpace, out var none ), "head06 is never stored" );
+		Assert.AreEqual( System.Numerics.Vector3.Zero, none );
+		Assert.AreEqual( NodeEnd.Missing, god.FindDirection( 99, RideNodes.WalkSpace, out _ ) );
+		Assert.AreEqual( NodeEnd.NegativeId, god.FindDirection( -1, RideNodes.WalkSpace, out _ ) );
+	}
 }
