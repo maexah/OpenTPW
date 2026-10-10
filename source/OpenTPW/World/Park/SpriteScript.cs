@@ -485,14 +485,18 @@ public sealed class SpriteScript
 	/// </param>
 	/// <param name="loops">The loop starts the save kept pushed, the oldest first; none for a program outside any loop.</param>
 	/// <param name="ended">Whether the save kept it at its end word, state 4: hidden, and freed on its next due turn.</param>
+	/// <param name="state">The three words a state's script reads, as the save kept them; noughts for a sprite made here.</param>
 	public SpriteScript( int script, int pc, int spriteNumber, int frame, int alpha = 0xff,
-		IEnumerable<int>? loops = null, bool ended = false )
+		IEnumerable<int>? loops = null, bool ended = false, ParkWorld.SpriteStateWords state = default )
 	{
 		Script = script;
 		Pc = pc;
 		_locals[SpriteNumberLocal] = spriteNumber;
 		_locals[FrameLocal] = frame;
 		_locals[AlphaLocal] = alpha;
+		_locals[FramesLocal] = state.FramesPerDirection;
+		_locals[LeadInLocal] = state.LeadIn;
+		_locals[HoldLocal] = state.Hold;
 		Ended = ended;
 
 		foreach ( var start in loops ?? [] )
@@ -566,6 +570,9 @@ public sealed class SpriteScript
 	/// <summary>Whether this sprite is already running the script a given animation names.</summary>
 	public bool IsOn( int animation ) => Script != None && Script == EntryFor( animation );
 
+	/// <summary>How many turns its script has run since this sprite was made or read from a save; the censuses print it.</summary>
+	public int Turns { get; private set; }
+
 	/// <summary>Sets when this sprite next comes due, which the original's constructor does as it is made.</summary>
 	public void ScheduleFrom( int now ) => Due = now + Interval;
 
@@ -594,6 +601,7 @@ public sealed class SpriteScript
 		}
 
 		Run();
+		++Turns;
 
 		Due = now + Interval;
 

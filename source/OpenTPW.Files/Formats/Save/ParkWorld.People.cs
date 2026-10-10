@@ -178,12 +178,18 @@ public sealed partial class ParkWorld
 	/// The record's <c>mLastRecordedMapId</c>, written for a member of staff; null leaves the record's, the file's
 	/// on a kept person and nought on a made one, as an arrival's is in the original's own files.
 	/// </param>
+	/// <param name="SpriteLoops">
+	/// The loop starts the person's own program has pushed and not popped, the oldest first
+	/// (<see cref="SpriteLoopsOf"/>): one word inside a state script's loop, none on any other. Null leaves the
+	/// record's stack as it is.
+	/// </param>
 	public readonly record struct WrittenPerson( Person Person, Sprite? Sprite,
 		IReadOnlyList<(int X, int Y)>? Waypoints = null, IReadOnlyList<int>? LegLengths = null,
 		int PreviousX = 0, int PreviousY = 0, int NextAnim = 0, int NextServiceInterval = 0,
 		bool? SetDestSuccessfully = null, int LastThought = 0, int TimeBubbleShown = 0,
 		uint StrandedTime = 0, int SpriteInterval = 0x3e, int? MadeSetByte = null, int? StateSetByte = null,
-		WrittenSprite? Balloon = null, WrittenSprite? Bubble = null, int? LastRecordedMapId = null );
+		WrittenSprite? Balloon = null, WrittenSprite? Bubble = null, int? LastRecordedMapId = null,
+		IReadOnlyList<int>? SpriteLoops = null );
 
 	/// <summary>
 	/// A sprite that is no person's own picture, as the writer takes it: a balloon or a thought bubble. All of
@@ -945,6 +951,23 @@ public sealed partial class ParkWorld
 		return loops;
 	}
 
+	/// <summary>
+	/// The three words of a sprite's record that a bank's state script reads as locals 14, 17 and 18: the frames
+	/// a direction of its set (<c>+0xbc</c>) and the state group's third and fourth bytes (<c>+0xc8</c>,
+	/// <c>+0xcc</c>), which only a sprite made on a state holds.
+	/// </summary>
+	public readonly record struct SpriteStateWords( int FramesPerDirection, int LeadIn, int Hold );
+
+	private const int SpriteLeadInAt = 0xc8;
+
+	private const int SpriteHoldAt = 0xcc;
+
+	/// <summary>A live sprite's <see cref="SpriteStateWords"/>; noughts for an empty slot.</summary>
+	public SpriteStateWords SpriteStateWordsOf( int slot )
+		=> _spriteRecords.TryGetValue( slot, out var at )
+			? new SpriteStateWords( ReadInt32At( at + SpriteSetByteAt ), ReadInt32At( at + SpriteLeadInAt ), ReadInt32At( at + SpriteHoldAt ) )
+			: default;
+
 	private const int SpriteDueAt = 0x7c;
 
 	private const int SpriteIntervalAt = 0x80;
@@ -1069,7 +1092,10 @@ public sealed partial class ParkWorld
 	}
 
 	/// <summary>Writes a person's picture and place over their sprite's record: the program and how far into it, the
-	/// interval, the place (the navigator's, ten world units to a cell), alpha, kind, bank, set, frame and facing.</summary>
+	/// interval, the place (the navigator's, ten world units to a cell), alpha, kind, bank, set, frame and facing,
+	/// and with <see cref="WrittenPerson.SpriteLoops"/> its loop stack: the room left, the words pushed and the
+	/// count of loops it is inside (<c>0x004763c6</c>), the words below the room left as they lie, as a pop leaves them
+	/// (<c>FUN_00475260</c>).</summary>
 	private static void PutSprite( byte[] record, WrittenPerson person, Sprite picture )
 	{
 		Put32( record, SpritePcAt, picture.Pc );
@@ -1084,6 +1110,25 @@ public sealed partial class ParkWorld
 		Put32( record, SpriteNumberAt, picture.SpriteNumber );
 		Put32( record, SpriteFrame, picture.Frame );
 		Put32( record, SpriteFacing, picture.Facing );
+
+		if ( person.SpriteLoops is not { } loops )
+			return;
+
+		if ( loops.Count > SpriteLoopDepth )
+			throw new InvalidOperationException( $"a sprite inside {loops.Count} loops is past the {SpriteLoopDepth} a record holds" );
+
+		for ( var i = 0; i < loops.Count; ++i )
+			Put32( record, SpriteLoopsAt + ((SpriteLoopDepth - 1 - i) * 4), loops[i] );
+
+		Put32( record, SpriteLoopRoomAt, SpriteLoopDepth - loops.Count );
+		Put32( record, SpriteLoopCountAt, loops.Count );
+
+		// A program inside a loop has run a turn and shown a frame.
+		if ( loops.Count > 0 )
+		{
+			Put32( record, SpriteState, SpriteRunningState );
+			Put32( record, SpriteShownAt, 1 );
+		}
 	}
 
 	/// <summary>Writes a balloon or a bubble over its sprite's record: the program, the interval, the place, alpha, kind, bank, set and frame, and with <see cref="WrittenSprite.Loops"/> its loop stack and state.</summary>

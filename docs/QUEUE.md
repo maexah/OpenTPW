@@ -48,7 +48,7 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q257l. The writer: what else a made record leaves out.** The old Q257k's other pieces, from Q253
+- [ ] **Q257m. The writer: what else a made record leaves out.** The old Q257l's other pieces, from Q253
   (`saves.md`, "What OpenTPW writes"), each counted or said there. A track ride (its `TRAK` record)
   and a thing with an emitter (`PART`) are left as the file has them, bought or sold (`SAVE_PARK_OBJECT_BOUGHT`,
   `SAVE_PARK_OBJECT_SOLD`). Confirm: each
@@ -62,11 +62,11 @@ the research lab), then the rest of this section in its old order.
   ever read. And not decoded: the original, loading a file whose queue cell names a record of another tile
   (or a bare cell naming one), reads no handle on that cell afterwards and still draws the piece
   (`saves.md`, "OpenTPW's writer, a queue cell's model", the control).
-  From Q255: a person's own sprite saved inside a loop of its script (a bank's state animation: 14 of the
-  1,154 sprites in the original's twelve files, on program 1760) is put on its word with an empty stack at a
-  load here, counted (`SAVED_SPRITE_LOOP_STACK`), and the writer leaves a kept sprite's stack the file's and a
-  made one's empty: read the stack with `ParkWorld.SpriteLoopsOf` and the script's own words (`+0xbc`, `+0xc8`,
-  `+0xcc`), and write them from the running sprite, as a balloon let go is.
+  From Q257l (`saves.md`, "OpenTPW's writer, a person's sprite inside a loop"): a made person's sprite is
+  written with nought at `+0xc4`, the draw's flags, where all 902 people's sprites of the original's ten files
+  hold `0x1200` (14 of the 32 in `q241h/run3/Q241h.TPWS`): write the running sprite's local 16. A saved sprite's
+  local 0 (`+0x84`, the hold loop's counter, where local 18 is not nought) and local 16 are not read at a load.
+  And a made person's sprite inside a loop (a hired entertainer performing) was in no game run: the tests alone.
   From Q257d: a head the engine hangs with no head table (a `WALKON` of action 4, the Aztec Mayhem's five; a
   coaster's and a tour's cars') is hung by nothing here, is not counted, and a written park holds only the
   file's: find who calls `FUN_0044b410` for one, count it where the script reaches it, then write it as a

@@ -1114,34 +1114,127 @@ public class ParkFileWriterPeopleTests
 		}
 	}
 
-	/// <summary>A person's own sprite saved inside a loop is counted at the load: its stack is not taken up.</summary>
+	/// <summary>
+	/// A person's own sprite inside a state script's loop is written with its stack - room 19, word 1730 in the
+	/// first place, a count of one, state 2 and shown - a kept sprite's and a made one's, and a load goes round the
+	/// loop from the frame it was on. One put on another program since is written with its stack empty.
+	/// </summary>
 	[TestMethod]
-	public void APersonsSpriteSavedInsideALoopIsCounted()
+	public void APersonsSpriteInsideALoopIsWrittenWithItsStackAndALoadGoesOnRoundIt()
 	{
-		int Counted() => Unimplemented.Summary.Where( gap => gap.What == "SAVED_SPRITE_LOOP_STACK" ).Sum( gap => gap.Times );
+		var people = new ParkPeople( shipped ) { BankAt = Bank };
+		var hire = people.Hire( new ParkStaffPool.Candidate( Id: 999, Kind: 4, Name: "Ada Test", Grade: 2, Costume: 0, Wage: 69 ), 47, 21 );
+		var entertainer = shipped.People.Single( person => person.Model == 6 ).ThingId;
+		var bank = Bank( shipped.People.Single( person => person.Model == 6 ).SpriteKind, shipped.People.Single( person => person.Model == 6 ).SpriteBank )!;
+		var group = bank.StateGroups[0];
+		var frames = bank.Sets[group.Set - 1].FramesPerDirection;
 
-		_ = new ParkPeople( shipped );
-		Assert.AreEqual( 0, Counted(), "none of the shipped eighteen is inside one" );
-		TestRun.DeleteEvery<ParkPeople>();
+		Assert.AreEqual( 8, frames );
 
-		var body = ParkFileWriter.Body( shipped, Running( new ParkPeople( shipped ) { BankAt = Bank } ) );
-		var guard = shipped.People.Single( person => person.Model == 7 );
-		var guest = shipped.People.First( person => person.Model == 1 );
-
-		var written = new ParkWorld( body );
-
-		foreach ( var slot in new[] { guard.SpriteSlot, guest.SpriteSlot } )
+		(int Room, int First, int Count, int State, int Shown, int Pc, int Frame) Of( ParkWorld park, int thing )
 		{
-			var at = body.AsSpan().IndexOf( written.SpriteRecordOf( slot )! );
+			var record = park.SpriteRecordOf( park.People.Single( person => person.ThingId == thing ).SpriteSlot )!;
 
-			Assert.IsTrue( at > 0 );
-			BitConverter.GetBytes( 19 ).CopyTo( body, at + 0x1c );
-			BitConverter.GetBytes( 1730 ).CopyTo( body, at + 0x6c );
+			return (BitConverter.ToInt32( record, 0x1c ), BitConverter.ToInt32( record, 0x6c ), BitConverter.ToInt32( record, 0x78 ),
+				BitConverter.ToInt32( record, 0x18 ), BitConverter.ToInt32( record, 0x114 ), BitConverter.ToInt32( record, 0x08 ), BitConverter.ToInt32( record, 0xb8 ));
 		}
 
+		Assert.AreEqual( (20, 0, 0), (Of( shipped, entertainer ).Room, Of( shipped, entertainer ).First, Of( shipped, entertainer ).Count), "the file's own is inside none" );
+
+		// The kept one shows frames 0 to 5 and the made one 0 to 2.
+		var now = 0;
+
+		foreach ( var (thing, turns) in new[] { (entertainer, 6), (hire, 3) } )
+		{
+			var sprite = people.SpriteFor( thing )!;
+
+			Assert.IsTrue( sprite.StartState( group, frames ) );
+
+			for ( var turn = 0; turn < turns; ++turn )
+				Assert.IsTrue( sprite.Step( now += 1000 ) );
+
+			CollectionAssert.AreEqual( new[] { 1730 }, sprite.Loops.ToArray() );
+		}
+
+		var written = Written( people, out _ );
+
+		Assert.AreEqual( (19, 1730, 1, 2, 1, 1732, 5), Of( written, entertainer ), "a kept sprite" );
+		Assert.AreEqual( (19, 1730, 1, 2, 1, 1732, 2), Of( written, hire ), "a made sprite" );
+
+		// Loaded, each goes on from its frame, round the set and round again, and nothing is counted.
 		TestRun.DeleteEvery<ParkPeople>();
-		_ = new ParkPeople( new ParkWorld( body ) );
-		Assert.AreEqual( 2, Counted(), "a member of staff's and a guest's" );
+
+		var loaded = new ParkPeople( written ) { BankAt = Bank };
+
+		foreach ( var (thing, from) in new[] { (entertainer, 5), (hire, 2) } )
+		{
+			var sprite = loaded.SpriteFor( thing )!;
+
+			CollectionAssert.AreEqual( new[] { 1730 }, sprite.Loops.ToArray() );
+			Assert.AreEqual( (frames, from), (sprite.FramesPerDirection, sprite.Frame), "the frames a direction are the record's, with no bank asked" );
+			Assert.AreEqual( (sprite.Interval, false), (sprite.Due, sprite.Step( sprite.Interval )), "first due an interval past the load, and not on it" );
+
+			var seen = new List<int>();
+
+			for ( var turn = 0; turn < 12; ++turn )
+			{
+				Assert.IsTrue( sprite.Step( 1000 * (turn + 1) ) );
+				seen.Add( sprite.Frame );
+			}
+
+			CollectionAssert.AreEqual( Enumerable.Range( from + 1, 12 ).Select( frame => frame % frames ).ToList(), seen, $"thing {thing}" );
+			CollectionAssert.AreEqual( new[] { 1730 }, sprite.Loops.ToArray(), "still inside the one loop" );
+		}
+
+		Assert.AreEqual( 0, Unimplemented.Summary.Count( gap => gap.What == "SAVED_SPRITE_LOOP_STACK" ) );
+
+		// Put on the standing program, the stack is empty again: the room and the count, the word left as it lies.
+		Assert.IsTrue( loaded.SpriteFor( entertainer )!.Start( SpriteScript.Standing ) );
+
+		var after = new ParkWorld( ParkFileWriter.Body( written, new ParkFileWriter.Running( written.GameTick, false, 0, 0, written.Camera.Saved!.Value,
+			People: loaded.Written( Level.WrittenThings( written ).Contains ) ) ) );
+
+		Assert.AreEqual( (20, 1730, 0), (Of( after, entertainer ).Room, Of( after, entertainer ).First, Of( after, entertainer ).Count) );
+		Assert.AreEqual( (19, 1730, 1), (Of( after, hire ).Room, Of( after, hire ).First, Of( after, hire ).Count), "the other is in its loop still" );
+		Assert.AreEqual( 0, new ParkPeople( after ).SpriteFor( entertainer )!.Loops.Count );
+	}
+
+	/// <summary>
+	/// A sprite's three state words are read from its record: the frames a direction at <c>+0xbc</c> and the lead-in
+	/// and the hold at <c>+0xc8</c> and <c>+0xcc</c>, which the state script holds frame 0 by between rounds.
+	/// </summary>
+	[TestMethod]
+	public void ASpritesStateWordsAreReadFromItsRecord()
+	{
+		var entertainer = shipped.People.Single( person => person.Model == 6 );
+
+		Assert.AreEqual( new ParkWorld.SpriteStateWords( SetByte( shipped, entertainer.SpriteSlot ), 0, 0 ), shipped.SpriteStateWordsOf( entertainer.SpriteSlot ) );
+		Assert.AreEqual( default, shipped.SpriteStateWordsOf( 99 ), "an empty slot" );
+
+		// The record as one made on a state whose group ends 2, 1, resting at frame 3 inside the loop.
+		var body = ParkFileWriter.Body( shipped, Running( new ParkPeople( shipped ) { BankAt = Bank } ) );
+		var at = body.AsSpan().IndexOf( new ParkWorld( body ).SpriteRecordOf( entertainer.SpriteSlot )! );
+
+		foreach ( var (offset, value) in new[] { (0x08, 1732), (0x0c, 1760), (0x1c, 19), (0x6c, 1730), (0x78, 1), (0xb4, 4), (0xb8, 3), (0xbc, 5), (0xc8, 2), (0xcc, 1) } )
+			BitConverter.GetBytes( value ).CopyTo( body, at + offset );
+
+		var park = new ParkWorld( body );
+
+		Assert.AreEqual( new ParkWorld.SpriteStateWords( 5, 2, 1 ), park.SpriteStateWordsOf( entertainer.SpriteSlot ) );
+
+		TestRun.DeleteEvery<ParkPeople>();
+
+		var sprite = new ParkPeople( park ).SpriteFor( entertainer.ThingId )!;
+		var seen = new List<int>();
+
+		for ( var turn = 0; turn < 10; ++turn )
+		{
+			Assert.IsTrue( sprite.Step( 1000 * (turn + 1) ) );
+			seen.Add( sprite.Frame );
+		}
+
+		// Frame 4 ends the round of five; frame 0 is held two turns (the hold + 1); the next round starts at the lead-in.
+		CollectionAssert.AreEqual( new[] { 4, 0, 0, 2, 3, 4, 0, 0, 2, 3 }, seen );
 	}
 
 	/// <summary>

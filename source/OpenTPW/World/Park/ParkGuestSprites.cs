@@ -1313,7 +1313,7 @@ public sealed class ParkGuestSprites : ModelEntity
 				$"cell ({person.CellX},{person.CellY}) slot {sprite.Slot,2} " +
 				$"type {kind} bank {bank}+{bankOffset} (saved {sprite.Type}/{sprite.Bank}) set {setNumber} " +
 				$"frame {frame} (saved set {sprite.Set} frame {sprite.Frame}) " +
-				$"script {(playing == null ? "none" : $"{playing.Script}@{playing.Pc}")} " +
+				$"script {(playing == null ? "none" : $"{playing.Script}@{playing.Pc} turns {playing.Turns} loops [{string.Join( ",", playing.Loops )}]")} " +
 				$"facing {ParkWorld.Person.OctantOf( angle )} (angle {angle}) " +
 				// Three decimals, not one: a guest covers about 0.24 of a cell per thing tick, so one
 				// interpolated frame moves them roughly 0.16 world units - which at one decimal place is

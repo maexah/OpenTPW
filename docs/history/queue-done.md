@@ -5710,6 +5710,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   due 114418816, start 114388816 in the file, where the build before's file held the slot as 16 nought bytes,
   and the original held the file's slot in memory at its first poll with this build's file and nothing with the
   build before's, then let ten of its own go the same way.
+- [x] **Q257l. The writer: a person's sprite inside a loop of its script.** Done 2026-10-09,
+  `alexah/387-a-persons-sprite-inside-a-loop`. I split the item: this is the piece from Q255, and every other
+  piece is Q257m. An entertainer performing is on program 1760 at word 1732 inside the loop from 1729; the
+  record keeps the loop's start in its stack (`+0x1c` 19, word 1730 at `+0x6c`, `+0x78` 1), 14 of 14 in ten
+  files, and the engine's loop end only logs when `+0x78` is nought (`0x00476426`), so a record without it
+  drops to frame 0 on its first turn. A load takes up the stack and the three state words (`+0xbc`, `+0xc8`,
+  `+0xcc`), and the writer writes the stack from the running sprite; `SAVED_SPRITE_LOOP_STACK` is gone.
+  Confirmed: saved on frame 2, the file held 19, 1730 and 1, three turns after the load the census read frame
+  5 (the build before, saved on 3, read 2), and the original showed the file's record at its first poll and
+  then frames 3, 4, 5, where the build before's file gave it 20, 0, 0 and then frames 0, 1, 2.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

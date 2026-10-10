@@ -1398,8 +1398,8 @@ record's own layout, and the original's memory after it let balloons go (below).
   it is state 4 and hidden. A balloon of the file's that nobody names any more is let go of its slot.
 - **Read back**: a kind-10 sprite no guest's `mBalloonScript` names goes on bursting where it was, with its
   stack (`ParkWorld.SpriteLoopsOf`, `Balloon.Saved`), and one at its end word is freed on its first due turn.
-- **Not read:** the loop stack of a person's own sprite. One saved inside a state script's loop (the 14 of
-  the 1,154 on program 1760) is put on its script's word with an empty stack, as before.
+- **A person's own sprite's stack** is read and written too: "OpenTPW's writer, a person's sprite inside a
+  loop", below.
 
 **A thought read back.** `mLastThought`, `mThoughtScript` and `mTimeBubbleShown` are the person base's (file
 `+386`, `+390`, `+394`), a member of staff's as a guest's.
@@ -1748,7 +1748,7 @@ control: flags are not drawn. `docs/exe/addresses.md` not regenerated.
 
 ### OpenTPW's writer, the region effects
 
-Q257e, split by the session: the staff's are the next section's and the item's other pieces Q257l. The rule, its eight effects and who stamps each
+Q257e, split by the session: the staff's are the next section's and the item's other pieces Q257m. The rule, its eight effects and who stamps each
 are `ride-operation.md`, "The region effects"; a cell's ten bytes are five words, and every cell of thirteen of
 the original's files is what the file's own things stamp.
 
@@ -1792,12 +1792,12 @@ camera, the view being turned, and the second opened a passing member of staff's
 next two clicks confirmed; the running park only, nothing saved, the save sum the same before and after.
 **Not run in either game:** fireworks (no Instant Action item was tried, no file holds one), a toilet bought, a
 toilet dirtied or cleaned and then written (tests only), a thing bought and left out of the file, the objects
-going out as the file's. **Not built:** the fireworks' spent turn (`FIREWORKS_SPENT_REGION_EFFECT`), any reader of the running grid (Q257l,
+going out as the file's. **Not built:** the fireworks' spent turn (`FIREWORKS_SPENT_REGION_EFFECT`), any reader of the running grid (Q257m,
 Q157). `docs/exe/addresses.md` not regenerated.
 
 ### OpenTPW's writer, the staff's region effects
 
-Q257f, split by the session: the item's other pieces are Q257l. The rule is `ride-operation.md`, "The region
+Q257f, split by the session: the item's other pieces are Q257m. The rule is `ride-operation.md`, "The region
 effects", "The staff's two, read whole".
 
 **What OpenTPW writes.** The running grid already holds each entertainer's and guard's effect round
@@ -1906,7 +1906,7 @@ Halloween World's Devils Disc).
 
 ### OpenTPW's writer, a bounce slot let go
 
-Q257k, split by the session: the item's other pieces are Q257l. **`UNBOUNCE` and `FORCEUNBOUNCE` clear a slot's
+Q257k, split by the session: the item's other pieces are Q257m. **`UNBOUNCE` and `FORCEUNBOUNCE` clear a slot's
 handle and nothing else.** Both end in one arm (`0x005558c6`): one off the count at `+0x6c`, the slot's first
 dword read for the answer and set to nought (`0x005558d6`); the node at `+4`, the due at `+8` and the start at
 `+0xc` are not touched, and `BOUNCE` takes the first slot whose handle is nought and writes all four. So a slot
@@ -1942,7 +1942,7 @@ the original's own log has slots 0 to 4.
 
 ### OpenTPW's writer, a walk slot let go
 
-Q257j, split by the session: the item's other pieces are Q257l. **`WALKGET` clears a slot's state and its handle and nothing else** (`FUN_00557110`: `+0x18` at `0x0055713f`,
+Q257j, split by the session: the item's other pieces are Q257m. **`WALKGET` clears a slot's state and its handle and nothing else** (`FUN_00557110`: `+0x18` at `0x0055713f`,
 `+0x10` at `0x00557149`), and `WALKON` takes the first slot whose state is nought and writes every field of it
 (`ride-operation.md`, "The machine"). So a slot let go holds the walk it was let go from until it is taken again:
 its four nodes, the walk off's two stamps, its action, its flags and its facing. **Counted in the thirteen files**
@@ -1977,7 +1977,7 @@ at a pause here (lane 1's leftovers, leg 1100 facing 3, are the original's own i
 
 ### OpenTPW's writer, a script's started effects
 
-Q257i, split by the session: the item's other pieces are Q257l. **A script's object list is the effects its
+Q257i, split by the session: the item's other pieces are Q257m. **A script's object list is the effects its
 `ADDOBJ`s have started and no `KILLOBJ` has stopped** (`park.md`, "ADDOBJ"): a doubly linked list at `+0xb0` of
 28-byte records, the newest at the head.
 
@@ -2044,7 +2044,59 @@ a load (the toilet's two are the same five words; the rule is the reader's listi
 drawn or heard in OpenTPW, and the original draws no smoke on a made kiosk with either file, so the photographs
 show the things bought and do not tell the fix from the control. **Not built:** the engine's spawn that fails
 and frees its record (every `ADDOBJ` of a known type keeps one here); the handle `SETOBJPARAM` stores back; the
-emitter itself (`PART`, Q257l).
+emitter itself (`PART`, Q257m).
+
+### OpenTPW's writer, a person's sprite inside a loop
+
+Q257l, split by the session: the item's other pieces are Q257m. **One animation of a person's loops: a bank's
+state animation, program 1760** (`ride-operation.md`, "What animation `0xd` shows"), which an entertainer
+performing is on. Its loop starts at word 1729: the start pushes the next word, 1730, and counts the loop in
+`+0x78` (`0x004763b0`, `FUN_00475230`); the frame instruction yields with the program counter on 1732; and the
+loop's end, three operands on, **tests `+0x78` first and only logs when it is not above nought** (`0x00476422`,
+the string at `0x0074f870`), leaving the counter past its operands. Otherwise it pops, and either pushes the
+start back and jumps to it (`0x00476649`) or takes one off `+0x78` (`0x00476673`). The pop leaves the word where
+it lies (`FUN_00475260`). So a record resting on 1732 needs its stack: without it the first turn adds one to the
+frame, falls through the loop's end to word 1739 and on to 1726, and starts the round again from frame 0.
+
+**Counted** (`q257l/loops.py`, `loops.out`): ten files the original wrote, 1,172 sprites. 14 people's sprites are
+inside a loop, every one an entertainer's on 1760 at 1732 with `+0x1c` 19, word 1730 at `+0x6c`, `+0x78` 1,
+`+0x70` and `+0x74` nought, state 2, shown, set 4, `+0xbc` 8 or 17, and `+0xc8` and `+0xcc` nought. The other 888
+people's sprites have nothing pushed, one of them on 1760 at its first word, started again and not yet run. Every
+person's `+0xc4` is `0x1200`.
+
+- **Read** (`ParkPeople.SavedSprite`, `ParkWorld.SpriteLoopsOf`, `SpriteStateWordsOf`): a person's sprite takes
+  up its record's stack and the three words the state script reads as locals 14, 17 and 18 (`+0xbc`, `+0xc8`,
+  `+0xcc`), so one saved performing goes on from the frame it was on, with its frames a direction from the
+  record. `SAVED_SPRITE_LOOP_STACK` is gone.
+- **Written** (`ParkPeople.Person`, `WrittenPerson.SpriteLoops`, `ParkWorld.PutSprite`): the running sprite's
+  stack, on a kept record and a made one: the room, the words from the last place down and the count, and with
+  anything pushed state 2 and shown. One put on another program since is written with room 20 and a count of
+  nought, the old word left where it lies.
+- The censuses print each sprite's turns since it was made or read and its stack (`guests`: `script 1760@1732
+  turns 3 loops [1730]`), and a load logs how many of the save's people's sprites are inside a loop.
+
+**Measured (Q257l, `q257l/`).** Stock Lost Kingdom left alone until entertainer 27 performed, paused with the
+sprite on frame 2: `guests` read `script 1760@1732 ... loops [1730]`, set 4; `savepark` wrote slot 3 with pc
+1732, script 1760, `+0x1c` 19, `+0x6c` 1730, `+0x78` 1, state 2, shown, frame 2, `+0xbc` 8. Loaded from the Load
+Park screen and paused, the log read "People: 1 of the save's people's sprites inside a loop of their script"
+and the census `turns 3`, frame 5, `loops [1730]`; stepped on a frame of the game at a time, 6, 7, 0, 1, 2
+(`run-desk`, 4 of 4). **The build before**, with the two census fields added and nothing else, saved on frame 3:
+the record held `+0x1c` 20, `+0x6c` 0, `+0x78` 0, and three turns after its load the census read frame 2, where
+the fix's would read 6, then 3, 4, 5 (`control`, off-screen, 4 of 4).
+**The original under Proton**, entering the park on each file, the sprite of slot 3 read every 10 ms
+(`orig/look.py`). The fix's (`orig/a-load.log`): on the first poll of `mGameTick` 772, 1760@1732, frame 2,
+`+0x1c` 19, `+0x6c` 1730, `+0x78` 1, held so for the 5.6 s of its loading; then frames 3, 4, 5, 6, 7, 0, 1, one
+every 65 ms or so, the stack as the file's throughout. The control's (`orig/c-load.log`): on the first poll of 817,
+frame 3 with `+0x1c` 20, `+0x6c` 0 and `+0x78` 0; the next reading is frame 0 with 19, 1730 and 1, then 1, 2, 3.
+All as predicted (`PREDICTION.txt`), the turns after the load guessed 2 to 6 and read 3.
+**Not run in either game, tested only:** a made person's sprite inside a loop (a hired entertainer performing);
+a kept sprite put on another program and written with its stack empty; a record whose `+0xc8` or `+0xcc` is
+not nought (no file holds one: staff are made on animation 3, which leaves both nought). **Not read at a
+load:** a sprite's local 0 (`+0x84`, the hold loop's counter) and local 16 (`+0xc4`). **Not written:** a made
+person's `+0xc4`, nought where the original's is `0x1200` (Q257m). The photographs show the entertainer
+performing and the park after the load and do not tell the fix from the control: the difference is one frame
+of eight, once. Of 22 bugs put back 21 failed a test at first; the last, a loaded sprite due at once, fails after
+the test was given the first due time (`mut-run1.log`, `mut-run2.log`). `docs/exe/addresses.md` not regenerated.
 
 ### Read, not run
 

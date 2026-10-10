@@ -362,21 +362,7 @@ public sealed partial class ParkPeople : Entity
 				// so starting them all at the first would put the entire park in step with itself.
 				if ( pictures.TryGetValue( person.SpriteSlot, out var picture ) )
 				{
-					var sprite = new SpriteScript(
-						picture.Script, picture.Pc, picture.SpriteNumber, picture.Frame );
-
-					// <b>And when it first comes due, which the original's constructor does as the sprite
-					// is made.</b> Left at nought, every sprite would be due on the first turn the clock
-					// had passed - one interval early, once, at load.
-					// Nought is the clock at load, which is the only moment either of these is built.
-					//
-					// <b>Whether the suite pins it is not measured on the suite as it stands.</b> The tests
-					// that build a park from the save (ParkAnimationTests among them) run this line, and
-					// SpriteScriptTests seeds its own sprites with ScheduleFrom directly.
-					sprite.ScheduleFrom( 0 );
-
-					_sprites[peep.ThingId] = sprite;
-					CountSavedLoops( park, person.SpriteSlot );
+					_sprites[peep.ThingId] = SavedSprite( park, picture );
 				}
 
 				// And the balloon, by the slot the guest names: the table is saved slot for slot, the balloon's own
@@ -418,14 +404,8 @@ public sealed partial class ParkPeople : Entity
 
 				if ( pictures.TryGetValue( person.SpriteSlot, out var picture ) )
 				{
-					var sprite = new SpriteScript(
-						picture.Script, picture.Pc, picture.SpriteNumber, picture.Frame );
-
-					sprite.ScheduleFrom( 0 );
-
-					_sprites[member.ThingId] = sprite;
+					_sprites[member.ThingId] = SavedSprite( park, picture );
 					_staffLooks[member.ThingId] = (picture.Type, picture.Bank);
-					CountSavedLoops( park, person.SpriteSlot );
 				}
 				else
 					_staffLooks[member.ThingId] = (person.SpriteKind, person.SpriteBank);
@@ -435,6 +415,9 @@ public sealed partial class ParkPeople : Entity
 					member.Thoughts.Restore( thinker.LastThought, thinker.TimeBubbleShown, thought.Script );
 			}
 		}
+
+		if ( _sprites.Values.Count( sprite => sprite.Loops.Count > 0 ) is > 0 and var looping )
+			Log.Info( $"People: {looping} of the save's people's sprites inside a loop of their script" );
 
 		Log.Info( $"People: {_peeps.Count} guests and {_staff.Count} staff simulating" );
 	}
@@ -1077,14 +1060,22 @@ public sealed partial class ParkPeople : Entity
 	internal int StillToDrop => _arrivalsRemaining;
 
 	/// <summary>
-	/// A person's own sprite saved inside a loop of its script, a bank's state animation, is put on its word with
-	/// an empty stack and the script's words as a start leaves them: counted (<c>SAVED_SPRITE_LOOP_STACK</c>).
-	/// A balloon let go keeps its stack (<see cref="Balloon.Saved"/>).
+	/// A person's own sprite picked up where the save left it: its script, word, set and frame, the loop starts
+	/// its program had pushed, and the three words a bank's state script reads. One saved inside a state
+	/// animation's loop goes round it from the frame it was on.
 	/// </summary>
-	private static void CountSavedLoops( IParkInitialState park, int slot )
+	private static SpriteScript SavedSprite( IParkInitialState park, ParkWorld.Sprite picture )
 	{
-		if ( park is ParkWorld file && file.SpriteLoopsOf( slot ).Count > 0 )
-			Unimplemented.Report( "SAVED_SPRITE_LOOP_STACK" );
+		var file = park as ParkWorld;
+
+		var sprite = new SpriteScript( picture.Script, picture.Pc, picture.SpriteNumber, picture.Frame,
+			loops: file?.SpriteLoopsOf( picture.Slot ), state: file?.SpriteStateWordsOf( picture.Slot ) ?? default );
+
+		// And when it first comes due, which the original's constructor does as the sprite is made. Nought is
+		// the clock at load, the only moment this is built.
+		sprite.ScheduleFrom( 0 );
+
+		return sprite;
 	}
 
 	/// <summary>The things the save's <c>mArrivalVehicle_Size1..3</c> name, nought where it names none.</summary>
@@ -2141,9 +2132,8 @@ public sealed partial class ParkPeople : Entity
 				if ( playing == null )
 					continue;
 
-				// A sprite read from a save part-way through a state's script carries no frames a direction here
-				// (+0xbc; whether the save keeps it is not decoded), and the script loops on it: it is read from
-				// the bank again, and with no bank the sprite stands.
+				// A sprite on a state's script whose save kept no frames a direction (+0xbc nought) would loop on
+				// it for ever: it is read from the bank again, and with no bank the sprite stands.
 				if ( playing.IsOnAState && playing.FramesPerDirection <= 0 )
 				{
 					playing.FramesPerDirection = BankOf( member.ThingId ) is { } bank

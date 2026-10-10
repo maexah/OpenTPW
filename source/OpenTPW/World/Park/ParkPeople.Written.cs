@@ -221,6 +221,7 @@ public sealed partial class ParkPeople
 		ParkWorld.Sprite? picture = null;
 		var interval = SpriteScript.DefaultInterval;
 		int? stateSetByte = null;
+		IReadOnlyList<int> loops = [];
 
 		if ( drawn )
 		{
@@ -235,6 +236,7 @@ public sealed partial class ParkPeople
 			}
 
 			interval = script.Interval;
+			loops = script.Loops;
 			stateSetByte = script.FramesPerDirection > 0 ? script.FramesPerDirection : null;
 			picture = new ParkWorld.Sprite(
 				Slot: 0, Type: look.Kind, Bank: look.Bank, SpriteNumber: script.SpriteNumber,
@@ -254,6 +256,7 @@ public sealed partial class ParkPeople
 			StrandedTime: strandedTime, SpriteInterval: interval,
 			// A person's sprite is made on set 0 of their bank, and a state's animation writes its own set's over it.
 			MadeSetByte: SetByteOf( look.Kind, look.Bank, 0 ), StateSetByte: stateSetByte,
-			Bubble: BubbleOf( thoughts, position ) );
+			Bubble: BubbleOf( thoughts, position ),
+			SpriteLoops: drawn ? loops : null );
 	}
 }
