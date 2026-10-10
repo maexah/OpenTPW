@@ -2116,6 +2116,11 @@ placed voice silenced. The class of the gulls' and the sea's effects (`0x0006`, 
 `SCAPE_OMP_SOUND_TYPE_3`), and the level's own `cat_ambient` is not loaded. Playing them waits on the mixer's
 law (Q264): a waterfall heard at a guessed loudness would be wrong all the time the camera is near it.
 
+**Run, 2026-10-10** (`q263/confirm.py`, 3 of 3 predictions, written first in `PREDICTION.txt`). Lost Kingdom at
+the tip, the camera on the fall: `unimplemented` reads `4x SCAPE_OMP_SOUND_TYPE_1` and `2x
+SCAPE_OMP_SOUND_TYPE_3`, the jungle's four and two records, and the frame shows the fall and its spray
+(`run/waterfall.png`).
+
 ## The save's world block: map cells
 
 Derived from an emulator field log (`fields_005179c0.txt`, i.e. the fields of `FUN_005179c0`) **which names every field of every one of the 16,384 cells**. Both record sizes match `ParkWorld`'s independently measured skip **to the byte**.
