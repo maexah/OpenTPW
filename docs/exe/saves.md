@@ -2882,6 +2882,65 @@ and sold), `004db090.c` (the object constructor), `gen_names.py` (the name rows 
 `confirm.py`, `loadonly.py`, `PREDICTION.txt`, `mutate.py`, and `orig/` (`go.sh`, `look.py`, the polls
 `g-load.log` and `r2-load.log`, the frames) with the sheet.
 
+### OpenTPW's writer, the mechanic's job
+
+Q257z, split by the session: the item's other pieces are Q258. **A mechanic finds a broken ride, walks to it
+and mends it, and his job, the ride's assignment and the search's cursor are written as they run.** The decode
+is `ride-operation.md`, "The mechanic's repair"; this is the file's side.
+
+**What is written.** A mechanic's `mDurationOfRepair` (record `+503`) and `mObjectToRepair` (`+507`), read at
+a load and written from the running member (`Staff.DurationOfRepair`, `ObjectToRepair`); one whose ride is not
+written is written standing, as a handyman whose toilet is not. The mechanics' HQ's `mNextObject` (thing 2,
+model 10, record `+16`), the search's cursor, read into `ParkState.MechanicCursor` and written by
+`ParkWorld.PutMechanicCursor`, nought where it names a thing not written. The ride's `mAssignedStaffMember`
+(`+210`) and `mTimeMarkedForMaintenance` (`+1082`) were written already.
+
+**Confirmed in the game** (`q257z/confirm.py`, each predicted in `PREDICTION.txt`: the fix 7 of 7 off-screen and
+twice on the desktop, the control 2 of 2). Q257y's scene: `buy 1140 41 23 0`, the queue joined, five guests,
+and in the go `scriptvar 43 VAR_BREAKSTAT 1`. One `mechanic 26 found ride 43 that needs fixing` 0.0 to 0.9 s
+after the break; `staff` read him `st 0xc`, `repair 43`; `MECHANIC_ON_HIS_WAY_MESSAGE` counted once. **The
+file saved there:** his `mState` `0xc`, `mObjectToRepair` 43, the pot's `mAssignedStaffMember` 26 and its stamp
+the tick of the log line, `mNextObject` 24, 15 and 23 in the three runs where the shipped file holds 18. He
+arrived on cell (43,23) 40 to 62 sweeps on: `starts repairing ride 43 ..., 0 sweeps to go` (the State of repair
+reads 100 here), and two sweeps later `Object 43: repairing fully`, `opened`, `finished repairing`: the pot
+`state 0 canload 1`, `VAR_BREAKSTAT`, `VAR_BROKEN` and `VAR_RIDECLOSED` nought, no boat smoking, him walking with
+`repair 0`. **The file saved after:** `mState` 0, `mCanLoad` 1, `+0x44` 100 and nobody assigned, the four as
+`q257x/orig/fixed-by-the-original.TPWS` holds them. In the frames the hoardings are up round the pot as he
+repairs and gone after (`q257z/pot-on-his-way-repairing-mended.png`), and he stands in the pot's doorway
+(`q257z/entrance-three-yaws.png`, the first). **The control, the build before:** `state 1 canload 0` and
+`VAR_BROKEN` 1 sixty seconds on, `MECHANIC_RIDE_SEARCH` counted 24 times, the file's `mObjectToRepair` nought
+and `mNextObject` 18.
+
+**The original under Proton** (`loadfile.sh` with `object.py` on thing 43; `q257z/orig/w-load.log`,
+`m-load.log`). **The file saved as he set off** (found on tick 860): on the load's first tick, 861, the pot
+read state 1 with member 26 assigned, where Q257y's file read nobody and 26 two ticks on; `VAR_BREAKSTAT`
+nought on tick 902 and **the pot mended and open on 903**, 42 ticks after the load. The run that wrote the
+file started repairing on 900 and finished on 902. **The file saved after the mend:** state 0 and `mCanLoad` 1
+from its first tick, a guest called forward on tick 938 and `VAR_RUNNING` 1 on 985. Its `save/` ended as it
+began.
+
+**The cursor, in the original's memory** (`original/thingwords.py` on thing 2's `+0xc` and mechanic 26's state,
+job and count across the same load; `q257z/orig/k-load.log`). The file's 23 was read and held while he walked
+(state `0xc`, job 43) and repaired (`0xd` on tick 901, the count nought); on tick 903, his decide after the
+mend, it read 22 and his job nought; then one object a decide, 21 down to 16, 14 down to 11, nought, 43, 15, 24,
+23. So the cursor moves along `mNext` one object a search, through nought to the head, as read. **Predicted and
+missed:** I had the chain in id order (24, nought, 43, 15, 16); it is the file's links', which is the order
+`ParkState.ObjectsInChainOrder` walks.
+
+**Still not the original's, each said where it is:**
+
+- An upgrade job, the advisor's message and a coaster's circuit test are counted (`ride-operation.md`, "The
+  mechanic's repair", "Where OpenTPW differs").
+- The State of repair stays 100 here (the wear by use, Q157), so every repair's count is nought and the
+  count down was in no game run: the tests alone.
+- His repairing animation, `0x12`, is queued; whether the picture is the original's was not compared (the
+  original's frames were not looked at; its memory was).
+
+**Not run in either game, tested only:** a ride called for (`mRequestedService`); two broken rides; a second
+mechanic; a ride with no route to it; a ride sold under him; the search that looks at nothing. Of 80 bugs put
+back (`q257z/mutations.py`) all 80 fail a test, five of them only after a test was strengthened; three of the new
+tests looped for ever on a cursor that never stepped and are bounded now.
+
 ### OpenTPW's writer, a broken ride's state
 
 Q257y, split by the session: the item's other pieces are Q257z. **A ride whose script says it has broken is
@@ -2929,9 +2988,9 @@ the first fix run's file read `mState` 0, which is how the writer's gap was foun
 
 **Still not the original's, each said where it is:**
 
-- **Nothing mends a broken ride here.** The mechanic's ride search answers nothing (`MECHANIC_RIDE_SEARCH`'s
-  count, `StaffBehaviour`), so a ride broken down stays shut for good; only the console's `scriptvar` breaks
-  one, the breakdown request being unbuilt (`ride-operation.md`, "The first half of the turn", step 3).
+- The mechanic mends a broken ride ("OpenTPW's writer, the mechanic's job", Q257z). Only the console's
+  `scriptvar` breaks one, the breakdown request being unbuilt (`ride-operation.md`, "The first half of the
+  turn", step 3).
 - SetState's post to the event bus is counted, not built (`RIDE_BROKEN_DOWN_EVENT`, `RIDE_CONDEMNED_EVENT`).
 - The original's file reads `+0x48` 99.0 and `+0x44` 92.0 on the pot where OpenTPW's reads 100 and 100: the wear
   by use (`FUN_004df670`) is unbuilt (Q157). In the load above one wear, on tick 1152 with a go running, took 1.55 and 0.03 off.

@@ -99,10 +99,12 @@ public sealed partial class ParkPeople
 			var heading = _staffWalks.GetValueOrDefault( id )?.Heading ?? 0;
 			var rest = Handle( member.RestArea );
 			var toilet = Handle( member.ToiletToClean );
+			var ride = Handle( member.ObjectToRepair );
 
 			var stands = member.Activity == StaffActivity.Held
 				|| (member.Activity is StaffActivity.GoingToRest or StaffActivity.Resting && rest == 0)
-				|| (member.Activity is StaffActivity.GoingToLoo or StaffActivity.Cleaning && toilet == 0);
+				|| (member.Activity is StaffActivity.GoingToLoo or StaffActivity.Cleaning && toilet == 0)
+				|| (member.Activity is StaffActivity.GoingToRide or StaffActivity.Repairing && ride == 0);
 
 			var staff = new ParkWorld.StaffState(
 				State: (int)(stands ? StaffActivity.Idle : member.Activity), PayGrade: member.PayGrade,
@@ -112,7 +114,8 @@ public sealed partial class ParkPeople
 				TimeStartedIdling: member.TimeStartedIdling, Name: member.Name,
 				ToiletToClean: stands ? 0 : toilet, TimeStartedCleaning: member.TimeStartedCleaning,
 				TimeStartedEntertaining: member.TimeStartedEntertaining,
-				TimeStartedResearching: member.TimeStartedResearching, TimeHired: member.TimeHired );
+				TimeStartedResearching: member.TimeStartedResearching, TimeHired: member.TimeHired,
+				DurationOfRepair: stands ? 0 : member.DurationOfRepair, ObjectToRepair: stands ? 0 : ride );
 
 			// One resting inside a rest area has no sprite, in the files as here.
 			var drawn = stands || member.Activity != StaffActivity.Resting;

@@ -638,7 +638,8 @@ public class Level
 		var running = new ParkFileWriter.Running( state.GameTick, state.ParkIsClosed, state.VisitorsToDate, state.Balance,
 			new ParkCameraModule.View( ParkOrbitCameraMode.Zoom, -ParkOrbitCameraMode.Yaw, point.X, point.Y ), cells,
 			people?.Written( written.Contains ), pool?.Written(), people?.WrittenArrival( things != null ? written.Contains : null ), things, people?.WrittenLetGo(),
-			WrittenEffects( loaded, state, written.Contains, asTheFile: things == null ) );
+			WrittenEffects( loaded, state, written.Contains, asTheFile: things == null ),
+			written.Contains( state.MechanicCursor ) ? state.MechanicCursor : 0 );
 
 		byte[] file;
 		ParkWorld.PeopleWritten? peopleWritten;

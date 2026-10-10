@@ -88,6 +88,19 @@ public enum StaffActivity
 	Cleaning = 0xb,
 
 	/// <summary>
+	/// A mechanic walking to the ride his search found - his own state <c>0xc</c> (<c>FUN_004da740</c>). Arriving
+	/// at a ride that still wants him starts <see cref="Repairing"/>; a ride no longer his, or a walk that
+	/// fails, sends him back to his decide.
+	/// </summary>
+	GoingToRide = 0xc,
+
+	/// <summary>
+	/// A mechanic repairing a ride - his own state <c>0xd</c> (<c>FUN_004da830</c>): a turn of work a sweep
+	/// while <c>mDurationOfRepair</c> counts down, then the ride is repaired and opened and he decides again.
+	/// </summary>
+	Repairing = 0xd,
+
+	/// <summary>
 	/// An entertainer performing where they stand - their own state <c>0xe</c>, written inline by the decide
 	/// with no SetState: a turn of work a sweep until the clock passes <c>mTimeStartedEntertaining</c> + the
 	/// grade's <c>WorkDuration</c>, then the decide again in the same turn.

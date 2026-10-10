@@ -48,12 +48,18 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q257z. The writer: what else a made record leaves out.** The old Q257y's other pieces, each counted or
+- [ ] **Q258. The writer: what else a made record leaves out.** The old Q257z's other pieces, each counted or
   said in `saves.md`. Confirm: each piece's bytes beside a file of the original's own, and the file loaded in
   the original under Proton.
-  From Q257y (`saves.md`, "OpenTPW's writer, a broken ride's state"): nothing mends a broken ride here, so one
-  stays shut for good (the mechanic's search is `MECHANIC_RIDE_SEARCH`, counted; the original's mechanic was
-  assigned two ticks after a load and had the pot open 32 ticks on); SetState's post to the event bus is
+  From Q257z (`saves.md`, "OpenTPW's writer, the mechanic's job"; `ride-operation.md`, "The mechanic's
+  repair"): an upgrade job is passed over and its completion left (`MECHANIC_UPGRADE_JOB`,
+  `RIDE_UPGRADE_COMPLETION`: nothing here puts a ride in state 2), advisor message `0x46` is counted
+  (`MECHANIC_ON_HIS_WAY_MESSAGE`), and a mechanic put down still goes idle where the original's searches at
+  once (`MECHANIC_PUT_DOWN_JOB_SEARCH`); every repair's count is nought while the State of repair stays 100
+  (the wear by use, Q157), so the count down was in no game run; his repairing picture was not held against
+  the original's frames; a called ride, two broken rides, a second mechanic, a ride with no route and a ride
+  sold under him were in no game run.
+  From Q257y (`saves.md`, "OpenTPW's writer, a broken ride's state"): SetState's post to the event bus is
   counted (`RIDE_BROKEN_DOWN_EVENT`, `RIDE_CONDEMNED_EVENT`); a ride condemned, one broken with its door shut
   and any ride but the Hot Pot were in no game run; whether nobody is seated inside a second of a break here
   was not resolved (a poll each half second; the original's is 0.3 s).

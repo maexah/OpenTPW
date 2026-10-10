@@ -119,7 +119,68 @@ a broken ride's go: the script only reports the break.
 state 1, `mCanLoad` 0 and nobody seated by 1.2 s on (four at 0.6 s), its queue put out a head a sweep and its
 hoardings up; the original, loading a file written before this was built, did the same on its first tick and
 had the go over four ticks later, and loading one written since had its mechanic mend the pot in 32 ticks.
-**Nothing here mends one**: the mechanic's search is counted and answers nothing.
+The mechanic mends one here too: "The mechanic's repair", next.
+
+### The mechanic's repair - `FUN_004daa90`, `FUN_004da5b0`, `FUN_004da740`, `FUN_004da830`, `FUN_004df8f0`
+
+Q257z, read in the listing 2026-10-10 and built (`StaffBehaviour.FindRide`, `ArriveAtTheRide`, `RepairOn`,
+`ParkState.ObjectsFromTheMechanicsCursor`, `ParkRideOperation.Repair`).
+
+**The mechanic's search, `FUN_004daa90`.** Its `this` is not the mechanic: it is the thing the world's
+`+0x1da71a` names (`FUN_00519490`), `mMechanicHQ`, thing 2, and that thing's `+0xc` is **a cursor into the object
+chain, kept between searches and saved** (the file's `mNextObject`, FileFormats `saves.md`).
+
+1. The cursor steps (`0x004daa9d`..`0x004dab53`): where it names an object still in the chain it moves to that
+   object's `mNext`, which is nought after the last; where it is nought or names none it moves to `mFirstObject`.
+2. **A cursor left nought ends the search with no ride** (`0x004daba0`): the search that steps off the chain's
+   end looks at nothing, one search in every (objects + 1).
+3. Otherwise every object is looked at once, from the cursor's right round the chain (the walk wraps at the
+   end, `0x004dabf4`), and the cursor is left where the walk began.
+4. An object is a candidate when its state is 1, broken down (`FUN_004e0370`), or `mRequestedService` is set and
+   it is no toilet (`+0x32` bit 1 clear, `0x004dac1a`), or its state is 2, waiting for an upgrade
+   (`FUN_004e03e0`); and the member assigned to it (`FUN_004e0220`) is nobody or this mechanic.
+5. **The nearest wins**: the squared distance in cells between the mechanic's own cell and the object's
+   (`+5` and `+7` of each), compared unsigned and strictly (`CMP ECX,EAX` / `JNC`, `0x004dacd2`), from
+   `0xffffffff`. No range, and no route is asked for.
+
+**The decide, `FUN_004da5b0`.** After the shared opening (`FUN_00506a40`) and "too tired to fix rides"
+(`FUN_00506680`): the search's answer is written to `+0x218` (`mObjectToRepair`) whatever it is (`0x004da609`).
+With a ride: the destination is its `mEntryPos` (`+0x36`, `FUN_004fa530`). A route: the ride is assigned to him
+and stamped (`FUN_004e01f0`), advisor message `0x46` is posted when it is neither called for nor waiting for an
+upgrade (`0x004da6bf`), and his state is `0xc`. No route ("couldn't reach broken ride"): the random walk, with
+`+0x218` still naming the ride. `FUN_004da370`, his setter, queues animation 9 for `0xc` and nothing else: no
+hurry speed, where the handyman's walk to a toilet takes one.
+
+**State `0xc`, `FUN_004da740`.** First the ride's own word: if the member assigned to it is not him, `+0x218` is
+cleared and he decides ("UNUSUAL INCIDENT"). Then a step of the walk (`FUN_004fa2a0`), with no tiring: arrived,
+a ride broken down, waiting for an upgrade or calling goes to state `0xd`, and any other sends him to his
+decide with the ride still named; a walk that fails clears `+0x218` and decides. Unlike the handyman's arrival,
+his own cell is not held against the entry.
+
+**State `0xd`.** The setter queues animation `0x12` and sets `+0x214` (`mDurationOfRepair`): for a repair
+`(100 - the State of repair's byte) x MechanicConstsPerGrade.WorkDuration / 100` in whole sweeps
+(`0x004da42a`; 80, 60, 40, 30, 20 by grade, `0x0078542c`), for an upgrade the tier's figure times the same.
+`FUN_004da830`, a turn: a turn of work (`FUN_00506760`); the count down one while it is not nought; at nought,
+on a ride of state 1, `VAR_BREAKSTAT` is written nought (`FUN_004e03f0`) and the turn ends there while
+`VAR_BROKEN` still reads above nought (`FUN_004e0410`, "Ride has finished fix anim" when it does not); then
+`FUN_004df8f0` on the ride, `+0x218` cleared, and his decide in the same turn.
+
+**The ride's side, `FUN_004df8f0`.** `+0x44` = 100, `VAR_WORN` 0, the assigned member (`+0x5e`) and
+`mRequestedService` nought. Not waiting for an upgrade: `VAR_BREAKSTAT` 0 and the hoardings down
+(`FUN_004547c0`). Then the open's tail whatever its state, logging "Opening non-openable ride" five times for
+one that was broken down: `mCanLoad` 1, hoardings down, `VAR_RIDECLOSED` 0, SetState(0); and a type 3 track
+whose circuit is not closed is shut again.
+
+**In both games** (`saves.md`, "OpenTPW's writer, the mechanic's job"): a Hot Pot broken in a go had mechanic
+26 set off inside a second, repairing 40 to 62 sweeps on and the pot open two sweeps after that, in three runs;
+the original, loading the file saved as he set off, read him assigned on its first tick and had the pot open 42
+ticks after the load, where the run that wrote it took 42 sweeps from the same moment.
+
+**Where OpenTPW differs.** An object waiting for an upgrade is passed over by the search, counted
+(`MECHANIC_UPGRADE_JOB`), and `Repair` on one is counted and does nothing (`RIDE_UPGRADE_COMPLETION`): nothing
+here puts a ride in state 2. Advisor message `0x46` is counted (`MECHANIC_ON_HIS_WAY_MESSAGE`). The coaster's
+circuit test after the open is counted (`OPEN_GUARD_COASTER_TRACK_RECORD`). A thing in the hand is passed
+over. The five "non-openable" log lines are not written.
 
 ### Where an object's state comes from
 
@@ -2844,7 +2905,7 @@ park, a walk that fails (tested only).
 |---|---|---|---|
 | A hire's first decide | at once, in every kind's constructor: the mechanic's `0x004d9fc4`, the handyman's `0x004d6c73`, the entertainer's `0x004d4430`, the guard's on `mGameTick & 3` (`0x004d5e76`), the researcher's on a draw (`0x005026cb`) | the same (`StaffBehaviour.Hired`, from `ParkPeople.Hire`; "The decide's differences, in both games") | every hire |
 | The mechanic, the handyman and the entertainer with no work | walk about | walk about: the mechanic and the handyman on every decide, the entertainer on `mGameTick & 3` (`StaffBehaviour.WalkAbout`, `Entertain`; "The no-work walk, in both games") | from their saved walks' ends |
-| The mechanic's search for a ride | `FUN_004daa90` on every decide not too tired | counted, `MECHANIC_RIDE_SEARCH`, and answers none | every mechanic decide; nothing here breaks down |
+| The mechanic's search for a ride | `FUN_004daa90` on every decide not too tired | built (`StaffBehaviour.FindRide`; "The mechanic's repair"); an upgrade job is counted, `MECHANIC_UPGRADE_JOB` | every mechanic decide |
 | The handyman's searches | litter `FUN_004c8ed0` at his decide and at his idle pre-step, then a toilet `FUN_004d7880` | the litter search counted, `HANDYMAN_LITTER_SEARCH`, and answers none; the toilet search built (`StaffBehaviour.FindToilet`; "A toilet's dirt") | every handyman decide; no cell here holds litter (Q225) |
 | The entertainer's performance | a draw mod 3 of nought, a guest in reach: a second draw, the bank's state animation, state `0xe` for WorkDuration + 1 sweeps, effect `0x87` ("The entertainer's performance") | built (`StaffBehaviour.Perform`; "The performance, in both games"); the look is `ParkPeople.GuestsNear`, each guest at the cell the park has them linked into; effect `0x87` counted, `STAFF_SOUND_PERFORMANCE_END` (Q135) | a third of the entertainer's decides |
 | The stand as a member goes idle | SetState(0) queues animation 3 every time (`FUN_004fa460`) | queued from a performance and after a clean only; any other idle keeps the picture it had | every idle |
@@ -3007,7 +3068,7 @@ does (`0x004e24bc`..`0x004e252a`).
 | The aim after the search | left on the last candidate tested | aimed at the winner again; counted where they differ, `HANDYMAN_TOILET_AIM_LEFT_ON_A_LATER_TOILET` |
 | The clean's region effects | 6 unstamped, 1 stamped | built, `ParkRideOperation.Clean` (Q257e) |
 | The hurry speed on the walk to a toilet | `+0xc2` = 25 | the same, one of the three words `Staff.Pace` sums; taken off on going idle |
-| A mechanic assigned to a thing | kept while his `+0x218` names it | reads as aiming elsewhere and is forgotten after 100 sweeps; nobody here assigns one |
+| A mechanic assigned to a thing | kept while his `+0x218` names it | the same (`Staff.ObjectToRepair`; "The mechanic's repair") |
 | The request for service | shuts the object and calls a member | the search and the clean read and clear a saved `+0x64`; no control here sets one on a toilet (the ride window's `b_callmech` draws and reports itself) |
 
 ### The clean, in both games

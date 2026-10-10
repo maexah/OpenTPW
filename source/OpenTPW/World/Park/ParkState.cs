@@ -328,6 +328,38 @@ public sealed class ParkState
 	}
 
 	/// <summary>
+	/// The object the mechanics' search last began on, a thing id, or nought - the mechanics' HQ's
+	/// <c>mNextObject</c> (<see cref="ParkWorld.MechanicCursor"/>).
+	/// </summary>
+	public int MechanicCursor { get; private set; }
+
+	/// <summary>
+	/// The objects one search for a ride to fix looks at, in its order - the walk of <c>FUN_004daa90</c>
+	/// (<c>docs/exe/ride-operation.md</c>, "The mechanic's search"). <b>Each search begins one object further
+	/// down the chain than the last</b>: <see cref="MechanicCursor"/> steps to the object after the one it
+	/// names, or to the chain's head where it names none still in the chain, and the walk runs from there right
+	/// round the chain. <b>A search whose step runs off the chain's end looks at nothing</b>: the cursor is left
+	/// nought and the next search begins at the head.
+	/// </summary>
+	public IReadOnlyList<ParkWorld.CatalogueObject> ObjectsFromTheMechanicsCursor()
+	{
+		var chain = ObjectsInChainOrder().ToList();
+		var named = MechanicCursor == 0 ? -1 : chain.FindIndex( placed => placed.ThingId == MechanicCursor );
+		var start = named < 0 ? 0 : named + 1;
+
+		if ( start >= chain.Count )
+		{
+			MechanicCursor = 0;
+
+			return [];
+		}
+
+		MechanicCursor = chain[start].ThingId;
+
+		return [.. chain.Skip( start ), .. chain.Take( start )];
+	}
+
+	/// <summary>
 	/// The next free thing id. <b>Objects and people share one numbering, and this is the only thing
 	/// that hands ids out of it.</b>
 	///
@@ -691,6 +723,7 @@ public sealed class ParkState
 		// ObjectsInChainOrder. Seeded from the save's own head and links, so a park straight out of the
 		// file is considered in exactly the order the file's chain gives.
 		_firstObject = park.FirstObject;
+		MechanicCursor = park.Save?.MechanicCursor ?? 0;
 
 		foreach ( var thing in park.Objects )
 			_nextObject[thing.ThingId] = thing.NextObject;

@@ -52,12 +52,14 @@ public static class ParkFileWriter
 	/// <see cref="Things"/> is the objects, their scripts and their models as they run; the file's where it is null.
 	/// <see cref="LetGo"/> is the balloons let go and still bursting, written with the people; the file's where it is null.
 	/// <see cref="Effects"/> is every cell's region effects (<see cref="ParkWorld.PutEffects"/>); the file's where it is null.
+	/// <see cref="MechanicCursor"/> is the object the mechanics' search last began on
+	/// (<see cref="ParkWorld.PutMechanicCursor"/>); the file's where it is null.
 	/// </summary>
 	public readonly record struct Running( int GameTick, bool ParkClosed, int VisitorsToDate, int Balance,
 		ParkCameraModule.View Camera, IReadOnlyDictionary<int, ParkWorld.MapCell>? Cells = null,
 		IReadOnlyList<ParkWorld.WrittenPerson>? People = null, ParkWorld.WrittenStaffPool? StaffPool = null,
 		ArrivalTimer? Arrival = null, RunningThings? Things = null, IReadOnlyList<ParkWorld.WrittenSprite>? LetGo = null,
-		IReadOnlyList<short>? Effects = null );
+		IReadOnlyList<short>? Effects = null, int? MechanicCursor = null );
 
 	/// <summary>
 	/// The file's objects, scripts and models as the running park has them (<c>docs/exe/saves.md</c>, "OpenTPW's
@@ -210,6 +212,9 @@ public static class ParkFileWriter
 
 		if ( running.Arrival is { } arrival )
 			loaded.PutArrival( body, arrival.TimeSig, arrival.PeopleOnBus, arrival.Offloading, arrival.CurrentVehicle );
+
+		if ( running.MechanicCursor is { } cursor )
+			loaded.PutMechanicCursor( body, cursor );
 
 		things = null;
 

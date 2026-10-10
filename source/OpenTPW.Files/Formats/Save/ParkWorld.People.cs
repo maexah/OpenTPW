@@ -1326,6 +1326,10 @@ public sealed partial class ParkWorld
 
 			switch ( person.Model )
 			{
+				case MechanicModel:
+					Put32( record, 503, staff.DurationOfRepair );
+					Put16( record, 507, staff.ObjectToRepair );
+					break;
 				case HandymanModel:
 					Put32( record, 505, staff.TimeStartedCleaning );
 					Put16( record, 509, staff.ToiletToClean );

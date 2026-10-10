@@ -873,6 +873,45 @@ public sealed class ParkRideOperation
 			&& script?.Set( WornVariable, 1 ) == true;
 
 	/// <summary>
+	/// The mechanic's repair - <c>FUN_004df8f0</c>, "repairing fully", whose one caller is his repairing
+	/// state's end (<c>docs/exe/ride-operation.md</c>, "The mechanic's repair"): the State of repair
+	/// (<c>+0x44</c>) 100, the script's <see cref="WornVariable"/> nought, the assigned member (<c>+0x5e</c>)
+	/// and the request for service (<c>+0x64</c>) forgotten, <see cref="BreakStatVariable"/> nought and the
+	/// broken picture off the hoardings; then the ride is opened whatever its state
+	/// (<see cref="Open(ParkState, RideScript?, int)"/>).
+	/// </summary>
+	/// <remarks>
+	/// <b>Not built, each counted.</b> On a ride waiting for an upgrade (state 2) the original raises its level
+	/// and writes the tier's speed, capacity and duration in the broken arm's place: <c>RIDE_UPGRADE_COMPLETION</c>,
+	/// and the ride is left as it is. After opening, a ride on a type 3 track whose circuit is not closed is shut
+	/// again (<c>0x004dfd1e</c>): <c>OPEN_GUARD_COASTER_TRACK_RECORD</c>, as <see cref="MayOpen"/> counts it.
+	/// </remarks>
+	/// <param name="trackType">The item's <c>TrackType</c>.</param>
+	public static void Repair( ParkState state, RideScript? script, int thingId, int trackType = 0 )
+	{
+		if ( !state.TryObject( thingId, out var thing ) )
+			return;
+
+		if ( thing.State == 2 )
+		{
+			Unimplemented.Report( "RIDE_UPGRADE_COMPLETION" );
+
+			return;
+		}
+
+		Log.Info( $"Object {thingId}: repairing fully, State of repair {thing.StateOfRepair:R} to 100" );
+
+		script?.Set( WornVariable, 0 );
+		state.ReplaceObject( thing with { StateOfRepair = 100f, AssignedStaff = 0, RequestedService = 0 } );
+		script?.Set( BreakStatVariable, 0 );
+
+		Open( state, script, thingId );
+
+		if ( trackType == ItemDescriptionFile.CoasterTrack )
+			Unimplemented.Report( "OPEN_GUARD_COASTER_TRACK_RECORD" );
+	}
+
+	/// <summary>
 	/// The handyman's clean - <c>FUN_004dfd80</c>, whose one caller is his cleaning state's end: the script's
 	/// <see cref="WornVariable"/> nought, the State of repair (<c>+0x44</c>) 100, and the assigned member
 	/// (<c>+0x5e</c>) and the request for service (<c>+0x64</c>) forgotten, toilet or not
@@ -1183,6 +1222,12 @@ public sealed class ParkRideOperation
 	/// twelve names every ride script declares - reached by name, as everything here is.
 	/// </remarks>
 	public const string BrokenVariable = "VAR_BROKEN";
+
+	/// <summary>
+	/// <c>VAR_BREAKSTAT</c>, variable 4 of the common twelve: the engine's word to a ride's script that it is
+	/// to break down, written nought again as its mechanic's repair runs out (<c>FUN_004e03f0</c>).
+	/// </summary>
+	public const string BreakStatVariable = "VAR_BREAKSTAT";
 
 	/// <summary>
 	/// Picks the guest at the head of the queue and invites them aboard - the original's

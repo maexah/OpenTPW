@@ -316,6 +316,7 @@ public sealed partial class ParkPeople : Entity
 			GateStatus = gateStatus,
 			GuestsInside = () => GateGuestCensus,
 			ScriptFor = scriptFor,
+			TrackTypeOf = TrackTypeOf,
 			StaffById = id => _staff.Find( member => member.ThingId == id ),
 			GuestsNear = GuestsNear,
 			StateGroupsOf = member => BankOf( member.ThingId )?.StateGroupsInUse ?? 0,
@@ -3342,6 +3343,7 @@ public sealed partial class ParkPeople : Entity
 				+ $"cell ({nav.Position.Cell.X},{nav.Position.Cell.Y}) heading {walk?.Heading ?? -1} "
 				+ $"has {(walk == null ? "no-walk" : walk.HasRoute ? "route" : "no-route")} "
 				+ $"loo {member.ToiletToClean} cleaningSince {member.TimeStartedCleaning} "
+				+ $"repair {member.ObjectToRepair} repairLeft {member.DurationOfRepair} "
 				+ $"performingSince {member.TimeStartedEntertaining} "
 				+ $"researchingSince {member.TimeStartedResearching} "
 				+ $"hired {(ParkWorld.StaffState.HiredWhenOf( member.TimeHired ) is { } hired ? hired.ToString( "d/M/yyyy HH:mm:ss" ) : $"0x{member.TimeHired:x}")} "

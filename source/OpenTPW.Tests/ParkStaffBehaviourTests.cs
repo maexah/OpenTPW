@@ -306,9 +306,10 @@ public class ParkStaffBehaviourTests
 	}
 
 	/// <summary>
-	/// Each search for work is counted where the original makes it: the mechanic's ride on every decide
-	/// (<c>FUN_004daa90</c>), the handyman's litter on every decide (<c>FUN_004c8ed0</c>), and nobody else's. His
-	/// toilet search is built (<see cref="ParkHandymanCleanTests"/>).
+	/// Each search for work is made where the original makes it: the mechanic's ride on every decide
+	/// (<c>FUN_004daa90</c>, which steps the mechanics' cursor), the handyman's litter, counted, on every decide
+	/// (<c>FUN_004c8ed0</c>), and nobody else's. His toilet search and the mechanic's are built
+	/// (<see cref="ParkHandymanCleanTests"/>, <see cref="ParkMechanicRepairTests"/>).
 	/// </summary>
 	[DataTestMethod]
 	[DataRow( Mechanic, 1, 0 )]
@@ -319,12 +320,12 @@ public class ParkStaffBehaviourTests
 	public void EachSearchForWorkIsCountedAtItsOwnKindsDecide( int thing, int ride, int litter )
 	{
 		var (member, walk, state) = OnThePath( thing );
-		var before = (Counted( "MECHANIC_RIDE_SEARCH" ), Counted( "HANDYMAN_LITTER_SEARCH" ));
+		var before = (state.MechanicCursor, Counted( "HANDYMAN_LITTER_SEARCH" ));
 
 		// 1001 divides by no grade's idle duration, so the handyman's pre-step is not counted beside it.
 		new StaffBehaviour( Balance(), new ConstantDraw(), state ).Step( member, walk, playing: null, tick: 1001 );
 
-		Assert.AreEqual( ride, Counted( "MECHANIC_RIDE_SEARCH" ) - before.Item1 );
+		Assert.AreEqual( ride, state.MechanicCursor == before.Item1 ? 0 : 1 );
 		Assert.AreEqual( litter, Counted( "HANDYMAN_LITTER_SEARCH" ) - before.Item2 );
 	}
 
@@ -364,7 +365,8 @@ public class ParkStaffBehaviourTests
 	public void ATiredMemberOfAnyKindGoesToRestAndLooksForNoWork( int thing )
 	{
 		var (member, walk, state) = OnThePath( thing );
-		var before = Counted( "MECHANIC_RIDE_SEARCH" ) + Counted( "HANDYMAN_LITTER_SEARCH" );
+		var before = Counted( "HANDYMAN_LITTER_SEARCH" );
+		var cursor = state.MechanicCursor;
 		var asked = 0;
 
 		member.Tiredness = 0.5f;
@@ -376,7 +378,8 @@ public class ParkStaffBehaviourTests
 
 		Assert.AreEqual( StaffActivity.GoingToRest, member.Activity );
 		Assert.AreNotEqual( 0, member.RestArea );
-		Assert.AreEqual( before, Counted( "MECHANIC_RIDE_SEARCH" ) + Counted( "HANDYMAN_LITTER_SEARCH" ) );
+		Assert.AreEqual( before, Counted( "HANDYMAN_LITTER_SEARCH" ) );
+		Assert.AreEqual( cursor, state.MechanicCursor, "the mechanics' cursor is not stepped" );
 		Assert.AreEqual( 0, asked, "and the entertainer does not look" );
 	}
 
@@ -1343,7 +1346,7 @@ public class ParkStaffBehaviourTests
 
 	/// <summary>
 	/// Too tired to work is the rest byte under RestLevel, strictly (<c>FUN_00506680</c>): at a byte of nought the
-	/// mechanic and the handyman make no search and the handyman's toilet is not written; at a byte of 1, tired
+	/// mechanic and the handyman make no search and neither's job is written; at a byte of 1, tired
 	/// but not too tired, both search.
 	/// </summary>
 	[DataTestMethod]
@@ -1351,12 +1354,15 @@ public class ParkStaffBehaviourTests
 	[DataRow( 1.5f, 1 )]
 	public void OneTooTiredToWorkMakesNoSearch( float rest, int searches )
 	{
-		var mechanicBefore = Counted( "MECHANIC_RIDE_SEARCH" );
 		var (mechanic, mechanicWalk, mechanicState) = WithNoRestArea( Mechanic, rest );
+		var cursor = mechanicState.MechanicCursor;
+
+		mechanic.ObjectToRepair = 77;
 
 		new StaffBehaviour( Balance(), new Random( 3 ), mechanicState ).Step( mechanic, mechanicWalk, playing: null, tick: 1001 );
 
-		Assert.AreEqual( searches, Counted( "MECHANIC_RIDE_SEARCH" ) - mechanicBefore );
+		Assert.AreEqual( searches, mechanicState.MechanicCursor == cursor ? 0 : 1 );
+		Assert.AreEqual( searches == 0 ? 77 : 0, mechanic.ObjectToRepair, "the ride found is written only when the search is made" );
 		Assert.AreEqual( StaffActivity.Walking, mechanic.Activity, "and walks either way" );
 
 		var litterBefore = Counted( "HANDYMAN_LITTER_SEARCH" );

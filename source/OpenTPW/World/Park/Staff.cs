@@ -100,6 +100,18 @@ public sealed class Staff
 	public int TimeStartedCleaning { get; internal set; }
 
 	/// <summary>
+	/// The object a mechanic's search last found, a thing id, or nought - <c>mObjectToRepair</c>
+	/// (<c>+0x218</c>). His decide writes it every time it looks, and it is kept where no route reaches the ride.
+	/// </summary>
+	public int ObjectToRepair { get; internal set; }
+
+	/// <summary>
+	/// How many more sweeps a mechanic's repair takes - <c>mDurationOfRepair</c> (<c>+0x214</c>), a count down
+	/// set by <see cref="StartRepairing"/>.
+	/// </summary>
+	public int DurationOfRepair { get; internal set; }
+
+	/// <summary>
 	/// The park clock when an entertainer began performing - <c>mTimeStartedEntertaining</c>, the same
 	/// <c>+0x214</c>, stamped by <see cref="StartPerforming"/>.
 	/// </summary>
@@ -245,6 +257,8 @@ public sealed class Staff
 		TimeStartedCleaning = saved.TimeStartedCleaning;
 		TimeStartedEntertaining = saved.TimeStartedEntertaining;
 		TimeStartedResearching = saved.TimeStartedResearching;
+		ObjectToRepair = saved.ObjectToRepair;
+		DurationOfRepair = saved.DurationOfRepair;
 		TimeHired = saved.TimeHired;
 
 		// The bubble showing when the park was saved is a slot of the sprite table (mThoughtScript), which ParkPeople joins.
@@ -293,7 +307,7 @@ public sealed class Staff
 	/// </summary>
 	public static bool IsAWalkingState( StaffActivity activity ) => activity is
 		StaffActivity.Walking or StaffActivity.GoingToRest or StaffActivity.GoingOnStrike
-		or StaffActivity.GoingToLoo;
+		or StaffActivity.GoingToLoo or StaffActivity.GoingToRide;
 
 	/// <summary>
 	/// Moves this member of staff into a new state, doing what the original's <c>FUN_005054d0</c> does on
@@ -334,6 +348,21 @@ public sealed class Staff
 
 		Activity = next;
 	}
+
+	/// <summary>
+	/// Starts a mechanic's repair - <c>FUN_004da370</c>'s <c>0xd</c> arm: animation <c>0x12</c> queued, the count
+	/// down and the state. The shared setter does not run, so the idle stamp and the hurry are left as they were.
+	/// </summary>
+	/// <param name="duration">How many sweeps the repair takes after this one.</param>
+	internal void StartRepairing( int duration )
+	{
+		NextAnimation = RepairingAnimation;
+		DurationOfRepair = duration;
+		Activity = StaffActivity.Repairing;
+	}
+
+	/// <summary>The animation a repairing mechanic is put on, <c>0x12</c> (<c>0x004da399</c>).</summary>
+	public const int RepairingAnimation = 0x12;
 
 	/// <summary>
 	/// Starts an entertainer's performance - the three inline writes at the end of <c>FUN_004d46d0</c>'s look:
@@ -379,7 +408,8 @@ public sealed class Staff
 	/// </summary>
 	public static int AnimationFor( StaffActivity activity ) => activity switch
 	{
-		StaffActivity.Walking or StaffActivity.GoingOnStrike or StaffActivity.GoingToLoo => 9,
+		StaffActivity.Walking or StaffActivity.GoingOnStrike or StaffActivity.GoingToLoo
+			or StaffActivity.GoingToRide => 9,
 		StaffActivity.Cleaning => 0x11,
 		StaffActivity.GoingToRest => 1,
 		StaffActivity.OnStrike => 0x13,

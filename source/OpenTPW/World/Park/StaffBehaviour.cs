@@ -63,6 +63,9 @@ public sealed class StaffBehaviour
 	/// <summary>A thing's own ride script, for the clean's <c>VAR_WORN</c> and the open that follows it.</summary>
 	public Func<int, RideScript?>? ScriptFor { get; init; }
 
+	/// <summary>An object's item's <c>TrackType</c>, which the repair's open asks; nought where nothing answers.</summary>
+	public Func<ParkWorld.CatalogueObject, int>? TrackTypeOf { get; init; }
+
 	/// <summary>
 	/// The member of staff with a thing id, which a toilet's forgetting asks of whoever it is assigned to
 	/// (<c>FUN_004e0220</c>).
@@ -118,6 +121,7 @@ public sealed class StaffBehaviour
 	private readonly int[] _idleDuration = new int[ParkWorld.StaffState.PayGrades];
 	private readonly int[] _handymanWork = new int[ParkWorld.StaffState.PayGrades];
 	private readonly int[] _handymanRange = new int[ParkWorld.StaffState.PayGrades];
+	private readonly int[] _mechanicWork = new int[ParkWorld.StaffState.PayGrades];
 	private readonly float[] _recuperation = new float[ParkWorld.StaffState.PayGrades];
 	private readonly float[] _happinessRecuperation = new float[ParkWorld.StaffState.PayGrades];
 
@@ -156,6 +160,7 @@ public sealed class StaffBehaviour
 		int[] reachFallback = [3, 3, 4, 4, 5];
 		int[] researchFallback = [10, 20, 30, 40, 50];
 		int[] abilityFallback = [2, 3, 4, 5, 6];
+		int[] repairFallback = [80, 60, 40, 30, 20];
 
 		for ( var grade = 0; grade < ParkWorld.StaffState.PayGrades; ++grade )
 		{
@@ -175,6 +180,9 @@ public sealed class StaffBehaviour
 				?? workFallback[grade];
 			_handymanRange[grade] = balance?.Int( $"{handyman}.DetectionRange", rangeFallback[grade] )
 				?? rangeFallback[grade];
+
+			_mechanicWork[grade] = balance?.Int( $"MechanicConstsPerGrade[{grade}].WorkDuration", repairFallback[grade] )
+				?? repairFallback[grade];
 
 			var entertainer = $"EntertainerConstsPerGrade[{grade}]";
 
@@ -224,6 +232,13 @@ public sealed class StaffBehaviour
 	/// </summary>
 	public int HandymanDetectionRangeAt( int grade )
 		=> _handymanRange[Math.Clamp( grade, 0, _handymanRange.Length - 1 )];
+
+	/// <summary>
+	/// How long a mechanic of this grade takes over a ride with no repair left -
+	/// <c>MechanicConstsPerGrade.WorkDuration</c>, the table at <c>0x0078542c</c>: 80, 60, 40, 30, 20.
+	/// </summary>
+	public int MechanicWorkDurationAt( int grade )
+		=> _mechanicWork[Math.Clamp( grade, 0, _mechanicWork.Length - 1 )];
 
 	/// <summary>
 	/// How long an entertainer of this grade performs - <c>EntertainerConstsPerGrade.WorkDuration</c>, the table
@@ -464,6 +479,52 @@ public sealed class StaffBehaviour
 
 				break;
 
+			// A mechanic on the way to a ride - FUN_004da740. The ride's own word on who is assigned to it comes
+			// first; then a step of the walk, which costs no rest or mood here: the arm has no FUN_005066a0.
+			case StaffActivity.GoingToRide:
+				if ( _state == null || !_state.TryObject( staff.ObjectToRepair, out var aimedAt )
+					|| AssignedTo( aimedAt, tick ) != staff.ThingId )
+				{
+					Log.Info( $"Staff: mechanic {staff.ThingId} is not the member assigned to ride "
+						+ $"{staff.ObjectToRepair} on mGameTick {tick}" );
+					staff.ObjectToRepair = 0;
+					Decide( staff, walk, tick );
+
+					break;
+				}
+
+				switch ( Walked( staff, walk, playing ) )
+				{
+					case WalkVerdict.Arrived:
+						ArriveAtTheRide( staff, walk, aimedAt, tick );
+						break;
+
+					case WalkVerdict.CannotReach:
+						staff.ObjectToRepair = 0;
+						Decide( staff, walk, tick );
+						break;
+
+					default:
+						break;
+				}
+
+				break;
+
+			// A mechanic repairing - FUN_004da830: a turn of work, the count down a sweep, and at nought the end.
+			case StaffActivity.Repairing:
+				Work( staff );
+
+				if ( staff.DurationOfRepair != 0 )
+				{
+					--staff.DurationOfRepair;
+
+					break;
+				}
+
+				RepairOn( staff, walk, tick );
+
+				break;
+
 			// An entertainer performing - FUN_004d4810's case 0xe: a turn of work, then, on the first sweep past
 			// stamp + WorkDuration, the end's sound and the decide again in the same turn, which may start another
 			// performance on a fresh stamp.
@@ -544,10 +605,42 @@ public sealed class StaffBehaviour
 
 		switch ( staff.Model )
 		{
-			// FUN_004da5b0: a ride to fix (FUN_004daa90), which nothing here looks for, else a random walk.
+			// FUN_004da5b0: a ride to fix (FUN_004daa90; docs/exe/ride-operation.md, "The mechanic's search"),
+			// else a random walk. The ride found, or nought, is written every time the search is made, and is
+			// kept where no route reaches it.
 			case MechanicModel:
-				if ( !tooTired )
-					Unimplemented.Report( "MECHANIC_RIDE_SEARCH" );
+				if ( tooTired )
+				{
+					WalkAbout( staff, walk, tick );
+
+					break;
+				}
+
+				staff.ObjectToRepair = FindRide( staff, walk, tick );
+
+				if ( staff.ObjectToRepair != 0 && _state!.TryObject( staff.ObjectToRepair, out var broken ) )
+				{
+					if ( AimAtEntryOf( staff, walk, broken ) )
+					{
+						_state.ReplaceObject( broken with
+						{
+							AssignedStaff = (ushort)staff.ThingId, TimeMarkedForMaintenance = tick
+						} );
+
+						// A ride nobody called him to gets advisor message 0x46 (0x004da6bf), which nothing posts.
+						if ( broken.RequestedService == 0 )
+							Unimplemented.Report( "MECHANIC_ON_HIS_WAY_MESSAGE" );
+
+						Log.Info( $"Staff: mechanic {staff.ThingId} found ride {broken.ThingId} that needs fixing, "
+							+ $"walking to it on mGameTick {tick}" );
+						staff.SetActivity( StaffActivity.GoingToRide, tick );
+
+						break;
+					}
+
+					Log.Info( $"Staff: mechanic {staff.ThingId} could not reach broken ride {broken.ThingId} "
+						+ $"on mGameTick {tick}" );
+				}
 
 				WalkAbout( staff, walk, tick );
 
@@ -749,6 +842,119 @@ public sealed class StaffBehaviour
 	public const int RestPerBaseSpeed = 20;
 
 	/// <summary>
+	/// The mechanic's search for a ride to fix - <c>FUN_004daa90</c>, over the park's objects from the
+	/// mechanics' cursor (<see cref="ParkState.ObjectsFromTheMechanicsCursor"/>;
+	/// <c>docs/exe/ride-operation.md</c>, "The mechanic's search"). An object is a candidate when it is broken
+	/// down (state 1), or a mechanic has been called to it and it is no toilet, and nobody else is assigned to
+	/// it (<see cref="AssignedTo"/>). The nearest wins, cell to cell from the mechanic's own, squared and
+	/// strictly, at any distance; no route is asked for here.
+	/// </summary>
+	/// <remarks>
+	/// <b>Not built, counted.</b> An object waiting for an upgrade (state 2) is a candidate in the original;
+	/// here it is passed over, <c>MECHANIC_UPGRADE_JOB</c>. A thing in the hand is passed over, as
+	/// <see cref="FindToilet"/> passes it over.
+	/// </remarks>
+	/// <returns>The ride's thing id, or nought.</returns>
+	private int FindRide( Staff staff, PeepWalk walk, int tick )
+	{
+		if ( _state == null )
+			return 0;
+
+		var (x, y) = walk.Position.Cell;
+		var winner = 0;
+		var best = uint.MaxValue;
+
+		foreach ( var candidate in _state.ObjectsFromTheMechanicsCursor() )
+		{
+			if ( !candidate.IsPlaced )
+				continue;
+
+			if ( candidate.State == 2 )
+			{
+				Unimplemented.Report( "MECHANIC_UPGRADE_JOB" );
+
+				continue;
+			}
+
+			if ( candidate.State != ParkRideChoice.StateRefusedOne
+				&& !(candidate.RequestedService != 0 && !candidate.IsToilet) )
+				continue;
+
+			var assigned = AssignedTo( candidate, tick );
+
+			if ( assigned != 0 && assigned != staff.ThingId )
+				continue;
+
+			var acrossBy = candidate.CellX - x;
+			var downBy = candidate.CellY - y;
+			var distance = (uint)((acrossBy * acrossBy) + (downBy * downBy));
+
+			if ( distance >= best )
+				continue;
+
+			best = distance;
+			winner = candidate.ThingId;
+		}
+
+		return winner;
+	}
+
+	/// <summary>
+	/// The end of a mechanic's walk to a ride - <c>FUN_004da740</c>'s arrival: a ride still broken down or
+	/// still calling for him is repaired, for <see cref="MechanicWorkDurationAt"/> sweeps scaled by the State of
+	/// repair it has lost, cut to a byte (<c>FUN_004da370</c>, <c>0x004da42a</c>); any other sends him back to
+	/// his decide, the ride still named.
+	/// </summary>
+	private void ArriveAtTheRide( Staff staff, PeepWalk walk, ParkWorld.CatalogueObject ride, int tick )
+	{
+		if ( ride.State != ParkRideChoice.StateRefusedOne && ride.RequestedService == 0 )
+		{
+			Log.Info( $"Staff: mechanic {staff.ThingId} arrived at ride {ride.ThingId} on mGameTick {tick} "
+				+ "but it does not need fixing" );
+			Decide( staff, walk, tick );
+
+			return;
+		}
+
+		var lost = 100 - (byte)(int)ride.StateOfRepair;
+
+		staff.StartRepairing( lost * MechanicWorkDurationAt( staff.PayGrade ) / 100 );
+
+		Log.Info( $"Staff: mechanic {staff.ThingId} starts repairing ride {ride.ThingId} on mGameTick {tick}, "
+			+ $"{staff.DurationOfRepair} sweeps to go" );
+	}
+
+	/// <summary>
+	/// The end of a repair's count down - <c>0x004da86d</c>..<c>0x004da8d6</c>. A ride broken down has its
+	/// script told the break is over (<see cref="ParkRideOperation.BreakStatVariable"/> nought), and the
+	/// mechanic works on, a sweep at a time, while the script still reads broken
+	/// (<see cref="ParkRideOperation.BrokenVariable"/> above nought). Then the ride is repaired and opened
+	/// (<see cref="ParkRideOperation.Repair"/>), the job forgotten and the decide made in the same turn.
+	/// </summary>
+	private void RepairOn( Staff staff, PeepWalk walk, int tick )
+	{
+		if ( _state != null && _state.TryObject( staff.ObjectToRepair, out var ride ) )
+		{
+			var script = ScriptFor?.Invoke( ride.ThingId );
+
+			if ( ride.State == ParkRideChoice.StateRefusedOne )
+			{
+				script?.Set( ParkRideOperation.BreakStatVariable, 0 );
+
+				if ( script != null && script[ParkRideOperation.BrokenVariable] > 0 )
+					return;
+			}
+
+			ParkRideOperation.Repair( _state, script, ride.ThingId, TrackTypeOf?.Invoke( ride ) ?? 0 );
+		}
+
+		Log.Info( $"Staff: mechanic {staff.ThingId} finished repairing ride {staff.ObjectToRepair} on mGameTick {tick}" );
+
+		staff.ObjectToRepair = 0;
+		Decide( staff, walk, tick );
+	}
+
+	/// <summary>
 	/// The handyman's search for a toilet to clean - <c>FUN_004d7880</c>, over the park's live objects in chain
 	/// order (<c>docs/exe/ride-operation.md</c>, "A toilet's dirt"). A toilet is a candidate when nobody else
 	/// is assigned to it (<see cref="AssignedTo"/>) and either it has asked for service and is nearer than the
@@ -840,12 +1046,9 @@ public sealed class StaffBehaviour
 	/// The member of staff assigned to a thing - <c>FUN_004e0220</c>, the getter every reader of
 	/// <c>mAssignedStaffMember</c> goes through. An assignment more than <see cref="AssignmentKept"/> sweeps old
 	/// whose member no longer aims at this thing (<c>FUN_00506580</c>: a handyman's
-	/// <see cref="Staff.ToiletToClean"/>) is forgotten there and then, member and stamp both.
+	/// <see cref="Staff.ToiletToClean"/>, a mechanic's <see cref="Staff.ObjectToRepair"/>) is forgotten there
+	/// and then, member and stamp both.
 	/// </summary>
-	/// <remarks>
-	/// A mechanic's aim is his <c>+0x218</c>, which nothing here keeps: an assigned mechanic reads as aiming
-	/// elsewhere. Nobody here assigns one; only a save can.
-	/// </remarks>
 	private int AssignedTo( ParkWorld.CatalogueObject thing, int tick )
 	{
 		if ( thing.AssignedStaff == 0 )
@@ -854,8 +1057,9 @@ public sealed class StaffBehaviour
 		if ( (uint)(thing.TimeMarkedForMaintenance + AssignmentKept) >= (uint)tick )
 			return thing.AssignedStaff;
 
-		if ( StaffById?.Invoke( thing.AssignedStaff ) is { Model: HandymanModel } member
-			&& member.ToiletToClean == thing.ThingId )
+		if ( StaffById?.Invoke( thing.AssignedStaff ) is { } member
+			&& ((member.Model == HandymanModel && member.ToiletToClean == thing.ThingId)
+				|| (member.Model == MechanicModel && member.ObjectToRepair == thing.ThingId)) )
 			return thing.AssignedStaff;
 
 		Log.Info( $"Object {thing.ThingId}: removing staff member {thing.AssignedStaff} from it, "
@@ -1492,6 +1696,14 @@ public sealed class StaffBehaviour
 			staff.SetActivity( StaffActivity.Idle, tick );
 
 			Log.Info( $"Staff: {staff.ThingId} dropped the job on loo {thingId}, now {staff.Activity}" );
+		}
+
+		if ( thingId != 0 && staff.Model == MechanicModel && staff.ObjectToRepair == thingId )
+		{
+			staff.ObjectToRepair = 0;
+			staff.SetActivity( StaffActivity.Idle, tick );
+
+			Log.Info( $"Staff: {staff.ThingId} dropped the job on ride {thingId}, now {staff.Activity}" );
 		}
 
 		if ( thingId == 0 || staff.RestArea != thingId )

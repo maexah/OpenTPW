@@ -742,7 +742,8 @@ public sealed partial class ParkWorld : IParkInitialState
 		int PatrolBottomLeft, int PatrolTopRight, int RestArea, int PercentageThroughGrade,
 		int TimeStartedIdling, string Name = "", int ToiletToClean = 0, int TimeStartedCleaning = 0,
 		int TimeStartedEntertaining = 0, int TimeStartedResearching = 0, long TimeHired = 0,
-		int LastThought = 0, int ThoughtScript = 0, int TimeBubbleShown = 0 )
+		int LastThought = 0, int ThoughtScript = 0, int TimeBubbleShown = 0,
+		int DurationOfRepair = 0, int ObjectToRepair = 0 )
 	{
 		/// <summary>
 		/// A time on the park's calendar as <c>mTimeHired</c> holds one: a <c>FILETIME</c>, the hundreds of
@@ -2018,6 +2019,11 @@ public sealed partial class ParkWorld : IParkInitialState
 			}
 			else if ( model == StaffHqModel )
 				StaffHq = ReadStaffHq( start );
+			else if ( model == MechanicHqModel )
+			{
+				MechanicHqAt = start;
+				MechanicCursor = ReadUInt16At( start + MechanicHqNextObjectAt );   // mNextObject
+			}
 
 			_things.Add( new( id, model ) );
 			_records.Add( new( id, model, start, size ) );
@@ -2459,7 +2465,8 @@ public sealed partial class ParkWorld : IParkInitialState
 	/// <para>
 	/// <b>What each kind adds after this block is decoded, and the handyman's toilet job, the entertainer's
 	/// stamp and the researcher's are read</b> (<c>mToiletToClean</c>, <c>mTimeStartedCleaning</c>,
-	/// <c>mTimeStartedEntertaining</c>, <c>mTimeStartedResearching</c>): no other kind's work is built.
+	/// <c>mTimeStartedEntertaining</c>, <c>mTimeStartedResearching</c>), <b>and the mechanic's repair job</b>
+	/// (<c>mDurationOfRepair</c>, <c>mObjectToRepair</c>): the guard's chase is not built.
 	/// They are recorded here so the next reader need not find them again. A mechanic adds
 	/// <c>mDurationOfRepair</c> (+503, 4), <c>mObjectToRepair</c> (+507, 2) and <c>mNext</c> (+509, 2); a
 	/// handyman <c>mTargetLitterCell</c> (+503, 2), <c>mTimeStartedCleaning</c> (+505, 4),
@@ -2490,7 +2497,12 @@ public sealed partial class ParkWorld : IParkInitialState
 			TimeHired: System.Buffers.Binary.BinaryPrimitives.ReadInt64LittleEndian( _data.AsSpan( start + 491, 8 ) ), // mTimeHired
 			LastThought: ReadInt32At( start + 386 ),            // mLastThought, the person base's as a guest's
 			ThoughtScript: ReadInt32At( start + 390 ),          // mThoughtScript
-			TimeBubbleShown: ReadInt32At( start + 394 ) );      // mTimeBubbleShown
+			TimeBubbleShown: ReadInt32At( start + 394 ),        // mTimeBubbleShown
+			DurationOfRepair: model == MechanicModel ? ReadInt32At( start + 503 ) : 0,      // mDurationOfRepair
+			ObjectToRepair: model == MechanicModel ? ReadUInt16At( start + 507 ) : 0 );     // mObjectToRepair
+
+	/// <summary>The mechanic's thing model.</summary>
+	private const int MechanicModel = 4;
 
 	/// <summary>The handyman's thing model.</summary>
 	private const int HandymanModel = 5;
@@ -2520,6 +2532,38 @@ public sealed partial class ParkWorld : IParkInitialState
 		}
 
 		return name.ToString();
+	}
+
+	/// <summary>
+	/// The mechanics' HQ's <c>mNextObject</c> - model 10, thing 2 in every park file, which the header's
+	/// <c>mMechanicHQ</c> names: the object the mechanics' search for a ride to fix last began on, a thing id, or
+	/// nought (<c>FUN_004daa90</c>; <c>docs/exe/ride-operation.md</c>, "The mechanic's search"). Nought where the
+	/// file holds no such thing.
+	/// </summary>
+	public int MechanicCursor { get; private set; }
+
+	/// <summary>Where the mechanics' HQ's record lies in the body, or -1 with none.</summary>
+	public int MechanicHqAt { get; private set; } = -1;
+
+	/// <summary>The model number of the mechanics' HQ - see <see cref="MechanicCursor"/>.</summary>
+	private const int MechanicHqModel = 10;
+
+	/// <summary>Where <c>mNextObject</c> sits in the mechanics' HQ's record: its last two bytes of eighteen.</summary>
+	private const int MechanicHqNextObjectAt = 16;
+
+	/// <summary>
+	/// Writes the mechanics' HQ's <c>mNextObject</c> over the file's in <paramref name="body"/>, a copy of this
+	/// park's own. A park with no such thing is left alone.
+	/// </summary>
+	public void PutMechanicCursor( byte[] body, int cursor )
+	{
+		ArgumentNullException.ThrowIfNull( body );
+
+		if ( MechanicHqAt < 0 )
+			return;
+
+		System.Buffers.Binary.BinaryPrimitives.WriteUInt16LittleEndian(
+			body.AsSpan( MechanicHqAt + MechanicHqNextObjectAt, 2 ), unchecked((ushort)cursor) );
 	}
 
 	/// <summary>The model number of the staff HQ - see <see cref="StaffHqState"/>.</summary>

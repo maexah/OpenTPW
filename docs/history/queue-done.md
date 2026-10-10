@@ -5833,6 +5833,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the build before kept four seated and the door open; the file's `mState` 1 and `mCanLoad` 0 are the
   original's own file's, and the original under Proton read them on its first poll after the load and had its
   mechanic mend the pot 32 ticks on (`saves.md`, "OpenTPW's writer, a broken ride's state").
+- [x] **Q257z. The mechanic mends a broken ride.** Done 2026-10-10, `alexah/402-the-mechanic-mends-a-broken-ride`.
+  Split by the session: the item's other pieces are Q258. The mechanic's search with its saved cursor
+  (`FUN_004daa90`, the mechanics' HQ's `mNextObject`), his walk to the ride, the repair's count and the ride's
+  side (`FUN_004da5b0`, `FUN_004da740`, `FUN_004da830`, `FUN_004df8f0`) are read and built, and his job and the
+  cursor written: in the game a Hot Pot broken in a go had mechanic 26 set off inside a second, predicted,
+  repairing 40 to 62 sweeps on and the pot open two sweeps later, 7 of 7 in three runs, the hoardings up and
+  down and him in its doorway in the frames, where the build before left it shut for good; the original under
+  Proton, loading the file saved as he set off, read him assigned on its first tick and had the pot open 42
+  ticks on, as the run that wrote it, and its own cursor steps one object a decide as read
+  (`ride-operation.md`, "The mechanic's repair"; `saves.md`, "OpenTPW's writer, the mechanic's job").
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.
