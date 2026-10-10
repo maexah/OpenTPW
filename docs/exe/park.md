@@ -1204,7 +1204,7 @@ A list node comes from `DAT_00877b8c`: `+0` peep, `+4` handle, `+8` seat node (-
 | 5 | none | Answers the object's `+0x2c`, `mIsTrackRideValid`. |
 | 6 | `FUN_00544a10` | Unless closed: state 0, the boarding list onto the leaving list's tail; bumper cars timed 0 and set `0x20`. "Close ride". |
 | 7 | `FUN_00544840` | Types -1, -2, -3, -6, -11 and -14: state 1, whatever it was. The karts and water, only from 0 (1 or 2, and the start buoy). Then the performance. "Open ride". |
-| 8 | `FUN_00544c80` / `FUN_00544e50` | Non-zero: `+0x54` = 2, smoke at each car's emitter, Hot Pot cars anim `0xc`. Zero: `+0x54` = 0, and only from 2 "Ride Fixed", smoke killed, anim 5. |
+| 8 | `FUN_00544c80` / `FUN_00544e50` | Non-zero: `+0x54` = 2, smoke (effect 2, its handle at the car's `+0x2c`) at the emitter node of each car flagged `0x4000` that has none, Hot Pot cars anim `0xc`. Zero: `+0x54` = 0, and only from 2 "Ride Fixed", smoke killed, anim 5. `saves.md`, "OpenTPW's writer, a smoking car". |
 | 9 | `FUN_00544c00` / `FUN_00544e50` | Non-zero: `+0x54` = 1, "Ride worn out". Zero: as 8's. |
 | 10 | `FUN_00544b50` | Removes every car (their riders to the leaving list), then closes. |
 | 11 | `FUN_005452a0` | Answers `+0x5c`. |

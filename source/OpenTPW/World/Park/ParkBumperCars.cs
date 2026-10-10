@@ -293,6 +293,12 @@ public sealed class ParkBumperCars
 		/// <summary><c>+0x2c</c> not -1: smoke rising from its emitter while the ride is broken.</summary>
 		public bool Smoking { get; internal set; }
 
+		/// <summary>
+		/// <c>+0x2c</c> as a park file held it: the handle of its smoke's emitter in that file's particles module.
+		/// -1 with no smoke, and for smoke started here, which has no emitter until a file is written.
+		/// </summary>
+		public int Smoke { get; internal set; } = NoSmoke;
+
 		public bool IsLive => (Flags & CarFlags.Live) != 0;
 	}
 
@@ -523,7 +529,8 @@ public sealed class ParkBumperCars
 		car.SavedModel = saved.Word( 0x08 );
 		car.Animation = saved.Word( 0x10 );
 		car.Voice = null;
-		car.Smoking = saved.Word( 0x2c ) != -1;
+		car.Smoke = saved.Word( 0x2c );
+		car.Smoking = car.Smoke != NoSmoke;
 		car.X = saved.Word( 0x34 );
 		car.Z = saved.Word( 0x38 );
 		car.VelocityX = saved.Word( 0x3c );
@@ -626,10 +633,12 @@ public sealed class ParkBumperCars
 	/// <para>
 	/// <b>Written as a boat of the Hot Pot holds them, not kept here:</b> the stuck count <c>+0xa4</c>, -1 from its
 	/// placement on, and <c>+0x60</c>, <c>+0x68</c>, <c>+0x84</c> and <c>+0xa8</c>, nought.
-	/// <b>Deviations:</b> the held sound <c>+0x20</c> and the smoke's emitter <c>+0x2c</c> are written as none, where the
-	/// original writes the session's own handles (a load finds the voice gone and empties it; no emitter alive is
-	/// written, <c>SAVE_PARK_CAR_SMOKE</c>); and the four pointers <c>+0x30</c>, <c>+0x94</c>, <c>+0x98</c> and
-	/// <c>+0x9c</c> are nought, each made again by the loader.
+	/// <b>The smoke's emitter</b> <c>+0x2c</c> is the handle the car's file held while it still smokes, and otherwise
+	/// -1 for the writer, which starts the emitter of a car that began to smoke here and writes its handle
+	/// (<c>ParkFileWriter.WrittenCar.Smoke</c>).
+	/// <b>Deviations:</b> the held sound <c>+0x20</c> is written as none, where the original writes the session's own
+	/// handle (a load finds the voice gone and empties it); and the four pointers <c>+0x30</c>, <c>+0x94</c>,
+	/// <c>+0x98</c> and <c>+0x9c</c> are nought, each made again by the loader.
 	/// </para>
 	/// </summary>
 	/// <param name="height">The height it was last drawn at, <c>+0xa0</c>.</param>
@@ -645,7 +654,7 @@ public sealed class ParkBumperCars
 		Put( 0x10, car.Animation );
 		Put( 0x24, emitters.First );
 		Put( 0x28, emitters.Second );
-		Put( 0x2c, -1 );
+		Put( 0x2c, car.Smoking ? car.Smoke : NoSmoke );
 		Put( 0x34, car.X );
 		Put( 0x38, car.Z );
 		Put( 0x3c, car.VelocityX );
@@ -669,9 +678,6 @@ public sealed class ParkBumperCars
 		Put( 0x90, car.Phase );
 		BitConverter.TryWriteBytes( bytes.AsSpan( 0xa0, 4 ), height );
 		Put( 0xa4, -1 );
-
-		if ( car.Smoking )
-			Unimplemented.Report( "SAVE_PARK_CAR_SMOKE" );
 
 		var arena = RideOf( car.Arena );
 		var buoy = arena != null && car.Buoy >= 0 && car.Buoy < arena.Buoys.Count ? arena.Buoys[car.Buoy] : ((int X, int Z)?)null;
@@ -787,6 +793,7 @@ public sealed class ParkBumperCars
 		car.Phase = 0;
 		car.SavedModel = 0;
 		car.Smoking = false;
+		car.Smoke = NoSmoke;
 		car.Voice = null;
 		car.VelocityX = car.VelocityZ = car.SteppedX = car.SteppedZ = car.Speed = 0;
 		car.Steering = car.Turned = car.Turn = car.SteerX = car.SteerZ = car.OffsetX = car.OffsetZ = car.Patience = 0;
@@ -855,6 +862,12 @@ public sealed class ParkBumperCars
 		SetPerformance( handle, ride.Performance );
 	}
 
+	/// <summary>A car's <c>+0x2c</c> with no smoke.</summary>
+	public const int NoSmoke = -1;
+
+	/// <summary>The effect a broken ride's car smokes with (<c>FUN_00544c80</c>, <c>Particles_Spawn( 2, ... )</c> at <c>0x00544dd8</c>).</summary>
+	public const int SmokeEffect = 2;
+
 	/// <summary><c>BUMP 8</c> with a value - <c>FUN_00544c80</c>: broken, smoke at each running car, a Hot Pot car at rest.</summary>
 	public void Break( int handle )
 	{
@@ -908,6 +921,7 @@ public sealed class ParkBumperCars
 				continue;
 
 			car.Smoking = false;
+			car.Smoke = NoSmoke;
 
 			if ( ride.BumperType == -1 && (car.Flags & CarFlags.Active) != 0 )
 				car.Animation = 5;
@@ -1473,6 +1487,7 @@ public sealed class ParkBumperCars
 
 		car.Flags = CarFlags.None;
 		car.Smoking = false;
+		car.Smoke = NoSmoke;
 
 		// A puff where it was; its models let go of are the drawing's (ParkBumperBoats).
 		Unimplemented.Report( "BUMPER_CAR_REMOVED_PARTICLE" );

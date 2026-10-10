@@ -233,6 +233,24 @@ public sealed class ParkParticles
 		}
 
 		/// <summary>
+		/// Puts the emitter <paramref name="handle"/> names at a place, each of the three the park's units times 1024,
+		/// as <c>Particles_Move</c> does (<c>0x0051fe30</c>): a bumper car's step moves its smoke so every tick
+		/// (<c>0x00548613</c>). False where it names none.
+		/// </summary>
+		public bool Move( int handle, int x, int height, int z )
+		{
+			if ( !Names( Live, handle ) )
+				return false;
+
+			var at = EmittersAt + ((handle & 0xffff) * EmitterSize);
+
+			Put32( Live, at + XAt, x >> 4 );
+			Put32( Live, at + HeightAt, height >> 4 );
+			Put32( Live, at + ZAt, z >> 4 );
+			return true;
+		}
+
+		/// <summary>
 		/// Starts an emitter as <c>Particles_Spawn</c> does and answers its handle: nought for an effect of the
 		/// screen's while the system keeps to those, <see cref="NoSlot"/> with no slot free or no such effect.
 		///

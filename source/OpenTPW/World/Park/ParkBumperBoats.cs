@@ -84,6 +84,13 @@ public sealed class ParkBumperBoats : Entity
 	/// <summary>How many boats' clips were put back where a park file left them - for the census.</summary>
 	public int Resumed { get; private set; }
 
+	/// <summary>
+	/// Where node <paramref name="node"/> of the boat in <paramref name="slot"/> stands in the world as it is drawn,
+	/// or null with no boat there or no such node.
+	/// </summary>
+	internal Vector3? NodeAt( int slot, int node )
+		=> _boats.TryGetValue( slot, out var boat ) && boat.Model.TryGetDrawnNode( node, out var at ) != DrawnNode.Missing ? at : null;
+
 	/// <summary>How many boats are standing - for the census.</summary>
 	public int Standing => _boats.Count;
 

@@ -804,6 +804,7 @@ public static class DebugConsole
 							+ $"height {ParkBumperBoats.Current?.HeightOf( car.Index ):0.0000} "
 							+ ( ParkBumperBoats.Current?.AnimationsOf( car.Index )?.Channel( 0 ) is { IsIdle: false } clip
 								? $"clip start {clip.StartAnimTime} time {clip.AnimTime} frame {clip.AnimFrame:0.00} " : "clip none " )
+							+ (car.Smoking ? car.Smoke != ParkBumperCars.NoSmoke ? $"smoke 0x{car.Smoke:x} " : "smoke started " : "smoke none ")
 							+ $"flags 0x{(int)car.Flags:x} riders [{string.Join( ",", car.Riders.Select( rider => $"{rider.Peep}@{rider.Seat}" ) )}] "
 							+ ( car.Voice is ParkCarSounds.Held held
 								? $"sound effect {held.Effect} '{held.Voice.Name}' param {held.Values[1]} pitch {held.Pitch} rate {held.Voice.Rate:0.000} "
@@ -1763,7 +1764,9 @@ public static class DebugConsole
 
 					Reply( $"emitters: slot {emitter.Slot} count {emitter.Count} handle 0x{emitter.Handle:x} effect {emitter.Template} "
 						+ $"at ({emitter.X / 64},{emitter.Height / 64},{emitter.Z / 64}) aim {emittersOf.Particles.Aim( emitter.Slot )} life {emitter.Life}, "
-						+ (namedBy is { } owner ? $"named by script {owner.Handle} of thing {owner.Thing}" : "named by no record") );
+						+ (namedBy is { } owner ? $"named by script {owner.Handle} of thing {owner.Thing}"
+							: emittersOf.TrackRides.Cars.FirstOrDefault( car => car.Word( 0x2c ) == emitter.Handle ) is { } smoker
+								? $"named by a car of ride 0x{smoker.Handle:x}" : "named by no record") );
 				}
 
 				break;

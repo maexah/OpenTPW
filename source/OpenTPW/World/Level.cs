@@ -708,7 +708,14 @@ public class Level
 				foreach ( var emitter in emitters.Killed )
 					Log.Info( $"Save: emitter killed: slot {emitter.Slot} count {emitter.Count} effect {emitter.Template}" );
 
-				Log.Info( $"Save: {emitters.Started.Count} emitters started, {emitters.Killed.Count} killed, {emitters.NotStarted} not started" );
+				foreach ( var (ride, emitter, kept) in emitters.Smoke ?? [] )
+				{
+					Log.Info( $"Save: smoke {(kept ? "kept" : "started")} for a car of ride 0x{ride:x}: slot {emitter.Slot} count {emitter.Count} handle 0x{emitter.Handle:x} "
+						+ $"effect {emitter.Template} at ({emitter.X / 64f:0.00},{emitter.Height / 64f:0.00},{emitter.Z / 64f:0.00}) life {emitter.Life}" );
+				}
+
+				Log.Info( $"Save: {emitters.Started.Count} emitters started, {emitters.Killed.Count} killed, {emitters.NotStarted} not started, "
+					+ $"{emitters.Smoke?.Count ?? 0} cars' smoke" );
 			}
 
 			Log.Info( $"Save: {wrote.Objects} objects, {wrote.Scripts} scripts and {wrote.Models} models written as they run, "

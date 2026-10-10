@@ -644,4 +644,213 @@ public class ParkFileWriterEmitterTests
 
 		CollectionAssert.AreEqual( new[] { (515, 5, 311, (0, 19, 34)), (525, 5, 311, (0, 25, 30)), (534, 5, 311, (0, 25, 30)) }, aimed );
 	}
+
+	private const int PotHandle = unchecked((int)0xffffff00);
+
+	private static readonly SavedTrackRide Pot = new( PotHandle, 0x20400, 0x12c00, 0, 1140, 60, 1, 1, 750, 2 );
+
+	private static readonly SavedChannel AtRest = new( ParkThingStates.NoRole, 0, 0, 1f, 0, 0, 0, ParkThingStates.NoRole, 0, 0, 0f );
+
+	/// <summary>Where the original's own smoking boat's node stood under its menu's pause, and its emitter's place in its file.</summary>
+	private static readonly ParkParticles.Spawn TheirSmoke = new( 2, (int)(442.6575f * 1024f), (int)(30.4622f * 1024f), (int)(263.3747f * 1024f) );
+
+	private static readonly (int X, int Height, int Z) TheirSmokeAt = (28330, 1949, 16855);
+
+	/// <summary>A boat whose <c>+0x2c</c> holds <paramref name="smoke"/>, asking for <paramref name="spawn"/>.</summary>
+	private static ParkFileWriter.WrittenCar Boat( int smoke, ParkParticles.Spawn? spawn )
+	{
+		var bytes = new byte[SavedTrackCar.Size];
+
+		BinaryPrimitives.WriteInt32LittleEndian( bytes.AsSpan( 0x2c ), smoke );
+
+		var car = new SavedTrackCar( PotHandle, bytes, 0x20a00, 0x13200, PotHandle, 0x20187, 0x12987, 0 );
+
+		car.Riders.Add( new SavedTrackRider( 31, 1 ) );
+
+		return new ParkFileWriter.WrittenCar( car, new ParkFileWriter.CarModel( 1142, AtRest, null ), null, [], spawn );
+	}
+
+	/// <summary><paramref name="world"/>'s things with a Hot Pot of these boats written whole.</summary>
+	private ParkFileWriter.RunningThings WithPot( ParkWorld world, params ParkFileWriter.WrittenCar[] boats )
+		=> Things( world, script => script ) with { Tracks = [new ParkFileWriter.WrittenTrack( Pot, boats, [], [] )] };
+
+	/// <summary>
+	/// <b><c>Particles_Move</c> writes an emitter's place and nothing else</b>, each of the three shifted down four
+	/// bits, and moves nothing for a handle that names none.
+	/// </summary>
+	[TestMethod]
+	public void AMoveIsTheEmittersPlaceAlone()
+	{
+		var edit = shipped.Particles.Begin();
+
+		Assert.IsFalse( edit.Move( 0, 16, 32, 48 ) );
+		Assert.IsFalse( edit.Move( Bubbles + 0x10000, 16, 32, 48 ) );
+		Assert.AreEqual( 0, Differing( shipped.Particles.Bytes( 20 ), edit.Bytes( 20 ) ).Count );
+
+		Assert.IsTrue( edit.Move( Bubbles, TheirSmoke.X, TheirSmoke.Height, TheirSmoke.Z ) );
+		Assert.AreEqual( TheirSmokeAt, (edit.At( 20 ).X, edit.At( 20 ).Height, edit.At( 20 ).Z) );
+		Assert.IsTrue( Differing( shipped.Particles.Bytes( 20 ), edit.Bytes( 20 ) ).All( at => at is >= 0x14 and < 0x20 ) );
+		CollectionAssert.AreEqual( shipped.Particles.Used.Select( emitter => emitter.Slot ).ToArray(), edit.Used.Select( emitter => emitter.Slot ).ToArray() );
+	}
+
+	/// <summary>
+	/// <b>A boat that began to smoke here is written with its smoke's emitter</b> (<c>FUN_00544c80</c>): effect 2
+	/// where its node stands, at 64ths of a unit as the original's own file has it, its handle in the boat's
+	/// <c>+0x2c</c>, dealt after the scripts' emitters; a boat with no smoke keeps -1.
+	/// </summary>
+	[TestMethod]
+	public void TheWriterStartsASmokingBoatsEmitterAndWritesItsHandle()
+	{
+		var things = WithPot( shipped, Boat( -1, TheirSmoke ), Boat( -1, null ) );
+
+		things = things with
+		{
+			Scripts = [.. things.Scripts.Select( script => script.Handle == ToiletScript
+				? script with { Effects = [new SavedEffect( 1, 0, 1, 1, 1 )], Emitters = [At( 9, 555, 10, 174 )] } : script )]
+		};
+
+		var written = new ParkWorld( ParkFileWriter.Body( shipped, Carried with { Things = things }, out _, out var report ) );
+
+		Assert.IsNull( written.Problem );
+		Assert.IsNull( written.Particles.Problem );
+		CollectionAssert.AreEqual( new[] { 107, 69, 8, 13, 20, 0 }, written.Particles.Used.Select( emitter => emitter.Slot ).ToArray() );
+		Assert.AreEqual( 9, written.Particles.At( 69 ).Template, "the script's first" );
+		Assert.AreEqual( new ParkParticles.Emitter( 107, true, 219, 2, TheirSmokeAt.X, TheirSmokeAt.Height, TheirSmokeAt.Z, 0 ), written.Particles.At( 107 ) );
+
+		CollectionAssert.AreEqual( new[] { 0xdb006b, -1 }, written.TrackRides.Cars.Select( car => car.Word( 0x2c ) ).ToArray() );
+
+		foreach ( var car in written.TrackRides.Cars )
+		{
+			Assert.AreEqual( (0x20a00, 0x13200, PotHandle, 0x20187, 0x12987), (car.CentreX, car.CentreZ, car.BuoyRide, car.BuoyX, car.BuoyZ) );
+			Assert.AreEqual( new SavedTrackRider( 31, 1 ), car.Riders.Single(), "the boat is written whole, its handle apart" );
+		}
+
+		Assert.IsTrue( written.Particles.Names( 0xdb006b ) );
+
+		var emitters = report!.Value.Emitters!;
+
+		CollectionAssert.AreEqual( new[] { (PotHandle, 107, false) }, emitters.Smoke!.Select( entry => (entry.Ride, entry.Emitter.Slot, entry.Kept) ).ToArray() );
+		Assert.AreEqual( (1, 0, 0), (emitters.Started.Count, emitters.Killed.Count, emitters.NotStarted) );
+
+		// Its bytes are a plain start's of effect 2 there: no draw the start itself does not make.
+		var edit = shipped.Particles.Begin();
+
+		edit.Start( At( 9, 555, 10, 174 ) );
+		edit.Start( TheirSmoke );
+		CollectionAssert.AreEqual( edit.Bytes( 107 ).ToArray(), written.Particles.Bytes( 107 ).ToArray() );
+
+		// An effect that links an effector is not started: counted, and the boat keeps -1.
+		var refused = new ParkWorld( ParkFileWriter.Body( shipped, Carried with { Things = WithPot( shipped, Boat( -1, TheirSmoke with { Template = 84 } ) ) }, out _, out report ) );
+
+		Assert.AreEqual( -1, refused.TrackRides.Cars.Single().Word( 0x2c ) );
+		Assert.AreEqual( (0, 1), (report!.Value.Emitters!.Smoke!.Count, report.Value.Emitters.NotStarted) );
+		CollectionAssert.AreEqual( new[] { 8, 13, 20, 0 }, refused.Particles.Used.Select( emitter => emitter.Slot ).ToArray() );
+
+		// A file whose module did not read has nowhere to start one: counted the same, the boat keeping -1.
+		var (unread, at) = WithLive( _ => { } );
+
+		BinaryPrimitives.WriteInt32LittleEndian( unread.AsSpan( at + 8 ), ParkParticles.LiveSize + 1 );
+
+		var blind = new ParkWorld( unread );
+
+		Assert.IsNotNull( blind.Particles.Problem );
+		ParkFileWriter.Body( blind, Carried with { Things = WithPot( blind, Boat( -1, TheirSmoke ), Boat( -1, null ) ) }, out _, out report );
+		Assert.AreEqual( 1, report!.Value.Emitters!.NotStarted );
+	}
+
+	/// <summary>
+	/// <b>A file's smoking boat keeps its emitter</b>, put where its node stands now as the boat's step puts it
+	/// every tick (<c>0x00548613</c>); <b>a boat fixed, or sold with its ride, has it killed</b>
+	/// (<c>FUN_00544e50</c>, <c>0x0054b077</c>); and a handle that names no smoke is not kept.
+	/// </summary>
+	[TestMethod]
+	public void TheWriterKeepsMovesAndKillsAFilesBoatsSmoke()
+	{
+		var smoking = new ParkWorld( ParkFileWriter.Body( shipped, Carried with { Things = WithPot( shipped, Boat( -1, TheirSmoke ) ) }, out _, out _ ) );
+		const int Handle = 0xda0045;
+
+		Assert.AreEqual( Handle, smoking.TrackRides.Cars.Single().Word( 0x2c ) );
+
+		// Kept: the same emitter, moved, nothing started or killed.
+		var moved = TheirSmoke with { X = 440 << 10, Height = 31 << 10, Z = 250 << 10 };
+		var kept = new ParkWorld( ParkFileWriter.Body( smoking, Carried with { Things = WithPot( smoking, Boat( Handle, moved ) ) }, out _, out var report ) );
+
+		Assert.IsNull( kept.Problem );
+		Assert.AreEqual( Handle, kept.TrackRides.Cars.Single().Word( 0x2c ) );
+		Assert.AreEqual( new ParkParticles.Emitter( 69, true, 218, 2, 440 * 64, 31 * 64, 250 * 64, 0 ), kept.Particles.At( 69 ) );
+		CollectionAssert.AreEqual( smoking.Particles.Used.Select( emitter => emitter.Slot ).ToArray(), kept.Particles.Used.Select( emitter => emitter.Slot ).ToArray() );
+		CollectionAssert.AreEqual( new[] { (PotHandle, 69, true) }, report!.Value.Emitters!.Smoke!.Select( entry => (entry.Ride, entry.Emitter.Slot, entry.Kept) ).ToArray() );
+		Assert.AreEqual( (0, 0, 0), (report.Value.Emitters.Started.Count, report.Value.Emitters.Killed.Count, report.Value.Emitters.NotStarted) );
+
+		// Fixed: the boat written with no smoke, and the file's emitter killed.
+		var mended = new ParkWorld( ParkFileWriter.Body( smoking, Carried with { Things = WithPot( smoking, Boat( -1, null ) ) }, out _, out report ) );
+
+		Assert.AreEqual( -1, mended.TrackRides.Cars.Single().Word( 0x2c ) );
+		Assert.AreEqual( ParkParticles.KilledLife, mended.Particles.At( 69 ).Life );
+		CollectionAssert.AreEqual( new[] { 69 }, report!.Value.Emitters!.Killed.Select( emitter => emitter.Slot ).ToArray() );
+		Assert.AreEqual( 0, report.Value.Emitters.Smoke!.Count );
+
+		// Sold: the ride taken out, and its boat's smoke with it.
+		var sold = new ParkWorld( ParkFileWriter.Body( smoking, Carried with { Things = Things( smoking, script => script ) with { GoneTracks = [PotHandle] } }, out _, out report ) );
+
+		Assert.AreEqual( 0, sold.TrackRides.Cars.Count );
+		Assert.AreEqual( ParkParticles.KilledLife, sold.Particles.At( 69 ).Life );
+		CollectionAssert.AreEqual( new[] { 69 }, report!.Value.Emitters!.Killed.Select( emitter => emitter.Slot ).ToArray() );
+
+		// A ride not written again leaves its boats' smoke alone.
+		var left = new ParkWorld( ParkFileWriter.Body( smoking, Carried with { Things = Things( smoking, script => script ) }, out _, out report ) );
+
+		Assert.AreEqual( 0, left.Particles.At( 69 ).Life );
+		Assert.IsNull( report!.Value.Emitters );
+
+		// A handle that names an emitter of another effect, or none, is no smoke to keep: one is started.
+		foreach ( var stale in new[] { Bubbles, Handle + 0x10000 } )
+		{
+			var anew = new ParkWorld( ParkFileWriter.Body( smoking, Carried with { Things = WithPot( smoking, Boat( stale, TheirSmoke ) ) }, out _, out report ) );
+			var dealt = anew.TrackRides.Cars.Single().Word( 0x2c );
+
+			Assert.AreNotEqual( stale, dealt );
+			Assert.AreNotEqual( Handle, dealt );
+			Assert.IsTrue( anew.Particles.Names( dealt ) );
+			Assert.AreEqual( 2, anew.Particles.At( dealt & 0xffff ).Template );
+			Assert.AreEqual( (TheirSmokeAt.X, false), (anew.Particles.At( dealt & 0xffff ).X, report!.Value.Emitters!.Smoke!.Single().Kept) );
+			Assert.AreEqual( ParkParticles.KilledLife, anew.Particles.At( 69 ).Life, "the file's boat's own, which no boat names now" );
+			Assert.AreEqual( 0, anew.Particles.At( 20 ).Life, "the bubbles are their script's" );
+		}
+	}
+
+	/// <summary>
+	/// <b>With no boat drawn there is nowhere to start a boat's smoke</b>: the car writer asks for none and counts
+	/// it, and a boat that does not smoke is not counted.
+	/// </summary>
+	[TestMethod]
+	public void ASmokingBoatWithNoBoatDrawnAsksForNoEmitterAndIsCounted()
+	{
+		var table = new ParkTrackRideTable();
+		var handle = table.Take( -1 );
+		var cars = table.Cars;
+
+		cars.Place( handle, 0x20a00, 0x13200 );
+		cars.OpenForLoading( handle );
+		var boat = cars.Launch( handle )!;
+
+		boat.Flags |= ParkBumperCars.CarFlags.Active;
+
+		Assert.IsTrue( catalogue.TryGet( 1140, out var pot ) );
+
+		var record = new SavedTrackRide( handle, 0x20400, 0x12c00, 0, 1140, 60, 1, 1, 750, 2 );
+		var sound = ParkCarWriter.Track( cars, record, pot, _ => 0u, null, data )!;
+
+		Assert.IsNull( sound.Cars.Single().Smoke );
+		Assert.IsFalse( Unimplemented.Summary.Any( gap => gap.What == "SAVE_PARK_CAR_SMOKE" ) );
+
+		cars.Break( handle );
+		Assert.IsTrue( boat.Smoking );
+
+		var broken = ParkCarWriter.Track( cars, record, pot, _ => 0u, null, data )!;
+
+		Assert.IsNull( broken.Cars.Single().Smoke );
+		Assert.AreEqual( -1, broken.Cars.Single().Car.Word( 0x2c ) );
+		Assert.AreEqual( 1, Unimplemented.Summary.Single( gap => gap.What == "SAVE_PARK_CAR_SMOKE" ).Times );
+	}
 }

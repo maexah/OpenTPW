@@ -15,6 +15,12 @@ namespace OpenTPW;
 /// started as the file is written, so its first frame; the height is the drawn boat's, and nought with none,
 /// counted (<c>SAVE_PARK_CAR_NO_HEIGHT</c>).
 /// </para>
+/// <para>
+/// <b>A smoking car's smoke</b> (<c>docs/exe/saves.md</c>, "OpenTPW's writer, a smoking car") is asked for where
+/// the drawn boat's first emitter node stands. A deviation: the original's emitter is where that node stood on
+/// the car's last tick, and this is where it is drawn now, within a tick's travel. With no boat drawn the car
+/// keeps what its file held and none is started, counted (<c>SAVE_PARK_CAR_SMOKE</c>).
+/// </para>
 /// </summary>
 internal static class ParkCarWriter
 {
@@ -106,10 +112,23 @@ internal static class ParkCarWriter
 				wake = new ParkFileWriter.CarModel( record.ItemId + 1, WakeChannel, wakeTables );
 			}
 
+			// A smoking car's smoke rises from its first emitter node, where the boat is drawn: each of the three
+			// times 1024 and cut to a whole number (0x00544daa). With no boat drawn there is no place to put it.
+			ParkParticles.Spawn? smoke = null;
+
+			if ( car.Smoking )
+			{
+				if ( model?.FindNode( 2, EmitterSpace ) is { } node and >= 0 && boats?.NodeAt( car.Index, node ) is { } at )
+					smoke = new ParkParticles.Spawn( ParkBumperCars.SmokeEffect, (int)(at.X * 1024f), (int)(at.Z * 1024f), (int)(at.Y * 1024f) );
+				else
+					Unimplemented.Report( "SAVE_PARK_CAR_SMOKE" );
+			}
+
 			written.Add( new ParkFileWriter.WrittenCar(
 				cars.Written( car, height, (Record( 2, EmitterSpace ), Record( 1, EmitterSpace )) ),
 				new ParkFileWriter.CarModel( record.ItemId + 1 + car.Mesh, channel, tables ), wake,
-				[.. car.Riders.Select( rider => (Record: Record( rider.Seat, SeatSpace ), Visitor: rider.Peep) ).Where( head => head.Record >= 0 )] ) );
+				[.. car.Riders.Select( rider => (Record: Record( rider.Seat, SeatSpace ), Visitor: rider.Peep) ).Where( head => head.Record >= 0 )],
+				smoke ) );
 		}
 
 		return new ParkFileWriter.WrittenTrack( record, written, [.. ride.Leaving], [.. ride.Boarding] );

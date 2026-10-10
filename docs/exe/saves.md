@@ -627,7 +627,7 @@ OpenTPW runs written over and records added and taken out. **Afresh** means writ
 | The action recording | `mLoadedPublishedPark`, a length, the recorder's buffer | nothing: no action is recorded here | carried |
 | `WRLD` | the park | nearly all of it | patched, part by part (below) |
 | `SPSC` | a 280-byte record per sprite | a guest or hire made, one gone, every position and frame | patched: a slot filled for a person made, emptied for one gone |
-| `PART` | the live emitters and the effect library | each emitter a script's `ADDOBJ` or `EVENT` has alive | the file's, with an emitter started for each particle a script here has started and one killed for each of the file's whose record is gone ("OpenTPW's writer, an emitter started"); a puff alive at the save is not made |
+| `PART` | the live emitters and the effect library | each emitter a script's `ADDOBJ` or `EVENT` has alive | the file's, with an emitter started for each particle a script here has started and one killed for each of the file's whose record is gone ("OpenTPW's writer, an emitter started"), and a smoking car's ("OpenTPW's writer, a smoking car"); a puff alive at the save is not made |
 | `MESS` | 29 listener sets | every set a made or gone thing belongs to | afresh from the thing list for sets `0xa`, `0xb`, `0xc` and `0x1b` by the rule above; the singletons carried |
 | `CLOK` | two clock readings | the clock runs | afresh: the file's readings plus the game time run since the load, so every carried deadline keeps its distance |
 | `VANT` | one reading of the real-time clock (`FUN_005f5f10`); the reader keeps its distance from its own | nothing | carried |
@@ -2488,9 +2488,9 @@ speed nought. **A rider's head** goes on the lookup record of their seat's node,
 kind and bank on the lowest slot the file's table leaves empty; the heads the file has on the cars' old
 records give their slots up. A ride **sold** with cars is taken out with them, their models and their heads.
 
-**Deviations, each said at its site.** The held sound `+0x20` and the smoke's emitter `+0x2c` are written as
-none, where the original writes the session's handles (`SAVE_PARK_CAR_SMOKE` counts a smoking car; the
-particles module still goes out as the file's). The four pointers `+0x30`, `+0x94`, `+0x98`, `+0x9c` are
+**Deviations, each said at its site.** The held sound `+0x20` is written as none, where the original writes
+the session's handle. The smoke's emitter `+0x2c` is written since Q257x ("OpenTPW's writer, a smoking car",
+below). The four pointers `+0x30`, `+0x94`, `+0x98`, `+0x9c` are
 nought; the loader makes each again. The model slots and the heads' sprite slots are dealt as the file is
 written, not as the cars were launched and the riders seated. **The height `+0xa0` is the original's** since
 Q257s: the landscape's under the boat's four corners plus the pot's model's 29.8 (`park.md`, "The scene's height
@@ -2533,8 +2533,7 @@ pot with a head in each (`orig/a-2-loaded.png`). With the control's file: record
 buoy by the pause, 67 ticks on); and two of the harness's own checks, which held a census against a file
 written or read some ticks after it. **Not run in either game, tested only:** a ride kept with a boat out
 after a load of a shut file; a ride sold with boats out; a peep on the leaving or the boarding list at the
-save (no run caught one); a boat with no rider written from a bought pot. **Not seen:** the original loading
-a file whose car holds a smoke handle of -1 while its ride is broken. **Not compared:** the boats' clip frame
+save (no run caught one); a boat with no rider written from a bought pot. **Not compared:** the boats' clip frame
 after the load. `docs/exe/addresses.md` not regenerated.
 
 ### OpenTPW's writer, a walk's head
@@ -2762,6 +2761,93 @@ no park particle, so its own frames show the Spray and no water. **Not run in ei
 put back 22 fail a test (`q257w/mutations.py`); the three that fail none are the direction left its own length
 (every third row in the jungle's and the fantasy's models is a unit long already, `q257w/probe`), a node with
 no matrix pointed along y, and the unstored node not counted (no model there has either in any space). `docs/exe/addresses.md` not regenerated.
+
+### OpenTPW's writer, a smoking car
+
+Q257x, split by the session: the item's other pieces are Q257y. **A broken bumper ride's smoking car is written
+with its smoke's emitter**, and the handle that names it in the car's `+0x2c`.
+
+**What a break does** (`BUMP 8` with a value, `FUN_00544c80`, read whole). The ride's `+0x54` is set to 2, and
+for a ride of BumperType -1 or -3 to -14 each car in use that is the ride's, is flagged `0x4000`, has an emitter
+node (`+0x24` not -1) and no smoke yet (`+0x2c` -1) gets `Particles_Spawn( 2, x, height, z )` (`0x00544dd8`):
+effect 2 at the place of the lookup record `+0x24` of its model, the object's three floats at `+0x30`, each
+times 1024 (`0x00700ed4`) and cut to a whole number; a record with no object gives the origin. The handle goes
+to `+0x2c`, and a Hot Pot's car is stopped (`+0x10` = 12). The ride's script calls it on every pass while
+`VAR_BREAKSTAT` is set (the Hot Pot's `bumper.RSE`, word 167), so a car that comes to be flagged later smokes
+then; the script then starts the pot's own two smokes, `ADDOBJ 2` of effect 16 on its nodes 1 and 2.
+
+- **The car's step moves it** (`Bumper_StepCar`, `0x00548587` and `0x00548b6e`, the two arms' ends): a car
+  with a smoke handle and an emitter node has `Particles_Move` (`0x0051fe30`) put the emitter at that node's
+  place every track tick, the same three times 1024, each shifted down four. So a file's place is in 64ths of
+  a unit, where an emitter a script's record names is in whole units.
+- **The fix** (`BUMP 8` or `9` with nought, `FUN_00544e50`), only from broken: each of the ride's cars with a
+  handle has it killed (`Particles_Kill`) and `+0x2c` set to -1. **A car taken off** kills its own
+  (`FUN_0054ae50`, `0x0054b077`).
+- **The ride's `+0x54` is not in the file** (the ride's chunk is its ten words). The script sets it again on
+  its first pass after a load, from the variable, which is.
+
+**Measured in the original** (`q257x/orig/`; `PREDICTION.txt` holds each prediction and miss). No file to hand
+held a smoking car, so one was made: `hotpot-later2.TPWS` loaded from the Load Park list, and variable 4 of
+thing 43's script (`VAR_BREAKSTAT`) written to 1 in its memory two seconds into a go (the new
+`original/scriptvar.py`). The record's `+0x54` read 2; the four cars' `+0x2c` read `0x1410008`, `0x1420005`,
+`0x143000c` and `0x1440045`, emitters of effect 2 under four counts running; then the pot's two of effect 16.
+**The go ended at the break**: nobody seated 0.3 s on, the cars' `0x4000` clear and their smoke kept. **Its
+mechanic had the pot fixed 25 s later**, the smoke killed. Saved from the menu seven seconds after a third
+break (`broken-by-the-original.TPWS`): the four cars hold `0x1400001`, `0x1410008`, `0x1420005` and
+`0x143000c`, each an emitter in use of effect 2, life nought, the first at raw (28330, 1949, 16855) for a node
+read at (442.6575, 30.4622, 263.3747) under the menu's pause: times 1024, cut, shifted down four. A break that
+landed as a go ended, with no car flagged, smoked none (my first try, and my prediction's miss).
+
+**What OpenTPW writes.** A car keeps the handle its file held (`Car.Smoke`), let go of at a fix, a launch and
+its removal. `ParkBumperCars.Written` writes it while the car smokes. `ParkCarWriter` asks for each smoking
+car's emitter where the drawn boat's emitter node of id 2 stands (`ParkBumperBoats.NodeAt`,
+`WrittenCar.Smoke`), and `ParkFileWriter.PutEmitters` then: moves the emitter the car's handle names there
+where that is an emitter in use of the effect (`ParkParticles.Edit.Move`); else starts one and writes its
+handle into the car; and kills the smoke of every car of the file's whose ride is sold, or written again
+with the car fixed or gone. The save's log says each (`smoke started`, `smoke kept`); `bumpers` prints each
+car's smoke and `emitters` names the car's ride beside its emitter.
+
+**Deviations, said at `ParkCarWriter` and `ParkFileWriter.PutEmitters`:**
+
+- The place is where the boat's node is drawn as the file is written; the original's is where it stood on the
+  car's last tick. In the run below the two agree within 0.04 of a unit.
+- The cars' emitters are dealt after the scripts', in pool order; the original starts each as its ride breaks,
+  before its script's own two. Every handle names its own emitter, which is all a load reads.
+- With no boat drawn (the tests) a car that began to smoke here is written with -1 and counted
+  (`SAVE_PARK_CAR_SMOKE`, now this case alone).
+- Nothing draws the smoke here (`BUMPER_CAR_SMOKE`, counted at the break as before).
+
+**Confirmed in the game** (`q257x/confirm.py`, each predicted in `PREDICTION.txt`; the fix's bought scene 4 of 4 off-screen and on the desktop, theirs 2 of 2 on the desktop, each control 1 of 1). **Bought:** Lost
+Kingdom from `easymode.TPWI`, `buy 1140 41 23 0`, its queue joined, five guests sent, and in the go
+`scriptvar 43 VAR_BREAKSTAT 1`: `bumpers` read wear 2 and four cars `smoke started` at clip 12. The save's log:
+four `smoke started`, effect 2, life nought, counts 220 to 223 after the pot's own two of effect 16 (218, 219),
+each inside the pot at a height of about 30.5. The file: each car's `+0x2c` names its emitter, and **each
+emitter is the original's own smoke emitter's bytes** outside the count, the links, the place, the two particle
+words and the box. Loaded here from the Load Park list, `bumpers` reads each car's handle and `emitters` the
+four `named by a car of ride 0xffffff00`. **Theirs:** the park entered on `broken-by-the-original.TPWS` and
+saved at once: four `smoke kept` under the original's four handles, none started, none killed, **each put
+within 0.04 of a unit of where the original's file has it**. **The control, the build before:**
+`SAVE_PARK_CAR_SMOKE` four times, every car's `+0x2c` -1, no emitter of effect 2 in the bought file, and in
+theirs the file's four left in use with nothing naming them.
+
+**The original under Proton** (`loadfile.sh` with `q257x/orig/smoke.py` polling the cars and the emitters each
+names). **The bought file:** on the first poll after the load the four cars read the handles written, each an
+emitter in use of effect 2 with no particle; 0.2 s on each holds six, and each follows its car's node. The
+control's: -1 and no emitter on the first poll, then the original's own script smokes the cars afresh under
+new counts (its riders are still seated; see below). **Theirs:** the fix's file reads the four handles from
+the first poll, and all four are killed when its mechanic fixes the pot, inside fifteen seconds. **The
+control's leaves four columns of smoke over the pot for good**: no car names them, so the fix kills none, and
+they are still in use 55 s on, where the boats stood at the save (`orig/sheet-fix-left-control-right-15s.png`).
+
+**Found on the way, not built** (filed under Q257y): the original ends the go as the ride breaks and lets
+its riders off within a third of a second (the object's turn sets it broken down and shut,
+`ride-operation.md`, "Where an object's state comes from"); OpenTPW's go runs on with its riders seated, so the
+bought file holds four riders where the original's own holds none. And OpenTPW's mechanic mends nothing.
+
+**Not run in either game, tested only:** a boat fixed or a ride sold with its smoke in the file; a handle that
+names another effect's emitter; an effect that will not start. Of 35 bugs put back all 35 fail a test, one after a case was added (a file whose particles module did not
+read); five more that only a game run can see (the node, its axes, the 64ths, the effect, the hand-over) each
+fail `confirm.py` (`q257x/mutations.py`, `gmutate.py`). `docs/exe/addresses.md` not regenerated.
 
 ### Read, not run
 

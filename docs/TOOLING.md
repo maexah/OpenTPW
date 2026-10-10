@@ -20,6 +20,7 @@ place to look for tools. Each file's docstring is its manual.
 | `original/loadfile.sh load <file> <outdir> <tag>` / `stop` | A park file loaded in the original from its Load Park list, off-screen, with frames; `POLL=` starts a memory reader just before the click. It starts the original only when it is not running, so a second file is 35 s where the first is 123 s |
 | `original/heads.py PID SECS ITEM` | The original's memory: every model of an item with its lookup state (shared flags, heads attached, each record holding one) and each head's sprite, place, scale and frame, a line a change. A `POLL` for `loadfile.sh` |
 | `original/emitters.py PID SECS` | The original's memory: the particle system's live emitters by the used chain (slot, count, handle, effect, place, aim, life, particles alive), a block a change and the particle counts a second. A `POLL` for `loadfile.sh` |
+| `original/scriptvar.py PID THING [INDEX [VALUE]]` | A ride script's variables in the running original, by thing: read, or **written** (the one tool that writes its memory). It is how a ride is broken on demand |
 | `original/research.py <in> <out> <item>` | A copy of a jungle park file with one item marked researched, so Instant Action's buy list offers it |
 | `original/original.sh`, `tpwmem.py`, `gmove.py`, `record.sh`, `watch.sh` | Starting, reading, clicking, filming and watchpointing the original ("The original under Proton", below) |
 | `q119/lib.py` | What `parkrun.py` is built on: the launch, the console pipe, XTEST clicks and keys, the frame grab. Use it through `parkrun.py` |
@@ -27,7 +28,7 @@ place to look for tools. Each file's docstring is its manual.
 | `wadcat`, `strdump`, `nodenames/` | A wad's entries, a string table's lines, a UI wad's node names (`CLAUDE.local.md`) |
 
 **A poller of the original's memory is the one thing still written an item at a time** (`q257r/orig/cars.py`,
-`q257t/orig/chan.py` for a car's model's channel stamps, `q253/orig/look.py`; a model's heads are `original/heads.py`, above): each reads its own structures. Start from the newest that reads the same
+`q257x/orig/smoke.py` for a car's smoke handle, its emitter and its node's place, `q257t/orig/chan.py` for a car's model's channel stamps, `q253/orig/look.py`; a model's heads are `original/heads.py`, above): each reads its own structures. Start from the newest that reads the same
 structure, and hand it to `loadfile.sh` through `POLL`.
 
 ## Recipes
@@ -54,10 +55,15 @@ whole list):
   In the original's frame the bubbles are a few pixels: crop the shop and enlarge it four times (Q257v).
 - **The Jungle Spray's jet:** `admit 52 34` four times, each `send <guest> 14`; poll `rides` for a `2:37@`
   record on thing 14 and `pause` at the first: one jet (node 2) is running, for about four seconds (Q257w).
+- **A broken Hot Pot with smoking boats:** fill the pot (above), and once `bumpers` reads `state Running` with
+  riders seated, `scriptvar <thing> VAR_BREAKSTAT 1`; every boat reads `smoke started`. A break between goes
+  smokes no boat (Q257x).
 - **A harness run needs a python with `Xlib` and `PIL`:** `~/.cache/tpw-harnesses/review-codex/venv/bin/python3`
   where the system's has no `Xlib`. A run that dies before `done()` leaves its Xvfb on `:78`: stop it (Q257w).
 - **The camera aims at the ground, so it cannot close in on a Hot Pot's water**, 30 units up: `camera 435 275 45 180`
   and anything nearer shows the pot's wall. Take `camera 435 320 110 180` and crop the pot from the frame (Q257s).
+- **`pkill -f 'Xvfb :78'` kills the shell that runs it** (its own command line matches): write
+  `pkill -f 'bin/[X]vfb :78'` (Q257x).
 - **Take the census last.** `step 2` after a `camera` moves every car and guest two ticks: a census held against a
   file must be taken after the last step before `savepark` (Q257r).
 - **A load runs on before `pause` lands**, a dozen ticks: hold a loaded park against the load's own log lines, not
@@ -82,6 +88,10 @@ GH=766` there, or the pointer is off):
 - **Hiring:** Buy (117,588), the side tab (957,316), mechanics (665,123).
 - **A clip's phase is held by its start stamp**, a reading of the saved clock that steps by the clip's length each
   loop (a boat's: 534 ms): compare a stamp with a file's less whole loops, never a frame number (Q257t).
+- **Breaking a ride:** `scriptvar.py PID <thing> 4 1` writes `VAR_BREAKSTAT` (variable 4 of every ride's
+  common twelve). Write it inside a go: only a car carrying riders smokes, and the go ends at once. Its
+  mechanic mends the ride about 25 s later, so save (the menu pauses the game) before then; the mended file is
+  evidence too. A script's variables are the dwords at `[frame + 0x1c]`, not `+0x20` (Q257x).
 - **Instant Action offers only researched items:** patch a copy with `research.py`, never the reference
   `easymode.TPWI` (Q257n).
 - **For the first seconds after a load its camera is not on the saved view**, so a thing that lasts under five

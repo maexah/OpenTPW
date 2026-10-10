@@ -48,9 +48,19 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q257x. The writer: what else a made record leaves out.** The old Q257w's other pieces, each counted or
+- [ ] **Q257y. The writer: what else a made record leaves out.** The old Q257x's other pieces, each counted or
   said in `saves.md`. Confirm: each piece's bytes beside a file of the original's own, and the file loaded in
   the original under Proton.
+  From Q257x (`saves.md`, "OpenTPW's writer, a smoking car"): the original ends the go as a ride breaks and
+  lets its riders off within a third of a second (the object's turn sets it broken down and shut), and its
+  mechanic mends it; here the go runs on with its riders seated and nothing mends it (not counted: count it
+  at `ParkRideOperation`'s turn, with the breakdown request that item names). A smoking car's emitter is put
+  where its boat is drawn, not where its last tick left it, and dealt after the scripts'; with no boat drawn
+  it is counted and written as none (`SAVE_PARK_CAR_SMOKE`). Nothing draws the smoke (`BUMPER_CAR_SMOKE`).
+  **An `EVENT`'s puff needs no writing:** the original's own file of a bought Loudspeaker holds its two puffs
+  spent (lives of -38 and -62, a particle each), and a load frees an emitter with a life under nought on its
+  first tick (`Particles_Tick`, `0x00520130`); only a puff of an effect with a life still running would show,
+  and no Lost Kingdom script's `EVENT` was found with one (not swept: sweep the corpus before building it).
   From Q257w (`saves.md`, "OpenTPW's writer, a particle with a direction"): a type 2's node that rides a clip is
   aimed as it rests; one whose matrix is never stored is counted (`SAVE_PARK_EMITTER_DIRECTED`, no Lost Kingdom
   node); the file's own jet was not seen in the original's picture (its camera is elsewhere for the load's first
@@ -69,8 +79,7 @@ the research lab), then the rest of this section in its old order.
   wake is drawn, `BUMPER_CAR_WAKE`); a handle naming no record of the boat's item is counted and left
   (`SAVED_TRACK_CAR_MODEL_NOT_ITS_OWN`), where the original takes whatever record lies there; with no boat drawn
   (the tests) a loaded car's clip is still started as the file is written.
-  From Q257r (`saves.md`, "OpenTPW's writer, a track ride's cars"): a car's held sound and smoke are written
-  as none (`SAVE_PARK_CAR_SMOKE`).
+  From Q257r (`saves.md`, "OpenTPW's writer, a track ride's cars"): a car's held sound is written as none.
   A loaded rider's sprite is made at the load, not as the ride lets them go, and a live rider's is never
   destroyed (the original's admission, `0x00502147`). The stepping agrees with the original's for three ticks
   and is not compared past a car's first draw: the cars draw their own generator, the original's the world's

@@ -5817,6 +5817,14 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   original's eighteen files hold the words the rule gives; in the game the Spray's jet was saved as slot 69
   count 218 effect 37 at (525,5,311) aim (0, 25, 30), predicted, and the original under Proton read it live with
   that aim and two particles 0.05 s after the load (`saves.md`, "OpenTPW's writer, a particle with a direction").
+- [x] **Q257x. The writer: a smoking car.** Done 2026-10-10, `alexah/400-a-smoking-boat-is-written-with-its-smoke`.
+  Split by the session: the item's other pieces are Q257y. A broken bumper ride's smoking car (`FUN_00544c80`,
+  effect 2, its handle at the car's `+0x2c`) is written with its smoke's emitter: in the game a bought Hot Pot
+  broken in a go was saved with four emitters under counts 220 to 223, predicted, each the original's own smoke
+  emitter's bytes, and the original's own broken file saved back kept its four handles, each put within 0.04
+  of a unit of the original's; the original under Proton read the written handles live on its first poll after
+  the load and killed them at its mechanic's fix, where the build before's file left four columns of smoke over
+  the pot for good (`saves.md`, "OpenTPW's writer, a smoking car").
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

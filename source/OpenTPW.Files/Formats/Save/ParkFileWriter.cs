@@ -103,9 +103,15 @@ public static class ParkFileWriter
 	/// the two model handles left nought, its model, its wake's (null for a car with none), and each rider's head by
 	/// the lookup record of its seat's node. The writer deals the two models their slots and writes the handles
 	/// into the car's <c>+0x08</c> and <c>+0x0c</c>.
+	///
+	/// <para>
+	/// <paramref name="Smoke"/> is the emitter a smoking car's smoke rises from, where its emitter node stands
+	/// ("OpenTPW's writer, a smoking car"); null for a car with none. The writer moves the emitter the car's
+	/// <c>+0x2c</c> names there, or starts one and writes its handle.
+	/// </para>
 	/// </summary>
 	public sealed record WrittenCar( SavedTrackCar Car, CarModel Model, CarModel? Wake,
-		IReadOnlyList<(int Record, int Visitor)> Heads );
+		IReadOnlyList<(int Record, int Visitor)> Heads, ParkParticles.Spawn? Smoke = null );
 
 	/// <summary>A track ride written whole: its record, its cars in pool order, and its leaving and boarding lists, head first.</summary>
 	public sealed record WrittenTrack( SavedTrackRide Ride, IReadOnlyList<WrittenCar> Cars, IReadOnlyList<int> Leaving,
@@ -136,10 +142,13 @@ public static class ParkFileWriter
 	/// <summary>
 	/// What was done with the particles module (<c>docs/exe/saves.md</c>, "OpenTPW's writer, an emitter started"):
 	/// each emitter started with the script whose record names it, each of the file's killed, and how many asked
-	/// for were not started, their effect linking an effector or the module unread. Null where there is none of the three.
+	/// for were not started, their effect linking an effector or the module unread; and each smoking car's emitter
+	/// with its ride's handle, started or the file's kept ("OpenTPW's writer, a smoking car"). Null where there is
+	/// none of the four.
 	/// </summary>
 	public sealed record EmittersWritten( IReadOnlyList<(int Script, ParkParticles.Emitter Emitter)> Started,
-		IReadOnlyList<ParkParticles.Emitter> Killed, int NotStarted );
+		IReadOnlyList<ParkParticles.Emitter> Killed, int NotStarted,
+		IReadOnlyList<(int Ride, ParkParticles.Emitter Emitter, bool Kept)>? Smoke = null );
 
 	/// <summary>
 	/// The arrival timer as it is written: the <c>mGameTick</c> the next load's wait is counted from
@@ -415,12 +424,19 @@ public static class ParkFileWriter
 	/// names its own emitter, which is all a load reads. And each is written as it starts: one whose effect has a
 	/// life begins it again at the load.
 	/// </para>
+	/// <para>
+	/// A smoking car's emitter follows its car the same way ("OpenTPW's writer, a smoking car"): the file's is
+	/// kept and moved, one is started for a car that began to smoke here, and the smoke of a file's car that is
+	/// fixed, gone or sold is killed.
+	/// </para>
 	/// </summary>
 	private static EmittersWritten? PutEmitters( ParkWorld loaded, byte[] body, ref RunningThings run )
 	{
 		var made = run.Made ?? [];
+		var tracks = run.Tracks ?? [];
 		var asked = run.Scripts.Sum( script => script.Emitters?.Count( spawn => spawn != null ) ?? 0 )
-			+ made.Sum( thing => thing.Script?.Script.Emitters?.Count( spawn => spawn != null ) ?? 0 );
+			+ made.Sum( thing => thing.Script?.Script.Emitters?.Count( spawn => spawn != null ) ?? 0 )
+			+ tracks.Sum( track => track.Cars.Count( car => car.Smoke != null ) );
 
 		if ( loaded.Particles.Problem != null )
 			return asked > 0 ? new EmittersWritten( [], [], asked ) : null;
@@ -490,10 +506,73 @@ public static class ParkFileWriter
 				.Select( thing => thing.Script is { } script ? thing with { Script = script with { Script = Started( script.Script ) } } : thing )]
 		};
 
+		// A smoking car's emitter (FUN_00544c80): the one its file's handle names is put where the car's node
+		// stands, as the car's step puts it every tick, and a car that began to smoke here is given one. After the
+		// scripts', where the original starts each as its ride breaks.
+		var smoke = new List<(int Ride, ParkParticles.Emitter Emitter, bool Kept)>();
+		var kept = new HashSet<int>();
+
+		WrittenCar Smoking( WrittenCar car )
+		{
+			if ( car.Smoke is not { } spawn )
+				return car;
+
+			var held = car.Car.Word( SmokeHandleAt );
+
+			if ( held != NoSmoke && edit.At( held & 0xffff ).Template == spawn.Template && edit.Move( held, spawn.X, spawn.Height, spawn.Z ) )
+			{
+				kept.Add( held );
+				smoke.Add( (car.Car.Handle, edit.At( held & 0xffff ), true) );
+				return car;
+			}
+
+			var handle = edit.Starts( spawn.Template ) ? edit.Start( spawn ) : NoSmoke;
+
+			if ( handle is 0 or ParkParticles.NoSlot )
+			{
+				++notStarted;
+				handle = NoSmoke;
+			}
+			else
+				smoke.Add( (car.Car.Handle, edit.At( handle & 0xffff ), false) );
+
+			var bytes = (byte[])car.Car.Bytes.Clone();
+
+			PutInt32( bytes, SmokeHandleAt, handle );
+
+			var record = new SavedTrackCar( car.Car.Handle, bytes, car.Car.CentreX, car.Car.CentreZ, car.Car.BuoyRide,
+				car.Car.BuoyX, car.Car.BuoyZ, car.Car.RidesBefore );
+
+			record.Riders.AddRange( car.Car.Riders );
+
+			return car with { Car = record };
+		}
+
+		if ( tracks.Count > 0 )
+			run = run with { Tracks = [.. tracks.Select( track => track with { Cars = [.. track.Cars.Select( Smoking )] } )] };
+
+		// The smoke of a file's car whose ride is sold, or written again with the car fixed or gone, is killed
+		// as the fix and the car's removal kill it (FUN_00544e50, 0x0054b077).
+		HashSet<int> tracksOut = [.. run.GoneTracks ?? [], .. tracks.Select( track => track.Ride.Handle )];
+
+		foreach ( var car in loaded.TrackRides.Cars.Where( car => tracksOut.Contains( car.Handle ) ) )
+		{
+			var held = car.Word( SmokeHandleAt );
+
+			if ( held != NoSmoke && !kept.Contains( held ) && edit.Kill( held ) )
+				killed.Add( edit.At( held & 0xffff ) );
+		}
+
 		loaded.Particles.Put( body, edit );
 
-		return started.Count > 0 || killed.Count > 0 || notStarted > 0 ? new EmittersWritten( started, killed, notStarted ) : null;
+		return started.Count > 0 || killed.Count > 0 || notStarted > 0 || smoke.Count > 0
+			? new EmittersWritten( started, killed, notStarted, smoke ) : null;
 	}
+
+	/// <summary>Where a car keeps the handle of its smoke's emitter, and what it holds with none.</summary>
+	private const int SmokeHandleAt = 0x2c;
+
+	private const int NoSmoke = -1;
 
 	/// <summary>The last of a script record's types that is a particle; the rest are sounds.</summary>
 	private const int LastParticleType = 2;

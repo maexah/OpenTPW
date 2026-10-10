@@ -438,4 +438,61 @@ public class ParkTrackRideWriterTests
 		Assert.AreSame( car, cars.Launch( handle ) );
 		Assert.AreEqual( 0, car.Turned );
 	}
+
+	/// <summary>
+	/// A boat's smoke handle (<c>+0x2c</c>) is its file's while it smokes: read by a load, written back, and -1 once
+	/// its ride is fixed (<c>FUN_00544e50</c>). A boat that began to smoke here holds none of its own: -1 for the
+	/// writer, which starts its emitter.
+	/// </summary>
+	[TestMethod]
+	public void ASmokingBoatKeepsItsFilesHandleUntilItIsFixed()
+	{
+		Log ??= new();
+
+		var smoking = TheirCar.Select( word => (int)word ).ToArray();
+
+		smoking[11] = 0x1400001;
+
+		var cars = new ParkTrackRideTable( new ParkTrackRides( Body(
+			Chunk( 3, HotPotHandle, 0x20400, 0x12c00, 0, 1140, 60, 1, 1, 750, 2 ),
+			Chunk( 5, [HotPotHandle, .. smoking, .. TheirCarsTail.Select( word => (int)word )] ),
+			Chunk( 5, [HotPotHandle, .. TheirCar.Select( word => (int)word ), .. TheirCarsTail.Select( word => (int)word )] ),
+			Chunk( 6, HotPotHandle ) ) ) ).Cars;
+
+		var boats = cars.CarsOf( HotPotHandle ).ToArray();
+
+		Assert.AreEqual( (true, 0x1400001), (boats[0].Smoking, boats[0].Smoke) );
+		Assert.AreEqual( (false, ParkBumperCars.NoSmoke), (boats[1].Smoking, boats[1].Smoke) );
+		Assert.AreEqual( 0x1400001, cars.Written( boats[0], 0f, (3, 2) ).Word( 0x2c ) );
+		Assert.AreEqual( -1, cars.Written( boats[1], 0f, (3, 2) ).Word( 0x2c ) );
+
+		// Broken here: the second smokes with no handle; the first's is left.
+		cars.Break( HotPotHandle );
+
+		Assert.AreEqual( (true, ParkBumperCars.NoSmoke), (boats[1].Smoking, boats[1].Smoke) );
+		Assert.AreEqual( -1, cars.Written( boats[1], 0f, (3, 2) ).Word( 0x2c ) );
+		Assert.AreEqual( 0x1400001, cars.Written( boats[0], 0f, (3, 2) ).Word( 0x2c ) );
+
+		cars.Fix( HotPotHandle );
+
+		Assert.AreEqual( (false, ParkBumperCars.NoSmoke), (boats[0].Smoking, boats[0].Smoke) );
+		Assert.AreEqual( -1, cars.Written( boats[0], 0f, (3, 2) ).Word( 0x2c ) );
+
+		// A handle left on a boat that smokes no more is not written.
+		boats[0].Smoke = 0x1400001;
+		Assert.AreEqual( -1, cars.Written( boats[0], 0f, (3, 2) ).Word( 0x2c ) );
+
+		// A boat taken off lets go of its handle, and one launched in its place starts with none.
+		boats[1].Smoke = 0x1400001;
+		cars.Empty( HotPotHandle );
+		Assert.AreEqual( ParkBumperCars.NoSmoke, boats[1].Smoke );
+
+		boats[0].Smoke = 0x1400001;
+		cars.OpenForLoading( HotPotHandle );
+
+		var again = cars.Launch( HotPotHandle )!;
+
+		Assert.AreSame( boats[0], again );
+		Assert.AreEqual( ParkBumperCars.NoSmoke, again.Smoke );
+	}
 }
