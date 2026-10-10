@@ -18,6 +18,7 @@ place to look for tools. Each file's docstring is its manual.
 | `lib/mutate.py <mutations.py>` | Putting an item's bugs back, in parallel, in copies of the tree (`WORKFLOW.md`, "Verifying") |
 | `lib/stryker.sh <project> <File.cs>...` | Mechanical bugs in a file, Stryker.NET |
 | `original/loadfile.sh load <file> <outdir> <tag>` / `stop` | A park file loaded in the original from its Load Park list, off-screen, with frames; `POLL=` starts a memory reader just before the click. It starts the original only when it is not running, so a second file is 35 s where the first is 123 s |
+| `original/heads.py PID SECS ITEM` | The original's memory: every model of an item with its lookup state (shared flags, heads attached, each record holding one) and each head's sprite, place, scale and frame, a line a change. A `POLL` for `loadfile.sh` |
 | `original/research.py <in> <out> <item>` | A copy of a jungle park file with one item marked researched, so Instant Action's buy list offers it |
 | `original/original.sh`, `tpwmem.py`, `gmove.py`, `record.sh`, `watch.sh` | Starting, reading, clicking, filming and watchpointing the original ("The original under Proton", below) |
 | `q119/lib.py` | What `parkrun.py` is built on: the launch, the console pipe, XTEST clicks and keys, the frame grab. Use it through `parkrun.py` |
@@ -25,7 +26,7 @@ place to look for tools. Each file's docstring is its manual.
 | `wadcat`, `strdump`, `nodenames/` | A wad's entries, a string table's lines, a UI wad's node names (`CLAUDE.local.md`) |
 
 **A poller of the original's memory is the one thing still written an item at a time** (`q257r/orig/cars.py`,
-`q257t/orig/chan.py` for a car's model's channel stamps, `q257d/orig/look.py`, `q253/orig/look.py`): each reads its own structures. Start from the newest that reads the same
+`q257t/orig/chan.py` for a car's model's channel stamps, `q253/orig/look.py`; a model's heads are `original/heads.py`, above): each reads its own structures. Start from the newest that reads the same
 structure, and hand it to `loadfile.sh` through `POLL`.
 
 ## Recipes
@@ -41,6 +42,10 @@ whole list):
   Pot on (41,23): `buy 1140 41 23 0`, node (43,22), path (43,21); four boats are out six seconds on (Q257r).
 - **Fill a ride:** `admit <x> <y>` on a path cell answers a new guest's id, `send <guest> <thing>` sends them; poll
   the ride's census (`bumpers`, `rides`) until it counts them (Q179d, Q257r).
+- **An Aztec Mayhem with riders:** `buy 1104 57 23`, then the queue: `tool queue <thing>`, `worldclick 58 22`,
+  `worldclick 56 22`, `tool off`. Two riders are carried about 40 s on, up to five before the ride starts.
+  `camera 585 245 25 90` looks down into its pit, where the riders' heads are; from further off its walls hide
+  them. In the original the lid is shut over them while the ride runs, so its frame shows no head (Q257u).
 - **A Balloon Shop a guest can reach:** `buy 1209 43 22 0` (the review of 2026-10-06, fix 2).
 - **The camera aims at the ground, so it cannot close in on a Hot Pot's water**, 30 units up: `camera 435 275 45 180`
   and anything nearer shows the pot's wall. Take `camera 435 320 110 180` and crop the pot from the frame (Q257s).

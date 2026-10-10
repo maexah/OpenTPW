@@ -653,7 +653,7 @@ public sealed class ParkGuestSprites : ModelEntity
 				continue;
 			}
 
-			// So is a rider whose head ADDHEAD hung on a ride's node.
+			// So is a rider whose head ADDHEAD, or a walk under action 4, hung on a ride's node.
 			if ( HeadOnRide( people, person.ThingId ) is { } hung )
 			{
 				if ( DrawHead( used, hung.At, hung.Frame, kind, bank, sprite.Alpha ) )
@@ -725,7 +725,7 @@ public sealed class ParkGuestSprites : ModelEntity
 	}
 
 	/// <summary>
-	/// Where the head <c>ADDHEAD</c> hung for this guest stands in the park, and which of the 56 pictures its node shows the
+	/// Where the head <c>ADDHEAD</c> or a walk under action 4 hung for this guest stands in the park, and which of the 56 pictures its node shows the
 	/// camera (<see cref="ParkBumperBoats.HeadFrame"/>), or null where no script holds a head of theirs on a node with a
 	/// position. The head stands where the node is drawn this frame (<see cref="ParkObjects.TryDrawnNodeOn"/>): on the
 	/// tentacle a morph has moved, or carried by the arm a clip turns. The picture is chosen by the node's turn at rest,

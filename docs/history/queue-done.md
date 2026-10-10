@@ -5794,6 +5794,14 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   resumed 102 ms before the load, the file's time less its start, and the file saved at once holds start 114635631,
   the original's 114633495 plus four loops of 534 ms; the control's 114635198 is 3.19 loops on; the original loaded
   the written file and read 114635631 on its first frame (`q257t/orig/b-load.log`).
+- [x] **Q257u. The writer: a rider's head hung by a walk.** Split by the session from the old Q257u, whose other
+  pieces are Q257v. A walk slot carried under action 4 is a head on its head node's lookup record
+  (`FUN_00557d80` at `0x00557e79`, `FUN_005571a0`): drawn, and written with a sprite of its own
+  (`RideScript.WalkHeads`, `ParkRides.WrittenHeads`). **Proved:** a bought Aztec Mayhem with four riders carried
+  reads `heads 4/0`, the frame shows four heads on its benches, and the file holds `0x2b` and slots 11, 20, 21, 22
+  on records 5, 7, 8, 9; the original under Proton read the four at the first poll, placed where this build's
+  census has them, and took them off 4, 3, 2, 1, 0; with the build before's file its count fell to 4294967292
+  (`saves.md`, "OpenTPW's writer, a walk's head").
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

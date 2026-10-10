@@ -1295,4 +1295,114 @@ public class ParkFileWriterBoughtAndSoldTests
 		Assert.AreEqual( 11, held.Values.Count( list => list.Length == 0 ) );
 		Assert.AreEqual( 14, held.Count );
 	}
+
+	private const int AztecMayhem = 1104;
+
+	/// <summary>The lookup records the Aztec Mayhem's head ids 1 to 5 hang on, as its model's own table has them and Alexah's save holds five heads on.</summary>
+	private static readonly int[] MayhemHeadRecord = [5, 7, 8, 9, 12];
+
+	/// <summary>A bought Aztec Mayhem with its script's walk slots as <paramref name="slots"/>, handed to the writer.</summary>
+	private ParkFileWriter.RunningThings MayhemWithRiders( out RideScript script, params SavedWalkSlot[] slots )
+	{
+		var state = new ParkState( shipped );
+		var rides = Bind( shipped );
+		var mayhem = Buy( state, rides, AztecMayhem, 57, 23 );
+
+		script = rides.Scheduler.Find( rides.ScriptFor( mayhem.ThingId ) )!;
+
+		var walk = new SavedWalkSlot[script.WalkSlots];
+
+		slots.CopyTo( walk, 0 );
+		script.RestoreRiders( new SavedScript( 1, 0, 0, [], 0, 0, 0, [], 0, 0, 0, 0, 0, Walk: walk ), reading => reading );
+
+		var kept = state.WrittenObjects( shipped, id => true, out var bought, out var gone );
+		Assert.IsTrue( catalogue.TryGet( AztecMayhem, out var item ) );
+
+		return rides.Written( shipped, kept, ChannelsFor, state.HoardingFor,
+			[new ParkRides.BoughtThing( new ParkWorld.MadeObject( bought[0], "Aztec", "Mayhem" ), item.Width, item.Depth, "there\\" )], gone, state.BuiltItems )!;
+	}
+
+	/// <summary>A walk slot of the Mayhem's: a rider walked on to head node <paramref name="head"/>.</summary>
+	private static SavedWalkSlot Walked( int head, int visitor, int action, RideScript.WalkState state )
+		=> new( 1, (short)head, (short)head, 1, 5000, 5700, visitor, (short)action, (short)state, 1 );
+
+	/// <summary>
+	/// A rider carried by a walk under action 4 has a head on the head node's lookup record, with a sprite of its own,
+	/// as a head table's: the Aztec Mayhem's, whose script keeps no head table. One still walking on, walking off,
+	/// or carried under another action has none, and every other head record reads as the model's file gives it.
+	/// </summary>
+	[TestMethod]
+	public void AWalksHeadGoesIntoItsLookupRecordAndTheSpriteTable()
+	{
+		var guests = shipped.People.Where( person => person.Guest != null ).Take( 5 ).Select( person => person.ThingId ).ToArray();
+
+		var things = MayhemWithRiders( out var script,
+			Walked( 1, guests[0], 4, RideScript.WalkState.Carried ), Walked( 2, guests[1], 4, RideScript.WalkState.WalkingOn ),
+			Walked( 3, guests[2], 4, RideScript.WalkState.Carried ), Walked( 4, guests[3], 6, RideScript.WalkState.Carried ),
+			Walked( 5, guests[4], 4, RideScript.WalkState.WalkingOff ) );
+
+		Assert.AreEqual( 0, script.HeadSlots, "the script has no head table" );
+
+		var heads = things.Made!.Single().Heads!.Value;
+
+		CollectionAssert.AreEqual( new[] { (MayhemHeadRecord[0], guests[0]), (MayhemHeadRecord[2], guests[2]) }, heads.Hung.ToArray() );
+		Assert.AreEqual( 27, heads.Records.Count, "every head node of the model: ids 1 to 27" );
+		CollectionAssert.IsSubsetOf( MayhemHeadRecord, heads.Records.ToArray() );
+
+		var body = ParkFileWriter.Body( shipped, Running( things ), out var report, out _ );
+		var written = new ParkWorld( body );
+		var lookups = Models( written ).LookupsOf( 90 )!.Value;
+
+		Assert.IsTrue( catalogue.TryGet( AztecMayhem, out var item ) );
+
+		var fresh = ParkModelTables.Lookups( new ModelFile( data.OpenRead( $"{item.Directory}/{item.Stem}.MD2" )! ), item.DoHeadProcessing );
+
+		Assert.IsNull( written.Problem );
+		Assert.IsTrue( item.DoHeadProcessing );
+		Assert.AreEqual( (7, 2, 2), (lookups.Shared, lookups.Attached, report!.Value.Heads) );
+		Assert.AreEqual( (0x2b, 11), lookups.Records[MayhemHeadRecord[0]] );
+		Assert.AreEqual( (0x2b, 20), lookups.Records[MayhemHeadRecord[2]] );
+
+		for ( var record = 0; record < fresh.Length; ++record )
+		{
+			if ( record != MayhemHeadRecord[0] && record != MayhemHeadRecord[2] )
+				Assert.AreEqual( fresh[record], lookups.Records[record], $"record {record} holds nothing" );
+		}
+
+		Assert.AreEqual( (0x29, -1), lookups.Records[MayhemHeadRecord[1]], "a rider still walking on" );
+		Assert.AreEqual( shipped.Sprites.Count + 2, written.Sprites.Count );
+
+		var first = written.Sprites.Single( sprite => sprite.Slot == 11 );
+
+		Assert.AreEqual( (1, 1698, 1704, 2), (first.Type, first.Pc, first.Script, first.State) );
+		Assert.IsFalse( written.People.Any( person => person.SpriteSlot is 11 or 20 ), "no person is given a head's slot" );
+	}
+
+	/// <summary>
+	/// With nobody carried the Mayhem's record holds no head, and a walking script on an item that does not keep its
+	/// head nodes posed rules no lookup record: the Jungle Spray's are not its script's to write.
+	/// </summary>
+	[TestMethod]
+	public void AWalkWithNobodyCarriedHoldsNoHeadAndAnItemWithNoHeadProcessingRulesNone()
+	{
+		var guest = shipped.People.First( person => person.Guest != null ).ThingId;
+		var things = MayhemWithRiders( out _, Walked( 1, guest, 4, RideScript.WalkState.WalkingOff ) );
+		var heads = things.Made!.Single().Heads!.Value;
+
+		Assert.AreEqual( (0, 27), (heads.Hung.Count, heads.Records.Count) );
+
+		var lookups = Models( new ParkWorld( ParkFileWriter.Body( shipped, Running( things ), out _, out _ ) ) ).LookupsOf( 90 )!.Value;
+
+		Assert.AreEqual( (3, 0), (lookups.Shared, lookups.Attached) );
+
+		// The shipped park's Jungle Spray walks its riders on under action 6 and its item sets no DoHeadProcessing.
+		var state = new ParkState( shipped );
+		var rides = Bind( shipped );
+		var kept = rides.Written( shipped, state.WrittenObjects( shipped ), ChannelsFor, state.HoardingFor )!;
+		var walking = shipped.Objects.Where( thing => rides.Scheduler.Find( rides.ScriptFor( thing.ThingId ) ) is { WalkSlots: > 0 } ).ToArray();
+
+		Assert.AreEqual( 1, walking.Length, "the Jungle Spray alone walks its riders on" );
+		Assert.IsTrue( catalogue.TryGet( walking[0].CatalogueId, out var spray ) && !spray.DoHeadProcessing );
+		Assert.IsTrue( kept.Models.All( model => model.Heads == null ), "no kept record's lookup records are written" );
+	}
 }

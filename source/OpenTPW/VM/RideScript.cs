@@ -370,7 +370,32 @@ public sealed class RideScript
 		}
 	}
 
-	/// <summary>The head node a head of <paramref name="handle"/> hangs on, the first slot's, or false where none does.</summary>
+	/// <summary>
+	/// Every head a walk has hung: the head node's id and the visitor of each walk slot carried under action 4. The
+	/// stepper hangs the rider's head on that node's lookup record as the walk on arrives (<c>FUN_0044b410</c> at
+	/// <c>0x00557e79</c>), <c>WALKOFF</c> takes it off a slot still carried (<c>FUN_0044b4c0</c> in
+	/// <c>FUN_005571a0</c>), and a head node the model lacks is given none, so the slot's own words say it all:
+	/// the script keeps no table of these. Lost Kingdom's are the Aztec Mayhem's and the Inca Totem's.
+	/// </summary>
+	public IEnumerable<(int Node, int Handle)> WalkHeads()
+	{
+		if ( Nodes is not { } nodes )
+			yield break;
+
+		foreach ( var walking in _walk )
+		{
+			if ( walking is { State: WalkState.Carried, Action: HeadAction } && nodes.HeadIndex( walking.HeadNode ) >= 0 )
+				yield return (walking.HeadNode, walking.Handle);
+		}
+	}
+
+	/// <summary>The action of a <c>WALKON</c> whose rider is carried as a head on a head node.</summary>
+	private const short HeadAction = 4;
+
+	/// <summary>
+	/// The head node a head of <paramref name="handle"/> hangs on, the head table's first slot's or else a walk's
+	/// (<see cref="WalkHeads"/>), or false where none does.
+	/// </summary>
 	public bool TryHeadNode( int handle, out int node )
 	{
 		for ( var slot = 0; handle != 0 && slot < _heads.Length; ++slot )
@@ -380,6 +405,15 @@ public sealed class RideScript
 				node = slot + 1;
 				return true;
 			}
+		}
+
+		foreach ( var head in handle != 0 ? WalkHeads() : [] )
+		{
+			if ( head.Handle != handle )
+				continue;
+
+			node = head.Node;
+			return true;
 		}
 
 		node = 0;
@@ -1419,7 +1453,8 @@ public sealed class RideScript
 	/// <c>FUN_005580a0</c> interpolating between two node positions and handing them to the sprite
 	/// placer, from the same nodes <see cref="Leg"/> finds (<see cref="Nodes"/>). Nothing here draws a walking
 	/// rider (docs/QUEUE.md Q22), so the bookkeeping is reproduced and the placement is not, the same split
-	/// <see cref="_bounceBase"/> already lives with. The slot's facing is kept, for the park file: a carried
+	/// <see cref="_bounceBase"/> already lives with. A rider arrived under action 4 is drawn as the head the engine
+	/// hangs on the head node (<see cref="WalkHeads"/>). The slot's facing is kept, for the park file: a carried
 	/// rider's is taken again here, and the turn <c>WALKST_FLOAT</c>'s shake gives it each frame is not built,
 	/// counted with that instruction.
 	/// </para>
@@ -2427,9 +2462,9 @@ public sealed class RideScript
 	/// </para>
 	/// <para>
 	/// The leg is a new one, from the off-from node to the off-to node, restamped from now (<c>0x00557276</c>); the
-	/// off-from node is a head where the action is 4. The particle spawn the engine performs for action 2, and the
-	/// model-node attachment it undoes for action 4, are both presentation and are absent for the reason given
-	/// on <see cref="StepTheWalks"/>.
+	/// off-from node is a head where the action is 4, and a rider carried under it has their head taken off its
+	/// node by the slot leaving <see cref="WalkState.Carried"/> (<see cref="WalkHeads"/>). The particle spawn the
+	/// engine performs for action 2 is presentation and is absent for the reason given on <see cref="StepTheWalks"/>.
 	/// </para>
 	/// </summary>
 	private void WalkOff( float now, int handle )

@@ -48,9 +48,12 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q257u. The writer: what else a made record leaves out.** The old Q257t's other pieces, each counted or
+- [ ] **Q257v. The writer: what else a made record leaves out.** The old Q257u's other pieces, each counted or
   said in `saves.md`. Confirm: each piece's bytes beside a file of the original's own, and the file loaded in
   the original under Proton.
+  From Q257u (`saves.md`, "OpenTPW's writer, a walk's head"): the Inca Totem, a Mayhem sold or moved with riders
+  carried and a head in a costume were in no game run; which of a head's 56 pictures each game shows is not
+  compared; the rider's body is not drawn where the original leaves it standing.
   From Q257t (`saves.md`, "OpenTPW's reader, a car's model record"): a loaded car's wake's record is not read (no
   wake is drawn, `BUMPER_CAR_WAKE`); a handle naming no record of the boat's item is counted and left
   (`SAVED_TRACK_CAR_MODEL_NOT_ITS_OWN`), where the original takes whatever record lies there; with no boat drawn
@@ -79,14 +82,14 @@ the research lab), then the rest of this section in its old order.
   (or a bare cell naming one), reads no handle on that cell afterwards and still draws the piece
   (`saves.md`, "OpenTPW's writer, a queue cell's model", the control).
   From Q257l (`saves.md`, "OpenTPW's writer, a person's sprite inside a loop"): a saved sprite's
-  local 0 (`+0x84`, the hold loop's counter, where local 18 is not nought) is not read at a load.
+  local 0 (`+0x84`) is not read at a load; it is memory the constructor `FUN_004758f0` never writes, and only
+  the state script's hold loop reads it, with local 18 above nought, which no file has (`q257u/locals.py`).
   And a made person's sprite inside a loop (a hired entertainer performing) was in no game run: the tests alone.
   From Q257m (`saves.md`, "OpenTPW's writer, a person's sprite's drawing flags"): what bit `0x200` of a
   sprite's flags draws is not decoded (`0x005422fb`), and the drawing here reads none of the word.
-  From Q257d: a head the engine hangs with no head table (a `WALKON` of action 4, the Aztec Mayhem's five; a
-  coaster's and a tour's cars') is hung by nothing here, is not counted, and a written park holds only the
-  file's: find who calls `FUN_0044b410` for one, count it where the script reaches it, then write it as a
-  table's head is (`ParkRides.WrittenHeads` hands over none for such a script). And a new head's slot is the
+  From Q257d: a head on a coaster's or a tour's car, which the engine hangs with no head table, is hung by
+  nothing here, is not counted, and a written park holds only the file's: count it where `COAST` and `TOUR`
+  reach `FUN_0044b410`, then write it as a table's head is (a walk's is done, Q257u). And a new head's slot is the
   lowest the FILE leaves empty, not the lowest empty as it was hung: keep the slots as heads are hung if that
   order is ever read.
   From Q257e (`saves.md`, "OpenTPW's writer, the region effects"; `ride-operation.md`, "The region effects"):

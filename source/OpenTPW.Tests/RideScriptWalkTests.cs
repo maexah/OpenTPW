@@ -950,4 +950,86 @@ public class RideScriptWalkTests
 		Assert.AreEqual( 24, Unimplemented.Summary.Single( gap => gap.What == "WALK_LEG_REST_POSE" ).Times,
 			"only the heads are counted at rest: twelve walks on in each script, and no walk off" );
 	}
+
+	/// <summary>
+	/// <b>A rider walked on under action 4 is carried as a head on the head node</b>: the stepper hangs it as the walk
+	/// arrives (<c>FUN_0044b410</c> at <c>0x00557e79</c>) and <c>WALKOFF</c> takes it off (<c>FUN_0044b4c0</c> in
+	/// <c>FUN_005571a0</c>). Still walking on, under another action, on a head node the model lacks or with no model,
+	/// no head hangs. The Aztec Mayhem's model, whose script is the one that does it.
+	/// </summary>
+	[TestMethod]
+	public void AWalkUnderActionFourHangsTheRidersHeadUntilTheWalkOff()
+	{
+		RideScript WalkedOn( int head, int action, bool model = true )
+		{
+			var script = new RideScript( Build( walkSlots: 2,
+				Word( Opcode.WALKON ), Rider, 1, head, head, 1, action, 1,
+				Word( Opcode.END ) ) );
+
+			if ( model )
+				script.Nodes = RideNodes.Load( "levels/jungle/Rides/tvsim", "tvsim", _data, true, [] )!;
+
+			script.Turn( 0f );
+
+			return script;
+		}
+
+		var script = WalkedOn( head: 3, action: 4 );
+
+		Assert.IsNotNull( script.Nodes );
+		Assert.IsFalse( script.WalkHeads().Any(), "a rider still walking on has no head hung" );
+		Assert.IsFalse( script.TryHeadNode( Rider, out _ ) );
+
+		script.StepTheWalks( 100_000f );
+
+		CollectionAssert.AreEqual( new[] { (3, Rider) }, script.WalkHeads().ToArray() );
+		Assert.IsTrue( script.TryHeadNode( Rider, out var node ) );
+		Assert.AreEqual( 3, node );
+		Assert.IsFalse( script.TryHeadNode( Rider + 1, out _ ), "another visitor has none" );
+		Assert.IsFalse( script.TryHeadNode( 0, out _ ), "and nobody has none" );
+
+		foreach ( var (head, action, model, why) in new[] { (3, 6, true, "action 6 carries a body"), (3, 1, true, "action 1"),
+			(99, 4, true, "the model has no head node 99"), (3, 4, false, "no model") } )
+		{
+			var other = WalkedOn( head, action, model );
+
+			other.StepTheWalks( 100_000f );
+
+			Assert.AreEqual( RideScript.WalkState.Carried, other.Walking().Single().State, why );
+			Assert.IsFalse( other.WalkHeads().Any(), why );
+			Assert.IsFalse( other.TryHeadNode( Rider, out _ ), why );
+		}
+
+		// A slot carried for nobody, which a script can make by walking on a handle of nought, is nobody's head to find.
+		var nobody = new RideScript( Build( walkSlots: 2,
+			Word( Opcode.WALKON ), 0, 1, 3, 3, 1, 4, 1,
+			Word( Opcode.END ) ) )
+		{
+			Nodes = script.Nodes,
+		};
+
+		nobody.Turn( 0f );
+		nobody.StepTheWalks( 100_000f );
+
+		CollectionAssert.AreEqual( new[] { (3, 0) }, nobody.WalkHeads().ToArray() );
+		Assert.IsFalse( nobody.TryHeadNode( 0, out _ ) );
+
+		// WALKOFF of a rider carried takes the head off: the slot leaves the carried state.
+		var off = new RideScript( Build( walkSlots: 2,
+			Word( Opcode.WALKOFF ), Rider,
+			Word( Opcode.END ) ) )
+		{
+			Nodes = script.Nodes,
+		};
+
+		off.RestoreRiders( Holding( new SavedWalkSlot( 1, 3, 3, 1, 5000, 5700, Rider, 4, (short)RideScript.WalkState.Carried, 1 ), default ),
+			reading => reading != 0 ? reading - 5000f : null );
+
+		CollectionAssert.AreEqual( new[] { (3, Rider) }, off.WalkHeads().ToArray(), "a carried slot read from a file holds its head" );
+
+		off.Turn( 1000f );
+
+		Assert.AreEqual( RideScript.WalkState.WalkingOff, off.Walking().Single().State );
+		Assert.IsFalse( off.WalkHeads().Any() );
+	}
 }

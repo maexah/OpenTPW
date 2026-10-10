@@ -2806,7 +2806,7 @@ public sealed partial class ParkPeople : Entity
 
 	/// <summary>
 	/// The script holding a head of this guest on one of its head nodes, and that node's id, or false where no script
-	/// does - <c>ADDHEAD</c>'s table, asked of the scripts for the reason <see cref="TrySeatOf"/> gives.
+	/// does - <c>ADDHEAD</c>'s table or a walk under action 4, asked of the scripts for the reason <see cref="TrySeatOf"/> gives.
 	/// </summary>
 	internal bool TryHeadOf( int guestThingId, out RideScript? script, out int node )
 	{
@@ -2927,7 +2927,7 @@ public sealed partial class ParkPeople : Entity
 
 			// Every head slot in use, and where its node stands in the park's axes as the drawing takes it, so a head
 			// can be checked against the picture: node:visitor, "unhung" where the model has no such node.
-			var heads = script.Heads().Select( head =>
+			var heads = script.Heads().Concat( script.WalkHeads().Select( head => (head.Node, head.Handle, Hung: true) ) ).Select( head =>
 			{
 				if ( !head.Hung || script.Nodes is not { } nodes )
 					return $"{head.Node}:{head.Handle} unhung";

@@ -1644,13 +1644,13 @@ leaves one: `0x2` off and the handle `-1`. The sprite is written at its slot as 
 keeps of its last drawing nought, as on every sprite made here. A head on a record the file has a head on keeps
 the file's slot, its kind and bank written over; a new one takes the lowest slot the file's table leaves empty,
 before any slot is dealt to a person made; a head gone, and every head of a thing sold, gives its slot up. A
-script with no head table rules no lookup record: its model's are left the file's, and its heads' sprites with
-them.
+script with no head table rules no lookup record, but one that walks riders on under action 4 ("OpenTPW's writer,
+a walk's head", below): its model's are left the file's, and its heads' sprites with them.
 
 **Deviations, each said at its site.** The original deals a head the lowest empty slot as it is hung, among the
 people's as they come and go; here a new head takes none of the file's slots, a person gone since or not, so
-the slots are not the original's own. A head the engine hangs with no head table is not built here, so a
-written park holds the file's and no new one. Written with no people (`Running.People` null) the sprite table is
+the slots are not the original's own. A coaster's and a tour's cars' heads, which the engine hangs with no head table, are not built here, so a
+written park holds the file's and no new one; a walk's is ("OpenTPW's writer, a walk's head", below). Written with no people (`Running.People` null) the sprite table is
 left alone and the lookup records with it.
 
 **Confirmed in both games** (`q257d/`, `PREDICTION.txt` holds every prediction and miss). A Crazy Ape bought in
@@ -2095,7 +2095,10 @@ All as predicted (`PREDICTION.txt`), the turns after the load guessed 2 to 6 and
 **Not run in either game, tested only:** a made person's sprite inside a loop (a hired entertainer performing);
 a kept sprite put on another program and written with its stack empty; a record whose `+0xc8` or `+0xcc` is
 not nought (no file holds one: staff are made on animation 3, which leaves both nought). **Not read at a
-load:** a sprite's local 0 (`+0x84`, the hold loop's counter; Q257n). The drawing flags at `+0xc4` are the next
+load:** a sprite's local 0 (`+0x84`). The constructor `FUN_004758f0` never writes it, so on a person's sprite it
+is what the memory held (68 of 1,008 people's sprites in fifteen files hold some float or other, the same value on
+one sprite from file to file; `q257u/locals.py`), and only the state script's hold loop reads it, with local 18
+above nought, which no file has. The drawing flags at `+0xc4` are the next
 section's. The photographs show the entertainer
 performing and the park after the load and do not tell the fix from the control: the difference is one frame
 of eight, once. Of 22 bugs put back 21 failed a test at first; the last, a loaded sprite due at once, fails after
@@ -2533,6 +2536,71 @@ after a load of a shut file; a ride sold with boats out; a peep on the leaving o
 save (no run caught one); a boat with no rider written from a bought pot. **Not seen:** the original loading
 a file whose car holds a smoke handle of -1 while its ride is broken. **Not compared:** the boats' clip frame
 after the load. `docs/exe/addresses.md` not regenerated.
+
+### OpenTPW's writer, a walk's head
+
+Q257u, split by the session: this is the head a walk hangs. The item's other pieces are Q257v. Harness `q257u/`
+(`PREDICTION.txt`, `confirm.py`, `heads.py`, `slots.py`, `mutations.py`, `orig/`).
+
+**Read in the listing.** The walk stepper `FUN_00557d80`, as a walk on arrives (state 1 to 2, `0x00557e79`), tests the
+slot's action against 4 and, where `FUN_0044b220( model, 0x80, the slot's head node )` answers a record, calls
+`FUN_0044b410( model, record, the slot's visitor )`, the one maker of a head (`0x2` on the record, a sprite of the
+rider's kind and bank, one more attached, shared `0x4`). `WALKOFF` (`FUN_005571a0`) for a slot of action 4 **in state
+2** looks the same head node up and calls `FUN_0044b4c0`, which takes one off the count whatever the record holds,
+clears shared `0x4` at nought, clears `0x2`, frees the sprite and writes -1; the teardown `FUN_00558500` does the
+same for every such slot under mode bit `0x4`. No table is kept: **a slot of action 4 in state 2 is a head on its
+head node's record, and nothing else is**.
+
+**Measured in the original's file.** Alexah's Lost Kingdom autosave holds one script with such slots, the Aztec
+Mayhem's (item 1104, `tvsim`): five slots carried under action 4 on head nodes 1 to 5, and its model's record holds
+shared 7, five attached and `0x2b` with a sprite slot on lookup records 5, 7, 8, 9 and 12, which the model's own table
+gives head ids 1 to 5 (`q257u/slots.py`, `heads.py`). Every other slot in use in the file is of action 1, 5 or 6.
+
+**What OpenTPW builds** (`RideScript.WalkHeads`, `TryHeadNode`; `ParkRides.WrittenHeads`). A walk slot carried
+under action 4 whose head node the model has is a head: `ParkGuestSprites.HeadOnRide` draws the rider as their head
+on that node as it is drawn this frame, and no body, as a head table's; the writer puts `0x2` and a sprite's slot on
+the node's lookup record and writes every other head record of the model as `FUN_0044b4c0` leaves one. The script
+rules the records where it has walk slots and its item sets `Info.DoHeadProcessing`, which the items whose scripts
+walk a rider on under action 4 do (Lost Kingdom's: the Aztec Mayhem and the Inca Totem). A load needs nothing new:
+the slot read back carried is the head. `rides` prints a walk's heads with the table's (`heads 4/0`).
+
+**Confirmed in the game** (`q257u/confirm.py`; `PREDICTION.txt` holds every prediction, written first; four runs of
+the fix, 4 of 4, then 5 of 5 three times, two of them on the desktop). Lost Kingdom from `easymode.TPWI`,
+`buy 1104 57 23`, the queue joined to the path, left until riders were carried. Paused with four carried: `rides`
+read `heads 4/0`, head ids 1 to 4 on visitors 39, 29, 42 and 38, each slot `Carried`; the frame, the camera over the
+ride, shows four heads on the simulator's benches inside the pyramid and no body there
+(`desk-fix2/1-riders-carried-2.png`). The file: the Mayhem's record on model slot 90 shared 7, four attached,
+`(0x2b, 11)`, `(0x2b, 20)`, `(0x2b, 21)`, `(0x2b, 22)` on records 5, 7, 8 and 9, `0x29` and -1 on record 12, and the
+four slots resting heads of kind 1 with no place, named by no person. Loaded here from the Load Park list and saved
+again at once: the same heads on the same slots. Saved after the riders walked off: shared 3, none attached, no head
+left on a slot. **The control** (the build before, the same scene, four riders carried): `heads 0/0`, the benches
+empty and the riders drawn standing outside (`desk-control/1-riders-carried-2.png`), the record shared 3 with
+nothing attached, and nothing counted.
+
+**The original under Proton** (`original/loadfile.sh` with `original/heads.py` polling the Mayhem's model;
+`q257u/orig/`). The fix's file of four heads (`a-load.log`): on the first poll of the file's tick shared 7, four
+attached, `0x2b` and handles 11, 20, 21 and 22 on records 5, 7, 8 and 9, each a live head of kind 1 on the file's
+bank, state 2, word 1698, flags `0x3000080`, shown, **placed at (580.7, 247.2), (594.8, 242.8), (585.3, 242.8) and
+(580.6, 242.8) at height 1.2, scale 0.685**: the places this build's census gives the same head nodes. It hung a
+fifth itself 3.4 s on (made on word 1704, resting on 1698 by the next poll) and at the ride's end took them off one
+a half second, 4, 3, 2, 1, to shared 3 and none. The second file, of three heads (`b-load.log`): 3, then its own
+fourth, then 3, 2, 1, 0. **The control's file**, four slots carried and no head (`c-load.log`): shared 3 and none
+attached at the first poll, a fifth rider's head hung by the original itself, and **at the ride's end the count
+read 0, then 4294967295, 4294967294, 4294967293 and 4294967292**, one off for each carried slot that had no head;
+it stayed four short, so that a later ride read shared 7 with nought attached while a head still hung. As predicted
+(C2), the freeing of a sprite handle of -1 doing no harm seen.
+
+**Not seen in the original's picture:** the heads. Its frames of both files show the Mayhem mid-frame with its lid
+shut over the riders (`orig/sheet-original-fix-left-control-right.png`); the proof there is its memory. **Not
+compared:** which of a head's 56 pictures each game shows (the original's read frames 22, 14, 22 and 22; the census
+here does not print one). **A deviation kept:** the rider's body is not drawn here, where the original leaves it
+standing where it boarded (`ride-operation.md`, "What the head is"), as for a boat's and a head table's rider.
+**Not run in either game:** the Inca Totem, whose walks are the same instruction; a Mayhem sold or moved with
+riders carried; a head in a costume. **One check passed the weaker way:** in the second off-screen run a fourth
+rider arrived between the load and its census, so the kept record was held against the new census, not the saved
+one. Of 22 bugs put back 20 fail a test (one after an assertion was added); the two that live change nothing that
+can happen: a head on no record is refused twice over, and no Lost Kingdom item sets `DoHeadProcessing` without
+walk slots (`mut-run1.out`, `mut-run2.log`). `docs/exe/addresses.md` not regenerated.
 
 ### Read, not run
 

@@ -135,7 +135,8 @@ public sealed class ParkRides : Entity
 	/// <c>Info.DestroyParticleEffect</c> over the footprint, for the script named here and not for the ones it
 	/// takes with it; it is counted rather than drawn, because nothing here draws a particle effect in the
 	/// world rather than on the screen. <c>0x4</c> takes the heads <c>ADDHEAD</c> hung on the model off it,
-	/// which here go with the script: a head is drawn from a live script's table (<see cref="RideScript.Heads"/>).
+	/// and a walk's with them, which here go with the script: a head is drawn from a live script's table and walk
+	/// slots (<see cref="RideScript.Heads"/>, <see cref="RideScript.WalkHeads"/>).
 	/// </para>
 	/// <para>
 	/// <b>A script that has already run off its end spawns nothing</b>, because the original's teardown finds
@@ -1061,21 +1062,35 @@ public sealed class ParkRides : Entity
 	internal static int NowMilliseconds => (int)(GameClock.Ticks * MillisecondsPerTick);
 
 	/// <summary>
-	/// The heads a script's head table has hung on its model's nodes, each by its node's lookup record, with every
-	/// record the table can hang one on; null for a script with no head table, whose model's lookup records are
-	/// not its to write (a head the engine hangs with no table, a car's or the Aztec Mayhem's, is kept by nothing
-	/// here), and for an item whose model will not read.
+	/// The heads hung on a script's model's nodes, each by its node's lookup record, with every record one can hang
+	/// on: a head table's (<c>ADDHEAD</c>), and a walk's on an item that keeps its head nodes posed
+	/// (<see cref="RideScript.WalkHeads"/>: <c>Info.DoHeadProcessing</c> is set by the items whose scripts walk a
+	/// rider on under action 4). Null for a script with neither, whose model's lookup records are not its to write
+	/// (a coaster's and a tour's cars' heads are kept by nothing here), and for an item whose model will not read.
 	/// </summary>
 	private WrittenHeads? WrittenHeads( RideScript? script, int catalogueId )
 	{
-		if ( script is not { HeadSlots: > 0 } || TableModel( catalogueId ) is not { } model )
+		if ( script == null || TableModel( catalogueId ) is not { } model )
+			return null;
+
+		var walked = script.WalkSlots > 0 && model.DoHeadProcessing;
+
+		if ( script.HeadSlots == 0 && !walked )
 			return null;
 
 		int Record( int head ) => model.Model.FindNode( head, RideNodes.HeadSpace ) is var node && node >= 0 ? node - model.Model.LookupFirst : -1;
 
+		// A walk can hang on any head node of the model: the run of ids from 1, as a head table is sized.
+		var nodes = script.HeadSlots;
+
+		while ( walked && model.Model.FindNode( nodes + 1, RideNodes.HeadSpace ) >= 0 )
+			++nodes;
+
 		return new WrittenHeads(
-			[.. Enumerable.Range( 1, script.HeadSlots ).Select( Record ).Where( record => record >= 0 )],
-			[.. script.Heads().Where( head => head.Hung && Record( head.Node ) >= 0 ).Select( head => (Record( head.Node ), head.Handle) )] );
+			[.. Enumerable.Range( 1, nodes ).Select( Record ).Where( record => record >= 0 )],
+			[.. script.Heads().Where( head => head.Hung ).Select( head => (head.Node, head.Handle) )
+				.Concat( walked ? script.WalkHeads() : [] )
+				.Where( head => Record( head.Node ) >= 0 ).Select( head => (Record( head.Node ), head.Handle) )] );
 	}
 
 	/// <summary>
