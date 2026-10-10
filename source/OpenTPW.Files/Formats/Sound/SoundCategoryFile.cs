@@ -61,7 +61,11 @@ public sealed class SoundCategoryFile
 	/// The byte at <c>+0x12</c>: the parameter id a held chain's zones are chosen by, its voice's key 0
 	/// (<c>0x006bbfb1</c>), or 0. Non-zero on exactly the records with bit <c>0x400</c>.
 	/// </param>
-	public readonly record struct Effect( int Id, TimeSpan RepeatDelay, int Variations, int ParameterId = 0 );
+	/// <param name="Flags">
+	/// The word at <c>+0x10</c>, which the engine makes a voice's flags from (<c>FUN_006bbe90</c>): bit <c>0x8</c> is
+	/// a looped voice, <c>0x200</c> one with no place and no range.
+	/// </param>
+	public readonly record struct Effect( int Id, TimeSpan RepeatDelay, int Variations, int ParameterId = 0, int Flags = 0 );
 
 	/// <summary>One sample an effect can pick, with the odds of it being the one picked.</summary>
 	/// <param name="Bank">Which of <see cref="Banks"/> it lives in, already zero-based.</param>
@@ -234,7 +238,8 @@ public sealed class SoundCategoryFile
 				BitConverter.ToInt32( data, record ),
 				TimeSpan.FromMilliseconds( BitConverter.ToInt32( data, record + (EffectDelayField * 4) ) ),
 				BitConverter.ToInt32( data, record + (EffectVariationField * 4) ),
-				data[record + 0x12] );
+				data[record + 0x12],
+				BitConverter.ToUInt16( data, record + 0x10 ) );
 		}
 
 		return effects;

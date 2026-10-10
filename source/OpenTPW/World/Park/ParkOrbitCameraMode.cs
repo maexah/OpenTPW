@@ -26,6 +26,13 @@ namespace OpenTPW;
 public sealed class ParkOrbitCameraMode : CameraMode
 {
 	/// <summary>
+	/// A park under this camera is heard from halfway between the eye and the point it looks at, as the
+	/// original's is while its camera-mode mask is clear (<c>0x0054f9e4</c>; <c>docs/exe/audio.md</c>, "The
+	/// listener, and what a pause does to it").
+	/// </summary>
+	public override Vector3 Ears => (Position + PointOfInterest) * 0.5f;
+
+	/// <summary>
 	/// What the camera looks at, on the ground. The original's default is (475, 175) in the park's own
 	/// axes, which is grid cell (47, 17) - the park entrance's <c>EntranceA</c> in <c>Standard.sam</c>, one
 	/// cell west of the (48, 17) that <c>MapInfo.FixedItemOrigin</c> names. A cell is 10 units across and

@@ -12,7 +12,8 @@ place to look for tools. Each file's docstring is its manual.
 
 | Tool | Use it for |
 |---|---|
-| `lib/parkrun.py` | The scaffold of every save-and-load confirm run: a private game folder, `enter()`, `save()`, `load()`, `reply()`, `gaps()`, `shot()`, `predict()` and `said()`, `done()`; `OFFSCREEN = True` for a run beside the desktop's; `original_view( x, y )` for a saved camera the original's frame will show the point in |
+| `lib/parkrun.py` | The scaffold of every save-and-load confirm run: a private game folder, `enter()`, `save()`, `load()`, `reply()`, `gaps()`, `shot()`, `predict()` and `said()`, `done()`; `OFFSCREEN = True` for a run beside the desktop's; `AUDIO_FILE = "<path>"` writes the game's own mix to a file, nothing to the speakers; `original_view( x, y )` for a saved camera the original's frame will show the point in |
+| `lib/mixmatch.py` | One sample measured in OpenTPW's own mix (`AUDIO_FILE`): `template( sdt, index )` decodes a bank's entry, `window( file, from, to )` cuts the capture between two sizes, `match()` is the best match and its least-squares gain, `steady()` the gain of a looped sample under other sounds, from 0.3 s pieces in 2 s steps |
 | `lib/parkscene.py` | exec'd after `parkrun.py`: the one-line census readers (`var`, `thing_line`, `staff_line`, `bumper_line`, `field`) and the Hot Pot scenes (`hot_pot`, `in_a_go`, `broken_pot`), so a confirm script does not write them again |
 | `lib/parkfile.py` | The one reader of a park file: `Park` (things, cells, sprites), `track()` (the track-rides module, cars and riders), `models()` (every model record: item, flags, node words, lookup records, channels), `head()` (a sprite), `emitters()`, `emitter_words()` and `emitter_aim()` (the particles module's live emitters by their chains, where one is not its template, and its own velocity at `+0x38`; `parkfile.py -e <file>` prints them). Add a module's reader here, not in an item's folder |
 | `lib/md2surf.py <wad> <member.md2> [x z]` / `--sweep <data dir>` | A model's header float, lookup records and the faces a point stands on, with the height under a model point; the sweep counts them over every wad. Importable (`Model`): a reader of a `.md2`'s header, lookup table, meshes, vertices and faces to build a model check on |
@@ -28,6 +29,7 @@ place to look for tools. Each file's docstring is its manual.
 | `original/particledump.py PID EFFECT [raw]` | The original's memory: EVERY particle of each live emitter of an effect (its place less the emitter's, velocity, size, frame, colour) and the spread of each, where `spritepass.py` prints an emitter's first six. OpenTPW's side is the console's `particles <slot>`; `q261/cloud.py <run.out>` prints the same spread from a run's output |
 | `lib/spritesheet.py <bank.ESP> <out.png> <set>...` | A sprite bank's picture sets with their alpha, each frame over black and over white, and each frame's alpha spread and mean colour: what a particle's picture is before any blend. `wadcat --dump SPR_PA.ESP` and `--dump SPR_PA.TPC` on `esprites.wad` write the two files it reads |
 | `original/voices.py PID [SECS]` | The original's memory: every live sound voice by the service's own list (its effect and flags word, the voice's flags, place, range and rectangle, how far it is from the listener), with the listener first; a block a change. Says which placed sounds are in range and sounding. A `POLL` for `loadfile.sh` |
+| `original/mixer.py PID [SECS]` | The original's memory, inside `QMixer.dll`: the session and its listener, and every open channel's flags, place, distance mapping, volume, the mixer's own distance, and its cone, distance and final gains, with the gain the law gives beside the one read. How loud the mixer is playing a voice, where `voices.py` says only whether it sounds. A `POLL` for `loadfile.sh` |
 | `original/research.py <in> <out> <item>` | A copy of a jungle park file with one item marked researched, so Instant Action's buy list offers it |
 | `original/original.sh`, `tpwmem.py`, `gmove.py`, `record.sh`, `watch.sh` | Starting, reading, clicking, filming and watchpointing the original ("The original under Proton", below) |
 | `q119/lib.py` | What `parkrun.py` is built on: the launch, the console pipe, XTEST clicks and keys, the frame grab. Use it through `parkrun.py` |
@@ -77,6 +79,15 @@ whole list):
 - **The mechanic mending a pot:** `broken_pot()` (`lib/parkscene.py`), then wait for the log's `mechanic 26 found
   ride`, `starts repairing` and `finished repairing`: under a minute in all. He stands on (43,23), inside the
   pot's doorway, hidden from yaw 180: `camera 435 235 30 0` looks in at him (Q257z).
+- **A placed sound measured in the mix:** `AUDIO_FILE` before `parkrun.py`, `bus music 0`, then **wait 16 s
+  after the park is entered**: the advisor's opening line turns the effects down (a waterfall read 0.05 to 0.07
+  where 0.176 was owed). Take byte marks either side of an 8 s sleep and use `mixmatch.steady`: a 1.5 s
+  template scores 0.2 under the park's screams, a 0.3 s piece 1.000 in the gaps. `placed` prints the listener
+  and each of the land's sounds with its distance and gain (Q264).
+- **The orbit camera's eye is not `zoom` from the point it looks at where the ground is high:** the eye is
+  lifted by the ground's height under the point and the point stays at height nought. Over the waterfall
+  (ground about 12) `camera 530 513 30 180` puts the eye 38.5 off, not 30. Read `placed`'s listener, do not
+  work it out (Q264).
 - **A harness run needs a python with `Xlib` and `PIL`:** `~/.cache/tpw-harnesses/review-codex/venv/bin/python3`
   where the system's has no `Xlib`. A run that dies before `done()` leaves its Xvfb on `:78`: stop it (Q257w).
 - **The camera aims at the ground, so it cannot close in on a Hot Pot's water**, 30 units up: `camera 435 275 45 180`
@@ -124,6 +135,9 @@ GH=766` there, or the pointer is off):
   same clicks put it back, and `save/Config.tcf` then holds the same bytes. A park's mix still reads 0.04 rms
   with it off and every placed voice silenced, so one placed sound's loudness is not read from the mix: neither
   a match of its sample (0.04) nor its loop's length in the autocovariance found a waterfall 21 units off (Q263).
+- **How loud its mixer plays a voice** is read, not captured: `mixer.py PID` after a load prints each channel's
+  distance and gain (Q263's camera files `q263/files/aim-*.TPWS` step the listener away from the waterfall). A
+  channel marked `dirty` has not been worked out since it last moved: read the ones that are not (Q264).
 - **A camera file's listener is not where the camera was aimed:** `camera 531 513 110 180` saved here reads a
   listener of (546, 50, 476) there. Read it (`voices.py`'s first line) rather than work it out (Q263).
 - **A point's place on its screen** is its park place (x, the height, z) through the matrix at `[0x0087b088]`,

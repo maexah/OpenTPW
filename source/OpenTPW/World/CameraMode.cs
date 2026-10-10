@@ -11,6 +11,9 @@ public class CameraMode
 	/// </summary>
 	public float FieldOfView { get; set; } = 90f;
 
+	/// <summary>Where the scene is heard from: the eye, unless the mode says otherwise.</summary>
+	public virtual Vector3 Ears => Position;
+
 	public virtual void Update()
 	{
 

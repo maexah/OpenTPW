@@ -80,6 +80,15 @@ public sealed class Voice
 	/// <summary>Where in the world it sounds from, or null for a flat sound.</summary>
 	internal Vector3? Place => _position;
 
+	/// <summary>A placed voice's own range, or null for a voice that is as loud at any distance.</summary>
+	internal float? Range { get; }
+
+	/// <summary>What each ear is given of it, left and right, once <see cref="Locate"/> has placed it: the pan times the distance's gain.</summary>
+	internal (float Left, float Right) EarGains => (_targetGainLeft, _targetGainRight);
+
+	/// <summary>What the listener's distance last made of it, 0 to 1, before the pan: 1 for a voice with no range.</summary>
+	internal float DistanceGain { get; private set; } = 1f;
+
 	/// <summary>Whether it has been told to end: stopped, or fading out to stop.</summary>
 	internal bool Ending => _stopped || _stopWhenFaded;
 
@@ -135,12 +144,13 @@ public sealed class Voice
 	}
 
 	internal Voice( AudioClip clip, float volume, bool loop, float fadeInSeconds, AudioBus bus,
-		Vector3? position )
+		Vector3? position, float? range = null )
 	{
 		_clip = clip;
 		Loop = loop;
 		Bus = bus;
 		_position = position;
+		Range = range;
 		_targetVolume = volume;
 
 		if ( fadeInSeconds > 0f )
@@ -272,6 +282,10 @@ public sealed class Voice
 		// Which side it is on, and how far away it is, are one pair of numbers by the time the mixer
 		// sees them - so distance costs the audio thread nothing that the pan was not costing already.
 		var attenuation = listener.AttenuationTo( position );
+
+		// A voice with a range of its own is turned down inside it as the original's mixer turns it down.
+		DistanceGain = Range is { } range ? AudioListener.RangeGain( (position - listener.Position).Length, range ) : 1f;
+		attenuation *= DistanceGain;
 
 		_targetGainLeft = (1f - MathF.Max( pan, 0f )) * attenuation;
 		_targetGainRight = (1f + MathF.Min( pan, 0f )) * attenuation;

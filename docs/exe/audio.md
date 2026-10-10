@@ -165,8 +165,7 @@ when the range is 2.0 or under), and the manager's slot `+0x2c` (`0x006b9bb0`): 
 manager's `+0x28`, else 0.8. The running game read `0x508` there, so 0.8. These reach
 `QSWaveMixSetDistanceMapping` through `0x006c581b`. In `QMixer.dll` (image base `0x18000000`) that export, at
 `0x18003b10`, packs them into a command of type `0xc` (`0x1800c870`; a record of 12 bytes or under takes a
-scale of 1.0) and posts it to the channel (`0x18001520`). **What the mixer does with them is not read**: how
-loud a voice is at a distance inside its range is unknown.
+scale of 1.0) and posts it to the channel (`0x18001520`). What the mixer does with them is the next section.
 
 | Address | Original name | What it is | Evidence |
 |---|---|---|---|
@@ -181,6 +180,79 @@ loud a voice is at a distance inside its range is unknown.
 | `0x006bc410` | — | A voice's channel set-up: the distance mapping's three numbers and its request bit, the loop count | Decompiled |
 | `0x006b9bb0` | — | The mapping's third number: 0.2 or 0.8 | Disassembly; `0x0070a624`, `0x0070a628` read |
 | `[[0x00802bcc] + 4] + 0x20` | — | The voice container: its list's head at `+0x24`, a voice's next at `+0x34` (`FUN_006b62b0`) | Decompiled; walked in the running game |
+
+## The mixer's distance law
+
+Read for Q264 in `QMixer.dll` itself, imported into the Ghidra project as `/QMixer.dll` at Alexah's word
+(2026-10-10; image base `0x18000000`, 1,277 functions; the names below are this project's), and held against
+the running original's channels (`original/mixer.py`).
+
+**A channel is turned down by its distance in a straight line, raised to the mapping's third number.** The
+mapping's command, type `0xc`, is applied by the channel's command switch (`0x18007a20`): it stores min, max and
+scale at channel `+0x1e4`, `+0x1e8` and `+0x1ec` and marks the channel's gains stale. They are worked out again
+in `0x1800a980`, which reads the channel's parameter block at `+0x1a4`:
+
+- The distance (`+0x24c`) is the length of the listener's place (session `+0x58`) to the channel's
+  (`+0x1b4`), **over all three axes**. The game's own service silences a voice by x and z alone (above), so a
+  voice the service counts in range can still be past the range for the mixer, the listener's height being part
+  of its distance.
+- The channel's flags word (`+0x200`, what `QSWaveMixEnableChannel`'s last argument is stored as) picks the arm.
+  **With `0x1000`: nothing past max; all of it at min or nearer, or with a scale of nought; between them
+  `((max - d) / (max - min)) ^ scale`** (a scale of 1.0 skips the power; the power is `2 ^ (scale x log2)`,
+  `0x1800de70`). Without `0x1000` the arm is the inverse one, `min / (min + scale x (d - min))`
+  (`0x1800cfd0`), nothing past max unless `0x800` holds it at max's gain.
+- **The game sets `0x1000` on every channel it enables**: its flag maker `0x006d22d0` ends in `OR AH,0x10`,
+  whatever it was handed, and its one caller `0x006d2320` (the wrapper's slot `+0x68`) passes the result to
+  `QSWaveMixEnableChannel`. So a placed voice's law is the linear arm: with the game's 2.0, its range and 0.8,
+  `((range - d) / (range - 2)) ^ 0.8`.
+- The channel's final gain (`+0x260`) is its volume (`+0x1f0`) times the distance's gain (`+0x25c`) times the
+  cone's (`+0x258`). The volume is `QSWaveMixSetVolume`'s number over 32,767 (command type 2).
+
+**Measured in the original, 2026-10-10** (`original/mixer.py`, new: the session found in the DLL's own memory,
+every open channel a line; four of Q263's camera files loaded, `q264/orig/mixer-*.txt`). Predicted first
+(`q264/PREDICTION.txt`), 4 of 4: both placed channels read flags `0x1111` and a mapping of 2.0, 97.0 and 0.80;
+the gain beside each distance was the law's to four places:
+
+| Channel | The mixer's distance | Its gain | The law |
+|---|---|---|---|
+| the fall, listener (552, 52, 538) | 61.70 | 0.4529 | 0.4529 |
+| the fall, listener (547, 57, 589) | 96.78 | 0.0077 | 0.0077 |
+| the river, the same listener | 100.51 | 0.0000 | 0 |
+| the river, listener (537, 57, 682) | 65.06 | 0.4181 | 0.4181 |
+| the fall, listener (552, 48, 464) | 71.77 | 0.3462 | 0.3462 |
+
+The first row's distance is the three-axis one: the service read the fall 34 off over x and z, and
+`sqrt( 22^2 + 25^2 + 52^2 )` is 61.75. At the second listener the service had both voices in range (78 and 83
+off) and the mixer played next to nothing of the fall and nothing of the river. The game hands the mixer a
+place as (x, z, height), and the mixer keeps the third negated (`0x18001020`).
+
+**Not predicted, found: a channel's volume is a whole number of 127.** The fall's read 0.5905, 75 of 127; the
+river's 0.2992, 38; the music's 0.4724, 60. Those are each variation's volume (100, 50 and 100) times its
+group's level, the options' defaults of 75 for sound effects and 60 for music (`sound.sam`, `DefaultVolume`),
+rounded. The code that makes the number (`FUN_006bb860` and the wrapper's slot `+0x80`) was not read; the three
+readings are the evidence. A paused park's channel reads a distance of 10,000.32 and a gain of nought: the
+pause's lift (below) is past any range.
+
+**Not read:** how the mixer applies the final gain to a sample (taken as a plain factor); what the pan and
+QSound's own processing make of a place (flag `0x1`); the two channels that read a place of (0, 0, 0), a
+mapping of 2.0, 100.0 and 0.8 and a distance of 50.00, stale as they were read; the 2D path's distance
+(`QSWaveMixSetPosition`, command type 7, a range given as a number).
+
+**What OpenTPW does.** `AudioListener.RangeGain` is the linear arm, and a voice played with a range of its own
+(`Audio.Play`'s `range`) is turned down by it, the distance over three axes. A park under the orbit camera is
+heard from the midpoint of the eye and the point it looks at (`CameraMode.Ears`), as below. Only the land's own
+sounds are given a range so far (`park.md`, "The land's own sounds"): screams, staff and thunder are still as
+loud at any distance, and a voice is still panned by a plain left and right.
+
+| Address | Original name | What it is | Evidence |
+|---|---|---|---|
+| `QMixer 0x1800a980` | — | A channel's gains from its place and the listener's: distance, cone, and the product | Decompiled; read live |
+| `QMixer 0x18007a20` | — | A channel's command switch; type `0xc` stores the mapping, type 1 the flags, type 2 the volume | Decompiled |
+| `QMixer 0x1800cfd0` | — | The inverse arm's gain | Decompiled |
+| `QMixer 0x1800de70`, `0x1800de40` | — | A power, by `2 ^ (y x log2 x)` | Decompiled |
+| `QMixer 0x18009c50` | — | The session's channel n: the count at `+8`, the array at `+0xc` | Decompiled; walked live |
+| `0x006d22d0` | — | The wrapper's channel flags from the game's, always with `0x1000` | Disassembly |
+| `0x006d2320` | — | The wrapper's slot `+0x68`: `QSWaveMixSetPanRate`, then `QSWaveMixEnableChannel` with those flags | Decompiled |
 
 ## Where positional audio actually lived
 
@@ -476,6 +548,6 @@ OpenTPW does not clamp a voice: `AudioClip` keeps NLayer's floats, up to 1.40, a
 
 - **`FUN_0051c700` is NOT the distance-mapping feed.** It is the sound-detail ladder that interpolates the three `RadiusInfo[n].MINRADIUS` values (100.0 / 0.5 / 0 at SWITCH 25 / 50 / 75) from `data\sound.sam` and posts them to `0x006b5890` → `FUN_006b99c0` → `FUN_006b8180`, which latches `{on/off, radius}` and walks the voice array setting a per-voice LEVEL. That level comes from `FUN_006c4c80`, a **segment-versus-circle occlusion test that uses only the X and Z components** and ignores height entirely — so the pause's Y-lift cannot touch it either way. It never reaches `SetDistanceMapping`.
 - `SndReverb.map`'s record shape is **not decoded**.
-- **What `QMixer.dll` does with the distance mapping is not read.** Its three numbers and their writer are in "A voice's range, and the rectangle it follows the listener in": 2.0, the voice's range and 0.8, from `FUN_006bc410`, through the one call site `0x006c581b` in `FUN_006c5690` (`if ( params->flags_at_0x14 & 0x200 ) vtbl[0x60]( out, channel, params + 0x38 )`). The DLL (307,200 bytes, 27 Jan 2000) is not in the Ghidra project; importing it, or a measurement of one looped voice alone at several distances, would settle the law.
+- **What `QMixer.dll` does with the distance mapping is read**: "The mixer's distance law". Its three numbers and their writer are in "A voice's range, and the rectangle it follows the listener in": 2.0, the voice's range and 0.8, from `FUN_006bc410`, through the one call site `0x006c581b` in `FUN_006c5690` (`if ( params->flags_at_0x14 & 0x200 ) vtbl[0x60]( out, channel, params + 0x38 )`).
 - **`params+0x14` is a request mask, not a flag pair.** `FUN_006c5690` tests at least nine bits of it, each gating one setter: `0x1` the position path (`FUN_006b7fa0`), `0x2` volume, `0x20` frequency, `0x40`, `0x100` source cone, `0x200` distance mapping, `0x400`, `0x20000`, `0x80000`.
-- **Consequently, "a pause attenuates every placed sound to nothing" is NOT established**, in either direction, and nothing measured supports it. OpenTPW holds placed voices to **silence** instead. That is a choice standing in for a curve nobody has measured, and it is said at the site, in `Audio.HoldPlaced`.
+- **A pause silences every voice with a range**: lifted 10,000 units, the listener is past any range, and the mixer plays nothing of a channel past its max ("The mixer's distance law"; a paused park's channel read a distance of 10,000.32 and a gain of nought). OpenTPW holds placed voices to silence, in `Audio.HoldPlaced`. A voice with no range, flag `0x8`, is not shown to be silenced.

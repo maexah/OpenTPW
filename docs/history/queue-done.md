@@ -5884,6 +5884,17 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   near edges (`park.md`, "The land's own sounds"; `audio.md`, "A voice's range, and the rectangle it follows the
   listener in"; FileFormats `omp.md`). The distance mapping's writer is found (2.0, the range, 0.8); the mixer's
   law is not read, so nothing is played yet.
+- [x] **Q264. The mixer's loudness law, and the waterfall and the river heard.** Split by the session from the
+  old Q264: its other pieces are Q265. Done 2026-10-10: `QMixer.dll` is in the Ghidra project (`/QMixer.dll`,
+  at Alexah's word), and a channel's gain is `((max - d) / (max - min)) ^ scale`, nothing past max, d over all
+  three axes: the arm of channel flag `0x1000`, which the game sets on every channel (`0x1800a980`,
+  `0x006d22d0`; `audio.md`, "The mixer's distance law"). In the running original's mixer both placed channels
+  read flags `0x1111` and a mapping of 2.0, 97.0, 0.80, and the gain beside each distance was the law's to four
+  places at four camera files (0.4529 at 61.70, 0.4181 at 65.06, 0.3462 at 71.77, 0.0077 at 96.78), predicted
+  first, 4 of 4. Built: the jungle's fall and river are looped voices with a range of 97, heard from the
+  midpoint of the eye and the point it looks at. In the game's own mix the fall's sample read a gain of 0.1755
+  at 19.27 units and 0.0981 at 59.73 (0.1757 and 0.0976 owed) and nothing at 235; the census reads `2x
+  SCAPE_OMP_SOUND_TYPE_1`, the level's own two (`park.md`, "The land's own sounds").
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

@@ -16,6 +16,7 @@ public sealed class SoundCategory
 		public int Id;
 		public TimeSpan RepeatDelay;
 		public int ParameterId;
+		public int Flags;
 		/// <summary>
 		/// The weighted lists this effect picks between. Most effects have exactly one; hallow's
 		/// repeating ambient effects have three to ten, and space's five to fourteen - see
@@ -86,6 +87,7 @@ public sealed class SoundCategory
 				Id = file.Effects[i].Id,
 				RepeatDelay = file.Effects[i].RepeatDelay,
 				ParameterId = file.Effects[i].ParameterId,
+				Flags = file.Effects[i].Flags,
 				Variations = i < lists.Count ? lists[i] : new List<List<SoundCategoryFile.Sample>>(),
 				Headers = i < headers.Count ? headers[i] : []
 			} );
@@ -122,8 +124,9 @@ public sealed class SoundCategory
 	/// Where in the world it is sounding, or null to play it flat - see <see cref="Audio.Play"/>. The
 	/// category neither knows nor cares which; it picks a sample and hands the place straight on.
 	/// </param>
+	/// <param name="range">A placed voice's own range, or null for none - see <see cref="Audio.Play"/>.</param>
 	public Voice? Play( int id, float volume = 1f, bool loop = false, float fadeInSeconds = 0f,
-		bool respectDelay = true, AudioBus bus = AudioBus.Effects, Vector3? position = null )
+		bool respectDelay = true, AudioBus bus = AudioBus.Effects, Vector3? position = null, float? range = null )
 	{
 		var effect = _effects.FirstOrDefault( candidate => candidate.Id == id );
 
@@ -143,7 +146,7 @@ public sealed class SoundCategory
 			? float.PositiveInfinity
 			: Time.Now + clip.Duration + (float)effect.RepeatDelay.TotalSeconds;
 
-		return Audio.Play( clip, volume, loop, fadeInSeconds, bus, position );
+		return Audio.Play( clip, volume, loop, fadeInSeconds, bus, position, range );
 	}
 
 	/// <summary>
@@ -200,6 +203,12 @@ public sealed class SoundCategory
 
 	/// <summary>Effect <paramref name="id"/>'s parameter id, its record's <c>+0x12</c>, or 0 for none or an unknown effect.</summary>
 	public int ParameterOf( int id ) => _effects.FirstOrDefault( effect => effect.Id == id )?.ParameterId ?? 0;
+
+	/// <summary>The bit of an effect's flags word that makes its voice a looped one (<c>FUN_006bbe90</c>).</summary>
+	public const int LoopedFlag = 0x8;
+
+	/// <summary>Effect <paramref name="id"/>'s flags word, nought for an effect the category has not got.</summary>
+	public int FlagsOf( int id ) => _effects.FirstOrDefault( effect => effect.Id == id )?.Flags ?? 0;
 
 	/// <summary>
 	/// How long effect <paramref name="id"/> waits after finishing before it may replay. Dead by CODE: nothing

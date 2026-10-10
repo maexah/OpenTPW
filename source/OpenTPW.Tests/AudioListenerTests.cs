@@ -248,4 +248,41 @@ public class AudioListenerTests
 			}
 		}
 	}
+
+	/// <summary>
+	/// The mixer's law against its own numbers: each a channel's distance and the gain beside it, read in the
+	/// running original's <c>QMixer.dll</c> for a voice with a range of 97 (<c>docs/exe/audio.md</c>, "The mixer's
+	/// distance law").
+	/// </summary>
+	[TestMethod]
+	[DataRow( 61.70f, 0.4529f )]
+	[DataRow( 65.06f, 0.4181f )]
+	[DataRow( 71.77f, 0.3462f )]
+	[DataRow( 96.78f, 0.0077f )]
+	[DataRow( 100.51f, 0f )]
+	[DataRow( 10000.32f, 0f )]
+	public void ARangedVoiceIsTurnedDownAsTheOriginalsMixerTurnsItDown( float distance, float gain )
+		=> Assert.AreEqual( gain, AudioListener.RangeGain( distance, 97f ), 0.00015f );
+
+	[TestMethod]
+	public void ARangedVoiceIsWholeInsideTheNearDistanceAndGoneAtItsRange()
+	{
+		Assert.AreEqual( 1f, AudioListener.RangeGain( 0f, 97f ) );
+		Assert.AreEqual( 1f, AudioListener.RangeGain( 2f, 97f ) );
+		Assert.IsTrue( AudioListener.RangeGain( 2.5f, 97f ) < 1f );
+		Assert.AreEqual( 0f, AudioListener.RangeGain( 97f, 97f ) );
+		Assert.AreEqual( 0f, AudioListener.RangeGain( 97.01f, 97f ) );
+
+		// Halfway through the fall, by the power: 0.5 ^ 0.8.
+		Assert.AreEqual( 0.57435f, AudioListener.RangeGain( 49.5f, 97f ), 1e-4f );
+	}
+
+	/// <summary>A range of 2 or under is handed the mixer as 2.1 (<c>0x006bc410</c>).</summary>
+	[TestMethod]
+	public void ARangeNoLongerThanTheNearDistanceIsTakenAsTwoPointOne()
+	{
+		Assert.AreEqual( 0.57435f, AudioListener.RangeGain( 2.05f, 2f ), 1e-3f );
+		Assert.AreEqual( 0.57435f, AudioListener.RangeGain( 2.05f, 1f ), 1e-3f );
+		Assert.AreEqual( 0f, AudioListener.RangeGain( 2.2f, 2f ) );
+	}
 }

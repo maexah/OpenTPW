@@ -314,4 +314,41 @@ public class VoicePlacementTests
 			Assert.IsFalse( next.IsHeld, "the next scene's first placed voice plays" );
 		} );
 	}
+
+	/// <summary>
+	/// A voice with a range of its own is turned down by the listener's distance over all three axes, each ear
+	/// alike for a sound straight ahead; one with none is as loud wherever the listener is.
+	/// </summary>
+	[TestMethod]
+	public void AVoiceWithARangeIsTurnedDownByTheListenersDistance()
+	{
+		var clip = AScream();
+
+		// The original's own listener and waterfall, in this world's axes: 61.75 apart, the height 52 of it.
+		var listener = AudioListener.Facing( new Vector3( 552f, 538f, 52f ), new Vector3( -22f, -25f, 0f ) );
+		var place = new Vector3( 530f, 513f, 0f );
+
+		var ranged = new Voice( clip, 1f, loop: true, 0f, AudioBus.Effects, place, range: 97f );
+		var flat = new Voice( clip, 1f, loop: true, 0f, AudioBus.Effects, place );
+
+		ranged.Locate( listener, immediately: true );
+		flat.Locate( listener, immediately: true );
+
+		Assert.AreEqual( 97f, ranged.Range );
+		Assert.IsNull( flat.Range );
+		Assert.AreEqual( 0.4524f, ranged.DistanceGain, 2e-4f );
+		Assert.AreEqual( 1f, flat.DistanceGain );
+
+		// Straight ahead, so both ears alike, and the distance's gain is what reaches them.
+		Assert.AreEqual( 0.4524f, ranged.EarGains.Left, 2e-4f );
+		Assert.AreEqual( 0.4524f, ranged.EarGains.Right, 2e-4f );
+		Assert.AreEqual( (1f, 1f), flat.EarGains );
+
+		// Out of range it is silent, and back in range it sounds again.
+		ranged.Locate( AudioListener.Facing( new Vector3( 552f, 538f, 10052f ), Vector3.Forward ), immediately: true );
+		Assert.AreEqual( 0f, ranged.DistanceGain );
+
+		ranged.Locate( AudioListener.Facing( place, Vector3.Forward ), immediately: true );
+		Assert.AreEqual( 1f, ranged.DistanceGain );
+	}
 }

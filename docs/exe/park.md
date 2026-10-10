@@ -2107,19 +2107,48 @@ at, as `scenes.md`, "Positioning" has it, and the distance is over x and z alone
 (450, the listener's height, 31) and the sea's at (the listener's x, its height, 21) on every poll, the
 listener being past both rectangles' near edge; both were silenced there.
 
-**Not measured: how loud a voice is inside its range.** The executable hands the mixer a mapping of 2.0, the
-range and 0.8 (`audio.md`); the law between is `QMixer.dll`'s. Two captures of the original's mix did not
-separate the fall from it: its sample matched at 0.04 at best, and the mix read 0.04 to 0.07 rms with every
-placed voice silenced. The class of the gulls' and the sea's effects (`0x0006`, `0x006be090`) is not decoded.
+**How loud a voice is inside its range** is `QMixer.dll`'s law, read and measured for Q264 (`audio.md`, "The
+mixer's distance law"): `((range - d) / (range - 2)) ^ 0.8`, d over all three axes. Two captures of the
+original's mix had not separated the fall from it (its sample matched at 0.04 at best, the mix 0.04 to 0.07 rms
+with every placed voice silenced); the mixer's own channel was read instead. The class of the gulls' and the
+sea's effects (`0x0006`, `0x006be090`) is not decoded.
 
-**What OpenTPW does.** Nothing yet: the six records are read and counted (`SCAPE_OMP_SOUND_TYPE_1`,
-`SCAPE_OMP_SOUND_TYPE_3`), and the level's own `cat_ambient` is not loaded. Playing them waits on the mixer's
-law (Q264): a waterfall heard at a guessed loudness would be wrong all the time the camera is near it.
+**What OpenTPW does** (Q264, split by the session: the item's other pieces are Q265). A type 1 record of the
+global category whose effect is a looped one (flag `0x8`) with something to play is started as the park's
+sound comes up (`ParkPlacedObjects.StartSounds`, `ParkAudio.StartPlaced`): a looped voice at the record's place,
+the height the world's third axis, with the record's range, at its variation's volume, 100 for the fall and 50
+for the river. A hundred plays at the music's level times 75 over 60, the two groups' levels as the original's
+channels read them (`ParkAudio.PlacedVolume`). The level's own category is not loaded, so its two type 1
+records are counted (`SCAPE_OMP_SOUND_TYPE_1`), and both type 3 (`SCAPE_OMP_SOUND_TYPE_3`). The console's
+`placed` prints the listener and each of the land's sounds with its distance and gain.
 
 **Run, 2026-10-10** (`q263/confirm.py`, 3 of 3 predictions, written first in `PREDICTION.txt`). Lost Kingdom at
 the tip, the camera on the fall: `unimplemented` reads `4x SCAPE_OMP_SOUND_TYPE_1` and `2x
 SCAPE_OMP_SOUND_TYPE_3`, the jungle's four and two records, and the frame shows the fall and its spray
 (`run/waterfall.png`).
+
+**Run, 2026-10-10, Q264** (`q264/confirm.py`, predictions written first in `PREDICTION.txt`; the game's own mix
+written to a file, the music's group at nought). Run 1 held 3 of 6: the distances missed (19.27 and 59.73 where
+15 and 55 were predicted: the eye is lifted by the ground's height under the point, about 12 at the fall, and
+the point looked at is left at nought), and the first place was measured under the advisor's opening line,
+which turns the effects down. Run 2, the distances as read and a wait of 16 s, held 6 of 6:
+
+| Camera | `placed`: the fall's distance and gain | `watfall.mp2` in the mix | Owed (0.4125 x the master's 0.5 x the gain) |
+|---|---|---|---|
+| `camera 530 513 30 180` | 19.27, 0.8517 | 0.1755, four steps scoring 0.94 to 0.97 | 0.1757 |
+| `camera 530 513 110 180` | 59.73, 0.4730 | 0.0981, scoring 0.87 to 1.00 | 0.0976 |
+| `camera 530 713 110 180` | 235.08, 0.0000; the river 96.46, 0.0159 | no step over 0.09 | nought |
+
+The census read `2x SCAPE_OMP_SOUND_TYPE_1` and `2x SCAPE_OMP_SOUND_TYPE_3`, and the log `the land's own
+ambient 8 started at (530,513), range 97, volume 100` and ambient 7's at (511,664), volume 50
+(`run-fix2/place-1.png` is the fall on the first camera). The control, the tree before the change, has no
+`placed`, counts type 1 four times and has no step of the fall's sample over 0.5 on the first camera
+(`run-control/`).
+
+**Not held against the original:** the same camera numbers in both games. The original's camera stands
+further back for the same numbers (Q260), so its listener is elsewhere and its gain with it; what was held is
+the law, in its own mixer's memory. Not measured: the river in the mix (its gain was 0.0159 where it was
+looked for); a pan against the original's.
 
 ## The save's world block: map cells
 

@@ -557,8 +557,8 @@ public sealed class ParkAudio : Entity
 		// A category names its banks relative to the LEVEL folder rather than to the folder its own
 		// .map files sit in - cat_music's bank path reads "Music\Music" - so the root is the level and
 		// the maps are the Music folder beside it. Two park categories are deliberately not loaded:
-		// cat_ambient's effects are placed emitters that come out of the level's scape.omp (the OBJ_ chunk
-		// FUN_00550e00 reads, type 1 records), and cat_speech is where the advisor's five bank-1 responses
+		// the level's own cat_ambient, whose effects are placed emitters that come out of the level's scape.omp
+		// (the OBJ_ chunk FUN_00550e00 reads; the global category's are started, StartPlaced), and cat_speech is where the advisor's five bank-1 responses
 		// play from (docs/exe/advisor-park.md, the response table's +0x10), and a park here says none of
 		// them. cat_rides is loaded below, for the bumper cars' engines (ParkCarSounds).
 		var root = $"levels/{themeName.ToLowerInvariant()}";
@@ -931,6 +931,71 @@ public sealed class ParkAudio : Entity
 	internal int ScreamsLetGo => _screams.LetGoCount;
 
 	/// <summary>
+	/// What a hundred of a sound effect's volume plays at here, before <see cref="Audio.MasterVolume"/>: the
+	/// music's level times 75 over 60.
+	/// </summary>
+	/// <remarks>
+	/// The original's mixer holds a channel's volume as the variation's volume times its group's level over a
+	/// hundred, of 127: the waterfall's channel reads 75 of 127 and the music's 60, the options' two defaults
+	/// (<c>docs/exe/audio.md</c>, "The mixer's distance law"). That the mixer scales a sample by that number and
+	/// nothing more is not read.
+	/// </remarks>
+	internal const float PlacedVolume = MusicVolume * 75f / 60f;
+
+	/// <summary>The land's own sounds that are sounding, with what each was started from.</summary>
+	internal IReadOnlyList<(ParkPlacedObjects.Sound Sound, int Volume, Voice? Voice)> Placed => _placed;
+
+	private readonly List<(ParkPlacedObjects.Sound Sound, int Volume, Voice? Voice)> _placed = [];
+
+	/// <summary>
+	/// Starts one of the land's own sounds where it stands (<c>FUN_0051c130</c>): a looped voice of the global
+	/// <c>cat_ambient</c>, at its first variation's volume, turned down by the listener's distance inside its
+	/// range. False, and nothing started, for an effect that is not a looped one or has nothing to play.
+	/// </summary>
+	internal bool StartPlaced( ParkPlacedObjects.Sound sound )
+	{
+		if ( !PlaysPlaced( _ambient, sound.Effect ) )
+			return false;
+
+		var header = _ambient!.VariationsOf( sound.Effect )[0];
+		var volume = Controlled( header, 1, 0, 0, _musicRandom );
+
+		var voice = _ambient.Play( sound.Effect, volume / 100f * PlacedVolume, loop: true, respectDelay: false,
+			bus: AudioBus.Effects, position: sound.Place, range: sound.Range );
+
+		_placed.Add( (sound, volume, voice) );
+
+		Log.Info( $"Park audio: the land's own ambient {sound.Effect} started at ({sound.Place.X:F0},{sound.Place.Y:F0}), "
+			+ $"range {sound.Range:F0}, volume {volume}" );
+
+		return true;
+	}
+
+	/// <summary>Whether <paramref name="effect"/> of <paramref name="category"/> is one a placed record can loop: flagged looped, with a variation to play.</summary>
+	internal static bool PlaysPlaced( SoundCategory? category, int effect )
+		=> category is { IsValid: true }
+			&& (category.FlagsOf( effect ) & SoundCategory.LoopedFlag) != 0
+			&& category.VariationsOf( effect ).Count > 0;
+
+	/// <summary>The land's own sounds as they stand, for the console.</summary>
+	internal string PlacedCensus()
+	{
+		var ears = Camera.Ears;
+		var lines = new List<string> { $"listener ({ears.X:F0},{ears.Y:F0},{ears.Z:F0}), {_placed.Count} placed" };
+
+		foreach ( var (sound, volume, voice) in _placed )
+		{
+			var distance = (sound.Place - ears).Length;
+
+			lines.Add( $"ambient {sound.Effect} at ({sound.Place.X:F0},{sound.Place.Y:F0},{sound.Place.Z:F0}) range {sound.Range:F0} "
+				+ $"volume {volume} distance {distance:F2} law {AudioListener.RangeGain( distance, sound.Range ):F4} "
+				+ $"gain {voice?.DistanceGain ?? -1f:F4} {(voice is null ? "no voice" : voice.IsHeld ? "held" : voice.Playing ? "sounding" : "ended")}" );
+		}
+
+		return string.Join( "; ", lines );
+	}
+
+	/// <summary>
 	/// Stops the rain, and lets the effect go.
 	///
 	/// The release matters: a looping voice holds its effect for ever - <see cref="SoundCategory.Play"/>
@@ -965,6 +1030,15 @@ public sealed class ParkAudio : Entity
 		_crowd?.FadeOut( StopSeconds );
 		_crowd = null;
 		CrowdVoiceHeld = false;
+
+		// The land's own, each a looped voice holding its effect.
+		foreach ( var (sound, _, voice) in _placed )
+		{
+			voice?.FadeOut( StopSeconds );
+			_ambient?.Release( sound.Effect );
+		}
+
+		_placed.Clear();
 
 		// The voice was holding the effect - see SoundCategory.Play - so the category has to be told
 		// it may start again, or the next park in this process waits out a delay counted against a

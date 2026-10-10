@@ -303,12 +303,10 @@ public static class Audio
 	/// during ordinary play, which is a change to UNPAUSED behaviour that nothing asked for.
 	/// </para>
 	/// <para>
-	/// <b>And the amount is a choice standing in for a curve nobody has measured.</b> How far the
-	/// original's 10,000-unit lift actually turned a sound down is <i>undetermined</i>: the executable
-	/// hands QMixer a mapping of 2.0, the voice's range and 0.8 for each placed voice (0x006bc410), and
-	/// what QMixer.dll makes of them is not read (docs/exe/audio.md, "A voice's range, and the rectangle
-	/// it follows the listener in"). This holds to silence instead. <b>Do not write "attenuates to nothing"</b>: nothing
-	/// measured supports it, and this is not it.
+	/// <b>And the amount is the original's.</b> The executable hands QMixer a mapping of 2.0, the voice's
+	/// range and 0.8 for each placed voice (0x006bc410), and the mixer plays nothing of a voice further
+	/// off than its range (<see cref="AudioListener.RangeGain"/>): a paused park's channel reads a
+	/// distance of 10,000 and a gain of nought (docs/exe/audio.md, "The mixer's distance law").
 	/// </para>
 	/// <para>
 	/// Rain and the music sound straight through, which is not a decision but what the mechanism
@@ -358,13 +356,18 @@ public static class Audio
 	/// interface sounds literally are. Null rather than a zero here, because (0,0,0) is a real corner
 	/// of the lobby rather than a way of saying "nowhere".
 	/// </param>
+	/// <param name="range">
+	/// A placed voice's own range, in the world's units, or null for a voice with none. With one the voice is
+	/// turned down by its distance from the listener as the original's mixer turns it down, to nothing at the range
+	/// (<see cref="AudioListener.RangeGain"/>); without one it is as loud wherever the listener is.
+	/// </param>
 	public static Voice? Play( AudioClip? clip, float volume = 1f, bool loop = false,
-		float fadeInSeconds = 0f, AudioBus bus = AudioBus.Effects, Vector3? position = null )
+		float fadeInSeconds = 0f, AudioBus bus = AudioBus.Effects, Vector3? position = null, float? range = null )
 	{
 		if ( !Ready || clip == null || clip.Frames == 0 )
 			return null;
 
-		var voice = new Voice( clip, volume.Clamp( 0f, 1f ), loop, fadeInSeconds, bus, position );
+		var voice = new Voice( clip, volume.Clamp( 0f, 1f ), loop, fadeInSeconds, bus, position, range );
 
 		lock ( Lock )
 		{

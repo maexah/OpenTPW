@@ -74,10 +74,8 @@ internal readonly record struct AudioListener( Vector3 Position, Vector3 Right, 
 	/// software per-voice level through FUN_006b8180 and an obstacle test (FUN_006c4c80) that uses
 	/// only two of the three axes - it never reaches SetDistanceMapping at all. The real parameters
 	/// are the three numbers a voice's channel set-up writes (0x006bc410): 2.0, the voice's range and
-	/// 0.8, and what QMixer.dll makes of them is not read (docs/exe/audio.md, "A voice's range, and
-	/// the rectangle it follows the listener in").
-	/// <b>The original's falloff law is therefore unknown, and the one here is not a reconstruction
-	/// of it.</b>
+	/// 0.8, and the mixer's law for them is <see cref="RangeGain"/>, which a voice with a range of its
+	/// own takes instead of this one.
 	/// </para>
 	/// </para>
 	/// </summary>
@@ -89,6 +87,33 @@ internal readonly record struct AudioListener( Vector3 Position, Vector3 Right, 
 		var distance = (source - Position).Length;
 
 		return distance <= ReferenceDistance ? 1f : ReferenceDistance / distance;
+	}
+
+	/// <summary>The distance a ranged voice is at its full level inside: the mapping's first number, 2.0 (<c>0x006bc410</c>).</summary>
+	public const float MappingNear = 2f;
+
+	/// <summary>The power the mapping's fall is raised to: its third number, 0.8 (<c>0x006b9bb0</c>).</summary>
+	public const float MappingPower = 0.8f;
+
+	/// <summary>
+	/// How much the original's mixer turns down a voice <paramref name="distance"/> from the listener whose own
+	/// range is <paramref name="range"/> (<c>QMixer.dll</c> <c>0x1800a980</c>, the arm of channel flag
+	/// <c>0x1000</c>, which the game sets on every channel; <c>docs/exe/audio.md</c>, "The mixer's distance law"):
+	/// nothing past the range, all of it at <see cref="MappingNear"/> or nearer, and between them the share of the
+	/// way still to go raised to <see cref="MappingPower"/>. The distance is over all three axes, the listener's
+	/// height with them. A range of <see cref="MappingNear"/> or under is handed the mixer as 2.1.
+	/// </summary>
+	public static float RangeGain( float distance, float range )
+	{
+		var far = range <= MappingNear ? 2.1f : range;
+
+		if ( distance > far )
+			return 0f;
+
+		if ( distance <= MappingNear )
+			return 1f;
+
+		return MathF.Pow( (far - distance) / (far - MappingNear), MappingPower );
 	}
 
 	/// <summary>

@@ -48,18 +48,23 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q264. The writer: what else a made record leaves out.** The old Q263's other pieces, each counted or
+- [ ] **Q265. The writer: what else a made record leaves out.** The old Q264's other pieces, each counted or
   said in `saves.md`. Confirm: each piece's bytes beside a file of the original's own, and the file loaded in
   the original under Proton.
-  From Q263 (`park.md`, "The land's own sounds"): the land's six sounds are decoded and not played
-  (`SCAPE_OMP_SOUND_TYPE_1`, `SCAPE_OMP_SOUND_TYPE_3`). **First settle how loud a voice is inside its range:**
-  the mapping is 2.0, the range and 0.8, and what `QMixer.dll` does with it is not read (import the DLL into
-  Ghidra with Alexah's yes: its command of type `0xc`, `0x1800c870`; or measure one looped voice alone, which
-  two captures of the mix did not manage). Then play the waterfall and the river (looped, range 97, the
-  listener the midpoint of the camera and its aim), and the same law is owed to every placed voice here
-  (screams, staff, thunder: flat and never out of range now). Not decoded: the gulls' and sea's voice class
-  (`0x0006`, `0x006be090`), why the level's ambient 181 had no voice in the original, a variation's own range
-  (`+0x22`). The level's own `cat_ambient` is not loaded.
+  From Q264 (`audio.md`, "The mixer's distance law"; `park.md`, "The land's own sounds"): the law is owed to
+  every placed voice here, and only the land's two have it: screams, staff and thunder are flat and never out
+  of range (each needs its range: a variation's own, `+0x22`, is not decoded). The land's two type 3 records
+  (gulls and the sea, a rectangle) and the level's own two type 1 are counted, not played
+  (`SCAPE_OMP_SOUND_TYPE_3`, `SCAPE_OMP_SOUND_TYPE_1`): the level's own `cat_ambient` is not loaded, and the
+  gulls' and sea's voice class (`0x0006`, `0x006be090`) is not decoded, nor why the level's ambient 181 had
+  no voice in the original. A channel's volume read as a whole number of 127 (the fall 75, the music 60), so a
+  sound effect at a hundred is 1.25 of the music; the crowd's voice is still at its measured 0.30 where that
+  gives 0.4125 (`ParkAudio.CrowdVoiceGain`), and the code that makes the number (`FUN_006bb860`, the wrapper's
+  `+0x80`) is not read. A voice out of range plays on unheard here, where the original gives its channel up:
+  where its sample stands when it is heard again is not decoded. The pan is a plain left and right, not
+  QSound's. The orbit camera's point is left at height nought where the ground is high, so the listener's
+  height over a hill was not held against the original's. In no game run: the river in the mix, another
+  theme, a park loaded from the menu. `docs/exe/addresses.md` not regenerated.
   From Q262: a park entered from a file starts the spray afresh
   and does not read the file's emitter. In no game run: another theme, a Full Simulation park with no file.
   **Do not take the jet's move as a piece for its picture:** the original's own Jungle Spray jet reads the same

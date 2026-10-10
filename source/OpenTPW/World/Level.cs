@@ -366,7 +366,10 @@ public class Level
 		// volumes (0x0054ec9a), and only then plays the music (0x0054ec9f). See ParkAudio for what it
 		// does with it afterwards: the crowd drives its level, as the original's does.
 		GameOptions.Current.ApplySound();
-		_ = new ParkAudio( ThemeName );
+		var audio = new ParkAudio( ThemeName );
+
+		// And the sounds the land itself carries, started as the level loads: the jungle's waterfall and its river.
+		ParkPlacedObjects.StartSounds( ThemeName, audio.StartPlaced );
 		load.Mark( "audio" );
 
 		// After the audio, because a park opens with its weather already rolled and that first roll
@@ -1781,7 +1784,7 @@ public class Level
 
 		// The ears go where the camera just went. Here rather than in Update because the camera itself
 		// moves here, so a listener set during the update pass would be a frame behind the picture.
-		Audio.SetListener( Camera.Position, Camera.Rotation.Forward );
+		Audio.SetListener( Camera.Ears, Camera.Rotation.Forward );
 
 		// The solid geometry, then everything see-through, then the sprites.
 		Entity.RenderWorld();

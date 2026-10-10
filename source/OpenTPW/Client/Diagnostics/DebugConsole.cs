@@ -580,6 +580,11 @@ public static class DebugConsole
 				Reply( Voices() );
 				break;
 
+			// The land's own sounds: where each stands, its range, and what the listener's distance makes of it.
+			case "placed":
+				Reply( ParkAudio.Current?.PlacedCensus() ?? "no park audio" );
+				break;
+
 			// Plays one of the island's ambient samples at a place of the caller's choosing, so a pan
 			// can be measured at angles the lobby's own marked place never reaches: the Space antenna
 			// sits almost on the camera's look axis, so it never pans more than about a seventh of the

@@ -7,6 +7,9 @@ public static class Camera
 	public static Vector3 Position => CameraMode?.Position ?? Vector3.Zero;
 	public static Rotation Rotation => CameraMode?.Rotation ?? Rotation.Identity;
 
+	/// <summary>Where the scene is heard from - see <see cref="CameraMode.Ears"/>.</summary>
+	public static Vector3 Ears => CameraMode?.Ears ?? Vector3.Zero;
+
 	public static Matrix4x4 ViewMatrix { get; set; }
 	public static Matrix4x4 ProjMatrix { get; set; }
 
