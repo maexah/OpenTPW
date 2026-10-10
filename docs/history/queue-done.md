@@ -5787,6 +5787,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   and a corner reads the ground plus that. Proof: a bought pot's four boats read `height 29.6561` in `bumpers` and in
   the file, 29.7986 to 29.8011 less the bob, beside the original's own files' 29.7993; the control 30.0018 to 30.0081;
   the original loaded the file and read 29.6573 at the same phase.
+- [x] **Q257t. A loaded boat's clip goes on from its model's record.** I split the item: this is the first piece
+  of the old Q257t, the rest is Q257u. A loaded car keeps its model's handle and its boat is stood with the record's
+  channel and node words laid over it (`saves.md`, "OpenTPW's reader, a car's model record"; FileFormats `saves.md`,
+  "A boat's three stamps in a go"). Proof: on the original's `hotpot-later2.TPWS` the log read four boats' clips
+  resumed 102 ms before the load, the file's time less its start, and the file saved at once holds start 114635631,
+  the original's 114633495 plus four loops of 534 ms; the control's 114635198 is 3.19 loops on; the original loaded
+  the written file and read 114635631 on its first frame (`q257t/orig/b-load.log`).
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

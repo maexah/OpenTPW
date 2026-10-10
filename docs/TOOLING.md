@@ -25,7 +25,7 @@ place to look for tools. Each file's docstring is its manual.
 | `wadcat`, `strdump`, `nodenames/` | A wad's entries, a string table's lines, a UI wad's node names (`CLAUDE.local.md`) |
 
 **A poller of the original's memory is the one thing still written an item at a time** (`q257r/orig/cars.py`,
-`q257d/orig/look.py`, `q253/orig/look.py`): each reads its own structures. Start from the newest that reads the same
+`q257t/orig/chan.py` for a car's model's channel stamps, `q257d/orig/look.py`, `q253/orig/look.py`): each reads its own structures. Start from the newest that reads the same
 structure, and hand it to `loadfile.sh` through `POLL`.
 
 ## Recipes
@@ -66,6 +66,8 @@ GH=766` there, or the pointer is off):
   legal place and a red one is not. After the placing click the queue tool is in the hand: a click on the path
   joins the queue and puts the tool away, and a later click on the queue's cell picks it up again (Q257o).
 - **Hiring:** Buy (117,588), the side tab (957,316), mechanics (665,123).
+- **A clip's phase is held by its start stamp**, a reading of the saved clock that steps by the clip's length each
+  loop (a boat's: 534 ms): compare a stamp with a file's less whole loops, never a frame number (Q257t).
 - **Instant Action offers only researched items:** patch a copy with `research.py`, never the reference
   `easymode.TPWI` (Q257n).
 - **Its camera stands further back than OpenTPW's for the same numbers.** A file saved under

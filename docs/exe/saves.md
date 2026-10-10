@@ -2316,8 +2316,8 @@ velocity, stepped velocity, speed, the two headings, turn, radius, steering poin
 patience and phase are the file's words; its arena, buoy, lead and a chaser's patience are made again as the
 loader makes them; its riders and the two lists go back as above. The ride's arena is laid round the saved
 place as the table seats it (`Bumper_LayRide`'s x and z), where before it waited for the object.
-**Left out:** the car's two model records, so its clip starts from its first frame
-(`SAVED_TRACK_CAR_MODEL_RECORDS`, counted a car); the held sound, which names a voice of the session that saved
+The car's model record is read as its boat is stood ("OpenTPW's reader, a car's model record", below).
+**Left out:** its wake's record, since no wake is drawn (`BUMPER_CAR_WAKE`); the held sound, which names a voice of the session that saved
 it (the original's step finds it gone and empties it; here it is empty from the load, and the next retarget
 starts another); `+0x24`, `+0x28`, `+0x60`, `+0x68`, `+0x84`, `+0xa0` and `+0xa4`, which nothing here keeps
 ("A car's eight words nothing keeps", below; `+0x58` is kept, `Car.Turned`); a rider record with no car of its ride before it
@@ -2359,6 +2359,50 @@ boarder or a leaver in a file (no file of the four holds one), a car out of ever
 short car chunk. **Not compared past three ticks:** the stepping, for the reason above. **Not looked at:** a
 loaded lead boat's engine sound (it starts at the boat's next retarget; `sounds started 0` at both pauses). The
 original's riders' heads are not told apart in its off-screen frame. `docs/exe/addresses.md` not regenerated.
+
+### OpenTPW's reader, a car's model record
+
+Q257t, split by the session: this is a loaded car's model record read. The item's other pieces are Q257u. Harness
+`q257t/` (`PREDICTION.txt`, `confirm.py`, `mutations.py`, `orig/chan.py`, `orig/a-load.log`, `orig/b-load.log`).
+
+**What the original does** (read before, "OpenTPW's writer, a track ride's cars": the loader's `FUN_00463ab0` finds
+the record its handle names as the ride system's reader `FUN_004647a0` left it, channels and all; nothing starts a
+car's clip at a load, since the step starts one only as `+0x10` changes). **Measured in the original under Proton**
+(`orig/chan.py`, each pool car's model's first channel every 0.02 s; `hotpot-later2.TPWS` loaded from the Load Park
+list, `orig/a-load.log`): on the first poll after the load all four boats' channels read flags 1, role 5, start
+114633495 and time 114633597, **the file's own stamps**, and the start stamp then stepped **534 ms a loop**
+(114634029, 114634563, ...), the clip's length. So a loaded boat's clip goes on from where the save left it, in step
+with the saved clock.
+
+**What OpenTPW does** (`Car.SavedModel`, `ParkThingStates.InSlot`, `ParkRides.ResumeCar`, `ParkBumperBoats.Resume`).
+A loaded car keeps its `+0x08`; a car launched here holds nought. As the boat is stood, the record in slot handle - 1
+is taken where its item is the boat's (the ride's plus one plus the mesh), and its channels and node words are laid
+over the boat's clips by the restore a placed thing's model takes (`ride-operation.md`, the `RSYS` restore): the role,
+the loop, the three stamps moved onto this clock. A record at rest starts nothing. **A handle that names no record of
+the boat's item is counted and left** (`SAVED_TRACK_CAR_MODEL_NOT_ITS_OWN`): the original would take whatever record
+lies there. **The wake's record `+0x0c` is not read**: no wake is drawn (`BUMPER_CAR_WAKE`), and a written wake's
+record is made afresh, at rest, as every wake in the original's files is.
+
+**Confirmed in the game** (`confirm.py`, on the desktop for `later2`, off-screen for `later` and `open`; 3 of 3, 3 of
+3, 1 of 1, the control 2 of 2). The park entered on the original's `hotpot-later2.TPWS`: the log read each of cars 0
+to 3 "clip resumed from model record" 94, 96, 169, 171, "role 5, 102 ms before the load", 102 being the file's time
+less its start; `bumpers` read 4 boats drawn, 4 clips resumed, each start stamp the load's moment less 102 plus four
+loops of 534 ms; no gap counted; the frame shows the four boats in the pot. **Saved at once, the file's four boat
+records read start 114635631, the original's 114633495 plus exactly four loops**, and time less start 12, the
+census's. `hotpot-later.TPWS`: 29 ms, and a written start of 114598988 plus three loops. `hotpot-open.TPWS`: four
+boats at rest, none resumed, nothing counted. **The control** (the build before): `4x SAVED_TRACK_CAR_MODEL_RECORDS`,
+no resumed line, and its written start 114635198, 3.19 loops on: the clip began again as the boat was stood.
+
+**The original loading the file written** (`orig/b-load.log`): the first poll after the load read start 114635631 and
+time 114635643 on all four boats, role 5, as written, and then 114636165, 534 on.
+
+**Prediction wrong, mine:** that a boat's start stamp would still read before the load's moment two seconds on (the
+clip is 534 ms, so it had stepped four loops; restated before the desktop run with the 534 taken from the original's
+log). My poller's clock address (`0x00785970`) read nought in the running original: not the live clock's address, not
+used. **Not seen in a picture:** the phase itself, a tenth of a second of a boat's rocking clip; it is the log's, the
+census's and the two files'. **Not run in either game, tested only:** a handle naming another item's record or an
+empty slot. **Two bugs put back by a game run** (`mutations.py`, `G`): a stood boat forgetting its record's role, and
+the wake's item asked for; each failed its predictions there; the twenty others fail a test, one only after a test was strengthened (a record at rest answering a role). `docs/exe/addresses.md` not regenerated (no new address).
 
 ### A car's eight words nothing keeps
 
@@ -2449,8 +2493,8 @@ written, not as the cars were launched and the riders seated. **The height `+0xa
 Q257s: the landscape's under the boat's four corners plus the pot's model's 29.8 (`park.md`, "The scene's height
 under a point", with its game run; Q257r wrote the top of the water mesh, 0.2 higher). With no boat drawn (the tests), the clip is
 one started as the file is written and the height nought, counted (`SAVE_PARK_CAR_NO_HEIGHT`). A loaded car's
-clip still starts from its first frame at the load (`SAVED_TRACK_CAR_MODEL_RECORDS`), so that is what a park
-loaded with boats writes.
+clip goes on from its record's stamps ("OpenTPW's reader, a car's model record", below), so a park loaded with
+boats writes the stamps the original's own next file would hold.
 
 **Confirmed in the game** (`q257r/confirm.py`, on the desktop: scene `bought` 3 of 3, `open` 5 of 5, `later`
 2 of 2, the controls 3 of 3 and 1 of 1; `PREDICTION.txt` holds every prediction and miss). **Bought:** Lost

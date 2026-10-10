@@ -10,7 +10,8 @@ namespace OpenTPW;
 /// <para>
 /// <b>Each live car is its ride's supplemental mesh</b> (<see cref="ParkItemCatalogue.Item.SupplementalMeshes"/>, the
 /// Hot Pot's <c>b_car.md2</c>), stood where the car floats, turned to its heading and bobbing on its phase, with the
-/// clip its car plays: none at rest, role 5 (<c>b_carm</c>) in a go.
+/// clip its car plays: none at rest, role 5 (<c>b_carm</c>) in a go. A car a park file held is stood with its model's
+/// record there laid over it, so its clip goes on from the frame the save left it on.
 /// </para>
 /// <para>
 /// <b>Two departures, said here.</b> The rocking the original works out from the four corners' heights is not drawn
@@ -79,6 +80,9 @@ public sealed class ParkBumperBoats : Entity
 
 	/// <summary>The height the boat of a pool slot was last stood at; null with none standing.</summary>
 	internal float? HeightOf( int slot ) => _boats.TryGetValue( slot, out var boat ) ? boat.Height : null;
+
+	/// <summary>How many boats' clips were put back where a park file left them - for the census.</summary>
+	public int Resumed { get; private set; }
 
 	/// <summary>How many boats are standing - for the census.</summary>
 	public int Standing => _boats.Count;
@@ -189,6 +193,12 @@ public sealed class ParkBumperBoats : Entity
 			if ( read != null )
 				animations.Nodes = new ParkModelTables.Running( read, 1 );
 
+			if ( Resume( car, animations, item.Id + 1 + car.Mesh, ParkRides.Current ) is { } role )
+			{
+				boat.Animation = role;
+				++Resumed;
+			}
+
 			_boats[slot] = boat;
 
 			// Counted once a boat: the rocking its corners' bob gives it, and its wake.
@@ -212,6 +222,33 @@ public sealed class ParkBumperBoats : Entity
 			Unimplemented.Report( "BUMPER_CAR_NO_MESH" );
 			return null;
 		}
+	}
+
+	/// <summary>
+	/// A car a park file held goes on from its model's record there - the clip where the save left it, and the node
+	/// words the file has (<see cref="ParkRides.ResumeCar(RideAnimations, int, int)"/>; <c>docs/exe/saves.md</c>,
+	/// "OpenTPW's reader, a car's model record"). A handle that names no record of the car's item is counted.
+	/// </summary>
+	/// <param name="itemId">The item the car's model is of: its ride's plus one plus its mesh.</param>
+	/// <returns>The role the record has the model playing, or null where nothing was put back or it was at rest.</returns>
+	internal static int? Resume( ParkBumperCars.Car car, RideAnimations animations, int itemId, ParkRides? rides )
+	{
+		if ( car.SavedModel == 0 || rides is null )
+			return null;
+
+		if ( rides.ResumeCar( animations, car.SavedModel, itemId ) is not { } saved )
+		{
+			Unimplemented.Report( "SAVED_TRACK_CAR_MODEL_NOT_ITS_OWN" );
+			return null;
+		}
+
+		if ( saved.Role == ParkThingStates.NoRole || animations.Channel( 0 ) is not { IsIdle: false } resumed )
+			return null;
+
+		Log.Info( $"Bumper boats: car {car.Index}'s clip resumed from model record {car.SavedModel}, role {saved.Role}, "
+			+ $"{rides.LoadedAt - resumed.StartAnimTime} ms before the load" );
+
+		return saved.Role;
 	}
 
 	/// <summary>

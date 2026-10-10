@@ -48,12 +48,15 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q257t. The writer: what else a made record leaves out.** The old Q257s's other pieces, each counted or
+- [ ] **Q257u. The writer: what else a made record leaves out.** The old Q257t's other pieces, each counted or
   said in `saves.md`. Confirm: each piece's bytes beside a file of the original's own, and the file loaded in
   the original under Proton.
+  From Q257t (`saves.md`, "OpenTPW's reader, a car's model record"): a loaded car's wake's record is not read (no
+  wake is drawn, `BUMPER_CAR_WAKE`); a handle naming no record of the boat's item is counted and left
+  (`SAVED_TRACK_CAR_MODEL_NOT_ITS_OWN`), where the original takes whatever record lies there; with no boat drawn
+  (the tests) a loaded car's clip is still started as the file is written.
   From Q257r (`saves.md`, "OpenTPW's writer, a track ride's cars"): a car's held sound and smoke are written
-  as none (`SAVE_PARK_CAR_SMOKE`). A loaded car's two model records are still not read, so its clip starts
-  from its first frame, and that is what a park loaded with boats then writes (`SAVED_TRACK_CAR_MODEL_RECORDS`).
+  as none (`SAVE_PARK_CAR_SMOKE`).
   A loaded rider's sprite is made at the load, not as the ride lets them go, and a live rider's is never
   destroyed (the original's admission, `0x00502147`). The stepping agrees with the original's for three ticks
   and is not compared past a car's first draw: the cars draw their own generator, the original's the world's

@@ -275,6 +275,12 @@ public sealed class ParkBumperCars
 		/// <summary><c>+0x64</c>: its radius, copied from its ride.</summary>
 		public int Radius { get; internal set; }
 
+		/// <summary>
+		/// <c>+0x08</c> as a park file held it: the handle of the model record a loaded car's model goes on from, or
+		/// nought for a car launched here.
+		/// </summary>
+		public int SavedModel { get; internal set; }
+
 		/// <summary><c>+0x88</c>: the ticks left in its go; below nought it never counts again.</summary>
 		public int Timer { get; internal set; }
 
@@ -498,9 +504,10 @@ public sealed class ParkBumperCars
 	/// the file names no ride; and a car that chases has no patience left, so it chooses again on its first tick.
 	///
 	/// <para>
-	/// <b>Left out, each said where it is counted:</b> the car's two model records (<c>+0x08</c>, <c>+0x0c</c>), so its
-	/// clip starts from its first frame; and its held sound's handle (<c>+0x20</c>), which names a voice of the session
-	/// that saved it: the original's step finds it gone and empties it, and the next retarget starts another.
+	/// <b>Its model's record</b> (<c>+0x08</c>) is kept by its handle for the boat's drawing, which puts its clip back
+	/// as it stands the boat (<see cref="ParkBumperBoats"/>). <b>Left out:</b> its wake's record (<c>+0x0c</c>), since
+	/// no wake is drawn (<c>BUMPER_CAR_WAKE</c>); and its held sound's handle (<c>+0x20</c>), which names a voice of the
+	/// session that saved it: the original's step finds it gone and empties it, and the next retarget starts another.
 	/// </para>
 	/// </summary>
 	/// <returns>The car, or null for a handle the table does not hold or a full pool.</returns>
@@ -513,6 +520,7 @@ public sealed class ParkBumperCars
 		car.Flags = (CarFlags)saved.Word( 0x00 );
 		car.Ride = saved.Handle;
 		car.Mesh = saved.Word( 0x04 );
+		car.SavedModel = saved.Word( 0x08 );
 		car.Animation = saved.Word( 0x10 );
 		car.Voice = null;
 		car.Smoking = saved.Word( 0x2c ) != -1;
@@ -556,8 +564,6 @@ public sealed class ParkBumperCars
 
 		if ( (car.Flags & CarFlags.Lead) != 0 )
 			ride.HasLead = true;
-
-		Unimplemented.Report( "SAVED_TRACK_CAR_MODEL_RECORDS" );
 
 		// Each rider onto the head of the car's list and counted seated (chunk 9, 0x00543f6a); the seat is the file's.
 		foreach ( var rider in saved.Riders )
@@ -779,6 +785,7 @@ public sealed class ParkBumperCars
 		car.Radius = ride.CarRadius;
 		car.Heading = 0;
 		car.Phase = 0;
+		car.SavedModel = 0;
 		car.Smoking = false;
 		car.Voice = null;
 		car.VelocityX = car.VelocityZ = car.SteppedX = car.SteppedZ = car.Speed = 0;

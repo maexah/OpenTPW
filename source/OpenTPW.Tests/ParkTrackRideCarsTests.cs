@@ -272,15 +272,40 @@ public class ParkTrackRideCarsTests
 		Assert.AreEqual( 2, read.StrayRiders );
 
 		var before = Counted( "SAVED_TRACK_RIDER_WITH_NO_CAR" );
-		var models = Counted( "SAVED_TRACK_CAR_MODEL_RECORDS" );
 		var cars = new ParkTrackRideTable( read ).Cars;
 		var boats = cars.CarsOf( HotPotHandle ).ToList();
 
 		Assert.AreEqual( 2, Counted( "SAVED_TRACK_RIDER_WITH_NO_CAR" ) - before );
-		Assert.AreEqual( 2, Counted( "SAVED_TRACK_CAR_MODEL_RECORDS" ) - models );
 		Assert.AreEqual( 0, boats[0].Riders.Count );
 		CollectionAssert.AreEqual( new[] { (41, 2), (40, 1) }, boats[1].Riders.Select( rider => (rider.Peep, rider.Seat) ).ToArray() );
 		Assert.AreEqual( (2, 2, true), (cars.RideOf( HotPotHandle )!.Cars, cars.RideOf( HotPotHandle )!.Seated, cars.RideOf( HotPotHandle )!.HasLead) );
+	}
+
+	/// <summary>A loaded car keeps the handle of its model's record, and a car launched in its pool slot names none.</summary>
+	[TestMethod]
+	public void ALoadedCarKeepsItsModelsHandleUntilItsSlotIsLaunchedAgain()
+	{
+		var read = new ParkTrackRides( Body(
+			Chunk( 3, HotPotHandle, 0x20400, 0x12c00, 0, 1140, 60, 1, 1, 4350, 1 ),
+			Car( HotPotHandle, [(0x00, 0x308c009), (0x08, 94), (0x0c, 95), (0x34, 0x20a00), (0x38, 0x13200)], 0x20a00, 0x13200, 0, 0, 0 ),
+			Car( HotPotHandle, [(0x00, 0x308c009), (0x08, 96), (0x0c, 97), (0x34, 0x20a00), (0x38, 0x13200)], 0x20a00, 0x13200, 0, 0, 0 ),
+			Chunk( 6, HotPotHandle ) ) );
+
+		var cars = new ParkTrackRideTable( read ).Cars;
+
+		CollectionAssert.AreEqual( new[] { 94, 96 }, cars.CarsOf( HotPotHandle ).Select( car => car.SavedModel ).ToArray() );
+		Assert.AreEqual( 0, Counted( "SAVED_TRACK_CAR_MODEL_RECORDS" ), "the record is read now, not counted" );
+
+		while ( cars.RemoveACar( HotPotHandle ) > 0 )
+		{
+		}
+
+		Assert.AreEqual( 0, cars.CarsOf( HotPotHandle ).Count() );
+
+		var launched = cars.Launch( HotPotHandle );
+
+		Assert.IsNotNull( launched );
+		Assert.AreEqual( 0, launched!.SavedModel );
 	}
 
 	[TestMethod]

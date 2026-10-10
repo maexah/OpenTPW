@@ -802,6 +802,8 @@ public static class DebugConsole
 							+ $"speed {car.Speed} steering {car.Steering} steer ({car.SteerX},{car.SteerZ}) {target} patience {car.Patience} "
 							+ $"heading {car.Heading} turned {car.Turned} timer {car.Timer} anim {car.Animation} "
 							+ $"height {ParkBumperBoats.Current?.HeightOf( car.Index ):0.0000} "
+							+ ( ParkBumperBoats.Current?.AnimationsOf( car.Index )?.Channel( 0 ) is { IsIdle: false } clip
+								? $"clip start {clip.StartAnimTime} time {clip.AnimTime} frame {clip.AnimFrame:0.00} " : "clip none " )
 							+ $"flags 0x{(int)car.Flags:x} riders [{string.Join( ",", car.Riders.Select( rider => $"{rider.Peep}@{rider.Seat}" ) )}] "
 							+ ( car.Voice is ParkCarSounds.Held held
 								? $"sound effect {held.Effect} '{held.Voice.Name}' param {held.Values[1]} pitch {held.Pitch} rate {held.Voice.Rate:0.000} "
@@ -811,6 +813,7 @@ public static class DebugConsole
 				}
 
 				Reply( $"bumpers {report.Count} track tick {bumpers.Ticks} boats drawn {ParkBumperBoats.Current?.Standing ?? 0} "
+					+ $"clips resumed {ParkBumperBoats.Current?.Resumed ?? 0} loaded at {ParkRides.Current?.LoadedAt} now {ParkRides.NowMilliseconds} "
 					+ $"sounds started {bumpers.SoundsStarted}" );
 
 				foreach ( var entry in report )

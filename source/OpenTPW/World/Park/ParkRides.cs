@@ -626,9 +626,34 @@ public sealed class ParkRides : Entity
 	/// </summary>
 	private void Restore( RideScript script, SavedThing saved )
 	{
-		if ( script.Animations is not { } players )
-			return;
+		if ( script.Animations is { } players )
+			Resume( players, saved );
+	}
 
+	/// <summary>
+	/// A track ride's car's model put back where the park file left it - the record its handle names, which the
+	/// loader's <c>FUN_00463ab0</c> finds as the ride system's reader left it (<c>docs/exe/saves.md</c>, "OpenTPW's
+	/// reader, a car's model record"): its channels and its node words, as a placed thing's (<see cref="Restore"/>).
+	/// </summary>
+	/// <param name="handle">The car's <c>+0x08</c>: the model table's slot plus one.</param>
+	/// <param name="itemId">The item the car's model is of; a record of another is not its model's, and is left.</param>
+	/// <returns>The record's first channel, or null where the file holds no such record.</returns>
+	internal SavedChannel? ResumeCar( RideAnimations players, int handle, int itemId )
+		=> handle > 0 ? ResumeCar( players, _models?.InSlot( handle - 1 ), itemId ) : null;
+
+	/// <summary>The same, of a record in hand; null for none, one of another item or one with no channel.</summary>
+	internal SavedChannel? ResumeCar( RideAnimations players, SavedThing? record, int itemId )
+	{
+		if ( record is not { } saved || saved.CatalogueId != itemId || saved.Channels.Length == 0 )
+			return null;
+
+		Resume( players, saved );
+
+		return saved.Channels[0];
+	}
+
+	private void Resume( RideAnimations players, SavedThing saved )
+	{
 		for ( var index = 0; index < saved.Channels.Length && index < players.ChannelCount; ++index )
 		{
 			var channel = saved.Channels[index];
@@ -710,6 +735,9 @@ public sealed class ParkRides : Entity
 	/// <summary>The same, for a channel frozen at frame nought. No record in Lost Kingdom carries it.</summary>
 	private const int FrozenAtStart = 0x2;
 
+	/// <summary>The save's model records as they read, by slot, or null with no save or one that would not read.</summary>
+	private ParkThingStates? _models;
+
 	/// <summary>What the save says each thing's model was doing, by thing id - empty where it would not read.</summary>
 	private Dictionary<int, SavedThing> _saved = [];
 
@@ -735,6 +763,8 @@ public sealed class ParkRides : Entity
 
 			return paired;
 		}
+
+		_models = states;
 
 		foreach ( var placed in world.Objects )
 		{

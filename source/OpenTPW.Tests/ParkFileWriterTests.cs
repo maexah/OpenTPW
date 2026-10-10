@@ -599,12 +599,79 @@ public class ParkFileWriterTests
 			Entity.ApplyDeletions();
 			TestRun.DeleteEvery<ParkPeople>();
 
+			// The file in a go, loaded: the boat keeps its model's handle, and its clip goes on from the record's stamps.
+			var goPeople = new ParkPeople( go );
+			var goRides = new ParkRides( "jungle", go, catalogue, FileSystem );
+
+			try
+			{
+				var afloat = goPeople.State.TrackRides.Cars.CarsOf( Handle ).Single();
+				var boatItem = HotPot + 1 + afloat.Mesh;
+
+				RideAnimations Clips() => RideAnimations.Load( item.Directory, "b_car", FileSystem );
+
+				Assert.AreEqual( going.Slot + 1, afloat.SavedModel );
+				Unimplemented.Forget();
+
+				var players = Clips();
+
+				Assert.AreEqual( 5, ParkBumperBoats.Resume( afloat, players, boatItem, goRides ) );
+				Assert.AreEqual( (5, 0, false, AnimTimeControl.LoopFlag), (players.Channel( 0 )!.AnimID, players.Channel( 0 )!.SubAnim, players.Channel( 0 )!.IsIdle, players.Channel( 0 )!.Flags & AnimTimeControl.LoopFlag) );
+				CollectionAssert.AreEqual( going.NodeWords, players.Nodes!.Words( players.NodeFrames() ), "the file's node words, its clip bound" );
+				Assert.AreEqual( 0, Counted( "SAVED_TRACK_CAR_MODEL_NOT_ITS_OWN" ) );
+
+				// A record whose clip began 102 ms before the save: the clip stands 102 ms in at the load.
+				var earlier = going with { Channels = [going.Channels[0] with { StartTime = go.Clock.Reading!.Value - 102, Time = go.Clock.Reading!.Value, NoPauseTime = go.Clock.Reading!.Value }] };
+				var resumed = Clips();
+
+				Assert.AreEqual( 5, goRides.ResumeCar( resumed, earlier, boatItem )!.Value.Role );
+				Assert.AreEqual( (goRides.LoadedAt - 102, goRides.LoadedAt), (resumed.Channel( 0 )!.StartAnimTime, resumed.Channel( 0 )!.AnimTime) );
+
+				// A record of another item, an empty slot and no record are not the boat's: nothing starts, and the first two are counted.
+				var other = Clips();
+
+				Assert.IsNull( goRides.ResumeCar( other, earlier, HotPot + 1 ) );
+				Assert.IsNull( ParkBumperBoats.Resume( afloat, other, HotPot + 1, goRides ), "its record is the boat's item's, not the wake's" );
+
+				afloat.SavedModel = Models( go ).Header.Cursor + 5;
+				Assert.IsNull( ParkBumperBoats.Resume( afloat, other, boatItem, goRides ), "a slot the file leaves empty" );
+				Assert.AreEqual( 2, Counted( "SAVED_TRACK_CAR_MODEL_NOT_ITS_OWN" ) );
+
+				afloat.SavedModel = 0;
+				Assert.IsNull( ParkBumperBoats.Resume( afloat, other, boatItem, goRides ), "a car launched here names none" );
+				Assert.IsNull( ParkBumperBoats.Resume( goPeople.State.TrackRides.Cars.CarsOf( Handle ).Single(), other, boatItem, null ) );
+				Assert.AreEqual( 2, Counted( "SAVED_TRACK_CAR_MODEL_NOT_ITS_OWN" ) );
+				Assert.IsTrue( other.Channel( 0 )!.IsIdle, "and nothing was started" );
+
+				// A record at rest is found, and starts nothing.
+				var still = Clips();
+
+				Assert.AreEqual( 12, goRides.ResumeCar( still, record, boatItem )!.Value.Role );
+				Assert.IsTrue( still.Channel( 0 )!.IsIdle );
+			}
+			finally
+			{
+				goRides.Delete();
+				Entity.ApplyDeletions();
+				TestRun.DeleteEvery<ParkPeople>();
+			}
+
 			var boatPeople = new ParkPeople( boat );
 			var boatRides = new ParkRides( "jungle", boat, catalogue, FileSystem );
 
 			try
 			{
 				Assert.AreEqual( 1, boatPeople.State.TrackRides.Cars.CarsOf( Handle ).Count() );
+
+				// Its boat's record is at rest: found, nothing started, no role answered and nothing counted.
+				var resting = RideAnimations.Load( item.Directory, "b_car", FileSystem );
+				var moored = boatPeople.State.TrackRides.Cars.CarsOf( Handle ).Single();
+
+				Unimplemented.Forget();
+				Assert.AreEqual( own + 1, moored.SavedModel );
+				Assert.IsNull( ParkBumperBoats.Resume( moored, resting, HotPot + 1 + moored.Mesh, boatRides ) );
+				Assert.IsTrue( resting.Channel( 0 )!.IsIdle );
+				Assert.AreEqual( 0, Counted( "SAVED_TRACK_CAR_MODEL_NOT_ITS_OWN" ) );
 				Unimplemented.Forget();
 				Assert.IsNotNull( Level.WritePark( boat, boatPeople.State, "jungle", "Again", boatPeople, null, boatRides, catalogue ) );
 

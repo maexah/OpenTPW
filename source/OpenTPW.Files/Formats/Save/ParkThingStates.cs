@@ -254,6 +254,22 @@ public sealed partial class ParkThingStates
 	}
 
 	/// <summary>
+	/// The saved record in a slot of the model table, or null where the slot is empty. A model's handle is its slot
+	/// plus one, which is how a track ride's car names its own (<c>docs/exe/saves.md</c>, "OpenTPW's reader, a car's
+	/// model record").
+	/// </summary>
+	public SavedThing? InSlot( int slot )
+	{
+		foreach ( var thing in _things )
+		{
+			if ( thing.Slot == slot )
+				return thing;
+		}
+
+		return null;
+	}
+
+	/// <summary>
 	/// Writes each model's channels, and its hoarding where one is given, over the record in its slot of
 	/// <paramref name="body"/>, a copy of the payload this was read from. A channel is the record's eleven dwords in
 	/// the file's order (<see cref="ReadThing"/>). A model whose slot holds no record, or one of another count of
