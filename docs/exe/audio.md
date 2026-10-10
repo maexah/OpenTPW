@@ -60,7 +60,7 @@ Every use of that int as a delay in OpenTPW is OpenTPW's own: `SoundCategory.Pla
 
 | Flags word | Voice class | Shipped users |
 |---|---|---|
-| no bit `0x4` (for example 0, `0x200`, `0x8`) | One-shot: plays one sample and dies. Freed at start + length + 250 ms (`0x006bc01b`), or when its channel ends. | 1,067 of the 1,267 records, SINGLESCREAM's 75-90 and 105-109 among them; 30 more carry bit `0x1` and go through a deferred queue first (`0x006b66d0`) |
+| no bit `0x4` (for example 0, `0x200`, `0x8`) | One-shot: plays one sample and dies; with bit `0x8` the sample is looped and the voice lives on ("A voice's range", below). Freed at start + length + 250 ms (`0x006bc01b`), or when its channel ends. | 1,067 of the 1,267 records, SINGLESCREAM's 75-90 and 105-109 among them; 30 more carry bit `0x1` and go through a deferred queue first (`0x006b66d0`) |
 | `0x0404` | Held chain, final vtable `0x0070a2e0`. The constructor stores `0x0070a390`, then overwrites it at `0x006bdde5`. | 18 records: kids 71-74, staff 188, and the ambient beds with `0x120404`/`0x170404` |
 | bits `0x4` and `0x2` | Three constructors by the other bits (`0x006b677d`..`0x006b67c3`): with `0x10`, `0x006be680`; else with `0x400`, `FUN_006be610`, **the music's class**, below; else with `0x100`, `0x006be330`; else `0x006be090`, which passes the variation's wait to the mixer channel (`0x006bdf00` → `0x006c5220`). Only the `0x400` one is decoded. | 135 records (`classes.py`): 106 to `0x006be090` (`0x0006`, `0x0206`), 27 to `FUN_006be610` (`0x0406` 16, `0x0606` 11: music 2 in every theme, kids 91, global ambient 33, jungle's rides 204, 216 and 217 among them), 2 to `0x006be680` (`0x0016`), none to `0x006be330` |
 
@@ -126,6 +126,61 @@ OpenTPW's `ParkScreams` builds exactly this: `ParkAudio.StopScream` releases not
 | `0x005f5fa0` | — | The sound clock: wall-time milliseconds | Disassembly |
 | `0x00fb1f20` | — | The one random seed every draw above advances | Disassembly |
 | `0x006b7e76` | — | Faults (a read through NULL) when no audio device exists: with Wine's pulse and ALSA drivers both disabled, mmdevapi finds no driver and the game crashes right after its DirectDraw set-up | Proton log, `EXCEPTION_ACCESS_VIOLATION` at this address |
+
+## A voice's range, and the rectangle it follows the listener in
+
+Read for Q263 (the land's own sounds, `park.md`) and held against the running original's voices
+(`original/voices.py`).
+
+**The play record carries a range.** The record `Sound_PlayEffect` builds is `{vtable 00700b90, category, effect,
+x, y, z, range}`; it stores nought for the range, and `FUN_0051c130`, whose one caller is the level's placed
+objects, stores its seventh argument. `FUN_006bbe90` makes the voice's flags from the effect record's flags word
+and keeps a range that is not nought at the voice's `+0x40`:
+
+| Effect flags (`+0x10`) | Voice flags (`+0x30`) | What it does |
+|---|---|---|
+| `0x8` | `0x6` | Bit `0x4`: the voice's channel is given 9999 (`FUN_006c5110`, `0x006bc410`'s end), its loop count. Measured: global ambient 8's voice held its channel through 14 s on a 1.8 s sample |
+| `0x4` | `0x2` | |
+| `0x200` | `0x8` | No range and no place: the service never silences it, and its channel is put at (0, 1, 0) with position request bit `0x1` (`FUN_006bb220`) |
+| `0x20` | `0x200` | |
+| `0x4000` | `0x20000` | |
+| a range given | `0x80` | The range at `+0x40` is the voice's own |
+
+**Each service pass silences what is out of range** (`FUN_006bca10`, from `FUN_006b62b0`'s walk of the voice
+list). The range is `FUN_006bc650`: the voice's own times the manager's float at `+0x2c` (1.0 in the running
+game) with flag `0x80`, else the float at `+0x22` of the voice's variation, else nought. The distance is
+`FUN_006bb9f0`'s, over x and z alone, from the listener at `[manager + 0x60]`. Past the range, and without
+voice flag `0x8`, the voice is flagged `0x800` and its channel given up (`FUN_006bca70`); inside it the flag is
+cleared and the voice plays on. Measured: a voice in range reads `0x00087`, one out of it `0x00886`.
+
+**A voice may be given a rectangle** (`FUN_0051c5d0` → `FUN_006b64b0`): four whole numbers at
+`[voice + 0x4c] + 8`, x, z, a second x and a second z, and voice flag `0x1000`. With it `FUN_006bca10` first
+moves the voice (`FUN_006bd5f0`): to the listener's x held between the two x, the listener's own height, and
+the listener's z held between the second z and the first. The voice stays as near the listener as the
+rectangle lets it. Measured: the sea's at (the listener's x, its height, 21), the gulls' at (450, its height, 31).
+
+**The distance mapping has a writer** (`FUN_006bc410`, the voice's channel set-up, for a voice without flag
+`0x8`): request bit `0x200` at `params + 0x14`, and the three numbers at `+0x38`: 2.0, the voice's range (2.1
+when the range is 2.0 or under), and the manager's slot `+0x2c` (`0x006b9bb0`): 0.2 with bit `0x40` of the
+manager's `+0x28`, else 0.8. The running game read `0x508` there, so 0.8. These reach
+`QSWaveMixSetDistanceMapping` through `0x006c581b`. In `QMixer.dll` (image base `0x18000000`) that export, at
+`0x18003b10`, packs them into a command of type `0xc` (`0x1800c870`; a record of 12 bytes or under takes a
+scale of 1.0) and posts it to the channel (`0x18001520`). **What the mixer does with them is not read**: how
+loud a voice is at a distance inside its range is unknown.
+
+| Address | Original name | What it is | Evidence |
+|---|---|---|---|
+| `0x0051c130` | — | `Sound_PlayEffect` with a range | Decompiled |
+| `0x006bbe90` | — | A voice's flags from its effect's, and its own range | Decompiled |
+| `0x006bca10` | — | A service pass on one voice: the rectangle's move, then in or out of range | Decompiled |
+| `0x006bc650` | — | A voice's range | Decompiled |
+| `0x006bb9f0` | — | The squared distance to the listener over x and z, and the sort key's low word | Disassembly |
+| `0x006bca70` | — | Out of range: flag `0x800`, the channel given up | Decompiled |
+| `0x0051c5d0`, `0x006b64b0` | — | A voice's rectangle and flag `0x1000` | Decompiled, disassembly |
+| `0x006bd5f0` | — | The voice put at the listener's place inside its rectangle | Decompiled |
+| `0x006bc410` | — | A voice's channel set-up: the distance mapping's three numbers and its request bit, the loop count | Decompiled |
+| `0x006b9bb0` | — | The mapping's third number: 0.2 or 0.8 | Disassembly; `0x0070a624`, `0x0070a628` read |
+| `[[0x00802bcc] + 4] + 0x20` | — | The voice container: its list's head at `+0x24`, a voice's next at `+0x34` (`FUN_006b62b0`) | Decompiled; walked in the running game |
 
 ## Where positional audio actually lived
 
@@ -421,6 +476,6 @@ OpenTPW does not clamp a voice: `AudioClip` keeps NLayer's floats, up to 1.40, a
 
 - **`FUN_0051c700` is NOT the distance-mapping feed.** It is the sound-detail ladder that interpolates the three `RadiusInfo[n].MINRADIUS` values (100.0 / 0.5 / 0 at SWITCH 25 / 50 / 75) from `data\sound.sam` and posts them to `0x006b5890` → `FUN_006b99c0` → `FUN_006b8180`, which latches `{on/off, radius}` and walks the voice array setting a per-voice LEVEL. That level comes from `FUN_006c4c80`, a **segment-versus-circle occlusion test that uses only the X and Z components** and ignores height entirely — so the pause's Y-lift cannot touch it either way. It never reaches `SetDistanceMapping`.
 - `SndReverb.map`'s record shape is **not decoded**.
-- The actual parameters passed to `SetDistanceMapping` are still **unknown**, but where they live is now known precisely. `QSWaveMixSetDistanceMapping` has **exactly one call site in the image**, `0x006c581b` in `FUN_006c5690`, reached as `if ( params->flags_at_0x14 & 0x200 ) vtbl[0x60]( out, channel, params + 0x38 )` — so the three values are the dwords at `params+0x38..+0x40`. **No writer of that `0x200` request bit exists anywhere in the image** (404 MOV-imm32 and 2 OR-imm32 candidates examined, none carrying it); the record is built by a virtual-dispatched builder that was not reached statically. So **QMixer's own DEFAULT mapping probably governs**, and that is in `QMixer.dll` (307,200 bytes, 27 Jan 2000, exporting `QSWaveMixGetDistanceMapping`), not in `testme.exe`. The Ghidra project holds only `testme.exe` and `TP.ICD`; importing the DLL is the one step that would settle it.
+- **What `QMixer.dll` does with the distance mapping is not read.** Its three numbers and their writer are in "A voice's range, and the rectangle it follows the listener in": 2.0, the voice's range and 0.8, from `FUN_006bc410`, through the one call site `0x006c581b` in `FUN_006c5690` (`if ( params->flags_at_0x14 & 0x200 ) vtbl[0x60]( out, channel, params + 0x38 )`). The DLL (307,200 bytes, 27 Jan 2000) is not in the Ghidra project; importing it, or a measurement of one looped voice alone at several distances, would settle the law.
 - **`params+0x14` is a request mask, not a flag pair.** `FUN_006c5690` tests at least nine bits of it, each gating one setter: `0x1` the position path (`FUN_006b7fa0`), `0x2` volume, `0x20` frequency, `0x40`, `0x100` source cone, `0x200` distance mapping, `0x400`, `0x20000`, `0x80000`.
 - **Consequently, "a pause attenuates every placed sound to nothing" is NOT established**, in either direction, and nothing measured supports it. OpenTPW holds placed voices to **silence** instead. That is a choice standing in for a curve nobody has measured, and it is said at the site, in `Audio.HoldPlaced`.

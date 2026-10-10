@@ -27,6 +27,7 @@ place to look for tools. Each file's docstring is its manual.
 | `original/spritepass.py PID`, `particleheights.py PID SECS EFFECT [STEP]`, `particleoverlay.py PID OUT.png [EFFECT]` | The original's world particles: the sprite pass's matrix (`[0x0087b088]`) with every emitter's draw words and its particles projected to pixels; how high and wide an effect's particles go over a time; and a frame grabbed with each particle's sprite marked on it, which proves a projection rule against the picture |
 | `original/particledump.py PID EFFECT [raw]` | The original's memory: EVERY particle of each live emitter of an effect (its place less the emitter's, velocity, size, frame, colour) and the spread of each, where `spritepass.py` prints an emitter's first six. OpenTPW's side is the console's `particles <slot>`; `q261/cloud.py <run.out>` prints the same spread from a run's output |
 | `lib/spritesheet.py <bank.ESP> <out.png> <set>...` | A sprite bank's picture sets with their alpha, each frame over black and over white, and each frame's alpha spread and mean colour: what a particle's picture is before any blend. `wadcat --dump SPR_PA.ESP` and `--dump SPR_PA.TPC` on `esprites.wad` write the two files it reads |
+| `original/voices.py PID [SECS]` | The original's memory: every live sound voice by the service's own list (its effect and flags word, the voice's flags, place, range and rectangle, how far it is from the listener), with the listener first; a block a change. Says which placed sounds are in range and sounding. A `POLL` for `loadfile.sh` |
 | `original/research.py <in> <out> <item>` | A copy of a jungle park file with one item marked researched, so Instant Action's buy list offers it |
 | `original/original.sh`, `tpwmem.py`, `gmove.py`, `record.sh`, `watch.sh` | Starting, reading, clicking, filming and watchpointing the original ("The original under Proton", below) |
 | `q119/lib.py` | What `parkrun.py` is built on: the launch, the console pipe, XTEST clicks and keys, the frame grab. Use it through `parkrun.py` |
@@ -119,6 +120,12 @@ GH=766` there, or the pointer is off):
   thing bought goes on the front. Read an order from the file's `mNext` links, never from the ids (Q257z).
 - **Instant Action offers only researched items:** patch a copy with `research.py`, never the reference
   `easymode.TPWI` (Q257n).
+- **Its music off:** the game menu's Options (510,400), the Music switch (445,533), OK (898,688), Escape; the
+  same clicks put it back, and `save/Config.tcf` then holds the same bytes. A park's mix still reads 0.04 rms
+  with it off and every placed voice silenced, so one placed sound's loudness is not read from the mix: neither
+  a match of its sample (0.04) nor its loop's length in the autocovariance found a waterfall 21 units off (Q263).
+- **A camera file's listener is not where the camera was aimed:** `camera 531 513 110 180` saved here reads a
+  listener of (546, 50, 476) there. Read it (`voices.py`'s first line) rather than work it out (Q263).
 - **A point's place on its screen** is its park place (x, the height, z) through the matrix at `[0x0087b088]`,
   then `x / w` and `y / w` as the screen's -1 to 1 (`spritepass.py` does it): how to find a thing in its frame, or
   to prove a drawing rule on it (Q258).

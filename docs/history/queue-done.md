@@ -5873,6 +5873,17 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   of the world, effect 20 at (532,4,526) holding 24 particles, all drawn, where the control reads one; the
   original, loading the fix's file, holds 24 to 28 on the same emitter, and both frames show the spray at the
   foot of the fall (`park.md`, "The land's own particles"; FileFormats `omp.md`). 5 of 5 predictions.
+- [x] **Q263. The land's own sounds, decoded.** Split by the session from the old Q263: its other pieces are
+  Q264. Done 2026-10-10, a decode with no code: a `scape.omp` type 1 is a sound with a range of its own (word 6,
+  doubled, over 1024: `FUN_0051c130`, the voice silenced past it by x and z alone, `FUN_006bca10`), a type 3 a
+  sound kept at the listener's place inside a rectangle (words 7 and 8: `FUN_0051c5d0`, `FUN_006bd5f0`), and
+  word 1 picks the global or the level's `cat_ambient`. The jungle's six are the waterfall and the river, looped,
+  range 97; gulls and the sea in rectangles; and two of the level's own. In the running original, loaded from
+  eight camera files, the fall's and the river's voices were in and out of range as predicted, 4 of 4 (in at 86
+  and 75 units, out at 134 and 160), both with a range of 97.0, the gulls' and sea's voices on their rectangles'
+  near edges (`park.md`, "The land's own sounds"; `audio.md`, "A voice's range, and the rectangle it follows the
+  listener in"; FileFormats `omp.md`). The distance mapping's writer is found (2.0, the range, 0.8); the mixer's
+  law is not read, so nothing is played yet.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

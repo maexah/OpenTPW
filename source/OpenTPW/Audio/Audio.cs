@@ -304,10 +304,10 @@ public static class Audio
 	/// </para>
 	/// <para>
 	/// <b>And the amount is a choice standing in for a curve nobody has measured.</b> How far the
-	/// original's 10,000-unit lift actually turned a sound down is <i>undetermined</i>: QMixer's
-	/// distance model is not in the executable, SetDistanceMapping has one call site (0x006c581b)
-	/// gated on a request bit with no writer anywhere in the image, and the parameters live in
-	/// QMixer.dll. This holds to silence instead. <b>Do not write "attenuates to nothing"</b>: nothing
+	/// original's 10,000-unit lift actually turned a sound down is <i>undetermined</i>: the executable
+	/// hands QMixer a mapping of 2.0, the voice's range and 0.8 for each placed voice (0x006bc410), and
+	/// what QMixer.dll makes of them is not read (docs/exe/audio.md, "A voice's range, and the rectangle
+	/// it follows the listener in"). This holds to silence instead. <b>Do not write "attenuates to nothing"</b>: nothing
 	/// measured supports it, and this is not it.
 	/// </para>
 	/// <para>

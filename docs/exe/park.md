@@ -2037,7 +2037,7 @@ Q262, split by the session: the item's other pieces are Q263. The shipped park's
 | `0x00407f82` | | The park level load's one call of `FUN_00550e00`, on `<level>\Scape.omp` (`0x00747ee8`), before the sky's loader | Decompiled (`FUN_00407f20`) |
 | `0x00550e00` | | The file's reader: `OBJ_`, a count, a record size, then each record's first fifteen words into a cleared buffer, a longer record's rest stepped over; a dispatch on word 0 | Decompiled |
 | `0x00551006` | | Type 2: `Particles_Spawn( word 1, word 3, word 4, word 5 )`, the answer dropped | The listing: the four pushes read `[ESP+0x30]`, `+0x2c`, `+0x28` and word 1 |
-| types 1 and 3 | | Sounds (`FUN_0051c130`; `Sound_PlayEffect` then `FUN_0051c5d0`), `scenes.md`, "What a park actually plays" | Decompiled; their words not decoded |
+| types 1 and 3 | | Sounds (`FUN_0051c130`; `Sound_PlayEffect` then `FUN_0051c5d0`): "The land's own sounds", below | Decompiled |
 
 **Measured on all four parks' files** (FileFormats `omp.md` has every record): the jungle's holds seven
 records, the other three four each; **the jungle's third is the only type 2 the game ships**:
@@ -2069,6 +2069,52 @@ The density is the options' (1000) where the original's is the file's 500; both 
 one a tick, so the counts agree. **Not run in either game:** a park of another theme (the tests: none starts a
 particle), a Full Simulation park with no file. Of 23 bugs put back, 23 fail a test (`q262/mutations.py`); the
 call in `Level` is held by the control run alone.
+
+### The land's own sounds
+
+Q263, split by the session: the item's other pieces are Q264. A decode, with no code: what `scape.omp`'s type 1
+and type 3 records ask of the sound engine, held against the running original's voices. The engine's side (a
+voice's range, the rectangle, the distance mapping) is `audio.md`, "A voice's range, and the rectangle it
+follows the listener in"; the bytes are FileFormats `omp.md`.
+
+| Address / value | Name | What it is | Evidence |
+|---|---|---|---|
+| word 1 | | The category: nought is the global `cat_ambient` (`DAT_00803a20`), anything else the level's own (`DAT_00803a38`) | Decompiled (`FUN_00550e00`) |
+| `0x005510ba` | | Type 1: `FUN_0051c130( 0, category, word 2, word 3 / 1024, word 4 / 1024, word 5 / 1024, word 6 * 2 / 1024 )`, each divided toward nought | Decompiled |
+| `0x0051c130` | | `Sound_PlayEffect` with a seventh number: the play record's float at `+0x18`, the voice's own range, where `Sound_PlayEffect` stores nought | Decompiled, both |
+| `0x00550fe5` | | Type 3: `Sound_PlayEffect` at words 3, 4, 5, then `FUN_0051c5d0( voice, word 3, word 5, word 7, word 8 )`, each over 1024. Its word 6 is not read | Decompiled |
+| `0x0051c5d0` | | Posts the voice a rectangle: x, z, x + the third, z + the fourth, as whole numbers (`FUN_006b64b0`) | Decompiled |
+
+**The six in the jungle** (`fx` on the two categories; the flags word is the effect record's `+0x10`):
+
+| Record | Effect | Samples | Flags | What the engine makes of it |
+|---|---|---|---|---|
+| type 1 at (530, 513) | global ambient 8 | `watfall.mp2`, 1.8 s, volume 100 | `0x0008` | A looped voice with a range of 97: the waterfall, 13 units from its spray |
+| type 1 at (511, 664) | global ambient 7 | `River.mp2`, 1.7 s, volume 50 | `0x0008` | A looped voice with a range of 97 |
+| type 3 at (353, 31) | global ambient 2 | `gull2.mp2`, `gull3.mp2`, a wait of 0 to 10 s | `0x0006` | A voice kept at the listener's place inside (353, 31) to (450, -66) |
+| type 3 at (372, 21) | global ambient 3 | `SEA1`, `SEA7`, `SEA8.mp2` | `0x0006` | The same inside (372, 21) to (567, -174) |
+| type 1 at (21, 39) | the level's ambient 181 | one variation | `0x0206` | Range 19; no such voice stood in the original's list on any poll |
+| type 1 at (19, 69) | the level's ambient 182 | no variation | `0x0008` | Nothing to play |
+
+**Measured in the original, 2026-10-10** (`original/voices.py`, new: the service's own voice list; the shipped
+park loaded from eight files whose cameras stand at stepped distances from the fall, `q263/mkfiles.py`). Predicted
+before each read from the range alone, 4 of 4: the fall's voice sounding and the river's silenced with the
+listener 21, 26 and 49 units from the fall; both sounding at 86 from the fall and 75 from the river; the river
+alone at 31 from it and 160 from the fall; neither at 281 and 134. A voice out of range carries flag `0x800`
+and no channel (`0x00886`), one in range `0x00087`, and the fall's held its channel through 28 polls in 14 s on
+a 1.8 s sample. Both read a range of 97.0. The listener is the midpoint of the camera and the point it looks
+at, as `scenes.md`, "Positioning" has it, and the distance is over x and z alone. The gulls' voice stood at
+(450, the listener's height, 31) and the sea's at (the listener's x, its height, 21) on every poll, the
+listener being past both rectangles' near edge; both were silenced there.
+
+**Not measured: how loud a voice is inside its range.** The executable hands the mixer a mapping of 2.0, the
+range and 0.8 (`audio.md`); the law between is `QMixer.dll`'s. Two captures of the original's mix did not
+separate the fall from it: its sample matched at 0.04 at best, and the mix read 0.04 to 0.07 rms with every
+placed voice silenced. The class of the gulls' and the sea's effects (`0x0006`, `0x006be090`) is not decoded.
+
+**What OpenTPW does.** Nothing yet: the six records are read and counted (`SCAPE_OMP_SOUND_TYPE_1`,
+`SCAPE_OMP_SOUND_TYPE_3`), and the level's own `cat_ambient` is not loaded. Playing them waits on the mixer's
+law (Q264): a waterfall heard at a guessed loudness would be wrong all the time the camera is near it.
 
 ## The save's world block: map cells
 

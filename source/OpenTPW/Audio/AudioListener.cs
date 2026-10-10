@@ -73,9 +73,9 @@ internal readonly record struct AudioListener( Vector3 Position, Vector3 Right, 
 	/// <b>data\sound.sam's RadiusInfo[n].MINRADIUS is not that model's inner radius.</b> MINRADIUS feeds FUN_0051c700, a sound-detail ladder whose value reaches a
 	/// software per-voice level through FUN_006b8180 and an obstacle test (FUN_006c4c80) that uses
 	/// only two of the three axes - it never reaches SetDistanceMapping at all. The real parameters
-	/// are three dwords at a params record +0x38, passed from the single call site 0x006c581b, gated
-	/// on a request bit whose writer does not exist anywhere in the image; so QMixer's own default
-	/// mapping probably governs, and that lives in QMixer.dll rather than in the executable.
+	/// are the three numbers a voice's channel set-up writes (0x006bc410): 2.0, the voice's range and
+	/// 0.8, and what QMixer.dll makes of them is not read (docs/exe/audio.md, "A voice's range, and
+	/// the rectangle it follows the listener in").
 	/// <b>The original's falloff law is therefore unknown, and the one here is not a reconstruction
 	/// of it.</b>
 	/// </para>

@@ -48,12 +48,19 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q263. The writer: what else a made record leaves out.** The old Q262's other pieces, each counted or
+- [ ] **Q264. The writer: what else a made record leaves out.** The old Q263's other pieces, each counted or
   said in `saves.md`. Confirm: each piece's bytes beside a file of the original's own, and the file loaded in
   the original under Proton.
-  From Q262 (`park.md`, "The land's own particles"): `scape.omp`'s sounds are read and not played
-  (`SCAPE_OMP_SOUND_TYPE_1`, `SCAPE_OMP_SOUND_TYPE_3`, six in the jungle: the land's ambience; what a type 1's
-  word 6 and a type 3's words 7 and 8 mean is not decoded). A park entered from a file starts the spray afresh
+  From Q263 (`park.md`, "The land's own sounds"): the land's six sounds are decoded and not played
+  (`SCAPE_OMP_SOUND_TYPE_1`, `SCAPE_OMP_SOUND_TYPE_3`). **First settle how loud a voice is inside its range:**
+  the mapping is 2.0, the range and 0.8, and what `QMixer.dll` does with it is not read (import the DLL into
+  Ghidra with Alexah's yes: its command of type `0xc`, `0x1800c870`; or measure one looped voice alone, which
+  two captures of the mix did not manage). Then play the waterfall and the river (looped, range 97, the
+  listener the midpoint of the camera and its aim), and the same law is owed to every placed voice here
+  (screams, staff, thunder: flat and never out of range now). Not decoded: the gulls' and sea's voice class
+  (`0x0006`, `0x006be090`), why the level's ambient 181 had no voice in the original, a variation's own range
+  (`+0x22`). The level's own `cat_ambient` is not loaded.
+  From Q262: a park entered from a file starts the spray afresh
   and does not read the file's emitter. In no game run: another theme, a Full Simulation park with no file.
   **Do not take the jet's move as a piece for its picture:** the original's own Jungle Spray jet reads the same
   place and aim on every poll of its four seconds (`q257w/orig/a-load.log`), so an emitter moved to its node
