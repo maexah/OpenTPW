@@ -5866,6 +5866,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   of 52.2 and 57.7 with the smoke over it, 64.7 and 64.5 in the control, where it is cut off at the sign's edge
   (`park.md`, "The sprite pass, and the Hot Pot's own smoke"). 1 of 2 predictions in the fix's run: the box's
   thresholds were mine and missed.
+- [x] **Q262. The jungle's waterfall has its spray.** Split by the session from the old Q262: its other pieces
+  are Q263. Done 2026-10-10: the shipped park's emitter of effect 20 at (532,4,526), which no script names, is
+  the land's own, placed by the level's `scape.omp` (`FUN_00550e00`, type 2: `Particles_Spawn` at `0x00551006`),
+  the only particle any shipped park places. It is started as the park is built: `particles` reads two emitters
+  of the world, effect 20 at (532,4,526) holding 24 particles, all drawn, where the control reads one; the
+  original, loading the fix's file, holds 24 to 28 on the same emitter, and both frames show the spray at the
+  foot of the fall (`park.md`, "The land's own particles"; FileFormats `omp.md`). 5 of 5 predictions.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

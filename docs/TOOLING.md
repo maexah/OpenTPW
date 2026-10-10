@@ -70,6 +70,9 @@ whole list):
   `camera 435 250 110 0` shows the cloud at its doorway from the side the original's file `hotpot-later2.TPWS`
   looks from (OpenTPW yaw 0 looks toward higher z; yaw 180, Q259's, is the pot's far side), and
   `camera 435 228 35 0` its sign close up. `particles <slot>` prints every particle of one emitter (Q261).
+- **The waterfall's spray** (effect 20, the land's own, running from the park's first frame):
+  `camera 532 526 25 0` looks at the foot of the fall from the side the water comes down; `camera 532 591 110 180`
+  (`parkrun.original_view( 532, 526 )`) saves a view the original's frame shows it in, from the far side (Q262).
 - **The mechanic mending a pot:** `broken_pot()` (`lib/parkscene.py`), then wait for the log's `mechanic 26 found
   ride`, `starts repairing` and `finished repairing`: under a minute in all. He stands on (43,23), inside the
   pot's doorway, hidden from yaw 180: `camera 435 235 30 0` looks in at him (Q257z).

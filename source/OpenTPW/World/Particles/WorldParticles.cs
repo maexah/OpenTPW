@@ -33,7 +33,8 @@ namespace OpenTPW;
 /// </para>
 /// <para>
 /// <b>Engine and content.</b> Drawing is engine. Which effects are started and where is up to whoever starts
-/// them: in a park, the ride scripts (<c>RideScript.StartParticle</c>).
+/// them: in a park, the ride scripts (<c>RideScript.StartParticle</c>) and the land's own file
+/// (<see cref="ParkPlacedObjects"/>).
 /// </para>
 /// </summary>
 internal sealed class WorldParticles : Entity

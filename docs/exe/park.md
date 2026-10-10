@@ -137,7 +137,7 @@ The inflated payload names the park's features by path — `data\levels\jungle\F
 
 `test.tpt` (jungle + space only, 236 bytes) is a weather table: dword chunk count 6, then per chunk a 4-byte tag, 4-byte size, payload — `WTHR`, `TEMP`, `WNDS` (wind speed), `WNDD` (wind direction), `CLCV` (cloud cover), `ADSR`; each carries a count then five (value, weight) pairs. Decodable by inspection; named "test", probably vestigial.
 
-`scape.omp` (409-590 bytes, one per park) is an `OBJ_` record file ending in an `INCL` chunk (count, then length-prefixed strings) naming the C++ headers it was built from: `D:\Park2\data\Particle\par_lib.h`, `SfxEvent.h`, `JungleEvent.h` — so it binds particle and sound events to the theme. Small; low priority.
+`scape.omp` (409-590 bytes, one per park) is an `OBJ_` record file ending in an `INCL` chunk naming the C++ headers it was built from: the land's own sounds and, in the jungle, its waterfall's spray ("The land's own particles", below; FileFormats `omp.md`).
 
 ## Buildable items: the per-item archive
 
@@ -1940,8 +1940,7 @@ whose node's matrix is never stored (`PARK_PARTICLE_NO_DIRECTION`), a start the 
 engine frees and this keeps (`PARK_PARTICLE_NOT_STARTED`). A loaded emitter begins its effect again: the file's
 running words are not read (`LOADED_EMITTER_LIFE_PART_RUN` where its life is not the template's). An effect added
 without its alpha (flags `0x4` with no `0x2000`) is drawn scaled by it (`WORLD_PARTICLE_ADDED_WITHOUT_ALPHA`).
-Not started at all, and not counted: a file's emitter no script's record names (the shipped park's effect 20 at
-(532,4,526)), a rider's and a leaver's puffs (a broken boat's smoke is started since Q259, below). The
+Not started at all, and not counted: a rider's and a leaver's puffs (a broken boat's smoke is started since Q259, below). The
 writer is as it was: an emitter is written as it starts, not as the running one stands. The density is the
 options' (1000 at medium), where the file loaded in the original carries its own (500), so a density-scaled
 effect holds about twice the particles here: the stink 17 to 19 against 8 to 9.
@@ -2027,6 +2026,49 @@ after the load): both show a dark cloud at the pot's doorway. The original's is 
 blend. Set 10's eight pictures are dark grey (a mean of 32 to 42) and faint, no alpha over 121 of 255 and half
 of each under 25 (`spritesheet.py`); which of `Texture_BlendStateWord`'s words their texture carries in the
 running original was not read.
+
+### The land's own particles
+
+Q262, split by the session: the item's other pieces are Q263. The shipped park's emitter of effect 20 at
+(532,4,526), which no script's record names, is the land's own: the level's `scape.omp` places it.
+
+| Address / value | Name | What it is | Evidence |
+|---|---|---|---|
+| `0x00407f82` | | The park level load's one call of `FUN_00550e00`, on `<level>\Scape.omp` (`0x00747ee8`), before the sky's loader | Decompiled (`FUN_00407f20`) |
+| `0x00550e00` | | The file's reader: `OBJ_`, a count, a record size, then each record's first fifteen words into a cleared buffer, a longer record's rest stepped over; a dispatch on word 0 | Decompiled |
+| `0x00551006` | | Type 2: `Particles_Spawn( word 1, word 3, word 4, word 5 )`, the answer dropped | The listing: the four pushes read `[ESP+0x30]`, `+0x2c`, `+0x28` and word 1 |
+| types 1 and 3 | | Sounds (`FUN_0051c130`; `Sound_PlayEffect` then `FUN_0051c5d0`), `scenes.md`, "What a park actually plays" | Decompiled; their words not decoded |
+
+**Measured on all four parks' files** (FileFormats `omp.md` has every record): the jungle's holds seven
+records, the other three four each; **the jungle's third is the only type 2 the game ships**:
+(2, 20, 0, 545100, 5000, 538700), effect 20 at 532.3, 4.9, 526.1. Effect 20 is the library's `WaterFall`:
+endless, rates 2, 1, 1, 1, a particle living 25 ticks and up to five more, thrown out inside an ellipse of 468
+(7.3 units) each way, growing from 1500 to 5000, set 13's six frames, blended. It is the first effect the
+park's system starts, which is why the shipped file holds it in slot 0 under handle `0x10000`.
+
+**What OpenTPW does.** `PlacedObjectsFile` reads the file as the loader does; `ParkPlacedObjects.Start`, called
+as the park's entities are made (`Level`, after `WorldParticles`), starts each type 2's effect at its place in
+the park's particle system and keeps no handle. A park entered from a file starts it afresh rather than
+reading the file's emitter, whose particles the original's loader empties in any case. The file's sounds are
+read and not played, each counted (`SCAPE_OMP_SOUND_TYPE_1`, `SCAPE_OMP_SOUND_TYPE_3`: six in the jungle), and
+a start the system refuses is counted (`PARK_PARTICLE_NOT_STARTED`).
+
+**Run, 2026-10-10** (`q262/confirm.py`, 5 of 5 predictions on the desktop, each written first in
+`PREDICTION.txt`). Lost Kingdom from `easymode.TPWI`: one log line `the land's own effect 20 started at
+(532,4,526)`; five seconds on `particles` read two emitters of the world, the shop's bubbles and effect 20 at
+(532,4,526) holding 24 particles, 36 of 36 drawn; the census counted the six sounds; `savepark`'s file still
+held the file's own emitter in slot 0. The frames show the spray at the foot of the fall
+(`waterfall-fix-left-control-right.png`). **The control** (the tip before): one emitter of the world, none of
+effect 20, no spray. **The original under Proton**, loading the fix's file (`loadfile.sh` with `emitters.py`):
+slot 0, handle `0x10000`, effect 20 at (532,4,526), no particle on the first poll after the load, two 0.05 s
+later, and 24 to 28 from then on; its frame shows the spray at the same place
+(`waterfall-opentpw-left-original-right.png`, the same side of the fall, not the same zoom).
+
+**Not compared:** the spray's size and brightness in the two pictures (the lens, Q260, and the two views differ).
+The density is the options' (1000) where the original's is the file's 500; both scale this effect's rates to
+one a tick, so the counts agree. **Not run in either game:** a park of another theme (the tests: none starts a
+particle), a Full Simulation park with no file. Of 23 bugs put back, 23 fail a test (`q262/mutations.py`); the
+call in `Level` is held by the control run alone.
 
 ## The save's world block: map cells
 

@@ -48,9 +48,16 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q262. The writer: what else a made record leaves out.** The old Q261's other pieces, each counted or
+- [ ] **Q263. The writer: what else a made record leaves out.** The old Q262's other pieces, each counted or
   said in `saves.md`. Confirm: each piece's bytes beside a file of the original's own, and the file loaded in
   the original under Proton.
+  From Q262 (`park.md`, "The land's own particles"): `scape.omp`'s sounds are read and not played
+  (`SCAPE_OMP_SOUND_TYPE_1`, `SCAPE_OMP_SOUND_TYPE_3`, six in the jungle: the land's ambience; what a type 1's
+  word 6 and a type 3's words 7 and 8 mean is not decoded). A park entered from a file starts the spray afresh
+  and does not read the file's emitter. In no game run: another theme, a Full Simulation park with no file.
+  **Do not take the jet's move as a piece for its picture:** the original's own Jungle Spray jet reads the same
+  place and aim on every poll of its four seconds (`q257w/orig/a-load.log`), so an emitter moved to its node
+  each tick shows nothing there; find a Lost Kingdom particle node a clip really moves before building it.
   From Q261 (`park.md`, "The sprite pass, and the Hot Pot's own smoke"): the original's cloud at the pot's
   doorway is wider and blacker than this one, the lens (Q260) and the blend not told apart: read which state
   word set 10's texture carries in the running original. Nothing here sorts see-through surfaces and sprites by
@@ -66,8 +73,7 @@ the research lab), then the rest of this section in its old order.
   counted and started nowhere: `PARK_PARTICLE_ITEM_EFFECT`, `PARK_PARTICLE_NO_PLACE`,
   `PARK_PARTICLE_NO_DIRECTION`, `PARK_PARTICLE_NOT_STARTED`; a loaded emitter begins again
   (`LOADED_EMITTER_LIFE_PART_RUN`); an effect added without its alpha (`WORLD_PARTICLE_ADDED_WITHOUT_ALPHA`).
-  Not started and not counted: a file's emitter no script's record names (the shipped park's effect 20 at
-  (532,4,526): find what owns it), the riders' and leavers' puffs
+  Not started and not counted: the riders' and leavers' puffs
   (`BUMPER_RIDER_PARTICLE`, `LEAVER_BOARDING_PARTICLE`), a sold thing's (`DESTROY_PARTICLE_EFFECT`). The writer
   still writes an emitter as it starts, not as the running one stands. A sprite's width on the screen was not
   settled by the original's picture (the listing's rule is built). An effect with no picture is 0.75 wide for

@@ -330,6 +330,9 @@ public class Level
 		// And the particles the park's scripts start, drawn where they stand.
 		_ = new WorldParticles();
 
+		// And the effects the land itself carries, started as the level loads: the jungle's waterfall's spray.
+		ParkPlacedObjects.Start( ThemeName, ParticleSystem.Current );
+
 		// And the park's people. After the ground, because a guest stands on the land and has to ask how
 		// high it is under them; they are sprites rather than models, so they are nothing to do with the
 		// objects above and only need the save that named them.
