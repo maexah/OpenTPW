@@ -2321,7 +2321,7 @@ place as the table seats it (`Bumper_LayRide`'s x and z), where before it waited
 (`SAVED_TRACK_CAR_MODEL_RECORDS`, counted a car); the held sound, which names a voice of the session that saved
 it (the original's step finds it gone and empties it; here it is empty from the load, and the next retarget
 starts another); `+0x24`, `+0x28`, `+0x58`, `+0x60`, `+0x68`, `+0x84`, `+0xa0` and `+0xa4`, which nothing here
-keeps and whose meanings are not decoded; a rider record with no car of its ride before it
+keeps ("A car's eight words nothing keeps", below); a rider record with no car of its ride before it
 (`SAVED_TRACK_RIDER_WITH_NO_CAR`: the original hangs it on a null car).
 
 **A rider saved with no sprite is given one at the load, a deviation.** A rider on a thing that keeps none (the
@@ -2360,6 +2360,50 @@ boarder or a leaver in a file (no file of the four holds one), a car out of ever
 short car chunk. **Not compared past three ticks:** the stepping, for the reason above. **Not looked at:** a
 loaded lead boat's engine sound (it starts at the boat's next retarget; `sounds started 0` at both pauses). The
 original's riders' heads are not told apart in its off-screen frame. `docs/exe/addresses.md` not regenerated.
+
+### A car's eight words nothing keeps
+
+Q257q, split by the session: this is the decode the item asked for first. Writing a car is Q257r. No code.
+
+**Read in the listing** (`Bumper_LaunchCar` `FUN_00549db0`, `Bumper_Retarget` `FUN_0054a040`, `Bumper_StepCar`
+`FUN_00547f50`, the draw `FUN_00546280`, `TrackRides_Tick`, `Bumper_KeepInObject`). A launch zeroes the car's
+`0xac` bytes, then sets `+0x24`, `+0x28`, `+0x2c`, `+0x7c` and `+0x80` to -1. What each word holds for a Hot Pot
+boat afterwards:
+
+| Word | What it is | Who writes it | A Hot Pot boat's |
+|---|---|---|---|
+| `+0x24`, `+0x28` | the lookup records of the model's two emitter nodes, `FUN_0044b220( model, 0x100, 2 )` and `( model, 0x100, 1 )` | the placement, `Bumper_Retarget` for a car still flagged `0x100000` (`0x0054a1b0`..`0x0054a1ea`) | 3 and 2, from its placement on |
+| `+0x58` | the heading the drawn heading turns to | `Bumper_StepCar`, only while the ride's state is 2: the steering heading `+0x50` for BumperType -1, the velocity's heading for the others | nought until its ride's first go, then `+0x50` as the last tick of a go left it |
+| `+0x60` | how far the turn `+0x5c` changed in the last tick | `Bumper_StepCar`'s last arm alone, which the bumper family's arm never reaches; the draw reads it for a car flagged `0x1000` | nought |
+| `+0x68` | the thrust bonus (`park.md`, "How a bumper ride's cars move") | the karts' and the water ride's arms | nought |
+| `+0x84` | nothing: no instruction of `0x00543000`..`0x0054c000` reads or writes a register's `+0x84` | the launch's zeroing | nought |
+| `+0xa0` | a float, the height the car was last drawn at | the draw, every frame, each car of the ride drawn (`0x00546969`) | the pot's water, about 29.80, plus its bob |
+| `+0xa4` | the stuck count (`park.md`, "Kept in the pot") | the launch (nought), then `Bumper_Retarget`'s bumper arm on every call (`0x0054a246`) | -1 |
+| `+0xa8` | the ticks counted while the stuck count is over nought (`TrackRides_Tick`, `0x00547047`) | the launch | nought |
+
+**The height `+0xa0`.** The draw takes the scene's height under each of the car's four corners; a corner the
+scene answers -100 for (`0xc2c80000`) takes the car's `+0xa0` instead, the last frame's. For a car flagged
+`0x1000000` each corner then gets its bob, 0.00125 × the sine table's step `phase × 6`, `4`, `3` and `5`, eased
+by the draw's argument. `+0xa0` is the four's sum × 0.25 (`0x00700efc`), or for a car flagged `0x800` the first
+two's × 0.5. So a boat's is the water's height plus a quarter of its four bobs, at most 0.32 either way, and
+the loader's "nought where it is not a number" guards this float.
+
+**Measured in the original's files** (`q257q/words.py`, the three files of `q257o/orig/` with cars, twelve
+cars; `q257q/PREDICTION.txt`, written first). All twelve read `+0x24` 3, `+0x28` 2, `+0x60`, `+0x68` and
+`+0x84` nought, `+0xa4` -1 and `+0xa8` nought. **`+0x58` is nought on the four of `hotpot-open.TPWS`**, loading
+before its first go with headings already drawn, and **equal to `+0x50` on the eight in a go**. **`+0xa0` is one
+float in each file**, where every car has one phase: 29.7999 at phase 1138, 29.7378 at 2887 and 29.8980 at
+4003, and **each less its bob is the same height, 29.7993, 29.7994 and 29.7958** (the last between this tick's
+29.7958 and the tick before's 29.8017, the easing).
+
+**For the writer (Q257r).** A boat's eight are: 3, 2, the kept `+0x58` (to keep: `Car` holds the steering and
+drawn headings, not this one), nought, nought, nought, the drawn height and -1. `ParkBumperBoats` draws no bob
+(`BUMPER_CAR_ROCK`, counted), so the height written is the water's alone until it does. **Not decoded:** where
+the scene's 29.80 comes from (`FUN_00450ac0`, `FUN_00450ea0`, `FUN_004511a0`); what the loader does with
+`+0x24` and `+0x28` if the model made again answers other records (it reads them as the file has them);
+`+0x14`, `+0x18` and `+0x1c`, nought in all twelve (`+0x14` is a particle mark the other BumperTypes' steps
+set). **Not run:** either game; the words are the listing's and the original's own files'. The karts' and the
+water ride's values are not measured (no file of theirs with a car was looked at).
 
 ### Read, not run
 

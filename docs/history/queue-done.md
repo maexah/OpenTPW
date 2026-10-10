@@ -5766,6 +5766,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   boat, the ride running for good with nobody let off); the original read the same four on its first tick,
   stepped the lead boat and the fourth through three ticks exactly as this build's tests do, and on its tick
   318 after the load listed the leavers 48, 42, 39, 31, this build's order.
+- [x] **Q257q. Decode a car's eight words nothing keeps.** Split by the session from the old Q257q, which asked
+  for this first; decode only, no code. `+0x24` and `+0x28` are the lookup records of the model's two emitter
+  nodes, `+0x58` the heading the drawn one turns to, `+0x60` and `+0x68` the karts', `+0x84` nothing's, `+0xa0`
+  the height last drawn and `+0xa4` the stuck count (`saves.md`, "A car's eight words nothing keeps").
+  **Proof: twelve cars of twelve in the original's three files read as predicted, 3, 2, nought, nought, nought
+  and -1, `+0x58` nought on the four before a go and `+0x50` on the eight in one, and `+0xa0` less its bob the
+  one height, 29.80, in all three.** No game run: a decode.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.
