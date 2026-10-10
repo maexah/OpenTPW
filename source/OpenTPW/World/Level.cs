@@ -518,11 +518,14 @@ public class Level
 		var names = ObjectNames();
 
 		// A thing bought or sold is written with the people, the scripts and the catalogue to hand. A track ride's
-		// record in the track-rides module and an emitter's in the particles are not written, so those stay as they
-		// were, counted.
+		// record in the track-rides module is not written, so one stays as it was, counted. A thing whose folder
+		// holds emitter files is written as any other: those are the particle library's templates, which the file
+		// holds whatever stands in the park (docs/exe/saves.md, "OpenTPW's writer, a thing with emitter files").
+		// A deviation: the particles module goes out as the file's, so a puff a script's EVENT had alive at the
+		// save is not in it, where the original's file holds each one.
 		Func<int, bool>? writable = rides != null && people != null && catalogue != null
 			? id => catalogue.TryGet( id, out var item ) && item.BumperType == 0 && item.TrackType == 0
-				&& !catalogue.HasEmitters( item ) && ParkObjectNames.Lines( id, names ) != null
+				&& ParkObjectNames.Lines( id, names ) != null
 			: null;
 
 		var objects = state.WrittenObjects( loaded, writable, out var made, out var gone );

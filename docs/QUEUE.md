@@ -48,11 +48,15 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q257n. The writer: what else a made record leaves out.** The old Q257m's other pieces, from Q253
+- [ ] **Q257o. The writer: what else a made record leaves out.** The old Q257n's other pieces, from Q253
   (`saves.md`, "What OpenTPW writes"), each counted or said there. A track ride (its `TRAK` record)
-  and a thing with an emitter (`PART`) are left as the file has them, bought or sold (`SAVE_PARK_OBJECT_BOUGHT`,
+  is left as the file has it, bought or sold (`SAVE_PARK_OBJECT_BOUGHT`,
   `SAVE_PARK_OBJECT_SOLD`). Confirm: each
   piece's bytes beside a file of the original's own, and the file loaded in the original under Proton.
+  From Q257n (`saves.md`, "OpenTPW's writer, a thing with emitter files"): the particles module goes out as
+  the loaded file's, so no emitter alive at the save is written: a script's `EVENT` puff (the original's file
+  of a bought Loudspeaker holds two of template 36) and an `ADDOBJ`'s (below). A handle is the emitter's
+  `+0xa` word over its slot. Nothing spawns a particle in a park here yet. A Loudspeaker sold was in no game run.
   From Q257c: the offset's
   arms at 180 and 270 degrees stand on the listing alone: no file holds such an object.
   From Q254: a queue cell on a tile outside the eight pieces, and every changed queue cell of a park written

@@ -627,7 +627,7 @@ OpenTPW runs written over and records added and taken out. **Afresh** means writ
 | The action recording | `mLoadedPublishedPark`, a length, the recorder's buffer | nothing: no action is recorded here | carried |
 | `WRLD` | the park | nearly all of it | patched, part by part (below) |
 | `SPSC` | a 280-byte record per sprite | a guest or hire made, one gone, every position and frame | patched: a slot filled for a person made, emptied for one gone |
-| `PART` | the live emitters and the effect library | emitters of things bought or sold | carried; a thing bought or sold with an emitter is counted |
+| `PART` | the live emitters and the effect library | each emitter a script's `ADDOBJ` or `EVENT` has alive | carried: no emitter is made or taken out ("OpenTPW's writer, a thing with emitter files") |
 | `MESS` | 29 listener sets | every set a made or gone thing belongs to | afresh from the thing list for sets `0xa`, `0xb`, `0xc` and `0x1b` by the rule above; the singletons carried |
 | `CLOK` | two clock readings | the clock runs | afresh: the file's readings plus the game time run since the load, so every carried deadline keeps its distance |
 | `VANT` | one reading of the real-time clock (`FUN_005f5f10`); the reader keeps its distance from its own | nothing | carried |
@@ -1250,8 +1250,9 @@ and the object constructor `FUN_004db090` was read beside the two files.
 - **The controls** (`ParkWorld.PutControls`): every item's standing count and first-build stamp as
   `ParkState.BuiltItems` runs them.
 - **Not written, counted, and left as the file has them:** a track ride, whose record in the track-rides module
-  is not made or taken out, and a thing whose folder holds an emitter (`SAVE_PARK_OBJECT_BOUGHT`,
-  `SAVE_PARK_OBJECT_SOLD`); with them stay their cells. A queue cell's model is Q254's.
+  is not made or taken out (`SAVE_PARK_OBJECT_BOUGHT`, `SAVE_PARK_OBJECT_SOLD`); with it stay its cells. A thing
+  whose folder holds emitter files is written since Q257n ("OpenTPW's writer, a thing with emitter files"). A
+  queue cell's model is Q254's.
 - **A bought thing's state of repair and remaining life start at 100** in the running park too
   (`ParkBuilding.Constructed`): they started at nought, so a bought toilet was dirty before anyone had used it.
 
@@ -1295,7 +1296,7 @@ by the bugs put back:** a bought thing's queue is read off the map already (the 
 thing's cells are on bare ground's tile already, and no name is longer than a line: three lines of this stage
 that did nothing were taken out. **Not run in either game, tested only:** a thing sold whose slot a thing bought
 then takes, two things bought on one cell's chain with a person, a made script with riders or a walker, a table
-with no empty slot, a track ride or an emitter bought or sold (counted and left), a thing bought and sold again
+with no empty slot, a track ride bought or sold (counted and left), a thing bought and sold again
 before the save, a save with no people handed over (refused). **Not run in the original:** a made thing with a
 guest queueing or riding (the ape was shut), a made thing turned, a made shop. **In the original the things, the
 slots and the scripts are its memory's** (`orig/look.py`); the two things in its frame are told from the file's
@@ -1753,8 +1754,8 @@ are `ride-operation.md`, "The region effects"; a cell's ten bytes are five words
 the original's files is what the file's own things stamp.
 
 **What OpenTPW writes.** `Level.WrittenEffects` hands the writer the running park's grid (`ParkState.Effects`)
-with each object's effect as its written record has it: a thing bought and left out of the file (a track ride,
-a thing with an emitter) holds none, a thing sold and still written holds the file's, and where the objects go
+with each object's effect as its written record has it: a thing bought and left out of the file (a track ride)
+holds none, a thing sold and still written holds the file's, and where the objects go
 out as the file's a toilet dirtied or cleaned since holds the file's too. `ParkWorld.PutEffects` then writes
 the map again, last of all, since the map lies before the thing list: a cell takes the effects record and bit
 `0x4` of its status where a word is not nought and loses both where all are, so the body changes length by ten
@@ -2134,6 +2135,67 @@ put back 16 fail a test; the last, writing no nought over a record, changes noth
 record is nought already, and a kept sprite's flags are its record's until a program writes `0x1200`
 (`mut-run1.out`). The first desk run died in the script, which did not allow for a person with no sprite line
 in the census; run again, all 18 had one. `docs/exe/addresses.md` not regenerated.
+
+### OpenTPW's writer, a thing with emitter files
+
+Q257n, split by the session: the item's other pieces are Q257o. **An item's `.emt` files are templates of the
+particle library, not emitters of the thing.** `FUN_0051fa20` (called at `0x00414552` as a park's catalogue is
+read) copies each into the first unnamed template slot, whatever the park holds; Lost Kingdom has two, both in
+`features/speaker1.wad` (the Loudspeaker, item 1417, "Speaker: Wild Beasts" in the buy list), and they are
+templates 101 and 102 of every jungle file. A live emitter comes only from a script: an `ADDOBJ` of type 1 or 2,
+whose record keeps the handle, or an `EVENT`, which keeps nothing (`park.md`, "ADDOBJ").
+
+**Measured in the original** (`q257n/orig/`). The reference park with the Loudspeaker marked researched
+(`research.py`: byte `+0x10` of its object control), loaded from the Load Park list; a Loudspeaker bought on
+(45,20) from the buy screen and the park saved from the menu (`bought-by-the-original.TPWS`). Against the park it
+was loaded from (`Q257N0.TPWS`): **templates 101 and 102 are the same bytes in both**; thing 43 is item 1417 on
+model handle 91 with script handle 16 at word 23; its script's list is one record `(4, handle, -1, -1, 10)`, the
+`ADDOBJ 4 -1 177 10` its script opens on; its model record declares 5 node words and 2 lookup records; and the
+live system holds **two emitters of effect 36**, the puffs of the script's `EVENT 2 1 36`, which it fires every
+600 and 1,500 ms in turn. No record names those two.
+
+**A live emitter's handle** (`q257n/handles.py`, `handles.out`, thirteen files): the low word of a handle is the
+emitter's slot and the high word the emitter's own word at `+0xa`; its byte `+0` is 1 in use and its word `+0xc`
+the template it was spawned from. **55 of 55** type 1 and 2 records in the thirteen files name an emitter in use
+whose `+0xa` is the handle's high word; 73 of the 128 emitters in use are named by no record, an `EVENT`'s or a
+screen effect's. In memory the live system is at `0x0080ced0` and emitter slot *n* at `0x0080cefc + 0x140 n`.
+
+**What OpenTPW writes.** `Level.WritePark`'s rule for a thing that can be written no longer refuses an item whose
+folder holds `.emt` files; `ParkItemCatalogue.HasEmitters` is gone. A bought Loudspeaker goes out as any thing
+bought does ("OpenTPW's writer, a thing bought and a thing sold"), and one sold is taken out.
+
+**A deviation, said at `Level.WritePark`:** the particles module goes out as the loaded file's, so an emitter
+alive at the save is not in it: the two puffs above, and the emitter an `ADDOBJ` of type 1 or 2 started here
+(its record is written with a handle of nought, "OpenTPW's writer, a script's started effects"). Nothing in an
+OpenTPW park spawns a particle yet, so there is no live emitter to write.
+
+**Confirmed in the game** (`q257n/confirm.py`, the fix's 7 of 7 on the desktop at the second run and the
+control's 4 of 4; `PREDICTION.txt` holds every prediction and miss). Lost Kingdom from `easymode.TPWI`:
+`buy 1417 45 20 0` built thing 43, `rides` read its script 18 with `effects [4:177@10/-1/-1]`, and the park was
+saved under `pause`. `SAVE_PARK_OBJECT_BOUGHT` was not counted. The file holds 43 things headed 43; **thing 43's
+record is the original's own bought speaker's in every byte** outside the list link, the date, the name's tail,
+the script handle (18 for 16) and the rings; the names `Speaker: Wild Beasts` and the empty line; script 18 on
+thing 43 and model 91 at word 23, its body, strings and variables the original's bytes and its list
+`(4, 0, -1, -1, 10)`; model handle 91 `(1417, 45, 20, 1, 1, 0x32f)` with the original's two lookup pairs and its
+five node words bit `0x8` apart (`0 a0 a0 601 601` for `0 a8 a8 601 601`: "OpenTPW's writer, the two tables");
+the header 162, 6, 91, as the original's; set `0xb` with 43; and the particles module the loaded file's 76,252
+bytes. Loaded here from the Load Park list, `rides` read thing 43 on script 18 with `effects [4:?@10/-1/-1]` among
+15 objects, and the frame shows the speaker beside the path. **The control** (the build before): the purchase
+counted once, 42 things in the file, 14 objects and no speaker in the frame after its load.
+
+**The original under Proton** (`orig/go.sh`, off-screen, entering the park on the file and then loading it from
+the Load Park list, `orig/puffs.py` polling every 0.05 s): on the first poll after the load 43 things, thing 43
+item 1417 on (45,20) on model handle 91, script 18 on thing 43 and model 91 at word 23, and no emitter of effect
+36; **the first 0.15 s later**, with the script on word 17, and 35 in the 41 s after, 0.77 and 1.6 s apart in
+turn. Its frame shows the speaker with its notes rising. With the control's file: 42 things, no script 18, no
+emitter of effect 36 in 45 s, bare grass on the cell (`orig/sheet-original-fix-control.png`).
+
+**Predictions wrong, mine:** 16 objects in the census, twice (the file holds 14, so 15); and the node words "each
+the original's" (bit `0x8` is never set here, a deviation already said). **Not run in either game:** a
+Loudspeaker sold (the same rule decides it; the test sells a shop). **Not seen:** whether the original's puff
+alive at a save goes on from where it was after a load (its file holds them; ours cannot). The speaker's sound,
+`ADDOBJ 4 -1 177 10`, is not heard here, and was not listened for in the original (run silent).
+`docs/exe/addresses.md` not regenerated.
 
 ### Read, not run
 

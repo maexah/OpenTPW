@@ -5730,6 +5730,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   load 31 of 31 (the build before: 15), and the original held `0x1200` on the 13 made slots from its first
   poll, where the build before's file gave it nought on all 13 for the 5.6 s of its loading and until each
   program came round, 0.9 s.
+- [x] **Q257n. The writer: a thing with emitter files.** Done 2026-10-09,
+  `alexah/389-loudspeaker-written`. I split the item: this is the piece from Q253, and every other
+  piece is Q257o. An item's `.emt` files are particle templates, read into the library as the catalogue is
+  read: the original's file of its own bought Loudspeaker (1417, the theme's one such thing) holds templates
+  101 and 102 as the file it was loaded from does. The writer's refusal of such a thing is gone.
+  Confirmed: a Loudspeaker bought on (45,20) is thing 43 in the file, its record the original's own bought
+  speaker's in every byte outside the link, the date, the name's tail, the script handle and the rings, model
+  handle 91, header 162, 6, 91; after the load the census read it on script 18 among 15 objects and the frame
+  shows it (the build before: 42 things, 14 objects, bare grass); and the original read thing 43 on handle 91
+  at its first poll and fired its first puff 0.15 s on, 35 in 41 s, where the build before's file gave it none.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

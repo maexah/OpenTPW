@@ -325,7 +325,7 @@ public class ParkFileWriterTests
 	/// <summary>
 	/// The level hands the writer a thing bought and a thing sold: the bought one's three records under its item's
 	/// two lines of name, its cells and its control; the sold one's taken out; and a thing whose item will not write
-	/// (a track ride) counted and left out.
+	/// (a track ride, bumper or tracked) counted and left out. A thing whose folder holds emitter files is written.
 	/// </summary>
 	[TestMethod]
 	public void TheLevelWritesAThingBoughtAndAThingSold()
@@ -362,8 +362,10 @@ public class ParkFileWriterTests
 			var ape = Buy( 1101, 41, 22 );
 			var racers = catalogue.All.First( item => item.BumperType != 0 );
 			var karts = Buy( racers.Id, 20, 20 );
-			var fountain = catalogue.All.First( item => item.BumperType == 0 && item.TrackType == 0 && catalogue.HasEmitters( item ) );
-			var spout = Buy( fountain.Id, 70, 70 );
+			var tracked = catalogue.All.First( item => item.BumperType == 0 && item.TrackType != 0 );
+			var coaster = Buy( tracked.Id, 90, 90 );
+			// The Loudspeaker, the one thing of the theme whose folder holds emitter files.
+			var speaker = Buy( 1417, 70, 70 );
 			var bounce = Buy( 1100, 30, 60 );
 
 			// A guest walking to the bought ride names it, and the file keeps the name.
@@ -386,8 +388,9 @@ public class ParkFileWriterTests
 			Assert.AreEqual( "Crazy", Encoding.Unicode.GetString( [.. Enumerable.Range( 0, 5 ).SelectMany( i => record.AsSpan( 60 + (i * 4), 2 ).ToArray() )] ) );
 			Assert.AreEqual( "Ape", Encoding.Unicode.GetString( [.. Enumerable.Range( 0, 3 ).SelectMany( i => record.AsSpan( 62 + (i * 4), 2 ).ToArray() )] ) );
 			Assert.AreEqual( bounce, written.FirstObject, "the newest heads the object list" );
-			Assert.IsFalse( written.Objects.Any( thing => thing.ThingId is 16 || thing.ThingId == karts || thing.ThingId == spout ), "the shop sold, and the track ride and the emitter left out" );
-			Assert.AreEqual( 15, written.Objects.Count );
+			Assert.IsFalse( written.Objects.Any( thing => thing.ThingId is 16 || thing.ThingId == karts || thing.ThingId == coaster ), "the shop sold, and the two track rides left out" );
+			Assert.AreEqual( 16, written.Objects.Count );
+			Assert.AreEqual( (1417, 92, rides.ScriptFor( speaker )), (written.Objects.Single( thing => thing.ThingId == speaker ).CatalogueId, written.Objects.Single( thing => thing.ThingId == speaker ).MeshInstance, written.Objects.Single( thing => thing.ThingId == speaker ).RideScript), "a thing with emitter files is written as any other" );
 			Assert.AreEqual( ape, written.People.Single( person => person.ThingId == walker.Key ).Guest!.Value.MajorDest, "a handle to a thing bought" );
 
 			// The script's folder as the engine keeps one, and the model's footprint across then down.
@@ -408,7 +411,7 @@ public class ParkFileWriterTests
 			Assert.IsNull( models.Problem );
 			Assert.AreEqual( (1101, rides.ScriptFor( ape )), (models.Things.Single( thing => thing.Slot == 90 ).CatalogueId, models.Things.Single( thing => thing.Slot == 90 ).ScriptHandle) );
 			Assert.IsFalse( models.Things.Any( thing => thing.Slot == 115 ), "the shop's model" );
-			Assert.AreEqual( (162, 6, 92), models.Header );
+			Assert.AreEqual( (163, 5, 93), models.Header );
 
 			var anchor = written.Cells[(22 * 128) + 41];
 			var sold = written.Cells[(30 * 128) + 43];
@@ -420,7 +423,9 @@ public class ParkFileWriterTests
 			CollectionAssert.Contains( written.MessageSets()![0xb].ToList(), ape );
 			CollectionAssert.DoesNotContain( written.MessageSets()![0xb].ToList(), 16 );
 
-			Assert.AreEqual( 2, Unimplemented.Summary.Single( gap => gap.What == "SAVE_PARK_OBJECT_BOUGHT" ).Times, "the track ride and the emitter" );
+			Assert.AreEqual( (speaker, 92), ((int)written.ScriptStates.For( rides.ScriptFor( speaker ) )!.Value.Thing, written.ScriptStates.For( rides.ScriptFor( speaker ) )!.Value.ModelHandle) );
+			Assert.AreEqual( 1417, models.Things.Single( thing => thing.Slot == 91 ).CatalogueId );
+			Assert.AreEqual( 2, Unimplemented.Summary.Single( gap => gap.What == "SAVE_PARK_OBJECT_BOUGHT" ).Times, "the two track rides alone" );
 			Assert.AreNotEqual( bounce, karts );
 			Assert.IsFalse( Unimplemented.Summary.Any( gap => gap.What == "SAVE_PARK_OBJECT_SOLD" ) );
 			Assert.IsTrue( written.Cells[(20 * 128) + 20].Type != 4, "and its cells are the file's" );
