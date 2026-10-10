@@ -9,6 +9,7 @@ index artifacts and point at what is still open.
 | `current-task-archive.md` | The live tracker's own history: superseded plans, dated findings, the 42-thing Lost Kingdom census (grep `THE PARK IS FULLY DECODED`), the guest-meter table (grep `FUN_004fe1e0`). |
 | `project-history-archive.md` | Finished work from branches 20-36, the two audits, and the 2026-09-12 review. |
 | `contribution-branch-layout.md` | The per-branch ledger: what each branch did, its gate result, and its push record. |
+| `status-save-paragraph-2026-10-10.md` | The "Works" paragraph on saving a park as `../STATUS.md` held it before it was cut to a summary: every piece's proving run in one place. `../exe/saves.md` is the current account. |
 | `queue-done.md` | Every ticked item of `../QUEUE.md`, verbatim, in queue order under its section heading. The pre-commit hook moves each finished item here in the commit that ticks it (`tools/queue-sweep.py`). |
 | `not-verified.md` | What each finished item did not confirm on screen, verbatim from `../STATUS.md`, newest first. The pre-commit hook moves every account but the newest there (`tools/status-sweep.py`). |
 | `fileformats-docs-ledger.md` | The FileFormats docs clone's per-commit ledger to 2026-09-21, and its 2026-09-18 audit, moved from memory on 2026-09-24. The clone's `git log` is authoritative; the rules it carried are in `../README.md`, "The FileFormats docs clone". |

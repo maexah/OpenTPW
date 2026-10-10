@@ -45,6 +45,13 @@ Machine-specific paths live in `CLAUDE.local.md` (not committed). Long-form know
     rule here, pushes nothing, and skips an item that needs Alexah, leaving a "Needs Alexah" line under it. While a
     run is live, every other session leaves the repo alone. `docs/WORKFLOW.md`, "Unattended runs".
 
+21. **A testing tool that will be wanted again is stored and listed, never written twice** (2026-10-10). Before
+    writing a harness script, read `docs/TOOLING.md`, "The tools every item reuses", and use what is there. A reader,
+    a poller or a driver a later item could use is built into the shared library (`CLAUDE.local.md` says where),
+    not into the item's own folder, and gets its row in that list in the same commit. A recipe found by trial (the
+    clicks that open a screen, the commands that fill a ride) goes in `docs/TOOLING.md`, "Recipes", not in the
+    live plan, where it is cut. The closing report names what was added.
+
 ## Build, test, run
 
 ```sh
@@ -104,6 +111,6 @@ Inside `source/OpenTPW/`: `Client/` (startup, `GameDir`, options, renderer, `Dia
 
 1. **Start from the repo root**, always. Claude Code keys its memory to the working directory; a session started in `source/` has none.
 2. Read `docs/STATUS.md`, then the first unticked item in `docs/QUEUE.md` (the file's first hundred lines or so, read with a line limit: never the whole queue), then the one `docs/exe/` page for the area you are about to touch. Do not read `docs/history/` (the former memory archives) whole; grep it, and never quote it as current.
-3. Before adding a helper, grep for it. `PeepWalk`, `CellRoute`, `CellSearch`, `MapStep`, `FixedVector`, `ParkState.CellAt` already exist. A harness the same: do not copy the last item's script. The bugs put back go through `mutate.py` and `stryker.sh`, a save-and-load run through `parkrun.py`, what lasts under a second in the original through `record.sh`, and who writes an address there through `watch.sh` (`docs/WORKFLOW.md`, "Verifying"; `docs/TOOLING.md`; `CLAUDE.local.md` says where they live).
+3. Before adding a helper, grep for it. `PeepWalk`, `CellRoute`, `CellSearch`, `MapStep`, `FixedVector`, `ParkState.CellAt` already exist. A harness the same: do not copy the last item's script. The bugs put back go through `mutate.py` and `stryker.sh`, a save-and-load run through `parkrun.py`, what lasts under a second in the original through `record.sh`, and who writes an address there through `watch.sh` (`docs/WORKFLOW.md`, "Verifying"; `docs/TOOLING.md`; `CLAUDE.local.md` says where they live). The whole list of stored tools, and the recipes found by trial, are `docs/TOOLING.md`: read both before writing a harness script, and add to them what you build (rule 21).
 4. One task per session. When the task is done: build and test alone in a worktree, commit, tick the item in `docs/QUEUE.md` (the pre-commit hook moves it to `docs/history/queue-done.md`), and update `docs/STATUS.md` in the same commit (the item's "not verified" account goes above the last one's, which the same hook moves to `docs/history/not-verified.md`), say what is ready, and stop. Do not start the next task in the same session.
 5. Memory files (`~/.claude/projects/.../memory/`) hold rules and the live plan only, each under 300 lines. Facts go in `docs/`. A correction replaces the old text; no `>>>` markers, no "this line said".
