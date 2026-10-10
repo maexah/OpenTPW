@@ -21,6 +21,12 @@ public static class ParkModelTables
 	/// <summary>The mesh was morphed and its face normals are stale, the node's <c>0x10000</c>. Never written here: the engine clears it as it next poses the mesh.</summary>
 	public const uint StaleNormals = 0x8;
 
+	/// <summary>
+	/// The node's <c>0x80000</c>, which the model loader sets on a model's first node where it is asked to
+	/// (<c>0x004625c5</c>). No bought thing's model holds it; a track car's and its wake's do, on node nought.
+	/// </summary>
+	public const uint FirstNodeMarked = 0x40;
+
 	/// <summary>A clip bound to a channel has a track for the node: the node's <c>0x40000</c>.</summary>
 	public const uint Tracked = 0x20;
 

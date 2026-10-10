@@ -800,7 +800,8 @@ public static class DebugConsole
 
 						report.Add( $"    car {car.Index} at ({car.X},{car.Z}) from centre {off} velocity ({car.VelocityX},{car.VelocityZ}) "
 							+ $"speed {car.Speed} steering {car.Steering} steer ({car.SteerX},{car.SteerZ}) {target} patience {car.Patience} "
-							+ $"heading {car.Heading} timer {car.Timer} anim {car.Animation} "
+							+ $"heading {car.Heading} turned {car.Turned} timer {car.Timer} anim {car.Animation} "
+							+ $"height {ParkBumperBoats.Current?.HeightOf( car.Index ):0.0000} "
 							+ $"flags 0x{(int)car.Flags:x} riders [{string.Join( ",", car.Riders.Select( rider => $"{rider.Peep}@{rider.Seat}" ) )}] "
 							+ ( car.Voice is ParkCarSounds.Held held
 								? $"sound effect {held.Effect} '{held.Voice.Name}' param {held.Values[1]} pitch {held.Pitch} rate {held.Voice.Rate:0.000} "

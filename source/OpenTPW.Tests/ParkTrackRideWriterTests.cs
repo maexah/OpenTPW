@@ -237,4 +237,205 @@ public class ParkTrackRideWriterTests
 		Assert.AreEqual( (80, 2, 3, 750, ParkBumperCars.RideState.Loading), (ride.Performance, ride.MeshBase, ride.MeshCount, ride.Duration, ride.State) );
 		Assert.AreEqual( 8 + ((12 - 8) * 80 / 100), ride.Thrust, "the performance is set, not stored" );
 	}
+
+	/// <summary>The lead boat of the original's own Hot Pot in a go (its file's first car), word for word, and the five words after it.</summary>
+	private static readonly uint[] TheirCar =
+	[
+		0x340c009, 0x1, 0x5e, 0x5f, 0x5, 0x0, 0x0, 0x0, 0x1800057, 0x3, 0x2, 0xffffffff, 0x12617820, 0x20b9f, 0x12fad, 0xffffff7a,
+		0xffffffa2, 0xffffff7a, 0xffffffa2, 0xa3, 0x159, 0x150, 0x159, 0x1, 0x0, 0x300, 0x0, 0x202cb, 0x12acc, 0x144, 0x145, 0x5,
+		0xffffffff, 0x0, 0x13f, 0x3, 0xb47, 0x0, 0x125f67f0, 0x125e87d0, 0x41ede714, 0xffffffff, 0x0
+	];
+
+	private static readonly uint[] TheirCarsTail = [0x20a00, 0x13200, 0xffffff00, 0x20187, 0x12987];
+
+	/// <summary>
+	/// A ride written whole is the original's chunks in the original's order: its record, each car with its bytes and
+	/// five words and then a chunk a rider, the leaving list, the boarding list and the close, no chunk inside another.
+	/// </summary>
+	[TestMethod]
+	public void ARideWithCarsIsWrittenInTheOriginalsOrder()
+	{
+		var bytes = new byte[SavedTrackCar.Size];
+
+		Buffer.BlockCopy( TheirCar, 0, bytes, 0, bytes.Length );
+
+		var first = new SavedTrackCar( HotPotHandle, bytes, 0x20a00, 0x13200, HotPotHandle, 0x20187, 0x12987, 0 );
+
+		first.Riders.Add( new SavedTrackRider( 31, 1 ) );
+		first.Riders.Add( new SavedTrackRider( 32, 2 ) );
+
+		var second = new SavedTrackCar( HotPotHandle, new byte[SavedTrackCar.Size], 1, 2, 0, 0, 0, 0 );
+		var running = HotPot with { Duration = 750, State = 2 };
+
+		var expected = new[]
+		{
+			Chunk( 3, HotPotHandle, 0x20400, 0x12c00, 0, 1140, 60, 1, 1, 750, 2 ),
+			Chunk( 5, [HotPotHandle, .. TheirCar.Select( word => (int)word ), .. TheirCarsTail.Select( word => (int)word )] ),
+			Chunk( 9, HotPotHandle, 31, 1 ),
+			Chunk( 9, HotPotHandle, 32, 2 ),
+			Chunk( 5, [HotPotHandle, .. new int[43], 1, 2, 0, 0, 0] ),
+			Chunk( 7, HotPotHandle, 41 ),
+			Chunk( 7, HotPotHandle, 43 ),
+			Chunk( 8, HotPotHandle, 42 ),
+			Chunk( 6, HotPotHandle )
+		}.SelectMany( chunk => chunk ).ToArray();
+
+		var chunks = ParkTrackRides.RideChunks( new WrittenTrackRide( running, [first, second], [41, 43], [42] ) );
+
+		CollectionAssert.AreEqual( expected, chunks );
+
+		// And a reader takes it back: both cars, the riders on the first in the file's order, the two lists.
+		var read = new ParkTrackRides( Body( chunks ) );
+
+		Assert.IsNull( read.Problem );
+		Assert.AreEqual( running, read.Rides.Single() );
+		Assert.AreEqual( 2, read.Cars.Count );
+		CollectionAssert.AreEqual( bytes, read.Cars[0].Bytes );
+		CollectionAssert.AreEqual( new[] { new SavedTrackRider( 31, 1 ), new SavedTrackRider( 32, 2 ) }, read.Cars[0].Riders );
+		Assert.AreEqual( (0x20a00, 0x13200, HotPotHandle, 0x20187, 0x12987), (read.Cars[0].CentreX, read.Cars[0].CentreZ, read.Cars[0].BuoyRide, read.Cars[0].BuoyX, read.Cars[0].BuoyZ) );
+		Assert.AreEqual( 0, read.Cars[1].Riders.Count );
+		CollectionAssert.AreEqual( new[] { (41, false), (43, false), (42, true) }, read.Listed.Select( peep => (peep.Peep, peep.Boarding) ).ToArray() );
+	}
+
+	/// <summary>
+	/// A ride taken out and put in again in one splice lies in its own slot's place with what it is given now: the
+	/// file's section, cars, rider and lists under its handle are gone, and the ride after it is untouched.
+	/// </summary>
+	[TestMethod]
+	public void ARideWrittenAgainTakesItsOwnPlace()
+	{
+		var body = Body( [.. Whole( 0 ), .. Whole( 1 )] );
+		var file = new ParkTrackRides( body );
+		var handle = 0 | (-1 << 8);
+		var car = new SavedTrackCar( handle, new byte[SavedTrackCar.Size], 5, 6, 0, 0, 0, 0 );
+
+		car.Riders.Add( new SavedTrackRider( 77, 1 ) );
+
+		var spliced = file.SpliceWhole( body, [handle],
+			[new WrittenTrackRide( new SavedTrackRide( handle, 0x20400, 0x12c00, 0, 1140, 60, 1, 1, 900, 1 ), [car], [], [78] )] );
+
+		var read = new ParkTrackRides( spliced );
+
+		Assert.IsNull( read.Problem );
+		CollectionAssert.AreEqual( new[] { handle, 1 | (-1 << 8) }, read.Rides.Select( ride => ride.Handle ).ToArray(), "in its slot's place, before the next ride" );
+		Assert.AreEqual( (900, 1), (read.Rides[0].Duration, read.Rides[0].State) );
+		Assert.AreEqual( (1, 2), (read.CarsOf( handle ), read.CarsOf( 1 | (-1 << 8) )) );
+		Assert.AreEqual( 77, read.Cars[0].Riders.Single().Peep );
+		Assert.AreEqual( 1, read.Sections.Count, "the first ride's section went with it" );
+		CollectionAssert.AreEqual( new[] { (handle, 78, true), (1 | (-1 << 8), 41, false), (1 | (-1 << 8), 42, true) },
+			read.Listed.Select( peep => (peep.Handle, peep.Peep, peep.Boarding) ).ToArray() );
+		Assert.AreEqual( body.Length - (Whole( 0 ).Sum( chunk => chunk.Length ) - (52 + 208 + 24 + 20 + 16)), spliced.Length );
+	}
+
+	/// <summary>The model slots a ride's cars give up are the two handles each car's bytes hold, less one; a handle of nought names none.</summary>
+	[TestMethod]
+	public void ARidesCarsNameTheirModelSlots()
+	{
+		var handle = 0 | (-1 << 8);
+		int[] words = new int[43 + 5];
+		int[] bare = new int[43 + 5];
+
+		words[2] = 94;
+		words[3] = 95;
+		bare[2] = 96;
+
+		var file = new ParkTrackRides( Body( Chunk( 3, handle, 0, 0, 0, 1140, 60, 1, 1, 750, 2 ), Chunk( 5, [handle, .. words] ), Chunk( 5, [handle, .. bare] ), Chunk( 6, handle ),
+			Chunk( 3, handle + 1, 0, 0, 0, 1140, 60, 1, 1, 750, 2 ), Chunk( 5, [handle + 1, .. words] ), Chunk( 6, handle + 1 ) ) );
+
+		CollectionAssert.AreEqual( new[] { 93, 94, 95 }, file.CarModelSlots( [handle] ).ToArray() );
+		Assert.AreEqual( 0, file.CarModelSlots( [] ).Count() );
+	}
+
+	/// <summary>
+	/// The original's own boat, read by a load and written again, is the original's bytes: every word a car keeps, 3
+	/// and 2 for its emitter nodes, the heading turned to, -1 for the stuck count, the height given, and the five
+	/// words after it. The two model handles are left for the writer, and the held sound and the four pointers are
+	/// nought.
+	/// </summary>
+	[TestMethod]
+	public void ACarReadAndWrittenAgainIsTheOriginalsBytes()
+	{
+		Log ??= new();
+
+		var saved = new ParkTrackRides( Body(
+			Chunk( 3, HotPotHandle, 0x20400, 0x12c00, 0, 1140, 60, 1, 1, 750, 2 ),
+			Chunk( 5, [HotPotHandle, .. TheirCar.Select( word => (int)word ), .. TheirCarsTail.Select( word => (int)word )] ),
+			Chunk( 9, HotPotHandle, 31, 1 ),
+			Chunk( 9, HotPotHandle, 32, 2 ),
+			Chunk( 6, HotPotHandle ) ) );
+
+		var cars = new ParkTrackRideTable( saved ).Cars;
+		var car = cars.CarsOf( HotPotHandle ).Single();
+
+		Assert.AreEqual( 0x159, car.Turned, "the load keeps +0x58" );
+
+		var written = cars.Written( car, BitConverter.UInt32BitsToSingle( TheirCar[40] ), (3, 2) );
+		var words = new uint[43];
+
+		Buffer.BlockCopy( written.Bytes, 0, words, 0, written.Bytes.Length );
+
+		// What is not the car's to write: the two model handles, the voice, and the pointers +0x30, +0x98 and +0x9c.
+		var expected = (uint[])TheirCar.Clone();
+
+		foreach ( var word in new[] { 2, 3, 8, 12, 38, 39 } )
+			expected[word] = 0;
+
+		CollectionAssert.AreEqual( expected, words );
+		Assert.AreEqual( (0x20a00, 0x13200, HotPotHandle, 0x20187, 0x12987), (written.CentreX, written.CentreZ, written.BuoyRide, written.BuoyX, written.BuoyZ) );
+		CollectionAssert.AreEqual( new[] { new SavedTrackRider( 32, 2 ), new SavedTrackRider( 31, 1 ) }, written.Riders, "head first, and the load turned the file's list round" );
+
+		// A car with no buoy names no ride and no place; and the velocity and the stepped velocity are each its own.
+		car.Buoy = -1;
+		(car.VelocityX, car.VelocityZ, car.SteppedX, car.SteppedZ) = (7, 8, 9, 10);
+
+		var bare = cars.Written( car, 0f, (-1, -1) );
+
+		Assert.AreEqual( (0x20a00, 0x13200, 0, 0, 0), (bare.CentreX, bare.CentreZ, bare.BuoyRide, bare.BuoyX, bare.BuoyZ) );
+		Assert.AreEqual( (-1, -1, -1, 0), (bare.Word( 0x24 ), bare.Word( 0x28 ), bare.Word( 0x7c ), bare.Word( 0xa0 )) );
+		Assert.AreEqual( (7, 8, 9, 10), (bare.Word( 0x3c ), bare.Word( 0x40 ), bare.Word( 0x44 ), bare.Word( 0x48 )) );
+	}
+
+	/// <summary>
+	/// The heading turned to (<c>+0x58</c>) is the steering heading as a tick of a go leaves it, and stands while the
+	/// ride loads: nought on a boat before its ride's first go (<c>Bumper_StepCar</c>).
+	/// </summary>
+	[TestMethod]
+	public void TheHeadingTurnedToIsKeptOnlyInAGo()
+	{
+		Log ??= new();
+
+		var table = new ParkTrackRideTable();
+		var handle = table.Take( -1 );
+		var cars = table.Cars;
+
+		cars.Place( handle, 0x20a00, 0x13200 );
+		cars.OpenForLoading( handle );
+		cars.Board( handle, 40 );
+
+		var car = cars.Launch( handle )!;
+
+		for ( var tick = 0; tick < 5; ++tick )
+			cars.Tick();
+
+		Assert.AreNotEqual( 0, car.Steering, "launched on a heading of its own" );
+		Assert.AreEqual( 0, car.Turned, "loading, nothing writes it" );
+
+		cars.Start( handle );
+
+		for ( var tick = 0; tick < 40; ++tick )
+			cars.Tick();
+
+		Assert.AreEqual( car.Steering, car.Turned );
+		Assert.AreEqual( car.Steering, cars.Written( car, 0f, (3, 2) ).Word( 0x58 ) );
+		Assert.AreNotEqual( 0, car.Turned );
+
+		// The ride gone and another in its slot: the pool's car is launched afresh, with no heading turned to.
+		cars.Close( handle );
+		cars.Open( handle, -1 );
+		cars.Place( handle, 0x20a00, 0x13200 );
+		cars.OpenForLoading( handle );
+
+		Assert.AreSame( car, cars.Launch( handle ) );
+		Assert.AreEqual( 0, car.Turned );
+	}
 }

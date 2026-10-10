@@ -68,6 +68,13 @@ public sealed record SavedTrackCar( int Handle, byte[] Bytes, int CentreX, int C
 public readonly record struct SavedTrackPeep( int Handle, int Peep, bool Boarding, int RidesBefore );
 
 /// <summary>
+/// A track ride as a park file's writer takes it whole (<see cref="ParkTrackRides.RideChunks(WrittenTrackRide)"/>): its
+/// record, its cars in pool order, each with its riders head first, and its leaving and boarding lists, head first.
+/// </summary>
+public sealed record WrittenTrackRide( SavedTrackRide Ride, IReadOnlyList<SavedTrackCar> Cars, IReadOnlyList<int> Leaving,
+	IReadOnlyList<int> Boarding );
+
+/// <summary>
 /// The track-rides module of a park save (<c>KART</c>): every ride whose item has a <c>Bumper.BumperType</c>, and
 /// the track laid for it. FileFormats <c>saves.md</c>, "The track-rides module".
 ///
@@ -86,7 +93,8 @@ public readonly record struct SavedTrackPeep( int Handle, int Peep, bool Boardin
 /// <para>
 /// <b>Written</b> by <see cref="Splice"/> (<c>docs/exe/saves.md</c>, "OpenTPW's writer, a track ride's record"): a
 /// ride made since the load goes in as its record and its close, and one gone is taken out with every chunk under
-/// its handle.
+/// its handle; one with a car out is taken out and put in again as it runs, its cars, their riders and its two
+/// lists with it (<c>docs/exe/saves.md</c>, "OpenTPW's writer, a track ride's cars").
 /// </para>
 /// </summary>
 public sealed class ParkTrackRides
@@ -111,6 +119,15 @@ public sealed class ParkTrackRides
 
 	/// <summary>A close chunk's size: the header and the handle.</summary>
 	private const int CloseSize = 16;
+
+	/// <summary>A car chunk's size: the header, the handle, the car's bytes and five dwords.</summary>
+	private const int CarSize = HeaderSize + 4 + SavedTrackCar.Size + 20;
+
+	/// <summary>A rider chunk's size: the header, the handle, the peep and the seat.</summary>
+	private const int RiderSize = HeaderSize + 12;
+
+	/// <summary>A listed peep's chunk's size: the header, the handle and the peep.</summary>
+	private const int ListedSize = HeaderSize + 8;
 
 	/// <summary>How many rider records (9) follow no car of their ride, which the loader would hang on no car.</summary>
 	public int StrayRiders { get; private set; }
@@ -270,6 +287,14 @@ public sealed class ParkTrackRides
 		ClosedOnTag = true;
 	}
 
+	/// <summary>
+	/// The model slots the cars under <paramref name="handles"/> name, each handle <c>+0x08</c> and <c>+0x0c</c> less
+	/// one - what a ride taken out of the module gives up with its cars.
+	/// </summary>
+	public IEnumerable<int> CarModelSlots( IReadOnlyCollection<int> handles )
+		=> _cars.Where( car => handles.Contains( car.Handle ) ).SelectMany( car => new[] { car.Word( 0x08 ) - 1, car.Word( 0x0c ) - 1 } )
+			.Where( slot => slot >= 0 );
+
 	/// <summary>How many cars the module holds under a ride's handle - its type 5 chunks.</summary>
 	public int CarsOf( int handle ) => _chunks.Count( chunk => chunk.Type == CarType && chunk.Handle == handle );
 
@@ -290,6 +315,67 @@ public sealed class ParkTrackRides
 		Buffer.BlockCopy( record, 0, chunks, 0, chunks.Length );
 
 		return chunks;
+	}
+
+	/// <summary>
+	/// A ride's chunks as the original's writer leaves them for a ride with no section (<c>FUN_005428e0</c>): its
+	/// record (3); each car (5) followed by a chunk for each of its riders (9); a chunk for each peep of the leaving
+	/// list (7), then of the boarding list (8); and the close (6). No chunk holds another: each one's whole size is
+	/// its own.
+	/// </summary>
+	public static byte[] RideChunks( WrittenTrackRide written )
+	{
+		ArgumentNullException.ThrowIfNull( written );
+
+		using var stream = new MemoryStream();
+		using var writer = new BinaryWriter( stream );
+
+		var handle = written.Ride.Handle;
+
+		void Header( int type, int size )
+		{
+			writer.Write( type );
+			writer.Write( size );
+			writer.Write( size );
+			writer.Write( handle );
+		}
+
+		writer.Write( RideChunks( written.Ride ), 0, RideSize );
+
+		foreach ( var car in written.Cars )
+		{
+			Header( CarType, CarSize );
+			writer.Write( car.Bytes, 0, SavedTrackCar.Size );
+			writer.Write( car.CentreX );
+			writer.Write( car.CentreZ );
+			writer.Write( car.BuoyRide );
+			writer.Write( car.BuoyX );
+			writer.Write( car.BuoyZ );
+
+			foreach ( var rider in car.Riders )
+			{
+				Header( RiderType, RiderSize );
+				writer.Write( rider.Peep );
+				writer.Write( rider.Seat );
+			}
+		}
+
+		foreach ( var peep in written.Leaving )
+		{
+			Header( LeavingType, ListedSize );
+			writer.Write( peep );
+		}
+
+		foreach ( var peep in written.Boarding )
+		{
+			Header( BoardingType, ListedSize );
+			writer.Write( peep );
+		}
+
+		Header( CloseType, CloseSize );
+		writer.Flush();
+
+		return stream.ToArray();
 	}
 
 	/// <summary>
@@ -319,7 +405,8 @@ public sealed class ParkTrackRides
 
 	/// <summary>
 	/// The body with the rides in <paramref name="gone"/> taken out, each with every chunk under its handle, and
-	/// the rides in <paramref name="made"/> put in (<see cref="RideChunks"/>), the root's whole size following.
+	/// the rides in <paramref name="made"/> put in (<see cref="RideChunks(WrittenTrackRide)"/>), the root's whole size
+	/// following. A ride in both is written again in its own slot.
 	///
 	/// <para>
 	/// The original writes its table slot by slot (<c>0x005429f3</c>), so a made ride goes before the first ride
@@ -329,6 +416,10 @@ public sealed class ParkTrackRides
 	/// <param name="body">The body, with this module where the file has it.</param>
 	/// <exception cref="InvalidOperationException">The module was refused by the walk, so where a ride lies is not known.</exception>
 	public byte[] Splice( byte[] body, IReadOnlyCollection<int> gone, IReadOnlyList<SavedTrackRide> made )
+		=> SpliceWhole( body, gone, [.. made.Select( ride => new WrittenTrackRide( ride, [], [], [] ) )] );
+
+	/// <summary><see cref="Splice"/>, each ride put in with its cars, their riders and its two lists.</summary>
+	public byte[] SpliceWhole( byte[] body, IReadOnlyCollection<int> gone, IReadOnlyList<WrittenTrackRide> made )
 	{
 		if ( gone.Count == 0 && made.Count == 0 )
 			return body;
@@ -346,9 +437,9 @@ public sealed class ParkTrackRides
 				pieces.Add( (chunk.Handle & 0xff, body.AsSpan( chunk.At, chunk.Whole ).ToArray()) );
 		}
 
-		foreach ( var ride in made.OrderBy( ride => ride.Handle & 0xff ) )
+		foreach ( var ride in made.OrderBy( ride => ride.Ride.Handle & 0xff ) )
 		{
-			var slot = ride.Handle & 0xff;
+			var slot = ride.Ride.Handle & 0xff;
 			var before = pieces.FindIndex( piece => piece.Slot > slot );
 
 			pieces.Insert( before < 0 ? pieces.Count : before, (slot, RideChunks( ride )) );

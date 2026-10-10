@@ -63,6 +63,18 @@ public sealed partial class ParkThingStates
 		=> Record( item, cellX, cellY, across, down, PlacedObjectFlags, scriptHandle, hoardingFlags, hoardingProgress,
 			angle, tables?.NodeWords ?? [], tables?.Lookups ?? [], tables?.Shared ?? 0, channels );
 
+	/// <summary>The flags a bumper ride's launch makes a car's model with (<c>Bumper_LaunchCar</c>, <c>0x00549fa5</c>).</summary>
+	public const int CarFlags = 0x101;
+
+	/// <summary>
+	/// The record of a track car's model, or of its wake's (FileFormats <c>saves.md</c>, "A car's two model
+	/// records"): the supplemental mesh's own item, on no cell and of no footprint, <see cref="CarFlags"/>, no script
+	/// and no turn, its two tables and its one channel.
+	/// </summary>
+	public static byte[] CarRecord( int item, SavedChannel channel, ModelTables? tables )
+		=> Record( item, 0, 0, 0, 0, CarFlags, 0, 0, 0f, 0, tables?.NodeWords ?? [], tables?.Lookups ?? [], tables?.Shared ?? 0,
+			[channel] );
+
 	/// <summary>The flags the retile makes a queue piece's model with (<c>FUN_005229e0</c>).</summary>
 	public const int QueuePieceFlags = 0x33a;
 

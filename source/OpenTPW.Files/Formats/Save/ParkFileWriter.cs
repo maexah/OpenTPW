@@ -83,12 +83,33 @@ public static class ParkFileWriter
 	/// <param name="MadeTracks">The track-rides module's record of each track ride in <paramref name="Made"/> (<see cref="ParkTrackRides.Splice"/>).</param>
 	/// <param name="GoneTracks">The handle of each track ride in <paramref name="Gone"/>, whose chunks are left out.</param>
 	/// <param name="KeptTracks">Each of the file's track rides whose record is written over as it runs (<see cref="ParkTrackRides.Put"/>).</param>
+	/// <param name="Tracks">
+	/// Each track ride written whole with its cars (<see cref="WrittenTrack"/>), made since the load or the file's:
+	/// every chunk the file holds under its handle is taken out and the ride put in again as it runs.
+	/// </param>
 	public sealed record RunningThings( IReadOnlyList<ParkWorld.CatalogueObject> Objects, int SchedulerTick,
 		int NextHandle, IReadOnlyList<WrittenScript> Scripts, ParkThingStates ModelStates,
 		IReadOnlyList<WrittenModel> Models, uint Clock, IReadOnlyList<MadeThing>? Made = null,
 		IReadOnlySet<int>? Gone = null, IReadOnlyDictionary<int, (int Standing, uint FirstBuilt)>? Built = null,
 		IReadOnlyDictionary<int, QueuePiece?>? QueueCells = null, IReadOnlyList<SavedTrackRide>? MadeTracks = null,
-		IReadOnlyCollection<int>? GoneTracks = null, IReadOnlyList<SavedTrackRide>? KeptTracks = null );
+		IReadOnlyCollection<int>? GoneTracks = null, IReadOnlyList<SavedTrackRide>? KeptTracks = null,
+		IReadOnlyList<WrittenTrack>? Tracks = null );
+
+	/// <summary>One model of a track car, its own or its wake's: the supplemental mesh's item, its one channel and its two tables (null declares none).</summary>
+	public sealed record CarModel( int Item, SavedChannel Channel, ParkThingStates.ModelTables? Tables );
+
+	/// <summary>
+	/// A track car as it runs (<c>docs/exe/saves.md</c>, "OpenTPW's writer, a track ride's cars"): its record with
+	/// the two model handles left nought, its model, its wake's (null for a car with none), and each rider's head by
+	/// the lookup record of its seat's node. The writer deals the two models their slots and writes the handles
+	/// into the car's <c>+0x08</c> and <c>+0x0c</c>.
+	/// </summary>
+	public sealed record WrittenCar( SavedTrackCar Car, CarModel Model, CarModel? Wake,
+		IReadOnlyList<(int Record, int Visitor)> Heads );
+
+	/// <summary>A track ride written whole: its record, its cars in pool order, and its leaving and boarding lists, head first.</summary>
+	public sealed record WrittenTrack( SavedTrackRide Ride, IReadOnlyList<WrittenCar> Cars, IReadOnlyList<int> Leaving,
+		IReadOnlyList<int> Boarding );
 
 	/// <summary>
 	/// The piece a queue cell holds: its tile's index and angle (<c>docs/exe/saves.md</c>, "OpenTPW's writer, a queue
@@ -178,15 +199,24 @@ public static class ParkFileWriter
 		ParkWorld.HeadEdits? heads = null;
 		var headSlots = new Dictionary<(int Slot, int Record), int>();
 		var madeHeadSlots = new Dictionary<(int Thing, int Record), int>();
+		var carHeadSlots = new Dictionary<(int Car, int Record), int>();
 
 		if ( running.Things is { } run )
 		{
 			var objects = loaded.PutObjects( body, run.Objects );
 			var scripts = loaded.ScriptStates.Put( body, run.SchedulerTick, run.NextHandle, run.Scripts );
 
+			// A track ride taken out, sold or to be written again, gives up its cars' models and the heads on them.
+			var tracks = run.Tracks ?? [];
+			HashSet<int> tracksOut = [.. run.GoneTracks ?? [], .. tracks.Select( track => track.Ride.Handle )];
+
+			HashSet<int> carSlots = [.. loaded.TrackRides.CarModelSlots( tracksOut ).Where( slot => run.ModelStates.ItemIn( slot ) != null )];
+
+			var cars = tracks.SelectMany( track => track.Cars ).ToList();
+
 			// The heads are sprites, so they are written with the people or not at all.
 			if ( running.People != null )
-				heads = PlanHeads( loaded, run, running.People, headSlots, madeHeadSlots );
+				heads = PlanHeads( loaded, run, running.People, headSlots, madeHeadSlots, carSlots, cars, carHeadSlots );
 
 			var models = run.ModelStates.Put( body, run.Models, heads != null ? headSlots : null );
 
@@ -202,14 +232,14 @@ public static class ParkFileWriter
 			// A kept script whose object list is another length: its record is written again with the rest.
 			var relisted = loaded.ScriptStates.Relisted( run.Scripts );
 
-			if ( made.Count > 0 || gone.Count > 0 || pieces.Count > 0 || relisted.Count > 0 )
+			if ( made.Count > 0 || gone.Count > 0 || pieces.Count > 0 || relisted.Count > 0 || tracksOut.Count > 0 )
 			{
 				if ( running.People == null && (made.Count > 0 || gone.Count > 0) )
 					throw new InvalidOperationException( "a thing bought or sold is written with the people, and none were given" );
 
 				// From the back of the file forwards, so each module is still where the file has it when its turn
 				// comes: the scripts, the track rides, the models, then the world with the people.
-				var goneSlots = new HashSet<int>();
+				var goneSlots = new HashSet<int>( carSlots );
 				var goneScripts = new HashSet<int>();
 
 				foreach ( var thing in loaded.Objects.Where( thing => gone.Contains( thing.ThingId ) ) )
@@ -240,11 +270,12 @@ public static class ParkFileWriter
 				//
 				// A deviation: the original gives each model the lowest empty slot as it is made, in the order
 				// things were bought and cells tiled. Here the slots are dealt as the file is written: the
-				// objects first, the oldest first, then the queue cells in the map's order. Every handle still
-				// names its own record, which is all a load reads.
+				// objects first, the oldest first, then the queue cells in the map's order, then each car's and its
+				// wake's in pool order. Every handle still names its own record, which is all a load reads.
 				var oldestFirst = made.OrderBy( thing => thing.Object.Object.ThingId ).ToList();
 				var laid = cellsInOrder.Where( entry => entry.Value != null ).ToList();
-				var slots = run.ModelStates.Plan( goneSlots, oldestFirst.Count + laid.Count );
+				var carModels = cars.Sum( car => car.Wake != null ? 2 : 1 );
+				var slots = run.ModelStates.Plan( goneSlots, oldestFirst.Count + laid.Count + carModels );
 				var madeModels = new List<(int Slot, byte[] Record)>();
 				var records = new List<(int Id, byte[] Record)>();
 				var scriptRecords = new List<(int Handle, byte[] Record)>();
@@ -280,6 +311,42 @@ public static class ParkFileWriter
 					handles[cell] = slot + 1;
 				}
 
+				// Each car's model and its wake's, and the two handles in the car's own bytes.
+				var nextCar = oldestFirst.Count + laid.Count;
+				var writtenTracks = new List<WrittenTrackRide>( (run.MadeTracks ?? []).Select( ride => new WrittenTrackRide( ride, [], [], [] ) ) );
+
+				foreach ( var track in tracks )
+				{
+					var floated = new List<SavedTrackCar>();
+
+					foreach ( var car in track.Cars )
+					{
+						var index = cars.IndexOf( car );
+						var own = slots[nextCar++];
+						var bytes = (byte[])car.Car.Bytes.Clone();
+
+						madeModels.Add( (own, ParkThingStates.CarRecord( car.Model.Item, car.Model.Channel,
+							heads != null ? WithHeads( car, index, carHeadSlots ) : car.Model.Tables )) );
+						PutInt32( bytes, 0x08, own + 1 );
+
+						if ( car.Wake is { } wake )
+						{
+							var its = slots[nextCar++];
+
+							madeModels.Add( (its, ParkThingStates.CarRecord( wake.Item, wake.Channel, wake.Tables )) );
+							PutInt32( bytes, 0x0c, its + 1 );
+						}
+
+						var record = new SavedTrackCar( car.Car.Handle, bytes, car.Car.CentreX, car.Car.CentreZ, car.Car.BuoyRide,
+							car.Car.BuoyX, car.Car.BuoyZ, 0 );
+
+						record.Riders.AddRange( car.Car.Riders );
+						floated.Add( record );
+					}
+
+					writtenTracks.Add( new WrittenTrackRide( track.Ride, floated, track.Leaving, track.Boarding ) );
+				}
+
 				// Where it lies, so before anything ahead of the map changes length.
 				loaded.PutCellModels( body, handles );
 
@@ -287,7 +354,7 @@ public static class ParkFileWriter
 					[.. scriptRecords.OrderByDescending( entry => entry.Handle ).Select( entry => entry.Record )], goneScripts,
 					relisted );
 
-				body = loaded.TrackRides.Splice( body, run.GoneTracks ?? [], run.MadeTracks ?? [] );
+				body = loaded.TrackRides.SpliceWhole( body, tracksOut, writtenTracks );
 				body = run.ModelStates.Splice( body, goneSlots, madeModels );
 
 				if ( run.Built is { } built )
@@ -335,7 +402,8 @@ public static class ParkFileWriter
 	/// </para>
 	/// </summary>
 	private static ParkWorld.HeadEdits PlanHeads( ParkWorld loaded, RunningThings run, IReadOnlyList<ParkWorld.WrittenPerson> people,
-		Dictionary<(int Slot, int Record), int> kept, Dictionary<(int Thing, int Record), int> made )
+		Dictionary<(int Slot, int Record), int> kept, Dictionary<(int Thing, int Record), int> made,
+		IReadOnlySet<int> carSlots, IReadOnlyList<WrittenCar> cars, Dictionary<(int Car, int Record), int> onCars )
 	{
 		var looks = people.ToDictionary( person => person.Person.ThingId, person => (person.Person.SpriteKind, person.Person.SpriteBank) );
 		var hung = new List<ParkWorld.WrittenHead>();
@@ -400,6 +468,21 @@ public static class ParkFileWriter
 			}
 		}
 
+		// A car's model is made again in the file, so the head on it is too: the file's cars' heads give their slots
+		// up, and each rider's head takes a new one.
+		foreach ( var slot in carSlots )
+			gone.UnionWith( run.ModelStates.AttachedOn( slot ).Values );
+
+		for ( var car = 0; car < cars.Count; ++car )
+		{
+			foreach ( var (record, visitor) in cars[car].Heads )
+			{
+				var index = car;
+
+				fresh.Add( (visitor, dealt => onCars[(index, record)] = dealt) );
+			}
+		}
+
 		var empty = loaded.EmptySpriteSlots( fresh.Count, taken );
 
 		for ( var i = 0; i < fresh.Count; ++i )
@@ -426,6 +509,27 @@ public static class ParkFileWriter
 		foreach ( var (record, _) in heads.Hung )
 		{
 			if ( record < 0 || record >= lookups.Length || !slots.TryGetValue( (thing.Object.Object.ThingId, record), out var slot ) )
+				continue;
+
+			lookups[record] = (lookups[record].Flags | ParkThingStates.LookupAttached, slot);
+			any = true;
+		}
+
+		return tables with { Lookups = lookups, Shared = tables.Shared | (any ? ParkThingStates.SharedAttached : 0) };
+	}
+
+	/// <summary>A car's model's tables with each rider's head hung in its seat's lookup record: <c>0x2</c> and the sprite's slot, and the shared <c>0x4</c>.</summary>
+	private static ParkThingStates.ModelTables? WithHeads( WrittenCar car, int index, Dictionary<(int Car, int Record), int> slots )
+	{
+		if ( car.Model.Tables is not { } tables )
+			return null;
+
+		var lookups = tables.Lookups.ToArray();
+		var any = false;
+
+		foreach ( var (record, _) in car.Heads )
+		{
+			if ( record < 0 || record >= lookups.Length || !slots.TryGetValue( (index, record), out var slot ) )
 				continue;
 
 			lookups[record] = (lookups[record].Flags | ParkThingStates.LookupAttached, slot);

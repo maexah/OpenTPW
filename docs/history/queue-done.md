@@ -5773,6 +5773,14 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   **Proof: twelve cars of twelve in the original's three files read as predicted, 3, 2, nought, nought, nought
   and -1, `+0x58` nought on the four before a go and `+0x50` on the eight in one, and `+0xa0` less its bob the
   one height, 29.80, in all three.** No game run: a decode.
+- [x] **Q257r. The writer: a bumper ride's cars.** Split by the session (2026-10-10): a Hot Pot with boats out
+  is written, bought, kept or sold: each car's `0xac` bytes and five words, a type 9 a rider, the two lists, the
+  boat's model record and its wake's (items 1142 and 1141, flags `0x101`), and each rider's head on their seat's
+  lookup record (`saves.md`, "OpenTPW's writer, a track ride's cars"). **Proved:** the original's own
+  `hotpot-open.TPWS` loaded here and saved again holds all eight model records byte for byte but the head's
+  sprite slot; and a pot bought here, saved in a go with four riders, read in the original under Proton as four
+  cars at the file's places, timer 723, and let its four riders off 723 ticks after the load
+  (`q257r/orig/a-load.log`, `a-2-loaded.png`). The item's other pieces are Q257s.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

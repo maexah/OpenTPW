@@ -47,6 +47,9 @@ public sealed class ParkBumperBoats : Entity
 		public int Animation { get; set; } = RideAnimations.NoRole;
 
 		public AnimationFile? Posed { get; set; }
+
+		/// <summary>The height it was last stood at - the car's <c>+0xa0</c>.</summary>
+		public float Height { get; set; }
 	}
 
 	/// <summary>A seat node: its name, and its own transform in the car's model space (the original's axes, y up).</summary>
@@ -68,6 +71,12 @@ public sealed class ParkBumperBoats : Entity
 		_catalogue = catalogue;
 		Current = this;
 	}
+
+	/// <summary>The clips of the boat drawn for a pool slot, with its model's node words as they have started; null with none standing.</summary>
+	internal RideAnimations? AnimationsOf( int slot ) => _boats.TryGetValue( slot, out var boat ) ? boat.Animations : null;
+
+	/// <summary>The height the boat of a pool slot was last stood at; null with none standing.</summary>
+	internal float? HeightOf( int slot ) => _boats.TryGetValue( slot, out var boat ) ? boat.Height : null;
 
 	/// <summary>How many boats are standing - for the census.</summary>
 	public int Standing => _boats.Count;
@@ -172,7 +181,12 @@ public sealed class ParkBumperBoats : Entity
 				sharedTextureDirectory: $"levels/{_theme}/sharetex",
 				clips: animations.AllClips );
 
-			var boat = new Boat( model, animations, SeatsOf( path ), car.Ride );
+			var boat = new Boat( model, animations, SeatsOf( path, out var read ), car.Ride );
+
+			// The model's node words, kept as its clips start, for the park file's record of it.
+			if ( read != null )
+				animations.Nodes = new ParkModelTables.Running( read, 1 );
+
 			_boats[slot] = boat;
 
 			// Counted once a boat: the rocking its corners' bob gives it, and its wake.
@@ -256,16 +270,18 @@ public sealed class ParkBumperBoats : Entity
 	}
 
 	/// <summary>The seat nodes of a car's model, by id: every node in the seat space, <c>FUN_0044b220( model, 0x80, id )</c>.</summary>
-	private IReadOnlyDictionary<int, Seat> SeatsOf( string path )
+	private IReadOnlyDictionary<int, Seat> SeatsOf( string path, out ModelFile? file )
 	{
 		var seats = new Dictionary<int, Seat>();
+
+		file = null;
 
 		using var stream = FileSystem.OpenRead( path );
 
 		if ( stream is null )
 			return seats;
 
-		var file = new ModelFile( stream );
+		file = new ModelFile( stream );
 
 		for ( var id = 1; id < 16; ++id )
 		{
@@ -342,6 +358,7 @@ public sealed class ParkBumperBoats : Entity
 		var heading = car.Heading - (int)(car.Turn * -ease);
 		var yaw = ((heading - 0x100) & 0x1ff) * (MathF.Tau / 512f);
 
+		boat.Height = height;
 		boat.Model.SetTransform( new Vector3( x, y, height ), Quaternion.CreateFromAxisAngle( System.Numerics.Vector3.UnitZ, -yaw ) );
 	}
 

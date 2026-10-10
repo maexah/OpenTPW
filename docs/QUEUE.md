@@ -48,27 +48,22 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q257r. The writer: a track ride's cars, and what else a made record leaves out.** The old Q257p's other
-  pieces, each counted or said in `saves.md`. Confirm: each piece's bytes beside a file of the original's own,
-  and the file loaded in the original under Proton.
-  From Q257q (`saves.md`, "A car's eight words nothing keeps"): the eight are decoded; `Car` must keep `+0x58`,
-  and the height written is the water's alone until the boats' bob is drawn (`BUMPER_CAR_ROCK`). Not decoded:
-  where the scene's water height comes from (`FUN_00450ac0`, `FUN_004511a0`), and a car's `+0x14` to `+0x1c`.
-  From Q257p (`saves.md`, "OpenTPW's reader, a track ride's cars"): a track ride with a car is still written
-  as the file has it, bought, sold or kept (`SAVE_PARK_OBJECT_BOUGHT`, `SAVE_PARK_OBJECT_SOLD`,
-  `SAVE_PARK_TRACK_RIDE_AS_THE_FILE`), so a Hot Pot is written only while shut, and one loaded with boats and
-  played on is written with the FILE's cars beside the running people. To write a car: its `0xac` bytes from
-  the running car (the words nothing keeps, `+0x24`, `+0x28`, `+0x58`, `+0x60`, `+0x68`, `+0x84`, `+0xa0`,
-  `+0xa4`, are decoded: Q257q), two model records (items 1142 and 1141 for
-  a boat and its wake, flags `0x101`), a head sprite for its rider and a type 9 record; the original's own
-  files are `q257o/orig/hotpot-open.TPWS` and `hotpot-later.TPWS`, and `q257p/orig/cars.py` prints the
-  original's cars a tick. A loaded car's two model records are not read, so its clip starts from its first
-  frame (`SAVED_TRACK_CAR_MODEL_RECORDS`). A loaded rider's sprite is made at the load, not as the ride lets
-  them go, and a live rider's is never destroyed (the original's admission, `0x00502147`). The stepping agrees
-  with the original's for three ticks and is not compared past a car's first draw: the cars draw their own
-  generator, the original's the world's (`ParkBumperCars`, `_random`).
-  The karts' and the water ride's BumperTypes have no record here, and a tracked ride (its `TrackType`) is
-  not written at all. A turned track ride was in no game run.
+- [ ] **Q257s. The writer: what else a made record leaves out.** The old Q257r's other pieces, each counted or
+  said in `saves.md`. Confirm: each piece's bytes beside a file of the original's own, and the file loaded in
+  the original under Proton.
+  From Q257r (`saves.md`, "OpenTPW's writer, a track ride's cars"): a car's height `+0xa0` is written about 0.2
+  above the original's, the boats floating on the top of the water mesh: decode where the scene's water height
+  comes from (`FUN_00450ac0`, `FUN_004511a0`) and float them there. A car's held sound and smoke are written
+  as none (`SAVE_PARK_CAR_SMOKE`). A loaded car's two model records are still not read, so its clip starts
+  from its first frame, and that is what a park loaded with boats then writes (`SAVED_TRACK_CAR_MODEL_RECORDS`).
+  A loaded rider's sprite is made at the load, not as the ride lets them go, and a live rider's is never
+  destroyed (the original's admission, `0x00502147`). The stepping agrees with the original's for three ticks
+  and is not compared past a car's first draw: the cars draw their own generator, the original's the world's
+  (`ParkBumperCars`, `_random`). The karts' and the water ride's BumperTypes have no record here, and a
+  tracked ride (its `TrackType`) is not written at all (`SAVE_PARK_OBJECT_BOUGHT`, `SAVE_PARK_OBJECT_SOLD`,
+  `SAVE_PARK_TRACK_RIDE_AS_THE_FILE`). Which of the three writers puts node word `0x40` on a car's first node
+  was not traced, nor a car's `+0x14` to `+0x1c`. In no game run: a ride sold with boats out, a peep on the
+  leaving or boarding list at the save, a turned track ride.
   From Q257n (`saves.md`, "OpenTPW's writer, a thing with emitter files"): the particles module goes out as
   the loaded file's, so no emitter alive at the save is written: a script's `EVENT` puff (the original's file
   of a bought Loudspeaker holds two of template 36) and an `ADDOBJ`'s (below). A handle is the emitter's

@@ -244,6 +244,9 @@ public sealed class ParkBumperCars
 		/// <summary><c>+0x54</c>: which way it is drawn pointing, in 512ths of a turn.</summary>
 		public int Heading { get; internal set; }
 
+		/// <summary><c>+0x58</c>: the heading the drawn one turns to - the steering heading as the last tick of a go left it, nought before a first go.</summary>
+		public int Turned { get; internal set; }
+
 		/// <summary><c>+0x5c</c>: how far <see cref="Heading"/> turned this tick.</summary>
 		public int Turn { get; internal set; }
 
@@ -314,6 +317,9 @@ public sealed class ParkBumperCars
 
 	/// <summary>Whether the BumperType is one of the family this builds.</summary>
 	public static bool IsBumperFamily( int bumperType ) => bumperType is -1 or -3 or -6 or -11 or -14;
+
+	/// <summary>Whether a BumperType's rides have a record here (<see cref="Open"/>): the Hot Pot's alone.</summary>
+	public static bool HasRecord( int bumperType ) => bumperType == -1;
 
 	/// <summary>The ride a handle names, or null for a stale handle or one of another family.</summary>
 	public Ride? RideOf( int handle ) => _table.Holds( handle ) ? _rides[handle & 0xff] : null;
@@ -519,6 +525,7 @@ public sealed class ParkBumperCars
 		car.Speed = saved.Word( 0x4c );
 		car.Steering = saved.Word( 0x50 );
 		car.Heading = saved.Word( 0x54 );
+		car.Turned = saved.Word( 0x58 );
 		car.Turn = saved.Word( 0x5c );
 		car.Radius = saved.Word( 0x64 );
 		car.SteerX = saved.Word( 0x6c );
@@ -602,6 +609,73 @@ public sealed class ParkBumperCars
 
 		return new SavedTrackRide( handle, ride.CentreX - (CellUnits / 2), ride.CentreZ - (CellUnits / 2), orientation, itemId,
 			ride.Performance, ride.MeshBase, ride.MeshCount, ride.Duration, (int)ride.State );
+	}
+
+	/// <summary>
+	/// A car for a park file's track-rides module, as <c>FUN_005428e0</c> writes one (<c>docs/exe/saves.md</c>,
+	/// "OpenTPW's writer, a track ride's cars"): its <c>0xac</c> bytes, the centre of the arena it floats in, and its
+	/// buoy's ride and place, nought with no buoy; its riders head first. The two model handles <c>+0x08</c> and
+	/// <c>+0x0c</c> are left nought for the writer, which deals the models their slots.
+	///
+	/// <para>
+	/// <b>Written as a boat of the Hot Pot holds them, not kept here:</b> the stuck count <c>+0xa4</c>, -1 from its
+	/// placement on, and <c>+0x60</c>, <c>+0x68</c>, <c>+0x84</c> and <c>+0xa8</c>, nought.
+	/// <b>Deviations:</b> the held sound <c>+0x20</c> and the smoke's emitter <c>+0x2c</c> are written as none, where the
+	/// original writes the session's own handles (a load finds the voice gone and empties it; no emitter alive is
+	/// written, <c>SAVE_PARK_CAR_SMOKE</c>); and the four pointers <c>+0x30</c>, <c>+0x94</c>, <c>+0x98</c> and
+	/// <c>+0x9c</c> are nought, each made again by the loader.
+	/// </para>
+	/// </summary>
+	/// <param name="height">The height it was last drawn at, <c>+0xa0</c>.</param>
+	/// <param name="emitters">The lookup records of its model's two emitter nodes, <c>+0x24</c> and <c>+0x28</c>.</param>
+	public SavedTrackCar Written( Car car, float height, (int First, int Second) emitters )
+	{
+		var bytes = new byte[SavedTrackCar.Size];
+
+		void Put( int at, int value ) => BitConverter.TryWriteBytes( bytes.AsSpan( at, 4 ), value );
+
+		Put( 0x00, (int)car.Flags );
+		Put( 0x04, car.Mesh );
+		Put( 0x10, car.Animation );
+		Put( 0x24, emitters.First );
+		Put( 0x28, emitters.Second );
+		Put( 0x2c, -1 );
+		Put( 0x34, car.X );
+		Put( 0x38, car.Z );
+		Put( 0x3c, car.VelocityX );
+		Put( 0x40, car.VelocityZ );
+		Put( 0x44, car.SteppedX );
+		Put( 0x48, car.SteppedZ );
+		Put( 0x4c, car.Speed );
+		Put( 0x50, car.Steering );
+		Put( 0x54, car.Heading );
+		Put( 0x58, car.Turned );
+		Put( 0x5c, car.Turn );
+		Put( 0x64, car.Radius );
+		Put( 0x6c, car.SteerX );
+		Put( 0x70, car.SteerZ );
+		Put( 0x74, car.OffsetX );
+		Put( 0x78, car.OffsetZ );
+		Put( 0x7c, car.Buoy );
+		Put( 0x80, car.Chased );
+		Put( 0x88, car.Timer );
+		Put( 0x8c, car.Patience );
+		Put( 0x90, car.Phase );
+		BitConverter.TryWriteBytes( bytes.AsSpan( 0xa0, 4 ), height );
+		Put( 0xa4, -1 );
+
+		if ( car.Smoking )
+			Unimplemented.Report( "SAVE_PARK_CAR_SMOKE" );
+
+		var arena = RideOf( car.Arena );
+		var buoy = arena != null && car.Buoy >= 0 && car.Buoy < arena.Buoys.Count ? arena.Buoys[car.Buoy] : ((int X, int Z)?)null;
+
+		var saved = new SavedTrackCar( car.Ride, bytes, arena?.CentreX ?? 0, arena?.CentreZ ?? 0,
+			buoy != null ? arena!.Handle : 0, buoy != null ? arena!.CentreX + buoy.Value.X : 0, buoy != null ? arena!.CentreZ + buoy.Value.Z : 0, 0 );
+
+		saved.Riders.AddRange( car.Riders.Select( rider => new SavedTrackRider( rider.Peep, rider.Seat ) ) );
+
+		return saved;
 	}
 
 	/// <summary>
@@ -708,7 +782,7 @@ public sealed class ParkBumperCars
 		car.Smoking = false;
 		car.Voice = null;
 		car.VelocityX = car.VelocityZ = car.SteppedX = car.SteppedZ = car.Speed = 0;
-		car.Steering = car.Turn = car.SteerX = car.SteerZ = car.OffsetX = car.OffsetZ = car.Patience = 0;
+		car.Steering = car.Turned = car.Turn = car.SteerX = car.SteerZ = car.OffsetX = car.OffsetZ = car.Patience = 0;
 		car.Buoy = -1;
 		car.Chased = -1;
 		car.Arena = ArenaHolding( ride.CentreX, ride.CentreZ )?.Handle ?? 0;
@@ -1169,6 +1243,7 @@ public sealed class ParkBumperCars
 				off -= 0x200;
 
 			car.Turn = off * car.Speed / 1000;
+			car.Turned = car.Steering;
 		}
 		else
 		{

@@ -1494,7 +1494,7 @@ is laid over the fresh node's: the reader clears the eleven bits below on the no
 | `0x4` | `0x8000` | not looked for; in no record of 7,688 |
 | `0x8` | `0x10000` | the mesh was morphed and its face normals are stale: set by the morph (`FUN_00471860`, `FUN_004714a0`), cleared by `FUN_00473a40`, which works the normals out again, from the pose walk (`0x0044afd8`, for a node with `0x10000000`) and `FUN_00473c30` |
 | `0x20` | `0x40000` | a clip bound to a channel has a track for the node (`FUN_00472d70`) |
-| `0x40` | `0x80000` | the md2 loader with its flag `0x20` (`FUN_00461f10`, `0x004625c5`, on the node at mesh `+0x78`) and two more writers (`FUN_00461ed0`, `FUN_00424ef0`, its test not read); 62 words of seven items hold it, none of them an item a player buys |
+| `0x40` | `0x80000` | the md2 loader with its flag `0x20` (`FUN_00461f10`, `0x004625c5`, on the node at mesh `+0x78`) and two more writers (`FUN_00461ed0`, `FUN_00424ef0` at `0x00425253`, its test not read), each an `OR` of `0x80800`; 62 words of seven items hold it, none of them an item a player buys, and the first node of every track car's model and of its wake's (24 of 24, Q257r; which of the three writes it there was not traced) |
 | `0x80` | `0x200000` | that track's flags hold `0x1000`, a morph |
 | `0x100` | `0x400000` | that track's flags hold `0x10000` |
 | `0x800` | `0x100000` | that track's flags hold any of `0x289` |
@@ -2246,14 +2246,13 @@ ride's cars", below).
 **What OpenTPW writes** (`ParkTrackRides.Splice`, `Put`, `RideChunks`; `ParkBumperCars.Written`;
 `Level.WritePark`). A track ride **bought** is written with its three records and, in the track-rides module,
 its ride and its close, before the first ride left of a higher slot; one of the file's **sold** is taken out
-with every chunk under its handle; one **kept** has its five words written over where they lie. **Only a ride
-with no car**, which is a ride still shut: a ride of the bumper family with a record here (the Hot Pot's
-BumperType alone, `ParkBumperCars.Open`) and no boat out and nobody on its lists, or a ride of the file's with
-no type 5 under its handle. **Left as the file has it, and counted:** a bought ride with a boat out, a ride of
-another BumperType (the karts, the water ride) and a tracked ride (`SAVE_PARK_OBJECT_BOUGHT`); a file's ride
+with every chunk under its handle; one **kept** has its five words written over where they lie. That is a ride
+with no car, here or in the file; **one with a car out is written whole with its cars** ("OpenTPW's writer, a
+track ride's cars", below). Only a ride of the bumper family with a record here, the Hot Pot's BumperType alone
+(`ParkBumperCars.Open`, `HasRecord`). **Left as the file has it, and counted:** a ride of another BumperType
+(the karts, the water ride) and a tracked ride, bought (`SAVE_PARK_OBJECT_BOUGHT`); such a ride of the file's
 with a car, sold (`SAVE_PARK_OBJECT_SOLD`) or kept (`SAVE_PARK_TRACK_RIDE_AS_THE_FILE`); and a ride bought into
-the slot of a file's ride that was sold and left. Writing a car needs its two model records, each rider's head
-sprite and the `0xac` bytes (Q257q).
+the slot of a file's ride that was sold and left.
 
 **Confirmed in the game** (`q257o/confirm.py`: scene `a` 6 of 6 and scene `b` 2 of 2 on the desktop at the second
 run, the control 4 of 4; `PREDICTION.txt` holds every prediction and miss). Lost Kingdom from `easymode.TPWI`:
@@ -2320,8 +2319,8 @@ place as the table seats it (`Bumper_LayRide`'s x and z), where before it waited
 **Left out:** the car's two model records, so its clip starts from its first frame
 (`SAVED_TRACK_CAR_MODEL_RECORDS`, counted a car); the held sound, which names a voice of the session that saved
 it (the original's step finds it gone and empties it; here it is empty from the load, and the next retarget
-starts another); `+0x24`, `+0x28`, `+0x58`, `+0x60`, `+0x68`, `+0x84`, `+0xa0` and `+0xa4`, which nothing here
-keeps ("A car's eight words nothing keeps", below); a rider record with no car of its ride before it
+starts another); `+0x24`, `+0x28`, `+0x60`, `+0x68`, `+0x84`, `+0xa0` and `+0xa4`, which nothing here keeps
+("A car's eight words nothing keeps", below; `+0x58` is kept, `Car.Turned`); a rider record with no car of its ride before it
 (`SAVED_TRACK_RIDER_WITH_NO_CAR`: the original hangs it on a null car).
 
 **A rider saved with no sprite is given one at the load, a deviation.** A rider on a thing that keeps none (the
@@ -2396,14 +2395,100 @@ float in each file**, where every car has one phase: 29.7999 at phase 1138, 29.7
 4003, and **each less its bob is the same height, 29.7993, 29.7994 and 29.7958** (the last between this tick's
 29.7958 and the tick before's 29.8017, the easing).
 
-**For the writer (Q257r).** A boat's eight are: 3, 2, the kept `+0x58` (to keep: `Car` holds the steering and
-drawn headings, not this one), nought, nought, nought, the drawn height and -1. `ParkBumperBoats` draws no bob
-(`BUMPER_CAR_ROCK`, counted), so the height written is the water's alone until it does. **Not decoded:** where
+**For the writer** ("OpenTPW's writer, a track ride's cars", below). A boat's eight are: 3, 2, the kept `+0x58`
+(`Car.Turned`), nought, nought, nought, the drawn height and -1. **Not decoded:** where
 the scene's 29.80 comes from (`FUN_00450ac0`, `FUN_00450ea0`, `FUN_004511a0`); what the loader does with
 `+0x24` and `+0x28` if the model made again answers other records (it reads them as the file has them);
 `+0x14`, `+0x18` and `+0x1c`, nought in all twelve (`+0x14` is a particle mark the other BumperTypes' steps
 set). **Not run:** either game; the words are the listing's and the original's own files'. The karts' and the
 water ride's values are not measured (no file of theirs with a car was looked at).
+
+### OpenTPW's writer, a track ride's cars
+
+Q257r, split by the session: this is a bumper ride with cars out written, bought, kept or sold. The item's
+other pieces are Q257s. Harness `q257r/` (`carfile.py`, `models.py`, `heads.py`, `confirm.py`, `PREDICTION.txt`,
+`mutations.py`, `orig/`).
+
+**Read in the listing.** `Bumper_LaunchCar` makes a car's model with `FUN_00463060( id, 0x101, 0.., -1, 0 )`,
+the id the ride's item's `+0x4bc` entry for the car's mesh, stores the handle at the car's `+0x08`, and stops
+its channel with `FUN_004732a0( model, 12, 0, 2, 1.0, 0 )`, which is why a boat's idle channel reads speed 1
+and its wake's, which nothing touches, nought. **The loader's `FUN_00463ab0` makes nothing**: handed a handle
+it takes the model table's slot as the ride system module's reader left it and marks it claimed (`0x10000`),
+so a car's model is whatever record its handle names. The head draw `FUN_0044b510` runs for any model whose
+shared flags hold `0x4` and gives each attached sprite its place (`FUN_00475480`), its picture and its scale
+(0.685, `0x0074ced0`) every time the model is drawn.
+
+**Measured** (`models.py`, the three files of `q257o/orig/` with cars, twelve boats, eight in a go, eleven
+with a rider): 12 of 12 read as FileFormats `saves.md`, "A car's two model records" gives them, the boat's
+record item 1142 and its wake's 1141, flags `0x101`, on no cell; node word `0x40` on the first node of all 24
+records; the rider's head on lookup record nought, seat 1, a sprite of kind 1 with scale 0.685.
+
+**What OpenTPW writes** (`ParkCarWriter.Track`, `ParkBumperCars.Written( Car )`, `ParkTrackRides.RideChunks`
+and `SpliceWhole`, `ParkThingStates.CarRecord`, `ParkFileWriter.WrittenTrack`, `WrittenCar`, `CarModel`;
+`Level.WritePark`). A ride with a car out, here or in the file, is **taken out of the track-rides module with
+every chunk under its handle and put in again in its slot's place**: its record, each live car of the pool in
+pool order with its riders head first, the leaving list, the boarding list, the close. **A car's `0xac` bytes**
+are the words `Car` keeps, `+0x58` among them now (`Car.Turned`, set by the step in a go and read by a load);
+3 and 2 at `+0x24` and `+0x28`, the lookup records of the model's emitter nodes of ids 2 and 1, looked up in
+its own file; -1 at `+0x2c` and `+0xa4`; the height the boat was last drawn at; and nought elsewhere. The five
+words after are its arena's centre and its buoy's ride and place, nought with no buoy. **Each car's model and
+its wake's are made records**: the file's cars' slots are given up and each running car takes the lowest empty
+slot, then its wake the next, after the made objects and the queue cells; the two handles go into the car's
+bytes. The boat's record holds its node words as its clips have started (`ParkModelTables.Running` on the drawn
+boat's clips, `ParkBumperBoats`), with `0x40` on the first node, its lookup records from its file with no head
+processing, and its channel as it runs; the wake's its file's words at rest, `0x40`, and an idle channel at
+speed nought. **A rider's head** goes on the lookup record of their seat's node, a new sprite of the rider's
+kind and bank on the lowest slot the file's table leaves empty; the heads the file has on the cars' old
+records give their slots up. A ride **sold** with cars is taken out with them, their models and their heads.
+
+**Deviations, each said at its site.** The held sound `+0x20` and the smoke's emitter `+0x2c` are written as
+none, where the original writes the session's handles (`SAVE_PARK_CAR_SMOKE` counts a smoking car; the
+particles module still goes out as the file's). The four pointers `+0x30`, `+0x94`, `+0x98`, `+0x9c` are
+nought; the loader makes each again. The model slots and the heads' sprite slots are dealt as the file is
+written, not as the cars were launched and the riders seated. **The height `+0xa0` stands about 0.2 above the
+original's**: the boats float on the top of the pot's water mesh, 30.0 with the bob, where the original's scene
+answers 29.80; the original draws it again on its first frame. With no boat drawn (the tests), the clip is
+one started as the file is written and the height nought, counted (`SAVE_PARK_CAR_NO_HEIGHT`). A loaded car's
+clip still starts from its first frame at the load (`SAVED_TRACK_CAR_MODEL_RECORDS`), so that is what a park
+loaded with boats writes.
+
+**Confirmed in the game** (`q257r/confirm.py`, on the desktop: scene `bought` 3 of 3, `open` 5 of 5, `later`
+2 of 2, the controls 3 of 3 and 1 of 1; `PREDICTION.txt` holds every prediction and miss). **Bought:** Lost
+Kingdom from `easymode.TPWI`, `buy 1140 41 23 0`, the queue joined to the path with the queue tool, five
+guests sent; paused in the go `bumpers` read `state Running ... duration 750 cars 4 seated 4`, and the file
+holds thing 43, chunks `2 3 5 9 5 9 5 9 5 9 6`, each car at the census's place with the census's rider, the
+boats on model handles 93, 95, 97 and 170 (item 1142, words `40 820 601 601 601 601`, channel flags 1 role
+5 speed 1.0) and the wakes on 94, 96, 169 and 171 (item 1141, word `40`), and heads of kind 1 on sprite
+slots 11, 20, 21 and 22; no gap was counted. Loaded here from the Load Park list, the log read the four cars at
+the saved places and `bumpers` the same riders; the frames before the save and after the load show four boats
+in the pot with a head in each. **Open:** the park entered on the original's own `hotpot-open.TPWS` and saved
+at once: the module is 1016 bytes with the original's chunks, the ride's ten words the original's, each car
+the original's at every word the cars had not moved (the handles 94/95, 96/97, 169/170, 171/172 among them)
+and nought at the voice and the pointers, **and each of the eight model records the original's byte for
+byte** but the head's sprite slot; three heads on banks 5, 5 and 2, the file's three slots given up, as many
+live sprites as the file's. **Later** (their file in a go): the words `40 820 601 601 601 601`, role 5,
+`+0x58` equal to `+0x50` on every car. **The control** (the build before): the bought pot not in the file at
+all (`1x SAVE_PARK_OBJECT_BOUGHT`, a module of 44 bytes, its eight riders written deciding), and the
+original's file's module left byte for byte (`1x SAVE_PARK_TRACK_RIDE_AS_THE_FILE`).
+
+**The original under Proton** (`q257r/orig/go.sh`, off-screen, the bought scene's file loaded from the Load
+Park list, `orig/cars.py` polling the record, the cars, each car's model and each head; `a-load.log`). **Its
+first poll after the load, `mGameTick` 873: state 2, four cars at the file's places, every timer 723, riders
+44, 45, 32 and 46 on the file's cars**, models 93/94, 95/96, 97/169 and 170/171 holding items 1142 and 1141,
+each boat on role 5 looped with shared flags 7, one attached and the pairs `(0x23, slot) (0x21, -1) (0x29, -1)
+(0x29, -1)`, and sprites 11, 20, 21 and 22 live heads of kind 1 on the file's banks, shown, each with a place
+and scale 0.685 from its first drawing; `+0xa0` read 29.8010 for the file's 30.0063. **On track tick 934, 723
+ticks after the load, the record read state 1 with the leaving list 46, 32, 45, 44**, emptied one every eight
+ticks, and the pot seated four new riders and started its next go 37 s in. Its frame shows four boats in the
+pot with a head in each (`orig/a-2-loaded.png`). With the control's file: record 0 free.
+
+**Predictions wrong, mine:** that a car's flags would read the original's in a go (their chaser had chosen a
+buoy by the pause, 67 ticks on); and two of the harness's own checks, which held a census against a file
+written or read some ticks after it. **Not run in either game, tested only:** a ride kept with a boat out
+after a load of a shut file; a ride sold with boats out; a peep on the leaving or the boarding list at the
+save (no run caught one); a boat with no rider written from a bought pot. **Not seen:** the original loading
+a file whose car holds a smoke handle of -1 while its ride is broken. **Not compared:** the boats' clip frame
+after the load. `docs/exe/addresses.md` not regenerated.
 
 ### Read, not run
 

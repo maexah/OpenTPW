@@ -1021,6 +1021,16 @@ public sealed class ParkRides : Entity
 	}
 
 	/// <summary>
+	/// A moment of the clock this park's scripts and channels run on as a reading of the file's clock, as
+	/// <see cref="Written"/> writes every stamp; null where the save's clock did not read.
+	/// </summary>
+	internal Func<float, uint>? Readings
+		=> _clock?.Reading is { } saved ? moment => unchecked(saved + (uint)(int)(moment - _loaded)) : null;
+
+	/// <summary>Now, on the clock the scripts and channels run on.</summary>
+	internal static int NowMilliseconds => (int)(GameClock.Ticks * MillisecondsPerTick);
+
+	/// <summary>
 	/// The heads a script's head table has hung on its model's nodes, each by its node's lookup record, with every
 	/// record the table can hang one on; null for a script with no head table, whose model's lookup records are
 	/// not its to write (a head the engine hangs with no table, a car's or the Aztec Mayhem's, is kept by nothing
@@ -1089,7 +1099,7 @@ public sealed class ParkRides : Entity
 	private const int ChannelFlagsKept = 0x3f;
 
 	/// <summary>One channel as the engine keeps it - see <see cref="Written"/>.</summary>
-	private static SavedChannel WrittenChannel( AnimTimeControl channel, SavedChannel file, Func<float, uint> reading, int now )
+	internal static SavedChannel WrittenChannel( AnimTimeControl channel, SavedChannel file, Func<float, uint> reading, int now )
 	{
 		// What is queued behind it; with nothing queued the engine leaves the last queue's clip, flags and speed
 		// behind, which a channel here does not keep, so the file's stay.
