@@ -125,8 +125,13 @@ public sealed class SoundCategory
 	/// category neither knows nor cares which; it picks a sample and hands the place straight on.
 	/// </param>
 	/// <param name="range">A placed voice's own range, or null for none - see <see cref="Audio.Play"/>.</param>
+	/// <param name="ownRange">
+	/// Whether a placed voice given no <paramref name="range"/> takes its variation's, as the original's does
+	/// (<see cref="RangeOf"/>). The lobby's placed voices are this project's own and take none.
+	/// </param>
 	public Voice? Play( int id, float volume = 1f, bool loop = false, float fadeInSeconds = 0f,
-		bool respectDelay = true, AudioBus bus = AudioBus.Effects, Vector3? position = null, float? range = null )
+		bool respectDelay = true, AudioBus bus = AudioBus.Effects, Vector3? position = null, float? range = null,
+		bool ownRange = false )
 	{
 		var effect = _effects.FirstOrDefault( candidate => candidate.Id == id );
 
@@ -136,10 +141,13 @@ public sealed class SoundCategory
 		if ( respectDelay && Time.Now < effect.AvailableAt )
 			return null;
 
-		var clip = Pick( effect );
+		var clip = Pick( effect, out var variation );
 
 		if ( clip == null )
 			return null;
+
+		if ( ownRange && position is not null )
+			range ??= RangeOf( effect, variation );
 
 		// A looping voice never finishes, so it holds the effect until something stops it.
 		effect.AvailableAt = loop
@@ -210,6 +218,24 @@ public sealed class SoundCategory
 	/// <summary>Effect <paramref name="id"/>'s flags word, nought for an effect the category has not got.</summary>
 	public int FlagsOf( int id ) => _effects.FirstOrDefault( effect => effect.Id == id )?.Flags ?? 0;
 
+	/// <summary>The bit of an effect's flags word that gives its voice no place and no range (<c>FUN_006bbe90</c>).</summary>
+	public const int NoPlaceFlag = 0x200;
+
+	/// <summary>
+	/// How far off a voice of variation <paramref name="variation"/> of effect <paramref name="id"/> is heard, where
+	/// the voice is given no range of its own: the variation's own (<c>FUN_006bc650</c>), which the engine hands
+	/// the mixer as the far end of the voice's distance mapping (<c>0x006bc410</c>). Null for an effect flagged
+	/// <see cref="NoPlaceFlag"/>, whose voice is as loud anywhere, and for an effect or variation the category has
+	/// not got.
+	/// </summary>
+	public float? RangeOf( int id, int variation )
+		=> _effects.FirstOrDefault( effect => effect.Id == id ) is { } effect ? RangeOf( effect, variation ) : null;
+
+	private static float? RangeOf( Effect effect, int variation )
+		=> (effect.Flags & NoPlaceFlag) != 0 || variation < 0 || variation >= effect.Headers.Count
+			? null
+			: effect.Headers[variation].Range;
+
 	/// <summary>
 	/// How long effect <paramref name="id"/> waits after finishing before it may replay. Dead by CODE: nothing
 	/// calls it; the play path reads the effect's own field.
@@ -240,8 +266,12 @@ public sealed class SoundCategory
 	/// A sample that would not decode gives silence rather than a re-roll: re-rolling would
 	/// quietly change the odds, and nothing in the lobby's banks fails to decode anyway.
 	/// </summary>
-	private AudioClip? Pick( Effect effect )
-		=> PickIn( effect.Variations[_random.Next( effect.Variations.Count )] );
+	private AudioClip? Pick( Effect effect, out int variation )
+	{
+		variation = _random.Next( effect.Variations.Count );
+
+		return PickIn( effect.Variations[variation] );
+	}
 
 	/// <summary>One sample of one weighted list, by its running total out of 65,535.</summary>
 	private AudioClip? PickIn( List<SoundCategoryFile.Sample> variation )

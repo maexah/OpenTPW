@@ -5895,6 +5895,18 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   midpoint of the eye and the point it looks at. In the game's own mix the fall's sample read a gain of 0.1755
   at 19.27 units and 0.0981 at 59.73 (0.1757 and 0.0976 owed) and nothing at 235; the census reads `2x
   SCAPE_OMP_SOUND_TYPE_1`, the level's own two (`park.md`, "The land's own sounds").
+- [x] **Q265. Every placed voice of a park takes its variation's range.** Split by the session from the old
+  Q265: its other pieces are Q266. Done 2026-10-10: a voice given no range takes the float at `+0x22` of its
+  variation (`FUN_006bc650`), and the channel set-up hands it to the mixer as the mapping's far end
+  (`0x006bc410`; `audio.md`, "A voice's range, and the rectangle it follows the listener in"). Counted over
+  all 1,595 variations in the 31 category files: 95 in every scream, 60 to 100 in the staff's, 1500 in
+  thunder. In the running original the Belly Bounce's scream channels read a mapping of 2.0, 95.0, 0.80 and
+  the law's gain on all 206 lines (0.5653 at 49.41), the staff's 60, 75 and 90, predicted first, 2 of 2.
+  Built: screams, single screams, a guest put off, a yawn, the staff's voices, thunder and a bumper ride's
+  engine are turned down by the law over their variation's range. In the game `voices` read seven scream
+  samples at range 95, 34.09 off, at a gain of 0.7128, the law's; 800 units off seventeen ranged voices read
+  0.0000 and the mix's loudest pieces fell from 0.0329 to nought, where the build before read 0.908 of the
+  near window (fix 4 of 4 on the first run, control 2 of 2).
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

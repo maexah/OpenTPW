@@ -602,14 +602,15 @@ public sealed class ParkAudio : Entity
 	///
 	/// The original plays it as a placed sound - Sound_PlayEffect's fourth, fifth and sixth arguments
 	/// are a position, not the single volume a decompile makes them look like - and the place it
-	/// passes is the bolt's <i>top</i>, three hundred units up.
+	/// passes is the bolt's <i>top</i>, three hundred units up. It is heard over its variation's own range, 1500
+	/// (<see cref="SoundCategory.RangeOf"/>).
 	/// </summary>
 	internal void Thunder( Vector3 at )
 	{
 		if ( !Audio.Ready )
 			return;
 
-		_ambient?.Play( ThunderEffect, ThunderVolume, bus: AudioBus.Effects, position: at );
+		_ambient?.Play( ThunderEffect, ThunderVolume, bus: AudioBus.Effects, position: at, ownRange: true );
 	}
 
 	/// <summary>
@@ -703,7 +704,8 @@ public sealed class ParkAudio : Entity
 
 	/// <summary>
 	/// Sounds one child of a held scream: a sample of that variation, placed at the ride, at the
-	/// chain's level. <see cref="ParkScreams"/> decides when and which; this is only the sound.
+	/// chain's level, heard over the variation's own range (<see cref="SoundCategory.RangeOf"/>).
+	/// <see cref="ParkScreams"/> decides when and which; this is only the sound.
 	/// </summary>
 	/// <remarks>
 	/// The gain is <see cref="ScreamVolume"/>, the value the original gives the voice's parameter 6.
@@ -714,7 +716,7 @@ public sealed class ParkAudio : Entity
 	private Voice? PlayScream( ParkScreams.Chain chain, int variation )
 	{
 		var voice = Audio.Play( _kids?.PickFrom( chain.Effect, variation ), ScreamVolume( chain.Level ) / 100f,
-			bus: AudioBus.Effects, position: chain.At );
+			bus: AudioBus.Effects, position: chain.At, range: _kids?.RangeOf( chain.Effect, variation ) );
 
 		if ( voice != null )
 			_screamSamples.Add( voice.Name );
@@ -758,7 +760,7 @@ public sealed class ParkAudio : Entity
 			return false;
 		}
 
-		var voice = _kids.Play( effect, SingleScreamVolume, bus: AudioBus.Effects, position: at );
+		var voice = _kids.Play( effect, SingleScreamVolume, bus: AudioBus.Effects, position: at, ownRange: true );
 
 		if ( voice == null )
 			return false;
@@ -792,13 +794,13 @@ public sealed class ParkAudio : Entity
 			return false;
 
 		var voice = _kids.Play( PutOffEffect, SingleScreamVolume, respectDelay: false, bus: AudioBus.Effects,
-			position: at );
+			position: at, ownRange: true );
 
 		if ( voice == null )
 			return false;
 
 		Log.Info( $"Park audio: put off, effect {PutOffEffect} sample '{voice.Name}' "
-			+ $"at ({at.X:0.0},{at.Y:0.0},{at.Z:0.0})" );
+			+ $"at ({at.X:0.0},{at.Y:0.0},{at.Z:0.0}) range {voice.Range ?? 0f:0} gain {voice.DistanceGain:0.0000}" );
 
 		return true;
 	}
@@ -806,8 +808,9 @@ public sealed class ParkAudio : Entity
 	/// <summary>
 	/// A <c>cat_staff</c> effect where a member of staff stands (<c>FUN_004faa00</c>, <c>Sound_PlayEffect</c> with no
 	/// handle): a variation evenly, a sample of it by weight, and the volume and pitch drawn from the variation's
-	/// own bytes (<c>0x006bbbe0</c>; <c>docs/exe/audio.md</c>, "The staff's voices"). Most draws land on the bank's
-	/// 9 ms blank sample, which is played as any other.
+	/// own bytes (<c>0x006bbbe0</c>; <c>docs/exe/audio.md</c>, "The staff's voices"), heard over the variation's
+	/// own range (<see cref="SoundCategory.RangeOf"/>). Most draws land on the bank's 9 ms blank sample, which is
+	/// played as any other.
 	/// </summary>
 	/// <remarks>
 	/// The volume's scale past the byte is <see cref="CrowdVoiceGain"/>, measured for the crowd's flat voice and not
@@ -828,7 +831,7 @@ public sealed class ParkAudio : Entity
 		var volume = Controlled( headers[variation], 1, 0, 0, _staffRandom );
 		var pitch = Controlled( headers[variation], 2, 0, 0, _staffRandom );
 		var voice = Audio.Play( _staff.PickFrom( effect, variation ), volume / 100f * CrowdVoiceGain,
-			bus: AudioBus.Effects, position: at );
+			bus: AudioBus.Effects, position: at, range: _staff.RangeOf( effect, variation ) );
 
 		if ( voice == null )
 			return false;
@@ -837,7 +840,7 @@ public sealed class ParkAudio : Entity
 		StaffSounds = (StaffSounds.Started + 1, StaffSounds.Voiced + (voice.Name.StartsWith( BlankSample ) ? 0 : 1));
 
 		Log.Info( $"Park audio: staff effect 0x{effect:x} sample '{voice.Name}' volume {volume} pitch {pitch} "
-			+ $"at ({at.X:0.0},{at.Y:0.0},{at.Z:0.0})" );
+			+ $"at ({at.X:0.0},{at.Y:0.0},{at.Z:0.0}) range {voice.Range ?? 0f:0} gain {voice.DistanceGain:0.0000}" );
 
 		return true;
 	}
@@ -864,7 +867,7 @@ public sealed class ParkAudio : Entity
 			return false;
 
 		var voice = _kids.Play( YawnEffect, SingleScreamVolume, respectDelay: false, bus: AudioBus.Effects,
-			position: at );
+			position: at, ownRange: true );
 
 		if ( voice == null )
 			return false;

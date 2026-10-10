@@ -16,6 +16,7 @@ place to look for tools. Each file's docstring is its manual.
 | `lib/mixmatch.py` | One sample measured in OpenTPW's own mix (`AUDIO_FILE`): `template( sdt, index )` decodes a bank's entry, `window( file, from, to )` cuts the capture between two sizes, `match()` is the best match and its least-squares gain, `steady()` the gain of a looped sample under other sounds, from 0.3 s pieces in 2 s steps |
 | `lib/parkscene.py` | exec'd after `parkrun.py`: the one-line census readers (`var`, `thing_line`, `staff_line`, `bumper_line`, `field`) and the Hot Pot scenes (`hot_pot`, `in_a_go`, `broken_pot`), so a confirm script does not write them again |
 | `lib/parkfile.py` | The one reader of a park file: `Park` (things, cells, sprites), `track()` (the track-rides module, cars and riders), `models()` (every model record: item, flags, node words, lookup records, channels), `head()` (a sprite), `emitters()`, `emitter_words()` and `emitter_aim()` (the particles module's live emitters by their chains, where one is not its template, and its own velocity at `+0x38`; `parkfile.py -e <file>` prints them). Add a module's reader here, not in an item's folder |
+| `lib/sfxmap.py <data dir> [<cat_..SFX.map> [effect]]` | A sound category's effects and variation headers (flags, parameter, volume, pitch, wait, range), walked as the loader walks them; with the data folder alone, the spread of every variation's range over all 31 files. Importable (`Category`, `categories`) |
 | `lib/md2surf.py <wad> <member.md2> [x z]` / `--sweep <data dir>` | A model's header float, lookup records and the faces a point stands on, with the height under a model point; the sweep counts them over every wad. Importable (`Model`): a reader of a `.md2`'s header, lookup table, meshes, vertices and faces to build a model check on |
 | `lib/mutate.py <mutations.py>` | Putting an item's bugs back, in parallel, in copies of the tree (`WORKFLOW.md`, "Verifying") |
 | `lib/stryker.sh <project> <File.cs>...` | Mechanical bugs in a file, Stryker.NET |
@@ -84,6 +85,11 @@ whole list):
   where 0.176 was owed). Take byte marks either side of an 8 s sleep and use `mixmatch.steady`: a 1.5 s
   template scores 0.2 under the park's screams, a 0.3 s piece 1.000 in the gaps. `placed` prints the listener
   and each of the land's sounds with its distance and gain (Q264).
+- **A ride that screams, and nothing heard:** the Belly Bounce (thing 13, cell (51,23)) screams inside a minute
+  of the stock park's start; `camera 515 235 60 180` puts the listener 34 units off it, and `camera 1100 1100 110
+  180` is 750 and more from every sound in the park, where the mix with `bus music 0` is exact nought. `voices`
+  prints each ranged voice's place, range, distance and gain; a scream's child lives a second or so, so poll it
+  every 0.4 s and gather (Q265).
 - **The orbit camera's eye is not `zoom` from the point it looks at where the ground is high:** the eye is
   lifted by the ground's height under the point and the point stays at height nought. Over the waterfall
   (ground about 12) `camera 530 513 30 180` puts the eye 38.5 off, not 30. Read `placed`'s listener, do not
@@ -138,6 +144,9 @@ GH=766` there, or the pointer is off):
 - **How loud its mixer plays a voice** is read, not captured: `mixer.py PID` after a load prints each channel's
   distance and gain (Q263's camera files `q263/files/aim-*.TPWS` step the listener away from the waterfall). A
   channel marked `dirty` has not been worked out since it last moved: read the ones that are not (Q264).
+- **Its mixer over a ride's screams:** a file saved under `parkrun.original_view( 515, 235 )` puts its listener
+  about 50 units from the Belly Bounce, and `POLL='python3 .../mixer.py %PID% 150'` reads the scream channels (a
+  mapping of 2.0, 95.0, 0.80 at (525, 250, 0)) and the staff's as they come and go (Q265).
 - **A camera file's listener is not where the camera was aimed:** `camera 531 513 110 180` saved here reads a
   listener of (546, 50, 476) there. Read it (`voices.py`'s first line) rather than work it out (Q263).
 - **A point's place on its screen** is its park place (x, the height, z) through the matrix at `[0x0087b088]`,

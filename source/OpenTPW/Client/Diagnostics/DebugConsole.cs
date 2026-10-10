@@ -114,16 +114,28 @@ public static class DebugConsole
 
 	/// <summary>
 	/// The voices the mixer holds, in the order they were started: name, bus, placed or flat, and whether each
-	/// loops, is held, or has been told to stop.
+	/// loops, is held, or has been told to stop. A placed voice with a range reads its place, the range, how far
+	/// the listener is from it and what that distance last made of it.
 	/// </summary>
 	private static string Voices()
 	{
 		lock ( Audio.Lock )
 		{
 			return $"voices {Audio.Voices.Count}: " + string.Join( ", ", Audio.Voices.Select( voice =>
-				$"{voice.Name} {voice.Bus} {(voice.IsPlaced ? "placed" : "flat")}" +
+				$"{voice.Name} {voice.Bus} {(voice.IsPlaced ? "placed" : "flat")}" + Ranged( voice ) +
 				(voice.Loop ? " looped" : "") + (voice.IsHeld ? " held" : "") + (voice.Playing ? "" : " stopped") ) );
 		}
+	}
+
+	private static string Ranged( Voice voice )
+	{
+		if ( voice.Place is not { } place || voice.Range is not { } range )
+			return "";
+
+		var distance = (place - Camera.Ears).Length;
+
+		return $" at ({place.X:F0},{place.Y:F0},{place.Z:F0}) range {range:F0} distance {distance:F2} "
+			+ $"law {AudioListener.RangeGain( distance, range ):F4} gain {voice.DistanceGain:F4}";
 	}
 
 	/// <summary>

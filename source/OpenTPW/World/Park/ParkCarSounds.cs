@@ -89,7 +89,7 @@ public sealed class ParkCarSounds : ParkBumperCars.ISounds
 		};
 
 		held.Voice = Audio.Play( rides.PickFrom( effect, 0 ), Level( held, 1, header.Volume ) / 100f, loop: true,
-			bus: AudioBus.Effects, position: at )!;
+			bus: AudioBus.Effects, position: at, range: rides.RangeOf( effect, 0 ) )!;
 
 		if ( held.Voice is null )
 			return null;

@@ -48,12 +48,18 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q265. The writer: what else a made record leaves out.** The old Q264's other pieces, each counted or
+- [ ] **Q266. The writer: what else a made record leaves out.** The old Q265's other pieces, each counted or
   said in `saves.md`. Confirm: each piece's bytes beside a file of the original's own, and the file loaded in
   the original under Proton.
-  From Q264 (`audio.md`, "The mixer's distance law"; `park.md`, "The land's own sounds"): the law is owed to
-  every placed voice here, and only the land's two have it: screams, staff and thunder are flat and never out
-  of range (each needs its range: a variation's own, `+0x22`, is not decoded). The land's two type 3 records
+  From Q265 (`audio.md`, "A voice's range, and the rectangle it follows the listener in"): the original sounds
+  the Belly Bounce's scream at (525, 250) and OpenTPW at its thing's cell, (510, 230): which place a scream is
+  given is not read. Its scream channel's volume read 35 of 127, the variation's 47 times the sound effects'
+  75 over a hundred; the levels here (`ScreamVolume`, `SingleScreamVolume`, `CrowdVoiceGain` for the staff)
+  were not held against that. Not identified: the original's channels at the listener's own place with a
+  mapping of 2.0, 95.0, 0.80 and a volume of 10 of 127. Held by the tests alone, in no game run: thunder, a
+  single scream, a guest put off, a yawn; a bumper ride's engine's range is held by a game run and no test (no test
+  stands a track ride's script), and its voice is at height nought where its boat floats 30 up. A script's own started sounds (`ADDOBJ`) were not looked at.
+  From Q264 (`audio.md`, "The mixer's distance law"; `park.md`, "The land's own sounds"): the land's two type 3 records
   (gulls and the sea, a rectangle) and the level's own two type 1 are counted, not played
   (`SCAPE_OMP_SOUND_TYPE_3`, `SCAPE_OMP_SOUND_TYPE_1`): the level's own `cat_ambient` is not loaded, and the
   gulls' and sea's voice class (`0x0006`, `0x006be090`) is not decoded, nor why the level's ambient 181 had

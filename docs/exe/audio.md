@@ -153,6 +153,22 @@ game) with flag `0x80`, else the float at `+0x22` of the voice's variation, else
 voice flag `0x8`, the voice is flagged `0x800` and its channel given up (`FUN_006bca70`); inside it the flag is
 cleared and the voice plays on. Measured: a voice in range reads `0x00087`, one out of it `0x00886`.
 
+**A voice given no range takes its variation's** (`FUN_006bc650`'s second arm: the voice's `+8` is its variation's
+header, kept in memory as the file lays it out, and the float is at `+0x22`). Counted over all 1,595 variations in
+the 31 category files (`lib/sfxmap.py`, each file walked to its last byte): 100 in 738, 95 in 34 (every scream of
+`cat_kids` 71 to 90, and two of fantasy's ride variations), 90 in 80, 60 to 85 in 51 (the staff's are 60, 70, 75, 85, 90 and one 100), 10 to 50 in 13,
+150 and 170 in four of the global rides', 1500 in one (the global ambient's thunder, 32, which the game sounds
+from a bolt's top), 0.1 in 29 and nought in the 645 speech variations. All but two of the last 674 belong to effects flagged
+`0x200`, whose voices are given no mapping at all. `FUN_006bc410` hands the same number to the mixer as the
+mapping's far end, so every placed voice is turned down by the law of the next section over its own variation's
+range. **Held in the running original** (Q265, `original/mixer.py` over 150 s of the shipped park with the view on
+the Belly Bounce, `q265/orig/a-load.log`; predicted first, 2 of 2): the ride's scream channels read a mapping of
+2.0, 95.0 and 0.80 at (525, 250, 0), and on all 206 lines off the listener the gain was the law's (0.5653 at
+49.41); the staff's read 60, 75 and 90, others 80 and 100, and no channel read a number the files do not hold. A
+scream's channel volume read 0.2756, 35 of 127: its variation's 47 times the sound effects' 75 over a hundred.
+**Not read:** the channels that stood at the listener's own place with a mapping of 2.0, 95.0, 0.80 and a volume of
+10 of 127 (a distance of nought, so at full gain): which effect they are.
+
 **A voice may be given a rectangle** (`FUN_0051c5d0` → `FUN_006b64b0`): four whole numbers at
 `[voice + 0x4c] + 8`, x, z, a second x and a second z, and voice flag `0x1000`. With it `FUN_006bca10` first
 moves the voice (`FUN_006bd5f0`): to the listener's x held between the two x, the listener's own height, and
@@ -240,9 +256,21 @@ mapping of 2.0, 100.0 and 0.8 and a distance of 50.00, stale as they were read; 
 
 **What OpenTPW does.** `AudioListener.RangeGain` is the linear arm, and a voice played with a range of its own
 (`Audio.Play`'s `range`) is turned down by it, the distance over three axes. A park under the orbit camera is
-heard from the midpoint of the eye and the point it looks at (`CameraMode.Ears`), as below. Only the land's own
-sounds are given a range so far (`park.md`, "The land's own sounds"): screams, staff and thunder are still as
-loud at any distance, and a voice is still panned by a plain left and right.
+heard from the midpoint of the eye and the point it looks at (`CameraMode.Ears`), as below. The land's own
+sounds are given their record's range (`park.md`, "The land's own sounds"), and every other placed voice of a
+park its variation's (`SoundCategory.RangeOf`, Q265): a ride's screams and single screams, a guest put off, a
+yawn, the staff's voices, thunder and a bumper ride's engine. A voice out of range plays on unheard, where the
+original gives its channel up, and a voice is still panned by a plain left and right. The lobby's placed voices
+are OpenTPW's own and take no range.
+
+**Measured here, 2026-10-10** (`q265/confirm.py`, predicted first in `q265/PREDICTION.txt`; fix 4 of 4 on the
+first run, control 2 of 2). With the camera on the Belly Bounce `voices` read seven scream samples at range 95,
+34.09 off, each at a gain of 0.7128, the law's; 800 units off, seventeen ranged voices (screams, staff, the fall
+and the river) each read 0.0000 while 14 screams started, and the mix's loudest pieces fell from 0.0329 to
+nought. In the build before, the same far window read 0.908 of the near one. The staff's 82 log lines read ranges
+of 60, 70, 75 and 90. **Found, not built:** the original sounds the Belly Bounce's scream at (525, 250), and
+OpenTPW at its thing's cell, (510, 230). A Hot Pot's engine in a go read range 100 and 0.8252 at 22.92 units,
+and nought far off (`q265/engine.py`, 2 of 2).
 
 | Address | Original name | What it is | Evidence |
 |---|---|---|---|

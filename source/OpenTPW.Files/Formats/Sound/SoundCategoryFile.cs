@@ -112,9 +112,13 @@ public sealed class SoundCategoryFile
 	/// </param>
 	/// <param name="SecondKey">The byte at <c>+0x1a</c>: the second controller's parameter id, 0 none.</param>
 	/// <param name="SecondMask">The <c>u16</c> at <c>+0x1c</c>: the second controller's mask, read after the first's.</param>
+	/// <param name="Range">
+	/// The float at <c>+0x22</c>: how far off, in the world's units, a voice of this variation is heard, where the
+	/// voice was given no range of its own (<c>FUN_006bc650</c>). 95 in every scream variation.
+	/// </param>
 	public readonly record struct Variation( int Samples, int GapMin, int GapMax, int GapByParameter,
 		long Weight, IReadOnlyList<Zone> Zones, (int Low, int High) Volume = default, (int Low, int High) Pitch = default,
-		int FirstKey = 0, int SecondKey = 0, int SecondMask = 0 );
+		int FirstKey = 0, int SecondKey = 0, int SecondMask = 0, float Range = 0f );
 
 	/// <summary>
 	/// One 8-byte zone record: a held voice whose parameter lies within <paramref name="Low"/> to
@@ -351,7 +355,7 @@ public sealed class SoundCategoryFile
 		foreach ( var effect in Effects )
 		{
 			var headers = new List<(int Samples, int Zones, int GapMin, int GapMax, int GapByParameter, long Weight,
-				(int, int) Volume, (int, int) Pitch, int FirstKey, int SecondKey, int SecondMask)>();
+				(int, int) Volume, (int, int) Pitch, int FirstKey, int SecondKey, int SecondMask, float Range)>();
 			long previous = 0;
 
 			for ( int i = 0; i < effect.Variations; ++i )
@@ -372,7 +376,8 @@ public sealed class SoundCategoryFile
 					((sbyte)_sfx[offset + 0x0e], (sbyte)_sfx[offset + 0x0f]),
 					_sfx[offset + 0x16],
 					_sfx[offset + 0x1a],
-					BitConverter.ToUInt16( _sfx, offset + 0x1c ) ) );
+					BitConverter.ToUInt16( _sfx, offset + 0x1c ),
+					BitConverter.ToSingle( _sfx, offset + 0x22 ) ) );
 
 				previous = weight;
 				offset += VariationHeaderSize;
@@ -393,7 +398,8 @@ public sealed class SoundCategoryFile
 					zones[z] = new Zone( BitConverter.ToInt32( _sfx, offset ) - 1, _sfx[offset + 6], _sfx[offset + 7] );
 
 				variations.Add( new Variation( header.Samples, header.GapMin, header.GapMax, header.GapByParameter,
-					header.Weight, zones, header.Volume, header.Pitch, header.FirstKey, header.SecondKey, header.SecondMask ) );
+					header.Weight, zones, header.Volume, header.Pitch, header.FirstKey, header.SecondKey, header.SecondMask,
+					header.Range ) );
 			}
 
 			effects.Add( variations );
