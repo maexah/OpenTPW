@@ -135,6 +135,54 @@ public sealed class HeightfieldFile
 		return near + ((far - near) * alongY);
 	}
 
+	/// <summary>A cell flag: the cell is two triangles, each with its own slope (<c>FUN_004527f0</c>).</summary>
+	private const ushort SplitFlag = 0x800;
+
+	/// <summary>A cell flag, read with <see cref="SplitFlag"/>: the split runs from the far-x corner to the far-y one.</summary>
+	private const ushort OtherDiagonalFlag = 0x4;
+
+	/// <summary>
+	/// The landscape's height under a world position as the original answers it - <c>FUN_004527f0</c>: nought off the
+	/// map; on a cell not flagged <c>0x800</c>, the plane through its near corner and that corner's two neighbours,
+	/// across the whole cell; on a flagged one, the plane of whichever of its two triangles the point is in, split
+	/// along the diagonal from the near corner, or along the other where the cell's flags carry <c>0x4</c>.
+	/// </summary>
+	public float ScapeHeight( float worldX, float worldY )
+	{
+		if ( worldX < 0f || worldY < 0f || worldX >= CellsX * CellSizeX || worldY >= CellsY * CellSizeY )
+			return 0f;
+
+		var gridX = worldX / CellSizeX;
+		var gridY = worldY / CellSizeY;
+
+		var x = (int)gridX;
+		var y = (int)gridY;
+
+		var u = gridX - x;
+		var v = gridY - y;
+
+		var near = HeightAt( x, y );
+		var alongX = HeightAt( x + 1, y );
+		var alongY = HeightAt( x, y + 1 );
+		var far = HeightAt( x + 1, y + 1 );
+
+		var flags = FlagsAt( x, y );
+
+		if ( (flags & SplitFlag) == 0 )
+			return ((alongY - near) * v) + ((1f - u) * near) + (alongX * u);
+
+		if ( (flags & OtherDiagonalFlag) == 0 )
+		{
+			return v <= u
+				? ((far - alongX) * v) + (u * alongX) + ((1f - u) * near)
+				: ((1f - v) * -(alongY - near)) + ((1f - u) * alongY) + (far * u);
+		}
+
+		return 1f - v <= u
+			? (-(far - alongX) * (1f - v)) + (u * far) + ((1f - u) * alongY)
+			: ((alongY - near) * v) + ((1f - u) * near) + (alongX * u);
+	}
+
 	/// <summary>The flag word of a cell - the low half of its record.</summary>
 	public ushort FlagsAt( int x, int y ) => (ushort)(Cells[(y * CellsX) + x] & 0xFFFF);
 

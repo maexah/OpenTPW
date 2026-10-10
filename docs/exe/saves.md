@@ -2396,8 +2396,8 @@ float in each file**, where every car has one phase: 29.7999 at phase 1138, 29.7
 29.7958 and the tick before's 29.8017, the easing).
 
 **For the writer** ("OpenTPW's writer, a track ride's cars", below). A boat's eight are: 3, 2, the kept `+0x58`
-(`Car.Turned`), nought, nought, nought, the drawn height and -1. **Not decoded:** where
-the scene's 29.80 comes from (`FUN_00450ac0`, `FUN_00450ea0`, `FUN_004511a0`); what the loader does with
+(`Car.Turned`), nought, nought, nought, the drawn height and -1. The scene's 29.80 is the landscape's
+height plus the Hot Pot's model's header float (`park.md`, "The scene's height under a point"). **Not decoded:** what the loader does with
 `+0x24` and `+0x28` if the model made again answers other records (it reads them as the file has them);
 `+0x14`, `+0x18` and `+0x1c`, nought in all twelve (`+0x14` is a particle mark the other BumperTypes' steps
 set). **Not run:** either game; the words are the listing's and the original's own files'. The karts' and the
@@ -2445,9 +2445,9 @@ records give their slots up. A ride **sold** with cars is taken out with them, t
 none, where the original writes the session's handles (`SAVE_PARK_CAR_SMOKE` counts a smoking car; the
 particles module still goes out as the file's). The four pointers `+0x30`, `+0x94`, `+0x98`, `+0x9c` are
 nought; the loader makes each again. The model slots and the heads' sprite slots are dealt as the file is
-written, not as the cars were launched and the riders seated. **The height `+0xa0` stands about 0.2 above the
-original's**: the boats float on the top of the pot's water mesh, 30.0 with the bob, where the original's scene
-answers 29.80; the original draws it again on its first frame. With no boat drawn (the tests), the clip is
+written, not as the cars were launched and the riders seated. **The height `+0xa0` is the original's** since
+Q257s: the landscape's under the boat's four corners plus the pot's model's 29.8 (`park.md`, "The scene's height
+under a point", with its game run; Q257r wrote the top of the water mesh, 0.2 higher). With no boat drawn (the tests), the clip is
 one started as the file is written and the height nought, counted (`SAVE_PARK_CAR_NO_HEIGHT`). A loaded car's
 clip still starts from its first frame at the load (`SAVED_TRACK_CAR_MODEL_RECORDS`), so that is what a park
 loaded with boats writes.

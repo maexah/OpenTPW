@@ -1162,4 +1162,85 @@ public class ParkFileWriterTests
 
 	private static void SetCurrentPlayer( Player? player )
 		=> typeof( Players ).GetProperty( nameof( Players.Current ) )!.SetValue( Players.Roster, player );
+
+	/// <summary>
+	/// The scene's height under a point (<c>docs/exe/park.md</c>, "The scene's height under a point"): on a cell of a
+	/// bought Hot Pot's footprint, the landscape's height plus its model's 29.8; on grass, a path, or a cell of the
+	/// Belly Bounce, whose model says neither way and is counted once, the height the caller last had.
+	/// </summary>
+	[TestMethod]
+	public void ThePointsCellSaysWhoseHeightItTakes()
+	{
+		const int HotPot = 1140;
+
+		SetCurrentPlayer( new Player( 0, "Test", new PlayerFile { InstantAction = true } ) );
+
+		var catalogue = new ParkItemCatalogue( "jungle", FileSystem );
+		var people = new ParkPeople( shipped );
+		var state = people.State;
+
+		try
+		{
+			Assert.IsTrue( catalogue.TryGet( HotPot, out var item ) );
+
+			var id = state.NextThingId();
+
+			state.AddObject( ParkBuilding.Constructed( item, id, 41, 23, 0, MapStep.CellId( 41 + item.EntryDeltaX, 23 + item.EntryDeltaY ),
+				MapStep.CellId( 41 + item.ExitDeltaX, 23 + item.ExitDeltaY ), ParkWorld.BuiltWhen.At( state.CalendarNow ),
+				ParkBuilding.TakeTrackRide( state, item ) ) );
+			ParkBuilding.Stamp( state, ParkObjects.FootprintAt( item, 41, 23, 0 ), 41, 23 );
+			state.EnterCell( 41, 23, id );
+
+			HeightfieldFile field;
+
+			using ( var stream = FileSystem.OpenRead( "levels/jungle/terrain/base.MD2" )! )
+				field = new HeightfieldFile( stream );
+
+			var scene = new ParkSceneHeight( catalogue );
+			var (centreX, centreZ) = ParkBumperCars.ArenaCentre( item, 41, 23, 0 );
+			var (x, y) = (centreX * 10f / ParkBumperCars.CellUnits, centreZ * 10f / ParkBumperCars.CellUnits);
+
+			Unimplemented.Forget();
+
+			Assert.AreEqual( field.ScapeHeight( x, y ) + 29.8f, scene.Under( x, y, state, field, -7f ), 0.0001f, "in the pot" );
+			Assert.AreEqual( field.ScapeHeight( x + 9f, y - 6f ) + 29.8f, scene.Under( x + 9f, y - 6f, state, field, -7f ), 0.0001f, "and a cell over" );
+			Assert.AreEqual( 29.8f, scene.Under( x, y, state, field, -7f ), 0.01f, "the ground there is flat, at nought" );
+
+			Assert.AreEqual( -7f, scene.Under( 705f, 505f, state, field, -7f ), "on grass" );
+			Assert.AreEqual( -7f, scene.Under( 435f, 215f, state, field, -7f ), "on the path" );
+			Assert.AreEqual( -7f, scene.Under( x, y, state, null, -7f ), "with no landscape" );
+			Assert.AreEqual( 0, Counted( "SCENE_HEIGHT_OWN_MESH" ) + Counted( "SCENE_HEIGHT_SURFACE_MESHES" ) );
+
+			// A cell on a slope given to the pot takes the slope's height; a queue cell of the pot's is nobody's
+			// footprint; and a point past the landscape's edge asks the edge's cell, where the landscape answers nought.
+			var pot = (ushort)MapStep.CellId( 41, 23 );
+			var (hillX, hillY) = Enumerable.Range( 0, field.CellsX * field.CellsY ).Select( i => (i % field.CellsX, i / field.CellsX) )
+				.First( at => MathF.Abs( field.ScapeHeight( (at.Item1 + 0.25f) * 10f, (at.Item2 + 0.5f) * 10f ) ) > 5f
+					&& state.Record( at.Item1, at.Item2 ).Type == 0 );
+
+			state.SetRecord( hillX, hillY, state.Record( hillX, hillY ) with { Type = CellEdge.Footprint, ParentId = pot } );
+			Assert.AreEqual( field.ScapeHeight( (hillX + 0.25f) * 10f, (hillY + 0.5f) * 10f ) + 29.8f,
+				scene.Under( (hillX + 0.25f) * 10f, (hillY + 0.5f) * 10f, state, field, -7f ), 0.0001f, "on a slope" );
+
+			state.SetRecord( hillX, hillY, state.Record( hillX, hillY ) with { Type = ParkRideChoice.QueueCellType } );
+			Assert.AreEqual( -7f, scene.Under( (hillX + 0.25f) * 10f, (hillY + 0.5f) * 10f, state, field, -7f ), "a queue cell" );
+
+			var edge = field.CellsX - 1;
+
+			state.SetRecord( edge, 40, state.Record( edge, 40 ) with { Type = CellEdge.RideEnd, ParentId = pot } );
+			Assert.AreEqual( 29.8f, scene.Under( (field.CellsX * 10f) + 5f, 405f, state, field, -7f ), 0.0001f, "past the edge" );
+
+			var bounce = state.Objects.Single( thing => thing.ThingId == 13 );
+
+			Assert.AreEqual( CellEdge.Footprint, state.Record( bounce.CellX, bounce.CellY ).Type );
+			Assert.AreEqual( -7f, scene.Under( (bounce.CellX + 0.5f) * 10f, (bounce.CellY + 0.5f) * 10f, state, field, -7f ), "on the Belly Bounce" );
+			Assert.AreEqual( -7f, scene.Under( (bounce.CellX + 0.5f) * 10f, (bounce.CellY + 0.5f) * 10f, state, field, -7f ) );
+			Assert.AreEqual( 1, Counted( "SCENE_HEIGHT_OWN_MESH" ), "counted once an item" );
+		}
+		finally
+		{
+			people.Delete();
+			Entity.ApplyDeletions();
+		}
+	}
 }

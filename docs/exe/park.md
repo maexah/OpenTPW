@@ -1287,13 +1287,69 @@ rest too; the Hot Pot's script launches before it admits anyone). Each track tic
 `0x52` whichever target it takes, so `BUMP 12` refilling a car still flagged to unload keeps its new rider.
 
 **The draw** (`FUN_00546280`, once a frame a ride): x and z × 1/307.2 (`DAT_00700edc`), so a cell is 10 units; the
-four corners at the car's radius along its heading each take a height from the scene under them (`FUN_00450ac0`,
-`FUN_00450ea0`, `FUN_004511a0`, not decoded), plus, for flag `0x1000000`, a bob of 0.00125 (`DAT_00700ef0`) × the sine
+four corners at the car's radius along its heading each take a height from the scene under them ("The scene's
+height under a point", below), plus, for flag `0x1000000`, a bob of 0.00125 (`DAT_00700ef0`) × the sine
 of `+0x90` × 6, 4, 3 and 5, eased across the frame; the car stands at their average, pitched and rolled by their
 differences, turned `((heading - 0x100) & 0x1ff)` 512ths of a turn; its wake (flag `0x2000000`) trails it by its speed,
 0.7 higher. **A rider is attached to the car's seat node**, found as `0x80` and its seat id (`FUN_0044b220`) and
 attached by `FUN_0044b410`: the `b_car`'s one
 is `Head1` (id 1, flags `0x100000b1`); a second rider of a car has no node and is still counted seated.
+
+### The scene's height under a point
+
+Read for Q257s, first-hand in Ghidra, after Q257r wrote a boat's height 0.2 above the original's. The bumper draw
+asks for it under each car's four corners; a walk slot without flag bit 0 asks the same routines
+(`ride-operation.md`, the slot's `+0x1a`). Three calls.
+
+**Whose model** (`FUN_00450ac0( cellX, cellZ )`, each clamped to the landscape's size). A cell of the track grid
+holding a piece answers that piece's model (`FUN_0053bf30`). Otherwise `FUN_00527d60`: a cell of type 4, 9 or 10 (a
+footprint, an entrance, an exit) is followed to its **parent cell** (`+0x2a4`), and the first object on that cell's
+thing list (`FUN_004d99e0`, thing type 3) gives its model handle `+0x20`. Any other cell answers nought, and the
+caller keeps what it had: the bumper draw keeps the car's `+0xa0`, the height it last stood at.
+
+**Which way** (`FUN_00450ea0( model )`, kept in `DAT_0079fb10`):
+
+| Mode | When | The height (`FUN_004511a0`), each plus the model header's float `+0xa0` |
+|---|---|---|
+| 2 | the model's lookup records' shared flags carry `0x8`: some record's file flags carry `0x2` | the highest face under the point of the meshes whose record carries `0x2` (`FUN_00451290`, `FUN_00451390`): only faces whose first word carries `0x8000`, the point inside all three edges seen from above, the height from the face's normal; a record with `0x4` ends at its first face. The vertices are the rest pose's, moved by each node's translation chain and the object's place and quarter turn (`FUN_00450f20`): no clip moves them |
+| 1 | else the header's flags `+0x30` carry `0x80`, or its float `+0xa0` is not nought | the landscape's under the point (`FUN_004527f0`) |
+| 4 | else | the one mesh the model's instance keeps at `+0x2c`, with the normals at `+0x30`; a miss answers the root node's own height. Not read: who sets `+0x2c` |
+
+A miss in mode 2 answers -100 (`0xc2c80000`), which the bumper draw replaces with the car's `+0xa0`. A float at
+`+0xa0` that is not a number is set to nought first (`FUN_0067b410`).
+
+**The landscape's height** (`FUN_004527f0( x, z )`, world units, a cell 10): nought off the map. On a cell whose
+flags lack `0x800`, `near + (alongX - near) × u + (alongZ - near) × v`: the plane of the near corner and its two
+neighbours across the whole cell, the far corner not read. With `0x800` the cell is two triangles, split from the
+near corner (`v <= u` takes near, alongX, far) or, with `0x4`, along the other diagonal. **No cell of the four parks
+carries `0x800`** (32,640 counted, 1,743 of them not flat), so those two arms are dead by CONTENT.
+
+**The Hot Pot** (`bumper.MD2`): no record with `0x2`, no face with `0x8000`, and `+0xa0` = **29.8**. So a boat's corner
+reads the ground under it plus 29.8, and the water mesh is never asked: its top stands at about 30.005. Measured
+over all 2,129 models (`md2surf.py --sweep`, FileFormats `models.md`, "The surface a point stands on"): 83 static
+models carry the float, 47 lookup records carry `0x2` (each with `0x4`) in 32 models, and all 2,182 faces with
+`0x8000` are on those meshes.
+
+**OpenTPW** (`ParkSceneHeight.Under`, `HeightfieldFile.ScapeHeight`, `ModelFile.SurfaceLift` and `HasSurfaceMeshes`,
+`ParkBumperBoats.Float`). Mode 1 by the float is built, and a boat stands at the average of its four corners'. A
+model with a `0x2` record is counted and keeps the last height (`SCENE_HEIGHT_SURFACE_MESHES`), as is one with
+neither (`SCENE_HEIGHT_OWN_MESH`); a track piece's cell is read as any other cell, since no car here drives on one;
+header flag `0x80`, which no file stores, is not read. The corner that keeps the last height keeps the boat's, nought
+at its first drawing, where the original's is the car's `+0xa0`, which a load fills from the file.
+
+**Confirmed** (`q257s/confirm.py`, on the desktop; `PREDICTION.txt` first). A Hot Pot bought on (41,23), four boats in
+a go, paused: `bumpers` read `height 29.6561` on all four at phase 596, the file's `+0xa0` the same, and less its
+bob 29.7986 to 29.8011 (the frame's easing is between the two); the original's own three files read 29.7993, 29.7994
+and 29.7958. No gap counted. **The control** (the build before): 29.9475, less its bob 30.0018 to 30.0081. **The
+original under Proton** (`loadfile.sh`, `q257r/orig/cars.py`, `q257s/orig/a-load.log`): after the list's click the
+four cars stood at the file's places, timer 666, riders 33, 44, 45 and 46, and its own `+0xa0` read 29.6573 at the
+file's phase beside the file's 29.6561; Q257r's file was 0.2053 off. Its frame and OpenTPW's both show four boats in
+the water (`orig/a-2-loaded.png`, `pot-fix-left-control-right.png`); 0.2 of a unit is under what either frame
+resolves, so the height is the census's and the file's, not the picture's. **Predictions wrong, mine:** that the Hot
+Pot would have a `0x2` mesh 0.2 under its water (it has the float instead); that under 20 models carry the float (83);
+that the control would read 30.000 (30.005); and the first build looked for the object on the corner's own cell, not
+its parent's, found none, and sank every boat to -82 in the first game run. **Not run:** a pot on sloping ground (the
+stock ground under it is flat, at nought), a boat with a corner off its ride's cells, either other mode.
 
 ### How a bumper ride's cars move
 

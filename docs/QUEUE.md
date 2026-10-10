@@ -48,12 +48,10 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q257s. The writer: what else a made record leaves out.** The old Q257r's other pieces, each counted or
+- [ ] **Q257t. The writer: what else a made record leaves out.** The old Q257s's other pieces, each counted or
   said in `saves.md`. Confirm: each piece's bytes beside a file of the original's own, and the file loaded in
   the original under Proton.
-  From Q257r (`saves.md`, "OpenTPW's writer, a track ride's cars"): a car's height `+0xa0` is written about 0.2
-  above the original's, the boats floating on the top of the water mesh: decode where the scene's water height
-  comes from (`FUN_00450ac0`, `FUN_004511a0`) and float them there. A car's held sound and smoke are written
+  From Q257r (`saves.md`, "OpenTPW's writer, a track ride's cars"): a car's held sound and smoke are written
   as none (`SAVE_PARK_CAR_SMOKE`). A loaded car's two model records are still not read, so its clip starts
   from its first frame, and that is what a park loaded with boats then writes (`SAVED_TRACK_CAR_MODEL_RECORDS`).
   A loaded rider's sprite is made at the load, not as the ride lets them go, and a live rider's is never
@@ -106,6 +104,12 @@ the research lab), then the rest of this section in its old order.
   every `ADDOBJ` of a known type keeps one here: decode when `Particles_Spawn` and `Sound_PlayEffect` answer
   nought (a category without the id, `park.md`, "ADDOBJ"), then keep no record there. `SETOBJPARAM`'s handle
   stored back is not kept. And not seen in the original: what its scripts do with a record whose handle is nought.
+  From Q257s (`park.md`, "The scene's height under a point"): the scene's height is built for a model whose
+  header float is not nought (the Hot Pot). Counted and left at the last height: a model with meshes to stand on
+  (`SCENE_HEIGHT_SURFACE_MESHES`: the karts' bridges, the water ride's raised pieces) and one with neither
+  (`SCENE_HEIGHT_OWN_MESH`: the mesh at the instance's `+0x2c`, whose setter is not read). Not read: a track
+  piece's cell (`FUN_0053bf30`), header flag `0x80`'s setter, and a loaded car's own `+0xa0` as the height a
+  corner off its ride keeps. A boat's rocking from its corners is still `BUMPER_CAR_ROCK`.
 - [ ] **Q241j. The writer: the managers, then Save Game saves.** From Q241e. The economy thing's loans and rings,
   the staff HQ's strikes, the calendar's and the weather's fields; then `ParkSaveScreen.Save` writes
   (`SAVE_GAME_WRITER` gone), an overwrite replaces the file, and the Load Park list shows it. Confirm: a park

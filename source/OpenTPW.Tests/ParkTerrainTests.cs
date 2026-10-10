@@ -1,4 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -249,5 +250,73 @@ public class ParkTerrainTests
 			$"{key} is '{value}', which is not a cell" );
 
 		return cell;
+	}
+
+	/// <summary>
+	/// The landscape's height as the original answers it (<c>docs/exe/park.md</c>, "The scene's height under a
+	/// point"): nought off the map, and on it the plane of three of the cell's corners - the near one and its two
+	/// neighbours, or, on a cell flagged <c>0x800</c>, the triangle the point is in, split along one diagonal or,
+	/// with <c>0x4</c>, the other. Held against each plane worked out from its three corners, at five points of every
+	/// cell of all four parks.
+	/// </summary>
+	[TestMethod]
+	public void TheLandscapesHeightIsThePlaneOfThreeOfItsCellsCorners()
+	{
+		static float Plane( (float U, float V, float H) a, (float U, float V, float H) b, (float U, float V, float H) c, float u, float v )
+		{
+			var nx = ((b.V - a.V) * (c.H - a.H)) - ((b.H - a.H) * (c.V - a.V));
+			var ny = ((b.H - a.H) * (c.U - a.U)) - ((b.U - a.U) * (c.H - a.H));
+			var nz = ((b.U - a.U) * (c.V - a.V)) - ((b.V - a.V) * (c.U - a.U));
+
+			return a.H - (((nx * (u - a.U)) + (ny * (v - a.V))) / nz);
+		}
+
+		(float U, float V)[] points = [(0.25f, 0.25f), (0.75f, 0.25f), (0.25f, 0.75f), (0.75f, 0.75f), (0.5f, 0.125f)];
+		int plain = 0, split = 0, other = 0, bent = 0;
+
+		foreach ( var theme in Themes )
+		{
+			var field = Landscape( theme );
+
+			Assert.AreEqual( 0f, field.ScapeHeight( -0.5f, 5f ), theme );
+			Assert.AreEqual( 0f, field.ScapeHeight( 5f, -0.5f ), theme );
+			Assert.AreEqual( 0f, field.ScapeHeight( field.CellsX * field.CellSizeX, 5f ), theme );
+			Assert.AreEqual( 0f, field.ScapeHeight( 5f, field.CellsY * field.CellSizeY ), theme );
+
+			for ( var y = 0; y < field.CellsY; ++y )
+			{
+				for ( var x = 0; x < field.CellsX; ++x )
+				{
+					var near = (0f, 0f, field.HeightAt( x, y ));
+					var alongX = (1f, 0f, field.HeightAt( x + 1, y ));
+					var alongY = (0f, 1f, field.HeightAt( x, y + 1 ));
+					var far = (1f, 1f, field.HeightAt( x + 1, y + 1 ));
+					var flags = field.FlagsAt( x, y );
+
+					if ( MathF.Abs( near.Item3 + far.Item3 - alongX.Item3 - alongY.Item3 ) > 0.01f )
+						++bent;
+
+					if ( (flags & 0x800) == 0 )
+						++plain;
+					else if ( (flags & 0x4) == 0 )
+						++split;
+					else
+						++other;
+
+					foreach ( var (u, v) in points )
+					{
+						var want = (flags & 0x800) == 0 ? Plane( near, alongX, alongY, u, v )
+							: (flags & 0x4) == 0 ? (v <= u ? Plane( near, alongX, far, u, v ) : Plane( near, alongY, far, u, v ))
+							: (1f - v <= u ? Plane( alongX, far, alongY, u, v ) : Plane( near, alongX, alongY, u, v ));
+
+						Assert.AreEqual( want, field.ScapeHeight( (x + u) * field.CellSizeX, (y + v) * field.CellSizeY ), 0.002f,
+							$"{theme} cell ({x},{y}) flags 0x{flags:x} at ({u},{v})" );
+					}
+				}
+			}
+		}
+
+		Console.WriteLine( $"cells not flagged 0x800: {plain}; flagged: {split}; flagged with 0x4: {other}; not flat: {bent}" );
+		Assert.IsTrue( plain > 0 && bent > 0, "the parks have cells of the plain kind, and cells that are not flat" );
 	}
 }

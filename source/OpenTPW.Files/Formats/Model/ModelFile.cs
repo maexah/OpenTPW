@@ -883,6 +883,19 @@ public partial class ModelFile : BaseFormat
 	public int LookupCount { get; private set; }
 
 	/// <summary>
+	/// The header's float at <c>0xa0</c>: what the engine adds to a height it takes for a point on this model
+	/// (<c>FUN_004511a0</c>), and, where it is not nought, what makes that height the landscape's under the point
+	/// (<c>FUN_00450ea0</c>). The jungle Hot Pot's is 29.8, its water. FileFormats models.md, "The surface a point stands on".
+	/// </summary>
+	public float SurfaceLift { get; private set; }
+
+	/// <summary>
+	/// Whether a lookup record's flags carry <c>0x2</c>: the model has meshes a point stands on, and the engine takes
+	/// a height on it from their faces marked <c>0x8000</c> (<c>FUN_00451290</c>), which nothing here reads.
+	/// </summary>
+	public bool HasSurfaceMeshes => Nodes.Exists( node => node.Id >= 0 && (node.IdFlags & 0x2) != 0 );
+
+	/// <summary>
 	/// Attaches each node's lookup id and flags, from the table the engine searches by id and flag
 	/// (0x0044b220).
 	///
@@ -912,6 +925,12 @@ public partial class ModelFile : BaseFormat
 
 		LookupFirst = firstNode;
 		LookupCount = count;
+
+		if ( stream.Length >= 0xa4 )
+		{
+			stream.Seek( 0xa0, SeekOrigin.Begin );
+			SurfaceLift = reader.ReadSingle();
+		}
 
 		stream.Seek( 0x7C, SeekOrigin.Begin );
 		var table = reader.ReadUInt32();

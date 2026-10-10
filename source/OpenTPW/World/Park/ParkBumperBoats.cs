@@ -13,10 +13,8 @@ namespace OpenTPW;
 /// clip its car plays: none at rest, role 5 (<c>b_carm</c>) in a go.
 /// </para>
 /// <para>
-/// <b>Two departures, said here.</b> The height is the top of the ride's own water mesh, where the original asks the
-/// scene for the surface under each of four points (not decoded; <c>docs/exe/park.md</c>, the same section): the Hot
-/// Pot's <c>water01</c> is flat to 0.2 units, so the two agree there. And the rocking the original works out from the
-/// four points' bob is not drawn (<c>BUMPER_CAR_ROCK</c>), nor the wake under a boat (<c>BUMPER_CAR_WAKE</c>).
+/// <b>Two departures, said here.</b> The rocking the original works out from the four corners' heights is not drawn
+/// (<c>BUMPER_CAR_ROCK</c>), nor the wake under a boat (<c>BUMPER_CAR_WAKE</c>).
 /// </para>
 /// </summary>
 public sealed class ParkBumperBoats : Entity
@@ -61,14 +59,18 @@ public sealed class ParkBumperBoats : Entity
 	/// <summary>The slots whose boat would not stand, not tried again until the car leaves the pool.</summary>
 	private readonly HashSet<int> _failed = [];
 
-	/// <summary>Each ride's water height above its own origin, by handle, read once.</summary>
-	private readonly Dictionary<int, float?> _water = [];
+	/// <summary>The scene's height under a boat's corner.</summary>
+	private readonly ParkSceneHeight _scene;
+
+	/// <summary>A corner's reach, <c>DAT_00700ee0</c>: a 1024th of the sine's step × 4 × the car's radius.</summary>
+	private const float CornerScale = 1f / 1024f;
 
 	public ParkBumperBoats( string themeName, ParkItemCatalogue? catalogue )
 	{
 		Name = "bumper boats";
 		_theme = themeName.ToLowerInvariant();
 		_catalogue = catalogue;
+		_scene = new ParkSceneHeight( catalogue );
 		Current = this;
 	}
 
@@ -328,9 +330,10 @@ public sealed class ParkBumperBoats : Entity
 
 	/// <summary>
 	/// Stands a boat where its car floats - <c>FUN_00546280</c>: the position at 1/307.2 of a unit, the heading as
-	/// <c>((heading - 0x100) &amp; 0x1ff)</c> 512ths of a turn, and the four corners' bob averaged, each eased back
-	/// from this tick's toward the last by the part of a tick not yet come: the park passes
-	/// <c>(now - stepped) / 31</c>, between -1 and 0, since its catch-up loop steps past now (<c>0x0054fa0d</c>).
+	/// <c>((heading - 0x100) &amp; 0x1ff)</c> 512ths of a turn, and the height the average of its four corners', each
+	/// the scene's under it (<see cref="ParkSceneHeight"/>) plus its bob, eased back from this tick's toward the last by the part
+	/// of a tick not yet come: the park passes <c>(now - stepped) / 31</c>, between -1 and 0, since its catch-up loop
+	/// steps past now (<c>0x0054fa0d</c>).
 	/// </summary>
 	private void Put( Boat boat, ParkBumperCars.Car car, ParkState state )
 	{
@@ -342,24 +345,39 @@ public sealed class ParkBumperBoats : Entity
 		var x = (car.X + car.VelocityX * ease) / ParkBumperCars.CellUnits * cellX;
 		var y = (car.Z + car.VelocityZ * ease) / ParkBumperCars.CellUnits * cellY;
 
-		var height = WaterUnder( car.Ride, state ) ?? field?.HeightAtWorld( x, y ) ?? 0f;
-
-		// Each corner bobs on its own multiple of the phase, 6, 4, 3 and 5 (0x0054658c..0x005466c0); their average is
-		// the height.
-		if ( (car.Flags & ParkBumperCars.CarFlags.Bobs) != 0 )
-		{
-			var bob = Bob( car.Phase, 6, ease ) + Bob( car.Phase, 4, ease ) + Bob( car.Phase, 3, ease ) + Bob( car.Phase, 5, ease );
-
-			height += bob * BobScale * 0.25f;
-		}
-
 		// The original passes this as the third of the angles it turns the model by, its heading eased back by its turn,
 		// truncated to a whole 512th (0x00546409..0x00546439).
 		var heading = car.Heading - (int)(car.Turn * -ease);
+
+		var radius = state.TrackRides.Cars.RideOf( car.Ride )?.CarRadius ?? car.Radius;
+		var last = boat.Height;
+
+		var height = Float( x, y, heading, radius, cellX, cellY, ( cornerX, cornerY ) => _scene.Under( cornerX, cornerY, state, field, last ) );
+
+		// Each corner bobs on its own multiple of the phase, 6, 4, 3 and 5 (0x0054658c..0x005466c0); the height is
+		// the four's average, so a quarter of their bobs.
+		if ( (car.Flags & ParkBumperCars.CarFlags.Bobs) != 0 )
+			height += (Bob( car.Phase, 6, ease ) + Bob( car.Phase, 4, ease ) + Bob( car.Phase, 3, ease ) + Bob( car.Phase, 5, ease )) * BobScale * 0.25f;
+
 		var yaw = ((heading - 0x100) & 0x1ff) * (MathF.Tau / 512f);
 
 		boat.Height = height;
 		boat.Model.SetTransform( new Vector3( x, y, height ), Quaternion.CreateFromAxisAngle( System.Numerics.Vector3.UnitZ, -yaw ) );
+	}
+
+	/// <summary>
+	/// The height a car stands at before its bob: the average of the scene's under its four corners, which stand the
+	/// ride's car radius from its middle, ahead, behind and to each side (<c>0x0054643f</c>..<c>0x005464e6</c>).
+	/// </summary>
+	internal static float Float( float x, float y, int heading, int radius, float cellX, float cellY, Func<float, float, float> under )
+	{
+		var ahead = (ParkBumperCars.Sine( heading ) << 2) * (float)radius * CornerScale / ParkBumperCars.CellUnits;
+		var aside = (ParkBumperCars.Sine( heading + 0x80 ) << 2) * (float)radius * CornerScale / ParkBumperCars.CellUnits;
+
+		return (under( x + ahead * cellX, y + aside * cellY )
+			+ under( x - ahead * cellX, y - aside * cellY )
+			+ under( x - aside * cellX, y + ahead * cellY )
+			+ under( x + aside * cellX, y - ahead * cellY )) * 0.25f;
 	}
 
 	/// <summary>One corner's bob, eased back toward the last tick's: <c>s[p×m] + (s[p×m] - s[p×m - m]) × ease</c>.</summary>
@@ -368,56 +386,6 @@ public sealed class ParkBumperBoats : Entity
 		var now = ParkBumperCars.Sine( phase * multiple );
 
 		return now + (now - ParkBumperCars.Sine( phase * multiple - multiple )) * ease;
-	}
-
-	/// <summary>
-	/// The height of a ride's water in the world: its object's origin plus the top of the mesh its model names
-	/// <c>water</c>, or null with none, which is counted and floats the boat on the ground.
-	/// </summary>
-	private float? WaterUnder( int handle, ParkState state )
-	{
-		if ( RideItem( handle, state ) is not { } found )
-			return null;
-
-		var (item, placed) = found;
-
-		if ( !_water.TryGetValue( handle, out var top ) )
-		{
-			top = WaterTop( item );
-			_water[handle] = top;
-
-			if ( top is null )
-				Unimplemented.Report( "BUMPER_RIDE_NO_WATER_MESH" );
-		}
-
-		return top is { } above ? ParkObjects.OriginFor( placed.CellX, placed.CellY, placed.Angle ).Z + above : null;
-	}
-
-	private float? WaterTop( ParkItemCatalogue.Item item )
-	{
-		using var stream = FileSystem.OpenRead( $"{item.Directory}/{item.Stem}.MD2" );
-
-		if ( stream is null )
-			return null;
-
-		var file = new ModelFile( stream );
-		float? top = null;
-
-		foreach ( var mesh in file.Meshes )
-		{
-			if ( mesh.Name is null || !mesh.Name.StartsWith( "water", StringComparison.OrdinalIgnoreCase ) || mesh.Vertices is null )
-				continue;
-
-			foreach ( var vertex in mesh.Vertices )
-			{
-				var at = System.Numerics.Vector3.Transform(
-					new System.Numerics.Vector3( vertex.Position.X, vertex.Position.Y, vertex.Position.Z ), mesh.WorldTransform );
-
-				top = top is { } high ? MathF.Max( high, at.Y ) : at.Y;
-			}
-		}
-
-		return top;
 	}
 
 	/// <summary>The catalogue item and the placed thing whose track handle is this one.</summary>

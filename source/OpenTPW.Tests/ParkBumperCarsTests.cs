@@ -493,6 +493,51 @@ public class ParkBumperCarsTests
 		Assert.AreEqual( 181, ParkBumperCars.Sine( 64 ), "sin 45 degrees times 256, 181.02, truncated" );
 		Assert.AreEqual( ParkBumperCars.Sine( 3 ), ParkBumperCars.Sine( 515 ), "wraps at 512" );
 	}
+
+	/// <summary>
+	/// A car's height before its bob is the average of the scene's under its four corners, the ride's car radius from
+	/// its middle: ahead, behind and to each side (<c>docs/exe/park.md</c>, "Where a bumper ride's cars float"). The
+	/// Hot Pot's 768 reaches 255 × 4 × 768 / 1024 of a 3072nd of a cell, 2.49 units.
+	/// </summary>
+	[TestMethod]
+	public void ACarStandsAtTheAverageOfItsFourCorners()
+	{
+		var asked = new List<(float X, float Y)>();
+
+		float Under( float x, float y )
+		{
+			asked.Add( (x, y) );
+			return asked.Count switch { 1 => 10f, 2 => 20f, 3 => 40f, _ => 80f };
+		}
+
+		var reach = 255f * 4f * 768f / 1024f / 3072f * 10f;
+
+		// Heading nought: the sine is nought and its quarter-turn 255, so "ahead" lies along y.
+		Assert.AreEqual( 37.5f, ParkBumperBoats.Float( 400f, 200f, 0, 768, 10f, 10f, Under ), 0.0001f );
+
+		(float, float)[] want = [(400f, 200f + reach), (400f, 200f - reach), (400f - reach, 200f), (400f + reach, 200f)];
+
+		for ( var i = 0; i < 4; ++i )
+		{
+			Assert.AreEqual( want[i].Item1, asked[i].X, 0.001f, $"corner {i} x" );
+			Assert.AreEqual( want[i].Item2, asked[i].Y, 0.001f, $"corner {i} y" );
+		}
+
+		// A quarter turn on: "ahead" lies along x, and a cell half as deep halves the reach along y.
+		asked.Clear();
+		ParkBumperBoats.Float( 400f, 200f, 0x80, 768, 10f, 5f, Under );
+
+		Assert.AreEqual( 400f + reach, asked[0].X, 0.001f );
+		Assert.AreEqual( 200f, asked[0].Y, 0.02f );
+		Assert.AreEqual( 400f, asked[2].X, 0.02f );
+		Assert.AreEqual( 200f + (reach / 2f), asked[2].Y, 0.001f );
+
+		asked.Clear();
+		ParkBumperBoats.Float( 400f, 200f, 0, 768, 10f, 5f, Under );
+
+		Assert.AreEqual( 200f + (reach / 2f), asked[0].Y, 0.001f );
+		Assert.AreEqual( 400f - reach, asked[2].X, 0.001f );
+	}
 }
 
 /// <summary>A rider in a boat is drawn as a head: which bank, and that every head bank the park can need is packed.</summary>

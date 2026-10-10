@@ -245,4 +245,28 @@ public class ModelTests
 
 		Console.WriteLine( $"meshes {meshes}, over sixteen {overSixteen}, most {most}" );
 	}
+
+	/// <summary>
+	/// A model's header float at <c>0xa0</c> and its meshes to stand on (FileFormats models.md, "The surface a point
+	/// stands on"): the jungle Hot Pot's float is its water's height, 29.8, and it has no such mesh; the karts' bridge
+	/// has one, and the Belly Bounce has neither.
+	/// </summary>
+	[TestMethod]
+	public void AModelSaysWhatAPointOnItStandsOn()
+	{
+		var pot = Read( "levels/jungle/rides/bumper/bumper.MD2" );
+
+		Assert.AreEqual( 29.8f, pot.SurfaceLift, 0.0001f );
+		Assert.IsFalse( pot.HasSurfaceMeshes );
+
+		var bridge = Read( "levels/jungle/rides/gokarts/gk_trckH.md2" );
+
+		Assert.AreEqual( 0f, bridge.SurfaceLift );
+		Assert.IsTrue( bridge.HasSurfaceMeshes );
+
+		var bounce = Read( "levels/jungle/rides/bouncy/bouncy.MD2" );
+
+		Assert.AreEqual( 0f, bounce.SurfaceLift );
+		Assert.IsFalse( bounce.HasSurfaceMeshes );
+	}
 }

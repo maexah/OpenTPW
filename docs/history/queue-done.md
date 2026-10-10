@@ -5781,6 +5781,12 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   sprite slot; and a pot bought here, saved in a go with four riders, read in the original under Proton as four
   cars at the file's places, timer 723, and let its four riders off 723 ticks after the load
   (`q257r/orig/a-load.log`, `a-2-loaded.png`). The item's other pieces are Q257s.
+- [x] **Q257s. A boat floats at the original's height.** I split the item: this is the first piece of the old
+  Q257s, the rest is Q257t. The scene's height under a point is decoded (`park.md`, "The scene's height under a
+  point"; FileFormats `models.md`, "The surface a point stands on"): the Hot Pot's model carries 29.8 in its header
+  and a corner reads the ground plus that. Proof: a bought pot's four boats read `height 29.6561` in `bumpers` and in
+  the file, 29.7986 to 29.8011 less the bob, beside the original's own files' 29.7993; the control 30.0018 to 30.0081;
+  the original loaded the file and read 29.6573 at the same phase.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.
