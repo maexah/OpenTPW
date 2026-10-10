@@ -594,7 +594,7 @@ public class ParkFileWriterBoughtAndSoldTests
 		Assert.IsTrue( state.RemoveObject( DrinksShop ) );
 		Assert.IsTrue( state.RemoveObject( 18 ) );
 
-		var kept = state.WrittenObjects( shipped, id => id != CameraItem, out var bought, out var gone );
+		var kept = state.WrittenObjects( shipped, thing => thing.CatalogueId != CameraItem, out var bought, out var gone );
 
 		CollectionAssert.AreEqual( new[] { ape.ThingId }, bought.Select( thing => thing.ThingId ).ToArray() );
 		CollectionAssert.AreEqual( new[] { DrinksShop }, gone.ToArray() );
@@ -833,7 +833,7 @@ public class ParkFileWriterBoughtAndSoldTests
 
 		ParkBuilding.Sell( state, shipped, catalogue, null, null, DrinksShop );
 		ParkBuilding.Sell( state, shipped, catalogue, null, null, 18 );
-		state.WrittenObjects( shipped, id => id != CameraItem, out var bought, out var gone );
+		state.WrittenObjects( shipped, thing => thing.CatalogueId != CameraItem, out var bought, out var gone );
 		Unimplemented.Forget();
 
 		var cells = Level.WrittenCells( shipped, state, bought, gone );

@@ -12,8 +12,9 @@ namespace OpenTPW;
 /// written over it, the park's people in place of the file's, its staff pool and arrival timer, and each object,
 /// script and model the file holds as it runs, under the clock moved on (<see cref="RunningThings"/>). An object
 /// bought since the load is written whole, its three records made, and one sold is taken out
-/// (<see cref="MadeThing"/>); a queue cell laid or tiled again names a model made for it, and one cleared names none
-/// (<see cref="QueuePiece"/>).
+/// (<see cref="MadeThing"/>); a track ride's record goes into the track-rides module or out of it with them
+/// (<see cref="ParkTrackRides.Splice"/>); a queue cell laid or tiled again names a model made for it, and one
+/// cleared names none (<see cref="QueuePiece"/>).
 /// </para>
 /// <para>
 /// <b>The container</b> is the version, 500 (<c>0x006fd928</c>), whatever the file loaded carried; the rest of that
@@ -79,11 +80,15 @@ public static class ParkFileWriter
 	/// Each cell whose queue piece is not the file's, by its place in <see cref="ParkWorld.Cells"/>: the piece it
 	/// holds now, or null where it holds none (<see cref="QueuePiece"/>).
 	/// </param>
+	/// <param name="MadeTracks">The track-rides module's record of each track ride in <paramref name="Made"/> (<see cref="ParkTrackRides.Splice"/>).</param>
+	/// <param name="GoneTracks">The handle of each track ride in <paramref name="Gone"/>, whose chunks are left out.</param>
+	/// <param name="KeptTracks">Each of the file's track rides whose record is written over as it runs (<see cref="ParkTrackRides.Put"/>).</param>
 	public sealed record RunningThings( IReadOnlyList<ParkWorld.CatalogueObject> Objects, int SchedulerTick,
 		int NextHandle, IReadOnlyList<WrittenScript> Scripts, ParkThingStates ModelStates,
 		IReadOnlyList<WrittenModel> Models, uint Clock, IReadOnlyList<MadeThing>? Made = null,
 		IReadOnlySet<int>? Gone = null, IReadOnlyDictionary<int, (int Standing, uint FirstBuilt)>? Built = null,
-		IReadOnlyDictionary<int, QueuePiece?>? QueueCells = null );
+		IReadOnlyDictionary<int, QueuePiece?>? QueueCells = null, IReadOnlyList<SavedTrackRide>? MadeTracks = null,
+		IReadOnlyCollection<int>? GoneTracks = null, IReadOnlyList<SavedTrackRide>? KeptTracks = null );
 
 	/// <summary>
 	/// The piece a queue cell holds: its tile's index and angle (<c>docs/exe/saves.md</c>, "OpenTPW's writer, a queue
@@ -186,6 +191,7 @@ public static class ParkFileWriter
 			var models = run.ModelStates.Put( body, run.Models, heads != null ? headSlots : null );
 
 			loaded.Clock.Put( body, run.Clock );
+			loaded.TrackRides.Put( body, run.KeptTracks ?? [] );
 			things = new ThingsWritten( objects, scripts.Scripts, scripts.TablesLeft, models );
 
 			var made = run.Made ?? [];
@@ -202,7 +208,7 @@ public static class ParkFileWriter
 					throw new InvalidOperationException( "a thing bought or sold is written with the people, and none were given" );
 
 				// From the back of the file forwards, so each module is still where the file has it when its turn
-				// comes: the scripts, the models, then the world with the people.
+				// comes: the scripts, the track rides, the models, then the world with the people.
 				var goneSlots = new HashSet<int>();
 				var goneScripts = new HashSet<int>();
 
@@ -281,6 +287,7 @@ public static class ParkFileWriter
 					[.. scriptRecords.OrderByDescending( entry => entry.Handle ).Select( entry => entry.Record )], goneScripts,
 					relisted );
 
+				body = loaded.TrackRides.Splice( body, run.GoneTracks ?? [], run.MadeTracks ?? [] );
 				body = run.ModelStates.Splice( body, goneSlots, madeModels );
 
 				if ( run.Built is { } built )

@@ -633,7 +633,7 @@ OpenTPW runs written over and records added and taken out. **Afresh** means writ
 | `VANT` | one reading of the real-time clock (`FUN_005f5f10`); the reader keeps its distance from its own | nothing | carried |
 | `GSYS` | nine dwords (above) | nothing read here | carried |
 | `RSYS` | a record per model slot, its channels | every running clip; a slot for a thing bought, one freed for a thing sold | patched |
-| `TRAK` | track rides, their sections and cars | a Hot Pot or another bumper ride bought or sold | carried; a track ride bought or sold is counted until a car's 208 bytes are decoded |
+| `TRAK` | track rides, their sections and cars | a Hot Pot or another bumper ride bought or sold | patched: a ride with no car is made, taken out or written over ("OpenTPW's writer, a track ride's record"); one with a car is carried and counted |
 | `FLYR` | the flyers (FileFormats `saves.md`) | nothing built here | carried |
 | `RSSE` | every running script | every script's counter, variables, stack and deadlines; a script for a thing bought, none for one sold | patched |
 | `KAME` | zoom, rotation, flags, two points of interest, a saved rotation | the camera | afresh |
@@ -1249,8 +1249,10 @@ and the object constructor `FUN_004db090` was read beside the two files.
   head"). The header's three counts are kept.
 - **The controls** (`ParkWorld.PutControls`): every item's standing count and first-build stamp as
   `ParkState.BuiltItems` runs them.
-- **Not written, counted, and left as the file has them:** a track ride, whose record in the track-rides module
-  is not made or taken out (`SAVE_PARK_OBJECT_BOUGHT`, `SAVE_PARK_OBJECT_SOLD`); with it stay its cells. A thing
+- **Not written, counted, and left as the file has them:** a track ride with a car, a track ride of a
+  BumperType with no record here and a tracked ride (`SAVE_PARK_OBJECT_BOUGHT`, `SAVE_PARK_OBJECT_SOLD`); with
+  each stay its cells. A track ride with no car is written since Q257o ("OpenTPW's writer, a track ride's
+  record"). A thing
   whose folder holds emitter files is written since Q257n ("OpenTPW's writer, a thing with emitter files"). A
   queue cell's model is Q254's.
 - **A bought thing's state of repair and remaining life start at 100** in the running park too
@@ -2138,7 +2140,7 @@ in the census; run again, all 18 had one. `docs/exe/addresses.md` not regenerate
 
 ### OpenTPW's writer, a thing with emitter files
 
-Q257n, split by the session: the item's other pieces are Q257o. **An item's `.emt` files are templates of the
+Q257n, split by the session: the item's other pieces are Q257p. **An item's `.emt` files are templates of the
 particle library, not emitters of the thing.** `FUN_0051fa20` (called at `0x00414552` as a park's catalogue is
 read) copies each into the first unnamed template slot, whatever the park holds; Lost Kingdom has two, both in
 `features/speaker1.wad` (the Loudspeaker, item 1417, "Speaker: Wild Beasts" in the buy list), and they are
@@ -2196,6 +2198,93 @@ Loudspeaker sold (the same rule decides it; the test sells a shop). **Not seen:*
 alive at a save goes on from where it was after a load (its file holds them; ours cannot). The speaker's sound,
 `ADDOBJ 4 -1 177 10`, is not heard here, and was not listened for in the original (run silent).
 `docs/exe/addresses.md` not regenerated.
+
+### OpenTPW's writer, a track ride's record
+
+Q257o, split by the session: this is the track ride's own record, and the item's other pieces, a ride's cars
+among them, are Q257p.
+
+**The writer `FUN_005428e0`, read whole.** After the root and the stamp it walks the table of 64 records at
+`[0x00877b60]` slot by slot, and for each whose first word is not nought writes, in this order: **the ride**
+(type 3: the handle, the placer's x and z from `+0xb4` and `+0xb8`, its orientation code `+0xb0`, the item
+`+0x10`, then the record's `+0x1c`, `+0x14`, `+0x18`, `+0x04` and `+0x50`: performance, the two mesh words,
+duration, state); **each section** of its list `+0xbc` (type 4); **each live car of the pool whose `+0x9c` is the
+record** (type 5: the handle, the car's `0xac` bytes as they lie in memory, the centre of its collision object
+`[+0x98]+4` and `+8`, then the handle of its buoy's ride and the buoy's `+8` and `+0xc`, nought for the handle
+where `+0x7c` is -1), **each followed by a type 9 for every node of its rider list `+0x30`** (the handle, the
+peep, the seat id `+0xc`); **a type 7 for every node of the leaving list `+0xc8`** and **a type 8 for every node
+of the boarding list `+0xc4`** (the handle and the peep); and **the close** (type 6: the handle).
+
+**The loader `FUN_00543560`** lays a ride with `Bumper_LayRide( 0, x, z, orientation, handle )`, which takes the
+slot the handle names and fills it from the BumperType's template; then `Bumper_SetPerformance`, the two mesh
+words, the duration ("Set Ride Duration to %d") and the state. A car is read over a fresh pool car: `+0x94`
+and the rider list are cleared, `+0x9c` is the record, the record's car count goes up, its collision object
+is found again from where it floats (or from the saved centre), **its model is made again by `FUN_00463ab0`,
+handed the handle its `+0x08` holds**, the item's supplemental mesh `+0x04` and flags `0x101`, and its wake's
+from `+0x0c` where the car's flags hold `0x2002000`; the lead (`0x400000`) is named on the record, and the buoy
+is found again by its place. A type 9 puts its peep on the car last read. A type 8 goes through
+`FUN_0054aa80`, `BUMP 1`'s call, and a type 7 through `FUN_0054abd0`.
+
+**The placer's orientation code** (`FUN_00529e10`): 0, 5, 6 and 1 for a turn of 0, 90, 180 and 270 degrees.
+
+**Measured in the original** (`q257o/orig/`, `q257o/kart.py`). The reference park with the Hot Pot (item 1140)
+marked researched, a Hot Pot bought on (41,23) from the buy screen and the park saved four times: shut
+(`hotpot-bought-shut.TPWS`), then with its queue joined to the path, open with four boats and three riders
+(`hotpot-open.TPWS`), and twice in a go (`hotpot-later.TPWS`, `hotpot-later2.TPWS`). **Shut, the module is 112
+bytes: the stamp, the ride and the close, and no car**: `ffffff00 20400 12c00 0 474 3c 1 1 10fe 0`, the handle,
+cell (43,25) times `0xc00`, orientation 0, item 1140, performance 60, mesh words 1 and 1, duration 4350, state 0.
+Open it reads state 1, and in the go duration 750 (`BUMP 13`'s 25 × 30) and state 2. **Each boat names two
+slots of the model table**, its own (item 1142, flags `0x101`, six node words, four lookup records) and its
+wake's (item 1141): handles 94 to 97 and 169 to 172 for the four. The object's `mTrackRideHandle` is
+`0xffffff00` and its `mIsTrackRideValid` 1.
+
+**What OpenTPW reads.** `ParkTrackRides` reads a ride's five words (`SavedTrackRide.Performance`, `MeshBase`,
+`MeshCount`, `Duration`, `State`) and `ParkTrackRideTable`'s seating lays them over the ride its template made
+(`ParkBumperCars.Restore`). The cars are still stepped over and counted (`SAVED_TRACK_RIDE_CARS`).
+
+**What OpenTPW writes** (`ParkTrackRides.Splice`, `Put`, `RideChunks`; `ParkBumperCars.Written`;
+`Level.WritePark`). A track ride **bought** is written with its three records and, in the track-rides module,
+its ride and its close, before the first ride left of a higher slot; one of the file's **sold** is taken out
+with every chunk under its handle; one **kept** has its five words written over where they lie. **Only a ride
+with no car**, which is a ride still shut: a ride of the bumper family with a record here (the Hot Pot's
+BumperType alone, `ParkBumperCars.Open`) and no boat out and nobody on its lists, or a ride of the file's with
+no type 5 under its handle. **Left as the file has it, and counted:** a bought ride with a boat out, a ride of
+another BumperType (the karts, the water ride) and a tracked ride (`SAVE_PARK_OBJECT_BOUGHT`); a file's ride
+with a car, sold (`SAVE_PARK_OBJECT_SOLD`) or kept (`SAVE_PARK_TRACK_RIDE_AS_THE_FILE`); and a ride bought into
+the slot of a file's ride that was sold and left. Writing a car needs its two model records, each rider's head
+sprite and the `0xac` bytes (Q257p).
+
+**Confirmed in the game** (`q257o/confirm.py`: scene `a` 6 of 6 and scene `b` 2 of 2 on the desktop at the second
+run, the control 4 of 4; `PREDICTION.txt` holds every prediction and miss). Lost Kingdom from `easymode.TPWI`:
+`buy 1140 41 23 0` built thing 43 and `bumpers` read `ride 0xffffff00 thing 43 state Closed ... duration 4350
+cars 0 ... centre (133632,78336) performance 60`; saved under `pause`, `SAVE_PARK_OBJECT_BOUGHT` was not counted.
+**The file's track module is 112 bytes, the ride's ten words and the close the original's own file's byte for
+byte** (the stamp is the loaded file's); 43 things headed 43, **thing 43's record the original's own bought Hot
+Pot's in every byte** outside the list link, the date, the name's tail, the script handle and the rings, the
+names `The` and `Hot Pot`; model handle 91 `(1140, 41, 23, 5, 5, 0x32f)` as the original's, the header 163, 5,
+92. Loaded here from the Load Park list, `bumpers` read the same line and the frame shows the pot under its
+hoardings. **Scene `b`**, the park entered on the original's own shut file: `bumpers` read the ride on thing 43,
+Closed, 4350; saved untouched the track module is the file's byte for byte and nothing was counted; `sell 43`
+and saved, the module is 44 bytes, the stamp alone, with one thing fewer, model slot 90 empty and
+`SAVE_PARK_OBJECT_SOLD` not counted. **The control** (the build before): the purchase counted once, a module of
+44 bytes, 42 things, and after its load no ride and one object fewer.
+
+**The original under Proton** (`orig/go.sh`, off-screen, entering the park on the file and then loading it from
+the Load Park list, `orig/look.py` polling every 0.05 s): on the first poll after the load record 0 held
+BumperType -1, duration 4350, performance 60, state 0, no car, centre (133632,78336), and thing 43 was item 1140
+on (41,23) on model handle 91 with `0xffffff00` at `+0x28`; its frame shows the pot under its hoardings. **Its
+queue joined to the path there with two clicks, the record read state 1 and four cars 5 s on**, and the frame
+shows the hoardings down and two boats in the water (`orig/a-5-open.png`). With the control's file: record 0
+free, 42 things, no thing 43.
+
+**Predictions wrong, mine:** the `buy` reply names no track handle (I had it print one); the model header's
+cursor, 92 for my 93 (I had read the original's, whose file holds a vehicle's model too); the made object's
+names, `The` and `Hot Pot` for my one line; and the things left after the sale, 41 for my 42 (the original's
+file holds 42, not the stock park's 43 with the pot). **Not run in either game, tested only:** a ride with a
+boat out bought, kept or sold (counted and left); a ride kept and written over with other words than the file's
+(scene `b` saved it untouched); a ride made between two of the file's; a turned ride (the three codes stand on
+the listing: the one file with a turned track ride holds 6 on a Dino Karts). **Not seen in the original:** a
+load of a file whose ride record says open and holds no car. `docs/exe/addresses.md` not regenerated.
 
 ### Read, not run
 

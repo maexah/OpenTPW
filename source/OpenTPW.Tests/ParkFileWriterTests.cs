@@ -360,7 +360,8 @@ public class ParkFileWriterTests
 			state.SetGameTick( 900 );
 
 			var ape = Buy( 1101, 41, 22 );
-			var racers = catalogue.All.First( item => item.BumperType != 0 );
+			// The karts: a track ride with no record of the bumper family's, so it is counted and left out.
+			var racers = catalogue.All.First( item => item.BumperType != 0 && !ParkBumperCars.IsBumperFamily( item.BumperType ) );
 			var karts = Buy( racers.Id, 20, 20 );
 			var tracked = catalogue.All.First( item => item.BumperType == 0 && item.TrackType != 0 );
 			var coaster = Buy( tracked.Id, 90, 90 );
@@ -442,6 +443,234 @@ public class ParkFileWriterTests
 		finally
 		{
 			rides.Delete();
+			Entity.ApplyDeletions();
+			TestRun.DeleteEvery<ParkPeople>();
+		}
+	}
+
+	private static int Counted( string gap ) => Unimplemented.Summary.Where( counted => counted.What == gap ).Sum( counted => counted.Times );
+
+	/// <summary>
+	/// A track ride's record in the track-rides module (<c>docs/exe/saves.md</c>, "OpenTPW's writer, a track ride's
+	/// record"). A Hot Pot bought and still shut is written, its record the original's own file's word for word; a
+	/// load of that file holds the ride; kept, its record follows the running ride; with a boat out it is left as
+	/// the file has it, counted, bought or kept; and sold with none it is taken out.
+	/// </summary>
+	[TestMethod]
+	public void TheLevelWritesATrackRidesRecord()
+	{
+		const int HotPot = 1140;
+		const int Handle = unchecked((int)0xffffff00);
+
+		SetCurrentPlayer( new Player( 0, "Test", new PlayerFile { InstantAction = true } ) );
+
+		var catalogue = new ParkItemCatalogue( "jungle", FileSystem );
+		var people = new ParkPeople( shipped );
+		var state = people.State;
+		var rides = new ParkRides( "jungle", shipped, catalogue, FileSystem );
+		ParkRides? again = null;
+
+		ParkWorld Written( string name ) => Read( File.ReadAllBytes( Path.Combine( Jungle, name + ".TPWS" ) ) );
+
+		try
+		{
+			Assert.IsTrue( catalogue.TryGet( HotPot, out var item ) );
+
+			var id = state.NextThingId();
+			var placed = ParkBuilding.Constructed( item, id, 41, 23, 0, MapStep.CellId( 41 + item.EntryDeltaX, 23 + item.EntryDeltaY ),
+				MapStep.CellId( 41 + item.ExitDeltaX, 23 + item.ExitDeltaY ), ParkWorld.BuiltWhen.At( state.CalendarNow ),
+				ParkBuilding.TakeTrackRide( state, item ) );
+
+			state.AddObject( placed );
+			ParkBuilding.BindOperation( state, rides, placed, item );
+			ParkBuilding.Stamp( state, ParkObjects.FootprintAt( item, 41, 23, 0 ), 41, 23 );
+			state.EnterCell( 41, 23, id );
+
+			var cars = state.TrackRides.Cars;
+			var (x, z) = ParkBumperCars.ArenaCentre( item, 41, 23, 0 );
+
+			cars.Place( Handle, x, z );
+			cars.SetPerformance( Handle, 60 );
+			Unimplemented.Forget();
+
+			// Bought and shut: written whole.
+			Assert.IsNotNull( Level.WritePark( shipped, state, "jungle", "Shut", people, null, rides, catalogue ) );
+
+			var shut = Written( "Shut" );
+
+			Assert.IsNull( shut.Problem );
+			Assert.AreEqual( new SavedTrackRide( Handle, 0x20400, 0x12c00, 0, HotPot, 60, 1, 1, 4350, 0 ), shut.TrackRides.Rides.Single() );
+			Assert.AreEqual( (HotPot, Handle, 1), (shut.Objects.Single( thing => thing.ThingId == id ).CatalogueId, shut.Objects.Single( thing => thing.ThingId == id ).TrackRide, shut.Objects.Single( thing => thing.ThingId == id ).IsTrackRideValid) );
+			Assert.AreEqual( 4, (int)shut.Cells[(23 * 128) + 41].Type, "and its footprint with it" );
+			Assert.AreEqual( 0, Counted( "SAVE_PARK_OBJECT_BOUGHT" ) );
+
+			// With a boat out it is not written, and counted.
+			cars.OpenForLoading( Handle );
+			Assert.IsNotNull( cars.Launch( Handle ) );
+			Unimplemented.Forget();
+			Assert.IsNotNull( Level.WritePark( shipped, state, "jungle", "Boat", people, null, rides, catalogue ) );
+
+			var boat = Written( "Boat" );
+
+			Assert.AreEqual( 0, boat.TrackRides.Rides.Count );
+			Assert.IsFalse( boat.Objects.Any( thing => thing.ThingId == id ) );
+			Assert.AreEqual( 1, Counted( "SAVE_PARK_OBJECT_BOUGHT" ) );
+
+			// The shut file loaded: the ride is the table's, and kept it is written over as it runs.
+			rides.Delete();
+			Entity.ApplyDeletions();
+			TestRun.DeleteEvery<ParkPeople>();
+
+			var loadedPeople = new ParkPeople( shut );
+			var loaded = loadedPeople.State;
+
+			again = new ParkRides( "jungle", shut, catalogue, FileSystem );
+
+			var theirs = loaded.TrackRides.Cars;
+
+			Assert.AreEqual( (4350, ParkBumperCars.RideState.Closed, 60), (theirs.RideOf( Handle )!.Duration, theirs.RideOf( Handle )!.State, theirs.RideOf( Handle )!.Performance) );
+
+			theirs.Place( Handle, x, z );
+			theirs.OpenForLoading( Handle );
+			theirs.SetDuration( Handle, 750 );
+			Unimplemented.Forget();
+			Assert.IsNotNull( Level.WritePark( shut, loaded, "jungle", "Kept", loadedPeople, null, again, catalogue ) );
+			Assert.AreEqual( new SavedTrackRide( Handle, 0x20400, 0x12c00, 0, HotPot, 60, 1, 1, 750, 1 ), Written( "Kept" ).TrackRides.Rides.Single() );
+			Assert.AreEqual( 0, Counted( "SAVE_PARK_TRACK_RIDE_AS_THE_FILE" ) );
+
+			// Kept with a boat out: the file's record is left, and counted.
+			Assert.IsNotNull( theirs.Launch( Handle ) );
+			theirs.SetDuration( Handle, 900 );
+			Assert.IsNotNull( Level.WritePark( shut, loaded, "jungle", "KeptBoat", loadedPeople, null, again, catalogue ) );
+			Assert.AreEqual( 4350, Written( "KeptBoat" ).TrackRides.Rides.Single().Duration );
+			Assert.AreEqual( 1, Counted( "SAVE_PARK_TRACK_RIDE_AS_THE_FILE" ) );
+
+			// Sold: its record and its close are taken out with its three records.
+			StringAssert.StartsWith( ParkBuilding.Sell( loaded, shut, catalogue, null, again, id, loadedPeople ), "sell: 'The Hot Pot'" );
+			Unimplemented.Forget();
+			Assert.IsNotNull( Level.WritePark( shut, loaded, "jungle", "Sold", loadedPeople, null, again, catalogue ) );
+
+			var sold = Written( "Sold" );
+
+			Assert.IsNull( sold.Problem );
+			Assert.IsTrue( sold.TrackRides.ClosedOnTag );
+			Assert.AreEqual( 0, sold.TrackRides.Rides.Count );
+			Assert.IsFalse( sold.Objects.Any( thing => thing.ThingId == id ) );
+			Assert.AreEqual( 0, Counted( "SAVE_PARK_OBJECT_SOLD" ) );
+			Assert.AreEqual( shipped.Objects.Count, sold.Objects.Count );
+		}
+		finally
+		{
+			rides.Delete();
+			again?.Delete();
+			Entity.ApplyDeletions();
+			TestRun.DeleteEvery<ParkPeople>();
+		}
+	}
+
+	/// <summary>
+	/// A ride the file holds with a car under its handle is left as the file has it: kept it is counted, sold it
+	/// stays, and a ride bought into the slot it had here is not written beside it.
+	/// </summary>
+	[TestMethod]
+	public void ATrackRideWithACarInTheFileIsLeft()
+	{
+		const int HotPot = 1140;
+		const int Handle = unchecked((int)0xffffff00);
+
+		SetCurrentPlayer( new Player( 0, "Test", new PlayerFile { InstantAction = true } ) );
+
+		var catalogue = new ParkItemCatalogue( "jungle", FileSystem );
+		var people = new ParkPeople( shipped );
+		var rides = new ParkRides( "jungle", shipped, catalogue, FileSystem );
+		ParkRides? again = null;
+
+		int Buy( ParkState state, ParkRides bound )
+		{
+			Assert.IsTrue( catalogue.TryGet( HotPot, out var item ) );
+
+			var id = state.NextThingId();
+			var placed = ParkBuilding.Constructed( item, id, 41, 23, 0, MapStep.CellId( 41 + item.EntryDeltaX, 23 + item.EntryDeltaY ),
+				MapStep.CellId( 41 + item.ExitDeltaX, 23 + item.ExitDeltaY ), ParkWorld.BuiltWhen.At( state.CalendarNow ),
+				ParkBuilding.TakeTrackRide( state, item ) );
+
+			Assert.AreEqual( Handle, placed.TrackRide );
+			state.AddObject( placed );
+			ParkBuilding.BindOperation( state, bound, placed, item );
+			ParkBuilding.Stamp( state, ParkObjects.FootprintAt( item, 41, 23, 0 ), 41, 23 );
+			state.EnterCell( 41, 23, id );
+
+			return id;
+		}
+
+		ParkWorld Written( string name ) => Read( File.ReadAllBytes( Path.Combine( Jungle, name + ".TPWS" ) ) );
+
+		try
+		{
+			var id = Buy( people.State, rides );
+
+			Assert.IsNotNull( Level.WritePark( shipped, people.State, "jungle", "Shut", people, null, rides, catalogue ) );
+
+			// The file again with one car under the ride's handle, between its record and its close.
+			var body = Inflate( File.ReadAllBytes( Path.Combine( Jungle, "Shut.TPWS" ) ) );
+			var close = body.AsSpan().IndexOf( "KART"u8 ) - 16;
+			var root = body.AsSpan().IndexOf( "SYSR"u8 ) + 4;
+			byte[] car = [.. new[] { 5, 208, 208, Handle }.SelectMany( BitConverter.GetBytes ), .. new byte[0xac + 20]];
+			byte[] withCar = [.. body[..close], .. car, .. body[close..]];
+
+			BitConverter.TryWriteBytes( withCar.AsSpan( root + 8, 4 ), BitConverter.ToInt32( body, root + 8 ) + car.Length );
+
+			using var shutStream = new MemoryStream( File.ReadAllBytes( Path.Combine( Jungle, "Shut.TPWS" ) ) );
+			var shutReader = new SaveReader( shutStream );
+
+			shutReader.ReadFile();
+
+			var file = new ParkWorld( withCar, shutReader.Preamble );
+
+			Assert.IsNull( file.Problem );
+			Assert.AreEqual( 1, file.TrackRides.CarsOf( Handle ) );
+
+			rides.Delete();
+			Entity.ApplyDeletions();
+			TestRun.DeleteEvery<ParkPeople>();
+
+			var loadedPeople = new ParkPeople( file );
+			var loaded = loadedPeople.State;
+
+			again = new ParkRides( "jungle", file, catalogue, FileSystem );
+			loaded.TrackRides.Cars.SetDuration( Handle, 900 );
+			Unimplemented.Forget();
+
+			Assert.IsNotNull( Level.WritePark( file, loaded, "jungle", "Kept", loadedPeople, null, again, catalogue ) );
+			Assert.AreEqual( (4350, 1), (Written( "Kept" ).TrackRides.Rides.Single().Duration, Written( "Kept" ).TrackRides.CarsOf( Handle )) );
+			Assert.AreEqual( 1, Counted( "SAVE_PARK_TRACK_RIDE_AS_THE_FILE" ) );
+
+			StringAssert.StartsWith( ParkBuilding.Sell( loaded, file, catalogue, null, again, id, loadedPeople ), "sell: 'The Hot Pot'" );
+			Unimplemented.Forget();
+			Assert.IsNotNull( Level.WritePark( file, loaded, "jungle", "Sold", loadedPeople, null, again, catalogue ) );
+
+			var sold = Written( "Sold" );
+
+			Assert.AreEqual( (1, 1), (sold.TrackRides.Rides.Count, sold.TrackRides.CarsOf( Handle )) );
+			Assert.IsTrue( sold.Objects.Any( thing => thing.ThingId == id ), "its three records stay with it" );
+			Assert.AreEqual( 1, Counted( "SAVE_PARK_OBJECT_SOLD" ) );
+
+			var next = Buy( loaded, again );
+
+			Unimplemented.Forget();
+			Assert.IsNotNull( Level.WritePark( file, loaded, "jungle", "Next", loadedPeople, null, again, catalogue ) );
+
+			var after = Written( "Next" );
+
+			Assert.IsNull( after.Problem );
+			Assert.AreEqual( (1, 1), (after.TrackRides.Rides.Count, after.TrackRides.CarsOf( Handle )) );
+			Assert.IsFalse( after.Objects.Any( thing => thing.ThingId == next ) );
+			Assert.AreEqual( (1, 1), (Counted( "SAVE_PARK_OBJECT_BOUGHT" ), Counted( "SAVE_PARK_OBJECT_SOLD" )) );
+		}
+		finally
+		{
+			rides.Delete();
+			again?.Delete();
 			Entity.ApplyDeletions();
 			TestRun.DeleteEvery<ParkPeople>();
 		}

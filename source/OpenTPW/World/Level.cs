@@ -473,8 +473,9 @@ public class Level
 	/// (<see cref="ParkStaffPool.Written"/>), the arrival timer (<see cref="ParkPeople.WrittenArrival"/>) and the
 	/// file's objects, scripts and models as they run (<see cref="ParkState.WrittenObjects"/>,
 	/// <see cref="ParkRides.Written"/>) written over it; an object bought since the load is written whole and one
-	/// sold taken out, but a track ride and a thing with an emitter, which stay as the file has them, counted; and
-	/// a queue cell laid, cleared or tiled again goes out with its model made, or let go.
+	/// sold taken out, a track ride with its record in the track-rides module where it has no car out, and one with
+	/// a car left as the file has it, counted; and a queue cell laid, cleared or tiled again goes out with its model
+	/// made, or let go.
 	/// </para>
 	/// <para>
 	/// <b>Deviations.</b> The original writes the player's <c>gms.dat</c> first and puts the pointer back to its
@@ -517,15 +518,33 @@ public class Level
 		// or models did not read, they go out as the file's, and are counted.
 		var names = ObjectNames();
 
-		// A thing bought or sold is written with the people, the scripts and the catalogue to hand. A track ride's
-		// record in the track-rides module is not written, so one stays as it was, counted. A thing whose folder
-		// holds emitter files is written as any other: those are the particle library's templates, which the file
-		// holds whatever stands in the park (docs/exe/saves.md, "OpenTPW's writer, a thing with emitter files").
+		// A thing bought or sold is written with the people, the scripts and the catalogue to hand. A thing whose
+		// folder holds emitter files is written as any other: those are the particle library's templates, which the
+		// file holds whatever stands in the park (docs/exe/saves.md, "OpenTPW's writer, a thing with emitter files").
 		// A deviation: the particles module goes out as the file's, so a puff a script's EVENT had alive at the
 		// save is not in it, where the original's file holds each one.
-		Func<int, bool>? writable = rides != null && people != null && catalogue != null
-			? id => catalogue.TryGet( id, out var item ) && item.BumperType == 0 && item.TrackType == 0
-				&& ParkObjectNames.Lines( id, names ) != null
+		//
+		// A track ride is written where its record in the track-rides module can be: a ride of the bumper family
+		// with no car out, made here, and one of the file's with no car under its handle, taken out
+		// (docs/exe/saves.md, "OpenTPW's writer, a track ride's record"). A ride with a car, a ride with no record
+		// here (the karts, the water ride) and a tracked ride stay as the file has them, counted.
+		bool TrackWritable( ParkWorld.CatalogueObject thing )
+		{
+			if ( thing.TrackRide == 0 )
+				return true;
+
+			if ( loaded.Objects.Any( file => file.ThingId == thing.ThingId ) )
+				return loaded.TrackRides.ClosedOnTag && loaded.TrackRides.CarsOf( thing.TrackRide ) == 0;
+
+			// A ride of the file's sold with its cars is left in the file, and no ride made takes its slot there.
+			return state.TrackRides.Cars.RideOf( thing.TrackRide ) is { Cars: 0, Boarding.Count: 0, Leaving.Count: 0 }
+				&& loaded.TrackRides.Rides.All( ride => (ride.Handle & 0xff) != (thing.TrackRide & 0xff) || loaded.TrackRides.CarsOf( ride.Handle ) == 0 );
+		}
+
+		Func<ParkWorld.CatalogueObject, bool>? writable = rides != null && people != null && catalogue != null
+			? thing => catalogue.TryGet( thing.CatalogueId, out var item ) && item.TrackType == 0
+				&& (item.BumperType != 0) == (thing.TrackRide != 0) && TrackWritable( thing )
+				&& ParkObjectNames.Lines( thing.CatalogueId, names ) != null
 			: null;
 
 		var objects = state.WrittenObjects( loaded, writable, out var made, out var gone );
@@ -543,6 +562,36 @@ public class Level
 		var things = rides?.Written( loaded, objects,
 			id => catalogue != null && catalogue.TryGet( id, out var item ) ? item.AnimationChannels : 1, state.HoardingFor,
 			bought, gone, state.BuiltItems );
+
+		// Each track ride made or gone, for the track-rides module, and each of the file's still standing: one with
+		// no car in the file and none out here is written over as it runs, and any other is left the file's, counted.
+		if ( things != null )
+		{
+			var kept = new List<SavedTrackRide>();
+
+			foreach ( var thing in objects.Where( thing => thing.TrackRide != 0 ) )
+			{
+				if ( loaded.TrackRides.CarsOf( thing.TrackRide ) == 0
+					&& state.TrackRides.Cars.RideOf( thing.TrackRide ) is { Cars: 0, Boarding.Count: 0, Leaving.Count: 0 }
+					&& state.TrackRides.Cars.Written( thing.TrackRide, thing.Angle, thing.CatalogueId ) is { } record )
+				{
+					kept.Add( record );
+				}
+				else
+				{
+					Unimplemented.Report( "SAVE_PARK_TRACK_RIDE_AS_THE_FILE" );
+				}
+			}
+
+			things = things with
+			{
+				KeptTracks = kept,
+				MadeTracks = [.. made.Where( thing => thing.TrackRide != 0 )
+					.Select( thing => state.TrackRides.Cars.Written( thing.TrackRide, thing.Angle, thing.CatalogueId )!.Value )],
+				GoneTracks = [.. loaded.Objects.Where( thing => gone.Contains( thing.ThingId ) && thing.TrackRide != 0 )
+					.Select( thing => thing.TrackRide )]
+			};
+		}
 
 		if ( rides != null && things == null )
 		{

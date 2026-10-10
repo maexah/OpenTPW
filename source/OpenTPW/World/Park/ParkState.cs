@@ -515,12 +515,12 @@ public sealed class ParkState
 	/// the id of each object of the file's that no longer stands.
 	///
 	/// <para>
-	/// <b>Only an item <paramref name="writable"/> passes is written so.</b> A thing of any other item (a track
-	/// ride, a thing with an emitter) is counted and left as it was: one sold stays in the file, one bought is not
-	/// in it. With no test given nothing is made or taken out.
+	/// <b>Only a thing <paramref name="writable"/> passes is written so.</b> Any other (a track ride with a car
+	/// out, a tracked ride) is counted and left as it was: one sold stays in the file, one bought is not in it.
+	/// With no test given nothing is made or taken out.
 	/// </para>
 	/// </summary>
-	internal List<ParkWorld.CatalogueObject> WrittenObjects( ParkWorld loaded, Func<int, bool>? writable,
+	internal List<ParkWorld.CatalogueObject> WrittenObjects( ParkWorld loaded, Func<ParkWorld.CatalogueObject, bool>? writable,
 		out List<ParkWorld.CatalogueObject> made, out HashSet<int> gone )
 	{
 		var written = new List<ParkWorld.CatalogueObject>( loaded.Objects.Count );
@@ -555,7 +555,7 @@ public sealed class ParkState
 
 			if ( !TryObject( file.ThingId, out var now ) )
 			{
-				if ( writable?.Invoke( file.CatalogueId ) == true )
+				if ( writable?.Invoke( file ) == true )
 					gone.Add( file.ThingId );
 				else
 					Unimplemented.Report( "SAVE_PARK_OBJECT_SOLD" );
@@ -571,7 +571,7 @@ public sealed class ParkState
 
 		foreach ( var now in _objects.Where( thing => !held.Contains( thing.ThingId ) ).OrderByDescending( thing => thing.ThingId ) )
 		{
-			if ( writable( now.CatalogueId ) )
+			if ( writable( now ) )
 				made.Add( AsItRuns( now ) );
 			else
 				Unimplemented.Report( "SAVE_PARK_OBJECT_BOUGHT" );

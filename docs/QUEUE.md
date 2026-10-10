@@ -48,11 +48,17 @@ the original.
 (the fee, the visitor count, loads of guests, save and load's decode, the calendar, the shop's window, the gauge,
 the research lab), then the rest of this section in its old order.
 
-- [ ] **Q257o. The writer: what else a made record leaves out.** The old Q257n's other pieces, from Q253
-  (`saves.md`, "What OpenTPW writes"), each counted or said there. A track ride (its `TRAK` record)
-  is left as the file has it, bought or sold (`SAVE_PARK_OBJECT_BOUGHT`,
-  `SAVE_PARK_OBJECT_SOLD`). Confirm: each
-  piece's bytes beside a file of the original's own, and the file loaded in the original under Proton.
+- [ ] **Q257p. The writer: what else a made record leaves out.** The old Q257o's other pieces, each counted or
+  said in `saves.md`. Confirm: each piece's bytes beside a file of the original's own, and the file loaded in
+  the original under Proton.
+  From Q257o (`saves.md`, "OpenTPW's writer, a track ride's record"): a track ride with a car is left as the
+  file has it, bought, sold or kept (`SAVE_PARK_OBJECT_BOUGHT`, `SAVE_PARK_OBJECT_SOLD`,
+  `SAVE_PARK_TRACK_RIDE_AS_THE_FILE`), so a Hot Pot is written only while shut; and a load here steps over a
+  file's cars (`SAVED_TRACK_RIDE_CARS`), so an open one comes back with no boat. A car is its `0xac` bytes,
+  two model records (items 1142 and 1141 for a boat and its wake, flags `0x101`), a head sprite for its rider
+  and a type 9 record; the original's own files are `q257o/orig/hotpot-open.TPWS` and `hotpot-later.TPWS`.
+  The karts' and the water ride's BumperTypes have no record here, and a tracked ride (its `TrackType`) is
+  not written at all. A turned track ride was in no game run.
   From Q257n (`saves.md`, "OpenTPW's writer, a thing with emitter files"): the particles module goes out as
   the loaded file's, so no emitter alive at the save is written: a script's `EVENT` puff (the original's file
   of a bought Loudspeaker holds two of template 36) and an `ADDOBJ`'s (below). A handle is the emitter's

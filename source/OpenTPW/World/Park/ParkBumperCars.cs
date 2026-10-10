@@ -131,9 +131,9 @@ public sealed class ParkBumperCars
 		public int CarRadius { get; init; }
 
 		/// <summary><c>+0x14</c> and <c>+0x18</c>: the first supplemental mesh a car is, and how many it cycles through.</summary>
-		public int MeshBase { get; init; }
+		public int MeshBase { get; internal set; }
 
-		public int MeshCount { get; init; }
+		public int MeshCount { get; internal set; }
 
 		/// <summary><c>+0x50</c>.</summary>
 		public RideState State { get; internal set; }
@@ -464,6 +464,41 @@ public sealed class ParkBumperCars
 
 		ride.CentreX = x;
 		ride.CentreZ = z;
+	}
+
+	/// <summary>
+	/// What the track-rides loader lays over a ride fresh from its template (<c>FUN_00543560</c>, chunk 3): the
+	/// performance through <see cref="SetPerformance"/>, the two mesh words, the duration and the state.
+	/// </summary>
+	internal void Restore( SavedTrackRide saved )
+	{
+		if ( RideOf( saved.Handle ) is not { } ride )
+			return;
+
+		SetPerformance( saved.Handle, saved.Performance );
+
+		ride.MeshBase = saved.MeshBase;
+		ride.MeshCount = saved.MeshCount;
+		ride.Duration = saved.Duration;
+		ride.State = (RideState)saved.State;
+	}
+
+	/// <summary>
+	/// A ride's record for a park file's track-rides module, as <c>FUN_005428e0</c> writes one
+	/// (<c>docs/exe/saves.md</c>, "OpenTPW's writer, a track ride's record"): where the placer put it, which is its
+	/// arena's centre less the half cell <c>FUN_00545890</c> adds, the placer's code for its turn
+	/// (<c>FUN_00529e10</c>: 0, 5, 6 and 1 for 0, 90, 180 and 270 degrees), its item, and its performance, mesh
+	/// words, duration and state. Null for a handle that names no ride of the family this builds.
+	/// </summary>
+	public SavedTrackRide? Written( int handle, int angle, int itemId )
+	{
+		if ( RideOf( handle ) is not { } ride )
+			return null;
+
+		var orientation = angle switch { 90 => 5, 180 => 6, 270 => 1, _ => 0 };
+
+		return new SavedTrackRide( handle, ride.CentreX - (CellUnits / 2), ride.CentreZ - (CellUnits / 2), orientation, itemId,
+			ride.Performance, ride.MeshBase, ride.MeshCount, ride.Duration, (int)ride.State );
 	}
 
 	/// <summary>

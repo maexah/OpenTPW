@@ -72,7 +72,8 @@ public sealed class ParkTrackRideTable
 
 	/// <summary>
 	/// A saved ride put back in the slot its handle names - <c>FUN_00545890</c> handed the handle (<c>0x00543725</c>),
-	/// which takes the slot without a free test and fills it from the BumperType's template, an empty list.
+	/// which takes the slot without a free test and fills it from the BumperType's template, an empty list; the
+	/// record's performance, mesh words, duration and state are then the file's (<see cref="ParkBumperCars.Restore"/>).
 	/// </summary>
 	private void Seat( SavedTrackRide ride )
 	{
@@ -89,6 +90,7 @@ public sealed class ParkTrackRideTable
 		_bumperType[slot] = bumperType;
 		_sections[slot].Clear();
 		Cars.Open( ride.Handle, bumperType );
+		Cars.Restore( ride );
 	}
 
 	/// <summary>

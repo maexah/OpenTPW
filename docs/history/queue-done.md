@@ -5740,6 +5740,20 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   handle 91, header 162, 6, 91; after the load the census read it on script 18 among 15 objects and the frame
   shows it (the build before: 42 things, 14 objects, bare grass); and the original read thing 43 on handle 91
   at its first poll and fired its first puff 0.15 s on, 35 in 41 s, where the build before's file gave it none.
+- [x] **Q257o. The writer: a track ride's record.** Done 2026-10-09, `alexah/390-track-ride-record`. I split
+  the item: this is the track ride's own record in the track-rides module, and every other piece is Q257p.
+  The original's writer `FUN_005428e0` and loader `FUN_00543560` read whole: a ride is its handle, where the
+  placer put it, the turn's code, its item and five words (performance, two mesh words, duration, state);
+  each car is its `0xac` bytes and five words, a record after it for each rider; a record for each person on
+  the two lists; a close. The original's own file of a Hot Pot bought and still shut holds the ride and the
+  close alone. A track ride with no car is written, bought, sold or kept, and a load reads the five words.
+  Confirmed: a Hot Pot bought on (41,23) read `ride 0xffffff00 thing 43 state Closed ... duration 4350 cars 0`
+  in the census, the file's track module is 112 bytes with the ride's ten words and the close the original's
+  own byte for byte, thing 43's record the original's, the census after the load the same line and the frame
+  the pot under its hoardings (the build before: a module of 44 bytes, 42 things, no ride); the original's own
+  file kept is written back byte for byte and its pot sold leaves 44 bytes; and the original read record 0 as
+  BumperType -1, duration 4350, state 0 at its first poll and, its queue joined to the path there, opened it
+  with four boats 5 s on, where the build before's file gave it no thing 43.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.
