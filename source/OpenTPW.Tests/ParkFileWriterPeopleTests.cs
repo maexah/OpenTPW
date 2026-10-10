@@ -310,6 +310,35 @@ public class ParkFileWriterPeopleTests
 	}
 
 	/// <summary>
+	/// A guest the file holds with no sprite - a rider on a thing that keeps none - is given one again by the load,
+	/// standing, where one with a sprite takes up the file's.
+	/// </summary>
+	[TestMethod]
+	public void AGuestSavedWithNoSpriteIsGivenOneAgainStanding()
+	{
+		var body = ParkFileWriter.Body( shipped, Running( new ParkPeople( shipped ) ) );
+		var held = new ParkWorld( body );
+		var rider = held.People.First( person => person.Model == ParkWorld.GuestModel && person.SpriteSlot != 0 );
+		var walker = held.People.Last( person => person.Model == ParkWorld.GuestModel && person.SpriteSlot != 0 );
+
+		BitConverter.TryWriteBytes( body.AsSpan( body.AsSpan().IndexOf( held.RecordOf( rider.ThingId ) ) + 16 ), 0 );
+		TestRun.DeleteEvery<ParkPeople>();
+
+		var doctored = new ParkWorld( body );
+
+		Assert.AreEqual( 0, doctored.People.Single( person => person.ThingId == rider.ThingId ).SpriteSlot );
+
+		var people = new ParkPeople( doctored );
+		var standing = new SpriteScript( SpriteScript.None, 0, spriteNumber: 0, frame: 0 );
+
+		standing.Start( SpriteScript.Standing );
+
+		Assert.IsNotNull( people.SpriteFor( rider.ThingId ), "made again" );
+		Assert.AreEqual( (standing.Script, standing.Pc), (people.SpriteFor( rider.ThingId )!.Script, people.SpriteFor( rider.ThingId )!.Pc) );
+		Assert.IsNotNull( people.SpriteFor( walker.ThingId ) );
+	}
+
+	/// <summary>
 	/// A balloon's and a bubble's sprite the file holds are let go and the slots that named them written nought: a
 	/// file made here, given a sprite nobody stands on and two guests naming it as their balloon and their bubble.
 	/// </summary>

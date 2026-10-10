@@ -484,6 +484,109 @@ public sealed class ParkBumperCars
 	}
 
 	/// <summary>
+	/// A saved car read over a free car of the pool - <c>FUN_00543560</c>, chunk 5 (<c>docs/exe/saves.md</c>,
+	/// "OpenTPW's reader, a track ride's cars"): its bytes as they lay in memory, then what the loader makes again.
+	/// Its ride is the handle's, counted one car more and named its lead where the car's flags say so; its riders are
+	/// none until their own records; its arena is the first that holds where it floats, or failing that the saved
+	/// centre; its buoy is found again by the place the file gives, the ring's first where none lies there, none where
+	/// the file names no ride; and a car that chases has no patience left, so it chooses again on its first tick.
+	///
+	/// <para>
+	/// <b>Left out, each said where it is counted:</b> the car's two model records (<c>+0x08</c>, <c>+0x0c</c>), so its
+	/// clip starts from its first frame; and its held sound's handle (<c>+0x20</c>), which names a voice of the session
+	/// that saved it: the original's step finds it gone and empties it, and the next retarget starts another.
+	/// </para>
+	/// </summary>
+	/// <returns>The car, or null for a handle the table does not hold or a full pool.</returns>
+	internal Car? Restore( SavedTrackCar saved )
+	{
+		if ( RideOf( saved.Handle ) is not { } ride || Array.Find( _cars, candidate => !candidate.IsLive ) is not { } car )
+			return null;
+
+		car.Riders.Clear();
+		car.Flags = (CarFlags)saved.Word( 0x00 );
+		car.Ride = saved.Handle;
+		car.Mesh = saved.Word( 0x04 );
+		car.Animation = saved.Word( 0x10 );
+		car.Voice = null;
+		car.Smoking = saved.Word( 0x2c ) != -1;
+		car.X = saved.Word( 0x34 );
+		car.Z = saved.Word( 0x38 );
+		car.VelocityX = saved.Word( 0x3c );
+		car.VelocityZ = saved.Word( 0x40 );
+		car.SteppedX = saved.Word( 0x44 );
+		car.SteppedZ = saved.Word( 0x48 );
+		car.Speed = saved.Word( 0x4c );
+		car.Steering = saved.Word( 0x50 );
+		car.Heading = saved.Word( 0x54 );
+		car.Turn = saved.Word( 0x5c );
+		car.Radius = saved.Word( 0x64 );
+		car.SteerX = saved.Word( 0x6c );
+		car.SteerZ = saved.Word( 0x70 );
+		car.OffsetX = saved.Word( 0x74 );
+		car.OffsetZ = saved.Word( 0x78 );
+		car.Chased = saved.Word( 0x80 );
+		car.Timer = saved.Word( 0x88 );
+		car.Patience = (car.Flags & CarFlags.Chasing) != 0 ? 0 : saved.Word( 0x8c );
+		car.Phase = saved.Word( 0x90 );
+		car.Arena = (ArenaHolding( car.X, car.Z ) ?? ArenaHolding( saved.CentreX, saved.CentreZ ))?.Handle ?? 0;
+
+		// The buoy list of the ride the file names is walked for one at the saved place (0x00543e1d); its id is its
+		// place in the ring.
+		if ( saved.BuoyRide == 0 )
+		{
+			car.Buoy = -1;
+		}
+		else
+		{
+			var of = _rides[saved.BuoyRide & 0xff];
+			var at = of is null ? -1 : of.Buoys.ToList().FindIndex( buoy => of.CentreX + buoy.X == saved.BuoyX && of.CentreZ + buoy.Z == saved.BuoyZ );
+
+			car.Buoy = Math.Max( at, 0 );
+		}
+
+		++ride.Cars;
+
+		if ( (car.Flags & CarFlags.Lead) != 0 )
+			ride.HasLead = true;
+
+		Unimplemented.Report( "SAVED_TRACK_CAR_MODEL_RECORDS" );
+
+		// Each rider onto the head of the car's list and counted seated (chunk 9, 0x00543f6a); the seat is the file's.
+		foreach ( var rider in saved.Riders )
+		{
+			--_freeNodes;
+			car.Riders.Insert( 0, new Rider( rider.Peep, rider.Seat ) );
+			++ride.Seated;
+		}
+
+		Log.Info( $"Bumper: car {car.Index} of ride 0x{saved.Handle:x} read at ({car.X},{car.Z}), flags 0x{(int)car.Flags:x}, "
+			+ $"timer {car.Timer}, riders [{string.Join( ",", car.Riders.Select( rider => $"{rider.Peep}@{rider.Seat}" ) )}]" );
+
+		return car;
+	}
+
+	/// <summary>
+	/// A saved peep put back on a ride's list - <c>FUN_00543560</c>, chunks 8 and 7: a boarder through
+	/// <see cref="Board"/>, as <c>BUMP 1</c> (so a closed ride takes none), a leaver onto the head of the leaving list
+	/// (<c>FUN_0054abd0</c>). The file lists each head first, so each list comes back turned round.
+	/// </summary>
+	internal void Restore( SavedTrackPeep saved )
+	{
+		if ( saved.Boarding )
+		{
+			Board( saved.Handle, saved.Peep );
+			return;
+		}
+
+		if ( RideOf( saved.Handle ) is not { } ride || _freeNodes == 0 )
+			return;
+
+		--_freeNodes;
+		ride.Leaving.Insert( 0, saved.Peep );
+	}
+
+	/// <summary>
 	/// A ride's record for a park file's track-rides module, as <c>FUN_005428e0</c> writes one
 	/// (<c>docs/exe/saves.md</c>, "OpenTPW's writer, a track ride's record"): where the placer put it, which is its
 	/// arena's centre less the half cell <c>FUN_00545890</c> adds, the placer's code for its turn

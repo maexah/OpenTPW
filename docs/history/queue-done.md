@@ -5754,6 +5754,18 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   file kept is written back byte for byte and its pot sold leaves 44 bytes; and the original read record 0 as
   BumperType -1, duration 4350, state 0 at its first poll and, its queue joined to the path there, opened it
   with four boats 5 s on, where the build before's file gave it no thing 43.
+- [x] **Q257p. The reader: a track ride's cars.** Done 2026-10-09, `alexah/391-track-ride-cars-read`. I split
+  the item: this is a file's cars, their riders and a ride's two lists read by a load, and every other piece,
+  writing them first, is Q257q. The loader's car arm read again (`FUN_00543560`, chunk 5): the `0xac` bytes over
+  a free car, then the arena, the buoy, the lead and a chaser's patience made again; a rider on the head of its
+  ride's last car; a boarder through `BUMP 1`'s call and a leaver onto the list's head. A rider saved with no
+  sprite of their own is given one at the load, where nothing drew them before. Confirmed: the park entered on
+  the original's own file of a Hot Pot in a go read four cars at the file's places, timer 319, riders 31, 39, 42
+  and 48, `state Running ... cars 4 seated 4` with four boats drawn and a head in each in the frame, and on
+  track tick 319 the four were on the leaving list and then walking from the exit (the build before: no car, no
+  boat, the ride running for good with nobody let off); the original read the same four on its first tick,
+  stepped the lead boat and the fourth through three ticks exactly as this build's tests do, and on its tick
+  318 after the load listed the leavers 48, 42, 39, 31, this build's order.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

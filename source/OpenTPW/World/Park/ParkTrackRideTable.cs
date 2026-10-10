@@ -8,7 +8,8 @@ namespace OpenTPW;
 ///
 /// <para>
 /// <b>Seeded from the save</b> as its loader does it (<c>FUN_00543560</c>), record by record: each ride in the slot its
-/// saved handle names, each section appended to its ride's list (<see cref="Lay"/>). <b>A purchase takes the first
+/// saved handle names, each section appended to its ride's list (<see cref="Lay"/>), each car and listed peep put
+/// back by <see cref="ParkBumperCars"/>. <b>A purchase takes the first
 /// free slot</b> (<see cref="Take"/>) and lays no section, and <b>a sale frees it</b> (<see cref="Free"/>); a move is a
 /// sale and a purchase, as the original's is. Laying track is not built (<c>PLACED_TRACK_RIDE_FIRST_TRACK_CELLS</c>),
 /// so a ride bought here never has a section.
@@ -48,22 +49,28 @@ public sealed class ParkTrackRideTable
 		if ( saved == null )
 			return;
 
-		// The loader restores each car and its record whole (FUN_00543560, chunks 5 and 9); nothing here reads them,
-		// so a saved bumper ride comes back with no cars and its record fresh from its template.
-		for ( var chunk = 0; chunk < saved.CarChunks; ++chunk )
-			Unimplemented.Report( "SAVED_TRACK_RIDE_CARS" );
+		// A rider record with no car of its ride before it: the loader hangs it on the record's last car, which is none.
+		for ( var rider = 0; rider < saved.StrayRiders; ++rider )
+			Unimplemented.Report( "SAVED_TRACK_RIDER_WITH_NO_CAR" );
 
-		// The loader reads the records in file order, so a section laid before its ride's record finds no ride.
-		var next = 0;
+		// The loader reads the records in file order, so a section, a car or a listed peep before its ride's record
+		// finds no ride.
+		int section = 0, car = 0, listed = 0;
 
 		for ( var ride = 0; ride <= saved.Rides.Count; ++ride )
 		{
-			for ( ; next < saved.Sections.Count && saved.Sections[next].RidesBefore == ride; ++next )
+			for ( ; section < saved.Sections.Count && saved.Sections[section].RidesBefore == ride; ++section )
 			{
-				var section = saved.Sections[next];
+				var laid = saved.Sections[section];
 
-				Lay( section.Handle, section.Type, section.X, section.Y );
+				Lay( laid.Handle, laid.Type, laid.X, laid.Y );
 			}
+
+			for ( ; car < saved.Cars.Count && saved.Cars[car].RidesBefore == ride; ++car )
+				Cars.Restore( saved.Cars[car] );
+
+			for ( ; listed < saved.Listed.Count && saved.Listed[listed].RidesBefore == ride; ++listed )
+				Cars.Restore( saved.Listed[listed] );
 
 			if ( ride < saved.Rides.Count )
 				Seat( saved.Rides[ride] );
@@ -72,8 +79,9 @@ public sealed class ParkTrackRideTable
 
 	/// <summary>
 	/// A saved ride put back in the slot its handle names - <c>FUN_00545890</c> handed the handle (<c>0x00543725</c>),
-	/// which takes the slot without a free test and fills it from the BumperType's template, an empty list; the
-	/// record's performance, mesh words, duration and state are then the file's (<see cref="ParkBumperCars.Restore"/>).
+	/// which takes the slot without a free test and fills it from the BumperType's template, an empty list, its arena
+	/// laid round the saved place; the record's performance, mesh words, duration and state are then the file's
+	/// (<see cref="ParkBumperCars.Restore(SavedTrackRide)"/>).
 	/// </summary>
 	private void Seat( SavedTrackRide ride )
 	{
@@ -90,6 +98,7 @@ public sealed class ParkTrackRideTable
 		_bumperType[slot] = bumperType;
 		_sections[slot].Clear();
 		Cars.Open( ride.Handle, bumperType );
+		Cars.Place( ride.Handle, ride.X + (ParkBumperCars.CellUnits / 2), ride.Y + (ParkBumperCars.CellUnits / 2) );
 		Cars.Restore( ride );
 	}
 

@@ -364,6 +364,27 @@ public sealed partial class ParkPeople : Entity
 				{
 					_sprites[peep.ThingId] = SavedSprite( park, picture );
 				}
+				else if ( person.SpriteSlot == 0 )
+				{
+					// A rider on a thing that keeps no sprite was saved with none: admission destroyed it (0x00502147),
+					// and the original makes it again from what they wear as the thing lets them go (FUN_004d4140).
+					// Nothing here destroys a rider's sprite, so it is made again now, standing where they are.
+					var slot = _nextSpriteSlot++;
+					var one = (float)ParkWorld.NavigatorState.One;
+					var again = new SpriteScript( SpriteScript.None, 0, spriteNumber: 0, frame: 0 );
+
+					again.Start( SpriteScript.Standing );
+					again.ScheduleFrom( 0 );
+
+					_sprites[peep.ThingId] = again;
+
+					ParkGuestSprites.Current?.Add( person with { SpriteSlot = slot }, new ParkWorld.Sprite(
+						Slot: slot, Type: peep.SpriteKind, Bank: peep.SpriteBank, SpriteNumber: 0,
+						X: person.Navigator.X / one, Height: 0f, Y: person.Navigator.Y / one, Facing: person.Facing,
+						Frame: 0, Alpha: 255, State: 0, Script: SpriteScript.None, Pc: 0 ) );
+
+					Log.Info( $"People: guest {peep.ThingId}, saved with no sprite, is given one again on slot {slot}" );
+				}
 
 				// And the balloon, by the slot the guest names: the table is saved slot for slot, the balloon's own
 				// sprite with it (FUN_00475730). A slot that is not a balloon's is not taken for one.

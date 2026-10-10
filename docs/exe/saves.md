@@ -2240,7 +2240,8 @@ wake's (item 1141): handles 94 to 97 and 169 to 172 for the four. The object's `
 
 **What OpenTPW reads.** `ParkTrackRides` reads a ride's five words (`SavedTrackRide.Performance`, `MeshBase`,
 `MeshCount`, `Duration`, `State`) and `ParkTrackRideTable`'s seating lays them over the ride its template made
-(`ParkBumperCars.Restore`). The cars are still stepped over and counted (`SAVED_TRACK_RIDE_CARS`).
+(`ParkBumperCars.Restore`). The cars, their riders and the two lists are read too ("OpenTPW's reader, a track
+ride's cars", below).
 
 **What OpenTPW writes** (`ParkTrackRides.Splice`, `Put`, `RideChunks`; `ParkBumperCars.Written`;
 `Level.WritePark`). A track ride **bought** is written with its three records and, in the track-rides module,
@@ -2252,7 +2253,7 @@ no type 5 under its handle. **Left as the file has it, and counted:** a bought r
 another BumperType (the karts, the water ride) and a tracked ride (`SAVE_PARK_OBJECT_BOUGHT`); a file's ride
 with a car, sold (`SAVE_PARK_OBJECT_SOLD`) or kept (`SAVE_PARK_TRACK_RIDE_AS_THE_FILE`); and a ride bought into
 the slot of a file's ride that was sold and left. Writing a car needs its two model records, each rider's head
-sprite and the `0xac` bytes (Q257p).
+sprite and the `0xac` bytes (Q257q).
 
 **Confirmed in the game** (`q257o/confirm.py`: scene `a` 6 of 6 and scene `b` 2 of 2 on the desktop at the second
 run, the control 4 of 4; `PREDICTION.txt` holds every prediction and miss). Lost Kingdom from `easymode.TPWI`:
@@ -2285,6 +2286,80 @@ boat out bought, kept or sold (counted and left); a ride kept and written over w
 (scene `b` saved it untouched); a ride made between two of the file's; a turned ride (the three codes stand on
 the listing: the one file with a turned track ride holds 6 on a Dino Karts). **Not seen in the original:** a
 load of a file whose ride record says open and holds no car. `docs/exe/addresses.md` not regenerated.
+
+### OpenTPW's reader, a track ride's cars
+
+Q257p, split by the session: this is a file's cars, riders and lists read by a load. Writing them, and the item's
+other pieces, are Q257q.
+
+**The loader's car arm, read again** (`FUN_00543560`, chunk 5). A free car of the pool is taken, the first whose
+bit 0 is clear (`FUN_00549b50`), and the file's `0xac` bytes are read over it. Then the loader makes again what
+the bytes cannot carry: `+0x94` nought; `+0x9c` the ride's record, whose `+0xcc` names this car as its last read
+and whose car count `+0x5c` goes up; the rider list `+0x30` nought; the float `+0xa0` nought where it is not a
+number; **the arena `+0x98` the first collision object that holds where the car floats, or failing that the one
+that holds the centre the chunk gives**; the car's model and its wake's (`FUN_00463ab0`, handed the handles
+`+0x08` and `+0x0c`); the record's lead `+0x58` where the car's flags hold `0x400000`; **the buoy `+0x7c` -1
+where the chunk names no ride, else the id of the buoy of the named ride that lies on the chunk's place, nought
+where none does**; and **a car whose flags hold `4`, a chase, has its patience `+0x8c` set to nought**, so its
+first tick chooses again. The held sound's handle `+0x20` is left as the file has it. **A rider** (chunk 9) is
+put on the head of the list of the car its ride read last, with the chunk's seat id, the record's seated count
+`+0x60` goes up and its seat node is looked up in the car's model (`FUN_0044b220( model, 0x80, id )`). **A
+boarder** (chunk 8) goes through `FUN_0054aa80`, `BUMP 1`'s call, which refuses a closed ride; **a leaver**
+(chunk 7) through `FUN_0054abd0`, onto the head of the leaving list. The writer lists each list head first, so
+each comes back turned round.
+
+**A buoy's id is its place in the ring**: the four files' cars name buoys 1, 3, 4 and 5 at the ring's second,
+fourth, fifth and sixth points round the centre (`0x20a00`, `0x13200`).
+
+**What OpenTPW reads** (`ParkTrackRides.Cars`, `Listed`, `StrayRiders`; `ParkTrackRideTable`;
+`ParkBumperCars.Restore( SavedTrackCar )` and `Restore( SavedTrackPeep )`). Each car's flags, mesh, clip, place,
+velocity, stepped velocity, speed, the two headings, turn, radius, steering point, offset, chased car, timer,
+patience and phase are the file's words; its arena, buoy, lead and a chaser's patience are made again as the
+loader makes them; its riders and the two lists go back as above. The ride's arena is laid round the saved
+place as the table seats it (`Bumper_LayRide`'s x and z), where before it waited for the object.
+**Left out:** the car's two model records, so its clip starts from its first frame
+(`SAVED_TRACK_CAR_MODEL_RECORDS`, counted a car); the held sound, which names a voice of the session that saved
+it (the original's step finds it gone and empties it; here it is empty from the load, and the next retarget
+starts another); `+0x24`, `+0x28`, `+0x58`, `+0x60`, `+0x68`, `+0x84`, `+0xa0` and `+0xa4`, which nothing here
+keeps and whose meanings are not decoded; a rider record with no car of its ride before it
+(`SAVED_TRACK_RIDER_WITH_NO_CAR`: the original hangs it on a null car).
+
+**A rider saved with no sprite is given one at the load, a deviation.** A rider on a thing that keeps none (the
+Hot Pot: `mFlags` without `0x20`) is in the file with sprite slot nought, since admission destroyed it
+(`0x00502147`), and the original makes it again from what they wear as the thing lets them go (`FUN_004d4140`).
+Nothing here destroys a rider's sprite, and a guest's head in a boat is drawn through their own, so
+`ParkPeople` makes it at the load: standing, on a new slot, of the person's `mESPSprite` and `mSpriteID`. Before
+this a rider loaded so was drawn by nothing, on the ride or after it.
+
+**Confirmed in the game** (`q257p/confirm.py`, on the desktop: scene `later` 4 of 4 at the second run, scene
+`open` 2 of 2, the control 2 of 2; `PREDICTION.txt` holds every prediction and miss). The park entered on the
+original's own `hotpot-later.TPWS`: the log read four cars 0 to 3 at (134047,77741), (131374,75555),
+(135682,75894) and (134925,80641), flags `0x340c009`, `0x300c005`, `0x300c009`, `0x300c009`, timer 319 each,
+riders 31, 39, 42 and 48 on seat 1; at the first pause, track tick 66, `bumpers` read `state Running ...
+duration 750 cars 4 seated 4`, four boats drawn, each on clip 5 with timer 253, and the frame shows four boats
+in the pot with a head in each. **On track tick 319 the four went onto the leaving list and the ride read
+loading**, and 13.5 s after the first pause they were off the list, in `guests` and walking from the exit, two
+new riders seated. With `hotpot-open.TPWS`: four cars at the file's places, timer 4350, riders 40, 34, 37 and
+none, `state Loading ... cars 4 seated 3`, buoys 3, 3, 5, 5. **The control** (the build before): no car, no boat,
+`8x SAVED_TRACK_RIDE_CARS`, and 15 s on still running with nobody let off.
+
+**The original under Proton** (`q257p/orig/go.sh`, off-screen, the file loaded from the Load Park list,
+`cars.py` printing every car each track tick; `a-load.log`). Its first tick after the load, track tick 209, read
+state 2, four cars, riders 31, 39, 42, 48, every timer 318; **the lead boat and the fourth stood on that tick and
+the next two exactly where this build's tests step them from the same words** (the lead at (133910,77647) with
+velocity (-137,-94), then (133770,77553), then (133627,77459)); the chaser, car 1, had chosen a buoy with
+patience 3 on its first tick; and **on track tick 527, 318 ticks after the load, the record read state 1 with
+the leaving list 48, 42, 39, 31**, the order this build's list reads on its tick 319, then emptied a rider every
+eight ticks. Its frame shows the four boats in the pot.
+
+**Predictions wrong, mine:** the four riders in `guests` after the go (none was: the missing sprite, found by
+it and fixed); and that the cars which had drawn nothing would stand at timer 253 where this build's stood (none
+did: each had reached a buoy within ten ticks, and a buoy reached draws the next offset from the generator,
+which is the original's world generator and here the cars' own). **Not run in either game, tested only:** a
+boarder or a leaver in a file (no file of the four holds one), a car out of every arena, a buoy not found, a
+short car chunk. **Not compared past three ticks:** the stepping, for the reason above. **Not looked at:** a
+loaded lead boat's engine sound (it starts at the boat's next retarget; `sounds started 0` at both pauses). The
+original's riders' heads are not told apart in its off-screen frame. `docs/exe/addresses.md` not regenerated.
 
 ### Read, not run
 

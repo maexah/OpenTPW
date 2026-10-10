@@ -33,6 +33,41 @@ public readonly record struct SavedTrackRide( int Handle, int X, int Y, int Orie
 public readonly record struct SavedTrackSection( int Handle, int Type, int X, int Y, int RidesBefore );
 
 /// <summary>
+/// One rider of a saved car - a type 9 record: the peep and the seat id <c>FUN_00549c60</c> gave them.
+/// </summary>
+public readonly record struct SavedTrackRider( int Peep, int Seat );
+
+/// <summary>
+/// One car as a park save left it - a type 5 record, and the type 9 records read while it was its ride's last car.
+/// FileFormats <c>saves.md</c>, "A car".
+/// </summary>
+/// <param name="Handle">The handle of the ride it belongs to.</param>
+/// <param name="Bytes">The car's <c>0xac</c> bytes as they lay in memory; a shorter chunk's are nought past its end.</param>
+/// <param name="CentreX">The centre of the collision object it floated in, across.</param>
+/// <param name="CentreZ">And down.</param>
+/// <param name="BuoyRide">The handle of the ride whose buoy it steered at, or nought where it had none.</param>
+/// <param name="BuoyX">Where that buoy lies, across.</param>
+/// <param name="BuoyZ">And down.</param>
+/// <param name="RidesBefore">How many ride records the file holds before it.</param>
+public sealed record SavedTrackCar( int Handle, byte[] Bytes, int CentreX, int CentreZ, int BuoyRide, int BuoyX, int BuoyZ,
+	int RidesBefore )
+{
+	/// <summary>How many bytes of a car the save holds - the pool's stride (<c>FUN_00549b50</c>).</summary>
+	public const int Size = 0xac;
+
+	/// <summary>Its riders in file order, which is head first; the loader pushes each on the head, so the list comes back turned round.</summary>
+	public List<SavedTrackRider> Riders { get; } = [];
+
+	/// <summary>The dword at an offset of the car.</summary>
+	public int Word( int offset ) => BitConverter.ToInt32( Bytes, offset );
+}
+
+/// <summary>
+/// One peep on a ride's boarding list (a type 8 record) or its leaving list (a type 7), in file order, head first.
+/// </summary>
+public readonly record struct SavedTrackPeep( int Handle, int Peep, bool Boarding, int RidesBefore );
+
+/// <summary>
 /// The track-rides module of a park save (<c>KART</c>): every ride whose item has a <c>Bumper.BumperType</c>, and
 /// the track laid for it. FileFormats <c>saves.md</c>, "The track-rides module".
 ///
@@ -43,9 +78,9 @@ public readonly record struct SavedTrackSection( int Handle, int Type, int X, in
 /// has to land on the root's end and then on the <c>KART</c> tag, or the module is refused and no ride is read.
 /// </para>
 /// <para>
-/// <b>Two chunk types are read and the rest are stepped over by length</b>: a ride (3) and a track section (4), each
-/// in file order, which is circuit order from the station. The stamp (2), the cars (5), their records (9) and a
-/// ride's close (6) are not, because nothing here models them. What the loader does with them is
+/// <b>Read</b>: a ride (3), a track section (4), a car (5) with its riders (9), and a peep on a ride's leaving (7)
+/// or boarding (8) list, each in file order, which for the sections is circuit order from the station. The stamp (2)
+/// and a ride's close (6) are stepped over by length. What the loader does with them is
 /// <see cref="ParkTrackRideTable"/>'s.
 /// </para>
 /// <para>
@@ -67,7 +102,9 @@ public sealed class ParkTrackRides
 	private const int SectionType = 4;
 	private const int CarType = 5;
 	private const int CloseType = 6;
-	private const int CarRecordType = 9;
+	private const int LeavingType = 7;
+	private const int BoardingType = 8;
+	private const int RiderType = 9;
 
 	/// <summary>A ride chunk's size: the header, the handle, where it stands, its orientation, its item and five dwords.</summary>
 	private const int RideSize = 52;
@@ -75,8 +112,8 @@ public sealed class ParkTrackRides
 	/// <summary>A close chunk's size: the header and the handle.</summary>
 	private const int CloseSize = 16;
 
-	/// <summary>How many car chunks (5) and car record chunks (9) the module steps over - what the loader restores whole.</summary>
-	public int CarChunks { get; private set; }
+	/// <summary>How many rider records (9) follow no car of their ride, which the loader would hang on no car.</summary>
+	public int StrayRiders { get; private set; }
 
 	/// <summary>A chunk's header: its type, its own size and its whole size, a dword each.</summary>
 	private const int HeaderSize = 12;
@@ -85,6 +122,8 @@ public sealed class ParkTrackRides
 
 	private readonly List<SavedTrackRide> _rides = [];
 	private readonly List<SavedTrackSection> _sections = [];
+	private readonly List<SavedTrackCar> _cars = [];
+	private readonly List<SavedTrackPeep> _listed = [];
 
 	/// <summary>Every chunk after the root's own data that opens on a handle: its type, the handle, where it lies and its whole size.</summary>
 	private readonly List<(int Type, int Handle, int At, int Whole)> _chunks = [];
@@ -106,6 +145,12 @@ public sealed class ParkTrackRides
 	/// <summary>The sections in file order.</summary>
 	public IReadOnlyList<SavedTrackSection> Sections => _sections;
 
+	/// <summary>The cars in file order, each with its riders.</summary>
+	public IReadOnlyList<SavedTrackCar> Cars => _cars;
+
+	/// <summary>The peeps on the rides' boarding and leaving lists, in file order.</summary>
+	public IReadOnlyList<SavedTrackPeep> Listed => _listed;
+
 	/// <summary>
 	/// Reads the module out of the inflated payload - what <see cref="SaveReader.ReadFile"/> hands back, and the
 	/// same array <see cref="ParkWorld"/> is given.
@@ -122,6 +167,8 @@ public sealed class ParkTrackRides
 		{
 			_rides.Clear();
 			_sections.Clear();
+			_cars.Clear();
+			_listed.Clear();
 			Problem ??= e.Message;
 		}
 	}
@@ -142,7 +189,9 @@ public sealed class ParkTrackRides
 		var rides = new List<SavedTrackRide>();
 		var sections = new List<SavedTrackSection>();
 		var chunks = new List<(int Type, int Handle, int At, int Whole)>();
-		var carChunks = 0;
+		var cars = new List<SavedTrackCar>();
+		var listed = new List<SavedTrackPeep>();
+		var stray = 0;
 
 		for ( var at = start + rootOwn; at != end; )
 		{
@@ -167,9 +216,36 @@ public sealed class ParkTrackRides
 				rides.Add( new SavedTrackRide( ReadInt32At( at + 12 ), ReadInt32At( at + 16 ), ReadInt32At( at + 20 ),
 					ReadInt32At( at + 24 ), ReadInt32At( at + 28 ), Field( 0 ), Field( 1 ), Field( 2 ), Field( 3 ), Field( 4 ) ) );
 			}
-			else if ( type is CarType or CarRecordType )
+			else if ( type == CarType )
 			{
-				++carChunks;
+				// The handle, the car's bytes, then five dwords: its collision object's centre, and its buoy's ride and
+				// place (0x00542c0e..0x00542d5b). The loader reads what a short chunk holds and takes the rest as nought.
+				var bytes = new byte[SavedTrackCar.Size];
+				var held = Math.Clamp( own - HeaderSize - 4, 0, SavedTrackCar.Size );
+
+				Buffer.BlockCopy( _data, at + HeaderSize + 4, bytes, 0, held );
+
+				var tail = at + HeaderSize + 4 + SavedTrackCar.Size;
+
+				int Tail( int index ) => tail + (index * 4) + 4 <= at + own ? ReadInt32At( tail + (index * 4) ) : 0;
+
+				cars.Add( new SavedTrackCar( ReadInt32At( at + HeaderSize ), bytes, Tail( 0 ), Tail( 1 ), Tail( 2 ), Tail( 3 ), Tail( 4 ),
+					rides.Count ) );
+			}
+			else if ( type == RiderType && own >= HeaderSize + 12 )
+			{
+				// On the car its ride read last (the record's +0xcc, 0x00543f6a).
+				var handle = ReadInt32At( at + HeaderSize );
+
+				if ( cars.FindLast( car => car.Handle == handle ) is { } car )
+					car.Riders.Add( new SavedTrackRider( ReadInt32At( at + HeaderSize + 4 ), ReadInt32At( at + HeaderSize + 8 ) ) );
+				else
+					++stray;
+			}
+			else if ( type is LeavingType or BoardingType && own >= HeaderSize + 8 )
+			{
+				listed.Add( new SavedTrackPeep( ReadInt32At( at + HeaderSize ), ReadInt32At( at + HeaderSize + 4 ), type == BoardingType,
+					rides.Count ) );
 			}
 			else if ( type == SectionType )
 			{
@@ -186,9 +262,11 @@ public sealed class ParkTrackRides
 		_rides.AddRange( rides );
 		_sections.AddRange( sections );
 		_chunks.AddRange( chunks );
+		_cars.AddRange( cars );
+		_listed.AddRange( listed );
 		_start = start;
 		_end = end;
-		CarChunks = carChunks;
+		StrayRiders = stray;
 		ClosedOnTag = true;
 	}
 
