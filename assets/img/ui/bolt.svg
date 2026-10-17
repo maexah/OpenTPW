@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+	<!-- A small brass bolt, seen from above, with one slot. -->
+	<defs>
+		<radialGradient id="b" cx="0.36" cy="0.3" r="0.8">
+			<stop offset="0" stop-color="#fff6a8"/>
+			<stop offset="0.35" stop-color="#f1c21b"/>
+			<stop offset="0.8" stop-color="#c98500"/>
+			<stop offset="1" stop-color="#8a5a00"/>
+		</radialGradient>
+	</defs>
+	<circle cx="8" cy="8.6" r="6.9" fill="#000" opacity="0.35"/>
+	<circle cx="8" cy="7.6" r="6.6" fill="url(#b)" stroke="#5c3a00" stroke-width="1.2"/>
+	<path d="M4.6 9.6l6.8-4" fill="none" stroke="#5c3a00" stroke-width="1.5" stroke-linecap="round"/>
+	<path d="M5 10.3l6.8-4" fill="none" stroke="#fff6a8" stroke-width="0.6" stroke-linecap="round" opacity="0.7"/>
+</svg>
