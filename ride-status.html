@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ride Status: how much of OpenTPW is built</title>
+<meta name="description" content="How much of OpenTPW is built, in numbers counted from the project&#039;s own code, and what is being built next.">
+<link rel="canonical" href="https://maexah.github.io/OpenTPW/ride-status.html">
+<meta property="og:url" content="https://maexah.github.io/OpenTPW/ride-status.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="OpenTPW">
+<meta property="og:locale" content="en_GB">
+<meta property="og:title" content="Ride Status: how much of OpenTPW is built">
+<meta property="og:description" content="How much of OpenTPW is built, in numbers counted from the project&#039;s own code, and what is being built next.">
+<meta property="og:image" content="https://maexah.github.io/OpenTPW/assets/img/screens/lost-kingdom-gate.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="720">
+<meta property="og:image:alt" content="The Lost Kingdom island seen from the sea, its stone gate facing the camera.">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Front Gate","item":"https://maexah.github.io/OpenTPW/"},{"@type":"ListItem","position":2,"name":"Ride Status","item":"https://maexah.github.io/OpenTPW/ride-status.html"}]}]}</script>
+	<meta name="theme-color" content="#064858">
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preload" href="assets/fonts/Boogaloo.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/Itim-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/css/site.css">
+<link rel="stylesheet" href="assets/css/pages.css">
+<script src="assets/js/look-first.js"></script>
+</head>
+<body class="page-ride-status">
+<a class="skip-link" href="#main">Skip to the park</a>
+
+<div class="alert-bar" role="region" aria-label="Park notice">
+	<span class="alert-mark" aria-hidden="true">!</span>
+	<p><strong class="alert-name">Park notice:</strong> Lost Kingdom is open early.<span class="alert-rest"> The other three lands are not open yet.</span></p>
+	<a href="ride-status.html" data-help="Opens the Ride Status page"><span><span class="alert-see">See </span>Ride Status</span></a>
+</div>
+
+<header class="site-head">
+	<a class="wordmark" href="./" aria-label="OpenTPW, the Front Gate" data-help="Goes to the Front Gate, the home page">
+		<span class="wordmark-open">Open</span><span class="wordmark-tpw">TPW</span>
+	</a>
+
+	<button class="menu-button" type="button" aria-expanded="false" aria-controls="site-menu" data-help="Opens the menu" data-help-on="Closes the menu">
+		<span class="menu-bars" aria-hidden="true"></span>
+		<span>Menu</span>
+	</button>
+
+	<nav id="site-menu" class="site-menu" aria-label="Main">
+		<ul>
+			<li><a href="./" data-help="Goes to the Front Gate, the home page">Front Gate</a></li>
+			<li><a href="plan-your-visit.html" data-help="Opens Plan Your Visit: how to get OpenTPW running">Get Started</a></li>
+			<li><a href="./#lands-title" data-help="Goes to the four lands on the Front Gate">The Lands</a></li>
+			<li><a href="ride-status.html" aria-current="page" data-help="Opens the Ride Status page">Ride Status</a></li>
+			<li><a href="guest-services.html" data-help="Opens Guest Services: questions and answers">Help</a></li>
+			<li><a href="backstage.html" data-help="Opens Backstage: the code, and how to help">Code</a></li>
+		</ul>
+	</nav>
+
+		<div class="site-tools">
+		<button class="switch" id="easy-read-switch" type="button" aria-pressed="false" data-ui="switch" data-help="Makes the words bigger and stops everything moving" data-help-on="Turns easy read off">
+			<span class="switch-icon" aria-hidden="true">Aa</span>
+			<span class="switch-label">Easy read</span>
+			<span class="switch-track" aria-hidden="true"><span class="switch-state" aria-hidden="true" data-on="On" data-off="Off">Off</span></span>
+		</button>
+		<button class="switch" id="stop-motion-switch" type="button" aria-pressed="false" data-ui="switch" data-help="Stops everything moving. The words stay as they are" data-help-off="Lets things move again" data-help-on="Lets things move again" data-held-easy="Easy read keeps the page still" data-held-device="Your device asks for no motion">
+			<span class="switch-icon switch-icon-still" aria-hidden="true"></span>
+			<span class="switch-label">Stop motion<span class="unseen switch-why"></span></span>
+			<span class="switch-track" aria-hidden="true"><span class="switch-state" aria-hidden="true" data-on="On" data-off="Off">Off</span></span>
+		</button>
+		<a class="panel-link easy-more" href="#easy-options" data-help="Goes to the choices for Easy read, lower on this page">Options</a>
+		<a class="key-count" id="key-count" href="golden-keys.html" data-help="Opens the golden key hunt" hidden><span class="key-count-icon" aria-hidden="true"></span><span id="key-count-words">Golden keys</span></a>
+	</div>
+
+	<a class="ticket" href="plan-your-visit.html" data-ui="ticket" data-help="Shows how to build OpenTPW and try it">
+		<span class="ticket-stub" aria-hidden="true">Admit one</span>
+		<span class="ticket-main">Build and try it</span>
+	</a>
+</header>
+	<main id="main" class="page status-page">
+
+<header class="page-head">
+	<h1 class="sign-head">Ride Status</h1>
+	<p class="page-lead">How much of OpenTPW is built, and what is being built next.</p>
+</header>
+
+<section class="panel can-do" aria-labelledby="can-do-title">
+	<h2 id="can-do-title">What you can do today</h2>
+	<div class="can-do-lists">
+		<div>
+			<h3 class="can-do-yes">You can</h3>
+			<ul>
+				<li>Open the park that comes with Lost Kingdom.</li>
+				<li>Watch guests arrive, queue, ride and buy drinks.</li>
+				<li>Lay paths, buy rides and hire staff.</li>
+			</ul>
+		</div>
+		<div>
+			<h3 class="can-do-no">You cannot yet</h3>
+			<ul>
+				<li>Save a park.</li>
+				<li>Finish a game.</li>
+				<li>Open a park in Wonder Land, Halloween World or Space Zone.</li>
+			</ul>
+		</div>
+	</div>
+	<p><a class="panel-link" href="plan-your-visit.html" data-help="Opens Plan Your Visit: how to get OpenTPW running">See how to get started</a></p>
+</section>
+
+<p class="status-lead">The numbers below show how much is built. Each card says where its number comes from.</p>
+
+<div id="status-board" class="status-board">
+
+	<ul class="meters" aria-label="OpenTPW in numbers">
+		<li class="meter meter-kingdom">
+			<p class="meter-figure"><strong>23</strong> of 31</p>
+			<h2 class="meter-name">Lost Kingdom rides, shops and sideshows running</h2>
+			<progress class="meter-bar" max="31" value="23" aria-label="23 of 31 running"></progress>
+			<p>Guests can use 23 of the 31 things in Lost Kingdom today. This list is kept by hand. <a href="lost-kingdom.html" data-help="Opens the Lost Kingdom page">See which</a>.</p>
+		</li>
+		<li class="meter meter-opcodes" id="meter-opcodes">
+			<p class="meter-figure"><strong id="opcodes-built">78</strong> of <span id="opcodes-all">106</span></p>
+			<h2 class="meter-name">Script commands built</h2>
+			<progress class="meter-bar" id="opcodes-bar" max="106" value="78" aria-label="78 of 106 built"></progress>
+			<p>The game's rides, shops and sideshows are run by small scripts. The game has <span id="opcodes-all-words">106</span> script commands. OpenTPW can carry out <span id="opcodes-built-words">78</span> of them. A small program counts this from the code.</p>
+		</li>
+		<li class="meter meter-gaps" id="meter-gaps" hidden>
+			<p class="meter-figure"><strong id="gaps-count">0</strong></p>
+			<h2 class="meter-name">Known gaps left</h2>
+			<p>A gap is a place where the game asks for something OpenTPW has not built yet. A small program counts the gaps that have a fixed name in the code. A few are named in other ways and are not counted, so the real number is a little higher. It goes down when a gap is filled, and up when a new one is found.</p>
+		</li>
+	</ul>
+
+	<p class="build-note" id="build-note">Read from the project on 23 October 2026.</p>
+
+	<section class="panel status-next" aria-labelledby="next-title">
+		<h2 id="next-title">Being built next</h2>
+		<div class="panel-screen">
+			<a class="skip-list" href="#after-board" data-help="Jumps past this list to the end of the board">Skip the list of what is built next</a>
+			<p class="status-hint">The work queue, in order. The first line is the next job.</p>
+			<ol class="build-list" id="build-list">
+				<li><span class="build-id">Q647</span> <span class="build-title">Every launch writes console.log, the one before kept as console-prev.log</span></li>
+				<li><span class="build-id">Q616</span> <span class="build-title">Eight bits a channel is the default: TEXTURE32 on</span></li>
+				<li><span class="build-id">Q617</span> <span class="build-title">The ground&#039;s cells are not drawn at one sharpness. Decode first</span></li>
+				<li><span class="build-id">Q618</span> <span class="build-title">The paths, the queue lines and the ride borders are blurry. After Q617</span></li>
+				<li><span class="build-id">Q619</span> <span class="build-title">The river, its features and the rock at the back are not darkened on unbought land. Decode first</span></li>
+				<li><span class="build-id">Q620</span> <span class="build-title">The boundary wall between the park and the unbought land is not drawn</span></li>
+				<li><span class="build-id">Q621</span> <span class="build-title">The advisor&#039;s colours: hard hat, gloves, safari hat, the scientist&#039;s white hair. Decode first</span></li>
+				<li><span class="build-id">Q622</span> <span class="build-title">The seaplane is invisible landing, picking up and dropping off</span></li>
+				<li><span class="build-id">Q623</span> <span class="build-title">The round fountain flashes a couple of times when first placed</span></li>
+				<li><span class="build-id">Q624</span> <span class="build-title">The map screen is badly broken</span></li>
+				<li><span class="build-id">Q625</span> <span class="build-title">The park camera can leave the park, to the map&#039;s edge and the ocean. Decode first</span></li>
+				<li><span class="build-id">Q626</span> <span class="build-title">Leaving the camcorder leaves the camera at an angle that is no multiple of 45 degrees</span></li>
+				<li><span class="build-id">Q627</span> <span class="build-title">Guests are picked up and dropped off by the vehicles almost non-stop. Measure first</span></li>
+				<li><span class="build-id">Q628</span> <span class="build-title">A staff member&#039;s click range is very large. Measure first</span></li>
+				<li><span class="build-id">Q629</span> <span class="build-title">A poor park won a golden ticket for happiness</span></li>
+				<li><span class="build-id">Q630</span> <span class="build-title">The key animation at park entry is not seen. Decode first</span></li>
+				<li><span class="build-id">Q631</span> <span class="build-title">WASD scroll the camera, the arrow keys&#039; meaning settled first (notes 6 and 11)</span></li>
+				<li><span class="build-id">Q632</span> <span class="build-title">Building a path makes no sound. Decode first</span></li>
+				<li><span class="build-id">Q633</span> <span class="build-title">Building a queue shows the path tool&#039;s previews, not the queue&#039;s</span></li>
+				<li><span class="build-id">Q634</span> <span class="build-title">In the shop and ride windows the cursor is hidden behind the 3D model preview</span></li>
+			</ol>
+			<p class="build-empty" id="build-empty" hidden>This list could not be read just now. Please look again soon.</p>
+			<span class="key-spot"><button class="gold-key" type="button" data-key="ride-status" data-ui="key" data-help="A golden key! Press to take it" aria-label="A hidden golden key. Press to take it." hidden></button></span>
+				<p class="status-hint" id="next-rest">And <span id="next-rest-count">246</span> more after these.</p>
+		</div>
+	</section>
+
+</div>
+
+<p class="way-back" id="after-board" tabindex="-1"><a class="ticket" href="./" data-ui="ticket" data-help="Goes to the Front Gate, the home page"><span class="ticket-stub" aria-hidden="true">This way</span><span class="ticket-main">Back to the Front Gate</span></a>
+	</p>
+
+</main>
+<section class="easy-options" id="easy-options" aria-labelledby="easy-options-title" tabindex="-1">
+	<h2 id="easy-options-title">Easy read options</h2>
+	<p>Pick what is easiest for you. Your choice is kept for your next visit.</p>
+	<div class="easy-choices">
+		<fieldset>
+			<legend>Letters</legend>
+				<button class="panel-link choice choice-font-atkinson" type="button" value="font-atkinson" aria-pressed="true" data-help="Uses the Atkinson Hyperlegible letters">Clear letters</button>
+				<button class="panel-link choice choice-font-dyslexic" type="button" value="font-dyslexic" aria-pressed="false" data-help="Uses the OpenDyslexic letters">Dyslexia letters</button>
+				<button class="panel-link choice choice-font-system" type="button" value="font-system" aria-pressed="false" data-help="Uses the letters your own device uses">My device&#039;s letters</button>
+			</fieldset>
+		<fieldset>
+			<legend>Page colour</legend>
+				<button class="panel-link choice choice-paper-sea" type="button" value="paper-sea" aria-pressed="true" data-help="Keeps the dark sea behind the words">Sea</button>
+				<button class="panel-link choice choice-paper-cream" type="button" value="paper-cream" aria-pressed="false" data-help="Puts cream paper behind the words">Cream paper</button>
+			</fieldset>
+	</div>
+</section>
+	<footer class="site-foot">
+	<div class="waves" aria-hidden="true"></div>
+	<p><strong>OpenTPW is a fan project.</strong> It rebuilds the game Theme Park World. In America the game is called Sim Theme Park.</p>
+	<p>It holds no game files. You need your own copy of the game to play.</p>
+	<p>It is not made or approved by the game's makers or publishers.</p>
+	<p>OpenTPW was started by Alex Guthrie and its contributors. This site follows a fork of their work. <a href="https://github.com/OpenTPW/OpenTPW" data-help="Opens the original OpenTPW project on GitHub">The original project on GitHub</a></p>
+	<p><a href="https://github.com/maexah/OpenTPW" data-help="Opens this fork on GitHub">This fork on GitHub</a> <a class="js-only" href="golden-keys.html" data-help="Opens the golden key hunt">The golden key hunt</a></p>
+</footer>
+
+<p class="key-say" id="key-say" role="status"></p>
+
+<div class="help-strip" id="help-strip" aria-hidden="true"></div>
+
+<script type="application/json" id="otpw-data">{"lands":[{"id":"lost-kingdom","name":"Lost Kingdom","url":"lost-kingdom.html","open":true,"badge":"Open","keys":1,"blurb":"Dinosaurs, palm trees and the first rides that run."},{"id":"wonder-land","name":"Wonder Land","url":"wonder-land.html","open":false,"badge":"Not open yet","keys":3,"blurb":"A garden where you are the size of an ant."},{"id":"halloween-world","name":"Halloween World","url":"halloween-world.html","open":false,"badge":"Not open yet","keys":1,"blurb":"Spooky, stormy and friendly all the same."},{"id":"space-zone","name":"Space Zone","url":"space-zone.html","open":false,"badge":"Not open yet","keys":5,"blurb":"A purple planet under a sunset sky."}],"site":{"keys":["index","lost-kingdom","wonder-land","halloween-world","space-zone","ride-status","plan-your-visit","guest-services","backstage"]}}</script>
+<script type="module" src="assets/js/main.js"></script>
+</body>
+</html>
+	

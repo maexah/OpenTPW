@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guest Services: questions and answers. OpenTPW</title>
+<meta name="description" content="Short, plain answers about OpenTPW: what it is, whether you can play it yet, what you need, which computers it runs on, and how to help.">
+<link rel="canonical" href="https://maexah.github.io/OpenTPW/guest-services.html">
+<meta property="og:url" content="https://maexah.github.io/OpenTPW/guest-services.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="OpenTPW">
+<meta property="og:locale" content="en_GB">
+<meta property="og:title" content="Guest Services: questions and answers. OpenTPW">
+<meta property="og:description" content="Short, plain answers about OpenTPW: what it is, whether you can play it yet, what you need, which computers it runs on, and how to help.">
+<meta property="og:image" content="https://maexah.github.io/OpenTPW/assets/img/screens/lost-kingdom-gate.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="720">
+<meta property="og:image:alt" content="The Lost Kingdom island seen from the sea, its stone gate facing the camera.">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Front Gate","item":"https://maexah.github.io/OpenTPW/"},{"@type":"ListItem","position":2,"name":"Guest Services","item":"https://maexah.github.io/OpenTPW/guest-services.html"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"What is OpenTPW?","acceptedAnswer":{"@type":"Answer","text":"Theme Park World is a theme park game from 1999. In America it is called Sim Theme Park. OpenTPW is a new program that plays the old game\u0027s files on today\u0027s computers. It is a fan project."}},{"@type":"Question","name":"Can I play it yet?","acceptedAnswer":{"@type":"Answer","text":"Not a whole game. Not yet. Today the lobby works, and the park that comes with Lost Kingdom runs. Guests arrive, queue, ride and buy drinks. You can lay paths, buy rides and hire staff. You cannot save a park, and you cannot finish a game. The Ride Status board shows how much is built, in numbers."}},{"@type":"Question","name":"When will it be finished?","acceptedAnswer":{"@type":"Answer","text":"There is no date. It is built one small piece at a time. Lost Kingdom comes first. The other three lands follow when it is done."}},{"@type":"Question","name":"Is it made by the people who made the game?","acceptedAnswer":{"@type":"Answer","text":"No. OpenTPW is a fan project. It is not made or approved by the game\u0027s makers or publishers."}},{"@type":"Question","name":"Do I need the original game?","acceptedAnswer":{"@type":"Answer","text":"Yes. OpenTPW holds no game files. It reads them from your own copy. We cannot give you the game, and we cannot tell you where to download it."}},{"@type":"Question","name":"Does it cost anything?","acceptedAnswer":{"@type":"Answer","text":"No. OpenTPW is free, and its code is open for anyone to read."}},{"@type":"Question","name":"Which version of the game works?","acceptedAnswer":{"@type":"Answer","text":"It is tested with the American disc, Sim Theme Park. Theme Park World, the disc sold elsewhere, should work too. Nobody has tested it yet."}},{"@type":"Question","name":"Which computers does it run on?","acceptedAnswer":{"@type":"Answer","text":"It is built and tested on Linux. It also builds for Windows and Mac. Windows has not been tried lately, and Mac never has. Reports are very welcome."}},{"@type":"Question","name":"How do I install it?","acceptedAnswer":{"@type":"Answer","text":"There is no ready download yet. You build it from its code in five steps."}},{"@type":"Question","name":"Will it use my old players and options?","acceptedAnswer":{"@type":"Answer","text":"Yes. OpenTPW keeps its players and options in the game\u0027s own save folder, so it shares them with the original game. It cannot save a park yet."}},{"@type":"Question","name":"What does Easy read do?","acceptedAnswer":{"@type":"Answer","text":"It makes the words bigger and uses a clearer font. It stops everything that moves and sets every sign straight. The switch is at the top of every page. Your choice is remembered on this computer. While it is on, an Options button shows beside it. There you can pick the letters: clear letters, letters made for dyslexia, or the ones your own device uses. You can also put cream paper behind the words. Your choices are kept in your own browser. They are sent nowhere, and they say nothing about you."}},{"@type":"Question","name":"Can I stop things moving?","acceptedAnswer":{"@type":"Answer","text":"Yes. The Stop motion switch at the top of every page stops everything that moves. The words stay as they are. Your choice is remembered on this computer. The Pause button on a picture of the islands holds just that picture still."}},{"@type":"Question","name":"Why are three lands \u0022not open yet\u0022?","acceptedAnswer":{"@type":"Answer","text":"Because their parks do not run in OpenTPW yet. You can see their islands, and read about them here."}},{"@type":"Question","name":"I found something wrong. Who do I tell?","acceptedAnswer":{"@type":"Answer","text":"Please tell us on GitHub. Say what you did and what happened."}},{"@type":"Question","name":"Can I help build it?","acceptedAnswer":{"@type":"Answer","text":"Yes, please. Backstage says how."}}]}]}</script>
+	<meta name="theme-color" content="#064858">
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preload" href="assets/fonts/Boogaloo.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/Itim-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/css/site.css">
+<link rel="stylesheet" href="assets/css/pages.css">
+<script src="assets/js/look-first.js"></script>
+</head>
+<body class="page-guest-services">
+<a class="skip-link" href="#main">Skip to the park</a>
+
+<div class="alert-bar" role="region" aria-label="Park notice">
+	<span class="alert-mark" aria-hidden="true">!</span>
+	<p><strong class="alert-name">Park notice:</strong> Lost Kingdom is open early.<span class="alert-rest"> The other three lands are not open yet.</span></p>
+	<a href="ride-status.html" data-help="Opens the Ride Status page"><span><span class="alert-see">See </span>Ride Status</span></a>
+</div>
+
+<header class="site-head">
+	<a class="wordmark" href="./" aria-label="OpenTPW, the Front Gate" data-help="Goes to the Front Gate, the home page">
+		<span class="wordmark-open">Open</span><span class="wordmark-tpw">TPW</span>
+	</a>
+
+	<button class="menu-button" type="button" aria-expanded="false" aria-controls="site-menu" data-help="Opens the menu" data-help-on="Closes the menu">
+		<span class="menu-bars" aria-hidden="true"></span>
+		<span>Menu</span>
+	</button>
+
+	<nav id="site-menu" class="site-menu" aria-label="Main">
+		<ul>
+			<li><a href="./" data-help="Goes to the Front Gate, the home page">Front Gate</a></li>
+			<li><a href="plan-your-visit.html" data-help="Opens Plan Your Visit: how to get OpenTPW running">Get Started</a></li>
+			<li><a href="./#lands-title" data-help="Goes to the four lands on the Front Gate">The Lands</a></li>
+			<li><a href="ride-status.html" data-help="Opens the Ride Status page">Ride Status</a></li>
+			<li><a href="guest-services.html" aria-current="page" data-help="Opens Guest Services: questions and answers">Help</a></li>
+			<li><a href="backstage.html" data-help="Opens Backstage: the code, and how to help">Code</a></li>
+		</ul>
+	</nav>
+
+		<div class="site-tools">
+		<button class="switch" id="easy-read-switch" type="button" aria-pressed="false" data-ui="switch" data-help="Makes the words bigger and stops everything moving" data-help-on="Turns easy read off">
+			<span class="switch-icon" aria-hidden="true">Aa</span>
+			<span class="switch-label">Easy read</span>
+			<span class="switch-track" aria-hidden="true"><span class="switch-state" aria-hidden="true" data-on="On" data-off="Off">Off</span></span>
+		</button>
+		<button class="switch" id="stop-motion-switch" type="button" aria-pressed="false" data-ui="switch" data-help="Stops everything moving. The words stay as they are" data-help-off="Lets things move again" data-help-on="Lets things move again" data-held-easy="Easy read keeps the page still" data-held-device="Your device asks for no motion">
+			<span class="switch-icon switch-icon-still" aria-hidden="true"></span>
+			<span class="switch-label">Stop motion<span class="unseen switch-why"></span></span>
+			<span class="switch-track" aria-hidden="true"><span class="switch-state" aria-hidden="true" data-on="On" data-off="Off">Off</span></span>
+		</button>
+		<a class="panel-link easy-more" href="#easy-options" data-help="Goes to the choices for Easy read, lower on this page">Options</a>
+		<a class="key-count" id="key-count" href="golden-keys.html" data-help="Opens the golden key hunt" hidden><span class="key-count-icon" aria-hidden="true"></span><span id="key-count-words">Golden keys</span></a>
+	</div>
+
+	<a class="ticket" href="plan-your-visit.html" data-ui="ticket" data-help="Shows how to build OpenTPW and try it">
+		<span class="ticket-stub" aria-hidden="true">Admit one</span>
+		<span class="ticket-main">Build and try it</span>
+	</a>
+</header>
+	<main id="main" class="page faq-page">
+
+<header class="page-head">
+	<h1 class="sign-head">Guest Services</h1>
+	<p class="page-plain">Help</p>
+	<p class="page-lead">Questions people ask, with short answers.</p>
+	<p>Press a question to see its answer.</p>
+</header>
+
+<section class="panel faq-group" aria-labelledby="faq-1">
+	<h2 id="faq-1">About OpenTPW</h2>
+	<div class="panel-screen">
+		<ul class="status-list faq-list">
+			<li class="status-row faq-row">
+				<details>
+					<summary data-help="Shows or hides the answer"><span class="status-short">What is OpenTPW?</span></summary>
+					<div class="status-more">
+						<p>Theme Park World is a theme park game from 1999. In America it is called Sim Theme Park.</p>
+						<p>OpenTPW is a new program that plays the old game&#039;s files on today&#039;s computers. It is a fan project.</p>
+					</div>
+				</details>
+			</li>
+			<li class="status-row faq-row">
+				<details>
+					<summary data-help="Shows or hides the answer"><span class="status-short">Can I play it yet?</span></summary>
+					<div class="status-more">
+						<p>Not a whole game. Not yet.</p>
+						<p>Today the lobby works, and the park that comes with Lost Kingdom runs. Guests arrive, queue, ride and buy drinks. You can lay paths, buy rides and hire staff.</p>
+						<p>You cannot save a park, and you cannot finish a game.</p>
+						<p>The Ride Status board shows how much is built, in numbers. <a href="ride-status.html" data-help="Opens the Ride Status page">See Ride Status</a></p>
+					</div>
+				</details>
+			</li>
+			<li class="status-row faq-row">
+				<details>
+					<summary data-help="Shows or hides the answer"><span class="status-short">When will it be finished?</span></summary>
+					<div class="status-more">
+						<p>There is no date. It is built one small piece at a time.</p>
+						<p>Lost Kingdom comes first. The other three lands follow when it is done.</p>
+					</div>
+				</details>
+			</li>
+			<li class="status-row faq-row">
+				<details>
+					<summary data-help="Shows or hides the answer"><span class="status-short">Is it made by the people who made the game?</span></summary>
+					<div class="status-more">
+						<p>No. OpenTPW is a fan project. It is not made or approved by the game&#039;s makers or publishers.</p>
+					</div>
+				</details>
+			</li>
+		</ul>
+	</div>
+</section>
+<section class="panel faq-group" aria-labelledby="faq-2">
+	<h2 id="faq-2">The game and your computer</h2>
+	<div class="panel-screen">
+		<ul class="status-list faq-list">
+			<li class="status-row faq-row">
+				<details>
+					<summary data-help="Shows or hides the answer"><span class="status-short">Do I need the original game?</span></summary>
+					<div class="status-more">
+						<p>Yes. OpenTPW holds no game files. It reads them from your own copy.</p>
+						<p>We cannot give you the game, and we cannot tell you where to download it.</p>
+					</div>
+				</details>
+			</li>
+			<li class="status-row faq-row">
+				<details>
+					<summary data-help="Shows or hides the answer"><span class="status-short">Does it cost anything?</span></summary>
+					<div class="status-more">
+						<p>No. OpenTPW is free, and its code is open for anyone to read.</p>
+						<span class="key-spot"><button class="gold-key" type="button" data-key="guest-services" data-ui="key" data-help="A golden key! Press to take it" aria-label="A hidden golden key. Press to take it." hidden></button></span>
+						</div>
+				</details>
+			</li>
+			<li class="status-row faq-row">
+				<details>
+					<summary data-help="Shows or hides the answer"><span class="status-short">Which version of the game works?</span></summary>
+					<div class="status-more">
+						<p>It is tested with the American disc, Sim Theme Park.</p>
+						<p>Theme Park World, the disc sold elsewhere, should work too. Nobody has tested it yet.</p>
+					</div>
+				</details>
+			</li>
+			<li class="status-row faq-row">
+				<details>
+					<summary data-help="Shows or hides the answer"><span class="status-short">Which computers does it run on?</span></summary>
+					<div class="status-more">
+						<p>It is built and tested on Linux.</p>
+						<p>It also builds for Windows and Mac. Windows has not been tried lately, and Mac never has. Reports are very welcome.</p>
+					</div>
+				</details>
+			</li>
+			<li class="status-row faq-row">
+				<details>
+					<summary data-help="Shows or hides the answer"><span class="status-short">How do I install it?</span></summary>
+					<div class="status-more">
+						<p>There is no ready download yet. You build it from its code in five steps.</p>
+						<p><a href="plan-your-visit.html" data-help="Opens the Plan Your Visit page">Open Plan Your Visit</a></p>
+					</div>
+				</details>
+			</li>
+			<li class="status-row faq-row">
+				<details>
+					<summary data-help="Shows or hides the answer"><span class="status-short">Will it use my old players and options?</span></summary>
+					<div class="status-more">
+						<p>Yes. OpenTPW keeps its players and options in the game&#039;s own save folder, so it shares them with the original game.</p>
+						<p>It cannot save a park yet.</p>
+					</div>
+				</details>
+			</li>
+		</ul>
+	</div>
+</section>
+<section class="panel faq-group" aria-labelledby="faq-3">
+	<h2 id="faq-3">This website</h2>
+	<div class="panel-screen">
+		<ul class="status-list faq-list">
+			<li class="status-row faq-row">
+				<details>
+					<summary data-help="Shows or hides the answer"><span class="status-short">What does Easy read do?</span></summary>
+					<div class="status-more">
+						<p>It makes the words bigger and uses a clearer font. It stops everything that moves and sets every sign straight.</p>
+						<p>The switch is at the top of every page. Your choice is remembered on this computer.</p>
+						<p>While it is on, an Options button shows beside it. There you can pick the letters: clear letters, letters made for dyslexia, or the ones your own device uses. You can also put cream paper behind the words.</p>
+						<p>Your choices are kept in your own browser. They are sent nowhere, and they say nothing about you.</p>
+					</div>
+				</details>
+			</li>
+			<li class="status-row faq-row">
+				<details>
+					<summary data-help="Shows or hides the answer"><span class="status-short">Can I stop things moving?</span></summary>
+					<div class="status-more">
+						<p>Yes. The Stop motion switch at the top of every page stops everything that moves. The words stay as they are. Your choice is remembered on this computer.</p>
+						<p>The Pause button on a picture of the islands holds just that picture still.</p>
+					</div>
+				</details>
+			</li>
+			<li class="status-row faq-row">
+				<details>
+					<summary data-help="Shows or hides the answer"><span class="status-short">Why are three lands &quot;not open yet&quot;?</span></summary>
+					<div class="status-more">
+						<p>Because their parks do not run in OpenTPW yet. You can see their islands, and read about them here.</p>
+					</div>
+				</details>
+			</li>
+			<li class="status-row faq-row">
+				<details>
+					<summary data-help="Shows or hides the answer"><span class="status-short">I found something wrong. Who do I tell?</span></summary>
+					<div class="status-more">
+						<p>Please tell us on GitHub. Say what you did and what happened. <a href="https://github.com/maexah/OpenTPW/issues" data-help="Opens this fork&#039;s list of faults on GitHub">Report a fault on GitHub</a></p>
+					</div>
+				</details>
+			</li>
+			<li class="status-row faq-row">
+				<details>
+					<summary data-help="Shows or hides the answer"><span class="status-short">Can I help build it?</span></summary>
+					<div class="status-more">
+						<p>Yes, please. Backstage says how. <a href="backstage.html" data-help="Opens the Backstage page">Go Backstage</a></p>
+					</div>
+				</details>
+			</li>
+		</ul>
+	</div>
+</section>
+
+<p class="way-back"><a class="ticket" href="./" data-ui="ticket" data-help="Goes to the Front Gate, the home page"><span class="ticket-stub" aria-hidden="true">This way</span><span class="ticket-main">Back to the Front Gate</span></a>
+	</p>
+
+</main>
+<section class="easy-options" id="easy-options" aria-labelledby="easy-options-title" tabindex="-1">
+	<h2 id="easy-options-title">Easy read options</h2>
+	<p>Pick what is easiest for you. Your choice is kept for your next visit.</p>
+	<div class="easy-choices">
+		<fieldset>
+			<legend>Letters</legend>
+				<button class="panel-link choice choice-font-atkinson" type="button" value="font-atkinson" aria-pressed="true" data-help="Uses the Atkinson Hyperlegible letters">Clear letters</button>
+				<button class="panel-link choice choice-font-dyslexic" type="button" value="font-dyslexic" aria-pressed="false" data-help="Uses the OpenDyslexic letters">Dyslexia letters</button>
+				<button class="panel-link choice choice-font-system" type="button" value="font-system" aria-pressed="false" data-help="Uses the letters your own device uses">My device&#039;s letters</button>
+			</fieldset>
+		<fieldset>
+			<legend>Page colour</legend>
+				<button class="panel-link choice choice-paper-sea" type="button" value="paper-sea" aria-pressed="true" data-help="Keeps the dark sea behind the words">Sea</button>
+				<button class="panel-link choice choice-paper-cream" type="button" value="paper-cream" aria-pressed="false" data-help="Puts cream paper behind the words">Cream paper</button>
+			</fieldset>
+	</div>
+</section>
+	<footer class="site-foot">
+	<div class="waves" aria-hidden="true"></div>
+	<p><strong>OpenTPW is a fan project.</strong> It rebuilds the game Theme Park World. In America the game is called Sim Theme Park.</p>
+	<p>It holds no game files. You need your own copy of the game to play.</p>
+	<p>It is not made or approved by the game's makers or publishers.</p>
+	<p>OpenTPW was started by Alex Guthrie and its contributors. This site follows a fork of their work. <a href="https://github.com/OpenTPW/OpenTPW" data-help="Opens the original OpenTPW project on GitHub">The original project on GitHub</a></p>
+	<p><a href="https://github.com/maexah/OpenTPW" data-help="Opens this fork on GitHub">This fork on GitHub</a> <a class="js-only" href="golden-keys.html" data-help="Opens the golden key hunt">The golden key hunt</a></p>
+</footer>
+
+<p class="key-say" id="key-say" role="status"></p>
+
+<div class="help-strip" id="help-strip" aria-hidden="true"></div>
+
+<script type="application/json" id="otpw-data">{"lands":[{"id":"lost-kingdom","name":"Lost Kingdom","url":"lost-kingdom.html","open":true,"badge":"Open","keys":1,"blurb":"Dinosaurs, palm trees and the first rides that run."},{"id":"wonder-land","name":"Wonder Land","url":"wonder-land.html","open":false,"badge":"Not open yet","keys":3,"blurb":"A garden where you are the size of an ant."},{"id":"halloween-world","name":"Halloween World","url":"halloween-world.html","open":false,"badge":"Not open yet","keys":1,"blurb":"Spooky, stormy and friendly all the same."},{"id":"space-zone","name":"Space Zone","url":"space-zone.html","open":false,"badge":"Not open yet","keys":5,"blurb":"A purple planet under a sunset sky."}],"site":{"keys":["index","lost-kingdom","wonder-land","halloween-world","space-zone","ride-status","plan-your-visit","guest-services","backstage"]}}</script>
+<script type="module" src="assets/js/main.js"></script>
+</body>
+</html>
+	

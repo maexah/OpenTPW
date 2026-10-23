@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+	<!-- The site's own pointer: a small chunky golden arrow with an orange edge. Its tip is at 3,2. -->
+	<path d="M4 3.5v20.2l5.6-4.9 3.9 8.6 5-2.3-3.9-8.4 7.6-.4z" fill="#7a3a00" stroke="#7a3a00" stroke-width="4" stroke-linejoin="round"/>
+	<path d="M4 3.5v20.2l5.6-4.9 3.9 8.6 5-2.3-3.9-8.4 7.6-.4z" fill="#f7c90a" stroke="#e07f00" stroke-width="1.6" stroke-linejoin="round"/>
+	<path d="M6 8.3v11.2" fill="none" stroke="#fff6a8" stroke-width="1.6" stroke-linecap="round"/>
+</svg>
