@@ -2548,11 +2548,50 @@ any other type. So a corner under the run's last path is red with `d58`, never `
 is red with `d58`, never the unlatched "other type" answer. **The anchor is always the first square**, so the cell before a new
 ride's entrance is marked the moment it is placed.
 
-**While a thing is carried** (mode 4) the placer runs twice a tick, a test pass that turns everything red
-on any failure, and a draw pass: footprint row 0 shows `m_front`, other footprint cells the verdict, the
-cell before the entrance `m_enter` (turned to face it; `m_inout` for a thing with no queue), the cell
-before the exit `m_exit`, and `m_direct` goes on the cell a kind-`0x17` cell points to. These squares
-glide, following a smoothed cursor.
+**While a thing is carried** (mode 4) the placer runs twice a tick (`FUN_005234d0`): a test pass,
+`FUN_00528a70( x, y, 4, angle, 0, 1 )`, whose failure sets `g_PlacerFailed` (`DAT_0081b604`), and a draw pass with both
+flags clear (`0x005239ee`). `x, y` is the pointer's cell (`DAT_008186a4` = the preview cell; only an add-on over a track
+moves it). Decoded 2026-10-25 (Q633):
+
+- **The picture is centred on the pointer's cell.** The placer starts `w / 2` columns and `d / 2` rows back
+  (`0x00528b24`, `0x00528b26`, integer halves of the descriptor's width and depth) and turns the picture about the
+  middle of a five-by-five box (`(5 - w) / 2`, `(5 - d) / 2`, from `0x00528b2a`): at angle 0 column `c`, row `r` stands on
+  `(x - w/2 + c, y - d/2 + r)`, and the sweep's other three arms (`0x00528f62`..) put it on the same cells as
+  `MapDelta::Rotate` from a corner offset by the box. Its uncentred reading, flag `DAT_0081af7c`, is only ever written
+  nought (`0x0052f074`). The put-down on the button's release is the same placer, so a thing goes down where its
+  squares were.
+- **The draw pass, rows from nought, columns within each** (the switch at `0x0052916c`): kind 0 nothing; a path, `+`
+  or `#` cell (kinds 1, `0xb`, `0x10`) blue, unturned; any other cell, the entrance and exit among them, `m_front` (6)
+  on row 0 turned by the angle's base bit (1, `0x40`, `0x10`, 4 for 0, 90, 180, 270; `0x00529688`) and blue unturned
+  elsewhere; a station cell (`0x17`, `<` `>`) blue turned by south's bit `0x10` (rotated), with `m_direct` (5), turned
+  the same, on the cell its facing points to (`FUN_004d97e0`), and one pointing off the map refuses. Then, for a picture with an
+  entrance or exit, the cell before the entrance (one step against its rotated bit `H`) wears `m_enter` (3, op `0x104`)
+  for a thing with a queue (`FUN_0052fab0`, `Info.HasQueue`) and `m_inout` (7, op `0x118`) for one without, turned by
+  `Opposite( H )` (`0x005299bf`); for a thing with a queue the cell past the exit (one step along its bit) `m_exit` (4,
+  op `0x118`), turned by the opposite of the exit's bit. A kart or water ride (`FUN_0052faf0` 1 or 2) also lays its first
+  track cells' squares (`FUN_005286a0`, `0x00529b35`).
+- **Any failure reds everything**: with `g_PlacerFailed` set the square arm of `FUN_00532fc0` lays texture 1 without
+  asking the cell (`0x00533931`), the ends' cells too. Lifts and walls are any square's ("The walls").
+- **A square's texture is turned by its bit** (`FUN_0053df30`): the UV pairs `0x00871ee8` holds, (0,0), (1,0), (0,1),
+  (1,1), go on the corners (x, z), (x+10, z), (x, z+10), (x+10, z+10) as indices 0 1 2 3 for north `0x01` (or none),
+  2 0 3 1 for east `0x04`, 3 2 1 0 for south `0x10` and 1 3 0 2 for west `0x40`.
+- **The squares glide.** `FUN_0053c3f0` moves a point `DAT_00820afc`, `DAT_00820af8` half the way to the preview cell × 10
+  every rendered frame (`0x00700de4`, 0.5), and in modes 4, `0xe` and `0x13` every square and wall below texture `0xd`
+  is drawn that far from its own place as the point is from the cell (`0x0053df67`), its ground and wave asked at the
+  shifted corner (`FUN_0053ddd0`). The no-glide flag `DAT_00874fc4` is only ever written nought (`0x005239f6`,
+  `0x0053c000`).
+- **The pointer** (`FUN_0052f950`, mode 4): cursor 7, `c_place`; 8, `c_noplace`, under the pass's refusal `DAT_00816d48`
+  (`FUN_00527950`); `0x14`, `c_cash`, under `DAT_00816d5c`.
+
+Measured in the original under Proton (`q633/orig/c-3-over.squares`, the stock park, a Belly Bounce in the hand by
+Ctrl+click, the pointer on (48,31)): fourteen squares in this order, (47..49, 29) texture 6 turn 1, nine texture 0 turn
+0 on (47..49, 30..32), (48,28) texture 3 turn 1 and (48,33) texture 4 turn 1, cursor 7; over (51,25), on the stock Belly
+Bounce, every square texture 1 with walls over the ride, cursor 8. **OpenTPW** (`ParkBuilding.CarrySquares`,
+`AnchorUnder`, `PlaceCarriedUnder`; `ParkBuildMarkers`, `TurnedUvs`, `Glide`; `Level.CarryCursor`) draws the same
+fourteen in the same order on the same cells, puts the thing down at the centred anchor, and wears `c_place` and
+`c_noplace`; the glide halves the distance each thirtieth of a second rather than each rendered frame, a said deviation.
+Not built: a track ride's first cells' squares (`CARRY_PREVIEW_TRACK_START`), and the latch the passes set
+(`CARRY_PASS_REFUSAL_LATCH`, Q536).
 
 **`data/generic/dynamic/garrow.MD2` and `rarrow.MD2` are not markers and are never drawn.** They are a
 model version (`0x18`/`0x17`) the one `.md2` reader `FUN_0046d6d0` refuses — it frees and returns null

@@ -10135,6 +10135,17 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   after the last as `FUN_0065e9a4` steps it. The original (`q637/orig/`, `original/aerialpoll.py`, `record.sh`) read
   (65, 785, 173, 901) and (65, 860, 173, 976) at the peaks, each stream 1.00 s; ours the same rectangles, about
   0.8 s at its frame rate (`q637/run3`, 4 of 4; `side-by-side.png`).
+- [x] **Q633. Building a queue shows the path tool's previews, not the queue's.** From Alexah's play test, 2026-10-21
+  (note 10). **Alexah (2026-10-25):** "the difference was so small, I didn't see it. Yes, I want you to fix it": the fix
+  is what the original draws while a ride is carried, before its queue. Compared first (`q633/PREDICTION.txt` rounds 5
+  and 5b): the queue and path tools' squares, icons and pointer agree with the original's in every scene filmed. The
+  one difference was the carry: decoded (`park-engine.md`, "While a thing is carried") and built, the footprint's
+  squares with `m_front`, `m_enter`, `m_exit`, `m_inout` and `m_direct` turned by their bits, all red when refused,
+  gliding after the pointer, centred on the pointer's cell as the original's placer centres them (the click's put-down
+  too), and the `c_place` pointer. Measured in the original (`q633/orig/c-3-over.squares`: fourteen squares for the
+  pointer on (48,31)) and matched square for square here (`q633/run11`, 6 of 6 on the final build:
+  `47,29,6^0;...;48,28,3^0;48,33,4^0`, `world click: under (48,31): ... at (47,29)`; `q633/side-by-side.png`); 18 bugs
+  put back, 18 caught. Tests 3932 with the game, 1397 without.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

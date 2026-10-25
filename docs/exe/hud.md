@@ -3077,7 +3077,7 @@ cell, so an empty-hand click on one unaffordable cell leaves `d50` 1 (the money 
 and mode 4's passes (`0x005235bb`..) set `d50` and `d5c` each tick while the item's price is above the bank's balance
 (`0x00523658`; the golden-ticket cost `+0xc4` unpaid sets neither, `0x005235e6`..`0x0052360b`) and the placer sets it on an
 entrance or exit facing off the map (`0x005295e8`, `0x00529730`), where ours leaves a carried item's latch clear
-(`CARRY_PREVIEW_MARKERS`). In no game run: a refused queue or patrol click before the edges (a queue pass then Escape was, Q538), a track's refusal (no shipped
+(`CARRY_PASS_REFUSAL_LATCH`; a carried thing's own squares are built, Q633). In no game run: a refused queue or patrol click before the edges (a queue pass then Escape was, Q538), a track's refusal (no shipped
 track reaches the path tool here; tested), Full Simulation (not
 asked: the locators are either mode's), the other three themes.
 

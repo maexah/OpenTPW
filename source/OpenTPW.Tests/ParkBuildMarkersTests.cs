@@ -134,7 +134,8 @@ public class ParkBuildMarkersTests
 		StringAssert.Contains( markers.Census(), "| walls 3 " );
 
 		typeof( ParkBuildMarkers ).GetMethod( "Build", flags )!.Invoke( markers,
-			[new System.Collections.Generic.List<ParkPathBuilding.QueueSquare>(), new System.Collections.Generic.List<ParkPathBuilding.QueueSquare>(), new System.Collections.Generic.List<(int X, int Y)>()] );
+			[new System.Collections.Generic.List<ParkPathBuilding.QueueSquare>(), new System.Collections.Generic.List<ParkBuilding.CarrySquare>(),
+				new System.Collections.Generic.List<ParkPathBuilding.QueueSquare>(), new System.Collections.Generic.List<(int X, int Y)>()] );
 
 		Assert.AreEqual( "none", markers.Census() );
 	}

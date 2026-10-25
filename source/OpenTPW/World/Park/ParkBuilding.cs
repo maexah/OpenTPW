@@ -19,8 +19,8 @@ namespace OpenTPW;
 ///
 /// <para>
 /// <b>What is not built is counted where it falls, rather than guessed:</b> each gap has its
-/// <c>Unimplemented.Report</c> key at its own site - among them the markers drawn while carrying
-/// (<c>CARRY_PREVIEW_MARKERS</c>), the terrain rule (<c>PLACEMENT_TERRAIN_RULE</c>) and the age-based scrap
+/// <c>Unimplemented.Report</c> key at its own site - among them a track ride's first squares while carrying
+/// (<c>CARRY_PREVIEW_TRACK_START</c>), the terrain rule (<c>PLACEMENT_TERRAIN_RULE</c>) and the age-based scrap
 /// curve, see <see cref="Sell"/>.
 /// </para>
 /// </summary>
@@ -77,23 +77,10 @@ public static class ParkBuilding
 		if ( item.UiType is < 0 or > ItemDescriptionFile.Feature )
 			return new( $"buy: '{item.Name}' is UI type {item.UiType}, which no buy tab lists" );
 
+		if ( PlacementRefusal( state, item, cellX, cellY, angle ) is { } refused )
+			return new( refused, Refused: true );
+
 		var footprint = ParkObjects.FootprintAt( item, cellX, cellY, angle );
-
-		if ( Refusal( state, footprint ) is { } why )
-			return new( $"buy: '{item.Name}' will not fit at ({cellX},{cellY}) - {why}", Refused: true );
-
-		// The affordability test the original makes when a buy row is clicked, before it ever builds
-		// the placement mode - and, for a move, which has no such click, in the put-down's own preview,
-		// where a price above the balance turns the cell red (FUN_00535670). A mystery ride's preview sets the run's
-		// price to nought and skips the test (BuildTool_PreviewPass, 0x005235e6..0x00523613): it is never refused for money.
-		// NOT MATCHED for a move: Build cannot tell a move from a carry, so the skip also covers the move tool's put-down,
-		// where the original prices the ride in full (0x0052398b, FUN_00535670) and refuses it above the balance; only a park
-		// holding a ticket ride its player has not bought reaches it (docs/exe/hud.md, "Spending golden tickets").
-		if ( !GoldenTickets.IsMystery( item ) && state.Balance < item.BuildPrice )
-			return new( $"buy: '{item.Name}' costs {item.BuildPrice} and the park has {state.Balance}", Refused: true );
-
-		if ( EndRefusal( state, item, cellX, cellY, angle ) is { } blocked )
-			return new( $"buy: '{item.Name}' will not fit at ({cellX},{cellY}) - {blocked}", Refused: true );
 
 		var thingId = state.NextThingId();
 
@@ -194,6 +181,34 @@ public static class ParkBuilding
 		return new( $"buy: '{item.Name}' built as thing {thingId} at ({cellX},{cellY}) for {paid}, " +
 			$"balance {state.Balance}" + (node is { } at ? $", queue node at ({at.X},{at.Y})" : ""), thingId, node,
 			item.HasQueue, item.TrackType );
+	}
+
+	/// <summary>
+	/// Why a thing will not go down at a cell, turned that far, or null where it will: its footprint's cells, its price
+	/// against the balance, and the cells its ends face, in the order <see cref="Build"/> asks them. The carried thing's
+	/// squares ask the same (<see cref="CarrySquares"/>), so what they show is what the click does.
+	/// </summary>
+	internal static string? PlacementRefusal( ParkState state, ParkItemCatalogue.Item item, int cellX, int cellY, int angle )
+	{
+		var footprint = ParkObjects.FootprintAt( item, cellX, cellY, angle );
+
+		if ( Refusal( state, footprint ) is { } why )
+			return $"buy: '{item.Name}' will not fit at ({cellX},{cellY}) - {why}";
+
+		// The affordability test the original makes when a buy row is clicked, before it ever builds
+		// the placement mode - and, for a move, which has no such click, in the put-down's own preview,
+		// where a price above the balance turns the cell red (FUN_00535670). A mystery ride's preview sets the run's
+		// price to nought and skips the test (BuildTool_PreviewPass, 0x005235e6..0x00523613): it is never refused for money.
+		// NOT MATCHED for a move: Build cannot tell a move from a carry, so the skip also covers the move tool's put-down,
+		// where the original prices the ride in full (0x0052398b, FUN_00535670) and refuses it above the balance; only a park
+		// holding a ticket ride its player has not bought reaches it (docs/exe/hud.md, "Spending golden tickets").
+		if ( Unaffordable( state, item ) )
+			return $"buy: '{item.Name}' costs {item.BuildPrice} and the park has {state.Balance}";
+
+		if ( EndRefusal( state, item, cellX, cellY, angle ) is { } blocked )
+			return $"buy: '{item.Name}' will not fit at ({cellX},{cellY}) - {blocked}";
+
+		return null;
 	}
 
 	/// <summary>
@@ -1294,11 +1309,179 @@ public static class ParkBuilding
 		// where the placer finds an entrance or exit facing off the map (0x005295e8, 0x00529730); none of those is
 		// built, so a carried item leaves the latch clear (Q536).
 		ParkBuildMode.RefusalLatched = false;
+		Unimplemented.Report( "CARRY_PASS_REFUSAL_LATCH" );
+	}
 
-		// While carrying, the original draws the footprint in coloured squares every tick - m_front along
-		// its front row, m_enter on the cell before the entrance, m_exit before the exit - out of the same
-		// marker vocabulary the queue tool uses. Only the path and queue tools' strips are built.
-		Unimplemented.Report( "CARRY_PREVIEW_MARKERS" );
+	/// <summary>
+	/// One square of a carried thing's footprint: its cell, the marker it wears (an index into the table at
+	/// <c>0x00763b38</c>) and the compass bit its texture is turned by (<c>FUN_0053df30</c>; nought and <c>0x01</c> both
+	/// unturned).
+	/// </summary>
+	internal readonly record struct CarrySquare( int X, int Y, int Marker, int Turn );
+
+	/// <summary>The kind of a track ride's station cell in <c>Info.Shape</c> (<c>D</c>, <c>&gt;</c>, <c>&lt;</c>).</summary>
+	internal const int StationKind = 0x17;
+
+	/// <summary>The squares the thing in the hand shows with the pointer on a cell, or none with the hand empty.</summary>
+	internal static List<CarrySquare> CarrySquares( int pointerX, int pointerY )
+	{
+		if ( Carrying == 0 || Level.Current is not { ParkState: { } state, Catalogue: { } catalogue }
+			|| !catalogue.TryGet( Carrying, out var item ) )
+			return [];
+
+		var (cellX, cellY) = AnchorUnder( item, pointerX, pointerY, CarryingAngle );
+
+		return CarrySquares( state, item, cellX, cellY, CarryingAngle );
+	}
+
+	/// <summary>Whether the thing in the hand costs more than the park has - <see cref="PlacementRefusal"/>'s money test.</summary>
+	internal static bool CarriedUnaffordable()
+		=> Carrying != 0 && Level.Current is { ParkState: { } state, Catalogue: { } catalogue }
+			&& catalogue.TryGet( Carrying, out var item ) && Unaffordable( state, item );
+
+	/// <summary>The money test of <see cref="PlacementRefusal"/>: a mystery ride is never refused for it.</summary>
+	private static bool Unaffordable( ParkState state, ParkItemCatalogue.Item item )
+		=> !GoldenTickets.IsMystery( item ) && state.Balance < item.BuildPrice;
+
+	/// <summary>
+	/// The cell <see cref="Build"/> anchors a thing at when a click puts it down with the pointer on (x, y). <b>The
+	/// original's placer centres the picture on the pointer's cell</b>: it starts half the picture's width and half its
+	/// depth back from it (<c>0x00528b24</c>, <c>0x00528b26</c>, whole cells, so a three-wide picture one column back), and
+	/// turns it about the middle of a five-by-five box (<c>(5 − w) / 2</c>, <c>(5 − d) / 2</c>, from <c>0x00528b2a</c>; the
+	/// sweep's own cells per angle, <c>0x00528f62</c>..). Its flag for the uncentred reading, <c>DAT_0081af7c</c>, is only
+	/// ever cleared (<c>0x0052f074</c>). This answers the anchor whose picture, turned by <see cref="RotateDelta"/>, covers
+	/// the same cells. docs/exe/park-engine.md, "While a thing is carried".
+	/// </summary>
+	internal static (int X, int Y) AnchorUnder( ParkItemCatalogue.Item item, int x, int y, int angle )
+	{
+		var (width, depth) = item.Shape is { } shape ? (shape.Width, shape.Depth) : (item.Width, item.Depth);
+		var (left, top) = (x - (width / 2), y - (depth / 2));
+		var (across, down) = ((5 - width) / 2, (5 - depth) / 2);
+
+		return (((angle % 360) + 360) % 360) switch
+		{
+			90 => (left + down - across, top + 4 - across - down),
+			180 => (left + 4 - (2 * across), top + 4 - (2 * down)),
+			270 => (left + 4 - across - down, top + across - down),
+			_ => (left, top)
+		};
+	}
+
+	/// <summary>
+	/// Puts the thing in the hand down with the pointer on (x, y), anchored as the original's placer centres it
+	/// (<see cref="AnchorUnder"/>) - the park's click. The console's <c>put</c> takes the anchor itself.
+	/// </summary>
+	public static string PlaceCarriedUnder( int pointerX, int pointerY, bool pressReachedTheTool = true )
+	{
+		if ( Carrying == 0 || Level.Current?.Catalogue is not { } catalogue || !catalogue.TryGet( Carrying, out var item ) )
+			return PlaceCarried( pointerX, pointerY, pressReachedTheTool: pressReachedTheTool );
+
+		var (cellX, cellY) = AnchorUnder( item, pointerX, pointerY, CarryingAngle );
+
+		return $"under ({pointerX},{pointerY}): {PlaceCarried( cellX, cellY, pressReachedTheTool: pressReachedTheTool )}";
+	}
+
+	/// <summary>
+	/// What the original draws while a thing is carried (mode 4): the placer's draw pass,
+	/// <c>FUN_00528a70( x, y, 4, angle, 0, 0 )</c> (<c>0x005239ee</c>), one square a cell of the item's shape picture, row by
+	/// row from row nought, column by column, then the cell before its entrance and the cell before its exit.
+	/// <b>A body, entrance or exit cell on row nought wears <c>m_front</c></b>, turned by the angle's base bit
+	/// (<c>0x00529688</c>); the rest of the body blue, unturned, and so a path, track or <c>#</c> cell wherever it stands. A
+	/// station cell is blue, turned by south's bit, and puts <c>m_direct</c> on the cell its facing points to. <b>The cell
+	/// before the entrance wears <c>m_enter</c></b> for a thing with a queue and <c>m_inout</c> for one without
+	/// (<c>0x005299bf</c>), the cell before the exit <c>m_exit</c> (a thing with a queue alone), each turned to the opposite of
+	/// its end's bit. <b>Any refusal reds every square</b>: the placer's test pass fails first and its square arm answers
+	/// red without asking the cell (<c>DAT_0081b604</c>, <c>0x00533931</c>); here the refusal is the click's own,
+	/// <see cref="PlacementRefusal"/>. docs/exe/park-engine.md, "Placement feedback", "While a thing is carried".
+	/// </summary>
+	internal static List<CarrySquare> CarrySquares( ParkState state, ParkItemCatalogue.Item item, int cellX, int cellY, int angle )
+	{
+		if ( item.Shape is not { } shape )
+			return [];
+
+		var squares = new List<CarrySquare>();
+		var refused = false;
+		var front = RotateBit( 0x01, angle );
+		var south = RotateBit( 0x10, angle );
+
+		for ( var row = 0; row < shape.Depth; ++row )
+		{
+			for ( var column = 0; column < shape.Width; ++column )
+			{
+				var kind = shape.KindAt( column, row );
+				var (dx, dy) = RotateDelta( column, row, angle );
+				var (x, y) = (cellX + dx, cellY + dy);
+
+				switch ( kind )
+				{
+					case 0:
+						break;
+
+					case CellEdge.Path or 0x0b or 0x10:
+						squares.Add( new( x, y, ParkPathBuilding.MarkerBlue, 0 ) );
+						break;
+
+					case StationKind:
+						// A station cell with no facing (D, which no shipped picture holds) asks its neighbour for bit
+						// nought, which the step table refuses (FUN_004d97e0's default arm).
+						var facing = shape.FacingAt( column, row );
+
+						if ( facing == 0 )
+						{
+							refused = true;
+							break;
+						}
+
+						squares.Add( new( x, y, ParkPathBuilding.MarkerBlue, south ) );
+
+						var (pointX, pointY) = Step( x, y, RotateBit( facing, angle ) );
+
+						if ( ParkState.OnMap( pointX, pointY ) )
+							squares.Add( new( pointX, pointY, ParkPathBuilding.MarkerDirect, south ) );
+						else
+							refused = true;
+
+						break;
+
+					default:
+						squares.Add( row == 0
+							? new( x, y, ParkPathBuilding.MarkerFront, front )
+							: new( x, y, ParkPathBuilding.MarkerBlue, 0 ) );
+						break;
+				}
+			}
+		}
+
+		if ( item.HasEntrance )
+		{
+			var (entryX, entryY) = RotateDelta( item.EntryDeltaX, item.EntryDeltaY, angle );
+			var heading = RotateBit( item.EntryDirection, angle );
+			var faced = Step( cellX + entryX, cellY + entryY, CellEdge.Opposite( heading ) );
+
+			if ( ParkState.OnMap( faced.X, faced.Y ) )
+				squares.Add( new( faced.X, faced.Y,
+					item.HasQueue ? ParkPathBuilding.MarkerEnter : ParkPathBuilding.MarkerInOut, CellEdge.Opposite( heading ) ) );
+
+			if ( item.HasQueue )
+			{
+				var (exitX, exitY) = RotateDelta( item.ExitDeltaX, item.ExitDeltaY, angle );
+				var exitHeading = RotateBit( item.ExitDirection, angle );
+				var exitFaced = Step( cellX + exitX, cellY + exitY, exitHeading );
+
+				if ( ParkState.OnMap( exitFaced.X, exitFaced.Y ) )
+					squares.Add( new( exitFaced.X, exitFaced.Y, ParkPathBuilding.MarkerExit, CellEdge.Opposite( exitHeading ) ) );
+			}
+		}
+
+		// A kart or water ride's placer also lays the squares of its first track cells (FUN_005286a0, 0x00529b35), which
+		// no track layer here holds.
+		if ( item.TrackType is 1 or 2 )
+			Unimplemented.Report( "CARRY_PREVIEW_TRACK_START" );
+
+		if ( refused || PlacementRefusal( state, item, cellX, cellY, angle ) != null )
+			return squares.Select( square => square with { Marker = ParkPathBuilding.MarkerRed, Turn = 0 } ).ToList();
+
+		return squares;
 	}
 
 	/// <summary>

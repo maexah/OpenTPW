@@ -74,16 +74,6 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q633. Building a queue shows the path tool's previews, not the queue's.** From Alexah's play test, 2026-10-21
-  (note 10). The queue tool has its own squares and cursor (`STATUS.md:29`; `hud.md:2955`); not reproduced by the
-  drafter; `CARRY_PREVIEW_MARKERS` and Q541 (QUEUE:1523) are the nearby code. Reproduce from the Queue button and from a
-  ride's hand-over, find which marker set is drawn, fix it. Confirm: a screenshot beside the original's with the tool
-  log.
-  **Alexah (2026-10-25):** while building a queue, the holograms (the build previews) carried the path tool's icons,
-  not the queue's. Not reproduced in four rounds (`q633/PREDICTION.txt`), which checked the squares' colour, the rope
-  pointer and the railed result, not the icons drawn on the previews: compare those icons with the original's queue
-  frames (`q540/orig`, `q538/orig`) first. The one route into the path tool found, a click with a red square then a
-  click on grass, is the original's own (`0x00524a63`).
 - [ ] **Q638. A tag leaving the gadget does not sparkle before it goes.** From Alexah's play test, 2026-10-21 (note 27).
   The original puts effect `0x5b` over the tag five seconds before its end, shown and hidden with the tag
   (`advisor-park.md:892`; `hud.md:1308-1313`); here it is counted, `TAG_ENDING_PARTICLE`
@@ -352,6 +342,8 @@ filed the items that cite it.
   `FUN_0052c6f0`/`FUN_0052ccb0`. Confirm on `q581/karts.TPWS` by the same clicks as `q581/orig` (bought on preview
   cells (32,25) and (20,20), whose station sections are (30,25)/(32,25) and (18,19)/(20,19); loops to (34,29)/(28,29) and (22,23)/(16,23)): sections and buoys against `q581/orig/A-track.log` and
   `D-track.log`, and the pieces photographed beside the original's (`B-5-closed.png`, `D-13-boats.png`).
+  From Q633: carried, a kart or water ride also lays its first track cells' squares (`FUN_005286a0`, `0x00529b35`),
+  counted `CARRY_PREVIEW_TRACK_START`; build them with the track.
 - [ ] **Q588. Dino Karts race for guests.** After Q587. The -4 record (`Bumper_LayRide`'s grid and start buoys, the
   template's 3 laps, 2048 arrival), `BUMP 7` to state 1 and the race's first buoy, `BUMP 4` a kart a rider (mesh
   `cars % 4`), the retarget's grid and race arms with the thrust bonus, the buoy arm's laps, state 3 and the end at the
@@ -1726,7 +1718,7 @@ filed the items that cite it.
   entrance or exit facing off the map (trigger not re-derived). Build both in `ParkBuildMarkers.OnUpdate` while
   `ParkBuilding.Carrying != 0`; the player reaches it by a move with the price above the balance, which `Carry`
   refuses but `Move` does not. `Hold` clears the latch for now; said at the site (`ParkBuilding.Hold`).
-  From Q539 (its last piece; counted as `CARRY_PREVIEW_MARKERS`): confirm beside the original's `[0x00816d50]` and the
+  From Q539 (its last piece; counted as `CARRY_PASS_REFUSAL_LATCH`; the carried thing's squares are Q633's): confirm beside the original's `[0x00816d50]` and the
   locator's edges; the bank can be held low in the original with `thingpoke.py` (`TOOLING.md`, "Recipes", Q542).
 - [ ] **Q537. The patrol pointer after a re-arm, watched in the original.** From the run 5 review (Q534 1). Re-arming
   the patrol tool over itself keeps `c_noplace` here (`ParkBuildMode.Arm`), by the decode (`FUN_004b5b50` ->

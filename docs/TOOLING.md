@@ -461,6 +461,14 @@ Each was found by trial in the item named, and cost a run to find.
   (1.00 drawn, 0.00 covered); a shot with the pointer above the panel says the model fills the box. In the original
   the pointer is in the captured frame (its cursor library draws it into the back buffer): Q31's shop pixel and Q478's
   ride pixel open the windows, (270,183) of the 1024 x 768 frame is the preview's middle, OK (856,431) closes each.
+- **A carried thing's squares in both games** (Q633, `q633/orig/run3.sh`, `q633/confirm.py`): the stock park at camera
+  (470,270) 125 180. The original: Ctrl+click on the stock Belly Bounce (51,23) puts another in the hand (mode 4, Q635's
+  route), `cellfind.py` with `PICK=1` aims at a cell, `squares.py` reads the fourteen squares (texture and turn) and the
+  cursor word `[0x007cb2d8]` reads 7 (`c_place`) or 8; a right click lets it go. Here the cells' pixels are found by
+  `cellprobe.py`'s `find` under `tool path` first (with a thing in the hand the drawn census starts at the centred anchor,
+  not the pointer's cell), then `carry 1100`; `strip` with no cell prints the carried squares (`x,y,marker^lift`, a turn
+  other than north's as `@bit`) and `| glide dx,dy`, which under `pause` holds the distance the squares still have to go.
+  A real click puts the thing down centred on the pointer's cell: `world click: under (48,31): ... at (47,29)`.
 - **A message box in either game, and its cross** (Q410, `q410/confirm.py`, `q410/orig/run.sh`): here the console's
   `windows` ends "MessageBox" while one is up (the reply begins `[dbg] windows:`), and `control 9873c8` finds its
   bottom place to click; R and the gadget's Research button (`control 2b`) open one in an Instant Action park. In the
@@ -887,7 +895,8 @@ after its poller starts**, so a key meant inside either line cannot be sent afte
   player's `gms.dat` copied in): the screen's tick logs `Buy list: cells "<name>" "<price>" (R,G,B), ...`, what each
   slot letters and in which colour; `tickets` reads `spent N left N rides [ids]`. A fresh park opens on its gate,
   where every click meets the drive: `camera 565 625` and `step 10` put cell (56,62), open park land, mid-window, and a
-  click there puts Jurassic Tours down at (56,61). `savepark` writes the player's `gms.dat` first, though a fresh park's
+  click there put Jurassic Tours down at (56,61) before Q633; a click now centres the picture on the pointer's cell
+  (`ParkBuilding.AnchorUnder`), so its anchor is half its width and depth back from the cell clicked. `savepark` writes the player's `gms.dat` first, though a fresh park's
   own file is refused (`SAVE_PARK_WITH_NO_FILE`); `lib/gmsfile.py` reads it back.
 - **The hire screen reached by real clicks, in both games, and its advisor line:** the buy screen's button to
   hire is layout point (1917, 634) and the hire screen's exit button (1930, 859), both a park screen's (centred,

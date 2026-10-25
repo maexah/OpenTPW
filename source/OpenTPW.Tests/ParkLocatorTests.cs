@@ -1140,6 +1140,41 @@ public class ParkLocatorTests
 	}
 
 	/// <summary>
+	/// <b>A carried thing wears <c>c_place</c> where it would go down and <c>c_noplace</c> where it would not</b>
+	/// (<c>FUN_0052f950</c>, mode 4: cursor 7, then 8 under the pass's refusal), as the original's did over (48,31) and over
+	/// the stock Belly Bounce (51,25) (<c>q633/orig/c-run.out</c>, cursor 7 and 8); with the hand empty, the view's own.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the carry left to the idle pointer, as before (the arrow).</remarks>
+	[TestMethod]
+	public void ACarriedThingWearsThePlacePointer()
+	{
+		var level = Level.Current!;
+
+		try
+		{
+			StringAssert.StartsWith( ParkBuilding.Carry( 1100 ), "carry: holding" );
+
+			ParkPicking.Pinned = (48, 31);
+			ParkPicking.Update();
+			Assert.IsTrue( ParkPicking.TryCell( out var x, out var y ) && (x, y) == (48, 31), "the pinned cell is the pointer's" );
+			Assert.AreEqual( Input.CursorTypes.Place, level.WantedCursor(), "over bare ground" );
+
+			ParkPicking.Pinned = (51, 25);
+			ParkPicking.Update();
+			Assert.AreEqual( Input.CursorTypes.NoGo, level.WantedCursor(), "over the stock Belly Bounce" );
+
+			ParkHand.LetGo();
+			Assert.AreNotEqual( Input.CursorTypes.Place, level.WantedCursor(), "the hand empty" );
+		}
+		finally
+		{
+			ParkHand.LetGo();
+			ParkPicking.Pinned = null;
+			ParkPicking.Update();
+		}
+	}
+
+	/// <summary>
 	/// <b>First person lays its own layer over the park's view</b> (<c>FUN_00481470</c> -> <c>FUN_004a2ac0</c>; <c>docs/exe/hud.md</c>,
 	/// "The help bar in first person"): the layer is the control under the pointer wherever the eject button is not, its
 	/// row none, so the bar empties and no hover runs over the gate or the ground under it, and the pointer is its

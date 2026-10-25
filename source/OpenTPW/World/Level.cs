@@ -1725,8 +1725,26 @@ public class Level
 				ParkBuildMode.Queue => QueueCursor(),
 				ParkBuildMode.Path => PathCursor(),
 				ParkBuildMode.Patrol => ParkPicking.TryCell( out var x, out var y ) ? PatrolCursor( x, y ) : PatrolCursor(),
+				_ when ParkBuilding.Carrying != 0 => CarryCursor(),
 				_ => IdleCursor()
 			};
+
+	/// <summary>
+	/// The pointer while a thing is carried (mode 4, <c>FUN_0052f950</c>): <c>c_place</c> (cursor 7), <c>c_noplace</c> where
+	/// its squares are red (cursor 8, the pass's refusal <c>DAT_00816d48</c>), and <c>c_cash</c> where that is because its
+	/// price is above the balance (cursor <c>0x14</c>, <c>DAT_00816d5c</c>), which only a move reaches here: the buy list
+	/// lets nothing dearer into the hand.
+	/// </summary>
+	private static Input.CursorTypes CarryCursor()
+	{
+		if ( !ParkPicking.TryCell( out var x, out var y ) )
+			return Input.CursorTypes.Place;
+
+		if ( !ParkBuildMarkers.CarriedRefused( ParkBuilding.CarrySquares( x, y ) ) )
+			return Input.CursorTypes.Place;
+
+		return ParkBuilding.CarriedUnaffordable() ? Input.CursorTypes.Cash : Input.CursorTypes.NoGo;
+	}
 
 	/// <summary>
 	/// The pointer with nothing armed: off the park's view the control's own, the arrow over the gadget's buttons; on it
@@ -2648,7 +2666,7 @@ public class Level
 		// 3, 5 and 6. Nothing is charged until it actually goes up, which is why cancelling needs no
 		// refund; see ParkBuilding.Carrying.
 		if ( ParkBuilding.Carrying != 0 )
-			return $"world click: {ParkBuilding.PlaceCarried( cellX, cellY, pressReachedTheTool: !UI.WindowStack.ParkScreenOpen )}";
+			return $"world click: {ParkBuilding.PlaceCarriedUnder( cellX, cellY, pressReachedTheTool: !UI.WindowStack.ParkScreenOpen )}";
 
 		if ( ParkStaffPool.Carrying != 0 )
 			return $"world click: {ParkStaffPool.PlaceCarried( cellX, cellY )}";

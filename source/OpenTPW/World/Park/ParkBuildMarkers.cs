@@ -63,10 +63,12 @@ public sealed class ParkBuildMarkers : ModelEntity
 		"m_cross", "m_end", "m_nocash", "m_erase", "red", "gby_sur1", "gby_sur2", "gby_sur3", "gte_lgo1", "gte_lgo1"
 	];
 
-	/// <summary>The four the queue tool draws, in the material's slot order.</summary>
+	/// <summary>The markers the tools and a carried thing draw, in the material's slot order.</summary>
 	private static readonly int[] Drawn =
 	[
-		ParkPathBuilding.MarkerBlue, ParkPathBuilding.MarkerRed, ParkPathBuilding.MarkerLink, ParkPathBuilding.MarkerEnd
+		ParkPathBuilding.MarkerBlue, ParkPathBuilding.MarkerRed, ParkPathBuilding.MarkerLink, ParkPathBuilding.MarkerEnd,
+		ParkPathBuilding.MarkerEnter, ParkPathBuilding.MarkerExit, ParkPathBuilding.MarkerDirect, ParkPathBuilding.MarkerFront,
+		ParkPathBuilding.MarkerInOut
 	];
 
 	/// <summary>The shader's own see-through bit - see <c>test.shader</c>'s <c>FLAG_TRANSLUCENT</c>.</summary>
@@ -87,8 +89,11 @@ public sealed class ParkBuildMarkers : ModelEntity
 	/// <summary>How far above the ground a stranded guest's square sits - the 1.0 <c>FUN_004fa030</c> passes.</summary>
 	private const float StrandedLift = 1f;
 
-	/// <summary>One square of the mesh: its cell, its marker, and how far over the ground its corners start.</summary>
-	private readonly record struct Square( int X, int Y, int Marker, float Over );
+	/// <summary>
+	/// One square of the mesh: its cell, its marker, how far over the ground its corners start, the compass bit its
+	/// texture is turned by (<see cref="TurnedUvs"/>), and whether it glides (<see cref="Glide"/>).
+	/// </summary>
+	private readonly record struct Square( int X, int Y, int Marker, float Over, int Turn = 0, bool Glides = false );
 
 	/// <summary>The squares the mesh holds now, and its vertices, so the wave can move them every frame.</summary>
 	private List<Square> _strip = [];
@@ -97,7 +102,7 @@ public sealed class ParkBuildMarkers : ModelEntity
 	/// One wall under a lifted square: the square's cell, the edge it stands on (<see cref="FaceNorth"/> and the
 	/// rest), its marker, and how far over the ground its foot is. It rises <see cref="WallHeight"/> from there.
 	/// </summary>
-	internal readonly record struct Wall( int X, int Y, int Face, int Marker, float Over );
+	internal readonly record struct Wall( int X, int Y, int Face, int Marker, float Over, bool Glides = false );
 
 	/// <summary>The walls the mesh holds now, in the order the original queues them: by square, then N, E, S, W, lowest first.</summary>
 	private List<Wall> _walls = [];
@@ -183,6 +188,32 @@ public sealed class ParkBuildMarkers : ModelEntity
 	/// </summary>
 	private const float WavePerSecond = 0.1f * 30f;
 
+	/// <summary>
+	/// Where a carried thing's squares are drawn from, in world units: the original's <c>DAT_00820afc</c> and
+	/// <c>DAT_00820af8</c>, which <c>FUN_0053c3f0</c> moves half the way to the pointer's cell each rendered frame
+	/// (<c>0x00700de4</c>, 0.5). In modes 4, <c>0xe</c> and <c>0x13</c> every square and wall is drawn that far from
+	/// its own cell as this point is from the pointer's (<c>FUN_0053df30</c>, <c>0x0053df67</c>), so the footprint
+	/// slides after the pointer rather than jumping a cell at a time.
+	/// </summary>
+	private (float X, float Y) _glide;
+
+	/// <summary>The pointer's cell's corner, in world units, that <see cref="_glide"/> eases toward.</summary>
+	private (float X, float Y) _glideTarget;
+
+	/// <summary>
+	/// How fast the glide closes. <b>The original halves the distance each rendered frame</b>, so its speed followed its
+	/// frame rate; this halves it each thirtieth of a second, the rate the wave takes (<see cref="WavePerSecond"/>), through
+	/// <see cref="Time.SmoothingFactor"/>.
+	/// </summary>
+	private static readonly float GlideRate = 30f * MathF.Log( 2f );
+
+	/// <summary>
+	/// The glide after some time: <paramref name="from"/> eased toward <paramref name="to"/> by
+	/// <paramref name="factor"/>, as <c>FUN_0053c3f0</c> does it, <c>s += ( target − s ) × 0.5</c>.
+	/// </summary>
+	internal static (float X, float Y) Glide( (float X, float Y) from, (float X, float Y) to, float factor )
+		=> (from.X + ((to.X - from.X) * factor), from.Y + ((to.Y - from.Y) * factor));
+
 	public ParkBuildMarkers()
 	{
 		Name = "build markers";
@@ -217,23 +248,31 @@ public sealed class ParkBuildMarkers : ModelEntity
 		var picked = ParkPicking.TryCell( out var x, out var y );
 		var latched = false;
 		var strip = picked ? ParkPathBuilding.Strip( x, y, out latched ) : [];
+		var carried = picked ? ParkBuilding.CarrySquares( x, y ) : [];
 
 		ParkBuildMode.RefusalLatched = LatchAfterFrame( ParkBuildMode.RefusalLatched, ParkBuildMode.Current, picked, latched );
 
+		if ( picked && ParkGround.Current?.Heightfield is { } ground )
+			_glideTarget = (x * ground.CellSizeX, y * ground.CellSizeY);
+
+		_glide = Glide( _glide, _glideTarget, Time.SmoothingFactor( GlideRate ) );
+
 		var stranded = Stranded();
 
-		// The original's marker draw empties its list every frame, so a patrol edge queued for no frame is gone.
-		var patrol = PatrolSquares( _patrolQueued, ParkBuildMode.RefusalLatched );
+		// The original's marker draw empties its list every frame, so a patrol edge queued for no frame is gone. A
+		// carried thing that will not go down leaves the placer's failure set, which the edges' square arm reads first.
+		var patrol = PatrolSquares( _patrolQueued, PatrolLatch( ParkBuildMode.RefusalLatched, carried ) );
 		_patrolQueued = [];
 
 		var built = string.Join( ";", strip.Select( square => $"{square.X},{square.Y},{square.Marker}" ) )
+			+ "|" + string.Join( ";", carried.Select( square => $"{square.X},{square.Y},{square.Marker},{square.Turn}" ) )
 			+ "|" + string.Join( ";", patrol.Select( square => $"{square.X},{square.Y},{square.Marker}" ) )
 			+ "|" + string.Join( ";", stranded.Select( cell => $"{cell.X},{cell.Y}" ) );
 
 		if ( built != _built )
 		{
 			_built = built;
-			Build( strip, patrol, stranded );
+			Build( strip, carried, patrol, stranded );
 
 			return;
 		}
@@ -261,12 +300,19 @@ public sealed class ParkBuildMarkers : ModelEntity
 	/// The patrol edges' squares: the original's verdict for them (<c>FUN_00535670( 0x36 )</c>, <c>0x005356df</c>) is the
 	/// refusal latch <c>DAT_00816d50</c> alone, so they are red after a tool's last pass refused in a way that latches
 	/// (<see cref="ParkBuildMode.RefusalLatched"/>) and blue otherwise. The square's own arm reads the placer's failure
-	/// <c>DAT_0081b604</c> first (<c>0x0053319a</c>), which putting a tool away clears; no placement here draws a preview
-	/// (<c>CARRY_PREVIEW_MARKERS</c>). docs/exe/hud.md, "The patrol edges".
+	/// <c>DAT_0081b604</c> first (<c>0x0053319a</c>), which putting a tool away clears, so a carried thing that will not go
+	/// down reds them too (<see cref="CarriedRefused"/>). docs/exe/hud.md, "The patrol edges".
 	/// </summary>
 	internal static List<ParkPathBuilding.QueueSquare> PatrolSquares( IEnumerable<(int X, int Y)> cells, bool latched )
 		=> cells.Select( cell => new ParkPathBuilding.QueueSquare( cell.X, cell.Y,
 			latched ? ParkPathBuilding.MarkerRed : ParkPathBuilding.MarkerBlue ) ).ToList();
+
+	/// <summary>What the patrol edges read as their refusal: the latch, or a carried thing that will not go down.</summary>
+	internal static bool PatrolLatch( bool latched, List<ParkBuilding.CarrySquare> carried ) => latched || CarriedRefused( carried );
+
+	/// <summary>Whether a carried thing's squares are all red: the placer refused it.</summary>
+	internal static bool CarriedRefused( List<ParkBuilding.CarrySquare> carried )
+		=> carried.Count > 0 && carried.All( square => square.Marker == ParkPathBuilding.MarkerRed );
 
 	/// <summary>The patrol edges queued for the next frame's mesh, for a test.</summary>
 	internal IReadOnlyList<(int X, int Y)> PatrolQueued => _patrolQueued;
@@ -293,14 +339,19 @@ public sealed class ParkBuildMarkers : ModelEntity
 	/// </summary>
 	public string Census()
 	{
-		string Line( Square square ) => $"{square.X},{square.Y},{square.Marker}^{square.Over - Lift:0}";
+		string Line( Square square ) => $"{square.X},{square.Y},{square.Marker}^{square.Over - Lift:0}"
+			+ (square.Turn is 0 or 0x01 ? "" : $"@{square.Turn:x2}");
 
 		var tool = _strip.Take( _toolSquares ).Select( Line ).ToArray();
 		var patrol = _strip.Skip( _toolSquares ).Take( _patrolSquares ).Select( Line ).ToArray();
 		var walls = _walls.Select( wall => $"{wall.X},{wall.Y},{wall.Face},{wall.Marker}^{wall.Over - Lift:0}" ).ToArray();
 		var stranded = _strip.Skip( _toolSquares + _patrolSquares ).Select( square => $"{square.X},{square.Y}" ).ToArray();
 
+		var gliding = _strip.Any( square => square.Glides );
+		var (glideX, glideY) = GlideOffset();
+
 		return (tool.Length == 0 ? "none" : string.Join( ";", tool ))
+			+ (gliding ? $" | glide {glideX:0.0},{glideY:0.0}" : "")
 			+ (patrol.Length == 0 ? "" : $" | patrol {patrol.Length} {string.Join( ";", patrol )}")
 			+ (walls.Length == 0 ? "" : $" | walls {walls.Length} {string.Join( ";", walls )}")
 			+ (stranded.Length == 0 ? "" : $" | stranded {string.Join( ";", stranded )} red {(_redShown ? "on" : "off")}");
@@ -351,7 +402,8 @@ public sealed class ParkBuildMarkers : ModelEntity
 		? ParkPathBuilding.MarkerRed
 		: ParkPathBuilding.MarkerBlue;
 
-	private void Build( List<ParkPathBuilding.QueueSquare> strip, List<ParkPathBuilding.QueueSquare> patrol, List<(int X, int Y)> stranded )
+	private void Build( List<ParkPathBuilding.QueueSquare> strip, List<ParkBuilding.CarrySquare> carried,
+		List<ParkPathBuilding.QueueSquare> patrol, List<(int X, int Y)> stranded )
 	{
 		TranslucentModel?.Delete();
 		TranslucentModel = null;
@@ -360,7 +412,7 @@ public sealed class ParkBuildMarkers : ModelEntity
 		_toolSquares = 0;
 		_patrolSquares = 0;
 
-		if ( strip.Count + patrol.Count + stranded.Count == 0 || ParkGround.Current?.Heightfield is not { } field )
+		if ( strip.Count + carried.Count + patrol.Count + stranded.Count == 0 || ParkGround.Current?.Heightfield is not { } field )
 			return;
 
 		if ( RipplesShade( Level.Current?.ParkLight ) )
@@ -371,8 +423,11 @@ public sealed class ParkBuildMarkers : ModelEntity
 
 		bool OnTheField( int x, int y ) => x >= 0 && y >= 0 && x < field.CellsX && y < field.CellsY;
 
-		// A patrol edge is the same square as a tool's (FUN_00532fc0's 0x100 arm), lifted and walled the same way.
-		var squares = strip.Concat( patrol );
+		// A carried thing's square and a patrol edge are the same square as a tool's (FUN_00532fc0's 0x100 arm), lifted and
+		// walled the same way; a carried thing's glide (mode 4), the others not.
+		var squares = strip.Select( square => (square.X, square.Y, square.Marker, Turn: 0, Glides: false) )
+			.Concat( carried.Select( square => (square.X, square.Y, square.Marker, square.Turn, Glides: true) ) )
+			.Concat( patrol.Select( square => (square.X, square.Y, square.Marker, Turn: 0, Glides: false) ) );
 
 		float LiftAt( int x, int y ) => ParkState.Current is { } state
 			? LiftOver( state, Level.Current?.Catalogue, field, x, y )
@@ -384,12 +439,14 @@ public sealed class ParkBuildMarkers : ModelEntity
 			.Select( square => (Square: square, Lift: LiftAt( square.X, square.Y )) )
 			.ToList();
 
-		_strip = lifts.Select( square => new Square( square.Square.X, square.Square.Y, square.Square.Marker, RecordHeight( square.Lift ) ) )
+		_strip = lifts.Select( square => new Square( square.Square.X, square.Square.Y, square.Square.Marker, RecordHeight( square.Lift ),
+				square.Square.Turn, square.Square.Glides ) )
 			.ToList();
-		_toolSquares = strip.Count( square => OnTheField( square.X, square.Y ) );
+		_toolSquares = strip.Count( square => OnTheField( square.X, square.Y ) ) + carried.Count( square => OnTheField( square.X, square.Y ) );
 		_patrolSquares = _strip.Count - _toolSquares;
 
-		_walls = lifts.SelectMany( square => WallsAt( square.Square.X, square.Square.Y, square.Lift, square.Square.Marker, NeighbourLift ) )
+		_walls = lifts.SelectMany( square => WallsAt( square.Square.X, square.Square.Y, square.Lift, square.Square.Marker, NeighbourLift )
+				.Select( wall => wall with { Glides = square.Square.Glides } ) )
 			.ToList();
 
 		// Each wall under a square not refused also zeroes the refusal latches DAT_00816d50 and d58 (0x005333bd). That
@@ -433,26 +490,31 @@ public sealed class ParkBuildMarkers : ModelEntity
 	{
 		var vertex = 0;
 
-		foreach ( var (x, y, marker, over) in _strip )
+		var glide = GlideOffset();
+
+		foreach ( var (x, y, marker, over, turn, glides) in _strip )
 		{
 			var slot = Math.Max( 0, Array.IndexOf( Drawn, marker ) );
+			var offset = glides ? glide : (0f, 0f);
+			var uvs = TurnedUvs( turn );
 
 			// A red square that is not showing is laid with no area: all four corners on its first.
 			var gone = marker == ParkPathBuilding.MarkerRed && !_redShown;
 
-			_vertices[vertex++] = Corner( field, x, y, new Vector2( 0f, 0f ), slot, over );
-			_vertices[vertex++] = Corner( field, gone ? x : x + 1, y, new Vector2( 1f, 0f ), slot, over );
-			_vertices[vertex++] = Corner( field, gone ? x : x + 1, gone ? y : y + 1, new Vector2( 1f, 1f ), slot, over );
-			_vertices[vertex++] = Corner( field, x, gone ? y : y + 1, new Vector2( 0f, 1f ), slot, over );
+			_vertices[vertex++] = Corner( field, x, y, uvs[0], slot, over, offset );
+			_vertices[vertex++] = Corner( field, gone ? x : x + 1, y, uvs[1], slot, over, offset );
+			_vertices[vertex++] = Corner( field, gone ? x : x + 1, gone ? y : y + 1, uvs[2], slot, over, offset );
+			_vertices[vertex++] = Corner( field, x, gone ? y : y + 1, uvs[3], slot, over, offset );
 		}
 
 		foreach ( var wall in _walls )
 		{
 			var slot = Math.Max( 0, Array.IndexOf( Drawn, wall.Marker ) );
 			var gone = wall.Marker == ParkPathBuilding.MarkerRed && !_redShown;
+			var offset = wall.Glides ? glide : (0f, 0f);
 
 			foreach ( var (x, y, over, uv) in WallCorners( wall, gone ) )
-				_vertices[vertex++] = Corner( field, x, y, uv, slot, over );
+				_vertices[vertex++] = Corner( field, x, y, uv, slot, over, offset );
 		}
 
 		return vertex;
@@ -494,13 +556,40 @@ public sealed class ParkBuildMarkers : ModelEntity
 		_ => throw new ArgumentOutOfRangeException( nameof( face ), face, "not a wall's face" )
 	};
 
-	private Vertex Corner( HeightfieldFile field, int x, int y, Vector2 uv, int slot, float over )
+	/// <summary>How far a gliding square is drawn from its own cell now (<see cref="GlideOffset(ValueTuple{float, float}, ValueTuple{float, float})"/>).</summary>
+	private (float X, float Y) GlideOffset() => GlideOffset( _glide, _glideTarget );
+
+	/// <summary>
+	/// How far a gliding square is drawn from its own cell: the glide's point less the pointer's cell's corner, as
+	/// <c>FUN_0053df30</c> draws it at <c>x − cell × 10 + DAT_00820afc</c>.
+	/// </summary>
+	internal static (float X, float Y) GlideOffset( (float X, float Y) glide, (float X, float Y) target )
+		=> (glide.X - target.X, glide.Y - target.Y);
+
+	/// <summary>
+	/// The texture coordinates of a square's corners, in the order <see cref="Fill"/> lays them - (x, y), (x + 1, y),
+	/// (x + 1, y + 1), (x, y + 1) - for the compass bit it is turned by: <c>FUN_0053df30</c>'s choice among the UV pairs
+	/// <c>0x00871ee8</c> holds, (0, 0), (1, 0), (0, 1) and (1, 1) (<c>FUN_0053c3f0</c> writes them every frame). East's
+	/// <c>0x04</c>, south's <c>0x10</c> and west's <c>0x40</c> turn it; anything else leaves it as north's <c>0x01</c> does.
+	/// </summary>
+	internal static Vector2[] TurnedUvs( int turn ) => turn switch
 	{
-		var (worldX, worldY) = (x * field.CellSizeX, y * field.CellSizeY);
+		0x04 => [new( 0f, 1f ), new( 0f, 0f ), new( 1f, 0f ), new( 1f, 1f )],
+		0x10 => [new( 1f, 1f ), new( 0f, 1f ), new( 0f, 0f ), new( 1f, 0f )],
+		0x40 => [new( 1f, 0f ), new( 1f, 1f ), new( 0f, 1f ), new( 0f, 0f )],
+		_ => [new( 0f, 0f ), new( 1f, 0f ), new( 1f, 1f ), new( 0f, 1f )]
+	};
+
+	private Vertex Corner( HeightfieldFile field, int x, int y, Vector2 uv, int slot, float over, (float X, float Y) offset )
+	{
+		var (worldX, worldY) = ((x * field.CellSizeX) + offset.X, (y * field.CellSizeY) + offset.Y);
+
+		// A gliding corner stands on the ground under where it is drawn, as FUN_0053ddd0 asks it after the shift.
+		var ground = offset == (0f, 0f) ? field.HeightAt( x, y ) : field.HeightAtWorld( worldX, worldY );
 
 		return new()
 		{
-			Position = new Vector3( worldX, worldY, field.HeightAt( x, y ) + over + Wave( _phase, worldX, worldY ) ),
+			Position = new Vector3( worldX, worldY, ground + over + Wave( _phase, worldX, worldY ) ),
 			Normal = ParkGround.NormalAt( field, x, y ),
 			TexCoords = uv,
 			TexIndex = slot,

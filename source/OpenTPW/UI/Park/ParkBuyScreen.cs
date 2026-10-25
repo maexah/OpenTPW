@@ -454,8 +454,8 @@ internal sealed class ParkBuyScreen : UiWindow
 	/// <remarks>
 	/// <b>So does this.</b> <c>ParkBuilding.Carry</c> makes the same two tests and puts the item in the
 	/// hand, and <c>Level.ClickWorldAt</c> puts it down through <c>ParkBuilding.PlaceCarried</c> where
-	/// the park is next clicked. The footprint the original draws while it is carried is counted as
-	/// <c>CARRY_PREVIEW_MARKERS</c>.
+	/// the park is next clicked. While it is carried its footprint is drawn as the original's
+	/// (<c>ParkBuilding.CarrySquares</c>).
 	/// </remarks>
 	private void Chose( int rowId )
 	{

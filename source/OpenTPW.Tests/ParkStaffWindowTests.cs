@@ -626,8 +626,8 @@ public class ParkStaffWindowTests
 	/// <b>A placement's and the path and queue tools' refused clicks play the same sound <c>0xaf</c>, only where the press
 	/// reached the park</b>: the commit plays it once ahead of its mode switch (<c>0x00524aae</c>), so every tool shares it.
 	/// A click on (43,16), outside the park, arms the path tool and refuses at once; a click on the Belly Bounce's queue
-	/// hands back the queue tool anchored on (49,22), and a click on (52,18) runs it to (49,18), over a type 7 cell; the Belly Bounce in the hand
-	/// will not go down on (43,16) either, and stays in the hand.
+	/// hands back the queue tool anchored on (49,22), and a click on (52,18) runs it to (49,18), over a type 7 cell; the Belly Bounce in the hand,
+	/// centred on the pointer's (44,18), will not go down on (43,16) either, and stays in the hand.
 	/// </summary>
 	[TestMethod]
 	public void RefusedBuildClicksAreHeardUnlessThePressWentToAParkScreen()
@@ -661,8 +661,8 @@ public class ParkStaffWindowTests
 
 				StringAssert.StartsWith( ParkBuilding.Carry( 1100 ), "carry: holding" );
 				UiSounds.LastAsked = null;
-				var put = Level.Current!.ClickWorldAt( 43, 16, 0 );
-				StringAssert.StartsWith( put, "world click: buy: 'Belly Bounce' will not fit at (43,16) - " );
+				var put = Level.Current!.ClickWorldAt( 44, 18, 0 );
+				StringAssert.StartsWith( put, "world click: under (44,18): buy: 'Belly Bounce' will not fit at (43,16) - " );
 				StringAssert.EndsWith( put, $" - {sound}" );
 				Assert.AreEqual( (screen ? null : 0xaf, 1100), (UiSounds.LastAsked, ParkBuilding.Carrying), "a placement, still in the hand" );
 				ParkHand.LetGo();

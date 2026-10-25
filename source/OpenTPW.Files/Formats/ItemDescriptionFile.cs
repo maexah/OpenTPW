@@ -1226,7 +1226,8 @@ public sealed partial class ItemDescriptionFile
 		depth = rows.Count;
 
 		_cellKinds = rows.SelectMany( row => row ).Select( cell => cell.Kind ).Distinct().Order().ToArray();
-		_shape = new ItemShape( width, depth, rows.Select( row => row.Select( cell => cell.Kind ).ToArray() ).ToArray() );
+		_shape = new ItemShape( width, depth, rows.Select( row => row.Select( cell => cell.Kind ).ToArray() ).ToArray(),
+			rows.Select( row => row.Select( cell => cell.Direction ).ToArray() ).ToArray() );
 
 		// FUN_00413410 walks COLUMN by column, each column top to bottom, and takes the first of each kind.
 		// No shipped picture has two of either, so the order is kept for its own sake.

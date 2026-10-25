@@ -378,6 +378,21 @@ public static class ParkPathBuilding
 	/// <summary>The run ends on this ride's own queue - <c>m_end</c>.</summary>
 	public const int MarkerEnd = 11;
 
+	/// <summary>A carried thing's queue starts here: the cell before its entrance - <c>m_enter</c>.</summary>
+	public const int MarkerEnter = 3;
+
+	/// <summary>A carried thing's guests leave here: the cell before its exit - <c>m_exit</c>.</summary>
+	public const int MarkerExit = 4;
+
+	/// <summary>The cell a carried thing's station cell points to - <c>m_direct</c>.</summary>
+	public const int MarkerDirect = 5;
+
+	/// <summary>A carried thing's front row - <c>m_front</c>.</summary>
+	public const int MarkerFront = 6;
+
+	/// <summary>The cell before the one way in and out of a carried thing with no queue - <c>m_inout</c>.</summary>
+	public const int MarkerInOut = 7;
+
 	/// <summary>
 	/// The squares the armed queue tool shows from its anchor to a cell, snapped to the longer axis -
 	/// the original's hover pass, <c>FUN_00536100( 0x103, anchor, target )</c> with the per-cell verdict

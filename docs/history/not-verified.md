@@ -5,6 +5,11 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q637 (the aerial's squash): the original off-screen and ours on the desktop, one tag put on and its life ending, the
+  red top measured and filmed. Not looked at: a tag going with tags above it in either game (the tags' 20 ms stream is
+  tested, not seen), a tag going while the top still plays (tested), the swell and a squash on one tag, Full
+  Simulation (nothing here asks the mode). The tag's own picture shows about half a second after the top lifts in the
+  original's film and at once here (Q673).
 - Q636 (the hire screen's skill bar): the original off-screen and ours on the desktop, the stock park's hire screen
   opened by real clicks, its first row picked. Not looked at: Full Simulation (the builder asks no game mode), a window
   other than 1280 x 720, the bar at nought or full, the inset helper's other 31 calls, swept by
