@@ -74,12 +74,6 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q638. A tag leaving the gadget does not sparkle before it goes.** From Alexah's play test, 2026-10-21 (note 27).
-  The original puts effect `0x5b` over the tag five seconds before its end, shown and hidden with the tag
-  (`advisor-park.md:892`; `hud.md:1308-1313`); here it is counted, `TAG_ENDING_PARTICLE`
-  (`source/OpenTPW/World/Advisor/ParkTags.cs:359`). Q463 owns `0x5a` and the move and hide of `0x5b` (QUEUE:1235-1241):
-  build them together; the drafter found no doc that calls the effect a sparkle (inferred). Confirm: a tag's last
-  seconds filmed beside the original's.
 - [ ] **Q639. The golden ticket's screen is not centred with the game maximized in a window.** From Alexah's play test,
   2026-10-21 (note 29). It sits off to the right. The virtual 2048 x 1536 screen scales to the window without
   letterboxing at 4:3 and anchors by thirds (`hud.md:964-975`); nothing covers a maximized, non-4:3 window (inferred:
@@ -1437,13 +1431,6 @@ filed the items that cite it.
 - [ ] **Q462. The advisor's turn comes before the sweep's tail.** From the week-end audit (D11, `VERIFY-8b.md` Q318 1).
   The original walks every thing (his turn inside the walk), then `0x004d7b20` (`0x00516695`): arrivals, staff pool,
   calendar. Ours runs the arrivals and the pool before his `Tick`, so row 0x11 can be said a poll round early or late.
-- [ ] **Q463. A tag's first show: half a second, and particle 0x5a.** From the week-end audit (D12, `VERIFY-7b.md`
-  Q309 1). The mast posts message 6 (show) 500 ms after a tag is put on (`0x004a1286`); its first show starts effect
-  0x5a (`0x0048dfa6`, not while paused). Ours shows it at once and counts nothing (rule 4): count it first.
-  - **Note (fork watch 2026-10-19, `verify-audio-fx.md` M3; `hud.md`, "A tag's effects follow its visibility"):** the live
-    effect `0x5b` (property 9) is shown and hidden with the tag (`0x0051ff10( h, 0 )` at `0x0048dff9`, `( h, 1 )` at
-    `0x0048e02e`), and message `0x13` moves it onto the tag's middle (`0x0051fe30`, `0x0048df88`). Ours counts neither the
-    hide / show nor the move (`ParkTags.cs` counts only the `0x5b` at the show): count them with `0x5a`.
 - [ ] **Q464. A written corner cell's made vehicles run newest first.** From the week-end audit (D13, `VERIFY-2b.md`
   Q342 1). With ferry and seaplane both made, `ParkWorld.People.cs` writes cell (0,0)'s chain oldest first; the
   original's file (`q257x/orig/fixed-by-the-original.TPWS`) and our running list run newest first. No effect on reading

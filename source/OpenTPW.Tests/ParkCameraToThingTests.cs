@@ -678,7 +678,7 @@ public class ParkCameraToThingTests
 
 		var tags = gadget.Tags = new ParkTags();
 		tags.Said( 72, 13, 1000, 1100, "Belly Bounce" );
-		Frame( false, new Vector2( 1000, 100 ), 1.1f );
+		Frame( false, new Vector2( 1000, 100 ), 1.5f );
 
 		Assert.IsTrue( _stack.ClickAt( 119, 941 ) );
 		ParkGadgetPressTests.Settle( gadget );

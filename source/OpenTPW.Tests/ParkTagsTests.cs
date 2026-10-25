@@ -127,27 +127,29 @@ public class ParkTagsTests
 	/// particle, counted once; at the end it is hidden; half a second on it is off the mast.
 	/// </summary>
 	/// <remarks>
-	/// <b>Mutations:</b> the particle at the start; at the end; counted every turn; hidden a tick early; never
+	/// <b>Mutations:</b> shown at once; the particle at the start; at the end; asked for every turn; hidden a tick early; never
 	/// hidden; taken off as it is hidden; never taken off; the change not told.
 	/// </remarks>
 	[TestMethod]
 	public void ATagIsHiddenAtItsLifesEndAndThenTakenOff()
 	{
 		var tags = new ParkTags();
-		var particle = Times( "TAG_ENDING_PARTICLE" );
 		var tag = tags.Said( 68, 13, 1000 )!;
+		Assert.AreEqual( (1500L, false, true), (tag.ShowAt, tag.ShownAt( 1499 ), tag.ShownAt( 1500 )), "shown half a second after it is put on" );
 
 		tags.Tick( 25999 );
-		Assert.AreEqual( particle, Times( "TAG_ENDING_PARTICLE" ) );
+		Assert.IsFalse( tag.EndingDue );
 		tags.Tick( 26000 );
+		Assert.IsTrue( tag.EndingDue, "its particle asked for 25 s in" );
+		tag.EndingDue = false;
 		tags.Tick( 26500 );
-		Assert.AreEqual( particle + 1, Times( "TAG_ENDING_PARTICLE" ), "once, 25 s in" );
+		Assert.IsFalse( tag.EndingDue, "once" );
 
 		var changes = tags.Changes;
 		tags.Tick( 30999 );
 		Assert.AreEqual( (false, 1, changes), (tag.Hidden, tags.Standing.Count, tags.Changes) );
 		tags.Tick( 31000 );
-		Assert.AreEqual( (true, 1, changes + 1), (tag.Hidden, tags.Standing.Count, tags.Changes), "hidden, its place kept" );
+		Assert.AreEqual( (true, 1, changes + 1, false), (tag.Hidden, tags.Standing.Count, tags.Changes, tag.ShownAt( 31000 )), "hidden, its place kept" );
 		tags.Tick( 31499 );
 		Assert.AreEqual( 1, tags.Standing.Count );
 		tags.Tick( 31500 );
@@ -200,7 +202,6 @@ public class ParkTagsTests
 	public void AnOpenedTagStopsItsTimers()
 	{
 		var tags = new ParkTags();
-		var particle = Times( "TAG_ENDING_PARTICLE" );
 		var opened = tags.Said( 72, 13, 1000 )!;
 		var left = tags.Said( 150, 0, 1000 )!;
 
@@ -209,6 +210,7 @@ public class ParkTagsTests
 		var changes = tags.Changes;
 		Assert.IsTrue( tags.Open( opened, 3000 ) );
 		Assert.AreEqual( (null, opened, false, long.MaxValue), (tags.OnShow, tags.PuttingOnShow, opened.TimersRun, opened.HideAt), "being put on show" );
+		Assert.IsTrue( opened.EndingStopped, "its particle to be killed with its timers (FUN_0048d9c0)" );
 		tags.Shown( 3000 );
 		Assert.AreEqual( (opened, opened, 3000L), (tags.OnShow, tags.PuttingOnShow, opened.OpenedAt), "on show as the arm starts out" );
 		tags.FullyOut();
@@ -220,7 +222,7 @@ public class ParkTagsTests
 		StringAssert.Contains( tags.Census( 5000 ), "tag=150/picture=1/subject=0/age=4000/hidden=0/item=0/slot=1/life=30000/timers=1/open=0/" );
 
 		tags.Tick( 26000 );
-		Assert.AreEqual( particle + 1, Times( "TAG_ENDING_PARTICLE" ), "the tag left alone starts its particle, the opened one none" );
+		Assert.AreEqual( (true, false, false), (left.EndingDue, left.EndingStopped, opened.EndingDue), "the tag left alone starts its particle, the opened one none" );
 		tags.Tick( 31000 );
 		tags.Tick( 31500 );
 		Assert.AreEqual( (1, opened, false), (tags.Standing.Count, tags.Standing[0], opened.Hidden), "the tag left alone is gone and the opened one stands" );
@@ -251,7 +253,7 @@ public class ParkTagsTests
 		var offer = offers.Said( 5, 0, 1000 )!;
 		Assert.IsTrue( offers.Open( offer, 2000 ) );
 		offers.Shown( 2000 );
-		Assert.AreEqual( (true, 31000L), (offer.TimersRun, offer.HideAt) );
+		Assert.AreEqual( (true, 31000L, false), (offer.TimersRun, offer.HideAt, offer.EndingStopped), "its timers and its particle kept" );
 		offers.Tick( 31000 );
 		Assert.IsTrue( offer.Hidden );
 		Assert.AreEqual( offer, offers.OnShow, "hidden and still on show until it is off the mast" );
@@ -287,7 +289,6 @@ public class ParkTagsTests
 		};
 		var unlisted = Times( "TAG_ROW_NOT_LISTED" );
 		var kinds = Times( "TAG_TEXT_KIND" );
-		var particle = Times( "TAG_ENDING_PARTICLE" );
 
 		var said = Enumerable.Range( 102, 12 ).Select( group => tags.Said( group, 0, 1000 ) ).ToArray();
 		Assert.AreEqual( (unlisted, kinds), (Times( "TAG_ROW_NOT_LISTED" ), Times( "TAG_TEXT_KIND" )) );
@@ -298,7 +299,7 @@ public class ParkTagsTests
 			said.Take( 10 ).Select( tag => tag!.Text ).ToArray() );
 
 		tags.Tick( 10_000_000 );
-		Assert.AreEqual( (10, particle), (tags.Standing.Count, Times( "TAG_ENDING_PARTICLE" )), "no life, so no end" );
+		Assert.AreEqual( (10, false), (tags.Standing.Count, tags.Standing.Any( tag => tag.EndingDue )), "no life, so no end" );
 
 		var least = new ParkTags { Strings = strings, Thresholds = default( ParkGoldenTickets.Thresholds ) with { ProfitYear = int.MinValue } };
 		Assert.AreEqual( "exceeding $-2147483648 profit", least.Said( 106, 0, 0 )!.Text, "the size of the least int is itself" );

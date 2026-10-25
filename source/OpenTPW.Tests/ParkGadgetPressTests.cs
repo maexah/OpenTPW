@@ -344,11 +344,13 @@ public class ParkGadgetPressTests
 	/// <summary>
 	/// <b>A tag stands on the mast and lifts the red top by its height and ten</b> (<c>LAB_004a11e0</c>, 0x100001):
 	/// the oldest lowest, each 70 by 65 across the mast's middle, eight under where the top stood, showing its row's
-	/// part of msgtag.md2; a hidden one keeps its place; one taken off puts the top and the later tags down.
+	/// part of msgtag.md2, shown half a second after it is put on (the mast's message 6, <c>0x004a1286</c>); a hidden one
+	/// keeps its place; one taken off puts the top and the later tags down.
 	/// </summary>
 	/// <remarks>
 	/// <b>Mutations:</b> the top not lifted; lifted by the tag's height alone; the newest tag lowest; the tag at the
-	/// mast's top edge; the picture not set; a hidden tag still shown; a hidden tag's place given up at once; the old controls left on the mast.
+	/// mast's top edge; the picture not set; shown at once; shown a frame late; a hidden tag still shown; a hidden tag's
+	/// place given up at once; the old controls left on the mast.
 	/// </remarks>
 	[TestMethod]
 	public void ATagStandsOnTheMastAndLiftsTheTop()
@@ -363,23 +365,29 @@ public class ParkGadgetPressTests
 		Assert.AreEqual( new UI.UiRect( 94, 901, 144, 984 ), Find( gadget, 0x2d ).Rect, "the mast up 75" );
 		Assert.AreEqual( new UI.UiRect( 77, 773, 161, 901 ), Find( gadget, 0x2e ).Rect, "and the top on it" );
 		Assert.AreEqual( new UI.UiRect( 84, 909, 154, 974 ), Find( gadget, 900 ).Rect );
-		Assert.AreEqual( (1, 475, true), (Find( gadget, 900 ).Frame, Find( gadget, 900 ).HelpText, Find( gadget, 900 ).Visible) );
+		Assert.AreEqual( (1, 475, false), (Find( gadget, 900 ).Frame, Find( gadget, 900 ).HelpText, Find( gadget, 900 ).Visible),
+			"the mast lifted at once, the tag not shown until the mast's message 6, half a second on" );
+		Assert.AreNotEqual( 900, Under( gadget, 119, 940 ), "an unshown tag takes no pointer" );
+		Frame( stack, false, new Vector2( 1000, 100 ), 1.499f );
+		Assert.IsFalse( Find( gadget, 900 ).Visible );
+		Frame( stack, false, new Vector2( 1000, 100 ), 1.5f );
+		Assert.IsTrue( Find( gadget, 900 ).Visible, "shown 500 ms on" );
 		Assert.AreEqual( 900, Under( gadget, 119, 940 ), "the tag takes the pointer" );
 		Assert.AreEqual( 0x2e, Under( gadget, 119, 820 ), "the top where it now stands" );
 
-		tags.Said( 150, 0, 1200 );
-		Frame( stack, false, new Vector2( 1000, 100 ), 1.3f );
+		tags.Said( 150, 0, 1600 );
+		Frame( stack, false, new Vector2( 1000, 100 ), 1.7f );
 		Assert.AreEqual( new UI.UiRect( 94, 826, 144, 984 ), Find( gadget, 0x2d ).Rect );
 		Assert.AreEqual( new UI.UiRect( 84, 909, 154, 974 ), Find( gadget, 900 ).Rect, "the older stays lowest" );
 		Assert.AreEqual( new UI.UiRect( 84, 834, 154, 899 ), Find( gadget, 901 ).Rect );
 
-		tags.Hide( first, 1400 );
-		Frame( stack, false, new Vector2( 1000, 100 ), 1.5f );
+		tags.Hide( first, 1800 );
+		Frame( stack, false, new Vector2( 1000, 100 ), 1.9f );
 		Assert.IsFalse( Find( gadget, 900 ).Visible, "hidden" );
 		Assert.AreEqual( new UI.UiRect( 94, 826, 144, 984 ), Find( gadget, 0x2d ).Rect, "and its place kept for half a second" );
 		Assert.AreNotEqual( 900, Under( gadget, 119, 940 ), "a hidden tag takes no pointer" );
 
-		Frame( stack, false, new Vector2( 1000, 100 ), 1.9f );
+		Frame( stack, false, new Vector2( 1000, 100 ), 2.3f );
 		Assert.AreEqual( new UI.UiRect( 94, 901, 144, 984 ), Find( gadget, 0x2d ).Rect, "off: the top comes down" );
 		Assert.AreEqual( new UI.UiRect( 84, 909, 154, 974 ), Find( gadget, 900 ).Rect, "and the later tag with it" );
 		Assert.AreEqual( 1, tags.Standing.Count );
@@ -574,7 +582,7 @@ public class ParkGadgetPressTests
 		Frame( stack, false, new Vector2( 1000, 100 ), 1.0f );
 		var tag = tags.Said( 72, 13, 1000 )!;
 		tag.Text = "A ride has broken down.";
-		Frame( stack, false, new Vector2( 1000, 100 ), 1.1f );
+		Frame( stack, false, new Vector2( 1000, 100 ), 1.5f );
 		Assert.IsFalse( Find( gadget, 0x10d2d ).Visible, "no bar until a tag is opened" );
 		Assert.IsNull( Under( gadget, 565, 1172 ) );
 
@@ -670,7 +678,7 @@ public class ParkGadgetPressTests
 		Frame( stack, false, new Vector2( 1000, 100 ), 1.0f );
 		tags.Said( 72, 13, 1000 );
 		tags.Said( 150, 0, 1000 );
-		Frame( stack, false, new Vector2( 1000, 100 ), 1.1f );
+		Frame( stack, false, new Vector2( 1000, 100 ), 1.5f );
 
 		// The wall clock far past the line's end: the cut is judged on the game's clock, which stands at nought.
 		Time.PinWall( 60000 );
@@ -763,7 +771,7 @@ public class ParkGadgetPressTests
 			Settle( gadget );
 			Frame( stack, false, new Vector2( 1000, 100 ), 1.0f );
 			tags.Said( 72, 13, 1000 );
-			Frame( stack, false, new Vector2( 1000, 100 ), 1.1f );
+			Frame( stack, false, new Vector2( 1000, 100 ), 1.5f );
 			Time.PinWall( 60000 );
 			Assert.IsTrue( stack.ClickAt( 119, 941 ), "the tag" );
 			Settle( gadget );
@@ -836,7 +844,7 @@ public class ParkGadgetPressTests
 
 		// Erase.
 		var tag = tags.Said( 72, 13, 1000 )!;
-		Frame( stack, false, new Vector2( 1000, 100 ), 1.1f );
+		Frame( stack, false, new Vector2( 1000, 100 ), 1.5f );
 		Time.PinWall( 2000 );
 		stack.ClickAt( 119, 941 );
 		Settle( gadget );
@@ -851,7 +859,7 @@ public class ParkGadgetPressTests
 
 		// The tag's own right click.
 		tag = tags.Said( 72, 13, 3000 )!;
-		Frame( stack, false, new Vector2( 1000, 100 ), 3.1f );
+		Frame( stack, false, new Vector2( 1000, 100 ), 3.5f );
 		stack.ClickAt( 119, 941 );
 		Settle( gadget );
 		Assert.IsTrue( gadget.BarOut );
@@ -864,12 +872,12 @@ public class ParkGadgetPressTests
 
 		// Taken off by a later line.
 		var worn = tags.Said( 68, 13, 5000 )!;
-		Frame( stack, false, new Vector2( 1000, 100 ), 5.1f );
+		Frame( stack, false, new Vector2( 1000, 100 ), 5.5f );
 		stack.ClickAt( 119, 941 );
 		Settle( gadget );
 		Assert.AreEqual( (true, worn), (gadget.BarOut, tags.OnShow) );
 		tags.Said( 72, 13, 6000 );
-		Frame( stack, false, new Vector2( 1000, 100 ), 6.1f );
+		Frame( stack, false, new Vector2( 1000, 100 ), 6.5f );
 		Settle( gadget );
 		Assert.AreEqual( (false, false), (gadget.BarOut, gadget.ArmOut), "the tag on show gone, the bar goes with it" );
 
@@ -904,10 +912,10 @@ public class ParkGadgetPressTests
 		Assert.IsTrue( stack.ClickAt( 261, 1414 ), "up again, with nothing out" );
 		Settle( gadget );
 		Assert.AreEqual( (false, false), (gadget.ArmOut, camcorder.IsDown) );
-		Frame( stack, false, new Vector2( 1000, 100 ), 6.7f );
+		Frame( stack, false, new Vector2( 1000, 100 ), 7.0f );
 		Assert.AreEqual( 0, tags.Standing.Count );
-		tags.Said( 72, 13, 6800 );
-		Frame( stack, false, new Vector2( 1000, 100 ), 6.9f );
+		tags.Said( 72, 13, 7100 );
+		Frame( stack, false, new Vector2( 1000, 100 ), 7.6f );
 
 		stack.ClickAt( 261, 1414 );
 		Settle( gadget );
@@ -921,8 +929,8 @@ public class ParkGadgetPressTests
 
 		// An offer of research, and to decline, which is not built.
 		var buttons = Times( "TAG_BAR_BUTTON" );
-		var offer = tags.Said( 20, 0, 7000 )!;
-		Frame( stack, false, new Vector2( 1000, 100 ), 7.1f );
+		var offer = tags.Said( 20, 0, 7700 )!;
+		Frame( stack, false, new Vector2( 1000, 100 ), 8.2f );
 		Assert.IsTrue( stack.ClickAt( 119, 866 ), "the second tag up" );
 		Settle( gadget );
 		Assert.AreEqual( offer, tags.OnShow );
@@ -938,8 +946,8 @@ public class ParkGadgetPressTests
 
 		// mb_locate of the other type, which goes by the item (FUN_004868d0, not read): counted, and the camera left.
 		var looked = ParkOrbitCameraMode.PointOfInterest;
-		var byItem = tags.Said( 21, 13, 7200 )!;
-		Frame( stack, false, new Vector2( 1000, 100 ), 7.3f );
+		var byItem = tags.Said( 21, 13, 8300 )!;
+		Frame( stack, false, new Vector2( 1000, 100 ), 8.8f );
 		Assert.IsTrue( stack.ClickAt( 119, 791 ), "the third tag up" );
 		Settle( gadget );
 		Assert.AreEqual( (byItem, 515), (tags.OnShow, Find( gadget, 0x10d30 ).HelpText) );
@@ -982,7 +990,7 @@ public class ParkGadgetPressTests
 		stack.Close( earlier );
 
 		var tag = tags.Said( 64, 0, 1000 )!;
-		Frame( stack, false, new Vector2( 1000, 100 ), 1.1f );
+		Frame( stack, false, new Vector2( 1000, 100 ), 1.5f );
 		Assert.AreEqual( (2, true), (Find( gadget, 900 ).Frame, Find( gadget, 900 ).Visible) );
 		Time.PinWall( 2000 );
 		Assert.IsTrue( stack.ClickAt( 119, 941 ) );
@@ -1004,8 +1012,8 @@ public class ParkGadgetPressTests
 		Frame( stack, false, new Vector2( 1000, 100 ), 2.6f );
 		Assert.AreEqual( 0, tags.Standing.Count );
 		var second = tags.Said( 21, 0, 3000, item: 1303 )!;
-		Frame( stack, false, new Vector2( 1000, 100 ), 3.1f );
-		Time.PinWall( 3500 );
+		Frame( stack, false, new Vector2( 1000, 100 ), 3.5f );
+		Time.PinWall( 3600 );
 		Assert.IsTrue( stack.ClickAt( 119, 941 ) );
 		Settle( gadget );
 		Assert.AreEqual( second, tags.OnShow );
@@ -1040,7 +1048,7 @@ public class ParkGadgetPressTests
 		stack.Close( earlier );
 
 		var tag = tags.Said( 7, 0, 1000 )!;
-		Frame( stack, false, new Vector2( 1000, 100 ), 1.1f );
+		Frame( stack, false, new Vector2( 1000, 100 ), 1.5f );
 		Assert.AreEqual( (2, true), (Find( gadget, 900 ).Frame, Find( gadget, 900 ).Visible) );
 		Time.PinWall( 2000 );
 		Assert.IsTrue( stack.ClickAt( 119, 941 ) );
@@ -1068,8 +1076,8 @@ public class ParkGadgetPressTests
 			Frame( stack, false, new Vector2( 1000, 100 ), now );
 			Assert.AreEqual( 0, tags.Standing.Count, $"type 0x{type:x}: the mast bare" );
 			var next = tags.Said( 200 + type, 0, (long)(now * 1000) + 100 )!;
-			Frame( stack, false, new Vector2( 1000, 100 ), now + 0.2f );
-			Time.PinWall( (long)(now * 1000) + 300 );
+			Frame( stack, false, new Vector2( 1000, 100 ), now + 0.6f );
+			Time.PinWall( (long)(now * 1000) + 700 );
 			Assert.IsTrue( stack.ClickAt( 119, 941 ) );
 			Settle( gadget );
 			Assert.AreEqual( next, tags.OnShow );
@@ -1086,7 +1094,7 @@ public class ParkGadgetPressTests
 			Assert.AreEqual( (1, type - 0xd, true, buttons), (screens.Length, screens[0].Tab, next.Hidden, Times( "TAG_BAR_BUTTON" )), $"type 0x{type:x}" );
 			Assert.AreNotSame( opened, screens[0], "built again, as the opener destroys the open screen first" );
 			opened = screens[0];
-			now += 1f;
+			now += 1.5f;
 		}
 
 		// The tab last left on is the session's: put back for the tests after this one.
@@ -1107,7 +1115,7 @@ public class ParkGadgetPressTests
 		var buttons = Times( "TAG_BAR_BUTTON" );
 
 		var tag = tags.Said( 3, 0, 1000 )!;
-		Frame( stack, false, new Vector2( 1000, 100 ), 1.1f );
+		Frame( stack, false, new Vector2( 1000, 100 ), 1.5f );
 		Assert.AreEqual( (2, true), (Find( gadget, 900 ).Frame, Find( gadget, 900 ).Visible) );
 		Time.PinWall( 2000 );
 		Assert.IsTrue( stack.ClickAt( 119, 941 ) );
@@ -1130,7 +1138,7 @@ public class ParkGadgetPressTests
 		// With the screen open already the button builds no second one, and takes its tag off all the same.
 		var screen = stack.Windows.Single( window => window is UI.ParkEntryPriceScreen );
 		var again = tags.Said( 3, 0, 3000 )!;
-		Frame( stack, false, new Vector2( 1000, 100 ), 3.1f );
+		Frame( stack, false, new Vector2( 1000, 100 ), 3.5f );
 		Assert.IsTrue( stack.ClickAt( 119, 941 ) );
 		Settle( gadget );
 		Assert.AreEqual( again, tags.OnShow );
@@ -1157,7 +1165,7 @@ public class ParkGadgetPressTests
 		UI.ParkCategoryScreens.Seed();
 
 		var tag = tags.Said( 30, 0, 1000 )!;
-		Frame( stack, false, new Vector2( 1000, 100 ), 1.1f );
+		Frame( stack, false, new Vector2( 1000, 100 ), 1.5f );
 		Time.PinWall( 2000 );
 		Assert.IsTrue( stack.ClickAt( 119, 941 ) );
 		Settle( gadget );
@@ -1175,7 +1183,7 @@ public class ParkGadgetPressTests
 
 		var screen = stack.Windows.Single( window => window is UI.ParkStaffCostsScreen );
 		var again = tags.Said( 31, 0, 3000 )!;
-		Frame( stack, false, new Vector2( 1000, 100 ), 3.1f );
+		Frame( stack, false, new Vector2( 1000, 100 ), 3.5f );
 		Assert.IsTrue( stack.ClickAt( 119, 941 ) );
 		Settle( gadget );
 		Assert.AreEqual( again, tags.OnShow );
@@ -1185,6 +1193,108 @@ public class ParkGadgetPressTests
 		Assert.AreEqual( (true, false), (again.Hidden, gadget.BarOut) );
 
 		UI.ParkCategoryScreens.Seed();
+	}
+
+	/// <summary>
+	/// <b>A tag's two effects</b> (<c>FUN_0048dae0</c>): its first show, half a second after it is put on, starts
+	/// MessageTag1 (0x5a) over its middle, once, and none while the park is paused or the gadget put away; timer 0x80081,
+	/// five seconds before its end, starts EndOfMessage (0x5b) there and keeps it, hidden while the tag is, moved with the
+	/// tag as one below goes (message 0x13), and killed as it is opened with its timers stopped or taken off; a tag that
+	/// declines an offer keeps it when opened.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> no 0x5a; shown at once; started while paused; started while put away; across over 2048 rounded
+	/// up; down over 1536 of the top edge; no 0x5b; started at the put-on; not kept; not hidden with the tag; not moved;
+	/// moved to the old place; not killed as the tag goes; not killed as it is opened; killed though the tag declines;
+	/// drawn over the whole interface, not with the gadget; not pinned down by the tag; a hidden tag shown.
+	/// </remarks>
+	[TestMethod]
+	public void ATagsEffectsFollowItsShowingAndItsEnd()
+	{
+		var (stack, gadget) = AGadget();
+		// An offer that declines, as the research offer's row (FUN_0048d9c0's 0x1b).
+		var tags = gadget.Tags = new ParkTags( ParkTags.Rows.Append( new ParkTags.Row( 20, ParkTags.NoTag, 1, 0, 0x1a, ParkTags.DeclineButton, 30000, 0 ) ) );
+		var system = new ParticleSystem( "Particle/Tp2.plb", 1000 );
+
+		try
+		{
+			Emitter[] Live( int effect ) => system.Emitters.Where( emitter => emitter.Active && emitter.Effect == effect && emitter.Generation != 0 ).ToArray();
+
+			Frame( stack, false, new Vector2( 1000, 100 ), 1.0f );
+			var low = tags.Said( 68, 13, 1000 )!;
+			Frame( stack, false, new Vector2( 1000, 100 ), 1.499f );
+			Assert.AreEqual( 0, Live( ParkTags.FirstShowEffect ).Length, "none before the tag is shown" );
+			Frame( stack, false, new Vector2( 1000, 100 ), 1.5f );
+			var first = Live( ParkTags.FirstShowEffect );
+			Assert.AreEqual( 1, first.Length, "MessageTag1 as it is shown" );
+			// The tag (84,909)-(154,974): its middle 119 across, 941 down; 119 * 100000 / 2048 = 5810, 941 * 75000 / 1536 = 45947.
+			Assert.AreEqual( (5810 >> 4, 45947 >> 4, UI.Anchor.Left, UI.VerticalAnchor.Bottom, gadget),
+				(first[0].X, first[0].Z, first[0].Anchor, first[0].Down, first[0].Owner) );
+			Assert.AreEqual( (5810, 45947), UI.ParkGadget.EffectMiddle( new UI.UiRect( 84, 909, 154, 974 ) ), "each toward nought" );
+			Assert.AreEqual( (5810, 42285), UI.ParkGadget.EffectMiddle( new UI.UiRect( 84, 834, 154, 899 ) ) );
+			Assert.IsTrue( system.Library.Effects[ParkTags.FirstShowEffect].OnScreen && system.Library.Effects[ParkTags.EndingEffect].OnScreen, "both drawn on the screen" );
+			Assert.AreEqual( ParkTags.EndingEffect, (int)ParLib.P_EFFECT_EndOfMessage );
+			Assert.AreEqual( ParkTags.FirstShowEffect, (int)ParLib.P_EFFECT_MessageTag1 );
+
+			// Paused at its show: none, and none later.
+			var high = tags.Said( 72, 14, 2000 )!;
+			GameClock.Update( true, GameClock.ParkCatchUp );
+			Frame( stack, false, new Vector2( 1000, 100 ), 2.5f );
+			GameClock.Rebase();
+			Frame( stack, false, new Vector2( 1000, 100 ), 2.6f );
+			Assert.AreEqual( (1, true), (Live( ParkTags.FirstShowEffect ).Length, high.ShownAt( 2600 )), "paused as it was shown: no MessageTag1" );
+
+			// Put away at its show: none either.
+			gadget.PutAway = true;
+			var away = tags.Said( 150, 0, 3000 )!;
+			Frame( stack, false, new Vector2( 1000, 100 ), 3.5f );
+			gadget.PutAway = false;
+			Frame( stack, false, new Vector2( 1000, 100 ), 3.6f );
+			Assert.AreEqual( (1, true), (Live( ParkTags.FirstShowEffect ).Length, away.FirstShown), "put away as it was shown: none" );
+
+			// Timer 0x80081: EndOfMessage over the low tag's middle, kept.
+			Frame( stack, false, new Vector2( 1000, 100 ), 25.999f );
+			Assert.AreEqual( 0, Live( ParkTags.EndingEffect ).Length );
+			Frame( stack, false, new Vector2( 1000, 100 ), 26.0f );
+			var ending = Live( ParkTags.EndingEffect );
+			Assert.AreEqual( 1, ending.Length, "EndOfMessage five seconds before its end" );
+			Assert.AreEqual( (5810 >> 4, 45947 >> 4, false, gadget), (ending[0].X, ending[0].Z, ending[0].Hidden, ending[0].Owner) );
+			Assert.IsTrue( system.IsLive( low.Ending ) );
+
+			// The high tag's, at its own middle, (84,834)-(154,899): 866 down, 866 * 75000 / 1536 = 42285.
+			Frame( stack, false, new Vector2( 1000, 100 ), 27.0f );
+			Assert.IsTrue( system.TryEmitter( high.Ending, out var highEnding ) );
+			Assert.AreEqual( (5810 >> 4, 42285 >> 4), (highEnding.X, highEnding.Z) );
+
+			// Hidden with the tag, killed as it is taken off; the high tag moves down and its effect with it.
+			tags.Hide( low, 27500 );
+			Frame( stack, false, new Vector2( 1000, 100 ), 27.5f );
+			Assert.IsTrue( ending[0].Hidden, "hidden with the tag" );
+			Assert.AreNotEqual( -2, ending[0].Lifetime );
+			Frame( stack, false, new Vector2( 1000, 100 ), 28.0f );
+			Assert.AreEqual( -2, ending[0].Lifetime, "killed as the tag is taken off" );
+			Assert.AreEqual( (5810 >> 4, 45947 >> 4), (highEnding.X, highEnding.Z), "moved down with its tag" );
+
+			// Opened, its timers stopped: killed.
+			Assert.IsTrue( stack.ClickAt( 119, 941 ) );
+			Settle( gadget );
+			Frame( stack, false, new Vector2( 1000, 100 ), 28.1f );
+			Assert.AreEqual( (high, -2), (tags.OnShow, highEnding.Lifetime), "opened: killed with its timers" );
+
+			// A tag that declines an offer keeps its timers and its effect as it is opened.
+			var offer = tags.Said( 20, 0, 29000 )!;
+			Frame( stack, false, new Vector2( 1000, 100 ), 29.0f + (offer.Row.Life - ParkTags.WarningBeforeTheEnd) / 1000f );
+			Assert.IsTrue( system.TryEmitter( offer.Ending, out var offerEnding ) );
+			Assert.AreEqual( ParkTags.DeclineButton, offer.Row.Button2 );
+			Assert.IsTrue( tags.Open( offer, Time.WallMilliseconds ) );
+			Frame( stack, false, new Vector2( 1000, 100 ), 29.1f + (offer.Row.Life - ParkTags.WarningBeforeTheEnd) / 1000f );
+			Assert.AreNotEqual( -2, offerEnding.Lifetime, "a declining tag's effect kept" );
+		}
+		finally
+		{
+			system.Shutdown();
+			GameClock.Rebase();
+		}
 	}
 
 	private static (UI.WindowStack Stack, UI.ParkGadget Gadget) AGadget()

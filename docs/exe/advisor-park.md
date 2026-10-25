@@ -831,7 +831,8 @@ records of `0x208` bytes at `0x007c26b0` (the control, in use, the text).
 
 **The mast, `LAB_004a11e0`** (control `0x2d`, `[0x007cb2c4]`; `hud.md`, "The management gadget"):
 
-- `0x100001`, a tag put on: the tag is shown, the mast's top edge goes up by the tag's height and ten
+- `0x100001`, a tag put on: the tag is enabled and shown half a second on (message 6, `0x004a1292`; `hud.md`, "A
+  tag's effects follow its visibility"), the mast's top edge goes up by the tag's height and ten
   (`FUN_0065cd95( 0, -h, 0, 0 )`), the tag is put across the mast's middle with its top eight under the mast's
   new top, and the red top `0x2e`, which follows the mast's top edge, plays the stream at `0x00752e48` at 50 ms a row,
   unless one plays on it already (`0x004a135b`; `hud.md`, "The aerial's squash").
@@ -843,7 +844,8 @@ records of `0x208` bytes at `0x007c26b0` (the control, in use, the text).
   a row unless one plays on it (`0x0048dcda`), the red top the same at 50 ms, started over (`0x0048dd06`), and the message bar retracted where it showed this tag.
 
 **A tag's own handler, `FUN_0048dae0`:** timer `0x80080` hides it and sends the mast `0x100002` with nought, so
-it is off half a second after its life ends; timer `0x80081` starts particle effect `0x5b` over its middle, once;
+it is off half a second after its life ends; timer `0x80081` starts particle effect `0x5b` over its middle, once (and its
+first show starts `0x5a` there: `hud.md`, "A tag's effects follow its visibility");
 a left click plays sound `0xc0` and shows its message on the bar (`FUN_0048d9c0`, which posts advisor message
 `0x11c`), or retracts the arm where it is the one on show; a right click, unless its message is the one being
 shown (`[0x007ca094]`), hides it and sends `0x100002` with nought. The tags are written to a park file
@@ -890,7 +892,8 @@ with the tag where over 30% was. Main's build said the same line, moved nothing 
 | The match of a standing tag | id, thing and item | the same; the item is the subject's catalogue id |
 | The times | the interface's timers, real milliseconds | the same clock (`Time.WallMilliseconds`), from the gadget's update |
 | The red top and the later tags as one comes or goes | put down at once, then squashed and sprung back (streams `0x007502f0`, `0x00752e48`; `hud.md`, "The aerial's squash") | the same (`ParkGadget.Squash`), by the same rule: a row on the first frame more than the interval after the last, so the length is the frame rate's in both (1.00 s in the original at the 30 fps cap, about 0.8 s here, `q637/run3`) |
-| The particle five seconds before the end | effect `0x5b` over the tag | counted, `TAG_ENDING_PARTICLE` |
+| The tag's first show | half a second after the mast lifts, effect `0x5a` over the tag, not while paused | the same (`ParkGadget.TagEffects`) |
+| The particle five seconds before the end | effect `0x5b` over the tag, hidden and shown with it, moved down with it, killed as it is opened or goes | the same |
 | A left click | sound `0xc0`, the message bar on the arm with the text and the buttons | the same (`hud.md`, "The message bar"), and an opened tag's timers stop there as here |
 | The tag's text | written from the row's string by its kind (`TagSystem_WriteText` `0x00509e10`), 37 kinds | kinds 0, 2 and 5 to 8, those the listed rows use: the row of `TAG_SYSTEM.str`, for kind 2 the item's `Info.Name` where its parameter 0 stands, for 5 to 8 the balance's `GoldenTicketLocal` keys; any other kind, and a kind 2 about no item, is counted, `TAG_TEXT_KIND`, and empty. Shown on the message bar, written to a park file and read by `tags` (a line break as `\n`) |
 | The sounds' loudness | not measured | each at its variation's own volume, as the boot's |

@@ -10146,6 +10146,30 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   pointer on (48,31)) and matched square for square here (`q633/run11`, 6 of 6 on the final build:
   `47,29,6^0;...;48,28,3^0;48,33,4^0`, `world click: under (48,31): ... at (47,29)`; `q633/side-by-side.png`); 18 bugs
   put back, 18 caught. Tests 3932 with the game, 1397 without.
+- [x] **Q638. A tag leaving the gadget does not sparkle before it goes.** From Alexah's play test, 2026-10-21 (note 27).
+  The original puts effect `0x5b` over the tag five seconds before its end, shown and hidden with the tag
+  (`advisor-park.md:892`; `hud.md:1308-1313`); here it is counted, `TAG_ENDING_PARTICLE`
+  (`source/OpenTPW/World/Advisor/ParkTags.cs:359`). Q463 owns `0x5a` and the move and hide of `0x5b` (QUEUE:1235-1241):
+  build them together; the drafter found no doc that calls the effect a sparkle (inferred). Confirm: a tag's last
+  seconds filmed beside the original's.
+  **Done (2026-10-25, a2), with Q463.** Built (`ParkGadget.TagEffects`, `ParkTags.ShowAfter`, `ParticleSystem.IsLive`):
+  a tag is shown half a second after the mast lifts and its first show starts `0x5a` (MessageTag1) over its middle, not
+  while paused or with the gadget put away; five seconds before its end `0x5b` (EndOfMessage) starts there, hidden and
+  shown with the tag, moved down with it, killed as it is opened with its timers stopped or taken off (`hud.md`, "A tag's
+  effects follow its visibility", which has the decode, `UI_SpawnEffectAtControl`, `Particles_IsLive`, `UI_MoveBy`).
+  `TAG_ENDING_PARTICLE` is gone. Both games filmed on the stock park's broken Belly Bounce: the empty pole, then the tag
+  in a green and gold burst, and gold glints growing over it in its last five seconds (`q638/side-by-side.png`); the
+  original's effect 90 at 0.52 s and 91 at 25.03 s at its middle (`q638/orig/a-emitters.log`), ours `shown at age 502,
+  effect 0x5a at 5810,45947` and `timer 0x80081 at age 25003` (`q638/run3`, 5 of 5). Ours' `0x5b`, past its own life
+  with particles out, is hidden with the tag at 30.0 s; whether the original's was still live then is not measured.
+- [x] **Q463. A tag's first show: half a second, and particle 0x5a.** From the week-end audit (D12, `VERIFY-7b.md`
+  Q309 1). The mast posts message 6 (show) 500 ms after a tag is put on (`0x004a1286`); its first show starts effect
+  0x5a (`0x0048dfa6`, not while paused). Ours shows it at once and counts nothing (rule 4): count it first.
+  - **Note (fork watch 2026-10-19, `verify-audio-fx.md` M3; `hud.md`, "A tag's effects follow its visibility"):** the live
+    effect `0x5b` (property 9) is shown and hidden with the tag (`0x0051ff10( h, 0 )` at `0x0048dff9`, `( h, 1 )` at
+    `0x0048e02e`), and message `0x13` moves it onto the tag's middle (`0x0051fe30`, `0x0048df88`). Ours counts neither the
+    hide / show nor the move (`ParkTags.cs` counts only the `0x5b` at the show): count them with `0x5a`.
+  **Done (2026-10-25, a2): built with Q638** (its entry has the account).
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

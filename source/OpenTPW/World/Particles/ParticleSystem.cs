@@ -204,6 +204,9 @@ internal sealed class ParticleSystem
 			emitter.Lifetime = -2;
 	}
 
+	/// <summary>Whether <paramref name="handle"/> is still for an effect in its slot (Particles_IsLive, 0x005222e0).</summary>
+	public bool IsLive( int handle ) => TryEmitter( handle, out _ );
+
 	/// <summary>Stops an effect being drawn, or lets it be drawn again (0x0051ff10).</summary>
 	public void Hide( int handle, bool hidden )
 	{

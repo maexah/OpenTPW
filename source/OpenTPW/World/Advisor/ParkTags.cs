@@ -109,6 +109,12 @@ internal sealed class ParkTags
 	internal const int Most = 10;
 	/// <summary>How long before its end a tag starts its particle (timer 0x80081, FUN_0048eb20).</summary>
 	internal const int WarningBeforeTheEnd = 5000;
+	/// <summary>How long after it is put on a tag is shown: the mast posts it message 6 half a second on (LAB_004a11e0, 0x004a1286).</summary>
+	internal const int ShowAfter = 500;
+	/// <summary>The effect a tag starts over its middle as it is first shown, P_EFFECT_MessageTag1 (FUN_0048dae0's 0x11, 0x0048dfbc).</summary>
+	internal const int FirstShowEffect = 0x5a;
+	/// <summary>The effect a tag starts over its middle five seconds before its end, P_EFFECT_EndOfMessage (timer 0x80081, 0x0048de18).</summary>
+	internal const int EndingEffect = 0x5b;
 	/// <summary>How long after it is hidden a tag is taken off the mast (LAB_004a11e0, 0x100002).</summary>
 	internal const int OffAfterHidden = 500;
 	/// <summary>How long after the one before it each tag goes when the top is right clicked (LAB_004a11e0, 0x100003).</summary>
@@ -137,7 +143,24 @@ internal sealed class ParkTags
 		internal long OffAt { get; set; } = long.MaxValue;
 		/// <summary>Hidden and still holding its place on the mast.</summary>
 		internal bool Hidden { get; set; }
+		/// <summary>When the mast's message 6 shows it, <see cref="ShowAfter"/> after it was put on.</summary>
+		internal long ShowAt { get; init; }
+		/// <summary>On show on the mast: shown by the mast's message 6 and not hidden since.</summary>
+		internal bool ShownAt( long now ) => !Hidden && now >= ShowAt;
+		/// <summary>Timer 0x80081 has come.</summary>
 		internal bool Warned { get; set; }
+		/// <summary>Timer 0x80081 has come and its effect waits to be started where the tag stands, which the gadget knows.</summary>
+		internal bool EndingDue { get; set; }
+		/// <summary>Opened with its timers stopped: its effect waits to be killed (FUN_0048d9c0).</summary>
+		internal bool EndingStopped { get; set; }
+		/// <summary>The control's property 9: its <see cref="EndingEffect"/>'s handle, 0 before one is started.</summary>
+		internal int Ending { get; set; }
+		/// <summary>Where its <see cref="EndingEffect"/> was last put, in the units effects are started at.</summary>
+		internal (int X, int Z) EndingAt { get; set; }
+		/// <summary>The control's property 0xa: its first show has been and asked for <see cref="FirstShowEffect"/>.</summary>
+		internal bool FirstShown { get; set; }
+		/// <summary>Whether the gadget last drew it shown, to tell a show or a hide (message 0x11) from no change.</summary>
+		internal bool Showing { get; set; }
 		/// <summary>The control's +0x134: its two timers run. Set as a tag with a life is made, cleared as it is opened.</summary>
 		internal bool TimersRun { get; set; }
 		/// <summary>When its message was last put on the bar.</summary>
@@ -209,7 +232,7 @@ internal sealed class ParkTags
 		if ( !fresh || _tags.Count >= Most ) return null;
 
 		var slot = Enumerable.Range( 0, Most ).First( free => _tags.All( tag => tag.Slot != free ) );
-		var made = new Tag { Row = row, Subject = subject, Item = item, Text = text, Slot = slot, Born = now };
+		var made = new Tag { Row = row, Subject = subject, Item = item, Text = text, Slot = slot, Born = now, ShowAt = now + ShowAfter };
 		if ( row.Life > 0 )
 		{
 			made.HideAt = now + row.Life;
@@ -315,6 +338,7 @@ internal sealed class ParkTags
 		{
 			tag.TimersRun = false;
 			tag.HideAt = long.MaxValue;
+			tag.EndingStopped = true;
 		}
 
 		PuttingOnShow = tag;
@@ -347,7 +371,10 @@ internal sealed class ParkTags
 		++Changes;
 	}
 
-	/// <summary>The timers' turn: a tag's particle five seconds before its end, its hiding at its end, and its going.</summary>
+	/// <summary>
+	/// The timers' turn: a tag's particle five seconds before its end, asked of the gadget (<see cref="Tag.EndingDue"/>),
+	/// its hiding at its end, and its going.
+	/// </summary>
 	internal void Tick( long now )
 	{
 		foreach ( var tag in _tags.ToArray() )
@@ -355,8 +382,8 @@ internal sealed class ParkTags
 			if ( tag.TimersRun && !tag.Warned && now >= tag.Born + tag.Row.Life - WarningBeforeTheEnd )
 			{
 				tag.Warned = true;
-				// Effect 0x5b over the tag's middle (FUN_0048dae0, timer 0x80081); the interface draws no particle here.
-				Unimplemented.Report( "TAG_ENDING_PARTICLE" );
+				tag.EndingDue = true;
+				Log.Info( $"Park tags: tag {tag.Row.Id} subject {tag.Subject} timer 0x80081 at age {now - tag.Born}" );
 			}
 
 			if ( !tag.Hidden && now >= tag.HideAt ) Hide( tag, now );
@@ -392,5 +419,6 @@ internal sealed class ParkTags
 	internal string Census( long now ) => $"tags: standing={_tags.Count} "
 		+ string.Join( " ", _tags.Select( tag =>
 			$"tag={tag.Row.Id}/picture={tag.Row.Picture}/subject={tag.Subject}/age={now - tag.Born}/hidden={(tag.Hidden ? 1 : 0)}"
-			+ $"/item={tag.Item}/slot={tag.Slot}/life={tag.Row.Life}/timers={(tag.TimersRun ? 1 : 0)}/open={(tag == OnShow ? 1 : 0)}/text=\"{tag.Text.Replace( "\n", "\\n" )}\"" ) );
+			+ $"/item={tag.Item}/slot={tag.Slot}/life={tag.Row.Life}/timers={(tag.TimersRun ? 1 : 0)}/open={(tag == OnShow ? 1 : 0)}/text=\"{tag.Text.Replace( "\n", "\\n" )}\""
+			+ $"/shown={(tag.ShownAt( now ) ? 1 : 0)}/ending={tag.Ending:x}" ) );
 }

@@ -31,17 +31,17 @@ One line per system; the detail, item by item, is `docs/WORKS.md` (grep it by ar
 
 ## Next
 
-`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next Q638 (a tag's sparkle before it goes; Q525, ordered before Q638, stands lower in the file; Q543 and Q27, ordered before Q631, and Q31b, Q25, Q51 and Q55, ordered earlier, stand lower in the file): Alexah's play test of 2026-10-21 put Q616 to Q645 first, the display, then what a player hits, then the chosen improvements (`playtest-2026-10-21/notes.md`); Q598 (every clip's scale track posed) follows them in section A (Q609, the advisor's row 19 that Q602 decoded, and Q587 to Q589, the karts' and the water ride's build, are filed after it; Q586 stood above the ordered block; Q608, the draws left both-sided, is filed after Q713): the queue was reordered at Alexah's word, 2026-10-20. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. Gaps 4 and 7: `docs/PLAYER-GAPS.md`. Q13 is done: `docs/history/CLEANUP-PLAN.md`.
+`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next Q639 (the golden ticket's screen centred in a maximized window; Q525, ordered before Q638, stands lower in the file; Q543 and Q27, ordered before Q631, and Q31b, Q25, Q51 and Q55, ordered earlier, stand lower in the file): Alexah's play test of 2026-10-21 put Q616 to Q645 first, the display, then what a player hits, then the chosen improvements (`playtest-2026-10-21/notes.md`); Q598 (every clip's scale track posed) follows them in section A (Q609, the advisor's row 19 that Q602 decoded, and Q587 to Q589, the karts' and the water ride's build, are filed after it; Q586 stood above the ordered block; Q608, the draws left both-sided, is filed after Q713): the queue was reordered at Alexah's word, 2026-10-20. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. Gaps 4 and 7: `docs/PLAYER-GAPS.md`. Q13 is done: `docs/history/CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the pre-commit hook: grep it by Q-number.
 
-- Q633 (a carried thing's squares and pointer): both games on the stock park, a Belly Bounce carried over (48,31) and
-  over the stock one, measured square by square and photographed, and put down by a click. Not looked at: a thing carried
-  at another angle (only a move carries one; the turns and anchors are tested against the decode, not seen), a shop's
-  `m_inout` and a station's `m_direct` on screen (tested), the glide in the original (decoded, not filmed), a move's
-  `c_cash`, Full Simulation (nothing here asks the mode).
+- Q638 (a tag's two effects, with Q463's half-second show): both games filmed on the stock park's broken Belly Bounce,
+  the first show and the last five seconds, and measured (effects 90 and 91 at the tag's middle, at 0.5 s and 25.0 s).
+  Not looked at: a tag opened with its timers stopped, one moved down as a tag below goes, one shown while paused or
+  with the gadget put away (each tested, not seen), a declining offer's tag, Full Simulation (nothing here asks the
+  mode); whether the original's `0x5b`, past its own life, is still live at the tag's end (ours is, and is hidden).
 
 
 
@@ -54,8 +54,8 @@ Only the item just landed is here. Every earlier item's account is in `docs/hist
 | | | measured |
 |---|---|---|
 | Opcodes | **78** of 106 | 2026-10-20, Q553 (`FADEOBJ`), `case Opcode.` labels vs enum members |
-| Tests | **3932**, 0 fail, 0 skip with the game | 2026-10-25, Q633, alone in a worktree |
-| Tests without the game | **1397** ran, **2535** skipped, of 3932 | 2026-10-25, Q633, alone in a worktree |
+| Tests | **3933**, 0 fail, 0 skip with the game | 2026-10-25, Q638, alone in a worktree |
+| Tests without the game | **1397** ran, **2536** skipped, of 3933 | 2026-10-25, Q638, alone in a worktree |
 | Build warnings | 121 in the main tree; 131 in a fresh worktree, the ten more NuGet's advisories on ModKit's ImageSharp | 2026-10-10 (the worktree's 131 and the main tree's 121 at Q340, the worktree's 131 and the main tree's 121 again at Q343, at Q344 and at Q345, and the worktree's 131 at Q346 and, with the main tree's 121, at Q347, at Q348, at Q349, at Q351 and at Q352, 2026-10-13) |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 

@@ -1347,6 +1347,8 @@ internal sealed class ParkGadget : UiWindow
 			_tagControls[i].Rect = Squashed( own, _tagSquash.TryGetValue( tag, out squash ) ? squash.Value : 0 );
 		}
 
+		TagEffects( tags, now );
+
 		if ( _topSquash != null && !_topSquash.Step( now ) )
 			_topSquash = null;
 		int? topSquash = _topSquash?.Value;
@@ -1356,6 +1358,99 @@ internal sealed class ParkGadget : UiWindow
 			Log.Info( $"Park gadget: top squash {topSquash?.ToString() ?? "none"} drawn {Edges( _mastTop.Rect )} at {now}" );
 		_topSquashLogged = topSquash;
 	}
+
+	/// <summary>
+	/// The tags' showing and their two effects (FUN_0048dae0), each frame. A tag is shown half a second after it is put
+	/// on (the mast's message 6), and its first show starts MessageTag1 over its middle, unless the park is paused or the
+	/// gadget is hidden or put away (FUN_00486b90 asks the tag and every parent shown, and the paused flag). As timer
+	/// 0x80081 comes, EndOfMessage is started over its middle and kept, hidden at once where the tag is not shown; it is
+	/// hidden and shown with the tag (message 0x11), moved with it as a tag below goes (message 0x13, which only a move
+	/// sends, not a squash or the swell), and killed as the tag is opened with its timers stopped (FUN_0048d9c0) or taken
+	/// off (message 5, in <see cref="BuildTags"/>). Both are drawn with the gadget, so a window opened over it covers them
+	/// (<see cref="ScreenParticles"/>).
+	/// </summary>
+	private void TagEffects( ParkTags tags, long now )
+	{
+		var particles = ParticleSystem.Current;
+
+		for ( var i = 0; i < _tagControls.Count; ++i )
+		{
+			var tag = tags.Standing[i];
+			var control = _tagControls[i];
+			var middle = EffectMiddle( _tagRects[i] );
+			var shown = tag.ShownAt( now );
+
+			if ( shown != tag.Showing )
+			{
+				tag.Showing = shown;
+
+				if ( shown && !tag.FirstShown )
+				{
+					tag.FirstShown = true;
+					var started = !GameClock.Paused && !Hidden && !PutAway
+						? StartTagEffect( particles, ParkTags.FirstShowEffect, middle, control ) : 0;
+					Log.Info( $"Park gadget: tag {tag.Row.Id} shown at age {now - tag.Born}, effect 0x5a at {middle.X},{middle.Z} handle {started:x}" );
+				}
+
+				if ( particles?.IsLive( tag.Ending ) == true )
+				{
+					particles.Hide( tag.Ending, !shown );
+					Log.Info( $"Park gadget: tag {tag.Row.Id} effect 0x5b {(shown ? "shown" : "hidden")} at age {now - tag.Born}" );
+				}
+			}
+
+			control.Visible = shown;
+
+			if ( tag.EndingDue )
+			{
+				tag.EndingDue = false;
+
+				if ( tag.Ending == 0 )
+				{
+					tag.Ending = StartTagEffect( particles, ParkTags.EndingEffect, middle, control );
+					tag.EndingAt = middle;
+
+					if ( !shown )
+						particles?.Hide( tag.Ending, true );
+
+					Log.Info( $"Park gadget: tag {tag.Row.Id} effect 0x5b at {middle.X},{middle.Z} handle {tag.Ending:x} at age {now - tag.Born}, shown {(shown ? 1 : 0)}" );
+				}
+			}
+			else if ( middle != tag.EndingAt && particles?.IsLive( tag.Ending ) == true )
+			{
+				particles.Move( tag.Ending, middle.X, 0, middle.Z );
+				tag.EndingAt = middle;
+				Log.Info( $"Park gadget: tag {tag.Row.Id} effect 0x5b moved to {middle.X},{middle.Z}" );
+			}
+
+			if ( tag.EndingStopped )
+			{
+				tag.EndingStopped = false;
+				KillTagEffect( particles, tag, "opened" );
+			}
+		}
+	}
+
+	/// <summary>Effect <paramref name="effect"/> started over a tag's middle, pinned and drawn as the tag is; its handle, or 0.</summary>
+	private int StartTagEffect( ParticleSystem? particles, int effect, (int X, int Z) middle, UiControl tag )
+		=> particles?.Spawn( effect, middle.X, 0, middle.Z, tag.Anchor, this, down: tag.VerticalAnchor ) ?? 0;
+
+	/// <summary>A tag's EndOfMessage killed where it lives: its particles live out their time.</summary>
+	private static void KillTagEffect( ParticleSystem? particles, ParkTags.Tag tag, string why )
+	{
+		if ( particles?.IsLive( tag.Ending ) != true )
+			return;
+
+		particles.Kill( tag.Ending );
+		Log.Info( $"Park gadget: tag {tag.Row.Id} effect 0x5b killed, {why}" );
+	}
+
+	/// <summary>
+	/// A control's middle in the units on-screen effects are started at (FUN_00486b90, 0x0048de18): across, its middle
+	/// times 100000 over 2048; down, times 75000 over 1536; each toward nought.
+	/// </summary>
+	internal static (int X, int Z) EffectMiddle( UiRect rect )
+		=> ((((rect.Right - rect.Left) >> 1) + rect.Left) * 100000 / 2048, (((rect.Bottom - rect.Top) >> 1) + rect.Top) * 75000 / 1536);
 
 	private static UiRect Squashed( UiRect rest, int squash ) => new( rest.Left - squash, rest.Top + squash, rest.Right + squash, rest.Bottom );
 
@@ -1417,6 +1512,10 @@ internal sealed class ParkGadget : UiWindow
 			_mast.Children.Remove( control );
 		}
 
+		// A tag taken off kills its EndOfMessage (FUN_0048dae0, message 5).
+		foreach ( var gone in _standingShown.Where( tag => !tags.Standing.Contains( tag ) ) )
+			KillTagEffect( ParticleSystem.Current, gone, "taken off" );
+
 		_tagControls.Clear();
 		_tagRects.Clear();
 		_tagsShown = tags;
@@ -1443,7 +1542,7 @@ internal sealed class ParkGadget : UiWindow
 				HelpText = 475,
 				Mesh = UiMesh.Get( "msgtag" ),
 				Frame = tag.Row.Picture,
-				Visible = !tag.Hidden,
+				Visible = tag.Showing,
 				PinAcross = Anchor.Left,
 				PinDown = VerticalAnchor.Bottom,
 				LeftClicked = () => OpenTag( tags, tag ),

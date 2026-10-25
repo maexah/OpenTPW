@@ -1335,7 +1335,27 @@ A tag's left click (`FUN_0048dae0`, `0x10006` with button 0) plays sound `0xc0`,
 (`0x0048dfbe`) spawns the first-show effect at the tag's middle, only when the tag is visible (`0x0065d773`) and not paused (`[0x00786b84]`, `0x00486bce`),
 the handle not kept; property 0xa becomes 1 (`0x0048dfcc`). A new tag resets property 9 to -1 and 0xa to 0 (`0x0048ed71`..`0x0048ed82`) before posting
 `0x100001`. On every show and hide the live **0x5b** handle (property 9, `0x005222e0`) is shown or hidden (`0x0051ff10( h, 0 )` at `0x0048dff9`,
-`0x0051ff10( h, 1 )` at `0x0048e02e`), and message `0x13` moves it onto the tag's middle (`0x0051fe30`, `0x0048df88`). Q463.
+`0x0051ff10( h, 1 )` at `0x0048e02e`), and message `0x13` moves it onto the tag's middle (`0x0051fe30`, `0x0048df88`).
+
+**The whole of it (Q638, which built Q463 with it).** `UI_SpawnEffectAtControl` (`0x00486b90`) asks the control and every
+parent shown (`FUN_0065d773`) and the paused flag clear (`[0x00786b84]`), then starts the effect at the control's middle:
+across `middle * 100000 / 2048`, down `middle * 75000 / 1536`, each toward nought, height 0, the handle not kept. Timer
+`0x80081` (set at the life less 5000 ms by `FUN_0048eb20`, `0x0048ecf2`) starts `0x5b` the same way inline (`0x0048de18`)
+when property 9 is -1, keeps the handle in property 9, stops the timer and hides the effect at once where the tag is not
+shown; it asks no pause. Property 9 is never put back to -1, so a tag starts `0x5b` once. `Particles_IsLive` (`0x005222e0`)
+is the test before each hide, show, move and kill: a handle not nought, the system up, the slot under 120 and its
+generation the handle's. Message `0x13` is sent by `UI_MoveBy` (`0x0065c7fe`, `0x0065c930`), a move by an offset, the one
+sender a sweep of `push 0x13` before the two message calls finds: the later tags put down as one below goes; a rectangle set (`0x0065cc04`) sends `0x12`, so the squash streams and the
+swell do not move the effect. The effect is killed by message 5 (`0x0048dc0a`) and by `FUN_0048d9c0` where it stops the
+timers (property 6 not `0x1b`, `0x0048da30`). The mast's `0x100001` enables the tag at once (vtable `+0x14` with 1, `0x004a1283`) and
+posts it message 6, `UI_SetVisible( 1 )`, 500 ms on (`0x004a1292`), so the tag is drawn half a second after the mast lifts.
+
+Measured in the original (`q638/orig`, Q309's load, the Belly Bounce broken): the mast lifted with an empty pole and the
+tag appeared about half a second on in a burst of green and gold glints, effect 90 (`MessageTag1`) at the tag's middle
+0.52 s after `tags.py` first read it held, its own life 29 ticks; effect 91 (`EndOfMessage`) at the same place 25.03 s
+after the tag, its own life 149 ticks (about 4.6 s): its glints grew over the tag and the emitter was gone from the list by
+55.22 s, about when the tag was hidden at its life's end (about 55.05 s), so which came first is not measured. **OpenTPW** builds all of it (`ParkGadget.TagEffects`, `ParkTags.ShowAfter`);
+its effects are drawn with the gadget, so a window opened over it covers them (`ScreenParticles`).
 
 ### The bar's handler, `FUN_0048e2f0`
 

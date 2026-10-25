@@ -5,6 +5,11 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q633 (a carried thing's squares and pointer): both games on the stock park, a Belly Bounce carried over (48,31) and
+  over the stock one, measured square by square and photographed, and put down by a click. Not looked at: a thing carried
+  at another angle (only a move carries one; the turns and anchors are tested against the decode, not seen), a shop's
+  `m_inout` and a station's `m_direct` on screen (tested), the glide in the original (decoded, not filmed), a move's
+  `c_cash`, Full Simulation (nothing here asks the mode).
 - Q637 (the aerial's squash): the original off-screen and ours on the desktop, one tag put on and its life ending, the
   red top measured and filmed. Not looked at: a tag going with tags above it in either game (the tags' 20 ms stream is
   tested, not seen), a tag going while the top still plays (tested), the swell and a squash on one tag, Full
