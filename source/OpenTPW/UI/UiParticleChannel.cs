@@ -12,6 +12,12 @@ namespace OpenTPW.UI;
 /// round the centre eased by <c>f</c> itself and radii eased by <c>f</c> held to 1: the centre runs on past its mark
 /// once the time is up, as the original's does, where the radii stop.
 /// </para>
+/// <para>
+/// <b>A deviation:</b> the original's channel moves on its one 4:3 screen, stretched to any mode. Here the interface keeps
+/// its shape and pins by thirds (<see cref="VirtualScreen"/>), so the channel takes, from each centre it is set to, the pin
+/// of the third that centre lies in, and eases its pin there with the radii (<see cref="PinShift"/>): the ticket's glints
+/// go from his hand on the right to the window's middle and on to the ticket count in the top right.
+/// </para>
 /// </summary>
 internal sealed class UiParticleChannel
 {
@@ -25,6 +31,12 @@ internal sealed class UiParticleChannel
 	private float _setAt;
 	private float _seconds;
 	private float _turns;
+
+	/// <summary>The pin the effects were started with, as fractions of the room beside and below the interface (0 left or top, 1 right or bottom).</summary>
+	private (float Across, float Down) _startedPin = (0.5f, 0.5f);
+	private bool _pinnedDown;
+	private (float Across, float Down) _fromPin = (0.5f, 0.5f);
+	private (float Across, float Down) _pin = (0.5f, 0.5f);
 
 	public int Count => _handles.Count;
 
@@ -46,6 +58,12 @@ internal sealed class UiParticleChannel
 	{
 		var system = ParticleSystem.Current;
 		var started = 0;
+
+		if ( count > _handles.Count )
+		{
+			_startedPin = (Fraction( anchor ), down is { } pinnedDown ? Fraction( pinnedDown ) : 0.5f);
+			_pinnedDown = down != null;
+		}
 
 		while ( _handles.Count > count )
 		{
@@ -75,6 +93,11 @@ internal sealed class UiParticleChannel
 		_fromCentre = jump ? (x, y) : _centre;
 		_centre = (x, y);
 
+		var pin = (Fraction( VirtualScreen.AnchorAt( (1f + x) * VirtualScreen.Width / 2f ) ),
+			Fraction( VirtualScreen.VerticalAnchorAt( (1f + y) * VirtualScreen.Height / 2f ) ));
+		_fromPin = jump ? pin : _pin;
+		_pin = pin;
+
 		if ( seconds != 0f )
 		{
 			_setAt = now;
@@ -101,10 +124,48 @@ internal sealed class UiParticleChannel
 
 		for ( int i = 0; i < _handles.Count; ++i )
 		{
-			var (x, z) = PlaceOf( i, now );
+			var (x, z) = MovedTo( i, now );
 			system.Move( _handles[i], x, 0, z );
 		}
 	}
+
+	/// <summary>Where effect <paramref name="index"/> is moved to at <paramref name="now"/>: the original's place (<see cref="PlaceOf"/>) and the pin's shift (<see cref="PinShift"/>).</summary>
+	internal (int X, int Z) MovedTo( int index, float now )
+	{
+		var (x, z) = PlaceOf( index, now );
+		var (shiftX, shiftZ) = PinShift( now );
+		return (x + shiftX, z + shiftZ);
+	}
+
+	/// <summary>Where the channel's pin stands at <paramref name="now"/>: eased from the last centre's third to this one's as the radii are.</summary>
+	internal (float Across, float Down) PinAt( float now )
+	{
+		var held = _seconds != 0f ? MathF.Min( (now - _setAt) / _seconds, 1f ) : 0f;
+		return (_fromPin.Across + ((_pin.Across - _fromPin.Across) * held), _fromPin.Down + ((_pin.Down - _fromPin.Down) * held));
+	}
+
+	/// <summary>
+	/// How far, in the units effects are moved in, the channel's effects stand from where their own pin puts them, for the
+	/// pin it has eased to (<see cref="PinAt"/>). Nought on a 4:3 window, which has no room beside or below the interface;
+	/// down it is nought where the effects were started with no pin down of their own.
+	/// </summary>
+	internal (int X, int Z) PinShift( float now )
+	{
+		var scale = VirtualScreen.Scale;
+		if ( scale <= 0f )
+			return (0, 0);
+
+		var (across, down) = PinAt( now );
+		var acrossPixels = VirtualScreen.Offset( Anchor.Right ) * (across - _startedPin.Across);
+		var downPixels = _pinnedDown ? VirtualScreen.OffsetDown( VerticalAnchor.Bottom ) * (down - _startedPin.Down) : 0f;
+
+		// A virtual pixel across is 50000 / 1024 of these units, down 37500 / 768.
+		return ((int)(acrossPixels / scale * 50000f / 1024f), (int)(downPixels / scale * 37500f / 768f));
+	}
+
+	private static float Fraction( Anchor anchor ) => anchor switch { Anchor.Left => 0f, Anchor.Right => 1f, _ => 0.5f };
+
+	private static float Fraction( VerticalAnchor down ) => down switch { VerticalAnchor.Top => 0f, VerticalAnchor.Bottom => 1f, _ => 0.5f };
 
 	/// <summary>Where effect <paramref name="index"/> stands at <paramref name="now"/>, in the units effects are moved in.</summary>
 	internal (int X, int Z) PlaceOf( int index, float now )

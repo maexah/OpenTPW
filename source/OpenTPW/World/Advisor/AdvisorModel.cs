@@ -52,6 +52,14 @@ public sealed class AdvisorModel
 	private readonly int[] _parents;
 	private readonly int[] _parentsFirst;
 
+	/// <summary>The node <c>Ticket2</c>, Lost Kingdom's golden ticket (-1 where he has none), and every node that is it or hangs from it.</summary>
+	private readonly int _ticket;
+	private readonly bool[] _onTicket;
+
+	/// <summary>The ticket's x axis at rest and at the longest any clip's scale track makes it.</summary>
+	private readonly float _ticketRest;
+	private readonly float _ticketFull;
+
 	private readonly int[] _mouths;
 
 	/// <param name="sharedTextureDirectory">
@@ -82,6 +90,9 @@ public sealed class AdvisorModel
 		_parentsFirst = ParentsFirst( _parents );
 
 		_mouths = MouthNames.Select( MeshNamed ).ToArray();
+
+		(_ticket, _ticketRest, _ticketFull) = TicketOf( _file, _clips.OfType<AnimationFile>() );
+		_onTicket = OnTicketNodes( _parents, _parentsFirst, _ticket );
 
 		Dress();
 		ShowMouth( 1 );
@@ -131,6 +142,13 @@ public sealed class AdvisorModel
 				Log.Info( $"Advisor: clip {_startedClip} leaves " + string.Join( ", ", outgoing.ScaleTracks.Select( track => track.TargetIndex )
 					.Where( node => node >= 0 && node < _local.Length )
 					.Select( node => $"{NodeName( node )} at {AxisLengths( _local[node] ):0.000} t {_local[node].Translation:0.000}" ) ) );
+
+			if ( outgoing.ScaleTracks.Any( track => track.TargetIndex == _ticket ) )
+			{
+				var (across, down) = TicketMove( TicketGrowth );
+				Log.Info( $"Advisor: the ticket {TicketGrowth:0.000} grown, drawn {across + 0f:0} px across and {down + 0f:0} px down from his pin, "
+					+ $"window {Screen.Width:0}x{Screen.Height:0}" );
+			}
 
 			foreach ( var node in outgoing.HideList )
 				SetMeshVisible( node, true );
@@ -248,6 +266,7 @@ public sealed class AdvisorModel
 	public void Draw()
 	{
 		var projection = ScreenProjection();
+		var ticketProjection = TicketProjection( projection, TicketGrowth );
 
 		// Every solid part before any see-through one. His head and body are see-through - flat discs
 		// with the ball painted on, under material flag 0x2 - so drawn a mesh at a time his head would go
@@ -259,11 +278,73 @@ public sealed class AdvisorModel
 		// bowler's tie 0.96 clear of the body, which through his orthographic screen projection is
 		// thousands of depth values apart, not a rounding error. The one pair that does share a plane,
 		// an eyelid and the eye beneath it, is never drawn at once - a blink swaps one for the other.
-		foreach ( var entity in _model.Entities )
-			entity.DrawOverlay( Matrix4x4.Identity, projection, LightPosition, LightColor, Ambient, worldNormals: true );
+		for ( int i = 0; i < _model.Entities.Length; ++i )
+			_model.Entities[i].DrawOverlay( Matrix4x4.Identity, OnTicket( i ) ? ticketProjection : projection, LightPosition, LightColor, Ambient, worldNormals: true );
 
-		foreach ( var entity in _model.Entities )
-			entity.DrawOverlay( Matrix4x4.Identity, projection, LightPosition, LightColor, Ambient, worldNormals: true, translucent: true );
+		for ( int i = 0; i < _model.Entities.Length; ++i )
+			_model.Entities[i].DrawOverlay( Matrix4x4.Identity, OnTicket( i ) ? ticketProjection : projection, LightPosition, LightColor, Ambient, worldNormals: true, translucent: true );
+	}
+
+	private bool OnTicket( int node ) => node < _onTicket.Length && _onTicket[node];
+
+	/// <summary>The node named <c>Ticket2</c> (-1 where there is none), its x axis at rest, and the longest its clips' scale keys make it.</summary>
+	internal static (int Node, float AtRest, float Full) TicketOf( ModelFile file, IEnumerable<AnimationFile> clips )
+	{
+		var node = file.Meshes.FindIndex( mesh => string.Equals( mesh.Name.TrimEnd( '\0' ).Trim(), "Ticket2", StringComparison.OrdinalIgnoreCase ) );
+		if ( node < 0 || node >= file.Nodes.Count )
+			return (-1, 0f, 0f);
+
+		var full = clips.SelectMany( clip => clip.ScaleTracks ).Where( track => track.TargetIndex == node )
+			.SelectMany( track => track.Scales ).Select( lengths => lengths.X ).DefaultIfEmpty( 0f ).Max();
+
+		return (node, AxisLengths( file.Nodes[node].LocalTransform ).X, full);
+	}
+
+	/// <summary>Which nodes are <paramref name="ticket"/> or hang from it, given each node's parent and an order with parents first.</summary>
+	internal static bool[] OnTicketNodes( int[] parents, IEnumerable<int> parentsFirst, int ticket )
+	{
+		var on = new bool[parents.Length];
+
+		foreach ( var node in parentsFirst )
+			on[node] = node == ticket || (parents[node] >= 0 && parents[node] < on.Length && on[parents[node]]);
+
+		return on;
+	}
+
+	/// <summary>How far the ticket has grown from its rest toward the largest its scale tracks make it, 0 to 1, as last posed.</summary>
+	internal float TicketGrowth { get; private set; }
+
+	/// <summary>The ticket's growth: its x axis <paramref name="length"/> from <paramref name="rest"/> to <paramref name="full"/>, held to 0 to 1.</summary>
+	internal static float Growth( float length, float rest, float full )
+		=> full > rest ? Math.Clamp( (length - rest) / (full - rest), 0f, 1f ) : 0f;
+
+	/// <summary>
+	/// How far, in window pixels, the ticket is drawn from where his own pin puts it: from his pin, the right and the
+	/// bottom, toward the middle's, by its <paramref name="growth"/>.
+	/// <para>
+	/// <b>A deviation:</b> the original stretches him with its 4:3 screen to any mode (his root scale is the constant
+	/// 0.01125, 0.001, 0.015 at Advisor_LoadModel 0x00429ba0), so the full-grown ticket of clips 18 to 20 stands across the
+	/// middle of every mode. Here he keeps his shape and his pin to the right, where the lobby's player slots are, and the
+	/// ticket alone eases to the middle's pin as it grows out of his hand, back as it shrinks (docs/exe/ui.md, "The big
+	/// ticket is a scale track"). Nought on a 4:3 window.
+	/// </para>
+	/// </summary>
+	internal static (float Across, float Down) TicketMove( float growth )
+		=> ((UI.VirtualScreen.Offset( UI.Anchor.Centre ) - UI.VirtualScreen.Offset( UI.Anchor.Right )) * growth,
+			(UI.VirtualScreen.OffsetDown( UI.VerticalAnchor.Middle ) - UI.VirtualScreen.OffsetDown( UI.VerticalAnchor.Bottom )) * growth);
+
+	/// <summary><paramref name="projection"/> moved by <see cref="TicketMove"/> on the window.</summary>
+	internal static Matrix4x4 TicketProjection( Matrix4x4 projection, float growth )
+	{
+		var (across, down) = TicketMove( growth );
+
+		if ( Screen.Width > 0 && Screen.Height > 0 )
+		{
+			projection.M41 += across * 2f / Screen.Width;
+			projection.M42 -= down * 2f / Screen.Height;
+		}
+
+		return projection;
 	}
 
 	/// <summary>
@@ -301,7 +382,7 @@ public sealed class AdvisorModel
 	/// <para>
 	/// It is affine, as the original's screen-space draw is (ModelRenderable_Draw 0x0057a750; docs/exe/ui.md, "His projection
 	/// is affine"): how far toward the viewer a node stands changes no size. The golden ticket that fills the screen in Lost
-	/// Kingdom's clips 18 to 20 is his own, grown by its scale track in clip 18, held through 19 and shrunk to three in 20 (<see cref="Pose"/>).
+	/// Kingdom's clips 18 to 20 is his own, grown by its scale track in clip 18, held through 19 and shrunk to three in 20 (<see cref="Pose"/>), and drawn toward the middle's pin as it grows (<see cref="TicketMove"/>).
 	/// </para>
 	public static Matrix4x4 ScreenProjection()
 	{
@@ -427,6 +508,8 @@ public sealed class AdvisorModel
 			_world[node] = parent >= 0 && parent < _world.Length ? _local[node] * _world[parent] : _local[node];
 		}
 
+		TicketGrowth = _ticket >= 0 ? Growth( AxisLengths( _local[_ticket] ).X, _ticketRest, _ticketFull ) : 0f;
+
 		for ( int i = 0; i < _model.Entities.Length && i < _world.Length; ++i )
 		{
 			var world = _world[i];
@@ -461,7 +544,7 @@ public sealed class AdvisorModel
 	}
 
 	/// <summary>Every node after its parent, so one pass composes the whole tree.</summary>
-	private static int[] ParentsFirst( int[] parents )
+	internal static int[] ParentsFirst( int[] parents )
 	{
 		var order = new List<int>( parents.Length );
 		var placed = new bool[parents.Length];

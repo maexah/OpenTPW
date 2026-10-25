@@ -5,6 +5,11 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q638 (a tag's two effects, with Q463's half-second show): both games filmed on the stock park's broken Belly Bounce,
+  the first show and the last five seconds, and measured (effects 90 and 91 at the tag's middle, at 0.5 s and 25.0 s).
+  Not looked at: a tag opened with its timers stopped, one moved down as a tag below goes, one shown while paused or
+  with the gadget put away (each tested, not seen), a declining offer's tag, Full Simulation (nothing here asks the
+  mode); whether the original's `0x5b`, past its own life, is still live at the tag's end (ours is, and is hidden).
 - Q633 (a carried thing's squares and pointer): both games on the stock park, a Belly Bounce carried over (48,31) and
   over the stock one, measured square by square and photographed, and put down by a click. Not looked at: a thing carried
   at another angle (only a move carries one; the turns and anchors are tested against the decode, not seen), a shop's

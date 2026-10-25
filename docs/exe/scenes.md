@@ -167,8 +167,11 @@ when it is not `Busy`):
 A line's start (`0x005993b3`), its end (`0x0059993e`), `Advisor_StopSpeaking` and `Advisor_StopQuietly` empty the channel.
 The original's film beside ours (`q707/p600/side-by-side.png`): a column beside his hand through clip 17, a ring
 round the big ticket through 18 and 19, a trail up to the counts at the top right in 20. **OpenTPW** builds it
-(`UiParticleChannel`, `Advisor.SetGlints`); the glints are pinned to the right of a window wider than 4:3 and to the bottom of one taller, as he is, wherever they move
-(`Emitter.Down`, `ScreenParticles.PinDown`); the original's screen is 4:3 and has neither.
+(`UiParticleChannel`, `Advisor.SetGlints`); the glints are started pinned to the right of a window wider than 4:3 and to the
+bottom of one taller, as he is (`Emitter.Down`, `ScreenParticles.PinDown`), and the channel eases them to the pin of the third
+each centre is set in, as the radii ease (`UiParticleChannel.PinShift`, Q639): his hand's right and bottom, the middle's round
+the big ticket, the top right's at the counts. The original stretches its 4:3 screen to every mode and needs neither
+(`ui.md`, "The big ticket is a scale track").
 
 **A clip's start** (`Advisor_Update` starts the next clip at `0x00599a46`, then `FUN_00599800` calls `Advisor_ClipStarted`
 `0x00598dc0` once the model reads it started): the model's clip change is `FUN_00472f60`, which shows again what the

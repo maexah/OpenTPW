@@ -685,9 +685,10 @@ public sealed class Advisor : Entity
 	/// three times round; 0x100000 empties it and starts two of 44, which close in on 0.8, -0.8, the top right, twice
 	/// round; 0x200000 empties it. Says whether the channel was set.
 	///
-	/// <b>A deviation:</b> the original's screen is 4:3; here the glints are pinned to the right of a wider window and
-	/// to the bottom of a taller one, as he is (<see cref="AdvisorModel.ScreenProjection"/>), however far they move. They
-	/// belong to no window, as the row's key does (<see cref="HandOverKey"/>).
+	/// <b>A deviation:</b> the original stretches its 4:3 screen to any mode; here the glints are started pinned to the
+	/// right and the bottom, as he is (<see cref="AdvisorModel.ScreenProjection"/>), and the channel eases them to the pin
+	/// of the third each centre is set in (<see cref="UI.UiParticleChannel.PinShift"/>): the middle's round the big ticket,
+	/// the top right's at the count. They belong to no window, as the row's key does (<see cref="HandOverKey"/>).
 	/// </summary>
 	internal static bool SetGlints( UI.UiParticleChannel glints, int flags, float clipSeconds, float now )
 	{

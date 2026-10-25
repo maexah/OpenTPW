@@ -218,7 +218,7 @@ internal sealed class ScreenParticles : Panel
 
 	/// <summary>
 	/// The edge an emitter is pinned to down the screen: the one it was started with, as the advisor's glints are pinned
-	/// to the bottom with him wherever they move; or else the one its own position gives, taken the way an effect with no
+	/// to the bottom with him (their channel moves them from there to another third's pin, UiParticleChannel.PinShift); or else the one its own position gives, taken the way an effect with no
 	/// pin of its own takes one across (ParticleSystem.AnchorAt): the sparkles over the island panel's price keep to the
 	/// bottom of the window with the panel, and a button's glints to whichever edge the button keeps to.
 	/// </summary>

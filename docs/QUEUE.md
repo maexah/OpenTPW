@@ -74,11 +74,6 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q639. The golden ticket's screen is not centred with the game maximized in a window.** From Alexah's play test,
-  2026-10-21 (note 29). It sits off to the right. The virtual 2048 x 1536 screen scales to the window without
-  letterboxing at 4:3 and anchors by thirds (`hud.md:964-975`); nothing covers a maximized, non-4:3 window (inferred:
-  the screen's anchor rule is the suspect). Reproduce at 2560 x 1440 and 16:9, find the anchor, and say what the
-  original does at a non-4:3 mode (decode first). Confirm: the ticket screen at two window sizes.
 - [ ] **Q640. The research pumps' animation stutters.** From Alexah's play test, 2026-10-21 (note 30). Q705 built them
   on `Time.Delta` at 30 passes a second, a said deviation (`hud.md:701-703`); the original steps once per drawn frame,
   30.00 passes a second and 12-13 drawn frames a second under the 30 fps cap (`hud.md:614-619`), so the stutter may be

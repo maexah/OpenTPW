@@ -124,6 +124,21 @@ other way (1.1018, 0.979, 0.9407 to 0.9002, 1.0997, 1.0997 at 9), clip 18 leaves
 place at clip 18's end, and the ticket 0.746 of the height across, 0.435 left of his anchor (`q707/p599`, its last run). Every other
 model's scale tracks are counted, `ANIM_SCALE_TRACK` (Q598).
 
+**On a screen that is not 4:3 the original stretches him, ticket and all** (Q639). His root's three axis lengths are
+constants, 0.01125, 0.001, 0.015, written at `0x00429d1c`..`0x00429d2c` and set by `Advisor_LoadModel`'s call at `0x00429d46` to `FUN_0046fa70`, and his
+place is the constant 0.6, -0.6 (`0x00429bcf`, `0x00429bd6`): no screen size enters either, so on any mode he stands 0.8 of
+the way across and his x unit is the 4:3 one stretched with the screen, as its interface is (`0x0048f47b`, `0x0048f4a6`).
+Read in the running original at its one 5:4 mode, 1280 x 1024 (Res 5; `[0x00faa5c4]` 1280, `[0x00faa5c0]` 1024): the
+full-grown ticket of clip 19 spans 251..960, 0.692 of the height across (0.738 x 0.9375) and squeezed, its middle 0.473 of
+the width, 0.034 of the height left of the middle (`q639/orig/O1280/f-031.png`, `ticketbox.py`). `Wave01` hangs from node 24,
+not from `Ticket2`, which nothing hangs from. **OpenTPW keeps his shape and pins him right** (`AdvisorModel.ScreenProjection`, for the lobby's player
+slots), **and draws `Ticket2` toward the middle's pin by its growth** (`AdvisorModel.TicketMove`: its x axis from 1, its rest, to
+12.093, the longest key, 0 to 1; the move is that share of the middle's offset less the right's, across and down), a said
+deviation; the glints ease between thirds' pins with it (`scenes.md`, "Gesture table"). Measured (`q639/`, the ticket line
+of q707's scene): the full ticket's middle 0.028 of the height left of the window's middle at 2552 x 1355 and 1280 x 720,
+0.029 at 1024 x 768, where before it stood 0.25 and 0.19 right at the wide sizes; the log's `the ticket 1.000 grown, drawn
+-373 px across` at 2552 x 1355.
+
 **Draw order.** Because of the see-through discs, the model draws in two passes: every solid half first, then every see-through half in file order. Drawn mesh by mesh, a hand behind him shows through. Any future screen-drawn model with see-through parts needs the same two passes.
 
 **Lighting** is tuned against Alexah's reference screenshots in `content/ReferenceScreenshots/` (untracked) by measuring glove and eye brightness in captures, never by eye. It uses the shader's per-draw ambient and world-normals uniforms.

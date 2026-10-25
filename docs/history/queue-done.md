@@ -10170,6 +10170,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
     `0x0048e02e`), and message `0x13` moves it onto the tag's middle (`0x0051fe30`, `0x0048df88`). Ours counts neither the
     hide / show nor the move (`ParkTags.cs` counts only the `0x5b` at the show): count them with `0x5a`.
   **Done (2026-10-25, a2): built with Q638** (its entry has the account).
+- [x] **Q639. The golden ticket's screen is not centred with the game maximized in a window.** From Alexah's play test,
+  2026-10-21 (note 29). It sits off to the right. The virtual 2048 x 1536 screen scales to the window without
+  letterboxing at 4:3 and anchors by thirds (`hud.md:964-975`); nothing covers a maximized, non-4:3 window (inferred:
+  the screen's anchor rule is the suspect). Reproduce at 2560 x 1440 and 16:9, find the anchor, and say what the
+  original does at a non-4:3 mode (decode first). Confirm: the ticket screen at two window sizes.
+  **Done (2026-10-25):** the advisor is pinned right, so his ticket stood 0.25 H right of the middle at 2552 x 1355 and
+  0.19 H at 1280 x 720 (`q639/runS`, `runR`). The original stretches him with its screen (root scale constant at
+  `0x00429d1c`; at 1280 x 1024 its ticket's middle is 0.473 W, squeezed: `q639/orig/O1280/f-031.png`). `Ticket2` is now drawn
+  toward the middle's pin by its growth and the glints ease between thirds' pins (`ui.md`, "On a screen that is not 4:3"):
+  0.028 H left of the middle at 2552 x 1355 and 1280 x 720, 4:3 unchanged (`q639/side-by-side.png`); tests 3936, 0 fail.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.
