@@ -10180,6 +10180,17 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `0x00429d1c`; at 1280 x 1024 its ticket's middle is 0.473 W, squeezed: `q639/orig/O1280/f-031.png`). `Ticket2` is now drawn
   toward the middle's pin by its growth and the glints ease between thirds' pins (`ui.md`, "On a screen that is not 4:3"):
   0.028 H left of the middle at 2552 x 1355 and 1280 x 720, 4:3 unchanged (`q639/side-by-side.png`); tests 3936, 0 fail.
+- [x] **Q640. The research pumps' animation stutters.** From Alexah's play test, 2026-10-21 (note 30). Q705 built them
+  on `Time.Delta` at 30 passes a second, a said deviation (`hud.md:701-703`); the original steps once per drawn frame,
+  30.00 passes a second and 12-13 drawn frames a second under the 30 fps cap (`hud.md:614-619`), so the stutter may be
+  the original's rhythm. Film both at the same state; if ours differs, fix it, if not, this is Q642's (smoothing between
+  ticks, a chosen improvement). Confirm: frame times of the pumps in both films.
+  **Done (2026-10-25):** ours does not differ. Filmed 15 s each, the rides' pump at rate 2 (`lib/rectfilm.py`): both
+  games change its picture 191 times, 12.75 a second, every 62 to 70 or 97 to 104 ms, and hold one picture 160 to 167
+  ms once a loop, 31 pictures in all (`q640/runA`, `q640/orig/O`, `q640/side-by-side.png`); 29.95 and 30.00 passes a
+  second. The hold is the original's art and rule: `fluid32` is `fluid` moved by one repeat of its wrapped texture, and
+  `ResearchPump_Tick` (`0x004a9fc0`) shows `0x1f` two passes, then `0x00` three from nought (`hud.md`, "The pump").
+  Smoothing it is Q642's (its note). No code changed.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

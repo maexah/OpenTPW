@@ -5,6 +5,11 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q639 (the golden ticket across the middle of a window not 4:3): the stock Full Simulation scene's ticket line shot at
+  2552 x 1355 (a maximized window's inside, by the console's `size`; the window manager's own maximize was not driven),
+  1280 x 720 and 1024 x 768, and the original at its 5:4 mode. Not looked at: a window taller than 4:3 (the ticket and the
+  glints then move up to the middle's and the top's pins: tested, not seen), the window resized during the line, the other
+  three themes' advisors (no `Ticket2` is asked for there), Full Simulation's other lines with glints (none but row 13's).
 - Q638 (a tag's two effects, with Q463's half-second show): both games filmed on the stock park's broken Belly Bounce,
   the first show and the last five seconds, and measured (effects 90 and 91 at the tag's middle, at 0.5 s and 25.0 s).
   Not looked at: a tag opened with its timers stopped, one moved down as a tag below goes, one shown while paused or

@@ -74,11 +74,6 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q640. The research pumps' animation stutters.** From Alexah's play test, 2026-10-21 (note 30). Q705 built them
-  on `Time.Delta` at 30 passes a second, a said deviation (`hud.md:701-703`); the original steps once per drawn frame,
-  30.00 passes a second and 12-13 drawn frames a second under the 30 fps cap (`hud.md:614-619`), so the stutter may be
-  the original's rhythm. Film both at the same state; if ours differs, fix it, if not, this is Q642's (smoothing between
-  ticks, a chosen improvement). Confirm: frame times of the pumps in both films.
 - [ ] **Q641. The money readout lacks its up and down arrows for the month's profit or loss. Decode first.** From
   Alexah's play test, 2026-10-21 (note 31). The control is `0x31`, `FUN_004a0e30`: frame 1 when last month's cash in
   (`+0x1fc94`) is below total costs (`+0x1f5a4`), "likely the red down arrow", which picture each frame is "not
@@ -95,6 +90,11 @@ filed the items that cite it.
   are on by default.** Interpolate drawn poses between ticks for rides, vehicles and the water; the logic's ticks stay
   at the original's rate. A deviation said at the site. Confirm: frame-to-frame pose deltas on a ride and the bus,
   before and after, the tick log unchanged.
+  **The research pumps (Q640, filmed):** they step as the original's, 12.75 pictures a second at rate 2 in a 2-or-3-pass
+  rhythm, with a 167 ms hold once a loop where `fluid32` repeats `fluid` (`hud.md`, "The pump"). Each run picture is
+  the last moved by -1/31 of the texture in `u` (FileFormats `models.md`), so a pump could be drawn at its 16.16
+  position as one smooth scroll, the turn taken at 31: an improvement in this item's sense, said at
+  `ParkResearchScreen`. The drain's and the fill's 32 meshes were not measured.
 - [ ] **Q643. Flags ease between wind directions.** From Alexah's play test, 2026-10-21 (note 14). The bus stop flags
   (built by Q493, `queue-done.md:7705-7712`) take `ParkWeather.WindDirection` and snap; the original's flags take
   `mWindDir` straight, which `FUN_00512f00` moves by `(rand % 90) - 45` at each change of weather
