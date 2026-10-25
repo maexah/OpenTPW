@@ -181,6 +181,53 @@ Built by `FUN_004a1d70` onto the park's layer 0, with no handler for the stream 
 | `0x1f` | Takes the `meter.wct` skin | Confirmed twice, independently |
 | `0x20` | The date is **black** — `FUN_0065c5d5(0,0,0,0xff)` with font slot 3 (`_DAT_007cb2d4 = 3`) | Confirmed twice, independently |
 
+### The money's trend arrow, `0x31` (Q641)
+
+**The picture.** `0x31` is a type-6 control, a child of the balance `0x2f`, mesh hash `0xa6a779d9`: `cashtrend.md2`
+(`ui.wad`), found by its first node's name. Its two parts, in file order, are `green_up` (texture `green_up`, a green
+arrow pointing up) and `red_down` (`red_down`, a red arrow pointing down), so frame 0 is the green arrow and frame 1 the
+red one. The builder disables it (vtable `+0x14` with 0, `0x004a22d9`) and does not hide it, so it is always drawn and
+never takes the pointer.
+
+**The frame** is set by `Gadget_SetDateAndTrend` (`0x004a0e30`), the routine that also letters the date into `0x20`. It
+compares the newest closed month of the analyser's two money rings ("The mini-balance is a MONTHLY ACCOUNT", below):
+cash in (`+0x1fc94`) and all costs (`+0x1f5a4`), each read as the hire screen reads it (a negative index reads
+`index + count` only when the ring has wrapped). Cash in at or above the costs gives frame 0, the green arrow. Cash in
+below them gives frame 1, the red arrow (`0x004a0f8a`, a signed `JL`). A ring with no closed month reads a stand-in
+word, the same word for both rings (Ghidra reads it as the third argument, the year less 1900), so a park with no month
+closed shows the green arrow. The routine runs at two times:
+
+- **Once a day**, from `Calendar_Update` (`0x004f83ac`, through `FUN_00481560`). This is after the day's message `0xb`
+  and **before** the month's `0xc`, which closes the month. So on the first of a month the arrow still shows the month
+  before last, and it turns on the second day.
+- **At a load**, from `FUN_004815e0` in the load's rebuild `FUN_00415140`.
+
+**The place.** `Gadget_ShowMoney` (`0x004a0ab0`) letters the balance each time it changes. It moves `0x31` with its size
+kept: its left edge goes to the right edge of the balance's lettering (`FUN_0065d616` on `0x2f`, then `FUN_0065ce10`,
+`0x004a0bc0`), and its top stays where it was. So the arrow follows the number's end, not the stream's
+`(728,109)-(831,211)`. The same call puts `0x30`'s right edge at the lettering's right edge. It also sets `0x32`, the
+`i_dollar` icon, to frame 1 while the balance is below nought (`0x004a0c23`). Its nodes, in file order, are `i_dollar`
+and `dollarsignneg`; frame 1 was not seen in the original. The balance's colour in the same call is Q403's.
+
+**Measured in the original** (`q641/orig/run.sh`, the stock park from the Load Park list, the analyser's words written
+by `thingpoke.py`; predicted first, `q641/PREDICTION.txt`, all held). Frames are cropped as `O-<n>-*-money.png`:
+
+| Date, tick | Newest cash in / all costs | Arrow |
+|---|---|---|
+| 6 Feb, 848 (the load) | 1500 / 13175 (the file's month) | red |
+| 1 Mar, 1384 | 10000435 / 768 (February closed with 10,000,000 written into its cash in) | still red |
+| 2 Mar, 1407 | the same | green |
+| 1 Apr, 2098 | 1105 / 10000400 (March's costs written 10,000,000) | still green |
+| 2 Apr, 2121 | the same | red |
+| 4 Apr, 2167 | 10000400 / 10000400 (the newest cash-in sample written equal) | green |
+| 6 Apr, 2212 | 10000399 / 10000400 | red |
+
+The arrow stood about 50 pixels left of the stream's rectangle on the 1024 x 768 frame, just after the number, and moved
+right when the number widened (`O-mar.png`, `O-apr.png`).
+
+**OpenTPW** does not build `0x31`, and `0x32` always shows its first part (Q674). The two rings it needs are kept
+(`ParkState.MonthCashIn`, `MonthCosts`, Q385).
+
 ### The happiness gauge's two quads (Q244; fork watch 2026-10-19, verify-advisor-ui.md L3, verify-other-b.md M3)
 
 The `meter.wct` skin of control `0x1f` is drawn by a sub-object built by `Meter_Construct` `0x00477870` (vtable `0x006fee88`,

@@ -111,6 +111,7 @@ figure; `parkfile.py -w <file>...` prints the cells and objects; Q388); `money_r
 | `original/retrigger.py PID SECS THING [TIMES]` | Sends an arrival vehicle round again in the original as a summons does: each time its script's `VAR_STATUS` (variable 1) reads 0 after anything else, writes its `VAR_TRIGGER` (variable 0) 1, TIMES times; prints each status with `mGameTick`. A `POLL` for `loadfile.sh`; it WRITES the original's memory (Q622, `q622/orig/run.sh`) |
 | `original/money.py PID SECS THING...` | The original's memory: each object's all-items columns, its customers last thirty days, last month's profit, total profit, satisfaction and bar, worked out from its takings, costs, customers and satisfaction rings and its two totals as the original's getters do, a line a change with `mGameTick`. A `POLL` for `loadfile.sh` (Q368) |
 | `original/tick.py PID SECS` | The original's memory: `mGameTick` every 50 ms, a line a change, a fall marked `FALL`: the moment a Load Park click's file is read in, and the tick it starts at. Run it beside a reader that prints only on its own changes (`POLL="python3 -u tick.py %PID% 25 & python3 -u inside.py %PID% 25; wait"`, Q241j). A `POLL` for `loadfile.sh` |
+| `original/waitdate.py PID MONTH DAY [SECS]` / `PID now` | The original's memory: waits until its published calendar (`0x007ced58`) reads that date and prints the date and `mGameTick`, exit 1 after SECS (default 120); `now` prints today's. A day is about 22 ticks, 5.5 s, and a month about 2.8 minutes of the stock park, as its park sweeps about four ticks a second: wait minutes, not seconds. Made for Q641 |
 | `original/thingwords.py PID SECS THING:OFFSET[:FMT[:NAME]] ...` | The original's memory: any words of any things, a line a change with `mGameTick`. Use it for a field or two before writing a poller: the mechanics' search cursor is `2:0xc`, a mechanic's state, job and count `26:0x19c:I`, `26:0x218`, `26:0x214:I`. A `POLL` for `loadfile.sh` |
 | `original/spritepass.py PID`, `particleheights.py PID SECS EFFECT [STEP]`, `particleoverlay.py PID OUT.png [EFFECT]` | The original's world particles: the sprite pass's matrix (`[0x0087b088]`) with every emitter's draw words and its particles projected to pixels; how high and wide an effect's particles go over a time; and a frame grabbed with each particle's sprite marked on it, which proves a projection rule against the picture |
 | `original/camera.py PID [X,Y;...]`, `--aim X,Y` | The original's park camera now: the point, zoom and rotation, the camera's matrix (its last row the eye) and the draw matrix, and named cells' corners at 1.5 and 21.5 put through it to pixels of the 1024 x 768 frame; `--aim` prints the pixel of a cell's middle, so a run's clicks follow whatever camera it has (Q435) |
@@ -648,6 +649,13 @@ after its poller starts**, so a key meant inside either line cannot be sent afte
   from `strdump` on the folder the game under test reads: strings 34 and 37 differ ("cleaners" and
   "scientists" in English, "janitors" and "researchers" in american). A run whose pollers see no change prints
   no tick after the load: give `thingwords.py` a word that moves (a mechanic's state, `26:0x19c:I`).
+- **A month closed in profit or in loss in the original, on demand** (Q641, `q641/orig/run.sh`): after a
+  `loadfile.sh` load, write the analyser's month so far once with `thingpoke.py PID 0.2 13 5:0x1fc90:i=10000000` (cash
+  in; thing 5 is of type 13) or `5:0x1f5a0:i=...` (all costs), then `waitdate.py PID M 1` and `waitdate.py PID M 2` for
+  the close and the day after. A closed month's own sample is written the same way at `+0x1fc94 + 4 x index`
+  (`+0x1fed4` holds the index; costs `+0x1f5a4`, `+0x1f7e4`): nothing writes it again until the next close. A POLL
+  started before the load click can write February's before 1 March, which `loadfile.sh` itself leaves too little time
+  for. Stop the original afterwards. Q641
 - **The original's Financial Information screen, and a ring's months on it** (Q386, `q386/orig/run.sh`): F in a park
   opens it on the bank balance alone, 1 Year (12 points). Its rows at game points (252, y) on the 1024 x 768 frame: Bank
   balance 122, Park value 159, Money in 208, Gate takings 245, Shop takings 283, Sideshow takings 320, Money out 358,

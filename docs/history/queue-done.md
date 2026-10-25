@@ -10191,6 +10191,20 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   second. The hold is the original's art and rule: `fluid32` is `fluid` moved by one repeat of its wrapped texture, and
   `ResearchPump_Tick` (`0x004a9fc0`) shows `0x1f` two passes, then `0x00` three from nought (`hud.md`, "The pump").
   Smoothing it is Q642's (its note). No code changed.
+- [x] **Q641. The money readout lacks its up and down arrows for the month's profit or loss. Decode first.** From
+  Alexah's play test, 2026-10-21 (note 31). The control is `0x31`, `FUN_004a0e30`: frame 1 when last month's cash in
+  (`+0x1fc94`) is below total costs (`+0x1f5a4`), "likely the red down arrow", which picture each frame is "not
+  established" (`ride-operation.md:3809-3811`, `addresses.md:278`). Nothing in the docs says there is a green up arrow.
+  Find the control's sprite bank and frames, and the original's frame with each state; then build, counted where unbuilt
+  (`ParkGadget.cs:80, :589-598` says no history is kept, which Q385's rings may have outdated: inferred). Confirm: a
+  month ending in profit and in loss, in both games.
+  **Done (2026-10-25), the decode; the build is Q674:** `0x31` is `cashtrend.md2`, whose parts are `green_up` (frame
+  0) and `red_down` (frame 1). `Gadget_SetDateAndTrend` (`0x004a0e30`) shows the red arrow when the newest closed month's
+  cash in is below its costs, the green at or above. It runs once a day before the month closes, so the arrow turns on
+  the second of a month, and at a load. `Gadget_ShowMoney` (`0x004a0ab0`) moves the arrow to the end of the balance's
+  lettering (`hud.md`, "The money's trend arrow"). In the original (`q641/orig`, seven of seven held): red at the
+  load, still red on 1 March after a profitable February, green on 2 March; still green on 1 April after a loss, red
+  on 2 April; equal samples green, one less red. Q385's rings outdated the old comment, now rewritten.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

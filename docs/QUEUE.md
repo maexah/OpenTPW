@@ -74,13 +74,6 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q641. The money readout lacks its up and down arrows for the month's profit or loss. Decode first.** From
-  Alexah's play test, 2026-10-21 (note 31). The control is `0x31`, `FUN_004a0e30`: frame 1 when last month's cash in
-  (`+0x1fc94`) is below total costs (`+0x1f5a4`), "likely the red down arrow", which picture each frame is "not
-  established" (`ride-operation.md:3809-3811`, `addresses.md:278`). Nothing in the docs says there is a green up arrow.
-  Find the control's sprite bank and frames, and the original's frame with each state; then build, counted where unbuilt
-  (`ParkGadget.cs:80, :589-598` says no history is kept, which Q385's rings may have outdated: inferred). Confirm: a
-  month ending in profit and in loss, in both games.
 - [ ] **Q642. Smooth the animations between ticks.** From Alexah's play test, 2026-10-21 (note 13). Rides, the bus and
   perhaps the water look 30 fps or less. The original steps at a fixed 31 ms, about 32 a second (`boot.md:165`): the
   track rides every tick, the flying cars and sprite every second tick, 62 ms (`boot.md:173-174`), and clips advance in
@@ -114,6 +107,14 @@ filed the items that cite it.
   difference. Each improvement reads one switch, set at one place (rule 9); say it in the option's own text and at the
   site. Confirm: a frame pair with the toggle on and off at the
   gate, the on frame matching the original's.
+- [ ] **Q674. Build the money's trend arrow `0x31`, and `0x32`'s sign.** From Q641's decode (`hud.md`, "The money's
+  trend arrow"). Add `0x31` as a child of the balance `0x2f`, mesh `cashtrend`, never taking the pointer. Its frame comes
+  from the newest closed month of `ParkState.MonthCashIn` and `MonthCosts`: 0 (green) at or above, 1 (red) below, the
+  same stand-in for a ring with no month. Set it once a day where the date is written, before the month's change runs,
+  and at a load. On each change of the balance, move its left edge to the end of the lettering, its top kept, and set
+  `0x32` to frame 1 while the balance is below nought. `0x2f` letters from its left here (`TextAcross = Start`), so the
+  arrow's place depends on that choice. Confirm, in both games: the stock park's load (red), and a month pushed into
+  profit (green on its second day, not its first), and the arrow's place against the number at two widths.
 - [ ] **Q743. The original on Q713's made file: row 248 said of a food stall walked away from.** From Q713 (lane B, which
   cannot run the original). Load `~/.cache/tpw-harnesses/q713/files/outlets-B.TPWS` (Alexah's jungle `New Save`, row 248's
   record fresh, food stall 193 a day of 7 walk-aways to its 7 customers) in the original by `q707/gms-none.dat`'s player

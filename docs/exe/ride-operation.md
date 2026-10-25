@@ -3824,9 +3824,9 @@ in double ("What a thing is worth to a guest", "Where OpenTPW differs", the FPU'
 - The analyser's month totals, pushed into 144-month rings at `+0x1fc94` and `+0x1f5a4` on the month's change
   (`FUN_004c7720`, with the staff, training and a dozen more, after thing 1's training and before the bank's turn and
   the wages: "The month's change"): the finance graph's "Money out" once the month is finished, the hire screen's mini-balance
-  ("Other costs", "Balance": `hud.md`), the staff-costs and loans screens, and the gadget's icon beside the money
-  (`FUN_004a0e30`, control `0x31`, frame 1 when last month's cash in was below its total costs; likely the red down arrow beside the
-  money in the original's frame, though which picture each frame is was not established).
+  ("Other costs", "Balance": `hud.md`), the staff-costs and loans screens, and the gadget's arrow beside the money
+  (`Gadget_SetDateAndTrend`, `0x004a0e30`, control `0x31`: the red down arrow when last month's cash in was below its
+  total costs, else the green up arrow, written once a day; `hud.md`, "The money's trend arrow").
 
 **The loan helpers and the money rows** (fork watch 2026-10-18, `verify-advisor.md` A1; read from the listing of
 `0x004d0690`..`0x004d0a2c` and `0x0059e8d0`..`0x0059edb9`, no game run). The loans object (`FUN_005195d0`'s) holds eight

@@ -77,8 +77,7 @@ namespace OpenTPW.UI;
 /// fee, charge, cost and refund - one number, as in the original (see <see cref="ShowMoney"/>). What is
 /// still out is <b>0x30</b>, the cost of whatever is
 /// in your hand, which the original starts hidden and paints yellow because an empty hand has no price;
-/// and <b>0x31</b>, the trend arrow, which wants a history of the balance that nothing here keeps. Both
-/// reasons are written out where the cluster is built.
+/// and <b>0x31</b>, the trend arrow, not built yet (Q674). Both are written out where the cluster is built.
 /// </para>
 /// <para>
 /// <b>Engine and content.</b> The controls, the pointer and the help bar are engine. Which buttons a
@@ -586,20 +585,11 @@ internal sealed class ParkGadget : UiWindow
 		// HIDDEN by FUN_004a1d70, which is exactly what an empty hand should show. The hand carries
 		// things (ParkBuilding.Carry), but what makes the original show 0x30 is not traced.
 		//
-		// 0x31, the trend arrow, (728,109)-(831,211) - and it is a CHILD of 0x2f rather than a root
-		// control, which only the disassembly shows: 0x004a0f05 fetches 0x2f from the interface root and
-		// then MOV ECX,EAX fetches 0x31 from THAT. FUN_004a0e30 sets its frame to 0 or 1 by comparing the
-		// newest sample of two ring buffers - base, index, count and a wrapped flag - at +0x1f5a4 (total
-		// costs) and +0x1fc94 (cash in), frame 1 when cash in is lower (0x004a0f8a), on the thing FUN_00519510 fetches from the world at +0x1da720.
-		//
-		// THOSE HISTORIES ARE NOT ON THE ECONOMY. They are on the
-		// park's STATISTICS manager: FUN_004c5d70 is the serialiser carrying those exact ring offsets,
-		// and it writes mLifetimeVisitors, mMisbehavingKids, mMostPaidForTicket, mLongestStay and
-		// mParkLastOpened beside them. The offsets are what joins the two functions; the header field is
-		// mParkAnalyser (docs/exe/park.md, "Arrivals"), and the thing is named here by what it serialises.
-		//
-		// Nothing in this tree keeps a history of anything, so the arrow would have no two numbers to
-		// compare and would sit on one frame for ever.
+		// 0x31, the trend arrow (cashtrend: green_up, red_down), a CHILD of 0x2f (0x004a0f05 fetches 0x2f,
+		// then 0x31 from it). Gadget_SetDateAndTrend shows the red arrow when the newest closed month's cash
+		// in is below its costs (0x004a0f8a), once a day before the month closes; Gadget_ShowMoney moves it
+		// to the lettering's end. Not built yet: Q674, from ParkState.MonthCashIn and MonthCosts
+		// (docs/exe/hud.md, "The money's trend arrow").
 
 		// The stream's fourth root control, away in the top right corner of the screen rather than on the
 		// panel - so it is added to the window's root, not to the gadget body, and it anchors top-right on

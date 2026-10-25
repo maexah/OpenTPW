@@ -274,8 +274,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00498fc3` | The entry-price builder reads `mParkClosed` (`FUN_0051a280`) for the door switch | OpenTPW/UI/Park/ParkEntryPriceScreen.cs  |
 | `0x00498fd9` | The entry-price builder sets `b_door` down for a closed park (`Button_SetDown`) | OpenTPW/UI/Park/ParkEntryPriceScreen.cs  |
 | `0x0049bf34` | Hire screen FUN_0049bdd0: UI_LoadTree onto the park's layer 0 | OpenTPW/UI/Park/ParkHireScreen.cs  |
-| `0x004a0f05` | | OpenTPW/UI/Park/ParkGadget.cs  |
-| `0x004a0f8a` | FUN_004a0e30, the gadget's trend arrow: last month's cash in (+0x1fc94) against its total costs (+0x1f5a4), frame 1 when lower | OpenTPW/UI/Park/ParkGadget.cs  |
+| `0x004a0f05` | Gadget_SetDateAndTrend: 0x2f fetched from the interface root, then 0x31 from it, so the arrow is 0x2f's child | OpenTPW/UI/Park/ParkGadget.cs  |
+| `0x004a0f8a` | Gadget_SetDateAndTrend (0x004a0e30), the gadget's trend arrow: last month's cash in (+0x1fc94) against its total costs (+0x1f5a4), frame 1 (red_down) when lower | OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x004a2057` | FUN_004a1d70: the aerial mast 0x2d's top set to its bottom less 8, so the mast is built eight high | OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x004a23da` | FUN_004a1d70: the arm 0x21's right edge moved by its left less the handle's (-645), so the arm is built in | OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x004a2529` | | OpenTPW/UI/Park/ParkGadget.cs  |

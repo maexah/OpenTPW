@@ -5,6 +5,10 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q640 (the research pumps' stutter, filmed in both games; no code changed): the rides' pump at rate 2 alone, on the
+  desktop at 144 Hz and the original at its 30 fps cap. Not filmed: rate 1, a pump stopping (the drain), the original's
+  start (ours was filmed from its third pass), the other four kinds' pumps, our game under 30 frames a second, where two
+  passes fall in one drawn frame.
 - Q639 (the golden ticket across the middle of a window not 4:3): the stock Full Simulation scene's ticket line shot at
   2552 x 1355 (a maximized window's inside, by the console's `size`; the window manager's own maximize was not driven),
   1280 x 720 and 1024 x 768, and the original at its 5:4 mode. Not looked at: a window taller than 4:3 (the ticket and the
