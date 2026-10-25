@@ -45,9 +45,9 @@ public sealed record LobbyScript
 	public bool HasSkyColour { get; init; }
 
 	/// <summary>
-	/// RAINY(n). The original copies the *currently selected* island's value into a single global
-	/// rain level every frame, so this is not per-island weather so much as weather that follows
-	/// whichever park you are looking at. Only hallow sets it, and only to 1.
+	/// RAINY(n). The original reads it only as zero or non-zero: the drop count follows the camera's
+	/// distance to every RAINY island (0x005e0e5d, Q696). Here the level is this value for the
+	/// *currently selected* island (a deviation). Only hallow sets it, and only to 1.
 	/// </summary>
 	public int Rainy { get; init; }
 

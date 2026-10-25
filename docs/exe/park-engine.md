@@ -599,7 +599,7 @@ Every theme ships `sky/` with those three files and an `ssky/` low-detail set be
 
 **Nothing re-centres the sky for a park.** The setter's only caller is the lobby, and the rebuild's only other caller is engine init. A park's sky therefore sits at the object default: **centre (0,0), height 300**.
 
-**A park's sky colour comes from its own art, not from a key.** `SKYCOLOUR(r,g,b)` is parsed only by the lobby's island-script reader `FUN_005e3210` — which also handles `LIGHTNING(n)` and `RAINY(n)`, storing them into the weather object at `+0x64`/`+0x68`/`+0x6c` as `value << 16`, `+0x5c` and `+0x60`. **No theme balance file carries a sky colour key at all** (checked in all four). The colour is `sky_rgb.tga`.
+**A park's sky colour comes from its own art, not from a key.** `SKYCOLOUR(r,g,b)` is parsed only by the lobby's island-script reader `FUN_005e3210` — which also handles `LIGHTNING(n)` and `RAINY(n)`, storing them into the island object (`FUN_005dfa60`) at `+0x64`/`+0x68`/`+0x6c` as `value << 16`, `+0x5c` and `+0x60`. **No theme balance file carries a sky colour key at all** (checked in all four). The colour is `sky_rgb.tga`.
 
 **The ORBIT camera never shows the sky.** Its pitch is 45-65 degrees against a picture 53.13 degrees high ("The lens"), so the top of the frame sits at elevation `26.57 - pitch`, always below the horizon. All three reference screenshots agree: ground to every edge. **Camcorder mode does show it**; from the ground the sky fills the upper half of the frame. The argument above is about the orbit camera, and for that it holds exactly.
 
@@ -5219,7 +5219,7 @@ push rejects only when the count exceeds `0x400`, so element `0x400` is writable
   literals **9** and **10**, and stores the matching cell's column and row as the entrance and the exit
   — see "Where a built thing's entry and exit cells come from" above. No debug string names them and
   none is needed: the constructor tests the numbers outright.
-- mType 2 and mType 5 are unidentified; the decode refused to guess water or rock.
+- mType 2 is the 240 river cells, every one a heightfield hole (`0x1`; fork watch 2026-10-25, `verify-forks.md` section 5); mType 5 is unidentified; the decode refused to guess water or rock.
 - ~~Whether tool `0x32` is ever armed as a live tool.~~ **CLOSED 2026-09-22:** Backspace's idle branch
   arms it for one apply (`FUN_0052f200(0x32,1)` at `0x0040be7d`). See "The path tool".
 

@@ -338,6 +338,11 @@ filed the items that cite it.
   `D-track.log`, and the pieces photographed beside the original's (`B-5-closed.png`, `D-13-boats.png`).
   From Q633: carried, a kart or water ride also lays its first track cells' squares (`FUN_005286a0`, `0x00529b35`),
   counted `CARRY_PREVIEW_TRACK_START`; build them with the track.
+  - **Note (fork watch 2026-10-25, verify-all.md H1):** the pieces are not rigid: a kart or water piece (load flag `0x10422`, `0x00522b1e` and
+    `0x00522cde`) is draped vertex by vertex at its placing, every vertex ending at its authored height above the ground
+    under it. The chain: `0x004629d0` turns load bit `0x2` into loader flag `0x40`; `0x00461f10` sets `0x20000` on every node
+    (`0x00462614`); the instancer `0x00463060` (flags `0x33a`, kart `0x522b90`, water `0x522d50`) calls `0x00469940` (`0x00463347`), which calls
+    `0x00469a80` per node (cell triangle by flag `0x4`, Q398's note). Draw them so, not as flat plates. Not proven: whether the cars' sampler reads the draped copy.
 - [ ] **Q588. Dino Karts race for guests.** After Q587. The -4 record (`Bumper_LayRide`'s grid and start buoys, the
   template's 3 laps, 2048 arrival), `BUMP 7` to state 1 and the race's first buoy, `BUMP 4` a kart a rider (mesh
   `cars % 4`), the retarget's grid and race arms with the thrust bonus, the buoy arm's laps, state 3 and the end at the
@@ -350,6 +355,9 @@ filed the items that cite it.
     loader's close chunk, type 6 (`0x00543928`, `saves.md`, "The close"): for BumperType -4 (this ride), after the handle check, it walks
     the buoy chain from `+0xa8` to the first buoy after the start buoy (flag 4) not flagged 2, wrapping, into `+0xa4`. Build that
     on load of a ride saved open; the writer never saves `+0xa4`.
+  - **Note (fork watch 2026-10-25, verify-all.md N2):** the loader sets header flag `0x80` at run time (`0x004625f4`) on a kart or water track piece, so
+    the model's height there is the landscape's under the point (mode 1, `park.md`), which is what a kart's height over the
+    track reads. Not proven: that the cars' sampler uses the draped copy.
 - [ ] **Q589. Splish Splash runs for guests.** After Q588. The -5 record (one start buoy, unload point a third of the
   way to it, 512 arrival, 64 boats), `BUMP 7` straight to state 2, a boat carrying the whole boarding list straight to
   the race, one lap, removed at the unload point with the ride left at 2, and the boat's spin (`+0x58` moved at a rim or
@@ -358,6 +366,8 @@ filed the items that cite it.
   website's rides list.
   - **Note (fork watch 2026-10-21, verify-world-other L6):** as Q588's: BumperType -5 takes the same close-chunk arm
     (`0x00543928`, `saves.md`, "The close"), the race's first buoy into `+0xa4` for a ride loaded open.
+  - **Note (fork watch 2026-10-25, verify-all.md N2):** as Q588's: the water kit's pieces (`0x10422` at `0x00522cde`) carry the run-time flag `0x80`
+    (`0x004625f4`), the landscape's height under a boat (mode 1), and are draped per vertex (Q587's note).
 - [ ] **Q726. The karts' and the water ride's track add-ons and hills.** From the Q581 review (`park.md`, "The karts'
   and the water ride's track, buoys and race", "Not read" lists the add-on sections (types 12 and 13) and the hills
   (`gk_trckH*`)). Lost Kingdom ships three track add-ons in `jungle/upgrades`, each `UpgradeType 1`: `lavajump` 1500 and
@@ -367,6 +377,8 @@ filed the items that cite it.
   == `0xdac`, `FUN_00548e80` at `0x00548d11`, `0x00548daa`, `0x00548e1c`). Q587 to Q589 do not ask for it, and Q512 and
   Q513 cover only the buy list, the snap and the window. Decode the add-on arm and the hills, build them (or count them
   with `Unimplemented.Report`), and confirm one of each against the original.
+  - **Note (fork watch 2026-10-25, verify-all.md H1):** the add-on and hill pieces come from the same kits (`0x522aa0`, `0x522c60`), so they are draped
+    per vertex like the rest (Q587's note); build them so.
 - [ ] **Q592. The cheat table's twelve rows.** From Q591 (`park-engine.md`, "The cheat table"): each is counted on its key's
   release with Alt alone (`Level.CheatRows`: `CHEAT_RESEARCH`, `CHEAT_MONEY`, `CHEAT_LOCAL_TICKET`, `CHEAT_GLOBAL_TICKET`).
   Build them as the original's after Q720 settles whether the keypad's digits reach their rows and the cheat flag's
@@ -1267,6 +1279,11 @@ filed the items that cite it.
   draped model's, and `FUN_004527f0`'s users, which split only the cells the load marks `0x800`). Confirm: a slope
   cell carrying `0x4` shot beside the original's, the same camera.
 
+  - **Note (fork watch 2026-10-25, verify-all.md H1, N2):** a draped model's height is taken per vertex (`0x00469a80`): the vertex goes through the
+    instance matrix, the cell is (x - grid `+8`) / grid `+0x10` and the same for z, the cell flag byte `& 4` picks the triangle
+    (`0x0046a34c`: clear, fz <= fx takes h00, h10, h11, else h00, h01, h11; set, 1 - fz <= fx takes h01, h11, h10, else h00, h10, h01),
+    and the vertex moves by h - H, H the instance's height. The kart, water, queue and boundary-hoarding kinds also carry the
+    run-time header flag `0x80` (`0x004625f4`), the landscape's height (`FUN_004527f0`), so they take this split too.
 - [ ] **Q399. Ride boards lettered as the original letters them.** From the fork review 2, 2026-10-16
   (`verify-objects-signs-other.md` H1, H3, M1). `ParkObjects.BuildSign` letters the `.sam`'s `Name`, split; the
   original letters the item's `OBJECT_NAMES` rows (FileFormats `sgn.md`): in English Lost Kingdom only Dino Karts
@@ -1805,6 +1822,12 @@ filed the items that cite it.
   original chains such a track's pieces before the type-7 node was not read (`Coaster_RebuildTrack` `0x0043eb70`).
   Decode it in Ghidra, or read the original's `+0x110` with an unfinished coaster saved. Confirm each built piece
   against the original's `+0x110` (`original/coaster.py`).
+  - **Note (fork watch 2026-10-25, verify-forks.md section 4):** (7) read whole: the opposite arm (`0x004743e0`) ignores `b` and blends
+    `a * sin( (1 - t) * pi/2 ) + p * sin( t * pi/2 )` with `p = ( -a.y, a.x, -a.w, a.z )`, the sines from the 4096-entry table
+    at `0x007b0968`. And the general sampler is a second deviation: `0x004742a0` never tests the dot's sign and never negates
+    `b`, so it never takes the shorter arc, where `AnimationFile.RotationTrack.Sample` (`Quaternion.Slerp`, AnimationFile.cs:462) does;
+    only 6 key pairs, in `looppylonr1` and `looppylonr2` (the sweep's census, not re-run), have a negative dot. Said at the site; make it the original's
+    when the loop pylons are posed (item 2).
 - [ ] **Q728. What shows the advisor's head again at a second ticket line (a live read).** From the run 7 review
   (VERIFY-7 Q595 2). The original's clip change (`FUN_00472f60`) shows the nodes the OUTGOING clip's tracks name
   (`FUN_00472310` at `0x004730a9`) and hides the incoming hide list (`FUN_00472d70` at `0x00473117`). Clip 20's hide
@@ -2805,6 +2828,12 @@ state machine.
   word's path to the blend states, and no run of the original has shown the frame (the fork's capture saw none either), so
   film the original's lobby in a storm (`record.sh`) before building, and count the unbuilt flash `LOBBY_BOLT_FLASH` (rule 4) until it is. Pairs
   with Q152 (the bolt's lifetime).
+  - **Note (fork watch 2026-10-25, verify-all.md M1):** the order is read: the flush `0x00582ad0` sorts descending (`0x005829e0`) unless the device word
+    carries `0x20000000` with `0xc` (`0x00566c22` can set it; the reference install's park word, `0x1444100`, lacks it; the lobby's
+    word is not measured). The bolts (state `0x200d52`) and the drops key 0, the invert quad 0.001 (state `0x9a1`), and none
+    of these three states carries `0x3000`, so all are queued: the quad is drawn before the bolts and rain. Build: draw the quad
+    after every queued entry whose key is above 0.001 and before the key-0 bolts and rain; what is drawn at submit (`0x3000`) comes
+    before the flush and is inverted. Not proven: the keys of translucent meshes and the sky, and the bolt in play (the film above).
 - [ ] **Q721. Each lobby island and gate turned by its ISLAND heading.** From the upstream look, 2026-10-19
   (`verify-sound-ui.md` L2). The island constructor `0x005dfa60` stores `island[+0x14]` = the ISLAND line's heading field
   x pi / 180, hands that radian value twice to `FUN_005d8380` (the isle's model instance `[island+4]`, then the gate's
@@ -2855,3 +2884,30 @@ state machine.
   samplers or present (https://github.com/jhm-ciberman/neo-veldrid/releases/tag/v1.3.0; the compare diff not read).
   Read the compare diff `v1.2.1...v1.3.0` first; bump every NeoVeldrid package together; build, test, and photograph
   the lobby and a park before and after at one camera (pictures equal within a frame's own spread).
+- [ ] **Q695. Queue pieces and the boundary hoarding draped vertex by vertex, like the track tiles.** From the fork watch 2026-10-25
+  (verify-all.md N1; a lead the fork missed). The original loads queue pieces (`FUN_00522900`, flags `0x12423`, or `0x112423` when the
+  row's byte `+5` is set: `0x00522954`) and the boundary-hoarding pieces (`FUN_00522e40`, `0x422`: `0x00522eb1`) with load bit `0x2`,
+  and makes both with `FUN_00463060` flags `0x33a`, as it does the kart and water tiles. Every node then carries `0x20000`
+  and is draped per vertex (`0x00469940`, `0x00469a80`; Q398's note), and the model's header carries the run-time flag `0x80`
+  (`0x004625f4`). Ours stands them rigid: `ParkQueues.Place` uses the near corner's height (`ParkObjects.OriginFor`) and
+  `ParkBoundaryHoarding.StandOf` the footprint height, so on a sloped cell ours is a flat plate where the original's follows the
+  ground. Not proven: that a loaded park's pieces are draped too (they are remade from the save's records, `FUN_004647a0`, flags `0x33a`, from the same
+  loaded models; not traced), and how many Lost Kingdom queue or boundary cells lie on sloped ground (not counted). First load
+  a park, count those cells, and shoot one beside the original's; then drape the pieces as the track tiles are (with Q587).
+- [ ] **Q696. The lobby's rain count follows the camera's distance to the rainy islands.** From the fork watch 2026-10-25 (verify-forks.md
+  section 1; low priority: the lobby, not Lost Kingdom's park). In `FUN_005e0470` (`0x005e0e29` to `0x005e0f18`) the original works
+  the drop count out every frame: over every island whose RAINY (`+0x60`) is not zero (RAINY is a flag; its value is never
+  read), it takes the mean m of `dx^2 + dz^2` from the camera (`[0x00f83778] + 8`, `+0x10`) to the island (`+0x3c`, `+0x44`),
+  then `v = 1e17 / m^4` (`[0x00702c88]`), 0 under 20, at most 400, and hands the count to `FUN_0057d910`. Rain starts about 91.7 units
+  away and is full inside about 63.1 (arithmetic); at the orbit's SPINRADIUS 70 it is about 173 drops (arithmetic, not
+  measured). Only hallow is RAINY, so it is the distance to Halloween's island whichever island is current; lightning
+  still follows the current island (`0x005e0f28`). Ours is a flat 900 drops (`Rain.DropsPerLevel`) whenever Halloween is current,
+  said at `LobbyWeather`. Build the original's count; confirm in the running lobby (the live drop count at one camera against
+  the number predicted from the camera's distance), and in the original if it can be read. Pairs with Q715 and Q152.
+- [ ] **Q697. A language selector.** Alexah, 2026-10-25, from PawelWielga/OpenTPW's `polish-support`, which cannot be merged: its
+  tree deletes 806 of our files. Our code hard-codes `Language/English` in about a dozen places (`grep -rn 'Language/English'
+  source`: `Localization`, `BitmapFont`, `BFSTReader.EnglishCharacterTable`, the park windows' tables, `ParkObjectNames`,
+  `ParkTags`, `ParkStaffPool`, `ParkFixedItems`). First decode how the original picks its Language folder (the
+  registry or a file; `docs/exe/`), then build the choice on that, with one place that names the folder and the character table
+  (`MBToUni.dat`, FileFormats `strings.md`, where a Polish header's bound is unproven). English stays the default; a language folder
+  not on the disc is refused with a message. Confirm by a launch with another shipped folder (`american`) lettering the lobby.

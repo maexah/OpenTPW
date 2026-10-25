@@ -459,6 +459,9 @@ public class AnimationFile : BaseFormat
 
 			// The curve belongs to the key being blended out of, which is why it is the lower one that is
 			// asked - the engine reads the id off the key its own search settled on (0x00471c73).
+			// Deviation (Q727): Quaternion.Slerp takes the shorter arc, flipping a key whose dot is negative; the
+			// original never does (0x004742a0 does not test the dot's sign), and blends from a table of sines. Only
+			// 6 key pairs, in looppylonr1 and looppylonr2, differ.
 			return System.Numerics.Quaternion.Slerp( Rotations[lo], Rotations[hi], Ease( lo, t ) );
 		}
 	}

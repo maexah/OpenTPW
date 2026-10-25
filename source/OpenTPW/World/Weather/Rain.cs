@@ -23,7 +23,7 @@ namespace OpenTPW;
 /// </summary>
 public sealed class Rain : WeatherSprites
 {
-	/// <summary>Drops at RAINY(1). The pool is sized for this and never grows.</summary>
+	/// <summary>Drops at RAINY(1). The pool is sized for this and never grows. The original's lobby count is at most 400 and follows distance (Q696).</summary>
 	private const int DropsPerLevel = 900;
 
 	/// <summary>

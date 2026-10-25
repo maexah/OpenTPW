@@ -127,7 +127,7 @@ naming the same texture (`m_grass1` on another mesh of the Belly Bounce would be
 | The catalogue, an ordinary item (`FUN_00413c10`, `0x00414175`) | `0xb24a9` (`0x4b24a9`) | yes | yes | the item's picture |
 | The catalogue, a fixed item (`Info.DontApplyOffset`, `0x00414192`) | `0x50c00` (`0x450c00`) | no | no | — |
 | The catalogue, an item's supplementary models (`0x0041437e`; the bumper boats' here) | `0xc0` | no | no | — |
-| Queue pieces (`FUN_00522900`) | `0x12423` | yes | yes | 1 x 1 at `0x00816d68`, kind nought |
+| Queue pieces (`FUN_00522900`) | `0x12423` (`0x112423` when the row's byte `+5` is set: `0x0052295d`) | yes | yes | 1 x 1 at `0x00816d68`, kind nought |
 | Type-3 items' pieces (`FUN_0042fad0`) | `0x1013405` | yes | yes | none |
 | `FUN_00430130`, `FUN_00522aa0`/`c60`/`e40`, `FUN_005d7fd0` | `0xc0`, `0x10422`, `0x422`, `0xc0`/`0x40c0` | no | no | — |
 

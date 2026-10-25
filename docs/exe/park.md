@@ -1392,7 +1392,7 @@ models carry the float, 47 lookup records carry `0x2` (each with `0x4`) in 32 mo
 `ParkBumperBoats.Float`). Mode 1 by the float is built, and a boat stands at the average of its four corners'. A
 model with a `0x2` record is counted and keeps the last height (`SCENE_HEIGHT_SURFACE_MESHES`), as is one with
 neither (`SCENE_HEIGHT_OWN_MESH`); a track piece's cell is read as any other cell, since no car here drives on one;
-header flag `0x80`, which no file stores, is not read. The corner that keeps the last height keeps the boat's, nought
+header flag `0x80`, which no file stores, is set at run time by the loader (`0x004625f4`, loader flag `0x40` from load bit `0x2`) on every kart and water track piece (`0x10422`), queue piece (`0x12423`, `0x112423`) and boundary-hoarding piece (`0x422`); those models take mode 1, the landscape's height. It is not read here (fork watch 2026-10-25, `verify-all.md` N2). The corner that keeps the last height keeps the boat's, nought
 at its first drawing, where the original's is the car's `+0xa0`, which a load fills from the file.
 
 **Confirmed** (`q257s/confirm.py`, on the desktop; `PREDICTION.txt` first). A Hot Pot bought on (41,23), four boats in

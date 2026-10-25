@@ -280,8 +280,8 @@ at three levels, all back-to-front.
 
 | Address / value | Original name | What it is | Evidence |
 |---|---|---|---|
-| `FUN_00565590` | — | 1. Per-batch depth key = mean vertex Z. State bit `0x800000` overrides it with 0. | Disassembly |
-| `FUN_00565590` → `FUN_00565490` | — | 2. Per-triangle sort: `FUN_00565590` sums each triangle's `z0+z1+z2` and, **only when the state word misses the `0x3000` mask**, sorts them descending with the quicksort `FUN_00565490` — i.e. only for the graded (`0x556`) and additive (`0x200552`) words. The opaque and cut-out words carry `0x1000`/`0x2000` and skip it. | Disassembly |
+| `FUN_00565590` | — | 1. Per-batch depth key `+0x30`: zeroed when the entry is allocated (`0x005826ae`); it gains the depth callback's sum only when the batch flags carry `0x20` (`0x0056560a`), then is divided by the vertex count (`0x005656f3`), so a batch without `0x20` keys 0. A caller may preset it with `FUN_005658c0( key )` (any value but -1.0). There is no `0x800000` test in `FUN_00565590` (fork watch 2026-10-25, `verify-all.md` near-conflict 1). | Disassembly |
+| `FUN_00565590` → `FUN_00565490` | — | 2. Per-triangle sort: `FUN_00565590` sums each triangle's `z0+z1+z2` and, **only when the state word misses the `0x3000` mask**, sorts them descending with the quicksort `FUN_00565490` — i.e. for the graded (`0x556`) and additive (`0x200552`) words and the lobby's lightning words (`0x9a1`, `0x200d52`), which also miss `0x3000`. The opaque and cut-out words carry `0x1000`/`0x2000` and are drawn at submit (`0x0056570b`); a state of exactly `0x800` is queued unsorted (`0x0056571e`); in mode 4 a state with `0x1000` skips the triangle sort (`0x0056573d`). The renderer's constructor writes the `0x3000` mask (`0x0056682d`). | Disassembly |
 | `FUN_00582ad0` → `FUN_005829e0` | — | 3. Per-batch sort, descending on the key at `+0x30` | Disassembly |
 
 **OpenTPW does none of this sorting.** It does not need it for the lobby: the only graded surfaces

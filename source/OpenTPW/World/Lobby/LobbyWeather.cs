@@ -5,10 +5,12 @@
 /// any place in the world.
 ///
 /// This is how the original does it. Its lobby tick works out which island is nearest, then
-/// every frame copies that island's SKYCOLOUR into the renderer's sky colour, its RAINY value
-/// into a single global rain level, and rolls its LIGHTNING mask for a strike. There is one sky,
+/// every frame copies that island's SKYCOLOUR into the renderer's sky colour and rolls its
+/// LIGHTNING mask for a strike. Its rain is not a copy: RAINY is only a flag, and the drop count
+/// follows the camera's distance to every RAINY island (<c>1e17 / m^4</c>, 0 under 20, at most 400;
+/// 0x005e0e46, Q696). There is one sky,
 /// one rain system and one bolt for the whole lobby; selecting a park is what changes them. So
-/// this reads <see cref="LobbyCameraMode.CurrentIsland"/> and does the same three things.
+/// this reads <see cref="LobbyCameraMode.CurrentIsland"/> and does the same three things (the rain by its deviation, said below).
 ///
 /// Of the four parks only hallow asks for any of it - RAINY(1) and LIGHTNING(63) - which is why
 /// Halloween World is the only one that storms. All four set a SKYCOLOUR.
@@ -64,6 +66,8 @@ public sealed class LobbyWeather : Entity
 
 		UpdateSky( script );
 
+		// Deviation (Q696): the level is the island's RAINY value, where the original counts drops by the
+		// camera's distance to the RAINY islands.
 		_rain.Level = DebugRain ?? script.Rainy;
 
 		UpdateLightning( script );
