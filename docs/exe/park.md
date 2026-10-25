@@ -341,6 +341,31 @@ The consequence for OpenTPW: the advance belongs in the frame sweep, **not in th
 
 **The idle default is role 5 entry 0 on channel 0**, restarted when channel 0 is idle or finished, gated on `(model+4 & 0x8004) == 0`. Entry 0 is a literal — **nothing in the engine ever advances to a role's next entry**, so cycling every `M` clip has no engine counterpart. `model+0x14` gates whether a model is advanced at all: it counts channels with role < 12, and a stopped model drops to nought and is never restarted — so an unconditional idle restart would start role 5 on every static prop in the park.
 
+### What a drawn frame shows between ticks (Q642)
+
+**The engine draws every mover at the frame's own time, not at the last tick.** Each kind its own way:
+
+| Mover | How a drawn frame places it | Where |
+|---|---|---|
+| A clip: a ride's, shop's or sideshow's model, the bus, the ferry and the seaplane (their route keys), the river's UV scroll (the terrain's `basem` clip, `FUN_0044e510`) | `AnimFrame` (`+0x20`) is a **float**, `(snapshot - StartAnimTime) × speed × 0.03` (`FSTP` at `0x00473740`), the snapshot `DAT_007b496c` the clock read once a drawn frame above the tick loop (`Anim_TakeFrameClock` `0x00473440` at `0x0054f475`, which also leaves the frame's delta × 0.001 in `DAT_007b497c`); the pose blends rotation keys by the frame's fraction (`Anim_BlendRotationKeys` `0x00474490`) and a morph by `frame - trunc frame` (`Anim_PoseTrack` `0x00471860`). So a clip moves on every drawn frame | `AnimChannel_Advance` `0x004735d0` |
+| A track ride's cars | stepped every tick, then drawn eased by `(now - the last tick's end) / 31` (`0x00700f8c`), clamped to -1..1 and so -1..0 past the loop: back along the step's velocity and turn, between the last two steps | `TrackRides_DrawAll` `0x00519060` at `0x0054fa33` → `TrackRide_DrawCarsEased` `0x00546280` |
+| The flying cars | handed the same over their every-second tick, `(now - [0x0087879c]) / 62` (`0x00700f90`); the body was not read | `FUN_0055ce60` at `0x0054fa57` |
+| The peeps | the same over the thing sweep: `(now - [0x00878a1c]) / 248` (`0x00700f94`) | `Peeps_PlaceForDraw` `0x00518f90` at `0x0054fa85` (`ride-operation.md`, "Where a WALKING peep is drawn") |
+| The sea and the gates' flags | their phase gains 0.4 a drawn frame (`park-engine.md`, "The park's sea") | `FUN_0053c3f0` |
+
+`now` is `0x008786bc`, read just after the snapshot; each stamp is the end of its step (`0x0054f4c7`, `0x0054f5ea`,
+`0x0054f683`), since the loop adds 31 before it ticks. Nothing is extrapolated. A sprite's picture still steps, at
+62 ms (`FUN_00475360`).
+
+**OpenTPW** eases the guests (`ParkPeople`) and the track cars (`ParkBumperBoats`, `GameClock.PartialTick`) as the
+engine does, and moves the river (`ParkTerrain`), the sea and the flags on frame time. **Its clips are posed at the last
+tick's instant** (`ParkRides.OnUpdate`, `ParkObjects.Sweep( GameClock.Ticks × 31 )`): difference 7 below, Q675.
+**Measured** (`q642/`, `PREDICTION.txt`), the stock park, the original's camera 530,250 zoom 70 rotation 180 in both,
+`rectfilm.py` on the Bouncy Dino's head (its loop, role 2): the original capped at 60 frames a second (`original.sh`
+`ORIG_FPS=60`, Wine's `+fps` 59.6 to 60.3, its clock true) changed 58.6 times a second, a picture a drawn frame
+(`orig/O2`); ours at 143.9 frames a second 32.1 times, a picture a tick (`runB2`), and not at all paused. Under
+`play.sh`'s 30 fps cap the original cannot show more than 30.
+
 ### End of clip is five outcomes, not three
 
 A channel on role 0 found past its end is first marked `0x8` (`0x00473758`), and every advance of a channel on another role takes the mark off (`0x004738b2`; `saves.md`, "OpenTPW's writer, a channel's `0x8`"). The queue is promoted first, whatever the model's flag word holds (`0x0047375d`). Failing that, `model[+4] & 0x18` chooses: clear, replay when flag `0x1` else pseudo-role `0xe`; else if `0x8` clear, **stall** (pin elapsed to total, set `model[+4] |= 0x40400000`, defer a stop to the end of the same advance, after the pose is applied, which parks the channel at role 12 with its pose kept, `0x00473a30`); else **stop and call out** to the dispose/reposition group. `FUN_00473e30` sets `0x10` on a thing's model whose only clips are role 0's (`0x00473f32`): 22 Lost Kingdom items, each running one `WAITANIM 0, 0` and nothing that reads the channel afterwards. The replay's speed comes from `+0x30` when non-zero, only falling back to `+0xc`.
@@ -767,7 +792,7 @@ Opcode numbers: 15 FLUSHANIM, 16 TRIGANIM (3 operands), 17 WAITANIM, 18 LOOPANIM
 Decoded for Q174 by two read-only decoders, each put to a skeptic in Ghidra, and measured over the corpus by two walkers
 written apart, which agree site for site: every script walked from word 0 with both arms of every branch and an exact
 return stack, carrying the engine's `+0xa4`/`+0xa8` and OpenTPW's side by side. Five differences, and a sixth found by
-Q174b's review. **Q174b built the first three and Q174c the fourth**, so OpenTPW now parts from the engine at 5 and 6;
+Q174b's review. **Q174b built the first three and Q174c the fourth**, so OpenTPW now parts from the engine at 5 and 6 (and 7, Q642);
 what content reaches each built one is kept, because it is what a change to any of them moves.
 
 **1. `WAITANIM`'s first visit writes `+0xa8 = 0xffff` and `+0xa4 = 0`** (`0x00552b1a`, `0x00552b14`), model or not, and
@@ -856,6 +881,11 @@ frame rate, so OpenTPW keeps each tick's own instant 31 ms after the last, said 
 lobby 17); `GameClock` runs one when a whole 31 ms is owed and runs 64 (16). Matching it would move every tick's phase
 and the interpolation; said at `GameClock.ParkCatchUp`. Measured (Q182b, `q182b/run2/`, predicted first): a 3 s
 `SIGSTOP` stall logged `a 3014 ms backlog capped at 2000 ms, 64 ticks run`, and `state` moved 177 to 241.
+
+**7. A drawn frame poses the clips at the last tick's instant in OpenTPW** (`ParkObjects.Sweep( GameClock.Ticks × 31 )`),
+where the engine poses them at the frame's snapshot `DAT_007b496c` as a float frame (`0x00473740`): the engine's clips move
+every drawn frame, OpenTPW's about 32 times a second whatever its frame rate ("What a drawn frame shows between ticks",
+above; Q675 builds it, the sweep at `(GameClock.Ticks + GameClock.PartialTick) × 31`, never past the next tick's instant).
 
 **What the engine's ticks read across one frame (Q182).** The park frame reads the clock `0x785970` twice, back to back,
 above the catch-up loop: `FUN_00473440` at `0x0054f475` takes the snapshot `DAT_007b496c`, and `0x0054f47f` takes the

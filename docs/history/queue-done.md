@@ -10205,6 +10205,28 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   lettering (`hud.md`, "The money's trend arrow"). In the original (`q641/orig`, seven of seven held): red at the
   load, still red on 1 March after a profitable February, green on 2 March; still green on 1 April after a loss, red
   on 2 April; equal samples green, one less red. Q385's rings outdated the old comment, now rewritten.
+- [x] **Q642. Smooth the animations between ticks.** From Alexah's play test, 2026-10-21 (note 13). Rides, the bus and
+  perhaps the water look 30 fps or less. The original steps at a fixed 31 ms, about 32 a second (`boot.md:165`): the
+  track rides every tick, the flying cars and sprite every second tick, 62 ms (`boot.md:173-174`), and clips advance in
+  31 ms ticks (`park.md:806`); the reference run is under a 30 fps cap (`CLAUDE.local.md`). Whether the original
+  interpolates a drawn frame is not stated: decode first. Ours already interpolates guests between 248 ms steps
+  (`STATUS.md:31`) and the sea moves on `Time.Delta` (`queue-done.md:7705-7706`). **Alexah (2026-10-21): improvements
+  are on by default.** Interpolate drawn poses between ticks for rides, vehicles and the water; the logic's ticks stay
+  at the original's rate. A deviation said at the site. Confirm: frame-to-frame pose deltas on a ride and the bus,
+  before and after, the tick log unchanged.
+  **The research pumps (Q640, filmed):** they step as the original's, 12.75 pictures a second at rate 2 in a 2-or-3-pass
+  rhythm, with a 167 ms hold once a loop where `fluid32` repeats `fluid` (`hud.md`, "The pump"). Each run picture is
+  the last moved by -1/31 of the texture in `u` (FileFormats `models.md`), so a pump could be drawn at its 16.16
+  position as one smooth scroll, the turn taken at 31: an improvement in this item's sense, said at
+  `ParkResearchScreen`. The drain's and the fill's 32 meshes were not measured.
+  **Done (2026-10-25), the decode; the build is Q675:** the original does not step its clips at the tick. A clip's frame
+  is a float taken from the clock once a drawn frame (`0x00473740`, the snapshot `DAT_007b496c`), so its rides, shops,
+  bus, ferry, seaplane and river move on every drawn frame; it eases its track cars, flying cars and guests between their
+  last two steps by `(now - the step's end) / 31, 62, 248` (`0x0054fa33`..`0x0054fa85`), and steps the sea's and the
+  flags' phase a drawn frame (`park.md`, "What a drawn frame shows between ticks"). Ours eases the guests and the track
+  cars and moves the water on frame time already; only its clips step, posed at the last tick (difference 7). Measured
+  on the Bouncy Dino (`q642/`): the original at 60 fps 58.6 pictures a second, ours at 144 fps 32.1. So the clip half
+  is a faithful fix, not a deviation; the pumps' smooth scroll above stays an improvement.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

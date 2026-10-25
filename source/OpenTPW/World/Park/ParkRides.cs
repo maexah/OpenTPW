@@ -1395,8 +1395,9 @@ public sealed class ParkRides : Entity
 
 		// And then, once, whatever those ticks asked for is shown. The engine advances its animation players
 		// in the scene draw (on-screen models from their scene-node callback, the rest by FUN_0044e410( 3 )),
-		// past the back edge of this very catch-up loop, off one snapshot of the clock - so the sweep belongs after the loop rather than inside it,
-		// and takes the moment the last tick ran at, which is exactly GameClock.Ticks beats in.
+		// past the back edge of this very catch-up loop, off one snapshot of the clock - so the sweep belongs after the loop rather than inside it.
+		// A deviation: it takes the moment the last tick ran at, exactly GameClock.Ticks beats in, so a clip steps once a tick here, where the
+		// engine's snapshot is the frame's own clock and a clip moves every drawn frame (0x00473740; docs/exe/park.md, difference 7; Q675).
 		_objects?.Sweep( (int)(GameClock.Ticks * MillisecondsPerTick) );
 	}
 

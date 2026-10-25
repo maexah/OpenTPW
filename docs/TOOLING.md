@@ -1004,6 +1004,12 @@ after its poller starts**, so a key meant inside either line cannot be sent afte
   (`win.translate_coords`) here, and from its 1024 x 768 point (x 320 + 1.875 x, 1.875 y) on the real screen there; then
   `rectfilm.py` on it, 2 px or more inside its edge, beside the game's own counter (`researchscreen`'s passes here,
   `respump.py PID 16` there, started half a second before). Both games' gaps fall on the 144 Hz desktop's 6.9 ms steps.
+- **A model's drawn rhythm in both games** (Q642, `q642/ours.py <out> <bin> <ROUND> [X,Y,W,H]`, `q642/orig/run.sh OUTDIR
+  [RECT]`): the stock park, one camera by `bothcam.py`'s numbers (530,250 70 180 puts the Bouncy Dino mid-frame),
+  `rectfilm.py --min 1.5` on a moving part, and `pause` for the control here. With no rectangle `ours.py` takes two shots
+  0.1 s apart to choose one clear of walking guests. The original at `ORIG_FPS=60`, or its 30 fps cap hides a per-frame
+  draw behind the 32 ticks. Keep the rectangle small, about 140 x 110 screen pixels on the original: every read of a
+  picture that changes each frame pays rectfilm's diff, and 420 x 340 read 28 times a second (`q642/orig/O`).
 - **A golden ticket won in both games** (Q591, `q706/`): a copy of Alexah's Full Simulation profile with tickets taken
   out, `gmsfile.put( copy, tickets={'jungle': [0,0,1,0,0,0]} )` (`q706/gms-L01off.dat`), so her jungle `New Save.TPWS`
   (tick 19004, 759 visitors to date, some 280 inside) wins Locals 0 and 1 again on tick 19100. Here: `q706/confirm.py <out>
@@ -1767,7 +1773,8 @@ put it back to 800 after. A number of the original's measured before 2026-10-15 
    1.00 (32.2 ticks a second, its clock 215,367 ms), `tpwmem.py clock` TRUE (`timens-clock/PREDICTION.txt`). No
    restart is needed. **Still run `tpwmem.py clock` before any timing, and discard timings it calls NOT TRUE**
    (`VERIFYING.md` rule 127): `original.sh` says when the namespace could not be made and starts the game plainly. The
-   30 fps cap stays on; uncapped in the namespace is not tried.
+   30 fps cap stays on; uncapped in the namespace is not tried. `ORIG_FPS=60 original.sh start` caps it at 60 instead
+   (a copy of `play.sh` in `logs/`): Wine's `+fps` read 59.6 to 60.3 and `tpwmem.py clock` TRUE (Q642).
 2. **Never point it at `~/Games/TPWorld`.** The original writes `save/`, `Config.tcf`, `enginedebug.txt` and
    `fallback.txt` into its own folder. The reference install is its own copy.
 3. **On the real screen it takes the whole display and the mouse.** Start it only when the other session is idle;

@@ -74,20 +74,6 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q642. Smooth the animations between ticks.** From Alexah's play test, 2026-10-21 (note 13). Rides, the bus and
-  perhaps the water look 30 fps or less. The original steps at a fixed 31 ms, about 32 a second (`boot.md:165`): the
-  track rides every tick, the flying cars and sprite every second tick, 62 ms (`boot.md:173-174`), and clips advance in
-  31 ms ticks (`park.md:806`); the reference run is under a 30 fps cap (`CLAUDE.local.md`). Whether the original
-  interpolates a drawn frame is not stated: decode first. Ours already interpolates guests between 248 ms steps
-  (`STATUS.md:31`) and the sea moves on `Time.Delta` (`queue-done.md:7705-7706`). **Alexah (2026-10-21): improvements
-  are on by default.** Interpolate drawn poses between ticks for rides, vehicles and the water; the logic's ticks stay
-  at the original's rate. A deviation said at the site. Confirm: frame-to-frame pose deltas on a ride and the bus,
-  before and after, the tick log unchanged.
-  **The research pumps (Q640, filmed):** they step as the original's, 12.75 pictures a second at rate 2 in a 2-or-3-pass
-  rhythm, with a 167 ms hold once a loop where `fluid32` repeats `fluid` (`hud.md`, "The pump"). Each run picture is
-  the last moved by -1/31 of the texture in `u` (FileFormats `models.md`), so a pump could be drawn at its 16.16
-  position as one smooth scroll, the turn taken at 31: an improvement in this item's sense, said at
-  `ParkResearchScreen`. The drain's and the fill's 32 meshes were not measured.
 - [ ] **Q643. Flags ease between wind directions.** From Alexah's play test, 2026-10-21 (note 14). The bus stop flags
   (built by Q493, `queue-done.md:7705-7712`) take `ParkWeather.WindDirection` and snap; the original's flags take
   `mWindDir` straight, which `FUN_00512f00` moves by `(rand % 90) - 45` at each change of weather
@@ -102,7 +88,7 @@ filed the items that cite it.
   at the site and on the website. Confirm: both screens beside the original's, every string fitting its box.
 - [ ] **Q645. A "faithful" graphics toggle brings the original's look back.** From Alexah's play test, 2026-10-21
   (decisions, last in the order). One option, off by default, that turns every improvement of this batch off at once:
-  four bits a channel (Q616), the original's rate of animation (Q642), flags' jumps (Q643), the original's letters
+  four bits a channel (Q616), the research pumps' picture-by-picture steps (Q675's second part; the clips' every-frame posing is the original's own, Q642), flags' jumps (Q643), the original's letters
   (Q644), the ground's 16-pixel tiles (`ground original`, Q618), and whatever Q619 to Q621 leave as a chosen
   difference. Each improvement reads one switch, set at one place (rule 9); say it in the option's own text and at the
   site. Confirm: a frame pair with the toggle on and off at the
@@ -115,6 +101,15 @@ filed the items that cite it.
   `0x32` to frame 1 while the balance is below nought. `0x2f` letters from its left here (`TextAcross = Start`), so the
   arrow's place depends on that choice. Confirm, in both games: the stock park's load (red), and a month pushed into
   profit (green on its second day, not its first), and the arrow's place against the number at two widths.
+- [ ] **Q675. Pose the clips at the frame's own time.** From Q642's decode (`park.md`, "What a drawn frame shows between
+  ticks", difference 7). `ParkRides.OnUpdate` sweeps the players at `GameClock.Ticks × 31`, so every clip (rides, shops,
+  sideshows, the bus, the ferry, the seaplane) steps about 32 times a second; the original's snapshot is the frame's
+  clock and its frame a float (`0x00473740`). Sweep at `(GameClock.Ticks + GameClock.PartialTick) × 31`, never past the
+  next tick's instant, so a script's trigger still judges the channel as the last frame's advance left it (difference
+  3) and the tick log is unchanged; take the deviation sentence out of `ParkRides.OnUpdate`. Second part, an improvement
+  said at `ParkResearchScreen` (Alexah, 2026-10-21: on by default): the pumps drawn as one smooth scroll (Q642's note
+  above, from Q640). Confirm: `q642/ours.py` on the Bouncy Dino (`runB2`'s patch, 32.1 a second before: predict the
+  frame rate after), the bus driving in filmed the same way, and `sweeps`/`rides` ticks unchanged across the change.
 - [ ] **Q743. The original on Q713's made file: row 248 said of a food stall walked away from.** From Q713 (lane B, which
   cannot run the original). Load `~/.cache/tpw-harnesses/q713/files/outlets-B.TPWS` (Alexah's jungle `New Save`, row 248's
   record fresh, food stall 193 a day of 7 walk-aways to its 7 customers) in the original by `q707/gms-none.dat`'s player

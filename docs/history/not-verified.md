@@ -5,6 +5,10 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q641 (the money's trend arrow, decoded; no code changed but a comment): the original alone, off-screen, on the stock
+  park with the analyser's words written by hand, not on a month a park earned or lost by play. Not seen: a park with no
+  month closed (the stand-in's green), a negative balance's dollar sign, the arrow at 640 x 480 or 1024 x 768, the
+  original's placement against the lettering measured in pixels; this game was not run, as nothing it draws changed.
 - Q640 (the research pumps' stutter, filmed in both games; no code changed): the rides' pump at rate 2 alone, on the
   desktop at 144 Hz and the original at its 30 fps cap. Not filmed: rate 1, a pump stopping (the drain), the original's
   start (ours was filmed from its third pass), the other four kinds' pumps, our game under 30 frames a second, where two
