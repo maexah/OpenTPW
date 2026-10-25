@@ -2862,3 +2862,9 @@ state machine.
   "4/18/2002" on this machine, and would letter another order on a machine of another culture; the original's frames read
   "4.4.2002" to "4.29.2002" (`q707/p707t/orig/O/g-*.png`). Decode the original's date writer for the gadget, then write
   the date its way whatever the machine.
+- [ ] **Q694. Move to NeoVeldrid 1.3.0.** Alexah, 2026-10-25: released 2026-10-24; we are on 1.2.1 (`OpenTPW.Common`,
+  `OpenTPW`, and `OpenTPW.ModKit`'s references). Its notes list Native AOT and trimming support (#104) and a backend-aware
+  window creation in StartupUtilities (#92), with no breaking change and nothing in Vulkan, SDL2, SPIRV, texture formats,
+  samplers or present (https://github.com/jhm-ciberman/neo-veldrid/releases/tag/v1.3.0; the compare diff not read).
+  Read the compare diff `v1.2.1...v1.3.0` first; bump every NeoVeldrid package together; build, test, and photograph
+  the lobby and a park before and after at one camera (pictures equal within a frame's own spread).
