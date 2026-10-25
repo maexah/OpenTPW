@@ -2906,3 +2906,13 @@ state machine.
   registry or a file; `docs/exe/`), then build the choice on that, with one place that names the folder and the character table
   (`MBToUni.dat`, FileFormats `strings.md`, where a Polish header's bound is unproven). English stays the default; a language folder
   not on the disc is refused with a message. Confirm by a launch with another shipped folder (`american`) lettering the lobby.
+- [ ] **Q698. A tag younger than half a second taken off by the top's right click, in the original.** From run 10's review
+  (VERIFY-1, Q638's UNSETTLED lead). Settle what the original does when the top's right click (DeleteAll) reaches a
+  tag put on less than half a second ago. DeleteAll posts message 5 to each tag at 100 ms steps
+  (0x004a13c6..0x004a13e4), while such a tag still has its delayed message 6 (UI_SetVisible( 1 ), posted 500 ms on at
+  0x004a1292) pending. If message 5 (0x0048dc0a) detaches the control from the mast and the delayed message 6 is still
+  delivered, then FUN_0065d773 on a parentless tag is true and the original would start MessageTag1 (0x5a) there, over
+  a tag that is no longer on the mast; ours shows nothing (`ParkTags.ShownAt` needs the tag standing). Settle it with
+  Ghidra on the message 5 path (0x0048dc0a) and the delayed-post queue (0x00669c8d), or with a run of the original
+  (right-click the top within 500 ms of a tag going on, film the effect list with record.sh); then match it or say it
+  at `ParkGadget.TagEffects`. Low priority.

@@ -136,7 +136,7 @@ slots), **and draws `Ticket2` toward the middle's pin by its growth** (`AdvisorM
 12.093, the longest key, 0 to 1; the move is that share of the middle's offset less the right's, across and down), a said
 deviation; the glints ease between thirds' pins with it (`scenes.md`, "Gesture table"). Measured (`q639/`, the ticket line
 of q707's scene): the full ticket's middle 0.028 of the height left of the window's middle at 2552 x 1355 and 1280 x 720,
-0.029 at 1024 x 768, where before it stood 0.25 and 0.19 right at the wide sizes; the log's `the ticket 1.000 grown, drawn
+0.034 at 1024 x 768, where before it stood 0.25 and 0.19 right at the wide sizes; the log's `the ticket 1.000 grown, drawn
 -373 px across` at 2552 x 1355.
 
 **Draw order.** Because of the see-through discs, the model draws in two passes: every solid half first, then every see-through half in file order. Drawn mesh by mesh, a hand behind him shows through. Any future screen-drawn model with see-through parts needs the same two passes.

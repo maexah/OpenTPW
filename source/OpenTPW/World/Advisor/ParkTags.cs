@@ -159,7 +159,7 @@ internal sealed class ParkTags
 		internal (int X, int Z) EndingAt { get; set; }
 		/// <summary>The control's property 0xa: its first show has been and asked for <see cref="FirstShowEffect"/>.</summary>
 		internal bool FirstShown { get; set; }
-		/// <summary>Whether the gadget last drew it shown, to tell a show or a hide (message 0x11) from no change.</summary>
+		/// <summary>Whether the tag was last shown with the gadget (the tag and every parent, FUN_0065d773), to tell a show or a hide (message 0x11) from no change.</summary>
 		internal bool Showing { get; set; }
 		/// <summary>The control's +0x134: its two timers run. Set as a tag with a life is made, cleared as it is opened.</summary>
 		internal bool TimersRun { get; set; }

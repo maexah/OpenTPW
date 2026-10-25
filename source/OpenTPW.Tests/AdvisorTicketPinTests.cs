@@ -75,6 +75,9 @@ public class AdvisorTicketPinTests
 		var (across, down) = AdvisorModel.TicketMove( 1f );
 		Assert.AreEqual( 0f, across );
 		Assert.AreEqual( -555f, down, 0.01f );
+
+		// The projection's y is 1 at the top, so a move of 555 pixels up adds 555 x 2 / the height.
+		Assert.AreEqual( AdvisorModel.ScreenProjection().M42 + (555f * 2f / 1920f), AdvisorModel.TicketProjection( AdvisorModel.ScreenProjection(), 1f ).M42, 1e-5f, "up the window" );
 	}
 
 	/// <summary>

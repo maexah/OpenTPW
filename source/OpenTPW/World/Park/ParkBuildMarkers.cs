@@ -425,6 +425,10 @@ public sealed class ParkBuildMarkers : ModelEntity
 
 		// A carried thing's square and a patrol edge are the same square as a tool's (FUN_00532fc0's 0x100 arm), lifted and
 		// walled the same way; a carried thing's glide (mode 4), the others not.
+		// Deviation (cosmetic, a tenth of a second after the pointer changes cell): the original's shift (FUN_0053df30,
+		// 0x0053df67..0x0053dfcf) applies to every square and wall whose no-glide word is 0 whenever the mode is 4, 0xe or
+		// 0x13, and the patrol edges' red arm queues its square with that word 0 (0x0053394b); so while a thing is
+		// carried a followed member's patrol edges slide in the original, and here they stand still.
 		var squares = strip.Select( square => (square.X, square.Y, square.Marker, Turn: 0, Glides: false) )
 			.Concat( carried.Select( square => (square.X, square.Y, square.Marker, square.Turn, Glides: true) ) )
 			.Concat( patrol.Select( square => (square.X, square.Y, square.Marker, Turn: 0, Glides: false) ) );

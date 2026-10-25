@@ -1244,13 +1244,13 @@ public class ParkGadgetPressTests
 			Frame( stack, false, new Vector2( 1000, 100 ), 2.6f );
 			Assert.AreEqual( (1, true), (Live( ParkTags.FirstShowEffect ).Length, high.ShownAt( 2600 )), "paused as it was shown: no MessageTag1" );
 
-			// Put away at its show: none either.
+			// Put away at its show: none then, and the burst as the gadget comes back (0x11 reaches the tag with its parents).
 			gadget.PutAway = true;
 			var away = tags.Said( 150, 0, 3000 )!;
 			Frame( stack, false, new Vector2( 1000, 100 ), 3.5f );
 			gadget.PutAway = false;
 			Frame( stack, false, new Vector2( 1000, 100 ), 3.6f );
-			Assert.AreEqual( (1, true), (Live( ParkTags.FirstShowEffect ).Length, away.FirstShown), "put away as it was shown: none" );
+			Assert.AreEqual( (2, true), (Live( ParkTags.FirstShowEffect ).Length, away.FirstShown), "put away as it was shown: MessageTag1 as it comes back" );
 
 			// Timer 0x80081: EndOfMessage over the low tag's middle, kept.
 			Frame( stack, false, new Vector2( 1000, 100 ), 25.999f );
@@ -1289,6 +1289,96 @@ public class ParkGadgetPressTests
 			Assert.IsTrue( tags.Open( offer, Time.WallMilliseconds ) );
 			Frame( stack, false, new Vector2( 1000, 100 ), 29.1f + (offer.Row.Life - ParkTags.WarningBeforeTheEnd) / 1000f );
 			Assert.AreNotEqual( -2, offerEnding.Lifetime, "a declining tag's effect kept" );
+		}
+		finally
+		{
+			system.Shutdown();
+			GameClock.Rebase();
+		}
+	}
+
+	private static void InFirstPerson( bool active )
+		=> typeof( ParkCamcorderCameraMode ).GetProperty( nameof( ParkCamcorderCameraMode.Active ) )!.SetValue( null, active );
+
+	/// <summary>
+	/// <b>A tag first shown in first person bursts when first person ends</b> (the gadget is hidden and the park runs; the
+	/// original's 0x11 reaches the tag when its parents are shown again, 0x0065d90b, and 0x0048dfb7 finds property 0xa
+	/// still 0), but a park that is paused as it ends gives none (0x00486b90 asks the paused flag).
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> FirstShown set while the gadget is hidden; started only while not hidden at the tag's own show;
+	/// not gated by the paused flag when the gadget returns.
+	/// </remarks>
+	[TestMethod]
+	public void ATagShownInFirstPersonBurstsAsFirstPersonEnds()
+	{
+		var (stack, gadget) = AGadget();
+		var tags = gadget.Tags = new ParkTags( ParkTags.Rows );
+		var system = new ParticleSystem( "Particle/Tp2.plb", 1000 );
+
+		try
+		{
+			Emitter[] Live() => system.Emitters.Where( emitter => emitter.Active && emitter.Effect == ParkTags.FirstShowEffect && emitter.Generation != 0 ).ToArray();
+
+			Frame( stack, false, new Vector2( 1000, 100 ), 1.0f );
+			InFirstPerson( true );
+			var inside = tags.Said( 68, 13, 1000 )!;
+			Frame( stack, false, new Vector2( 1000, 100 ), 1.6f );
+			Frame( stack, false, new Vector2( 1000, 100 ), 1.7f );
+			Assert.IsFalse( GameClock.Paused );
+			Assert.AreEqual( (true, 0, false), (inside.ShownAt( 1700 ), Live().Length, inside.Showing), "in first person: the tag is up on the mast, none drawn, none started" );
+
+			InFirstPerson( false );
+			Frame( stack, false, new Vector2( 1000, 100 ), 1.8f );
+			Frame( stack, false, new Vector2( 1000, 100 ), 1.9f );
+			Assert.AreEqual( (1, true, true), (Live().Length, inside.FirstShown, inside.Showing), "MessageTag1 as the gadget comes back" );
+
+			// The same with the park paused as first person ends: refused, and not owed after.
+			InFirstPerson( true );
+			var paused = tags.Said( 72, 14, 2000 )!;
+			Frame( stack, false, new Vector2( 1000, 100 ), 2.6f );
+			GameClock.Update( true, GameClock.ParkCatchUp );
+			InFirstPerson( false );
+			Frame( stack, false, new Vector2( 1000, 100 ), 2.7f );
+			GameClock.Rebase();
+			Frame( stack, false, new Vector2( 1000, 100 ), 2.8f );
+			Assert.AreEqual( (1, true), (Live().Length, paused.FirstShown), "paused as it came back: no MessageTag1" );
+		}
+		finally
+		{
+			InFirstPerson( false );
+			system.Shutdown();
+			GameClock.Rebase();
+		}
+	}
+
+	/// <summary>
+	/// <b>A tag taken off between 24.5 and 25 s still gets its EndOfMessage, started hidden</b> (the right click clears the
+	/// tag's flag and leaves its timers, 0x0048e08a; the handler of timer 0x80081 hides at once where the tag and its
+	/// parents are not shown, 0x0048de3c).
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the hide at the start removed (<c>if ( !onScreen ) particles?.Hide( tag.Ending, true )</c>).
+	/// </remarks>
+	[TestMethod]
+	public void ATagTakenOffJustBeforeTheWarningStartsItsEndingHidden()
+	{
+		var (stack, gadget) = AGadget();
+		var tags = gadget.Tags = new ParkTags( ParkTags.Rows );
+		var system = new ParticleSystem( "Particle/Tp2.plb", 1000 );
+
+		try
+		{
+			Frame( stack, false, new Vector2( 1000, 100 ), 1.0f );
+			var tag = tags.Said( 68, 13, 1000 )!;
+			Frame( stack, false, new Vector2( 1000, 100 ), 1.6f );
+			var due = 1000 + tag.Row.Life - ParkTags.WarningBeforeTheEnd;
+
+			tags.Hide( tag, due - 200 );
+			Frame( stack, false, new Vector2( 1000, 100 ), (due - 200) / 1000f );
+			Frame( stack, false, new Vector2( 1000, 100 ), due / 1000f );
+			Assert.IsTrue( system.TryEmitter( tag.Ending, out var ending ), "EndOfMessage started at the warning" );
+			Assert.IsTrue( ending.Hidden, "hidden at once: the tag is off the mast" );
 		}
 		finally
 		{

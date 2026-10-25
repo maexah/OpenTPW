@@ -1361,8 +1361,11 @@ internal sealed class ParkGadget : UiWindow
 
 	/// <summary>
 	/// The tags' showing and their two effects (FUN_0048dae0), each frame. A tag is shown half a second after it is put
-	/// on (the mast's message 6), and its first show starts MessageTag1 over its middle, unless the park is paused or the
-	/// gadget is hidden or put away (FUN_00486b90 asks the tag and every parent shown, and the paused flag). As timer
+	/// on (the mast's message 6). The tag counts as shown only where the gadget is too (FUN_0065d773 asks the tag and
+	/// every parent), so a tag whose half second ends while the gadget is hidden or put away is first shown, and starts
+	/// MessageTag1 over its middle, as the gadget comes back (the original's 0x11 reaches it then, FUN_0065d90b; the map's
+	/// and the options screen's closers resume the park before they show the layer, and ours has the clock unpaused in
+	/// the frame after the window goes), unless the park is paused (FUN_00486b90 asks the paused flag). As timer
 	/// 0x80081 comes, EndOfMessage is started over its middle and kept, hidden at once where the tag is not shown; it is
 	/// hidden and shown with the tag (message 0x11), moved with it as a tag below goes (message 0x13, which only a move
 	/// sends, not a squash or the swell), and killed as the tag is opened with its timers stopped (FUN_0048d9c0) or taken
@@ -1377,25 +1380,32 @@ internal sealed class ParkGadget : UiWindow
 		{
 			var tag = tags.Standing[i];
 			var control = _tagControls[i];
+			// Deviation (cosmetic, at most 6 px): the middle is the rest rectangle's; the original reads the control's
+			// rectangle as it stands (0x0065d42e at 0x00486be0, 0x0048ddb7, 0x0048df26), a playing squash's offsets
+			// included, so its effect can stand up to 6 px lower than the tag's middle after a squash.
 			var middle = EffectMiddle( _tagRects[i] );
 			var shown = tag.ShownAt( now );
+			var onScreen = shown && !HiddenNow && !PutAway;
 
-			if ( shown != tag.Showing )
+			if ( onScreen != tag.Showing )
 			{
-				tag.Showing = shown;
+				tag.Showing = onScreen;
 
-				if ( shown && !tag.FirstShown )
+				if ( onScreen && !tag.FirstShown )
 				{
 					tag.FirstShown = true;
-					var started = !GameClock.Paused && !Hidden && !PutAway
+					var started = !GameClock.Paused
 						? StartTagEffect( particles, ParkTags.FirstShowEffect, middle, control ) : 0;
 					Log.Info( $"Park gadget: tag {tag.Row.Id} shown at age {now - tag.Born}, effect 0x5a at {middle.X},{middle.Z} handle {started:x}" );
 				}
 
+				// Deviation (cosmetic, practically unseen): the original tests a handle as a signed number before it hides,
+				// shows, moves or kills it (0x0048da18, 0x0048dbf7, 0x0048df02, 0x0048dfdc, 0x0048e011), so one whose
+				// generation is 0x8000 or more is left alone; ours tests IsLive (generations to 0xffff).
 				if ( particles?.IsLive( tag.Ending ) == true )
 				{
-					particles.Hide( tag.Ending, !shown );
-					Log.Info( $"Park gadget: tag {tag.Row.Id} effect 0x5b {(shown ? "shown" : "hidden")} at age {now - tag.Born}" );
+					particles.Hide( tag.Ending, !onScreen );
+					Log.Info( $"Park gadget: tag {tag.Row.Id} effect 0x5b {(onScreen ? "shown" : "hidden")} at age {now - tag.Born}" );
 				}
 			}
 
@@ -1410,10 +1420,10 @@ internal sealed class ParkGadget : UiWindow
 					tag.Ending = StartTagEffect( particles, ParkTags.EndingEffect, middle, control );
 					tag.EndingAt = middle;
 
-					if ( !shown )
+					if ( !onScreen )
 						particles?.Hide( tag.Ending, true );
 
-					Log.Info( $"Park gadget: tag {tag.Row.Id} effect 0x5b at {middle.X},{middle.Z} handle {tag.Ending:x} at age {now - tag.Born}, shown {(shown ? 1 : 0)}" );
+					Log.Info( $"Park gadget: tag {tag.Row.Id} effect 0x5b at {middle.X},{middle.Z} handle {tag.Ending:x} at age {now - tag.Born}, shown {(onScreen ? 1 : 0)}" );
 				}
 			}
 			else if ( middle != tag.EndingAt && particles?.IsLive( tag.Ending ) == true )
@@ -1622,8 +1632,11 @@ internal sealed class ParkGadget : UiWindow
 		//
 		// Both conditions belong in ONE assignment: written as two, one after the other, the second
 		// silently overwrites the first - a line that compiles, measures clean and does nothing.
-		Hidden = ParkCamcorderCameraMode.Active || Stack.Windows.Any( window => window is ParkMapScreen );
+		Hidden = HiddenNow;
 	}
+
+	/// <summary>Whether the gadget is to be hidden this frame: first person, or the map up. <see cref="Hidden"/> follows it at the end of <see cref="Update"/>; the tags ask it at once.</summary>
+	private bool HiddenNow => ParkCamcorderCameraMode.Active || Stack.Windows.Any( window => window is ParkMapScreen );
 
 	/// <summary>
 	/// The date the park's calendar has reached.

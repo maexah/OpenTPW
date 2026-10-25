@@ -1144,7 +1144,7 @@ public class ParkLocatorTests
 	/// (<c>FUN_0052f950</c>, mode 4: cursor 7, then 8 under the pass's refusal), as the original's did over (48,31) and over
 	/// the stock Belly Bounce (51,25) (<c>q633/orig/c-run.out</c>, cursor 7 and 8); with the hand empty, the view's own.
 	/// </summary>
-	/// <remarks><b>Mutation:</b> the carry left to the idle pointer, as before (the arrow).</remarks>
+	/// <remarks><b>Mutations:</b> the carry left to the idle pointer, as before (the arrow); the Cash branch of <c>CarryCursor</c> removed.</remarks>
 	[TestMethod]
 	public void ACarriedThingWearsThePlacePointer()
 	{
@@ -1162,6 +1162,15 @@ public class ParkLocatorTests
 			ParkPicking.Pinned = (51, 25);
 			ParkPicking.Update();
 			Assert.AreEqual( Input.CursorTypes.NoGo, level.WantedCursor(), "over the stock Belly Bounce" );
+
+			// A move can be dearer than the balance (the buy list lets nothing dearer into the hand): the squares go red for
+			// the money, over bare ground too, and the pointer is c_cash, cursor 0x14 (FUN_0052f950's tail, 0x0052fa06).
+			var state = level.ParkState!;
+			ParkPicking.Pinned = (48, 31);
+			ParkPicking.Update();
+			state.Spend( state.Balance );
+			Assert.IsTrue( ParkBuilding.CarriedUnaffordable(), "the thing in the hand costs more than the park has" );
+			Assert.AreEqual( Input.CursorTypes.Cash, level.WantedCursor(), "refused for money over bare ground" );
 
 			ParkHand.LetGo();
 			Assert.AreNotEqual( Input.CursorTypes.Place, level.WantedCursor(), "the hand empty" );
