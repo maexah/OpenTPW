@@ -10401,6 +10401,27 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   **Done (2026-10-26, `ProceduralFloor`):** the stock park blends 40 + 4 = 44 cells with the original's words, the
   tables of 41 of 41 Lost Kingdom item models equal the running original's, and at the Belly Bounce floor-only boxes read
   1.82 and 1.58 times the ground against the original's 1.55 and 1.19 at 32 (`q649/PREDICTION.txt`).
+- [x] **Q652. The terrain model's meshes half lit on land outside the park, and the water drawn unlit.** From Q619
+  (`park-engine.md`, "The terrain model's meshes on that land are half lit too" and "The water is drawn unlit, not half
+  lit"). Give each `base.md2` mesh vertex whose cell carries the half light its normal at 0.225 long (1.0 elsewhere, the
+  cell `x * 0.1f`, `z * 0.1f` of the posed vertex truncated as the engine does (`__ftol`; the float 0.1f in x87
+  precision, so a vertex at x in (-10, 0) is cell 0, on the field), left alone off the field), the ambient untouched, so the
+  river beds and banks, the cliffs, the volcano and the grass strips read 0.517 of the sun's level face where the
+  ground beside them is halved; and draw a material whose record's last word has `0x1` (`ModelFile.MaterialData.Pad`
+  today) with white for its light, unlit, everywhere it occurs (929 uses in 656 meshes of the game's 847 static models, `lib/matword.py`), not
+  only in the park. Again when Buy Land marks the cells (Q407). Confirm: `q619/side-by-side.png`'s two cameras in both
+  games, the cliff path, the grass strip and plain rock within 0.05 of the original's ratio, the water unchanged, and
+  a census of the vertices made 0.225 (the original's: every normal of `river13` to `river26`, `newcliff01` to `10`,
+  `newcliff11` 34 of 130, `volcanoe` 1,659 of its 1,672; `original/modelnodes.py`). **A choice for the build:** the
+  original's walk (`0x00450b30`) has no zero guard, so the 102 zero-length normals on the field (`volcanoe` 13,
+  `arrival_base` and `depart_base` 7 each, `bridgeend` 64, `bridge_top` 1, `road_rhs`'s `bend01` 10, counted in
+  `base.MD2`) become NaN (0 x inf) in either branch, and stay NaN through Buy Land. What the original's lighter draws
+  for a NaN normal is not read (a live read of those vertices' cache words would settle it). The build reproduces
+  that or keeps the face normal, and says which at the site; a NaN is a deviation if it is not reproduced.
+  **Done 2026-10-26:** `TerrainHalfLight`; 9,307 vertices of 135 meshes at 0.225, every mesh's count the original's
+  (its NaN normals aside: this game keeps its own normal, said at the site); the cliff path, grass strip and rock
+  0.524, 0.522 and 0.51 of main's, 1.12, 1.03 and 1.04 of the original's; the water unlit everywhere, 0.60 without
+  the shader's test (`q652/PREDICTION.txt`, `q652/side-by-side.png`).
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

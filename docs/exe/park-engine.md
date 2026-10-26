@@ -4199,10 +4199,19 @@ camera A the grass went from (29.9, 139.2, 28.6) to (14.9, 69.3, 14.2), 0.498 of
 nothing is halved, and every corner is white (below, Q516). Buy Land is unbuilt
 (Q407); its purchase must make the mask again. Not run in Full Simulation: a fresh park's cells take their `mFlags` from
 `FreshPark` (`0x40` unless a path, `0x80` from attribute `0x10`), which by code follows `FUN_00536490`, so the mask is
-expected to match, and no fresh park was photographed. **The terrain model's meshes are not half lit here**: the
-river, the cliffs, the volcano and the grass strips beside them are drawn at full light over the half-lit ground, so
-they look cut out (Alexah's play test, 2026-10-21, note 39), and the material word's unlit bit is read as padding
-(`ModelFile.MaterialData.Pad`), so the water is lit; both are Q652.
+expected to match, and no fresh park was photographed. **The terrain model's meshes are half lit here too** (Q652):
+`TerrainHalfLight` gives each `base.MD2` vertex, posed by its mesh's `WorldTransform`, the cell `(long)(x × 0.1f)`,
+`(long)(z × 0.1f)` and a normal 0.225 long over a half-lit cell, 1.0 elsewhere on the field, left alone off it, and
+`test.shader`'s lighter, which does not normalise, does the rest. In Lost Kingdom 9,307 vertices of 135 meshes take 0.225
+(the log's `terrain meshes made 0.225 long` line); every one of the 272 meshes' counts is the original's live read
+(`q619/orig/b-nodes.txt`) once its zero-length normals, which it makes NaN, are counted with them (`volcanoe` 13,
+`bridgeend` 64, `bridge_top` 1): this game lights its own loader's normal there, a deviation said at the site. At the
+two cameras above the cliff path, the grass strip and the plain rock read 0.524, 0.522 and 0.51 of main's, 1.12, 1.03
+and 1.04 of the original's like boxes; the ground did not move (`q652/side-by-side.png`, `q652/PREDICTION.txt`). A
+material whose word has `0x1` (`ModelFile.MaterialData.IsUnlit`) carries `LobbyModel.UnlitFlag`, and `test.shader`
+draws it white in every model draw, park and lobby alike. The water, see-through, reads darker than main's where its
+bed is half lit (0.87 at one box; over the whole river 83.7 against the original's 75.1, main's 91.1); with the shader's
+unlit test taken out the same box falls to 0.60. Buy Land (Q407) must make the normals again.
 
 **The brown patches are the procedural compositor's.** `FUN_0056f380` gives every visible cell inside the box at the
 terrain object's words `0x8d` to `0x90` a composited tile when `[0x008bd550]` bit 4 is set (the compositor ready,

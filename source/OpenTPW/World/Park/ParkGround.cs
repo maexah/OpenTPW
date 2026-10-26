@@ -70,6 +70,9 @@ public sealed class ParkGround : ModelEntity
 	/// </summary>
 	private bool[]? _halfLight;
 
+	/// <summary>The ground cells drawn at half light, by <c>y * CellsX + x</c>, or null where none is: the terrain model's meshes read it (<see cref="TerrainHalfLight"/>).</summary>
+	internal bool[]? HalfLitMask => _halfLight;
+
 	/// <summary>
 	/// The procedural ground's tiles, every cell of the box in one texture, or null where the detail file turns the
 	/// compositor off or the park has no <c>base.lnd</c>: every cell then draws its own texture.

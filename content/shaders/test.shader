@@ -213,6 +213,11 @@ fragment {
     // the interface keep the sampler their caller bound.
     const uint FLAG_CLAMP = 0x20000;
 
+    // Not from the file's flag word: set by LobbyModel where the material record's last word has 0x1 (LobbyModel.UnlitFlag).
+    // The original gives such a material's vertices the channel mask, white, in place of their lit colours, so its
+    // texture is drawn at its own brightness whatever the light (DrawList_AddMaterialFaces 0x00580530): the water.
+    const uint FLAG_UNLIT = 0x80000;
+
     vec4 SampleColor(texture2D colour, vec2 uv)
     {
         if ((outMatFlags & FLAG_CLAMP) != 0)
@@ -271,6 +276,8 @@ fragment {
         if ( texIndex == 31 ) vTextureSample = SampleColor(Color31, finalTexCoords);
 
         vec3 vShading = g_oUbo.g_flParkLight > 0.5 ? vParkLight : vDiffuse + vAmbient;
+        if ((outMatFlags & FLAG_UNLIT) != 0)
+            vShading = vec3(1.0);
         vec3 vOutColor = vTextureSample.xyz * vShading;
 
         // A see-through material keeps its texture's alpha; anything else is solid.

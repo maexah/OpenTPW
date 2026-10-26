@@ -5,6 +5,11 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q649 (a built thing's floor blended into the ground's tiles): this game on the desk at 1280 x 720 (`q649/run2`, the
+  final build), the original off-screen at 32-pixel tiles (`q649/orig`), both at the Belly Bounce (525,240) 110 180.
+  Not seen in the running game: a thing turned 180 or 270 bigger than one cell (none stands so in the stock park; the
+  stamp's walk is the listing's, `ProceduralFloorTests`), the faithful 16-pixel tiles, and the other three themes.
+  The bought Drinks Shop was seen in this game alone, not beside the original's.
 - Q656 (a fresh park's boundary wall): this game on the desk at 1280 x 720 (`q656/run1`), the original off-screen by
   `freshfs.sh` (`q656/orig`), both at the cameras (450,165) and (600,100), 110, 180. Not seen: the left of the gate in the
   original (its 4:3 frame cuts it off at that camera; its file holds it). Not built: how often the original's laying

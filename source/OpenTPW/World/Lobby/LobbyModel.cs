@@ -171,13 +171,18 @@ public sealed class LobbyModel : IChannelPosed
 	/// thing's floor blended into the ground's tiles (<see cref="ProceduralFloor"/>), each the model's own, as the
 	/// original's model keeps its own frame table. Null for none.
 	/// </param>
+	/// <param name="vertexNormals">
+	/// The normal each mesh's vertex is lit by, given the mesh and the vertex, in place of the loader's: the terrain's
+	/// meshes on land outside the park (<see cref="TerrainHalfLight"/>). Null for the loader's own.
+	/// </param>
 	public LobbyModel( string modelPath, string textureDirectory, Vector3 origin, float scale = 1f,
 		IReadOnlyDictionary<string, Texture>? textureOverrides = null,
 		MaterialFlags materialFlags = MaterialFlags.None,
 		string? sharedTextureDirectory = null,
 		IReadOnlyList<AnimationFile>? clips = null,
 		Func<ModelFile, IReadOnlySet<uint>>? opaqueFrames = null,
-		Func<ModelFile, IReadOnlyDictionary<uint, Texture>>? frameTextures = null )
+		Func<ModelFile, IReadOnlyDictionary<uint, Texture>>? frameTextures = null,
+		Func<ModelFile.Mesh, int, Vector3>? vertexNormals = null )
 	{
 		var modelFile = new ModelFile( modelPath );
 		_file = modelFile;
@@ -232,7 +237,7 @@ public sealed class LobbyModel : IChannelPosed
 				vertices.Add( new Vertex()
 				{
 					Position = new Vector3( mesh.Vertices[i].Position.X, mesh.Vertices[i].Position.Z, mesh.Vertices[i].Position.Y ),
-					Normal = mesh.Normals[i],
+					Normal = vertexNormals?.Invoke( mesh, i ) ?? mesh.Normals[i],
 					TexCoords = mesh.TexCoords[i],
 					TexIndex = (int)mesh.Vertices[i].TextureIndex,
 					MatFlags = MaterialFlagsFor( mesh, textures, substituted, (int)mesh.Vertices[i].TextureIndex, opaque, wrapping )
@@ -982,6 +987,13 @@ public sealed class LobbyModel : IChannelPosed
 	internal const uint ClampFlag = 0x20000;
 
 	/// <summary>
+	/// Marks a vertex drawn white, its texture at its own brightness, whatever the light: its material is unlit
+	/// (<see cref="ModelFile.MaterialData.IsUnlit"/>, <c>DrawList_AddMaterialFaces</c> <c>0x00580530</c>). Must match
+	/// FLAG_UNLIT in content/shaders/test.shader; a high bit of ours, as <see cref="CutOutAlphaFlag"/> is.
+	/// </summary>
+	internal const uint UnlitFlag = 0x80000;
+
+	/// <summary>
 	/// A frame's wrap bits: <c>0x10</c> ORs <c>0x10000</c> into each of its textures' flags, <c>0x20</c>
 	/// <c>0x20000</c> (<c>FUN_00575e10</c>), and either one sets the stage's ADDRESS to WRAP where every other
 	/// texture is CLAMPed (<c>FUN_00581790</c>, <c>0x005678cf</c>; docs/exe/render-states.md).
@@ -1079,13 +1091,17 @@ public sealed class LobbyModel : IChannelPosed
 
 	/// <summary>
 	/// The flag word a vertex carries: what the file gave its material with the see-through bit taken from
-	/// <see cref="SeeThrough"/>, plus <see cref="CutOutAlphaFlag"/> where its texture's alpha is not graded and
-	/// <see cref="ClampFlag"/> where its texture does not wrap (<see cref="Wraps"/>).
+	/// <see cref="SeeThrough"/>, plus <see cref="CutOutAlphaFlag"/> where its texture's alpha is not graded,
+	/// <see cref="ClampFlag"/> where its texture does not wrap (<see cref="Wraps"/>) and <see cref="UnlitFlag"/> where the
+	/// material is drawn unlit.
 	/// </summary>
 	internal static uint MaterialFlagsFor( ModelFile.Mesh mesh, List<Texture> textures, bool[] substituted,
 		int material, IReadOnlySet<uint>? opaque = null, IReadOnlySet<uint>? wrapping = null )
 	{
 		var flags = mesh.Materials[material].Flags & ~TranslucentFlag;
+
+		if ( mesh.Materials[material].IsUnlit )
+			flags |= UnlitFlag;
 
 		if ( !Wraps( mesh.Materials[material], wrapping ?? NoFrames ) )
 			flags |= ClampFlag;

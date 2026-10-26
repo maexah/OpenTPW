@@ -283,7 +283,18 @@ public partial class ModelFile : BaseFormat
 		public ushort b;
 		public ushort StartIndex;
 		public ushort EndIndex;
-		public uint Pad;
+
+		/// <summary>
+		/// The record's last word (+0x0C): 0 or 1 in every shipped model. Bit <c>0x1</c> draws the material unlit
+		/// (<see cref="IsUnlit"/>; FileFormats <c>models.md</c>, "Materials").
+		/// </summary>
+		public uint Word;
+
+		/// <summary>
+		/// Whether the engine draws this material's vertices white, its texture at its own brightness, rather than with
+		/// their lit colours: <see cref="Word"/>'s bit <c>0x1</c> (<c>DrawList_AddMaterialFaces</c>, <c>0x00580530</c>).
+		/// </summary>
+		public bool IsUnlit => (Word & 0x1) != 0;
 
 		public string Name;
 
@@ -452,7 +463,7 @@ public partial class ModelFile : BaseFormat
 						b = reader.ReadUInt16(),
 						StartIndex = reader.ReadUInt16(),
 						EndIndex = reader.ReadUInt16(),
-						Pad = reader.ReadUInt32()
+						Word = reader.ReadUInt32()
 					} );
 				}
 

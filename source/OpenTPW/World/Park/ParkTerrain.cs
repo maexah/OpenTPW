@@ -32,6 +32,12 @@ namespace OpenTPW;
 /// bare <c>m</c> clip where no <c>M1</c>, <c>M2</c>... run exists, so those tracks scroll on the park's clock.
 /// Nothing moves the lake, <c>Line01</c>: the moving water over the harbour is <see cref="ParkSea"/>'s.
 /// </para>
+///
+/// <para>
+/// <b>Lit as the original lights it on land outside the park</b>: its vertices over half-lit ground take normals 0.225
+/// long (<see cref="TerrainHalfLight"/>), and its unlit materials, the water's, are drawn white
+/// (<see cref="LobbyModel.UnlitFlag"/>). Buy Land is unbuilt (<c>BUY_LAND_TOOL</c>); its purchase must make the normals again.
+/// </para>
 /// </summary>
 public sealed class ParkTerrain : Entity
 {
@@ -49,7 +55,17 @@ public sealed class ParkTerrain : Entity
 		// as levels/<theme>/terrain/... - the same way lobby.wad gives the lobby its lobby/ paths.
 		var terrain = $"levels/{themeName.ToLowerInvariant()}/terrain";
 
-		_model = new LobbyModel( $"{terrain}/base.MD2", $"{terrain}/textures", Vector3.Zero );
+		// Its meshes on land outside the park are lit by shortened normals, read from the ground's half-light mask; with
+		// GraphicalOptions.LIGHTING 0 there is none and every vertex is drawn white anyway.
+		var halfLight = ParkGround.Current is { HalfLitMask: { } mask } ground
+			? new TerrainHalfLight( mask, ground.Heightfield.CellsX, ground.Heightfield.CellsY )
+			: null;
+
+		_model = new LobbyModel( $"{terrain}/base.MD2", $"{terrain}/textures", Vector3.Zero,
+			vertexNormals: halfLight == null ? null : halfLight.Normal );
+
+		if ( halfLight != null )
+			Log.Info( $"{themeName}: {halfLight.Summary()}" );
 	}
 
 	/// <summary>Game time, not frame time, so the park's scenery holds still while the park is held - see <see cref="GameClock"/>.</summary>

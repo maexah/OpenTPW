@@ -74,23 +74,6 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q652. The terrain model's meshes half lit on land outside the park, and the water drawn unlit.** From Q619
-  (`park-engine.md`, "The terrain model's meshes on that land are half lit too" and "The water is drawn unlit, not half
-  lit"). Give each `base.md2` mesh vertex whose cell carries the half light its normal at 0.225 long (1.0 elsewhere, the
-  cell `x * 0.1f`, `z * 0.1f` of the posed vertex truncated as the engine does (`__ftol`; the float 0.1f in x87
-  precision, so a vertex at x in (-10, 0) is cell 0, on the field), left alone off the field), the ambient untouched, so the
-  river beds and banks, the cliffs, the volcano and the grass strips read 0.517 of the sun's level face where the
-  ground beside them is halved; and draw a material whose record's last word has `0x1` (`ModelFile.MaterialData.Pad`
-  today) with white for its light, unlit, everywhere it occurs (929 uses in 656 meshes of the game's 847 static models, `lib/matword.py`), not
-  only in the park. Again when Buy Land marks the cells (Q407). Confirm: `q619/side-by-side.png`'s two cameras in both
-  games, the cliff path, the grass strip and plain rock within 0.05 of the original's ratio, the water unchanged, and
-  a census of the vertices made 0.225 (the original's: every normal of `river13` to `river26`, `newcliff01` to `10`,
-  `newcliff11` 34 of 130, `volcanoe` 1,659 of its 1,672; `original/modelnodes.py`). **A choice for the build:** the
-  original's walk (`0x00450b30`) has no zero guard, so the 102 zero-length normals on the field (`volcanoe` 13,
-  `arrival_base` and `depart_base` 7 each, `bridgeend` 64, `bridge_top` 1, `road_rhs`'s `bend01` 10, counted in
-  `base.MD2`) become NaN (0 x inf) in either branch, and stay NaN through Buy Land. What the original's lighter draws
-  for a NaN normal is not read (a live read of those vertices' cache words would settle it). The build reproduces
-  that or keeps the face normal, and says which at the site; a NaN is a deviation if it is not reproduced.
 - [ ] **Q657. Light the advisor as the original does (Q621's build).** `ui.md`, "How he is lit": per vertex, the
   theme's `AmbientLightLevel` plus 2 x max(0, -(d.n)) of white, d the record light's (26.667, -26.667, 800) taken into
   his model's space (the file's axes; `AdvisorModel`'s world has Y and Z swapped), each channel clamped to 1 and
@@ -1271,8 +1254,11 @@ filed the items that cite it.
 
 - [ ] **Q401. Self-lit materials.** From the fork review 2, 2026-10-16 (`verify-formats.md` M3). A material whose word
   `+0xC` carries `0x1` (tested at `0x00580c51`) gives every vertex the colour mask itself, white in play, in place of
-  its lit colour: 929 of 12,960 materials, on signs, water, fire and lava. Nothing here reads it. Confirm: a sign and
-  the waterfall shot beside the original's.
+  its lit colour: 929 of 12,960 materials, on signs, water, fire and lava. Read and drawn since Q652
+  (`ModelFile.MaterialData.IsUnlit`, `LobbyModel.UnlitFlag`, `test.shader`'s `FLAG_UNLIT`), confirmed on the river's
+  water alone. Confirm: a sign and the waterfall shot beside the original's. Seen at Q652: the bridge's waterfall
+  curtain (`falls02`, `watersource`) is solid bright cyan here and faint and foamy in the original's frame
+  (`q652/side-by-side.png`, top row), in main too; its texture's frames are Q400's question.
 
 - [ ] **Q402. A refused purchase makes the original's error sound.** From the fork review 2, 2026-10-16
   (`verify-audio-lips-video.md` lead 5). The original plays `cat_ui` `0x1D` when the buy screen refuses a row
@@ -2640,7 +2626,8 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   cells inside; the purchase `0x005327e0` places the hoardings and clears the flag inside (`0x005311c0`); the debit is
   `0x004d01f0`. Confirm: a rectangle bought, beside the original. The purchase also re-marks the ground's half light
   (`Terrain_MarkLandOutsidePark` at `0x005328c3`; Q482): make `ParkGround`'s mask again, and confirm a bought cell's
-  light doubling; it also sets the terrain meshes' normals over the bought cells back to 1.0 (Q619, built by Q652).
+  light doubling; it also sets the terrain meshes' normals over the bought cells back to 1.0 (Q619; `TerrainHalfLight`, Q652: the
+  terrain's model made again with the new mask).
 
 - [ ] **Q408. TOUR rides: Jurassic Tours.** From the fork review 2, 2026-10-16 (`verify-tours-advisor-rse.md` L1-L6).
   `tourride` (Id 1170), Lost Kingdom's golden-ticket ride, Full Simulation only (no `Easy_` `.sam`), runs 19 TOUR
