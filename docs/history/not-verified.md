@@ -5,6 +5,14 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q657 (the advisor lit as the original): this game on the desk at 1280 x 720 (`q657/run3`, the final build: the lobby's
+  `greet` and four park lines, the census line `lit: ambient 0.333 0.333 0.408 strength 2; ... Hardhat: 188 vertices, r
+  85/255/153.0`), the original off-screen (`q657/orig/rO`: the lobby's read, the breakpoint on `0x10000`) and Q621's
+  frames. Not seen: the theme fly's own gesture line (this game's `sayas` has no row 41; its 434 plays the ticket's
+  clips, so the helmet's band was measured mid-squash), the other three themes' advisors, low quality's `LIGHTING` 0
+  on him, a 4:3 window; a frame's median of a moving part follows his pose, so the pose-free census stands for it.
+  Three wirings are confirmed by the run alone, no test catching them (`q657/mutate.log`): the park's light handed
+  to him, the records counted, and the draw given the file's normals (`q657/side-by-side.png`).
 - Q652 (the terrain model's meshes half lit outside the park, the water unlit): this game on the desk at 1280 x 720
   (`q652/run1`, the census line `9307 vertices of 271 terrain meshes made 0.225 long`), main as the before
   (`q652/run0-main`), the original off-screen (`q652/orig`), both at (500,500) and (700,640) 130 rot 90. Not seen in

@@ -165,8 +165,8 @@ public sealed class RideNodes
 	/// <summary>The node tree as the thing's players last posed it (<see cref="Follow"/>); null until it is followed.</summary>
 	private NodePoser? _carrier;
 
-	/// <summary>The clip each of the players' channels was last posed from, so a change of clip puts back what it moved.</summary>
-	private AnimationFile?[] _carriedClips = [];
+	/// <summary>The clip each of the players' channels was last posed from, so a new start puts back what it moved.</summary>
+	private RideAnimations.Posed[] _carriedClips = [];
 
 	/// <summary>
 	/// Poses the node tree as the thing's drawn model is posed (<see cref="ParkObjects.Sweep"/>): every channel's clip at
@@ -195,7 +195,7 @@ public sealed class RideNodes
 
 		Array.Clear( _routed );
 
-		foreach ( var clip in _carriedClips )
+		foreach ( var (clip, _) in _carriedClips )
 		{
 			foreach ( var track in clip?.PathTracks ?? [] )
 			{

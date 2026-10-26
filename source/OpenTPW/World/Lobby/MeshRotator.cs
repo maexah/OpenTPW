@@ -219,7 +219,7 @@ public class MeshRotator
 	/// </para>
 	///
 	/// <para>
-	/// Which meshes the change shows and hides is not this class's: <see cref="LobbyModel.ShownAtChange"/>.
+	/// Which meshes the change shows and hides is not this class's: <see cref="LobbyModel.ShownAtRest"/> and <see cref="LobbyModel.HiddenAtBind"/>.
 	/// </para>
 	/// </summary>
 	public void Rest( AnimationFile outgoing )

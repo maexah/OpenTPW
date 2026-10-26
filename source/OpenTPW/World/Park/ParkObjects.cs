@@ -78,11 +78,11 @@ public sealed class ParkObjects : Entity
 		public int CatalogueId { get; } = catalogueId;
 
 		/// <summary>
-		/// The clip posed last on each channel, so a change of clip can put back what the one before it
-		/// moved. One entry per player, because a sideshow runs a lane on each and each lane changes clip
+		/// The clip posed last on each channel and the start that bound it, so a new start can put back what the
+		/// one before it moved. One entry per player, because a sideshow runs a lane on each and each lane changes clip
 		/// independently - a single slot here would make lane three's trigger undo lane one's pose.
 		/// </summary>
-		public AnimationFile?[] Posed { get; } = new AnimationFile?[animations.ChannelCount];
+		public RideAnimations.Posed[] Posed { get; } = new RideAnimations.Posed[animations.ChannelCount];
 	}
 
 	private readonly Dictionary<int, Standing> _standing = [];

@@ -71,7 +71,7 @@ public class ParkBuildClipTests
 		Assert.AreEqual( (0, 0, 0f, 0x2), (channel.AnimID, channel.SubAnim, channel.AnimFrame, channel.Flags & 0x6), "role 0 entry 0, frozen" );
 
 		var posed = new Posed();
-		animations.PoseOnto( posed, new AnimationFile?[animations.ChannelCount] );
+		animations.PoseOnto( posed, new RideAnimations.Posed[animations.ChannelCount] );
 		Assert.AreEqual( 1, posed.Poses.Count );
 		var (clip, frame) = posed.Poses[0];
 		Assert.AreSame( animations.Clip( 0, 0 ), clip, "fountainc" );

@@ -178,17 +178,7 @@ public class LobbyModelVisibilityTests
 
 		try
 		{
-			var model = (LobbyModel)RuntimeHelpers.GetUninitializedObject( typeof( LobbyModel ) );
-			const BindingFlags any = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
-
-			void Set( string field, object value ) => typeof( LobbyModel ).GetField( field, any )!.SetValue( model, value );
-
-			Set( "_file", file );
-			Set( "<Entities>k__BackingField", entities );
-			Set( "<Offsets>k__BackingField", new OpenTPW.Vector3[meshes] );
-			Set( "<Animators>k__BackingField", new MeshAnimator[0] );
-			Set( "_nodeParents", file.Nodes.Select( node => node.ParentIndex ).ToArray() );
-			Set( "_placedRotation", System.Numerics.Quaternion.Identity );
+			var model = Bare( file, entities );
 
 			foreach ( var track in takeOff.VisibilityTracks )
 				model.SetMeshVisible( track.TargetIndex, track.VisibleAt( takeOff.LastFrame ) != false );
@@ -199,6 +189,57 @@ public class LobbyModelVisibilityTests
 
 			Assert.IsTrue( Enumerable.Range( 0, 5 ).All( mesh => entities[mesh].Opacity == 1f ),
 				string.Join( " ", entities.Select( entity => entity.Opacity ) ) );
+		}
+		finally
+		{
+			foreach ( var entity in entities )
+				entity.Delete();
+		}
+	}
+	/// <summary>A drawn model without its graphics (<see cref="RuntimeHelpers.GetUninitializedObject"/>), with only the fields <c>Rest</c> and <c>Hide</c> read.</summary>
+	private static LobbyModel Bare( ModelFile file, ModelEntity[] entities )
+	{
+		var model = (LobbyModel)RuntimeHelpers.GetUninitializedObject( typeof( LobbyModel ) );
+		const BindingFlags any = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
+
+		void Set( string field, object value ) => typeof( LobbyModel ).GetField( field, any )!.SetValue( model, value );
+
+		Set( "_file", file );
+		Set( "<Entities>k__BackingField", entities );
+		Set( "<Offsets>k__BackingField", new OpenTPW.Vector3[file.Meshes.Count] );
+		Set( "<Animators>k__BackingField", new MeshAnimator[0] );
+		Set( "_nodeParents", file.Nodes.Select( node => node.ParentIndex ).ToArray() );
+		Set( "_placedRotation", System.Numerics.Quaternion.Identity );
+
+		return model;
+	}
+
+	/// <summary>
+	/// <see cref="LobbyModel.Hide"/> puts a bound clip's list away on the drawn meshes and <see cref="LobbyModel.Rest"/> only
+	/// shows: the Fries Shop's construction hides its mesh 10, <c>chip08</c>, alone; put back over itself it shows the chip
+	/// again until the bind hides it.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> <c>Rest</c> hiding the incoming clip's list too; <c>Hide</c> showing what it should hide.</remarks>
+	[TestMethod]
+	public void HideAndRestPutTheFriesShopsChipAwayAndBack()
+	{
+		const string at = "levels/jungle/shops/fries";
+		var build = Clip( $"{at}/friesc.md2" );
+
+		using var stream = new MemoryStream( data.ReadAllBytes( $"{at}/fries.md2" ) );
+		var file = new ModelFile( stream );
+		var entities = Enumerable.Range( 0, file.Meshes.Count ).Select( _ => new ModelEntity() ).ToArray();
+
+		try
+		{
+			var model = Bare( file, entities );
+			int[] Hidden() => [.. Enumerable.Range( 0, entities.Length ).Where( mesh => entities[mesh].Opacity == 0f )];
+
+			model.Hide( build );
+			CollectionAssert.AreEqual( new[] { 10 }, Hidden(), "bound" );
+
+			model.Rest( build, build );
+			CollectionAssert.AreEqual( new int[0], Hidden(), "put back over itself" );
 		}
 		finally
 		{

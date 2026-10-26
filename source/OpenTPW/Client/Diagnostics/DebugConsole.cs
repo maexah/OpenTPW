@@ -2610,6 +2610,27 @@ public static class DebugConsole
 				foreach ( var boundaryLine in boundary.Census( near ) ) Reply( boundaryLine );
 				break;
 
+			// `meshes THING`: which of a standing thing's drawn meshes are put away, by index and name, and what its
+			// channel 0 plays and the start that bound it.
+			case "meshes":
+				if ( parts.Length < 2 || !int.TryParse( parts[1], out var meshesThing ) || ParkObjects.Current?.ModelFor( meshesThing ) is not { } meshesModel )
+				{
+					Reply( "meshes: a standing thing's id is wanted" );
+					break;
+				}
+
+				var putAway = meshesModel.Source.Meshes
+					.Select( ( mesh, index ) => (Name: mesh.Name.TrimEnd( '\0' ), Index: index) )
+					.Where( mesh => meshesModel.Entities[mesh.Index].Opacity <= 0f )
+					.Select( mesh => $"{mesh.Index} {mesh.Name}" );
+				var meshesPlayers = ParkRides.Current?.Scheduler.Scripts.FirstOrDefault( script => script.ThingId == meshesThing )?.Animations;
+				var meshesChannel = meshesPlayers?.Channel( 0 );
+
+				Reply( $"meshes {meshesThing}: {meshesModel.Entities.Length} meshes, hidden [{string.Join( ", ", putAway )}]; channel 0 "
+					+ (meshesChannel is null ? "none" : $"role {meshesChannel.AnimID} entry {meshesChannel.SubAnim} frame {meshesChannel.AnimFrame:F1} "
+						+ $"flags 0x{meshesChannel.Flags:x}, bound {meshesPlayers!.BoundOn( 0 )}") );
+				break;
+
 			// What is standing in the park NOW, which is the save's list plus what has been built and
 			// minus what has been sold - the census that says whether buying actually changed anything.
 			case "objects":

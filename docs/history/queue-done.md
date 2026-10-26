@@ -10439,6 +10439,20 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   normals are the file's `+0x64` table entry for entry (43 meshes). Built (`AdvisorModel.VertexLight`, `LightFor`,
   `FileNormal`): the census's hard hat mean 153.0 against the original's 153.0 to 155.9, the lobby's head
   230/255/254.4 as the original's (`q657/PREDICTION.txt`, `q657/side-by-side.png`). The rest of the models: Q681.
+- [x] **Q658. A clip started on an idle channel hides its hide list.** From Q622. The original's bind hides a clip's hide
+  list at every start without the caller's `0x8` (`FUN_00472d70` at `0x00473117`); the drawn model here applies it only
+  at a change of clip (`LobbyModel.ShownAtChange`), so a start on an idle channel counts `CLIP_HIDE_LIST_ON_IDLE_CHANNEL`
+  (three in q622's run-F3: the seaplane's first landing, a bought Crazy Ape's and a bought Loudspeaker's builds, whose
+  lists name no mesh). In Lost
+  Kingdom the one mesh it would hide is a bought Fries Shop's mesh 10 in its construction (`lib/cliphide.py`, Q622's
+  `hidemeshes.py`). Build it where the start is known (`RideAnimations.StartOn`) and the drawn model reached; also carry
+  the start's `0x4`/`0x8` to the rest, which the engine skips on them (`park.md`, "The per-clip hide list"). Confirm:
+  a Fries Shop bought, its build filmed in both games.
+  **Done (2026-10-26, alexah/732):** every start of a clip binds it per channel with its caller's flags
+  (`RideAnimations.Bind`), and the drawn model puts back unless `0x4|0x8` and hides unless `0x8`, idle or not
+  (`PoseChannel`, `LobbyModel.Hide`); `CLIP_HIDE_LIST_ON_IDLE_CHANNEL` is gone. A bought Fries Shop: `hidden [10 chip08]`
+  here, `chip08` `0x41000111` in the original, seven chips in both (`q658/`, 7 held 1 missed). Tests 4019 / 1455 run
+  without the game; mutate 13 of 13.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

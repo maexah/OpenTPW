@@ -339,7 +339,7 @@ public class RideNodesTests
 		var players = RideAnimations.Load( End, "end", _data, 1 );
 		var nodes = RideNodes.Load( End, "end", _data, false, players.AllClips )!;
 		var drawn = new Drawn( nodes.Model );
-		var posed = new AnimationFile?[1];
+		var posed = new RideAnimations.Posed[1];
 
 		nodes.PlaceFixed();
 

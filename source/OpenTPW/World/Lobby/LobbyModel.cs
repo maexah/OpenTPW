@@ -878,20 +878,20 @@ public sealed class LobbyModel : IChannelPosed
 			points[(first + 2) % points.Length], points[(first + 3) % points.Length]);
 
 	/// <summary>
-	/// Puts back what <paramref name="outgoing"/> moved, which the engine does on every role change -
-	/// see <see cref="MeshRotator.Rest"/> for the mask that decides how much of it - and shows and hides meshes as the
-	/// change does (<see cref="ShownAtChange"/>): the seaplane's take-off hides it, and its next landing shows it again.
+	/// Puts back what <paramref name="outgoing"/> moved, which the engine's start does unless its caller passed <c>0x4</c>
+	/// or <c>0x8</c> (<c>FUN_00472f60</c>) - see <see cref="MeshRotator.Rest"/> for the mask that decides how much of it -
+	/// and shows again what the restore shows (<see cref="ShownAtRest"/>): the seaplane's take-off hides it, and its next
+	/// landing shows it again. The incoming clip's hide list is the bind's, <see cref="Hide"/>.
 	/// </summary>
 	/// <param name="incoming">
 	/// The clip about to play, whose own channels the engine leaves as <paramref name="outgoing"/> left them - see
 	/// <see cref="NodePoser.Rest"/>.
 	/// </param>
 	/// <remarks>
-	/// Not the original's in one way: the engine skips the restore where the start passed <c>0x4</c> or <c>0x8</c>, and
-	/// the hide list where it passed <c>0x8</c> (<c>FUN_00472f60</c>; a queued clip's promotion passes it off-screen only,
-	/// <c>0x00473874</c>), and the caller here, <see cref="RideAnimations.PoseChannel"/>, rests at every change of clip, as
-	/// it already does the places, and at no other: the engine also restores at a loop's restart in view
-	/// (<c>0x00473848</c>), where this shows and hides nothing.
+	/// The caller, <see cref="RideAnimations.PoseChannel"/>, rests at a start it has not seen, by the start's flags; a
+	/// queued clip's promotion, which the engine binds with <c>0x8</c> added off the screen (<c>0x00473874</c>), is bound
+	/// here as in view, and a loop's restart, which the engine binds in view (<c>0x00473848</c>), shows and hides nothing
+	/// here (Q661).
 	/// </remarks>
 	public void Rest( AnimationFile outgoing, AnimationFile? incoming = null )
 	{
@@ -902,7 +902,17 @@ public sealed class LobbyModel : IChannelPosed
 
 		RestMeshes( Entities, Offsets, _nodeParents, _poser, _scale, _placedRotation, _placedOrigin, outgoing, incoming );
 
-		foreach ( var (node, visible) in ShownAtChange( outgoing, incoming, node => IsTransformOnly( _file, node ) ) )
+		foreach ( var (node, visible) in ShownAtRest( outgoing, node => IsTransformOnly( _file, node ) ) )
+			SetMeshVisible( node, visible );
+	}
+
+	/// <summary>
+	/// Hides <paramref name="incoming"/>'s hide list, as the engine's start binds it unless its caller passed <c>0x8</c>
+	/// (<c>FUN_00472d70</c>, <c>0x00473117</c>), on an idle channel too: a bought Fries Shop's construction puts its mesh 10 away.
+	/// </summary>
+	public void Hide( AnimationFile incoming )
+	{
+		foreach ( var (node, visible) in HiddenAtBind( incoming, node => IsTransformOnly( _file, node ) ) )
 			SetMeshVisible( node, visible );
 	}
 
@@ -910,22 +920,32 @@ public sealed class LobbyModel : IChannelPosed
 	internal static bool IsTransformOnly( ModelFile file, int node ) => node >= 0 && node < file.Nodes.Count && (file.Nodes[node].Flags & 0x200) != 0;
 
 	/// <summary>
-	/// What a change of clip does to which nodes are hidden, in the order the engine does it (<c>FUN_00472f60</c>): the
-	/// restore shows again every node <paramref name="outgoing"/> has a track of any kind for and every node of its hide
-	/// list (<c>Anim_RestoreOutgoing</c>: the tracks' clear at <c>0x00472486</c>, the list's at <c>0x00472401</c>), then the bind hides every node of
-	/// <paramref name="incoming"/>'s hide list (<c>FUN_00472d70</c>, <c>0x00473117</c>); a transform-only node is
-	/// spared both (<c>docs/exe/park.md</c>, "The per-clip hide list"). Each node with whether it is left shown.
+	/// What a change of clip by an unflagged start does to which nodes are hidden, in the order the engine does it
+	/// (<c>FUN_00472f60</c>): the restore's showing (<see cref="ShownAtRest"/>), then the bind's hiding
+	/// (<see cref="HiddenAtBind"/>). Each node with whether it is left shown.
 	/// </summary>
 	internal static IEnumerable<(int Node, bool Visible)> ShownAtChange( AnimationFile outgoing, AnimationFile? incoming,
 		Func<int, bool> transformOnly )
+		=> ShownAtRest( outgoing, transformOnly ).Concat( incoming is null ? [] : HiddenAtBind( incoming, transformOnly ) );
+
+	/// <summary>
+	/// The restore's showing: every node <paramref name="outgoing"/> has a track of any kind for and every node of its hide
+	/// list is shown again (<c>Anim_RestoreOutgoing</c>: the tracks' clear at <c>0x00472486</c>, the list's at
+	/// <c>0x00472401</c>); a transform-only node is spared (<c>docs/exe/park.md</c>, "The per-clip hide list").
+	/// </summary>
+	internal static IEnumerable<(int Node, bool Visible)> ShownAtRest( AnimationFile outgoing, Func<int, bool> transformOnly )
 	{
 		foreach ( var node in outgoing.Tracks.Select( track => track.Node ).Concat( outgoing.HideList.Select( node => (int)node ) ) )
 		{
 			if ( !transformOnly( node ) )
 				yield return (node, true);
 		}
+	}
 
-		foreach ( int node in incoming?.HideList ?? [] )
+	/// <summary>The bind's hiding: every node of <paramref name="incoming"/>'s hide list (<c>FUN_00472d70</c>) but a transform-only one.</summary>
+	internal static IEnumerable<(int Node, bool Visible)> HiddenAtBind( AnimationFile incoming, Func<int, bool> transformOnly )
+	{
+		foreach ( int node in incoming.HideList )
 		{
 			if ( !transformOnly( node ) )
 				yield return (node, false);

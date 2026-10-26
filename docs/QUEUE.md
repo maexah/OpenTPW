@@ -74,15 +74,6 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q658. A clip started on an idle channel hides its hide list.** From Q622. The original's bind hides a clip's hide
-  list at every start without the caller's `0x8` (`FUN_00472d70` at `0x00473117`); the drawn model here applies it only
-  at a change of clip (`LobbyModel.ShownAtChange`), so a start on an idle channel counts `CLIP_HIDE_LIST_ON_IDLE_CHANNEL`
-  (three in q622's run-F3: the seaplane's first landing, a bought Crazy Ape's and a bought Loudspeaker's builds, whose
-  lists name no mesh). In Lost
-  Kingdom the one mesh it would hide is a bought Fries Shop's mesh 10 in its construction (`lib/cliphide.py`, Q622's
-  `hidemeshes.py`). Build it where the start is known (`RideAnimations.StartOn`) and the drawn model reached; also carry
-  the start's `0x4`/`0x8` to the rest, which the engine skips on them (`park.md`, "The per-clip hide list"). Confirm:
-  a Fries Shop bought, its build filmed in both games.
 - [ ] **Q663. A bought thing's build draws no sparkles. Decode first.** From Q623. The original's Round Fountain, placed
   in `late30.TPWS`, rises from its bare floor among yellow and green sparkles for its whole build (`q623/orig/a/appear.png`,
   film `original/shots/q623-a.mkv` frames 87 to 120); ours rises with none, and nothing counts it. Which effect it is,
@@ -1935,12 +1926,20 @@ filed the items that cite it.
 - [ ] **Q661. Rest at a loop's restart in view (from Q622).** The original restores at a loop's restart in view:
   `0x00473840`..`0x00473848` call `FUN_00472f60` with the same role and entry and flags `1` (`| 8` only off-screen),
   which reaches `FUN_00472310` with the outgoing clip the incoming one: it clears `0x10` on every tracked and listed
-  node and re-hides the hide list. `RideAnimations.PoseChannel` rests only when the clip reference changes, so a loop's
-  restart shows and hides nothing. No Lost Kingdom placed thing loops a clip whose visibility track starts after
+  node and re-hides the hide list. Here `RideAnimations.End` restarts a loop with `0x8`, so `PoseChannel` (which since
+  Q658 puts back and hides at every start it sees, by the start's flags) shows and hides nothing there. No Lost Kingdom placed thing loops a clip whose visibility track starts after
   frame 0 (the only such clips are three vehicles' `m3`, `coconutc` and `mamfounte`), so nothing differs on screen
   there. Build it where the loop is known, and carry the start's `0x4`/`0x8` with it (Q658's seam). Confirm: a
   looped clip with a visibility track after frame 0 in both games, or a read of the original's node words at the
   restart.
+- [ ] **Q682. A loaded park's things drawn as their saved node words hide them (from Q658).** A loaded thing is drawn
+  as its construction clip leaves it (`ParkObjects`, the as-built pose: the visibility tracks at the build's end), and
+  its channels are restarted with `0x8` (`ParkRides.Resume`), so no hide list is applied and the file's node words'
+  bit `0x10` is not read for the drawn meshes. A Fries Shop bought, saved and loaded would show its `chip08` here, where
+  the original's running instance holds it hidden (`q658/orig/b/modelnodes.txt`); whether its saved model record keeps
+  the bit, and whether its load restores it to the node, is not read. Read it (`parkfile.models()` on a file the
+  original saved with a bought Fries Shop, `modelnodes.py PID =fries` after its load), then draw a loaded thing's meshes
+  by its words. Confirm: the Fries Shop saved and loaded in both games.
 - [ ] **Q662. Run the original on the made file for the advisor's row 257 (from Q713; beside Q743's file B).** The docs now
   say the original's tick 19040, sample 525 and props (8, 0) are from the unmodified `New Save` (`q707/orig/O2`); the
   original has never loaded `files/outlets-D.TPWS` (sideshow 50's thirty satisfaction days made 40). Load it in the

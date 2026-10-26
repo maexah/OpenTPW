@@ -130,7 +130,7 @@ internal sealed class ParkObjectPreview
 	private readonly RideAnimations _animations;
 	private readonly System.Numerics.Vector3 _boxMin, _boxMax;
 
-	private AnimationFile? _posed;
+	private RideAnimations.Posed _posed;
 	private double _clock;
 	private float? _held;
 	private bool _said;
@@ -378,7 +378,7 @@ internal sealed class ParkObjectPreview
 			|| _animations.Clip( channel.AnimID, channel.SubAnim ) is not { } clip )
 			return;
 
-		RideAnimations.PoseChannel( _model, ref _posed, clip, channel.AnimFrame );
+		RideAnimations.PoseChannel( _model, ref _posed, clip, channel.AnimFrame, _animations.BoundOn( 0 ) );
 	}
 
 	/// <summary>Lets go of the instance, as the original does when the window shows another thing or closes (<c>FUN_004690a0</c>).</summary>

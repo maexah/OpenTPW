@@ -261,7 +261,7 @@ public class NodePoserTests
 	{
 		var poser = Tree();
 		var flight = Clip( Flight() );
-		AnimationFile? posed = null;
+		RideAnimations.Posed posed = default;
 
 		RideAnimations.PoseChannel( poser, ref posed, flight, 20 );
 		Near( new( 0, 59, -77 ), poser.Local( 0 ).Translation, "flown" );
@@ -275,7 +275,7 @@ public class NodePoserTests
 		} );
 
 		RideAnimations.PoseChannel( poser, ref posed, later, 0 );
-		Assert.AreSame( later, posed );
+		Assert.AreSame( later, posed.Clip );
 		Near( new( 0, 59, -77 ), poser.Local( 0 ).Translation, "kept until the incoming's first key" );
 
 		RideAnimations.PoseChannel( poser, ref posed, Clip( Flight( 1 ) ), 0 );

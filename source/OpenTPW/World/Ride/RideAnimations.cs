@@ -78,6 +78,8 @@ public sealed class RideAnimations
 		for ( var index = 0; index < _channels.Length; ++index )
 			_channels[index] = new AnimTimeControl();
 
+		_bound = new Bind[_channels.Length];
+
 		foreach ( var role in roles )
 		{
 			if ( role.Length == 0 )
@@ -292,16 +294,18 @@ public sealed class RideAnimations
 	/// </summary>
 	private int StartOn( AnimTimeControl channel, int role, int entry, int flags, float speed, int now )
 	{
-		// The model's nodes are marked as the clip's only where the start binds it, which the caller's 0x8 says it
-		// does not (0x00473117); the frame the outgoing clip stood on is what its visibility tracks leave behind.
-		if ( (flags & AnimTimeControl.KeepShownFlag) == 0 && Clip( role, entry ) is { } clip )
-		{
-			Nodes?.Started( Array.IndexOf( _channels, channel ), clip, channel.IsIdle ? float.MaxValue : channel.AnimFrame );
+		var index = Array.IndexOf( _channels, channel );
 
-			// The drawn model hides a clip's hide list at a change of clip (LobbyModel.Rest); at a first start on a channel
-			// there is none, and the bind's hiding (0x00473117) is counted: a bought Fries Shop's construction lists its mesh 10.
-			if ( channel.IsIdle && clip.HideList.Length > 0 )
-				Unimplemented.Report( "CLIP_HIDE_LIST_ON_IDLE_CHANNEL" );
+		if ( Clip( role, entry ) is { } clip )
+		{
+			// The model's nodes are marked as the clip's only where the start binds it, which the caller's 0x8 says it
+			// does not (0x00473117); the frame the outgoing clip stood on is what its visibility tracks leave behind.
+			if ( (flags & AnimTimeControl.KeepShownFlag) == 0 )
+				Nodes?.Started( index, clip, channel.IsIdle ? float.MaxValue : channel.AnimFrame );
+
+			// Every start of a clip is a bind, the same clip again included; what it puts back and hides is the drawn
+			// side's, by the caller's 0x4 and 0x8 (PoseChannel).
+			_bound[index] = new Bind( _bound[index].Start + 1, flags );
 		}
 
 		// Where the outgoing clip had already run past its end, the new one starts that far in rather than
@@ -318,12 +322,26 @@ public sealed class RideAnimations
 	}
 
 	/// <summary>
+	/// A clip bound to a channel by a start (<c>FUN_00472f60</c>): which start it was, counted on the channel from one,
+	/// and the caller's flags, whose <c>0x4</c> and <c>0x8</c> say what the start puts back and hides.
+	/// </summary>
+	public readonly record struct Bind( int Start, int Flags );
+
+	private readonly Bind[] _bound;
+
+	/// <summary>The last start that bound a clip to a channel, or none (<c>Start</c> nought) where nothing has.</summary>
+	public Bind BoundOn( int index ) => index >= 0 && index < _bound.Length ? _bound[index] : default;
+
+	/// <summary>The clip a drawn model or node tree was last posed from on one channel, and the start that bound it.</summary>
+	public record struct Posed( AnimationFile? Clip, int Start );
+
+	/// <summary>
 	/// Poses <paramref name="target"/> from every channel that is playing, each its clip at the frame it has reached, a
-	/// change of clip first putting back what the one before it moved (<see cref="PoseChannel"/>). <paramref name="posed"/>
+	/// new start first putting back and hiding what the engine's bind does (<see cref="PoseChannel"/>). <paramref name="posed"/>
 	/// holds the clip each channel was last posed from, one per channel this caller poses. The engine's sweep walks the
 	/// whole array of players (<c>FUN_004735d0</c>): the Jungle Spray runs one per lane.
 	/// </summary>
-	public void PoseOnto( IChannelPosed target, AnimationFile?[] posed )
+	public void PoseOnto( IChannelPosed target, Posed[] posed )
 	{
 		for ( var index = 0; index < posed.Length; ++index )
 		{
@@ -333,23 +351,29 @@ public sealed class RideAnimations
 			if ( Clip( channel.AnimID, channel.SubAnim ) is not { } clip )
 				continue;
 
-			PoseChannel( target, ref posed[index], clip, channel.AnimFrame );
+			PoseChannel( target, ref posed[index], clip, channel.AnimFrame, BoundOn( index ) );
 		}
 	}
 
 	/// <summary>
 	/// One channel's clip on <paramref name="target"/> at <paramref name="frame"/>, the frame counted from the start of the
-	/// clip. A change of clip first puts back what the one before moved, all but what the incoming clip moves on the same
-	/// channel, which the engine does on every role change (<c>FUN_00472310</c>; <see cref="NodePoser.Rest"/>).
+	/// clip. A start the target has not seen, <paramref name="bind"/>, does what the engine's start does
+	/// (<c>FUN_00472f60</c>): it puts back what the clip before moved, all but what the incoming clip moves on the same
+	/// channel (<c>FUN_00472310</c>; <see cref="NodePoser.Rest"/>), unless the caller passed <c>0x4</c> or <c>0x8</c>, and
+	/// then hides the incoming clip's hide list unless it passed <c>0x8</c> (<c>FUN_00472d70</c>, <c>0x00473117</c>), on a
+	/// channel that was idle too. A clip changed with no start seen is put back and hidden as an unflagged start's.
 	/// </summary>
-	internal static void PoseChannel( IChannelPosed target, ref AnimationFile? posed, AnimationFile clip, float frame )
+	internal static void PoseChannel( IChannelPosed target, ref Posed posed, AnimationFile clip, float frame, Bind bind = default )
 	{
-		if ( !ReferenceEquals( clip, posed ) )
+		if ( !ReferenceEquals( clip, posed.Clip ) || bind.Start != posed.Start )
 		{
-			if ( posed is { } previous )
+			if ( posed.Clip is { } previous && (bind.Flags & (AnimTimeControl.KeepPoseFlag | AnimTimeControl.KeepShownFlag)) == 0 )
 				target.Rest( previous, clip );
 
-			posed = clip;
+			if ( (bind.Flags & AnimTimeControl.KeepShownFlag) == 0 )
+				target.Hide( clip );
+
+			posed = new Posed( clip, bind.Start );
 		}
 
 		target.Pose( clip, frame );
@@ -430,13 +454,10 @@ public sealed class RideAnimations
 			// The promotion is a full start, so the clip that ran past its end hands its overshoot to this
 			// one, clamped to this clip's own length - and it clears three of the four queue fields,
 			// leaving the flags stale.
-			// The engine binds a promoted clip while its model is in view and not otherwise (FUN_004735d0's
-			// per-frame argument); here it is bound as the caller's flags say, in view or not.
-			if ( (channel.DeferredFlags & AnimTimeControl.KeepShownFlag) == 0 && Clip( channel.DeferredAnimID, channel.DeferredSubAnim ) is { } promoted )
-				Nodes?.Started( Array.IndexOf( _channels, channel ), promoted, channel.AnimFrame );
-
-			StartOn( channel, channel.DeferredAnimID, channel.DeferredSubAnim,
-				channel.DeferredFlags | AnimTimeControl.KeepShownFlag,
+			// The engine binds a promoted clip by the queued flags while its model is in view and adds 0x8 off it
+			// (FUN_004735d0's per-frame argument, 0x00473874); this poses every model every frame, so it binds as the
+			// queued flags say, in view or not.
+			StartOn( channel, channel.DeferredAnimID, channel.DeferredSubAnim, channel.DeferredFlags,
 				channel.DeferredSpeed <= 0f ? channel.Speed : channel.DeferredSpeed, now );
 
 			channel.ClearQueue();
@@ -447,7 +468,8 @@ public sealed class RideAnimations
 		if ( (channel.Flags & AnimTimeControl.LoopFlag) != 0 )
 		{
 			// A loop is expressed as starting the same clip again rather than as rewinding it, which is
-			// what carries the overshoot across the join.
+			// what carries the overshoot across the join. Not the original's: its restart in view passes 0x1 alone
+			// (0x00473840..0x00473848), so it puts back and hides as a start does; this passes 0x8 (Q661).
 			StartOn( channel, channel.AnimID, channel.SubAnim,
 				AnimTimeControl.LoopFlag | AnimTimeControl.KeepShownFlag, channel.Speed, now );
 
@@ -555,6 +577,9 @@ public interface IChannelPosed
 {
 	/// <summary>Puts back what <paramref name="outgoing"/> moved, all but what <paramref name="incoming"/> moves.</summary>
 	void Rest( AnimationFile outgoing, AnimationFile? incoming );
+
+	/// <summary>Hides <paramref name="incoming"/>'s hide list, as its start binds it (<c>FUN_00472d70</c>); nothing where the target draws nothing.</summary>
+	void Hide( AnimationFile incoming ) { }
 
 	/// <summary>Shows <paramref name="clip"/> at <paramref name="frame"/>.</summary>
 	void Pose( AnimationFile clip, float frame );
