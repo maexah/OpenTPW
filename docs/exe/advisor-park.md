@@ -5221,18 +5221,29 @@ message=248 ... score=100 ... tick=19031 result=post outlet=Food thing=193 figur
 tick, response 488, sample 516, in the fast-food hat and the spatula (13, 14); with sideshow 50's thirty satisfaction days
 40 (`run6-made`, read 87 at a gate on 19034), `poll message=257 ... score=68 ... tick=19040 result=post outlet=Sideshows
 thing=50 figure=87 line=70` and `attempt=1 message=257 ... response=497 sample=525 line=0 tick=19040`, in the kiosk hat
-(8, 0), no tag: the original's tick, sample and props as it said them on the unmodified `New Save` (`q707/orig/O2`); the
-original has not been run on this made file.
+(8, 0), no tag: the original's tick, sample and props as it said them on the unmodified `New Save` (`q707/orig/O2`).
+
+**The original on the made file** (Q743, `q743/PREDICTION.txt`, `q743/orig/run.sh`: `fsload.sh` by the same player,
+`advisor.py ... 0xf8,0x101 poll`, `advisorline.py`, `thingwords.py` on stall 193's `+0x1a0` and `+0x1a4`). Row 248's
+record went from (0, -1, 0, 0) to (19031, 0, 1, 0) on tick 19031, said at once: sample 516, props (13, 14), the action
+7,498 ms (clips 4,832 + 2,666; this game's `waitUntil` less its start is 7,498 too, the log's `duration=` being the
+speaker's 6,498 before its 1,000). Stall 193's lifetime counts stood at 194 and 12 from the load to 19049, so the rolled-in
+day added nothing and the share stayed 100; the score itself is not read (no poll ever saw `0xf8` in a slot: posted
+and taken on one tick). Row 257 was slotted on 19040 at **72** (a sideshow at 88; this game's read 78 and slotted 32;
+which one is Q662's) and never said: `0x13a` (this game's 314, posted on 19059 at 150) took the free advisor on 19062,
+and the 19100 awards replaced the slot. This game on the same file (`q743/runG2`, `runG3`, the desk) says 248 on 19031
+and leaves 257 unsaid behind 314 alike, but says 314 on **19067**, five sweeps after the original: Q679.
 
 | | The original | OpenTPW |
 |---|---|---|
 | Rows 238 to 257 | polled; the outlet's figure against its line | the same |
 | Row 257 on Alexah's `New Save` | said on 19040, sample 525, props (8, 0) | scored 24 on 19040 (76); with the file's satisfaction made 87, said on 19040, sample 525, (8, 0) |
 | Row 254 on it | slotted at 28 on 19347, after its 7,200-sweep wait from 11907 | `cooldown` on 19037 at 40 (not run to 19347) |
-| A food stall walked away from by all its customers | not run (lane A, Q743) | row 248 said on 19031 at 100 |
+| A food stall walked away from by all its customers (made file B) | row 248 said on 19031, sample 516, (13, 14) | the same, at 100 |
+| Row 257 on made file B | slotted on 19040 at 72, never said (`0x13a` said on 19062) | slotted at 32, never said (314 said on 19067, Q679) |
 | The poor rows | below nought, never said | the same |
 
-**Not built or not seen.** The original on the made file (Q743). A great row said a second time past its 7,200 sweeps. The
+**Not built or not seen.** The original's score for row 248 (taken on its tick). A great row said a second time past its 7,200 sweeps. The
 poor rows only as unit tests (no shipped setting makes them speak). Not heard (off-screen).
 
 ## Row 172 and row 72 read whole (fork watch 2026-10-19)

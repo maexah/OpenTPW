@@ -5,6 +5,11 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q676 (the all-visitors, all-items and all-staff titles as `UI_SetTitle` letters them): seen in the stock park under
+  Instant Action at 800 x 600, each screen opened by its key, beside the original's frames and before and after the change.
+  The widening shows nowhere on screen: each of these titles is narrower than the stream's rect, so only `control`
+  and the original's memory show it. Not run: Full Simulation (nothing in the titles reads the mode), a window of another
+  size, the items screen's other three tabs' titles (the same control and lettering; the test reads the rides' one).
 - Q674 (the money's trend arrow and the icon's sign): seen in the stock park under Instant Action at 800 x 600, beside
   the original's frames, at a load, 1 and 2 March after a February written into profit, and four balances written by
   the console under pause. The balance's colour is Q403's, so "5" and "500" are white here where the original's are

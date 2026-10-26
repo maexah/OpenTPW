@@ -10361,6 +10361,18 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   **Done 2026-10-26:** all three are `UI_SetTitle`'s in the original (`ui.md`, "The 32 calls"): its controls in the
   widened rects with `0x007c2118`, 0.037 to 0.041 of each rect yellow; ours 0.040 to 0.046, none white (main's 0.077 to
   0.088 white), `control` reading `lettered font 5 in (234, 239, 102) with the edge` (`q676/PREDICTION.txt`, 11 held).
+- [x] **Q743. The original on Q713's made file: row 248 said of a food stall walked away from.** From Q713 (lane B, which
+  cannot run the original). Load `~/.cache/tpw-harnesses/q713/files/outlets-B.TPWS` (Alexah's jungle `New Save`, row 248's
+  record fresh, food stall 193 a day of 7 walk-aways to its 7 customers) in the original by `q707/gms-none.dat`'s player
+  (`original/fsload.sh`), read `advisor.py ... 0xf8,0x101 poll` and the line: this game said row 248 on 19031 at 100
+  (sample 516, props 13, 14) and queued row 257 at 32 behind it (`q713/run4-made.out`). Predict the original's tick and
+  score first; a miss in either game's guests (the rolled-in day) is said as such.
+  - **Done (Q743, lane A):** the original said row 248 on tick 19031 (`0xf8`'s record (0, -1, 0, 0) -> (19031, 0, 1, 0)),
+    sample 516, props (13, 14), the action 7,498 ms, as this game's (its log's `duration=6498` is before the 1,000 added);
+    stall 193's lifetime counts 194 and 12 unchanged to 19049, so the share stayed 100 (the score is not read: posted and
+    taken on one tick). Row 257 slotted at 72 in the original (32 here) and said in neither game: `0x13a`/314 took the
+    advisor first, the original on 19062, this game on 19067 (Q679). Frames `q743/orig/O/f-t19035.png`, `q743/runG2/s516-t19039.png`;
+    `advisor-park.md`, "The original on the made file".
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

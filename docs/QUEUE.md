@@ -74,12 +74,6 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q743. The original on Q713's made file: row 248 said of a food stall walked away from.** From Q713 (lane B, which
-  cannot run the original). Load `~/.cache/tpw-harnesses/q713/files/outlets-B.TPWS` (Alexah's jungle `New Save`, row 248's
-  record fresh, food stall 193 a day of 7 walk-aways to its 7 customers) in the original by `q707/gms-none.dat`'s player
-  (`original/fsload.sh`), read `advisor.py ... 0xf8,0x101 poll` and the line: this game said row 248 on 19031 at 100
-  (sample 516, props 13, 14) and queued row 257 at 32 behind it (`q713/run4-made.out`). Predict the original's tick and
-  score first; a miss in either game's guests (the rolled-in day) is said as such.
 - [ ] **Q656. A park made fresh draws no boundary wall.** From Q620. `FreshParkBoundary` writes the anchors (track type 25)
   with no model record, no `mHoardingNeighbours` and no `mTileData`, so `ParkBoundaryHoarding` counts each,
   `BOUNDARY_HOARDING_UNMADE`. Build the original's way: the mask from the four anchors two cells away (FileFormats
@@ -1983,6 +1977,16 @@ filed the items that cite it.
   original has never loaded `files/outlets-D.TPWS` (sideshow 50's thirty satisfaction days made 40). Load it in the
   original with `loadfile.sh` and read row 257's record beside file B (row 248). Also read which sideshow the
   original's row 257 picked on the unmodified file and its figure (the docs say only "some sideshow at 77 or more").
+  - **Note (Q743):** on file B the original slotted `0x101` on 19040 at 72 (a sideshow at 88; which one was not read) and
+    never said it: `0x13a` was said on 19062 and the 19100 awards replaced the slot (`q743/orig/O/load.log`).
+- [ ] **Q679. The advisor's next line comes five sweeps after the original's.** From Q743. On `q713/files/outlets-B.TPWS`
+  by Q707's F player, after row 248's line on 19031 (a 7,498 ms action in both games), the original said `0x13a` on 19062,
+  7.70 s on at four sweeps a second (`q743/orig/O/load.log`); this game said it (314) on 19067 in two desk runs, the
+  second with no frame grabbed (`q743/runG2`, `runG3`), its log's stamps four sweeps a second. The wait reads
+  `GameClock.Now` (`ParkPeople`'s `AdvisorMessages.Tick`), so that clock fell about 1.5 s behind the sweeps in 9 s, or
+  the sweeps run ahead of it. Measure `GameClock.Now` against the wall and `sweeps` in a free run without a console
+  poll every 0.2 s (`q743/confirm.py` polls), then make the wait end on the original's sweep. Confirm: the same file,
+  `0x13a`'s tick in both games.
 
 ## B. Docs and comments
 
