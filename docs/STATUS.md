@@ -40,7 +40,8 @@ Only the item just landed is here. Every earlier item's account is in `docs/hist
 - Q677 (the research pumps drawn as one smooth scroll): the rides' pump at rate 2 in one Full Simulation park on the
   desktop at 143.9 fps, filmed three times on the final build; not the other four kinds running, other rates, a low frame
   rate, a drag that changes a rate mid-run, nor the start and the stop (stepped as the original's, not filmed here). Full
-  Simulation is the only mode with the screen.
+  Simulation is the only mode with the screen. Since run 10's fix group I the drawn scroll advances each frame by the
+  passes elapsed (`ResearchPump.Advance`), so a rate change bends it; that, too, is tested, not filmed.
 
 
 
@@ -55,8 +56,8 @@ Only the item just landed is here. Every earlier item's account is in `docs/hist
 | | | measured |
 |---|---|---|
 | Opcodes | **78** of 106 | 2026-10-20, Q553 (`FADEOBJ`), `case Opcode.` labels vs enum members |
-| Tests | **3953**, 0 fail, 0 skip with the game | 2026-10-26, Q677, alone in a worktree |
-| Tests without the game | **1408** ran, **2545** skipped, of 3953 | 2026-10-26, Q677, alone in a worktree |
+| Tests | **3957**, 0 fail, 0 skip with the game | 2026-10-26, run 10 fix I, alone in a worktree |
+| Tests without the game | **1412** ran, **2545** skipped, of 3957 | 2026-10-26, run 10 fix I, alone in a worktree |
 | Build warnings | 121 in the main tree; 131 in a fresh worktree, the ten more NuGet's advisories on ModKit's ImageSharp | 2026-10-10 (the worktree's 131 and the main tree's 121 at Q340, the worktree's 131 and the main tree's 121 again at Q343, at Q344 and at Q345, and the worktree's 131 at Q346 and, with the main tree's 121, at Q347, at Q348, at Q349, at Q351 and at Q352, 2026-10-13) |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 

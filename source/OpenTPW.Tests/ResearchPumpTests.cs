@@ -1,6 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using NumericsVector3 = System.Numerics.Vector3;
 
@@ -72,10 +73,10 @@ public class ResearchPumpTests
 	/// pass) the run starts at nought; 70 passes in it stands at 2018380 (frame 30.80), drawn moved by -30.80/31 of a repeat
 	/// where the original shows <c>0x1e</c>; the 71st turns it to 15598 (0.238) where the original shows <c>fluid32</c>, and
 	/// the 73rd, where the original's run comes round to nought and loses its fraction, to 73266 (1.118), and the 74th a pass
-	/// on from there. Half a pass owed is drawn as half a pass further on. Stopping draws the drain's own parts, unmoved, and
+	/// on from there. Stopping draws the drain's own parts, unmoved, and
 	/// a run started again starts at nought.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the turn at 32; the fraction dropped at the turn; the owed part of a pass not drawn; the
+	/// <remarks><b>Mutations:</b> the turn at 32; the fraction dropped at the turn; the
 	/// shift's sign; the logic's frame drawn while running; the scroll not set to nought at a new run; the logic's position
 	/// drawn, turned at 31; a repeat taken as 32 frames.</remarks>
 	[TestMethod]
@@ -87,35 +88,104 @@ public class ResearchPumpTests
 		for ( var pass = 0; pass < 37; ++pass )
 			pump.Pass();
 
-		Assert.AreEqual( (UI.ResearchPump.PumpState.Running, 0, 0, 0), (pump.State, pump.Frame, pump.Scroll, pump.DrawnPart) );
-		Assert.AreEqual( -(0.5f * 28834 / 65536) / 31, pump.Shift( 0.5f ), 1e-6f, "half a pass owed" );
+		Assert.AreEqual( (UI.ResearchPump.PumpState.Running, 0, 0f, 0), (pump.State, pump.Frame, pump.Scroll, pump.DrawnPart) );
+		Assert.AreEqual( 0f, pump.Shift(), "the start of a run is fluid unmoved" );
 
 		for ( var pass = 0; pass < 70; ++pass )
 			pump.Pass();
 
-		Assert.AreEqual( (0x1e, 2018380, 0), (pump.Frame, pump.Scroll, pump.DrawnPart) );
-		Assert.AreEqual( -(2018380f / 65536) / 31, pump.Shift( 0f ), 1e-6f );
+		Assert.AreEqual( (0x1e, 2018380f, 0), (pump.Frame, pump.Scroll, pump.DrawnPart) );
+		Assert.AreEqual( -(2018380f / 65536) / 31, pump.Shift(), 1e-6f );
 
 		pump.Pass();
-		Assert.AreEqual( (0x1f, 15598), (pump.Frame, pump.Scroll), "turned at 31, the fraction kept" );
-		Assert.AreEqual( -(15598f / 65536) / 31, pump.Shift( 0f ), 1e-6f );
+		Assert.AreEqual( (0x1f, 15598f), (pump.Frame, pump.Scroll), "turned at 31, the fraction kept" );
+		Assert.AreEqual( -(15598f / 65536) / 31, pump.Shift(), 1e-6f );
 
 		pump.Pass();
 		pump.Pass();
-		Assert.AreEqual( (0, 0, 73266), (pump.Frame, pump.Position, pump.Scroll), "the original's run comes round; the drawn one goes on" );
+		Assert.AreEqual( (0, 0, 73266f), (pump.Frame, pump.Position, pump.Scroll), "the original's run comes round; the drawn one goes on" );
 		StringAssert.EndsWith( pump.ToString(), " scroll 1.118" );
 		pump.Pass();
-		Assert.AreEqual( (0, 28834, 73266 + 28834), (pump.Frame, pump.Position, pump.Scroll), "a pass on from both" );
+		Assert.AreEqual( (0, 28834, 73266f + 28834), (pump.Frame, pump.Position, pump.Scroll), "a pass on from both" );
 
 		pump.SetRate( 0 );
-		Assert.AreEqual( (0x20, 0f), (pump.DrawnPart, pump.Shift( 0.5f )) );
+		Assert.AreEqual( (0x20, 0f), (pump.DrawnPart, pump.Shift()) );
 
 		pump.SetRate( 2 );
 
 		for ( var pass = 0; pass < 37; ++pass )
 			pump.Pass();
 
-		Assert.AreEqual( (UI.ResearchPump.PumpState.Running, 0), (pump.State, pump.Scroll), "a new run starts at nought" );
+		Assert.AreEqual( (UI.ResearchPump.PumpState.Running, 0f), (pump.State, pump.Scroll), "a new run starts at nought" );
+	}
+
+	/// <summary>
+	/// <b>The drawn run moves by the passes elapsed at the speed it has then, so a change of rate bends it and does not
+	/// step it</b>: at rate 2 (28834 a pass) half a pass elapsed puts the scroll at 14417; the rate turned to 48 (89128 a
+	/// pass) leaves it there, drawn where it was; and the next half pass adds 44564 (not 14417, as at the speed the pass
+	/// began at), or nothing for a stretch of nought or less, or while the pump is not running.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the stretch added at the speed the pass began at; the scroll recomputed from the pass count
+	/// at the new speed; a stretch of less than nought moving it back; a stopped pump's scroll moved.</remarks>
+	[TestMethod]
+	public void ARateChangeBendsTheDrawnRunAndDoesNotStepIt()
+	{
+		var pump = new UI.ResearchPump();
+		pump.SetRate( 2 );
+		pump.Advance( 1f );
+		Assert.AreEqual( 0f, pump.Scroll, "starting is not running: nothing drawn moves" );
+
+		for ( var pass = 0; pass < 37; ++pass )
+			pump.Pass();
+
+		pump.Advance( 0.5f );
+		Assert.AreEqual( 14417f, pump.Scroll );
+		var drawn = pump.Shift();
+		Assert.AreEqual( -(14417f / 65536) / 31, drawn, 1e-6f );
+
+		pump.SetRate( 48 );
+		Assert.AreEqual( 44564, pump.Speed );
+		Assert.AreEqual( drawn, pump.Shift(), "the rate turned, the picture has not" );
+
+		pump.Advance( 0.5f );
+		Assert.AreEqual( 14417f + 44564f, pump.Scroll );
+		pump.Advance( 0f );
+		pump.Advance( -3f );
+		Assert.AreEqual( 14417f + 44564f, pump.Scroll, "nothing elapsed, nothing moved" );
+
+		pump.SetRate( 0 );
+		pump.Advance( 1f );
+		Assert.AreEqual( 0f, pump.Shift(), "stopping draws the drain's own parts" );
+	}
+
+	/// <summary>
+	/// <b>The scroll reaches the shader's texture coordinate</b>: a draw's uniforms carry the shift in <c>g_flScrollU</c>
+	/// (<see cref="UI.UiMesh.Uniforms"/>), the model shader adds it to <c>u</c> and not <c>v</c> before the v flip, and both stages'
+	/// blocks hold the field between <c>g_flWorldNormals</c> and <c>g_vAmbientColour</c> (offset 268, which
+	/// <c>ShaderTests</c> pins from either side). That <c>UiControl.OnDraw</c> hands its <c>TextureShift</c> to the draw is
+	/// seen in the game alone (<c>q677/C</c>).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the add dropped from the shader; it added to <c>v</c>; it added after the flip; the field
+	/// missing from one stage's block; <c>Uniforms</c> not writing the shift.</remarks>
+	[TestMethod]
+	public void TheScrollReachesTheShadersTextureCoordinate()
+	{
+		var text = File.ReadAllText( Path.Combine( AppContext.BaseDirectory, "content", "shaders", "test.shader" ) );
+
+		const string add = "vs_out.vTexCoords = texCoords + vec2(g_oUbo.g_flScrollU, 0.0);";
+		const string flip = "vs_out.vTexCoords.y = 1.0 - vs_out.vTexCoords.y;";
+		StringAssert.Contains( text, add );
+		Assert.IsTrue( text.IndexOf( add ) < text.IndexOf( flip ), "before the v flip" );
+
+		var blocks = text.Split( "float g_flScrollU;" );
+		Assert.AreEqual( 3, blocks.Length, "both stages' blocks carry it, once each" );
+		Assert.IsTrue( blocks[0].TrimEnd().EndsWith( "float g_flWorldNormals;" ) && blocks[1].TrimEnd().EndsWith( "float g_flWorldNormals;" ),
+			"after g_flWorldNormals in both" );
+		Assert.IsTrue( blocks[1].TrimStart().StartsWith( "vec3 g_vAmbientColour;" ) && blocks[2].TrimStart().StartsWith( "vec3 g_vAmbientColour;" ),
+			"ahead of g_vAmbientColour in both" );
+
+		Assert.AreEqual( 0.375f, UI.UiMesh.Uniforms( System.Numerics.Matrix4x4.Identity, 1f, 0.375f ).g_flScrollU );
+		Assert.AreEqual( 0f, UI.UiMesh.Uniforms( System.Numerics.Matrix4x4.Identity, 1f, 0f ).g_flScrollU );
 	}
 
 	/// <summary>

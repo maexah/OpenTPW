@@ -17,8 +17,9 @@ namespace OpenTPW.UI;
 /// word, 2026-10-21; <c>docs/exe/hud.md</c>, "The pump"). The run's 32 meshes are <c>fluid</c> moved across by -1/31 of
 /// its wrapped texture each, so <c>fluid32</c> is <c>fluid</c> again: the original shows a picture every two or three
 /// passes and one picture for five passes at each turn. Here a running pump draws <c>fluid</c> moved by
-/// <see cref="Scroll"/> over 31, which moves as the position does, turns at 31 with its fraction kept, and is drawn
-/// between passes too (<see cref="Shift"/>). So a loop takes 31 frames of travel where the original's takes 32 and the fraction
+/// <see cref="Scroll"/> over 31, which moves as the position does, turns at 31 with its fraction kept, and moves a
+/// little every drawn frame by the speed it has then (<see cref="Advance"/>), so a change of rate bends it and does not
+/// step it (<see cref="Shift"/>). So a loop takes 31 frames of travel where the original's takes 32 and the fraction
 /// lost at its turn: at rate 2, 2.35 s against 2.43. The drain and the fill are stepped as the original's: their meshes
 /// are two quads whose edge moves, not a scroll.
 /// </para>
@@ -65,9 +66,9 @@ internal sealed class ResearchPump
 
 	/// <summary>
 	/// Where the drawn run stands, frames in 16.16 below 31 (<see cref="RunPictures"/>): nought where the run starts, twice
-	/// the speed more each running pass, turned at 31 with its fraction kept.
+	/// the speed more each running pass (<see cref="Advance"/> adds it as the passes elapse), turned at 31 with its fraction kept.
 	/// </summary>
-	internal int Scroll { get; private set; }
+	internal float Scroll { get; private set; }
 
 	/// <summary>The part drawn: the run's first, <c>fluid</c>, while running (moved by <see cref="Shift"/>); else <see cref="Frame"/>.</summary>
 	internal int DrawnPart => State == PumpState.Running ? 0 : Frame;
@@ -102,16 +103,37 @@ internal sealed class ResearchPump
 	}
 
 	/// <summary>
-	/// <c>ResearchPump_Tick</c> on one UI pass: nothing while stopped; otherwise twice the speed added and the frame its
+	/// One whole UI pass: the drawn run moved by it (<see cref="Advance"/>) and the pass itself (<see cref="Step"/>).
+	/// </summary>
+	internal void Pass()
+	{
+		Advance( 1f );
+		Step();
+	}
+
+	/// <summary>
+	/// The drawn run moved on by <paramref name="passes"/> of a pass at the speed it has now, twice the speed a pass, while
+	/// running; nothing otherwise. The screen calls it for the part of the passes each drawn frame spans, so the line
+	/// the scroll draws bends where the speed changes and does not step.
+	/// </summary>
+	internal void Advance( float passes )
+	{
+		if ( State == PumpState.Running && passes > 0f )
+			Scroll = (Scroll + (passes * Speed * 2f)) % (RunPictures << Whole);
+	}
+
+	/// <summary>
+	/// <c>ResearchPump_Tick</c> on one UI pass, the pass's move of the drawn run taken by <see cref="Advance"/>: nothing while stopped; otherwise twice the speed added and the frame its
 	/// high word, a run past <c>0x1f</c> back to nought, a stop past <c>0x2f</c> to rest at <c>0x30</c>, a start past
 	/// <c>0x3f</c> into the run at nought. The position is set to the new frame exactly at each of those turns.
 	/// </summary>
-	internal void Pass()
+	internal void Step()
 	{
 		if ( State == PumpState.Stopped )
 			return;
 
-		Scroll = State == PumpState.Running ? (Scroll + (Speed * 2)) % (RunPictures << Whole) : 0;
+		if ( State != PumpState.Running )
+			Scroll = 0;
 
 		var position = Position + (Speed * 2);
 		var frame = position >> Whole;
@@ -142,17 +164,11 @@ internal sealed class ResearchPump
 	}
 
 	/// <summary>
-	/// How far <see cref="DrawnPart"/>'s texture is moved, in repeats of it: while running, <see cref="Scroll"/> and
-	/// <paramref name="owed"/> of a pass more, over 31, the way each of the run's meshes is moved (-1/31); else nought.
+	/// How far <see cref="DrawnPart"/>'s texture is moved, in repeats of it: while running, <see cref="Scroll"/> over 31, the
+	/// way each of the run's meshes is moved (-1/31); else nought.
 	/// </summary>
-	internal float Shift( float owed )
-	{
-		if ( State != PumpState.Running )
-			return 0f;
-
-		var frames = (Scroll + (owed * Speed * 2f)) / (1 << Whole);
-		return -(frames % RunPictures) / RunPictures;
-	}
+	internal float Shift()
+		=> State == PumpState.Running ? -(Scroll / (1 << Whole)) / RunPictures : 0f;
 
 	public override string ToString() => $"{State.ToString().ToLowerInvariant()} frame 0x{Frame:x2} speed {Speed}"
 		+ (State == PumpState.Running ? $" scroll {Scroll / (float)(1 << Whole):0.000}" : "");

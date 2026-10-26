@@ -10310,6 +10310,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the drain and the fill are two quads split at a moving edge, left stepped (FileFormats `models.md`). Filmed on the
   final build (`q677/C`): 143.93 picture changes a second, +0.42578 repeats a second in a line against the original's
   12.75 changes and +0.41082, with its 167 ms hold once a loop (`q677/orig/O`); mutate 10/10; `lib/scrollphase.py` added.
+- [x] **Q678. Why a guest leaves before mGameTick 1100 in Q675's runs. Measure first.** In `q675/A` (build `6c637b3d`)
+  and `q675/F` (`8c9a01c1`, the stock park, the same script) a leaver summoned the bus at random on `mGameTick` 1089
+  and 1094 ("a leaver's stay" in the log), where the control `q675/C` and `q675/X3` (`ec2e6638`) first summoned it for
+  the arrivals on 1264. **Closed 2026-10-25 (run 10 review): not caused by Q675.** `q561/run4` (2026-10-20, Q561's final
+  build `deb7ae13`, five days before Q675) logged the same guest, Person 38, leaving on tick 974 after 109 fours of
+  sweeps, and the bus summoned at random on 1094; `q561/run3` and `run-main` (`589dfa38`) summoned it at random on 1148
+  and 1147 for leavers on 1034/1131 and 1036/1131, and only `q561/run-x1` (the off-screen game folder, the same binary
+  as `run-main`) first summoned it on 1264. Runs of one build differ from their first staff tick (`q675/X2` against `X3`,
+  both `ec2e6638`: "Staff: 27 sounds" against "Staff: 30 sounds" at 756), and which guest leaves first follows. Why two
+  runs of one build part at the first staff wander is not looked into.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

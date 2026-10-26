@@ -495,13 +495,13 @@ internal sealed class ParkResearchScreen : UiWindow
 	internal int PumpRate( int kind )
 		=> _lab is { } lab && lab.CurrentItem( kind ) != 0 ? lab.Rate( kind, _abilityNow(), _most ) : 0;
 
-	/// <summary>Each pump's part on its control, a run moved by the passes owed too (<see cref="ResearchPump.Shift"/>).</summary>
+	/// <summary>Each pump's part on its control, a run moved by <see cref="ResearchPump.Shift"/>.</summary>
 	private void ShowPumps()
 	{
 		foreach ( var kind in KindOrder )
 		{
 			_pumps[kind].Frame = _pumpStates[kind].DrawnPart;
-			_pumps[kind].TextureShift = _pumpStates[kind].Shift( _passesOwed );
+			_pumps[kind].TextureShift = _pumpStates[kind].Shift();
 		}
 	}
 
@@ -570,17 +570,29 @@ internal sealed class ParkResearchScreen : UiWindow
 
 	/// <summary>
 	/// The pumps' passes owed over <paramref name="seconds"/> at <see cref="PassesPerSecond"/>, each moving every pump once,
-	/// a second's worth at most after a long frame.
+	/// a second's worth at most after a long frame. The drawn runs move on by the part of the passes each stretch of the
+	/// frame spans (<see cref="ResearchPump.Advance"/>), so they stand where the frame's end puts them.
 	/// </summary>
 	internal void RunPasses( float seconds )
 	{
-		_passesOwed = MathF.Min( _passesOwed + (seconds * PassesPerSecond), PassesPerSecond );
+		var at = _passesOwed;
+		_passesOwed = MathF.Min( at + (seconds * PassesPerSecond), PassesPerSecond );
+		var left = _passesOwed - at;
 
 		for ( ; _passesOwed >= 1f; _passesOwed -= 1f )
 		{
 			foreach ( var pump in _pumpStates )
-				pump.Pass();
+			{
+				pump.Advance( 1f - at );
+				pump.Step();
+			}
+
+			left -= 1f - at;
+			at = 0f;
 		}
+
+		foreach ( var pump in _pumpStates )
+			pump.Advance( left );
 
 		ShowPumps();
 	}

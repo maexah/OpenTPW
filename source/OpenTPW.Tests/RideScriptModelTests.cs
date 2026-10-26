@@ -484,9 +484,9 @@ public class RideScriptModelTests
 	/// <b>Why this needs pinning rather than being obvious.</b> Advancing the channels once per
 	/// tick would promote the queue early: with three ticks due, a clip ending on the first would have
 	/// its successor running before the second tick's instructions could look at it, and no state the engine
-	/// can reach looks like that. The mistake is invisible at a frame boundary, because the last tick and the
-	/// sweep land on the same millisecond - <c>ParkRides</c> hands the sweep <c>Ticks * 31</c>, which is
-	/// exactly the instant its last tick ran at. Part way through a long frame is the only place it shows.
+	/// can reach looks like that. The mistake is invisible at a frame boundary, because the sweep falls less
+	/// than a tick after the last tick (<c>ParkRides.NowMilliseconds</c>). Part way through a long frame is the only
+	/// place it shows.
 	/// </para>
 	///
 	/// <para>

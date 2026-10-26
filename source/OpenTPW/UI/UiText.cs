@@ -28,7 +28,11 @@ internal sealed class UiText
 	private Layout _built;
 	private List<string> _lines = [];
 
-	private readonly record struct Layout( string Text, int Font, int Set, UiColour Colour, bool Shadow, int WrapWidth, TextAlign Across, int Prescale );
+	/// <summary>The laid-out text's RGBA pixels at the font's own size, and how many texels a pixel is copied to in <see cref="_texture"/>.</summary>
+	private byte[] _pixels = [];
+	private int _prescale;
+
+	private readonly record struct Layout( string Text, int Font, int Set, UiColour Colour, bool Shadow, int WrapWidth, TextAlign Across );
 
 	/// <param name="size">
 	/// How much larger than the original's the lettering is wanted (<see cref="UiControl.LetteringSize"/>): it is drawn
@@ -41,18 +45,19 @@ internal sealed class UiText
 		if ( string.IsNullOrEmpty( text ) || UiFonts.Get( font ) is not { } bitmap )
 			return;
 
-		var layout = new Layout( text, font, UiFonts.SetIndex, colour, shadow, wrap ? WrapWidthAt( area.Width, size ) : 0, across,
-			PrescaleFor( UiFonts.Scale * size ) );
+		var layout = new Layout( text, font, UiFonts.SetIndex, colour, shadow, wrap ? WrapWidthAt( area.Width, size ) : 0, across );
 		var built = _texture == null || layout != _built;
 
 		if ( built )
 			Build( bitmap, layout );
 
+		var margin = shadow ? ShadowOffset : 0;
+		var (placed, drawn, prescale) = Plan( area, _width, _height, margin, UiFonts.Scale, size, across, down );
+
+		Upload( prescale, built );
+
 		if ( _texture == null )
 			return;
-
-		var margin = shadow ? ShadowOffset : 0;
-		var (placed, drawn) = Place( area, _width, _height, margin, UiFonts.Scale, size, across, down );
 
 		if ( built && Census )
 		{
@@ -65,6 +70,18 @@ internal sealed class UiText
 
 		using ( _ = new Graphics.Scope( Screen.Size ) )
 			Graphics.Quad( new Rectangle( MathF.Round( placed.X ), MathF.Round( Screen.Height - placed.Y - placed.Height ), placed.Width, placed.Height ), Material.UI );
+	}
+
+	/// <summary>
+	/// <see cref="Place"/>, and with it how many texels a font pixel is copied to (<see cref="PrescaleFor"/>): chosen from
+	/// the scale the text is drawn at once its box has held it, not the size wanted.
+	/// </summary>
+	internal static (Rectangle Placed, float Size, int Prescale) Plan( PixelRect area, int width, int height, int margin, float fontScale,
+		float wanted, TextAlign across, TextAlign down )
+	{
+		var (placed, drawn) = Place( area, width, height, margin, fontScale, wanted, across, down );
+
+		return (placed, drawn, PrescaleFor( fontScale * drawn ));
 	}
 
 	/// <summary>
@@ -116,8 +133,8 @@ internal sealed class UiText
 	/// How many texels a font pixel is copied to before the sampler scales the text onto the screen: the whole number at
 	/// or under <paramref name="scale"/>, 1 to 4. Enlarged straight from the font's pixels, the linear sampler spreads a
 	/// one-pixel stroke over two and dims it; copied first, a stroke keeps its full strength and only its edges are
-	/// blended. Never more than the scale, so a text is never drawn smaller than its texture and the sampler reads only
-	/// the first level, the one <see cref="Texture.UpdatePixels"/> rewrites. A deviation of OpenTPW's own: the original
+	/// blended. Handed the scale the text is drawn at (<see cref="Plan"/>), so never more than it: a text is never drawn
+	/// smaller than its texture and the sampler reads only the first level, the one <see cref="Texture.UpdatePixels"/> rewrites. A deviation of OpenTPW's own: the original
 	/// never scales a font (Q644; <c>ui.md</c>, "<c>UI_SetTitle</c>").
 	/// </summary>
 	internal static int PrescaleFor( float scale ) => Math.Clamp( (int)MathF.Floor( scale + 0.001f ), 1, 4 );
@@ -188,21 +205,35 @@ internal sealed class UiText
 			font.Write( lines[i], pixels, width, height, x + margin, y, layout.Colour, 1f );
 		}
 
-		var n = layout.Prescale;
-		var texels = Prescaled( pixels, width, height, n );
+		_pixels = pixels;
+		_width = width;
+		_height = height;
+	}
 
-		if ( _texture != null && _texture.Width == width * n && _texture.Height == height * n )
+	/// <summary>
+	/// Puts the laid-out pixels in the texture, each copied to a <paramref name="prescale"/> by <paramref name="prescale"/> block:
+	/// the first level is rewritten in place where the texture keeps its size. Nothing is done where the texture already
+	/// holds them at that copy (<paramref name="rewrite"/> false).
+	/// </summary>
+	private void Upload( int prescale, bool rewrite )
+	{
+		if ( _texture != null && prescale == _prescale && !rewrite )
+			return;
+
+		var texels = Prescaled( _pixels, _width, _height, prescale );
+		var (width, height) = (_width * prescale, _height * prescale);
+
+		if ( _texture != null && _texture.Width == width && _texture.Height == height )
 		{
 			_texture.UpdatePixels( texels );
 		}
 		else
 		{
 			_texture?.Delete();
-			_texture = new Texture( texels, width * n, height * n, TextureFlags.OwnPixels );
+			_texture = new Texture( texels, width, height, TextureFlags.OwnPixels );
 		}
 
-		_width = width;
-		_height = height;
+		_prescale = prescale;
 	}
 
 	/// <summary>

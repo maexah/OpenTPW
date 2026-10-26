@@ -368,11 +368,11 @@ held to 1.172. Every string of every tab of both screens stayed inside its box a
 
 **Why the original's letters looked bolder on that sheet** (Alexah's question, 2026-10-25): not another font and no
 shadow on the rows (their label skin draws once). At the same set and scale, both at 1024 x 768, the two games' rows and
-labels carry the same ink, within 1.1 per cent, every ink pixel at 255 (`q644/w-crops.png`). The reference install runs
+labels (this game's before the 1.2 lettering below, at x 1.0) carry the same ink, within 1.1 per cent, every ink pixel at 255 (`q644/w-crops.png`). The reference install runs
 at 800 x 600, so it letters set 2's smaller GAME9 and its frame was stretched to 1024 and then 1.76 times: a one-pixel
 stroke 2.25 pixels wide at full strength. Ours drew set 3's GAME10 1.76 times through the linear sampler, which spreads a
 stroke over two pixels and dims it. **OpenTPW now copies a text's pixels by nearest to the whole number at or under its
-drawn scale before the sampler enlarges it** (`UiText.PrescaleFor`, 1 to 4; a deviation of its own, the original never
+drawn scale (the size wanted after its box has held it, `UiText.Plan`) before the sampler enlarges it** (`UiText.PrescaleFor`, 1 to 4; a deviation of its own, the original never
 scales a font): at 2552 x 1355 the rows' strokes went from a share over 200 of 0.136 to 0.481, the original's sheet tile
 0.199 (`q644/y-rows.png`); under a scale of 2 nothing changes. Never more than the scale, so a text is never drawn
 smaller than its texture: `Texture.UpdatePixels` rewrites the first level alone, and a shrunk text would be read from

@@ -1029,7 +1029,7 @@ after its poller starts**, so a key meant inside either line cannot be sent afte
   `time` is its start less the clip's length, never an advance, so leave those lines out. `bumpers` prints each boat's
   `clip start`, `time` and the header's `now`. The bus: `camera 475 60 90 0`, wait for the log's `the bus summoned`
   (about 126 s after the stock park's entry, `mGameTick` 1264: that count is the thing sweep's, about 4 a second, not
-  the 32 ticks; near 1090 where a leaver summons it first, Q678), then 3.5 s, then `rectfilm.py --min 0.5` on window 1040,240 120x30 for 6 s: the roof crosses it
+  the 32 ticks; near 1090 in the runs where a leaver summons it first, on any build), then 3.5 s, then `rectfilm.py --min 0.5` on window 1040,240 120x30 for 6 s: the roof crosses it
   above the flags (which wave every frame) before the bus stops by x 960. A Hot Pot's boats in view: `camera 420 245
   90 180` after `hot_pot()` (`buy 1140 41 23 0`); the smoke recipe's 435 320 110 180 frames the smoke, not the pot.
 - **A golden ticket won in both games** (Q591, `q706/`): a copy of Alexah's Full Simulation profile with tickets taken

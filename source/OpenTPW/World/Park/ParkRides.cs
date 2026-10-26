@@ -1052,11 +1052,20 @@ public sealed class ParkRides : Entity
 	/// <summary>
 	/// Now, on the clock the scripts and channels run on: the last tick's instant and the part of a tick owed since,
 	/// the frame's own moment, as the engine's snapshot is the clock read once a drawn frame (<c>0x00473440</c>). It
-	/// never reaches the next tick's instant, so every stamp a sweep makes lies before the next tick's scripts run,
-	/// and a save written now holds no channel started after its own moment.
+	/// never reaches the next tick's instant, or meets it, past 2^24 ms, so every stamp a sweep makes lies before the next
+	/// tick's scripts run, and a save written now holds no channel started after its own moment.
 	/// </summary>
-	internal static int NowMilliseconds
-		=> LastTickMilliseconds + Math.Min( (int)(GameClock.PartialTick * MillisecondsPerTick), (int)MillisecondsPerTick - 1 );
+	internal static int NowMilliseconds => MomentAt( GameClock.Ticks, (int)(GameClock.PartialTick * MillisecondsPerTick) );
+
+	/// <summary>
+	/// The moment <paramref name="owed"/> milliseconds past tick <paramref name="ticks"/>'s instant, short of the next tick's.
+	/// The sum is rounded to a float as the tick stamps are (<see cref="LastTickMilliseconds"/>, <see cref="MillisecondsAt"/>),
+	/// which from 2^24 ms (4.7 hours of ticks) lose whole milliseconds: rounding to nearest never steps back across a
+	/// tick, where a rounded instant and an exact part would from 2^26 ms (18.6 hours), and it stays between the two
+	/// ticks' rounded instants.
+	/// </summary>
+	internal static int MomentAt( int ticks, int owed )
+		=> (int)(float)(((long)ticks * (int)MillisecondsPerTick) + Math.Min( owed, (int)MillisecondsPerTick - 1 ));
 
 	/// <summary>The last tick's instant on the same clock, exactly <see cref="GameClock.Ticks"/> beats in.</summary>
 	internal static int LastTickMilliseconds => (int)(GameClock.Ticks * MillisecondsPerTick);

@@ -95,12 +95,6 @@ filed the items that cite it.
   white, font 5, with no edge, in the stream's rect; the buy, hire, research, staff-costs screens and the object windows
   take `UI_SetTitle`'s look. Find each screen's opener's call (`grep 'call   0x485d20' lib/testme.objdump`, 32 sites)
   first; a title the original letters otherwise is said so. Confirm: each title's colour beside the original's frame.
-- [ ] **Q678. Why a guest leaves before mGameTick 1100 in Q675's runs. Measure first.** In `q675/A` and `q675/F` (the
-  branch, the stock park, the same script) a leaver summoned the bus at random on `mGameTick` 1089 and 1094 ("a
-  leaver's stay" in the log), where the control `q675/C` (the bug put back), `q675/X3` (the branch) and `q561`'s runs
-  first summoned it for the arrivals on 1264. Find the guest, what they did and why they left, in both builds; the
-  original on the stock park for the first summons' tick (`q561`'s recipe). If it is the clips' ends falling a tick
-  sooner (Q675, `park.md` difference 7), say so; if not, file what it is.
 - [ ] **Q743. The original on Q713's made file: row 248 said of a food stall walked away from.** From Q713 (lane B, which
   cannot run the original). Load `~/.cache/tpw-harnesses/q713/files/outlets-B.TPWS` (Alexah's jungle `New Save`, row 248's
   record fresh, food stall 193 a day of 7 walk-aways to its 7 customers) in the original by `q707/gms-none.dat`'s player

@@ -87,6 +87,38 @@ public class ParkScreenLetteringTests
 	}
 
 	/// <summary>
+	/// <b>A text's copy is chosen from the scale it is drawn at, once its box has held it, not from the size wanted</b>: at
+	/// 2552 x 1355 a font pixel is 1.764 screen pixels, a 100 x 15 text wanted 1.2 times in a box 40 high is drawn at 1.2
+	/// (2.117, copied twice) and in a box 28 high at 1.058 (1.867, copied once, not drawn smaller than its texture).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> <c>Plan</c> choosing from <c>fontScale</c> alone; from the size wanted; from the wanted
+	/// scale (<c>fontScale * wanted</c>).</remarks>
+	[TestMethod]
+	public void ATextsCopyIsChosenFromTheSizeItIsDrawnAt()
+	{
+		var screen = Screen.Size;
+
+		try
+		{
+			Screen.Size = new Point2( 2552, 1355 );
+			Assert.AreEqual( 1.764f, UiFonts.Scale, 1e-3f );
+
+			var (placed, drawn, copy) = UiText.Plan( new PixelRect( 0, 0, 360, 40 ), 100, 15, 0, UiFonts.Scale, 1.2f, TextAlign.Start, TextAlign.Start );
+			Assert.AreEqual( (1.2f, 2), (drawn, copy), "the box holds 1.2" );
+			Assert.AreEqual( 100 * UiFonts.Scale * 1.2f, placed.Width, 1e-2f );
+
+			(placed, drawn, copy) = UiText.Plan( new PixelRect( 0, 0, 360, 28 ), 100, 15, 0, UiFonts.Scale, 1.2f, TextAlign.Start, TextAlign.Start );
+			Assert.AreEqual( 28f / (15 * UiFonts.Scale), drawn, 1e-4f, "the box holds 1.058" );
+			Assert.AreEqual( 1, copy, "drawn at 1.867 screen pixels a font pixel, so copied once" );
+			Assert.IsTrue( placed.Width / 100 < 2f, "the picture is drawn smaller than two texels a pixel would be" );
+		}
+		finally
+		{
+			Screen.Size = screen;
+		}
+	}
+
+	/// <summary>
 	/// <b>A text's pixels are copied to the whole number of texels at or under its drawn scale, 1 to 4</b>, before the
 	/// sampler enlarges it: under 2 stays, x 2.12 takes 2, x 3.5 takes 3, anything past 4 takes 4.
 	/// </summary>

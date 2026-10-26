@@ -120,6 +120,23 @@ internal sealed class UiMesh
 		return sized;
 	}
 
+	/// <summary>
+	/// What a draw hands the shader: the part's matrix onto the screen, lit by nothing but a flat 1 so every texel is its
+	/// texture's own colour, and its texture moved across by <paramref name="scrollAcross"/> repeats (nought for all but a
+	/// research pump's run; <c>test.shader</c>).
+	/// </summary>
+	internal static ObjectUniformBuffer Uniforms( Matrix4x4 toScreen, float opacity, float scrollAcross ) => new()
+	{
+		g_mModel = toScreen,
+		g_mView = Matrix4x4.Identity,
+		g_mProj = Matrix4x4.Identity,
+		g_flTime = Time.Now,
+		g_vFogColour = Level.FogColour,
+		g_flOpacity = opacity,
+		g_flScrollU = scrollAcross,
+		g_flAmbient = 1f
+	};
+
 	private sealed class Part
 	{
 		private readonly NumericsVector3[] _authored;
@@ -248,19 +265,7 @@ internal sealed class UiMesh
 				acrossOffset, upOffset, 0.5f, 1f );
 
 			// Through the frame, as one part is drawn for every control that wears it - see Material.SetInFrame.
-			_model.Material.SetInFrame( "g_oUbo", new ObjectUniformBuffer
-			{
-				g_mModel = toScreen,
-				g_mView = Matrix4x4.Identity,
-				g_mProj = Matrix4x4.Identity,
-				g_flTime = Time.Now,
-				g_vFogColour = Level.FogColour,
-				g_flOpacity = opacity,
-				g_flScrollU = scrollAcross,
-
-				// Lit by nothing but a flat 1, so every texel is its texture's own colour.
-				g_flAmbient = 1f
-			} );
+			_model.Material.SetInFrame( "g_oUbo", Uniforms( toScreen, opacity, scrollAcross ) );
 
 			_model.Draw();
 		}

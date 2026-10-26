@@ -895,9 +895,11 @@ its 31 ms and OpenTPW's at the end (difference 6), so in the ticks' own stamps O
 and its clips run a tick ahead of the Hot Pot boats' place, which is eased back between the last two ticks as the
 engine's is (`ParkBumperBoats.Put`; said at `ParkRides.OnUpdate`). A clip that ends within the part of a tick is
 finished before the next tick in both, so a `WAITANIM` or a queued trigger can pass a tick sooner than when the sweep
-took the last tick's instant, and whether it does hangs on where the frames fall, as in the engine. Seen, not traced:
-two runs of the branch summoned the bus first for the arrivals on `mGameTick` 1264 and for a leaver on 1094
-(`q675/X3`, `F`; the control `q675/C` on 1264, as `q561`'s runs), the rates unchanged
+took the last tick's instant, and whether it does hangs on where the frames fall, as in the engine. The stock
+park's runs differ from the first ticks on any build, and which guest leaves first varies with them: the bus was first
+summoned at random for a leaver on 1148, 1094 and 1147 in `q561/run3`, `run4` and `run-main` (before Q675; `run4`'s
+Person 38 on tick 974 is the one `q675/A` (`6c637b3d`) and `q675/F` (`8c9a01c1`) show) and for the arrivals on 1264 in
+`q561/run-x1`, `q675/C` and `q675/X3` (`ec2e6638`), the rates unchanged
 (`q675/C`, `F`: 3.92 and 3.89 sweeps a second, 31.4 and 31.2 scheduler ticks).
 
 **What the engine's ticks read across one frame (Q182).** The park frame reads the clock `0x785970` twice, back to back,

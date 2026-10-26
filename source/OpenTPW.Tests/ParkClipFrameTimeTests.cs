@@ -57,6 +57,40 @@ public class ParkClipFrameTimeTests
 	}
 
 	/// <summary>
+	/// Past 2^26 ms (tick 2164803; 18.6 hours of ticks), where a float loses whole milliseconds, the frame's moment is
+	/// still the tick stamps' own rounding: it never steps back across a tick, starts at the last tick's stamp and stays
+	/// at or under the next tick's. Read across 2000 ticks at 2^26 ms (a float's step 8) and at 2^27 ms and past (16).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the rounded tick instant and the exact owed part added (steps back from 2^26 ms); the sum
+	/// exact in integers (the tick instant is not the stamp the tick's scripts make).</remarks>
+	[TestMethod]
+	public void NowNeverStepsBackAndKeepsTheTickStampsPastTwoToTheTwentySixMilliseconds()
+	{
+		foreach ( var first in new[] { 2164800, 4400000 } )
+		{
+			var previous = 0;
+
+			for ( int ticks = first; ticks < first + 2000; ++ticks )
+			{
+				var stamp = (int)(ticks * 31f);
+				var nextStamp = (int)((ticks + 1) * 31f);
+
+				Assert.AreEqual( stamp, ParkRides.MomentAt( ticks, 0 ), $"tick {ticks}: nothing owed is the tick's own stamp" );
+
+				for ( int owed = 0; owed < 31; ++owed )
+				{
+					var now = ParkRides.MomentAt( ticks, owed );
+					Assert.IsTrue( now >= previous, $"tick {ticks}, {owed} ms owed: {now} after {previous}" );
+					Assert.IsTrue( now <= nextStamp, $"tick {ticks}, {owed} ms owed: {now} past the next tick's {nextStamp}" );
+					previous = now;
+				}
+
+				Assert.AreEqual( ParkRides.MomentAt( ticks, 30 ), ParkRides.MomentAt( ticks, 99 ), "short of the next tick however long is owed" );
+			}
+		}
+	}
+
+	/// <summary>
 	/// A frame with half a tick owed and no tick due advances a standing thing's clip to the frame's moment: the Round
 	/// Fountain's construction clip, started at the last tick's instant, stands 15 ms and 0.45 frames in after the frame,
 	/// where a sweep at the last tick's instant leaves it on frame nought. The model is made without its graphics, as

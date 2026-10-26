@@ -276,6 +276,12 @@ public class ParkResearchScreenTests
 		Assert.AreEqual( (37, UI.ResearchPump.PumpState.Running, 0), (rides.Passes, rides.State, drawn.Frame) );
 		Assert.AreEqual( -(0.5f * 28834 / 65536) / 31, drawn.TextureShift, 1e-6f );
 
+		// A frame of exactly one pass, its pass boundary half way: the scroll moved by the whole pass, the pass counted once.
+		screen.RunPasses( 1f / 30 );
+		Assert.AreEqual( (38, UI.ResearchPump.PumpState.Running), (rides.Passes, rides.State) );
+		Assert.AreEqual( 1.5f * 28834, rides.Scroll, 1f );
+		Assert.AreEqual( -(1.5f * 28834 / 65536) / 31, drawn.TextureShift, 1e-5f );
+
 		var effort = Slider( screen, 0xd2d0e );
 		effort.SetValue( 0 );
 		effort.Moved!();

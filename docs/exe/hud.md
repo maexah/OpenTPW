@@ -676,8 +676,8 @@ run's `fluid32` is `fluid` moved by one whole repeat of its wrapped texture (Fil
 0x20"), so one picture is shown through the turn: `0x1f` two passes, then `0x00` three, the position set to nought and its
 fraction lost; 31 pictures in all (`q640/orig/O`). **OpenTPW draws the run as one smooth scroll** (Q677, a deviation
 on by default; `ResearchPump.Scroll`, `Shift`): `fluid` moved across by a 16.16 scroll that grows as the position does,
-turns at 31 with its fraction kept and is drawn between passes too, so the picture changes on every drawn frame (143.93
-a second on the desktop, no gap over 9.2 ms) and moves +0.42578 repeats a second in a line (RMS 0.0052 of a repeat, the
+turns at 31 with its fraction kept and moves on every drawn frame by the speed it has then (a change of rate bends it, and does not step it), so the picture changes on every drawn frame (143.93
+a second on the desktop, no gap over 10.2 ms) and moves +0.42578 repeats a second in a line (RMS 0.0052 of a repeat, the
 rest one ripple a screen pixel crossed) where the original's steps at +0.411 with its hold once a loop (a loop of 2.35 s
 against 2.43; `q677/C`, `q677/orig/O`, `lib/scrollphase.py`). Stepped on the original's rule it filmed as the original
 does, 191 changes in 15 s, six holds of five passes (`q640/runA`). The drain and the fill are stepped in both: their
