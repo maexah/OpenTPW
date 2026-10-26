@@ -127,10 +127,12 @@ public class ParkTrendArrowTests
 	/// <b>The arrow's left edge is the lettering's end, its top and size kept, and the icon carries the sign</b>
 	/// (<c>Gadget_ShowMoney</c> <c>0x004a0ab0</c>): on the interface's own 2048 x 1536 the set is the 768 one (CASHBIG,
 	/// two units a pixel), so "5" ends at 258 + 2 x its advance and "123456789" 2 x the nine advances on; -500 is lettered
-	/// "500" with <c>dollarsignneg</c>, part 1 of <c>i_dollar</c>, and the arrow after "500".
+	/// "500" with <c>dollarsignneg</c>, part 1 of <c>i_dollar</c>, and the arrow after "500". The arrow is 0x2f's child
+	/// (<c>0x004a0f05</c>), not the root's.
 	/// </summary>
 	/// <remarks><b>Mutations:</b> the arrow left where the stream puts it; placed by the font's pixels, not the screen's;
-	/// its width not kept; the balance lettered with its sign; the icon's part not set, or set at nought.</remarks>
+	/// its width not kept; the balance lettered with its sign; the icon's part not set, or set at nought; the arrow added to
+	/// the root, not to 0x2f.</remarks>
 	[TestMethod]
 	public void TheArrowFollowsTheLetteringAndTheIconCarriesTheSign()
 	{
@@ -142,9 +144,32 @@ public class ParkTrendArrowTests
 			WithAGadget( world, new ParkState( parkIsClosed: false, visitorsToDate: 0, balance: balance ), gadget =>
 			{
 				Assert.AreEqual( text, Find( gadget.Root, 0x2f ).Text, $"{balance}'s lettering" );
+				CollectionAssert.Contains( Find( gadget.Root, 0x2f ).Children.ToList(), Find( gadget.Root, 0x31 ), "0x31 is a child of 0x2f" );
 				Assert.AreEqual( new UI.UiRect( end, 109, end + 103, 211 ), Find( gadget.Root, 0x31 ).Rect, $"{balance}'s arrow" );
 				Assert.AreEqual( icon, Find( gadget.Root, 0x32 ).Frame, $"{balance}'s icon" );
 			} );
+		}
+	}
+
+	/// <summary>
+	/// <b>The set the lettering was measured in is the screen's, not a constant</b>: at 800 x 600 the set is the 600 one, and
+	/// CASHBIG's advances are laid at 1536 / 600 = 2.56 units a pixel, not the 768 set's 2, so "5" ends at 258 + 69 = 327 and
+	/// the nine digits at 258 + 629 = 887. A 768 held fixed puts them at 312 and 750, the true distance 1.28 times the wrong
+	/// one's for "5".
+	/// </summary>
+	/// <remarks><b>Mutations:</b> <c>SetScreenHeight</c> replaced by 768 in <c>ShowMoney</c>.</remarks>
+	[TestMethod]
+	public void TheArrowIsPlacedForTheSetTheScreenCallsFor()
+	{
+		var world = Stock();
+
+		foreach ( var (balance, end) in new[] { (5, 258 + 27 * 1536 / 600), (123456789, 258 + 246 * 1536 / 600) } )
+		{
+			WithAGadget( world, new ParkState( parkIsClosed: false, visitorsToDate: 0, balance: balance ), gadget =>
+			{
+				Assert.AreEqual( 600, UI.UiFonts.SetScreenHeight );
+				Assert.AreEqual( new UI.UiRect( end, 109, end + 103, 211 ), Find( gadget.Root, 0x31 ).Rect, $"{balance}'s arrow at 800 x 600" );
+			}, new Point2( 800, 600 ) );
 		}
 	}
 
@@ -186,14 +211,14 @@ public class ParkTrendArrowTests
 		return new ParkWorld( reader.ReadFile(), reader.Preamble );
 	}
 
-	/// <summary>A gadget built on its own level of <paramref name="world"/> and <paramref name="state"/>, on the interface's own 2048 x 1536.</summary>
-	private static void WithAGadget( ParkWorld world, ParkState state, System.Action<UI.ParkGadget> check )
+	/// <summary>A gadget built on its own level of <paramref name="world"/> and <paramref name="state"/>, on the interface's own 2048 x 1536 unless <paramref name="size"/> says.</summary>
+	private static void WithAGadget( ParkWorld world, ParkState state, System.Action<UI.ParkGadget> check, Point2? size = null )
 	{
 		var (screen, level) = (Screen.Size, Level.Current);
 
 		try
 		{
-			Screen.Size = new Point2( 2048, 1536 );
+			Screen.Size = size ?? new Point2( 2048, 1536 );
 			Level.Current = RunningLevel( world, state );
 			check( new UI.ParkGadget( AStack() ) );
 		}

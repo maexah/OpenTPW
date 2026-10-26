@@ -165,6 +165,11 @@ internal static class SaveFolder
 						GameOptions.Current.Faithful = parts[1].Equals( GraphicsFaithful, StringComparison.OrdinalIgnoreCase );
 						break;
 
+					// The two lines "graphics" replaced (Q616, Q618): read no more, and the next write drops them, so say so.
+					case "textures" or "ground" when parts[1].Equals( "original", StringComparison.OrdinalIgnoreCase ):
+						Log.Warning( $"Saves: {path}: \"{parts[0]} {parts[1]}\" is read no more; \"{GraphicsName} {GraphicsFaithful}\" replaces it, and the next save of the file drops the old line" );
+						break;
+
 					// What a kind of load cost when it was last measured - see LoadStepCounts. Read before
 					// anything loads, which is why this is called from Game.Run rather than with a scene.
 					case LoadStepCounts.LineName when parts.Length >= 3 && int.TryParse( parts[2], out var steps ):
@@ -206,9 +211,9 @@ internal static class SaveFolder
 				.AppendLine( $"fullscreen {options.FullScreenSize.Width} {options.FullScreenSize.Height} {options.FullScreenSize.RefreshRate}" )
 				.AppendLine( "# graphics improved: OpenTPW's improvements to the original's look, the default: the art at eight bits a" )
 				.AppendLine( "# channel, the ground's tiles at the 32 pixels the detail file asks, the research pumps scrolled smoothly," )
-				.AppendLine( "# the flags easing between winds, and the buy and hire screens lettered larger. graphics faithful: every one" )
-				.AppendLine( "# off, as the original draws them today: four bits a channel unless the detail file says TEXTURE32 1, 16-pixel" )
-				.AppendLine( "# tiles, the pumps stepped picture by picture, the flags jumping, the letters at the original's size." )
+				.AppendLine( "# the flags easing between winds, the buy and hire screens lettered larger and large letters sharpened." )
+				.AppendLine( "# graphics faithful: every one off, as the original draws them today: four bits a channel unless the detail file says TEXTURE32 1, 16-pixel" )
+				.AppendLine( "# tiles, the pumps stepped picture by picture, the flags jumping, the letters at the original's size and unsharpened." )
 				.AppendLine( "# Read as the game starts." )
 				.AppendLine( $"{GraphicsName} {(options.Faithful ? GraphicsFaithful : GraphicsImproved)}" );
 

@@ -2539,7 +2539,7 @@ public static class DebugConsole
 				}
 
 				Reply( Level.Current?.ParkState is { } purse
-					? $"money balance {purse.Balance} trend {(purse.MonthInLoss ? "red" : "green")} takings {purse.Takings} " +
+					? $"money balance {purse.Balance} takings {purse.Takings} " +
 						$"fee {purse.AdmissionFee} gate {(purse.ParkIsClosed ? "shut" : "open")} " +
 						$"profit {purse.ProfitThisYear} last {purse.LastBalance} red {purse.TurnEnteredRed} " +
 						$"withdrawals {purse.WithdrawalsEnabled} " +
@@ -2559,7 +2559,8 @@ public static class DebugConsole
 						$"training {purse.MonthTraining.Total}/{purse.MonthTraining.Newest} " +
 						$"gate {purse.MonthGateTakings.Total}/{purse.MonthGateTakings.Newest} " +
 						$"shops {purse.MonthShopTakings.Total}/{purse.MonthShopTakings.Newest} " +
-						$"sideshows {purse.MonthSideshowTakings.Total}/{purse.MonthSideshowTakings.Newest}"
+						$"sideshows {purse.MonthSideshowTakings.Total}/{purse.MonthSideshowTakings.Newest} " +
+						$"trend {(purse.MonthInLoss ? "red" : "green")}"
 					: "money: a park has to be loaded" );
 				break;
 

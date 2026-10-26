@@ -188,6 +188,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0047f020` | | OpenTPW/UI/Screens/MessageBox.cs OpenTPW/UI/UiWindow.cs OpenTPW/UI/WindowStack.cs OpenTPW/World/Advisor/Advisor.cs  |
 | `0x0047f251` | | OpenTPW/World/Level.cs  |
 | `0x004813c0` | | OpenTPW/UI/WindowStack.cs  |
+| `0x0048166f` | The load's rebuild FUN_00415140 reaches Gadget_SetDateAndTrend (0x004a0e30) here, so a loaded park's trend arrow is set from its first frame | OpenTPW/World/Park/ParkState.cs  |
 | `0x00481a2b` | Camcorder button `FUN_00481a10`, its first call: FUN_00485b40 closes the open park screen before the mode is built | OpenTPW.Tests/ParkScreenTests.cs OpenTPW/UI/WindowStack.cs OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x00481ad0` | Camcorder button `FUN_00481a10`: installs the camcorder mode through the setter, letting go of the hand | OpenTPW.Tests/ParkHandTests.cs  |
 | `0x00485780` | | OpenTPW/UI/ButtonGlint.cs OpenTPW/UI/UiControl.cs OpenTPW/UI/UiSounds.cs OpenTPW/UI/WindowStack.cs  |
@@ -274,8 +275,11 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00498fc3` | The entry-price builder reads `mParkClosed` (`FUN_0051a280`) for the door switch | OpenTPW/UI/Park/ParkEntryPriceScreen.cs  |
 | `0x00498fd9` | The entry-price builder sets `b_door` down for a closed park (`Button_SetDown`) | OpenTPW/UI/Park/ParkEntryPriceScreen.cs  |
 | `0x0049bf34` | Hire screen FUN_0049bdd0: UI_LoadTree onto the park's layer 0 | OpenTPW/UI/Park/ParkHireScreen.cs  |
+| `0x004a0ab0` | Gadget_ShowMoney: letters the balance as its magnitude, (x ^ s) - s, and sets the money icon 0x32's frame from the sign | OpenTPW.Tests/ParkTrendArrowTests.cs OpenTPW/UI/Park/ParkGadget.cs  |
+| `0x004a0c23` | Gadget_ShowMoney: the money icon 0x32 set to frame 1 below nought | OpenTPW/UI/Park/ParkGadget.cs  |
+| `0x004a0e30` | Gadget_SetDateAndTrend: letters the date into 0x20 and sets the trend arrow 0x31's frame; returns at once while the gadget does not exist | OpenTPW/World/Park/ParkState.cs  |
 | `0x004a0f05` | Gadget_SetDateAndTrend: 0x2f fetched from the interface root, then 0x31 from it, so the arrow is 0x2f's child | OpenTPW/UI/Park/ParkGadget.cs  |
-| `0x004a0f8a` | Gadget_SetDateAndTrend (0x004a0e30), the gadget's trend arrow: last month's cash in (+0x1fc94) against its total costs (+0x1f5a4), frame 1 (red_down) when lower | OpenTPW/UI/Park/ParkGadget.cs  |
+| `0x004a0f8a` | Gadget_SetDateAndTrend (0x004a0e30), the gadget's trend arrow: last month's cash in (+0x1fc94) against its total costs (+0x1f5a4), frame 1 (red_down) when lower | OpenTPW.Tests/ParkTrendArrowTests.cs OpenTPW/World/Park/ParkState.cs  |
 | `0x004a2057` | FUN_004a1d70: the aerial mast 0x2d's top set to its bottom less 8, so the mast is built eight high | OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x004a23da` | FUN_004a1d70: the arm 0x21's right edge moved by its left less the handle's (-645), so the arm is built in | OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x004a2529` | | OpenTPW/UI/Park/ParkGadget.cs  |
@@ -455,6 +459,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004f8281` | Calendar_Update: mGameTick read for the published calendar, mFunnyTimeStart + tick x rate / 4 | OpenTPW/Global/GameCalendar.cs  |
 | `0x004f82f6` | Calendar_Update: the published calendar 0x007ced58 split out of that FILETIME | OpenTPW/Global/GameCalendar.cs  |
 | `0x004f8321` | Calendar FUN_004f8260: the day of the month compared with mDayAtLastUpdate; a difference sends the day's change, message 0xb | OpenTPW/Global/GameCalendar.cs OpenTPW/World/Park/ParkState.cs  |
+| `0x004f83ac` | Calendar_Update: the once-a-day call through FUN_00481560 into Gadget_SetDateAndTrend, after the day's message 0xb and before the month's 0xc | OpenTPW.Tests/ParkTrendArrowTests.cs OpenTPW/World/Level.cs OpenTPW/World/Park/ParkState.cs  |
 | `0x004f83b9` | Calendar FUN_004f8260: the month compared on its own; a change sends message 0xc | OpenTPW/Global/GameCalendar.cs  |
 | `0x004f84d0` | FUN_004f8260: the year compared on its own; a change sends message 0xd | OpenTPW/Global/GameCalendar.cs  |
 | `0x004f8792` | | OpenTPW/Global/GameCalendar.cs  |

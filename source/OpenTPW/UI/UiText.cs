@@ -135,9 +135,14 @@ internal sealed class UiText
 	/// one-pixel stroke over two and dims it; copied first, a stroke keeps its full strength and only its edges are
 	/// blended. Handed the scale the text is drawn at (<see cref="Plan"/>), so never more than it: a text is never drawn
 	/// smaller than its texture and the sampler reads only the first level, the one <see cref="Texture.UpdatePixels"/> rewrites. A deviation of OpenTPW's own: the original
-	/// never scales a font (Q644; <c>ui.md</c>, "<c>UI_SetTitle</c>").
+	/// never scales a font (Q644; <c>ui.md</c>, "<c>UI_SetTitle</c>"). Turned off, so 1, by <c>graphics faithful</c>
+	/// (<see cref="GameOptions.Faithful"/>, Q645): the sampler alone enlarges the text.
 	/// </summary>
-	internal static int PrescaleFor( float scale ) => Math.Clamp( (int)MathF.Floor( scale + 0.001f ), 1, 4 );
+	internal static int PrescaleFor( float scale ) => PrescaleFor( scale, GameOptions.Current.Faithful );
+
+	/// <summary><see cref="PrescaleFor(float)"/> with the toggle handed in: always 1 under <paramref name="faithful"/>.</summary>
+	internal static int PrescaleFor( float scale, bool faithful )
+		=> faithful ? 1 : Math.Clamp( (int)MathF.Floor( scale + 0.001f ), 1, 4 );
 
 	/// <summary>The RGBA <paramref name="pixels"/> with each pixel copied into an <paramref name="n"/> by <paramref name="n"/> block.</summary>
 	internal static byte[] Prescaled( byte[] pixels, int width, int height, int n )

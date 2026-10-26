@@ -1,5 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.IO;
+using OpenTPW.UI;
 
 namespace OpenTPW.Tests;
 
@@ -52,10 +53,26 @@ public class FaithfulGraphicsTests
 				Assert.IsFalse( GameOptions.Current.Faithful, $"\"{other}\" is not \"faithful\"" );
 			}
 
+			// The old lines set nothing, and each is named in a warning that gives the line replacing it.
+			var warned = new System.Collections.Generic.List<string>();
+			Logger.LogDelegate hear = ( severity, text ) =>
+			{
+				if ( severity == Logger.Level.Warning )
+					warned.Add( text );
+			};
+
 			GameOptions.Current = new();
-			File.WriteAllText( file, "textures original\nground original\n" );
-			SaveFolder.LoadDisplay();
+			File.WriteAllText( file, "textures original\nground original\ntextures improved\n" );
+			Logger.OnLog += hear;
+
+			try { SaveFolder.LoadDisplay(); }
+			finally { Logger.OnLog -= hear; }
+
 			Assert.IsFalse( GameOptions.Current.Faithful, "the old lines set nothing" );
+			Assert.AreEqual( 2, warned.Count, "one warning each for the two old lines, none for a value they never had" );
+			StringAssert.Contains( warned[0], "\"textures original\"" );
+			StringAssert.Contains( warned[1], "\"ground original\"" );
+			StringAssert.Contains( warned[0], "\"graphics faithful\" replaces it" );
 
 			GameOptions.Current = new() { Faithful = true };
 			SaveFolder.SaveDisplay();
@@ -139,6 +156,32 @@ public class FaithfulGraphicsTests
 			Assert.AreEqual( 1f, UI.UiFonts.ParkScreenLettering );
 			GameOptions.Current = new();
 			Assert.AreEqual( 1.2f, UI.UiFonts.ParkScreenLettering );
+		}
+		finally { GameOptions.Current = was; }
+	}
+
+	/// <summary>
+	/// <b>Under the toggle a text's pixels are not copied up before the sampler enlarges them</b> (Q644's sharpening, left
+	/// off with the rest): a scale of 2.117 or 3.5 is copied 2 or 3 times without it and once with it, as is 9, which the
+	/// ceiling of 4 would take.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the toggle not read by <c>PrescaleFor</c>, either overload.</remarks>
+	[TestMethod]
+	public void UnderTheToggleTheLettersAreNotSharpened()
+	{
+		Assert.AreEqual( (2, 3, 4), (UiText.PrescaleFor( 2.117f, false ), UiText.PrescaleFor( 3.5f, false ), UiText.PrescaleFor( 9f, false )) );
+		Assert.AreEqual( (1, 1, 1), (UiText.PrescaleFor( 2.117f, true ), UiText.PrescaleFor( 3.5f, true ), UiText.PrescaleFor( 9f, true )) );
+
+		var was = GameOptions.Current;
+
+		try
+		{
+			GameOptions.Current = new() { Faithful = true };
+			Assert.AreEqual( 1, UiText.PrescaleFor( 3.5f ), "the toggle as the game holds it" );
+			Assert.AreEqual( 1, UiText.Plan( new PixelRect( 0, 0, 2000, 400 ), 100, 15, 0, 4f, 1f, TextAlign.Start, TextAlign.Start ).Prescale );
+			GameOptions.Current = new();
+			Assert.AreEqual( 3, UiText.PrescaleFor( 3.5f ) );
+			Assert.AreEqual( 4, UiText.Plan( new PixelRect( 0, 0, 2000, 400 ), 100, 15, 0, 4f, 1f, TextAlign.Start, TextAlign.Start ).Prescale );
 		}
 		finally { GameOptions.Current = was; }
 	}

@@ -73,7 +73,8 @@ internal sealed class GameOptions
 	/// improvement reads it: the textures' eight bits a channel (<see cref="Texture.KeepsEightBitsUnder"/>), the ground's
 	/// 32-pixel tiles (<see cref="Level.TileSizeFor"/>), the research pumps' smooth scroll (<see cref="UI.ResearchPump.Smooth"/>),
 	/// the flags' eased turn (<see cref="ParkFlags.TurnFactor"/>) and the buy and hire screens' larger letters
-	/// (<see cref="UI.UiFonts.ParkScreenLettering"/>).
+	/// (<see cref="UI.UiFonts.ParkScreenLettering"/>), and the letters' sharpening where a text is drawn at twice a font
+	/// pixel or more (<see cref="UI.UiText.PrescaleFor(float)"/>).
 	/// </summary>
 	public bool Faithful { get; set; }
 

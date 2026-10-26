@@ -4407,7 +4407,7 @@ reads blurred (not looked into). **The flags turn to a new wind eased, where the
 Alexah's word, said at `ParkFlags.TurnRate`): each frame `ParkFlags.WindAfter` moves the drawn angle the shorter way
 round towards the weather's by `Time.SmoothingFactor( 1.5 )`, so a 45 degree change is 10 short after a second and 2
 after two; a park opens at the file's wind, the turn holds while the game is paused, as the phase does, and the rate is
-chosen, the original having none. The debug console's `flags` prints the count, phase, the drawn angle (`at`), the
+chosen, the original having none. Under opentpw.cfg's `graphics faithful` (Q645, `ParkFlags.TurnFactor`) the angle is taken at once, as the original's. The debug console's `flags` prints the count, phase, the drawn angle (`at`), the
 weather's wind, the frame's `Time.Now` and the folder; `flags wind W` holds the wind and stands the flags at it at once,
 `flags wind free` lets it go; the log has a line at each change of the wind.
 

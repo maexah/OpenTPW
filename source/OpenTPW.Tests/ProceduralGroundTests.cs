@@ -25,7 +25,7 @@ public class ProceduralGroundTests
 	private static string Hash( byte[] bytes ) => Convert.ToHexString( SHA256.HashData( bytes ) ).ToLowerInvariant();
 
 	/// <summary>
-	/// <paramref name="test"/> at the original's texture depth, four bits a channel (opentpw.cfg's <c>textures original</c>),
+	/// <paramref name="test"/> at the original's texture depth, four bits a channel (opentpw.cfg's <c>graphics faithful</c>),
 	/// where a path texture's texels are the ones the original's oracle was given.
 	/// </summary>
 	private static void AtTheOriginalsDepth( Action test )

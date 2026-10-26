@@ -195,15 +195,17 @@ cash in (`+0x1fc94`) and all costs (`+0x1f5a4`), each read as the hire screen re
 `index + count` only when the ring has wrapped). Cash in at or above the costs gives frame 0, the green arrow. Cash in
 below them gives frame 1, the red arrow (`0x004a0f8a`, a signed `JL`). A ring with no closed month reads a stand-in
 word, the same word for both rings (the routine's third argument, `0x004a0f51` and `0x004a0f86`; its callers pass the year
-less 1900, `0x00481568` and `0x00481653`), so a park with no month
+less 1900, loaded at `0x00481564` with the day at `0x00481568`, and `0x00481653`), so a park with no month
 closed shows the green arrow. The routine runs at two times:
 
 - **Once a day**, from `Calendar_Update` (`0x004f83ac`, through `FUN_00481560`). This is after the day's message `0xb`
   and **before** the month's `0xc`, which closes the month. So on the first of a month the arrow still shows the month
   before last, and it turns on the second day.
 - **At a load**, from `FUN_004815e0` in the load's rebuild `FUN_00415140` (`0x00415227`, `0x0048166f`). The routine
-  returns at once while the gadget does not exist (`[0x007cb2b8]` null, `0x004a0e30`..`0x004a0e3d`; the pointer is
-  written only at `0x004a0a51`, in the body's `FUN_004a0a20`), and at a Load Park click the gadget is there: the stock
+  returns at once while the gadget does not exist (`[0x007cb2b8]` null, `0x004a0e30`..`0x004a0e3d`). The pointer has two
+  writes: `FUN_004a1d70`, the gadget's builder, sets it to control `0x1d` (`0x004a255c`), and the proc `FUN_004a0a20`
+  nulls it on message `0x14` (`0x004a0a51`). The builder runs before the analyser's first call on every park entry
+  (`0x0054ed25` -> `0x00489f50` -> `0x0048a222`, then `0x0054f12b`), so the gate passes there; at a Load Park click the gadget is there: the stock
   park loaded into a park showing green (`q674/files/green.TPWS`) is red from its first frame, tick 756, before its first
   day's change at 762 (Q674, `q674/orig/O-L-sheet.png`).
 
@@ -690,7 +692,7 @@ rides' pump at rate 2, `lib/rectfilm.py`):** the picture changes 12.75 times a s
 run's `fluid32` is `fluid` moved by one whole repeat of its wrapped texture (FileFormats `models.md`, "Bits 0x10 and
 0x20"), so one picture is shown through the turn: `0x1f` two passes, then `0x00` three, the position set to nought and its
 fraction lost; 31 pictures in all (`q640/orig/O`). **OpenTPW draws the run as one smooth scroll** (Q677, a deviation
-on by default; `ResearchPump.Scroll`, `Shift`): `fluid` moved across by a 16.16 scroll that grows as the position does,
+on by default, off under opentpw.cfg's `graphics faithful`, which steps it as the original's, Q645; `ResearchPump.Scroll`, `Shift`): `fluid` moved across by a 16.16 scroll that grows as the position does,
 turns at 31 with its fraction kept and moves on every drawn frame by the speed it has then (a change of rate bends it, and does not step it), so the picture changes on every drawn frame (143.93
 a second on the desktop, no gap over 10.2 ms) and moves +0.42578 repeats a second in a line (RMS 0.0052 of a repeat, the
 rest one ripple a screen pixel crossed) where the original's steps at +0.411 with its hold once a loop (a loop of 2.35 s

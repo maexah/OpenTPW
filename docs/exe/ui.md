@@ -364,7 +364,7 @@ where not, never under the original's (`UiText.SizeIn`); a wrapping text breaks 
 a list row holds at the 768 set (font 7's 25-pixel line in a 30-pixel row at 2552 x 1355); at 1280 x 720 the rows are
 held to 1.172. Every string of every tab of both screens stayed inside its box at all three sizes (`OPENTPW_TEXT_CENSUS=1`,
 `q644/Y/census-*.txt`, `Y7/`, `Y10/`). A face other than the original's was tried and not chosen
-(`q644/sheet.png`).
+(`q644/sheet.png`). Under opentpw.cfg's `graphics faithful` the lettering is 1, the original's (Q645, `UiFonts.LetteringFor`).
 
 **Why the original's letters looked bolder on that sheet** (Alexah's question, 2026-10-25): not another font and no
 shadow on the rows (their label skin draws once). At the same set and scale, both at 1024 x 768, the two games' rows and
@@ -376,7 +376,7 @@ drawn scale (the size wanted after its box has held it, `UiText.Plan`) before th
 scales a font): at 2552 x 1355 the rows' strokes went from a share over 200 of 0.136 to 0.481, the original's sheet tile
 0.199 (`q644/y-rows.png`); under a scale of 2 nothing changes. Never more than the scale, so a text is never drawn
 smaller than its texture: `Texture.UpdatePixels` rewrites the first level alone, and a shrunk text would be read from
-its stale mip maps.
+its stale mip maps. Under opentpw.cfg's `graphics faithful` the copy is 1 whatever the scale (Q645, `UiText.PrescaleFor`), so the sampler alone enlarges the text, as the original's.
 
 ## Escape game menu
 

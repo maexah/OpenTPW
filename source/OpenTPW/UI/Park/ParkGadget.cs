@@ -76,8 +76,8 @@ namespace OpenTPW.UI;
 /// number is <see cref="ParkState.Balance"/>: the save's own <c>mBalance</c>, moved by every admission
 /// fee, charge, cost and refund - one number, as in the original (see <see cref="ShowMoney"/>). What is
 /// still out is <b>0x30</b>, the cost of whatever is
-/// in your hand, which the original starts hidden and paints yellow because an empty hand has no price;
-/// and <b>0x31</b>, the trend arrow, not built yet (Q674). Both are written out where the cluster is built.
+/// in your hand, which the original starts hidden and paints yellow because an empty hand has no price.
+/// <b>0x31</b>, the trend arrow, is built (Q674; see <see cref="ShowMoney"/>). 0x30 is written out where the cluster is built.
 /// </para>
 /// <para>
 /// <b>Engine and content.</b> The controls, the pointer and the help bar are engine. Which buttons a
@@ -1741,6 +1741,8 @@ internal sealed class ParkGadget : UiWindow
 		// The number comes from the running state, but whether the park HAS an economy is still a fact
 		// about the file - so a theme shipping no economy shows nothing rather than a nought, which would
 		// be a claim that it is broke.
+		// Dead by CONTENT (rule 3): the Lost Kingdom park file carries an economy and FreshPark always sets one, so nothing placed reaches this arm.
+		// It leaves _trend and _dollar as they stand; the original's behaviour for a file without one is not looked into.
 		if ( level?.ParkState is not { } park || level.Park?.Economy is null )
 		{
 			_balance.Text = null;

@@ -74,8 +74,10 @@ belongs to or at the end. Grep it by area or Q-number; never read it whole.
 - **One line brings the original's look back: `graphics faithful` in `save/opentpw.cfg`** (Q645, Alexah 2026-10-21; off
   by default, read as the game starts, `GameOptions.Faithful`). It turns every chosen improvement off at once: the art
   cut to four bits a channel (Q616), 16-pixel ground tiles (Q618), the research pumps stepped picture by picture (Q677),
-  the flags taking each wind at once (Q643), the buy and hire screens lettered at the original's size (Q644); the boot
-  log's `Graphics:` line names the mode. At the gate, faithful against the default against the original: the path's
+  the flags taking each wind at once (Q643), the buy and hire screens lettered at the original's size (Q644), and the letters' sharpening where a text is
+  drawn at twice a font pixel or more (Q644, `UiText.PrescaleFor`); the boot
+  log's `Graphics:` line names the mode. The two lines it replaced, `textures original` and `ground original` (Q616, Q618), are
+  read no more: the log warns of each, naming `graphics faithful`, and the next save of the file drops them. At the gate, faithful against the default against the original: the path's
   sharpness 1.47, 3.24 and 1.80, the grass 1.29, 3.72 and 1.74, the path's colour (163.2, 121.2, 51.8), (175.9, 127.1,
   71.0) and (165.8, 120.7, 50.2) (`q645/side-by-side-gate.png`); the rides' pump 13.16 picture changes a second against
   143.93; a 24-degree wind change taken on the next frame, where the default leaves 0.951 of a 42-degree one after two
