@@ -5101,8 +5101,8 @@ the same per-frame block from `[0x008786bc]`, each against its own baseline and 
 
 | Constant | Value | Baseline | Driver | What it paces |
 |---|---|---|---|---|
-| `0x00700f8c` | 1/31.000001 | `[0x00878c74]` | `FUN_00519060` | placed objects, track rides |
-| `0x00700f90` | 1/62.000002 | `[0x0087879c]` | `FUN_0055ce60` | particles and models |
+| `0x00700f8c` | 1/31.000001 | `[0x00878c74]` | `FUN_00519060` | track rides (it walks the things of type 3 with a `+0x28` record into `FUN_00546280`) |
+| `0x00700f90` | 1/62.000002 | `[0x0087879c]` | `FUN_0055ce60` | the flying cars (it walks the tour ride records at `[0x8791f8]`, `0x0055ce80`; `park.md`, "What a drawn frame shows between ticks") |
 | `0x00700f94` | **1/248.000007** | `[0x00878a1c]` | `FUN_00518f90` | **peeps and staff** |
 
 **The every-2nd-tick sprite step moves NOBODY — a clean negative worth keeping.** `FUN_00475360`'s only

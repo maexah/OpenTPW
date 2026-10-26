@@ -47,7 +47,7 @@ fork watch).
 
 **Ordered at Alexah's word (2026-10-21), after their own play of Lost Kingdom:** showing the original's art as well as it can
 be shown comes first, and improvements over the original are ON by default, each said at the site as a deviation (full
-texture depth, smoothing between ticks, flags easing between winds, a more legible font); a "faithful" graphics toggle that
+texture depth, the research pumps' smooth scroll, flags easing between winds, a more legible font); a "faithful" graphics toggle that
 brings the original's look back comes last (Q645). Q647 first (a console.log per launch, Alexah 2026-10-22, for the play-test fixes after it). Then the display: Q616 (eight bits a channel by default, reversing
 Q700's 2026-10-18 choice), Q617 and Q618 (the ground's cells at different sharpness, then the paths, queues and ride
 borders; decode how the original draws and filters the ground first), Q619 (the river and the rock not darkened), Q620
@@ -59,7 +59,7 @@ the spot), Q543 (the advisor's opening lines),
 Q27 (push scroll), Q631 (WASD and the arrow keys), Q632 (path sounds), Q633 (queue previews), Q634 (the cursor behind the
 preview), Q635 (Ctrl+click), Q419 (the hire screen's picture), Q636 (its skill meter), Q637 (the gadget's aerial), Q525
 (the price's "$"), Q638 (the tag's sparkle), Q639 (the golden ticket's centring), Q640 (the pumps' stutter), Q641 (the
-money's arrows). Last the chosen improvements: Q642 (smoothing between ticks), Q643 (flags easing), Q644 (a legible font),
+money's arrows). Last the chosen improvements: Q675 (the clips at the frame's own time, and the pumps' smooth scroll), Q643 (flags easing), Q644 (a legible font),
 then Q645. **Alexah's decisions (2026-10-21):** note 1 reverses the 2026-10-18 choice (Q700: four bits by default); W, A, S
 and D all move the camera, and the screen shortcuts on A and S move to other free keys, said at the site (Q631). Their notes
 are in `~/.cache/tpw-harnesses/playtest-2026-10-21/notes.md`, with five screenshots.
@@ -80,6 +80,31 @@ filed the items that cite it.
   default.** Choose a face and size that keep each control's box (decide with Alexah on a sheet of two or three), and
   render those two screens first; Q213 (QUEUE:478) and Q614 (QUEUE:238) are the nearby lettering items. A deviation said
   at the site and on the website. Confirm: both screens beside the original's, every string fitting its box.
+- [ ] **Q675. Pose the clips at the frame's own time.** From Q642's decode (`park.md`, "What a drawn frame shows between
+  ticks", difference 7). `ParkRides.OnUpdate` sweeps the players at `GameClock.Ticks × 31`, so every clip (rides, shops,
+  sideshows, the bus, the ferry, the seaplane) steps about 32 times a second; the original's snapshot is the frame's
+  clock and its frame a float (`0x00473740`). Sweep at `(GameClock.Ticks + GameClock.PartialTick) × 31`, never past the
+  next tick's instant (`PartialTick` is below 1), so a script's trigger still judges the channel as the last frame's
+  advance left it (difference 3); take the deviation sentence out of `ParkRides.OnUpdate`. The sampler needs no change:
+  `AnimFrame` is already a float (`AnimTimeControl.cs:122`, passed to `PoseChannel` at `RideAnimations.cs:336`) and
+  rotation keys already ease (`AnimationFile.cs:465`). What stays at the tick rate: the sprite picture step (62 ms,
+  `park.md`), the peeps' 248 ms placement, the track tick and the scripts' ticks. **A second site:**
+  `ParkBumperBoats.cs:155` makes its own `now` from `GameClock.Ticks` and poses the boat's clip once a tick
+  (`boat.Animations.Advance( now )` :436, `boat.Model.Pose` :443); move it to the same instant. Its position is eased by
+  `Clamp( PartialTick, 0, 1 ) - 1` (:458), which is `(Ticks - 1 + p) × 31`, one tick behind the clips' phase. **Take
+  `(Ticks + p) × 31` for the clips**, not the boats' phase: a clip started at the last tick's instant, swept at a time
+  behind it, would wrap `(uint)( AnimTime - StartAnimTime )` (`AnimTimeControl.cs:181`) and read as finished. The
+  engine's own snapshot, taken after its tick loop, lies between its last two ticks; the choice leaves the clips ahead of
+  the boats' position by one tick, and says so at the site. **The tick log is not unchanged:** `sweeps` and `rides` keep
+  their rate, but a clip that ends between `Ticks × 31` and `(Ticks + p) × 31` is finished before the next tick, so a
+  `WAITANIM` or a queued trigger can pass a tick sooner (toward the engine). Compare rates, not per-tick script traces.
+  Second part, an improvement said at `ParkResearchScreen` (Alexah, 2026-10-21: on by default): the pumps drawn as one
+  smooth scroll. From Q640 (`hud.md`, "The pump"; `docs/history/queue-done.md`, Q642): they step as the original's, 12.75
+  pictures a second at rate 2 in a 2-or-3-pass rhythm, with a 167 ms hold once a loop where `fluid32` repeats `fluid`;
+  each run picture is the last moved by -1/31 of the texture in `u` (FileFormats `models.md`), so a pump could be drawn at
+  its 16.16 position as one smooth scroll, the turn taken at 31. The drain's and the fill's 32 meshes were not measured.
+  Confirm: `q642/ours.py` on the Bouncy Dino (`runB2`'s patch, 32.1 a second before: predict the frame rate after), the
+  bus driving in filmed the same way, the bumper boats, and `sweeps`/`rides` rates unchanged across the change.
 - [ ] **Q645. A "faithful" graphics toggle brings the original's look back.** From Alexah's play test, 2026-10-21
   (decisions, last in the order). One option, off by default, that turns every improvement of this batch off at once:
   four bits a channel (Q616), the research pumps' picture-by-picture steps (Q675's second part; the clips' every-frame posing is the original's own, Q642), flags' jumps (Q643), the original's letters
@@ -93,17 +118,9 @@ filed the items that cite it.
   same stand-in for a ring with no month. Set it once a day where the date is written, before the month's change runs,
   and at a load. On each change of the balance, move its left edge to the end of the lettering, its top kept, and set
   `0x32` to frame 1 while the balance is below nought. `0x2f` letters from its left here (`TextAcross = Start`), so the
-  arrow's place depends on that choice. Confirm, in both games: the stock park's load (red), and a month pushed into
+  arrow's place depends on that choice. Until it is built the gap is counted as `MONEY_TREND_ARROW`
+  (`Unimplemented.Report` in `ParkGadget.ShowMoney`); take that call out with the build. Confirm, in both games: the arrow in the first frames after the stock park's load (red; the filmed red at tick 848 was the daily call's, four days on), and a month pushed into
   profit (green on its second day, not its first), and the arrow's place against the number at two widths.
-- [ ] **Q675. Pose the clips at the frame's own time.** From Q642's decode (`park.md`, "What a drawn frame shows between
-  ticks", difference 7). `ParkRides.OnUpdate` sweeps the players at `GameClock.Ticks × 31`, so every clip (rides, shops,
-  sideshows, the bus, the ferry, the seaplane) steps about 32 times a second; the original's snapshot is the frame's
-  clock and its frame a float (`0x00473740`). Sweep at `(GameClock.Ticks + GameClock.PartialTick) × 31`, never past the
-  next tick's instant, so a script's trigger still judges the channel as the last frame's advance left it (difference
-  3) and the tick log is unchanged; take the deviation sentence out of `ParkRides.OnUpdate`. Second part, an improvement
-  said at `ParkResearchScreen` (Alexah, 2026-10-21: on by default): the pumps drawn as one smooth scroll (Q642's note
-  above, from Q640). Confirm: `q642/ours.py` on the Bouncy Dino (`runB2`'s patch, 32.1 a second before: predict the
-  frame rate after), the bus driving in filmed the same way, and `sweeps`/`rides` ticks unchanged across the change.
 - [ ] **Q743. The original on Q713's made file: row 248 said of a food stall walked away from.** From Q713 (lane B, which
   cannot run the original). Load `~/.cache/tpw-harnesses/q713/files/outlets-B.TPWS` (Alexah's jungle `New Save`, row 248's
   record fresh, food stall 193 a day of 7 walk-aways to its 7 customers) in the original by `q707/gms-none.dat`'s player
@@ -2904,3 +2921,19 @@ state machine.
   Ghidra on the message 5 path (0x0048dc0a) and the delayed-post queue (0x00669c8d), or with a run of the original
   (right-click the top within 500 ms of a tag going on, film the effect list with record.sh); then match it or say it
   at `ParkGadget.TagEffects`. Low priority.
+- [ ] **Q699. The park's rain ignores the wind.** From run 10's review (Q643's first reader). The original turns its rain
+  with the wind: `mWindDir` is handed to the drop-direction setter `0x0057d920( dir, force )`, called from
+  `FUN_00512f00` at `0x005131dd` at each change of weather, and a drop is the quad from `p1` to `p1 + windDirection *
+  0.1` and drifts along it (`weather.md`, "The rain"). `source/OpenTPW/World/Weather/Rain.cs:84` drifts every drop by
+  a constant `(5.5, 2.5, 0)`. Build the original's: read the setter's body (`0x0057d920`) first, then turn the drops
+  by it at each change of weather. Read the **raw** `ParkWeather.WindDirection`, not `ParkFlags`' eased angle: the
+  original's rain turns at once, and Alexah's easing (Q643) was asked for the flags only. Confirm: the rain's slant in
+  both games across a change of wind (poke the original's `mWindDir` with `thingpoke.py`; Q643's `flagangle.py` reads
+  the flags).
+- [ ] **Q689. Whether the original draws particles between ticks.** From run 10's review (VERIFY-3, Q642 5).
+  `ParticleSystem.cs:17` says "Nothing moves between ticks: the original draws the last tick". Q642's decode did not
+  test it: `FUN_0055ce60` (docs/exe/park.md, "What a drawn frame shows between ticks") paces the flying cars' tour
+  records, not particles, and the original's particle draw was not read. Read how the original draws a world particle
+  between ticks (the sprite pass, `original/spritepass.py`, `particleheights.py`) and whether it eases by the frame's
+  own time; if it does, build it (an improvement or the original's own, said at the site), if not, keep the comment.
+  Confirm: a particle film (`rectfilm.py`) in both games on an effect whose rate is known.

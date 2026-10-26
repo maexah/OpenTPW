@@ -194,13 +194,17 @@ compares the newest closed month of the analyser's two money rings ("The mini-ba
 cash in (`+0x1fc94`) and all costs (`+0x1f5a4`), each read as the hire screen reads it (a negative index reads
 `index + count` only when the ring has wrapped). Cash in at or above the costs gives frame 0, the green arrow. Cash in
 below them gives frame 1, the red arrow (`0x004a0f8a`, a signed `JL`). A ring with no closed month reads a stand-in
-word, the same word for both rings (Ghidra reads it as the third argument, the year less 1900), so a park with no month
+word, the same word for both rings (the routine's third argument, `0x004a0f51` and `0x004a0f86`; its callers pass the year
+less 1900, `0x00481568` and `0x00481653`), so a park with no month
 closed shows the green arrow. The routine runs at two times:
 
 - **Once a day**, from `Calendar_Update` (`0x004f83ac`, through `FUN_00481560`). This is after the day's message `0xb`
   and **before** the month's `0xc`, which closes the month. So on the first of a month the arrow still shows the month
   before last, and it turns on the second day.
-- **At a load**, from `FUN_004815e0` in the load's rebuild `FUN_00415140`.
+- **At a load**, from `FUN_004815e0` in the load's rebuild `FUN_00415140` (`0x00415227`, `0x0048166f`): read from the
+  listing, not isolated by a run. The routine returns at once while the gadget does not exist (`[0x007cb2b8]` null,
+  `0x004a0e30`..`0x004a0e3d`; the pointer is written only at `0x004a0a51`, in the body's `FUN_004a0a20`), and whether
+  the gadget is built before the load's call runs was not read.
 
 **The place.** `Gadget_ShowMoney` (`0x004a0ab0`) letters the balance each time it changes. It moves `0x31` with its size
 kept: its left edge goes to the right edge of the balance's lettering (`FUN_0065d616` on `0x2f`, then `FUN_0065ce10`,
@@ -214,7 +218,7 @@ by `thingpoke.py`; predicted first, `q641/PREDICTION.txt`, all held). Frames are
 
 | Date, tick | Newest cash in / all costs | Arrow |
 |---|---|---|
-| 6 Feb, 848 (the load) | 1500 / 13175 (the file's month) | red |
+| 6 Feb, 848 (four days after the load, so the daily call's frame; the load's own call was not isolated) | 1500 / 13175 (the file's month) | red |
 | 1 Mar, 1384 | 10000435 / 768 (February closed with 10,000,000 written into its cash in) | still red |
 | 2 Mar, 1407 | the same | green |
 | 1 Apr, 2098 | 1105 / 10000400 (March's costs written 10,000,000) | still green |
@@ -222,8 +226,10 @@ by `thingpoke.py`; predicted first, `q641/PREDICTION.txt`, all held). Frames are
 | 4 Apr, 2167 | 10000400 / 10000400 (the newest cash-in sample written equal) | green |
 | 6 Apr, 2212 | 10000399 / 10000400 | red |
 
-The arrow stood about 50 pixels left of the stream's rectangle on the 1024 x 768 frame, just after the number, and moved
-right when the number widened (`O-mar.png`, `O-apr.png`).
+The stream's units are two to a pixel of the 1024 x 768 frame (the body's `(37,984)-(439,1507)` stands at
+`(18,492)-(220,754)` in `O-1-load.png`), so the stream rectangle's left edge, 728, is at 364 pixels. The arrow stood 34
+to 53 pixels left of it (its left edge at 312 to 330, measured in the money crops and read by eye in `O-mar.png` and
+`O-apr.png`), just after the number, and moved right when the number widened.
 
 **OpenTPW** does not build `0x31`, and `0x32` always shows its first part (Q674). The two rings it needs are kept
 (`ParkState.MonthCashIn`, `MonthCosts`, Q385).

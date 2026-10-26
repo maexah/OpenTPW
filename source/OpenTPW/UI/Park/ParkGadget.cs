@@ -571,7 +571,8 @@ internal sealed class ParkGadget : UiWindow
 			TextAcross = TextAlign.Start
 		} );
 
-		// The currency icon - the one piece of artwork this cluster has of its own.
+		// The currency icon. Always frame 0 here; the original sets frame 1 (dollarsignneg) while the balance is
+		// below nought (Gadget_ShowMoney 0x004a0c23). Not built: MONEY_TREND_ARROW in ShowMoney, Q674.
 		Root.Add( new UiControl
 		{
 			Id = 0x32,
@@ -1732,6 +1733,10 @@ internal sealed class ParkGadget : UiWindow
 		}
 
 		_balance.Text = $"{park.Balance}";
+
+		// Where Gadget_ShowMoney (0x004a0ab0) also moves the trend arrow 0x31 to the lettering's end and sets
+		// 0x32's frame from the sign of the balance; neither is built (Q674). Counted once a frame the gadget updates.
+		Unimplemented.Report( "MONEY_TREND_ARROW" );
 	}
 
 	/// <summary>

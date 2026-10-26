@@ -26,7 +26,7 @@ One line per system; the detail, item by item, is `docs/WORKS.md` (grep it by ar
 - Every other sound still waits out a per-effect "repeat delay" that is really a priority (Q43). Of a park file's live voices only its held chains are put back (Q612), so the stock park's gates make their chain of beasts from the entry as the original's do; its one-shots, plain and music-class voices (the Fountain's, the Litter Bin's, the crowd's, the music's), its screams' chains and the land's own copies are counted (`PARK_FILE_SOUND_VOICE_*`, Q741), and a save writes the loaded file's list less the voices let go (`ParkVoices.Without`). A voice is not clamped to 16 bits as the original's is, only the mix (`docs/exe/audio.md`).
 - The handyman's litter search is counted and answers nothing; a mechanic put down goes idle where the original's searches at once (counted); the guard's shout and catch (`0x88`, `0x89`) wait on the chase, unbuilt and uncounted; a member going idle keeps the picture they had, but from a performance or a clean; one put down sets off on the next sweep, where the original's stands eleven (Q229). No freed thing id is used again (Q582). Guests, staff and rides are swept apart, not as one list (Q150). The pause overlay as the window loses the focus is counted, not built. A strike's three posts to the advisor and the handymen's own cause are counted, and the ride window's strike statuses unbuilt (Q212).
 - Counted, not built: the isles' random clips (Q76), the idle repeat (Q77), a clip's hide list at a start on an idle channel (Q658), a ride walked into in first person, a coaster's excitement and level, the Hot Pot's wake, a ride head's picture turn (`RIDER_HEAD_TURN_AT_REST`).
-- The rides', shops', sideshows' and vehicles' clips are posed at the last tick's instant, so they step about 32 times a second where the original's move every drawn frame; the guests, the track cars and the water already move between ticks as the original's do (decoded, Q642; the build is Q675).
+- The rides', shops', sideshows' and vehicles' clips are posed at the last tick's instant, so they step about 32 times a second where the original's move every drawn frame; the guests, the track cars' places and the water already move between ticks as the original's do, the bumper boats' own clip not (decoded, Q642; the build is Q675).
 - The orbit camera's point goes on past the land's edge over the sea, where the original's stops about a cell past the heightfield's edge (decoded, Q625; the build is Q667).
 - The camcorder is entered where the orbit looks, not by a click on the ground, so it can start off the park, where it cannot move (Q25); leaving puts the orbit's point and yaw back at once, where the original's drawn turn eases back over about a second (Q626, Q23). It walks at a chosen 40 units a second, where the original's measures about 21.8 (Q25). Walking into the Belly Bounce's entrance starts no ride view: counted, and the viewer walks on into its queue; three of the four ride views (a track ride's car, a TOUR car, a coaster's node) are counted and taken as none (Q246).
 
@@ -40,7 +40,7 @@ Only the item just landed is here. Every earlier item's account is in `docs/hist
 
 - Q643 (the flags ease between winds): watched at one camera, B, in the stock park, at the high texture quality, in
   Instant Action alone (the flags and the weather take no mode); the original's jump was read by poking its wind, not
-  across a change of its own weather. The menu's pause holding the turn is held by a test alone, not filmed.
+  across a change of its own weather. The menu's pause holding the turn is neither tested nor filmed: the test holds `WindAfter`'s paused branch alone, and the console's pause the runs used holds any turn through `Time.Delta` = 0.
 
 
 
@@ -55,8 +55,8 @@ Only the item just landed is here. Every earlier item's account is in `docs/hist
 | | | measured |
 |---|---|---|
 | Opcodes | **78** of 106 | 2026-10-20, Q553 (`FADEOBJ`), `case Opcode.` labels vs enum members |
-| Tests | **3940**, 0 fail, 0 skip with the game | 2026-10-25, Q643, alone in a worktree |
-| Tests without the game | **1401** ran, **2539** skipped, of 3940 | 2026-10-25, Q643, alone in a worktree |
+| Tests | **3941**, 0 fail, 0 skip with the game | 2026-10-26, run 10 fix H, alone in a worktree |
+| Tests without the game | **1401** ran, **2540** skipped, of 3941 | 2026-10-26, run 10 fix H, alone in a worktree |
 | Build warnings | 121 in the main tree; 131 in a fresh worktree, the ten more NuGet's advisories on ModKit's ImageSharp | 2026-10-10 (the worktree's 131 and the main tree's 121 at Q340, the worktree's 131 and the main tree's 121 again at Q343, at Q344 and at Q345, and the worktree's 131 at Q346 and, with the main tree's 121, at Q347, at Q348, at Q349, at Q351 and at Q352, 2026-10-13) |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
