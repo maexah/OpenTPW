@@ -143,23 +143,30 @@ internal sealed class ParkBuyScreen : UiWindow
 		{
 			Id = 0x1e9,
 			Rect = new UiRect( 186, 30, 2018, 1007 ),
-			Mesh = UiMesh.Get( "w_big" )
+			Mesh = UiMesh.Get( "w_big" ),
+			// Lettered larger than the original's where each box holds it: a deviation, UiFonts.ParkScreenLettering.
+			TextSize = UiFonts.ParkScreenLettering
 		};
 
+		// Lettered by UI_SetTitle (0x00485d20): font 5 on the purple skin in (234, 239, 102), centred in the stream's
+		// rect (805 to 1277) widened by half its width either side.
 		_title = Root.Add( new UiControl
 		{
 			Id = 0x1fe,
-			Rect = new UiRect( 805, 74, 1277, 153 ),
+			Rect = new UiRect( 569, 74, 1513, 153 ),
 			Font = 5,
-			TextColour = UiColour.White
+			TextColour = new UiColour( 234, 239, 102 ),
+			TextShadow = true
 		} );
 
+		// The purple skin, font 5 in white, from the right (PurpleSkin_Construct, 0x004ace70).
 		_money = Root.Add( new UiControl
 		{
 			Id = 0x200,
 			Rect = new UiRect( 1297, 75, 1769, 154 ),
 			Font = 5,
 			TextColour = UiColour.White,
+			TextShadow = true,
 			TextAcross = TextAlign.End
 		} );
 

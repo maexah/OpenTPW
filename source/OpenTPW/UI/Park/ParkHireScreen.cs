@@ -105,23 +105,30 @@ internal sealed class ParkHireScreen : UiWindow
 		{
 			Id = 0x247f,
 			Rect = new UiRect( 186, 30, 2018, 1007 ),
-			Mesh = UiMesh.Get( "w_big" )
+			Mesh = UiMesh.Get( "w_big" ),
+			// Lettered larger than the original's where each box holds it: a deviation, UiFonts.ParkScreenLettering.
+			TextSize = UiFonts.ParkScreenLettering
 		};
 
+		// Lettered by UI_SetTitle (0x00485d20): font 5 on the purple skin in (234, 239, 102), centred in the stream's
+		// rect (805 to 1277) widened by half its width either side.
 		_title = Root.Add( new UiControl
 		{
 			Id = 0x2480,
-			Rect = new UiRect( 805, 74, 1277, 153 ),
+			Rect = new UiRect( 569, 74, 1513, 153 ),
 			Font = 5,
-			TextColour = UiColour.White
+			TextColour = new UiColour( 234, 239, 102 ),
+			TextShadow = true
 		} );
 
+		// The purple skin, font 5 in white, from the right (PurpleSkin_Construct, FUN_0049bdd0).
 		_money = Root.Add( new UiControl
 		{
 			Id = 0x2496,
 			Rect = new UiRect( 1297, 74, 1769, 153 ),
 			Font = 5,
 			TextColour = UiColour.White,
+			TextShadow = true,
 			TextAcross = TextAlign.End
 		} );
 
@@ -479,12 +486,15 @@ internal sealed class ParkHireScreen : UiWindow
 	internal string Account()
 		=> $"cash in {_cashInFigure.Text}, staff costs {_staffCosts.Text}, other costs {_otherCosts.Text}, balance {_balanceFigure.Text}";
 
-	/// <summary>Takes the list's posted pick, as the original's loop hands the screen its queued <c>0x401</c>, then the park's cash.</summary>
+	/// <summary>
+	/// Takes the list's posted pick, as the original's loop hands the screen its queued <c>0x401</c>, then the park's cash,
+	/// lettered as the buy screen's (UITEXT 0x1ca or 0x1cb, <c>FUN_0049bdd0</c>).
+	/// </summary>
 	protected internal override void Update()
 	{
 		_list.TakePosted();
 
-		if ( Level.Current?.ParkState is { } state )
-			_money.Text = $"{state.Balance}";
+		if ( Park is { } state )
+			_money.Text = ParkBuyScreen.MoneyText( state.Balance );
 	}
 }

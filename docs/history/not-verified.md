@@ -5,6 +5,9 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q643 (the flags ease between winds): watched at one camera, B, in the stock park, at the high texture quality, in
+  Instant Action alone (the flags and the weather take no mode); the original's jump was read by poking its wind, not
+  across a change of its own weather. The menu's pause holding the turn is neither tested nor filmed: the test holds `WindAfter`'s paused branch alone, and the console's pause the runs used holds any turn through `Time.Delta` = 0.
 - Q642 (smoothing between ticks, decoded; no code changed but a comment): measured on one clip, the Bouncy Dino's loop in
   the stock park, at one camera, the original at 60 frames a second and ours at 144. Not filmed: the bus, the ferry and
   the seaplane (their route keys go through the same channel advance, read in the listing only), the original's track

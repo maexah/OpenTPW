@@ -344,6 +344,40 @@ in the original's frames. The options screen's labels do not: `0x004a43b0` and `
 (`OptionsScreen.cs`, font 6, `UiColour.Black`, no shadow). Not read: whether the pass's grey replaces the text's own
 colour or combines with it; `UiText` halves the colour and draws it at half alpha.
 
+### `UI_SetTitle` (`0x00485d20`), and the buy and hire screens' titles and money
+
+Read 2026-10-25 (Q644, `q644/gd/00485d20.c`). Its arguments are the window, a control id and the text. **Once per
+control**, while the control has no skin yet (`+0x98` nought): the rect is widened by half its width either side, the
+skin is the static two-pass object `0x007c2118` (built by `PurpleSkin_Construct` `0x00491920` at `0x00485722`, its
+destructor queued at `0x00485740`), the font is slot 5 of the current set (`0x0078b5c4 + set * 0x138`, which is
+`FUN_00485a70( 5 )`'s entry), the text is centred, and the colour is (234, 239, 102) (`UI_SetTitleColour`,
+`0x00492d20`). Then, every call, the text. The buy screen's opener calls it on `0x1fe` (`0x004ad1b8`), the hire
+screen's on `0x2480` (`FUN_0049bdd0`); their money controls `0x200` and `0x2496` take a purple skin of their own in
+white, font 5, from the right (`0x004ace70`; `FUN_0049bdd0`), both lettered "Cash  $ N" or "Cash  -$ N" from UITEXT
+`0x1ca` or `0x1cb`. The original under Proton, the stock park: both titles' brightest pixels (239, 239, 99), each with
+the darker copy, the hire screen reading "Cash  $ 88112" (`q644/orig/a-1-buy.png`, `a-2-hire.png`; its "Hire Janitors" is the reference
+install's `american` table, where ours reads the English "Hire Cleaners").
+
+**OpenTPW letters both screens larger** (Q644, a deviation at Alexah's word, 2026-10-25, `UiFonts.ParkScreenLettering`):
+the same `.bf4` fonts drawn 1.2 times the original's size where each control's box holds it, as large as it holds
+where not, never under the original's (`UiText.SizeIn`); a wrapping text breaks at its width at that size. 1.2 is what
+a list row holds at the 768 set (font 7's 25-pixel line in a 30-pixel row at 2552 x 1355); at 1280 x 720 the rows are
+held to 1.172. Every string of every tab of both screens stayed inside its box at all three sizes (`OPENTPW_TEXT_CENSUS=1`,
+`q644/Y/census-*.txt`, `Y7/`, `Y10/`). A face other than the original's was tried and not chosen
+(`q644/sheet.png`).
+
+**Why the original's letters looked bolder on that sheet** (Alexah's question, 2026-10-25): not another font and no
+shadow on the rows (their label skin draws once). At the same set and scale, both at 1024 x 768, the two games' rows and
+labels carry the same ink, within 1.1 per cent, every ink pixel at 255 (`q644/w-crops.png`). The reference install runs
+at 800 x 600, so it letters set 2's smaller GAME9 and its frame was stretched to 1024 and then 1.76 times: a one-pixel
+stroke 2.25 pixels wide at full strength. Ours drew set 3's GAME10 1.76 times through the linear sampler, which spreads a
+stroke over two pixels and dims it. **OpenTPW now copies a text's pixels by nearest to the whole number at or under its
+drawn scale before the sampler enlarges it** (`UiText.PrescaleFor`, 1 to 4; a deviation of its own, the original never
+scales a font): at 2552 x 1355 the rows' strokes went from a share over 200 of 0.136 to 0.481, the original's sheet tile
+0.199 (`q644/y-rows.png`); under a scale of 2 nothing changes. Never more than the scale, so a text is never drawn
+smaller than its texture: `Texture.UpdatePixels` rewrites the first level alone, and a shrunk text would be read from
+its stale mip maps.
+
 ## Escape game menu
 
 | Address / value | Original name | What it is | Evidence |

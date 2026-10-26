@@ -10245,6 +10245,19 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   missed (A5 and O3, boxes off the flags; A7's pixel search, begun 300 px off). 9 bugs put back, 9 killed. Tests 3940/0
   with the game, 1401 ran / 2539 skipped without. **Q30 is the same flags** and is ticked with it: the eight poles stand at cells
   (41,3) to (55,5), and the frame's pixels at the two glass shelters pick `BusStopA` (42,5) and `BusStopB` (53,5).
+- [x] **Q644. A more legible font on the hire and buy screens.** From Alexah's play test, 2026-10-21 (note 28). The
+  `.bf4` fonts are drawn faithfully (`boot.md:12`; Q377 and Q378 letter the lists in font 7 at the factories' heights,
+  `queue-done.md:6955, :6962`) and are hard to read. **Alexah (2026-10-21): a more legible font is an improvement, on by
+  default.** **Alexah's choice (2026-10-25, from `q644/sheet.png`: Atkinson Hyperlegible, Nunito and Roboto drawn in
+  both screens by the game): keep the original's fonts, a bit bigger.** Done: both screens letter the same `.bf4` fonts
+  1.2 times the original's size where each box holds it (`UiFonts.ParkScreenLettering`, `UiText.SizeIn`; the deviation
+  at the site and in `ui.md`, "`UI_SetTitle`"); the titles lettered by `UI_SetTitle` (yellow (234, 239, 102), the
+  purple skin's edge, the widened rect), the money with its edge, the hire money "Cash  $ N" as the original's. Every
+  string of every tab inside its box at 2552 x 1355, 1280 x 720 and 1024 x 768 (`q644/Y`, `Y7`, `Y10`), beside the
+  original's (`q644/side-by-side.png`). **Alexah asked why the original's letters look bolder:** the titles' copy (now
+  drawn), and the reference install's 800 x 600 mode (a smaller font enlarged more); at the same scale the glyphs are the
+  same (`q644/w-crops.png`); our linear enlargement's thinning is fixed by copying a text's pixels whole first
+  (`UiText.PrescaleFor`, `ui.md`). 21 bugs put back, 21 caught. The website's words are the Sentinel's.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

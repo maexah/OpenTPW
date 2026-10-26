@@ -53,6 +53,12 @@ internal class UiControl
 	/// <summary>Whether the text has the purple skin's dark edge - see <see cref="UiText"/>.</summary>
 	public bool TextShadow { get; init; }
 
+	/// <summary>How much larger than the original's this control and those inside it letter their text, null for its parent's.</summary>
+	public float? TextSize { get; set; }
+
+	/// <summary>The size this control letters at: its own <see cref="TextSize"/>, else the nearest parent's, else the original's.</summary>
+	internal float LetteringSize => TextSize ?? Parent?.LetteringSize ?? 1f;
+
 	/// <summary>Whether text too wide for its rectangle carries on onto further lines.</summary>
 	public bool TextWraps { get; init; }
 
@@ -244,7 +250,7 @@ internal class UiControl
 	protected PixelRect TextArea => TextRect is { } rect ? VirtualScreen.ToPixels( rect, Anchor, VerticalAnchor ) : Pixels;
 
 	protected void DrawText( string? text )
-		=> _text.Draw( text, Font, TextColour, TextShadow, TextWraps, TextArea, TextAcross, TextDown );
+		=> _text.Draw( text, Font, TextColour, TextShadow, TextWraps, TextArea, TextAcross, TextDown, LetteringSize );
 
 	/// <summary>The front-most control under a point that takes the pointer, if any.</summary>
 	internal UiControl? HitTest( float x, float y )

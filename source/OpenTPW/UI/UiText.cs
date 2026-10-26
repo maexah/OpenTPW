@@ -28,38 +28,82 @@ internal sealed class UiText
 	private Layout _built;
 	private List<string> _lines = [];
 
-	private readonly record struct Layout( string Text, int Font, int Set, UiColour Colour, bool Shadow, int WrapWidth, TextAlign Across );
+	private readonly record struct Layout( string Text, int Font, int Set, UiColour Colour, bool Shadow, int WrapWidth, TextAlign Across, int Prescale );
 
-	public void Draw( string? text, int font, UiColour colour, bool shadow, bool wrap, PixelRect area, TextAlign across, TextAlign down )
+	/// <param name="size">
+	/// How much larger than the original's the lettering is wanted (<see cref="UiControl.LetteringSize"/>): it is drawn
+	/// at that size where the box holds it, and as large as the box holds where not, never smaller than the original's.
+	/// A wrapping text is broken at the width it has at that size.
+	/// </param>
+	public void Draw( string? text, int font, UiColour colour, bool shadow, bool wrap, PixelRect area, TextAlign across, TextAlign down,
+		float size = 1f )
 	{
 		if ( string.IsNullOrEmpty( text ) || UiFonts.Get( font ) is not { } bitmap )
 			return;
 
-		var scale = UiFonts.Scale;
-		var layout = new Layout( text, font, UiFonts.SetIndex, colour, shadow, wrap ? WrapWidthOf( area.Width ) : 0, across );
+		var layout = new Layout( text, font, UiFonts.SetIndex, colour, shadow, wrap ? WrapWidthAt( area.Width, size ) : 0, across,
+			PrescaleFor( UiFonts.Scale * size ) );
+		var built = _texture == null || layout != _built;
 
-		if ( _texture == null || layout != _built )
+		if ( built )
 			Build( bitmap, layout );
 
 		if ( _texture == null )
 			return;
 
-		// Aligned by the text itself; the shadow hangs off its left and bottom.
 		var margin = shadow ? ShadowOffset : 0;
-		var textWidth = (_width - margin) * scale;
-		var textHeight = (_height - margin) * scale;
+		var (placed, drawn) = Place( area, _width, _height, margin, UiFonts.Scale, size, across, down );
 
-		var x = Align( area.X, area.Width, textWidth, across ) - (margin * scale);
-		var y = Align( area.Y, area.Height, textHeight, down );
-
-		var width = _width * scale;
-		var height = _height * scale;
+		if ( built && Census )
+		{
+			var (textWidth, textHeight) = (placed.Width - (margin * UiFonts.Scale * drawn), placed.Height - (margin * UiFonts.Scale * drawn));
+			Log.Info( $"UI text: \"{text}\" font {font}, {textWidth:0} x {textHeight:0} in a box {area.Width:0} x {area.Height:0}, x {drawn:0.000}"
+				+ (textWidth > area.Width + 0.5f || textHeight > area.Height + 0.5f ? " OVER" : "") );
+		}
 
 		Material.UI.Set( "Color", _texture );
 
 		using ( _ = new Graphics.Scope( Screen.Size ) )
-			Graphics.Quad( new Rectangle( MathF.Round( x ), MathF.Round( Screen.Height - y - height ), width, height ), Material.UI );
+			Graphics.Quad( new Rectangle( MathF.Round( placed.X ), MathF.Round( Screen.Height - placed.Y - placed.Height ), placed.Width, placed.Height ), Material.UI );
 	}
+
+	/// <summary>
+	/// Where a laid-out text of <paramref name="width"/> by <paramref name="height"/> of the font's pixels (its shadow's
+	/// <paramref name="margin"/> among them) is drawn in <paramref name="area"/>, and at what size (<see cref="SizeIn"/>):
+	/// <paramref name="fontScale"/> screen pixels a font pixel times that size, its top-left from the top of the screen,
+	/// aligned by the text itself, the shadow hanging off its left and bottom.
+	/// </summary>
+	internal static (Rectangle Placed, float Size) Place( PixelRect area, int width, int height, int margin, float fontScale, float wanted,
+		TextAlign across, TextAlign down )
+	{
+		var size = SizeIn( wanted, (width - margin) * fontScale, (height - margin) * fontScale, area.Width, area.Height );
+		var scale = fontScale * size;
+		var x = Align( area.X, area.Width, (width - margin) * scale, across ) - (margin * scale);
+		var y = Align( area.Y, area.Height, (height - margin) * scale, down );
+
+		return (new Rectangle( x, y, width * scale, height * scale ), size);
+	}
+
+	/// <summary>
+	/// How much larger than the original's a text is drawn: <paramref name="wanted"/>, or less where its box
+	/// (<paramref name="areaWidth"/> by <paramref name="areaHeight"/>) is too small for that, and never less than 1. The
+	/// text's sizes are at the original's.
+	/// </summary>
+	internal static float SizeIn( float wanted, float textWidth, float textHeight, float areaWidth, float areaHeight )
+	{
+		var size = wanted;
+
+		if ( textWidth > 0f )
+			size = MathF.Min( size, areaWidth / textWidth );
+
+		if ( textHeight > 0f )
+			size = MathF.Min( size, areaHeight / textHeight );
+
+		return MathF.Max( 1f, size );
+	}
+
+	/// <summary>Whether each text laid out is logged with its drawn size and its box (<c>OPENTPW_TEXT_CENSUS=1</c>).</summary>
+	private static readonly bool Census = Environment.GetEnvironmentVariable( "OPENTPW_TEXT_CENSUS" ) == "1";
 
 	/// <summary>
 	/// The width a wrapping control's text breaks at, in the font's pixels: the control's drawn width over the font's scale,
@@ -67,6 +111,36 @@ internal sealed class UiText
 	/// "The help bar's lettering").
 	/// </summary>
 	internal static int WrapWidthOf( float areaWidth ) => (int)(areaWidth / UiFonts.Scale);
+
+	/// <summary>
+	/// How many texels a font pixel is copied to before the sampler scales the text onto the screen: the whole number at
+	/// or under <paramref name="scale"/>, 1 to 4. Enlarged straight from the font's pixels, the linear sampler spreads a
+	/// one-pixel stroke over two and dims it; copied first, a stroke keeps its full strength and only its edges are
+	/// blended. Never more than the scale, so a text is never drawn smaller than its texture and the sampler reads only
+	/// the first level, the one <see cref="Texture.UpdatePixels"/> rewrites. A deviation of OpenTPW's own: the original
+	/// never scales a font (Q644; <c>ui.md</c>, "<c>UI_SetTitle</c>").
+	/// </summary>
+	internal static int PrescaleFor( float scale ) => Math.Clamp( (int)MathF.Floor( scale + 0.001f ), 1, 4 );
+
+	/// <summary>The RGBA <paramref name="pixels"/> with each pixel copied into an <paramref name="n"/> by <paramref name="n"/> block.</summary>
+	internal static byte[] Prescaled( byte[] pixels, int width, int height, int n )
+	{
+		if ( n == 1 )
+			return pixels;
+
+		var texels = new byte[pixels.Length * n * n];
+
+		for ( int y = 0; y < height * n; ++y )
+		{
+			for ( int x = 0; x < width * n; ++x )
+				Array.Copy( pixels, ((y / n * width) + (x / n)) * 4, texels, ((y * width * n) + x) * 4, 4 );
+		}
+
+		return texels;
+	}
+
+	/// <summary>The width a wrapping text breaks at when it is wanted <paramref name="size"/> times the original's.</summary>
+	internal static int WrapWidthAt( float areaWidth, float size ) => WrapWidthOf( areaWidth / size );
 
 	/// <summary>The lines the text was last laid out in, and the width in the font's pixels they were wrapped at (0 for none).</summary>
 	public IReadOnlyList<string> Lines => _lines;
@@ -114,14 +188,17 @@ internal sealed class UiText
 			font.Write( lines[i], pixels, width, height, x + margin, y, layout.Colour, 1f );
 		}
 
-		if ( _texture != null && _texture.Width == width && _texture.Height == height )
+		var n = layout.Prescale;
+		var texels = Prescaled( pixels, width, height, n );
+
+		if ( _texture != null && _texture.Width == width * n && _texture.Height == height * n )
 		{
-			_texture.UpdatePixels( pixels );
+			_texture.UpdatePixels( texels );
 		}
 		else
 		{
 			_texture?.Delete();
-			_texture = new Texture( pixels, width, height, TextureFlags.OwnPixels );
+			_texture = new Texture( texels, width * n, height * n, TextureFlags.OwnPixels );
 		}
 
 		_width = width;

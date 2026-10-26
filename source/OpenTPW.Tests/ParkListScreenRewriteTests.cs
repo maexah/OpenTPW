@@ -754,6 +754,48 @@ public class ParkListScreenRewriteTests
 	}
 
 	/// <summary>
+	/// <b>Both screens letter larger, and their titles and money as the original's.</b> Every text control under either
+	/// root letters at <see cref="UiFonts.ParkScreenLettering"/>; the title at (569, 74)-(1513, 153), (234, 239, 102), with
+	/// the edge; the money with the edge; the hire screen's money in the buy screen's words (UITEXT <c>0x1ca</c>,
+	/// <c>FUN_0049bdd0</c>), "Cash  $ 87987" for the stock park, not "87987".
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> either root left at the original's size; a title white, without its edge or in the stream's rect;
+	/// a money without its edge; the hire money the bare balance.
+	/// </remarks>
+	[TestMethod]
+	public void TheBuyAndHireScreensLetterLargerAndTheirTitlesAndMoneyAsTheOriginals()
+	{
+		var buy = new ParkBuyScreen( stack );
+		var hire = new ParkHireScreen( stack );
+		hire.Update();
+
+		Assert.AreEqual( 1.2f, UiFonts.ParkScreenLettering, "the improvement's size" );
+
+		foreach ( var (root, title, money, name) in new[] { (buy.Root!, 0x1fe, 0x200, "buy"), (hire.Root!, 0x2480, 0x2496, "hire") } )
+		{
+			var lettered = Under( root ).Where( control => control.Font >= 0 ).ToList();
+			Assert.IsTrue( lettered.Count > 5, $"{name}: its lettered controls" );
+
+			foreach ( var control in lettered )
+				Assert.AreEqual( UiFonts.ParkScreenLettering, control.LetteringSize, $"{name}: control 0x{control.Id:x}" );
+
+			var t = root.Children.Single( child => child.Id == title );
+			Assert.AreEqual( (new UiRect( 569, 74, 1513, 153 ), new UiColour( 234, 239, 102 ), true, 5),
+				(t.Rect, t.TextColour, t.TextShadow, t.Font), $"{name}: the title" );
+
+			var m = root.Children.Single( child => child.Id == money );
+			Assert.AreEqual( (UiColour.White, true, 5, TextAlign.End), (m.TextColour, m.TextShadow, m.Font, m.TextAcross), $"{name}: the money" );
+		}
+
+		Assert.AreEqual( 87987, state.Balance, "the stock park's bank" );
+		Assert.AreEqual( "Cash  $ 87987", hire.Root!.Children.Single( child => child.Id == 0x2496 ).Text, "the hire screen's money" );
+	}
+
+	private static IEnumerable<UiControl> Under( UiControl control )
+		=> control.Children.SelectMany( child => Under( child ).Prepend( child ) );
+
+	/// <summary>
 	/// <b>The hire screen's skill bar stands in 10 from its rectangle's top and bottom</b>, (722, 546)-(957, 565) of the
 	/// stream's (722, 536)-(957, 575) (<c>FUN_00485e30( bar, 0, 10 )</c> at <c>0x0049c2ef</c>; the original's skin
 	/// keeps that rect, read live by <c>q636/orig/read.py</c>), and the "Skill" label beside it keeps the whole row.
