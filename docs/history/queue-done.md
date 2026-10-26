@@ -10498,6 +10498,19 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   **Done (2026-10-26):** row 304 = row 188's twin, response 564, sample 582; he never says it in either game (the map
   holds the park still): original slot taken and emptied on tick 915 and 970, ours `post message=304 ... tick=788`, mGameTick
   788 9 s on, `withdraw message=304 cleared=1 cut=0` (`advisor-park.md`, "The map's own line").
+- [x] **Q667. The orbit camera's point stops at the heightfield's edge, as the original's (Q625's build).**
+  `park-engine.md`, "The point of interest's edge": keep a scroll term per axis, eased as the original's
+  (`(sqrt( zoom ) x 0.02 x input + term) x 0.5` a frame, divided by `1 + 0.01 dt` with no input), and where the point
+  stood past an edge at the frame's start (x < 0, y < 0, x > cellsX x cellSizeX, y > cellsY x cellSizeY of
+  `HeightfieldFile`) drop a push further out: the term becomes the old one over `1 + 0.01 dt`. A per-frame recurrence
+  on milliseconds: put it on `Time.Delta` (CLAUDE.md rule 10) and say the deviation at the site. The keys, the speed
+  and the term are built (Q631: `ParkOrbitCameraMode.Scroll`, `StepScroll`), with no bound: this item adds the bound. Past the edge the original draws flat grass (`q625/orig/b-right-2-after.png`) and
+  ours the sea: read what that ground is before building anything there. Confirm: a pan held against each of the four
+  edges in both games (`original/campoi.py`, `q625/orig/run.sh`), the same stopping cell (x 97 or -2, y 86 or -2).
+  **Done (2026-10-26):** `ParkOrbitCameraMode.StepPan`, `BoundScroll`, `EdgeOf` (960 by 850 in all four themes), the
+  coast on `Time.Delta` (the deviation, said at the site). Ours at rest at 970.237, -10.238, 860.242, -10.237 (cells 97,
+  -2, 86, -2; `q667/ours-run1`), the original at 972.828, -13.622, 863.576, -12.014 (`q667/orig2`); at each stop
+  both draw the same scene past the edge (`q667/side-by-side.png`; Q625's cyan was 767 units out).
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

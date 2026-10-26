@@ -894,7 +894,9 @@ after its poller starts**, so a key meant inside either line cannot be sent afte
   scroll term runs on at full speed into the next round, which reads as the point not staying where `setcam.py` put it.
   Read the term (`campoi.py PID 0`) after each release and press and release the key again until it is nought.
   Releasing the key under both its names (`KP_4` and the no-NumLock `KP_Left`) did not prevent it (Q625 round b: KP_8's release
-  was still lost), and `q625/orig/run.sh` does not read the term between rounds, which is how its later rounds were polluted.
+  was still lost), which is how Q625's later rounds were polluted; since Q667 `q625/orig/run.sh` puts the point back inside and reads the term after each
+  release and releases again until it is nought (past the edge a stuck key's term reads nought: the bound drops the push),
+  and `TAG=c OUT=<dir>` holds all four edges from 40 inside (`q667/orig`).
 - **The original's camera keys held, one at a time** (Q631, `q631/orig/run.sh`): as Q625's above, `setcam.py PID 480,400
   ZOOM 0 off` twice 1.5 s apart (the second catches a coast the first left), then `xdotool keydown Up` (Down, Left,
   Right, `w`, `d`) for HOLD s beside `campoi.py PID HOLD+2 0.03`; `camrate.py` reads the rate. Read the options word

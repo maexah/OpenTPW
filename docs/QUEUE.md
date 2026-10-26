@@ -74,15 +74,6 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q667. The orbit camera's point stops at the heightfield's edge, as the original's (Q625's build).**
-  `park-engine.md`, "The point of interest's edge": keep a scroll term per axis, eased as the original's
-  (`(sqrt( zoom ) x 0.02 x input + term) x 0.5` a frame, divided by `1 + 0.01 dt` with no input), and where the point
-  stood past an edge at the frame's start (x < 0, y < 0, x > cellsX x cellSizeX, y > cellsY x cellSizeY of
-  `HeightfieldFile`) drop a push further out: the term becomes the old one over `1 + 0.01 dt`. A per-frame recurrence
-  on milliseconds: put it on `Time.Delta` (CLAUDE.md rule 10) and say the deviation at the site. The keys, the speed
-  and the term are built (Q631: `ParkOrbitCameraMode.Scroll`, `StepScroll`), with no bound: this item adds the bound. Past the edge the original draws flat grass (`q625/orig/b-right-2-after.png`) and
-  ours the sea: read what that ground is before building anything there. Confirm: a pan held against each of the four
-  edges in both games (`original/campoi.py`, `q625/orig/run.sh`), the same stopping cell (x 97 or -2, y 86 or -2).
 - [ ] **Q668. From a crowd, guests go home faster than the original's. Measure first.** From Q627. Loaded with
   `q416/guard.TPWS` (212 inside), over the same 2420 sweeps 204 went home here (`People: guest N went home`) and 155 in
   the original (`original/vehicles.py`'s `GONE`). **Not like for like: ours admitted 48 in four loads (13, 12, 12, 11),

@@ -182,6 +182,9 @@ public sealed class ParkOrbitCameraMode : CameraMode
 
 	private static float _panSeconds;
 
+	/// <summary>Whether the edge held the pan last frame, so the log says once when it starts to.</summary>
+	private static bool _atEdge;
+
 	/// <summary>
 	/// The angle the original's park camera hands its projection: pi/2 at its reset (<c>FUN_0042a990</c>,
 	/// <c>0x0042aa2f</c>), near 0.1, far 1000.
@@ -278,14 +281,21 @@ public sealed class ParkOrbitCameraMode : CameraMode
 
 		_resetHeld = reset;
 
-		// Not the original's, for the pan's edge: the original holds the point inside the heightfield's soft bound
-		// (0x0042b668..0x0042b716, 0x0042bc2a..0x0042bd65) and this adds the move with no bound, so a held pan runs on
-		// over the edge. The build is Q667.
 		var (forward, right) = PanInput( down );
 		var panned = Panning;
 		Panning = forward != 0f || right != 0f;
-		Scroll = StepScroll( Scroll, PanTarget( forward, right, Yaw, Zoom ), Panning );
-		PointOfInterest += new Vector3( Scroll.X * Time.Delta, Scroll.Y * Time.Delta, 0f );
+		var moving = Scroll != Vector2.Zero;
+		(PointOfInterest, Scroll, var atEdge) = StepPan( PointOfInterest, Scroll, PanTarget( forward, right, Yaw, Zoom ), Panning,
+			EdgeOf( ParkGround.Current?.Heightfield ) );
+
+		if ( atEdge && !_atEdge )
+			Log.Info( $"Camera: pan held at the edge, point ({PointOfInterest.X:F3},{PointOfInterest.Y:F3}), scroll {Scroll.Length:F1} a second" );
+
+		_atEdge = atEdge;
+
+		if ( moving && Scroll == Vector2.Zero )
+			Log.Info( $"Camera: pan at rest, point ({PointOfInterest.X:F3},{PointOfInterest.Y:F3}) cell ({MathF.Floor( PointOfInterest.X / 10f ):F0},"
+				+ $"{MathF.Floor( PointOfInterest.Y / 10f ):F0})" );
 
 		if ( Panning != panned || (Panning && (forward, right) != _panHeld) )
 		{
@@ -370,6 +380,55 @@ public sealed class ParkOrbitCameraMode : CameraMode
 			: term * (1f - Time.SmoothingFactor( PanCoastRate ));
 
 		return new Vector2( MathF.Abs( next.X ) < 0.1f ? 0f : next.X, MathF.Abs( next.Y ) < 0.1f ? 0f : next.Y );
+	}
+
+	/// <summary>
+	/// A frame of the pan: the term stepped towards the target, held at the edge by where the point stood before the move
+	/// (<see cref="BoundScroll"/>), then the point moved by it, as the original's order (<c>0x0042b668</c> flags,
+	/// <c>0x0042c5ed</c> moves); and whether the edge changed the term.
+	/// </summary>
+	internal static (Vector3 Point, Vector2 Term, bool AtEdge) StepPan( Vector3 point, Vector2 term, Vector2 target, bool held, Vector2? edge )
+	{
+		var stepped = StepScroll( term, target, held );
+		var next = BoundScroll( stepped, term, new Vector2( point.X, point.Y ), edge );
+
+		return (point + new Vector3( next.X * Time.Delta, next.Y * Time.Delta, 0f ), next, next != stepped);
+	}
+
+	/// <summary>
+	/// The far corner of the point's soft bound: the heightfield's cell counts times its cell sizes (<c>+0x18 x +0x10</c>,
+	/// <c>+0x1c x +0x14</c> of <c>[[0x007a0854] + 0x6c]</c>), 960 by 850 in Lost Kingdom, not the 128-cell map; none
+	/// without a heightfield, which leaves the point unbounded.
+	/// </summary>
+	internal static Vector2? EdgeOf( HeightfieldFile? field )
+		=> field is null ? null : new Vector2( field.CellsX * field.CellSizeX, field.CellsY * field.CellSizeY );
+
+	/// <summary>
+	/// The pan's term held at the heightfield's edge, as the original's soft bound (<c>0x0042b668</c>..<c>0x0042b716</c>,
+	/// <c>0x0042bca0</c>..<c>0x0042bd5f</c>; <c>docs/exe/park-engine.md</c>, "The point of interest's edge"): where the point
+	/// stood past an edge before this frame's move (x or y under nought, or over <paramref name="edge"/>), an axis whose new
+	/// term points further out takes the old term coasted instead. The push is dropped and the coast runs out, so a held
+	/// pan stops about a cell past the edge; nothing pulls the point back, and a pan inward is free.
+	/// </summary>
+	/// <remarks>
+	/// <b>Not the original's step:</b> the original divides the old term by <c>1 + 0.01 dt</c> on a frame of <c>dt</c>
+	/// milliseconds; this coasts it as <see cref="StepScroll"/> does with no key, on <c>Time.Delta</c> (CLAUDE.md rule 10),
+	/// so a held pan at zoom 110 stops about 10.2 units past the edge at 144 frames a second and 11.1 at 30, where the
+	/// original's stops 10.5 plus part of its crossing frame's step past it (10.6 to 13.6 measured, Q625): the same cell.
+	/// </remarks>
+	internal static Vector2 BoundScroll( Vector2 next, Vector2 old, Vector2 point, Vector2? edge )
+	{
+		if ( edge is not { } far )
+			return next;
+
+		var coast = StepScroll( old, Vector2.Zero, false );
+
+		return new Vector2(
+			Outward( point.X, next.X, far.X ) ? coast.X : next.X,
+			Outward( point.Y, next.Y, far.Y ) ? coast.Y : next.Y );
+
+		static bool Outward( float at, float term, float far )
+			=> (at < 0f && term < 0f) || (at > far && term > 0f);
 	}
 
 	/// <summary>
@@ -483,6 +542,7 @@ public sealed class ParkOrbitCameraMode : CameraMode
 		Zoom = 110f;
 		Scroll = Vector2.Zero;
 		Panning = false;
+		_atEdge = false;
 	}
 
 	/// <summary>

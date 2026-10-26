@@ -424,6 +424,89 @@ public class ParkCountedPathsTests
 	}
 
 	/// <summary>
+	/// <b>The orbit camera's point stops about a cell past the heightfield's edge</b>, as the original's soft bound
+	/// (<c>0x0042b668</c>, <c>0x0042bca0</c>..<c>0x0042bd5f</c>): where the point stood past an edge before the move, an axis
+	/// whose new term points further out takes the old term coasted; inward is free, and an edge itself is not past
+	/// (<c>ParkOrbitCameraMode.BoundScroll</c>, <c>StepPan</c>).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> an edge taken as past (<c>&lt;=</c>, <c>&gt;=</c>); the new term's sign not asked, so an inward
+	/// pan is held too; the new term kept, or noughted, instead of the old one coasted; the axes crossed; the flag taken
+	/// after the move; no bound at all.</remarks>
+	[TestMethod]
+	public void TheOrbitCamerasPointStopsAtTheHeightfieldsEdge()
+	{
+		var edge = new Vector2( 960f, 850f );
+		var delta = Time.Delta;
+		Time.Delta = 0.031f;
+
+		try
+		{
+			// The coast of 31 ms is 0.73345 of the term (TheKeysPanAndZoomTheOrbitCamera).
+			AreNear( (-58.676f, 0f), Bound( (-90f, 0f), (-80f, 0f), (-1f, 400f) ), "past x 0, pushed out: the old term coasted" );
+			AreNear( (58.676f, -20f), Bound( (90f, -20f), (80f, -30f), (961f, 400f) ), "past x 960; y inside is free" );
+			AreNear( (30f, 58.676f), Bound( (30f, 90f), (40f, 80f), (400f, 851f) ), "past y 850; x inside is free" );
+			AreNear( (5f, -58.676f), Bound( (5f, -90f), (6f, -80f), (400f, -0.5f) ), "past y 0" );
+			AreNear( (-58.676f, 58.676f), Bound( (-90f, 90f), (-80f, 80f), (-1f, 851f) ), "past a corner" );
+			AreNear( (20f, -7.335f), Bound( (20f, 7f), (-50f, -10f), (-5f, 900f) ), "inward free; out again from an inward term" );
+			AreNear( (-20f, -7f), Bound( (-20f, -7f), (50f, 30f), (970f, 860f) ), "inward free from the high edges" );
+			AreNear( (90f, -90f), Bound( (90f, -90f), (80f, -80f), (960f, 0f) ), "on the edge is not past it" );
+			AreNear( (0f, 0f), Bound( (90f, 0f), (0.12f, 0f), (970f, 400f) ), "past, the old term's coast under 0.1: nought" );
+			AreNear( (90f, -90f), ParkOrbitCameraMode.BoundScroll( new Vector2( 90f, -90f ), new Vector2( 80f, -80f ), new Vector2( 2000f, -50f ), null ),
+				"no heightfield: no bound" );
+
+			// The flag is the point's before the move: one frame from just inside the edge goes past, and is not held.
+			var (point, term, held) = ParkOrbitCameraMode.StepPan( new Vector3( 959f, 400f, 0f ), new Vector2( 100f, 0f ), new Vector2( 100f, 0f ), true, edge );
+			AreNear( (962.1f, 400f), new Vector2( point.X, point.Y ), "the crossing frame moves the whole step" );
+			AreNear( (100f, 0f), term, "and keeps its term" );
+			Assert.IsFalse( held, "not held at the edge on the crossing frame" );
+			(point, term, held) = ParkOrbitCameraMode.StepPan( point, term, new Vector2( 100f, 0f ), true, edge );
+			AreNear( (964.374f, 400f), new Vector2( point.X, point.Y ), "the next is held: moved by the old term coasted" );
+			Assert.IsTrue( held, "held at the edge the frame after" );
+
+			// A pan held 4 s at 144 frames a second from x 920, then let go 2 s: it stops in the second cell out, x 97.
+			Time.Delta = 1f / 144f;
+			var at = new Vector3( 920f, 400f, 0f );
+			var scroll = Vector2.Zero;
+			var right = ParkOrbitCameraMode.PanTarget( 0f, 1f, 0f, 110f );
+
+			for ( var i = 0; i < 6 * 144; i++ )
+				(at, scroll, _) = ParkOrbitCameraMode.StepPan( at, scroll, i < 4 * 144 ? right : Vector2.Zero, i < 4 * 144, edge );
+
+			Assert.AreEqual( 970.21f, at.X, 0.05f, "x stops 10.2 past 960" );
+			Assert.AreEqual( 400f, at.Y, 0.001f );
+			Assert.AreEqual( Vector2.Zero, scroll, "and comes to rest" );
+		}
+		finally
+		{
+			Time.Delta = delta;
+		}
+
+		static Vector2 Bound( (float X, float Y) next, (float X, float Y) old, (float X, float Y) point )
+			=> ParkOrbitCameraMode.BoundScroll( new Vector2( next.X, next.Y ), new Vector2( old.X, old.Y ), new Vector2( point.X, point.Y ),
+				new Vector2( 960f, 850f ) );
+
+		static void AreNear( (float X, float Y) expected, Vector2 actual, string what )
+		{
+			Assert.AreEqual( expected.X, actual.X, 0.01f, what );
+			Assert.AreEqual( expected.Y, actual.Y, 0.01f, what );
+		}
+	}
+
+	/// <summary>
+	/// <b>The jungle's heightfield bounds the orbit's point at 960 by 850</b>, its 96 by 85 cells of 10, not the 128-cell
+	/// map (<c>ParkOrbitCameraMode.EdgeOf</c>; Q625 read 960 and 850 in the running original).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the map's 128 cells, or the counts and sizes crossed, fail it.</remarks>
+	[TestMethod]
+	public void TheJunglesHeightfieldBoundsTheOrbitAt960By850()
+	{
+		using var ground = GameData.Required().OpenRead( "levels/jungle/terrain/base.MD2" )!;
+
+		Assert.AreEqual( new Vector2( 960f, 850f ), ParkOrbitCameraMode.EdgeOf( new HeightfieldFile( ground ) ) );
+		Assert.IsNull( ParkOrbitCameraMode.EdgeOf( null ) );
+	}
+
+	/// <summary>
 	/// <b>The boot's effect 210 asks for a volume of nought</b> in the shipped category, where the click, effect 31,
 	/// asks for the whole of it; an effect with no header reads nought.
 	/// </summary>

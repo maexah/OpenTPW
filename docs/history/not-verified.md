@@ -5,6 +5,10 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q666 (the map's advisor line `0x130`): the original off-screen (`q666/orig`, the stock park: `original/advisor.py`
+  read the slot taken and emptied on one tick, OK and Escape, the record never written; `a-2-open-later.png`) and this
+  game on the desktop, the final build (`q666/run1`: the post, the tick standing, the withdrawals, no attempt;
+  `side-by-side.png`). Not seen: the map opened while he says another line, Full Simulation, other themes. Not heard.
 - Q665 (the map's hover and its click; decode only): the original off-screen (`q665/orig`, rounds b and c, the stock
   park: `original/mapgrid.py hover` after each glide; the label's text in `crop-label-*.png`; the handyman's outline by
   `maprects.py`; the clicks' windows in `c-c1c-later.png` and `c-c2-later.png`), and this game's map on the final build

@@ -422,7 +422,7 @@ either: the soft bound on the walker ("Nothing clamps the position", under "Walk
   x 40 stopped at -11.989; keypad 2 from z 40 at -12.806; keypad 6 from x 920 at 973.517 (and at 970.643 and 973.435 with its release lost); keypad 8
   from z 810 at 863.621; keypad 4 at rotation 90 from z 810 left by z, at 862.013. The held term read 0.10488 a
   millisecond. Released past the edge, the point stayed there. Started past the edge (x 1240), keypad 6 moved nothing.
-  Past the edge the original draws flat grass (`q625/orig/b-right-2-after.png`); what that ground is was not read.
+  Past the edge the original draws flat grass (`q625/orig/b-right-2-after.png`); what that ground is was not read; this game draws the same there (Q667).
 - **The arrows driven by key** (Q631, `q631/orig/run.sh`, `original/camrate.py`; the stock park at (480, 400), zoom 110,
   the follow off): Up held went from 110 to 70 at 0.0513 a millisecond and stopped there, Down from 70 to 130 at 0.0519;
   with the reference player's 90 degree option set (`[0x0078d912]` 1) Left raised the asked rotation by 90 once and
@@ -437,10 +437,14 @@ either: the soft bound on the walker ("Nothing clamps the position", under "Walk
   (`PanInput`; all-items and all-staff move to O and E, `ParkFrontEnd.ShortcutRow`, and the help bar's nine rows say so,
   `HelpBar.OurKeys`); each only with no modifier held. A held pan settles at `sqrt( zoom ) x 10` a second, the term eased
   up by half every 31 ms and coasting out at 10 a second, nought under 0.1 (`PanTarget`, `StepScroll`), and ends a
-  locator's follow (`Panning`). Up, Down and keypad 1 and 3 zoom at 50 a second. Nothing bounds the point: from x 920, a
-  key held 4 s runs on past the land (`q625/side-by-side.png`, on the old 200 a second), where the frame is one flat cyan
-  with no shore or horizon; whether that is a sea or the fog clear colour with nothing drawn was not measured (the clear
-  is `Level.FogColour`, `Renderer.cs`); the bound is Q667. Keypad 9 and
+  locator's follow (`Panning`). Up, Down and keypad 1 and 3 zoom at 50 a second. The edge is the original's rule
+  (Q667, `StepPan`, `BoundScroll`, `EdgeOf`): flagged by the point before the move, per axis, strictly past 0 or the
+  heightfield's cells times its cell size (960 by 850 in all four themes), an outward new term replaced by the old one
+  coasted, on `Time.Delta` rather than `1 + 0.01 dt` (the deviation, said at the site), so a pan held at zoom 110 stops
+  about 10.2 past the edge at 144 frames a second (11.1 at 30), in the original's cell; the log says `Camera: pan held at
+  the edge` once and `Camera: pan at rest, point (x,y) cell (cx,cy)` as the coast ends. Past the edge, at the stop, this
+  game draws what the original does at all four edges (`q667/side-by-side.png`: the original stopped at 972.828,
+  -13.622, z 863.576, z -12.014, `q667/orig2`); Q625's flat cyan was at x 1727, beyond that ground. Keypad 9 and
   7 do not turn, and the turn's step is not the original's (Q23). Keypad 5 and Home are counted, not built
   (`CAMERA_HOME_RESET`).
 
