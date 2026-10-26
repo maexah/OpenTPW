@@ -1941,8 +1941,9 @@ space).
 blend stop1->stop2 below 50 and stop2->stop3 above, patch R/G/B into the descriptor and force alpha 0xff.
 The stops are `DAT_00f86bd8`, `DAT_00f86bfc`, `DAT_00f86c20` (beyond `.data`'s raw bytes, so a static read gives zeros;
 they are filled by the initialiser `0x005f0700`, below). The value is a **per-thing metric**: for cell codes 1, 2, 3 and 8 with the radio (`[map+0x20]`) at 2 it is
-`FUN_004e0860` (`0x005f24eb`), at 3 `FUN_004e1e30` (`0x005f2565`); **otherwise, in the radio's default setting, each thing
-code 1 to 8 tests its own layer bit (`[map+0x18]`) and is coloured by `__ftol( [thing + 0x44] ) & 0xff`, its state of repair**
+`FUN_004e0860` (`0x005f24eb`), at 3 `FUN_004e1e30` (`0x005f2565`); **otherwise each thing code 1 to 8 tests its own
+layer bit (`[map+0x18]`), or for 5, 6 and 7 the staff picker (`[map+0x1c]`; "The map's overlay", below), and is coloured by
+`__ftol( [thing + 0x44] ) & 0xff`, its state of repair**
 (`ride-operation.md`, `park-engine.md`; eight sites `0x005f2602`, `0x005f2681`, `0x005f2705`, `0x005f2784`, `0x005f2809`,
 `0x005f288d`, `0x005f290b`, `0x005f298a`, the jump table `0x005f2f9c`; fork watch 2026-10-19, `verify-other-b.md` M2). The ramp
 `0x005f09a0` clamps it to 0 to 100 and blends below 50 by `( v << 16 ) / 50`, from 50 by `( ( v - 50 ) << 16 ) / 50`. The first
@@ -1959,15 +1960,16 @@ R, G, B, A. The object ramp `0x005f2380` takes `0x00f86bd8`, `0x00f86bfc`, `0x00
 black, green (0, 255, 0), cyan (0, 255, 255), orange (254, 78, 0), yellow (252, 255, 3) and brown (110, 66, 11). The fifteen
 `0x005f0970` records from `0x00f86b00` (R, G, B, A): (31, 166, 31), (37, 198, 37), (0, 23, 0), (0, 23, 0, 128),
 (25, 25, 150, 200), (25, 25, 250, 200), the ramp's three, then (32, 168, 248), (248, 132, 0), (248, 252, 0), (0, 0, 0),
-(255, 0, 0), (200, 250, 200). The channel order is inferred, not proven: a photograph of the original's map would settle it.
-The thing codes 1 to 8's colour is the state of repair through the ramp above (`0x005f09a0` over the stops (248, 0, 0), (248, 200, 0), (48, 252, 0), pushed at `0x005f08a5`..`0x005f08df`); which record colours which land code or other layer is not traced.
+(255, 0, 0), (200, 250, 200). The channel order is the D3D colour's, B, G, R, A in memory, so the arguments read R, G, B: the
+map's patrol rectangle, (25, 25, 150), is drawn blue in the original (Q664). Which record colours which code, sprite and
+line is in "The map's overlay", below.
 
 ### Controls
 
 Six toggles — **0x982, 0x987, 0x989, 0x993, 0x994, 0x983** — each restored from a bit in `+0x18`
 (8, 1, 0x10, 2, 4, 0x20) and each gating one code in the painter: they are **layer filters**. Two radio
-groups: **0x98b** with options 0x98e/0x98f/0x98c/0x98d from `+0x1c`, and **0x996** with 0x998/0x997/0x999
-from `+0x20` — the **metric pickers**. **0x991** is a label, font 4, **yellow** (0xff,0xff,0,0xff).
+groups: **0x98b** with options 0x98e/0x98f/0x98c/0x98d from `+0x1c` (1 to 4), and **0x996** with 0x998/0x997/0x999
+from `+0x20` (1 to 3) — the staff picker and the metric picker ("The map's overlay", below, has what each value shows). **0x991** is a label, font 4, **yellow** (0xff,0xff,0,0xff).
 **0x990** and **0x995** are display-only (vtable+0x14 with 0), and 0x990's depth+2 is handed to the six
 toggles. **0x992** takes handler `LAB_005f0b20` (it calls the viewport's proc `0x005f18d0` on the static); 0x98a/0x984/0x981/0x988
 get `FUN_00668f35( 0, 10 )` (`Button_SetRepeatDelays` in Ghidra), a repeating button's two delays (below, "The map's view").
@@ -1975,15 +1977,13 @@ get `FUN_00668f35( 0, 10 )` (`Button_SetRepeatDelays` in Ghidra), a repeating bu
 ### Sprite sheets
 
 Six, in `data\2DMap.wad` — a whole archive listed beside `data\ui.wad` in the loader's table:
-`.\data\2dmap\` + `vsprite/rsprite/ssprite/lsprite/esprite/gsprite.tga`. They are constructed as static
-globals — `v` at `0xf86d40`, then `r` `0xf86d54`, `s` `0xf86d68`, `l` `0xf86d7c`, `e` `0xf86d90`,
-`g` `0xf86da4` (stride 0x14). `FUN_005f3710` walks `&DAT_00f86d48` to `0xf86dc0` by 0x14 calling
-`FUN_0056b380`, which allocates 0x18, constructs, loads by name and caches the handle.
-
-**UNRESOLVED:** that walk starts at `d48`, so it skips `vsprite` at `d34`, and its last record `dac` would
-put a string at `0xf86db8` — which the park-engine page already records as the map screen's own ECX. So
-the "six records each holding a path at +0xc" reading is wrong somewhere. **Do not build on it — re-derive
-the table layout first.**
+`.\data\2dmap\` + `vsprite/rsprite/ssprite/lsprite/esprite/gsprite.tga`. Their names are six string objects of
+0x14 bytes (vtable, length, buffer `+8`, capacity, 8; the constructor `0x005f60b0`) at `0xf86d40`, `d54`, `d68`, `d7c`,
+`d90`, `da4`, made by `0x005f3685`..`0x005f36d5` (the strings `0x0077537c` down to `0x007752f0`) and destroyed as one
+array of six (`0x005f36f0`). `Map_MakeSprites` (`FUN_005f3710`) walks `0xf86d48` to `0xf86dc0` by 0x14, reading each
+object's buffer pointer, so all six are loaded in that order by `FUN_0056b380` into the map's `+0x20068` (v), `+0x2006c`
+(r), `+0x20070` (s), `+0x20074` (l), `+0x20078` (e), `+0x2007c` (g); the last object ends at `0xf86db8`, where the map's own
+static starts. What each is for: "The map's overlay", below.
 
 ### It pauses
 
@@ -2064,6 +2064,95 @@ The screen is one static object at `0x00f86db8` (the `ECX` of every call); its c
 shrinks on a finer screen), moves a per-pass amount at thirty passes a second on `Time.Delta`, and draws the source
 rectangle exactly rather than truncated. The frame `map_win` is the root's mesh (`w_map.MD2`), drawn over the picture;
 its interior's grid lies over the picture in both games.
+
+### The map's overlay (Q664)
+
+Decoded from the listing and the decompiler (`q664/g1`, `g2`, `g3`), measured in the original's stock park (`q664/orig`,
+round a, `mapgrid.py`: every switch and picker pressed in turn, each step's words, records and picture as decoded;
+`q664/PREDICTION.txt`). **Not built here**: counted `MAP_OVERLAY` as the map opens; the build is Q684.
+
+**Two layers.** The opener (`Map_Open`, `0x005f0b40`) fills the code grid (`Map_FillCodeGrid`, `FUN_005f2050`, below) and
+makes the sprite records (`Map_MakeSprites`, `FUN_005f3710`, then `Map_MakeRecords`, `FUN_005f3940`); the painter
+(`Map_PaintOverlay`, `FUN_005f2380`) paints the grid into the picture itself, at picture pixels
+(`15 + x × ftol( 480 / cells across )`, `42 + y × ftol( 425 / cells down )`, 5 by 5 in Lost Kingdom), so it is zoomed and
+moved with the picture. The sprites are separate quads placed in screen space each time the view is redone
+(`FUN_005f4180` from `Map_ApplyView`), so a person's dot keeps its size in the picture's terms only through its scale
+(below). Every switch or picker press reloads the picture (`FUN_005f1ea0( 1 )`), repaints it and uploads it
+(`FUN_00577990`, `0x005f15fd`..`0x005f1633`).
+
+**The map's three words** live in the static at `0x00f86db8` and outlive the screen like its zoom: the constructor
+(`0x005f0690`) sets each to 1 (`0x005f06c3`..`0x005f06cd`), so a fresh process opens on the rides layer, the handyman and
+happiness.
+
+| Word | What | Pressed by (`Map_Proc` `0x005f1130`) |
+|---|---|---|
+| `+0x18` | the layer bits: rides 1 (`0x987`), shops 2 (`0x993`), sideshows 4 (`0x994`), miscellaneous 8 (`0x982`), tracks `0x10` (`0x989`), visitors `0x20` (`0x983`) | message `0x100`, each an XOR of its bit |
+| `+0x1c` | the staff picker: 1 handyman (`0x98e`), 2 mechanic (`0x98f`), 3 guard (`0x98c`), 4 entertainer (`0x98d`), 0 none | message `0x101`, the value when the fifth argument is 1, else 0 |
+| `+0x20` | the metric: 1 happiness (`0x998`), 2 excitement (`0x997`), 3 satisfaction (`0x999`), 0 none | the same |
+
+**The code grid** (`+0x60`, 128 × 128 cells of 8 bytes: the code dword, the thing id word; `FUN_005f2050`, over the
+heightfield's cells). Read in order, first that holds:
+
+| Code | The cell | Painted (`FUN_005f2380`) |
+|---|---|---|
+| 9 | its track record is type 25 (`FUN_00536450`) | always, `0x00f86b48` (0, 23, 0) |
+| 1 to 8 | kind 4, 9 or 10, a track record of type 11, 13, 16, 18 or 25, or kind `0x15`: the first thing of type 3 on the cell's list (its owner's cell `+0x10` for a record cell, then the head `+0x24` and each `+0xa`), by its item's `+0x4ac` (`Info.WhichUIType`): 0 a ride, 1, but **8** where the cell is not kind 4 and its record is one of those types or kind `0x15` (a ride's track cells); 1 a shop, 2; 2 a sideshow, 3; 3 a feature, 4, but 5 with `mFlags` (`+0x32`) `& 0x41` (bit 1 a toilet; `0x40` not named), 6 with `& 0x10` (a security camera), 7 with `& 2` (a staff room). The thing id is kept | below |
+| 10 | `mType` 1, a path | always, `0x00f86b00` (31, 166, 31) |
+| 11 | `mType` 3 or 9, a queue | always, `0x00f86b24` (37, 198, 37) |
+| 12 | `mFlags & 0x40`, land outside the park | always, `0x00f86b6c` (0, 23, 0) at alpha 128 |
+
+The things' fill: with the metric at 2, codes 1, 2, 3 and 8 take the ramp of `FUN_004e0860( thing, 0 )` (the excitement,
+`ParkRideScore.ExcitementOf`), at 3 of `FUN_004e1e30` (satisfaction), **whatever the layer bits**. Otherwise each code
+tests its own switch and takes the ramp of the thing's state of repair (`__ftol( [thing + 0x44] ) & 0xff`): 1 the rides bit, 2
+shops, 3 sideshows, 4 miscellaneous, 8 tracks; **5, 6 and 7 follow the staff picker**, not a switch: 5 (toilets) under
+the handyman (1), 6 (flag `0x10`, security) under the guard (3), 7 (staff rooms) under any member. The ramp
+(`FUN_005f09a0`) is red (248, 0, 0) at 0, orange (248, 200, 0) at 50, green (48, 252, 0) at 100 (`0x00f86bd8`,
+`0x00f86bfc`, `0x00f86c20`). Every cell of codes 1 to 8, filled or not, is then outlined on each side whose neighbour has
+another code or thing id (vtable `+8` along the top and bottom, `+0xc` down the sides): green (0, 255, 0) (`0x00f86a4c`),
+or black (`0x00f86a28`) for codes 1 to 7 whose thing cannot load (`FUN_004e0440`: `mCanLoad`, `+0x68`, nought; a shut ride).
+
+**The colours are D3D colours.** `0x005f0970( this, r, g, b, a )` stores the bytes B, G, R, A, and the byte-by-byte records
+are written the same way, so every colour on this page reads R, G, B. Measured: the patrol rectangle (25, 25, 150) is
+drawn blue (below), not red.
+
+**The coaster lines** (`FUN_005f2fd0`, with the tracks bit, after the cells): every coaster (the list at `0x00790fe0`,
+`[0x00792214]` of them, `FUN_00438730`), each piece's curve sampled at t = 0, 0.1, ... 1 (`Coaster_BezierPoint`), a line
+between each two samples at picture pixels `15 + x × 480 / ( cells across × 10 )`, `42 + z × 425 / ( cells down × 10 )`
+(`0x0070304c` 10, a cell's world units), coloured by the ramp of the coaster's thing's state of repair.
+
+**The sprite records** (`FUN_005f3940`; 0x30 bytes, made by `FUN_005f4370( sheet, kind, mode, value, scale )`): `+4`/`+8`
+the position in cells, `+0xc`/`+0x10` the screen point (`FUN_005f4180`), `+0x14` the kind, `+0x18` the thing, `+0x1c` the
+filter's mode and `+0x20` its value, `+0x24` the scale, `+0x28` the sprite, `+0x2c` shown. A person's position is its
+cell bytes `+5`, `+7` plus the fractions `+4`, `+6` over 256; a cell's is its centre.
+
+| Made for | Sheet | Kind | Shown when | Colour (`FUN_005f44d0`) | Scale |
+|---|---|---|---|---|---|
+| each guest (type 1) | `rsprite` | 1 | the visitors bit `0x20` | `0x00f86cb0` (0, 0, 0) | 1 |
+| each guest | `vsprite` | 0 | the metric is 1 | the ramp of happiness (`+0x19c`) over (32, 168, 248), (248, 132, 0), (248, 252, 0) (`0x00f86c44`, `c68`, `c8c`) | 1 |
+| each handyman (5), mechanic (4), guard (7), entertainer (6) | `ssprite` | 2 | the picker is 1, 2, 3, 4 respectively | white (`0x00f86a04`) | 1 |
+| each entertainer | `esprite` | 4 | the picker is 4 | the same ramp of `+0x1f8` (the staff window's happiness bar) | `RegionFX[0].Radius` × 0.5 (`0x00785610`; 1.5) |
+| each guard | `gsprite` | 5 | the picker is 3 | (200, 250, 200) (`0x00f86cf8`) | `RegionFX[3].Radius` × 0.5 (`0x00785658`; 1.5) |
+| each cell with litter (`+0x2c`) | `lsprite` | 3 | the picker is 1 | red (255, 0, 0) (`0x00f86cd4`) | 0.5, or `RegionFX[2].Radius` × 0.5 for kind 7 and `[5]` for kind 8 (`0x00785640`, `0x00785688`; 0.5 and 1.5) |
+| each thing on the list at `+0x1da746` with `mFlags & 0x10` (a security camera) | `gsprite` | 5 | the picker is 3 | (200, 250, 200) | `RegionFX[4].Radius` × 0.5 (`0x00785670`; 2.5) |
+
+Researchers (type 8) have none. `rsprite` is a ring and `vsprite` and `ssprite` filled dots, 16 × 16 with a dark edge;
+`lsprite`, `esprite` and `gsprite` are 64 × 64 soft white discs (`data\2dmap\*.tga`; FileFormats `park-map.md`). The
+sprite's `+0x2c` is its picture's width × scale × zoom × 0.5 × 0.0625 (`0x00703070`; what the sprite draw makes of it is
+not read), its depth 0.99 (`0x3f7d70a4`) for the kinds 0 to 2 and 0.9999 above. The scales are read as dwords at the
+`RegionFX` radius bytes and measured as 1.5 and 2.5 (`q664/orig/a-s01-open.grid`).
+
+**The patrol rectangles.** After the cells, the painter walks the records: each of kind 2 (a member's dot) whose filter
+passes and whose thing's patrol corners (`+0x20a`, `+0x20c`, packed cells) are not on row or column 0 nor beyond 126 is
+outlined (vtable `+0x1c`; the painter's flags `0xc` hold 4) from the first corner's cell to the far side of the second's,
+in (25, 25, 150) at alpha 200 (`0x00f86b90`), or (25, 25, 250) (`0x00f86bb4`) for the hovered record (`+0x20060`). A
+member with no patrol area (the whole map, cell 1) has none. **This is the rectangle `q624/orig/a-1-open.png` shows**, the
+stock handyman's (39, 21)-(56, 28), not the camera's view: nothing on the map draws the view.
+
+**Measured** (the stock park, zoom 1, `q664/orig/a-*`): 34 records (13 guests × 2, the four staff, the entertainer's and
+the guard's glows, the two cameras', things 18 and 19); the handyman's rectangle 114 frame pixels across for 18 cells;
+the entertainer's 2 × 8; under satisfaction the rides switch changes no pixel; each of shops, sideshows and
+miscellaneous changes only its own things' cells; the code-5 cells are filled under the handyman and only outlined
+under the mechanic; a shop's excitement fill is red (nought), a ride at full repair green.
 
 ### The map screen's stream, `0x00774da0` — walked in full
 

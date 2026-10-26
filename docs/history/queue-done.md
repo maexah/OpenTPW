@@ -10464,6 +10464,20 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   gives off"). Measured in the original (`q663/orig/a`): effect 81 at (495, 0, 355), the box's middle, called from
   `0x00558f2a`, gone in about 1.5 s. Ours counts it in `ParkRides.BindNew` (`CREATE_PARTICLE_EFFECT`, 1x for a bought
   Round Fountain, none after the load; `q663/run1`, `side-by-side.png`).
+- [x] **Q664. The map's switches, pickers and overlay. Decode first.** From Q624. The original's map (stream `0x00774da0`,
+  `hud.md`, "The map screen's stream") has six layer switches (rides, sideshows, shops, miscellaneous, tracks, visitors),
+  the staff picker (four portraits on the right) and the metric picker (three faces, bottom right), none built here, and
+  over the picture paints the park's own land (bright, outlined), each thing's footprint, the people, a rectangle about
+  the camera's view and a highlight (`q624/orig/a-1-open.png`), from the 128 x 128 code grid `FUN_005f2050` fills and
+  `FUN_005f2380` paints (Q450 (2): the colours, the ramp; `hud.md`, "Sprite sheets", is UNRESOLVED). Counted `MAP_OVERLAY` as the map opens. Decode the painter,
+  the six sprite sheets and the view rectangle, then build the switches and the pickers with what they show. Confirm: each
+  switch and picker beside the original's, the same park.
+  - **Done (decode only, 2026-10-26):** `hud.md`, "The map's overlay": the code grid and its fills, the outlines, the
+    three words (layers, staff 1 to 4, metric 1 to 3, each starting 1), the sprite records (guests' rings and happiness
+    dots, staff dots, litter, the entertainers', guards' and cameras' glows by `RegionFX` radius), the coaster lines and
+    the patrol rectangles; the "rectangle about the camera's view" is the chosen member's patrol area, and nothing draws
+    the view. The six sprite sheets are resolved (FileFormats `park-map.md`). Measured in the original's stock park,
+    every switch and picker (`q664/orig`, `original/mapgrid.py`). The build is Q684.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

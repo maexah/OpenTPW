@@ -24,20 +24,16 @@ namespace OpenTPW.UI;
 /// put the camera on the view's cell as the map closes; Escape closes it where it is.
 /// </para>
 /// <para>
-/// <b>The overlay is not built</b> (counted, <c>MAP_OVERLAY</c>, Q664). Over that picture the original paints a live 128x128 grid of
-/// classification codes - rides, shops, sideshows, tracks, visitors and staff - each cell coloured by a
-/// three-stop ramp over a per-thing metric from 0 to 100, and its six layer switches and two radio
-/// groups (staff overlays and the metric picker) choose what it shows. Of its metrics excitement is
-/// worked out (<see cref="ParkRideScore.ExcitementOf"/>) and satisfaction's days are kept
-/// (<see cref="ParkObjectRings.Satisfaction"/>); reliability and queue times are not, so the switches
-/// would sit over an overlay half empty. The two button panels that back the switches, buttpan1 and
+/// <b>The overlay is not built</b> (counted, <c>MAP_OVERLAY</c>; the build is Q684). Over that picture the original paints a
+/// 128x128 grid of codes - paths, queues, land outside the park, and each ride, shop, sideshow, feature, toilet, camera
+/// and staff room, filled by a three-stop ramp over its repair, excitement or satisfaction - and over it draws a dot for
+/// each guest and member of staff, the litter, the guards', cameras' and entertainers' ranges and the chosen member's
+/// patrol area. Six layer switches, the staff picker and the metric picker choose what it shows
+/// (<c>docs/exe/hud.md</c>, "The map's overlay"). The two button panels that back the switches, buttpan1 and
 /// buttpan2, are kept bare, as the screen's own backing art.
 /// </para>
 /// <para>
-/// <b>No terrain colours are painted over the picture.</b> The colours the original gives its land
-/// codes are immediates in its initialiser at <c>0x005f0700</c> (<c>docs/exe/hud.md</c>, "The map's
-/// colours"; which record colours which code is not traced), not carried over, and the shipped picture
-/// already shows the park's terrain.
+/// <b>No colours are painted over the picture</b>, so the shipped picture shows the park's terrain alone.
 /// </para>
 /// <para>
 /// <b>Engine and content.</b> The window, the controls and the help bar are engine. Which controls the
@@ -205,7 +201,7 @@ internal sealed class ParkMapScreen : UiWindow
 		// thing in this game that takes it, and for the same reason.
 		Advisor.Current?.StopQuietly();
 
-		// The overlay, its switches and pickers (Q664), and the advisor's line 0x130 the opener posts (FUN_00486b00,
+		// The overlay, its switches and pickers (Q684), and the advisor's line 0x130 the opener posts (FUN_00486b00,
 		// 0x005f100d; Q666).
 		Unimplemented.Report( "MAP_OVERLAY" );
 		Unimplemented.Report( "MAP_ADVISOR_LINE" );

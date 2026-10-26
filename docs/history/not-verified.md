@@ -5,6 +5,13 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q663 (a bought thing's build draws no sparkles; decode and count): the original off-screen (`q663/orig/a`,
+  `late30.TPWS`, a Round Fountain bought and placed by clicks: effect 81 at its box's middle (495, 0, 355), caller
+  `0x00558f2a`, gone in about 1.5 s; `orig-build-strip.png`), and this game on the desk at 1280 x 720 (`q663/run1`, the
+  final build: no `CREATE_PARTICLE_EFFECT` after the load, 1x after `buy 1403 47 33`, the log's "create effect 81 not
+  started", no emitter of effect 81; `q663/side-by-side.png`). Not seen: the emitter's area in the original's memory
+  (the listing's alone), the `+0xd4` sound zone, a Lost Kingdom item with no `.RSE` (the test-script fallback), a layout
+  replay, and the other three themes.
 - Q658 (a clip started on an idle channel hides its hide list): this game on the desk at 1280 x 720 (`q658/run-fix`,
   the final build: a Fries Shop bought paused in the stock park, `meshes 43: 11 meshes, hidden [10 chip08]; ... bound
   Bind { Start = 1, Flags = 0 }`, then `Start = 2` after its script's play, no `CLIP_HIDE_LIST_ON_IDLE_CHANNEL`;

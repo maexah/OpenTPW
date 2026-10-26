@@ -74,19 +74,11 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q664. The map's switches, pickers and overlay. Decode first.** From Q624. The original's map (stream `0x00774da0`,
-  `hud.md`, "The map screen's stream") has six layer switches (rides, sideshows, shops, miscellaneous, tracks, visitors),
-  the staff picker (four portraits on the right) and the metric picker (three faces, bottom right), none built here, and
-  over the picture paints the park's own land (bright, outlined), each thing's footprint, the people, a rectangle about
-  the camera's view and a highlight (`q624/orig/a-1-open.png`), from the 128 x 128 code grid `FUN_005f2050` fills and
-  `FUN_005f2380` paints (Q450 (2): the colours, the ramp; `hud.md`, "Sprite sheets", is UNRESOLVED). Counted `MAP_OVERLAY` as the map opens. Decode the painter,
-  the six sprite sheets and the view rectangle, then build the switches and the pickers with what they show. Confirm: each
-  switch and picker beside the original's, the same park.
 - [ ] **Q665. The map's hover and its click on a hovered record.** From Q624. On the viewport's `0x10001` the original keeps
   the nearest record of its list `+0x20080` within 5 of the pointer's picture point (`0x005f198e`..`0x005f1a9a`), and a
   click on the map with one kept hands its `+0x18` to `FUN_00486920` after the close (`0x005f1de8`; with none, a word
   `+0x20064` and the table at `0x007cfb90`, `0x005f1df5`). Not read: what the list holds and what `FUN_00486920` does.
-  Counted `MAP_HOVER`. Wants Q664's list. Decode, then build. Confirm: a hover and a click in both games.
+  Counted `MAP_HOVER`. The list is Q664's sprite records (`hud.md`, "The map's overlay"), built by Q684. Decode, then build. Confirm: a hover and a click in both games.
   - **Amended (Q624's review, run 9):** the hover's 5 is SCREEN pixels: at `0x005f198e`..`0x005f1a1b` the pointer is
     taken as (x * W / 2048, (0x600 - y) * H / 1536), y from the bottom, and `0x005f4180` writes each record's `+0xc`/`+0x10`
     as the cell centre * 480 / cells * zoom + W / 2, so the reach varies with the zoom in picture terms. What the hover
@@ -2507,6 +2499,16 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   template's. Build both, with the same box for the destroy effect's (Q38). Leave the `+0xd4` sound zone counted
   (undecoded). Confirm: the Round Fountain bought in both games, `particles` against `original/emitters.py` (effect 81,
   life 30, most 146 at density 500, about 1.5 s) and the build's first frames side by side (`q663/side-by-side.png`).
+- [ ] **Q684. The map's overlay, its six switches and two pickers (Q664's build).** From Q664 (`hud.md`, "The map's
+  overlay"; FileFormats `park-map.md`, "The overlay's six sprites"). Build the six layer switches (`0x987`, `0x993`, `0x994`,
+  `0x982`, `0x989`, `0x983`; toggles, flags `0x11`, their help pairs) and the two radio groups (`0x98e`, `0x98f`, `0x98c`,
+  `0x98d`; `0x998`, `0x997`, `0x999`) on the original's three words, each starting at 1 and kept across openings; the code
+  grid painted into the picture at its pixels, with its fills, ramp and outlines (black for a thing that cannot load);
+  the patrol rectangle of each shown member; the coaster lines; and the sprite records with their filters, tints,
+  `RegionFX` scales and depths, placed again whenever the view moves. Satisfaction's value (`FUN_004e1e30`) is not
+  worked out here (its days are, `ParkObjectRings.Satisfaction`): read it, or count `MAP_SATISFACTION` where the metric
+  is 3. Replace `MAP_OVERLAY` by what stays unbuilt. Confirm: `q664/orig/run.sh`'s fourteen steps in both games, each
+  step's census against `original/mapgrid.py`'s and the picture's diff against `q664/orig/a-*.png` (`original/diffcells.py`).
 - [ ] **Q32. Graphics tiers.** `Level` reads the detail files (`low.sam`, `med.sam`, `high.sam`) for `GameOptions.PARTICLEDENSITY`
   and `NUMKIDS` (the kid and staff bank caps) and for three `GraphicalOptions.*` keys: `LIGHTING` (a counted no-op),
   `TEXTUREQUALITY` (the sea's and the flags' folder) and `PROCEDURALTEXTURING` (the ground's tile size). `SPRITESHADOW` is read too (Q480: medium's silhouette built, the own
@@ -2722,8 +2724,9 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   2026-10-16 (`verify-ui-hud.md` M3, M4, C3). (1) The buy screen's stats panel is unbuilt (`ParkBuyScreen.cs`); its
   gauges are in `hud.md`, "The shop, sideshow and ride windows" (`0x004abb00`: excitement, text from
   `Upgrades[0].RedLineCapacity`, a gauge from `Upgrades[0].WearRate`; label text not read). (2) The map overlay is
-  unbuilt (`ParkMapScreen.cs`; its view, zoom and scroll are built, Q624, and the overlay's build is Q664); its colours are immediates in `0x005f0700` (`hud.md`, "The map's colours"); the
-  channel order is inferred, and which record colours which code is not traced. (3) The frame routine brackets the
+  unbuilt (`ParkMapScreen.cs`; its view, zoom and scroll are built, Q624, and the overlay's build is Q684); its colours are immediates in `0x005f0700` (`hud.md`, "The map's colours"); the
+  channel order (D3D, B, G, R, A in memory) and which record colours which code, sprite and line are settled by Q664
+  (`hud.md`, "The map's overlay"), so (2) is Q684's. (3) The frame routine brackets the
   draws with `0x0046c100` (on `0x007b05a8`, at `0x0054e310`) and `0x0046c110` (at `0x0054e34f`), which sets `+4`
   (`0x007b05ac`) to the latched thing when its kind byte `+2` is 1, 4, 5, 6, 7, 8 or `0x12`, sets `+8` to the first
   thing on the picked cell (`+0x24`, `0x007b05cc`, by `0x00527e80`) and, when nothing was latched, copies `+8` into
