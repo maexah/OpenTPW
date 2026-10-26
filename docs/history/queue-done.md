@@ -10227,6 +10227,24 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   cars and moves the water on frame time already; only its clips step, posed at the last tick (difference 7). Measured
   on the Bouncy Dino (`q642/`): the original at 60 fps 58.6 pictures a second, ours at 144 fps 32.1. So the clip half
   is a faithful fix, not a deviation; the pumps' smooth scroll above stays an improvement.
+- [x] **Q643. Flags ease between wind directions.** From Alexah's play test, 2026-10-21 (note 14). The bus stop flags
+  (built by Q493, `queue-done.md:7705-7712`) take `ParkWeather.WindDirection` and snap; the original's flags take
+  `mWindDir` straight, which `FUN_00512f00` moves by `(rand % 90) - 45` at each change of weather
+  (`park-engine.md:4170-4172`, `weather.md:61`), so its flags jump too. **Alexah (2026-10-21):** an eased turn,
+  `Time.SmoothingFactor`, on by default. A deviation said at the site. Q30 (QUEUE:1968) looks stale beside Q493
+  (inferred; check and tick). Confirm: the angle logged across a weather change, a few frames.
+  **Done (2026-10-25):** `ParkFlags.WindAfter` eases the drawn angle the shorter way round to the weather's at
+  `Time.SmoothingFactor( 1.5 )` (`TurnRate`, the deviation said there), held while the game is paused, the file's wind
+  taken straight at the opening; `flags wind W` stands them at once; `flags` prints the drawn `at`, the wind and
+  `Time.Now`; the log a line a change of wind (`park-engine.md`, "The gates' flags"). Confirmed at camera B on the final
+  binary: a real change logged "moves from 139 to 150" and the reply's angle fell e^-1.5t over 16 pairs, at 149.990 4 s
+  on (`q643/ours/runF1`); paused and stepped, 168 to 123 left gaps -21.255, -10.040, -0.500 after 30, 60, 180 frames of
+  a sixtieth, the model's own to 0.0002, and the frames moved 25.86 and 15.73 against a control's 0.00 (`runF2`,
+  `q643/side-by-side.png`). The original's flag went from 139.04 to 90.00 between two reads 50 ms apart, none of
+  180 between, its wind poked (`q643/orig`, `orig-pair.png`; `original/flagangle.py`, new). `PREDICTION.txt`: 15 held, 3
+  missed (A5 and O3, boxes off the flags; A7's pixel search, begun 300 px off). 9 bugs put back, 9 killed. Tests 3940/0
+  with the game, 1401 ran / 2539 skipped without. **Q30 is the same flags** and is ticked with it: the eight poles stand at cells
+  (41,3) to (55,5), and the frame's pixels at the two glass shelters pick `BusStopA` (42,5) and `BusStopB` (53,5).
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.
@@ -10330,6 +10348,11 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   mode 1, and the Backspace handler (Backspace reaches the key tables as `0x08`, `park-engine.md`
   "Keyboard bindings") - then build: the path tool's own preview squares and cursor states
   (`PATH_TOOL_PREVIEW`) come with it.
+- [x] **Q30. Waving flags at the bus stop.** Nothing found in code or docs. Decode what the original
+  draws at `BusStopA/B` (`park.md:54, 98`), then build.
+  **Done (2026-10-25, with Q643):** they are the gates' eight flags, decoded by Q491 and built by Q493: their poles stand
+  at cells (41,3) to (55,5), either side of `BusStopA` (42,5) and `BusStopB` (53,5), which pixels at the two glass
+  shelters of camera B's frame pick (`q643/ours/runF2`, `T0a.png`).
 
 ## E. Large
 

@@ -4403,8 +4403,13 @@ original's (86.0, 63.9, 72.2) and (109.5, 95.5, 101.9) at the wind held at 0 and
 The phase is `ParkSea.Phase`, as the original's two are equal at every read; the angle is `ParkWeather.WindDirection`,
 which a loaded park takes from the file's `mWindDir` (139 in the stock park; `weather.md`). Phase 5 against 25 moved the
 boxes 0.00, 5 against 15 7.36 and 8.14 (the original's 7.44 and 6.98). Ours is sharper than the original's frame, whose logo
-reads blurred (not looked into). The debug console's `flags` prints the count, phase, wind and folder; `flags wind W`
-holds the wind, `flags wind free` lets it go.
+reads blurred (not looked into). **The flags turn to a new wind eased, where the original's jump** (Q643, a deviation at
+Alexah's word, said at `ParkFlags.TurnRate`): each frame `ParkFlags.WindAfter` moves the drawn angle the shorter way
+round towards the weather's by `Time.SmoothingFactor( 1.5 )`, so a 45 degree change is 10 short after a second and 2
+after two; a park opens at the file's wind, the turn holds while the game is paused, as the phase does, and the rate is
+chosen, the original having none. The debug console's `flags` prints the count, phase, the drawn angle (`at`), the
+weather's wind, the frame's `Time.Now` and the folder; `flags wind W` holds the wind and stands the flags at it at once,
+`flags wind free` lets it go; the log has a line at each change of the wind.
 
 ---
 

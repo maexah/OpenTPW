@@ -96,6 +96,35 @@ public class ParkFlagsTests
 		Assert.AreEqual( 90f, ParkWeather.Turned( 350f, 15, held: 90f ), "held" );
 	}
 
+	/// <summary>
+	/// The eased turn (Q643, a deviation: the original's flags jump). The asked winds straddle 0 and 360 both ways, so a
+	/// turn the long way round lands near 185 rather than 5, a dropped wrap at 365, and the factors are neither 0, 1 nor
+	/// a half of a half.
+	/// </summary>
+	[TestMethod]
+	public void TheFlagsTurnToANewWindTheShorterWayRound()
+	{
+		Assert.AreEqual( 5f, ParkFlags.WindAfter( 350f, 20f, 0.5f, paused: false ), 0.0001f, "over 360, wrapped" );
+		Assert.AreEqual( 12.5f, ParkFlags.WindAfter( 20f, 350f, 0.25f, paused: false ), 0.0001f, "back past nought" );
+		Assert.AreEqual( 109f, ParkFlags.WindAfter( 100f, 145f, 0.2f, paused: false ), 0.0001f, "a fifth of the way" );
+		Assert.AreEqual( 335f, ParkFlags.WindAfter( 10f, 300f, 0.5f, paused: false ), 0.0001f, "below nought, wrapped" );
+
+		Assert.AreEqual( 139f, ParkFlags.WindAfter( null, 139f, 0.2f, paused: false ), "a park opens at its file's wind" );
+		Assert.AreEqual( 100f, ParkFlags.WindAfter( 100f, 145f, 0.2f, paused: true ), "held while the game is paused" );
+		Assert.AreEqual( 0f, ParkFlags.WindAfter( 100f, null, 0.2f, paused: false ), "no weather, no turn" );
+	}
+
+	[TestMethod]
+	public void AFortyFiveDegreeChangeIsTenShortAfterASecond()
+	{
+		float? shown = 100f;
+		var factor = 1f - System.MathF.Exp( -ParkFlags.TurnRate / 60f );
+		for ( var frame = 0; frame < 60; ++frame )
+			shown = ParkFlags.WindAfter( shown, 145f, factor, paused: false );
+
+		Assert.AreEqual( 134.96f, shown!.Value, 0.01f, "45 x (1 - e^-1.5) after sixty frames of a sixtieth" );
+	}
+
 	[TestMethod]
 	public void TheStockParkSavesItsWindAt139Degrees()
 	{

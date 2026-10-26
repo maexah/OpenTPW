@@ -73,8 +73,27 @@ public sealed class ParkFlags : ModelEntity
 	/// </summary>
 	public float Phase { get; private set; }
 
-	/// <summary>The angle the flags stand at, degrees: the weather's <c>mWindDir</c>, 0 where no weather is running.</summary>
+	/// <summary>
+	/// The angle the flags stand at, degrees in [0, 360): the weather's <c>mWindDir</c> eased towards (<see cref="WindAfter"/>),
+	/// 0 where no weather is running.
+	/// </summary>
 	public float Wind { get; private set; }
+
+	/// <summary>
+	/// How fast the flags turn to a new wind, per second, through <see cref="Time.SmoothingFactor"/>: a 45 degree change
+	/// is 10 degrees short after a second and 2 after two.
+	///
+	/// <para>
+	/// <b>A deviation, at Alexah's word (Q643).</b> The original's flags take <c>mWindDir</c> straight every
+	/// frame (<c>FUN_0053c3f0</c> through <c>FUN_00519590</c>), so they jump by up to 45 degrees at each change of
+	/// weather (<c>FUN_00512f00</c>). This eases the turn, on by default; the rate is chosen, not measured, as the
+	/// original has none.
+	/// </para>
+	/// </summary>
+	internal const float TurnRate = 1.5f;
+
+	/// <summary>The wind last seen in the weather, to log each change once.</summary>
+	private float? _seen;
 
 	/// <summary>The folder the texture came from: <c>stexture</c> at low texture quality, else <c>textures</c>.</summary>
 	public string Folder { get; }
@@ -223,10 +242,46 @@ public sealed class ParkFlags : ModelEntity
 	internal static float PhaseAfter( float? sea, float phase, float seconds, bool paused )
 		=> sea ?? ParkSea.Advance( phase, seconds, paused );
 
+	/// <summary>
+	/// The flags' angle this frame, eased from <paramref name="shown"/> towards the weather's <paramref name="wind"/> the
+	/// shorter way round by <paramref name="factor"/> (<see cref="Time.SmoothingFactor"/> of <see cref="TurnRate"/>), and
+	/// wrapped to [0, 360). Taken straight where nothing has been shown yet, so a park opens with its flags at the
+	/// file's wind; held while the game is paused, as the wave's phase is; 0 with no weather.
+	/// </summary>
+	internal static float WindAfter( float? shown, float? wind, float factor, bool paused )
+	{
+		if ( wind is not { } target )
+			return 0f;
+
+		if ( shown is not { } from )
+			return target;
+
+		if ( paused )
+			return from;
+
+		var turn = ((((target - from) % 360f) + 540f) % 360f) - 180f;
+		return (((from + (turn * factor)) % 360f) + 360f) % 360f;
+	}
+
+	/// <summary>Stands the flags at the weather's wind at once, for DebugConsole's <c>flags wind W</c>, whose frames are compared with the original's.</summary>
+	internal void DebugSnap() => _shown = null;
+
+	private float? _shown;
+
 	protected override void OnUpdate()
 	{
 		Phase = PhaseAfter( ParkSea.Current?.Phase, Phase, Time.Delta, GameClock.Paused );
-		Wind = ParkWeather.Current?.WindDirection ?? 0f;
+
+		var wind = ParkWeather.Current?.WindDirection;
+		if ( wind != _seen )
+		{
+			var now = wind?.ToString( "0.###" ) ?? "none";
+			Log.Info( $"Flags: the wind {(_seen is { } was ? $"moves from {was:0.###} to {now}" : $"is {now}")}, the flags at {Wind:0.###}" );
+			_seen = wind;
+		}
+
+		Wind = WindAfter( _shown, wind, Time.SmoothingFactor( TurnRate ), GameClock.Paused );
+		_shown = wind is null ? null : Wind;
 
 		Fill();
 		Model?.UpdateVertices( _vertices );

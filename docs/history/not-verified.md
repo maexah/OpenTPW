@@ -5,6 +5,11 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q642 (smoothing between ticks, decoded; no code changed but a comment): measured on one clip, the Bouncy Dino's loop in
+  the stock park, at one camera, the original at 60 frames a second and ours at 144. Not filmed: the bus, the ferry and
+  the seaplane (their route keys go through the same channel advance, read in the listing only), the original's track
+  cars, flying cars and guests eased between steps (read in the listing; the stock park has no track ride), and the
+  flying cars' draw `FUN_0055ce60`, whose body was not read.
 - Q641 (the money's trend arrow, decoded; no code changed but a comment): the original alone, off-screen, on the stock
   park with the analyser's words written by hand, not on a month a park earned or lost by play. Not seen: a park with no
   month closed (the stand-in's green), a negative balance's dollar sign, the arrow at 640 x 480 or 1024 x 768, the

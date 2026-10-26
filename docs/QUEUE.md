@@ -74,12 +74,6 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q643. Flags ease between wind directions.** From Alexah's play test, 2026-10-21 (note 14). The bus stop flags
-  (built by Q493, `queue-done.md:7705-7712`) take `ParkWeather.WindDirection` and snap; the original's flags take
-  `mWindDir` straight, which `FUN_00512f00` moves by `(rand % 90) - 45` at each change of weather
-  (`park-engine.md:4170-4172`, `weather.md:61`), so its flags jump too. **Alexah (2026-10-21):** an eased turn,
-  `Time.SmoothingFactor`, on by default. A deviation said at the site. Q30 (QUEUE:1968) looks stale beside Q493
-  (inferred; check and tick). Confirm: the angle logged across a weather change, a few frames.
 - [ ] **Q644. A more legible font on the hire and buy screens.** From Alexah's play test, 2026-10-21 (note 28). The
   `.bf4` fonts are drawn faithfully (`boot.md:12`; Q377 and Q378 letter the lists in font 7 at the factories' heights,
   `queue-done.md:6955, :6962`) and are hard to read. **Alexah (2026-10-21): a more legible font is an improvement, on by
@@ -2298,8 +2292,6 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   - **Note (Q617):** the filter values are decoded (`render-states.md`, "Texture filtering"): MIN POINT but on a wrapped
     texture, MAG LINEAR but under word bit `0x20000`, MIP chosen once from `TEXTUREFILTERING` and the caps, LOD bias 0.
     Which MIP the reference install's caps give is not read live.
-- [ ] **Q30. Waving flags at the bus stop.** Nothing found in code or docs. Decode what the original
-  draws at `BusStopA/B` (`park.md:54, 98`), then build.
 - [ ] **Q37. The placement terrain rule.** `ParkBuilding.Refusal` counts `PLACEMENT_TERRAIN_RULE` and lets a
   thing stand on types 2, 7 and 30 and on land flagged `0x40`, outside the park. The original allows a
   footprint only over in-park bare ground or path (`FUN_00535600`, `FUN_00535670` refusing `0x40` at
