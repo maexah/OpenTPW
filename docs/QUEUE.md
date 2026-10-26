@@ -2829,11 +2829,12 @@ state machine.
   "4/18/2002" on this machine, and would letter another order on a machine of another culture; the original's frames read
   "4.4.2002" to "4.29.2002" (`q707/p707t/orig/O/g-*.png`). Decode the original's date writer for the gadget, then write
   the date its way whatever the machine.
-- [ ] **Q694. Move to NeoVeldrid 1.3.0.** Alexah, 2026-10-25: released 2026-10-24; we are on 1.2.1 (`OpenTPW.Common`,
-  `OpenTPW`, and `OpenTPW.ModKit`'s references). Its notes list Native AOT and trimming support (#104) and a backend-aware
+- [ ] **Q694. Move to the newest NeoVeldrid (1.3.1 on 2026-10-26).** Alexah, 2026-10-25: 1.3.0 released 2026-10-24, 1.3.1 by
+  2026-10-26 (`lib/nvwatch.py` reports newer ones); we are on 1.2.1 (`OpenTPW.Common`,
+  `OpenTPW`, and `OpenTPW.ModKit`'s references). 1.3.0's notes list Native AOT and trimming support (#104) and a backend-aware
   window creation in StartupUtilities (#92), with no breaking change and nothing in Vulkan, SDL2, SPIRV, texture formats,
   samplers or present (https://github.com/jhm-ciberman/neo-veldrid/releases/tag/v1.3.0; the compare diff not read).
-  Read the compare diff `v1.2.1...v1.3.0` first; bump every NeoVeldrid package together; build, test, and photograph
+  Read the compare diffs `v1.2.1...v1.3.0` and `v1.3.0...v1.3.1` (and the 1.3.1 notes, not yet read) first; bump every NeoVeldrid package together; build, test, and photograph
   the lobby and a park before and after at one camera (pictures equal within a frame's own spread).
 - [ ] **Q695. Queue pieces and the boundary hoarding draped vertex by vertex, like the track tiles.** From the fork watch 2026-10-25
   (verify-all.md N1; a lead the fork missed). The original loads queue pieces (`FUN_00522900`, flags `0x12423`, or `0x112423` when the
