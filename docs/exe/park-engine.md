@@ -440,8 +440,9 @@ either: the soft bound on the walker ("Nothing clamps the position", under "Walk
   locator's follow (`Panning`). Up, Down and keypad 1 and 3 zoom at 50 a second. The edge is the original's rule
   (Q667, `StepPan`, `BoundScroll`, `EdgeOf`): flagged by the point before the move, per axis, strictly past 0 or the
   heightfield's cells times its cell size (960 by 850 in all four themes), an outward new term replaced by the old one
-  coasted, on `Time.Delta` rather than `1 + 0.01 dt` (the deviation, said at the site), so a pan held at zoom 110 stops
-  about 10.2 past the edge at 144 frames a second (11.1 at 30), in the original's cell; the log says `Camera: pan held at
+  coasted, by the original's own step, the term over `1 + 0.01 dt`, kept on `Time.Delta` (Alexah, 2026-10-26; the no-key coast
+  is the same step), so a pan held at zoom 110 coasts 100 times its term, 10.49, past the edge plus part of its crossing frame,
+  in the original's cell at any frame rate (30, 60 and 144: `AHeldPanRestsInTheSameCellAtAnyFrameRate`); the log says `Camera: pan held at
   the edge` once and `Camera: pan at rest, point (x,y) cell (cx,cy)` as the coast ends. Past the edge, at the stop, this
   game draws what the original does at all four edges (`q667/side-by-side.png`: the original stopped at 972.828,
   -13.622, z 863.576, z -12.014, `q667/orig2`); Q625's flat cyan was at x 1727, beyond that ground. Keypad 9 and

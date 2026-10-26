@@ -151,11 +151,11 @@ public sealed class ParkOrbitCameraMode : CameraMode
 	private const float PanRiseRate = 22.36f;
 
 	/// <summary>
-	/// How fast the pan's term coasts away with no key held, a second: the original divides it by <c>1 + 0.01 dt</c> a
-	/// frame (<c>0x006fddc8</c>), which this is at a frame of no length. The original's coast totals exactly 100 times the
-	/// term at any frame rate; this one steps the term and then moves by it, so it totals less, and by an amount that
-	/// depends on the frame rate: 10.1 units from a term of 104.9 a second at 144 frames a second, 9.6 at 60 and 8.8 at 30,
-	/// against the original's 10.5.
+	/// How fast the pan's term coasts away with no key held, in the original's own step: it divides the term by
+	/// <c>1 + 0.01 dt</c> on a frame of <c>dt</c> milliseconds (<c>0x006fddc8</c>), which is <c>1 + 10 x Time.Delta</c>
+	/// here. This is the original's step kept on <c>Time.Delta</c> (Alexah, 2026-10-26), not <c>Time.SmoothingFactor</c>:
+	/// the coast then totals 100 times the term, 10.5 units from a term of 104.9 a second, at any frame rate, as the
+	/// original's does.
 	/// </summary>
 	private const float PanCoastRate = 10f;
 
@@ -377,7 +377,7 @@ public sealed class ParkOrbitCameraMode : CameraMode
 	{
 		var next = held
 			? term + ((target - term) * Time.SmoothingFactor( PanRiseRate ))
-			: term * (1f - Time.SmoothingFactor( PanCoastRate ));
+			: term / (1f + (PanCoastRate * Time.Delta));
 
 		return new Vector2( MathF.Abs( next.X ) < 0.1f ? 0f : next.X, MathF.Abs( next.Y ) < 0.1f ? 0f : next.Y );
 	}
@@ -411,10 +411,10 @@ public sealed class ParkOrbitCameraMode : CameraMode
 	/// pan stops about a cell past the edge; nothing pulls the point back, and a pan inward is free.
 	/// </summary>
 	/// <remarks>
-	/// <b>Not the original's step:</b> the original divides the old term by <c>1 + 0.01 dt</c> on a frame of <c>dt</c>
-	/// milliseconds; this coasts it as <see cref="StepScroll"/> does with no key, on <c>Time.Delta</c> (CLAUDE.md rule 10),
-	/// so a held pan at zoom 110 stops about 10.2 units past the edge at 144 frames a second and 11.1 at 30, where the
-	/// original's stops 10.5 plus part of its crossing frame's step past it (10.6 to 13.6 measured, Q625): the same cell.
+	/// The old term is coasted as <see cref="StepScroll"/> does with no key: the original's own step, <c>old / ( 1 + 0.01
+	/// dt )</c>, kept on <c>Time.Delta</c> (Alexah, 2026-10-26; <c>docs/exe/park-engine.md</c>). A held pan at zoom 110
+	/// therefore stops 10.5 units past the edge plus part of its crossing frame's step (10.6 to 13.6 measured, Q625), in
+	/// the original's cell, at any frame rate.
 	/// </remarks>
 	internal static Vector2 BoundScroll( Vector2 next, Vector2 old, Vector2 point, Vector2? edge )
 	{

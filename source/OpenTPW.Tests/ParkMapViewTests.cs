@@ -370,7 +370,7 @@ public class ParkMapViewTests
 	}
 
 	/// <summary>
-	/// <b>The map asks the advisor for its own line as it opens and takes it back as it closes</b>: the opener's last act
+	/// <b>The map asks the advisor for its own line as it opens and takes it back as it closes</b>: the opener's last call but one
 	/// posts message 0x130 (<c>0x005f100d</c>), and the destroy, event 0x14, withdraws it (<c>0x005f123c</c>), which empties
 	/// its slot and, were he saying it, cuts him off on the game's clock. Every way the map goes is that close: OK, Escape
 	/// and a click on the map.
@@ -378,7 +378,7 @@ public class ParkMapViewTests
 	/// <remarks>
 	/// <b>Mutations:</b> no post at the opening; a post as the map is made, before it is opened; no withdrawal at the
 	/// close; the camcorder's 0x131 or the buy screen's 0xbc for either; response 565 for 564; the row's category, copies,
-	/// lines, prop or group another's; the wall clock for the game's.
+	/// lines, prop or group another's; the wall clock for the game's; <c>Pauses = false</c> on the map.
 	/// </remarks>
 	[TestMethod]
 	public void TheMapAsksTheAdvisorForItsLineAsItOpensAndTakesItBackAsItCloses()
@@ -407,13 +407,19 @@ public class ParkMapViewTests
 		{
 			var map = new ParkMapScreen( stack ) { Park = park };
 			StringAssert.Contains( lines.Census(), "pending=0 attempts=0 ", "made, and not yet opened" );
+			Assert.IsFalse( stack.AnyPausing, "nothing holds the park before the map is open" );
 			stack.Open( map );
 			StringAssert.Contains( lines.Census(), "pending=1 attempts=0 threshold=25 slot=304/subject=0 " );
+
+			// The park stands while the map is up (Map_Open, 0x005f0b84), so his turn in the sweep never comes and he never says it.
+			Assert.IsTrue( map.Pauses, "the map pauses the park" );
+			Assert.IsTrue( stack.AnyPausing, "and the stack says so" );
 
 			// Closed by OK before he says it: the slot alone, the record as it was.
 			Ok( map ).Clicked!();
 			StringAssert.Contains( lines.Census(), "pending=0 attempts=0 " );
 			StringAssert.Contains( lines.Census(), "message=304/score=1000/line=-1/lastTick=0/said=0/slaps=0" );
+			Assert.IsFalse( stack.AnyPausing, "the park runs again once it is closed" );
 
 			// Opened, said (were his turn to come), and closed by Escape while he says it.
 			map = new ParkMapScreen( stack ) { Park = park };

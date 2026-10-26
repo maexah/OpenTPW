@@ -374,7 +374,7 @@ public class ParkCountedPathsTests
 	/// </summary>
 	/// <remarks><b>Mutations:</b> a key's direction turned over; a modifier let through (Ctrl+S, Alt+S); a keypad key left
 	/// out; Up and Down exchanged; the speed not by the root of the zoom; the yaw's turn the other way; the rise or the
-	/// coast at another rate; the floor of 0.1 left out; the rise made half the gap a frame whatever <c>Time.Delta</c> is.</remarks>
+	/// coast at another rate or by another rule (the exponential); the floor of 0.1 left out; the rise made half the gap a frame whatever <c>Time.Delta</c> is.</remarks>
 	[TestMethod]
 	public void TheKeysPanAndZoomTheOrbitCamera()
 	{
@@ -400,7 +400,7 @@ public class ParkCountedPathsTests
 		try
 		{
 			AreNear( (50f, -25f), ParkOrbitCameraMode.StepScroll( Vector2.Zero, new Vector2( 100f, -50f ), true ), "half the gap in 31 ms" );
-			AreNear( (73.345f, 0f), ParkOrbitCameraMode.StepScroll( new Vector2( 100f, 0.09f ), new Vector2( 5f, 5f ), false ), "the coast, and under 0.1 nought" );
+			AreNear( (76.336f, 0f), ParkOrbitCameraMode.StepScroll( new Vector2( 100f, 0.09f ), new Vector2( 5f, 5f ), false ), "the coast by 1 + 0.01 dt, and under 0.1 nought" );
 
 			// The original halves the gap every frame, whatever the frame's length (not on dt); this rise is on Time.Delta,
 			// so at half the frame it takes 29.29 % of the gap, not half.
@@ -441,13 +441,13 @@ public class ParkCountedPathsTests
 
 		try
 		{
-			// The coast of 31 ms is 0.73345 of the term (TheKeysPanAndZoomTheOrbitCamera).
-			AreNear( (-58.676f, 0f), Bound( (-90f, 0f), (-80f, 0f), (-1f, 400f) ), "past x 0, pushed out: the old term coasted" );
-			AreNear( (58.676f, -20f), Bound( (90f, -20f), (80f, -30f), (961f, 400f) ), "past x 960; y inside is free" );
-			AreNear( (30f, 58.676f), Bound( (30f, 90f), (40f, 80f), (400f, 851f) ), "past y 850; x inside is free" );
-			AreNear( (5f, -58.676f), Bound( (5f, -90f), (6f, -80f), (400f, -0.5f) ), "past y 0" );
-			AreNear( (-58.676f, 58.676f), Bound( (-90f, 90f), (-80f, 80f), (-1f, 851f) ), "past a corner" );
-			AreNear( (20f, -7.335f), Bound( (20f, 7f), (-50f, -10f), (-5f, 900f) ), "inward free; out again from an inward term" );
+			// The coast of 31 ms is the term over 1.31, the original's 1 + 0.01 dt (TheKeysPanAndZoomTheOrbitCamera).
+			AreNear( (-61.069f, 0f), Bound( (-90f, 0f), (-80f, 0f), (-1f, 400f) ), "past x 0, pushed out: the old term coasted" );
+			AreNear( (61.069f, -20f), Bound( (90f, -20f), (80f, -30f), (961f, 400f) ), "past x 960; y inside is free" );
+			AreNear( (30f, 61.069f), Bound( (30f, 90f), (40f, 80f), (400f, 851f) ), "past y 850; x inside is free" );
+			AreNear( (5f, -61.069f), Bound( (5f, -90f), (6f, -80f), (400f, -0.5f) ), "past y 0" );
+			AreNear( (-61.069f, 61.069f), Bound( (-90f, 90f), (-80f, 80f), (-1f, 851f) ), "past a corner" );
+			AreNear( (20f, -7.634f), Bound( (20f, 7f), (-50f, -10f), (-5f, 900f) ), "inward free; out again from an inward term" );
 			AreNear( (-20f, -7f), Bound( (-20f, -7f), (50f, 30f), (970f, 860f) ), "inward free from the high edges" );
 			AreNear( (90f, -90f), Bound( (90f, -90f), (80f, -80f), (960f, 0f) ), "on the edge is not past it" );
 			AreNear( (0f, 0f), Bound( (90f, 0f), (0.12f, 0f), (970f, 400f) ), "past, the old term's coast under 0.1: nought" );
@@ -460,7 +460,7 @@ public class ParkCountedPathsTests
 			AreNear( (100f, 0f), term, "and keeps its term" );
 			Assert.IsFalse( held, "not held at the edge on the crossing frame" );
 			(point, term, held) = ParkOrbitCameraMode.StepPan( point, term, new Vector2( 100f, 0f ), true, edge );
-			AreNear( (964.374f, 400f), new Vector2( point.X, point.Y ), "the next is held: moved by the old term coasted" );
+			AreNear( (964.466f, 400f), new Vector2( point.X, point.Y ), "the next is held: moved by the old term coasted" );
 			Assert.IsTrue( held, "held at the edge the frame after" );
 
 			// A pan held 4 s at 144 frames a second from x 920, then let go 2 s: it stops in the second cell out, x 97.
@@ -472,7 +472,7 @@ public class ParkCountedPathsTests
 			for ( var i = 0; i < 6 * 144; i++ )
 				(at, scroll, _) = ParkOrbitCameraMode.StepPan( at, scroll, i < 4 * 144 ? right : Vector2.Zero, i < 4 * 144, edge );
 
-			Assert.AreEqual( 970.21f, at.X, 0.05f, "x stops 10.2 past 960" );
+			Assert.AreEqual( 970.57f, at.X, 0.05f, "x stops 10.57 past 960: the coast's 10.49 and part of the crossing frame" );
 			Assert.AreEqual( 400f, at.Y, 0.001f );
 			Assert.AreEqual( Vector2.Zero, scroll, "and comes to rest" );
 		}
@@ -493,10 +493,54 @@ public class ParkCountedPathsTests
 	}
 
 	/// <summary>
+	/// <b>A held pan stops in the original's cell at any frame rate</b>: the coast is the original's own step, the term
+	/// over <c>1 + 0.01 dt</c> (<c>0x0042b73d</c>, <c>0x0042bca0</c>), which totals 100 times the term, 10.49 units at zoom 110,
+	/// whatever <c>dt</c> is, so the point rests 10.49 plus part of the crossing frame's step past 960 (the original's
+	/// 972.828, cell 97) at 30, 60 and 144 frames a second alike.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the coast back to <c>term x exp( -10 dt )</c> (at 60 frames a second, 22 % of these starts
+	/// rest in cell 96, and at 30, 36 %); the coast at another rate.</remarks>
+	[TestMethod]
+	public void AHeldPanRestsInTheSameCellAtAnyFrameRate()
+	{
+		var edge = new Vector2( 960f, 850f );
+		var right = ParkOrbitCameraMode.PanTarget( 0f, 1f, 0f, 110f );
+		var delta = Time.Delta;
+
+		try
+		{
+			foreach ( var rate in new[] { 30, 60, 144 } )
+			{
+				Time.Delta = 1f / rate;
+
+				for ( var start = 900f; start < 930f; start += 0.37f )
+				{
+					var at = new Vector3( start, 400f, 0f );
+					var scroll = Vector2.Zero;
+
+					for ( var i = 0; i < 8 * rate; i++ )
+						(at, scroll, _) = ParkOrbitCameraMode.StepPan( at, scroll, i < 4 * rate ? right : Vector2.Zero, i < 4 * rate, edge );
+
+					var past = at.X - 960f;
+
+					Assert.AreEqual( Vector2.Zero, scroll, $"at rest, {rate} fps from {start}" );
+					Assert.AreEqual( 97, (int)(at.X / 10f), $"cell 97, {rate} fps from {start}: {at.X}" );
+					Assert.IsTrue( past >= 10.45f && past <= 10.49f + (104.881f / rate), $"{past} past 960, {rate} fps from {start}: the coast's 10.49 and part of the crossing frame" );
+				}
+			}
+		}
+		finally
+		{
+			Time.Delta = delta;
+		}
+	}
+
+	/// <summary>
 	/// <b>The jungle's heightfield bounds the orbit's point at 960 by 850</b>, its 96 by 85 cells of 10, not the 128-cell
 	/// map (<c>ParkOrbitCameraMode.EdgeOf</c>; Q625 read 960 and 850 in the running original).
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the map's 128 cells, or the counts and sizes crossed, fail it.</remarks>
+	/// <remarks><b>Mutations:</b> the map's 128 cells fails it; the counts and sizes crossed is equivalent on every shipped
+	/// heightfield (cells 10 by 10 in all four <c>base.MD2</c>, edge 960 by 850), so it survives.</remarks>
 	[TestMethod]
 	public void TheJunglesHeightfieldBoundsTheOrbitAt960By850()
 	{

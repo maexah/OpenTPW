@@ -115,6 +115,7 @@ internal sealed class ParkMapScreen : UiWindow
 			// The viewport's 0x10001 keeps the nearest shown record of the overlay's list within 5 screen pixels of the
 			// pointer (0x005f198e) and the thing id of the cell under it, and letters 0x991 with the record's thing or the
 			// cell's (docs/exe/hud.md, "The map's hover and click"): not built, it waits on the overlay's records (Q685).
+			// MAP_HOVER counts once per Entered; the original acts on every move message (0x10001 and 0x10003).
 			Entered = () => Unimplemented.Report( "MAP_HOVER" )
 		} );
 
@@ -284,7 +285,8 @@ internal sealed class ParkMapScreen : UiWindow
 	{
 		// The original hands the hovered record's thing, or else the thing on the cell under the pointer, to its window
 		// opener after the close (0x005f1de8, 0x005f1df5, Thing_OpenWindow; Q685); nothing here does, and the count tells a
-		// click from a hover.
+		// click from a hover. It counts every click on the map; the original hands on only with a thing (0x005f1e3b), so a
+		// click on an empty cell counts a gap the original does not have (Q685).
 		Unimplemented.Report( "MAP_CLICK_HANDOFF" );
 
 		var (x, y) = PointerOnTheScreen();
@@ -309,7 +311,7 @@ internal sealed class ParkMapScreen : UiWindow
 	// (the map's own key-up case, 0x005f17ef, ParkFrontEnd.MenuKey), and leaves the camera where it was.
 
 	/// <summary>
-	/// The opener's last act (Map_Open, <c>0x005f100d</c>): the advisor is posted message 0x130 (FUN_00486b00), the
+	/// The opener's last call but one (Map_Open, <c>0x005f100d</c>, before the help bar's move at <c>0x005f1019</c>): the advisor is posted message 0x130 (FUN_00486b00), the
 	/// screen's own line. The map pauses the park, and he says a slot only on his turn in the park's sweep, so the line
 	/// waits in its slot while the map is up.
 	/// </summary>

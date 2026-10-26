@@ -8,7 +8,9 @@ later item may have run what an earlier one lists as untested.
 - Q667 (the orbit camera's point stops at the heightfield's edge): this game on the desktop, the final build
   (`q667/ours-run1`: each of the four edges held 4 s, the edge's and the rest's log lines, cells 97, -2, 86, -2) and the
   original off-screen (`q667/orig2`: `campoi.py`, the same cells), `side-by-side.png`. Not seen: zoom other than 110,
-  a turned camera, Full Simulation, other themes, frame rates other than the desktop's.
+  a turned camera, Full Simulation, other themes, frame rates other than the desktop's. Since the run 11 review the
+  coast is the original's own step (Alexah, 2026-10-26): the four rest points re-read on the desktop 970.6, -10.6, 860.6,
+  -10.6, the same cells (`run11-fixN/run1`); other frame rates by the test alone.
 - Q666 (the map's advisor line `0x130`): the original off-screen (`q666/orig`, the stock park: `original/advisor.py`
   read the slot taken and emptied on one tick, OK and Escape, the record never written; `a-2-open-later.png`) and this
   game on the desktop, the final build (`q666/run1`: the post, the tick standing, the withdrawals, no attempt;

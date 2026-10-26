@@ -348,7 +348,7 @@ public class ParkTagsTests
 	[TestMethod]
 	public void AParksTicketTagsReadItsThresholds()
 	{
-		GameData.Required();
+		FileSystem = GameData.Required();
 		var tags = Level.DressTags( new ParkTags(), new ParkBalance( "jungle", easyMode: false ) );
 		const string Won = "YOU'VE WON A GOLDEN TICKET!";
 

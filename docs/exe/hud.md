@@ -2043,14 +2043,14 @@ The screen is one static object at `0x00f86db8` (the `ECX` of every call); its c
 - **Closed** by b_okay (id -1) and by a left click on the map through `0x005f1050`: the centre held to the cells less one
   and the camera put on `( (int)across x 10, (int)down x 10 )` (`FUN_0042aab0`, which noughts the pan's momentum and
   leaves the zoom and turn). The click (`0x005f1d19`, the viewport's `0x10006` with button 0) first moves the centre by the
-  pointer's distance from the SCREEN's centre over `480 / cells x zoom` screen pixels a cell (y negated), and, where a
+  pointer's distance from the SCREEN's centre over `480 / cells across × zoom` screen pixels a cell across and `425 / cells down × zoom` a cell down (y negated; `0x005f1d65`), and, where a
   thing was hovered or lies on the cell under the pointer, hands it to its window after the close ("The map's hover and
   click", below). Measured: zoom 1.5, a click at layout (1218,765): 58.104, 26.156, the camera on (580,260). **Escape** (the key-up case `0x005f17ef`) closes it without `0x005f1050`: the camera
   stays.
 - **The help bar** stands at the top while the map is up: the opener's `FUN_00492530( -1, 10 )` (`HelpBar_MoveTo` in Ghidra; `0x005f1015`; it moves
   the bar's label to top 10, keeping its left), the close's `FUN_00492530( -1, -1 )` (`0x005f1256`) puts it back.
 - **The camera's table is off**: the opener hands its root to `FUN_00485b70` (`0x005f0c01`), as a park screen's.
-- **The advisor**: the opener's last act posts message `0x130` (`FUN_00486b00`, `0x005f100d`), and the root's destroy
+- **The advisor**: the opener's last call but one posts message `0x130` (`FUN_00486b00`, `0x005f100d`; the help bar's move, `0x005f1019`, is its last), and the root's destroy
   (event `0x14`, `0x005f1176`) withdraws it (`FUN_00486b40`, `0x005f123c`) after putting `g_ParkRunning` back, so
   OK, a click on the map and Escape all take it back. The park stands while the map is up, so his turn in the sweep
   never comes and **he never says it**: measured (Q666, `q666/orig`), the slot taken on tick 915, emptied by OK on 915,
@@ -2122,9 +2122,16 @@ between each two samples, a piece's 0 joining the previous piece's 0.9 (only the
 at `0x005f30b8`..`0x005f30ed`; the 425 constant is not read here; `0x0070304c` 10, a cell's world units), coloured by the ramp of the coaster's thing's state of repair.
 
 **The sprite records** (`FUN_005f3940`; 0x30 bytes, made by `FUN_005f4370( sheet, kind, mode, value, scale )`): `+4`/`+8`
-the position in cells, `+0xc`/`+0x10` the screen point (`FUN_005f4180`), `+0x14` the kind, `+0x18` the thing, `+0x1c` the
+the position in cells, `+0xc`/`+0x10` the screen point, `+0x14` the kind, `+0x18` the thing, `+0x1c` the
 filter's mode and `+0x20` its value, `+0x24` the scale, `+0x28` the sprite, `+0x2c` shown. A person's position is its
 cell bytes `+5`, `+7` plus the fractions `+4`, `+6` over 256; a cell's is its centre.
+
+**The screen point** (`FUN_005f4180`, `0x005f4192`..`0x005f4239`; map = the map static, W = `[0x007a1968]`, H = `[0x007a1930]`):
+`+0xc` = ( `+4` - map`+0x54` ) × ( 480 / map`+0x24` ) × map`+0x5c` + W × 0.5 and `+0x10` = ( `+8` - map`+0x58` ) × ( 425 /
+map`+0x28` ) × map`+0x5c` + H × 0.5, each stored as a float32 in that order (y counts up, like the hover's pointer), so the
+5-pixel reach of the hover is in screen pixels whatever the zoom. The same pass puts the sprite at 2 × `+0xc` / W - 1 and
+2 × `+0x10` / H - 1, at depth 0.99 for the kinds 0 to 2 and 0.9999 for any other. Every record is placed again by the list walk at
+`0x005f3583`..`0x005f359f`.
 
 | Made for | Sheet | Kind | Shown when | Colour (`FUN_005f44d0`) | Scale |
 |---|---|---|---|---|---|
@@ -2169,10 +2176,16 @@ Decoded from the listing (`Map_ViewportProc`, `0x005f18d0`; `q665/g1`) and measu
    nought (a SHOWN record: the hidden layers' records are passed over) and whose screen point (`+0xc`, `+0x10`) is less
    than 5 (`0x00703040`) from the pointer in x AND in y is a candidate, and the nearest by distance is kept (strictly
    nearer, so of two at one distance the first in the list). The list is the overlay's sprite records ("The map's
-   overlay"); the camera glows (kind 5, no thing at `+0x18`) can be hovered and name nothing.
+   overlay"). Two kinds of record carry no thing (`+0x18` 0): the cameras' glows (kind 5, `0x005f412a`) and the litter
+   sprites (kind 3, `0x005f3fbb`); the entertainer's and the guard's glows carry their member (`0x005f3e66`). A thingless
+   record can win the contest, and so hide a farther dot from the hover, but it names nothing of its own (step 5).
 3. If the hovered record changed and the old or the new one's thing is a member (`+2` 4 to 8), the picture is
    reloaded, repainted and uploaded (`0x005f1aed`..`0x005f1b0e`), so the member's patrol rectangle turns (25, 25, 250)
-   as he is hovered and back to (25, 25, 150) as he is left.
+   as he is hovered and back to (25, 25, 150) as he is left. The bright rectangle is for a hovered kind-2 record only
+   (his dot's, not his glow's: `0x005f2de9`, `0x005f2ed0`). An entertainer's or a guard's glow lies exactly on his dot,
+   which is earlier in the list, so the dot is the record hovered and the rectangle brightens, unless the glow wins the
+   tie, which it can only if the FPU keeps more than float precision at `0x005f1a7d`: **unsettled**, a `mapgrid.py
+   hover` read on the entertainer's or the guard's dot settles it.
 4. **The word** `+0x20064` is the thing id of the code grid's cell under the pointer: across = centre `+0x54` +
    (px - W / 2) / (480 / cells across × zoom), down = `+0x58` + (py - H / 2) / (425 / cells down × zoom), each
    truncated (`__ftol`), the grid's `down × 128 + across`; nought off the grid. Only codes 1 to 8 keep an id
@@ -2180,20 +2193,21 @@ Decoded from the listing (`Map_ViewportProc`, `0x005f18d0`; `q665/g1`) and measu
 5. **The label** `0x991` (yellow, font 4) is lettered from them (`0x005f1bab`..`0x005f1cfc`): a hovered record whose
    thing is a member, its name (`FUN_00506860`, `+0x1a0`); a guest (`+2` 1), UITEXT 456 "Visitor #{P24}" with his
    `+0x1d8`, or 457 "New Visitor" at nought (`FUN_006acd60` into `0x007ba058`); **otherwise, with no record or one with
-   no thing, the word's thing** from the thing table `0x007cfb90` (`+ id × 20`), named by `Thing_JoinedName`
+   no thing (`+0x18` 0: `0x005f1bcb`, `je 0x005f1c80`), the word's thing** from the thing table `0x007cfb90` (`+ id × 20`), named by `Thing_JoinedName`
    (`FUN_004e2780`: its two name lines `+0x3c8` and `+0x40a` joined, "The status's row 16"). With neither, the label is
    given the empty string. A record wins over the word: a guest's dot within 5 pixels of a ride's cell names the guest.
 
 **The click** (`0x10006` with button 0, `0x005f1d19`..`0x005f1e45`): the centre is moved by the pointer (above, "The
-map's view"), then the thing is the hovered record's `+0x18` or, with no record or none there, the word's thing from
-the table; `Map_CloseOnTheView` (`0x005f1050`) puts the camera on the centre and closes the map, and only then is the
+map's view"), then the thing is the hovered record's `+0x18` or, with no record or none there (`0x005f1de8`), the word's thing from
+the table, so a click on a camera's glow or a litter sprite opens the window of the thing under the pointer, if any; `Map_CloseOnTheView` (`0x005f1050`) puts the camera on the centre and closes the map, and only then is the
 thing handed to `Thing_OpenWindow` (`FUN_00486920`; `park-engine.md`, "The per-object management screen is nine screens"): a guest's visitor
 window, a member's staff window, a placed thing's window by its item's `+0x4ac`. With no thing the map closes and
 nothing opens.
 
 **Measured** (zoom 1, 800 × 600): the pointer on the panel, hovered 0, word 0, the label empty; on the handyman's dot,
-record 32 (kind 2, thing 25) and "Duke Mighten", his rectangle's outline from 108 to 215 blue pixels, mean (0, 37, 109)
-to (0, 41, 172) (`maprects.py`); on guest 42's, "Visitor #13", the rectangle back; on shop 16's cell, word 16, "Drinks
+record 32 (kind 2, thing 25) and "Duke Mighten", his rectangle's outline brighter (the blue of its top edge 110 to 180, its bottom edge 99 to 165, its sides 74 to 121;
+the pixel count that passes `maprects.py`'s blue test is 108 for the top edge alone, then 215 for the whole box, which is
+the test and not the outline); on guest 42's, "Visitor #13", the rectangle back; on shop 16's cell, word 16, "Drinks
 Shop"; on cell (45, 26), code 0, word 0, empty; on ride 13's cell (52, 24) beside a guest, word 13 but "Visitor #8";
 on its cell (52, 26), 15 pixels from any dot, word 13 and "Belly Bounce" (`q665/orig/crop-label-ride.png`). A click
 there closed the map, put the camera on (520, 260) and opened Belly Bounce's ride window (`c-c1c-later.png`); a click on

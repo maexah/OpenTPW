@@ -5010,7 +5010,7 @@ Cleaners": the reference install reads the American. Not heard in either game.
 ## The map's own line (message `0x130`, Q666)
 
 **The post and the withdrawal.** `Map_Open` (`FUN_005f0b40`) pauses the park (`FUN_004092a0( 0, 0 )`, `g_ParkRunning`
-nought), stops him with the quiet stop (`Advisor_StopQuietly( 1 )`) and ends on `FUN_00486b00( 0x130 )` at `0x005f100d`.
+nought), stops him with the quiet stop (`Advisor_StopQuietly( 1 )`) and posts `FUN_00486b00( 0x130 )` at `0x005f100d`, its last call but one (the help bar's move, `0x005f1019`, is its last).
 The root's handler, on event `0x14` (`0x005f1176`), puts `g_ParkRunning` back to 1 (`0x005f120c`) and calls
 `FUN_00486b40( 0x130 )` at `0x005f123c`. Every way the map goes is that event: OK and a click on the map through
 `Map_CloseOnTheView` (`0x005f1050`), and Escape (`hud.md`, "The map's view"). The third `PUSH 0x130` (`0x004c01df`) is
@@ -5049,7 +5049,7 @@ counted `MAP_ADVISOR_LINE` at the opening and logged no line naming message 304 
 
 | | The original | OpenTPW |
 |---|---|---|
-| The post | the opener's last act | `Shown`, the first time |
+| The post | the opener's last call but one, before the help bar's move | `Shown`, the first time |
 | The withdrawal | the root's destroy (event `0x14`): OK, a click, Escape | `Closed` |
 | Said | never: the park stands while the map is up | the same |
 

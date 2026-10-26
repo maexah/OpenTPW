@@ -2485,7 +2485,7 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   (in x and in y, then by distance, the first of equals) and the cell's thing id; repaint the picture when a member is
   hovered or left (his patrol rectangle in (25, 25, 250)); letter `0x991` with the member's name, UITEXT 456 "Visitor
   #{P24}" or 457 "New Visitor" for a guest, else the cell's thing's two name lines joined (`Thing_JoinedName`, as the
-  status's row 16), else empty. A click: the record's thing, else the cell's, to the window opener after the close
+  status's row 16), else empty; a record with no thing (a camera's glow, a litter sprite) names the cell's thing as with no record. A click: the record's thing, else the cell's, to the window opener after the close
   (`Level.OpenObjectWindow` for a placed thing, the visitor's and the staff member's windows for people). Replace
   `MAP_HOVER` and `MAP_CLICK_HANDOFF`. Confirm: `q665/orig/run.sh` and `runc.sh`'s points in both games, each hover's
   `mapgrid.py hover` against the console's, the label's crop, and each click's window and camera point.
