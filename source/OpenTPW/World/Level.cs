@@ -139,9 +139,13 @@ public class Level
 				+ (GameCalendar.DayRolled ? "" : " NOT") + (GameCalendar.MonthRolled ? ", the month's" : "")
 				+ (GameCalendar.YearRolled ? ", the year's" : "") );
 
-		// The day's change, then the month's and the year's, which the calendar sends after the day's in the same tick.
+		// The day's change, then the month's and the year's, which the calendar sends after the day's in the same tick. The
+		// gadget's date and trend arrow are read between the day's and the month's (FUN_00481560, 0x004f83ac).
 		if ( GameCalendar.DayRolled )
+		{
 			state.RollTheDay();
+			state.ReadTheTrend();
+		}
 
 		if ( GameCalendar.MonthRolled )
 			ParkPeople.TurnTheMonth( people, state, catalogue );

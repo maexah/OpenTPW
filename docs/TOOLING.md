@@ -660,6 +660,15 @@ after its poller starts**, so a key meant inside either line cannot be sent afte
   (`+0x1fed4` holds the index; costs `+0x1f5a4`, `+0x1f7e4`): nothing writes it again until the next close. A POLL
   started before the load click can write February's before 1 March, which `loadfile.sh` itself leaves too little time
   for. Stop the original afterwards. Q641
+- **The same in this game, and the balance at any width in both** (Q674, `q674/ours.py`, `q674/orig/run.sh`): here
+  `money cashin N` and `money costs N` write the analyser's month so far and `money balance N` the bank's balance (the
+  console's instruments; `money` says `trend red|green`, `control 31` and `control 32` the arrow's and the icon's `frame`);
+  wait for the log's `Calendar: 2000-03-01` line and `pause`. The original's balance is the bank thing's `+0xc` (its id is
+  the world's `+0x1da726`, 8 in the stock park, its type 16): hold it with `thingpoke.py PID 6 16 8:0xc:i=N`. **The original runs at
+  800 x 600** (its `Resolution.sam`) scaled up to the 1024 x 768 capture, so its lettering is the 600 set's: compare with
+  this game in a window of 800 x 600 (`size 800 600`) scaled by 1.28, never with a 1024 x 768 one. A park file whose
+  arrow differs from the running one's isolates the load's own call: `q674/mkfiles.py` writes a closed month with
+  `parkfile.thing_set`. Q674
 - **The original's Financial Information screen, and a ring's months on it** (Q386, `q386/orig/run.sh`): F in a park
   opens it on the bank balance alone, 1 Year (12 points). Its rows at game points (252, y) on the 1024 x 768 frame: Bank
   balance 122, Park value 159, Money in 208, Gate takings 245, Shop takings 283, Sideshow takings 320, Money out 358,

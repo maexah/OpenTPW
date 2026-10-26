@@ -201,17 +201,28 @@ closed shows the green arrow. The routine runs at two times:
 - **Once a day**, from `Calendar_Update` (`0x004f83ac`, through `FUN_00481560`). This is after the day's message `0xb`
   and **before** the month's `0xc`, which closes the month. So on the first of a month the arrow still shows the month
   before last, and it turns on the second day.
-- **At a load**, from `FUN_004815e0` in the load's rebuild `FUN_00415140` (`0x00415227`, `0x0048166f`): read from the
-  listing, not isolated by a run. The routine returns at once while the gadget does not exist (`[0x007cb2b8]` null,
-  `0x004a0e30`..`0x004a0e3d`; the pointer is written only at `0x004a0a51`, in the body's `FUN_004a0a20`), and whether
-  the gadget is built before the load's call runs was not read.
+- **At a load**, from `FUN_004815e0` in the load's rebuild `FUN_00415140` (`0x00415227`, `0x0048166f`). The routine
+  returns at once while the gadget does not exist (`[0x007cb2b8]` null, `0x004a0e30`..`0x004a0e3d`; the pointer is
+  written only at `0x004a0a51`, in the body's `FUN_004a0a20`), and at a Load Park click the gadget is there: the stock
+  park loaded into a park showing green (`q674/files/green.TPWS`) is red from its first frame, tick 756, before its first
+  day's change at 762 (Q674, `q674/orig/O-L-sheet.png`).
 
-**The place.** `Gadget_ShowMoney` (`0x004a0ab0`) letters the balance each time it changes. It moves `0x31` with its size
-kept: its left edge goes to the right edge of the balance's lettering (`FUN_0065d616` on `0x2f`, then `FUN_0065ce10`,
-`0x004a0bc0`), and its top stays where it was. So the arrow follows the number's end, not the stream's
-`(728,109)-(831,211)`. The same call puts `0x30`'s right edge at the lettering's right edge. It also sets `0x32`, the
-`i_dollar` icon, to frame 1 while the balance is below nought (`0x004a0c23`). Its nodes, in file order, are `i_dollar`
-and `dollarsignneg`; frame 1 was not seen in the original. The balance's colour in the same call is Q403's.
+**The place.** `Gadget_ShowMoney` (`0x004a0ab0`) letters the balance each time it changes, as its magnitude: it hands
+the number setter `(x ^ s) - s`, `s` the sign, so the least int is left as it is. It moves `0x31` with its size kept: its
+left edge goes to the right edge of the balance's lettering (`UI_GetTextBox` `0x0065d616` on `0x2f`, then `UI_MoveTo`
+`0x0065ce10` with no top, `0x004a0bc0`), and its top stays where it was. The lettering's box is the one `LabelSkin_Draw`
+(`0x0048f830`) keeps at the skin's `+0x20` (`Skin_GetTextBox` `0x00661810`): the renderer's laid-out block, the pen's
+advances added (`+0xac`..`+0xb4`, "How a list's cells are aligned"), its pixels times 2048 over the screen's width, cut
+toward nought, plus the control's left. So the arrow follows the number's end, not the stream's `(728,109)-(831,211)`.
+The same call puts `0x30`'s right edge at the lettering's right edge. It also sets `0x32`, the `i_dollar` icon, to frame 1
+while the balance is below nought (`0x004a0c23`). Its nodes, in file order, are `i_dollar` and `dollarsignneg`, drawn as
+"-$" (Q674, `q674/orig/O-hold-500-money.png`: -500 lettered "500"). The balance's colour in the same call is Q403's.
+
+**Measured at two widths** (Q674, `q674/orig/run.sh`, the balance held by `thingpoke.py`): the original runs at 800 x 600
+(its `Resolution.sam`), scaled to the 1024 x 768 capture, so the balance's font is the 600 set's `CASHBIG` at 2.56 units a
+font pixel. The arrow's tip, the middle of its rectangle, stood at x 189 after "5" and 469 after "123456789"
+(`O-grid-sheet.png`): (258 + floor(advance x 2.56)) / 2 + 25.75 is 189.25 and 469.25 for `CASHBIG`'s advances of 27 and
+246 pixels. Three seconds into each hold the arrow stood after the number then lettered, not the one before.
 
 **Measured in the original** (`q641/orig/run.sh`, the stock park from the Load Park list, the analyser's words written
 by `thingpoke.py`; predicted first, `q641/PREDICTION.txt`, all held). Frames are cropped as `O-<n>-*-money.png`:
@@ -231,8 +242,12 @@ The stream's units are two to a pixel of the 1024 x 768 frame (the body's `(37,9
 to 53 pixels left of it (its left edge at 312 to 330, measured in the money crops and read by eye in `O-mar.png` and
 `O-apr.png`), just after the number, and moved right when the number widened.
 
-**OpenTPW** does not build `0x31`, and `0x32` always shows its first part (Q674). The two rings it needs are kept
-(`ParkState.MonthCashIn`, `MonthCosts`, Q385).
+**OpenTPW** (Q674): `ParkState.MonthInLoss` is read from the rings at a load and by `ReadTheTrend` between the day's
+change and the month's (`Level.TurnTheCalendar`); `ParkGadget.ShowMoney` letters the magnitude, sets `0x32`'s part by the
+sign and `0x31`'s by the reading, and moves `0x31` to the lettering's end (`LetteringEnd`: the pen's advance times
+1536 over the set's screen height, cut toward nought, which is the original's 2048 over the width on a 4:3 screen) every
+frame where the original does it on a change of the balance; the place is the same, as it is worked out from the
+number then lettered.
 
 ### The happiness gauge's two quads (Q244; fork watch 2026-10-19, verify-advisor-ui.md L3, verify-other-b.md M3)
 

@@ -10339,6 +10339,20 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   taken at once against 0.951 left after two sixtieths; the buy screen's 13 texts at x 1 against 1.172 to 1.2
   (`q645/PREDICTION.txt`: 15 held, 2 missed with causes, 1 void). 4 tests; 12 of 13 bugs put back fail, the 13th
   (`ParkFlags.OnUpdate` not reading it) needs a device and is held by the run's census.
+- [x] **Q674. Build the money's trend arrow `0x31`, and `0x32`'s sign.** From Q641's decode (`hud.md`, "The money's
+  trend arrow"). Add `0x31` as a child of the balance `0x2f`, mesh `cashtrend`, never taking the pointer. Its frame comes
+  from the newest closed month of `ParkState.MonthCashIn` and `MonthCosts`: 0 (green) at or above, 1 (red) below, the
+  same stand-in for a ring with no month. Set it once a day where the date is written, before the month's change runs,
+  and at a load. On each change of the balance, move its left edge to the end of the lettering, its top kept, and set
+  `0x32` to frame 1 while the balance is below nought. `0x2f` letters from its left here (`TextAcross = Start`), so the
+  arrow's place depends on that choice. Until it is built the gap is counted as `MONEY_TREND_ARROW`
+  (`Unimplemented.Report` in `ParkGadget.ShowMoney`); take that call out with the build. Confirm, in both games: the arrow in the first frames after the stock park's load (red; the filmed red at tick 848 was the daily call's, four days on), and a month pushed into
+  profit (green on its second day, not its first), and the arrow's place against the number at two widths.
+  **Done 2026-10-26** (lane A, run 10): built as decoded; the original's load call is seen (red from its first frame,
+  tick 756, before the day's change at 762), so `ParkState` reads the rings at a load and between the day's change and the
+  month's; the balance is lettered without its sign (`(x ^ s) - s`), which the item did not name. `MONEY_TREND_ARROW` is
+  gone. Both games at 800 x 600: load red, 1 March red, 2 March green, the arrow after "5", "123456789", "500" and the
+  stock balance (`q674/side-*.png`; `q674/PREDICTION.txt`).
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

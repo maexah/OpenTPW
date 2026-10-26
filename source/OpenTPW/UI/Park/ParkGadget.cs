@@ -218,6 +218,18 @@ internal sealed class ParkGadget : UiWindow
 	/// </summary>
 	private readonly UiControl _balance;
 
+	/// <summary>The currency icon, the stream's 0x32: <c>i_dollar</c>, its second part (<c>dollarsignneg</c>) while the balance is below nought.</summary>
+	private readonly UiControl _dollar;
+
+	/// <summary>
+	/// The money's trend arrow, the stream's 0x31 and a child of the balance: <c>cashtrend</c>, green up or red down by
+	/// <see cref="ParkState.MonthInLoss"/>, moved to the lettering's end with each balance (<see cref="ShowMoney"/>).
+	/// </summary>
+	private readonly UiControl _trend;
+
+	/// <summary>Whether the arrow and the icon have been logged once, so the first frames are said as well as each change.</summary>
+	private bool _moneyLogged;
+
 	/// <summary>
 	/// The balance's own font slot - <c>FUN_004a1d70</c> gives 0x2f <c>FUN_00485a70(1)</c>, where the two
 	/// counts in the opposite corner get slot 2 and the date gets slot 3.
@@ -571,26 +583,29 @@ internal sealed class ParkGadget : UiWindow
 			TextAcross = TextAlign.Start
 		} );
 
-		// The currency icon. Always frame 0 here; the original sets frame 1 (dollarsignneg) while the balance is
-		// below nought (Gadget_ShowMoney 0x004a0c23). Not built: MONEY_TREND_ARROW in ShowMoney, Q674.
-		Root.Add( new UiControl
+		// The money's trend arrow, a CHILD of 0x2f (0x004a0f05 fetches 0x2f, then 0x31 from it). The builder disables it
+		// (0x004a22d9) and never hides it, so it is always drawn and never takes the pointer; ShowMoney places it and
+		// gives it its frame. Pinned to the balance's corner, as the place it is moved to is the lettering's.
+		_trend = _balance.Add( new UiControl
+		{
+			Id = 0x31,
+			Rect = new UiRect( 728, 109, 831, 211 ),
+			Mesh = UiMesh.Get( "cashtrend" ),
+			PinAcross = Anchor.Left,
+			PinDown = VerticalAnchor.Top
+		} );
+
+		// The currency icon: frame 1, dollarsignneg, while the balance is below nought (ShowMoney).
+		_dollar = Root.Add( new UiControl
 		{
 			Id = 0x32,
 			Rect = new UiRect( 37, 58, 242, 262 ),
 			Mesh = UiMesh.Get( "i_dollar" )
 		} );
 
-		// TWO OF THE CLUSTER ARE DELIBERATELY NOT BUILT, each for a reason rather than for want of a rect.
-		//
-		// 0x30, the price of whatever is in your hand, (458,273)-(720,363): yellow, font 2, and started
-		// HIDDEN by FUN_004a1d70, which is exactly what an empty hand should show. The hand carries
-		// things (ParkBuilding.Carry), but what makes the original show 0x30 is not traced.
-		//
-		// 0x31, the trend arrow (cashtrend: green_up, red_down), a CHILD of 0x2f (0x004a0f05 fetches 0x2f,
-		// then 0x31 from it). Gadget_SetDateAndTrend shows the red arrow when the newest closed month's cash
-		// in is below its costs (0x004a0f8a), once a day before the month closes; Gadget_ShowMoney moves it
-		// to the lettering's end. Not built yet: Q674, from ParkState.MonthCashIn and MonthCosts
-		// (docs/exe/hud.md, "The money's trend arrow").
+		// ONE OF THE CLUSTER IS NOT BUILT: 0x30, the price of whatever is in your hand, (458,273)-(720,363): yellow,
+		// font 2, and started HIDDEN by FUN_004a1d70, which is exactly what an empty hand should show. The hand carries
+		// things (ParkBuilding.Carry); what the original shows there is Q403's.
 
 		// The stream's fourth root control, away in the top right corner of the screen rather than on the
 		// panel - so it is added to the window's root, not to the gadget body, and it anchors top-right on
@@ -1732,12 +1747,42 @@ internal sealed class ParkGadget : UiWindow
 			return;
 		}
 
-		_balance.Text = $"{park.Balance}";
+		// The number without its sign, which the icon carries (Gadget_ShowMoney 0x004a0ab0 letters (x ^ s) - s and sets 0x32's
+		// frame 1 below nought, 0x004a0c23); the arrow's frame is the rings' last reading, and its left edge goes to the
+		// lettering's end, its top and size kept (FUN_0065d616, FUN_0065ce10).
+		var balance = park.Balance;
 
-		// Where Gadget_ShowMoney (0x004a0ab0) also moves the trend arrow 0x31 to the lettering's end and sets
-		// 0x32's frame from the sign of the balance; neither is built (Q674). Counted once a frame the gadget updates.
-		Unimplemented.Report( "MONEY_TREND_ARROW" );
+		_balance.Text = $"{Unsigned( balance )}";
+		_trend.Rect = TrendPlace( _trend.Rect, LetteringEnd( _balance.Rect.Left, UiFonts.Get( BalanceFont )?.Measure( _balance.Text ) ?? 0,
+			UiFonts.SetScreenHeight ) );
+
+		var (trend, sign) = (park.MonthInLoss ? 1 : 0, balance < 0 ? 1 : 0);
+
+		if ( (trend, sign) != (_trend.Frame, _dollar.Frame) || !_moneyLogged )
+			Log.Info( $"Gadget: the trend arrow {(trend == 1 ? "red" : "green")} ({park.MonthCashIn.Newest} in against {park.MonthCosts.Newest} of costs), "
+				+ $"the icon's part {sign} at {balance}, the arrow at x {_trend.Rect.Left} on {GameCalendar.Now:yyyy-MM-dd}" );
+
+		(_trend.Frame, _dollar.Frame, _moneyLogged) = (trend, sign, true);
 	}
+
+	/// <summary>The balance as lettered: its magnitude, <c>(x ^ s) - s</c> with <c>s</c> its sign, so the least int stays itself.</summary>
+	internal static int Unsigned( int balance )
+	{
+		var sign = balance >> 31;
+
+		return unchecked((balance ^ sign) - sign);
+	}
+
+	/// <summary>
+	/// Where on the virtual screen a lettering starting at <paramref name="left"/> ends: the pen's advance over it in the
+	/// font's pixels (<paramref name="advance"/>), the font's set drawn for a screen <paramref name="setHeight"/> high. The
+	/// original's label keeps the laid-out block's box, its pixels times 2048 over the screen's width, cut toward nought,
+	/// plus the control's left (<c>LabelSkin_Draw</c> <c>0x0048f830</c>, read back by <c>FUN_0065d616</c>).
+	/// </summary>
+	internal static int LetteringEnd( int left, int advance, int setHeight ) => left + advance * VirtualScreen.Height / setHeight;
+
+	/// <summary>The trend arrow moved so its left edge is at <paramref name="x"/>, its top and size kept (<c>FUN_0065ce10</c> with no top).</summary>
+	internal static UiRect TrendPlace( UiRect arrow, int x ) => new( x, arrow.Top, x + arrow.Right - arrow.Left, arrow.Bottom );
 
 	/// <summary>
 	/// How happy the park's visitors are, which is the one thing the gauge has ever been for - see

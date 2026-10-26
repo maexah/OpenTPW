@@ -74,15 +74,6 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q674. Build the money's trend arrow `0x31`, and `0x32`'s sign.** From Q641's decode (`hud.md`, "The money's
-  trend arrow"). Add `0x31` as a child of the balance `0x2f`, mesh `cashtrend`, never taking the pointer. Its frame comes
-  from the newest closed month of `ParkState.MonthCashIn` and `MonthCosts`: 0 (green) at or above, 1 (red) below, the
-  same stand-in for a ring with no month. Set it once a day where the date is written, before the month's change runs,
-  and at a load. On each change of the balance, move its left edge to the end of the lettering, its top kept, and set
-  `0x32` to frame 1 while the balance is below nought. `0x2f` letters from its left here (`TextAcross = Start`), so the
-  arrow's place depends on that choice. Until it is built the gap is counted as `MONEY_TREND_ARROW`
-  (`Unimplemented.Report` in `ParkGadget.ShowMoney`); take that call out with the build. Confirm, in both games: the arrow in the first frames after the stock park's load (red; the filmed red at tick 848 was the daily call's, four days on), and a month pushed into
-  profit (green on its second day, not its first), and the arrow's place against the number at two widths.
 - [ ] **Q676. The other park screens' titles as `UI_SetTitle` letters one.** From Q644 (`ui.md`, "`UI_SetTitle`"). The
   visitors screen (`0x1e498`), the all-items screen (`0x12c4be`) and the all-staff screen (`0x328`) letter their titles
   white, font 5, with no edge, in the stream's rect; the buy, hire, research, staff-costs screens and the object windows

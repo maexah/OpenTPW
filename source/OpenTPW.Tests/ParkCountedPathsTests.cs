@@ -145,42 +145,6 @@ public class ParkCountedPathsTests
 	}
 
 	/// <summary>
-	/// <b>The money's trend arrow and 0x32's sign are counted</b> where the gadget letters a balance, and only
-	/// there: a park whose file has no economy shows no balance and counts nothing.
-	/// </summary>
-	/// <remarks>
-	/// <b>Mutations:</b> the report taken out of <c>ShowMoney</c> counts nothing; the report moved above the economy
-	/// test counts for a park with no economy.
-	/// </remarks>
-	[TestMethod]
-	public void TheMoneyTrendArrowIsCounted()
-	{
-		using var stream = new System.IO.MemoryStream( FileSystem.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
-		var reader = new SaveReader( stream );
-		var world = new ParkWorld( reader.ReadFile(), reader.Preamble );
-
-		APark( RunningLevel( world, new ParkState( world ) ) );
-		Assert.IsTrue( Times( "MONEY_TREND_ARROW" ) >= 1, "built with an economy, the gadget counts it" );
-
-		Unimplemented.Forget();
-		APark( RunningLevel( null, new ParkState( world ) ) );
-		Assert.AreEqual( 0, Times( "MONEY_TREND_ARROW" ), "a park with no economy shows no balance, so counts nothing" );
-	}
-
-	/// <summary>A level of its own for the gadget to read: the park's file and its running state, either of which may be none.</summary>
-	private static Level RunningLevel( ParkWorld? world, ParkState state )
-	{
-		var level = (Level)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject( typeof( Level ) );
-
-		typeof( Level ).GetProperty( nameof( Level.Kind ) )!.SetValue( level, Level.Scene.Park );
-		typeof( Level ).GetProperty( nameof( Level.ThemeName ) )!.SetValue( level, "jungle" );
-		typeof( Level ).GetProperty( nameof( Level.Park ) )!.SetValue( level, world );
-		typeof( Level ).GetProperty( nameof( Level.ParkState ) )!.SetValue( level, state );
-
-		return level;
-	}
-
-	/// <summary>
 	/// <b>R runs the research opener on its release, with no modifier held, over the park</b>, which in Instant Action
 	/// is its box: held it is nothing, with Shift or Ctrl it is nothing (a row's modifiers are matched exactly,
 	/// <c>FUN_0040c990</c>), and another key is nothing.
@@ -478,13 +442,6 @@ public class ParkCountedPathsTests
 	}
 
 	/// <summary>A park's stack as entering one makes it: the gadget and the viewfinder under the real park front end.</summary>
-	private static UI.WindowStack APark( Level level )
-	{
-		Level.Current = level;
-
-		return APark();
-	}
-
 	private static UI.WindowStack APark()
 	{
 		var stack = new UI.WindowStack();

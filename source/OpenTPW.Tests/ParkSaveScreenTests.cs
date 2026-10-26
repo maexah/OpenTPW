@@ -1007,12 +1007,9 @@ public class ParkSaveScreenTests
 			=> method!.Name == $"get_{nameof( IParkInitialState.Save )}" ? throw new IOException( "the disc is full" ) : method.Invoke( Park, args );
 	}
 
-	/// <summary>
-	/// What has been counted, less the list's own count of a first row it does not select and the gadget's count of
-	/// the money's trend arrow, which a running park reaches every frame (Q674).
-	/// </summary>
+	/// <summary>What has been counted, less the list's own count of a first row it does not select.</summary>
 	private static string Counted() => string.Join( ", ", Unimplemented.Summary
-		.Where( entry => entry.What is not ("LIST_FIRST_ROW_SELECTED" or "MONEY_TREND_ARROW") )
+		.Where( entry => entry.What != "LIST_FIRST_ROW_SELECTED" )
 		.Select( entry => $"{entry.Times}x {entry.What}" ) );
 
 	private static UI.WindowStack APark()

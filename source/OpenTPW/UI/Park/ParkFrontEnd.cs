@@ -63,9 +63,9 @@ internal sealed class ParkFrontEnd : Panel
 		"mainpanel", "gauge", "date", "b_retract", "b_buy", "b_camera", "b_info", "b_map", "b_money",
 		"b_resrch",
 
-		// The currency icon beside the bank balance in the top-left corner - the stream's 0x32, and the
-		// one piece of artwork that cluster has of its own. The balance beside it is lettering.
-		"i_dollar",
+		// The currency icon beside the bank balance in the top-left corner - the stream's 0x32 - and the money's trend
+		// arrow after it, 0x31. The balance between them is lettering.
+		"i_dollar", "cashtrend",
 
 		// The arm the gadget carries a panel out on, and the camcorder panel that rides on it - see
 		// <see cref="ParkGadget"/>. The two long pieces are another case of the naming above: the stream

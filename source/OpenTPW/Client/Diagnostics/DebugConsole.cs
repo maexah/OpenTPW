@@ -512,7 +512,8 @@ public static class DebugConsole
 				Reply( $"control 0x{controlId:x} at ({at.X:F0},{at.Y:F0}) size ({at.Width:F0},{at.Height:F0}) "
 					+ $"middle ({at.X + (at.Width / 2f):F0},{at.Y + (at.Height / 2f):F0})"
 					+ (control is UI.UiEdit typedInto ? $" holds '{typedInto.Value}' {(typedInto.HasFocus ? "with" : "without")} the keys"
-						: control.Text is { Length: > 0 } lettered ? $" reads '{lettered.Replace( "\n", " / " )}'" : "") );
+						: control.Text is { Length: > 0 } lettered ? $" reads '{lettered.Replace( "\n", " / " )}'" : "")
+					+ (control.Mesh is { } drawnMesh ? $" mesh {drawnMesh.Name} frame {control.Frame}" : "") );
 				break;
 
 			// The level the crowd has the park's music at, and how many times it has been set (ParkAudio.MusicLevel).
@@ -2517,9 +2518,28 @@ public static class DebugConsole
 						(ParkGoldenTickets.Last is { } last ? $"; last test tick {last.Tick}, {last.Measures}, won {last.Won.Count}" : "; no test yet") );
 				break;
 
+			// The money's census, or with a word and a number an INSTRUMENT that writes one figure: `money balance N` the bank's
+			// balance, `money cashin N` and `money costs N` the analyser's month so far, as the original's are written by
+			// thingpoke.py (docs/TOOLING.md, "A month closed in profit or in loss in the original, on demand").
 			case "money":
+				if ( parts.Length > 2 && Level.Current?.ParkState is { } purseWritten )
+				{
+					// Parsed whole: a float would write 123456789 as 123456792.
+					var figure = int.TryParse( parts[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out var moneyFigure ) ? moneyFigure : 0;
+
+					if ( parts[1] == "balance" )
+						purseWritten.SetBalance( figure );
+					else if ( parts[1] == "cashin" )
+						purseWritten.MonthCashIn.Add( unchecked(figure - purseWritten.MonthCashIn.Total) );
+					else if ( parts[1] == "costs" )
+						purseWritten.MonthCosts.Add( unchecked(figure - purseWritten.MonthCosts.Total) );
+
+					Reply( parts[1] is "balance" or "cashin" or "costs" ? $"money: {parts[1]} written {figure}" : "money: money balance|cashin|costs <n>" );
+					break;
+				}
+
 				Reply( Level.Current?.ParkState is { } purse
-					? $"money balance {purse.Balance} takings {purse.Takings} " +
+					? $"money balance {purse.Balance} trend {(purse.MonthInLoss ? "red" : "green")} takings {purse.Takings} " +
 						$"fee {purse.AdmissionFee} gate {(purse.ParkIsClosed ? "shut" : "open")} " +
 						$"profit {purse.ProfitThisYear} last {purse.LastBalance} red {purse.TurnEnteredRed} " +
 						$"withdrawals {purse.WithdrawalsEnabled} " +

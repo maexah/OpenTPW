@@ -925,6 +925,9 @@ public sealed class ParkState
 		MonthShopTakings = park.Save?.MonthShopTakings?.Copy() ?? new();
 		MonthSideshowTakings = park.Save?.MonthSideshowTakings?.Copy() ?? new();
 
+		// The trend arrow as the load's own call reads the rings (FUN_004815e0 from the load's rebuild, 0x0048166f).
+		ReadTheTrend();
+
 		foreach ( var thing in park.Objects )
 			_nextObject[thing.ThingId] = thing.NextObject;
 
@@ -1090,6 +1093,9 @@ public sealed class ParkState
 	/// the original's memory is. Every stamp already taken stays as it was.
 	/// </summary>
 	internal void SetGameTick( int tick ) => GameTick = tick;
+
+	/// <summary>Writes the bank's balance and nothing else: the debug console's <c>money balance</c>, an instrument.</summary>
+	internal void SetBalance( int balance ) => Balance = balance;
 
 	/// <summary>
 	/// Now on the park's own calendar - <c>FUN_004f8690</c>: <c>mFunnyTimeStart</c> plus <c>mGameTick ×
@@ -1275,6 +1281,20 @@ public sealed class ParkState
 
 	/// <summary>The analyser's month of every deposit (<c>+0x1fc90</c>), as <see cref="MonthCosts"/>; <see cref="Deposit"/> and <see cref="Take"/> add to it.</summary>
 	public ParkMonthRing MonthCashIn { get; private set; } = new();
+
+	/// <summary>
+	/// Whether the newest closed month's cash in was below its costs when the rings were last read for the gadget's trend
+	/// arrow, which is red while it is (<c>Gadget_SetDateAndTrend</c> <c>0x004a0e30</c>, a signed <c>JL</c> at
+	/// <c>0x004a0f8a</c>): read at a load and by <see cref="ReadTheTrend"/>. A ring with no closed month reads the same stand-in
+	/// for both, so equal and green (<c>docs/exe/hud.md</c>, "The money's trend arrow").
+	/// </summary>
+	public bool MonthInLoss { get; private set; }
+
+	/// <summary>
+	/// Reads the rings for the trend arrow (<see cref="MonthInLoss"/>): once a day, after the day's change and before the
+	/// month's, so the first of a month still reads the month before last (<c>Calendar_Update</c> <c>0x004f83ac</c>).
+	/// </summary>
+	public void ReadTheTrend() => MonthInLoss = MonthCashIn.Newest < MonthCosts.Newest;
 
 	/// <summary>The analyser's month of training paid (<c>+0x1fa40</c>), as <see cref="MonthCosts"/>; <see cref="AddTrainingCost"/> adds to it.</summary>
 	public ParkMonthRing MonthTraining { get; private set; } = new();

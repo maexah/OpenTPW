@@ -5,6 +5,11 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q645 (the faithful graphics toggle, `graphics faithful`): seen at one camera, the park gate in the stock park
+  under Instant Action, at medium quality and 1280 x 720, beside the original's frame; the pump at rate 2 in one Full
+  Simulation park; the buy screen's lettering by its census and frame, the hire screen's by a test alone; the flags
+  under the console's pause only. Not run: `TEXTURE32 1` with the toggle (a test), low or high quality, the other
+  themes. The toggle is read at the start: no screen changes it while the game runs.
 - Q677 (the research pumps drawn as one smooth scroll): the rides' pump at rate 2 in one Full Simulation park on the
   desktop at 143.9 fps, filmed three times on the final build; not the other four kinds running, other rates, a low frame
   rate, a drag that changes a rate mid-run, nor the start and the stop (stepped as the original's, not filmed here). Full
