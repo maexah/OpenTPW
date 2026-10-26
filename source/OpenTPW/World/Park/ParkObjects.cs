@@ -363,8 +363,10 @@ public sealed class ParkObjects : Entity
 			// outright - see RideAnimations.AllClips for why probing for a numbered run is not the same set.
 			var animations = RideAnimations.Load( item.Directory, item.Stem, FileSystem, item.AnimationChannels );
 
-			// The cells the builder marks, from the anchor; the model of an item with a map offset stands off it.
+			// The cells the builder marks, from the anchor; the model of an item with a map offset stands off it, and
+			// its floor is blended over the cells the model covers (FloorFootprint).
 			var footprint = FootprintAt( item, placed.CellX, placed.CellY, placed.Angle );
+			var covered = FloorFootprint( item, placed.CellX, placed.CellY, placed.Angle );
 			var shared = $"levels/{ThemeName.ToLowerInvariant()}/sharetex";
 			var blended = new List<Texture>();
 			var floorCells = 0;
@@ -374,7 +376,7 @@ public sealed class ParkObjects : Entity
 				sharedTextureDirectory: shared,
 				clips: animations.AllClips,
 				opaqueFrames: file => ProceduralBase.ForItem( file, item.Shape ),
-				frameTextures: file => BlendFloor( file, item, placed.Angle, footprint, shared, blended, out floorCells ) );
+				frameTextures: file => BlendFloor( file, item, placed.Angle, covered, shared, blended, out floorCells ) );
 
 			// Put away whatever building it left behind before it is stood anywhere.
 			PoseAsBuilt( model, item );
@@ -418,8 +420,28 @@ public sealed class ParkObjects : Entity
 		}
 	}
 
+	/// <summary>
+	/// The cells a placed item's floor is stamped and blended over: the rectangle the model covers (<c>FUN_00467030</c>'s
+	/// <c>+0xc0</c>/<c>+0xc4</c>, made from the place <c>FUN_004dd500</c> builds from <c>mTopLeft</c>), so the footprint at the
+	/// item's <see cref="ModelCell"/>. It is the anchor's own footprint except for an item with a map offset.
+	/// </summary>
+	public static (int Left, int Top, int Right, int Bottom) FloorFootprint( ParkItemCatalogue.Item item, int cellX, int cellY, int angle )
+	{
+		var (modelX, modelY) = ModelCell( item, cellX, cellY, angle );
+
+		return FootprintAt( item, modelX, modelY, angle );
+	}
+
 	/// <summary>The floor cells of the things standing blended into the ground's tiles (<see cref="BlendFloor"/>).</summary>
 	public int FloorCellsBlended => _standing.Values.Sum( standing => standing.FloorCells );
+
+	/// <summary>
+	/// The mesh a model's floor table is read from, or -1 where it blends none: a model exported with a procedural base (header
+	/// <c>0x8</c>) and a floor found, or the header's <c>0x80</c>, every cell, on the root.
+	/// </summary>
+	internal static int FloorMeshOf( ModelFile file, ItemShape shape )
+		=> (file.HeaderFlags & 0x8) == 0 ? -1
+			: ProceduralBase.FloorMesh( file, shape, ProceduralBase.ParkGrid, out _ ) ?? ((file.HeaderFlags & 0x80) != 0 ? file.RootNode : -1);
 
 	/// <summary>
 	/// A placed item's floor blended into the ground's tiles (<see cref="ProceduralFloor.Blend"/>), as the model maker does
@@ -432,14 +454,10 @@ public sealed class ParkObjects : Entity
 	{
 		cells = 0;
 
-		if ( ParkGround.Current is not { } ground || item.Shape is not { } shape || (file.HeaderFlags & 0x8) == 0 )
+		if ( ParkGround.Current is not { } ground || item.Shape is not { } shape || FloorMeshOf( file, shape ) is not (>= 0 and var mesh) )
 			return new Dictionary<uint, Texture>();
 
 		var everyCell = (file.HeaderFlags & 0x80) != 0;
-		var mesh = ProceduralBase.FloorMesh( file, shape, ProceduralBase.ParkGrid, out _ ) ?? (everyCell ? file.RootNode : -1);
-
-		if ( mesh < 0 )
-			return new Dictionary<uint, Texture>();
 
 		var blended = ProceduralFloor.Blend( file, mesh, shape, shape.Width, shape.Depth, everyCell, angle, footprint, ground,
 			name => LobbyModel.TexturePath( name, $"{item.Directory}/textures", shared ), made, out cells );

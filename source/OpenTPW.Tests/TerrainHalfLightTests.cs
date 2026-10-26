@@ -61,8 +61,9 @@ public class TerrainHalfLightTests
 			WorldTransform = System.Numerics.Matrix4x4.CreateTranslation( 20f, 0f, 0f )
 		};
 
-		Assert.AreEqual( TerrainHalfLight.HalfLength, light.Normal( mesh, 0 ).Length, 1e-6f, "posed to x 25, column 2: half" );
-		Assert.AreEqual( TerrainHalfLight.FullLength, light.Normal( mesh, 1 ).Length, 1e-6f, "posed to x 15, column 1: lit" );
+		// The original's floats, not the code's constants: 0.225 at 0x0074cf30 (read 0.22499999) and 1.0 at 0x006fe380.
+		Assert.AreEqual( 0.225f, light.Normal( mesh, 0 ).Length, 1e-6f, "posed to x 25, column 2: half" );
+		Assert.AreEqual( 1f, light.Normal( mesh, 1 ).Length, 1e-6f, "posed to x 15, column 1: lit" );
 		Assert.AreEqual( 2f, light.Normal( mesh, 2 ).Length, 1e-6f, "posed to x 35, off the field: left alone" );
 		Assert.AreEqual( Vector3.Zero, light.Normal( mesh, 3 ), "posed to x 20, column 2: a zero normal stays zero" );
 		Assert.AreEqual( (2, 1, 1), light.CountsFor( mesh ), "the census: two half, one full, one off the field" );

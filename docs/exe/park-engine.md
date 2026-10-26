@@ -208,7 +208,7 @@ This matches the value derived from the data alone. The camera's default POI **(
 | Address | What it is | Evidence |
 |---|---|---|
 | `FUN_004d8610` | Packs a ticket booth's cell to a packed cell id, `y * 128 + x + 1`: `FixedItemInfo.TicketBoothA` (`0x0078559c`, `0x007855a0`) for argument 0, `TicketBoothB` (`0x007855a4`, `0x007855a8`) otherwise. `FUN_004d8650` (bus stops), `FUN_004d8690` (entrances) and `FUN_004d86d0` do the same for theirs (`park.md`, "Arrivals") | Disassembly: `SHL EAX,0x7` on the Y, then `LEA ..,[EAX + ECX + 1]` (`0x004d8623`, `0x004d8626`). The values are used as cell numbers with no scaling |
-| `FUN_004dd500` | Builds a placed thing's model (`FUN_00463060`, or `FUN_00463ab0` to rebuild) at an integer cell: the thing's packed cell id `+0x34` unpacked as `x = (id - 1) & 0x7f`, `y = (id - 1) >> 7` (`0x004dd5d3`..`0x004dd5e5`; `+0x34` is `mTopLeft`, so an item with a map offset is made a row or a column off its anchor, the Huge Hollow Rock a row before it unturned, the one arm every placed object takes, at every angle, so the turn about that cell is every item's (`OriginFor`'s, matched at 0, 90, 180 and 270 degrees on items with no offset, `q257v/census.out`); **OpenTPW builds it**, `ParkObjects.ModelCell`, for the model, its nodes and its `.hmp`), or, for an item whose `+0x38` is set, the item's own `+0x20`/`+0x24` with `MapInfo.FixedItemOriginX`/`Y` (`[0x00785594]`/`[0x00785598]`, the two value slots before `TicketBoothAPosX`'s `0x0078559c` in the balance table's order) where they are nought. It calls none of the FixedItemInfo packers | Disassembly. From the data: `base.map`'s `0x08`/`0x90`/`0x94` bits land exactly on the FixedItemInfo coordinates in all four themes |
+| `FUN_004dd500` | Builds a placed thing's model (`FUN_00463060`, or `FUN_00463ab0`, which re-claims an existing instance when its argument is non-zero) at an integer cell: the thing's packed cell id `+0x34` unpacked as `x = (id - 1) & 0x7f`, `y = (id - 1) >> 7` (`0x004dd5d3`..`0x004dd5e5`; `+0x34` is `mTopLeft`, so an item with a map offset is made a row or a column off its anchor, the Huge Hollow Rock a row before it unturned, the one arm every placed object takes, at every angle, so the turn about that cell is every item's (`OriginFor`'s, matched at 0, 90, 180 and 270 degrees on items with no offset, `q257v/census.out`); **OpenTPW builds it**, `ParkObjects.ModelCell`, for the model, its nodes and its `.hmp`), or, for an item whose `+0x38` is set, the item's own `+0x20`/`+0x24` with `MapInfo.FixedItemOriginX`/`Y` (`[0x00785594]`/`[0x00785598]`, the two value slots before `TicketBoothAPosX`'s `0x0078559c` in the balance table's order) where they are nought. It calls none of the FixedItemInfo packers | Disassembly. From the data: `base.map`'s `0x08`/`0x90`/`0x94` bits land exactly on the FixedItemInfo coordinates in all four themes |
 
 ### Where a placed object's model stands
 
@@ -4037,8 +4037,9 @@ drawn some other way, which only frames of the original a few game days apart wo
 
 **OpenTPW** lights a park this way in `content/shaders/test.shader` (per vertex, clamped, rounded to a byte) with
 `ParkLight` and `ParkGround.NormalAt`. The lobby and anything drawn on the screen keep the shader's old per-pixel
-lighting. Not checked: whether the original's mesh normals at `+0x64` are the same smoothed normals OpenTPW
-computes (`models.md`, "Normals").
+lighting, but the advisor, lit per vertex by his own record light (`ui.md`, "How he is lit"; Q657). The original's lighter
+takes the mesh's `+0x64` table, entry *i* for vertex-order entry *i* (`models.md`, "Normals"), not the smoothed normals
+OpenTPW computes: OpenTPW lights the advisor by the table and every other model by its own (Q681).
 
 ## The park view's colours: no fog, land outside the park at half light, the compositor's tiles
 
@@ -4541,8 +4542,8 @@ level's bits, width, height, bytes a texel and the word; x and y are the heightf
 box-relative: the same in every shipped park, whose box starts at nought). The new texture takes the place of that
 frame's texture in the instance's own frame table (`[[instance + 8] + 0x1c] + 8`, `+0x50`, eight bytes a frame; the old
 one is kept in a list at `+0x124` to give back), so **the floor's materials draw the composited tile**; a failure logs
-"Could not blend base for ride %s" (`0x0074d36c`). A frame two cells shared would draw the later cell's tile; no Lost
-Kingdom table shares one.
+"Could not blend base for ride %s" (`0x0074d36c`). A frame two cells shared would draw the later cell's tile; none of the 51
+tables measured below shares one.
 
 **The footprint table** is `ProceduralBase_SkirtFlags`' (`0x0046aa10`), run by `ProceduralBase_Build` as the loader
 `FUN_004629d0` makes the model (its flag `0x1`), where the model is exported with a procedural base (header `0x8`, else
@@ -4572,7 +4573,7 @@ eleven placed instances and of the seven queue models (eight loads) are as above
 `b-items.txt`; `ProceduralFloorTests`); the two coaster pylon models hold one cell with no entry. Q617 compared the Belly
 Bounce (camera (525,240) 110 180) at 16: the original's floor as soft as the ground beside it, sharpness 2.38 against
 1.79 (`lib/sharp.py`), OpenTPW's then 10.91 against 1.11, its own texture. **OpenTPW blends a floor as the original**
-(`ProceduralFloor`, Q649): the same cells and words, and at 32 boxes wholly on the floor read 1.82 and 1.58 times the
+(`ProceduralFloor`, Q649): the same cells, turns and mirrors (ours drops the cell's own `0x6` bits), and at 32 boxes wholly on the floor read 1.82 and 1.58 times the
 ground against the original's 1.55 and 1.19, half as sharp as the floor's own texture, in the original's colours
 (`q649/side-by-side-floor.png`, `q649/PREDICTION.txt`). The lobby calls the
 same load (`FUN_005d84a0`) but no lobby wad holds a `base.lnd`, so the bit is not set there.

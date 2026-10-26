@@ -7,7 +7,8 @@ namespace OpenTPW;
 /// Everything the process prints, kept in <c>console.log</c> as well as shown: stdout and stderr both, so
 /// <see cref="Logger"/>'s lines, the debug console's [dbg] replies and an unhandled exception are in the file
 /// the terminal showed. The launch before is kept as <c>console-prev.log</c>, so two runs of one build can be
-/// compared and a bug report from another machine has the whole run.
+/// compared and a bug report from another machine has the whole run. The new file is opened first, beside the old
+/// one, and the old ones are moved only once it is open: a folder that cannot be written loses nothing.
 ///
 /// <para>
 /// The file goes in the game folder beside <c>save\</c>; where that cannot be written (a Program Files install)
@@ -28,6 +29,9 @@ public static class ConsoleLog
 {
 	public const string FileName = "console.log";
 	public const string PreviousName = "console-prev.log";
+
+	/// <summary>Appended to <see cref="FileName"/> for the new file while it is opened, before the old one is moved aside.</summary>
+	public const string NewSuffix = ".new";
 	public const string DirectoryVariable = "OPENTPW_LOG_DIR";
 
 	private static Sink? _sink;
@@ -92,10 +96,11 @@ public static class ConsoleLog
 		private StringBuilder? _held = new();
 		private StreamWriter? _file;
 
-		/// <param name="create">Opens the file at a path; a test hands in a stream that fails.</param>
+		/// <param name="create">Opens the file at a path (the new file is opened beside console.log first); a test hands in a stream that fails.</param>
 		public Sink( Func<string, Stream>? create = null )
 		{
-			_create = create ?? ( path => new FileStream( path, FileMode.Create, FileAccess.Write, FileShare.Read ) );
+			// Shared for delete as well as read, so that the file can be renamed while it is open (Windows refuses otherwise).
+			_create = create ?? ( path => new FileStream( path, FileMode.Create, FileAccess.Write, FileShare.Read | FileShare.Delete ) );
 		}
 
 		public string Path { get; private set; } = string.Empty;
@@ -120,6 +125,34 @@ public static class ConsoleLog
 			}
 		}
 
+		/// <summary>
+		/// Moves the old console.log over console-prev.log and the open <paramref name="fresh"/> file to
+		/// <paramref name="path"/>. A move that fails leaves the run's file where it is, named by <see cref="Path"/>, and
+		/// says so in <see cref="Failures"/> and at the head of the file.
+		/// </summary>
+		private void Rotate( string folder, string path, string fresh )
+		{
+			// A test's create hook may hand in a stream that is no file; there is then nothing to name.
+			if ( !File.Exists( fresh ) )
+				return;
+
+			try
+			{
+				if ( File.Exists( path ) )
+					File.Move( path, System.IO.Path.Join( folder, PreviousName ), overwrite: true );
+
+				File.Move( fresh, path );
+				Path = path;
+			}
+			catch ( Exception e ) when ( e is IOException or UnauthorizedAccessException )
+			{
+				var why = $"{folder}'s log could not be moved into place ({e.GetType().Name}: {e.Message}), so this run is kept as {Path}";
+
+				Failures += Failures.Length == 0 ? why : "; " + why;
+				_held?.Append( $"[console log] {why}\n" );
+			}
+		}
+
 		private string? Guarded( Action write )
 		{
 			try
@@ -138,9 +171,13 @@ public static class ConsoleLog
 		}
 
 		/// <summary>
-		/// Takes the first folder that can be written, rotates its console.log to console-prev.log (replacing
-		/// it) and starts the new file with <paramref name="header"/> and everything held. Answers whether one
-		/// was; when none was, the terminal's copy is all there is and the held text is dropped.
+		/// Takes the first folder that can be written and starts the new file with <paramref name="header"/> and
+		/// everything held. In each folder the new file is opened first, beside the old one as console.log.new; only
+		/// once that is open is console.log moved over console-prev.log (replacing it) and the new file named
+		/// console.log, so a folder that cannot be written is left as it was and keeps both older files. Should the
+		/// move fail after the open, the run keeps writing the new file under the name it has, <see cref="Path"/> says
+		/// which, and <see cref="Failures"/> says why. Answers whether a file was opened; when none was, the
+		/// terminal's copy is all there is and the held text is dropped.
 		/// </summary>
 		public bool Open( IEnumerable<string> folders, string header )
 		{
@@ -153,12 +190,12 @@ public static class ConsoleLog
 						Directory.CreateDirectory( folder );
 
 						var path = System.IO.Path.Join( folder, FileName );
+						var fresh = path + NewSuffix;
 
-						if ( File.Exists( path ) )
-							File.Move( path, System.IO.Path.Join( folder, PreviousName ), overwrite: true );
+						_file = new StreamWriter( _create( fresh ), new UTF8Encoding( false ) ) { AutoFlush = true };
+						Path = fresh;
 
-						_file = new StreamWriter( _create( path ), new UTF8Encoding( false ) ) { AutoFlush = true };
-						Path = path;
+						Rotate( folder, path, fresh );
 						break;
 					}
 					catch ( Exception e ) when ( e is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException )

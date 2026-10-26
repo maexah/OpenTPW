@@ -536,10 +536,18 @@ public sealed class ParkGround : ModelEntity
 
 		var n = _tiles.TileSize;
 		var tile = _tiles.Ground.Tile( x, y, new ProceduralGround.Overlay( floor, word ) );
+		return new Texture( TextureRows( tile, n ), n, n, TextureFlags.Repeat );
+	}
+
+	/// <summary>
+	/// A tile's n x n RGB pixels as the texture holds them: opaque RGBA, the tile's row k at the texture's row n - 1 - k. The
+	/// tile's row k is the surface's; the texture holds its rows bottom up, as every texture here is read (the shader turns v
+	/// over), so a floor's UVs find it as they found the floor's own.
+	/// </summary>
+	internal static byte[] TextureRows( byte[] tile, int n )
+	{
 		var pixels = new byte[n * n * 4];
 
-		// The tile's row k is the surface's; the texture holds its rows bottom up, as every texture here is read (the
-		// shader turns v over), so a floor's UVs find it as they found the floor's own.
 		for ( var k = 0; k < n; ++k )
 		{
 			for ( var j = 0; j < n; ++j )
@@ -553,7 +561,7 @@ public sealed class ParkGround : ModelEntity
 			}
 		}
 
-		return new Texture( pixels, n, n, TextureFlags.Repeat );
+		return pixels;
 	}
 
 	/// <summary>A floor's texture as the compositor reads it (<see cref="ProceduralGround.PathTexture"/>), read once a path.</summary>

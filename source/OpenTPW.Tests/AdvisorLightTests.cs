@@ -74,6 +74,20 @@ public class AdvisorLightTests
 		Assert.AreEqual( (new OpenTPW.Vector3( 68f / 255f ), true, 1f), (inLobby.Ambient, inLobby.Lit, one), "0x444444 and one record" );
 	}
 
+	/// <summary>
+	/// One record light for the lobby's one model, two for a park's (the global fly and the theme's), one where the theme's
+	/// model did not load. The draw (<c>AdvisorModel.Draw</c> handing the strength and the light to <c>DrawOverlay</c>) is
+	/// not tested here: it needs a graphics device, and the run's log line and frames hold it.
+	/// </summary>
+	[TestMethod]
+	public void The_records_loaded_count_the_global_fly_and_the_themes()
+	{
+		Assert.AreEqual( 1, Advisor.RecordsLoaded( true, false ), "the lobby" );
+		Assert.AreEqual( 2, Advisor.RecordsLoaded( true, true ), "a park" );
+		Assert.AreEqual( 1, Advisor.RecordsLoaded( false, true ), "a park whose global model failed" );
+		Assert.AreEqual( 0, Advisor.RecordsLoaded( false, false ), "neither" );
+	}
+
 	[TestMethod]
 	public void Every_advisor_is_lit_by_its_files_own_normal_for_each_vertex()
 	{

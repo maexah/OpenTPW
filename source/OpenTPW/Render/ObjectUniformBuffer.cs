@@ -73,8 +73,8 @@ struct ObjectUniformBuffer
 	public float g_flScrollU; // 4
 
 	/// <summary>
-	/// The park's ambient as a colour - <c>ThemeEngine.AmbientLightLevel</c>'s R, G, B / 255 - read only
-	/// when <see cref="g_flParkLight"/> is set. See <see cref="ParkLight"/>.
+	/// The park's ambient as a colour - <c>ThemeEngine.AmbientLightLevel</c>'s R, G, B / 255 - or the advisor's own
+	/// (<see cref="AdvisorModel.LightFor"/>), read only when <see cref="g_flParkLight"/> is set. See <see cref="ParkLight"/>.
 	/// </summary>
 	public Vector3 g_vAmbientColour; // 12
 
@@ -85,7 +85,7 @@ struct ObjectUniformBuffer
 	/// </summary>
 	public float g_flParkLight; // 4
 
-	/// <summary>The direction the park's sun light travels, in world space. Read with <see cref="g_flParkLight"/>.</summary>
+	/// <summary>The direction the park's sun light travels, in world space, or the advisor's own (<see cref="AdvisorModel.LightFor"/>). Read with <see cref="g_flParkLight"/>.</summary>
 	public Vector3 g_vLightTravels; // 12
 
 	/// <summary>

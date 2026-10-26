@@ -10399,7 +10399,7 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Confirm: `q617/side-by-side-bounce.png`'s view in both games, `lib/sharp.py` floor against ground within the
   original's, and a census of the cells blended (the original's 44 in the stock park).
   **Done (2026-10-26, `ProceduralFloor`):** the stock park blends 40 + 4 = 44 cells with the original's words, the
-  tables of 41 of 41 Lost Kingdom item models equal the running original's, and at the Belly Bounce floor-only boxes read
+  tables of the 41 Lost Kingdom item models the stock park's catalogue loads equal the running original's, and at the Belly Bounce floor-only boxes read
   1.82 and 1.58 times the ground against the original's 1.55 and 1.19 at 32 (`q649/PREDICTION.txt`).
 - [x] **Q652. The terrain model's meshes half lit on land outside the park, and the water drawn unlit.** From Q619
   (`park-engine.md`, "The terrain model's meshes on that land are half lit too" and "The water is drawn unlit, not half

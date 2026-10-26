@@ -106,7 +106,7 @@ public sealed class ParkQueues : Entity
 	/// symmetric. A straight looks identical either way.
 	/// </para>
 	/// </summary>
-	private static int TurnOf( ParkWorld.MapCell cell ) => (360 - cell.TileAngle) % 360;
+	internal static int TurnOf( ParkWorld.MapCell cell ) => (360 - cell.TileAngle) % 360;
 
 	/// <summary>
 	/// The queues of the park currently loaded, or null outside one - the arrangement

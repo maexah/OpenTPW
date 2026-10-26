@@ -584,8 +584,8 @@ filed the items that cite it.
   walk chooses them (Q656).
   The catalogue's emitters are registered and the per-item slot table (item `+0x4dc`, `0x0041455a`) is thrown away.
   `FreshParkBoundary.Apply` throws where the original stops at its 64th entry (`0x00532517`), and a test pins the
-  throw. Confirm: several entertainers hired in a fresh park, more than one costume on screen; the boundary beside
-  the original's fresh park (the stock park's is drawn, Q620).
+  throw. Confirm: several entertainers hired in a fresh park, more than one costume on screen. (The boundary
+  beside the original's fresh park was confirmed by Q656.)
   From Q494: the picker's object march meets the boundary's hoarding in the original (ho_fos1.MD2, its track kind 25
   anchors (43,17) and (51,17), at 7 pixels right of the gate in `q494/orig/a-scan.log`); ours counts
   `PICK_OBJECT_MARCH_TRACK_THING` on every cell of kind 11, 12, 16, 17 or 25 and answers the ground there. The
@@ -811,6 +811,26 @@ filed the items that cite it.
   `Track_RetileCell` on anchors more than once, and each choice of a straight draws the park's generator, so the park
   starts on a state further on. Read those callers and count the choices per anchor (a watch on `0x00820aec` under
   `watch.sh` in a fresh park counts them), then draw as often, or keep the deviation said at the site.
+- [ ] **Q744. An item with a map offset (the Huge Hollow Rock, the Dino Karts Tunnel) is marked, refused and sounded on the anchor's cells, not the model's. (from the run 11 review of Q649.)**
+  Q649 made the floor blend use the cells the model covers (`ParkObjects.FloorFootprint`: `FootprintAt` of `ModelCell`);
+  every other footprint of such an item is still the anchor's. `ParkBuilding` stamps (`:83` -> `Stamp` `:157`), refuses
+  (`PlacementRefusal` `:193`) and clears on a sale (`:483` -> `Unstamp` `:511`) over `FootprintAt( anchor )`, and
+  `TrySoundPlace` takes `BoxMiddle( Standing.Footprint )` (`ParkObjects.cs:151`, set at `:388` from the anchor's footprint).
+  The original's marked cells and its sound place are the model's rectangle, with the anchor as the cells' owner. Evidence:
+  Alexah's Full Simulation jungle saves (`autosave.TPWS`, `New Save.TPWS`; read through `lib/parkfile.py`): the rock,
+  thing 252, item 1427, anchor (19,27) angle 0, `mTopLeft` 3348, its model record's place (19,26); its mType-4 cells are
+  x 19..23, rows 26..30 (row 31 is all path), every `mParentID` (19,27); the tunnel, thing 404, item 1501, anchor (17,21)
+  angle 90, `mTopLeft` 2705, record place (16,21); its mType-4 cells are x 16..19, rows 19..21 less its two `.` cells,
+  owner (17,21). The sound place: `FUN_00556af0` (`0x00556b04`) calls `FUN_00466b70`, which reads the instance's
+  `+0xc0`/`+0xc4` (`0x00466b9a`, `0x00466ba0`), the rectangle `FUN_00467030` makes from the model's place. In OpenTPW a
+  rock bought in Full Simulation marks rows 27..31 under a model standing on 26..30; selling the loaded rock unstamps
+  27..31 by owner and leaves row 26 mType 4 for a thing that is gone; its sound place stands a row off.
+  **Read the original's marking code first** (what writes the mType-4 cells, and from which rectangle; the cells in the
+  files are the evidence so far, the code was not read), then give the build marks, `PlacementRefusal`, the carry squares,
+  the sale's `Unstamp` and `TrySoundPlace` one helper for an item's covered cells (`ParkObjects.FloorFootprint`), the owner
+  staying the anchor. Confirm in Full Simulation (research and buy the rock and the tunnel, both left out of Instant
+  Action): the cells the buy marks read with `parkfile.py` against the original's own save of the same buy, a sale
+  clearing exactly those, and the sound place beside the original's.
 - [ ] **Q569. Where the original puts down a worker held at a save, decode first.** From the run 6 review of Q241j (VERIFY-3,
   "anything the first reader missed"; unsettled). The world writer installs the idle mode over the hand
   (`FUN_0046c350` at `0x00516d13`), which runs the outgoing mode's uninstall: for a worker picked up, the type-6
@@ -1235,7 +1255,10 @@ filed the items that cite it.
   `+0xC` carries `0x1` (tested at `0x00580c51`) gives every vertex the colour mask itself, white in play, in place of
   its lit colour: 929 of 12,960 materials, on signs, water, fire and lava. Read and drawn since Q652
   (`ModelFile.MaterialData.IsUnlit`, `LobbyModel.UnlitFlag`, `test.shader`'s `FLAG_UNLIT`), confirmed on the river's
-  water alone. Confirm: a sign and the waterfall shot beside the original's. Seen at Q652: the bridge's waterfall
+  water alone. Confirm: a sign and the waterfall shot beside the original's, and the other LobbyModel draws the bit now reaches: the
+  advisor's five mouths and his tickets (Q657), the queue torches (`quebin1`, `quebin2`, `queend`), the shops and the
+  features (giftshop, icecream, coconut, burger, balloon, lavspurt, supbog, statue2) and the rides' (incagod, volcano, spider,
+  bumper, junspray), each beside the original's. Seen at Q652: the bridge's waterfall
   curtain (`falls02`, `watersource`) is solid bright cyan here and faint and foamy in the original's frame
   (`q652/side-by-side.png`, top row), in main too; its texture's frames are Q400's question.
 
@@ -1919,7 +1942,7 @@ filed the items that cite it.
   each anchor's saved handle and re-claims its piece by matching item, cell and angle (`FUN_0053b1a0` through
   `FUN_00522f20( ..., 1 )` and `FUN_00463ab0`, which marks a match `0x10000`); `ParkBoundaryHoarding` draws every
   173xx record without that claim. No park file to hand tells them apart (933 anchors in seven files, every one has
-  its record, no record lacks an anchor), but Q656's fresh-park writer and any edited file could. Read the users of
+  its record, no record lacks an anchor), but Q249's fresh-park writer and any edited file could. Read the users of
   slot bit `0x10000` (for instance `0x004721b7`, `test [eax+4], 0x10000`) in Ghidra to settle whether an unclaimed
   record is freed or hidden; if it is, build the claim (pair each type 25 cell's `mTileData` with the record at its
   shifted cell and angle, count an anchor with no match) or keep the deviation said at the site.

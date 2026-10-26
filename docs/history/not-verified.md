@@ -11,8 +11,8 @@ later item may have run what an earlier one lists as untested.
   frames. Not seen: the theme fly's own gesture line (this game's `sayas` has no row 41; its 434 plays the ticket's
   clips, so the helmet's band was measured mid-squash), the other three themes' advisors, low quality's `LIGHTING` 0
   on him, a 4:3 window; a frame's median of a moving part follows his pose, so the pose-free census stands for it.
-  Three wirings are confirmed by the run alone, no test catching them (`q657/mutate.log`): the park's light handed
-  to him, the records counted, and the draw given the file's normals (`q657/side-by-side.png`).
+  The records counted are pinned by a test; the park's light handed to him is confirmed by the run alone, and the
+  draw given the file's normals by the code alone (the census recomputes from the file's normals; `q657/mutate.log`).
 - Q652 (the terrain model's meshes half lit outside the park, the water unlit): this game on the desk at 1280 x 720
   (`q652/run1`, the census line `9307 vertices of 271 terrain meshes made 0.225 long`), main as the before
   (`q652/run0-main`), the original off-screen (`q652/orig`), both at (500,500) and (700,640) 130 rot 90. Not seen in

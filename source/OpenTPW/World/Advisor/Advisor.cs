@@ -285,11 +285,17 @@ public sealed class Advisor : Entity
 		if ( theme != null )
 			LoadThemeFigure( theme.ToLowerInvariant() );
 
-		var records = (_figure != null ? 1 : 0) + (_themeFigure != null ? 1 : 0);
+		var records = RecordsLoaded( _figure != null, _themeFigure != null );
 		(_light, _lightStrength) = AdvisorModel.LightFor( parkLight, records, Level.Lighting( Level.DetailFile ) );
 		Log.Info( $"Advisor: lit by ambient {_light.Ambient.X:0.000} {_light.Ambient.Y:0.000} {_light.Ambient.Z:0.000} and {records} record "
 			+ $"light{(records == 1 ? "" : "s")}, strength {_lightStrength}{(_light.Lit ? "" : ", LIGHTING 0: every vertex full")}" );
 	}
+
+	/// <summary>
+	/// How many advisor records the original has loaded, each filing a white light: the global fly's, and the theme's where a
+	/// park loads one (<c>Advisor_LoadModel</c> <c>0x00429ba0</c>; <see cref="AdvisorModel.LightFor"/>).
+	/// </summary>
+	internal static int RecordsLoaded( bool global, bool theme ) => (global ? 1 : 0) + (theme ? 1 : 0);
 
 	/// <summary>His light, as the original lights him (<see cref="AdvisorModel.LightFor"/>).</summary>
 	private readonly ParkLight _light;

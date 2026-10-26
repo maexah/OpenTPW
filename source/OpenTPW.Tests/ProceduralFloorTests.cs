@@ -140,8 +140,8 @@ public class ProceduralFloorTests
 
 	/// <summary>
 	/// <b>The stamp lands each table cell where the original's did, turned as it was</b>: the 40 item cells the stock park
-	/// blends, at 0, 90 and 270 degrees, each the frame and the word (its turn and mirror; the cell's own <c>0x6</c>
-	/// aside) the blend was handed.
+	/// blends, at 0, 90 and 270 degrees, each the frame and the word the blend was handed less the cell's own <c>0x6</c>, which
+	/// <see cref="ProceduralFloor.Blend"/> hands on as nought (<c>ProceduralGround</c> reads none of them).
 	/// </summary>
 	/// <remarks><b>Mutations:</b> 90 carried round as 270; the mirror dropped.</remarks>
 	[TestMethod]
@@ -177,7 +177,7 @@ public class ProceduralFloorTests
 			Assert.IsTrue( catalogue.TryGet( id, out var item ), $"item {id}" );
 			var model = new ModelFile( $"{item.Directory}/{item.Stem}.MD2" );
 			var table = ItemTable( model, item.Shape! );
-			var covered = ParkObjects.FootprintAt( item, x, y, angle );
+			var covered = ParkObjects.FloorFootprint( item, x, y, angle );
 
 			for ( var row = 0; row < table.GetLength( 1 ); ++row )
 			{
@@ -187,7 +187,7 @@ public class ProceduralFloorTests
 						continue;
 
 					stamped[ProceduralFloor.CellOf( column, row, angle, covered )] =
-						(ProceduralFloor.Stamped( cell.Flags, angle, 0x2 ), (int)((cell.FrameOffset - model.FrameTableOffset) / 8));
+						(ProceduralFloor.Stamped( cell.Flags, angle, 0 ), (int)((cell.FrameOffset - model.FrameTableOffset) / 8));
 				}
 			}
 		}
@@ -197,8 +197,46 @@ public class ProceduralFloorTests
 		foreach ( var (at, want) in measured )
 		{
 			Assert.IsTrue( stamped.TryGetValue( at, out var got ), $"{at} stamped" );
-			Assert.AreEqual( $"{want.Word:x3}:{want.Frame}", $"{got.Word:x3}:{got.Frame}", $"{at}" );
+			Assert.AreEqual( $"{want.Word & ~0x6:x3}:{want.Frame}", $"{got.Word:x3}:{got.Frame}", $"{at}" );
 		}
+	}
+
+	/// <summary>
+	/// <b>A map-offset item's floor is stamped over the cells its model covers, not its anchor's</b>: the Huge Hollow Rock
+	/// anchored at (19, 27) stands its model on (19, 26) (<c>mTopLeft</c>, <c>FUN_00467030</c>'s <c>+0xc0</c>), and the Dino
+	/// Karts Tunnel at (17, 21) turned 90 on (16, 21). The cells are the ones Alexah's Full Simulation jungle save marks.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the footprint taken from the anchor (<see cref="ParkObjects.FootprintAt"/>) puts the rock's
+	/// cell (1, 0) on (20, 27) and the tunnel's (0, 1) on (18, 21).</remarks>
+	[TestMethod]
+	public void AMapOffsetItemsFloorIsStampedOverTheCellsItsModelCovers()
+	{
+		var catalogue = new ParkItemCatalogue( "jungle", FileSystem );
+
+		Assert.IsTrue( catalogue.TryGet( 1427, out var rock ) );
+		Assert.IsTrue( catalogue.TryGet( 1501, out var tunnel ) );
+
+		var rockCovered = ParkObjects.FloorFootprint( rock, 19, 27, 0 );
+		Assert.AreEqual( (19, 26, 23, 30), rockCovered );
+		Assert.AreEqual( (20, 26), ProceduralFloor.CellOf( 1, 0, 0, rockCovered ) );
+		Assert.AreEqual( (22, 30), ProceduralFloor.CellOf( 3, 4, 0, rockCovered ) );
+
+		var tunnelCovered = ParkObjects.FloorFootprint( tunnel, 17, 21, 90 );
+		Assert.AreEqual( (17, 21), ProceduralFloor.CellOf( 0, 1, 90, tunnelCovered ) );
+		Assert.AreEqual( (18, 21), ProceduralFloor.CellOf( 0, 2, 90, tunnelCovered ) );
+
+		// The table cells those are: the rock's edge ring, less its two corners, and the tunnel's two floor cells.
+		var rockTable = ItemTable( new ModelFile( $"{rock.Directory}/{rock.Stem}.MD2" ), rock.Shape! );
+		Assert.IsNotNull( rockTable[1, 0] );
+		Assert.IsNotNull( rockTable[3, 4] );
+
+		var tunnelTable = ItemTable( new ModelFile( $"{tunnel.Directory}/{tunnel.Stem}.MD2" ), tunnel.Shape! );
+		Assert.IsNotNull( tunnelTable[0, 1] );
+		Assert.IsNotNull( tunnelTable[0, 2] );
+
+		// An item with no map offset is unmoved: the anchor's own footprint.
+		Assert.IsTrue( catalogue.TryGet( 1100, out var bounce ) );
+		Assert.AreEqual( ParkObjects.FootprintAt( bounce, 51, 23, 0 ), ParkObjects.FloorFootprint( bounce, 51, 23, 0 ) );
 	}
 
 	/// <summary>

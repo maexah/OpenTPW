@@ -455,7 +455,8 @@ public class Level
 		_ = new ParkFixedItems( ThemeName, park, objects );
 		load.Mark( "fixed items" );
 
-		// The wall round the land the park owns, made again from the file's model records.
+		// The wall round the land the park owns, made again from the file's model records, or for a park made
+		// fresh from the pieces its walk chose.
 		_ = new ParkBoundaryHoarding( ThemeName, park, catalogue );
 		load.Mark( "boundary" );
 

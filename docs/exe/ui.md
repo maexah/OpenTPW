@@ -76,7 +76,7 @@ from the renderer ambient (`0x00879ddc..e4`), adds each directional light's colo
   (`0x005e13a9`, `IslandLobby_Start` `0x005e1924`, `0x005e2445`; `Lobby_Start`'s 0x202020 at `0x005dd078` comes
   before them). Each record loaded files its own white light along the same direction, so the lobby's one model (the
   front end loads slot 0 alone, `0x0054e5ec`) is lit at a strength of 1 and a park's two (the global fly and the
-  theme's) at 2: a face reaches white at a third of full facing in a park, at two thirds of it in the lobby.
+  theme's) at 2: a face reaches white at a third of full facing in a park, at nearly three quarters of it (0.73) in the lobby.
 - **The texel.** The vertex colour multiplies the texel: stage 0's `COLOROP` is `MODULATE`. `FUN_00567620` sets
   `MODULATE2X` through `FUN_00567a70` only for a state word with `0x10000`, and no model draw's word has it: `DrawList_Flush`
   (`0x00581db0`) and `FUN_00581880` build each batch's word by `FUN_00581790` (from `[0x008bcbc8]`, the mesh word, the

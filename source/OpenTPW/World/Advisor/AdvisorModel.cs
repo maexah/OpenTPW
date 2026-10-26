@@ -266,7 +266,7 @@ public sealed class AdvisorModel
 	/// <summary>
 	/// Draws him over whatever is already on the screen - see <see cref="Level.Render"/> - lit per vertex by
 	/// <paramref name="light"/> and a white light of <paramref name="strength"/> (<see cref="LightFor"/>, <see cref="VertexLight"/>).
-	/// A material the file marks unlit (Lost Kingdom's mouths and tickets) takes white whatever the light, as the original's
+	/// A material the file marks unlit (his mouths, and Lost Kingdom's tickets) takes white whatever the light, as the original's
 	/// DrawList_AddMaterialFaces 0x00580530 gives it. <b>A deviation:</b> his textures are eight bits a channel here (Q616),
 	/// so a fully lit glove is its texel's 231 where the original's four-bit texture shows 239.
 	/// </summary>
@@ -408,7 +408,7 @@ public sealed class AdvisorModel
 		}
 	}
 
-	/// <summary>The normal the original lights vertex <paramref name="vertex"/> of <paramref name="mesh"/> by: the model file's own, its +0x64 table's entry for the vertex-order entry, or the loader's where the table is short.</summary>
+	/// <summary>The normal the original lights vertex <paramref name="vertex"/> of <paramref name="mesh"/> by: the model file's own, its +0x64 table's entry for the vertex-order entry, or the loader's where the faces name fewer entries than the vertex order (ModelFile reads no further).</summary>
 	internal static Vector3 FileNormal( ModelFile.Mesh mesh, int vertex )
 		=> vertex < mesh.FaceNormals.Length ? mesh.FaceNormals[vertex] : mesh.Normals[vertex];
 

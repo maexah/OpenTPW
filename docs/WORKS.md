@@ -87,7 +87,8 @@ belongs to or at the end. Grep it by area or Q-number; never read it whole.
   `ProceduralFloor`): each footprint cell's floor frame draws that cell's ground tile, at the tiles' own size, with the
   frame's texture laid over by its alpha, turned as the original stamps it; again for a thing bought or moved, let go
   with it when sold. The stock park blends the original's 44 cells, 40 of eleven things and 4 of queue, with the same
-  words, and the tables of all 41 Lost Kingdom item models equal those the running original holds. At the Belly
+  turns and mirrors (ours drops the cell's own `0x6` bits), and the tables of the 41 Lost Kingdom item models the stock
+  park's catalogue loads equal those the running original holds. At the Belly
   Bounce (`q649/side-by-side-floor.png`) the plate's square edge is gone and the floor reads 1.82 and 1.58 times the
   ground's sharpness against the original's 1.55 and 1.19, in its colours. With the compositor off a floor draws its own
   texture, as the original's.
