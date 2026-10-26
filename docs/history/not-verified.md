@@ -5,6 +5,15 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q658 (a clip started on an idle channel hides its hide list): this game on the desk at 1280 x 720 (`q658/run-fix`,
+  the final build: a Fries Shop bought paused in the stock park, `meshes 43: 11 meshes, hidden [10 chip08]; ... bound
+  Bind { Start = 1, Flags = 0 }`, then `Start = 2` after its script's play, no `CLIP_HIDE_LIST_ON_IDLE_CHANNEL`;
+  `q658/run-control` on main counts it once and draws the chip, `q658/diff-f120.png`), and the original off-screen
+  (`q658/orig/b`: a Fries Shop researched in a copy of `late30.TPWS`, bought by clicks, `chip08` read `0x41000111`,
+  seven chips in `b-close.png`). Not seen: the original's build frame by frame (its film is too small to count chips;
+  the chip's light cache, never written, says it was never drawn), the flags `0x4` and `0x8` on a drawn start (no
+  Lost Kingdom script passes either; the tests hold them), the Belly Bounce's and the Monkey ride's lists at a first
+  start, the other three themes, and a saved and loaded Fries Shop (Q682).
 - Q657 (the advisor lit as the original): this game on the desk at 1280 x 720 (`q657/run3`, the final build: the lobby's
   `greet` and four park lines, the census line `lit: ambient 0.333 0.333 0.408 strength 2; ... Hardhat: 188 vertices, r
   85/255/153.0`), the original off-screen (`q657/orig/rO`: the lobby's read, the breakpoint on `0x10000`) and Q621's

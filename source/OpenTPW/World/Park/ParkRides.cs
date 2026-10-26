@@ -111,6 +111,16 @@ public sealed class ParkRides : Entity
 		script.Nodes = NodesFor( script, placed, item );
 		BindTrackRide( script, placed, item, Scheduler );
 
+		// The engine's script loader starts the item's create effect over the cells its model covers as a bought
+		// thing's script starts (FUN_005587f0, 0x00558e7c; docs/exe/park.md, "What building a thing gives off").
+		// Counted, not drawn: no emitter here takes the cells' box as its area.
+		if ( item.CreateParticleEffect != 0 )
+		{
+			Unimplemented.Report( "CREATE_PARTICLE_EFFECT" );
+			Log.Info( $"{ThemeName}: thing {placed.ThingId} ('{item.Name}') built: its create effect " +
+				$"{item.CreateParticleEffect} not started (CREATE_PARTICLE_EFFECT)" );
+		}
+
 		// A thing made here has no file's words to start from: a fresh model's, kept from its first clip on.
 		if ( TableModel( placed.CatalogueId ) is { } fresh )
 			script.Animations.Nodes = new ParkModelTables.Running( fresh.Model, script.Animations.ChannelCount );

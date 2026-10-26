@@ -266,6 +266,14 @@ public sealed partial class ItemDescriptionFile
 	/// </summary>
 	public int DestroyParticleEffect => _destroyParticleEffect ?? _category?.DestroyParticleEffect ?? 0;
 
+	/// <summary>
+	/// The particle effect a newly built one gives off - <c>Info.CreateParticleEffect</c>, the descriptor's
+	/// <c>+0x60</c>, which the script loader <c>FUN_005587f0</c> spawns over the footprint as a bought thing's script
+	/// starts (<c>0x00558e7c</c>). Each category sets its own (rides 79, sideshows 80, shops 81, features 82,
+	/// upgrades 80), and a feature may override it: the Jungle's Round Fountain 81, the vehicles and the gates 0.
+	/// </summary>
+	public int CreateParticleEffect => _createParticleEffect ?? _category?.CreateParticleEffect ?? 0;
+
 	/// <summary>How much thirst using this takes away - <c>UsageInfo.ThirstEffect</c>. The Drinks Shop sets 40.</summary>
 	public int ThirstEffect => _thirstEffect ?? _category?.ThirstEffect ?? 0;
 
@@ -653,6 +661,7 @@ public sealed partial class ItemDescriptionFile
 	private int? _newAttractionDecayTime;
 	private readonly int?[] _newBonus = new int?[NewBonusSteps];
 	private int? _destroyParticleEffect;
+	private int? _createParticleEffect;
 	private int? _thirstEffect;
 	private int? _hungerEffect;
 	private int? _vomitEffect;
@@ -948,6 +957,10 @@ public sealed partial class ItemDescriptionFile
 
 				case "Info.DestroyParticleEffect":
 					_destroyParticleEffect = Number( line );
+					break;
+
+				case "Info.CreateParticleEffect":
+					_createParticleEffect = Number( line );
 					break;
 
 				case "UsageInfo.ThirstEffect":

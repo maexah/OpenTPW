@@ -1177,6 +1177,12 @@ after its poller starts**, so a key meant inside either line cannot be sent afte
   `emitters` prints the LOADED FILE's emitters; `particles` the running park's, with how many were drawn.
   `camera 445 335 45 180` shows both Drinks Shops' bubbles, `camera 555 170 25 180` the toilet's stink (Q258).
   In the original's frame the bubbles are a few pixels: crop the shop and enlarge it four times (Q257v).
+- **Who starts a particle effect in the original, and which** (Q663, `q663/orig/run.sh`): `emitters.py PID SECS` and
+  `brk.sh 0x00521e60,0x00521930 12 10 60` (`Particles_Spawn`, `Particles_SpawnFull`) armed together a few seconds before
+  the act, with `BRK_COND='(*(unsigned*)$esp < 0x51ef00 || *(unsigned*)$esp > 0x522300)'` so the particle system's own
+  calls take no hit and `BRK_PRINT` printing the four arguments (effect, x, y, z over 1024). The first stack word is
+  the caller. Effect 19 at the gate (`0x004fa522`, peeps arriving) is the stock park's steady noise. A Round Fountain
+  in `late30.TPWS`: Buy, the features tab, its row (575,261), `setcam.py` back, then the ground at (585,275).
 - **The Jungle Spray's jet:** `admit 52 34` four times, each `send <guest> 14`; poll `rides` for a `2:37@`
   record on thing 14 and `pause` at the first: one jet (node 2) is running, for about four seconds (Q257w).
 - **A broken Hot Pot with smoking boats:** fill the pot (above), and once `bumpers` reads `state Running` with

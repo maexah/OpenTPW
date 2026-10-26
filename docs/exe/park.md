@@ -1221,6 +1221,39 @@ Decoded 2026-09-23 as disassembly, every claim re-derived by a refuter.
 
 **OpenTPW** takes a sold thing's script down through `ParkRides.Unbind`, the scheduler's `Destroy` with mode 7's meaning: the particle is counted (`DESTROY_PARTICLE_EFFECT`), and `0x4` has nothing to undo because nothing hangs a head.
 
+### What building a thing gives off
+
+Q663. The yellow and green sparkles a bought thing rises among are its item's `Info.CreateParticleEffect` (descriptor
+`+0x60`; FileFormats `sam.md`, "The particle effects an item gives off"), started by the **script loader**
+`FUN_005587f0` as the new thing's script is made, not by its script and not by the build path `FUN_00463060`.
+
+| Address | What it does | Evidence |
+|---|---|---|
+| `0x004dd070` | The object's script start `FUN_004dcf90` (from `Object_Construct`, `0x004db517`) calls the loader with the thing's id and a third argument of `DAT_00785a2c`, which is 1 only while a loaded save's layout is replayed | Decompiled |
+| `0x00558e12`..`0x00558e2b` | The block runs only when that argument is nought and the script's thing word `+0xac` is set | Listing |
+| `0x00558e5d`..`0x00558e81` | The item record (`FUN_00412e90` on the thing's `+0xe` item id, `[0x007cfb90 + id x 0x14]`); its `+0x60` nought spawns nothing | Listing |
+| `0x00558e87`..`0x00558ea5` | It needs the script's model (`+0xc8`) and that model's box, `FUN_00466b70` (`ride-operation.md`: the cells `+0xc0`..`+0xc4` x 10, the heights from the `.hmp`); with none, nothing | Listing |
+| `0x00558eab`..`0x00558f25` | `Particles_Spawn( effect, x, y, z )`: x and z the box's middle, y the model's base height `[[[rec + 8] + 4] + 0x78] + 0x44`, each x 1024 (`0x00700fd0` 0.5, `0x00700fdc` 1024.0) | Listing; constants read |
+| `0x00558f3d`..`0x00558fac` | `Particles_SetArea( handle, dx x 512, dy x 256, dz x 512 )` (`0x00701050`, `0x00701054`): the emitter's area `+0x44`/`+0x48`/`+0x4c`, each over 16, so half the box across and along and a quarter of its height, in place of the template's | Listing; `Particles_SetArea` decompiled |
+| `0x00558fda` | `FUN_0051c640( ... )` makes a sound-engine zone about the box's middle, kept at `+0xd4` and released at the teardown (above). What it does to the sound is not decoded | Listing |
+
+The place uses the model's own cells, `+0xc0`/`+0xc4` (the rule Q744 names for the build marks), never the anchor's
+footprint. **Gaps the decode leaves:** an item with no `.RSE` falls back to `Data\TestScript\test.rse`
+(`0x004dd031`), which the game does not ship; whether the loader then makes a script (and the effect) was not read.
+`SPAWNCHILD`'s two calls of the loader (`0x00555123`, `0x0055524d`) were not read for their thing word.
+
+**Measured in the original** (`q663/orig/a`, `late30.TPWS`, a Round Fountain bought and placed by a click, predicted
+first). One emitter started on the tick after the click: effect 81 (`Create3`, the fountain's own value) at (495, 0,
+355), life 30, rates (1, 1, 1, 0), most 146 at density 500 (`original/emitters.py`); the fountain's box read
+(48,34)..(50,36), middle (495, 355), base height nought (`original/modelboxes.py`). `brk.sh` on `Particles_Spawn` named
+the caller `0x00558f2a`. The emitter was gone about 1.5 s later, the build still rising (`orig-build-strip.png`: the
+sparkles in the first two frames, 0.4 s apart). **A load starts none:** two earlier loads watched from before their
+click (`q703d/orig/a-emit.log`, `q703d/fs/g-emit.log`) name no effect 79 to 82.
+
+**OpenTPW** reads the value (`ItemDescriptionFile.CreateParticleEffect`, the item's own over its category's) and counts
+it where a bought thing's script starts (`ParkRides.BindNew`, `CREATE_PARTICLE_EFFECT`, with a log line naming the
+effect); nothing is spawned. The load path does not reach it. Building it is Q683.
+
 ### `COAST` — the script-to-ride interface, and it is small
 
 Handler `0x00554a5a`: it fetches the selector **raw** (no value resolution), does `DEC` / `CMP 7` / `JA`, and jumps through an **8-entry table at `0x556a5c`**:

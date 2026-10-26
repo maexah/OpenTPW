@@ -74,11 +74,6 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q663. A bought thing's build draws no sparkles. Decode first.** From Q623. The original's Round Fountain, placed
-  in `late30.TPWS`, rises from its bare floor among yellow and green sparkles for its whole build (`q623/orig/a/appear.png`,
-  film `original/shots/q623-a.mkv` frames 87 to 120); ours rises with none, and nothing counts it. Which effect it is,
-  who starts it (the placer, the build path or the item's own effect nodes) and when it ends are not decoded. Decode
-  it, count it where ours reaches it, then build it. Confirm: the same placement filmed in both games.
 - [ ] **Q664. The map's switches, pickers and overlay. Decode first.** From Q624. The original's map (stream `0x00774da0`,
   `hud.md`, "The map screen's stream") has six layer switches (rides, sideshows, shops, miscellaneous, tracks, visitors),
   the staff picker (four portraits on the right) and the metric picker (three faces, bottom right), none built here, and
@@ -2273,9 +2268,9 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
     (Q191).
 - [ ] **Q38. What building and selling look and sound like.** Counted, not built: the death particle
   (`DESTROY_PARTICLE_EFFECT`, `Info.DestroyParticleEffect`, 75-78, a world effect spread over the
-  footprint) and the demolish sound (`DEMOLISH_SOUND`, `0x96`-`0x99` by size). Not yet counted: the
-  build side - `Info.CreateParticleEffect` and the `+0xd4` sound zone the script loader makes when an
-  item has one (`park.md`, "What selling a thing does to its script"). The world pass to draw them in is `WorldParticles`.
+  footprint) and the demolish sound (`DEMOLISH_SOUND`, `0x96`-`0x99` by size). The build side's particle is
+  counted (`CREATE_PARTICLE_EFFECT`, Q663) and its build is Q683; not yet counted: the `+0xd4` sound zone the script
+  loader makes when an item has one (`park.md`, "What building a thing gives off"). The world pass to draw them in is `WorldParticles`.
   - **Note (fork watch 2026-10-16, `verify-audio-fx.md` A6):** particle caller ids read in the listing: `0x004d95bf`
     50, `0x00544dd8` 2, `0x005480fc` 96, `0x0055dba3` 39, `0x0055dc22` and `0x0055dca1` 40, `0x005999ad` 87,
     `0x0048de1a` 91; also `0x00546ac7` and `0x0054aed5` (15), `0x00549d04`, `0x0054ad24`, `0x00557334`, `0x00557f0e`
@@ -2503,6 +2498,15 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   table (`lib/normdump`, `lib/normcmp.py`), and count over all 2,129 `.md2` whether every mesh's table covers its vertex
   order (Q657 counted the five advisors alone: FileFormats `models.md`, "Normals"). Then light them by it; confirm a
   park thing's shading beside the original's.
+- [ ] **Q683. Start a bought thing's create effect (Q663's build).** The script loader starts the item's
+  `Info.CreateParticleEffect` (`ItemDescriptionFile.CreateParticleEffect`) once as a bought thing's script is made, never
+  at a load or a layout replay: `Particles_Spawn` at the middle of the model's box (`FUN_00466b70`: the model's own
+  cells `+0xc0`/`+0xc4` x 10, not the anchor's footprint, Q744's rule) at its base height, then `Particles_SetArea` with
+  half the box across and along and a quarter of its height in place of the template's area (`park.md`, "What building
+  a thing gives off"). Here `ParkRides.BindNew` counts `CREATE_PARTICLE_EFFECT`; `ParticleSystem` takes no area but the
+  template's. Build both, with the same box for the destroy effect's (Q38). Leave the `+0xd4` sound zone counted
+  (undecoded). Confirm: the Round Fountain bought in both games, `particles` against `original/emitters.py` (effect 81,
+  life 30, most 146 at density 500, about 1.5 s) and the build's first frames side by side (`q663/side-by-side.png`).
 - [ ] **Q32. Graphics tiers.** `Level` reads the detail files (`low.sam`, `med.sam`, `high.sam`) for `GameOptions.PARTICLEDENSITY`
   and `NUMKIDS` (the kid and staff bank caps) and for three `GraphicalOptions.*` keys: `LIGHTING` (a counted no-op),
   `TEXTUREQUALITY` (the sea's and the flags' folder) and `PROCEDURALTEXTURING` (the ground's tile size). `SPRITESHADOW` is read too (Q480: medium's silhouette built, the own

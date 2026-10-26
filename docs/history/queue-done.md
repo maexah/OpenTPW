@@ -10453,6 +10453,17 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   (`PoseChannel`, `LobbyModel.Hide`); `CLIP_HIDE_LIST_ON_IDLE_CHANNEL` is gone. A bought Fries Shop: `hidden [10 chip08]`
   here, `chip08` `0x41000111` in the original, seven chips in both (`q658/`, 7 held 1 missed). Tests 4019 / 1455 run
   without the game; mutate 13 of 13.
+- [x] **Q663. A bought thing's build draws no sparkles. Decode first.** From Q623. The original's Round Fountain, placed
+  in `late30.TPWS`, rises from its bare floor among yellow and green sparkles for its whole build (`q623/orig/a/appear.png`,
+  film `original/shots/q623-a.mkv` frames 87 to 120); ours rises with none, and nothing counts it. Which effect it is,
+  who starts it (the placer, the build path or the item's own effect nodes) and when it ends are not decoded. Decode
+  it, count it where ours reaches it, then build it. Confirm: the same placement filmed in both games.
+  **Done (2026-10-26), decode and count; the build is Q683:** the sparkles are the item's `Info.CreateParticleEffect`,
+  started once by the script loader `FUN_005587f0` (`0x00558e7c`..`0x00558fe2`) as a bought thing's script is made, at
+  its model box's middle with the emitter's area set to the box; a load starts none (`park.md`, "What building a thing
+  gives off"). Measured in the original (`q663/orig/a`): effect 81 at (495, 0, 355), the box's middle, called from
+  `0x00558f2a`, gone in about 1.5 s. Ours counts it in `ParkRides.BindNew` (`CREATE_PARTICLE_EFFECT`, 1x for a bought
+  Round Fountain, none after the load; `q663/run1`, `side-by-side.png`).
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.
