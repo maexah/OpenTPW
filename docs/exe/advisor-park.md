@@ -5227,12 +5227,21 @@ thing=50 figure=87 line=70` and `attempt=1 message=257 ... response=497 sample=5
 `advisor.py ... 0xf8,0x101 poll`, `advisorline.py`, `thingwords.py` on stall 193's `+0x1a0` and `+0x1a4`). Row 248's
 record went from (0, -1, 0, 0) to (19031, 0, 1, 0) on tick 19031, said at once: sample 516, props (13, 14), the action
 7,498 ms (clips 4,832 + 2,666; this game's `waitUntil` less its start is 7,498 too, the log's `duration=` being the
-speaker's 6,498 before its 1,000). Stall 193's lifetime counts stood at 194 and 12 from the load to 19049, so the rolled-in
-day added nothing and the share stayed 100; the score itself is not read (no poll ever saw `0xf8` in a slot: posted
-and taken on one tick). Row 257 was slotted on 19040 at **72** (a sideshow at 88; this game's read 78 and slotted 32;
-which one is Q662's) and never said: `0x13a` (this game's 314, posted on 19059 at 150) took the free advisor on 19062,
-and the 19100 awards replaced the slot. This game on the same file (`q743/runG2`, `runG3`, the desk) says 248 on 19031
-and leaves 257 unsaid behind 314 alike, but says 314 on **19067**, five sweeps after the original: Q679.
+speaker's 6,498 before its 1,000). The original run read only stall 193's lifetime counts (`+0x1a0`, `+0x1a4`), which stood at 194 and 12 from the load to
+19049: no sale and no walk-away in that time. It did not read the 30-day rings the poll reads (`+0x1a8`, `+0x230`), so
+what the 19008 roll left in them is not measured; the score was not read (no poll ever saw `0xf8` in a slot: posted and
+taken on one tick); and which food outlet the original judged is not read either (the helper keeps the highest-share
+food thing; "stall 193" is this game's pick, `q743/runG3.out`, assumed for the original). What the reading supports is
+that some food outlet's share passed the line, since 248 was said on 19031. Row 257 was slotted on 19040 at **72** (a
+sideshow at 88, worked back by the formula 70 + 72 / 4, not read; this game's read 78 and slotted 32; which one is
+Q662's) and not said by then: `0x13a` (this game's 314, posted on 19059 at 150) took the free advisor on 19062, and the
+19100 awards replaced the slot. `0x101` was slotted again, at 40, on 19350 and was still unsaid at the last advisor read,
+19389 (`q743/orig/O/load.log`; the readers stopped near 19430). This game on the same file (`q743/runG2`, `runG3`, the
+desk) says 248 on 19031 and leaves 257 unsaid behind 314 alike, but says 314 on **19067**, five sweeps after the original.
+Both desk runs ran below 10 frames a second (every clock stamp in their `run.log`s sits on a 100 ms grid; about 75
+clamped frames in the 8.93 s), so `GameClock.Now` advanced 0.1 s a frame while the sweeps took the raw time: the
+clamped-frame deviation above gives a lag of about 1.5 s (7.500 s of `Now` over 36 sweeps of 0.248 s). Whether the lag
+shows at a normal frame rate is Q679.
 
 | | The original | OpenTPW |
 |---|---|---|
@@ -5240,7 +5249,7 @@ and leaves 257 unsaid behind 314 alike, but says 314 on **19067**, five sweeps a
 | Row 257 on Alexah's `New Save` | said on 19040, sample 525, props (8, 0) | scored 24 on 19040 (76); with the file's satisfaction made 87, said on 19040, sample 525, (8, 0) |
 | Row 254 on it | slotted at 28 on 19347, after its 7,200-sweep wait from 11907 | `cooldown` on 19037 at 40 (not run to 19347) |
 | A food stall walked away from by all its customers (made file B) | row 248 said on 19031, sample 516, (13, 14) | the same, at 100 |
-| Row 257 on made file B | slotted on 19040 at 72, never said (`0x13a` said on 19062) | slotted at 32, never said (314 said on 19067, Q679) |
+| Row 257 on made file B | slotted on 19040 at 72, not said by 19062 (`0x13a` said then), slotted again at 40 on 19350, unsaid at 19389 | slotted at 32, never said (314 said on 19067 in desk runs below 10 frames a second, Q679) |
 | The poor rows | below nought, never said | the same |
 
 **Not built or not seen.** The original's score for row 248 (taken on its tick). A great row said a second time past its 7,200 sweeps. The

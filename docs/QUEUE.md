@@ -550,7 +550,7 @@ filed the items that cite it.
   percentage, `SCRAP_VALUE_DEPRECIATION`, counted only when something is sold. `ParkEntryPriceScreen`'s heading
   `0x4f3af` is empty, and its remark says "left empty and counted"; the original titles it with the name of the thing
   at world `+0x1da732`, `mParkGates` (`ParkWorld`), and its help row 191 reads "Park name - left-click to edit", so
-  the title is the park's name and its edit is Q28's. The name is lettered by `UI_SetTitle` (`0x00498e4c`): yellow, with the edge, in
+  the title is the park's name and its edit is Q28's. The name is lettered by `UI_SetTitle` (`0x00485d20`, called at `0x00498e4c`): yellow, with the edge, in
   the stream's rect widened by half its width either side (749..1221 to 513..1457), where ours letters the empty heading white (Q676). `ParkGadget.ShowDate` prints the machine's short date (Q527). `ParkBuyScreen`'s description panel `0x1ea` draws its frame and the footprint picture, and neither the item's turning model nor its name row `0x1ec`. Count each
   where it is drawn. Confirm: `unimplemented` after opening a ride's window, the entry-price screen and the buy
   screen.
@@ -1726,8 +1726,10 @@ filed the items that cite it.
   `shopwindow` census naming the other shop.
 - [ ] **Q548. The ride window's title is white; `UI_SetTitle` letters it yellow.** From Q31: the shop's window takes
   `UI_SetTitle`'s font 5 in (234, 239, 102) with its shadow over the widened rect (`hud.md`, "The shop's window"), as the
-  visitor's and the staff member's do; `ParkObjectWindow` letters the ride's title white in the stream's own rect. Read the
-  ride's load for the same call (`FUN_004ae940` or `0x004af030`), then photograph the Belly Bounce's window beside the original's.
+  visitor's and the staff member's do; `ParkObjectWindow` letters the ride's title white in the stream's own rect. The
+  original letters it through `FUN_0048d290` (`push 0x3e28` at `0x004ae930`, `call` at `0x004ae937`, in `FUN_004ae8e0`, slot 0
+  of vtable `0x006ffbe8` on the ride window's object `0x7cc218`; `0x48d290` calls `UI_SetTitle` at `0x0048d2c5`); letter
+  `ParkObjectWindow`'s `0x3e28` so, then photograph the Belly Bounce's window beside the original's.
 - [ ] **Q549. The researcher tires about 80 sweeps sooner here and rests longer.** From Q701: stock Easymode, left
   alone, our researcher (thing 30) set off for the Staff Room on tick 2210 and 2199 in two runs and ended the rest on
   2553 and 2578, skipping 17 and 19 hand-outs; the original's last hand-out before its rest was on 2280 and it gave the
@@ -1977,16 +1979,21 @@ filed the items that cite it.
   original has never loaded `files/outlets-D.TPWS` (sideshow 50's thirty satisfaction days made 40). Load it in the
   original with `loadfile.sh` and read row 257's record beside file B (row 248). Also read which sideshow the
   original's row 257 picked on the unmodified file and its figure (the docs say only "some sideshow at 77 or more").
-  - **Note (Q743):** on file B the original slotted `0x101` on 19040 at 72 (a sideshow at 88; which one was not read) and
-    never said it: `0x13a` was said on 19062 and the 19100 awards replaced the slot (`q743/orig/O/load.log`).
-- [ ] **Q679. The advisor's next line comes five sweeps after the original's.** From Q743. On `q713/files/outlets-B.TPWS`
-  by Q707's F player, after row 248's line on 19031 (a 7,498 ms action in both games), the original said `0x13a` on 19062,
-  7.70 s on at four sweeps a second (`q743/orig/O/load.log`); this game said it (314) on 19067 in two desk runs, the
-  second with no frame grabbed (`q743/runG2`, `runG3`), its log's stamps four sweeps a second. The wait reads
-  `GameClock.Now` (`ParkPeople`'s `AdvisorMessages.Tick`), so that clock fell about 1.5 s behind the sweeps in 9 s, or
-  the sweeps run ahead of it. Measure `GameClock.Now` against the wall and `sweeps` in a free run without a console
-  poll every 0.2 s (`q743/confirm.py` polls), then make the wait end on the original's sweep. Confirm: the same file,
-  `0x13a`'s tick in both games.
+  - **Note (Q743):** on file B the original slotted `0x101` on 19040 at 72 (a sideshow at 88 worked back by 70 + 72 / 4,
+    not read; which one was not read) and had not said it by 19062: `0x13a` was said then and the 19100 awards replaced
+    the slot. It slotted `0x101` again at 40 on 19350 and it was still unsaid at the last advisor read, 19389
+    (`q743/orig/O/load.log`).
+- [ ] **Q679. Does the advisor's next line come on the original's tick at a normal frame rate?** From Q743. On
+  `q713/files/outlets-B.TPWS` by Q707's F player, after row 248's line on 19031 (a 7,498 ms action in both games), the
+  original said `0x13a` on 19062 (7.70 s on at four sweeps a second, `q743/orig/O/load.log`) and this game said it (314)
+  on 19067 in two desk runs (`q743/runG2`, `runG3`). That lag is explained: both runs ran below 10 frames a second (every
+  clock stamp in their `run.log`s is on a 100 ms grid, 75 clamped frames), and the wait reads `GameClock.Now`
+  (`ParkPeople`'s `AdvisorMessages.Tick`), which adds `Time.Delta` clamped to 0.1 s (`Time.cs` `LongestFrame`) while the
+  sweeps take `RawDelta`, so `Now` fell about 1.5 s (7.500 s over 36 sweeps) behind: the documented deviation
+  (`advisor-park.md`, the paragraph "The per-message cooldown reads...", `ParkPeople.cs:2444`). Still open: does this game say row 314 on 19062
+  when it runs at a normal frame rate? Re-run Q743's scene at full rate (no console poll every 0.2 s, no frame grab;
+  `q743/confirm.py` polls) and predict 19062 first. If it says 19062, close this; if not, find the cause there.
+  Confirm: the same file, `0x13a`'s tick in both games.
 
 ## B. Docs and comments
 

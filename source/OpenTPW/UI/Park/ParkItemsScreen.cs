@@ -146,7 +146,7 @@ internal sealed class ParkItemsScreen : UiWindow
 			Mesh = UiMesh.Get( "!frame" )
 		} );
 
-		// Lettered by UI_SetTitle, each tab's builder with its own row (0x004953d7 to 0x0049547e): font 5 in
+		// Lettered by UI_SetTitle, by the opener's one call (0x00495bc3) and each tab's click (0x004953d7 to 0x0049547e): font 5 in
 		// (234, 239, 102), with its edge, centred in the stream's rect (809 to 1281) widened by half its width either side.
 		_title = Root.Add( new UiControl
 		{

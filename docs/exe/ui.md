@@ -359,9 +359,10 @@ the darker copy, the hire screen reading "Cash  $ 88112" (`q644/orig/a-1-buy.png
 install's `american` table, where ours reads the English "Hire Cleaners").
 
 **The 32 calls** (`grep 'call   0x485d20' lib/testme.objdump`, each call's pushed id and UITEXT row read before it): the
-object windows' shared title `FUN_0048d290` (`0x0048d2c5`, the id its eight callers hand it); all-visitors `0x1e498` on message `0x15` (`0x004933b9`, row `0x70`); all-items
-`0x12c4be`, each tab's builder with its own row (`0x004953d7` to `0x0049547e`, rows `0x4e` to `0x51`, and `0x00495bc3`,
-`0x51` again); all-staff `0x328` on message `0x15` (`0x00495f22`, row `0x64`); the entry price's heading `0x4f3af`
+object windows' shared title `FUN_0048d290` (`0x0048d2c5`, the id its eight callers hand it; the ride window's `0x3e28` is pushed at `0x004ae930` and called at `0x004ae937` in `FUN_004ae8e0`, slot 0 of vtable `0x006ffbe8` on the ride window's object `0x7cc218`, white here: Q548); all-visitors `0x1e498` on message `0x15` (`0x004933b9`, row `0x70`); all-items
+`0x12c4be`, from its opener `0x00495aa0` (`0x00495bc3`, the one call, reached for all four rows `0x4e` to `0x51` through the jump
+table at `0x495c08`; it sets the look, since `UI_SetTitle` styles only on the first call) and from each tab's click in its
+callback `0x00495290` (`0x004953d7` to `0x0049547e`, each with its own row); all-staff `0x328` on message `0x15` (`0x00495f22`, row `0x64`); the entry price's heading `0x4f3af`
 (`0x00498e4c`, the park gate thing's name); `0x12271` (`0x0049a0f0`); the hire screen `0x2480` (four); the file
 screen `0x23bce1` (two); `0x12c4ca` (`0x0049fbf2`); the options screen `0x1d4d4`; `0x4a68c5`; `0x5d9e`; the research
 screen `0xd2d00`; the buy screen `0x1fe` (two); the staff costs screen `0x2da`; the visitor window `0x3736` (two);
@@ -371,7 +372,8 @@ each title yellow with its darker copy, its control's rect and skin rect the str
 (573, 74, 1517, 153), and `0x007c2118` at its `+0x98` (`uitree.py` from `[0x007c24c8]`, which prints that word as
 "text"), 0.037 to 0.041 of the widened rect yellow and none white. OpenTPW letters the three so (Q676,
 `ParkVisitorsScreen`, `ParkItemsScreen`, `ParkStaffScreen`). Ids with no control here are screens not built. The entry
-price's heading is `UI_SetTitle`'s too, and is empty and white here until it carries the park's name (Q158).
+price's heading is `UI_SetTitle`'s too, and is empty and white here until it carries the park's name (Q158); the ride
+window's title is `UI_SetTitle`'s too and is white here (Q548).
 
 **OpenTPW letters both screens larger** (Q644, a deviation at Alexah's word, 2026-10-25, `UiFonts.ParkScreenLettering`):
 the same `.bf4` fonts drawn 1.2 times the original's size where each control's box holds it, as large as it holds

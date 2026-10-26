@@ -493,7 +493,7 @@ public static class DebugConsole
 
 			// Where a control of an open window is on screen, in window pixels, by its id in hex - so that a harness
 			// can `click` the middle of a button rather than work out the virtual screen's anchoring for itself, and what
-			// it letters: a box's text and whether it has the keys, any other control's text. A pure getter.
+			// it letters: a box's text and whether it has the keys, any other control's text, and a lettered control's font, colour and edge. A pure getter.
 			case "control":
 				if ( parts.Length < 2 || !int.TryParse( parts[1].Replace( "0x", "" ), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var controlId ) )
 				{

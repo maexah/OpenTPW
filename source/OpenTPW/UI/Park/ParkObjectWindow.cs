@@ -200,6 +200,8 @@ internal sealed class ParkObjectWindow : UiWindow
 			Rect = new UiRect( 746, 74, 1219, 153 ),
 			HelpText = 3,
 			Font = 5,
+			// Not yet lettered as the original does: it calls UI_SetTitle through FUN_0048d290 (0x004ae937, docs/QUEUE.md
+			// Q548), yellow with the edge in the widened rect; this one is white in the stream's rect.
 			TextColour = UiColour.White,
 
 			// A left click on the title opens the thing's rename box (FUN_0048d2e0, the helper every object

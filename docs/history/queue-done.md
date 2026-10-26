@@ -10369,9 +10369,12 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   score first; a miss in either game's guests (the rolled-in day) is said as such.
   - **Done (Q743, lane A):** the original said row 248 on tick 19031 (`0xf8`'s record (0, -1, 0, 0) -> (19031, 0, 1, 0)),
     sample 516, props (13, 14), the action 7,498 ms, as this game's (its log's `duration=6498` is before the 1,000 added);
-    stall 193's lifetime counts 194 and 12 unchanged to 19049, so the share stayed 100 (the score is not read: posted and
-    taken on one tick). Row 257 slotted at 72 in the original (32 here) and said in neither game: `0x13a`/314 took the
-    advisor first, the original on 19062, this game on 19067 (Q679). Frames `q743/orig/O/f-t19035.png`, `q743/runG2/s516-t19039.png`;
+    stall 193's lifetime counts (`+0x1a0`, `+0x1a4`) 194 and 12 unchanged to 19049 (no sale, no walk-away; the 30-day rings
+    `+0x1a8`/`+0x230` the poll reads and the score were not read, and which food outlet the original judged is not read:
+    "stall 193" is this game's pick). Row 257 slotted at 72 in the original (a sideshow at 88, worked back by 70 + 72 / 4,
+    not read; 32 here), and was said in neither game by 19062: `0x13a`/314 took the advisor first, the original on 19062,
+    this game on 19067 (a clamped-frame lag of runs below 10 frames a second; Q679). The original slotted `0x101` again at
+    40 on 19350 and it was still unsaid at the last read, 19389. Frames `q743/orig/O/f-t19035.png`, `q743/runG2/s516-t19039.png`;
     `advisor-park.md`, "The original on the made file".
 ## B. Docs and comments
 
