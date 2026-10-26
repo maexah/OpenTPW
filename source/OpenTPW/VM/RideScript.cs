@@ -1788,9 +1788,9 @@ public sealed class RideScript
 		//
 		// Advancing per tick would promote a queued clip mid-catch-up: with three ticks due, a clip
 		// ending on the first would have its successor running before the second tick's instructions
-		// could look at it. The engine cannot do that, because it has not swept yet. End-of-frame state
-		// is the same either way - ParkRides hands the sweep Ticks * 31, which is exactly the instant its
-		// last tick ran at - so the difference is only what a script can see PART WAY THROUGH a long frame.
+		// could look at it. The engine cannot do that, because it has not swept yet. ParkRides hands the
+		// sweep the frame's own moment (ParkRides.NowMilliseconds), past the last tick's instant and short
+		// of the next's, so a clip that ends within that part of a tick is finished before the next tick.
 		//
 		// A script reads channel state through RideAnimations.Trigger, RoleOn and AnimationOn, and all three
 		// read it as the last sweep left it, as the engine does (0x00473315).

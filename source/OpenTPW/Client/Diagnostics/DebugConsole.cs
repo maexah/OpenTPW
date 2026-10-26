@@ -834,6 +834,7 @@ public static class DebugConsole
 					+ $"{ParkAudio.Current?.ScreamSamplesHeard ?? 0} screams let go {ParkAudio.Current?.ScreamsLetGo ?? 0} "
 					+ $"scripts {ParkRides.Current?.Scheduler.Count ?? 0} "
 					+ $"tick {ParkRides.Current?.Scheduler.Tick ?? 0} "
+					+ $"now {ParkRides.NowMilliseconds} last tick at {ParkRides.LastTickMilliseconds} "
 					+ $"bound {ParkRides.Current?.Bound ?? 0} "
 					+ $"critical longest {scripts.Select( script => script.LongestCritical ).DefaultIfEmpty().Max()} "
 					+ $"cap {RideScript.CriticalStepCap} reached {scripts.Count( script => script.ReachedCriticalCap )} "

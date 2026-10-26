@@ -1019,6 +1019,15 @@ after its poller starts**, so a key meant inside either line cannot be sent afte
   `q642/orig/run.sh` takes that 420 x 340 as its default rectangle: always pass one (round O2's `1450,580,140,110`).
   `q642/ours.py` and `q642/orig/run.sh` are the item's own drivers, not in `lib/`: copy the camera and park-entering
   steps from them, and move them to `lib/` if a third item wants them.
+- **A clip's sweep moment, and the bus filmed driving in** (Q675, `q675/confirm.py <out> <bin> <ROUND>`): `rides` prints
+  `now` and `last tick at` in its header and each channel's `time` (its last advance): a clip swept at the last tick's
+  instant reads a `time` that divides by 31, one swept at the frame's own moment mostly does not; a HELD channel's
+  `time` is its start less the clip's length, never an advance, so leave those lines out. `bumpers` prints each boat's
+  `clip start`, `time` and the header's `now`. The bus: `camera 475 60 90 0`, wait for the log's `the bus summoned`
+  (about 126 s after the stock park's entry, `mGameTick` 1264: that count is the thing sweep's, about 4 a second, not
+  the 32 ticks; near 1090 where a leaver summons it first, Q678), then 3.5 s, then `rectfilm.py --min 0.5` on window 1040,240 120x30 for 6 s: the roof crosses it
+  above the flags (which wave every frame) before the bus stops by x 960. A Hot Pot's boats in view: `camera 420 245
+  90 180` after `hot_pot()` (`buy 1140 41 23 0`); the smoke recipe's 435 320 110 180 frames the smoke, not the pot.
 - **A golden ticket won in both games** (Q591, `q706/`): a copy of Alexah's Full Simulation profile with tickets taken
   out, `gmsfile.put( copy, tickets={'jungle': [0,0,1,0,0,0]} )` (`q706/gms-L01off.dat`), so her jungle `New Save.TPWS`
   (tick 19004, 759 visitors to date, some 280 inside) wins Locals 0 and 1 again on tick 19100. Here: `q706/confirm.py <out>

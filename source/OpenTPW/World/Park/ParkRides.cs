@@ -934,7 +934,9 @@ public sealed class ParkRides : Entity
 		if ( states.Problem != null )
 			return null;
 
-		var now = (int)(GameClock.Ticks * MillisecondsPerTick);
+		// The file's moment is the frame's, the instant the channels were swept to: a clip held or replayed in this frame's
+		// sweep is stamped after the last tick's instant, and a moment before that would load it started in the future.
+		var now = NowMilliseconds;
 
 		uint Reading( float moment ) => unchecked(saved + (uint)(int)(moment - _loaded));
 
@@ -1047,8 +1049,17 @@ public sealed class ParkRides : Entity
 	internal Func<float, uint>? Readings
 		=> _clock?.Reading is { } saved ? moment => unchecked(saved + (uint)(int)(moment - _loaded)) : null;
 
-	/// <summary>Now, on the clock the scripts and channels run on.</summary>
-	internal static int NowMilliseconds => (int)(GameClock.Ticks * MillisecondsPerTick);
+	/// <summary>
+	/// Now, on the clock the scripts and channels run on: the last tick's instant and the part of a tick owed since,
+	/// the frame's own moment, as the engine's snapshot is the clock read once a drawn frame (<c>0x00473440</c>). It
+	/// never reaches the next tick's instant, so every stamp a sweep makes lies before the next tick's scripts run,
+	/// and a save written now holds no channel started after its own moment.
+	/// </summary>
+	internal static int NowMilliseconds
+		=> LastTickMilliseconds + Math.Min( (int)(GameClock.PartialTick * MillisecondsPerTick), (int)MillisecondsPerTick - 1 );
+
+	/// <summary>The last tick's instant on the same clock, exactly <see cref="GameClock.Ticks"/> beats in.</summary>
+	internal static int LastTickMilliseconds => (int)(GameClock.Ticks * MillisecondsPerTick);
 
 	/// <summary>
 	/// The heads hung on a script's model's nodes, each by its node's lookup record, with every record one can hang
@@ -1396,9 +1407,11 @@ public sealed class ParkRides : Entity
 		// And then, once, whatever those ticks asked for is shown. The engine advances its animation players
 		// in the scene draw (on-screen models from their scene-node callback, the rest by FUN_0044e410( 3 )),
 		// past the back edge of this very catch-up loop, off one snapshot of the clock - so the sweep belongs after the loop rather than inside it.
-		// A deviation: it takes the moment the last tick ran at, exactly GameClock.Ticks beats in, so a clip steps once a tick here, where the
-		// engine's snapshot is the frame's own clock and a clip moves every drawn frame (0x00473740; docs/exe/park.md, difference 7; Q675).
-		_objects?.Sweep( (int)(GameClock.Ticks * MillisecondsPerTick) );
+		// The snapshot is the frame's own moment, so a clip moves every drawn frame (0x00473740; docs/exe/park.md, difference 7). Our tick runs
+		// at the end of its 31 ms and the engine's at the start, so the engine's snapshot lies between its last two ticks and ours past its
+		// last: the same moment of the frame, a tick further on in the ticks' own stamps, which leaves these clips a tick ahead of the
+		// bumper boats' eased position (ParkBumperBoats.Put).
+		_objects?.Sweep( NowMilliseconds );
 	}
 
 	/// <summary>

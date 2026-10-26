@@ -5,6 +5,12 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q644 (the buy and hire screens lettered 1.2 times larger, titles as `UI_SetTitle`'s): shot at 2552 x 1355,
+  1280 x 720 and 1024 x 768 in the stock park, every tab of both; not below 480 high (the two small font sets) nor in
+  a window narrower than 4:3; the original at its 800 x 600 and 1024 x 768. The whole-pixel copy before the sampler
+  (`UiText.PrescaleFor`) reaches every text whose scale is 2 or more: at 2552 x 1355 only these screens' x 1.2 text;
+  a window 1536 or more high, where every screen's text takes it, was not shot. The lettering takes no mode, so Full
+  Simulation was not run.
 - Q643 (the flags ease between winds): watched at one camera, B, in the stock park, at the high texture quality, in
   Instant Action alone (the flags and the weather take no mode); the original's jump was read by poking its wind, not
   across a change of its own weather. The menu's pause holding the turn is neither tested nor filmed: the test holds `WindAfter`'s paused branch alone, and the console's pause the runs used holds any turn through `Time.Delta` = 0.

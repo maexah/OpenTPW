@@ -358,13 +358,19 @@ The consequence for OpenTPW: the advance belongs in the frame sweep, **not in th
 62 ms (`FUN_00475360`).
 
 **OpenTPW** eases the guests (`ParkPeople`) and the track cars (`ParkBumperBoats`, `GameClock.PartialTick`) as the
-engine does, and moves the river (`ParkTerrain`), the sea and the flags on frame time. **Its clips are posed at the last
-tick's instant** (`ParkRides.OnUpdate`, `ParkObjects.Sweep( GameClock.Ticks × 31 )`; and `ParkBumperBoats` poses each boat's own clip at `GameClock.Ticks × 31`, `ParkBumperBoats.cs:155`, :436, under a position that is eased): difference 7 below, Q675.
+engine does, and moves the river (`ParkTerrain`), the sea and the flags on frame time. **Since Q675 its clips are
+posed at the frame's own moment too**: `ParkRides.NowMilliseconds`, the last tick's instant and the part of a tick owed,
+truncated to the millisecond and never 31, read by the sweep (`ParkRides.OnUpdate`), each Hot Pot boat's own clip
+(`ParkBumperBoats.Sync`) and a save's moment (`ParkRides.Written`: a clip held or replayed in a frame's sweep is
+stamped past the last tick's instant, and a file's moment before it would load that clip started in the future, read
+through the unsigned subtraction as run past its end). The phase still differs: difference 7 below.
 **Measured** (`q642/`, `PREDICTION.txt`), the stock park, the original's camera 530,250 zoom 70 rotation 180 in both,
 `rectfilm.py` on the Bouncy Dino's head (its loop, role 2): the original capped at 60 frames a second (`original.sh`
 `ORIG_FPS=60`, Wine's `+fps` 59.6 to 60.3, its clock true) changed 58.6 times a second, a picture a drawn frame
-(`orig/O2`); ours at 143.9 frames a second 32.1 times, a picture a tick (`runB2`), and not at all paused. Under
-`play.sh`'s 30 fps cap the original cannot show more than 30.
+(`orig/O2`; 58.74 again in `q675/O`); ours at 143.9 frames a second 32.1 times, a picture a tick, before Q675 (`runB2`;
+`q675/C`, the build with the bug put back), and 133.1 times after, a picture a drawn frame (`q675/F`), and not at all
+paused. The bus's roof driving in changed 150 times in 6 s with 120 gaps under 14 ms (`q675/F`; 0 of 49 in `q675/C`).
+Under `play.sh`'s 30 fps cap the original cannot show more than 30.
 
 ### End of clip is five outcomes, not three
 
@@ -882,10 +888,17 @@ lobby 17); `GameClock` runs one when a whole 31 ms is owed and runs 64 (16). Mat
 and the interpolation; said at `GameClock.ParkCatchUp`. Measured (Q182b, `q182b/run2/`, predicted first): a 3 s
 `SIGSTOP` stall logged `a 3014 ms backlog capped at 2000 ms, 64 ticks run`, and `state` moved 177 to 241.
 
-**7. A drawn frame poses the clips at the last tick's instant in OpenTPW** (`ParkObjects.Sweep( GameClock.Ticks × 31 )`),
-where the engine poses them at the frame's snapshot `DAT_007b496c` as a float frame (`0x00473740`): the engine's clips move
-every drawn frame, OpenTPW's about 32 times a second whatever its frame rate ("What a drawn frame shows between ticks",
-above; Q675 builds it, the sweep at `(GameClock.Ticks + GameClock.PartialTick) × 31`, never past the next tick's instant; the bumper boats' own clip is the second site).
+**7. A drawn frame's moment lies past OpenTPW's last tick, between the engine's last two.** Both pose the clips at the
+frame's own moment (the engine's snapshot `DAT_007b496c`, a float frame at `0x00473740`; OpenTPW's
+`ParkRides.NowMilliseconds`, Q675), so both move a clip every drawn frame. But the engine's tick runs at the start of
+its 31 ms and OpenTPW's at the end (difference 6), so in the ticks' own stamps OpenTPW's moment is a tick further on,
+and its clips run a tick ahead of the Hot Pot boats' place, which is eased back between the last two ticks as the
+engine's is (`ParkBumperBoats.Put`; said at `ParkRides.OnUpdate`). A clip that ends within the part of a tick is
+finished before the next tick in both, so a `WAITANIM` or a queued trigger can pass a tick sooner than when the sweep
+took the last tick's instant, and whether it does hangs on where the frames fall, as in the engine. Seen, not traced:
+two runs of the branch summoned the bus first for the arrivals on `mGameTick` 1264 and for a leaver on 1094
+(`q675/X3`, `F`; the control `q675/C` on 1264, as `q561`'s runs), the rates unchanged
+(`q675/C`, `F`: 3.92 and 3.89 sweeps a second, 31.4 and 31.2 scheduler ticks).
 
 **What the engine's ticks read across one frame (Q182).** The park frame reads the clock `0x785970` twice, back to back,
 above the catch-up loop: `FUN_00473440` at `0x0054f475` takes the snapshot `DAT_007b496c`, and `0x0054f47f` takes the

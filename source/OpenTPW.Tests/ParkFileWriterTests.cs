@@ -569,7 +569,8 @@ public class ParkFileWriterTests
 
 			var written = Read( File.ReadAllBytes( Path.Combine( Jungle, "Things.TPWS" ) ) );
 
-			Assert.AreEqual( shipped.Clock.Reading + (64u * 31u), written.Clock.Reading );
+			// Two seconds are 64 ticks and 16 ms owed toward the next: the file's moment is the frame's, not the last tick's.
+			Assert.AreEqual( shipped.Clock.Reading + (64u * 31u) + 16u, written.Clock.Reading );
 			Assert.AreEqual( 31, written.Objects.Single( placed => placed.ThingId == 13 ).FirstInQueue );
 			Assert.IsNull( written.ThingStates( id => catalogue.TryGet( id, out var item ) ? item.AnimationChannels : 1 ).Problem, "the Jungle Spray's three channels are walked as three" );
 			Assert.IsFalse( Unimplemented.Summary.Any( gap => gap.What == "SAVE_PARK_THINGS_AS_THE_FILE" ) );

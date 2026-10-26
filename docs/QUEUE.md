@@ -59,7 +59,7 @@ the spot), Q543 (the advisor's opening lines),
 Q27 (push scroll), Q631 (WASD and the arrow keys), Q632 (path sounds), Q633 (queue previews), Q634 (the cursor behind the
 preview), Q635 (Ctrl+click), Q419 (the hire screen's picture), Q636 (its skill meter), Q637 (the gadget's aerial), Q525
 (the price's "$"), Q638 (the tag's sparkle), Q639 (the golden ticket's centring), Q640 (the pumps' stutter), Q641 (the
-money's arrows). Last the chosen improvements: Q675 (the clips at the frame's own time, and the pumps' smooth scroll), Q643 (flags easing), Q644 (a legible font),
+money's arrows). Last the chosen improvements: Q675 (the clips at the frame's own time) and Q677 (its second part, the pumps' smooth scroll), Q643 (flags easing), Q644 (a legible font),
 then Q645. **Alexah's decisions (2026-10-21):** note 1 reverses the 2026-10-18 choice (Q700: four bits by default); W, A, S
 and D all move the camera, and the screen shortcuts on A and S move to other free keys, said at the site (Q631). Their notes
 are in `~/.cache/tpw-harnesses/playtest-2026-10-21/notes.md`, with five screenshots.
@@ -74,34 +74,17 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q675. Pose the clips at the frame's own time.** From Q642's decode (`park.md`, "What a drawn frame shows between
-  ticks", difference 7). `ParkRides.OnUpdate` sweeps the players at `GameClock.Ticks × 31`, so every clip (rides, shops,
-  sideshows, the bus, the ferry, the seaplane) steps about 32 times a second; the original's snapshot is the frame's
-  clock and its frame a float (`0x00473740`). Sweep at `(GameClock.Ticks + GameClock.PartialTick) × 31`, never past the
-  next tick's instant (`PartialTick` is below 1), so a script's trigger still judges the channel as the last frame's
-  advance left it (difference 3); take the deviation sentence out of `ParkRides.OnUpdate`. The sampler needs no change:
-  `AnimFrame` is already a float (`AnimTimeControl.cs:122`, passed to `PoseChannel` at `RideAnimations.cs:336`) and
-  rotation keys already ease (`AnimationFile.cs:465`). What stays at the tick rate: the sprite picture step (62 ms,
-  `park.md`), the peeps' 248 ms placement, the track tick and the scripts' ticks. **A second site:**
-  `ParkBumperBoats.cs:155` makes its own `now` from `GameClock.Ticks` and poses the boat's clip once a tick
-  (`boat.Animations.Advance( now )` :436, `boat.Model.Pose` :443); move it to the same instant. Its position is eased by
-  `Clamp( PartialTick, 0, 1 ) - 1` (:458), which is `(Ticks - 1 + p) × 31`, one tick behind the clips' phase. **Take
-  `(Ticks + p) × 31` for the clips**, not the boats' phase: a clip started at the last tick's instant, swept at a time
-  behind it, would wrap `(uint)( AnimTime - StartAnimTime )` (`AnimTimeControl.cs:181`) and read as finished. The
-  engine's own snapshot, taken after its tick loop, lies between its last two ticks; the choice leaves the clips ahead of
-  the boats' position by one tick, and says so at the site. **The tick log is not unchanged:** `sweeps` and `rides` keep
-  their rate, but a clip that ends between `Ticks × 31` and `(Ticks + p) × 31` is finished before the next tick, so a
-  `WAITANIM` or a queued trigger can pass a tick sooner (toward the engine). Compare rates, not per-tick script traces.
-  Second part, an improvement said at `ParkResearchScreen` (Alexah, 2026-10-21: on by default): the pumps drawn as one
-  smooth scroll. From Q640 (`hud.md`, "The pump"; `docs/history/queue-done.md`, Q642): they step as the original's, 12.75
+- [ ] **Q677. The research pumps drawn as one smooth scroll.** Q675's second part, split from it (its first part, the
+  clips at the frame's own time, is done). An improvement said at `ParkResearchScreen` (Alexah, 2026-10-21: on by
+  default): the pumps drawn as one smooth scroll. From Q640 (`hud.md`, "The pump"; `docs/history/queue-done.md`, Q642): they step as the original's, 12.75
   pictures a second at rate 2 in a 2-or-3-pass rhythm, with a 167 ms hold once a loop where `fluid32` repeats `fluid`;
   each run picture is the last moved by -1/31 of the texture in `u` (FileFormats `models.md`), so a pump could be drawn at
   its 16.16 position as one smooth scroll, the turn taken at 31. The drain's and the fill's 32 meshes were not measured.
-  Confirm: `q642/ours.py` on the Bouncy Dino (`runB2`'s patch, 32.1 a second before: predict the frame rate after), the
-  bus driving in filmed the same way, the bumper boats, and `sweeps`/`rides` rates unchanged across the change.
+  Confirm: the pumps filmed with `lib/rectfilm.py` (`q640/ours.py`, Q640's numbers: 12.75 pictures a second at rate
+  2 before), predicting the rate after, beside the original's (`q640/orig/run.sh`).
 - [ ] **Q645. A "faithful" graphics toggle brings the original's look back.** From Alexah's play test, 2026-10-21
   (decisions, last in the order). One option, off by default, that turns every improvement of this batch off at once:
-  four bits a channel (Q616), the research pumps' picture-by-picture steps (Q675's second part; the clips' every-frame posing is the original's own, Q642), flags' jumps (Q643), the letters
+  four bits a channel (Q616), the research pumps' picture-by-picture steps (Q677; the clips' every-frame posing is the original's own, Q642, Q675), flags' jumps (Q643), the letters
   at the original's size (Q644, `UiFonts.ParkScreenLettering` at 1), the ground's 16-pixel tiles (`ground original`, Q618), and whatever Q619 to Q621 leave as a chosen
   difference. Each improvement reads one switch, set at one place (rule 9); say it in the option's own text and at the
   site. Confirm: a frame pair with the toggle on and off at the
@@ -120,6 +103,12 @@ filed the items that cite it.
   white, font 5, with no edge, in the stream's rect; the buy, hire, research, staff-costs screens and the object windows
   take `UI_SetTitle`'s look. Find each screen's opener's call (`grep 'call   0x485d20' lib/testme.objdump`, 32 sites)
   first; a title the original letters otherwise is said so. Confirm: each title's colour beside the original's frame.
+- [ ] **Q678. Why a guest leaves before mGameTick 1100 in Q675's runs. Measure first.** In `q675/A` and `q675/F` (the
+  branch, the stock park, the same script) a leaver summoned the bus at random on `mGameTick` 1089 and 1094 ("a
+  leaver's stay" in the log), where the control `q675/C` (the bug put back), `q675/X3` (the branch) and `q561`'s runs
+  first summoned it for the arrivals on 1264. Find the guest, what they did and why they left, in both builds; the
+  original on the stock park for the first summons' tick (`q561`'s recipe). If it is the clips' ends falling a tick
+  sooner (Q675, `park.md` difference 7), say so; if not, file what it is.
 - [ ] **Q743. The original on Q713's made file: row 248 said of a food stall walked away from.** From Q713 (lane B, which
   cannot run the original). Load `~/.cache/tpw-harnesses/q713/files/outlets-B.TPWS` (Alexah's jungle `New Save`, row 248's
   record fresh, food stall 193 a day of 7 walk-aways to its 7 customers) in the original by `q707/gms-none.dat`'s player

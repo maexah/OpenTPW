@@ -152,7 +152,8 @@ public sealed class ParkBumperBoats : Entity
 			return;
 
 		var cars = state.TrackRides.Cars;
-		var now = (int)(GameClock.Ticks * GameClock.TickSeconds * 1000f);
+		// Each boat's clip at the frame's own moment, as the placed things' (ParkRides.OnUpdate), a tick ahead of the eased place Put stands it at.
+		var now = ParkRides.NowMilliseconds;
 
 		for ( var slot = 0; slot < ParkBumperCars.Pool; ++slot )
 		{

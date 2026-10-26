@@ -10258,6 +10258,42 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   drawn), and the reference install's 800 x 600 mode (a smaller font enlarged more); at the same scale the glyphs are the
   same (`q644/w-crops.png`); our linear enlargement's thinning is fixed by copying a text's pixels whole first
   (`UiText.PrescaleFor`, `ui.md`). 21 bugs put back, 21 caught. The website's words are the Sentinel's.
+- [x] **Q675. Pose the clips at the frame's own time.** From Q642's decode (`park.md`, "What a drawn frame shows between
+  ticks", difference 7). `ParkRides.OnUpdate` sweeps the players at `GameClock.Ticks × 31`, so every clip (rides, shops,
+  sideshows, the bus, the ferry, the seaplane) steps about 32 times a second; the original's snapshot is the frame's
+  clock and its frame a float (`0x00473740`). Sweep at `(GameClock.Ticks + GameClock.PartialTick) × 31`, never past the
+  next tick's instant (`PartialTick` is below 1), so a script's trigger still judges the channel as the last frame's
+  advance left it (difference 3); take the deviation sentence out of `ParkRides.OnUpdate`. The sampler needs no change:
+  `AnimFrame` is already a float (`AnimTimeControl.cs:122`, passed to `PoseChannel` at `RideAnimations.cs:336`) and
+  rotation keys already ease (`AnimationFile.cs:465`). What stays at the tick rate: the sprite picture step (62 ms,
+  `park.md`), the peeps' 248 ms placement, the track tick and the scripts' ticks. **A second site:**
+  `ParkBumperBoats.cs:155` makes its own `now` from `GameClock.Ticks` and poses the boat's clip once a tick
+  (`boat.Animations.Advance( now )` :436, `boat.Model.Pose` :443); move it to the same instant. Its position is eased by
+  `Clamp( PartialTick, 0, 1 ) - 1` (:458), which is `(Ticks - 1 + p) × 31`, one tick behind the clips' phase. **Take
+  `(Ticks + p) × 31` for the clips**, not the boats' phase: a clip started at the last tick's instant, swept at a time
+  behind it, would wrap `(uint)( AnimTime - StartAnimTime )` (`AnimTimeControl.cs:181`) and read as finished. The
+  engine's own snapshot, taken after its tick loop, lies between its last two ticks; the choice leaves the clips ahead of
+  the boats' position by one tick, and says so at the site. **The tick log is not unchanged:** `sweeps` and `rides` keep
+  their rate, but a clip that ends between `Ticks × 31` and `(Ticks + p) × 31` is finished before the next tick, so a
+  `WAITANIM` or a queued trigger can pass a tick sooner (toward the engine). Compare rates, not per-tick script traces.
+  Confirm: `q642/ours.py` on the Bouncy Dino (`runB2`'s patch, 32.1 a second before: predict the frame rate after), the
+  bus driving in filmed the same way, the bumper boats, and `sweeps`/`rides` rates unchanged across the change.
+  The pumps, the item's second part, are Q677.
+  **Done (2026-10-26, the first part):** `ParkRides.NowMilliseconds` is the frame's own moment, the last tick's instant
+  (`LastTickMilliseconds`) and the part of a tick owed, truncated, at most 30 ms; the sweep, each Hot Pot boat's clip
+  and a save's moment read it (a clip held or replayed in a frame's sweep is stamped past the last tick's instant, and a
+  file's moment before it would load that clip started in the future, run past its end through the unsigned
+  subtraction; `AClipStartedBetweenTicksIsNotSavedInTheFuture`). The phase said at `ParkRides.OnUpdate` and in
+  `park.md`, difference 7; `rides` prints `now`, `last tick at` and each channel's `time`. On the final binary
+  (`q675/F`): the Bouncy Dino's head changed 133.1 times a second at 143.9 fps, median gap 6.9 ms (the control with the
+  bug put back, `q675/C`, 32.1; the original at 60 fps 58.74, `q675/O`; `q675/side-by-side.png`); the bus's roof driving
+  in 120 of 150 gaps under 14 ms (C: 0 of 49); every advanced bus and Bouncy Dino `time` and all 48 boat polls off the
+  tick instants (C: all on them); `sweeps` 3.89 a second and the scheduler 31.2 ticks against C's 3.92 and 31.4.
+  A save and its load (`q675/S`): every saved channel started at or before the file's clock, every advanced one at it,
+  and the Bouncy Dino 29.2 frames in both before the save and after the load. `PREDICTION.txt`: 31 made, 30 held, 1
+  missed (C3: a held channel's `time` is no advance). 8 bugs put back, 7 caught;
+  the 30 ms guard survives, reached only if float rounding left a whole tick owed. Two runs of the branch first
+  summoned the bus for a leaver on 1094 and 1089 where the control's came for the arrivals on 1264: Q678.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

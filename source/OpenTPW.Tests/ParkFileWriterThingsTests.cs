@@ -869,9 +869,9 @@ public class ParkFileWriterThingsTests
 			GameClock.Update( paused: false, GameClock.ParkCatchUp );
 		}
 
-		var passed = (uint)((int)(GameClock.Ticks * 31f) - rides.LoadedAt);
+		var passed = (uint)(ParkRides.NowMilliseconds - rides.LoadedAt);
 
-		Assert.AreEqual( 64u * 31u, passed, "four half-second frames are 64 ticks" );
+		Assert.AreEqual( 64u * 31u + 16u, passed, "four half-second frames are 64 ticks and 16 ms owed toward the next, the frame's moment" );
 
 		var things = rides.Written( shipped, state.WrittenObjects( shipped ), ChannelsFor, state.HoardingFor )!;
 		var body = ParkFileWriter.Body( shipped, Carried with { Things = things } );
@@ -904,6 +904,52 @@ public class ParkFileWriterThingsTests
 		var camera = again.Scheduler.Find( 8 )!;
 
 		Assert.AreEqual( 2329f - passed, camera.WaitDeadline!.Value - again.LoadedAt, "the camera's WAIT, saved 2,329 ms ahead" );
+	}
+
+	/// <summary>
+	/// A clip a frame's sweep starts past the last tick's instant (a replay, a hold) goes out started at the file's own
+	/// moment, not after it, and a park loaded from the file finds it on its first frame: started in the future it
+	/// would read through the unsigned subtraction as run past its end (Q675).
+	/// </summary>
+	[TestMethod]
+	public void AClipStartedBetweenTicksIsNotSavedInTheFuture()
+	{
+		Time.Paused = false;
+		Time.StepFrames = 0;
+		GameClock.Rebase();
+		Time.Update( 0f );
+		GameClock.Update( paused: false, GameClock.ParkCatchUp );
+
+		var rides = Bind( shipped );
+		var state = new ParkState( shipped );
+
+		// Half a tick owed and none due: the frame's moment is 15 ms past the last tick's instant.
+		Time.Update( 0.0155f );
+		GameClock.Update( paused: false, GameClock.ParkCatchUp );
+
+		var now = ParkRides.NowMilliseconds;
+
+		Assert.AreEqual( rides.LoadedAt + 15, now );
+
+		var players = rides.Scheduler.Find( rides.ScriptFor( BellyBounce ) )!.Animations!;
+		var role = Models( shipped ).ForScript( BouncyScript )!.Value.Channels[0].Role;
+
+		players.Trigger( role, 0, AnimTimeControl.LoopFlag | AnimTimeControl.StartAtOnceFlag, 1f, now );
+
+		var things = rides.Written( shipped, state.WrittenObjects( shipped ), ChannelsFor, state.HoardingFor )!;
+		var read = new ParkWorld( ParkFileWriter.Body( shipped, Carried with { Things = things } ) );
+		var bouncy = read.ThingStates( ChannelsFor ).ForScript( BouncyScript )!.Value.Channels[0];
+
+		Assert.AreEqual( ShippedClock + 15, read.Clock.Reading, "the file's moment is the frame's" );
+		Assert.AreEqual( (read.Clock.Reading, read.Clock.Reading), (bouncy.StartTime, bouncy.Time), "started and advanced to the file's moment" );
+
+		var again = Bind( read );
+		var resumed = again.Scheduler.Find( again.ScriptFor( BellyBounce ) )!.Animations!;
+
+		resumed.Advance( again.LoadedAt );
+
+		Assert.AreEqual( (role, again.LoadedAt, 0f), (resumed.Channel( 0 )!.AnimID, resumed.Channel( 0 )!.StartAnimTime, resumed.Channel( 0 )!.AnimFrame),
+			"loaded on the clip's first frame" );
 	}
 
 	/// <summary>
