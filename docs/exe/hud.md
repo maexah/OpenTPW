@@ -2091,9 +2091,9 @@ heightfield's cells). Read in order, first that holds:
 | Code | The cell | Painted (`FUN_005f2380`) |
 |---|---|---|
 | 9 | its track record is type 25 (`FUN_00536450`) | always, `0x00f86b48` (0, 23, 0) |
-| 1 to 8 | kind 4, 9 or 10, a track record of type 11, 13, 16, 18 or 25, or kind `0x15`: the first thing of type 3 on the cell's list (its owner's cell `+0x10` for a record cell, then the head `+0x24` and each `+0xa`), by its item's `+0x4ac` (`Info.WhichUIType`): 0 a ride, 1, but **8** where the cell is not kind 4 and its record is one of those types or kind `0x15` (a ride's track cells); 1 a shop, 2; 2 a sideshow, 3; 3 a feature, 4, but 5 with `mFlags` (`+0x32`) `& 0x41` (bit 1 a toilet; `0x40` not named), 6 with `& 0x10` (a security camera), 7 with `& 2` (a staff room). The thing id is kept | below |
+| 1 to 8 | kind 4, 9 or 10, a track record of type 11, 13, 16, 18 or 25, or kind `0x15`: the first thing of type 3 on the cell's list (the list at the cell named by `+0x10`: a plain cell's own, `0x005f21c1`; a record cell's record's, the parent record's only for record types 12 and 17, `FUN_0053ad90`, `0x005f21b6`; then that cell's head `+0x24` and each `+0xa`), by its item's `+0x4ac` (`Info.WhichUIType`): 0 a ride, 1, but **8** where the cell is not kind 4 and its record is one of those types or kind `0x15` (a ride's track cells); 1 a shop, 2; 2 a sideshow, 3; 3 a feature, 4, but 5 with `mFlags` (`+0x32`) `& 0x41` (bit 1 a toilet; `0x40` not named), 6 with `& 0x10` (a security camera), 7 with `& 2` (a staff room). The thing id is kept | below |
 | 10 | `mType` 1, a path | always, `0x00f86b00` (31, 166, 31) |
-| 11 | `mType` 3 or 9, a queue | always, `0x00f86b24` (37, 198, 37) |
+| 11 | `mType` 3, a queue (a kind-9 cell, an entrance, takes the thing branch at `0x005f210e` and its owner's code, 0 where no type-3 thing is found) | always, `0x00f86b24` (37, 198, 37) |
 | 12 | `mFlags & 0x40`, land outside the park | always, `0x00f86b6c` (0, 23, 0) at alpha 128 |
 
 The things' fill: with the metric at 2, codes 1, 2, 3 and 8 take the ramp of `FUN_004e0860( thing, 0 )` (the excitement,
@@ -2111,9 +2111,11 @@ are written the same way, so every colour on this page reads R, G, B. Measured: 
 drawn blue (below), not red.
 
 **The coaster lines** (`FUN_005f2fd0`, with the tracks bit, after the cells): every coaster (the list at `0x00790fe0`,
-`[0x00792214]` of them, `FUN_00438730`), each piece's curve sampled at t = 0, 0.1, ... 1 (`Coaster_BezierPoint`), a line
-between each two samples at picture pixels `15 + x × 480 / ( cells across × 10 )`, `42 + z × 425 / ( cells down × 10 )`
-(`0x0070304c` 10, a cell's world units), coloured by the ramp of the coaster's thing's state of repair.
+`[0x00792214]` of them, `FUN_00438730`), each piece's curve sampled at ten t values, 0 to 0.9 (`Coaster_BezierPoint`; float32
+sums of `-(-0.1f)`, the eleventh is 1.0000001 and ends the loop, `0x005f3198`..`0x005f31c9`, so none is at t = 1), a line
+between each two samples, a piece's 0 joining the previous piece's 0.9 (only the coaster's first sample draws no line), at picture pixels
+`15 + x × s`, `42 + z × s` with the one scale `s = 480 / ( cells across × 10 )` for both (`0x005f300f`..`0x005f301e`, used
+at `0x005f30b8`..`0x005f30ed`; the 425 constant is not read here; `0x0070304c` 10, a cell's world units), coloured by the ramp of the coaster's thing's state of repair.
 
 **The sprite records** (`FUN_005f3940`; 0x30 bytes, made by `FUN_005f4370( sheet, kind, mode, value, scale )`): `+4`/`+8`
 the position in cells, `+0xc`/`+0x10` the screen point (`FUN_005f4180`), `+0x14` the kind, `+0x18` the thing, `+0x1c` the

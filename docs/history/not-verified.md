@@ -27,7 +27,9 @@ later item may have run what an earlier one lists as untested.
   seven chips in `b-close.png`). Not seen: the original's build frame by frame (its film is too small to count chips;
   the chip's light cache, never written, says it was never drawn), the flags `0x4` and `0x8` on a drawn start (no
   Lost Kingdom script passes either; the tests hold them), the Belly Bounce's and the Monkey ride's lists at a first
-  start, the other three themes, and a saved and loaded Fries Shop (Q682).
+  start, the other three themes, and a saved and loaded Fries Shop (Q682). The object window's preview (role 5, flags 1,
+  `0x00468e11`) now hides the Belly Bounce's `shell06` and egg and the Monkey ride's `m_crate` and `m_shards`, as the
+  original's code does; seen in neither game. The role-12 stop and several starts between two poses are not built (Q745).
 - Q657 (the advisor lit as the original): this game on the desk at 1280 x 720 (`q657/run3`, the final build: the lobby's
   `greet` and four park lines, the census line `lit: ambient 0.333 0.333 0.408 strength 2; ... Hardhat: 188 vertices, r
   85/255/153.0`), the original off-screen (`q657/orig/rO`: the lobby's read, the breakpoint on `0x10000`) and Q621's

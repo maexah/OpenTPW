@@ -1932,7 +1932,7 @@ four-byte slot a key from `Shape` at `+0x18`):
 The destructor `FUN_004dd0a0` unstamps what the constructor stamped, by the flag: effect 4 with `0x10`, effect
 7 with `0x80` while script variable 0 reads under 2, and a toilet's 1 or 6. **Who else reads `0x10`:** the
 object window's opener `FUN_00499b40` shows its control `0x1581` only for a thing carrying it (the round
-button at the window's lower right), and the map's grid filler `FUN_005f3940` (`0x005f4053`) and the loose
+button at the window's lower right), and the map's record maker `FUN_005f3940` (`0x005f4053`) and the loose
 code at `0x004bd828` test it, neither read here.
 
 **`mTopLeft`** (`0x004db2da`): the anchor's packed id plus `MapDelta::Rotate( descriptor + 0x4b0, angle + 180 )`,

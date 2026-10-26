@@ -923,6 +923,8 @@ public sealed class LobbyModel : IChannelPosed
 	/// What a change of clip by an unflagged start does to which nodes are hidden, in the order the engine does it
 	/// (<c>FUN_00472f60</c>): the restore's showing (<see cref="ShownAtRest"/>), then the bind's hiding
 	/// (<see cref="HiddenAtBind"/>). Each node with whether it is left shown.
+	/// Dead by CODE (CLAUDE.md rule 3): nothing in the game calls it; <c>RideAnimations.PoseChannel</c> calls <see cref="Rest"/>
+	/// and <see cref="Hide"/> by the start's flags. Only <c>LobbyModelVisibilityTests</c> composes the two through it.
 	/// </summary>
 	internal static IEnumerable<(int Node, bool Visible)> ShownAtChange( AnimationFile outgoing, AnimationFile? incoming,
 		Func<int, bool> transformOnly )

@@ -268,9 +268,9 @@ public sealed partial class ItemDescriptionFile
 
 	/// <summary>
 	/// The particle effect a newly built one gives off - <c>Info.CreateParticleEffect</c>, the descriptor's
-	/// <c>+0x60</c>, which the script loader <c>FUN_005587f0</c> spawns over the footprint as a bought thing's script
+	/// <c>+0x60</c>, which the script loader <c>FUN_005587f0</c> spawns at the middle of the model's box as a bought thing's script
 	/// starts (<c>0x00558e7c</c>). Each category sets its own (rides 79, sideshows 80, shops 81, features 82,
-	/// upgrades 80), and a feature may override it: the Jungle's Round Fountain 81, the vehicles and the gates 0.
+	/// upgrades 80), and a feature may override it: the Jungle's Round Fountain 81, the vehicles, the gates, the lights and the End sign 0.
 	/// </summary>
 	public int CreateParticleEffect => _createParticleEffect ?? _category?.CreateParticleEffect ?? 0;
 

@@ -10,6 +10,8 @@ namespace OpenTPW.Tests;
 /// <summary>
 /// Which meshes a change of clip shows and hides (<see cref="LobbyModel.ShownAtChange"/>), on the shipped clips: the
 /// engine's restore shows again what the outgoing clip tracked or listed, then the incoming clip's hide list is hidden.
+/// <see cref="LobbyModel.ShownAtChange"/> has no caller in the game now (a park thing poses through <c>RideAnimations.PoseChannel</c>, which
+/// calls the restore and the hide separately), so these test a composition of the two the game no longer runs.
 /// These read real game files and are skipped where there is no installation: see <see cref="GameData"/>.
 /// </summary>
 [TestClass]

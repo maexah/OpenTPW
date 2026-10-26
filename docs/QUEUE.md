@@ -1938,6 +1938,20 @@ filed the items that cite it.
   the bit, and whether its load restores it to the node, is not read. Read it (`parkfile.models()` on a file the
   original saved with a bought Fries Shop, `modelnodes.py PID =fries` after its load), then draw a loaded thing's meshes
   by its words. Confirm: the Fries Shop saved and loaded in both games.
+- [ ] **Q745. A start of a role the model lacks does not stop the drawn channel, and several starts between two poses are drawn as the last one. (from the run 11 review of Q658.)**
+  The drawn side (`RideAnimations.PoseChannel`, `PoseOnto`; `StartOn`) sees only `BoundOn( index )` at pose time, so two
+  things the original does at each start are not built. (1) The role-12 stop: `FUN_00472f60` on a role the model lacks
+  restores the outgoing clip at the stop unless its flags carry `0xc` (`0x00473121`..`0x00473139`) and parks the channel
+  at role 12, so the next start finds outgoing role 12 and restores nothing (`0x00472fbb`). Here `StartOn` binds nothing
+  for a null clip and `PoseOnto` skips the idle channel: nothing is put back at the stop, the last pose stays drawn, and
+  the next start rests by its own flags. (2) Several starts between two poses collapse into the last: a script's start
+  (flags 0) followed in one `Advance` by the clip's loop restart (bound `0x9`, only when the clip is shorter than the time
+  since the trigger) loses that start's rest and hide; a start followed by a promotion rests the clip before the first
+  start straight into the promoted one. Both are said at `PoseChannel`. Reach in Lost Kingdom is unproven: park.md:326
+  counts eight shipped references to a lacking role and does not say which; no collapsed case was found.
+  **Find a reach first** (which of the eight references, which model; a clip shorter than a script's wait); where one
+  exists, record the stop as a bind with a null clip so the target rests at the stop by the stop's flags, and queue the
+  binds per channel and replay them in `PoseChannel`. If none is reached, close this item with the reason.
 - [ ] **Q662. Run the original on the made file for the advisor's row 257 (from Q713; beside Q743's file B).** The docs now
   say the original's tick 19040, sample 525 and props (8, 0) are from the unmodified `New Save` (`q707/orig/O2`); the
   original has never loaded `files/outlets-D.TPWS` (sideshow 50's thirty satisfaction days made 40). Load it in the
@@ -2479,13 +2493,14 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   order (Q657 counted the five advisors alone: FileFormats `models.md`, "Normals"). Then light them by it; confirm a
   park thing's shading beside the original's.
 - [ ] **Q683. Start a bought thing's create effect (Q663's build).** The script loader starts the item's
-  `Info.CreateParticleEffect` (`ItemDescriptionFile.CreateParticleEffect`) once as a bought thing's script is made, never
+  `Info.CreateParticleEffect` (`ItemDescriptionFile.CreateParticleEffect`) once as a bought or moved thing's script is made (a move's put-down
+  rebuilds the object through the same constructor: `0x00525417`, `FUN_00528a70`, `FUN_004db090`; `park-engine.md`), never
   at a load or a layout replay: `Particles_Spawn` at the middle of the model's box (`FUN_00466b70`: the model's own
   cells `+0xc0`/`+0xc4` x 10, not the anchor's footprint, Q744's rule) at its base height, then `Particles_SetArea` with
   half the box across and along and a quarter of its height in place of the template's area (`park.md`, "What building
   a thing gives off"). Here `ParkRides.BindNew` counts `CREATE_PARTICLE_EFFECT`; `ParticleSystem` takes no area but the
-  template's. Build both, with the same box for the destroy effect's (Q38). Leave the `+0xd4` sound zone counted
-  (undecoded). Confirm: the Round Fountain bought in both games, `particles` against `original/emitters.py` (effect 81,
+  template's. Build both, with the same box for the destroy effect's (Q38). Leave the `+0xd4` sound zone alone: uncounted,
+  reached exactly with `CREATE_PARTICLE_EFFECT` (`0x00558e81`, the box tests `0x00558ea5` and `0x00558f4d`), and undecoded. Confirm: the Round Fountain bought in both games, `particles` against `original/emitters.py` (effect 81,
   life 30, most 146 at density 500, about 1.5 s) and the build's first frames side by side (`q663/side-by-side.png`).
 - [ ] **Q684. The map's overlay, its six switches and two pickers (Q664's build).** From Q664 (`hud.md`, "The map's
   overlay"; FileFormats `park-map.md`, "The overlay's six sprites"). Build the six layer switches (`0x987`, `0x993`, `0x994`,

@@ -362,6 +362,19 @@ public sealed class RideAnimations
 	/// channel (<c>FUN_00472310</c>; <see cref="NodePoser.Rest"/>), unless the caller passed <c>0x4</c> or <c>0x8</c>, and
 	/// then hides the incoming clip's hide list unless it passed <c>0x8</c> (<c>FUN_00472d70</c>, <c>0x00473117</c>), on a
 	/// channel that was idle too. A clip changed with no start seen is put back and hidden as an unflagged start's.
+	/// <para>
+	/// <b>Deviation, the role-12 stop:</b> a start of a role the model lacks restores the outgoing clip at the stop (unless
+	/// its flags carry <c>0xc</c>) and parks the channel at role 12, so the next start restores nothing
+	/// (<c>0x00473121</c>, <c>0x00472fbb</c>). <see cref="StartOn"/> binds nothing for a null clip and <see cref="PoseOnto"/>
+	/// skips the idle channel, so nothing is put back at the stop, the last pose stays drawn, and the next start rests by
+	/// its own flags.
+	/// </para>
+	/// <para>
+	/// <b>Deviation, collapsed starts:</b> only the last start on a channel between two poses is seen (<see cref="BoundOn"/>),
+	/// where the original applies each start's restore and hide at the start. A trigger and a loop restart in one
+	/// <see cref="Advance"/> lose the trigger's restore and hide; a start and a promotion rest the clip before the first
+	/// start straight into the promoted one. No Lost Kingdom case is known.
+	/// </para>
 	/// </summary>
 	internal static void PoseChannel( IChannelPosed target, ref Posed posed, AnimationFile clip, float frame, Bind bind = default )
 	{

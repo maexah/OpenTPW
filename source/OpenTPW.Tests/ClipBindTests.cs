@@ -181,4 +181,39 @@ public class ClipBindTests
 		players.Advance( 4000 );
 		Assert.AreEqual( new RideAnimations.Bind( 4, AnimTimeControl.LoopFlag | AnimTimeControl.KeepShownFlag ), players.BoundOn( 0 ), "looped" );
 	}
+
+	/// <summary>
+	/// Every channel is posed by its own start (<see cref="RideAnimations.PoseOnto"/>): the Jungle Spray's three lanes, each
+	/// started with other flags, hide and put back by their own and not by channel 0's, and a second start on one lane
+	/// is seen by that lane alone.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> <c>BoundOn( 0 )</c> for every channel in <c>PoseOnto</c> (lane 1 would hide <c>m2</c>, and its restart would go unseen).</remarks>
+	[TestMethod]
+	public void EachLanePosesByItsOwnStart()
+	{
+		var data = GameData.Required();
+		var players = RideAnimations.Load( "levels/jungle/sideshow/junspray", "junspray", data, 3 );
+		var first = players.Clip( 5, 0 )!;
+		var second = players.Clip( 5, 1 )!;
+
+		Assert.AreEqual( 3, players.ChannelCount );
+		Assert.IsNotNull( first, "the Spray's first clip" );
+		Assert.IsNotNull( second, "the Spray's second clip" );
+
+		var calls = new Calls( new() { [first] = "m1", [second] = "m2" } );
+		var posed = new RideAnimations.Posed[3];
+
+		players.Trigger( 5, 0, 0, 1f, 0, 0 );
+		players.Trigger( 5, 1, AnimTimeControl.KeepShownFlag, 1f, 0, 1 );
+		players.Trigger( 5, 0, AnimTimeControl.KeepPoseFlag, 1f, 0, 2 );
+		players.PoseOnto( calls, posed );
+		CollectionAssert.AreEqual( new[] { "hide m1", "pose m1", "pose m2", "hide m1", "pose m1" }, calls.Take(), "three lanes, three starts" );
+
+		players.PoseOnto( calls, posed );
+		CollectionAssert.AreEqual( new[] { "pose m1", "pose m2", "pose m1" }, calls.Take(), "no new start" );
+
+		players.Trigger( 5, 0, AnimTimeControl.StartAtOnceFlag, 1f, 0, 1 );
+		players.PoseOnto( calls, posed );
+		CollectionAssert.AreEqual( new[] { "pose m1", "rest m2 m1", "hide m1", "pose m1", "pose m1" }, calls.Take(), "lane 1 started again" );
+	}
 }

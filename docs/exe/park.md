@@ -1240,18 +1240,24 @@ Q663. The yellow and green sparkles a bought thing rises among are its item's `I
 The place uses the model's own cells, `+0xc0`/`+0xc4` (the rule Q744 names for the build marks), never the anchor's
 footprint. **Gaps the decode leaves:** an item with no `.RSE` falls back to `Data\TestScript\test.rse`
 (`0x004dd031`), which the game does not ship; whether the loader then makes a script (and the effect) was not read.
-`SPAWNCHILD`'s two calls of the loader (`0x00555123`, `0x0055524d`) were not read for their thing word.
+`SPAWNCHILD`'s two calls of the loader (`0x00555123`, `0x0055524d`) both pass a third argument of 0 (`push eax` after `xor eax,eax`, `0x005550e6`, `0x00555210`) and a thing word of 0 (a slot pushed at `0x00555115`, `0x0055523f`, turned into the word by `0x00409cd0`), which the loader stores at `+0xac` (`0x00558d2e`) and tests at `0x00558e2b`: a child script never starts the effect.
 
 **Measured in the original** (`q663/orig/a`, `late30.TPWS`, a Round Fountain bought and placed by a click, predicted
 first). One emitter started on the tick after the click: effect 81 (`Create3`, the fountain's own value) at (495, 0,
 355), life 30, rates (1, 1, 1, 0), most 146 at density 500 (`original/emitters.py`); the fountain's box read
 (48,34)..(50,36), middle (495, 355), base height nought (`original/modelboxes.py`). `brk.sh` on `Particles_Spawn` named
 the caller `0x00558f2a`. The emitter was gone about 1.5 s later, the build still rising (`orig-build-strip.png`: the
-sparkles in the first two frames, 0.4 s apart). **A load starts none:** two earlier loads watched from before their
-click (`q703d/orig/a-emit.log`, `q703d/fs/g-emit.log`) name no effect 79 to 82.
+sparkles in the first two frames, 0.4 s apart). **A load starts none:** the loader is reached at a
+load, for the gates (`0x00515be1`) and the lights (`0x00515c94`), which the park's init `FUN_005156a0` builds through
+the constructor `0x004db090` with a third argument of 0, and starts nothing because their items declare effect 0
+(`0x00558e81`); the rest of a park's things come back through the save-state reader, which does not reach it. Two loads
+watched from before their click (`q703d/orig/a-emit.log`, `q703d/fs/g-emit.log`) name no effect 79 to 82; their
+sampling is 0.75 s against a life of 1.2 to 1.6 s, so they are a weak check beside the code. **A move starts it again:**
+the put-down after a move builds the object afresh through the same constructor (`0x00525417`, `FUN_00528a70`;
+`park-engine.md`).
 
 **OpenTPW** reads the value (`ItemDescriptionFile.CreateParticleEffect`, the item's own over its category's) and counts
-it where a bought thing's script starts (`ParkRides.BindNew`, `CREATE_PARTICLE_EFFECT`, with a log line naming the
+it where a bought or moved thing's script starts (`ParkRides.BindNew`, `CREATE_PARTICLE_EFFECT`, with a log line naming the
 effect); nothing is spawned. The load path does not reach it. Building it is Q683.
 
 ### `COAST` — the script-to-ride interface, and it is small
@@ -2729,7 +2735,7 @@ What the binary invalidates:
 
 **Bare-only-M models outside `levels/`: zero**, so the bare-file probe cannot touch the lobby. But **91 models ship more than one numbered M clip**, and **8 of them are lobby models** — `*_gate` with 3 and `*_isle` with 2, in all four themes — plus the advisor with 15. `MeshAnimator` cycles every clip in turn and `MeshRotator` the first two (`ClipsUsed = 2`), but neither loops a gate: `LobbyGate` poses M1 once as the park-entry flight swings onto it and M2 when Escape cancels the flight, each over the span it declares (`lobby.md`, "Escape cancels the fly-in, and the gate is the flight's"). **So a channel must be something a park model opts into, leaving lobby playback exactly as it is.**
 
-Known divergences still open, both in lobby playback, which a park thing does not use: `MeshAnimator` and `MeshRotator` keep private clocks, and play `FirstFrame..LastFrame` (`MeshRotator` only as far as `MotionEnd`) where the engine plays **0 -> declared span** (164 clips disagree). For a park thing the per-clip hide list is applied only at a change of clip (Q622), not at a start on an idle channel (Q658), and `PoseAsBuilt` hand-rolls the build's end.
+Known divergences still open, both in lobby playback, which a park thing does not use: `MeshAnimator` and `MeshRotator` keep private clocks, and play `FirstFrame..LastFrame` (`MeshRotator` only as far as `MotionEnd`) where the engine plays **0 -> declared span** (164 clips disagree). For a park thing `PoseAsBuilt` hand-rolls the build's end.
 
 `AnimationFile.VisibilityTrack` already matches the engine's visibility rule exactly. `AnimationFile.RotationTrack.Ease` obeys the easing table. The per-clip hide list is applied to the drawn model at every start by the start's flags, an idle channel's included (`RideAnimations.PoseChannel`, Q622, Q658).
 
