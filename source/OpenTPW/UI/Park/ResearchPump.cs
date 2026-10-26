@@ -21,7 +21,7 @@ namespace OpenTPW.UI;
 /// little every drawn frame by the speed it has then (<see cref="Advance"/>), so a change of rate bends it and does not
 /// step it (<see cref="Shift"/>). So a loop takes 31 frames of travel where the original's takes 32 and the fraction
 /// lost at its turn: at rate 2, 2.35 s against 2.43. The drain and the fill are stepped as the original's: their meshes
-/// are two quads whose edge moves, not a scroll.
+/// are two quads whose edge moves, not a scroll. Under <c>graphics faithful</c> the run is stepped too (<see cref="Smooth"/>).
 /// </para>
 /// </summary>
 internal sealed class ResearchPump
@@ -70,8 +70,17 @@ internal sealed class ResearchPump
 	/// </summary>
 	internal float Scroll { get; private set; }
 
-	/// <summary>The part drawn: the run's first, <c>fluid</c>, while running (moved by <see cref="Shift"/>); else <see cref="Frame"/>.</summary>
-	internal int DrawnPart => State == PumpState.Running ? 0 : Frame;
+	/// <summary>
+	/// Whether the run is drawn as one scroll, OpenTPW's improvement; false under <see cref="GameOptions.Faithful"/>, when every
+	/// part is drawn as the original's, picture by picture, and <see cref="Scroll"/> is kept but not drawn.
+	/// </summary>
+	internal bool Smooth { get; init; } = !GameOptions.Current.Faithful;
+
+	/// <summary>
+	/// The part drawn: while running smoothly, the run's first, <c>fluid</c> (moved by <see cref="Shift"/>); else
+	/// <see cref="Frame"/>.
+	/// </summary>
+	internal int DrawnPart => Smooth && State == PumpState.Running ? 0 : Frame;
 
 	/// <summary>
 	/// <c>ResearchPump_SetRate</c>: a rate of nought turns a running or starting pump to stopping at <c>0x20</c>; any other
@@ -164,12 +173,12 @@ internal sealed class ResearchPump
 	}
 
 	/// <summary>
-	/// How far <see cref="DrawnPart"/>'s texture is moved, in repeats of it: while running, <see cref="Scroll"/> over 31, the
-	/// way each of the run's meshes is moved (-1/31); else nought.
+	/// How far <see cref="DrawnPart"/>'s texture is moved, in repeats of it: while running smoothly, <see cref="Scroll"/> over
+	/// 31, the way each of the run's meshes is moved (-1/31); else nought.
 	/// </summary>
 	internal float Shift()
-		=> State == PumpState.Running ? -(Scroll / (1 << Whole)) / RunPictures : 0f;
+		=> Smooth && State == PumpState.Running ? -(Scroll / (1 << Whole)) / RunPictures : 0f;
 
 	public override string ToString() => $"{State.ToString().ToLowerInvariant()} frame 0x{Frame:x2} speed {Speed}"
-		+ (State == PumpState.Running ? $" scroll {Scroll / (float)(1 << Whole):0.000}" : "");
+		+ (State == PumpState.Running ? Smooth ? $" scroll {Scroll / (float)(1 << Whole):0.000}" : " stepped" : "");
 }

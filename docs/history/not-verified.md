@@ -5,6 +5,11 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q677 (the research pumps drawn as one smooth scroll): the rides' pump at rate 2 in one Full Simulation park on the
+  desktop at 143.9 fps, filmed three times on the final build; not the other four kinds running, other rates, a low frame
+  rate, a drag that changes a rate mid-run, nor the start and the stop (stepped as the original's, not filmed here). Full
+  Simulation is the only mode with the screen. Since run 10's fix group I the drawn scroll advances each frame by the
+  passes elapsed (`ResearchPump.Advance`), so a rate change bends it; that, too, is tested, not filmed.
 - Q675 (the clips posed at the frame's own moment): the stock park on the desktop at 143.9 fps, the Bouncy Dino, the
   bus driving in and a Hot Pot's four boats in a go; not at a low frame rate, where a frame spans several ticks, nor
   the ferry or the seaplane (Lost Kingdom's stock park draws neither), nor any other theme; one save and load, paused,

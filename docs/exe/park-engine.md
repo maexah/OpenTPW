@@ -4449,7 +4449,7 @@ against 1.79 and the grass 3.64 against 1.74 (`lib/sharp.py`; `q618/side-by-side
 load instead, it changes nothing: the cache made at the first entry is kept (`q618/PREDICTION.txt`, P2). **OpenTPW
 draws the size asked** (`Level.TileSizeFor`; 32 at the shipped medium and high, which the original is inferred to have drawn on the machines of
 its day (no such machine measured), Alexah's choice of 2026-10-24), a deviation from the original as it runs on today's machines; `save/opentpw.cfg`'s
-`ground original` takes the 16. At 32 the two games read alike at the gate (the path 3.20 here against 3.23, the
+`graphics faithful` takes the 16 (Q645). At 32 the two games read alike at the gate (the path 3.20 here against 3.23, the
 grass 3.72 against 3.64), and every 32-pixel tile of the four parks and the stock park's 78 path tiles equal the
 original's code (`ProceduralGroundTests`).
 

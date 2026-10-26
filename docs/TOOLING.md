@@ -687,11 +687,16 @@ after its poller starts**, so a key meant inside either line cannot be sent afte
   **A sea's colour is the eight phases' mean, P = 1 + k 4π/8, k 0 to 7, in both games** (Q700, `q700/ours.py`,
   `q700/orig/run.sh`): the words are drawn afresh each run, so a k0 frame differs between two runs drawing the same
   pixels (main twice 4.4; main and the branch at TEXTURE32 1, 1.8), while the eight's mean holds to under 1 a channel.
-- **This game at the original's four bits a channel** (Q616; eight is the default): `gamefolder.make( DEST, {} )`, then
-  append `textures original` to `DEST/save/opentpw.cfg`, and hand DEST to `parkrun.py` as `GAME_FOLDER`; the run's log
-  says "opentpw.cfg's "textures original" and med.sam's TEXTURE32 0, so the game's art is cut to four bits a channel".
+- **This game at the original's look: four bits a channel, 16-pixel tiles, stepped pumps, jumping flags, letters at 1** (Q616,
+  Q645; the improvements are the default): `gamefolder.make( DEST, {} )`, then append `graphics faithful` to
+  `DEST/save/opentpw.cfg`, and hand DEST to `parkrun.py` as `GAME_FOLDER`; the run's log says "Graphics: opentpw.cfg's
+  "graphics faithful"" and ""graphics faithful" and med.sam's TEXTURE32 0, so the game's art is cut to four bits a channel".
   With `data/med.sam` changed too (`gamefolder.py DEST data/med.sam "GraphicalOptions.TEXTURE32<six tabs>0" "...1"`) it
   keeps eight, as the original does (`q616/run3`). `q700/ours.py` and `q700/measure.py` shoot and measure cameras A and B.
+  `q645/ours.py <out> <bin> <ROUND> faithful|improved` makes the folder and shoots the gate pair, the flags' turn and the
+  buy screen's text census in one run; `q645/pumps.py` films the pump in it. Under the console's `pause` the faithful
+  flags take a `weather N` change on the next drawn frame (their factor is 1 whatever `Time.Delta`): measure the turn
+  against the angle before the call, not the gap left after it.
 - **The gates' flags at one wind and one phase** (Q491): `thingpoke.py %PID% S 15 7:0x5c:f=W` holds the weather's
   `mWindDir` (every flag turns with it; 0 streams them to +x), `memhold.py %PID% S 0x00871ed0:f=P 0x00871f60:f=P` both
   phases. **A read under a held phase can be a frame late**: the frame steps the phase 0.4 before `memhold.py` writes

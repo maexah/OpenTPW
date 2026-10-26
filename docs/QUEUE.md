@@ -74,13 +74,6 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q645. A "faithful" graphics toggle brings the original's look back.** From Alexah's play test, 2026-10-21
-  (decisions, last in the order). One option, off by default, that turns every improvement of this batch off at once:
-  four bits a channel (Q616), the research pumps' picture-by-picture steps (Q677; the clips' every-frame posing is the original's own, Q642, Q675), flags' jumps (Q643), the letters
-  at the original's size (Q644, `UiFonts.ParkScreenLettering` at 1), the ground's 16-pixel tiles (`ground original`, Q618), and whatever Q619 to Q621 leave as a chosen
-  difference. Each improvement reads one switch, set at one place (rule 9); say it in the option's own text and at the
-  site. Confirm: a frame pair with the toggle on and off at the
-  gate, the on frame matching the original's.
 - [ ] **Q674. Build the money's trend arrow `0x31`, and `0x32`'s sign.** From Q641's decode (`hud.md`, "The money's
   trend arrow"). Add `0x31` as a child of the balance `0x2f`, mesh `cashtrend`, never taking the pointer. Its frame comes
   from the newest closed month of `ParkState.MonthCashIn` and `MonthCosts`: 0 (green) at or above, 1 (red) below, the
@@ -1670,8 +1663,8 @@ filed the items that cite it.
   along the sun) and 0x67/255 darkening on opaque texels. Measure the order too: ours draws every shadow after every
   body, the original's 0x80 walk adds each straight after its own body (said at `BuildShadows`).
 - [ ] **Q717. The cost of cutting every texture to four bits.** From the run 4 review (Q700 4); since Q616 the cost of
-  the option `textures original`, not of the default: a park loads 0.76 s slower with the cut, and each switch into
-  and out of first person packs the guest atlas again (about 0.45 s by the load figure, not measured). Measure a camcorder switch with and without the cut (`textures original` in a private game
+  the option `graphics faithful` (Q645), not of the default: a park loads 0.76 s slower with the cut, and each switch into
+  and out of first person packs the guest atlas again (about 0.45 s by the load figure, not measured). Measure a camcorder switch with and without the cut (`graphics faithful` in a private game
   folder's `save/opentpw.cfg`); if it is felt, make `CutLevels` cheaper (a 256-entry table, one row loop a level). Said at
   `Texture.LevelsFor` and in `docs/exe/textures.md`, "What the cut costs".
 - [ ] **Q718. A first-person right click let go inside one frame reaches the park after first person is left.** From the

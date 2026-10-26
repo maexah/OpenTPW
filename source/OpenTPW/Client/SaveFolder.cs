@@ -27,12 +27,9 @@ internal static class SaveFolder
 {
 	private const string ConfigName = "Config.tcf";
 	private const string DisplayName = "opentpw.cfg";
-	private const string TexturesName = "textures";
-	private const string TexturesFull = "full";
-	private const string TexturesOriginal = "original";
-	private const string GroundName = "ground";
-	private const string GroundAsked = "asked";
-	private const string GroundOriginal = "original";
+	private const string GraphicsName = "graphics";
+	private const string GraphicsImproved = "improved";
+	private const string GraphicsFaithful = "faithful";
 	private const string UsersFolder = "users";
 	private const string OnlineFolder = "online";
 	private const string PlayerFileName = "gms.dat";
@@ -119,8 +116,8 @@ internal static class SaveFolder
 	/// <summary>
 	/// Reads save\opentpw.cfg: the settings that are OpenTPW's own, because the original's files have
 	/// nowhere to put them. How the game fills the screen, and the mode full screen asks the display
-	/// for - see <see cref="Display"/>; the texture depth (<see cref="GameOptions.OriginalTextureDepth"/>), read
-	/// before the first texture is made; and the ground's tile size (<see cref="GameOptions.OriginalGroundTiles"/>).
+	/// for - see <see cref="Display"/>; and the faithful graphics toggle (<see cref="GameOptions.Faithful"/>), read
+	/// before the first texture is made, and set nowhere else.
 	///
 	/// <para>
 	/// It is a plain text file of its own rather than more fields in Config.tcf, so that the original's
@@ -163,14 +160,9 @@ internal static class SaveFolder
 						GameOptions.Current.FullScreenSize = new VideoMode( width, height, refresh );
 						break;
 
-					// "original" draws the game's art at the original's depth; anything else keeps eight bits.
-					case TexturesName:
-						GameOptions.Current.OriginalTextureDepth = parts[1].Equals( TexturesOriginal, StringComparison.OrdinalIgnoreCase );
-						break;
-
-					// "original" draws the ground's tiles at the original's 16 pixels; anything else draws the size asked.
-					case GroundName:
-						GameOptions.Current.OriginalGroundTiles = parts[1].Equals( GroundOriginal, StringComparison.OrdinalIgnoreCase );
+					// "faithful" turns every improvement to the original's look off; anything else keeps them.
+					case GraphicsName:
+						GameOptions.Current.Faithful = parts[1].Equals( GraphicsFaithful, StringComparison.OrdinalIgnoreCase );
 						break;
 
 					// What a kind of load cost when it was last measured - see LoadStepCounts. Read before
@@ -212,12 +204,13 @@ internal static class SaveFolder
 				.AppendLine( "# options it knows about; these are the ones it has no room for." )
 				.AppendLine( $"display {mode}" )
 				.AppendLine( $"fullscreen {options.FullScreenSize.Width} {options.FullScreenSize.Height} {options.FullScreenSize.RefreshRate}" )
-				.AppendLine( "# textures full: the game's art keeps eight bits a channel, OpenTPW's improvement. textures original:" )
-				.AppendLine( "# cut to four bits a channel, as the original draws it, unless the detail file says TEXTURE32 1." )
-				.AppendLine( $"{TexturesName} {(options.OriginalTextureDepth ? TexturesOriginal : TexturesFull)}" )
-				.AppendLine( "# ground asked: the ground's tiles are the size the detail file asks, 32 pixels at medium and high, as" )
-				.AppendLine( "# the original drew them on the machines of its day. ground original: 16 pixels, as it draws them today." )
-				.AppendLine( $"{GroundName} {(options.OriginalGroundTiles ? GroundOriginal : GroundAsked)}" );
+				.AppendLine( "# graphics improved: OpenTPW's improvements to the original's look, the default: the art at eight bits a" )
+				.AppendLine( "# channel, the ground's tiles at the 32 pixels the detail file asks, the research pumps scrolled smoothly," )
+				.AppendLine( "# the flags easing between winds, and the buy and hire screens lettered larger. graphics faithful: every one" )
+				.AppendLine( "# off, as the original draws them today: four bits a channel unless the detail file says TEXTURE32 1, 16-pixel" )
+				.AppendLine( "# tiles, the pumps stepped picture by picture, the flags jumping, the letters at the original's size." )
+				.AppendLine( "# Read as the game starts." )
+				.AppendLine( $"{GraphicsName} {(options.Faithful ? GraphicsFaithful : GraphicsImproved)}" );
 
 			// How many steps each kind of load took last time, which is how the loading bar knows how far
 			// to fill without being told - see LoadStepCounts. These are measurements rather than choices,

@@ -87,10 +87,17 @@ public sealed class ParkFlags : ModelEntity
 	/// <b>A deviation, at Alexah's word (Q643).</b> The original's flags take <c>mWindDir</c> straight every
 	/// frame (<c>FUN_0053c3f0</c> through <c>FUN_00519590</c>), so they jump by up to 45 degrees at each change of
 	/// weather (<c>FUN_00512f00</c>). This eases the turn, on by default; the rate is chosen, not measured, as the
-	/// original has none.
+	/// original has none. <c>graphics faithful</c> takes the jump back (<see cref="TurnFactor"/>).
 	/// </para>
 	/// </summary>
 	internal const float TurnRate = 1.5f;
+
+	/// <summary>
+	/// The share of the turn taken this frame: the whole of it under <paramref name="faithful"/>
+	/// (<see cref="GameOptions.Faithful"/>), as the original's flags take the wind straight; else <see cref="Time.SmoothingFactor"/>
+	/// of <see cref="TurnRate"/>.
+	/// </summary>
+	internal static float TurnFactor( bool faithful ) => faithful ? 1f : Time.SmoothingFactor( TurnRate );
 
 	/// <summary>The wind last seen in the weather, to log each change once.</summary>
 	private float? _seen;
@@ -280,7 +287,7 @@ public sealed class ParkFlags : ModelEntity
 			_seen = wind;
 		}
 
-		Wind = WindAfter( _shown, wind, Time.SmoothingFactor( TurnRate ), GameClock.Paused );
+		Wind = WindAfter( _shown, wind, TurnFactor( GameOptions.Current.Faithful ), GameClock.Paused );
 		_shown = wind is null ? null : Wind;
 
 		Fill();

@@ -115,7 +115,7 @@ public class TextureCutTests
 		Assert.IsTrue( Texture.KeepsEightBitsUnder( originalDepth: false, texture32: true ) );
 		Assert.IsFalse( Texture.KeepsEightBitsUnder( originalDepth: true, texture32: false ), "the original's own, shipped" );
 		Assert.IsTrue( Texture.KeepsEightBitsUnder( originalDepth: true, texture32: true ) );
-		Assert.IsFalse( new GameOptions().OriginalTextureDepth, "OpenTPW's default" );
+		Assert.IsFalse( new GameOptions().Faithful, "OpenTPW's default" );
 	}
 
 	/// <summary>
@@ -132,8 +132,8 @@ public class TextureCutTests
 
 		bool Texture32( bool value ) { ++read; return value; }
 
-		var full = new GameOptions { OriginalTextureDepth = false };
-		var original = new GameOptions { OriginalTextureDepth = true };
+		var full = new GameOptions { Faithful = false };
+		var original = new GameOptions { Faithful = true };
 
 		try
 		{
@@ -150,62 +150,6 @@ public class TextureCutTests
 			Assert.AreEqual( 2, read );
 		}
 		finally { Texture.KeepsEightBits = was; }
-	}
-
-	/// <summary>
-	/// opentpw.cfg's <c>textures</c> line: <c>original</c> asks for the original's depth, <c>full</c> or none keeps
-	/// eight, and the file written says which, read back the same.
-	/// </summary>
-	/// <remarks><b>Mutation:</b> the line not read, read as any value, or written as the other word, fails a step.</remarks>
-	[TestMethod]
-	public void TheTextureDepthIsKeptInOpenTpwCfg()
-	{
-		var folder = Path.Combine( Path.GetTempPath(), $"opentpw-textures-{System.Guid.NewGuid():N}" );
-		Directory.CreateDirectory( folder );
-		var was = GameOptions.Current;
-		var wasSaves = SaveFileSystem;
-
-		try
-		{
-			Log = new();
-			SaveFileSystem = new BaseFileSystem( folder );
-			var file = Path.Combine( folder, "opentpw.cfg" );
-
-			GameOptions.Current = new();
-			File.WriteAllText( file, "display windowed\ntextures original\n" );
-			SaveFolder.LoadDisplay();
-			Assert.IsTrue( GameOptions.Current.OriginalTextureDepth, "original" );
-
-			File.WriteAllText( file, "textures full\n" );
-			SaveFolder.LoadDisplay();
-			Assert.IsFalse( GameOptions.Current.OriginalTextureDepth, "full" );
-
-			// Only the word "original" asks for it: any other value keeps eight.
-			foreach ( var other in new[] { "8", "4", "yes", "originals" } )
-			{
-				GameOptions.Current.OriginalTextureDepth = true;
-				File.WriteAllText( file, $"textures {other}\n" );
-				SaveFolder.LoadDisplay();
-				Assert.IsFalse( GameOptions.Current.OriginalTextureDepth, $"\"{other}\" is not \"original\"" );
-			}
-
-			GameOptions.Current = new() { OriginalTextureDepth = true };
-			SaveFolder.SaveDisplay();
-			StringAssert.Contains( File.ReadAllText( file ), "\ntextures original\n" );
-			GameOptions.Current = new();
-			SaveFolder.LoadDisplay();
-			Assert.IsTrue( GameOptions.Current.OriginalTextureDepth, "written original, read back" );
-
-			GameOptions.Current = new();
-			SaveFolder.SaveDisplay();
-			StringAssert.Contains( File.ReadAllText( file ), "\ntextures full\n" );
-		}
-		finally
-		{
-			GameOptions.Current = was;
-			SaveFileSystem = wasSaves;
-			Directory.Delete( folder, true );
-		}
 	}
 
 	/// <summary>

@@ -30,8 +30,8 @@ namespace OpenTPW;
 /// belong to the player, in their gms.dat (<see cref="PlayerOptions"/>), with the movie volume again - the
 /// player's copy wins when they are picked. Every gms.dat written takes the options as they stand.
 /// <para>
-/// The four that are OpenTPW's own - <see cref="DisplayMode"/>, <see cref="FullScreenSize"/>,
-/// <see cref="OriginalTextureDepth"/> and <see cref="OriginalGroundTiles"/> - go in a third file, save\opentpw.cfg (<see cref="SaveFolder.LoadDisplay"/>), rather than into fields the
+/// The three that are OpenTPW's own - <see cref="DisplayMode"/>, <see cref="FullScreenSize"/> and
+/// <see cref="Faithful"/> - go in a third file, save\opentpw.cfg (<see cref="SaveFolder.LoadDisplay"/>), rather than into fields the
 /// original's own file has no room for. That way Config.tcf stays a file the original can still read.
 /// </para>
 /// </para>
@@ -67,18 +67,15 @@ internal sealed class GameOptions
 	public VideoMode FullScreenSize { get; set; }
 
 	/// <summary>
-	/// The original's texture depth: the game's art cut to four bits a channel unless the detail file says
-	/// <c>TEXTURE32</c> 1, as the shipped game draws it (<see cref="Texture.KeepsEightBitsUnder"/>). <b>OpenTPW's own</b>,
-	/// off by default: OpenTPW keeps eight bits a channel whatever the detail file says, a deviation from the original.
+	/// The faithful graphics toggle (Q645): every improvement OpenTPW makes to the original's look turned off at once, so the
+	/// game is drawn as the shipped original draws it today. <b>OpenTPW's own</b>, off by default; opentpw.cfg's
+	/// <c>graphics faithful</c> sets it, read once as the game starts (<see cref="SaveFolder.LoadDisplay"/>), and each
+	/// improvement reads it: the textures' eight bits a channel (<see cref="Texture.KeepsEightBitsUnder"/>), the ground's
+	/// 32-pixel tiles (<see cref="Level.TileSizeFor"/>), the research pumps' smooth scroll (<see cref="UI.ResearchPump.Smooth"/>),
+	/// the flags' eased turn (<see cref="ParkFlags.TurnFactor"/>) and the buy and hire screens' larger letters
+	/// (<see cref="UI.UiFonts.ParkScreenLettering"/>).
 	/// </summary>
-	public bool OriginalTextureDepth { get; set; }
-
-	/// <summary>
-	/// The original's ground tiles: 16 pixels whatever size the detail file asks (none at PROCEDURALTEXTURING 0), as the original draws on a machine with over
-	/// 4 GB (<see cref="Level.TileSizeFor"/>). <b>OpenTPW's own</b>, off by default: OpenTPW draws the tile size asked,
-	/// 32 for the shipped medium and high, as the original drew on the machines of its day, a deviation from the original.
-	/// </summary>
-	public bool OriginalGroundTiles { get; set; }
+	public bool Faithful { get; set; }
 
 	/// <summary>+0x08: low, medium or high, as 0, 1 or 2.</summary>
 	public int GraphicsQuality { get; set; } = 1;

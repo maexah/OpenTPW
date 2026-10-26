@@ -10320,6 +10320,25 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   as `run-main`) first summoned it on 1264. Runs of one build differ from their first staff tick (`q675/X2` against `X3`,
   both `ec2e6638`: "Staff: 27 sounds" against "Staff: 30 sounds" at 756), and which guest leaves first follows. Why two
   runs of one build part at the first staff wander is not looked into.
+- [x] **Q645. A "faithful" graphics toggle brings the original's look back.** From Alexah's play test, 2026-10-21
+  (decisions, last in the order). One option, off by default, that turns every improvement of this batch off at once:
+  four bits a channel (Q616), the research pumps' picture-by-picture steps (Q677; the clips' every-frame posing is the original's own, Q642, Q675), flags' jumps (Q643), the letters
+  at the original's size (Q644, `UiFonts.ParkScreenLettering` at 1), the ground's 16-pixel tiles (`ground original`, Q618), and whatever Q619 to Q621 leave as a chosen
+  difference. Each improvement reads one switch, set at one place (rule 9); say it in the option's own text and at the
+  site. Confirm: a frame pair with the toggle on and off at the
+  gate, the on frame matching the original's.
+  **Done (2026-10-26, `alexah/722-faithful-graphics-toggle`):** `graphics faithful` in `save/opentpw.cfg`
+  (`GameOptions.Faithful`, read once at the start by `SaveFolder.LoadDisplay`, the one place it is set; `graphics improved`
+  the default) replaces Q616's `textures original` and Q618's `ground original`, which are read no more. Its readers:
+  `Texture.SetDepthFor`, `Level.ProceduralTileSize`, `ResearchPump.Smooth`, `ParkFlags.TurnFactor` (1: the wind taken
+  each frame) and `UiFonts.ParkScreenLettering` (1); each says so at its site, the file's own text lists them, and the
+  boot log's `Graphics:` line names the mode. Q619 to Q621 left no chosen difference (two are decodes whose builds,
+  Q652 and Q657, are faithful work; Q620 drew the wall as the original's). Gate pair on the final build: the path's
+  sharpness 1.47 faithful, 3.24 default, 1.80 the original's; the path (163.2, 121.2, 51.8), (175.9, 127.1, 71.0),
+  (165.8, 120.7, 50.2) (`q645/side-by-side-gate.png`); the pump 13.16 against 143.93 changes a second; a wind change
+  taken at once against 0.951 left after two sixtieths; the buy screen's 13 texts at x 1 against 1.172 to 1.2
+  (`q645/PREDICTION.txt`: 15 held, 2 missed with causes, 1 void). 4 tests; 12 of 13 bugs put back fail, the 13th
+  (`ParkFlags.OnUpdate` not reading it) needs a device and is held by the run's census.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

@@ -1573,13 +1573,13 @@ public class Level
 			Log.Warning( $"Ground: {DetailFile} would not load, so the ground is composited as at medium - {e.Message}" );
 		}
 
-		var original = GameOptions.Current.OriginalGroundTiles;
+		var original = GameOptions.Current.Faithful;
 		var size = TileSizeFor( ask, original );
 		Log.Info( size == 0
 			? $"Ground: {DetailFile}'s PROCEDURALTEXTURING 0, so every ground cell draws its own texture"
 			: original
-				? $"Ground: opentpw.cfg's \"ground original\", so {size}-pixel tiles, as the original draws on a machine with over 4 GB"
-				: $"Ground: {DetailFile}'s PROCEDURALTEXTURING {ask}, so {size}-pixel tiles, as asked, OpenTPW's default; opentpw.cfg's \"ground original\" takes the original's 16" );
+				? $"Ground: opentpw.cfg's \"graphics faithful\", so {size}-pixel tiles, as the original draws on a machine with over 4 GB"
+				: $"Ground: {DetailFile}'s PROCEDURALTEXTURING {ask}, so {size}-pixel tiles, as asked, OpenTPW's default; opentpw.cfg's \"graphics faithful\" takes the original's 16" );
 		return size;
 	}
 
@@ -1593,7 +1593,7 @@ public class Level
 	/// high.sam say 2). The original then cuts the ask to 16 where a signed test reads <c>dwTotalPhys</c> under 48 MB, as it
 	/// reads any machine over 4 GB (<c>FUN_00572110</c>; docs/exe/park-engine.md, "The tile size"), so on today's machines
 	/// it draws 16 whatever is asked. OpenTPW draws the ask, what the original drew on the machines of its day: a
-	/// deviation from the original as it runs now. <paramref name="original"/> (opentpw.cfg's <c>ground original</c>)
+	/// deviation from the original as it runs now. <paramref name="original"/> (<see cref="GameOptions.Faithful"/>, opentpw.cfg's <c>graphics faithful</c>)
 	/// takes the cut. The original's other cuts (its texture memory; 64 to 32 under 64 MB, <c>0x00572170</c>) are not modelled.
 	/// </summary>
 	internal static int TileSizeFor( int ask, bool original ) => ask switch

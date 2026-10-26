@@ -6,7 +6,7 @@ namespace OpenTPW.Tests;
 
 /// <summary>
 /// The procedural ground's tile size (<see cref="Level.TileSizeFor"/>): the size the detail file asks, as the original
-/// asks it (<c>FUN_00457a90</c>), unless opentpw.cfg's <c>ground original</c> takes the 16 the original cuts it to on any
+/// asks it (<c>FUN_00457a90</c>), unless opentpw.cfg's <c>graphics faithful</c> takes the 16 the original cuts it to on any
 /// machine over 4 GB (docs/exe/park-engine.md, "The tile size").
 /// </summary>
 [TestClass]
@@ -33,7 +33,7 @@ public class GroundTileSizeTests
 
 	/// <summary>
 	/// The shipped detail files, read as a park reads them: low.sam's 0 draws no tiles, med.sam's and high.sam's 2 draw
-	/// 32 by default and 16 under <c>ground original</c>. The option is off by default.
+	/// 32 by default and 16 under <c>graphics faithful</c>. The option is off by default.
 	/// </summary>
 	/// <remarks><b>Mutation:</b> the wrong key read, the file's value ignored, or the option not consulted fails a row.</remarks>
 	[TestMethod]
@@ -45,7 +45,7 @@ public class GroundTileSizeTests
 
 		try
 		{
-			Assert.IsFalse( new GameOptions().OriginalGroundTiles, "OpenTPW's default" );
+			Assert.IsFalse( new GameOptions().Faithful, "OpenTPW's default" );
 
 			int[] Sizes( bool original )
 			{
@@ -53,7 +53,7 @@ public class GroundTileSizeTests
 
 				for ( var quality = 0; quality < 3; ++quality )
 				{
-					GameOptions.Current = new() { GraphicsQuality = quality, OriginalGroundTiles = original };
+					GameOptions.Current = new() { GraphicsQuality = quality, Faithful = original };
 					sizes[quality] = Level.ProceduralTileSize();
 				}
 
@@ -68,7 +68,7 @@ public class GroundTileSizeTests
 
 	/// <summary>
 	/// The park's ground is made at the size <see cref="Level.ProceduralTileSize"/> gives: a level's one ground-making call
-	/// (<see cref="Level.MakeGround"/>) lays its tiles at 32 by default and at 16 under <c>ground original</c>, as
+	/// (<see cref="Level.MakeGround"/>) lays its tiles at 32 by default and at 16 under <c>graphics faithful</c>, as
 	/// <c>GroundTiles.Make</c> logs it. The ground's texture needs a device, so the call may throw once its tiles are laid;
 	/// the log line is read either way.
 	/// </summary>
@@ -90,7 +90,7 @@ public class GroundTileSizeTests
 			foreach ( var (original, pixels) in new[] { (false, 32), (true, 16) } )
 			{
 				lines.Clear();
-				GameOptions.Current = new() { GraphicsQuality = 1, OriginalGroundTiles = original };
+				GameOptions.Current = new() { GraphicsQuality = 1, Faithful = original };
 
 				try { Level.MakeGround( "jungle", null, null, true ); }
 				catch ( System.Exception ) { /* the device-bound part, after the tiles are laid */ }
@@ -104,69 +104,6 @@ public class GroundTileSizeTests
 			Logger.OnLog = wasLog;
 			GameOptions.Current = was;
 			Entity.ApplyDeletions();
-		}
-	}
-
-	/// <summary>
-	/// opentpw.cfg's <c>ground</c> line: <c>original</c> takes the original's 16, <c>asked</c> or anything else the size
-	/// asked, and the file written says which, read back the same.
-	/// </summary>
-	/// <remarks><b>Mutation:</b> the line not read, read as any value, written as the other word, or set by the
-	/// <c>textures</c> line, fails a step.</remarks>
-	[TestMethod]
-	public void TheGroundTilesAreKeptInOpenTpwCfg()
-	{
-		var folder = Path.Combine( Path.GetTempPath(), $"opentpw-ground-{System.Guid.NewGuid():N}" );
-		Directory.CreateDirectory( folder );
-		var was = GameOptions.Current;
-		var wasSaves = SaveFileSystem;
-
-		try
-		{
-			Log = new();
-			SaveFileSystem = new BaseFileSystem( folder );
-			var file = Path.Combine( folder, "opentpw.cfg" );
-
-			GameOptions.Current = new();
-			File.WriteAllText( file, "display windowed\nground original\n" );
-			SaveFolder.LoadDisplay();
-			Assert.IsTrue( GameOptions.Current.OriginalGroundTiles, "original" );
-			Assert.IsFalse( GameOptions.Current.OriginalTextureDepth, "the texture depth is its own line" );
-
-			File.WriteAllText( file, "ground asked\n" );
-			SaveFolder.LoadDisplay();
-			Assert.IsFalse( GameOptions.Current.OriginalGroundTiles, "asked" );
-
-			File.WriteAllText( file, "ground asked\ntextures original\n" );
-			SaveFolder.LoadDisplay();
-			Assert.IsFalse( GameOptions.Current.OriginalGroundTiles, "the texture depth's line leaves the ground alone" );
-			Assert.IsTrue( GameOptions.Current.OriginalTextureDepth );
-
-			foreach ( var other in new[] { "16", "32", "yes", "originals" } )
-			{
-				GameOptions.Current.OriginalGroundTiles = true;
-				File.WriteAllText( file, $"ground {other}\n" );
-				SaveFolder.LoadDisplay();
-				Assert.IsFalse( GameOptions.Current.OriginalGroundTiles, $"\"{other}\" is not \"original\"" );
-			}
-
-			GameOptions.Current = new() { OriginalGroundTiles = true };
-			SaveFolder.SaveDisplay();
-			StringAssert.Contains( File.ReadAllText( file ), "\nground original\n" );
-			StringAssert.Contains( File.ReadAllText( file ), "\ntextures full\n" );
-			GameOptions.Current = new();
-			SaveFolder.LoadDisplay();
-			Assert.IsTrue( GameOptions.Current.OriginalGroundTiles, "written original, read back" );
-
-			GameOptions.Current = new();
-			SaveFolder.SaveDisplay();
-			StringAssert.Contains( File.ReadAllText( file ), "\nground asked\n" );
-		}
-		finally
-		{
-			GameOptions.Current = was;
-			SaveFileSystem = wasSaves;
-			Directory.Delete( folder, true );
 		}
 	}
 }

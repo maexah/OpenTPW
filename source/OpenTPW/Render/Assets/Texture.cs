@@ -394,7 +394,7 @@ public partial class Texture : Asset
 	/// eight whatever the detail file says, where the original keeps eight only for <c>GraphicalOptions.TEXTURE32</c> 1,
 	/// which no shipped detail file sets (all three hold 0), and otherwise runs format 2, A4R4G4B4 (<c>0x0044e1f4</c>;
 	/// <c>textures.md</c>, "The texture cache's surface format"). <paramref name="originalDepth"/>
-	/// (<see cref="GameOptions.OriginalTextureDepth"/>, opentpw.cfg's <c>textures original</c>) takes the original's rule.
+	/// (<see cref="GameOptions.Faithful"/>, opentpw.cfg's <c>graphics faithful</c>) takes the original's rule.
 	/// </summary>
 	internal static bool KeepsEightBitsUnder( bool originalDepth, bool texture32 ) => !originalDepth || texture32;
 
@@ -403,7 +403,7 @@ public partial class Texture : Asset
 	/// file's <c>TEXTURE32</c> read (through <paramref name="texture32"/>) only where the original's depth is asked for.
 	/// </summary>
 	internal static bool SetDepthFor( GameOptions options, Func<bool> texture32 )
-		=> KeepsEightBits = KeepsEightBitsUnder( options.OriginalTextureDepth, options.OriginalTextureDepth && texture32() );
+		=> KeepsEightBits = KeepsEightBitsUnder( options.Faithful, options.Faithful && texture32() );
 
 	/// <summary>Whether this texture's texels are cut to four bits a channel - see <see cref="CutLevels"/>.</summary>
 	public bool Cut => CutsFor( Requested );
@@ -416,7 +416,7 @@ public partial class Texture : Asset
 	/// the texture is cut (<see cref="CutsFor"/>), null where it is kept at eight bits and the device makes the mip maps.
 	/// </summary>
 	/// <remarks>
-	/// Cutting costs time, under <c>textures original</c> only. The park loads about 0.76 s slower with every texture cut than with eight bits (the
+	/// Cutting costs time, under <c>graphics faithful</c> only. The park loads about 0.76 s slower with every texture cut than with eight bits (the
 	/// totals over four runs, <c>q700/*/run.log</c>: 3.4 s against 4.2 s), the guest sprites 273 -> 729 ms, the ground
 	/// 560 -> 691, the objects 717 -> 785, the fixed items 172 -> 206; the guest atlas is packed again, cut again, on
 	/// every switch into and out of first person (<c>ParkGuestSprites.UseFirstPersonPictures</c>), about 0.45 s by the

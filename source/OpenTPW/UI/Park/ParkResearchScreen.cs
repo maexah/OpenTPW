@@ -37,7 +37,7 @@ namespace OpenTPW.UI;
 /// <b>here they move on <see cref="Time.Delta"/> at <see cref="PassesPerSecond"/></b>, the passes measured in the
 /// original under its 30 frames a second, so a pump runs as fast at any frame rate (a deviation, <c>docs/exe/hud.md</c>,
 /// "The pump"). A running pump is drawn as one smooth scroll, moved between passes too, where the original steps it
-/// picture by picture (a deviation, on by default; <see cref="ResearchPump"/>).
+/// picture by picture (a deviation, on by default, stepped under <c>graphics faithful</c>; <see cref="ResearchPump"/>).
 /// </para>
 ///
 /// <para>

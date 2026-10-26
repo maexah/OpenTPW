@@ -89,15 +89,18 @@ internal static class Game
 		}
 
 		// The texture format, once, before the first texture. Eight bits a channel unless opentpw.cfg asks for the
-		// original's depth, which reads the detail file the game starts with, as the original's window setup does
+		// original's look, which reads the detail file the game starts with, as the original's window setup does
 		// (0x0044e1f4).
-		var originalDepth = GameOptions.Current.OriginalTextureDepth;
+		var faithful = GameOptions.Current.Faithful;
+		Log.Info( faithful
+			? "Graphics: opentpw.cfg's \"graphics faithful\", the original's look: its texture depth, 16-pixel ground tiles, the research pumps stepped, the flags jumping, the buy and hire screens' letters at its size"
+			: "Graphics: OpenTPW's improvements, the default: eight bits a channel, the ground's tiles as asked, the research pumps scrolled, the flags easing, the buy and hire screens lettered larger; opentpw.cfg's \"graphics faithful\" takes the original's look" );
 		Texture.SetDepthFor( GameOptions.Current, () => Level.Texture32( Level.DetailFile ) );
-		Log.Info( !originalDepth
-			? "Textures: every texture keeps eight bits a channel (A8R8G8B8), OpenTPW's default; opentpw.cfg's \"textures original\" takes the original's depth"
+		Log.Info( !faithful
+			? "Textures: every texture keeps eight bits a channel (A8R8G8B8), OpenTPW's default"
 			: Texture.KeepsEightBits
-				? $"Textures: opentpw.cfg's \"textures original\" and {Level.DetailFile}'s TEXTURE32 1, so every texture keeps eight bits a channel (A8R8G8B8)"
-				: $"Textures: opentpw.cfg's \"textures original\" and {Level.DetailFile}'s TEXTURE32 0, so the game's art is cut to four bits a channel (A4R4G4B4)" );
+				? $"Textures: \"graphics faithful\" and {Level.DetailFile}'s TEXTURE32 1, so every texture keeps eight bits a channel (A8R8G8B8)"
+				: $"Textures: \"graphics faithful\" and {Level.DetailFile}'s TEXTURE32 0, so the game's art is cut to four bits a channel (A4R4G4B4)" );
 
 		//
 		// Init renderer

@@ -792,6 +792,36 @@ public class ParkListScreenRewriteTests
 		Assert.AreEqual( "Cash  $ 87987", hire.Root!.Children.Single( child => child.Id == 0x2496 ).Text, "the hire screen's money" );
 	}
 
+	/// <summary>
+	/// <b>Under <c>graphics faithful</c> both screens letter at the original's size</b> (<see cref="GameOptions.Faithful"/>,
+	/// Q645): every text control under either root letters at 1.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the toggle not read by <see cref="UiFonts.ParkScreenLettering"/>; a screen lettering at a
+	/// literal 1.2.</remarks>
+	[TestMethod]
+	public void UnderGraphicsFaithfulBothScreensLetterAtTheOriginalsSize()
+	{
+		var was = GameOptions.Current;
+
+		try
+		{
+			GameOptions.Current = new() { Faithful = true };
+			var buy = new ParkBuyScreen( stack );
+			var hire = new ParkHireScreen( stack );
+			hire.Update();
+
+			foreach ( var (root, name) in new[] { (buy.Root!, "buy"), (hire.Root!, "hire") } )
+			{
+				var lettered = Under( root ).Where( control => control.Font >= 0 ).ToList();
+				Assert.IsTrue( lettered.Count > 5, $"{name}: its lettered controls" );
+
+				foreach ( var control in lettered )
+					Assert.AreEqual( 1f, control.LetteringSize, $"{name}: control 0x{control.Id:x}" );
+			}
+		}
+		finally { GameOptions.Current = was; }
+	}
+
 	private static IEnumerable<UiControl> Under( UiControl control )
 		=> control.Children.SelectMany( child => Under( child ).Prepend( child ) );
 

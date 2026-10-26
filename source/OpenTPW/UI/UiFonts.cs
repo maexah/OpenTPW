@@ -26,9 +26,13 @@ internal static class UiFonts
 	/// <summary>
 	/// How much larger than the original's the buy and hire screens letter, where each box holds it (Q644). A deviation
 	/// at Alexah's word (2026-10-25): the original letters them at the font's own size, which is hard to read; 1.2 is the
-	/// most a list row holds (font 7's line in its row). 1 is the original's.
+	/// most a list row holds (font 7's line in its row). 1 is the original's, which <c>graphics faithful</c> takes
+	/// (<see cref="GameOptions.Faithful"/>).
 	/// </summary>
-	public static float ParkScreenLettering { get; set; } = 1.2f;
+	public static float ParkScreenLettering => LetteringFor( GameOptions.Current.Faithful );
+
+	/// <summary>The buy and hire screens' lettering: 1.2, OpenTPW's, or 1, the original's, under <paramref name="faithful"/>.</summary>
+	internal static float LetteringFor( bool faithful ) => faithful ? 1f : 1.2f;
 
 	private static readonly int[] SetHeights = [384, 480, 600, 768];
 
