@@ -1464,7 +1464,7 @@ filed the items that cite it.
   (VERIFY-14, finding 3; UNSETTLED, narrowed). The premise now holds: each group's flush (`0x0058aa3b call 0x5658c0`, ecx
   `[0x00879ab0]`, the batch object `0x00566220` adds to) reaches `FUN_00565590` (`0x00565917`), so sprite batches go through the
   per-triangle sort, which keys on the screen z the pull wrote. Still unread: the mask `[esi+0xc]` tested at `0x0056570b` (the
-  doc's `0x3000`) and `[0x008bd524]` in play, and whether bodies share a group (texture) with heads, bubbles and balloons;
+  doc's `0x3000`, or `0x1000` where the device probe `0x0056728c` finds the caps bit `0x40` missing: fork watch 2026-10-26, L1) and `[0x008bd524]` in play, and whether bodies share a group (texture) with heads, bubbles and balloons;
   across groups the batch key (mean z) also sees the pulled z. Settle by a live read of those two words in the original, or a
   photograph of a balloon's fringe against a body in both games; then say whether `FurthestFirst`, which orders every quad
   here by its unpulled depth, matches the original's order for a pulled body against an unpulled sprite, and whether the

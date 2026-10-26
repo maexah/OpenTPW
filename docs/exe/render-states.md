@@ -41,7 +41,7 @@ which code reads them is not traced (Q194, from the bytes). DirectDraw's two cal
 | `0x1000` / `0x2000` | Not render states: together the `0x3000` "exempt from sorting" mask | `FUN_00565590` tests the mask |
 | `0x80000` | `SPECULARENABLE` | `FUN_00567620` |
 | `0x100000` | `FOGENABLE` | `FUN_00567620`. Cleared on a batch the game fogs itself; the park's own view asks for no fog at all (`park-engine.md`, "The park view's colours") |
-| `0x800000` | Overrides the per-batch depth key with 0 | `FUN_00565590` |
+| `0x800000` | Overrides the per-batch depth key `+0x30` after the depth sum is added: 0.0 for a record whose kind nibble (`[+0] & 0xf`) is 2, else the added vertex count x `[0x008bcc14]` + 0.01; set from the texture slot's flag `0x2` (`0x005817e4`) | `0x0058109e` (`DrawList_AddMaterialFaces`; fork watch 2026-10-26, `verify-all.md` M1) |
 
 ## States set once for the whole run
 
@@ -281,7 +281,7 @@ at three levels, all back-to-front.
 | Address / value | Original name | What it is | Evidence |
 |---|---|---|---|
 | `FUN_00565590` | — | 1. Per-batch depth key `+0x30`: zeroed when the entry is allocated (`0x005826ae`); it gains the depth callback's sum only when the batch flags carry `0x20` (`0x0056560a`), then is divided by the vertex count (`0x005656f3`), so a batch without `0x20` keys 0. A caller may preset it with `FUN_005658c0( key )` (any value but -1.0). There is no `0x800000` test in `FUN_00565590` (fork watch 2026-10-25, `verify-all.md` near-conflict 1). | Disassembly |
-| `FUN_00565590` → `FUN_00565490` | — | 2. Per-triangle sort: `FUN_00565590` sums each triangle's `z0+z1+z2` and, **only when the state word misses the `0x3000` mask**, sorts them descending with the quicksort `FUN_00565490` — i.e. for the graded (`0x556`) and additive (`0x200552`) words and the lobby's lightning words (`0x9a1`, `0x200d52`), which also miss `0x3000`. The opaque and cut-out words carry `0x1000`/`0x2000` and are drawn at submit (`0x0056570b`); a state of exactly `0x800` is queued unsorted (`0x0056571e`); in mode 4 a state with `0x1000` skips the triangle sort (`0x0056573d`). The renderer's constructor writes the `0x3000` mask (`0x0056682d`). | Disassembly |
+| `FUN_00565590` → `FUN_00565490` | — | 2. Per-triangle sort: `FUN_00565590` sums each triangle's `z0+z1+z2` and, **only when the state word misses the `0x3000` mask**, sorts them descending with the quicksort `FUN_00565490` — i.e. for the graded (`0x556`) and additive (`0x200552`) words and the lobby's lightning words (`0x9a1`, `0x200d52`), which also miss `0x3000`. The opaque and cut-out words carry `0x1000`/`0x2000` and are drawn at submit (`0x0056570b`); a state of exactly `0x800` is queued unsorted (`0x0056571e`); in mode 4 a state with `0x1000` skips the triangle sort (`0x0056573d`). The renderer's constructor writes the `0x3000` mask (`0x0056682d`); the device probe `FUN_00567270` writes `0x1000` there instead (`0x0056728c`) when the caps word `[[0x00879da8]+0xa4]` lacks bit `0x40` (what that bit means is inferred, not read). Mode 4 sums the corners' depths as integers and sorts with the twin `FUN_005653d0` (`0x005657e7`); mode 4 is `[0x0079d86c]` bit `0x40` (`0x0044dde9`), which the live `0x82` lacks, so play runs mode 1 (fork watch 2026-10-26, L1). | Disassembly |
 | `FUN_00582ad0` → `FUN_005829e0` | — | 3. Per-batch sort, descending on the key at `+0x30` | Disassembly |
 
 **OpenTPW does none of this sorting.** It does not need it for the lobby: the only graded surfaces

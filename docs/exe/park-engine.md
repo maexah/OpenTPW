@@ -4597,6 +4597,12 @@ functions are:
 | `FUN_005367a0` | `ClearCell` — the one per-cell teardown, shared by deletion and demolition |
 | `FUN_00532fc0` | The per-cell op worker; `FUN_00536100` applies one op along a line of cells |
 
+A refused release (the latch `0x00816d48` set, tested at `0x00524a63`) ends by the mode's byte in the table at
+`0x00527694` (index mode - 1, `0x00524ac7`) through the jump table at `0x0052766c`: modes 1 (path), 3, 0xB and 0x10
+(track), 0xE, 0x13 and 0x36 (patrol) put the tool away (`0x005266a3`, `0x0052f200( 0, 0 )`); mode 0x16 has its own exit
+(`0x00524ad4`: `0x00446050`, then clears `0x00816d48`, `0x00818c54`, `0x008186d8`, the mode kept); mode 4 (the carry) and
+every other mode keep the tool (`0x0052765b`). Fork watch 2026-10-26, `verify-all.md` M2.
+
 ### The runtime cell is not the save cell, and there are two parallel arrays
 
 `CMapCell` is **0x44 bytes** at `DAT_007cf83c + 0x294`, indexed by the packed id `y*128 + x + 1`.
