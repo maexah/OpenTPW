@@ -5,6 +5,13 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q652 (the terrain model's meshes half lit outside the park, the water unlit): this game on the desk at 1280 x 720
+  (`q652/run1`, the census line `9307 vertices of 271 terrain meshes made 0.225 long`), main as the before
+  (`q652/run0-main`), the original off-screen (`q652/orig`), both at (500,500) and (700,640) 130 rot 90. Not seen in
+  the running game: a face turned from the sun on half-lit land (none at these cameras), the other three themes, the
+  lobby's and the rides' unlit materials (Q401 confirms a sign), and what the original draws for its NaN normals (the
+  bridge's ends, 64 of 80 vertices; this game lights its own normal). The bridge's waterfall curtain reads brighter
+  here than the original's, in main too (filed under Q401).
 - Q649 (a built thing's floor blended into the ground's tiles): this game on the desk at 1280 x 720 (`q649/run2`, the
   final build), the original off-screen at 32-pixel tiles (`q649/orig`), both at the Belly Bounce (525,240) 110 180.
   Not seen in the running game: a thing turned 180 or 270 bigger than one cell (none stands so in the stock park; the

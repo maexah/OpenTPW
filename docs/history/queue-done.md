@@ -10422,6 +10422,23 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   (its NaN normals aside: this game keeps its own normal, said at the site); the cliff path, grass strip and rock
   0.524, 0.522 and 0.51 of main's, 1.12, 1.03 and 1.04 of the original's; the water unlit everywhere, 0.60 without
   the shader's test (`q652/PREDICTION.txt`, `q652/side-by-side.png`).
+- [x] **Q657. Light the advisor as the original does (Q621's build).** `ui.md`, "How he is lit": per vertex, the
+  theme's `AmbientLightLevel` plus 2 x max(0, -(d.n)) of white, d the record light's (26.667, -26.667, 800) taken into
+  his model's space (the file's axes; `AdvisorModel`'s world has Y and Z swapped), each channel clamped to 1 and
+  rounded to a byte, times the texel; no sun. Measure the lobby first (`original/advlight.py` there: the front end
+  loads him once and writes its own ambient, so the strength and ambient may differ) and check his normals
+  against the original's `+0x64` ones (`advlight.py --json`). Replace `AdvisorModel`'s 1.4 and 0.3 and their comment. **First settle** whether the advisor's draws carry state-word bit
+  `0x10000`, which makes stage 0 `MODULATE2X` (`FUN_00567a70`; `ui.md`, "How he is lit"): a live read of his batch's state
+  word, or the path from `0x00575ea1` through `FUN_00590c40` to `FUN_00567620`. If they do, a lit face is up to twice its
+  texel, not at most its texel.
+  Confirm: the four lines of `q621/ours.py` beside `q621/orig/r1-four.png`, each part's median and 95th percentile by
+  `q621/parts.py` within 8 of the original's but the gloves' 239 (our texel's 231 at eight bits, said at the site);
+  predicted first.
+  **Done (2026-10-26):** his draws carry no `0x10000` (a breakpoint on its flip, 0 in 25 s of a line; the wrap bit's,
+  5 in 10 s), so MODULATE; the lobby measured (0x444444, strength 1; a park's 2, one light a loaded record); his
+  normals are the file's `+0x64` table entry for entry (43 meshes). Built (`AdvisorModel.VertexLight`, `LightFor`,
+  `FileNormal`): the census's hard hat mean 153.0 against the original's 153.0 to 155.9, the lobby's head
+  230/255/254.4 as the original's (`q657/PREDICTION.txt`, `q657/side-by-side.png`). The rest of the models: Q681.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

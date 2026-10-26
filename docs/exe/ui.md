@@ -50,26 +50,41 @@ flag `[0x008bb624] |= 0x2000000` rides into each mesh's draw entry (`DrawList_Ad
 `original/advnodes.py`): A = 1 0 0 0 | 0 -1 0 0 | 0 0 1 0 | 0.6 0.6 0.2 1 and B the identity throughout, every node's
 w column (0, 0, 0, 1), the root's axes 0.0112 (`advnodes.py` prints four places), 0.001, 0.015.
 
-**How he is lit** (Q621). Per vertex, by the park's own model lighter ("The lighting model", `park-engine.md`), and (if
-his draws do not carry the `MODULATE2X` bit, below) not past his textures. Each advisor record
-(`0x00790398 + slot × 0xb0`) holds a light at `+0x48`, made by the array's constructor `AdvisorRecord_Construct`
-(`0x00429a60`) as type 2 (directional) with colour (1, 1, 1, 1); `Advisor_LoadModel` (`0x00429ba0`) sets its world
-direction (`+0x2c`) to (26.667, −26.667, 800), the direction light travels, and files it in the manager `[0x0087a6d0]`'s
-list 1 (`RenderList_Add( light, 0x10 )`, `0x00429d15`), where his own renderable goes. His draw carries `0x2000000`, so
-`Light_ModelSetup` (`0x0057aa10`) chains the lights of the manager's `+0x30` and the model's own (`FUN_005744d0`) but
-skips `+0x2c`, list 7, where the sun is filed (`Light_Create`, `0x00457e70`, case 2, `RenderList_Add( 0x70 )`): **the sun
-does not light him.** `Light_SumAtVertex` (`0x005741b0`) starts from the renderer ambient (`0x00879ddc..e4`, in a park the
-theme's `AmbientLightLevel` set by `FUN_00458590`, (0.333, 0.333, 0.408) in Lost Kingdom), adds each directional light's
-colour × max(0, −(d·n)), and `Light_ModelVertexColours` (`0x00574660`) clamps each channel to a byte. The vertex colour
-then multiplies the texel, but by how much is not settled. Stage 0's `COLOROP` is `MODULATE` (4) at `0x00567e59` and
-`0x00568625`, `MODULATE4X` (6) at `0x00567dd8` and, on stage 1, `ADDSIGNED` (8) at `0x00568925` (the 13 constant writes of
-`SetTextureStageState`). It is also set by the lazy setter `FUN_00567a70`, which `FUN_00567620` (applying the compiled
-state word) calls at `0x005678ba`..`0x005678ca` for stage 0: **`MODULATE2X` (5) when the state word has bit `0x10000`**,
-`MODULATE` otherwise. The state-word table (`render-states.md`) does not list that bit; the texture-flag table has
-source-material bit `0x10` setting texture flag `0x10000` (`0x00575ea1`), and whether that reaches the state word of the
-advisor's draws was not traced. So "a lit face is its texel at most" is **not established**: the frames do not rule 2X out
-(the gloves' darkest tenth, (144, 145, 152), sits well above what `MODULATE` would give an ambient-only vertex on a texel
-of 231, about (77, 77, 94), though the texture's creases make that rough).
+**How he is lit** (Q621, Q657). Per vertex, by the park's own model lighter ("The lighting model", `park-engine.md`),
+and never past his textures. Each advisor record (`0x00790398 + slot × 0xb0`) holds a light at `+0x48`, made by the
+array's constructor `AdvisorRecord_Construct` (`0x00429a60`) as type 2 (directional) with colour (1, 1, 1, 1);
+`Advisor_LoadModel` (`0x00429ba0`) sets its world direction (`+0x2c`) to (26.667, −26.667, 800), the direction light
+travels, and files it in the manager `[0x0087a6d0]`'s list 1 (`RenderList_Add( light, 0x10 )`, `0x00429d15`), where his
+own renderable goes. His draw carries `0x2000000`, so `Light_ModelSetup` (`0x0057aa10`) chains the lights of the
+manager's `+0x30` and the model's own (`FUN_005744d0`) but skips `+0x2c`, list 7, where the sun is filed (`Light_Create`,
+`0x00457e70`, case 2, `RenderList_Add( 0x70 )`): **the sun does not light him.** `Light_SumAtVertex` (`0x005741b0`) starts
+from the renderer ambient (`0x00879ddc..e4`), adds each directional light's colour × max(0, −(d·n)), and
+`Light_ModelVertexColours` (`0x00574660`) clamps each channel to a byte.
+
+- **d.** `Light_ModelSetup` hands `FUN_005743a0` its third argument, the node's chain times B, as that routine's first (`edx`, loaded at
+  `0x0057ab2e` and pushed last; Ghidra's decompile shows the two swapped: the mesh's `+0x78` is the second): `FUN_00578b20` inverts
+  it (LU, `0x00578900`, `0x00578820`), each light's `+0x2c` goes through the inverse with no translation
+  (`FUN_00578d20` mode 3, a row vector) and is normalised. The chain holds his root's axis lengths, 0.01125, 0.001 and
+  0.015 (below), so in his root's space the light runs almost straight into the screen: across 26.667 / 0.01125, into
+  the screen 800 / 0.001, up 26.667 / 0.015 (the screen's flip, A's diag(1, −1, 1), turns −26.667 up).
+- **n.** Entry *i* of the mesh's `+0x64` table for vertex-order entry *i*, the model file's own normal: the original's
+  live normals equal the file's, 0.0000 apart, on all 25 meshes of `Advisor.md2` and the 18 of `Advisor_JUN.md2`
+  (`lib/normcmp.py` over `q621/orig/r2-bare.json` and `r2-theme.json`; FileFormats `models.md`, "Normals"). The
+  triangles' averaged planes stand a median 33 degrees off on his hands and 90 on the bow tie.
+- **The ambient and the strength.** In a park the ambient is the theme's `AmbientLightLevel` (`FUN_00458590`; (0.333,
+  0.333, 0.408) in Lost Kingdom). In the lobby every camera's start hands `FUN_005d9230` 0x444444, 68 of 255 a channel
+  (`0x005e13a9`, `IslandLobby_Start` `0x005e1924`, `0x005e2445`; `Lobby_Start`'s 0x202020 at `0x005dd078` comes
+  before them). Each record loaded files its own white light along the same direction, so the lobby's one model (the
+  front end loads slot 0 alone, `0x0054e5ec`) is lit at a strength of 1 and a park's two (the global fly and the
+  theme's) at 2: a face reaches white at a third of full facing in a park, at two thirds of it in the lobby.
+- **The texel.** The vertex colour multiplies the texel: stage 0's `COLOROP` is `MODULATE`. `FUN_00567620` sets
+  `MODULATE2X` through `FUN_00567a70` only for a state word with `0x10000`, and no model draw's word has it: `DrawList_Flush`
+  (`0x00581db0`) and `FUN_00581880` build each batch's word by `FUN_00581790` (from `[0x008bcbc8]`, the mesh word, the
+  draw entry's flags, `Texture_BlendStateWord` and the texture's `+8`; none gives `0x10000`, and texture flag `0x10000`,
+  set at `0x00575ea1`, becomes the wrap bit `0x400000`), `FUN_00565240` stores it at the batch's `+4`, and
+  `FUN_00565590` only clears `0x100000` and sets `0x80000`. In the running original (`q657/PREDICTION.txt` P2, P3), a
+  `gdb` breakpoint at `0x00567a8f`, reached only when a bit of the word flips, met mask `0x10000` 0 times in 25 s while
+  he spoke, and the wrap bit 5 times in under 10 s.
 
 **Measured in the running original** (`q621/PREDICTION.txt`, `q621/orig/`, `original/advlight.py`: the stock park,
 the buy screen's own line, then `sayas.sh 18,44,41`, read while each line played; two rounds). The ambient read
@@ -79,34 +94,37 @@ ambient and a white light, nothing else (the sun's blue 0.847 would break it). T
 ambient alone. Fitted mesh by mesh in its own normal space, the light's strength is **2.00**, not 1 (|v| 1.990 to
 2.008 over 15 meshes in round 2 (14 in round 1), every normal then within 1 of `clamp( ambient + 2 × max(0, −(d·n)) )`, 0 channels
 off of 1,401 in a read; the theme fly's right hand alone does not fit, 4 unsaturated normals of 82, not settled).
-Both records' lights are the same, so both reaching him would make the 2. That the record's light lights him is
-inferred, not traced: `FUN_00576410` files a light at `[mgr + 0x10 + 4 × (flags >> 4)]` (`0x00576522`..`0x0057652c`), so
-`0x10` goes to list 1 (`+0x14`, `0x00429d12`), and `Light_ModelSetup` chains `[mgr+0x30]` (`0x0057aa8e`), `[mgr+0x2c]`
-only without `0x3000000` (`0x0057aa96`..`0x0057aab6`) and `FUN_005744d0` (`0x0057aad0`), never `+0x14`; the chain that
-hands list 1's lights to it was not traced, nor was the sign of the fitted directions (the hats' fits and the record's
-−d differ in y). A face therefore reaches its texel at a third of full facing: his head and body
+Both records' lights are the same, so both reaching him make the 2, and in the lobby, where one record is loaded,
+the strength measures 1.000 to 1.001 over five meshes, 0 channels of 684 off, the ambient (0.267, 0.267, 0.267)
+(`q657/orig/rO-lobby.out`). The chain that hands list 1's lights to `Light_ModelSetup` was not traced:
+`FUN_00576410` files a light at `[mgr + 0x10 + 4 × (flags >> 4)]` (`0x00576522`..`0x0057652c`), so `0x10` goes to list
+1 (`+0x14`, `0x00429d12`), and `Light_ModelSetup` chains `[mgr+0x30]` (`0x0057aa8e`), `[mgr+0x2c]` only without
+`0x3000000` (`0x0057aa96`..`0x0057aab6`) and `FUN_005744d0` (`0x0057aad0`), never `+0x14`. A face therefore reaches its texel at a third of full facing: his head and body
 discs, eyes and mouths read (255, 255, 255) throughout; his hands' normals averaged 153 to 172, the hard hat's 153 to
 156, the research hat's 158, the pith helmet's 144.
 
 **In his frames** (`q621/parts.py`, `parts.out`: each part's pixels of its colour class, the original's 1024 × 768
-frames against this game's at 1280 × 720, the same four lines; `q621/orig/r1-four.png`, `q621/ours-four.png`):
+frames against this game's at 1280 × 720, the same four lines; `q621/orig/r1-four.png`; this game's since Q657,
+`q657/run3`, `q657/parts.py 3`, `q657/side-by-side.png`; its theme line is response 434, the ticket's clips, where the
+original's was 41):
 
-| Part | Texel (`wctpng.py`) | The original (median; 95th percentile) | OpenTPW (main's light) |
+| Part | Texel (`wctpng.py`) | The original (median; 95th percentile) | OpenTPW (Q657) |
 |---|---|---|---|
-| Gloves, `White.wct` | 231 | 239; 239, darkest tenth (144, 145, 152) | 255 on 95 per cent, darkest tenth 250 |
-| Hard hat, `Hardhat_yellow` | (227, 219, 60) | (229, 219, 49); (239, 237, 105) | (255, 255, 95); (255, 255, 128) |
-| Scientist's hair, `Research_Hair` | 234 | 174; 214, darkest tenth 92 | 249, 255 on 46 per cent |
-| Pith helmet, `Pith_Side` | (194, 154, 76) | (151, 116, 49); (196, 146, 67) | (255, 232, 108); (255, 255, 130) |
-| Its band | grey | (117, 115, 117); (177, 176, 171) | 255 on 97 per cent |
+| Gloves, `White.wct` | 231 | 239; 239, darkest tenth (144, 145, 152) | 231; 231, darkest tenth (113, 114, 123) |
+| Hard hat, `Hardhat_yellow` | (227, 219, 60) | (229, 219, 49); (239, 237, 105) | (225, 217, 60); (230, 225, 106) |
+| Scientist's hair, `Research_Hair` | 234 | 174; 214, darkest tenth 92 | 188; 231, darkest tenth 106 |
+| Pith helmet, `Pith_Side` | (194, 154, 76) | (151, 116, 49); (196, 146, 67) | (151, 118, 56); (193, 151, 75) |
+| Its band | grey | (117, 115, 117); (177, 176, 171) | (138, 134, 133); (176, 176, 174) |
 
 The original's 239 for a texel of 231 is not the light (his head's normals read 255, so a lit texel is the texel); it
 fits the texture depth, four bits a channel making it 14 (238) and a 16-bit frame's five bits 29, shown 239, though
-the frame's depth (`GraphicalOptions.RENDER32`, `boot.md`) was not read. **OpenTPW lights him past his textures**: `AdvisorModel.Draw` hands the
-shader's old per-pixel arm an ambient of 1.4 and a light of 0.3 at a point, unclamped, so every texel is 1.4 to 1.7
-times itself, cut at 255: the gloves and hair white and flat, the hard hat lemon, the helmet pale yellow with a white
-band. Not measured: the lobby, where the front end calls `Advisor_LoadModel` once (`0x0054e5ec`) and other code writes
-the ambient (`FUN_005d8b50`, `FUN_005d9230`), so the strength and the ambient may differ there; whether the original's
-normals at `+0x64` are the ones this game computes (`models.md`, "Normals"). Building it is Q657.
+the frame's depth (`GraphicalOptions.RENDER32`, `boot.md`) was not read. **OpenTPW lights him as the original** (Q657,
+`AdvisorModel.VertexLight`, `content/shaders/test.shader`'s per-vertex arm): the file's normals, the light through the
+inverse of the node's chain, the ambient and one white light a loaded record, clamped to a byte, times the texel. Its
+census (`advisor`'s `lit:` part) against the original's reads: the lobby's head 230/255/254.4 as the original's, the
+hard hat's mean 153.0 (153.0 to 155.9), the research hat's 156.4 (157.6, 157.9). A frame's median of a moving part
+follows the pose a gesture picks, in both games (the original's park gloves 218 to 239 over 17 frames); the brightest
+twentieth is the texel in both, 231 here at eight bits a channel (Q616), the original's 239.
 
 **The big ticket is a scale track** (Q597, Q599). Lost Kingdom's `Advisor_JUNm18` keys `Ticket2` (node 12, hung from
 `Bug Head`) from 0.748, 0.964, 1.158 at frame 0 to 3.273, 4.214, 5.063 at 38 and 12.093, 11.486, 8.958 at 70; `m19` keys

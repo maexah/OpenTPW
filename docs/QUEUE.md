@@ -74,18 +74,6 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q657. Light the advisor as the original does (Q621's build).** `ui.md`, "How he is lit": per vertex, the
-  theme's `AmbientLightLevel` plus 2 x max(0, -(d.n)) of white, d the record light's (26.667, -26.667, 800) taken into
-  his model's space (the file's axes; `AdvisorModel`'s world has Y and Z swapped), each channel clamped to 1 and
-  rounded to a byte, times the texel; no sun. Measure the lobby first (`original/advlight.py` there: the front end
-  loads him once and writes its own ambient, so the strength and ambient may differ) and check his normals
-  against the original's `+0x64` ones (`advlight.py --json`). Replace `AdvisorModel`'s 1.4 and 0.3 and their comment. **First settle** whether the advisor's draws carry state-word bit
-  `0x10000`, which makes stage 0 `MODULATE2X` (`FUN_00567a70`; `ui.md`, "How he is lit"): a live read of his batch's state
-  word, or the path from `0x00575ea1` through `FUN_00590c40` to `FUN_00567620`. If they do, a lit face is up to twice its
-  texel, not at most its texel.
-  Confirm: the four lines of `q621/ours.py` beside `q621/orig/r1-four.png`, each part's median and 95th percentile by
-  `q621/parts.py` within 8 of the original's but the gloves' 239 (our texel's 231 at eight bits, said at the site);
-  predicted first.
 - [ ] **Q658. A clip started on an idle channel hides its hide list.** From Q622. The original's bind hides a clip's hide
   list at every start without the caller's `0x8` (`FUN_00472d70` at `0x00473117`); the drawn model here applies it only
   at a change of clip (`LobbyModel.ShownAtChange`), so a start on an idle channel counts `CLIP_HIDE_LIST_ON_IDLE_CHANNEL`
@@ -2484,6 +2472,15 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
     `SIDESHOW_WINDOW` and `FEATURE_WINDOW` (`source/OpenTPW/World/Level.cs:2732-2733`); `docs/PLAYER-GAPS.md:95`.
   - **Note (Q636's review, run 9):** the sideshow window's bars `0xa094`, `0xa096`, `0xa099`, `0xa09e`, the toilet window's
     `0x15bbb` and the resting-staff list `0x1e7b` are inset (0, 10) by `FUN_00485e30` in the original: build them so.
+- [ ] **Q681. Light every model by its file's own normals, as the original does (from Q657). Measure first.** The
+  original's lighter takes entry *i* of a mesh's `+0x64` table for vertex-order entry *i* (`Light_ModelVertexColours`
+  `0x00574660`, the one routine for every model); OpenTPW lights the advisor by it (Q657) and every other model, the
+  park's things, the land's meshes (`TerrainHalfLight`) and the lobby's islands, by its own averaged triangle normals
+  (`ModelFile.CalculateNormals`), which on the advisor stood a median 33 degrees off on his hands and 90 on the bow tie.
+  Measure first: a placed thing's live normals in the original (a walk like `advlight.py`'s, on its model) against its file's
+  table (`lib/normdump`, `lib/normcmp.py`), and count over all 2,129 `.md2` whether every mesh's table covers its vertex
+  order (Q657 counted the five advisors alone: FileFormats `models.md`, "Normals"). Then light them by it; confirm a
+  park thing's shading beside the original's.
 - [ ] **Q32. Graphics tiers.** `Level` reads the detail files (`low.sam`, `med.sam`, `high.sam`) for `GameOptions.PARTICLEDENSITY`
   and `NUMKIDS` (the kid and staff bank caps) and for three `GraphicalOptions.*` keys: `LIGHTING` (a counted no-op),
   `TEXTUREQUALITY` (the sea's and the flags' folder) and `PROCEDURALTEXTURING` (the ground's tile size). `SPRITESHADOW` is read too (Q480: medium's silhouette built, the own

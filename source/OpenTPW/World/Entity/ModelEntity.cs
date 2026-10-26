@@ -92,6 +92,10 @@ public partial class ModelEntity : Entity
 	/// <param name="ambient">Light every surface gets regardless of facing; 0 for the world's own.</param>
 	/// <param name="worldNormals">Light with normals turned by the model matrix - see ObjectUniformBuffer.</param>
 	/// <param name="translucent">Which half to draw: false for the solid one, true for the see-through one.</param>
+	/// <param name="parkLight">
+	/// The original's per-vertex lighter in place of the shader's own (<see cref="WithParkLight"/>): its ambient and the
+	/// direction its light travels, <paramref name="lightColor"/> the light's colour. The advisor's draw alone passes one.
+	/// </param>
 	/// <param name="transform">
 	/// Where to put it, instead of where the entity itself stands.
 	///
@@ -103,13 +107,13 @@ public partial class ModelEntity : Entity
 	/// </param>
 	public void DrawOverlay( System.Numerics.Matrix4x4 view, System.Numerics.Matrix4x4 projection,
 		Vector3 lightPosition, Vector3 lightColor, float ambient = 0f, bool worldNormals = false,
-		bool translucent = false, System.Numerics.Matrix4x4? transform = null )
+		bool translucent = false, System.Numerics.Matrix4x4? transform = null, ParkLight? parkLight = null )
 	{
 		if ( Opacity <= 0f )
 			return;
 
 		if ( (translucent ? TranslucentModel : Model) is { } half )
-			Draw( half, Uniforms( view, projection, lightPosition, lightColor, 0f, ambient, worldNormals, transform ) );
+			Draw( half, Uniforms( view, projection, lightPosition, lightColor, 0f, ambient, worldNormals, transform, parkLight ) );
 	}
 
 	private static void Draw( Model model, ObjectUniformBuffer uniformBuffer )
@@ -148,7 +152,7 @@ public partial class ModelEntity : Entity
 	/// <summary>
 	/// <paramref name="uniforms"/> with the park's light written in: a park lights the scene per vertex as the original
 	/// does, and at low quality draws every vertex white (<see cref="ParkLight.FullLight"/>); the lobby, and anything
-	/// drawn on the screen through <see cref="DrawOverlay"/>, pass no light and keep the shader's own lighting.
+	/// drawn on the screen through <see cref="DrawOverlay"/> but the advisor, pass no light and keep the shader's own lighting.
 	/// </summary>
 	internal static ObjectUniformBuffer WithParkLight( ObjectUniformBuffer uniforms, ParkLight? parkLight )
 	{

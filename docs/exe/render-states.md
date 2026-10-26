@@ -38,6 +38,7 @@ which code reads them is not traced (Q194, from the bytes). DirectDraw's two cal
 | `0x400` | `ALPHATESTENABLE` | `FUN_00567620` |
 | `0x800` | `ZWRITEENABLE = NOT this bit` — the only depth-write control in the engine | `FUN_00567620` |
 | `0x8000` | `ZENABLE = NOT this bit` | `FUN_00567620` |
+| `0x10000` | Stage 0's `COLOROP` `MODULATE2X` (5), `MODULATE` (4) without it (`FUN_00567a70` from `0x005678ba`). No model draw's word carries it: `FUN_00581790` and `Texture_BlendStateWord` never give it, and a breakpoint on its flip met none in 25 s of the advisor's line (Q657; `ui.md`, "How he is lit") | `FUN_00567620` |
 | `0x1000` / `0x2000` | Not render states: together the `0x3000` "exempt from sorting" mask | `FUN_00565590` tests the mask |
 | `0x80000` | `SPECULARENABLE` | `FUN_00567620` |
 | `0x100000` | `FOGENABLE` | `FUN_00567620`. Cleared on a batch the game fogs itself; the park's own view asks for no fog at all (`park-engine.md`, "The park view's colours") |

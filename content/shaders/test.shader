@@ -76,8 +76,8 @@ vertex {
         if (g_oUbo.g_vLinearFog.z > 0.5)
             vFog = clamp((-vs_out.vViewPosition.z - g_oUbo.g_vLinearFog.x) / (g_oUbo.g_vLinearFog.y - g_oUbo.g_vLinearFog.x), 0.0, 1.0);
 
-        // A park is lit per vertex, as the original lights it (FUN_005741b0, docs/exe/park-engine.md,
-        // "The lighting model"): the ambient colour plus the sun's colour times -(d.n) where that is not
+        // A park, and the advisor everywhere, are lit per vertex, as the original lights them (FUN_005741b0,
+        // docs/exe/park-engine.md, "The lighting model"; the advisor's light: AdvisorModel.VertexLight): the ambient colour plus the sun's colour times -(d.n) where that is not
         // negative, d being the direction the light travels taken into the model's space and normalised,
         // n the normal as the model carries it. Each channel is clamped and rounded to a byte, and the
         // card blends the result across the triangle. A sun-facing face therefore saturates to its

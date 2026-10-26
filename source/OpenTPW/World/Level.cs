@@ -536,7 +536,7 @@ public class Level
 		// weather end before he does. Advisor_Update runs from a park's loop (0x0054f9f9) exactly as it
 		// runs from the lobby's (0x0054e6df) - he is the same speaker in both scenes, and what differs is
 		// who hands him lines: a park's are ParkAdvisorMessages'.
-		_ = new Advisor( ThemeName, Balance );
+		_ = new Advisor( ThemeName, Balance, ParkLight );
 		load.Mark( "advisor" );
 
 		load.Done();

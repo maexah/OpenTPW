@@ -81,7 +81,7 @@ struct ObjectUniformBuffer
 	/// <summary>
 	/// 1 to light per vertex the way the original lights a park (<c>FUN_005741b0</c>): the ambient
 	/// colour plus the sun's colour times the facing, each channel clamped. 0 keeps the lobby's and
-	/// the interface's lighting. Set by <see cref="ModelEntity"/> for scene draws in a park.
+	/// the interface's lighting. Set by <see cref="ModelEntity"/> for scene draws in a park and for the advisor's draws.
 	/// </summary>
 	public float g_flParkLight; // 4
 

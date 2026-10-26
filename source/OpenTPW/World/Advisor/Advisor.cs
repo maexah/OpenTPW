@@ -271,7 +271,8 @@ public sealed class Advisor : Entity
 
 	/// <param name="theme">The park's theme, whose own advisor is model slot 1; null in the lobby, which has none.</param>
 	/// <param name="balance">The park's balance, which names the theme's costume.</param>
-	public Advisor( string? theme = null, ParkBalance? balance = null )
+	/// <param name="parkLight">The park's light, whose ambient and quality light him; null in the lobby (<see cref="AdvisorModel.LightFor"/>).</param>
+	public Advisor( string? theme = null, ParkBalance? balance = null, ParkLight? parkLight = null )
 	{
 		Current = this;
 		_costume = AdvisorProps.CostumeOf( key => balance?.Int( key ) ?? 0 );
@@ -283,7 +284,18 @@ public sealed class Advisor : Entity
 
 		if ( theme != null )
 			LoadThemeFigure( theme.ToLowerInvariant() );
+
+		var records = (_figure != null ? 1 : 0) + (_themeFigure != null ? 1 : 0);
+		(_light, _lightStrength) = AdvisorModel.LightFor( parkLight, records, Level.Lighting( Level.DetailFile ) );
+		Log.Info( $"Advisor: lit by ambient {_light.Ambient.X:0.000} {_light.Ambient.Y:0.000} {_light.Ambient.Z:0.000} and {records} record "
+			+ $"light{(records == 1 ? "" : "s")}, strength {_lightStrength}{(_light.Lit ? "" : ", LIGHTING 0: every vertex full")}" );
 	}
+
+	/// <summary>His light, as the original lights him (<see cref="AdvisorModel.LightFor"/>).</summary>
+	private readonly ParkLight _light;
+
+	/// <summary>How strong his white light is: one for each advisor record loaded, each filing its own light.</summary>
+	private readonly float _lightStrength;
 
 	protected override void OnUpdate()
 	{
@@ -344,7 +356,7 @@ public sealed class Advisor : Entity
 		// the screen is Dismiss clearing _shown, which is the quiet stop and the crying one, and those are
 		// the two the original removes his model for. A pause is not one of them.
 		if ( _shown && _speaker != null )
-			_speaker.Draw();
+			_speaker.Draw( _light, _lightStrength );
 	}
 
 	/// <summary>
@@ -948,7 +960,10 @@ public sealed class Advisor : Entity
 
 		var clip = _sequence.TryLocate( _now - _gesturesStartedAt, out var current, out _ ) ? current : 0;
 
+		var lit = _speaker == null ? "" : $" lit: ambient {_light.Ambient.X:0.000} {_light.Ambient.Y:0.000} {_light.Ambient.Z:0.000} strength {_lightStrength}; "
+			+ string.Join( "; ", _speaker.LitCensus( _light, _lightStrength ) );
+
 		return $"{what} paused={_paused} queued={_queue.Count} duck={Audio.DuckLevel:0.00} shown={_shown} clip={clip} mouth={_mouth} wearing={_wearing.First},{_wearing.Second} slot={_slot} "
-			+ $"samples={_speech?.EffectIds.Count() ?? 0}";
+			+ $"samples={_speech?.EffectIds.Count() ?? 0}{lit}";
 	}
 }

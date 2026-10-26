@@ -693,8 +693,8 @@ mechanic's decide posts began `Advisor: sample 202 ... wearing 5,0`, `advisor` r
 | | The original | OpenTPW |
 |---|---|---|
 | The props of a line | put on after every clip's start | put on again at every clip's start (Q595) |
-| The hat's colour | its texel at most unless his draws carry state bit `0x10000` (`MODULATE2X`, not settled, Q657), a full yellow (`ui.md`, "How he is lit": the ambient and twice a white light, clamped) | lemon: he is lit past his textures, 1.4 to 1.7 times (Q657) |
-| The theme's costume, prop -1, and the theme's own model | slot 1's 137 rows: in Lost Kingdom the fly in an explorer's hat, no antennae (`q344/orig/a-told.png`) | the same, lit past its textures ("The theme's own advisor and its costume", below) |
+| The hat's colour | its texel at most (his draws never carry state bit `0x10000`, `MODULATE2X`), a full yellow (`ui.md`, "How he is lit": the ambient and twice a white light, clamped) | the same law (Q657): the hard hat's lit mean 153.1 against the original's 153.0 to 155.9, its blue fuller (an eight-bit texture) |
+| The theme's costume, prop -1, and the theme's own model | slot 1's 137 rows: in Lost Kingdom the fly in an explorer's hat, no antennae (`q344/orig/a-told.png`) | the same, lit as the original's (Q657; "The theme's own advisor and its costume", below) |
 | A clip word's `0x10000` (no prop, the head hidden) and its particles | a gesture row's | the same (Q595): only rows 1 and 13 carry flags |
 
 ## The theme's own advisor and its costume (Q346)
@@ -759,7 +759,7 @@ slot 0` and `3-hardhat.png` shows the lobby's fly in the hard hat. Main's build 
 |---|---|---|
 | Who says a slot 1 line | the level's own model, alone on the screen | the same |
 | The costume | four pairs of the theme's `Standard.sam`, put on after every clip's start | the same pairs, put on again at every clip's start (Q595) |
-| The helmet's colour | tan, with a grey band | **pale yellow with a white band**: lit past its textures, as the hard hat is (`ui.md`, "How he is lit"; Q657) |
+| The helmet's colour | tan, with a grey band | the same (Q657): median (151, 118, 56) against (151, 116, 49); its band 122 and 138 against 117, caught mid-squash by the ticket's clips of this game's line 434 (`ui.md`, "How he is lit") |
 | The chain's clip lengths | the park's model's, for both slots | the same |
 | Clips 16 to 20, the map, the tickets and the mutant eye | the golden ticket's lines (`scenes.md`, "Gesture table") | clips 17 to 20 played by the ticket lines (Q595); the big ticket of 18 to 20 grown by its scale track (Q599; `ui.md`, "The big ticket is a scale track"); clip 16 (row 0's) by no park line |
 
@@ -3048,8 +3048,8 @@ grades=N share=N`. A response that names a gesture row plays it (Q596): 82 and 8
 `hud.md`, "The Staff Training Budgets screen"), as the original's: a budget set there is the one these rows read,
 and the mechanics' row was polled `score=0 ... tick=1260 result=no-score members=1 budget=75` after 75 was set
 on tick 1110 or so (`q352/run-fix2`). The runs below are of the build before that screen, where the click was
-counted (`TAG_BAR_BUTTON`). **The handymen's cap is lighter than the original's**, as the hard hat and the pith
-helmet are: he is lit past his textures (`ui.md`, "How he is lit"; Q657).
+counted (`TAG_BAR_BUTTON`). The handymen's cap is lit as the original's, as the hard hat and the pith helmet are
+(`ui.md`, "How he is lit"; Q657).
 
 **The scenes** (`q350/both.TPWS`, the stock park saved on tick 963 with one member of each kind; written with
 `parkfile.thing_set`): *all0*, all five members' `mCurrentPayGrade` (the record's `+398`) written 0; *g1all*,
@@ -3101,7 +3101,7 @@ and the budgets read as written in every run (`bud0` 25, `bud2` 50 in run c).
 | Every kind at grade 1 | none said | the same (`share=20`) |
 | A budget for the handymen and the entertainers | those two not said; the other three on 1105, 1164, 1191 | the same: 1105, 1169, 1196 (`budget=25`, `budget=50`) |
 | The researcher alone at grade 0 | the researchers' line on 1109 | the same |
-| What he wears | hard hat, cap, police cap, the theme's fly in its helmet, research hat | the same, the cap lit past its texture (Q657) |
+| What he wears | hard hat, cap, police cap, the theme's fly in its helmet, research hat | the same, lit as the original's (Q657) |
 | The tags | rows 30 to 34, four standing at the fifth line, the newest on top | the same |
 | The bar | button 21 and the bomb | the same (`b_staffcost`, help 533) |
 | The bar's button | opens the Staff Training Budgets screen, the tag off | the same since Q352; in these runs counted, nothing opened |
@@ -4347,7 +4347,7 @@ the same tag. *feat30* (run c) and *noside30* (run d): fresh through the runs' e
 | A feature standing, and no sideshow | not said | the same (`no-score`) |
 | Day 29 | not said on tick 1593; with the stamp held, said on tick 1748 | nought on tick 1593; tick 1748 not seen (a vehicle's stamp on 1600) |
 | A vehicle made on the row's own turn | the stamp moves and the row is silent | the same |
-| Who says it | the fly in the theme's explorer's hat, no antennae | the same since Q346, the helmet lit past its texture (`q346/side-by-side.png`; Q657) |
+| Who says it | the fly in the theme's explorer's hat, no antennae | the same since Q346, the helmet lit as the original's since Q657 (`q657/run2/theme.png`) |
 | The tag and the bar | row 83, part 2, string 85; button 12 builds the buy screen on its features tab, tag off | the same |
 | The tag's words | the american folder's, "... as it could be. ..." | the English folder's, "... as it might be. ..." |
 

@@ -68,7 +68,8 @@ public sealed class AdvisorModel
 	/// </param>
 	public AdvisorModel( string modelPath, string textureDirectory, string? sharedTextureDirectory = null )
 	{
-		_model = new LobbyModel( modelPath, textureDirectory, Vector3.Zero, sharedTextureDirectory: sharedTextureDirectory );
+		_model = new LobbyModel( modelPath, textureDirectory, Vector3.Zero, sharedTextureDirectory: sharedTextureDirectory,
+			vertexNormals: FileNormal );
 		_file = new ModelFile( modelPath );
 
 		foreach ( var entity in _model.Entities )
@@ -262,9 +263,17 @@ public sealed class AdvisorModel
 		SetMeshVisible( MeshNamed( "shuteye l" ), false );
 	}
 
-	/// <summary>Draws him over whatever is already on the screen - see <see cref="Level.Render"/>.</summary>
-	public void Draw()
+	/// <summary>
+	/// Draws him over whatever is already on the screen - see <see cref="Level.Render"/> - lit per vertex by
+	/// <paramref name="light"/> and a white light of <paramref name="strength"/> (<see cref="LightFor"/>, <see cref="VertexLight"/>).
+	/// A material the file marks unlit (Lost Kingdom's mouths and tickets) takes white whatever the light, as the original's
+	/// DrawList_AddMaterialFaces 0x00580530 gives it. <b>A deviation:</b> his textures are eight bits a channel here (Q616),
+	/// so a fully lit glove is its texel's 231 where the original's four-bit texture shows 239.
+	/// </summary>
+	public void Draw( ParkLight light, float strength )
 	{
+		var white = new Vector3( strength );
+
 		var projection = ScreenProjection();
 		var ticketProjection = TicketProjection( projection, TicketGrowth );
 
@@ -279,10 +288,10 @@ public sealed class AdvisorModel
 		// thousands of depth values apart, not a rounding error. The one pair that does share a plane,
 		// an eyelid and the eye beneath it, is never drawn at once - a blink swaps one for the other.
 		for ( int i = 0; i < _model.Entities.Length; ++i )
-			_model.Entities[i].DrawOverlay( Matrix4x4.Identity, OnTicket( i ) ? ticketProjection : projection, LightPosition, LightColor, Ambient, worldNormals: true );
+			_model.Entities[i].DrawOverlay( Matrix4x4.Identity, OnTicket( i ) ? ticketProjection : projection, Vector3.Zero, white, worldNormals: true, parkLight: light );
 
 		for ( int i = 0; i < _model.Entities.Length; ++i )
-			_model.Entities[i].DrawOverlay( Matrix4x4.Identity, OnTicket( i ) ? ticketProjection : projection, LightPosition, LightColor, Ambient, worldNormals: true, translucent: true );
+			_model.Entities[i].DrawOverlay( Matrix4x4.Identity, OnTicket( i ) ? ticketProjection : projection, Vector3.Zero, white, worldNormals: true, translucent: true, parkLight: light );
 	}
 
 	private bool OnTicket( int node ) => node < _onTicket.Length && _onTicket[node];
@@ -348,21 +357,81 @@ public sealed class AdvisorModel
 	}
 
 	/// <summary>
-	/// How he is lit. The original gives him a light of his own, at (26.67, -26.67, 800) with a
-	/// colour of one (0x00429ba0), but what space those numbers are in is not established. So these
-	/// are set against screenshots of the original instead, by measurement. There his gloves sit at
-	/// a median brightness of 220 to 240 out of 255, brighter than their texture - White.wct
-	/// averages 210, with its creases painted in down to 98 - so he is lit past his textures' own
-	/// colours, and the ambient term alone has to carry the gloves' shaded side. At an ambient of
-	/// 0.6 they came out at 115, and at 1.0 at 155. His eyes saturate either way, and his head's
-	/// shine is in its texture. The light sits in front of him, up and to his right as the viewer
-	/// sees it.
+	/// The direction his record's light travels in this model's world (X across, Y into the screen, Z up). The original's
+	/// is (26.667, -26.667, 800) in the world his node chain draws into (Advisor_LoadModel 0x00429ba0), and its lighter
+	/// takes it through the inverse of the whole chain (FUN_005743a0, FUN_00578b20), his root's axis lengths 0.01125,
+	/// 0.001 and 0.015 among it. Here those lengths are in <see cref="ScreenProjection"/>, so the direction is divided by
+	/// them before the shader takes it through the rest of the chain: across 26.667 / 0.01125, into the screen
+	/// 800 / 0.001, up 26.667 / 0.015 (the screen's flip turns -26.667 up). Nearly straight into the screen: the faces
+	/// turned to the viewer are lit (docs/exe/ui.md, "How he is lit"). The lengths are the original's 4:3 ones, which
+	/// keep his shape; here he keeps it on any window (<see cref="TicketMove"/>), so they hold on any.
 	/// </summary>
-	private static readonly Vector3 LightPosition = new( -150f, -400f, 250f );
+	internal static readonly Vector3 Travels = new Vector3( 26.667f / 0.01125f, 800f / 0.001f, 26.667f / 0.015f ).Normal;
 
-	private static readonly Vector3 LightColor = new( 0.3f, 0.3f, 0.3f );
+	/// <summary>
+	/// The lobby's ambient, 68 of 255 a channel: every lobby camera's start hands the renderer 0x444444 (FUN_005d9230 from
+	/// 0x005e13a9, IslandLobby_Start 0x005e1924 and 0x005e2445); measured 0.267 in the running original's lobby.
+	/// </summary>
+	internal static readonly Vector3 LobbyAmbient = new( 68f / 255f );
 
-	private const float Ambient = 1.4f;
+	/// <summary>
+	/// His light: the park's ambient (the theme's <c>AmbientLightLevel</c>) or the lobby's <see cref="LobbyAmbient"/>, the
+	/// direction <see cref="Travels"/>, and a strength of one for each of the <paramref name="records"/> advisor records
+	/// loaded: each files its own white light along the same direction in his render list (Advisor_LoadModel 0x00429ba0,
+	/// 0x00429d15), so the lobby's one model is lit by one and a park's two, the global fly and the theme's, by two
+	/// (measured 1.00 and 2.00). At <c>LIGHTING</c> 0 (<paramref name="lit"/> false) every vertex is full, as the park's.
+	/// </summary>
+	internal static (ParkLight Light, float Strength) LightFor( ParkLight? park, int records, bool lit )
+		=> (new ParkLight( park?.Ambient ?? LobbyAmbient, Travels, park?.Lit ?? lit ), records);
+
+	/// <summary>
+	/// Each shown mesh's lit colours as <see cref="VertexLight"/> gives them in the pose drawn last: its name, vertices, and
+	/// the least, most and mean red, green and blue, as <c>original/advlight.py</c> reads the original's.
+	/// </summary>
+	internal IEnumerable<string> LitCensus( ParkLight light, float strength )
+	{
+		for ( int i = 0; i < _file.Meshes.Count && i < _model.Entities.Length; ++i )
+		{
+			if ( _model.Entities[i].Opacity <= 0f )
+				continue;
+
+			var mesh = _file.Meshes[i];
+			var model = _model.Entities[i].ModelMatrix;
+			var lit = Enumerable.Range( 0, mesh.Vertices.Length )
+				.Select( vertex => light.Lit ? VertexLight( FileNormal( mesh, vertex ), model, light.Ambient, strength ) : new Vector3( 255f ) ).ToArray();
+
+			if ( lit.Length == 0 )
+				continue;
+
+			string Of( Func<Vector3, float> channel ) => $"{lit.Min( channel ):0}/{lit.Max( channel ):0}/{lit.Average( channel ):0.0}";
+			yield return $"{mesh.Name.TrimEnd( '\0' ).Trim()}: {lit.Length} vertices, r {Of( c => c.X )} g {Of( c => c.Y )} b {Of( c => c.Z )} (least/most/mean)";
+		}
+	}
+
+	/// <summary>The normal the original lights vertex <paramref name="vertex"/> of <paramref name="mesh"/> by: the model file's own, its +0x64 table's entry for the vertex-order entry, or the loader's where the table is short.</summary>
+	internal static Vector3 FileNormal( ModelFile.Mesh mesh, int vertex )
+		=> vertex < mesh.FaceNormals.Length ? mesh.FaceNormals[vertex] : mesh.Normals[vertex];
+
+	/// <summary>
+	/// The colour, 0 to 255 a channel, the original lights a vertex of his with <paramref name="normal"/> (the file's, its
+	/// axes) on a node drawn by <paramref name="model"/>: <paramref name="ambient"/> plus <paramref name="strength"/> of
+	/// white times max(0, -(d.n)), d <see cref="Travels"/> taken into the node's space and normalised, each channel
+	/// clamped and rounded to a byte (Light_SumAtVertex 0x005741b0, Light_ModelVertexColours 0x00574660). The texel is
+	/// multiplied by it, a lit face at most its texel: his draws' state words never carry 0x10000, stage 0's MODULATE2X.
+	/// content/shaders/test.shader does the same per vertex; this is its census (<see cref="LitCensus"/>).
+	/// </summary>
+	internal static Vector3 VertexLight( Vector3 normal, Matrix4x4 model, Vector3 ambient, float strength )
+	{
+		if ( !Matrix4x4.Invert( model, out var inverse ) )
+			return Vector3.Zero;
+
+		var d = System.Numerics.Vector3.Normalize( System.Numerics.Vector3.TransformNormal( Travels.GetSystemVector3(), inverse ) );
+		var facing = -System.Numerics.Vector3.Dot( d, new System.Numerics.Vector3( normal.X, normal.Z, normal.Y ) );
+		var lift = strength * MathF.Max( facing, 0f );
+
+		static float Byte( float channel ) => MathF.Round( Math.Clamp( channel, 0f, 1f ) * 255f );
+		return new Vector3( Byte( ambient.X + lift ), Byte( ambient.Y + lift ), Byte( ambient.Z + lift ) );
+	}
 
 	/// <summary>
 	/// Model to screen: the original's root scale and on-screen translation, as one matrix. Our
