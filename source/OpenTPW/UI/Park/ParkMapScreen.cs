@@ -104,8 +104,9 @@ internal sealed class ParkMapScreen : UiWindow
 			LeftClicked = CentreAndClose,
 			RightPressed = () => _dragging = GameOptions.Current.RightButtonScroll,
 
-			// The viewport's 0x10001 keeps the nearest record of the overlay's list within 5 screen pixels of the pointer
-			// (0x005f198e) and shows its name in 0x991; a click then hands it on: not built (Q665).
+			// The viewport's 0x10001 keeps the nearest shown record of the overlay's list within 5 screen pixels of the
+			// pointer (0x005f198e) and the thing id of the cell under it, and letters 0x991 with the record's thing or the
+			// cell's (docs/exe/hud.md, "The map's hover and click"): not built, it waits on the overlay's records (Q685).
 			Entered = () => Unimplemented.Report( "MAP_HOVER" )
 		} );
 
@@ -125,9 +126,9 @@ internal sealed class ParkMapScreen : UiWindow
 		} );
 
 		// Yellow, font 4 - FUN_005f0b40 fetches 0x991, hands it a label skin and calls the colour setter
-		// with (0xff, 0xff, 0, 0xff). The original fills it as the pointer moves over the map with the name of the thing
-		// or the cell code's text under it (docs/exe/hud.md, "The map's view", Hover; Q665), which is not built, so it is
-		// drawn empty rather than given words it may not have.
+		// with (0xff, 0xff, 0, 0xff). The original fills it as the pointer moves over the map with the hovered record's
+		// thing's name, or the name of the thing on the cell under it (docs/exe/hud.md, "The map's hover and click"; Q685),
+		// which is not built, so it is drawn empty rather than given words it may not have.
 		Root.Add( new UiControl
 		{
 			Id = 0x991,
@@ -275,8 +276,9 @@ internal sealed class ParkMapScreen : UiWindow
 	/// <summary>A click on the map (0x005f1d19): the view centred on the cell under the pointer, then the close OK makes.</summary>
 	private void CentreAndClose()
 	{
-		// The original hands the hovered record, or the cell's code word's text, on after the close (0x005f1de8,
-		// 0x005f1df5; Q665); nothing here does, and the count tells a click from a hover.
+		// The original hands the hovered record's thing, or else the thing on the cell under the pointer, to its window
+		// opener after the close (0x005f1de8, 0x005f1df5, Thing_OpenWindow; Q685); nothing here does, and the count tells a
+		// click from a hover.
 		Unimplemented.Report( "MAP_CLICK_HANDOFF" );
 
 		var (x, y) = PointerOnTheScreen();

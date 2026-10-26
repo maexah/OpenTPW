@@ -74,18 +74,6 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q665. The map's hover and its click on a hovered record.** From Q624. On the viewport's `0x10001` the original keeps
-  the nearest record of its list `+0x20080` within 5 of the pointer's picture point (`0x005f198e`..`0x005f1a9a`), and a
-  click on the map with one kept hands its `+0x18` to `FUN_00486920` after the close (`0x005f1de8`; with none, a word
-  `+0x20064` and the table at `0x007cfb90`, `0x005f1df5`). Not read: what the list holds and what `FUN_00486920` does.
-  Counted `MAP_HOVER`. The list is Q664's sprite records (`hud.md`, "The map's overlay"), built by Q684. Decode, then build. Confirm: a hover and a click in both games.
-  - **Amended (Q624's review, run 9):** the hover's 5 is SCREEN pixels: at `0x005f198e`..`0x005f1a1b` the pointer is
-    taken as (x * W / 2048, (0x600 - y) * H / 1536), y from the bottom, and `0x005f4180` writes each record's `+0xc`/`+0x10`
-    as the cell centre * 480 / cells * zoom + W / 2, so the reach varies with the zoom in picture terms. What the hover
-    shows: `0x005f1bab`..`0x005f1cfc` builds the text of control `0x991` (through `0x0065d55a`/`0x0065d7d0`, its vtable
-    `+0x24`): the thing's name (`0x00506860`) for kinds 4 to 8, row `0x1c8` or `0x1c9` (`0x006acd60`) for kind 1, or the
-    `0x007cfb90` table's entry (`0x004e2780`) for the word `+0x20064` under the pointer. The click's hand-off is counted
-    `MAP_CLICK_HANDOFF` (`ParkMapScreen.CentreAndClose`) beside `MAP_HOVER`.
 - [ ] **Q666. The map's advisor line 0x130.** From Q624. The map's opener posts the advisor's line `0x130`
   (`FUN_00486b00`, `0x005f100d`) and its close withdraws it (`FUN_00486b40`); here the map posts nothing (counted `MAP_ADVISOR_LINE`). Read the row
   and its response, build it as the buy screen's own line is, and confirm what he says in both games, the same park.
@@ -2509,6 +2497,15 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   worked out here (its days are, `ParkObjectRings.Satisfaction`): read it, or count `MAP_SATISFACTION` where the metric
   is 3. Replace `MAP_OVERLAY` by what stays unbuilt. Confirm: `q664/orig/run.sh`'s fourteen steps in both games, each
   step's census against `original/mapgrid.py`'s and the picture's diff against `q664/orig/a-*.png` (`original/diffcells.py`).
+- [ ] **Q685. The map's hover and its click (Q665's build).** From Q665 (`hud.md`, "The map's hover and click"); needs
+  Q684's records and code grid. On each pointer move over the map keep the nearest shown record within 5 game pixels
+  (in x and in y, then by distance, the first of equals) and the cell's thing id; repaint the picture when a member is
+  hovered or left (his patrol rectangle in (25, 25, 250)); letter `0x991` with the member's name, UITEXT 456 "Visitor
+  #{P24}" or 457 "New Visitor" for a guest, else the cell's thing's two name lines joined (`Thing_JoinedName`, as the
+  status's row 16), else empty. A click: the record's thing, else the cell's, to the window opener after the close
+  (`Level.OpenObjectWindow` for a placed thing, the visitor's and the staff member's windows for people). Replace
+  `MAP_HOVER` and `MAP_CLICK_HANDOFF`. Confirm: `q665/orig/run.sh` and `runc.sh`'s points in both games, each hover's
+  `mapgrid.py hover` against the console's, the label's crop, and each click's window and camera point.
 - [ ] **Q32. Graphics tiers.** `Level` reads the detail files (`low.sam`, `med.sam`, `high.sam`) for `GameOptions.PARTICLEDENSITY`
   and `NUMKIDS` (the kid and staff bank caps) and for three `GraphicalOptions.*` keys: `LIGHTING` (a counted no-op),
   `TEXTUREQUALITY` (the sea's and the flags' folder) and `PROCEDURALTEXTURING` (the ground's tile size). `SPRITESHADOW` is read too (Q480: medium's silhouette built, the own

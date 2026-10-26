@@ -5,6 +5,13 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q664 (the map's switches, pickers and overlay; decode only): the original off-screen (`q664/orig/a`, the stock park,
+  every switch and picker pressed in turn, `original/mapgrid.py` after each: the three words, the 34 sprite records and
+  which are shown as decoded; each switch's picture diff only over its own things, none for rides under satisfaction;
+  `crop-staff.png`, `crop-code5.png`), and this game's map on the final build (`q664/run2`: `MAP_OVERLAY` counted at each
+  opening, no overlay drawn; `q664/side-by-side.png`). Not seen: a coaster's lines and a ride's code-8 cells (the stock park has neither), litter
+  sprites, a shut ride's black outline, a hovered rectangle, the path and queue fills' colours (no cell list dumped), the
+  sprite draw's own use of its size word, and the other three themes.
 - Q663 (a bought thing's build draws no sparkles; decode and count): the original off-screen (`q663/orig/a`,
   `late30.TPWS`, a Round Fountain bought and placed by clicks: effect 81 at its box's middle (495, 0, 355), caller
   `0x00558f2a`, gone in about 1.5 s; `orig-build-strip.png`), and this game on the desk at 1280 x 720 (`q663/run1`, the

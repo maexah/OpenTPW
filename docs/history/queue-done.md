@@ -10478,6 +10478,20 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
     the patrol rectangles; the "rectangle about the camera's view" is the chosen member's patrol area, and nothing draws
     the view. The six sprite sheets are resolved (FileFormats `park-map.md`). Measured in the original's stock park,
     every switch and picker (`q664/orig`, `original/mapgrid.py`). The build is Q684.
+- [x] **Q665. The map's hover and its click on a hovered record (decode; the build is Q685).** From Q624. Decoded
+  (`hud.md`, "The map's hover and click"; `Map_ViewportProc` `0x005f18d0`): each move keeps the nearest SHOWN record within
+  5 game pixels in x and y (`+0x20060`) and the thing id of the code grid's cell under the pointer (`+0x20064`, codes 1
+  to 8 only), repaints the picture when a member is hovered or left (his patrol rectangle (25, 25, 250)), and letters
+  `0x991`: a member's name, "Visitor #N" / "New Visitor" for a guest, else the cell's thing's joined name, else nothing;
+  a click hands the record's thing, else the cell's, to `Thing_OpenWindow` (`FUN_00486920`) after the close. Measured in
+  the original's stock park (`q665/orig`, rounds b and c): "Duke Mighten", "Visitor #13", "Drinks Shop", "Belly Bounce"
+  (`crop-label-*.png`), a guest's dot beating the ride's cell; the click on Belly Bounce's cell opened its ride window
+  with the camera on (520, 260), on guest 29's dot the window "Visitor #12", on an empty cell nothing; the handyman's
+  outline 108 to 215 blue pixels as he is hovered. Here (`q665/run3`, dll `39f2cfa0`): `1x MAP_HOVER` as the pointer
+  comes onto the map, `1x MAP_CLICK_HANDOFF` at the click, the label empty, no window opened, the camera on (510, 250)
+  by the same centring rule (`q665/side-by-side.png`). 13 held, 3 missed, 2 not run (`q665/PREDICTION.txt`: two my aim,
+  one my sum; C1 and C2 of round b not run as predicted); not mutated (comments only in code). Ghidra: `Thing_OpenWindow`, `Thing_JoinedName`. Tools:
+  `mapgrid.py hover`, `mapptr.py`, `maptarget.py`.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

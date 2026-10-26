@@ -1930,7 +1930,7 @@ timer can still run before the queued `0x10002` (under a frame); ours swaps in t
 | `FUN_005777b0` | — | Rounds those dimensions up to 64 — `(w+0x3f)>>6` — and allocates `tilesX*tilesY` records of 0x60, each a 64x64 surface. For 512x512 that is **8x8 = 64 tiles** | Corroborates that the loaded image is the shipped TGA |
 | `+0x60` | — | A **128x128 grid of classification codes**, 8 bytes a cell, in the screen's structure; `+0x60 + 0x20000 = +0x20060` is the selection field | Disassembly |
 | `FUN_005f2050` | — | Fills the grid: **9** a cell of track type 25, **10/11/12** mType 1, mType 3 and `mFlags & 0x40` (below), **1-8** things by type (`+0x4ac`) and flags (`+0x32`) | Disassembly |
-| `FUN_005f2380` | — | Paints it: a 9-dword (36-byte) blit descriptor per cell, then outlines footprints by comparing each cell with its neighbour above/below (vtable+8) and left/right (vtable+0xc), then draws a selection highlight for the item at `+0x20060` | Disassembly |
+| `FUN_005f2380` | — | Paints it: a 9-dword (36-byte) blit descriptor per cell, then outlines footprints by comparing each cell with its neighbour above/below (vtable+8) and left/right (vtable+0xc), then outlines each shown member's patrol, the hovered record's (`+0x20060`) in (25, 25, 250) ("The map's overlay") | Disassembly |
 
 The base image is the park's own **`2dmap.tga`**, 512x512 24-bit, one per theme (fantasy, hallow, jungle,
 space).
@@ -2044,21 +2044,16 @@ The screen is one static object at `0x00f86db8` (the `ECX` of every call); its c
   and the camera put on `( (int)across x 10, (int)down x 10 )` (`FUN_0042aab0`, which noughts the pan's momentum and
   leaves the zoom and turn). The click (`0x005f1d19`, the viewport's `0x10006` with button 0) first moves the centre by the
   pointer's distance from the SCREEN's centre over `480 / cells x zoom` screen pixels a cell (y negated), and, where a
-  record was hovered (below), hands its `+0x18` to `FUN_00486920` after the close (not read). Measured: zoom 1.5, a click at layout (1218,765): 58.104,
-  26.156, the camera on (580,260). **Escape** (the key-up case `0x005f17ef`) closes it without `0x005f1050`: the camera
+  thing was hovered or lies on the cell under the pointer, hands it to its window after the close ("The map's hover and
+  click", below). Measured: zoom 1.5, a click at layout (1218,765): 58.104, 26.156, the camera on (580,260). **Escape** (the key-up case `0x005f17ef`) closes it without `0x005f1050`: the camera
   stays.
 - **The help bar** stands at the top while the map is up: the opener's `FUN_00492530( -1, 10 )` (`HelpBar_MoveTo` in Ghidra; `0x005f1015`; it moves
   the bar's label to top 10, keeping its left), the close's `FUN_00492530( -1, -1 )` (`0x005f1256`) puts it back.
 - **The camera's table is off**: the opener hands its root to `FUN_00485b70` (`0x005f0c01`), as a park screen's.
 - **The advisor**: the opener posts line `0x130` (`FUN_00486b00`, `0x005f100d`), the close withdraws it
   (`FUN_00486b40`). Not built here: counted `MAP_ADVISOR_LINE` (Q666).
-- **Hover**: on the viewport's `0x10001` the nearest record of the list at `+0x20080` within 5 (`0x00703040`) **screen
-  pixels** of the pointer (taken in the game's pixels, x x W / 2048 and (`0x600` - y) x H / 1536, so y counts from the
-  bottom; a record's `+0xc`/`+0x10` are written by `0x005f4180` as the cell centre x 480 / cells x zoom + W / 2, so the
-  distance is zoom-dependent in picture terms) is kept at `+0x20060` (`0x005f198e`..`0x005f1a9a`). It also builds a string
-  for the label `0x991` (`0x005f1bab`..`0x005f1cfc`; the control is found through `0x0065d55a`/`0x0065d7d0`, then its vtable
-  `+0x24`): the thing's name (`0x00506860`) for kinds 4 to 8, the text of row `0x1c8` or `0x1c9` (`0x006acd60`) for kind 1,
-  or otherwise the `0x007cfb90` table's entry (`0x004e2780`) for the code word `+0x20064` under the pointer. Not built: counted `MAP_HOVER` as the pointer comes onto the map, and `MAP_CLICK_HANDOFF` at a click (Q665).
+- **Hover** and the click's hand-off: "The map's hover and click", below. Not built: counted `MAP_HOVER` as the pointer
+  comes onto the map, and `MAP_CLICK_HANDOFF` at a click (Q685).
 
 **OpenTPW** draws the map at the scale the original has at 800 x 600, whatever the window (a deviation: the original's
 shrinks on a finer screen), moves a per-pass amount at thirty passes a second on `Time.Delta`, and draws the source
@@ -2153,6 +2148,51 @@ the guard's glows, the two cameras', things 18 and 19); the handyman's rectangle
 the entertainer's 2 × 8; under satisfaction the rides switch changes no pixel; each of shops, sideshows and
 miscellaneous changes only its own things' cells; the code-5 cells are filled under the handyman and only outlined
 under the mechanic; a shop's excitement fill is red (nought), a ride at full repair green.
+
+### The map's hover and click (Q665)
+
+Decoded from the listing (`Map_ViewportProc`, `0x005f18d0`; `q665/g1`) and measured in the original's stock park
+(`q665/orig`, rounds b and c; `original/mapgrid.py PID hover`, `original/mapptr.py`, `original/maptarget.py`;
+`q665/PREDICTION.txt`). **Not built here**: it waits on the overlay's records and code grid (Q684); its build is Q685.
+
+**The hover** (each move message, `0x10001` and `0x10003`, `0x005f198e`..`0x005f1cfc`):
+
+1. The pointer is kept (`+0x10`, `+0x14`, layout units) and taken to the game's pixels, x × W / 2048 and (`0x600` - y) ×
+   H / 1536, so y counts up from the bottom.
+2. **The hovered record** `+0x20060` is noughted, then the list `+0x20080` is walked: a record whose `+0x2c` is not
+   nought (a SHOWN record: the hidden layers' records are passed over) and whose screen point (`+0xc`, `+0x10`) is less
+   than 5 (`0x00703040`) from the pointer in x AND in y is a candidate, and the nearest by distance is kept (strictly
+   nearer, so of two at one distance the first in the list). The list is the overlay's sprite records ("The map's
+   overlay"); the camera glows (kind 5, no thing at `+0x18`) can be hovered and name nothing.
+3. If the hovered record changed and the old or the new one's thing is a member (`+2` 4 to 8), the picture is
+   reloaded, repainted and uploaded (`0x005f1aed`..`0x005f1b0e`), so the member's patrol rectangle turns (25, 25, 250)
+   as he is hovered and back to (25, 25, 150) as he is left.
+4. **The word** `+0x20064` is the thing id of the code grid's cell under the pointer: across = centre `+0x54` +
+   (px - W / 2) / (480 / cells across × zoom), down = `+0x58` + (py - H / 2) / (425 / cells down × zoom), each
+   truncated (`__ftol`), the grid's `down × 128 + across`; nought off the grid. Only codes 1 to 8 keep an id
+   (`FUN_005f2050`, `0x005f22e1`; every cell noughted first at `0x005f20c9`), so a path, a queue, grass or land outside gives nought.
+5. **The label** `0x991` (yellow, font 4) is lettered from them (`0x005f1bab`..`0x005f1cfc`): a hovered record whose
+   thing is a member, its name (`FUN_00506860`, `+0x1a0`); a guest (`+2` 1), UITEXT 456 "Visitor #{P24}" with his
+   `+0x1d8`, or 457 "New Visitor" at nought (`FUN_006acd60` into `0x007ba058`); **otherwise, with no record or one with
+   no thing, the word's thing** from the thing table `0x007cfb90` (`+ id × 20`), named by `Thing_JoinedName`
+   (`FUN_004e2780`: its two name lines `+0x3c8` and `+0x40a` joined, "The status's row 16"). With neither, the label is
+   given the empty string. A record wins over the word: a guest's dot within 5 pixels of a ride's cell names the guest.
+
+**The click** (`0x10006` with button 0, `0x005f1d19`..`0x005f1e45`): the centre is moved by the pointer (above, "The
+map's view"), then the thing is the hovered record's `+0x18` or, with no record or none there, the word's thing from
+the table; `Map_CloseOnTheView` (`0x005f1050`) puts the camera on the centre and closes the map, and only then is the
+thing handed to `Thing_OpenWindow` (`FUN_00486920`; `park-engine.md`, "The per-object management screen is nine screens"): a guest's visitor
+window, a member's staff window, a placed thing's window by its item's `+0x4ac`. With no thing the map closes and
+nothing opens.
+
+**Measured** (zoom 1, 800 × 600): the pointer on the panel, hovered 0, word 0, the label empty; on the handyman's dot,
+record 32 (kind 2, thing 25) and "Duke Mighten", his rectangle's outline from 108 to 215 blue pixels, mean (0, 37, 109)
+to (0, 41, 172) (`maprects.py`); on guest 42's, "Visitor #13", the rectangle back; on shop 16's cell, word 16, "Drinks
+Shop"; on cell (45, 26), code 0, word 0, empty; on ride 13's cell (52, 24) beside a guest, word 13 but "Visitor #8";
+on its cell (52, 26), 15 pixels from any dot, word 13 and "Belly Bounce" (`q665/orig/crop-label-ride.png`). A click
+there closed the map, put the camera on (520, 260) and opened Belly Bounce's ride window (`c-c1c-later.png`); a click on
+guest 29's dot opened the visitor window "Visitor #12" (`c-c2-later.png`); a click on (50, 26), no record and word 0,
+opened nothing (`b-c1-after.png`).
 
 ### The map screen's stream, `0x00774da0` — walked in full
 
