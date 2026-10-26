@@ -5007,6 +5007,55 @@ five hire buttons (types `0xd` to `0x11`; built since, "Worn rides and no mechan
 word is row 188's, either mode). The American strings name the first tab "Hire Janitors", the English "Hire
 Cleaners": the reference install reads the American. Not heard in either game.
 
+## The map's own line (message `0x130`, Q666)
+
+**The post and the withdrawal.** `Map_Open` (`FUN_005f0b40`) pauses the park (`FUN_004092a0( 0, 0 )`, `g_ParkRunning`
+nought), stops him with the quiet stop (`Advisor_StopQuietly( 1 )`) and ends on `FUN_00486b00( 0x130 )` at `0x005f100d`.
+The root's handler, on event `0x14` (`0x005f1176`), puts `g_ParkRunning` back to 1 (`0x005f120c`) and calls
+`FUN_00486b40( 0x130 )` at `0x005f123c`. Every way the map goes is that event: OK and a click on the map through
+`Map_CloseOnTheView` (`0x005f1050`), and Escape (`hud.md`, "The map's view"). The third `PUSH 0x130` (`0x004c01df`) is
+an argument to `FUN_00485b00`, not the message.
+
+**Row 304** (`0x00772580`) is row 188's twin but for its response: posted only, category 1, either game mode, score
+`0x0059e8c0` (`HelpMessage.Score`, 1000), one copy, first response 564, one line. Response 564 is sample 582, lip 582,
+the random gesture chain, model slot 0, no prop, group 383 (no tag); the transcript's row 582, 26.4 s: "the map shows an
+overview of the park and some other important information the plus minus and arrow buttons down near the bottom left
+let you soon in and out and scroll the map ...".
+
+**He never says it.** He says a slot only on his turn in the sweep ("The advisor's turn in the sweep"), and the map
+holds the park still from before the post to after the withdrawal, so the slot is emptied unsaid and the record is never
+written. The sample is in the game's data and no path of the park reaches it.
+
+### The original (`q666/orig/run.sh`, `original/advisor.py ... 0x130,0xbc`; predicted first, four of four)
+
+`q325/stock.TPWS` off-screen, Space, 10 s, OK, 10 s; Space, 3 s, Escape (`q666/PREDICTION.txt`, round orig-a). The slot
+(thing 0, line -1, `0x130`, 1000) was taken on tick 915 beside the file's waiting `0x80`; 12 s later OK emptied it, the
+tick still 915; posted again on tick 970 (the park ran between) and Escape emptied it on 970. Message `0x130`'s record
+read (0, -1, 0, 0) throughout; over the map nobody is up (`orig/a-2-open-later.png`). `save/` the same.
+
+### OpenTPW (`ParkAdvisorMessages.MapScreen`; `ParkMapScreen.Shown`, `Closed`)
+
+The buy screen's shape: `Shown` posts it the first time the map is shown, to the running park's advisor, and `Closed`
+withdraws it from that park's. The map pauses the game clock, so the sweep whose last call is his turn does not run.
+Its record is read from and written to a park file with the other built messages'.
+
+`q666/ours.py`, the stock park entered from the lobby, the desktop, the final dll (`293ca0b0`), predicted first, five of
+five (`run1`): Space logged `Park advisor: post message=304 subject=0 score=1000 threshold=25 tick=788 result=queued
+pending=2`; 9 s on `sweeps` read mGameTick 788, `advisor` held `slot=304`, no attempt (`run1/1-open-later.png`, the map
+and nobody up; `q666/side-by-side.png` beside the original's); OK: `withdraw message=304 cleared=1 cut=0 slaps=0
+pending=1`, and 10 s on, tick 835, `message=304/score=1000/line=-1/lastTick=0/said=0/slaps=0`; Space again posted on
+tick 845 and Escape withdrew it (`cleared=1 cut=0`); `unimplemented` names no `MAP_ADVISOR_LINE`. **Main's build**
+counted `MAP_ADVISOR_LINE` at the opening and logged no line naming message 304 (`q665/run3`).
+
+| | The original | OpenTPW |
+|---|---|---|
+| The post | the opener's last act | `Shown`, the first time |
+| The withdrawal | the root's destroy (event `0x14`): OK, a click, Escape | `Closed` |
+| Said | never: the park stands while the map is up | the same |
+
+**Not built or not seen.** A map opened while he says another line (the quiet stop is Q624's), Full Simulation (the row
+is either mode), a park saved with the map up. Not heard in either game.
+
 ## A project finished, and a group raised (messages `0x5d` to `0x61` and `0x85` to `0x88`, Q702)
 
 The posters are the lab's message `0x11` (`park-engine.md`, "The lab at work"). **The rows** (the metadata table,

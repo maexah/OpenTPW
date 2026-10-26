@@ -59,7 +59,7 @@ public class ParkTagsTests
 		Assert.AreEqual( 3, tags.Standing.Count );
 		CollectionAssert.AreEqual( new[] { 150, 151, 3, 4, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag }
 			// Rows 238 to 257, the shops' and sideshows' value and satisfaction: their twenty lines leave none.
-			.Concat( Enumerable.Repeat( ParkTags.NoTag, 20 ) ).Concat( new[] { 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 24, ParkTags.NoTag, 100, 30, 31, 32, 33, 34, 62, 73, 77, 81, 75, 76, 79, 83, 84, 87, 82, 78, 80, 64, 135, 68, 70, 71, 72, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, 95, 96, 97, 98, 99, 155, 156, 157, 158, ParkTags.NoTag } )
+			.Concat( Enumerable.Repeat( ParkTags.NoTag, 20 ) ).Concat( new[] { 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 24, ParkTags.NoTag, 100, 30, 31, 32, 33, 34, 62, 73, 77, 81, 75, 76, 79, 83, 84, 87, 82, 78, 80, 64, 135, 68, 70, 71, 72, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, 95, 96, 97, 98, 99, 155, 156, 157, 158, ParkTags.NoTag } )
 			// The golden tickets' fifteen: their lines' groups are their responses' own (ParkAdvisorMessages.ResponseOf);
 			// then their four hints, whose responses, 541 and 574 to 577, leave none.
 			.Concat( Enumerable.Repeat( ParkTags.NoTag, 15 + 4 ) ).ToArray(), ParkAdvisorMessages.ParkTopics.Select( topic => topic.Group ).ToArray(),

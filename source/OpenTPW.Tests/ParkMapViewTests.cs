@@ -369,6 +369,70 @@ public class ParkMapViewTests
 		Assert.IsNull( stack.HelpBarTop );
 	}
 
+	/// <summary>
+	/// <b>The map asks the advisor for its own line as it opens and takes it back as it closes</b>: the opener's last act
+	/// posts message 0x130 (<c>0x005f100d</c>), and the destroy, event 0x14, withdraws it (<c>0x005f123c</c>), which empties
+	/// its slot and, were he saying it, cuts him off on the game's clock. Every way the map goes is that close: OK, Escape
+	/// and a click on the map.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> no post at the opening; a post as the map is made, before it is opened; no withdrawal at the
+	/// close; the camcorder's 0x131 or the buy screen's 0xbc for either; response 565 for 564; the row's category, copies,
+	/// lines, prop or group another's; the wall clock for the game's.
+	/// </remarks>
+	[TestMethod]
+	public void TheMapAsksTheAdvisorForItsLineAsItOpensAndTakesItBackAsItCloses()
+	{
+		// Row 304 (0x00772580) is row 188's twin, the buy screen's, but for its response: posted only, category 1, either
+		// mode, HelpMessage.Score, one copy, one line; response 564 is sample 582, no prop, group 383.
+		Assert.AreEqual( 0x130, ParkAdvisorMessages.MapScreen );
+		var buy = ParkAdvisorMessages.ParkTopics.Single( one => one.Id == ParkAdvisorMessages.BuyScreen );
+		Assert.AreEqual( buy with { Id = 0x130, FirstResponse = 564, FirstSample = 582 },
+			ParkAdvisorMessages.ParkTopics.Single( one => one.Id == ParkAdvisorMessages.MapScreen ) );
+
+		using var clock = new SimulationClockScope();
+		var stack = ParkEscapeOnReleaseTests.APark();
+		var lines = new ParkAdvisorMessages( new SettingsFile( "Advisor/Advisor.sam" ), tutorial: () => true );
+		var park = new ParkState( null ) { AdvisorMessages = lines };
+		var said = new List<(int, int)>();
+		int Play( int response, int sample ) { said.Add( (response, sample) ); return 26400; }
+
+		for ( var i = 0; i < 500; ++i )
+			park.AdvanceGameTick();
+
+		// The wall clock far past any line's end: a cut is judged on the game's clock, which stands at nought.
+		Time.PinWall( 60000 );
+
+		try
+		{
+			var map = new ParkMapScreen( stack ) { Park = park };
+			StringAssert.Contains( lines.Census(), "pending=0 attempts=0 ", "made, and not yet opened" );
+			stack.Open( map );
+			StringAssert.Contains( lines.Census(), "pending=1 attempts=0 threshold=25 slot=304/subject=0 " );
+
+			// Closed by OK before he says it: the slot alone, the record as it was.
+			Ok( map ).Clicked!();
+			StringAssert.Contains( lines.Census(), "pending=0 attempts=0 " );
+			StringAssert.Contains( lines.Census(), "message=304/score=1000/line=-1/lastTick=0/said=0/slaps=0" );
+
+			// Opened, said (were his turn to come), and closed by Escape while he says it.
+			map = new ParkMapScreen( stack ) { Park = park };
+			stack.Open( map );
+			lines.Tick( park.GameTick, 0, Play );
+			CollectionAssert.AreEqual( new[] { (564, 582) }, said );
+			StringAssert.Contains( lines.Census(), "message=304/score=1000/line=0/lastTick=500/said=1/slaps=0" );
+			ParkEscapeOnReleaseTests.Frame( stack, ParkEscapeOnReleaseTests.Down( Key.Escape ) );
+			ParkEscapeOnReleaseTests.Frame( stack, ParkEscapeOnReleaseTests.Up( Key.Escape ) );
+			Assert.IsFalse( stack.Windows.Contains( map ), "Escape closes it" );
+			StringAssert.Contains( lines.Census(), "message=304/score=1000/line=0/lastTick=500/said=0/slaps=1", "cut off" );
+			StringAssert.Contains( lines.Census(), "message=305/score=1000/line=-1/lastTick=0/said=0/slaps=0", "the camcorder's record is not this one's" );
+		}
+		finally
+		{
+			Time.PinWall( null );
+		}
+	}
+
 	private static UiButton Ok( ParkMapScreen map ) => (UiButton)Control( map, -1 );
 
 	private static UiControl Control( ParkMapScreen map, int id ) => map.Root.Children.Single( control => control.Id == id );

@@ -5,6 +5,12 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q665 (the map's hover and its click; decode only): the original off-screen (`q665/orig`, rounds b and c, the stock
+  park: `original/mapgrid.py hover` after each glide; the label's text in `crop-label-*.png`; the handyman's outline by
+  `maprects.py`; the clicks' windows in `c-c1c-later.png` and `c-c2-later.png`), and this game's map on the final build
+  (`q665/run3`: `MAP_HOVER` and `MAP_CLICK_HANDOFF` counted once each, the label empty, no window; `side-by-side.png`).
+  Not seen: a hover at zoom above 1, on a camera glow (no thing) or a hidden layer's record, "New Visitor", a click on
+  a member, a shop's or a feature's window from the map, and the other three themes.
 - Q664 (the map's switches, pickers and overlay; decode only): the original off-screen (`q664/orig/a`, the stock park,
   every switch and picker pressed in turn, `original/mapgrid.py` after each: the three words, the 34 sprite records and
   which are shown as decoded; each switch's picture diff only over its own things, none for rides under satisfaction;

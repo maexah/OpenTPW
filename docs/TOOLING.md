@@ -928,6 +928,9 @@ after its poller starts**, so a key meant inside either line cannot be sent afte
   least 6 from every shown dot (the stock park's Belly Bounce cell (52,26), 15 off). A click on a hovered thing opens
   its window; close a ride or visitor window by its tick (858,426), never Escape, which raises the game menu where no
   window is up. The records exist only while the map is open: a dump after a failed reopening reads 0.
+  **The map's advisor line** (Q666, `q666/orig/run.sh`, `q666/ours.py`): `advisor.py PID 120 0x130` as `loadfile.sh`'s
+  POLL prints a line only on a change, so the slot's taking and emptying lines carry the tick the park stood at; here
+  `sweeps` before and after, `advisor` for `slot=304`, and the log's `post`/`withdraw message=304` lines.
 - **Each text against its box** (Q644): `OPENTPW_TEXT_CENSUS=1` logs every text as it is laid out, `UI text: "<text>" font
   F, W x H in a box BW x BH, x S` and `OVER` where it passes its box, in any screen; `lib/screentext.py` reads it for the
   buy and hire screens' every tab. The original's own: `q644/orig/run.sh` (the two screens by Q636's route, `FILE=`).

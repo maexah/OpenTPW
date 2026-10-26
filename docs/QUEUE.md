@@ -74,9 +74,6 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q666. The map's advisor line 0x130.** From Q624. The map's opener posts the advisor's line `0x130`
-  (`FUN_00486b00`, `0x005f100d`) and its close withdraws it (`FUN_00486b40`); here the map posts nothing (counted `MAP_ADVISOR_LINE`). Read the row
-  and its response, build it as the buy screen's own line is, and confirm what he says in both games, the same park.
 - [ ] **Q667. The orbit camera's point stops at the heightfield's edge, as the original's (Q625's build).**
   `park-engine.md`, "The point of interest's edge": keep a scroll term per axis, eased as the original's
   (`(sqrt( zoom ) x 0.02 x input + term) x 0.5` a frame, divided by `1 + 0.01 dt` with no input), and where the point

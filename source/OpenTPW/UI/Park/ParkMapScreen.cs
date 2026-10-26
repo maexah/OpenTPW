@@ -56,6 +56,14 @@ internal sealed class ParkMapScreen : UiWindow
 	/// <summary>The right button went down on the map and is still held - the viewport's <c>+0x20084</c>.</summary>
 	private bool _dragging;
 
+	private ParkState? _parkGiven;
+
+	/// <summary>The running park whose advisor hears of this screen: the level's, or one a test gives.</summary>
+	internal ParkState? Park { get => _parkGiven ?? Level.Current?.ParkState; set => _parkGiven = value; }
+
+	// The park whose advisor this screen has asked for its line, none before it is first shown.
+	private ParkState? _asked;
+
 	/// <summary>The open map, for the debug console's census; null while none is.</summary>
 	internal static ParkMapScreen? Current { get; private set; }
 
@@ -202,10 +210,8 @@ internal sealed class ParkMapScreen : UiWindow
 		// thing in this game that takes it, and for the same reason.
 		Advisor.Current?.StopQuietly();
 
-		// The overlay, its switches and pickers (Q684), and the advisor's line 0x130 the opener posts (FUN_00486b00,
-		// 0x005f100d; Q666).
+		// The overlay, its switches and pickers (Q684).
 		Unimplemented.Report( "MAP_OVERLAY" );
-		Unimplemented.Report( "MAP_ADVISOR_LINE" );
 
 		Stack.HelpBarTop = HelpBarTopAtTheMap;
 		Current = this;
@@ -303,12 +309,28 @@ internal sealed class ParkMapScreen : UiWindow
 	// (the map's own key-up case, 0x005f17ef, ParkFrontEnd.MenuKey), and leaves the camera where it was.
 
 	/// <summary>
+	/// The opener's last act (Map_Open, <c>0x005f100d</c>): the advisor is posted message 0x130 (FUN_00486b00), the
+	/// screen's own line. The map pauses the park, and he says a slot only on his turn in the park's sweep, so the line
+	/// waits in its slot while the map is up.
+	/// </summary>
+	protected internal override void Shown()
+	{
+		if ( _asked != null || Park is not { AdvisorMessages: { } lines } park )
+			return;
+
+		_asked = park;
+		lines.Post( ParkAdvisorMessages.MapScreen, park.GameTick );
+	}
+
+	/// <summary>
 	/// The map's own picture goes when the screen does. It is built from a stream rather than a path, so
 	/// nothing caches it and nothing else shares it - left alone it would be one more pathless texture a
-	/// scene never lets go of. The help bar goes back to the bottom (<c>FUN_00492530( -1, -1 )</c> on message <c>0x14</c>, <c>0x005f1256</c>).
+	/// scene never lets go of. The help bar goes back to the bottom (<c>FUN_00492530( -1, -1 )</c> on message <c>0x14</c>, <c>0x005f1256</c>),
+	/// and the advisor's message 0x130 is withdrawn (FUN_00486b40, <c>0x005f123c</c>), which empties its slot.
 	/// </summary>
 	protected internal override void Closed()
 	{
+		_asked?.AdvisorMessages?.Withdraw( ParkAdvisorMessages.MapScreen, (long)(GameClock.Now * 1000), () => Advisor.Current?.StopSpeaking() );
 		_picture.Release();
 		Stack.HelpBarTop = null;
 

@@ -1989,7 +1989,7 @@ static starts. What each is for: "The map's overlay", below.
 
 `FUN_005f0b40` calls `FUN_004092a0(0,0)`, clears `g_ParkRunning`, and calls `Advisor_StopQuietly(1)` — the
 *quiet* stop, not the crying one. So unlike the gadget this screen legitimately pauses. It posts advisor
-message **0x130** as it opens, and refuses to open at all if the game menu is up (`FUN_0048c8d0`) or if it is
+message **0x130** as it opens (never said: "The map's view", the advisor), and refuses to open at all if the game menu is up (`FUN_0048c8d0`) or if it is
 already open.
 
 ### The map's view (Q624)
@@ -2050,8 +2050,12 @@ The screen is one static object at `0x00f86db8` (the `ECX` of every call); its c
 - **The help bar** stands at the top while the map is up: the opener's `FUN_00492530( -1, 10 )` (`HelpBar_MoveTo` in Ghidra; `0x005f1015`; it moves
   the bar's label to top 10, keeping its left), the close's `FUN_00492530( -1, -1 )` (`0x005f1256`) puts it back.
 - **The camera's table is off**: the opener hands its root to `FUN_00485b70` (`0x005f0c01`), as a park screen's.
-- **The advisor**: the opener posts line `0x130` (`FUN_00486b00`, `0x005f100d`), the close withdraws it
-  (`FUN_00486b40`). Not built here: counted `MAP_ADVISOR_LINE` (Q666).
+- **The advisor**: the opener's last act posts message `0x130` (`FUN_00486b00`, `0x005f100d`), and the root's destroy
+  (event `0x14`, `0x005f1176`) withdraws it (`FUN_00486b40`, `0x005f123c`) after putting `g_ParkRunning` back, so
+  OK, a click on the map and Escape all take it back. The park stands while the map is up, so his turn in the sweep
+  never comes and **he never says it**: measured (Q666, `q666/orig`), the slot taken on tick 915, emptied by OK on 915,
+  the record (0, -1, 0, 0) throughout; posted again on 970 and emptied by Escape on 970. Built
+  (`ParkAdvisorMessages.MapScreen`, `ParkMapScreen.Shown`, `Closed`): `advisor-park.md`, "The map's own line".
 - **Hover** and the click's hand-off: "The map's hover and click", below. Not built: counted `MAP_HOVER` as the pointer
   comes onto the map, and `MAP_CLICK_HANDOFF` at a click (Q685).
 

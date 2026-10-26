@@ -10492,6 +10492,12 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   by the same centring rule (`q665/side-by-side.png`). 13 held, 3 missed, 2 not run (`q665/PREDICTION.txt`: two my aim,
   one my sum; C1 and C2 of round b not run as predicted); not mutated (comments only in code). Ghidra: `Thing_OpenWindow`, `Thing_JoinedName`. Tools:
   `mapgrid.py hover`, `mapptr.py`, `maptarget.py`.
+- [x] **Q666. The map's advisor line 0x130.** From Q624. The map's opener posts the advisor's line `0x130`
+  (`FUN_00486b00`, `0x005f100d`) and its close withdraws it (`FUN_00486b40`); here the map posts nothing (counted `MAP_ADVISOR_LINE`). Read the row
+  and its response, build it as the buy screen's own line is, and confirm what he says in both games, the same park.
+  **Done (2026-10-26):** row 304 = row 188's twin, response 564, sample 582; he never says it in either game (the map
+  holds the park still): original slot taken and emptied on tick 915 and 970, ours `post message=304 ... tick=788`, mGameTick
+  788 9 s on, `withdraw message=304 cleared=1 cut=0` (`advisor-park.md`, "The map's own line").
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.
