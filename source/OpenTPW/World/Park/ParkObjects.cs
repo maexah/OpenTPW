@@ -60,6 +60,12 @@ public sealed class ParkObjects : Entity
 		/// </summary>
 		public (int Left, int Top, int Right, int Bottom)? Footprint { get; init; }
 
+		/// <summary>The textures its floor was blended into, its own to let go of with it (<see cref="ProceduralFloor.Blend"/>).</summary>
+		public IReadOnlyList<Texture> Blended { get; init; } = [];
+
+		/// <summary>How many cells of its floor were blended.</summary>
+		public int FloorCells { get; init; }
+
 		public LobbyModel Model { get; } = model;
 
 		public RideAnimations Animations { get; } = animations;
@@ -274,7 +280,7 @@ public sealed class ParkObjects : Entity
 
 		_savedHoardings.Clear();
 
-		Log.Info( $"{themeName}: {Placed} of {wanted.Length} objects stand in the park" );
+		Log.Info( $"{themeName}: {Placed} of {wanted.Length} objects stand in the park, {FloorCellsBlended} floor cells blended into the ground's tiles" );
 	}
 
 	/// <summary>
@@ -321,6 +327,13 @@ public sealed class ParkObjects : Entity
 		foreach ( var entity in standing.Model.Entities )
 			entity.Delete();
 
+		// Its entities are gone, so nothing draws with its blended floor now.
+		foreach ( var texture in standing.Blended )
+			texture.Delete();
+
+		if ( standing.Blended.Count > 0 )
+			Log.Info( $"thing {thingId}: its {standing.Blended.Count} blended floor textures let go" );
+
 		return true;
 	}
 
@@ -350,11 +363,18 @@ public sealed class ParkObjects : Entity
 			// outright - see RideAnimations.AllClips for why probing for a numbered run is not the same set.
 			var animations = RideAnimations.Load( item.Directory, item.Stem, FileSystem, item.AnimationChannels );
 
+			// The cells the builder marks, from the anchor; the model of an item with a map offset stands off it.
+			var footprint = FootprintAt( item, placed.CellX, placed.CellY, placed.Angle );
+			var shared = $"levels/{ThemeName.ToLowerInvariant()}/sharetex";
+			var blended = new List<Texture>();
+			var floorCells = 0;
+
 			var model = new LobbyModel( $"{item.Directory}/{item.Stem}.MD2", $"{item.Directory}/textures", Vector3.Zero,
 				textureOverrides: sign,
-				sharedTextureDirectory: $"levels/{ThemeName.ToLowerInvariant()}/sharetex",
+				sharedTextureDirectory: shared,
 				clips: animations.AllClips,
-				opaqueFrames: file => ProceduralBase.ForItem( file, item.Shape ) );
+				opaqueFrames: file => ProceduralBase.ForItem( file, item.Shape ),
+				frameTextures: file => BlendFloor( file, item, placed.Angle, footprint, shared, blended, out floorCells ) );
 
 			// Put away whatever building it left behind before it is stood anywhere.
 			PoseAsBuilt( model, item );
@@ -364,11 +384,8 @@ public sealed class ParkObjects : Entity
 
 			model.SetTransform( origin, turn );
 
-			// The cells the builder marks, from the anchor; the model of an item with a map offset stands off it.
-			var footprint = FootprintAt( item, placed.CellX, placed.CellY, placed.Angle );
-
 			_models.Add( model );
-			_standing[placed.ThingId] = new Standing( model, animations, placed.CatalogueId, sign ) { Footprint = footprint };
+			_standing[placed.ThingId] = new Standing( model, animations, placed.CatalogueId, sign ) { Footprint = footprint, Blended = blended, FloorCells = floorCells };
 
 			// The original gates on the base vertices FUN_00469a80 counts (0x0046a838) and reads the mesh with the
 			// most of them (0x0046a82c). The node count and the first mesh stand in for both: the same mesh in
@@ -399,6 +416,38 @@ public sealed class ParkObjects : Entity
 		{
 			Log.Warning( $"{ThemeName}: '{item.Name}' would not load, so it is missing from ({placed.CellX},{placed.CellY}) - {e.Message}" );
 		}
+	}
+
+	/// <summary>The floor cells of the things standing blended into the ground's tiles (<see cref="BlendFloor"/>).</summary>
+	public int FloorCellsBlended => _standing.Values.Sum( standing => standing.FloorCells );
+
+	/// <summary>
+	/// A placed item's floor blended into the ground's tiles (<see cref="ProceduralFloor.Blend"/>), as the model maker does
+	/// for a thing stood on the land (<c>FUN_00463060</c>'s flag <c>0x8</c>) where the compositor is on and the loader built
+	/// the item's footprint table: a model exported with a procedural base (header <c>0x8</c>), loaded with its picture, and a
+	/// floor found (or the header's <c>0x80</c>, every cell, on the root). None elsewhere, where the floor draws its own texture.
+	/// </summary>
+	private static IReadOnlyDictionary<uint, Texture> BlendFloor( ModelFile file, ParkItemCatalogue.Item item, int angle,
+		(int Left, int Top, int Right, int Bottom) footprint, string shared, List<Texture> made, out int cells )
+	{
+		cells = 0;
+
+		if ( ParkGround.Current is not { } ground || item.Shape is not { } shape || (file.HeaderFlags & 0x8) == 0 )
+			return new Dictionary<uint, Texture>();
+
+		var everyCell = (file.HeaderFlags & 0x80) != 0;
+		var mesh = ProceduralBase.FloorMesh( file, shape, ProceduralBase.ParkGrid, out _ ) ?? (everyCell ? file.RootNode : -1);
+
+		if ( mesh < 0 )
+			return new Dictionary<uint, Texture>();
+
+		var blended = ProceduralFloor.Blend( file, mesh, shape, shape.Width, shape.Depth, everyCell, angle, footprint, ground,
+			name => LobbyModel.TexturePath( name, $"{item.Directory}/textures", shared ), made, out cells );
+
+		if ( cells > 0 )
+			Log.Info( $"'{item.Name}': {cells} floor cells blended into the ground's tiles" );
+
+		return blended;
 	}
 
 	/// <summary>
@@ -854,6 +903,12 @@ public sealed class ParkObjects : Entity
 		}
 
 		_signs.Clear();
+
+		foreach ( var standing in _standing.Values )
+		{
+			foreach ( var texture in standing.Blended )
+				texture.Delete();
+		}
 	}
 
 }

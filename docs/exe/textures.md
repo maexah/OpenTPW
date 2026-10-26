@@ -101,7 +101,7 @@ materials, their texture's flags or the footprint cells' texture words (a read w
 (`+0x0c` -1, `+0x18` nought). Holding the textures' `0x300` additive, the footprint cells' texture words or the
 floor's `0x800` cleared changed nothing on screen (`orig/belly-4.png`, `h-3.png`, `k-2.png`): the floor's draw state
 is made at the load. **A procedural base's floor draws composited tiles, not its own texture** (Q617): as the model is
-made, `FUN_0057ace0` blends each used footprint cell's ground tile with that cell's texture and puts the result in the
+made, `ProceduralBase_BlendFloor` (`0x0057ace0`) blends each used footprint cell's ground tile with that cell's texture and puts the result in the
 model's frame table in the texture's place (`park-engine.md`, "A built thing's floor is blended into the ground's
 tiles"), which fits `m_grass1`'s cached texture having no surface. The texture cache
 (`[0x0087a268]`, 4,096 entries of {folder, name, texture, refs}, the count at `+0x10000`) holds `m_grass1` once,
@@ -147,7 +147,7 @@ all meshes. With no outline (a queue piece's kind-nought cell, no footprint) not
 every catalogue item on offer, and **54 of 54 Lost Kingdom item models agree with OpenTPW's `ProceduralBase.FloorMesh` on
 the count and the floor** (`q362/sweep.txt`): every floor is the item's mesh 0, its count the outline's corners (the Belly
 Bounce 14, Sign 1 14, the 2 x 1 Log 6); the park gate, a fixed item, counts 0. Every floor's and root's material word
-carries `0x800` (the Belly Bounce's `0x801`/`0x821`, Ptotem's `0x0803` with `0x2`), the seven queue pieces count 0 with
+carries `0x800` (the Belly Bounce's `0x801`/`0x821`, Ptotem's `0x0803` with `0x2`), the seven queue pieces count 0 (loaded with `0x2`, every mesh node of theirs is marked `0x20000` by `FUN_00461f10`, `park-engine.md`, "The footprint table") with
 their root's `0x0831` (`jpa_que1`/`2`/`3`), and `jpa_que5`/`jpa_que6` on their second mesh have none (`0x0011` to `0x0033`).
 The terrain (`base.MD2`, header `0x3`, not loaded by `FUN_004629d0`) keeps `dk_water3`'s word `0x8031`, no `0x800`.
 

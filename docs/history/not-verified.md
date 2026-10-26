@@ -5,6 +5,11 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q656 (a fresh park's boundary wall): this game on the desk at 1280 x 720 (`q656/run1`), the original off-screen by
+  `freshfs.sh` (`q656/orig`), both at the cameras (450,165) and (600,100), 110, 180. Not seen: the left of the gate in the
+  original (its 4:3 frame cuts it off at that camera; its file holds it). Not built: how often the original's laying
+  draws the generator before each anchor's last choice (`FRESH_BOUNDARY_LAYING_DRAWS`). Not run: fantasy, Hallowe'en
+  and space fresh parks in this game (Lost Kingdom first; the chooser matches the original's fantasy and Hallowe'en files).
 - Q743 (the original on Q713's made file B, row 248): the original run off-screen under Proton by `fsload.sh`, its
   memory read and its frames taken (`q743/orig/O`); this game on the desk at 1280 x 720, Full Simulation by Q707's F player.
   Not read: the original's score for row 248 (posted and taken on one tick), which sideshow its row 257 judged at 88

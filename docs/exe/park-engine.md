@@ -4515,25 +4515,57 @@ caught nibbles; every other one is one higher, and only where OpenTPW's byte end
 `0x13` decode stands one above OpenTPW's on about half of those bytes (Q460). The terrain pass then draws the tile by
 the cell's word, as every tile ("Which cell is handed on"), and `FUN_0046ded0(1)` leaves a `0x0080` cell's turn.
 
-**A built thing's floor is blended into the ground's tiles** (Q617). The model maker `FUN_00463060`, asked with
-flag `0x8` (a thing stood on the land), while `[0x007a1a8c]` has `0x4000` (the compositor on) and the model's root byte
-has `0x40`, stamps each used cell of the item's footprint (`0x80` in its entry) into the heightfield, turned by the
-thing's angle: the word `& 0x6 | turn | 0x281` (used `0x80`, stamped `0x200`, and `0x1`, so the terrain pass draws no
-ground there) and the entry's texture index above it. It then calls `FUN_0057ace0` over the footprint's rectangle
-(`0x004635af`), which for each cell holding `0x80` and `0x200` makes a texture (`FUN_00575fa0`) and has
-`FUN_00572630`, on the tile cache `[[0x00879d60] + 0x230]`, composite into it the cell's ground tile at the cache's own
-size (`+4`) with the cell's texture laid over by its alpha, as a path is ("A path laid over", above; the record handed
-on is that texture's bits, width, height, bytes a texel and the word). The new texture takes the place of that index's
-texture in the model's frame table (`[this + 8] + 0x50`, eight bytes an index; the old one is kept in a list at
-`+0x124` to give back), so **the floor's materials draw the composited tile**; a failure logs "Could not blend base
-for ride %s" (`0x0074d36c`). Read in the running original (`q617/orig/run.sh`: `brk.sh` on the call at `0x0057af4b`
-as `loadfile.sh`'s poller): the stock park's load blends 44 cells, all on tick 755, every one at the cache's size 16,
-every texture laid over 128 x 128 at 2 bytes a texel and every word holding `0x281` (`q617/orig/a-load.log`); by
-OpenTPW's `cell` they are 40 footprint cells (types 4, 9 and 10) of eleven things and the four queue cells (type 3)
-at (49..52, 22) before the Belly Bounce (`q617/cells.out`). At the Belly Bounce (camera (525,240) 110 180,
-`q617/side-by-side-bounce.png`) the original's floor is as soft as the ground beside it, sharpness 2.38 against 1.79
-(`lib/sharp.py`, the mean absolute Laplacian of luminance), where OpenTPW, then at 16, drew the floor with its own texture,
-10.91 against 1.11 (`q617/PREDICTION.txt`, P6 to P8; at the 32 it draws now the ground beside it reads 3.68, Q649). The two boxes were mapped by eye on the same spot, the corner of the floor cell beside the second fence post, and the frames differ in size (1280 x 720 against 1024 x 768), so the ratio is a rough magnitude, not a like-for-like measure: **OpenTPW does not blend a floor** (Q649). The lobby calls the
+**A built thing's floor is blended into the ground's tiles** (Q617, Q649). The model maker `FUN_00463060`, asked with
+flag `0x8` (a thing stood on the land), while `[0x007a1a8c]` has `0x4000` (the compositor on) and the model record's
+byte 0 (`[instance + 8]`) has `0x40`, stamps each used cell of the record's footprint table (`+0x18`, below) into the
+heightfield, turned by the thing's angle (the record's `+0x10`): the word `& 0x6 | mirror | turn | 0x281` (used `0x80`,
+stamped `0x200`, and `0x1`, so the terrain pass draws no ground there) and the entry's frame index above it. The walk
+(`0x004633c0`) starts from the model's cell less one in x at 180 and 270 and in z at 90 and 180, so in the covered
+cells (`+0xc0`/`+0xc4`) table cell (u, v) lands on (left + u, top + v) at 0, (left + v, bottom - u) at 90, (right - u,
+bottom - v) at 180 and (right - v, top + u) at 270; the mirror is kept and the turn carried round, 90: nought to `0x08`
+to `0x10` to `0x20` to nought (180 and 270 likewise, the rotation table above). It then calls
+`ProceduralBase_BlendFloor` (`0x0057ace0`) over the covered rectangle (`0x004635af`), which for each cell holding `0x80`
+and `0x200` reads the frame's texture's top level (`FUN_00575fa0`), makes a texture (`0x0057ae95`) and has `TileCache_CompositeCell` (`0x00572630`), on the tile cache
+`[[0x00879d60] + 0x230]`, composite into it the cell's ground tile at the cache's own size (`+4`) with the cell's frame's
+texture laid over by its alpha, as a path is ("A path laid over", above; the record handed on is that texture's top
+level's bits, width, height, bytes a texel and the word; x and y are the heightfield's own, which the tile maker reads as
+box-relative: the same in every shipped park, whose box starts at nought). The new texture takes the place of that
+frame's texture in the instance's own frame table (`[[instance + 8] + 0x1c] + 8`, `+0x50`, eight bytes a frame; the old
+one is kept in a list at `+0x124` to give back), so **the floor's materials draw the composited tile**; a failure logs
+"Could not blend base for ride %s" (`0x0074d36c`). A frame two cells shared would draw the later cell's tile; no Lost
+Kingdom table shares one.
+
+**The footprint table** is `ProceduralBase_SkirtFlags`' (`0x0046aa10`), run by `ProceduralBase_Build` as the loader
+`FUN_004629d0` makes the model (its flag `0x1`), where the model is exported with a procedural base (header `0x8`, else
+"Ride %s has not been exported with procedural base") and a floor was found (`[record] + 0x2c`) or the header has
+`0x80`; it sets byte 0's `0x40` as it ends. Width x depth entries of `{ u16 flags, u16 frame }`, `{ 1, 10000 }` for
+none. For each face of the floor mesh (the root where none was found) it takes the corners' mean in model space (by the
+float third, `0x006fe86c`), cut to cells (`__ftol` of x and z over the grid's cell), and the edge of the three most along
+x and the one most along z, each as a share of its length; a face is kept for its cell where both shares pass 0.9
+(`0x006fe870`) and either passes the kept face's. Then (`0x0046af02` on) a cell is entered where the header has `0x80`,
+or where `Footprint_EdgeMask` (`0x0052c420`: a cell of kind 4, 9, 10 or 0x17 not ringed on all four sides by such cells)
+has it and its kind is not nought, and a face was kept: the kept face's three corners stand on three corners of the
+cell, 0 low x low z, 1 low x high z, 2 high x high z, 3 high x low z (from each edge's low and high end along its axis),
+the fourth's UV completes the parallelogram, and the corner nearest the least u and least v of the four gives the turn
+(nought, `0x08`, `0x10`, `0x20`), with the mirror `0x40` where u changes more than v from that corner to the next; the
+frame is the face's material's. The loader has moved each floor face's UVs by whole numbers into 0..1 first
+(`FUN_004679d0`), which leaves the answer alone. **Queue pieces** are loaded with flag `0x2` (`0x12423`), which makes
+`FUN_00461f10` set the header's `0x80` and every mesh node's `0x20000` (so no floor is found, `textures.md`, "Which
+materials the loader makes opaque"): their one cell is entered whatever its kind, from the root mesh.
+
+**Measured in the running original** (`q617/orig/run.sh`, `q649/orig/run.sh`, `run-items.sh`: `brk.sh` on the call at
+`0x0057af4b` as `loadfile.sh`'s poller, and `original/footprints.py`): the stock park's load blends 44 cells, all on tick
+755, every texture laid over 128 x 128 at 2 bytes a texel and every word holding `0x281`, at the cache's size, 16 there
+and 32 under `prepoke32.sh` (`q617/orig/a-load.log`, `q649/orig/a-load.log`, the same cells and words); by OpenTPW's
+`cell` they are 40 footprint cells (types 4, 9 and 10) of eleven things and the four queue cells (type 3) at (49..52, 22)
+before the Belly Bounce (`q617/cells.out`). The tables of the 41 Lost Kingdom item models the catalogue loads, of the
+eleven placed instances and of the seven queue models (eight loads) are as above, cell for cell (`q649/orig/a-footprints.txt`,
+`b-items.txt`; `ProceduralFloorTests`); the two coaster pylon models hold one cell with no entry. Q617 compared the Belly
+Bounce (camera (525,240) 110 180) at 16: the original's floor as soft as the ground beside it, sharpness 2.38 against
+1.79 (`lib/sharp.py`), OpenTPW's then 10.91 against 1.11, its own texture. **OpenTPW blends a floor as the original**
+(`ProceduralFloor`, Q649): the same cells and words, and at 32 boxes wholly on the floor read 1.82 and 1.58 times the
+ground against the original's 1.55 and 1.19, half as sharp as the floor's own texture, in the original's colours
+(`q649/side-by-side-floor.png`, `q649/PREDICTION.txt`). The lobby calls the
 same load (`FUN_005d84a0`) but no lobby wad holds a `base.lnd`, so the bit is not set there.
 
 **Which cell is handed on, and how its tile is laid** (Q488). `FUN_0056f090` keys each visible box cell

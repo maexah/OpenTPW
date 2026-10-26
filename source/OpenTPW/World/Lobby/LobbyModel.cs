@@ -166,18 +166,25 @@ public sealed class LobbyModel : IChannelPosed
 	/// The frames whose materials the original's loader sets <c>0x800</c> on, drawn opaque whatever their texture's
 	/// alpha (<see cref="ProceduralBase"/>), or null for a model it loads without flag <c>0x2000</c>.
 	/// </param>
+	/// <param name="frameTextures">
+	/// Textures to draw in place of a frame's own, keyed by <see cref="ModelFile.MaterialData.FrameOffset"/>: a built
+	/// thing's floor blended into the ground's tiles (<see cref="ProceduralFloor"/>), each the model's own, as the
+	/// original's model keeps its own frame table. Null for none.
+	/// </param>
 	public LobbyModel( string modelPath, string textureDirectory, Vector3 origin, float scale = 1f,
 		IReadOnlyDictionary<string, Texture>? textureOverrides = null,
 		MaterialFlags materialFlags = MaterialFlags.None,
 		string? sharedTextureDirectory = null,
 		IReadOnlyList<AnimationFile>? clips = null,
-		Func<ModelFile, IReadOnlySet<uint>>? opaqueFrames = null )
+		Func<ModelFile, IReadOnlySet<uint>>? opaqueFrames = null,
+		Func<ModelFile, IReadOnlyDictionary<uint, Texture>>? frameTextures = null )
 	{
 		var modelFile = new ModelFile( modelPath );
 		_file = modelFile;
 		_modelPath = modelPath;
 		_additive = (modelFile.HeaderFlags & 0x4) != 0;
 		var opaque = opaqueFrames?.Invoke( modelFile ) ?? NoFrames;
+		var framed = frameTextures?.Invoke( modelFile );
 		var meshCount = modelFile.Meshes.Count;
 
 		var supplied = clips is { Count: > 0 };
@@ -208,6 +215,8 @@ public sealed class LobbyModel : IChannelPosed
 			{
 				if ( mesh.Materials.Length <= i || string.IsNullOrEmpty( mesh.Materials[i].Name ) )
 					textures.Add( Texture.Missing );
+				else if ( framed != null && framed.TryGetValue( mesh.Materials[i].FrameOffset, out var blended ) )
+					textures.Add( blended );
 				else if ( textureOverrides != null && textureOverrides.TryGetValue( mesh.Materials[i].Name, out var overridden ) )
 				{
 					textures.Add( overridden );
@@ -381,13 +390,17 @@ public sealed class LobbyModel : IChannelPosed
 	/// </para>
 	/// </summary>
 	private static Texture LoadTexture( string name, string directory, string? shared )
+		=> new( TexturePath( name, directory, shared ), TextureFlags.Repeat );
+
+	/// <summary>Where a material's texture is read from: the model's own folder, else the shared one where only it has the file.</summary>
+	internal static string TexturePath( string name, string directory, string? shared )
 	{
 		var path = $"{directory}/{name}.wct";
 
 		if ( shared != null && !Exists( path ) && Exists( $"{shared}/{name}.wct" ) )
 			path = $"{shared}/{name}.wct";
 
-		return new Texture( path, TextureFlags.Repeat );
+		return path;
 	}
 
 	/// <summary>Whether the file system can offer this path at all - see <see cref="LoadTexture"/>.</summary>

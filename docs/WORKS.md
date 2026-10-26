@@ -76,6 +76,14 @@ belongs to or at the end. Grep it by area or Q-number; never read it whole.
   Every 32-pixel tile of the four parks and the stock park's 78 path tiles equal the original's code. At the gate the
   path reads 3.20 and the grass 3.72 (`lib/sharp.py`), the original made to draw 32 reads 3.23 and
   3.64; at 16, 1.39 and 1.20 here (`q618/side-by-side-gate.png`).
+- **A built thing's floor and a queue's are blended into the ground's tiles, as the original's are** (Q649,
+  `ProceduralFloor`): each footprint cell's floor frame draws that cell's ground tile, at the tiles' own size, with the
+  frame's texture laid over by its alpha, turned as the original stamps it; again for a thing bought or moved, let go
+  with it when sold. The stock park blends the original's 44 cells, 40 of eleven things and 4 of queue, with the same
+  words, and the tables of all 41 Lost Kingdom item models equal those the running original holds. At the Belly
+  Bounce (`q649/side-by-side-floor.png`) the plate's square edge is gone and the floor reads 1.82 and 1.58 times the
+  ground's sharpness against the original's 1.55 and 1.19, in its colours. With the compositor off a floor draws its own
+  texture, as the original's.
 - **One line brings the original's look back: `graphics faithful` in `save/opentpw.cfg`** (Q645, Alexah 2026-10-21; off
   by default, read as the game starts, `GameOptions.Faithful`). It turns every chosen improvement off at once: the art
   cut to four bits a channel (Q616), 16-pixel ground tiles (Q618), the research pumps stepped picture by picture (Q677),

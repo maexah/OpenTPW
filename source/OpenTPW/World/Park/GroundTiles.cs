@@ -38,6 +38,9 @@ public sealed class GroundTiles
 
 	private readonly ProceduralGround _ground;
 
+	/// <summary>The tile maker the tiles were laid by, which a built thing's floor is blended by too (<see cref="ParkGround.BlendFloor"/>).</summary>
+	internal ProceduralGround Ground => _ground;
+
 	/// <summary>The texture's pixels, kept so that a tile can be laid again.</summary>
 	private readonly byte[] _pixels;
 

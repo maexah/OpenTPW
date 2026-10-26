@@ -88,6 +88,9 @@ public sealed class ParkGround : ModelEntity
 	/// <summary>Each path tile's texture as the compositor reads it, by tile index, null where it would not read.</summary>
 	private readonly Dictionary<int, ProceduralGround.PathTexture?> _pathTextures = new();
 
+	/// <summary>Each built thing's floor texture as the compositor reads it, by path, null where it would not read.</summary>
+	private readonly Dictionary<string, ProceduralGround.PathTexture?> _floorTextures = new( StringComparer.OrdinalIgnoreCase );
+
 	/// <param name="world">
 	/// The park's own save, or null where the theme ships none. It is asked which cells something else draws - a
 	/// path, a queue or a built thing's floor - so that those are left to their owners instead of being drawn as grass
@@ -512,6 +515,64 @@ public sealed class ParkGround : ModelEntity
 		}
 
 		_pathTextures[index] = texture;
+		return texture;
+	}
+
+	/// <summary>
+	/// <c>TileCache_CompositeCell</c> (<c>0x00572630</c>) for one cell of a built thing's floor (<c>ProceduralBase_BlendFloor</c>): cell (x, y)'s ground tile at the
+	/// tiles' own size, read by <paramref name="word"/>'s turn and mirror, with the floor's texture at
+	/// <paramref name="texturePath"/> laid over it by its alpha, as a path is (<see cref="ProceduralGround.Tile"/>); null where
+	/// there are no tiles (the compositor off), the cell is outside their box or the texture will not read. The caller owns
+	/// the texture. The original hands the heightfield's x and y as they are, where its tiles' own are box-relative: one in
+	/// every shipped park, whose box starts at nought.
+	/// </summary>
+	public Texture? BlendFloor( int x, int y, ushort word, string texturePath )
+	{
+		if ( _tiles?.Covers( x, y ) != true || FloorTexture( texturePath ) is not { } floor )
+			return null;
+
+		var n = _tiles.TileSize;
+		var tile = _tiles.Ground.Tile( x, y, new ProceduralGround.Overlay( floor, word ) );
+		var pixels = new byte[n * n * 4];
+
+		// The tile's row k is the surface's; the texture holds its rows bottom up, as every texture here is read (the
+		// shader turns v over), so a floor's UVs find it as they found the floor's own.
+		for ( var k = 0; k < n; ++k )
+		{
+			for ( var j = 0; j < n; ++j )
+			{
+				var from = ((k * n) + j) * 3;
+				var to = ((((n - 1 - k) * n) + j) * 4);
+				pixels[to] = tile[from];
+				pixels[to + 1] = tile[from + 1];
+				pixels[to + 2] = tile[from + 2];
+				pixels[to + 3] = 0xff;
+			}
+		}
+
+		return new Texture( pixels, n, n, TextureFlags.Repeat );
+	}
+
+	/// <summary>A floor's texture as the compositor reads it (<see cref="ProceduralGround.PathTexture"/>), read once a path.</summary>
+	private ProceduralGround.PathTexture? FloorTexture( string path )
+	{
+		if ( _floorTextures.TryGetValue( path, out var known ) )
+			return known;
+
+		ProceduralGround.PathTexture? texture = null;
+
+		try
+		{
+			using var stream = FileSystem.OpenRead( path );
+			var data = new TextureFile( stream ).Data;
+			texture = ProceduralGround.PathTexture.FromRgba( data.Data, data.Width, data.Height );
+		}
+		catch ( Exception e )
+		{
+			Log.Warning( $"{_themeName}: floor texture '{path}' would not read, so its floor draws its own - {e.Message}" );
+		}
+
+		_floorTextures[path] = texture;
 		return texture;
 	}
 

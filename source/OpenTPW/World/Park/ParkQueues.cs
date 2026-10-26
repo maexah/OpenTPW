@@ -194,6 +194,12 @@ public sealed class ParkQueues : Entity
 		}
 
 		_models.Clear();
+
+		foreach ( var texture in _blended )
+			texture.Delete();
+
+		_blended.Clear();
+		FloorCellsBlended = 0;
 	}
 
 	private void Build( IParkInitialState? world )
@@ -242,7 +248,7 @@ public sealed class ParkQueues : Entity
 			Log.Warning( $"{ThemeName}: {unnamed} queue cells name a piece outside the game's own table of {Pieces.Length}" );
 
 		if ( Placed > 0 )
-			Log.Info( $"{ThemeName}: {Placed} queue cells stand in the park" );
+			Log.Info( $"{ThemeName}: {Placed} queue cells stand in the park, {FloorCellsBlended} of them blended into the ground's tiles" );
 	}
 
 	/// <summary>
@@ -266,14 +272,16 @@ public sealed class ParkQueues : Entity
 		{
 			// Queue pieces keep their own art beside them - the jungle's six jpa_que textures - and fall
 			// back to the theme's shared archive for anything else, the way a built item does.
-			var model = new LobbyModel( $"{directory}/{piece}.MD2", $"{directory}/textures", Vector3.Zero,
-				sharedTextureDirectory: $"levels/{theme}/sharetex",
-				opaqueFrames: ProceduralBase.ForQueuePiece );
-
 			// The same angle to both, or the model is turned about one point and stood at another. For a
 			// one-cell piece either angle covers the same cell, so a mismatch does not show as a piece in
 			// the wrong place - it shows as one sitting slightly off its own square.
 			var turn = TurnOf( cell );
+			var shared = $"levels/{theme}/sharetex";
+
+			var model = new LobbyModel( $"{directory}/{piece}.MD2", $"{directory}/textures", Vector3.Zero,
+				sharedTextureDirectory: shared,
+				opaqueFrames: ProceduralBase.ForQueuePiece,
+				frameTextures: file => BlendFloor( file, x, y, turn, $"{directory}/textures", shared ) );
 
 			model.SetTransform( ParkObjects.OriginFor( x, y, turn ), ParkObjects.Turn( turn ) );
 
@@ -283,6 +291,30 @@ public sealed class ParkQueues : Entity
 		{
 			Log.Warning( $"{ThemeName}: queue piece '{piece}' would not load, so ({x},{y}) is missing from the park - {e.Message}" );
 		}
+	}
+
+	/// <summary>The textures the pieces' floors were blended into, let go of with the pieces.</summary>
+	private readonly List<Texture> _blended = [];
+
+	/// <summary>The pieces' cells blended into the ground's tiles (<see cref="BlendFloor"/>).</summary>
+	public int FloorCellsBlended { get; private set; }
+
+	/// <summary>
+	/// A piece's one cell blended into the ground's tiles (<see cref="ProceduralFloor.Blend"/>) at the angle the model maker is
+	/// given (<see cref="TurnOf"/>). The pieces are loaded with flag <c>0x2</c> (<c>FUN_00522900</c>'s <c>0x12423</c>), which
+	/// makes <c>FUN_00461f10</c> set the header's <c>0x80</c>, so the cell is entered whatever its kind, from the root mesh (no
+	/// floor is found: every node is marked to count nothing); the running original's table holds it (<c>footprints.py</c>).
+	/// </summary>
+	private IReadOnlyDictionary<uint, Texture> BlendFloor( ModelFile file, int x, int y, int angle, string directory, string shared )
+	{
+		if ( ParkGround.Current is not { } ground || (file.HeaderFlags & 0x8) == 0 )
+			return new Dictionary<uint, Texture>();
+
+		var blended = ProceduralFloor.Blend( file, file.RootNode, null, 1, 1, true, angle, (x, y, x, y), ground,
+			name => LobbyModel.TexturePath( name, directory, shared ), _blended, out var cells );
+
+		FloorCellsBlended += cells;
+		return blended;
 	}
 
 	protected override void OnUpdate()

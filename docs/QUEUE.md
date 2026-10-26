@@ -74,16 +74,6 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q649. A built thing's floor blended into the ground's tiles.** From Q617 (`park-engine.md`, "A built thing's
-  floor is blended into the ground's tiles"). The original composites each used footprint cell's ground tile with the
-  cell's floor texture laid over by its alpha (as a path is, `ProceduralGround`'s overlay) and draws the floor's
-  materials with it; ours draws the floor plate's own 128 x 128 texture, crisp beside the ground's tiles (the Belly
-  Bounce's floor 10.91 against 1.11 at 16 pixels, the original's 2.38 against 1.79; at 32, Q618, 10.91 against 3.68, the
-  original's 4.89 against 3.74, `q618/side-by-side-bounce.png`; `original/prepoke32.sh` makes the original draw 32).
-  Build it for every model the original blends (flag `0x8`, compositor on, root byte `0x40`), queue pieces included, and
-  again when a thing is bought, moved or sold.
-  Confirm: `q617/side-by-side-bounce.png`'s view in both games, `lib/sharp.py` floor against ground within the
-  original's, and a census of the cells blended (the original's 44 in the stock park).
 - [ ] **Q652. The terrain model's meshes half lit on land outside the park, and the water drawn unlit.** From Q619
   (`park-engine.md`, "The terrain model's meshes on that land are half lit too" and "The water is drawn unlit, not half
   lit"). Give each `base.md2` mesh vertex whose cell carries the half light its normal at 0.225 long (1.0 elsewhere, the

@@ -188,6 +188,9 @@ public partial class ModelFile : BaseFormat
 	/// <summary>The root node, the header's 0x78 (the one node with no parent), or -1 where it names none.</summary>
 	public int RootNode { get; private set; } = -1;
 
+	/// <summary>The frame table's offset, the header's 0x50: a material's frame index is its <see cref="MaterialData.FrameOffset"/> less this, over 8.</summary>
+	public uint FrameTableOffset { get; private set; }
+
 	public ModelFile( Stream stream )
 	{
 		ReadFromStream( stream );
@@ -354,6 +357,7 @@ public partial class ModelFile : BaseFormat
 
 			reader.BaseStream.Seek( 0x50, SeekOrigin.Begin );
 			uint textureListOffset = reader.ReadUInt32();
+			FrameTableOffset = textureListOffset;
 
 			reader.BaseStream.Seek( 0x54, SeekOrigin.Begin );
 			uint frameListOffset = reader.ReadUInt32();

@@ -10388,6 +10388,19 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   directions, flags, rows and turns are the original's fresh park's (the same in all 34 it made), the variants in its walk
   order; the gate's wall lies on the original's (`q656/overlay-gate.png`). The saved file is Q249's: a fresh park cannot
   be saved yet (`SAVE_PARK_WITH_NO_FILE`), and the pieces it will write are noted there.
+- [x] **Q649. A built thing's floor blended into the ground's tiles.** From Q617 (`park-engine.md`, "A built thing's
+  floor is blended into the ground's tiles"). The original composites each used footprint cell's ground tile with the
+  cell's floor texture laid over by its alpha (as a path is, `ProceduralGround`'s overlay) and draws the floor's
+  materials with it; ours draws the floor plate's own 128 x 128 texture, crisp beside the ground's tiles (the Belly
+  Bounce's floor 10.91 against 1.11 at 16 pixels, the original's 2.38 against 1.79; at 32, Q618, 10.91 against 3.68, the
+  original's 4.89 against 3.74, `q618/side-by-side-bounce.png`; `original/prepoke32.sh` makes the original draw 32).
+  Build it for every model the original blends (flag `0x8`, compositor on, root byte `0x40`), queue pieces included, and
+  again when a thing is bought, moved or sold.
+  Confirm: `q617/side-by-side-bounce.png`'s view in both games, `lib/sharp.py` floor against ground within the
+  original's, and a census of the cells blended (the original's 44 in the stock park).
+  **Done (2026-10-26, `ProceduralFloor`):** the stock park blends 40 + 4 = 44 cells with the original's words, the
+  tables of 41 of 41 Lost Kingdom item models equal the running original's, and at the Belly Bounce floor-only boxes read
+  1.82 and 1.58 times the ground against the original's 1.55 and 1.19 at 32 (`q649/PREDICTION.txt`).
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.
