@@ -10294,6 +10294,22 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   missed (C3: a held channel's `time` is no advance). 8 bugs put back, 7 caught;
   the 30 ms guard survives, reached only if float rounding left a whole tick owed. Two runs of the branch first
   summoned the bus for a leaver on 1094 and 1089 where the control's came for the arrivals on 1264: Q678.
+- [x] **Q677. The research pumps drawn as one smooth scroll.** Q675's second part, split from it (its first part, the
+  clips at the frame's own time, is done). An improvement said at `ParkResearchScreen` (Alexah, 2026-10-21: on by
+  default): the pumps drawn as one smooth scroll. From Q640 (`hud.md`, "The pump"; `docs/history/queue-done.md`, Q642): they step as the original's, 12.75
+  pictures a second at rate 2 in a 2-or-3-pass rhythm, with a 167 ms hold once a loop where `fluid32` repeats `fluid`;
+  each run picture is the last moved by -1/31 of the texture in `u` (FileFormats `models.md`), so a pump could be drawn at
+  its 16.16 position as one smooth scroll, the turn taken at 31. The drain's and the fill's 32 meshes were not measured.
+  Confirm: the pumps filmed with `lib/rectfilm.py` (`q640/ours.py`, Q640's numbers: 12.75 pictures a second at rate
+  2 before), predicting the rate after, beside the original's (`q640/orig/run.sh`).
+  **Done (2026-10-26):** `ResearchPump` keeps the original's logic and adds a drawn scroll: `Scroll` (16.16 frames, nought
+  where the run starts, twice the speed a running pass, turned at 31 with its fraction kept) and `Shift( owed )`, the
+  scroll and the pass owed over 31; a running pump's control draws part 0, `fluid`, its texture moved by that through
+  `UiControl.TextureShift` and a new shader float `g_flScrollU` (the uniform buffer's spare padding; nought for every
+  other draw). The run's 32 meshes are `fluid` less k/31 in `u` at the same corners (`TheRunsMeshesAreFluidMovedAThirtyFirstEach`);
+  the drain and the fill are two quads split at a moving edge, left stepped (FileFormats `models.md`). Filmed on the
+  final build (`q677/C`): 143.93 picture changes a second, +0.42578 repeats a second in a line against the original's
+  12.75 changes and +0.41082, with its 167 ms hold once a loop (`q677/orig/O`); mutate 10/10; `lib/scrollphase.py` added.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

@@ -74,14 +74,6 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q677. The research pumps drawn as one smooth scroll.** Q675's second part, split from it (its first part, the
-  clips at the frame's own time, is done). An improvement said at `ParkResearchScreen` (Alexah, 2026-10-21: on by
-  default): the pumps drawn as one smooth scroll. From Q640 (`hud.md`, "The pump"; `docs/history/queue-done.md`, Q642): they step as the original's, 12.75
-  pictures a second at rate 2 in a 2-or-3-pass rhythm, with a 167 ms hold once a loop where `fluid32` repeats `fluid`;
-  each run picture is the last moved by -1/31 of the texture in `u` (FileFormats `models.md`), so a pump could be drawn at
-  its 16.16 position as one smooth scroll, the turn taken at 31. The drain's and the fill's 32 meshes were not measured.
-  Confirm: the pumps filmed with `lib/rectfilm.py` (`q640/ours.py`, Q640's numbers: 12.75 pictures a second at rate
-  2 before), predicting the rate after, beside the original's (`q640/orig/run.sh`).
 - [ ] **Q645. A "faithful" graphics toggle brings the original's look back.** From Alexah's play test, 2026-10-21
   (decisions, last in the order). One option, off by default, that turns every improvement of this batch off at once:
   four bits a channel (Q616), the research pumps' picture-by-picture steps (Q677; the clips' every-frame posing is the original's own, Q642, Q675), flags' jumps (Q643), the letters

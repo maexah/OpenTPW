@@ -33,6 +33,9 @@ internal class UiControl
 	/// <summary>Which part of <see cref="Mesh"/> it shows, before its state is added - set by 0x0065d3a3.</summary>
 	public int Frame { get; set; }
 
+	/// <summary>How far the part's textures are moved across, in repeats of them: a research pump's run (<see cref="ResearchPump.Scroll"/>), else nought.</summary>
+	public float TextureShift { get; set; }
+
 	/// <summary>The row of UIHELPTEXT.str the <see cref="HelpBar"/> shows over it, or -1 for none.</summary>
 	public int HelpText { get; set; } = -1;
 
@@ -243,7 +246,7 @@ internal class UiControl
 
 	protected virtual void OnDraw()
 	{
-		Mesh?.Draw( Frame + State, Pixels, Rect );
+		Mesh?.Draw( Frame + State, Pixels, Rect, scrollAcross: TextureShift );
 		DrawText( Text );
 	}
 

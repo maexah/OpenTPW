@@ -246,12 +246,12 @@ public class ParkResearchScreenTests
 	/// <b>The pumps take their kinds' rates as the screen opens, and move 30 passes a second</b>: with one researcher of
 	/// ability 3 of a most of 60 the rides' output 48 is a rate of <c>48 × 5 / 100</c> = 2 and the others' 6, 14, 6 and 4
 	/// nought; the rides' pump starts at <c>0x30</c> at 14417, the rest stand. A second is 30 passes, and
-	/// <c>0x300000 + 30 × 28834</c> is frame <c>0x3d</c>, drawn on the panel's pump. The rides' effort dragged to nought takes
-	/// its output, and its rate, to nought: the pump drains from <c>0x20</c>. Of ability 60 every kind's rate is its
-	/// output, and every pump starts.
+	/// <c>0x300000 + 30 × 28834</c> is frame <c>0x3d</c>, drawn on the panel's pump; seven passes and a half more start the
+	/// run, drawn as <c>fluid</c> moved by the half pass owed. The rides' effort dragged to nought takes its output, and its
+	/// rate, to nought: the pump drains from <c>0x20</c>. Of ability 60 every kind's rate is its output, and every pump starts.
 	/// </summary>
 	/// <remarks><b>Mutations:</b> the rate given without a current project's test; 60 passes a second; the drag's refresh
-	/// skipped; the pumps refreshed before the opening's efforts are seeded.</remarks>
+	/// skipped; the pumps refreshed before the opening's efforts are seeded; the shift not handed to the control, or without the passes owed.</remarks>
 	[TestMethod]
 	public void ThePumpsTakeTheirRatesAndMove()
 	{
@@ -269,12 +269,17 @@ public class ParkResearchScreenTests
 		Assert.AreEqual( (30, 0x3d), (rides.Passes, rides.Frame) );
 
 		var drawn = Controls( screen.Root ).Single( control => control.Id == 0xd2d01 ).Children.Single( control => control.Id == 0xd2d06 );
-		Assert.AreEqual( 0x3d, drawn.Frame );
+		Assert.AreEqual( (0x3d, 0f), (drawn.Frame, drawn.TextureShift) );
+
+		// Seven passes and a half more: the 37th starts the run, drawn as fluid moved by the half pass owed.
+		screen.RunPasses( 0.25f );
+		Assert.AreEqual( (37, UI.ResearchPump.PumpState.Running, 0), (rides.Passes, rides.State, drawn.Frame) );
+		Assert.AreEqual( -(0.5f * 28834 / 65536) / 31, drawn.TextureShift, 1e-6f );
 
 		var effort = Slider( screen, 0xd2d0e );
 		effort.SetValue( 0 );
 		effort.Moved!();
-		Assert.AreEqual( (UI.ResearchPump.PumpState.Stopping, 0x20, 0x20), (rides.State, rides.Frame, drawn.Frame) );
+		Assert.AreEqual( (UI.ResearchPump.PumpState.Stopping, 0x20, 0x20, 0f), (rides.State, rides.Frame, drawn.Frame, drawn.TextureShift) );
 
 		var all = Open( new UI.WindowStack(), FreshLab(), ability: 60 );
 		CollectionAssert.AreEqual( new[] { 48, 6, 14, 6, 4 }, Enumerable.Range( 0, 5 ).Select( all.PumpRate ).ToArray() );

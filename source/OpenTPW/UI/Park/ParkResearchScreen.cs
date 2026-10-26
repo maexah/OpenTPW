@@ -36,7 +36,8 @@ namespace OpenTPW.UI;
 /// (<c>ResearchScreen_RefreshPumps</c>, <c>0x004a9c70</c>). The original moves them once a UI pass, on no clock;
 /// <b>here they move on <see cref="Time.Delta"/> at <see cref="PassesPerSecond"/></b>, the passes measured in the
 /// original under its 30 frames a second, so a pump runs as fast at any frame rate (a deviation, <c>docs/exe/hud.md</c>,
-/// "The pump").
+/// "The pump"). A running pump is drawn as one smooth scroll, moved between passes too, where the original steps it
+/// picture by picture (a deviation, on by default; <see cref="ResearchPump"/>).
 /// </para>
 ///
 /// <para>
@@ -494,10 +495,14 @@ internal sealed class ParkResearchScreen : UiWindow
 	internal int PumpRate( int kind )
 		=> _lab is { } lab && lab.CurrentItem( kind ) != 0 ? lab.Rate( kind, _abilityNow(), _most ) : 0;
 
+	/// <summary>Each pump's part on its control, a run moved by the passes owed too (<see cref="ResearchPump.Shift"/>).</summary>
 	private void ShowPumps()
 	{
 		foreach ( var kind in KindOrder )
-			_pumps[kind].Frame = _pumpStates[kind].Frame;
+		{
+			_pumps[kind].Frame = _pumpStates[kind].DrawnPart;
+			_pumps[kind].TextureShift = _pumpStates[kind].Shift( _passesOwed );
+		}
 	}
 
 	/// <summary>A kind's pump, for the tests.</summary>

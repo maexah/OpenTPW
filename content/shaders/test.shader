@@ -19,6 +19,7 @@ vertex {
         float g_flFogDensity;
         float g_flAmbient;
         float g_flWorldNormals;
+        float g_flScrollU;
 
         vec3 g_vAmbientColour;
         float g_flParkLight;
@@ -44,7 +45,8 @@ vertex {
     const uint FLAG_HALF_LIGHT = 0x40000;
 
     void main() {
-        vs_out.vTexCoords = texCoords;
+        // Moved across by ObjectUniformBuffer.g_flScrollU, nought for every draw but a research pump's run.
+        vs_out.vTexCoords = texCoords + vec2(g_oUbo.g_flScrollU, 0.0);
         vs_out.vTexCoords.y = 1.0 - vs_out.vTexCoords.y;
         vs_out.vNormal = normal;
         // The loader works these out from the file's own positions - ModelFile.CalculateNormals - so
@@ -137,6 +139,7 @@ fragment {
         float g_flFogDensity;
         float g_flAmbient;
         float g_flWorldNormals;
+        float g_flScrollU;
 
         vec3 g_vAmbientColour;
         float g_flParkLight;

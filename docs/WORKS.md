@@ -45,6 +45,11 @@ belongs to or at the end. Grep it by area or Q-number; never read it whole.
   and each Hot Pot boat's are posed at the frame's own moment (`ParkRides.NowMilliseconds`), not the last tick's; the
   Bouncy Dino's head changed 133.1 times a second at 143.9 fps, where it changed 32.1 with the bug put back and the
   original's 58.74 at its 60 (`q675/F`, `C`, `O`); a save's moment is the frame's, so no clip loads started after it.
+- **The research pumps run as one smooth scroll, a deviation on by default** (Q677, Alexah 2026-10-21): a running pump
+  draws `fluid` moved across by its own scroll, which turns at 31 with its fraction kept and is moved between passes; the
+  rides' pump at rate 2 changed picture 143.93 times a second at 143.9 fps, never more than 9.2 ms apart, moving +0.42578
+  repeats a second in a line, where the original's changes 12.75 times a second with a hold of 167 ms once a loop
+  (`q677/C`, `q677/orig/O`); its start and stop stay stepped, as the original's.
 - **A thing bought this session is a member of the running park**: it takes its turn, appears in every census, joins the object chain the original keeps live, and carries the entry and exit cells derived from its own shape picture (Q1b). **Every thing made takes the original's next id** (Q582): the free list's head, after a load the file's holes rising and then one past its highest, and an id deleted (a guest gone home, a hire fired, an object sold, the End feature ended) back at the head from its sweep's end, the first deleted first. A save after an id comes back writes the thing on it whole as made, newest first by its making, as the original's own file holds it, and a new object on a sold one's id starts with nought taken (Q606).
 - **A guest who pays sounds a till where they stand** (Q611): kids 208 (`cashD2b.mp2`, volume 0.1760, pitch 0, range 60) once per charge, after the deposit and before the cash comes off, none at a price of nought; 13 charges in 150 s of the stock park, 13 sounds, the sample found in the game's own mix (`docs/exe/audio.md`, "The charge's sound").
 - **The game's art keeps eight bits a channel by default, a deviation from the original** (Q616, Alexah 2026-10-21):

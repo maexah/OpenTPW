@@ -11,6 +11,17 @@ namespace OpenTPW.UI;
 /// once a UI pass): running it loops frames <c>0x00</c> to <c>0x1f</c>; starting it plays <c>0x30</c> to <c>0x3f</c> and then
 /// runs; stopping it plays <c>0x20</c> to <c>0x2f</c> and rests at <c>0x30</c>. Each pass adds twice the speed.
 /// </para>
+///
+/// <para>
+/// <b>The run is drawn as one smooth scroll, where the original steps it</b> (a deviation, on by default at Alexah's
+/// word, 2026-10-21; <c>docs/exe/hud.md</c>, "The pump"). The run's 32 meshes are <c>fluid</c> moved across by -1/31 of
+/// its wrapped texture each, so <c>fluid32</c> is <c>fluid</c> again: the original shows a picture every two or three
+/// passes and one picture for five passes at each turn. Here a running pump draws <c>fluid</c> moved by
+/// <see cref="Scroll"/> over 31, which moves as the position does, turns at 31 with its fraction kept, and is drawn
+/// between passes too (<see cref="Shift"/>). So a loop takes 31 frames of travel where the original's takes 32 and the fraction
+/// lost at its turn: at rate 2, 2.35 s against 2.43. The drain and the fill are stepped as the original's: their meshes
+/// are two quads whose edge moves, not a scroll.
+/// </para>
 /// </summary>
 internal sealed class ResearchPump
 {
@@ -35,6 +46,9 @@ internal sealed class ResearchPump
 	/// <summary>Where the position's whole frames are: its high word.</summary>
 	private const int Whole = 16;
 
+	/// <summary>The run's distinct pictures: <c>fluid32</c>, the 32nd, is <c>fluid</c> moved by one whole repeat of its texture.</summary>
+	internal const int RunPictures = 31;
+
 	/// <summary>The position, frames in 16.16 (slot 0). The opening writes <c>0x30</c> itself, not <c>0x30</c> frames.</summary>
 	internal int Position { get; private set; } = RestFrame;
 
@@ -48,6 +62,15 @@ internal sealed class ResearchPump
 
 	/// <summary>How many passes have moved it.</summary>
 	internal int Passes { get; private set; }
+
+	/// <summary>
+	/// Where the drawn run stands, frames in 16.16 below 31 (<see cref="RunPictures"/>): nought where the run starts, twice
+	/// the speed more each running pass, turned at 31 with its fraction kept.
+	/// </summary>
+	internal int Scroll { get; private set; }
+
+	/// <summary>The part drawn: the run's first, <c>fluid</c>, while running (moved by <see cref="Shift"/>); else <see cref="Frame"/>.</summary>
+	internal int DrawnPart => State == PumpState.Running ? 0 : Frame;
 
 	/// <summary>
 	/// <c>ResearchPump_SetRate</c>: a rate of nought turns a running or starting pump to stopping at <c>0x20</c>; any other
@@ -88,6 +111,8 @@ internal sealed class ResearchPump
 		if ( State == PumpState.Stopped )
 			return;
 
+		Scroll = State == PumpState.Running ? (Scroll + (Speed * 2)) % (RunPictures << Whole) : 0;
+
 		var position = Position + (Speed * 2);
 		var frame = position >> Whole;
 
@@ -116,5 +141,19 @@ internal sealed class ResearchPump
 		++Passes;
 	}
 
-	public override string ToString() => $"{State.ToString().ToLowerInvariant()} frame 0x{Frame:x2} speed {Speed}";
+	/// <summary>
+	/// How far <see cref="DrawnPart"/>'s texture is moved, in repeats of it: while running, <see cref="Scroll"/> and
+	/// <paramref name="owed"/> of a pass more, over 31, the way each of the run's meshes is moved (-1/31); else nought.
+	/// </summary>
+	internal float Shift( float owed )
+	{
+		if ( State != PumpState.Running )
+			return 0f;
+
+		var frames = (Scroll + (owed * Speed * 2f)) / (1 << Whole);
+		return -(frames % RunPictures) / RunPictures;
+	}
+
+	public override string ToString() => $"{State.ToString().ToLowerInvariant()} frame 0x{Frame:x2} speed {Speed}"
+		+ (State == PumpState.Running ? $" scroll {Scroll / (float)(1 << Whole):0.000}" : "");
 }

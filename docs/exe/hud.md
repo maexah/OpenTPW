@@ -674,7 +674,14 @@ rides' pump at rate 2, `lib/rectfilm.py`):** the picture changes 12.75 times a s
 (62 to 70 ms, then 97 to 104 ms on the desktop's 144 Hz), and once a loop it stands 160 to 167 ms, five passes: the
 run's `fluid32` is `fluid` moved by one whole repeat of its wrapped texture (FileFormats `models.md`, "Bits 0x10 and
 0x20"), so one picture is shown through the turn: `0x1f` two passes, then `0x00` three, the position set to nought and its
-fraction lost; 31 pictures in all (`q640/orig/O`). Ours, on the same rule, films the same: 191 changes in 15 s in each, six holds of five passes (`q640/runA`). The rate is
+fraction lost; 31 pictures in all (`q640/orig/O`). **OpenTPW draws the run as one smooth scroll** (Q677, a deviation
+on by default; `ResearchPump.Scroll`, `Shift`): `fluid` moved across by a 16.16 scroll that grows as the position does,
+turns at 31 with its fraction kept and is drawn between passes too, so the picture changes on every drawn frame (143.93
+a second on the desktop, no gap over 9.2 ms) and moves +0.42578 repeats a second in a line (RMS 0.0052 of a repeat, the
+rest one ripple a screen pixel crossed) where the original's steps at +0.411 with its hold once a loop (a loop of 2.35 s
+against 2.43; `q677/C`, `q677/orig/O`, `lib/scrollphase.py`). Stepped on the original's rule it filmed as the original
+does, 191 changes in 15 s, six holds of five passes (`q640/runA`). The drain and the fill are stepped in both: their
+meshes are two quads split at a moving edge (FileFormats `models.md`). The rate is
 `Lab_KindRate( kind )` (`0x00503980`; `advisor-park.md`, "The rate") where the kind has a current project
 (`Lab_KindCurrentItem`, `0x005039f0`), and nought where not. `ResearchScreen_RefreshPumps( kind or -1 )` (`0x004a9c70`)
 hands the pumps their rates, then sets the parameter `0x12` of the loop sound `0x9a` to the mean of the five rates (all

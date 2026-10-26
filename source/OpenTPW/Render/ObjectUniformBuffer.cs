@@ -65,7 +65,12 @@ struct ObjectUniformBuffer
 	/// dialog - among them. So this stays a switch rather than becoming the shader's only path.
 	/// </summary>
 	public float g_flWorldNormals; // 4
-	public float _padding4; // 4
+
+	/// <summary>
+	/// How far across a texture is moved, in repeats of it, added to every vertex's <c>u</c>. Nought for every draw but a
+	/// research pump's run, which <see cref="UI.UiMesh"/> draws as one mesh scrolled (<see cref="UI.ResearchPump"/>).
+	/// </summary>
+	public float g_flScrollU; // 4
 
 	/// <summary>
 	/// The park's ambient as a colour - <c>ThemeEngine.AmbientLightLevel</c>'s R, G, B / 255 - read only

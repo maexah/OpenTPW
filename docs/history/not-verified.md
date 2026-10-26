@@ -5,6 +5,10 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q675 (the clips posed at the frame's own moment): the stock park on the desktop at 143.9 fps, the Bouncy Dino, the
+  bus driving in and a Hot Pot's four boats in a go; not at a low frame rate, where a frame spans several ticks, nor
+  the ferry or the seaplane (Lost Kingdom's stock park draws neither), nor any other theme; one save and load, paused,
+  not one made while a clip ends between ticks (the suite's case). The clips take no mode: Full Simulation not run.
 - Q644 (the buy and hire screens lettered 1.2 times larger, titles as `UI_SetTitle`'s): shot at 2552 x 1355,
   1280 x 720 and 1024 x 768 in the stock park, every tab of both; not below 480 high (the two small font sets) nor in
   a window narrower than 4:3; the original at its 800 x 600 and 1024 x 768. The whole-pixel copy before the sampler

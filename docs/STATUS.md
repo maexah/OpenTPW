@@ -31,16 +31,16 @@ One line per system; the detail, item by item, is `docs/WORKS.md` (grep it by ar
 
 ## Next
 
-`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next Q677 (the research pumps' smooth scroll, Q675's second part), then Q645 (a "faithful" graphics toggle; Q525, ordered before Q638, stands lower in the file; Q543 and Q27, ordered before Q631, and Q31b, Q25, Q51 and Q55, ordered earlier, stand lower in the file): Alexah's play test of 2026-10-21 put Q616 to Q645 first, the display, then what a player hits, then the chosen improvements (`playtest-2026-10-21/notes.md`); Q598 (every clip's scale track posed) follows them in section A (Q609, the advisor's row 19 that Q602 decoded, and Q587 to Q589, the karts' and the water ride's build, are filed after it; Q586 stood above the ordered block; Q608, the draws left both-sided, is filed after Q713): the queue was reordered at Alexah's word, 2026-10-20. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. Gaps 4 and 7: `docs/PLAYER-GAPS.md`. Q13 is done: `docs/history/CLEANUP-PLAN.md`.
+`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next Q645 (a "faithful" graphics toggle; Q525, ordered before Q638, stands lower in the file; Q543 and Q27, ordered before Q631, and Q31b, Q25, Q51 and Q55, ordered earlier, stand lower in the file): Alexah's play test of 2026-10-21 put Q616 to Q645 first, the display, then what a player hits, then the chosen improvements (`playtest-2026-10-21/notes.md`); Q598 (every clip's scale track posed) follows them in section A (Q609, the advisor's row 19 that Q602 decoded, and Q587 to Q589, the karts' and the water ride's build, are filed after it; Q586 stood above the ordered block; Q608, the draws left both-sided, is filed after Q713): the queue was reordered at Alexah's word, 2026-10-20. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. Gaps 4 and 7: `docs/PLAYER-GAPS.md`. Q13 is done: `docs/history/CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the pre-commit hook: grep it by Q-number.
 
-- Q675 (the clips posed at the frame's own moment): the stock park on the desktop at 143.9 fps, the Bouncy Dino, the
-  bus driving in and a Hot Pot's four boats in a go; not at a low frame rate, where a frame spans several ticks, nor
-  the ferry or the seaplane (Lost Kingdom's stock park draws neither), nor any other theme; one save and load, paused,
-  not one made while a clip ends between ticks (the suite's case). The clips take no mode: Full Simulation not run.
+- Q677 (the research pumps drawn as one smooth scroll): the rides' pump at rate 2 in one Full Simulation park on the
+  desktop at 143.9 fps, filmed three times on the final build; not the other four kinds running, other rates, a low frame
+  rate, a drag that changes a rate mid-run, nor the start and the stop (stepped as the original's, not filmed here). Full
+  Simulation is the only mode with the screen.
 
 
 
@@ -55,8 +55,8 @@ Only the item just landed is here. Every earlier item's account is in `docs/hist
 | | | measured |
 |---|---|---|
 | Opcodes | **78** of 106 | 2026-10-20, Q553 (`FADEOBJ`), `case Opcode.` labels vs enum members |
-| Tests | **3951**, 0 fail, 0 skip with the game | 2026-10-26, Q675, alone in a worktree |
-| Tests without the game | **1407** ran, **2544** skipped, of 3951 | 2026-10-26, Q675, alone in a worktree |
+| Tests | **3953**, 0 fail, 0 skip with the game | 2026-10-26, Q677, alone in a worktree |
+| Tests without the game | **1408** ran, **2545** skipped, of 3953 | 2026-10-26, Q677, alone in a worktree |
 | Build warnings | 121 in the main tree; 131 in a fresh worktree, the ten more NuGet's advisories on ModKit's ImageSharp | 2026-10-10 (the worktree's 131 and the main tree's 121 at Q340, the worktree's 131 and the main tree's 121 again at Q343, at Q344 and at Q345, and the worktree's 131 at Q346 and, with the main tree's 121, at Q347, at Q348, at Q349, at Q351 and at Q352, 2026-10-13) |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 

@@ -95,12 +95,13 @@ internal sealed class UiMesh
 	/// draws nothing, as the original's lookup comes back empty.
 	/// </summary>
 	/// <param name="size">The control's size on the virtual screen, which is what a frame stretches to.</param>
-	public void Draw( int part, PixelRect pixels, UiRect size, float opacity = 1f )
+	/// <param name="scrollAcross">How far the part's textures are moved across, in repeats of them (only a research pump's run).</param>
+	public void Draw( int part, PixelRect pixels, UiRect size, float opacity = 1f, float scrollAcross = 0f )
 	{
 		if ( part < 0 || part >= _parts.Length )
 			return;
 
-		Sized( part, size ).Draw( pixels, opacity );
+		Sized( part, size ).Draw( pixels, opacity, scrollAcross );
 	}
 
 	/// <summary>The part a control of this size draws: the part itself, or for a frame its copy grown to the size.</summary>
@@ -224,7 +225,7 @@ internal sealed class UiMesh
 			}
 		}
 
-		public void Draw( PixelRect pixels, float opacity )
+		public void Draw( PixelRect pixels, float opacity, float scrollAcross )
 		{
 			if ( _vertices.Length == 0 )
 				return;
@@ -255,6 +256,7 @@ internal sealed class UiMesh
 				g_flTime = Time.Now,
 				g_vFogColour = Level.FogColour,
 				g_flOpacity = opacity,
+				g_flScrollU = scrollAcross,
 
 				// Lit by nothing but a flat 1, so every texel is its texture's own colour.
 				g_flAmbient = 1f
