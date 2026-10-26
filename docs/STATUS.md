@@ -31,17 +31,17 @@ One line per system; the detail, item by item, is `docs/WORKS.md` (grep it by ar
 
 ## Next
 
-`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next Q676 (the other park screens' titles as `UI_SetTitle` letters one; Q525, ordered before Q638, stands lower in the file; Q543 and Q27, ordered before Q631, and Q31b, Q25, Q51 and Q55, ordered earlier, stand lower in the file): Alexah's play test of 2026-10-21 put Q616 to Q645 first, the display, then what a player hits, then the chosen improvements (`playtest-2026-10-21/notes.md`); Q598 (every clip's scale track posed) follows them in section A (Q609, the advisor's row 19 that Q602 decoded, and Q587 to Q589, the karts' and the water ride's build, are filed after it; Q586 stood above the ordered block; Q608, the draws left both-sided, is filed after Q713): the queue was reordered at Alexah's word, 2026-10-20. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. Gaps 4 and 7: `docs/PLAYER-GAPS.md`. Q13 is done: `docs/history/CLEANUP-PLAN.md`.
+`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next Q743 (the original on Q713's made file, row 248 said of a food stall walked away from; Q525, ordered before Q638, stands lower in the file; Q543 and Q27, ordered before Q631, and Q31b, Q25, Q51 and Q55, ordered earlier, stand lower in the file): Alexah's play test of 2026-10-21 put Q616 to Q645 first, the display, then what a player hits, then the chosen improvements (`playtest-2026-10-21/notes.md`); Q598 (every clip's scale track posed) follows them in section A (Q609, the advisor's row 19 that Q602 decoded, and Q587 to Q589, the karts' and the water ride's build, are filed after it; Q586 stood above the ordered block; Q608, the draws left both-sided, is filed after Q713): the queue was reordered at Alexah's word, 2026-10-20. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. Gaps 4 and 7: `docs/PLAYER-GAPS.md`. Q13 is done: `docs/history/CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the pre-commit hook: grep it by Q-number.
 
-- Q674 (the money's trend arrow and the icon's sign): seen in the stock park under Instant Action at 800 x 600, beside
-  the original's frames, at a load, 1 and 2 March after a February written into profit, and four balances written by
-  the console under pause. The balance's colour is Q403's, so "5" and "500" are white here where the original's are
-  orange and red. Not run: Full Simulation, a window of another size (the place there by a test alone), a month closed
-  in loss by play rather than by a written figure.
+- Q676 (the all-visitors, all-items and all-staff titles as `UI_SetTitle` letters them): seen in the stock park under
+  Instant Action at 800 x 600, each screen opened by its key, beside the original's frames and before and after the change.
+  The widening shows nowhere on screen: each of these titles is narrower than the stream's rect, so only `control`
+  and the original's memory show it. Not run: Full Simulation (nothing in the titles reads the mode), a window of another
+  size, the items screen's other three tabs' titles (the same control and lettering; the test reads the rides' one).
 
 
 
@@ -56,8 +56,8 @@ Only the item just landed is here. Every earlier item's account is in `docs/hist
 | | | measured |
 |---|---|---|
 | Opcodes | **78** of 106 | 2026-10-20, Q553 (`FADEOBJ`), `case Opcode.` labels vs enum members |
-| Tests | **3966**, 0 fail, 0 skip with the game | 2026-10-26, run 10 fix group J, alone in a worktree |
-| Tests without the game | **1418** ran, **2548** skipped, of 3966 | 2026-10-26, run 10 fix group J, alone in a worktree |
+| Tests | **3967**, 0 fail, 0 skip with the game | 2026-10-26, Q676, alone in a worktree |
+| Tests without the game | **1418** ran, **2549** skipped, of 3967 | 2026-10-26, Q676, alone in a worktree |
 | Build warnings | 121 in the main tree; 131 in a fresh worktree, the ten more NuGet's advisories on ModKit's ImageSharp | 2026-10-10 (the worktree's 131 and the main tree's 121 at Q340, the worktree's 131 and the main tree's 121 again at Q343, at Q344 and at Q345, and the worktree's 131 at Q346 and, with the main tree's 121, at Q347, at Q348, at Q349, at Q351 and at Q352, 2026-10-13) |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 

@@ -5,6 +5,11 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q674 (the money's trend arrow and the icon's sign): seen in the stock park under Instant Action at 800 x 600, beside
+  the original's frames, at a load, 1 and 2 March after a February written into profit, and four balances written by
+  the console under pause. The balance's colour is Q403's, so "5" and "500" are white here where the original's are
+  orange and red. Not run: Full Simulation, a window of another size (the place there by a test alone), a month closed
+  in loss by play rather than by a written figure.
 - Q645 (the faithful graphics toggle, `graphics faithful`): seen at one camera, the park gate in the stock park
   under Instant Action, at medium quality and 1280 x 720, beside the original's frame; the pump at rate 2 in one Full
   Simulation park; the buy screen's lettering by its census and frame, the hire screen's by a test alone; the flags

@@ -146,12 +146,15 @@ internal sealed class ParkItemsScreen : UiWindow
 			Mesh = UiMesh.Get( "!frame" )
 		} );
 
+		// Lettered by UI_SetTitle, each tab's builder with its own row (0x004953d7 to 0x0049547e): font 5 in
+		// (234, 239, 102), with its edge, centred in the stream's rect (809 to 1281) widened by half its width either side.
 		_title = Root.Add( new UiControl
 		{
 			Id = 0x12c4be,
-			Rect = new UiRect( 809, 74, 1281, 153 ),
+			Rect = new UiRect( 573, 74, 1517, 153 ),
 			Font = 5,
-			TextColour = UiColour.White
+			TextColour = new UiColour( 234, 239, 102 ),
+			TextShadow = true
 		} );
 
 		BuildList( 5, new UiRect( 266, 318, 1825, 876 ), new UiRect( 275, 428, 1739, 875 ), Five, FiveHeadings );

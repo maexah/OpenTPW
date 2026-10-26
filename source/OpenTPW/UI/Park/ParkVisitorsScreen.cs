@@ -100,12 +100,15 @@ internal sealed class ParkVisitorsScreen : UiWindow
 			Mesh = UiMesh.Get( "w_big" )
 		};
 
+		// Lettered by UI_SetTitle on message 0x15 (0x004933b9): font 5 in (234, 239, 102), with its edge, centred in the
+		// stream's rect (803 to 1276) widened by half its width either side.
 		Root.Add( new UiControl
 		{
 			Id = 0x1e498,
-			Rect = new UiRect( 803, 81, 1276, 161 ),
+			Rect = new UiRect( 567, 81, 1512, 161 ),
 			Font = 5,
-			TextColour = UiColour.White,
+			TextColour = new UiColour( 234, 239, 102 ),
+			TextShadow = true,
 			Text = Localization.Get( UIStrings.AllVisitors )
 		} );
 

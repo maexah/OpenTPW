@@ -513,7 +513,11 @@ public static class DebugConsole
 					+ $"middle ({at.X + (at.Width / 2f):F0},{at.Y + (at.Height / 2f):F0})"
 					+ (control is UI.UiEdit typedInto ? $" holds '{typedInto.Value}' {(typedInto.HasFocus ? "with" : "without")} the keys"
 						: control.Text is { Length: > 0 } lettered ? $" reads '{lettered.Replace( "\n", " / " )}'" : "")
-					+ (control.Mesh is { } drawnMesh ? $" mesh {drawnMesh.Name} frame {control.Frame}" : "") );
+					+ (control.Mesh is { } drawnMesh ? $" mesh {drawnMesh.Name} frame {control.Frame}" : "")
+					+ (control.Text is { Length: > 0 } && control is not UI.UiEdit
+						? $" lettered font {control.Font} in ({control.TextColour.R}, {control.TextColour.G}, {control.TextColour.B}) "
+							+ (control.TextShadow ? "with" : "without") + " the edge"
+						: "") );
 				break;
 
 			// The level the crowd has the park's music at, and how many times it has been set (ParkAudio.MusicLevel).

@@ -10353,6 +10353,14 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   month's; the balance is lettered without its sign (`(x ^ s) - s`), which the item did not name. `MONEY_TREND_ARROW` is
   gone. Both games at 800 x 600: load red, 1 March red, 2 March green, the arrow after "5", "123456789", "500" and the
   stock balance (`q674/side-*.png`; `q674/PREDICTION.txt`).
+- [x] **Q676. The other park screens' titles as `UI_SetTitle` letters one.** From Q644 (`ui.md`, "`UI_SetTitle`"). The
+  visitors screen (`0x1e498`), the all-items screen (`0x12c4be`) and the all-staff screen (`0x328`) letter their titles
+  white, font 5, with no edge, in the stream's rect; the buy, hire, research, staff-costs screens and the object windows
+  take `UI_SetTitle`'s look. Find each screen's opener's call (`grep 'call   0x485d20' lib/testme.objdump`, 32 sites)
+  first; a title the original letters otherwise is said so. Confirm: each title's colour beside the original's frame.
+  **Done 2026-10-26:** all three are `UI_SetTitle`'s in the original (`ui.md`, "The 32 calls"): its controls in the
+  widened rects with `0x007c2118`, 0.037 to 0.041 of each rect yellow; ours 0.040 to 0.046, none white (main's 0.077 to
+  0.088 white), `control` reading `lettered font 5 in (234, 239, 102) with the edge` (`q676/PREDICTION.txt`, 11 held).
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

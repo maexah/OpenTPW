@@ -74,11 +74,6 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q676. The other park screens' titles as `UI_SetTitle` letters one.** From Q644 (`ui.md`, "`UI_SetTitle`"). The
-  visitors screen (`0x1e498`), the all-items screen (`0x12c4be`) and the all-staff screen (`0x328`) letter their titles
-  white, font 5, with no edge, in the stream's rect; the buy, hire, research, staff-costs screens and the object windows
-  take `UI_SetTitle`'s look. Find each screen's opener's call (`grep 'call   0x485d20' lib/testme.objdump`, 32 sites)
-  first; a title the original letters otherwise is said so. Confirm: each title's colour beside the original's frame.
 - [ ] **Q743. The original on Q713's made file: row 248 said of a food stall walked away from.** From Q713 (lane B, which
   cannot run the original). Load `~/.cache/tpw-harnesses/q713/files/outlets-B.TPWS` (Alexah's jungle `New Save`, row 248's
   record fresh, food stall 193 a day of 7 walk-aways to its 7 customers) in the original by `q707/gms-none.dat`'s player
@@ -561,7 +556,8 @@ filed the items that cite it.
   percentage, `SCRAP_VALUE_DEPRECIATION`, counted only when something is sold. `ParkEntryPriceScreen`'s heading
   `0x4f3af` is empty, and its remark says "left empty and counted"; the original titles it with the name of the thing
   at world `+0x1da732`, `mParkGates` (`ParkWorld`), and its help row 191 reads "Park name - left-click to edit", so
-  the title is the park's name and its edit is Q28's. `ParkGadget.ShowDate` prints the machine's short date (Q527). `ParkBuyScreen`'s description panel `0x1ea` draws its frame and the footprint picture, and neither the item's turning model nor its name row `0x1ec`. Count each
+  the title is the park's name and its edit is Q28's. The name is lettered by `UI_SetTitle` (`0x00498e4c`): yellow, with the edge, in
+  the stream's rect widened by half its width either side (749..1221 to 513..1457), where ours letters the empty heading white (Q676). `ParkGadget.ShowDate` prints the machine's short date (Q527). `ParkBuyScreen`'s description panel `0x1ea` draws its frame and the footprint picture, and neither the item's turning model nor its name row `0x1ec`. Count each
   where it is drawn. Confirm: `unimplemented` after opening a ride's window, the entry-price screen and the buy
   screen.
   From Q130e, seen beside the original's lists: the hire list's wages are bare numbers too ("$ 63" there); a buy

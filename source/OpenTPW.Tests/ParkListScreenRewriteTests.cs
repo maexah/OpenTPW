@@ -822,6 +822,33 @@ public class ParkListScreenRewriteTests
 		finally { GameOptions.Current = was; }
 	}
 
+	/// <summary>
+	/// <b>The visitors, all-staff and all-items screens letter their titles as <c>UI_SetTitle</c> does</b> (Q676; the
+	/// openers' calls at <c>0x004933b9</c>, <c>0x00495f22</c>, <c>0x004953d7</c>): font 5 in (234, 239, 102), with the edge,
+	/// in the stream's rect widened by half its width either side, (803, 81)-(1276, 161) to (567, 81)-(1512, 161) and
+	/// (809, 74)-(1281, 153) to (573, 74)-(1517, 153); the items screen's in its tab's own words.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> a title white, without its edge, in the stream's rect, or widened by its whole width.</remarks>
+	[TestMethod]
+	public void TheVisitorsStaffAndItemsScreensLetterTheirTitlesAsUiSetTitle()
+	{
+		typeof( ParkItemsScreen ).GetField( "_lastTab", BindingFlags.Static | BindingFlags.NonPublic )!.SetValue( null, 0 );
+
+		var screens = new (UiControl Root, int Id, UiRect Rect, string Text, string Name)[]
+		{
+			(new ParkVisitorsScreen( stack ).Root!, 0x1e498, new UiRect( 567, 81, 1512, 161 ), Localization.Get( UIStrings.AllVisitors ), "visitors"),
+			(new ParkStaffScreen( stack ).Root!, 0x328, new UiRect( 567, 81, 1512, 161 ), Localization.Get( UIStrings.AllStaff ), "staff"),
+			(new ParkItemsScreen( stack ).Root!, 0x12c4be, new UiRect( 573, 74, 1517, 153 ), Localization.Get( UIStrings.AllRides ), "items")
+		};
+
+		foreach ( var (root, id, rect, text, name) in screens )
+		{
+			var title = root.Children.Single( child => child.Id == id );
+			Assert.AreEqual( (rect, new UiColour( 234, 239, 102 ), true, 5, text),
+				(title.Rect, title.TextColour, title.TextShadow, title.Font, title.Text), $"{name}: the title" );
+		}
+	}
+
 	private static IEnumerable<UiControl> Under( UiControl control )
 		=> control.Children.SelectMany( child => Under( child ).Prepend( child ) );
 

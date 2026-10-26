@@ -4,6 +4,10 @@ Moved word for word from `docs/STATUS.md`'s "Works" on 2026-10-22 (Alexah: it wa
 read). STATUS keeps one line per system; each item's account of what it made work is added here, under the area it
 belongs to or at the end. Grep it by area or Q-number; never read it whole.
 
+- **The all-visitors, all-items and all-staff screens' titles are lettered as `UI_SetTitle` letters them** (Q676): font 5 in
+  (234, 239, 102) with the darker copy, centred in the stream's rect widened by half its width either side, as every other
+  park screen's title already was. Seen beside the original's at 800 x 600 in the stock park, each opened by its key
+  (`q676/side-by-side.png`); the console's `control` reply now names a lettered control's font, colour and edge.
 - **The money's trend arrow is drawn, and the currency icon carries the balance's sign** (Q674): `0x31`, `cashtrend`, a
   child of the balance, red down while the newest closed month's cash in is below its costs and green up otherwise or with
   no month closed, read at a load and once a day before the month closes, so it turns on the 2nd; its left edge at the
