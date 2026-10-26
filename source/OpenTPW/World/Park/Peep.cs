@@ -39,7 +39,32 @@ public sealed class Peep
 	/// </summary>
 	public int ExitLevel { get; set; }
 
-	public float Happiness { get; set; }
+	public float Happiness
+	{
+		get => _happiness;
+		set
+		{
+			// A guest's first write is where they start, not a change.
+			if ( HappinessLedger is { } ledger && _happinessSet )
+			{
+				var key = State == PeepState.PlayingSpotAnimation ? $"{State} from {SavedState}" : State.ToString();
+				ledger[key] = ledger.GetValueOrDefault( key ) + (value - _happiness);
+			}
+
+			_happiness = value;
+			_happinessSet = true;
+		}
+	}
+
+	private float _happiness;
+	private bool _happinessSet;
+
+	/// <summary>
+	/// A debug instrument, null (off) unless the console's <c>happiness on</c> starts it: every change of any guest's
+	/// happiness, summed by the state the guest is in as it is written (a spot animation by the state it will go back
+	/// to as well) - where a crowd's happiness goes, set beside the original's by <c>original/leavers.py</c>'s ledger.
+	/// </summary>
+	internal static Dictionary<string, double>? HappinessLedger { get; set; }
 
 	/// <summary>The saved or newly drawn prankery index; initialization is in <c>docs/exe/guest-arrivals.md</c>.</summary>
 	public int PrankeryIndex { get; set; }
@@ -694,12 +719,11 @@ public sealed class Peep
 	/// One turn of the guest's needs - the body of <c>FUN_00501650</c>, in its own order.
 	///
 	/// <para>
-	/// <b>One term is deliberately missing, and it is named rather than quietly left out.</b> Between the
-	/// countdown and the drift the original adds the guest's <i>cell's</i> own influence to happiness,
-	/// illness and hunger - three signed shorts of a ten-byte per-cell record that placed objects and
-	/// walking staff stamp into the cells around them. The park keeps those cells
-	/// (<see cref="ParkState.Effects"/>; <c>ride-operation.md</c>, "The region effects"); this turn does not read
-	/// them yet.
+	/// <b>The cell's own influence comes between the countdown and the drift</b> (<c>0x005016a7</c>..<c>0x00501787</c>):
+	/// the first three words of the guest's cell's region effects (<see cref="ParkState.Effects"/>;
+	/// <c>ride-operation.md</c>, "The region effects") are added to happiness, illness and hunger, each held to
+	/// 0..100, on every needs turn in every state. In Lost Kingdom the one happiness word is the entertainer's, 2 on his
+	/// cell and 1 beside it, so a guest watching him gains on every turn.
 	/// </para>
 	/// <para>
 	/// <b>A quirk worth not tidying away.</b> The drift is gated on the same counter as the whole tick,
@@ -718,12 +742,21 @@ public sealed class Peep
 	/// The block's draw of the park's generator and, one time in ten, the thought the needs pick
 	/// (<see cref="ParkPeople"/> hands it in, with the generator and the park's clock).
 	/// </param>
-	public void Tick( int tick, bool onACountingCell = false, Action<Peep>? think = null )
+	/// <param name="cell">
+	/// The happiness, illness and hunger words of the region effects on the guest's cell
+	/// (<see cref="ParkPeople.CellEffects"/>). None by default.
+	/// </param>
+	public void Tick( int tick, bool onACountingCell = false, Action<Peep>? think = null,
+		(short Happiness, short Illness, short Hunger) cell = default )
 	{
 		if ( !DueOn( tick ) )
 			return;
 
 		--ExitLevel;
+
+		Happiness = Change( Happiness, cell.Happiness );
+		Vomit = Change( Vomit, cell.Illness );
+		Hunger = Change( Hunger, cell.Hunger );
 
 		if ( (tick & (DriftEvery - 1)) == 0 )
 		{

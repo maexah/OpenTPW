@@ -10511,6 +10511,38 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   coast on `Time.Delta` (the deviation, said at the site). Ours at rest at 970.237, -10.238, 860.242, -10.237 (cells 97,
   -2, 86, -2; `q667/ours-run1`), the original at 972.828, -13.622, 863.576, -12.014 (`q667/orig2`); at each stop
   both draw the same scene past the edge (`q667/side-by-side.png`; Q625's cyan was 767 units out).
+- [x] **Q668. From a crowd, guests go home faster than the original's. Measure first.** From Q627. Loaded with
+  `q416/guard.TPWS` (212 inside), over the same 2420 sweeps 204 went home here (`People: guest N went home`) and 155 in
+  the original (`original/vehicles.py`'s `GONE`). **Not like for like: ours admitted 48 in four loads (13, 12, 12, 11),
+  the original 33 (13, 4, 12, 4, the 4s Q222's; 34 with the guest its load made), so count the setters-off among the
+  loaded 212 apart from the arrivals.** The original's census, a minute apart: 225, 220, 200, 165, 141, 126, 115, 108,
+  107, 91. Ours' `guests` reply runs 5 above its own count of guests at every poll (what the five are is not read), so
+  take the log's count, as the sweep-for-sweep series: ours 220, 194, 119, 96, 57 against the original's 220, 165, 126,
+  108, 91 at the same sweeps (`q627/run2-crowd/run.log`, `q627/orig/b-load.log`): level at two minutes, slower at four,
+  faster from six on. A guest sets off home only from the
+  deciding turn: happiness under 1, the park shut, or the day exactly nought (Q109; `ride-operation.md`, the leaving
+  row). Count the setters-off by cause in both games on that file (their happiness and `mExitLevel` at the turn)
+  before building anything. Confirm: the census a minute in both games (ours by the log's count, not the reply's), and
+  the causes, predicted first.
+  **Done (2026-10-26): measured, the cause found and built.** Counted at the turn they set off, with the cause, and the
+  happiness ledger of both games (`original/leavers.py`; `Peep.HappinessLedger`, the console's `happiness`): the
+  original set off 173 and 172 over 2420 sweeps (44 and 37 for the day run out, 137 and 133 miserable), this game 198
+  (25 and 173). Not the chooser (its failures 2082 there, 1816 here): the original's guests GAIN in state 6, +697 by
+  sweep 968, on the entertainer's cells, the file's only happiness words. Two pieces were missing here, both built: the
+  needs turn adds the cell's happiness, illness and hunger words (`0x005016a7`, `Peep.Tick`, `ParkPeople.CellEffects`),
+  and arm (e) holds a deciding guest beside a performing entertainer, facing him (`0x004fefcf`, `PeepBehaviour.Watch`,
+  `ParkPeople.EntertainerToWatch`; Q227's). On the build 178 set off (44, 134), 169 went (the original's 159, 160), the
+  mean happiness at sweep 972 38.5 (39.8, 37.3), up to 17 watchers (the original's up to 26)
+  (`ride-operation.md`, "Q668: leaving a crowd"; `q668/PREDICTION.txt`).
+- [x] **Q227. Nobody stops to watch the entertainer.** Found by Q111, arm (e). An entertainer on the nine cells
+  around a deciding guest, and the nearest one performing (staff state `0xe`): event `0xe`, the guest turned to face
+  them, and the turn ends. The original's stock park did it eight times in 964 sweeps. After Q133d, which builds the
+  performance; counted meanwhile as `DECIDE_ENTERTAINER_BESIDE`, whoever the entertainer is doing. The fireworks half
+  (`DECIDE_WATCH_FIREWORKS`) is dead by content in Lost Kingdom. Confirm: a guest beside the performing entertainer
+  facing them; `facing 1` and a screenshot.
+  **Done by Q668 (2026-10-26):** built with the needs turn's cell term (`PeepBehaviour.Watch`); 11 guests deciding round
+  him performing at (48,23), `facing 1` (`q668/photo/watchers-facing-1390.png`); the original's 6, 26 and 7
+  (`q668/orig/c-watch-1.png`). `DECIDE_ENTERTAINER_BESIDE` is gone; the event is `DECIDE_WATCH_ENTERTAINER_EVENT`.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

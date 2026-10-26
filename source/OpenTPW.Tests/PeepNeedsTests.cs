@@ -226,6 +226,31 @@ public class PeepNeedsTests
 	}
 
 	/// <summary>
+	/// <b>The cell's region effects are added on the guest's own turn</b> (<c>0x005016a7</c>..<c>0x00501787</c>): its
+	/// first word to happiness, its second to illness, its third to hunger, each held to 0..100, and on no other tick.
+	/// </summary>
+	[TestMethod]
+	public void TheCellsEffectsAreAddedOnTheGuestsOwnTurn()
+	{
+		var peep = Guest( thirst: 20f, hunger: 10f, vomit: 5f, happiness: 99f );
+
+		peep.Tick( 5, cell: (2, 3, -4) );
+
+		Assert.AreEqual( (99f, 5f, 10f, 20f), (peep.Happiness, peep.Vomit, peep.Hunger, peep.Thirst), "not their tick" );
+
+		peep.Tick( 4, cell: (2, 3, -4) );
+
+		Assert.AreEqual( (100f, 8f, 6f, 20f), (peep.Happiness, peep.Vomit, peep.Hunger, peep.Thirst),
+			"happiness held at a hundred, illness and hunger moved, thirst left" );
+
+		var low = Guest( hunger: 2f, happiness: 1f );
+
+		low.Tick( 4, cell: (-3, 0, -5) );
+
+		Assert.AreEqual( (0f, 0f), (low.Happiness, low.Hunger), "held at nought" );
+	}
+
+	/// <summary>
 	/// A tick that is not the guest's own changes nothing at all, which is the guard the rest of these
 	/// rest on.
 	/// </summary>

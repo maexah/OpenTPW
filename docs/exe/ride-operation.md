@@ -1596,7 +1596,7 @@ the next sweep that chooses to. What writes the second 0 is not read. In the sec
 | The dead end and the stamp | thought `0x11`, `+0x198` stamped, every route refused until a map edit | the same, for a guest (`PeepBehaviour.SetRandomDest`, `RefusedAsStranded`; "Q110b") | not by the stock park left alone; by a player who cuts a queue's tail off its path ("Q110") |
 | A map type write's block stamp | a fresh counter value in the cell's 16 × 16 block | the same, where a cell becomes ground, path or queue (`ParkState.SetRecord`, `ClearRecord`, `StampBlock`) | every path or queue cell laid or cleared, every sale |
 | The split's events 1 and 2 | pushed onto the guest's event ring | counted, `DECIDE_NOTHING_CHOSEN_EVENT` and `DECIDE_CHOSEN_EVENT`; no ring is kept | every choice |
-| Arms (a), (b), (c), (e), (f) | run before the split | counted at each arm's own test, none built (`PeepBehaviour.CountBeforeLeaving`, `CountAfterLeaving`; "Q111") | (a) above 80; (c) the Drinks Shop's litter and the bin at (44,29); (e) the entertainer, thing 27; (f) pranksters |
+| Arms (a), (b), (c), (e), (f) | run before the split | (e)'s entertainer arm built: face him, the turn ends (`PeepBehaviour.Watch`, `ParkPeople.EntertainerToWatch`; "Q668"); the rest counted at each arm's own test (`PeepBehaviour.CountBeforeLeaving`, `CountAfterLeaving`; "Q111") | (a) above 80; (c) the Drinks Shop's litter and the bin at (44,29); (e) the entertainer, thing 27; (f) pranksters |
 | Leaving | state 6 only: happiness byte 0, `mExitLevel` exactly 0, or shut; −25 every turn it holds; (47,9)/(48,9); state `0x12` only on a route | the same (`PeepBehaviour.WantsToLeave`, `Leave`, Q109); the second pass in walking mode 1 is counted, `LEAVE_ROUTE_MODE_1_RETRY`; a guest reaching state 19 is taken out at the crossing, where the original walks them on to a bus stop (Q128) | every leaver |
 
 **Q109: when a guest leaves** is built in `PeepBehaviour.Decide` (`WantsToLeave`, `Leave`), as the listing reads
@@ -1705,17 +1705,32 @@ coming and going is the original's (`~/.cache/tpw-harnesses/q627/`). From the sa
 original's 155 went, but ours admitted 48 arrivals in its four loads and the original 33 (34 with the guest its load
 made), so the two are not like for like (Q668).
 
+**Q668: leaving a crowd, measured in both games.** `q416/guard.TPWS` (212 inside) from its Load Park list, the
+setters-off counted at the turn they set off (state 6 to `0x12`), with their cause, and where the crowd's happiness goes
+(`original/leavers.py` at 50 ms: each guest's change between polls summed by the state it came from and went to; this
+game's `Peep.HappinessLedger`, the console's `happiness`, by the state at the write). Over 2420 sweeps the original set
+off 173 and 172 (rounds `a`, `b`: 44 and 37 for the day run out, 137 and 133 miserable), 159 and 160 gone. This game
+set off 198 (25 day, 173 miserable), 190 gone, its crowd 5 to 8 happiness points lower from the second minute
+(`q668/run1`). **The chooser's failures were not it**: the original's found nothing 2082 times, this game's 1816
+(5 each, `0x6>0x8`, the ledger's largest loss in both). The original's ledger has a gain this game had none of:
++697 by sweep 968 to guests in state 6, +426 over the run in state 7, +208 in `0x12`. The file's only happiness words
+are the entertainer's (2 on his cell, 1 on the four beside: RegionFX[0], "The region effects"), and two things put
+guests there: the needs turn adds the cell's words (below), and arm (e) holds a deciding guest beside a performing
+entertainer, facing him, every turn. Both are built (Q668). On the build (`q668/run2`): 178 set off (44 day, 134
+miserable), 169 gone, the state-6 gain about +922 by sweep 972, the mean happiness at sweep 972 38.5 against the
+original's 39.8 and 37.3; up to 17 guests stood round him at a census. The census of guests a minute, this game's
+against the original's round `a`: 225/225, 221/222, 200/206, 178/168, 131/132, 133/117, 109/108, 101/94, 100/93.
+
 **Q111: the arms either side of the leave test are counted**, none built, the listing re-read first-hand
 (`0x004fecb9`..`0x004ff3ae`; the corrections are in the list above). `PeepBehaviour.CountBeforeLeaving` counts
 `DECIDE_HAPPY_SPOT_ANIMATION`, `DECIDE_VOMIT` and, for litter, `DECIDE_LITTER_BIN_ERRAND` with a `HoldsLitter` thing
 inside the reach or `DECIDE_LITTER_DROPPED` without; `CountAfterLeaving` counts `DECIDE_WATCH_FIREWORKS` (dead by
-content in Lost Kingdom), else `DECIDE_ENTERTAINER_BESIDE`, then `DECIDE_PRANK_STINK_BOMB`, `DECIDE_PRANK_LITTER` or
-`DECIDE_PRANK_BALLOON`, all on the turn's one draw. **Each is a count of deciding turns on which the arm's own test
-held**, and differs from the original's reach in four ways, said at the site: no arm ends the turn; nothing clears a
-test (the jump's stamp, the levels zeroed), so a guest counts on every turn it holds; the bin's route is not asked;
-and the entertainer's count is of one standing beside the guest, where the original goes on to ask for staff state
-`0xe`, performing, which an entertainer takes here (Q133d) and the count does not ask (Q227). The fireworks' script variable is not read. The console's `need` sets
-`vomit`, `litter` or `prankery`.
+content in Lost Kingdom), else runs the entertainer's arm, **built by Q668** (`PeepBehaviour.Watch`, below), then
+counts `DECIDE_PRANK_STINK_BOMB`, `DECIDE_PRANK_LITTER` or `DECIDE_PRANK_BALLOON`, all on the turn's one draw. **Each
+count is of deciding turns on which the arm's own test held**, and differs from the original's reach in three ways,
+said at the site: no counted arm ends the turn; nothing clears a test (the jump's stamp, the levels zeroed), so a guest
+counts on every turn it holds; the bin's route is not asked. The fireworks' script variable is not read. The console's
+`need` sets `vomit`, `litter` or `prankery`.
 
 Predicted and read in Lost Kingdom (`q111confirm.py`, `q111/run1`). The stock park left alone 120 s: vomit, litter,
 pranks and fireworks all nought as predicted, the happy jump 0 (0 to 40 predicted), an entertainer beside 4 (0 to 60).
@@ -3180,6 +3195,14 @@ words are the balance file's keys in its own order**: `RegionFX[n].Happiness`, `
 | 5 | 3 | happiness -3, illness 3, hunger -1 | litter of kind 8, which also starts particle effect `0x32` | that litter removed |
 | 6 | 3 | illness 2, hunger -2 | the use that dirties a toilet | the clean; a dirty toilet's sale (`0x004dd222`) |
 | 7 | 6 | happiness 2, attraction 10 | fireworks' constructor (`0x004db48c`) | the thing's turn `FUN_004e0b90` on the sweep its script's variable 0 reads 1, which then writes it 2; its destructor while that variable reads under 2 (`0x004dd217`) |
+
+**A guest's needs turn reads them** (`FUN_00501650`, `0x005016a7`..`0x00501787`): after `mExitLevel` loses one, the
+cell of the guest's own bytes (`+5`, `+7`; `FUN_004cd4e0` packs it, `FUN_004d8410` answers its record) gives its first
+three words, added to happiness (`+0x19c`), illness (`+0x1b0`) and hunger (`+0x1a8`), each held to 0..100, in every
+state, before the drift. In Lost Kingdom the one happiness word is the entertainer's, so a guest gains 2 a needs turn on
+his cell and 1 beside it. `EntertainerConstsPerGrade[g].HappinessEffectOnCell` (4 to 20, the per-grade record's `+4`,
+`0x0078539c`) is read by no instruction: the stamp is RegionFX[0]'s whatever his grade. OpenTPW: `Peep.Tick`'s `cell`,
+from `ParkPeople.CellEffects` (Q668).
 
 **A cell's litter, `FUN_004d93b0( cell, kind )`** (fork watch 2026-10-18, `verify-other-b.md` L2; read from the listing, no game
 run). It returns at once in the online visit (game type `[0x00fb3b7c]` 1, `0x004d93ef`) and when the cell already has litter

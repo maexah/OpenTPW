@@ -74,19 +74,6 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q668. From a crowd, guests go home faster than the original's. Measure first.** From Q627. Loaded with
-  `q416/guard.TPWS` (212 inside), over the same 2420 sweeps 204 went home here (`People: guest N went home`) and 155 in
-  the original (`original/vehicles.py`'s `GONE`). **Not like for like: ours admitted 48 in four loads (13, 12, 12, 11),
-  the original 33 (13, 4, 12, 4, the 4s Q222's; 34 with the guest its load made), so count the setters-off among the
-  loaded 212 apart from the arrivals.** The original's census, a minute apart: 225, 220, 200, 165, 141, 126, 115, 108,
-  107, 91. Ours' `guests` reply runs 5 above its own count of guests at every poll (what the five are is not read), so
-  take the log's count, as the sweep-for-sweep series: ours 220, 194, 119, 96, 57 against the original's 220, 165, 126,
-  108, 91 at the same sweeps (`q627/run2-crowd/run.log`, `q627/orig/b-load.log`): level at two minutes, slower at four,
-  faster from six on. A guest sets off home only from the
-  deciding turn: happiness under 1, the park shut, or the day exactly nought (Q109; `ride-operation.md`, the leaving
-  row). Count the setters-off by cause in both games on that file (their happiness and `mExitLevel` at the turn)
-  before building anything. Confirm: the census a minute in both games (ours by the log's count, not the reply's), and
-  the causes, predicted first.
 - [ ] **Q669. Draw the key puff at park entry (Q630's build).** `IslandPanel.EnterPark` starts effect 98 with the panel as
   its owner after closing it, so it is never drawn (`lobby.md`, "The key puff at park entry"). Start it with no owner,
   as the original's, and say at the site why the owner rule (`lobby.md`, "Deliberate departure") does not bite: no window
@@ -433,12 +420,14 @@ filed the items that cite it.
   entry-price door shuts a running park; `HeadingForExit` has no
   change of mind (`FUN_00500a50`), which a saved guest can take. `CellReroute` never
   runs `FUN_005108a0`'s diagonal pass after a scan that splices nothing, which is how most routes end.
-  `Peep.Tick` leaves out the cell's `RegionFX` term (`FUN_00501650`) on every needs turn.
+  (`Peep.Tick`'s cell's `RegionFX` term is built, Q668.)
   (`ParkRideOperation.Invite`'s `RunsContinuously` is built, Q304.) Count each where the original tests it, and
   put each build without an item in the queue. Confirm: `unimplemented` over a timed run, each name present, predicted
   first.
   - **Note (fork review, 2026-09-30):** `EntertainerConstsPerGrade[g].HappinessEffectOnCell` (4, 8, 12, 16, 20; `Standard.sam`)
     has no reader in our decode; find it before building the entertainer's half of the region term. Review item peeps-v3.
+    Answered by Q668: no instruction reads the per-grade record's `+4` (`0x0078539c`); the stamp is RegionFX[0]'s
+    (`ride-operation.md`, "The region effects").
   From Q126: `FUN_0055a470` (`0x0054f828`, every eighth step, a dropped sweep's too) finds the ride the camera is
   on (`FUN_0042a4e0`, the list at `[0x008791b0]`) and hands its `+0xd8`, or the default `[0x0078578c]`, to
   `FUN_0051c8d0`, a sound setting not decoded. Nothing here has it, counted or not.
@@ -670,12 +659,6 @@ filed the items that cite it.
   - **Note (fork watch 2026-10-18, `verify-other-b.md` L2):** the sick are litter kind 7: record `0x0074f140`, region effect 2
     stamped first, then the sprite placed by the cell-id reseed and two draws (`ride-operation.md`, "A cell's litter"). The drop
     does nothing on a cell that already has litter, so a second sickness there leaves the first.
-- [ ] **Q227. Nobody stops to watch the entertainer.** Found by Q111, arm (e). An entertainer on the nine cells
-  around a deciding guest, and the nearest one performing (staff state `0xe`): event `0xe`, the guest turned to face
-  them, and the turn ends. The original's stock park did it eight times in 964 sweeps. After Q133d, which builds the
-  performance; counted meanwhile as `DECIDE_ENTERTAINER_BESIDE`, whoever the entertainer is doing. The fireworks half
-  (`DECIDE_WATCH_FIREWORKS`) is dead by content in Lost Kingdom. Confirm: a guest beside the performing entertainer
-  facing them; `facing 1` and a screenshot.
 - [ ] **Q228. A prankster plays no pranks.** Found by Q111, arm (f). Below happiness 15, on a draw under the
   prankery: a stink bomb (litter type 8, sound `0xcf`) on `PeepInfo.StinkbombLikelihood` of a hundred, litter, or
   the balloon of another guest on the cell let go; event `0xf`, a type-`0xe` bus message and happiness up one. After
@@ -972,11 +955,8 @@ filed the items that cite it.
     (`OpenTPW/World/Level.cs`, line 282; commit `2bdbd7fd`)
   - Built by Q241j: `Level.WritePark` writes `gms.dat` first and installs the idle mode before the park, as the
     original's save does on every call; nothing of this bullet is left.
-  - `Peep.Tick` leaves the cell's region-effects term out of every needs turn and counts nothing, though the park
-    has kept the cells since Q257e (`ParkState.Effects`). The original adds the cell's happiness, illness and
-    hunger words there (`FUN_00501650` through the getter `FUN_004d8410`), so until it is built the turn should
-    call `Unimplemented.Report`, as rule 4 asks and Q157 already lists. (`OpenTPW/World/Park/Peep.cs`, line 716;
-    commit `8b70a8d8`)
+  - Built by Q668: `Peep.Tick` adds the cell's happiness, illness and hunger words on every needs turn
+    (`ParkPeople.CellEffects`); nothing of this bullet is left.
   - A handyman loaded from a park file in state 8 or 9 (the walk to litter and the sweep, FUN_004d73c0's cases 8
     and 9, set by FUN_004d7330's table at 0x004d73a4) takes `StaffBehaviour.Step`'s `default:` arm, stands for the
     rest of the session and is counted nowhere. It should at least call `Unimplemented.Report` and fall to idle so

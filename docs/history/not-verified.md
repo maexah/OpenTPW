@@ -5,6 +5,10 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q667 (the orbit camera's point stops at the heightfield's edge): this game on the desktop, the final build
+  (`q667/ours-run1`: each of the four edges held 4 s, the edge's and the rest's log lines, cells 97, -2, 86, -2) and the
+  original off-screen (`q667/orig2`: `campoi.py`, the same cells), `side-by-side.png`. Not seen: zoom other than 110,
+  a turned camera, Full Simulation, other themes, frame rates other than the desktop's.
 - Q666 (the map's advisor line `0x130`): the original off-screen (`q666/orig`, the stock park: `original/advisor.py`
   read the slot taken and emptied on one tick, OK and Escape, the record never written; `a-2-open-later.png`) and this
   game on the desktop, the final build (`q666/run1`: the post, the tick standing, the withdrawals, no attempt;

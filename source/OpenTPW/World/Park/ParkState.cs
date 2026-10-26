@@ -54,7 +54,7 @@ public sealed class ParkState
 	/// <summary>
 	/// Every cell's region effects as the park runs, <see cref="ParkWorld.EffectWords"/> words a cell in the map's
 	/// order: the file's, with what a thing bought, sold, dirtied or cleaned since has stamped and taken off
-	/// (the world's <c>+0x2d8 + 0x1b1104</c>). The staff's and the litter's are the file's and do not move.
+	/// (the world's <c>+0x2d8 + 0x1b1104</c>). The litter's are the file's and do not move; an entertainer's and a guard's move with them (<see cref="ParkPeople.MoveEffect"/>).
 	/// </summary>
 	public IReadOnlyList<short> Effects => _effects;
 

@@ -946,6 +946,29 @@ public static class DebugConsole
 
 				break;
 
+			// Where the guests' happiness goes: `happiness on` starts Peep.HappinessLedger from nought, `happiness` prints
+			// it by state, most lost first, `happiness off` stops it.
+			case "happiness":
+				if ( parts.Length > 1 && parts[1] is "on" or "off" )
+				{
+					Peep.HappinessLedger = parts[1] == "on" ? new() : null;
+					Reply( $"happiness: ledger {parts[1]}" );
+					break;
+				}
+
+				if ( Peep.HappinessLedger is not { } moodLedger )
+				{
+					Reply( "happiness: ledger off - `happiness on` starts it" );
+					break;
+				}
+
+				Reply( $"happiness: lost {-moodLedger.Values.Where( v => v < 0 ).Sum():0} gained {moodLedger.Values.Where( v => v > 0 ).Sum():0}" );
+
+				foreach ( var (state, change) in moodLedger.OrderBy( kv => kv.Value ) )
+					Reply( $"  {state} {change:+0.0;-0.0}" );
+
+				break;
+
 			// Sets every guest's cash - an instrument as `happy` is, so that a guest can come to a door short of
 			// its price: see ParkPeople.SetCash.
 			case "cash":

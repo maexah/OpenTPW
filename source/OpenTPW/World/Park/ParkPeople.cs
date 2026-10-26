@@ -312,7 +312,7 @@ public sealed partial class ParkPeople : Entity
 			LargerVehicleCurrent = () => LargerVehicleIsCurrent,
 			MayCrossTheRoad = MayCrossTheRoad,
 			// And who stands near a deciding guest, which only the holder of everybody's walk can say.
-			EntertainerBeside = EntertainerBeside,
+			EntertainerToWatch = EntertainerToWatch,
 			BalloonBeside = BalloonBeside
 		};
 
@@ -1488,6 +1488,37 @@ public sealed partial class ParkPeople : Entity
 	}
 
 	/// <summary>
+	/// The cell of the entertainer a deciding guest on (x, y) watches, or none (<c>0x004fefcf</c>..<c>0x004ff051</c>):
+	/// one must stand beside them (<see cref="EntertainerBeside"/>), and then the nearest entertainer of all by squared
+	/// cells, the first of equals (<c>FUN_00500f00</c>, unsigned and strict), must be performing (state <c>0xe</c>,
+	/// <c>0x004ff04a</c>). The original walks its chain of entertainers (world <c>+0x1da740</c>, linked by <c>+0x210</c>);
+	/// this walks <see cref="Staff"/>'s order, which is not read against that chain's, and decides only between two
+	/// entertainers at the same distance.
+	/// </summary>
+	private (int X, int Y)? EntertainerToWatch( int x, int y )
+	{
+		if ( !EntertainerBeside( x, y ) )
+			return null;
+
+		var best = uint.MaxValue;
+		(Staff Member, int X, int Y)? nearest = null;
+
+		foreach ( var member in _staff )
+		{
+			if ( member.Model != EntertainerModel || !_staffWalks.TryGetValue( member.ThingId, out var walk ) )
+				continue;
+
+			var (cellX, cellY) = walk.Position.Cell;
+			var squared = (uint)((cellX - x) * (cellX - x) + (cellY - y) * (cellY - y));
+
+			if ( squared < best )
+				(best, nearest) = (squared, (member, cellX, cellY));
+		}
+
+		return nearest is { } found && found.Member.Activity == StaffActivity.Performing ? (found.X, found.Y) : null;
+	}
+
+	/// <summary>
 	/// Whether another guest on (x, y) holds a balloon, for a prankster's third prank (<c>0x004ff1c8</c>..
 	/// <c>0x004ff1d9</c>: not themselves, a guest, <c>mBalloonScript</c> set).
 	/// </summary>
@@ -2315,7 +2346,7 @@ public sealed partial class ParkPeople : Entity
 				// oscillate for ever.
 				peep.Navigator.StampPrevious();
 
-				peep.Tick( thingTick, OnACountingCell( peep ), ThinkOfNeeds );
+				peep.Tick( thingTick, OnACountingCell( peep ), ThinkOfNeeds, CellEffects( peep ) );
 
 				// The needs turn's bubble call (0x00501951): on every needs turn, riding or not.
 				if ( peep.DueOn( thingTick ) )
@@ -3057,6 +3088,23 @@ public sealed partial class ParkPeople : Entity
 	/// linked into, as the original reads the thing's own cell bytes, or the one under their feet before their
 	/// first turn has linked them.
 	/// </summary>
+	/// <summary>
+	/// The happiness, illness and hunger words of the region effects on the guest's cell, which their needs turn adds
+	/// (<c>FUN_004d8410</c> at <c>0x005016ba</c>, the cell of the thing's own bytes). A cell off the map has none.
+	/// </summary>
+	internal (short Happiness, short Illness, short Hunger) CellEffects( Peep peep )
+	{
+		var (x, y) = State.CellOf( peep.ThingId )
+			?? (peep.Navigator.Position.X >> 16, peep.Navigator.Position.Y >> 16);
+
+		if ( (uint)x >= ParkWorld.MapSize || (uint)y >= ParkWorld.MapSize )
+			return default;
+
+		var words = State.EffectsAt( x, y );
+
+		return (words[0], words[1], words[2]);
+	}
+
 	internal bool OnACountingCell( Peep peep )
 	{
 		var (x, y) = State.CellOf( peep.ThingId )

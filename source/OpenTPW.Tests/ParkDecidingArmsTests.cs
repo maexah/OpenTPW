@@ -6,9 +6,9 @@ using System.Linq;
 namespace OpenTPW.Tests;
 
 /// <summary>
-/// The deciding turn's arms that are counted and not built - <c>FUN_004fec90</c> either side of its leave test:
-/// the happy jump, the vomit, litter, watching, and the pranks. Each test asserts the count moves exactly where
-/// the original's own test holds.
+/// The deciding turn's arms either side of its leave test - <c>FUN_004fec90</c>: the happy jump, the vomit, litter,
+/// watching fireworks and the pranks, counted, each test asserting the count moves exactly where the original's own
+/// test holds; and watching an entertainer, built.
 ///
 /// <para>
 /// These read real game files and are skipped where there is no installation - see <see cref="GameData"/>.
@@ -54,7 +54,7 @@ public class ParkDecidingArmsTests
 			new ParkAdmission( new ParkBalance( "jungle", easyMode: true ), world.Economy!.Value.AdmissionFee ),
 			state: people.State )
 		{
-			EntertainerBeside = people.Behaviour.EntertainerBeside,
+			EntertainerToWatch = people.Behaviour.EntertainerToWatch,
 			BalloonBeside = people.Behaviour.BalloonBeside
 		};
 
@@ -166,45 +166,110 @@ public class ParkDecidingArmsTests
 	}
 
 	/// <summary>
-	/// <b>An entertainer on the nine cells around a deciding guest is counted, and one two cells off is not</b>
-	/// (<c>FUN_004c8eb0( 6, cell, 1 )</c>), and no other kind of staff is.
+	/// <b>A deciding guest beside a performing entertainer turns to face him, and the turn ends there</b>
+	/// (<c>0x004fefcf</c>..<c>0x004ff0f4</c>): the heading is <c>FUN_006e7074</c> of the negated x step and the y step,
+	/// the event is counted, and the split's wander is not reached. A signed sum of the steps of nought (his own cell,
+	/// a diagonal of opposite signs), two cells off, and an entertainer not performing are each passed by.
 	/// </summary>
 	[TestMethod]
-	public void AnEntertainerBesideADecidingGuestIsCounted()
+	public void ADecidingGuestWatchesAPerformingEntertainer()
 	{
-		var seed = SeedWhere( roll => roll % 3 == 2 );
-		var from = Counted( "DECIDE_ENTERTAINER_BESIDE" );
-		var people = new ParkPeople( Park() );
+		// An arm-1 roll: a guest who does not watch goes on to the wander.
+		var seed = SeedWhere( roll => roll % 3 == 1 );
+		var from = Counted( "DECIDE_WATCH_ENTERTAINER_EVENT" );
 
+		var people = new ParkPeople( Park() );
 		var entertainer = people.Staff.Single( member => member.Model == ParkPeople.EntertainerModel );
 		var (x, y) = people.StaffWalkFor( entertainer.ThingId )!.Position.Cell;
 
-		var (_, turn, _) = DecidingAt( x + 1, y - 1, seed );
-		turn( 2 );
-		Assert.AreEqual( from + 1, Counted( "DECIDE_ENTERTAINER_BESIDE" ), "a corner of the nine cells" );
-
-		(_, turn, _) = DecidingAt( x + 2, y, seed );
-		turn( 2 );
-		Assert.AreEqual( from + 1, Counted( "DECIDE_ENTERTAINER_BESIDE" ), "two cells off" );
-
-		// A mechanic hired well away from everybody is nobody to watch.
-		var (_, alone, park) = DecidingAt( 55, 30, seed );
-		Assert.AreNotEqual( 0, park.Hire( new ParkStaffPool.Candidate( Id: 999, Kind: 1, Name: "Test", Grade: 0, Costume: 0, Wage: 69 ), 55, 30 ) );
-		Assert.AreEqual( (4, (55, 30)), (park.Staff[0].Model, park.StaffWalkFor( park.Staff[0].ThingId )!.Position.Cell) );
-		alone( 2 );
-		Assert.AreEqual( from + 1, Counted( "DECIDE_ENTERTAINER_BESIDE" ), "a mechanic on the guest's own cell" );
-
-		// Nor any other kind of staff the save holds, away from the entertainer.
-		foreach ( var member in people.Staff.Where( member => member.Model != ParkPeople.EntertainerModel ) )
+		// A guest dx before him in x and dy before him in y.
+		(Peep Guest, PeepWalk Walk, Action<int> Turn) At( int dx, int dy, bool performing )
 		{
-			var (otherX, otherY) = people.StaffWalkFor( member.ThingId )!.Position.Cell;
+			var (moved, turnThere, there) = DecidingAt( x - dx, y - dy, seed );
 
-			if ( Math.Abs( otherX - x ) <= 2 && Math.Abs( otherY - y ) <= 2 )
-				continue;
+			if ( performing )
+				there.Staff.Single( member => member.Model == ParkPeople.EntertainerModel ).StartPerforming( 0, 1 );
 
-			(_, turn, _) = DecidingAt( otherX, otherY, seed );
-			turn( 2 );
-			Assert.AreEqual( from + 1, Counted( "DECIDE_ENTERTAINER_BESIDE" ), $"on staff {member.ThingId}'s cell, model {member.Model}" );
+			var walk = there.AnyWalkFor( moved.ThingId )!;
+			walk.Heading = 0x123;
+
+			return (moved, walk, turnThere);
+		}
+
+		// Him a step on in x and in y: facing 0x500, and the turn ends with the guest still deciding.
+		var (watcher, walk, watch) = At( 1, 1, performing: true );
+		watch( 2 );
+		Assert.AreEqual( (0x500, PeepState.Deciding, from + 1),
+			(walk.Heading, watcher.State, Counted( "DECIDE_WATCH_ENTERTAINER_EVENT" )), "a step on in x and y" );
+
+		// Him a step on in y alone: facing 0x400.
+		(_, walk, watch) = At( 0, 1, performing: true );
+		watch( 2 );
+		Assert.AreEqual( (0x400, from + 2), (walk.Heading, Counted( "DECIDE_WATCH_ENTERTAINER_EVENT" )), "a step on in y" );
+
+		// Steps summing to nought, two cells off, or no performance: nobody watched, the heading untouched.
+		foreach ( var (dx, dy, performing, what) in new[]
+		{
+			(1, -1, true, "a diagonal of opposite signs"), (0, 0, true, "his own cell"),
+			(2, 0, true, "two cells off"), (1, 1, false, "not performing")
+		} )
+		{
+			(_, walk, watch) = At( dx, dy, performing );
+			watch( 2 );
+			Assert.AreEqual( (0x123, from + 2), (walk.Heading, Counted( "DECIDE_WATCH_ENTERTAINER_EVENT" )), what );
+		}
+	}
+
+	/// <summary>
+	/// <b>A guest's needs turn is handed the region effects of the cell they stand on</b> (<c>0x005016ba</c>): in the
+	/// shipped park the entertainer's own cell holds happiness 2 and the four beside it 1 (effect 0, divided by the
+	/// steps plus one), a diagonal and the cells two off nothing.
+	/// </summary>
+	[TestMethod]
+	public void TheNeedsTurnReadsTheCellTheGuestStandsOn()
+	{
+		var people = new ParkPeople( Park() );
+		var entertainer = people.Staff.Single( member => member.Model == ParkPeople.EntertainerModel );
+		var (x, y) = people.StaffWalkFor( entertainer.ThingId )!.Position.Cell;
+
+		short HappinessAt( int dx, int dy ) => people.CellEffects( people.Guests[people.Admit( x + dx, y + dy )] ).Happiness;
+
+		Assert.AreEqual( (2, 1, 1, 0, 0), (HappinessAt( 0, 0 ), HappinessAt( 1, 0 ), HappinessAt( 0, -1 ), HappinessAt( 1, 1 ),
+			HappinessAt( 2, 0 )) );
+	}
+
+	/// <summary>
+	/// <b>The park's sweep hands each guest's needs turn the cell they stand on</b> (<c>0x005016ba</c>): a guest held in a
+	/// spot animation on a quiet cell with effect 0 stamped round it gains its 2 on each of their two needs turns in eight
+	/// sweeps, and nothing else moves their happiness there.
+	/// </summary>
+	[TestMethod]
+	public void ASweepHandsTheNeedsTurnTheGuestsCell()
+	{
+		using var clock = new SimulationClockScope();
+		var people = new ParkPeople( Park(), new ParkBalance( "jungle", easyMode: true ) );
+
+		try
+		{
+			people.State.StampEffect( 0, 55, 30 );
+
+			var guest = people.Guests[people.Admit( 55, 30 )];
+			guest.SetState( PeepState.PlayingSpotAnimation, 1_000_000, new Random( 1 ) );
+			guest.Happiness = 50f;
+			guest.Thirst = guest.Hunger = guest.Toilet = guest.Vomit = 10f;
+
+			for ( var sweep = 0; sweep < 8; ++sweep )
+			{
+				SimulationClockScope.Frame( GameClock.TickSeconds * 8 );
+				people.Update();
+			}
+
+			Assert.AreEqual( (PeepState.PlayingSpotAnimation, 54f), (guest.State, guest.Happiness) );
+		}
+		finally
+		{
+			people.Delete();
+			Entity.ApplyDeletions();
 		}
 	}
 

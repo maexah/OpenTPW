@@ -1264,8 +1264,9 @@ public sealed class PeepBehaviour
 	/// orders the leaver's two cells and its remainder picks the split's arm (<c>0x004fecb4</c>).
 	/// </para>
 	/// <para>
-	/// <b>The other arms before the split are counted, not built</b>: <see cref="CountBeforeLeaving"/> and
-	/// <see cref="CountAfterLeaving"/>, either side of the leave test as the original has them.
+	/// <b>Watching an entertainer is built</b> and ends the turn (<see cref="Watch"/>). <b>The other arms before the
+	/// split are counted, not built</b>: <see cref="CountBeforeLeaving"/> and <see cref="CountAfterLeaving"/>, either
+	/// side of the leave test as the original has them.
 	/// </para>
 	/// </summary>
 	private void Decide( Peep peep, PeepWalk walk, int tick )
@@ -1280,7 +1281,8 @@ public sealed class PeepBehaviour
 		if ( WantsToLeave( peep ) && Leave( peep, walk, admission, draw, tick ) )
 			return;
 
-		CountAfterLeaving( peep, walk, admission, draw );
+		if ( CountAfterLeaving( peep, walk, admission, draw ) )
+			return;
 
 		switch ( draw % 3 )
 		{
@@ -1358,10 +1360,12 @@ public sealed class PeepBehaviour
 	public const int PrankBelow = 15;
 
 	/// <summary>
-	/// Whether a member of staff of the entertainers' model stands on the nine cells around this one -
-	/// <c>FUN_004c8eb0( 6, cell, 1 )</c>. <see cref="ParkPeople"/> hands in its own; nothing handed in is no staff.
+	/// The cell of the entertainer a deciding guest on (x, y) would watch, or none (<c>0x004fefcf</c>..<c>0x004ff051</c>):
+	/// one of the entertainers' model must stand on the nine cells around (<c>FUN_004c8eb0( 6, cell, 1 )</c>), and then
+	/// the nearest entertainer of all (<c>FUN_00500f00</c>) must be performing, its state <c>0xe</c>.
+	/// <see cref="ParkPeople"/> hands in its own; nothing handed in is nobody.
 	/// </summary>
-	internal Func<int, int, bool> EntertainerBeside { get; set; } = static ( _, _ ) => false;
+	internal Func<int, int, (int X, int Y)?> EntertainerToWatch { get; set; } = static ( _, _ ) => null;
 
 	/// <summary>
 	/// Whether another guest on this guest's cell holds a balloon - the walk of the cell's things at
@@ -1401,28 +1405,29 @@ public sealed class PeepBehaviour
 	}
 
 	/// <summary>
-	/// The deciding turn's two arms between the leave test and the split (<c>0x004fef19</c>..<c>0x004ff3ae</c>),
-	/// each counted where the original tests it and none built: watching fireworks or an entertainer, and a
-	/// prankster's three pranks by <see cref="Peep.PrankeryIndex"/>, on the turn's one draw.
+	/// The deciding turn's two arms between the leave test and the split (<c>0x004fef19</c>..<c>0x004ff3ae</c>):
+	/// watching fireworks, counted, or an entertainer, built (<see cref="Watch"/>), and a prankster's three pranks by
+	/// <see cref="Peep.PrankeryIndex"/>, on the turn's one draw, each counted where the original tests it.
 	/// </summary>
 	/// <remarks>
-	/// Watching ends the original's turn; here it does not. The fireworks' script variable 0 is not read, and
-	/// the entertainer's count is of one standing beside the guest: the original then asks the nearest one's
-	/// state <c>0xe</c>, performing, which an entertainer takes here and this count does not ask. A prank whose own test fails (the stink
-	/// bomb's roll, no balloon on the cell) does nothing in the original and counts nothing here.
+	/// Watching fireworks ends the original's turn; here it is counted and the turn goes on to the pranks and the split,
+	/// without asking the entertainer (dead by content: no Lost Kingdom item sets <c>IsFireworks</c>). The fireworks'
+	/// script variable 0 is not read. A prank whose own test fails (the stink bomb's roll, no balloon on the cell) does
+	/// nothing in the original and counts nothing here.
 	/// </remarks>
-	private void CountAfterLeaving( Peep peep, PeepWalk walk, ParkAdmission admission, int draw )
+	/// <returns>Whether the turn ends here, the guest watching an entertainer.</returns>
+	private bool CountAfterLeaving( Peep peep, PeepWalk walk, ParkAdmission admission, int draw )
 	{
 		var (x, y) = walk.Position.Cell;
 
 		if ( State.ObjectsInChainOrder().Any( thing => thing.IsFireworks
 			&& SquaredCells( x, y, thing.CellX, thing.CellY ) < FireworksWithinSquared ) )
 			Unimplemented.Report( "DECIDE_WATCH_FIREWORKS" );
-		else if ( EntertainerBeside( x, y ) )
-			Unimplemented.Report( "DECIDE_ENTERTAINER_BESIDE" );
+		else if ( Watch( walk, x, y ) )
+			return true;
 
 		if ( (byte)(int)peep.Happiness >= PrankBelow || draw % 101 >= (byte)peep.PrankeryIndex )
-			return;
+			return false;
 
 		switch ( (byte)peep.PrankeryIndex )
 		{
@@ -1443,6 +1448,38 @@ public sealed class PeepBehaviour
 
 				break;
 		}
+
+		return false;
+	}
+
+	/// <summary>
+	/// A deciding guest watching an entertainer (<c>0x004fefcf</c>..<c>0x004ff0f4</c>): with one performing beside
+	/// them (<see cref="EntertainerToWatch"/>), they turn to face the nearest (<c>FUN_006e7074</c> of the negated x step
+	/// and the y step, onto <c>+0x1c</c>) and the turn ends, before the pranks and the split. So a guest stays deciding
+	/// at the entertainer for as long as the performance lasts, inside his region effect, which the needs turn reads
+	/// (<see cref="Peep.Tick"/>).
+	/// </summary>
+	/// <remarks>
+	/// The test of the steps is their <b>signed sum</b> against nought (<c>0x004ff0ad</c>..<c>0x004ff0b2</c>), so a guest
+	/// on the entertainer's own cell, and one a diagonal off with the steps of opposite sign, faces nobody and goes on to
+	/// the pranks with no event. The event <c>0xe</c> naming the entertainer is counted: this project keeps no event ring.
+	/// </remarks>
+	/// <returns>Whether the guest watched, which ends the turn.</returns>
+	private bool Watch( PeepWalk walk, int x, int y )
+	{
+		if ( EntertainerToWatch( x, y ) is not { } at )
+			return false;
+
+		var (across, down) = (at.X - x, at.Y - y);
+
+		if ( across + down == 0 )
+			return false;
+
+		Unimplemented.Report( "DECIDE_WATCH_ENTERTAINER_EVENT" );
+
+		walk.Heading = PeepHeading.Of( -across, down, walk.Heading );
+
+		return true;
 	}
 
 	private static int SquaredCells( int x, int y, int toX, int toY )
