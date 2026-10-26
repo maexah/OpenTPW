@@ -8,7 +8,8 @@ namespace OpenTPW;
 /// (<c>FUN_004647a0</c>; <c>docs/exe/park.md</c>, "The boundary hoarding's piece"). The original then clears each
 /// anchor's saved handle and re-claims its piece by matching item, cell and angle (<c>FUN_0053b1a0</c> through
 /// <c>FUN_00522f20</c> and <c>FUN_00463ab0</c>); this draws every record of items 17300 on without that claim, which no
-/// park file to hand tells apart (every anchor has its record and no such record lacks an anchor).
+/// park file to hand tells apart (every anchor has its record and no such record lacks an anchor). A park made fresh has
+/// no records: its pieces are those its walk chose for its anchors (<see cref="PieceFor"/>, <see cref="PieceOf"/>).
 ///
 /// <para>
 /// A piece's record carries its item, 17300 plus its row of the hoarding table (<c>FUN_00522e40</c>, <c>0x00522ea0</c>), the
@@ -39,7 +40,10 @@ public sealed class ParkBoundaryHoarding : Entity
 	private static readonly ItemShape Square = new( 2, 2, [[1, 1], [1, 1]] );
 
 	/// <summary>The model a row draws, or null for a row outside the table.</summary>
-	public static string? ModelOf( int row )
+	public static string? ModelOf( int row ) => NamedRowOf( row ) is { } named ? Rows[named] : null;
+
+	/// <summary>The named row at or above a row, whose item a piece of that row is made as; null outside the table.</summary>
+	public static int? NamedRowOf( int row )
 	{
 		if ( row < 0 || row >= Rows.Length )
 			return null;
@@ -47,11 +51,109 @@ public sealed class ParkBoundaryHoarding : Entity
 		while ( Rows[row] == null )
 			--row;
 
-		return Rows[row];
+		return row;
 	}
 
 	/// <summary>One piece standing: its anchor's model, the cell and angle its record was made at.</summary>
 	public readonly record struct Piece( string Model, int Row, int CellX, int CellY, int Angle );
+
+	/// <summary>
+	/// An anchor of a boundary made here: its cell, the track record's neighbour mask (<c>+0xc</c>, the file's
+	/// <c>mHoardingNeighbours</c>), direction (<c>+0xd</c>) and flag word (<c>+0xe</c>), and the row and turn its piece takes
+	/// (<c>+0x18</c>, <c>+0x1c</c>; the file's <c>mTileData</c>).
+	/// </summary>
+	public readonly record struct Anchor( int X, int Y, byte Mask, byte Direction, ushort Flags, int Row, int Turn );
+
+	/// <summary>
+	/// The chooser's two words for the straights' variants, the original's <c>[0x00820aec]</c> (the next roll) and
+	/// <c>[0x00820af0]</c> (the variant last given), nought at the program's start and kept from park to park.
+	/// </summary>
+	public sealed class Variants
+	{
+		public int Roll;
+		public int Last;
+
+		/// <summary>The program's one pair, as the original keeps its two globals.</summary>
+		public static Variants Session { get; } = new();
+	}
+
+	/// <summary>
+	/// Each mask's row and turn, the table at <c>0x00762ff0</c>. Every mask of the four bits has its own row, so the
+	/// original's search for a subset after the exact match never answers.
+	/// </summary>
+	private static readonly (byte Mask, int Row, int Turn)[] PieceRows =
+	[
+		(0x11, 2, 0), (0x44, 2, 90), (0x10, 1, 0), (0x40, 1, 90), (0x01, 1, 180), (0x04, 1, 270), (0x14, 3, 0), (0x50, 3, 90),
+		(0x41, 3, 180), (0x05, 3, 270), (0x15, 5, 0), (0x45, 6, 0), (0x51, 7, 0), (0x54, 8, 0), (0x55, 4, 0), (0x00, 0, 0)
+	];
+
+	/// <summary>
+	/// The row and turn of an anchor's piece, as <c>Track_PieceForCell</c> (<c>FUN_0053a540</c>) chooses one for track type
+	/// 25 (<c>docs/exe/park.md</c>, "The boundary hoarding's piece"). A straight whose flags' low four bits are clear takes the
+	/// variant its roll names, unless it is the last one given, and draws the next roll from the park's generator.
+	/// </summary>
+	public static (int Row, int Turn) PieceFor( byte mask, byte direction, ushort flags, bool gateEnd, ref uint seed, Variants variants )
+	{
+		var neighbours = ((mask & 0x01) != 0 ? 1 : 0) + ((mask & 0x04) != 0 ? 1 : 0) + ((mask & 0x10) != 0 ? 1 : 0)
+			+ ((mask & 0x40) != 0 ? 1 : 0);
+		var straight = neighbours == 2 && ((mask & 0x11) == 0x11 || (mask & 0x44) == 0x44);
+		var corner = neighbours == 2 && !straight;
+
+		// A gate's end looks itself up with the side it lacks (FUN_004d8c00).
+		var lookup = gateEnd ? (byte)(mask | (mask == 0 ? 0 : mask < 0x10 ? (mask << 4) & 0xff : mask >> 4)) : mask;
+		var (_, row, turn) = PieceRows.First( entry => entry.Mask == lookup );
+
+		if ( straight && direction is 0x40 or 0x10 )
+			turn += 180;
+
+		if ( !corner && neighbours < 3 )
+		{
+			if ( (flags & 1) != 0 )
+				row += 9;
+			if ( (flags & 2) != 0 )
+				row += 12;
+			if ( (flags & 8) != 0 )
+				row += 15;
+			if ( (flags & 4) != 0 )
+				row = 0x12;
+		}
+
+		if ( corner )
+		{
+			// Eight direction and mask pairs take the corner's other model; 0x40 with 0x14 by a compare of BL with itself (0x0053a8c4).
+			if ( (direction, mask) is (0x01, 0x41) or (0x10, 0x14) or (0x04, 0x05) or (0x40, 0x50) or (0x40, 0x14) or (0x01, 0x50)
+				or (0x04, 0x41) or (0x10, 0x05) )
+				row = (flags & 0xf) != 0 ? 0x1b : row + 0x10;
+			else if ( (flags & 0xf) != 0 )
+				row = 0x1a;
+		}
+
+		if ( straight && (flags & 0xf) == 0 )
+		{
+			var variant = variants.Roll < 18 ? 0 : variants.Roll < 24 ? 20 : 23;
+
+			if ( variant != variants.Last )
+				row += variant;
+
+			variants.Last = variant;
+			variants.Roll = (int)(ParkGenerator.Draw( ref seed ) % 30);
+		}
+
+		return (row, turn);
+	}
+
+	/// <summary>
+	/// The piece an anchor's record makes (<c>FUN_00522f20</c>): its row's named item, the cell moved one on by the turn (90
+	/// moves x, 180 x and y, 270 y) and the angle 360 less the turn.
+	/// </summary>
+	public static Piece PieceOf( Anchor anchor )
+	{
+		var named = NamedRowOf( anchor.Row ) ?? throw new ArgumentOutOfRangeException( nameof( anchor ), $"row {anchor.Row} is no row of the hoarding table" );
+		var turn = anchor.Turn % 360;
+
+		return new Piece( Rows[named]!, named, anchor.X + (turn is 90 or 180 ? 1 : 0), anchor.Y + (turn is 180 or 270 ? 1 : 0),
+			(360 - turn) % 360 );
+	}
 
 	/// <summary>The boundary of the park currently loaded, or null outside one.</summary>
 	public static ParkBoundaryHoarding? Current { get; private set; }
@@ -73,13 +175,13 @@ public sealed class ParkBoundaryHoarding : Entity
 
 		Anchors = AnchorsOf( park );
 
-		var pieces = Read( park, catalogue );
+		// A park made fresh has no records: its pieces are the ones its walk chose (FreshParkBoundary).
+		var pieces = park is FreshPark fresh ? fresh.Boundary.Select( PieceOf ).ToList() : Read( park, catalogue );
 
 		foreach ( var piece in pieces )
 			Place( piece );
 
-		// A park made fresh writes its anchors into the cells (FreshParkBoundary) with no model record; the original makes
-		// each piece there from its neighbour mask (FUN_0053a540), which is not built.
+		// An anchor no record names; no park file to hand holds one.
 		for ( var unmade = Anchors - pieces.Count; unmade > 0; --unmade )
 			Unimplemented.Report( "BOUNDARY_HOARDING_UNMADE" );
 

@@ -10376,6 +10376,18 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
     this game on 19067 (a clamped-frame lag of runs below 10 frames a second; Q679). The original slotted `0x101` again at
     40 on 19350 and it was still unsaid at the last read, 19389. Frames `q743/orig/O/f-t19035.png`, `q743/runG2/s516-t19039.png`;
     `advisor-park.md`, "The original on the made file".
+- [x] **Q656. A park made fresh draws no boundary wall.** From Q620. `FreshParkBoundary` writes the anchors (track type 25)
+  with no model record, no `mHoardingNeighbours` and no `mTileData`, so `ParkBoundaryHoarding` counts each,
+  `BOUNDARY_HOARDING_UNMADE`. Build the original's way: the mask from the four anchors two cells away (FileFormats
+  `saves.md`, "A boundary piece's record"), then `Track_PieceForCell` (`0x0053a540`; `park.md`, "The boundary hoarding's
+  piece"): read `FUN_00522810`, `FUN_00522850` and the gate ends' `FUN_004d8c00` first; the straights' variant rolls the
+  park's generator, so the order the original retiles the anchors in decides which straights are `ho_fos2`/`ho_fos3`
+  (find the caller that walks them at a fresh park's start). Write the records and masks into a saved file as the
+  original does. Confirm: a fresh Full Simulation park's gate in both games (`lib/freshpark.py`, `original/freshfs.sh`).
+  **Done 2026-10-26:** "jungle: 107 boundary hoarding pieces stand on 107 anchors", none unmade; the 107 anchors' masks,
+  directions, flags, rows and turns are the original's fresh park's (the same in all 34 it made), the variants in its walk
+  order; the gate's wall lies on the original's (`q656/overlay-gate.png`). The saved file is Q249's: a fresh park cannot
+  be saved yet (`SAVE_PARK_WITH_NO_FILE`), and the pieces it will write are noted there.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

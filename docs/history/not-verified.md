@@ -5,6 +5,10 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q743 (the original on Q713's made file B, row 248): the original run off-screen under Proton by `fsload.sh`, its
+  memory read and its frames taken (`q743/orig/O`); this game on the desk at 1280 x 720, Full Simulation by Q707's F player.
+  Not read: the original's score for row 248 (posted and taken on one tick), which sideshow its row 257 judged at 88
+  (Q662). Not run: Instant Action (rows 238 to 257 read no mode), file D in the original (Q662). Not heard (dummy audio).
 - Q676 (the all-visitors, all-items and all-staff titles as `UI_SetTitle` letters them): seen in the stock park under
   Instant Action at 800 x 600, each screen opened by its key, beside the original's frames and before and after the change.
   The widening shows nowhere on screen: each of these titles is narrower than the stream's rect, so only `control`

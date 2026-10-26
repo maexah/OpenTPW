@@ -1736,7 +1736,24 @@ where `FUN_00522850`'s byte and the mask are one of eight pairs (`0x01`/`0x41`, 
 `0x40`/`0x14`, `0x01`/`0x50`, `0x04`/`0x41`, `0x10`/`0x05`) and then takes 0x1b where the flags' low four bits are set; any
 other corner with them set takes 0x1a. A straight whose low four flag bits are clear adds a variant, 0 (`[0x00820aec]` under
 18), 20 (18 to 23) or 23 (24 to 29), only when it differs from the last piece's (`[0x00820af0]`), and rolls the next from
-the park's generator (`FUN_00516330() % 30`). The answer is `row | 0x50000`. `FUN_00522810` and `FUN_00522850` are not read.
+the park's generator (`FUN_00516330() % 30`, unsigned): a straight whose variant is the last one given stands plain, row 2.
+The two words, `[0x00820aec]` (the roll) and `[0x00820af0]` (the last variant), are nought at the start, nothing but this
+chooser reads or writes them (`0x0053a938`..`0x0053a983`), so they carry from park to park. The answer is `row | 0x50000`.
+`FUN_00522810` (`Cell_CountNeighbours`) counts the mask's four bits and `FUN_00522770` answers the mask, both from the record's `+0xc`, or from
+its `+0x22` while `[0x0081b4cc]` is set (the fresh walk, below) and the record's byte `+2` is 2 (not read further);
+`FUN_00522850` (`Cell_GetDirection`) answers the direction byte `+0xd`. **Measured** (Q656, `q656/model.py`): this rule gives the row and turn
+of every anchor in 42 park files of the original's: Alexah's eight Full Simulation files (the fresh jungle, fantasy and
+Hallowe'en parks and their played saves, the jungle ones with land bought, 163 anchors), the reference install's stock
+park restart (143) and 33 fresh Lost Kingdom parks made under Proton, a straight's 22 and 25 taken as its 2.
+**A fresh park's boundary** (`FUN_005323f0`, `Boundary_LayFresh`, with `[0x0081b4cc]` set): the walk replays `Hoardings.sam`'s clicks from
+entrance B three on, `[0x007639f0]`, round to entrance A four back, `[0x007639f8]`, the gate's two ends. Each anchor's
+`mDirection` is the way the walk leaves it (the last, the way it came); its mask names the anchors two cells away; a
+straight over water or hidden ground carries flag 1 (row 11, `ho_fos4`). The model slots keep the walk's order (slot 3,
+(51,17), to slot 109, (43,17), in Lost Kingdom), and the straights' variants follow it: in all 34 fresh Lost Kingdom parks
+the original made (Alexah's and 33 under Proton), no two straights next in the walk share a variant, where in row order 31 of 34 have such a pair and in column order all 34; 27.4 variants a park on average (27.9 for one roll a straight in that order).
+Everything else is the same in all 34: 107 anchors, 10 `ho_fob1`, 6 `ho_fob2`, one `ho_fos4`, 90 among the three
+`ho_fos`. The variants differ from park to park, so the generator is seeded each time. How often the laying chooses an
+anchor before the last time, so how far it moves the generator, is not read.
 **The model:** `FUN_00522f20` (`Hoarding_MakePieceModel`)`( x, y, family, row, rotation, restoring )` turns the piece by the angle 360 less the rotation (360 folded to 0) and moves
 the cell one on by that angle: 90 moves y, 180 x and y, 270 x (so a rotation of 90 moves x and one of 270 moves y), then makes the model with `FUN_00463060( table[row].model, 0x33a,
 { x, y, angle, 0x008179f8 }, table[row].mask, ..., -1, 0 )`: flags `0x33a` with a footprint, so the height is the middle of
@@ -1764,9 +1781,11 @@ flags `+0xe4` (`0x33a`), cell `+0xe8`/`+0xec`, angle and footprint; a match is m
 then frees or hides a 173xx record no anchor claimed (a slot lacking `0x10000`) was not read. In the park files to hand
 (933 anchors in seven files, 520 in the four distinct parks, across three themes) every anchor names a record of its row's
 model, on its cell moved by its angle, at the record's angle (360 less the turn), and no 173xx record lacks an anchor.
-**OpenTPW builds it** from the records (`ParkBoundaryHoarding`); a park made fresh writes its anchors with no record or
-mask (`FreshParkBoundary`), so its pieces are counted, `BOUNDARY_HOARDING_UNMADE` (Q656). Measured: the stock park's
-wall right of the gate and along row 13 in both games at the same cameras (Q620, `q620/overlay-gate-final.png`).
+**OpenTPW builds it** from the records (`ParkBoundaryHoarding`); a park made fresh chooses each anchor's piece once, in
+the walk's order, with the chooser above (`FreshParkBoundary`, `ParkBoundaryHoarding.PieceFor`, `PieceOf`; Q656), its
+straights drawing the fresh park's generator; the laying's draws before that are counted,
+`FRESH_BOUNDARY_LAYING_DRAWS`. Measured: the stock park's wall right of the gate and along row 13 in both games at the
+same cameras (Q620, `q620/overlay-gate-final.png`); a fresh park's in both games (Q656).
 
 ### The ride object
 

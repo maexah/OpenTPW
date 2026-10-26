@@ -83,8 +83,9 @@ public class LevelFullSimulationParkTests
 		var rows = string.Join( "\n", Enumerable.Range( 0, 64 ).Select( at =>
 			$"HoardingClicks[{at}].X 0\nHoardingClicks[{at}].Y 0" ) );
 		using var stream = new System.IO.MemoryStream( System.Text.Encoding.ASCII.GetBytes( rows ) );
+		var seed = 0u;
 		Assert.ThrowsException<System.IO.InvalidDataException>( () => FreshParkBoundary.Apply(
-			new ParkWorld.MapCell[16384], new ParkBalance( "jungle" ), new SettingsFile( stream ) ) );
+			new ParkWorld.MapCell[16384], new ParkBalance( "jungle" ), new SettingsFile( stream ), ref seed, new() ) );
 	}
 
 	private static void SetCurrentPlayer( Player? player )

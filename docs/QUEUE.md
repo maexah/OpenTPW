@@ -74,14 +74,6 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q656. A park made fresh draws no boundary wall.** From Q620. `FreshParkBoundary` writes the anchors (track type 25)
-  with no model record, no `mHoardingNeighbours` and no `mTileData`, so `ParkBoundaryHoarding` counts each,
-  `BOUNDARY_HOARDING_UNMADE`. Build the original's way: the mask from the four anchors two cells away (FileFormats
-  `saves.md`, "A boundary piece's record"), then `Track_PieceForCell` (`0x0053a540`; `park.md`, "The boundary hoarding's
-  piece"): read `FUN_00522810`, `FUN_00522850` and the gate ends' `FUN_004d8c00` first; the straights' variant rolls the
-  park's generator, so the order the original retiles the anchors in decides which straights are `ho_fos2`/`ho_fos3`
-  (find the caller that walks them at a fresh park's start). Write the records and masks into a saved file as the
-  original does. Confirm: a fresh Full Simulation park's gate in both games (`lib/freshpark.py`, `original/freshfs.sh`).
 - [ ] **Q649. A built thing's floor blended into the ground's tiles.** From Q617 (`park-engine.md`, "A built thing's
   floor is blended into the ground's tiles"). The original composites each used footprint cell's ground tile with the
   cell's floor texture laid over by its alpha (as a path is, `ProceduralGround`'s overlay) and draws the floor's
@@ -636,8 +628,8 @@ filed the items that cite it.
 - [ ] **Q214. A fresh Full Simulation park's four gaps.** Found by the 2026-10-04 review (`u1-startup-1` to `-4`).
   `ParkStaffPool.Roll` gives every candidate costume 0 where `FUN_00507600` stores `FUN_00541f70( kind )` at record
   `+9`, so every hired entertainer and mechanic wears bank 0 (`guests`: `bank 0+0` on all five kinds). The land
-  boundary (track types 25 and 12, from `Hoardings.sam`) is written into the cells; its pieces are counted, not made
-  (Q656; a loaded park's are drawn, Q620).
+  boundary (track types 25 and 12, from `Hoardings.sam`) is written into the cells and its pieces drawn as the original's
+  walk chooses them (Q656).
   The catalogue's emitters are registered and the per-item slot table (item `+0x4dc`, `0x0041455a`) is thrown away.
   `FreshParkBoundary.Apply` throws where the original stops at its 64th entry (`0x00532517`), and a test pins the
   throw. Confirm: several entertainers hired in a fresh park, more than one costume on screen; the boundary beside
@@ -856,6 +848,17 @@ filed the items that cite it.
   (three are in Alexah's saves), make each afresh, and take the legal text from the level's shipped park file.
   After Q241j. Confirm: a fresh Full Simulation park saved and loaded by the original under Proton.
   From Q241f: `Level.WritePark` counts such a park as `SAVE_PARK_WITH_NO_FILE` and writes nothing.
+  From Q656: the boundary's anchors are `FreshPark.Boundary`, in the walk's order (the original's model slots 3 to
+  109 in Lost Kingdom), each with the mask, direction, flags, row and turn its track sub-record holds (`mHoardingNeighbours`,
+  `mDirection`, `mFlags`, `mTileData` set 5) and `ParkBoundaryHoarding.PieceOf` its record (FileFormats `saves.md`,
+  "A boundary piece's record"); write them as the original's `restart.INTS` holds them.
+- [ ] **Q680. How often a fresh park's boundary laying draws the generator (from Q656), decode first.** `FreshParkBoundary`
+  chooses each anchor's piece once, in the walk's order, which gives the original's pattern of straights' variants
+  (34 fresh parks), and counts `FRESH_BOUNDARY_LAYING_DRAWS`: the original's laying (`Boundary_LayFresh` `0x005323f0` →
+  `FUN_00524960` → `FUN_0053aac0` → `FUN_005370e0`, then `FUN_005311c0`'s 0x81 arm and `FUN_0052ba50`) calls
+  `Track_RetileCell` on anchors more than once, and each choice of a straight draws the park's generator, so the park
+  starts on a state further on. Read those callers and count the choices per anchor (a watch on `0x00820aec` under
+  `watch.sh` in a fresh park counts them), then draw as often, or keep the deviation said at the site.
 - [ ] **Q569. Where the original puts down a worker held at a save, decode first.** From the run 6 review of Q241j (VERIFY-3,
   "anything the first reader missed"; unsettled). The world writer installs the idle mode over the hand
   (`FUN_0046c350` at `0x00516d13`), which runs the outgoing mode's uninstall: for a worker picked up, the type-6

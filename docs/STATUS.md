@@ -31,16 +31,18 @@ One line per system; the detail, item by item, is `docs/WORKS.md` (grep it by ar
 
 ## Next
 
-`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next Q656 (a park made fresh draws no boundary wall; Q525, ordered before Q638, stands lower in the file; Q543 and Q27, ordered before Q631, and Q31b, Q25, Q51 and Q55, ordered earlier, stand lower in the file): Alexah's play test of 2026-10-21 put Q616 to Q645 first, the display, then what a player hits, then the chosen improvements (`playtest-2026-10-21/notes.md`); Q598 (every clip's scale track posed) follows them in section A (Q609, the advisor's row 19 that Q602 decoded, and Q587 to Q589, the karts' and the water ride's build, are filed after it; Q586 stood above the ordered block; Q608, the draws left both-sided, is filed after Q713): the queue was reordered at Alexah's word, 2026-10-20. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. Gaps 4 and 7: `docs/PLAYER-GAPS.md`. Q13 is done: `docs/history/CLEANUP-PLAN.md`.
+`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next Q649 (a built thing's floor blended into the ground's tiles; Q525, ordered before Q638, stands lower in the file; Q543 and Q27, ordered before Q631, and Q31b, Q25, Q51 and Q55, ordered earlier, stand lower in the file): Alexah's play test of 2026-10-21 put Q616 to Q645 first, the display, then what a player hits, then the chosen improvements (`playtest-2026-10-21/notes.md`); Q598 (every clip's scale track posed) follows them in section A (Q609, the advisor's row 19 that Q602 decoded, and Q587 to Q589, the karts' and the water ride's build, are filed after it; Q586 stood above the ordered block; Q608, the draws left both-sided, is filed after Q713): the queue was reordered at Alexah's word, 2026-10-20. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. Gaps 4 and 7: `docs/PLAYER-GAPS.md`. Q13 is done: `docs/history/CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the pre-commit hook: grep it by Q-number.
 
-- Q743 (the original on Q713's made file B, row 248): the original run off-screen under Proton by `fsload.sh`, its
-  memory read and its frames taken (`q743/orig/O`); this game on the desk at 1280 x 720, Full Simulation by Q707's F player.
-  Not read: the original's score for row 248 (posted and taken on one tick), which sideshow its row 257 judged at 88
-  (Q662). Not run: Instant Action (rows 238 to 257 read no mode), file D in the original (Q662). Not heard (dummy audio).
+- Q656 (a fresh park's boundary wall): this game on the desk at 1280 x 720 (`q656/run1`), the original off-screen by
+  `freshfs.sh` (`q656/orig`), both at the cameras (450,165) and (600,100), 110, 180. Not seen: the left of the gate in the
+  original (its 4:3 frame cuts it off at that camera; its file holds it). Not built: how often the original's laying
+  draws the generator before each anchor's last choice (`FRESH_BOUNDARY_LAYING_DRAWS`). Not run: fantasy, Hallowe'en
+  and space fresh parks in this game (Lost Kingdom first; the chooser matches the original's fantasy and Hallowe'en files).
+
 
 
 
@@ -55,8 +57,8 @@ Only the item just landed is here. Every earlier item's account is in `docs/hist
 | | | measured |
 |---|---|---|
 | Opcodes | **78** of 106 | 2026-10-20, Q553 (`FADEOBJ`), `case Opcode.` labels vs enum members |
-| Tests | **3967**, 0 fail, 0 skip with the game | 2026-10-26, run 10 close (the fork watch commit), alone in a worktree |
-| Tests without the game | **1418** ran, **2549** skipped, of 3967 | 2026-10-26, run 10 close (the fork watch commit), alone in a worktree |
+| Tests | **3997**, 0 fail, 0 skip with the game | 2026-10-26, Q656, the main tree before its commit |
+| Tests without the game | **1446** ran, **2551** skipped, of 3997 | 2026-10-26, Q656, the main tree before its commit |
 | Build warnings | 121 in the main tree; 131 in a fresh worktree, the ten more NuGet's advisories on ModKit's ImageSharp | 2026-10-10 (the worktree's 131 and the main tree's 121 at Q340, the worktree's 131 and the main tree's 121 again at Q343, at Q344 and at Q345, and the worktree's 131 at Q346 and, with the main tree's 121, at Q347, at Q348, at Q349, at Q351 and at Q352, 2026-10-13) |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 

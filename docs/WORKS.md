@@ -93,6 +93,11 @@ belongs to or at the end. Grep it by area or Q-number; never read it whole.
   plus the hoarding table's row, the record's cell and angle, the middle of the ground under its two cells square;
   `ParkBoundaryHoarding`, `docs/exe/park.md`, "The boundary hoarding's piece"). The stock park's 143: 90 `ho_fos1`, 19
   `ho_fos2`, 13 `ho_fos3`, 12 `ho_fob1`, 8 `ho_fob2`, one `ho_fos4`; the console's `boundary [X Y]`. Beside the gate and
-  along row 13 the wall lies on the original's at the same cameras (`q620/overlay-gate-final.png`). A park made fresh has
-  no records: its anchors are counted, `BOUNDARY_HOARDING_UNMADE` (Q656). The load's `boundary` phase took 307 ms.
+  along row 13 the wall lies on the original's at the same cameras (`q620/overlay-gate-final.png`). The load's
+  `boundary` phase took 307 ms. **A park made fresh draws its wall too** (Q656): each anchor's piece chosen once, in the
+  walk's order, by the original's chooser (`ParkBoundaryHoarding.PieceFor`), its straights' variants rolled from the
+  fresh park's generator; the 107 anchors' masks, directions, flags, rows and turns are the original's own fresh park's
+  (its 22 and 25 taken as 2), the same in all 34 it made. In this game's fresh park: 107 on 107, 10 `ho_fob1`, 6
+  `ho_fob2`, one `ho_fos4`, 61 `ho_fos1`, 15 `ho_fos2`, 14 `ho_fos3`; beside the gate it lies on the original's fresh
+  park's (`q656/overlay-gate.png`). The laying's draws before the last choice are counted, `FRESH_BOUNDARY_LAYING_DRAWS`.
 - The original runs under Proton as a reference (Q168, `docs/TOOLING.md`); the console's `admit`/`send` place a guest (Q184).

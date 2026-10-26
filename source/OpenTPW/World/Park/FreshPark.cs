@@ -19,7 +19,10 @@ public sealed class FreshPark : IParkInitialState
 	public int ParkGates => 11;
 	public int TrafficLights => 12;
 	public int FirstObject => TrafficLights;
-	public int RandomSeed { get; } = unchecked((int)DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+	public int RandomSeed { get; }
+
+	/// <summary>The boundary's anchors in the walk's order, each with its piece (<see cref="FreshParkBoundary"/>).</summary>
+	public IReadOnlyList<ParkBoundaryHoarding.Anchor> Boundary { get; }
 	public int Weather => 0;
 	public int ParkClosed => 1;
 	public int GameTick => 0;
@@ -38,7 +41,8 @@ public sealed class FreshPark : IParkInitialState
 	public int ResearchWorkLoad { get; }
 	public int ResearchMostExpensiveProject { get; }
 
-	public FreshPark( string theme, ParkBalance balance, ParkItemCatalogue catalogue, BaseFileSystem? files = null )
+	/// <param name="seed">The park's generator before the boundary draws it; the clock where none is given.</param>
+	public FreshPark( string theme, ParkBalance balance, ParkItemCatalogue catalogue, BaseFileSystem? files = null, uint? seed = null )
 	{
 		files ??= FileSystem;
 		// Allocation order reserves the advisor (3) and challenge manager (10) even though neither draws.
@@ -66,7 +70,10 @@ public sealed class FreshPark : IParkInitialState
 		using var attributes = files.OpenRead( $"levels/{theme}/terrain/base.map" );
 		InitializeCells( new HeightfieldFile( ground ), new AttributeMapFile( attributes ), balance );
 		using var hoardings = files.OpenRead( $"levels/{theme}/Hoardings.sam" );
-		FreshParkBoundary.Apply( _cells, balance, new SettingsFile( hoardings ) );
+		// The park's generator, which the boundary's straights draw before the park starts.
+		var generator = seed ?? unchecked((uint)DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+		Boundary = FreshParkBoundary.Apply( _cells, balance, new SettingsFile( hoardings ), ref generator, ParkBoundaryHoarding.Variants.Session );
+		RandomSeed = unchecked((int)generator);
 	}
 
 	private static ParkWorld.CatalogueObject FixedObject( ParkItemCatalogue catalogue, string stem, int id, int next )
