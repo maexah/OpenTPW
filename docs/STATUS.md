@@ -8,7 +8,7 @@ One line per system; the detail, item by item, is `docs/WORKS.md` (grep it by ar
 
 - Lobby: the four islands, the front end, players and their saves, options, the advisor, weather, the island gate and the fly-in.
 - The park's world: ground, paths, queues, placed and fixed objects, the boundary wall, sky, sea, weather, music, the calendar on the park's own clock, lighting, the camcorder.
-- Building: the buy and hire screens, paths and queues laid by pointing, a ride carried over its squares and placed with its queue, a bought thing joining the running park with the original's next id, a kart or water ride's station and mouths and every track piece drawn, and its track laid run by run with the track tool, taken back a run at a time with Backspace, its circuit walked as the loop closes.
+- Building: the buy and hire screens, paths and queues laid by pointing, a ride carried over its squares and placed with its queue, a bought thing joining the running park with the original's next id, a kart or water ride's station and mouths and every track piece drawn, and its track laid run by run with the track tool, taken back a run at a time with Backspace, its circuit walked as the loop closes, each section with its collision objects and buoy.
 - Guests: eight kinds arrive, choose by the original's score, queue, ride, buy and pay; 23 of Lost Kingdom's 31 rides, shops and sideshows run for them (the website's ride list).
 - Staff: all five kinds hired and working their kind's decide (cleaning, performing, researching), strikes, their voices.
 - Rides: every placed thing runs its script, the rest of the opcodes counted; screams, particles, hoardings; the ride window closes and reopens its ride.
@@ -30,21 +30,18 @@ One line per system; the detail, item by item, is `docs/WORKS.md` (grep it by ar
 
 ## Next
 
-`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next Q587 (the rest of the karts' and the water ride's track: the sections' objects and buoys, the closed loop's edit, crossings and hills; the first open item in the file; its decode is done, Q687, its station, mouths and drawn pieces, Q688, the track tool's runs, Q762, the circuit's walk as a loop closes, Q763, and Backspace's take-back, Q765; Q598, every clip's scale track posed, is done, and so are Q693, the ride window's gauges, Q752 and Q753, put first at Alexah's word 2026-10-27; Q525, ordered before Q638, stands lower in the file; Q543 and Q27, ordered before Q631, and Q31b, Q25, Q51 and Q55, ordered earlier, stand lower in the file): Alexah's play test of 2026-10-21 put Q616 to Q645 first, the display, then what a player hits, then the chosen improvements (`playtest-2026-10-21/notes.md`); Q587 to Q589, the karts' and the water ride's build, follow them in section A (Q598 and Q609 stood before them and are done; Q586 stood above the ordered block; Q608, the draws left both-sided, is filed after Q713): the queue was reordered at Alexah's word, 2026-10-20. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. Gaps 4 and 7: `docs/PLAYER-GAPS.md`. Q13 is done: `docs/history/CLEANUP-PLAN.md`.
+`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next Q587 (the rest of the karts' and the water ride's track: the closed loop's edit, crossings and hills, the add-on's caps, the pieces' clips; the first open item in the file; its decode is done, Q687, its station, mouths and drawn pieces, Q688, the track tool's runs, Q762, the circuit's walk as a loop closes, Q763, Backspace's take-back, Q765, and the sections' objects and buoys, Q766; Q598, every clip's scale track posed, is done, and so are Q693, the ride window's gauges, Q752 and Q753, put first at Alexah's word 2026-10-27; Q525, ordered before Q638, stands lower in the file; Q543 and Q27, ordered before Q631, and Q31b, Q25, Q51 and Q55, ordered earlier, stand lower in the file): Alexah's play test of 2026-10-21 put Q616 to Q645 first, the display, then what a player hits, then the chosen improvements (`playtest-2026-10-21/notes.md`); Q587 to Q589, the karts' and the water ride's build, follow them in section A (Q598 and Q609 stood before them and are done; Q586 stood above the ordered block; Q608, the draws left both-sided, is filed after Q713): the queue was reordered at Alexah's word, 2026-10-20. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. Gaps 4 and 7: `docs/PLAYER-GAPS.md`. Q13 is done: `docs/history/CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the pre-commit hook: grep it by Q-number.
 
-- Q765 (Backspace takes the karts' last run back, refunded; Q587's fourth piece, with the review's fixes). Ours on the
-  final binary (`q765/ours-b`, `probe1`), on the desktop, the stock park, by the original's clicks: the second run taken
-  back, 3 pieces, +600, (34,29) links 0x01 way 0x10 over 0 piece 3/1/180, the others bare at row 55, as
-  `q587/orig/A-load.log` at 199.64 s, and the shape as `B-5-backspace.png` (`ours-2-backspace.png`), both earlier
-  evidence for the same clicks, the original not run this session; one model made over it (`TRACK_PIECE_DRAPE` 9 to
-  10); the run laid again and the loop closed as Q763's. The armed tool's pointer read by the console (`c_track` over a
-  run it lays, `c_noplace` over refused ones), not by eye. Not seen: a water run taken back (tests only), a crossing or
-  a laid-over piece kept (tests only), the mouth's bend broken at the list's first entry (tests only), the river laid
-  over (Lost Kingdom's river is all outside the land), the put-down over track (tests only), the original's `c_end`.
+- Q766 (each section's collision objects and buoy; Q587's fifth piece). Ours on the final binary (`q766/ours-b`), on
+  the desktop, the stock park, by Q581's clicks: the karts' eight buoys and ten sections' objects, flags, places and
+  sizes, as `q581/orig/A-track.log` at 496 s, and the water loop's as `D-track.log` at 171 s, read by the `track` census
+  (`ours-K-closed.png`, `ours-W-closed.png`); the logs are the original's earlier evidence for the same clicks, the
+  original not run this session. Not seen: a crossing's or an add-on's objects (tests only), the pools' limits and an
+  unknown type (tests only), anything steering by them (Q588), the buoys' pool index (ours numbers a ride's own list).
 
 
 ## Numbers (take counts fresh; these go stale within a day)

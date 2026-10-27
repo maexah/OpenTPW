@@ -1788,9 +1788,8 @@ objects. Callers: the closing click (`0x00526f02`, 0), the move's put-down (`0x0
 two-click edit (`0x0052693e` with 1, `0x00526bd0` with 0); each stores the answer in `+0x2c`, and the click and the edit
 then open the ride where it is 1 and the open guard lets it (`0x00526f18`..`0x00526f2d`).
 **OpenTPW** (Q763, `ParkTrackTool.WalkCircuit`) builds the walk at the closing click: the sections, the bends' way on
-and retile, `+0x2c` and the opening; the cars and buoys it clears are none here, a kart or water ride having no bumper
-record (Q588), and the step count is answered, not kept on the cells. Counted: the sections' objects and buoys
-(`TRACK_SECTION_OBJECTS`), the add-on's caps (`TRACK_WALK_ADD_ON`), the pieces' clips that follow (`TRACK_PIECES_CLIP`).
+and retile, `+0x2c` and the opening; it clears the last walk's sections, their objects and buoys (Q766's, below), and
+no car, a kart or water ride having no bumper record (Q588), and the step count is answered, not kept on the cells. Counted: the add-on's caps (`TRACK_WALK_ADD_ON`), the pieces' clips that follow (`TRACK_PIECES_CLIP`).
 Measured in ours on the final binary (`q763/ours-d`, `ours-t`), by the original's clicks: the karts' ten sections as
 `q581/orig/A-track.log`'s, the water loop south's as `D-track.log`'s, `+0x2c` 1 and the ride not opened (theirs the track-ride slot's
 state 0, `+0x50`, ours `mCanLoad` 0); (28,25) way 0x04 as `A-load.log`, Q687's water corner (16,19) way 0x04, `wr_trckB2`, row 19, turn 270 as
@@ -1799,17 +1798,34 @@ state 0, `+0x50`, ours `mCanLoad` 0); (28,25) way 0x04 as `A-load.log`, Q687's w
 
 **A section** (`TrackRide_AddSection( handle, x, z, type, … )`, `FUN_0054b2f0`, pool `DAT_00877b80`, 1024 of 0x28; x and
 z its top-left cell × 3072) joins the ride's list (`+0xbc`); a place already there is refused
-("Duplicate track section - IGNORED!"). Its collision objects (pool `DAT_00877b70`, 2048 of 0x20), with `w` the template's `+0x0c` and `r` the
-car's radius: a straight is one rectangle (0x3f, 0x20 square) at its middle, 3104 (0xc20) along and `w − r` across; a
-bend a quarter circle of radius `3072 + w − r` about the corner it turns round (0x1f less the bits of the two sides it
-is open to: 2 x below, 4 x above, 8 z above, 0x10 z below; not whole, so a car in it gets three quarters of its thrust,
-`Bumper_SteerToward`), and the same quarter of radius `3072 − w + r` flagged 0x40, an obstacle
-(`Bumper_PushOffObstacles`); a crossing a round object at its middle (radius `ftol( sqrt( (w − r)² + 3072² ) )`, `0x0054b8ff`: 3279 for the
-karts, 3082 for the water ride; flagged 0x80 for the water family) and four obstacle quarters at its corners. Its buoy (`Bumper_MakeBuoy`, `FUN_0054b170`; pool `DAT_00877b78`,
-1024 of 0x1c), flagged 1 with the section's first object, is at a bend's arc middle (offsets 0xf84 and 0x87c by the
-bend) or at a straight's or crossing's middle, and joins the ride's buoys (`+0xa8`, count `+0xac`). **Measured**: every
-section, type, place, object and buoy of both rides' ten as predicted (`A-track.log` 496 s; `D-track.log` 171 s): the
-karts' straights 3104 × 1148 and bends 4220 and 1924, the water's 3104 × 257, 3329 and 2815.
+("Duplicate track section - IGNORED!"). Its collision objects (pool `DAT_00877b70`, 2048 of 0x20: flags, x, z, two
+sizes `+0xc` and `+0x10`, next, section, buoy; `Bumper_TakeObject` `0x0054b1e0`, `Bumper_MakeObject` `0x0054b210`), with
+`w` the template's `+0x0c` and `r` the car's radius (`+0x08`), each put at the head of the section's list (`+0x1c`): a
+straight is one rectangle (0x3f, 0x20 square; 0x13f for an add-on's, 12 or 13) at its middle, 3104 (0xc20) along and `w −
+r` across (types 9 and 12 along x, 10 and 13 along z); a bend (1 to 8, 1 and 5 alike and so on) a quarter circle of
+radius `3072 + w − r` about the corner it turns round (0x1f less the bits of the two sides it is open to: 2 x below, 4
+x above, 8 z above, 0x10 z below; not whole, so a car in it gets three quarters of its thrust, `Bumper_SteerToward`), then
+the same quarter of radius `3072 − w + r` flagged 0x40, an obstacle (`Bumper_PushOffObstacles`): 5 about (x + 6144, z)
+less 0x14, 6 about (x, z) less 0x12, 7 about (x, z + 6144) less 0xa, 8 about (x + 6144, z + 6144) less 0xc
+(`0x0054b42a`..`0x0054b7df`); a crossing a round object at its middle (radius `ftol( sqrt( (w − r)² + 3072² ) )`,
+`0x0054b8ff`: 3279 for the karts, 3082 for the water ride; flagged 0x80 for the water family, −5, −8, −12 and −13) and
+four obstacle quarters of radius `3072 − w + r` at its corners, each with the corner's bend's bits. Its buoy
+(`Bumper_MakeBuoy`, `FUN_0054b170`; pool `DAT_00877b78`, 1024 of 0x1c: flags, its pool index, x, z, ride, next,
+object), flagged 1 and tied to the section's first object made (`+0x18`; the object's `+0x1c` back to it), is at a
+bend's arc middle, x + a and z + 6144 − b with (a, b) (0xf84, 0xf84) for 5, (0x87c, 0xf84) for 6, (0x87c, 0x87c) for 7
+and (0xf84, 0x87c) for 8, or at a straight's or crossing's middle, and joins the end of the ride's buoys (`+0xa8`, count
+`+0xac`); a section flagged 0x10000, the station's, lays none (`0x0054bae5`). Every pool answers nought when full ("Out
+of Collision Objects", "Out of Buoys"): with no buoy the section is kept, but with no object the next store goes through
+nought, and so does a type outside 1 to 13 not flagged 0x10000, whose buoy is tied to no object (`0x0054bb49`). The
+ride's free (`FUN_00545610`) lets every buoy go, then the sections and their objects, then the arena's (`+0xc0`).
+**Measured**: every section, type, place, object and buoy of both rides' ten as predicted (`A-track.log` 496 s;
+`D-track.log` 171 s): the karts' straights 3104 × 1148 and bends 4220 and 1924, the water's 3104 × 257, 3329 and 2815.
+**OpenTPW** (Q766, `ParkTrackRideTable.Lay`, `ObjectsFor`, `BuoyFor`) makes every section's objects and buoy for the
+karts' and the water ride's templates; another theme's template is counted (`TRACK_SECTION_TEMPLATE_<n>`), and so are
+the two the original does not survive (`TRACK_SECTION_OUT_OF_OBJECTS`, its pool holding the track's alone here, and
+`TRACK_SECTION_UNKNOWN_TYPE`); the grid's and start's buoys are Q588's. Measured in ours on the final binary
+(`q766/ours-a`), by Q581's clicks: both loops' buoys and objects as the two logs' (earlier evidence, the original not
+run for Q766).
 
 **The two templates** (`0x764178`, "How a bumper ride ends a go"): −4 duration −3 (laps), car radius 900, `w` 2048,
 meshes 4 from 0 (`gk_blue`, `gk_green`, `gk_orange`, `gk_purple`), thrust 16–30, friction 960–950, turn 18–34,

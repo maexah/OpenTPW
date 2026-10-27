@@ -77,8 +77,8 @@ filed the items that cite it.
 - [ ] **Q587. The karts' and the water ride's track: edited, crossed (the rest).** From Q581 (`park.md`, "The
   karts' and the water ride's track, buoys and race"). Q688 lays the station and mouths and draws the pieces; Q762 arms
   the track tool and lays its runs; Q763 walks the circuit as a loop closes (the sections, `+0x2c`, the opening); Q765
-  takes a run back with Backspace. What is left: each section's collision objects and buoy (`TRACK_SECTION_OBJECTS`, `TrackRide_AddSection` from `0x0054b3a1`;
-  Q588's race steers by them), an add-on's end caps in the walk (`TRACK_WALK_ADD_ON`), the pieces' clips after a close
+  takes a run back with Backspace; Q766 makes each section's collision objects and buoy. What is left: an add-on's end
+  caps in the walk (`TRACK_WALK_ADD_ON`), the pieces' clips after a close
   (`TRACK_PIECES_CLIP`: `TrackRide_PlayPiecesFromMouth`, `0x0052a490`, and `TrackRide_PlayPiecesFromEnd`); the move's
   put-down walk (`0x00524d0a`; ours moves as a sale and a purchase); the put-down's check of the mouths, op 0x20b or
   0x210, whose refusal refuses the placement (`PUT_DOWN_TRACK_OVER_TRACK`: ours lays no anchor over track instead); the

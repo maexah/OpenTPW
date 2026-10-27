@@ -10764,6 +10764,15 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   (counted), and the pieces stood again keeping every unchanged model. Ours on the final binary (`q765/ours-b`,
   `probe1`, `PREDICTION.txt`): the original's second run taken back, 3 pieces, +600, (34,29) an end again, the rest bare
   at row 55, as `q587/orig/A-load.log` 199.64 s (earlier evidence); one model made over it; laid again and closed.
+- [x] **Q766. Each section of the karts' and the water ride's track makes its collision objects and buoy (Q587's
+  fifth piece).** `ParkTrackRideTable.Lay`, `ObjectsFor`, `BuoyFor` (`TrackRide_AddSection`, `0x0054b2f0`;
+  `Bumper_MakeBuoy`, `0x0054b170`; decoded in the real Ghidra project, `q766/dump`; `park.md`, "A section"): a straight's
+  rectangle, a bend's quarter and obstacle quarter, a crossing's round and four corners, a buoy on all but the station's
+  two, let go by the walk's clear and the sale; the `track` census prints them. Ours on the final binary (`q766/ours-b`,
+  `PREDICTION.txt`), on the desktop, the stock park, by Q581's clicks: the karts' eight buoys and ten sections' objects as
+  `q581/orig/A-track.log` at 496 s and the water loop's as `D-track.log` at 171 s, the original's earlier logs for the
+  same clicks (the original not run for this item). `mutate.py`: 22 bugs, 21 fail; the survivor (a purchase's slot
+  clearing its buoys) is equivalent, since every path that empties a slot lets its buoys go first.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

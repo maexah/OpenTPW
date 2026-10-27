@@ -5,6 +5,15 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q765 (Backspace takes the karts' last run back, refunded; Q587's fourth piece, with the review's fixes). Ours on the
+  final binary (`q765/ours-b`, `probe1`), on the desktop, the stock park, by the original's clicks: the second run taken
+  back, 3 pieces, +600, (34,29) links 0x01 way 0x10 over 0 piece 3/1/180, the others bare at row 55, as
+  `q587/orig/A-load.log` at 199.64 s, and the shape as `B-5-backspace.png` (`ours-2-backspace.png`), both earlier
+  evidence for the same clicks, the original not run this session; one model made over it (`TRACK_PIECE_DRAPE` 9 to
+  10); the run laid again and the loop closed as Q763's. The armed tool's pointer read by the console (`c_track` over a
+  run it lays, `c_noplace` over refused ones), not by eye. Not seen: a water run taken back (tests only), a crossing or
+  a laid-over piece kept (tests only), the mouth's bend broken at the list's first entry (tests only), the river laid
+  over (Lost Kingdom's river is all outside the land), the put-down over track (tests only), the original's `c_end`.
 - Q763 (the karts' and the water ride's circuit walked as a loop closes; Q587's third piece). Ours on the final binary
   (`q763/ours-d`, `ours-t`), on the desktop, the stock park, by the original's clicks: the karts' ten sections, type,
   flags and cell, as `q581/orig/A-track.log`'s and Q581's water loop's as `D-track.log`'s, `+0x2c` 1 and the ride not

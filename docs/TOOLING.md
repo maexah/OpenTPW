@@ -1786,8 +1786,10 @@ GH=766` there, or the pointer is off):
   (Q762, `q762/ours.py`): `carry 1150`, `hover 32 25`, `worldclick 32 25`, `rightclick` (the queue tool away), then
   `worldclick` on the mouth (34,25) arms the track tool and one `worldclick` a run; `tool` reads the mode and anchor and
   `cell X Y` an anchor's `links`, `way`, `track over` and `piece`, as `trackcells.py` reads the original's. `track`
-  then prints each track ride's `+0x2c`, `can load` and sections in `trackride.py`'s own words (`section 0 type 9 flags
-  0x1 cells (30,25)`), so its lines hold beside `q581/orig/A-track.log`'s; `tool queue <thing>`, `worldclick 31 23`,
+  then prints each track ride's `+0x2c`, `can load`, buoys and sections with their objects in `trackride.py`'s own words
+  (`section 0 type 9 flags 0x1 cells (30,25) at (92160,76800) objects [0x3f (95232,79872) 3104/1148]`; a buoy is
+  numbered in its ride's own list, where the original's is its pool slot, and names its object where `trackride.py`
+  says `yes`), so its lines hold beside `q581/orig/A-track.log`'s (Q766, `q766/ours.py`); `tool queue <thing>`, `worldclick 31 23`,
   `worldclick 32 23` joins the karts' queue to the path cell before the exit, which opens a closed loop (Q763,
   `q763/ours.py`).
 - **A chosen advisor line in both games** (Q596, `q596/orig/runfs.sh`, `q596/confirm.py`): only a park whose advisor

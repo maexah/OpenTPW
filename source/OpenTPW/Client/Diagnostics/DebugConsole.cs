@@ -2637,7 +2637,7 @@ public static class DebugConsole
 
 				foreach ( var trackLine in track.Census() ) Reply( $"  {trackLine}" );
 
-				// Each track ride's mIsTrackRideValid and its sections, as original/trackride.py prints them.
+				// Each track ride's mIsTrackRideValid, its buoys and its sections with their objects, as original/trackride.py prints them.
 				foreach ( var trackRide in ParkState.Current?.Objects.Where( o => o.TrackRide != 0 ) ?? [] )
 				{
 					var sections = ParkState.Current!.TrackRides.SectionsOf( trackRide.TrackRide );
@@ -2645,9 +2645,22 @@ public static class DebugConsole
 					Reply( $"track ride 0x{trackRide.TrackRide:x} thing {trackRide.ThingId} +0x2c {trackRide.IsTrackRideValid} "
 						+ $"can load {trackRide.CanLoad} sections {sections.Count}" );
 
+					var buoys = ParkState.Current!.TrackRides.BuoysOf( trackRide.TrackRide );
+
+					Reply( $"    buoys {buoys.Count}" );
+
+					for ( var index = 0; index < buoys.Count; ++index )
+						Reply( $"    buoy {index} flags 0x{buoys[index].Flags:x} ({buoys[index].X},{buoys[index].Z}) "
+							+ $"object {(buoys[index].Object is { } tied ? $"0x{tied.Flags:x} ({tied.X},{tied.Z})" : "no")}" );
+
 					for ( var index = 0; index < sections.Count; ++index )
+					{
+						var objects = string.Join( " ", ParkState.Current!.TrackRides.ObjectsOf( trackRide.TrackRide, index )
+							.Select( o => $"[0x{o.Flags:x} ({o.X},{o.Z}) {o.RadiusX}/{o.RadiusZ}]" ) );
+
 						Reply( $"    section {index} type {sections[index].Type & 0xffff} flags 0x{sections[index].Type >> 16:x} "
-							+ $"cells ({sections[index].X / 0xc00},{sections[index].Y / 0xc00}) at ({sections[index].X},{sections[index].Y})" );
+							+ $"cells ({sections[index].X / 0xc00},{sections[index].Y / 0xc00}) at ({sections[index].X},{sections[index].Y}) objects {objects}" );
+					}
 				}
 
 				break;
