@@ -6,7 +6,7 @@
         An open-source re-implementation of <a href="https://en.wikipedia.org/wiki/Theme_Park_World">Sim Theme Park / Theme Park World</a>.
     </p>
     <p align="center">
-        <b>OpenTPW</b> · <a href="https://github.com/OpenTPW/OpenTPW.FileFormats">File Formats</a> · <a href="https://maexah.github.io/OpenTPW/">Website</a>
+        <b>OpenTPW</b> · <a href="https://github.com/maexah/OpenTPW.FileFormats">File Formats</a> · <a href="https://maexah.github.io/OpenTPW/">Website</a>
     </p>
 </p>
 
@@ -23,9 +23,10 @@ OpenTPW re-implements the engine of Theme Park World (1999) so it runs on modern
 **Not yet.** OpenTPW is a work in progress. What works today:
 
 - **The lobby works.** The four islands, the front end, the advisor, weather, the options screen and your saved players.
-- **Only Lost Kingdom is partly working.** A new Instant Action game enters the park the game ships already built, and the park runs: guests arrive, queue, ride and buy things; you can buy, sell and move rides, hire staff and lay paths.
-- **A new Full Simulation game starts Lost Kingdom as an empty park,** and you can hire staff in it. The other three islands are not worked on yet.
-- **There is no way to finish a park, and the park menu's Save Game does not save one yet.** Money comes in and wages go out each month, but there are no loans to buy, no litter and no end to a park. Only the debug console's `savepark` writes a park, and not every kind of ride.
+- **Lost Kingdom runs.** Instant Action starts the park the game ships, already built. Full Simulation starts it as an empty park. Guests arrive, queue, ride and buy things. Most of its rides, shops and sideshows run.
+- **You can build and manage.** Buy, sell and move rides, lay paths and queues, hire, train and place staff, set the entry price and research new rides.
+- **Saving works.** Save, Load, Restart Park and the quicksave keys. Not saved yet: a Full Simulation park started empty, and karts, water rides and track rides bought in a park.
+- **Not built yet:** loans, litter, and a park ending when the money runs out. The other three islands are not worked on yet.
 
 [`docs/STATUS.md`](docs/STATUS.md) lists everything that works and everything that does not.
 
@@ -36,7 +37,13 @@ Proton. You need your own disc and your own no-CD `.exe`.
 
 OpenTPW is tested only with the **American release, Sim Theme Park**. Theme Park World, the release sold elsewhere, uses the same engine and data and **should** work, but is untested. If you try it, please report how it goes.
 
-## Quick start
+## Download
+
+Experimental test builds for Windows, Linux and macOS are published as pre-releases on the
+[Releases page](https://github.com/maexah/OpenTPW/releases). Each zip holds a README that says how to start it. The
+macOS builds are untested. You still need your own copy of the game.
+
+## Build it yourself
 
 1. Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
 2. Copy your game disc to a folder - see [Getting the game's files](#getting-the-games-files).
@@ -54,7 +61,7 @@ The build includes every library OpenTPW needs. You may also need a **Vulkan dri
 1. Put the game disc in your computer. If you have a disc image (an `.iso` file), double-click it instead.
 2. Open the disc in your file manager, the same way you open any folder.
 3. Copy **everything** on it into a new folder, for example `Sim Theme Park` in your Documents.
-4. Start OpenTPW and give it that folder, as in [Quick start](#quick-start). Put the folder's name in quotes.
+4. Start OpenTPW and give it that folder, as in [Build it yourself](#build-it-yourself). Put the folder's name in quotes.
 
 If OpenTPW says the file names **"have been cut short"**, the copy went wrong. Delete the folder and copy the disc
 again by dragging the files in your file manager.
@@ -87,9 +94,17 @@ options and players.
 | `F2` | Hide the interface |
 | `X` | Freeze the lobby camera |
 | `[` `]` | Move between islands |
-| `C` | In a park: walk on the ground and look around, and back again |
+| `W` `A` `S` `D` | Move the park camera |
 | `←` `→` | Turn the park camera |
 | Mouse wheel | Zoom the park camera |
+| `C` | In a park: walk on the ground and look around, and back again |
+| `B` / `H` | Buy screen / hire screen |
+| `O` / `E` / `V` | All rides and shops / all staff / all visitors |
+| `Space` | Park map |
+| `Ctrl`+`S` / `Ctrl`+`V` | Find a member of staff / find a visitor |
+| `Alt`+`S` / `Alt`+`L` | Quicksave / quickload |
+
+`O` and `E` differ from the original game, which uses `A` and `S`: here those move the camera.
 
 ## Platforms
 
@@ -125,6 +140,10 @@ OPENTPW_SYSTEM_SDL=1 dotnet source/OpenTPW/bin/Debug/net10.0/OpenTPW.dll --game 
 
 **No sound.** Not fatal - OpenTPW warns and carries on.
 
+**Reporting a problem.** Every start writes `console.log` in the game's folder, beside `save`. It names the build,
+your system and your graphics card, and holds no personal details. [Open an issue](https://github.com/maexah/OpenTPW/issues)
+and attach it.
+
 ## For developers
 
 ```sh
@@ -145,6 +164,9 @@ Most tests read the real game files and skip when the game is not found; set `OP
 | `OPENTPW_GAME_PATH=<folder>` | The same, as an environment variable. |
 | `OPENTPW_SYSTEM_SDL=1` | Use your system's SDL2 instead of the one in the build. |
 | `OPENTPW_DEBUG_CONSOLE=1` | Turn on the debug console. |
+| `OPENTPW_LOG_DIR=<folder>` | Write `console.log` there instead of the game's folder. |
+| `OPENTPW_PROFILE=1` | Log the frame time, frames a second and memory use every 120 frames. |
+| `OPENTPW_TEXT_CENSUS=1` | Log every piece of interface text with its drawn size and box. |
 
 **Opening the debug console.** Start OpenTPW from a terminal with `OPENTPW_DEBUG_CONSOLE=1` set, then type commands
 into that terminal and press Enter. Every reply starts with `[dbg]`.
@@ -161,14 +183,14 @@ On Windows, run `set OPENTPW_DEBUG_CONSOLE=1` first, then start OpenTPW in the s
 |-----|----------|
 | Going places | `lobby`, `island`, `enter`, `park`, `reload`, `savepark`, `quit` |
 | Time | `pause`, `resume`, `step`, `clock`, `sweeps` |
-| Lobby camera and weather | `orbit`, `freeze`, `unfreeze`, `attract`, `aim`, `settle`, `near`, `rain`, `weather`, `strike`, `bolt` |
-| Park camera | `camera`, `camcorder`, `facing`, `walk` |
-| Sound | `volume`, `mute`, `sound`, `voices`, `place`, `speech`, `advisor`, `greet`, `duck`, `music`, `crowd`, `bus`, `placed` |
-| Reading the park | `guests`, `peeps`, `staff`, `candidates`, `rides`, `vehicles`, `paths`, `arrivals`, `objects`, `catalogue`, `money`, `rings`, `spend`, `why`, `cell`, `drawn`, `scriptvar`, `bumpers`, `gate`, `hoardings`, `strikes`, `effects`, `emitters`, `particles` |
+| Lobby camera and weather | `orbit`, `freeze`, `unfreeze`, `attract`, `aim`, `settle`, `near`, `rain`, `weather`, `strike`, `bolt`, `flags` |
+| Park camera and drawing | `camera`, `camcorder`, `facing`, `walk`, `fog`, `sea`, `shadows`, `sprites`, `meshes`, `circle` |
+| Sound and the advisor | `volume`, `mute`, `sound`, `voices`, `place`, `speech`, `advisor`, `greet`, `duck`, `music`, `crowd`, `bus`, `placed`, `parkcue`, `scriptsounds`, `sayas`, `advisorgame`, `tutorial` |
+| Reading the park | `guests`, `peeps`, `staff`, `candidates`, `rides`, `vehicles`, `paths`, `arrivals`, `objects`, `catalogue`, `money`, `loans`, `budgets`, `research`, `tickets`, `outlets`, `happiness`, `rings`, `spend`, `why`, `cell`, `drawn`, `scriptvar`, `bumpers`, `gate`, `boundary`, `hoardings`, `strikes`, `effects`, `emitters`, `particles`, `endfeature`, `thingids` |
 | Changing guests | `arrive`, `admit`, `send`, `load`, `depart`, `happy`, `cash`, `thirst`, `balloon`, `toilet`, `need` |
 | Building and staff | `buy`, `put`, `sell`, `move`, `path`, `delpath`, `queue`, `delqueue`, `hire`, `fire`, `pickup`, `putstaff`, `carry`, `drop`, `hand`, `strip`, `tool`, `staffrest`, `forcestrike` |
-| Mouse, keys and windows | `pick`, `click`, `rightclick`, `rmbcancel`, `worldclick`, `hover`, `pointer`, `backspace`, `menu`, `buyscreen`, `hirescreen`, `openthing`, `screen`, `windows`, `control`, `state`, `footprint`, `buymoney`, `preview` |
-| Measuring | `stats`, `assets`, `parks`, `huds`, `water`, `size`, `unimplemented` |
+| Mouse, keys and windows | `pick`, `pickray`, `click`, `rightclick`, `rmbcancel`, `worldclick`, `hover`, `pointer`, `backspace`, `stall`, `menu`, `buyscreen`, `hirescreen`, `researchscreen`, `openthing`, `shopwindow`, `staffwindow`, `visitorwindow`, `screen`, `windows`, `control`, `state`, `footprint`, `buymoney`, `preview`, `map`, `locator`, `tags`, `helpbar` |
+| Measuring | `stats`, `assets`, `parks`, `huds`, `water`, `size`, `strings`, `thingfill`, `unimplemented` |
 
 Each command's arguments are in [`DebugConsole.cs`](source/OpenTPW/Client/Diagnostics/DebugConsole.cs), one `case`
 per command. Add a new command to this table.
@@ -178,7 +200,7 @@ per command. Add a new command to this table.
 - [`docs/STATUS.md`](docs/STATUS.md) - what works and what does not.
 - [`docs/QUEUE.md`](docs/QUEUE.md) - the work queue.
 - [`docs/exe/`](docs/exe) - what the original executable does, decoded.
-- [OpenTPW.FileFormats](https://github.com/OpenTPW/OpenTPW.FileFormats) - the game's file formats, documented.
+- [OpenTPW.FileFormats](https://github.com/maexah/OpenTPW.FileFormats) - the game's file formats, documented.
 - [The website](https://maexah.github.io/OpenTPW/) - a fan site for this fork: what works today, and how to get started.
 
 <details>
@@ -202,7 +224,7 @@ per command. Add a new command to this table.
 | Models (.MD2) | ⚠️ Meshes load; some animation channel kinds are not decoded yet |
 | Sound categories (cat_\*.map) | ⚠️ Decoded; a few fields are unnamed |
 | Park signs (.SGN) | ⚠️ Read and drawn; a gradient fill is drawn flat |
-| Park saves (.TPWS) | ⚠️ Read, only Lost Kingdom's shipped save tested; only the debug console's `savepark` writes one |
+| Park saves (.TPWS) | ⚠️ Read and written, Lost Kingdom only; not yet a park started empty, or karts, water rides and track rides bought |
 | Ride scripts (.RSE) | ⚠️ Every shipped script runs; some instructions are not built yet |
 | Materials (.MTR) | ❌ |
 | Video (.TGQ) | ❌ |
