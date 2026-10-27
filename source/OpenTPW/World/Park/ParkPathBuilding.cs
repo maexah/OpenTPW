@@ -655,6 +655,12 @@ public static class ParkPathBuilding
 			case ParkBuildMode.Patrol:
 				return ParkPatrolTool.Strip( toX, toY, out latched );
 
+			// The track tool's preview (FUN_005234d0 with Track_CellVerdict) draws the run's squares and its total; the
+			// pointer reads its verdict (ParkTrackTool.CursorOver), the squares are not drawn.
+			case ParkBuildMode.KartTrack or ParkBuildMode.WaterTrack:
+				Unimplemented.Report( "TRACK_TOOL_PREVIEW" );
+				return [];
+
 			default:
 				return [];
 		}

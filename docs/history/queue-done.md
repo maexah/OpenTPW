@@ -10756,6 +10756,14 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Ours on the final binary (`q763/ours-d`, `ours-t`, `PREDICTION.txt`): the karts' ten sections as
   `q581/orig/A-track.log`'s, Q581's water loop's as `D-track.log`'s, (28,25) way 0x04, Q687's water corner (16,19)
   `wr_trckB2`, as `A-load.log` and `W-cells.log` (earlier evidence); the karts opened once their queue joined a path.
+- [x] **Q765. Backspace takes the karts' and the water ride's last run of track back, refunded (Q587's fourth piece).**
+  `ParkTrackTool.Backtrack` and `TakeBack` (`BuildTool_Backtrack`, `0x0052fe50`; op 0x32, `Track_ClearCell`,
+  `0x0053b280`; the mouth's tidy `FUN_0052fc80`), with the review's fixes to the track code: the armed tool's pointer
+  (`c_track`, `c_noplace`, `c_cash`; `c_end` and the preview's squares counted), the river laid over plain and a run's last
+  cell refused on queue, a ride's used-from cell or map flag 0x20, the put-down laying no anchor over track already laid
+  (counted), and the pieces stood again keeping every unchanged model. Ours on the final binary (`q765/ours-b`,
+  `probe1`, `PREDICTION.txt`): the original's second run taken back, 3 pieces, +600, (34,29) an end again, the rest bare
+  at row 55, as `q587/orig/A-load.log` 199.64 s (earlier evidence); one model made over it; laid again and closed.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

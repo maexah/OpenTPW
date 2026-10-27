@@ -5,6 +5,15 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q763 (the karts' and the water ride's circuit walked as a loop closes; Q587's third piece). Ours on the final binary
+  (`q763/ours-d`, `ours-t`), on the desktop, the stock park, by the original's clicks: the karts' ten sections, type,
+  flags and cell, as `q581/orig/A-track.log`'s and Q581's water loop's as `D-track.log`'s, `+0x2c` 1 and the ride not
+  opened as both logs' state 0; the closing corners as `q587/orig/A-load.log` and `W-cells.log`, (16,19) now
+  `wr_trckB2` (`ours-W-far.png`, four corners alike, beside `W-8-closed.png` as shapes); all earlier evidence, theirs on
+  `q581/karts.TPWS`, the original not run this session. The karts opened once their queue joined a path, but ours joined
+  the path cell before the exit by one click, where `C-track.log`'s queue ran to (39,23): the same rule, another queue.
+  Not seen: a loop through a crossing or an add-on (tested only), the sections' objects and buoys (counted), the
+  Splish Splash's `wr_hut` shown in one run and not another (Q764).
 - Q762 (the karts' and the water ride's track tool lays runs; Q587's second build piece). Ours on the final binary
   (`q762/ours-b`), on the desktop, the stock park: Q687's two loops laid by the same clicks read every anchor's links,
   way on, overlap, row and turn as the original's `q587/orig/A-load.log` and `W-cells.log` (earlier evidence, theirs on

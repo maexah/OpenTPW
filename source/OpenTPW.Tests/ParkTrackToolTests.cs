@@ -369,4 +369,179 @@ public class ParkTrackToolTests
 		Assert.AreEqual( 1, ParkTrackTool.WalkCircuit( state, ride, check: false ).Valid );
 		Assert.IsFalse( ParkRideOperation.MayOpen( null, ride, 1 ), "no park, no queue joined: the guard refuses" );
 	}
+
+	/// <summary>
+	/// Backspace after the original's second run takes it back as <c>q587/orig/A-load.log</c> read it at 199.64 s: three
+	/// pieces removed and 600 refunded, the corner (34,29) an end piece again with the way out of it, the removed anchors
+	/// and their cells bare at row 0x37.
+	/// </summary>
+	[TestMethod]
+	public void BackspaceTakesBackTheOriginalsSecondRun()
+	{
+		var (state, ride) = Standing( 1, 30, 24 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 25), (34, 29), 200 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 29), (28, 29), 200 );
+		Assert.AreEqual( 52522, state.Balance );
+
+		var taken = ParkTrackTool.TakeBack( state, ride, (28, 29), (34, 29), 200, backToFirst: false );
+
+		Assert.AreEqual( (3, 600), (taken.Removed, taken.Refunded) );
+		Assert.AreEqual( 53122, state.Balance );
+		Assert.AreEqual( ((byte)0x01, (byte)0x10, (short)0, 1, 180), Piece( state, 34, 29 ), "an end again, its way out of it" );
+		Assert.AreEqual( ((byte)0x11, (byte)0x10, (short)0, 2, 180), Piece( state, 34, 27 ) );
+		Assert.AreEqual( ((byte)0x50, (byte)0x10, (short)1, 3, 90), Piece( state, 34, 25 ), "the mouth is not touched" );
+
+		foreach ( var (x, y) in new[] { (32, 29), (30, 29), (28, 29), (33, 30), (29, 29), (28, 30) } )
+		{
+			var cell = state.Record( x, y );
+			Assert.AreEqual( (0, (byte)0, (byte)0, (ushort)0, 0, ParkTrackTool.ClearedRow, 0),
+				(cell.TrackType, cell.TrackNeighbours, cell.TrackDirection, cell.TrackParentId, cell.TrackTileSet, cell.TrackTileIndex,
+					cell.TrackTileAngle), $"({x},{y})" );
+		}
+
+		Assert.AreEqual( 0xc, state.Record( 35, 30 ).TrackType, "the kept end's own cells stay" );
+	}
+
+	/// <summary>Taking back the first run leaves the mouth as the ride was bought, and refunds the run's two pieces.</summary>
+	[TestMethod]
+	public void TakingBackTheFirstRunLeavesTheMouthAsBought()
+	{
+		var (state, ride) = Standing( 1, 30, 24 );
+		var bought = Piece( state, 34, 25 );
+
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 25), (34, 29), 200 );
+		var taken = ParkTrackTool.TakeBack( state, ride, (34, 29), (34, 25), 200, backToFirst: false );
+
+		Assert.AreEqual( (2, 400), (taken.Removed, taken.Refunded) );
+		Assert.AreEqual( 53522, state.Balance );
+		Assert.AreEqual( bought, Piece( state, 34, 25 ) );
+		Assert.AreEqual( ((byte)0x40, (byte)0x04), (state.Record( 34, 25 ).TrackNeighbours, state.Record( 34, 25 ).TrackDirection) );
+	}
+
+	/// <summary>
+	/// A crossing taken back keeps its piece with the run's axis let go; a piece another run was laid over keeps it too;
+	/// and a step of nought removes outright a piece that is not the mouth.
+	/// </summary>
+	[TestMethod]
+	public void APieceLaidOverIsKeptAndANoughtStepRemoves()
+	{
+		var (state, ride) = Standing( 1, 30, 24 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 25), (34, 31), 200 );
+		state.SetRecord( 34, 27, state.Record( 34, 27 ) with
+		{
+			TrackNeighbours = 0x55, TrackDirection = 0x14, TrackOverlapCounter = 1
+		} );
+
+		var taken = ParkTrackTool.TakeBack( state, ride, (34, 31), (34, 25), 200, backToFirst: false );
+
+		Assert.AreEqual( (2, 400), (taken.Removed, taken.Refunded), "(34,29) and (34,31) go" );
+		Assert.AreEqual( (0xb, (byte)0x44, (byte)0x04, (short)0),
+			(state.Record( 34, 27 ).TrackType, state.Record( 34, 27 ).TrackNeighbours, state.Record( 34, 27 ).TrackDirection,
+				state.Record( 34, 27 ).TrackOverlapCounter), "the crossing keeps its east-west links and way" );
+		Assert.AreEqual( (byte)0x40, state.Record( 34, 25 ).TrackNeighbours, "the mouth lets go of the crossing, which no longer links back" );
+
+		state.SetRecord( 34, 27, state.Record( 34, 27 ) with { TrackOverlapCounter = 1 } );
+		taken = ParkTrackTool.TakeBack( state, ride, (34, 27), (34, 27), 200, backToFirst: false );
+		Assert.AreEqual( (1, 200), (taken.Removed, taken.Refunded), "a step of nought removes it whatever its counter" );
+		Assert.AreEqual( 0, state.Record( 34, 27 ).TrackType );
+	}
+
+	/// <summary>
+	/// A corner whose neighbour along the run is kept (laid over) still has its link back at its own clear: it lets it go
+	/// and, left an end, leads out of it.
+	/// </summary>
+	[TestMethod]
+	public void ABendLeftAnEndLeadsOutOfIt()
+	{
+		var (state, ride) = Standing( 1, 30, 24 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 25), (34, 29), 200 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 29), (28, 29), 200 );
+		state.SetRecord( 32, 29, state.Record( 32, 29 ) with { TrackOverlapCounter = 1 } );
+
+		var taken = ParkTrackTool.TakeBack( state, ride, (28, 29), (34, 29), 200, backToFirst: false );
+
+		Assert.AreEqual( (2, 400), (taken.Removed, taken.Refunded) );
+		Assert.AreEqual( ((byte)0x01, (byte)0x10, (short)0, 1, 180), Piece( state, 34, 29 ) );
+		Assert.AreEqual( ((byte)0x04, (short)0), (state.Record( 32, 29 ).TrackNeighbours, state.Record( 32, 29 ).TrackOverlapCounter) );
+	}
+
+	/// <summary>The mouth left one link takes the way away from its station, whatever way it had.</summary>
+	[TestMethod]
+	public void AClearedMouthLeadsAwayFromItsStation()
+	{
+		var (state, ride) = Standing( 1, 30, 24 );
+		state.SetRecord( 34, 25, state.Record( 34, 25 ) with { TrackDirection = 0x40 } );
+
+		ParkTrackTool.TakeBack( state, ride, (34, 25), (34, 25), 200, backToFirst: false );
+
+		Assert.AreEqual( ((byte)0x40, (byte)0x04), (state.Record( 34, 25 ).TrackNeighbours, state.Record( 34, 25 ).TrackDirection) );
+	}
+
+	/// <summary>Back at the list's first entry a mouth left a bend is broken at the link not to the station.</summary>
+	[TestMethod]
+	public void BackAtTheFirstEntryTheMouthsBendIsBroken()
+	{
+		var (state, ride) = Standing( 1, 30, 24 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 25), (34, 29), 200 );
+
+		ParkTrackTool.TakeBack( state, ride, (34, 25), (34, 25), 200, backToFirst: false );
+		Assert.AreEqual( (byte)0x50, state.Record( 34, 25 ).TrackNeighbours, "not at the first entry: the bend stays" );
+
+		ParkTrackTool.TakeBack( state, ride, (34, 25), (34, 25), 200, backToFirst: true );
+		Assert.AreEqual( ((byte)0x40, (byte)0x04), (state.Record( 34, 25 ).TrackNeighbours, state.Record( 34, 25 ).TrackDirection) );
+		Assert.AreEqual( (byte)0x10, state.Record( 34, 27 ).TrackNeighbours, "its link back let go" );
+		Assert.AreEqual( (short)-1, state.Record( 34, 25 ).TrackOverlapCounter, "the mouth's counter goes below nought and stays" );
+	}
+
+	/// <summary>
+	/// The river takes a plain piece; a run may not end on queue, a ride's used-from cell or a cell flagged 0x20, but
+	/// may end on its own track there; path or queue mid-run is the counted hill; types 7, 0x15 and 30 refuse.
+	/// </summary>
+	[TestMethod]
+	public void TheRiverIsLaidOverAndARunMayNotEndOnQueue()
+	{
+		var state = Bought();
+		state.SetRecord( 34, 27, state.Record( 34, 27 ) with { Type = 2 } );
+		state.SetRecord( 35, 29, state.Record( 35, 29 ) with { Type = 2 } );
+		Assert.IsFalse( ParkTrackTool.Verdict( state, 0xb, Owner, (34, 25), (34, 29), 200 ).Refused, "over the river" );
+
+		state = Bought();
+		state.SetRecord( 35, 30, state.Record( 35, 30 ) with { Type = ParkRideChoice.QueueCellType } );
+		var queue = ParkTrackTool.Verdict( state, 0xb, Owner, (34, 25), (34, 29), 200 );
+		Assert.IsTrue( queue.Refused && queue.Why!.Contains( "may not end" ), queue.Why );
+
+		state = Bought();
+		state.SetRecord( 34, 29, state.Record( 34, 29 ) with { Flags = 0x20 } );
+		Assert.IsTrue( ParkTrackTool.Verdict( state, 0xb, Owner, (34, 25), (34, 29), 200 ).Why!.Contains( "may not end" ) );
+		Assert.IsFalse( ParkTrackTool.Verdict( state, 0xb, Owner, (34, 25), (34, 31), 200 ).Refused, "0x20 mid-run" );
+
+		state = Bought();
+		state.SetRecord( 35, 26, state.Record( 35, 26 ) with { Flags = 0x20 } );
+		Assert.IsFalse( ParkTrackTool.Verdict( state, 0xb, Owner, (36, 25), (34, 25), 200 ).Refused, "its own track at the end" );
+
+		state = Bought();
+		state.SetRecord( 34, 27, state.Record( 34, 27 ) with { Type = ParkRideChoice.QueueCellType } );
+		var hill = ParkTrackTool.Verdict( state, 0xb, Owner, (34, 25), (34, 29), 200 );
+		Assert.IsTrue( hill.Refused && hill.Why!.Contains( "hill" ), hill.Why );
+
+		foreach ( var type in new[] { 7, 0x15, CellEdge.Approach } )
+		{
+			state = Bought();
+			state.SetRecord( 34, 27, state.Record( 34, 27 ) with { Type = type } );
+			Assert.IsTrue( ParkTrackTool.Verdict( state, 0xb, Owner, (34, 25), (34, 29), 200 ).Refused, $"map type {type}" );
+		}
+	}
+
+	/// <summary>A run the balance cannot pay is refused as over the balance, which the pointer shows as <c>c_cash</c>.</summary>
+	[TestMethod]
+	public void ARunOverTheBalanceIsMarkedSo()
+	{
+		var state = Bought( balance: 500 );
+
+		Assert.IsTrue( ParkTrackTool.Verdict( state, 0xb, Owner, (34, 25), (34, 31), 200 ).OverBalance );
+
+		state.SetRecord( 34, 27, state.Record( 34, 27 ) with { Type = CellEdge.Footprint } );
+		var judged = ParkTrackTool.Verdict( state, 0xb, Owner, (34, 25), (34, 31), 200 );
+		Assert.IsTrue( judged.Refused && !judged.OverBalance );
+	}
 }

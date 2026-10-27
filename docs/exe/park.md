@@ -1726,12 +1726,25 @@ last.
 `0x40` (outside the park's land, `FUN_00535db0`) refuses; map types 4, 7, 9, 10, 30 or 0x15 mark the cell blocked; a
 track cell of another ride among the three others latches the refusal; the run's new pieces add up (`FUN_0052fba0`) and
 a total above the balance refuses (`DAT_00816d5c`); an empty cell not blocked passes; the anchor's own track passes by
-rules on its links and way on (a straight crossed, an end met, the station met along its flow), not read to the end.
+rules on its links and way on (a straight crossed, an end met, the station met along its flow), not read to the end;
+where an end of the run meets its own track so, it latches `DAT_00816d4c` (`0x0053a1c6`). The run's last cell, unless
+its track is the run's own type, is refused on map type 3 or 9 (queue, or a ride's used-from cell, `FUN_00536320`) or
+map flag `0x20` among its four cells (`0x00539fc5`..`0x0053a05f`). No map-type test asks for the river (type 2): a piece
+over it is plain, for op `0x85` makes a hill only over types 1 and 3 (`0x00538b0b`), and only on an end or a straight
+(a bend, or a cell of three links or more, returns first, `0x00538aa9`..`0x00538b05`). **The pointer** in modes 0xb and
+0x10 (`FUN_0052f950`, the byte table `0x0052fa48` sending both to `0x0052f9a9`) is `c_link` (5) under `DAT_00816d60`,
+which only the path verdict writes, else `c_end` (`0x12`) under `DAT_00816d4c`, else `c_track.ani` (6); then
+`c_noplace` (8) where the preview is red and `c_cash` (`0x14`) under `DAT_00816d5c`, each over the last; the preview
+(`FUN_005234d0` with the verdict) draws the run's squares and its total.
 **OpenTPW** (Q762, `ParkTrackTool`) builds the arming walk, the click and its passes but `0x87` and `0x86`; its verdict
-refuses map types 1, 2 and 3 (`TRACK_RUN_OVER_PATH`: the original lays a hill), its own track mid-run or with two links
-at the end (`TRACK_RUN_CROSSING`) and its own station (`TRACK_RUN_INTO_STATION`); a closed loop's edit
-(`TRACK_EDIT_CLOSED_LOOP`) and Backspace's refund (`TRACK_BACKSPACE_REFUND`) are counted, and the circuit's walk that
-closes a run is Q763's (below). Measured in ours (`q762/ours-b`, then `q763/ours-d` with the walk): Q687's two loops by
+refuses the last cell's queue, used-from cell and flag `0x20` as the original, lays over the river plain, and refuses and
+counts path and queue mid-run (`TRACK_RUN_OVER_PATH`: the original's hill, unbuilt), its own track mid-run or with two
+links at the end (`TRACK_RUN_CROSSING`) and its own station (`TRACK_RUN_INTO_STATION`); a closed loop's edit
+(`TRACK_EDIT_CLOSED_LOOP`) is counted, the circuit's walk that closes a run is Q763's (below), and Backspace's refund
+Q765's ("A track piece's model, price and open end", below). The pointer (Q765, `ParkTrackTool.CursorOver`) is
+`c_track`, `c_noplace` where ours' verdict refuses and `c_cash` where that is the balance; `c_end` is counted
+(`TRACK_TOOL_CURSOR_END`, where the run's last cell is its own track), and so are the preview's squares
+(`TRACK_TOOL_PREVIEW`). Measured in ours (`q762/ours-b`, then `q763/ours-d` with the walk): Q687's two loops by
 the same clicks give every anchor the links, way on, overlap, row and turn the original's `A-load.log` and `W-cells.log`
 hold, the closing corners included, and 200 (250) a new piece.
 
@@ -1968,6 +1981,30 @@ percentage of its price (`0x0053b603`..`0x0053b627`), 100 for a ride with no cus
 row 0x37, no piece. The sale clears and refunds every piece so, then withdraws two pieces' worth at the same percentage,
 the two mouths that came free (`0x00528179`, `addresses.md`). Measured: a three-piece run taken back, +600, its first cell
 an end piece again, the anchor on it.
+Read for Q765 (`q765/dump`, `q762/dump/0053b280.asm`): `BuildTool_Backtrack` pops the list's top, the run's end (a list
+left with one entry takes nothing back), lets the red latch go (`FUN_00527940( 0 )`), installs mode 0x35 and writes 0x80
+into the last link step, then its two clicks: the first anchors at the end, the second lays op 0x32 from it to the new
+top, the run's start, one pass of `FUN_0053aac0` (`0x00524960`'s mode-0x35 arm), so each anchor from the end back is
+given the step toward the start; the anchor becomes the start and the tool its mode again (`FUN_0052f580`). Op 0x32 is
+`Track_ClearCell( dx, dy, 1 )` (`0x00538cdc`): on a track anchor its counter `+0x20` falls by one, or with a step of
+nought, but at the mouth `[0x007639e0]`, to −1 outright. A cell with one way on (`+0xd`), unless the mouth or the other
+mouth (`[0x007639e8]`), lets go of its link back toward the cells already cleared (`~opposite( step )`), and a bend so
+left with one link takes the way out of it, `opposite( link )`; a cell of two ways on (a crossing laid twice) loses that
+way's bit and both links on the step's axis; either is retiled. Below nought, and no mouth, the piece goes as above, and
+also: each of its links let go at both ends, a neighbour so left with one link and a way on that is neither the link nor
+its opposite taking `opposite( link )`; an add-on's thing torn down (`FUN_00527ee0`); its way, flags, type and owner
+nought, `+0x24` −1, retiled to row 0x37 of set nought (`0x0053b006`); and each of its two by two's cells naming it made
+bare the same. On the mouth (`0x0053b8bb`..`0x0053ba7d`) it then links to a station of its ride two cells off where it
+did not, with the way out of it, and with one link left takes the way away from the station. After the pass
+`FUN_0052fc80( list back to one entry )` tidies the mouth the same way, lets go of a link to no track or to track that
+does not link back, and back at the first entry breaks a bend at the mouth, letting go at both ends of the link not to
+the station; then the walk pairs.
+**OpenTPW** (Q765, `ParkTrackTool.Backtrack`, `TakeBack`): Backspace takes the last run back so, the anchor on its start
+and the tool armed, each removed piece refunded at its whole price (the scrap percentage is counted,
+`SCRAP_VALUE_DEPRECIATION`), the pieces' clips and pulse counted (`TRACK_OPEN_END_PULSE`). Measured in ours on the final
+binary (`q765/ours-b`), by the original's clicks: the second run taken back, 3 pieces, +600, (34,29) links 0x01 way 0x10
+over 0 piece 3/1/180, the three others bare at row 55, as `q587/orig/A-load.log` at 199.64 s (earlier evidence); the
+run laid again and the loop closed as Q763's.
 
 **The open end's pulse.** `TrackRide_ShapeFromMouth` (`0x0052c6f0`) walks from the mouth (x + 4, z + 1 at turn 0,
 heading 4; 1, 0x40 and 0x10 at 90, 180 and 270) and `TrackRide_ShapeFromOtherMouth` (`0x0052ccb0`) from the other mouth
@@ -2003,7 +2040,9 @@ its station and mouths clears them and pays nothing net. Counted, not built: the
 (`CARRY_PREVIEW_TRACK_START`), the pulse (`TRACK_OPEN_END_PULSE`), the drape (`TRACK_PIECE_DRAPE`), a water piece's own
 clip 0xc (`TRACK_PIECE_WATER_CLIP`), an add-on's model (`TRACK_PIECE_ADD_ON`: the ground under it shows the sky), a
 written park's piece records (`SAVE_PARK_TRACK_PIECE_MODEL`), and the sale of a ride with more track
-(`SALE_TRACK_TEARDOWN`). The track tool's runs are Q762 ("The track tool", above), the circuit's walk and the opening
+(`SALE_TRACK_TEARDOWN`). The put-down's check of the mouths (op 0x20b or 0x210) is not built: an anchor whose two by two holds
+track already is not laid, and counted (`PUT_DOWN_TRACK_OVER_TRACK`, Q765). The pieces are stood again after a change
+keeping each model its anchor still names, so only a changed piece is made again (Q765). The track tool's runs are Q762 ("The track tool", above), the circuit's walk and the opening
 Q763 ("The walk", above); the rest is Q587.
 
 ### The ride object

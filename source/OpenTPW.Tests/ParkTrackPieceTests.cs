@@ -147,6 +147,7 @@ public class ParkTrackPieceTests
 		Assert.AreEqual( (0xd, 0xd, 0xb, 0xb), (state.Record( 88, 60 ).TrackType, state.Record( 88, 62 ).TrackType,
 			state.Record( 88, 64 ).TrackType, state.Record( 88, 58 ).TrackType ) );
 
+		state = new ParkState( parkIsClosed: false, visitorsToDate: 0 );
 		ParkTrackPieces.LayStation( state, 2, 18, 18, 0 );
 
 		Assert.AreEqual( (0x10, (byte)0x40, (byte)0x04, (ushort)MapStep.CellId( 18, 18 ), 4, 1, 90), Fields( state, 22, 19 ) );
@@ -225,5 +226,20 @@ public class ParkTrackPieceTests
 
 		return (cell.TrackType, cell.TrackNeighbours, cell.TrackDirection, cell.TrackParentId, cell.TrackTileSet, cell.TrackTileIndex,
 			cell.TrackTileAngle);
+	}
+
+	/// <summary>A bought ride's anchor whose two by two holds track already is not laid, so the other ride's track stands.</summary>
+	[TestMethod]
+	public void APutDownLeavesTrackAlreadyLaid()
+	{
+		var state = new ParkState( parkIsClosed: false, visitorsToDate: 0, balance: 0 );
+		var other = (ushort)MapStep.CellId( 50, 50 );
+
+		state.SetRecord( 35, 26, state.Record( 35, 26 ) with { TrackType = 0xc, TrackParentId = (ushort)MapStep.CellId( 35, 25 ) } );
+		state.SetRecord( 35, 25, state.Record( 35, 25 ) with { TrackType = 0x19, TrackParentId = other } );
+
+		Assert.AreEqual( 3, ParkTrackPieces.LayStation( state, 1, 30, 24, 0 ), "the mouth (34,25) is not laid" );
+		Assert.AreEqual( (0, 0x19, 0xc), (state.Record( 34, 25 ).TrackType, state.Record( 35, 25 ).TrackType, state.Record( 35, 26 ).TrackType) );
+		Assert.AreEqual( 0xd, state.Record( 32, 25 ).TrackType );
 	}
 }

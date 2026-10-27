@@ -74,15 +74,18 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q587. The karts' and the water ride's track: taken back, edited, crossed (the rest).** From Q581 (`park.md`, "The
+- [ ] **Q587. The karts' and the water ride's track: edited, crossed (the rest).** From Q581 (`park.md`, "The
   karts' and the water ride's track, buoys and race"). Q688 lays the station and mouths and draws the pieces; Q762 arms
-  the track tool and lays its runs; Q763 walks the circuit as a loop closes (the sections, `+0x2c`, the opening). What is
-  left: each section's collision objects and buoy (`TRACK_SECTION_OBJECTS`, `TrackRide_AddSection` from `0x0054b3a1`;
+  the track tool and lays its runs; Q763 walks the circuit as a loop closes (the sections, `+0x2c`, the opening); Q765
+  takes a run back with Backspace. What is left: each section's collision objects and buoy (`TRACK_SECTION_OBJECTS`, `TrackRide_AddSection` from `0x0054b3a1`;
   Q588's race steers by them), an add-on's end caps in the walk (`TRACK_WALK_ADD_ON`), the pieces' clips after a close
   (`TRACK_PIECES_CLIP`: `TrackRide_PlayPiecesFromMouth`, `0x0052a490`, and `TrackRide_PlayPiecesFromEnd`); the move's
-  put-down walk (`0x00524d0a`; ours moves as a sale and a purchase); Backspace's refund (`TRACK_BACKSPACE_REFUND`: `BuildTool_Backtrack` in mode
-  0x35, `Track_ClearCell`, read for Q762 in `q762/dump`); a closed loop's two-click edit (`TRACK_EDIT_CLOSED_LOOP`);
-  a run over path, queue or water, laid as a hill in the original (`TRACK_RUN_OVER_PATH`), a crossing or junction
+  put-down walk (`0x00524d0a`; ours moves as a sale and a purchase); the put-down's check of the mouths, op 0x20b or
+  0x210, whose refusal refuses the placement (`PUT_DOWN_TRACK_OVER_TRACK`: ours lays no anchor over track instead); the
+  armed tool's `c_end` and preview squares (`TRACK_TOOL_CURSOR_END`, `TRACK_TOOL_PREVIEW`); a take-back's other cell or
+  add-on (`TRACK_CLEAR_PIECE_CELL`, `TRACK_CLEAR_ADD_ON`); a closed loop's two-click edit (`TRACK_EDIT_CLOSED_LOOP`);
+  a run over path or queue mid-run, an end or straight laid there as a hill and a bend or junction plain in the original
+  (`TRACK_RUN_OVER_PATH`; the river takes a plain piece, built), a crossing or junction
   (`TRACK_RUN_CROSSING`) and a run into the station (`TRACK_RUN_INTO_STATION`), the verdict's rest; the clear pass
   (op 0x87); the open end's pulse and a hill's reshaping by the mouths' walks (`TRACK_OPEN_END_PULSE`); the carried
   ride's squares and their check (`CARRY_PREVIEW_TRACK_START`); a water piece's own clip 0xc (`TRACK_PIECE_WATER_CLIP`);

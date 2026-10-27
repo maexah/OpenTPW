@@ -5,7 +5,7 @@ namespace OpenTPW;
 /// track, it lays a straight run of pieces a click (<c>docs/exe/park.md</c>, "The track tool").
 ///
 /// <para>
-/// <b>Armed.</b> The idle click on a kart or water anchor (or a kart piece's other cell, which names its anchor) installs
+/// <b>Armed.</b> The idle click on a kart or water anchor (or a piece's other cell, 0xc in both kits, which names its anchor) installs
 /// mode <c>0xe</c> (<c>0x13</c>) for the piece's ride (<c>FUN_004879d0</c>, category 5); its release walks the ride's track
 /// from the mouth to the open end (<c>FUN_00530830</c>), which becomes the anchor, the walk's bends the pending list, and
 /// arms <c>0xb</c> (<c>0x10</c>). Ours does both on the press.
@@ -46,9 +46,9 @@ public static class ParkTrackTool
 
 	/// <summary>
 	/// The anchor a click on this cell arms the tool on, or null where it arms nothing: a kart or water anchor itself, or a
-	/// kart piece's other cell (0xc), which names its anchor (<c>FUN_004879d0</c>, <c>0x00487f8e</c>). The hover sends only
-	/// track types 0xb, 0xc and 0x10 to the track's category (<c>0x00487392</c>), so a water piece's 0x11 cells and the
-	/// stations arm nothing.
+	/// piece's other cell (0xc in both kits), which names its anchor (<c>FUN_004879d0</c>, <c>0x00487f39</c>..<c>0x00487f4e</c>).
+	/// The hover sends only track types 0xb, 0xc and 0x10 to the track's category (<c>0x00487392</c>), so the stations arm
+	/// nothing.
 	/// </summary>
 	public static (int X, int Y)? AnchorUnder( ParkState state, int x, int y )
 	{
@@ -186,18 +186,23 @@ public static class ParkTrackTool
 		return (cells, dx, dy);
 	}
 
-	/// <summary>A run's verdict: refused or not, why, and what its new pieces cost.</summary>
-	public readonly record struct Judged( bool Refused, string? Why, int Total );
+	/// <summary>A run's verdict: refused or not, why, what its new pieces cost, and whether that is the refusal (<c>DAT_00816d5c</c>).</summary>
+	public readonly record struct Judged( bool Refused, string? Why, int Total, bool OverBalance = false );
 
 	/// <summary>
 	/// The preview's verdict on a run, cell by cell (<c>Track_CellVerdict</c>, <c>FUN_00539760</c>): refused where a piece's
 	/// two by two leaves the map or the park's land (map flag <c>0x40</c>), stands on an object (map types 4, 9 and 10), on
-	/// type 7, 0x15 or 30, or on another ride's track; or where the new pieces together cost more than the balance. What the
-	/// original allows that is not built here is refused too, and counted: a run over path, queue or water
-	/// (<c>TRACK_RUN_OVER_PATH</c>: the original lays it as a hill), through or into its own track other than at its two ends
-	/// (<c>TRACK_RUN_CROSSING</c>) and onto its own station (<c>TRACK_RUN_INTO_STATION</c>).
+	/// type 7, 0x15 or 30, or on another ride's track; where the run's last cell, unless it meets its own track, stands on
+	/// queue, a ride's used-from cell or a cell flagged <c>0x20</c> (<c>0x00539fc5</c>..<c>0x0053a05f</c>); or where the new
+	/// pieces together cost more than the balance. The river (map type 2) takes a plain piece. What the original allows
+	/// that is not built here is refused too, and counted: a run over path or queue (<c>TRACK_RUN_OVER_PATH</c>: the
+	/// original lays an end or straight there as a hill, op <c>0x85</c>, and a bend or junction plain), through or into its
+	/// own track other than at its two ends (<c>TRACK_RUN_CROSSING</c>) and onto its own station
+	/// (<c>TRACK_RUN_INTO_STATION</c>). <paramref name="count"/> false judges without counting, as the pointer's preview
+	/// does every frame.
 	/// </summary>
-	public static Judged Verdict( ParkState state, int type, ushort owner, (int X, int Y) from, (int X, int Y) to, int price )
+	public static Judged Verdict( ParkState state, int type, ushort owner, (int X, int Y) from, (int X, int Y) to, int price,
+		bool count = true )
 	{
 		var (cells, _, _) = CellsOf( from, to );
 		var total = 0;
@@ -221,9 +226,15 @@ public static class ParkTrackTool
 				if ( under.Type is CellEdge.Footprint or CellEdge.RideEnd or CellEdge.RideFarEnd or 7 or 0x15 or CellEdge.Approach )
 					return new Judged( true, $"({cx},{cy}) is map type {under.Type}", total );
 
-				if ( under.Type is CellEdge.Path or ParkRideChoice.QueueCellType or 2 )
+				if ( last && state.Record( x, y ).TrackType != type
+					&& (under.Type is ParkRideChoice.QueueCellType or CellEdge.RideEnd || (under.Flags & 0x20) != 0) )
+					return new Judged( true, $"({cx},{cy}) is map type {under.Type}, flags 0x{under.Flags:x}, where a run may not end", total );
+
+				if ( under.Type is CellEdge.Path or ParkRideChoice.QueueCellType )
 				{
-					Unimplemented.Report( "TRACK_RUN_OVER_PATH" );
+					if ( count )
+						Unimplemented.Report( "TRACK_RUN_OVER_PATH" );
+
 					return new Judged( true, $"({cx},{cy}) is map type {under.Type}, which the original crosses with a hill (not built)", total );
 				}
 
@@ -252,7 +263,9 @@ public static class ParkTrackTool
 
 			if ( cell.TrackType is ParkTrackPieces.KartStation or ParkTrackPieces.WaterStation )
 			{
-				Unimplemented.Report( "TRACK_RUN_INTO_STATION" );
+				if ( count )
+					Unimplemented.Report( "TRACK_RUN_INTO_STATION" );
+
 				return new Judged( true, $"({x},{y}) is the station, which a run meets only along its flow (not built)", total );
 			}
 
@@ -263,13 +276,15 @@ public static class ParkTrackTool
 			// junction.
 			if ( !first && !(last && CellEdge.Links( cell.TrackNeighbours ) == 1) )
 			{
-				Unimplemented.Report( "TRACK_RUN_CROSSING" );
+				if ( count )
+					Unimplemented.Report( "TRACK_RUN_CROSSING" );
+
 				return new Judged( true, $"({x},{y}) is its own track, which the run would cross or join (not built)", total );
 			}
 		}
 
 		return total > state.Balance
-			? new Judged( true, $"the run's {total} is more than the balance {state.Balance}", total )
+			? new Judged( true, $"the run's {total} is more than the balance {state.Balance}", total, OverBalance: true )
 			: new Judged( false, null, total );
 	}
 
@@ -392,10 +407,14 @@ public static class ParkTrackTool
 
 	/// <summary>
 	/// A cell retiled (<c>Track_RetileCell</c>, <c>FUN_0053afa0</c>): a kart or water anchor takes its row and turn again by
-	/// its links, way on and flags; a station or any other type is left as it is.
+	/// its links, way on and flags; a cell of no track takes row <c>0x37</c> of set nought at turn nought, no piece; a
+	/// station or any other type is left as it is.
 	/// </summary>
 	private static ParkWorld.MapCell Retiled( ParkWorld.MapCell cell )
 	{
+		if ( cell.TrackType < 1 )
+			return cell with { TrackTileSet = 0, TrackTileIndex = ClearedRow, TrackTileAngle = 0 };
+
 		if ( !ParkTrackPieces.IsPieceAnchor( cell.TrackType ) )
 			return cell;
 
@@ -408,6 +427,9 @@ public static class ParkTrackTool
 			TrackTileAngle = turn
 		};
 	}
+
+	/// <summary>The row a cell of no track is retiled to (<c>0x0053b006</c>), which makes no piece.</summary>
+	public const int ClearedRow = 0x37;
 
 	/// <summary>Track to the walks: a kart or water anchor or station, or a boundary piece (<c>TrackCell_IsTrack</c>, <c>0x0053ad30</c>).</summary>
 	private static bool IsTrack( int type )
@@ -574,6 +596,360 @@ public static class ParkTrackTool
 
 		state.SetRecord( at.X, at.Y, cell with { TrackNeighbours = (byte)(cell.TrackNeighbours | toward) } );
 		state.SetRecord( bx, by, back with { TrackNeighbours = (byte)(back.TrackNeighbours | CellEdge.Opposite( toward )) } );
+	}
+
+	/// <summary>The four link bits in the order the original's loops take them (<c>FUN_004d8c20( bit, 4 )</c>).</summary>
+	private static readonly byte[] Bits = [0x01, 0x04, 0x10, 0x40];
+
+	/// <summary>What a run taken back did: the pieces it removed and the money they gave back.</summary>
+	public readonly record struct TakenBack( int Removed, int Refunded );
+
+	/// <summary>
+	/// Takes back one run, as Backspace does with the track tool armed (<c>BuildTool_Backtrack</c>, <c>0x0052fe50</c>): in
+	/// mode 0x35 its two clicks lay op <c>0x32</c> (<c>Track_ClearCell</c>, <c>0x0053b280</c>) over every anchor from the
+	/// run's end back to its start, each given the step toward the start (<c>FUN_0053aac0</c> from <c>0x00524960</c>), then
+	/// the mouth is tidied (<c>FUN_0052fc80</c>), its bend broken where the list is back at its first entry. A piece the run
+	/// laid falls below nought and goes, refunding its price; the start, which the run bumped, keeps its piece.
+	/// </summary>
+	public static TakenBack TakeBack( ParkState state, ParkWorld.CatalogueObject ride, (int X, int Y) end, (int X, int Y) start,
+		int price, bool backToFirst )
+	{
+		var station = ParkTrackPieces.StationOf( ride.CellX, ride.CellY, ride.Angle );
+		var (cells, dx, dy) = CellsOf( end, start );
+		var removed = 0;
+		var refunded = 0;
+
+		foreach ( var at in cells )
+			refunded += ClearCell( state, at, (dx, dy), station.Mouth, station.OtherMouth, price, ref removed );
+
+		TidyMouth( state, station.Mouth, backToFirst );
+
+		return new TakenBack( removed, refunded );
+	}
+
+	/// <summary>
+	/// Op <c>0x32</c> on one anchor, <c>Track_ClearCell( dx, dy, 1 )</c>: its overlap counter down by one (to −1 outright on
+	/// a step of nought but at the mouth); on a cell with one way on, unless a mouth, the link back toward the cells already
+	/// cleared goes, and a bend left with one link takes the way out of it; on a crossing that way's bit and both links on
+	/// the step's axis go. Below nought, and no mouth, the piece goes: its price refunded (<c>0x0053b603</c>..
+	/// <c>0x0053b627</c>), each link let go at both ends, a neighbour left with one link turned to lead out of it, the anchor
+	/// and the cells of its two by two made bare and retiled to row <c>0x37</c>. The mouth then links back to its station.
+	/// </summary>
+	private static int ClearCell( ParkState state, (int X, int Y) at, (int Dx, int Dy) step, (int X, int Y) mouth,
+		(int X, int Y) otherMouth, int price, ref int removed )
+	{
+		if ( !ParkState.OnMap( at.X, at.Y ) )
+			return 0;
+
+		var cell = state.Record( at.X, at.Y );
+		var isMouth = at == mouth;
+		var guarded = isMouth || at == otherMouth;
+		var refund = 0;
+
+		// A piece's other cell is cleared through its anchor (0x0053b2d2); a run's cells are all anchors on its grid.
+		if ( cell.TrackType is ParkTrackPieces.KartCell or ParkTrackPieces.WaterCell )
+		{
+			Unimplemented.Report( "TRACK_CLEAR_PIECE_CELL" );
+			return 0;
+		}
+
+		if ( IsTrack( cell.TrackType ) )
+		{
+			if ( step == (0, 0) && !isMouth )
+				cell = cell with { TrackOverlapCounter = -1 };
+			else
+			{
+				cell = cell with { TrackOverlapCounter = (short)(cell.TrackOverlapCounter - 1) };
+
+				var behind = (byte)CellEdge.Opposite( HeadingOf( step.Dx, step.Dy ) );
+
+				if ( CellEdge.Links( cell.TrackDirection ) < 2 )
+				{
+					if ( !guarded )
+					{
+						var bend = IsBend( cell.TrackNeighbours );
+
+						cell = cell with { TrackNeighbours = (byte)(cell.TrackNeighbours & ~behind) };
+
+						if ( bend && CellEdge.Links( cell.TrackNeighbours ) == 1 )
+							cell = cell with { TrackDirection = (byte)CellEdge.Opposite( cell.TrackNeighbours ) };
+
+						cell = Retiled( cell );
+					}
+				}
+				else
+				{
+					var links = cell.TrackNeighbours;
+
+					if ( Math.Abs( step.Dx ) == 2 )
+						links &= unchecked((byte)~0x44);
+
+					if ( Math.Abs( step.Dy ) == 2 )
+						links &= unchecked((byte)~0x11);
+
+					cell = Retiled( cell with { TrackDirection = (byte)(cell.TrackDirection & ~behind), TrackNeighbours = links } );
+				}
+			}
+
+			state.SetRecord( at.X, at.Y, cell );
+
+			if ( cell.TrackOverlapCounter < 0 && !guarded )
+			{
+				refund = Remove( state, at, price );
+				++removed;
+			}
+		}
+
+		if ( isMouth && IsTrack( state.Record( at.X, at.Y ).TrackType ) )
+			RelinkClearedMouth( state, at );
+
+		return refund;
+	}
+
+	/// <summary>The removal of <see cref="ClearCell"/>: answers the refund.</summary>
+	private static int Remove( ParkState state, (int X, int Y) at, int price )
+	{
+		var cell = state.Record( at.X, at.Y ) with { TrackOverlapCounter = 0 };
+		var refund = 0;
+
+		// The refund is the price at the ride's scrap percentage (FUN_004e2290), 100 for a ride under thirty days old with
+		// no customer; the percentage is not kept here, so the whole price comes back.
+		if ( cell.TrackType != 0x19 && price > 0 )
+		{
+			Unimplemented.Report( "SCRAP_VALUE_DEPRECIATION" );
+			state.Deposit( price );
+			refund = price;
+		}
+
+		foreach ( var bit in Bits )
+		{
+			if ( (cell.TrackNeighbours & bit) == 0 )
+				continue;
+
+			cell = cell with { TrackNeighbours = (byte)(cell.TrackNeighbours & ~bit) };
+
+			var (dx, dy) = StepOf( bit );
+
+			if ( !ParkState.OnMap( at.X + dx, at.Y + dy ) )
+				continue;
+
+			var next = state.Record( at.X + dx, at.Y + dy );
+			next = Retiled( next with { TrackNeighbours = (byte)(next.TrackNeighbours & ~CellEdge.Opposite( bit )) } );
+
+			if ( CellEdge.Links( next.TrackNeighbours ) == 1 && next.TrackDirection != next.TrackNeighbours
+				&& next.TrackDirection != CellEdge.Opposite( next.TrackNeighbours ) )
+				next = next with { TrackDirection = (byte)CellEdge.Opposite( next.TrackNeighbours ) };
+
+			state.SetRecord( at.X + dx, at.Y + dy, next );
+		}
+
+		// An add-on's thing is torn down with its cell (FUN_00527ee0).
+		if ( (cell.TrackFlags & ParkTrackPieces.AddOnFlag) != 0 )
+			Unimplemented.Report( "TRACK_CLEAR_ADD_ON" );
+
+		var id = (ushort)MapStep.CellId( at.X, at.Y );
+
+		state.SetRecord( at.X, at.Y, Retiled( cell with { TrackDirection = 0, TrackFlags = 0, TrackType = 0, TrackParentId = 0 } ) );
+
+		foreach ( var (dx, dy) in new[] { (1, 0), (0, 1), (1, 1) } )
+		{
+			if ( !ParkState.OnMap( at.X + dx, at.Y + dy ) || state.Record( at.X + dx, at.Y + dy ).TrackParentId != id )
+				continue;
+
+			state.SetRecord( at.X + dx, at.Y + dy, Retiled( state.Record( at.X + dx, at.Y + dy ) with
+			{
+				TrackNeighbours = 0, TrackDirection = 0, TrackFlags = 0, TrackType = 0, TrackOverlapCounter = 0, TrackParentId = 0
+			} ) );
+		}
+
+		return refund;
+	}
+
+	/// <summary>
+	/// The mouth after its own clear (<c>0x0053b8bb</c>..<c>0x0053ba7d</c>): linked to a station of its ride two cells off
+	/// where it was not, with the way out of it; a link to no track let go; and with one link left, its way on away from
+	/// the station.
+	/// </summary>
+	private static void RelinkClearedMouth( ParkState state, (int X, int Y) at )
+	{
+		foreach ( var bit in Bits )
+		{
+			var cell = state.Record( at.X, at.Y );
+
+			if ( (cell.TrackNeighbours & bit) != 0 || Beyond( state, at, bit ) is not { } next )
+				continue;
+
+			if ( IsStation( state, next ) && next.TrackParentId == cell.TrackParentId )
+				state.SetRecord( at.X, at.Y, Retiled( cell with
+				{
+					TrackDirection = (byte)CellEdge.Opposite( bit ), TrackNeighbours = (byte)(cell.TrackNeighbours | bit)
+				} ) );
+
+			if ( !IsTrack( next.TrackType ) )
+				state.SetRecord( at.X, at.Y, Retiled( state.Record( at.X, at.Y ) with
+				{
+					TrackNeighbours = (byte)(state.Record( at.X, at.Y ).TrackNeighbours & ~bit)
+				} ) );
+		}
+
+		var mouth = state.Record( at.X, at.Y );
+
+		if ( CellEdge.Links( mouth.TrackNeighbours ) != 1 )
+			return;
+
+		mouth = mouth with { TrackDirection = 0 };
+
+		foreach ( var bit in Bits )
+		{
+			if ( (mouth.TrackNeighbours & bit) != 0 && Beyond( state, at, bit ) is { } next && IsStation( state, next )
+				&& next.TrackParentId == mouth.TrackParentId )
+				mouth = mouth with { TrackDirection = (byte)CellEdge.Opposite( bit ) };
+		}
+
+		state.SetRecord( at.X, at.Y, mouth );
+	}
+
+	/// <summary>
+	/// The mouth tidied after a take-back, <c>FUN_0052fc80( backToFirst )</c>: linked to a station of its ride two cells off
+	/// where it was not, with the way out of it; a link to no track, or to track not linking back, let go; and where the
+	/// list is back at its first entry and the mouth is a bend, the bend broken: the link to anything but the station let go
+	/// at both ends, the way on away from the station.
+	/// </summary>
+	private static void TidyMouth( ParkState state, (int X, int Y) at, bool backToFirst )
+	{
+		if ( !ParkState.OnMap( at.X, at.Y ) || !IsTrack( state.Record( at.X, at.Y ).TrackType ) )
+			return;
+
+		foreach ( var bit in Bits )
+		{
+			var cell = state.Record( at.X, at.Y );
+
+			if ( (cell.TrackNeighbours & bit) == 0 )
+			{
+				if ( Beyond( state, at, bit ) is { } station && IsStation( state, station ) && station.TrackParentId == cell.TrackParentId )
+					state.SetRecord( at.X, at.Y, Retiled( cell with
+					{
+						TrackDirection = (byte)CellEdge.Opposite( bit ), TrackNeighbours = (byte)(cell.TrackNeighbours | bit)
+					} ) );
+
+				continue;
+			}
+
+			// The original reads the cell two on without a test here; a mouth's links stay on the map.
+			if ( Beyond( state, at, bit ) is not { } next )
+				continue;
+
+			var letGo = IsTrack( next.TrackType )
+				? (next.TrackNeighbours & CellEdge.Opposite( bit )) == 0
+				: !IsStation( state, next );
+
+			if ( letGo )
+				state.SetRecord( at.X, at.Y, Retiled( cell with { TrackNeighbours = (byte)(cell.TrackNeighbours & ~bit) } ) );
+		}
+
+		if ( !backToFirst || !IsBend( state.Record( at.X, at.Y ).TrackNeighbours ) )
+			return;
+
+		foreach ( var bit in Bits )
+		{
+			var cell = state.Record( at.X, at.Y );
+
+			if ( (cell.TrackNeighbours & bit) == 0 || Beyond( state, at, bit ) is not { } next )
+				continue;
+
+			if ( !IsStation( state, next ) )
+			{
+				state.SetRecord( at.X, at.Y, Retiled( cell with { TrackNeighbours = (byte)(cell.TrackNeighbours & ~bit) } ) );
+
+				var (dx, dy) = StepOf( bit );
+				state.SetRecord( at.X + dx, at.Y + dy, Retiled( next with
+				{
+					TrackNeighbours = (byte)(next.TrackNeighbours & ~CellEdge.Opposite( bit ))
+				} ) );
+			}
+			else
+				state.SetRecord( at.X, at.Y, cell with { TrackDirection = (byte)CellEdge.Opposite( bit ) } );
+		}
+	}
+
+	/// <summary>The cell two on along a link bit (<c>FUN_0050c3e0( bit, 2 )</c>), or null off the map.</summary>
+	private static ParkWorld.MapCell? Beyond( ParkState state, (int X, int Y) at, byte bit )
+	{
+		var (dx, dy) = StepOf( bit );
+
+		return ParkState.OnMap( at.X + dx, at.Y + dy ) ? state.Record( at.X + dx, at.Y + dy ) : null;
+	}
+
+	/// <summary>
+	/// Backspace with the track tool armed: the last run taken back (<see cref="TakeBack"/>) and the anchor put back at its
+	/// start, the tool staying armed. With only the first entry left there is nothing to take back, and the mouth is
+	/// tidied alone. The pulse the walks that follow start is counted (<c>TRACK_OPEN_END_PULSE</c>).
+	/// </summary>
+	public static string Backtrack()
+	{
+		if ( Level.Current is not { ParkState: { } state } level || level.Catalogue is not { } catalogue )
+			return "backspace: a park has to be loaded";
+
+		if ( state.Objects.FirstOrDefault( o => o.ThingId == ParkBuildMode.Serves ) is not { ThingId: not 0 } ride
+			|| !catalogue.TryGet( ride.CatalogueId, out var item ) )
+			return $"backspace: thing {ParkBuildMode.Serves} is gone";
+
+		var mouth = ParkTrackPieces.StationOf( ride.CellX, ride.CellY, ride.Angle ).Mouth;
+
+		// The red latch is let go first (FUN_00527940( 0 )), and the next run's first cell links along nothing (0x80).
+		ParkBuildMode.RefusalLatched = false;
+		_lastLinkStep = null;
+
+		if ( !ParkBuildMode.TryPopRun( out var end, out var start ) )
+		{
+			TidyMouth( state, mouth, backToFirst: false );
+			Unimplemented.Report( "TRACK_OPEN_END_PULSE" );
+			return "backspace: nothing laid since the track tool was armed";
+		}
+
+		var balance = state.Balance;
+		var taken = TakeBack( state, ride, end, start, ParkTrackPieces.PieceCost( level, item.TrackType ),
+			backToFirst: ParkBuildMode.Pending.Count == 1 );
+
+		ParkBuildMode.AnchorAt( start.X, start.Y );
+		ParkTrackPieces.Current?.Rebuild();
+
+		// The pair of walks after it (0x00530025, 0x0053003e): the open end's pulse.
+		Unimplemented.Report( "TRACK_OPEN_END_PULSE" );
+
+		var report = $"took back the run from ({start.X},{start.Y}) to ({end.X},{end.Y}), {taken.Removed} piece(s) removed, "
+			+ $"{taken.Refunded} refunded, balance {balance} -> {state.Balance} - the anchor is ({start.X},{start.Y})";
+
+		Log.Info( $"track: {report}" );
+
+		return $"backspace: {report}";
+	}
+
+	/// <summary>
+	/// The armed tool's pointer over a cell (<c>FUN_0052f950</c>, <c>0x0052f9a9</c>): <c>c_track.ani</c> (cursor 6),
+	/// <c>c_noplace</c> (8) where the run's preview is red, and <c>c_cash</c> (<c>0x14</c>) where that is its total above
+	/// the balance. The verdict's <c>c_end</c> (<c>0x12</c>; its latch <c>DAT_00816d4c</c>, set at <c>0x0053a1c6</c> where an
+	/// end of the run meets its own track by rules on its links and way on) is counted where the run's last cell is its own
+	/// track, <c>TRACK_TOOL_CURSOR_END</c>; <c>c_link</c> (5) is the path verdict's alone.
+	/// </summary>
+	public static Input.CursorTypes CursorOver( int x, int y )
+	{
+		if ( Level.Current is not { ParkState: { } state } level || level.Catalogue is not { } catalogue
+			|| state.Objects.FirstOrDefault( o => o.ThingId == ParkBuildMode.Serves ) is not { ThingId: not 0 } ride
+			|| !catalogue.TryGet( ride.CatalogueId, out var item ) || !ParkBuildMode.Anchored )
+			return Input.CursorTypes.Track;
+
+		var type = ParkBuildMode.Current == ParkBuildMode.WaterTrack ? ParkTrackPieces.WaterAnchor : ParkTrackPieces.KartAnchor;
+		var anchor = ParkBuildMode.Anchor;
+		var target = TargetOf( anchor, x, y );
+
+		if ( target != anchor && ParkState.OnMap( target.X, target.Y ) && state.Record( target.X, target.Y ).TrackType == type )
+			Unimplemented.Report( "TRACK_TOOL_CURSOR_END" );
+
+		var judged = Verdict( state, type, (ushort)MapStep.CellId( ride.CellX, ride.CellY ), anchor, target,
+			ParkTrackPieces.PieceCost( level, item.TrackType ), count: false );
+
+		return !judged.Refused ? Input.CursorTypes.Track : judged.OverBalance ? Input.CursorTypes.Cash : Input.CursorTypes.NoGo;
 	}
 
 	/// <summary>

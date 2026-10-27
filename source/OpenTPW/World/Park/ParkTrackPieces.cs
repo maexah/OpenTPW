@@ -186,11 +186,27 @@ public sealed class ParkTrackPieces : Entity
 		return laid;
 	}
 
-	/// <summary>Writes one anchor and its three cells. A piece's 2 x 2 runs right and down from its anchor at every turn.</summary>
+	/// <summary>
+	/// Writes one anchor and its three cells. A piece's 2 x 2 runs right and down from its anchor at every turn. The
+	/// original's put-down first checks each mouth's two by two (op <c>0x20b</c> or <c>0x210</c> from
+	/// <c>TrackRide_CarrySquares</c>, <c>0x005286a0</c>) and refuses the placement on its refusal; that check is not built,
+	/// so an anchor whose two by two holds track already is left as it is, and counted (<c>PUT_DOWN_TRACK_OVER_TRACK</c>).
+	/// </summary>
 	private static int Lay( ParkState state, (int X, int Y) at, int type, byte mask, byte direction, ushort owner )
 	{
 		if ( !ParkState.OnMap( at.X, at.Y ) )
 			return 0;
+
+		foreach ( var (dx, dy) in new[] { (0, 0), (1, 0), (0, 1), (1, 1) } )
+		{
+			if ( ParkState.OnMap( at.X + dx, at.Y + dy ) && state.Record( at.X + dx, at.Y + dy ).TrackType != 0 )
+			{
+				Unimplemented.Report( "PUT_DOWN_TRACK_OVER_TRACK" );
+				Log.Info( $"track: ({at.X},{at.Y}) is not laid, ({at.X + dx},{at.Y + dy}) holds track type "
+					+ $"0x{state.Record( at.X + dx, at.Y + dy ).TrackType:x} already" );
+				return 0;
+			}
+		}
 
 		var (family, row, turn) = IsPieceAnchor( type )
 			? (type == KartAnchor ? KartFamily : WaterFamily, PieceFor( type, mask, direction, 0 ).Row, PieceFor( type, mask, direction, 0 ).Turn)
@@ -319,7 +335,9 @@ public sealed class ParkTrackPieces : Entity
 	public IReadOnlyList<Piece> Pieces => _pieces;
 
 	private readonly List<Piece> _pieces = [];
-	private readonly List<LobbyModel> _models = [];
+
+	/// <summary>Each standing piece's model, kept while its anchor's record names the same piece.</summary>
+	private readonly Dictionary<Piece, LobbyModel> _models = [];
 	private readonly string _theme;
 	private readonly IParkInitialState? _park;
 
@@ -334,32 +352,58 @@ public sealed class ParkTrackPieces : Entity
 		Current = this;
 	}
 
-	/// <summary>Stands the pieces again, because a cell has changed.</summary>
-	public void Rebuild()
-	{
-		TakeDown();
-		Build();
-	}
+	/// <summary>
+	/// Stands the pieces again, because a cell has changed: a piece its anchor still names keeps its model, one it no
+	/// longer names is taken down, and only a new one is made, as the original's retile makes a model for the cell it
+	/// changes alone.
+	/// </summary>
+	public void Rebuild() => Build();
 
 	private void Build()
 	{
 		if ( _park == null )
 			return;
 
+		var wanted = new List<Piece>();
+
 		for ( var y = 0; y < ParkWorld.MapSize; ++y )
 		{
 			for ( var x = 0; x < ParkWorld.MapSize; ++x )
 			{
 				if ( PieceAt( x, y, ParkState.CellFor( _park, x, y ) ) is { } piece )
-					Place( piece );
+					wanted.Add( piece );
 			}
 		}
 
-		if ( _pieces.Count > 0 )
-			Log.Info( $"{_theme}: {_pieces.Count} track pieces stand - {string.Join( ", ", Census() )}" );
+		var keep = wanted.ToHashSet();
+
+		foreach ( var gone in _models.Keys.Where( piece => !keep.Contains( piece ) ).ToList() )
+		{
+			Delete( _models[gone] );
+			_models.Remove( gone );
+		}
+
+		var made = 0;
+		_pieces.Clear();
+
+		foreach ( var piece in wanted )
+		{
+			if ( !_models.ContainsKey( piece ) && Make( piece ) is { } model )
+			{
+				_models[piece] = model;
+				++made;
+			}
+
+			if ( _models.ContainsKey( piece ) )
+				_pieces.Add( piece );
+		}
+
+		if ( _pieces.Count > 0 || made > 0 )
+			Log.Info( $"{_theme}: {_pieces.Count} track pieces stand, {made} made - {string.Join( ", ", Census() )}" );
 	}
 
-	private void Place( Piece piece )
+	/// <summary>Makes one piece's model where it stands, or null where it would not load.</summary>
+	private LobbyModel? Make( Piece piece )
 	{
 		var directory = $"levels/{_theme}/rides/{(piece.Type == WaterAnchor ? "wateride" : "gokarts")}";
 
@@ -381,12 +425,12 @@ public sealed class ParkTrackPieces : Entity
 			if ( piece.Type == WaterAnchor )
 				Unimplemented.Report( "TRACK_PIECE_WATER_CLIP" );
 
-			_models.Add( model );
-			_pieces.Add( piece );
+			return model;
 		}
 		catch ( Exception e )
 		{
 			Log.Warning( $"{_theme}: track piece '{piece.Model}' would not load, so ({piece.AnchorX},{piece.AnchorY}) is missing - {e.Message}" );
+			return null;
 		}
 	}
 
@@ -394,13 +438,16 @@ public sealed class ParkTrackPieces : Entity
 	public IEnumerable<string> Census()
 		=> _pieces.Select( piece => $"({piece.AnchorX},{piece.AnchorY}) {piece.Model} row {piece.Row} turn {piece.Turn}" );
 
+	private static void Delete( LobbyModel model )
+	{
+		foreach ( var entity in model.Entities )
+			entity.Delete();
+	}
+
 	private void TakeDown()
 	{
-		foreach ( var model in _models )
-		{
-			foreach ( var entity in model.Entities )
-				entity.Delete();
-		}
+		foreach ( var model in _models.Values )
+			Delete( model );
 
 		_models.Clear();
 		_pieces.Clear();
@@ -418,7 +465,7 @@ public sealed class ParkTrackPieces : Entity
 
 	protected override void OnUpdate()
 	{
-		foreach ( var model in _models )
+		foreach ( var model in _models.Values )
 			model.Update( GameClock.Delta );
 	}
 }

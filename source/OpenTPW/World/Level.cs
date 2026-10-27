@@ -1743,6 +1743,8 @@ public class Level
 				ParkBuildMode.Queue => QueueCursor(),
 				ParkBuildMode.Path => PathCursor(),
 				ParkBuildMode.Patrol => ParkPicking.TryCell( out var x, out var y ) ? PatrolCursor( x, y ) : PatrolCursor(),
+				ParkBuildMode.KartTrack or ParkBuildMode.WaterTrack => ParkPicking.TryCell( out var tx, out var ty )
+					? ParkTrackTool.CursorOver( tx, ty ) : Input.CursorTypes.Track,
 				_ when ParkBuilding.Carrying != 0 => CarryCursor(),
 				_ => IdleCursor()
 			};
@@ -2473,8 +2475,8 @@ public class Level
 
 	/// <summary>
 	/// Backspace - the game table's row 5, handler <c>0x0040bda0</c>. With the path tool armed it takes up
-	/// the last run laid; with nothing armed and an empty hand it takes one press of the clear off the path
-	/// under the pointer. One body, shared with the console's <c>backspace</c>.
+	/// the last run laid, with the track tool the last run of track, refunded; with nothing armed and an empty
+	/// hand it takes one press of the clear off the path under the pointer. One body, shared with the console's <c>backspace</c>.
 	/// </summary>
 	internal string BackspaceKey()
 	{
@@ -2489,8 +2491,7 @@ public class Level
 
 			// BuildTool_Backtrack in mode 0x35 clears the last run (Track_ClearCell, 0x0053b280) and refunds its pieces.
 			case ParkBuildMode.KartTrack or ParkBuildMode.WaterTrack:
-				Unimplemented.Report( "TRACK_BACKSPACE_REFUND" );
-				return "backspace: taking back a track run is not built";
+				return ParkTrackTool.Backtrack();
 
 			case ParkBuildMode.None when ParkHand.Empty:
 				if ( !ParkPicking.TryCell( out var x, out var y ) )
