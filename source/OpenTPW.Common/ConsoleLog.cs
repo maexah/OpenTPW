@@ -24,6 +24,10 @@ namespace OpenTPW;
 /// <para>
 /// A launch that finds no game writes no file: nothing is rotated for it, and the terminal has all it said.
 /// </para>
+/// <para>
+/// The file is written through <see cref="SafePaths"/>, so it can be shared as it is: the game's folder, the
+/// home folder and the account's name are cut from it. The terminal shows the paths in full.
+/// </para>
 /// </summary>
 public static class ConsoleLog
 {
@@ -60,7 +64,7 @@ public static class ConsoleLog
 		if ( _sink is not { } sink )
 			return;
 
-		if ( !sink.Open( Candidates( gameFolder, Environment.GetEnvironmentVariable( DirectoryVariable ), UserFolder() ), Header() ) )
+		if ( !sink.Open( Candidates( gameFolder, Environment.GetEnvironmentVariable( DirectoryVariable ), UserFolder() ), Header(), SafePaths.ForThisMachine( gameFolder ).Scrub ) )
 			Console.Error.WriteLine( $"[console log] no folder could be written, so this run is not kept: {sink.Failures}" );
 		else if ( sink.Failures.Length > 0 )
 			Console.Error.WriteLine( $"[console log] this run is kept in {sink.Path}: {sink.Failures}" );
@@ -95,6 +99,7 @@ public static class ConsoleLog
 		private readonly Func<string, Stream> _create;
 		private StringBuilder? _held = new();
 		private StreamWriter? _file;
+		private Func<string, string> _scrub = text => text;
 
 		/// <param name="create">Opens the file at a path (the new file is opened beside console.log first); a test hands in a stream that fails.</param>
 		public Sink( Func<string, Stream>? create = null )
@@ -119,7 +124,7 @@ public static class ConsoleLog
 				if ( _held != null )
 					_held.Append( text );
 				else if ( _file != null )
-					return Guarded( () => _file.Write( text ) );
+					return Guarded( () => _file.Write( _scrub( text ) ) );
 
 				return null;
 			}
@@ -177,12 +182,15 @@ public static class ConsoleLog
 		/// console.log, so a folder that cannot be written is left as it was and keeps both older files. Should the
 		/// move fail after the open, the run keeps writing the new file under the name it has, <see cref="Path"/> says
 		/// which, and <see cref="Failures"/> says why. Answers whether a file was opened; when none was, the
-		/// terminal's copy is all there is and the held text is dropped.
+		/// terminal's copy is all there is and the held text is dropped. Everything the file is given, the header and
+		/// the held text with it, goes through <paramref name="scrub"/> first.
 		/// </summary>
-		public bool Open( IEnumerable<string> folders, string header )
+		public bool Open( IEnumerable<string> folders, string header, Func<string, string>? scrub = null )
 		{
 			lock ( _lock )
 			{
+				_scrub = scrub ?? _scrub;
+
 				foreach ( var folder in folders )
 				{
 					try
@@ -209,8 +217,8 @@ public static class ConsoleLog
 
 				if ( _file != null && Guarded( () =>
 				{
-					_file.WriteLine( header );
-					_file.Write( _held );
+					_file.WriteLine( _scrub( header ) );
+					_file.Write( _scrub( _held?.ToString() ?? string.Empty ) );
 				} ) is { } lost )
 				{
 					Failures += Failures.Length == 0 ? lost : "; " + lost;

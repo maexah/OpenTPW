@@ -41,6 +41,9 @@ internal static class Game
 		// Now there is a folder to keep the console's log in, and what was printed so far goes into it.
 		ConsoleLog.Open( GameDir.Root );
 
+		// What a tester's log needs at its head: the build, the machine, the runtime, the game's data.
+		LaunchReport.LogMachine( GameDir.Data );
+
 		// Register game data directory
 		FileSystem = new BaseFileSystem( GameDir.Data );
 		FileSystem.RegisterArchiveHandler<WadArchive>( ".wad" );
@@ -111,6 +114,8 @@ internal static class Game
 		// of starting does not ask the display for anything at all.
 		if ( GameOptions.Current.DisplayMode != DisplayMode.Windowed )
 			Display.Apply( Render.Window, GameOptions.Current.DisplayMode, GameOptions.Current.FullScreenSize );
+
+		LaunchReport.LogGraphics( Device, Render.Window, GameOptions.Current.DisplayMode );
 
 		// The original shows these once a run, before its first lobby, and none is built: the Bullfrog splash and
 		// the legal screen (LoadingScreen_Begin 0x00587380, whose files ship as Splash_American.tga and

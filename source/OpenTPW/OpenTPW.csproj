@@ -11,6 +11,22 @@
 		<ApplicationManifest>app.manifest</ApplicationManifest>
 	</PropertyGroup>
 
+	<!--
+		The build's name, which the console's log prints first (LaunchReport.Build). The weekly workflow passes
+		-p:OpenTPWBuildTag=weekly-YYYY-MM-DD; every other build is "local". The SDK adds "+<commit>" from git
+		after it, so a local build names its commit too (the commit checked out: changes not yet committed are
+		not named).
+	-->
+	<PropertyGroup>
+		<OpenTPWBuildTag Condition="'$(OpenTPWBuildTag)' == ''">local</OpenTPWBuildTag>
+		<InformationalVersion>$(OpenTPWBuildTag)</InformationalVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- The disc's file list, which LaunchReport counts a game folder against. -->
+		<EmbeddedResource Include="Client\DiscData.txt" LogicalName="OpenTPW.DiscData.txt" />
+	</ItemGroup>
+
 	<ItemGroup>
 	  <Compile Remove="Formats\Model\**" />
 	  <EmbeddedResource Remove="Formats\Model\**" />
