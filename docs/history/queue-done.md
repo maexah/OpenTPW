@@ -10733,6 +10733,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   after the put-down and on the other mouth from the arming click until the loop closed; 8 predictions held, 2 held in
   part (`q587/PREDICTION.txt`). Ours, on the final binary: `PLACED_TRACK_RIDE_FIRST_TRACK_CELLS` counted at the put-down,
   no piece at either mouth (`q587/ours`). The build is Q587.
+- [x] **Q688. A bought kart or water ride lays its station and mouths, and every track piece is drawn (Q587's first
+  build piece).** From Q587. The put-down lays the four anchors and their 2 x 2s on the track grid
+  (`ParkTrackPieces.LayStation`: `TrackRide_LayStation`, `FUN_0052a3a0`, `FUN_0052a420`), each kart or water anchor
+  draws its kit's piece by its record's row and turn with the row's end caps hidden (`Track_PieceForCell`,
+  `ParkTrackPieces.PieceFor`, the id record's hide word now read), and a sale of a ride owning only its station and
+  mouths clears them; `PLACED_TRACK_RIDE_FIRST_TRACK_CELLS` is gone. Ours on the final binary (`q688/ours-b`, `ours-f2`):
+  the four cells as the original's `q587/orig/A-load.log` at its put-down, both mouths' end pieces beside the original's
+  `A-8-put.png` and `W-2-put.png` (theirs on `q581/karts.TPWS`, ours on the stock park), Alexah's played Dino Karts' 28
+  pieces as its 28 records; the chooser holds all 31 of its anchors in a test. FileFormats `saves.md`, "A kart or water
+  track piece's record".
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

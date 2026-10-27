@@ -74,26 +74,28 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q587. The karts' and the water ride's track: laid, walked and opened.** From Q581 (`park.md`, "The karts' and
-  the water ride's track, buoys and race"). Replace `PLACED_TRACK_RIDE_FIRST_TRACK_CELLS`: the purchase lays the station
-  (0xd or 0x12) and both mouths (0xb or 0x10) on the track grid and arms the queue; a click on a piece ("Left-click to
-  edit this track") arms mode 0xb or 0x10 with it the anchor; each click lays a straight run, sound 0xce; the walk sets
-  `+0x2c` and makes the sections, their collision objects and buoys (`ParkTrackRideTable`); a closed loop with the open
-  guard opens the ride, and a later queue edit opens a closed valid one (the tail `ride-operation.md` cites). What it
-  left unread is decoded (Q687, `park.md`, "A track piece's model, price and open end"): each piece's row and model and
-  the end caps its mask hides, 200 (250) a new piece and Backspace's refund, the open end's pulse
-  (`TrackRide_ShapeFromMouth`, `TrackRide_ShapeFromOtherMouth`), the carried ride's squares; build them with it, and
-  hold the pieces against `q587/orig/A-load.log` and `W-cells.log` (`original/trackcells.py`; a crossing or junction
-  piece, `X` and `X2`, is decoded and not measured). Confirm on `q581/karts.TPWS` by the same clicks as `q581/orig` (bought on preview
-  cells (32,25) and (20,20), whose station sections are (30,25)/(32,25) and (18,19)/(20,19); loops to (34,29)/(28,29) and (22,23)/(16,23)): sections and buoys against `q581/orig/A-track.log` and
-  `D-track.log`, and the pieces photographed beside the original's (`B-5-closed.png`, `D-13-boats.png`).
-  From Q633: carried, a kart or water ride also lays its first track cells' squares (`FUN_005286a0`, `0x00529b35`),
-  counted `CARRY_PREVIEW_TRACK_START`; build them with the track.
+- [ ] **Q587. The karts' and the water ride's track: laid, walked and opened (the rest).** From Q581 (`park.md`, "The
+  karts' and the water ride's track, buoys and race"). Q688 lays the station and mouths and draws the pieces; what is
+  left: a click on a piece ("Left-click to edit this track") arms mode 0xb or 0x10 with it the anchor; each click lays a
+  straight run, sound 0xce, 200 (250) a new piece read from the park's balance, its pieces retiled
+  (`ParkTrackPieces.PieceFor`); Backspace's refund; the walk sets `+0x2c` and makes the sections, their collision objects
+  and buoys (`ParkTrackRideTable`); a closed loop with the open guard opens the ride, and a later queue edit opens a
+  closed valid one (the tail `ride-operation.md` cites); the open end's pulse (`TRACK_OPEN_END_PULSE`; which walk pulses
+  at the put-down: the review of Q687, `review12/VERIFY-2.md`); the carried ride's squares and their check
+  (`CARRY_PREVIEW_TRACK_START`); a water piece's own clip 0xc (`TRACK_PIECE_WATER_CLIP`); an add-on's model, whose cell
+  shows the sky through the ground now (`TRACK_PIECE_ADD_ON`, Alexah's played Dino Karts, `q688/ours-f2`); a sale of a
+  ride with track laid (`SALE_TRACK_TEARDOWN`: the walks `FUN_00530830` and `FUN_00530b70` are not read); a written
+  park's piece records (`SAVE_PARK_TRACK_PIECE_MODEL`); and a put-down at 90 or 270, tested and not seen in either game.
+  Hold the pieces against `q587/orig/A-load.log` and `W-cells.log` (`original/trackcells.py`; a crossing or junction
+  piece, `X` and `X2`, is decoded and not measured). Confirm on `q581/karts.TPWS` by the same clicks as `q581/orig`
+  (bought on preview cells (32,25) and (20,20), whose station sections are (30,25)/(32,25) and (18,19)/(20,19); loops to
+  (34,29)/(28,29) and (22,23)/(16,23)): sections and buoys against `q581/orig/A-track.log` and `D-track.log`, and the
+  pieces photographed beside the original's (`B-5-closed.png`, `D-13-boats.png`).
   - **Note (fork watch 2026-10-25, verify-all.md H1):** the pieces are not rigid: a kart or water piece (load flag `0x10422`, `0x00522b1e` and
     `0x00522cde`) is draped vertex by vertex at its placing, every vertex ending at its authored height above the ground
     under it. The chain: `0x004629d0` turns load bit `0x2` into loader flag `0x40`; `0x00461f10` sets `0x20000` on every node
     (`0x00462614`); the instancer `0x00463060` (flags `0x33a`, kart `0x522b90`, water `0x522d50`) calls `0x00469940` (`0x00463347`), which calls
-    `0x00469a80` per node (cell triangle by flag `0x4`, Q398's note). Draw them so, not as flat plates. Not proven: whether the cars' sampler reads the draped copy.
+    `0x00469a80` per node (cell triangle by flag `0x4`, Q398's note). Draw them so, not as flat plates (counted `TRACK_PIECE_DRAPE`). Not proven: whether the cars' sampler reads the draped copy.
     The same call also conforms every flag-8 object's base vertices to the terrain corners (Q750; fork watch 2026-10-27, verify-world H1).
 - [ ] **Q588. Dino Karts race for guests.** After Q587. The -4 record (`Bumper_LayRide`'s grid and start buoys, the
   template's 3 laps, 2048 arrival), `BUMP 7` to state 1 and the race's first buoy, `BUMP 4` a kart a rider (mesh

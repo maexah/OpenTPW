@@ -88,6 +88,28 @@ public sealed class ParkBoundaryHoarding : Entity
 	];
 
 	/// <summary>
+	/// A mask's row and turn in the table, as <c>Track_PieceForCell</c> looks one up: the first row whose mask is the
+	/// cell's, else the first whose mask is a subset of it. The karts' table at <c>0x00762f30</c> holds the same rows and
+	/// turns (family 3 where this one's is 4), so a kart or water anchor is looked up here too (<see cref="ParkTrackPieces"/>).
+	/// </summary>
+	internal static (int Row, int Turn) RowFor( byte mask )
+	{
+		foreach ( var (rowMask, row, turn) in PieceRows )
+		{
+			if ( rowMask == mask )
+				return (row, turn);
+		}
+
+		foreach ( var (rowMask, row, turn) in PieceRows )
+		{
+			if ( (mask & rowMask) == rowMask )
+				return (row, turn);
+		}
+
+		return (0, 0);
+	}
+
+	/// <summary>
 	/// The row and turn of an anchor's piece, as <c>Track_PieceForCell</c> (<c>FUN_0053a540</c>) chooses one for track type
 	/// 25 (<c>docs/exe/park.md</c>, "The boundary hoarding's piece"). A straight whose flags' low four bits are clear takes the
 	/// variant its roll names, unless it is the last one given, and draws the next roll from the park's generator.

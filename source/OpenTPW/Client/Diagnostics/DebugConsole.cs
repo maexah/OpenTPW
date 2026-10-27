@@ -2211,6 +2211,7 @@ public static class DebugConsole
 						: "") +
 					$" occupant {ParkState.Current?.CellAt( probeX, probeY ).Occupant ?? 0}" +
 					$" overlap {probed.OverlapCounter} track type {probed.TrackType} links 0x{probed.TrackNeighbours:x2}" +
+					$" way 0x{probed.TrackDirection:x2} track parent {probed.TrackParentId} piece {probed.TrackTileSet}/{probed.TrackTileIndex}/{probed.TrackTileAngle}" +
 					(ParkState.Current is { } effectState && ParkState.OnMap( probeX, probeY )
 						? $" effects {string.Join( ",", effectState.EffectsAt( probeX, probeY ).ToArray() )}"
 						: "") );
@@ -2621,6 +2622,19 @@ public static class DebugConsole
 			// Every bound hoarding: its panels, texture, progress and flags.
 			case "hoardings":
 				foreach ( var hoardingLine in ParkObjects.Current?.HoardingCensus() ?? [] ) Reply( hoardingLine );
+				break;
+
+			// The karts' and water rides' track pieces standing: each anchor, model, row and turn.
+			case "track":
+				if ( ParkTrackPieces.Current is not { } track )
+				{
+					Reply( "track: none - a park has to be loaded" );
+					break;
+				}
+
+				Reply( $"track pieces {track.Pieces.Count}" );
+
+				foreach ( var trackLine in track.Census() ) Reply( $"  {trackLine}" );
 				break;
 
 			// The wall between the park and the land not bought; `boundary X Y` adds the pieces made on or beside a cell.

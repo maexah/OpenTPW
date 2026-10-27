@@ -949,7 +949,7 @@ public sealed partial class ParkWorld : IParkInitialState
 		int Litter = 0, ushort LitterCollector = 0, ushort PylonIndex = 0,
 		byte StatusFlags = 0, int TimeMarkedForLitterCollection = 0, ushort Occupant = 0,
 		ushort NearbyEffects = 0, ushort ParentId = 0, short OverlapCounter = 0, byte TrackNeighbours = 0,
-		int MeshInstance = 0 )
+		int MeshInstance = 0, byte TrackDirection = 0, int TrackTileSet = 0, int TrackTileIndex = 0, int TrackTileAngle = 0 )
 	{
 		/// <summary>
 		/// Whether anything has been dropped here. <b>Nought on every cell of the park the game ships</b>,
@@ -1492,12 +1492,17 @@ public sealed partial class ParkWorld : IParkInitialState
 				{
 					var track = map + MapCellSize;
 
+					body[track + CellDirection] = cell.TrackDirection;
 					PutUInt16( body, track + CellFlags, cell.TrackFlags );
 					body[track + CellNeighbours] = cell.TrackNeighbours;
 					PutUInt16( body, track + CellParent, cell.TrackParentId );
+					PutInt32( body, track + CellTileData, cell.TrackTileSet );
+					PutInt32( body, track + CellTileData + 4, cell.TrackTileIndex );
+					PutInt32( body, track + CellTileData + 8, cell.TrackTileAngle );
 					PutInt32( body, track + CellType, cell.TrackType );
 				}
-				else if ( cell.TrackType != 0 || cell.TrackFlags != 0 || cell.TrackParentId != 0 || cell.TrackNeighbours != 0 )
+				else if ( cell.TrackType != 0 || cell.TrackFlags != 0 || cell.TrackParentId != 0 || cell.TrackNeighbours != 0
+					|| cell.TrackDirection != 0 || cell.TrackTileSet != 0 || cell.TrackTileIndex != 0 || cell.TrackTileAngle != 0 )
 				{
 					throw new InvalidOperationException( $"cell {index} of the park file it was loaded from has no track record" );
 				}
@@ -2141,6 +2146,12 @@ public sealed partial class ParkWorld : IParkInitialState
 			TrackFlags: tracked ? (ushort)ReadUInt16At( track + CellFlags ) : (ushort)0,
 			TrackParentId: tracked ? (ushort)ReadUInt16At( track + CellParent ) : (ushort)0,
 			TrackNeighbours: tracked ? _data[track + CellNeighbours] : (byte)0,
+
+			// A kart or water track cell's way on, and the piece its retile chose: family, row and turn (FileFormats saves.md).
+			TrackDirection: tracked ? _data[track + CellDirection] : (byte)0,
+			TrackTileSet: tracked ? ReadInt32At( track + CellTileData ) : 0,
+			TrackTileIndex: tracked ? ReadInt32At( track + CellTileData + 4 ) : 0,
+			TrackTileAngle: tracked ? ReadInt32At( track + CellTileData + 8 ) : 0,
 			OverlapCounter: (short)ReadUInt16At( at + CellOverlapCounter ),
 
 			// The MAP record carries mParentID as well, at the same offset within its own record, and

@@ -5,6 +5,13 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q687 (the karts' and the water ride's track pieces, decoded; Q587's first piece): the decode only, no code. Measured
+  in the original under Proton, off-screen, on `q581/karts.TPWS` (`q587/orig`, `original/trackcells.py`): a Dino Karts
+  looped as Q581's and a Splish Splash looped the other way round, every piece's row, model and turn, the bank at every
+  click (6500 and 5000 at the put-downs, 200 and 250 a piece, +600 for a run taken back) and the pulsing end (`B-3-run1.png`,
+  `W-8-closed.png`). Ours on the final binary (dll 73a596ed, `q587/ours`): the counted gaps and the bare station
+  (`ours-2-put.png`). Not seen: the hills, the add-ons, a junction or crossing piece (`X`, `X2`), the water pieces' own
+  clip 0xc, the pulse's colour beyond the red frame, and which of the put-down's three walk pairs runs.
 - Q598 (every clip's scale track posed): seen on the desk at 1280 x 720 in the stock park, on the final binary
   (`q598/run-final`, dll 77418ac6): a Fries Shop, a Laughing Hyenas and a Super Toilet bought by `buy` under `pause`, each
   stepped through its construction with `meshes THING axes` (within 0.004 of the keys at each printed frame) and a shot each

@@ -480,6 +480,27 @@ public sealed class LobbyModel : IChannelPosed
 	}
 
 	/// <summary>
+	/// Hides each node whose id record's hide word shares a bit with <paramref name="mask"/>, as the engine makes a model
+	/// with a mask (<c>FUN_00454a10</c>, <c>FUN_0044b140</c>): a track piece's end caps on the sides its track carries on.
+	/// Answers how many it hid.
+	/// </summary>
+	public int HideCaps( uint mask )
+	{
+		var hidden = 0;
+
+		for ( var node = 0; node < _file.Nodes.Count; ++node )
+		{
+			if ( (_file.Nodes[node].IdHide & mask) == 0 )
+				continue;
+
+			SetMeshVisible( node, false );
+			++hidden;
+		}
+
+		return hidden;
+	}
+
+	/// <summary>
 	/// Where the node called <paramref name="name"/> sits in the world, if this model has one.
 	///
 	/// This is the node's resting place, taken from the origin the model was loaded at. It does not

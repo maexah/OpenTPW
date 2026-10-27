@@ -1919,8 +1919,20 @@ put-down, the other mouth from the arming click until the loop closed (`q587/ori
 **The carried ride's first track cells** (`TrackRide_CarrySquares`, `0x005286a0`, from `BuildTool_Placer` at `0x00529c65`
 and `0x00529ce1`): each mouth's 2 x 2 cells, by op 0x10b (karts) or 0x110 (water) with step 5 for the preview's squares,
 and 0x20b or 0x210 for the commit's check, whose refusal refuses the placement. Seen: the carried Splish Splash with both
-mouths' squares and their arrows (`q587/orig/W-1-before-put.png`). **OpenTPW** builds none of this yet: it counts
-`CARRY_PREVIEW_TRACK_START` and `PLACED_TRACK_RIDE_FIRST_TRACK_CELLS` (Q587).
+mouths' squares and their arrows (`q587/orig/W-1-before-put.png`).
+
+**OpenTPW** (Q688, `ParkTrackPieces`): the put-down lays the station and both mouths, each anchor's way on the turn's
+heading (east, north, west, south for 0, 90, 180, 270), the station's two linked both ways, the mouth back to the station,
+the other mouth on to it, the owner the ride's cell, the 2 x 2's other cells 0xc (0x11) naming their anchor; at turn 0 from
+(30,24) the four cells read as the original's at its put-down (`q587/orig/A-load.log`; `q688/ours-b`), and at turn 180 as
+Alexah's played Dino Karts lies. Each kart or water anchor draws the piece its record's row and turn name, its end caps
+hidden by the row's mask: Alexah's played file's 28 pieces are its 28 records' (`q688/ours-f2`), and the chooser
+(`ParkTrackPieces.PieceFor`) gives every one of its 31 anchors the row and turn the file holds. A sale of a ride owning only
+its station and mouths clears them and pays nothing net. Counted, not built: the carried squares and their check
+(`CARRY_PREVIEW_TRACK_START`), the pulse (`TRACK_OPEN_END_PULSE`), the drape (`TRACK_PIECE_DRAPE`), a water piece's own
+clip 0xc (`TRACK_PIECE_WATER_CLIP`), an add-on's model (`TRACK_PIECE_ADD_ON`: the ground under it shows the sky), a
+written park's piece records (`SAVE_PARK_TRACK_PIECE_MODEL`), and the sale of a ride with more track
+(`SALE_TRACK_TEARDOWN`). The track tool, the walk and opening are Q587.
 
 ### The ride object
 

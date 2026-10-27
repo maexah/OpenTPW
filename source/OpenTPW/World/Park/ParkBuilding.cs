@@ -494,7 +494,11 @@ public static class ParkBuilding
 			// Karts and the water ride clear their track cells and pay for it; any other track type withdraws
 			// nought, which still writes the bank's last balance (0x00528179).
 			if ( item.TrackType is ItemDescriptionFile.CarTrack or ItemDescriptionFile.WaterTrack )
-				Unimplemented.Report( "SALE_TRACK_TEARDOWN" );
+			{
+				if ( ParkTrackPieces.SellBareStation( state, item.TrackType, placed.CellX, placed.CellY,
+					ParkTrackPieces.PieceCost( Level.Current, item.TrackType ) ) == null )
+					Unimplemented.Report( "SALE_TRACK_TEARDOWN" );
+			}
 			else if ( item.TrackType != 0 )
 				state.Spend( 0 );
 		}
@@ -1509,8 +1513,8 @@ public static class ParkBuilding
 			}
 		}
 
-		// A kart or water ride's placer also lays the squares of its first track cells (FUN_005286a0, 0x00529b35), which
-		// no track layer here holds.
+		// A kart or water ride's placer also lays the squares of its mouths' cells and checks them (FUN_005286a0,
+		// 0x00529b35); neither is built.
 		if ( item.TrackType is 1 or 2 )
 			Unimplemented.Report( "CARRY_PREVIEW_TRACK_START" );
 
@@ -1580,10 +1584,15 @@ public static class ParkBuilding
 		if ( built.ThingId == 0 )
 			return built.Answer;
 
-		// Karts and the water ride lay their first track cells here, before the queue is seeded
-		// (0x00524db7..0x00524e49). There is no track layer to lay them in.
+		// Karts and the water ride lay their station and both mouths here (0x00524db7..0x0052518c). The mouth then pulses
+		// until the track tool is armed, which is not drawn.
 		if ( built.TrackType is 1 or 2 )
-			Unimplemented.Report( "PLACED_TRACK_RIDE_FIRST_TRACK_CELLS" );
+		{
+			var laid = ParkTrackPieces.LayStation( state, built.TrackType, cellX, cellY, angle ?? CarryingAngle );
+			ParkTrackPieces.Current?.Rebuild();
+			Unimplemented.Report( "TRACK_OPEN_END_PULSE" );
+			Log.Info( $"Building: thing {built.ThingId} laid {laid} track anchors, its station and mouths" );
+		}
 
 		if ( built.QueueNode is not { } node )
 		{

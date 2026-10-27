@@ -11,8 +11,8 @@ namespace OpenTPW;
 /// saved handle names, each section appended to its ride's list (<see cref="Lay"/>), each car and listed peep put
 /// back by <see cref="ParkBumperCars"/>. <b>A purchase takes the first
 /// free slot</b> (<see cref="Take"/>) and lays no section, and <b>a sale frees it</b> (<see cref="Free"/>); a move is a
-/// sale and a purchase, as the original's is. Laying track is not built (<c>PLACED_TRACK_RIDE_FIRST_TRACK_CELLS</c>),
-/// so a ride bought here never has a section.
+/// sale and a purchase, as the original's is. A kart or water ride bought here lays its station and mouths on the track
+/// grid (<see cref="ParkTrackPieces.LayStation"/>) and no section: the track tool and the walk are not built.
 /// </para>
 /// </summary>
 public sealed class ParkTrackRideTable

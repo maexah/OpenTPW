@@ -34,8 +34,17 @@ public class LevelFullSimulationParkTests
 		Assert.AreEqual( 10, park.Cells.Count( c => c.Type == 1 ) );
 		Assert.AreEqual( 6991, park.Cells.Count( c => c.Type == 0 ) );
 		// Oracle from all 16,384 cells of the copied original jungle restart.INTS, not from FreshPark.
-		// Only random path art is normalized: base 10/2 and alternate 20/19 share geometry.
-		var normalized = park.Cells.Select( c => c with { TileIndex = c.TileIndex == 20 ? 10 : c.TileIndex == 19 ? 2 : c.TileIndex } );
+		// Only random path art is normalized: base 10/2 and alternate 20/19 share geometry. The oracle covers the fields
+		// below, the cell as read before the track record's way on and tile words were (a boundary anchor's row is rolled
+		// per park), so the hash is taken over them alone.
+		var normalized = park.Cells.Select( c => new
+		{
+			c.Type, c.Flags, c.Neighbours, c.Direction, c.TileSet,
+			TileIndex = c.TileIndex == 20 ? 10 : c.TileIndex == 19 ? 2 : c.TileIndex,
+			c.TileAngle, c.Status, c.TrackType, c.TrackFlags, c.TrackParentId, c.Litter, c.LitterCollector, c.PylonIndex,
+			c.StatusFlags, c.TimeMarkedForLitterCollection, c.Occupant, c.NearbyEffects, c.ParentId, c.OverlapCounter,
+			c.TrackNeighbours, c.MeshInstance, c.HasLitter, c.IsOccupied, c.IsMapped
+		} );
 		var hash = System.Convert.ToHexString( System.Security.Cryptography.SHA256.HashData(
 			System.Text.Json.JsonSerializer.SerializeToUtf8Bytes( normalized ) ) );
 		Assert.AreEqual( "BA5550C083CBF1139ED44083C59FD41B08DD6BD8DFBF5DF6C4030EF176C6A8A9", hash );

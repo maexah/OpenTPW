@@ -29,8 +29,8 @@ namespace OpenTPW;
 public static class ParkSurfaces
 {
 	/// <summary>
-	/// Lays the ground, the paths and the queues again. Safe to call outside a park, where all three
-	/// are null and nothing happens.
+	/// Lays the ground, the paths, the queues and the karts' and water rides' track pieces again. Safe to call outside a
+	/// park, where all four are null and nothing happens.
 	/// </summary>
 	/// <remarks>
 	/// <b>Whole surfaces, not cells.</b> Each of the three is one model - or, for a queue, one model a
@@ -45,5 +45,6 @@ public static class ParkSurfaces
 		ParkGround.Current?.Rebuild();
 		ParkPaths.Current?.Rebuild();
 		ParkQueues.Current?.Rebuild();
+		ParkTrackPieces.Current?.Rebuild();
 	}
 }

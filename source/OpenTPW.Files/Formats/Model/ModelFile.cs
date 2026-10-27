@@ -102,6 +102,12 @@ public partial class ModelFile : BaseFormat
 		public uint IdFlags { get; set; }
 
 		/// <summary>
+		/// The id record's hide word at <c>+0x08</c>: a node whose word shares a bit with the mask its model is made with is
+		/// hidden (FileFormats models.md, "End caps"); 0 when it has none.
+		/// </summary>
+		public uint IdHide { get; set; }
+
+		/// <summary>
 		/// Which of <see cref="Paths"/> this node follows, from the node record's +0x52.
 		///
 		/// The file draws no distinction between "follows path 0" and "follows no path" - both
@@ -966,7 +972,7 @@ public partial class ModelFile : BaseFormat
 			stream.Seek( table + (20L * r), SeekOrigin.Begin );
 			Nodes[node].IdFlags = reader.ReadUInt32();
 			Nodes[node].Id = (int)reader.ReadUInt32();
-			_ = reader.ReadUInt32();
+			Nodes[node].IdHide = reader.ReadUInt32();
 			var face = reader.ReadUInt32();
 
 			// The face record: its face, a ushort not read here (FUN_0044a640 steps back by it to a turn), and

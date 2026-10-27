@@ -461,6 +461,10 @@ public class Level
 		_ = new ParkBoundaryHoarding( ThemeName, park, catalogue );
 		load.Mark( "boundary" );
 
+		// The karts' and water rides' track pieces, one at each anchor.
+		_ = new ParkTrackPieces( ThemeName, park );
+		load.Mark( "track" );
+
 		// And the scripts those objects run. After the objects, because a script belongs to something
 		// standing in the park rather than the other way round - and now literally so: a script is handed
 		// the very animation player its own thing's model is posed from, and its tick loop is what drives
@@ -1329,6 +1333,11 @@ public class Level
 			if ( SameGround( was, now ) )
 				continue;
 
+			// A kart or water piece laid here is written as its track record; its model record is not made, so the original
+			// loading the file draws no piece there.
+			if ( ParkTrackPieces.IsPieceAnchor( now.TrackType ) && (was.TrackType, was.TrackTileIndex) != (now.TrackType, now.TrackTileIndex) )
+				Unimplemented.Report( "SAVE_PARK_TRACK_PIECE_MODEL" );
+
 			var footprintWas = IsFootprint( was.Type );
 			var footprintNow = IsFootprint( now.Type );
 
@@ -1375,8 +1384,8 @@ public class Level
 	private static bool SameGround( ParkWorld.MapCell a, ParkWorld.MapCell b ) =>
 		(a.Type, a.Flags, a.Neighbours, a.Direction, a.TileSet, a.TileIndex, a.TileAngle, a.OverlapCounter, a.ParentId)
 			== (b.Type, b.Flags, b.Neighbours, b.Direction, b.TileSet, b.TileIndex, b.TileAngle, b.OverlapCounter, b.ParentId)
-		&& (a.TrackType, a.TrackFlags, a.TrackParentId, a.TrackNeighbours)
-			== (b.TrackType, b.TrackFlags, b.TrackParentId, b.TrackNeighbours);
+		&& (a.TrackType, a.TrackFlags, a.TrackParentId, a.TrackNeighbours, a.TrackDirection, a.TrackTileSet, a.TrackTileIndex, a.TrackTileAngle)
+			== (b.TrackType, b.TrackFlags, b.TrackParentId, b.TrackNeighbours, b.TrackDirection, b.TrackTileSet, b.TrackTileIndex, b.TrackTileAngle);
 
 	/// <summary>
 	/// A park's interface: the windows its menu opens in, the park's own build of that menu, and the
