@@ -680,10 +680,64 @@ public class ParkStaffWindowTests
 		UiSounds.LastAsked = null;
 		StringAssert.Contains( Level.Current!.ClickWorldAt( 10, 10, 0 ), "(10,10)" );
 		Assert.AreEqual( (ParkBuildMode.Path, true), (ParkBuildMode.Current, ParkBuildMode.Anchored), "a click on the park's bare ground anchors" );
-		Assert.IsNull( UiSounds.LastAsked, "and is not refused" );
+		Assert.AreEqual( 0x65, UiSounds.LastAsked, "and is not refused: the laying sound" );
 
 		Assert.AreEqual( 0, Times( "PATH_TOOL_REFUSED_SOUND_0xAF" ) + Times( "QUEUE_TOOL_REFUSED_SOUND_0xAF" )
 			+ Times( "PLACEMENT_REFUSED_SOUND_0xAF" ), "no longer counted" );
+	}
+
+	/// <summary>
+	/// <b>Every path or queue click the red latch has not refused plays the laying sound <c>0x65</c></b>, before its arm
+	/// runs and wherever the press went (<c>0x005271ea</c>): the path tool's arming click on (62,18) and its run to (66,18),
+	/// the queue tool's run from the Belly Bounce's (49,22) that joins the path at (47,22), and a click on its anchor. The
+	/// click on the queue that hands the queue tool back is no click of either tool, and a refused click plays <c>0xaf</c> alone.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the sound dropped from either tool, gated on the press, played on a refusal or another effect.</remarks>
+	[TestMethod]
+	public void EveryUnrefusedPathAndQueueClickPlaysTheLayingSound()
+	{
+		foreach ( var screen in new[] { false, true } )
+		{
+			if ( screen )
+				ParkStaffWindow.Open( _stack, Mechanic.ThingId );
+
+			_stack.Update();
+			Assert.AreEqual( screen, WindowStack.ParkScreenOpen );
+
+			ParkBuildMode.Arm( ParkBuildMode.Path );
+			UiSounds.LastAsked = null;
+			StringAssert.Contains( Level.Current!.ClickWorldAt( 62, 18, 0 ), "anchored at" );
+			Assert.AreEqual( 0x65, UiSounds.LastAsked, "the path tool's arming click" );
+
+			UiSounds.LastAsked = null;
+			StringAssert.Contains( Level.Current!.ClickWorldAt( 66, 18, 0 ), "path: laid " );
+			Assert.AreEqual( 0x65, UiSounds.LastAsked, "the path tool's run" );
+
+			UiSounds.LastAsked = null;
+			StringAssert.Contains( Level.Current!.ClickWorldAt( 43, 16, 0 ), "path: nothing laid" );
+			Assert.AreEqual( screen ? null : 0xaf, UiSounds.LastAsked, "a refusal plays 0xaf and not the laying sound" );
+
+			if ( !screen )
+			{
+				UiSounds.LastAsked = null;
+				StringAssert.Contains( Level.Current!.ClickWorldAt( 51, 22, 0 ), "from (49,22)" );
+				Assert.IsNull( UiSounds.LastAsked, "handing the queue tool back is no tool's click" );
+
+				StringAssert.Contains( Level.Current!.ClickWorldAt( 47, 22, 0 ), "queue: laid 1 from (49,22) and joined the path at (47,22)" );
+				Assert.AreEqual( 0x65, UiSounds.LastAsked, "the queue tool's run" );
+			}
+
+			UiSounds.LastAsked = null;
+			StringAssert.Contains( Level.Current!.ClickWorldAt( 51, 22, 0 ), "from (48,22)" );
+			Assert.IsNull( UiSounds.LastAsked, "handing the queue tool back is no tool's click" );
+
+			StringAssert.Contains( Level.Current!.ClickWorldAt( 48, 22, 0 ), "queue: clicked the anchor (48,22)" );
+			Assert.AreEqual( 0x65, UiSounds.LastAsked, "the queue tool's click on its anchor" );
+		}
+
+		_stack.Close( Window! );
+		_stack.Update();
+		Assert.AreEqual( 0, Times( "PATH_TOOL_CLICK_SOUND_0x65" ), "no longer counted" );
 	}
 
 	/// <summary>

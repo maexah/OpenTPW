@@ -5173,9 +5173,17 @@ there. A hardware breakpoint on `Sound_PlayEffect` for effect `0x65` hit exactly
 returning to `0x005271ef`, category 3 (`[0x00803a2c]`), handle 0, x 620 then 660. In the mix `rj_laypath_2` scored
 0.29 to 0.35 in each click's window against 0.16 to 0.19 in the quiet stretch, in three runs; `laysmall` scores nearly
 as high there, as the two samples match each other at 0.30, so the breakpoint is what names the effect.
-In OpenTPW (`ParkPathBuilding.RunPath`) the path tool's click is counted, `PATH_TOOL_CLICK_SOUND_0x65`, and plays
-nothing: the same two clicks on the stock park left the mix silent where `rj_laypath_2` would be (score 0.000), and
-the count went to 2. `RunQueue`'s click neither plays nor counts it. The build is Q671.
+The queue tool's clicks measured in the original (Q671, `q671/orig`, the stock park, its music off, the same breakpoint):
+the click on the Belly Bounce's queue cell (51,22) with the hand empty hands the queue tool over (mode 3, anchor (49,22))
+and plays nothing; a click on (47,22) lays queue over the path at (48,22), joins the path and puts the tool away, one
+hit; a second click on (51,22) hands it back anchored on (48,22), nothing; a click on that anchor puts it away, one hit.
+Each hit "handle 0 cat 3 effect 65", returning to `0x005271ef`, x 470 and 480; nothing else in 50 s. In the mix
+`rj_laypath_2` scored 0.383 and 0.268 at the two, 0.227 and 0.175 at the handing-over clicks, 0.148 to 0.208 quiet.
+OpenTPW plays it in `ParkPathBuilding.LayingSound`, from `RunPath` and `RunQueue` after the red refusal and on the queue
+tool's anchor click, at its variation's volume, whatever screen is open; the log says "path: cat_ui 0x65 for the click on
+(x,y), a voice" (or "queue: ..."). On the stock park (`q671/run1`) the same four path and queue clicks each scored
+`rj_laypath_2` 0.947 to 1.000 at gain 0.50 in the mix, and the handing-over clicks 0.19. The coaster bar's track tool's
+play (mode `0x15`) waits on that bar.
 
 **Leaving the tool**, every exit through `FUN_0052f200(0,…)`: a run that ends on path or queue; a
 click on the anchor; a red click; a quick right click with RMB cancel on; **Escape** — game-table row 0,

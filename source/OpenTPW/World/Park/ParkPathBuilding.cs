@@ -256,6 +256,17 @@ public static class ParkPathBuilding
 			+ $"cost {price}, balance {state.Balance}";
 	}
 
+	private const int LayingSoundEffect = 0x65;
+
+	/// <summary>
+	/// The laying sound: <c>cat_ui</c> effect <c>0x65</c>, <c>rj_laypath_2</c>, flat at its variation's own volume, once for
+	/// every click of the path or the queue tool that the red latch has not refused, before the click's arm runs
+	/// (<c>0x005271ea</c>; <c>docs/exe/park-engine.md</c>, "The laying sound"). Unlike <c>0xaf</c> it is not gated on where
+	/// the press went, so it sounds beside an open park screen too.
+	/// </summary>
+	private static void LayingSound( string tool, int x, int y )
+		=> Log.Info( $"{tool}: cat_ui 0x{LayingSoundEffect:x} for the click on ({x},{y}), {(UI.UiSounds.Interface( LayingSoundEffect ) ? "a voice" : "no voice")}" );
+
 	/// <summary>
 	/// One click of the armed queue tool: a straight run from the anchor to the clicked cell, snapped to
 	/// its longer axis - the original's mode-3 arm of the apply dispatcher (<c>0x00527222</c>..
@@ -293,6 +304,7 @@ public static class ParkPathBuilding
 		// puts the tool away, with the advisor's message for a queue left unjoined.
 		if ( toX == fromX && toY == fromY )
 		{
+			LayingSound( "queue", clickX, clickY );
 			LayQueue( fromX, fromY, serves, fromX, fromY, lastOfRun: false, firstOfRun: true );
 			ParkBuildMode.Disarm();
 			Unimplemented.Report( "QUEUE_MODE_ADVISOR_MESSAGE_0x151" );
@@ -309,6 +321,8 @@ public static class ParkPathBuilding
 
 			return $"queue: nothing laid - ({refused.X},{refused.Y}) {why}, so the queue tool is put away - {ParkBuildMode.RefusedSound( pressReachedTheTool )}";
 		}
+
+		LayingSound( "queue", clickX, clickY );
 
 		var (acrossBy, downBy) = (Math.Sign( toX - fromX ), Math.Sign( toY - fromY ));
 		var laid = 0;
@@ -868,7 +882,7 @@ public static class ParkPathBuilding
 			return $"path: nothing laid - ({strip[red].X},{strip[red].Y}) {strip[red].Why}, so the path tool is put away - {ParkBuildMode.RefusedSound( pressReachedTheTool )}";
 		}
 
-		Unimplemented.Report( "PATH_TOOL_CLICK_SOUND_0x65" );
+		LayingSound( "path", clickX, clickY );
 
 		if ( !ParkBuildMode.Anchored )
 		{

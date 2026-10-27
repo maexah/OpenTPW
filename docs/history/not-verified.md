@@ -5,6 +5,11 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q670 (the park-entry flight's length, measured; three log lines added): the original read a pass at a time
+  (`q670/orig-c`: the turn 2.0505 rad in 4.101 s, the fly-in 3.067 s, the park at +7.23 s) and ours on the final build
+  from the same turn (`q670/run2`: "facing the gate after 4.114 s", "arrived ... after 7.206 s"), `side-by-side.png`.
+  Not seen: the other three islands, a frame rate other than the original's 30 cap and ours' desktop rate (the delta
+  rule is read, and held at 30), the original's eye and look point (Q686), and the cancel's timing.
 - Q669 (the key puff at park entry, owned by no window): the final build on the desktop (`q669/run1`: effect 98 "owner
   no window (drawn over all)", 32 particles, none from about 1.1 s; the cloud of keys beside the original's in
   `side-by-side.png`; `run2`, Escape at 0.37 s: the panel back under the same puff, `f-11.png`). Not seen: the original's

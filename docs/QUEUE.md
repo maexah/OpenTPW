@@ -74,18 +74,6 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q671. The path and queue tools' click sound `0x65` (Q632's build).** Every click of the path tool or the queue
-  tool that the red latch has not refused plays `cat_ui` effect `0x65`, `rj_laypath_2`, flat at its variation's volume
-  100, once, before the click's arm runs (`0x005271b7`..`0x005271ea`; `park-engine.md`, "The laying sound"): the arming
-  click, each run laid, a click on the anchor, and each click of the queue tool. Ours counts it in `RunPath` only
-  (`PATH_TOOL_CLICK_SOUND_0x65`) and `RunQueue` not at all. Unlike `0xaf` it has no gate on the press (`0x005271b7`
-  tests only the layout replay, `[0x00785a2c]`), so it sounds where the press went to an open park screen too (by the
-  listing, not run: the sound itself beside an open screen was not heard). The
-  coaster bar's track tool plays it as well (mode `0x15`, `0x00526423`), unbuilt with that bar. Confirm:
-  `q632/confirm.py`'s two clicks, and a queue click, which is new work in both games (neither harness has one; the
-  original's wants a breakpoint on `0x0051bfc0` for `0x65` with the queue tool armed), `rj_laypath_2` matched once a click
-  in ours' mix, and in the original's capture, which is on its own scale (its gains for it were about 0.04, `q632/orig`'s
-  `b-match.txt`, `c-match.txt`): compare the match's score and its presence between the games, not the gain.
 - [ ] **Q672. Ctrl+click on a placed thing buys another (Q635's build).** The original's world click on a placed object
   with Ctrl down (`GetAsyncKeyState( 0x11 )`, either Ctrl) opens no window: where the item's control-table price is at most
   the bank it puts the item in the hand as the buy screen does, turned to the clicked thing's angle, nothing charged until

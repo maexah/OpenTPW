@@ -390,7 +390,9 @@ Each was found by trial in the item named, and cost a run to find.
   `q632/orig/run.sh`, `BRK=1`): the same aim, `setcam.py` moved to the second cell between the clicks. A 123 ms ui clip
   scores only 0.29 to 0.35 in the mix (0.16 to 0.19 quiet), and a look-alike sample nearly as high, so name the effect
   by `brk.sh 0x0051bfc0` with `BRK_COND='*(int*)($esp+12) == 0x65'`: one hit a click, the first stack word the caller's
-  return. `oneshots.py` does not see a ui effect at all (bit `0x1`, below). **The refusal latch a tool leaves** (Q532,
+  return. `oneshots.py` does not see a ui effect at all (bit `0x1`, below). The queue tool there (Q671, `q671/orig/run.sh`):
+  `setcam.py` over the Belly Bounce's queue cell (51,22) and a click at the frame's middle hands it over (mode 3, anchor
+  (49,22)), then `setcam.py` over (47,22) and a click joins the path; here `q671/confirm.py` clicks the same cells. **The refusal latch a tool leaves** (Q532,
   `q532/orig/run.sh`, `q532/confirm.py`): in the original, `setcam.py` to (49,24), click (the path tool armed and
   anchored), `setcam.py` to (51,24), click (refused on the Belly Bounce), then Ctrl+S and the mechanics' button, read
   `[0x00816d50]` and `squares.py`; here `cellprobe.py`'s `find` arms `tool path`, and each probe's pass moves the latch,
