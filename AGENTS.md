@@ -90,7 +90,7 @@ OPENTPW_LOG_DIR=<folder> ...                         # where console.log / conso
 
 | Project | What it is |
 |---|---|
-| `OpenTPW.Common` | Window, display, virtual file system (`BaseFileSystem`; the `Zio` package it references is used by nothing), vector types, `Logger`, `Unimplemented`. `GlobalNamespace.cs` holds the static `Log`, `FileSystem`, `SaveFileSystem`, `CacheFileSystem`. |
+| `OpenTPW.Common` | Window, display, virtual file system (`BaseFileSystem`), vector types, `Logger`, `Unimplemented`. `GlobalNamespace.cs` holds the static `Log`, `FileSystem`, `SaveFileSystem`, `CacheFileSystem`. |
 | `OpenTPW.Files` | Binary format readers. `Formats/<kind>/`. `Public/` is the old upstream API: its `SettingsFile`, `StringFile` and `BaseFormat` are still the live entry points; `MapFile` and `Public/ModelFile.cs` are used by nothing, and `SoundFile` is live only through `SdtArchive`, which reads every `.sdt` entry with it. |
 | `OpenTPW` | The game. `Program.cs` → `Client/Game.cs` (boot order lives here) → `World/Level.cs` (builds a scene). |
 | `OpenTPW.Tests` | MSTest, flat folder, named by area. `GameData.cs` is the shared fixture. |

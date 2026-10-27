@@ -10625,6 +10625,17 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   for a standing tag alone, so it holds that too. No code. Ours filmed by Q673, against Q637's film of the original (`q673/side-by-side.png`): the bare pole,
   then the tag in its glints, the original's 16 frames (0.53 s) from the top's lift, ours 0.502 s (`q673/run1`: `tag 72
   shown at age 502`; the tag's box first changed at +0.515 s, the top's strip at +0.014 s; 4 of 4).
+- [x] **Q753. The two warnings that are real: short reads, and the unused Zio package.** Alexah, 2026-10-27. CA2022 at
+  seven sites (`SDTArchive.cs`, `BaseStream.cs`, `SaveReader.cs`, `BFMUReader.cs`, `BFSTReader.cs`, `Public/SoundFile.cs`,
+  `Render/Assets/Texture.cs`): `Stream.Read( buf, off, n )` may return fewer than `n` bytes and each assumes it does
+  not; use `ReadExactly` (or a loop where a short file is allowed) and keep what each does at a true end of file. Then
+  drop `Zio` 0.17.0 from `OpenTPW.Common.csproj` (referenced by nothing, `CLAUDE.md`'s map; NU1901, and it ships in every
+  weekly zip) and update `docs/DECISIONS.md`, "Package advisories". Count the warnings fresh before and after; a test
+  per reader with a stream that hands out one byte a call (a put-back bug must fail it).
+  Done (lane B, branch alexah/800): the seven reads are `ReadAtLeast( ..., throwOnEndOfStream: false )`, which loops over a
+  short read and keeps a true end of file as before (the tail stays nought); `Zio` is gone from `OpenTPW.Common.csproj`;
+  `ShortReadTests` (a one-byte-a-call stream per reader: SDT, BFMU, BFST, Save, Sound; five fail with the old lines put
+  back). `Texture( Stream )` (needs a graphics device) and `BaseStream.ReadBytes` (dead by CODE) have no test.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

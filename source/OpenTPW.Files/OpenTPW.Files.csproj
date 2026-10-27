@@ -14,4 +14,8 @@
     <ProjectReference Include="..\OpenTPW.Common\OpenTPW.Common.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="OpenTPW.Tests" />
+  </ItemGroup>
+
 </Project>

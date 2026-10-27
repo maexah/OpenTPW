@@ -30,19 +30,17 @@ One line per system; the detail, item by item, is `docs/WORKS.md` (grep it by ar
 
 ## Next
 
-`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next Q752 (our version in the lobby's corner), then Q753 (the short reads and Zio), put first at Alexah's word 2026-10-27; then Q690 (Keypad 5 and Home reset the park camera; Q525, ordered before Q638, stands lower in the file; Q543 and Q27, ordered before Q631, and Q31b, Q25, Q51 and Q55, ordered earlier, stand lower in the file): Alexah's play test of 2026-10-21 put Q616 to Q645 first, the display, then what a player hits, then the chosen improvements (`playtest-2026-10-21/notes.md`); Q598 (every clip's scale track posed) follows them in section A (Q609, the advisor's row 19 that Q602 decoded, and Q587 to Q589, the karts' and the water ride's build, are filed after it; Q586 stood above the ordered block; Q608, the draws left both-sided, is filed after Q713): the queue was reordered at Alexah's word, 2026-10-20. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. Gaps 4 and 7: `docs/PLAYER-GAPS.md`. Q13 is done: `docs/history/CLEANUP-PLAN.md`.
+`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next Q752 (our version in the lobby's corner), put first at Alexah's word 2026-10-27; then Q690 (Keypad 5 and Home reset the park camera; Q525, ordered before Q638, stands lower in the file; Q543 and Q27, ordered before Q631, and Q31b, Q25, Q51 and Q55, ordered earlier, stand lower in the file): Alexah's play test of 2026-10-21 put Q616 to Q645 first, the display, then what a player hits, then the chosen improvements (`playtest-2026-10-21/notes.md`); Q598 (every clip's scale track posed) follows them in section A (Q609, the advisor's row 19 that Q602 decoded, and Q587 to Q589, the karts' and the water ride's build, are filed after it; Q586 stood above the ordered block; Q608, the draws left both-sided, is filed after Q713): the queue was reordered at Alexah's word, 2026-10-20. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. Gaps 4 and 7: `docs/PLAYER-GAPS.md`. Q13 is done: `docs/history/CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the pre-commit hook: grep it by Q-number.
 
-- Q751 (weekly builds, the engine's half): the launch log's lines and the clean `console.log` were seen in real
-  launches on this Linux desktop, from the build and from the published zip, whose lobby was photographed. Not run: the
-  Windows and macOS builds (their processor probes, the Mac's sysctl and Windows's registry, are unexercised; the Mac
-  zip is labelled untested), a `console.log` written on Windows (the scrubber's backslash and case rules are the
-  suite's). The workflow ran twice on dry-run tags: the first refused both Mac zips at the guard (MoltenVK's driver
-  manifest, now allowed), the second published all four zips and the sums; the Linux zip, downloaded from the release,
-  passed `zipsmoke.py` (`q751/run8-release`). The Windows and Mac zips were built there and never started.
+- Q753 (short reads, `Zio`): seen in the off-screen run (lane B, lavapipe, white textures, so the census and log are the
+  evidence): the stock jungle park entered at tick 763 with no exception line in `console.log`, the real `save/`
+  unchanged (`q800/run1`). Not seen: `Texture( Stream )` (needs a device and no caller was shown to reach it) and
+  `BaseStream.ReadBytes` (dead by CODE) have no test; no earlier-binary census was taken to compare the
+  `unimplemented` names against.
 
 
 ## Numbers (take counts fresh; these go stale within a day)
@@ -50,9 +48,9 @@ Only the item just landed is here. Every earlier item's account is in `docs/hist
 | | | measured |
 |---|---|---|
 | Opcodes | **78** of 106 | 2026-10-20, Q553 (`FADEOBJ`), `case Opcode.` labels vs enum members |
-| Tests | **4077**, 0 fail, 0 skip with the game | 2026-10-27, Q751's gate (twenty-four tests added) |
-| Tests without the game | **1488** ran, **2589** skipped, of 4077 | 2026-10-27, Q751's gate |
-| Build warnings | 121 in the main tree; 130 to 133 in a fresh worktree as NuGet's advisory list was last fetched, the ten or twelve more its advisories on ModKit's ImageSharp 3.1.6 (a sixth, GHSA-v76p-62qx-wwq2, published 2026-10-26: Q75, DECISIONS.md "Package advisories") | 2026-10-27 (the worktree's 133 at Q672's gate, 131 at fix group P's, run 11, and 130 at PERF PASS 1's; the main tree's 121 last counted 2026-10-13) |
+| Tests | **4083**, 0 fail, 0 skip with the game | 2026-10-27, Q753 (six tests added) |
+| Tests without the game | **1494** ran, **2589** skipped, of 4083 | 2026-10-27, Q753 |
+| Build warnings | 115 after Q753, 132 before it (both `--no-incremental`, the 132 in a fresh worktree of `main`: the seven CA2022 short reads and the `Zio` advisory, repeated for each project that took it, gone); earlier: 121 in the main tree; 130 to 133 in a fresh worktree as NuGet's advisory list was last fetched, the ten or twelve more its advisories on ModKit's ImageSharp 3.1.6 (a sixth, GHSA-v76p-62qx-wwq2, published 2026-10-26: Q75, DECISIONS.md "Package advisories") | 2026-10-27 (the worktree's 133 at Q672's gate, 131 at fix group P's, run 11, and 130 at PERF PASS 1's; the main tree's 121 last counted 2026-10-13) |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 | Park load, Release | **3.1 to 3.4 s**, worst phase `audio` 1.04 s (`ground` 0.52 to 0.57, `terrain` 0.46 to 0.55, `objects` 0.35 to 0.47) | 2026-10-26, three runs, `perf/bench.sh` |
 | Frame, stock jungle park, Release | **1.23 ms** a frame uncapped (about 810 fps, 18 guests) on the RX 6700 XT, the display's cap 143.9 fps held; **16.3 KB** allocated a frame (54.5 KB before the allocation pass), a gen 0 collection about every 1.3 s uncapped (every 0.37 s before), so about every 7 s at the display's 144 fps; worst frame about 24 ms; the CPU is the limit (89% of the frame on-CPU): 62% `Model.Draw` (NeoVeldrid's `FlushNewResourceSets` 23% of the frame), 11% `Level.Update`. The pass took the walk-head iterator, the boxed object enumerators, the furthest-first sort's copies, the picker's strings and `Unimplemented.Report`'s lock out of the frame and did not move the frame time (seven runs each: 1.230 ms, SD 0.005, before; 1.234 ms, SD 0.028, after); what is left to allocate is the shadow arrays and the bubble's closures (about 2.5 KB), `NodePoser.Pose`, the UI meshes, `ParkFlags.Grid` and the materials' resource sets | 2026-10-27, `perf/ab.sh` (`docs/TOOLING.md`) |

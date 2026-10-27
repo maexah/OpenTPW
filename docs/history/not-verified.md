@@ -5,6 +5,13 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q751 (weekly builds, the engine's half): the launch log's lines and the clean `console.log` were seen in real
+  launches on this Linux desktop, from the build and from the published zip, whose lobby was photographed. Not run: the
+  Windows and macOS builds (their processor probes, the Mac's sysctl and Windows's registry, are unexercised; the Mac
+  zip is labelled untested), a `console.log` written on Windows (the scrubber's backslash and case rules are the
+  suite's). The workflow ran twice on dry-run tags: the first refused both Mac zips at the guard (MoltenVK's driver
+  manifest, now allowed), the second published all four zips and the sums; the Linux zip, downloaded from the release,
+  passed `zipsmoke.py` (`q751/run8-release`). The Windows and Mac zips were built there and never started.
 - PERF PASS 1 (the frame's allocations; not a queue item): the stock jungle park's picture is the same to the bit in the
   build before and the build after (`perf/samepic.py`, `step 30`: 0 pixels differ, 48 census lines equal; a bug put back,
   the furthest-first order reversed, leaves 80), and at `step 120` equal outside two guests who turn at random between

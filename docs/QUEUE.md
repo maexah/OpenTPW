@@ -81,13 +81,6 @@ filed the items that cite it.
   with the build's name from `LaunchReport.Build`'s source (`weekly-YYYY-MM-DD`, `local` otherwise), saying the
   deviation at the site. Confirm beside the original's lobby under Proton (`original/lobbypanel.sh`), at the same window
   size; add the label to the census so a test can pin it.
-- [ ] **Q753. The two warnings that are real: short reads, and the unused Zio package.** Alexah, 2026-10-27. CA2022 at
-  seven sites (`SDTArchive.cs`, `BaseStream.cs`, `SaveReader.cs`, `BFMUReader.cs`, `BFSTReader.cs`, `Public/SoundFile.cs`,
-  `Render/Assets/Texture.cs`): `Stream.Read( buf, off, n )` may return fewer than `n` bytes and each assumes it does
-  not; use `ReadExactly` (or a loop where a short file is allowed) and keep what each does at a true end of file. Then
-  drop `Zio` 0.17.0 from `OpenTPW.Common.csproj` (referenced by nothing, `CLAUDE.md`'s map; NU1901, and it ships in every
-  weekly zip) and update `docs/DECISIONS.md`, "Package advisories". Count the warnings fresh before and after; a test
-  per reader with a stream that hands out one byte a call (a put-back bug must fail it).
 - [ ] **Q690. Keypad 5 and Home reset the park camera, as the original's.** From the Q631 review (run 9). Camera-table
   rows 19 and 24 (`lib/bindtables.py`: actions `0x14` key `0x0065`, `0x18` key `0x2400`) run `0x0042a500`, which sets bit
   `0x100` of `[0x00790aac]`; the update answers at `0x0042b518`: zoom `[0x007909ec]` = 110.0, asked rotation
@@ -2770,7 +2763,6 @@ Back to `docs/PLAYER-GAPS.md`: gap 4 (advisor in a park); gap 7 (saving a fresh 
 - [ ] **Q648. Halloween World: guests stick at the crosswalk.** Alexah's own play, 2026-10-22: the park otherwise ran.
   Out of scope until Lost Kingdom is whole (`CLAUDE.md`, the goal); kept so it is not lost. Reproduce in `hallow` with a
   `guests` census at the crossing, then find what the walk asks of the crosswalk cells there.
-
 
 ## G. The lobby plan's open items
 

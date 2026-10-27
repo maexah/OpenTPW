@@ -17,7 +17,6 @@
     <PackageReference Include="NeoVeldrid" Version="1.2.1" />
     <PackageReference Include="NeoVeldrid.SDL2" Version="1.2.1" />
     <PackageReference Include="NeoVeldrid.StartupUtilities" Version="1.2.1" />
-    <PackageReference Include="Zio" Version="0.17.0" />
   </ItemGroup>
 
 </Project>

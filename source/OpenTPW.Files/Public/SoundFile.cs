@@ -33,7 +33,7 @@ public class SoundFile : BaseFormat
 		var fileLength = (int)tempStreamReader.BaseStream.Length;
 
 		buffer = new byte[fileLength];
-		tempStreamReader.BaseStream.Read( buffer, 0, fileLength );
+		tempStreamReader.BaseStream.ReadAtLeast( buffer, fileLength, throwOnEndOfStream: false );
 		tempStreamReader.Close();
 
 		memoryStream = new ExpandedMemoryStream( buffer );

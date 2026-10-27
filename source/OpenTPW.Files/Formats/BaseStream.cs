@@ -19,7 +19,7 @@ internal class BaseStream : MemoryStream
 	public byte[] ReadBytes( int length, bool bigEndian = false )
 	{
 		var bytes = new byte[length];
-		Read( bytes, 0, length );
+		this.ReadAtLeast( bytes, length, throwOnEndOfStream: false );
 
 		if ( bigEndian )
 			Array.Reverse( bytes );

@@ -103,7 +103,7 @@ public partial class Texture : Asset
 	public Texture( Stream stream, TextureFlags flags = TextureFlags.None )
 	{
 		var fileData = new byte[stream.Length];
-		stream.Read( fileData, 0, fileData.Length );
+		stream.ReadAtLeast( fileData, fileData.Length, throwOnEndOfStream: false );
 
 		var image = ImageResult.FromMemory( fileData, ColorComponents.RedGreenBlueAlpha );
 
