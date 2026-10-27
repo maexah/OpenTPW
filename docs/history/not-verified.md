@@ -5,6 +5,11 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q669 (the key puff at park entry, owned by no window): the final build on the desktop (`q669/run1`: effect 98 "owner
+  no window (drawn over all)", 32 particles, none from about 1.1 s; the cloud of keys beside the original's in
+  `side-by-side.png`; `run2`, Escape at 0.37 s: the panel back under the same puff, `f-11.png`). Not seen: the original's
+  cancel (only its entry was filmed, Q630), a window size other than 1280 x 720, Instant Action (no puff, unchanged). The
+  key sparkle 97 is still the panel's, so its last particles are not drawn after the Enter, where the original's are.
 - Q668 (from a crowd, guests set off home as the original's): the final build on the desktop (`q668/run2`: 178 set off
   over 2420 sweeps, 44 for the day and 134 miserable, 169 gone; `q668/photo`: 11 watchers round the performing
   entertainer, `watchers-facing-1390.png`) and the original off-screen (`q668/orig` a, b: 173 and 172, 159 and 160

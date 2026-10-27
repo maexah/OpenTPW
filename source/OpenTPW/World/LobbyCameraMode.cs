@@ -326,6 +326,10 @@ public class LobbyCameraMode : CameraMode
 	private static float _leaveVertical;
 	private static Action? _whenArrived;
 
+	// How long the leave has run, in seconds and passes, for the log lines that time its phases.
+	private static float _leaveSeconds;
+	private static int _leavePasses;
+
 	/// <summary>
 	/// How fast the orbit swings round onto the gate side, in radians a second.
 	///
@@ -416,6 +420,12 @@ public class LobbyCameraMode : CameraMode
 		_leaveAngle = Wrap( _orbitTime * SpinSpeed );
 		_whenArrived = whenArrived;
 		_leaving = Leaving.Homing;
+		_leaveSeconds = 0f;
+		_leavePasses = 0;
+
+		var turn = Wrap( _leaveAngle - GateHeading );
+		Log.Info( $"Lobby camera: leaving for a park from angle {_leaveAngle:F4}, turning {MathF.Min( turn, MathF.Tau - turn ):F4} "
+			+ $"onto {GateHeading:F4} at {HomingRate} a second" );
 	}
 
 	/// <summary>One frame of the leaving sequence, answering the heading to place the camera at.</summary>
@@ -424,6 +434,9 @@ public class LobbyCameraMode : CameraMode
 	{
 		if ( Paused )
 			return _leaving == Leaving.Homing ? _leaveAngle : GateHeading;
+
+		_leaveSeconds += Time.Delta;
+		_leavePasses++;
 
 		if ( _leaving == Leaving.Homing )
 		{
@@ -437,6 +450,9 @@ public class LobbyCameraMode : CameraMode
 
 				// The gate's M1, once, as the camera faces it (0x005e06e4).
 				CurrentIsland?.Gate.Open();
+
+				Log.Info( $"Lobby camera: facing the gate after {_leaveSeconds:F3} s ({_leavePasses} passes); flying in from "
+					+ $"radius {_leaveRadius:F2}" );
 			}
 
 			return _leaveAngle;
@@ -454,6 +470,9 @@ public class LobbyCameraMode : CameraMode
 			// Told exactly once, and the state cleared first so that a park load asking anything of this
 			// camera on its way out does not find it still leaving.
 			var landed = _whenArrived;
+
+			Log.Info( $"Lobby camera: arrived at radius {_leaveRadius:F3} after {_leaveSeconds:F3} s ({_leavePasses} passes) - "
+				+ "asking for the park" );
 
 			_whenArrived = null;
 			_leaving = Leaving.No;

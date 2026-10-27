@@ -74,14 +74,6 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q670. The park-entry flight is twice as quick as the original's. Measure first.** From Q630. Filmed on Lost
-  Kingdom from the same island panel: the original's loading screen comes 7.3 s after the entering click, its turn onto
-  the gate taking about 4 s of it and its fade (Q61) running from +4.3 to +6.8 s (`q630/orig-a/film-3.0-8.5s.png`); ours'
-  comes 3.0 to 3.8 s after Enter, the camera already at the open gate at +2.9 s (`q630/run3`). The decode reckons 3.1 s
-  of flying in (`lobby.md`, "The derived vtable"), and state 1's turn "within half a step". Read the original's camera
-  (`+0x14`, `+0x18`, `+0x20` of the island camera) a frame at a time over a flight, and its frame rate, before changing
-  anything: a per-pass rate under the 30 fps cap would make the flight's length the frame rate's. Confirm: the same film
-  in both games, the three phases' times predicted first.
 - [ ] **Q671. The path and queue tools' click sound `0x65` (Q632's build).** Every click of the path tool or the queue
   tool that the red latch has not refused plays `cat_ui` effect `0x65`, `rj_laypath_2`, flat at its variation's volume
   100, once, before the click's arm runs (`0x005271b7`..`0x005271ea`; `park-engine.md`, "The laying sound"): the arming
@@ -2483,6 +2475,13 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   (`Level.OpenObjectWindow` for a placed thing, the visitor's and the staff member's windows for people). Replace
   `MAP_HOVER` and `MAP_CLICK_HANDOFF`. Confirm: `q665/orig/run.sh` and `runc.sh`'s points in both games, each hover's
   `mapgrid.py hover` against the console's, the label's crop, and each click's window and camera point.
+- [ ] **Q686. Ours' park-entry fly-in looks nearer the island than the original's from about +5 s. Measure first.**
+  From Q670 (`q670/side-by-side.png`, columns +5.0 to +6.8 s): the same turn and the same arrival time in both, but from
+  the facing on ours' dino fills more of the frame. Not measured. Read the original's eased eye `+0x28..+0x30` and look
+  point `+0x40..+0x48` of the island camera (`FUN_005e1210`: both eased at `0.1 x delta` and `[0x00702ca4] x delta`)
+  over a flight with `original/lobbycam.py` (add the fields), against ours' `PositionRate` and `LookAtRate`
+  (`LobbyCameraMode`) and the island's camera target; the fade (Q61) darkens the original's frames from +4.3 s, so
+  compare positions, not pictures. Confirm: the eye's distance a frame at a time in both games.
 - [ ] **Q32. Graphics tiers.** `Level` reads the detail files (`low.sam`, `med.sam`, `high.sam`) for `GameOptions.PARTICLEDENSITY`
   and `NUMKIDS` (the kid and staff bank caps) and for three `GraphicalOptions.*` keys: `LIGHTING` (a counted no-op),
   `TEXTUREQUALITY` (the sea's and the flags' folder) and `PROCEDURALTEXTURING` (the ground's tile size). `SPRITESHADOW` is read too (Q480: medium's silhouette built, the own
@@ -2793,7 +2792,10 @@ state machine.
   `0xc0`) turns the float into a rotation (axis, sign, row or column convention), and that the stack argument `[ESP+0x48]`
   at `0x005dfb90` is the ISLAND line's sixth field; or, cheaper, read the island camera's `+0x18` at state 2 after Enter on
   Lost Kingdom with `tpwmem.py` (pi / 2 + pi = 4.712 if the heading is used, as predicted; ours pi) and film one frame of
-  the opened gate. Then turn the isles and gates, set `GateHeading` from the island, and fix the sun in
+  the opened gate. **Measured (Q670):** the island camera's `+0x18` at state 2 on Lost Kingdom is 4.71239 and the island's
+  `+0x14` 1.57080 (`q670/orig-b`, `orig-c`, `original/lobbycam.py`), and the original's frame at its facing shows the
+  isle from the same side as ours' at ours' pi (pier to the left, gate square on, `q670/side-by-side.png`), which is the
+  isle turned by its heading. Then turn the isles and gates, set `GateHeading` from the island, and fix the sun in
   `Level.SetupEntities`, which stands in front of gates that all face one way. Lost Kingdom's island first. Confirm: the
   lobby with the island and gate of Lost Kingdom beside the original's.
 - [ ] **Q575. A plain voice's first silence, measured in the original.** From the run 6 review of Q563 (`handoff/review6/VERIFY-18.md`,

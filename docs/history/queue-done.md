@@ -10552,6 +10552,22 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   **Done 2026-10-26:** started with no owner (`IslandPanel.EnterPark`); `q669/run1`: effect 98 "owner no window (drawn
   over all)", key-white pixels in the burst's patch 16194 at 0.50 s against `q630/run4`'s 825 at most; `run2`: Escape
   gives the panel back under the same puff.
+- [x] **Q670. The park-entry flight is twice as quick as the original's. Measure first.** From Q630. Filmed on Lost
+  Kingdom from the same island panel: the original's loading screen comes 7.3 s after the entering click, its turn onto
+  the gate taking about 4 s of it and its fade (Q61) running from +4.3 to +6.8 s (`q630/orig-a/film-3.0-8.5s.png`); ours'
+  comes 3.0 to 3.8 s after Enter, the camera already at the open gate at +2.9 s (`q630/run3`). The decode reckons 3.1 s
+  of flying in (`lobby.md`, "The derived vtable"), and state 1's turn "within half a step". Read the original's camera
+  (`+0x14`, `+0x18`, `+0x20` of the island camera) a frame at a time over a flight, and its frame rate, before changing
+  anything: a per-pass rate under the 30 fps cap would make the flight's length the frame rate's. Confirm: the same film
+  in both games, the three phases' times predicted first.
+  **Done (measured; no rate changed):** the two flights run at the same rates and last the same from the same angle.
+  The original (`original/lobbycam.py`, `q670/orig-c`, 30 fps cap): state 0 0.201 rad a second, state 1 2.0505 rad in
+  4.101 s (0.500 a second, 125 passes), state 2 3.067 s (93 passes, radius 70 to 7.94), park asked at +7.23 s; its delta
+  is the pass's whole milliseconds / 100 (0.33 at 30 a second), so no per-pass rate. Ours (`q670/run2`, dll 3639110d,
+  `ORBIT=0.8516`): "turning 2.0523", "facing the gate after 4.114 s", "arrived ... after 7.206 s". The 3.0 to 3.8 s of
+  Q630's run was a short turn: the turn's length is how long the player waited on the panel (both orbits start at nought
+  and turn 0.2 a second) and where it ends, which for Lost Kingdom is heading + pi = 4.712 in the original and pi in
+  ours (Q721). `q670/side-by-side.png`. Ours' camera looks nearer the island from +5 s: Q686.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

@@ -174,7 +174,7 @@ Measured, Lost Kingdom from the lobby as a Full Simulation player with two keys 
 | its life | none in use 1.0 s later; the key sparkle 97 dies with it | 8 particles at about 0.9 s, none after |
 | on screen | a cloud of some thirty keys over the island, 0.2 to 1.0 s after the click | nothing. `windows` at 0.5 s: none |
 | the fade (Q61) | the frame mean 112.7 at the click, 106.5 at +4.3 s, 5.8 at +6.8 s | none: 102.5 to 109.2 to the loading screen |
-| the loading screen | +7.3 s; the turn onto the gate alone takes about 4 s | +3.0 to +3.8 s (Q670) |
+| the loading screen | +7.3 s; the turn onto the gate alone takes about 4 s | +3.0 to +3.8 s: a shorter turn, not a quicker one (Q670, "The flight measured" below) |
 
 **Ours, owned by no window (Q669).** `IslandPanel.EnterPark` closes the panel (`Stack.Close( this )`) and then starts
 the puff with no owner, as the original's, so `ScreenParticles` draws it over everything. Owned by the panel (Q630's
@@ -478,6 +478,27 @@ screen** — it swings the camera round onto the gate side, opens the gate, and 
 `FUN_005d83f0`, called on the 1 → 2 transition, is `__thiscall` on the island's **gate** instance (`island+8`)
 and plays its M1 once; the tail loop's random pair is the isle's, `island+4`.
 
+#### The flight measured (Q670)
+
+Read a pass at a time in the running original (`original/lobbycam.py`, the island camera found by its vtable
+`0x00702ec0`; Lost Kingdom from the island panel, a Full Simulation player, the 30 fps cap; `q670/orig-b`, `orig-c`):
+
+| | the original (`orig-c`) | ours (`q670/run2`, its turn set to the original's by `orbit`) |
+|---|---|---|
+| the delta `[0x00f82884]+8` | the pass's whole milliseconds / 100: 0.33 at 30 a second (0.34, 0.65 at a slow pass) | `Time.Delta`, seconds |
+| state 0, the orbit | 0.7600 rad over 3.781 s: 0.201 a second (SPINSPEED 0.02 x delta) | 0.2 a second |
+| state 1, the turn | 2.0505 rad over 4.101 s, 125 passes: 0.500 a second, from 0.481 down through nought to 4.712 | "turning 2.0523", "facing the gate after 4.114 s" |
+| state 2, the fly-in | 93 passes over 3.067 s (3.099 s in `orig-b`), radius 70 to 7.94, vertical 20 to 0, `[0x00f83778]+0x60` to 0x10000 | 3.092 s |
+| the park asked for | +7.23 s after the click | "arrived ... after 7.206 s" |
+
+So no rate is per pass: every step is times the delta, and the delta is the pass's time. The flight's length is the
+turn's plus 3.1 s, and the turn's is where the orbit stands at the click against where it ends. The orbit `+0x18` is
+written once, by the constructor (`0x005dfd30`), and never by SetIsland (`0x005e2750`), so it starts at nought and turns
+0.2 a second while a player is chosen: how long the player waits on the panel sets the turn, up to pi at 0.5 a second.
+The turn ends at the island's `+0x14` + pi, which reads 1.57080 for Lost Kingdom (4.712 at state 2, both runs); ours
+ends at one pi for every island (Q721). The 93 passes against the 92 a steady 1/30 s gives is the delta's whole
+milliseconds (0.33, not 0.333).
+
 ### The island keys wait for the fly-in, and the fly-in dies with the lobby
 
 Decoded 2026-09-23 for `docs/QUEUE.md` Q8, every claim put to two refuters.
@@ -607,9 +628,7 @@ over about 42 passes. **Not built** (`LOBBY_FLY_IN_FADE`, `docs/QUEUE.md` Q61).
 - Whether a lobby channel holds a once-clip's last frame (the end-of-clip rule reads `model+4 & 0x18`).
 - Which lobby mode the sibling camera class `0x00702dd0` serves. It runs the same state machine (`0x005e22d0` calls
   `0x005e0470` first) and its Enter opens a confirm dialog first (`0x005e26a0`, island `+0x70`).
-- The flight was filmed once in the running original (Q630, "The key puff at park entry" above): the turn onto the gate
-  takes about 4 s and the loading screen comes 7.3 s after the click, against the 3.1 s of flying in reckoned above;
-  ours reaches its loading screen in 3.0 to 3.8 s (Q670). The rest here was not observed.
+- The flight's rates and length are measured (Q670, "The flight measured" above). The rest here was not observed.
 
 **OpenTPW.** `FrontEnd.MenuKey` leaves Escape to the game menu and to a modal window as the focus does, then asks
 `LobbyCameraMode.CancelLeave`, and opens the menu only if it did not answer; a cancel opens the island panel again,
