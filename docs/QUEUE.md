@@ -74,6 +74,20 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
+- [ ] **Q752. The lobby shows our version where the original's shows "v 2.0".** Alexah, 2026-10-27. Decoded
+  (`docs/exe/boot.md`, "Which build this is"): `FrontEnd_Init` (`0x005d5a30`) calls `FUN_0048b020` on every lobby entry,
+  which formats `L"v %d.%d"` (2, 0) into a label with its right edge at 0x7c0 and its bottom at 0x5c0 of the
+  0x800 x 0x600 layout. Read the label's font, colour and alignment there first (not yet decoded), then draw ours in it
+  with the build's name from `LaunchReport.Build`'s source (`weekly-YYYY-MM-DD`, `local` otherwise), saying the
+  deviation at the site. Confirm beside the original's lobby under Proton (`original/lobbypanel.sh`), at the same window
+  size; add the label to the census so a test can pin it.
+- [ ] **Q753. The two warnings that are real: short reads, and the unused Zio package.** Alexah, 2026-10-27. CA2022 at
+  seven sites (`SDTArchive.cs`, `BaseStream.cs`, `SaveReader.cs`, `BFMUReader.cs`, `BFSTReader.cs`, `Public/SoundFile.cs`,
+  `Render/Assets/Texture.cs`): `Stream.Read( buf, off, n )` may return fewer than `n` bytes and each assumes it does
+  not; use `ReadExactly` (or a loop where a short file is allowed) and keep what each does at a true end of file. Then
+  drop `Zio` 0.17.0 from `OpenTPW.Common.csproj` (referenced by nothing, `CLAUDE.md`'s map; NU1901, and it ships in every
+  weekly zip) and update `docs/DECISIONS.md`, "Package advisories". Count the warnings fresh before and after; a test
+  per reader with a stream that hands out one byte a call (a put-back bug must fail it).
 - [ ] **Q690. Keypad 5 and Home reset the park camera, as the original's.** From the Q631 review (run 9). Camera-table
   rows 19 and 24 (`lib/bindtables.py`: actions `0x14` key `0x0065`, `0x18` key `0x2400`) run `0x0042a500`, which sets bit
   `0x100` of `[0x00790aac]`; the update answers at `0x0042b518`: zoom `[0x007909ec]` = 110.0, asked rotation
@@ -2757,20 +2771,6 @@ Back to `docs/PLAYER-GAPS.md`: gap 4 (advisor in a park); gap 7 (saving a fresh 
   Out of scope until Lost Kingdom is whole (`CLAUDE.md`, the goal); kept so it is not lost. Reproduce in `hallow` with a
   `guests` census at the crossing, then find what the walk asks of the crosswalk cells there.
 
-- [ ] **Q752. The lobby shows our version where the original's shows "v 2.0".** Alexah, 2026-10-27. Decoded
-  (`docs/exe/boot.md`, "Which build this is"): `FrontEnd_Init` (`0x005d5a30`) calls `FUN_0048b020` on every lobby entry,
-  which formats `L"v %d.%d"` (2, 0) into a label with its right edge at 0x7c0 and its bottom at 0x5c0 of the
-  0x800 x 0x600 layout. Read the label's font, colour and alignment there first (not yet decoded), then draw ours in it
-  with the build's name from `LaunchReport.Build`'s source (`weekly-YYYY-MM-DD`, `local` otherwise), saying the
-  deviation at the site. Confirm beside the original's lobby under Proton (`original/lobbypanel.sh`), at the same window
-  size; add the label to the census so a test can pin it.
-- [ ] **Q753. The two warnings that are real: short reads, and the unused Zio package.** Alexah, 2026-10-27. CA2022 at
-  seven sites (`SDTArchive.cs`, `BaseStream.cs`, `SaveReader.cs`, `BFMUReader.cs`, `BFSTReader.cs`, `Public/SoundFile.cs`,
-  `Render/Assets/Texture.cs`): `Stream.Read( buf, off, n )` may return fewer than `n` bytes and each assumes it does
-  not; use `ReadExactly` (or a loop where a short file is allowed) and keep what each does at a true end of file. Then
-  drop `Zio` 0.17.0 from `OpenTPW.Common.csproj` (referenced by nothing, `CLAUDE.md`'s map; NU1901, and it ships in every
-  weekly zip) and update `docs/DECISIONS.md`, "Package advisories". Count the warnings fresh before and after; a test
-  per reader with a stream that hands out one byte a call (a put-back bug must fail it).
 
 ## G. The lobby plan's open items
 
