@@ -294,6 +294,89 @@ public class WalkRidersTests
 	}
 
 	/// <summary>
+	/// <b>The drawing finds the ride that holds a rider wherever it stands in the park's list</b>: the walk, the head a
+	/// walk hung and the bounce seat (<see cref="ParkPeople.TryWalkOf"/>, <see cref="ParkPeople.TryHeadOf"/>,
+	/// <see cref="ParkPeople.TrySeatOf"/>) each look through every placed object, and are asked of every guest every
+	/// frame. The ride is made the first, a middle and the last of the stock park's objects in turn, and each answers each time.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> any of the three loops starting at the second object or stopping before the last.</remarks>
+	[TestMethod]
+	public void TheLookupsFindTheHoldingRideAtAnyPlaceInTheList()
+	{
+		var data = GameData.Required();
+		using var stream = new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
+		using var clock = new SimulationClockScope();
+		var previousState = ParkState.Current;
+		var previousPeople = ParkPeople.Current;
+		ParkPeople? people = null;
+
+		try
+		{
+			var state = new ParkState( world );
+			var things = state.Objects.Select( thing => thing.ThingId ).ToArray();
+			Assert.IsTrue( things.Length >= 3, "the control: a list with a first, a middle and a last" );
+
+			var (holding, script) = (0, (RideScript?)null);
+
+			people = new ParkPeople( world, state: state, scriptFor: id => id == holding ? script : null, random: new Random( 1 ),
+				behaviourRandom: new Random( 2 ), rideRandom: new Random( 3 ), staffRandom: new Random( 4 ) );
+
+			RideScript Holding( SavedScript saved, bool model = false )
+			{
+				var made = new RideScript( Build( bounceSlots: 2, walkSlots: 2, [0] ) );
+
+				if ( model )
+					made.Nodes = RideNodes.Load( "levels/jungle/Rides/tvsim", "tvsim", data, true, [] )!;
+
+				made.RestoreRiders( saved, reading => reading != 0 ? reading - 5000f : null );
+
+				return made;
+			}
+
+			var walk = Holding( new SavedScript( 1, 0, 0, [], 0, 0, 0, [], 0, 0, 0, 0, 0, Walk:
+			[
+				new SavedWalkSlot( 1, 2, 2, 16, 5000, 5700, 29, 6, (short)RideScript.WalkState.Carried, 1, 0 ),
+				default,
+			] ) );
+			var heads = Holding( new SavedScript( 1, 0, 0, [], 0, 0, 0, [], 0, 0, 0, 0, 0, Walk:
+			[
+				new SavedWalkSlot( 1, 3, 3, 1, 5000, 5700, 29, 4, (short)RideScript.WalkState.Carried, 1, 0 ),
+				default,
+			] ), model: true );
+			var seats = Holding( new SavedScript( 1, 0, 0, [], 0, 0, 0, [], 0, 0, 0, 0, 0,
+				Bounce: [new SavedBounceSlot( 29, 2, 9000, 8000 ), default] ) );
+
+			foreach ( var place in new[] { 0, things.Length / 2, things.Length - 1 } )
+			{
+				holding = things[place];
+
+				script = walk;
+				Assert.IsTrue( people.TryWalkOf( 29, out var walker, out _ ) && walker == walk, $"the walk, ride at place {place} of {things.Length}" );
+				Assert.IsFalse( people.TryWalkOf( 30, out _, out _ ), "and not another guest's" );
+
+				script = heads;
+				Assert.IsTrue( people.TryHeadOf( 29, out var hung, out var node ) && hung == heads && node == 3, $"the head, ride at place {place}" );
+				Assert.IsFalse( people.TryHeadOf( 30, out _, out _ ), "and not another guest's" );
+
+				script = seats;
+				Assert.IsTrue( people.TrySeatOf( 29, out var ride, out var seat ) && ride == holding && seat == 2, $"the seat, ride at place {place}" );
+				Assert.IsFalse( people.TrySeatOf( 30, out _, out _ ), "and not another guest's" );
+			}
+
+			holding = 0;
+			Assert.IsFalse( people.TryWalkOf( 29, out _, out _ ), "the control: no ride holds the guest when none is named" );
+		}
+		finally
+		{
+			people?.Delete();
+			Entity.ApplyDeletions();
+			typeof( ParkPeople ).GetProperty( "Current", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic )!.SetValue( null, previousPeople );
+			typeof( ParkState ).GetProperty( nameof( ParkState.Current ) )!.SetValue( null, previousState );
+		}
+	}
+
+	/// <summary>
 	/// <b>A sweep hands a carried guest the placer's animation, and frees a hidden one's bubble</b>
 	/// (<c>FUN_004f9e60</c>, <c>FUN_004f9ed0</c>): in the stock park, guest 29 riding thing 13 carried under action 6 is on
 	/// animation 5 (script 140) after eight sweeps; carried under action 1, the bubble a thought gave them on the sweep
@@ -551,7 +634,9 @@ public class WalkRidersTests
 	private static int Word( Opcode opcode ) => unchecked( (int)(0x80000000u | (uint)opcode) );
 
 	/// <summary>A script declaring <paramref name="walkSlots"/> walk slots, two variables, and <paramref name="body"/>.</summary>
-	private static RideScriptFile Build( int walkSlots, params int[] body )
+	private static RideScriptFile Build( int walkSlots, params int[] body ) => Build( 0, walkSlots, body );
+
+	private static RideScriptFile Build( int bounceSlots, int walkSlots, int[] body )
 	{
 		using var memory = new MemoryStream();
 		using var writer = new BinaryWriter( memory );
@@ -562,7 +647,7 @@ public class WalkRidersTests
 		writer.Write( 8 );
 		writer.Write( 50 );
 		writer.Write( 0 );
-		writer.Write( 0 );
+		writer.Write( bounceSlots );
 		writer.Write( walkSlots );
 		writer.Write( Encoding.ASCII.GetBytes( "Pad Pad Pad Pad " ) );
 		writer.Write( body.Length );

@@ -77,6 +77,70 @@ public class ParkGuestSpriteDepthTests
 	}
 
 	/// <summary>
+	/// <b>The sort keeps its working arrays between frames and puts equal depths in the order it always did.</b> Frames of
+	/// 2, 40, 7, 64, 3, 64, 1, 0 and 33 quads on six depths, so nearly every key has a twin, go through one pool and
+	/// through the sort as it was written before the arrays were kept (a comparison over a fresh copy of the keys); both
+	/// leave the same quads in the same places, ties and all, and a smaller frame after a larger one reads none of
+	/// the larger one's leftovers.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutation:</b> a stable sort (LINQ's <c>OrderByDescending</c>) in place of <c>Array.Sort</c> reorders the ties.
+	/// </remarks>
+	[TestMethod]
+	public void EqualDepthsKeepTheOrderTheSortAlwaysGaveThemAcrossFrames()
+	{
+		static void Before( Vertex[] vertices, float[] depths, int used )
+		{
+			used = Math.Min( used, Math.Min( vertices.Length / 4, depths.Length ) );
+
+			if ( used < 2 )
+				return;
+
+			var order = new int[used];
+
+			for ( var i = 0; i < used; ++i )
+				order[i] = i;
+
+			var keys = depths.AsSpan( 0, used ).ToArray();
+			Array.Sort( order, ( a, b ) => keys[b].CompareTo( keys[a] ) );
+
+			var quads = vertices.AsSpan( 0, used * 4 ).ToArray();
+
+			for ( var i = 0; i < used; ++i )
+			{
+				quads.AsSpan( order[i] * 4, 4 ).CopyTo( vertices.AsSpan( i * 4, 4 ) );
+				depths[i] = keys[order[i]];
+			}
+		}
+
+		var random = new Random( 744 );
+		var pool = new ParkGuestSprites( "jungle", null );
+		pool.Resize( 64 );
+
+		foreach ( var used in new[] { 2, 40, 7, 64, 3, 64, 1, 0, 33 } )
+		{
+			var (vertices, depths) = pool.Written;
+
+			for ( var i = 0; i < used; ++i )
+				depths[i] = random.Next( 6 ) * 10f;
+
+			for ( var v = 0; v < used * 4; ++v )
+				vertices[v] = new Vertex( new OpenTPW.Vector3( v / 4, v % 4, 0f ), new OpenTPW.Vector2( 0f, 0f ) );
+
+			var (expectedVertices, expectedDepths) = (vertices.ToArray(), depths.ToArray());
+			Before( expectedVertices, expectedDepths, used );
+
+			pool.Finish( used );
+
+			CollectionAssert.AreEqual( expectedDepths[..used], depths[..used], $"{used} quads: the depths" );
+			CollectionAssert.AreEqual(
+				expectedVertices[..( used * 4 )].Select( v => (v.Position.X, v.Position.Y) ).ToArray(),
+				vertices[..( used * 4 )].Select( v => (v.Position.X, v.Position.Y) ).ToArray(),
+				$"{used} quads: the quads" );
+		}
+	}
+
+	/// <summary>
 	/// <b>A frame's quads are sorted before they go up</b>: written at 5, 50 and 20, the frame ends with them 50, 20, 5,
 	/// and the upload still reaches the three.
 	/// </summary>

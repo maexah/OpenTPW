@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace OpenTPW.Tests;
@@ -142,5 +143,34 @@ public class ParkPickingTests
 			cell.SetValue( null, was );
 			ParkPicking.Pinned = pinned;
 		}
+	}
+
+	/// <summary>
+	/// <b>The object march finds a placed thing wherever it stands in the park's list</b>: the first, a middle one and the
+	/// last of the stock park's objects each answer with their own record, as a search by id through the list would, and
+	/// nought and a thing nobody placed answer nothing.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the loop starting at the second object or stopping before the last; the id compared to
+	/// the wrong field; a thing of nought answered with the first object.</remarks>
+	[TestMethod]
+	public void APlacedThingIsFoundAtAnyPlaceInTheList()
+	{
+		using var stream = new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var state = new ParkState( new ParkWorld( new SaveReader( stream ).ReadFile() ) );
+		var objects = state.Objects;
+
+		Assert.IsTrue( objects.Count >= 3, "the control: a list with a first, a middle and a last" );
+		Assert.AreEqual( objects.Count, objects.Select( o => o.ThingId ).Distinct().Count(), "the control: every id once, so first is the only" );
+
+		foreach ( var place in new[] { 0, objects.Count / 2, objects.Count - 1 } )
+		{
+			var found = ParkPicking.PlacedThing( state, objects[place].ThingId );
+
+			Assert.IsNotNull( found, $"place {place} of {objects.Count}" );
+			Assert.AreEqual( objects[place], found.Value, $"place {place} of {objects.Count}" );
+		}
+
+		Assert.IsNull( ParkPicking.PlacedThing( state, 0 ), "nought is no thing" );
+		Assert.IsNull( ParkPicking.PlacedThing( state, objects.Max( o => o.ThingId ) + 1000 ), "a thing nobody placed" );
 	}
 }

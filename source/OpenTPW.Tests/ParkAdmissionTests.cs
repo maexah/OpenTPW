@@ -532,4 +532,32 @@ public class ParkAdmissionTests
 
 		return (behaviour, guests);
 	}
+
+	/// <summary>
+	/// <b>A fixed item's cell is its two balance keys, however often it is asked for</b>: the keys are built once and kept
+	/// (the picker asks for the entrance's cells for every cell a ray crosses), so the first answer and the hundredth are the
+	/// balance's own <c>FixedItemInfo.{name}PosX</c> and <c>PosY</c>, X and Y the right way round, one item's never another's,
+	/// and an item the balance lacks is (-1, -1).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the two keys swapped; the keys kept under the wrong name; the cache returning the first
+	/// item's keys for every item.</remarks>
+	[TestMethod]
+	public void AFixedItemsCellIsItsTwoBalanceKeysEveryTimeItIsAsked()
+	{
+		var balance = new ParkBalance( "jungle", easyMode: true );
+
+		foreach ( var name in new[] { "EntranceA", "EntranceB", "TicketBoothA", "TicketBoothB", "BusStopA", "BusStopB" } )
+		{
+			var (x, y) = (balance.Int( $"FixedItemInfo.{name}PosX", -1 ), balance.Int( $"FixedItemInfo.{name}PosY", -1 ));
+
+			Assert.IsTrue( x >= 0 && y >= 0, $"the control: {name} is placed in the stock balance" );
+
+			for ( var asked = 0; asked < 3; ++asked )
+				Assert.AreEqual( (x, y), ParkAdmission.Cell( balance, name ), $"{name}, asked {asked + 1} times" );
+		}
+
+		Assert.AreNotEqual( ParkAdmission.Cell( balance, "EntranceA" ), ParkAdmission.Cell( balance, "EntranceB" ), "two items, two cells" );
+		Assert.AreEqual( (-1, -1), ParkAdmission.Cell( balance, "NoSuchItem" ) );
+		Assert.AreEqual( (-1, -1), ParkAdmission.Cell( balance, "NoSuchItem" ), "and again" );
+	}
 }

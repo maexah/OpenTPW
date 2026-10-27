@@ -5,6 +5,10 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q673 (a tag shows half a second after the top lifts; already built by Q638): ours on the final build (`q673/run1`, 4
+  of 4: the tag 0.502 s after the top) beside the original's film of Q637 (`q637/orig/film-on`, 0.53 s), not filmed
+  again this session; `side-by-side.png`. Not seen: a tag taken off within its half second (the decode's case; a delete
+  of all at 100 ms a tag) in either game.
 - Q672 (Ctrl+click on a placed thing puts another in the hand): ours on the final build (`q672/run5`: the Belly Bounce
   cloned twice and put down for 500 each with the queue tool, a Small Toilet held and built at its 270, the bank at 50
   refused with `0x1D` "a voice") and the original's toilet clone (`q672/orig`: rotation 270, put down for 100),

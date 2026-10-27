@@ -3403,9 +3403,14 @@ public sealed partial class ParkPeople : Entity
 		{
 			// ParkState's list, so a guest aboard something bought this session is found too. Missed here,
 			// the drawing falls back to their ground position and they are drawn standing at the front of
-			// the queue instead of on the ride's own node.
-			foreach ( var thing in _behaviour.State.Objects )
+			// the queue instead of on the ride's own node. Walked by index: the drawing asks this of every
+			// guest every frame, and a foreach over the interface boxes a new enumerator each time.
+			var objects = _behaviour.State.Objects;
+
+			for ( var i = 0; i < objects.Count; ++i )
 			{
+				var thing = objects[i];
+
 				if ( _scriptFor( thing.ThingId ) is not { } script )
 					continue;
 
@@ -3432,9 +3437,11 @@ public sealed partial class ParkPeople : Entity
 	{
 		if ( _scriptFor != null )
 		{
-			foreach ( var thing in _behaviour.State.Objects )
+			var objects = _behaviour.State.Objects;
+
+			for ( var i = 0; i < objects.Count; ++i )
 			{
-				if ( _scriptFor( thing.ThingId ) is not { } candidate || !candidate.TryHeadNode( guestThingId, out node ) )
+				if ( _scriptFor( objects[i].ThingId ) is not { } candidate || !candidate.TryHeadNode( guestThingId, out node ) )
 					continue;
 
 				script = candidate;
@@ -3465,9 +3472,11 @@ public sealed partial class ParkPeople : Entity
 
 		if ( _scriptFor != null )
 		{
-			foreach ( var thing in _behaviour.State.Objects )
+			var objects = _behaviour.State.Objects;
+
+			for ( var i = 0; i < objects.Count; ++i )
 			{
-				if ( _scriptFor( thing.ThingId ) is not { } candidate || !candidate.TryWalkOf( guestThingId, out slot ) )
+				if ( _scriptFor( objects[i].ThingId ) is not { } candidate || !candidate.TryWalkOf( guestThingId, out slot ) )
 					continue;
 
 				script = candidate;

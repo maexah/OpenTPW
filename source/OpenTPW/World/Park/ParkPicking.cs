@@ -270,9 +270,8 @@ public static class ParkPicking
 			: ((-9, -9), (-9, -9));
 
 		var thing = ParkItemHeights.ThingAnswering( state, entranceA, entranceB, gate, x, y );
-		var placed = state.Objects.FirstOrDefault( o => o.ThingId == thing );
 
-		if ( thing == 0 || placed.ThingId != thing || objects?.ModelFor( thing ) is not { } model || catalogue == null
+		if ( PlacedThing( state, thing ) is not { } placed || objects?.ModelFor( thing ) is not { } model || catalogue == null
 			|| !catalogue.TryGet( placed.CatalogueId, out var item ) || ParkItemHeights.For( item ) is not { } file )
 			return null;
 
@@ -281,8 +280,30 @@ public static class ParkPicking
 		if ( ParkItemHeights.AboveBase( file, root, placed.Angle, field, x, y ) is not { } above )
 			return null;
 
-		return new ParkPickMarch.Candidate( thing, above + root.Z, file.BoxMin.Y,
-			( from, direction ) => ParkPickMarch.MeetModel( model, from, direction ) );
+		return CandidateOf( thing, above + root.Z, file.BoxMin.Y, model );
+	}
+
+	/// <summary>
+	/// A candidate of the march with the model to meet. Made here, not in <see cref="CandidateOn"/>, so the closure over
+	/// the model is built only for a thing that is met: a lambda in that method makes its closure on entry, for every cell.
+	/// </summary>
+	private static ParkPickMarch.Candidate CandidateOf( int thing, float top, float floor, LobbyModel model )
+		=> new( thing, top, floor, ( from, direction ) => ParkPickMarch.MeetModel( model, from, direction ) );
+
+	/// <summary>
+	/// The first placed thing with this id, or null for nought or one not placed. Walked by index: the object march asks it
+	/// of every cell a ray crosses, every frame, and a search through the list as a sequence is a delegate and an
+	/// enumerator a cell.
+	/// </summary>
+	internal static ParkWorld.CatalogueObject? PlacedThing( ParkState state, int thing )
+	{
+		for ( var i = 0; thing != 0 && i < state.Objects.Count; ++i )
+		{
+			if ( state.Objects[i].ThingId == thing )
+				return state.Objects[i];
+		}
+
+		return null;
 	}
 
 	/// <summary>

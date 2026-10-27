@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 namespace OpenTPW;
 
@@ -20,11 +22,23 @@ namespace OpenTPW;
 /// earns the right to be ignored. The first time a gap is reached it is announced; after that the
 /// repeat is counted and <see cref="Summary"/> can say how often.
 /// </para>
+/// <para>
+/// <b>A repeat takes no lock.</b> The frame's draw reaches some gaps for every person every frame, so the repeat is
+/// one dictionary read and one <see cref="Interlocked.Increment(ref int)"/>; only the first sight of a gap, once per
+/// kind a session, takes the lock that makes the announcement happen exactly once.
+/// </para>
 /// </summary>
 public static class Unimplemented
 {
-	private static readonly Dictionary<string, int> _seen = new( StringComparer.Ordinal );
+	/// <summary>How often one gap has been reached: a class so a repeat can count in place, with no write to the dictionary.</summary>
+	private sealed class Counter
+	{
+		public int Times;
+	}
 
+	private static readonly ConcurrentDictionary<string, Counter> _seen = new( StringComparer.Ordinal );
+
+	/// <summary>Held by the first sight of a gap and by <see cref="Forget"/>, never by a repeat.</summary>
 	private static readonly object _lock = new();
 
 	/// <summary>
@@ -40,45 +54,41 @@ public static class Unimplemented
 		if ( string.IsNullOrWhiteSpace( what ) )
 			return;
 
+		if ( _seen.TryGetValue( what, out var counter ) )
+		{
+			Interlocked.Increment( ref counter.Times );
+
+			return;
+		}
+
 		bool first;
 
 		lock ( _lock )
 		{
-			first = !_seen.TryGetValue( what, out var count );
+			first = !_seen.TryGetValue( what, out counter );
 
-			_seen[what] = first ? 1 : count + 1;
+			// Another thread may have registered it between the read above and the lock; that one is the first.
+			if ( first )
+				_seen[what] = counter = new Counter { Times = 1 };
 		}
 
 		// Only the first of each kind reaches the console; the rest are counted. See the class remarks.
 		if ( first )
 			Log?.Warning( $"not implemented: {what} was reached and does nothing" );
+		else
+			Interlocked.Increment( ref counter!.Times );
 	}
 
 	/// <summary>How many times each distinct gap has been reached this session, most-reached first.</summary>
 	public static IReadOnlyList<(string What, int Times)> Summary
-	{
-		get
-		{
-			lock ( _lock )
-			{
-				return _seen
-					.Select( entry => (entry.Key, entry.Value) )
-					.OrderByDescending( entry => entry.Value )
-					.ThenBy( entry => entry.Key, StringComparer.Ordinal )
-					.ToList();
-			}
-		}
-	}
+		=> _seen
+			.Select( entry => (What: entry.Key, Times: Volatile.Read( ref entry.Value.Times )) )
+			.OrderByDescending( entry => entry.Times )
+			.ThenBy( entry => entry.What, StringComparer.Ordinal )
+			.ToList();
 
 	/// <summary>Whether anything at all has been reported.</summary>
-	public static bool Any
-	{
-		get
-		{
-			lock ( _lock )
-				return _seen.Count > 0;
-		}
-	}
+	public static bool Any => !_seen.IsEmpty;
 
 	/// <summary>
 	/// Forgets everything reported so far, so that one test cannot see another's reports and a run can be

@@ -1474,25 +1474,53 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// its own clear fringe should have let through. Every quad is keyed by its unpulled depth; whether the original's order
 	/// agrees for a pulled body against an unpulled head, bubble or balloon is not settled.
 	/// </summary>
-	private void FurthestFirst( int used ) => FurthestFirst( _vertices, _depths, used );
+	private void FurthestFirst( int used ) => FurthestFirst( _vertices, _depths, used, _sortScratch );
 
 	/// <inheritdoc cref="FurthestFirst(int)"/>
 	internal static void FurthestFirst( Vertex[] vertices, float[] depths, int used )
+		=> FurthestFirst( vertices, depths, used, new SortScratch() );
+
+	/// <summary>
+	/// What <see cref="FurthestFirst(int)"/> sorts with, kept from one frame to the next so a frame of people allocates
+	/// none of it: the order, a copy of the keys, a copy of the quads, and the comparer itself (the keys' copy, furthest
+	/// first), which the sort calls through an interface rather than a delegate that captures them.
+	/// </summary>
+	private sealed class SortScratch : IComparer<int>
+	{
+		public int[] Order = [];
+		public float[] Keys = [];
+		public Vertex[] Quads = [];
+
+		public int Compare( int a, int b ) => Keys[b].CompareTo( Keys[a] );
+	}
+
+	private readonly SortScratch _sortScratch = new();
+
+	private static void FurthestFirst( Vertex[] vertices, float[] depths, int used, SortScratch scratch )
 	{
 		used = Math.Min( used, Math.Min( vertices.Length / 4, depths.Length ) );
 
 		if ( used < 2 )
 			return;
 
-		var order = new int[used];
+		if ( scratch.Order.Length < used )
+		{
+			scratch.Order = new int[used];
+			scratch.Keys = new float[used];
+			scratch.Quads = new Vertex[used * 4];
+		}
+
+		var (order, keys, quads) = (scratch.Order, scratch.Keys, scratch.Quads);
 
 		for ( var i = 0; i < used; ++i )
 			order[i] = i;
 
-		var keys = depths.AsSpan( 0, used ).ToArray();
-		Array.Sort( order, ( a, b ) => keys[b].CompareTo( keys[a] ) );
+		depths.AsSpan( 0, used ).CopyTo( keys );
 
-		var quads = vertices.AsSpan( 0, used * 4 ).ToArray();
+		// The same introsort as sorting by a comparison, so equal depths fall in the same order as they always have.
+		Array.Sort( order, 0, used, scratch );
+
+		vertices.AsSpan( 0, used * 4 ).CopyTo( quads );
 
 		for ( var i = 0; i < used; ++i )
 		{

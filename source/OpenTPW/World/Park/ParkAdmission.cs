@@ -107,7 +107,17 @@ public sealed class ParkAdmission
 
 	/// <summary>A fixed item's cell, <c>FixedItemInfo.{name}PosX</c> and <c>PosY</c>, or (-1, -1) where the key is absent.</summary>
 	internal static (int X, int Y) Cell( ParkBalance balance, string name )
-		=> (balance.Int( $"FixedItemInfo.{name}PosX", -1 ), balance.Int( $"FixedItemInfo.{name}PosY", -1 ));
+	{
+		var (x, y) = _cellKeys.GetOrAdd( name, static item => ($"FixedItemInfo.{item}PosX", $"FixedItemInfo.{item}PosY") );
+
+		return (balance.Int( x, -1 ), balance.Int( y, -1 ));
+	}
+
+	/// <summary>
+	/// Each fixed item's two balance keys, built the once: the picker asks for the entrance's cells for every cell its ray
+	/// crosses, every frame, and building the strings each time is most of what a frame of picking allocates.
+	/// </summary>
+	private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (string X, string Y)> _cellKeys = new();
 
 	private readonly Func<int> _fee;
 

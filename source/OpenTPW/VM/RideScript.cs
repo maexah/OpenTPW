@@ -384,10 +384,14 @@ public sealed class RideScript
 
 		foreach ( var walking in _walk )
 		{
-			if ( walking is { State: WalkState.Carried, Action: HeadAction } && nodes.HeadIndex( walking.HeadNode ) >= 0 )
+			if ( HangsAHead( walking, nodes ) )
 				yield return (walking.HeadNode, walking.Handle);
 		}
 	}
+
+	/// <summary>Whether a walk slot carries its rider as a head on a head node the model has (<see cref="WalkHeads"/>).</summary>
+	private static bool HangsAHead( in WalkSlot walking, RideNodes nodes )
+		=> walking is { State: WalkState.Carried, Action: HeadAction } && nodes.HeadIndex( walking.HeadNode ) >= 0;
 
 	/// <summary>The action of a <c>WALKON</c> whose rider is carried as a head on a head node.</summary>
 	private const short HeadAction = 4;
@@ -407,13 +411,17 @@ public sealed class RideScript
 			}
 		}
 
-		foreach ( var head in handle != 0 ? WalkHeads() : [] )
+		// WalkHeads' own test, walked in place: the drawing asks this of every ride for every guest every frame.
+		if ( handle != 0 && Nodes is { } nodes )
 		{
-			if ( head.Handle != handle )
-				continue;
+			foreach ( var walking in _walk )
+			{
+				if ( walking.Handle != handle || !HangsAHead( walking, nodes ) )
+					continue;
 
-			node = head.Node;
-			return true;
+				node = walking.HeadNode;
+				return true;
+			}
 		}
 
 		node = 0;

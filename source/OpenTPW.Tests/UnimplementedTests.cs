@@ -1,5 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace OpenTPW.Tests;
 
@@ -82,5 +83,49 @@ public class UnimplementedTests
 		Unimplemented.Report( null! );
 
 		Assert.IsFalse( Unimplemented.Any, "a gap with no name is not a report" );
+	}
+
+	/// <summary>
+	/// <b>A repeat takes no lock, so the count must still be exact.</b> The draw reports from every person every frame,
+	/// and the render and the simulation do not share a thread: a repeat that lost an increment would understate the
+	/// gap that bites most, which is the one the census exists to find. Several threads report the same gaps at once,
+	/// one of them for the first time, and every report is accounted for.
+	/// </summary>
+	[TestMethod]
+	public void RepeatsFromManyThreadsAreAllCounted()
+	{
+		const int threads = 8;
+		const int each = 50_000;
+
+		Parallel.For( 0, threads, new ParallelOptions { MaxDegreeOfParallelism = threads }, _ =>
+		{
+			for ( var i = 0; i < each; ++i )
+			{
+				Unimplemented.Report( "RIDER_BOUNCE" );
+				Unimplemented.Report( i % 2 == 0 ? "EVEN" : "ODD" );
+			}
+		} );
+
+		var summary = Unimplemented.Summary.ToDictionary( entry => entry.What, entry => entry.Times );
+
+		Assert.AreEqual( 3, summary.Count, "three distinct gaps, however many threads reached them" );
+		Assert.AreEqual( threads * each, summary["RIDER_BOUNCE"] );
+		Assert.AreEqual( threads * each / 2, summary["EVEN"] );
+		Assert.AreEqual( threads * each / 2, summary["ODD"] );
+	}
+
+	/// <summary>Forgetting empties the reporter, and a gap reached again afterwards counts from one.</summary>
+	[TestMethod]
+	public void ForgettingStartsTheCountAgain()
+	{
+		Unimplemented.Report( "COAST" );
+		Unimplemented.Report( "COAST" );
+		Unimplemented.Forget();
+
+		Assert.IsFalse( Unimplemented.Any );
+
+		Unimplemented.Report( "COAST" );
+
+		Assert.AreEqual( 1, Unimplemented.Summary[0].Times );
 	}
 }

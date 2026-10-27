@@ -36,10 +36,12 @@ One line per system; the detail, item by item, is `docs/WORKS.md` (grep it by ar
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the pre-commit hook: grep it by Q-number.
 
-- Q673 (a tag shows half a second after the top lifts; already built by Q638): ours on the final build (`q673/run1`, 4
-  of 4: the tag 0.502 s after the top) beside the original's film of Q637 (`q637/orig/film-on`, 0.53 s), not filmed
-  again this session; `side-by-side.png`. Not seen: a tag taken off within its half second (the decode's case; a delete
-  of all at 100 ms a tag) in either game.
+- PERF PASS 1 (the frame's allocations; not a queue item): the stock jungle park's picture is the same to the bit in the
+  build before and the build after (`perf/samepic.py`, `step 30`: 0 pixels differ, 48 census lines equal; a bug put back,
+  the furthest-first order reversed, leaves 80), and at `step 120` equal outside two guests who turn at random between
+  launches of one build. Not seen: a picture with a rider aboard a ride (the walk, head and seat lookups are the
+  suite's, at the first, a middle and the last object), or with the pointer over a placed model (the picker's lookup is
+  the suite's); and a faster frame, which the pass did not make (above, Numbers).
 
 
 ## Numbers (take counts fresh; these go stale within a day)
@@ -47,12 +49,12 @@ Only the item just landed is here. Every earlier item's account is in `docs/hist
 | | | measured |
 |---|---|---|
 | Opcodes | **78** of 106 | 2026-10-20, Q553 (`FADEOBJ`), `case Opcode.` labels vs enum members |
-| Tests | **4047**, 0 fail, 0 skip with the game | 2026-10-27, run 11 fix group P, its gate |
-| Tests without the game | **1462** ran, **2585** skipped, of 4047 | 2026-10-27, run 11 fix group P, its gate |
-| Build warnings | 121 in the main tree; 131 or 133 in a fresh worktree as NuGet's advisory list was last fetched, the ten or twelve more its advisories on ModKit's ImageSharp 3.1.6 (a sixth, GHSA-v76p-62qx-wwq2, published 2026-10-26: Q75, DECISIONS.md "Package advisories") | 2026-10-26 (the worktree's 133 at Q672's gate and 131 at fix group P's, run 11; the main tree's 121 last counted 2026-10-13) |
+| Tests | **4053**, 0 fail, 0 skip with the game | 2026-10-27, PERF PASS 1's gate (six tests added) |
+| Tests without the game | **1465** ran, **2588** skipped, of 4053 | 2026-10-27, PERF PASS 1's gate |
+| Build warnings | 121 in the main tree; 130 to 133 in a fresh worktree as NuGet's advisory list was last fetched, the ten or twelve more its advisories on ModKit's ImageSharp 3.1.6 (a sixth, GHSA-v76p-62qx-wwq2, published 2026-10-26: Q75, DECISIONS.md "Package advisories") | 2026-10-27 (the worktree's 133 at Q672's gate, 131 at fix group P's, run 11, and 130 at PERF PASS 1's; the main tree's 121 last counted 2026-10-13) |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 | Park load, Release | **3.1 to 3.4 s**, worst phase `audio` 1.04 s (`ground` 0.52 to 0.57, `terrain` 0.46 to 0.55, `objects` 0.35 to 0.47) | 2026-10-26, three runs, `perf/bench.sh` |
-| Frame, stock jungle park, Release | **1.23 ms** a frame uncapped (about 800 fps, 18 guests) on the RX 6700 XT, the display's cap 143.9 fps held; 54 KB allocated a frame, a gen 0 collection about every 2 s at the display's 144 fps, worst frame about 24 ms; the CPU is the limit (88% of the frame on-CPU): 67% drawing (`Model.Draw` 61%), 11% `Level.Update` | 2026-10-26, `perf/bench.sh` (`docs/TOOLING.md`) |
+| Frame, stock jungle park, Release | **1.23 ms** a frame uncapped (about 810 fps, 18 guests) on the RX 6700 XT, the display's cap 143.9 fps held; **16.3 KB** allocated a frame (54.5 KB before the allocation pass), a gen 0 collection about every 1.3 s uncapped (every 0.37 s before), so about every 7 s at the display's 144 fps; worst frame about 24 ms; the CPU is the limit (89% of the frame on-CPU): 62% `Model.Draw` (NeoVeldrid's `FlushNewResourceSets` 23% of the frame), 11% `Level.Update`. The pass took the walk-head iterator, the boxed object enumerators, the furthest-first sort's copies, the picker's strings and `Unimplemented.Report`'s lock out of the frame and did not move the frame time (seven runs each: 1.230 ms, SD 0.005, before; 1.234 ms, SD 0.028, after); what is left to allocate is the shadow arrays and the bubble's closures (about 2.5 KB), `NodePoser.Pose`, the UI meshes, `ParkFlags.Grid` and the materials' resource sets | 2026-10-27, `perf/ab.sh` (`docs/TOOLING.md`) |
 
 ## Recent
 
