@@ -140,3 +140,11 @@ belongs to or at the end. Grep it by area or Q-number; never read it whole.
   `ho_fob2`, one `ho_fos4`, 61 `ho_fos1`, 15 `ho_fos2`, 14 `ho_fos3`; beside the gate it lies on the original's fresh
   park's (`q656/overlay-gate.png`). The laying's draws before the last choice are counted, `FRESH_BOUNDARY_LAYING_DRAWS`.
 - The original runs under Proton as a reference (Q168, `docs/TOOLING.md`); the console's `admit`/`send` place a guest (Q184).
+- **A tester's `console.log` says what a bug report needs, and nothing about who sent it** (Q751): its head names the
+  build and commit (`weekly-YYYY-MM-DD` from the weekly workflow, `local` otherwise), the system, processor and
+  threads, the .NET runtime and whether it came inside the build, the GPU and its Vulkan driver, the display mode with
+  the game's and the desktop's sizes, and how many of the disc's 789 data files the game folder holds, naming the first
+  missing. The file (not the terminal) has the game folder cut to `<game folder>`, the home folder to `~` and the
+  account's name in any other path to `<user>`; `lib/logpii.py` finds no account name, host name or home folder in a
+  real launch's log (`q751/run3`). A self-contained Linux publish, zipped as the weekly workflow zips it, starts and
+  draws the lobby (`q751/run5-zip`).

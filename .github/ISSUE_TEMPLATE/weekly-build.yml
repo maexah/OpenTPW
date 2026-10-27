@@ -1,0 +1,43 @@
+name: Weekly build problem
+description: Something went wrong in one of the experimental weekly builds.
+labels: ["weekly build"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for trying a weekly build. Please never attach any of the game's own files.
+  - type: input
+    id: build
+    attributes:
+      label: Which build?
+      description: The name of the zip you downloaded, for example OpenTPW-weekly-2026-11-01-win-x64.zip.
+      placeholder: OpenTPW-weekly-2026-11-01-win-x64.zip
+    validations:
+      required: true
+  - type: dropdown
+    id: system
+    attributes:
+      label: Your system
+      options:
+        - Windows
+        - Linux
+        - macOS
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: console.log
+      description: |
+        Drag console.log into this box. It is in the game's folder, beside "save". If it is not there, look in
+        %AppData%\OpenTPW (Windows), ~/.local/share/OpenTPW (Linux) or ~/Library/Application Support/OpenTPW (macOS).
+        Folder paths in it are already cut down to "<game folder>" and "~".
+    validations:
+      required: true

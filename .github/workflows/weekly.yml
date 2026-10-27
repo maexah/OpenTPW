@@ -1,0 +1,130 @@
+# The weekly experimental build: packages and publishes, decides nothing (docs/WORKFLOW.md, "Weekly builds").
+#
+# Alexah pushes a tag weekly-YYYY-MM-DD after the local build-and-test ritual, with everything already pushed. This
+# builds the three self-contained zips on their own systems, checks that no zip holds the game's files, and only then
+# makes the release: as a draft, every asset uploaded, the asset list checked, and the draft published as a
+# pre-release last, so no link ever points at a half-built release. Tests are not run here: the local gate already
+# ran them on this commit, and a workflow that judged the code would be the CI that CLAUDE.md rule 2 refuses.
+#
+# A tag weekly-test-N is a dry run: the same steps, the release made with a placeholder note, to be deleted after.
+
+name: Weekly build
+
+on:
+  push:
+    tags:
+      - "weekly-*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: weekly-${{ github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  TAG: ${{ github.ref_name }}
+  DOTNET_NOLOGO: "1"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+
+jobs:
+  build:
+    name: Build ${{ matrix.rid }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          # Each on its own system: a Windows build made elsewhere loses its icon and manifest, and a macOS
+          # build made elsewhere is not signed, which Apple silicon refuses to run.
+          - rid: win-x64
+            os: windows-latest
+          - rid: linux-x64
+            os: ubuntu-latest
+          - rid: osx-arm64
+            os: macos-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: The tag is a weekly one
+        shell: bash
+        run: |
+          [[ "$TAG" =~ ^weekly-([0-9]{4}-[0-9]{2}-[0-9]{2}|test-[0-9]+)$ ]] || { echo "::error::$TAG is not weekly-YYYY-MM-DD or weekly-test-N"; exit 1; }
+
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Publish
+        shell: bash
+        run: >
+          dotnet publish source/OpenTPW/OpenTPW.csproj -c Release -r ${{ matrix.rid }} --self-contained true
+          -p:OpenTPWBuildTag="$TAG" -o "publish/${{ matrix.rid }}"
+
+      - name: Zip and guard against the game's files
+        shell: bash
+        run: |
+          py=$(command -v python3 || command -v python)   # the Windows image names it python
+          "$py" tools/weekly/release.py package "publish/${{ matrix.rid }}" "$TAG" ${{ matrix.rid }} zips
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: zip-${{ matrix.rid }}
+          path: zips/*.zip
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: Release
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v5
+        with:
+          pattern: zip-*
+          path: zips
+          merge-multiple: true
+
+      - name: Guard every zip again, and check the names
+        shell: bash
+        run: |
+          python3 tools/weekly/release.py guard zips/*.zip
+          for rid in win-x64 linux-x64 osx-arm64; do
+            [ -f "zips/OpenTPW-$TAG-$rid.zip" ] || { echo "::error::OpenTPW-$TAG-$rid.zip is missing"; exit 1; }
+          done
+          (cd zips && sha256sum OpenTPW-*.zip > SHA256SUMS.txt && cat SHA256SUMS.txt)
+
+      - name: The release notes
+        shell: bash
+        run: |
+          notes="docs/releases/$TAG.md"
+          if [ -f "$notes" ]; then
+            cp "$notes" notes.md
+          elif [[ "$TAG" == weekly-test-* ]]; then
+            echo "A dry run of the weekly build. Not for playing; it will be deleted." > notes.md
+          else
+            echo "::error::$notes is missing: the changelog Alexah approved is committed there before the tag"; exit 1
+          fi
+
+      - name: Draft, upload, check, publish
+        shell: bash
+        run: |
+          title="Experimental ${TAG#weekly-}"
+          state=$(gh release view "$TAG" --json isDraft --jq '.isDraft' 2>/dev/null || echo none)
+          if [ "$state" = "false" ]; then
+            echo "::error::$TAG is already published; a published release is never replaced"; exit 1
+          elif [ "$state" = "true" ]; then
+            gh release delete "$TAG" --yes          # a draft left by a run that failed part way
+          fi
+          gh release create "$TAG" --verify-tag --draft --prerelease --title "$title" --notes-file notes.md
+          gh release upload "$TAG" zips/OpenTPW-*.zip zips/SHA256SUMS.txt
+          have=$(gh release view "$TAG" --json assets --jq '[.assets[].name] | sort | join(" ")')
+          want=$(printf '%s\n' "OpenTPW-$TAG-linux-x64.zip" "OpenTPW-$TAG-osx-arm64.zip" "OpenTPW-$TAG-win-x64.zip" SHA256SUMS.txt | sort | paste -sd' ')
+          [ "$have" = "$want" ] || { echo "::error::the draft holds [$have], not [$want]"; exit 1; }
+          gh release edit "$TAG" --draft=false --prerelease
+          echo "Published https://github.com/$GH_REPO/releases/tag/$TAG"

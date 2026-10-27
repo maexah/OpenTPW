@@ -1,6 +1,6 @@
 # Status
 
-Last updated: 2026-10-26. **This header names no branch and no sha, deliberately**: a line in the commit that moves the tip cannot name it. Read the current state from the repository, which cannot lag: `git log --oneline -1`. **`docs/QUEUE.md` is the work queue**, one item per session, taken from the top unless Alexah reorders.
+Last updated: 2026-10-27. **This header names no branch and no sha, deliberately**: a line in the commit that moves the tip cannot name it. Read the current state from the repository, which cannot lag: `git log --oneline -1`. **`docs/QUEUE.md` is the work queue**, one item per session, taken from the top unless Alexah reorders.
 
 ## Works
 
@@ -36,12 +36,11 @@ One line per system; the detail, item by item, is `docs/WORKS.md` (grep it by ar
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the pre-commit hook: grep it by Q-number.
 
-- PERF PASS 1 (the frame's allocations; not a queue item): the stock jungle park's picture is the same to the bit in the
-  build before and the build after (`perf/samepic.py`, `step 30`: 0 pixels differ, 48 census lines equal; a bug put back,
-  the furthest-first order reversed, leaves 80), and at `step 120` equal outside two guests who turn at random between
-  launches of one build. Not seen: a picture with a rider aboard a ride (the walk, head and seat lookups are the
-  suite's, at the first, a middle and the last object), or with the pointer over a placed model (the picker's lookup is
-  the suite's); and a faster frame, which the pass did not make (above, Numbers).
+- Q751 (weekly builds, the engine's half): the launch log's lines and the clean `console.log` were seen in real
+  launches on this Linux desktop, from the build and from the published zip, whose lobby was photographed. Not run: the
+  Windows and macOS builds (their processor probes, the Mac's sysctl and Windows's registry, are unexercised; the Mac
+  zip is labelled untested), a `console.log` written on Windows (the scrubber's backslash and case rules are the
+  suite's), and the workflow itself, which waits for a dry-run tag on Alexah's yes.
 
 
 ## Numbers (take counts fresh; these go stale within a day)
@@ -49,8 +48,8 @@ Only the item just landed is here. Every earlier item's account is in `docs/hist
 | | | measured |
 |---|---|---|
 | Opcodes | **78** of 106 | 2026-10-20, Q553 (`FADEOBJ`), `case Opcode.` labels vs enum members |
-| Tests | **4053**, 0 fail, 0 skip with the game | 2026-10-27, PERF PASS 1's gate (six tests added) |
-| Tests without the game | **1465** ran, **2588** skipped, of 4053 | 2026-10-27, PERF PASS 1's gate |
+| Tests | **4073**, 0 fail, 0 skip with the game | 2026-10-27, Q751's gate (twenty tests added) |
+| Tests without the game | **1484** ran, **2589** skipped, of 4073 | 2026-10-27, Q751's gate |
 | Build warnings | 121 in the main tree; 130 to 133 in a fresh worktree as NuGet's advisory list was last fetched, the ten or twelve more its advisories on ModKit's ImageSharp 3.1.6 (a sixth, GHSA-v76p-62qx-wwq2, published 2026-10-26: Q75, DECISIONS.md "Package advisories") | 2026-10-27 (the worktree's 133 at Q672's gate, 131 at fix group P's, run 11, and 130 at PERF PASS 1's; the main tree's 121 last counted 2026-10-13) |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 | Park load, Release | **3.1 to 3.4 s**, worst phase `audio` 1.04 s (`ground` 0.52 to 0.57, `terrain` 0.46 to 0.55, `objects` 0.35 to 0.47) | 2026-10-26, three runs, `perf/bench.sh` |

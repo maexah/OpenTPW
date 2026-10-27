@@ -5,6 +5,12 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- PERF PASS 1 (the frame's allocations; not a queue item): the stock jungle park's picture is the same to the bit in the
+  build before and the build after (`perf/samepic.py`, `step 30`: 0 pixels differ, 48 census lines equal; a bug put back,
+  the furthest-first order reversed, leaves 80), and at `step 120` equal outside two guests who turn at random between
+  launches of one build. Not seen: a picture with a rider aboard a ride (the walk, head and seat lookups are the
+  suite's, at the first, a middle and the last object), or with the pointer over a placed model (the picker's lookup is
+  the suite's); and a faster frame, which the pass did not make (above, Numbers).
 - Q673 (a tag shows half a second after the top lifts; already built by Q638): ours on the final build (`q673/run1`, 4
   of 4: the tag 0.502 s after the top) beside the original's film of Q637 (`q637/orig/film-on`, 0.53 s), not filmed
   again this session; `side-by-side.png`. Not seen: a tag taken off within its half second (the decode's case; a delete

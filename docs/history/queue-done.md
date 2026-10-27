@@ -10745,3 +10745,20 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   retail `TP.exe` cannot start under Proton (`exe/boot.md`, "Under Wine and Proton"). Found on the way: the original's
   park clock loses precision with uptime (`exe/park-engine.md`), so timings taken on it need `tpwmem.py clock` first
   (`VERIFYING.md` rule 127).
+
+## F. Then
+
+- [x] **Q751. Weekly experimental builds, the engine's half: a launch log a tester can share, the build's name, the
+  workflow, the zip's README and guard, the changelog's commit list.** Alexah, 2026-10-27 (the brief
+  `handoff/weekly-builds-brief.md`, part A). `console.log` now opens with the build and commit, the system and
+  processor, the .NET runtime, the GPU and Vulkan driver, the display, and how many of the disc's 789 data files the
+  game folder holds (`LaunchReport`, `DiscData.txt`); the file is written through `SafePaths` (game folder to
+  `<game folder>`, home to `~`, the account's name in another path to `<user>`), the terminal is not.
+  `-p:OpenTPWBuildTag` stamps the name, `local` otherwise. `.github/workflows/weekly.yml`, `tools/weekly/`
+  (`release.py package|guard`, `README.txt`, `changelog.py`), `.github/ISSUE_TEMPLATE/weekly-build.yml`;
+  `docs/WORKFLOW.md`, "Weekly builds". Predicted 789 of 789 and the desktop 2560 x 1440 at 144 Hz: both as seen.
+  `lib/logpii.py` clean on the real log, the terminal's log hits (the control), and the scrubber put back out of
+  `ConsoleLog.Open` makes the real log hit. 23 bugs through `mutate.py`: 21 fail a test; the backslash one cannot fail
+  on Linux, and the wiring one is the real-log run's. A Linux publish zipped, guarded (252 entries) and started from
+  the zip by `lib/zipsmoke.py`: the lobby drawn (`q751/run5-zip/lobby.png`). Not run: the Windows and macOS builds,
+  and the workflow itself (a dry-run tag, on Alexah's yes).

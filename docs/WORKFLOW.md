@@ -66,6 +66,40 @@ The fan website is at https://maexah.github.io/OpenTPW/ . It is its own project:
   website work with its own yes, and **a push of this repo's `main` still needs its fresh yes** (rule 1).
   Most tasks change nothing there; the Ride Status board follows by itself.
 
+## Weekly builds
+
+An experimental pre-release for Windows, Linux and macOS, made by GitHub from a tag Alexah pushes on a Sunday
+(Alexah, 2026-10-27). `.github/workflows/weekly.yml` only packages and publishes: it runs no test and decides
+nothing about the code, which the local gate has already done. Its one refusal is the content guard: a zip holding
+anything that looks like the game's files fails the run.
+
+- **The contract.** Tag `weekly-YYYY-MM-DD`, release title "Experimental YYYY-MM-DD", a pre-release on origin
+  (`maexah/OpenTPW`). Assets `OpenTPW-<tag>-win-x64.zip`, `OpenTPW-<tag>-linux-x64.zip`, `OpenTPW-<tag>-osx-arm64.zip`
+  (labelled untested until a Mac has run it) and `SHA256SUMS.txt`, at
+  `https://github.com/maexah/OpenTPW/releases/download/<tag>/<asset>`. GitHub's `/releases/latest` skips
+  pre-releases, so nothing links it. The release is made as a draft, every asset uploaded and the list checked, and
+  published last, so a link never points at a half-built release. A published release is never replaced.
+- **A week with nothing meaningful gets no release.** The next changelog covers the gap.
+- **The Sunday routine**, in order:
+  1. Everything is pushed after the usual gate (rule 1's yes, `Pushing` above).
+  2. `python3 tools/weekly/changelog.py main` lists the commits since the last `weekly-*` tag (dry-run
+     `weekly-test-N` tags are passed over; the first build takes `--from <rev>`). The changelog is written from that
+     list, never from memory: broad, plain bullets grouped by area, each may end with its `[abc1234]` link, ending
+     with the "Full history" compare link the script prints.
+  3. Alexah approves the draft. It is committed as `docs/releases/<tag>.md` (the workflow refuses a tag without it)
+     and pushed with `main`, which needs its own yes.
+  4. On Alexah's yes, the tag: `git tag weekly-YYYY-MM-DD main && git push origin refs/tags/weekly-YYYY-MM-DD`.
+  5. When the run is green, download the Linux zip and run `lib/zipsmoke.py` on it (`docs/TOOLING.md`); read the
+     release page back. The website's buttons follow by its own step (its `docs/PLAN.md`).
+- **The build's name.** `-p:OpenTPWBuildTag=<tag>` stamps it; every other build is `local`. The SDK adds the commit.
+  The console log's first lines (`LaunchReport`) print both, and `console.log` is written with paths cut to
+  `<game folder>` and `~` (`SafePaths`), so a tester can attach it as it is.
+- **A dry run** is a tag `weekly-test-N`: the same steps with a placeholder note. Delete the release and the tag
+  after reading it back.
+- **Each zip carries** `tools/weekly/README.txt` (experimental, bring your own game, `--game`, the unsigned
+  warnings, Vulkan on Linux, where `console.log` is) and `LICENSE.md`. Issues come in through
+  `.github/ISSUE_TEMPLATE/weekly-build.yml`, which asks for the zip's name, the system and `console.log`.
+
 ## Subagents
 
 Set by Alexah 2026-09-26, after one staleness audit spent about 40M subagent tokens and hit the weekly limit. None of
