@@ -235,7 +235,7 @@ per command. Add a new command to this table.
 
 Contributions are very welcome:
 
-1. Fork the [original project](https://github.com/OpenTPW/OpenTPW).
+1. Fork [this project](https://github.com/maexah/OpenTPW).
 2. Create a branch named `YourName/FeatureName`.
 3. Open a pull request when you are ready.
 
