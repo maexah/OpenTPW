@@ -74,14 +74,6 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q693. The ride window's four condition gauges stand in 10 from their rows' top and bottom, as the original's.**
-  From the Q636 review (run 9; VERIFY-10). The ride window's stats fill `0x004ad890` (the ride vtable `0x006ffbe8`
-  `+0xc`, called by the shared opener at `0x0048cf55` on every ride window) calls `FUN_00485e30( gauge, 0, 10 )` on
-  `0x3e16`, `0x3e18`, `0x3e19` and `0x3e17` (`0x004adc69`, `0x004adcc7`, `0x004add25`, `0x004add83`): 10 off the top and
-  the bottom in the stream's 2048 x 1536 units, none off the sides, so three rows of 45 draw 25 tall and `0x3e18`'s 44
-  draws 24. Ours (`ParkObjectWindow.cs`, the gauge rows about 79-82, built about 252-254) fills the whole row. Build the
-  inset as Q636 did the hire screen's; a test that fails with it removed or doubled; confirm a ride window beside the
-  original's (`original/uitree.py` reads the original's rects).
 - [ ] **Q598. Every clip's scale track posed.** From Q597. The scale track (`0x80|0x100`; FileFormats `models.md`,
   "Scale") is in 644 tracks of 192 clips, 128 of them in 54 Lost Kingdom clips of 19 wads (`lib/scalescan.py`):
   the shops `fries`, `steak`, `cost_shp`, the rides `lookout`, `monkey`, `porkpie`, `tourride`, `tvsim`, `volcano`,

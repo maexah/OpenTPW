@@ -2673,6 +2673,16 @@ render the labels perfectly and leave every value blank.
 | `0x3e17` | Remaining life | **gauge** | `FUN_004dd6d0`, which is only `FLD float ptr [ECX + 0x48]; JMP __ftol` |
 | `0x3e23` | Scrap value | value | `FUN_004e2400` — see below |
 
+**The four gauges stand 10 in from their rows' top and bottom** (Q693): the ride's own fill `0x004ad890` (the ride
+vtable `0x006ffbe8` `+0xc`, called by the shared opener at `0x0048cf55`) calls `FUN_00485e30( gauge, 0, 10 )` on
+`0x3e16`, `0x3e18`, `0x3e19` and `0x3e17` (`0x004adc69`, `0x004adcc7`, `0x004add25`, `0x004add83`), so each skin is
+handed its row less 10 above and below and none at the sides (`hud.md`, "The skill bar `0x2482`", says what the helper
+writes): three rows of 45 draw 25 tall, Reliability's 44 draws 24. The text cells beside them keep the whole row.
+**Measured** (`q693/orig/run.sh`, `uitree.py PID 0x007c24c8` on the stock park's Belly Bounce window): each meter's
+`+0xc` the stream's (1315, 279, 1550, 324), (1315, 331, 1550, 375), (1315, 382, 1550, 427), (1315, 433, 1550, 478), its
+`+0x30` and its kept rectangle (1315, 289, 1550, 314), (1315, 341, 1550, 365), (1315, 392, 1550, 417), (1315, 443, 1550,
+468); the 1024 x 768 frame lights rows 144-156, 171-182, 197-208 and 222-234 in columns 658-774.
+
 **Every gauge is handed `((v & 0xff) << 10) / 100`** — a 0..100 percentage mapped onto **0..1024** —
 through the control's `+0x1c` entry. The compiler emits that divide as `IMUL 0x51eb851f; SAR EDX,5`.
 The three non-gauge rows are handed a raw value or a string instead.

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """uitree.py PID GLOBAL - a UI tree of the running ORIGINAL walked from the control a global points at (the hire
-screen's [0x007ca308], checked; any other global unchecked), read-only, one line a control,
+screen's [0x007ca308], checked; the open park screen's [0x007c24c8], the ride window's tree, checked by Q693; any other
+global unchecked), read-only, one line a control,
 indented by depth: its address, its rectangle (+0xc, four shorts, 2048 x 1536 layout), the rectangle its skin is handed
 (+0x30, flag 0x10 at 0x0065cd55; FUN_00485e30 insets it), its text (+0x98) and skin (+0x9c) pointers and the skin's
 vtable. A meter's skin (vtable 0x006feeb8, FUN_00477ff0) adds its kept rectangle (+0x18), its value of 100 (+0x120)

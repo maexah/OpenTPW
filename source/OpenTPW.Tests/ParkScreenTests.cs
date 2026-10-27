@@ -653,6 +653,29 @@ public class ParkScreenTests
 	}
 
 	/// <summary>
+	/// <b>The ride window's four condition gauges stand in 10 from their rows' top and bottom and none from their
+	/// sides</b> (<c>FUN_00485e30( gauge, 0, 10 )</c> on <c>0x3e16</c>, <c>0x3e18</c>, <c>0x3e19</c> and <c>0x3e17</c>,
+	/// <c>0x004adc69</c> to <c>0x004add83</c>): three rows of 45 draw 25 tall and <c>0x3e18</c>'s 44 draws 24, while the
+	/// text beside them keeps the whole row.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> no inset; an inset of 20; the inset across rather than down; the text inset too.</remarks>
+	[TestMethod]
+	public void TheRideWindowsFourGaugesStandInTenFromTheirRowsTopAndBottom()
+	{
+		var window = new UI.ParkObjectWindow( APark(), 13 );
+		var stats = window.Root.Children.Single( child => child.Id == 0x3e15 );
+
+		UI.UiRect Of( int id ) => stats.Children.Single( child => child.Id == id ).Rect;
+
+		Assert.AreEqual( new UI.UiRect( 1315, 289, 1550, 314 ), Of( 0x3e16 ), "Excitement" );
+		Assert.AreEqual( new UI.UiRect( 1315, 341, 1550, 365 ), Of( 0x3e18 ), "Reliability, a row of 44" );
+		Assert.AreEqual( new UI.UiRect( 1315, 392, 1550, 417 ), Of( 0x3e19 ), "State of repair" );
+		Assert.AreEqual( new UI.UiRect( 1315, 443, 1550, 468 ), Of( 0x3e17 ), "Remaining life" );
+		Assert.AreEqual( new UI.UiRect( 876, 279, 1273, 324 ), Of( 0x3e1c ), "the text beside Excitement keeps its row" );
+		Assert.IsTrue( new[] { 0x3e16, 0x3e17, 0x3e18, 0x3e19 }.All( id => stats.Children.Single( child => child.Id == id ) is UI.ParkObjectWindow.UiStatBar ) );
+	}
+
+	/// <summary>
 	/// <b>The hire list picks its first row as it fills, on opening and on a tab</b> (<c>FUN_0066403b</c> at a count of
 	/// 1, its <c>0x401</c> posted): the skill bar stands at nought until the screen's next frame takes the pick, then at
 	/// the grade of the candidate sorted first by name, not of the one handed over first; the label reads UITEXT 146.

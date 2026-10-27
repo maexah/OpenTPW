@@ -10691,6 +10691,20 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `CameraKeysAway`; ours 5 of 5 (`q692/ours-b`; before it, `ours-0` panned to (480,511) and zoomed to 70 behind the
   menu). The original keeps a row latched whose key comes up behind the menu (Up, 3 of 3): not kept, said at the site
   (`park-engine.md`, "The game menu and the options screen hold the keys").
+- [x] **Q693. The ride window's four condition gauges stand in 10 from their rows' top and bottom, as the original's.**
+  From the Q636 review (run 9; VERIFY-10). The ride window's stats fill `0x004ad890` (the ride vtable `0x006ffbe8`
+  `+0xc`, called by the shared opener at `0x0048cf55` on every ride window) calls `FUN_00485e30( gauge, 0, 10 )` on
+  `0x3e16`, `0x3e18`, `0x3e19` and `0x3e17` (`0x004adc69`, `0x004adcc7`, `0x004add25`, `0x004add83`): 10 off the top and
+  the bottom in the stream's 2048 x 1536 units, none off the sides, so three rows of 45 draw 25 tall and `0x3e18`'s 44
+  draws 24. Ours (`ParkObjectWindow.cs`, the gauge rows about 79-82, built about 252-254) fills the whole row. Build the
+  inset as Q636 did the hire screen's; a test that fails with it removed or doubled; confirm a ride window beside the
+  original's (`original/uitree.py` reads the original's rects).
+  **Done 2026-10-27 (run 12 lane A).** The four calls checked in the disassembly; ours stands each gauge in
+  `ParkObjectWindow.GaugeInset` (10) top and bottom, the text beside them the whole row. The original measured live
+  (`q693/orig`, `uitree.py PID 0x007c24c8`): each meter's `+0x30` and kept rect 10 in, (1315,289,1550,314) and so on
+  (`park-engine.md`, "The object window's stats panel"), its frame lighting repair 197-208 and life 222-234 at 768. Ours
+  at 720: `control 0x3e19 at (776,184) size (110,12)`, repair 183-195 and life 207-218 lit where main's lit 179-200 and
+  203-223; `q693/side-by-side.png`. Mutate 6 of 6 caught.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

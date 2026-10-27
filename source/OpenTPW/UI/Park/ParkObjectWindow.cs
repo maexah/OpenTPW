@@ -83,6 +83,12 @@ internal sealed class ParkObjectWindow : UiWindow
 		(0x3e22, new UiRect( 876, 484, 1273, 529 )), (0x3e23, new UiRect( 1315, 484, 1550, 529 )),
 	];
 
+	/// <summary>
+	/// The four condition gauges' inset from their rows' top and bottom: the stats fill <c>0x004ad890</c> calls
+	/// <c>FUN_00485e30( gauge, 0, 10 )</c> on each (<c>0x004adc69</c> to <c>0x004add83</c>).
+	/// </summary>
+	private const int GaugeInset = 10;
+
 	/// <summary>The three sliders: the control's own rect takes the pointer, op 3 is the track.</summary>
 	private static readonly (int Id, int Help, UiRect Rect, UiRect Track, UiRect Thumb, string Mesh)[] Sliders =
 	[
@@ -250,10 +256,15 @@ internal sealed class ParkObjectWindow : UiWindow
 		foreach ( var (id, rect) in StatCells )
 		{
 			// The four condition rows are GAUGES and the rest are text - see UiStatBar. Text set on a
-			// gauge draws nothing, so those four rows would sit blank beside their labels.
+			// gauge draws nothing, so those four rows would sit blank beside their labels. Each stands in
+			// GaugeInset from its row's top and bottom and none from its sides.
 			if ( id is 0x3e16 or 0x3e17 or 0x3e18 or 0x3e19 )
 			{
-				_bars[id] = stats.Add( new UiStatBar { Id = id, Rect = rect } );
+				_bars[id] = stats.Add( new UiStatBar
+				{
+					Id = id,
+					Rect = new UiRect( rect.Left, rect.Top + GaugeInset, rect.Right, rect.Bottom - GaugeInset )
+				} );
 				continue;
 			}
 
