@@ -79,7 +79,8 @@ anything that looks like the game's files fails the run.
   `SHA256SUMS.txt`, at
   `https://github.com/maexah/OpenTPW/releases/download/<tag>/<asset>`. GitHub's `/releases/latest` skips
   pre-releases, so nothing links it. The release is made as a draft, every asset uploaded and the list checked, and
-  published last, so a link never points at a half-built release. A published release is never replaced.
+  published last, so a link never points at a half-built release. A published release is never replaced, and
+  every one is kept: none is deleted when a newer one comes (Alexah, 2026-10-27).
 - **A week with nothing meaningful gets no release.** The next changelog covers the gap.
 - **The Sunday routine**, in order:
   1. Everything is pushed after the usual gate (rule 1's yes, `Pushing` above).
@@ -91,7 +92,12 @@ anything that looks like the game's files fails the run.
      and pushed with `main`, which needs its own yes.
   4. On Alexah's yes, the tag: `git tag weekly-YYYY-MM-DD main && git push origin refs/tags/weekly-YYYY-MM-DD`.
   5. When the run is green, download the Linux zip and run `lib/zipsmoke.py` on it (`docs/TOOLING.md`); read the
-     release page back. The website's buttons follow by its own step (its `docs/PLAN.md`).
+     release page back.
+  6. In the website's clone, on its `main` with nothing unpushed: `tools/release-site.sh weekly-YYYY-MM-DD`. It waits
+     until GitHub shows the release published with all five files (45 minutes at most), then switches the site's
+     Download box to it, publishes, reads the live page back and checks each link answers. No yes is needed for
+     that one change (the website's `CLAUDE.md`, rule 1). If the release never goes live, the site keeps its old
+     links. The site shows the build's date and links its release page; it quotes nothing from the changelog.
 - **The build's name.** `-p:OpenTPWBuildTag=<tag>` stamps it; every other build is `local`. The SDK adds the commit.
   The console log's first lines (`LaunchReport`) print both, and `console.log` is written with paths cut to
   `<game folder>` and `~` and each player's name to `<player N>` (`SafePaths`), so a tester can attach it as it is.
