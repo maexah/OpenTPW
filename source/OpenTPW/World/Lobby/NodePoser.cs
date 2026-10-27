@@ -5,8 +5,8 @@ namespace OpenTPW;
 /// <summary>
 /// Poses a model's whole node tree from a clip that moves nodes about: its rotation, position and route tracks, each node's
 /// own transform within its parent, composed down from the root as the engine's pose walk does (<c>FUN_0044ab30</c>,
-/// local x parent, <c>FUN_004702d0</c>). <see cref="LobbyModel.Pose"/> uses it for a clip carrying position or route tracks
-/// (<see cref="Drives"/>) and <see cref="MeshRotator"/> for the rest.
+/// local x parent, <c>FUN_004702d0</c>). <see cref="LobbyModel.Pose"/> uses it for a clip carrying position, route or scale
+/// tracks (<see cref="Drives"/>) and <see cref="MeshRotator"/> for the rest.
 ///
 /// <para>
 /// <b>A position key replaces the node's translation within its parent</b> (<c>FUN_00471860</c>, <c>0x0047208b</c>),
@@ -15,6 +15,13 @@ namespace OpenTPW;
 /// model whose header word <c>0x30</c> carries <c>0x4</c> (the coaster parts) the point is added to the node's own
 /// translation instead (<c>0x0047205d</c>), which the engine puts back every advance (<c>FUN_00473c70</c>), so it is
 /// added to the rest.
+/// </para>
+///
+/// <para>
+/// <b>A scale key sets the lengths of the node's three axes</b> (channel <c>0x80</c>), after its turn and before its place, as
+/// <c>Anim_PoseTrack</c> takes a track's channels (<c>0x00471d8d</c>, <c>Matrix_SetAxisLengths</c>): each axis keeps its
+/// direction and what hangs off the node is scaled with it, as a bought shop's pieces grow out of nothing in its
+/// construction clip. Before a track's first key the node keeps the lengths it has (<see cref="AnimationFile.ScaleTrack.TrySample"/>).
 /// </para>
 ///
 /// <para>
@@ -39,6 +46,7 @@ public sealed class NodePoser : IChannelPosed
 
 	private const uint PositionChannel = 0x1;
 	private const uint RotationChannel = 0x8;
+	private const uint ScaleChannel = 0x80;
 	private const uint PathChannel = 0x200;
 	private const uint PathNodeFlag = 0x8;
 
@@ -103,8 +111,9 @@ public sealed class NodePoser : IChannelPosed
 			: -1;
 	}
 
-	/// <summary>Whether a clip is posed here rather than by <see cref="MeshRotator"/>: one that moves a node, by a key or a route.</summary>
-	public static bool Drives( AnimationFile clip ) => clip.PositionTracks.Count > 0 || clip.PathTracks.Count > 0;
+	/// <summary>Whether a clip is posed here rather than by <see cref="MeshRotator"/>: one that moves a node, by a key or a route, or scales one.</summary>
+	public static bool Drives( AnimationFile clip )
+		=> clip.PositionTracks.Count > 0 || clip.PathTracks.Count > 0 || clip.ScaleTracks.Count > 0;
 
 	/// <summary>How many nodes the tree holds.</summary>
 	public int Count => _local.Length;
@@ -142,6 +151,14 @@ public sealed class NodePoser : IChannelPosed
 				turned.Translation = at;
 				_local[node] = turned;
 			}
+		}
+
+		foreach ( var track in clip.ScaleTracks )
+		{
+			var node = track.TargetIndex;
+
+			if ( Holds( node ) && track.TrySample( frame, out var lengths ) )
+				_local[node] = AdvisorModel.WithAxisLengths( _local[node], lengths );
 		}
 
 		foreach ( var track in clip.PositionTracks )
@@ -245,6 +262,9 @@ public sealed class NodePoser : IChannelPosed
 
 		foreach ( var track in clip.PositionTracks )
 			Add( track.TargetIndex, PositionChannel );
+
+		foreach ( var track in clip.ScaleTracks )
+			Add( track.TargetIndex, ScaleChannel );
 
 		foreach ( var track in clip.PathTracks )
 			Add( track.TargetIndex, PathChannel );

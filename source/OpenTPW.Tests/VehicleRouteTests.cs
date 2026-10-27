@@ -285,7 +285,7 @@ public class VehicleRouteTests
 
 		var clip = (AnimationFile)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject( typeof( AnimationFile ) );
 
-		foreach ( var property in new[] { "PositionTracks", "RotationTracks", "PathTracks" } )
+		foreach ( var property in new[] { "PositionTracks", "RotationTracks", "PathTracks", "ScaleTracks" } )
 		{
 			var field = typeof( AnimationFile ).GetField( $"<{property}>k__BackingField",
 				System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic )!;

@@ -10705,6 +10705,20 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   (`park-engine.md`, "The object window's stats panel"), its frame lighting repair 197-208 and life 222-234 at 768. Ours
   at 720: `control 0x3e19 at (776,184) size (110,12)`, repair 183-195 and life 207-218 lit where main's lit 179-200 and
   203-223; `q693/side-by-side.png`. Mutate 6 of 6 caught.
+- [x] **Q598. Every clip's scale track posed.** From Q597. The scale track (`0x80|0x100`; FileFormats `models.md`,
+  "Scale") is in 644 tracks of 192 clips, 128 of them in 54 Lost Kingdom clips of 19 wads (`lib/scalescan.py`):
+  the shops `fries`, `steak`, `cost_shp`, the rides `lookout`, `monkey`, `porkpie`, `tourride`, `tvsim`, `volcano`,
+  `wateride`, `bouncy`, the sideshows `hyenas`, `junspray`, `arc2x3`, `squark`, the features `bigpalm`, `supbog`, `toilet`.
+  `AnimationFile` reads them (Q599) and only the advisor poses them; `LobbyModel.Pose` counts the rest, `ANIM_SCALE_TRACK`.
+  Three clips carry nothing else (Lost Kingdom's `tvsime` and `tvsims`, fantasy's `sign1c`): `TryLoad` reads them as no
+  clip (`IsValid`), while the rides' and features' direct reads take them (`tvsime` and `tvsims` reach `NodePoser`).
+  Before a track's first key no scale is set and the node keeps the lengths its matrix holds after the turn (21 tracks
+  start past frame 0, three in Lost Kingdom: `volcanol` node 1, `wateridec` nodes 15 and 16; `models.md`, "Scale"). Pose them on every model a clip moves (`NodePoser`, `MeshRotator`) and confirm one of each kind beside
+  the original's frames.
+  **Done:** `NodePoser` poses them after the turn, takes a clip with only scale keys, and puts them back at a change of
+  clip; `ANIM_SCALE_TRACK` is gone. Fries Shop, Laughing Hyenas and Super Toilet: ours within 0.004 of the keys at each
+  printed frame, the original's nodes within 0.0031 of the same curves (1,544, 2,316 and 225 readings) and its films
+  alike (`q598/PREDICTION.txt`); Jurassic Tours ours only (0.0033), the original's is Q761. 7 of 7 bugs put back caught.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

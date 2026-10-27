@@ -5,6 +5,11 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q693 (the ride window's four condition gauges 10 in from their rows' top and bottom): seen on the desk at 1280 x 720
+  in the stock park's Belly Bounce window (`q693/ours-a` on the final binary, `control 0x3e19 at (776,184) size (110,12)`;
+  `ours-0`, main's build, 21 tall); the original's meters read the same day under Proton by `uitree.py` on the same
+  window (`q693/orig`), the frames side by side (`q693/side-by-side.png`). Not seen: Excitement and Reliability filled in
+  this game (counted `RIDE_EXCITEMENT_BAR`, `RIDE_RELIABILITY_BAR`); another ride's window (the same table for every ride); Full Simulation (the same window in both modes).
 - Q692 (the camera keys silent behind the game menu and the options screen): seen on the desk at 1280 x 720 in the stock
   park (`q692/ours-b`, 5 of 5 on the final binary; `ours-0`, the build before it, panned and zoomed behind the menu);
   the original measured the same day under Proton by `keylatch.py` (`q692/orig`, rounds a and b), the same keys, the

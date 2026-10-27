@@ -74,16 +74,6 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q598. Every clip's scale track posed.** From Q597. The scale track (`0x80|0x100`; FileFormats `models.md`,
-  "Scale") is in 644 tracks of 192 clips, 128 of them in 54 Lost Kingdom clips of 19 wads (`lib/scalescan.py`):
-  the shops `fries`, `steak`, `cost_shp`, the rides `lookout`, `monkey`, `porkpie`, `tourride`, `tvsim`, `volcano`,
-  `wateride`, `bouncy`, the sideshows `hyenas`, `junspray`, `arc2x3`, `squark`, the features `bigpalm`, `supbog`, `toilet`.
-  `AnimationFile` reads them (Q599) and only the advisor poses them; `LobbyModel.Pose` counts the rest, `ANIM_SCALE_TRACK`.
-  Three clips carry nothing else (Lost Kingdom's `tvsime` and `tvsims`, fantasy's `sign1c`): `TryLoad` reads them as no
-  clip (`IsValid`), while the rides' and features' direct reads take them (`tvsime` and `tvsims` reach `NodePoser`).
-  Before a track's first key no scale is set and the node keeps the lengths its matrix holds after the turn (21 tracks
-  start past frame 0, three in Lost Kingdom: `volcanol` node 1, `wateridec` nodes 15 and 16; `models.md`, "Scale"). Pose them on every model a clip moves (`NodePoser`, `MeshRotator`) and confirm one of each kind beside
-  the original's frames.
 - [ ] **Q587. The karts' and the water ride's track: laid, walked and opened.** From Q581 (`park.md`, "The karts' and
   the water ride's track, buoys and race"). Replace `PLACED_TRACK_RIDE_FIRST_TRACK_CELLS`: the purchase lays the station
   (0xd or 0x12) and both mouths (0xb or 0x10) on the track grid and arms the queue; a click on a piece ("Left-click to
@@ -720,6 +710,12 @@ filed the items that cite it.
   entry nor its exit saves or restores `0x007908f0`, so by the listing the orbit would come back at (475, 175), and
   back in first person the ride under the moved point is looked up again, `0x0042a340`). The End's view, the only ride
   view this game reaches, takes keys in its own handlers (`0x0048a740`, `0x0048a970`): read them first.
+- [ ] **Q761. Jurassic Tours' construction beside the original's (the ride kind of Q598).** From Q598: its scale keys
+  are posed (`TourrideC`'s rocks from y 0.0028, `q598/run-ride-final`), but the original's frames were not taken: on a
+  fresh Full Simulation park (`freshfs.sh`, `q709/gms-two.dat`, `q598/orig/ride.sh`) all ten spots tried were refused, red
+  signs on the footprint, so the poll read only the carried preview. Find where the original lets it stand (the
+  park's owned land, or a park file with the ride researched and land bought), then poll `modelnodes.py =tourride --axes
+  --poll` from the placing click, film it, and check the readings with `scalecurve.py ... tourride C`.
 - [ ] **Q569. Where the original puts down a worker held at a save, decode first.** From the run 6 review of Q241j (VERIFY-3,
   "anything the first reader missed"; unsettled). The world writer installs the idle mode over the hand
   (`FUN_0046c350` at `0x00516d13`), which runs the outgoing mode's uninstall: for a worker picked up, the type-6

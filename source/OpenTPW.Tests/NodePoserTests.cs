@@ -30,7 +30,7 @@ public class NodePoserTests
 	{
 		var clip = (AnimationFile)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject( typeof( AnimationFile ) );
 
-		foreach ( var property in new[] { "PositionTracks", "RotationTracks", "PathTracks" } )
+		foreach ( var property in new[] { "PositionTracks", "RotationTracks", "PathTracks", "ScaleTracks" } )
 		{
 			var field = typeof( AnimationFile ).GetField( $"<{property}>k__BackingField",
 				System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic )!;
@@ -374,5 +374,114 @@ public class NodePoserTests
 		Near( offsets[1].GetSystemVector3(), entities[1].Position.GetSystemVector3(), "the propeller at rest" );
 
 		Delete( entities );
+	}
+	private static Vector3 Lengths( Matrix4x4 m )
+		=> new( new Vector3( m.M11, m.M12, m.M13 ).Length(), new Vector3( m.M21, m.M22, m.M23 ).Length(), new Vector3( m.M31, m.M32, m.M33 ).Length() );
+
+	/// <summary>Node 0 keyed (0.1, 0.2, 0.4) at frame 10 and (1.1, 2.2, 4.4) at frame 20: halfway (0.6, 1.2, 2.4).</summary>
+	private static AnimationFile.ScaleTrack Growth( int node = 0 ) => new()
+	{
+		TargetIndex = node,
+		FrameIndices = [10, 20],
+		Scales = [new( 0.1f, 0.2f, 0.4f ), new( 1.1f, 2.2f, 4.4f )]
+	};
+
+	/// <summary>
+	/// A scale key sets the node's axis lengths after its turn (Anim_PoseTrack 0x00471d8d, Matrix_SetAxisLengths
+	/// 0x0046f910): the plane keyed a quarter turn and (0.6, 1.2, 2.4) halfway has those lengths, its axes the turn's, and the
+	/// turned, stretched axes take the propeller's (6, 7, 3) to (7.2, 8.4, -3.6) off the plane and the root's turn to
+	/// (749.4, 67.4, 162.8). Scaled before the turn, the turn would put the lengths back to 1 and the propeller at (746, 66, 167).
+	/// </summary>
+	[TestMethod]
+	public void AScaleKeySetsTheAxisLengthsAfterTheTurn()
+	{
+		var poser = Tree();
+		var clip = Clip();
+
+		clip.RotationTracks.Add( new AnimationFile.RotationTrack
+		{
+			TargetIndex = 0,
+			FrameIndices = [0],
+			Rotations = [Quaternion.CreateFromAxisAngle( Vector3.UnitY, MathF.PI / 2 )]
+		} );
+		clip.ScaleTracks.Add( Growth() );
+
+		poser.Pose( clip, 15 );
+
+		Near( new( 0.6f, 1.2f, 2.4f ), Lengths( poser.Local( 0 ) ), "the plane's lengths", 1e-4f );
+		Near( new( 0, 0, -0.6f ), new( poser.Local( 0 ).M11, poser.Local( 0 ).M12, poser.Local( 0 ).M13 ), "its x axis, turned", 1e-4f );
+		Near( new( 0, 59, 273 ), poser.Local( 0 ).Translation, "its place kept" );
+		Near( new( 749.4f, 67.4f, 162.8f ), poser.World( 1 ).Translation, "the propeller" );
+	}
+
+	/// <summary>
+	/// Before a track's first key the node keeps the lengths it has: at rest on a fresh pose (1, 1, 1), and the last key's
+	/// (1.1, 2.2, 4.4) once the clip has come round (frame 9.9 floors to 9). A sampler held at the first key would give
+	/// (0.1, 0.2, 0.4) both times.
+	/// </summary>
+	[TestMethod]
+	public void BeforeTheFirstScaleKeyTheNodeKeepsItsLengths()
+	{
+		var poser = Tree();
+		var clip = Clip();
+		clip.ScaleTracks.Add( Growth() );
+
+		poser.Pose( clip, 5 );
+		Near( Vector3.One, Lengths( poser.Local( 0 ) ), "fresh", 1e-4f );
+
+		poser.Pose( clip, 20 );
+		poser.Pose( clip, 9.9f );
+		Near( new( 1.1f, 2.2f, 4.4f ), Lengths( poser.Local( 0 ) ), "come round", 1e-4f );
+
+		Assert.IsTrue( NodePoser.Drives( clip ), "a clip that only scales is the tree's" );
+	}
+
+	/// <summary>
+	/// A change of clip puts a scaled node back (FUN_00472310's 0x289 holds the scale channel, 0x80), unless the incoming
+	/// clip scales it too; and the mesh is placed again (LobbyModel.MeshesRested).
+	/// </summary>
+	[TestMethod]
+	public void AChangeOfClipPutsBackWhatTheOutgoingScaled()
+	{
+		var poser = Tree();
+		var outgoing = Clip();
+		outgoing.ScaleTracks.Add( Growth() );
+
+		poser.Pose( outgoing, 20 );
+		var other = Clip();
+		other.ScaleTracks.Add( Growth() );
+		poser.Rest( outgoing, other );
+		Near( new( 1.1f, 2.2f, 4.4f ), Lengths( poser.Local( 0 ) ), "the incoming scales it too", 1e-4f );
+
+		poser.Rest( outgoing, null );
+		Near( Vector3.One, Lengths( poser.Local( 0 ) ), "put back", 1e-4f );
+
+		CollectionAssert.AreEqual( new[] { true, true, false }, LobbyModel.MeshesRested( outgoing, [2, 0, -1], 3 ),
+			"the plane and the propeller under it placed again, the root not" );
+	}
+
+	/// <summary>
+	/// The Fries Shop's construction (FriesC) over its model: the basket, node 1, keyed (0.3185, 0.0079, 0.3185) at frame
+	/// 10 and (1, 1, 1) at 15, is (0.6593, 0.5040, 0.6593) at 12.5; chip01, node 3, keyed (0.0132, 0.0125, 0.0119) at 38
+	/// and (1.0824, 1.0304, 0.9811) at 45, is (0.5478, 0.5215, 0.4965) at 41.5 and at its first key's lengths at 20.
+	/// </summary>
+	[TestMethod]
+	public void TheFriesShopsPiecesGrowInItsConstruction()
+	{
+		var data = GameData.Required();
+		var model = new ModelFile( new System.IO.MemoryStream( data.ReadAllBytes( "levels/jungle/shops/fries/Fries.MD2" ) ) );
+		var clip = new AnimationFile( new System.IO.MemoryStream( data.ReadAllBytes( "levels/jungle/shops/fries/FriesC.MD2" ) ) );
+		var poser = new NodePoser( model );
+
+		Assert.AreEqual( 8, clip.ScaleTracks.Count );
+
+		poser.Pose( clip, 12.5f );
+		Near( new( 0.6593f, 0.5040f, 0.6593f ), Lengths( poser.Local( 1 ) ), "the basket at 12.5", 1e-3f );
+
+		poser.Pose( clip, 20 );
+		Near( new( 0.0132f, 0.0125f, 0.0119f ), Lengths( poser.Local( 3 ) ), "chip01 at 20", 1e-3f );
+
+		poser.Pose( clip, 41.5f );
+		Near( new( 0.5478f, 0.5215f, 0.4965f ), Lengths( poser.Local( 3 ) ), "chip01 at 41.5", 1e-3f );
 	}
 }

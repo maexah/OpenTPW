@@ -659,6 +659,12 @@ public sealed class LobbyModel : IChannelPosed
 	/// </summary>
 	internal Matrix4x4? Posed( int node ) => _poser != null && node >= 0 && node < _poser.Count ? _poser.World( node ) : null;
 
+	/// <summary>
+	/// Node <paramref name="node"/>'s own transform within its parent as the node tree last posed it, or null where no clip
+	/// has posed the tree: for the debug console's <c>meshes THING axes</c>.
+	/// </summary>
+	internal Matrix4x4? PosedLocal( int node ) => _poser != null && node >= 0 && node < _poser.Count ? _poser.Local( node ) : null;
+
 	/// <summary>The node tree's poser, made by the first clip that moves a node (<see cref="NodePoser.Drives"/>).</summary>
 	private NodePoser Poser()
 	{
@@ -667,7 +673,8 @@ public sealed class LobbyModel : IChannelPosed
 			_poser = new NodePoser( _file );
 
 			Log.Info( $"{_modelPath}: posing {Clips.Count( NodePoser.Drives )} of {Clips.Count} clip(s) over the node tree, " +
-				$"{Clips.Sum( clip => clip.PositionTracks.Count )} position track(s), {Clips.Sum( clip => clip.PathTracks.Count )} route track(s)" );
+				$"{Clips.Sum( clip => clip.PositionTracks.Count )} position track(s), {Clips.Sum( clip => clip.PathTracks.Count )} route track(s), " +
+				$"{Clips.Sum( clip => clip.ScaleTracks.Count )} scale track(s)" );
 		}
 
 		return _poser;
@@ -697,7 +704,7 @@ public sealed class LobbyModel : IChannelPosed
 	}
 
 	/// <summary>
-	/// The meshes a change from <paramref name="outgoing"/> puts back: each node it turns, moves or routes that is a mesh,
+	/// The meshes a change from <paramref name="outgoing"/> puts back: each node it turns, moves, routes or scales that is a mesh,
 	/// and every mesh under one, of the first <paramref name="meshCount"/> nodes (<c>FUN_00472310</c> restores the outgoing
 	/// clip's nodes alone, <c>0x0047244b</c>, and the pose walk composes what hangs off them again).
 	/// </summary>
@@ -705,7 +712,8 @@ public sealed class LobbyModel : IChannelPosed
 	{
 		var driven = new HashSet<int>( outgoing.RotationTracks.Select( track => track.TargetIndex )
 			.Concat( outgoing.PositionTracks.Select( track => track.TargetIndex ) )
-			.Concat( outgoing.PathTracks.Select( track => track.TargetIndex ) ) );
+			.Concat( outgoing.PathTracks.Select( track => track.TargetIndex ) )
+			.Concat( outgoing.ScaleTracks.Select( track => track.TargetIndex ) ) );
 
 		var rested = new bool[meshCount];
 
@@ -739,8 +747,8 @@ public sealed class LobbyModel : IChannelPosed
 	/// </para>
 	///
 	/// <para>
-	/// <b>A clip carrying position or route tracks is posed by <see cref="NodePoser"/></b>, rotation, position and route
-	/// together over the whole node tree, so a node a key or a route moves carries what hangs off it, turned by its parents
+	/// <b>A clip carrying position, route or scale tracks is posed by <see cref="NodePoser"/></b>, rotation, scale, position
+	/// and route together over the whole node tree, so a node a key or a route moves carries what hangs off it, turned by its parents
 	/// (the End's planes and their propellers, the seaplane's propellers as it turns along its route); every other clip
 	/// turns its meshes through <see cref="Rotator"/>.
 	/// </para>
@@ -766,11 +774,6 @@ public sealed class LobbyModel : IChannelPosed
 
 			Rotator?.Pose( animation, frame );
 		}
-
-		// A scale track sets a node's axis lengths after its turn (Anim_PoseTrack 0x00471d8d); only the advisor poses them
-		// (AdvisorModel.Pose). 128 of the game's 644 are in Lost Kingdom's wads: 11 the advisor's, which AdvisorModel poses, and 117 in its shops, rides, sideshows and features.
-		if ( animation.ScaleTracks.Count > 0 )
-			Unimplemented.Report( "ANIM_SCALE_TRACK" );
 
 		// Held at whatever the last entry before this frame said, and left alone entirely before the
 		// first - which is what VisibleAt answers null for, and what the engine does by simply not

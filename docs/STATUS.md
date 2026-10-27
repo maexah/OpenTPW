@@ -30,17 +30,22 @@ One line per system; the detail, item by item, is `docs/WORKS.md` (grep it by ar
 
 ## Next
 
-`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next Q598 (every clip's scale track posed, the first open item in the file; Q693, the ride window's gauges, Q752 and Q753, put first at Alexah's word 2026-10-27, are done; Q525, ordered before Q638, stands lower in the file; Q543 and Q27, ordered before Q631, and Q31b, Q25, Q51 and Q55, ordered earlier, stand lower in the file): Alexah's play test of 2026-10-21 put Q616 to Q645 first, the display, then what a player hits, then the chosen improvements (`playtest-2026-10-21/notes.md`); Q598 (every clip's scale track posed) follows them in section A (Q609, the advisor's row 19 that Q602 decoded, and Q587 to Q589, the karts' and the water ride's build, are filed after it; Q586 stood above the ordered block; Q608, the draws left both-sided, is filed after Q713): the queue was reordered at Alexah's word, 2026-10-20. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. Gaps 4 and 7: `docs/PLAYER-GAPS.md`. Q13 is done: `docs/history/CLEANUP-PLAN.md`.
+`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next Q587 (the karts' and the water ride's track, the first open item in the file; Q598, every clip's scale track posed, is done, and so are Q693, the ride window's gauges, Q752 and Q753, put first at Alexah's word 2026-10-27; Q525, ordered before Q638, stands lower in the file; Q543 and Q27, ordered before Q631, and Q31b, Q25, Q51 and Q55, ordered earlier, stand lower in the file): Alexah's play test of 2026-10-21 put Q616 to Q645 first, the display, then what a player hits, then the chosen improvements (`playtest-2026-10-21/notes.md`); Q587 to Q589, the karts' and the water ride's build, follow them in section A (Q598 and Q609 stood before them and are done; Q586 stood above the ordered block; Q608, the draws left both-sided, is filed after Q713): the queue was reordered at Alexah's word, 2026-10-20. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. Gaps 4 and 7: `docs/PLAYER-GAPS.md`. Q13 is done: `docs/history/CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the pre-commit hook: grep it by Q-number.
 
-- Q693 (the ride window's four condition gauges 10 in from their rows' top and bottom): seen on the desk at 1280 x 720
-  in the stock park's Belly Bounce window (`q693/ours-a` on the final binary, `control 0x3e19 at (776,184) size (110,12)`;
-  `ours-0`, main's build, 21 tall); the original's meters read the same day under Proton by `uitree.py` on the same
-  window (`q693/orig`), the frames side by side (`q693/side-by-side.png`). Not seen: Excitement and Reliability filled in
-  this game (counted `RIDE_EXCITEMENT_BAR`, `RIDE_RELIABILITY_BAR`); another ride's window (the same table for every ride); Full Simulation (the same window in both modes).
+- Q598 (every clip's scale track posed): seen on the desk at 1280 x 720 in the stock park, on the final binary
+  (`q598/run-final`, dll 77418ac6): a Fries Shop, a Laughing Hyenas and a Super Toilet bought by `buy` under `pause`, each
+  stepped through its construction with `meshes THING axes` (within 0.004 of the keys at each printed frame) and a shot each
+  (`q598/ours-side-by-side.png` beside main's build, `run-control`, whose pieces stand full size); Jurassic Tours the
+  same in a fresh Full Simulation park (`run-ride-final`, 0.0033). The original the same day under Proton, off-screen,
+  bought by clicks: its nodes polled from the placing click (`q598/orig`, `scalecurve.py`: 0.0031, 0.0011, 0.0010 off the
+  same curves) and filmed (`orig/film/*-sheet.png`), the same growth. Not seen: Jurassic Tours in the original (ten spots
+  refused, Q761); the camera's framing is not matched between the games (each frames its own build); the water jets of the
+  Hyenas and the Jungle Spray (M1 to M6, keyed the same way, not played); the three late tracks (`volcanol`, `wateridec`,
+  all at 1); the seven clips of other themes with scale keys and no position track; Full Simulation's shops (the same code).
 
 
 ## Numbers (take counts fresh; these go stale within a day)

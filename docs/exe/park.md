@@ -434,6 +434,23 @@ its two stops comes out at (529.2, 64.8) and (440.0, 65.2), where the original's
 (Q562). Not the original's: a tangent of nought, which the engine divides by, leaves the turn as it was (no shipped route
 has one at a key).
 
+**A scale key sets the lengths of the node's three axes** (Q598; `Anim_PoseTrack` `0x00471d8d`, `Matrix_SetAxisLengths`
+`0x0046f910`; the keys, FileFormats `models.md`, "Scale"). A track's channels go in this order: the turn (`0x8`, three fresh
+rows over the matrix, `FUN_0046fbb0`), then the scale (`0x80`: each of rows 0 to 2 times the keyed length over its own,
+undivided, so its direction is kept), then the route or the position (`0x200`, `0x1`), then the facing along the route
+(`0x400`). Before the first key nothing is set. What hangs off the node is scaled with it, and the restore mask
+`0x289` holds `0x80`, so a change of clip puts the node's lengths back. In Lost Kingdom the scale tracks that change a
+drawn size are the construction clips' (`FriesC`, `SteakC`, `Cost_shpC`, `lookoutC`, `TourrideC`, `BirdC`, `Arc2x3C`,
+`HyenasC`, `JunsprayC`, `supbogC`: the pieces grow out of nothing as a bought thing is built), the Hyenas' and the
+Jungle Spray's water (`HyenasM1`..`M6`, `JunsprayM1`..`M6`, up to 14 times) and the Lookout's cogs (`lookoutM`, `S`,
+under 2%); the rest key (1, 1, 1). **Read in the running original** (`q598/orig`, `modelnodes.py --axes --poll` from the
+placing click, `scalecurve.py`): the Fries Shop's eight scaled nodes, 1,544 readings, each within 0.0031 of `FriesC`'s
+keyed curve (the basket from 0.0232, 0.0079 to 1, squashed to y 0.4842, then 1); the Laughing Hyenas' twelve within
+0.0011 of `HyenasC`'s (y from 0.0021); the Super Toilet's sign within 0.0010 of `supbogC`'s (0.1218 to 1).
+**OpenTPW poses them** (Q598): `NodePoser.Pose` sets them after the turn, `NodePoser.Drives` takes any clip with a scale
+track into the node tree, its restore and `LobbyModel.MeshesRested` put them back; the same three, and Jurassic Tours'
+(not placed in the original: Q761), within 0.004 of the keys at each printed frame (`q598/run-final`, `run-ride-final`).
+
 **Rotation keys carry an easing curve id** at key`+0x02` (`0xFFFF` = none) indexing an **8-byte** table at track descriptor `+0x34`, remapped through a **9-segment** ramp: **457 of 1,166 clips carry one**. Three things that matter: the id belongs to the **lower** key of the pair; the id is **not** the key's own index (**3,070 of 12,428 eased keys disagree**, ids reach 100, so the table is indexed not walked); and the ramp's endpoints are **implied** (0 before the first byte, 1 after the last), which is what makes it nine segments from eight bytes.
 
 **The restore mask `0x289` includes position**, so unlike visibility a clip's position IS put back.

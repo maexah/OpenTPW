@@ -64,6 +64,9 @@ public static class DebugConsole
 			Execute( line );
 	}
 
+	/// <summary>The length of one axis row of a matrix.</summary>
+	private static float AxisLength( float x, float y, float z ) => MathF.Sqrt( (x * x) + (y * y) + (z * z) );
+
 	private static void Record( float delta )
 	{
 		_frames[_frameIndex] = delta * 1000.0;
@@ -2653,6 +2656,22 @@ public static class DebugConsole
 				Reply( $"meshes {meshesThing}: {meshesModel.Entities.Length} meshes, hidden [{string.Join( ", ", putAway )}]; channel 0 "
 					+ (meshesChannel is null ? "none" : $"role {meshesChannel.AnimID} entry {meshesChannel.SubAnim} frame {meshesChannel.AnimFrame:F1} "
 						+ $"flags 0x{meshesChannel.Flags:x}, bound {meshesPlayers!.BoundOn( 0 )}") );
+
+				// `meshes THING axes`: each node's own axis lengths as the node tree last posed them, for a scale track's
+				// keys against the original's (modelnodes.py --axes reads its nodes' +0x10 rows).
+				if ( parts.Length > 2 && parts[2] == "axes" )
+				{
+					for ( var node = 0; node < meshesModel.Source.Nodes.Count; ++node )
+					{
+						var name = node < meshesModel.Source.Meshes.Count ? meshesModel.Source.Meshes[node].Name.TrimEnd( '\0' ).Trim() : $"node {node}";
+						var local = meshesModel.PosedLocal( node ) ?? meshesModel.Source.Nodes[node].LocalTransform;
+
+						Reply( $"  node {node} {name} axes ({AxisLength( local.M11, local.M12, local.M13 ):F4}, "
+							+ $"{AxisLength( local.M21, local.M22, local.M23 ):F4}, {AxisLength( local.M31, local.M32, local.M33 ):F4})"
+							+ (meshesModel.PosedLocal( node ) is null ? " rest" : "") );
+					}
+				}
+
 				break;
 
 			// What is standing in the park NOW, which is the save's list plus what has been built and

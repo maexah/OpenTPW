@@ -14,6 +14,10 @@ The park's land outside the park sets its terrain meshes' normals to 0.225 long 
   modelnodes.py %PID% @0x007a0854 river surface newcliff
   modelnodes.py %PID% surface Object12 --scale 4.444 --secs 12    WRITTEN: the named meshes' normals times 4.444 for 12 s,
                                      read again 1 s in, then each put back byte for byte (exit 2 if one was not)
+  modelnodes.py %PID% =fries --axes --poll 6     each mesh's own axis lengths (the node's +0x10 local row-vector matrix,
+                                     rows 0-2), a line per mesh per pass for 6 s, each pass stamped with its time in seconds and the wall clock, the
+                                     instances looked up again each pass (so a poll may start before the placing click):
+                                     a scale track's keys as posed (Q598; this game's `meshes THING axes`)
 """
 import collections, math, struct, sys
 
@@ -22,6 +26,10 @@ pid = int(sys.argv[1]); args = sys.argv[2:]
 SCALE = SECS = None
 if '--scale' in args: i = args.index('--scale'); SCALE = float(args[i + 1]); del args[i:i + 2]
 if '--secs' in args: i = args.index('--secs'); SECS = float(args[i + 1]); del args[i:i + 2]
+AXES = '--axes' in args
+if AXES: args.remove('--axes')
+POLL = None
+if '--poll' in args: i = args.index('--poll'); POLL = float(args[i + 1]); del args[i:i + 2]
 hdr_arg = args.pop(0) if args and (args[0][:1] in '@=' or args[0].startswith('0x')) else '@0x007a0854'
 f = open(f'/proc/{pid}/mem', 'r+b' if SCALE else 'rb', buffering=0)
 def rd(a, n): f.seek(a); return f.read(n)
@@ -43,9 +51,16 @@ if hdr_arg.startswith('='):
 else:
 	headers = [(None, u32(int(hdr_arg[1:], 16)) if hdr_arg.startswith('@') else int(hdr_arg, 16))]
 tot = collections.Counter(); saved = []
+def axes(node):
+	rows = struct.unpack('<12f', rd(node + 0x10, 48))
+	return tuple(math.sqrt(sum(v * v for v in rows[4 * r:4 * r + 3])) for r in range(3))
 def walk(node, depth):
 	while node:
 		flags = u32(node); name = cstr(u32(node + 0x54)) if u32(node + 0x54) else ''
+		if AXES:
+			if not flags & 0x200 and (not args or any(name.lower().startswith(a.lower()) for a in args)):
+				print(f'{"  " * depth}{name or "?"}: flags 0x{flags:x} axes (%.4f, %.4f, %.4f)' % axes(node))
+			walk(u32(node + 0xc), depth + 1); node = u32(node + 8); continue
 		if not flags & 0x200 and (not args or any(name.lower().startswith(a.lower()) for a in args)):
 			n = u16(node + 0x5e); np_ = u32(node + 0x64); cache = u32(node + 0x9c)
 			lens = collections.Counter()
@@ -66,6 +81,15 @@ def walk(node, depth):
 		walk(u32(node + 0xc), depth + 1)
 		node = u32(node + 8)
 READ_ONLY = False
+if AXES:
+	t0 = time.time()
+	while True:
+		if hdr_arg.startswith('=') and POLL is not None: headers = placed(hdr_arg[1:])   # a thing placed while it polls
+		print(f'-- t {time.time() - t0:.3f} wall {time.time():.3f} ' + ', '.join(f'slot {s} header 0x{h:08x}' for s, h in headers))
+		for _, hdr in headers: walk(u32(hdr + 0x78), 0)
+		if POLL is None or time.time() - t0 >= POLL: break
+		time.sleep(0.03)
+	sys.exit(0)
 for _, hdr in headers:
 	root = u32(hdr + 0x78)
 	print(f'header 0x{hdr:08x} root 0x{root:08x}')

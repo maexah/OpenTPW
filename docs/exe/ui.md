@@ -140,7 +140,7 @@ the one in his hand about 0.05. Clip 17 squashes his body (1.243, 0.838, 0.838, 
 other way (1.1018, 0.979, 0.9407 to 0.9002, 1.0997, 1.0997 at 9), clip 18 leaves the head at 0.9947, 1.0427, 1.0249, and clip
 16 keys the map. **OpenTPW poses them** (Q599): `AnimationFile.ScaleTracks`, `AdvisorModel.PoseNodes`; the same node lengths and
 place at clip 18's end, and the ticket 0.746 of the height across, 0.435 left of his anchor (`q707/p599`, its last run). Every other
-model's scale tracks are counted, `ANIM_SCALE_TRACK` (Q598).
+model's are posed by `NodePoser` (Q598; `park.md`, "Clip content").
 
 **On a screen that is not 4:3 the original stretches him, ticket and all** (Q639). His root's three axis lengths are
 constants, 0.01125, 0.001, 0.015, written at `0x00429d1c`..`0x00429d2c` and set by `Advisor_LoadModel`'s call at `0x00429d46` to `FUN_0046fa70`, and his
