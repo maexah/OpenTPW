@@ -45,8 +45,9 @@ Windows:  SmartScreen says "Windows protected your PC". Choose
 macOS:    THE MAC BUILD IS UNTESTED: nobody has run it on a Mac yet.
           macOS says the app "cannot be opened". In Terminal, run
             xattr -dr com.apple.quarantine <the OpenTPW folder>
-          then start it again. It needs a Mac with Apple silicon
-          (M1 or newer).
+          then start it again. The osx-arm64 zip is for Macs with
+          Apple silicon (M1 or newer), the osx-x64 zip for older
+          Macs with an Intel processor.
 Linux:    you need a Vulkan driver for your graphics card (Mesa's
           on AMD and Intel, the NVIDIA driver on NVIDIA). If the
           window does not open, install your system's

@@ -69,13 +69,14 @@ The fan website is at https://maexah.github.io/OpenTPW/ . It is its own project:
 ## Weekly builds
 
 An experimental pre-release for Windows, Linux and macOS, made by GitHub from a tag Alexah pushes on a Sunday
-(Alexah, 2026-10-27). `.github/workflows/weekly.yml` only packages and publishes: it runs no test and decides
+(Alexah, 2026-10-27; Intel Macs added the same day). `.github/workflows/weekly.yml` only packages and publishes: it runs no test and decides
 nothing about the code, which the local gate has already done. Its one refusal is the content guard: a zip holding
 anything that looks like the game's files fails the run.
 
 - **The contract.** Tag `weekly-YYYY-MM-DD`, release title "Experimental YYYY-MM-DD", a pre-release on origin
   (`maexah/OpenTPW`). Assets `OpenTPW-<tag>-win-x64.zip`, `OpenTPW-<tag>-linux-x64.zip`, `OpenTPW-<tag>-osx-arm64.zip`
-  (labelled untested until a Mac has run it) and `SHA256SUMS.txt`, at
+  (Apple silicon), `OpenTPW-<tag>-osx-x64.zip` (Intel; both Mac zips labelled untested until a Mac has run them) and
+  `SHA256SUMS.txt`, at
   `https://github.com/maexah/OpenTPW/releases/download/<tag>/<asset>`. GitHub's `/releases/latest` skips
   pre-releases, so nothing links it. The release is made as a draft, every asset uploaded and the list checked, and
   published last, so a link never points at a half-built release. A published release is never replaced.
