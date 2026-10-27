@@ -11,7 +11,7 @@ namespace OpenTPW;
 /// arms <c>0xb</c> (<c>0x10</c>). Ours does both on the press.
 /// </para>
 /// <para>
-/// <b>A click</b> (<c>0x00526cb3</c>..<c>0x00526f9a</c>) plays sound <c>0xce</c>, moves the target onto the anchor's row or
+/// <b>A click</b> (<c>0x00526cb3</c>..<c>0x00526fb2</c>) plays sound <c>0xce</c>, moves the target onto the anchor's row or
 /// column, whichever is farther, and lays the run in 2-cell steps by eight passes over it (<c>FUN_0053aac0</c>, each op
 /// through <c>Track_CellOp</c>, <c>FUN_005370e0</c>): the clear, the stamp, the links, the flow, the owner, the hill flags,
 /// the mouths' walks and the retile. A run that ends on track closes the tool; any other moves the anchor to its end.
@@ -19,7 +19,7 @@ namespace OpenTPW;
 /// </summary>
 public static class ParkTrackTool
 {
-	/// <summary>The sound every click of the track tool plays before it lays anything (<c>cat_ui</c> <c>0xce</c>, <c>0x00526cd0</c>).</summary>
+	/// <summary>The sound every click of the track tool plays before it lays anything (<c>cat_ui</c> <c>0xce</c>, <c>0x00526ce2</c>).</summary>
 	public const int ClickSound = 0xce;
 
 	/// <summary>The step two cells on along a heading bit: north <c>0x01</c> is −y, east <c>0x04</c> +x, south <c>0x10</c> +y, west <c>0x40</c> −x.</summary>
@@ -37,11 +37,13 @@ public static class ParkTrackTool
 
 	/// <summary>
 	/// The step the last link pass took (<c>DAT_00763b00</c>/<c>b04</c>), which the next run's first cell links back along,
-	/// or null where the tool was installed or a run closed since (both write <c>0x80</c>).
+	/// or null where the tools were put away, a run closed or Backspace took one back since. Those write <c>0x80</c>:
+	/// <c>FUN_0052f200</c> with mode 0 (<c>0x0052f35e</c>) or <c>0x35</c> (<c>0x0052f55e</c>), the close
+	/// (<c>0x00526fa7</c>) and Backspace (<c>0x0052ff25</c>). Installing a tool, the arming's <c>FUN_0052f580</c>, writes none.
 	/// </summary>
 	private static (int Dx, int Dy)? _lastLinkStep;
 
-	/// <summary>Forgets the last link step, as installing a tool does.</summary>
+	/// <summary>Forgets the last link step, as putting the tools away does.</summary>
 	public static void Forget() => _lastLinkStep = null;
 
 	/// <summary>
@@ -140,7 +142,7 @@ public static class ParkTrackTool
 
 	/// <summary>
 	/// Where a click's run really ends: the target moved onto the anchor's row or column, whichever is farther, ties to the
-	/// row (<c>0x00526d04</c>..<c>0x00526d2c</c>), then onto the anchor's 2-cell grid, an odd distance taken to the lower
+	/// row (<c>0x00526d4f</c>..<c>0x00526d85</c>), then onto the anchor's 2-cell grid, an odd distance taken to the lower
 	/// cell (<c>FUN_0053aac0</c>).
 	/// </summary>
 	public static (int X, int Y) TargetOf( (int X, int Y) anchor, int clickX, int clickY )
@@ -186,7 +188,7 @@ public static class ParkTrackTool
 		return (cells, dx, dy);
 	}
 
-	/// <summary>A run's verdict: refused or not, why, what its new pieces cost, and whether that is the refusal (<c>DAT_00816d5c</c>).</summary>
+	/// <summary>A run's verdict: refused or not, the first reason, what its new pieces cost, and whether that total passes the balance (<c>DAT_00816d5c</c>), whether or not it is refused for another reason too.</summary>
 	public readonly record struct Judged( bool Refused, string? Why, int Total, bool OverBalance = false );
 
 	/// <summary>
@@ -194,7 +196,8 @@ public static class ParkTrackTool
 	/// two by two leaves the map or the park's land (map flag <c>0x40</c>), stands on an object (map types 4, 9 and 10), on
 	/// type 7, 0x15 or 30, or on another ride's track; where the run's last cell, unless it meets its own track, stands on
 	/// queue, a ride's used-from cell or a cell flagged <c>0x20</c> (<c>0x00539fc5</c>..<c>0x0053a05f</c>); or where the new
-	/// pieces together cost more than the balance. The river (map type 2) takes a plain piece. What the original allows
+	/// pieces together cost more than the balance. The total runs on past a refused cell, so a run refused for another reason
+	/// can be over the balance too (<see cref="Judged.OverBalance"/>, <c>DAT_00816d5c</c>), which the pointer shows as <c>c_cash</c>. The river (map type 2) takes a plain piece. What the original allows
 	/// that is not built here is refused too, and counted: a run over path or queue (<c>TRACK_RUN_OVER_PATH</c>: the
 	/// original lays an end or straight there as a hill, op <c>0x85</c>, and a bend or junction plain), through or into its
 	/// own track other than at its two ends (<c>TRACK_RUN_CROSSING</c>) and onto its own station
@@ -206,49 +209,66 @@ public static class ParkTrackTool
 	{
 		var (cells, _, _) = CellsOf( from, to );
 		var total = 0;
+		string? why = null;
+
+		// The first refusal is the one said, and the pass goes on: the original's walk judges every cell, adds each empty
+		// cell's price to the running total whether or not the cell is refused, and raises its over-the-balance latch the
+		// first time the total passes the balance (0x00539f5c, 0x00539f87..0x00539fb6), so a refused run can be over it too.
+		// Each counted gap is counted at the first refusal alone, as before.
+		bool Refuse( string reason, string? gap = null )
+		{
+			if ( why != null )
+				return false;
+
+			why = reason;
+
+			if ( count && gap != null )
+				Unimplemented.Report( gap );
+
+			return true;
+		}
 
 		for ( var i = 0; i < cells.Count; ++i )
 		{
 			var (x, y) = cells[i];
 			var first = i == 0;
 			var last = i == cells.Count - 1;
+			var onMap = true;
 
 			foreach ( var (cx, cy) in new[] { (x, y), (x + 1, y), (x, y + 1), (x + 1, y + 1) } )
 			{
 				if ( !ParkState.OnMap( cx, cy ) )
-					return new Judged( true, $"({cx},{cy}) is off the map", total );
+				{
+					Refuse( $"({cx},{cy}) is off the map" );
+					onMap = false;
+					continue;
+				}
 
 				var under = state.Record( cx, cy );
 
 				if ( (under.Flags & 0x40) != 0 )
-					return new Judged( true, $"({cx},{cy}) is outside the park's land", total );
-
-				if ( under.Type is CellEdge.Footprint or CellEdge.RideEnd or CellEdge.RideFarEnd or 7 or 0x15 or CellEdge.Approach )
-					return new Judged( true, $"({cx},{cy}) is map type {under.Type}", total );
-
-				if ( last && state.Record( x, y ).TrackType != type
+					Refuse( $"({cx},{cy}) is outside the park's land" );
+				else if ( under.Type is CellEdge.Footprint or CellEdge.RideEnd or CellEdge.RideFarEnd or 7 or 0x15 or CellEdge.Approach )
+					Refuse( $"({cx},{cy}) is map type {under.Type}" );
+				else if ( last && ParkState.OnMap( x, y ) && state.Record( x, y ).TrackType != type
 					&& (under.Type is ParkRideChoice.QueueCellType or CellEdge.RideEnd || (under.Flags & 0x20) != 0) )
-					return new Judged( true, $"({cx},{cy}) is map type {under.Type}, flags 0x{under.Flags:x}, where a run may not end", total );
-
-				if ( under.Type is CellEdge.Path or ParkRideChoice.QueueCellType )
+					Refuse( $"({cx},{cy}) is map type {under.Type}, flags 0x{under.Flags:x}, where a run may not end" );
+				else if ( under.Type is CellEdge.Path or ParkRideChoice.QueueCellType )
+					Refuse( $"({cx},{cy}) is map type {under.Type}, which the original crosses with a hill (not built)", "TRACK_RUN_OVER_PATH" );
+				else if ( (cx, cy) != (x, y) && under.TrackType != 0 )
 				{
-					if ( count )
-						Unimplemented.Report( "TRACK_RUN_OVER_PATH" );
-
-					return new Judged( true, $"({cx},{cy}) is map type {under.Type}, which the original crosses with a hill (not built)", total );
-				}
-
-				// The three other cells: any ride's track but this one's refuses (0x00539b66..0x00539c8c).
-				if ( (cx, cy) != (x, y) && under.TrackType != 0 )
-				{
+					// The three other cells: any ride's track but this one's refuses (0x00539c47..0x00539dbb).
 					var parent = under.TrackType is ParkTrackPieces.KartCell or ParkTrackPieces.WaterCell
 						? state.Record( MapStep.CellAt( under.TrackParentId ).X, MapStep.CellAt( under.TrackParentId ).Y )
 						: under;
 
 					if ( parent.TrackType is not 0 && parent.TrackParentId != owner )
-						return new Judged( true, $"({cx},{cy}) is another ride's track", total );
+						Refuse( $"({cx},{cy}) is another ride's track" );
 				}
 			}
+
+			if ( !onMap )
+				continue;
 
 			var cell = state.Record( x, y );
 
@@ -259,41 +279,33 @@ public static class ParkTrackTool
 			}
 
 			if ( cell.TrackParentId != owner )
-				return new Judged( true, $"({x},{y}) is another ride's track", total );
-
-			if ( cell.TrackType is ParkTrackPieces.KartStation or ParkTrackPieces.WaterStation )
+				Refuse( $"({x},{y}) is another ride's track" );
+			else if ( cell.TrackType is ParkTrackPieces.KartStation or ParkTrackPieces.WaterStation )
+				Refuse( $"({x},{y}) is the station, which a run meets only along its flow (not built)", "TRACK_RUN_INTO_STATION" );
+			else if ( cell.TrackType != type )
+				Refuse( $"({x},{y}) is track type 0x{cell.TrackType:x}" );
+			else if ( !first && !(last && CellEdge.Links( cell.TrackNeighbours ) == 1) )
 			{
-				if ( count )
-					Unimplemented.Report( "TRACK_RUN_INTO_STATION" );
-
-				return new Judged( true, $"({x},{y}) is the station, which a run meets only along its flow (not built)", total );
-			}
-
-			if ( cell.TrackType != type )
-				return new Judged( true, $"({x},{y}) is track type 0x{cell.TrackType:x}", total );
-
-			// The anchor itself, and an end piece the run closes on, are free; anything else of its own is a crossing or a
-			// junction.
-			if ( !first && !(last && CellEdge.Links( cell.TrackNeighbours ) == 1) )
-			{
-				if ( count )
-					Unimplemented.Report( "TRACK_RUN_CROSSING" );
-
-				return new Judged( true, $"({x},{y}) is its own track, which the run would cross or join (not built)", total );
+				// The anchor itself, and an end piece the run closes on, are free; anything else of its own is a crossing or a
+				// junction.
+				Refuse( $"({x},{y}) is its own track, which the run would cross or join (not built)", "TRACK_RUN_CROSSING" );
 			}
 		}
 
-		return total > state.Balance
-			? new Judged( true, $"the run's {total} is more than the balance {state.Balance}", total, OverBalance: true )
-			: new Judged( false, null, total );
+		var over = total > state.Balance;
+
+		if ( over )
+			Refuse( $"the run's {total} is more than the balance {state.Balance}" );
+
+		return new Judged( why != null, why, total, over );
 	}
 
 	/// <summary>What a run did: whether its last cell was track already (the retile pass answers nought), and what it charged.</summary>
 	public readonly record struct Laid( bool MetTrack, int Charged, int NewPieces );
 
 	/// <summary>
-	/// Lays one run from the anchor to its target, pass by pass over every cell, as the click does (<c>0x00526d3c</c>..
-	/// <c>0x00526dd6</c>): the stamp, the links, the flow, the owner, the hill flags and the retile. The clear pass
+	/// Lays one run from the anchor to its target, pass by pass over every cell, as the click does (<c>0x00526daa</c>..
+	/// <c>0x00526ebe</c>): the stamp, the links, the flow, the owner, the hill flags and the retile. The clear pass
 	/// (<c>0x87</c>) clears only what <see cref="Verdict"/> refuses to lay over, so it has nothing to do; the mouths' walks
 	/// (<c>0x86</c>) are counted, <c>TRACK_OPEN_END_PULSE</c>.
 	/// </summary>
@@ -376,7 +388,7 @@ public static class ParkTrackTool
 			}
 		}
 
-		// The hill flags (0x00538a8c): a piece over path or queue would be a hill, which the verdict refuses; over bare
+		// The hill flags (op 0x85, 0x00538a92): a piece over path or queue would be a hill, which the verdict refuses; over bare
 		// ground an end or straight loses its hill flags.
 		foreach ( var (x, y) in cells )
 		{
@@ -439,6 +451,9 @@ public static class ParkTrackTool
 	/// The circuit's walk, <c>TrackRide_WalkCircuit( check )</c> (<c>FUN_0052a970</c>): from the station's first section
 	/// along the ride's heading in 2-cell steps, straight on through a straight or a crossing and out of a bend the way its
 	/// links leave it, until it is back where it started (1) or meets a cell that is not track or has under two links (0).
+	/// The heading is the turn's way, as it is in the original at every click but one: a click on the mouth while the anchor
+	/// is the mouth walks back towards the other mouth there, laying 1 section where this lays 2 (<c>docs/exe/park.md</c>,
+	/// "The walk"; <c>+0x2c</c> is 0 in both).
 	/// Unless checking, the ride's sections go first (<see cref="ParkTrackRideTable.ClearSections"/>) and each cell lays
 	/// one: a bend 5 (links north and east), 6 (north, west), 7 (south, west) or 8 (east, south); a crossing 11; a straight
 	/// 9 east-west or 10 north-south, flagged <c>0x10000</c> on the first two cells, the station's. Checking or not, a bend
@@ -646,7 +661,7 @@ public static class ParkTrackTool
 		var guarded = isMouth || at == otherMouth;
 		var refund = 0;
 
-		// A piece's other cell is cleared through its anchor (0x0053b2d2); a run's cells are all anchors on its grid.
+		// A piece's other cell is cleared through its anchor (0x0053b2c3..0x0053b2ea); a run's cells are all anchors on its grid.
 		if ( cell.TrackType is ParkTrackPieces.KartCell or ParkTrackPieces.WaterCell )
 		{
 			Unimplemented.Report( "TRACK_CLEAR_PIECE_CELL" );
@@ -894,6 +909,16 @@ public static class ParkTrackTool
 			|| !catalogue.TryGet( ride.CatalogueId, out var item ) )
 			return $"backspace: thing {ParkBuildMode.Serves} is gone";
 
+		return BacktrackOn( state, ride, ParkTrackPieces.PieceCost( level, item.TrackType ) );
+	}
+
+	/// <summary>
+	/// <see cref="Backtrack"/> on a park and a ride, the list of run ends being <see cref="ParkBuildMode.Pending"/>: the last
+	/// run is popped, taken back and the anchor put at its start; the mouth's bend is broken where the list is then back at
+	/// its first entry (<c>FUN_0052fc80( count == 1 )</c>, <c>0x0052ff6e</c>..<c>0x00530005</c>).
+	/// </summary>
+	internal static string BacktrackOn( ParkState state, ParkWorld.CatalogueObject ride, int price )
+	{
 		var mouth = ParkTrackPieces.StationOf( ride.CellX, ride.CellY, ride.Angle ).Mouth;
 
 		// The red latch is let go first (FUN_00527940( 0 )), and the next run's first cell links along nothing (0x80).
@@ -908,8 +933,7 @@ public static class ParkTrackTool
 		}
 
 		var balance = state.Balance;
-		var taken = TakeBack( state, ride, end, start, ParkTrackPieces.PieceCost( level, item.TrackType ),
-			backToFirst: ParkBuildMode.Pending.Count == 1 );
+		var taken = TakeBack( state, ride, end, start, price, backToFirst: ParkBuildMode.Pending.Count == 1 );
 
 		ParkBuildMode.AnchorAt( start.X, start.Y );
 		ParkTrackPieces.Current?.Rebuild();
@@ -927,16 +951,26 @@ public static class ParkTrackTool
 
 	/// <summary>
 	/// The armed tool's pointer over a cell (<c>FUN_0052f950</c>, <c>0x0052f9a9</c>): <c>c_track.ani</c> (cursor 6),
-	/// <c>c_noplace</c> (8) where the run's preview is red, and <c>c_cash</c> (<c>0x14</c>) where that is its total above
-	/// the balance. The verdict's <c>c_end</c> (<c>0x12</c>; its latch <c>DAT_00816d4c</c>, set at <c>0x0053a1c6</c> where an
-	/// end of the run meets its own track by rules on its links and way on) is counted where the run's last cell is its own
-	/// track, <c>TRACK_TOOL_CURSOR_END</c>; <c>c_link</c> (5) is the path verdict's alone.
+	/// <c>c_noplace</c> (8) where the run's preview is red, and <c>c_cash</c> (<c>0x14</c>) where its total passes the
+	/// balance, which wins over the red even where the run is refused for something else too. The verdict's <c>c_end</c>
+	/// (<c>0x12</c>; its latch <c>DAT_00816d4c</c>, set at <c>0x0053a1c6</c> where an end of the run meets its own track by
+	/// rules on its links and way on) is counted where the run's last cell is its own track, <c>TRACK_TOOL_CURSOR_END</c>;
+	/// <c>c_link</c> (5) is the path verdict's alone.
 	/// </summary>
 	public static Input.CursorTypes CursorOver( int x, int y )
 	{
 		if ( Level.Current is not { ParkState: { } state } level || level.Catalogue is not { } catalogue
 			|| state.Objects.FirstOrDefault( o => o.ThingId == ParkBuildMode.Serves ) is not { ThingId: not 0 } ride
-			|| !catalogue.TryGet( ride.CatalogueId, out var item ) || !ParkBuildMode.Anchored )
+			|| !catalogue.TryGet( ride.CatalogueId, out var item ) )
+			return Input.CursorTypes.Track;
+
+		return CursorFor( state, ride, ParkTrackPieces.PieceCost( level, item.TrackType ), x, y );
+	}
+
+	/// <summary><see cref="CursorOver"/> for a park and the ride the tool serves, the anchor being <see cref="ParkBuildMode.Anchor"/>.</summary>
+	internal static Input.CursorTypes CursorFor( ParkState state, ParkWorld.CatalogueObject ride, int price, int x, int y )
+	{
+		if ( !ParkBuildMode.Anchored )
 			return Input.CursorTypes.Track;
 
 		var type = ParkBuildMode.Current == ParkBuildMode.WaterTrack ? ParkTrackPieces.WaterAnchor : ParkTrackPieces.KartAnchor;
@@ -946,8 +980,7 @@ public static class ParkTrackTool
 		if ( target != anchor && ParkState.OnMap( target.X, target.Y ) && state.Record( target.X, target.Y ).TrackType == type )
 			Unimplemented.Report( "TRACK_TOOL_CURSOR_END" );
 
-		var judged = Verdict( state, type, (ushort)MapStep.CellId( ride.CellX, ride.CellY ), anchor, target,
-			ParkTrackPieces.PieceCost( level, item.TrackType ), count: false );
+		var judged = Verdict( state, type, (ushort)MapStep.CellId( ride.CellX, ride.CellY ), anchor, target, price, count: false );
 
 		return !judged.Refused ? Input.CursorTypes.Track : judged.OverBalance ? Input.CursorTypes.Cash : Input.CursorTypes.NoGo;
 	}
@@ -958,16 +991,22 @@ public static class ParkTrackTool
 	/// </summary>
 	public static string Arm( int x, int y )
 	{
-		if ( Level.Current is not { ParkState: { } state } level || level.Catalogue is not { } catalogue )
+		if ( Level.Current is not { ParkState: { } state } || Level.Current.Catalogue is not { } catalogue )
 			return "track: a park has to be loaded";
 
+		return ArmOn( state, id => catalogue.TryGet( id, out var item ) ? item.TrackType : null, x, y );
+	}
+
+	/// <summary><see cref="Arm"/> on a park, the track type of a catalogue id being <paramref name="trackTypeOf"/> (null for none).</summary>
+	internal static string ArmOn( ParkState state, Func<int, int?> trackTypeOf, int x, int y )
+	{
 		if ( AnchorUnder( state, x, y ) is not { } anchor )
 			return $"track: ({x},{y}) is no piece of track";
 
 		var owner = state.Record( anchor.X, anchor.Y ).TrackParentId;
 
 		if ( state.Objects.FirstOrDefault( o => MapStep.CellId( o.CellX, o.CellY ) == owner ) is not { ThingId: not 0 } ride
-			|| !catalogue.TryGet( ride.CatalogueId, out var item ) || ParkTrackPieces.AnchorOf( item.TrackType ) == 0 )
+			|| trackTypeOf( ride.CatalogueId ) is not { } trackType || ParkTrackPieces.AnchorOf( trackType ) == 0 )
 			return $"track: the piece at ({anchor.X},{anchor.Y}) belongs to no track ride";
 
 		var walk = WalkToOpenEnd( state, ride.CellX, ride.CellY, ride.Angle );
@@ -978,7 +1017,7 @@ public static class ParkTrackTool
 			return $"track: thing {ride.ThingId}'s track is closed, and editing a closed loop is not built";
 		}
 
-		var mode = item.TrackType == 2 ? ParkBuildMode.WaterTrack : ParkBuildMode.KartTrack;
+		var mode = trackType == 2 ? ParkBuildMode.WaterTrack : ParkBuildMode.KartTrack;
 		var armed = ParkBuildMode.ArmAt( mode, ride.ThingId, walk.End.X, walk.End.Y );
 
 		ParkBuildMode.ClearPending();
@@ -994,6 +1033,30 @@ public static class ParkTrackTool
 		return $"{armed} (the open end, {walk.Pending.Count} pending)";
 	}
 
+	/// <summary>What a click of the armed tool that was not refused comes to.</summary>
+	public enum RunOutcome
+	{
+		/// <summary>The run was laid and the anchor moves to its end; the tool stays.</summary>
+		Moved,
+
+		/// <summary>The run met track, or the click did not move the anchor: the circuit is walked and the tool put away.</summary>
+		Closed
+	}
+
+	/// <summary>
+	/// Whether a click lays its run: one that moves the anchor does, and so does one on the mouth while the anchor is the
+	/// mouth, which falls through the click's passes where any other click that does not move the anchor goes straight to
+	/// the walk (<c>0x00526d86</c>..<c>0x00526da4</c>).
+	/// </summary>
+	public static bool LaysRun( (int X, int Y) anchor, (int X, int Y) target, (int X, int Y) mouth ) => anchor != target || mouth == target;
+
+	/// <summary>
+	/// What a click that was not refused comes to: where the anchor moves and the run did not meet track, the anchor moves on
+	/// (<c>0x0052718c</c>); else the click closes the tool (<c>0x00526eff</c>).
+	/// </summary>
+	public static RunOutcome OutcomeOf( (int X, int Y) anchor, (int X, int Y) target, bool metTrack )
+		=> anchor != target && !metTrack ? RunOutcome.Moved : RunOutcome.Closed;
+
 	/// <summary>
 	/// One click of the armed tool. A refused run lays nothing, plays <c>0xaf</c> and puts the tool away, the preview's red
 	/// (<c>0x00524a63</c>..<c>0x00524acd</c>). A run that ends on track, or a click that does not move the anchor, closes
@@ -1005,9 +1068,6 @@ public static class ParkTrackTool
 		if ( Level.Current is not { ParkState: { } state } level || level.Catalogue is not { } catalogue )
 			return "track: a park has to be loaded";
 
-		var mode = ParkBuildMode.Current;
-		var type = mode == ParkBuildMode.WaterTrack ? ParkTrackPieces.WaterAnchor : ParkTrackPieces.KartAnchor;
-
 		if ( state.Objects.FirstOrDefault( o => o.ThingId == ParkBuildMode.Serves ) is not { ThingId: not 0 } ride
 			|| !catalogue.TryGet( ride.CatalogueId, out var item ) )
 		{
@@ -1015,8 +1075,18 @@ public static class ParkTrackTool
 			return $"track: thing {ParkBuildMode.Serves} is gone - the tool is put away";
 		}
 
+		var script = ParkRides.Current?.Scheduler.Scripts.FirstOrDefault( s => s.ThingId == ride.ThingId );
+
+		return RunOn( state, level.Park, script, ride, item.TrackType, ParkTrackPieces.PieceCost( level, item.TrackType ), clickX, clickY,
+			pressReachedTheTool );
+	}
+
+	/// <summary><see cref="Run"/> on a park and the ride the tool serves, its ride script (or null) and its piece price.</summary>
+	internal static string RunOn( ParkState state, IParkInitialState? park, RideScript? script, ParkWorld.CatalogueObject ride,
+		int trackType, int price, int clickX, int clickY, bool pressReachedTheTool )
+	{
+		var type = ParkBuildMode.Current == ParkBuildMode.WaterTrack ? ParkTrackPieces.WaterAnchor : ParkTrackPieces.KartAnchor;
 		var owner = (ushort)MapStep.CellId( ride.CellX, ride.CellY );
-		var price = ParkTrackPieces.PieceCost( level, item.TrackType );
 		var anchor = ParkBuildMode.Anchor;
 		var target = TargetOf( anchor, clickX, clickY );
 		var mouth = ParkTrackPieces.StationOf( ride.CellX, ride.CellY, ride.Angle ).Mouth;
@@ -1034,7 +1104,7 @@ public static class ParkTrackTool
 
 		var laid = new Laid( false, 0, 0 );
 
-		if ( anchor != target || mouth == target )
+		if ( LaysRun( anchor, target, mouth ) )
 		{
 			laid = LayRun( state, type, owner, anchor, target, price );
 			ParkBuildMode.Push( target.X, target.Y );
@@ -1043,27 +1113,20 @@ public static class ParkTrackTool
 
 		var report = $"run ({anchor.X},{anchor.Y}) to ({target.X},{target.Y}), {laid.NewPieces} new piece(s), {laid.Charged} charged, balance {state.Balance}";
 
-		if ( anchor != target && !laid.MetTrack )
+		if ( OutcomeOf( anchor, target, laid.MetTrack ) == RunOutcome.Moved )
 		{
 			ParkBuildMode.AnchorAt( target.X, target.Y );
 			return $"track: {report} - the anchor moves to ({target.X},{target.Y})";
 		}
 
 		// The circuit's walk into the ride's +0x2c, and with 1 and the open guard the ride opened (0x00526f02..0x00526f2d);
-		// then the pieces' clips; then the anchor goes and, the queue's pointer nought, the tool with it.
+		// then the pieces' clips; then the anchor goes and the tool with it. The original hands the queue tool over instead
+		// where [0x008186c0], the queue node the put-down laid (FUN_0052a050), is still set (mode 3 at the entrance's front,
+		// 0x00526f84..0x00527004); ours always puts the tool away and counts nothing here, as it is not known whether the
+		// original's right click leaves that pointer set (FUN_0052f200 writes it nowhere, its eleven writers are in FUN_00524960).
 		var (valid, _) = WalkCircuit( state, ride, check: false );
-		var script = ParkRides.Current?.Scheduler.Scripts.FirstOrDefault( s => s.ThingId == ride.ThingId );
 
-		if ( state.TryObject( ride.ThingId, out var walked ) )
-		{
-			state.ReplaceObject( walked with { IsTrackRideValid = valid } );
-
-			if ( script != null )
-				script.TrackRideValid = valid;
-
-			if ( valid != 0 && ParkRideOperation.MayOpen( level.Park, walked, item.TrackType ) )
-				ParkRideOperation.Open( state, script, ride.ThingId );
-		}
+		Settle( state, park, script, ride.ThingId, trackType, valid );
 
 		// The pieces' clip 0xc from the mouth (TrackRide_PlayPiecesFromMouth, and with no circuit from the open end too).
 		Unimplemented.Report( "TRACK_PIECES_CLIP" );
@@ -1072,5 +1135,24 @@ public static class ParkTrackTool
 		ParkBuildMode.Disarm();
 
 		return $"track: {report} - {(laid.MetTrack ? "it met track" : "the anchor did not move")}, +0x2c {valid}, the tool put away";
+	}
+
+	/// <summary>
+	/// The closing click's tail after the walk (<c>0x00526f0d</c>..<c>0x00526f2d</c>): the walk's answer stored in the ride's
+	/// <c>+0x2c</c> (<c>mIsTrackRideValid</c>) and its script, and with 1 and the open guard (<c>FUN_004df290</c>) the ride
+	/// opened (<c>FUN_004df390</c>).
+	/// </summary>
+	internal static void Settle( ParkState state, IParkInitialState? park, RideScript? script, int thingId, int trackType, int valid )
+	{
+		if ( !state.TryObject( thingId, out var walked ) )
+			return;
+
+		state.ReplaceObject( walked with { IsTrackRideValid = valid } );
+
+		if ( script != null )
+			script.TrackRideValid = valid;
+
+		if ( valid != 0 && ParkRideOperation.MayOpen( park, walked, trackType ) )
+			ParkRideOperation.Open( state, script, thingId );
 	}
 }

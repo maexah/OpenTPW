@@ -2738,7 +2738,7 @@ public class Level
 		}
 
 		// A KART OR WATER RIDE'S PIECE OF TRACK ARMS THE TRACK TOOL at its track's open end - the hover's category 5
-		// (FUN_004879d0, 0x00487f6c), mode 0xe or 0x13 on the press and 0xb or 0x10 on the release.
+		// (FUN_004879d0, 0x00487f39..0x00487f69), mode 0xe or 0x13 on the press and 0xb or 0x10 on the release.
 		if ( ParkState is { } trackState && ParkTrackTool.AnchorUnder( trackState, cellX, cellY ) is not null )
 			return $"world click: {ParkTrackTool.Arm( cellX, cellY )}";
 

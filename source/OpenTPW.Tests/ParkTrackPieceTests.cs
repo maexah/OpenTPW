@@ -1,4 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
@@ -142,10 +143,27 @@ public class ParkTrackPieceTests
 			state.Record( 61, 55 ).TrackType, state.Record( 61, 61 ).TrackType ) );
 		Assert.AreEqual( (byte)0x10, state.Record( 61, 55 ).TrackNeighbours, "the mouth at 90 links south, back to the station" );
 
+		// Facing north the way on is 0x01; the mouth's link is the one back, south, and the other mouth's the way on.
+		var north = (ushort)MapStep.CellId( 60, 60 );
+
+		Assert.AreEqual( (0xb, (byte)0x01, (byte)0x01, north, 3, 1, 180), Fields( state, 61, 61 ), "the other mouth at 90" );
+		Assert.AreEqual( (0xd, (byte)0x11, (byte)0x01, north, 0, 0, 0), Fields( state, 61, 59 ) );
+		Assert.AreEqual( (0xd, (byte)0x11, (byte)0x01, north, 0, 0, 0), Fields( state, 61, 57 ) );
+		Assert.AreEqual( (0xb, (byte)0x10, (byte)0x01, north, 3, 1, 0), Fields( state, 61, 55 ), "the mouth at 90" );
+
 		ParkTrackPieces.LayStation( state, 1, 90, 60, 270 );
 
 		Assert.AreEqual( (0xd, 0xd, 0xb, 0xb), (state.Record( 88, 60 ).TrackType, state.Record( 88, 62 ).TrackType,
 			state.Record( 88, 64 ).TrackType, state.Record( 88, 58 ).TrackType ) );
+
+		// Facing south the way on is 0x10: the mouth at (88,64) links north, back to the station, piece row 1 at 180; the
+		// other mouth at (88,58) links south, row 1 at 0.
+		var south = (ushort)MapStep.CellId( 90, 60 );
+
+		Assert.AreEqual( (0xb, (byte)0x01, (byte)0x10, south, 3, 1, 180), Fields( state, 88, 64 ), "the mouth at 270" );
+		Assert.AreEqual( (0xb, (byte)0x10, (byte)0x10, south, 3, 1, 0), Fields( state, 88, 58 ), "the other mouth at 270" );
+		Assert.AreEqual( (0xd, (byte)0x11, (byte)0x10, south, 0, 0, 0), Fields( state, 88, 60 ) );
+		Assert.AreEqual( (0xd, (byte)0x11, (byte)0x10, south, 0, 0, 0), Fields( state, 88, 62 ) );
 
 		state = new ParkState( parkIsClosed: false, visitorsToDate: 0 );
 		ParkTrackPieces.LayStation( state, 2, 18, 18, 0 );
@@ -215,6 +233,108 @@ public class ParkTrackPieceTests
 		Assert.AreEqual( 2, Caps( "gk_trckS", ParkTrackPieces.MaskOf( 2 ) ) );
 		Assert.AreEqual( 1, Caps( "gk_trckQ", ParkTrackPieces.MaskOf( 1 ) ) );
 		Assert.AreEqual( 0, Caps( "gk_trckB", ParkTrackPieces.MaskOf( 3 ) ) );
+	}
+
+	/// <summary>
+	/// A straight's two end caps and an end's one, from the mask a standing piece asks its model to hide (<c>CapMaskOf</c>:
+	/// the row its anchor's record holds): the model of a straight laid by a run, <c>gk_trckS</c>, has two nodes the mask
+	/// hides, and its end piece <c>gk_trckQ</c> one.
+	/// </summary>
+	[TestMethod]
+	public void APlacedStraightHidesItsTwoCapNodes()
+	{
+		var data = GameData.Required();
+		var state = new ParkState( parkIsClosed: false, visitorsToDate: 0, balance: 60000 );
+		ParkTrackTool.Forget();
+		ParkTrackPieces.LayStation( state, 1, 30, 24, 0 );
+		ParkTrackTool.LayRun( state, 0xb, (ushort)MapStep.CellId( 30, 24 ), (34, 25), (34, 29), 200 );
+
+		int Hidden( int x, int y )
+		{
+			var piece = ParkTrackPieces.PieceAt( x, y, state.Record( x, y ) )!.Value;
+
+			return new ModelFile( new MemoryStream( data.ReadAllBytes( $"levels/jungle/rides/gokarts/{piece.Model}.md2" ) ) ).Nodes
+				.Count( node => (node.IdHide & ParkTrackPieces.CapMaskOf( piece )) != 0 );
+		}
+
+		Assert.AreEqual( "gk_trckS", ParkTrackPieces.PieceAt( 34, 27, state.Record( 34, 27 ) )!.Value.Model );
+		Assert.AreEqual( 2, Hidden( 34, 27 ), "a straight" );
+		Assert.AreEqual( 1, Hidden( 34, 29 ), "an end" );
+		Assert.AreEqual( 0, Hidden( 34, 25 ), "a bend" );
+	}
+
+	/// <summary>
+	/// The track record's four fields as the stock park holds them, read through <see cref="ParkWorld"/>: its 143 boundary
+	/// anchors (track type 25) of family 5, their ways on, flags, turns and rows as the independent reader <c>parkfile.py -B</c>
+	/// counts them in <c>Easymode.TPWI</c> (Q620).
+	/// </summary>
+	[TestMethod]
+	public void TheStockParksBoundaryAnchorsReadTheirWayOnTileWordsAndFlags()
+	{
+		var data = GameData.Required();
+		using var stream = new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var anchors = new ParkWorld( new SaveReader( stream ).ReadFile() ).Cells.Where( cell => cell.TrackType == 25 ).ToList();
+
+		Assert.AreEqual( 143, anchors.Count );
+		Assert.IsTrue( anchors.All( cell => cell.TrackTileSet == 5 ), "family 5" );
+
+		// (way on, flags, turn): a boundary's links are its own field (mHoardingNeighbours), which the track fields here do not read.
+		var byWord = anchors.GroupBy( cell => (cell.TrackDirection, cell.TrackFlags, cell.TrackTileAngle) )
+			.ToDictionary( group => group.Key, group => group.Count() );
+		var expected = new Dictionary<(byte, ushort, int), int>
+		{
+			[(1, 0, 0)] = 21, [(1, 0, 180)] = 2, [(1, 0, 270)] = 4, [(4, 0, 0)] = 3, [(4, 0, 90)] = 38, [(4, 0, 270)] = 2,
+			[(16, 0, 0)] = 1, [(16, 0, 90)] = 3, [(16, 0, 180)] = 23, [(64, 0, 90)] = 3, [(64, 0, 180)] = 2, [(64, 0, 270)] = 40,
+			[(64, 1, 270)] = 1
+		};
+
+		CollectionAssert.AreEquivalent( expected.ToList(), byWord.ToList() );
+
+		var rows = anchors.GroupBy( cell => cell.TrackTileIndex ).ToDictionary( group => group.Key, group => group.Count() );
+
+		CollectionAssert.AreEquivalent( new Dictionary<int, int> { [2] = 90, [22] = 19, [25] = 13, [3] = 12, [19] = 8, [11] = 1 }.ToList(), rows.ToList() );
+	}
+
+	/// <summary>
+	/// A laid station and a run written over the park file and read back: every track field of each cell the same, the
+	/// way on, the three tile words and the overlap counter included.
+	/// </summary>
+	[TestMethod]
+	public void ALaidStationAndRunsTrackFieldsWriteAndReadBack()
+	{
+		var data = GameData.Required();
+		using var stream = new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var shipped = new ParkWorld( new SaveReader( stream ).ReadFile() );
+		var state = new ParkState( shipped );
+
+		ParkTrackPieces.LayStation( state, 1, 30, 24, 0 );
+		ParkTrackTool.LayRun( state, 0xb, (ushort)MapStep.CellId( 30, 24 ), (34, 25), (34, 29), 200 );
+
+		var cells = new Dictionary<int, ParkWorld.MapCell>();
+
+		for ( var y = 23; y <= 30; ++y )
+		{
+			for ( var x = 26; x <= 37; ++x )
+				cells[(y * ParkWorld.MapSize) + x] = state.Record( x, y );
+		}
+
+		var body = ParkFileWriter.Body( shipped, new ParkFileWriter.Running( shipped.GameTick, false, 13, 0, shipped.Camera.Saved!.Value, Cells: cells ) );
+		var written = new ParkWorld( body );
+
+		Assert.AreEqual( 0xb, written.CellAt( 34, 25 ).TrackType );
+
+		foreach ( var (index, cell) in cells )
+		{
+			var back = written.Cells[index];
+
+			Assert.AreEqual( (cell.TrackType, cell.TrackNeighbours, cell.TrackDirection, cell.TrackFlags, cell.TrackParentId, cell.TrackTileSet, cell.TrackTileIndex, cell.TrackTileAngle, cell.TrackOverlapCounter),
+				(back.TrackType, back.TrackNeighbours, back.TrackDirection, back.TrackFlags, back.TrackParentId, back.TrackTileSet, back.TrackTileIndex, back.TrackTileAngle, back.TrackOverlapCounter),
+				$"cell ({index % ParkWorld.MapSize},{index / ParkWorld.MapSize})" );
+		}
+
+		Assert.AreEqual( ((byte)0x50, (byte)0x10, (short)1, 3, 90),
+			(written.CellAt( 34, 25 ).TrackNeighbours, written.CellAt( 34, 25 ).TrackDirection, written.CellAt( 34, 25 ).TrackOverlapCounter,
+				written.CellAt( 34, 25 ).TrackTileIndex, written.CellAt( 34, 25 ).TrackTileAngle ) );
 	}
 
 	private static (int Type, byte Mask, byte Direction) Head( ParkState state, int x, int y )

@@ -108,6 +108,28 @@ filed the items that cite it.
     (`0x00462614`); the instancer `0x00463060` (flags `0x33a`, kart `0x522b90`, water `0x522d50`) calls `0x00469940` (`0x00463347`), which calls
     `0x00469a80` per node (cell triangle by flag `0x4`, Q398's note). Draw them so, not as flat plates (counted `TRACK_PIECE_DRAPE`). Not proven: whether the cars' sampler reads the draped copy.
     The same call also conforms every flag-8 object's base vertices to the terrain corners (Q750; fork watch 2026-10-27, verify-world H1).
+- [ ] **Q757. Whether the original's closing click of the karts' and water ride's track tool hands over the queue tool, and
+  whether a count is owed.** From the Q762 review (the unsettled note; `docs/exe/park.md`, "The track tool"). The
+  closing click (`0x00526eff`..`0x00526f83`, then the `0x80` stores at `0x00526fa7`) reads `[0x008186c0]`, the queue node
+  `FUN_0052a050` hands the put-down (`0x00524dd7`, `0x00525269`; the move's `0x00525446`, `0x005258a7`); where it is
+  non-zero the click installs mode 3 at the entrance's front (`0x00526f84`..`0x00527004`, `FUN_0052f580( 3, 0 )`) and
+  clears it (`0x00527056`) instead of putting the tools away. Its eleven writers are all in `FUN_00524960` and the right
+  click (`FUN_0052f200( 0, 1 )`, `0x00488434`) writes none by the listing, so a kart put-down, the right click that
+  ends the queue tool, then the track tool armed and closed may hand the queue tool back. `ParkTrackTool.RunOn` always
+  puts the tool away and counts nothing there (its comment says so). Watch `0x008186c0` in the original under Proton
+  (`original/watch.sh`: the writers and the value) through a kart put-down, the right click, the arming click and the
+  closing click, and settle it: if it stays set, build the hand-over (the queue tool anchored at the entrance's front,
+  `ParkBuildMode.ArmAt( Queue, ... )`) or count it (`TRACK_TOOL_CLOSE_TO_QUEUE`) where ours reaches that state; if the
+  right click clears it by another path, say so in `park.md` and drop this note. `A-load.log` closed to mode 0 at 221.95 s
+  after its queue tool had gone with no charge (144.90 to 153.94 s), which argues the pointer was nought there.
+- [ ] **Q758. A click on the mouth while the anchor is the mouth walks back towards the other mouth in the original; ours walks
+  forward.** From the Q763 review (VERIFY-4, the residual of finding 1; `park.md`, "The walk"). In that one case op `0x86`
+  runs `TrackRide_ShapeFromMouth` (answers 0 on an open mouth) and then `ShapeFromOtherMouth`, whose write of the
+  opposite heading (`0x0052cd48`) the walk reads: 1 section in the original, 2 in ours, `+0x2c` 0 in both, nothing a
+  player sees reads the difference (`ParkTrackRideTable.LayoutOf` of a run with no bend is the same). Give
+  `WalkCircuit` the heading as a parameter and pass `CellEdge.Opposite( HeadingOf( angle ) )` from `RunOn` when
+  `anchor == target && mouth == target` and the circuit from the mouth does not close; keep the turn's way everywhere
+  else (the finder's "opposite on every open no-move close" is wrong). Test it with a bought ride closed at once.
 - [ ] **Q588. Dino Karts race for guests.** After Q587. The -4 record (`Bumper_LayRide`'s grid and start buoys, the
   template's 3 laps, 2048 arrival), `BUMP 7` to state 1 and the race's first buoy, `BUMP 4` a kart a rider (mesh
   `cars % 4`), the retarget's grid and race arms with the thrust bonus, the buoy arm's laps, state 3 and the end at the

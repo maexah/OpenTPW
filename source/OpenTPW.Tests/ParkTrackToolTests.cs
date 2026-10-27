@@ -1,4 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.IO;
 using System.Linq;
 
 namespace OpenTPW.Tests;
@@ -13,6 +14,11 @@ namespace OpenTPW.Tests;
 public class ParkTrackToolTests
 {
 	private static readonly ushort Owner = (ushort)MapStep.CellId( 30, 24 );
+
+	/// <summary>The tool's statics (the mode, its anchor and the list of run ends) are the program's one set; each test starts and leaves them clear.</summary>
+	[TestInitialize]
+	[TestCleanup]
+	public void ForgetTheTool() => ParkBuildMode.Forget();
 
 	private static ParkState Bought( int balance = 53522 )
 	{
@@ -356,20 +362,299 @@ public class ParkTrackToolTests
 		Assert.AreEqual( Section( 13, 0, 28, 27 ), sections[8], "north-south with an add-on" );
 	}
 
-	/// <summary>A ride whose loop the tool closes takes the walk's 1 into <c>+0x2c</c>, and opens only where the open guard lets it.</summary>
+	private static int Valid( ParkState state, int thingId ) => state.TryObject( thingId, out var ride ) ? ride.IsTrackRideValid : -1;
+
+	/// <summary>
+	/// A run the balance cannot pay is refused: nothing is laid and the tool is put away (<c>0x00524a63</c>). Made to fail by
+	/// leaving the tool armed, or by laying the run.
+	/// </summary>
 	[TestMethod]
-	public void ARideWithNoQueueJoinedIsValidAndNotOpened()
+	public void ARefusedClickLaysNothingAndPutsTheToolAway()
+	{
+		var (state, ride) = Standing( 1, 30, 24, 300 );
+		ParkBuildMode.ArmAt( ParkBuildMode.KartTrack, ride.ThingId, 34, 25 );
+
+		var said = ParkTrackTool.RunOn( state, null, null, ride, 1, 200, 34, 29, true );
+
+		Assert.IsTrue( said.Contains( "refused" ), said );
+		Assert.AreEqual( (ParkBuildMode.None, false), (ParkBuildMode.Current, ParkBuildMode.Anchored), "the tool is put away" );
+		Assert.AreEqual( (300, 0), (state.Balance, state.Record( 34, 27 ).TrackType), "and nothing is laid or charged" );
+	}
+
+	/// <summary>A click that lays a run and does not meet track moves the anchor to its end and keeps the tool armed.</summary>
+	[TestMethod]
+	public void AClickThatMovesTheAnchorKeepsTheToolArmed()
 	{
 		var (state, ride) = Standing( 1, 30, 24 );
+		ParkBuildMode.ArmAt( ParkBuildMode.KartTrack, ride.ThingId, 34, 25 );
+		ParkBuildMode.Push( 34, 25 );
 
+		ParkTrackTool.RunOn( state, null, null, ride, 1, 200, 34, 29, true );
+
+		Assert.AreEqual( 53122, state.Balance );
+		Assert.AreEqual( (ParkBuildMode.KartTrack, (34, 29)), (ParkBuildMode.Current, ParkBuildMode.Anchor) );
+		CollectionAssert.AreEqual( new[] { (34, 25), (34, 29) }, ParkBuildMode.Pending.ToArray(), "the run's end is pushed" );
+		Assert.AreEqual( 0, Valid( state, ride.ThingId ), "no circuit walked yet" );
+	}
+
+	/// <summary>
+	/// A click that does not move the anchor lays nothing and closes the tool, unless it is on the mouth while the anchor
+	/// is the mouth, which lays (<c>0x00526d86</c>..<c>0x00526da4</c>). Made to fail by dropping the mouth's case, or by
+	/// laying on every such click.
+	/// </summary>
+	[TestMethod]
+	public void AClickThatDoesNotMoveTheAnchorLaysOnlyOnTheMouth()
+	{
+		Assert.IsTrue( ParkTrackTool.LaysRun( (34, 25), (34, 29), (34, 25) ), "a run that moves the anchor" );
+		Assert.IsTrue( ParkTrackTool.LaysRun( (34, 25), (34, 25), (34, 25) ), "on the mouth while the anchor is the mouth" );
+		Assert.IsFalse( ParkTrackTool.LaysRun( (34, 29), (34, 29), (34, 25) ), "anywhere else on the anchor" );
+
+		var (state, ride) = Standing( 1, 30, 24 );
+		ParkBuildMode.ArmAt( ParkBuildMode.KartTrack, ride.ThingId, 34, 25 );
+		ParkBuildMode.Push( 34, 25 );
+
+		Assert.AreEqual( (short)0, state.Record( 34, 25 ).TrackOverlapCounter, "a bought mouth has been laid over by nothing" );
+
+		ParkTrackTool.RunOn( state, null, null, ride, 1, 200, 34, 25, true );
+
+		Assert.AreEqual( ((short)1, 2), (state.Record( 34, 25 ).TrackOverlapCounter, ParkBuildMode.Pending.Count), "the mouth's own piece counted again, and pushed" );
+		Assert.AreEqual( (ParkBuildMode.None, 0), (ParkBuildMode.Current, Valid( state, ride.ThingId )), "closed on an open loop: +0x2c 0" );
+
+		ParkBuildMode.Forget();
+		(state, ride) = Standing( 1, 30, 24 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 25), (34, 29), 200 );
+		ParkBuildMode.ArmAt( ParkBuildMode.KartTrack, ride.ThingId, 34, 29 );
+		ParkBuildMode.Push( 34, 29 );
+		var before = state.Record( 34, 29 ).TrackOverlapCounter;
+
+		ParkTrackTool.RunOn( state, null, null, ride, 1, 200, 34, 29, true );
+
+		Assert.AreEqual( (before, 1), (state.Record( 34, 29 ).TrackOverlapCounter, ParkBuildMode.Pending.Count), "off the mouth it lays nothing" );
+		Assert.AreEqual( ParkBuildMode.None, ParkBuildMode.Current );
+	}
+
+	[TestMethod]
+	public void AClickMovesTheAnchorUnlessItMetTrack()
+	{
+		Assert.AreEqual( ParkTrackTool.RunOutcome.Moved, ParkTrackTool.OutcomeOf( (34, 25), (34, 29), false ) );
+		Assert.AreEqual( ParkTrackTool.RunOutcome.Closed, ParkTrackTool.OutcomeOf( (34, 25), (34, 29), true ), "a run that met track closes" );
+		Assert.AreEqual( ParkTrackTool.RunOutcome.Closed, ParkTrackTool.OutcomeOf( (34, 25), (34, 25), false ), "so does a click that moves nothing" );
+	}
+
+	/// <summary>
+	/// The run that closes the loop puts the tool away and stores the walk's 1 in the ride's <c>+0x2c</c>; the ride is not
+	/// opened, no queue being joined. Made to fail by keeping the tool armed on a run that met track, by moving the anchor
+	/// there, or by not storing the walk's answer.
+	/// </summary>
+	[TestMethod]
+	public void TheRunThatClosesTheLoopPutsTheToolAwayAndStoresTheWalk()
+	{
+		var (state, ride) = Standing( 1, 30, 24 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 25), (34, 29), 200 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 29), (28, 29), 200 );
+		ParkBuildMode.ArmAt( ParkBuildMode.KartTrack, ride.ThingId, 28, 29 );
+
+		var said = ParkTrackTool.RunOn( state, null, null, ride, 1, 200, 28, 25, true );
+
+		Assert.IsTrue( said.Contains( "it met track" ) && said.Contains( "+0x2c 1" ), said );
+		Assert.AreEqual( (ParkBuildMode.None, false, 1), (ParkBuildMode.Current, ParkBuildMode.Anchored, Valid( state, ride.ThingId )) );
+		Assert.AreEqual( 0, state.Objects.Single( o => o.ThingId == ride.ThingId ).CanLoad, "no queue joined, so not opened" );
+		Assert.AreEqual( 10, state.TrackRides.SectionsOf( ride.TrackRide ).Count, "the walk laid the circuit" );
+	}
+
+	/// <summary>
+	/// The tail of the closing click (<c>0x00526f0d</c>..<c>0x00526f2d</c>): <c>+0x2c</c> stored, and the ride opened where
+	/// the walk answered 1 and its queue is joined. A shipped ride whose back of queue is joined, shut by hand. Made to fail
+	/// by not storing, by opening on a 0, or by not opening on a 1.
+	/// </summary>
+	[TestMethod]
+	public void TheClosingClicksTailStoresTheWalkAndOpensOnlyOnOne()
+	{
+		FileSystem = GameData.Required();
+		using var stream = new MemoryStream( FileSystem.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
+		var state = new ParkState( world );
+		var joined = state.Objects.First( o => ParkRideOperation.BackOfQueueConnected( world, o ) && o.RequestedService == 0
+			&& o.State is not (1 or 2 or 4) );
+
+		void Shut( int valid ) => state.ReplaceObject( state.Objects.Single( o => o.ThingId == joined.ThingId ) with { CanLoad = 0, IsTrackRideValid = valid } );
+
+		Shut( 5 );
+		ParkTrackTool.Settle( state, world, null, joined.ThingId, 1, 0 );
+
+		Assert.AreEqual( (0, 0), (Valid( state, joined.ThingId ), state.Objects.Single( o => o.ThingId == joined.ThingId ).CanLoad ), "a 0 is stored and opens nothing" );
+
+		Shut( 5 );
+		ParkTrackTool.Settle( state, world, null, joined.ThingId, 1, 1 );
+
+		Assert.AreEqual( (1, 1), (Valid( state, joined.ThingId ), state.Objects.Single( o => o.ThingId == joined.ThingId ).CanLoad ), "a 1 is stored and opens the ride whose queue is joined" );
+
+		Shut( 5 );
+		ParkTrackTool.Settle( state, null, null, joined.ThingId, 1, 1 );
+
+		Assert.AreEqual( (1, 0), (Valid( state, joined.ThingId ), state.Objects.Single( o => o.ThingId == joined.ThingId ).CanLoad ), "the guard refuses with no queue joined" );
+	}
+
+	/// <summary>Arming walks the track to its open end, which becomes the anchor, and a closed loop is not armed but counted.</summary>
+	[TestMethod]
+	public void ArmingAnchorsAnOpenLoopAtItsEndAndRefusesAClosedOne()
+	{
+		var (state, ride) = Standing( 1, 30, 24 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 25), (34, 29), 200 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 29), (28, 29), 200 );
+
+		Assert.IsTrue( ParkTrackTool.ArmOn( state, _ => 1, 35, 26 ).Contains( "open end" ) );
+		Assert.AreEqual( (ParkBuildMode.KartTrack, ride.ThingId, (28, 29)), (ParkBuildMode.Current, ParkBuildMode.Serves, ParkBuildMode.Anchor) );
+		CollectionAssert.AreEqual( new[] { (34, 25), (34, 25), (34, 29), (28, 29) }, ParkBuildMode.Pending.ToArray() );
+
+		ParkBuildMode.Forget();
+		ParkTrackTool.LayRun( state, 0xb, Owner, (28, 29), (28, 25), 200 );
+
+		var said = ParkTrackTool.ArmOn( state, _ => 1, 35, 26 );
+
+		Assert.IsTrue( said.Contains( "closed" ), said );
+		Assert.AreEqual( (ParkBuildMode.None, false, 0), (ParkBuildMode.Current, ParkBuildMode.Anchored, ParkBuildMode.Pending.Count), "a closed loop arms nothing" );
+		Assert.IsFalse( ParkTrackTool.ArmOn( state, _ => 1, 30, 25 ).Contains( "open end" ), "a station arms nothing" );
+	}
+
+	[TestMethod]
+	public void ArmingAWaterRideTakesTheWaterMode()
+	{
+		var (state, ride) = Standing( 2, 18, 18, 47452 );
+
+		ParkTrackTool.ArmOn( state, _ => 2, 22, 19 );
+
+		Assert.AreEqual( (ParkBuildMode.WaterTrack, ride.ThingId), (ParkBuildMode.Current, ParkBuildMode.Serves) );
+	}
+
+	/// <summary>
+	/// A three-link cell answers 0 where the cell beyond is of no type, or is track with no links while heading north
+	/// (<c>0x0052b22f</c>..<c>0x0052b280</c>); else the walk goes straight on through it. Told by the steps taken, which a
+	/// cell that is not track would add one to anyway.
+	/// </summary>
+	[TestMethod]
+	public void AThreeLinkCellAnswersNoughtWhereTheCellBeyondIsNothing()
+	{
+		var (state, ride) = Standing( 1, 30, 24 );
 		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 25), (34, 29), 200 );
 		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 29), (28, 29), 200 );
 		ParkTrackTool.LayRun( state, 0xb, Owner, (28, 29), (28, 25), 200 );
 
-		Assert.AreEqual( 1, ParkTrackTool.WalkCircuit( state, ride, check: false ).Valid );
-		Assert.IsFalse( ParkRideOperation.MayOpen( null, ride, 1 ), "no park, no queue joined: the guard refuses" );
+		state.SetRecord( 34, 27, state.Record( 34, 27 ) with { TrackNeighbours = 0x15 } );
+		Assert.AreEqual( (1, 10), ParkTrackTool.WalkCircuit( state, ride, check: true ), "a junction is gone straight on through" );
+
+		state.SetRecord( 34, 29, state.Record( 34, 29 ) with { TrackType = 0 } );
+		Assert.AreEqual( (0, 4), ParkTrackTool.WalkCircuit( state, ride, check: true ), "the cell beyond of no type: nought at the junction" );
+
+		state.SetRecord( 34, 29, state.Record( 34, 29 ) with { TrackType = 0xc } );
+		Assert.AreEqual( (0, 5), ParkTrackTool.WalkCircuit( state, ride, check: true ), "of some type: the junction lets it by, the next cell fails" );
 	}
 
+	/// <summary>Heading north, track with no links beyond a three-link cell answers 0; heading south it does not.</summary>
+	[TestMethod]
+	public void ATrackCellWithNoLinksBeyondAThreeLinkCellFailsOnlyHeadingNorth()
+	{
+		var (state, ride) = Standing( 1, 30, 24 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 25), (34, 29), 200 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 29), (28, 29), 200 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (28, 29), (28, 25), 200 );
+
+		// South: (34,27) has three links and the cell beyond it is track with none; the walk fails at that cell next step.
+		state.SetRecord( 34, 27, state.Record( 34, 27 ) with { TrackNeighbours = 0x15 } );
+		state.SetRecord( 34, 29, state.Record( 34, 29 ) with { TrackNeighbours = 0 } );
+		Assert.AreEqual( (0, 5), ParkTrackTool.WalkCircuit( state, ride, check: true ), "heading south the junction lets it by" );
+
+		// North: the same on the west leg.
+		state.SetRecord( 34, 27, state.Record( 34, 27 ) with { TrackNeighbours = 0x11 } );
+		state.SetRecord( 34, 29, state.Record( 34, 29 ) with { TrackNeighbours = 0x41 } );
+		state.SetRecord( 28, 27, state.Record( 28, 27 ) with { TrackNeighbours = 0x51 } );
+		state.SetRecord( 28, 25, state.Record( 28, 25 ) with { TrackNeighbours = 0 } );
+		Assert.AreEqual( (0, 9), ParkTrackTool.WalkCircuit( state, ride, check: true ), "heading north it answers nought at the junction" );
+	}
+
+	/// <summary>A bend entered past its links leaves by the link it has beyond the one it was entered along (<c>0x0052b1cc</c>).</summary>
+	[TestMethod]
+	public void ABendEnteredWithNoLinkBackLeavesTheWayItHas()
+	{
+		var (state, ride) = Standing( 1, 30, 24 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 25), (34, 29), 200 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 29), (28, 29), 200 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (28, 29), (28, 25), 200 );
+
+		// Entered going east, (34,25) has links east and south and none back west: it leaves south.
+		state.SetRecord( 34, 25, state.Record( 34, 25 ) with { TrackNeighbours = 0x14 } );
+
+		Assert.AreEqual( (1, 10), ParkTrackTool.WalkCircuit( state, ride, check: true ) );
+		Assert.AreEqual( (byte)0x10, state.Record( 34, 25 ).TrackDirection, "the bend's way on is the way it leaves" );
+	}
+
+	/// <summary>
+	/// Backspace after two runs: the last is popped, its pieces refunded, the anchor put at its start and the mouth's bend
+	/// left alone (the list is not back at its first entry). Made to fail by putting the anchor at the run's end.
+	/// </summary>
+	[TestMethod]
+	public void BacktrackTakesBackTheLastRunAndAnchorsAtItsStart()
+	{
+		var (state, ride) = Standing( 1, 30, 24 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 25), (34, 29), 200 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 29), (28, 29), 200 );
+		ParkBuildMode.ArmAt( ParkBuildMode.KartTrack, ride.ThingId, 28, 29 );
+
+		foreach ( var at in new[] { (34, 25), (34, 25), (34, 29), (28, 29) } )
+			ParkBuildMode.Push( at.Item1, at.Item2 );
+
+		var said = ParkTrackTool.BacktrackOn( state, ride, 200 );
+
+		Assert.IsTrue( said.Contains( "3 piece(s) removed, 600 refunded" ), said );
+		Assert.AreEqual( ((34, 29), 3), (ParkBuildMode.Anchor, ParkBuildMode.Pending.Count) );
+		Assert.AreEqual( 53122, state.Balance );
+		Assert.AreEqual( ((byte)0x50, (byte)0x10), (state.Record( 34, 25 ).TrackNeighbours, state.Record( 34, 25 ).TrackDirection), "the mouth's bend stays" );
+		Assert.AreEqual( ((byte)0x01, (byte)0x10, (short)0, 1, 180), Piece( state, 34, 29 ) );
+	}
+
+	/// <summary>
+	/// Back at the list's first entry the mouth's bend is broken: the pop leaves one entry. Made to fail by deciding on
+	/// no entries left, or on the list before the pop.
+	/// </summary>
+	[TestMethod]
+	public void BacktrackBreaksTheMouthsBendWhereTheListIsBackAtItsFirstEntry()
+	{
+		var (state, ride) = Standing( 1, 30, 24 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 25), (34, 29), 200 );
+		ParkBuildMode.ArmAt( ParkBuildMode.KartTrack, ride.ThingId, 34, 25 );
+		ParkBuildMode.Push( 34, 25 );
+		ParkBuildMode.Push( 34, 25 );
+
+		ParkTrackTool.BacktrackOn( state, ride, 200 );
+
+		Assert.AreEqual( 1, ParkBuildMode.Pending.Count );
+		Assert.AreEqual( ((byte)0x40, (byte)0x04), (state.Record( 34, 25 ).TrackNeighbours, state.Record( 34, 25 ).TrackDirection), "the bend is broken" );
+		Assert.AreEqual( (byte)0x10, state.Record( 34, 27 ).TrackNeighbours, "at both ends" );
+
+		Assert.IsTrue( ParkTrackTool.BacktrackOn( state, ride, 200 ).Contains( "nothing laid" ), "the first entry is never popped" );
+	}
+
+	/// <summary>A water run taken back: three pieces of 250 refunded, the start an end again in the water kit's family.</summary>
+	[TestMethod]
+	public void BacktrackTakesBackAWaterRun()
+	{
+		var (state, ride) = Standing( 2, 18, 18, 47452 );
+		var owner = (ushort)MapStep.CellId( 18, 18 );
+		ParkTrackTool.LayRun( state, 0x10, owner, (22, 19), (22, 23), 250 );
+		ParkTrackTool.LayRun( state, 0x10, owner, (22, 23), (16, 23), 250 );
+		ParkBuildMode.ArmAt( ParkBuildMode.WaterTrack, ride.ThingId, 16, 23 );
+
+		foreach ( var at in new[] { (22, 19), (22, 19), (22, 23), (16, 23) } )
+			ParkBuildMode.Push( at.Item1, at.Item2 );
+
+		var before = state.Balance;
+		var said = ParkTrackTool.BacktrackOn( state, ride, 250 );
+
+		Assert.IsTrue( said.Contains( "3 piece(s) removed, 750 refunded" ), said );
+		Assert.AreEqual( before + 750, state.Balance );
+		Assert.AreEqual( ((byte)0x01, (byte)0x10, (short)0, 1, 180), Piece( state, 22, 23 ), "an end again, its way out of it" );
+		Assert.AreEqual( (4, 0), (state.Record( 22, 23 ).TrackTileSet, state.Record( 16, 23 ).TrackType), "a water piece, and the removed ones gone" );
+	}
 	/// <summary>
 	/// Backspace after the original's second run takes it back as <c>q587/orig/A-load.log</c> read it at 199.64 s: three
 	/// pieces removed and 600 refunded, the corner (34,29) an end piece again with the way out of it, the removed anchors
@@ -532,16 +817,43 @@ public class ParkTrackToolTests
 		}
 	}
 
-	/// <summary>A run the balance cannot pay is refused as over the balance, which the pointer shows as <c>c_cash</c>.</summary>
+	/// <summary>
+	/// A run the balance cannot pay is refused as over the balance, and so is one refused for something else too: the total
+	/// runs on past a refused cell, each empty cell's price added (<c>0x00539f5c</c>, <c>0x00539f87</c>..<c>0x00539fb6</c>).
+	/// </summary>
 	[TestMethod]
-	public void ARunOverTheBalanceIsMarkedSo()
+	public void ARunOverTheBalanceIsMarkedSoWhetherOrNotItIsRefusedForSomethingElse()
 	{
 		var state = Bought( balance: 500 );
 
 		Assert.IsTrue( ParkTrackTool.Verdict( state, 0xb, Owner, (34, 25), (34, 31), 200 ).OverBalance );
+		Assert.IsFalse( ParkTrackTool.Verdict( state, 0xb, Owner, (34, 25), (34, 29), 200 ).OverBalance, "400 is under 500" );
 
 		state.SetRecord( 34, 27, state.Record( 34, 27 ) with { Type = CellEdge.Footprint } );
 		var judged = ParkTrackTool.Verdict( state, 0xb, Owner, (34, 25), (34, 31), 200 );
-		Assert.IsTrue( judged.Refused && !judged.OverBalance );
+
+		Assert.IsTrue( judged.Refused && judged.OverBalance, "refused by the object, and over the balance too" );
+		Assert.AreEqual( 600, judged.Total, "the cell over the object is added to the total" );
+		Assert.IsTrue( judged.Why!.Contains( "map type 4" ), "the first reason is the one said: " + judged.Why );
+		Assert.IsFalse( ParkTrackTool.Verdict( state, 0xb, Owner, (34, 25), (34, 29), 200 ).OverBalance, "refused, under the balance" );
+	}
+
+	/// <summary>The armed pointer: <c>c_track</c> over a run that may be laid, <c>c_cash</c> over the balance (which wins), <c>c_noplace</c> otherwise.</summary>
+	[TestMethod]
+	public void TheArmedPointerShowsTrackNoPlaceOrCash()
+	{
+		var (state, ride) = Standing( 1, 30, 24, 500 );
+
+		Assert.AreEqual( Input.CursorTypes.Track, ParkTrackTool.CursorFor( state, ride, 200, 34, 29 ), "not anchored" );
+
+		ParkBuildMode.ArmAt( ParkBuildMode.KartTrack, ride.ThingId, 34, 25 );
+
+		Assert.AreEqual( Input.CursorTypes.Track, ParkTrackTool.CursorFor( state, ride, 200, 34, 29 ) );
+		Assert.AreEqual( Input.CursorTypes.Cash, ParkTrackTool.CursorFor( state, ride, 200, 34, 31 ), "600 is more than 500" );
+
+		state.SetRecord( 35, 28, state.Record( 35, 28 ) with { Type = CellEdge.Footprint } );
+
+		Assert.AreEqual( Input.CursorTypes.NoGo, ParkTrackTool.CursorFor( state, ride, 200, 34, 29 ), "refused, and 400 is within the balance" );
+		Assert.AreEqual( Input.CursorTypes.Cash, ParkTrackTool.CursorFor( state, ride, 200, 34, 31 ), "refused and over: the cash wins" );
 	}
 }

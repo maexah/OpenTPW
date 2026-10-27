@@ -1178,7 +1178,9 @@ heading (`QUEUE_TURN_HEADING`) and boredom
 (`QUEUE_TURN_BOREDOM`). **The two spot animations are built** (`PeepBehaviour.PlaySpotAnimation`, below). **The unhappy arm runs the common leave path** (Q85b), after the same mood gap;
 with its thought `0xb` (Q110b). New arrivals start at the constructor's 50
 ([guest-arrivals.md](guest-arrivals.md)). 5b's built half is
-dead by content: the shipped park places nothing tracked, nothing here sets `mIsTrackRideValid`, and the choice
+dead by content: the shipped park places nothing tracked, nothing but the track tool's closing walk (Q763) sets
+`mIsTrackRideValid` and nothing sets it back to nought on a ride guests queue for (the closed loop's edit is counted,
+`TRACK_EDIT_CLOSED_LOOP`), and the choice
 sends nobody to a car track without it, so only a save holding a queue for an invalid Dino Karts (item 1150, the
 jungle's one car track) reaches it. A guest who has played no spot animation has `TimeOfLastSpotAnim` at nought, and the
 clock is `ParkState.GameTick`, 755 at the shipped park's load: their mood is read on their first turn

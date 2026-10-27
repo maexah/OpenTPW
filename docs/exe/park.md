@@ -1685,8 +1685,9 @@ Splash is the same a row further up its 4 × 4 (0x12, 0x10; its other cells 0xc 
 own arm `0x00525a52`). Read for Q762 in Ghidra (`q762/dump`; `Track_CellOp` is `FUN_005370e0`, named then).
 **Armed** by a click on a piece of track, "Left-click to edit this track": the hover sends track types 0xb and 0x10, and
 0xc under any parent but a hoarding, to category 5 (`0x00487392`), so a water piece's 0x11 cells and the stations arm
-nothing; the click (`FUN_004879d0`, `0x00487f6c`) takes a 0xc cell's anchor, selects the anchor's owning thing and
-installs mode 0xe (karts) or 0x13 (water). That mode's release (`0x00526b1e`), when the ride's `+0x2c` is nought, walks
+nothing; the click (`FUN_004879d0`: the cell's type is looked at from `0x00487f39` to `0x00487f69`, a 0xc cell's anchor taken at
+`0x00487f39`..`0x00487f4e`) selects the anchor's owning thing and
+installs mode 0xe (karts) or 0x13 (water). That mode's release (`0x00526c19`..`0x00526c4d`), when the ride's `+0x2c` is nought, walks
 the ride's track from the mouth (`FUN_00530830`): in 2-cell steps along laid track (0xb, 0x10), turning at a bend the
 way its links leave it (`mask ^ opposite( heading )`), until a cell with no link onward or the station met from its far
 side; the pending list `0x0081b740` is the mouth, each bend and the cell it stops on, which is the anchor; each cell's
@@ -1695,20 +1696,21 @@ overlap counter `+0x20` is set, 1 at a bend or crossing, 0 on a straight or an e
 loop at them (`FUN_00539760( 0xe )`, `FUN_0052b400`), not read further. **A click** on release: a run the preview
 flagged red (`DAT_00816d48`) lays nothing, plays 0xaf and puts the tool away (`0x00524a63`..`0x00524acd`); otherwise
 sound 0xce, the target moved onto the anchor's row or column, whichever is farther, a tie to the row
-(`0x00526d04`..`0x00526d2c`), and the run laid by ops `0x87`, the type, `0x80`, `0x82`, `0x83`, `0x85`, `0x86` and
-`0x81`, each a pass of `FUN_0053aac0` over the whole line. That walker takes the target onto the anchor's 2-cell grid
+(the snap, `0x00526d4f`..`0x00526d85`), and the run laid by ops `0x87`, the type, `0x80`, `0x82`, `0x83`, `0x85`, `0x86` and
+`0x81`, each a pass of `FUN_0053aac0` over the whole line (`0x00526daa`..`0x00526ebe`; the close that follows is
+`0x00526eff`..`0x00526f83`, its `0x80` stores `0x00526fa7`..`0x00526fb2`). That walker takes the target onto the anchor's 2-cell grid
 (an odd distance to the lower cell) and writes it back, steps ±2, and gives each cell the step (`0x00820ac8` marks the
 first cell, `0x00820ad0` the last); an op that answers nought stops its own pass. What each op does to a kart or water
 cell (`Track_CellOp`):
 
 | Op | On the run's anchors |
 |---|---|
-| `0x87` | a cell that is not track: its 2 x 2's things torn down (`FUN_00527ee0`) and, the last, its map cells cleared, both gated on `[0x00818c14] < [0x00818c10]` (`0x00538d2e`) |
+| `0x87` | a cell that is not track: its 2 x 2's things torn down (`FUN_00527ee0`) and, the last, its map cells cleared, both gated on `[0x00818c14] < [0x00818c10]` (`0x00538cf0`..`0x00538cfd`) |
 | the type | `Track_StampCell`: its own type again is free and bumps `+0x20`; another track type refuses; a new piece is charged `Costs.KartTrackCell` or `WaterTrackCell` (not in modes 4 and 0x3b) and refused above the balance; `0x00820ae8` notes a last cell that was track already |
 | `0x80` | `FUN_00539220`: links the cell and the anchor two back along the step, where that one is track (0xb, 0xd, 0x10, 0x12, 0x19) of this ride or none and neither has four links; the run's first cell links along the last pass's step (`0x00763b00`/`b04`; none after `0x80`, which putting the tools away, Backspace's mode 0x35 and a closing run write) |
 | `0x82` | `FUN_00539670`: the way on (`+0xd`) is the step's bit on a cell of under three links, or gains it on a crossing |
 | `0x83` | with the station pointer `[0x008186c4]` set: the anchor's owner `+0x10` the selected thing's cell, and its three other cells stamped 0xc, in both kits (`0x00538895`), naming it |
-| `0x85` | an end or straight over map types 1 or 3 takes flag 1, a hill; over four bare cells its flags' low four bits go |
+| `0x85` (from `0x00538a92`) | an end or straight over map types 1 or 3 takes flag 1, a hill; over four bare cells its flags' low four bits go |
 | `0x86` | for track with an owner, outside a fresh boundary: `TrackRide_ShapeFromMouth` with 1, then `TrackRide_ShapeFromOtherMouth` with 0 when it answers 0 (`0x00538ca0`, `0x00538cb7`) |
 | `0x81` | a bend, or a crossing with links, loses its hill flags; every piece but a station is retiled; on the last cell where `0x00820ae8` is set it answers nought |
 
@@ -1742,11 +1744,17 @@ counts path and queue mid-run (`TRACK_RUN_OVER_PATH`: the original's hill, unbui
 links at the end (`TRACK_RUN_CROSSING`) and its own station (`TRACK_RUN_INTO_STATION`); a closed loop's edit
 (`TRACK_EDIT_CLOSED_LOOP`) is counted, the circuit's walk that closes a run is Q763's (below), and Backspace's refund
 Q765's ("A track piece's model, price and open end", below). The pointer (Q765, `ParkTrackTool.CursorOver`) is
-`c_track`, `c_noplace` where ours' verdict refuses and `c_cash` where that is the balance; `c_end` is counted
+`c_track`, `c_noplace` where ours' verdict refuses and `c_cash` where the run's total passes the balance, the total
+running on past a refused cell and each empty cell's price added as the original's does (`0x00539f5c`,
+`0x00539f87`..`0x00539fb6`), so a refused run over the balance shows `c_cash`; `c_end` is counted
 (`TRACK_TOOL_CURSOR_END`, where the run's last cell is its own track), and so are the preview's squares
-(`TRACK_TOOL_PREVIEW`). Measured in ours (`q762/ours-b`, then `q763/ours-d` with the walk): Q687's two loops by
-the same clicks give every anchor the links, way on, overlap, row and turn the original's `A-load.log` and `W-cells.log`
-hold, the closing corners included, and 200 (250) a new piece.
+(`TRACK_TOOL_PREVIEW`). Measured in ours (`q762/ours-b`, then `q763/ours-d` with the walk): Q687's two loops give
+the anchors the links, way on, overlap, row and turn the original's `A-load.log` and `W-cells.log` hold, the closing
+corners included, and 200 (250) a new piece, **but not by the original's own clicks**: the original's water loop took
+four clicks, (22,17) first (`W-cells.log` 79.53 s, then (22,15) at 103.53 s), where ours took three, (22,15), (16,15),
+(16,19), so (22,17) reads overlap 0 in ours and 1 in the log and the charges are 500, 750 and 250 against its 250, 250,
+750 and 250; and the karts' loop skipped the original's Backspace and re-lay (199.64 s, 209.89 s), the end state the
+same. The original's own sequence is not repeated for the water loop.
 
 **The walk** (`TrackRide_WalkCircuit( check )`, `FUN_0052a970`) goes from the circuit's start in 2-cell steps the way
 each cell's flow (`+0xd`) and links (`+0xc`) send it: a cell with two links at right angles is a bend
@@ -1759,9 +1767,14 @@ east–west, 10 north–south, 12 and 13 the same with an add-on (the cell's fla
 section keeps the add-on's model); crossing 11. The first two, the station's, are flagged 0x10000 and lay no buoy. A
 cell's `+0x24` takes its step (`TrackCell_SetStep`, `0x0053aef0`). Read for Q763 (`q763/dump`,
 `q762/dump/0052a970.asm`): the start is `[0x007639e0]`/`e4`, the mouth `FUN_005276d0` or the put-down leaves there, 4
-cells back along the turn, so the station's first section, and the heading `[0x00818c50]`, which every writer before a
-walk sets to the turn's way (east, north, west, south for 0, 90, 180, 270: `FUN_0052a3a0`, `TrackRide_ShapeFromMouth`,
-`ShapeFromOtherMouth`); a start on a piece's other cell (0xc, 0x11, `TrackCell_IsPieceCell`) asks its anchor whether
+cells back along the turn, so the station's first section, and the heading `[0x00818c50]`, which `FUN_005276d0` sets to the
+turn's way (east, north, west, south for 0, 90, 180, 270: `FUN_0052a3a0`) at every click that is not red (`0x00524af6`,
+`0x005278c7`; the put-down the same at `0x00524cf1`). A click that does not move the anchor and is not on the mouth runs
+no pass and walks with it (`0x00526d86`..`0x00526da4`); otherwise op `0x86`'s `TrackRide_ShapeFromMouth` writes the turn's
+way again (`0x0052c791`) and, where it answers 0, `ShapeFromOtherMouth` its opposite (`0x0052cd48`; `FUN_00530830`'s second
+write the same, `0x00530bdd`), so the walk heads out of the mouth except at a click on the mouth while the anchor is the
+mouth, which walks back towards the other mouth (the original lays 1 section there, ours 2: `+0x2c` 0 in both, and
+nothing a player sees reads the difference, `ParkTrackRideTable.LayoutOf` of a run with no bend being the same); a start on a piece's other cell (0xc, 0x11, `TrackCell_IsPieceCell`) asks its anchor whether
 there is track and whose ride it is (`0x0052aa1c`), and with none the walk answers 0 before it clears anything. A
 straight or crossing keeps the heading; a bend leaves by `mask ^ opposite( heading )`, or `mask ^ heading` where the
 bend has no link back (`0x0052b1cc`), checking or not, and **where its way on (`+0xd`) is not that, takes it and is
@@ -1779,8 +1792,8 @@ and retile, `+0x2c` and the opening; the cars and buoys it clears are none here,
 record (Q588), and the step count is answered, not kept on the cells. Counted: the sections' objects and buoys
 (`TRACK_SECTION_OBJECTS`), the add-on's caps (`TRACK_WALK_ADD_ON`), the pieces' clips that follow (`TRACK_PIECES_CLIP`).
 Measured in ours on the final binary (`q763/ours-d`, `ours-t`), by the original's clicks: the karts' ten sections as
-`q581/orig/A-track.log`'s, the water loop south's as `D-track.log`'s, `+0x2c` 1 and the ride not opened (both logs'
-state 0); (28,25) way 0x04 as `A-load.log`, Q687's water corner (16,19) way 0x04, `wr_trckB2`, row 19, turn 270 as
+`q581/orig/A-track.log`'s, the water loop south's as `D-track.log`'s, `+0x2c` 1 and the ride not opened (theirs the track-ride slot's
+state 0, `+0x50`, ours `mCanLoad` 0); (28,25) way 0x04 as `A-load.log`, Q687's water corner (16,19) way 0x04, `wr_trckB2`, row 19, turn 270 as
 `W-cells.log` (earlier evidence, the original not run for Q763). The karts opened once their queue joined a path
 (`C-track.log`'s state 1 after its queue, another queue: ours joined the cell before the exit).
 

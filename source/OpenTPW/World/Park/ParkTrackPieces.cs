@@ -81,6 +81,9 @@ public sealed class ParkTrackPieces : Entity
 	/// <summary>The end caps a row hides, or nought outside the table.</summary>
 	public static uint MaskOf( int row ) => row >= 0 && row < RowMasks.Length ? RowMasks[row] : 0;
 
+	/// <summary>The end caps a standing piece's model hides: its row's mask (<see cref="MaskOf"/>).</summary>
+	public static uint CapMaskOf( Piece piece ) => MaskOf( piece.Row );
+
 	/// <summary>
 	/// The row and turn a kart (0xb) or water (0x10) anchor takes - <c>Track_PieceForCell</c> (<c>FUN_0053a540</c>): its
 	/// links looked up in its table (the karts' at <c>0x00762f30</c> holds the boundary's rows and turns, so one table
@@ -416,7 +419,7 @@ public sealed class ParkTrackPieces : Entity
 				piece.CellY, piece.Angle ), ParkGround.Current?.Heightfield );
 
 			model.SetTransform( origin, turn );
-			model.HideCaps( MaskOf( piece.Row ) );
+			model.HideCaps( CapMaskOf( piece ) );
 
 			// The original drapes a piece's every vertex over the ground under it at its making (0x00469940), and starts a
 			// water piece's clip 0xc (FUN_004732a0); neither is built.
