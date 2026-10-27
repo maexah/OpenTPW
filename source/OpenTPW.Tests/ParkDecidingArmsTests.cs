@@ -211,12 +211,91 @@ public class ParkDecidingArmsTests
 		foreach ( var (dx, dy, performing, what) in new[]
 		{
 			(1, -1, true, "a diagonal of opposite signs"), (0, 0, true, "his own cell"),
-			(2, 0, true, "two cells off"), (1, 1, false, "not performing")
+			(2, 0, true, "two cells off in x"), (0, 2, true, "two cells off in y"), (0, -2, true, "two cells off in y, the other way"),
+			(-2, 2, true, "two cells off in both"), (1, 1, false, "not performing")
 		} )
 		{
 			(_, walk, watch) = At( dx, dy, performing );
 			watch( 2 );
 			Assert.AreEqual( (0x123, from + 2), (walk.Heading, Counted( "DECIDE_WATCH_ENTERTAINER_EVENT" )), what );
+		}
+	}
+
+	/// <summary>The cell the shipped park's one entertainer stands on.</summary>
+	private (int X, int Y) EntertainerCell()
+	{
+		var people = new ParkPeople( Park() );
+
+		return people.StaffWalkFor( people.Staff.Single( member => member.Model == ParkPeople.EntertainerModel ).ThingId )!.Position.Cell;
+	}
+
+	/// <summary>
+	/// <b>The entertainer watched is the nearest of all, and only if he performs</b> (<c>FUN_00500f00</c>, then the state
+	/// test at <c>0x004ff04a</c>): a second entertainer nearer the guest, not performing, leaves the guest watching nobody
+	/// though the performing one is beside them; both performing, the guest faces the nearer.
+	/// </summary>
+	[TestMethod]
+	public void TheEntertainerWatchedIsTheNearestOfAllAndMustBePerforming()
+	{
+		var seed = SeedWhere( roll => roll % 3 == 1 );
+		var from = Counted( "DECIDE_WATCH_ENTERTAINER_EVENT" );
+		var (x, y) = EntertainerCell();
+
+		// The guest a step off the shipped entertainer in x and y; the second one stands on the cell beside the guest in
+		// x alone, so he is the nearer (1 cell squared against 2).
+		(Action<int> Turn, PeepWalk Walk) Set( bool nearerPerforms )
+		{
+			var (guest, turn, people) = DecidingAt( x - 1, y - 1, seed );
+			var shipped = people.Staff.Single( member => member.Model == ParkPeople.EntertainerModel );
+			shipped.StartPerforming( 0, 1 );
+
+			Assert.AreNotEqual( 0, people.Hire( new ParkStaffPool.Candidate( Id: 997, Kind: 2, Name: "Ent Test", Grade: 0, Costume: 0, Wage: 69 ), x - 1, y ) );
+			var second = people.Staff.Single( member => member.Model == ParkPeople.EntertainerModel && member != shipped );
+			Assert.AreEqual( (x - 1, y), people.StaffWalkFor( second.ThingId )!.Position.Cell, "the second entertainer's cell" );
+
+			second.SetActivity( nearerPerforms ? StaffActivity.Performing : StaffActivity.Idle, 1 );
+
+			var walk = people.AnyWalkFor( guest.ThingId )!;
+			walk.Heading = 0x123;
+
+			return (turn, walk);
+		}
+
+		var (turn, walk) = Set( nearerPerforms: false );
+		turn( 2 );
+		Assert.AreEqual( (0x123, from), (walk.Heading, Counted( "DECIDE_WATCH_ENTERTAINER_EVENT" )), "the nearer is idle: nobody is watched" );
+
+		(turn, walk) = Set( nearerPerforms: true );
+		turn( 2 );
+		Assert.AreEqual( (0x400, from + 1), (walk.Heading, Counted( "DECIDE_WATCH_ENTERTAINER_EVENT" )), "both perform: the nearer is faced" );
+	}
+
+	/// <summary>
+	/// <b>The watching arm is after the leave test</b> (<c>0x004fee5b</c>..<c>0x004fef13</c> before <c>0x004fefcf</c>): a
+	/// miserable guest, or one whose day has run out, beside a performing entertainer goes home instead of stopping to
+	/// watch him.
+	/// </summary>
+	[TestMethod]
+	public void AGuestWhoWantsToLeaveDoesNotStopToWatch()
+	{
+		var seed = SeedWhere( roll => roll % 3 == 1 );
+		var from = Counted( "DECIDE_WATCH_ENTERTAINER_EVENT" );
+		var (x, y) = EntertainerCell();
+
+		foreach ( var (what, ready) in new (string, Action<Peep>)[]
+		{
+			("miserable", guest => guest.Happiness = 0f), ("a day run out", guest => guest.ExitLevel = 0)
+		} )
+		{
+			var (guest, turn, people) = DecidingAt( x - 1, y - 1, seed );
+			people.Staff.Single( member => member.Model == ParkPeople.EntertainerModel ).StartPerforming( 0, 1 );
+			ready( guest );
+
+			var walk = people.AnyWalkFor( guest.ThingId )!;
+			walk.Heading = 0x123;
+			turn( 2 );
+
+			Assert.AreEqual( (PeepState.HeadingForExit, 0x123, from), (guest.State, walk.Heading, Counted( "DECIDE_WATCH_ENTERTAINER_EVENT" )), what );
 		}
 	}
 

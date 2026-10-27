@@ -180,10 +180,14 @@ Measured, Lost Kingdom from the lobby as a Full Simulation player with two keys 
 the puff with no owner, as the original's, so `ScreenParticles` draws it over everything. Owned by the panel (Q630's
 build, the `run4` column above) it lived its second with nothing to be drawn with, since an owned effect is drawn only
 while its window is open. The owner rule (the departure above) does not bite here: nothing is open in the stack from
-the Enter to the park, and Escape cancels the flight before it can open a menu, giving the panel back under a puff
-still alive, as the original's. The fade starts some 3 s after the puff is gone, so it hides none of it. The key
-sparkle 97 is still the panel's, so its last few particles (3, 2, 1 at 0.1 to 0.3 s) are not drawn after the Enter,
-where the original's die on screen with the puff.
+the Enter to the park, and a first Escape cancels the flight before it can open a menu, giving the panel back under a puff
+still alive, as the original's. **A limit:** the cancel leaves no flight, so a second Escape within about 0.7 s (while the
+puff lives) goes on to `FrontEnd.MenuKey` (`FrontEnd.cs`), which opens the game menu, and the ownerless puff is drawn over
+the dimmed menu; ours has no `SetOwner` to give the live puff back to the reopened
+panel. The fade starts some 3 s after the puff is gone, so it hides none of it. The key
+sparkle 97 is still the panel's, so its last few particles (3, 2, 1, 1 at 0.1 to 0.4 s, `q669/run1/run.log`) are not
+drawn after the Enter, where the original's, stopped with 4 particles still falling at 0.1 s, are drawn until they die,
+gone by 0.5 s (`q630/orig-a/poll.txt`); the puff lives to about 1 s.
 
 Measured on the final build (`q669/`): `lib/lobbyentry.py`'s `particles screen` reads effect 98 "owner no window (drawn
 over all)", 32 particles, then 27, 14, 8, none from about 1.1 s; key-white pixels in the burst's patch (`q669/patch.py`,
@@ -485,19 +489,23 @@ Read a pass at a time in the running original (`original/lobbycam.py`, the islan
 
 | | the original (`orig-c`) | ours (`q670/run2`, its turn set to the original's by `orbit`) |
 |---|---|---|
-| the delta `[0x00f82884]+8` | the pass's whole milliseconds / 100: 0.33 at 30 a second (0.34, 0.65 at a slow pass) | `Time.Delta`, seconds |
+| the delta `[0x00f82884]+8` | the pass's whole milliseconds / 100: 0.33 at 30 a second (0.33, 0.33, 0.34 in turn, mean 0.3333; 0.65 and 0.02 are the uneven pair) | `Time.Delta`, seconds |
 | state 0, the orbit | 0.7600 rad over 3.781 s: 0.201 a second (SPINSPEED 0.02 x delta) | 0.2 a second |
 | state 1, the turn | 2.0505 rad over 4.101 s, 125 passes: 0.500 a second, from 0.481 down through nought to 4.712 | "turning 2.0523", "facing the gate after 4.114 s" |
-| state 2, the fly-in | 93 passes over 3.067 s (3.099 s in `orig-b`), radius 70 to 7.94, vertical 20 to 0, `[0x00f83778]+0x60` to 0x10000 | 3.092 s |
+| state 2, the fly-in | 92 decay passes over 3.067 s (3.099 s in `orig-b`; the poll's first "state 2" row is state 1's arriving pass), radius 70 to 7.94, vertical 20 to 0, `[0x00f83778]+0x60` to 0x10000 | 3.092 s |
 | the park asked for | +7.23 s after the click | "arrived ... after 7.206 s" |
 
 So no rate is per pass: every step is times the delta, and the delta is the pass's time. The flight's length is the
 turn's plus 3.1 s, and the turn's is where the orbit stands at the click against where it ends. The orbit `+0x18` is
 written once, by the constructor (`0x005dfd30`), and never by SetIsland (`0x005e2750`), so it starts at nought and turns
-0.2 a second while a player is chosen: how long the player waits on the panel sets the turn, up to pi at 0.5 a second.
+0.2 a second while a player is chosen. The constructor runs on every entry to the lobby, a quit from a park included (boot state 1
+builds a new lobby, `0x0054e656`..`0x0054e671`, and so a new island camera: `0x005e3dc0`, constructor `0x005dfcd0` at `0x005e3dfb`);
+ours zeroes its orbit when the lobby is built (`LobbyCameraMode.BeginLobby`), but its eye is not re-seeded (queued): how long the player waits on the panel sets the turn, up to pi at 0.5 a second.
 The turn ends at the island's `+0x14` + pi, which reads 1.57080 for Lost Kingdom (4.712 at state 2, both runs); ours
-ends at one pi for every island (Q721). The 93 passes against the 92 a steady 1/30 s gives is the delta's whole
-milliseconds (0.33, not 0.333).
+ends at one pi for every island (Q721). The fly-in is 92 decay passes, as a steady 1/30 s gives (70 down to 7.976): the poll's 93rd "state 2" row is state 1's
+arriving pass, which sets the state and does not decay (92 of 92 rows after it equal r x (1 - 0.07 delta), in both polls).
+The delta is the pass's whole milliseconds and carries the remainder (0.33, 0.33, 0.34: 0.34 is an ordinary delta, 23
+times in state 2 and 84 in all, mean 0.3333). State 1's 125 passes count its arriving pass, as the table says.
 
 ### The island keys wait for the fly-in, and the fly-in dies with the lobby
 

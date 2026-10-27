@@ -35,8 +35,10 @@ belongs to or at the end. Grep it by area or Q-number; never read it whole.
   the price owned by no window, so the cloud of keys is drawn over the island for about a second after the panel closes
   (32 particles, none from about 1.1 s); Escape during the flight gives the panel back under the same puff
   (`docs/exe/lobby.md`, "The key puff at park entry").
-- **The park-entry flight runs at the original's rates** (Q670, measured): from the same angle the turn onto the gate,
-  the fly-in and the park's asking take as long as the original's, 4.114 s and 7.206 s against 4.101 s and 7.23 s, the
+- **The park-entry flight runs at the original's rates** (Q670, measured): from the same turn the turn onto the gate,
+  the fly-in and the park's asking take as long as the original's (for the same wait at the panel Lost Kingdom's entry is up
+  to 3.14 s shorter, a wait of 3.93 to 19.63 s mod 31.42 s, the whole 3.14 s for 7.85 to 15.71 s, until Q721 turns the isle;
+  the same wait means the same angle only in a run's first lobby), 4.114 s and 7.206 s against 4.101 s and 7.23 s, the
   turn at 0.5 radians a second and the fly-in 3.1 s (`docs/exe/lobby.md`, "The flight measured"); the log times each
   phase ("Lobby camera: facing the gate after ...", "arrived ... after ...").
 - **The path and queue tools' clicks play the original's laying sound** (Q671): every click of either tool the red

@@ -722,8 +722,9 @@ public sealed class Peep
 	/// <b>The cell's own influence comes between the countdown and the drift</b> (<c>0x005016a7</c>..<c>0x00501787</c>):
 	/// the first three words of the guest's cell's region effects (<see cref="ParkState.Effects"/>;
 	/// <c>ride-operation.md</c>, "The region effects") are added to happiness, illness and hunger, each held to
-	/// 0..100, on every needs turn in every state. In Lost Kingdom the one happiness word is the entertainer's, 2 on his
-	/// cell and 1 beside it, so a guest watching him gains on every turn.
+	/// 0..100, on every needs turn in every state. In a Lost Kingdom park as shipped the one happiness word in the cells is
+	/// the entertainer's, 2 on his cell and 1 on the four cells beside (none on a diagonal); a sick guest's litter (-1) and a
+	/// stink bomb (-3) add their own once those arms are built. A guest watching him from beside gains 1 a turn.
 	/// </para>
 	/// <para>
 	/// <b>A quirk worth not tidying away.</b> The drift is gated on the same counter as the whole tick,

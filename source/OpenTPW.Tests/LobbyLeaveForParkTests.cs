@@ -51,6 +51,25 @@ public class LobbyLeaveForParkTests
 		Time.Delta = _delta;
 	}
 
+	/// <summary>
+	/// <b>A second lobby's orbit starts at nought</b>: the original builds the island camera afresh on every entry to the
+	/// lobby, a quit from a park included, and its constructor stores 0 to the orbit angle (<c>0x005dfd30</c>). So the
+	/// turn for a park after a return starts from the angle the new wait has run to, not from the last click's.
+	/// </summary>
+	[TestMethod]
+	public void ASecondLobbysOrbitStartsAtNought()
+	{
+		LobbyCameraMode.BeginLobby();
+		LobbyCameraMode.DebugOrbit = 2.6f;
+		Assert.AreEqual( 2.6f, LobbyCameraMode.DebugOrbit, 0.001f, "the first lobby's orbit ran to the click" );
+
+		// The park is quit, and the lobby is built again.
+		LobbyCameraMode.ForgetIsland();
+		LobbyCameraMode.BeginLobby();
+
+		Assert.AreEqual( 0f, LobbyCameraMode.DebugOrbit, 0.0001f );
+	}
+
 	/// <summary>A turn that has arrived stays put and says so, rather than stepping past and oscillating.</summary>
 	[TestMethod]
 	public void AnAngleAlreadyOnTheTargetHasArrived()

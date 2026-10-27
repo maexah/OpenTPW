@@ -298,6 +298,7 @@ public class Level
 		// handed to him by the front end, which is built with the HUD below.
 		_ = new Advisor();
 
+		LobbyCameraMode.BeginLobby();
 		Camera.SetCameraMode<LobbyCameraMode>();
 	}
 

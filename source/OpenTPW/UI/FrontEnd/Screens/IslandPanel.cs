@@ -332,8 +332,10 @@ internal sealed class IslandPanel : UiWindow
 			{
 				// Owned by no window, as the original's (0x004b8fd0 keeps no handle), so it is drawn over everything and
 				// lives on after this panel is closed. The owner rule (ScreenParticles) does not bite: no window opens from
-				// here to the park, and Escape cancels the flight before a menu can open, showing this panel again under
-				// the puff, as the original's (lobby.md, "The key puff at park entry").
+				// here to the park. A first Escape cancels the flight and shows this panel again under the puff, as the
+				// original's (lobby.md, "The key puff at park entry"). LIMIT: a second Escape within about 0.7 s opens the
+				// game menu (FrontEnd.MenuKey), and the ownerless puff is then drawn over the dimmed menu;
+				// ParticleSystem has no SetOwner to hand the live puff back to the panel.
 				var rect = _price.Rect;
 				var middle = ((rect.Bottom - rect.Top) >> 1) + rect.Top;
 

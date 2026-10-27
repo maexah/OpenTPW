@@ -214,7 +214,8 @@ public class LobbyCameraMode : CameraMode
 
 	// Accumulated separately from Time.Now so unpausing resumes where it stopped instead of
 	// snapping back onto the wall-clock orbit. Static for the same reason Paused is: the orbit
-	// should not restart just because a camera mode was swapped out and back.
+	// should not restart just because a camera mode was swapped out and back. Zeroed when a lobby is built
+	// (BeginLobby), as the original's constructor zeroes its angle (0x005dfd30).
 	private static float _orbitTime;
 
 	// Where the camera and its aim have actually got to, as opposed to where they are headed.
@@ -825,10 +826,20 @@ public class LobbyCameraMode : CameraMode
 	}
 
 	/// <summary>
+	/// A lobby is being built: its orbit starts at nought. The original builds the island camera afresh on every entry
+	/// to the lobby, a quit from a park included (boot state 1, <c>0x0054e656</c>..<c>0x0054e671</c>), and its
+	/// constructor stores 0 to the orbit angle at <c>+0x18</c> (<c>0x005dfd30</c>), so a player who waits on the island
+	/// panel after a return turns for the park from the angle the orbit has run to since then, not from the last
+	/// click's (<c>docs/exe/lobby.md</c>, "The flight measured"). Where the camera's eye stands is not reset here: the
+	/// original seeds it from its render camera (<c>0x005dfd3c</c>..<c>0x005dfd99</c>), which ours does not read (queued).
+	/// </summary>
+	internal static void BeginLobby() => _orbitTime = 0f;
+
+	/// <summary>
 	/// Lets go of the island on show as the lobby ends, so nothing reads an island out of a lobby that has gone,
-	/// and of any leave for a park still under way. Which island it was, and where the camera was, are kept, as
-	/// they are across camera modes - see <see cref="Paused"/> - so the lobby built next picks up where this one
-	/// left off.
+	/// and of any leave for a park still under way. Which island it was, and where the camera has got to (not its
+	/// orbit, which <see cref="BeginLobby"/> zeroes), are kept, as they are across camera modes - see
+	/// <see cref="Paused"/>.
 	/// </summary>
 	internal static void ForgetIsland()
 	{

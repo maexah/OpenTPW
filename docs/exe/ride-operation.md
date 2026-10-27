@@ -1709,7 +1709,7 @@ made), so the two are not like for like (Q668).
 setters-off counted at the turn they set off (state 6 to `0x12`), with their cause, and where the crowd's happiness goes
 (`original/leavers.py` at 50 ms: each guest's change between polls summed by the state it came from and went to; this
 game's `Peep.HappinessLedger`, the console's `happiness`, by the state at the write). Over 2420 sweeps the original set
-off 173 and 172 (rounds `a`, `b`: 44 and 37 for the day run out, 137 and 133 miserable), 159 and 160 gone. This game
+off 173 and 172 (rounds `a`, `b`: 44 and 37 for the day run out, 129 and 133 miserable at +2420, round `b`'s 172 including 2 who set off from state `0x11`, not from the deciding turn; round `a`'s 137 is its count at the run's end, +2819), 159 and 160 gone. This game
 set off 198 (25 day, 173 miserable), 190 gone, its crowd 5 to 8 happiness points lower from the second minute
 (`q668/run1`). **The chooser's failures were not it**: the original's found nothing 2082 times, this game's 1816
 (5 each, `0x6>0x8`, the ledger's largest loss in both). The original's ledger has a gain this game had none of:
@@ -3199,8 +3199,10 @@ words are the balance file's keys in its own order**: `RegionFX[n].Happiness`, `
 **A guest's needs turn reads them** (`FUN_00501650`, `0x005016a7`..`0x00501787`): after `mExitLevel` loses one, the
 cell of the guest's own bytes (`+5`, `+7`; `FUN_004cd4e0` packs it, `FUN_004d8410` answers its record) gives its first
 three words, added to happiness (`+0x19c`), illness (`+0x1b0`) and hunger (`+0x1a8`), each held to 0..100, in every
-state, before the drift. In Lost Kingdom the one happiness word is the entertainer's, so a guest gains 2 a needs turn on
-his cell and 1 beside it. `EntertainerConstsPerGrade[g].HappinessEffectOnCell` (4 to 20, the per-grade record's `+4`,
+state, before the drift. In a Lost Kingdom park as shipped the one happiness word in the cells is the entertainer's: 2 on his cell and 1 on the four
+orthogonal cells beside (effect 0 divides by |dx| + |dy| + 1, so a diagonal gains 0, 2/3 cut to nought); a sick guest's
+litter (effect 2, -1) and a stink bomb (effect 5, -3) add their own once those arms are built (Q225, Q228). Of the six cells a
+guest watches from, the four beside him gain 1 a needs turn. `EntertainerConstsPerGrade[g].HappinessEffectOnCell` (4 to 20, the per-grade record's `+4`,
 `0x0078539c`) is read by no instruction: the stamp is RegionFX[0]'s whatever his grade. OpenTPW: `Peep.Tick`'s `cell`,
 from `ParkPeople.CellEffects` (Q668).
 

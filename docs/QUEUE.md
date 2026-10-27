@@ -1894,6 +1894,13 @@ filed the items that cite it.
   **Find a reach first** (which of the eight references, which model; a clip shorter than a script's wait); where one
   exists, record the stop as a bind with a null clip so the target rests at the stop by the stop's flags, and queue the
   binds per channel and replay them in `PoseChannel`. If none is reached, close this item with the reason.
+- [ ] **Q746. Ours' queues lose more happiness than the original's. Measure first which state's loss differs. (from the run 11 review of Q668.)**
+  From a crowd (`q416/guard.TPWS`, 2420 sweeps) ours' queuers lose about -344 happiness against the original's about -195:
+  ours `InQueue` -280, with `SteppingUpQueue` -17 and the spot animations entered from `InQueue` -47 (`q668/run2.out`
+  LEDGER); the original's queue states 0xb, 0xb>0x6, 0xc, 0xb>0x8 and the rest sum to about -195 (`q668/orig/b-load.log`
+  LEDGER). Nothing is built on this: measure the queue turn's docks in both games (`original/leavers.py`; `Peep.HappinessLedger`,
+  the console's `happiness`) by the state at the write, find which state's loss differs, and read that state's listing
+  before changing anything. Confirm: the two ledgers' queue rows side by side, same file, same sweeps.
 - [ ] **Q662. Run the original on the made file for the advisor's row 257 (from Q713; beside Q743's file B).** The docs now
   say the original's tick 19040, sample 525 and props (8, 0) are from the unmodified `New Save` (`q707/orig/O2`); the
   original has never loaded `files/outlets-D.TPWS` (sideshow 50's thirty satisfaction days made 40). Load it in the
@@ -2310,8 +2317,8 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   closes on the gate, and a cancel lifts it. Counted as `LOBBY_FLY_IN_FADE`. The ease is per pass, not per second:
   convert it through `Time.SmoothingFactor` and say so (rule 10). Confirm: `step` into the flight, screenshots at
   three radii with mean brightness falling, then Escape and the brightness back within a second.
-  - **Note (play test 2026-10-21, note 2):** no golden key animation at entry; the key puff is built
-    (IslandPanel.cs:325-337`) and filed as Q630.`
+  - **Note (play test 2026-10-21, note 2):** no golden key animation at entry; the key puff is drawn since Q669, so
+    what is left of the note is this fade.
 - [ ] **Q62. What View the online world does offline. Decode first.** Found by Q41's decode. `IslandPanel_Callback`'s
   case for button `0x1e0e9` (`0x004b8c18`-`0x004b8c2f`) calls the island camera's `+0x20`, its deactivate
   (`0x005e1bd0`, which Ghidra names `IslandLobby_ViewOnlineWorld`), and then the online-world child's `+0x1c`, with no
@@ -2470,6 +2477,33 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   over a flight with `original/lobbycam.py` (add the fields), against ours' `PositionRate` and `LookAtRate`
   (`LobbyCameraMode`) and the island's camera target; the fade (Q61) darkens the original's frames from +4.3 s, so
   compare positions, not pictures. Confirm: the eye's distance a frame at a time in both games.
+- [ ] **Q747. A second Escape within about 0.7 s of the park-entry cancel shows the key puff over the game menu. (from the run 11 review of Q669.)**
+  Small. `IslandPanel.EnterPark` starts the puff ownerless; the first Escape cancels the flight and reopens the panel
+  (`LobbyCameraMode.CancelLeave`), so a second Escape goes to `FrontEnd.MenuKey` (`FrontEnd.cs`), which opens a `GameMenu`
+  while the puff is still falling (32, 27, 14, 8 particles for about 0.7 s, `q669/run2/run.log`), and the ownerless puff is
+  drawn over the dimmed menu: the case the owner rule was made for. Derived from the code, not observed. Build: keep the
+  puff's handle in `EnterPark`; when the cancel reopens the panel make the panel the owner of the live puff, with a small
+  `ParticleSystem.SetOwner( int handle, UiWindow? owner )` beside `Hide`, so it is still drawn over the panel and the menu's
+  dimming then covers it. Said at the site (`IslandPanel.cs`) and in `lobby.md` meanwhile. Confirm: Enter then Escape twice
+  in quick succession, a screenshot of the menu with no keys over it.
+- [ ] **Q748. The key sparkle's last particles at park entry are drawn, as the original's. Decode first. (from the run 11 review of Q669.)**
+  At the Enter the original's sparkle (effect 97, the handle at `0x7cc4bc`) is stopped with life -2 and its last particles
+  fall on screen: 4 still falling at 0.1 s, counts 3, 2, 1, 1 over 0.1 to 0.4 s, gone by 0.5 s (`q630/orig-a/poll.txt`).
+  Ours is stopped by the panel's `Closed` (`ShowSparkle( false )`), but its particles stay the closed panel's, so
+  `ScreenParticles` does not draw them (`q669/run1/run.log`: 3, 2, 1, 1 "closed (not drawn)"). Decode first what stops the
+  original's 97 at the Enter: not `0x004b8fd0`, and not the panel's message `0x14` case (`0x004b8c37`). Then let the stopped
+  sparkle's particles go unowned for the Enter alone, as the puff. The owner rule's limit is the same as the item above's (a
+  second Escape opens the menu), so settle that first. Confirm: `lib/lobbyentry.py`'s `particles screen` reads effect 97
+  "owner no window (drawn over all)" at 0.1 to 0.4 s, and a frame at +0.1 s shows the twinkles at the price beside
+  `q630/orig-a/film`.
+- [ ] **Q749. After a quit to the lobby ours' eye eases out from where the last flight ended; the original seeds it from its render camera. Film both first. (from the run 11 review of Q670, M1, unsettled.)**
+  `LobbyCameraMode._placed` (and `_position`, `_lookAt`) are static and reset only by `DebugSettle`, so after a park is quit
+  ours' first lobby frame eases from where the last flight ended (radius under 8 at the old island) out to the orbit. The
+  original's island camera constructor seeds its eye `+0x28` and look point `+0x40` (and `+0x34`, `+0x4c`) from the render
+  camera `[0xf83778]` `+8` and `+0x14` (`0x005dfd3c`..`0x005dfd99`), and the render camera is itself rebuilt by FrontEnd_Init
+  (`0x005d8b00`, `0x005d5abf`). Whether ours visibly flies out where the original does not is not read: film the lobby's
+  first second after a quit in both games (`record.sh`, `lobbycam.py`), then build (the orbit is already zeroed on a lobby's
+  build, `LobbyCameraMode.BeginLobby`). Confirm: the two films' first second side by side.
 - [ ] **Q32. Graphics tiers.** `Level` reads the detail files (`low.sam`, `med.sam`, `high.sam`) for `GameOptions.PARTICLEDENSITY`
   and `NUMKIDS` (the kid and staff bank caps) and for three `GraphicalOptions.*` keys: `LIGHTING` (a counted no-op),
   `TEXTUREQUALITY` (the sea's and the flags' folder) and `PROCEDURALTEXTURING` (the ground's tile size). `SPRITESHADOW` is read too (Q480: medium's silhouette built, the own
@@ -2783,9 +2817,14 @@ state machine.
   the opened gate. **Measured (Q670):** the island camera's `+0x18` at state 2 on Lost Kingdom is 4.71239 and the island's
   `+0x14` 1.57080 (`q670/orig-b`, `orig-c`, `original/lobbycam.py`), and the original's frame at its facing shows the
   isle from the same side as ours' at ours' pi (pier to the left, gate square on, `q670/side-by-side.png`), which is the
-  isle turned by its heading. Then turn the isles and gates, set `GateHeading` from the island, and fix the sun in
+  isle turned by its heading. **It also carries the flight's length:** the turn ends on pi where the original's ends on the
+  island's heading + pi, so until this is built Lost Kingdom's entry is up to 3.14 s off for the same wait at the panel
+  (ours shorter for waits of 3.93 to 19.63 s mod 31.42 s, by the whole 3.14 s for 7.85 to 15.71 s, longer otherwise), and
+  the panel's orbit at a given wait shows the isle from 90 degrees away (the original's view angle relative to its isle is
+  the orbit's less 1.5708, ours' the orbit; one facing pair measured, not at other angles). Then turn the isles and gates, set `GateHeading` from the island, and fix the sun in
   `Level.SetupEntities`, which stands in front of gates that all face one way. Lost Kingdom's island first. Confirm: the
-  lobby with the island and gate of Lost Kingdom beside the original's.
+  lobby with the island and gate of Lost Kingdom beside the original's, and the leave's "turning" and "arrived ... after"
+  log lines after a fixed wait at the panel equal the original's (`lobbycam.py`) from the same wait.
 - [ ] **Q575. A plain voice's first silence, measured in the original.** From the run 6 review of Q563 (`handoff/review6/VERIFY-18.md`,
   Q563 2). Read from the listing and built (fix group P): every start of a plain or music voice, the first and a start
   in range again included, draws its variation's silence (`FUN_006bc410` -> slot `+0x48` `0x006bdf00` -> `0x006c5220`),

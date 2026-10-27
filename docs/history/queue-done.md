@@ -10526,7 +10526,7 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the causes, predicted first.
   **Done (2026-10-26): measured, the cause found and built.** Counted at the turn they set off, with the cause, and the
   happiness ledger of both games (`original/leavers.py`; `Peep.HappinessLedger`, the console's `happiness`): the
-  original set off 173 and 172 over 2420 sweeps (44 and 37 for the day run out, 137 and 133 miserable), this game 198
+  original set off 173 and 172 over 2420 sweeps (44 and 37 for the day run out, 129 and 133 miserable at +2420, round b's 2 more from state 0x11), this game 198
   (25 and 173). Not the chooser (its failures 2082 there, 1816 here): the original's guests GAIN in state 6, +697 by
   sweep 968, on the entertainer's cells, the file's only happiness words. Two pieces were missing here, both built: the
   needs turn adds the cell's happiness, illness and hunger words (`0x005016a7`, `Peep.Tick`, `ParkPeople.CellEffects`),
@@ -10560,7 +10560,7 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   (`+0x14`, `+0x18`, `+0x20` of the island camera) a frame at a time over a flight, and its frame rate, before changing
   anything: a per-pass rate under the 30 fps cap would make the flight's length the frame rate's. Confirm: the same film
   in both games, the three phases' times predicted first.
-  **Done (measured; no rate changed):** the two flights run at the same rates and last the same from the same angle.
+  **Done (measured; no rate changed):** the two flights run at the same rates and last the same from the same turn (for the same wait at the panel Lost Kingdom's entry is up to 3.14 s shorter until Q721).
   The original (`original/lobbycam.py`, `q670/orig-c`, 30 fps cap): state 0 0.201 rad a second, state 1 2.0505 rad in
   4.101 s (0.500 a second, 125 passes), state 2 3.067 s (93 passes, radius 70 to 7.94), park asked at +7.23 s; its delta
   is the pass's whole milliseconds / 100 (0.33 at 30 a second), so no per-pass rate. Ours (`q670/run2`, dll 3639110d,
