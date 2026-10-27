@@ -51,6 +51,8 @@ Only the item just landed is here. Every earlier item's account is in `docs/hist
 | Tests without the game | **1462** ran, **2585** skipped, of 4047 | 2026-10-27, run 11 fix group P, its gate |
 | Build warnings | 121 in the main tree; 131 or 133 in a fresh worktree as NuGet's advisory list was last fetched, the ten or twelve more its advisories on ModKit's ImageSharp 3.1.6 (a sixth, GHSA-v76p-62qx-wwq2, published 2026-10-26: Q75, DECISIONS.md "Package advisories") | 2026-10-26 (the worktree's 133 at Q672's gate and 131 at fix group P's, run 11; the main tree's 121 last counted 2026-10-13) |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
+| Park load, Release | **3.1 to 3.4 s**, worst phase `audio` 1.04 s (`ground` 0.52 to 0.57, `terrain` 0.46 to 0.55, `objects` 0.35 to 0.47) | 2026-10-26, three runs, `perf/bench.sh` |
+| Frame, stock jungle park, Release | **1.23 ms** a frame uncapped (about 800 fps, 18 guests) on the RX 6700 XT, the display's cap 143.9 fps held; 54 KB allocated a frame, a gen 0 collection about every 2 s at the display's 144 fps, worst frame about 24 ms; the CPU is the limit (88% of the frame on-CPU): 67% drawing (`Model.Draw` 61%), 11% `Level.Update` | 2026-10-26, `perf/bench.sh` (`docs/TOOLING.md`) |
 
 ## Recent
 
