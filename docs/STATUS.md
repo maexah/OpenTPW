@@ -40,7 +40,9 @@ Only the item just landed is here. Every earlier item's account is in `docs/hist
   launches on this Linux desktop, from the build and from the published zip, whose lobby was photographed. Not run: the
   Windows and macOS builds (their processor probes, the Mac's sysctl and Windows's registry, are unexercised; the Mac
   zip is labelled untested), a `console.log` written on Windows (the scrubber's backslash and case rules are the
-  suite's), and the workflow itself, which waits for a dry-run tag on Alexah's yes.
+  suite's). The workflow ran twice on dry-run tags: the first refused both Mac zips at the guard (MoltenVK's driver
+  manifest, now allowed), the second published all four zips and the sums; the Linux zip, downloaded from the release,
+  passed `zipsmoke.py` (`q751/run8-release`). The Windows and Mac zips were built there and never started.
 
 
 ## Numbers (take counts fresh; these go stale within a day)

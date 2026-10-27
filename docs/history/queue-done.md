@@ -10760,5 +10760,7 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `lib/logpii.py` clean on the real log, the terminal's log hits (the control), and the scrubber put back out of
   `ConsoleLog.Open` makes the real log hit. 23 bugs through `mutate.py`: 21 fail a test; the backslash one cannot fail
   on Linux, and the wiring one is the real-log run's. A Linux publish zipped, guarded (252 entries) and started from
-  the zip by `lib/zipsmoke.py`: the lobby drawn (`q751/run5-zip/lobby.png`). Not run: the Windows and macOS builds,
-  and the workflow itself (a dry-run tag, on Alexah's yes).
+  the zip by `lib/zipsmoke.py`: the lobby drawn (`q751/run5-zip/lobby.png`). Player names cut too, as `<player N>`
+  (Alexah's answer). Dry runs: `weekly-test-1` refused the Mac zips (MoltenVK's manifest, then allowed);
+  `weekly-test-2` published four zips and the sums, the Linux zip downloaded passed `zipsmoke.py`; both deleted.
+  Not run: the Windows and macOS zips themselves.
