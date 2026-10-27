@@ -74,12 +74,6 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q673. A tag put on the aerial shows at once here, about half a second after the top lifts in the original.**
-  Seen by Q637 in the original's film (`q637/orig/film-on-sheet.png`: the top lifted at frame 212, the tag's picture
-  from frame 228, 0.53 s on, with sparkles about it). The mast's `0x100001` arm links the tag and posts it message 6
-  with 1 to arrive 500 ms later (`FUN_00658df4`, `0x004a1292`; `hud.md`, "The aerial is built down"); what message 6
-  does to the tag and what is shown before it is not read. Here `ParkGadget.BuildTags` shows the tag at once. Decode
-  message 6 in the tag's handler (`FUN_0048dae0`), then build it. Confirm: the put-on filmed in both games.
 - [ ] **Q690. Keypad 5 and Home reset the park camera, as the original's.** From the Q631 review (run 9). Camera-table
   rows 19 and 24 (`lib/bindtables.py`: actions `0x14` key `0x0065`, `0x18` key `0x2400`) run `0x0042a500`, which sets bit
   `0x100` of `[0x00790aac]`; the update answers at `0x0042b518`: zoom `[0x007909ec]` = 110.0, asked rotation

@@ -30,19 +30,17 @@ One line per system; the detail, item by item, is `docs/WORKS.md` (grep it by ar
 
 ## Next
 
-`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next Q673 (a tag on the aerial shows half a second late; Q525, ordered before Q638, stands lower in the file; Q543 and Q27, ordered before Q631, and Q31b, Q25, Q51 and Q55, ordered earlier, stand lower in the file): Alexah's play test of 2026-10-21 put Q616 to Q645 first, the display, then what a player hits, then the chosen improvements (`playtest-2026-10-21/notes.md`); Q598 (every clip's scale track posed) follows them in section A (Q609, the advisor's row 19 that Q602 decoded, and Q587 to Q589, the karts' and the water ride's build, are filed after it; Q586 stood above the ordered block; Q608, the draws left both-sided, is filed after Q713): the queue was reordered at Alexah's word, 2026-10-20. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. Gaps 4 and 7: `docs/PLAYER-GAPS.md`. Q13 is done: `docs/history/CLEANUP-PLAN.md`.
+`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next Q690 (Keypad 5 and Home reset the park camera; Q525, ordered before Q638, stands lower in the file; Q543 and Q27, ordered before Q631, and Q31b, Q25, Q51 and Q55, ordered earlier, stand lower in the file): Alexah's play test of 2026-10-21 put Q616 to Q645 first, the display, then what a player hits, then the chosen improvements (`playtest-2026-10-21/notes.md`); Q598 (every clip's scale track posed) follows them in section A (Q609, the advisor's row 19 that Q602 decoded, and Q587 to Q589, the karts' and the water ride's build, are filed after it; Q586 stood above the ordered block; Q608, the draws left both-sided, is filed after Q713): the queue was reordered at Alexah's word, 2026-10-20. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. Gaps 4 and 7: `docs/PLAYER-GAPS.md`. Q13 is done: `docs/history/CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the pre-commit hook: grep it by Q-number.
 
-- Q672 (Ctrl+click on a placed thing puts another in the hand): ours on the final build (`q672/run5`: the Belly Bounce
-  cloned twice and put down for 500 each with the queue tool, a Small Toilet held and built at its 270, the bank at 50
-  refused with `0x1D` "a voice") and the original's toilet clone (`q672/orig`: rotation 270, put down for 100),
-  `side-by-side.png`, whose two views face opposite ways. Not seen: a mystery ride's clone in either game (cash asked, by
-  the listing), a Ctrl+click with something already in the hand, the refusal's sound in the original (Q635's breakpoint
-  only) or caught by the disk driver here, and the Belly Bounce on (41,22), refused here for a path where the original
-  takes it (Q37).
+- Q673 (a tag shows half a second after the top lifts; already built by Q638): ours on the final build (`q673/run1`, 4
+  of 4: the tag 0.502 s after the top) beside the original's film of Q637 (`q637/orig/film-on`, 0.53 s), not filmed
+  again this session; `side-by-side.png`. Not seen: a tag taken off within its half second (the decode's case; a delete
+  of all at 100 ms a tag) in either game.
+
 
 
 

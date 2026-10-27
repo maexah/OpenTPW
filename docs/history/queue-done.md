@@ -10612,6 +10612,19 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   a Small Toilet standing at 270 held and built at 270 for 100; the bank at 50 refused with `0x1D`, a voice, no window. The
   original's toilet clone reads rotation 270, its put-down 100 (`q672/orig/a-run.out`; `q672/side-by-side.png`). Not run:
   a mystery ride's clone, a Ctrl+click with an item already in the hand.
+- [x] **Q673. A tag put on the aerial shows at once here, about half a second after the top lifts in the original.**
+  Seen by Q637 in the original's film (`q637/orig/film-on-sheet.png`: the top lifted at frame 212, the tag's picture
+  from frame 228, 0.53 s on, with sparkles about it). The mast's `0x100001` arm links the tag and posts it message 6
+  with 1 to arrive 500 ms later (`FUN_00658df4`, `0x004a1292`; `hud.md`, "The aerial is built down"); what message 6
+  does to the tag and what is shown before it is not read. Here `ParkGadget.BuildTags` shows the tag at once. Decode
+  message 6 in the tag's handler (`FUN_0048dae0`), then build it. Confirm: the put-on filmed in both games.
+  **Done (2026-10-26, a16): already built by Q638 with Q463** (`ParkTags.ShowAfter`), filed by Q637 earlier the same day
+  and never ticked; message 6 decoded. The tag's handler (Ghidra `Tag_Proc`) has its own arm for 6 (`0x0048db24`): it
+  passes the show on to `UI_SetVisible( 1 )` only while the tag's record (`0x007c26b0`, `+4`) is in use, so a tag taken
+  off within its half second is never shown (`hud.md`, "Message 6 in the tag's own handler"); OpenTPW draws a control
+  for a standing tag alone, so it holds that too. No code. Both games filmed (`q673/side-by-side.png`): the bare pole,
+  then the tag in its glints, the original's 16 frames (0.53 s) from the top's lift, ours 0.502 s (`q673/run1`: `tag 72
+  shown at age 502`; the tag's box first changed at +0.515 s, the top's strip at +0.014 s; 4 of 4).
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

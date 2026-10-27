@@ -5,6 +5,13 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q672 (Ctrl+click on a placed thing puts another in the hand): ours on the final build (`q672/run5`: the Belly Bounce
+  cloned twice and put down for 500 each with the queue tool, a Small Toilet held and built at its 270, the bank at 50
+  refused with `0x1D` "a voice") and the original's toilet clone (`q672/orig`: rotation 270, put down for 100),
+  `side-by-side.png`, whose two views face opposite ways. Not seen: a mystery ride's clone in either game (cash asked, by
+  the listing), a Ctrl+click with something already in the hand, the refusal's sound in the original (Q635's breakpoint
+  only) or caught by the disk driver here, and the Belly Bounce on (41,22), refused here for a path where the original
+  takes it (Q37).
 - Q671 (the path and queue tools' laying sound `0x65`): ours on the final build (`q671/run1`: the path tool's two
   clicks, the queue tool's join and its anchor click, each "cat_ui 0x65 ..., a voice" and `rj_laypath_2` 0.947 to 1.000
   in the mix) and the original's queue clicks under a breakpoint (`q671/orig`: two hits of effect `0x65` from
