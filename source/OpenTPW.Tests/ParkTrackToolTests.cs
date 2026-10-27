@@ -109,8 +109,8 @@ public class ParkTrackToolTests
 		Assert.AreEqual( ((byte)0x05, (byte)0x01, (short)1, 3, 270), Piece( state, 28, 29 ) );
 		Assert.AreEqual( ((byte)0x11, (byte)0x01, (short)0, 2, 0), Piece( state, 28, 27 ) );
 
-		// The original's circuit walk then turns the closing bend's way on to the way it leaves (0x04); ours stops at the
-		// run's flow, 0x01, which takes the same row and turn.
+		// The run leaves the closing bend at its flow, 0x01; the circuit's walk that follows turns it to the way it leaves
+		// (TheClosedKartLoopsWalkLaysTheOriginalsSections).
 		Assert.AreEqual( ((byte)0x14, (byte)0x01, (short)1, 3, 0), Piece( state, 28, 25 ) );
 		Assert.AreEqual( ((byte)0x44, (byte)0x04), (state.Record( 30, 25 ).TrackNeighbours, state.Record( 30, 25 ).TrackDirection),
 			"the station is not relaid" );
@@ -222,5 +222,151 @@ public class ParkTrackToolTests
 		Assert.AreEqual( ((byte)0x41, (byte)0x01, (short)1, 19, 180), Piece( state, 22, 19 ), "W-cells.log's corner, wr_trckB2" );
 		Assert.AreEqual( ((byte)0x11, (byte)0x01, (short)0, 2, 0), Piece( state, 22, 17 ) );
 		Assert.AreEqual( (0x10, 0xc), (state.Record( 22, 15 ).TrackType, state.Record( 23, 16 ).TrackType) );
+	}
+
+	/// <summary>A bought kart (water) ride standing on its cell at turn 0, the table holding it, as the walk finds it by the station's owner.</summary>
+	private static (ParkState State, ParkWorld.CatalogueObject Ride) Standing( int trackType, int x, int y, int balance = 53522 )
+	{
+		var state = new ParkState( parkIsClosed: false, visitorsToDate: 0, balance: balance );
+		ParkTrackTool.Forget();
+		ParkTrackPieces.LayStation( state, trackType, x, y, 0 );
+
+		var ride = new ParkWorld.CatalogueObject( state.NextThingId(), trackType == 1 ? 1150 : 1160, x << 8, y << 8, 0,
+			TrackRide: state.TrackRides.Take( trackType == 1 ? -4 : -5 ) );
+		state.AddObject( ride );
+
+		return (state, ride);
+	}
+
+	private static (int Type, int X, int Y) Section( int type, int flags, int x, int y ) => (type | (flags << 16), x * 0xc00, y * 0xc00);
+
+	/// <summary>
+	/// The closed kart loop's walk lays the original's ten sections in circuit order (<c>q581/orig/A-track.log</c>, after
+	/// the same clicks), answers 1, and turns the closing corner's way on to the way it leaves, 0x04 (<c>A-load.log</c>).
+	/// </summary>
+	[TestMethod]
+	public void TheClosedKartLoopsWalkLaysTheOriginalsSections()
+	{
+		var (state, ride) = Standing( 1, 30, 24 );
+
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 25), (34, 29), 200 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 29), (28, 29), 200 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (28, 29), (28, 25), 200 );
+
+		Assert.AreEqual( (1, 10), ParkTrackTool.WalkCircuit( state, ride, check: false ), "once round, back at the start" );
+		CollectionAssert.AreEqual( new[]
+		{
+			Section( 9, 1, 30, 25 ), Section( 9, 1, 32, 25 ), Section( 7, 0, 34, 25 ), Section( 10, 0, 34, 27 ),
+			Section( 6, 0, 34, 29 ), Section( 9, 0, 32, 29 ), Section( 9, 0, 30, 29 ), Section( 5, 0, 28, 29 ),
+			Section( 10, 0, 28, 27 ), Section( 8, 0, 28, 25 )
+		}, state.TrackRides.SectionsOf( ride.TrackRide ).ToArray() );
+		Assert.AreEqual( ((byte)0x14, (byte)0x04, (short)1, 3, 0), Piece( state, 28, 25 ), "A-load.log's (28,25) after the close" );
+		Assert.AreEqual( ((byte)0x50, (byte)0x10, (short)1, 3, 90), Piece( state, 34, 25 ), "a bend already leaving its way is left" );
+
+		// A second walk lets the first's sections go before it lays them again.
+		Assert.AreEqual( 1, ParkTrackTool.WalkCircuit( state, ride, check: false ).Valid );
+		Assert.AreEqual( 10, state.TrackRides.SectionsOf( ride.TrackRide ).Count );
+	}
+
+	/// <summary>The water loop south of its station, Q581's (<c>q581/orig/D-track.log</c>), and Q687's north of it, whose closing corner the walk makes <c>wr_trckB2</c> (<c>q587/orig/W-cells.log</c>).</summary>
+	[TestMethod]
+	public void TheWaterLoopsWalkLaysItsSectionsAndTurnsTheClosingCorner()
+	{
+		var (state, ride) = Standing( 2, 18, 18, 47452 );
+		var owner = (ushort)MapStep.CellId( 18, 18 );
+
+		ParkTrackTool.LayRun( state, 0x10, owner, (22, 19), (22, 23), 250 );
+		ParkTrackTool.LayRun( state, 0x10, owner, (22, 23), (16, 23), 250 );
+		ParkTrackTool.LayRun( state, 0x10, owner, (16, 23), (16, 19), 250 );
+
+		Assert.AreEqual( 1, ParkTrackTool.WalkCircuit( state, ride, check: false ).Valid );
+		CollectionAssert.AreEqual( new[]
+		{
+			Section( 9, 1, 18, 19 ), Section( 9, 1, 20, 19 ), Section( 7, 0, 22, 19 ), Section( 10, 0, 22, 21 ),
+			Section( 6, 0, 22, 23 ), Section( 9, 0, 20, 23 ), Section( 9, 0, 18, 23 ), Section( 5, 0, 16, 23 ),
+			Section( 10, 0, 16, 21 ), Section( 8, 0, 16, 19 )
+		}, state.TrackRides.SectionsOf( ride.TrackRide ).ToArray() );
+
+		(state, ride) = Standing( 2, 18, 18, 47452 );
+		ParkTrackTool.LayRun( state, 0x10, owner, (22, 19), (22, 15), 250 );
+		ParkTrackTool.LayRun( state, 0x10, owner, (22, 15), (16, 15), 250 );
+		ParkTrackTool.LayRun( state, 0x10, owner, (16, 15), (16, 19), 250 );
+
+		Assert.AreEqual( ((byte)0x05, (byte)0x10, 3), (Piece( state, 16, 19 ).Mask, Piece( state, 16, 19 ).Way, Piece( state, 16, 19 ).Row ),
+			"the run leaves the corner wr_trckB" );
+		Assert.AreEqual( 1, ParkTrackTool.WalkCircuit( state, ride, check: true ).Valid );
+		Assert.AreEqual( ((byte)0x05, (byte)0x04, (short)1, 19, 270), Piece( state, 16, 19 ), "W-cells.log's (16,19), wr_trckB2" );
+		Assert.AreEqual( 0, state.TrackRides.SectionsOf( ride.TrackRide ).Count, "a checking walk lays no section" );
+	}
+
+	/// <summary>An open loop's walk stops at its open end, answering 0, with the sections it passed laid.</summary>
+	[TestMethod]
+	public void AnOpenLoopsWalkAnswersNought()
+	{
+		var (state, ride) = Standing( 1, 30, 24 );
+
+		Assert.AreEqual( 0, ParkTrackTool.WalkCircuit( state, ride, check: false ).Valid, "the bought station alone: the mouth is an end" );
+		Assert.AreEqual( 2, state.TrackRides.SectionsOf( ride.TrackRide ).Count );
+
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 25), (34, 29), 200 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 29), (28, 29), 200 );
+
+		Assert.AreEqual( 0, ParkTrackTool.WalkCircuit( state, ride, check: false ).Valid );
+		CollectionAssert.AreEqual( new[]
+		{
+			Section( 9, 1, 30, 25 ), Section( 9, 1, 32, 25 ), Section( 7, 0, 34, 25 ), Section( 10, 0, 34, 27 ),
+			Section( 6, 0, 34, 29 ), Section( 9, 0, 32, 29 ), Section( 9, 0, 30, 29 )
+		}, state.TrackRides.SectionsOf( ride.TrackRide ).ToArray(), "no section for the end at (28,29)" );
+
+		// Track beyond the end, not linked to it: the walk stops at the end and lays nothing there.
+		state.SetRecord( 26, 29, state.Record( 26, 29 ) with { TrackType = 0xb, TrackNeighbours = 0x44, TrackParentId = Owner } );
+		Assert.AreEqual( (0, 8), ParkTrackTool.WalkCircuit( state, ride, check: false ) );
+		Assert.AreEqual( 7, state.TrackRides.SectionsOf( ride.TrackRide ).Count, "an end stops it, track beyond or not" );
+
+		state.SetRecord( 32, 29, state.Record( 32, 29 ) with { TrackType = 0 } );
+		Assert.AreEqual( 0, ParkTrackTool.WalkCircuit( state, ride, check: false ).Valid );
+		Assert.AreEqual( 5, state.TrackRides.SectionsOf( ride.TrackRide ).Count, "a cell that is not track stops it" );
+
+		// A station that is no longer track: the walk answers 0 before it lets the sections go.
+		state.SetRecord( 30, 25, state.Record( 30, 25 ) with { TrackType = 0 } );
+		Assert.AreEqual( (0, 0), ParkTrackTool.WalkCircuit( state, ride, check: false ) );
+		Assert.AreEqual( 5, state.TrackRides.SectionsOf( ride.TrackRide ).Count );
+	}
+
+	/// <summary>A crossing lays section 11 and is gone straight through; an add-on's straight lays 12 or 13.</summary>
+	[TestMethod]
+	public void ACrossingAndAnAddOnLayTheirOwnSections()
+	{
+		var (state, ride) = Standing( 1, 30, 24 );
+
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 25), (34, 29), 200 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 29), (28, 29), 200 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (28, 29), (28, 25), 200 );
+
+		state.SetRecord( 34, 27, state.Record( 34, 27 ) with { TrackNeighbours = 0x55 } );
+		state.SetRecord( 32, 29, state.Record( 32, 29 ) with { TrackFlags = ParkTrackPieces.AddOnFlag } );
+		state.SetRecord( 28, 27, state.Record( 28, 27 ) with { TrackFlags = ParkTrackPieces.AddOnFlag } );
+
+		Assert.AreEqual( 1, ParkTrackTool.WalkCircuit( state, ride, check: false ).Valid );
+
+		var sections = state.TrackRides.SectionsOf( ride.TrackRide );
+
+		Assert.AreEqual( Section( 11, 0, 34, 27 ), sections[3] );
+		Assert.AreEqual( Section( 12, 0, 32, 29 ), sections[5], "east-west with an add-on" );
+		Assert.AreEqual( Section( 13, 0, 28, 27 ), sections[8], "north-south with an add-on" );
+	}
+
+	/// <summary>A ride whose loop the tool closes takes the walk's 1 into <c>+0x2c</c>, and opens only where the open guard lets it.</summary>
+	[TestMethod]
+	public void ARideWithNoQueueJoinedIsValidAndNotOpened()
+	{
+		var (state, ride) = Standing( 1, 30, 24 );
+
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 25), (34, 29), 200 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 29), (28, 29), 200 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (28, 29), (28, 25), 200 );
+
+		Assert.AreEqual( 1, ParkTrackTool.WalkCircuit( state, ride, check: false ).Valid );
+		Assert.IsFalse( ParkRideOperation.MayOpen( null, ride, 1 ), "no park, no queue joined: the guard refuses" );
 	}
 }

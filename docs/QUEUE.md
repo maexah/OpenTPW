@@ -74,13 +74,13 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q587. The karts' and the water ride's track: walked, opened, taken back (the rest).** From Q581 (`park.md`, "The
+- [ ] **Q587. The karts' and the water ride's track: taken back, edited, crossed (the rest).** From Q581 (`park.md`, "The
   karts' and the water ride's track, buoys and race"). Q688 lays the station and mouths and draws the pieces; Q762 arms
-  the track tool and lays its runs. What is left: the walk (`TrackRide_WalkCircuit`, `TRACK_WALK_CIRCUIT`) sets `+0x2c`,
-  turns each bend's way on to the way it leaves and retiles it (`0x0052b1a9`..`0x0052b1fc`: the water loop's closing
-  corner is `wr_trckB` in ours, `wr_trckB2` in the original), and makes the sections, their collision objects and buoys
-  (`ParkTrackRideTable`); a closed loop with the open guard opens the ride, and a later queue edit opens a closed valid
-  one (the tail `ride-operation.md` cites); Backspace's refund (`TRACK_BACKSPACE_REFUND`: `BuildTool_Backtrack` in mode
+  the track tool and lays its runs; Q763 walks the circuit as a loop closes (the sections, `+0x2c`, the opening). What is
+  left: each section's collision objects and buoy (`TRACK_SECTION_OBJECTS`, `TrackRide_AddSection` from `0x0054b3a1`;
+  Q588's race steers by them), an add-on's end caps in the walk (`TRACK_WALK_ADD_ON`), the pieces' clips after a close
+  (`TRACK_PIECES_CLIP`: `TrackRide_PlayPiecesFromMouth`, `0x0052a490`, and `TrackRide_PlayPiecesFromEnd`); the move's
+  put-down walk (`0x00524d0a`; ours moves as a sale and a purchase); Backspace's refund (`TRACK_BACKSPACE_REFUND`: `BuildTool_Backtrack` in mode
   0x35, `Track_ClearCell`, read for Q762 in `q762/dump`); a closed loop's two-click edit (`TRACK_EDIT_CLOSED_LOOP`);
   a run over path, queue or water, laid as a hill in the original (`TRACK_RUN_OVER_PATH`), a crossing or junction
   (`TRACK_RUN_CROSSING`) and a run into the station (`TRACK_RUN_INTO_STATION`), the verdict's rest; the clear pass
@@ -738,6 +738,12 @@ filed the items that cite it.
   signs on the footprint, so the poll read only the carried preview. Find where the original lets it stand (the
   park's owned land, or a park file with the ride researched and land bought), then poll `modelnodes.py =tourride --axes
   --poll` from the placing click, film it, and check the readings with `scalecurve.py ... tourride C`.
+- [ ] **Q764. The Splish Splash's hut (`wr_hut`), shown in one of our runs and not in another.** From Q763's runs. The
+  same bought Splish Splash at (18,18), its loop closed by the same clicks, draws mesh 5 `wr_hut` south of its footprint
+  while its channel 0 runs (`q763/probe3`: frame 1.9, bound Start 2, after a Dino Karts was opened) and hides it while the
+  channel is held (`q763/probe`: frame 0.0, flags 0x2, the water ride alone). The original draws the hut over the
+  station (`q587/orig/W-8-closed.png`). Read which clip shows and places `wr_hut` and what starts it, then compare its
+  place and time with the original's frames.
 - [ ] **Q569. Where the original puts down a worker held at a save, decode first.** From the run 6 review of Q241j (VERIFY-3,
   "anything the first reader missed"; unsettled). The world writer installs the idle mode over the hand
   (`FUN_0046c350` at `0x00516d13`), which runs the outgoing mode's uninstall: for a worker picked up, the type-6

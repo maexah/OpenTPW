@@ -1729,13 +1729,11 @@ a total above the balance refuses (`DAT_00816d5c`); an empty cell not blocked pa
 rules on its links and way on (a straight crossed, an end met, the station met along its flow), not read to the end.
 **OpenTPW** (Q762, `ParkTrackTool`) builds the arming walk, the click and its passes but `0x87` and `0x86`; its verdict
 refuses map types 1, 2 and 3 (`TRACK_RUN_OVER_PATH`: the original lays a hill), its own track mid-run or with two links
-at the end (`TRACK_RUN_CROSSING`) and its own station (`TRACK_RUN_INTO_STATION`); the circuit's walk
-(`TRACK_WALK_CIRCUIT`), a closed loop's edit (`TRACK_EDIT_CLOSED_LOOP`) and Backspace's refund (`TRACK_BACKSPACE_REFUND`)
-are counted. Measured in ours (`q762/ours-b`): Q687's two loops by the same clicks give every anchor the links, way on,
-overlap, row and turn the original's `A-load.log` and `W-cells.log` hold, and 200 (250) a new piece, but for the closing
-corner: the circuit's walk turns a bend's way on to the way it leaves and retiles it (`0x0052b1a9`..`0x0052b1fc`), so
-the original's (28,25) reads way 0x04 and its water corner (16,19) way 0x04, row 19 (`wr_trckB2`), where ours keeps the
-run's 0x01 and 0x10 and draws (16,19) as row 3 (`wr_trckB`).
+at the end (`TRACK_RUN_CROSSING`) and its own station (`TRACK_RUN_INTO_STATION`); a closed loop's edit
+(`TRACK_EDIT_CLOSED_LOOP`) and Backspace's refund (`TRACK_BACKSPACE_REFUND`) are counted, and the circuit's walk that
+closes a run is Q763's (below). Measured in ours (`q762/ours-b`, then `q763/ours-d` with the walk): Q687's two loops by
+the same clicks give every anchor the links, way on, overlap, row and turn the original's `A-load.log` and `W-cells.log`
+hold, the closing corners included, and 200 (250) a new piece.
 
 **The walk** (`TrackRide_WalkCircuit( check )`, `FUN_0052a970`) goes from the circuit's start in 2-cell steps the way
 each cell's flow (`+0xd`) and links (`+0xc`) send it: a cell with two links at right angles is a bend
@@ -1746,7 +1744,32 @@ whose way on has no link. Unless checking, it first lets the ride's sections go 
 (`TrackRide_AddSection`): bend 5 (links north and east), 6 (north, west), 7 (south, west), 8 (east, south); straight 9
 east–west, 10 north–south, 12 and 13 the same with an add-on (the cell's flag 0x10, "Found upgrade... modify?"; the
 section keeps the add-on's model); crossing 11. The first two, the station's, are flagged 0x10000 and lay no buoy. A
-cell's `+0x24` takes its step.
+cell's `+0x24` takes its step (`TrackCell_SetStep`, `0x0053aef0`). Read for Q763 (`q763/dump`,
+`q762/dump/0052a970.asm`): the start is `[0x007639e0]`/`e4`, the mouth `FUN_005276d0` or the put-down leaves there, 4
+cells back along the turn, so the station's first section, and the heading `[0x00818c50]`, which every writer before a
+walk sets to the turn's way (east, north, west, south for 0, 90, 180, 270: `FUN_0052a3a0`, `TrackRide_ShapeFromMouth`,
+`ShapeFromOtherMouth`); a start on a piece's other cell (0xc, 0x11, `TrackCell_IsPieceCell`) asks its anchor whether
+there is track and whose ride it is (`0x0052aa1c`), and with none the walk answers 0 before it clears anything. A
+straight or crossing keeps the heading; a bend leaves by `mask ^ opposite( heading )`, or `mask ^ heading` where the
+bend has no link back (`0x0052b1cc`), checking or not, and **where its way on (`+0xd`) is not that, takes it and is
+retiled** (`0x0052b1e3`..`0x0052b1fc`): so a closing run's last bend, left at the run's flow, turns to the way the
+circuit leaves it. A cell that is not track, or after its turn has no heading or under two links, answers 0; a cell of
+three links answers 0 where the cell two on is of no type, or is track with no links while heading north (`0x0052b22f`..
+`0x0052b280`). A laid piece with no model (`+4` nought) is retiled; an add-on's cell shows or hides its model's two end
+caps by the track on either side (`0x0052ade3`..`0x0052b18c`). `TrackRide_ClearSections` (`FUN_00545450`) removes the
+ride's cars (`FUN_0054ae50`), closes it (`BUMP 6`), frees the buoys not flagged 2 or 4 and every section with its
+objects. Callers: the closing click (`0x00526f02`, 0), the move's put-down (`0x00524d0a`, 0) and the closed loop's
+two-click edit (`0x0052693e` with 1, `0x00526bd0` with 0); each stores the answer in `+0x2c`, and the click and the edit
+then open the ride where it is 1 and the open guard lets it (`0x00526f18`..`0x00526f2d`).
+**OpenTPW** (Q763, `ParkTrackTool.WalkCircuit`) builds the walk at the closing click: the sections, the bends' way on
+and retile, `+0x2c` and the opening; the cars and buoys it clears are none here, a kart or water ride having no bumper
+record (Q588), and the step count is answered, not kept on the cells. Counted: the sections' objects and buoys
+(`TRACK_SECTION_OBJECTS`), the add-on's caps (`TRACK_WALK_ADD_ON`), the pieces' clips that follow (`TRACK_PIECES_CLIP`).
+Measured in ours on the final binary (`q763/ours-d`, `ours-t`), by the original's clicks: the karts' ten sections as
+`q581/orig/A-track.log`'s, the water loop south's as `D-track.log`'s, `+0x2c` 1 and the ride not opened (both logs'
+state 0); (28,25) way 0x04 as `A-load.log`, Q687's water corner (16,19) way 0x04, `wr_trckB2`, row 19, turn 270 as
+`W-cells.log` (earlier evidence, the original not run for Q763). The karts opened once their queue joined a path
+(`C-track.log`'s state 1 after its queue, another queue: ours joined the cell before the exit).
 
 **A section** (`TrackRide_AddSection( handle, x, z, type, … )`, `FUN_0054b2f0`, pool `DAT_00877b80`, 1024 of 0x28; x and
 z its top-left cell × 3072) joins the ride's list (`+0xbc`); a place already there is refused
@@ -1980,7 +2003,8 @@ its station and mouths clears them and pays nothing net. Counted, not built: the
 (`CARRY_PREVIEW_TRACK_START`), the pulse (`TRACK_OPEN_END_PULSE`), the drape (`TRACK_PIECE_DRAPE`), a water piece's own
 clip 0xc (`TRACK_PIECE_WATER_CLIP`), an add-on's model (`TRACK_PIECE_ADD_ON`: the ground under it shows the sky), a
 written park's piece records (`SAVE_PARK_TRACK_PIECE_MODEL`), and the sale of a ride with more track
-(`SALE_TRACK_TEARDOWN`). The track tool's runs are Q762 ("The track tool", above); the walk, opening and the rest are Q587.
+(`SALE_TRACK_TEARDOWN`). The track tool's runs are Q762 ("The track tool", above), the circuit's walk and the opening
+Q763 ("The walk", above); the rest is Q587.
 
 ### The ride object
 

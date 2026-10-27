@@ -384,21 +384,170 @@ public static class ParkTrackTool
 			if ( IsBend( cell.TrackNeighbours ) || (links >= 3 && cell.TrackNeighbours != 0) )
 				cell = cell with { TrackFlags = (ushort)(cell.TrackFlags & 0xfff0) };
 
-			if ( ParkTrackPieces.IsPieceAnchor( cell.TrackType ) )
-			{
-				var (row, turn) = ParkTrackPieces.PieceFor( cell.TrackType, cell.TrackNeighbours, cell.TrackDirection, cell.TrackFlags );
-				cell = cell with
-				{
-					TrackTileSet = cell.TrackType == ParkTrackPieces.KartAnchor ? ParkTrackPieces.KartFamily : ParkTrackPieces.WaterFamily,
-					TrackTileIndex = row,
-					TrackTileAngle = turn
-				};
-			}
-
-			state.SetRecord( x, y, cell );
+			state.SetRecord( x, y, Retiled( cell ) );
 		}
 
 		return new Laid( metTrack, charged, pieces );
+	}
+
+	/// <summary>
+	/// A cell retiled (<c>Track_RetileCell</c>, <c>FUN_0053afa0</c>): a kart or water anchor takes its row and turn again by
+	/// its links, way on and flags; a station or any other type is left as it is.
+	/// </summary>
+	private static ParkWorld.MapCell Retiled( ParkWorld.MapCell cell )
+	{
+		if ( !ParkTrackPieces.IsPieceAnchor( cell.TrackType ) )
+			return cell;
+
+		var (row, turn) = ParkTrackPieces.PieceFor( cell.TrackType, cell.TrackNeighbours, cell.TrackDirection, cell.TrackFlags );
+
+		return cell with
+		{
+			TrackTileSet = cell.TrackType == ParkTrackPieces.KartAnchor ? ParkTrackPieces.KartFamily : ParkTrackPieces.WaterFamily,
+			TrackTileIndex = row,
+			TrackTileAngle = turn
+		};
+	}
+
+	/// <summary>Track to the walks: a kart or water anchor or station, or a boundary piece (<c>TrackCell_IsTrack</c>, <c>0x0053ad30</c>).</summary>
+	private static bool IsTrack( int type )
+		=> type is ParkTrackPieces.KartAnchor or ParkTrackPieces.KartStation or ParkTrackPieces.WaterAnchor or ParkTrackPieces.WaterStation or 0x19;
+
+	/// <summary>
+	/// The circuit's walk, <c>TrackRide_WalkCircuit( check )</c> (<c>FUN_0052a970</c>): from the station's first section
+	/// along the ride's heading in 2-cell steps, straight on through a straight or a crossing and out of a bend the way its
+	/// links leave it, until it is back where it started (1) or meets a cell that is not track or has under two links (0).
+	/// Unless checking, the ride's sections go first (<see cref="ParkTrackRideTable.ClearSections"/>) and each cell lays
+	/// one: a bend 5 (links north and east), 6 (north, west), 7 (south, west) or 8 (east, south); a crossing 11; a straight
+	/// 9 east-west or 10 north-south, flagged <c>0x10000</c> on the first two cells, the station's. Checking or not, a bend
+	/// whose way on is not the way it leaves takes that way and is retiled (<c>0x0052b1a9</c>..<c>0x0052b1fc</c>).
+	/// </summary>
+	/// <returns>
+	/// What the ride's <c>mIsTrackRideValid</c> (<c>+0x2c</c>) takes, 1 for a closed circuit, else 0; and how many cells
+	/// it stepped from, the count each cell's <c>+0x24</c> takes in the original (<c>FUN_0053aef0</c>), not kept here.
+	/// </returns>
+	public static (int Valid, int Steps) WalkCircuit( ParkState state, ParkWorld.CatalogueObject ride, bool check )
+	{
+		var start = ParkTrackPieces.StationOf( ride.CellX, ride.CellY, ride.Angle ).First;
+		var heading = ParkTrackPieces.HeadingOf( ride.Angle );
+		var (x, y) = start;
+
+		if ( !ParkState.OnMap( x, y ) )
+			return (0, 0);
+
+		// A piece's other cell names its anchor (FUN_0053ad90, 0x0052aa1c), which decides alone whether there is track
+		// and whose ride it is; the walk itself starts on the cell.
+		var first = state.Record( x, y );
+
+		if ( first.TrackType is ParkTrackPieces.KartCell or ParkTrackPieces.WaterCell )
+			first = state.Record( MapStep.CellAt( first.TrackParentId ).X, MapStep.CellAt( first.TrackParentId ).Y );
+
+		if ( !IsTrack( first.TrackType ) )
+			return (0, 0);
+
+		var handle = state.Objects.FirstOrDefault( o => MapStep.CellId( o.CellX, o.CellY ) == first.TrackParentId ).TrackRide;
+
+		if ( !check )
+			state.TrackRides.ClearSections( handle );
+
+		var valid = 1;
+		var retiled = false;
+		var step = 0;
+
+		// The original walks until it is back or stops, however far that is; a map's cells bound this one.
+		for ( ; step < ParkWorld.MapSize * ParkWorld.MapSize; )
+		{
+			var cell = state.Record( x, y );
+			var mask = cell.TrackNeighbours;
+
+			if ( !IsTrack( cell.TrackType ) )
+				heading = 0;
+			else
+			{
+				var links = CellEdge.Links( mask );
+
+				if ( IsBend( mask ) )
+				{
+					if ( !check )
+						state.TrackRides.Lay( handle, mask switch { 0x05 => 5, 0x41 => 6, 0x50 => 7, _ => 8 }, x * 0xc00, y * 0xc00 );
+				}
+				else if ( links >= 3 )
+				{
+					if ( !check )
+						state.TrackRides.Lay( handle, 11, x * 0xc00, y * 0xc00 );
+				}
+				else if ( links == 2 )
+				{
+					// An add-on's cell (flag 0x10) lays 12 or 13 and keeps the add-on's model, whose end caps the walk
+					// shows or hides by the track on either side (0x0052ade3..0x0052b18c).
+					var addOn = (cell.TrackFlags & ParkTrackPieces.AddOnFlag) != 0;
+
+					if ( addOn )
+						Unimplemented.Report( "TRACK_WALK_ADD_ON" );
+
+					var kind = (step < 2 ? 0x10000 : 0) | (mask == 0x11 ? (addOn ? 13 : 10) : (addOn ? 12 : 9));
+
+					if ( !check )
+						state.TrackRides.Lay( handle, kind, x * 0xc00, y * 0xc00 );
+				}
+
+				// Out of a bend the way its links leave it; a bend entered past its links keeps the heading as the link
+				// it leaves by (0x0052b1cc).
+				if ( IsBend( mask ) )
+				{
+					var back = (byte)CellEdge.Opposite( heading );
+
+					if ( (back & mask) == 0 )
+						back = heading;
+
+					heading = (byte)(mask ^ back);
+
+					if ( cell.TrackDirection != heading )
+					{
+						state.SetRecord( x, y, Retiled( cell with { TrackDirection = heading } ) );
+						retiled = true;
+					}
+				}
+			}
+
+			if ( heading == 0 || CellEdge.Links( mask ) < 2 )
+				valid = 0;
+
+			// Three links: the walk goes on only where the cell beyond is of some type, and not, heading north, a piece of
+			// track with no links (0x0052b22f..0x0052b280).
+			if ( CellEdge.Links( mask ) == 3 )
+			{
+				var (bx, by) = StepOf( heading );
+
+				if ( !ParkState.OnMap( x + bx, y + by ) )
+					valid = 0;
+				else
+				{
+					var beyond = state.Record( x + bx, y + by );
+
+					if ( (IsTrack( beyond.TrackType ) && beyond.TrackNeighbours == 0 && (heading & 0x01) != 0) || beyond.TrackType == 0 )
+						valid = 0;
+				}
+			}
+
+			var (dx, dy) = StepOf( heading );
+			(x, y) = (x + dx, y + dy);
+			++step;
+
+			if ( (x, y) == start || valid == 0 || !ParkState.OnMap( x, y ) )
+				break;
+		}
+
+		if ( !ParkState.OnMap( x, y ) )
+			valid = 0;
+
+		if ( retiled )
+			ParkTrackPieces.Current?.Rebuild();
+
+		Log.Info( $"track: the circuit's walk for thing {ride.ThingId}{(check ? ", checking" : "")}: +0x2c {valid}, "
+			+ $"{step} step(s), {state.TrackRides.SectionsOf( handle ).Count} section(s)" );
+
+		return (valid, step);
 	}
 
 	/// <summary>
@@ -472,7 +621,8 @@ public static class ParkTrackTool
 	/// <summary>
 	/// One click of the armed tool. A refused run lays nothing, plays <c>0xaf</c> and puts the tool away, the preview's red
 	/// (<c>0x00524a63</c>..<c>0x00524acd</c>). A run that ends on track, or a click that does not move the anchor, closes
-	/// the tool: the circuit's walk follows (<c>TRACK_WALK_CIRCUIT</c>, not built) and the tool goes idle.
+	/// the tool: the circuit's walk follows (<see cref="WalkCircuit"/>) into the ride's <c>+0x2c</c>, the ride opens where the
+	/// circuit is closed and the open guard lets it, and the tool goes idle.
 	/// </summary>
 	public static string Run( int clickX, int clickY, bool pressReachedTheTool = true )
 	{
@@ -523,12 +673,28 @@ public static class ParkTrackTool
 			return $"track: {report} - the anchor moves to ({target.X},{target.Y})";
 		}
 
-		// The circuit's walk into the ride's +0x2c, the ride opened where it closes, the pieces' clips (0x00526de9..
-		// 0x00526e6a); then the anchor goes and, the queue's pointer nought, the tool with it.
-		Unimplemented.Report( "TRACK_WALK_CIRCUIT" );
+		// The circuit's walk into the ride's +0x2c, and with 1 and the open guard the ride opened (0x00526f02..0x00526f2d);
+		// then the pieces' clips; then the anchor goes and, the queue's pointer nought, the tool with it.
+		var (valid, _) = WalkCircuit( state, ride, check: false );
+		var script = ParkRides.Current?.Scheduler.Scripts.FirstOrDefault( s => s.ThingId == ride.ThingId );
+
+		if ( state.TryObject( ride.ThingId, out var walked ) )
+		{
+			state.ReplaceObject( walked with { IsTrackRideValid = valid } );
+
+			if ( script != null )
+				script.TrackRideValid = valid;
+
+			if ( valid != 0 && ParkRideOperation.MayOpen( level.Park, walked, item.TrackType ) )
+				ParkRideOperation.Open( state, script, ride.ThingId );
+		}
+
+		// The pieces' clip 0xc from the mouth (TrackRide_PlayPiecesFromMouth, and with no circuit from the open end too).
+		Unimplemented.Report( "TRACK_PIECES_CLIP" );
+
 		_lastLinkStep = null;
 		ParkBuildMode.Disarm();
 
-		return $"track: {report} - {(laid.MetTrack ? "it met track" : "the anchor did not move")}, the tool put away";
+		return $"track: {report} - {(laid.MetTrack ? "it met track" : "the anchor did not move")}, +0x2c {valid}, the tool put away";
 	}
 }

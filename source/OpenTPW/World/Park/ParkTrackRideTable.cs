@@ -12,7 +12,8 @@ namespace OpenTPW;
 /// back by <see cref="ParkBumperCars"/>. <b>A purchase takes the first
 /// free slot</b> (<see cref="Take"/>) and lays no section, and <b>a sale frees it</b> (<see cref="Free"/>); a move is a
 /// sale and a purchase, as the original's is. A kart or water ride bought here lays its station and mouths on the track
-/// grid (<see cref="ParkTrackPieces.LayStation"/>) and no section: the track tool and the walk are not built.
+/// grid (<see cref="ParkTrackPieces.LayStation"/>) and no section; the circuit's walk lays its sections when the track
+/// tool's loop closes (<see cref="ParkTrackTool.WalkCircuit"/>).
 /// </para>
 /// </summary>
 public sealed class ParkTrackRideTable
@@ -104,8 +105,9 @@ public sealed class ParkTrackRideTable
 
 	/// <summary>
 	/// A section appended to its ride's list - <c>FUN_0054b2f0</c>, which the loader calls for each saved one
-	/// (<c>0x00544061</c>). It refuses a stale handle, a cell the ride's list already holds ("Duplicate track section
-	/// - IGNORE") and a full pool.
+	/// (<c>0x00544061</c>) and the circuit's walk for each cell (<see cref="ParkTrackTool.WalkCircuit"/>). It refuses a
+	/// stale handle, a cell the ride's list already holds ("Duplicate track section - IGNORE") and a full pool. The
+	/// section's collision objects and buoy are not made: counted, <c>TRACK_SECTION_OBJECTS</c>.
 	/// </summary>
 	/// <returns>Whether the section was laid.</returns>
 	internal bool Lay( int handle, int type, int x, int y )
@@ -132,8 +134,31 @@ public sealed class ParkTrackRideTable
 
 		list.Add( new Section( type, x, y ) );
 
+		// The section's collision objects and its buoy (0x0054b3a1 on), which the race steers by (Q588).
+		Unimplemented.Report( "TRACK_SECTION_OBJECTS" );
+
 		return true;
 	}
+
+	/// <summary>
+	/// Lets a ride's sections go before the circuit's walk lays them again - <c>TrackRide_ClearSections</c>
+	/// (<c>FUN_00545450</c>): nothing for a stale handle, else its cars removed (<c>FUN_0054ae50</c>), the ride closed
+	/// (<c>BUMP 6</c>), the buoys not flagged 2 or 4 freed and every section with its collision objects. A kart or
+	/// water ride's buoys and objects are not made here (Q588), so only its sections go.
+	/// </summary>
+	public void ClearSections( int handle )
+	{
+		if ( !Holds( handle ) )
+			return;
+
+		Cars.RemoveCarsOf( handle );
+		Cars.Shut( handle );
+		_sections[handle & 0xff].Clear();
+	}
+
+	/// <summary>A ride's sections in circuit order, each its type dword and cell times <c>0xc00</c>; none for a stale handle.</summary>
+	public IReadOnlyList<(int Type, int X, int Y)> SectionsOf( int handle )
+		=> Holds( handle ) ? _sections[handle & 0xff].ConvertAll( section => (section.Type, section.X, section.Y) ) : [];
 
 	/// <summary>How many slots hold a ride.</summary>
 	public int Count => _bumperType.Count( bumperType => bumperType != 0 );

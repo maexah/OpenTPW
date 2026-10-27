@@ -5,6 +5,14 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q762 (the karts' and the water ride's track tool lays runs; Q587's second build piece). Ours on the final binary
+  (`q762/ours-b`), on the desktop, the stock park: Q687's two loops laid by the same clicks read every anchor's links,
+  way on, overlap, row and turn as the original's `q587/orig/A-load.log` and `W-cells.log` (earlier evidence, theirs on
+  `q581/karts.TPWS`), and its prices, 200 and 250 a new piece, but the closing corner's way on (the walk, Q587) and so the
+  water loop's closing corner, `wr_trckB` in ours where theirs is `wr_trckB2`; the closed kart loop photographed
+  (`ours-2-closed.png`) beside the original's `B-7-closed.png` as shapes, another park and camera. Not seen in either
+  game this session: a refused run's sound and the verdict's refusals, a run at a ride turned 90 or 270, Full Simulation's
+  price, the original not run this session.
 - Q688 (a bought kart or water ride's station and mouths, and every track piece drawn; Q587's first build piece). Ours
   on the final binary (dll f94fbce9, `q688/ours-b`, `ours-f2`), on the desktop: the four anchors' cells as the original's
   `q587/orig/A-load.log` read at its own put-down, the same cells of a different park file (theirs `q581/karts.TPWS`,

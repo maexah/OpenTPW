@@ -827,6 +827,16 @@ public sealed class ParkBumperCars
 		return car;
 	}
 
+	/// <summary>Every live car of a ride removed, as <c>TrackRide_ClearSections</c> does (<c>FUN_0054ae50</c> on each).</summary>
+	public void RemoveCarsOf( int handle )
+	{
+		foreach ( var car in _cars )
+		{
+			if ( car.IsLive && car.Ride == handle )
+				Remove( car );
+		}
+	}
+
 	/// <summary><c>BUMP 6</c> - <c>FUN_00544a10</c>: unless closed, closed; the boarding list onto the leaving list's tail, every car to unload.</summary>
 	public void Shut( int handle )
 	{

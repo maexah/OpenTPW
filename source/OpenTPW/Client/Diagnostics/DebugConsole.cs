@@ -2624,7 +2624,8 @@ public static class DebugConsole
 				foreach ( var hoardingLine in ParkObjects.Current?.HoardingCensus() ?? [] ) Reply( hoardingLine );
 				break;
 
-			// The karts' and water rides' track pieces standing: each anchor, model, row and turn.
+			// The karts' and water rides' track pieces standing: each anchor, model, row and turn; then each track ride's
+			// +0x2c and sections.
 			case "track":
 				if ( ParkTrackPieces.Current is not { } track )
 				{
@@ -2635,6 +2636,20 @@ public static class DebugConsole
 				Reply( $"track pieces {track.Pieces.Count}" );
 
 				foreach ( var trackLine in track.Census() ) Reply( $"  {trackLine}" );
+
+				// Each track ride's mIsTrackRideValid and its sections, as original/trackride.py prints them.
+				foreach ( var trackRide in ParkState.Current?.Objects.Where( o => o.TrackRide != 0 ) ?? [] )
+				{
+					var sections = ParkState.Current!.TrackRides.SectionsOf( trackRide.TrackRide );
+
+					Reply( $"track ride 0x{trackRide.TrackRide:x} thing {trackRide.ThingId} +0x2c {trackRide.IsTrackRideValid} "
+						+ $"can load {trackRide.CanLoad} sections {sections.Count}" );
+
+					for ( var index = 0; index < sections.Count; ++index )
+						Reply( $"    section {index} type {sections[index].Type & 0xffff} flags 0x{sections[index].Type >> 16:x} "
+							+ $"cells ({sections[index].X / 0xc00},{sections[index].Y / 0xc00}) at ({sections[index].X},{sections[index].Y})" );
+				}
+
 				break;
 
 			// The wall between the park and the land not bought; `boundary X Y` adds the pieces made on or beside a cell.

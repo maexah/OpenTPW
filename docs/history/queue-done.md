@@ -10750,6 +10750,12 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   track puts the tool away (`ParkTrackTool`; `park.md`, "The track tool"). Done 2026-10-27: Q687's two loops by the same
   clicks in ours (`q762/ours-b`, the final binary) give every anchor the original's links, way on, overlap, row and turn
   (`q587/orig/A-load.log`, `W-cells.log`) and its prices, but the closing corner's way on, which the circuit's walk turns.
+- [x] **Q763. The karts' and the water ride's circuit walked when the track tool closes a loop (Q587's third piece).**
+  `ParkTrackTool.WalkCircuit` (`TrackRide_WalkCircuit`, `0x0052a970`): the ride's sections laid in circuit order, each
+  bend's way on turned to the way it leaves and retiled, `+0x2c` set, and the ride opened where its open guard lets it.
+  Ours on the final binary (`q763/ours-d`, `ours-t`, `PREDICTION.txt`): the karts' ten sections as
+  `q581/orig/A-track.log`'s, Q581's water loop's as `D-track.log`'s, (28,25) way 0x04, Q687's water corner (16,19)
+  `wr_trckB2`, as `A-load.log` and `W-cells.log` (earlier evidence); the karts opened once their queue joined a path.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.
