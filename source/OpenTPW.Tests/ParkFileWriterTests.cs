@@ -1313,7 +1313,7 @@ public class ParkFileWriterTests
 	{
 		Direction = 0x10, Flags = 0x20, Neighbours = 0x55, OverlapCounter = -1, ParentId = 1234,
 		TileSet = 1, TileIndex = 7, TileAngle = 180, Type = 1,
-		TrackType = 25, TrackFlags = 3, TrackParentId = 4321, TrackNeighbours = 0x11
+		TrackType = 25, TrackFlags = 3, TrackParentId = 4321, TrackNeighbours = 0x11, TrackOverlapCounter = 2
 	};
 
 	/// <summary>
@@ -1329,7 +1329,8 @@ public class ParkFileWriterTests
 		// Each of the thirteen is another value than the file's, so none reads back from a field left alone.
 		Assert.AreEqual( (3, (ushort)0, (byte)68, (byte)4, 2, 5, 270, (short)0, (ushort)2996),
 			(was.Type, was.Flags, was.Neighbours, was.Direction, was.TileSet, was.TileIndex, was.TileAngle, was.OverlapCounter, was.ParentId) );
-		Assert.AreEqual( (0, (ushort)0, (ushort)0, (byte)0), (was.TrackType, was.TrackFlags, was.TrackParentId, was.TrackNeighbours) );
+		Assert.AreEqual( (0, (ushort)0, (ushort)0, (byte)0, (short)0),
+			(was.TrackType, was.TrackFlags, was.TrackParentId, was.TrackNeighbours, was.TrackOverlapCounter) );
 
 		// The Jungle Spray's own cell, which names it: a cell's mWho is not the writer's to move.
 		var stoodOn = shipped.CellAt( 55, 15 ) with { TileIndex = 9 };
@@ -1367,9 +1368,10 @@ public class ParkFileWriterTests
 		Assert.AreEqual( 3, before[map - 1], "a map and a track record" );
 		Assert.AreNotEqual( 0, BitConverter.ToInt32( before, map + 3 ), "the queue cell's mesh instance" );
 
-		// mDirection and mFlags; mNeighbours to mTileData; mType; then the track record's flags, neighbours, parent, type.
+		// mDirection and mFlags; mNeighbours to mTileData; mType; then the track record's flags, neighbours, overlap counter,
+		// parent, type.
 		(int At, int Size)[] fields =
-			[(map, 3), (map + 7, 17), (map + 24, 4), (track + 1, 2), (track + 7, 1), (track + 10, 2), (track + 24, 4)];
+			[(map, 3), (map + 7, 17), (map + 24, 4), (track + 1, 2), (track + 7, 1), (track + 8, 2), (track + 10, 2), (track + 24, 4)];
 
 		var changed = Enumerable.Range( 0, body.Length ).Where( at => body[at] != before[at] ).ToArray();
 		var outside = changed.Where( at => !fields.Any( field => at >= field.At && at < field.At + field.Size ) ).ToArray();

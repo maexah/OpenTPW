@@ -74,23 +74,31 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q587. The karts' and the water ride's track: laid, walked and opened (the rest).** From Q581 (`park.md`, "The
-  karts' and the water ride's track, buoys and race"). Q688 lays the station and mouths and draws the pieces; what is
-  left: a click on a piece ("Left-click to edit this track") arms mode 0xb or 0x10 with it the anchor; each click lays a
-  straight run, sound 0xce, 200 (250) a new piece read from the park's balance, its pieces retiled
-  (`ParkTrackPieces.PieceFor`); Backspace's refund; the walk sets `+0x2c` and makes the sections, their collision objects
-  and buoys (`ParkTrackRideTable`); a closed loop with the open guard opens the ride, and a later queue edit opens a
-  closed valid one (the tail `ride-operation.md` cites); the open end's pulse (`TRACK_OPEN_END_PULSE`; which walk pulses
-  at the put-down: the review of Q687, `review12/VERIFY-2.md`); the carried ride's squares and their check
-  (`CARRY_PREVIEW_TRACK_START`); a water piece's own clip 0xc (`TRACK_PIECE_WATER_CLIP`); an add-on's model, whose cell
-  shows the sky through the ground now (`TRACK_PIECE_ADD_ON`, Alexah's played Dino Karts, `q688/ours-f2`); a sale of a
-  ride with track laid (`SALE_TRACK_TEARDOWN`: the walks `FUN_00530830` and `FUN_00530b70` are not read); a written
-  park's piece records (`SAVE_PARK_TRACK_PIECE_MODEL`); and a put-down at 90 or 270, tested and not seen in either game.
-  Hold the pieces against `q587/orig/A-load.log` and `W-cells.log` (`original/trackcells.py`; a crossing or junction
-  piece, `X` and `X2`, is decoded and not measured). Confirm on `q581/karts.TPWS` by the same clicks as `q581/orig`
-  (bought on preview cells (32,25) and (20,20), whose station sections are (30,25)/(32,25) and (18,19)/(20,19); loops to
-  (34,29)/(28,29) and (22,23)/(16,23)): sections and buoys against `q581/orig/A-track.log` and `D-track.log`, and the
-  pieces photographed beside the original's (`B-5-closed.png`, `D-13-boats.png`).
+- [ ] **Q587. The karts' and the water ride's track: walked, opened, taken back (the rest).** From Q581 (`park.md`, "The
+  karts' and the water ride's track, buoys and race"). Q688 lays the station and mouths and draws the pieces; Q762 arms
+  the track tool and lays its runs. What is left: the walk (`TrackRide_WalkCircuit`, `TRACK_WALK_CIRCUIT`) sets `+0x2c`,
+  turns each bend's way on to the way it leaves and retiles it (`0x0052b1a9`..`0x0052b1fc`: the water loop's closing
+  corner is `wr_trckB` in ours, `wr_trckB2` in the original), and makes the sections, their collision objects and buoys
+  (`ParkTrackRideTable`); a closed loop with the open guard opens the ride, and a later queue edit opens a closed valid
+  one (the tail `ride-operation.md` cites); Backspace's refund (`TRACK_BACKSPACE_REFUND`: `BuildTool_Backtrack` in mode
+  0x35, `Track_ClearCell`, read for Q762 in `q762/dump`); a closed loop's two-click edit (`TRACK_EDIT_CLOSED_LOOP`);
+  a run over path, queue or water, laid as a hill in the original (`TRACK_RUN_OVER_PATH`), a crossing or junction
+  (`TRACK_RUN_CROSSING`) and a run into the station (`TRACK_RUN_INTO_STATION`), the verdict's rest; the clear pass
+  (op 0x87); the open end's pulse and a hill's reshaping by the mouths' walks (`TRACK_OPEN_END_PULSE`); the carried
+  ride's squares and their check (`CARRY_PREVIEW_TRACK_START`); a water piece's own clip 0xc (`TRACK_PIECE_WATER_CLIP`);
+  an add-on's model, whose cell shows the sky through the ground now (`TRACK_PIECE_ADD_ON`, Alexah's played Dino Karts,
+  `q688/ours-f2`); a sale of a ride with track laid (`SALE_TRACK_TEARDOWN`: the walks `FUN_00530830` and `FUN_00530b70`);
+  a written park's piece records (`SAVE_PARK_TRACK_PIECE_MODEL`); and a put-down at 90 or 270, tested and not seen in
+  either game. Not measured in the original (the review of Q687, `review12/VERIFY-2.md`): the hill rows 9 to 18 and the
+  walks' reshaping, the water refund, the sale's two-piece withdrawal (`0x00528179`), a refund below 100, the
+  over-balance refusal, the karts' B2 (row 19), which walk pulses at the put-down (op 0x86's, `0x00538ca0`, by the
+  reading; a breakpoint would settle it), the Full Simulation price (400 and 500 from `data/levels/Standard.sam`, where
+  Instant Action's `Easy_Standard.sam` gives 200 and 250), a water piece's other cells (0xc by the disassembly), and a
+  crossing or junction piece (`X`, `X2`). Hold the pieces against `q587/orig/A-load.log` and `W-cells.log`
+  (`original/trackcells.py`). Confirm on `q581/karts.TPWS` by the same clicks as `q581/orig` (bought on preview cells
+  (32,25) and (20,20), whose station sections are (30,25)/(32,25) and (18,19)/(20,19); loops to (34,29)/(28,29) and
+  (22,23)/(16,23)): sections and buoys against `q581/orig/A-track.log` and `D-track.log`, and the pieces photographed
+  beside the original's (`B-5-closed.png`, `D-13-boats.png`).
   - **Note (fork watch 2026-10-25, verify-all.md H1):** the pieces are not rigid: a kart or water piece (load flag `0x10422`, `0x00522b1e` and
     `0x00522cde`) is draped vertex by vertex at its placing, every vertex ending at its authored height above the ground
     under it. The chain: `0x004629d0` turns load bit `0x2` into loader flag `0x40`; `0x00461f10` sets `0x20000` on every node

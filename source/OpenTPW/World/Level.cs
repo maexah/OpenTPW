@@ -2487,6 +2487,11 @@ public class Level
 				Unimplemented.Report( "BACKSPACE_UNDO_QUEUE_RUN" );
 				return "backspace: undoing a queue run is not built";
 
+			// BuildTool_Backtrack in mode 0x35 clears the last run (Track_ClearCell, 0x0053b280) and refunds its pieces.
+			case ParkBuildMode.KartTrack or ParkBuildMode.WaterTrack:
+				Unimplemented.Report( "TRACK_BACKSPACE_REFUND" );
+				return "backspace: taking back a track run is not built";
+
 			case ParkBuildMode.None when ParkHand.Empty:
 				if ( !ParkPicking.TryCell( out var x, out var y ) )
 					return "backspace: the pointer is not on the park";
@@ -2731,6 +2736,11 @@ public class Level
 			return $"world click: the {(gate == GroundArm.Gate ? "gate" : "ticket booth")} at ({cellX},{cellY}) opens the entry price";
 		}
 
+		// A KART OR WATER RIDE'S PIECE OF TRACK ARMS THE TRACK TOOL at its track's open end - the hover's category 5
+		// (FUN_004879d0, 0x00487f6c), mode 0xe or 0x13 on the press and 0xb or 0x10 on the release.
+		if ( ParkState is { } trackState && ParkTrackTool.AnchorUnder( trackState, cellX, cellY ) is not null )
+			return $"world click: {ParkTrackTool.Arm( cellX, cellY )}";
+
 		// CLICKING A QUEUE CELL HANDS BACK THE QUEUE TOOL for the thing that queue serves, anchored on the
 		// queue's far end - the original's mode 0x14, "edit this ride's queue". It has to be tested BEFORE
 		// the thing under the cursor, because a queue cell names its ride through the owner a queue
@@ -2789,6 +2799,9 @@ public class Level
 
 		if ( ParkBuildMode.Current == ParkBuildMode.Patrol )
 			return ParkPatrolTool.Run( cellX, cellY, !UI.WindowStack.ParkScreenOpen );
+
+		if ( ParkBuildMode.IsTrack( ParkBuildMode.Current ) )
+			return ParkTrackTool.Run( cellX, cellY, !UI.WindowStack.ParkScreenOpen );
 
 		if ( ParkBuildMode.Anchored )
 			return ParkPathBuilding.RunQueue( cellX, cellY, !UI.WindowStack.ParkScreenOpen );

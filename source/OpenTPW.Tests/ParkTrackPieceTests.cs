@@ -152,7 +152,7 @@ public class ParkTrackPieceTests
 		Assert.AreEqual( (0x10, (byte)0x40, (byte)0x04, (ushort)MapStep.CellId( 18, 18 ), 4, 1, 90), Fields( state, 22, 19 ) );
 		Assert.AreEqual( (0x10, (byte)0x04, (byte)0x04, (ushort)MapStep.CellId( 18, 18 ), 4, 1, 270), Fields( state, 16, 19 ) );
 		Assert.AreEqual( 0x12, state.Record( 18, 19 ).TrackType );
-		Assert.AreEqual( 0x11, state.Record( 23, 20 ).TrackType );
+		Assert.AreEqual( 0xc, state.Record( 23, 20 ).TrackType, "op 0x83 stamps a water piece's other cells 0xc too (0x00538895)" );
 	}
 
 	[TestMethod]

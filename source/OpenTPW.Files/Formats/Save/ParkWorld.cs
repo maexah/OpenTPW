@@ -949,7 +949,8 @@ public sealed partial class ParkWorld : IParkInitialState
 		int Litter = 0, ushort LitterCollector = 0, ushort PylonIndex = 0,
 		byte StatusFlags = 0, int TimeMarkedForLitterCollection = 0, ushort Occupant = 0,
 		ushort NearbyEffects = 0, ushort ParentId = 0, short OverlapCounter = 0, byte TrackNeighbours = 0,
-		int MeshInstance = 0, byte TrackDirection = 0, int TrackTileSet = 0, int TrackTileIndex = 0, int TrackTileAngle = 0 )
+		int MeshInstance = 0, byte TrackDirection = 0, int TrackTileSet = 0, int TrackTileIndex = 0, int TrackTileAngle = 0,
+		short TrackOverlapCounter = 0 )
 	{
 		/// <summary>
 		/// Whether anything has been dropped here. <b>Nought on every cell of the park the game ships</b>,
@@ -1496,13 +1497,15 @@ public sealed partial class ParkWorld : IParkInitialState
 					PutUInt16( body, track + CellFlags, cell.TrackFlags );
 					body[track + CellNeighbours] = cell.TrackNeighbours;
 					PutUInt16( body, track + CellParent, cell.TrackParentId );
+					PutUInt16( body, track + CellOverlapCounter, unchecked((ushort)cell.TrackOverlapCounter) );
 					PutInt32( body, track + CellTileData, cell.TrackTileSet );
 					PutInt32( body, track + CellTileData + 4, cell.TrackTileIndex );
 					PutInt32( body, track + CellTileData + 8, cell.TrackTileAngle );
 					PutInt32( body, track + CellType, cell.TrackType );
 				}
 				else if ( cell.TrackType != 0 || cell.TrackFlags != 0 || cell.TrackParentId != 0 || cell.TrackNeighbours != 0
-					|| cell.TrackDirection != 0 || cell.TrackTileSet != 0 || cell.TrackTileIndex != 0 || cell.TrackTileAngle != 0 )
+					|| cell.TrackDirection != 0 || cell.TrackTileSet != 0 || cell.TrackTileIndex != 0 || cell.TrackTileAngle != 0
+					|| cell.TrackOverlapCounter != 0 )
 				{
 					throw new InvalidOperationException( $"cell {index} of the park file it was loaded from has no track record" );
 				}
@@ -2152,6 +2155,9 @@ public sealed partial class ParkWorld : IParkInitialState
 			TrackTileSet: tracked ? ReadInt32At( track + CellTileData ) : 0,
 			TrackTileIndex: tracked ? ReadInt32At( track + CellTileData + 4 ) : 0,
 			TrackTileAngle: tracked ? ReadInt32At( track + CellTileData + 8 ) : 0,
+
+			// How many runs were laid over a kart or water piece after its own (FileFormats saves.md, the track record's 0x08).
+			TrackOverlapCounter: tracked ? (short)ReadUInt16At( track + CellOverlapCounter ) : (short)0,
 			OverlapCounter: (short)ReadUInt16At( at + CellOverlapCounter ),
 
 			// The MAP record carries mParentID as well, at the same offset within its own record, and

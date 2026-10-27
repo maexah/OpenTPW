@@ -1782,7 +1782,10 @@ GH=766` there, or the pointer is off):
   "Left-click to extend this path", then the far cell), then click the queue's cell and that path cell to edit the
   queue, which opens the closed, looped ride. A click on a person opens their window: check the mode after each
   click and close a window with its tick (815, 380) before going on. `trackride.py` reads it all; `trackcells.py` the
-  pieces and the bank, a line a click (Q687, `q587/orig`: Backspace on its release takes the last run back).
+  pieces and the bank, a line a click (Q687, `q587/orig`: Backspace on its release takes the last run back). In ours
+  (Q762, `q762/ours.py`): `carry 1150`, `hover 32 25`, `worldclick 32 25`, `rightclick` (the queue tool away), then
+  `worldclick` on the mouth (34,25) arms the track tool and one `worldclick` a run; `tool` reads the mode and anchor and
+  `cell X Y` an anchor's `links`, `way`, `track over` and `piece`, as `trackcells.py` reads the original's.
 - **A chosen advisor line in both games** (Q596, `q596/orig/runfs.sh`, `q596/confirm.py`): only a park whose advisor
   talks will do; the stock park, loaded in either game, holds message 128 at score 20 alone and says nothing. A fresh
   Full Simulation park says lines on the same ticks in both, 265, 612, 673, 734, 1277, 1897 and 2517 (responses 404,

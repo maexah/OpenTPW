@@ -2211,7 +2211,7 @@ public static class DebugConsole
 						: "") +
 					$" occupant {ParkState.Current?.CellAt( probeX, probeY ).Occupant ?? 0}" +
 					$" overlap {probed.OverlapCounter} track type {probed.TrackType} links 0x{probed.TrackNeighbours:x2}" +
-					$" way 0x{probed.TrackDirection:x2} track parent {probed.TrackParentId} piece {probed.TrackTileSet}/{probed.TrackTileIndex}/{probed.TrackTileAngle}" +
+					$" way 0x{probed.TrackDirection:x2} track parent {probed.TrackParentId} track over {probed.TrackOverlapCounter} piece {probed.TrackTileSet}/{probed.TrackTileIndex}/{probed.TrackTileAngle}" +
 					(ParkState.Current is { } effectState && ParkState.OnMap( probeX, probeY )
 						? $" effects {string.Join( ",", effectState.EffectsAt( probeX, probeY ).ToArray() )}"
 						: "") );

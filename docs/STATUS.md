@@ -8,7 +8,7 @@ One line per system; the detail, item by item, is `docs/WORKS.md` (grep it by ar
 
 - Lobby: the four islands, the front end, players and their saves, options, the advisor, weather, the island gate and the fly-in.
 - The park's world: ground, paths, queues, placed and fixed objects, the boundary wall, sky, sea, weather, music, the calendar on the park's own clock, lighting, the camcorder.
-- Building: the buy and hire screens, paths and queues laid by pointing, a ride carried over its squares and placed with its queue, a bought thing joining the running park with the original's next id, a kart or water ride's station and mouths and every track piece drawn.
+- Building: the buy and hire screens, paths and queues laid by pointing, a ride carried over its squares and placed with its queue, a bought thing joining the running park with the original's next id, a kart or water ride's station and mouths and every track piece drawn, and its track laid run by run with the track tool.
 - Guests: eight kinds arrive, choose by the original's score, queue, ride, buy and pay; 23 of Lost Kingdom's 31 rides, shops and sideshows run for them (the website's ride list).
 - Staff: all five kinds hired and working their kind's decide (cleaning, performing, researching), strikes, their voices.
 - Rides: every placed thing runs its script, the rest of the opcodes counted; screams, particles, hoardings; the ride window closes and reopens its ride.
@@ -30,29 +30,28 @@ One line per system; the detail, item by item, is `docs/WORKS.md` (grep it by ar
 
 ## Next
 
-`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next Q587 (the karts' and the water ride's track, the first open item in the file; its decode is done, Q687, and its station, mouths and drawn pieces, Q688; Q598, every clip's scale track posed, is done, and so are Q693, the ride window's gauges, Q752 and Q753, put first at Alexah's word 2026-10-27; Q525, ordered before Q638, stands lower in the file; Q543 and Q27, ordered before Q631, and Q31b, Q25, Q51 and Q55, ordered earlier, stand lower in the file): Alexah's play test of 2026-10-21 put Q616 to Q645 first, the display, then what a player hits, then the chosen improvements (`playtest-2026-10-21/notes.md`); Q587 to Q589, the karts' and the water ride's build, follow them in section A (Q598 and Q609 stood before them and are done; Q586 stood above the ordered block; Q608, the draws left both-sided, is filed after Q713): the queue was reordered at Alexah's word, 2026-10-20. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. Gaps 4 and 7: `docs/PLAYER-GAPS.md`. Q13 is done: `docs/history/CLEANUP-PLAN.md`.
+`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next Q587 (the rest of the karts' and the water ride's track: the walk, opening, Backspace; the first open item in the file; its decode is done, Q687, its station, mouths and drawn pieces, Q688, and the track tool's runs, Q762; Q598, every clip's scale track posed, is done, and so are Q693, the ride window's gauges, Q752 and Q753, put first at Alexah's word 2026-10-27; Q525, ordered before Q638, stands lower in the file; Q543 and Q27, ordered before Q631, and Q31b, Q25, Q51 and Q55, ordered earlier, stand lower in the file): Alexah's play test of 2026-10-21 put Q616 to Q645 first, the display, then what a player hits, then the chosen improvements (`playtest-2026-10-21/notes.md`); Q587 to Q589, the karts' and the water ride's build, follow them in section A (Q598 and Q609 stood before them and are done; Q586 stood above the ordered block; Q608, the draws left both-sided, is filed after Q713): the queue was reordered at Alexah's word, 2026-10-20. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. Gaps 4 and 7: `docs/PLAYER-GAPS.md`. Q13 is done: `docs/history/CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the pre-commit hook: grep it by Q-number.
 
-- Q688 (a bought kart or water ride's station and mouths, and every track piece drawn; Q587's first build piece). Ours
-  on the final binary (dll f94fbce9, `q688/ours-b`, `ours-f2`), on the desktop: the four anchors' cells as the original's
-  `q587/orig/A-load.log` read at its own put-down, the same cells of a different park file (theirs `q581/karts.TPWS`,
-  ours the stock park); both games' mouth pieces photographed at the same cells (ours `ours-2-put.png`,
-  `ours-3-water.png`; theirs Q687's `A-8-put.png`, `W-2-put.png`), not at one camera; Alexah's played Dino Karts' 28
-  pieces as its 28 records, ours only (`ours-f-karts.png`), not loaded in the original. Not seen: a put-down at 90 or 270
-  in either game (tested only), a hill or water crossing piece, the pulse, the drape, the carried squares, an add-on's
-  model (its cell shows the sky), and the sale of a ride with track laid.
-
+- Q762 (the karts' and the water ride's track tool lays runs; Q587's second build piece). Ours on the final binary
+  (`q762/ours-b`), on the desktop, the stock park: Q687's two loops laid by the same clicks read every anchor's links,
+  way on, overlap, row and turn as the original's `q587/orig/A-load.log` and `W-cells.log` (earlier evidence, theirs on
+  `q581/karts.TPWS`), and its prices, 200 and 250 a new piece, but the closing corner's way on (the walk, Q587) and so the
+  water loop's closing corner, `wr_trckB` in ours where theirs is `wr_trckB2`; the closed kart loop photographed
+  (`ours-2-closed.png`) beside the original's `B-7-closed.png` as shapes, another park and camera. Not seen in either
+  game this session: a refused run's sound and the verdict's refusals, a run at a ride turned 90 or 270, Full Simulation's
+  price, the original not run this session.
 
 ## Numbers (take counts fresh; these go stale within a day)
 
 | | | measured |
 |---|---|---|
 | Opcodes | **78** of 106 | 2026-10-20, Q553 (`FADEOBJ`), `case Opcode.` labels vs enum members |
-| Tests | **4111**, 0 fail, 0 skip with the game | 2026-10-27, Q688 (ten added) |
-| Tests without the game | **1514** ran, **2597** skipped, of 4111 | 2026-10-27, Q688 |
+| Tests | **4122**, 0 fail, 0 skip with the game | 2026-10-27, Q762 (eleven added) |
+| Tests without the game | **1525** ran, **2597** skipped, of 4122 | 2026-10-27, Q762 |
 | Build warnings | 115 after Q753, 132 before it (both `--no-incremental`, the 132 in a fresh worktree of `main`: the seven CA2022 short reads and the `Zio` advisory, repeated for each project that took it, gone); earlier: 121 in the main tree; 130 to 133 in a fresh worktree as NuGet's advisory list was last fetched, the ten or twelve more its advisories on ModKit's ImageSharp 3.1.6 (a sixth, GHSA-v76p-62qx-wwq2, published 2026-10-26: Q75, DECISIONS.md "Package advisories") | 2026-10-27 (the worktree's 133 at Q672's gate, 131 at fix group P's, run 11, and 130 at PERF PASS 1's; the main tree's 121 last counted 2026-10-13) |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 | Park load, Release | **3.1 to 3.4 s**, worst phase `audio` 1.04 s (`ground` 0.52 to 0.57, `terrain` 0.46 to 0.55, `objects` 0.35 to 0.47) | 2026-10-26, three runs, `perf/bench.sh` |

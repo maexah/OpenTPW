@@ -5,6 +5,14 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q688 (a bought kart or water ride's station and mouths, and every track piece drawn; Q587's first build piece). Ours
+  on the final binary (dll f94fbce9, `q688/ours-b`, `ours-f2`), on the desktop: the four anchors' cells as the original's
+  `q587/orig/A-load.log` read at its own put-down, the same cells of a different park file (theirs `q581/karts.TPWS`,
+  ours the stock park); both games' mouth pieces photographed at the same cells (ours `ours-2-put.png`,
+  `ours-3-water.png`; theirs Q687's `A-8-put.png`, `W-2-put.png`), not at one camera; Alexah's played Dino Karts' 28
+  pieces as its 28 records, ours only (`ours-f-karts.png`), not loaded in the original. Not seen: a put-down at 90 or 270
+  in either game (tested only), a hill or water crossing piece, the pulse, the drape, the carried squares, an add-on's
+  model (its cell shows the sky), and the sale of a ride with track laid.
 - Q687 (the karts' and the water ride's track pieces, decoded; Q587's first piece): the decode only, no code. Measured
   in the original under Proton, off-screen, on `q581/karts.TPWS` (`q587/orig`, `original/trackcells.py`): a Dino Karts
   looped as Q581's and a Splish Splash looped the other way round, every piece's row, model and turn, the bank at every

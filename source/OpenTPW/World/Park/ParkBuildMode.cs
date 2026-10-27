@@ -35,6 +35,15 @@ public static class ParkBuildMode
 	/// <summary>Fencing a member of staff into a patrol area, the original's mode <c>0x36</c> (<see cref="ParkPatrolTool"/>).</summary>
 	public const int Patrol = 0x36;
 
+	/// <summary>Laying a kart ride's track, the original's mode <c>0xb</c> (<see cref="ParkTrackTool"/>).</summary>
+	public const int KartTrack = 0xb;
+
+	/// <summary>Laying a water ride's track, the original's mode <c>0x10</c> (<see cref="ParkTrackTool"/>).</summary>
+	public const int WaterTrack = 0x10;
+
+	/// <summary>Whether a mode is one of the two track tools.</summary>
+	public static bool IsTrack( int mode ) => mode is KartTrack or WaterTrack;
+
 	/// <summary>Which mode is armed, or <see cref="None"/>.</summary>
 	public static int Current { get; private set; }
 
@@ -82,6 +91,10 @@ public static class ParkBuildMode
 		if ( mode != None )
 			RefusalLatched = false;
 
+		// Putting the tools away writes 0x80 to the track tool's last link step (FUN_0052f200, DAT_00763b00).
+		if ( mode == None )
+			ParkTrackTool.Forget();
+
 		// Arming the patrol tool over itself sets no cursor in the original (FUN_0052f200 sets one only for modes 3 and
 		// 1), so the pointer's refusal stays; any other Arm clears it. Not watched in the original's running game (Q537).
 		if ( mode != Patrol || Current != Patrol )
@@ -95,6 +108,7 @@ public static class ParkBuildMode
 		{
 			Path => "tool: laying path - click once to anchor, again to lay the run",
 			Patrol => $"tool: fencing thing {serves} - click one corner of the patrol area, then the other",
+			KartTrack or WaterTrack => $"tool: laying track for thing {serves}",
 			Queue => serves == 0
 				? "tool: a queue has to say which thing it serves - `tool queue <thingId>`"
 				: $"tool: laying queue for thing {serves} - click once to anchor, again to lay the run",
@@ -114,9 +128,12 @@ public static class ParkBuildMode
 		Arm( mode, serves );
 		Anchor = (x, y);
 
-		return mode == Queue
-			? $"tool: laying queue for thing {serves} from ({x},{y}) - click where it should run to"
-			: $"tool: mode {mode} anchored at ({x},{y})";
+		return mode switch
+		{
+			Queue => $"tool: laying queue for thing {serves} from ({x},{y}) - click where it should run to",
+			KartTrack or WaterTrack => $"tool: laying track (mode 0x{mode:x}) for thing {serves} from ({x},{y}) - click where it should run to",
+			_ => $"tool: mode {mode} anchored at ({x},{y})"
+		};
 	}
 
 	/// <summary>Puts the mode away entirely - the original's <c>FUN_0052f200( 0, 0 )</c>.</summary>
@@ -209,6 +226,7 @@ public static class ParkBuildMode
 		Clicks = 0;
 		RefusalLatched = false;
 		ParkPatrolTool.PointerRefused = false;
+		ParkTrackTool.Forget();
 		_pending.Clear();
 	}
 }

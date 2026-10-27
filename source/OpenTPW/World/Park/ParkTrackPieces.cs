@@ -10,8 +10,8 @@ namespace OpenTPW;
 /// <para>
 /// <b>The grid.</b> A piece is a 2 x 2 of cells: its top-left, the anchor, carries the track type (0xb karts, 0x10 water;
 /// the stations 0xd and 0x12), the links to the anchors two cells away (<c>+0xc</c>), the way on (<c>+0xd</c>), the
-/// owning ride's cell (<c>+0x10</c>) and the piece its retile chose (family, row, turn); the other three cells are 0xc
-/// (0x11 water) and name the anchor as their parent. The running park holds them on the cells' track fields
+/// owning ride's cell (<c>+0x10</c>) and the piece its retile chose (family, row, turn); the other three cells are 0xc (0xc
+/// in both kits, op 0x83's stamp) and name the anchor as their parent. The running park holds them on the cells' track fields
 /// (<see cref="ParkWorld.MapCell.TrackType"/> and the rest), the save's track records.
 /// </para>
 /// <para>
@@ -208,7 +208,8 @@ public sealed class ParkTrackPieces : Entity
 			TrackTileAngle = turn
 		} );
 
-		var cell = type is KartAnchor or KartStation ? KartCell : WaterCell;
+		// Op 0x83 stamps the three 0xc in both kits (0x00538895).
+		var cell = KartCell;
 		var parent = (ushort)MapStep.CellId( at.X, at.Y );
 
 		foreach ( var (dx, dy) in new[] { (1, 0), (0, 1), (1, 1) } )

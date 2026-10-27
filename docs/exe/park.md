@@ -1678,15 +1678,43 @@ it, so the queue comes first**. Measured at turn 0 on preview cell (32,25): the 
 entrance (31,24), exit (32,24), the queue's cell (31,23) and a path cell before the exit (32,23); on the track grid the
 station (0xd) at (30,25) and (32,25), laid track (0xb) at the mouth (34,25) and at (28,25), where the circuit comes back
 in, every other cell of a 2 × 2 0xc; mIsTrackRideValid (`+0x2c`) 0; the tool 4 then 3 (`q581/orig/A-8-put.png`). Splish
-Splash is the same a row further up its 4 × 4 (0x12, 0x10; its other cells 0x11).
+Splash is the same a row further up its 4 × 4 (0x12, 0x10; its other cells 0xc too: op 0x83 stamps 0xc in both kits,
+`0x00538895`, and no writer of 0x11 was found, though readers test it; not measured).
 
 **The track tool** (modes 0xb and 0x10, arm `0x00526cb3`; the dispatch at `0x00525a1c` also sends mode 0x19, track type 0x19's tool, to its
-own arm `0x00525a52`) is armed by a click on a piece
-of track, "Left-click to edit this track", with that piece's cell its anchor (`DAT_0081ede4`, `e8`). A click (on the
-button's release) plays sound 0xce and lays a straight run in 2-cell steps from the anchor to the click, moved onto the
-anchor's row or column, whichever is farther (the preview's cell reads the moved one), by ops `0x87`, the type, `0x80`,
-`0x82`, `0x83`, `0x85`, `0x86` and `0x81`. While `0x81` answers not nought the anchor moves to the click and the tool
-stays (`TrackRide_ShapeFromMouth` with 0, `TrackRide_ShapeFromOtherMouth` with 1: "A track piece's model, price and open end", below). When it answers nought (the run met track) or the click
+own arm `0x00525a52`). Read for Q762 in Ghidra (`q762/dump`; `Track_CellOp` is `FUN_005370e0`, named then).
+**Armed** by a click on a piece of track, "Left-click to edit this track": the hover sends track types 0xb and 0x10, and
+0xc under any parent but a hoarding, to category 5 (`0x00487392`), so a water piece's 0x11 cells and the stations arm
+nothing; the click (`FUN_004879d0`, `0x00487f6c`) takes a 0xc cell's anchor, selects the anchor's owning thing and
+installs mode 0xe (karts) or 0x13 (water). That mode's release (`0x00526b1e`), when the ride's `+0x2c` is nought, walks
+the ride's track from the mouth (`FUN_00530830`): in 2-cell steps along laid track (0xb, 0x10), turning at a bend the
+way its links leave it (`mask ^ opposite( heading )`), until a cell with no link onward or the station met from its far
+side; the pending list `0x0081b740` is the mouth, each bend and the cell it stops on, which is the anchor; each cell's
+overlap counter `+0x20` is set, 1 at a bend or crossing, 0 on a straight or an end (`FUN_005228a0`). Then
+`FUN_0052f580( 0xb )` (or `0x10`), which keeps the anchor. With `+0x2c` set the same mode takes two clicks and joins the
+loop at them (`FUN_00539760( 0xe )`, `FUN_0052b400`), not read further. **A click** on release: a run the preview
+flagged red (`DAT_00816d48`) lays nothing, plays 0xaf and puts the tool away (`0x00524a63`..`0x00524acd`); otherwise
+sound 0xce, the target moved onto the anchor's row or column, whichever is farther, a tie to the row
+(`0x00526d04`..`0x00526d2c`), and the run laid by ops `0x87`, the type, `0x80`, `0x82`, `0x83`, `0x85`, `0x86` and
+`0x81`, each a pass of `FUN_0053aac0` over the whole line. That walker takes the target onto the anchor's 2-cell grid
+(an odd distance to the lower cell) and writes it back, steps ±2, and gives each cell the step (`0x00820ac8` marks the
+first cell, `0x00820ad0` the last); an op that answers nought stops its own pass. What each op does to a kart or water
+cell (`Track_CellOp`):
+
+| Op | On the run's anchors |
+|---|---|
+| `0x87` | a cell that is not track: its 2 x 2's things torn down (`FUN_00527ee0`) and, the last, its map cells cleared, both gated on `[0x00818c14] < [0x00818c10]` (`0x00538d2e`) |
+| the type | `Track_StampCell`: its own type again is free and bumps `+0x20`; another track type refuses; a new piece is charged `Costs.KartTrackCell` or `WaterTrackCell` (not in modes 4 and 0x3b) and refused above the balance; `0x00820ae8` notes a last cell that was track already |
+| `0x80` | `FUN_00539220`: links the cell and the anchor two back along the step, where that one is track (0xb, 0xd, 0x10, 0x12, 0x19) of this ride or none and neither has four links; the run's first cell links along the last pass's step (`0x00763b00`/`b04`; none after `0x80`, which putting the tools away, Backspace's mode 0x35 and a closing run write) |
+| `0x82` | `FUN_00539670`: the way on (`+0xd`) is the step's bit on a cell of under three links, or gains it on a crossing |
+| `0x83` | with the station pointer `[0x008186c4]` set: the anchor's owner `+0x10` the selected thing's cell, and its three other cells stamped 0xc, in both kits (`0x00538895`), naming it |
+| `0x85` | an end or straight over map types 1 or 3 takes flag 1, a hill; over four bare cells its flags' low four bits go |
+| `0x86` | for track with an owner, outside a fresh boundary: `TrackRide_ShapeFromMouth` with 1, then `TrackRide_ShapeFromOtherMouth` with 0 when it answers 0 (`0x00538ca0`, `0x00538cb7`) |
+| `0x81` | a bend, or a crossing with links, loses its hill flags; every piece but a station is retiled; on the last cell where `0x00820ae8` is set it answers nought |
+
+While `0x81` answers not nought and the target is not the anchor, the anchor moves to it and the tool stays, the pair
+`TrackRide_ShapeFromMouth` with 0 and `TrackRide_ShapeFromOtherMouth` with 1 following (`0x0052718c`): "A track piece's
+model, price and open end", below. When it answers nought (the run met track) or the click
 does not move the anchor, the circuit is walked into `+0x2c`; with 1 and the open guard (`FUN_004df290`) the ride opens
 (`FUN_004df390`); the pieces are put to clip 0xc (`TrackRide_PlayPiecesFromMouth`, `FUN_0052a490`, and with no circuit
 `TrackRide_PlayPiecesFromEnd`, `FUN_0052a700`, too; `BUMP 17` plays them 5 or 0xc the same way); the anchor goes to −1,
@@ -1694,6 +1722,20 @@ and the tool to the queue (mode 3 at the entrance's front) when the queue pointe
 move's put-down (`0x00524c00`) clears the ride's sections (`TrackRide_ClearSections`, `FUN_00545450`) and walks again.
 Measured: clicks on (34,25), (34,29), (28,29), (28,25): 0xb with the anchor at each, `+0x2c` 0, then 1 and idle on the
 last.
+**The preview's verdict** (`Track_CellVerdict`, `FUN_00539760`, per anchor of the run): any of the four cells' map flag
+`0x40` (outside the park's land, `FUN_00535db0`) refuses; map types 4, 7, 9, 10, 30 or 0x15 mark the cell blocked; a
+track cell of another ride among the three others latches the refusal; the run's new pieces add up (`FUN_0052fba0`) and
+a total above the balance refuses (`DAT_00816d5c`); an empty cell not blocked passes; the anchor's own track passes by
+rules on its links and way on (a straight crossed, an end met, the station met along its flow), not read to the end.
+**OpenTPW** (Q762, `ParkTrackTool`) builds the arming walk, the click and its passes but `0x87` and `0x86`; its verdict
+refuses map types 1, 2 and 3 (`TRACK_RUN_OVER_PATH`: the original lays a hill), its own track mid-run or with two links
+at the end (`TRACK_RUN_CROSSING`) and its own station (`TRACK_RUN_INTO_STATION`); the circuit's walk
+(`TRACK_WALK_CIRCUIT`), a closed loop's edit (`TRACK_EDIT_CLOSED_LOOP`) and Backspace's refund (`TRACK_BACKSPACE_REFUND`)
+are counted. Measured in ours (`q762/ours-b`): Q687's two loops by the same clicks give every anchor the links, way on,
+overlap, row and turn the original's `A-load.log` and `W-cells.log` hold, and 200 (250) a new piece, but for the closing
+corner: the circuit's walk turns a bend's way on to the way it leaves and retiles it (`0x0052b1a9`..`0x0052b1fc`), so
+the original's (28,25) reads way 0x04 and its water corner (16,19) way 0x04, row 19 (`wr_trckB2`), where ours keeps the
+run's 0x01 and 0x10 and draws (16,19) as row 3 (`wr_trckB`).
 
 **The walk** (`TrackRide_WalkCircuit( check )`, `FUN_0052a970`) goes from the circuit's start in 2-cell steps the way
 each cell's flow (`+0xd`) and links (`+0xc`) send it: a cell with two links at right angles is a bend
@@ -1882,10 +1924,13 @@ karts' four corners `gk_trckB`, row 3; the water loop's four corners `wr_trckB2`
 
 **The price.** `Costs.KartTrackCell` and `Costs.WaterTrackCell` (the `Costs` record at `0x007855fc`: queue, path, kart,
 water, map cell; the `.sam` loader's setters at `0x004081b6` and `0x004081c4`, the getters `Costs_KartTrackCell`
-`0x0052fb60` and `Costs_WaterTrackCell` `0x0052fb80`), Lost Kingdom's `Easy_Standard.sam` 200 and 250. `Track_StampCell`
+`0x0052fb60` and `Costs_WaterTrackCell` `0x0052fb80`): 200 and 250 in Lost Kingdom's Instant Action, from
+`jungle/Easy_Standard.sam`, which only game type 2 layers (`boot.md`); a Full Simulation park layers no Easy file and takes
+`data/levels/Standard.sam`'s 400 and 500 (not measured); OpenTPW reads it through `ParkBalance`. `Track_StampCell`
 (`0x00538fc0`) charges it for a piece laid on a cell not already its type and refuses one above the balance; over its
 own type it is free and bumps the overlap counter `+0x20`; in mode 4, the put-down, and mode 0x3b (`[0x008186d4]` 1,
-`0x00524b4a`, `0x005253e9`) it charges nothing, so the station and both mouths come with the ride's price. The preview's
+`0x00524b4a`, `0x005253e9`, and in the preview `FUN_005234d0` at `0x005235d4` and `0x00523967`, so the carried preview's
+cost is free in the same two modes) it charges nothing, so the station and both mouths come with the ride's price. The preview's
 verdict `Track_CellVerdict` (`0x00539760`) adds each such piece to the run's total (the yellow "$ N" under the money) and
 refuses a run whose total passes the balance (`c_cash`) or whose pieces meet another ride's track, station or the
 boundary. Measured: the put-down took 6500 (Splish Splash 5000) and nothing more; each click 200 (250) a new piece, the
@@ -1893,7 +1938,8 @@ anchor's own piece nothing.
 
 **The refund.** Backspace with the track tool armed (on its release, `0x0040beaa`) runs `BuildTool_Backtrack`
 (`0x0052fe50`): the pending list's last run is cleared in mode 0x35 (op 0x32, `Track_ClearCell`, `0x0053b280`), the
-anchor goes back to the run's start and the tool stays. A piece whose overlap counter falls below nought (or under the
+anchor goes back to the run's start and the tool stays; its walk pairs (`0x00530025`/`0x0053003e`,
+`0x00530082`/`0x0053009b`) run `ShapeFromOtherMouth` with 1 only where `ShapeFromMouth` with 0 answered 0. A piece whose overlap counter falls below nought (or under the
 sale's `[0x0081b46c]`, or forced, `[0x0081d7a8]`), a mouth only by the sale, is removed and refunds `FUN_004e2290`'s
 percentage of its price (`0x0053b603`..`0x0053b627`), 100 for a ride with no customers under 30 days old; its cell reads
 row 0x37, no piece. The sale clears and refunds every piece so, then withdraws two pieces' worth at the same percentage,
@@ -1910,10 +1956,12 @@ pulsed when the second argument is 1 (`Model_PulseOn`, `0x00469580`: model flag 
 and stops pulsing when it is 0 (`Model_PulseOff`, `0x00469650`). `Model_PulseTick` (`0x00469840`, once a drawn frame from
 `0x0054e301`) moves a phase by twice the frame's seconds, wrapped at 2, and writes its triangle, 0 to 255 and back,
 into every vertex colour of the pulsed models as alpha and red 255 and that value for green and blue: red to white and
-back once a second. The tool's arming and each of its clicks call `ShapeFromMouth` with 0 and `ShapeFromOtherMouth` with
-1, so while the loop is open the other mouth, where the circuit must come back in, pulses; at the put-down a pair with
-`ShapeFromMouth` given 1 runs, so the mouth pulses until the tool is armed (which of `FUN_00524960`'s three such pairs,
-`0x00526b7a`, `0x00526f3c` or `0x0052718c`, is not read); a closed loop pulses nothing. Measured: the mouth after the
+back once a second. The tool's arming (`0x00526c89`) and each click that moves the anchor (`0x0052718c`) call
+`ShapeFromMouth` with 0 and `ShapeFromOtherMouth` with 1, so while the loop is open the other mouth, where the circuit
+must come back in, pulses; every click's op 0x86 runs the other pair first (`0x00538ca0`, `ShapeFromMouth` with 1, then
+`0x00538cb7`, `ShapeFromOtherMouth` with 0 where it answered 0), which the click's own pair then flips. At the put-down
+`FUN_00524960` calls neither walk itself: the only walk it reaches is the mouths' op 0x86 (applied at both mouths), so the
+mouth pulses until the tool is armed (not observed by a breakpoint); a closed loop pulses nothing. Measured: the mouth after the
 put-down, the other mouth from the arming click until the loop closed (`q587/orig/B-3-run1.png`, red on the left), nothing after.
 
 **The carried ride's first track cells** (`TrackRide_CarrySquares`, `0x005286a0`, from `BuildTool_Placer` at `0x00529c65`
@@ -1923,7 +1971,7 @@ mouths' squares and their arrows (`q587/orig/W-1-before-put.png`).
 
 **OpenTPW** (Q688, `ParkTrackPieces`): the put-down lays the station and both mouths, each anchor's way on the turn's
 heading (east, north, west, south for 0, 90, 180, 270), the station's two linked both ways, the mouth back to the station,
-the other mouth on to it, the owner the ride's cell, the 2 x 2's other cells 0xc (0x11) naming their anchor; at turn 0 from
+the other mouth on to it, the owner the ride's cell, the 2 x 2's other cells 0xc in both kits naming their anchor; at turn 0 from
 (30,24) the four cells read as the original's at its put-down (`q587/orig/A-load.log`; `q688/ours-b`), and at turn 180 as
 Alexah's played Dino Karts lies. Each kart or water anchor draws the piece its record's row and turn name, its end caps
 hidden by the row's mask: Alexah's played file's 28 pieces are its 28 records' (`q688/ours-f2`), and the chooser
@@ -1932,7 +1980,7 @@ its station and mouths clears them and pays nothing net. Counted, not built: the
 (`CARRY_PREVIEW_TRACK_START`), the pulse (`TRACK_OPEN_END_PULSE`), the drape (`TRACK_PIECE_DRAPE`), a water piece's own
 clip 0xc (`TRACK_PIECE_WATER_CLIP`), an add-on's model (`TRACK_PIECE_ADD_ON`: the ground under it shows the sky), a
 written park's piece records (`SAVE_PARK_TRACK_PIECE_MODEL`), and the sale of a ride with more track
-(`SALE_TRACK_TEARDOWN`). The track tool, the walk and opening are Q587.
+(`SALE_TRACK_TEARDOWN`). The track tool's runs are Q762 ("The track tool", above); the walk, opening and the rest are Q587.
 
 ### The ride object
 

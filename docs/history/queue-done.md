@@ -10743,6 +10743,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `A-8-put.png` and `W-2-put.png` (theirs on `q581/karts.TPWS`, ours on the stock park), Alexah's played Dino Karts' 28
   pieces as its 28 records; the chooser holds all 31 of its anchors in a test. FileFormats `saves.md`, "A kart or water
   track piece's record".
+- [x] **Q762. The karts' and the water ride's track tool lays runs (Q587's second build piece).** A click on a kart or
+  water piece arms mode 0xb or 0x10 at the ride's open end (`FUN_00530830`'s walk from the mouth); each click plays 0xce
+  and lays a straight run in 2-cell steps by the stamp (200 or 250 a new piece through `ParkBalance`), the links, the
+  flow, the owner and its 0xc cells, the hill flags and the retile (`Track_CellOp`, `FUN_005370e0`); a run that meets
+  track puts the tool away (`ParkTrackTool`; `park.md`, "The track tool"). Done 2026-10-27: Q687's two loops by the same
+  clicks in ours (`q762/ours-b`, the final binary) give every anchor the original's links, way on, overlap, row and turn
+  (`q587/orig/A-load.log`, `W-cells.log`) and its prices, but the closing corner's way on, which the circuit's walk turns.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.
