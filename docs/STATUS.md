@@ -30,18 +30,18 @@ One line per system; the detail, item by item, is `docs/WORKS.md` (grep it by ar
 
 ## Next
 
-`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next Q692 (do the game menu and the options screen switch the camera table off; Q752 and Q753, put first at Alexah's word 2026-10-27, are done; Q525, ordered before Q638, stands lower in the file; Q543 and Q27, ordered before Q631, and Q31b, Q25, Q51 and Q55, ordered earlier, stand lower in the file): Alexah's play test of 2026-10-21 put Q616 to Q645 first, the display, then what a player hits, then the chosen improvements (`playtest-2026-10-21/notes.md`); Q598 (every clip's scale track posed) follows them in section A (Q609, the advisor's row 19 that Q602 decoded, and Q587 to Q589, the karts' and the water ride's build, are filed after it; Q586 stood above the ordered block; Q608, the draws left both-sided, is filed after Q713): the queue was reordered at Alexah's word, 2026-10-20. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. Gaps 4 and 7: `docs/PLAYER-GAPS.md`. Q13 is done: `docs/history/CLEANUP-PLAN.md`.
+`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next Q693 (the ride window's four condition gauges inset 10 from their rows' top and bottom; Q752 and Q753, put first at Alexah's word 2026-10-27, are done; Q525, ordered before Q638, stands lower in the file; Q543 and Q27, ordered before Q631, and Q31b, Q25, Q51 and Q55, ordered earlier, stand lower in the file): Alexah's play test of 2026-10-21 put Q616 to Q645 first, the display, then what a player hits, then the chosen improvements (`playtest-2026-10-21/notes.md`); Q598 (every clip's scale track posed) follows them in section A (Q609, the advisor's row 19 that Q602 decoded, and Q587 to Q589, the karts' and the water ride's build, are filed after it; Q586 stood above the ordered block; Q608, the draws left both-sided, is filed after Q713): the queue was reordered at Alexah's word, 2026-10-20. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. Gaps 4 and 7: `docs/PLAYER-GAPS.md`. Q13 is done: `docs/history/CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the pre-commit hook: grep it by Q-number.
 
-- Q609 (the advisor's row 19, the mechanics' patrol areas): seen in the off-screen run (lane B, lavapipe, white textures,
-  so the log is the evidence; shots `q801/run2/t19090.png`, `run3/t22148.png`): on Alexah's jungle `New Save` by their Full
-  Simulation profile, `poll message=19 ... score=325 ... tick=19084 ... entrances=25/71`, and sample 57, line 2, in the hard
-  hat on 22142, not 19084 as in Q602's original run: this game's advisor says the hint `0x13a` first (Q662's note). Not
-  seen: Instant Action's `other-game` and a park with no entrance or too few mechanics (unit tests only); the original
-  not run again; no photograph of the hard hat, off-screen.
+- Q692 (the camera keys silent behind the game menu and the options screen): seen on the desk at 1280 x 720 in the stock
+  park (`q692/ours-b`, 5 of 5 on the final binary; `ours-0`, the build before it, panned and zoomed behind the menu);
+  the original measured the same day under Proton by `keylatch.py` (`q692/orig`, rounds a and b), the same keys, the
+  same park, the same camera. Not seen: the menu opened from the full-screen view, the camcorder or the park map in
+  either game; Full Simulation (the camera is the same code in both modes); why the original's paused camera still
+  creeps about 1.5 zoom a second on a stuck row (not read).
 
 
 ## Numbers (take counts fresh; these go stale within a day)

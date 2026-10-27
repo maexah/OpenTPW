@@ -240,12 +240,13 @@ public sealed class ParkOrbitCameraMode : CameraMode
 		// camera key is heard until it closes. The mouse still reaches the camera from the park beside the screen. The park
 		// map is handed to the same switch (0x005f0c01), and its own handler takes the arrow keys.
 		//
-		// Nor under a message box or the Save or Load screen: each opener calls FUN_00486b70 (0x0047efa0, 0x0049f406),
-		// which switches the camera's table off and clears its latches (docs/exe/hud.md, "The research opener and its two boxes";
-		// docs/exe/saves.md, "One screen, two uses"). That is WindowStack.CameraTableOff, the narrower test than
-		// Level.PausedByWindow: the game menu and the options screen also pause, but whether their openers switch the
-		// table off is not read, so the keys are left to them.
-		var keys = !UI.WindowStack.ParkScreenOpen && !UI.WindowStack.MapOpen && !UI.WindowStack.CameraTableOff;
+		// Nor under a message box, the Save or Load screen, the game menu or the options screen (WindowStack.CameraKeysAway):
+		// the first three switch the camera's table off as they open (FUN_00486b70), the last two take every key themselves
+		// (docs/exe/park-engine.md, "The game menu and the options screen hold the keys"). The keys are read live, so one
+		// held as the menu opens stops at once and nothing moves when it closes. Ours: the original's camera row stays
+		// latched when its key comes up behind the menu, so the camera creeps behind it and runs on after the close until
+		// the key is pressed and let go in the park again; that stuck key is not kept.
+		var keys = !UI.WindowStack.ParkScreenOpen && !UI.WindowStack.MapOpen && !UI.WindowStack.CameraKeysAway;
 
 		if ( keys && Input.Pressed( InputButton.RotateLeft ) )
 			Yaw -= MathF.PI / 4f;

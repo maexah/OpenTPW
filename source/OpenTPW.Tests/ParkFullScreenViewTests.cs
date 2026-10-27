@@ -451,14 +451,17 @@ public class ParkFullScreenViewTests
 	}
 
 	/// <summary>
-	/// <b>No camera key pans or zooms under a message box or the Save or Load screen</b>: their openers switch the
-	/// camera's table off (<c>FUN_00486b70</c>, <c>0x0047efa0</c>, <c>0x0049f406</c>), and a box being typed into has
-	/// the keyboard (<c>Input.TextCaptured</c>). With the box shut the same keys move the park.
+	/// <b>No camera key pans or zooms under a message box, the Save or Load screen, the game menu or the options
+	/// screen</b>: the first three switch the camera's table off (<c>FUN_00486b70</c>, <c>0x0047efa0</c>,
+	/// <c>0x0049f406</c>), the last two take every key themselves (<c>0x0048b6a0</c>; measured in the original,
+	/// <c>q692/orig</c>), and a box being typed into has the keyboard (<c>Input.TextCaptured</c>). A pan held as the menu
+	/// opens is let go there. With the box shut the same keys move the park.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> <c>WindowStack.CameraTableOff</c> left out of the keys' gate; the message box or the
-	/// file screen left out of <c>CameraTableOff</c>; the <c>TextCaptured</c> test taken out of the keys.</remarks>
+	/// <remarks><b>Mutations:</b> <c>WindowStack.CameraKeysAway</c> left out of the keys' gate; the message box, the
+	/// file screen, the game menu or the options screen left out of <c>CameraKeysAway</c>; the <c>TextCaptured</c> test
+	/// taken out of the keys.</remarks>
 	[TestMethod]
-	public void TheCameraKeysAreSilentUnderAMessageBoxTheFileScreensAndATextBox()
+	public void TheCameraKeysAreSilentUnderAMessageBoxTheFileScreensTheMenuTheOptionsAndATextBox()
 	{
 		var stack = APark();
 		var park = AParkLevel( stack );
@@ -481,6 +484,29 @@ public class ParkFullScreenViewTests
 			Assert.AreEqual( (from, 110f, false), (ParkOrbitCameraMode.PointOfInterest, ParkOrbitCameraMode.Zoom, ParkOrbitCameraMode.Panning), "under a file screen: none" );
 			WorldFrame( stack, park, Up( Key.A ), Up( Key.Up ) );
 			stack.Close( screen );
+
+			var menu = new UI.GameMenu( stack, [], 10 );
+			stack.Open( menu );
+			WorldFrame( stack, park, Down( Key.A ), Down( Key.Up ) );
+			Assert.AreEqual( (from, 110f, false), (ParkOrbitCameraMode.PointOfInterest, ParkOrbitCameraMode.Zoom, ParkOrbitCameraMode.Panning), "under the game menu: none" );
+			WorldFrame( stack, park, Up( Key.A ), Up( Key.Up ) );
+
+			UI.OptionsScreen.Open( stack );
+			WorldFrame( stack, park, Down( Key.A ), Down( Key.Up ) );
+			Assert.AreEqual( (from, 110f, false), (ParkOrbitCameraMode.PointOfInterest, ParkOrbitCameraMode.Zoom, ParkOrbitCameraMode.Panning), "under the options screen: none" );
+			WorldFrame( stack, park, Up( Key.A ), Up( Key.Up ) );
+			stack.Close( stack.Windows.First( window => window is UI.OptionsScreen ) );
+			stack.Close( menu );
+
+			WorldFrame( stack, park, Down( Key.A ) );
+			Assert.IsTrue( ParkOrbitCameraMode.Panning, "A held: panning" );
+			stack.Open( new UI.GameMenu( stack, [], 10 ) );
+			WorldFrame( stack, park, Down( Key.A ) );
+			Assert.IsFalse( ParkOrbitCameraMode.Panning, "the menu opened over it: let go, the key still down" );
+			stack.Close( stack.Windows.First( window => window is UI.GameMenu ) );
+			WorldFrame( stack, park, Up( Key.A ) );
+			ParkOrbitCameraMode.Forget();
+			from = ParkOrbitCameraMode.PointOfInterest;
 
 			Frame( stack, Down( Key.A ), Down( Key.Up ) );
 			Input.TextCaptured = true;

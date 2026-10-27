@@ -3548,6 +3548,39 @@ modifier held it does nothing (`ParkFrontEnd.MenuKey`). Where it parts from the 
 - **F1 over a screen** and **the wheel over a screen's body** are not decoded, and neither is built or counted
   (`docs/QUEUE.md` Q231). The wheel zooms the camera wherever the pointer is.
 
+### The game menu and the options screen hold the keys
+
+Q692. **Neither opener switches a key table off.** `GameMenu_Open` (`0x0048c830`; the park's build, `GameMenu_BuildPark`
+`0x0048c150`, then `FUN_004a25f0( 1 )` and the pause) and `OptionsScreen_Open` (`0x004a3a30`, which hides the park's
+layer with message 6) call neither `FUN_0040cfa0` nor `FUN_00486b70`; the switch's four callers are `FUN_00486b70`
+itself, the two inlined copies in `FUN_0048ac40` and `FUN_0048ae70` (`0x0048ac8f`, `0x0048aebf`) and
+`FrontEnd_ShowPlayerSlots` (`0x004a6599`). **The keys go to them instead.** `MenuList_Show` (`0x00493130`) closes the
+open park screen and shows the menu over the layer, and the park's menu handler `GameMenu_ParkHandler` (`0x0048b6a0`)
+takes every key-up (`0x1000b`, `0x0048b6ad`): Escape, or a key the `shortcuts` table's lookup (`FUN_0040c870` on
+`[0x0078721c]`, `0x0048bb49`) finds as row 0 ("menu"), resumes the park and closes it; any other goes to
+`MenuList_Callback` (`0x00492e00`). The park's layer, whose handler runs the `camera` table, hears none of them.
+
+**What the camera reads is the row's latch.** `Bindings_RowHeld` (`0x0040ca20`, this = the table, the action) returns the
+row's `+0x06`, set by a key's down and cleared by its up, and tests no table's enable; `ParkCamera_Update`
+(`0x0042b1c0`) reads it for every held action (the pan's `0xd` to `0x10` at `0x0042b99b`..`0x0042b9e9`) and runs
+every frame from `Game_StateMachine` (`0x0054fa9e`), the menu up or not, its time from the game clock's second stopwatch
+(`FUN_00402d80`, `0x0042b1ff`). So a key pressed behind the menu moves nothing, and a key held as the menu opens keeps
+its row latched: its up goes to the menu.
+
+**Measured** (`q692/orig`, `tools/harness/original/keylatch.py` beside each round; the stock park, `setcam.py` (480,
+400)): behind the menu (`[0x007c2534]` set, `g_ParkRunning` 0) keypad 8 or Up held a second moved nothing, the camera
+table's enable 1 throughout and no row held; behind the options screen (`[0x007cb2fc]` set) the same, and after OK.
+Up held from zoom 130 as Escape opened the menu, let go behind it, kept its row (`0x0:0x2600`) held three times of
+three: the zoom crept about 1.5 a second behind the menu (112.70 to 109.05 in 2.4 s; 50 a second running; why the
+paused stopwatch still gives the camera that much is not read), ran to 70 within a second of the close, and the row
+cleared at the next press and release of Up in the park. Up held and let go with no menu cleared its row both times.
+(Keypad 8 showed the same, but its control lost its release with no menu at all: the Wine trap, `TOOLING.md`.)
+
+**OpenTPW** (`WindowStack.CameraKeysAway`, read by `ParkOrbitCameraMode`): no camera key pans, zooms, turns or resets
+under the game menu or the options screen, as under a message box and the Save and Load screens. The keys are read
+live, so a key held as the menu opens is let go there and nothing moves when it closes: **the original's stuck row,
+its creep behind the menu and its run after the close are not kept** (said at the site).
+
 ### The camera goes to a thing
 
 Decoded for `docs/QUEUE.md` Q117, first-hand, and run in the original.

@@ -5,6 +5,12 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q609 (the advisor's row 19, the mechanics' patrol areas): seen in the off-screen run (lane B, lavapipe, white textures,
+  so the log is the evidence; shots `q801/run2/t19090.png`, `run3/t22148.png`): on Alexah's jungle `New Save` by their Full
+  Simulation profile, `poll message=19 ... score=325 ... tick=19084 ... entrances=25/71`, and sample 57, line 2, in the hard
+  hat on 22142, not 19084 as in Q602's original run: this game's advisor says the hint `0x13a` first (Q662's note). Not
+  seen: Instant Action's `other-game` and a park with no entrance or too few mechanics (unit tests only); the original
+  not run again; no photograph of the hard hat, off-screen.
 - Q690 (Home and keypad 5 reset the park camera): seen on the desk at 1280 x 720 in the stock park, from two turned and
   zoomed cameras, Ctrl+Home refused, a locator's follow let go and a coasting pan carried on (`q690/ours-a`); the original
   measured the same day under Proton by `campoi.py` (`q690/orig`), its frames at the reset the gate's view as ours. Not

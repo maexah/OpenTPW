@@ -10680,6 +10680,17 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
     entrances=25/71`, queued behind `0x13a` (said 19059), then the 19100 awards, 311 and 315; said on 22142, `response=57
     sample=57 line=2`, `wearing 5,0` (`q801/PREDICTION.txt`, run3). 22 bugs put back, all caught. The tick differs from
     the original's 19084 for the hint's sake: Q662's note.
+- [x] **Q692. Do the game menu and the options screen switch the camera table off?** From the Q631 review (run 9),
+  decode. `WindowStack.CameraTableOff` holds the camera keys off under a message box and the Save and Load screens only,
+  whose openers call `FUN_00486b70` (`0x0047efa0`, `0x0049f406`). The game menu (`0x0048c830`) and the options screen
+  (`0x004a3a30`) also pause but are not among the `0x0040cfa0` callers read. Read their handlers, measure one key held
+  behind the menu in the original, then widen `CameraTableOff` or say why not.
+  **Done (2026-10-27, run 12 lane A):** neither opener switches a table off, but both take every key, so the original's
+  camera hears none behind them: measured, the table's enable 1 and no row held through keypad 8 and Up held behind
+  each, the point and zoom unmoved (`q692/orig`, `keylatch.py`). `WindowStack.CameraTableOff` widened and renamed
+  `CameraKeysAway`; ours 5 of 5 (`q692/ours-b`; before it, `ours-0` panned to (480,511) and zoomed to 70 behind the
+  menu). The original keeps a row latched whose key comes up behind the menu (Up, 3 of 3): not kept, said at the site
+  (`park-engine.md`, "The game menu and the options screen hold the keys").
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

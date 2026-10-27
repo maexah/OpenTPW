@@ -74,11 +74,6 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q692. Do the game menu and the options screen switch the camera table off?** From the Q631 review (run 9),
-  decode. `WindowStack.CameraTableOff` holds the camera keys off under a message box and the Save and Load screens only,
-  whose openers call `FUN_00486b70` (`0x0047efa0`, `0x0049f406`). The game menu (`0x0048c830`) and the options screen
-  (`0x004a3a30`) also pause but are not among the `0x0040cfa0` callers read. Read their handlers, measure one key held
-  behind the menu in the original, then widen `CameraTableOff` or say why not.
 - [ ] **Q693. The ride window's four condition gauges stand in 10 from their rows' top and bottom, as the original's.**
   From the Q636 review (run 9; VERIFY-10). The ride window's stats fill `0x004ad890` (the ride vtable `0x006ffbe8`
   `+0xc`, called by the shared opener at `0x0048cf55` on every ride window) calls `FUN_00485e30( gauge, 0, 10 )` on
