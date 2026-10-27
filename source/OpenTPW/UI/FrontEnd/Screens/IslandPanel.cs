@@ -330,23 +330,24 @@ internal sealed class IslandPanel : UiWindow
 			// the price while it can be afforded is 97.
 			if ( ParticleSystem.Current is { } particles )
 			{
-				// Not the original's: it starts the puff before the panel is hidden (0x004b8fd0, then message 6), and this panel
-				// has just been closed, so the puff it owns is never drawn (ScreenParticles; Q669).
+				// Owned by no window, as the original's (0x004b8fd0 keeps no handle), so it is drawn over everything and
+				// lives on after this panel is closed. The owner rule (ScreenParticles) does not bite: no window opens from
+				// here to the park, and Escape cancels the flight before a menu can open, showing this panel again under
+				// the puff, as the original's (lobby.md, "The key puff at park entry").
 				var rect = _price.Rect;
 				var middle = ((rect.Bottom - rect.Top) >> 1) + rect.Top;
 
 				var puff = particles.Spawn( (int)ParLib.P_EFFECT_KeyPuff, 50000, 0,
-					middle * 75000 / VirtualScreen.Height, _price.Anchor, this );
+					middle * 75000 / VirtualScreen.Height, _price.Anchor );
 
-				Log.Info( $"Front end: key puff (effect 98) started, handle 0x{puff:x}, for the island panel, "
-					+ (Stack.Windows.Contains( this ) ? "open" : "closed") );
+				Log.Info( $"Front end: key puff (effect 98) started, handle 0x{puff:x}, owned by no window" );
 			}
 		}
 
 		Log.Info( $"Front end: entering '{island.ParkName}'" );
 
 		// 0x005e1e30 is a store, a call and a tail jump: set the camera leaving, the cue and the puff above, and message 6 to
-		// this panel's tree, which hides it (this panel is closed before the puff, above). The camera then swings round onto the gate, opens it, flies in, and asks for the park
+		// this panel's tree, which hides it (this panel is closed before the puff, above, which no window owns). The camera then swings round onto the gate, opens it, flies in, and asks for the park
 		// when it arrives - see LobbyCameraMode.LeaveForPark. Escape before then cancels it and shows this panel again.
 		LobbyCameraMode.LeaveForPark( () => Game.RequestParkLoad( island.ThemeName ) );
 	}

@@ -316,6 +316,60 @@ public class LobbyEscapeTests
 		Assert.AreEqual( "IslandPanel, GameMenu", Names( stack ), "in orbit, Escape opens the game menu" );
 	}
 
+	/// <summary>
+	/// <b>A Full Simulation player's Enter starts the key puff, effect 98, owned by no window</b>, as the original's
+	/// (<c>0x004b8fd0</c>): the panel is closed and the puff is drawn all the same, over everything. Escape then gives the
+	/// panel back under the puff, still running and still no window's. Needs the game's particle library.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> giving the puff the panel as its owner leaves it undrawn once the panel closes (the bug Q630
+	/// found); not starting it at all leaves no effect 98; killing it with the cancel leaves none under the panel.
+	/// </remarks>
+	[TestMethod]
+	public void EnteringStartsTheKeyPuffOwnedByNoWindowAndACancelLeavesItRunning()
+	{
+		FileSystem = GameData.Required();
+		var system = new ParticleSystem( "Particle/Tp2.plb", 1000 );
+
+		try
+		{
+			var (frontEnd, stack, panel) = ALobbyFrontEnd();
+			var island = AnIsland( out _ );
+			SetBacking( island, "GlobalLoaded", true );
+			SetCurrentPlayer( new Player( 0, "Test", new PlayerFile { InstantAction = false } ) );
+
+			Enter( stack, panel );
+			Assert.AreEqual( "", Names( stack ), "Enter closed the panel" );
+
+			// Three ticks of 31 ms: the original's had 28 particles out 0.1 s after the click.
+			for ( var i = 0; i < 3; ++i )
+				system.Tick();
+
+			var puffs = system.Emitters.Where( emitter => emitter.Active && emitter.Effect == 98 ).ToArray();
+			Assert.AreEqual( 1, puffs.Length, "one key puff is running" );
+
+			var puff = puffs[0];
+			Assert.IsNull( puff.Owner, "it is no window's" );
+			Assert.IsTrue( Drawn( puff ), $"so it is drawn with the panel closed ({puff.Count} particles)" );
+
+			Escape( frontEnd );
+			Assert.AreEqual( "IslandPanel", Names( stack ), "Escape gave the panel back" );
+
+			system.Tick();
+			Assert.IsTrue( puff.Active && puff.Effect == 98 && puff.Owner is null && Drawn( puff ),
+				"and the puff runs on over it, still no window's" );
+		}
+		finally
+		{
+			system.Shutdown();
+		}
+	}
+
+	/// <summary>Whether the screen's effects draw <paramref name="emitter"/> at all, by their own rule.</summary>
+	private static bool Drawn( Emitter emitter )
+		=> (bool)typeof( UI.ScreenParticles ).GetMethod( "Drawn", BindingFlags.Static | BindingFlags.NonPublic )!
+			.Invoke( null, [emitter] )!;
+
 	private static void Step( int frames )
 	{
 		for ( var i = 0; i < frames; ++i )

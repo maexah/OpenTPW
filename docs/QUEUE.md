@@ -74,12 +74,6 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q669. Draw the key puff at park entry (Q630's build).** `IslandPanel.EnterPark` starts effect 98 with the panel as
-  its owner after closing it, so it is never drawn (`lobby.md`, "The key puff at park entry"). Start it with no owner,
-  as the original's, and say at the site why the owner rule (`lobby.md`, "Deliberate departure") does not bite: no window
-  is open from the Enter to the park (`windows: none` at 0.5 s, `q630/run4`), and Escape cancels the flight before a
-  menu can open (a cancel shows the panel again under a puff still alive, as the original's). Confirm: `lib/lobbyentry.py` (`particles screen` reads "owner no window"), a frame at +0.35 s
-  beside `q630/orig-a/film/e-025.png`, the burst's patch brighter than `q630/run4`'s at the same moment.
 - [ ] **Q670. The park-entry flight is twice as quick as the original's. Measure first.** From Q630. Filmed on Lost
   Kingdom from the same island panel: the original's loading screen comes 7.3 s after the entering click, its turn onto
   the gate taking about 4 s of it and its fade (Q61) running from +4.3 to +6.8 s (`q630/orig-a/film-3.0-8.5s.png`); ours'

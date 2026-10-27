@@ -10543,6 +10543,15 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   **Done by Q668 (2026-10-26):** built with the needs turn's cell term (`PeepBehaviour.Watch`); 11 guests deciding round
   him performing at (48,23), `facing 1` (`q668/photo/watchers-facing-1390.png`); the original's 6, 26 and 7
   (`q668/orig/c-watch-1.png`). `DECIDE_ENTERTAINER_BESIDE` is gone; the event is `DECIDE_WATCH_ENTERTAINER_EVENT`.
+- [x] **Q669. Draw the key puff at park entry (Q630's build).** `IslandPanel.EnterPark` starts effect 98 with the panel as
+  its owner after closing it, so it is never drawn (`lobby.md`, "The key puff at park entry"). Start it with no owner,
+  as the original's, and say at the site why the owner rule (`lobby.md`, "Deliberate departure") does not bite: no window
+  is open from the Enter to the park (`windows: none` at 0.5 s, `q630/run4`), and Escape cancels the flight before a
+  menu can open (a cancel shows the panel again under a puff still alive, as the original's). Confirm: `lib/lobbyentry.py` (`particles screen` reads "owner no window"), a frame at +0.35 s
+  beside `q630/orig-a/film/e-025.png`, the burst's patch brighter than `q630/run4`'s at the same moment.
+  **Done 2026-10-26:** started with no owner (`IslandPanel.EnterPark`); `q669/run1`: effect 98 "owner no window (drawn
+  over all)", key-white pixels in the burst's patch 16194 at 0.50 s against `q630/run4`'s 825 at most; `run2`: Escape
+  gives the panel back under the same puff.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

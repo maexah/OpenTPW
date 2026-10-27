@@ -156,7 +156,7 @@ linked, end and death spawns, and each window's effects are drawn right after th
 **Any new on-screen effect for a window must pass its owner, or it draws over everything.** Do not
 "restore" the original order — that reintroduces the reported bug.
 
-### The key puff at park entry, and why ours draws none (Q630)
+### The key puff at park entry (Q630, built Q669)
 
 `IslandLobby_LeaveForPark` (`0x005e1e30`) is three instructions: `+0x14 = 1`, a call of
 `IslandPanel_KeyPuffAndEnterSound` (`0x004b8fd0`), and a tail jump to `0x004b8ec0`, message 6 to the panel tree. So the
@@ -168,7 +168,7 @@ so the hide does not touch it.
 
 Measured, Lost Kingdom from the lobby as a Full Simulation player with two keys (`q630/`):
 
-| | the original (`orig-a`, the real screen) | ours (`run4`, the final build) |
+| | the original (`orig-a`, the real screen) | ours before Q669 (`q630/run4`, the puff owned by the panel) |
 |---|---|---|
 | the emitter | `emitters.py`, 0.1 s after the click: slot 1, handle `0x20001`, effect 98 at (48, 0, 14), 28 then 32 particles | `particles screen`: slot 1, effect 98, 31 then 32 particles, owner `IslandPanel`, closed |
 | its life | none in use 1.0 s later; the key sparkle 97 dies with it | 8 particles at about 0.9 s, none after |
@@ -176,12 +176,20 @@ Measured, Lost Kingdom from the lobby as a Full Simulation player with two keys 
 | the fade (Q61) | the frame mean 112.7 at the click, 106.5 at +4.3 s, 5.8 at +6.8 s | none: 102.5 to 109.2 to the loading screen |
 | the loading screen | +7.3 s; the turn onto the gate alone takes about 4 s | +3.0 to +3.8 s (Q670) |
 
-**Why ours draws none.** `IslandPanel.EnterPark` closes the panel (`Stack.Close( this )`) and then starts the puff with
-the panel as its owner. `ScreenParticles` draws an owned effect only while its window is open (the departure above), so
-the puff lives its second with nothing to be drawn with. A scratch build with no owner draws it, the same cloud
-(`q630/side-by-side.png`, `run2b`). Nothing is open in the stack from the Enter to the park, and Escape cancels the
-flight before it can open a menu, so an unowned puff cannot shine through a window the departure was made for. The fade
-starts some 3 s after the puff is gone, so it hides none of it. The build is Q669.
+**Ours, owned by no window (Q669).** `IslandPanel.EnterPark` closes the panel (`Stack.Close( this )`) and then starts
+the puff with no owner, as the original's, so `ScreenParticles` draws it over everything. Owned by the panel (Q630's
+build, the `run4` column above) it lived its second with nothing to be drawn with, since an owned effect is drawn only
+while its window is open. The owner rule (the departure above) does not bite here: nothing is open in the stack from
+the Enter to the park, and Escape cancels the flight before it can open a menu, giving the panel back under a puff
+still alive, as the original's. The fade starts some 3 s after the puff is gone, so it hides none of it. The key
+sparkle 97 is still the panel's, so its last few particles (3, 2, 1 at 0.1 to 0.3 s) are not drawn after the Enter,
+where the original's die on screen with the puff.
+
+Measured on the final build (`q669/`): `lib/lobbyentry.py`'s `particles screen` reads effect 98 "owner no window (drawn
+over all)", 32 particles, then 27, 14, 8, none from about 1.1 s; key-white pixels in the burst's patch (`q669/patch.py`,
+440,0-840,300 of 1280 x 720) 9876 to 16194 from 0.27 to 0.55 s, where `q630/run4` had at most 825; the cloud beside
+the original's `e-025.png` (`q669/side-by-side.png`). With `CANCEL=0.3` the panel is back (`windows: IslandPanel`)
+under the same puff, still listed and drawn (`q669/run2/f-11.png`).
 
 ### Decisions taken without proof
 

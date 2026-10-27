@@ -5,6 +5,12 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q668 (from a crowd, guests set off home as the original's): the final build on the desktop (`q668/run2`: 178 set off
+  over 2420 sweeps, 44 for the day and 134 miserable, 169 gone; `q668/photo`: 11 watchers round the performing
+  entertainer, `watchers-facing-1390.png`) and the original off-screen (`q668/orig` a, b: 173 and 172, 159 and 160
+  gone; c: 6, 26, 7 watchers, `c-watch-1.png`). Not seen: Full Simulation, other themes, a park with more than one
+  entertainer (the nearest is chosen in the staff list's order), fireworks' watching (counted, no Lost Kingdom item);
+  ours' crowd still loses more in queues (`InQueue` -280 against the original's queue states' about -195), not looked into.
 - Q667 (the orbit camera's point stops at the heightfield's edge): this game on the desktop, the final build
   (`q667/ours-run1`: each of the four edges held 4 s, the edge's and the rest's log lines, cells 97, -2, 86, -2) and the
   original off-screen (`q667/orig2`: `campoi.py`, the same cells), `side-by-side.png`. Not seen: zoom other than 110,
