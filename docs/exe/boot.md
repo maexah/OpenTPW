@@ -201,14 +201,27 @@ says so itself in the two places the 2.0 patch's readme promises:
 
 - **The lobby.** `FUN_0048b020`'s one caller is `FrontEnd_Init`, at `0x005d5a30`, on every entry to the lobby. It
   formats `swprintf( buf, L"v %d.%d", 2, 0 )` and puts the text in a label whose right edge is 0x7c0 and bottom 0x5c0 of
-  the 0x800 x 0x600 virtual screen: "v 2.0", bottom right.
+  the 0x800 x 0x600 virtual screen: "v 2.0", bottom right. Read 2026-10-27 (Q752, from the disassembly):
+  - Its argument (0 from `FrontEnd_Init`) picks the parent: nought, the lobby's root `[[0x00f82884]+4]`; else
+    `[0x00faa5d8]`.
+  - The box is the text's own: `FUN_004929f0( text, (0, 0, 0x7d00, 0x7d00), 6, 0, ... )` measures it in font 6 into a
+    pixel rectangle, and the width x 0x800 / the screen's width `[0x00faa5c4]` and the height x 0x600 / its height
+    `[0x00faa5c0]` (`idiv`, cut toward nought; `0x0048b0a8`-`0x0048b0dc`) are taken back from 0x7c0 and 0x5c0.
+  - The control is `FUN_0065dd7b( 1, 3, 0x8cfd55, x0, y0, 0x7c0, 0x5c0 )`: type 1, flags 3, id `0x8cfd55`. Its skin is
+    the plain label `0x0048f6a0` (vtable `0x006ff320`): white (`+0x48`..`+0x4a` 0xff), no dark edge, at ( 0, 1 ), from
+    the left and in the middle. Its font is `0x0078b5dc + set x 0x138`, slot 6 of the set (`FUN_00485a70`'s table).
+  - Measured in the running original at 800 x 600 (`q752/orig-a`, `uitree.py PID 0x00f82884+4`): the control at
+    ( 1926, 1444, 1984, 1472 ) under the lobby root, skin vtable `0x006ff320`; GAME8.bf4 measures "v 2.0" 23 x 11, which
+    gives that box. Its ink, white at its brightest, is 751 to 772 across and 564 to 572 down of the 800 x 600 picture.
+    A second control under the root, ( 1904, 1402, 2007, 1504 ), takes in the label's corner; what it is was not read.
 - **ALT-V in a park.** The key-table row at `0x00748140` (20 bytes: id 14, key 0x56 'V', modifier word 0x30, which the
   readme calls ALT) runs 0x0040c820, which calls 0x00481b70, a jump into undisassembled code at 0x0048f090 that formats
   `swprintf( buf, L"Ver %d.%d", 2, 0 )`.
 
 `Boot_Init` logs the build as "Compiled Mar 24 2000 at 15:14:05" (above). The PE link time, read from the `TP.ICD` the
 exe was dumped from (the dump's own header was overwritten), is 2000-03-24 15:14:32 UTC.
-OpenTPW draws neither version string yet.
+OpenTPW draws the lobby's label with its own build's name in it (`VersionLabel`, Q752: a deviation said there); ALT-V
+in a park is not built (Q760).
 
 The import table also names eight EA online libraries, all shipped in the game folder: `weavoter`, `weachatr`,
 `weaauthr`, `weanewsr`, `weacityr`, `weauploadr`, `wearasr` and `weamailr.dll` (Q194).
@@ -250,7 +263,7 @@ Evidence is a Ghidra trace of `/testme.exe` throughout; the column names what in
 | 0x005f87b0 | | Lists drives by `GetLogicalDriveStringsA` and `GetDriveTypeA`; mask bit 8 keeps `DRIVE_CDROM`. | Decompile |
 | 0x005f89f0 | | `GetVolumeInformationA` for one root, the label into a 20-byte buffer. | Import call |
 | 0x005a8730 | | Static initialiser: builds the string at `0x00f7a7c8` from "TPWorld" (`0x007477e8`). | Disassembly |
-| 0x0048b020 | | The lobby's "v 2.0" label; its one caller is `FrontEnd_Init`. | Disassembly |
+| 0x0048b020 | | The lobby's "v 2.0" label: font 6, plain white, the text's box back from ( 0x7c0, 0x5c0 ), id `0x8cfd55`; its one caller is `FrontEnd_Init`. | Disassembly; the original's memory (Q752) |
 | 0x0048f090 | | ALT-V in a park: formats "Ver 2.0". Undisassembled; reached from key-table row `0x00748140`. | Raw bytes |
 | 0x0044e080 | `Window_Create` | Creates the "Theme Park World" window and the D3D device. | Window title string |
 | 0x0054dcf0 | `Boot_Init` | The once-only boot init. | Decompile |

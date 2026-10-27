@@ -5,6 +5,11 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q753 (short reads, `Zio`): seen in the off-screen run (lane B, lavapipe, white textures, so the census and log are the
+  evidence): the stock jungle park entered at tick 763 with no exception line in `console.log`, the real `save/`
+  unchanged (`q800/run1`). Not seen: `Texture( Stream )` (needs a device and no caller was shown to reach it) and
+  `BaseStream.ReadBytes` (dead by CODE) have no test; no earlier-binary census was taken to compare the
+  `unimplemented` names against.
 - Q751 (weekly builds, the engine's half): the launch log's lines and the clean `console.log` were seen in real
   launches on this Linux desktop, from the build and from the published zip, whose lobby was photographed. Not run: the
   Windows and macOS builds (their processor probes, the Mac's sysctl and Windows's registry, are unexercised; the Mac

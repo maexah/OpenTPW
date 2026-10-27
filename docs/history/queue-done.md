@@ -10636,6 +10636,17 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   short read and keeps a true end of file as before (the tail stays nought); `Zio` is gone from `OpenTPW.Common.csproj`;
   `ShortReadTests` (a one-byte-a-call stream per reader: SDT, BFMU, BFST, Save, Sound; five fail with the old lines put
   back). `Texture( Stream )` (needs a graphics device) and `BaseStream.ReadBytes` (dead by CODE) have no test.
+- [x] **Q752. The lobby shows our version where the original's shows "v 2.0".** Alexah, 2026-10-27. Decoded
+  (`docs/exe/boot.md`, "Which build this is"): `FrontEnd_Init` (`0x005d5a30`) calls `FUN_0048b020` on every lobby entry,
+  which formats `L"v %d.%d"` (2, 0) into a label with its right edge at 0x7c0 and its bottom at 0x5c0 of the
+  0x800 x 0x600 layout. Read the label's font, colour and alignment there first (not yet decoded), then draw ours in it
+  with the build's name from `LaunchReport.Build`'s source (`weekly-YYYY-MM-DD`, `local` otherwise), saying the
+  deviation at the site. Confirm beside the original's lobby under Proton (`original/lobbypanel.sh`), at the same window
+  size; add the label to the census so a test can pin it.
+  - **Done (2026-10-27, run 12 lane A):** `VersionLabel` letters `LaunchReport.BuildName` ('local' here) in the
+    original's box: font 6, plain white, measured, back from ( 0x7c0, 0x5c0 ); `control 8cfd55` reads it. The original's
+    box for "v 2.0" read from its memory at 800 x 600, ( 1926, 1444, 1984, 1472 ), is ours for the same text (a test);
+    both games' frames at 800 x 600 put the ink's bottom on row 571 (`q752/orig-a`, `q752/ours-a`). ALT-V is Q760.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

@@ -29,7 +29,7 @@ internal static class LaunchReport
 			return "Build: unknown, commit unknown";
 
 		var plus = informational.IndexOf( '+' );
-		var tag = plus < 0 ? informational : informational[..plus];
+		var tag = BuildName( informational );
 		var commit = plus < 0 ? string.Empty : informational[(plus + 1)..];
 
 		commit = commit.Length == 0 ? "unknown" : commit[..Math.Min( 12, commit.Length )];
@@ -38,6 +38,24 @@ internal static class LaunchReport
 			? $"Build: a local build, commit {commit}"
 			: $"Build: {tag}, commit {commit}";
 	}
+
+	/// <summary>
+	/// The build's name alone, the informational version before its <c>+commit</c>: <c>weekly-YYYY-MM-DD</c> for a weekly
+	/// build, <c>local</c> for any other, <c>unknown</c> where the version is missing. The lobby letters it bottom right
+	/// (<see cref="UI.VersionLabel"/>).
+	/// </summary>
+	public static string BuildName( string? informational )
+	{
+		if ( string.IsNullOrWhiteSpace( informational ) )
+			return "unknown";
+
+		var plus = informational.IndexOf( '+' );
+		return plus < 0 ? informational : informational[..plus];
+	}
+
+	/// <summary>The build's name from the running program's own version (<see cref="BuildName"/>).</summary>
+	public static string RunningBuildName
+		=> BuildName( Assembly.GetEntryAssembly()?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion );
 
 	/// <summary>The system, its release where it names one, the processor and how many threads it runs.</summary>
 	public static string Machine( string os, string? release, Architecture architecture, int threads, string? processor )

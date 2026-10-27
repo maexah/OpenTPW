@@ -1423,6 +1423,9 @@ public class Level
 	{
 		Hud = new();
 
+		// The build's name, bottom right, under every window (the original's "v 2.0"; a deviation said there).
+		Hud.AddChild( new VersionLabel( LaunchReport.RunningBuildName ) );
+
 		// The interface's windows, and what the pointer and the keys do to them.
 		var windows = _windows = Hud.AddChild( new WindowStack() );
 

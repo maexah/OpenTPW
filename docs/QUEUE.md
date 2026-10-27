@@ -74,13 +74,6 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q752. The lobby shows our version where the original's shows "v 2.0".** Alexah, 2026-10-27. Decoded
-  (`docs/exe/boot.md`, "Which build this is"): `FrontEnd_Init` (`0x005d5a30`) calls `FUN_0048b020` on every lobby entry,
-  which formats `L"v %d.%d"` (2, 0) into a label with its right edge at 0x7c0 and its bottom at 0x5c0 of the
-  0x800 x 0x600 layout. Read the label's font, colour and alignment there first (not yet decoded), then draw ours in it
-  with the build's name from `LaunchReport.Build`'s source (`weekly-YYYY-MM-DD`, `local` otherwise), saying the
-  deviation at the site. Confirm beside the original's lobby under Proton (`original/lobbypanel.sh`), at the same window
-  size; add the label to the census so a test can pin it.
 - [ ] **Q690. Keypad 5 and Home reset the park camera, as the original's.** From the Q631 review (run 9). Camera-table
   rows 19 and 24 (`lib/bindtables.py`: actions `0x14` key `0x0065`, `0x18` key `0x2400`) run `0x0042a500`, which sets bit
   `0x100` of `[0x00790aac]`; the update answers at `0x0042b518`: zoom `[0x007909ec]` = 110.0, asked rotation
@@ -1917,6 +1910,12 @@ filed the items that cite it.
   when it runs at a normal frame rate? Re-run Q743's scene at full rate (no console poll every 0.2 s, no frame grab;
   `q743/confirm.py` polls) and predict 19062 first. If it says 19062, close this; if not, find the cause there.
   Confirm: the same file, `0x13a`'s tick in both games.
+
+- [ ] **Q760. ALT-V in a park shows "Ver 2.0", as the original's (decode first).** From Q752. The key-table row at
+  `0x00748140` (id 14, key 0x56 'V', modifier word 0x30, ALT) runs `0x0040c820`, which calls `0x00481b70`, a jump into
+  undisassembled code at `0x0048f090` that formats `L"Ver %d.%d"` (2, 0) (`boot.md`, "Which build this is"). Read where
+  and how long it shows, in what font and colour, then build it with this build's name (`LaunchReport.BuildName`, as the
+  lobby's `VersionLabel`), the deviation said at the site; confirm beside the original under Proton.
 
 ## B. Docs and comments
 

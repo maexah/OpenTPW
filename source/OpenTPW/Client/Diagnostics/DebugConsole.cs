@@ -501,8 +501,9 @@ public static class DebugConsole
 					break;
 				}
 
-				if ( Level.Current?.Hud?.Children.OfType<UI.WindowStack>().FirstOrDefault()?.Windows
-					.Select( window => FindControl( window.Root, controlId ) ).FirstOrDefault( found => found != null ) is not { } control )
+				if ( (Level.Current?.Hud?.Children.OfType<UI.WindowStack>().FirstOrDefault()?.Windows
+					.Select( window => FindControl( window.Root, controlId ) ).FirstOrDefault( found => found != null )
+					?? Level.Current?.Hud?.Children.OfType<UI.VersionLabel>().Select( label => FindControl( label.Control, controlId ) ).FirstOrDefault()) is not { } control )
 				{
 					Reply( $"control: no open window holds 0x{controlId:x}" );
 					break;

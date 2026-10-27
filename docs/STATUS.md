@@ -30,17 +30,17 @@ One line per system; the detail, item by item, is `docs/WORKS.md` (grep it by ar
 
 ## Next
 
-`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next Q752 (our version in the lobby's corner), put first at Alexah's word 2026-10-27; then Q690 (Keypad 5 and Home reset the park camera; Q525, ordered before Q638, stands lower in the file; Q543 and Q27, ordered before Q631, and Q31b, Q25, Q51 and Q55, ordered earlier, stand lower in the file): Alexah's play test of 2026-10-21 put Q616 to Q645 first, the display, then what a player hits, then the chosen improvements (`playtest-2026-10-21/notes.md`); Q598 (every clip's scale track posed) follows them in section A (Q609, the advisor's row 19 that Q602 decoded, and Q587 to Q589, the karts' and the water ride's build, are filed after it; Q586 stood above the ordered block; Q608, the draws left both-sided, is filed after Q713): the queue was reordered at Alexah's word, 2026-10-20. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. Gaps 4 and 7: `docs/PLAYER-GAPS.md`. Q13 is done: `docs/history/CLEANUP-PLAN.md`.
+`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next Q690 (Keypad 5 and Home reset the park camera; Q752 and Q753, put first at Alexah's word 2026-10-27, are done; Q525, ordered before Q638, stands lower in the file; Q543 and Q27, ordered before Q631, and Q31b, Q25, Q51 and Q55, ordered earlier, stand lower in the file): Alexah's play test of 2026-10-21 put Q616 to Q645 first, the display, then what a player hits, then the chosen improvements (`playtest-2026-10-21/notes.md`); Q598 (every clip's scale track posed) follows them in section A (Q609, the advisor's row 19 that Q602 decoded, and Q587 to Q589, the karts' and the water ride's build, are filed after it; Q586 stood above the ordered block; Q608, the draws left both-sided, is filed after Q713): the queue was reordered at Alexah's word, 2026-10-20. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. Gaps 4 and 7: `docs/PLAYER-GAPS.md`. Q13 is done: `docs/history/CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the pre-commit hook: grep it by Q-number.
 
-- Q753 (short reads, `Zio`): seen in the off-screen run (lane B, lavapipe, white textures, so the census and log are the
-  evidence): the stock jungle park entered at tick 763 with no exception line in `console.log`, the real `save/`
-  unchanged (`q800/run1`). Not seen: `Texture( Stream )` (needs a device and no caller was shown to reach it) and
-  `BaseStream.ReadBytes` (dead by CODE) have no test; no earlier-binary census was taken to compare the
-  `unimplemented` names against.
+- Q752 (the lobby's build label): seen at 800 x 600 and 1024 x 768 on the desk, the player slots up, reading 'local'
+  (`q752/ours-a`); the original's "v 2.0" box was read from its memory and its frame taken at 800 x 600 the same day
+  (`q752/orig-a`), the island panel up. Not seen: a weekly build's name in it (the name comes from the same version
+  string the launch log prints, which Q751's dry run saw); the label under the island panel, the game menu or the
+  options screen in this game; the original at any other size; what the original's second corner control is.
 
 
 ## Numbers (take counts fresh; these go stale within a day)

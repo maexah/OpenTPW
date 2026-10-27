@@ -149,3 +149,11 @@ belongs to or at the end. Grep it by area or Q-number; never read it whole.
   (`q751/run6-names`); `lib/logpii.py` finds no account name, host name or home folder in a
   real launch's log (`q751/run3`). A self-contained Linux publish, zipped as the weekly workflow zips it, starts and
   draws the lobby (`q751/run5-zip`).
+- **The lobby letters this build's name bottom right, where the original's says "v 2.0"** (Q752): `VersionLabel`, under
+  every window and taking no pointer, letters `LaunchReport.BuildName` (`weekly-YYYY-MM-DD`, else `local`) as the
+  original letters its own version (`FUN_0048b020`, `boot.md`, "Which build this is"): font 6, plain white with no edge,
+  in a box measured from the text and set back from ( 0x7c0, 0x5c0 ), id `0x8cfd55`, which the console's `control
+  8cfd55` reads. The text is the deviation, said at the site. The original's box for "v 2.0", read from its memory at
+  800 x 600, is ( 1926, 1444, 1984, 1472 ), and ours measures the same text to the same box (`VersionLabelTests`);
+  at 800 x 600 ours reads `control 0x8cfd55 at (754,564) size (21,11) ... 'local' lettered font 6 in (255, 255, 255)
+  without the edge`, its ink's bottom on row 571 as the original's (`q752/ours-a`, `q752/orig-a`).
