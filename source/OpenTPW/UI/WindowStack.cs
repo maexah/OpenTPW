@@ -132,7 +132,7 @@ internal sealed class WindowStack : Panel
 	/// <summary>
 	/// Whether a window that keeps the camera keys from the park is open, so no camera key pans, zooms, turns or resets
 	/// the park behind it. A message box and the Save and Load screens switch the camera's table off as they open
-	/// (<c>FUN_00486b70</c>, <c>0x0047efa0</c>, <c>0x0049f406</c>). The game menu and the options screen leave it on, but
+	/// (<c>FUN_00486b70</c>, <c>0x0047f241</c>, <c>0x0049f406</c>). The game menu and the options screen leave it on, but
 	/// each takes every key itself (the menu's handler <c>0x0048b6a0</c>), so the park's layer hears none
 	/// (<c>docs/exe/park-engine.md</c>, "The game menu and the options screen hold the keys"). Not the park map, whose own
 	/// <see cref="MapOpen"/> it is. Written as <see cref="ParkScreenOpen"/> is.

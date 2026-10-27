@@ -436,15 +436,15 @@ has one at a key).
 
 **A scale key sets the lengths of the node's three axes** (Q598; `Anim_PoseTrack` `0x00471d8d`, `Matrix_SetAxisLengths`
 `0x0046f910`; the keys, FileFormats `models.md`, "Scale"). A track's channels go in this order: the turn (`0x8`, three fresh
-rows over the matrix, `FUN_0046fbb0`), then the scale (`0x80`: each of rows 0 to 2 times the keyed length over its own,
-undivided, so its direction is kept), then the route or the position (`0x200`, `0x1`), then the facing along the route
-(`0x400`). Before the first key nothing is set. What hangs off the node is scaled with it, and the restore mask
+rows over the matrix, `FUN_0046fbb0`), then the scale (`0x80`: each of rows 0 to 2 times the keyed length over its own
+(`fdivr` at `0x0046f999`, with no guard for a zero-length row), so its direction is kept), then the route or the
+position (`0x200`, `0x1`), then the facing along the route (`0x400`). Before the first key nothing is set. What hangs off the node is scaled with it, and the restore mask
 `0x289` holds `0x80`, so a change of clip puts the node's lengths back. In Lost Kingdom the scale tracks that change a
 drawn size are the construction clips' (`FriesC`, `SteakC`, `Cost_shpC`, `lookoutC`, `TourrideC`, `BirdC`, `Arc2x3C`,
 `HyenasC`, `JunsprayC`, `supbogC`: the pieces grow out of nothing as a bought thing is built), the Hyenas' and the
 Jungle Spray's water (`HyenasM1`..`M6`, `JunsprayM1`..`M6`, up to 14 times) and the Lookout's cogs (`lookoutM`, `S`,
-under 2%); the rest key (1, 1, 1). **Read in the running original** (`q598/orig`, `modelnodes.py --axes --poll` from the
-placing click, `scalecurve.py`): the Fries Shop's eight scaled nodes, 1,544 readings, each within 0.0031 of `FriesC`'s
+under 2%) and `squarkC`'s arrow (node 3, `sq_arrow`, keyed down to 0.945); the rest key (1, 1, 1).
+**Read in the running original** (`q598/orig`, `modelnodes.py --axes --poll` from the placing click, `scalecurve.py`): the Fries Shop's eight scaled nodes, 1,544 readings, each within 0.0031 of `FriesC`'s
 keyed curve (the basket from 0.0232, 0.0079 to 1, squashed to y 0.4842, then 1); the Laughing Hyenas' twelve within
 0.0011 of `HyenasC`'s (y from 0.0021); the Super Toilet's sign within 0.0010 of `supbogC`'s (0.1218 to 1).
 **OpenTPW poses them** (Q598): `NodePoser.Pose` sets them after the turn, `NodePoser.Drives` takes any clip with a scale

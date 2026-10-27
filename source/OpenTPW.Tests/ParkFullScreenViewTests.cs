@@ -452,14 +452,14 @@ public class ParkFullScreenViewTests
 
 	/// <summary>
 	/// <b>No camera key pans or zooms under a message box, the Save or Load screen, the game menu or the options
-	/// screen</b>: the first three switch the camera's table off (<c>FUN_00486b70</c>, <c>0x0047efa0</c>,
+	/// screen</b>: the first three switch the camera's table off (<c>FUN_00486b70</c>, <c>0x0047f241</c>,
 	/// <c>0x0049f406</c>), the last two take every key themselves (<c>0x0048b6a0</c>; measured in the original,
 	/// <c>q692/orig</c>), and a box being typed into has the keyboard (<c>Input.TextCaptured</c>). A pan held as the menu
 	/// opens is let go there. With the box shut the same keys move the park.
 	/// </summary>
 	/// <remarks><b>Mutations:</b> <c>WindowStack.CameraKeysAway</c> left out of the keys' gate; the message box, the
 	/// file screen, the game menu or the options screen left out of <c>CameraKeysAway</c>; the <c>TextCaptured</c> test
-	/// taken out of the keys.</remarks>
+	/// taken out of the keys; the reset or the turn moved outside the <c>CameraKeysAway</c> gate.</remarks>
 	[TestMethod]
 	public void TheCameraKeysAreSilentUnderAMessageBoxTheFileScreensTheMenuTheOptionsAndATextBox()
 	{
@@ -471,6 +471,16 @@ public class ParkFullScreenViewTests
 		try
 		{
 			var from = ParkOrbitCameraMode.PointOfInterest;
+			var yaw = ParkOrbitCameraMode.Yaw;
+
+			// The turn (Left) and the reset (Home, on its release) are camera keys too.
+			void TurnAndResetKeysAreSilent( string under )
+			{
+				WorldFrame( stack, park, Down( Key.Left ), Down( Key.Home ) );
+				WorldFrame( stack, park, Up( Key.Left ), Up( Key.Home ) );
+				Assert.AreEqual( (yaw, false), (ParkOrbitCameraMode.Yaw, ParkOrbitCameraMode.WasReset), $"under {under}: Left does not turn, Home does not reset" );
+			}
+
 			var box = new UI.MessageBox( stack, "Test", () => { } );
 			stack.Open( box );
 			WorldFrame( stack, park, Down( Key.A ), Down( Key.Up ) );
@@ -490,11 +500,13 @@ public class ParkFullScreenViewTests
 			WorldFrame( stack, park, Down( Key.A ), Down( Key.Up ) );
 			Assert.AreEqual( (from, 110f, false), (ParkOrbitCameraMode.PointOfInterest, ParkOrbitCameraMode.Zoom, ParkOrbitCameraMode.Panning), "under the game menu: none" );
 			WorldFrame( stack, park, Up( Key.A ), Up( Key.Up ) );
+			TurnAndResetKeysAreSilent( "the game menu" );
 
 			UI.OptionsScreen.Open( stack );
 			WorldFrame( stack, park, Down( Key.A ), Down( Key.Up ) );
 			Assert.AreEqual( (from, 110f, false), (ParkOrbitCameraMode.PointOfInterest, ParkOrbitCameraMode.Zoom, ParkOrbitCameraMode.Panning), "under the options screen: none" );
 			WorldFrame( stack, park, Up( Key.A ), Up( Key.Up ) );
+			TurnAndResetKeysAreSilent( "the options screen" );
 			stack.Close( stack.Windows.First( window => window is UI.OptionsScreen ) );
 			stack.Close( menu );
 

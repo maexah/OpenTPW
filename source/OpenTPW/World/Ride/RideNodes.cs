@@ -90,9 +90,10 @@ public sealed class RideNodes
 				_hasChild[node.ParentIndex] = true;
 		}
 
-		// A clip's rotation, position and path tracks are what move a node. Its scale channel (0x80) would too, and
-		// NodePoser does not pose it; every node a shipped walk finds that hangs from a scaled node, a clip also
-		// turns or moves that node. The morph tracks AnimationFile reads leave out the ones it skips as unreadable.
+		// A clip's rotation, position and path tracks are what move a node. Its scale channel (0x80) moves no node's own
+		// place; NodePoser poses it, so a carried find reads it. _moved leaves it out because every node a shipped walk
+		// finds that hangs from a scaled node is also turned or moved by a clip. The morph tracks
+		// AnimationFile reads leave out the ones it skips as unreadable.
 		foreach ( var clip in clips )
 		{
 			foreach ( var track in clip.RotationTracks )

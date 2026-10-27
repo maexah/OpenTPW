@@ -658,7 +658,8 @@ public class ParkScreenTests
 	/// <c>0x004adc69</c> to <c>0x004add83</c>): three rows of 45 draw 25 tall and <c>0x3e18</c>'s 44 draws 24, while the
 	/// text beside them keeps the whole row.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> no inset; an inset of 20; the inset across rather than down; the text inset too.</remarks>
+	/// <remarks><b>Mutations:</b> no inset; an inset of 20; the inset across rather than down; the text inset too; the inset chosen by column, so the right column's value cells
+	/// are inset as well.</remarks>
 	[TestMethod]
 	public void TheRideWindowsFourGaugesStandInTenFromTheirRowsTopAndBottom()
 	{
@@ -672,6 +673,9 @@ public class ParkScreenTests
 		Assert.AreEqual( new UI.UiRect( 1315, 392, 1550, 417 ), Of( 0x3e19 ), "State of repair" );
 		Assert.AreEqual( new UI.UiRect( 1315, 443, 1550, 468 ), Of( 0x3e17 ), "Remaining life" );
 		Assert.AreEqual( new UI.UiRect( 876, 279, 1273, 324 ), Of( 0x3e1c ), "the text beside Excitement keeps its row" );
+		Assert.AreEqual( new UI.UiRect( 1315, 228, 1550, 273 ), Of( 0x3e1b ), "the age, in the gauges' column, keeps its row" );
+		Assert.AreEqual( new UI.UiRect( 1315, 177, 1550, 222 ), Of( 0x3e21 ), "the users, in the gauges' column, keep their row" );
+		Assert.AreEqual( new UI.UiRect( 1315, 484, 1550, 529 ), Of( 0x3e23 ), "the scrap value, in the gauges' column, keeps its row" );
 		Assert.IsTrue( new[] { 0x3e16, 0x3e17, 0x3e18, 0x3e19 }.All( id => stats.Children.Single( child => child.Id == id ) is UI.ParkObjectWindow.UiStatBar ) );
 	}
 

@@ -3590,17 +3590,22 @@ its row latched: its up goes to the menu.
 
 **Measured** (`q692/orig`, `tools/harness/original/keylatch.py` beside each round; the stock park, `setcam.py` (480,
 400)): behind the menu (`[0x007c2534]` set, `g_ParkRunning` 0) keypad 8 or Up held a second moved nothing, the camera
-table's enable 1 throughout and no row held; behind the options screen (`[0x007cb2fc]` set) the same, and after OK.
+table's enable 1 throughout and no row held; behind the options screen (`[0x007cb2fc]` set) keypad 8 held a second the
+same (Up not pressed there), and after OK.
 Up held from zoom 130 as Escape opened the menu, let go behind it, kept its row (`0x0:0x2600`) held three times of
-three: the zoom crept about 1.5 a second behind the menu (112.70 to 109.05 in 2.4 s; 50 a second running; why the
-paused stopwatch still gives the camera that much is not read), ran to 70 within a second of the close, and the row
+three: the zoom crept about 1.5 a second behind the menu (112.70 to 109.05 in 2.4 s; 50 a second running; `ParkCamera_Update`
+steps the stopwatch's move plus 1 ms a frame, `inc eax` at `0x0042b2a6`, the last reading stored at `0x0042cce7`, so
+under the pause the step is 1 ms a frame and the zoom's 0.05 a ms is 0.05 a frame, about 1.5 a second at 30 frames), ran to 70 within a second of the close, and the row
 cleared at the next press and release of Up in the park. Up held and let go with no menu cleared its row both times.
 (Keypad 8 showed the same, but its control lost its release with no menu at all: the Wine trap, `TOOLING.md`.)
 
 **OpenTPW** (`WindowStack.CameraKeysAway`, read by `ParkOrbitCameraMode`): no camera key pans, zooms, turns or resets
 under the game menu or the options screen, as under a message box and the Save and Load screens. The keys are read
 live, so a key held as the menu opens is let go there and nothing moves when it closes: **the original's stuck row,
-its creep behind the menu and its run after the close are not kept** (said at the site).
+its creep behind the menu and its run after the close are not kept** (said at the site). A related older difference
+stays: the original's camera, a pan's coast and the turn's ease, steps by the same stopwatch and so runs at about 3%
+speed behind every pausing window, where ours eases on `Time.Delta` and finishes behind the menu (the Q692 run `ours-b`
+U3: a coast 341.6 to 351.3 finished behind it); not measured in the original.
 
 ### The camera goes to a thing
 

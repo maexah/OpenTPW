@@ -715,6 +715,15 @@ filed the items that cite it.
   entry nor its exit saves or restores `0x007908f0`, so by the listing the orbit would come back at (475, 175), and
   back in first person the ride under the moved point is looked up again, `0x0042a340`). The End's view, the only ride
   view this game reaches, takes keys in its own handlers (`0x0048a740`, `0x0048a970`): read them first.
+- [ ] **Q756. The original's camera coast and turn ease run at about 3% speed behind every pausing window; ours run on
+  `Time.Delta`.** From the Q692 review (finding 1; `park-engine.md`, "The game menu and the options screen hold the
+  keys"). `ParkCamera_Update` (`0x0042b1c0`) steps the stopwatch's move plus 1 ms a frame (`inc eax`, `0x0042b2a6`), so
+  behind the game menu, the options screen, a message box and the Save and Load screens (the pause stops the stopwatch)
+  the original's pan coast and the drawn turn's ease crawl at 1 ms a frame, where ours (`ParkOrbitCameraMode`) keeps
+  easing on `Time.Delta` and finished a coast behind the menu (Q692 `ours-b` U3: 341.6 to 351.3). Measure the original's
+  coast and turn ease behind the game menu under Proton (`keylatch.py` and `setcam.py`: release a pan or a turn as the
+  menu opens, read the point and yaw over a few seconds behind it and after the close), then decide whether to hold ours
+  to the same crawl (a deviation said at the site if not) and build it.
 - [ ] **Q761. Jurassic Tours' construction beside the original's (the ride kind of Q598).** From Q598: its scale keys
   are posed (`TourrideC`'s rocks from y 0.0028, `q598/run-ride-final`), but the original's frames were not taken: on a
   fresh Full Simulation park (`freshfs.sh`, `q709/gms-two.dat`, `q598/orig/ride.sh`) all ten spots tried were refused, red
