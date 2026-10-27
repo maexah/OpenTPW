@@ -318,6 +318,39 @@ public class ParkStaffWindowTests
 	}
 
 	/// <summary>
+	/// <b>A frame the orbit camera was reset by Home or keypad 5 ends the locator's follow, the strip left on the member</b>
+	/// (<c>0x0042b54d</c> clears the follow's bit), and the camera stays where the reset put it.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the locator not reading the reset.</remarks>
+	[TestMethod]
+	public void AResetEndsTheLocatorsFollow()
+	{
+		var member = Mechanic;
+		var reset = typeof( ParkOrbitCameraMode ).GetProperty( nameof( ParkOrbitCameraMode.WasReset ) )!;
+		ParkStaffWindow.Open( _stack, member.ThingId );
+		ParkGadgetPressTests.Settle( _gadget );
+		Click( Window!.Root, 0x521 );
+		ParkGadgetPressTests.Settle( _gadget );
+
+		try
+		{
+			Locator.Update();
+			Assert.AreEqual( (member.ThingId, true), (Locator.Actor, Locator.Following), "no reset: followed" );
+
+			ParkOrbitCameraMode.Reset();
+			reset.SetValue( null, true );
+			Locator.Update();
+			Assert.AreEqual( (member.ThingId, false, true), (Locator.Actor, Locator.Following, Locator.Strip.Visible), "a reset: let go" );
+			Assert.AreEqual( new System.Numerics.Vector3( 475f, 175f, 0f ), ParkOrbitCameraMode.PointOfInterest, "the point left at the reset's" );
+		}
+		finally
+		{
+			reset.SetValue( null, false );
+			ParkOrbitCameraMode.Forget();
+		}
+	}
+
+	/// <summary>
 	/// <b>Ctrl+S with the window up opens the staff's locator on its member</b> (<c>FUN_004b3f60( [0x007c2658] )</c>), and
 	/// with none up on nobody (<c>FUN_004b3f60( 0 )</c>).
 	/// </summary>

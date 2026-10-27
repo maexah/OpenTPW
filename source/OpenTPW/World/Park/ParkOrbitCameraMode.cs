@@ -177,8 +177,11 @@ public sealed class ParkOrbitCameraMode : CameraMode
 
 	private static (float Forward, float Right) _panHeld;
 
-	/// <summary>Whether the reset keys were held last frame, so the count is one a press.</summary>
-	private static bool _resetHeld;
+	/// <summary>
+	/// Whether the last update reset the camera: the original's reset clears the follow's bit (<c>0x0042b54d</c>), which
+	/// <see cref="UI.ParkLocator"/> reads at its next frame, as it reads <see cref="Panning"/>.
+	/// </summary>
+	public static bool WasReset { get; private set; }
 
 	private static float _panSeconds;
 
@@ -271,15 +274,17 @@ public sealed class ParkOrbitCameraMode : CameraMode
 
 		_zoomHeld = zoom;
 
-		// Keypad 5 and Home reset the camera in the original (camera rows 19 and 24, 0x0042a500, applied at 0x0042b518: zoom
-		// 110, rotation 0, the point (475, 175), the follow cleared; docs/exe/park-engine.md, "The point of interest's
-		// edge"). Not built: counted, so a press that does nothing here is not silent.
-		var reset = ResetInput( down );
+		// Keypad 5 and Home reset the camera on their release (camera rows 19 and 24, ParkCamera_ResetKey 0x0042a500, run
+		// from the key-up), applied before the pan as the original's update (0x0042b518; docs/exe/park-engine.md, "The
+		// camera's reset"). The pan's term is left alone, so a pan still coasting carries on from the reset's point.
+		WasReset = keys && !Input.TextCaptured && ResetReleased( Input.Releases );
 
-		if ( reset && !_resetHeld )
-			Unimplemented.Report( "CAMERA_HOME_RESET" );
-
-		_resetHeld = reset;
+		if ( WasReset )
+		{
+			Log.Info( $"Camera: reset by key, point ({PointOfInterest.X:F1},{PointOfInterest.Y:F1}) yaw {Yaw:F2} zoom {Zoom:F1} -> (475,175) yaw 0 zoom 110,"
+				+ $" scroll {Scroll.Length:F1} a second kept" );
+			Reset();
+		}
 
 		var (forward, right) = PanInput( down );
 		var panned = Panning;
@@ -341,11 +346,27 @@ public sealed class ParkOrbitCameraMode : CameraMode
 			: Held( down, Key.Down, Key.Keypad3 ) - Held( down, Key.Up, Key.Keypad1 );
 
 	/// <summary>
-	/// Whether a reset key is held, with no modifier: keypad 5 and Home, the camera table's rows 19 and 24 (action
-	/// <c>0x14</c>, <c>0x18</c>).
+	/// Whether a reset key came up this frame with no modifier held: keypad 5 and Home, the camera table's rows 19 and 24
+	/// (action <c>0x14</c>, <c>0x18</c>), whose handler the original runs on the key's release (<c>FUN_0040c990</c>).
 	/// </summary>
-	internal static bool ResetInput( IReadOnlyCollection<Key> down )
-		=> Input.HeldIn( down ) == Input.Modifiers.None && Held( down, Key.Home, Key.Keypad5 ) != 0f;
+	internal static bool ResetReleased( IReadOnlyList<Input.KeyRelease> releases )
+		=> releases.Any( release => release.Plain && release.Key is Key.Home or Key.Keypad5 );
+
+	/// <summary>
+	/// The original's reset (<c>0x0042b518</c>..<c>0x0042b561</c>): zoom 110, rotation 0 and the point (475, 175), the
+	/// floats at <c>0x006fdd40</c>..<c>0x006fdd50</c>. The scroll terms are not written, as there.
+	/// </summary>
+	/// <remarks>
+	/// <b>A deviation:</b> the original writes the rotation it asks for and its drawn one eases there (1.4 s from 135
+	/// degrees, and from 270 the long way down through 180, as both are kept in 0..2 pi); here the yaw is set at once,
+	/// as every turn here is (Q23).
+	/// </remarks>
+	internal static void Reset()
+	{
+		Zoom = 110f;
+		Yaw = 0f;
+		PointOfInterest = new Vector3( 475f, 175f, 0f );
+	}
 
 	private static float Held( IReadOnlyCollection<Key> down, Key a, Key b )
 		=> down.Contains( a ) || down.Contains( b ) ? 1f : 0f;
@@ -542,6 +563,7 @@ public sealed class ParkOrbitCameraMode : CameraMode
 		Zoom = 110f;
 		Scroll = Vector2.Zero;
 		Panning = false;
+		WasReset = false;
 		_atEdge = false;
 	}
 

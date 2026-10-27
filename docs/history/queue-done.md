@@ -10647,6 +10647,22 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
     original's box: font 6, plain white, measured, back from ( 0x7c0, 0x5c0 ); `control 8cfd55` reads it. The original's
     box for "v 2.0" read from its memory at 800 x 600, ( 1926, 1444, 1984, 1472 ), is ours for the same text (a test);
     both games' frames at 800 x 600 put the ink's bottom on row 571 (`q752/orig-a`, `q752/ours-a`). ALT-V is Q760.
+- [x] **Q690. Keypad 5 and Home reset the park camera, as the original's.** From the Q631 review (run 9). Camera-table
+  rows 19 and 24 (`lib/bindtables.py`: actions `0x14` key `0x0065`, `0x18` key `0x2400`) run `0x0042a500`, which sets bit
+  `0x100` of `[0x00790aac]`; the update answers at `0x0042b518`: zoom `[0x007909ec]` = 110.0, asked rotation
+  `[0x00790a38]` = 0.0, the point `[0x007908f0]`/`[0x007908f4]`/`[0x007908f8]` = 475.0/0.0/175.0 (`0x006fdd40`..
+  `0x006fdd50`), then the bit and gui_CameraFlags' follow bit `0x1000` cleared. Ours counts a press `CAMERA_HOME_RESET`
+  (`ParkOrbitCameraMode.Update`, `ResetInput`) and does nothing else. Build it: zoom 110, yaw 0, point (475, 175),
+  `Scroll` noughted, a locator's follow let go; no modifier, behind the same gate as the other camera keys. Confirm in
+  both games: the original under Proton with `campoi.py` (Home and keypad 5, from a panned, zoomed and turned camera;
+  keypad 5 hangs on Q720's question, which Q625's keypad pans suggest is answered), ours by the log and a photograph;
+  then retire the count. `park-engine.md`, "The point of interest's edge".
+  - **Done (2026-10-27, run 12 lane A):** on the key's RELEASE, as the original's handler (`ParkCamera_ResetKey`, named
+    in Ghidra); zoom 110, yaw 0, the point (475, 175), a locator's follow let go; the pan's term is NOT noughted (this
+    item's text guessed it was: the update writes no scroll term, and the original carried a running pan on from 475,
+    `q690/orig`). The original measured with `campoi.py` (Home and keypad 5, which reaches its row under Proton), ours by
+    the log and frames (`q690/ours-a`, 6 of 6); `CAMERA_HOME_RESET` retired. The yaw snaps where the original's drawn
+    turn eases about 1.5 s, the long way from 270 (Q23's deviation, said at the site). `park-engine.md`, "The camera's reset".
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

@@ -243,6 +243,7 @@ Read this before aiming a click or comparing two pictures. Each fact names the i
 | Stop or restart the original's follow | `original/setcam.py PID off` / `on` |
 | Pan the original to a cell | `original/camto.py PID X,Y` (pointer on the screen edge; it stops a follow) |
 | Watch the original's pan and its edge | `original/campoi.py PID 7 0.03` beside a held keypad key |
+| Watch the original's camera reset | `original/campoi.py PID 4 0.03` beside Home or `KP_5` held 1 s after `setcam.py` (`q690/orig/run.sh`): the reset lands at the release |
 | Watch the original enter and leave first person | `original/campoi.py PID 22 0.03` across the pick, its click and C (`q626/orig/run.sh`) |
 | Click a named cell in the original | `original/cellfind.py PID X,Y`, straight before the click |
 | Click a named cell here | `lib/cellprobe.py` `find( (x, y), start )` |

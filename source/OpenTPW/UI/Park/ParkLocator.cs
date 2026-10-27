@@ -410,7 +410,7 @@ internal sealed class ParkLocator
 	/// A frame, the panel's <c>0x1e</c>: the camera put on whoever it follows and a fenced member's patrol edges drawn
 	/// (<c>FUN_004b3640</c>), then the corner's picture brought up to date (<c>FUN_004b3580</c>). First person takes the
 	/// camera off them, as the camera's change of mode clears the follow (<c>0x0042ae52</c>), and so does a frame the orbit
-	/// camera was panned by key.
+	/// camera was panned by key or reset by Home or keypad 5 (<c>0x0042b54d</c>).
 	/// </summary>
 	internal void Update()
 	{
@@ -425,6 +425,12 @@ internal sealed class ParkLocator
 		if ( Following && ParkOrbitCameraMode.Panning )
 		{
 			Log.Info( $"Park locator: the pan ends the follow of thing {Actor}" );
+			Following = false;
+		}
+
+		if ( Following && ParkOrbitCameraMode.WasReset )
+		{
+			Log.Info( $"Park locator: the camera's reset ends the follow of thing {Actor}" );
 			Following = false;
 		}
 

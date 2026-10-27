@@ -447,9 +447,7 @@ either: the soft bound on the walker ("Nothing clamps the position", under "Walk
   Right lowered it by 90; W and D moved nothing; the point stood through all six. The table's keys, read from the exe
   (`lib/bindtables.py`), by action: 0 and 1 `0x2600` Up and `0x2800` Down, 6 and 7 `0x2500` Left and `0x2700` Right,
   `0xd` to `0x10` the keypad's 8, 2, 4 and 6, `0x15` and `0x16` keypad 1 and 3, `0x12` and `0x13` keypad 9 and 7, `0x14` keypad 5
-  (`0x0065`) and `0x18` Home (`0x2400`), both the reset (handler `0x0042a500` sets bit `0x100` of `[0x00790aac]`; the update
-  answers at `0x0042b518`: zoom 110, rotation 0, the point (475, 175), the follow's bit `0x1000` cleared; not measured in the
-  running original). No row of the six tables binds
+  (`0x0065`) and `0x18` Home (`0x2400`), both the reset ("The camera's reset", below). No row of the six tables binds
   D, E, J, K, M, N, O, Q, U, W, X, Y or Z with no modifier.
 - **OpenTPW** (Q631, `ParkOrbitCameraMode`): the keypad's 8, 2, 4 and 6 pan, and so do W, S, A and D, its deviation
   (`PanInput`; all-items and all-staff move to O and E, `ParkFrontEnd.ShortcutRow`, and the help bar's nine rows say so,
@@ -464,8 +462,27 @@ either: the soft bound on the walker ("Nothing clamps the position", under "Walk
   the edge` once and `Camera: pan at rest, point (x,y) cell (cx,cy)` as the coast ends. Past the edge, at the stop, this
   game draws what the original does at all four edges (`q667/side-by-side.png`: the original stopped at 972.828,
   -13.622, z 863.576, z -12.014, `q667/orig2`); Q625's flat cyan was at x 1727, beyond that ground. Keypad 9 and
-  7 do not turn, and the turn's step is not the original's (Q23). Keypad 5 and Home are counted, not built
-  (`CAMERA_HOME_RESET`).
+  7 do not turn, and the turn's step is not the original's (Q23). Keypad 5 and Home reset the camera ("The camera's reset").
+
+**The camera's reset** (Q690, decoded and measured). Camera rows 19 (keypad 5, `0x0065`) and 24 (Home, `0x2400`), modifier
+0, both hand `ParkCamera_ResetKey` (`0x0042a500`, made a function in Q690), which sets bit `0x100` of `[0x00790aac]` and
+answers 1; like every handler it runs from the key-up (`FUN_0040c990`, "The original fires its shortcuts on key RELEASE").
+The update answers after the zoom keys and before the pan (`0x0042b518`..`0x0042b561`): zoom `[0x007909ec]` = 110, the
+asked rotation `[0x00790a38]` = 0, the point `0x007908f0`/`f4`/`f8` = 475/0/175 (the floats at `0x006fdd40`..`0x006fdd50`),
+the bit cleared and `gui_CameraFlags`' follow bit `0x1000` with it (`and ch, 0xef`). It writes neither the scroll terms
+`0x00790a88`..`0x00790a90` nor the drawn rotation `0x007909e0`, which eases to nought as "The turn" says.
+- **Measured** (`original/campoi.py` on `q325/stock.TPWS`, `q690/orig/run.sh`, frames `q690/orig/a-*.png`): Home held
+  1.0 s from point (600, 300), zoom 90, rotation 135 moved nothing until its release, then read (475.000, 175.000), zoom
+  110, asked rotation 0, flags 0; the drawn rotation eased 135 to 0 in 1.42 s. Keypad 5 the same from (300, 600), zoom
+  125, rotation 270, its drawn rotation going 270, 222.75, 151.47 ... 0 in 1.57 s: down through 180, the long way round,
+  as both rotations are kept in 0..2 pi. With keypad 6's term still running (its release lost under Wine), Home put the
+  point at 475 and the pan carried it on (481.712 at the first read, 763.1 three seconds later), z 175: the terms stand.
+- **OpenTPW** (`ParkOrbitCameraMode.ResetReleased`, `Reset`, `WasReset`): Home or keypad 5 let go with no modifier,
+  behind the same gate as the other camera keys (no park screen, map, message box or file screen, no text box), sets
+  zoom 110, yaw 0 and the point (475, 175) before the pan's step, the pan's term kept; the log says `Camera: reset by
+  key, point (x,y) yaw Y zoom Z -> (475,175) yaw 0 zoom 110, scroll S a second kept`, and a locator following lets go at
+  its next frame (`Park locator: the camera's reset ends the follow of thing N`). **A deviation:** the yaw is set at
+  once, as every turn here is (Q23), where the original's drawn turn eases over about 1.5 s.
 
 The camera persists a *saved* POI and *saved* Y rotation as well as the *required* ones — the shape of a camera that leaves its position and is put back (camcorder mode does exactly that).
 
@@ -855,7 +872,8 @@ the camera's rows 15 and 16 (`0x64`, `0x66`) have modifier 0, so Alt+Num4 and Al
 **Unsettled:** both key edges replace the vk by `MapVirtualKeyA( vk, 2 )` when that answers non-zero, excluding only the keypad's
 `*`, `+`, `-`, `.`, `/` (`0x6a`, `0x6b`, `0x6d`, `0x6e`, `0x6f`, which become `vk << 8`; `0x0046b9c0`..`0x0046b9f5`, `0x0046bab8`..`0x0046baeb`).
 The digits `0x60`-`0x69` are not excluded. If the call answers `'1'` for `VK_NUMPAD1`, rows 3-11 (and the camera's keypad rows
-13-22) are unreachable and Alt+Num1 fires row 1. Bytes cannot settle it: Q720.
+13-22) are unreachable and Alt+Num1 fires row 1. Bytes cannot settle it: Q720. The camera's keypad rows are reached under
+Proton: keypad 4, 6, 2 and 8 pan (Q625) and keypad 5 resets ("The camera's reset", Q690); the cheat rows' Alt+Num were not pressed.
 
 **The cheat flag is cleared by the first key.** The flag is `+0xa` of the object at `0x00fb3520`, whose constructor `0x004053b0`
 clears `+9`, `+0xa` and `+0xb`. That constructor is run again behind three separate first-use guard bytes (bit 1 each): `0x00fb3519`

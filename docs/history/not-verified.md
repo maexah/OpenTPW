@@ -5,6 +5,11 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q752 (the lobby's build label): seen at 800 x 600 and 1024 x 768 on the desk, the player slots up, reading 'local'
+  (`q752/ours-a`); the original's "v 2.0" box was read from its memory and its frame taken at 800 x 600 the same day
+  (`q752/orig-a`), the island panel up. Not seen: a weekly build's name in it (the name comes from the same version
+  string the launch log prints, which Q751's dry run saw); the label under the island panel, the game menu or the
+  options screen in this game; the original at any other size; what the original's second corner control is.
 - Q753 (short reads, `Zio`): seen in the off-screen run (lane B, lavapipe, white textures, so the census and log are the
   evidence): the stock jungle park entered at tick 763 with no exception line in `console.log`, the real `save/`
   unchanged (`q800/run1`). Not seen: `Texture( Stream )` (needs a device and no caller was shown to reach it) and

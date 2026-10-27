@@ -74,16 +74,6 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q690. Keypad 5 and Home reset the park camera, as the original's.** From the Q631 review (run 9). Camera-table
-  rows 19 and 24 (`lib/bindtables.py`: actions `0x14` key `0x0065`, `0x18` key `0x2400`) run `0x0042a500`, which sets bit
-  `0x100` of `[0x00790aac]`; the update answers at `0x0042b518`: zoom `[0x007909ec]` = 110.0, asked rotation
-  `[0x00790a38]` = 0.0, the point `[0x007908f0]`/`[0x007908f4]`/`[0x007908f8]` = 475.0/0.0/175.0 (`0x006fdd40`..
-  `0x006fdd50`), then the bit and gui_CameraFlags' follow bit `0x1000` cleared. Ours counts a press `CAMERA_HOME_RESET`
-  (`ParkOrbitCameraMode.Update`, `ResetInput`) and does nothing else. Build it: zoom 110, yaw 0, point (475, 175),
-  `Scroll` noughted, a locator's follow let go; no modifier, behind the same gate as the other camera keys. Confirm in
-  both games: the original under Proton with `campoi.py` (Home and keypad 5, from a panned, zoomed and turned camera;
-  keypad 5 hangs on Q720's question, which Q625's keypad pans suggest is answered), ours by the log and a photograph;
-  then retire the count. `park-engine.md`, "The point of interest's edge".
 - [ ] **Q692. Do the game menu and the options screen switch the camera table off?** From the Q631 review (run 9),
   decode. `WindowStack.CameraTableOff` holds the camera keys off under a message box and the Save and Load screens only,
   whose openers call `FUN_00486b70` (`0x0047efa0`, `0x0049f406`). The game menu (`0x0048c830`) and the options screen
@@ -1394,7 +1384,7 @@ filed the items that cite it.
   cheats; camera rows 13-22, the keypad pan) and Alt+Num1 fires the ten-thousand cheat. If it answers 0 the rows work as the
   tables say. Confirm: in the original under Proton, in a park, NumLock on, hold keypad 4 (or 6) and see whether the camera
   pans; with `Easymode.TPWI`'s cheat flag possibly cleared by the first key (the same section), press a harmless first key, then
-  Alt+Num1 and read the money. Then correct the keypad rows in `park-engine.md` (the camera's pan keys, near line 394, and the cheat table) and OpenTPW's keypad bindings if they differ.
+  Alt+Num1 and read the money. (The camera's keypad 4, 6, 2, 8 and 5 are reached under Proton: Q625, Q690.) Then correct the keypad rows in `park-engine.md` (the camera's pan keys, near line 394, and the cheat table) and OpenTPW's keypad bindings if they differ.
 - [ ] **Q511. A bouncing rider is lifted on a sine.** From the fork watch, 2026-10-18 (`verify-world-b.md` L4). The Belly
   Bounce's riders are drawn standing on their node here (`ParkGuestSprites.Seated`); the original's positioner
   `FUN_00557ab0` lifts each on a sine (`0x00557c75`): the phase is `( trunc( elapsed x ( 0.8 + 0.005 x the short +0xc0 ) )

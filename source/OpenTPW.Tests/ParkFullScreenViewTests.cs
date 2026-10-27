@@ -2,6 +2,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NeoVeldrid;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
@@ -500,35 +501,72 @@ public class ParkFullScreenViewTests
 	}
 
 	/// <summary>
-	/// <b>Keypad 5 and Home are counted once a press</b> (<c>CAMERA_HOME_RESET</c>): the original's camera reset (rows 19
-	/// and 24, <c>0x0042a500</c>) is not built; with a modifier held, or a park screen up, nothing is counted.
+	/// <b>Keypad 5 and Home put the camera back on their release</b>: zoom 110, rotation 0, the point (475, 175)
+	/// (camera rows 19 and 24, <c>0x0042a500</c> from the key-up, applied at <c>0x0042b518</c>), the pan's term left
+	/// alone so a coast carries on from there (measured in the original, <c>q690/orig</c>). Held, nothing yet; with Ctrl
+	/// held, under a park screen or with a text box holding the keyboard, nothing.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the count asked every frame the key is held; the modifier test left out; the park
-	/// screen's gate left out.</remarks>
+	/// <remarks><b>Mutations:</b> on the press, not the release; the scroll noughted; a modifier let through; the park
+	/// screen's gate or the text box's left out; each of the three values; <c>WasReset</c> not set or left set.</remarks>
 	[TestMethod]
-	public void TheCameraResetKeysAreCountedOncePerPress()
+	public void TheCameraResetKeysPutTheCameraBackOnTheirRelease()
 	{
 		var stack = APark();
 		var park = AParkLevel( stack );
+		var delta = Time.Delta;
+		Time.Delta = 0.1f;
+		var away = new Vector3( 600f, 300f, 0f );
+
+		void Away( Vector2 scroll )
+		{
+			(ParkOrbitCameraMode.PointOfInterest, ParkOrbitCameraMode.Yaw, ParkOrbitCameraMode.Zoom) = (away, 2f, 90f);
+			ParkOrbitCameraMode.Scroll = scroll;
+		}
+
+		(Vector3, float, float) Now() => (ParkOrbitCameraMode.PointOfInterest, ParkOrbitCameraMode.Yaw, ParkOrbitCameraMode.Zoom);
 
 		try
 		{
-			var before = Times( "CAMERA_HOME_RESET" );
+			Away( Vector2.Zero );
 			WorldFrame( stack, park, Down( Key.Home ) );
-			WorldFrame( stack, park );
+			Assert.AreEqual( (away, 2f, 90f, false), (ParkOrbitCameraMode.PointOfInterest, ParkOrbitCameraMode.Yaw, ParkOrbitCameraMode.Zoom, ParkOrbitCameraMode.WasReset), "Home held: nothing yet" );
 			WorldFrame( stack, park, Up( Key.Home ) );
-			Assert.AreEqual( before + 1, Times( "CAMERA_HOME_RESET" ), "Home held three frames: one" );
+			Assert.AreEqual( (new Vector3( 475f, 175f, 0f ), 0f, 110f), Now(), "Home let go: the original's three" );
+			Assert.IsTrue( ParkOrbitCameraMode.WasReset, "and the frame says so" );
+			WorldFrame( stack, park );
+			Assert.IsFalse( ParkOrbitCameraMode.WasReset, "for that frame alone" );
 
+			// A pan coasting at 50 a second along x: the term is not noughted, so the same frame's coast (50 / (1 + 10 x 0.1),
+			// for 0.1 s) carries the point on 2.5 from the reset's.
 			WorldFrame( stack, park, Down( Key.Keypad5 ) );
+			Away( new Vector2( 50f, 0f ) );
 			WorldFrame( stack, park, Up( Key.Keypad5 ) );
-			Assert.AreEqual( before + 2, Times( "CAMERA_HOME_RESET" ), "keypad 5: another" );
+			Assert.AreEqual( (new Vector3( 477.5f, 175f, 0f ), 0f, 110f), Now(), "keypad 5, a coast running: on from (475, 175)" );
+			Assert.AreEqual( 25f, ParkOrbitCameraMode.Scroll.X, 0.001f, "the term kept, coasted" );
 
+			Away( Vector2.Zero );
 			WorldFrame( stack, park, Down( Key.ControlLeft ), Down( Key.Home ) );
 			WorldFrame( stack, park, Up( Key.Home ), Up( Key.ControlLeft ) );
-			Assert.AreEqual( before + 2, Times( "CAMERA_HOME_RESET" ), "Ctrl+Home: not the row" );
+			Assert.AreEqual( (away, 2f, 90f), Now(), "Ctrl+Home: not the row" );
+
+			Press( stack, Key.E );
+			Assert.AreEqual( "ParkGadget, ParkViewfinder, ParkStaffScreen", Names( stack ), "E: the staff" );
+			WorldFrame( stack, park, Down( Key.Home ) );
+			WorldFrame( stack, park, Up( Key.Home ) );
+			Assert.AreEqual( (away, 2f, 90f), Now(), "under a park screen: no camera key" );
+			Press( stack, Key.Escape );
+
+			Frame( stack, Down( Key.Home ) );
+			Frame( stack, Up( Key.Home ) );
+			Input.TextCaptured = true;
+			Camera.Update();
+			Input.TextCaptured = false;
+			Assert.AreEqual( (away, 2f, 90f), Now(), "a text box with the keyboard: none" );
 		}
 		finally
 		{
+			Input.TextCaptured = false;
+			Time.Delta = delta;
 			ParkOrbitCameraMode.Forget();
 			UI.ParkCategoryScreens.Seed();
 		}
