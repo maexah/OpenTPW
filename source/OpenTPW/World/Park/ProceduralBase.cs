@@ -121,8 +121,8 @@ public static class ProceduralBase
 	/// on it; a cell past the footprint's last is its last, seen from the far side.
 	/// </summary>
 	/// <remarks>
-	/// The original also stops the mesh's walk at a vertex past the ground's last cell (96 x 85, 960 x 850 units); no
-	/// Lost Kingdom mesh reaches past 502 units (its offset and its box), so that end is not kept.
+	/// The original also stops the mesh's walk, and its children's, at a vertex past the ground's last cell (96 x 85, 960 x 850
+	/// units); no Lost Kingdom mesh reaches past 502 units (its offset and its box), so that end is not kept.
 	/// </remarks>
 	private static bool IsBase( System.Numerics.Vector3 at, Grid grid, int[,]? edges, int width, int depth, bool every )
 	{

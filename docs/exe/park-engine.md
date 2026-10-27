@@ -227,6 +227,24 @@ vertex gives -7 and 9. **OpenTPW builds it** (`ParkObjects.ModelOriginFor`, `Bas
 base its `.hmp` is laid from. Not separated by any file read: a shape's empty cells, whose corners no file's ground
 tells apart from their neighbours'.
 
+**The same flag `0x8` also conforms the model's base vertices to the ground** (Q750; fork watch 2026-10-27, verify-world H1,
+verify-other L2). After the model is made, `test bl,8` (`0x00463329`) and `FUN_00469940( [instance + 8], DAT_007a0854, base
+height, 0 )` (`0x00463347`) run `FUN_00469a80` in its apply mode, the mode whose drape arm is Q398's and Q695's. Flag `0x8` is in
+`0x3fa` (a purchase, `0x00430883`), `0x32f` (every thing of a loaded park, `0x004dd64f`) and `0x33a` (the kart, water, queue
+and hoarding pieces); the coaster pieces run it too (`0x00432f2f`, `0x004432db`). Only the vertices the type load listed are
+taken (the record's list at `+0x14`, counted by `ProceduralBase_Build` at `0x0046a808` and copied at `0x0046a853`..`0x0046a87b`,
+on nodes the count flagged `0x1000`): the base vertices `ProceduralBase.FloorMesh` already counts, on every node that has one.
+Each is carried into world space (the node chain, `0x004702d0`); x and z snap to the grid line when within 0.01 of it
+(`0x00469f71`..`0x0046a028`), and the nearest terrain corner (a fraction of 0.5 or more takes the next) gives y outright,
+nothing added (`0x0046a332`..`0x0046a33c`; the base height is used only by the drape and the interpolating arms); the point is
+carried back through the float LU inverse (`0x00470040`, `0x00469b37`, applied at `0x0046a121`) into the instance node's own
+vertices, its box only widened. A corner past the heightfield's last ends that node and skips its children (`0x00469dd7`..
+`0x0046a2a0`). So on a slope the floor's rim lies on the terrain's corners while the inner floor stays at the height above.
+Read from the bytes; not read: that the instance nodes carry the type node's `0x1000` (the clone in `FUN_00463060` is not
+traced). The instancer then sets `0x10000` on every node of every instance it makes and calls `FUN_00473c30`
+(`0x00463937`), which recomputes the face normals of the nodes so flagged (`FUN_00473a40`, cross products into the node's
+face-normal block) and clears header `0x40000`; whether the face normals reach the lighting is unread.
+
 ---
 
 ## base.map / terrain.map: the header is 72 bytes, not 80
@@ -488,7 +506,7 @@ screen scale in after the projection, and that scale narrows every view by the s
 | `FUN_00578be0` | The projection builder (`ECX` = `0x0087b110`; near, far, angle): `m00 = m11 = cos(a/2)`, `m23 = sin(a/2)`, `m22 = sin(a/2) / (1 - near/far)`; it keeps the three in `DAT_0087b1dc`, `0x00768acc`, `DAT_0087af58`. Its `DAT_008bcbc8 & 0x200` branch is orthographic; the flags word is `0x00410100`, so **the park is perspective** |
 | `FUN_005781d0` | Render start (`FUN_00572780`): the screen scale `0x0087b0d0` = diag( `2 x DAT_008bcbcc`, `-2` (`0xc0000000` at `0x0087b0e4`), 1, 1 ); nothing writes it after |
 | `FUN_005783b0` | The draw matrix `[0x0087b088]` (`0x0087b158`) = the camera's matrix `0x0087aff0` inverted, times the projection, times the scale. The one path for every view |
-| `FUN_00578ca0` | Calls the builder again with the kept angle and a new far. Three call sites: `0x0056bd3e` in `FUN_0056bb00`, and `0x0056eac0` and `0x0056ed79` in `FUN_0056ea90`, which hands it 1000.0, then the depth the cell scan found (`[esi+0x1c]`, 100.0 at `0x0056ead3`, raised as cells are scanned). 460 / `[0x008bd4c0]` is only the scan's range around the eye, never the far; the far measured (126, 128, 112) is neither |
+| `FUN_00578ca0` | Calls the builder again with the kept angle and a new far. Three call sites: `0x0056bd3e` in `FUN_0056bb00`, and `0x0056eac0` and `0x0056ed79` in `FUN_0056ea90`, which hands it 1000.0, then the depth the cell scan found (`[esi+0x1c]`, 100.0 at `0x0056ead3`, raised as cells are scanned). On the `FUN_0056bb00` path the far is the farthest of the four view rays' ground points from the camera, at least 10.0 (`0x0056bc5c`..`0x0056bc9f`), each ray's parameter capped at `[0x008bd4c0]` / 2 (`FUN_0056b940`): at the wide zoom 300 (Q510) a capped corner point leaves the ground and the hull shrinks, so black may show at the frame's top (arithmetic, not seen; fork watch 2026-10-27, verify-other L1). 460 / `[0x008bd4c0]` is only the scan's range around the eye, never the far; the far measured (126, 128, 112) is neither |
 | `FUN_0056b790` | The picture's frustum, made straight after the builder at `0x0042aa5f`, `0x0054e884` and `0x005d8cda`: it multiplies `tan(a/2)` by 0.5 (`0x0070149c`), so its corner rays are `(+/-0.5 tan(a/2) / DAT_008bcbcc, +/-0.5 tan(a/2), 1)`, (+/-0.667, +/-0.5, 1) at 90, the 53.13 x 67.38 picture itself; it writes `[0x00879d54]` |
 | `FUN_0056bb00` | The per-frame frustum (from `0x00576add` when `[0x008bd508] & 0x100` is clear, `0x00576aba`), unscaled: corner rays `(+/-tan(a/2) / DAT_008bcbcc, +/-tan(a/2), 1)`, the projection's own 90 degrees, a volume wider than the picture (harmless: it culls less) |
 | `FUN_0045bf90` | Screen to world: its corner ray is built from fixed numbers (`0x0074c9b8` pi/2 x `0x0074d13c` 0.885 x 0.5 = a 39.8 degree diagonal, split by `atan( 0.75 )`, `_DAT_006fe640`): half-tangents **0.667 across, 0.500 down**, the park's picture |
@@ -700,11 +718,11 @@ the site").
 
 Pause object fields: **`+0x1c` = paused, `+0x20` = quiet flag, `+0x3c` = park running.**
 
-**Every SCREEN-DRIVEN call site passes `PUSH 0x0; PUSH 0x0`** — six of them (`0x0047f26c`, `0x0049f29f`, `0x004a93d7`, `0x0048c87e`, `0x0049efba`, `0x004a3a6c`) — so for a menu, a message box or the options screen the quiet flag is 0 and the sound half of a pause is `Advisor_PauseVoice()` + `FUN_0051c1c0(1)` (which only writes `DAT_00803ad2`). **So a park's music keeps playing under the menu.**
+**Every SCREEN-DRIVEN call site passes `PUSH 0x0; PUSH 0x0`** — seven of them (`0x0047f26c`, `0x0049f29f`, `0x004a93d7`, `0x0048c87e`, `0x0049efba`, `0x004a3a6c`, and the map window's `0x005f0b7f`: its `EBP` is nought, `xor ebp,ebp` at `0x005f0b6c`; fork watch 2026-10-27, verify-ui-hud) — so for a menu, a message box or the options screen the quiet flag is 0 and the sound half of a pause is `Advisor_PauseVoice()` + `FUN_0051c1c0(1)` (which only writes `DAT_00803ad2`). **So a park's music keeps playing under the menu.**
 
-**But the window procedure passes `(1, 1)`.** `FUN_0046b600`'s `WM_ACTIVATEAPP` branch calls `Game_Pause(1,1)` at `0x0046b74c`, and arg2 non-zero takes the **voice-pausing** path `FUN_0051bcf0` and never touches the listener. So that path **is** taken offline, on **alt-tab**. (One site, `0x005f0b7f`, pushes `EBP` twice and its value was not established.)
+**But the window procedure passes `(1, 1)`.** `FUN_0046b600`'s `WM_ACTIVATEAPP` branch calls `Game_Pause(1,1)` at `0x0046b74c`, and arg2 non-zero takes the suspend-all path `FUN_0051bcf0` (the pair of the next paragraph) and never touches the listener. So that path **is** taken offline, on **alt-tab**. The advisor-voice pause is the other branch, arg2 nought (`0x004092d1`..`0x004092e8`: `0x00598960` pauses his one voice, then `FUN_0051c1c0(1)`).
 
-`FUN_0051bcf0` / `FUN_0051bd30` post commands differing only in payload address (`0x0070a268` vs `0x0070a270`), whose handlers `0x006b8e40` / `0x006b8eb0` are byte-identical but for one operand — `CALL [EDX+0x38]` against `CALL [EDX+0x3c]`, two adjacent virtual slots on the same sound object. That shape is a **suspend-all / resume-all pair**. Which matters for more than accuracy: **the original owns a primitive that holds the whole mix, spends it on losing focus, and pointedly does not use it for the park menu** — the menu takes the listener branch instead. That is the best evidence available that a park menu was never meant to silence everything.
+`FUN_0051bcf0` / `FUN_0051bd30` post commands differing only in payload address (`0x0070a268` vs `0x0070a270`), whose handlers `0x006b8e40` / `0x006b8eb0` are byte-identical but for one operand — `CALL [EDX+0x38]` against `CALL [EDX+0x3c]`, two adjacent virtual slots on the same sound object. That shape is a **suspend-all / resume-all pair**. Which matters for more than accuracy: **the original owns a primitive that holds the whole mix, spends it on losing focus, and pointedly does not use it for the park menu** — the menu takes the listener branch instead. That is the best evidence available that a park menu was never meant to silence everything. The advisor's voice has its own pause (the arg2 nought branch above): per-voice sound commands 2 and 3 through `0x00598960` -> `0x0051c060` -> `0x006b5bd0` -> `0x006b5c50` -> `0x006b8a10` to the voice's slot `+0x18`, `0x006bcab0`, the resume pushing the voice's start on by the paused span (`0x006bcafd`..`0x006bcb46`; `audio.md`, Q577; fork watch 2026-10-27, verify-ui-hud M1).
 
 ### What the 31 ms tick drives
 
@@ -3193,7 +3211,7 @@ carries it) is tried as its piece's list (`[[record + 0xd4] + 0x100]`, `FUN_0044
 with its own height. The thing is tried when the ray's height across the cell, from where it enters to where it leaves
 along the stepped axis (`modf` of a tenth, or `1 - fmod( v, 10 ) / 10` for a falling coordinate), reaches down to that
 height and up to the model's box minimum height (header `+0x84`, which `FUN_00451640` copies from the `.hmp`'s box:
-gates.hmp's -0.004). A model flagged `0x40000` and `0x20000` (`+0x30`) is first brought up to its pose (`FUN_00473c30`).
+gates.hmp's -0.004). A model flagged `0x40000` and `0x20000` (`+0x30`) first has the face normals of its nodes flagged `0x10000` recomputed (`FUN_00473c30` -> `FUN_00473a40`, which clears header flag `0x40000`); it poses nothing (fork watch 2026-10-27, verify-world M2).
 
 The model test, `PickMarch_MeetModel` (`FUN_0045d090`) `( root node, identity )`, walks the node tree from the header's root (`+0x78`): each node's
 matrix composed onto its parent's (`FUN_004702d0`); a node flagged `0x10` or `0x8210` offers no faces, otherwise its
@@ -4574,6 +4592,14 @@ frame is the face's material's. The loader has moved each floor face's UVs by wh
 (`FUN_004679d0`), which leaves the answer alone. **Queue pieces** are loaded with flag `0x2` (`0x12423`), which makes
 `FUN_00461f10` set the header's `0x80` and every mesh node's `0x20000` (so no floor is found, `textures.md`, "Which
 materials the loader makes opaque"): their one cell is entered whatever its kind, from the root mesh.
+
+**The blended floor's texture clamps.** The UV normaliser `FUN_00467310` (eps 0.02 at every caller; each face's least u and v floored and
+subtracted from its corners not yet moved; `0x30` cleared from the word of a material group no counted face uses, `0x00467978`) does not
+make the blended floor wrap: the composite is made by `0x00590a80` with flags `0x1000000` and the mip count, no wrap bits
+(`0x00590ac4`, `0x00590ad7`, `0x00590b1c`), so `Texture_BlendStateWord` gives it no `0x400000` and the mesh draw (`0x00581790`)
+clamps it whatever the material's word says (the per-draw state is inferred; the frame loop is not traced). The clear of `0x30` matters only to a later
+reuse through `0x00575c60`. The unmasked call (`0x0046264f`) is gated on loader bit `0x4000`, which no shipped catalogue, queue or
+type-3 load carries. Fork watch 2026-10-27, verify-world M1.
 
 **Measured in the running original** (`q617/orig/run.sh`, `q649/orig/run.sh`, `run-items.sh`: `brk.sh` on the call at
 `0x0057af4b` as `loadfile.sh`'s poller, and `original/footprints.py`): the stock park's load blends 44 cells, all on tick

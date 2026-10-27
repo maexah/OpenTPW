@@ -242,8 +242,10 @@ public class ProceduralFloorTests
 	/// <summary>
 	/// <b>Every Lost Kingdom floor frame blended either has its UVs in 0..1 or wraps</b> (its word's <c>0x10</c> or <c>0x20</c>),
 	/// so the shift the original's loader gives each floor face's UVs (<c>FUN_004679d0</c>: a face's corners moved alike by
-	/// whole numbers into 0..1) draws the same picture as the file's own UVs drawn here: 36 frames of eight rides leave 0..1,
-	/// every one wrapping.
+	/// whole numbers into 0..1) draws the same picture as the file's own UVs drawn here, where this game wraps: 36 frames of
+	/// eight rides leave 0..1, every one wrapping. The original's composite has no wrap bits and its draw clamps it
+	/// (<c>0x00590a80</c>, <c>0x00581790</c>; park-engine.md, "The blended floor's texture clamps"), so the two pictures
+	/// agree only where each face's shifted UVs stay inside 0..1.
 	/// </summary>
 	/// <remarks><b>Mutations:</b> none: a check on the data that the drawing's shortcut holds.</remarks>
 	[TestMethod]

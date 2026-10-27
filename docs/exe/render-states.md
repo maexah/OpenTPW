@@ -172,7 +172,7 @@ sixteen-byte steps. `00575c60` retains those pointers and invokes `00575e10` imm
 | Selecting an option assigns cache `+0x10008`; later matching tests overwrite earlier ones | `00575b80`; consumed and cleared in `005755f0` | These options are not ORed together |
 | Option `4` bypasses the ordinary alpha-classifier mapping | `00575725..00575734` | This does not name all effects of the option |
 | Option `8` ORs texture flags `0x300`, selecting the additive state | `00575754..00575760`, then `00590c40` | Source material flags and runtime texture flags are different words |
-| Source low bits `0x10` and `0x20` propagate to texture flags `0x10000` and `0x20000` | `00575ea1`, `00575eb3`; reuse in `00575c60` ORs `0x30000` if either is present | The final high-level purpose of those bits remains unknown |
+| Source low bits `0x10` and `0x20` propagate to texture flags `0x10000` and `0x20000` | `00575ea1`, `00575eb3`; reuse in `00575c60` ORs `0x30000` if either is present | The bits request wrapping (the rows below, `0x00567a70`) |
 | Material `0x800` forces state `0x1256`; otherwise texture flags select the table above | `00581820`, `00581826`, `00581830`, `00590c40` | Mesh `0x2` is a separate depth-write control |
 | Partial-alpha count is compared with an integer-truncated threshold | `0057557e`, `00575584`, `005755c2` (`__ftol`), `005755c7`, `005755cb`; multiplier bytes `cd cc 4c 3d` at `00701720` | OpenTPW currently compares `partial * 20 >= texels`, which can disagree at the boundary |
 

@@ -136,6 +136,7 @@ filed the items that cite it.
     under it. The chain: `0x004629d0` turns load bit `0x2` into loader flag `0x40`; `0x00461f10` sets `0x20000` on every node
     (`0x00462614`); the instancer `0x00463060` (flags `0x33a`, kart `0x522b90`, water `0x522d50`) calls `0x00469940` (`0x00463347`), which calls
     `0x00469a80` per node (cell triangle by flag `0x4`, Q398's note). Draw them so, not as flat plates. Not proven: whether the cars' sampler reads the draped copy.
+    The same call also conforms every flag-8 object's base vertices to the terrain corners (Q750; fork watch 2026-10-27, verify-world H1).
 - [ ] **Q588. Dino Karts race for guests.** After Q587. The -4 record (`Bumper_LayRide`'s grid and start buoys, the
   template's 3 laps, 2048 arrival), `BUMP 7` to state 1 and the race's first buoy, `BUMP 4` a kart a rider (mesh
   `cars % 4`), the retarget's grid and race arms with the thrust bonus, the buoy arm's laps, state 3 and the end at the
@@ -211,6 +212,12 @@ filed the items that cite it.
   a one-shot away from the camera kept past its length + 250 ms across an alt-tab (`oneshots.py`).
   - **Note (fork watch 2026-10-24):** the P key's row and the overlay it puts up are read (`hud.md`, the pause
     overlay); building the overlay is Q739.
+  - **Note (fork watch 2026-10-27, verify-ui-hud M1):** the advisor's one voice is paused and resumed by the same two commands:
+    `Game_Pause` with arg2 nought (`0x004092d1`) -> `0x00598960` -> `0x0051c060` -> `0x006b5bd0` -> `0x006b5c50` -> `0x006b8a10`,
+    to the voice's slot `+0x18`, `0x006bcab0`, with commands 2 (functor `0x0070a5b8`) and 3 (`0x0070a5c0`); the resume adds the paused
+    span to the voice's start (`0x006bcafd`..`0x006bcb46`), as `Advisor.cs` holds. The `+0x3c` quirk above reaches him too: a second pause
+    of the same sample does not stamp again, so its resume adds the time since the first (effect on him unproven). The window procedure's
+    `(1, 1)` does not take this path: it suspends all (`0x0051bcf0`). Unproven: what the driver does to the DirectSound buffer.
 
 - [ ] **Q741. A park file's other voices put back (Q612's rest).** From Q612 (`audio.md`, "A park file's voices"). Put
   back the classes Q612 counts: the one-shots (`PARK_FILE_SOUND_VOICE_ONE_SHOT`: the Fountain's looped 107, the level's
@@ -1374,6 +1381,11 @@ filed the items that cite it.
   predicting 300 and 40 first), also after a park load. Then build it: the key, the bit kept across a load, the two ranges.
   The pitch is computed from the zoom by the same expression and extrapolates past the range; read the camera's pitch clamp
   ([0, 84.27] in `park-engine.md`) at zoom 300 in the original before building it. Q23 is the camera's other work.
+  - **Note (fork watch 2026-10-27, verify-other L1):** on the per-frame path (`FUN_0056bb00`) the park view's far plane is the farthest of
+    the four view rays' ground points from the camera, at least 10.0 (`0x0056bc5c`..`0x0056bc9f`, handed to `FUN_00578ca0` at
+    `0x0056bd3e`), each ray's parameter capped at `[0x008bd4c0]` / 2 (`FUN_0056b940`). At zoom 300 a capped corner point leaves the
+    ground and the hull shrinks, so the original may show black at the frame's top: predict it before pressing the zoom
+    (arithmetic, not seen).
 - [ ] **Q720. Do the keypad digits reach the cheat and camera rows? (one key press in the original)** From the fork watch,
   2026-10-20 (`verify-other-ui-audio.md`, "Miss found here"; `park-engine.md`, "The cheat table"). Both key edges
   (`0x0046b9c0`..`0x0046b9f5`, `0x0046bab8`..`0x0046baeb`) replace the vk by `MapVirtualKeyA( vk, 2 )` when it answers
@@ -2651,9 +2663,14 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
     by its `ShopType` 1 to 6 (`0x004e18e4`: types 5, ingredient, 8, ingredient, 7, 6) and `SpecialIngredient` 1 to 4
     (`0x004e18fc`: types 2, 1, 3, 4), posted by `0x004d27a0`; `0x004ca160` is the mean over toilets of 100 less a
     float's low byte, only for `0x004d2860`. The loans window: row pitch `(h x 0x600) / [0x00faa5c0] + 6` from a font
-    of 7; summary labels UITEXT `0x165`, `0x168`, `0x167`, `0x169`; take `0x0049f460` and repay `0x0049f4a0` refill
+    of 7; summary labels UITEXT `0x165`, `0x168`, `0x167`, `0x169`; take `0x0049f4a0` and repay `0x0049f460` refill
     only the list `0x0012c4bd`; the tab is remembered for the session (`[0x007cb260]`, control `0x0012c4bf` or
     `0x0012c4c0`).
+  - **Note (fork watch 2026-10-27, verify-ui-hud M2):** the loans window opens three pausing message boxes, each a call of
+    `FUN_0047f020`: UITEXT 181 at `0x0049f66a` ("There is ${P1} outstanding on this loan. Pay the outstanding balance ?", its tick
+    `0x0049f460` -> the pay-off `0x004d0850`), 182 at `0x0049f6fe` ("You do not have enough money to pay the outstanding balance of
+    ${P1}", no tick) and 183 at `0x0049f7ad` ("Take out a loan for ...", its tick `0x0049f4a0` -> the drawdown `0x004d0750`). Not Lost
+    Kingdom: Instant Action runs only in type 2, where the loans opener returns at once (`0x0049fb8e`).
   - **Note (fork watch 2026-10-18, `verify-advisor.md` A1):** the credit test `0x004d06b0` is read in `ride-operation.md`, "The
     loan helpers and the money rows": limit = net worth x 1.0 less the total still owed (instalments left x instalment over the
     taken offers), an offer passing when its amount is at most it, and the pass flag **written into the offer** on every call, so
@@ -2851,6 +2868,28 @@ state machine.
   ground. Not proven: that a loaded park's pieces are draped too (they are remade from the save's records, `FUN_004647a0`, flags `0x33a`, from the same
   loaded models; not traced), and how many Lost Kingdom queue or boundary cells lie on sloped ground (not counted). First load
   a park, count those cells, and shoot one beside the original's; then drape the pieces as the track tiles are (with Q587).
+  The same call, `0x00469940`, also conforms the base vertices of every flag-8 object to the terrain's corners, a thing bought or
+  loaded (Q750; fork watch 2026-10-27, verify-world H1).
+- [ ] **Q750. Every placed thing's floor edge conformed to the terrain, as the original's (`0x469940` apply mode).** From the fork
+  watch 2026-10-27 (verify-world H1, verify-other L2; a lead the fork found and ours had not). Every thing made with flag `0x8`
+  (a purchase, `0x3fa`, `0x00430883`; every thing of a loaded park, `0x32f`, `0x004dd64f`; the coaster pieces too) runs
+  `FUN_00469940` -> `FUN_00469a80` in its apply mode (`0x00463329`, `0x00463347`): each base vertex the type load listed is set in
+  world space to the nearest terrain corner's height (x and z snapped to the grid line within 0.01, y that corner's, nothing added),
+  then carried back by the float LU inverse into the instance's own vertices. The mechanism is written once in
+  `docs/exe/park-engine.md`, "Where a placed object's model stands". Ours stands every model rigid at `ParkObjects.ModelOriginFor`'s
+  height (halfway between the lowest and highest ground), so on a slope the floor's rim floats over or sinks under the ground
+  where the original's lies on the corners. `ProceduralBase` already finds the same vertices (`textures.md`, 54 of 54 Lost
+  Kingdom models), so the list the conform needs exists. Plan: first decode what remains (the instance nodes' `0x1000` flag is
+  inferred, not read: trace the clone in `FUN_00463060`; the control word the conform runs under, `0x7f` against the park tick's
+  `0x27f`, is unread: a `watch.sh` break at `0x00469940` while buying a ride would settle it, and 104 of the fork's 400 conforms
+  differ in the last bits between the two); then count the Lost Kingdom footprints on sloped ground; photograph one beside the
+  original's; then build. Confirm with a sloped footprint in both games, the rim's vertex heights against the terrain's
+  corners read from the original with `tpwmem.py`. Next to Q398 (the diagonal), Q695 (the drape of queue and boundary pieces)
+  and Q210 (hoardings' base-vertex gate).
+  - **Note (fork watch 2026-10-27, verify-world M1):** the blended floor's composite clamps in the original (no wrap bits,
+    `0x00590a80`; park-engine.md, "The blended floor's texture clamps"), so `ProceduralFloorTests.EveryBlendedFloorFrameLiesInsideOneOrWraps`
+    rests on a wrap the original does not do. Not counted: how many of the 36 frames have a face whose shifted UVs span more than 1.
+    Count them with this item; a floor whose face does is drawn wrapped here and clamped there.
 - [ ] **Q696. The lobby's rain count follows the camera's distance to the rainy islands.** From the fork watch 2026-10-25 (verify-forks.md
   section 1; low priority: the lobby, not Lost Kingdom's park). In `FUN_005e0470` (`0x005e0e29` to `0x005e0f18`) the original works
   the drop count out every frame: over every island whose RAINY (`+0x60`) is not zero (RAINY is a flag; its value is never
