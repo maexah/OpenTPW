@@ -52,6 +52,9 @@ internal sealed class Players
 
 		foreach ( var (slot, name, file) in SaveFolder.ScanPlayers() )
 		{
+			// Before anything prints the name: a tester's console.log says <player N> instead (SafePaths).
+			ConsoleLog.HidePlayer( name, slot );
+
 			// A folder with no gms.dat is a player nobody has saved yet, and is written like any other. A
 			// gms.dat that would not read is not a new player: its stand-in stays read-only even if the file
 			// becomes readable before saving, and only a successful select replaces it.
@@ -72,6 +75,8 @@ internal sealed class Players
 	{
 		if ( _slots[slot] is { } previous )
 			SaveFolder.DeletePlayer( previous.Slot, previous.Name );
+
+		ConsoleLog.HidePlayer( name, slot );
 
 		var player = new Player( slot, name, new PlayerFile { InstantAction = instantAction } );
 		_slots[slot] = player;

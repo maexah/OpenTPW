@@ -66,7 +66,7 @@ beside "save". If that folder cannot be written, it is here instead:
 The log names the build, your system and graphics card, and whether
 the game's files look complete. It does not hold your name or your
 computer's name: folder paths in it are cut down to "<game folder>"
-and "~".
+and "~", and each player's name to "<player 1>" and so on.
 
 To report a problem, open an issue at
    https://github.com/maexah/OpenTPW/issues

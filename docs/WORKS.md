@@ -145,6 +145,7 @@ belongs to or at the end. Grep it by area or Q-number; never read it whole.
   threads, the .NET runtime and whether it came inside the build, the GPU and its Vulkan driver, the display mode with
   the game's and the desktop's sizes, and how many of the disc's 789 data files the game folder holds, naming the first
   missing. The file (not the terminal) has the game folder cut to `<game folder>`, the home folder to `~` and the
-  account's name in any other path to `<user>`; `lib/logpii.py` finds no account name, host name or home folder in a
+  account's name in any other path to `<user>`, each player's name, in a line or in their folder, to `<player N>`
+  (`q751/run6-names`); `lib/logpii.py` finds no account name, host name or home folder in a
   real launch's log (`q751/run3`). A self-contained Linux publish, zipped as the weekly workflow zips it, starts and
   draws the lobby (`q751/run5-zip`).

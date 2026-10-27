@@ -87,6 +87,52 @@ public class SafePathsTests
 	}
 
 	[TestMethod]
+	public void APlayersNameIsCutAsTheirSlotWithItsCaseKept()
+	{
+		var safe = Linux();
+
+		safe.HidePlayer( "Kim Lee", 2 );
+
+		Assert.AreEqual( "Front end: '<player 3>' is playing in slot 3", safe.Scrub( "Front end: 'Kim Lee' is playing in slot 3" ) );
+		Assert.AreEqual( "jungle: <player 3> has no park file", safe.Scrub( "jungle: Kim Lee has no park file" ) );
+		Assert.AreEqual( "kim lee and Kim Leeds and Kim Lee2", safe.Scrub( "kim lee and Kim Leeds and Kim Lee2" ) );
+	}
+
+	[TestMethod]
+	public void APlayersFolderIsTheirSlotRunIntoTheirName()
+	{
+		var safe = Linux();
+
+		safe.HidePlayer( "Mae", 0 );
+
+		Assert.AreEqual( "<game folder>/save/users/1<player 1>/jungle/New Save.TPWS",
+			safe.Scrub( "/home/kim/Games/TPWorld/save/users/1Mae/jungle/New Save.TPWS" ) );
+	}
+
+	[TestMethod]
+	public void TheLongestNameIsCutFirstAndOneLetterIsLeft()
+	{
+		var safe = Linux();
+
+		safe.HidePlayer( "Al", 0 );
+		safe.HidePlayer( "Al B", 1 );
+		safe.HidePlayer( "Q", 2 );
+
+		Assert.AreEqual( "<player 2> and <player 1> and Alan and Q", safe.Scrub( "Al B and Al and Alan and Q" ) );
+	}
+
+	[TestMethod]
+	public void ANameHiddenAgainTakesItsNewSlot()
+	{
+		var safe = Linux();
+
+		safe.HidePlayer( "Mae", 0 );
+		safe.HidePlayer( "Mae", 3 );
+
+		Assert.AreEqual( "'<player 4>'", safe.Scrub( "'Mae'" ) );
+	}
+
+	[TestMethod]
 	public void TheConsoleLogFileIsWrittenScrubbedAndTheTerminalIsNot()
 	{
 		var folder = Directory.CreateTempSubdirectory( "tpw-safepaths" ).FullName;

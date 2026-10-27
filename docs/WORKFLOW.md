@@ -93,7 +93,7 @@ anything that looks like the game's files fails the run.
      release page back. The website's buttons follow by its own step (its `docs/PLAN.md`).
 - **The build's name.** `-p:OpenTPWBuildTag=<tag>` stamps it; every other build is `local`. The SDK adds the commit.
   The console log's first lines (`LaunchReport`) print both, and `console.log` is written with paths cut to
-  `<game folder>` and `~` (`SafePaths`), so a tester can attach it as it is.
+  `<game folder>` and `~` and each player's name to `<player N>` (`SafePaths`), so a tester can attach it as it is.
 - **A dry run** is a tag `weekly-test-N`: the same steps with a placeholder note. Delete the release and the tag
   after reading it back.
 - **Each zip carries** `tools/weekly/README.txt` (experimental, bring your own game, `--game`, the unsigned

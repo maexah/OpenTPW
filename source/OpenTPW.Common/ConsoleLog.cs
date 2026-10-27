@@ -39,6 +39,7 @@ public static class ConsoleLog
 	public const string DirectoryVariable = "OPENTPW_LOG_DIR";
 
 	private static Sink? _sink;
+	private static SafePaths? _safe;
 
 	/// <summary>Where the file is, once <see cref="Open"/> has made it; empty before.</summary>
 	public static string Path => _sink?.Path ?? string.Empty;
@@ -64,11 +65,16 @@ public static class ConsoleLog
 		if ( _sink is not { } sink )
 			return;
 
-		if ( !sink.Open( Candidates( gameFolder, Environment.GetEnvironmentVariable( DirectoryVariable ), UserFolder() ), Header(), SafePaths.ForThisMachine( gameFolder ).Scrub ) )
+		_safe = SafePaths.ForThisMachine( gameFolder );
+
+		if ( !sink.Open( Candidates( gameFolder, Environment.GetEnvironmentVariable( DirectoryVariable ), UserFolder() ), Header(), _safe.Scrub ) )
 			Console.Error.WriteLine( $"[console log] no folder could be written, so this run is not kept: {sink.Failures}" );
 		else if ( sink.Failures.Length > 0 )
 			Console.Error.WriteLine( $"[console log] this run is kept in {sink.Path}: {sink.Failures}" );
 	}
+
+	/// <summary>Cuts a player's name from the file from here on (<see cref="SafePaths.HidePlayer"/>); nothing before <see cref="Open"/>.</summary>
+	public static void HidePlayer( string name, int slot ) => _safe?.HidePlayer( name, slot );
 
 	/// <summary>The player's own data folder for the log: <c>%AppData%\OpenTPW</c> on Windows, <c>~/.local/share/OpenTPW</c> elsewhere.</summary>
 	public static string UserFolder()
