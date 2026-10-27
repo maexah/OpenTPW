@@ -1433,13 +1433,16 @@ sends `0x13`; `UI_MoveBy` has 14 call sites, among them the mast's put-on at `0x
 timers (property 6 not `0x1b`, `0x0048da30`). The mast's `0x100001` enables the tag at once (vtable `+0x14` with 1, `0x004a1283`) and
 posts it message 6, `UI_SetVisible( 1 )`, 500 ms on (`0x004a1292`), so the tag is drawn half a second after the mast lifts.
 **Message 6 in the tag's own handler (Q673).** `FUN_0048dae0` (Ghidra `Tag_Proc`) has its own arm for 6 (`0x0048db24`): it
-finds the tag among the list's ten records (`0x007c26b0`, `0x208` bytes each) and passes the message on to the base
-proc (`0x0048e0c0`, `0x0065f66e`), whose case 6 is `UI_SetVisible( 1 )` (`0x0065f760`, `0x0065d9dd`: flag `+0x48` bit 1,
+finds the tag among the list's ten records (`0x007c26b0`, `0x208` bytes each) and passes the message on through its
+default tail (`0x0048e0c0`) to the base proc (`0x0065f66e`), which calls the control's handler `[this+0x118]` =
+`0x0065f6d1` (set at `0x0065bd42`), where the switch is: message 6 is entry 5 of the table at `0x0065fba8`, `0x0065f760`,
+`UI_SetVisible( 1 )` (`0x0065d9dd`: flag `+0x48` mask 1, `0x0065d9ec`, `0x0065da23`, `0x0065da34`,
 then the `0x11` notice through `0x0065d90b` when the tag and its parents are shown), only while the record's in-use word
 `+4` is not nought; a tag not in the list, or whose record message 5 has freed (`0x0048dc5e`), swallows it (returns 0,
 `0x0048db72`, `0x0048dc43`). So nothing is drawn of a tag before its half second, and a tag taken off within it (a delete
 of all, `0x100003`, at 100 ms a tag) is never shown. OpenTPW draws a control for a standing tag alone and shows it from
-`ParkTags.ShowAfter`, so it holds both; filmed in both games (`q673/side-by-side.png`).
+`ParkTags.ShowAfter`, so it holds both (`ATagTakenOffInsideItsHalfSecondIsNeverShown` pins the second); ours filmed
+by Q673 (`q673/side-by-side.png`), the original's film is Q637's.
 
 Measured in the original (`q638/orig`, Q309's load, the Belly Bounce broken): the mast lifted with an empty pole and the
 tag appeared about half a second on in a burst of green and gold glints, effect 90 (`MessageTag1`) at the tag's middle

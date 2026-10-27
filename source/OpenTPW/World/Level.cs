@@ -2742,12 +2742,13 @@ public class Level
 		{
 			// CTRL, WHATEVER SHIFT AND ALT ARE, PUTS ANOTHER OF IT IN THE HAND and opens no window: the original asks
 			// VK_CONTROL alone (0x00487ac0). Too dear, it plays the buy screen's refusal, cat_ui 0x1D (0x00487b56), and the
-			// hand stays empty (docs/exe/park-engine.md, "Ctrl+click buys another of a placed thing").
+			// hand stays empty (docs/exe/park-engine.md, "Ctrl+click buys another of a placed thing"). The lookups that fail
+			// before the price test (no park, no thing, no item) are silent: the original returns at 0x00487ab8 there.
 			if ( (Input.Held & Input.Modifiers.Control) != 0 )
 			{
-				var another = ParkBuilding.CarryAnother( placed, out var held );
+				var another = ParkBuilding.CarryAnother( placed, out _, out var tooDear );
 
-				if ( held )
+				if ( !tooDear )
 					return $"world click: {another}";
 
 				return $"world click: {another} - cat_ui 0x{UI.ParkBuyScreen.RefusedSound:x} for the refusal, " +
@@ -2780,6 +2781,10 @@ public class Level
 		if ( ParkBuildMode.Anchored )
 			return ParkPathBuilding.RunQueue( cellX, cellY, !UI.WindowStack.ParkScreenOpen );
 
+		// An unanchored queue click plays the laying sound too, as mode 3 does before its anchor test (0x005271ea, then
+		// 0x00527222). Dead by CONTENT in Lost Kingdom: only EDIT_QUEUE_WITH_NO_ENTRANCE and the console's `tool queue` arm
+		// the queue tool with no anchor.
+		ParkPathBuilding.LayingSound( "queue", cellX, cellY );
 		ParkBuildMode.AnchorAt( cellX, cellY );
 
 		return $"anchored a queue run at ({cellX},{cellY}) - click again to lay it";

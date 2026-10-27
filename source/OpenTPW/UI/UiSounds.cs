@@ -117,9 +117,13 @@ internal static class UiSounds
 	/// <summary>The last effect played at its variation's own volume, asked for whether or not a voice took it; null for none.</summary>
 	internal static int? LastAsked { get; set; }
 
+	/// <summary>How many effects were asked for at their variation's own volume since a test last set it to nought.</summary>
+	internal static int AskedCount { get; set; }
+
 	private static bool PlayAtItsOwn( int effect )
 	{
 		LastAsked = effect;
+		++AskedCount;
 		Preload();
 
 		return _category != null && _category.Play( effect, BootVolume( _category.VariationsOf( effect ) ), respectDelay: false ) != null;

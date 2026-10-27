@@ -264,7 +264,7 @@ public static class ParkPathBuilding
 	/// (<c>0x005271ea</c>; <c>docs/exe/park-engine.md</c>, "The laying sound"). Unlike <c>0xaf</c> it is not gated on where
 	/// the press went, so it sounds beside an open park screen too.
 	/// </summary>
-	private static void LayingSound( string tool, int x, int y )
+	internal static void LayingSound( string tool, int x, int y )
 		=> Log.Info( $"{tool}: cat_ui 0x{LayingSoundEffect:x} for the click on ({x},{y}), {(UI.UiSounds.Interface( LayingSoundEffect ) ? "a voice" : "no voice")}" );
 
 	/// <summary>

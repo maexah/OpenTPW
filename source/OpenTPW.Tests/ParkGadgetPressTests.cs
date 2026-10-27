@@ -395,6 +395,38 @@ public class ParkGadgetPressTests
 	}
 
 	/// <summary>
+	/// <b>A tag taken off inside its half second is never shown</b> (the tag's own handler drops the mast's message 6 once
+	/// message 5 has freed its record, <c>0x0048db24</c>, <c>0x0048dc5e</c>; <c>docs/exe/hud.md</c>, "Message 6 in the tag's
+	/// own handler"): put on at a second, the top's right click deletes it a tenth of a second on (off at 1.11 s); it is not
+	/// shown while it stands, at 1.05 s and 1.1 s, and at 1.5 s (when it would have been shown) and 1.6 s it is gone.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> a standing tag shown at once; the delete of all leaving the tag standing; a tag taken off
+	/// keeping its control.</remarks>
+	[TestMethod]
+	public void ATagTakenOffInsideItsHalfSecondIsNeverShown()
+	{
+		var (stack, gadget) = AGadget();
+		var tags = gadget.Tags = new ParkTags();
+
+		Frame( stack, false, new Vector2( 1000, 100 ), 1.0f );
+		tags.Said( 68, 13, 1000 );
+		Frame( stack, false, new Vector2( 1000, 100 ), 1.01f );
+		Assert.IsFalse( Find( gadget, 900 ).Visible, "standing, not yet shown" );
+		tags.DeleteAll( 1010 );
+
+		foreach ( var now in new[] { 1.05f, 1.1f, 1.5f, 1.6f } )
+		{
+			Frame( stack, false, new Vector2( 1000, 100 ), now );
+			Assert.IsFalse( ShownTag( gadget.Root ), $"no tag shown at {now} s" );
+		}
+
+		Assert.AreEqual( 0, tags.Standing.Count, "taken off" );
+
+		static bool ShownTag( UI.UiControl control )
+			=> control.Id == 900 && control.Visible || control.Children.Any( ShownTag );
+	}
+
+	/// <summary>
 	/// <b>A tag put on squashes the red top, and a tag taken off squashes the top and every tag above it</b>
 	/// (<c>LAB_004a11e0</c> <c>0x004a135b</c>, <c>FUN_0048dae0</c> <c>0x0048dcda</c>, <c>0x0048dd06</c>): the
 	/// streams at 0x00752e48 and 0x007502f0, the left and right out and the top down by 2, 4 ... 12, 8, 4, 6, 8, 6, 4,

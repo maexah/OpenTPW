@@ -569,11 +569,13 @@ public class ParkLocatorTests
 	/// thing"): the Belly Bounce (thing 13, item 1100, 500) with Ctrl alone, with Ctrl and Shift (the original asks
 	/// <c>VK_CONTROL</c> alone), and with the bank at exactly its price (<c>jle</c> at <c>0x00487b44</c>); the first stock
 	/// thing standing turned keeps its angle in the hand; and one whose item no buy tab lists is held all the same, the clone
-	/// asking the bank alone. Nothing is charged. With the bank one short it plays <c>cat_ui</c> <c>0x1D</c>, opens nothing
-	/// and leaves the hand empty; with no Ctrl the window opens as before.
+	/// asking the bank alone, as does a placed mystery ride with no golden tickets (its cash price against the bank, held at
+	/// exactly the price and refused one short). Nothing is charged and a held clone plays no sound. With the bank one short
+	/// it plays <c>cat_ui</c> <c>0x1D</c>, opens nothing and leaves the hand empty; with no Ctrl the window opens as before.
 	/// </summary>
 	/// <remarks><b>Mutations:</b> the arm removed; Ctrl alone asked for; the angle passed as nought; the bank test made
-	/// strict; the bank test removed; <c>Carry</c>'s buy-tab test reused; the refusal's sound changed.</remarks>
+	/// strict; the bank test removed; <c>Carry</c>'s buy-tab test reused; <c>Carry</c>'s ticket test reused; the refusal's
+	/// sound changed or played for a clone held.</remarks>
 	[TestMethod]
 	public void ACtrlClickOnAPlacedThingPutsAnotherOfItInTheHand()
 	{
@@ -587,8 +589,10 @@ public class ParkLocatorTests
 		{
 			state.SetBalance( 88000 );
 			ctrl();
+			UiSounds.LastAsked = null;
 			StringAssert.Contains( Level.Current.ClickWorldAt( 51, 23, 0, 13 ), "carry another: holding 'Belly Bounce' (1100) at 500, turned 0" );
 			Assert.AreEqual( 1100, ParkBuilding.Carrying );
+			Assert.IsNull( UiSounds.LastAsked, "a clone held plays no sound" );
 			Assert.IsNull( window(), "Ctrl: no window" );
 			Assert.AreEqual( 88000, state.Balance, "nothing charged until the put-down" );
 			ParkHand.LetGo();
@@ -609,6 +613,24 @@ public class ParkLocatorTests
 			Level.Current.ClickWorldAt( 51, 23, 0, unlisted.ThingId );
 			Assert.AreEqual( unlisted.CatalogueId, ParkBuilding.Carrying, $"thing {unlisted.ThingId}, listed on no buy tab, is held" );
 			ParkHand.LetGo();
+
+			// A mystery ride stands in the park: its clone asks its cash price alone, never the tickets (none are held here).
+			var mystery = catalogue.All.First( item => item.GoldenTicketCost > 0 && item.BuildPrice > 0 );
+			var mysteryId = state.NextThingId();
+			state.AddObject( new ParkWorld.CatalogueObject( mysteryId, mystery.Id, 73 << 8, 66 << 8, 0 ) );
+			Assert.AreEqual( 0, GoldenTickets.TicketsLeft, "no golden tickets" );
+
+			state.SetBalance( mystery.BuildPrice );
+			UiSounds.LastAsked = null;
+			Level.Current.ClickWorldAt( 51, 23, 0, mysteryId );
+			Assert.AreEqual( mystery.Id, ParkBuilding.Carrying, "a mystery ride is held for its cash price, with no tickets" );
+			Assert.IsNull( UiSounds.LastAsked );
+			ParkHand.LetGo();
+
+			state.SetBalance( mystery.BuildPrice - 1 );
+			StringAssert.Contains( Level.Current.ClickWorldAt( 51, 23, 0, mysteryId ), "for the refusal" );
+			Assert.AreEqual( 0, ParkBuilding.Carrying, "a mystery ride with the bank one short is refused" );
+			Assert.AreEqual( 0x1d, UiSounds.LastAsked );
 
 			state.SetBalance( 500 );
 			Level.Current.ClickWorldAt( 51, 23, 0, 13 );

@@ -1300,9 +1300,11 @@ public static class ParkBuilding
 	/// asked, and a mystery ride asks its cash price, not the tickets. Nothing is charged until the put-down, as a buy.
 	/// </summary>
 	/// <param name="held">Whether the item went into the hand; a refusal leaves the hand as it was.</param>
-	public static string CarryAnother( int thingId, out bool held )
+	/// <param name="tooDear">Whether the price test refused it: the only answer that sounds (<c>0x00487b56</c>); a failed lookup returns silent (<c>0x00487ab8</c>).</param>
+	public static string CarryAnother( int thingId, out bool held, out bool tooDear )
 	{
 		held = false;
+		tooDear = false;
 
 		if ( Level.Current is not { ParkState: { } state, Catalogue: { } catalogue } )
 			return "carry another: a park has to be loaded";
@@ -1314,7 +1316,11 @@ public static class ParkBuilding
 			return $"carry another: this theme has no item {placed.CatalogueId}";
 
 		if ( item.BuildPrice > state.Balance )
+		{
+			tooDear = true;
+
 			return $"carry another: '{item.Name}' costs {item.BuildPrice} and the park has {state.Balance}";
+		}
 
 		Hold( placed.CatalogueId, placed.Angle );
 		held = true;

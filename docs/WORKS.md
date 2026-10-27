@@ -22,7 +22,7 @@ belongs to or at the end. Grep it by area or Q-number; never read it whole.
   lettering's end, worked out from the font's advances as the original's label box is. Below nought the balance is
   lettered without its minus and `0x32` shows `dollarsignneg`, "-$". Seen beside the original at 800 x 600 at a load,
   1 and 2 March, and four balances (`q674/side-*.png`).
-- **A tag comes on half a second after the mast lifts, in a burst of glints, and glints for its last five seconds** (Q638, with Q463; the put-on filmed again by Q673, 0.502 s here, 0.53 s in the original, `q673/side-by-side.png`): the first show starts effect `0x5a` over the tag's middle (not while paused), and five seconds before its end `0x5b` starts there, hidden and shown with the tag, moved down with it as one below goes, killed as it is opened or goes. Both games filmed side by side (`q638/side-by-side.png`); the census `shown at age 502, effect 0x5a at 5810,45947` and `timer 0x80081 at age 25003`, the original's at 0.52 s and 25.03 s.
+- **A tag comes on half a second after the mast lifts, in a burst of glints, and glints for its last five seconds** (Q638, with Q463; the put-on measured again by Q673, 0.502 s here, against the original's film of Q637, 0.53 s, `q673/side-by-side.png`): the first show starts effect `0x5a` over the tag's middle (not while paused), and five seconds before its end `0x5b` starts there, hidden and shown with the tag, moved down with it as one below goes, killed as it is opened or goes. Both games filmed side by side (`q638/side-by-side.png`); the census `shown at age 502, effect 0x5a at 5810,45947` and `timer 0x80081 at age 25003`, the original's at 0.52 s and 25.03 s.
 - **Ctrl+click on a placed thing puts another of it in the hand** (Q672): Ctrl, whatever Shift and Alt are, opens no
   window; where the item's price is at most the bank the item goes into the hand turned as the clicked thing stands, and
   nothing is charged until it goes down (`ParkBuilding.CarryAnother`); dearer, `cat_ui` `0x1D` plays and the hand stays
@@ -48,7 +48,7 @@ belongs to or at the end. Grep it by area or Q-number; never read it whole.
   turn at 0.5 radians a second and the fly-in 3.1 s (`docs/exe/lobby.md`, "The flight measured"); the log times each
   phase ("Lobby camera: facing the gate after ...", "arrived ... after ...").
 - **The path and queue tools' clicks play the original's laying sound** (Q671): every click of either tool the red
-  latch has not refused, the arming click, each run, a queue joining the path and a click on the anchor, plays `cat_ui`
+  latch has not refused, the arming click, each run, a queue joining the path, a click on the anchor and a click with no anchor yet, plays `cat_ui`
   `0x65`, `rj_laypath_2`, flat at its variation's volume, before the click's arm, whatever screen is open (`0x005271ea`);
   a click on a queue cell that hands the queue tool over plays none, as the original's (`q671/side-by-side.png`; the log's
   "path: cat_ui 0x65 for the click on (x,y), a voice").

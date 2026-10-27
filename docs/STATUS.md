@@ -42,17 +42,14 @@ Only the item just landed is here. Every earlier item's account is in `docs/hist
   of all at 100 ms a tag) in either game.
 
 
-
-
-
 ## Numbers (take counts fresh; these go stale within a day)
 
 | | | measured |
 |---|---|---|
 | Opcodes | **78** of 106 | 2026-10-20, Q553 (`FADEOBJ`), `case Opcode.` labels vs enum members |
-| Tests | **4046**, 0 fail, 0 skip with the game | 2026-10-26, run 11 fix group O, its gate |
-| Tests without the game | **1462** ran, **2584** skipped, of 4046 | 2026-10-26, run 11 fix group O, its gate |
-| Build warnings | 121 in the main tree; 131 in a fresh worktree, the ten more NuGet's advisories on ModKit's ImageSharp | 2026-10-10 (the worktree's 131 and the main tree's 121 at Q340, the worktree's 131 and the main tree's 121 again at Q343, at Q344 and at Q345, and the worktree's 131 at Q346 and, with the main tree's 121, at Q347, at Q348, at Q349, at Q351 and at Q352, 2026-10-13) |
+| Tests | **4047**, 0 fail, 0 skip with the game | 2026-10-27, run 11 fix group P, its gate |
+| Tests without the game | **1462** ran, **2585** skipped, of 4047 | 2026-10-27, run 11 fix group P, its gate |
+| Build warnings | 121 in the main tree; 131 or 133 in a fresh worktree as NuGet's advisory list was last fetched, the ten or twelve more its advisories on ModKit's ImageSharp 3.1.6 (a sixth, GHSA-v76p-62qx-wwq2, published 2026-10-26: Q75, DECISIONS.md "Package advisories") | 2026-10-26 (the worktree's 133 at Q672's gate and 131 at fix group P's, run 11; the main tree's 121 last counted 2026-10-13) |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 
 ## Recent

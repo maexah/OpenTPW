@@ -10622,7 +10622,7 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   and never ticked; message 6 decoded. The tag's handler (Ghidra `Tag_Proc`) has its own arm for 6 (`0x0048db24`): it
   passes the show on to `UI_SetVisible( 1 )` only while the tag's record (`0x007c26b0`, `+4`) is in use, so a tag taken
   off within its half second is never shown (`hud.md`, "Message 6 in the tag's own handler"); OpenTPW draws a control
-  for a standing tag alone, so it holds that too. No code. Both games filmed (`q673/side-by-side.png`): the bare pole,
+  for a standing tag alone, so it holds that too. No code. Ours filmed by Q673, against Q637's film of the original (`q673/side-by-side.png`): the bare pole,
   then the tag in its glints, the original's 16 frames (0.53 s) from the top's lift, ours 0.502 s (`q673/run1`: `tag 72
   shown at age 502`; the tag's box first changed at +0.515 s, the top's strip at +0.014 s; 4 of 4).
 ## B. Docs and comments

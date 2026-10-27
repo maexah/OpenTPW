@@ -2601,8 +2601,9 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   no money, and nothing tests the balance. The edit handlers (height 0.005 a unit, rotate 0.02 within
   ±`fMaxRotnAngleDeviance`, bank and incline 0.02, loop tilt 0.01 in [0.15, 0.85]), auto-bank ((±π - turn) × v / 4.0
   over the neighbours' distances; `fAutoBankDivisor` is read by nothing), the sampler (0.05 steps, spacing 3.0) and
-  the closing pair, the end node, the place distance (3 to 8 cells, 3 to 9 for a loop pylon, `0x0042fd90`). The
-  validator `0x00434740` never refuses a click. Open: what hides the loop button on `coaster1`; whether Backspace
+  the closing pair, the end node, the place distance (3 to 8 cells, 3 to 9 for a loop pylon, `0x0042fd90`). A click of
+  the track tool plays `cat_ui 0x65` before `0x00446300` (mode `0x15`, `0x005263f1`..`0x00526423`; `park-engine.md`,
+  "The laying sound"). The validator `0x00434740` never refuses a click. Open: what hides the loop button on `coaster1`; whether Backspace
   reaches delete-last `0x00444f30` (`park-engine.md` has Backspace calling `0x0052fe50( 0, 1 )`, its only caller).
   Decode to `docs/exe/` first, then split.
   - **Note (fork watch 2026-10-16, `verify-world.md` L1 and L9, `verify-audio-fx.md` O1):** the loop button's open
