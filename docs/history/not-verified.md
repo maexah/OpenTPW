@@ -5,6 +5,16 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q598 (every clip's scale track posed): seen on the desk at 1280 x 720 in the stock park, on the final binary
+  (`q598/run-final`, dll 77418ac6): a Fries Shop, a Laughing Hyenas and a Super Toilet bought by `buy` under `pause`, each
+  stepped through its construction with `meshes THING axes` (within 0.004 of the keys at each printed frame) and a shot each
+  (`q598/ours-side-by-side.png` beside main's build, `run-control`, whose pieces stand full size); Jurassic Tours the
+  same in a fresh Full Simulation park (`run-ride-final`, 0.0033). The original the same day under Proton, off-screen,
+  bought by clicks: its nodes polled from the placing click (`q598/orig`, `scalecurve.py`: 0.0031, 0.0011, 0.0010 off the
+  same curves) and filmed (`orig/film/*-sheet.png`), the same growth. Not seen: Jurassic Tours in the original (ten spots
+  refused, Q761); the camera's framing is not matched between the games (each frames its own build); the water jets of the
+  Hyenas and the Jungle Spray (M1 to M6, keyed the same way, not played); the three late tracks (`volcanol`, `wateridec`,
+  all at 1); the seven clips of other themes with scale keys and no position track; Full Simulation's shops (the same code).
 - Q693 (the ride window's four condition gauges 10 in from their rows' top and bottom): seen on the desk at 1280 x 720
   in the stock park's Belly Bounce window (`q693/ours-a` on the final binary, `control 0x3e19 at (776,184) size (110,12)`;
   `ours-0`, main's build, 21 tall); the original's meters read the same day under Proton by `uitree.py` on the same

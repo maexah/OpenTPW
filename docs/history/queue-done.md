@@ -10719,6 +10719,20 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   clip; `ANIM_SCALE_TRACK` is gone. Fries Shop, Laughing Hyenas and Super Toilet: ours within 0.004 of the keys at each
   printed frame, the original's nodes within 0.0031 of the same curves (1,544, 2,316 and 225 readings) and its films
   alike (`q598/PREDICTION.txt`); Jurassic Tours ours only (0.0033), the original's is Q761. 7 of 7 bugs put back caught.
+- [x] **Q687. The karts' and the water ride's track pieces, decoded (Q587's first piece).** From Q587. The decode only:
+  which `gk_trck*`/`wr_trck*` model a piece draws (`Track_PieceForCell`'s tables `0x00762f30` and `0x00762ff0`, the kits
+  `0x007633e8` and `0x007634d8`, the end caps hidden by the row's mask), what a piece costs (`Costs.KartTrackCell` 200,
+  `WaterTrackCell` 250, `Track_StampCell`, nothing in the put-down) and refunds (Backspace's `BuildTool_Backtrack`,
+  `Track_ClearCell`, the scrap percentage), `FUN_0052c6f0`/`FUN_0052ccb0` (`TrackRide_ShapeFromMouth`,
+  `TrackRide_ShapeFromOtherMouth`: the open end's pulse and the hills' reshaping) and the carried ride's squares
+  (`TrackRide_CarrySquares`): `park.md`, "A track piece's model, price and open end"; FileFormats `models.md`, "End
+  caps". Measured in the original under Proton on `q581/karts.TPWS` (`q587/orig`, the new `original/trackcells.py`):
+  every piece of a Dino Karts loop and of a Splish Splash loop laid the other way round, row, model and turn as the rule
+  gives (corners `gk_trckB` row 3 one way round, `wr_trckB2` row 19 the other), the put-down 6500 and 5000 and nothing
+  for the track, 200 and 250 a new piece, +600 back for a three-piece run taken back by Backspace, the pulse on the mouth
+  after the put-down and on the other mouth from the arming click until the loop closed; 8 predictions held, 2 held in
+  part (`q587/PREDICTION.txt`). Ours, on the final binary: `PLACED_TRACK_RIDE_FIRST_TRACK_CELLS` counted at the put-down,
+  no piece at either mouth (`q587/ours`). The build is Q587.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

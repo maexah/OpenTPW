@@ -30,22 +30,19 @@ One line per system; the detail, item by item, is `docs/WORKS.md` (grep it by ar
 
 ## Next
 
-`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next Q587 (the karts' and the water ride's track, the first open item in the file; Q598, every clip's scale track posed, is done, and so are Q693, the ride window's gauges, Q752 and Q753, put first at Alexah's word 2026-10-27; Q525, ordered before Q638, stands lower in the file; Q543 and Q27, ordered before Q631, and Q31b, Q25, Q51 and Q55, ordered earlier, stand lower in the file): Alexah's play test of 2026-10-21 put Q616 to Q645 first, the display, then what a player hits, then the chosen improvements (`playtest-2026-10-21/notes.md`); Q587 to Q589, the karts' and the water ride's build, follow them in section A (Q598 and Q609 stood before them and are done; Q586 stood above the ordered block; Q608, the draws left both-sided, is filed after Q713): the queue was reordered at Alexah's word, 2026-10-20. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. Gaps 4 and 7: `docs/PLAYER-GAPS.md`. Q13 is done: `docs/history/CLEANUP-PLAN.md`.
+`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next Q587 (the karts' and the water ride's track, the first open item in the file; its decode is done, Q687; Q598, every clip's scale track posed, is done, and so are Q693, the ride window's gauges, Q752 and Q753, put first at Alexah's word 2026-10-27; Q525, ordered before Q638, stands lower in the file; Q543 and Q27, ordered before Q631, and Q31b, Q25, Q51 and Q55, ordered earlier, stand lower in the file): Alexah's play test of 2026-10-21 put Q616 to Q645 first, the display, then what a player hits, then the chosen improvements (`playtest-2026-10-21/notes.md`); Q587 to Q589, the karts' and the water ride's build, follow them in section A (Q598 and Q609 stood before them and are done; Q586 stood above the ordered block; Q608, the draws left both-sided, is filed after Q713): the queue was reordered at Alexah's word, 2026-10-20. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. Gaps 4 and 7: `docs/PLAYER-GAPS.md`. Q13 is done: `docs/history/CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the pre-commit hook: grep it by Q-number.
 
-- Q598 (every clip's scale track posed): seen on the desk at 1280 x 720 in the stock park, on the final binary
-  (`q598/run-final`, dll 77418ac6): a Fries Shop, a Laughing Hyenas and a Super Toilet bought by `buy` under `pause`, each
-  stepped through its construction with `meshes THING axes` (within 0.004 of the keys at each printed frame) and a shot each
-  (`q598/ours-side-by-side.png` beside main's build, `run-control`, whose pieces stand full size); Jurassic Tours the
-  same in a fresh Full Simulation park (`run-ride-final`, 0.0033). The original the same day under Proton, off-screen,
-  bought by clicks: its nodes polled from the placing click (`q598/orig`, `scalecurve.py`: 0.0031, 0.0011, 0.0010 off the
-  same curves) and filmed (`orig/film/*-sheet.png`), the same growth. Not seen: Jurassic Tours in the original (ten spots
-  refused, Q761); the camera's framing is not matched between the games (each frames its own build); the water jets of the
-  Hyenas and the Jungle Spray (M1 to M6, keyed the same way, not played); the three late tracks (`volcanol`, `wateridec`,
-  all at 1); the seven clips of other themes with scale keys and no position track; Full Simulation's shops (the same code).
+- Q687 (the karts' and the water ride's track pieces, decoded; Q587's first piece): the decode only, no code. Measured
+  in the original under Proton, off-screen, on `q581/karts.TPWS` (`q587/orig`, `original/trackcells.py`): a Dino Karts
+  looped as Q581's and a Splish Splash looped the other way round, every piece's row, model and turn, the bank at every
+  click (6500 and 5000 at the put-downs, 200 and 250 a piece, +600 for a run taken back) and the pulsing end (`B-3-run1.png`,
+  `W-8-closed.png`). Ours on the final binary (dll 73a596ed, `q587/ours`): the counted gaps and the bare station
+  (`ours-2-put.png`). Not seen: the hills, the add-ons, a junction or crossing piece (`X`, `X2`), the water pieces' own
+  clip 0xc, the pulse's colour beyond the red frame, and which of the put-down's three walk pairs runs.
 
 
 ## Numbers (take counts fresh; these go stale within a day)
@@ -53,8 +50,8 @@ Only the item just landed is here. Every earlier item's account is in `docs/hist
 | | | measured |
 |---|---|---|
 | Opcodes | **78** of 106 | 2026-10-20, Q553 (`FADEOBJ`), `case Opcode.` labels vs enum members |
-| Tests | **4097**, 0 fail, 0 skip with the game | 2026-10-27, Q693 (one test added) |
-| Tests without the game | **1502** ran, **2595** skipped, of 4097 | 2026-10-27, Q693 |
+| Tests | **4101**, 0 fail, 0 skip with the game | 2026-10-27, Q687 (none added) |
+| Tests without the game | **1505** ran, **2596** skipped, of 4101 | 2026-10-27, Q687 |
 | Build warnings | 115 after Q753, 132 before it (both `--no-incremental`, the 132 in a fresh worktree of `main`: the seven CA2022 short reads and the `Zio` advisory, repeated for each project that took it, gone); earlier: 121 in the main tree; 130 to 133 in a fresh worktree as NuGet's advisory list was last fetched, the ten or twelve more its advisories on ModKit's ImageSharp 3.1.6 (a sixth, GHSA-v76p-62qx-wwq2, published 2026-10-26: Q75, DECISIONS.md "Package advisories") | 2026-10-27 (the worktree's 133 at Q672's gate, 131 at fix group P's, run 11, and 130 at PERF PASS 1's; the main tree's 121 last counted 2026-10-13) |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 | Park load, Release | **3.1 to 3.4 s**, worst phase `audio` 1.04 s (`ground` 0.52 to 0.57, `terrain` 0.46 to 0.55, `objects` 0.35 to 0.47) | 2026-10-26, three runs, `perf/bench.sh` |

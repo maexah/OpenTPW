@@ -79,9 +79,12 @@ filed the items that cite it.
   (0xd or 0x12) and both mouths (0xb or 0x10) on the track grid and arms the queue; a click on a piece ("Left-click to
   edit this track") arms mode 0xb or 0x10 with it the anchor; each click lays a straight run, sound 0xce; the walk sets
   `+0x2c` and makes the sections, their collision objects and buoys (`ParkTrackRideTable`); a closed loop with the open
-  guard opens the ride, and a later queue edit opens a closed valid one (the tail `ride-operation.md` cites). Decode
-  first what it leaves unread: which `gk_trck*`/`wr_trck*` model a piece draws, a piece's cost and refund,
-  `FUN_0052c6f0`/`FUN_0052ccb0`. Confirm on `q581/karts.TPWS` by the same clicks as `q581/orig` (bought on preview
+  guard opens the ride, and a later queue edit opens a closed valid one (the tail `ride-operation.md` cites). What it
+  left unread is decoded (Q687, `park.md`, "A track piece's model, price and open end"): each piece's row and model and
+  the end caps its mask hides, 200 (250) a new piece and Backspace's refund, the open end's pulse
+  (`TrackRide_ShapeFromMouth`, `TrackRide_ShapeFromOtherMouth`), the carried ride's squares; build them with it, and
+  hold the pieces against `q587/orig/A-load.log` and `W-cells.log` (`original/trackcells.py`; a crossing or junction
+  piece, `X` and `X2`, is decoded and not measured). Confirm on `q581/karts.TPWS` by the same clicks as `q581/orig` (bought on preview
   cells (32,25) and (20,20), whose station sections are (30,25)/(32,25) and (18,19)/(20,19); loops to (34,29)/(28,29) and (22,23)/(16,23)): sections and buoys against `q581/orig/A-track.log` and
   `D-track.log`, and the pieces photographed beside the original's (`B-5-closed.png`, `D-13-boats.png`).
   From Q633: carried, a kart or water ride also lays its first track cells' squares (`FUN_005286a0`, `0x00529b35`),

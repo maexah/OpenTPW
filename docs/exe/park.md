@@ -1686,7 +1686,7 @@ of track, "Left-click to edit this track", with that piece's cell its anchor (`D
 button's release) plays sound 0xce and lays a straight run in 2-cell steps from the anchor to the click, moved onto the
 anchor's row or column, whichever is farther (the preview's cell reads the moved one), by ops `0x87`, the type, `0x80`,
 `0x82`, `0x83`, `0x85`, `0x86` and `0x81`. While `0x81` answers not nought the anchor moves to the click and the tool
-stays (`FUN_0052c6f0`, `FUN_0052ccb0` on the object, not read). When it answers nought (the run met track) or the click
+stays (`TrackRide_ShapeFromMouth` with 0, `TrackRide_ShapeFromOtherMouth` with 1: "A track piece's model, price and open end", below). When it answers nought (the run met track) or the click
 does not move the anchor, the circuit is walked into `+0x2c`; with 1 and the open guard (`FUN_004df290`) the ride opens
 (`FUN_004df390`); the pieces are put to clip 0xc (`TrackRide_PlayPiecesFromMouth`, `FUN_0052a490`, and with no circuit
 `TrackRide_PlayPiecesFromEnd`, `FUN_0052a700`, too; `BUMP 17` plays them 5 or 0xc the same way); the anchor goes to −1,
@@ -1766,10 +1766,10 @@ already has p's sign, else old + p), held at × 0.998 a tick while over 48,
 and its turn `+0x5c` is `+0x58 / 128` held to ±16; particle 0x60 one tick in eight of every 32nd in a go. Each car's
 looped sound is pitched speed / 3. Measured: 1287 to 1266 in eight ticks, turn 13 at 1772.
 
-**Not read**: which track model a piece draws (`gk_trck*`, `wr_trck*`; the track grid's tile rule, `FUN_0053afa0`,
-`FUN_0053a540`, but for type 25, below, and its tables `0x00762f30` and `0x00763138`), what a piece costs or refunds, `FUN_0052c6f0` and `FUN_0052ccb0`, the
-add-ons (12 and 13) and the hills (`gk_trckH*`), the seat a rider takes (`FUN_00549c60`), a car's height over the track,
-−9's and −10's flags 0x3c00, and the term in a boat's spin.
+**Not read**: the add-ons (12 and 13) and the hills (`gk_trckH*`; their rows and their reshaping by the mouths' walks
+are below, not measured), the seat a rider takes (`FUN_00549c60`), a car's height over the track, −9's and −10's
+flags 0x3c00, and the term in a boat's spin. Which model a piece draws, its price and refund, and the mouths' walks are
+read: "A track piece's model, price and open end", below.
 
 **The boundary hoarding's piece** (track type 25; fork watch 2026-10-24, `verify-world-other.md` L3; Q620). The cell
 retile `FUN_0053afa0` (`Track_RetileCell`) asks `FUN_0053a540` (`Track_PieceForCell`) for a piece, keeps its family, row and rotation at the track record's `+0x14`,
@@ -1842,6 +1842,85 @@ the walk's order, with the chooser above (`FreshParkBoundary`, `ParkBoundaryHoar
 straights drawing the fresh park's generator; the laying's draws before that are counted,
 `FRESH_BOUNDARY_LAYING_DRAWS`. Measured: the stock park's wall right of the gate and along row 13 in both games at the
 same cameras (Q620, `q620/overlay-gate-final.png`); a fresh park's in both games (Q656).
+
+#### A track piece's model, price and open end
+
+Read for Q687 in Ghidra and measured in the original under Proton on `q581/karts.TPWS` (`q587/orig`, `original/trackcells.py`,
+`q587/PREDICTION.txt` rounds O and W): a Dino Karts bought on (32,25) and looped south of its station as Q581's, then a
+Splish Splash bought on (20,20) and looped north of its own, the other way round.
+
+**The piece.** `Track_RetileCell` asks `Track_PieceForCell` (above) for a karts' track cell (0xb) out of table
+`0x00762f30` (sixteen rows of `{ row | 0x30000, rotation, mask }`, count `[0x00700c18]`) and for a water track cell (0x10)
+out of `BoundaryPieceRows` (`0x00762ff0`, family 4; only type 0x19's answer is made family 5): the same exact, then
+subset, match by the neighbour mask, so rows 0 to 8 are none, an end (1), a straight (2), a bend (3), a crossing (4) and
+the four junctions (5 to 8), at the boundary table's turns. Then a straight turns 180 more where its direction byte is
+`0x40` or `0x10`; an end or a straight takes a hill row by its flags' low four bits (+9, +12, +15, or 0x12); a bend of
+0xb or 0x10 adds 0x10, row 19, where (direction, mask) is (0x40, 0x50), (0x10, 0x14), (0x01, 0x41) or (0x04, 0x05), the
+flow leaving it the other way round; and a water crossing or junction with direction 0x14 takes turn 90, with 0x41 adds
+0x10, with 0x50 adds 0x10 and takes 270 (rows 20 to 24). The direction byte is the way the last run laid over the cell
+left it. The stations (0xd, 0x12) and every other type go to the path table `0x00763138`, family 1, which makes no model;
+a station cell is never retiled at all and reads family 0.
+Family 3 makes the piece by `TrackKit_MakeKartPiece` (`0x00522b90`), family 4 by `TrackKit_MakeWaterPiece`
+(`0x00522d50`), unless the cell carries the add-on flag 0x10 (the section keeps the add-on's model) or the row is 0: the
+model of its row in the kit's table, `0x007633e8` (karts, 20 rows) or `0x007634d8` (water, 25 rows) of
+`{ model, name, mask }`, which `TrackKit_LoadKartPieces` and `TrackKit_LoadWaterPieces` (`0x00522aa0`, `0x00522c60`) fill
+from `%s\rides\gokarts` and `%s\rides\wateride` with load flag `0x10422`, as items 17100 + row and 17200 + row, a row
+with no name taking the row before's model:
+
+    row    1     2     3     4     5     6     7     8     9     10    11    12    13    14    15    16    17    18    19    20    21    22    23    24
+    model  Q     S     B     X     (X)   (X)   (X)   (X)   H     (H)   (H)   H_U   (H_U) (H_U) H_D   (H_D) (H_D) H_A   B2    X2    (X2)  (X2)  (X2)  (X2)
+    mask   0x01  0x11  0     0x55  0x15  0x54  0x51  0x45  0     0x01  0x11  0     0x01  0x11  0     0x01  0x11  0     0     0x55  0x15  0x54  0x51  0x45
+
+The models are `gk_trck<model>.md2` and `wr_trck<model>.md2`; the karts' table stops at row 19, so rows 20 to 24 are the
+water kit's alone, and row 0 is `-`, no model. A piece is turned and moved as a boundary piece's (360 less the turn; the cell one on by it),
+flags `0x33a` with the 2 x 2 footprint at `0x008179f8`, and the row's mask hides each end cap whose lookup record's
+`+0x08` bit is in it (`FUN_0044b140`; FileFormats `models.md`, "End caps"): a straight hides both, an end the one toward
+its link, and a junction is the crossing with one cap left. A water piece also starts its clip 0xc as it is made
+(`FUN_004732a0( model, 0xc, 0, 7, 1.0, 0 )`). Measured, every piece of both loops as the rule gives: the karts' ends
+`gk_trckQ` at 90 and 270, straights `gk_trckS` at 0 (direction 0x01), 180 (0, direction 0x10) and 270 (90, direction 0x40), the
+karts' four corners `gk_trckB`, row 3; the water loop's four corners `wr_trckB2`, row 19, at 180, 90, 0 and 270.
+
+**The price.** `Costs.KartTrackCell` and `Costs.WaterTrackCell` (the `Costs` record at `0x007855fc`: queue, path, kart,
+water, map cell; the `.sam` loader's setters at `0x004081b6` and `0x004081c4`, the getters `Costs_KartTrackCell`
+`0x0052fb60` and `Costs_WaterTrackCell` `0x0052fb80`), Lost Kingdom's `Easy_Standard.sam` 200 and 250. `Track_StampCell`
+(`0x00538fc0`) charges it for a piece laid on a cell not already its type and refuses one above the balance; over its
+own type it is free and bumps the overlap counter `+0x20`; in mode 4, the put-down, and mode 0x3b (`[0x008186d4]` 1,
+`0x00524b4a`, `0x005253e9`) it charges nothing, so the station and both mouths come with the ride's price. The preview's
+verdict `Track_CellVerdict` (`0x00539760`) adds each such piece to the run's total (the yellow "$ N" under the money) and
+refuses a run whose total passes the balance (`c_cash`) or whose pieces meet another ride's track, station or the
+boundary. Measured: the put-down took 6500 (Splish Splash 5000) and nothing more; each click 200 (250) a new piece, the
+anchor's own piece nothing.
+
+**The refund.** Backspace with the track tool armed (on its release, `0x0040beaa`) runs `BuildTool_Backtrack`
+(`0x0052fe50`): the pending list's last run is cleared in mode 0x35 (op 0x32, `Track_ClearCell`, `0x0053b280`), the
+anchor goes back to the run's start and the tool stays. A piece whose overlap counter falls below nought (or under the
+sale's `[0x0081b46c]`, or forced, `[0x0081d7a8]`), a mouth only by the sale, is removed and refunds `FUN_004e2290`'s
+percentage of its price (`0x0053b603`..`0x0053b627`), 100 for a ride with no customers under 30 days old; its cell reads
+row 0x37, no piece. The sale clears and refunds every piece so, then withdraws two pieces' worth at the same percentage,
+the two mouths that came free (`0x00528179`, `addresses.md`). Measured: a three-piece run taken back, +600, its first cell
+an end piece again, the anchor on it.
+
+**The open end's pulse.** `TrackRide_ShapeFromMouth` (`0x0052c6f0`) walks from the mouth (x + 4, z + 1 at turn 0,
+heading 4; 1, 0x40 and 0x10 at 90, 180 and 270) and `TrackRide_ShapeFromOtherMouth` (`0x0052ccb0`) from the other mouth
+(x − 2, z + 1 at turn 0) heading away from the station, the circuit's way back walked backwards, each in 2-cell steps
+along the laid track, out of a bend the way its mask leaves, until a cell with no link onward, or the station met from
+its far side (answering 1). A cell with hill flags is reshaped by its neighbours (hills on both sides 4, on neither 1,
+ahead only 2, behind only 8) and retiled, with clip 0xc or 5 when asked. The cell it stops on with no link onward is
+pulsed when the second argument is 1 (`Model_PulseOn`, `0x00469580`: model flag `0x4000000`, the list `[0x007afe14]`)
+and stops pulsing when it is 0 (`Model_PulseOff`, `0x00469650`). `Model_PulseTick` (`0x00469840`, once a drawn frame from
+`0x0054e301`) moves a phase by twice the frame's seconds, wrapped at 2, and writes its triangle, 0 to 255 and back,
+into every vertex colour of the pulsed models as alpha and red 255 and that value for green and blue: red to white and
+back once a second. The tool's arming and each of its clicks call `ShapeFromMouth` with 0 and `ShapeFromOtherMouth` with
+1, so while the loop is open the other mouth, where the circuit must come back in, pulses; at the put-down a pair with
+`ShapeFromMouth` given 1 runs, so the mouth pulses until the tool is armed (which of `FUN_00524960`'s three such pairs,
+`0x00526b7a`, `0x00526f3c` or `0x0052718c`, is not read); a closed loop pulses nothing. Measured: the mouth after the
+put-down, the other mouth from the arming click until the loop closed (`q587/orig/B-3-run1.png`, red on the left), nothing after.
+
+**The carried ride's first track cells** (`TrackRide_CarrySquares`, `0x005286a0`, from `BuildTool_Placer` at `0x00529c65`
+and `0x00529ce1`): each mouth's 2 x 2 cells, by op 0x10b (karts) or 0x110 (water) with step 5 for the preview's squares,
+and 0x20b or 0x210 for the commit's check, whose refusal refuses the placement. Seen: the carried Splish Splash with both
+mouths' squares and their arrows (`q587/orig/W-1-before-put.png`). **OpenTPW** builds none of this yet: it counts
+`CARRY_PREVIEW_TRACK_START` and `PLACED_TRACK_RIDE_FIRST_TRACK_CELLS` (Q587).
 
 ### The ride object
 
