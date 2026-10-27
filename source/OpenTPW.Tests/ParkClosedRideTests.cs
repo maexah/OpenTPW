@@ -701,7 +701,7 @@ public class ParkClosedRideTests
 	/// held (<c>0x004cd340</c>, <c>0x004cd500</c> mode 2). The shipped park's mechanic keeps to (39,21) to (56,28),
 	/// which holds one of its eight entrances, (52,23); its handyman, entertainer and guard keep to areas too.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> another kind's areas counted; the whole map counted as an area; a corner's row or column left out; the entrances of another <c>mType</c>; an entrance counted for each area that holds it.</remarks>
+	/// <remarks><b>Mutations:</b> another kind's areas counted; the whole map counted as an area; a corner's row or column left out; the entrances of another <c>mType</c>; an entrance counted for each area that holds it; a mechanic with no area patrolling every entrance (<c>member.HasPatrolArea</c> left out of <c>MechanicPatrols</c>).</remarks>
 	[TestMethod]
 	public void TheAdvisorsParkFactsHoldTheEntrancesInsideTheMechanicsAreas()
 	{
@@ -726,6 +726,10 @@ public class ParkClosedRideTests
 			Assert.AreEqual( (1, 8, 3), Facts(), "a hire keeps to the whole map" );
 			second.SetPatrolArea( MapStep.CellId( 43, 29 ), MapStep.CellId( 52, 30 ) );
 			Assert.AreEqual( (2, 8, 3), Facts() );
+
+			// A mechanic with no area at all, nought and nought, counts as one with an area and holds no cell.
+			second.SetPatrolArea( 0, 0 );
+			Assert.AreEqual( (2, 8, 3), Facts(), "no area counts and holds no cell" );
 
 			second.ClearPatrolArea();
 			mechanic.ClearPatrolArea();

@@ -71,15 +71,41 @@ public class ShortReadTests
 		CollectionAssert.AreEqual( data, archive.buffer );
 	}
 
-	/// <summary>At a true end of file the buffer keeps its length and its unread tail stays nought, as before.</summary>
+	/// <summary>
+	/// At a true end of file each reader keeps its buffer's length, takes the bytes that are there and leaves the
+	/// unread tail nought, as before; a read that throws at the end (ReadExactly) fails this.
+	/// </summary>
 	[TestMethod]
-	public void AStreamReadFromPartWayLeavesTheTailNought()
+	[DataRow( "SaveReader" )]
+	[DataRow( "BFMUReader" )]
+	[DataRow( "BFSTReader" )]
+	[DataRow( "SoundFile" )]
+	[DataRow( "SdtArchive" )]
+	public void AStreamReadFromPartWayLeavesTheTailNought( string reader )
 	{
-		var data = Sample( "ABCD" );
+		// The last four bytes are the magic (for an archive, a file count of one, whose offset reads as nought):
+		// that is all the reader gets from a stream positioned at 60.
+		var data = Sample( "" );
+		var magic = reader == "BFMUReader" ? "BFMU" : reader == "BFSTReader" ? "BFST" : reader == "SdtArchive" ? "\x01\0\0\0" : "ABCD";
+		for ( var i = 0; i < 4; i++ )
+			data[60 + i] = (byte)magic[i];
 		var stream = new MemoryStream( data ) { Position = 60 };
-		var reader = new SaveReader( stream );
-		Assert.AreEqual( 64, reader.buffer.Length );
-		CollectionAssert.AreEqual( data[60..], reader.buffer[..4] );
-		Assert.IsTrue( reader.buffer[4..].All( b => b == 0 ) );
+
+		byte[] buffer;
+		switch ( reader )
+		{
+			case "SaveReader": buffer = new SaveReader( stream ).buffer; break;
+			case "BFMUReader": buffer = new BFMUReader( stream ).buffer; break;
+			case "BFSTReader": buffer = new BFSTReader( stream, "" ).buffer; break;
+			case "SoundFile": buffer = new SoundFile( stream ).buffer; break;
+			default:
+				using ( var archive = new SdtArchive( stream ) )
+					buffer = archive.buffer;
+				break;
+		}
+
+		Assert.AreEqual( 64, buffer.Length, reader );
+		CollectionAssert.AreEqual( data[60..], buffer[..4], reader );
+		Assert.IsTrue( buffer[4..].All( b => b == 0 ), reader );
 	}
 }

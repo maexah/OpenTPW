@@ -483,6 +483,17 @@ the bit cleared and `gui_CameraFlags`' follow bit `0x1000` with it (`and ch, 0xe
   key, point (x,y) yaw Y zoom Z -> (475,175) yaw 0 zoom 110, scroll S a second kept`, and a locator following lets go at
   its next frame (`Park locator: the camera's reset ends the follow of thing N`). **A deviation:** the yaw is set at
   once, as every turn here is (Q23), where the original's drawn turn eases over about 1.5 s.
+- **Reached in the other modes too** (read from the listing, never run). The update answers the bit in every mode it runs
+  in (`0x0042b3fc` for the orbit, `0x0042b40c` for a ride view's flags `0x3c`, `0x0042b46c` after the walking keys), and in
+  first person the viewfinder layer's `FUN_00488a00` runs the camera table on the key-up (`0x00488af8`). So Home or keypad
+  5 let go in first person puts the viewer (`0x007908f0`/`f8`, the walker's own place) at (475, 175), asked rotation 0, zoom
+  110, at once; leaving first person puts the orbit's saved point and yaw back (`0x0042af8c`) but not the zoom, so the
+  orbit comes back at 110. OpenTPW counts it, `CAMERA_RESET_FIRST_PERSON`, in `ParkCamcorderCameraMode.Update` behind the
+  orbit's gate, and moves nothing. **The ride view's arm is unsettled:** it is reached at `0x0042b40c`, and by the
+  listing neither the view's entry nor its exit saves or restores `0x007908f0`, so the orbit would come back at (475, 175),
+  and back in first person the ride under the moved point is looked up again (`0x0042a340`); what the player sees was not
+  traced or run, and the End's view, the only ride view this game reaches, hides both layers and takes keys in its own
+  handlers (`0x0048a740`, `0x0048a970`), not read.
 
 The camera persists a *saved* POI and *saved* Y rotation as well as the *required* ones — the shape of a camera that leaves its position and is put back (camcorder mode does exactly that).
 

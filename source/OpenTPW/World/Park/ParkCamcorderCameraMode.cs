@@ -319,6 +319,13 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 		// wheel there adds or takes 10 from the zoom with no flag test (0x0042a91d), so a wheel turned in first person changes
 		// the walk's speed (sqrt( zoom ) x 0.02) and the zoom the orbit comes back at. Read from the listing only, never
 		// turned in the original's first person. This reads no wheel and counts nothing.
+
+		// Not built: Home and keypad 5 let go reach the camera's reset in first person too, behind the same gate as the orbit's, and
+		// put the viewer at (475, 175) facing 0 (0x0042b518; docs/exe/park-engine.md, "The camera's reset"). Read from the
+		// listing, never run in the original's first person. This counts the release and moves nothing.
+		if ( ParkOrbitCameraMode.CameraTableOn && !Input.TextCaptured && ParkOrbitCameraMode.ResetReleased( Input.Releases ) )
+			Unimplemented.Report( "CAMERA_RESET_FIRST_PERSON" );
+
 		Steer();
 		Walk();
 

@@ -707,6 +707,27 @@ filed the items that cite it.
   staying the anchor. Confirm in Full Simulation (research and buy the rock and the tunnel, both left out of Instant
   Action): the cells the buy marks read with `parkfile.py` against the original's own save of the same buy, a sale
   clearing exactly those, and the sound place beside the original's.
+- [ ] **Q754. The lobby's build label letters one pixel right of the original's.** From the Q752 review (finding 2).
+  GAME8.bf4's 'v' has left 0, and the original's "v 2.0" has its ink at 751 to 772 of the 800 x 600 picture
+  (`q752/orig-a`), so its pen stands at 751, 1.3 px left of its box's 752.3 (1926 x 800 / 2048). Ours rounds the placed
+  x (`UiText.cs:72`, `MathF.Round( placed.X )`), puts the pen at 752 and the ink at 752 to 773. Read the plain label's
+  draw, `0x0048f830`'s rectangle (and `0x006ae550` if it is the text's own pen), to settle where the original puts the
+  pen inside its box, then make ours do the same (or say at the site why not). `hud.md` 3922 calls a one-pixel
+  difference "possible and unmeasured"; here it is measured. Compare under Proton at 800 x 600 and 1024 x 768 with the
+  text "v 2.0" (`VersionLabel` letters this build's name, so also read a longer text's pen).
+- [ ] **Q755. Home and keypad 5 in the original's first person (and its ride view) reach the camera's reset; ours counts
+  `CAMERA_RESET_FIRST_PERSON` and moves nothing.** From the Q690 review (finding 1; `park-engine.md`, "The camera's
+  reset"). By the listing the update answers the reset bit in every mode (`0x0042b3fc`, `0x0042b40c`, `0x0042b46c`) and
+  the viewfinder layer runs the camera table on the key-up (`0x00488af8`), so a release in first person puts the viewer
+  (`0x007908f0`/`f8`) at (475, 175), asked rotation 0, zoom 110 (the walk's speed is the zoom's `sqrt` term; leaving
+  puts the orbit's saved point and yaw back but not the zoom, so the orbit returns at zoom 110). Measure it first
+  under Proton (`campoi.py` in first person: the viewer, its heading and the zoom before and after a Home and a
+  keypad 5 release, the walk's speed after, and the orbit's zoom on leaving), then build it in
+  `ParkCamcorderCameraMode.Update` behind `ParkOrbitCameraMode.CameraTableOn`, replacing the count, and confirm both
+  games. Settle the ride view's arm too (reached at `0x0042b40c`; what the player sees is unsettled: neither the view's
+  entry nor its exit saves or restores `0x007908f0`, so by the listing the orbit would come back at (475, 175), and
+  back in first person the ride under the moved point is looked up again, `0x0042a340`). The End's view, the only ride
+  view this game reaches, takes keys in its own handlers (`0x0048a740`, `0x0048a970`): read them first.
 - [ ] **Q569. Where the original puts down a worker held at a save, decode first.** From the run 6 review of Q241j (VERIFY-3,
   "anything the first reader missed"; unsettled). The world writer installs the idle mode over the hand
   (`FUN_0046c350` at `0x00516d13`), which runs the outgoing mode's uninstall: for a worker picked up, the type-6
@@ -1918,10 +1939,9 @@ filed the items that cite it.
   `Public/MapFile.cs` (both unreferenced), `Render/Primitives/Cube.cs` and `ReadUIntN`. `Singleton.cs` is used by
   `UI/Cursor.cs`, though nothing reads its `Instance`. Left to Alexah's call, not to be started: `.gitignore` for `.claude/`,
   `.vscode/` and `.mcp.json`, ModKit as a whole, and the nullable warnings except in passing.
-  Also left (the 2026-09-26 staleness audit): the `Zio` 0.17.0 package in `OpenTPW.Common.csproj`, which no source
-  file uses and which carries a low advisory (`DECISIONS.md`, "Package advisories"), and the `PreferredBackend`
-  setting in `App.config` and `Settings.settings`, which nothing reads (`Settings.Default` is read for `GamePath` and
-  `GameWindowSize` only). Label both as dead by CODE at their sites; remove either only on Alexah's word.
+  Also left (the 2026-09-26 staleness audit): the `PreferredBackend` setting in `App.config` and `Settings.settings`,
+  which nothing reads (`Settings.Default` is read for `GamePath` and `GameWindowSize` only). Label it as dead by CODE
+  at its sites; remove it only on Alexah's word.
 - [ ] **Q161. Stale text in code strings, test names and one census key.** Found by the 2026-09-26 staleness audit,
   whose edits were to comments only. `Extensions.GetColor`'s `[Obsolete( "Use Color.Parse" )]` names a method that
   does not exist, and nothing calls `GetColor` (dead by CODE: label it, rule 3). `RideEffects.Trigger` reports
@@ -2084,6 +2104,9 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   From Q626 (`park-engine.md`, "Entering and leaving first person"): leaving first person puts back the asked rotation
   and leaves the drawn one at the walk's heading, so the view eases round to the saved one, 1.36 s from 98 degrees off
   (`q626/orig/b-poll.log`); `ParkCamcorderCameraMode.Leave` puts the yaw back at once. The ease built here carries it.
+  From Q690 (`park-engine.md`, "The camera's reset"): Home and keypad 5 write the asked rotation 0 and the drawn one eases
+  there, 1.42 s from 135 and, from 270, the long way down through 180 (both kept in 0..2 pi, `q690/orig/a-kp5.log`);
+  `ParkOrbitCameraMode.Reset` sets the yaw at once. The ease built here carries it.
   From the run review (2026-10-17, Q440): W and D scroll the orbit camera (`ParkOrbitCameraMode.cs`) without ending a
   locator's follow, where any pan in the original does (`0x0042ba37`, `0x0042ba92`; `ParkLocator.Following` is cleared only
   at its own fold, a mode change, a person gone and a step that finds nobody), so scrolling with the locator following

@@ -13,7 +13,8 @@ namespace OpenTPW.UI;
 /// </para>
 /// <para>
 /// <b>A deviation:</b> the original letters its own version (<c>L"v %d.%d"</c>, 2 and 0). This one letters OpenTPW's
-/// build, <c>weekly-YYYY-MM-DD</c> for a weekly build and <c>local</c> for any other (<see cref="LaunchReport.BuildName"/>),
+/// build, <c>weekly-YYYY-MM-DD</c> (a dry run's <c>weekly-test-N</c>), <c>local</c> for a build not given the tag
+/// (<see cref="LaunchReport.BuildName"/>),
 /// so a screenshot says which build it came from.
 /// </para>
 /// </summary>

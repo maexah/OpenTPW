@@ -598,6 +598,76 @@ public class ParkFullScreenViewTests
 		}
 	}
 
+	/// <summary>
+	/// <b>In first person the reset keys are counted, not built</b> (<c>CAMERA_RESET_FIRST_PERSON</c>, <c>0x0042b518</c>): a bare
+	/// Home or keypad 5 let go counts once each, and the viewer stays where it stood. Not held, not with a modifier, not under a
+	/// park screen and not with a text box holding the keyboard.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> counted on the press; a modifier let through; the park screen's gate or the text box's left
+	/// out; the count left out.</remarks>
+	[TestMethod]
+	public void TheResetKeysAreCountedInFirstPerson()
+	{
+		var stack = APark();
+		var park = AParkLevel( stack );
+		Unimplemented.Forget();
+
+		try
+		{
+			ParkOrbitCameraMode.PointOfInterest = new Vector3( 600f, 300f, 0f );
+			ParkCamcorderCameraMode.Enter();
+			var stood = ParkCamcorderCameraMode.Stand;
+
+			WorldFrame( stack, park, Down( Key.Home ) );
+			Assert.AreEqual( 0, Times( "CAMERA_RESET_FIRST_PERSON" ), "Home held: nothing yet" );
+			WorldFrame( stack, park, Up( Key.Home ) );
+			Assert.AreEqual( 1, Times( "CAMERA_RESET_FIRST_PERSON" ), "Home let go" );
+			WorldFrame( stack, park, Down( Key.Keypad5 ) );
+			WorldFrame( stack, park, Up( Key.Keypad5 ) );
+			Assert.AreEqual( 2, Times( "CAMERA_RESET_FIRST_PERSON" ), "keypad 5 let go" );
+			Assert.AreEqual( stood, ParkCamcorderCameraMode.Stand, "and nothing moves" );
+
+			WorldFrame( stack, park, Down( Key.ControlLeft ), Down( Key.Home ) );
+			WorldFrame( stack, park, Up( Key.Home ), Up( Key.ControlLeft ) );
+			WorldFrame( stack, park, Down( Key.Keypad6 ) );
+			WorldFrame( stack, park, Up( Key.Keypad6 ) );
+			Assert.AreEqual( 2, Times( "CAMERA_RESET_FIRST_PERSON" ), "Ctrl+Home and another key: not the row" );
+
+			WorldFrame( stack, park, Down( Key.Home ) );
+			Frame( stack, Up( Key.Home ) );
+			Input.TextCaptured = true;
+			Camera.Update();
+			Input.TextCaptured = false;
+			Assert.AreEqual( 2, Times( "CAMERA_RESET_FIRST_PERSON" ), "a text box with the keyboard: none" );
+
+			var screen = new AWindow( stack, modal: false, parkScreen: true );
+			stack.Open( screen );
+			WorldFrame( stack, park, Down( Key.Home ) );
+			WorldFrame( stack, park, Up( Key.Home ) );
+			Assert.AreEqual( 2, Times( "CAMERA_RESET_FIRST_PERSON" ), "under a park screen: no camera key" );
+			stack.Close( screen );
+
+			var file = new AFileScreen( stack );
+			stack.Open( file );
+			WorldFrame( stack, park, Down( Key.Home ) );
+			WorldFrame( stack, park, Up( Key.Home ) );
+			Assert.AreEqual( 2, Times( "CAMERA_RESET_FIRST_PERSON" ), "under a file screen: none" );
+			stack.Close( file );
+
+			WorldFrame( stack, park, Down( Key.Home ) );
+			WorldFrame( stack, park, Up( Key.Home ) );
+			Assert.AreEqual( 3, Times( "CAMERA_RESET_FIRST_PERSON" ), "and with the screens closed, counted again" );
+		}
+		finally
+		{
+			Input.TextCaptured = false;
+			Unimplemented.Forget();
+			ParkCamcorderCameraMode.Forget();
+			ParkOrbitCameraMode.Forget();
+			UI.ParkCategoryScreens.Seed();
+		}
+	}
+
 	/// <summary>A park's stack with a bare park level over it, the camera put on the orbit and its state forgotten.</summary>
 	private static Level AParkLevel( UI.WindowStack stack )
 	{

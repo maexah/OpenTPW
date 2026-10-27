@@ -900,7 +900,7 @@ with the tag where over 30% was. Main's build said the same line, moved nothing 
 | The tags in a park file | written and read | written and read (`saves.md`, "OpenTPW's writer, the aerial's tags") |
 | The other two events (`0x19`, the postcard's) | heard | nothing sends them here |
 
-**The golden tickets' tags, both games (Q707; `q707/p707t/`).** Alexah's jungle `New Save` with her Full Simulation
+**The golden tickets' tags, both games (Q707; `q707/p707t/`).** Alexah's jungle `New Save` with their Full Simulation
 profile less Locals 0 and 1 (Standard keys: `Visitors` 100, `PeopleInPark` 200). The original (`orig/O`, `tags.py`):
 at the `0xd8` line, tick 19115, a tag "YOU'VE WON A GOLDEN TICKET!", a blank line, "Congratulations! You've won a golden
 ticket for getting 100 visitors to your park. Keep up the good work!" at (84, 909, 154, 974); at the `0xd7` line, 19162,
@@ -5163,7 +5163,7 @@ second says the opposite of the row's condition; it is said as the cycle comes t
 
 **When it is said.** As any polled row (above, "The poll"): on the tick the cursor stands on row 19, posted and said on that
 tick where the advisor is free, else it waits in a slot. Measured in the original, off-screen (`q602/run.sh`, Q707's O2
-setup: Alexah's jungle `New Save` loaded on tick 19004 by her Full Simulation profile with no ticket; `brk.sh` on the four
+setup: Alexah's jungle `New Save` loaded on tick 19004 by their Full Simulation profile with no ticket; `brk.sh` on the four
 compares): the poll stood on row 19 on tick **19084** (`advisor.py`'s `poll=20`), and every reading was the file's
 (`q602/predict.py`, `parkfile.py -V`: five mechanics, each with an area, 25 of 71 entrances inside them): `eax 1b` (27 months), `eax 5`,
 `eax 23` (share 35; ECX 25, EDX 15 the remainder), `eax 145` (score 325 against 300). The same four on the same tick

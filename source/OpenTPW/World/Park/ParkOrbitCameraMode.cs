@@ -246,7 +246,7 @@ public sealed class ParkOrbitCameraMode : CameraMode
 		// held as the menu opens stops at once and nothing moves when it closes. Ours: the original's camera row stays
 		// latched when its key comes up behind the menu, so the camera creeps behind it and runs on after the close until
 		// the key is pressed and let go in the park again; that stuck key is not kept.
-		var keys = !UI.WindowStack.ParkScreenOpen && !UI.WindowStack.MapOpen && !UI.WindowStack.CameraKeysAway;
+		var keys = CameraTableOn;
 
 		if ( keys && Input.Pressed( InputButton.RotateLeft ) )
 			Yaw -= MathF.PI / 4f;
@@ -345,6 +345,12 @@ public sealed class ParkOrbitCameraMode : CameraMode
 		=> Input.HeldIn( down ) != Input.Modifiers.None
 			? 0f
 			: Held( down, Key.Down, Key.Keypad3 ) - Held( down, Key.Up, Key.Keypad1 );
+
+	/// <summary>
+	/// Whether the camera's key table is on: no park screen, map, message box or file screen holds it off (see the gate in
+	/// <see cref="Update"/>). Both the orbit and first person take the camera's keys behind it.
+	/// </summary>
+	internal static bool CameraTableOn => !UI.WindowStack.ParkScreenOpen && !UI.WindowStack.MapOpen && !UI.WindowStack.CameraKeysAway;
 
 	/// <summary>
 	/// Whether a reset key came up this frame with no modifier held: keypad 5 and Home, the camera table's rows 19 and 24

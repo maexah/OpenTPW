@@ -212,7 +212,11 @@ says so itself in the two places the 2.0 patch's readme promises:
     the left and in the middle. Its font is `0x0078b5dc + set x 0x138`, slot 6 of the set (`FUN_00485a70`'s table).
   - Measured in the running original at 800 x 600 (`q752/orig-a`, `uitree.py PID 0x00f82884+4`): the control at
     ( 1926, 1444, 1984, 1472 ) under the lobby root, skin vtable `0x006ff320`; GAME8.bf4 measures "v 2.0" 23 x 11, which
-    gives that box. Its ink, white at its brightest, is 751 to 772 across and 564 to 572 down of the 800 x 600 picture.
+    gives that box. Its ink, white at its brightest, is 751 to 772 across and 564 to 571 down of the 800 x 600 picture.
+    The pen differs by a pixel across: GAME8.bf4's 'v' has left 0, so the original's ink at 751 puts its pen at 751,
+    1.3 px left of the box's 752.3 (1926 x 800 / 2048); ours rounds the placed x (`UiText.cs:72`) and puts the pen at
+    752 and the ink at 752 to 773, against the original's 751 to 772. Not the glyph's own placement: the cause
+    (`0x0048f830`'s rectangle, or `0x006ae550`) is not read.
     A second control under the root, ( 1904, 1402, 2007, 1504 ), takes in the label's corner; what it is was not read.
 - **ALT-V in a park.** The key-table row at `0x00748140` (20 bytes: id 14, key 0x56 'V', modifier word 0x30, which the
   readme calls ALT) runs 0x0040c820, which calls 0x00481b70, a jump into undisassembled code at 0x0048f090 that formats

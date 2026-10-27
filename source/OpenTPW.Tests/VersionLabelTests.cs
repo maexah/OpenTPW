@@ -55,4 +55,36 @@ public class VersionLabelTests
 		// The original's control 0x8cfd55 at 800 x 600, read 2026-10-27 (Q752): ( 1926, 1444, 1984, 1472 ).
 		Assert.AreEqual( new UiRect( 1926, 1444, 1984, 1472 ), VersionLabel.Box( font.Measure( "v 2.0" ), font.LineHeight, 600 ) );
 	}
+
+	/// <summary>
+	/// <b>The label's box is measured for the set's screen, not the window's</b>: at 1280 x 720 the layout is 720 tall, so the
+	/// set is the 600 one drawn 1.2 times, and the box is the one 800 x 600 gives ( 1926, 1444, 1984, 1472 for "v 2.0" ). Passing
+	/// the window's 720, or the layout's, to <see cref="VersionLabel.Box"/> puts the left edge at 1935 and the top at 1449. A 900 x 1200 window
+	/// draws the 675 layout, the same set.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> <c>UiFonts.SetScreenHeight</c> replaced by <c>Screen.Size.Y</c> in <c>VersionLabel.OnUpdate</c>.</remarks>
+	[TestMethod]
+	public void TheLabelsBoxFollowsTheSetAtASizeBetweenTheSetOnes()
+	{
+		FileSystem = GameData.Required();
+		var before = Screen.Size;
+
+		try
+		{
+			foreach ( var size in new[] { new Point2( 1280, 720 ), new Point2( 900, 1200 ), new Point2( 800, 600 ) } )
+			{
+				Screen.Size = size;
+				Assert.AreEqual( 600, UiFonts.SetScreenHeight, $"the set at {size.X} x {size.Y}" );
+
+				var label = new VersionLabel( "v 2.0" );
+				label.Update();
+
+				Assert.AreEqual( new UiRect( 1926, 1444, 1984, 1472 ), label.Control.Rect, $"the box at {size.X} x {size.Y}" );
+			}
+		}
+		finally
+		{
+			Screen.Size = before;
+		}
+	}
 }

@@ -3965,7 +3965,7 @@ no selection mode, and keeps it as the message's last line even past the count; 
 response plus it, or the first response where it is past the count. A response's sample and lip file are its own row's
 (`0x00768fb8`): the "ticket only" lines rotate samples 293 to 295 and all move the mouth by lip file 293. Measured in
 the original (Q595, `q707/orig/O`, `original/advisorline.py`): Alexah's jungle `New Save` with Locals 0 and 1 taken out
-of her profile posts `0xd8` line 0 and `0xd7` line 1 on tick 19100; `0xd8` is said on 19115 (the line before it in its
+of their profile posts `0xd8` line 0 and `0xd7` line 1 on tick 19100; `0xd8` is said on 19115 (the line before it in its
 wait) with sample 446 on slot 1 in the helmet, its clips ending 8798 ms and its cue 7798 ms after the clock less 200,
 no lead-in, the wait 11464 ms; `0xd7` on 19162 with sample 294. With no ticket of any kind (`q707/orig/O2`) the six
 posts of four awards and the first ticket's two lines are said one a turn, the highest score first and equal scores
@@ -4000,10 +4000,10 @@ hint, `AdvisorScore_GoldTicketNearToXProfit` `0x005a0670`: profit past `ProfitYe
 posted-only row, and no `PUSH 0x13e` posts it: the original never says it.
 **Measured in the original** (Q708; `q708/PREDICTION.txt`). A fresh Full Simulation park (`freshfs.sh`,
 `original/loads.py`): the ring took its first load, of four, on tick 604, and `0x119` was said on 612, its turn, with no
-slot holding it first; row 282's `0x11a` waited in a slot behind it. Alexah's jungle `New Save` loaded on 19004 by her
+slot holding it first; row 282's `0x11a` waited in a slot behind it. Alexah's jungle `New Save` loaded on 19004 by their
 profile with no ticket (`q707/orig/O2`): `0x13a` 150 on 19059, `0x13c` 100 on 19060 and `0x13d` 100 on 19061, the poll's
-three turns; by her profile less Locals 0 and 1 (`q707/orig/O`): `0x13c` alone. There the advisor was busy with two lines
-this game does not say (row 257's sample 525 on 19040, Q713; row 19's sample 57 on 19084, Q602's decode, Q609's build), so each hint waited in
+three turns; by their profile less Locals 0 and 1 (`q707/orig/O`): `0x13c` alone. There the advisor was busy with two lines
+this game does not say then (row 257's sample 525 on 19040, which this game's row 257, scoring 24 on that load, does not say, Q713; row 19's sample 57 on 19084, which this game says on 22142, after its hint `0x13a`, Q609), so each hint waited in
 its slot: on 19100 `0xdc` took `0x13c`'s, `0x13a`'s was let go on 19502 at its turn, nought by then, and `0x13d` still
 waited on 19561.
 **OpenTPW** (Q708: `ParkAdvisorMessages.TicketExplanation` to `NearHappinessTicket`, `TicketHint`, `HintScore`;

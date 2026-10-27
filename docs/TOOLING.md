@@ -345,7 +345,7 @@ Each was found by trial in the item named, and cost a run to find.
   conflict from `objdump` of `testme.exe` and at most fifteen private `gd` calls, reading our facts from committed
   `main` by `git grep` (`VERIFY.md` is its brief), and writes `verify-<area>.md`; only CONFIRMED, or the confirmed
   part of PARTLY, is used. (5) Write `REPORT.md` (leads that held and what they serve, our doc lines found wrong) and
-  report to Alexah. (6) **File only on Alexah's word** (hers, 2026-10-16, in the coordinator session: "file and fix"):
+  report to Alexah. (6) **File only on Alexah's word** (theirs, 2026-10-16, in the coordinator session: "file and fix"):
   notes under the items the leads serve, new items after the queue's last, our wrong doc lines fixed, each citing
   "fork watch <date>" and the verify file's lead id. Never a sweep-only claim.
 - **A member's walk watched in the original, and a patrol area set without the tool** (Q434, `q434/orig/run-b.sh`):
@@ -1094,7 +1094,7 @@ after its poller starts**, so a key meant inside either line cannot be sent afte
   above the flags (which wave every frame) before the bus stops by x 960. A Hot Pot's boats in view: `camera 420 245
   90 180` after `hot_pot()` (`buy 1140 41 23 0`); the smoke recipe's 435 320 110 180 frames the smoke, not the pot.
 - **A golden ticket won in both games** (Q591, `q706/`): a copy of Alexah's Full Simulation profile with tickets taken
-  out, `gmsfile.put( copy, tickets={'jungle': [0,0,1,0,0,0]} )` (`q706/gms-L01off.dat`), so her jungle `New Save.TPWS`
+  out, `gmsfile.put( copy, tickets={'jungle': [0,0,1,0,0,0]} )` (`q706/gms-L01off.dat`), so their jungle `New Save.TPWS`
   (tick 19004, 759 visitors to date, some 280 inside) wins Locals 0 and 1 again on tick 19100. Here: `q706/confirm.py <out>
   <bin> L` (`fs_profile`, `enter()`, `pause`, the file loaded from the list, run to 19101 and to 19201, the `tickets`
   census, `savepark` and the private `gms.dat` read back; `A` Alexah's own profile, `I` the Instant Action player, `P` back to the lobby after the award and each island's panel shot). The
