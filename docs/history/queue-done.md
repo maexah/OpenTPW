@@ -10588,6 +10588,30 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   handing-over clicks; `rj_laypath_2` 0.383 and 0.268 against 0.148 to 0.208 quiet. Unit test
   `EveryUnrefusedPathAndQueueClickPlaysTheLayingSound`; `mutate.py` 7 of 7. The click beside an open screen was not run
   in either game, and the track tool's play waits on the coaster bar.
+- [x] **Q672. Ctrl+click on a placed thing buys another (Q635's build).** The original's world click on a placed object
+  with Ctrl down (`GetAsyncKeyState( 0x11 )`, either Ctrl) opens no window: where the item's control-table price is at most
+  the bank it puts the item in the hand as the buy screen does, turned to the clicked thing's angle, nothing charged until
+  the put-down; a dearer one plays `cat_ui` `0x1D` and leaves the hand empty (`park-engine.md`, "Ctrl+click buys another of
+  a placed thing"). Ours opens the window (`Level.ClickWorldAt`, no Ctrl arm; the click is counted
+  `OBJECT_CLONE_CTRL_CLICK`, window still opened); the put-down's Ctrl half
+  is built (`ParkBuilding.PlaceCarried`). Build the arm before `OpenObjectWindow`, on Ctrl held whatever Shift and Alt
+  are (the original asks `VK_CONTROL` alone, not the modifier word that `Input.ControlAlone` and the `Clone` binding test), with the refusal through
+  `ParkBuyScreen.RefusedSound`'s sound (`cat_ui` `0x1D`, as the buy screen's refusal; not `ParkBuildMode.RefusedSound`, `0xaf`).
+  Remove the report when the arm is built. Do not reuse `ParkBuilding.Carry` as it is: it applies the golden-ticket test
+  to a mystery item (`GoldenTickets.CanBuyRide`) and refuses an item no buy tab lists (`UiType` outside 0..`Feature`),
+  neither of which the original's clone makes (it asks the price against the bank alone, `0x00487b14`..`0x00487b44`), and
+  it passes angle 0: `Hold( catalogueId, angle )` takes the angle but is private, so the clone needs a public entry that
+  passes the clicked thing's angle. A Ctrl+click with an item already in the hand goes, by the listing
+  (`0x00487a3d`..`0x00487a57`), to the mode's put-down, not to the clone (read, not run). Open: a mystery ride's clone asks for cash only (read, not run), and a fixed item
+  with no catalogue row (the gate's booths) reaches category 13 or 14, not 4. Confirm: `q635/confirm.py` (U1 becomes the
+  Belly Bounce in the hand, item 1100, no window; then put down for 500 and the queue tool), twice, and the bank at 50
+  refused with the sound, beside `q635/orig/b-run.out` and `c2-run.out`.
+  **Done (2026-10-26):** built as asked (`ParkBuilding.CarryAnother`, the arm in `Level.ClickWorldAt`; the count retired);
+  `ACtrlClickOnAPlacedThingPutsAnotherOfItInTheHand`, seven bugs put back, seven caught (`q672/mutate.out`). In the game
+  (`q672/run5`, the final build, seven of seven): the Belly Bounce cloned twice, put down for 500 each with the queue tool;
+  a Small Toilet standing at 270 held and built at 270 for 100; the bank at 50 refused with `0x1D`, a voice, no window. The
+  original's toilet clone reads rotation 270, its put-down 100 (`q672/orig/a-run.out`; `q672/side-by-side.png`). Not run:
+  a mystery ride's clone, a Ctrl+click with an item already in the hand.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

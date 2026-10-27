@@ -74,24 +74,6 @@ The review of the run of 2026-10-16/17 put Q444 to Q446 first (done; its finding
 The review of the run of 2026-10-17/18 (its findings are `~/.cache/tpw-harnesses/handoff/review3/`, `VERIFY-<n>.md`)
 filed the items that cite it.
 
-- [ ] **Q672. Ctrl+click on a placed thing buys another (Q635's build).** The original's world click on a placed object
-  with Ctrl down (`GetAsyncKeyState( 0x11 )`, either Ctrl) opens no window: where the item's control-table price is at most
-  the bank it puts the item in the hand as the buy screen does, turned to the clicked thing's angle, nothing charged until
-  the put-down; a dearer one plays `cat_ui` `0x1D` and leaves the hand empty (`park-engine.md`, "Ctrl+click buys another of
-  a placed thing"). Ours opens the window (`Level.ClickWorldAt`, no Ctrl arm; the click is counted
-  `OBJECT_CLONE_CTRL_CLICK`, window still opened); the put-down's Ctrl half
-  is built (`ParkBuilding.PlaceCarried`). Build the arm before `OpenObjectWindow`, on Ctrl held whatever Shift and Alt
-  are (the original asks `VK_CONTROL` alone, not the modifier word that `Input.ControlAlone` and the `Clone` binding test), with the refusal through
-  `ParkBuyScreen.RefusedSound`'s sound (`cat_ui` `0x1D`, as the buy screen's refusal; not `ParkBuildMode.RefusedSound`, `0xaf`).
-  Remove the report when the arm is built. Do not reuse `ParkBuilding.Carry` as it is: it applies the golden-ticket test
-  to a mystery item (`GoldenTickets.CanBuyRide`) and refuses an item no buy tab lists (`UiType` outside 0..`Feature`),
-  neither of which the original's clone makes (it asks the price against the bank alone, `0x00487b14`..`0x00487b44`), and
-  it passes angle 0: `Hold( catalogueId, angle )` takes the angle but is private, so the clone needs a public entry that
-  passes the clicked thing's angle. A Ctrl+click with an item already in the hand goes, by the listing
-  (`0x00487a3d`..`0x00487a57`), to the mode's put-down, not to the clone (read, not run). Open: a mystery ride's clone asks for cash only (read, not run), and a fixed item
-  with no catalogue row (the gate's booths) reaches category 13 or 14, not 4. Confirm: `q635/confirm.py` (U1 becomes the
-  Belly Bounce in the hand, item 1100, no window; then put down for 500 and the queue tool), twice, and the bank at 50
-  refused with the sound, beside `q635/orig/b-run.out` and `c2-run.out`.
 - [ ] **Q673. A tag put on the aerial shows at once here, about half a second after the top lifts in the original.**
   Seen by Q637 in the original's film (`q637/orig/film-on-sheet.png`: the top lifted at frame 212, the tag's picture
   from frame 228, 0.53 s on, with sparkles about it). The mast's `0x100001` arm links the tag and posts it message 6
@@ -1184,7 +1166,8 @@ filed the items that cite it.
   (`FUN_004ac270` at `0x004ac7f6`: a mystery row short of tickets, a row dearer than the balance), when a Ctrl+click
   Clone is dearer than the balance (`FUN_004879d0`, the call at `0x00487b56`), and from `FUN_004af480` (`0x004af5d6`, a control of
   window stream `0x00755750` not identified). The buy screen's refusal, both arms, is built (Q709, `ParkBuyScreen.Chose`,
-  `RefusedSound`), not yet caught by the disk driver; `FUN_004af480` is not built, and Clone has nothing behind it (Q672).
+  `RefusedSound`), not yet caught by the disk driver; `FUN_004af480` is not built; the Clone's refusal is built (Q672, `Level.ClickWorldAt`,
+  the same `RefusedSound`), its sound asked for ("a voice", `q672/run5`), not caught by the disk driver either.
   Confirm: the sound caught by the disk driver on a refused row.
   - **Note (fork watch 2026-10-16, `verify-audio-fx.md` A3):** the list rows' click sound is built (`UiSounds`,
     `WindowStack`'s hook `0x00485780`): the control's message `0x100` handler (`0x004857b8`) plays `Select3` (189,
@@ -2209,6 +2192,10 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   clears the whole flag word, and giving terrain back its save's record rather than clearing it.
   - **Note (fork review, 2026-09-30):** the `.hmp` adds nothing here: its mark plane equals `Info.Shape` in all 274 pictured items
     (Q191).
+  - **Note (Q672):** ours refuses any path cell under a footprint (`ParkBuilding.Refusal`, "is a path"), where this item says
+    the original allows bare ground or path. Seen: the Belly Bounce with the pointer on (41,22) is refused here, "will not
+    fit at (40,20) - (40,21) is a path" (`q672/run3`), and taken by the original from the same pointer cell, 88181 to
+    87701 (`q635/orig/b-run.out` 1-4-put). Which of its cells may stand on a path there is not read.
 - [ ] **Q38. What building and selling look and sound like.** Counted, not built: the death particle
   (`DESTROY_PARTICLE_EFFECT`, `Info.DestroyParticleEffect`, 75-78, a world effect spread over the
   footprint) and the demolish sound (`DEMOLISH_SOUND`, `0x96`-`0x99` by size). The build side's particle is

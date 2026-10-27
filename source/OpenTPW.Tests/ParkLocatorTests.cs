@@ -564,34 +564,74 @@ public class ParkLocatorTests
 	}
 
 	/// <summary>
-	/// <b>A Ctrl+click on a placed thing is counted as the original's clone, and still opens the window</b>
-	/// (<c>FUN_004879d0</c>, <c>docs/exe/park-engine.md</c>, "Ctrl+click buys another of a placed thing"; Q672). Without
-	/// Ctrl nothing is reported; with Ctrl, or Ctrl and Shift (the original asks <c>VK_CONTROL</c> alone), the click is
-	/// reported once and the ride's window opens as before.
+	/// <b>A Ctrl+click on a placed thing puts another of it in the hand, turned as it is, and opens no window</b>
+	/// (<c>0x00487ac0</c>..<c>0x00487bf4</c>, <c>docs/exe/park-engine.md</c>, "Ctrl+click buys another of a placed
+	/// thing"): the Belly Bounce (thing 13, item 1100, 500) with Ctrl alone, with Ctrl and Shift (the original asks
+	/// <c>VK_CONTROL</c> alone), and with the bank at exactly its price (<c>jle</c> at <c>0x00487b44</c>); the first stock
+	/// thing standing turned keeps its angle in the hand; and one whose item no buy tab lists is held all the same, the clone
+	/// asking the bank alone. Nothing is charged. With the bank one short it plays <c>cat_ui</c> <c>0x1D</c>, opens nothing
+	/// and leaves the hand empty; with no Ctrl the window opens as before.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the report removed; the report made on every click; Ctrl alone asked for.</remarks>
+	/// <remarks><b>Mutations:</b> the arm removed; Ctrl alone asked for; the angle passed as nought; the bank test made
+	/// strict; the bank test removed; <c>Carry</c>'s buy-tab test reused; the refusal's sound changed.</remarks>
 	[TestMethod]
-	public void ACtrlClickOnAPlacedThingIsCountedAsTheUnbuiltClone()
+	public void ACtrlClickOnAPlacedThingPutsAnotherOfItInTheHand()
 	{
 		typeof( Level ).GetProperty( nameof( Level.Kind ) )!.SetValue( Level.Current, Level.Scene.Park );
+		var state = Level.Current!.ParkState!;
+		var catalogue = Level.Current.Catalogue!;
 		var window = () => _stack.Windows.OfType<ParkObjectWindow>().SingleOrDefault();
-		int Counted() => Unimplemented.Summary.Where( gap => gap.What == "OBJECT_CLONE_CTRL_CLICK" ).Sum( gap => gap.Times );
+		var ctrl = () => Input.Keyboard = new Input.KeyboardInfo( new List<Key> { Key.ControlLeft } );
 
-		Unimplemented.Forget();
-		StringAssert.Contains( Level.Current!.ClickWorldAt( 51, 23, 0, 13 ), "opened the window for thing 13" );
-		Assert.AreEqual( 0, Counted(), "no Ctrl: nothing reported" );
-		_stack.Close( window()! );
+		try
+		{
+			state.SetBalance( 88000 );
+			ctrl();
+			StringAssert.Contains( Level.Current.ClickWorldAt( 51, 23, 0, 13 ), "carry another: holding 'Belly Bounce' (1100) at 500, turned 0" );
+			Assert.AreEqual( 1100, ParkBuilding.Carrying );
+			Assert.IsNull( window(), "Ctrl: no window" );
+			Assert.AreEqual( 88000, state.Balance, "nothing charged until the put-down" );
+			ParkHand.LetGo();
 
-		Input.Keyboard = new Input.KeyboardInfo( new List<Key> { Key.ControlLeft } );
-		StringAssert.Contains( Level.Current.ClickWorldAt( 51, 23, 0, 13 ), "opened the window for thing 13" );
-		Assert.AreEqual( 1, Counted(), "Ctrl: reported once" );
-		_stack.Close( window()! );
+			Input.Keyboard = new Input.KeyboardInfo( new List<Key> { Key.ControlRight, Key.ShiftLeft } );
+			Level.Current.ClickWorldAt( 51, 23, 0, 13 );
+			Assert.AreEqual( 1100, ParkBuilding.Carrying, "Ctrl with Shift is still Ctrl" );
+			ParkHand.LetGo();
 
-		Input.Keyboard = new Input.KeyboardInfo( new List<Key> { Key.ControlRight, Key.ShiftLeft } );
-		StringAssert.Contains( Level.Current.ClickWorldAt( 51, 23, 0, 13 ), "opened the window for thing 13" );
-		Assert.AreEqual( 2, Counted(), "Ctrl with Shift is still Ctrl" );
-		_stack.Close( window()! );
-		Input.Keyboard = new();
+			var turned = state.Objects.First( placed => placed.Angle != 0 && catalogue.TryGet( placed.CatalogueId, out _ ) );
+			ctrl();
+			Level.Current.ClickWorldAt( 51, 23, 0, turned.ThingId );
+			Assert.AreEqual( (turned.CatalogueId, turned.Angle), (ParkBuilding.Carrying, ParkBuilding.CarryingAngle), $"thing {turned.ThingId} turned" );
+			ParkHand.LetGo();
+
+			var unlisted = state.Objects.First( placed => catalogue.TryGet( placed.CatalogueId, out var item )
+				&& item.UiType is < 0 or > ItemDescriptionFile.Feature && item.BuildPrice <= state.Balance );
+			Level.Current.ClickWorldAt( 51, 23, 0, unlisted.ThingId );
+			Assert.AreEqual( unlisted.CatalogueId, ParkBuilding.Carrying, $"thing {unlisted.ThingId}, listed on no buy tab, is held" );
+			ParkHand.LetGo();
+
+			state.SetBalance( 500 );
+			Level.Current.ClickWorldAt( 51, 23, 0, 13 );
+			Assert.AreEqual( 1100, ParkBuilding.Carrying, "a bank of exactly the price takes it" );
+			ParkHand.LetGo();
+
+			state.SetBalance( 499 );
+			UiSounds.LastAsked = null;
+			StringAssert.Contains( Level.Current.ClickWorldAt( 51, 23, 0, 13 ), "costs 500 and the park has 499 - cat_ui 0x1d for the refusal" );
+			Assert.AreEqual( 0x1d, UiSounds.LastAsked, "the buy screen's refusal" );
+			Assert.AreEqual( 0, ParkBuilding.Carrying, "refused: the hand stays empty" );
+			Assert.IsNull( window(), "refused: no window either" );
+
+			Input.Keyboard = new();
+			StringAssert.Contains( Level.Current.ClickWorldAt( 51, 23, 0, 13 ), "opened the window for thing 13" );
+			Assert.AreEqual( 0, ParkBuilding.Carrying, "no Ctrl: the window, not the hand" );
+			_stack.Close( window()! );
+		}
+		finally
+		{
+			Input.Keyboard = new();
+			ParkHand.LetGo();
+		}
 	}
 
 	/// <summary>

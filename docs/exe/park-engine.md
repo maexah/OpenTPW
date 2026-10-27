@@ -1857,7 +1857,9 @@ Ctrl+click on a placed one.
 Measured in the original (`q635/orig/`, `PREDICTION.txt`; the stock park off-screen, the camera 470,270 125 180):
 Ctrl+click on the Belly Bounce (51,23), category 4, took the tool word `[0x0081ae2c]` from 0 to 4, the item
 `[0x008186e0]` to 1100 and the rotation `[0x0081d7a4]` to 0 (the Belly Bounce stands at 0, so the turn is read, not
-seen), with no window (`[0x007c2658]` 0) and the bank unmoved;
+seen), with no window (`[0x007c2658]` 0) and the bank unmoved. The turn is seen on a Small Toilet (thing 22, (55,16),
+standing at 270; `q672/orig/a-run.out`): Ctrl+click took the tool to 4, the item to 1402 and the rotation to **270**, no window,
+88112 unmoved; put down plain on (41,24), 88112 to 88012 and the tool to 0 (`a-3-over.png`, `a-4-put.png`);
 the plain put-down on (48,31), in a fresh load (`c2`), took 88112 to 87612 and the tool to 3 (`c2-4-put.png`), and in the
 first load (`b`) on (41,22) 88181 to 87701 (480; the bank also moves by tens between readings with nothing done, 88201 to 88181
 from 1-2 to 1-3, so 500 less the gate's takings is not the whole account). The Drinks Shop (43,30) Ctrl+clicked took item 1203; put down with Ctrl held on
@@ -1865,10 +1867,15 @@ from 1-2 to 1-3, so 500 less the gate's takings is not the whole account). The D
 the tool away (`b-3-4-put-ctrl.png`, `b-3-5-put-plain.png`). With the bank held at 50 (`thingpoke.py`) the Ctrl+click
 left the tool at 0 and `brk.sh` caught `0x00487b56` once, `esi` 500, the Belly Bounce's price (`b-brk.log`).
 
-**OpenTPW** (main `e457475c`, `q635/run3`, five of five): the same Ctrl+click opens the Belly Bounce's window and
-leaves the hand empty (`Level.ClickWorldAt` has no Ctrl arm; the click is counted `OBJECT_CLONE_CTRL_CLICK`); the put-down's half is built
-(`ParkBuilding.PlaceCarried`: the shop kept under Ctrl, "Ctrl is held, so another is still in the hand", 650 each; the
-Belly Bounce handing over the queue tool). The clone is Q672. Side by side: `q635/side-by-side.png`.
+**OpenTPW** (Q672) builds the clone in `Level.ClickWorldAt` before the window, on Ctrl whatever Shift and Alt are:
+`ParkBuilding.CarryAnother` asks the item's price against the bank alone (no buy tab, no golden tickets) and holds it at the
+clicked thing's angle; dearer, `cat_ui` `0x1D` and an empty hand. The put-down's half is `ParkBuilding.PlaceCarried`'s (the
+shop kept under Ctrl; a thing with a queue handing over the queue tool). Measured (`q672/run5`, seven of seven): the Belly
+Bounce's Ctrl+click holds 1100 at 0, no window, 88112 unmoved; put down on (48,31) for 500, the queue tool, a right click
+puts it away; a second clone on (44,24), 500 again; the toilet thing 22 held turned 270 and built on (41,24) as thing 45
+turned 270, 100; the bank at 50 refused with the sound and no window; without Ctrl the window. Side by side:
+`q672/side-by-side.png` (the views face opposite ways). The put-down on (41,22) that the original's run `b` made is refused
+here, "(40,21) is a path", where the original lets a footprint stand on path (Q37).
 
 ### Picking is a real ray cast, not a grid lookup
 
@@ -3637,7 +3644,7 @@ capacity and duration commit **byte-wide** where speed is a dword.
 
 **Ctrl+click on a placed object does not open its window** - it buys another copy of the same item and
 puts it in the cursor (when the bank covers the price, else the refusal sound; "Ctrl+click buys another of a placed thing",
-above, and Q672).
+above; built, Q672).
 
 #### The RIDE window, walked: `0x00755150`, 1536 bytes, 39 controls
 

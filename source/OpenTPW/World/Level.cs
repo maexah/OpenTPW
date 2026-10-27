@@ -2740,10 +2740,19 @@ public class Level
 
 		if ( placed != 0 )
 		{
-			// The original's Ctrl+click here buys another of the thing instead of opening its window
-			// (docs/exe/park-engine.md, "Ctrl+click buys another of a placed thing"; Q672). Not built: the window opens.
+			// CTRL, WHATEVER SHIFT AND ALT ARE, PUTS ANOTHER OF IT IN THE HAND and opens no window: the original asks
+			// VK_CONTROL alone (0x00487ac0). Too dear, it plays the buy screen's refusal, cat_ui 0x1D (0x00487b56), and the
+			// hand stays empty (docs/exe/park-engine.md, "Ctrl+click buys another of a placed thing").
 			if ( (Input.Held & Input.Modifiers.Control) != 0 )
-				Unimplemented.Report( "OBJECT_CLONE_CTRL_CLICK" );
+			{
+				var another = ParkBuilding.CarryAnother( placed, out var held );
+
+				if ( held )
+					return $"world click: {another}";
+
+				return $"world click: {another} - cat_ui 0x{UI.ParkBuyScreen.RefusedSound:x} for the refusal, " +
+					$"{(UiSounds.Interface( UI.ParkBuyScreen.RefusedSound ) ? "a voice" : "no voice")}";
+			}
 
 			OpenObjectWindow( placed );
 

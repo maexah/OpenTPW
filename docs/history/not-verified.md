@@ -5,6 +5,12 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q671 (the path and queue tools' laying sound `0x65`): ours on the final build (`q671/run1`: the path tool's two
+  clicks, the queue tool's join and its anchor click, each "cat_ui 0x65 ..., a voice" and `rj_laypath_2` 0.947 to 1.000
+  in the mix) and the original's queue clicks under a breakpoint (`q671/orig`: two hits of effect `0x65` from
+  `0x005271ef`), `side-by-side.png`. Not seen: a click beside an open park screen in either game (the unit test holds
+  ours; the original's by the listing alone), how loud the original's is against ours (its capture is on its own
+  scale), a queue run laid without joining, and the coaster bar's track tool, unbuilt.
 - Q670 (the park-entry flight's length, measured; three log lines added): the original read a pass at a time
   (`q670/orig-c`: the turn 2.0505 rad in 4.101 s, the fly-in 3.067 s, the park at +7.23 s) and ours on the final build
   from the same turn (`q670/run2`: "facing the gate after 4.114 s", "arrived ... after 7.206 s"), `side-by-side.png`.

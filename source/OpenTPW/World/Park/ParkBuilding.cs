@@ -1237,8 +1237,9 @@ public static class ParkBuilding
 	public static int Carrying { get; private set; }
 
 	/// <summary>
-	/// The way what is in the hand faces when it goes down, in degrees: a moved thing's own, and nought for a
-	/// purchase. Nothing here turns it while it is carried.
+	/// The way what is in the hand faces when it goes down, in degrees: a moved thing's own, the clicked thing's for a
+	/// Ctrl+click's other of it (<see cref="CarryAnother"/>), and nought for a purchase. Nothing here turns it while it
+	/// is carried.
 	/// </summary>
 	/// <remarks>
 	/// <b>A deviation:</b> the original keeps one rotation, <c>DAT_0081d7a4</c>, which a purchase does not set,
@@ -1290,6 +1291,35 @@ public static class ParkBuilding
 		held = true;
 
 		return $"carry: holding '{item.Name}' ({catalogueId}) at {item.BuildPrice}";
+	}
+
+	/// <summary>
+	/// Takes another of a placed thing into the hand, turned to its angle - the original's Ctrl+click on a placed object
+	/// (<c>0x00487ad4</c>..<c>0x00487bf4</c>; <c>docs/exe/park-engine.md</c>, "Ctrl+click buys another of a placed
+	/// thing"). Its one test is the item's price against the bank (<c>0x00487b14</c>..<c>0x00487b44</c>): no buy tab is
+	/// asked, and a mystery ride asks its cash price, not the tickets. Nothing is charged until the put-down, as a buy.
+	/// </summary>
+	/// <param name="held">Whether the item went into the hand; a refusal leaves the hand as it was.</param>
+	public static string CarryAnother( int thingId, out bool held )
+	{
+		held = false;
+
+		if ( Level.Current is not { ParkState: { } state, Catalogue: { } catalogue } )
+			return "carry another: a park has to be loaded";
+
+		if ( !state.TryObject( thingId, out var placed ) )
+			return $"carry another: nothing in the park is thing {thingId}";
+
+		if ( !catalogue.TryGet( placed.CatalogueId, out var item ) )
+			return $"carry another: this theme has no item {placed.CatalogueId}";
+
+		if ( item.BuildPrice > state.Balance )
+			return $"carry another: '{item.Name}' costs {item.BuildPrice} and the park has {state.Balance}";
+
+		Hold( placed.CatalogueId, placed.Angle );
+		held = true;
+
+		return $"carry another: holding '{item.Name}' ({placed.CatalogueId}) at {item.BuildPrice}, turned {placed.Angle} as thing {thingId}";
 	}
 
 	/// <summary>Puts an item in the hand, facing a way.</summary>

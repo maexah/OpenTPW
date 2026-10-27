@@ -1384,6 +1384,13 @@ GH=766` there, or the pointer is off):
   `bank.py` either side; the gate's takings land 10 or 20 at a time between reads. Here the same view is
   `camera 470 270 125 -180` (`lib/bothcam.py`), cells by `cellprobe.py`'s `find` under `tool path`, Ctrl by
   `key_down( "Control_L" )` around `button( 1 )`, and `hand` prints `hand: item N` (an empty hand is `item 0`).
+  **One camera per target** (Q672, `q672/confirm.py`'s `aim`, `look` and `over`): at 1280 x 720 one shared view lost a
+  target off the frame twice, so each cell is found with the camera on it (`camera X*10+5 Y*10+5 110 0`, `step 10`), every
+  pixel before anything is carried (`find` arms `tool path`, which lets the hand go), and each click goes back to its own
+  cell's camera. Every target then sits at the window's middle, so a pointer moved to the same pixel after a camera move
+  does not move and the hovered cell, and the carried squares drawn from it, stay the old view's: nudge it a few pixels
+  and back, then `step`, before a photograph. Read `tool`'s mode number, not its words: the idle reply carries its
+  usage, "`tool queue <thingId>`". The original's half is `q672/orig/run.sh` (`setcam.py` on each target).
 - **The camcorder button in the original** (Q428, `q428/orig/run.sh`): the button (130,707) and, once its panel is out,
   the camera button (283,641), of 1024 x 768; its line `0x131` is `advisor.py %PID% SECS 0x131`, here the log's
   `message=305` (`q428/confirm.py` clicks `control 27`, `64` and `63`). **The original's camera button installs a pick**
