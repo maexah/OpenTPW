@@ -23,6 +23,7 @@ ALLOW = [
     ("libraries", r"[A-Za-z0-9_.+-]+\.(dll|so|dylib)"),
     ("debug symbols", r"[A-Za-z0-9_.-]+\.pdb"),
     ("runtime settings", r"OpenTPW\.(deps|runtimeconfig)\.json|OpenTPW\.dll\.config"),
+    ("the Vulkan driver's manifest (macOS)", r"MoltenVK_icd\.json"),
     ("shaders", r"content/shaders/[A-Za-z0-9_/-]+\.(shader|vert|frag)"),
     ("the loading screen's font", r"content/fonts/Roboto-Medium\.ttf"),
 ]

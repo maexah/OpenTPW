@@ -31,7 +31,7 @@ jobs:
   build:
     name: Build ${{ matrix.rid }}
     strategy:
-      fail-fast: true
+      fail-fast: false   # every system reports in one run; the release job still needs all four
       matrix:
         include:
           # Each on its own system: a Windows build made elsewhere loses its icon and manifest, and a macOS
