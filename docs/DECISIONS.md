@@ -94,3 +94,15 @@ where `testme.exe` holds code addresses. Hashes (sha256): `testme.exe`
 source; `tp-2_0.exe` `d0399acfc1bcbdcbe5836814b19e386486bfa06f057646ae7821bc25e9927ac9`. The Gold disc image holds 35
 bonus attraction wads and no exe. The evidence (the extracted patch, the apply logs and controls, three adversarial
 reviews) is on Alexah's machine, the path in `CLAUDE.local.md`.
+
+## Rules for everyone in `AGENTS.md`, the harness in the repo (2026-10-27)
+
+Alexah asked for the repo to be set up so others can contribute, with their own agents or without. Chosen, one
+question at a time: the rules every contributor works by moved to `AGENTS.md`, which any coding agent reads, and
+`CLAUDE.md` imports it, so one copy serves Claude Code and the rest. The rules keep their numbers, because other
+pages cite them; the maintainer's own working rules (15, 17, 19, 20, and rule 1's push survey) went to their
+uncommitted `CLAUDE.local.md` rather than to a maintainer section, so nothing committed binds a contributor to
+another person's desk. Outside work reaches `main` by a pull request the maintainer reviews and fast-forwards, still
+with no CI. The shared harness (`lib/`, `original/`, and the C# readers) moved from the maintainer's cache into
+`tools/harness/`, every folder it names now read from an environment variable (`paths.py`); the per-item evidence
+folders stayed out, and so did anything made from the game's files.

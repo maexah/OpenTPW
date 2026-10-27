@@ -3672,7 +3672,7 @@ an award persists as two keys. A truncated copy remains unchanged when a default
 The original machine options have not been checked here.
 
 Caution: a run of the game writes into the real installation's `save/` (`Config.tcf`, `opentpw.cfg`, player folders).
-Never empty it: delete only what that run created (`CLAUDE.md` rule 12).
+Never empty it: delete only what that run created (`AGENTS.md` rule 12).
 
 ### OpenTPW preservation policy
 

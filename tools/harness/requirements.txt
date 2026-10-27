@@ -1,0 +1,6 @@
+# The Python packages the harness imports. pip install -r tools/harness/requirements.txt
+python-xlib   # the scaffold: XTEST keys and clicks, frames from the root window (X11 only)
+Pillow        # frames and pictures
+numpy         # frame and sound arithmetic
+unicorn       # the scripts that run the executable's own code (exeleaf.py, lndtile.py, pathoracle.py); OPENTPW_EMU_PYTHON
+pefile        # the same

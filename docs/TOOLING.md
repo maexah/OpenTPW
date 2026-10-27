@@ -1,14 +1,16 @@
 # Tooling recipes
 
 The planned recipes file (`docs/README.md`). The recipes `docs/MEMORY-DIET.md` still owes it stay owed. Machine
-paths are in `CLAUDE.local.md`.
+paths are set by environment variable (`tools/harness/lib/paths.py`).
 
 ## The tools every item reuses
 
-`CLAUDE.md` rule 21: read this before writing a harness script, use what is here, and add a row for anything built
-that a later item could use. The files are outside the repo, in the harness folder (`CLAUDE.local.md`): `lib/` is
-shared by every item, `original/` drives the original, and a `q<N>/` folder is one item's own evidence, not a
-place to look for tools. Each file's docstring is its manual.
+`AGENTS.md` rule 21: read this before writing a harness script, use what is here, and add a row for anything built
+that a later item could use. The files are in `tools/harness/` (its `README.md` says how to set it up): `lib/` is
+shared by every item, `original/` drives the original, `dotnet/` holds the C# readers. A `q<N>/` folder in the
+work folder (`OPENTPW_HARNESS_WORK`) is one item's own evidence, not a place to look for tools. Each file's
+docstring is its manual. A row whose file is not in `tools/harness/` (`perf/`, `handoff/`, `fork-review-2/`,
+`autorun/`, `strdump`, `nodenames/`) is a maintainer's tool kept outside the repo.
 
 | Tool | Use it for |
 |---|---|
@@ -57,10 +59,10 @@ census; Q620, Q656). Add a module's reader here, not in an item's folder |
 | `lib/ticketbox.py <png> [interface-left-px]` | The advisor's big golden ticket in a frame: the box of the largest near-white run (its border), in the frame's height, and its middle from his anchor (0.8 across and down the 4:3 interface; this game's is pinned to the window's right edge, the original's frame is the interface, pass 0; on a window wider than 4:3 this game draws the grown ticket toward the middle, Q639, so read its middle against the window's there). Run with `review-codex/venv` (numpy, PIL). Where the gate's white doors touch the border the height reads high (Q599) |
 | `lib/md2surf.py <wad> <member.md2> [x z]` / `--sweep <data dir>` / `--uvs <data dir>` | A model's header float, lookup records and the faces a point stands on, with the height under a model point; the sweep counts them over every wad. Importable (`Model`): a reader of a `.md2`'s header, lookup table, meshes, vertices and faces to build a model check on; each mesh's `.uvs` (one per vertex-order entry) and `uv_runs( model )`, and `--uvs` lists every material run whose UVs leave 0..1, which `q363/wrapflags.py` sets beside its frame's wrap bits (Q363) |
 | `lib/twinfaces.py <wad> <member.md2>` / `--sweep <data dir>` | A model's faces drawn twice: face records on the same three points (each group, its face numbers, the normal words they name, material, whether turned opposite ways), or every `.md2`'s count, a line a mesh. The original draws only the one wound to the eye (`render-states.md`, "The software back-face test"). Importable, `twins( model, mesh )` (Q586) |
-| `lib/normdump/` (`dotnet bin/Debug/net10.0/normdump.dll <data dir> <path in data> <out.json>`) | A model's meshes as this game's reader reads them, to JSON: each mesh's name, vertex-order length, faces' normal indices, the `+0x64` normal table and the normals OpenTPW computes (`ModelFile`). Build it once in its folder (it references the main clone's `OpenTPW.Files`). Q657: the advisor's |
+| `dotnet/normdump/` (`dotnet bin/Debug/net10.0/normdump.dll <data dir> <path in data> <out.json>`) | A model's meshes as this game's reader reads them, to JSON: each mesh's name, vertex-order length, faces' normal indices, the `+0x64` normal table and the normals OpenTPW computes (`ModelFile`). Build it once in its folder (it references the main clone's `OpenTPW.Files`). Q657: the advisor's |
 | `lib/normcmp.py <orig.json> <ours.json>` | The original's live normals (`original/advlight.py --json`) against `normdump`'s, mesh by mesh: the table's entry for each vertex-order entry (0.0000 apart on all 43 meshes of the global and Lost Kingdom advisors, Q657) and the angle to OpenTPW's computed ones (FileFormats `models.md`, "Normals") |
 | `lib/uiwinding.py <ui.wad> [<member.md2>]` | The UI faces the original's face test drops: each mesh's faces through its node chain, kept when they turn clockwise in the file's (x, y) (`render-states.md`, "Which draws the test covers"); the sweep prints a line a mesh with any turned away, then the totals; one model lists the faces. Importable: `winding`, `placed`, `turned`. `q608/coverage.py` and `mask.py` raster one mesh's turned-away area on it. Q608 |
-| `lib/walkriders/` (a project: `dotnet lib/walkriders/bin/Debug/net10.0/walkriders.dll`) `<data dir> <park file>...` / `--objects <park file>` / `--nodes <item dir> <stem> <cellX> <cellY> <angle> <space hex> <id>...` | (It references the main clone's build, so lane B of a two-lane run does not build it.) Every walk slot in use in the park files beside its rider's saved sprite (place, facing, set, script, or none) and the placer's rule for it, tallied; the walkers' sprite facing against the octant of their angle; `--objects` each object's thing, item, cell and turn; `--nodes` a model's nodes as `RideNodes` composes them at rest, with their facings. In this game the `guests` census says the same per person: "WALK at (x,y,z) facing f" or "WALK hides" (Q585) |
+| `dotnet/walkriders/` (a project: `dotnet dotnet/walkriders/bin/Debug/net10.0/walkriders.dll`) `<data dir> <park file>...` / `--objects <park file>` / `--nodes <item dir> <stem> <cellX> <cellY> <angle> <space hex> <id>...` | (It references the main clone's build, so lane B of a two-lane run does not build it.) Every walk slot in use in the park files beside its rider's saved sprite (place, facing, set, script, or none) and the placer's rule for it, tallied; the walkers' sprite facing against the octant of their angle; `--objects` each object's thing, item, cell and turn; `--nodes` a model's nodes as `RideNodes` composes them at rest, with their facings. In this game the `guests` census says the same per person: "WALK at (x,y,z) facing f" or "WALK hides" (Q585) |
 | `lib/parkrun-smoke.py <out> <bin> [off]` | The scaffold's own check: enters Lost Kingdom, saves under pause, loads the file back from the Load Park list and compares the three ticks; `off` runs it on the private display |
 | `lib/uistream.py <VA>` | A compiled UI layout stream of `testme.exe` on disk walked to its balanced close (`hud.md`, "The opcodes"): every control's type, flags, id and rect, its mesh hash, text rect, help row and outline, indented by its parent, each close printed. It does not read ops 9 and 10 (a list's scrollbar): a stream with a list stops there |
 | `meshhash.py <hash> ...` | A layout stream's mesh hashes turned back into the `ui.wad` model to load, by file stem or by a model's first node name (`w_park` is the node `window3`) |
@@ -218,9 +220,9 @@ census; Q620, Q656). Add a module's reader here, not in an item's folder |
 | `fork-review-2/forkwatch.py [--fork OWNER/REPO[@BRANCH]] [--from SHA] [--keep watch-<sha>.json]` | The daily fork watch's first step (read-only): with no `--fork`, fetches the meneerkrabs fork's clone (`~/.cache/tpw-fork-krabs/repo`); with one, any fork `forkscan.py` names, cloned to `~/.cache/tpw-forks/OWNER__REPO`, its state `watch-state-<slug>.json`, its first look from the newest merge base with upstream's main or ours, its leads `watch-<slug>-<sha>.json`; takes the PC addresses in the lines added since the last look, maps each to its function by `funcs-all.tsv` (every function's ranges, dumped from Ghidra 2026-10-16), drops the functions our tree and the FileFormats clone cite now and those an earlier look handed on, and writes `watch-<sha>.json`; `--keep watch-<sha>.json` records that look's tip in the state once its leads go to a sweep, and fetches nothing |
 | `fork-review-2/mkwatchev.py <watch-SHA.json> <dir>` | The watch's evidence builder: splits the leads into areas (advisor, ui-hud, audio-fx, world, other) by the fork file citing each most, and writes `<dir>/claims-<area>-N.txt` (the fork's citing lines, +-2, read from the watched tip, for the sweeps) and `<dir>/code-<area>-N.txt` (our Ghidra decompile of each function, for the verifiers) from `<dir>/decomp.json`, which a Ghidra dump script (`watch/2026-10-16/dump.py`, a model for the next) writes |
 | `gen_addresses.py` | Regenerating `docs/exe/addresses.md` |
-| `lib/cliptracks/` (a project: `dotnet run --project ~/.cache/tpw-harnesses/lib/cliptracks -c Release -- <data dir> [clip]`) | Every shipped clip's position tracks against its model (Q554): the counts (late first keys, last keys before the declared span, additive models, nodes under a moved node, a route in the same clip) and the lists `late.txt`, `past.txt`, `offrest.txt`, `nested.txt`, `adds.txt` in the working folder; with a clip's path, its declared span and each position track's keys and samples. Builds the repo's `OpenTPW.Files` in Release |
-| `rse-listing/bin/Debug/net10.0/rselisting <file.RSE>` (`DOTNET_ROOT` set) | One ride script's listing: its variables by index, the variable it watches, and each instruction at its word with its operands, variables by name and branches as `->word`. The `.RSE` corpus (`CLAUDE.local.md`) is what to point it at; `lib/soundsweep.py` reads its output. A turn of a script with no park can be counted from it by hand (Q144: Coaster1's 993 gaps in 200 turns) |
-| `wadcat`, `strdump`, `nodenames/` | A wad's entries, a string table's lines, a UI wad's node names (`CLAUDE.local.md`). `strdump` prints every part of a row, a parameter as `{Pn}` (since Q372: a row that starts with one, as UITEXT 441 "{P11} hours", read blank before); name the table under the data folder, `Language/English/UITEXT.str` (it reads through the tree it is built on, which decodes each language folder through its own `MBToUni.dat` from Q710) |
+| `dotnet/cliptracks/` (a project: `dotnet run --project tools/harness/dotnet/cliptracks -c Release -- <data dir> [clip]`) | Every shipped clip's position tracks against its model (Q554): the counts (late first keys, last keys before the declared span, additive models, nodes under a moved node, a route in the same clip) and the lists `late.txt`, `past.txt`, `offrest.txt`, `nested.txt`, `adds.txt` in the working folder; with a clip's path, its declared span and each position track's keys and samples. Builds the repo's `OpenTPW.Files` in Release |
+| `dotnet/rselisting/bin/Debug/net10.0/rselisting <file.RSE>` (`DOTNET_ROOT` set) | One ride script's listing: its variables by index, the variable it watches, and each instruction at its word with its operands, variables by name and branches as `->word`. The `.RSE` corpus (`CLAUDE.local.md`) is what to point it at; `lib/soundsweep.py` reads its output. A turn of a script with no park can be counted from it by hand (Q144: Coaster1's 993 gaps in 200 turns) |
+| `dotnet/wadcat`, `strdump`, `nodenames/` | A wad's entries, a string table's lines, a UI wad's node names (the last two are the maintainer's, outside the repo). `strdump` prints every part of a row, a parameter as `{Pn}` (since Q372: a row that starts with one, as UITEXT 441 "{P11} hours", read blank before); name the table under the data folder, `Language/English/UITEXT.str` (it reads through the tree it is built on, which decodes each language folder through its own `MBToUni.dat` from Q710) |
 | console `strings <table> <row>...` | A string table's rows in the running game, through the table's own folder's character table (Q710): `strings Language/american/THEMENAMES.str 0` answers `strings: Language/american/THEMENAMES.str row 0 of 4: "Lost Kingdom"`. The log's `Character table: <path>, <n> characters` says each character table opened, once each |
 
 **A poller of the original's memory is the one thing still written an item at a time** (`q257r/orig/cars.py`,
@@ -1295,7 +1297,7 @@ after its poller starts**, so a key meant inside either line cannot be sent afte
   lifted by the ground's height under the point and the point stays at height nought. Over the waterfall
   (ground about 12) `camera 530 513 30 180` puts the eye 38.5 off, not 30. Read `placed`'s listener, do not
   work it out (Q264).
-- **A harness run needs a python with `Xlib` and `PIL`:** `~/.cache/tpw-harnesses/review-codex/venv/bin/python3`
+- **A harness run needs a python with `Xlib` and `PIL`** (`tools/harness/requirements.txt`; on the maintainer's machine `~/.cache/tpw-harnesses/review-codex/venv/bin/python3`)
   where the system's has no `Xlib`. A run that dies before `done()` leaves its Xvfb on `:78`: stop it (Q257w).
 - **The camera aims at the ground, so it cannot close in on a Hot Pot's water**, 30 units up: `camera 435 275 45 180`
   and anything nearer shows the pot's wall. Take `camera 435 320 110 180` and crop the pot from the frame (Q257s).
@@ -1812,7 +1814,7 @@ does nothing on Windows or macOS.
 
 ### Running it
 
-The harness, named by file here (`CLAUDE.local.md` says where it lives):
+The harness, named by file here, is `tools/harness/original/`:
 
 | Command | What it does |
 |---|---|
@@ -1895,7 +1897,7 @@ put it back to 800 after. A number of the original's measured before 2026-10-15 
    which `tpw-setup.sh` writes, or it quits silently at boot.
 9. **Kill by pid, never `pkill -f PATTERN`** when the pattern is also in your own command line
    (`VERIFYING.md` rule 129).
-10. **Disassembly is Ghidra's job** (`CLAUDE.md` rule 7). If the Ghidra server is down, say so rather than reaching
+10. **Disassembly is Ghidra's job** (`AGENTS.md` rule 7). If the Ghidra server is down, say so rather than reaching
     for `objdump`.
 11. **A big park off screen draws at about a hundredth of a frame a second** under llvmpipe. With
     `GALLIUM_DRIVER=zink MESA_VK_WSI_DEBUG=sw` in front of `original.sh start --offscreen` it draws on the GPU through

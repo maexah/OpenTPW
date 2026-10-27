@@ -1,0 +1,40 @@
+name: Bug report
+description: Something OpenTPW does wrong, or differently from the original game, in a build you made yourself.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you. Please never attach any of the game's own files. If you are using a weekly build, use the
+        "Weekly build problem" form instead.
+  - type: input
+    id: commit
+    attributes:
+      label: Which commit?
+      description: The first line of console.log names it, or run `git log -1 --oneline`.
+    validations:
+      required: true
+  - type: dropdown
+    id: system
+    attributes:
+      label: Your system
+      options:
+        - Windows
+        - Linux
+        - macOS
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead. If the original game does it differently, say how.
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: console.log
+      description: Drag console.log into this box. It is in the game's folder, beside "save", or where OPENTPW_LOG_DIR points.
+    validations:
+      required: false

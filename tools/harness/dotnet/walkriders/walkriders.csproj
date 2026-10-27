@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><NoWarn>$(NoWarn);CS1591</NoWarn></PropertyGroup>
+  <ItemGroup>
+    <Reference Include="OpenTPW"><HintPath>../../../../source/OpenTPW/bin/Debug/net10.0/OpenTPW.dll</HintPath></Reference>
+    <Reference Include="OpenTPW.Files"><HintPath>../../../../source/OpenTPW/bin/Debug/net10.0/OpenTPW.Files.dll</HintPath></Reference>
+    <Reference Include="OpenTPW.Common"><HintPath>../../../../source/OpenTPW/bin/Debug/net10.0/OpenTPW.Common.dll</HintPath></Reference>
+    <Reference Include="ICSharpCode.SharpZipLib"><HintPath>../../../../source/OpenTPW/bin/Debug/net10.0/ICSharpCode.SharpZipLib.dll</HintPath></Reference>
+  </ItemGroup>
+</Project>

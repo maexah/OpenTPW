@@ -14,7 +14,7 @@ Where the project's memory lives. Code says what; these files say why, and what 
 | `DECISIONS.md` | Choices that could have gone another way, one paragraph each, dated: what was chosen, why, and where its facts now live. | When a choice is made |
 | `MEMORY-DIET.md` | What moved out of the memory folder and where, and what is still owed. | While the diet is unfinished |
 | `WORKFLOW.md` | Branches, pushing, subagents (model by stage), sessions, unattended runs, commits, READMEs, how to verify | Rarely |
-| `TOOLING.md` | The stored tools every item reuses (`CLAUDE.md` rule 21) and the recipes found by trial, with the original game under Proton and the executable's own routines under unicorn | When a tool is built or a recipe is found |
+| `TOOLING.md` | The stored tools every item reuses (`AGENTS.md` rule 21) and the recipes found by trial, with the original game under Proton and the executable's own routines under unicorn | When a tool is built or a recipe is found |
 | `exe/` | Reverse-engineering facts as tables: addresses, offsets, field names, counts from shipped data | Whenever a fact is found |
 | FileFormats docs clone | File-format facts: the bytes in a shipped file. A separate repo, `OpenTPW.FileFormats` - see "The FileFormats docs clone" below. | Whenever a format fact is found |
 | `history/` | Superseded plans and per-branch ledgers, **verbatim**. Grep it; never read it whole, and never edit it by hand — history is kept as it was written. | The pre-commit hook, which adds to `queue-done.md` and `not-verified.md` |
@@ -26,7 +26,7 @@ order): the memory diet's last step was closed without it.
 
 **What belongs there:** does it describe bytes in a file the game ships? Then it belongs in the FileFormats docs.
 Does it describe what the executable does with them? Then it belongs in `exe/`. Mirror a format into its page in
-the same session it is decoded or corrected (`CLAUDE.md` rule 14). Assert only what was verified against the real
+the same session it is decoded or corrected (`AGENTS.md` rule 14). Assert only what was verified against the real
 game data and mark the rest as an open question; findings that are content rather than layout still belong there if
 an implementer would trip over them.
 
@@ -41,7 +41,7 @@ toolchain are in `CLAUDE.local.md`.
 `master` at the same time as this repo's `main`, and pushed with it. Check every link against the headings on
 `master`. Local writes are always fine.
 
-**Pull requests and pushes.** Nothing is pushed or opened without Alexah's yes (`CLAUDE.md` rule 1). Never push onto
+**Pull requests and pushes.** Nothing is pushed or opened without Alexah's yes (`AGENTS.md` rule 1). Never push onto
 a branch that carries an open pull request. Check that from here with `git ls-remote upstream 'refs/pull/*'`, which
 lists each as `refs/pull/N/head`, and name the repository whenever you record a PR fact. Before any push: no
 `refs/pull/*` on `origin`, the upstream PR heads unchanged, and each origin tip the expected parent; then one named

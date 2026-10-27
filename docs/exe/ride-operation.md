@@ -3070,7 +3070,7 @@ state 4 again within 18. `s4-strike.png` is the picket. Not run: a park open and
 forced one, a calling-off, a strike ended by shutting the park, a walk that fails; the advisor's lines were not
 listened to.
 
-**Reach** (`CLAUDE.md` rule 3). The month's look is reached every month. `FUN_00508f70` is reached, unless `mForceStrike` is set (`0x00508e85`), only in an
+**Reach** (`AGENTS.md` rule 3). The month's look is reached every month. `FUN_00508f70` is reached, unless `mForceStrike` is set (`0x00508e85`), only in an
 open park with no guest inside as a month turns, and does anything only past 66.5 minutes; no Lost Kingdom park
 left to run gets there, and a player's can.
 
@@ -4048,7 +4048,7 @@ that makes the tickets of every kind one posts them.
 
 **What reaches it in Lost Kingdom.** Instant Action (`Easymode.TPWI`, game type 2) never: play awards nothing, every
 ticket row and hint is game type 0's, and only the cheats award. A Full Simulation jungle reaches all of it: a gap
-(`CLAUDE.md` rule 3): built, with its lines (Q595), its tags (Q707) and its hints (Q708).
+(`AGENTS.md` rule 3): built, with its lines (Q595), its tags (Q707) and its hints (Q708).
 
 ### A coaster's highest track point
 

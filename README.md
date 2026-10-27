@@ -233,11 +233,9 @@ per command. Add a new command to this table.
 
 ## Contributing
 
-Contributions are very welcome:
-
-1. Fork [this project](https://github.com/maexah/OpenTPW).
-2. Create a branch named `YourName/FeatureName`.
-3. Open a pull request when you are ready.
+Contributions are very welcome, from people and from people working with coding agents.
+[`CONTRIBUTING.md`](CONTRIBUTING.md) says how to set up, how the work is checked and how a pull request reaches
+`main`; [`AGENTS.md`](AGENTS.md) holds the project's rules, which your agent should read.
 
 ## License
 

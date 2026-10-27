@@ -102,7 +102,7 @@ public static class GameCalendar
 	/// Index 4 lands on 0x007854f4, which is the Seasons array's own element-count slot, and then reads
 	/// <c>DaysOfWarning</c> and <c>DaysBetweenChanges</c> as though they were a tolerance and a chance -
 	/// so December's weather comes from three numbers that are not weather at all. This clamps instead,
-	/// which puts December with September to November. See CLAUDE.md rule 11 on why filling a
+	/// which puts December with September to November. See AGENTS.md rule 11 on why filling a
 	/// broken spot in the game's own style beats copying the breakage.
 	/// </para>
 	/// </summary>

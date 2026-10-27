@@ -386,7 +386,7 @@ filed the items that cite it.
   gadget's gauge alone and its fill direction is read (`hud.md`, "The happiness gauge's two quads"); the remark cited
   above is gone.
 - [ ] **Q157. Guests' and rides' reached arms that count nothing.** Found by the 2026-09-26 staleness audit. Each is
-  reached in Lost Kingdom, unbuilt, and calls no `Unimplemented.Report` (`CLAUDE.md` rule 4). In `PeepBehaviour`:
+  reached in Lost Kingdom, unbuilt, and calls no `Unimplemented.Report` (`AGENTS.md` rule 4). In `PeepBehaviour`:
   `Entering` lacks `FUN_004ffb20`'s guard (park shut or gate not open, back to the gate), reachable since the
   entry-price door shuts a running park; `HeadingForExit` has no
   change of mind (`FUN_00500a50`), which a saved guest can take. `CellReroute` never
@@ -412,7 +412,7 @@ filed the items that cite it.
     `+0xd8` for the preset holder above; with reverb cut nothing would read it, so a name of its own in the count is all
     it needs (`q580fs/run-S2`).
 - [ ] **Q158. Five park-screen readouts are stand-ins, and nothing counts them.** Found by the 2026-09-26 staleness
-  audit (`CLAUDE.md` rule 4). `ParkObjectWindow`'s Age row prints a bare number: its wording, `FUN_006acd60` with
+  audit (`AGENTS.md` rule 4). `ParkObjectWindow`'s Age row prints a bare number: its wording, `FUN_006acd60` with
   `0x1b1`, is not decoded. Its scrap row prints the build price, where `FUN_004e2400` scales it by the age bucket's
   percentage, `SCRAP_VALUE_DEPRECIATION`, counted only when something is sold. `ParkEntryPriceScreen`'s heading
   `0x4f3af` is empty, and its remark says "left empty and counted"; the original titles it with the name of the thing
@@ -446,7 +446,7 @@ filed the items that cite it.
   the cell asked about. `ParkRideJoinTests.NoQueueGrowsPastTheRoomItHas` takes the room as the save's
   `QueueSizeInCells` times four, nought on the Drinks Shop and the three toilets, where the gate measures their walked
   cells (`ParkRideChoice.QueueCellsFor`); a run that queues a guest at a toilet fails it falsely. Use the walked
-  count. Put the bug back for each (`CLAUDE.md` rule 6). No game run.
+  count. Put the bug back for each (`AGENTS.md` rule 6). No game run.
 
 - [ ] **Q210. Hoardings: the original's terrain rectangle and its base-vertex gate.** Found by the 2026-10-04 review
   (`u6-hoardings-1`, `-2`, `-4`; `docs/exe/ride-hoardings.md`). `ParkRideHoarding.Ground` samples `x0 + gx` where the
@@ -463,7 +463,7 @@ filed the items that cite it.
   `Level`'s `DrawStatus`; `SetupParticles` before `SetupParkEntities`; `FreshPark`'s goods and chance on the two fixed
   objects; the prankery id's `& 0xffff`; the cash's `Math.Max( 0, ... )`; `Players.Load`'s read-only stand-in. And
   `ArchiveDamageTests.EveryInstalledWadEntryStillDecodes` prints its hash and count without asserting either. Write
-  each test, put its bug back, see it fail (`CLAUDE.md` rule 6). No game run.
+  each test, put its bug back, see it fail (`AGENTS.md` rule 6). No game run.
   From the run review (2026-10-17): three more callers whose tests stop at the helper. `ParkBuildMarkers` hands
   `RecordHeight( square.Lift )` to the strip's `Over`; put back `square.Lift` and every test passes, and the game's `strip`
   census prints `Over - Lift`: assert a built strip's `Over` for a lifted cell (21.5), or print `Over` (Q435).
@@ -549,7 +549,7 @@ filed the items that cite it.
   `AssignedStaff` whatever was decided and cites `0x004de48c`. Read the tail in Ghidra and make the two agree. Also
   two sentences: `docs/exe/saves.md`'s "None of this is the original's behaviour" follows a sentence that says the
   first save is the original's, and `STATUS.md`'s "cached profiles stay read-only" is true of an unreadable file
-  only. Put the bug back for each test (`CLAUDE.md` rule 6). No game run.
+  only. Put the bug back for each test (`AGENTS.md` rule 6). No game run.
 
 - [ ] **Q219. Light the models from the normals the file stores. Decode first.** Found by the 2026-10-04 effort
   audit (`r-f1`, `r-c2`). The original's model lighter `FUN_00574660` takes one normal per vertex-order entry from the
@@ -565,7 +565,7 @@ filed the items that cite it.
   placement wiring, the seating friction 7/10 and the broken ride's 1000, the car's turn, the engine fade's length,
   `TowardsCamera`; `ParkGuestSprites.DrawBalloons` (the bob's rate and write-back); the camcorder's
   `UseFirstPersonPictures` on enter and leave; `ParkObjectWindow`'s 30 days and 4 s; the buy list's features tab.
-  Write each test, put its bug back, see it fail (`CLAUDE.md` rule 6). No game run.
+  Write each test, put its bug back, see it fail (`AGENTS.md` rule 6). No game run.
 - [ ] **Q221. Eight leftovers from the effort audit, each dead by content today.** Found by the 2026-10-04 effort
   audit, each read in the listing. (1) `ParkScriptStates` reads the tick and next handle with `header > dword * 4`; it
   should be `>= (dword + 1) * 4`. (2) `ParkBuyScreen.Listed` applies two of the original's four filters: add the
@@ -916,7 +916,7 @@ filed the items that cite it.
   not reproduced in the game). `OpenTPW/Client/Diagnostics/DebugConsole.cs`, line 1804.
 
 - [ ] **Q285. Seven unbuilt paths the game reaches count nothing.** From the week-end audit (stage 6, the second
-  reading of each commit; read from the code). `CLAUDE.md` rule 4 asks each for an `Unimplemented.Report`; build
+  reading of each commit; read from the code). `AGENTS.md` rule 4 asks each for an `Unimplemented.Report`; build
   the path where it is small. One bullet a path.
   - A park loaded from a file with a camera module opens on the default view and counts nothing:
     `ParkWorld.Camera.Saved` is read from the file and used by no load, and `Level` reports only
@@ -2354,7 +2354,7 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   Ctrl+H toggles on its press (`HelpBar.Update`, said at the site), F8 is not built, and nothing switches the keys off
   under the slots. Decode what the F8 chord's flag does, and where a screenshot may be written without touching the
   game's folder, before building either. Confirm: Ctrl+H held, the help bar unchanged until it is let go; a screenshot.
-  Until F8 and the chord are built, count each where it is let go (`CLAUDE.md` rule 4): nothing binds either, so the
+  Until F8 and the chord are built, count each where it is let go (`AGENTS.md` rule 4): nothing binds either, so the
   press reaches nothing and nothing says so (the 2026-09-26 staleness audit).
 - [ ] **Q66. A disabled button takes the pointer.** Found by Q42's review. The original's hit test (`0x0065db25`) skips a
   control flagged `0x2` - a disabled button, `0x0065da8d` - with everything under it, so the pointer passes over it to

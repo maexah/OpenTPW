@@ -149,7 +149,7 @@ public sealed class LobbyGate : Entity
 		var clip = _model.Clips[_clip];
 		var length = PlaySeconds( clip );
 
-		// Time.Delta rather than a per-frame step, so a clip takes as long at any frame rate - CLAUDE.md rule 10.
+		// Time.Delta rather than a per-frame step, so a clip takes as long at any frame rate - AGENTS.md rule 10.
 		_played = MathF.Min( _played + Time.Delta, length );
 
 		// The frame is the clip's own, counted from its declared start; posed at the very end too, so it is held

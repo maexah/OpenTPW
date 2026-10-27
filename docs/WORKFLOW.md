@@ -1,11 +1,13 @@
 # Workflow
 
-The workflow rules from `CLAUDE.md`, with the traps behind them. `CLAUDE.md` loads every session and this
-file does not, so where the two differ `CLAUDE.md` wins.
+The workflow rules from `AGENTS.md`, with the traps behind them. `AGENTS.md` loads every session and this
+file does not, so where the two differ `AGENTS.md` wins. **Pushing**, **The website**, **Weekly builds** and
+**Unattended runs** are the maintainer's own procedures; a contributor's route to `main` is a pull request
+(`CONTRIBUTING.md`).
 
 ## Branches
 
-- See `CLAUDE.md`, Branches. Fast-forward with `git checkout main && git merge --ff-only <branch>`; this
+- See `AGENTS.md`, Branches. Fast-forward with `git checkout main && git merge --ff-only <branch>`; this
   sandbox refuses `git branch -f main`.
 - Name a branch for what it changes, not with a phrase.
 - **A merged task branch is deleted, on origin and locally** (Alexah, 2026-10-03): once it is inside `main` and
@@ -96,7 +98,7 @@ anything that looks like the game's files fails the run.
   6. In the website's clone, on its `main` with nothing unpushed: `tools/release-site.sh weekly-YYYY-MM-DD`. It waits
      until GitHub shows the release published with all five files (45 minutes at most), then switches the site's
      Download box to it, publishes, reads the live page back and checks each link answers. No yes is needed for
-     that one change (the website's `CLAUDE.md`, rule 1). If the release never goes live, the site keeps its old
+     that one change (the website's `AGENTS.md`, rule 1). If the release never goes live, the site keeps its old
      links. The site shows the build's date and links its release page; it quotes nothing from the changelog.
 - **The build's name.** `-p:OpenTPWBuildTag=<tag>` stamps it; every other build is `local`. The SDK adds the commit.
   The console log's first lines (`LaunchReport`) print both, and `console.log` is written with paths cut to
@@ -174,7 +176,7 @@ say so before launching it.
 
 ## Sessions
 
-- **One task per session.** Start Claude Code from the repo root. Read `CLAUDE.md` (automatic) and `docs/STATUS.md`, take the first unticked item in `docs/QUEUE.md` (unless Alexah names another; read the file's head and that item, not the whole queue), then read the one `docs/exe/` page for its area. Check the Ghidra headless server at the start of work (`CLAUDE.md` rule 7).
+- **One task per session.** Start Claude Code from the repo root. Read `AGENTS.md` (Claude Code loads it through `CLAUDE.md`) and `docs/STATUS.md`, take the first unticked item in `docs/QUEUE.md` (unless Alexah names another; read the file's head and that item, not the whole queue), then read the one `docs/exe/` page for its area. Check Ghidra answers at the start of work, if you use it (`AGENTS.md` rule 7).
 - Keep a multi-step task's checklist in the live plan and tick each step before moving on (rule 16).
 - `docs/STATUS.md`'s "Not verified on screen" holds the item just landed and no other. Write a new item's account above the one before it; the same pre-commit hook runs `tools/status-sweep.py`, which moves every earlier account to `docs/history/not-verified.md`.
 - End the session when the task is committed, its `docs/QUEUE.md` item ticked and `docs/STATUS.md` updated. The pre-commit hook (`tools/hooks/pre-commit`, enabled once per clone with `git config core.hooksPath tools/hooks`) runs `tools/queue-sweep.py`, which moves every ticked item to `docs/history/queue-done.md` and stages both files; do not move one by hand. Do not carry the next task in the same context. When Alexah says a clear is coming, read `docs/QUEUE.md` and show the next five unticked items with what each asks (rule 17).

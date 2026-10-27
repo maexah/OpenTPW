@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: What works today
+    url: https://github.com/maexah/OpenTPW/blob/main/docs/STATUS.md
+    about: Check here first - a missing feature may already be known and queued.
