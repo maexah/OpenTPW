@@ -2970,6 +2970,7 @@ public sealed partial class ParkPeople : Entity
 		var sideshowKinds = Kinds( _behaviour.Catalogue?.All ?? [], ItemDescriptionFile.SideShow, id => _research?.IsResearched( id ) == true, id => State.BuiltOf( id ).Standing );
 		var featureKinds = Kinds( _behaviour.Catalogue?.All ?? [], ItemDescriptionFile.Feature, id => _research?.IsResearched( id ) == true, id => State.BuiltOf( id ).Standing );
 		var ability = ResearchAbility;
+		var patrols = MechanicPatrols();
 
 		return new ParkAdvisorMessages.ParkFacts( State.ParkIsClosed, rides, sideshows, WaitingToOpen,
 			shops, toilets, shopsShut, sideshowsShut, toiletsShut, ridesShut, unjoined, staffRooms, staffRoomsShut,
@@ -2985,7 +2986,35 @@ public sealed partial class ParkPeople : Entity
 			_research?.Unfinished( ItemDescriptionFile.Ride ) ?? 0,
 			ParkStaffPool.Current?.OfKind( ParkStaffPool.Kinds - 1 ).Count() ?? 0, thirsty, hungry,
 			State.LifetimeVisitors, GuestsInsideHappiness,
-			State.ArrivalLoads.Wrapped ? State.ArrivalLoads.Length : State.ArrivalLoads.Current + 1, AdvisorTicketFacts(), new( outlets ) );
+			State.ArrivalLoads.Wrapped ? State.ArrivalLoads.Length : State.ArrivalLoads.Current + 1, AdvisorTicketFacts(), new( outlets ),
+			patrols.Areas, patrols.Entrances, patrols.Patrolled );
+	}
+
+	/// <summary>
+	/// What row 19's score reads of the mechanics' patrol areas: the mechanics whose corners are not the whole map's
+	/// (<c>0x004c9b40</c> asked for type 4, <c>0x00506eb0</c>), the map's cells of <c>mType</c> 9, the ride entrances, and
+	/// those of them inside one of those mechanics' rectangles (<c>0x004cd500</c> asked for type 4 and mode 2, after
+	/// <c>0x004cd340</c> has marked every cell of each rectangle). A mechanic with no area at all, nought and nought,
+	/// counts and holds no cell, as the original's, whose one mark for it lands on cell id nought, off the map.
+	/// </summary>
+	private (int Areas, int Entrances, int Patrolled) MechanicPatrols()
+	{
+		var penned = _staff.Where( member => member.Model == MechanicModel
+			&& !(member.PatrolBottomLeft == OpenTPW.Staff.WholeMapBottomLeft && member.PatrolTopRight == OpenTPW.Staff.WholeMapTopRight) ).ToList();
+		var (entrances, patrolled) = (0, 0);
+
+		for ( var y = 0; y < ParkWorld.MapSize; ++y )
+		{
+			for ( var x = 0; x < ParkWorld.MapSize; ++x )
+			{
+				if ( State.Record( x, y ).Type != CellEdge.RideEnd ) continue;
+				++entrances;
+				if ( penned.Any( member => member.HasPatrolArea && member.Patrols( x, y ) ) )
+					++patrolled;
+			}
+		}
+
+		return (penned.Count, entrances, patrolled);
 	}
 
 	/// <summary>

@@ -10663,6 +10663,23 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
     `q690/orig`). The original measured with `campoi.py` (Home and keypad 5, which reaches its row under Proton), ours by
     the log and frames (`q690/ours-a`, 6 of 6); `CAMERA_HOME_RESET` retired. The yaw snaps where the original's drawn
     turn eases about 1.5 s, the long way from 270 (Q23's deviation, said at the site). `park-engine.md`, "The camera's reset".
+- [x] **Q609. Build the advisor's row 19, message 0x13 (Q602's rest).** From Q602 (`advisor-park.md`, "The mechanics'
+  patrol areas"). A topic on the polled rows' machinery: months from tick nought by 30 days at least 13, mechanics at least
+  3, a mechanic with an area (not the whole map), the share of `mType` 9 cells inside a mechanic's rectangle, ( 100 -
+  share ) x 5, nought below 300; three lines from response 55, mode 2, props (5, 0). Full Simulation only (the row's
+  `+0x0c` is 0: `FullSimulationOnly`); a park with no `mType` 9 cell has a share of nought (`0x004cd6df`), so it scores
+  500 and is said (no divide). Take `PARK_ADVISOR_POLLED_ROW_NOT_BUILT` off row 19. Confirm on Q708's load (Alexah's jungle
+  `New Save`, `q707/gms-none.dat`, loaded on 19004): `poll message=19 ... score=325 ... tick=19084` and sample 57 in the
+  hard hat. The hint `0x13a` left waiting as the original's needs row 257 too (Q713: its sample 525 holds the original's
+  advisor from 19040 to 19076, `q602/orig-R1/line.log`), so with row 19 alone this game still says `0x13a` on 19059 and
+  sample 57 later than 19084: say so, or build after Q713 (run 7 review, `review7/q602/FINDINGS.md`).
+  - **Note (Q713, built):** on that load this game's row 257 scores 24 on 19040 (sideshow 50's satisfaction 76, where the
+    original said it), so it is not said and does not hold the advisor (`q713/run3-fs.out`).
+  - **Done (Q609, lane B, off-screen):** built (`EntrancesPatrolled`, `ParkPeople.MechanicPatrols`); on that load
+    `poll message=19 row=19 days=828 score=325 threshold=25 tick=19084 result=post months=27 mechanics=5 areas=5
+    entrances=25/71`, queued behind `0x13a` (said 19059), then the 19100 awards, 311 and 315; said on 22142, `response=57
+    sample=57 line=2`, `wearing 5,0` (`q801/PREDICTION.txt`, run3). 22 bugs put back, all caught. The tick differs from
+    the original's 19084 for the hint's sake: Q662's note.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

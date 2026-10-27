@@ -36,11 +36,12 @@ One line per system; the detail, item by item, is `docs/WORKS.md` (grep it by ar
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the pre-commit hook: grep it by Q-number.
 
-- Q690 (Home and keypad 5 reset the park camera): seen on the desk at 1280 x 720 in the stock park, from two turned and
-  zoomed cameras, Ctrl+Home refused, a locator's follow let go and a coasting pan carried on (`q690/ours-a`); the original
-  measured the same day under Proton by `campoi.py` (`q690/orig`), its frames at the reset the gate's view as ours. Not
-  seen: the keys under the full-screen view or the park map in either game; the original's follow let go by the key
-  (decoded, `and ch, 0xef`, not measured); Full Simulation (the camera is the same code in both modes).
+- Q609 (the advisor's row 19, the mechanics' patrol areas): seen in the off-screen run (lane B, lavapipe, white textures,
+  so the log is the evidence; shots `q801/run2/t19090.png`, `run3/t22148.png`): on Alexah's jungle `New Save` by their Full
+  Simulation profile, `poll message=19 ... score=325 ... tick=19084 ... entrances=25/71`, and sample 57, line 2, in the hard
+  hat on 22142, not 19084 as in Q602's original run: this game's advisor says the hint `0x13a` first (Q662's note). Not
+  seen: Instant Action's `other-game` and a park with no entrance or too few mechanics (unit tests only); the original
+  not run again; no photograph of the hard hat, off-screen.
 
 
 ## Numbers (take counts fresh; these go stale within a day)
@@ -48,8 +49,8 @@ Only the item just landed is here. Every earlier item's account is in `docs/hist
 | | | measured |
 |---|---|---|
 | Opcodes | **78** of 106 | 2026-10-20, Q553 (`FADEOBJ`), `case Opcode.` labels vs enum members |
-| Tests | **4088**, 0 fail, 0 skip with the game | 2026-10-27, Q690 |
-| Tests without the game | **1497** ran, **2591** skipped, of 4088 | 2026-10-27, Q690 |
+| Tests | **4085**, 0 fail, 0 skip with the game | 2026-10-27, Q609 (two tests added) |
+| Tests without the game | **1495** ran, **2590** skipped, of 4085 | 2026-10-27, Q609 |
 | Build warnings | 115 after Q753, 132 before it (both `--no-incremental`, the 132 in a fresh worktree of `main`: the seven CA2022 short reads and the `Zio` advisory, repeated for each project that took it, gone); earlier: 121 in the main tree; 130 to 133 in a fresh worktree as NuGet's advisory list was last fetched, the ten or twelve more its advisories on ModKit's ImageSharp 3.1.6 (a sixth, GHSA-v76p-62qx-wwq2, published 2026-10-26: Q75, DECISIONS.md "Package advisories") | 2026-10-27 (the worktree's 133 at Q672's gate, 131 at fix group P's, run 11, and 130 at PERF PASS 1's; the main tree's 121 last counted 2026-10-13) |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 | Park load, Release | **3.1 to 3.4 s**, worst phase `audio` 1.04 s (`ground` 0.52 to 0.57, `terrain` 0.46 to 0.55, `objects` 0.35 to 0.47) | 2026-10-26, three runs, `perf/bench.sh` |

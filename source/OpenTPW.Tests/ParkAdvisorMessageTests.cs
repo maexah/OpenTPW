@@ -40,6 +40,8 @@ public class ParkAdvisorMessageTests
 			+ "StaffHireEntertainers1.AtLeastThisBusy 35\nStaffHireEntertainers1.ScorePerExtraBusyPoint 3\n"
 			+ "StaffHireResearchers1.Most 70\nStaffHireResearchers1.PointsPerExtraPct 5\nStaffHireResearchers2.Score 90\n"
 			+ "StaffHireResearchers3.MonthsIntoGameForConsideration 15\nStaffHireResearchers3.SlowerThan 14\nStaffHireResearchers3.Score 50\n"
+			+ "StaffSetMechanicArea.DontBotherIfPatrolledUp 10\nStaffSetMechanicArea.ScorePerUnpatrolledPct 1\nStaffSetMechanicArea.AtLeastThisMany 3\n"
+			+ "StaffSetMechanicArea.MonthsIntoGameForConsideration 13\nStaffMechanicCoverage.Score 300\nStaffMechanicCoverage.ScorePerNonCoveredPercent 5\n"
 			+ "RidesPoorSelection.PoorerThan 30\nRidesPoorSelection.MoreRidesThan 3\nRidesPoorSelection.Score 30\nWaitingTimes.DaysForObjects 30\n"
 			+ "ShopsPoorSelection.PoorerThan 25\nShopsPoorSelection.MoreShopsThan 2\nShopsPoorSelection.Score 50\n"
 			+ "ShopsBuildShops.Score 50\nShopsBuildShops.AdditionalPerDay 2\n"
@@ -189,7 +191,7 @@ public class ParkAdvisorMessageTests
 		Assert.AreEqual( (308, 342), said[1], "two lines: the one after line 1 is line 0" );
 
 		var written = messages.Written();
-		Assert.AreEqual( 115, written.Count, "every built topic's record, the golden tickets' fifteen, their four hints and the outlets' twenty among them" );
+		Assert.AreEqual( 116, written.Count, "every built topic's record, the golden tickets' fifteen, their four hints and the outlets' twenty among them" );
 		Assert.AreEqual( new ParkWorld.AdvisorHistory( 911, 0, true, 0 ), written[ParkAdvisorMessages.TagMessage] );
 		Assert.AreEqual( new ParkWorld.AdvisorHistory( 1360, 1, true, 0 ), written[ParkAdvisorMessages.MechanicOnHisWay] );
 		Assert.AreEqual( ParkWorld.AdvisorHistory.Fresh, written[ParkAdvisorMessages.Closed] );
@@ -1002,7 +1004,7 @@ public class ParkAdvisorMessageTests
 			messages.Tick( 254 + i, (254 + i) * 250L, Play, ( group, subject ) => groups.Add( (group, subject) ) );
 		CollectionAssert.AreEqual( new[] { (186, 404, 377) }, said );
 		CollectionAssert.AreEqual( new[] { (ParkTags.NoTag, 0) }, groups );
-		Assert.AreEqual( unbuilt + 84, Counted( "PARK_ADVISOR_POLLED_ROW_NOT_BUILT" ) );
+		Assert.AreEqual( unbuilt + 83, Counted( "PARK_ADVISOR_POLLED_ROW_NOT_BUILT" ) );
 		Assert.AreEqual( "no-score", messages.PollAnswer( ParkAdvisorMessages.OpenPark ), "row 1 with no park handed in" );
 		Assert.AreEqual( "no-score", messages.PollAnswer( ParkAdvisorMessages.ExplainTooltips ) );
 		Assert.AreEqual( 351, cursor.Row );
@@ -2304,6 +2306,120 @@ public class ParkAdvisorMessageTests
 		Round( 24768 );
 		CollectionAssert.AreEqual( new[] { (13968, 50, 50), (17568, 51, 51), (21168, 49, 49), (24768, 50, 50) }, said, "three lines in turn" );
 		CollectionAssert.AreEqual( new[] { (19, 0), (19, 0), (19, 0), (19, 0) }, groups );
+	}
+
+	/// <summary>
+	/// Row 19, message 0x13, is polled in Full Simulation alone and scored by the park (0x0059d180): nought before
+	/// StaffSetMechanicArea.MonthsIntoGameForConsideration whole months of thirty days since mGameTick nought, nought
+	/// with fewer than its AtLeastThisMany mechanics, nought with no mechanic whose area is not the whole map, then
+	/// StaffMechanicCoverage.ScorePerNonCoveredPercent for each whole per cent of the ride entrances outside every area,
+	/// nought under StaffMechanicCoverage.Score; a map with no entrance scores the most. Shut or open. Three lines in turn
+	/// in the hard hat, no gesture row, no tag.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the months, the mechanics or those with an area not asked, or asked with another key or more than;
+	/// the share rounded, of the entrances outside, or a divide by nought; the per-cent key or the score key another's, or
+	/// the score kept under it; a shut park made nought; the row scored in Instant Action, not polled, of another category;
+	/// the lines, the response, the sample, the prop or the group another's; the poll line naming another row's facts.
+	/// </remarks>
+	[TestMethod]
+	public void EntrancesOutsideTheMechanicsAreasAreToldInFullSimulation()
+	{
+		var cursor = new ParkAdvisorMessages.PollCursor { Row = 19 };
+		var settings = Settings();
+		var instant = false;
+		var messages = new ParkAdvisorMessages( settings, cursor: cursor, instantAction: () => instant );
+		// Alexah's jungle New Save, loaded on tick 19004 (q707/gms-none.dat): five mechanics, each with an area, 25 of 71
+		// entrances inside them, as the original read them on tick 19084 (docs/exe/advisor-park.md, "The mechanics' patrol areas").
+		var facts = new ParkAdvisorMessages.ParkFacts( Closed: false, Rides: 9, Sideshows: 4, WaitingToOpen: 0,
+			Mechanics: 5, MechanicsWithAnArea: 5, Entrances: 71, EntrancesPatrolled: 25 );
+		var said = new List<(int Tick, int Response, int Sample)>();
+		var groups = new List<(int, int)>();
+		var gestures = Gestured( said );
+		void Round( int at )
+		{
+			cursor.Row = 19;
+			messages.Tick( at, at * 250L, ( response, sample ) => { said.Add( (at, response, sample) ); return 8200; },
+				( group, subject ) => groups.Add( (group, subject) ), () => facts );
+		}
+
+		var topic = ParkAdvisorMessages.ParkTopics.Single( one => one.Id == ParkAdvisorMessages.SetMechanicAreas );
+		Assert.AreEqual( (0x13, "StaffMechanicCoverage.Score", "StaffSetMechanicArea", 55, 55, 3, 1, 0, true, ParkTags.NoTag, ParkAdvisorMessages.HardHat, -1),
+			(topic.Id, topic.ScoreKey, topic.EntrancesPatrolled, topic.FirstResponse, topic.FirstSample, topic.Lines, topic.MaxInstances, topic.Category, topic.Polled, topic.Group, topic.Prop, GestureLine( topic )) );
+		Assert.AreEqual( 1, ParkAdvisorMessages.ParkTopics.Count( one => one.EntrancesPatrolled != null ) );
+		Assert.IsTrue( topic.FullSimulationOnly, "the row's +0x0c is nought" );
+		Assert.IsTrue( ParkAdvisorMessages.IsPolled( 19 ) );
+		Assert.AreEqual( 0, messages.ScoreOf( topic, 19084 ), "before any sweep has handed the park in" );
+		foreach ( var response in new[] { 55, 56, 57 } )
+			Assert.AreEqual( ((ParkAdvisorMessages.HardHat, 0), 0, -1), (ParkAdvisorMessages.PropsOf( response ), ParkAdvisorMessages.SlotOf( response ), ParkAdvisorMessages.GestureRowOf( response )) );
+
+		// Thirteen months end between sweeps 8985 and 8986.
+		Assert.AreEqual( (12, 13), (ParkStrikes.MonthsSinceTheFirstSweep( 8985 ), ParkStrikes.MonthsSinceTheFirstSweep( 8986 )) );
+		Round( 8985 );
+		Assert.AreEqual( ("no-score", 0), (messages.PollAnswer( 19 ), said.Count), "twelve months" );
+		Assert.AreEqual( " months=12 mechanics=5 areas=5 entrances=25/71", messages.PollFacts( topic ), "the poll line names what the score read" );
+
+		// 25 of 71 is a whole 35: 65 per cent outside, 325, said, the first line, no tag.
+		Round( 19084 );
+		Assert.AreEqual( (325, "post", 1), (messages.ScoreOf( topic, 19084 ), messages.PollAnswer( 19 ), said.Count) );
+		CollectionAssert.AreEqual( new[] { (19084, 55, 55) }, said );
+		StringAssert.Contains( messages.Census(), "message=19/score=325/line=0/lastTick=19084/said=1/slaps=0" );
+		CollectionAssert.AreEqual( new[] { (ParkTags.NoTag, 0) }, groups );
+		Assert.IsFalse( ParkTags.Rows.Any( one => one.Id == ParkTags.NoTag ), "group 383 has no tag row, so no tag is left" );
+		Assert.AreEqual( gestures, Gestured( said ), "the random chain" );
+		Assert.AreEqual( " months=27 mechanics=5 areas=5 entrances=25/71", messages.PollFacts( topic ) );
+		facts = facts with { Mechanics = 4, MechanicsWithAnArea = 2 };
+		Assert.AreEqual( " months=27 mechanics=4 areas=2 entrances=25/71", messages.PollFacts( topic ), "each its own fact" );
+		facts = facts with { Mechanics = 5, MechanicsWithAnArea = 5 };
+
+		// Each gate.
+		Assert.AreEqual( 325, Score( facts with { Closed = true } ), "the door is not asked" );
+		Assert.AreEqual( 0, Score( facts, 8985 ), "twelve months" );
+		Assert.AreEqual( 325, Score( facts, 8986 ), "thirteen" );
+		Assert.AreEqual( 0, Score( facts with { Mechanics = 2 } ), "two mechanics" );
+		Assert.AreEqual( 325, Score( facts with { Mechanics = 3, MechanicsWithAnArea = 1 } ), "three, one with an area" );
+		Assert.AreEqual( 0, Score( facts with { MechanicsWithAnArea = 0 } ), "every mechanic on the whole map" );
+		Assert.AreEqual( 300, Score( facts with { EntrancesPatrolled = 29 } ), "29 of 71 is a whole 40, not 41: 300 is not under 300" );
+		Assert.AreEqual( 0, Score( facts with { EntrancesPatrolled = 30 } ), "30 of 71 is 42: 290" );
+		Assert.AreEqual( 500, Score( facts with { EntrancesPatrolled = 0 } ), "none inside" );
+		Assert.AreEqual( 500, Score( facts with { Entrances = 0, EntrancesPatrolled = 0 } ), "no entrance at all: a share of nought, not a divide" );
+		Assert.AreEqual( 0, Score( facts with { EntrancesPatrolled = 71 } ), "every one inside" );
+		Set( settings, "StaffSetMechanicArea.AtLeastThisMany", 6 );
+		Assert.AreEqual( 0, Score( facts ), "five of six" );
+		Set( settings, "StaffSetMechanicArea.AtLeastThisMany", 3 );
+		Set( settings, "StaffSetMechanicArea.MonthsIntoGameForConsideration", 28 );
+		Assert.AreEqual( 0, Score( facts ), "27 months of 28" );
+		Set( settings, "StaffSetMechanicArea.MonthsIntoGameForConsideration", 13 );
+		Set( settings, "StaffMechanicCoverage.ScorePerNonCoveredPercent", 7 );
+		Assert.AreEqual( 455, Score( facts ), "65 per cent at 7" );
+		Set( settings, "StaffMechanicCoverage.ScorePerNonCoveredPercent", 5 );
+		Set( settings, "StaffMechanicCoverage.Score", 326 );
+		Assert.AreEqual( 0, Score( facts ), "325 under 326" );
+		Set( settings, "StaffMechanicCoverage.Score", 300 );
+		int Score( ParkAdvisorMessages.ParkFacts park, int at = 19084 )
+		{
+			var held = facts;
+			facts = park;
+			var score = messages.ScoreOf( topic, at );
+			facts = held;
+			return score;
+		}
+
+		// The three lines in turn, past category 0's 120 quarter-sweeps each, then the first again.
+		said.Clear();
+		groups.Clear();
+		Round( 19563 );
+		Assert.AreEqual( ("cooldown", 0), (messages.PollAnswer( 19 ), said.Count), "119 quarter-sweeps on" );
+		Round( 19564 );
+		Round( 20044 );
+		Round( 20524 );
+		CollectionAssert.AreEqual( new[] { (19564, 56, 56), (20044, 57, 57), (20524, 55, 55) }, said, "three lines in turn" );
+
+		// Instant Action does not score it.
+		instant = true;
+		Round( 21004 );
+		Assert.AreEqual( ("other-game", 3), (messages.PollAnswer( 19 ), said.Count) );
+		CollectionAssert.AreEqual( new[] { (ParkTags.NoTag, 0), (ParkTags.NoTag, 0), (ParkTags.NoTag, 0) }, groups );
 	}
 
 	/// <summary>
@@ -3808,8 +3924,8 @@ public class ParkAdvisorMessageTests
 			(topic.Id, topic.ScoreKey, topic.EveryFeatureBuilt, topic.FirstResponse, topic.FirstSample, topic.Lines, topic.MaxInstances, topic.Category, topic.Polled, topic.Group, topic.Prop, GestureLine( topic )) );
 		Assert.AreEqual( (4, 10), (ParkAdvisorMessages.ResearchMore, ParkAdvisorMessages.ResearchHat) );
 		Assert.AreEqual( 1, ParkAdvisorMessages.ParkTopics.Count( one => one.EveryFeatureBuilt ), "no other row is scored so" );
-		Assert.AreEqual( (true, 26), (topic.FullSimulationOnly, ParkAdvisorMessages.ParkTopics.Count( one => one.FullSimulationOnly )),
-			"rows 76, 133 to 136, 200, the golden tickets' fifteen and their four hints are the others; every other built row is either game's" );
+		Assert.AreEqual( (true, 27), (topic.FullSimulationOnly, ParkAdvisorMessages.ParkTopics.Count( one => one.FullSimulationOnly )),
+			"rows 19, 76, 133 to 136, 200, the golden tickets' fifteen and their four hints are the others; every other built row is either game's" );
 		Assert.AreEqual( 3, ParkAdvisorMessages.ParkTopics.Count( one => one.Category == ParkAdvisorMessages.ResearchMore ), "rows 76 and 17 are the others of its category" );
 		Assert.IsTrue( ParkAdvisorMessages.IsPolled( 80 ) );
 		Assert.AreEqual( 0, messages.ScoreOf( topic, 972 ), "before any sweep has handed the park in" );
@@ -4910,7 +5026,7 @@ public class ParkAdvisorMessageTests
 
 		Assert.AreEqual( 1, ParkAdvisorMessages.ParkTopics.Single( one => one.Id == ParkAdvisorMessages.ControlPanel ).Lines );
 		Assert.IsTrue( ParkAdvisorMessages.ParkTopics.Single( one => one.Id == ParkAdvisorMessages.ControlPanel ).Polled );
-		Assert.AreEqual( 71, ParkAdvisorMessages.ParkTopics.Count( one => one.Polled ) );
+		Assert.AreEqual( 72, ParkAdvisorMessages.ParkTopics.Count( one => one.Polled ) );
 	}
 
 	/// <summary>

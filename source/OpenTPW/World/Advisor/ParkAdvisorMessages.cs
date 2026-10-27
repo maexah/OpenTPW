@@ -71,6 +71,8 @@ internal sealed class ParkAdvisorMessages
 	internal const int HireResearchersAllBuilt = 0x10;
 	/// <summary>Message 0x11, polled: the line about research too slow for the months the park has run, with researchers to hire (0x0059cfe0).</summary>
 	internal const int HireMoreResearchers = 0x11;
+	/// <summary>Message 0x13, polled, Full Simulation's alone: the line about the mechanics' patrol areas, scored by the share of the ride entrances outside them (0x0059d180).</summary>
+	internal const int SetMechanicAreas = 0x13;
 	/// <summary>Message 0x16, polled: the line about security cameras, scored where a guard is on the staff and this month's kids who got away are more than a number (0x0059d3b0).</summary>
 	internal const int BuildCameras = 0x16;
 	/// <summary>Message 0x1c, polled: the line about mechanics nobody has trained, scored where the park has one, their training budget is nought and their grades are low (0x0059d620).</summary>
@@ -423,6 +425,11 @@ internal sealed class ParkAdvisorMessages
 	/// staff's research could be any at all, at least the section's MonthsIntoGameForConsideration whole months of thirty
 	/// days since mGameTick nought, with a researcher and a researcher to hire, the key's value where the researchers'
 	/// ability added up, in whole per cent of the most, is under the section's SlowerThan; nought otherwise.
+	/// <paramref name="EntrancesPatrolled"/> makes the score row 19's (0x0059d180), and names the section of its gates: at
+	/// least the section's MonthsIntoGameForConsideration whole months of thirty days since mGameTick nought, at least its
+	/// AtLeastThisMany mechanics, a mechanic with a patrol area that is not the whole map, then
+	/// <see cref="ScorePerNonCoveredPercent"/>'s value for each whole per cent of the map's ride entrances outside every
+	/// such area, nought where that is under the key's value; shut or open.
 	/// <paramref name="PerThirstyGuest"/> is the score of row 3 (0x0059c9d0): the key's value for each guest inside whose
 	/// thirst is over <see cref="ThirstierThan"/>, shut or open, and <paramref name="PerHungryGuest"/> row 4's (0x0059ca00),
 	/// the same of the hunger over <see cref="HungrierThan"/>.
@@ -448,7 +455,7 @@ internal sealed class ParkAdvisorMessages
 		string? MorePranksters = null, string? BusyWithNoEntertainer = null, string? BusyWithNoGuard = null,
 		string? LitterWithNoHandyman = null, bool Filthy = false, string? GotAwayMoreThan = null,
 		string? MostRidesBuilt = null, bool EveryRideBuilt = false, string? SlowResearch = null,
-		string? GotAwayWithAGuard = null, int SecondProp = 0, bool PerThirstyGuest = false, bool PerHungryGuest = false,
+		string? GotAwayWithAGuard = null, string? EntrancesPatrolled = null, int SecondProp = 0, bool PerThirstyGuest = false, bool PerHungryGuest = false,
 		bool AlwaysNought = false, int? Constant = null, TicketHint Hint = TicketHint.None, OutletJudgement? Judges = null );
 
 	/// <summary>The happiness a guest is under to count as unhappy in row 14's score, the argument it hands FUN_004c9750 (0x0059ce63).</summary>
@@ -462,6 +469,9 @@ internal sealed class ParkAdvisorMessages
 
 	/// <summary>The key of the whole days since the newest object was made that rows 60, 71, 73 to 75, 77 to 79 and 81's scores wait for (the balance object's +0x634).</summary>
 	internal const string DaysForObjects = "WaitingTimes.DaysForObjects";
+
+	/// <summary>The key of row 19's score for each whole per cent of the ride entrances no mechanic's area holds (the balance object's +0x140).</summary>
+	internal const string ScorePerNonCoveredPercent = "StaffMechanicCoverage.ScorePerNonCoveredPercent";
 
 	/// <summary>The things a row's score counts shut: none, the rides (0x005a02f0), the shops (0x005a0370), the sideshows (0x005a03d0), the toilets (0x005a0430) or the staff rooms (0x005a0490); the features are counted shut by none, and are a poor selection's alone (0x0059e1c0).</summary>
 	internal enum Shut
@@ -519,7 +529,10 @@ internal sealed class ParkAdvisorMessages
 	/// rows 15 and 16's read besides: the lab's projects of a ride's kind that are not done (0x004ca630, FUN_00503b30 asked
 	/// for kind nought); and what row 17's reads besides: the staff pool's researchers to hire (FUN_00508380 asked for kind
 	/// four: a slot whose mValid is set); and what rows 3 and 4's read: the guests inside whose thirst, or hunger, is over
-	/// <see cref="ThirstierThan"/>, or <see cref="HungrierThan"/> (0x004c93f0, 0x004c9340).
+	/// <see cref="ThirstierThan"/>, or <see cref="HungrierThan"/> (0x004c93f0, 0x004c9340); and what row 19's reads
+	/// besides the mechanics: those of them whose patrol area is not the whole map (0x004c9b40 asked for type 4), the
+	/// map's cells of mType 9, the ride entrances, and those of them inside such an area (0x004cd500 asked for type 4,
+	/// mode 2, after 0x004cd340 has marked the areas' cells).
 	/// </summary>
 	internal readonly record struct ParkFacts( bool Closed, int Rides, int Sideshows, int WaitingToOpen,
 		int Shops = 0, int Toilets = 0, int ShopsShut = 0, int SideshowsShut = 0, int ToiletsShut = 0, int RidesShut = 0,
@@ -533,7 +546,7 @@ internal sealed class ParkAdvisorMessages
 		StaffTraining Staff = default, int DevelopedCells = 0, int MisbehavingKids = 0, int GuestsUnhappy = 0, int LitterShare = 0,
 		int KidsGotAway = 0, int RideProjectsUnfinished = 0, int ResearcherCandidates = 0, int GuestsThirsty = 0, int GuestsHungry = 0,
 		int LifetimeVisitors = 0, float Happiness = 0, int LoadsCalled = 0, TicketFacts? Tickets = null,
-		OutletList? Outlets = null )
+		OutletList? Outlets = null, int MechanicsWithAnArea = 0, int Entrances = 0, int EntrancesPatrolled = 0 )
 	{
 		/// <summary>How many of <paramref name="share"/>'s things stand, and how many of them are shut.</summary>
 		internal (int Standing, int Shut) Of( Shut share ) => share switch
@@ -811,6 +824,9 @@ internal sealed class ParkAdvisorMessages
 		new( HireResearchers, "StaffHireResearchers1.PointsPerExtraPct", 44, 44, Lines: 3, Prop: ResearchHat, Group: 17, Polled: true, MostRidesBuilt: "StaffHireResearchers1" ),
 		new( HireResearchersAllBuilt, "StaffHireResearchers2.Score", 47, 47, Lines: 2, Prop: ResearchHat, Group: 18, Polled: true, EveryRideBuilt: true ),
 		new( HireMoreResearchers, "StaffHireResearchers3.Score", 49, 49, Lines: 3, Prop: ResearchHat, Group: 19, Category: ResearchMore, Polled: true, SlowResearch: "StaffHireResearchers3" ),
+		// Row 19's three responses are in the hard hat, with no gesture row and no tag (group 383; docs/exe/advisor-park.md,
+		// "The mechanics' patrol areas").
+		new( SetMechanicAreas, "StaffMechanicCoverage.Score", 55, 55, Lines: 3, Prop: HardHat, Polled: true, FullSimulationOnly: true, EntrancesPatrolled: "StaffSetMechanicArea" ),
 		new( BuildCameras, "StaffGuardBuildCamera.Score", 64, 64, Lines: 3, Prop: GuardCap, Group: 24, Polled: true, GotAwayWithAGuard: "StaffGuardBuildCamera" ),
 
 		// Row 264's one response is in the guards' cap; its group, 0x17f, has no row in the tag table, so it leaves no tag
@@ -1369,6 +1385,19 @@ internal sealed class ParkAdvisorMessages
 			return (uint)lab.ResearchAbility * 100 / (uint)lab.MostResearchAbility < (uint)Value( $"{slow}.SlowerThan" ) ? Value( topic.ScoreKey ) : 0;
 		}
 
+		if ( topic.EntrancesPatrolled is { } patrol )
+		{
+			// The months, the mechanics and those with an area come before the share (0x0059d1b4 to 0x0059d200); the door
+			// is not asked.
+			if ( _park?.Invoke() is not { } covered ) return 0;
+			if ( ParkStrikes.MonthsSinceTheFirstSweep( gameTick ) < Value( $"{patrol}.MonthsIntoGameForConsideration" ) ) return 0;
+			if ( covered.Mechanics < Value( $"{patrol}.AtLeastThisMany" ) || covered.MechanicsWithAnArea == 0 ) return 0;
+			// A map with no entrance has a share of nought, not a divide (0x004cd6df), so it scores the most.
+			var share = covered.Entrances == 0 ? 0 : covered.EntrancesPatrolled * 100 / covered.Entrances;
+			var uncovered = (100 - share) * Value( ScorePerNonCoveredPercent );
+			return uncovered < Value( topic.ScoreKey ) ? 0 : uncovered;
+		}
+
 		if ( topic.BusyWithNoEntertainer is { } busy )
 		{
 			// The share answers nought with nobody inside (FUN_004c9750); the crowd is the music's, and nothing keeps the score from going below nought.
@@ -1547,6 +1576,8 @@ internal sealed class ParkAdvisorMessages
 			shut = $" closed={(unresearched.Closed ? 1 : 0)} researchers={unresearched.Researchers} unfinished={unresearched.RideProjectsUnfinished} kinds={unresearched.RideKindsStanding}/{unresearched.RideKindsOnOffer}";
 		if ( topic.SlowResearch != null && _park?.Invoke() is { } lab )
 			shut = $" closed={(lab.Closed ? 1 : 0)} months={ParkStrikes.MonthsSinceTheFirstSweep( _lastTick )} researchers={lab.Researchers} candidates={lab.ResearcherCandidates} ability={lab.ResearchAbility}/{lab.MostResearchAbility}";
+		if ( topic.EntrancesPatrolled != null && _park?.Invoke() is { } patrolled )
+			shut = $" months={ParkStrikes.MonthsSinceTheFirstSweep( _lastTick )} mechanics={patrolled.Mechanics} areas={patrolled.MechanicsWithAnArea} entrances={patrolled.EntrancesPatrolled}/{patrolled.Entrances}";
 		if ( topic.BusyWithNoEntertainer != null && _park?.Invoke() is { } busyPark )
 			shut = $" closed={(busyPark.Closed ? 1 : 0)} entertainers={busyPark.Staff.Entertainers.Members} inside={busyPark.GuestsInside} unhappy={busyPark.GuestsUnhappy} crowd={ParkAudio.CrowdLevel( busyPark.GuestsInside )}";
 		if ( topic.BusyWithNoGuard != null && _park?.Invoke() is { } thronged )

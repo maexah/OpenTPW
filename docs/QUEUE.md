@@ -97,18 +97,6 @@ filed the items that cite it.
   Before a track's first key no scale is set and the node keeps the lengths its matrix holds after the turn (21 tracks
   start past frame 0, three in Lost Kingdom: `volcanol` node 1, `wateridec` nodes 15 and 16; `models.md`, "Scale"). Pose them on every model a clip moves (`NodePoser`, `MeshRotator`) and confirm one of each kind beside
   the original's frames.
-- [ ] **Q609. Build the advisor's row 19, message 0x13 (Q602's rest).** From Q602 (`advisor-park.md`, "The mechanics'
-  patrol areas"). A topic on the polled rows' machinery: months from tick nought by 30 days at least 13, mechanics at least
-  3, a mechanic with an area (not the whole map), the share of `mType` 9 cells inside a mechanic's rectangle, ( 100 -
-  share ) x 5, nought below 300; three lines from response 55, mode 2, props (5, 0). Full Simulation only (the row's
-  `+0x0c` is 0: `FullSimulationOnly`); a park with no `mType` 9 cell has a share of nought (`0x004cd6df`), so it scores
-  500 and is said (no divide). Take `PARK_ADVISOR_POLLED_ROW_NOT_BUILT` off row 19. Confirm on Q708's load (Alexah's jungle
-  `New Save`, `q707/gms-none.dat`, loaded on 19004): `poll message=19 ... score=325 ... tick=19084` and sample 57 in the
-  hard hat. The hint `0x13a` left waiting as the original's needs row 257 too (Q713: its sample 525 holds the original's
-  advisor from 19040 to 19076, `q602/orig-R1/line.log`), so with row 19 alone this game still says `0x13a` on 19059 and
-  sample 57 later than 19084: say so, or build after Q713 (run 7 review, `review7/q602/FINDINGS.md`).
-  - **Note (Q713, built):** on that load this game's row 257 scores 24 on 19040 (sideshow 50's satisfaction 76, where the
-    original said it), so it is not said and does not hold the advisor (`q713/run3-fs.out`).
 - [ ] **Q587. The karts' and the water ride's track: laid, walked and opened.** From Q581 (`park.md`, "The karts' and
   the water ride's track, buoys and race"). Replace `PLACED_TRACK_RIDE_FIRST_TRACK_CELLS`: the purchase lays the station
   (0xd or 0x12) and both mouths (0xb or 0x10) on the track grid and arms the queue; a click on a piece ("Left-click to
@@ -1889,6 +1877,10 @@ filed the items that cite it.
     not read; which one was not read) and had not said it by 19062: `0x13a` was said then and the 19100 awards replaced
     the slot. It slotted `0x101` again at 40 on 19350 and it was still unsaid at the last advisor read, 19389
     (`q743/orig/O/load.log`).
+  - **Note (Q609):** on the unmodified `New Save` this game's row 257 scores 24 on 19040 where the original's says sample
+    525, so this game's advisor is free for the hint `0x13a` on 19059 and row 19's line (said by the original on 19084)
+    waits behind it and the 19100 awards to 22142 (`q801/run3`). Which sideshow and figure the original's row 257 read
+    there decides it.
 - [ ] **Q679. Does the advisor's next line come on the original's tick at a normal frame rate?** From Q743. On
   `q713/files/outlets-B.TPWS` by Q707's F player, after row 248's line on 19031 (a 7,498 ms action in both games), the
   original said `0x13a` on 19062 (7.70 s on at four sweeps a second, `q743/orig/O/load.log`) and this game said it (314)

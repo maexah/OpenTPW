@@ -5,6 +5,11 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q690 (Home and keypad 5 reset the park camera): seen on the desk at 1280 x 720 in the stock park, from two turned and
+  zoomed cameras, Ctrl+Home refused, a locator's follow let go and a coasting pan carried on (`q690/ours-a`); the original
+  measured the same day under Proton by `campoi.py` (`q690/orig`), its frames at the reset the gate's view as ours. Not
+  seen: the keys under the full-screen view or the park map in either game; the original's follow let go by the key
+  (decoded, `and ch, 0xef`, not measured); Full Simulation (the camera is the same code in both modes).
 - Q752 (the lobby's build label): seen at 800 x 600 and 1024 x 768 on the desk, the player slots up, reading 'local'
   (`q752/ours-a`); the original's "v 2.0" box was read from its memory and its frame taken at 800 x 600 the same day
   (`q752/orig-a`), the island panel up. Not seen: a weekly build's name in it (the name comes from the same version

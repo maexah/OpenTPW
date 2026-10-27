@@ -5172,11 +5172,24 @@ again, the tick's rescore of its answer (`FUN_0059bf20`). Said at once: sample 5
 `said` a flag that stays 1. Not measured: the line after the third (mode 2's turn back to line 0), and a park whose
 share or mechanics fail a test.
 
-**OpenTPW** does not build it: the row is counted `PARK_ADVISOR_POLLED_ROW_NOT_BUILT`, so on that load it says no line on
-19084. Its advisor says the hint `0x13a` on 19059, which the original's leaves waiting because row 257's sample 525 holds
-it from 19040 to 19076 (`q602/orig-R1/line.log`; `ride-operation.md`, "The hints"), and row 257 is not built either (Q713).
-The row is Full Simulation only (`+0x0c` 0), and with no `mType` 9 cell the share is nought (`0x004cd6df`), the score 500.
-The build is Q609.
+### OpenTPW (`ParkAdvisorMessages.SetMechanicAreas`, a topic's `EntrancesPatrolled`, `ScorePerNonCoveredPercent`; `ParkFacts.MechanicsWithAnArea`, `Entrances`, `EntrancesPatrolled`; `ParkPeople.MechanicPatrols`)
+
+Built (Q609) as the four steps above: the strike's months (`ParkStrikes.MonthsSinceTheFirstSweep`), the mechanics
+(`ParkFacts.Mechanics`), those whose corners are not (1, `0x4000`), then the share of the map's `mType` 9 cells inside
+any of their rectangles, both corners held, an entrance counted once however many areas hold it. Shut or open; in
+Instant Action the poll answers `other-game`. A mechanic with no area at all, (0, 0), counts in step 3 and holds no cell,
+as the original's, whose one mark for it lands on cell id nought. The poll line ends `months=M mechanics=N areas=A
+entrances=P/E`.
+
+On that load (`q801/run2`, lane B off-screen, the final binary): `restored message=19 line=1 lastTick=18464 said=1`, then
+`poll message=19 row=19 days=828 score=325 threshold=25 tick=19084 result=post months=27 mechanics=5 areas=5
+entrances=25/71`, the tick and numbers the original read on the same load in Q602's run (above; not run again for Q609); it was queued (`pending=4`), not said, because this game's advisor
+says the hint `0x13a` on 19059, which the original's leaves waiting behind row 257's sample 525 (from 19040 to 19076,
+`q602/orig-R1/line.log`): this game's row 257 scores 24 there, under the threshold, where the original's said it (`q713/run3-fs.out`), so the advisor is free for
+`0x13a`. From 19100 the golden tickets' awards (99000) and 311 and 315 outrank it, so row 19's line comes after theirs:
+sample 57, line 2 after the file's line 1, on tick 22142 off-screen (`q801/run3`: `attempt=8 message=19 ... response=57
+sample=57 line=2`, `wearing 5,0 on model slot 0`), where the original's said it on 19084 in Q602's run. The difference is the hint's,
+the first line this game says and the original's does not; row 19's poll, score and line are the original's.
 
 ## Shop and sideshow value and satisfaction, rows 238 to 257 (fork watch 2026-10-19, Q713)
 
