@@ -72,26 +72,48 @@ internal static class ParkItemHeights
 	/// <summary>
 	/// <c>FUN_00452ae0( x, y, null )</c> with the cell's track-layer object asked first (<c>FUN_0053bf30</c>): the record's own,
 	/// or for a cell of 0xc or 0x11 its anchor's. A kart or water piece standing there answers its own <c>.hmp</c> over the
-	/// cell plus the height its root stands at; the boundary's things (0x19) are not built, so such a cell is counted
-	/// (<c>MARKER_LIFT_OVER_TRACK_THING</c>) and answers as <see cref="Over"/> does, which every cell without a track-layer
+	/// cell plus the height its root stands at; the boundary's things (0x19) are drawn, but their <c>.hmp</c> is not read for
+	/// the lift, so such a cell is counted (<c>MARKER_LIFT_OVER_TRACK_THING</c>) and answers as <see cref="Over"/> does, which every cell without a track-layer
 	/// object answers. The pieces are read from <paramref name="theme"/>'s kits, or the park now loaded's.
 	/// </summary>
 	public static float AtCell( ParkState state, ParkItemCatalogue? catalogue, HeightfieldFile field, int x, int y,
 		string? theme = null )
 	{
-		var cell = state.Record( x, y );
-		var (anchorX, anchorY) = cell.TrackType is ParkTrackPieces.KartCell or ParkTrackPieces.WaterCell && cell.TrackParentId != 0
-			? MapStep.CellAt( cell.TrackParentId )
-			: (x, y);
-		var anchor = state.Record( anchorX, anchorY );
+		if ( PieceTopAt( state, field, x, y, theme ) is { } top )
+			return top;
 
-		if ( ParkTrackPieces.PieceAt( anchorX, anchorY, anchor ) is { } piece && (theme ?? ParkTrackPieces.Current?.Theme) is { } kits )
-			return PieceTop( piece, kits, field, x, y ) ?? field.HeightAt( x, y );
+		var (anchorX, anchorY) = TrackAnchorOf( state, x, y );
 
-		if ( anchor.TrackType == ParkTrackPieces.Boundary )
+		if ( state.Record( anchorX, anchorY ).TrackType == ParkTrackPieces.Boundary )
 			Unimplemented.Report( "MARKER_LIFT_OVER_TRACK_THING" );
 
 		return Over( state, catalogue, field, x, y );
+	}
+
+	/// <summary>
+	/// How high the kart or water piece standing on the cell is over it - its <c>.hmp</c> there plus the height its root
+	/// stands at (<see cref="PieceTop"/>) - or null where the cell's track-layer object is no piece. A piece whose file is
+	/// not read answers the ground under the cell, as <c>FUN_00452ae0</c> does.
+	/// </summary>
+	internal static float? PieceTopAt( ParkState state, HeightfieldFile field, int x, int y, string? theme = null )
+	{
+		var (anchorX, anchorY) = TrackAnchorOf( state, x, y );
+
+		if ( ParkTrackPieces.PieceAt( anchorX, anchorY, state.Record( anchorX, anchorY ) ) is not { } piece
+			|| (theme ?? ParkTrackPieces.Current?.Theme) is not { } kits )
+			return null;
+
+		return PieceTop( piece, kits, field, x, y ) ?? field.HeightAt( x, y );
+	}
+
+	/// <summary>The cell whose track record holds the cell's piece: the cell itself, or for a 0xc or 0x11 its parent's.</summary>
+	private static (int X, int Y) TrackAnchorOf( ParkState state, int x, int y )
+	{
+		var cell = state.Record( x, y );
+
+		return cell.TrackType is ParkTrackPieces.KartCell or ParkTrackPieces.WaterCell && cell.TrackParentId != 0
+			? MapStep.CellAt( cell.TrackParentId )
+			: (x, y);
 	}
 
 	/// <summary>

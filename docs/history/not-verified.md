@@ -5,6 +5,16 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q775 (the track tool's squares lifted and walled; Q587's ninth piece). Ours on the final binary (`q775/ours-a`, dll
+  1fd5fd5e, SCORE 6 of 6), on the desktop, the stock park, Q581's purchase and the tool armed on the mouth: the `strip`
+  census at five poses, the mouth (34,25) `11^10` with walls north, east and south; toward (34,29); red toward (30,25) with
+  the station at 10; over the Security Camera (40,29) after a run to (34,29), `0^30` with walls 0/10/20 north, south and west
+  and 20 east; the other mouth after a run to (28,29), `11^0` (`ours-A1..A5.png`). The original this session under Proton
+  (`q775/orig`, tag R2; the first run's camera move overshot and stopped before any pose): the same records, 1.5 higher, in
+  all five poses (`R2-O1..O5.squares`, `.png`), and `liftcells.py` reads the mouths' pieces with a `.hmp`, roots -2 and -7,
+  the station's sections map type 4 with no track object. Not seen in either game: the water ride's squares, a boundary
+  thing (0x19, counted), a red square's walls blinking (built from the code). Still counted: a path or queue square over a
+  track piece (`MARKER_LIFT_OVER_TRACK_THING`, Q587).
 - Q773 (a track run over scenery; Q587's eighth piece). Ours on the final binary (`q773/ours-b`, `ours-c`, dll 49058921),
   on the desktop, the stock park, by Q581's clicks and a run to (34,29): the pointer on (40,29), where the Security Camera
   stands (priority 0, thing 19): four blue squares, cursor `c_track`, "run total 400", no `TRACK_RUN_OVER_SCENERY` count; the

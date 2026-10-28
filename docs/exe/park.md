@@ -1800,9 +1800,20 @@ south and west at 1.5, 11.5 and 21.5 and east at 21.5; after a run to (28,29), o
 walled north, south and west, (28,27) at 1.5, (28,25) `m_end` at 1.5. `liftcells.py`: the mouths are map type 0 with track
 0xb, their pieces' objects (93, 94) hold a `.hmp` and stand at -2 and -7, so the mouth reads -2 + 14 / 2.55 = 3.49 (10) and the
 other -7 + 5.49 (nought); the station's sections are map type 4 with no track object. **Ours** reads the same rule over each
-cell's `AtCell` and draws the same records in every one of those five poses (`q775/ours-a`). Not built: a path tool's square
-over a track piece is still counted (`MARKER_LIFT_OVER_TRACK_THING`, `LiftOver`), as is the boundary's thing (track type 0x19),
-which `AtCell` answers as the ground or the thing below it.
+cell's `AtCell` and draws the same records in every one of those five poses (`q775/ours-a`). **The path and queue tools'
+squares ask the same height** (Q776; `ParkBuildMarkers.LiftOver`, `ParkItemHeights.PieceTopAt`): `FUN_00532fc0`'s lift is
+`ceil10( trunc( FUN_00452ae0 ) )` over a map type 4, 7, 9, 10 or `0x1e` cell or a track kind 11, 12, 16, 17 or 25 cell, and
+`FUN_00452ae0` reads the cell's track-layer object first, so a one-cell square over a kart or water piece stands on the
+piece's `.hmp` and its root. **A track piece does not refuse a path square**: a path tool anchored on bare ground at
+(34,23) with the pointer over the mouth (34,25) draws blue (texture 0) squares, the last lifted (the preview; no click was made). Measured in the original
+under Proton (`q776/orig`, `run.sh`, tags O and P3run; `squares.py`, `liftcells.py`) on `q581/karts.TPWS`, the karts bought
+on (32,25): (34,23) and (34,24) at 1.5; the mouth (34,25), track 0xb, object 93 with a `.hmp`, root -2, at 11.5 with one wall,
+face 0x1, at 1.5; with the pointer on (34,26), a 0xc cell parented to (34,25), (34,25) and (34,26) at 11.5, walls north of
+(34,25) and south of (34,26), both at 1.5 (the east and west neighbours lift alike); the other mouth (28,25), root -7, with
+the anchor on (28,22): four squares at 1.5, no wall. Ours draws the same records in the three poses (`q776/ours-a`, `strip`).
+Not built: the boundary's things (track type 0x19) are drawn, but their `.hmp` is not read for the lift, so a square over one
+(or over a 0xc cell parented to one) stays on the ground and is counted (`MARKER_LIFT_OVER_TRACK_THING`); `AtCell` answers
+them as the ground or the thing below. The original lifts such a square too (Q436: (93,21) and (94,21) by 20).
 **A run over scenery** (Q773; `ParkTrackTool.JudgeCell`, `TearDownUnder`; the click's pass in `LayRun`). The verdict's blue answer is at
 `0x00539961`..`0x00539c24`: after the four cells' flag `0x40` (`0x00539924`..`0x0053995b`), for each of the anchor (the
 verdict's own cell), its east cell and its south-east cell in turn, the last read twice by the listing (the south cell, `ebx`,

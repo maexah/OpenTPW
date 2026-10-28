@@ -10811,6 +10811,11 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   own `.hmp` first (`ParkItemHeights.AtCell`); the walls down to the anchors two cells away, 20 long (`TrackWalls`). Ours and
   the original this session read the same records in five poses (`q775/ours-a` 6 of 6, `q775/orig` R2; `park.md`, "A
   track square's lift and walls").
+- [x] **Q776. A path or queue tool's square over a track piece (Q587's tenth piece).** `ParkBuildMarkers.LiftOver` asks
+  `ParkItemHeights.PieceTopAt` for a track kind 11, 12, 16 or 17 cell, so a one-cell square over a kart or water piece
+  stands on its `.hmp` and root, the rule Q775 built for the track tool's (`FUN_00452ae0`'s track-layer object first); a
+  boundary thing's cell is still counted. Ours and the original this session draw the same records over the mouth, its
+  0xc cell and the other mouth (`q776/ours-a`, `q776/orig`; `park.md`, "A track square's lift and walls").
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

@@ -467,7 +467,8 @@ public sealed class ParkBuildMarkers : ModelEntity
 
 		// Each wall under a square not refused also zeroes the refusal latches DAT_00816d50 and d58 (0x005333bd). That
 		// changes nothing the path and queue tools read, so it is not done: such a square leaves both at nought already,
-		// but for the queue's join, the strip's last square, whose path cell only a track thing lifts (counted here,
+		// but for the queue's join, the strip's last square, whose path cell only a track thing lifts (a built piece
+		// never stands on a path cell; a boundary thing's is counted,
 		// MARKER_LIFT_OVER_TRACK_THING), and the d58 a join leaves is read next by a pass, which clears it first.
 		// docs/exe/park-engine.md, "The walls".
 
@@ -618,24 +619,31 @@ public sealed class ParkBuildMarkers : ModelEntity
 	/// <summary>
 	/// How far a square over a cell is lifted before the ground under its corner is added - the original's
 	/// <c>ceil10( trunc( FUN_00452ae0 ) )</c> (<c>0x005330ca</c>). Nought except over a cell of type 4, 7, 9, 10 or
-	/// <c>0x1e</c>; a cell of track kind 11, 12, 16, 17 or 25 is counted instead. <b>The height asked already
+	/// <c>0x1e</c> or a cell of track kind 11, 12, 16, 17 or 25, and then the height of what the cell holds, its
+	/// track-layer object asked first (<see cref="ParkItemHeights.AtCell"/>). A kart or water piece answers its own
+	/// <c>.hmp</c>; the boundary's things, and a 0xc or 0x11 cell parented to one, are drawn but their <c>.hmp</c> is not
+	/// read, so such a cell is counted (<c>MARKER_LIFT_OVER_TRACK_THING</c>) and the square stays on the ground. <b>The height asked already
 	/// includes the ground under the thing, so on raised ground the ground is counted twice</b>, once here and once
 	/// as the corner is laid; this keeps that, as the original draws it.
 	/// </summary>
-	internal static float LiftOver( ParkState state, ParkItemCatalogue? catalogue, HeightfieldFile field, int x, int y )
+	internal static float LiftOver( ParkState state, ParkItemCatalogue? catalogue, HeightfieldFile field, int x, int y,
+		string? theme = null )
 	{
 		var cell = state.Record( x, y );
 
 		if ( cell.Type is CellEdge.Footprint or 7 or CellEdge.RideEnd or CellEdge.RideFarEnd or CellEdge.Approach )
-			return CeilingTen( (int)ParkItemHeights.Over( state, catalogue, field, x, y ) );
+			return CeilingTen( (int)ParkItemHeights.AtCell( state, catalogue, field, x, y, theme ) );
 
-		// A cell of these track kinds holds a thing of the second cell layer (kind 25 its anchor, 12 and 17 naming
-		// it as parent), which the original asks for its height first (FUN_0053bf30); this park builds none of
-		// them, so the square stays on the ground.
-		if ( cell.TrackType is 11 or 12 or 16 or 17 or 25 )
+		if ( cell.TrackType is not (11 or 12 or 16 or 17 or 25) )
+			return 0f;
+
+		if ( ParkItemHeights.PieceTopAt( state, field, x, y, theme ) is not { } top )
+		{
 			Unimplemented.Report( "MARKER_LIFT_OVER_TRACK_THING" );
+			return 0f;
+		}
 
-		return 0f;
+		return CeilingTen( (int)top );
 	}
 
 	/// <summary>

@@ -176,6 +176,54 @@ public class ItemHeightMapTests
 		Assert.AreEqual( 0f, ParkBuildMarkers.TrackLiftOver( state, 28, 25, At ) );
 	}
 
+	/// <summary>
+	/// A path or queue tool's square over a kart piece lifts by the piece's height, the same rule that lifts the track
+	/// tool's (Q776; <c>FUN_00532fc0</c> asks <c>FUN_00452ae0</c>, whose track-layer object comes first): over the
+	/// station laid from (30,24) the mouth (34,25) reads 3.49 so 10, its 0xc cell (34,26) by its anchor 3.88 so 10, the
+	/// other mouth (28,25) nought. The ground there is -3 and -8, and a cell asked as the ground (or a 0xc cell not
+	/// followed to its anchor) lifts nought. Nothing is counted, but a 0xc cell parented to a boundary thing (its <c>.hmp</c> not read)
+	/// still is, and stays on the ground.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the piece not asked; a 0xc cell not followed to its anchor; the boundary lifted by its ground; a map type 4 or 7 cell asked as the ground.</remarks>
+	[TestMethod]
+	public void APathSquareOverAKartPieceIsLiftedByThePiece()
+	{
+		using var stream = new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
+		var state = new ParkState( world );
+		var catalogue = new ParkItemCatalogue( "jungle", data, instantAction: true );
+
+		HeightfieldFile field;
+
+		using ( var terrain = data.OpenRead( "levels/jungle/terrain/base.MD2" ) )
+			field = new HeightfieldFile( terrain );
+
+		ParkTrackPieces.LayStation( state, 1, 30, 24, 0 );
+		Unimplemented.Forget();
+
+		Assert.AreEqual( 10f, ParkBuildMarkers.LiftOver( state, catalogue, field, 34, 25, "jungle" ), "the mouth's piece" );
+		Assert.AreEqual( 10f, ParkBuildMarkers.LiftOver( state, catalogue, field, 34, 26, "jungle" ), "its 0xc cell, by its anchor" );
+		Assert.AreEqual( 0f, ParkBuildMarkers.LiftOver( state, catalogue, field, 28, 25, "jungle" ), "the other mouth's piece" );
+		Assert.IsFalse( Unimplemented.Summary.Any( entry => entry.What == "MARKER_LIFT_OVER_TRACK_THING" ), "a built piece is not a gap" );
+
+		Unimplemented.Forget();
+
+		Assert.AreEqual( 0f, ParkBuildMarkers.LiftOver( state, catalogue, field, 34, 25, "nosuchtheme" ), "a piece whose file is not read stands on the ground" );
+		Assert.IsFalse( Unimplemented.Summary.Any( entry => entry.What == "MARKER_LIFT_OVER_TRACK_THING" ), "and is no gap of this count" );
+
+		state.SetRecord( 34, 26, state.Record( 34, 26 ) with { Type = 7 } );
+
+		Assert.AreEqual( 10f, ParkBuildMarkers.LiftOver( state, catalogue, field, 34, 26, "jungle" ), "land of type 7 under the piece: the piece first" );
+
+		Assert.IsTrue( field.HeightAt( 74, 66 ) > 20, "raised ground, which a lift by the ground would show" );
+
+		state.SetRecord( 73, 66, ParkState.CellFor( world, 73, 66 ) with { Type = 0, TrackType = 25 } );
+		state.SetRecord( 74, 66, ParkState.CellFor( world, 74, 66 ) with { Type = 0, TrackType = ParkTrackPieces.KartCell, TrackParentId = (ushort)((66 * 128) + 73 + 1) } );
+
+		Assert.AreEqual( 0f, ParkBuildMarkers.LiftOver( state, catalogue, field, 74, 66, "jungle" ), "a boundary thing's cell stays on the ground" );
+		Assert.IsTrue( Unimplemented.Summary.Any( entry => entry.What == "MARKER_LIFT_OVER_TRACK_THING" ), "and is counted" );
+	}
+
 	/// <summary>The original's rounding: <c>(t + 9) / 10 * 10</c>, integer division towards nought.</summary>
 	[TestMethod]
 	public void TheLiftRoundsUpToTen()
