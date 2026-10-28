@@ -1820,9 +1820,10 @@ public static class DebugConsole
 
 			// The hand: what the buy screen puts an item into, and what a click on the ground would
 			// take out of it. Carrying costs nothing - the money is taken when the thing goes up.
+			// `carry <item> <thing>` takes a track add-on for the ride that thing is, as the ride window's Buy Upgrades row does.
 			case "carry":
-				Reply( parts.Length > 1
-					? ParkBuilding.Carry( (int)Argument( 1 ) )
+				Reply( parts.Length > 2 ? ParkBuilding.CarryFor( (int)Argument( 1 ), (int)Argument( 2 ) )
+					: parts.Length > 1 ? ParkBuilding.Carry( (int)Argument( 1 ) )
 					: ParkBuilding.HandState() );
 				break;
 
@@ -2211,7 +2212,7 @@ public static class DebugConsole
 						: "") +
 					$" occupant {ParkState.Current?.CellAt( probeX, probeY ).Occupant ?? 0}" +
 					$" overlap {probed.OverlapCounter} track type {probed.TrackType} links 0x{probed.TrackNeighbours:x2}" +
-					$" way 0x{probed.TrackDirection:x2} track parent {probed.TrackParentId} track over {probed.TrackOverlapCounter} piece {probed.TrackTileSet}/{probed.TrackTileIndex}/{probed.TrackTileAngle}" +
+					$" way 0x{probed.TrackDirection:x2} track flags 0x{probed.TrackFlags:x} track parent {probed.TrackParentId} track over {probed.TrackOverlapCounter} piece {probed.TrackTileSet}/{probed.TrackTileIndex}/{probed.TrackTileAngle}" +
 					(ParkState.Current is { } effectState && ParkState.OnMap( probeX, probeY )
 						? $" effects {string.Join( ",", effectState.EffectsAt( probeX, probeY ).ToArray() )}"
 						: "") );

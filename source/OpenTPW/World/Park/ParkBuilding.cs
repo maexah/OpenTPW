@@ -49,7 +49,7 @@ public static class ParkBuilding
 	/// cell refused it the way the original's preview reddens one.
 	/// </summary>
 	private readonly record struct Built( string Answer, int ThingId = 0, (int X, int Y)? QueueNode = null,
-		bool HasQueue = false, int TrackType = 0, bool Refused = false );
+		bool HasQueue = false, int TrackType = 0, bool Refused = false, int AddOnFor = 0 );
 
 	private static Built Build( int catalogueId, int cellX, int cellY, int angle )
 	{
@@ -66,8 +66,10 @@ public static class ParkBuilding
 	/// <see cref="Level"/>. With no <paramref name="objects"/> nothing can be stood, so a placement that passes
 	/// every test answers that it would not load.
 	/// </summary>
+	/// <param name="addOnFor">For a track add-on, the thing id of the ride it is put down on, the builder's object
+	/// (<c>[0x008186ac]</c>); nought names none, and then every track cell of it refuses.</param>
 	private static Built Build( ParkState state, IParkInitialState park, ParkItemCatalogue catalogue, ParkObjects? objects,
-		ParkRides? rides, int catalogueId, int cellX, int cellY, int angle )
+		ParkRides? rides, int catalogueId, int cellX, int cellY, int angle, int addOnFor = 0 )
 	{
 		if ( !catalogue.TryGet( catalogueId, out var item ) )
 			return new( $"buy: this theme has no item {catalogueId}" );
@@ -77,10 +79,12 @@ public static class ParkBuilding
 		if ( item.UiType is < 0 or > ItemDescriptionFile.Feature )
 			return new( $"buy: '{item.Name}' is UI type {item.UiType}, which no buy tab lists" );
 
-		if ( PlacementRefusal( state, item, cellX, cellY, angle ) is { } refused )
+		if ( PlacementRefusal( state, item, cellX, cellY, angle, addOnFor ) is { } refused )
 			return new( refused, Refused: true );
 
-		var footprint = ParkObjects.FootprintAt( item, cellX, cellY, angle );
+		// A track add-on's cells are the ones its model covers (ParkTrackAddOn.Cells), as the placer stamps them.
+		var addOn = ParkTrackAddOn.Is( item );
+		var footprint = addOn ? ParkObjects.FloorFootprint( item, cellX, cellY, angle ) : ParkObjects.FootprintAt( item, cellX, cellY, angle );
 
 		var thingId = state.NextThingId();
 
@@ -128,20 +132,15 @@ public static class ParkBuilding
 				Unimplemented.Report( $"SHAPE_KIND_{kind}_PLACEMENT" );
 		}
 
-		// A track add-on's put-down is not built: the snap to the ride's anchors (0x005236b0), the add-on flag its kinds 0xb and
-		// 0x10 set on the track's cells (FUN_0053a510( 0x10 ), 0x0052950d) and the ride's word at +0x30 (0x00529ff5); it
-		// stands as a plain object, and no walk reaches its caps.
-		if ( ParkObjects.IsTrackAddOn( item ) )
-			Unimplemented.Report( "PLACE_TRACK_ADD_ON" );
-
 		// The placer's track-ride slot, taken before the object is constructed.
 		var trackRide = TakeTrackRide( state, item );
 
 		// Stamped now on the park's calendar, as the constructor does on a purchase and on a move's put-down
 		// (FUN_004db090, 0x004db66a): it is what makes a bought thing new to the ride score. The constructor stores
 		// the track ride's handle beside it.
+		// A track add-on keeps the ride it was put down on in its +0x30 (0x00529ff5..0x0052a023, mUpgradeParent).
 		var placed = Constructed( item, thingId, cellX, cellY, angle, entryPos, exitPos,
-			ParkWorld.BuiltWhen.At( state.CalendarNow ), trackRide );
+			ParkWorld.BuiltWhen.At( state.CalendarNow ), trackRide ) with { UpgradeParent = (ushort)(addOn ? addOnFor : 0) };
 
 		if ( objects?.PlaceNow( placed, catalogue ) != true )
 		{
@@ -160,7 +159,17 @@ public static class ParkBuilding
 
 		StampEffects( state, placed );
 		BindOperation( state, rides, placed, item );
-		Stamp( state, footprint, cellX, cellY );
+
+		if ( addOn )
+		{
+			var flagged = ParkTrackAddOn.Stamp( state, item, cellX, cellY, angle );
+
+			// The pieces under it go with their cells' models (FUN_00536780 at 0x00529141).
+			ParkTrackPieces.Current?.Rebuild();
+			Log.Info( $"Building: '{item.Name}' flags {flagged} track cells 0x10 for ride thing {addOnFor}" );
+		}
+		else
+			Stamp( state, footprint, cellX, cellY );
 
 		// And onto its anchor cell's own list, which is the ONE cell the save puts a placed thing on -
 		// through EnterCell, so a guest standing there is kept behind it rather than evicted. The rest
@@ -184,9 +193,10 @@ public static class ParkBuilding
 			$"speed {placed.OperatingSpeed}, capacity {placed.OperatingCapacity}, duration {placed.OperatingDuration}" +
 			(placed.TrackRide != 0 ? $", track 0x{placed.TrackRide:x8}" : "") );
 
+		// An add-on answers no track type to the put-down (FUN_0052faf0), so no station is laid for it.
 		return new( $"buy: '{item.Name}' built as thing {thingId} at ({cellX},{cellY}) for {paid}, " +
 			$"balance {state.Balance}" + (node is { } at ? $", queue node at ({at.X},{at.Y})" : ""), thingId, node,
-			item.HasQueue, item.TrackType );
+			item.HasQueue, addOn ? 0 : item.TrackType, AddOnFor: addOn ? addOnFor : 0 );
 	}
 
 	/// <summary>
@@ -194,11 +204,19 @@ public static class ParkBuilding
 	/// against the balance, and the cells its ends face, in the order <see cref="Build"/> asks them. The carried thing's
 	/// squares ask the same (<see cref="CarrySquares"/>), so what they show is what the click does.
 	/// </summary>
-	internal static string? PlacementRefusal( ParkState state, ParkItemCatalogue.Item item, int cellX, int cellY, int angle )
+	/// <param name="addOnFor">For a track add-on, the ride it is for (<see cref="Build"/>'s); its cells are then judged by
+	/// <see cref="ParkTrackAddOn.Refusal"/>.</param>
+	internal static string? PlacementRefusal( ParkState state, ParkItemCatalogue.Item item, int cellX, int cellY, int angle,
+		int addOnFor = 0 )
 	{
-		var footprint = ParkObjects.FootprintAt( item, cellX, cellY, angle );
+		if ( ParkTrackAddOn.Is( item ) )
+		{
+			var ride = state.TryObject( addOnFor, out var named ) ? named : (ParkWorld.CatalogueObject?)null;
 
-		if ( Refusal( state, footprint ) is { } why )
+			if ( ParkTrackAddOn.Refusal( state, item, ride, cellX, cellY, angle, ( x, y ) => Refusal( state, (x, y, x, y) ) ) is { } refused )
+				return $"buy: '{item.Name}' will not fit at ({cellX},{cellY}) - {refused}";
+		}
+		else if ( Refusal( state, ParkObjects.FootprintAt( item, cellX, cellY, angle ) ) is { } why )
 			return $"buy: '{item.Name}' will not fit at ({cellX},{cellY}) - {why}";
 
 		// The affordability test the original makes when a buy row is clicked, before it ever builds
@@ -484,6 +502,11 @@ public static class ParkBuilding
 		// The demolish sound, one of 0x96..0x99 by how many body cells the thing covered (FUN_00527ee0,
 		// after the destructor, whenever a saved layout is not being replayed).
 		Unimplemented.Report( "DEMOLISH_SOUND" );
+
+		// A track add-on's own arm of the demolisher (0x00528512..0x0052852d) is not read: here its cells are cleared as any
+		// thing's and its track cells keep their add-on flag, so no piece stands there again.
+		if ( ParkTrackAddOn.Is( item ) )
+			Unimplemented.Report( "SALE_TRACK_ADD_ON" );
 
 		var refund = item.BuildPrice;
 		var footprint = ParkObjects.FootprintAt( item, placed.CellX, placed.CellY, placed.Angle );
@@ -1259,6 +1282,38 @@ public static class ParkBuilding
 	public static int CarryingAngle { get; private set; }
 
 	/// <summary>
+	/// For a track add-on in the hand, the thing id of the ride it is for: the builder's object <c>[0x008186ac]</c>, which the
+	/// ride window's Buy Upgrades choice makes the ride the window is open on (<c>FUN_005276d0( 1 )</c> at <c>0x004af5c7</c>; an
+	/// add-on's window names its own ride, <c>+0x30</c>), and whose cell the preview snaps to. Nought for anything else.
+	/// </summary>
+	public static int CarryingFor { get; private set; }
+
+	/// <summary>
+	/// Takes a track add-on into the hand for a ride, as the ride window's Buy Upgrades choice does (<c>FUN_004af480</c>, Q512,
+	/// which is not built: the console's <c>carry &lt;item&gt; &lt;thing&gt;</c> stands in for its row). A thing that is itself
+	/// an add-on names the ride in its <c>+0x30</c> (<c>FUN_005276d0</c>, <c>0x005277b3</c>..<c>0x00527831</c>).
+	/// </summary>
+	public static string CarryFor( int catalogueId, int thingId )
+	{
+		if ( Level.Current is not { ParkState: { } state, Catalogue: { } catalogue } )
+			return "carry: a park has to be loaded";
+
+		if ( !state.TryObject( thingId, out var named ) )
+			return $"carry: nothing in the park is thing {thingId}";
+
+		var ride = catalogue.TryGet( named.CatalogueId, out var namedItem ) && ParkTrackAddOn.Is( namedItem ) && named.UpgradeParent != 0
+			? named.UpgradeParent
+			: thingId;
+
+		var answer = Carry( catalogueId, out var held );
+
+		if ( held && catalogue.TryGet( catalogueId, out var item ) && ParkTrackAddOn.Is( item ) )
+			CarryingFor = ride;
+
+		return held ? $"{answer}, for ride thing {CarryingFor}" : answer;
+	}
+
+	/// <summary>
 	/// Takes an item into the hand, refusing the ones no buy list offers and the ones the park cannot
 	/// afford - the two tests the original makes before it builds the placement mode. A mystery ride is
 	/// afforded by the player's tickets, the bank not asked (<c>0x004ac5a9</c>).
@@ -1348,6 +1403,7 @@ public static class ParkBuilding
 
 		Carrying = catalogueId;
 		CarryingAngle = angle;
+		CarryingFor = 0;
 
 		// The install of mode 4 (and of the move tool) runs a pass first, which clears the refusal latch a followed
 		// member's patrol edges read (DAT_00816d50, FUN_0046d5a0, 0x0046d5e8). The place mode's later passes set it
@@ -1375,9 +1431,33 @@ public static class ParkBuilding
 			|| !catalogue.TryGet( Carrying, out var item ) )
 			return [];
 
-		var (cellX, cellY) = AnchorUnder( item, pointerX, pointerY, CarryingAngle );
+		var (cellX, cellY) = CarriedAnchorUnder( state, item, pointerX, pointerY, out _ );
 
-		return CarrySquares( state, item, cellX, cellY, CarryingAngle );
+		return CarrySquares( state, item, cellX, cellY, CarryingAngle, CarryingFor );
+	}
+
+	/// <summary>
+	/// The anchor the thing in the hand takes with the pointer on (x, y), <see cref="AnchorUnder"/>'s, but for a track add-on
+	/// the preview's snap first (<see cref="ParkTrackAddOn.Snap"/>), which may turn the hand as the original's preview turns
+	/// <c>[0x0081d7a4]</c>, and the anchor its picture's cell gives (<see cref="ParkTrackAddOn.AnchorFor"/>).
+	/// </summary>
+	/// <param name="previewCell">The preview's cell, <c>[0x008186a4]</c>: the pointer's, or an add-on's snapped one.</param>
+	private static (int X, int Y) CarriedAnchorUnder( ParkState state, ParkItemCatalogue.Item item, int pointerX, int pointerY,
+		out (int X, int Y) previewCell )
+	{
+		previewCell = (pointerX, pointerY);
+
+		if ( !ParkTrackAddOn.Is( item ) )
+			return AnchorUnder( item, pointerX, pointerY, CarryingAngle );
+
+		var angle = CarryingAngle;
+		var (preview, anchor) = ParkTrackAddOn.Under( state, item,
+			state.TryObject( CarryingFor, out var ride ) ? ride : null, pointerX, pointerY, ref angle );
+
+		CarryingAngle = angle;
+		previewCell = preview;
+
+		return anchor;
 	}
 
 	/// <summary>Whether the thing in the hand costs more than the park has - <see cref="PlacementRefusal"/>'s money test.</summary>
@@ -1417,14 +1497,40 @@ public static class ParkBuilding
 	/// Puts the thing in the hand down with the pointer on (x, y), anchored as the original's placer centres it
 	/// (<see cref="AnchorUnder"/>) - the park's click. The console's <c>put</c> takes the anchor itself.
 	/// </summary>
+	/// <remarks>
+	/// <b>A track add-on goes down on the preview's snapped cell</b> (the carry shell's click passes the put-down its flag 1,
+	/// <c>0x0046c627</c>, which takes <c>[0x008186b8]</c>/<c>[0x008186b4]</c>, <c>0x005249cd</c>), and for the ride whose track
+	/// is there: the put-down's add-on arm makes that track's owner the builder's object (<c>0x00524b9b</c>..<c>0x00524c3d</c>).
+	/// Where the cell is no track the arm builds nothing and lets the add-on go (<c>0x00524bbe</c>), which a shipped add-on
+	/// never meets: the snapped cell is one of its track cells, so the preview refuses it red first.
+	/// </remarks>
 	public static string PlaceCarriedUnder( int pointerX, int pointerY, bool pressReachedTheTool = true )
 	{
-		if ( Carrying == 0 || Level.Current?.Catalogue is not { } catalogue || !catalogue.TryGet( Carrying, out var item ) )
+		if ( Carrying == 0 || Level.Current is not { ParkState: { } state, Catalogue: { } catalogue }
+			|| !catalogue.TryGet( Carrying, out var item ) )
 			return PlaceCarried( pointerX, pointerY, pressReachedTheTool: pressReachedTheTool );
 
-		var (cellX, cellY) = AnchorUnder( item, pointerX, pointerY, CarryingAngle );
+		var (cellX, cellY) = CarriedAnchorUnder( state, item, pointerX, pointerY, out var preview );
 
-		return $"under ({pointerX},{pointerY}): {PlaceCarried( cellX, cellY, pressReachedTheTool: pressReachedTheTool )}";
+		if ( !ParkTrackAddOn.Is( item ) )
+			return $"under ({pointerX},{pointerY}): {PlaceCarried( cellX, cellY, pressReachedTheTool: pressReachedTheTool )}";
+
+		var under = $"under ({pointerX},{pointerY}), snapped to ({preview.X},{preview.Y}) turned {CarryingAngle}";
+
+		if ( ParkTrackAddOn.RideUnder( state, preview.X, preview.Y ) is { } ride )
+			CarryingFor = ride.ThingId;
+		else if ( PlacementRefusal( state, item, cellX, cellY, CarryingAngle, CarryingFor ) == null )
+		{
+			// Dead by CONTENT: see the remarks.
+			ParkBuildMode.Disarm();
+
+			if ( !Input.ControlAlone )
+				Carrying = 0;
+
+			return $"{under}: put: no track there - nothing is built, and '{item.Name}' is let go";
+		}
+
+		return $"{under}: {PlaceCarried( cellX, cellY, pressReachedTheTool: pressReachedTheTool )}";
 	}
 
 	/// <summary>
@@ -1440,10 +1546,16 @@ public static class ParkBuilding
 	/// red without asking the cell (<c>DAT_0081b604</c>, <c>0x00533931</c>); here the refusal is the click's own,
 	/// <see cref="PlacementRefusal"/>. docs/exe/park-engine.md, "Placement feedback", "While a thing is carried".
 	/// </summary>
-	internal static List<CarrySquare> CarrySquares( ParkState state, ParkItemCatalogue.Item item, int cellX, int cellY, int angle )
+	/// <remarks>A track add-on's squares stand on the cells its model covers (<see cref="ParkTrackAddOn.Cells"/>), judged for the
+	/// ride <paramref name="addOnFor"/>.</remarks>
+	internal static List<CarrySquare> CarrySquares( ParkState state, ParkItemCatalogue.Item item, int cellX, int cellY, int angle,
+		int addOnFor = 0 )
 	{
 		if ( item.Shape is not { } shape )
 			return [];
+
+		var addOn = ParkTrackAddOn.Is( item );
+		var (originX, originY) = addOn ? ParkObjects.ModelCell( item, cellX, cellY, angle ) : (cellX, cellY);
 
 		var squares = new List<CarrySquare>();
 		var refused = false;
@@ -1456,7 +1568,7 @@ public static class ParkBuilding
 			{
 				var kind = shape.KindAt( column, row );
 				var (dx, dy) = RotateDelta( column, row, angle );
-				var (x, y) = (cellX + dx, cellY + dy);
+				var (x, y) = (originX + dx, originY + dy);
 
 				switch ( kind )
 				{
@@ -1520,11 +1632,11 @@ public static class ParkBuilding
 		}
 
 		// A kart or water ride's placer also lays the squares of its mouths' cells and checks them (FUN_005286a0,
-		// 0x00529b35); neither is built.
-		if ( item.TrackType is 1 or 2 )
+		// 0x00529b35); neither is built. An add-on answers no track type there (FUN_0052faf0).
+		if ( item.TrackType is 1 or 2 && !addOn )
 			Unimplemented.Report( "CARRY_PREVIEW_TRACK_START" );
 
-		if ( refused || PlacementRefusal( state, item, cellX, cellY, angle ) != null )
+		if ( refused || PlacementRefusal( state, item, cellX, cellY, angle, addOnFor ) != null )
 			return squares.Select( square => square with { Marker = ParkPathBuilding.MarkerRed, Turn = 0 } ).ToList();
 
 		return squares;
@@ -1581,7 +1693,7 @@ public static class ParkBuilding
 		if ( Carrying == 0 )
 			return "put: the hand is empty - `carry <item>` first, or click a row on the buy screen";
 
-		var built = Build( state, park, catalogue, objects, rides, Carrying, cellX, cellY, angle ?? CarryingAngle );
+		var built = Build( state, park, catalogue, objects, rides, Carrying, cellX, cellY, angle ?? CarryingAngle, CarryingFor );
 
 		// A click on a red cell plays sound 0xaf and leaves the hand as it is, so the next click tries again.
 		if ( built.Refused )
@@ -1596,6 +1708,21 @@ public static class ParkBuilding
 		{
 			var laid = ParkTrackTool.PutDown( state, built.TrackType, cellX, cellY, angle ?? CarryingAngle );
 			Log.Info( $"Building: thing {built.ThingId} laid {laid} track anchors, its station and mouths" );
+		}
+
+		// The add-on's put-down walks the ride's circuit (0x00524c46..0x00524d68): its sections cleared and laid again, its
+		// +0x2c, its pieces' clips and, closed and let, its opening; the walk shows and hides the add-on's end caps.
+		if ( built.AddOnFor != 0 && state.TryObject( built.AddOnFor, out var ride ) && catalogue.TryGet( ride.CatalogueId, out var rideItem ) )
+		{
+			// FUN_00523230 first runs ops 0x85, 0x86 and 0x81 over the track about the add-on (0x00524c75), which is not read.
+			Unimplemented.Report( "TRACK_ADD_ON_PASSES" );
+
+			var (valid, steps) = ParkTrackTool.WalkCircuit( state, ride, check: false );
+			var script = rides?.Scheduler.Scripts.FirstOrDefault( s => s.ThingId == ride.ThingId );
+
+			ParkTrackTool.Settle( state, park, script, ride.ThingId, rideItem.TrackType, valid );
+			Unimplemented.Report( "TRACK_PIECES_CLIP" );
+			Log.Info( $"Building: add-on thing {built.ThingId} walked ride thing {ride.ThingId}'s circuit, {steps} steps, +0x2c {valid}" );
 		}
 
 		if ( built.QueueNode is not { } node )
@@ -1629,7 +1756,7 @@ public static class ParkBuilding
 			? $"'{item.Name}' ({Carrying}) at {item.BuildPrice}"
 			: $"item {Carrying}";
 
-		return $"hand: holding {name}, turned {CarryingAngle}";
+		return $"hand: holding {name}, turned {CarryingAngle}" + (CarryingFor != 0 ? $", for ride thing {CarryingFor}" : "");
 	}
 
 	/// <summary>Every object standing in the park now, for the debug console.</summary>
@@ -1659,7 +1786,8 @@ public static class ParkBuilding
 				$"at ({placed.CellX},{placed.CellY}) turned {placed.Angle}" +
 				$"{(placed.IsPlaced ? "" : " (not placed)")} state {placed.State} canload {placed.CanLoad}" +
 				$" repair {placed.StateOfRepair:R} staff {placed.AssignedStaff} marked {placed.TimeMarkedForMaintenance}" +
-				$" flags 0x{placed.Flags:x} topleft {placed.TopLeft}";
+				$" flags 0x{placed.Flags:x} topleft {placed.TopLeft}" +
+				(placed.UpgradeParent != 0 ? $" upgradeparent {placed.UpgradeParent}" : "");
 		}
 	}
 }

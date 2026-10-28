@@ -80,9 +80,12 @@ filed the items that cite it.
   takes a run back with Backspace; Q766 makes each section's collision objects and buoy; Q767 walks from the mouths and
   pulses the open end; Q768 draws the armed tool's preview squares and its `c_end`; Q773 answers blue over a feature of priority
   below 3 and tears it down at the click (op `0x87`); Q775 lifts and walls the preview squares; Q776 lifts a path or queue tool's square over a piece; Q777 lifts a square over the boundary's hoardings by their `.hmp`; Q778 shows and hides an add-on's end caps in the
-  walk and lays a loaded add-on's from its file. What is left: an add-on's put-down (`PLACE_TRACK_ADD_ON`: the snap to the
-  ride's anchors, `0x005236b0`, the track cells' add-on flag its shape kinds 0xb and 0x10 set, `0x0052950d`, and the ride's
-  word `+0x30`, `0x00529ff5`; `park.md`, "The walk"), the pieces' clips after a close
+  walk and lays a loaded add-on's from its file; Q780 puts an add-on down on its ride's track (the snap, the verdict, the
+  stamp, `mUpgradeParent` and the walk). What is left: the add-on put-down's passes over the track about it
+  (`TRACK_ADD_ON_PASSES`: `FUN_00523230`'s ops 0x85, 0x86 and 0x81, cells not read), its rotation to 0 under Ctrl
+  (`0x005259fc`; ours keeps the hand's angle), the sale of an add-on (`SALE_TRACK_ADD_ON`: the demolisher's arm
+  `0x00528512`..`0x0052852d`; ours leaves its track cells flagged, so no piece stands there again), the bit `0x01000000` a
+  freshly made model's cap words carry in the original (not read); the pieces' clips after a close
   (`TRACK_PIECES_CLIP`: `TrackRide_PlayPiecesFromMouth`, `0x0052a490`, and `TrackRide_PlayPiecesFromEnd`); the move's
   put-down walk (`0x00524d0a`; ours moves as a sale and a purchase); the put-down's check of the mouths, op 0x20b or
   0x210, whose refusal refuses the placement (`PUT_DOWN_TRACK_OVER_TRACK`: ours lays no anchor over track instead); a take-back's other cell or
@@ -186,7 +189,7 @@ filed the items that cite it.
   section 12 or 13 (`TrackRide_AddSection`, jump-table arms `0x0054b7e4` and `0x0054b86d`, each `mov ebp,0x100` then the
   straight's arm), so its rectangle carries flag 0x100, which drives `Bumper_StepCar`'s add-on arm (the object's `+0x10`
   == `0xdac`, `FUN_00548e80` at `0x00548d11`, `0x00548daa`, `0x00548e1c`). Q587 to Q589 do not ask for it, and Q512 and
-  Q513 cover only the buy list, the snap and the window. Decode the add-on arm and the hills, build them (or count them
+  Q513 cover only the buy list and the window (the snap and the put-down are Q780's). Decode the add-on arm and the hills, build them (or count them
   with `Unimplemented.Report`), and confirm one of each against the original.
   - **Note (fork watch 2026-10-25, verify-all.md H1):** the add-on and hill pieces come from the same kits (`0x522aa0`, `0x522c60`), so they are draped
     per vertex like the rest (Q587's note); build them so.
@@ -1512,16 +1515,12 @@ filed the items that cite it.
   Instant Action. Neighbours: Q272 (a mechanic and a waiting upgrade), Q452 (Buy Rides lists a researched upgrade), Q402 (the
   sound). Confirm in Full Simulation: a ride at level 0 and at level 2, the list's rows and prices, an order and its cancel,
   beside the original; a screenshot of each.
-- [ ] **Q513. The add-on's snap and the window a click on an add-on opens.** From the fork watch, 2026-10-18
-  (`verify-world-b.md` L2 and L3, `verify-world-a.md` M5). Lost Kingdom's add-ons (1500 to 1502, `AddOn.UpgradeType` 1) are
-  the items. Hovered over one of the five track types, the tool-4 preview snaps the add-on to anchor + 2 x floor( d / 2 ) on
-  both axes, turns it by the cell's flow (flow 1 gives 0, 4 `0x10e`, `0x10` `0xb4`, `0x40` `0x5a`), applies the item's
-  North/West/South/East adjust and moves the cell by the ride's own angle; the placement stores the word `+0x30` as the
-  builder's object (the ride the buy row was chosen on); a click on the add-on opens that ride's window when the word is
-  non-zero (`docs/exe/park-engine.md`, "The add-on's snap, its open ends and the window a click opens"). Its open ends light
-  the dummy nodes by a bit accumulator that is never cleared after the start. Read what this game does first (`HOVER_*` and
-  the add-on hover counters; since Q478 a placed add-on of type 1 posts no hover row and keeps the thing, `Level.GroundArmAt`). Reached through Q512's add-on rows, so after it. Confirm in Full Simulation: an add-on dragged
-  over a track piece at each flow, its snapped cell and angle, and a click on the placed add-on opening the ride's window,
+- [ ] **Q513. The window a click on an add-on opens.** From the fork watch, 2026-10-18 (`verify-world-b.md` L2 and L3,
+  `verify-world-a.md` M5). Lost Kingdom's add-ons (1500 to 1502, `AddOn.UpgradeType` 1) are the items; their snap, put-down
+  and `+0x30` (`mUpgradeParent`) are Q780's, built. A click on the add-on opens its ride's window when the word is non-zero
+  (`docs/exe/park-engine.md`, "The add-on's snap, its put-down, its open ends and the window a click opens", the click). Read
+  what this game does first (`HOVER_*` and the add-on hover counters; since Q478 a placed add-on of type 1 posts no hover row
+  and keeps the thing, `Level.GroundArmAt`). Confirm in Full Simulation: a click on a placed add-on opening the ride's window,
   beside the original; a screenshot of each.
 - [ ] **Q514. The hover's rows over a track and type `0x15`.** From Q478 (`park-engine.md`, "The rows over a queue and
   an object", "The arms that post nothing"): ours posts the empty row and counts `HOVER_TRACK_CELL_CATEGORY` (track types

@@ -9,7 +9,9 @@ the hill shape), owner +0x10, the overlap counter +0x20, and the piece Track_Ret
 karts' kit, 4 the water's, 5 the boundary's), row +0x18, rotation +0x1c, and the model record's handle +4. For a kit
 piece the row's model is named from the kit's table (0x007633e8 karts, 0x007634d8 water; 12 bytes a row, the name
 at +4, a row with none takes the row before's), and the model record ([0x007a4610 + handle*4]) is marked `pulse` when
-its flag word +4 carries 0x4000000, the open end's pulse (FUN_00469580). The bank is FUN_005195d0's thing +0xc."""
+its flag word +4 carries 0x4000000, the open end's pulse (FUN_00469580). The bank is FUN_005195d0's thing +0xc.
+After the bar, the cell's map record ([0x007cf83c] + 0x294 + (y*128 + x + 1) * 0x44, as BuildTool_Placer reaches it at
+0x00529073): its type +8, flags +0xe (0x10 an add-on's track cell, 0x40 land outside the park) and owner +0x10 (Q780)."""
 import struct, sys, time
 pid = int(sys.argv[1]); secs = float(sys.argv[2])
 cells = [tuple(int(v) for v in a.split(',')) for a in sys.argv[3:]]
@@ -45,8 +47,10 @@ def snap():
 		if handle > 0:
 			m = rd(0x007a4610 + handle * 4, '<I')
 			pulse = ' pulse' if m and rd(m + 4, '<I') & 0x4000000 else ''
+		m = w + 0x294 + (y * 128 + x + 1) * 0x44
 		out.append(f"  ({x},{y}) type {typ:#x} mask {mask:#04x} dir {dirn:#04x} flags {flags:#x} owner {owner} over {over} "
-			f"family {fam} row {row} rot {rot} model {model_name(fam, row)} handle {handle}{pulse}")
+			f"family {fam} row {row} rot {rot} model {model_name(fam, row)} handle {handle}{pulse} | "
+			f"map type {rd(m + 8)} flags {rd(m + 0xe, '<H'):#x} parent {rd(m + 0x10, '<H')}")
 	return out
 last = None; t0 = time.time()
 while time.time() - t0 < secs:

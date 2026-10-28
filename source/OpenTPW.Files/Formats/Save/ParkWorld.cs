@@ -100,7 +100,7 @@ public sealed partial class ParkWorld : IParkInitialState
 		float StateOfRepair = 0f, float RemainingLife = 0f, BuiltWhen Built = default, int RequestedService = 0,
 		int UpgradeLevel = 0, int MeshInstance = 0, ObjectRings? Rings = null, int QualityOfGoods = 0,
 		int AmountOfSpecialIngredient = 0, int TotalCosts = 0, int CostOfGoods = 0, int ChanceOfWinning = 100,
-		int TimeMarkedForMaintenance = 0, ushort PersonBeingLoaded = 0 )
+		int TimeMarkedForMaintenance = 0, ushort PersonBeingLoaded = 0, ushort UpgradeParent = 0 )
 	{
 		/// <summary>
 		/// The bit that makes an object somewhere a guest can be <i>offered</i> - <c>FUN_004fcb10</c>, the
@@ -2400,6 +2400,10 @@ public sealed partial class ParkWorld : IParkInitialState
 			// Load-bearing for "is this open for business": FUN_004dd920 refuses a candidate whose
 			// catalogue type is 1 or 2 unless this is non-zero.
 			IsTrackRideValid: ReadInt32At( start + 222 ),  // mIsTrackRideValid
+
+			// The ride a track add-on was put down on, by its thing id (the object's +0x30, FUN_004e0de0 at 0x00529ff5); nought
+			// on every other object. Alexah's played Dino Karts Jump and Tunnel both name the Dino Karts, thing 289.
+			UpgradeParent: (ushort)ReadUInt16At( start + 226 ), // mUpgradeParent
 
 			// The six day rings and the two counts between them - see ReadRings.
 			Rings: ReadRings( start + 228 ),

@@ -1668,7 +1668,7 @@ Read for Q581, first-hand in Ghidra (the decompiles are kept in `q581/`), and ch
 (karts) or 0x12 (water) over the station's two 2 × 2 sections by the track grid's own ops (`FUN_0053aac0`: the type,
 `0x80`, `0x82`, `0x83`), and the mouth, two cells past the station's far end, handed back. The station's first section is left in
 `DAT_007639e0`/`e4` by `TrackRide_LayStation` (`0x0052a31c`), but the place commit overwrites that at once
-(`0x00524fb6`..`0x00524ff3`; the move's put-down the same, `0x00524cb4`..`0x00524d01`): it ends as the mouth
+(`0x00524fb6`..`0x00524ff3`; an add-on's put-down the same, `0x00524cb4`..`0x00524d01`): it ends as the mouth
 (`FUN_0052a3a0`: x + 4, z + 1 at turn 0) and `e8`/`ec` as the other mouth (`FUN_0052a420`: x − 2, z + 1), and the
 circuit's walk (`TrackRide_WalkCircuit`) starts and stops 4 cells back from that, along the turn (x − 4 at turn 0,
 `0x0052a9c2`), on the station's first section. `FUN_0052f580( 0xb )` (or `0x10`) then arms the track tool, whose type the next
@@ -1720,8 +1720,9 @@ model, price and open end", below. When it answers nought (the run met track) or
 does not move the anchor, the circuit is walked into `+0x2c`; with 1 and the open guard (`FUN_004df290`) the ride opens
 (`FUN_004df390`); the pieces are put to clip 0xc (`TrackRide_PlayPiecesFromMouth`, `FUN_0052a490`, and with no circuit
 `TrackRide_PlayPiecesFromEnd`, `FUN_0052a700`, too; `BUMP 17` plays them 5 or 0xc the same way); the anchor goes to −1,
-and the tool to the queue (mode 3 at the entrance's front) when the queue pointer `0x008186c0` is set, else idle. A
-move's put-down (`0x00524c00`) clears the ride's sections (`TrackRide_ClearSections`, `FUN_00545450`) and walks again.
+and the tool to the queue (mode 3 at the entrance's front) when the queue pointer `0x008186c0` is set, else idle. An
+add-on's put-down (`0x00524c00`) clears the ride's sections (`TrackRide_ClearSections`, `FUN_00545450`) and walks again;
+a move's (mode `0x3b`) walks nothing.
 Measured: clicks on (34,25), (34,29), (28,29), (28,25): 0xb with the anchor at each, `+0x2c` 0, then 1 and idle on the
 last.
 **The preview's verdict** (`Track_CellVerdict`, `FUN_00539760`, per anchor of the run): any of the four cells' map flag
@@ -1921,7 +1922,7 @@ three links answers 0 where the cell two on is of no type, or is track with no l
 `0x0052b280`). A laid piece with no model (`+4` nought) is retiled; an add-on's cell shows or hides its model's two end
 caps by the track on either side (below). `TrackRide_ClearSections` (`FUN_00545450`) removes the
 ride's cars (`FUN_0054ae50`), closes it (`BUMP 6`), frees the buoys not flagged 2 or 4 and every section with its
-objects. Callers: the closing click (`0x00526f02`, 0), the move's put-down (`0x00524d0a`, 0) and the closed loop's
+objects. Callers: the closing click (`0x00526f02`, 0), an add-on's put-down (`0x00524d0a`, 0) and the closed loop's
 two-click edit (`0x0052693e` with 1, `0x00526bd0` with 0); each stores the answer in `+0x2c`, and the click and the edit
 then open the ride where it is 1 and the open guard lets it (`0x00526f18`..`0x00526f2d`).
 **OpenTPW** (Q763, `ParkTrackTool.WalkCircuit`) builds the walk at the closing click: the sections, the bends' way on
@@ -1932,9 +1933,9 @@ no car, a kart or water ride having no bumper record (Q588), and the step count 
 under Proton, `q778/orig/O1`, `O2`). An add-on (Lost Kingdom's Dino Karts Jump 1500 and Tunnel 1501 on the karts, the Splish
 Splash Tunnel 1502 on the water) is a placed thing of its own, whose model stands over the cells it covers; the placer's
 shape kinds `0xb` and `0x10` set the track cells' add-on flag 0x10 (`FUN_0053a510( 0x10 )`, `0x0052950d`), the cells' map
-type is 4 and their parent the thing's cell, and the kit makes no piece there. The walk keeps a count (`[esp + 0x50]`) and
+type is 4 and their parent the thing's cell, and the kit makes no piece there. The walk keeps a count (`[esp + 0x20]`, `0x0052ae18`) and
 bits (`[esp + 0x2c]`). The count goes back to nought at a straight without the flag, checking or not, and, only where not
-checking, at a bend or a crossing (their arms are skipped when checking, `0x0052ab1b`). At every track cell
+checking, at a bend or a crossing (their arms are skipped when checking, `0x0052ab18`). At every track cell
 (`0x0052ade3`, `Cell_HasFlag( 0x10 )` on the track record's `+0xe`) with the flag, the count goes up by one and the thing is
 looked for: `FUN_00527d60` takes the cell's map record where its type is 4, 9 or 10, its parent, and the occupant of that
 parent; with none, nothing more. With one, the cell two on along the cell's way on (`+0xd`, `FUN_0050c3e0( way, 2 )`) ORs 0x10
@@ -1946,15 +1947,19 @@ the cap of hide word 1 is hidden (`| 0x80000010`) where bit 1 is set and shown (
 the same by bit 0x10 (0 both shown, 0x11 both hidden). So an add-on of one piece (the Jump, one anchor) is never reached and
 keeps its caps as its model was made, no mask passed (both shown); a Tunnel of two pieces with track either side hides both;
 an add-on beside another counts on through it, and a later add-on takes an earlier one's bits. The add-on's own put-down
-(`0x005253b8`) runs no walk, so a bought one shows both caps until the next walk of its ride. A park file keeps the caps in
+walks the circuit (`0x00524d0a`; `park-engine.md`, "The add-on's snap"), so a bought one's caps are set at the click where
+the walk reaches it (an open loop may not). A park file keeps the caps in
 its node words (bit `0x1`, FileFormats `saves.md`, "The node flag words"), which the load lays back. Measured on Alexah's
 played Full Simulation Dino Karts (a Full Simulation player, `original/fsload.sh`): the Tunnel's `gk_end09` and `gk_end08`
 read `0xc0000111` (hidden; the file's words `0x401`), the Jump's `gk_end02` and `gk_end01` `0x40000101` (shown; the file's 0).
+Measured at a put-down (Q780, `q780/orig/O1`): a Tunnel bought onto the straights (12,15), (12,17), bends with models either
+side, read `0xc1000111` at once (hidden); a Jump bought onto (16,13), between the crossing and a bend, `0x41000101` (shown).
 **OpenTPW** (Q778): the walk keeps the same count and bits (`ParkTrackTool.WalkCircuit`) and shows and hides the caps
 (`ParkObjects.ShowAddOnCaps`, `ModelFile.FindNodeByHide`); a loaded add-on lays its two caps' saved words
-(`ParkObjects.SavedCaps`), the rest of a model's words left to this game's clips. Not seen in this game: neither. No walk reaches an
-add-on here, for its put-down is not built (`PLACE_TRACK_ADD_ON`) and a closed loop's edit neither; and the played file's model
-records do not read here (Q779), so its caps are not laid at the load and both stand. The add-ons themselves are drawn: the
+(`ParkObjects.SavedCaps`), the rest of a model's words left to this game's clips; the walk finds the thing as the head of the
+parent's live list (`ParkState.CellAt`), so a thing just put down is found. Seen in this game (Q780, `q780/R1`): the put-down's
+walk hides the bought Tunnel's caps and leaves the bought Jump's shown, as the original's. The played file's model records do
+not read here (Q779), so the loaded Tunnel's caps are not laid at the load; the first walk hides them. The add-ons themselves are drawn: the
 sky `q688/ours-f2` showed under them was that run's Instant Action catalogue, which holds no `upgrades` item (its log:
 "nothing in this theme is catalogue number 1501"), and a Full Simulation player's load stands both where the original's do
 (`q778/R2`, `O1`, `O2`).

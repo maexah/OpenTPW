@@ -1025,7 +1025,8 @@ public static class ParkTrackTool
 
 		var (px, py) = cell.ParentId != 0 ? MapStep.CellAt( cell.ParentId ) : (x, y);
 
-		return ParkState.OnMap( px, py ) && state.Record( px, py ).Occupant is var thing and not 0 ? thing : null;
+		// The head of the parent's own list (FUN_004d99e0), which a put-down's EnterCell writes at once.
+		return ParkState.OnMap( px, py ) && state.CellAt( px, py ).Occupant is var thing and not 0 ? thing : null;
 	}
 
 	/// <summary>

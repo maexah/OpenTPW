@@ -10831,6 +10831,12 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Simulation player's load draws both add-ons where the original does (`q778/R2`, `orig/O1`, `O2`). The original this
   session: the Tunnel's caps hidden, the Jump's shown. Not seen in this game: either cap rule (no walk reaches an add-on
   here, `PLACE_TRACK_ADD_ON`; the played file's model records do not read, Q779) (`park.md`, "The walk").
+- [x] **Q780. A track add-on put down on its ride's track (Q587's thirteenth piece).** Decoded from `0x005236b0` (the snap),
+  `0x0053594e` (the verdict's add-on arm), `0x005290bf`..`0x0052950d` (the stamp), `0x00529ff5` (`+0x30`) and `0x00524b45`
+  (the put-down's arm, which walks the circuit: the run 13 review of Q778), measured in the original (`q780/orig/O1`), built in
+  `ParkTrackAddOn` and `ParkBuilding` (`park-engine.md`, "The add-on's snap, its put-down, ..."). Confirmed in both games on
+  Alexah's played Full Simulation Dino Karts: a Tunnel and a Jump carried for the ride, hovered and put down on the same cells,
+  their squares, cells, `mUpgradeParent` and caps alike (`q780/R1`, `R2`, `orig/O1`).
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

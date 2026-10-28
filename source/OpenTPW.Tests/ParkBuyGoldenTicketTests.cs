@@ -161,11 +161,11 @@ public class ParkBuyGoldenTicketTests
 		SetBalance( -1000 );
 
 		var build = typeof( ParkBuilding ).GetMethods( BindingFlags.NonPublic | BindingFlags.Static )
-			.Single( method => method.Name == "Build" && method.GetParameters().Length == 9 );
+			.Single( method => method.Name == "Build" && method.GetParameters().Length == 10 );
 
 		string Answer( int x, int y )
 		{
-			var built = build.Invoke( null, [state, Level.Current.Park, catalogue, null, null, 1170, x, y, 0] )!;
+			var built = build.Invoke( null, [state, Level.Current.Park, catalogue, null, null, 1170, x, y, 0, 0] )!;
 			return (string)built.GetType().GetProperty( "Answer" )!.GetValue( built )!;
 		}
 
@@ -205,12 +205,12 @@ public class ParkBuyGoldenTicketTests
 		Assert.AreEqual( (2, ""), (file.TicketsSpent, string.Join( ' ', file.RideIds )), "carried, not yet bought" );
 
 		var build = typeof( ParkBuilding ).GetMethods( BindingFlags.NonPublic | BindingFlags.Static )
-			.Single( method => method.Name == "Build" && method.GetParameters().Length == 9 );
+			.Single( method => method.Name == "Build" && method.GetParameters().Length == 10 );
 		var objects = new ParkObjects( "jungle", null, null );
 
 		string Answer( int x, int y )
 		{
-			var built = build.Invoke( null, [state, Level.Current.Park, catalogue, objects, null, 1170, x, y, 0] )!;
+			var built = build.Invoke( null, [state, Level.Current.Park, catalogue, objects, null, 1170, x, y, 0, 0] )!;
 			return (string)built.GetType().GetProperty( "Answer" )!.GetValue( built )!;
 		}
 
@@ -244,11 +244,11 @@ public class ParkBuyGoldenTicketTests
 		file.RideIds.Add( 1170 );
 
 		var build = typeof( ParkBuilding ).GetMethods( BindingFlags.NonPublic | BindingFlags.Static )
-			.Single( method => method.Name == "Build" && method.GetParameters().Length == 9 );
+			.Single( method => method.Name == "Build" && method.GetParameters().Length == 10 );
 
 		string Answer( int x, int y )
 		{
-			var built = build.Invoke( null, [state, Level.Current.Park, catalogue, null, null, 1170, x, y, 0] )!;
+			var built = build.Invoke( null, [state, Level.Current.Park, catalogue, null, null, 1170, x, y, 0, 0] )!;
 			return (string)built.GetType().GetProperty( "Answer" )!.GetValue( built )!;
 		}
 

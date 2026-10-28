@@ -3406,28 +3406,57 @@ the word `0xC` the function jumps to `0x00525a06` and changes nothing. Otherwise
 `0x0052f1de`); the tail at `0x005259ae` ends with `FUN_0052f1b0( 0, 0 )` again unless Ctrl is held. Not read: which
 placements take the `0x00524db1` branch, and whether the last click of a queue re-arms the tool (the queue tool's commit).
 
-**The add-on's snap, its open ends and the window a click opens** (fork watch 2026-10-18, `verify-world-b.md` L2 and L3,
-`verify-world-a.md` M5; read from `0x005236b0`, `0x0052a023`, `0x00486920` and `0x0052ade3`, no game run). Lost Kingdom's
-add-ons (1500 to 1502) are the items that reach all of it.
+**The add-on's snap, its put-down, its open ends and the window a click opens** (fork watch 2026-10-18, `verify-world-b.md` L2
+and L3, `verify-world-a.md` M5; the snap, the verdict and the put-down read again for Q780 from `q780/dump` and measured in the
+original under Proton, `q780/orig/O1`). Lost Kingdom's add-ons (1500 to 1502) are the items that reach all of it.
 
-- **The snap**, the tool-4 preview `0x005236b0`, runs only when the add-on flag `[0x008187f8]` is non-zero (`0x0052369d`).
-  For each axis, d = the cell less the ride's anchor cell (`[0x007639a4]`, `[0x007639a8]`); a negative odd d is lowered by
-  one, then halved (`sar 1`): the anchor + 2 × floor( d / 2 ), written to `0x008186a4`/`0x008186a8` (`0x005236e3`..`0x0052374d`).
-  The cell's record (`[0x007cf83c] + 40 × (((y × 128 + x + 1) & 0xffff) + 0x6cde)`) is then tested: `FUN_0053ad90` (types
-  `0xc`, `0x11`) redirects to the head `[ + 0x10 ]`, and `FUN_0053ad30` accepts types `0xb`, `0xd`, `0x10`, `0x12` and `0x19`,
-  the five track types above.
-- **The angle** comes from the cell's flow byte (`FUN_00522850` is `mov al, [ecx + 0xd]`): index flow - 1, held to `0x3f`, into the
-  64-byte table `0x00524750` (`[0]` 0, `[3]` 1, `[0xf]` 2, `[0x3f]` 3, every other 4), then the jump table `0x0052473c`: flow 1 gives
-  0, flow 4 gives `0x10e`, flow `0x10` gives `0xb4`, flow `0x40` gives `0x5a`, and index 4 keeps the angle `0x0052f1f0` answers.
-  `FUN_0052f1b0` sets `[0x0081d7a4]`, the old one going to `0x0081b134` (event `0xa` through `0x00403d00` when it changes).
-- **The adjust** (`0x00523804`..`0x005238a5`) takes the item's X/Y adjust of that angle: type `+0xa4`/`+0xa8` (0), `+0xbc`/`+0xc0`
-  (`0x5a`), `+0xb4`/`+0xb8` (`0xb4`), `+0xac`/`+0xb0` (`0x10e`), which are `ItemDescriptionFile`'s North, West, South and East
-  adjusts (`ItemDescriptionFile.cs:958-965`). The ride's angle `[[0x008186ac] + 0x10]` then moves the cell: `0x5a` x - 1, `0xb4`
-  x - 1 and y + 1, `0x10e` y + 1 (`0x005238ab`..`0x005238d7`). The attempt is `FUN_00528a70( x, y, 4, angle )`; a failure sets
-  `[0x0081b604]` to 1.
-- **The placement** (`0x00529ff5`..`0x0052a023`) with `[0x008187f8]` set and the type's `+0x288` not 2 stores the word `+0x30` on
-  the thing: the word at the builder's object `[0x008186ac]` (`0x00527930`, `0x0050b350`), else 0. The builder's object is the
-  ride the add-on's buy row was chosen on (`ride-operation.md`, "The ride window's Buy Upgrades list").
+- **The hand.** The ride window's Buy Upgrades choice (`0x004af480`) builds the carry shell and calls `FUN_005276d0( 1 )`,
+  whose builder's object `[0x008186ac]` is the thing whose window is open (`[0x007c2654]`), or, for an add-on of `+0x288` 1
+  with a word `+0x30`, that word's ride (`0x005277b3`..`0x00527831`); its cell (bytes `+5`, `+7`) goes to `[0x007639a4]`,
+  `[0x007639a8]`, its angle `+0x10` to `[0x007639ac]`. Measured: (25,21) for Alexah's Dino Karts, the ride's own cell. The
+  shell's install (`0x0046d61d`) sets the add-on flag `[0x008187f8]` to the item's `+0x9c` (`Bumper.WhichTrackType`, 1 from
+  `Upgrades.sam`) where `+0x288` is 1, else 0, through `FUN_0052f880`.
+- **The snap**, the tool-4 preview `0x005236b0`, runs only when the add-on flag is non-zero (`0x0052369d`) and the pointer's
+  cell is on the map. For each axis, d = the cell less the anchor; a negative odd d is lowered by one, then halved (`sar 1`):
+  the anchor + 2 × floor( d / 2 ), written to `0x008186a4`/`0x008186a8` (`0x005236e3`..`0x0052374d`); off the map, nothing more.
+  The cell's track record (`[0x007cf83c] + 40 × (y × 128 + x + 1 + 0x6cde)`) is redirected by `TrackCell_IsPieceCell` (types
+  `0xc`, `0x11`) to the anchor `[ + 0x10 ]` names, and where `TrackCell_IsTrack` accepts it (`0xb`, `0xd`, `0x10`, `0x12`, `0x19`)
+  the angle is its way on (`+0xd`): through the byte table `0x00524750` and the jump table `0x0052473c`, 1 gives 0, 4 `0x10e`,
+  `0x10` `0xb4`, `0x40` `0x5a`, any other keeps the angle (`FUN_0052f1b0`; the rotation `[0x0081d7a4]` persists). Then **the
+  adjust** of the angle now held (`0x00523804`..`0x005238a5`): 0 `+0xa4`/`+0xa8`, `0x5a` `+0xbc`/`+0xc0`, `0xb4` `+0xb4`/`+0xb8`,
+  `0x10e` `+0xac`/`+0xb0`, which are `Bumper.NorthXAdjust` and Y, `West`, `South` and `East` (the bumper placer `FUN_00529e10`
+  pairs `0x5a` with East instead). Then the ride's angle `[[0x008186ac] + 0x10]`: `0x5a` x - 1, `0xb4` x - 1 and y + 1,
+  `0x10e` y + 1 (`0x005238ab`..`0x005238d7`). The cell is stored as the preview's `[0x008186b8]`/`[0x008186b4]`, which the
+  carry shell's click reads (its fourth argument 1, `0x0046c627`; `0x005249cd`), and the placer's test pass is
+  `BuildTool_Placer( x, y, 4, angle, 0, 1 )`, a failure setting `g_PlacerFailed` (`[0x0081b604]`).
+  Measured (pointer, preview cell, rotation): (13,17), (12,17), 0 for the Tunnel; for the Jump (13,13), (12,14), 270, (15,13),
+  (14,14), 270 and (17,14), (16,14), 270; off the track (3,12), (3,12), 0 and (12,12), (10,12) at a kept 270 (`jump-hovers.txt`).
+  Alexah's played Jump (19,9) at 270 and Tunnel (17,21) at 90 are where pointers on (19..20, 9..10) and (17..18, 19..20) put them.
+- **The test pass** over an add-on's picture: a track cell (kind `0xb` or `0x10`) asks `FUN_00532fc0( 0x20b or 0x210 )`, which
+  is `BuildTool_CellVerdict( 0xb or 0x10 ) != 1`, and is then refused where its map type is 4 (`FUN_00536380`, `0x005294e2`);
+  a body cell asks op `0x204`. **The verdict's add-on arm** (`0x0053594e`..`0x005359b3`), past its first answers (land outside the
+  park red; a map type 4, 9 or 10 cell blue where its thing's `+0x54` is below the add-on's `[0x00818c10]`, else red; a `0x19`
+  track cell red): a track cell is blue only where its map flags lack `0x10`, the track record it names is track of no bend
+  (`TrackCell_BendLinks`) and no crossing (`TrackCell_CrossingLinks`), owned by the builder's object (`+0x10` against
+  `[0x00818698]`) and its map type is not 3. A body cell over track answers blue for an add-on (`0x00535bc3`). Measured: red
+  over a bend and over the crossing, blue over a straight; any red reds every square (`squares.py`).
+- **The put-down's arm** (`0x00524b45`..`0x00524d87`, the add-on flag set; the run 13 review of Q778, `review13/VERIFY-3.md`): `FUN_005276d0(
+  0 )`; the preview cell's track record is redirected as above, and where it is no track the arm builds nothing and goes idle
+  (`0x00524bbe`); otherwise the builder's object becomes the thing on the cell its owner names (`0x00524c3d`), its sections are
+  cleared (`TrackRide_ClearSections`, `0x00524c46`), the placer commits (`0x00524c63`), `FUN_00523230` runs ops 0x85, 0x86 and
+  0x81 over the track about it, the circuit is walked (`TrackRide_WalkCircuit( 0 )`, `0x00524d0a`) into the ride's `+0x2c`, the
+  pieces play (`0x00524d29`, `0x00524d37`) and a closed ride opens under the open guard; then the tool goes idle and the flag is
+  cleared unless Ctrl alone is held, and the rotation goes to 0 either way (`0x005259fc`). Measured: the bought Tunnel's caps
+  hidden at the click (`gk_end09`, `gk_end08` `0xc1000111`), the bought Jump's shown (`0x41000101`); the `0x01000000` bit is on
+  both models made in the session and not read.
+- **The commit** (`BuildTool_Placer`, its fifth argument set): every cell of the picture but `.` is stamped, its map record
+  (`[0x007cf83c] + 0x294 + 0x44 × id`) by ops `0x87`, the clear `FUN_005367a0`, 4 and `0x81` and owned by the thing's cell
+  (`FUN_00539210`), its track record's model let go (`FUN_00536780`) and its flags' low four bits cleared (`FUN_0053a530( 0xf )`);
+  a track cell's map and track flags are then both **written** `0x10` (`FUN_0053a510`, `0x0052950d`). The track's type, links,
+  way on and owner stay. **The placement** (`0x00529ff5`..`0x0052a023`) with the add-on flag set and the type's `+0x288` not 2
+  stores the builder's object's id in the thing's `+0x30` (`FUN_004e0de0`), else 0: the file's `mUpgradeParent`. Measured on the
+  bought Tunnel, thing 209 at (11,16) turned 0: its cells (12..13, 15..18) map type 4, flags `0x10` both, owner 2060; `+0x30`
+  289, the file's `mTopLeft` 1932 and `mUpgradeParent` 289 (`savepark.sh`); the Jump, thing 598 at (17,13) turned 270, the same.
 - **The click** (`0x00486920`): a thing whose byte `+2` is 3 and whose type `+0x4ac` is class 0 (table `0x00486a90`). A type with
   `+0x288` 2 opens the window of `[0x007cc3e0]` (`0x004b6ae0`). Otherwise a non-zero word `+0x30` (`FUN_004e0df0`) opens that ride's
   window (`0x004af980` on `0x007cfb90[id]`); a zero word looks at the type's own `+0x284` (`FUN_004e2710`): zero opens the thing's own
@@ -3441,8 +3470,14 @@ add-ons (1500 to 1502) are the items that reach all of it.
   (`00 01 04 x 14 02 03`) and the jump table (`0x0052af77`, `0x0052afe8`, `0x0052b002`, `0x0052b0cb`, `0x0052b1a7`) choose the
   dummy nodes: bits 0 shows both, 1 hides dummy 1 and shows `0x10`, `0x10` shows 1 and hides `0x10`, `0x11` hides both
   (`FUN_0044b3c0( instance, 1, n )`, the lookup record whose hide word is n; show is `and ~0x10`, hide is `or 0x80000010`;
-  the whole rule, where the count goes back to nought and the caps measured: `park.md`, "The walk", Q778). Not read: that `0x007639a4` is the ride's
-  cell (the fork's word), what `[esp + 0x50]` holds in the demolisher's add-on arm (`0x00528512`..`0x0052852d`).
+  the whole rule, where the count goes back to nought and the caps measured: `park.md`, "The walk", Q778). Not read: what
+  `[esp + 0x50]` holds in the demolisher's add-on arm (`0x00528512`..`0x0052852d`), `FUN_00523230`'s cells.
+**OpenTPW** (Q780, `ParkTrackAddOn`, `ParkBuilding`): the console's `carry <item> <thing>` stands in for the Buy Upgrades row
+(Q512); the preview snaps and turns the hand, the squares and the test pass judge by the verdict's add-on arm, the commit stamps
+the picture by kind at the model's cell (`mTopLeft`, the original's rule, where other items still mark the anchor's, Q744), the
+thing keeps `mUpgradeParent`, and the put-down walks the circuit. Counted: `FUN_00523230`'s passes (`TRACK_ADD_ON_PASSES`), the
+pieces' clips, and the sale (`SALE_TRACK_ADD_ON`). Not built: the arm's rotation to 0 under Ctrl (ours keeps the hand's angle),
+and the window a click on an add-on opens (Q513).
 
 **The worker (type 6)**, vtable `0x006fea70`. The mode stores only the worker's sprite bank and costume; the
 worker's id is kept in the world's hand thing (`+0x60`, through `FUN_00509ae0` and `FUN_00509af0`). The pickup

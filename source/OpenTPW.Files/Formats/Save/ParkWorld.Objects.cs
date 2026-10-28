@@ -106,7 +106,7 @@ public sealed partial class ParkWorld
 	/// A whole record for an object the file does not hold, as the object constructor <c>FUN_004db090</c> and the
 	/// serialiser <c>FUN_004db7d0</c> leave one: the thing's place at the middle of its anchor cell, its angle,
 	/// item and date, <paramref name="meshHandle"/>, its flags, the two lines of its name, its script, its track
-	/// ride, <c>mTopLeft</c>, its two ends, <c>mIsTrackRideValid</c> 1, six rings of thirty days, the running fields
+	/// ride, <c>mTopLeft</c>, its two ends, <c>mIsTrackRideValid</c> 1, <c>mUpgradeParent</c>, six rings of thirty days, the running fields
 	/// (<see cref="PutObject"/>), its upgrade level and 100 in the float no reader here names. Its links are
 	/// <see cref="PutPeople"/>'s to write.
 	/// </summary>
@@ -144,6 +144,7 @@ public sealed partial class ParkWorld
 		PutUInt16( record, 206, thing.EntryPos );
 		PutUInt16( record, 218, thing.ExitPos );
 		PutInt32( record, 222, 1 );
+		PutUInt16( record, 226, thing.UpgradeParent );
 
 		foreach ( var ring in RingsAt )
 			PutInt32( record, ring + 4, DayRing.Length );

@@ -379,7 +379,8 @@ public class ParkTrackToolTests
 			state.SetRecord( x, y, cell with { TrackFlags = (ushort)(cell.TrackFlags | ParkTrackPieces.AddOnFlag), Type = 4, ParentId = parentId } );
 		}
 
-		state.SetRecord( parent.X, parent.Y, state.Record( parent.X, parent.Y ) with { Type = 4, ParentId = parentId, Occupant = (ushort)thing } );
+		state.SetRecord( parent.X, parent.Y, state.Record( parent.X, parent.Y ) with { Type = 4, ParentId = parentId } );
+		state.EnterCell( parent.X, parent.Y, thing );
 	}
 
 	/// <summary>A kart loop south of the station at (30,24), from its mouth (34,25) to (34, <paramref name="bottom"/>) and back up x 28.</summary>
@@ -441,7 +442,7 @@ public class ParkTrackToolTests
 
 	/// <summary>
 	/// The count goes back to nought at a straight with no add-on, checking or not, and at a bend only where the walk is not
-	/// checking (the bend's arm is skipped then, <c>0x0052ab1b</c>): so two one-piece jumps a bend apart are never reached
+	/// checking (the bend's arm is skipped then, <c>0x0052ab18</c>): so two one-piece jumps a bend apart are never reached
 	/// by a closing walk, and a checking one reaches the second.
 	/// </summary>
 	[TestMethod]
@@ -483,6 +484,27 @@ public class ParkTrackToolTests
 		CollectionAssert.AreEqual( new[] { (500, 0x11) }, calls.ToArray(), "(32,25), the station's, behind the mouth" );
 	}
 
+	/// <summary>
+	/// An add-on put down as the put-down stamps it (<see cref="ParkTrackAddOn.Stamp"/>) and enters its anchor's list
+	/// (<see cref="ParkState.EnterCell"/>) is reached by the walk that follows at once: the thing is the head of the parent's
+	/// live list (<c>FUN_004d99e0</c>), which no record holds yet (Q780: the original hid the bought Tunnel's caps at the click).
+	/// </summary>
+	[TestMethod]
+	public void ABoughtAddOnIsReachedByThePutDownsWalk()
+	{
+		var calls = new List<(int Thing, int Bits)>();
+		var (state, ride) = Loop( 31 );
+		var item = new ParkItemCatalogue.Item( 1599, "made up", "", "", 2, 4, null,
+			Shape: new ItemShape( 2, 4, [[0xb, 0xb], [0xb, 0xb], [0xb, 0xb], [0xb, 0xb]] ), AddOnUpgradesId: 1150, AddOnUpgradeType: 1 );
+
+		ParkTrackAddOn.Stamp( state, item, 34, 27, 0 );
+		state.EnterCell( 34, 27, 500 );
+
+		Assert.AreEqual( 0, state.Record( 34, 27 ).Occupant, "the record names nobody" );
+		Assert.AreEqual( 1, ParkTrackTool.WalkCircuit( state, ride, check: false, ( thing, bits ) => calls.Add( (thing, bits) ) ).Valid );
+		CollectionAssert.AreEqual( new[] { (500, 0x11) }, calls.ToArray() );
+	}
+
 	/// <summary>An add-on's cell whose map record names no object's thing reaches no caps, and lays its section all the same.</summary>
 	[TestMethod]
 	public void AnAddOnCellWithNoThingReachesNoCaps()
@@ -491,14 +513,14 @@ public class ParkTrackToolTests
 		var (state, ride) = Loop( 31 );
 
 		AddOn( state, 500, (35, 30), (34, 27), (34, 29) );
-		state.SetRecord( 35, 30, state.Record( 35, 30 ) with { Occupant = 0 } );
+		state.LeaveCell( 35, 30, 500 );
 
 		Assert.AreEqual( 1, ParkTrackTool.WalkCircuit( state, ride, check: false, ( thing, bits ) => calls.Add( (thing, bits) ) ).Valid );
 		Assert.AreEqual( 0, calls.Count );
 		Assert.AreEqual( Section( 13, 0, 34, 29 ), state.TrackRides.SectionsOf( ride.TrackRide )[4] );
 
 		// Cells no longer an object's (map type 0), their parent still standing: FUN_00527d60 answers no thing.
-		state.SetRecord( 35, 30, state.Record( 35, 30 ) with { Occupant = 500 } );
+		state.EnterCell( 35, 30, 500 );
 		state.SetRecord( 34, 27, state.Record( 34, 27 ) with { Type = 0 } );
 		state.SetRecord( 34, 29, state.Record( 34, 29 ) with { Type = 0 } );
 

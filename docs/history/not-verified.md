@@ -5,6 +5,19 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q778 (an add-on's end caps; Q587's twelfth piece). Ours on the final binary (`q778/R2`, dll a249d937), Alexah's played
+  Full Simulation Dino Karts (a copy of `New Save.TPWS`) loaded by a Full Simulation player (`fsplayer.py`): "catalogued 70
+  items", "'Dino Karts Tunnel' anchored at (17,21)" and "'Dino Karts Jump' anchored at (19,9)", no ADD_ON line in the census;
+  `loop.png`, `tunnel-a.png` and `jump-a.png` show both add-ons on the loop, no sky, as the original's `q778/orig/O1/o-t19136.png`
+  and `O2/o-t19246.png` this session (the cameras set alike, not a pixel pair). The sky `q688/ours-f2` showed was that run's
+  Instant Action catalogue ("nothing in this theme is catalogue number 1501"). The original's caps this session
+  (`modelnodes.py`): the Tunnel's `gk_end09`, `gk_end08` `0xc0000111` (hidden), the Jump's `gk_end02`, `gk_end01`
+  `0x40000101` (shown). Missed and recorded (`q778/PREDICTION.txt`, R1): ours shows the Tunnel's caps (`meshes 404 ...
+  hidden []`), for this file's model records do not read here ("the walk ended at 2058464 and the module ends at 2101020",
+  a Temple of Gloom car's 5 channels read as 1; Q779), so the load's cap rule is held by the tests alone. Not seen: the walk's
+  caps in either game (no walk reaches an add-on in ours: `PLACE_TRACK_ADD_ON`; the original's walk not run on an add-on
+  this session, its words read after a load); a water add-on. The bugs put back: 14 of 15 fail a test, the fifth equivalent on
+  every shipped model (`hidesweep.py`).
 - Q777 (the boundary's things lift a square; Q587's eleventh piece). Ours on the final binary (`q777/ours-a`, dll 80f525fd,
   SCORE 4 of 4), on the desktop, the stock park, the path tool anchored on (91,21): the `strip` census with the pointer on the
   east wall's anchor (93,21) reads `91,21,0^0;92,21,0^0;93,21,1^20` (red, lifted 20) with two walls west of it at 0 and 10; on
