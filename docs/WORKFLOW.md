@@ -89,7 +89,8 @@ font and its licence, the README, `LICENSE.md` and `THIRD-PARTY-NOTICES.md`; `We
 - **The Sunday routine**, in order:
   1. Everything is pushed after the usual gate (rule 1's yes, `Pushing` above). Before the tag, read the zip's
      `tools/weekly/README.txt` and the two issue forms against `docs/STATUS.md`: what the README says starts, what
-     the build does without a game, and where `console.log` is must still be true of this tag (Q798).
+     the build does without a game, and where `console.log` is must still be true of this tag (Q798). Also that the runtime pack the publish takes (`weekly.yml` says 10.0.x) is still the version
+     `THIRD-PARTY-NOTICES.md` appendices F and G quote (10.0.12); a later one means reading those two again.
   2. `python3 tools/weekly/changelog.py main` lists the commits since the last `weekly-*` tag (dry-run
      `weekly-test-N` tags are passed over; the first build takes `--from <rev>`). The changelog is written from that
      list, never from memory: broad, plain bullets grouped by area, each may end with its `[abc1234]` link, ending

@@ -2259,10 +2259,10 @@ station (`FUN_0053adb0`) of the same owner (`+0x10`) linking back. The callers, 
 the closing click (`0x00526f56`..`0x00526f7f`) passes f = 0 always, from the mouth alone where the walk answered 1, else
 from both; an add-on's put-down (`0x00524d19`..`0x00524d47`) and the closed loop's two-click edit (`0x00526be4`..`0x00526c0d`)
 pass 1 from the mouth alone where it answered 1, else 0 from both; `BUMP 17` (`0x00554a1a`..`0x00554a47`, the table above)
-walks both with 1 for an operand of 0 and 0 for any other. A water piece is put to 0xc as it is made ("A track piece's model, price and open end", above), so every
+walks both with 1 for an operand of 0 and 0 for any other. The mouths' walks (`TrackRide_ShapeFromMouth`, `TrackRide_ShapeFromOtherMouth`) play the same clips when their third argument is 1: role 5 at `0x0052ca82` and 0xc at `0x0052cbe3` (from the mouth; the gate is `[esp+0x30]` at `0x0052ca4e`, the choice `[esp+0x34]`), both at `0x0052ce84` (from the other mouth; gate `[esp+0x34]`, choice `[esp+0x38]`). Every track-tool caller passes 0 (`0x00526c89`, `0x00526c9c`, `0x0052718c`, `0x005271a0`, `0x00526f3c`, `0x00526f4e`, `0x00530025`, `0x0053003e`, `0x00530082`, `0x0053009b`, `0x00538ca0`, `0x00538cb7`); only `FUN_00532fc0`'s op 0x86 arm (`0x005341a2`) passes 1, at `0x0053426f` and `0x00534285`, with f = the ride's `+0x2c`, and which callers apply that op to a ride's track cells was not traced. A water piece is put to 0xc as it is made ("A track piece's model, price and open end", above), so every
 piece stands at rest until a walk with 1 or `BUMP 17 0`; Splish Splash's script runs `BUMP 17 0` at @33 as it starts a go
-and `BUMP 17 1` at @155 and @201 when it shuts or breaks (`Wateride.RSE`), so the original's water flows only while its
-ride runs, after an add-on, or after a loop's edit. Of the 53 `M` clips the eight kits ship, 48 carry UV tracks alone and five
+and at @219 after a repair, and `BUMP 17 1` at @155 and @201 when it shuts or breaks (`Wateride.RSE`), so among the callers read the
+original's water flows while its ride runs, after an add-on, or after a loop's edit. Of the 53 `M` clips the eight kits ship, 48 carry UV tracks alone and five
 no readable span (Haunted Hallow's four `gk_trckH*m`, Space's `gk_trckh_am`); Lost Kingdom's and Fantasy's karts ship none,
 so of Lost Kingdom's track only the water moves (FileFormats `models.md`, "Which animation file a model takes").
 Measured in the original (Q781, `q781/orig/O3.out`, a Splish Splash on (20,20) of `q581/karts.TPWS` looped south): no clip
@@ -2274,7 +2274,7 @@ call from the arming through two runs (`O-brkA.log`); the closing click's 8 call
 walks, after the closing click and an add-on's put-down; a piece is made at rest, and clip 5 runs its `M` clips through
 `MeshAnimator` on the park's clock, restarted from frame 0. Not built: the closed loop's edit (`TRACK_EDIT_CLOSED_LOOP`) and
 `BUMP 17` (Q448: a kart or water ride's every `BUMP` is counted here, so Splish Splash's water never flows by its script;
-a loaded park's running water ride stands still where the original's flows).
+whether a loaded park's pieces take their saved model records' channel in the original is not read: after a load the script's `BUMP 17 0` is skipped by its `+0xe6` test, which the record keeps (`saves.md`, "A script's record"), and ours makes every loaded piece at rest).
 
 **The carried ride's first track cells** (`TrackRide_CarrySquares`, `0x005286a0`, from `BuildTool_Placer` at `0x00529c65`
 and `0x00529ce1`): each mouth's 2 x 2 cells, by op 0x10b (karts) or 0x110 (water) with step 5 for the preview's squares,

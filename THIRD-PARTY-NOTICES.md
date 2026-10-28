@@ -6,7 +6,7 @@ zip: it belongs to its owners.
 
 Each row names the files it covers. The four zips (Windows, Linux, macOS on Apple silicon, macOS on Intel) hold the
 same managed libraries and each its own native ones; a native library is named for every system it appears on. The
-licence texts follow the tables, in appendices A to G. Every text is the one in the package or in the upstream
+licence texts follow the tables, in appendices A to H. Every text is the one in the package or in the upstream
 project at the version or commit named, read when this page was written, not recalled.
 
 A test (`ThirdPartyNoticesTests`) fails when a package the build restores or a file under `content/` has no row
@@ -18,10 +18,10 @@ covers in `code` marks: package ids, or a path under `content/` where `*` stands
 
 | Covers | Version | Files in the zip | Licence | Copyright and where the text is |
 |---|---|---|---|---|
-| `Microsoft.NETCore.App.Runtime` | 10.0.x | the self-contained .NET runtime: `System.*.dll`, `Microsoft.*.dll` of the runtime, `mscorlib.dll`, `netstandard.dll`, `WindowsBase.dll`, `libcoreclr`, `libclrjit`, `libclrgc`, `libhostfxr`, `libhostpolicy`, `libmscordaccore`, `libmscordbi`, `libcoreclrtraceptprovider` (`.so`, `.dll` or `.dylib`) and `createdump` | MIT | Copyright (c) .NET Foundation and Contributors; its own third-party notices follow in appendix G |
+| `Microsoft.NETCore.App.Runtime` | the pack the publish used (appendices F and G are the text of 10.0.12; `weekly.yml` takes 10.0.x, so a later pack needs them read again) | every file of the self-contained .NET runtime pack: `System.*.dll`, `Microsoft.*.dll` of the runtime, `mscorlib.dll`, `netstandard.dll`, `WindowsBase.dll`, `libcoreclr`, `libclrjit`, `libclrgc`, `libclrgcexp`, `libhostfxr`, `libhostpolicy`, `libmscordaccore`, `libmscordbi`, `libcoreclrtraceptprovider`, the `libSystem.*.Native` libraries (`libSystem.Native`, `libSystem.Globalization.Native`, `libSystem.IO.Compression.Native`, `libSystem.Net.Security.Native`, `libSystem.Security.Cryptography.Native.*`) (`.so`, `.dll` or `.dylib`), `createdump`, and on Windows `clretwrc.dll`, `clrgcexp.dll`, `mscorrc.dll`, `msquic.dll` and `mscordaccore_amd64_amd64_*.dll`; the apphost `OpenTPW` / `OpenTPW.exe` comes from `Microsoft.NETCore.App.Host` (MIT, the same .NET Foundation notice) | MIT | Copyright (c) .NET Foundation and Contributors; its own third-party notices follow in appendix G |
 | `Microsoft.DotNet.PlatformAbstractions` | 3.1.6 | `Microsoft.DotNet.PlatformAbstractions.dll` | MIT (`LICENSE.TXT` in the package) | Copyright (c) .NET Foundation and Contributors; (c) Microsoft Corporation |
-| `Microsoft.Extensions.DependencyModel` | 9.0.9 | `Microsoft.Extensions.DependencyModel.dll` | MIT | (c) Microsoft Corporation |
-| `Microsoft.Win32.SystemEvents`, `System.Configuration.ConfigurationManager`, `System.Drawing.Common`, `System.Security.Cryptography.ProtectedData`, `System.Security.Permissions`, `System.Windows.Extensions` | 6.0.0 | `Microsoft.Win32.SystemEvents.dll`, `System.Configuration.ConfigurationManager.dll`, `System.Drawing.Common.dll`, `System.Security.Cryptography.ProtectedData.dll`, `System.Security.Permissions.dll`, `System.Windows.Extensions.dll` | MIT | (c) Microsoft Corporation |
+| `Microsoft.Extensions.DependencyModel` | 9.0.9 | `Microsoft.Extensions.DependencyModel.dll` | MIT (`LICENSE.TXT` in the package) | Copyright (c) .NET Foundation and Contributors (the package's `LICENSE.TXT`, appendix F); (c) Microsoft Corporation |
+| `Microsoft.Win32.SystemEvents`, `System.Configuration.ConfigurationManager`, `System.Drawing.Common`, `System.Security.Cryptography.ProtectedData`, `System.Security.Permissions`, `System.Windows.Extensions` | 6.0.0 | `Microsoft.Win32.SystemEvents.dll`, `System.Configuration.ConfigurationManager.dll`, `System.Drawing.Common.dll`, `System.Security.Cryptography.ProtectedData.dll`, `System.Security.Permissions.dll`, `System.Windows.Extensions.dll` | MIT (`LICENSE.TXT` in each package) | Copyright (c) .NET Foundation and Contributors (each package's `LICENSE.TXT`, appendix F); (c) Microsoft Corporation |
 | `NAudio`, `NAudio.Asio`, `NAudio.Core`, `NAudio.Midi`, `NAudio.Wasapi`, `NAudio.WinMM` | 2.2.1 | `NAudio.dll`, `NAudio.Asio.dll`, `NAudio.Core.dll`, `NAudio.Midi.dll`, `NAudio.Wasapi.dll`, `NAudio.WinMM.dll` (the build references it; nothing in OpenTPW calls it) | MIT (`license.txt` in the `NAudio` package) | (c) Mark Heath 2023; the package's `license.txt` reads "Copyright 2020 Mark Heath" |
 | `NLayer` | 3.0.0 | `NLayer.dll` | MIT | (c) Mark Heath 2026; upstream's `LICENSE` reads "Copyright (c) 2018 Mark Heath, Andrew Ward & Contributors" |
 | `NeoVeldrid`, `NeoVeldrid.SDL2`, `NeoVeldrid.SPIRV`, `NeoVeldrid.StartupUtilities` | 1.2.1 | `NeoVeldrid.dll`, `NeoVeldrid.SDL2.dll`, `NeoVeldrid.SPIRV.dll`, `NeoVeldrid.StartupUtilities.dll` | MIT | Copyright (c) 2017 Eric Mellino and Veldrid contributors; Copyright (c) 2026 Javier Mora and NeoVeldrid contributors |
@@ -31,7 +31,7 @@ covers in `code` marks: package ids, or a path under `content/` where `*` stands
 | `Ultz.Native.SDL` | 2.32.10 | SDL 2.32.10: `libSDL2-2.0.so` (Linux), `SDL2.dll` (Windows), `libSDL2-2.0.dylib` (macOS) | zlib | Copyright (C) 1997-2025 Sam Lantinga; text in appendix C |
 | `Silk.NET.Shaderc.Native` | 2.23.0 | shaderc, built by Silk.NET 2.23.0 from the commits it pins: `libshaderc_shared.so` (Linux), `shaderc_shared.dll` (Windows), `libshaderc_shared.dylib` (macOS). It holds shaderc (`8c2e602`), glslang (`efd24d7`), SPIRV-Tools (`33e0256`) and SPIRV-Headers (`2a611a9`), the last three as pinned by shaderc's `DEPS` | Apache-2.0 (shaderc, SPIRV-Tools); glslang's mixed licence file; SPIRV-Headers's Khronos licence | shaderc: Google Inc. (its `AUTHORS`); texts in appendices B, D and E |
 | `Silk.NET.SPIRV.Cross.Native` | 2.23.0 | SPIRV-Cross (`998146d`), built by Silk.NET 2.23.0: `libspirv-cross.so` (Linux), `spirv-cross.dll` (Windows), `libspirv-cross.dylib` (macOS) | Apache-2.0 | SPIRV-Cross's own `LICENSE` at that commit, appendix B (it has no `NOTICE` file) |
-| `Silk.NET.MoltenVK.Native` | 2.23.0 | MoltenVK (`4588705`), macOS builds only: `libMoltenVK.dylib`, `MoltenVK_icd.json` | Apache-2.0 | MoltenVK's own `LICENSE` at that commit, appendix B |
+| `Silk.NET.MoltenVK.Native` | 2.23.0 | MoltenVK (`4588705`), macOS builds only: `libMoltenVK.dylib`, `MoltenVK_icd.json`. The dylib has SPIRV-Cross, SPIRV-Tools and cereal compiled into it | Apache-2.0 (MoltenVK, SPIRV-Cross, SPIRV-Tools); BSD-3-Clause (cereal) | MoltenVK's own `LICENSE` at that commit, appendix B; cereal: Copyright (c) 2014, Randolph Voorhies, Shane Grant, text in appendix H (the revision MoltenVK pins) |
 
 ## Files under `content/`
 
@@ -40,8 +40,8 @@ covers in `code` marks: package ids, or a path under `content/` where `*` stands
 | `content/fonts/Roboto-*.ttf` | Roboto 2.137 (twelve faces; the zip holds only `Roboto-Medium.ttf`, which the loading screen writes with) | Apache-2.0 | Copyright 2011 Google Inc. All Rights Reserved. (the font's own name table); text in appendix B and in `content/fonts/LICENSE.txt` beside the fonts |
 | `content/fonts/LICENSE.txt` | the Roboto licence, beside the fonts | Apache-2.0 | the text of appendix B, from the Roboto repository (`googlefonts/roboto-2`) |
 | `content/shaders/**` | OpenTPW's shaders (shipped) | MIT | OpenTPW's own, under `LICENSE.md` |
-| `content/icons/*.png` | the file browser's icons (not shipped) | MIT | in the repository since the upstream project's 2022 and 2023 commits (Alex Guthrie); the files name Inkscape and GIMP as their makers; their origin is not recorded beyond that |
-| `content/icon*` | the program's icon in four forms (`icon.ico` is built into `OpenTPW.exe`) | MIT | as above: the upstream project's, made with GIMP by the file's own comment; origin not recorded beyond that |
+| `content/icons/archive.png`, `content/icons/document.png`, `content/icons/folder.png`, `content/icons/image.png`, `content/icons/model.png`, `content/icons/ride.png`, `content/icons/save.png`, `content/icons/settings.png`, `content/icons/sound.png`, `content/icons/strings.png` | the file browser's icons (not shipped) | MIT | in the repository since the upstream project's 2022 and 2023 commits (Alex Guthrie); the files name Inkscape and GIMP as their makers; their origin is not recorded beyond that |
+| `content/icon-sm.tga`, `content/icon.ico`, `content/icon.png`, `content/icon.tga` | the program's icon in four forms (`icon.ico` is built into `OpenTPW.exe`) | MIT | as above: the upstream project's, made with GIMP by the file's own comment; origin not recorded beyond that |
 | `content/textures/test.png` | a 4096 x 4096 test image (not shipped) | MIT | in the repository since the upstream project's first texture commit, 2022-03-06; origin not recorded |
 
 ## Appendix A: the MIT licence
@@ -1838,8 +1838,10 @@ Creative Commons may be contacted at creativecommons.org.
 ## Appendix F: licence files that come with the packages
 
 The `license.txt` of `NAudio` 2.2.1 and the `LICENSE.TXT` of `Microsoft.DotNet.PlatformAbstractions` 3.1.6 and of the
-.NET runtime pack, as they are in the packages. The other packages hold no licence file; their licence is the
-expression in their `.nuspec`, which is what the rows give.
+.NET runtime pack, as they are in the packages. Seven more packages (`Microsoft.Extensions.DependencyModel` 9.0.9 and the
+six 6.0.0 packages in the table) carry the same `LICENSE.TXT` as PlatformAbstractions, "Copyright (c) .NET Foundation
+and Contributors", which is the text printed here under the runtime pack. The remaining packages hold no licence file;
+their licence is the expression in their `.nuspec`, which is what the rows give.
 
 NAudio 2.2.1, `license.txt`:
 
@@ -3332,4 +3334,36 @@ NIST-developed software is provided by NIST as a public service. You may use, co
 NIST-developed software is expressly provided "AS IS." NIST MAKES NO WARRANTY OF ANY KIND, EXPRESS, IMPLIED, IN FACT, OR ARISING BY OPERATION OF LAW, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTY OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, NON-INFRINGEMENT, AND DATA ACCURACY. NIST NEITHER REPRESENTS NOR WARRANTS THAT THE OPERATION OF THE SOFTWARE WILL BE UNINTERRUPTED OR ERROR-FREE, OR THAT ANY DEFECTS WILL BE CORRECTED. NIST DOES NOT WARRANT OR MAKE ANY REPRESENTATIONS REGARDING THE USE OF THE SOFTWARE OR THE RESULTS THEREOF, INCLUDING BUT NOT LIMITED TO THE CORRECTNESS, ACCURACY, RELIABILITY, OR USEFULNESS OF THE SOFTWARE.
 
 You are solely responsible for determining the appropriateness of using and distributing the software and you assume all risks associated with its use, including but not limited to the risks and costs of program errors, compliance with applicable laws, damage to or loss of data, programs or equipment, and the unavailability or interruption of operation. This software is not intended to be used in any situation where a failure could cause risk of injury or damage to property. The software developed by NIST employees is not subject to copyright protection within the United States.
+~~~~
+
+## Appendix H: cereal (inside MoltenVK)
+
+The `LICENSE` of cereal (USCiLab/cereal) at revision `51cbda5f30e56c801c07fe3d3aba5d7fb9e6cca4`, the one MoltenVK `4588705`
+pins in its `ExternalRevisions/cereal_repo_revision`. `libMoltenVK.dylib` has cereal compiled in.
+
+~~~~text
+Copyright (c) 2014, Randolph Voorhies, Shane Grant
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+    * Neither the name of cereal nor the
+      names of its contributors may be used to endorse or promote products
+      derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL RANDOLPH VOORHIES OR SHANE GRANT BE LIABLE FOR ANY
+DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ~~~~

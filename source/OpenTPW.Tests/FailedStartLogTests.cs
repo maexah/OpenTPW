@@ -28,6 +28,14 @@ public class FailedStartLogTests
 		environment["OPENTPW_GAME_PATH"] = null;
 		environment["SDL_AUDIODRIVER"] = "dummy";
 
+		// A path that goes wrong lands in scratch, never in the player's own data folder (AGENTS.md rule 12): the data
+		// folder follows XDG_DATA_HOME on Linux, HOME on macOS and APPDATA on Windows.
+		environment.TryAdd( "HOME", Path.Join( workingFolder, "home" ) );
+		environment.TryAdd( "USERPROFILE", environment["HOME"] );
+		environment.TryAdd( "XDG_DATA_HOME", Path.Join( workingFolder, "xdg" ) );
+		environment.TryAdd( "APPDATA", Path.Join( workingFolder, "appdata" ) );
+		environment.TryAdd( "LOCALAPPDATA", Path.Join( workingFolder, "appdata" ) );
+
 		return RepoFiles.Run( host!, [dll, .. arguments], environment, workingFolder )!.Value;
 	}
 
@@ -81,10 +89,21 @@ public class FailedStartLogTests
 			Directory.CreateDirectory( logs );
 			File.WriteAllText( Path.Join( logs, ConsoleLog.FileName ), "an earlier launch" );
 
-			Start( folder, new() { ["OPENTPW_LOG_DIR"] = logs }, "--game", folder );
+			// The game folder named is under the child's home folder, so the list of what was tried holds a home path
+			// that the log must print as "~".
+			var home = Path.Join( folder, "home" );
+			var named = Path.Join( home, "Games", "not-the-game" );
+
+			Directory.CreateDirectory( named );
+			Start( folder, new() { ["OPENTPW_LOG_DIR"] = logs, ["HOME"] = home, ["USERPROFILE"] = home }, "--game", named );
 
 			Assert.AreEqual( "an earlier launch", File.ReadAllText( Path.Join( logs, ConsoleLog.PreviousName ) ) );
-			StringAssert.Contains( File.ReadAllText( Path.Join( logs, ConsoleLog.FileName ) ), "does not hold" );
+
+			var log = File.ReadAllText( Path.Join( logs, ConsoleLog.FileName ) );
+
+			StringAssert.Contains( log, "does not hold" );
+			StringAssert.Contains( log, "~", "the home folder is written as ~" );
+			Assert.IsFalse( log.Contains( home ), "the home folder is never named: " + log );
 		}
 		finally { Directory.Delete( folder, true ); }
 	}

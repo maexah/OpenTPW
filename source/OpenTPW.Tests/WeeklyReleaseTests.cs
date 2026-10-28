@@ -16,19 +16,48 @@ public class WeeklyReleaseTests
 {
 	private const string Top = "OpenTPW-weekly-test-1";
 
-	/// <summary>A Linux build's entries, by the names the packager gives them; the shaders are the repository's own.</summary>
-	private static List<string> Complete( string root, bool windows = false )
+	/// <summary>The three spellings of a build's files: how the runtime and the natives are named on each system.</summary>
+	public enum Os { Linux, Windows, MacOs }
+
+	/// <summary>Each entry release.py's REQUIRED asks for apart from the shaders, with the label the guard gives it when it is missing.</summary>
+	private static (string Entry, string Label)[] Required( Os system )
 	{
+		// Windows spells a library "name.dll"; Linux and macOS "libname.so" and "libname.dylib".
+		string Native( string name ) => system switch
+		{
+			Os.Windows => name + ".dll",
+			Os.MacOs => "lib" + name + ".dylib",
+			_ => "lib" + name + ".so",
+		};
+
+		return
+		[
+			( system == Os.Windows ? "OpenTPW.exe" : "OpenTPW", "the program" ),
+			( "OpenTPW.dll", "OpenTPW.dll" ), ( "OpenTPW.Common.dll", "OpenTPW.Common.dll" ), ( "OpenTPW.Files.dll", "OpenTPW.Files.dll" ),
+			( "OpenTPW.deps.json", "the dependency list" ), ( "OpenTPW.runtimeconfig.json", "the runtime settings" ),
+			( Native( "coreclr" ), "the .NET runtime's core" ),
+			( Native( "hostfxr" ), "the .NET runtime's host" ),
+			( Native( "hostpolicy" ), "the .NET runtime's host policy" ),
+			( system == Os.Windows ? "SDL2.dll" : Native( "SDL2-2.0" ), "SDL" ),
+			( Native( "shaderc_shared" ), "shaderc" ),
+			( Native( "spirv-cross" ), "SPIRV-Cross" ),
+			( "content/fonts/Roboto-Medium.ttf", "the loading screen's font" ),
+			( "content/fonts/LICENSE.txt", "the font's licence" ),
+			( "README.txt", "README.txt" ), ( "LICENSE.md", "LICENSE.md" ), ( "THIRD-PARTY-NOTICES.md", "the third-party notices" ),
+		];
+	}
+
+	/// <summary>A build's entries, by the names the packager gives them; the shaders are the repository's own.</summary>
+	private static List<string> Complete( string root, bool windows = false, Os? system = null )
+	{
+		system ??= windows ? Os.Windows : Os.Linux;
+
 		var entries = new List<string>
 		{
-			windows ? "OpenTPW.exe" : "OpenTPW",
-			"OpenTPW.dll", "OpenTPW.Common.dll", "OpenTPW.Files.dll", "OpenTPW.pdb", "OpenTPW.deps.json", "OpenTPW.runtimeconfig.json", "OpenTPW.dll.config",
-			windows ? "coreclr.dll" : "libcoreclr.so", windows ? "hostfxr.dll" : "libhostfxr.so", windows ? "hostpolicy.dll" : "libhostpolicy.so",
-			windows ? "SDL2.dll" : "libSDL2-2.0.so", windows ? "shaderc_shared.dll" : "libshaderc_shared.so", windows ? "spirv-cross.dll" : "libspirv-cross.so",
-			"System.Private.CoreLib.dll", "NeoVeldrid.dll",
-			"README.txt", "LICENSE.md", "THIRD-PARTY-NOTICES.md",
-			"content/fonts/Roboto-Medium.ttf", "content/fonts/LICENSE.txt",
+			"OpenTPW.pdb", "OpenTPW.dll.config", "System.Private.CoreLib.dll", "NeoVeldrid.dll",
 		};
+
+		entries.AddRange( Required( system.Value ).Select( r => r.Entry ) );
 
 		var shaders = Path.Join( root, "content", "shaders" );
 
@@ -133,6 +162,26 @@ public class WeeklyReleaseTests
 
 			Assert.AreEqual( 1, exit, $"{shader} is not required: {output}" );
 			StringAssert.Contains( output, "missing: the shader " + shader["content/shaders/".Length..] );
+		}
+	}
+
+	/// <remarks><b>Mutation:</b> deleting any entry from REQUIRED in release.py, or narrowing a pattern to the Linux and Windows spellings (<c>dll|so</c>), fails this.</remarks>
+	[TestMethod]
+	public void EveryRequiredEntryIsRefusedWhenMissingOnEverySystem()
+	{
+		var root = RepoFiles.Root();
+
+		foreach ( var system in Enum.GetValues<Os>() )
+		{
+			Assert.AreEqual( 0, Guard( Complete( root, system: system ) ).Exit, $"a complete {system} build passes" );
+
+			foreach ( var (entry, label) in Required( system ) )
+			{
+				var (exit, output) = Guard( Complete( root, system: system ).Where( e => e != entry ) );
+
+				Assert.AreEqual( 1, exit, $"{system}: {entry} is not required: {output}" );
+				StringAssert.Contains( output, "missing: " + label, $"{system}: {entry}" );
+			}
 		}
 	}
 

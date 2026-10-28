@@ -146,6 +146,34 @@ public class ParkTrackPieceClipTests
 	}
 
 	/// <summary>
+	/// The walk stops short of a station only where it links back: the station's first section (30,25) with its link west
+	/// taken off is no stop, so the loop's last anchor (28,25) is not the last played and the walk plays that section too.
+	/// Made to fail by dropping the link-back test from the stop.
+	/// </summary>
+	[TestMethod]
+	public void TheWalkDoesNotStopAtAStationThatDoesNotLinkBack()
+	{
+		var (state, _) = Closed();
+		state.SetRecord( 30, 25, state.Record( 30, 25 ) with { TrackNeighbours = 0x04 } );
+
+		CollectionAssert.AreEqual( Loop.Append( (30, 25) ).ToArray(), ParkTrackTool.PlayPieces( state, 30, 24, 0, fromOtherMouth: false, running: true ) );
+	}
+
+	/// <summary>
+	/// The walk stops short of a station only where it is the same owner's: the loop's last anchor (28,25) given another
+	/// owner meets the station as a stranger's, so the walk goes on into its first section (30,25), where the station's own
+	/// owner and link stop it. Made to fail by dropping the owner test from the stop.
+	/// </summary>
+	[TestMethod]
+	public void TheWalkDoesNotStopAtAStationOfAnotherOwner()
+	{
+		var (state, _) = Closed();
+		state.SetRecord( 28, 25, state.Record( 28, 25 ) with { TrackParentId = (ushort)(Owner + 1) } );
+
+		CollectionAssert.AreEqual( Loop.Append( (30, 25) ).ToArray(), ParkTrackTool.PlayPieces( state, 30, 24, 0, fromOtherMouth: false, running: true ) );
+	}
+
+	/// <summary>
 	/// A cell whose piece has no model is passed over and the walk goes on: the recorder answering no for (34,27) leaves it
 	/// out of the answer and the rest played. Made to fail by stopping where nothing was played.
 	/// </summary>

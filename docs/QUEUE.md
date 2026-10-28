@@ -53,7 +53,8 @@ fork watch).
 ## A. Bugs first
 
 **Ordered at Alexah's word (2026-10-28), before any weekly build goes out:** Q798 (ready for public builds) first, then
-Q249 (saving a park made fresh; its build is Q783), then the rest in the order below.
+Q249 (saving a park made fresh; its build is Q783), then Q782 (a player's data folder) and Q800 (contributors by
+default, Alexah's second pre-weekly list), then the rest in the order below.
 
 - [ ] **Q783. Save a park made fresh.** From Q249 (Alexah's ordering of 2026-10-28 put it second, before any weekly build
   goes out). Write the tick-nought body `saves.md`, "A park made fresh: its file at tick nought", describes, module by
@@ -77,6 +78,29 @@ Q249 (saving a park made fresh; its build is Q783), then the rest in the order b
   `XDG_DATA_HOME` string, so it asks differently), and no Mac has run the build. Decide it from a Mac's `console.log`, or from
   the runtime's source, and make the four places say one thing. Confirm: a run with `HOME` set to an empty folder writes the
   cache under it.
+- [ ] **Q800. Contributors by default; the Sentinel's way for the maintainer only.** Alexah's pre-weekly list
+  (2026-10-28), every point before any weekly build. (1) Hooks: `tools/hooks/` keeps only a content guard for
+  everyone; the queue/status sweeps and the website push move to a maintainer folder. (2) `AGENTS.md`: an agent does
+  the task its person gave it and never takes a queue item unasked; the queue run's steps move to the maintainer part
+  of `docs/WORKFLOW.md`. (3) `CONTRIBUTING.md`: the game is needed to play and to confirm behaviour, not for docs,
+  tools or tests (the no-game run's counts). (4) `.editorconfig` says `crlf`, every `.cs` is LF: make it `lf`, add
+  `.gitattributes` (`* text=auto eol=lf`). (5)+(8) Newcomers start from a few issues made from queue items tagged
+  "good first", each naming its Q-number, where to look, what is expected, the tools it needs. (6) `ARCHITECTURE.md`
+  takes `AGENTS.md`'s "Where things are" map (moved, not copied). (7) A script checks every path and type named in
+  README, CONTRIBUTING and ARCHITECTURE still exists; the Saturday audit runs it. Quick start for Linux/macOS and
+  Windows; the Linux steps checked in a clean container (build, no-game tests, a launch under Xvfb and lavapipe), the
+  Windows and macOS steps marked "these launch steps are not tested" until someone runs them; a no-game path and an advanced path (game,
+  Ghidra, Proton harnesses Linux-only). (9) Claims: a `Claimed: @user, #issue, date` line on a queue item; the
+  Sentinel skips claimed items and reads open issues and PRs at a run's start; a claim lapses after 14 quiet days;
+  the maintainer ticks QUEUE and STATUS at merge (the PR template changes to match). (10) A portable verification
+  record for new items: prediction, command, census or log lines, result. Screenshots are allowed where they really
+  help (Alexah: screenshots are fine; raw textures and models are not), best attached to the PR or issue, since a
+  committed picture stays in the history after it is removed. (11) One guard script, shared with `tools/weekly/release.py`, refuses game
+  file types and `save/` in staged files; run by the contributor hook and by hand; `.gitignore` the reference
+  screenshots folder. (12) FileFormats: outsiders may put findings in the PR for us to write up; linked PRs welcome.
+  Extras: a reverse-engineering note (describe, never paste decompiled code; `docs/exe/` is what is shared), a place
+  to ask questions. Docs and tools only; no game run needed except the guard's test.
+
 **Ordered at Alexah's word (2026-10-21), after their own play of Lost Kingdom:** showing the original's art as well as it can
 be shown comes first, and improvements over the original are ON by default, each said at the site as a deviation (full
 texture depth, the research pumps' smooth scroll, flags easing between winds, a more legible font); a "faithful" graphics toggle that
@@ -144,6 +168,9 @@ filed the items that cite it.
     (`0x00462614`); the instancer `0x00463060` (flags `0x33a`, kart `0x522b90`, water `0x522d50`) calls `0x00469940` (`0x00463347`), which calls
     `0x00469a80` per node (cell triangle by flag `0x4`, Q398's note). Draw them so, not as flat plates (counted `TRACK_PIECE_DRAPE`). Not proven: whether the cars' sampler reads the draped copy.
     The same call also conforms every flag-8 object's base vertices to the terrain corners (Q750; fork watch 2026-10-27, verify-world H1).
+  From the run 13 review (`review13/q781`, finding 3): no test reaches `PlayClip`, `_playing` or the clip census on a real
+  water piece (`ParkTrackPieces` builds `LobbyModel`s, which no test makes without a window); test it when the pieces' clips are
+  next touched.
 - [ ] **Q774. A feature beside a cell the original's verdict never reaches.** From Q773 (`park.md`, "A run over scenery"). In
   the original the blue answer returns at once, before the other cells of the anchor's two by two are judged, so its piece
   is laid over a path, a queue, another ride's track, a map type 7 or 0x15 cell or a ride's south cell beside the feature (op
