@@ -12,7 +12,8 @@ later item may have run what an earlier one lists as untested.
   (28,22)) `28,25,0^0`, no wall (`ours-A1..A3.png`; no `MARKER_LIFT_OVER_TRACK_THING` count). The original this session under
   Proton (`q776/orig`, tags O and P3run, `squares.py`): the same records, 1.5 higher, in all three poses, the squares blue
   (`O-P1.png`, `O-P2.png`, `P3run-P3.png`; the cameras differ, so the pictures are not a pixel pair). Missed predictions
-  (`q776/PREDICTION.txt`): the squares over a piece are blue, not red, in both games; ours' strip began at (34,22), the
+  (`q776/PREDICTION.txt`): the squares over the mouth and its 0xc cell are blue, not red, in both games (the mouth is an end, one link: the path
+  verdict refuses only a bend, a junction or a 0x19 cell); ours' strip began at (34,22), the
   original's anchor landed on (34,23). Not seen: the water ride's pieces; a click over a piece (only the preview was
   read, so whether the click refuses is open); the bug put back in the game (the unit tests carry it: 8 of 8 mutants
   fail). Still counted: the boundary's things' height (`MARKER_LIFT_OVER_TRACK_THING`, Q587).

@@ -10801,7 +10801,7 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   never asked), and `LayRun` begins with op `0x87`'s pass (`0x00538cf0`..`0x00538d9e`, `TearDownUnder`): the demolisher
   (`ParkBuilding.Sell`, `FUN_00527ee0`) on each non-track anchor's four cells in order, the stamp then charging the piece as
   any. `TRACK_RUN_OVER_SCENERY` is gone; a feature beside a cell this game refuses by another rule stays red and is counted
-  (`TRACK_RUN_OVER_SCENERY_MIXED`, Q774). Ours on the final binary (`q773/ours-a`, `PREDICTION.txt`) and the original this
+  (`TRACK_RUN_OVER_SCENERY_MIXED`, Q774). Ours on the final binary (`q773/ours-b`, `ours-c`, `PREDICTION.txt`) and the original this
   session (`q773/orig`), the Dino Karts bought on (32,25), a run to (34,29), the pointer on (40,29) over the Security Camera:
   four blue squares and cursor 6 in both (`ours-1-over.png`, `O-O2.png`), the camera gone after the click, a track piece
   there (`ours-2-after.png`, `O-O3.png`). Not compared: the refund (ours 250 whole, the original's scrap percentage is not

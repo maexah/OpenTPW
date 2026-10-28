@@ -771,8 +771,10 @@ public static class ParkTrackTool
 	/// (<c>0x00538d45</c>..<c>0x00538d6c</c>) the demolisher is called on its two by two's cells in the order (x,y), (x+1,y),
 	/// (x,y+1), (x+1,y+1) (<c>0x00538d76</c>..<c>0x00538d9e</c>), which takes down the thing a cell typed 4, 9 or 10 belongs to
 	/// (<c>FUN_00527d60</c>) and finds nothing in a cell it already took down. The pass is gated on <c>[0x00818c10]</c> (3)
-	/// being above <c>[0x00818c14]</c>, the priority the last verdict read; a run the verdict let through has read only
-	/// priorities below 3 (a ride's 5 answers red), so the gate stands open here. The last anchor's own clear
+	/// being above <c>[0x00818c14]</c>, the priority last stored (the last asked cell's owner, or the preview's target cell's):
+	/// a run onto a cell read at 3 or more and still let through (the station along its flow, the ride's 5) finds it shut and
+	/// tears nothing down. Every run this game lets through reads below 3, since it refuses the run into the station
+	/// (<c>TRACK_RUN_INTO_STATION</c>), so the gate stands open here; building that gap gates this on the priority. The last anchor's own clear
 	/// (<c>FUN_005367a0</c> on its four cells, <c>0x00538db3</c>..<c>0x00538e37</c>) leaves bare ground, the river and track as
 	/// they are (its jump table, <c>0x00536c10</c>), and a path or queue is refused before the click, so it has nothing more to
 	/// do. Like the original, a south cell that holds a ride's footprint is taken down too, the verdict never having asked it.

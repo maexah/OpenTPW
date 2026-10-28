@@ -423,18 +423,21 @@ public class ParkTrackPreviewTests
 	public void TheSquaresWallsGoDownToTheAnchorsTwoCellsAway()
 	{
 		var state = new ParkState( parkIsClosed: false, visitorsToDate: 0, balance: 53522 );
-		var heights = new Dictionary<(int, int), float> { [(126, 41)] = 25f, [(126, 38)] = 12f, [(124, 40)] = 30f };
+		var heights = new Dictionary<(int, int), float> { [(126, 41)] = 25f, [(126, 39)] = 12f, [(124, 40)] = 20f };
 		float HeightAt( int x, int y ) => heights.TryGetValue( (x, y), out var height ) ? height : 0.5f;
 
-		foreach ( var (x, y) in new[] { (126, 41), (126, 38), (124, 40) } )
+		// The north neighbour (126,38) is lifted by the type 4 on its two by two's other row, the west one (124,40) by its track type alone.
+		foreach ( var (x, y) in new[] { (126, 41), (126, 39) } )
 			state.SetRecord( x, y, state.Record( x, y ) with { Type = 4 } );
+
+		state.SetRecord( 124, 40, state.Record( 124, 40 ) with { TrackType = 0xb } );
 
 		var lift = ParkBuildMarkers.TrackLiftOver( state, 126, 40, HeightAt );
 		var walls = ParkBuildMarkers.TrackWalls( state, 126, 40, lift, ParkPathBuilding.MarkerEnd, HeightAt );
 
 		Assert.AreEqual( 30f, lift );
-		Assert.AreEqual( "1^20#2 16^0#2 16^10#2 16^20#2", string.Join( " ", walls.Select( wall =>
-			$"{wall.Face}^{wall.Over - 1.5f:0}#{wall.Size}" ) ), "north from 20, none east (off the map), south from the ground, none west" );
+		Assert.AreEqual( "1^20#2 16^0#2 16^10#2 16^20#2 64^20#2", string.Join( " ", walls.Select( wall =>
+			$"{wall.Face}^{wall.Over - 1.5f:0}#{wall.Size}" ) ), "north from 20, none east (off the map), south from the ground, west from 20" );
 		Assert.IsTrue( walls.All( wall => wall.Marker == ParkPathBuilding.MarkerBlue && (wall.X, wall.Y) == (126, 40) ) );
 		Assert.IsTrue( ParkBuildMarkers.TrackWalls( state, 126, 40, lift, ParkPathBuilding.MarkerRed, HeightAt )
 			.All( wall => wall.Marker == ParkPathBuilding.MarkerRed ) );

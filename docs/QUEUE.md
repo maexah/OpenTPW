@@ -87,7 +87,7 @@ filed the items that cite it.
   add-on (`TRACK_CLEAR_PIECE_CELL`, `TRACK_CLEAR_ADD_ON`); a closed loop's two-click edit (`TRACK_EDIT_CLOSED_LOOP`);
   a run over path or queue mid-run, an end or straight laid there as a hill and a bend or junction plain in the original
   (`TRACK_RUN_OVER_PATH`; the river takes a plain piece, built), a crossing or junction
-  (`TRACK_RUN_CROSSING`) and a run into the station (`TRACK_RUN_INTO_STATION`), the verdict's rest; op 0x87's
+  (`TRACK_RUN_CROSSING`) and a run into the station (`TRACK_RUN_INTO_STATION`; when built, gate op 0x87's `TearDownUnder` on the last priority stored, which the station's 5 shuts), the verdict's rest; op 0x87's
   clear of a path or queue under the last anchor (with `TRACK_RUN_OVER_PATH`); a hill's reshaping by the mouths' walks (`TRACK_WALK_HILL_SHAPE`) and the walks of the closed loop's edit
   (`0x00526b7a`) and of `FUN_00532fc0` (`0x0053426f`); the carried
   ride's squares and their check (`CARRY_PREVIEW_TRACK_START`); a water piece's own clip 0xc (`TRACK_PIECE_WATER_CLIP`);

@@ -47,7 +47,7 @@ public sealed class ParkBuildMarkers : ModelEntity
 	/// <summary>The markers of the park currently loaded, or null outside one.</summary>
 	public static ParkBuildMarkers? Current { get; private set; }
 
-	/// <summary>How far above the ground a tool's square sits - the <c>1.5</c> in <c>FUN_0053df30</c>'s corner height.</summary>
+	/// <summary>How far above the ground a tool's square sits - the <c>1.5</c> the record writers take off (<c>- [0x00700d9c]</c>, -1.5), so a record holds the lift plus 1.5.</summary>
 	private const float Lift = 1.5f;
 
 	/// <summary>
@@ -467,8 +467,9 @@ public sealed class ParkBuildMarkers : ModelEntity
 
 		// Each wall under a square not refused also zeroes the refusal latches DAT_00816d50 and d58 (0x005333bd). That
 		// changes nothing the path and queue tools read, so it is not done: such a square leaves both at nought already,
-		// but for the queue's join, the strip's last square, whose path cell only a track thing lifts (a built piece
-		// never stands on a path cell; a boundary thing's lift is read, ParkItemHeights.PieceTopAt), and the d58 a join leaves is read next by a pass, which clears it first.
+		// but for the queue's join, the strip's last square, whose path cell only a track thing lifts (the path cell of a path laid over a
+		// kart piece, which ours' stamp lays, counted PATH_RUN_OVER_TRACK, lifted by the piece; or a boundary thing's, lifted
+		// by its .hmp), and the d58 a join leaves is read next by a pass, which clears it first.
 		// docs/exe/park-engine.md, "The walls".
 
 		_strip.AddRange( stranded.Where( cell => OnTheField( cell.X, cell.Y ) )

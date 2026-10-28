@@ -844,8 +844,8 @@ public static class ParkPathBuilding
 
 	/// <summary>
 	/// Whether a track record is a corner - exactly two cardinal links, at right angles
-	/// (<c>FUN_0053ae00</c>) - or a junction, three or more (<c>FUN_0053ae90</c>). Every track record in
-	/// Lost Kingdom's save has no links at all, so this never answers yes there.
+	/// (<c>FUN_0053ae00</c>) - or a junction, three or more (<c>FUN_0053ae90</c>). The stock save's track
+	/// records have no links; a bought ride's station and laid circuit do, so a bend or junction of one answers yes.
 	/// </summary>
 	internal static bool TrackCornerOrJunction( ParkWorld.MapCell track )
 	{

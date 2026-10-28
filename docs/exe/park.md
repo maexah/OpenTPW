@@ -1804,8 +1804,9 @@ cell's `AtCell` and draws the same records in every one of those five poses (`q7
 squares ask the same height** (Q776; `ParkBuildMarkers.LiftOver`, `ParkItemHeights.PieceTopAt`): `FUN_00532fc0`'s lift is
 `ceil10( trunc( FUN_00452ae0 ) )` over a map type 4, 7, 9, 10 or `0x1e` cell or a track kind 11, 12, 16, 17 or 25 cell, and
 `FUN_00452ae0` reads the cell's track-layer object first, so a one-cell square over a kart or water piece stands on the
-piece's `.hmp` and its root. **A kart piece's mouth does not refuse a path square** (the verdict `FUN_00535670` refuses a corner
-or junction record, `0x00535bd7`..`0x00535bef`, and track type 0x19, `0x005358b5`; the mouth's links are one, `0x40`, so it passes):
+piece's `.hmp` and its root. **A straight or end piece does not refuse a path square; a bend, a junction or a 0x19 cell does** (the verdict `FUN_00535670`
+answers red with `d58` 1 for a corner or junction record, `0x00535bd7`..`0x00535bef` -> `0x00535d57`, and for track type 0x19
+with latch `d50`, `0x005358b5`, each after the 0xc/0x11 redirect; the mouth's links are one, `0x40`, so it is an end and passes):
 a path tool anchored on bare ground at (34,23) with the pointer over the mouth (34,25) draws blue (texture 0) squares, the last
 lifted (the preview; no click was made). Measured in the original
 under Proton (`q776/orig`, `run.sh`, tags O and P3run; `squares.py`, `liftcells.py`) on `q581/karts.TPWS`, the karts bought
@@ -1844,13 +1845,18 @@ is never asked), a cell of map type 4, 9 or 10 whose owner is a catalogue object
 `[0x00818c14]` to the item's `+0x54` and answers 0 where `[0x00818c10]` (3) is above it, returning at once, before the latch,
 the other cells' refusals and the charge. Where the owner is no catalogue object `[0x00818c14]` keeps what it held; the
 preview pass clears it to 0 at its start (`0x00523522`). Op `0x87` (`0x00538cf0`..`0x00538e37`) runs the same compare, then, for
-an anchor whose map type is not 0xb, 0xd, 0x10, 0x12 or 0x19 (`0x00538d45`..`0x00538d6c`), calls the demolisher on
+an anchor whose track type (the track grid cell's `+8`) is not 0xb, 0xd, 0x10, 0x12 or 0x19 (`0x00538d45`..`0x00538d6c`), calls the demolisher on
 (x,y), (x+1,y), (x,y+1) and (x+1,y+1) in that order (`0x00538d76`..`0x00538d9e`); `FUN_00527ee0` resolves the thing by
 `FUN_00527d60`, which answers for a cell typed 4, 9 or 10, so a cell already cleared by an earlier call finds nothing; on the
 last anchor (`[0x00820ad0]`) it then calls `FUN_005367a0( 0, 0 )` on the anchor's four cells (`0x00538db3`..`0x00538e37`),
 whose jump table (`0x00536c10`, bytes `0x00536c2c`) acts only on map types 1, 3, 4, 9, 10 and 0x15, so bare ground, the river
-and track are left as they are. A run the verdict let through has read only priorities below 3 (a ride's 5 answers red), so the
-compare at `0x00538cfd` stands open at the click; **the south cell is torn down with the rest**, though the verdict never asked
+and track are left as they are. The gate reads what was last stored: the priority of the last asked
+map type 4/9/10 cell with a kind-3 owner, or the target cell's owner where that is map type 4 (the preview's tail,
+`0x0052462f`..`0x005246fb`, which runs after the walk; the click runs op `0x87` at once, `0x00526daa`..`0x00526dbb`, with no verdict
+in between). A run onto a cell the verdict reads at priority 3 or more and still lets through (the station along its flow: its
+map cells are type 4 of the ride, 5; `0x0053a251`..`0x0053a27e`, `0x0053a2c7`..`0x0053a2f4`) finds the compare at `0x00538cfd`
+shut, and nothing on that run is torn down or cleared. Every run this game lets through reads below 3, since it refuses the run
+into the station (`TRACK_RUN_INTO_STATION`), so the compare stands open at the click; **the south cell is torn down with the rest**, though the verdict never asked
 it, so a ride's footprint on a south cell goes with the feature on the east one (decoded, not seen). The click charges the cell's
 piece at the stamp as it does any new piece (`Track_StampCell`), where the preview's total leaves the blue anchor out.
 Measured (Q773): in the original under Proton (`q773/orig`, `run.sh`) on `q581/karts.TPWS`, the Dino Karts bought on (32,25), the

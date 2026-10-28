@@ -223,6 +223,24 @@ public class ItemHeightMapTests
 
 		Assert.AreEqual( 0f, ParkBuildMarkers.LiftOver( state, catalogue, field, 74, 66, "jungle" ), "an anchor with no piece named stays on the ground" );
 		Assert.IsTrue( Unimplemented.Summary.Any( entry => entry.What == "MARKER_LIFT_OVER_TRACK_THING" ), "and is counted" );
+
+		Unimplemented.Forget();
+
+		Assert.AreEqual( 0f, ParkBuildMarkers.LiftOver( state, catalogue, field, 73, 66, "jungle" ), "the 0x19 anchor itself, with no piece named, stays on the ground" );
+		Assert.IsTrue( Unimplemented.Summary.Any( entry => entry.What == "MARKER_LIFT_OVER_TRACK_THING" ), "and is counted: its own cell is asked" );
+
+		Unimplemented.Forget();
+
+		// A water ride's mouth (0x10) and its 0xc cell lift by the water kit's piece .hmp too.
+		ParkTrackPieces.LayStation( state, 2, 18, 18, 0 );
+		Unimplemented.Forget();
+		Assert.AreEqual( 10f, ParkBuildMarkers.LiftOver( state, catalogue, field, 22, 19, "jungle" ), "the water mouth's piece, over ground at -6" );
+		Assert.AreEqual( 10f, ParkBuildMarkers.LiftOver( state, catalogue, field, 22, 20, "jungle" ), "its 0xc cell, by its anchor" );
+
+		state.SetRecord( 22, 20, state.Record( 22, 20 ) with { TrackType = ParkTrackPieces.WaterCell, TrackParentId = (ushort)MapStep.CellId( 22, 19 ) } );
+
+		Assert.AreEqual( 10f, ParkBuildMarkers.LiftOver( state, catalogue, field, 22, 20, "jungle" ), "a 0x11 cell, by its anchor" );
+		Assert.IsFalse( Unimplemented.Summary.Any( entry => entry.What == "MARKER_LIFT_OVER_TRACK_THING" ), "a water piece is not a gap" );
 	}
 
 	/// <summary>
