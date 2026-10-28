@@ -10823,6 +10823,14 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   fresh park's anchors carry the same record (`FreshParkBoundary`). `MARKER_LIFT_OVER_TRACK_THING` now counts only an anchor
   whose record names no row. Corrects Q776's "a track piece does not refuse a path square" to the kart pieces' mouth
   (`park.md`, "The boundary's things lift a square too"; `q777/ours-a`, `q777/orig`).
+- [x] **Q778. An add-on's end caps (Q587's twelfth piece).** The walk keeps the original's count and bits
+  (`ParkTrackTool.WalkCircuit`, `0x0052ade3`..`0x0052b18c`): at an add-on cell walked second in a row it hides each cap
+  (found by its lookup record's hide word, `FUN_0044b3c0`) on a side where track with a model or a station lies two cells
+  on, the bits never cleared in a walk; a loaded add-on lays its two caps' saved words (`ParkObjects.SavedCaps`).
+  `TRACK_PIECE_ADD_ON` is gone: the sky `q688/ours-f2` showed was that run's Instant Action catalogue, and a Full
+  Simulation player's load draws both add-ons where the original does (`q778/R2`, `orig/O1`, `O2`). The original this
+  session: the Tunnel's caps hidden, the Jump's shown. Not seen in this game: either cap rule (no walk reaches an add-on
+  here, `PLACE_TRACK_ADD_ON`; the played file's model records do not read, Q779) (`park.md`, "The walk").
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

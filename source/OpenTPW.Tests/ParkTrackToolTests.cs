@@ -1,4 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
@@ -360,6 +361,149 @@ public class ParkTrackToolTests
 		Assert.AreEqual( Section( 11, 0, 34, 27 ), sections[3] );
 		Assert.AreEqual( Section( 12, 0, 32, 29 ), sections[5], "east-west with an add-on" );
 		Assert.AreEqual( Section( 13, 0, 28, 27 ), sections[8], "north-south with an add-on" );
+	}
+
+	/// <summary>
+	/// An add-on of <paramref name="thing"/> over the anchors given: each carries the track's add-on flag and is of an
+	/// object (map type 4) whose parent cell's occupant is the thing, as the placer leaves them (Alexah's played file's
+	/// Dino Karts Tunnel: (16,19) and (18,19), parent (17,21), thing 404).
+	/// </summary>
+	private static void AddOn( ParkState state, int thing, (int X, int Y) parent, params (int X, int Y)[] anchors )
+	{
+		var parentId = (ushort)MapStep.CellId( parent.X, parent.Y );
+
+		foreach ( var (x, y) in anchors )
+		{
+			var cell = state.Record( x, y );
+
+			state.SetRecord( x, y, cell with { TrackFlags = (ushort)(cell.TrackFlags | ParkTrackPieces.AddOnFlag), Type = 4, ParentId = parentId } );
+		}
+
+		state.SetRecord( parent.X, parent.Y, state.Record( parent.X, parent.Y ) with { Type = 4, ParentId = parentId, Occupant = (ushort)thing } );
+	}
+
+	/// <summary>A kart loop south of the station at (30,24), from its mouth (34,25) to (34, <paramref name="bottom"/>) and back up x 28.</summary>
+	private static (ParkState State, ParkWorld.CatalogueObject Ride) Loop( int bottom )
+	{
+		var (state, ride) = Standing( 1, 30, 24 );
+
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 25), (34, bottom), 200 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, bottom), (28, bottom), 200 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (28, bottom), (28, 25), 200 );
+
+		return (state, ride);
+	}
+
+	/// <summary>
+	/// An add-on of two pieces with track either side: the walk reaches its second cell and hides both its caps (bits 0x11),
+	/// as the original leaves the played file's tunnel (<c>q778/orig/O1</c>, <c>gk_end09</c> and <c>gk_end08</c> 0xc0000111).
+	/// One of a single piece is never reached: its caps stay as its model was made (the played file's jump, both shown).
+	/// </summary>
+	[TestMethod]
+	public void AnAddOnsWalkHidesTheCapsOfTwoPiecesAndLeavesOne()
+	{
+		var calls = new List<(int Thing, int Bits)>();
+		var (state, ride) = Loop( 31 );
+
+		AddOn( state, 500, (35, 30), (34, 27), (34, 29) );
+		AddOn( state, 600, (33, 32), (32, 31) );
+
+		Assert.AreEqual( 1, ParkTrackTool.WalkCircuit( state, ride, check: false, ( thing, bits ) => calls.Add( (thing, bits) ) ).Valid );
+		CollectionAssert.AreEqual( new[] { (500, 0x11) }, calls.ToArray(), "the tunnel at its second cell; the one-piece jump never" );
+		Assert.AreEqual( Section( 13, 0, 34, 29 ), state.TrackRides.SectionsOf( ride.TrackRide )[4], "its cells lay the add-on's straight" );
+
+		// A checking walk reaches the caps the same.
+		calls.Clear();
+		Assert.AreEqual( 1, ParkTrackTool.WalkCircuit( state, ride, check: true, ( thing, bits ) => calls.Add( (thing, bits) ) ).Valid );
+		CollectionAssert.AreEqual( new[] { (500, 0x11) }, calls.ToArray() );
+	}
+
+	/// <summary>
+	/// The count runs on through add-ons side by side, so a jump before a tunnel makes the tunnel's FIRST cell the second, and
+	/// a cell's neighbour that is an add-on carries nothing (it has no model of the kit's): the tunnel's caps take bits 1,
+	/// its way-on cap shown. And the bits are never cleared in a walk: the second tunnel's own are 1, but it takes 0x11, the
+	/// first side's (<c>0x0052ae1e</c> runs only at a count of nought).
+	/// </summary>
+	[TestMethod]
+	public void AnAddOnsCountRunsThroughNeighboursAndItsBitsAreKept()
+	{
+		var calls = new List<(int Thing, int Bits)>();
+		var (state, ride) = Loop( 33 );
+
+		AddOn( state, 600, (35, 28), (34, 27) );
+		AddOn( state, 500, (35, 32), (34, 29), (34, 31) );
+		AddOn( state, 900, (29, 32), (28, 31) );
+		AddOn( state, 800, (29, 28), (28, 29), (28, 27) );
+
+		Assert.AreEqual( 1, ParkTrackTool.WalkCircuit( state, ride, check: false, ( thing, bits ) => calls.Add( (thing, bits) ) ).Valid );
+		CollectionAssert.AreEqual( new[] { (500, 0x01), (800, 0x11) }, calls.ToArray() );
+	}
+
+	/// <summary>
+	/// The count goes back to nought at a straight with no add-on, checking or not, and at a bend only where the walk is not
+	/// checking (the bend's arm is skipped then, <c>0x0052ab1b</c>): so two one-piece jumps a bend apart are never reached
+	/// by a closing walk, and a checking one reaches the second.
+	/// </summary>
+	[TestMethod]
+	public void AnAddOnsCountGoesBackAtAStraightAndAtABendUnlessChecking()
+	{
+		var calls = new List<(int Thing, int Bits)>();
+		var (state, ride) = Loop( 33 );
+
+		AddOn( state, 600, (35, 28), (34, 27) );
+		AddOn( state, 700, (35, 32), (34, 31) );
+
+		Assert.AreEqual( 1, ParkTrackTool.WalkCircuit( state, ride, check: true, ( thing, bits ) => calls.Add( (thing, bits) ) ).Valid );
+		Assert.AreEqual( 0, calls.Count, "the straight (34,29) between them" );
+
+		(state, ride) = Loop( 33 );
+		AddOn( state, 700, (35, 32), (34, 31) );
+		AddOn( state, 900, (33, 34), (32, 33) );
+
+		Assert.AreEqual( 1, ParkTrackTool.WalkCircuit( state, ride, check: false, ( thing, bits ) => calls.Add( (thing, bits) ) ).Valid );
+		Assert.AreEqual( 0, calls.Count, "the bend (34,33) between them, not checking" );
+		Assert.AreEqual( 1, ParkTrackTool.WalkCircuit( state, ride, check: true, ( thing, bits ) => calls.Add( (thing, bits) ) ).Valid );
+		CollectionAssert.AreEqual( new[] { (900, 0x11) }, calls.ToArray(), "checking, the bend does not set it back" );
+	}
+
+	/// <summary>A station two cells back carries the track on for a cap as a piece does: an add-on just past the mouth hides both.</summary>
+	[TestMethod]
+	public void AStationCarriesTheTrackOnForAnAddOnsCap()
+	{
+		var calls = new List<(int Thing, int Bits)>();
+		var (state, ride) = Standing( 1, 30, 24 );
+
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 25), (38, 25), 200 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (38, 25), (38, 29), 200 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (38, 29), (28, 29), 200 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (28, 29), (28, 25), 200 );
+		AddOn( state, 500, (35, 27), (34, 25), (36, 25) );
+
+		Assert.AreEqual( 1, ParkTrackTool.WalkCircuit( state, ride, check: false, ( thing, bits ) => calls.Add( (thing, bits) ) ).Valid );
+		CollectionAssert.AreEqual( new[] { (500, 0x11) }, calls.ToArray(), "(32,25), the station's, behind the mouth" );
+	}
+
+	/// <summary>An add-on's cell whose map record names no object's thing reaches no caps, and lays its section all the same.</summary>
+	[TestMethod]
+	public void AnAddOnCellWithNoThingReachesNoCaps()
+	{
+		var calls = new List<(int Thing, int Bits)>();
+		var (state, ride) = Loop( 31 );
+
+		AddOn( state, 500, (35, 30), (34, 27), (34, 29) );
+		state.SetRecord( 35, 30, state.Record( 35, 30 ) with { Occupant = 0 } );
+
+		Assert.AreEqual( 1, ParkTrackTool.WalkCircuit( state, ride, check: false, ( thing, bits ) => calls.Add( (thing, bits) ) ).Valid );
+		Assert.AreEqual( 0, calls.Count );
+		Assert.AreEqual( Section( 13, 0, 34, 29 ), state.TrackRides.SectionsOf( ride.TrackRide )[4] );
+
+		// Cells no longer an object's (map type 0), their parent still standing: FUN_00527d60 answers no thing.
+		state.SetRecord( 35, 30, state.Record( 35, 30 ) with { Occupant = 500 } );
+		state.SetRecord( 34, 27, state.Record( 34, 27 ) with { Type = 0 } );
+		state.SetRecord( 34, 29, state.Record( 34, 29 ) with { Type = 0 } );
+
+		Assert.AreEqual( 1, ParkTrackTool.WalkCircuit( state, ride, check: false, ( thing, bits ) => calls.Add( (thing, bits) ) ).Valid );
+		Assert.AreEqual( 0, calls.Count, "no object's cells" );
 	}
 
 	private static int Valid( ParkState state, int thingId ) => state.TryObject( thingId, out var ride ) ? ride.IsTrackRideValid : -1;

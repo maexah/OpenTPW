@@ -5,6 +5,20 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q777 (the boundary's things lift a square; Q587's eleventh piece). Ours on the final binary (`q777/ours-a`, dll 80f525fd,
+  SCORE 4 of 4), on the desktop, the stock park, the path tool anchored on (91,21): the `strip` census with the pointer on the
+  east wall's anchor (93,21) reads `91,21,0^0;92,21,0^0;93,21,1^20` (red, lifted 20) with two walls west of it at 0 and 10; on
+  its 0xc cell (94,21) `...;93,21,1^20;94,21,1^20` with two walls west of (93,21) and two east of (94,21); on bare (92,21)
+  `91,21,0^0;92,21,0^0` and no wall; and with the track tool (Dino Karts bought on (85,25), armed on its mouth (87,25)) the
+  pointer on (93,25) reads `87,25,0^10#2;89,25,0^0#2;91,25,0^0#2;93,25,1^20#2` with the wall on each side; no
+  `MARKER_LIFT_OVER_TRACK_THING` count (`ours-A1..A4.png`). The original this session under Proton (`q777/orig`, tag O5,
+  `squares.py`, `liftcells.py`): the same records at the same heights, texture 1 over the wall, the squares 21.50 high and
+  the walls at 1.50 and 11.50 (`O5-P1..P4.png`; the cameras differ, so the pictures are not a pixel pair). Missed predictions
+  (`q777/PREDICTION.txt`): the wall is two records for a lift of 20 (the rule's two tens), and the track tool's square has a wall
+  on both sides; both recorded and re-predicted. Corrected: a path square over a boundary cell is red in the original, not
+  blue as Q776 wrote of the kart piece's mouth. Not seen: a click over a hoarding (only the previews were read); a wall's
+  cell of row 19 or 3 (lift 10 or 0 beside 20) in either game; a fresh park's wall in the game (the tests carry it); the bug
+  put back in the game (the tests carry it: 12 of 12 mutants fail).
 - Q776 (a path or queue tool's square over a kart piece; Q587's tenth piece). Ours on the final binary (`q776/ours-a`, dll
   a5ad2c04, SCORE 1 of 1), on the desktop, the stock park, Q581's purchase, the path tool anchored on (34,23): the `strip`
   census with the pointer on the mouth (34,25) reads `34,25,0^10` (blue, lifted 10) with one north wall, on its 0xc cell

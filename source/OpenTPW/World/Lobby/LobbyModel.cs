@@ -511,6 +511,12 @@ public sealed class LobbyModel : IChannelPosed
 	}
 
 	/// <summary>
+	/// The node of the first lookup record whose hide word is <paramref name="side"/> and whose flags carry 1, or -1 where
+	/// none is (<c>FUN_0044b3c0( instance, 1, side )</c>): an add-on's end cap on that side, 1 or 0x10.
+	/// </summary>
+	public int CapNode( uint side ) => _file.FindNodeByHide( side, 1 );
+
+	/// <summary>
 	/// Where the node called <paramref name="name"/> sits in the world, if this model has one.
 	///
 	/// This is the node's resting place, taken from the origin the model was loaded at. It does not

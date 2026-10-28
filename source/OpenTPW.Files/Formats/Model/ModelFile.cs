@@ -1022,6 +1022,25 @@ public partial class ModelFile : BaseFormat
 	}
 
 	/// <summary>
+	/// The same walk by a record's hide word (<c>+8</c>) in place of its id (<c>FUN_0044b3c0</c>): the first node whose
+	/// hide word is <paramref name="hide"/> and whose flags meet <paramref name="mask"/>, or -1. A track add-on's end cap
+	/// is the one of hide word 1 or 0x10, mask 1. A mask outside <see cref="AnySpace"/> is taken as 1, this walk's own rule.
+	/// </summary>
+	public int FindNodeByHide( uint hide, uint mask )
+	{
+		if ( (mask & AnySpace) == 0 )
+			mask = 1;
+
+		for ( var node = 0; node < Nodes.Count; ++node )
+		{
+			if ( Nodes[node].Id >= 0 && Nodes[node].IdHide == hide && (Nodes[node].IdFlags & mask) != 0 )
+				return node;
+		}
+
+		return -1;
+	}
+
+	/// <summary>
 	/// The routes at file 0xac: a pointer to an array of 16-byte records, each
 	/// { type, point count, offset of the points, 0 }, with the points 12-byte XYZ triples.
 	///

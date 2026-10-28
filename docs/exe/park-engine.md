@@ -3440,7 +3440,8 @@ add-ons (1500 to 1502) are the items that reach all of it.
   (`0x0052af07`) or 1 (`0x0052af4d`). At counter 2 (`0x0052af54`) with the bits at most `0x11`, the byte table `0x0052b38c`
   (`00 01 04 x 14 02 03`) and the jump table (`0x0052af77`, `0x0052afe8`, `0x0052b002`, `0x0052b0cb`, `0x0052b1a7`) choose the
   dummy nodes: bits 0 shows both, 1 hides dummy 1 and shows `0x10`, `0x10` shows 1 and hides `0x10`, `0x11` hides both
-  (`FUN_0044b3c0( instance, 1, n )`; show is `and ~0x10`, hide is `or 0x80000010`). Not read: that `0x007639a4` is the ride's
+  (`FUN_0044b3c0( instance, 1, n )`, the lookup record whose hide word is n; show is `and ~0x10`, hide is `or 0x80000010`;
+  the whole rule, where the count goes back to nought and the caps measured: `park.md`, "The walk", Q778). Not read: that `0x007639a4` is the ride's
   cell (the fork's word), what `[esp + 0x50]` holds in the demolisher's add-on arm (`0x00528512`..`0x0052852d`).
 
 **The worker (type 6)**, vtable `0x006fea70`. The mode stores only the worker's sprite bank and costume; the

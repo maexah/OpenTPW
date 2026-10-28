@@ -851,7 +851,16 @@ public static class ParkTrackTool
 	/// What the ride's <c>mIsTrackRideValid</c> (<c>+0x2c</c>) takes, 1 for a closed circuit, else 0; and how many cells
 	/// it stepped from, the count each cell's <c>+0x24</c> takes in the original (<c>FUN_0053aef0</c>), not kept here.
 	/// </returns>
-	public static (int Valid, int Steps) WalkCircuit( ParkState state, ParkWorld.CatalogueObject ride, bool check )
+	/// <param name="addOnCaps">
+	/// What shows and hides an add-on's end caps, given its thing and the bits (<see cref="ParkObjects.ShowAddOnCaps"/>
+	/// where null): 1 where track with a model or a station lies two cells back along the add-on's way on, 0x10 where it
+	/// lies two on, each hiding that side's cap. It is called at an add-on cell walked second in a row, the bits of every
+	/// add-on cell walked so far ORed, as the original's are: its count goes back to nought at a straight without an add-on
+	/// (and, unless checking, at a bend or a crossing), its bits never (<c>0x0052ade3</c>..<c>0x0052af54</c>). So an add-on
+	/// of one piece is never reached, and a later one takes an earlier one's bits.
+	/// </param>
+	public static (int Valid, int Steps) WalkCircuit( ParkState state, ParkWorld.CatalogueObject ride, bool check,
+		Action<int, int>? addOnCaps = null )
 	{
 		var start = ParkTrackPieces.StationOf( ride.CellX, ride.CellY, ride.Angle ).First;
 		var heading = ParkTrackPieces.HeadingOf( ride.Angle );
@@ -878,6 +887,8 @@ public static class ParkTrackTool
 		var valid = 1;
 		var retiled = false;
 		var step = 0;
+		var addOns = 0;
+		var addOnBits = 0;
 
 		// The original walks until it is back or stops, however far that is; a map's cells bound this one.
 		for ( ; step < ParkWorld.MapSize * ParkWorld.MapSize; )
@@ -891,29 +902,55 @@ public static class ParkTrackTool
 			{
 				var links = CellEdge.Links( mask );
 
+				var addOn = (cell.TrackFlags & ParkTrackPieces.AddOnFlag) != 0;
+
 				if ( IsBend( mask ) )
 				{
 					if ( !check )
+					{
 						state.TrackRides.Lay( handle, mask switch { 0x05 => 5, 0x41 => 6, 0x50 => 7, _ => 8 }, x * 0xc00, y * 0xc00 );
+						addOns = 0;
+					}
 				}
 				else if ( links >= 3 )
 				{
 					if ( !check )
+					{
 						state.TrackRides.Lay( handle, 11, x * 0xc00, y * 0xc00 );
+						addOns = 0;
+					}
 				}
 				else if ( links == 2 )
 				{
-					// An add-on's cell (flag 0x10) lays 12 or 13 and keeps the add-on's model, whose end caps the walk
-					// shows or hides by the track on either side (0x0052ade3..0x0052b18c).
-					var addOn = (cell.TrackFlags & ParkTrackPieces.AddOnFlag) != 0;
-
-					if ( addOn )
-						Unimplemented.Report( "TRACK_WALK_ADD_ON" );
-
+					// An add-on's cell (flag 0x10) lays 12 or 13 and keeps the add-on's model.
 					var kind = (step < 2 ? 0x10000 : 0) | (mask == 0x11 ? (addOn ? 13 : 10) : (addOn ? 12 : 9));
+
+					if ( !addOn )
+						addOns = 0;
 
 					if ( !check )
 						state.TrackRides.Lay( handle, kind, x * 0xc00, y * 0xc00 );
+				}
+
+				// "Found upgrade... modify?": the add-on's thing is the occupant of its cell's parent (FUN_00527d60), and its
+				// caps are shown or hidden by the track either side of the cell (0x0052ade3..0x0052b18c).
+				if ( addOn )
+				{
+					++addOns;
+
+					if ( AddOnThingAt( state, x, y ) is { } thing )
+					{
+						addOnBits |= (CarriesOn( state, x, y, cell.TrackDirection ) ? 0x10 : 0)
+							| (CarriesOn( state, x, y, (byte)CellEdge.Opposite( cell.TrackDirection ) ) ? 0x01 : 0);
+
+						if ( addOns == 2 )
+						{
+							if ( addOnCaps != null )
+								addOnCaps( thing, addOnBits );
+							else
+								ParkObjects.Current?.ShowAddOnCaps( thing, addOnBits );
+						}
+					}
 				}
 
 				// Out of a bend the way its links leave it; a bend entered past its links keeps the heading as the link
@@ -973,6 +1010,40 @@ public static class ParkTrackTool
 			+ $"{step} step(s), {state.TrackRides.SectionsOf( handle ).Count} section(s)" );
 
 		return (valid, step);
+	}
+
+	/// <summary>
+	/// The thing an add-on's cell is of, or null: the occupant of the parent its map record names, where the map type is 4
+	/// (an object's), 9 or 10 (<c>FUN_00527d60</c>).
+	/// </summary>
+	private static int? AddOnThingAt( ParkState state, int x, int y )
+	{
+		var cell = state.Record( x, y );
+
+		if ( cell.Type is not (4 or 9 or 10) )
+			return null;
+
+		var (px, py) = cell.ParentId != 0 ? MapStep.CellAt( cell.ParentId ) : (x, y);
+
+		return ParkState.OnMap( px, py ) && state.Record( px, py ).Occupant is var thing and not 0 ? thing : null;
+	}
+
+	/// <summary>
+	/// Whether the anchor two cells from (<paramref name="x"/>, <paramref name="y"/>) the way <paramref name="way"/> carries
+	/// the track on for an add-on's cap: a kart or water piece with a model of its own (<c>+4</c>), or a station
+	/// (<c>0x0052af07</c>, <c>0x0052af4d</c>). Another add-on's cell has no model of the kit's, so does not.
+	/// </summary>
+	private static bool CarriesOn( ParkState state, int x, int y, byte way )
+	{
+		var (dx, dy) = StepOf( way );
+
+		if ( (dx, dy) == (0, 0) || !ParkState.OnMap( x + dx, y + dy ) )
+			return false;
+
+		var next = state.Record( x + dx, y + dy );
+
+		return next.TrackType is ParkTrackPieces.KartStation or ParkTrackPieces.WaterStation
+			|| ParkTrackPieces.PieceAt( x + dx, y + dy, next ) != null;
 	}
 
 	/// <summary>

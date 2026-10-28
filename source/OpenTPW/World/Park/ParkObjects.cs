@@ -381,6 +381,19 @@ public sealed class ParkObjects : Entity
 			// Put away whatever building it left behind before it is stood anywhere.
 			PoseAsBuilt( model, item );
 
+			// A track add-on's end caps as the file left them: the original lays each saved node word over the fresh
+			// model's node, the walk's last show or hide among them (FileFormats saves.md, "The node flag words"). Only the
+			// two caps' words are laid here; the rest of a model's words this game's clips put back themselves.
+			if ( IsTrackAddOn( item ) && _savedHoardings.TryGetValue( placed.MeshInstance, out var record )
+				&& record.CatalogueId == placed.CatalogueId && record.NodeWords is { } words )
+			{
+				foreach ( var (_, node, hidden) in SavedCaps( model.Source, words ) )
+					model.SetMeshVisible( node, !hidden );
+
+				Log.Info( $"{ThemeName}: '{item.Name}' (thing {placed.ThingId}) stands with its end caps as the file left them: "
+					+ string.Join( ", ", AddOnCapSides.Select( side => $"0x{side:x} " + CapState( model, side ) ) ) );
+			}
+
 			var origin = ModelOriginFor( item, placed );
 			var turn = Turn( placed.Angle );
 
@@ -848,6 +861,56 @@ public sealed class ParkObjects : Entity
 	/// </summary>
 	internal LobbyModel? ModelFor( int thingId )
 		=> _standing.TryGetValue( thingId, out var standing ) ? standing.Model : null;
+
+	/// <summary>An add-on's two end caps, by their lookup records' hide words: 1 the way back, 0x10 the way on.</summary>
+	public static readonly uint[] AddOnCapSides = [0x01, 0x10];
+
+	/// <summary>An add-on of a kart or water ride's track (<c>AddOn.UpgradeType</c> 1, a ride named): its cells carry the
+	/// track's add-on flag, and the walk shows and hides its end caps.</summary>
+	public static bool IsTrackAddOn( ParkItemCatalogue.Item item ) => item.AddOnUpgradesId != 0 && item.AddOnUpgradeType == 1;
+
+	/// <summary>An add-on's end caps as a park file's node words leave them: each side's cap node and whether its word's
+	/// hidden bit (<c>0x1</c>) is set. A side with no cap, or no word, is left out.</summary>
+	public static IEnumerable<(uint Side, int Node, bool Hidden)> SavedCaps( ModelFile file, IReadOnlyList<uint> words )
+	{
+		foreach ( var side in AddOnCapSides )
+		{
+			if ( file.FindNodeByHide( side, 1 ) is var node and >= 0 && node < words.Count )
+				yield return (side, node, (words[node] & 1) != 0);
+		}
+	}
+
+	private static string CapState( LobbyModel model, uint side )
+		=> model.CapNode( side ) is var node and >= 0 ? (model.Entities[node].Opacity > 0f ? "shown" : "hidden") : "none";
+
+	/// <summary>
+	/// An add-on's end caps as a walk leaves them (<c>0x0052af54</c>..<c>0x0052b18c</c>): each cap whose side's bit is in
+	/// <paramref name="bits"/> hidden (<c>| 0x80000010</c>), the other shown (<c>&amp; ~0x10</c>), and its node words the
+	/// same for a save. Answers whether the thing stands here.
+	/// </summary>
+	public bool ShowAddOnCaps( int thingId, int bits )
+	{
+		if ( ModelFor( thingId ) is not { } model )
+			return false;
+
+		foreach ( var side in AddOnCapSides )
+		{
+			var node = model.CapNode( side );
+
+			if ( node < 0 )
+				continue;
+
+			var hidden = (bits & side) != 0;
+
+			model.SetMeshVisible( node, !hidden );
+			AnimationsFor( thingId )?.Nodes?.SetHidden( node, hidden );
+		}
+
+		Log.Info( $"track: the walk leaves add-on thing {thingId}'s end caps "
+			+ string.Join( ", ", AddOnCapSides.Select( side => $"0x{side:x} " + CapState( model, side ) ) ) + $" (bits 0x{bits:x})" );
+
+		return true;
+	}
 
 	/// <summary>
 	/// The name board painted for a placed thing, or null where it has none. The park owns the textures

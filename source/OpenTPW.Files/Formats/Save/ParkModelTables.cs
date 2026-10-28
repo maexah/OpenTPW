@@ -211,6 +211,13 @@ public static class ParkModelTables
 		/// <summary>How many nodes the words are of.</summary>
 		public int Count => _words.Length;
 
+		/// <summary>Sets or clears one node's hidden bit (<c>0x1</c>), as a walk shows or hides an add-on's end cap.</summary>
+		public void SetHidden( int node, bool hidden )
+		{
+			if ( node >= 0 && node < _words.Length )
+				_words[node] = hidden ? _words[node] | 1u : _words[node] & ~1u;
+		}
+
 		/// <summary>
 		/// <paramref name="clip"/> is started on <paramref name="channel"/> and bound (a start without the
 		/// caller's <c>0x8</c>; <c>FUN_00472f60</c>): the clip the channel last ran is taken off

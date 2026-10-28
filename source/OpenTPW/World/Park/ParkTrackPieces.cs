@@ -18,9 +18,10 @@ namespace OpenTPW;
 /// <b>The pieces are drawn from the anchors</b>, each by the row and turn its track record holds, where the original makes
 /// each model as it retiles the cell and a loaded park makes them again from its model records; in every anchor of the
 /// park file to hand that holds a kart track the two agree (<c>ParkTrackPieceTests</c>). The open end the mouths' walks
-/// stop on pulses red to white and back (<see cref="SetPulse"/>). Not built here: the drape of a piece's vertices over the
-/// ground (<c>TRACK_PIECE_DRAPE</c>), a water piece's own clip 0xc (<c>TRACK_PIECE_WATER_CLIP</c>) and an add-on's model
-/// (<c>TRACK_PIECE_ADD_ON</c>).
+/// stop on pulses red to white and back (<see cref="SetPulse"/>). An add-on's anchor takes no piece: the add-on is a placed
+/// thing whose model stands over its cells (<see cref="ParkObjects"/>), its end caps shown and hidden by the walk
+/// (<see cref="ParkObjects.ShowAddOnCaps"/>). Not built here: the drape of a piece's vertices over the ground
+/// (<c>TRACK_PIECE_DRAPE</c>) and a water piece's own clip 0xc (<c>TRACK_PIECE_WATER_CLIP</c>).
 /// </para>
 /// </summary>
 public sealed class ParkTrackPieces : Entity
@@ -41,7 +42,8 @@ public sealed class ParkTrackPieces : Entity
 	/// <summary>The family a water piece's retile answers (<c>BoundaryPieceRows</c>' rows carry <c>0x40000</c>).</summary>
 	public const int WaterFamily = 4;
 
-	/// <summary>The flag a cell with an add-on carries; the section keeps the add-on's model and the kit makes none.</summary>
+	/// <summary>The flag a cell with an add-on carries (the placer's shape kinds 0xb and 0x10, <c>FUN_0053a510( 0x10 )</c>); the
+	/// kit makes no piece there, the add-on's own model standing over it.</summary>
 	public const ushort AddOnFlag = 0x10;
 
 	/// <summary>
@@ -319,10 +321,7 @@ public sealed class ParkTrackPieces : Entity
 			return null;
 
 		if ( (cell.TrackFlags & AddOnFlag) != 0 )
-		{
-			Unimplemented.Report( "TRACK_PIECE_ADD_ON" );
 			return null;
-		}
 
 		var row = cell.TrackTileIndex & 0xffff;
 

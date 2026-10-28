@@ -362,4 +362,46 @@ public class ParkTrackPieceTests
 		Assert.AreEqual( (0, 0x19, 0xc), (state.Record( 34, 25 ).TrackType, state.Record( 35, 25 ).TrackType, state.Record( 35, 26 ).TrackType) );
 		Assert.AreEqual( 0xd, state.Record( 32, 25 ).TrackType );
 	}
+
+	/// <summary>
+	/// Each of Lost Kingdom's three add-ons has its two end caps where <c>FUN_0044b3c0( instance, 1, side )</c> finds them,
+	/// by the lookup records' hide words (an id walk would find none: both caps are id 0), and an add-on's anchor takes no
+	/// kit piece, its own model standing there instead.
+	/// </summary>
+	[TestMethod]
+	public void TheAddOnsCapsAreFoundByTheirHideWords()
+	{
+		var data = GameData.Required();
+
+		ModelFile Model( string stem ) => new( new MemoryStream( data.ReadAllBytes( $"levels/jungle/upgrades/{stem}/{stem}.md2" ) ) );
+
+		Assert.AreEqual( (4, 5), (Model( "lavajump" ).FindNodeByHide( 0x01, 1 ), Model( "lavajump" ).FindNodeByHide( 0x10, 1 )), "gk_end02, gk_end01" );
+		Assert.AreEqual( (3, 4), (Model( "mammtunn" ).FindNodeByHide( 0x01, 1 ), Model( "mammtunn" ).FindNodeByHide( 0x10, 1 )), "gk_end09, gk_end08" );
+		Assert.AreEqual( (8, 6), (Model( "watertun" ).FindNodeByHide( 0x01, 1 ), Model( "watertun" ).FindNodeByHide( 0x10, 1 )), "wr_end03, wr_end02" );
+		Assert.AreEqual( -1, Model( "mammtunn" ).FindNodeByHide( 0x04, 1 ), "no cap of 4" );
+
+		Assert.IsNull( ParkTrackPieces.PieceAt( 18, 9, new ParkWorld.MapCell( 4, 0x10, 0, 0, 0, 8, 0, 3, TrackType: 0xb,
+			TrackFlags: ParkTrackPieces.AddOnFlag, TrackNeighbours: 0x44, TrackDirection: 0x04, TrackTileSet: 3, TrackTileIndex: 2,
+			TrackTileAngle: 90 ) ), "the played file's jump anchor (18,9): row 2, but an add-on" );
+	}
+
+	/// <summary>
+	/// A loaded add-on's caps are its file's node words' hidden bits: the played file's tunnel (item 1501) holds 0x401 on both
+	/// caps, its jump (1500) nought, as the original shows them (<c>q778/orig/O1</c>: 0xc0000111 and 0x40000101).
+	/// </summary>
+	[TestMethod]
+	public void ALoadedAddOnsCapsAreItsFilesNodeWords()
+	{
+		var data = GameData.Required();
+
+		ModelFile Model( string stem ) => new( new MemoryStream( data.ReadAllBytes( $"levels/jungle/upgrades/{stem}/{stem}.md2" ) ) );
+
+		CollectionAssert.AreEqual( new[] { (0x01u, 3, true), (0x10u, 4, true) },
+			ParkObjects.SavedCaps( Model( "mammtunn" ), [0, 0xa2, 0, 0x401, 0x401, 0x601] ).ToArray(), "the tunnel's" );
+		CollectionAssert.AreEqual( new[] { (0x01u, 4, false), (0x10u, 5, false) },
+			ParkObjects.SavedCaps( Model( "lavajump" ), [0, 0, 0, 0, 0, 0, 0x601, 0x601, 0x601, 0x601] ).ToArray(), "the jump's" );
+		CollectionAssert.AreEqual( new[] { (0x01u, 3, false), (0x10u, 4, true) },
+			ParkObjects.SavedCaps( Model( "mammtunn" ), [0x1, 0x1, 0x1, 0x400, 0x401] ).ToArray(), "each cap its own word's bit" );
+		Assert.AreEqual( 1, ParkObjects.SavedCaps( Model( "mammtunn" ), [0, 0, 0, 0] ).Count(), "a cap with no word is left" );
+	}
 }

@@ -21,6 +21,8 @@
     parkfile.py -K <file>...     prints each file's coasters module: the counts, the first coaster's header and pieces (show_coasters; Q593)
     parkfile.py -V <file>...     prints each file's mechanics' and handymen's coverage as the advisor's row 19 and the handymen's 0x0059d383 take it (show_coverage; Q602)
     parkfile.py -B <file>...     prints each file's boundary anchors against their pieces' records (show_boundary; Q620)
+    parkfile.py -H <file>...     prints each file's model records' channel counts by item, the walker's reading, and each
+                                 item's first record of more than one channel (show_channels; Q778, for Q779)
     parkfile.py -W <file>...     prints each file's weather thing: every field, its stamps as dates and ticks (show_weather; Q528)
 
     Park(path)        the inflated body, the world block's things, cells and sprites (q241h/pk.py: .b .things .cell
@@ -107,6 +109,8 @@
     coasters(p)       the coasters module (SAOC): (the four counts, [dict(header, partners, pieces = each piece's flags,
                       mesh, cell x and y on the 96-wide coaster grid, ordinal, loft, bank, incline, yaw, loop, partners)])
                       (FileFormats saves.md, "The coasters module"; Q593; `-K` prints it)
+    channels(p)       the ride system module's records by item: {item: Counter(channels)} and {item: (offset, channels)} of
+                      each item's first record of more than one, by rsys.walk's reading (Q778)
     chunks, walk      the two walkers themselves (q257o/kart.py, q257o/rsys.py)
 
 The Park, chunks and walk code is not here: it is imported from pk.py, kart.py and rsys.py beside it. Importing this raises Python's recursion limit to 100000."""
@@ -838,8 +842,20 @@ def sound(p):
     words = struct.unpack_from('<3I', b, at); L = struct.unpack_from('<I', b, at + 12)[0]
     return dict(on=on, second=second, n=n, words=words, length=L, ends=at + 12 + L == nu)
 
+def channels(p):
+    """({item: Counter(channel count)}, {item: (offset, channels) of its first record of more than one}) (Q778)."""
+    import collections
+    g, hdr, recs = rsys.walk(p); by = collections.defaultdict(collections.Counter); first = {}
+    for r in recs or []:
+        if not r: continue
+        at, ch, base = r; item = p.u32(at + 1); by[item][ch] += 1
+        if ch != 1 and item not in first: first[item] = (at, ch)
+    return dict(by), first
+def show_channels(p):
+    by, first = channels(p)
+    for item in sorted(by): print(f'  item {item:5}: ' + ', '.join(f'{n} of {ch} channel(s)' for ch, n in sorted(by[item].items())) + (f'; first of {first[item][1]} at {first[item][0]}' if item in first else ''))
 if __name__ == '__main__':
-    flags = [a for a in sys.argv[1:] if a in ('-e', '-t', '-a', '-s', '-v', '-l', '-o', '-p', '-m', '-w', '-x', '-d', '-g', '-L', '-P', '-E', '-C', '-W', '-c', '-n', '-T', '-K', '-V', '-N', '-B')]
+    flags = [a for a in sys.argv[1:] if a in ('-e', '-t', '-a', '-s', '-v', '-l', '-o', '-p', '-m', '-w', '-x', '-d', '-g', '-L', '-P', '-E', '-C', '-W', '-c', '-n', '-T', '-K', '-V', '-N', '-B', '-H')]
     if '-c' in flags:
         rest = [a for a in sys.argv[1:] if a not in flags]; print(rest[0]); show_map(Park(rest[0]), *map(int, rest[1:5])); sys.exit()
-    for path in [a for a in sys.argv[1:] if a not in flags]: print(path); (show_boundary if '-B' in flags else show_voices if '-N' in flags else show_coverage if '-V' in flags else show_coasters if '-K' in flags else show_tickets if '-T' in flags else show_nomodify if '-n' in flags else show_weather if '-W' in flags else show_calendar if '-C' in flags else show_economy if '-E' in flags else show_pool if '-P' in flags else show_litter if '-L' in flags else show_inside if '-g' in flags else show_developed if '-d' in flags else show_sets if '-x' in flags else show_park_value if '-w' in flags else show_money if '-m' in flags else show_patrols if '-p' in flags else show_object_days if '-o' in flags else show_lab if '-l' in flags else show_emitters if '-e' in flags else show_tags if '-t' in flags else show_advisor if '-a' in flags else show_analyser if '-s' in flags else show_vehicles if '-v' in flags else show)(Park(path))
+    for path in [a for a in sys.argv[1:] if a not in flags]: print(path); (show_channels if '-H' in flags else show_boundary if '-B' in flags else show_voices if '-N' in flags else show_coverage if '-V' in flags else show_coasters if '-K' in flags else show_tickets if '-T' in flags else show_nomodify if '-n' in flags else show_weather if '-W' in flags else show_calendar if '-C' in flags else show_economy if '-E' in flags else show_pool if '-P' in flags else show_litter if '-L' in flags else show_inside if '-g' in flags else show_developed if '-d' in flags else show_sets if '-x' in flags else show_park_value if '-w' in flags else show_money if '-m' in flags else show_patrols if '-p' in flags else show_object_days if '-o' in flags else show_lab if '-l' in flags else show_emitters if '-e' in flags else show_tags if '-t' in flags else show_advisor if '-a' in flags else show_analyser if '-s' in flags else show_vehicles if '-v' in flags else show)(Park(path))

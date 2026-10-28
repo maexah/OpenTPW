@@ -128,6 +128,12 @@ public static class ParkBuilding
 				Unimplemented.Report( $"SHAPE_KIND_{kind}_PLACEMENT" );
 		}
 
+		// A track add-on's put-down is not built: the snap to the ride's anchors (0x005236b0), the add-on flag its kinds 0xb and
+		// 0x10 set on the track's cells (FUN_0053a510( 0x10 ), 0x0052950d) and the ride's word at +0x30 (0x00529ff5); it
+		// stands as a plain object, and no walk reaches its caps.
+		if ( ParkObjects.IsTrackAddOn( item ) )
+			Unimplemented.Report( "PLACE_TRACK_ADD_ON" );
+
 		// The placer's track-ride slot, taken before the object is constructed.
 		var trackRide = TakeTrackRide( state, item );
 

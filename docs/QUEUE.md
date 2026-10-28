@@ -79,8 +79,10 @@ filed the items that cite it.
   the track tool and lays its runs; Q763 walks the circuit as a loop closes (the sections, `+0x2c`, the opening); Q765
   takes a run back with Backspace; Q766 makes each section's collision objects and buoy; Q767 walks from the mouths and
   pulses the open end; Q768 draws the armed tool's preview squares and its `c_end`; Q773 answers blue over a feature of priority
-  below 3 and tears it down at the click (op `0x87`); Q775 lifts and walls the preview squares; Q776 lifts a path or queue tool's square over a piece; Q777 lifts a square over the boundary's hoardings by their `.hmp`. What is left: an add-on's end
-  caps in the walk (`TRACK_WALK_ADD_ON`), the pieces' clips after a close
+  below 3 and tears it down at the click (op `0x87`); Q775 lifts and walls the preview squares; Q776 lifts a path or queue tool's square over a piece; Q777 lifts a square over the boundary's hoardings by their `.hmp`; Q778 shows and hides an add-on's end caps in the
+  walk and lays a loaded add-on's from its file. What is left: an add-on's put-down (`PLACE_TRACK_ADD_ON`: the snap to the
+  ride's anchors, `0x005236b0`, the track cells' add-on flag its shape kinds 0xb and 0x10 set, `0x0052950d`, and the ride's
+  word `+0x30`, `0x00529ff5`; `park.md`, "The walk"), the pieces' clips after a close
   (`TRACK_PIECES_CLIP`: `TrackRide_PlayPiecesFromMouth`, `0x0052a490`, and `TrackRide_PlayPiecesFromEnd`); the move's
   put-down walk (`0x00524d0a`; ours moves as a sale and a purchase); the put-down's check of the mouths, op 0x20b or
   0x210, whose refusal refuses the placement (`PUT_DOWN_TRACK_OVER_TRACK`: ours lays no anchor over track instead); a take-back's other cell or
@@ -91,8 +93,7 @@ filed the items that cite it.
   clear of a path or queue under the last anchor (with `TRACK_RUN_OVER_PATH`); a hill's reshaping by the mouths' walks (`TRACK_WALK_HILL_SHAPE`) and the walks of the closed loop's edit
   (`0x00526b7a`) and of `FUN_00532fc0` (`0x0053426f`); the carried
   ride's squares and their check (`CARRY_PREVIEW_TRACK_START`); a water piece's own clip 0xc (`TRACK_PIECE_WATER_CLIP`);
-  an add-on's model, whose cell shows the sky through the ground now (`TRACK_PIECE_ADD_ON`, Alexah's played Dino Karts,
-  `q688/ours-f2`); a sale of a ride with track laid (`SALE_TRACK_TEARDOWN`: the walks `FUN_00530830` and `FUN_00530b70`);
+  a sale of a ride with track laid (`SALE_TRACK_TEARDOWN`: the walks `FUN_00530830` and `FUN_00530b70`);
   a written park's piece records (`SAVE_PARK_TRACK_PIECE_MODEL`); and a put-down at 90 or 270, tested and not seen in
   either game. Not measured in the original (the review of Q687, `review12/VERIFY-2.md`): the hill rows 9 to 18 and the
   walks' reshaping, the water refund, the sale's two-piece withdrawal (`0x00528179`), a refund below 100, the
@@ -3079,6 +3080,16 @@ state machine.
   through a park's menu, where ours holds them (`Audio.HoldPlaced`) and lets their samples pass unheard. Read what
   `[manager + 0x60]` points to and who writes it, then measure the original's mix in a paused Lost Kingdom park
   (`mixer.py`: the sea's channel volume and distance with the menu open).
+- [ ] **Q779. A played park's model records do not read when it holds a Temple of Gloom: a car's channel count.** From Q778
+  (`q778/PREDICTION.txt`, R1). Loading Alexah's played Full Simulation jungle park (`New Save.TPWS`, and its `autosave`),
+  `ParkThingStates` stops at 2058464 of the module's 2101020 ("Hoarding restore: the walk ended at ...", and `ParkRides`'
+  "the park file's model states would not read"), so nothing of that file's model states is restored: hoardings, clips'
+  stamps, node words, an add-on's caps. The walk asks `channelsFor` the item, and a car's model record is the ride's item
+  plus one plus its mesh (FileFormats `saves.md`, "A car's two model records"), which the catalogue does not hold, so it is
+  taken as 1 channel; `rsys.py` reads 40 records of item 1181 (ride 1180's car) with 5 and 24 of 1183 with 1, and the stop
+  falls just after a 1181 record (`q778/where.py`; `parkfile.py -H` prints the counts). Decode first how many channels the original makes a car's model with
+  (the car's launch, which makes the two records) and what its loader reads for them, then read them so; check against
+  both of Alexah's jungle files and the 45 files `saves.md` counts.
 - [ ] **Q601. The gadget's date is written with the machine's culture; the original's reads "4.13.2002".** Seen in
   Q707's runs (`q707/p707t/side-by-side.png`): ours letters `GameCalendar.Now.ToShortDateString()` (`ParkGadget.ShowDate`),
   "4/18/2002" on this machine, and would letter another order on a machine of another culture; the original's frames read
