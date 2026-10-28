@@ -1570,7 +1570,7 @@ work load 85, dearest 3, inactive, project 0 item 1100 at 250.
 
 **Not built or not seen.** The original was not driven to hire a researcher and build the eight features, so
 row 80's line in its own fresh park is not seen there; no file of this game's was loaded in the original (a
-fresh park is not saved, `SAVE_PARK_WITH_NO_FILE`). The other three themes' fresh labs are measured in the
+fresh park was not saved then; since Q783 it is). The other three themes' fresh labs are measured in the
 original's two other files and not made here in any run. An upgrade item is catalogued and nothing builds one.
 Not heard in either game.
 

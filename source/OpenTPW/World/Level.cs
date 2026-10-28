@@ -690,7 +690,8 @@ public class Level
 	/// writes anything, <c>0x00516d13</c>), so a worker held is put down and written where they stand, then the park.
 	/// </para>
 	/// <para>
-	/// <b>Deviations.</b> A park made fresh, with no file behind it, is counted and not written. With nobody playing
+	/// <b>Deviations.</b> A park made fresh is written over the file the original writes at tick nought (<see cref="FreshParkFile"/>), with the
+	/// words the original leaves as memory held written as nought and the unbuilt ones counted (<c>FRESH_PARK_FILE_*</c>). With nobody playing
 	/// there is no folder, and nothing is written; the original has a player on every entry. A save that fails
 	/// leaves the file already at its path as it was, where the original deletes it on most failures after the
 	/// open (<c>docs/exe/saves.md</c>, "The save", step 3): a fill in the player's favour, so a failed save never
@@ -841,10 +842,11 @@ public class Level
 			return null;
 		}
 
-		if ( park?.Save is not { } loaded )
+		// A park loaded from a file is written back over it; one made fresh over the file the original writes at tick nought
+		// (docs/exe/saves.md, "A park made fresh: its file at tick nought").
+		if ( (park?.Save ?? (park as FreshPark)?.BaseFile()) is not { } loaded )
 		{
-			Unimplemented.Report( "SAVE_PARK_WITH_NO_FILE" );
-			Log.Warning( $"Save: '{name}' is not written - this park was made fresh, and only a loaded park's file is written back" );
+			Log.Warning( $"Save: '{name}' is not written - this park has no file behind it" );
 			return null;
 		}
 
@@ -902,7 +904,9 @@ public class Level
 			var (lineA, lineB) = ParkObjectNames.Lines( thing.CatalogueId, names )!.Value;
 
 			return new ParkRides.BoughtThing( new ParkWorld.MadeObject( thing, lineA, lineB ), item.Width, item.Depth,
-				"data\\" + item.Directory.Replace( '/', '\\' ).TrimEnd( '\\' ) + "\\", ParkFixedItems.IsVehicle( thing.CatalogueId ) );
+				"data\\" + item.Directory.Replace( '/', '\\' ).TrimEnd( '\\' ) + "\\", ParkFixedItems.IsVehicle( thing.CatalogueId ),
+				// The gates and the lights are fixed items: their models are recorded on the item's own cell, not the object's.
+				ParkFixedItems.IsGatesOrLights( thing.CatalogueId ) ? item.EngineMapOffset ?? (ParkThingStates.FixedItemCellX, ParkThingStates.FixedItemCellY) : null );
 		} ).ToList();
 
 		var things = rides?.Written( loaded, objects,
@@ -1000,7 +1004,7 @@ public class Level
 			things = things with { QueueCells = pieces };
 
 		var running = new ParkFileWriter.Running( state.GameTick, state.ParkIsClosed, state.VisitorsToDate, state.Balance,
-			new ParkCameraModule.View( ParkOrbitCameraMode.Zoom, -ParkOrbitCameraMode.Yaw, point.X, point.Y ), cells,
+			new ParkCameraModule.View( ParkOrbitCameraMode.Zoom, 0f - ParkOrbitCameraMode.Yaw, point.X, point.Y ), cells,
 			writtenPeople, pool?.Written(), people?.WrittenArrival( things != null ? written.Contains : null ), things, people?.WrittenLetGo(),
 			WrittenEffects( loaded, state, written.Contains, asTheFile: things == null ),
 			written.Contains( state.MechanicCursor ) ? state.MechanicCursor : 0,

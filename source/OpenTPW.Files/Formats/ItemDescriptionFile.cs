@@ -42,6 +42,15 @@ public sealed partial class ItemDescriptionFile
 	public int FootprintDepth { get; private set; } = 1;
 
 	/// <summary>
+	/// The cell a fixed item's model stands on in a park file's ride system module, where the item names one:
+	/// <c>Info.EngineMapOffsetOverrideX</c> and <c>Y</c> (the park gate's 45 and 16). Null where it names none, which the
+	/// lights and the arrival vehicles read as (48, 17) (FileFormats <c>saves.md</c>, "The ride system module").
+	/// </summary>
+	public (int X, int Y)? EngineMapOffsetOverride => _engineMapOffsetX is { } x && _engineMapOffsetY is { } y ? (x, y) : null;
+
+	private int? _engineMapOffsetX, _engineMapOffsetY;
+
+	/// <summary>
 	/// The category's own description, whose values this one falls back to - see the constructor.
 	/// </summary>
 	private readonly ItemDescriptionFile? _category;
@@ -858,6 +867,16 @@ public sealed partial class ItemDescriptionFile
 				// The original's own escape hatch, and in the whole jungle only the park gate uses it: its
 				// picture is a single cell but it really stands six by three over the entrance. Where these
 				// are present they win, because the game's own loader takes them in preference.
+				case "Info.EngineMapOffsetOverrideX":
+					if ( int.TryParse( ValueOf( line ), out var offsetX ) )
+						_engineMapOffsetX = offsetX;
+					break;
+
+				case "Info.EngineMapOffsetOverrideY":
+					if ( int.TryParse( ValueOf( line ), out var offsetY ) )
+						_engineMapOffsetY = offsetY;
+					break;
+
 				case "Info.EngineFootprintWidthOverride":
 					if ( int.TryParse( ValueOf( line ), out var overrideWidth ) && overrideWidth > 0 )
 						FootprintWidth = overrideWidth;

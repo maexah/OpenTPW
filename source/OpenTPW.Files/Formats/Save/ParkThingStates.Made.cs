@@ -72,15 +72,20 @@ public sealed partial class ParkThingStates
 	/// (<c>FUN_004647a0</c>), so a node its clip has hidden is shown again and none is marked as a clip's.
 	/// </para>
 	/// <para>
+	/// <b>A fixed item's</b> (<paramref name="fixedCell"/>: the gates', the lights') is <see cref="FixedItemFlags"/> on that cell at
+	/// the footprint given, whatever cell its object is on.
+	/// </para>
+	/// <para>
 	/// <b>An arrival vehicle's</b> (<paramref name="vehicle"/>) is a fixed item's: <see cref="FixedItemFlags"/>, on
 	/// (<see cref="FixedItemCellX"/>, <see cref="FixedItemCellY"/>) whatever cell its object is on, one cell square.
 	/// </para>
 	/// </summary>
 	public static byte[] MadeRecord( int item, int cellX, int cellY, int across, int down, int scriptHandle,
 		uint hoardingFlags, float hoardingProgress, int angle, IReadOnlyList<SavedChannel> channels,
-		ModelTables? tables = null, bool vehicle = false )
-		=> Record( item, vehicle ? FixedItemCellX : cellX, vehicle ? FixedItemCellY : cellY, vehicle ? 1 : across, vehicle ? 1 : down,
-			vehicle ? FixedItemFlags : PlacedObjectFlags, scriptHandle, hoardingFlags, hoardingProgress,
+		ModelTables? tables = null, bool vehicle = false, (int X, int Y)? fixedCell = null )
+		=> Record( item, vehicle ? FixedItemCellX : fixedCell?.X ?? cellX, vehicle ? FixedItemCellY : fixedCell?.Y ?? cellY,
+			vehicle ? 1 : across, vehicle ? 1 : down,
+			vehicle || fixedCell != null ? FixedItemFlags : PlacedObjectFlags, scriptHandle, hoardingFlags, hoardingProgress,
 			angle, tables?.NodeWords ?? [], tables?.Lookups ?? [], tables?.Shared ?? 0, channels );
 
 	/// <summary>The flags a bumper ride's launch makes a car's model with (<c>Bumper_LaunchCar</c>, <c>0x00549fa5</c>).</summary>
@@ -133,6 +138,14 @@ public sealed partial class ParkThingStates
 		return Record( FirstQueuePieceItem + tileIndex, cellX, cellY, 1, 1, QueuePieceFlags, 0, 0, 0f,
 			(360 - tileAngle) % 360, new uint[QueuePieceNodeWords[tileIndex]], [], 0, [QueuePieceChannel] );
 	}
+
+	/// <summary>
+	/// The record of a boundary piece's model (FileFormats <c>saves.md</c>, "A boundary piece's record"): the item and the
+	/// cell it stands on, two cells square, <see cref="QueuePieceFlags"/>, no script, turned by <paramref name="angle"/>, one
+	/// node word nought and one channel idle, as a queue piece's.
+	/// </summary>
+	public static byte[] BoundaryPieceRecord( int item, int cellX, int cellY, int angle )
+		=> Record( item, cellX, cellY, 2, 2, QueuePieceFlags, 0, 0, 0f, angle, new uint[1], [], 0, [QueuePieceChannel] );
 
 	/// <summary>The item of the present record in <paramref name="slot"/>, or null where the slot is empty or past the table.</summary>
 	public int? ItemIn( int slot )

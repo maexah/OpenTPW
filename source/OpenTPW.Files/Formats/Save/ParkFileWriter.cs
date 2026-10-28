@@ -179,7 +179,7 @@ public static class ParkFileWriter
 	/// </summary>
 	public sealed record MadeThing( ParkWorld.MadeObject Object, int Across, int Down, MadeScript? Script,
 		IReadOnlyList<SavedChannel> Channels, uint HoardingFlags = 0, float HoardingProgress = 0f,
-		ParkThingStates.ModelTables? Tables = null, WrittenHeads? Heads = null, bool Vehicle = false );
+		ParkThingStates.ModelTables? Tables = null, WrittenHeads? Heads = null, bool Vehicle = false, (int X, int Y)? FixedCell = null );
 
 	/// <summary>What was done with <see cref="RunningThings"/>: the records written over, the script tables left the file's, the things made and taken out, and each queue cell's new handle beside the one it gave up.</summary>
 	public readonly record struct ThingsWritten( int Objects, int Scripts, int ScriptTablesLeft, int Models,
@@ -420,7 +420,7 @@ public static class ParkFileWriter
 					madeModels.Add( (slots[i], ParkThingStates.MadeRecord( placed.CatalogueId, cell % ParkWorld.MapSize,
 						cell / ParkWorld.MapSize, thing.Across, thing.Down, handle, thing.HoardingFlags,
 						thing.HoardingProgress, placed.Angle, thing.Channels,
-						heads != null ? WithHeads( thing, madeHeadSlots ) : thing.Tables, thing.Vehicle )) );
+						heads != null ? WithHeads( thing, madeHeadSlots ) : thing.Tables, thing.Vehicle, thing.FixedCell )) );
 
 					if ( thing.Script is { } script )
 						scriptRecords.Add( (handle, ParkScriptStates.MadeRecord( script, slots[i] + 1, loaded.ScriptStates.StructSize )) );

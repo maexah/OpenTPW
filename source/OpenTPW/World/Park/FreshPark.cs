@@ -45,6 +45,10 @@ public sealed class FreshPark : IParkInitialState
 	public FreshPark( string theme, ParkBalance balance, ParkItemCatalogue catalogue, BaseFileSystem? files = null, uint? seed = null )
 	{
 		files ??= FileSystem;
+		Theme = theme;
+		_balance = balance;
+		_catalogue = catalogue;
+		_files = files;
 		// Allocation order reserves the advisor (3) and challenge manager (10) even though neither draws.
 		int[] models = [9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 3, 3];
 		Things = Array.AsReadOnly( models.Select( (model, at) => new ParkThingIdentity( at + 1, model ) ).ToArray() );
@@ -63,8 +67,10 @@ public sealed class FreshPark : IParkInitialState
 				Objects.Count( placed => placed.CatalogueId == item.Id ), Price: item.BuildPrice ) ).ToArray() );
 
 		var loans = Enumerable.Range( 0, ParkWorld.EconomyState.LoanSlots ).Select( at => Loan( balance, at ) ).ToArray();
-		Economy = new( balance.Int( "BankAccountInfo.InitialAdmissionFee" ), balance.Int( "BankAccountInfo.InitialCash" ),
-			0, 1, 0, 0, 0, Array.AsReadOnly( loans ) );
+		// The bank's last balance is the cash it starts with, as the original's file at tick nought holds it.
+		var cash = balance.Int( "BankAccountInfo.InitialCash" );
+		Economy = new( balance.Int( "BankAccountInfo.InitialAdmissionFee" ), cash,
+			0, 1, cash, 0, 0, Array.AsReadOnly( loans ) );
 
 		using var ground = files.OpenRead( $"levels/{theme}/terrain/base.MD2" );
 		using var attributes = files.OpenRead( $"levels/{theme}/terrain/base.map" );
@@ -74,6 +80,29 @@ public sealed class FreshPark : IParkInitialState
 		var generator = seed ?? unchecked((uint)DateTimeOffset.UtcNow.ToUnixTimeSeconds());
 		Boundary = FreshParkBoundary.Apply( _cells, balance, new SettingsFile( hoardings ), ref generator, ParkBoundaryHoarding.Variants.Session );
 		RandomSeed = unchecked((int)generator);
+	}
+
+	/// <summary>The theme the park was made for, as it was given.</summary>
+	public string Theme { get; }
+
+	private readonly ParkBalance _balance;
+	private readonly ParkItemCatalogue _catalogue;
+	private readonly BaseFileSystem _files;
+	private ParkWorld? _base;
+
+	/// <summary>
+	/// The park as the original writes it at tick nought, read as a park file (<see cref="FreshParkFile"/>): what a save of this
+	/// park is patched from, as a loaded park's is from its file. Its legal text is the shipped park's, as every file's is.
+	/// </summary>
+	public ParkWorld BaseFile()
+	{
+		if ( _base != null )
+			return _base;
+
+		using var shipped = _files.OpenRead( "levels/jungle/Easymode.TPWI" );
+		var preamble = FreshParkFile.Preamble( new SaveReader( shipped ).Preamble );
+
+		return _base = new ParkWorld( FreshParkFile.Body( this, _catalogue, _balance, _files ), preamble );
 	}
 
 	private static ParkWorld.CatalogueObject FixedObject( ParkItemCatalogue catalogue, string stem, int id, int next )

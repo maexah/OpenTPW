@@ -827,7 +827,9 @@ public sealed class ParkState
 		Balance = park?.Economy?.Balance ?? 0;
 		AdmissionFee = park?.Economy?.AdmissionFee ?? 0;
 
-		// The bank's constructor starts withdrawals on and the rest at nought (FUN_004cf7c0).
+		// The bank's constructor starts withdrawals on and the rest at nought (FUN_004cf7c0), but the last balance, which a
+		// park made fresh starts at its cash (the original's file at tick nought, FreshPark).
+		_freshCalendar = park is FreshPark || park?.Save?.Calendar is { DayAtLastUpdate: -1 };
 		WithdrawalsEnabled = park?.Economy?.WithdrawalsEnabled ?? 1;
 		LastBalance = park?.Economy?.LastBalance ?? 0;
 		TurnEnteredRed = park?.Economy?.TurnEnteredRed ?? 0;
@@ -1112,6 +1114,9 @@ public sealed class ParkState
 		=> GameCalendar.Epoch.AddTicks( (long)(uint)GameTick * GameCalendar.Rate / GameCalendar.AdvancesPerSecond
 			* TimeSpan.TicksPerSecond );
 
+	/// <summary>A park made fresh holds month 0 and day -1 until its first sweep: the clock before its first update (docs/exe/saves.md, "A park made fresh").</summary>
+	private readonly bool _freshCalendar;
+
 	/// <summary>
 	/// The park clock's <c>mMonthAtLastUpdate</c>, nought-based, and <c>mDayAtLastUpdate</c> as the original's hold them
 	/// now: <c>Calendar_Update</c> (<c>0x004f8260</c>) stores the date of <c>mGameTick</c> at the end of every sweep, the
@@ -1119,7 +1124,7 @@ public sealed class ParkState
 	/// <see cref="CalendarNow"/>'s month and day. A save writes them (<c>docs/exe/saves.md</c>, "OpenTPW's writer, the
 	/// calendar's fields").
 	/// </summary>
-	public (int Month, int Day) CalendarAtLastUpdate => (CalendarNow.Month - 1, CalendarNow.Day);
+	public (int Month, int Day) CalendarAtLastUpdate => GameTick == 0 && _freshCalendar ? (0, -1) : (CalendarNow.Month - 1, CalendarNow.Day);
 
 	/// <summary>
 	/// The park's calendar as the newest member of staff was made, a <c>FILETIME</c>: the park analyser's

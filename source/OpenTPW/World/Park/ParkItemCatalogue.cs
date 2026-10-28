@@ -125,6 +125,9 @@ public sealed class ParkItemCatalogue
 		// ItemDescriptionFile.ObjectFlags and MapOffset. See ParkBuilding.Constructed.
 		int ObjectFlags = 0, int MapOffsetX = 0, int MapOffsetY = 0,
 
+		// The cell a fixed item's model is recorded on in a park file - ItemDescriptionFile.EngineMapOffsetOverride. See FreshParkFile.
+		(int X, int Y)? EngineMapOffset = null,
+
 		// Each tier's wear rate and red lines - ItemDescriptionFile.WearRateAt. See WearAt.
 		IReadOnlyList<ParkRideWear.Tier>? WearTiers = null,
 
@@ -383,7 +386,7 @@ public sealed class ParkItemCatalogue
 						description.BumperAdjust( 270 )],
 					description.SupplementalMeshes, description.Hoarding, description.Shape,
 					description.NewBonusAt( 0 ), description.NewBonusAt( 1 ), description.NewBonusAt( 2 ),
-					description.ObjectFlags, description.MapOffset.X, description.MapOffset.Y,
+					description.ObjectFlags, description.MapOffset.X, description.MapOffset.Y, description.EngineMapOffsetOverride,
 					[.. Enumerable.Range( 0, ItemDescriptionFile.Tiers ).Select( tier => new ParkRideWear.Tier(
 						description.WearRateAt( tier ), description.RedLineSpeedAt( tier ),
 						description.RedLineCapacityAt( tier ) ) )],

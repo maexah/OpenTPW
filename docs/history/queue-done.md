@@ -10869,6 +10869,24 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   session (`q249/orig/r1`, `fresh-park.png`; P1 to P7 of `q249/PREDICTION.txt` held); OpenTPW's fresh park still counts
   both its restart and a save, `2x SAVE_PARK_WITH_NO_FILE`, and writes nothing (`q249/ours/r2`, `1-fresh-park.png`, 4 of 4;
   r1's O3 missed by its check, recorded). `parkfile.py -M` added. The build is Q783.
+- [x] **Q783. Save a park made fresh.** From Q249 (Alexah's ordering of 2026-10-28 put it second, before any weekly build
+  goes out). Write the tick-nought body `saves.md`, "A park made fresh: its file at tick nought", describes, module by
+  module, from `FreshPark` and the running park, with the shipped park's legal text, and read it as the base the writer
+  patches (`ParkWorld`), so a thing bought, a person made and the cells take the paths a loaded park's do. Write the
+  leftover words as nought (the clean runs' value), and the weather's location, leftover in every file, as nought too, said
+  at the site. Test it against the decoded values the doc gives (no game bytes in
+  the repo). Confirm: a fresh Full Simulation park saved here and loaded by the original under Proton (`original/fsload.sh`),
+  and its `restart.INTS` read back by Restart Park here.
+  From Q241f: `Level.WritePark` counts such a park as `SAVE_PARK_WITH_NO_FILE` and writes nothing.
+  From Q656: the boundary's anchors are `FreshPark.Boundary`, in the walk's order (the original's model slots 3 to
+  109 in Lost Kingdom), each with the mask, direction, flags, row and turn its track sub-record holds (`mHoardingNeighbours`,
+  `mDirection`, `mFlags`, `mTileData` set 5) and `ParkBoundaryHoarding.PieceOf` its record (FileFormats `saves.md`,
+  "A boundary piece's record"); write them as the original's `restart.INTS` holds them.
+  **DONE 2026-10-28 (Q783, on `alexah/766-save-a-park-made-fresh`).** `FreshParkFile` makes the file at tick nought (the managers, cells, boundary pieces,
+  particles with the land's WaterFall, the sound with the land's five voices, the constant modules), `FreshPark.BaseFile()` reads it, `Level.WritePark` patches
+  it as any loaded park's; the gates and the lights are made as bought things, with fixed-item model records (flags `0x361` on the item's cell). Against the
+  original's clean fresh file only what varies per run differs, beside the counted gaps filed as Q801. Confirmed: `q783/confirm/r2` (entry writes
+  `restart.INTS`, Restart Park reads it, the park saved after it), `q783/orig/l3` (the original under Proton loads the saved file and draws the gate).
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

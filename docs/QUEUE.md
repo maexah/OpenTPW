@@ -56,19 +56,6 @@ fork watch).
 Q249 (saving a park made fresh; its build is Q783), then Q782 (a player's data folder) and Q800 (contributors by
 default, Alexah's second pre-weekly list), then the rest in the order below.
 
-- [ ] **Q783. Save a park made fresh.** From Q249 (Alexah's ordering of 2026-10-28 put it second, before any weekly build
-  goes out). Write the tick-nought body `saves.md`, "A park made fresh: its file at tick nought", describes, module by
-  module, from `FreshPark` and the running park, with the shipped park's legal text, and read it as the base the writer
-  patches (`ParkWorld`), so a thing bought, a person made and the cells take the paths a loaded park's do. Write the
-  leftover words as nought (the clean runs' value), and the weather's location, leftover in every file, as nought too, said
-  at the site. Test it against the decoded values the doc gives (no game bytes in
-  the repo). Confirm: a fresh Full Simulation park saved here and loaded by the original under Proton (`original/fsload.sh`),
-  and its `restart.INTS` read back by Restart Park here.
-  From Q241f: `Level.WritePark` counts such a park as `SAVE_PARK_WITH_NO_FILE` and writes nothing.
-  From Q656: the boundary's anchors are `FreshPark.Boundary`, in the walk's order (the original's model slots 3 to
-  109 in Lost Kingdom), each with the mask, direction, flags, row and turn its track sub-record holds (`mHoardingNeighbours`,
-  `mDirection`, `mFlags`, `mTileData` set 5) and `ParkBoundaryHoarding.PieceOf` its record (FileFormats `saves.md`,
-  "A boundary piece's record"); write them as the original's `restart.INTS` holds them.
 - [ ] **Q782. A player's data folder that does not exist yet, and macOS's.** From Q798. (1) `Game.cs` makes the cache folder
   from `Environment.GetFolderPath( LocalApplicationData )` without `DoNotVerify`, which answers an empty string for a folder
   that is not there (a new Linux account has no `~/.local/share`), so the cache would land in the working directory;
@@ -100,6 +87,16 @@ default, Alexah's second pre-weekly list), then the rest in the order below.
   screenshots folder. (12) FileFormats: outsiders may put findings in the PR for us to write up; linked PRs welcome.
   Extras: a reverse-engineering note (describe, never paste decompiled code; `docs/exe/` is what is shared), a place
   to ask questions. Docs and tools only; no game run needed except the guard's test.
+
+- [ ] **Q801. The rest of a park made fresh's file.** From Q783, filed after the 2026-10-28 ordering block (a reorder is Alexah's). What Q783 writes
+  differently from the original's file at tick nought, each counted: (1) the advisor module's `+0x38` to `+0x64` (each slot's head node and five mouth
+  nodes, found by name, `FUN_0044b2e0`) and `+0x68` to `+0xb4` (twenty clip lengths in ms of one model, slot 1's else slot 0's, clip 14 nought), nought
+  here (`FRESH_PARK_FILE_ADVISOR_MODEL_WORDS`; the corrected rows are `review13/q249/FINDINGS.md`, finding 1, to be written to `saves.md` first); (2) the
+  object controls' dword at `+0x08`, 5 on rides, shops and sideshows but the track rides 1500 to 1502, and on item 100 (`FRESH_PARK_FILE_OBJECT_CONTROL_WORD_8`):
+  find the writer in the control manager and its rule; (3) the gates' and lights' model records' node words and lookup records (6 and 2, 9 and 0), which
+  the made path leaves out (`SAVE_PARK_MADE_MODEL_TABLES`, 76 bytes); (4) the weather as the constructor leaves it (wind 90, force 0.5) where this game
+  writes its own roll; (5) the other three themes' files (flyers, land voices and emitter, seed, ride-system counts: `FRESH_PARK_FILE_OTHER_THEME`);
+  (6) the session's own voices (the music's, `+0x00` of the sound state). Confirm each by the same diff against the original's file (`lib/freshcmp.py`).
 
 **Ordered at Alexah's word (2026-10-21), after their own play of Lost Kingdom:** showing the original's art as well as it can
 be shown comes first, and improvements over the original are ON by default, each said at the site as a deviation (full

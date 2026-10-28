@@ -5,6 +5,12 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q249 (a park made fresh: its file at tick nought, the decode; the build is Q783). Measured on seventeen Lost Kingdom
+  `restart.INTS` the original wrote (Alexah's and fifteen of earlier items' are earlier evidence; one made this session,
+  `q249/orig/r1`, `fresh-park.png`, P1 to P7 held). Not verified: the action recording's 135 bytes and the challenge
+  manager's 67 are measured, not named; whether a load reads the track module's build stamp or `GSYS`'s three distances;
+  what makes a run's leftover memory class; the Fantasy and Halloween files only beside Lost Kingdom's. OpenTPW's side
+  (`q249/ours/r2`, this branch's binary, no code change): a fresh park's restart and save both counted, nothing written.
 - Q798 (ready for public builds; Alexah's review, all six points in one commit). Confirmed on the zip `release.py package`
   made from a local linux-x64 publish of this tree (`q798/run1`, `q798/run2`, final binary): its apphost with no game found
   exits 1, says where it looked and writes `console.log` in the data folder it was told (`XDG_DATA_HOME`; the folder did not

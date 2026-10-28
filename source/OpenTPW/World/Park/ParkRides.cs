@@ -340,7 +340,8 @@ public sealed class ParkRides : Entity
 		// ends (FUN_00415140, 0x00415193), so everything the save measured against that clock keeps its distance
 		// from now. See OnThisClock.
 		_loaded = (int)(GameClock.Ticks * MillisecondsPerTick);
-		_clock = saved?.Clock;
+		// A park made fresh has its file at tick nought, whose clock reads nought (FreshParkFile).
+		_clock = saved?.Clock ?? (world as FreshPark)?.BaseFile().Clock;
 
 		if ( _clock?.Problem != null )
 		{
@@ -994,7 +995,7 @@ public sealed class ParkRides : Entity
 			made.Add( new ParkFileWriter.MadeThing( thing.Object, thing.Across, thing.Down, record, channels,
 				raised?.Flags ?? 0, raised?.Progress ?? 0f, tables,
 				tables != null && _scripts.TryGetValue( placed.ThingId, out var own ) ? WrittenHeads( Scheduler.Find( own ), placed.CatalogueId ) : null,
-				thing.Vehicle ) );
+				thing.Vehicle, thing.FixedCell ) );
 		}
 
 		var goneHandles = new HashSet<int>( (gone ?? new HashSet<int>()).SelectMany( loaded.ScriptStates.HandlesOf ) );
@@ -1115,9 +1116,10 @@ public sealed class ParkRides : Entity
 	/// <summary>
 	/// An object bought since the load, for <see cref="Written"/>: its record and name, its item's footprint in cells
 	/// and the folder its script was loaded from, as the engine keeps one (<c>data\levels\jungle\Rides\monkey\</c>);
-	/// <paramref name="Vehicle"/> for an arrival vehicle made at its summons.
+	/// <paramref name="Vehicle"/> for an arrival vehicle made at its summons, <paramref name="FixedCell"/> for a fixed item's (the gates', the lights') model cell.
 	/// </summary>
-	internal readonly record struct BoughtThing( ParkWorld.MadeObject Object, int Across, int Down, string Directory, bool Vehicle = false );
+	internal readonly record struct BoughtThing( ParkWorld.MadeObject Object, int Across, int Down, string Directory, bool Vehicle = false,
+		(int X, int Y)? FixedCell = null );
 
 	/// <summary>A channel with nothing started on it and nothing queued, at speed 1: what a made model's record starts from.</summary>
 	private static readonly SavedChannel MadeChannel =

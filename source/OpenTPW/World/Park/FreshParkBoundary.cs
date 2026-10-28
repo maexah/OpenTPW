@@ -38,6 +38,10 @@ internal static class FreshParkBoundary
 
 		var anchors = new HashSet<(int X, int Y)>();
 		var walk = new List<(int X, int Y)>();
+
+		// The times the walk lays an anchor: a clicked point ends one run and starts the next, so it is built over once, which
+		// is the track record's overlap counter (FileFormats saves.md, "The map": 'how many more times a cell has been built over').
+		var visits = new Dictionary<(int X, int Y), int>();
 		for ( var at = 1; at < points.Count; ++at )
 		{
 			var (x, y) = points[at - 1];
@@ -50,6 +54,7 @@ internal static class FreshParkBoundary
 			{
 				if ( !ParkState.OnMap( x, y ) || !ParkState.OnMap( x + 1, y + 1 ) )
 					throw new InvalidDataException( "The initial hoarding leaves the map" );
+				visits[(x, y)] = visits.GetValueOrDefault( (x, y) ) + 1;
 				if ( anchors.Add( (x, y) ) )
 					walk.Add( (x, y) );
 				if ( (x, y) == end )
@@ -120,7 +125,8 @@ internal static class FreshParkBoundary
 			// The retile keeps the piece's family, row and rotation on the anchor's track record (0x0053b02b..0x0053b04c).
 			cells[y * ParkWorld.MapSize + x] = cells[y * ParkWorld.MapSize + x] with
 			{
-				TrackTileSet = ParkBoundaryHoarding.Family, TrackTileIndex = row, TrackTileAngle = turn
+				TrackTileSet = ParkBoundaryHoarding.Family, TrackTileIndex = row, TrackTileAngle = turn,
+				TrackDirection = direction, TrackOverlapCounter = (short)(visits[(x, y)] - 1)
 			};
 		}
 

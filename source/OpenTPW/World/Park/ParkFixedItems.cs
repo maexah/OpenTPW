@@ -125,6 +125,9 @@ public sealed class ParkFixedItems : Entity
 	};
 
 	/// <summary>Whether a catalogue item is one of the three arrival vehicles.</summary>
+	/// <summary>Whether the item is the park gate or the traffic lights, the two fixed objects a park is made with.</summary>
+	internal static bool IsGatesOrLights( int catalogueId ) => catalogueId is GatesCatalogueId or LightsCatalogueId;
+
 	internal static bool IsVehicle( int catalogueId ) => catalogueId is BusCatalogueId or SeaplaneCatalogueId or FerryCatalogueId;
 
 	/// <summary>
@@ -220,7 +223,11 @@ public sealed class ParkFixedItems : Entity
 	/// </summary>
 	private const int BusCatalogueId = 1600;
 
+	private const int GatesCatalogueId = 1601;
+
 	private const int SeaplaneCatalogueId = 1602;
+
+	private const int LightsCatalogueId = 1603;
 
 	private const int FerryCatalogueId = 1604;
 

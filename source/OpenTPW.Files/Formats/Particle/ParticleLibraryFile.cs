@@ -24,6 +24,18 @@ public sealed class ParticleLibraryFile : BaseFormat
 	public ParticleEffectTemplate[] Effects { get; private set; } = [];
 	public ParticleEffectorTemplate[] Effectors { get; private set; } = [];
 
+	/// <summary>
+	/// The effects' records as the library holds them, 320 bytes each, an item's own <c>.emt</c> in the slot it was registered in:
+	/// what a park file's templates image is made of (<c>docs/exe/saves.md</c>, "A park made fresh").
+	/// </summary>
+	public IReadOnlyList<byte[]> EffectRecords => _effectRecords;
+
+	/// <summary>The effectors' records as the library holds them, 104 bytes each.</summary>
+	public IReadOnlyList<byte[]> EffectorRecords => _effectorRecords;
+
+	private byte[][] _effectRecords = [];
+	private byte[][] _effectorRecords = [];
+
 	public ParticleLibraryFile( string path )
 	{
 		ReadFromFile( path );
@@ -38,8 +50,13 @@ public sealed class ParticleLibraryFile : BaseFormat
 	{
 		using var reader = new BinaryReader( stream );
 
-		Effects = ReadRecords( reader, ParticleEffectTemplate.RecordSize, record => new ParticleEffectTemplate( record ) );
-		Effectors = ReadRecords( reader, ParticleEffectorTemplate.RecordSize, record => new ParticleEffectorTemplate( record ) );
+		var effects = new List<byte[]>();
+		var effectors = new List<byte[]>();
+
+		Effects = ReadRecords( reader, ParticleEffectTemplate.RecordSize, record => { effects.Add( record ); return new ParticleEffectTemplate( record ); } );
+		Effectors = ReadRecords( reader, ParticleEffectorTemplate.RecordSize, record => { effectors.Add( record ); return new ParticleEffectorTemplate( record ); } );
+		_effectRecords = [.. effects];
+		_effectorRecords = [.. effectors];
 	}
 
 	/// <summary>Registers one raw .emt record in the first slot whose name is empty (FUN_0051fa20).</summary>
@@ -53,6 +70,7 @@ public sealed class ParticleLibraryFile : BaseFormat
 		var record = new byte[ParticleEffectTemplate.RecordSize];
 		stream.ReadExactly( record );
 		Effects[slot] = new ParticleEffectTemplate( record );
+		_effectRecords[slot] = record;
 		return slot;
 	}
 

@@ -1274,16 +1274,23 @@ public class ParkFileWriterTests
 	}
 
 	[TestMethod]
-	public void AParkMadeFreshIsCountedAndNotWritten()
+	public void AParkMadeFreshIsWrittenAsTheFileAtTickNought()
 	{
 		SetCurrentPlayer( new Player( 0, "Test", new PlayerFile { InstantAction = false } ) );
 
 		var fresh = new FreshPark( "jungle", new ParkBalance( "jungle", easyMode: false ),
 			new ParkItemCatalogue( "jungle", instantAction: false ) );
 
-		Assert.IsNull( Level.WritePark( fresh, new ParkState( fresh ), "jungle", "Fresh" ) );
-		Assert.AreEqual( 1, Unimplemented.Summary.Single( gap => gap.What == "SAVE_PARK_WITH_NO_FILE" ).Times );
-		Assert.AreEqual( 0, Directory.GetFiles( Jungle ).Length );
+		var path = Level.WritePark( fresh, new ParkState( fresh ), "jungle", "Fresh" );
+
+		Assert.AreEqual( "Fresh.TPWS", Path.GetFileName( path ) );
+		Assert.IsFalse( Unimplemented.Summary.Any( gap => gap.What == "SAVE_PARK_WITH_NO_FILE" ) );
+
+		var written = Read( SaveFileSystem.ReadAllBytes( path! ) );
+
+		Assert.IsNull( written.Problem );
+		Assert.AreEqual( 0, written.GameTick );
+		Assert.AreEqual( 1, Directory.GetFiles( Jungle ).Length );
 	}
 
 	[TestMethod]

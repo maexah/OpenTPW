@@ -559,9 +559,9 @@ internal sealed class ParkFrontEnd : Panel
 	/// open, nothing is taken down, and the park runs on.
 	/// <para>
 	/// <b>Deviations.</b> The file is loaded by building the scene again from it, as a Load Park row is, where the
-	/// original reads it over the running park. A park made fresh was never written as <c>restart.INTS</c>
-	/// (<see cref="Level.WriteRestartOnEntering"/> counts it), so with no file it is made fresh again, the world the
-	/// original's file would hold. With nobody playing, which only the console's <c>park</c> reaches, there is no folder,
+	/// original reads it over the running park. A park made fresh is written as <c>restart.INTS</c> as it is entered
+	/// (<see cref="Level.WriteRestartOnEntering"/>), so Restart Park loads that file; where a file cannot be written it is
+	/// made fresh again, the world the original's file would hold. With nobody playing, which only the console's <c>park</c> reaches, there is no folder,
 	/// and the copy that ships beside the level is read again.
 	/// </para>
 	/// </summary>
