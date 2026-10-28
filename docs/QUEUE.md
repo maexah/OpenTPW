@@ -45,6 +45,33 @@ fork watch).
 
 ## A. Bugs first
 
+**Ordered at Alexah's word (2026-10-28), before any weekly build goes out:** Q798 (ready for public builds) first, then
+Q249 (saving a park made fresh), then the rest in the order below.
+
+- [ ] **Q798. Ready for public builds: licenses, the zip's required files, a log on a failed start, the docs.** Alexah's
+  review, 2026-10-28. (1) `THIRD-PARTY-NOTICES.md`: every package and file the build ships that we did not make (each
+  package's license read from its own nupkg, the .NET runtime's notices, Roboto 2.137, Apache-2.0, (c) 2011 Google, with
+  `content/fonts/LICENSE.txt` beside the fonts); both in the weekly zip. (2) `tools/weekly/release.py`: a `REQUIRED` list
+  (the program, its deps and runtimeconfig, the shaders, the font, README.txt, LICENSE.md, the notices) a zip must hold;
+  tested with a zip of only the notes, one without the font, one without the notices. (3) When no game folder is found,
+  the log is still written (the player's data folder: the held lines and the folders tried) before the exit; a test and one
+  run with no game; the issue forms and the zip's README say where it is. (4) `CONTRIBUTING.md`: no CI tests the code;
+  the one workflow, `weekly.yml`, only packages a tagged release and runs the content guard. (5) This file's header: what
+  every contributor does, apart from the maintainer's own steps (branch names, reordering, pushing). (6) Delete
+  `docs/PLAYER-GAPS.md` (it repeats STATUS and WORKS) and every link to it. So it stays true unremembered: a test fails when
+  a file under `content/` or a shipped project's `PackageReference` has no row in the notices; the guard's `REQUIRED`; the
+  failed-start test; and one line in `WORKFLOW.md`'s Sunday routine (read the zip's README and the issue forms against
+  STATUS before the tag).
+- [ ] **Q249. A park that was never loaded from a file has nothing to carry.** From Q241e. The fresh world (a
+  Full Simulation park, or a player whose folder holds no park file) is made by `FreshPark`, so the writer's
+  carried modules have no source. Decode what each module holds in a `restart.INTS` written at tick nought
+  (three are in Alexah's saves), make each afresh, and take the legal text from the level's shipped park file.
+  After Q241j. Confirm: a fresh Full Simulation park saved and loaded by the original under Proton.
+  From Q241f: `Level.WritePark` counts such a park as `SAVE_PARK_WITH_NO_FILE` and writes nothing.
+  From Q656: the boundary's anchors are `FreshPark.Boundary`, in the walk's order (the original's model slots 3 to
+  109 in Lost Kingdom), each with the mask, direction, flags, row and turn its track sub-record holds (`mHoardingNeighbours`,
+  `mDirection`, `mFlags`, `mTileData` set 5) and `ParkBoundaryHoarding.PieceOf` its record (FileFormats `saves.md`,
+  "A boundary piece's record"); write them as the original's `restart.INTS` holds them.
 **Ordered at Alexah's word (2026-10-21), after their own play of Lost Kingdom:** showing the original's art as well as it can
 be shown comes first, and improvements over the original are ON by default, each said at the site as a deviation (full
 texture depth, the research pumps' smooth scroll, flags easing between winds, a more legible font); a "faithful" graphics toggle that
@@ -736,16 +763,6 @@ filed the items that cite it.
     plays **nothing**, neither at the repeats nor on release (the repeat messages are not `0x100`, and the release posts
     none after a repeat). The thumb and the track play nothing.
 
-- [ ] **Q249. A park that was never loaded from a file has nothing to carry.** From Q241e. The fresh world (a
-  Full Simulation park, or a player whose folder holds no park file) is made by `FreshPark`, so the writer's
-  carried modules have no source. Decode what each module holds in a `restart.INTS` written at tick nought
-  (three are in Alexah's saves), make each afresh, and take the legal text from the level's shipped park file.
-  After Q241j. Confirm: a fresh Full Simulation park saved and loaded by the original under Proton.
-  From Q241f: `Level.WritePark` counts such a park as `SAVE_PARK_WITH_NO_FILE` and writes nothing.
-  From Q656: the boundary's anchors are `FreshPark.Boundary`, in the walk's order (the original's model slots 3 to
-  109 in Lost Kingdom), each with the mask, direction, flags, row and turn its track sub-record holds (`mHoardingNeighbours`,
-  `mDirection`, `mFlags`, `mTileData` set 5) and `ParkBoundaryHoarding.PieceOf` its record (FileFormats `saves.md`,
-  "A boundary piece's record"); write them as the original's `restart.INTS` holds them.
 - [ ] **Q680. How often a fresh park's boundary laying draws the generator (from Q656), decode first.** `FreshParkBoundary`
   chooses each anchor's piece once, in the walk's order, which gives the original's pattern of straights' variants
   (34 fresh parks), and counts `FRESH_BOUNDARY_LAYING_DRAWS`: the original's laying (`Boundary_LayFresh` `0x005323f0` →
