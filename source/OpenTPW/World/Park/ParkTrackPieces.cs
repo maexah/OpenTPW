@@ -17,9 +17,10 @@ namespace OpenTPW;
 /// <para>
 /// <b>The pieces are drawn from the anchors</b>, each by the row and turn its track record holds, where the original makes
 /// each model as it retiles the cell and a loaded park makes them again from its model records; in every anchor of the
-/// park file to hand that holds a kart track the two agree (<c>ParkTrackPieceTests</c>). Not built here: the open end's
-/// pulse (<c>TRACK_OPEN_END_PULSE</c>), the drape of a piece's vertices over the ground (<c>TRACK_PIECE_DRAPE</c>), a water
-/// piece's own clip 0xc (<c>TRACK_PIECE_WATER_CLIP</c>) and an add-on's model (<c>TRACK_PIECE_ADD_ON</c>).
+/// park file to hand that holds a kart track the two agree (<c>ParkTrackPieceTests</c>). The open end the mouths' walks
+/// stop on pulses red to white and back (<see cref="SetPulse"/>). Not built here: the drape of a piece's vertices over the
+/// ground (<c>TRACK_PIECE_DRAPE</c>), a water piece's own clip 0xc (<c>TRACK_PIECE_WATER_CLIP</c>) and an add-on's model
+/// (<c>TRACK_PIECE_ADD_ON</c>).
 /// </para>
 /// </summary>
 public sealed class ParkTrackPieces : Entity
@@ -341,6 +342,15 @@ public sealed class ParkTrackPieces : Entity
 
 	/// <summary>Each standing piece's model, kept while its anchor's record names the same piece.</summary>
 	private readonly Dictionary<Piece, LobbyModel> _models = [];
+
+	/// <summary>The models pulsing, the original's model flag <c>0x4000000</c> and its list <c>[0x007afe14]</c>.</summary>
+	private readonly HashSet<LobbyModel> _pulsing = [];
+
+	/// <summary>
+	/// The pulse's phase, 0 to 2, shared by every pulsing model and never set back (<c>[0x007afd04]</c>): each frame it
+	/// moves on by twice the frame's seconds, wrapped at 2 (<c>Model_PulseTick</c>, <c>0x00469840</c>).
+	/// </summary>
+	private static float _pulsePhase;
 	private readonly string _theme;
 	private readonly IParkInitialState? _park;
 
@@ -382,6 +392,7 @@ public sealed class ParkTrackPieces : Entity
 
 		foreach ( var gone in _models.Keys.Where( piece => !keep.Contains( piece ) ).ToList() )
 		{
+			_pulsing.Remove( _models[gone] );
 			Delete( _models[gone] );
 			_models.Remove( gone );
 		}
@@ -437,9 +448,43 @@ public sealed class ParkTrackPieces : Entity
 		}
 	}
 
-	/// <summary>The console's <c>track</c>: each piece's anchor, model, row and turn.</summary>
+	/// <summary>
+	/// Starts or stops the pulse of the piece standing on an anchor, as a mouth's walk does on the open end it stops on
+	/// (<c>Model_PulseOn</c>, <c>0x00469580</c>, where the model is not pulsing; <c>Model_PulseOff</c>, <c>0x00469650</c>,
+	/// where it is, which gives its vertices their lit colours back). Answers whether a piece stands there; a new model
+	/// made for a changed piece does not pulse until a walk says so, as the original's retile makes a fresh one.
+	/// </summary>
+	public bool SetPulse( int x, int y, bool on )
+	{
+		if ( _pieces.FirstOrDefault( piece => piece.AnchorX == x && piece.AnchorY == y ) is not { Model: not null } piece
+			|| !_models.TryGetValue( piece, out var model ) )
+			return false;
+
+		if ( on && _pulsing.Add( model ) )
+			Log.Info( $"{_theme}: the track piece on ({x},{y}) pulses" );
+		else if ( !on && _pulsing.Remove( model ) )
+		{
+			model.SetVertexColour( null );
+			Log.Info( $"{_theme}: the track piece on ({x},{y}) stops pulsing" );
+		}
+
+		return true;
+	}
+
+	/// <summary>
+	/// The green and blue a pulsing model's every vertex takes at a phase, red and alpha being 255: the phase's triangle, 0
+	/// at 0, 255 at 1 and back to 0 at 2, times 255 and cut to a whole number (<c>0x00469840</c>..<c>0x00469871</c>,
+	/// <c>__ftol</c>), so the piece goes red to white and back once a second.
+	/// </summary>
+	public static int PulseValue( float phase ) => (int)((phase <= 1f ? phase : 2f - phase) * 255f);
+
+	/// <summary>The phase after a frame of <paramref name="seconds"/>: twice the seconds on, wrapped at 2 (<c>fmod</c>).</summary>
+	public static float PulsePhaseAfter( float phase, float seconds ) => (phase + (2f * seconds)) % 2f;
+
+	/// <summary>The console's <c>track</c>: each piece's anchor, model, row and turn, and whether it pulses.</summary>
 	public IEnumerable<string> Census()
-		=> _pieces.Select( piece => $"({piece.AnchorX},{piece.AnchorY}) {piece.Model} row {piece.Row} turn {piece.Turn}" );
+		=> _pieces.Select( piece => $"({piece.AnchorX},{piece.AnchorY}) {piece.Model} row {piece.Row} turn {piece.Turn}"
+			+ (_models.TryGetValue( piece, out var model ) && _pulsing.Contains( model ) ? $" pulsing {PulseValue( _pulsePhase )}" : "") );
 
 	private static void Delete( LobbyModel model )
 	{
@@ -454,6 +499,7 @@ public sealed class ParkTrackPieces : Entity
 
 		_models.Clear();
 		_pieces.Clear();
+		_pulsing.Clear();
 	}
 
 	protected override void OnDelete()
@@ -470,5 +516,14 @@ public sealed class ParkTrackPieces : Entity
 	{
 		foreach ( var model in _models.Values )
 			model.Update( GameClock.Delta );
+
+		// Once a frame, on the frame clock as the original's drawn frame runs it (0x0054e301): the value is taken at the
+		// phase before it moves on, and written over every vertex of every pulsing model.
+		var value = PulseValue( _pulsePhase ) / 255f;
+
+		foreach ( var model in _pulsing )
+			model.SetVertexColour( new Vector4( 1f, value, value, 1f ) );
+
+		_pulsePhase = PulsePhaseAfter( _pulsePhase, Time.Delta );
 	}
 }

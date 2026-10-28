@@ -10773,6 +10773,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `q581/orig/A-track.log` at 496 s and the water loop's as `D-track.log` at 171 s, the original's earlier logs for the
   same clicks (the original not run for this item). `mutate.py`: 22 bugs, 21 fail; the survivor (a purchase's slot
   clearing its buoys) is equivalent, since every path that empties a slot lets its buoys go first.
+- [x] **Q767. The karts' and the water ride's open end pulses (Q587's sixth piece).** `ParkTrackTool.Shape` and
+  `ShapeMouths` (`TrackRide_ShapeFromMouth`, `0x0052c6f0`; `TrackRide_ShapeFromOtherMouth`, `0x0052ccb0`; read in the
+  real Ghidra project, `q767/dump`; `park.md`, "The open end's pulse"): each walk to its open end, and its pair at the
+  put-down, the arming, each moving click, the close and Backspace; `ParkTrackPieces.SetPulse` and the tick give the
+  piece (255, v, v) in place of its light, red to white and back once a second (`Model_PulseTick`, `0x00469840`). Ours
+  on the final binary (`q767/ours-b`, `PREDICTION.txt`), on the desktop, the stock park, by Q581's clicks: the mouth
+  (34,25) pulses after the put-down, the other mouth (28,25) from the arming click until the close, nothing after,
+  and the water ride's (22,19) and (16,19) the same; the other mouth red at a low value (`pulsing 23`,
+  `ours-3-run1-b.png`) as in the original's `q587/orig/B-3-run1.png`, earlier evidence for the same clicks; the
+  original not run this session. mutate.py: 22 bugs, 21 fail, one equivalent.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

@@ -41,7 +41,22 @@ public class ShaderTests
 		Assert.AreEqual( 288, At( nameof( ObjectUniformBuffer.g_vLightTravels ) ) );
 		Assert.AreEqual( 300, At( nameof( ObjectUniformBuffer.g_flFullLight ) ) );
 		Assert.AreEqual( 304, At( nameof( ObjectUniformBuffer.g_vLinearFog ) ) );
-		Assert.AreEqual( 320, System.Runtime.InteropServices.Marshal.SizeOf<ObjectUniformBuffer>() );
+		Assert.AreEqual( 320, At( nameof( ObjectUniformBuffer.g_vVertexColour ) ) );
+		Assert.AreEqual( 336, System.Runtime.InteropServices.Marshal.SizeOf<ObjectUniformBuffer>() );
+	}
+
+	/// <summary>
+	/// Both of test.shader's stages declare the pulse's colour after first person's fog, where the struct puts it, and the
+	/// vertex stage puts it in place of the park light when its <c>w</c> is set (<see cref="ModelEntity.VertexColour"/>).
+	/// </summary>
+	[TestMethod]
+	public void TheModelShaderReadsThePulsesColourInPlaceOfTheLight()
+	{
+		var text = File.ReadAllText( Path.Combine( AppContext.BaseDirectory, "content", "shaders", "test.shader" ) );
+		const string block = "vec4 g_vLinearFog;\n        vec4 g_vVertexColour;\n    } g_oUbo;";
+
+		Assert.AreEqual( 2, text.Split( block ).Length - 1, "in both stages" );
+		StringAssert.Contains( text, "if (g_oUbo.g_vVertexColour.w > 0.5)\n            {\n                vParkLight = g_oUbo.g_vVertexColour.rgb;" );
 	}
 
 	/// <summary>

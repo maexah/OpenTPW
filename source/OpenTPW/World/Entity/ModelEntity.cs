@@ -23,6 +23,13 @@ public partial class ModelEntity : Entity
 	public float Opacity { get; set; } = 1f;
 
 	/// <summary>
+	/// With <c>w</c> 1, the colour every vertex of a park draw takes in place of its lit colour, as the original writes a
+	/// pulsing model's vertex colours each frame (<c>Model_PulseTick</c>, <c>0x00469840</c>); a material drawn unlit stays
+	/// white. Nought, the ordinary case, keeps the light.
+	/// </summary>
+	public System.Numerics.Vector4 VertexColour { get; set; }
+
+	/// <summary>
 	/// Set when this model is drawn by whatever owns it, through <see cref="DrawOverlay"/>, rather
 	/// than as part of the scene - so the world passes leave it alone.
 	/// </summary>
@@ -143,6 +150,7 @@ public partial class ModelEntity : Entity
 			g_flWorldNormals = worldNormals ? 1f : 0f,
 
 			g_vLinearFog = linearFog,
+			g_vVertexColour = VertexColour,
 
 			_padding0 = 0,
 			_padding1 = 0,

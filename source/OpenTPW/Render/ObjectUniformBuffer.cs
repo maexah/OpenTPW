@@ -99,4 +99,10 @@ struct ObjectUniformBuffer
 	/// Nought everywhere else, where no draw is fogged by it.
 	/// </summary>
 	public Vector4 g_vLinearFog; // 16
+
+	/// <summary>
+	/// With <c>w</c> 1, the colour that takes the place of every vertex's park light (<see cref="ModelEntity.VertexColour"/>:
+	/// the track's open end pulsing). Nought everywhere else. Read with <see cref="g_flParkLight"/>.
+	/// </summary>
+	public Vector4 g_vVertexColour; // 16
 }

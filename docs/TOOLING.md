@@ -1785,7 +1785,8 @@ GH=766` there, or the pointer is off):
   pieces and the bank, a line a click (Q687, `q587/orig`: Backspace on its release takes the last run back). In ours
   (Q762, `q762/ours.py`): `carry 1150`, `hover 32 25`, `worldclick 32 25`, `rightclick` (the queue tool away), then
   `worldclick` on the mouth (34,25) arms the track tool and one `worldclick` a run; `tool` reads the mode and anchor and
-  `cell X Y` an anchor's `links`, `way`, `track over` and `piece`, as `trackcells.py` reads the original's. `track`
+  `cell X Y` an anchor's `links`, `way`, `track over` and `piece`, as `trackcells.py` reads the original's; `track`
+  ends a pulsing piece's line with `pulsing V`, the green and blue it is drawn with (Q767, `q767/ours.py`). `track`
   then prints each track ride's `+0x2c`, `can load`, buoys and sections with their objects in `trackride.py`'s own words
   (`section 0 type 9 flags 0x1 cells (30,25) at (92160,76800) objects [0x3f (95232,79872) 3104/1148]`; a buoy is
   numbered in its ride's own list, where the original's is its pool slot, and names its object where `trackride.py`

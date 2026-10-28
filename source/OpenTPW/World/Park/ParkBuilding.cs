@@ -1584,13 +1584,11 @@ public static class ParkBuilding
 		if ( built.ThingId == 0 )
 			return built.Answer;
 
-		// Karts and the water ride lay their station and both mouths here (0x00524db7..0x0052518c). The mouth then pulses
-		// until the track tool is armed, which is not drawn.
+		// Karts and the water ride lay their station and both mouths here (0x00524db7..0x0052518c), the mouths by op 0x86 among
+		// the rest, whose pair of walks leaves the mouth pulsing until the track tool is armed.
 		if ( built.TrackType is 1 or 2 )
 		{
-			var laid = ParkTrackPieces.LayStation( state, built.TrackType, cellX, cellY, angle ?? CarryingAngle );
-			ParkTrackPieces.Current?.Rebuild();
-			Unimplemented.Report( "TRACK_OPEN_END_PULSE" );
+			var laid = ParkTrackTool.PutDown( state, built.TrackType, cellX, cellY, angle ?? CarryingAngle );
 			Log.Info( $"Building: thing {built.ThingId} laid {laid} track anchors, its station and mouths" );
 		}
 

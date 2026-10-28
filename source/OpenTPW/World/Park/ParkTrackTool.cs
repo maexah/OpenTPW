@@ -137,6 +137,115 @@ public static class ParkTrackTool
 				&& state.Record( MapStep.CellAt( cell.TrackParentId ).X, MapStep.CellAt( cell.TrackParentId ).Y ).TrackType
 					is ParkTrackPieces.KartStation or ParkTrackPieces.WaterStation);
 
+	/// <summary>Where a mouth's walk stopped: whether it met the station from its far side, and the open end it stopped on.</summary>
+	public readonly record struct Shaped( bool MetStation, (int X, int Y)? OpenEnd );
+
+	/// <summary>
+	/// A mouth's walk, <c>TrackRide_ShapeFromMouth</c> (<c>0x0052c6f0</c>), or with <paramref name="fromOtherMouth"/>
+	/// <c>TrackRide_ShapeFromOtherMouth</c> (<c>0x0052ccb0</c>): from the mouth on the turn's heading, or from the other
+	/// mouth away from the station, in 2-cell steps over laid track (0xb, 0x10), out of a bend the way its links leave it
+	/// (its links less the way in, <c>opposite( heading )</c> where it links that way, else the heading), until a cell that
+	/// is no bend and links no further on, the open end, or a station of the ride two cells on linking back, which answers
+	/// 1. A start that is not track answers 1 at once. The original reshapes and retiles a hill on the way by its
+	/// neighbours; that is counted, <c>TRACK_WALK_HILL_SHAPE</c>.
+	/// </summary>
+	public static Shaped Shape( ParkState state, int rideX, int rideY, int angle, bool fromOtherMouth )
+	{
+		var station = ParkTrackPieces.StationOf( rideX, rideY, angle );
+		var (x, y) = fromOtherMouth ? station.OtherMouth : station.Mouth;
+		var heading = ParkTrackPieces.HeadingOf( angle );
+
+		if ( fromOtherMouth )
+			heading = (byte)CellEdge.Opposite( heading );
+
+		if ( !ParkState.OnMap( x, y ) || !IsTrack( state.Record( x, y ).TrackType ) )
+			return new Shaped( true, null );
+
+		// The original steps on until it stops, however far that is; a map's width of steps bounds this one.
+		for ( var steps = 0; steps < ParkWorld.MapSize && ParkState.OnMap( x, y ); ++steps )
+		{
+			var cell = state.Record( x, y );
+
+			if ( ParkTrackPieces.IsPieceAnchor( cell.TrackType ) )
+			{
+				var bend = IsBend( cell.TrackNeighbours );
+
+				if ( bend )
+				{
+					var wayIn = (byte)CellEdge.Opposite( heading );
+
+					if ( (wayIn & cell.TrackNeighbours) == 0 )
+						wayIn = heading;
+
+					heading = (byte)(cell.TrackNeighbours ^ wayIn);
+				}
+				else if ( (cell.TrackFlags & 0xf) != 0 )
+				{
+					Unimplemented.Report( "TRACK_WALK_HILL_SHAPE" );
+				}
+
+				(int X, int Y)? openEnd = !bend && (heading & cell.TrackNeighbours) == 0 ? (x, y) : null;
+				var (dx, dy) = StepOf( heading );
+				var met = ParkState.OnMap( x + dx, y + dy ) && state.Record( x + dx, y + dy ) is var next && IsStation( state, next )
+					&& next.TrackParentId == cell.TrackParentId && (next.TrackNeighbours & CellEdge.Opposite( heading )) != 0;
+
+				if ( openEnd != null || met )
+					return new Shaped( met, openEnd );
+			}
+
+			var (stepX, stepY) = StepOf( heading );
+			(x, y) = (x + stepX, y + stepY);
+		}
+
+		return new Shaped( false, null );
+	}
+
+	/// <summary>
+	/// A pair of the mouths' walks: from the mouth, its open end pulsing where <paramref name="mouthPulses"/> and stopping
+	/// where not, then from the other mouth the other way round, which <paramref name="onlyWhereOpen"/> skips where the
+	/// first met the station (op 0x86's pair, <c>0x00538ca0</c>, and Backspace's, <c>0x00530025</c>). The pulse is on the
+	/// open end's piece (<see cref="ParkTrackPieces.SetPulse"/>); a cell with no piece standing pulses nothing.
+	/// </summary>
+	public static (Shaped Mouth, Shaped? OtherMouth) ShapeMouths( ParkState state, int rideX, int rideY, int angle, bool mouthPulses,
+		bool onlyWhereOpen )
+	{
+		var mouth = Shape( state, rideX, rideY, angle, fromOtherMouth: false );
+
+		Pulse( mouth.OpenEnd, mouthPulses );
+
+		if ( onlyWhereOpen && mouth.MetStation )
+			return (mouth, null);
+
+		var other = Shape( state, rideX, rideY, angle, fromOtherMouth: true );
+
+		Pulse( other.OpenEnd, !mouthPulses );
+
+		return (mouth, other);
+	}
+
+	/// <summary>
+	/// A bought kart or water ride's put-down on the track grid: its station and mouths laid (<see cref="ParkTrackPieces.LayStation"/>),
+	/// the pieces stood, and op 0x86's pair of walks, which leaves the mouth pulsing. Answers how many anchors were laid.
+	/// </summary>
+	public static int PutDown( ParkState state, int trackType, int x, int y, int angle )
+	{
+		var laid = ParkTrackPieces.LayStation( state, trackType, x, y, angle );
+
+		ParkTrackPieces.Current?.Rebuild();
+		ShapeMouths( state, x, y, angle, mouthPulses: true, onlyWhereOpen: true );
+
+		return laid;
+	}
+
+	/// <summary>Where the walks' pulses go: the pieces standing, or in a test a recorder of its own.</summary>
+	internal static Action<int, int, bool> PulseTo = ( x, y, on ) => ParkTrackPieces.Current?.SetPulse( x, y, on );
+
+	private static void Pulse( (int X, int Y)? at, bool on )
+	{
+		if ( at is { } cell )
+			PulseTo( cell.X, cell.Y, on );
+	}
+
 	/// <summary>Two links at right angles (<c>TrackCell_BendLinks</c>, <c>FUN_0053ae00</c>).</summary>
 	public static bool IsBend( byte mask ) => CellEdge.Links( mask ) == 2 && (mask & 0x11) != 0x11 && (mask & 0x44) != 0x44;
 
@@ -307,7 +416,7 @@ public static class ParkTrackTool
 	/// Lays one run from the anchor to its target, pass by pass over every cell, as the click does (<c>0x00526daa</c>..
 	/// <c>0x00526ebe</c>): the stamp, the links, the flow, the owner, the hill flags and the retile. The clear pass
 	/// (<c>0x87</c>) clears only what <see cref="Verdict"/> refuses to lay over, so it has nothing to do; the mouths' walks
-	/// (<c>0x86</c>) are counted, <c>TRACK_OPEN_END_PULSE</c>.
+	/// (<c>0x86</c>) run once for the run (<see cref="ShapeMouths"/>).
 	/// </summary>
 	public static Laid LayRun( ParkState state, int type, ushort owner, (int X, int Y) from, (int X, int Y) to, int price )
 	{
@@ -398,8 +507,10 @@ public static class ParkTrackTool
 				state.SetRecord( x, y, cell with { TrackFlags = (ushort)(cell.TrackFlags & 0xfff0) } );
 		}
 
-		// The mouths' walks (op 0x86, 0x00538ca0): the open end's pulse and a hill's shape by its neighbours.
-		Unimplemented.Report( "TRACK_OPEN_END_PULSE" );
+		// The mouths' walks (op 0x86, 0x00538ca0): from the mouth with 1, then from the other mouth with 0 where the first met
+		// no station. Every cell of the run asks the same pair of its owner, so one pair stands for them all.
+		if ( owner != 0 && state.Objects.FirstOrDefault( o => MapStep.CellId( o.CellX, o.CellY ) == owner ) is { ThingId: not 0 } ride )
+			ShapeMouths( state, ride.CellX, ride.CellY, ride.Angle, mouthPulses: true, onlyWhereOpen: true );
 
 		// The retile (0x00538757..0x005387da): a bend, or a crossing with links, loses its hill flags; every piece but a
 		// station's takes its row and turn again.
@@ -898,7 +1009,8 @@ public static class ParkTrackTool
 	/// <summary>
 	/// Backspace with the track tool armed: the last run taken back (<see cref="TakeBack"/>) and the anchor put back at its
 	/// start, the tool staying armed. With only the first entry left there is nothing to take back, and the mouth is
-	/// tidied alone. The pulse the walks that follow start is counted (<c>TRACK_OPEN_END_PULSE</c>).
+	/// tidied alone. Either way the walks follow, from the mouth with 0 and from the other mouth with 1 where the first met
+	/// no station (<c>0x00530025</c>, <c>0x00530082</c>), so the open end left pulses.
 	/// </summary>
 	public static string Backtrack()
 	{
@@ -928,7 +1040,7 @@ public static class ParkTrackTool
 		if ( !ParkBuildMode.TryPopRun( out var end, out var start ) )
 		{
 			TidyMouth( state, mouth, backToFirst: false );
-			Unimplemented.Report( "TRACK_OPEN_END_PULSE" );
+			ShapeMouths( state, ride.CellX, ride.CellY, ride.Angle, mouthPulses: false, onlyWhereOpen: true );
 			return "backspace: nothing laid since the track tool was armed";
 		}
 
@@ -938,8 +1050,8 @@ public static class ParkTrackTool
 		ParkBuildMode.AnchorAt( start.X, start.Y );
 		ParkTrackPieces.Current?.Rebuild();
 
-		// The pair of walks after it (0x00530025, 0x0053003e): the open end's pulse.
-		Unimplemented.Report( "TRACK_OPEN_END_PULSE" );
+		// The pair of walks after it (0x00530025, 0x0053003e).
+		ShapeMouths( state, ride.CellX, ride.CellY, ride.Angle, mouthPulses: false, onlyWhereOpen: true );
 
 		var report = $"took back the run from ({start.X},{start.Y}) to ({end.X},{end.Y}), {taken.Removed} piece(s) removed, "
 			+ $"{taken.Refunded} refunded, balance {balance} -> {state.Balance} - the anchor is ({start.X},{start.Y})";
@@ -1027,8 +1139,8 @@ public static class ParkTrackTool
 
 		_lastLinkStep = null;
 
-		// The arming's pair of walks (0x00526c89): the other mouth pulses while the loop is open.
-		Unimplemented.Report( "TRACK_OPEN_END_PULSE" );
+		// The arming's pair of walks (0x00526c89, 0x00526c9c): the other mouth's open end pulses while the loop is open.
+		ShapeMouths( state, ride.CellX, ride.CellY, ride.Angle, mouthPulses: false, onlyWhereOpen: false );
 
 		return $"{armed} (the open end, {walk.Pending.Count} pending)";
 	}
@@ -1116,6 +1228,10 @@ public static class ParkTrackTool
 		if ( OutcomeOf( anchor, target, laid.MetTrack ) == RunOutcome.Moved )
 		{
 			ParkBuildMode.AnchorAt( target.X, target.Y );
+
+			// The moving click's pair of walks (0x0052718c, 0x005271a0): the other mouth's open end pulses again.
+			ShapeMouths( state, ride.CellX, ride.CellY, ride.Angle, mouthPulses: false, onlyWhereOpen: false );
+
 			return $"track: {report} - the anchor moves to ({target.X},{target.Y})";
 		}
 
@@ -1127,6 +1243,10 @@ public static class ParkTrackTool
 		var (valid, _) = WalkCircuit( state, ride, check: false );
 
 		Settle( state, park, script, ride.ThingId, trackType, valid );
+
+		// The closing click's pair of walks (0x00526f3c, 0x00526f4e): from the mouth with 1, from the other mouth with 0, so a
+		// closed loop pulses nothing and a run that met track short of closing leaves the mouth's open end pulsing.
+		ShapeMouths( state, ride.CellX, ride.CellY, ride.Angle, mouthPulses: true, onlyWhereOpen: false );
 
 		// The pieces' clip 0xc from the mouth (TrackRide_PlayPiecesFromMouth, and with no circuit from the open end too).
 		Unimplemented.Report( "TRACK_PIECES_CLIP" );

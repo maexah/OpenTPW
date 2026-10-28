@@ -2030,7 +2030,7 @@ does not link back, and back at the first entry breaks a bend at the mouth, lett
 the station; then the walk pairs.
 **OpenTPW** (Q765, `ParkTrackTool.Backtrack`, `TakeBack`): Backspace takes the last run back so, the anchor on its start
 and the tool armed, each removed piece refunded at its whole price (the scrap percentage is counted,
-`SCRAP_VALUE_DEPRECIATION`), the pieces' clips and pulse counted (`TRACK_OPEN_END_PULSE`). Measured in ours on the final
+`SCRAP_VALUE_DEPRECIATION`), the pieces' clips counted, the pulse as the walks that follow give it (Q767). Measured in ours on the final
 binary (`q765/ours-b`), by the original's clicks: the second run taken back, 3 pieces, +600, (34,29) links 0x01 way 0x10
 over 0 piece 3/1/180, the three others bare at row 55, as `q587/orig/A-load.log` at 199.64 s (earlier evidence); the
 run laid again and the loop closed as Q763's.
@@ -2052,6 +2052,20 @@ must come back in, pulses; every click's op 0x86 runs the other pair first (`0x0
 `FUN_00524960` calls neither walk itself: the only walk it reaches is the mouths' op 0x86 (applied at both mouths), so the
 mouth pulses until the tool is armed (not observed by a breakpoint); a closed loop pulses nothing. Measured: the mouth after the
 put-down, the other mouth from the arming click until the loop closed (`q587/orig/B-3-run1.png`, red on the left), nothing after.
+Read for Q767 (`q767/dump`): a walk turns out of a bend by its links less the way in, `opposite( heading )` where the bend
+links that way, else the heading itself; it pulses only a cell whose piece has a model (`+4`). `Model_PulseOn` sets the
+model's flag `0x4000000` and puts it on the list; `Model_PulseOff` takes it off and copies the shared mesh's lit vertex
+colours back. The tick takes its value at the phase before moving it on: `p` up to 1 and `2 − p` above, times 255 and cut
+by `__ftol`, written as `0xffff` and the value twice (alpha and red 255, green and blue the value). The pairs and their
+values: the put-down's op 0x86 (1, then 0 where open), the arming (`0x00526c89`, 0 then 1), a moving click (`0x0052718c`,
+0 then 1), the close (`0x00526f3c`, 1 then 0), Backspace (`0x00530025`, `0x00530082`, 0 then 1 where open, both
+branches), the closed loop's two-click edit (`0x00526b7a`, 1 then 0 where open) and `FUN_00532fc0`'s (`0x0053426f`,
+with the clip argument).
+**OpenTPW** (Q767, `ParkTrackTool.Shape`, `ShapeMouths`, `ParkTrackPieces.SetPulse`): both walks, with every pair but
+the two-click edit's (not built, `TRACK_EDIT_CLOSED_LOOP`) and `FUN_00532fc0`'s; op 0x86's pair runs once for a run, as
+every cell of it asks the same of its owner. A pulsing piece's every vertex takes (255, v, v) in place of its light
+(`ModelEntity.VertexColour`, the shader's `g_vVertexColour`), on the frame clock (`Time.Delta`). The hill's reshaping
+by the walks is counted (`TRACK_WALK_HILL_SHAPE`).
 
 **The carried ride's first track cells** (`TrackRide_CarrySquares`, `0x005286a0`, from `BuildTool_Placer` at `0x00529c65`
 and `0x00529ce1`): each mouth's 2 x 2 cells, by op 0x10b (karts) or 0x110 (water) with step 5 for the preview's squares,
@@ -2066,7 +2080,7 @@ Alexah's played Dino Karts lies. Each kart or water anchor draws the piece its r
 hidden by the row's mask: Alexah's played file's 28 pieces are its 28 records' (`q688/ours-f2`), and the chooser
 (`ParkTrackPieces.PieceFor`) gives every one of its 31 anchors the row and turn the file holds. A sale of a ride owning only
 its station and mouths clears them and pays nothing net. Counted, not built: the carried squares and their check
-(`CARRY_PREVIEW_TRACK_START`), the pulse (`TRACK_OPEN_END_PULSE`), the drape (`TRACK_PIECE_DRAPE`), a water piece's own
+(`CARRY_PREVIEW_TRACK_START`), the drape (`TRACK_PIECE_DRAPE`), a water piece's own
 clip 0xc (`TRACK_PIECE_WATER_CLIP`), an add-on's model (`TRACK_PIECE_ADD_ON`: the ground under it shows the sky), a
 written park's piece records (`SAVE_PARK_TRACK_PIECE_MODEL`), and the sale of a ride with more track
 (`SALE_TRACK_TEARDOWN`). The put-down's check of the mouths (op 0x20b or 0x210) is not built: an anchor whose two by two holds

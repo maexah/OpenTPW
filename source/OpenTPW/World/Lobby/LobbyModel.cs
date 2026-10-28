@@ -462,6 +462,16 @@ public sealed class LobbyModel : IChannelPosed
 	}
 
 	/// <summary>
+	/// Gives every vertex of the model one colour in place of its lit colour, or with null its lit colours back - see
+	/// <see cref="ModelEntity.VertexColour"/>. The track's open end pulses so (<see cref="ParkTrackPieces.SetPulse"/>).
+	/// </summary>
+	public void SetVertexColour( Vector4? colour )
+	{
+		foreach ( var entity in Entities )
+			entity.VertexColour = colour ?? Vector4.Zero;
+	}
+
+	/// <summary>
 	/// Shows or hides one mesh of this model, leaving the rest of it alone.
 	///
 	/// <para>

@@ -77,7 +77,8 @@ filed the items that cite it.
 - [ ] **Q587. The karts' and the water ride's track: edited, crossed (the rest).** From Q581 (`park.md`, "The
   karts' and the water ride's track, buoys and race"). Q688 lays the station and mouths and draws the pieces; Q762 arms
   the track tool and lays its runs; Q763 walks the circuit as a loop closes (the sections, `+0x2c`, the opening); Q765
-  takes a run back with Backspace; Q766 makes each section's collision objects and buoy. What is left: an add-on's end
+  takes a run back with Backspace; Q766 makes each section's collision objects and buoy; Q767 walks from the mouths and
+  pulses the open end. What is left: an add-on's end
   caps in the walk (`TRACK_WALK_ADD_ON`), the pieces' clips after a close
   (`TRACK_PIECES_CLIP`: `TrackRide_PlayPiecesFromMouth`, `0x0052a490`, and `TrackRide_PlayPiecesFromEnd`); the move's
   put-down walk (`0x00524d0a`; ours moves as a sale and a purchase); the put-down's check of the mouths, op 0x20b or
@@ -87,7 +88,8 @@ filed the items that cite it.
   a run over path or queue mid-run, an end or straight laid there as a hill and a bend or junction plain in the original
   (`TRACK_RUN_OVER_PATH`; the river takes a plain piece, built), a crossing or junction
   (`TRACK_RUN_CROSSING`) and a run into the station (`TRACK_RUN_INTO_STATION`), the verdict's rest; the clear pass
-  (op 0x87); the open end's pulse and a hill's reshaping by the mouths' walks (`TRACK_OPEN_END_PULSE`); the carried
+  (op 0x87); a hill's reshaping by the mouths' walks (`TRACK_WALK_HILL_SHAPE`) and the walks of the closed loop's edit
+  (`0x00526b7a`) and of `FUN_00532fc0` (`0x0053426f`); the carried
   ride's squares and their check (`CARRY_PREVIEW_TRACK_START`); a water piece's own clip 0xc (`TRACK_PIECE_WATER_CLIP`);
   an add-on's model, whose cell shows the sky through the ground now (`TRACK_PIECE_ADD_ON`, Alexah's played Dino Karts,
   `q688/ours-f2`); a sale of a ride with track laid (`SALE_TRACK_TEARDOWN`: the walks `FUN_00530830` and `FUN_00530b70`);
