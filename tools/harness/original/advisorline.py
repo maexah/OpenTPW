@@ -10,7 +10,7 @@ the same 1000 it set the voice's time by, and `none` once the voice has started 
 (0x00f79778, nought for none or once fired), the clip words (0x00f79718..) and the index of the next (0x00f79768), the
 running clip's flags (0x00f79660), UI particle channel 0's count (0x00f8692c), and the lobby island panel's pointer
 (0x007cc4b4, which IslandPanel_Refresh 0x004b9340 needs). The clip lengths table (0x00f796c4, clip n at +4n, filled
-by FUN_005989c0 from slot 1's model) is printed once at the start. Times print relative to the line's start."""
+by Advisor_ResetState from slot 1's model) is printed once at the start. Times print relative to the line's start."""
 import struct, sys, time
 pid = int(sys.argv[1]); secs = float(sys.argv[2])
 f = open(f'/proc/{pid}/mem', 'rb', buffering=0)

@@ -339,7 +339,7 @@ Two steps of the park load each do two things:
 
 | Address | What it does |
 |---|---|
-| `FUN_00457a90` | Loads the terrain model, `base.md2` under `%s\Terrain` (`FUN_004504c0`), and the advisor's models (`FUN_00429ba0` on `%s\Global\Advisor` and `%s\Advisor\%s`), then resets the advisor (`FUN_005989c0`) |
+| `FUN_00457a90` | Loads the terrain model, `base.md2` under `%s\Terrain` (`FUN_004504c0`), and the advisor's models (`FUN_00429ba0` on `%s\Global\Advisor` and `%s\Advisor\%s`), then resets the advisor (`Advisor_ResetState`) |
 | `FUN_00457c30` | Loads `Base.map` (`FUN_00450900`, `%s\Terrain\Base.map`) and sets the viewport and screen globals |
 
 ---

@@ -815,7 +815,7 @@ public sealed class Advisor : Entity
 
 	/// <summary>
 	/// How long a clip is taken to last as a line's clips are picked: the park's own model's where there is one,
-	/// whichever model the line plays on, and the lobby's otherwise (<c>FUN_005989c0</c> fills the table once).
+	/// whichever model the line plays on, and the lobby's otherwise (<c>Advisor_ResetState</c> fills the table once).
 	/// </summary>
 	private int ClipMilliseconds( int clip )
 		=> clip == StartClip ? 0 : (_themeFigure ?? _figure)?.ClipMilliseconds( clip ) ?? 0;

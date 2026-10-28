@@ -852,11 +852,13 @@ bytes are FileFormats `saves.md`, "A park made fresh"; this is what makes them a
 `Easymode.TPWI`'s byte for byte (the legal text, in all nineteen files and in the three themes). **The things are fixed.**
 Over the eight Proton runs with clean memory (27 KB files) the twelve thing records are byte for byte the same but the
 weather's quality (`+0x10`, a draw of the generator: 51 to 92 over the seventeen); Alexah's differs from them
-in that, in the weather's leftover words and in the economy's balance and its last withdrawal (9,999,999, their
+in that, in the weather's leftover words and in the economy's `mBalance` and `mLastBalance` (9,999,999, their
 profile's). The other eight Proton runs (35 KB
-files, this session's among them) hold, in bytes no constructor writes, the same leftover memory each: the lab past its
-used projects (`+0x310` to `+0x100e`), the advisor's 351 records (1,172 bytes), the challenge manager's
-`+0x17c` to `+0x393` and the two objects' day rings (about 800 bytes each). The clean runs hold nought there, so nought
+files, this session's among them) hold, in bytes no constructor writes, the same leftover memory each, but for 7 bytes of the challenge manager's at `+0x28a`: the lab past its
+used projects (`+0x310` to `+0x100e`), the advisor's 1,172 bytes (1,022 in the 351 records' unused bytes, 126 in the eight
+message slots at `+0x2d` to `+0xbf`, 24 in the kept-message slot at `+0x16bc` to `+0x16d5`), the challenge manager's
+`+0x17c` to `+0x393` and the two objects' 796 and 802 bytes (697 and 705 in the day rings, the rest, 99 and 97 bytes, in
+the name's words at `+0x50` and `+0x42` to `+0xbf`). The clean runs hold nought there, so nought
 is the original's own value. What decides the class is not read.
 
 | Module | At tick nought | Varies between runs | A writer here |
@@ -870,18 +872,18 @@ is the original's own value. What decides the class is not read.
 | Things 1 to 10 | the managers as their constructors leave them: the staff HQ, mechanics' HQ (`mNextObject` 0), advisor (every record fresh, slot 0 `(0, 0, 0, 100000, 1, -1)`), models 12 and 17 (the base alone), the analyser (grid 4, 32, 32, 128, 128; 1,024 blocks of (x, y, 4, 4) with nine (-999, 0) pairs; four rings at -1, 3; six kept (-999, 0); sixteen int rings at -1, 144; the six stamps 2000-01-01), the lab (Q349's fill), the weather (wind 90, force 0.5, no forecast, its location three words of leftover memory), the economy (the balance's), the challenge manager | the weather's quality | each record afresh by its rule; the leftover words as nought |
 | Things 11, 12 | the gates and the lights (`FreshPark.FixedObject`), unplaced, in cell 1's chain | no | `FreshPark.Objects` |
 | `SPSC` | 100 slots, all empty | no | constant |
-| `PART` | the live header (2,048 particles, the generator's seed `0x18be873a`, the next counts 2 and 1), one emitter in use: the land's `WaterFall` (effect 20) at (532, 4, 526), handle `0x10000`; the library with the jungle's `.emt` pair in slots 101 and 102 | the density (the options' graphics: 1500 on Windows, 1000 under Proton), the emitter's density-scaled words, one heap pointer | the library and the land's emitter as the park has them, at its density |
+| `PART` | the live header (2,048 particles, in every Lost Kingdom file the generator's seed `0x18be873a` and the next counts 2 and 1; Fantasy and Halloween hold seed 1, counts 1 and 1 and no emitter; `+0x1c` `0x803b68` and `+0x24` `0x5d60c0` in all nineteen, which a load ignores, `FUN_0051f7a0` keeping the live system's two), one emitter in use (Lost Kingdom): the land's `WaterFall` (effect 20) at (532.3, 4.9, 526.1), raw 34068, 312, 33668, handle `0x10000`; the library with the jungle's `.emt` pair in slots 101 and 102 | the density (the options' graphics: 1500 on Windows, 1000 under Proton), the emitter's density-scaled words, one heap pointer | the library and the land's emitter as the park has them, at its density |
 | `MESS` | the 29 sets of the twelve things by the rule of "What ties the modules together", the singletons as every file has them (set `0x1c` thing 9) | no | afresh from the thing list |
 | `CLOK`, `VANT` | the two stopwatches and the real clock at the write | every reading | the park's clock |
-| `GSYS` | three equal readings 33 ms (once 34) before the clock's first, the tick counter `[0x00877d34]` 0, `[0x008786c0]` 0, the stack word 2, and each reading less `[0x008786bc]`: 11,864 under Proton (11,866 once), 2,235 to 3,000 on Windows | the readings | the clock's; the distance the session's |
+| `GSYS` | three equal readings 33 ms (once 34) before the clock's first under Proton, 3 ms on Windows, the tick counter `[0x00877d34]` 0, `[0x008786c0]` 0, the stack word 2, and each reading less `[0x008786bc]`: 11,864 under Proton (11,863 and 11,866 once each), 2,235 to 2,992 on Windows | the readings | the clock's; the distance the session's |
 | `RSYS` | 109 slots: the gates', the lights' and the boundary's 107 (Q656: its anchors' records, FileFormats "A boundary piece's record") | each boundary piece's item (this session's: 69, 10, 1, 6, 9 and 12 of the six) | the gates' and lights' as a thing bought; the boundary's from `FreshPark.Boundary` |
 | `TRAK` | the stamp alone: `15:25:02`, `Mar 17 2000` (the 2.0 build's; the shipped park's is 1999's) | no | constant |
 | `FLYR` | set up, no flyer; the four values 190000, 70000, 140000, 30000 | no | constant |
 | `RSSE` | two scripts, the gates' (handle 1) and the lights' (2), with no object; the next handle 3 | the records' heap pointers | the two scripts as a thing bought's |
 | `KAME` | zoom 110, rotation 0, flags 0, the point (475, 0, 175), nothing saved | no | constant (the orbit camera's at the write, as any save) |
 | `COAS` | no coaster: `0 0 0 1` | no | constant |
-| `ADVS` | `Advisor_ResetState`'s 360 bytes (`0x005989c0`: zeroed, `+0x110` 5, `+0x12c` -1, then the advisor's two models' clips at `+0x38` to `+0x64` and their lengths in ms at `+0x68` to `+0xb4`), four words of the balance at `+0x144` to `+0x158` (`FUN_004080e0`), no buffer | no (by theme: the theme's advisor) | afresh from the theme's advisor model and the balance |
-| `SOUN` | five voices of the land at fixed places (two plain voices of the global ambient, held; the jungle's ambient effect 181, range 19; two one-shots of the global ambient, range 97) and whatever the session had playing: the lobby's one-shots on Windows, the music's voice under Proton | the voices, the handles, the category slots | the running park's voices, as any save |
+| `ADVS` | `Advisor_ResetState`'s 360 bytes (`0x005989c0`: zeroed, `+0x110` 5, `+0x12c` -1, the head node at `+0x38 + slot*4` and five mouth nodes at `+0x40 + slot*20` of each slot's model, found by name (`FUN_0044b2e0`), then twenty clip lengths in ms at `+0x68` to `+0xb4` from slot 1's model, else slot 0's, clip 14's (`+0x9c`, entry 13) nought), then eight words of the balance (four pairs from `0x7856f4`) at `+0x144` to `+0x150` and `+0x154` to `+0x160`: the theme's costume piece ids, `AddOns` and `SubOffs` (`FUN_004080e0`; `advisor-park.md`, the costume row), no buffer | no (by theme: the theme's advisor) | afresh from the theme's advisor model and the balance |
+| `SOUN` | five voices of the land at fixed places (two plain voices of the global ambient, held; the jungle's ambient effect 181, range 19; two one-shots of the global ambient, range 97) and whatever the session had playing: the lobby's one-shots and a speech one-shot on Windows, the music's voice under Proton (and a lobby one-shot in two runs) | the voices, the handles, the category slots | the running park's voices, as any save |
 | `CHTS`, `ADSC`, the UI block | nought; no tag (`ADSC` 258 in the Halloween file) | no | constant |
 
 So nothing of the shipped park file but its legal text belongs in a fresh park's file, and every module is made from
