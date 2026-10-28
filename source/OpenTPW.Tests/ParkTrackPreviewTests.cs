@@ -1,4 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Linq;
 
 namespace OpenTPW.Tests;
@@ -13,9 +14,28 @@ public class ParkTrackPreviewTests
 {
 	private static readonly ushort Owner = (ushort)MapStep.CellId( 30, 24 );
 
+	private static readonly Func<ParkState, ushort, int?> LevelPriority = ParkTrackTool.OverwritePriorityOf;
+
+	/// <summary>A ride's category priority, 5; a feature's is 0 or 1.</summary>
+	private const int RidePriority = 5;
+
+	private static int TimesReported( string what )
+		=> Unimplemented.Summary.FirstOrDefault( entry => entry.What == what ).Times;
+
 	[TestInitialize]
 	[TestCleanup]
-	public void ForgetTheTool() => ParkBuildMode.Forget();
+	public void ForgetTheTool()
+	{
+		ParkBuildMode.Forget();
+		ParkTrackTool.OverwritePriorityOf = LevelPriority;
+	}
+
+	/// <summary>Stands every footprint cell's owner at this priority, as the item catalogue would answer.</summary>
+	private static void OwnersHold( int priority ) => ParkTrackTool.OverwritePriorityOf = ( _, owner ) => owner == Owner ? priority : null;
+
+	/// <summary>Stamps a footprint cell owned by the bought ride.</summary>
+	private static void Footprint( ParkState state, int x, int y )
+		=> state.SetRecord( x, y, state.Record( x, y ) with { Type = CellEdge.Footprint, ParentId = Owner } );
 
 	private static ParkState Bought( int balance = 53522 )
 	{
@@ -118,14 +138,161 @@ public class ParkTrackPreviewTests
 	[TestMethod]
 	public void AnObjectIsJudgedAfterTheChargeAndRedsTheRest()
 	{
+		OwnersHold( RidePriority );
 		var state = Bought();
-		state.SetRecord( 35, 28, state.Record( 35, 28 ) with { Type = CellEdge.Footprint } );
+		Footprint( state, 35, 28 );
 
 		var preview = ParkTrackTool.Preview( state, 0xb, Owner, (34, 25), (34, 31), 200 );
 
 		Assert.AreEqual( "(34,25)0/0 (34,27)1/400 (34,29)1/600 (34,31)1/800", Read( preview ),
 			"the object's cell is charged by both judgements, the later ones by their second" );
-		Assert.IsTrue( preview.Latched, "the pending refusal latched at the next cell" );
+		Assert.IsTrue( preview.Latched, "the pending refusal latched at once, by the red square's second judgement" );
+	}
+
+	/// <summary>
+	/// The copy of the pending refusal into the latch (<c>0x00539dbc</c>..<c>0x00539dca</c>) comes before the verdict reads its
+	/// third argument, so the second judgement of a red square latches it at the same anchor: a run whose last anchor is
+	/// refused after the charge leaves the latch set. Made to fail by latching only at the next anchor.
+	/// </summary>
+	[TestMethod]
+	public void AnAfterRefusalAtTheLastAnchorLeavesTheLatchSet()
+	{
+		OwnersHold( RidePriority );
+		var state = Bought();
+		Footprint( state, 34, 30 );
+
+		var preview = ParkTrackTool.Preview( state, 0xb, Owner, (34, 25), (34, 29), 200 );
+
+		Assert.AreEqual( "(34,25)0/0 (34,27)0/200 (34,29)1/600", Read( preview ) );
+		Assert.IsTrue( preview.Latched, "no anchor follows, and the latch is set" );
+	}
+
+	/// <summary>
+	/// A land refusal is judged first and touches no latch: an After refusal's latch stands through a land anchor and reds
+	/// the plain one after it. Made to fail by a land arm that clears the latch.
+	/// </summary>
+	[TestMethod]
+	public void AnAfterRefusalThenLandThenAPlainAnchorStaysLatched()
+	{
+		OwnersHold( RidePriority );
+		var state = Bought();
+		Footprint( state, 35, 28 );
+		state.SetRecord( 34, 29, state.Record( 34, 29 ) with { Flags = 0x40 } );
+
+		var preview = ParkTrackTool.Preview( state, 0xb, Owner, (34, 25), (34, 31), 200 );
+
+		Assert.AreEqual( "(34,25)0/0 (34,27)1/400 (34,29)1/400 (34,31)1/600", Read( preview ),
+			"the land square charges nothing; the plain anchor is red by the latch, charged once, by its second judgement" );
+		Assert.IsTrue( preview.Latched );
+	}
+
+	/// <summary>
+	/// The verdict answers 0 over a feature (a thing whose item's priority is below 3): this game refuses it, red, and counts
+	/// <c>TRACK_RUN_OVER_SCENERY</c> (<c>0x00539961</c>..<c>0x00539b75</c>). A ride's priority 5 is refused and not counted.
+	/// </summary>
+	[TestMethod]
+	public void AFeatureUnderTheRunIsCountedAndARideIsNot()
+	{
+		var state = Bought();
+		Footprint( state, 35, 28 );
+
+		OwnersHold( RidePriority );
+		var before = TimesReported( "TRACK_RUN_OVER_SCENERY" );
+		Assert.IsTrue( ParkTrackTool.Verdict( state, 0xb, Owner, (34, 25), (34, 29), 200 ).Refused );
+		Assert.AreEqual( before, TimesReported( "TRACK_RUN_OVER_SCENERY" ), "a ride's cells are red by the original's rule too" );
+
+		foreach ( var feature in new[] { 0, 1 } )
+		{
+			OwnersHold( feature );
+			before = TimesReported( "TRACK_RUN_OVER_SCENERY" );
+
+			Assert.IsTrue( ParkTrackTool.Verdict( state, 0xb, Owner, (34, 25), (34, 29), 200 ).Refused );
+			Assert.AreEqual( before + 1, TimesReported( "TRACK_RUN_OVER_SCENERY" ), $"a feature of priority {feature} is counted once" );
+
+			ParkTrackTool.Verdict( state, 0xb, Owner, (34, 25), (34, 29), 200, count: false );
+			Assert.AreEqual( before + 1, TimesReported( "TRACK_RUN_OVER_SCENERY" ), "the preview counts nothing" );
+		}
+
+		OwnersHold( 3 );
+		before = TimesReported( "TRACK_RUN_OVER_SCENERY" );
+		ParkTrackTool.Verdict( state, 0xb, Owner, (34, 25), (34, 29), 200 );
+		Assert.AreEqual( before, TimesReported( "TRACK_RUN_OVER_SCENERY" ), "priority 3 is not below 3" );
+	}
+
+	/// <summary>
+	/// The verdict asks the anchor, its east cell and its south-east cell about the owner, never its south cell, nor a cell
+	/// of the run's other anchors. Made to fail by asking the south cell as well.
+	/// </summary>
+	[TestMethod]
+	public void OnlyTheAnchorsEastAndSouthEastCellsAreAskedTheirPriority()
+	{
+		OwnersHold( 0 );
+
+		foreach ( var (cx, cy, asked) in new[] { (34, 27, true), (35, 27, true), (35, 28, true), (34, 28, false) } )
+		{
+			var state = Bought();
+			Footprint( state, cx, cy );
+
+			var before = TimesReported( "TRACK_RUN_OVER_SCENERY" );
+			var verdict = ParkTrackTool.Verdict( state, 0xb, Owner, (34, 25), (34, 27), 200 );
+
+			Assert.IsTrue( verdict.Refused, $"({cx},{cy}) is a footprint: red whatever its priority" );
+			Assert.AreEqual( before + (asked ? 1 : 0), TimesReported( "TRACK_RUN_OVER_SCENERY" ), $"({cx},{cy})" );
+		}
+	}
+
+	/// <summary>
+	/// The square's lift starts from the anchor's own track record type (<c>0x0053716f</c>..<c>0x00537239</c>), so a laid piece on
+	/// plain ground counts the lift gap where no map type does. Made to fail by reading map types alone.
+	/// </summary>
+	[TestMethod]
+	public void ALaidPieceUnderTheSquareCountsTheLiftGap()
+	{
+		var state = Bought();
+		var before = TimesReported( "MARKER_LIFT_OVER_TRACK_THING" );
+
+		ParkBuildMarkers.TrackLiftOver( state, 40, 40 );
+		Assert.AreEqual( before, TimesReported( "MARKER_LIFT_OVER_TRACK_THING" ), "bare ground lifts nothing" );
+
+		state.SetRecord( 40, 40, state.Record( 40, 40 ) with { TrackType = 0xb } );
+		ParkBuildMarkers.TrackLiftOver( state, 40, 40 );
+		Assert.AreEqual( before + 1, TimesReported( "MARKER_LIFT_OVER_TRACK_THING" ), "counted once" );
+	}
+
+	/// <summary>
+	/// The catalogue reads <c>Info.OverwritePriority</c> as the data states it (FileFormats <c>sam.md</c>): the category's 5 for every
+	/// ride, shop and sideshow, an item's own for a feature (<c>bigpalm</c> 0, <c>bush</c> 1), 5 again for the End. Made to fail
+	/// by leaving the key unread.
+	/// </summary>
+	[TestMethod]
+	public void TheCatalogueReadsEachItemsOverwritePriority()
+	{
+		var catalogue = new ParkItemCatalogue( "jungle", GameData.Required(), instantAction: false );
+		var byStem = catalogue.All.ToDictionary( item => item.Stem, StringComparer.OrdinalIgnoreCase );
+
+		Assert.AreEqual( 0, byStem["bigpalm"].OverwritePriority );
+		Assert.AreEqual( 1, byStem["bush"].OverwritePriority );
+		Assert.IsTrue( catalogue.All.Where( item => item.Id is >= 1100 and < 1400 ).All( item => item.OverwritePriority == 5 ),
+			"every ride, shop and sideshow keeps its category's 5" );
+		Assert.AreEqual( 5, catalogue.TryGet( 1605, out var end ) ? end.OverwritePriority : -1, "the End keeps 5" );
+	}
+
+	/// <summary>The water ride's track is the same rules over its own anchor type, 0x10, whose mouth a karts' run refuses.</summary>
+	[TestMethod]
+	public void TheWaterRidesPreviewIsTheSameRulesOverItsOwnType()
+	{
+		var state = new ParkState( parkIsClosed: false, visitorsToDate: 0, balance: 53522 );
+		ParkTrackTool.Forget();
+		ParkTrackPieces.LayStation( state, 2, 30, 24, 0 );
+
+		var water = ParkTrackTool.Preview( state, 0x10, Owner, (34, 25), (34, 29), 200 );
+
+		Assert.AreEqual( "(34,25)0/0 (34,27)0/200 (34,29)0/400", Read( water ) );
+		Assert.AreEqual( (false, 400), (water.Red, water.Total) );
+
+		var karts = ParkTrackTool.Preview( state, 0xb, Owner, (34, 25), (34, 29), 200 );
+
+		Assert.IsTrue( karts.Red, "the water ride's mouth is not a kart piece" );
 	}
 
 	[TestMethod]

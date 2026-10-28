@@ -461,7 +461,13 @@ public sealed class ParkTrackPieces : Entity
 			return false;
 
 		if ( on && _pulsing.Add( model ) )
+		{
+			// The tick writes the colour only on the next update; a click is dealt after it, so write it now.
+			var value = PulseValue( _pulsePhase ) / 255f;
+
+			model.SetVertexColour( new Vector4( 1f, value, value, 1f ) );
 			Log.Info( $"{_theme}: the track piece on ({x},{y}) pulses" );
+		}
 		else if ( !on && _pulsing.Remove( model ) )
 		{
 			model.SetVertexColour( null );

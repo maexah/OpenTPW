@@ -147,7 +147,10 @@ public sealed class ParkItemCatalogue
 		int ShopType = 0,
 
 		// The particle effect building one gives off - ItemDescriptionFile.CreateParticleEffect. ParkRides.BindNew counts it.
-		int CreateParticleEffect = 0 )
+		int CreateParticleEffect = 0,
+
+		// What its cells answer a tool that builds over them - ItemDescriptionFile.OverwritePriority. ParkTrackTool.JudgeCell reads it.
+		int OverwritePriority = 0 )
 	{
 		/// <summary>A tier's <c>CostOfUpgrade</c>: tier nought's is <see cref="BuildPrice"/>, nought past the third.</summary>
 		public int UpgradeCostAt( int tier ) => tier switch { 0 => BuildPrice, 1 => UpgradeCost1, 2 => UpgradeCost2, _ => 0 };
@@ -390,7 +393,8 @@ public sealed class ParkItemCatalogue
 					UpgradeCost1: description.UpgradeCostAt( 1 ), UpgradeCost2: description.UpgradeCostAt( 2 ),
 					RideTypeStringIndex: description.RideTypeStringIndex,
 					AddOnUpgradesId: description.AddOnUpgradesId, AddOnUpgradeType: description.AddOnUpgradeType,
-					ShopType: description.ShopType, CreateParticleEffect: description.CreateParticleEffect );
+					ShopType: description.ShopType, CreateParticleEffect: description.CreateParticleEffect,
+					OverwritePriority: description.OverwritePriority );
 
 			return true;
 		}

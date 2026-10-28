@@ -208,7 +208,8 @@ public class ParkTrackPulseTests
 
 	/// <summary>
 	/// The run that closes the loop: op 0x86's walk from the mouth meets the station, so its other walk is skipped, and the
-	/// close's pair meets it from both mouths, so nothing pulses. Made to fail by running op 0x86's second walk regardless.
+	/// close's pair meets it from both mouths, so nothing pulses. The skip itself is pinned by
+	/// <see cref="APairSkipsItsSecondWalkWhereTheFirstMetTheStation"/>; on a real loop both walks meet the station.
 	/// </summary>
 	[TestMethod]
 	public void TheClosingRunPulsesNothing()

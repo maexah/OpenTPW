@@ -1743,19 +1743,27 @@ with `op | 0x100` (op `0x10b` karts, `0x110` water) from the anchor (`[0x0081ede
 itself), which puts the target on the 2-cell grid, sets `DAT_00820ac8` for the first anchor and `DAT_00820ad0` for the
 last, and runs `Track_CellOp` (`0x005370e0`) on each anchor on the map (`FUN_004d8300`). Its square arm asks
 `Track_CellVerdict( op, 0, the step's bit )` (`0x005372ad`). An answer of 1 is a red square: the verdict is asked again
-with 1 (`0x00537a29`), which past the land charges an empty cell a second time (`0x00539f61`) and sets `DAT_00816d5c` if
-the total then passes the balance, latching nothing, then `FUN_00527940( 1 )` (`DAT_00816d48`, the pointer's red). Any
+with 1 (`0x00537a29`), which past the land copies a pending refusal (`DAT_00816d58`) into the latch (`DAT_00816d50`, `0x00539dbc`..`0x00539dca`, before the third argument is read at `0x00539dd0`), charges an empty cell a second time (`0x00539f61`) and sets `DAT_00816d5c` if
+the total then passes the balance, then `FUN_00527940( 1 )` (`DAT_00816d48`, the pointer's red). Any
 other answer is the square's texture, 0 blue, or 0xb `m_end`, the verdict's answer where the run's last anchor (or its
 first, the pointer having rested on it, `DAT_00818688`) meets its own track by its links and way on, latching
 `DAT_00816d4c` (`0x0053a1c6`). The square is queued with `+0x18` 1 (`0x00537a5c`), which `FUN_0053df30` lays 20 wide
 (`0x0053df39`; 10 where it is nought, as the path and queue tools' are): one square, turn 1, over the anchor's two by
-two. Its height is `TrackSquare_Height` (`FUN_00536ca0`) of the anchor's map record (`0x0053724c`): of its two by two's cells, its own, then
+two. Its height is `TrackSquare_Height` (`FUN_00536ca0`) of the anchor's map record (`0x0053724c`): it starts from the anchor's own track record
+type (`Track_CellOp` lifts by it first, `0x0053716f`..`0x00537239`, and passes it as the second argument,
+`0x0053723d`..`0x0053724c`; a laid piece is of the set below), then of its two by two's cells, its own, then
 south, east and the far corner, the last whose map type is 0xb, 0x10, 0x19, 7, 4, 9 or 10 gives the lift (`FUN_00452ae0`
 there, rounded up to ten, as a path square's); it is walled down to its one-cell neighbours' lifts, asked the same way,
 each wall 20 wide. Within an anchor the verdict answers in this order: land
-outside the park (flag 0x40) red, nothing latched or charged; another ride's track among the three other cells latches;
+outside the park (flag 0x40) red, nothing latched or charged; then, in these track modes, 0 (blue, uncharged, latching
+nothing, even where a latch stands) for a map type 4, 9 or 10 cell, of the anchor, its east cell or its south-east cell
+(the south cell is never asked), whose owner thing's item `+0x54` (`Info.OverwritePriority`) is below `[0x00818c10]`, which
+is 3 in modes 0xb, 0x10 and 0x19 (`0x00539961`..`0x00539c24`; set at `0x00523546`, stored at `0x005244be`; the
+category files give 5, a feature 0 or 1), and the click's op `0x87` tears that thing down (`0x00538cf0`..`0x00538cfd`);
+another ride's track among the three other cells latches;
 a latch answers red before the charge; the empty cell is charged, and a total above the balance latches; then any other
-refusal answers red and leaves `g_BuildRefusalPending`, which the next anchor turns into the latch (`0x00539dc2`). The
+refusal answers red and leaves `g_BuildRefusalPending`, which the square's second judgement copies into the latch at
+once (`0x00539dbc`..`0x00539dca`). The
 anchor itself, its own end, with the run leading back against its way on, answers red alone (`0x0053a216` to
 `0x0053a251`, then `0x0053a4e9`: its links are not three). Measured in the original under Proton (`q768/orig`,
 `squares.py` reading `+0x18`, the cursor `[0x007cb2d8]`) on `q581/karts.TPWS`, a Dino Karts bought on (32,25) and the
@@ -1767,7 +1775,8 @@ stood at 11.5 with walls, the other mouth's at 1.5.
 **OpenTPW** (Q762, `ParkTrackTool`) builds the arming walk, the click and its passes but `0x87` and `0x86`; its verdict
 refuses the last cell's queue, used-from cell and flag `0x20` as the original, lays over the river plain, and refuses and
 counts path and queue mid-run (`TRACK_RUN_OVER_PATH`: the original's hill, unbuilt), its own track mid-run or with two
-links at the end (`TRACK_RUN_CROSSING`) and its own station (`TRACK_RUN_INTO_STATION`); a closed loop's edit
+links at the end (`TRACK_RUN_CROSSING`), its own station (`TRACK_RUN_INTO_STATION`) and a feature under it of priority below 3
+(`TRACK_RUN_OVER_SCENERY`: the original answers blue there and op `0x87` tears the feature down; ours refuses it red); a closed loop's edit
 (`TRACK_EDIT_CLOSED_LOOP`) is counted, the circuit's walk that closes a run is Q763's (below), and Backspace's refund
 Q765's ("A track piece's model, price and open end", below). The preview (Q768, `ParkTrackTool.Preview`,
 `JudgeCell`) draws a two-by-two square an anchor, blue, red, or `m_end` where the run's last anchor is its own track,
@@ -1852,7 +1861,7 @@ ride's free (`FUN_00545610`) lets every buoy go, then the sections and their obj
 karts' and the water ride's templates; another theme's template is counted (`TRACK_SECTION_TEMPLATE_<n>`), and so are
 the two the original does not survive (`TRACK_SECTION_OUT_OF_OBJECTS`, its pool holding the track's alone here, and
 `TRACK_SECTION_UNKNOWN_TYPE`); the grid's and start's buoys are Q588's. Measured in ours on the final binary
-(`q766/ours-a`), by Q581's clicks: both loops' buoys and objects as the two logs' (earlier evidence, the original not
+(`q766/ours-b`), by Q581's clicks: both loops' buoys and objects as the two logs' (earlier evidence, the original not
 run for Q766).
 
 **The two templates** (`0x764178`, "How a bumper ride ends a go"): −4 duration −3 (laps), car radius 900, `w` 2048,

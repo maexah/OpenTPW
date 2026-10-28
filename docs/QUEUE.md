@@ -112,6 +112,13 @@ filed the items that cite it.
     (`0x00462614`); the instancer `0x00463060` (flags `0x33a`, kart `0x522b90`, water `0x522d50`) calls `0x00469940` (`0x00463347`), which calls
     `0x00469a80` per node (cell triangle by flag `0x4`, Q398's note). Draw them so, not as flat plates (counted `TRACK_PIECE_DRAPE`). Not proven: whether the cars' sampler reads the draped copy.
     The same call also conforms every flag-8 object's base vertices to the terrain corners (Q750; fork watch 2026-10-27, verify-world H1).
+  - **Note (run 12 review, Q768 finding 1):** in the track modes the original's `Track_CellVerdict` answers 0 (blue, uncharged, even
+    where a latch stands) for a map type 4, 9 or 10 cell whose owner thing's item `+0x54` (`Info.OverwritePriority`) is below
+    `[0x00818c10]` = 3 (`0x00539961`..`0x00539c24`; set at `0x00523546`, stored at `0x005244be`), and op `0x87` tears that thing
+    down (`0x00538cf0`..`0x00538d76`, `FUN_00527ee0`). Lost Kingdom's features carry 0 or 1, rides and shops 5. Asked of three
+    cells only: the anchor, its east cell and its south-east cell (the south cell never). Ours keeps the refusal, red, and counts
+    it (`TRACK_RUN_OVER_SCENERY`, `ParkTrackTool.JudgeCell`; `ItemDescriptionFile.OverwritePriority` now reads the key). Build the
+    blue answer with op `0x87`'s tear-down (cross-reference Q449, which asks the same of a ride or shop's placement).
 - [ ] **Q757. Whether the original's closing click of the karts' and water ride's track tool hands over the queue tool, and
   whether a count is owed.** From the Q762 review (the unsettled note; `docs/exe/park.md`, "The track tool"). The
   closing click (`0x00526eff`..`0x00526f83`, then the `0x80` stores at `0x00526fa7`) reads `[0x008186c0]`, the queue node
@@ -149,6 +156,10 @@ filed the items that cite it.
   - **Note (fork watch 2026-10-25, verify-all.md N2):** the loader sets header flag `0x80` at run time (`0x004625f4`) on a kart or water track piece, so
     the model's height there is the landscape's under the point (mode 1, `park.md`), which is what a kart's height over the
     track reads. Not proven: that the cars' sampler uses the draped copy.
+  - **Note (run 12 review, q766 finding 4):** a car's buoy (`+0x7c`) is a slot of the `DAT_00877b78` pool, read at `0x0054a4ed`,
+    `0x00547991`, `0x0054a9a2` and `0x00542f22` (D-track.log's "car 4 ... buoy 18" is that slot, and the grid's "9 to 16 and 8" above
+    are slots too). Ours' `Buoy` keeps no slot, and the original's one `+0xa8` chain is two lists in ours: the track rides'
+    section buoys (`ParkTrackRideTable`) and the bumper rings (`ParkBumperCars.Ride.Buoys`). Build the pool's index with the race.
 - [ ] **Q589. Splish Splash runs for guests.** After Q588. The -5 record (one start buoy, unload point a third of the
   way to it, 512 arrival, 64 boats), `BUMP 7` straight to state 2, a boat carrying the whole boarding list straight to
   the race, one lap, removed at the unload point with the ride left at 2, and the boat's spin (`+0x58` moved at a rim or
@@ -159,6 +170,8 @@ filed the items that cite it.
     (`0x00543928`, `saves.md`, "The close"), the race's first buoy into `+0xa4` for a ride loaded open.
   - **Note (fork watch 2026-10-25, verify-all.md N2):** as Q588's: the water kit's pieces (`0x10422` at `0x00522cde`) carry the run-time flag `0x80`
     (`0x004625f4`), the landscape's height under a boat (mode 1), and are draped per vertex (Q587's note).
+  - **Note (run 12 review, q766 finding 4):** as Q588's: the boats' buoys are slots of the same `DAT_00877b78` pool (`0x0054a4ed`, `0x00547991`,
+    `0x0054a9a2`, `0x00542f22`), which ours' `Buoy` does not keep.
 - [ ] **Q726. The karts' and the water ride's track add-ons and hills.** From the Q581 review (`park.md`, "The karts'
   and the water ride's track, buoys and race", "Not read" lists the add-on sections (types 12 and 13) and the hills
   (`gk_trckH*`)). Lost Kingdom ships three track add-ons in `jungle/upgrades`, each `UpgradeType 1`: `lavajump` 1500 and
@@ -2756,8 +2769,8 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   another's cells only when its `Info.OverwritePriority` is **strictly greater** than the owner's (`0x00818c10`,
   `0x00818c14`). Every category file declares 5; of the item files, features alone set it, 45 at 1 and 48 at 0
   (FileFormats `sam.md`, which lists Lost Kingdom's); the path and queue tools write 2 and 3 (`0x00527200`,
-  `0x00527218`). Our code reads the key nowhere (`ItemDescriptionFile.cs` lists it as unread;
-  `RideInfo.OverwritePriority` is unused): decide what a click on scenery with a ride or shop selected does here, then
+  `0x00527218`). Our catalogue reads the key (`ParkItemCatalogue`'s `Item.OverwritePriority`, run 12 review)
+  and the track tool counts a run over scenery below 3 (`TRACK_RUN_OVER_SCENERY`); nothing else uses it: decide what a click on scenery with a ride or shop selected does here, then
   count it. (2) The demolisher's track arm (`0x0052801d`), for `WhichTrackType` 1 (karts) and 2 (the water ride):
   withdraws 2 x the cell cost x the scrap % / 100, signed, at `0x00528179`, after the per-tile refund of `0x0053b280`
   (cost x % / 100 unsigned; none for cell type `0x19`, a replayed layout or a station tile). `SALE_TRACK_TEARDOWN`

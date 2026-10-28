@@ -317,7 +317,7 @@ public sealed class ParkTrackRideTable
 		_sections[handle & 0xff].Clear();
 	}
 
-	/// <summary>How many buoys every ride holds between them - the pool's count, <c>DAT_00877b7c</c>.</summary>
+	/// <summary>How many section buoys the track rides hold between them; the original's count (<c>DAT_00877b7c</c>) also holds the bumper rings (ParkBumperCars) and the grid's (Q588).</summary>
 	public int BuoysInUse => _buoys.Sum( held => held.Count );
 
 	/// <summary>A ride's buoys in the order laid; none for a stale handle.</summary>

@@ -158,6 +158,12 @@ public sealed partial class ItemDescriptionFile
 	/// </summary>
 	public (int X, int Y) MapOffset => (_mapOffsetX ?? _category?._mapOffsetX ?? 0, _mapOffsetY ?? _category?._mapOffsetY ?? 0);
 
+	/// <summary>
+	/// <c>Info.OverwritePriority</c>, item <c>+0x54</c>: what a thing's cells answer a tool that builds over them. The category
+	/// files all say 5 and an item's own file overrides it only for features (0 or 1; FileFormats <c>sam.md</c>).
+	/// </summary>
+	public int OverwritePriority => _overwritePriority ?? _category?._overwritePriority ?? 0;
+
 	private const int ChillsYouOutBit = 0, ProvidesSecurityBit = 1, RideHandlesSpriteBit = 2, HoldsLitterBit = 3,
 		IsFireworksBit = 4, RunsContinuouslyBit = 5;
 
@@ -645,6 +651,7 @@ public sealed partial class ItemDescriptionFile
 	private int? _hasQueue;
 	private int? _isIndoors;
 	private readonly int?[] _flagKeys = new int?[6];
+	private int? _overwritePriority;
 	private int? _mapOffsetX;
 	private int? _mapOffsetY;
 	private int? _cannotRide;
@@ -913,6 +920,10 @@ public sealed partial class ItemDescriptionFile
 
 				case "Info.RunsContinuously":
 					_flagKeys[RunsContinuouslyBit] = Number( line );
+					break;
+
+				case "Info.OverwritePriority":
+					_overwritePriority = Number( line );
 					break;
 
 				case "Info.MapOffsetX":

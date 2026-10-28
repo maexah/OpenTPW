@@ -165,23 +165,29 @@ public class ParkTrackSectionObjectsTests
 		Assert.AreEqual( 0, table.BuoysOf( karts ).Count );
 		Assert.AreEqual( 0, table.ObjectsOf( karts, 1 ).Count );
 
-		// 409 crossings take 2045 objects; the 410th's five do not fit.
-		for ( var at = 0; at < 409; ++at )
+		// The pool is shared by every ride: the water ride's four crossings (20 objects) and the karts' 405 (2025)
+		// make 2045, so the 406th kart crossing's five do not fit.
+		var water = table.Take( -5 );
+
+		for ( var at = 0; at < 4; ++at )
+			Assert.IsTrue( table.Lay( water, 11, at * 0x1800, 0 ) );
+
+		for ( var at = 0; at < 405; ++at )
 			Assert.IsTrue( table.Lay( karts, 11, (at % 60) * 0x1800, (1 + at / 60) * 0x1800 ) );
 
 		var full = TimesReported( "TRACK_SECTION_OUT_OF_OBJECTS" );
 
 		Assert.IsTrue( table.Lay( karts, 11, 0, 20 * 0x1800 ) );
 		Assert.AreEqual( full + 1, TimesReported( "TRACK_SECTION_OUT_OF_OBJECTS" ) );
-		Assert.AreEqual( 0, table.ObjectsOf( karts, 411 ).Count );
-		Assert.AreEqual( 409, table.BuoysOf( karts ).Count, "and lays no buoy" );
+		Assert.AreEqual( 0, table.ObjectsOf( karts, 407 ).Count );
+		Assert.AreEqual( 405, table.BuoysOf( karts ).Count, "and lays no buoy" );
 		// 2045 and three straights' one each: the pool's 2048 exactly, then none.
 		for ( var at = 1; at <= 3; ++at )
 			Assert.IsTrue( table.Lay( karts, 9, at * 0x1800, 20 * 0x1800 ) );
 
-		Assert.AreEqual( 1, table.ObjectsOf( karts, 414 ).Count, "the 2048th fits" );
+		Assert.AreEqual( 1, table.ObjectsOf( karts, 410 ).Count, "the 2048th fits" );
 		Assert.IsTrue( table.Lay( karts, 9, 4 * 0x1800, 20 * 0x1800 ) );
-		Assert.AreEqual( 0, table.ObjectsOf( karts, 415 ).Count, "the 2049th does not" );
+		Assert.AreEqual( 0, table.ObjectsOf( karts, 411 ).Count, "the 2049th does not, across rides" );
 		Assert.AreEqual( full + 2, TimesReported( "TRACK_SECTION_OUT_OF_OBJECTS" ) );
 
 		var other = TimesReported( "TRACK_SECTION_TEMPLATE_7" );

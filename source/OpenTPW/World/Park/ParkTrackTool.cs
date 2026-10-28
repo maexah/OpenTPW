@@ -85,8 +85,8 @@ public static class ParkTrackTool
 		if ( ParkTrackPieces.IsPieceAnchor( state.Record( x, y ).TrackType ) )
 			pending.Add( (x, y) );
 
-		// The original walks on until it stops, however far that is; a map's width of steps bounds this one.
-		for ( var steps = 0; steps < ParkWorld.MapSize && ParkState.OnMap( x, y ); ++steps )
+		// The original walks on until it stops, however far that is, with no bound; the map's cells bound this one.
+		for ( var steps = 0; steps < ParkWorld.MapSize * ParkWorld.MapSize && ParkState.OnMap( x, y ); ++steps )
 		{
 			var cell = state.Record( x, y );
 			var stop = false;
@@ -161,8 +161,8 @@ public static class ParkTrackTool
 		if ( !ParkState.OnMap( x, y ) || !IsTrack( state.Record( x, y ).TrackType ) )
 			return new Shaped( true, null );
 
-		// The original steps on until it stops, however far that is; a map's width of steps bounds this one.
-		for ( var steps = 0; steps < ParkWorld.MapSize && ParkState.OnMap( x, y ); ++steps )
+		// The original steps on until it stops, however far that is, with no bound; the map's cells bound this one.
+		for ( var steps = 0; steps < ParkWorld.MapSize * ParkWorld.MapSize && ParkState.OnMap( x, y ); ++steps )
 		{
 			var cell = state.Record( x, y );
 
@@ -302,7 +302,8 @@ public static class ParkTrackTool
 
 	/// <summary>
 	/// The preview's verdict on a run, cell by cell (<c>Track_CellVerdict</c>, <c>FUN_00539760</c>): refused where a piece's
-	/// two by two leaves the map or the park's land (map flag <c>0x40</c>), stands on an object (map types 4, 9 and 10), on
+	/// two by two leaves the map or the park's land (map flag <c>0x40</c>), stands on an object (map types 4, 9 and 10; the
+	/// original answers blue over a feature of priority below 3, which is counted, <c>TRACK_RUN_OVER_SCENERY</c>), on
 	/// type 7, 0x15 or 30, or on another ride's track; where the run's last cell, unless it meets its own track, stands on
 	/// queue, a ride's used-from cell or a cell flagged <c>0x20</c> (<c>0x00539fc5</c>..<c>0x0053a05f</c>); or where the new
 	/// pieces together cost more than the balance. The total runs on past a refused cell, so a run refused for another reason
@@ -353,13 +354,40 @@ public static class ParkTrackTool
 	/// preview: <see cref="Land"/> answers first and latches nothing (map flag <c>0x40</c>, <c>0x00539924</c>..
 	/// <c>0x00539959</c>); <see cref="NearTrack"/> latches before the cell is charged (another ride's track among its three
 	/// other cells, <c>0x00539c47</c>..<c>0x00539dbb</c>); <see cref="After"/> is judged after the charge and the money and
-	/// leaves the refusal pending (<c>0x0053a307</c>), which the next cell turns into the latch (<c>0x00539dc2</c>).
+	/// leaves the refusal pending (<c>0x0053a307</c>), which the same anchor's second judgement turns into the latch
+	/// (<c>0x00539dbc</c>..<c>0x00539dca</c>, before the third argument is read).
 	/// </summary>
 	public enum CellRefusal { None, Land, NearTrack, After }
 
 	/// <summary>One anchor of a run judged: its first reason (and the gap it counts, if any), which part refused it, and
 	/// whether it is an empty cell on the map, the kind a run is charged for.</summary>
 	public readonly record struct CellJudged( string? Why, string? Gap, CellRefusal Kind, bool Empty );
+
+	/// <summary>The track modes' <c>[0x00818c10]</c> (<c>0x00523546</c>, <c>0x005244be</c>): a thing under a run whose item's priority is below it answers blue.</summary>
+	private const int BuildsOverPriority = 3;
+
+	/// <summary>
+	/// The <c>Info.OverwritePriority</c> (item <c>+0x54</c>) of the thing a cell's owner names (its <c>ParentId</c>, a packed
+	/// cell: <see cref="ParkBuilding.Stamp"/>), or null where no such thing or no catalogue is at hand. The running park's
+	/// objects and catalogue unless a test stands in.
+	/// </summary>
+	internal static Func<ParkState, ushort, int?> OverwritePriorityOf { get; set; } = OverwritePriorityInLevel;
+
+	private static int? OverwritePriorityInLevel( ParkState state, ushort owner )
+	{
+		if ( owner == 0 || Level.Current?.Catalogue is not { } catalogue )
+			return null;
+
+		var (ownerX, ownerY) = MapStep.CellAt( owner );
+
+		foreach ( var placed in state.Objects )
+		{
+			if ( placed.CellX == ownerX && placed.CellY == ownerY )
+				return catalogue.TryGet( placed.CatalogueId, out var item ) ? item.OverwritePriority : null;
+		}
+
+		return null;
+	}
 
 	/// <summary>
 	/// One anchor of a run (<paramref name="at"/>) by <see cref="Verdict"/>'s rules, the money left out: its two by two's
@@ -372,7 +400,7 @@ public static class ParkTrackTool
 		var (x, y) = at;
 		string? why = null;
 		string? gap = null;
-		var (land, near) = (false, false);
+		var (land, near, scenery) = (false, false, false);
 		var onMap = true;
 
 		void Refuse( string reason, string? counted = null )
@@ -395,6 +423,12 @@ public static class ParkTrackTool
 			}
 
 			var under = state.Record( cx, cy );
+
+			// The verdict asks only the anchor, its east cell and its south-east cell about the owner's priority; the south
+			// cell is never asked (0x00539961..0x00539b75).
+			if ( under.Type is CellEdge.Footprint or CellEdge.RideEnd or CellEdge.RideFarEnd && (cx, cy) != (x, y + 1)
+				&& OverwritePriorityOf( state, under.ParentId ) is < BuildsOverPriority )
+				scenery = true;
 
 			if ( (under.Flags & 0x40) != 0 )
 			{
@@ -422,6 +456,12 @@ public static class ParkTrackTool
 				}
 			}
 		}
+
+		// A deviation: in the track modes the original answers 0 here, blue and uncharged, for a thing whose item's
+		// OverwritePriority (+0x54) is below 3 (a feature: 0 or 1; the category files all say 5), and the click's op 0x87
+		// tears it down (0x00538cf0). Op 0x87 is not built, so the cell stays refused, red, and the run is counted.
+		if ( scenery && !land )
+			gap = "TRACK_RUN_OVER_SCENERY";
 
 		if ( !onMap )
 			return new CellJudged( why, gap, CellRefusal.Land, false );
@@ -469,8 +509,8 @@ public static class ParkTrackTool
 	/// <see cref="JudgeCell"/>, in the original's order (<c>Track_CellVerdict</c>, <c>0x00539760</c>): land outside the park
 	/// answers red first and latches nothing; another ride's track beside it latches; a latch an earlier cell left answers
 	/// red before the charge; then an empty cell's price is added to the run's total, and a total above the balance answers
-	/// red and latches (<c>0x00539f87</c>..<c>0x00539fb6</c>); then any other refusal answers red and leaves the latch
-	/// pending for the next cell. A cell not refused is blue (texture 0), or <c>m_end</c> (11, the verdict's answer
+	/// red and latches (<c>0x00539f87</c>..<c>0x00539fb6</c>); then any other refusal answers red and, its second judgement
+	/// being asked at once, latches. A cell not refused is blue (texture 0), or <c>m_end</c> (11, the verdict's answer
 	/// <c>0xb</c>, <c>0x0053a1c6</c>) where it is the run's last and its own track: the anchor itself, or an end the run
 	/// closes on. Every red square is judged again (<c>0x00537a29</c>, third argument 1): past the land, an empty cell is
 	/// charged again and the total asked again, raising <c>DAT_00816d5c</c> alone. Each square covers its anchor's two by two
@@ -479,14 +519,14 @@ public static class ParkTrackTool
 	/// are red where this game's click refuses; where the original's answers differ (a hill over path or queue, a crossing,
 	/// the station along its flow) <see cref="Verdict"/> says so.
 	/// <b>Not reproduced:</b> for the one pass after the pointer leaves an anchor it rested on, the original's first square
-	/// is judged as a last (<c>DAT_00818688</c>, <c>0x0053a0ce</c>); here the anchor is a last only while the pointer is on it.
+	/// is judged as a last (<c>DAT_00818688</c>, <c>0x0053a0cb</c>); here the anchor is a last only while the pointer is on it.
 	/// </summary>
 	public static Previewed Preview( ParkState state, int type, ushort owner, (int X, int Y) from, (int X, int Y) to, int price )
 	{
 		var (cells, dx, dy) = CellsOf( from, to );
 		var step = HeadingOf( dx, dy );
 		var squares = new List<ParkPathBuilding.QueueSquare>();
-		var (latch, pending, red, end, over, total) = (false, false, false, false, false, 0);
+		var (latch, red, end, over, total) = (false, false, false, false, 0);
 
 		for ( var i = 0; i < cells.Count; ++i )
 		{
@@ -501,7 +541,9 @@ public static class ParkTrackTool
 
 			// The anchor, its own end, with the run leading back against its way on: the verdict's own-track rules answer it
 			// red alone, latching nothing (0x0053a216 to 0x0053a251, then 0x0053a4e9: links not three), where the click lays
-			// nothing anyway, for the cell beyond is its own track or its station.
+			// nothing anyway, for the cell beyond is its own track or its station. Not applied: the rule's hill (the anchor's
+			// +0xe & 0xf) and add-on (0x10) flags, which refuse more (0x0053a307, red and pending); this game builds
+			// neither, so only a park built in the original reaches them.
 			if ( i == 0 && !last && judged.Kind == CellRefusal.None && step != 0 && state.Record( x, y ) is var anchor
 				&& anchor.TrackType == type && anchor.TrackDirection == CellEdge.Opposite( step ) )
 				judged = judged with { Why = $"({x},{y}) is left against its way on", Kind = CellRefusal.Land };
@@ -511,8 +553,7 @@ public static class ParkTrackTool
 
 			if ( judged.Kind != CellRefusal.Land )
 			{
-				latch |= pending || judged.Kind == CellRefusal.NearTrack;
-				pending = false;
+				latch |= judged.Kind == CellRefusal.NearTrack;
 
 				if ( !latch )
 				{
@@ -522,7 +563,7 @@ public static class ParkTrackTool
 					if ( total > state.Balance )
 						(latch, over, unaffordable) = (true, true, true);
 					else if ( judged.Kind == CellRefusal.After )
-						pending = true;
+						latch = true; // pending (0x0053a30d), copied into the latch by the red square's second judgement
 					else
 						refused = false;
 				}
@@ -582,7 +623,8 @@ public static class ParkTrackTool
 	/// <summary>
 	/// Lays one run from the anchor to its target, pass by pass over every cell, as the click does (<c>0x00526daa</c>..
 	/// <c>0x00526ebe</c>): the stamp, the links, the flow, the owner, the hill flags and the retile. The clear pass
-	/// (<c>0x87</c>) clears only what <see cref="Verdict"/> refuses to lay over, so it has nothing to do; the mouths' walks
+	/// (<c>0x87</c>) tears down what the original's verdict lays over, a feature of priority below 3
+	/// (<c>TRACK_RUN_OVER_SCENERY</c>: here <see cref="Verdict"/> refuses it, so op 0x87 has nothing to do); the mouths' walks
 	/// (<c>0x86</c>) run once for the run (<see cref="ShapeMouths"/>).
 	/// </summary>
 	public static Laid LayRun( ParkState state, int type, ushort owner, (int X, int Y) from, (int X, int Y) to, int price )

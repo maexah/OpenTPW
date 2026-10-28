@@ -633,17 +633,28 @@ public sealed class ParkBuildMarkers : ModelEntity
 	/// <summary>
 	/// How far a track tool's square is lifted: <c>FUN_00536ca0</c> on the anchor's map record (<c>0x0053724c</c>) asks its
 	/// two by two, its own cell, then south, east and the far corner, and takes the lift of the last whose MAP type is
-	/// <c>0xb</c>, <c>0x10</c>, <c>0x19</c>, 7, 4, 9 or 10 (<c>FUN_00452ae0</c> there, rounded up to ten); its walls go down to
+	/// <c>0xb</c>, <c>0x10</c>, <c>0x19</c>, 7, 4, 9 or 10 (<c>FUN_00452ae0</c> there, rounded up to ten), starting from the
+	/// anchor's own track record type's (the same set); its walls go down to
 	/// its one-cell neighbours' lifts, asked the same way, each 20 wide. None of that is built: the square lies on the
 	/// ground, unwalled, and where any of the four would lift it the gap is counted (<c>MARKER_LIFT_OVER_TRACK_THING</c>).
 	/// </summary>
 	internal static float TrackLiftOver( ParkState state, int x, int y )
 	{
+		var counted = false;
+
 		foreach ( var (cx, cy) in new[] { (x, y), (x, y + 1), (x + 1, y), (x + 1, y + 1) } )
 		{
 			if ( ParkState.OnMap( cx, cy ) && state.Record( cx, cy ).Type is 0xb or 0x10 or 0x19 or 7 or 4 or 9 or 10 )
+			{
 				Unimplemented.Report( "MARKER_LIFT_OVER_TRACK_THING" );
+				counted = true;
+			}
 		}
+
+		// The first source is the anchor's own track record type (Track_CellOp, 0x0053716f..0x00537239, passed on at
+		// 0x0053723d..0x0053724c): laid track lifts the square alone, where no map type does.
+		if ( !counted && ParkState.OnMap( x, y ) && state.Record( x, y ).TrackType is 0xb or 0x10 or 0x19 or 7 or 4 or 9 or 10 )
+			Unimplemented.Report( "MARKER_LIFT_OVER_TRACK_THING" );
 
 		return 0f;
 	}
