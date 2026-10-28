@@ -100,9 +100,10 @@ public sealed class ParkBuildMarkers : ModelEntity
 
 	/// <summary>
 	/// One wall under a lifted square: the square's cell, the edge it stands on (<see cref="FaceNorth"/> and the
-	/// rest), its marker, and how far over the ground its foot is. It rises <see cref="WallHeight"/> from there.
+	/// rest), its marker, how far over the ground its foot is, and how many cells long it is (2 under a track tool's
+	/// square). It rises <see cref="WallHeight"/> from there.
 	/// </summary>
-	internal readonly record struct Wall( int X, int Y, int Face, int Marker, float Over, bool Glides = false );
+	internal readonly record struct Wall( int X, int Y, int Face, int Marker, float Over, bool Glides = false, int Size = 1 );
 
 	/// <summary>The walls the mesh holds now, in the order the original queues them: by square, then N, E, S, W, lowest first.</summary>
 	private List<Wall> _walls = [];
@@ -344,7 +345,8 @@ public sealed class ParkBuildMarkers : ModelEntity
 
 		var tool = _strip.Take( _toolSquares ).Select( Line ).ToArray();
 		var patrol = _strip.Skip( _toolSquares ).Take( _patrolSquares ).Select( Line ).ToArray();
-		var walls = _walls.Select( wall => $"{wall.X},{wall.Y},{wall.Face},{wall.Marker}^{wall.Over - Lift:0}" ).ToArray();
+		var walls = _walls.Select( wall => $"{wall.X},{wall.Y},{wall.Face},{wall.Marker}^{wall.Over - Lift:0}"
+			+ (wall.Size == 1 ? "" : $"#{wall.Size}") ).ToArray();
 		var stranded = _strip.Skip( _toolSquares + _patrolSquares ).Select( square => $"{square.X},{square.Y}" ).ToArray();
 
 		var gliding = _strip.Any( square => square.Glides );
@@ -437,10 +439,13 @@ public sealed class ParkBuildMarkers : ModelEntity
 			? LiftOver( state, Level.Current?.Catalogue, field, x, y )
 			: 0f;
 
-		// The track tool's squares are lifted by their own rule (TrackLiftOver), which lifts none here, so they have no
-		// walls either.
+		// The track tool's squares, two by two, are lifted and walled by their own rule over each cell's whole height.
+		float HeightAt( int x, int y ) => ParkState.Current is { } state
+			? ParkItemHeights.AtCell( state, Level.Current?.Catalogue, field, x, y )
+			: 0f;
+
 		float SquareLift( int x, int y, int size ) => size == 1 ? LiftAt( x, y )
-			: ParkState.Current is { } state ? TrackLiftOver( state, x, y ) : 0f;
+			: ParkState.Current is { } state ? TrackLiftOver( state, x, y, HeightAt ) : 0f;
 
 		float? NeighbourLift( int x, int y ) => OnTheField( x, y ) ? LiftAt( x, y ) : null;
 
@@ -454,7 +459,9 @@ public sealed class ParkBuildMarkers : ModelEntity
 		_toolSquares = strip.Count( square => OnTheField( square.X, square.Y ) ) + carried.Count( square => OnTheField( square.X, square.Y ) );
 		_patrolSquares = _strip.Count - _toolSquares;
 
-		_walls = lifts.SelectMany( square => WallsAt( square.Square.X, square.Square.Y, square.Lift, square.Square.Marker, NeighbourLift )
+		_walls = lifts.SelectMany( square => (square.Square.Size == 1 || ParkState.Current is not { } state
+					? WallsAt( square.Square.X, square.Square.Y, square.Lift, square.Square.Marker, NeighbourLift )
+					: TrackWalls( state, square.Square.X, square.Square.Y, square.Lift, square.Square.Marker, HeightAt ))
 				.Select( wall => wall with { Glides = square.Square.Glides } ) )
 			.ToList();
 
@@ -538,7 +545,7 @@ public sealed class ParkBuildMarkers : ModelEntity
 	/// </summary>
 	internal static (int X, int Y, float Over, Vector2 Uv)[] WallCorners( Wall wall, bool gone )
 	{
-		var ((fromX, fromY), (toX, toY)) = Edge( wall.X, wall.Y, wall.Face );
+		var ((fromX, fromY), (toX, toY)) = Edge( wall.X, wall.Y, wall.Face, wall.Size );
 
 		if ( gone )
 			return [.. Enumerable.Repeat( (fromX, fromY, wall.Over, Vector2.Zero), 4 )];
@@ -555,14 +562,15 @@ public sealed class ParkBuildMarkers : ModelEntity
 	/// <summary>
 	/// The two ground corners of the edge a wall stands on, in the order <c>FUN_0053df30</c> lays its foot: north from
 	/// (x, y) to (x + 1, y), east from (x + 1, y) to (x + 1, y + 1), south from (x + 1, y + 1) to (x, y + 1), west from
-	/// (x, y + 1) to (x, y).
+	/// (x, y + 1) to (x, y), each <paramref name="size"/> cells for a wall that long (20 wide, <c>FUN_0053df30</c> adding its
+	/// size, 20 where the record's <c>+0x18</c> is set, to the corner it lays first).
 	/// </summary>
-	internal static ((int X, int Y) From, (int X, int Y) To) Edge( int x, int y, int face ) => face switch
+	internal static ((int X, int Y) From, (int X, int Y) To) Edge( int x, int y, int face, int size = 1 ) => face switch
 	{
-		FaceNorth => ((x, y), (x + 1, y)),
-		FaceEast => ((x + 1, y), (x + 1, y + 1)),
-		FaceSouth => ((x + 1, y + 1), (x, y + 1)),
-		FaceWest => ((x, y + 1), (x, y)),
+		FaceNorth => ((x, y), (x + size, y)),
+		FaceEast => ((x + size, y), (x + size, y + size)),
+		FaceSouth => ((x + size, y + size), (x, y + size)),
+		FaceWest => ((x, y + size), (x, y)),
 		_ => throw new ArgumentOutOfRangeException( nameof( face ), face, "not a wall's face" )
 	};
 
@@ -631,32 +639,45 @@ public sealed class ParkBuildMarkers : ModelEntity
 	}
 
 	/// <summary>
-	/// How far a track tool's square is lifted: <c>FUN_00536ca0</c> on the anchor's map record (<c>0x0053724c</c>) asks its
-	/// two by two, its own cell, then south, east and the far corner, and takes the lift of the last whose MAP type is
-	/// <c>0xb</c>, <c>0x10</c>, <c>0x19</c>, 7, 4, 9 or 10 (<c>FUN_00452ae0</c> there, rounded up to ten), starting from the
-	/// anchor's own track record type's (the same set); its walls go down to
-	/// its one-cell neighbours' lifts, asked the same way, each 20 wide. None of that is built: the square lies on the
-	/// ground, unwalled, and where any of the four would lift it the gap is counted (<c>MARKER_LIFT_OVER_TRACK_THING</c>).
+	/// How far a track tool's square over the anchor (<paramref name="x"/>, <paramref name="y"/>) is lifted, each cell's
+	/// height asked of <paramref name="heightAt"/> (<c>FUN_00452ae0( x, y, null )</c>, <see cref="ParkItemHeights.AtCell"/>).
+	/// <c>Track_CellOp</c> starts from nought, or where the anchor's TRACK type is one of <see cref="LiftsTrackSquare"/> from
+	/// the anchor's height rounded up to ten (<c>0x0053716f</c>..<c>0x00537239</c>); then <c>TrackSquare_Height</c>
+	/// (<c>FUN_00536ca0</c>) asks the MAP type of its two by two, its own cell, south, east and the far corner
+	/// (<c>DAT_007cdba8</c>, <c>DAT_007cdbc8</c>, <c>DAT_007cdbb8</c>), and each of the set replaces the lift with its own
+	/// height rounded up to ten, so the last such cell gives it. Every type of the set is rounded alike.
 	/// </summary>
-	internal static float TrackLiftOver( ParkState state, int x, int y )
+	internal static float TrackLiftOver( ParkState state, int x, int y, Func<int, int, float> heightAt )
 	{
-		var counted = false;
+		var lift = LiftsTrackSquare( state.Record( x, y ).TrackType ) ? CeilingTen( (int)heightAt( x, y ) ) : 0f;
 
-		foreach ( var (cx, cy) in new[] { (x, y), (x, y + 1), (x + 1, y), (x + 1, y + 1) } )
+		foreach ( var (cellX, cellY) in new[] { (x, y), (x, y + 1), (x + 1, y), (x + 1, y + 1) } )
 		{
-			if ( ParkState.OnMap( cx, cy ) && state.Record( cx, cy ).Type is 0xb or 0x10 or 0x19 or 7 or 4 or 9 or 10 )
-			{
-				Unimplemented.Report( "MARKER_LIFT_OVER_TRACK_THING" );
-				counted = true;
-			}
+			if ( ParkState.OnMap( cellX, cellY ) && LiftsTrackSquare( state.Record( cellX, cellY ).Type ) )
+				lift = CeilingTen( (int)heightAt( cellX, cellY ) );
 		}
 
-		// The first source is the anchor's own track record type (Track_CellOp, 0x0053716f..0x00537239, passed on at
-		// 0x0053723d..0x0053724c): laid track lifts the square alone, where no map type does.
-		if ( !counted && ParkState.OnMap( x, y ) && state.Record( x, y ).TrackType is 0xb or 0x10 or 0x19 or 7 or 4 or 9 or 10 )
-			Unimplemented.Report( "MARKER_LIFT_OVER_TRACK_THING" );
+		return lift;
+	}
 
-		return 0f;
+	/// <summary>The types a track square's lift is read over: <c>0xb</c>, <c>0x10</c>, <c>0x19</c>, 7, 4, 9 and 10 (<c>FUN_00536ca0</c>).</summary>
+	internal static bool LiftsTrackSquare( int type ) => type is 0xb or 0x10 or 0x19 or 7 or 4 or 9 or 10;
+
+	/// <summary>
+	/// The walls under a track tool's square over (<paramref name="x"/>, <paramref name="y"/>) lifted by
+	/// <paramref name="lift"/>: <c>Track_CellOp</c> asks the anchors two cells away on the track grid (<c>FUN_0050c320</c>
+	/// with 2), north, east, south and west, none off the map, each lifted by <see cref="TrackLiftOver"/>, and lays a wall
+	/// on that edge of the square's two by two from the neighbour's lift up by tens while under the square's
+	/// (north's loop <c>0x00537494</c>..<c>0x005374c8</c>), 20 wide as the square (<c>FUN_0053df30</c>'s <c>+0x18</c>). A
+	/// wall is red under a red square (the refused arm's texture 1, <c>0x00537bf9</c>) and blue under every other.
+	/// </summary>
+	internal static List<Wall> TrackWalls( ParkState state, int x, int y, float lift, int marker, Func<int, int, float> heightAt )
+	{
+		float? Neighbour( int cellX, int cellY ) => ParkState.OnMap( cellX, cellY ) ? TrackLiftOver( state, cellX, cellY, heightAt ) : null;
+
+		return Walls( lift, Neighbour( x, y - 2 ), Neighbour( x + 2, y ), Neighbour( x, y + 2 ), Neighbour( x - 2, y ) )
+			.Select( wall => new Wall( x, y, wall.Face, WallMarker( marker ), RecordHeight( wall.Foot ), Size: 2 ) )
+			.ToList();
 	}
 
 	/// <summary>The original's <c>(t + 9) / 10 * 10.0</c>, integer division towards nought.</summary>

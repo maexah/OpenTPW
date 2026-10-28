@@ -16,11 +16,17 @@ internal static class ParkItemHeights
 	/// file passes; a rebuild is counted, not done.
 	/// </summary>
 	public static ItemHeightMapFile? For( ParkItemCatalogue.Item item )
+		=> Read( item.Directory, $"{item.Directory}/{item.Stem}.hmp", item.Width, item.Depth );
+
+	/// <summary>
+	/// A file read once under <paramref name="key"/>: the <c>.hmp</c> at <paramref name="path"/>, or null where it is missing,
+	/// unknown, or of another size than <paramref name="columns"/> by <paramref name="rows"/> (counted <c>HMP_REBUILD</c>).
+	/// </summary>
+	private static ItemHeightMapFile? Read( string key, string path, int columns, int rows )
 	{
-		if ( _read.TryGetValue( item.Directory, out var known ) )
+		if ( _read.TryGetValue( key, out var known ) )
 			return known;
 
-		var path = $"{item.Directory}/{item.Stem}.hmp";
 		ItemHeightMapFile? file = null;
 
 		// FileExists sees only loose files, never an archive's members, so opening it is the test: an archive
@@ -41,16 +47,16 @@ internal static class ParkItemHeights
 			Log.Warning( $"{path}: {e.Message}" );
 		}
 
-		if ( file != null && (file.Columns != item.Width || file.Rows != item.Depth) )
+		if ( file != null && (file.Columns != columns || file.Rows != rows) )
 		{
-			Log.Warning( $"{path} is {file.Columns}x{file.Rows} where the item is {item.Width}x{item.Depth}" );
+			Log.Warning( $"{path} is {file.Columns}x{file.Rows} where the item is {columns}x{rows}" );
 			file = null;
 		}
 
 		if ( file == null )
 			Unimplemented.Report( "HMP_REBUILD" );
 
-		_read[item.Directory] = file;
+		_read[key] = file;
 
 		return file;
 	}
@@ -62,6 +68,50 @@ internal static class ParkItemHeights
 	/// </summary>
 	public static float Over( ParkState state, ParkItemCatalogue? catalogue, HeightfieldFile field, int x, int y )
 		=> Built( state, catalogue, field, x, y )?.Top ?? field.HeightAt( x, y );
+
+	/// <summary>
+	/// <c>FUN_00452ae0( x, y, null )</c> with the cell's track-layer object asked first (<c>FUN_0053bf30</c>): the record's own,
+	/// or for a cell of 0xc or 0x11 its anchor's. A kart or water piece standing there answers its own <c>.hmp</c> over the
+	/// cell plus the height its root stands at; the boundary's things (0x19) are not built, so such a cell is counted
+	/// (<c>MARKER_LIFT_OVER_TRACK_THING</c>) and answers as <see cref="Over"/> does, which every cell without a track-layer
+	/// object answers. The pieces are read from <paramref name="theme"/>'s kits, or the park now loaded's.
+	/// </summary>
+	public static float AtCell( ParkState state, ParkItemCatalogue? catalogue, HeightfieldFile field, int x, int y,
+		string? theme = null )
+	{
+		var cell = state.Record( x, y );
+		var (anchorX, anchorY) = cell.TrackType is ParkTrackPieces.KartCell or ParkTrackPieces.WaterCell && cell.TrackParentId != 0
+			? MapStep.CellAt( cell.TrackParentId )
+			: (x, y);
+		var anchor = state.Record( anchorX, anchorY );
+
+		if ( ParkTrackPieces.PieceAt( anchorX, anchorY, anchor ) is { } piece && (theme ?? ParkTrackPieces.Current?.Theme) is { } kits )
+			return PieceTop( piece, kits, field, x, y ) ?? field.HeightAt( x, y );
+
+		if ( anchor.TrackType == ParkTrackPieces.Boundary )
+			Unimplemented.Report( "MARKER_LIFT_OVER_TRACK_THING" );
+
+		return Over( state, catalogue, field, x, y );
+	}
+
+	/// <summary>
+	/// How high a standing track piece's <c>.hmp</c> says it stands over a cell, plus the height its root stands at, or null
+	/// where the file is not read (<c>FUN_00452ae0</c> then answers the ground). The pieces' loader asks for the file with
+	/// bit <c>0x400</c> of its flags <c>0x10422</c> (<c>0x00462dc9</c>), so each kit piece is given its own.
+	/// </summary>
+	internal static float? PieceTop( ParkTrackPieces.Piece piece, string theme, HeightfieldFile field, int x, int y )
+	{
+		var directory = ParkTrackPieces.KitDirectory( theme, piece.Type );
+
+		if ( Read( $"{directory}/{piece.Model}", $"{directory}/{piece.Model}.hmp", 2, 2 ) is not { } file )
+			return null;
+
+		var (origin, _) = ParkBoundaryHoarding.StandOf( new ParkBoundaryHoarding.Piece( piece.Model, piece.Row, piece.CellX,
+			piece.CellY, piece.Angle ), field );
+		var root = origin.GetSystemVector3();
+
+		return AboveBase( file, root, piece.Angle, field, x, y ) is { } above ? above + root.Z : null;
+	}
 
 	/// <summary>
 	/// <c>FUN_00452ae0</c> where a placed thing with a <c>.hmp</c> owns the cell: the thing, its file, the height its

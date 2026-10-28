@@ -1749,12 +1749,7 @@ other answer is the square's texture, 0 blue, or 0xb `m_end`, the verdict's answ
 first, the pointer having rested on it, `DAT_00818688`) meets its own track by its links and way on, latching
 `DAT_00816d4c` (`0x0053a1c6`). The square is queued with `+0x18` 1 (`0x00537a5c`), which `FUN_0053df30` lays 20 wide
 (`0x0053df39`; 10 where it is nought, as the path and queue tools' are): one square, turn 1, over the anchor's two by
-two. Its height is `TrackSquare_Height` (`FUN_00536ca0`) of the anchor's map record (`0x0053724c`): it starts from the anchor's own track record
-type (`Track_CellOp` lifts by it first, `0x0053716f`..`0x00537239`, and passes it as the second argument,
-`0x0053723d`..`0x0053724c`; a laid piece is of the set below), then of its two by two's cells, its own, then
-south, east and the far corner, the last whose map type is 0xb, 0x10, 0x19, 7, 4, 9 or 10 gives the lift (`FUN_00452ae0`
-there, rounded up to ten, as a path square's); it is walled down to its one-cell neighbours' lifts, asked the same way,
-each wall 20 wide. Within an anchor the verdict answers in this order: land
+two, lifted and walled as "A track square's lift and walls" (below) says. Within an anchor the verdict answers in this order: land
 outside the park (flag 0x40) red, nothing latched or charged; then, in these track modes, 0 (blue, uncharged, latching
 nothing, even where a latch stands) for a map type 4, 9 or 10 cell, of the anchor, its east cell or its south-east cell
 (the south cell is never asked), whose owner thing's item `+0x54` (`Info.OverwritePriority`) is below `[0x00818c10]`, which
@@ -1772,6 +1767,42 @@ tool armed on its mouth: the pointer on the mouth, one square (34,25), `m_end`, 
 the mouth and the station's two sections red, "$ 0", cursor 8; after runs to (34,29) and (28,29), on the other mouth
 (28,25), blue, blue and `m_end`, cursor 0x12. The squares over the mouth, the station (map type 4) and the run's end
 stood at 11.5 with walls, the other mouth's at 1.5.
+**A track square's lift and walls** (Q775; `ParkBuildMarkers.TrackLiftOver`, `TrackWalls`, `ParkItemHeights.AtCell`).
+`Track_CellOp`'s square arm (`0x0053716f`..`0x00537251`) starts the lift at nought, or, where the anchor's TRACK record type
+is 0xb, 0x10, 0x19, 7, 4, 9 or 10, at the anchor's height rounded up to ten; it passes that to `TrackSquare_Height`
+(`FUN_00536ca0`) with the anchor's MAP record (`FUN_004d0b10`, the 0x44-byte grid at `[0x008023a0]`) and the anchor's x and y.
+That asks the map type of the anchor's own cell, then of the cells one step south (`DAT_007cdba8`, (0,+1)), east
+(`DAT_007cdbc8`, (+1,0)) and the far corner (`DAT_007cdbb8`, (+1,+1), written 1 and 1 at `0x004d9b50`), each through
+`FUN_004d96f0`, none off the map; each of the same seven types replaces the lift with that cell's height rounded up to ten, so
+the last such cell gives it. **Every type is rounded alike**: the three arms (0xb, 0x10 and 0x19; 7; 4, 9 and 10) are the same
+code, `__ftol( FUN_00452ae0( x, y, 0 ) )`, then `(t + 9) / 10` by the multiply `0x66666667` and `* 10.0` (`0x00700d94`). The
+square's record is laid at that + 1.5 (`- [0x00700d9c]`, -1.5). The height `FUN_00452ae0` answers is the cell's track-layer
+object's first (`FUN_0053bf30`: the track record's `+4`, or for a type 0xc or 0x11 cell its `+0x10` parent's), else the thing
+on a cell of map type 4, 9 or 10 (`FUN_00527e80`), each its model record's `.hmp` (`+0xcc`) over the cell plus its root's height,
+else the ground at the cell's corner; an object with no `.hmp` answers the ground. A kart or water piece has its own: the kits'
+loader passes flags `0x10422`, whose bit `0x400` reads `<model>.hmp` (`0x00462dc9`, the name `.hmp` at `0x0074d360`), and every row
+of both kits ships one, two by two. A station's track records (0xd, 0x12) hold no object, so its sections answer the ride's own
+`.hmp` through their map type 4. **The walls** (four arms, north `0x0053731e`, east `0x005374d9`, south `0x00537697`, west
+`0x00537855`, and the refused arm's four from `0x00537a83`): the anchor two cells away on the track grid (`FUN_0050c320` with 2),
+none off the map, lifted by the same rule; where its lift is not equal (`FCOMP`, `0x0053746c`) and its whole part is under the
+square's, a record at the neighbour's lift + 1.5, then ten higher while under the square's lift, each face byte 1, 4, 0x10 or
+0x40 (`FUN_0053c8d0`'s fourth argument), `+0x18` 1, so `FUN_0053df30` lays it 20 long on that edge of the two by two (its size,
+`0x0053df39`, added to the corner it lays first, `0x0053e14b`). A wall's texture is 0 under a square of the blue arm, `m_end`'s
+too, and 1 under a red one (`0x00537bf9`); its `+0x98` is 1 in the blue arm only where the verdict answered 0xd (`0x00537307`),
+which matters only in the gliding modes 4, 0xe and 0x13. The jump table `0x00536c10` is `FUN_005367a0`'s, the op `0x87` reset's (below), not this rule's.
+Measured in the original under Proton this session (`q775/orig`, `run.sh`, tag R2; `squares.py` and `liftcells.py`) on
+`q581/karts.TPWS`, the karts bought on (32,25) and the tool armed on the mouth (34,25): the mouth's square at 11.5 with walls
+north, east and south at 1.5 (the station's (32,25) lifts 10 too, so no west wall); with the pointer on (34,29) (34,25) the
+same, (34,27) and (34,29) at 1.5; on (30,25) three red at 11.5, walls (34,25) north, east and south, (32,25) south, (30,25)
+south and west (the anchors (30,23) and (32,23) read row 24, the ride's footprint, type 4, and its exit, 0xa); after a run to (34,29), on (40,29)
+over the Security Camera: (34,29) at 11.5 walled east, south and west, (36,29) and (38,29) at 1.5, (40,29) at 31.5 walled north,
+south and west at 1.5, 11.5 and 21.5 and east at 21.5; after a run to (28,29), on the other mouth (28,25): (28,29) at 11.5
+walled north, south and west, (28,27) at 1.5, (28,25) `m_end` at 1.5. `liftcells.py`: the mouths are map type 0 with track
+0xb, their pieces' objects (93, 94) hold a `.hmp` and stand at -2 and -7, so the mouth reads -2 + 14 / 2.55 = 3.49 (10) and the
+other -7 + 5.49 (nought); the station's sections are map type 4 with no track object. **Ours** reads the same rule over each
+cell's `AtCell` and draws the same records in every one of those five poses (`q775/ours-a`). Not built: a path tool's square
+over a track piece is still counted (`MARKER_LIFT_OVER_TRACK_THING`, `LiftOver`), as is the boundary's thing (track type 0x19),
+which `AtCell` answers as the ground or the thing below it.
 **A run over scenery** (Q773; `ParkTrackTool.JudgeCell`, `TearDownUnder`; the click's pass in `LayRun`). The verdict's blue answer is at
 `0x00539961`..`0x00539c24`: after the four cells' flag `0x40` (`0x00539924`..`0x0053995b`), for each of the anchor (the
 verdict's own cell), its east cell and its south-east cell in turn, the last read twice by the listing (the south cell, `ebx`,
@@ -1791,7 +1822,7 @@ piece at the stamp as it does any new piece (`Track_StampCell`), where the previ
 Measured (Q773): in the original under Proton (`q773/orig`, `run.sh`) on `q581/karts.TPWS`, the Dino Karts bought on (32,25), the
 track tool armed on the mouth and a run clicked to (34,29), the pointer on (40,29), where the Security Camera (`camera`, priority
 0, one cell, thing 19) stands: four blue squares (34,29), (36,29), (38,29), (40,29), the last 20 wide at y 31.5 with three
-wall levels down (the lift rule's map type 4 cell, `MARKER_LIFT_OVER_TRACK_THING`), cursor 6, the frame's "$ 400" (two
+wall levels down (the lift rule's map type 4 cell, built by Q775), cursor 6, the frame's "$ 400" (two
 pieces: the cell over the camera is not in the total, `O-O2.png`); the click laid pieces on (36,29), (38,29) and (40,29) (the
 last `gk_trckQ`, row 1, turn 90), the camera's pole gone from the frame (`O-O3.png`) and the anchor moved to (40,29), the tool
 armed still. The bank fell 445 over that click, the park's clock running (the day turned 2.19 to 2.20 between the two frames):
@@ -1812,8 +1843,8 @@ Q765's ("A track piece's model, price and open end", below). The preview (Q768, 
 judged in the original's order over ours' own refusals (the counted ones too), the total running on past a refused cell
 with the red squares' second charges (`0x00539f5c`, `0x00539f87`..`0x00539fb6`). The pointer (Q765, Q768,
 `ParkTrackTool.CursorOver`) is taken from it: `c_end` or `c_track`, `c_noplace` over either where a square is red, and
-`c_cash` over that where the total passed the balance, so a refused run can show `c_cash`. Not built: the squares' lift (`FUN_00536ca0`)
-and so their walls (counted, `MARKER_LIFT_OVER_TRACK_THING`): ours lie on the ground, under the pieces, the run's total on the screen (Q541), and the
+`c_cash` over that where the total passed the balance, so a refused run can show `c_cash`; each square is lifted and walled
+as the original's (Q775, above). Not built: the run's total on the screen (Q541), and the
 anchor judged a last for the one pass after the pointer leaves it. Measured in ours (`q762/ours-b`, then `q763/ours-d` with the walk): Q687's two loops give
 the anchors the links, way on, overlap, row and turn the original's `A-load.log` and `W-cells.log` hold, the closing
 corners included, and 200 (250) a new piece, **but not by the original's own clicks**: the original's water loop took

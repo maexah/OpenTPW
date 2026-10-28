@@ -1,5 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace OpenTPW.Tests;
@@ -377,21 +378,68 @@ public class ParkTrackPreviewTests
 	}
 
 	/// <summary>
-	/// The square's lift starts from the anchor's own track record type (<c>0x0053716f</c>..<c>0x00537239</c>), so a laid piece on
-	/// plain ground counts the lift gap where no map type does. Made to fail by reading map types alone.
+	/// The square's lift (<c>Track_CellOp</c>, <c>FUN_00536ca0</c>): from the anchor's own track type, then the map types of its
+	/// two by two in the order own, south, east, far corner, the last of the set giving its height rounded up to ten from the
+	/// whole part. Each height here is one a wrong rule reads differently: the order (east before south gives 10), the
+	/// rounding (a ceiling of 10.9 gives 20), a type outside the set (the path's 1 would give 50), the track type alone.
 	/// </summary>
 	[TestMethod]
-	public void ALaidPieceUnderTheSquareCountsTheLiftGap()
+	public void TheSquaresLiftIsTheLastLiftingCellOfItsTwoByTwo()
 	{
-		var state = Bought();
-		var before = TimesReported( "MARKER_LIFT_OVER_TRACK_THING" );
+		var state = new ParkState( parkIsClosed: false, visitorsToDate: 0, balance: 53522 );
+		var heights = new Dictionary<(int, int), float> { [(40, 40)] = 3.7f, [(40, 41)] = 25f, [(41, 40)] = 7f, [(41, 41)] = 41f };
+		float HeightAt( int x, int y ) => heights.TryGetValue( (x, y), out var height ) ? height : 0.5f;
 
-		ParkBuildMarkers.TrackLiftOver( state, 40, 40 );
-		Assert.AreEqual( before, TimesReported( "MARKER_LIFT_OVER_TRACK_THING" ), "bare ground lifts nothing" );
+		void Type( int x, int y, int type ) => state.SetRecord( x, y, state.Record( x, y ) with { Type = type } );
+
+		Assert.AreEqual( 0f, ParkBuildMarkers.TrackLiftOver( state, 40, 40, HeightAt ), "bare ground lifts nothing" );
 
 		state.SetRecord( 40, 40, state.Record( 40, 40 ) with { TrackType = 0xb } );
-		ParkBuildMarkers.TrackLiftOver( state, 40, 40 );
-		Assert.AreEqual( before + 1, TimesReported( "MARKER_LIFT_OVER_TRACK_THING" ), "counted once" );
+		Assert.AreEqual( 10f, ParkBuildMarkers.TrackLiftOver( state, 40, 40, HeightAt ), "a laid anchor lifts by its own height" );
+
+		Type( 41, 41, 1 );
+		Assert.AreEqual( 10f, ParkBuildMarkers.TrackLiftOver( state, 40, 40, HeightAt ), "a path's map type is not of the set" );
+
+		Type( 40, 41, 4 );
+		Type( 41, 40, 9 );
+		Assert.AreEqual( 10f, ParkBuildMarkers.TrackLiftOver( state, 40, 40, HeightAt ), "east comes after south" );
+
+		Type( 41, 40, 0 );
+		Assert.AreEqual( 30f, ParkBuildMarkers.TrackLiftOver( state, 40, 40, HeightAt ), "south alone: 25 up to 30" );
+
+		heights[(40, 41)] = 10.9f;
+		Assert.AreEqual( 10f, ParkBuildMarkers.TrackLiftOver( state, 40, 40, HeightAt ), "the whole part rounded up: 10" );
+
+		Type( 41, 41, 7 );
+		Assert.AreEqual( 50f, ParkBuildMarkers.TrackLiftOver( state, 40, 40, HeightAt ), "the far corner last" );
+	}
+
+	/// <summary>
+	/// The square's walls go down to the anchors two cells away, each lifted by the same rule, 20 wide on the two by two's
+	/// edges; none off the map, none where the neighbour stands as high; red under red, blue under <c>m_end</c>. A rule
+	/// asking the one-cell neighbours reads the square's own south cell for its south wall and lays none there.
+	/// </summary>
+	[TestMethod]
+	public void TheSquaresWallsGoDownToTheAnchorsTwoCellsAway()
+	{
+		var state = new ParkState( parkIsClosed: false, visitorsToDate: 0, balance: 53522 );
+		var heights = new Dictionary<(int, int), float> { [(126, 41)] = 25f, [(126, 38)] = 12f, [(124, 40)] = 30f };
+		float HeightAt( int x, int y ) => heights.TryGetValue( (x, y), out var height ) ? height : 0.5f;
+
+		foreach ( var (x, y) in new[] { (126, 41), (126, 38), (124, 40) } )
+			state.SetRecord( x, y, state.Record( x, y ) with { Type = 4 } );
+
+		var lift = ParkBuildMarkers.TrackLiftOver( state, 126, 40, HeightAt );
+		var walls = ParkBuildMarkers.TrackWalls( state, 126, 40, lift, ParkPathBuilding.MarkerEnd, HeightAt );
+
+		Assert.AreEqual( 30f, lift );
+		Assert.AreEqual( "1^20#2 16^0#2 16^10#2 16^20#2", string.Join( " ", walls.Select( wall =>
+			$"{wall.Face}^{wall.Over - 1.5f:0}#{wall.Size}" ) ), "north from 20, none east (off the map), south from the ground, none west" );
+		Assert.IsTrue( walls.All( wall => wall.Marker == ParkPathBuilding.MarkerBlue && (wall.X, wall.Y) == (126, 40) ) );
+		Assert.IsTrue( ParkBuildMarkers.TrackWalls( state, 126, 40, lift, ParkPathBuilding.MarkerRed, HeightAt )
+			.All( wall => wall.Marker == ParkPathBuilding.MarkerRed ) );
+		Assert.AreEqual( ((128, 40), (128, 42)), ParkBuildMarkers.Edge( 126, 40, ParkBuildMarkers.FaceEast, 2 ) );
+		Assert.AreEqual( ((128, 42), (126, 42)), ParkBuildMarkers.Edge( 126, 40, ParkBuildMarkers.FaceSouth, 2 ) );
 	}
 
 	/// <summary>

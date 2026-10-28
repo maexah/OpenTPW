@@ -144,6 +144,38 @@ public class ItemHeightMapTests
 		Assert.AreEqual( 60f, ParkBuildMarkers.LiftOver( state, catalogue, field, 73, 66 ) );
 	}
 
+	/// <summary>
+	/// A cell under a kart piece answers the piece's own <c>.hmp</c> plus its root's height (<c>FUN_0053bf30</c> before the
+	/// thing, <c>FUN_00452ae0</c>), its 0xc cells by their anchor's piece: a Dino Karts' station laid from (30,24), as the
+	/// original's on <c>q581/karts.TPWS</c>, whose mouths' roots read -2 and -7 there (<c>q775/orig</c>, <c>liftcells.py</c>).
+	/// So the mouth's square lifts to 10 and the other mouth's to nought, the original's 11.5 and 1.5. The ground alone gives
+	/// -3 and -8, the 0xc cell asked as itself the ground too.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the piece not asked; a 0xc cell not followed to its anchor.</remarks>
+	[TestMethod]
+	public void ACellUnderAKartPieceAnswersThePiecesHeight()
+	{
+		using var stream = new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var state = new ParkState( new ParkWorld( new SaveReader( stream ).ReadFile() ) );
+		var catalogue = new ParkItemCatalogue( "jungle", data, instantAction: true );
+
+		HeightfieldFile field;
+
+		using ( var terrain = data.OpenRead( "levels/jungle/terrain/base.MD2" ) )
+			field = new HeightfieldFile( terrain );
+
+		ParkTrackPieces.LayStation( state, 1, 30, 24, 0 );
+
+		float At( int x, int y ) => ParkItemHeights.AtCell( state, catalogue, field, x, y, "jungle" );
+
+		Assert.AreEqual( -3f, field.HeightAt( 34, 25 ), 0.001f, "the ground under the mouth" );
+		Assert.AreEqual( -2f + (14 * ItemHeightMapFile.UnitsPerByte), At( 34, 25 ), 0.001f, "the mouth's piece" );
+		Assert.AreEqual( -2f + (15 * ItemHeightMapFile.UnitsPerByte), At( 34, 26 ), 0.001f, "its 0xc cell, by its anchor's piece" );
+		Assert.AreEqual( -7f + (14 * ItemHeightMapFile.UnitsPerByte), At( 28, 25 ), 0.001f, "the other mouth's piece" );
+		Assert.AreEqual( 10f, ParkBuildMarkers.TrackLiftOver( state, 34, 25, At ) );
+		Assert.AreEqual( 0f, ParkBuildMarkers.TrackLiftOver( state, 28, 25, At ) );
+	}
+
 	/// <summary>The original's rounding: <c>(t + 9) / 10 * 10</c>, integer division towards nought.</summary>
 	[TestMethod]
 	public void TheLiftRoundsUpToTen()

@@ -5,6 +5,16 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q773 (a track run over scenery; Q587's eighth piece). Ours on the final binary (`q773/ours-b`, `ours-c`, dll 49058921),
+  on the desktop, the stock park, by Q581's clicks and a run to (34,29): the pointer on (40,29), where the Security Camera
+  stands (priority 0, thing 19): four blue squares, cursor `c_track`, "run total 400", no `TRACK_RUN_OVER_SCENERY` count; the
+  click: the camera gone from `objects`, `cell 40 29` track type 11, the pieces `gk_trckS` and `gk_trckQ` as the
+  original's, the bank -350. The original this session under Proton (`q773/orig`, `run.sh`): the same four blue squares,
+  cursor 6, "$ 400", the camera's pole gone after the click, the same pieces. Not compared: the refund (the original's bank
+  fell 445 with its clock running; ours refunds the camera's 250 whole, the scrap percentage is not built); the original's
+  square over the camera stands at 31.5 with walls, ours lie on the ground (counted, `MARKER_LIFT_OVER_TRACK_THING`). Not
+  seen in either game: a ride's footprint on the south cell beside a feature (decoded: torn down; ours red, counted
+  `TRACK_RUN_OVER_SCENERY_MIXED`, Q774), the water ride.
 - Q768 (the track tool's preview squares and `c_end`; Q587's seventh piece). Ours on the final binary (`q768/ours-a`),
   on the desktop, the stock park, by Q581's clicks: the drawn squares (`strip`), the pointer and the strip's latch toward
   (34,29), the station, the path at (39,25) and the other mouth, and the water ride's two, with frames. The original run

@@ -10806,6 +10806,11 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   four blue squares and cursor 6 in both (`ours-1-over.png`, `O-O2.png`), the camera gone after the click, a track piece
   there (`ours-2-after.png`, `O-O3.png`). Not compared: the refund (ours 250 whole, the original's scrap percentage is not
   built, `SCRAP_VALUE_DEPRECIATION`). `park.md`, "A run over scenery".
+- [x] **Q775. The track tool's preview squares lifted and walled (Q587's ninth piece).** `TrackSquare_Height` (`FUN_00536ca0`)
+  decoded per type (every type of its set rounds alike) and built over each cell's `FUN_00452ae0`, a kart or water piece's
+  own `.hmp` first (`ParkItemHeights.AtCell`); the walls down to the anchors two cells away, 20 long (`TrackWalls`). Ours and
+  the original this session read the same records in five poses (`q775/ours-a` 6 of 6, `q775/orig` R2; `park.md`, "A
+  track square's lift and walls").
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

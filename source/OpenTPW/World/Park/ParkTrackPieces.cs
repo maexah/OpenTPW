@@ -32,6 +32,9 @@ public sealed class ParkTrackPieces : Entity
 	public const int WaterCell = 0x11;
 	public const int WaterStation = 0x12;
 
+	/// <summary>The boundary's anchor type on the track grid, whose things this park does not build.</summary>
+	public const int Boundary = 0x19;
+
 	/// <summary>The family a kart piece's retile answers (<c>0x00762f30</c>'s rows carry <c>0x30000</c>).</summary>
 	public const int KartFamily = 3;
 
@@ -332,6 +335,10 @@ public sealed class ParkTrackPieces : Entity
 			(360 - turn) % 360 );
 	}
 
+	/// <summary>The folder a kit's pieces are read from: <c>rides\gokarts</c> for the karts', <c>rides\wateride</c> for the water's.</summary>
+	public static string KitDirectory( string theme, int anchorType )
+		=> $"levels/{theme}/rides/{(anchorType == WaterAnchor ? "wateride" : "gokarts")}";
+
 	/// <summary>The track of the park currently loaded, or null outside one.</summary>
 	public static ParkTrackPieces? Current { get; private set; }
 
@@ -352,6 +359,9 @@ public sealed class ParkTrackPieces : Entity
 	/// </summary>
 	private static float _pulsePhase;
 	private readonly string _theme;
+
+	/// <summary>The theme the pieces are read from, lower-case.</summary>
+	public string Theme => _theme;
 	private readonly IParkInitialState? _park;
 
 	public ParkTrackPieces( string themeName, IParkInitialState? park )
@@ -419,7 +429,7 @@ public sealed class ParkTrackPieces : Entity
 	/// <summary>Makes one piece's model where it stands, or null where it would not load.</summary>
 	private LobbyModel? Make( Piece piece )
 	{
-		var directory = $"levels/{_theme}/rides/{(piece.Type == WaterAnchor ? "wateride" : "gokarts")}";
+		var directory = KitDirectory( _theme, piece.Type );
 
 		try
 		{
