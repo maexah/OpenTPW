@@ -53,13 +53,16 @@ fork watch).
 ## A. Bugs first
 
 **Ordered at Alexah's word (2026-10-28), before any weekly build goes out:** Q798 (ready for public builds) first, then
-Q249 (saving a park made fresh), then the rest in the order below.
+Q249 (saving a park made fresh; its build is Q783), then the rest in the order below.
 
-- [ ] **Q249. A park that was never loaded from a file has nothing to carry.** From Q241e. The fresh world (a
-  Full Simulation park, or a player whose folder holds no park file) is made by `FreshPark`, so the writer's
-  carried modules have no source. Decode what each module holds in a `restart.INTS` written at tick nought
-  (three are in Alexah's saves), make each afresh, and take the legal text from the level's shipped park file.
-  After Q241j. Confirm: a fresh Full Simulation park saved and loaded by the original under Proton.
+- [ ] **Q783. Save a park made fresh.** From Q249 (Alexah's ordering of 2026-10-28 put it second, before any weekly build
+  goes out). Write the tick-nought body `saves.md`, "A park made fresh: its file at tick nought", describes, module by
+  module, from `FreshPark` and the running park, with the shipped park's legal text, and read it as the base the writer
+  patches (`ParkWorld`), so a thing bought, a person made and the cells take the paths a loaded park's do. Write the
+  leftover words as nought (the clean runs' value), and the weather's location, leftover in every file, as nought too, said
+  at the site. Test it against the decoded values the doc gives (no game bytes in
+  the repo). Confirm: a fresh Full Simulation park saved here and loaded by the original under Proton (`original/fsload.sh`),
+  and its `restart.INTS` read back by Restart Park here.
   From Q241f: `Level.WritePark` counts such a park as `SAVE_PARK_WITH_NO_FILE` and writes nothing.
   From Q656: the boundary's anchors are `FreshPark.Boundary`, in the walk's order (the original's model slots 3 to
   109 in Lost Kingdom), each with the mask, direction, flags, row and turn its track sub-record holds (`mHoardingNeighbours`,
@@ -1976,7 +1979,7 @@ filed the items that cite it.
   each anchor's saved handle and re-claims its piece by matching item, cell and angle (`FUN_0053b1a0` through
   `FUN_00522f20( ..., 1 )` and `FUN_00463ab0`, which marks a match `0x10000`); `ParkBoundaryHoarding` draws every
   173xx record without that claim. No park file to hand tells them apart (933 anchors in seven files, every one has
-  its record, no record lacks an anchor), but Q249's fresh-park writer and any edited file could. Read the users of
+  its record, no record lacks an anchor), but Q783's fresh-park writer and any edited file could. Read the users of
   slot bit `0x10000` (for instance `0x004721b7`, `test [eax+4], 0x10000`) in Ghidra to settle whether an unclaimed
   record is freed or hidden; if it is, build the claim (pair each type 25 cell's `mTileData` with the record at its
   shifted cell and angle, count an anchor with no match) or keep the deviation said at the site.
@@ -3008,7 +3011,7 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
 
 ## F. Then
 
-Back to the advisor in a park; saving a fresh park is Q249, in section A. Also litter and the day ending, whose deferral reasons expired
+Back to the advisor in a park; saving a fresh park is Q783, in section A. Also litter and the day ending, whose deferral reasons expired
 (`docs/REVIEW-2026-09-21.md` section 6).
 - [ ] **Q648. Halloween World: guests stick at the crosswalk.** Alexah's own play, 2026-10-22: the park otherwise ran.
   Out of scope until Lost Kingdom is whole (`CLAUDE.md`, the goal); kept so it is not lost. Reproduce in `hallow` with a

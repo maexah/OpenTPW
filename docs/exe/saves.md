@@ -564,7 +564,7 @@ and the console's `lobby` and `reload`) and after the frame loop ends (Quit Game
 `Level.WritePark( "autosave" )` when the scene is a park. The console's `quit` ends the process at once and writes
 nothing. The two calls are `Game.LeaveOnClose` and `Game.ChangeSceneIfAsked`, apart so a test reaches their order.
 Load Park's row and Restart Park, which end the scene here where the original loads in place, write nothing, as the
-original's. A park made fresh is counted and not written (`SAVE_PARK_WITH_NO_FILE`, Q249), as every save of one is.
+original's. A park made fresh is counted and not written (`SAVE_PARK_WITH_NO_FILE`, Q783), as every save of one is.
 
 **Measured (Q544).** In the original under Proton, the stock park loaded from the list and held by the menu at
 `mGameTick` 986: Exit To Lobby wrote `autosave.TPWS` holding 986, 27 ms after `gms.dat` (whose bytes were the same),
@@ -601,7 +601,7 @@ the write after a park is built from the lobby, and not after one built again fr
 Restart Park), and it is `Level.WritePark( "restart", ".INTS" )`. Restart Park quietens the advisor and asks for the
 player's `restart.INTS`, found in any case, as a Load Park row does, ending the scene and building it again from the
 file where the original reads it over the running park; with no such file it logs and loads nothing. A park made fresh
-is counted and not written (`SAVE_PARK_WITH_NO_FILE`, Q249), so its Restart Park, with no file, makes it fresh again.
+is counted and not written (`SAVE_PARK_WITH_NO_FILE`, Q783), so its Restart Park, with no file, makes it fresh again.
 With nobody playing, which only the console's `park` reaches, the copy beside the level is read again.
 
 **Measured (Q248).** In the original under Proton, the reference player's `restart.INTS` moved aside and Lost Kingdom
@@ -835,8 +835,60 @@ OpenTPW runs written over and records added and taken out. **Afresh** means writ
 **What is not settled, and belongs to the build that meets it.** A record made here has bytes no reader here
 names: whether nought is safe in each is to be measured by loading a made guest and a bought ride in the
 original. A person in the middle of a walk carries the original's navigator (177 bytes), of which OpenTPW's walk keeps
-and writes what "OpenTPW's writer, the people" lists and leaves the rest at nought. A park that was never loaded from a file (the fresh world) has nothing to carry: every module would be
-afresh, the legal text taken from the level's shipped park file.
+and writes what "OpenTPW's writer, the people" lists and leaves the rest at nought. A park that was never loaded from a file (the fresh world) has nothing to carry: "A park made fresh: its file at tick
+nought" below says what each module holds there.
+
+### A park made fresh: its file at tick nought
+
+Decoded and measured on 2026-10-28 (Q249). A fresh Full Simulation park's `restart.INTS` is written in state 0xf, after
+the world is made and before its first tick ("Restart Park: restart.INTS"), so it is the fresh world as the original
+writes it. Measured over seventeen Lost Kingdom files the original wrote: Alexah's (Windows, 2026-09-22), fifteen of
+earlier items under Proton (`fresh-list.txt` in the harness's `q249/`, which also names two copies) and one made this
+session (`q249/orig/r1`, `original/freshfs.sh make`), each split by `parkfile.py -M`; Alexah's Fantasy and Halloween
+files beside them. The
+bytes are FileFormats `saves.md`, "A park made fresh"; this is what makes them and where a writer here takes each.
+
+**Every file has one length per module but the sound's**, and the preamble after the version is the shipped
+`Easymode.TPWI`'s byte for byte (the legal text, in all nineteen files and in the three themes). **The things are fixed.**
+Over the eight Proton runs with clean memory (27 KB files) the twelve thing records are byte for byte the same but the
+weather's quality (`+0x10`, a draw of the generator: 51 to 92 over the seventeen); Alexah's differs from them
+in that, in the weather's leftover words and in the economy's balance and its last withdrawal (9,999,999, their
+profile's). The other eight Proton runs (35 KB
+files, this session's among them) hold, in bytes no constructor writes, the same leftover memory each: the lab past its
+used projects (`+0x310` to `+0x100e`), the advisor's 351 records (1,172 bytes), the challenge manager's
+`+0x17c` to `+0x393` and the two objects' day rings (about 800 bytes each). The clean runs hold nought there, so nought
+is the original's own value. What decides the class is not read.
+
+| Module | At tick nought | Varies between runs | A writer here |
+|---|---|---|---|
+| The action recording | `mLoadedPublishedPark` 0, length 135; the recorder's fresh buffer (not decoded) | no | the measured bytes, constant |
+| `WRLD` header | tick 0, closed 1, no visitors, no vehicles, the twelve things' ids (`park-engine.md`, "A fresh Full Simulation world"), `mFirstObject` 12, no staff | `mRandomSeed`: the generator after the boundary's draws (`FreshPark.RandomSeed`) | `FreshPark` |
+| The object controls | each item's researched flag, tier, count (the gates and lights 1) and price | no | `FreshPark.ObjectControlRecords` |
+| The staff pool | 22 of its 32 slots, five candidates of each of kinds 0 to 3 and two of kind 4 (Q422) | every candidate: the top-up's draws | the pool as `ParkStaffPool` stands |
+| The clock and arrival | the calendar's start 2000-01-01, the session's FILETIME, month 0, day -1 (`Calendar_Construct`'s, not the date of tick 0), rate 15000; the arrival block | the session's FILETIME | the clock as it runs; month 0 and day -1 |
+| The cells | `FreshPark`'s: 16,384, each with its map and track parts | the boundary pieces' cells and four path tiles' art (the generator's coin, `FRESH_PARK_PATH_ART_VARIANT`) | `FreshPark` and `Boundary` |
+| Things 1 to 10 | the managers as their constructors leave them: the staff HQ, mechanics' HQ (`mNextObject` 0), advisor (every record fresh, slot 0 `(0, 0, 0, 100000, 1, -1)`), models 12 and 17 (the base alone), the analyser (grid 4, 32, 32, 128, 128; 1,024 blocks of (x, y, 4, 4) with nine (-999, 0) pairs; four rings at -1, 3; six kept (-999, 0); sixteen int rings at -1, 144; the six stamps 2000-01-01), the lab (Q349's fill), the weather (wind 90, force 0.5, no forecast, its location three words of leftover memory), the economy (the balance's), the challenge manager | the weather's quality | each record afresh by its rule; the leftover words as nought |
+| Things 11, 12 | the gates and the lights (`FreshPark.FixedObject`), unplaced, in cell 1's chain | no | `FreshPark.Objects` |
+| `SPSC` | 100 slots, all empty | no | constant |
+| `PART` | the live header (2,048 particles, the generator's seed `0x18be873a`, the next counts 2 and 1), one emitter in use: the land's `WaterFall` (effect 20) at (532, 4, 526), handle `0x10000`; the library with the jungle's `.emt` pair in slots 101 and 102 | the density (the options' graphics: 1500 on Windows, 1000 under Proton), the emitter's density-scaled words, one heap pointer | the library and the land's emitter as the park has them, at its density |
+| `MESS` | the 29 sets of the twelve things by the rule of "What ties the modules together", the singletons as every file has them (set `0x1c` thing 9) | no | afresh from the thing list |
+| `CLOK`, `VANT` | the two stopwatches and the real clock at the write | every reading | the park's clock |
+| `GSYS` | three equal readings 33 ms (once 34) before the clock's first, the tick counter `[0x00877d34]` 0, `[0x008786c0]` 0, the stack word 2, and each reading less `[0x008786bc]`: 11,864 under Proton (11,866 once), 2,235 to 3,000 on Windows | the readings | the clock's; the distance the session's |
+| `RSYS` | 109 slots: the gates', the lights' and the boundary's 107 (Q656: its anchors' records, FileFormats "A boundary piece's record") | each boundary piece's item (this session's: 69, 10, 1, 6, 9 and 12 of the six) | the gates' and lights' as a thing bought; the boundary's from `FreshPark.Boundary` |
+| `TRAK` | the stamp alone: `15:25:02`, `Mar 17 2000` (the 2.0 build's; the shipped park's is 1999's) | no | constant |
+| `FLYR` | set up, no flyer; the four values 190000, 70000, 140000, 30000 | no | constant |
+| `RSSE` | two scripts, the gates' (handle 1) and the lights' (2), with no object; the next handle 3 | the records' heap pointers | the two scripts as a thing bought's |
+| `KAME` | zoom 110, rotation 0, flags 0, the point (475, 0, 175), nothing saved | no | constant (the orbit camera's at the write, as any save) |
+| `COAS` | no coaster: `0 0 0 1` | no | constant |
+| `ADVS` | `Advisor_ResetState`'s 360 bytes (`0x005989c0`: zeroed, `+0x110` 5, `+0x12c` -1, then the advisor's two models' clips at `+0x38` to `+0x64` and their lengths in ms at `+0x68` to `+0xb4`), four words of the balance at `+0x144` to `+0x158` (`FUN_004080e0`), no buffer | no (by theme: the theme's advisor) | afresh from the theme's advisor model and the balance |
+| `SOUN` | five voices of the land at fixed places (two plain voices of the global ambient, held; the jungle's ambient effect 181, range 19; two one-shots of the global ambient, range 97) and whatever the session had playing: the lobby's one-shots on Windows, the music's voice under Proton | the voices, the handles, the category slots | the running park's voices, as any save |
+| `CHTS`, `ADSC`, the UI block | nought; no tag (`ADSC` 258 in the Halloween file) | no | constant |
+
+So nothing of the shipped park file but its legal text belongs in a fresh park's file, and every module is made from
+the running park, from the theme's data or from a constant. `CLOK`, `VANT` and `GSYS` are readings any save writes.
+**Not read:** the action recording's 135 bytes and the challenge manager's 67 non-zero bytes are measured, not named;
+whether a load reads the `TRAK` stamp, and whether nought in `GSYS`'s three distances changes anything after a load.
+**OpenTPW** writes nothing for such a park yet: `SAVE_PARK_WITH_NO_FILE` (Q783).
 
 ### OpenTPW's writer, the first stage
 
@@ -869,7 +921,7 @@ over the copy, never the one held.
   Park screen's OK and the console's `savepark <name>` are its callers (Q241j), with `Level.WriteParkOnLeaving`, which
   `Game` calls as a park is left ("Leaving a park: the autosave"; Q544), and Alt+S, `Level.QuickSaveKey` ("The
   quicksave and quickload keys"; Q545). **Deviations:** a park made
-  fresh, with no file behind it, is counted (`SAVE_PARK_WITH_NO_FILE`, Q249) and not written; with nobody playing,
+  fresh, with no file behind it, is counted (`SAVE_PARK_WITH_NO_FILE`, Q783) and not written; with nobody playing,
   which only the console's `park` reaches, nothing is written. A save that fails leaves the file already at its path
   as it was, where the original deletes it on all but three of its failures ("The save", step 3): a fill in the
   player's favour, so a failed save never costs them the old one. The bytes go to a file beside the path that then

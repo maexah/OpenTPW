@@ -363,7 +363,7 @@ Fresh Ghidra follow-up in the same private, identity-checked Q90 project resolve
 
 - `FUN_00599e70` clears eight occupied flags and all 351 histories: last-said tick 0, rotation −1,
   said flag 0, slap count 0. The implementation starts the door histories this way.
-- `FUN_005989c0` fills the clip-length array through indexed writes starting at `0x00f796c8`, then zeros
+- `Advisor_ResetState` fills the clip-length array through indexed writes starting at `0x00f796c8`, then zeros
   **clip 14 only** (`0x00f796fc`). `0x00f79700` holds **clip 15's duration**, despite being zero in the image.
   `FUN_00598b20` includes it in the gesture-chain sum, and `Advisor_SayResponse` adds it **again** at
   `0x005994ac`, plus 1,000 ms. The scheduler adds another 1,000 ms. The park speaker preserves both additions.
@@ -709,11 +709,11 @@ slot 0 alone.
 `Advisor_SayResponse` keeps the response's `+0x10` low half at `0x00f79674` (`0x00599100`) and starts the line's
 first clip on that slot's model (`FUN_00429e90( clip, slot )` at `0x005993d5`); every later read of the model is
 through `FUN_00429fe0( [0x00f79674] )`: the next clip (`0x005999fa`), the mouths (`0x00599b5a` on; the five
-mouths and the head are found by name for each slot by `FUN_005989c0`, at `0x00f796a0 + slot * 20` and
+mouths and the head are found by name for each slot by `Advisor_ResetState`, at `0x00f796a0 + slot * 20` and
 `0x00f79698 + slot * 4`), the props (`FUN_00598dc0`, `FUN_00598ca0`) and the kill (`Advisor_KillModel( slot )`).
 So a line's model is its response's, for the whole line, and the other is not drawn.
 
-**The clip lengths are the park's model's.** `FUN_005989c0` fills the twenty lengths at `0x00f796c8` once, from
+**The clip lengths are the park's model's.** `Advisor_ResetState` fills the twenty lengths at `0x00f796c8` once, from
 slot 1's model where there is one and slot 0's otherwise, and sets clip 14's to nought. The random chain
 (`FUN_00598b20`) picks every line's clips by that table, whichever slot the line is on. In Lost Kingdom it makes
 no difference to a line of clips 1 to 15: the two models' fifteen lengths are the same to the millisecond (1666,

@@ -5,6 +5,20 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q798 (ready for public builds; Alexah's review, all six points in one commit). Confirmed on the zip `release.py package`
+  made from a local linux-x64 publish of this tree (`q798/run1`, `q798/run2`, final binary): its apphost with no game found
+  exits 1, says where it looked and writes `console.log` in the data folder it was told (`XDG_DATA_HOME`; the folder did not
+  exist yet) with "(no game folder was found)" at its head, the paths cut to `~` (`logpii.py`: clean); a second such run
+  rotates it to `console-prev.log`; a log folder that cannot be written says so and still exits 1 (`run1/A1.out`, `A2.out`,
+  `A4.out`). `lib/zipsmoke.py` on the same zip with the game: guard, lobby, a lit frame (`run2/lobby.png`, the build label
+  `weekly-test-1` at the foot), a clean log, `save/` unchanged. Missed and recorded (`q798/PREDICTION.txt`): P1, four
+  "looked in" lines (three: the GamePath setting is the original's install path and said once). Not verified: the licence
+  texts were read from the packages and from the upstream projects at the commits Silk.NET 2.23.0's tag pins (shaderc
+  `8c2e602`, glslang, SPIRV-Tools, SPIRV-Cross, MoltenVK) and SDL's `release-2.32.10`, on the word that those are what
+  `Silk.NET.*.Native` and `Ultz.Native.SDL` were built from, which no package says; the Windows and macOS zips were
+  packaged and guarded here but not run (no Windows or Mac), and macOS's data folder is the README's word, not seen; the
+  icons and test image under `content/` are named the upstream project's by their metadata alone. The bugs put back:
+  21 of 21 fail a test (four survived the first run, a skipped test and a case that did not cross a slash; fixed, re-run).
 - Q781 (the pieces' clips; Q587's fourteenth piece). The close in both games this session on a Splish Splash on (20,20)
   looped south by the same clicks; the add-on in ours alone. The original (`q781/orig/O3`, off-screen, `q581/karts.TPWS`): no
   clip call from the arming through two runs (`O-brkA.log`); the closing click's 8 calls all at `0x0052a5de`, the mouth's walk

@@ -98,7 +98,7 @@ There is one speaker, driven from two states, and each scene feeds it a differen
 | `0x004a6580` | `FrontEnd_ShowPlayerSlots` | The only site that pushes the lobby greeting | Complete set of greeting pushes |
 | `0x004a61b0` | — | The delete tick; calls `FillPlayerSlots` and does **not** greet | Call path checked |
 | `0x004a62b0` | `FrontEnd_FillPlayerSlots` | Refills the slot gadgets without greeting | As above |
-| `FUN_005989c0` | — | Per-scene advisor reset | Scene setup |
+| `0x005989c0` | `Advisor_ResetState` | Per-scene advisor reset | Scene setup |
 | `FUN_00598ad0` | — | Per-scene advisor stop; models are freed and `Sound_SetSpeechDuck(0)` runs at the end of states 1 and 9 | Scene teardown |
 
 Lobby lines are pushed at front-end call sites, through the queue. Park lines bypass the queue entirely.

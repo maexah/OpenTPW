@@ -10859,6 +10859,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   (texts read from the nupkgs and the upstream projects), `REQUIRED` in `release.py`, `OpenWithoutGame` in `ConsoleLog`,
   `ThirdPartyNoticesTests`, `WeeklyReleaseTests` and `FailedStartLogTests`; confirmed on the Linux zip's apphost with and
   without a game (`q798/run1`, `run2`, STATUS).
+- [x] **Q249. A park that was never loaded from a file has nothing to carry: the decode.** From Q241e. The fresh world (a
+  Full Simulation park, or a player whose folder holds no park file) is made by `FreshPark`, so the writer's
+  carried modules have no source. Decoded what each module holds in a `restart.INTS` written at tick nought (`saves.md`, "A
+  park made fresh: its file at tick nought"; FileFormats `saves.md`, "A park made fresh"): seventeen Lost Kingdom files of the
+  original's, each module the same length but the sound's, the twelve things byte for byte the same over the eight clean
+  Proton runs but the weather's quality, the run-to-run bytes clocks, pointers, draws and leftover memory, and nothing of
+  the shipped park but its legal text needed. `Advisor_ResetState` named (`0x005989c0`). The original made one this
+  session (`q249/orig/r1`, `fresh-park.png`; P1 to P7 of `q249/PREDICTION.txt` held); OpenTPW's fresh park still counts
+  both its restart and a save, `2x SAVE_PARK_WITH_NO_FILE`, and writes nothing (`q249/ours/r2`, `1-fresh-park.png`, 4 of 4;
+  r1's O3 missed by its check, recorded). `parkfile.py -M` added. The build is Q783.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

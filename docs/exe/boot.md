@@ -291,7 +291,7 @@ Evidence is a Ghidra trace of `/testme.exe` throughout; the column names what in
 | 0x0051b660 | | Initialises sound; volumes come from the settings. | Decompile |
 | `DAT_00803a2c` | `cat_ui` | The UI sound category (see `lobby.md`); boot plays its effect 0xd2 (210), `BUTTON01` at volume nought. | Call argument; the sound map; a capture |
 | 0x00489ca0 | `UI_Init` | Hides the cursor, loads the UI meshes, sets up the UI, calls `Dialup::Initialise`. | "Loaded %d UI meshes" |
-| 0x005989c0 | | The per-scene advisor reset (`scenes.md`, "The advisor"). Last call of boot init, before the first state is chosen. | Call order; `scenes.md` |
+| 0x005989c0 | `Advisor_ResetState` | The per-scene advisor reset (`scenes.md`, "The advisor"). Last call of boot init, before the first state is chosen. | Call order; `scenes.md` |
 | `DAT_0087906c` | | The current state. | State machine |
 | `DAT_00879068` | | Gate: the state machine runs once this is set, at the end of boot init. | State machine |
 | 0x0054df20 | `Intro_PlayBullfrogMovie` | Plays `Data\Movies\bf.tgq`. | Filename string |

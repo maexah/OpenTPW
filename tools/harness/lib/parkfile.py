@@ -23,6 +23,7 @@
     parkfile.py -B <file>...     prints each file's boundary anchors against their pieces' records (show_boundary; Q620)
     parkfile.py -H <file>...     prints each file's model records' channel counts by item, the walker's reading, and each
                                  item's first record of more than one channel (show_channels; Q778, for Q779)
+    parkfile.py -M <file>...     prints each file's modules side by side: each one's length and the start of its md5 (Q249)
     parkfile.py -W <file>...     prints each file's weather thing: every field, its stamps as dates and ticks (show_weather; Q528)
 
     Park(path)        the inflated body, the world block's things, cells and sprites (q241h/pk.py: .b .things .cell
@@ -111,6 +112,9 @@
                       (FileFormats saves.md, "The coasters module"; Q593; `-K` prints it)
     channels(p)       the ride system module's records by item: {item: Counter(channels)} and {item: (offset, channels)} of
                       each item's first record of more than one, by rsys.walk's reading (Q778)
+    modules(p)        the body's modules in the file's order: [(name, start, end)], the action recording first, each tagged
+                      module up to its tag and the untagged interface block last (FileFormats saves.md, "Inside the stream";
+                      Q249); `parkfile.py -M <file>...` prints each module's length and the start of its md5, file beside file
     chunks, walk      the two walkers themselves (q257o/kart.py, q257o/rsys.py)
 
 The Park, chunks and walk code is not here: it is imported from pk.py, kart.py and rsys.py beside it. Importing this raises Python's recursion limit to 100000."""
@@ -854,8 +858,26 @@ def channels(p):
 def show_channels(p):
     by, first = channels(p)
     for item in sorted(by): print(f'  item {item:5}: ' + ', '.join(f'{n} of {ch} channel(s)' for ch, n in sorted(by[item].items())) + (f'; first of {first[item][1]} at {first[item][0]}' if item in first else ''))
+MODULES = ['WRLD', 'SPSC', 'PART', 'MESS', 'CLOK', 'VANT', 'GSYS', 'RSYS', 'TRAK', 'FLYR', 'RSSE', 'KAME', 'COAS', 'ADVS',
+           'SOUN', 'CHTS', 'ADSC']
+def modules(p):
+    """[(name, start, end)] of the inflated body: ACTREC (8 + its length), each tagged module up to its tag (stored
+    backwards, searched from the module's start), UI the rest (Q249)."""
+    b = p.b; at = 8 + p.u32(4); out = [('ACTREC', 0, at)]
+    for name in MODULES:
+        end = b.find(name[::-1].encode(), at); assert end >= 0, name
+        out.append((name, at, end)); at = end + 4
+    return out + [('UI', at, len(b))]
+def show_modules(paths):
+    import hashlib
+    rows = [(path, Park(path)) for path in paths]
+    print('module', *[os.path.basename(os.path.dirname(path)) + '/' + os.path.basename(path) for path, _ in rows], sep='\t')
+    tables = [modules(p) for _, p in rows]
+    for i, (name, _, _) in enumerate(tables[0]):
+        print(name, *[f'{e - s}:{hashlib.md5(p.b[s:e]).hexdigest()[:6]}' for (_, p), t in zip(rows, tables) for _, s, e in [t[i]]], sep='\t')
 if __name__ == '__main__':
-    flags = [a for a in sys.argv[1:] if a in ('-e', '-t', '-a', '-s', '-v', '-l', '-o', '-p', '-m', '-w', '-x', '-d', '-g', '-L', '-P', '-E', '-C', '-W', '-c', '-n', '-T', '-K', '-V', '-N', '-B', '-H')]
+    flags = [a for a in sys.argv[1:] if a in ('-e', '-t', '-a', '-s', '-v', '-l', '-o', '-p', '-m', '-w', '-x', '-d', '-g', '-L', '-P', '-E', '-C', '-W', '-c', '-n', '-T', '-K', '-V', '-N', '-B', '-H', '-M')]
+    if '-M' in flags: show_modules([a for a in sys.argv[1:] if a not in flags]); sys.exit()
     if '-c' in flags:
         rest = [a for a in sys.argv[1:] if a not in flags]; print(rest[0]); show_map(Park(rest[0]), *map(int, rest[1:5])); sys.exit()
     for path in [a for a in sys.argv[1:] if a not in flags]: print(path); (show_channels if '-H' in flags else show_boundary if '-B' in flags else show_voices if '-N' in flags else show_coverage if '-V' in flags else show_coasters if '-K' in flags else show_tickets if '-T' in flags else show_nomodify if '-n' in flags else show_weather if '-W' in flags else show_calendar if '-C' in flags else show_economy if '-E' in flags else show_pool if '-P' in flags else show_litter if '-L' in flags else show_inside if '-g' in flags else show_developed if '-d' in flags else show_sets if '-x' in flags else show_park_value if '-w' in flags else show_money if '-m' in flags else show_patrols if '-p' in flags else show_object_days if '-o' in flags else show_lab if '-l' in flags else show_emitters if '-e' in flags else show_tags if '-t' in flags else show_advisor if '-a' in flags else show_analyser if '-s' in flags else show_vehicles if '-v' in flags else show)(Park(path))
