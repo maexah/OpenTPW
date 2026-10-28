@@ -153,13 +153,19 @@ filed the items that cite it.
     loader's close chunk, type 6 (`0x00543928`, `saves.md`, "The close"): for BumperType -4 (this ride), after the handle check, it walks
     the buoy chain from `+0xa8` to the first buoy after the start buoy (flag 4) not flagged 2, wrapping, into `+0xa4`. Build that
     on load of a ride saved open; the writer never saves `+0xa4`.
-  - **Note (fork watch 2026-10-25, verify-all.md N2):** the loader sets header flag `0x80` at run time (`0x004625f4`) on a kart or water track piece, so
-    the model's height there is the landscape's under the point (mode 1, `park.md`), which is what a kart's height over the
-    track reads. Not proven: that the cars' sampler uses the draped copy.
+  - **Note (fork watch 2026-10-25, verify-all.md N2; corrected fork watch 2026-10-28, verify-world C1):** the loader sets header flag `0x80` at run time
+    (`0x004625f4`) on a kart or water track piece, so the model's height there is the landscape's under the point (mode 1, `park.md`) for a flat piece;
+    the hill pieces (`gk_trckH`, `_d`, `_u`, `wr_trckh`, `_d`, `_u`) carry a `0x7` lookup record and the instance flag `0x8`, which `0x450ea0` tests first
+    (`0x450eb1`, before `0x450ecf`): mode 2, draped faces (loader `0x44a870`, `0x44a9ed`). Not proven: that the cars' sampler uses the draped copy.
   - **Note (run 12 review, q766 finding 4):** a car's buoy (`+0x7c`) is a slot of the `DAT_00877b78` pool, read at `0x0054a4ed`,
     `0x00547991`, `0x0054a9a2` and `0x00542f22` (D-track.log's "car 4 ... buoy 18" is that slot, and the grid's "9 to 16 and 8" above
     are slots too). Ours' `Buoy` keeps no slot, and the original's one `+0xa8` chain is two lists in ours: the track rides'
     section buoys (`ParkTrackRideTable`) and the bumper rings (`ParkBumperCars.Ride.Buoys`). Build the pool's index with the race.
+  - **Note (fork watch 2026-10-28, verify-world W3):** the directed-edge face test a kart's height over the track uses is
+    `0x4514cf` (`0x4514c7`..`0x451536`): edges V2 -> V0, V1 -> V2, V0 -> V1, the value dz x px - (dz x Bx + dx x Bz) + dx x pz
+    with dz = Az - Bz, dx = Bx - Ax and p the third and fourth arguments, outside when it is below nought (nought is inside;
+    `fcomp [0x6fe3dc]`, `test ah,1`, `0x45152a`). `md2surf.py`'s `face_height` carries the same test; `ParkSceneHeight.cs`'s
+    counted `SCENE_HEIGHT_SURFACE_MESHES` is the site.
 - [ ] **Q589. Splish Splash runs for guests.** After Q588. The -5 record (one start buoy, unload point a third of the
   way to it, 512 arrival, 64 boats), `BUMP 7` straight to state 2, a boat carrying the whole boarding list straight to
   the race, one lap, removed at the unload point with the ride left at 2, and the boat's spin (`+0x58` moved at a rim or
@@ -168,10 +174,11 @@ filed the items that cite it.
   website's rides list.
   - **Note (fork watch 2026-10-21, verify-world-other L6):** as Q588's: BumperType -5 takes the same close-chunk arm
     (`0x00543928`, `saves.md`, "The close"), the race's first buoy into `+0xa4` for a ride loaded open.
-  - **Note (fork watch 2026-10-25, verify-all.md N2):** as Q588's: the water kit's pieces (`0x10422` at `0x00522cde`) carry the run-time flag `0x80`
-    (`0x004625f4`), the landscape's height under a boat (mode 1), and are draped per vertex (Q587's note).
+  - **Note (fork watch 2026-10-25, verify-all.md N2; corrected fork watch 2026-10-28, verify-world C1):** as Q588's: the water kit's pieces (`0x10422` at `0x00522cde`) carry the run-time flag `0x80`
+    (`0x004625f4`), the landscape's height under a boat (mode 1) for a flat piece, mode 2 for the hill pieces (`wr_trckh`, `_d`, `_u`: Q588's corrected note), and are draped per vertex (Q587's note).
   - **Note (run 12 review, q766 finding 4):** as Q588's: the boats' buoys are slots of the same `DAT_00877b78` pool (`0x0054a4ed`, `0x00547991`,
     `0x0054a9a2`, `0x00542f22`), which ours' `Buoy` does not keep.
+  - **Note (fork watch 2026-10-28, verify-world W3):** the edge test is Q588's note (`0x4514cf`).
 - [ ] **Q726. The karts' and the water ride's track add-ons and hills.** From the Q581 review (`park.md`, "The karts'
   and the water ride's track, buoys and race", "Not read" lists the add-on sections (types 12 and 13) and the hills
   (`gk_trckH*`)). Lost Kingdom ships three track add-ons in `jungle/upgrades`, each `UpgradeType 1`: `lavajump` 1500 and
@@ -183,6 +190,13 @@ filed the items that cite it.
   with `Unimplemented.Report`), and confirm one of each against the original.
   - **Note (fork watch 2026-10-25, verify-all.md H1):** the add-on and hill pieces come from the same kits (`0x522aa0`, `0x522c60`), so they are draped
     per vertex like the rest (Q587's note); build them so.
+  - **Note (fork watch 2026-10-28, verify-world C1 and W3):** the hill pieces (`gk_trckH`, `gk_trckH_d`, `gk_trckH_u`, `wr_trckh`,
+    `wr_trckh_d`, `wr_trckh_u`) take height mode 2, not mode 1: `0x450ea0` tests the instance block's flag `0x8` first
+    (`0x450eb1`) and only then the header's `0x80` (`0x450ecf`); the loader `0x44a870` sets `0x8` when any lookup record
+    (`[model+0x7c]`, 20 bytes each) carries `0x2` (`0x44a9ed`..`0x44a9f2`). `md2surf.py` on jungle: those six carry a `0x7` record
+    and `+0xa0` = 0.0; the flat pieces (`gk_trckB`, `B2`, `Q`, `S`, `v`, `X` 3.1; `wr_trckb`, `b2`, `s`, `s1`, `x`, `x2` 3.254)
+    are mode 1, `gk_trckH_a` 7.9 and `wr_trckh_a` 8.097 mode 1, `wr_trckQ` 0.0 with no record mode 1 by `0x80`. The edge test is
+    Q588's note (`0x4514cf`). The same finding is relayed to the session building Q587.
 - [ ] **Q592. The cheat table's twelve rows.** From Q591 (`park-engine.md`, "The cheat table"): each is counted on its key's
   release with Alt alone (`Level.CheatRows`: `CHEAT_RESEARCH`, `CHEAT_MONEY`, `CHEAT_LOCAL_TICKET`, `CHEAT_GLOBAL_TICKET`).
   Build them as the original's after Q720 settles whether the keypad's digits reach their rows and the cheat flag's
@@ -322,6 +336,13 @@ filed the items that cite it.
   scene sets the flag (it also gates a mirrored copy of the dome), write the draw to `docs/exe/`, then give a park the
   default set, 0.99, 0.84, 0.67, 0.51 over 0.49, 0.34, 0.17, 0.01. Confirm: a camcorder frame of Lost Kingdom's
   horizon before and after.
+  - **Note (fork watch 2026-10-28, verify-hz-world H3):** render word `[0x008bcbc8]` bit `0x2000000` (band coordinates
+    0.19/0.01/0.49 and the mirrored dome) is written only by `Lobby_Start`, the globe page's start (`0x005dd072`, cleared at
+    `0x005dd2e2`, `0x005dd762`, `0x005dda22`; no other writer of that bit to the global), so the island pages draw the DEFAULT
+    band set (0.34, 0.17, 0.01) as a park does, most likely: this item's "which is the lobby's" is the globe's only. A live read
+    of `[0x8bcbc8]` on Lost Kingdom's island page settles it. Also: in the lobby the rebuild `FUN_00585720` writes random greys
+    0x80..0xff into all four cloud colour tables after the load, so the lobby's three untinted layers are not the `sky_rgb`
+    gradient (`Sky.cs`), and the first layer's flood is the island colour at SKYQUALITY above 1.
 - [ ] **Q152. Every lightning bolt lasts 0.42 s.** Found by the 2026-09-26 staleness audit. `Lightning.Duration` is a
   constant, and neither `LobbyWeather` nor `ParkWeather.PlaceBolt` passes a lifetime to `Strike`. The original's bolt
   draw takes one (`FUN_00580320`, argument 7, in milliseconds): 500 in the lobby and `LightningTime` in a park, 2000
@@ -752,6 +773,15 @@ filed the items that cite it.
   pen inside its box, then make ours do the same (or say at the site why not). `hud.md` 3922 calls a one-pixel
   difference "possible and unmeasured"; here it is measured. Compare under Proton at 800 x 600 and 1024 x 768 with the
   text "v 2.0" (`VersionLabel` letters this build's name, so also read a longer text's pen).
+  - **Note (fork watch 2026-10-28, verify-ui-hud H3, verify-other O2):** two verifiers differ, both agree the quad's own rounding
+    is not the cause (the box 752.34 rounds to 752 by `fistp`, `0x58A15F`, `0x58A1C6`: the same as ours) and the plain skin's left
+    arm puts the pen at bitmap column 0 (`0x48F9A3`). (a) ui-hud: the clip-to-screen map `0x00582EB0` (scale `[+0x38]` = (W -
+    0.999) / 2, offset `[+0x28]` = (W - 0.999) / 2 + 0.24975; `ClipToScreen_Fpu` applies it, `0x5796D7`..`0x5796EA`) puts a UI
+    quad's left edge at p x (W - 0.999) / W + 0.24975 = 751.31 for p = 752 at W = 800, which a rasteriser with pixel centres at .5
+    lights at 751 (the measurement) and D3D's integer centres at 752; not traced: that the sprite batch reaches `ClipToScreen`,
+    and Proton's pixel-centre rule. Test: a label near the screen's LEFT edge should letter at p (or p + 1) where one at the right
+    letters at p - 1. (b) other: the offset lies inside the bitmap (`0x48F830`), not read. `hud.md`'s "truncates the drawn
+    position" is corrected: only the in-bitmap alignment truncates.
 - [ ] **Q755. Home and keypad 5 in the original's first person (and its ride view) reach the camera's reset; ours counts
   `CAMERA_RESET_FIRST_PERSON` and moves nothing.** From the Q690 review (finding 1; `park-engine.md`, "The camera's
   reset"). By the listing the update answers the reset bit in every mode (`0x0042b3fc`, `0x0042b40c`, `0x0042b46c`) and
@@ -1183,6 +1213,13 @@ filed the items that cite it.
     A4R4G4B4 alpha nibble would blank the letters, a rival to `textures.md`'s blame of Wine's GDI fonts for the original
     under Proton lettering no name on the jungle gate. No Proton frame of a byte-0-is-255 board's lettering was found to
     split the two; film one.
+  - **Note (fork watch 2026-10-28, verify-hz-world M5):** the sign lettering rasteriser is `FUN_005eab70` (callers `0x5ecc49`,
+    `0x5ecc64`): an 8-bit grey DIB of 2w x 2h (`biWidth = w << 1`, `biHeight = -2h`), the font from the record's LOGFONT
+    (`+0x14c`), Uniscribe `ScriptStringAnalyse` with per-character widths x `+0x144` / 100 truncating; when the text is 2w wide or
+    wider a binary search on `lfWidth` from (hi - 1) / 2 + 1 (hi = lfWidth, or -lfHeight when 0) until the bracket is under 3 and
+    it fits; white on black at x = 256 - width / 2 (a hard-coded `0x100`), y = `+0x148`; then each mask texel is the sum of its 2
+    x 2 samples >> 2 (truncating), then the first and last non-empty rows. Ours has the width percent and the `lfWidth` search;
+    new: the 2x supersample, the truncating 2 x 2 average, the centring and the search bounds.
 - [ ] **Q722. A park's name split over the sign's two lines at the space nearest the middle.** From the upstream look,
   2026-10-19 (`verify-images.md` L4). `SignTexture.SplitName` splits at the FIRST space; the original searches outward from
   the middle of the string for a space, alternating (`FUN_00467a80`; FileFormats `sgn.md`). Lost Kingdom reaches it: "Tom
@@ -1355,6 +1392,13 @@ filed the items that cite it.
   the global fog. Decode which lobby states fog and which do not, photograph the lobby in both games at the same
   camera, then give the lobby the original's linear start and end (first person's fog, Q485, is the same linear fog,
   `FirstPersonFog` and the shaders' `g_vLinearFog`, worked out per vertex in the original's clip z: share that path).
+  - **Note (fork watch 2026-10-28, verify-hz-other O1 (answers "which lobby states fog")):** all three island-camera classes fog
+    50 to 250 at their start (`FUN_005d96a0( 0xff44ddff, 50.0, 250.0 )` straight after `FUN_005d9680`, `0x005e1421` in the base
+    island camera `0x00702cb0`, `0x005e199a` in the derived island lobby `0x00702ec0`, `0x005e24bc` in the sibling `0x00702dd0`,
+    whose screen is lobby.md's open question); `Lobby_Start`, the globe page's state, turns the fog OFF (`FUN_005d9690`,
+    `0x005dd04c`); the lobby camera's init `FUN_005d8b50` leaves it off (50 / 300 with bit `0x2000` clear, saved and restored at
+    `0x005d8da8`..`0x005d8dca`). So wherever fog is on it runs 50 to 250; the fork's 300 exists only with the bit clear. The
+    remaining work is the photograph and the build.
 - [ ] **Q503. The build markers load from `textures` at every texture quality.** The original's `FUN_0053d790` calls
   `FUN_0054dcc0` (0x0053d7b4) and takes `STexture` (`0x00763ee4`) for the three dynamic meshes where it answers 1
   (texture quality 0 or 1), as `ParkSea` and `ParkFlags` already do through `ParkSea.SmallTextures`. `ParkBuildMarkers.Load`
@@ -1497,6 +1541,15 @@ filed the items that cite it.
   `0x00587380`), the `.ani` pointer, and the `.bf4` letters. Find whether each is a texture of the cache (cut to
   A4R4G4B4) or a blit to the display, then cut what the original cuts. Confirm by a frame pair of the help bar's letters
   and the pointer in both games.
+  - **Note (fork watch 2026-10-28, verify-ui-hud H1):** the letters are answered (`ui.md`, "The two-pass text class"): a text
+    control's bitmap is made in the texture cache's own format (`0x4925D0` copies the record `0x8BD558 + 32 x [0x8BD554]`, the
+    shipped game's A4R4G4B4; `0x588940` allocates it), and the letters pass through the blitter `0x6B21F0` (picked by `0x6B4AA0`
+    from the target's pixel format `[0x00FA76E8]`; its A8R8G8B8 twin is `0x6B24B0`): the coverage nibble is stored as the alpha
+    nibble (lossless: the glyph's coverage is already 4-bit), the glyph colour is cut to its top nibble a channel
+    (`0x6B2266`..`0x6B2289`), nothing is written at coverage 0, and no read of the target. So the letters are a texture of the
+    cache, cut to A4R4G4B4. The title class's grey copy is nibble 8 (0.533 x the control's colour, not 0.5) at alpha 17 x floor( c
+    x 128 / 255 ), and the string's texels replace the copy's wherever c > 0 where `UiText` composites Over: build both with this
+    item. The loading screen and the pointer are not answered here.
 - [ ] **Q518. The 16-bit display.** From Q700 (`q700/PREDICTION.txt`, P3, P9): with the textures cut, the sea at camera
   B still reads red 3.1 against the original's 1.3, and the shipped presets hold `RENDER32 0`, a 16-bit display
   (`boot.md`, `0x0044e20b`), where ours draws eight bits a channel. Decode first what the original's frame keeps at 16
@@ -1972,6 +2025,53 @@ filed the items that cite it.
   undisassembled code at `0x0048f090` that formats `L"Ver %d.%d"` (2, 0) (`boot.md`, "Which build this is"). Read where
   and how long it shows, in what font and colour, then build it with this build's name (`LaunchReport.BuildName`, as the
   lobby's `VersionLabel`), the deviation said at the site; confirm beside the original under Proton.
+- [ ] **Q769. The lobby is lit by the original's camera-following light and ambient, not a fixed sun and a flat 0.4 (decode done;
+  confirm beside the original).** From the fork watch 2026-10-28 (verify-hz-world H1 and C1, verify-hz-advisor A1; `ui.md`, "The
+  lobby's light"). The original lights the lobby's models by one directional light, `FUN_005d92e0` (list 7, the park sun's list,
+  colour byte x 1/255), and the ambient `FUN_005d9230`: on an island page ambient 0x444444 and light 0xeeeeee, on the globe page
+  0x202020 and white. Every pass `FUN_005d8de0` aims it from P = eye + right x 8 + up x 2 (globe: right -300, up +300) toward the
+  camera's target, flattened (y 0) and then y -0.3 on an island page, not flattened on the globe's. The advisor is not lit by it:
+  his draw carries `0x2000000`, which skips list 7 (`0x0057aa96`), so ours stands. Ours lights the lobby by `Level.SunLight` at a
+  fixed (500, -3500, 2800), said there to be a choice, and by the shader's flat 0.4 ambient (`content/shaders/test.shader`,
+  `g_flAmbient` 0), which was unmarked and now carries a deviation comment. Build the original's: the ambient colour and one
+  direction per page, lit per vertex as a park is (`park-engine.md`, "The lighting model"), the direction rebuilt each frame from
+  the lobby camera's eye, target, right and up. Do Q681's measure first, so the light is judged on the file's own normals. Confirm
+  beside the original under Proton: one island, the camera frozen (`X` or `freeze`) at two orbit angles, a lit face's colour
+  against the original's; predict it first (ambient 68/255 plus 0xee/255 x max( 0, -d.n ) before the texel), and put the bug back.
+- [ ] **Q770. The island lobby plays no global lobby sound 2 or 3; ours loops effect 3 as a bed.** From the fork watch
+  2026-10-28 (verify-hz-ui-hud M1, L2; `audio.md`, "The lobby was entirely non-positional"). Global lobby effects 2 and 3 are
+  started by `Lobby_Start` (`0x005dcfe0`, at `0x005dd0eb` and `0x005dd0fe`), which is the globe page's start; the globe's
+  deactivate (`0x005dd690`) stops both. The island lobby, the page that opens (`0x005d5bf1` -> `0x005e18d0`), never runs it; the
+  other uses of the global lobby category's handle `[0x00803a48]` are effect 4 (`0x004b90aa`, park entry) and effect 1 (thunder,
+  `0x005e1110`). Ours (`LobbyAudio.KeepGlobalPlaying`, `GlobalAmbientBed` 3) plays effect 3 as a bed from the lobby's opening,
+  which was unmarked and now carries a deviation comment; its own text already guessed effect 2 belonged to the globe. Build: take
+  the bed out of the island lobby (the original has none), and when Q62's globe page is built start effects 2 and 3 there at (0,
+  0, 0) and stop them at its deactivate; or, if Alexah wants the texture, keep it as a said deviation. Confirm: the island lobby's
+  mix by the disk driver for 60 s in the original holds none of effect 3's samples (predict silence of that bed), then ours the
+  same with the bug put back (`verifying-audio-by-capture`).
+- [ ] **Q771. A text control's bitmap is its box, and the original cuts the text at it; ours never cuts.** From the fork watch
+  2026-10-28 (verify-ui-hud H2, verify-other O2; `ui.md`, "The two-pass text class"). Every text control of the original makes its
+  bitmap once (guard `+0x44`) at its box's size: width (x1 - x0) x `[0xFAA5C4]` / 2048 toward nought (`0x48F47B`..`0x48F49E`,
+  `+0x3C`), height (y1 - y0) x `[0xFAA5C0]` / 1536 toward nought (`0x48F4A2`..`0x48F4C5`, `+0x3E`), allocated by slot `+0x28` =
+  `0x48F3D0` (`0x588940`, texels of the cache's format) in the plain class (vtables `0x6FF320`, `0x6FF500`) and the title class
+  (`0x6FF530`). The glyph blitter `0x6B4AA0` clips each glyph against that bitmap, so text past the box is cut: a line wider than
+  its box loses its end, a block taller than it its lower lines; right alignment's bound is the bitmap's width (`0x48F8BA`),
+  centre's half of it (`0x48F943`), left 0; the title class's grey copy, moved (-2, +2) inside the same bitmap, loses its two left
+  columns on a left-aligned string. Ours (`UiText.Build`) sizes its texture to the text plus its margin, so it never cuts: it
+  differs wherever a string is longer than its box (a longer build name in `VersionLabel`, a long player or park name, a
+  translated string). Count first over Lost Kingdom's screens which controls' text the original does cut (the box tree against the
+  strings' widths, `uitree.py`), then size `UiText`'s texture to the box by the same two divisions and clip at its edge, the grey
+  copy inside it. Confirm beside the original under Proton: one control whose string is wider than its box, predicting the last
+  visible column, and the bug put back.
+- [ ] **Q772. A toggle that is on shows its op 0x12 help row, and the new player dialog's chosen toggle then shows none.** From
+  the fork watch 2026-10-28 (verify-hz-ui-hud L3; static read, never seen on screen: no frame of the dialog exists). The button
+  class's help getter `0x00669410` answers `+0x94` (op 0x12) when its state byte `+0x138` is exactly 1 (on, not held) and `+0x90`
+  (op 0x11) otherwise (Q684's note has the chain). The new player dialog's tree `0x753f50` gives every control op 0x12 -1 and the
+  two mode toggles (`0x70d` Instant Action, `0x70e` Full Simulation, flags `0x11`) op 0x11 358 and 359, so the original's help bar
+  shows 358 or 359 over the toggle that is OFF (and while one is held down) and the empty text over the chosen one. Ours
+  (`NewPlayerDialog.cs`, `HelpText` 358 and 359 on both) shows the row on either, now marked at the site. Build: the help row of
+  the chosen toggle empty. Confirm: first shoot the original's dialog with the pointer on each toggle in each mode (the help bar's
+  text), predicting the chosen one empty; then ours the same, the bug put back.
 
 ## B. Docs and comments
 
@@ -2246,6 +2346,12 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
     (`0x004b6110`, callback `0x004b6320`, table `0x007572e8`): one edit of 32 characters, title UITEXT 195, first text the
     thing's current name, write through `0x00506830` (no length or empty test), refused while a box is open or with no
     selected thing of class 4..8; a box does not open a second time while one is open.
+  - **Note (fork watch 2026-10-28, verify-hz-world M4):** the lobby's island title (`FUN_005b12e0`, one caller `0x4b90f0`): when
+    `+0xb8` is clear `FUN_005b11c0` loads `data\levels\%s\global.sam` (`0x7733b4`) into `+0x1c`; the title is the item name
+    (`FUN_00412fb0`, id `0x414670`, item `+0x4f4`) of `[+0x1c]+0x18` (jungle `global.sam` line 16, `ParkName.GateObjectId 1601`;
+    that `+0x18` is that key is the fork's reading, not re-read); a load failure gives an empty string. Join: first line empty
+    gives the second alone; first ending in '-' drops it and joins with `"%s%s"` (`0x749850`); second empty gives the first alone;
+    else `"%s %s"` (`0x75c0c0`).
 - [ ] **Q29. Parity with the original's hardware renderer.** `render-states.md`, "Texture addressing", counts the
   MIN/MAG/MIPFILTER and LOD-bias sites but does not decode their values; no shade-mode row exists; ZFUNC
   is LESSEQUAL there and Less here. The renderer lights per pixel with 16x anisotropic filtering and
@@ -2319,6 +2425,13 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   - **Note (fork watch 2026-10-18, `verify-other-a.md` M3):** the pool's tie keeps the **newer** voice: `0x006b6a80` links a new voice at the
     list head, so the rebuild (`0x006b6bc0`, strictly greater than the lowest rank) sees the newest first. This corrects
     "the earlier voice keeping a tie" above (`audio.md`, "The fade, the SoundInfo settings and the reverb").
+  - **Note (fork watch 2026-10-28, verify-hz-audio-fx A1):** N follows the sound-detail ladder `FUN_0051b810( q )` (from
+    `FUN_0051b920`, at boot `0x0054de22` with DEFAULTQUALITY or half of it, and from the options `0x00423850`): sound.sam's
+    `ChannelInfo[3]` { CHANNELS, SWITCH } = { 5, 0 }, { 12, 50 }, { 13, 70 } (globals `0x00785938`..`0x0078594c`; CHANNELS[2] has
+    no reader). q above 70: (q - 50) x (M - 12) / 50 + 12 with M the device's capability (message `0x00700b40`); q in 51..70: 12;
+    else (q - 0) x (12 - 5) / 50 + 5. N is posted (`0x00700b3c` -> `FUN_006b84f0`, `+0x1c`) and the pool is min( N, 30 )
+    (`FUN_006b6140`, `0x006b6145`; no lower clamp). The default q 50 gives 12; a boot at graphics detail 0 (q 25) gives 8. Ours
+    (`Audio.cs` `MaxVoices` = 32, drop the quietest non-loop) has no counterpart.
 - [ ] **Q51. Rest-area occupancy is unbuilt at both ends.** Found by Q36's decode. Arriving to rest
   (`FUN_00505fe0`) adds one to the rest area's script variable 0 (`VAR_STAFFIN` in every staff room) and sends
   message 15 to the resting-staff list (UI control `0x1e7b`); leaving (`FUN_00506d10`, from the normal end of a rest
@@ -2378,10 +2491,27 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
     what is left of the note is this fade.
 - [ ] **Q62. What View the online world does offline. Decode first.** Found by Q41's decode. `IslandPanel_Callback`'s
   case for button `0x1e0e9` (`0x004b8c18`-`0x004b8c2f`) calls the island camera's `+0x20`, its deactivate
-  (`0x005e1bd0`, which Ghidra names `IslandLobby_ViewOnlineWorld`), and then the online-world child's `+0x1c`, with no
-  online test read yet; `IslandPanel.ViewOnlineWorld` does nothing, saying the original does nothing offline. Decode
-  whether a test sits in front, and what the online child shows with no connection. Confirm: the button pressed,
-  `windows` and a screenshot.
+  (`0x005e1bd0`, which Ghidra names `IslandLobby_ViewOnlineWorld`), and then the online-world child's `+0x1c`, which is
+  `0x005dd650`, the globe page's activate, with no connection test in front (fork watch 2026-10-28, note below);
+  `IslandPanel.ViewOnlineWorld` does nothing, saying the original does nothing offline, and the original does open the
+  globe page. Still to read: what that page shows with no connection (its city-list request `FUN_005b6070` is undecoded).
+  Confirm: the button pressed, `windows` and a screenshot.
+  - **Note (fork watch 2026-10-28, verify-hz-ui-hud L2/M2, verify-hz-advisor A3):** the island panel's View case
+    (`IslandPanel_Callback` `0x004b8b70`, message 0x100, jump table `0x4b8c7c`/`0x4b8c90`: `0x1e0e9` -> `0x4b8c18`) calls
+    `[[0xf85614]+4]` vtable `+0x20` (`0x005e1bd0`) then `[[0xf85614]+0xc]` vtable `+0x1c`, nothing in front. `[0xf85614]` (built
+    by `0x005e3c20` / `0x005e3dc0`): `+4` the island camera (vtable `0x702ec0`), `+8` (`0x702dd0`), `+0xc` the globe child
+    (`0x702e70`, size `0x7c`), `+0x10` a second globe child (`0x702e20`), `+0x14` the advisor queue object. The `+0xc` activate
+    `0x005dd650`: if not active (`+0x24`), `FUN_004c4fb0( 0 )` (tree `0x7596b0`: enables 0x16007, label skins 0x16008..0x1600c,
+    font 6, `Button_SetRepeatDelays( 0, 10 )` on 0x16001, 0x16002, 0x16004, 0x16005, callback `FUN_004c56e0`), `FUN_004b9a70()`
+    (tree `0x7581a0`, the hover readout), `Lobby_Start` `0x005dcfe0`, then `0x005d6060` on `[0xf85614]+0x14`; the trees are
+    created here, not at lobby start. `Lobby_Start` is the globe scene's start: FOV 60, ambient 0x202020, a white directional
+    light, `[0x008bcbc8] |= 0x2000000`, model `data\lobby\globe`, global lobby effects 2 and 3 (Q770), the online object
+    `[0x00f7d88c]` made if absent (`FUN_005b50b0`), `FUN_005b6070()` and `FUN_005bc7d0( 0x5dcfc0, this )`, and the fog off
+    (`0x005dd04c`, Q502). The return, the panel callback `0x004c53f0` case `0x004c5568`: globe `+0x20`, island `+0x1c`, then
+    `0x005d6110( 0x258, 1 )` on `[0xf85614]+0x14` (`0x004c5589`): advisor response 600 queued; the globe's deactivate `0x005dd690`
+    stops both voices and clears `0x2000000`. The lobby opens on the globe only when `[0x00f8288c]` is set (`0x005d5b8b`; written
+    1 by the menu item 0x13 path `0x0048b9f9`) or `[[0x00f7d88c]+0x108]` is (`0x005d5b81`), else on the island (`0x005d5bf1`).
+    Unproven: what the city-list request does offline; whether button `0x1e0e9` is ever disabled (no code names it by id).
 - [ ] **Q63. Does the engine's idle default play a lobby gate by itself? Decode first.** Found by Q41's decode. The
   lobby loop's `FUN_0044e410( 3 )` calls `FUN_00473c70( model, 0, 8 )` on every model with `[+0x14] != 0` and
   `!(+4 & 0x3000)`, and that replays role M entry 0 whenever channel 0 has finished, unless `(model+4 & 0x8004) != 0`.
@@ -2498,6 +2628,14 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   table (`lib/normdump`, `lib/normcmp.py`), and count over all 2,129 `.md2` whether every mesh's table covers its vertex
   order (Q657 counted the five advisors alone: FileFormats `models.md`, "Normals"). Then light them by it; confirm a
   park thing's shading beside the original's.
+  - **Note (fork watch 2026-10-28, verify-hz-data D1, verify-hz-world H2):** the `+0x64` table is two runs: measured over all
+    2,129 `.md2` (847 static models, 4,923 meshes), in 4,707 of the 4,918 meshes with a table it is exactly 12 x (
+    vertexOrderLength + faceCount ) bytes (the other 211 have a longer gap, none shorter; 5 have none), one normal per
+    vertex-order entry (what `FUN_00574660` lights by) then one per face; every face's first word (low 15 bits) is below
+    vertexOrderLength + faceCount in all 4,918 (FileFormats `models.md`, "Normals"). Mesh flag `0x1000000` makes
+    `Light_ModelSetup` (`0x0057aa30`, `0x0057aa66`) skip the relight and `DrawList_AddMesh` (`0x00581d56`) read mesh `+0x64` as
+    the draw's colour stream; it is set at run time only (`FUN_00469580`, the hover tint `FUN_00469180`), 0 of 4,923 meshes and
+    2,606 transform records carry it. A mesh with it must not be lit by normals. The lobby's light is Q769.
 - [ ] **Q683. Start a bought thing's create effect (Q663's build).** The script loader starts the item's
   `Info.CreateParticleEffect` (`ItemDescriptionFile.CreateParticleEffect`) once as a bought or moved thing's script is made (a move's put-down
   rebuilds the object through the same constructor: `0x00525417`, `FUN_00528a70`, `FUN_004db090`; `park-engine.md`), never
@@ -2518,6 +2656,14 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   worked out here (its days are, `ParkObjectRings.Satisfaction`): read it, or count `MAP_SATISFACTION` where the metric
   is 3. Replace `MAP_OVERLAY` by what stays unbuilt. Confirm: `q664/orig/run.sh`'s fourteen steps in both games, each
   step's census against `original/mapgrid.py`'s and the picture's diff against `q664/orig/a-*.png` (`original/diffcells.py`).
+  - **Note (fork watch 2026-10-28, verify-hz-ui-hud L3):** the rule for a toggle's help lives in the button class, not per screen:
+    the base control's vtable slot `+0x2c` returns `+0x90` (op 0x11, `0x0065bc70`), and the button class overrides it
+    (`0x00669410`) with `byte [+0x138] == 1 ? [+0x94] : [+0x90]`; `+0x94` (op 0x12) defaults to -1 and is written by `0x00661850`.
+    `+0x138` is the state byte (press `0x10005` ORs 2, the release `0x10004` of a toggle, flags `0x11`, flips bit 1 and re-asks
+    the help, `0x00669172`, the radio group sets 1 on its pick `0x0066a468`), so a toggle that is on (state exactly 1) shows its
+    op 0x12 row and one held down (3) its op 0x11 row; a row of -1 posts the empty text (`HelpBar_PostControlRow` `0x00492070`).
+    The map's six switches carry two rows each (`hud.md`); `hud.md`'s staff switch (`b_route`, second help 87) was measured NOT shown (`q431/confirm.py`): reconcile that run with this static reading (state byte exactly 1 while on). The new
+    player dialog's own case is Q772.
 - [ ] **Q685. The map's hover and its click (Q665's build).** From Q665 (`hud.md`, "The map's hover and click"); needs
   Q684's records and code grid. On each pointer move over the map keep the nearest shown record within 5 game pixels
   (in x and in y, then by distance, the first of equals) and the cell's thing id; repaint the picture when a member is
@@ -2568,6 +2714,15 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   (`FUN_0044dc60`, `lobby.md`'s `0x007858c8` row); `0x00423bc0` (`OptionsScreen`'s restart note) only reads a new
   quality's file into a local to compare it and flag a restart. Decode what it does with each key - the lobby plan's item 11 names three: the `stexture` set,
   `SKYQUALITY` and the particle low-detail byte - then build low / medium / high.
+  - **Note (fork watch 2026-10-28, verify-hz-world H3, M1, M2; verify-hz-other O3):** SKYQUALITY: `DetailFile_Apply`
+    (`0x0044d9f0`..`0x0044da17`) copies it to the sky's `+0x2ec8` for 0, 1, 2 and 4 only (3 is not stored: the object default
+    stays, 4 unless the renderer `[0x8bd524]` is 4, `FUN_00584ef0`); `FUN_005863c0` returns at once for 0 (neither clouds nor
+    band), else the layer count is that value (1 when render word `0x8`); shipped low 1, medium 2, high 4; the layers' alphas are
+    0xcf, 0x97, 0x5f, 0x27. LOBBYOBJECTS (`GameOptions`, `[0x7858dc]`): the lobby flock's constructor `FUN_005d9db0` (`0x5d9e22`)
+    sets its quota `+8` = count x LOBBYOBJECTS / 100 (signed, truncating), clamped to 1..count; ours reads none (`LobbyFlyer.cs`
+    spawns `mesh.Count`). The flock's update `FUN_005da020` makes one actor per frame while live `+0xc` is below the quota,
+    stepping the lobby generator `[0xf82884]+0x34` (`x*0x19660d + 0x3c6ef35f`, stored rotated right 13) and stopping when the
+    rotated value `& 7 == 1` (and not drawing for the last actor).
 - [ ] **Q33. UI scale.** The UI has one fixed virtual size (`VirtualScreen`, 2048 by 1536). Add Auto / small / medium
   / large in the dead Video Card row (`OptionsScreen.cs:71-72`).
 - [ ] **Q34b. Pictures for the README.** Animated pictures need a capture tool; none exists in the repo.
@@ -2670,6 +2825,17 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
     `node+0`, and whether deleting a node renumbers the rest. No park file on hand holds a crossing (the two with a coaster have
     counts 0), and the offer gate refuses a self-crossing coaster, so Lost Kingdom meets none. FileFormats `saves.md`, "The coasters
     module", has it.
+  - **Note (fork watch 2026-10-28, verify-world W2):** `SetTrainSoundState` `0x439780`: `0x4392a0` stores EventMap slots 5..8 at
+    train `+0x54`, `+0x58`, `+0x5c`, `+0x60` (`0x4392c4`..`0x4392ff`), plays slot 0 into `+0x64` (`0x43932f`) and slot 1 into
+    `+0x68` (`0x439363`) and, when its third argument is nought, calls `0x439780( train, 2, 100 )` (`0x439376`). `0x439780` maps a
+    new state 1, 2, 4, 8, 0x10 to 15, 30, 70, 90, 50 and sets parameter id `[+0x5c]` (slot 7) on the voice `+0x68` to it; every
+    call then sets parameter id `[+0x60]` (slot 8) on `+0x68` to its third argument; it plays nothing, and is skipped while
+    `[0x785a2c]` is set. Its one per-frame caller `0x43d7d8` (in `0x43ce20`): train `[+0] & 0x10` gives state 8 with ( `fistp(
+    [ebp-0x38] )` + 1 ) x 50; else no counted cars or `[coaster+0x2c] == 0.0` gives state 0x10 with 100; else `[train+0x78] /
+    [coaster+0x34]` above 0.3 (`[0x6fe078]`) gives state 4, at or below state 2, each with count x 100 / `[[train+4]+4]`; state 1
+    is never passed. The saver writes `+0x38`, `+0x64`, `+0x68` (`0x43780a`..`0x437821`) and the loader puts them back raw
+    (`0x4383fe`..`0x438412`). `coaster1`'s EventMap slot 7 = `VAR_PAR2` 19, slot 8 = `VAR_PAR3` 0 (`coaster3`, `minecart`: 19 and
+    22). Not read: what `[ebp-0x38]`, `[+0x78]`, `[+0x34]` and `[+0x2c]` are; slots 5 and 6.
 - [ ] **Q406. Coaster building: the track tool.** From the fork review 2, 2026-10-16 (`verify-coasters-build.md`
   L1-L11). A piece costs `fCostPerHeight` × H × 0.1 + `fCostPer2DLength` × length × 0.1, plus `fCostPerUnit` only on
   placing a pylon (`0x00447830`, `0x00435020`; the cursor's preview `0x00435d50`); placing takes trunc( cost ), a
@@ -2844,6 +3010,10 @@ state machine.
   `Water` entity (`Level`) that `Sky` seals the horizon against. The item is re-sourcing it from `base.md2` through the
   park terrain loader - but `Sky`'s own note says the original's lobby has no sea below its islands, which contradicts
   the premise. Settle whether the original draws `base.md2`'s sea before building anything.
+  - **Note (fork watch 2026-10-28, verify-hz-world M3):** the lobby's scene constructor calls the park terrain loader
+    `FUN_004504c0( 1, 0 )` at `0x5d8503` after naming the "lobby" folder (`0x5d84c7`, `0xf816c0`), which loads `%s\Terrain`
+    `base.md2` (`0x450523`) into `[0x79fcb4]`, the terrain base model a park uses: the original's lobby loads it as its land
+    model. Not read: whether its sea meshes are drawn each frame.
 - [ ] **Q79. Robustness (plan item 12, the rest).** Atomic save writes exist (`BaseFileSystem.WriteAllBytes`) and
   input is dropped while unfocused (Q42). Open: top-level error containment (nothing in `Program.Main` or `Game.Run` catches a failure of the load or the run loop),
   and easing the render rate and music while the window is unfocused.
@@ -2954,6 +3124,14 @@ state machine.
     `0x00590a80`; park-engine.md, "The blended floor's texture clamps"), so `ProceduralFloorTests.EveryBlendedFloorFrameLiesInsideOneOrWraps`
     rests on a wrap the original does not do. Not counted: how many of the 36 frames have a face whose shifted UVs span more than 1.
     Count them with this item; a floor whose face does is drawn wrapped here and clamped there.
+  - **Note (fork watch 2026-10-28, verify-world W1/C2 (unsettled, as 10-27)):** nothing in the executable settles the control word
+    the conform runs under: twelve thread starts, none runs the park tick; every `fldcw` in game code is `0x591233`, `0x591243`,
+    `0x59125c`, `0x439ac8`/`0x439c30` (the coaster crossing pass's chop), `0x62f9c3`, `__ftol` and the CRT. New: the executable
+    asks for DirectX 6 interfaces only (`IID_IDirectDraw2`/`4` at `0x7071f0`/`0x707200`, `IID_IDirect3D2`/`3` at
+    `0x707510`/`0x707520`, `IID_IDirect3DHALDevice` `0x707550`; no `IDirect3D7`), so the fork's "D3DIM CreateDevice" is
+    `IDirect3D3::CreateDevice`. What the DX6 runtime does to the word under `DDSCL_FPUSETUP` (the fork's `0x7F`) is not in the
+    executable; our `0x27f` is a measurement under Proton. It settles only by a reading on real Windows at `FUN_0042b1c0`'s entry
+    (`park-engine.md`, the peeps' single-precision paragraph, which ends with logging the word at `FUN_0042b1c0`'s entry; Q222 item 7).
 - [ ] **Q696. The lobby's rain count follows the camera's distance to the rainy islands.** From the fork watch 2026-10-25 (verify-forks.md
   section 1; low priority: the lobby, not Lost Kingdom's park). In `FUN_005e0470` (`0x005e0e29` to `0x005e0f18`) the original works
   the drop count out every frame: over every island whose RAINY (`+0x60`) is not zero (RAINY is a flag; its value is never
@@ -2964,6 +3142,15 @@ state machine.
   still follows the current island (`0x005e0f28`). Ours is a flat 900 drops (`Rain.DropsPerLevel`) whenever Halloween is current,
   said at `LobbyWeather`. Build the original's count; confirm in the running lobby (the live drop count at one camera against
   the number predicted from the camera's distance), and in the original if it can be read. Pairs with Q715 and Q152.
+  - **Note (fork watch 2026-10-28, verify-hz-audio-fx A3):** the lobby's bolt (all from `FUN_005e0470`'s weather tail,
+    `0x005e0f1d`..`0x005e11b2`): the sky point is (cx + U x 100 - 50, 500, cz + U x 100 - 50) with U = (r & 0x3fffffff) x 2^-30
+    (`0x00702c58`, 100 `0x00702c94`, 50 `0x00702c98`) and the island's `+0x3c` centre, the ground point (sky.x + U x 20 - 10, 0,
+    sky.z + U x 20 - 10) (`0x00702c8c`, `0x00702ca0`), then `FUN_00580320( ground, sky, 500 ms, 1 )`, the flash `0x0057dc70` and
+    thunder `FUN_0051bfc0( 0, [0x00803a48], 1, 0, 0, 0 )`. A seeded bolt's stroke brightness (`0x0057eed1`..`0x0057ef61`): phase =
+    (lifeLeft % 500) x 0.002; phase below 0.9: b = 255 - (int)( (0.9 - phase) x 1.11 x 64 ); phase 0.9 or over (a bolt's first 50
+    ms): b = 192 + (int)( (1 - phase) x 640 ); then b += `rand() & 63`; the colour is 0xFF000000 | b << 16 | b << 8 | b with no
+    mask (b reaches 318 and spills into the next channel); an unseeded bolt is white. The drop cube and the stroke jitter use the
+    C runtime's `rand()` (`0x0067b5c0`); the strike, ambient and pick draws use the scene's generator `[[0xf82884]+0x34]`.
 - [ ] **Q697. A language selector.** Alexah, 2026-10-25, from PawelWielga/OpenTPW's `polish-support`, which cannot be merged: its
   tree deletes 806 of our files. Our code hard-codes `Language/English` in about a dozen places (`grep -rn 'Language/English'
   source`: `Localization`, `BitmapFont`, `BFSTReader.EnglishCharacterTable`, the park windows' tables, `ParkObjectNames`,

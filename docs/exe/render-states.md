@@ -42,7 +42,7 @@ which code reads them is not traced (Q194, from the bytes). DirectDraw's two cal
 | `0x1000` / `0x2000` | Not render states: together the `0x3000` "exempt from sorting" mask | `FUN_00565590` tests the mask |
 | `0x80000` | `SPECULARENABLE` | `FUN_00567620` |
 | `0x100000` | `FOGENABLE` | `FUN_00567620`. Cleared on a batch the game fogs itself; the park's own view asks for no fog at all (`park-engine.md`, "The park view's colours") |
-| `0x800000` | Overrides the per-batch depth key `+0x30` after the depth sum is added: 0.0 for a record whose kind nibble (`[+0] & 0xf`) is 2, else the added vertex count x `[0x008bcc14]` + 0.01; set from the texture slot's flag `0x2` (`0x005817e4`) | `0x0058109e` (`DrawList_AddMaterialFaces`; fork watch 2026-10-26, `verify-all.md` M1) |
+| `0x800000` | Overrides the per-batch depth key `+0x30` after the depth sum is added: 0.0 for a record whose kind nibble (`[+0] & 0xf`) is 2, else the added vertex count x `[0x008bcc14]` + 0.01; set from bit `0x2` of the material record's word `+0xc` (`0x005817de`, `or esi, 0x800000` at `0x005817e4`; the record is mesh `+0x6c` + 16 x index, `DrawList_Flush` `0x00581e0f`): every material word in the game is 0 or 1 (12,960 materials of the 2,129 `.md2`, 929 with bit 0x1), so no shipped model sets it and the arm is dead by CONTENT | `0x0058109e` (`DrawList_AddMaterialFaces`; fork watch 2026-10-26, `verify-all.md` M1; corrected fork watch 2026-10-28, verify-other C5) |
 
 ## States set once for the whole run
 

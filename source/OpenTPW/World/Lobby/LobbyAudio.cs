@@ -7,9 +7,11 @@ namespace OpenTPW;
 /// The original's lobby plays sound in five places and nowhere else, all of them found in its
 /// decompile:
 ///
-///   - <b>lobby start</b> (FUN_005dcfe0), right after it loads data\lobby\globe, starts two
-///     continuous voices from the global lobby sfx category - effects 2 and 3. Only effect 3 is
-///     played here; see <see cref="KeepGlobalPlaying"/> for why effect 2 is not.
+///   - <b>the globe page's start</b> (FUN_005dcfe0), right after it loads data\lobby\globe, starts
+///     two continuous voices from the global lobby sfx category - effects 2 and 3 - and the globe's
+///     deactivate stops them. The island lobby, the page that opens, never runs it and plays
+///     neither; effect 3 is played here as a bed anyway, a deviation (Q770), and effect 2 is not.
+///     See <see cref="KeepGlobalPlaying"/>.
 ///   - <b>selecting an island</b> (FUN_005e14a0, and the same three lines again in the next- and
 ///     previous-island handlers) stops whatever the last island had going and starts two more:
 ///     effect 1 of that park's local lobby <i>music</i> category, and effect 2 of its local lobby
@@ -351,8 +353,9 @@ public sealed class LobbyAudio : Entity
 	/// <summary>
 	/// Keeps the lobby's global ambience going.
 	///
-	/// The original starts <i>two</i> voices here, as the lobby opens, and never touches them
-	/// again - effects 2 and 3 of the global lobby sfx category. This plays only effect 3.
+	/// The original starts <i>two</i> voices from the globe page's start, and its deactivate stops
+	/// them - effects 2 and 3 of the global lobby sfx category - and the island lobby plays neither.
+	/// This plays effect 3 from the lobby's opening, a deviation (Q770).
 	///
 	/// Effect 2 is left out deliberately. Its two samples are level4c and level4w from the global
 	/// music bank, and level4c is the same recording as one of Space Zone's three lobby themes -
@@ -373,6 +376,7 @@ public sealed class LobbyAudio : Entity
 		if ( _global is not { IsValid: true } )
 			return;
 
+		// Deviation, Q770: the original's island lobby plays no global bed.
 		if ( _globalBed is not { Playing: true } )
 			_globalBed = _global.Play( GlobalAmbientBed, GlobalBedVolume, fadeInSeconds: CrossfadeSeconds );
 	}

@@ -549,7 +549,7 @@ picture whose half-tangent is `tan(a/2) / 2` top to bottom and `tan(a/2) / 1.5` 
 | The park camera's reset `FUN_0042a990` (pi/2 x 180/pi, `0x0042aa2f`) | 90 | **53.13 x 67.38** |
 | `Window_Create` `0x0044e277`, `Game_StateMachine` `0x0054e874` (`0x42b40000`) | 90 | 53.13 x 67.38 |
 | The lobby's render camera (the global `[0x00f83778]` points at it; vtable `0x00702a90`, slot 2 `0x005d8cb0`), its `+4` | 115 at `FUN_005d8b50`, then `ISLANDFOV` | 100: **61.58 x 76.93** (`lobby.md`, "The lens") |
-| `Lobby_Start` `0x005dcfe0`, the same `+4` (60.0, `0x42700000`, at `0x005dd034`) | 60 | by the law 32.2 top to bottom; not measured |
+| `Lobby_Start` `0x005dcfe0` (the globe page's camera), the same `+4` (60.0, `0x42700000`, at `0x005dd034`) | 60 | by the law 32.2 top to bottom; not measured |
 
 Nothing in a park calls the builder after the reset but `FUN_00578ca0`, so the camcorder's first person draws with
 the orbit camera's lens. **Measured** (Q260, `original/lens.py`): the lobby's angle 100.000 (its camera's `+4` the
@@ -638,25 +638,25 @@ so `mTileData` is one named field per tile. **It is three dwords - tile set, til
 |---|---|
 | `FUN_005852b0(this, path)` | Loads `<path>\sky\sky.tga`, `sky_rgb.tga` and `sky_cyl.tga` |
 | `FUN_00585690(x, h, z)` | A three-field setter — writes x, height and z to `+0x1f64`/`+0x1f68`/`+0x1f6c` and calls the rebuild. It does **not** load `levels/fantasy` and does not itself set height 180 |
-| `FUN_00585720(this)` | The rebuild: a 16x16 drooped grid plus a 16-column skirt |
-| `FUN_00585ce0(this)` | Samples `sky_rgb` on a 16x16 grid into the dome's vertex colours |
+| `FUN_00585720(this)` | The rebuild: a 16x16 drooped grid plus a 16-column skirt, and for each of the 16x16 vertices a random grey `c = (rand() & 0x7f) x 0x10101 \| 0xff808080` (the CRT `rand`, `0x0067b5c0`) written to all four colour tables (`+0xf60`, `+0x1360`, `+0x1760`, `+0x1b60`) (fork watch 2026-10-28, verify-hz-world H3) |
+| `FUN_00585ce0(this)` | Samples `sky_rgb` on a 16x16 grid into the same four colour tables: at surface format 2 each channel `n<<4\|8`, alpha 0xff, at format 3 copied, at formats 0 and 1 nothing; called only by the loader `FUN_005852b0` (`0x005854de`) |
 | `FUN_00584ef0(this)` | The object's init — centre (0,0), height 300 (`0x43960000`), extent `0x960` |
-| `FUN_005856c0(this)` | Puts centre and height back to those defaults |
-| `FUN_00572780` | Engine init; the step printing `" (tload/rain/sky ok)"`, and the only caller of the rebuild besides the setter |
+| `FUN_005856c0(this)` | Puts centre and height back to those defaults, then tail-jumps to the rebuild (`0x005856d8`; the lobby's teardown calls it, `0x005d8dcf`) |
+| `FUN_00572780` | Engine init; the step printing `" (tload/rain/sky ok)"` (it calls the rebuild at `0x005729b5`; the rebuild's other callers are the setter and `FUN_005856c0`'s tail jump) |
 
 **The texture loader has two callers**: the lobby's `FUN_005d8b50` at `0x005d8bac`, which passes `Data\Levels\fantasy` and then centres at (0, **180**, 0); and a park's level load `FUN_00407f20` at `0x00407f95`, reached from state 9 through `FUN_00407e00` at `0x0054ed3f` (which also loads `\Scape.omp`). **So a park does load its own sky art.**
 
 Every theme ships `sky/` with those three files and an `ssky/` low-detail set beside it (4,140 bytes against 262,188 — that belongs to SKYQUALITY, not here). Hallow and space also ship `moon.tga`/`moon2.tga`: those are the global `Standard.sam`'s `SkyObjects[n].Filename` entries, and jungle and fantasy ship none.
 
-**Nothing re-centres the sky for a park.** The setter's only caller is the lobby, and the rebuild's only other caller is engine init. A park's sky therefore sits at the object default: **centre (0,0), height 300**.
+**Nothing re-centres the sky for a park.** The setter's only caller is the lobby, and the rebuild's other callers are engine init and `FUN_005856c0`'s tail jump (`0x005856d8`, the lobby's teardown `0x005d8dcf`; fork watch 2026-10-28, verify-hz-world H3). A park's sky therefore sits at the object default: **centre (0,0), height 300**.
 
-**A park's sky colour comes from its own art, not from a key.** `SKYCOLOUR(r,g,b)` is parsed only by the lobby's island-script reader `FUN_005e3210` — which also handles `LIGHTNING(n)` and `RAINY(n)`, storing them into the island object (`FUN_005dfa60`) at `+0x64`/`+0x68`/`+0x6c` as `value << 16`, `+0x5c` and `+0x60`. **No theme balance file carries a sky colour key at all** (checked in all four). The colour is `sky_rgb.tga`.
+**A park's sky colour comes from its own art, not from a key.** `SKYCOLOUR(r,g,b)` is parsed only by the lobby's island-script reader `FUN_005e3210` — which also handles `LIGHTNING(n)` and `RAINY(n)`, storing them into the island object (`FUN_005dfa60`) at `+0x64`/`+0x68`/`+0x6c` as `value << 16`, `+0x5c` and `+0x60`. **No theme balance file carries a sky colour key at all** (checked in all four). The colour is `sky_rgb.tga`. In the lobby the rebuild that follows the load (setter `0x005d8bd9`) overwrites all four colour tables with random greys 0x80 to 0xff (`FUN_00585720`), so the lobby's three untinted layers are those greys and `sky_rgb` never reaches its screen; a park's load (`0x00407f95`, state 9) samples `sky_rgb` after the rebuilds, so a park keeps it, unless the lobby's teardown runs after state 9's load (order not read: a live read settles it). Layers: `DetailFile_Apply` (`0x0044d9f0`..`0x0044da17`) copies `GraphicalOptions.SKYQUALITY` to sky `+0x2ec8` for 0, 1, 2 and 4 only; `FUN_005863c0` returns at once for 0 (no clouds, no band), else the layer count is that value (1 when render word `0x8`); each layer's colour is `(+0x2f0c - k x +0x2f10) & mask & table k`, alpha 0xcf, 0x97, 0x5f, 0x27. Render word `[0x008bcbc8]` bit `0x2000000` (band coordinates 0.19/0.01/0.49 and the mirrored dome) is written only by `Lobby_Start`, the globe page's start (`0x005dd072`, cleared at `0x005dd2e2`, `0x005dd762`, `0x005dda22`), so the island pages most likely draw the default band, as a park does (not read live).
 
 **The ORBIT camera never shows the sky.** Its pitch is 45-65 degrees against a picture 53.13 degrees high ("The lens"), so the top of the frame sits at elevation `26.57 - pitch`, always below the horizon. All three reference screenshots agree: ground to every edge. **Camcorder mode does show it**; from the ground the sky fills the upper half of the frame. The argument above is about the orbit camera, and for that it holds exactly.
 
 What OpenTPW's orbit camera shows past the ground's edge is the **fog-cleared background**, measured at exactly jungle's `ThemeEngine.FogColour` **4774136** (`0x48D8F8`) with **one unique colour and zero standard deviation** across the strip. Not sky.
 
-**Bit `0x80` set by `FUN_0042afd0` is NOT the first-person flag.** Its only caller is `FUN_005d8de0`, a look-at basis builder (it normalises a direction, derives right/up, stores a position) reached from the **lobby's** `FUN_005d8b50` — so `0x80` of `DAT_00790ab0` marks a **scripted lobby camera**. The camera-mode dispatcher worth reading instead is `FUN_0042b1c0`.
+**Bit `0x80` set by `FUN_0042afd0` is NOT the first-person flag.** Its only caller is `FUN_005d8de0`, a look-at basis builder (it normalises a direction, derives right/up, stores a position) reached from the **lobby's** `FUN_005d8b50` — so `0x80` of `DAT_00790ab0` marks a **scripted lobby camera**. `FUN_005d8de0` also aims the lobby's camera-following light every pass: with the light and `+0x24` set, P = eye + right x `+0x2c` + up x `+0x28`, L = target - P, with L.y = 0 when `+0x30`, normalised, and when `+0x30` L.y -= 0.3 (`0x00702a48`) and normalised again, written to the light's `+0x2c..+0x34` (`ui.md`, "The lobby's light"; fork watch 2026-10-28, verify-hz-world H1). The camera-mode dispatcher worth reading instead is `FUN_0042b1c0`.
 
 ---
 
@@ -4195,8 +4195,10 @@ park, the original's eye at (481.9, 5, 166.3) looking (0.279, 0, -0.960), the cl
 
 **The depth is the clip z, not the buffer's z.** `Fog_VertexSpecular` compares the float at a batch vertex's `+8`; measured, the
 fog sees it before `ClipToScreen_Fpu` turns `+8` into the 16-bit buffer's z (the order itself was not traced), so it is
-still the draw matrix's z row, which in first person reads 1.0001 × its w row less 0.0707: **d = 0.70718 (e − 0.1)**, e the eye depth along the view (the
-projection's sin 45 × 1000 / 999.9, near 0.1; "The pull"). Held at 20 to 40 and at 40 to 80, the fraction read along
+still the draw matrix's z row, which in first person reads 1.0001 × its w row less 0.0707: **d = 0.70718 (e − 0.1)** at far 1000, e the eye depth along the view (the
+projection's sin 45 × F / (F − 0.1), near 0.1; "The pull"). The far F is the eye view's scan's, not 1000 (`0x56ea90` hands `0x578ca0` the
+`[esi+0x1c]` the scan `0x56e7e0` raises, measured 126 to 128 in first person, above): d = 0.70767 (e − 0.1) at F = 126. The 1000 was assumed,
+not read; the difference is 0.07 % and changes no fog picture (fork watch 2026-10-28, verify-other O3). Held at 20 to 40 and at 40 to 80, the fraction read along
 the ground straight ahead follows (d − start) / (end − start) of that d (`q485/orig/b-fogfit.txt`: eye depth 40 under
 20 to 40 reads 0.40, the formula 0.41; measured in e it would be whole); in the eye depth itself, medium's 100 to 110 is
 141.5 to 155.6. Where the band is narrower than a ground cell the frame departs from the per-point formula (eye depth
@@ -5113,7 +5115,7 @@ same words. Each posts its row only when the last category was another, forgets 
 `c_pick`; the gate's arm also calls `FUN_00469180` (`0x004878ce`), the booth's does not. `FUN_00469180` is a model
 highlight swap: it puts back the material of the model held in `[0x007a1ce0]` (clearing `0x20000` on its `+4`), then, if
 `[0x007afda0]` (set by `0x00469340`) holds a model with no `0x20000` and `[0x007afda4]` is nought, tints each of its
-meshes (`0x1000000`, a colour block, `0x20000`, `0x400000`) and stores it in `[0x007a1ce0]`. The hover calls it at six
+meshes (`0x1000000`, a colour block, `0x20000`, `0x400000`) and stores it in `[0x007a1ce0]`. Mesh word bit `0x1000000` is a run-time bit (no shipped mesh carries it: 0 of 4,923 meshes and 2,606 transform records of the 2,129 `.md2`; `FUN_00469580` and this swap set it): `Light_ModelSetup` (`0x0057aa30`, `0x0057aa66`) skips the relight for a mesh with it, and `DrawList_AddMesh` (`0x00581d56`) then takes the draw's colour stream from mesh `+0x64` instead of `+0x9c` + 4 (fork watch 2026-10-28, verify-hz-world H2, verify-hz-data D1). The hover calls it at six
 places in all (`0x00486f6b`, `0x004874fe`, `0x00487712`, `0x0048778d`, `0x004878ce`, `0x0048798b`). Which model
 `[0x007afda0]` holds over the gate is not read, so whether the gate's model lights up is not known; nothing here
 highlights (Q24). The click's switch (table `0x00488168`) sends 13 and 14 to `0x00487c93`, `FUN_00498d80`, the entry price's

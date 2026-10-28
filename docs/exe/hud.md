@@ -44,7 +44,7 @@ The stream argument is **16-bit opcodes compiled into the executable**, not a fi
     op 0xe,f [rect] like 6/7
     op 0x10  [short n][rect] type 6, id n|0x11100000, RECURSE
     op 0x11  [dword] the UIHELPTEXT row
-    op 0x12  [dword] a second id
+    op 0x12  [dword] the help row a toggle shows while it is on (the button class's getter `0x00669410`: state byte `+0x138` == 1 gives `+0x94`, else `+0x90`; -1 posts the empty text; fork watch 2026-10-28, verify-hz-ui-hud L3)
 
 ### Operand sizes, read out of `UI_ParseTreeStream` rather than inferred
 
@@ -3920,8 +3920,9 @@ above its top), code 5 at `bottom - h`, otherwise `top` (results `+0xb0`, `+0xb8
 (`+0x80`): code 1 puts the left at `right - w`, code 2 at `(right - left - w) / 2 + left` truncated, otherwise `left`
 (results `+0xac`, `+0xb4`). Each line then moves by `right - lineWidth - left` for code 1, and for code 2 by that
 shifted right once, unsigned (`0x006ae550`). `UiText.Align` centres in floats and rounds the drawn position
-(`MathF.Round`), where the original truncates: a one-pixel difference is possible and unmeasured; inside the texture
-its `(int)` cast truncates as the original does.
+(`MathF.Round`); the original's in-bitmap alignment truncates, and ours' `(int)` cast inside the texture does the same, but the
+bitmap's own screen origin is fistp-rounded to nearest (`0x58A15F`, `0x58A1C6`: `(pos + 1) x size x 0.5`), so only the in-bitmap
+offset truncates (fork watch 2026-10-28, verify-ui-hud H3). One pixel is measured at the lobby's build label (Q754).
 
 The stylers, each call on the cell just made (`ESI`, the listing; the decompiler drops it):
 

@@ -57,7 +57,9 @@ array's constructor `AdvisorRecord_Construct` (`0x00429a60`) as type 2 (directio
 travels, and files it in the manager `[0x0087a6d0]`'s list 1 (`RenderList_Add( light, 0x10 )`, `0x00429d15`), where his
 own renderable goes. His draw carries `0x2000000`, so `Light_ModelSetup` (`0x0057aa10`) chains the lights of the
 manager's `+0x30` and the model's own (`FUN_005744d0`) but skips `+0x2c`, list 7, where the sun is filed (`Light_Create`,
-`0x00457e70`, case 2, `RenderList_Add( 0x70 )`): **the sun does not light him.** `Light_SumAtVertex` (`0x005741b0`) starts
+`0x00457e70`, case 2, `RenderList_Add( 0x70 )`; the lobby's camera-following light `FUN_005d92e0` is filed in the same list 7,
+`RenderList_Add( light, 0x70 )` at `0x005d94c0`, so it skips him the same way; the test is on `Light_ModelSetup`'s fourth argument,
+the clip flags OR `[0x008bb624]`, `0x0057a69a`; fork watch 2026-10-28, verify-hz-advisor A1): **the sun does not light him.** `Light_SumAtVertex` (`0x005741b0`) starts
 from the renderer ambient (`0x00879ddc..e4`), adds each directional light's colour × max(0, −(d·n)), and
 `Light_ModelVertexColours` (`0x00574660`) clamps each channel to a byte.
 
@@ -73,10 +75,21 @@ from the renderer ambient (`0x00879ddc..e4`), adds each directional light's colo
   triangles' averaged planes stand a median 33 degrees off on his hands and 90 on the bow tie.
 - **The ambient and the strength.** In a park the ambient is the theme's `AmbientLightLevel` (`FUN_00458590`; (0.333,
   0.333, 0.408) in Lost Kingdom). In the lobby every camera's start hands `FUN_005d9230` 0x444444, 68 of 255 a channel
-  (`0x005e13a9`, `IslandLobby_Start` `0x005e1924`, `0x005e2445`; `Lobby_Start`'s 0x202020 at `0x005dd078` comes
-  before them). Each record loaded files its own white light along the same direction, so the lobby's one model (the
+  (`0x005e13a9`, `IslandLobby_Start` `0x005e1924`, `0x005e2445`). `Lobby_Start`'s 0x202020 (`0x005dd078`) is the globe page's,
+  not run before them: the normal path opens on the island, and `Lobby_Start` runs at lobby open only when `[0x00f8288c]` or
+  `[[0x00f7d88c]+0x108]` is set (fork watch 2026-10-28, verify-hz-ui-hud L2). Each record loaded files its own white light along the same direction, so the lobby's one model (the
   front end loads slot 0 alone, `0x0054e5ec`) is lit at a strength of 1 and a park's two (the global fly and the
   theme's) at 2: a face reaches white at a third of full facing in a park, at nearly three quarters of it (0.73) in the lobby.
+- **The lobby's light.** The lobby is lit by one camera-following directional light, `FUN_005d92e0` (owner `[0xf83778]`; type 2, each
+  byte of an ARGB uint x 1/255 into `+4..+0x10`, direction normalised into `+0x2c..+0x34`, `RenderList_Add( light, 0x70 )`: list 7, the
+  park sun's list), and the ambient `FUN_005d9230`. Island pages (`0x005e13a9`/`0x005e13ce`, `IslandLobby_Start` `0x005e1924`/`0x005e194a`,
+  `0x005e2445`/`0x005e2469`): ambient 0x444444, light 0xeeeeee, no direction until the first aim (so (1, 0, 0)), offsets up 2.0 (`+0x28`),
+  right 8.0 (`+0x2c`), flatten 1 (`+0x30`) (`0x005e13d8`..`0x005e13e6`, setter `0x005e1bb0( 2.0, 8.0, 1 )`). The globe page's `Lobby_Start`
+  (its constructor `FUN_005dc580` writes `+0x38` = 300.0): ambient 0x202020, light 0xffffff (`0x005dd078`..`0x005dd0a2`), up +300, right
+  -300, no flatten (`0x005dd0a7`..`0x005dd0c2`). The aim runs every pass of `FUN_005d8de0` ("The lens" basis builder, `park-engine.md`):
+  P = eye + right x `+0x2c` + up x `+0x28`, L = target - P, L.y = 0 when `+0x30`, normalised, and when `+0x30` L.y -= 0.3 (`0x00702a48`)
+  and normalised again. It does not light the advisor (list 7 is skipped by `0x2000000`, above). Ours lights the lobby's models with a
+  flat 0.4 ambient (`content/shaders/test.shader`): a deviation, Q769 (fork watch 2026-10-28, verify-hz-world H1).
 - **The texel.** The vertex colour multiplies the texel: stage 0's `COLOROP` is `MODULATE`. `FUN_00567620` sets
   `MODULATE2X` through `FUN_00567a70` only for a state word with `0x10000`, and no model draw's word has it: `DrawList_Flush`
   (`0x00581db0`) and `FUN_00581880` build each batch's word by `FUN_00581790` (from `[0x008bcbc8]`, the mesh word, the
@@ -353,14 +366,21 @@ Fork watch 2026-10-18 (`verify-ui-hud.md` C1), read from the listing and seen in
 | `0x00491e27`-`0x00491e84` | — | **Pass 2**: colour (`0xff` x 4), the rectangle unshifted, the draw `0x006ae0f0` again | Disassembly |
 | `0x0048f830` | — | The plain label render: one draw, white glyphs (`0x0048fa96`) unless `+0xdd` | Disassembly |
 
-So a menu item, a window title or a park name is a grey copy at half strength two pixels left and two down, then the
+So a menu item, a window title or a park name is a grey copy two pixels left and two down (in the shipped game's A4R4G4B4 bitmap the copy's colour is
+nibble 8, 0.533 of the control's colour, at alpha 17 x floor( c x 128 / 255 ) / 255, about 0.47 at full coverage), then the
 text at full strength; the shadow is the class, not a flag (the 13 writes of `+0xdb` in `0x00480000`-`0x004c0000` have no
 reader). `0x006ae0f0` has four callers: `0x0048fbb0` (the plain label), `0x00491e1a` and `0x00491e84` (this class) and
 `0x00492986`. The pause menu ("Load", cyan) and the lobby park name ("Wonder Land", yellow) both show the darker copy
 in the original's frames. The options screen's labels do not: `0x004a43b0` and `0x004a4490` build the plain class
 (`0x0048f6a0`, `0x004a43f9` and `0x004a44d9`) in (0, 0, 0, 255) and font 6 (`0x007537b4`), and ours matches
-(`OptionsScreen.cs`, font 6, `UiColour.Black`, no shadow). Not read: whether the pass's grey replaces the text's own
-colour or combines with it; `UiText` halves the colour and draws it at half alpha.
+(`OptionsScreen.cs`, font 6, `UiColour.Black`, no shadow). Read (fork watch 2026-10-28, verify-ui-hud H1): the bitmap is built in the texture cache's own format (`0x4925D0` copies the record
+`0x8BD558 + 32 x [0x8BD554]`, the shipped game's index 2, A4R4G4B4, `textures.md`), so the letters go through the blitter `0x6B21F0`
+(`0x6B4AA0` picks it by the target's pixel format `[0x00FA76E8]`; `0x6B24B0` is its A8R8G8B8 twin), which stores a texel word
+and reads none: the grey is the glyph colour's top nibbles (0x80 gives 8, 0.533, not 0.5) with alpha nibble c, or floor( c x a / 255 )
+for a colour alpha under 255, nothing written at c = 0, and the string's texels REPLACE the copy's wherever the string's c is over
+0 (no composite). The quad multiplies the bitmap by the control's colour (`+0x48..+0x4B`, state word `0x7060556` at `0x58A26C`:
+point filtering, clamp). `UiText` halves the colour (0.5, not 0.533) at half alpha (0.5, not 0.467) and composites Over, so it
+differs at glyph edges and in the copy's tone; Q517.
 
 ### `UI_SetTitle` (`0x00485d20`), and the buy and hire screens' titles and money
 

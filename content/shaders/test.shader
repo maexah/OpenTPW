@@ -248,6 +248,7 @@ fragment {
         vec3 L = normalize(g_oUbo.g_vLightPos - vs_out.vPosition);
         
         vec3 vDiffuse = max(dot(N, L), 0.0) * g_oUbo.g_vLightColor;
+        // Deviation, Q769: the original's lobby is lit by its camera-following light and per-page ambient, not a flat 0.4.
         vec3 vAmbient = vec3(g_oUbo.g_flAmbient > 0.0 ? g_oUbo.g_flAmbient : 0.4);
 
         vec4 vTextureSample = vec4(1, 0, 1, 1);

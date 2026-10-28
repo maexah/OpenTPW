@@ -22,15 +22,16 @@ a file under `data/`.
 | `0x753f50` | — | Tree: new player dialog | Dumped call site |
 | `0x74f920` | — | Tree: message box | Dumped call site |
 | `0x757f60` | — | Tree: island panel | Dumped call site |
-| `0x7581a0` | — | Tree: the **online globe's hover readout** — two labels, a name and "Parks: N" (UITEXT 462), both blanked on null, created at lobby start beside the globe panel | Dumped call site; the labels' own text ids |
-| `0x7596b0` | — | Tree: online globe panel, 14 controls. Loaded on the lobby path, unbuilt | Dumped call site |
+| `0x7581a0` | — | Tree: the **online globe's hover readout** — two labels, a name and "Parks: N" (UITEXT 462), both blanked on null, created when the globe page opens (`FUN_004b9a70`, called only by the globe children's activates `0x005dd650` / `0x005dd910`; fork watch 2026-10-28, verify-hz-ui-hud M2) | Dumped call site; the labels' own text ids |
+| `0x7596b0` | — | Tree: online globe panel, 14 controls. Loaded when the globe page opens (the island panel's View `0x1e0e9` -> `0x005dd650` -> `FUN_004c4fb0( 0 )`, gated only by the lobby root `[0x00f82884]+4`; fork watch 2026-10-28, verify-hz-ui-hud L2/M2); unbuilt | Dumped call site |
 | `0x774c18` | — | Tree: the lobby's **root control** `0xbf431`, full screen, callback `0x005d58b0`, given the focus by `FrontEnd_Init` - every key and press the lobby takes goes through it ("The lobby's keys act on the release"). Its one child is the mail badge `0xbf432`, mesh `i_mail`, unbuilt | Dumped call site; stream re-read |
 | `0x1e0ec` / `0x1e0ed` / `0x1e0ee` | — | The player's golden-key count, part of the **island panel** | Control ids in the island panel's stream |
 | `h = (c ^ h) * 47` | — | Mesh-name hash, over the node name of the model's **first** mesh — e.g. `wdialogw`, `islandlob` | Reproduced against every ui.wad mesh name |
 
 `0x7581a0` is **not** a key count, and no second key counter should be built from it. The lobby has
-**at least seven trees, not five**. The two unbuilt ones, the globe's readout and panel, belong to the online world,
-which is a permanent dead end here; so may the root's unbuilt mail badge (see the Unsettled list under "The lobby's
+**at least seven trees, not five**. The two unbuilt ones, the globe's readout and panel, belong to the globe page, which View
+opens offline with no connection test in front (`0x005dd650`; Q62; fork watch 2026-10-28, verify-hz-ui-hud L2): only its online
+content (the city list, `FUN_005b6070`) is undecoded, so it is not a dead end by the code; so may the root's unbuilt mail badge (see the Unsettled list under "The lobby's
 keys act on the release").
 
 ## Meshes and fonts
@@ -104,7 +105,7 @@ screenshots centre the name. It is centred.
 | `0x00803a2c` | cat_ui | The UI sound category: effect 31 `BUTTON01`, 189 `Select3` on button clicks; 198 `goldkey` at the tour cue | Sound map |
 | `0x00485780` | `UI_MessageHook_ClickSound` | UI_Init's click hook, which plays the above | Disassembly |
 | `0x005e1e30` | `IslandLobby_LeaveForPark` | Enter park, affordable: panel hidden, globallobbysfx effect 4, particle 98 - neither for an Instant Action player (`0x004b8fd0` returns on game type 2, `0x004b9020`). Locked, Enter this park plays nothing itself; a click on its button still plays the UI click through the hook | Disassembly |
-| `0x005e1bd0` | `IslandLobby_ViewOnlineWorld` | The island camera's `+0x20` deactivate, which the panel's View button (`0x1e0e9`) calls before the online-world child's `+0x1c`. Whether a connection test stands in front, and what the child shows offline, is not decoded (`docs/QUEUE.md` Q62) | Disassembly |
+| `0x005e1bd0` | `IslandLobby_ViewOnlineWorld` | The island camera's `+0x20` deactivate, which the panel's View button (`0x1e0e9`) calls before the online-world child's `+0x1c`. None stands in front: the child's `+0x1c` is `0x005dd650` (`FUN_004c4fb0( 0 )`, `FUN_004b9a70`, `Lobby_Start`), which is the globe page; what it shows offline is not built (`docs/QUEUE.md` Q62; fork watch 2026-10-28, verify-hz-ui-hud L2) | Disassembly |
 
 Measured lobby mix: the goldkey click read back a gain of 0.090, against 0.484 x master 0.5 x duck 0.38 = 0.092.
 
@@ -365,7 +366,7 @@ The box is the lobby's own geometry: the four islands stand at 400 and 600 in X 
 
 The lobby's render camera is a second object, held by the global `[0x00f83778]` (`FrontEnd_Init` builds it, `FUN_005d8b00`, vtable
 `0x00702a90`). Its `FUN_005d8b50` sets its angle `+4` to 115, `IslandLobby_Start` copies `ISLANDFOV` over it
-(`0x005e13fb`), and `Lobby_Start` (`0x005dcfe0`) writes 60.0 to it at `0x005dd034` (by the same law 32.2 degrees top to bottom; not measured); its slot 2, `0x005d8cb0`, hands that angle to the projection builder each pass. The draw matrix's
+(`0x005e13fb`), and `Lobby_Start` (`0x005dcfe0`, the globe page's start) writes 60.0 to it at `0x005dd034` (by the same law 32.2 degrees top to bottom; not measured); its slot 2, `0x005d8cb0`, hands that angle to the projection builder each pass. The draw matrix's
 screen scale (`park-engine.md`, "The lens: 90 handed to the projection, 53.13 drawn") then makes the picture
 `2 atan( tan(a/2) / 2 )` top to bottom: `ISLANDFOV(100)` draws **61.58 degrees top to bottom and 76.93 across**.
 Measured (Q260, `original/lens.py`, the player list over the lobby): angle 100.000, the camera's `+4` 100.000,

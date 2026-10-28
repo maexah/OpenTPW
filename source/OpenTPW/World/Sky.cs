@@ -19,11 +19,13 @@ namespace OpenTPW;
 ///   share one 16x16 grid of positions and differ only in how far the texture tiles across it,
 ///   how fast it scrolls and how opaque it is.
 ///
-/// The cloud layers are coloured by a 256-entry ramp, one copy per layer, normally a 16x16
-/// downsample of <c>sky_rgb.tga</c> - a gradient from pale cyan to deep blue. Each lobby frame
-/// FUN_005d96c0 floods <b>the first copy only</b> with a single colour, and that colour is the
-/// park's SKYCOLOUR. So SKYCOLOUR reaches exactly one of the four cloud layers; the horizon band
-/// and the other three stay as their textures paint them.
+/// The cloud layers are coloured by a 256-entry ramp, one copy per layer. Here each copy is a 16x16
+/// downsample of <c>sky_rgb.tga</c> - a gradient from pale cyan to deep blue - which is what a park's
+/// sky keeps in the original; the original's lobby overwrites all four copies with random greys,
+/// 0x80 to 0xff a channel (FUN_00585720, docs/exe/park-engine.md), so the lobby's three untinted
+/// layers are a deviation here (Q151). Each lobby frame FUN_005d96c0 floods <b>the first copy only</b>
+/// with a single colour, and that colour is the park's SKYCOLOUR. So SKYCOLOUR reaches exactly one of
+/// the four cloud layers; the horizon band is as its texture paints it.
 ///
 /// Two things gate even that in the original, both left out here, because nothing yet reads
 /// the detail file's SKYQUALITY (Q32) and there is no software renderer: the tint only applies
@@ -197,7 +199,8 @@ public class Sky : Entity
 	/// it is one rather than two because both halves follow from the same fact. The lobby floods the
 	/// first cloud layer's ramp with the selected park's SKYCOLOUR every frame (FUN_005d96c0); a park
 	/// has no island script, and nothing in the original ever floods it there, so <b>all four layers
-	/// keep the gradient sampled out of sky_rgb.tga</b>. And because the lobby's horizon then moves
+	/// keep the gradient sampled out of sky_rgb.tga</b> (the original's lobby has random greys on the
+	/// other three, not that gradient: a deviation, Q151). And because the lobby's horizon then moves
 	/// with whichever park the camera is on, the lobby's sky is what decides
 	/// <see cref="Level.FogColour"/> - while a park's fog is its own ThemeEngine.FogColour, set once
 	/// as the level is built, so a park's sky has to leave it alone.
@@ -244,8 +247,9 @@ public class Sky : Entity
 		for ( int i = 0; i < layers.Length; ++i )
 		{
 			// Only the first ramp copy is flooded, so only the first layer is tinted; the rest
-			// keep the gradient sampled out of sky_rgb.tga. Where nothing floods it at all - a
-			// park - that layer keeps the gradient too, so the sky is four layers of it.
+			// keep the gradient sampled out of sky_rgb.tga (the original's lobby has random greys
+			// there: a deviation, Q151). Where nothing floods it at all - a park - that layer keeps
+			// the gradient too, so the sky is four layers of it.
 			var ramp = (i == 0 ? _tintRamp : null) ?? gradient;
 
 			pieces.Add( SkyPiece.Clouds( middle, _height, _bandTop, layers[i], cloudTexture, ramp ) );

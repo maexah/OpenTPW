@@ -123,6 +123,7 @@ internal sealed class NewPlayerDialog : UiWindow
 		{
 			Id = InstantAction,
 			Rect = new UiRect( 764, 405, 1206, 476 ),
+			// Deviation, Q772 (a static read): the original's chosen toggle shows no help.
 			HelpText = 358,
 			Mesh = UiMesh.Get( "b_ltoggle" ),
 			Text = Localization.Get( UIStrings.InstantAction ),

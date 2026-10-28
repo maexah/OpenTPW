@@ -100,7 +100,7 @@ Nothing on this path writes a volume. A sample's volume comes from its variation
 - Nothing on any stop or free path writes an effect record, a category or a manager gate. STOPSCREAM zeroes the script's `+0xd0` itself (`0x00555f0a`).
 
 **Where two callers of one effect do meet: the pool.**
-- Each service keeps only the top N voices by that `(priority << 16) | closeness` key and ticks only those (`0x006b6358`, `0x006b637b`). N is 12 by default (`0x006b83b0`) and is reset from the options, up to 30 (`0x006b6140`).
+- Each service keeps only the top N voices by that `(priority << 16) | closeness` key and ticks only those (`0x006b6358`, `0x006b637b`). N is 12 by default (`0x006b83b0`) and follows the sound-detail ladder `FUN_0051b810( q )` (called from `FUN_0051b920`, the sound-detail apply, at boot `0x0054de22` with DEFAULTQUALITY or half of it, and from the options `0x00423850`): sound.sam's `ChannelInfo` CHANNELS 5, 12, 13 with SWITCH 0, 50, 70 (globals `0x00785938`..`0x0078594c`; CHANNELS[2] has no reader): q over 70 gives (q - 50) x (M - 12) / 50 + 12 with M the device's capability, q in 51..70 gives 12, below gives (q - 0) x (12 - 5) / 50 + 5, so a boot at graphics detail 0 (q 25) gives 8; the pool is min( N, 30 ) (`0x006b6140`, `0x006b6145`), with no lower clamp (fork watch 2026-10-28, verify-hz-audio-fx A1).
 - The hardware channels are taken by the same key (`0x006bad28`).
 - A held chain that falls out of the top N makes no children, and a stop elsewhere can let it back in. Not built here (Q43).
 
@@ -435,7 +435,7 @@ layouts and the jungle values). `FUN_0055a3e0( script, slot )` answers the child
 |---|---|---|---|
 | 0 | `FUN_004392a0` (`0x0043932f`) | coaster, per train (list `DAT_00790fe0`) | plays it into the train's `+100`, after stopping the old voices; skipped while `DAT_00785a2c` is set |
 | 1 | `FUN_004392a0` (`0x00439363`) | the same | plays it into the train's `+0x68` |
-| 5-8 | `FUN_004392a0`, `FUN_004396e0` | the same | stored in the train at `+0x54`..`+0x60` (use not read) |
+| 5-8 | `FUN_004392a0`, `FUN_004396e0` | the same | stored in the train at `+0x54`..`+0x60`; slots 7 and 8 are parameter ids `SetTrainSoundState` `0x00439780` sets on the slot-1 voice `+0x68` (slot 7 by the state: 1, 2, 4, 8, 0x10 give 15, 30, 70, 90, 50; slot 8 by its third argument, each call; the one per-frame caller `0x0043d7d8`; fork watch 2026-10-28, verify-world W2); 5 and 6 are not read |
 | 0 | `Bumper_Retarget` `FUN_0054a040` (`0x0054a366`, `0x0054a682`, `0x0054a909`) | bumper, go-kart, water arms | plays it into the car's held voice `+0x20`; the go-kart and water arms for every new car (`0x100000`), so each kart and boat has its own (`park.md`, "The karts' and the water ride's track, buoys and race") |
 | 1 | `FUN_0054ae50` (`0x0054b01d`) | go-karts only (types -4, -7, -9, -10), as a car is taken off | plays it; every other type fades its voice |
 | 3 | `Bumper_PlayCarSound` `FUN_00547170` (`0x00547311`) | bumper, go-kart, water | case 2, the toot (logs "TOOT") |
@@ -1353,11 +1353,11 @@ Related node-record facts: the node **name** is at `+0x54` in every record, the 
 
 ## The lobby was entirely non-positional
 
-`Lobby_Start` plays global effects 2 and 3 at `(0,0,0)`; `FUN_005e1640` plays each park's music and bed (effects 1 and 2) at `(0,0,0)`. **So positional lobby audio in OpenTPW is a deliberate deviation — an improvement on the original, not a restoration. Always say so when lobby audio is reported on.**
+`Lobby_Start`, the globe page's start, plays global effects 2 and 3 at `(0,0,0)` (the globe's deactivate `0x005dd690` stops both, `0x005dd772`/`0x005dd77e`; the island lobby, the page that opens, plays neither: fork watch 2026-10-28, verify-hz-ui-hud M1; ours plays effect 3 as a bed, Q770); `FUN_005e1640` plays each park's music and bed (effects 1 and 2) at `(0,0,0)`. **So positional lobby audio in OpenTPW is a deliberate deviation — an improvement on the original, not a restoration. Always say so when lobby audio is reported on.**
 
 | Address | Original name | What it is | Evidence |
 |---|---|---|---|
-| `005dcfe0` | `Lobby_Start` | Plays global effects 2 and 3, both at `(0,0,0)` | Decompiled |
+| `005dcfe0` | `Lobby_Start` | The globe page's start (callers: the two globe children's activates `0x005dd66c`, `0x005dd92d`, and the base vtable slot `0x00702be4`): plays global effects 2 and 3, both at `(0,0,0)`, kept at `this+0x74`/`+0x78`; the island lobby does not run it | Decompiled; fork watch 2026-10-28, verify-hz-ui-hud M1 |
 | `FUN_005e1640` | — | Plays each park's music and bed (effects 1 and 2), both at `(0,0,0)` | Decompiled |
 
 The lobby island `Spa_isle.MD2` has nodes 26 `ant_emitternew` and 27 `ant_emitter`, parented to mesh 9 `Antennae01` (the only mesh either space lobby model rotates) — but **no id record**, so in the lobby they are named positions only. It is the sole model in `lobby.wad` with an emitter node, verified across all eight lobby models: the other three islands carry only `Dummy0..09` (idFlags `0x111`) plus `Spline path`, jungle adds `l_tree1` / `l_tree2`, and all four lobby gates carry nothing but a root `Dummy01`. That is why OpenTPW looks the name up rather than naming Space in code.

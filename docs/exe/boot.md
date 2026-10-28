@@ -215,8 +215,13 @@ says so itself in the two places the 2.0 patch's readme promises:
     gives that box. Its ink, white at its brightest, is 751 to 772 across and 564 to 571 down of the 800 x 600 picture.
     The pen differs by a pixel across: GAME8.bf4's 'v' has left 0, so the original's ink at 751 puts its pen at 751,
     1.3 px left of the box's 752.3 (1926 x 800 / 2048); ours rounds the placed x (`UiText.cs:72`) and puts the pen at
-    752 and the ink at 752 to 773, against the original's 751 to 772. Not the glyph's own placement: the cause
-    (`0x0048f830`'s rectangle, or `0x006ae550`) is not read.
+    752 and the ink at 752 to 773, against the original's 751 to 772. Not the glyph's own placement. Two candidates, the verifiers
+    differing (fork watch 2026-10-28, verify-ui-hud H3, verify-other O2): the quad's rounding is not it (the box 752.34 rounds to 752 by
+    `fistp`, `0x58A1C6`), and the plain skin's left arm puts the pen at bitmap column 0 (`0x48F9A3`), so (a) the clip-to-screen map
+    `0x00582EB0` (scale `(W - 0.999) / 2`, offset that plus 0.24975; ClipToScreen applies it, `0x5796D7`..`0x5796EA`), which puts a UI
+    quad's left edge at p x (W - 0.999) / W + 0.24975 = 751.31 for p = 752 at W = 800, lighting 751 under a rasteriser with pixel centres at
+    .5 (not traced: that the sprite batch reaches ClipToScreen, and Proton's pixel-centre rule; a label near the screen's left should
+    letter at p or p + 1 where one at the right letters at p - 1); or (b) an offset inside the bitmap (`0x0048f830`'s rectangle, not read).
     A second control under the root, ( 1904, 1402, 2007, 1504 ), takes in the label's corner; what it is was not read.
 - **ALT-V in a park.** The key-table row at `0x00748140` (20 bytes: id 14, key 0x56 'V', modifier word 0x30, which the
   readme calls ALT) runs 0x0040c820, which calls 0x00481b70, a jump into undisassembled code at 0x0048f090 that formats
