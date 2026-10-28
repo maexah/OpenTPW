@@ -239,7 +239,7 @@ public static class ParkTrackAddOn
 	}
 
 	/// <summary>
-	/// The verdict's first answers, the same for an add-on's every cell (<c>0x0053585d</c>..<c>0x0053594b</c>): land outside the
+	/// The verdict's first answers, the same for an add-on's every cell (<c>0x005357c7</c>..<c>0x005358c9</c>): land outside the
 	/// park refuses; a thing's cell (map type 4, 9 or 10) passes where the thing's overwrite priority is below the add-on's and
 	/// refuses otherwise; a boundary piece refuses. <c>Decided</c> where one of them answered.
 	/// </summary>

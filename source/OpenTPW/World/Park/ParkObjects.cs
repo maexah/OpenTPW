@@ -385,10 +385,14 @@ public sealed class ParkObjects : Entity
 			// model's node, the walk's last show or hide among them (FileFormats saves.md, "The node flag words"). Only the
 			// two caps' words are laid here; the rest of a model's words this game's clips put back themselves.
 			if ( IsTrackAddOn( item ) && _savedHoardings.TryGetValue( placed.MeshInstance, out var record )
-				&& record.CatalogueId == placed.CatalogueId && record.NodeWords is { } words )
+				&& LoadedCaps( model.Source, record, placed.CatalogueId ).ToArray() is { Length: > 0 } loaded )
 			{
-				foreach ( var (_, node, hidden) in SavedCaps( model.Source, words ) )
-					model.SetMeshVisible( node, !hidden );
+				ApplyCaps( model.SetMeshVisible, loaded );
+
+				// A walk-hidden cap's saved word also holds the lock (0x400), which the LobbyModel's rest and hide must spare
+				// as ShowAddOnCaps' LockNode does; it is not laid here yet.
+				if ( loaded.Any( cap => cap.Hidden ) )
+					Unimplemented.Report( "TRACK_CAP_LOCK_LOADED" );
 
 				Log.Info( $"{ThemeName}: '{item.Name}' (thing {placed.ThingId}) stands with its end caps as the file left them: "
 					+ string.Join( ", ", AddOnCapSides.Select( side => $"0x{side:x} " + CapState( model, side ) ) ) );
@@ -883,6 +887,28 @@ public sealed class ParkObjects : Entity
 	private static string CapState( LobbyModel model, uint side )
 		=> model.CapNode( side ) is var node and >= 0 ? (model.Entities[node].Opacity > 0f ? "shown" : "hidden") : "none";
 
+	/// <summary>Each cap a walk's <paramref name="bits"/> leave: a side's cap hidden where its bit is set.</summary>
+	public static IEnumerable<(uint Side, int Node, bool Hidden)> CapsFor( ModelFile file, int bits )
+	{
+		foreach ( var side in AddOnCapSides )
+		{
+			if ( file.FindNodeByHide( side, 1 ) is var node and >= 0 )
+				yield return (side, node, (bits & side) != 0);
+		}
+	}
+
+	/// <summary>The caps a loaded add-on's saved record lays: its node words' hidden bits, only for the record of this
+	/// catalogue item. None where the record is another item's or holds no words.</summary>
+	public static IEnumerable<(uint Side, int Node, bool Hidden)> LoadedCaps( ModelFile file, SavedThing record, int catalogueId )
+		=> record.CatalogueId == catalogueId && record.NodeWords is { } words ? SavedCaps( file, words ) : [];
+
+	/// <summary>Shows each cap not hidden and hides the others, through <paramref name="setVisible"/> (node, visible).</summary>
+	public static void ApplyCaps( Action<int, bool> setVisible, IEnumerable<(uint Side, int Node, bool Hidden)> caps )
+	{
+		foreach ( var (_, node, hidden) in caps )
+			setVisible( node, !hidden );
+	}
+
 	/// <summary>
 	/// An add-on's end caps as a walk leaves them (<c>0x0052af54</c>..<c>0x0052b18c</c>): each cap whose side's bit is in
 	/// <paramref name="bits"/> hidden (<c>| 0x80000010</c>), the other shown (<c>&amp; ~0x10</c>), and its node words the
@@ -893,16 +919,13 @@ public sealed class ParkObjects : Entity
 		if ( ModelFor( thingId ) is not { } model )
 			return false;
 
-		foreach ( var side in AddOnCapSides )
+		var caps = CapsFor( model.Source, bits ).ToArray();
+
+		ApplyCaps( model.SetMeshVisible, caps );
+
+		foreach ( var (_, node, hidden) in caps )
 		{
-			var node = model.CapNode( side );
-
-			if ( node < 0 )
-				continue;
-
-			var hidden = (bits & side) != 0;
-
-			model.SetMeshVisible( node, !hidden );
+			model.LockNode( node );
 			AnimationsFor( thingId )?.Nodes?.SetHidden( node, hidden );
 		}
 

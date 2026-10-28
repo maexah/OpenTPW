@@ -384,7 +384,7 @@ public class ParkTrackToolTests
 	}
 
 	/// <summary>A kart loop south of the station at (30,24), from its mouth (34,25) to (34, <paramref name="bottom"/>) and back up x 28.</summary>
-	private static (ParkState State, ParkWorld.CatalogueObject Ride) Loop( int bottom )
+	internal static (ParkState State, ParkWorld.CatalogueObject Ride) Loop( int bottom )
 	{
 		var (state, ride) = Standing( 1, 30, 24 );
 

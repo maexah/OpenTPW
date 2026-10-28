@@ -475,4 +475,22 @@ public class ParkModelTablesTests
 
 		CollectionAssert.AreEqual( new[] { float.MaxValue }, idle.NodeFrames(), "an idle channel reads past any clip's end" );
 	}
+
+	/// <summary>
+	/// A walk's hide and show leave the node locked (live <c>0x80000000</c>, saved <c>0x400</c>): the played file's tunnel caps
+	/// hold <c>0x401</c> hidden, and <c>0x400</c> once shown again.
+	/// </summary>
+	[TestMethod]
+	public void AWalksHideAndShowKeepTheNodesLockBit()
+	{
+		var running = new ParkModelTables.Running( new uint[] { 0, 0, 0, 0, 0 }, new AnimationFile?[] { null } );
+
+		running.SetHidden( 3, true );
+		running.SetHidden( 4, false );
+
+		CollectionAssert.AreEqual( new uint[] { 0, 0, 0, 0x401, 0x400 }, running.Words( [0f] ) );
+
+		running.SetHidden( 3, false );
+		Assert.AreEqual( 0x400u, running.Words( [0f] )[3] );
+	}
 }

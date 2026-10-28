@@ -184,7 +184,7 @@ public class ItemHeightMapTests
 	/// followed to its anchor) lifts nought. Nothing is counted; a boundary hoarding's is
 	/// <see cref="ASquareOverABoundaryHoardingIsLiftedByItsFile"/>.
 	/// </summary>
-	/// <remarks><b>Mutation:</b> the piece not asked; a 0xc cell not followed to its anchor; a map type 4 or 7 cell asked as the ground.</remarks>
+	/// <remarks><b>Mutation:</b> the piece not asked; a 0xc cell not followed to its anchor; a map type 4 or 7 cell asked as the ground; the family not required.</remarks>
 	[TestMethod]
 	public void APathSquareOverAKartPieceIsLiftedByThePiece()
 	{
@@ -251,7 +251,7 @@ public class ItemHeightMapTests
 	/// On ground raised above 20 the model's root stands there, so the lift is the file's height plus the root's, not the ground's.
 	/// </summary>
 	/// <remarks><b>Mutation:</b> the hoarding not asked (ground only); a 0xc cell not followed to its anchor; the file's height dropped
-	/// (the root alone); the root dropped (the file alone); the record's row not read (row 0); the family not required.</remarks>
+	/// (the root alone); the root dropped (the file alone).</remarks>
 	[TestMethod]
 	public void ASquareOverABoundaryHoardingIsLiftedByItsFile()
 	{
@@ -295,12 +295,12 @@ public class ItemHeightMapTests
 	}
 
 	/// <summary>
-	/// Every anchor of the stock park's boundary (143, rows of five models) lifts a path square over its own two by two by its
+	/// Every anchor of the stock park's boundary (143, rows of six models) lifts a path square over its own two by two by its
 	/// row's file: over the four cells the lowest lift is the file's lowest byte (as a height over the root, rounded up to ten)
 	/// and the highest its highest, whatever the turn, so the row the record names is the model read (Q777; ho_fos1's 51 is
 	/// 20, ho_fos2's 76 and 71 are 30, ho_fob2's 25 is 10 beside three 20s, ho_fob1's 0 beside three 20s).
 	/// </summary>
-	/// <remarks><b>Mutation:</b> the record's row not read (row 0); the file's own cells not asked; the family not required; the
+	/// <remarks><b>Mutation:</b> the record's row not read (row 0); the file's own cells not asked; the
 	/// anchor's piece standing a cell off.</remarks>
 	[TestMethod]
 	public void EveryStockBoundaryAnchorLiftsByItsRowsFile()

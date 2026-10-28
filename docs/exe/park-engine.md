@@ -3476,8 +3476,8 @@ original under Proton, `q780/orig/O1`). Lost Kingdom's add-ons (1500 to 1502) ar
 (Q512); the preview snaps and turns the hand, the squares and the test pass judge by the verdict's add-on arm, the commit stamps
 the picture by kind at the model's cell (`mTopLeft`, the original's rule, where other items still mark the anchor's, Q744), the
 thing keeps `mUpgradeParent`, and the put-down walks the circuit. Counted: `FUN_00523230`'s passes (`TRACK_ADD_ON_PASSES`) and the
-sale (`SALE_TRACK_ADD_ON`); the pieces' clips that follow the walk are Q781's (`park.md`, "The pieces' clips"). Not built: the arm's rotation to 0 under Ctrl (ours keeps the hand's angle),
-and the window a click on an add-on opens (Q513).
+sale (`SALE_TRACK_ADD_ON`); the pieces' clips that follow the walk are Q781's (`park.md`, "The pieces' clips"). The arm's rotation to 0 (`0x005259fc`) is built: the hand's
+angle is 0 after the put-down, Ctrl held too. Not built: the window a click on an add-on opens (Q513).
 
 **The worker (type 6)**, vtable `0x006fea70`. The mode stores only the worker's sprite bank and costume; the
 worker's id is kept in the world's hand thing (`+0x60`, through `FUN_00509ae0` and `FUN_00509af0`). The pickup

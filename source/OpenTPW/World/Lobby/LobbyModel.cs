@@ -942,7 +942,7 @@ public sealed class LobbyModel : IChannelPosed
 
 		RestMeshes( Entities, Offsets, _nodeParents, _poser, _scale, _placedRotation, _placedOrigin, outgoing, incoming );
 
-		foreach ( var (node, visible) in ShownAtRest( outgoing, node => IsTransformOnly( _file, node ) ) )
+		foreach ( var (node, visible) in ShownAtRest( outgoing, Spared ) )
 			SetMeshVisible( node, visible );
 	}
 
@@ -952,9 +952,17 @@ public sealed class LobbyModel : IChannelPosed
 	/// </summary>
 	public void Hide( AnimationFile incoming )
 	{
-		foreach ( var (node, visible) in HiddenAtBind( incoming, node => IsTransformOnly( _file, node ) ) )
+		foreach ( var (node, visible) in HiddenAtBind( incoming, Spared ) )
 			SetMeshVisible( node, visible );
 	}
+
+	private HashSet<int>? _walkLocked;
+
+	/// <summary>Locks a node as a track add-on's walk does when it hides or shows an end cap (<c>| 0x80000010</c>, <c>0x0052b06d</c>): no
+	/// restore or hide list touches it from then on, as for a transform-only node.</summary>
+	public void LockNode( int node ) => (_walkLocked ??= []).Add( node );
+
+	private bool Spared( int node ) => IsTransformOnly( _file, node ) || (_walkLocked?.Contains( node ) ?? false);
 
 	/// <summary>Whether a node is transform-only (its file flags hold <c>0x200</c>), which no hide list or restore touches.</summary>
 	internal static bool IsTransformOnly( ModelFile file, int node ) => node >= 0 && node < file.Nodes.Count && (file.Nodes[node].Flags & 0x200) != 0;

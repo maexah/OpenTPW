@@ -43,7 +43,7 @@ later item may have run what an earlier one lists as untested.
   (`q777/PREDICTION.txt`): the wall is two records for a lift of 20 (the rule's two tens), and the track tool's square has a wall
   on both sides; both recorded and re-predicted. Corrected: a path square over a boundary cell is red in the original, not
   blue as Q776 wrote of the kart piece's mouth. Not seen: a click over a hoarding (only the previews were read); a wall's
-  cell of row 19 or 3 (lift 10 or 0 beside 20) in either game; a fresh park's wall in the game (the tests carry it); the bug
+  cell of row 3 (lift 0 beside 20) or of rows 22 and 25 (lift 30: (93,9), (93,13), (93,17), (93,19), (93,23)) in either game; a fresh park's wall in the game (the tests carry it); the bug
   put back in the game (the tests carry it: 12 of 12 mutants fail).
 - Q776 (a path or queue tool's square over a kart piece; Q587's tenth piece). Ours on the final binary (`q776/ours-a`, dll
   a5ad2c04, SCORE 1 of 1), on the desktop, the stock park, Q581's purchase, the path tool anchored on (34,23): the `strip`

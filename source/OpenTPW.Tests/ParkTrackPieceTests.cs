@@ -404,4 +404,30 @@ public class ParkTrackPieceTests
 			ParkObjects.SavedCaps( Model( "mammtunn" ), [0x1, 0x1, 0x1, 0x400, 0x401] ).ToArray(), "each cap its own word's bit" );
 		Assert.AreEqual( 1, ParkObjects.SavedCaps( Model( "mammtunn" ), [0, 0, 0, 0] ).Count(), "a cap with no word is left" );
 	}
+
+	/// <summary>
+	/// What the walk's bits and a load's words do to the caps' visibility, as the code that lays them does it
+	/// (<c>ParkObjects.CapsFor</c>, <c>LoadedCaps</c>, <c>ApplyCaps</c>): on the tunnel, bit 0x01 hides the cap of word 1 (node 3)
+	/// and bit 0x10 the cap of word 0x10 (node 4); a hidden cap is set not visible.
+	/// </summary>
+	[TestMethod]
+	public void TheWalksBitsAndTheLoadsWordsChooseWhichCapIsHidden()
+	{
+		var data = GameData.Required();
+		var tunnel = new ModelFile( new MemoryStream( data.ReadAllBytes( "levels/jungle/upgrades/mammtunn/mammtunn.md2" ) ) );
+
+		CollectionAssert.AreEqual( new[] { (0x01u, 3, true), (0x10u, 4, false) }, ParkObjects.CapsFor( tunnel, 0x01 ).ToArray(), "bit 1" );
+		CollectionAssert.AreEqual( new[] { (0x01u, 3, false), (0x10u, 4, true) }, ParkObjects.CapsFor( tunnel, 0x10 ).ToArray(), "bit 0x10" );
+		CollectionAssert.AreEqual( new[] { (0x01u, 3, true), (0x10u, 4, true) }, ParkObjects.CapsFor( tunnel, 0x11 ).ToArray(), "both" );
+
+		var shown = new Dictionary<int, bool>();
+		ParkObjects.ApplyCaps( ( node, visible ) => shown[node] = visible, ParkObjects.CapsFor( tunnel, 0x01 ) );
+		Assert.AreEqual( false, shown[3], "the hidden cap is not visible" );
+		Assert.AreEqual( true, shown[4], "the other is" );
+
+		uint[] words = [0, 0, 0, 0x401, 0x400];
+		var saved = new SavedThing( 1501, 0, [], NodeWords: words );
+		CollectionAssert.AreEqual( new[] { (0x01u, 3, true), (0x10u, 4, false) }, ParkObjects.LoadedCaps( tunnel, saved, 1501 ).ToArray(), "its own item" );
+		Assert.AreEqual( 0, ParkObjects.LoadedCaps( tunnel, saved, 1500 ).Count(), "another item's record lays nothing" );
+	}
 }

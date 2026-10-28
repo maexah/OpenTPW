@@ -51,6 +51,10 @@ public static class ParkBuilding
 	private readonly record struct Built( string Answer, int ThingId = 0, (int X, int Y)? QueueNode = null,
 		bool HasQueue = false, int TrackType = 0, bool Refused = false, int AddOnFor = 0 );
 
+	/// <summary>A test's stand-in for <see cref="ParkObjects.PlaceNow"/>, which wants a graphics device: answers whether the
+	/// thing stood. Null in the game.</summary>
+	internal static Func<ParkWorld.CatalogueObject, bool>? StandThing { get; set; }
+
 	private static Built Build( int catalogueId, int cellX, int cellY, int angle )
 	{
 		if ( Level.Current is not { } level || level.ParkState is not { } state
@@ -142,7 +146,7 @@ public static class ParkBuilding
 		var placed = Constructed( item, thingId, cellX, cellY, angle, entryPos, exitPos,
 			ParkWorld.BuiltWhen.At( state.CalendarNow ), trackRide ) with { UpgradeParent = (ushort)(addOn ? addOnFor : 0) };
 
-		if ( objects?.PlaceNow( placed, catalogue ) != true )
+		if ( (StandThing?.Invoke( placed ) ?? objects?.PlaceNow( placed, catalogue )) != true )
 		{
 			// Dead by CONTENT (Q615): Lost Kingdom's 61 items in a Full Simulation buy list all load in the running game
 			// (Instant Action shows 41; no other theme was run), so this return is met by none and the id taken above is
@@ -1517,17 +1521,23 @@ public static class ParkBuilding
 
 		var under = $"under ({pointerX},{pointerY}), snapped to ({preview.X},{preview.Y}) turned {CarryingAngle}";
 
-		if ( ParkTrackAddOn.RideUnder( state, preview.X, preview.Y ) is { } ride )
-			CarryingFor = ride.ThingId;
-		else if ( PlacementRefusal( state, item, cellX, cellY, CarryingAngle, CarryingFor ) == null )
+		// The preview judged the add-on for the hand's own ride ([0x00818698], 0x0053599c) and any red square latched
+		// [0x00816d48] (0x00527944), so a refused click builds nothing (0x00524a63) and the hand keeps its ride: PlaceCarried
+		// refuses it below. Only past that gate does the put-down take the track's owner as the builder's object (0x00524c3d).
+		if ( PlacementRefusal( state, item, cellX, cellY, CarryingAngle, CarryingFor ) == null )
 		{
-			// Dead by CONTENT: see the remarks.
-			ParkBuildMode.Disarm();
+			if ( ParkTrackAddOn.RideUnder( state, preview.X, preview.Y ) is { } ride )
+				CarryingFor = ride.ThingId;
+			else
+			{
+				// Dead by CONTENT: see the remarks.
+				ParkBuildMode.Disarm();
 
-			if ( !Input.ControlAlone )
-				Carrying = 0;
+				if ( !Input.ControlAlone )
+					Carrying = 0;
 
-			return $"{under}: put: no track there - nothing is built, and '{item.Name}' is let go";
+				return $"{under}: put: no track there - nothing is built, and '{item.Name}' is let go";
+			}
 		}
 
 		return $"{under}: {PlaceCarried( cellX, cellY, pressReachedTheTool: pressReachedTheTool )}";
@@ -1718,6 +1728,9 @@ public static class ParkBuilding
 			var (valid, steps) = ParkTrackTool.WalkAfterAddOn( state, park, script, ride, rideItem.TrackType );
 
 			Log.Info( $"Building: add-on thing {built.ThingId} walked ride thing {ride.ThingId}'s circuit, {steps} steps, +0x2c {valid}" );
+
+			// The add-on arm ends at FUN_0052f1b0( 0, 0 ) (0x005259fc), which turns the hand to 0 with Ctrl held too.
+			CarryingAngle = 0;
 		}
 
 		if ( built.QueueNode is not { } node )

@@ -211,11 +211,15 @@ public static class ParkModelTables
 		/// <summary>How many nodes the words are of.</summary>
 		public int Count => _words.Length;
 
-		/// <summary>Sets or clears one node's hidden bit (<c>0x1</c>), as a walk shows or hides an add-on's end cap.</summary>
+		/// <summary>
+		/// Sets or clears one node's hidden bit (<c>0x1</c>) and keeps the node locked (<see cref="TransformOnly"/>), as a
+		/// walk shows or hides an add-on's end cap: its <c>| 0x80000010</c> and <c>&amp; ~0x10</c> leave the live bit
+		/// <c>0x80000000</c> set (<c>0x0052b06d</c>, <c>0x0052afcc</c>), saved as <c>0x400</c>. The lobby model's rest and hide spare it the same way (<c>LobbyModel.LockNode</c>).
+		/// </summary>
 		public void SetHidden( int node, bool hidden )
 		{
 			if ( node >= 0 && node < _words.Length )
-				_words[node] = hidden ? _words[node] | 1u : _words[node] & ~1u;
+				_words[node] = (_words[node] | TransformOnly) & ~Hidden | (hidden ? Hidden : 0u);
 		}
 
 		/// <summary>

@@ -113,7 +113,7 @@ public class ParkFileWriterBoughtAndSoldTests
 	}
 
 	/// <summary>A Crazy Ape made by hand: thing <paramref name="id"/> on (41,22), closed, with a script of handle <paramref name="handle"/>.</summary>
-	private ParkFileWriter.MadeThing Ape( int id = 43, int handle = 16, int x = 41, int y = 22 )
+	private ParkFileWriter.MadeThing Ape( int id = 43, int handle = 16, int x = 41, int y = 22, ushort upgradeParent = 0 )
 	{
 		Assert.IsTrue( catalogue.TryGet( CrazyApe, out var item ) );
 
@@ -125,6 +125,7 @@ public class ParkFileWriterBoughtAndSoldTests
 			QueueSizeInCells = 1,
 			TotalTakings = 12,
 			Rings = new ParkObjectRings().Written(),
+			UpgradeParent = upgradeParent,
 		};
 
 		var script = new WrittenScript( handle, 26, 19, 0, 1, [.. Enumerable.Repeat( -1, 20 )], [0, 0, 8, 3, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -254,6 +255,16 @@ public class ParkFileWriterBoughtAndSoldTests
 
 		CollectionAssert.AreEqual( shipped.MessageSets()![0xb].Concat( [43, 50] ).ToArray(), set.ToArray(), "the day's change, in rising id" );
 		CollectionAssert.AreEqual( shipped.MessageSets()![0xa].ToArray(), written.MessageSets()![0xa].ToArray(), "and no other set" );
+	}
+
+	/// <summary>A made object's <c>mUpgradeParent</c> (record offset 226) is written and read back, and is 0 on the shipped objects.</summary>
+	[TestMethod]
+	public void AMadeObjectsUpgradeParentIsReadBackFromTheFile()
+	{
+		var written = Written( Things( [Ape( 43, 16, 41, 22, upgradeParent: 289 ), Ape( 50, 17, 20, 20 )] ), out _ );
+
+		Assert.AreEqual( (289, 0), ((int)written.Objects.Single( thing => thing.ThingId == 43 ).UpgradeParent,
+			(int)written.Objects.Single( thing => thing.ThingId == 50 ).UpgradeParent ) );
 	}
 
 	/// <summary>An object gone is out of the thing list, the object list, its cell's chain and every set; the things either side of it are linked.</summary>

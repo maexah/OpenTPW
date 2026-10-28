@@ -1823,9 +1823,10 @@ passes flags `0x422` (`0x00522eb1`), whose bit `0x400` reads `<model>.hmp`, and 
 19.99997, truncated 19, rounded up to ten 20). The anchor's record names its model: the row at `+0x18` and the rotation at `+0x1c`
 (family 5 at `+0x14`; the file's `mTileData`), the piece standing on the anchor moved by the turn at 360 less it
 (`ParkBoundaryHoarding.PieceOf`), so the cell's height is the file's byte over the cell plus the root's, the middle of the lowest
-and highest ground under its two by two. Over the stock park's east wall (ground 0 from x = 91) every cell lifts 20: (93,21),
-the anchor, row 2 turned 180, and (94,21), its 0xc cell, which Q436 measured; the wall's cells of row 19 or 3 lift 10 or 0 where
-the file's byte is lower. **A path or queue tool's square over a boundary cell is refused** (texture 1) in the original, and so
+and highest ground under its two by two. Over the stock park's east wall (ground 0 from x = 91) the anchors of row 2 (`ho_fos1`) lift 20 over
+their two by two - (93,21), turned 180, and (94,21), its 0xc cell, which Q436 measured - those of rows 22 and 25 (`ho_fos2`,
+`ho_fos3`: (93,9), (93,13), (93,17), (93,19), (93,23)) lift 30, and the corner pieces of row 3 (`ho_fob1`, (93,1) and (93,31)) 20
+beside the one cell whose byte is 0. The wall has no row 19. **A path or queue tool's square over a boundary cell is refused** (texture 1) in the original, and so
 is every square after it, as over any track corner; the track tool's, anchored on a cell of track type 0x19, is lifted by
 `Track_CellOp`'s start (`0x0053716f`) and answers red too. Measured in the original under Proton this session (`q777/orig`,
 `run.sh`, tag O5; `squares.py`, `liftcells.py`; `liftcells.py` reads (93,21) track 0x19, object 42, `.hmp` yes, root 0.00; (94,21) and
