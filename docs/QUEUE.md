@@ -78,19 +78,20 @@ filed the items that cite it.
   karts' and the water ride's track, buoys and race"). Q688 lays the station and mouths and draws the pieces; Q762 arms
   the track tool and lays its runs; Q763 walks the circuit as a loop closes (the sections, `+0x2c`, the opening); Q765
   takes a run back with Backspace; Q766 makes each section's collision objects and buoy; Q767 walks from the mouths and
-  pulses the open end; Q768 draws the armed tool's preview squares and its `c_end`. What is left: an add-on's end
+  pulses the open end; Q768 draws the armed tool's preview squares and its `c_end`; Q773 answers blue over a feature of priority
+  below 3 and tears it down at the click (op `0x87`). What is left: an add-on's end
   caps in the walk (`TRACK_WALK_ADD_ON`), the pieces' clips after a close
   (`TRACK_PIECES_CLIP`: `TrackRide_PlayPiecesFromMouth`, `0x0052a490`, and `TrackRide_PlayPiecesFromEnd`); the move's
   put-down walk (`0x00524d0a`; ours moves as a sale and a purchase); the put-down's check of the mouths, op 0x20b or
   0x210, whose refusal refuses the placement (`PUT_DOWN_TRACK_OVER_TRACK`: ours lays no anchor over track instead); the
   preview squares' lift and their 20-wide walls (`FUN_00536ca0`, `MARKER_LIFT_OVER_TRACK_THING`: the original's squares
-  over the mouth, the station and a run's end stand at 11.5 with walls, over the other mouth at 1.5, `q768/orig`; ours
-  lie on the ground under the pieces); a take-back's other cell or
+  over the mouth, the station and a run's end stand at 11.5 with walls, over the other mouth at 1.5, `q768/orig`; over the
+  Security Camera's cell (40,29) at 31.5 with three wall levels, `q773/orig`; ours lie on the ground under the pieces); a take-back's other cell or
   add-on (`TRACK_CLEAR_PIECE_CELL`, `TRACK_CLEAR_ADD_ON`); a closed loop's two-click edit (`TRACK_EDIT_CLOSED_LOOP`);
   a run over path or queue mid-run, an end or straight laid there as a hill and a bend or junction plain in the original
   (`TRACK_RUN_OVER_PATH`; the river takes a plain piece, built), a crossing or junction
-  (`TRACK_RUN_CROSSING`) and a run into the station (`TRACK_RUN_INTO_STATION`), the verdict's rest; the clear pass
-  (op 0x87); a hill's reshaping by the mouths' walks (`TRACK_WALK_HILL_SHAPE`) and the walks of the closed loop's edit
+  (`TRACK_RUN_CROSSING`) and a run into the station (`TRACK_RUN_INTO_STATION`), the verdict's rest; op 0x87's
+  clear of a path or queue under the last anchor (with `TRACK_RUN_OVER_PATH`); a hill's reshaping by the mouths' walks (`TRACK_WALK_HILL_SHAPE`) and the walks of the closed loop's edit
   (`0x00526b7a`) and of `FUN_00532fc0` (`0x0053426f`); the carried
   ride's squares and their check (`CARRY_PREVIEW_TRACK_START`); a water piece's own clip 0xc (`TRACK_PIECE_WATER_CLIP`);
   an add-on's model, whose cell shows the sky through the ground now (`TRACK_PIECE_ADD_ON`, Alexah's played Dino Karts,
@@ -112,13 +113,14 @@ filed the items that cite it.
     (`0x00462614`); the instancer `0x00463060` (flags `0x33a`, kart `0x522b90`, water `0x522d50`) calls `0x00469940` (`0x00463347`), which calls
     `0x00469a80` per node (cell triangle by flag `0x4`, Q398's note). Draw them so, not as flat plates (counted `TRACK_PIECE_DRAPE`). Not proven: whether the cars' sampler reads the draped copy.
     The same call also conforms every flag-8 object's base vertices to the terrain corners (Q750; fork watch 2026-10-27, verify-world H1).
-  - **Note (run 12 review, Q768 finding 1):** in the track modes the original's `Track_CellVerdict` answers 0 (blue, uncharged, even
-    where a latch stands) for a map type 4, 9 or 10 cell whose owner thing's item `+0x54` (`Info.OverwritePriority`) is below
-    `[0x00818c10]` = 3 (`0x00539961`..`0x00539c24`; set at `0x00523546`, stored at `0x005244be`), and op `0x87` tears that thing
-    down (`0x00538cf0`..`0x00538d76`, `FUN_00527ee0`). Lost Kingdom's features carry 0 or 1, rides and shops 5. Asked of three
-    cells only: the anchor, its east cell and its south-east cell (the south cell never). Ours keeps the refusal, red, and counts
-    it (`TRACK_RUN_OVER_SCENERY`, `ParkTrackTool.JudgeCell`; `ItemDescriptionFile.OverwritePriority` now reads the key). Build the
-    blue answer with op `0x87`'s tear-down (cross-reference Q449, which asks the same of a ride or shop's placement).
+- [ ] **Q774. A feature beside a cell the original's verdict never reaches.** From Q773 (`park.md`, "A run over scenery"). In
+  the original the blue answer returns at once, before the other cells of the anchor's two by two are judged, so its piece
+  is laid over a path, a queue, another ride's track, a map type 7 or 0x15 cell or a ride's south cell beside the feature (op
+  `0x87` tearing the south cell's thing down too, the compare at `0x00538cfd` standing open); ours refuses the run red and
+  counts `TRACK_RUN_OVER_SCENERY_MIXED`. Build the rest when Q587's path hill (`TRACK_RUN_OVER_PATH`) and its crossings are
+  built, for the stamp over such a cell is theirs; the south cell's tear-down is decoded and not seen, so run it in the
+  original (a feature on an anchor's east cell with a placed ride's footprint on its south cell) before building it.
+
 - [ ] **Q757. Whether the original's closing click of the karts' and water ride's track tool hands over the queue tool, and
   whether a count is owed.** From the Q762 review (the unsettled note; `docs/exe/park.md`, "The track tool"). The
   closing click (`0x00526eff`..`0x00526f83`, then the `0x80` stores at `0x00526fa7`) reads `[0x008186c0]`, the queue node
@@ -2936,7 +2938,7 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   `0x00818c14`). Every category file declares 5; of the item files, features alone set it, 45 at 1 and 48 at 0
   (FileFormats `sam.md`, which lists Lost Kingdom's); the path and queue tools write 2 and 3 (`0x00527200`,
   `0x00527218`). Our catalogue reads the key (`ParkItemCatalogue`'s `Item.OverwritePriority`, run 12 review)
-  and the track tool counts a run over scenery below 3 (`TRACK_RUN_OVER_SCENERY`); nothing else uses it: decide what a click on scenery with a ride or shop selected does here, then
+  and the track tool answers blue over scenery below 3 and takes it down (Q773); nothing else uses it: decide what a click on scenery with a ride or shop selected does here, then
   count it. (2) The demolisher's track arm (`0x0052801d`), for `WhichTrackType` 1 (karts) and 2 (the water ride):
   withdraws 2 x the cell cost x the scrap % / 100, signed, at `0x00528179`, after the per-tile refund of `0x0053b280`
   (cost x % / 100 unsigned; none for cell type `0x19`, a replayed layout or a station tile). `SALE_TRACK_TEARDOWN`

@@ -5,6 +5,13 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q768 (the track tool's preview squares and `c_end`; Q587's seventh piece). Ours on the final binary (`q768/ours-a`),
+  on the desktop, the stock park, by Q581's clicks: the drawn squares (`strip`), the pointer and the strip's latch toward
+  (34,29), the station, the path at (39,25) and the other mouth, and the water ride's two, with frames. The original run
+  this session under Proton (`q768/orig`, `squares.py`, the cursor word) for the same purchase and clicks: the squares,
+  textures, 20-wide flag and cursor on the mouth, toward (34,29), toward the station and on the other mouth; its water
+  ride and its run over the path at (39,25) not run (the pointer stopped on (36,25)). Not built, seen: the original's
+  squares stand on the pieces and the station with walls, ours lie on the ground under them (counted).
 - Q767 (the open end's pulse; Q587's sixth piece). Ours on the final binary (`q767/ours-b`), on the desktop, the stock
   park, by Q581's clicks: which piece pulses after the put-down, the arming, each run and the close, read by the `track`
   census, and the other mouth red at a low value (`ours-3-run1-b.png`); the original's `q587/orig/B-3-run1.png` is

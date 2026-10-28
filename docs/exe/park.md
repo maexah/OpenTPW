@@ -1772,11 +1772,40 @@ tool armed on its mouth: the pointer on the mouth, one square (34,25), `m_end`, 
 the mouth and the station's two sections red, "$ 0", cursor 8; after runs to (34,29) and (28,29), on the other mouth
 (28,25), blue, blue and `m_end`, cursor 0x12. The squares over the mouth, the station (map type 4) and the run's end
 stood at 11.5 with walls, the other mouth's at 1.5.
+**A run over scenery** (Q773; `ParkTrackTool.JudgeCell`, `TearDownUnder`; the click's pass in `LayRun`). The verdict's blue answer is at
+`0x00539961`..`0x00539c24`: after the four cells' flag `0x40` (`0x00539924`..`0x0053995b`), for each of the anchor (the
+verdict's own cell), its east cell and its south-east cell in turn, the last read twice by the listing (the south cell, `ebx`,
+is never asked), a cell of map type 4, 9 or 10 whose owner is a catalogue object (the thing's model byte `+2` is 3) sets
+`[0x00818c14]` to the item's `+0x54` and answers 0 where `[0x00818c10]` (3) is above it, returning at once, before the latch,
+the other cells' refusals and the charge. Where the owner is no catalogue object `[0x00818c14]` keeps what it held; the
+preview pass clears it to 0 at its start (`0x00523522`). Op `0x87` (`0x00538cf0`..`0x00538e37`) runs the same compare, then, for
+an anchor whose map type is not 0xb, 0xd, 0x10, 0x12 or 0x19 (`0x00538d45`..`0x00538d6c`), calls the demolisher on
+(x,y), (x+1,y), (x,y+1) and (x+1,y+1) in that order (`0x00538d76`..`0x00538d9e`); `FUN_00527ee0` resolves the thing by
+`FUN_00527d60`, which answers for a cell typed 4, 9 or 10, so a cell already cleared by an earlier call finds nothing; on the
+last anchor (`[0x00820ad0]`) it then calls `FUN_005367a0( 0, 0 )` on the anchor's four cells (`0x00538db3`..`0x00538e37`),
+whose jump table (`0x00536c10`, bytes `0x00536c2c`) acts only on map types 1, 3, 4, 9, 10 and 0x15, so bare ground, the river
+and track are left as they are. A run the verdict let through has read only priorities below 3 (a ride's 5 answers red), so the
+compare at `0x00538cfd` stands open at the click; **the south cell is torn down with the rest**, though the verdict never asked
+it, so a ride's footprint on a south cell goes with the feature on the east one (decoded, not seen). The click charges the cell's
+piece at the stamp as it does any new piece (`Track_StampCell`), where the preview's total leaves the blue anchor out.
+Measured (Q773): in the original under Proton (`q773/orig`, `run.sh`) on `q581/karts.TPWS`, the Dino Karts bought on (32,25), the
+track tool armed on the mouth and a run clicked to (34,29), the pointer on (40,29), where the Security Camera (`camera`, priority
+0, one cell, thing 19) stands: four blue squares (34,29), (36,29), (38,29), (40,29), the last 20 wide at y 31.5 with three
+wall levels down (the lift rule's map type 4 cell, `MARKER_LIFT_OVER_TRACK_THING`), cursor 6, the frame's "$ 400" (two
+pieces: the cell over the camera is not in the total, `O-O2.png`); the click laid pieces on (36,29), (38,29) and (40,29) (the
+last `gk_trckQ`, row 1, turn 90), the camera's pole gone from the frame (`O-O3.png`) and the anchor moved to (40,29), the tool
+armed still. The bank fell 445 over that click, the park's clock running (the day turned 2.19 to 2.20 between the two frames):
+600 for three pieces less a refund of about 155 and the clock's own costs, not separated; ours refunds the camera's 250
+whole (the scrap percentage, `SCRAP_VALUE_DEPRECIATION`, is not built) and falls 350 on the same clicks, the clock held.
+**Ours** answers the blue and tears the thing down as above; a feature of two by two or more reaches the south cell, which counts as
+part of the answer where one of the three asked cells is the feature too. Where another cell of the anchor is refused by a rule
+of ours (a ride's footprint on the south cell, path, queue, another ride's track, map type 7 or 0x15) the run stays red and is
+counted, `TRACK_RUN_OVER_SCENERY_MIXED` (Q774): the original lays its piece over that cell too.
 **OpenTPW** (Q762, `ParkTrackTool`) builds the arming walk, the click and its passes but `0x87` and `0x86`; its verdict
 refuses the last cell's queue, used-from cell and flag `0x20` as the original, lays over the river plain, and refuses and
 counts path and queue mid-run (`TRACK_RUN_OVER_PATH`: the original's hill, unbuilt), its own track mid-run or with two
-links at the end (`TRACK_RUN_CROSSING`), its own station (`TRACK_RUN_INTO_STATION`) and a feature under it of priority below 3
-(`TRACK_RUN_OVER_SCENERY`: the original answers blue there and op `0x87` tears the feature down; ours refuses it red); a closed loop's edit
+links at the end (`TRACK_RUN_CROSSING`) and its own station (`TRACK_RUN_INTO_STATION`); over a feature of priority below 3 it
+answers blue as the original does (Q773, below); a closed loop's edit
 (`TRACK_EDIT_CLOSED_LOOP`) is counted, the circuit's walk that closes a run is Q763's (below), and Backspace's refund
 Q765's ("A track piece's model, price and open end", below). The preview (Q768, `ParkTrackTool.Preview`,
 `JudgeCell`) draws a two-by-two square an anchor, blue, red, or `m_end` where the run's last anchor is its own track,

@@ -302,8 +302,8 @@ public static class ParkTrackTool
 
 	/// <summary>
 	/// The preview's verdict on a run, cell by cell (<c>Track_CellVerdict</c>, <c>FUN_00539760</c>): refused where a piece's
-	/// two by two leaves the map or the park's land (map flag <c>0x40</c>), stands on an object (map types 4, 9 and 10; the
-	/// original answers blue over a feature of priority below 3, which is counted, <c>TRACK_RUN_OVER_SCENERY</c>), on
+	/// two by two leaves the map or the park's land (map flag <c>0x40</c>), stands on an object (map types 4, 9 and 10; blue over a
+	/// feature of priority below 3, as the original answers, whose op <c>0x87</c> is <see cref="LayRun"/>'s first pass), on
 	/// type 7, 0x15 or 30, or on another ride's track; where the run's last cell, unless it meets its own track, stands on
 	/// queue, a ride's used-from cell or a cell flagged <c>0x20</c> (<c>0x00539fc5</c>..<c>0x0053a05f</c>); or where the new
 	/// pieces together cost more than the balance. The total runs on past a refused cell, so a run refused for another reason
@@ -355,9 +355,10 @@ public static class ParkTrackTool
 	/// <c>0x00539959</c>); <see cref="NearTrack"/> latches before the cell is charged (another ride's track among its three
 	/// other cells, <c>0x00539c47</c>..<c>0x00539dbb</c>); <see cref="After"/> is judged after the charge and the money and
 	/// leaves the refusal pending (<c>0x0053a307</c>), which the same anchor's second judgement turns into the latch
-	/// (<c>0x00539dbc</c>..<c>0x00539dca</c>, before the third argument is read).
+	/// (<c>0x00539dbc</c>..<c>0x00539dca</c>, before the third argument is read). <see cref="Scenery"/> answers blue at once,
+	/// after the land and before the latch is read, uncharged and latching nothing (<c>0x00539961</c>..<c>0x00539c24</c>).
 	/// </summary>
-	public enum CellRefusal { None, Land, NearTrack, After }
+	public enum CellRefusal { None, Land, NearTrack, After, Scenery }
 
 	/// <summary>One anchor of a run judged: its first reason (and the gap it counts, if any), which part refused it, and
 	/// whether it is an empty cell on the map, the kind a run is charged for.</summary>
@@ -402,6 +403,7 @@ public static class ParkTrackTool
 		string? gap = null;
 		var (land, near, scenery) = (false, false, false);
 		var onMap = true;
+		string? southFeature = null;
 
 		void Refuse( string reason, string? counted = null )
 		{
@@ -426,15 +428,24 @@ public static class ParkTrackTool
 
 			// The verdict asks only the anchor, its east cell and its south-east cell about the owner's priority; the south
 			// cell is never asked (0x00539961..0x00539b75).
-			if ( under.Type is CellEdge.Footprint or CellEdge.RideEnd or CellEdge.RideFarEnd && (cx, cy) != (x, y + 1)
-				&& OverwritePriorityOf( state, under.ParentId ) is < BuildsOverPriority )
-				scenery = true;
+			var thing = under.Type is CellEdge.Footprint or CellEdge.RideEnd or CellEdge.RideFarEnd;
+			var gives = thing && OverwritePriorityOf( state, under.ParentId ) is < BuildsOverPriority;
+			var south = (cx, cy) == (x, y + 1);
+			var feature = gives && !south;
+
+			scenery |= feature;
 
 			if ( (under.Flags & 0x40) != 0 )
 			{
 				Refuse( $"({cx},{cy}) is outside the park's land" );
 				land = true;
 			}
+			else if ( feature )
+			{
+				// Answered below: blue, with the rest of the anchor unasked.
+			}
+			else if ( gives && south )
+				southFeature = $"({cx},{cy}) is map type {under.Type}"; // a feature the verdict never asks: refused unless a cell it does ask is one
 			else if ( under.Type is CellEdge.Footprint or CellEdge.RideEnd or CellEdge.RideFarEnd or 7 or 0x15 or CellEdge.Approach )
 				Refuse( $"({cx},{cy}) is map type {under.Type}" );
 			else if ( last && ParkState.OnMap( x, y ) && state.Record( x, y ).TrackType != type
@@ -457,14 +468,26 @@ public static class ParkTrackTool
 			}
 		}
 
-		// A deviation: in the track modes the original answers 0 here, blue and uncharged, for a thing whose item's
-		// OverwritePriority (+0x54) is below 3 (a feature: 0 or 1; the category files all say 5), and the click's op 0x87
-		// tears it down (0x00538cf0). Op 0x87 is not built, so the cell stays refused, red, and the run is counted.
-		if ( scenery && !land )
-			gap = "TRACK_RUN_OVER_SCENERY";
-
 		if ( !onMap )
 			return new CellJudged( why, gap, CellRefusal.Land, false );
+
+		// A feature on the south cell is part of the answer where the anchor's, east or south-east cell is one too (a rock
+		// of two by two or more); alone it is a cell of map type 4, 9 or 10 like any other.
+		if ( southFeature != null && (!scenery || land) )
+			Refuse( southFeature );
+
+		// In the track modes the original answers 0 here, blue, uncharged and latching nothing, at once and whatever else
+		// the anchor's cells hold, for a thing whose item's OverwritePriority (+0x54) is below 3 (a feature: 0 or 1; the
+		// category files all say 5), and the click's op 0x87 tears it down (0x00538cf0; LayRun). A deviation: where one of the
+		// anchor's other cells would be refused by a rule of ours, the refusal stands and the run is counted, for the
+		// original lays its piece over that cell too.
+		if ( scenery && !land )
+		{
+			if ( why == null )
+				return new CellJudged( null, null, CellRefusal.Scenery, false );
+
+			gap = "TRACK_RUN_OVER_SCENERY_MIXED";
+		}
 
 		var cell = state.Record( x, y );
 
@@ -551,7 +574,9 @@ public static class ParkTrackTool
 			var refused = true;
 			var unaffordable = false;
 
-			if ( judged.Kind != CellRefusal.Land )
+			if ( judged.Kind == CellRefusal.Scenery )
+				refused = false;
+			else if ( judged.Kind != CellRefusal.Land )
 			{
 				latch |= judged.Kind == CellRefusal.NearTrack;
 
@@ -623,9 +648,8 @@ public static class ParkTrackTool
 	/// <summary>
 	/// Lays one run from the anchor to its target, pass by pass over every cell, as the click does (<c>0x00526daa</c>..
 	/// <c>0x00526ebe</c>): the stamp, the links, the flow, the owner, the hill flags and the retile. The clear pass
-	/// (<c>0x87</c>) tears down what the original's verdict lays over, a feature of priority below 3
-	/// (<c>TRACK_RUN_OVER_SCENERY</c>: here <see cref="Verdict"/> refuses it, so op 0x87 has nothing to do); the mouths' walks
-	/// (<c>0x86</c>) run once for the run (<see cref="ShapeMouths"/>).
+	/// (<c>0x87</c>, <see cref="TearDownUnder"/>) comes first and tears down what the verdict answered blue over, a feature of
+	/// priority below 3; the mouths' walks (<c>0x86</c>) run once for the run (<see cref="ShapeMouths"/>).
 	/// </summary>
 	public static Laid LayRun( ParkState state, int type, ushort owner, (int X, int Y) from, (int X, int Y) to, int price )
 	{
@@ -633,6 +657,8 @@ public static class ParkTrackTool
 		var charged = 0;
 		var pieces = 0;
 		var metTrack = false;
+
+		TearDownUnder( state, cells );
 
 		// The stamp (Track_StampCell, 0x00538fc0): its own type again is free and counts once more; a new piece is charged,
 		// and refused where the balance cannot pay, which stops this pass alone.
@@ -735,6 +761,46 @@ public static class ParkTrackTool
 		}
 
 		return new Laid( metTrack, charged, pieces );
+	}
+
+	/// <summary>Sells one thing the way the demolisher does (<c>FUN_00527ee0</c>), and answers the line to show. The running park unless a test stands in.</summary>
+	internal static Func<int, string> TearDownThing { get; set; } = ParkBuilding.Sell;
+
+	/// <summary>
+	/// The click's op <c>0x87</c> (<c>0x00538cf0</c>..<c>0x00538d9e</c>), its first pass: for each anchor that is not track
+	/// (<c>0x00538d45</c>..<c>0x00538d6c</c>) the demolisher is called on its two by two's cells in the order (x,y), (x+1,y),
+	/// (x,y+1), (x+1,y+1) (<c>0x00538d76</c>..<c>0x00538d9e</c>), which takes down the thing a cell typed 4, 9 or 10 belongs to
+	/// (<c>FUN_00527d60</c>) and finds nothing in a cell it already took down. The pass is gated on <c>[0x00818c10]</c> (3)
+	/// being above <c>[0x00818c14]</c>, the priority the last verdict read; a run the verdict let through has read only
+	/// priorities below 3 (a ride's 5 answers red), so the gate stands open here. The last anchor's own clear
+	/// (<c>FUN_005367a0</c> on its four cells, <c>0x00538db3</c>..<c>0x00538e37</c>) leaves bare ground, the river and track as
+	/// they are (its jump table, <c>0x00536c10</c>), and a path or queue is refused before the click, so it has nothing more to
+	/// do. Like the original, a south cell that holds a ride's footprint is taken down too, the verdict never having asked it.
+	/// </summary>
+	internal static void TearDownUnder( ParkState state, List<(int X, int Y)> anchors )
+	{
+		foreach ( var (x, y) in anchors )
+		{
+			if ( state.Record( x, y ).TrackType != 0 )
+				continue;
+
+			foreach ( var (cx, cy) in new[] { (x, y), (x + 1, y), (x, y + 1), (x + 1, y + 1) } )
+			{
+				if ( !ParkState.OnMap( cx, cy ) || state.Record( cx, cy ) is not { Type: CellEdge.Footprint or CellEdge.RideEnd or CellEdge.RideFarEnd } under )
+					continue;
+
+				var (ownerX, ownerY) = MapStep.CellAt( under.ParentId );
+
+				foreach ( var placed in state.Objects.ToArray() )
+				{
+					if ( placed.CellX != ownerX || placed.CellY != ownerY )
+						continue;
+
+					Log.Info( $"track: op 0x87 takes down thing {placed.ThingId} under ({cx},{cy}): {TearDownThing( placed.ThingId )}" );
+					break;
+				}
+			}
+		}
 	}
 
 	/// <summary>

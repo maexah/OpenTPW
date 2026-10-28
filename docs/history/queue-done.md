@@ -10795,6 +10795,17 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   mouth one `m_end` square and cursor 0x12 in both; toward (34,29) three blue (`ours-2-run.png`, `O-O2.png`); toward the
   station three red, the mouth with them (`ours-3-back.png`, `O-O3.png`); on the other mouth blue, blue, `m_end`. Left
   in Q587: the squares' lift and walls (`FUN_00536ca0`), which the original's have.
+- [x] **Q773. A track run over scenery (Q587's eighth piece).** `ParkTrackTool.JudgeCell` answers blue, uncharged and latching
+  nothing, at once after the land check, where the anchor's, its east or its south-east cell is a map type 4, 9 or 10 whose
+  owner's item `+0x54` (`Info.OverwritePriority`) is below 3 (`Track_CellVerdict`, `0x00539961`..`0x00539c24`; the south cell is
+  never asked), and `LayRun` begins with op `0x87`'s pass (`0x00538cf0`..`0x00538d9e`, `TearDownUnder`): the demolisher
+  (`ParkBuilding.Sell`, `FUN_00527ee0`) on each non-track anchor's four cells in order, the stamp then charging the piece as
+  any. `TRACK_RUN_OVER_SCENERY` is gone; a feature beside a cell this game refuses by another rule stays red and is counted
+  (`TRACK_RUN_OVER_SCENERY_MIXED`, Q774). Ours on the final binary (`q773/ours-a`, `PREDICTION.txt`) and the original this
+  session (`q773/orig`), the Dino Karts bought on (32,25), a run to (34,29), the pointer on (40,29) over the Security Camera:
+  four blue squares and cursor 6 in both (`ours-1-over.png`, `O-O2.png`), the camera gone after the click, a track piece
+  there (`ours-2-after.png`, `O-O3.png`). Not compared: the refund (ours 250 whole, the original's scrap percentage is not
+  built, `SCRAP_VALUE_DEPRECIATION`). `park.md`, "A run over scenery".
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

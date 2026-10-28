@@ -1792,7 +1792,7 @@ GH=766` there, or the pointer is off):
   numbered in its ride's own list, where the original's is its pool slot, and names its object where `trackride.py`
   says `yes`), so its lines hold beside `q581/orig/A-track.log`'s (Q766, `q766/ours.py`); `tool queue <thing>`, `worldclick 31 23`,
   `worldclick 32 23` joins the karts' queue to the path cell before the exit, which opens a closed loop (Q763,
-  `q763/ours.py`).
+  `q763/ours.py`). A run over scenery (Q773, `q773/ours.py`, `q773/orig/run.sh`): after the run to (34,29), `hover 40 29` then `strip` is four blue squares over the Security Camera (a feature, priority 0, one cell, thing 19), and one more `worldclick 40 29` takes it down; the original's `trackcells.py` reads the track grid, not the map type, so it cannot show the camera: its pole is gone from the frame.
 - **A chosen advisor line in both games** (Q596, `q596/orig/runfs.sh`, `q596/confirm.py`): only a park whose advisor
   talks will do; the stock park, loaded in either game, holds message 128 at score 20 alone and says nothing. A fresh
   Full Simulation park says lines on the same ticks in both, 265, 612, 673, 734, 1277, 1897 and 2517 (responses 404,
