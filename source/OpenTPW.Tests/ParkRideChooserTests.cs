@@ -85,7 +85,7 @@ public class ParkRideChooserTests
 		// The half that matters for spending, said on its own so a future change cannot quietly drop it
 		// back into the set it came from: a guest really is sent to the shop.
 		Assert.IsTrue( offered.Contains( DrinksShop ),
-			"the Drinks Shop is chosen - this is the whole of PLAYER-GAPS item 8's shop half" );
+			"the Drinks Shop is chosen - this is the whole of the thirsty-guest gap's shop half" );
 
 		// Anti-vacuity: the guest really was stood next to things that were passed over.
 		Assert.AreEqual( 6, park.Objects.Count( o => o.IsVisitable ),

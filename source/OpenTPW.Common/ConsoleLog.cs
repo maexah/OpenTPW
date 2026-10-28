@@ -22,7 +22,9 @@ namespace OpenTPW;
 /// terminal, and the terminal carries on: the log never stops the game.
 /// </para>
 /// <para>
-/// A launch that finds no game writes no file: nothing is rotated for it, and the terminal has all it said.
+/// A launch that finds no game still keeps its file, so a player who cannot start the game has the lines
+/// that say why (<see cref="OpenWithoutGame"/>): in the player's own data folder, where there is no game folder to
+/// put it in, and rotated like any other launch's.
 /// </para>
 /// <para>
 /// The file is written through <see cref="SafePaths"/>, so it can be shared as it is: the game's folder, the
@@ -61,16 +63,29 @@ public static class ConsoleLog
 
 	/// <summary>Opens the file now the game's folder is found: rotates the old one and writes what was held.</summary>
 	public static void Open( string gameFolder )
+		=> Open( SafePaths.ForThisMachine( gameFolder ), Candidates( gameFolder, Environment.GetEnvironmentVariable( DirectoryVariable ), UserFolder() ), Header(), sayWhere: false );
+
+	/// <summary>
+	/// Opens the file when no game was found, in the player's own data folder (or where <c>OPENTPW_LOG_DIR</c> says), with
+	/// the lines held so far - the folders tried and what would put it right - and says on the terminal where it is.
+	/// Called once, just before the process exits.
+	/// </summary>
+	public static void OpenWithoutGame()
+		=> Open( SafePaths.ForThisMachine( string.Empty ), NoGameCandidates( Environment.GetEnvironmentVariable( DirectoryVariable ), UserFolder() ), Header( NoGameNote ), sayWhere: true );
+
+	private static void Open( SafePaths safe, string[] folders, string header, bool sayWhere )
 	{
 		if ( _sink is not { } sink )
 			return;
 
-		_safe = SafePaths.ForThisMachine( gameFolder );
+		_safe = safe;
 
-		if ( !sink.Open( Candidates( gameFolder, Environment.GetEnvironmentVariable( DirectoryVariable ), UserFolder() ), Header(), _safe.Scrub ) )
+		if ( !sink.Open( folders, header, _safe.Scrub ) )
 			Console.Error.WriteLine( $"[console log] no folder could be written, so this run is not kept: {sink.Failures}" );
 		else if ( sink.Failures.Length > 0 )
 			Console.Error.WriteLine( $"[console log] this run is kept in {sink.Path}: {sink.Failures}" );
+		else if ( sayWhere )
+			Console.Error.WriteLine( $"[console log] this run is kept in {sink.Path}" );
 	}
 
 	/// <summary>Cuts a player's name from the file from here on (<see cref="SafePaths.HidePlayer"/>); nothing before <see cref="Open"/>.</summary>
@@ -81,18 +96,27 @@ public static class ConsoleLog
 	{
 		var root = OperatingSystem.IsWindows() ? Environment.SpecialFolder.ApplicationData : Environment.SpecialFolder.LocalApplicationData;
 
-		return System.IO.Path.Join( Environment.GetFolderPath( root ), "OpenTPW" );
+		// DoNotVerify: asked to verify, the runtime answers an empty string for a folder that is not there yet
+		// (a new account has no ~/.local/share), and the log would land in whatever folder the game was started from.
+		return System.IO.Path.Join( Environment.GetFolderPath( root, Environment.SpecialFolderOption.DoNotVerify ), "OpenTPW" );
 	}
 
 	/// <summary>The folders to try, in order: the variable's alone when set, otherwise the game's and then the player's own.</summary>
 	public static string[] Candidates( string gameFolder, string? variable, string userFolder )
 		=> string.IsNullOrWhiteSpace( variable ) ? [gameFolder, userFolder] : [variable];
 
-	private static string Header()
+	/// <summary>The folders to try when there is no game folder: the variable's alone when set, otherwise the player's own.</summary>
+	public static string[] NoGameCandidates( string? variable, string userFolder )
+		=> string.IsNullOrWhiteSpace( variable ) ? [userFolder] : [variable];
+
+	/// <summary>Said at the head of a file that was kept without a game folder.</summary>
+	public const string NoGameNote = "no game folder was found";
+
+	private static string Header( string note = "" )
 	{
 		var build = Assembly.GetEntryAssembly()?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "unknown build";
 
-		return $"OpenTPW {build}, started {DateTime.Now:yyyy-MM-dd HH:mm:ss zzz}";
+		return $"OpenTPW {build}, started {DateTime.Now:yyyy-MM-dd HH:mm:ss zzz}" + ( note.Length > 0 ? $" ({note})" : string.Empty );
 	}
 
 	/// <summary>

@@ -177,7 +177,7 @@ public class ParkRideChoiceTests
 
 	/// <summary>
 	/// <b>A thirsty guest is sent to the Drinks Shop from all over the park, and it is routable from
-	/// everywhere they stand.</b> This is the shop half of <c>docs/PLAYER-GAPS.md</c> item 8, pinned at the
+	/// everywhere they stand.</b> This is the shop half of the thirsty-guest gap, pinned at the
 	/// level the live game could not show.
 	///
 	/// <para>

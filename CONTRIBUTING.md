@@ -58,7 +58,10 @@ The project's habits, in short. `AGENTS.md` has them all, numbered.
 - **Style**: tabs, LF line endings, file-scoped namespaces, spaces inside parentheses (`Foo( x, y )`), braces on their
   own line. Match the file you are in.
 
-There is no CI, on purpose. Before you open a pull request, build and test your branch in a clean worktree:
+No CI tests the code, on purpose. The one workflow, [`weekly.yml`](.github/workflows/weekly.yml), only packages a
+weekly build from a tag the maintainer pushes and runs the content guard that keeps the game's files out of the zip; it
+runs no test and decides nothing about your change. So the check is yours. Before you open a pull request, build and
+test your branch in a clean worktree:
 
 ```sh
 git worktree add ../opentpw-check HEAD
@@ -79,9 +82,13 @@ cd - && git worktree remove ../opentpw-check
 
 ## Reporting a bug
 
-[Open an issue](https://github.com/maexah/OpenTPW/issues/new/choose). Attach `console.log` from the game's folder:
-it names the build, your system and your graphics card, and holds no personal details.
+[Open an issue](https://github.com/maexah/OpenTPW/issues/new/choose). Attach `console.log` from the game's folder,
+beside `save`: it names the build, your system and your graphics card, and holds no personal details. If the game's
+folder cannot be written, or OpenTPW found no game to start, the file is in your own data folder instead
+(`%AppData%\OpenTPW` on Windows, `~/.local/share/OpenTPW` on Linux, `~/Library/Application Support/OpenTPW` on macOS).
 
 ## License
 
-By contributing you agree that your work is released under the [MIT license](LICENSE.md).
+By contributing you agree that your work is released under the [MIT license](LICENSE.md). Anything you add that is
+not your own work (a library, a font, an image) gets a row in [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md) in the
+same commit: a test fails when a package or a file under `content/` has none.

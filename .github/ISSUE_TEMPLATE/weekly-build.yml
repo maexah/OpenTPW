@@ -37,7 +37,8 @@ body:
       label: console.log
       description: |
         Drag console.log into this box. It is in the game's folder, beside "save". If it is not there, look in
-        %AppData%\OpenTPW (Windows), ~/.local/share/OpenTPW (Linux) or ~/Library/Application Support/OpenTPW (macOS).
+        %AppData%\OpenTPW (Windows), ~/.local/share/OpenTPW (Linux) or ~/Library/Application Support/OpenTPW (macOS). If the game could not find
+        Theme Park World and did not start, the file is in that folder too, and says where it looked.
         Folder paths in it are already cut down to "<game folder>" and "~", and player names to "<player 1>" and so on.
     validations:
       required: true

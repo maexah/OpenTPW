@@ -34,6 +34,9 @@ internal static class Game
 		//
 		if ( !GameDir.Find( args ) )
 		{
+			// There is no game folder to keep the log in, but the lines that say why are still worth keeping.
+			ConsoleLog.OpenWithoutGame();
+
 			Environment.ExitCode = 1;
 			return;
 		}

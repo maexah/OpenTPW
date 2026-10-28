@@ -10842,6 +10842,23 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the original (`q781/orig/O3`: the closing click's 8 calls at `0x0052a5de`, the loop's handles in order), built in
   `ParkTrackTool` and `ParkTrackPieces` (`park.md`, "The pieces' clips"): a piece made at rest, the close at rest, an add-on's
   put-down on a closed loop its `M` clip looped. Confirmed in ours on Splish Splash (`q781/R4`), the close in both games.
+- [x] **Q798. Ready for public builds: licenses, the zip's required files, a log on a failed start, the docs.** Alexah's
+  review, 2026-10-28. (1) `THIRD-PARTY-NOTICES.md`: every package and file the build ships that we did not make (each
+  package's license read from its own nupkg, the .NET runtime's notices, Roboto 2.137, Apache-2.0, (c) 2011 Google, with
+  `content/fonts/LICENSE.txt` beside the fonts); both in the weekly zip. (2) `tools/weekly/release.py`: a `REQUIRED` list
+  (the program, its deps and runtimeconfig, the shaders, the font, README.txt, LICENSE.md, the notices) a zip must hold;
+  tested with a zip of only the notes, one without the font, one without the notices. (3) When no game folder is found,
+  the log is still written (the player's data folder: the held lines and the folders tried) before the exit; a test and one
+  run with no game; the issue forms and the zip's README say where it is. (4) `CONTRIBUTING.md`: no CI tests the code;
+  the one workflow, `weekly.yml`, only packages a tagged release and runs the content guard. (5) This file's header: what
+  every contributor does, apart from the maintainer's own steps (branch names, reordering, pushing). (6) Delete
+  `docs/PLAYER-GAPS.md` (it repeats STATUS and WORKS) and every link to it. So it stays true unremembered: a test fails when
+  a file under `content/` or a shipped project's `PackageReference` has no row in the notices; the guard's `REQUIRED`; the
+  failed-start test; and one line in `WORKFLOW.md`'s Sunday routine (read the zip's README and the issue forms against
+  STATUS before the tag). Done 2026-10-28, `alexah/770-release-ready`: `THIRD-PARTY-NOTICES.md` and `content/fonts/LICENSE.txt`
+  (texts read from the nupkgs and the upstream projects), `REQUIRED` in `release.py`, `OpenWithoutGame` in `ConsoleLog`,
+  `ThirdPartyNoticesTests`, `WeeklyReleaseTests` and `FailedStartLogTests`; confirmed on the Linux zip's apphost with and
+  without a game (`q798/run1`, `run2`, STATUS).
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

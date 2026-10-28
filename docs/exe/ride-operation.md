@@ -3089,7 +3089,7 @@ the walk to `EntranceA`. `Staff.SettingOffForTheStrike` is `+0x188`. A saved par
 records (Q523; `saves.md`, "OpenTPW's writer, the strike records").
 
 **Counted, not built.** The three posts, where `FUN_00508f70` makes them: `STRIKE_WARNING_TO_THE_ADVISOR`,
-`STRIKE_TO_THE_ADVISOR`, `STRIKE_CALLED_OFF_TO_THE_ADVISOR` (`docs/PLAYER-GAPS.md` gap 4: the park's advisor
+`STRIKE_TO_THE_ADVISOR`, `STRIKE_CALLED_OFF_TO_THE_ADVISOR` (the park's advisor
 says none of these three). The handymen's cell ratio, `STRIKE_HANDYMEN_CELL_RATIO`, which answers as no cause (Q225).
 `STAFF_HQ_MONTHLY_STRIKE_CHECK` is gone. The ride window's three strike statuses (`FUN_00485f60`) are Q212's.
 
@@ -4222,7 +4222,7 @@ Five constructors join set `0xc`: model 9's (`0x00508a08`), the tag system's, th
    `mPaidAdmission` (the save's name for it, `FUN_004fb530`): the constructor zeroes it (`0x004faf81`) and the gate
    sets it as a guest pays (`FUN_004ff9d0`, `0x004ffaee`), so only a guest who paid hands in a stay. The history
    ring's readers are the park status screen's graph (`FUN_004a4b90`, `FUN_004a51d0`, the draw at `0x004a47bf`, and
-   `FUN_004a5e10` from the date's change, `0x004f8435`), which is not built (`docs/PLAYER-GAPS.md`); that the series
+   `FUN_004a5e10` from the date's change, `0x004f8435`), which is not built; that the series
    is the one the screen calls the average time in the park is not read from a label. OpenTPW keeps both rings
    (Q393; `hud.md`, "The leavers' stays"): `PeepBehaviour` hands a paying guest's stay to `ParkState.AddLeaverStay` as
    it puts them at the stop.

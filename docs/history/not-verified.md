@@ -5,6 +5,18 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q781 (the pieces' clips; Q587's fourteenth piece). The close in both games this session on a Splish Splash on (20,20)
+  looped south by the same clicks; the add-on in ours alone. The original (`q781/orig/O3`, off-screen, `q581/karts.TPWS`): no
+  clip call from the arming through two runs (`O-brkA.log`); the closing click's 8 calls all at `0x0052a5de`, the mouth's walk
+  at clip 0xc, on handles 93, 95, 96, 169, 170, 171, 172, 94, `trackcells.py`'s from (22,19) round to (16,19) (`O-brkB.log`,
+  `O-cells.txt`); none in the 35 s after, its water still (`O-9-closed-a.png`, `-b`: 0.0 on the channels). Ours on the final
+  binary (`q781/R4`, dll aec330f7, Full Simulation): "ride thing 43's pieces' walk put 8 pieces at rest, clip 0xc", its water
+  still (`3-closed-a.png`, `-b`: 0.0, 0.05, 0.0); a Splish Splash Tunnel snapped to (20,23) turned 90, "+0x2c 1", "put 6
+  pieces to clip 5, looped", `clip 5` on the six in the census and its water scrolling (`5-tunnel-a.png`, `-b`: 27.5, 17.8,
+  32.6). Missed and recorded (`q781/PREDICTION.txt`): R1 to R3 and O1, O2 by the harness (no 1502 in Instant Action, the north
+  loop's squares red over the queue, the front squares' marker 6, the buy row y 341 another item); the laying pairs' crop (the
+  camera moved). Not seen: the original's add-on put-down (its clip 5 is read, not measured), a piece made at rest before the
+  close (the census only), the karts (no `M` clip in Lost Kingdom). The bugs put back: 11 of 11 fail a test.
 - Q780 (a track add-on's put-down; Q587's thirteenth piece). Both games this session on a copy of Alexah's played Full
   Simulation Dino Karts by a Full Simulation player, the same pointers. The original (`q780/orig/O1`, the ride window's Buy
   Upgrades): the Tunnel's ten squares blue on (12..13,15..18) and (11,16), (11,17) (`8-hover-13-17.png`, `squares.py`), thing 209

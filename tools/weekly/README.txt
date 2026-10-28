@@ -69,6 +69,11 @@ the game's files look complete. It does not hold your name or your
 computer's name: folder paths in it are cut down to "<game folder>"
 and "~", and each player's name to "<player 1>" and so on.
 
+If OpenTPW cannot find Theme Park World it says where it looked and
+stops, and it still writes console.log. There is no game folder to
+put it in, so it is in the folder listed above, and its first line
+says "no game folder was found".
+
 To report a problem, open an issue at
    https://github.com/maexah/OpenTPW/issues
 and choose "Weekly build problem". Say which build you have (the
@@ -78,5 +83,8 @@ name of this zip), your system, and attach console.log.
 Licence
 -------
 
-OpenTPW's code is under the licence in LICENSE.md. Theme Park World
-belongs to its owners; OpenTPW is not made or approved by them.
+OpenTPW's code is under the licence in LICENSE.md. The libraries and
+the font in this download are other people's work, each under its own
+licence: THIRD-PARTY-NOTICES.md names every one, and the font's licence
+is also in content/fonts. Theme Park World belongs to its owners;
+OpenTPW is not made or approved by them.

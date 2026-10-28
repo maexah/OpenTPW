@@ -73,7 +73,9 @@ The fan website is at https://maexah.github.io/OpenTPW/ . It is its own project:
 An experimental pre-release for Windows, Linux and macOS, made by GitHub from a tag Alexah pushes on a Sunday
 (Alexah, 2026-10-27; Intel Macs added the same day). `.github/workflows/weekly.yml` only packages and publishes: it runs no test and decides
 nothing about the code, which the local gate has already done. Its one refusal is the content guard: a zip holding
-anything that looks like the game's files fails the run.
+anything that looks like the game's files fails the run, and so does a zip without a file the game or its licences
+need (`REQUIRED` in `tools/weekly/release.py`: the program, its libraries and settings, the natives, the shaders, the
+font and its licence, the README, `LICENSE.md` and `THIRD-PARTY-NOTICES.md`; `WeeklyReleaseTests` holds it).
 
 - **The contract.** Tag `weekly-YYYY-MM-DD`, release title "Experimental YYYY-MM-DD", a pre-release on origin
   (`maexah/OpenTPW`). Assets `OpenTPW-<tag>-win-x64.zip`, `OpenTPW-<tag>-linux-x64.zip`, `OpenTPW-<tag>-osx-arm64.zip`
@@ -85,7 +87,9 @@ anything that looks like the game's files fails the run.
   every one is kept: none is deleted when a newer one comes (Alexah, 2026-10-27).
 - **A week with nothing meaningful gets no release.** The next changelog covers the gap.
 - **The Sunday routine**, in order:
-  1. Everything is pushed after the usual gate (rule 1's yes, `Pushing` above).
+  1. Everything is pushed after the usual gate (rule 1's yes, `Pushing` above). Before the tag, read the zip's
+     `tools/weekly/README.txt` and the two issue forms against `docs/STATUS.md`: what the README says starts, what
+     the build does without a game, and where `console.log` is must still be true of this tag (Q798).
   2. `python3 tools/weekly/changelog.py main` lists the commits since the last `weekly-*` tag (dry-run
      `weekly-test-N` tags are passed over; the first build takes `--from <rev>`). The changelog is written from that
      list, never from memory: broad, plain bullets grouped by area, each may end with its `[abc1234]` link, ending
@@ -106,8 +110,12 @@ anything that looks like the game's files fails the run.
 - **A dry run** is a tag `weekly-test-N`: the same steps with a placeholder note. Delete the release and the tag
   after reading it back.
 - **Each zip carries** `tools/weekly/README.txt` (experimental, bring your own game, `--game`, the unsigned
-  warnings, Vulkan on Linux, where `console.log` is) and `LICENSE.md`. Issues come in through
-  `.github/ISSUE_TEMPLATE/weekly-build.yml`, which asks for the zip's name, the system and `console.log`.
+  warnings, Vulkan on Linux, where `console.log` is), `LICENSE.md`, `THIRD-PARTY-NOTICES.md` (a row for every package
+  the build restores and every file under `content/`; `ThirdPartyNoticesTests` fails without one, and the licence
+  texts in it were read from the packages and the upstream projects, never recalled) and `content/fonts/LICENSE.txt`
+  beside the font. Issues come in through `.github/ISSUE_TEMPLATE/weekly-build.yml`, which asks for the zip's name,
+  the system and `console.log`; a launch that finds no game writes that file too, in the player's own data folder
+  (`FailedStartLogTests`).
 
 ## Subagents
 

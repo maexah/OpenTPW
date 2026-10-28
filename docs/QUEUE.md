@@ -4,31 +4,38 @@ Begun 2026-09-22 against `main` at `9b0ebab`; items from Q35 on were filed again
 numbers in Q13-Q34 are from `9b0ebab` and have drifted (`park-engine.md` by up to ~1,100 lines): find the member or
 the heading, never the line.
 
-**How to use this file.** One item per session. Take the first unticked item and do only that one.
-Tick it in the commit that lands it, with the number that proves it; the pre-commit hook then moves it to the end of
-its section in `history/queue-done.md`, which holds every finished item. A page citing a Q-number that is not here
-means that finished entry. If an item turns out to be two,
-split it into two lines here and stop after the first. Alexah may reorder; nobody else does.
-A line **Needs Alexah (date):** at the end of an item is a question an unattended run left (`WORKFLOW.md`,
-"Unattended runs"): the item waits for the answer, and the session Alexah answers takes the line out.
+**How to use this file.** One item per session. Take the first unticked item and do only that one. Tick it in the
+commit that lands it, with the number that proves it; the pre-commit hook then moves it to the end of its section in
+`history/queue-done.md`, which holds every finished item. A page citing a Q-number that is not here means that finished
+entry. If an item turns out to be two, split it into two lines here and stop after the first. The maintainer may
+reorder the queue; nobody else does. A line **Needs Alexah (date):** at the end of an item is a question an unattended
+run left (`WORKFLOW.md`, "Unattended runs"): the item waits for the answer, and the session that gets it takes the
+line out.
 
-**Every item, no exceptions.**
+**Every contributor, on every item, no exceptions.**
 
-- Start from the repo root. Read `CLAUDE.md`, `docs/STATUS.md`, then this file's head and its first unticked item:
-  the first hundred lines or so. The rest of the queue is other sessions'; grep it for a Q-number when a note
-  is to be filed under one.
-- Branch from `main`, named for the item, next free number: `alexah/N-<what-it-changes>`.
-- "Confirm" means the running game: a screenshot **and** the census or log line that goes with it,
-  both. Predict the number before reading it. A test is added for regression only. It is never the proof.
+- Start from the repo root. Read `AGENTS.md` (or `CLAUDE.md`, which loads it), `docs/STATUS.md`, then this file's head
+  and its first unticked item: the first hundred lines or so. The rest of the queue is other sessions'; grep it for a
+  Q-number when a note is to be filed under one.
+- Branch from `main`, one short branch per item, named `<you>/<what-it-changes>`.
+- "Confirm" means the running game: a screenshot **and** the census or log line that goes with it, both. Predict the
+  number before reading it. A test is added for regression only. It is never the proof.
 - Put the bug back and re-run the new test. If it stays green, the test is hollow. Fix the test.
 - Build and test the commit alone in a throwaway worktree.
-- Facts found go in `docs/exe/`, and bytes in a shipped file in the FileFormats clone (rule 14). The commit
-  message says why. The code comment says what the code does now. No "used to say", no dates, no `>>>`
+- Facts found go in `docs/exe/`, and bytes in a shipped file in the FileFormats clone (`AGENTS.md` rule 14). The
+  commit message says why. The code comment says what the code does now. No "used to say", no dates, no `>>>`
   banners in code.
 - Update `docs/STATUS.md` in the same commit. It stays under 120 lines.
-- When confirmed, fast-forward merge into `main`. Commit locally. **Pushing `main` still needs Alexah's
-  yes** (rule 1). Say what is ready and stop. Do not start the next item.
+- Commit locally, tick the item and stop. Do not start the next item.
 - End with four lines: what is ready, what was confirmed on screen, what was not, what the next item is.
+
+**The maintainer's own steps (Alexah's; a contributor outside the project skips them).**
+
+- Their branches are `alexah/N-<what-it-changes>`, N the next number after the highest local `alexah/*` branch.
+- They reorder this file, and say so in a block headed "Ordered at Alexah's word".
+- When an item is confirmed they fast-forward merge its branch into `main`. Pushing `main`, and opening or merging
+  any pull request, still needs their yes (`AGENTS.md` rule 1): the session says what is ready and where it would go,
+  and waits.
 
 **Where the detail is.** Q72-Q75 come from the 2026-09-12 review, whose three
 artifacts are listed in `docs/history/README.md`. Q208-Q217 come from the 2026-10-04 review of the commits of
@@ -48,20 +55,6 @@ fork watch).
 **Ordered at Alexah's word (2026-10-28), before any weekly build goes out:** Q798 (ready for public builds) first, then
 Q249 (saving a park made fresh), then the rest in the order below.
 
-- [ ] **Q798. Ready for public builds: licenses, the zip's required files, a log on a failed start, the docs.** Alexah's
-  review, 2026-10-28. (1) `THIRD-PARTY-NOTICES.md`: every package and file the build ships that we did not make (each
-  package's license read from its own nupkg, the .NET runtime's notices, Roboto 2.137, Apache-2.0, (c) 2011 Google, with
-  `content/fonts/LICENSE.txt` beside the fonts); both in the weekly zip. (2) `tools/weekly/release.py`: a `REQUIRED` list
-  (the program, its deps and runtimeconfig, the shaders, the font, README.txt, LICENSE.md, the notices) a zip must hold;
-  tested with a zip of only the notes, one without the font, one without the notices. (3) When no game folder is found,
-  the log is still written (the player's data folder: the held lines and the folders tried) before the exit; a test and one
-  run with no game; the issue forms and the zip's README say where it is. (4) `CONTRIBUTING.md`: no CI tests the code;
-  the one workflow, `weekly.yml`, only packages a tagged release and runs the content guard. (5) This file's header: what
-  every contributor does, apart from the maintainer's own steps (branch names, reordering, pushing). (6) Delete
-  `docs/PLAYER-GAPS.md` (it repeats STATUS and WORKS) and every link to it. So it stays true unremembered: a test fails when
-  a file under `content/` or a shipped project's `PackageReference` has no row in the notices; the guard's `REQUIRED`; the
-  failed-start test; and one line in `WORKFLOW.md`'s Sunday routine (read the zip's README and the issue forms against
-  STATUS before the tag).
 - [ ] **Q249. A park that was never loaded from a file has nothing to carry.** From Q241e. The fresh world (a
   Full Simulation park, or a player whose folder holds no park file) is made by `FreshPark`, so the writer's
   carried modules have no source. Decode what each module holds in a `restart.INTS` written at tick nought
@@ -72,6 +65,15 @@ Q249 (saving a park made fresh), then the rest in the order below.
   109 in Lost Kingdom), each with the mask, direction, flags, row and turn its track sub-record holds (`mHoardingNeighbours`,
   `mDirection`, `mFlags`, `mTileData` set 5) and `ParkBoundaryHoarding.PieceOf` its record (FileFormats `saves.md`,
   "A boundary piece's record"); write them as the original's `restart.INTS` holds them.
+- [ ] **Q782. A player's data folder that does not exist yet, and macOS's.** From Q798. (1) `Game.cs` makes the cache folder
+  from `Environment.GetFolderPath( LocalApplicationData )` without `DoNotVerify`, which answers an empty string for a folder
+  that is not there (a new Linux account has no `~/.local/share`), so the cache would land in the working directory;
+  `ConsoleLog.UserFolder` was fixed in Q798 and this one was not. (2) The zip's README, the issue forms and
+  `CONTRIBUTING.md` give macOS's data folder as `~/Library/Application Support/OpenTPW`, and `ConsoleLog`'s comment says
+  `~/.local/share/OpenTPW` "elsewhere": what .NET answers on a Mac is not known here (its `CoreLib` for osx-arm64 holds no
+  `XDG_DATA_HOME` string, so it asks differently), and no Mac has run the build. Decide it from a Mac's `console.log`, or from
+  the runtime's source, and make the four places say one thing. Confirm: a run with `HOME` set to an empty folder writes the
+  cache under it.
 **Ordered at Alexah's word (2026-10-21), after their own play of Lost Kingdom:** showing the original's art as well as it can
 be shown comes first, and improvements over the original are ON by default, each said at the site as a deviation (full
 texture depth, the research pumps' smooth scroll, flags easing between winds, a more legible font); a "faithful" graphics toggle that
@@ -1173,7 +1175,7 @@ filed the items that cite it.
     not a dead member. Not checked in Ghidra here. Two things the finder may want: (1) both comments give as the
     reason that the project keeps no per-cell lists of who stands where, but ParkState now keeps exactly that
     (_onCellNext, ParkState.cs:1294-1369, "the original's thing +10"), so the stated reason looks stale; (2) grep
-    of docs/QUEUE.md and docs/PLAYER-GAPS.md (held copies) finds no line for separation or crowding.
+    of docs/QUEUE.md (a held copy) finds no line for separation or crowding.
     (`OpenTPW/World/Park/PeepSteering.cs`, line 47, `SeparationWeight`)
   - Called only by RideStateTests:85 and RideScriptRunTests:280, and it is the only writer of _finished. The
     reader is live: RideScript.cs:2291 stores Ride.TakeRider() for COAST 3. ParkRideOperation.cs:335-338 says so
@@ -2637,7 +2639,7 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
     sets (that branch is dead by content); apply to all is `0xa0a9` with mask `0x100`, the same-item rule. Ride: the
     speed, duration and capacity controls and the apply `0x004af440`.
   - **Note (play test 2026-10-21, notes 12 and 17):** a click on a sideshow, and on a toilet, opens no window. Counted
-    `SIDESHOW_WINDOW` and `FEATURE_WINDOW` (`source/OpenTPW/World/Level.cs:2732-2733`); `docs/PLAYER-GAPS.md:95`.
+    `SIDESHOW_WINDOW` and `FEATURE_WINDOW` (`source/OpenTPW/World/Level.cs:2732-2733`).
   - **Note (Q636's review, run 9):** the sideshow window's bars `0xa094`, `0xa096`, `0xa099`, `0xa09e`, the toilet window's
     `0x15bbb` and the resting-staff list `0x1e7b` are inset (0, 10) by `FUN_00485e30` in the original: build them so.
 - [ ] **Q681. Light every model by its file's own normals, as the original does (from Q657). Measure first.** The
@@ -3006,7 +3008,7 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
 
 ## F. Then
 
-Back to `docs/PLAYER-GAPS.md`: gap 4 (advisor in a park); gap 7 (saving a fresh park) is Q249, in section A. Also litter and the day ending, whose deferral reasons expired
+Back to the advisor in a park; saving a fresh park is Q249, in section A. Also litter and the day ending, whose deferral reasons expired
 (`docs/REVIEW-2026-09-21.md` section 6).
 - [ ] **Q648. Halloween World: guests stick at the crosswalk.** Alexah's own play, 2026-10-22: the park otherwise ran.
   Out of scope until Lost Kingdom is whole (`CLAUDE.md`, the goal); kept so it is not lost. Reproduce in `hallow` with a
