@@ -10837,6 +10837,11 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `ParkTrackAddOn` and `ParkBuilding` (`park-engine.md`, "The add-on's snap, its put-down, ..."). Confirmed in both games on
   Alexah's played Full Simulation Dino Karts: a Tunnel and a Jump carried for the ride, hovered and put down on the same cells,
   their squares, cells, `mUpgradeParent` and caps alike (`q780/R1`, `R2`, `orig/O1`).
+- [x] **Q781. The pieces' clips after a close and an add-on's put-down (Q587's fourteenth piece).** Decoded from
+  `0x0052a490` and `0x0052a700` (`TrackRide_PlayPiecesFromMouth`, `TrackRide_PlayPiecesFromEnd`) and their callers, measured in
+  the original (`q781/orig/O3`: the closing click's 8 calls at `0x0052a5de`, the loop's handles in order), built in
+  `ParkTrackTool` and `ParkTrackPieces` (`park.md`, "The pieces' clips"): a piece made at rest, the close at rest, an add-on's
+  put-down on a closed loop its `M` clip looped. Confirmed in ours on Splish Splash (`q781/R4`), the close in both games.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

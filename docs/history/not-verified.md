@@ -5,6 +5,19 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q780 (a track add-on's put-down; Q587's thirteenth piece). Both games this session on a copy of Alexah's played Full
+  Simulation Dino Karts by a Full Simulation player, the same pointers. The original (`q780/orig/O1`, the ride window's Buy
+  Upgrades): the Tunnel's ten squares blue on (12..13,15..18) and (11,16), (11,17) (`8-hover-13-17.png`, `squares.py`), thing 209
+  at (11,16) turned 0, `+0x30` 289, its file's `mTopLeft` 1932 and `mUpgradeParent` 289, the cells map type 4 with flags `0x10`
+  both (`trackcells.py`), its caps hidden at the click (`0xc1000111`); the Jump red over the bend (12,13) and the crossing (14,13),
+  blue and put down on (16,13) at 270, caps shown (`12-jump-*.png`, `15-jump-put.png`). Ours on the final binary (`q780/R1`, dll
+  f3295c6c; `R2` its hover shots after the glide): the same squares, lifts and walls (`strip`), "flags 8 track cells 0x10 for
+  ride thing 289", thing 527 "topleft 1932 upgradeparent 289", 900 less, "the walk leaves add-on thing 527's end caps 0x1 hidden,
+  0x10 hidden", the Jump red, red, blue and put down at (17,13) 270 with its caps shown (`5-tunnel-hover.png`,
+  `2-tunnel-put.png`, `6-jump-*.png`, `4-jump-put.png`; cameras alike, not a pixel pair). Missed and recorded
+  (`q780/PREDICTION.txt`): the trial R0's walk missed the bought Tunnel (`AddOnThingAt` read the file record's occupant; fixed),
+  the cap word's extra `0x01000000` bit in the original, the bank's 900 (it moves by the takings). Not seen: the water tunnel,
+  Ctrl's put-down, an add-on refused for another ride's track, the sale. The bugs put back: 19 of 19 fail a test.
 - Q778 (an add-on's end caps; Q587's twelfth piece). Ours on the final binary (`q778/R2`, dll a249d937), Alexah's played
   Full Simulation Dino Karts (a copy of `New Save.TPWS`) loaded by a Full Simulation player (`fsplayer.py`): "catalogued 70
   items", "'Dino Karts Tunnel' anchored at (17,21)" and "'Dino Karts Jump' anchored at (19,9)", no ADD_ON line in the census;

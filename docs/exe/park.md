@@ -1927,7 +1927,7 @@ two-click edit (`0x0052693e` with 1, `0x00526bd0` with 0); each stores the answe
 then open the ride where it is 1 and the open guard lets it (`0x00526f18`..`0x00526f2d`).
 **OpenTPW** (Q763, `ParkTrackTool.WalkCircuit`) builds the walk at the closing click: the sections, the bends' way on
 and retile, `+0x2c` and the opening; it clears the last walk's sections, their objects and buoys (Q766's, below), and
-no car, a kart or water ride having no bumper record (Q588), and the step count is answered, not kept on the cells. Counted: the pieces' clips that follow (`TRACK_PIECES_CLIP`).
+no car, a kart or water ride having no bumper record (Q588), and the step count is answered, not kept on the cells. The pieces' clips that follow are Q781's ("The pieces' clips", below).
 
 **An add-on's end caps in the walk** (read for Q778 from `q762/dump/0052a970.c` and `q778/dump`; measured in the original
 under Proton, `q778/orig/O1`, `O2`). An add-on (Lost Kingdom's Dino Karts Jump 1500 and Tunnel 1501 on the karts, the Splish
@@ -2156,8 +2156,8 @@ The models are `gk_trck<model>.md2` and `wr_trck<model>.md2`; the karts' table s
 water kit's alone, and row 0 is `-`, no model. A piece is turned and moved as a boundary piece's (360 less the turn; the cell one on by it),
 flags `0x33a` with the 2 x 2 footprint at `0x008179f8`, and the row's mask hides each end cap whose lookup record's
 `+0x08` bit is in it (`FUN_0044b140`; FileFormats `models.md`, "End caps"): a straight hides both, an end the one toward
-its link, and a junction is the crossing with one cap left. A water piece also starts its clip 0xc as it is made
-(`FUN_004732a0( model, 0xc, 0, 7, 1.0, 0 )`). Measured, every piece of both loops as the rule gives: the karts' ends
+its link, and a junction is the crossing with one cap left. A water piece is also put to clip 0xc, no role, as it is made
+(`FUN_004732a0( model, 0xc, 0, 7, 1.0, 0 )`): it stands at rest (Q781, "The pieces' clips", below). Measured, every piece of both loops as the rule gives: the karts' ends
 `gk_trckQ` at 90 and 270, straights `gk_trckS` at 0 (direction 0x01), 180 (0, direction 0x10) and 270 (90, direction 0x40), the
 karts' four corners `gk_trckB`, row 3; the water loop's four corners `wr_trckB2`, row 19, at 180, 90, 0 and 270.
 
@@ -2204,7 +2204,7 @@ does not link back, and back at the first entry breaks a bend at the mouth, lett
 the station; then the walk pairs.
 **OpenTPW** (Q765, `ParkTrackTool.Backtrack`, `TakeBack`): Backspace takes the last run back so, the anchor on its start
 and the tool armed, each removed piece refunded at its whole price (the scrap percentage is counted,
-`SCRAP_VALUE_DEPRECIATION`), the pieces' clips counted, the pulse as the walks that follow give it (Q767). Measured in ours on the final
+`SCRAP_VALUE_DEPRECIATION`), no pieces' clips (Backspace calls neither clip walk: Q781, "The pieces' clips"), the pulse as the walks that follow give it (Q767). Measured in ours on the final
 binary (`q765/ours-b`), by the original's clicks: the second run taken back, 3 pieces, +600, (34,29) links 0x01 way 0x10
 over 0 piece 3/1/180, the three others bare at row 55, as `q587/orig/A-load.log` at 199.64 s (earlier evidence); the
 run laid again and the loop closed as Q763's.
@@ -2241,6 +2241,40 @@ every cell of it asks the same of its owner. A pulsing piece's every vertex take
 (`ModelEntity.VertexColour`, the shader's `g_vVertexColour`), on the frame clock (`Time.Delta`). The hill's reshaping
 by the walks is counted (`TRACK_WALK_HILL_SHAPE`).
 
+**The pieces' clips** (read for Q781 from `q781/dump`, `0052a490.asm` and `0052a700.asm`, and the callers in
+`testme.objdump`). `TrackRide_PlayPiecesFromMouth( ride, f )` (`FUN_0052a490`) and `TrackRide_PlayPiecesFromEnd( ride, f )`
+(`FUN_0052a700`) take the ride thing's cell (`+5`, `+7`) and turn (`+0x10`) and start, like the mouths' walks, from the
+mouth on the turn's heading (0: x + 4, y + 1, east; 90: x + 1, y − 5, north; 180: x − 5, y − 2, west; 270: x − 2, y + 4,
+south) or from the other mouth away from the station (0: x − 2, y + 1; 90: x + 1, y + 1; 180: x + 1, y − 2; 270: x − 2,
+y − 2, each on the opposite heading, `FUN_004d8c00`); the two bodies are otherwise the same. Each step, in 2-cell steps: a
+cell that is not track (`TrackCell_IsTrack`) sets the heading to nought; on track a bend (`TrackCell_BendLinks`) turns as
+the mouths' walks do (its links less the way in, `opposite( heading )` where it links that way, else the heading), and a
+cell whose record names a model (`+4`, so not an add-on's cell nor a station) has it played,
+`FUN_004732a0( [0x007a4610 + handle * 4], f ? 5 : 0xc, 0, 7, 1.0, 0 )` (`0x0052a5bb` and `0x0052a5de`; `0x0052a833` and
+`0x0052a856`): role 5, the `M` clip, looped and started at once (flags 7), or 0xc, which names no role, so the rest pose
+(`FUN_00472f60`, "A trigger naming a role the model lacks", above; a model with no `M` clip rests under 5 too). The walk
+stops at a cell that is no bend and links no further on, and where the cell two on (`FUN_0050c3e0( heading, 2 )`) is a
+station (`FUN_0053adb0`) of the same owner (`+0x10`) linking back. The callers, each after the circuit's walk:
+the closing click (`0x00526f56`..`0x00526f7f`) passes f = 0 always, from the mouth alone where the walk answered 1, else
+from both; an add-on's put-down (`0x00524d19`..`0x00524d47`) and the closed loop's two-click edit (`0x00526be4`..`0x00526c0d`)
+pass 1 from the mouth alone where it answered 1, else 0 from both; `BUMP 17` (`0x00554a1a`..`0x00554a47`, the table above)
+walks both with 1 for an operand of 0 and 0 for any other. A water piece is put to 0xc as it is made ("A track piece's model, price and open end", above), so every
+piece stands at rest until a walk with 1 or `BUMP 17 0`; Splish Splash's script runs `BUMP 17 0` at @33 as it starts a go
+and `BUMP 17 1` at @155 and @201 when it shuts or breaks (`Wateride.RSE`), so the original's water flows only while its
+ride runs, after an add-on, or after a loop's edit. Of the 53 `M` clips the eight kits ship, 48 carry UV tracks alone and five
+no readable span (Haunted Hallow's four `gk_trckH*m`, Space's `gk_trckh_am`); Lost Kingdom's and Fantasy's karts ship none,
+so of Lost Kingdom's track only the water moves (FileFormats `models.md`, "Which animation file a model takes").
+Measured in the original (Q781, `q781/orig/O3.out`, a Splish Splash on (20,20) of `q581/karts.TPWS` looped south): no clip
+call from the arming through two runs (`O-brkA.log`); the closing click's 8 calls all at `0x0052a5de`, their handles 93,
+95, 96, 169, 170, 171, 172 and 94, `trackcells.py`'s at (22,19), (22,21), (22,23), (20,23), (18,23), (16,23), (16,21) and
+(16,19), the loop in order from the mouth (`O-brkB.log`); none other in the 35 s after, and the water still in two frames
+1.4 s apart (`O-9-closed-a.png`, `-b`, `O-crops.txt`).
+**OpenTPW** (Q781, `ParkTrackTool.PlayPieces`, `PlayPiecesAfterWalk`, `WalkAfterAddOn`, `ParkTrackPieces.PlayClip`): both
+walks, after the closing click and an add-on's put-down; a piece is made at rest, and clip 5 runs its `M` clips through
+`MeshAnimator` on the park's clock, restarted from frame 0. Not built: the closed loop's edit (`TRACK_EDIT_CLOSED_LOOP`) and
+`BUMP 17` (Q448: a kart or water ride's every `BUMP` is counted here, so Splish Splash's water never flows by its script;
+a loaded park's running water ride stands still where the original's flows).
+
 **The carried ride's first track cells** (`TrackRide_CarrySquares`, `0x005286a0`, from `BuildTool_Placer` at `0x00529c65`
 and `0x00529ce1`): each mouth's 2 x 2 cells, by op 0x10b (karts) or 0x110 (water) with step 5 for the preview's squares,
 and 0x20b or 0x210 for the commit's check, whose refusal refuses the placement. Seen: the carried Splish Splash with both
@@ -2254,8 +2288,7 @@ Alexah's played Dino Karts lies. Each kart or water anchor draws the piece its r
 hidden by the row's mask: Alexah's played file's 28 pieces are its 28 records' (`q688/ours-f2`), and the chooser
 (`ParkTrackPieces.PieceFor`) gives every one of its 31 anchors the row and turn the file holds. A sale of a ride owning only
 its station and mouths clears them and pays nothing net. Counted, not built: the carried squares and their check
-(`CARRY_PREVIEW_TRACK_START`), the drape (`TRACK_PIECE_DRAPE`), a water piece's own
-clip 0xc (`TRACK_PIECE_WATER_CLIP`), a
+(`CARRY_PREVIEW_TRACK_START`), the drape (`TRACK_PIECE_DRAPE`), a
 written park's piece records (`SAVE_PARK_TRACK_PIECE_MODEL`), and the sale of a ride with more track
 (`SALE_TRACK_TEARDOWN`). The put-down's check of the mouths (op 0x20b or 0x210) is not built: an anchor whose two by two holds
 track already is not laid, and counted (`PUT_DOWN_TRACK_OVER_TRACK`, Q765). The pieces are stood again after a change

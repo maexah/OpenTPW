@@ -1714,14 +1714,9 @@ public static class ParkBuilding
 		// +0x2c, its pieces' clips and, closed and let, its opening; the walk shows and hides the add-on's end caps.
 		if ( built.AddOnFor != 0 && state.TryObject( built.AddOnFor, out var ride ) && catalogue.TryGet( ride.CatalogueId, out var rideItem ) )
 		{
-			// FUN_00523230 first runs ops 0x85, 0x86 and 0x81 over the track about the add-on (0x00524c75), which is not read.
-			Unimplemented.Report( "TRACK_ADD_ON_PASSES" );
-
-			var (valid, steps) = ParkTrackTool.WalkCircuit( state, ride, check: false );
 			var script = rides?.Scheduler.Scripts.FirstOrDefault( s => s.ThingId == ride.ThingId );
+			var (valid, steps) = ParkTrackTool.WalkAfterAddOn( state, park, script, ride, rideItem.TrackType );
 
-			ParkTrackTool.Settle( state, park, script, ride.ThingId, rideItem.TrackType, valid );
-			Unimplemented.Report( "TRACK_PIECES_CLIP" );
 			Log.Info( $"Building: add-on thing {built.ThingId} walked ride thing {ride.ThingId}'s circuit, {steps} steps, +0x2c {valid}" );
 		}
 

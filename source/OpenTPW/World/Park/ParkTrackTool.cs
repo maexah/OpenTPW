@@ -224,6 +224,108 @@ public static class ParkTrackTool
 	}
 
 	/// <summary>
+	/// The pieces' walk, <c>TrackRide_PlayPiecesFromMouth</c> (<c>FUN_0052a490</c>), or with <paramref name="fromOtherMouth"/>
+	/// <c>TrackRide_PlayPiecesFromEnd</c> (<c>FUN_0052a700</c>): from the mouth on the turn's heading, or from the other mouth
+	/// away from the station, in 2-cell steps, out of a bend as <see cref="Shape"/> leaves it, putting each track cell's piece
+	/// to its clip (<see cref="ParkTrackPieces.PlayClip"/>: role 5 looped where <paramref name="running"/>, else at rest). It
+	/// stops at a cell that is not track (its heading nought), at one that is no bend and links no further on, and where the
+	/// cell two on is a station of the same owner linking back. Answers the anchors whose piece it played.
+	/// </summary>
+	public static List<(int X, int Y)> PlayPieces( ParkState state, int rideX, int rideY, int angle, bool fromOtherMouth, bool running )
+	{
+		var station = ParkTrackPieces.StationOf( rideX, rideY, angle );
+		var (x, y) = fromOtherMouth ? station.OtherMouth : station.Mouth;
+		var heading = ParkTrackPieces.HeadingOf( angle );
+		var played = new List<(int X, int Y)>();
+
+		if ( fromOtherMouth )
+			heading = (byte)CellEdge.Opposite( heading );
+
+		// The original steps on until it stops, however far that is, with no bound; the map's cells bound this one.
+		for ( var steps = 0; steps < ParkWorld.MapSize * ParkWorld.MapSize && ParkState.OnMap( x, y ); ++steps )
+		{
+			var cell = state.Record( x, y );
+			var bend = IsBend( cell.TrackNeighbours );
+
+			if ( IsTrack( cell.TrackType ) )
+			{
+				if ( bend )
+				{
+					var wayIn = (byte)CellEdge.Opposite( heading );
+
+					if ( (wayIn & cell.TrackNeighbours) == 0 )
+						wayIn = heading;
+
+					heading = (byte)(cell.TrackNeighbours ^ wayIn);
+				}
+
+				// Only a cell whose record names a model (+4) is played: an add-on's cells and the stations name none.
+				if ( ClipTo( x, y, running ) )
+					played.Add( (x, y) );
+			}
+			else
+			{
+				heading = 0;
+			}
+
+			var stop = !bend && (heading & cell.TrackNeighbours) == 0;
+			var (dx, dy) = StepOf( heading );
+
+			if ( ParkState.OnMap( x + dx, y + dy ) && state.Record( x + dx, y + dy ) is var next && IsStation( state, next )
+				&& next.TrackParentId == cell.TrackParentId && (next.TrackNeighbours & CellEdge.Opposite( heading )) != 0 )
+				stop = true;
+
+			if ( stop )
+				break;
+
+			(x, y) = (x + dx, y + dy);
+		}
+
+		return played;
+	}
+
+	/// <summary>
+	/// The pieces' clips after a walk of the circuit, as its three callers run them: where the walk answered
+	/// <paramref name="valid"/>, from the mouth alone, with <paramref name="runningWhereValid"/> (nought at the closing click,
+	/// <c>0x00526f58</c>; 1 at an add-on's put-down, <c>0x00524d26</c>, and the closed loop's edit, <c>0x00526bec</c>); else
+	/// from the mouth and from the other mouth, both at rest. Answers how many pieces were played.
+	/// </summary>
+	public static int PlayPiecesAfterWalk( ParkState state, ParkWorld.CatalogueObject ride, int valid, bool runningWhereValid )
+	{
+		var played = PlayPieces( state, ride.CellX, ride.CellY, ride.Angle, fromOtherMouth: false, valid != 0 && runningWhereValid );
+
+		if ( valid == 0 )
+			played.AddRange( PlayPieces( state, ride.CellX, ride.CellY, ride.Angle, fromOtherMouth: true, running: false ) );
+
+		Log.Info( $"Track: ride thing {ride.ThingId}'s pieces' walk{(valid == 0 ? "s" : "")} put {played.Count} pieces "
+			+ $"{(valid != 0 && runningWhereValid ? "to clip 5, looped" : "at rest, clip 0xc")}" );
+
+		return played.Count;
+	}
+
+	/// <summary>
+	/// An add-on's put-down's walk of its ride's circuit (<c>0x00524c46</c>..<c>0x00524d68</c>): the circuit walked, its
+	/// answer settled (<see cref="Settle"/>), then the pieces' clips, 5 from the mouth where the walk answered 1, else at
+	/// rest from both mouths (<c>0x00524d19</c>..<c>0x00524d47</c>). Answers the walk's answer and its steps.
+	/// </summary>
+	internal static (int Valid, int Steps) WalkAfterAddOn( ParkState state, IParkInitialState? park, RideScript? script,
+		ParkWorld.CatalogueObject ride, int trackType )
+	{
+		// FUN_00523230 first runs ops 0x85, 0x86 and 0x81 over the track about the add-on (0x00524c75), which is not read.
+		Unimplemented.Report( "TRACK_ADD_ON_PASSES" );
+
+		var (valid, steps) = WalkCircuit( state, ride, check: false );
+
+		Settle( state, park, script, ride.ThingId, trackType, valid );
+		PlayPiecesAfterWalk( state, ride, valid, runningWhereValid: true );
+
+		return (valid, steps);
+	}
+
+	/// <summary>Where the pieces' walks put a piece to its clip: the pieces standing, or in a test a recorder of its own.</summary>
+	internal static Func<int, int, bool, bool> ClipTo = ( x, y, running ) => ParkTrackPieces.Current?.PlayClip( x, y, running ) ?? false;
+
+	/// <summary>
 	/// A bought kart or water ride's put-down on the track grid: its station and mouths laid (<see cref="ParkTrackPieces.LayStation"/>),
 	/// the pieces stood, and op 0x86's pair of walks, which leaves the mouth pulsing. Answers how many anchors were laid.
 	/// </summary>
@@ -1581,8 +1683,8 @@ public static class ParkTrackTool
 		// closed loop pulses nothing and a run that met track short of closing leaves the mouth's open end pulsing.
 		ShapeMouths( state, ride.CellX, ride.CellY, ride.Angle, mouthPulses: true, onlyWhereOpen: false );
 
-		// The pieces' clip 0xc from the mouth (TrackRide_PlayPiecesFromMouth, and with no circuit from the open end too).
-		Unimplemented.Report( "TRACK_PIECES_CLIP" );
+		// The pieces at rest from the mouth, and where the walk answered nought from the other mouth too (0x00526f56..0x00526f7f).
+		PlayPiecesAfterWalk( state, ride, valid, runningWhereValid: false );
 
 		_lastLinkStep = null;
 		ParkBuildMode.Disarm();

@@ -21,7 +21,8 @@ namespace OpenTPW;
 /// stop on pulses red to white and back (<see cref="SetPulse"/>). An add-on's anchor takes no piece: the add-on is a placed
 /// thing whose model stands over its cells (<see cref="ParkObjects"/>), its end caps shown and hidden by the walk
 /// (<see cref="ParkObjects.ShowAddOnCaps"/>). Not built here: the drape of a piece's vertices over the ground
-/// (<c>TRACK_PIECE_DRAPE</c>) and a water piece's own clip 0xc (<c>TRACK_PIECE_WATER_CLIP</c>).
+/// (<c>TRACK_PIECE_DRAPE</c>). Each piece is made at rest, and the pieces' walks after a close or an add-on's put-down
+/// play its <c>M</c> clip or rest it (<see cref="PlayClip"/>).
 /// </para>
 /// </summary>
 public sealed class ParkTrackPieces : Entity
@@ -353,6 +354,12 @@ public sealed class ParkTrackPieces : Entity
 	private readonly HashSet<LobbyModel> _pulsing = [];
 
 	/// <summary>
+	/// The models whose channel plays role 5, the <c>M</c> clip, looped (<see cref="PlayClip"/>); every other one stands at
+	/// rest, as a piece is made (<c>FUN_004732a0( model, 0xc, ... )</c>: 0xc names no role, so the rest pose).
+	/// </summary>
+	private readonly HashSet<LobbyModel> _playing = [];
+
+	/// <summary>
 	/// The pulse's phase, 0 to 2, shared by every pulsing model and never set back (<c>[0x007afd04]</c>): each frame it
 	/// moves on by twice the frame's seconds, wrapped at 2 (<c>Model_PulseTick</c>, <c>0x00469840</c>).
 	/// </summary>
@@ -402,6 +409,7 @@ public sealed class ParkTrackPieces : Entity
 		foreach ( var gone in _models.Keys.Where( piece => !keep.Contains( piece ) ).ToList() )
 		{
 			_pulsing.Remove( _models[gone] );
+			_playing.Remove( _models[gone] );
 			Delete( _models[gone] );
 			_models.Remove( gone );
 		}
@@ -441,12 +449,10 @@ public sealed class ParkTrackPieces : Entity
 			model.SetTransform( origin, turn );
 			model.HideCaps( CapMaskOf( piece ) );
 
-			// The original drapes a piece's every vertex over the ground under it at its making (0x00469940), and starts a
-			// water piece's clip 0xc (FUN_004732a0); neither is built.
+			// The original drapes a piece's every vertex over the ground under it at its making (0x00469940), which is not
+			// built. A water piece is then put to clip 0xc, no role, so it stands at rest (FUN_004732a0 at its making), as
+			// every piece here does until a walk plays its clip (PlayClip).
 			Unimplemented.Report( "TRACK_PIECE_DRAPE" );
-
-			if ( piece.Type == WaterAnchor )
-				Unimplemented.Report( "TRACK_PIECE_WATER_CLIP" );
 
 			return model;
 		}
@@ -487,6 +493,40 @@ public sealed class ParkTrackPieces : Entity
 	}
 
 	/// <summary>
+	/// Puts the piece standing on an anchor to a clip, as the pieces' walks do (<see cref="ParkTrackTool.PlayPieces"/>):
+	/// with <paramref name="running"/> role 5, the <c>M</c> clip, looped from its start (<c>FUN_004732a0( model, 5, 0, 7,
+	/// 1.0, 0 )</c>, flags 7: loop, start now), else 0xc, which names no role and puts the model back at rest. A model
+	/// with no <c>M</c> clip (every Lost Kingdom kart piece) rests either way, as the original's trigger of a role a model
+	/// lacks restores the rest pose (<c>FUN_00472f60</c>). Answers whether a piece stands there.
+	/// </summary>
+	public bool PlayClip( int x, int y, bool running )
+	{
+		if ( _pieces.FirstOrDefault( piece => piece.AnchorX == x && piece.AnchorY == y ) is not { Model: not null } piece
+			|| !_models.TryGetValue( piece, out var model ) )
+			return false;
+
+		if ( running && model.Clips.Count > 0 )
+		{
+			foreach ( var animator in model.Animators )
+				animator.Pause();
+
+			_playing.Add( model );
+		}
+		else
+		{
+			_playing.Remove( model );
+
+			foreach ( var animator in model.Animators )
+				animator.Rest();
+
+			if ( model.Clips.Count > 0 )
+				model.Rotator?.Rest( model.Clips[0] );
+		}
+
+		return true;
+	}
+
+	/// <summary>
 	/// The green and blue a pulsing model's every vertex takes at a phase, red and alpha being 255: the phase's triangle, 0
 	/// at 0, 255 at 1 and back to 0 at 2, times 255 and cut to a whole number (<c>0x00469840</c>..<c>0x00469871</c>,
 	/// <c>__ftol</c>), so the piece goes red to white and back once a second.
@@ -499,7 +539,8 @@ public sealed class ParkTrackPieces : Entity
 	/// <summary>The console's <c>track</c>: each piece's anchor, model, row and turn, and whether it pulses.</summary>
 	public IEnumerable<string> Census()
 		=> _pieces.Select( piece => $"({piece.AnchorX},{piece.AnchorY}) {piece.Model} row {piece.Row} turn {piece.Turn}"
-			+ (_models.TryGetValue( piece, out var model ) && _pulsing.Contains( model ) ? $" pulsing {PulseValue( _pulsePhase )}" : "") );
+			+ (_models.TryGetValue( piece, out var model ) && _pulsing.Contains( model ) ? $" pulsing {PulseValue( _pulsePhase )}" : "")
+			+ (model != null && _playing.Contains( model ) ? " clip 5" : "") );
 
 	private static void Delete( LobbyModel model )
 	{
@@ -515,6 +556,7 @@ public sealed class ParkTrackPieces : Entity
 		_models.Clear();
 		_pieces.Clear();
 		_pulsing.Clear();
+		_playing.Clear();
 	}
 
 	protected override void OnDelete()
@@ -529,7 +571,7 @@ public sealed class ParkTrackPieces : Entity
 
 	protected override void OnUpdate()
 	{
-		foreach ( var model in _models.Values )
+		foreach ( var model in _playing )
 			model.Update( GameClock.Delta );
 
 		// Once a frame, on the frame clock as the original's drawn frame runs it (0x0054e301): the value is taken at the

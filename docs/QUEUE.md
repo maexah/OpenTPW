@@ -81,21 +81,21 @@ filed the items that cite it.
   pulses the open end; Q768 draws the armed tool's preview squares and its `c_end`; Q773 answers blue over a feature of priority
   below 3 and tears it down at the click (op `0x87`); Q775 lifts and walls the preview squares; Q776 lifts a path or queue tool's square over a piece; Q777 lifts a square over the boundary's hoardings by their `.hmp`; Q778 shows and hides an add-on's end caps in the
   walk and lays a loaded add-on's from its file; Q780 puts an add-on down on its ride's track (the snap, the verdict, the
-  stamp, `mUpgradeParent` and the walk). What is left: the add-on put-down's passes over the track about it
+  stamp, `mUpgradeParent` and the walk); Q781 plays the pieces' clips after a close and an add-on's put-down and makes a piece at
+  rest. What is left: the add-on put-down's passes over the track about it
   (`TRACK_ADD_ON_PASSES`: `FUN_00523230`'s ops 0x85, 0x86 and 0x81, cells not read), its rotation to 0 under Ctrl
   (`0x005259fc`; ours keeps the hand's angle), the sale of an add-on (`SALE_TRACK_ADD_ON`: the demolisher's arm
   `0x00528512`..`0x0052852d`; ours leaves its track cells flagged, so no piece stands there again), the bit `0x01000000` a
-  freshly made model's cap words carry in the original (not read); the pieces' clips after a close
-  (`TRACK_PIECES_CLIP`: `TrackRide_PlayPiecesFromMouth`, `0x0052a490`, and `TrackRide_PlayPiecesFromEnd`); the move's
+  freshly made model's cap words carry in the original (not read); the move's
   put-down walk (`0x00524d0a`; ours moves as a sale and a purchase); the put-down's check of the mouths, op 0x20b or
   0x210, whose refusal refuses the placement (`PUT_DOWN_TRACK_OVER_TRACK`: ours lays no anchor over track instead); a take-back's other cell or
-  add-on (`TRACK_CLEAR_PIECE_CELL`, `TRACK_CLEAR_ADD_ON`); a closed loop's two-click edit (`TRACK_EDIT_CLOSED_LOOP`);
+  add-on (`TRACK_CLEAR_PIECE_CELL`, `TRACK_CLEAR_ADD_ON`); a closed loop's two-click edit (`TRACK_EDIT_CLOSED_LOOP`, its pieces' clips with it: `0x00526be4`);
   a run over path or queue mid-run, an end or straight laid there as a hill and a bend or junction plain in the original
   (`TRACK_RUN_OVER_PATH`; the river takes a plain piece, built), a crossing or junction
   (`TRACK_RUN_CROSSING`) and a run into the station (`TRACK_RUN_INTO_STATION`; when built, gate op 0x87's `TearDownUnder` on the last priority stored, which the station's 5 shuts), the verdict's rest; op 0x87's
   clear of a path or queue under the last anchor (with `TRACK_RUN_OVER_PATH`); a hill's reshaping by the mouths' walks (`TRACK_WALK_HILL_SHAPE`) and the walks of the closed loop's edit
   (`0x00526b7a`) and of `FUN_00532fc0` (`0x0053426f`); the carried
-  ride's squares and their check (`CARRY_PREVIEW_TRACK_START`); a water piece's own clip 0xc (`TRACK_PIECE_WATER_CLIP`);
+  ride's squares and their check (`CARRY_PREVIEW_TRACK_START`);
   a sale of a ride with track laid (`SALE_TRACK_TEARDOWN`: the walks `FUN_00530830` and `FUN_00530b70`);
   a written park's piece records (`SAVE_PARK_TRACK_PIECE_MODEL`); and a put-down at 90 or 270, tested and not seen in
   either game. Not measured in the original (the review of Q687, `review12/VERIFY-2.md`): the hill rows 9 to 18 and the
@@ -2928,6 +2928,10 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
     `0x0055631a` and `0x0055634c`) **drop both returned handles**: nothing stores them, so nothing can stop them with the
     owner. Do not tie them to the owner. Whether 111 and 211 loop (effect flag `0x8`) was not read; if they do, the
     original never stops them.
+  - **Note (Q781, 2026-10-28):** the two walks are decoded and built (`park.md`, "The pieces' clips";
+    `ParkTrackTool.PlayPieces`, f = 1 plays role 5 looped, 0 rests): BUMP 17 is the walks from both mouths after its
+    `+0xe6` test (`0x00554a1a`..`0x00554a47`), and it reads the thing itself, not a bumper record (`esi`, `0x0055470b`), so it
+    can be built before the rest of the water ride's `BUMP`. Until it is, Splish Splash's water never flows by its script.
 
 - [ ] **Q449. Building over scenery, and tearing down a water track.** From the fork watch, 2026-10-16
   (`verify-world.md` C2 and C3). (1) The placement check (`0x00535d66` to `0x00535d73`) passes a new thing over
