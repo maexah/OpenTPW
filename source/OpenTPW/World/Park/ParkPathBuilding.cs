@@ -330,7 +330,7 @@ public static class ParkPathBuilding
 
 		for ( var step = 0; step < strip.Count; ++step )
 		{
-			var (x, y, marker, _, _, _) = strip[step];
+			var (x, y, marker, _, _, _, _) = strip[step];
 
 			if ( marker == MarkerLink && state.TryObject( serves, out var ride ) )
 			{
@@ -376,9 +376,11 @@ public static class ParkPathBuilding
 	/// One square of the queue tool's preview: where it is, the marker it wears, why it is red, and
 	/// whether it is red because the run cannot be paid for - which the original shows with its own
 	/// cursor, <c>c_cash</c> (<c>DAT_00816d5c</c>, <c>FUN_0052f950</c>) - and what the run owes once the square is judged
-	/// (the original's run total <c>DAT_0081af4c</c>).
+	/// (the original's run total <c>DAT_0081af4c</c>), and whether it covers its cell's two by two, as the track tool's do
+	/// (<see cref="ParkTrackTool.Preview"/>).
 	/// </summary>
-	public readonly record struct QueueSquare( int X, int Y, int Marker, string? Why = null, bool Unaffordable = false, int Owed = 0 );
+	public readonly record struct QueueSquare( int X, int Y, int Marker, string? Why = null, bool Unaffordable = false, int Owed = 0,
+		bool Wide = false );
 
 	/// <summary>A square of the queue tool's preview - an index into the original's twenty-entry marker table at <c>0x00763b38</c>.</summary>
 	public const int MarkerBlue = 0;
@@ -655,11 +657,11 @@ public static class ParkPathBuilding
 			case ParkBuildMode.Patrol:
 				return ParkPatrolTool.Strip( toX, toY, out latched );
 
-			// The track tool's preview (FUN_005234d0 with Track_CellVerdict) draws the run's squares and its total; the
-			// pointer reads its verdict (ParkTrackTool.CursorOver), the squares are not drawn.
+			// The track tool's preview (FUN_005234d0's modes 0xb and 0x10): a two-by-two square an anchor of the run.
 			case ParkBuildMode.KartTrack or ParkBuildMode.WaterTrack:
-				Unimplemented.Report( "TRACK_TOOL_PREVIEW" );
-				return [];
+				var preview = ParkTrackTool.PreviewOver( toX, toY );
+				latched = preview.Latched;
+				return preview.Squares;
 
 			default:
 				return [];

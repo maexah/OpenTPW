@@ -838,7 +838,7 @@ public class ParkTrackToolTests
 		Assert.IsFalse( ParkTrackTool.Verdict( state, 0xb, Owner, (34, 25), (34, 29), 200 ).OverBalance, "refused, under the balance" );
 	}
 
-	/// <summary>The armed pointer: <c>c_track</c> over a run that may be laid, <c>c_cash</c> over the balance (which wins), <c>c_noplace</c> otherwise.</summary>
+	/// <summary>The armed pointer: <c>c_track</c> over a run that may be laid, <c>c_cash</c> over the balance (which wins, its red squares charged twice), <c>c_noplace</c> otherwise.</summary>
 	[TestMethod]
 	public void TheArmedPointerShowsTrackNoPlaceOrCash()
 	{
@@ -853,7 +853,10 @@ public class ParkTrackToolTests
 
 		state.SetRecord( 35, 28, state.Record( 35, 28 ) with { Type = CellEdge.Footprint } );
 
-		Assert.AreEqual( Input.CursorTypes.NoGo, ParkTrackTool.CursorFor( state, ride, 200, 34, 29 ), "refused, and 400 is within the balance" );
+		// (34,27) refused: charged 200 and, as a red square, 200 again; 400 is within the balance.
+		Assert.AreEqual( Input.CursorTypes.NoGo, ParkTrackTool.CursorFor( state, ride, 200, 34, 27 ), "refused, and 400 is within the balance" );
+		// A red square is charged twice (0x00537a29, 0x00539f61): (34,29) brings the run to 600.
+		Assert.AreEqual( Input.CursorTypes.Cash, ParkTrackTool.CursorFor( state, ride, 200, 34, 29 ), "refused, and its red squares' second charges pass 500" );
 		Assert.AreEqual( Input.CursorTypes.Cash, ParkTrackTool.CursorFor( state, ride, 200, 34, 31 ), "refused and over: the cash wins" );
 	}
 }

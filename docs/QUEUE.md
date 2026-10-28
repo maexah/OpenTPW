@@ -78,12 +78,14 @@ filed the items that cite it.
   karts' and the water ride's track, buoys and race"). Q688 lays the station and mouths and draws the pieces; Q762 arms
   the track tool and lays its runs; Q763 walks the circuit as a loop closes (the sections, `+0x2c`, the opening); Q765
   takes a run back with Backspace; Q766 makes each section's collision objects and buoy; Q767 walks from the mouths and
-  pulses the open end. What is left: an add-on's end
+  pulses the open end; Q768 draws the armed tool's preview squares and its `c_end`. What is left: an add-on's end
   caps in the walk (`TRACK_WALK_ADD_ON`), the pieces' clips after a close
   (`TRACK_PIECES_CLIP`: `TrackRide_PlayPiecesFromMouth`, `0x0052a490`, and `TrackRide_PlayPiecesFromEnd`); the move's
   put-down walk (`0x00524d0a`; ours moves as a sale and a purchase); the put-down's check of the mouths, op 0x20b or
   0x210, whose refusal refuses the placement (`PUT_DOWN_TRACK_OVER_TRACK`: ours lays no anchor over track instead); the
-  armed tool's `c_end` and preview squares (`TRACK_TOOL_CURSOR_END`, `TRACK_TOOL_PREVIEW`); a take-back's other cell or
+  preview squares' lift and their 20-wide walls (`FUN_00536ca0`, `MARKER_LIFT_OVER_TRACK_THING`: the original's squares
+  over the mouth, the station and a run's end stand at 11.5 with walls, over the other mouth at 1.5, `q768/orig`; ours
+  lie on the ground under the pieces); a take-back's other cell or
   add-on (`TRACK_CLEAR_PIECE_CELL`, `TRACK_CLEAR_ADD_ON`); a closed loop's two-click edit (`TRACK_EDIT_CLOSED_LOOP`);
   a run over path or queue mid-run, an end or straight laid there as a hill and a bend or junction plain in the original
   (`TRACK_RUN_OVER_PATH`; the river takes a plain piece, built), a crossing or junction

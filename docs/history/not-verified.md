@@ -5,6 +5,12 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q767 (the open end's pulse; Q587's sixth piece). Ours on the final binary (`q767/ours-b`), on the desktop, the stock
+  park, by Q581's clicks: which piece pulses after the put-down, the arming, each run and the close, read by the `track`
+  census, and the other mouth red at a low value (`ours-3-run1-b.png`); the original's `q587/orig/B-3-run1.png` is
+  earlier evidence for the same clicks, the original not run this session; the water ride's by the census alone (its
+  frame was taken pale). Not seen: Backspace's pulse (tests only), a hill's reshaping by the walks (counted), the pulse's
+  speed beside the original's (not measured).
 - Q766 (each section's collision objects and buoy; Q587's fifth piece). Ours on the final binary (`q766/ours-b`), on
   the desktop, the stock park, by Q581's clicks: the karts' eight buoys and ten sections' objects, flags, places and
   sizes, as `q581/orig/A-track.log` at 496 s, and the water loop's as `D-track.log` at 171 s, read by the `track` census

@@ -324,69 +324,112 @@ public static class ParkTrackTool
 		// cell's price to the running total whether or not the cell is refused, and raises its over-the-balance latch the
 		// first time the total passes the balance (0x00539f5c, 0x00539f87..0x00539fb6), so a refused run can be over it too.
 		// Each counted gap is counted at the first refusal alone, as before.
-		bool Refuse( string reason, string? gap = null )
-		{
-			if ( why != null )
-				return false;
-
-			why = reason;
-
-			if ( count && gap != null )
-				Unimplemented.Report( gap );
-
-			return true;
-		}
-
 		for ( var i = 0; i < cells.Count; ++i )
 		{
-			var (x, y) = cells[i];
-			var first = i == 0;
-			var last = i == cells.Count - 1;
-			var onMap = true;
+			var judged = JudgeCell( state, type, owner, cells[i], i == 0, i == cells.Count - 1 );
 
-			foreach ( var (cx, cy) in new[] { (x, y), (x + 1, y), (x, y + 1), (x + 1, y + 1) } )
+			if ( judged.Why != null && why == null )
 			{
-				if ( !ParkState.OnMap( cx, cy ) )
-				{
-					Refuse( $"({cx},{cy}) is off the map" );
-					onMap = false;
-					continue;
-				}
+				why = judged.Why;
 
-				var under = state.Record( cx, cy );
-
-				if ( (under.Flags & 0x40) != 0 )
-					Refuse( $"({cx},{cy}) is outside the park's land" );
-				else if ( under.Type is CellEdge.Footprint or CellEdge.RideEnd or CellEdge.RideFarEnd or 7 or 0x15 or CellEdge.Approach )
-					Refuse( $"({cx},{cy}) is map type {under.Type}" );
-				else if ( last && ParkState.OnMap( x, y ) && state.Record( x, y ).TrackType != type
-					&& (under.Type is ParkRideChoice.QueueCellType or CellEdge.RideEnd || (under.Flags & 0x20) != 0) )
-					Refuse( $"({cx},{cy}) is map type {under.Type}, flags 0x{under.Flags:x}, where a run may not end" );
-				else if ( under.Type is CellEdge.Path or ParkRideChoice.QueueCellType )
-					Refuse( $"({cx},{cy}) is map type {under.Type}, which the original crosses with a hill (not built)", "TRACK_RUN_OVER_PATH" );
-				else if ( (cx, cy) != (x, y) && under.TrackType != 0 )
-				{
-					// The three other cells: any ride's track but this one's refuses (0x00539c47..0x00539dbb).
-					var parent = under.TrackType is ParkTrackPieces.KartCell or ParkTrackPieces.WaterCell
-						? state.Record( MapStep.CellAt( under.TrackParentId ).X, MapStep.CellAt( under.TrackParentId ).Y )
-						: under;
-
-					if ( parent.TrackType is not 0 && parent.TrackParentId != owner )
-						Refuse( $"({cx},{cy}) is another ride's track" );
-				}
+				if ( count && judged.Gap != null )
+					Unimplemented.Report( judged.Gap );
 			}
 
-			if ( !onMap )
-				continue;
-
-			var cell = state.Record( x, y );
-
-			if ( cell.TrackType == 0 )
-			{
+			if ( judged.Empty )
 				total += price;
+		}
+
+		var over = total > state.Balance;
+
+		if ( over && why == null )
+			why = $"the run's {total} is more than the balance {state.Balance}";
+
+		return new Judged( why != null, why, total, over );
+	}
+
+	/// <summary>
+	/// Which part of <c>Track_CellVerdict</c> refuses a cell, which decides what the refusal does to the cells after it in the
+	/// preview: <see cref="Land"/> answers first and latches nothing (map flag <c>0x40</c>, <c>0x00539924</c>..
+	/// <c>0x00539959</c>); <see cref="NearTrack"/> latches before the cell is charged (another ride's track among its three
+	/// other cells, <c>0x00539c47</c>..<c>0x00539dbb</c>); <see cref="After"/> is judged after the charge and the money and
+	/// leaves the refusal pending (<c>0x0053a307</c>), which the next cell turns into the latch (<c>0x00539dc2</c>).
+	/// </summary>
+	public enum CellRefusal { None, Land, NearTrack, After }
+
+	/// <summary>One anchor of a run judged: its first reason (and the gap it counts, if any), which part refused it, and
+	/// whether it is an empty cell on the map, the kind a run is charged for.</summary>
+	public readonly record struct CellJudged( string? Why, string? Gap, CellRefusal Kind, bool Empty );
+
+	/// <summary>
+	/// One anchor of a run (<paramref name="at"/>) by <see cref="Verdict"/>'s rules, the money left out: its two by two's
+	/// cells first, in the map's order, then its own track. Off the map is taken as land outside the park (the original
+	/// asks a cell off the map nothing it answers here). A cell refused by several rules says the first and takes the kind
+	/// that answers first in the original: land, then another ride's track beside it, then the rest.
+	/// </summary>
+	internal static CellJudged JudgeCell( ParkState state, int type, ushort owner, (int X, int Y) at, bool first, bool last )
+	{
+		var (x, y) = at;
+		string? why = null;
+		string? gap = null;
+		var (land, near) = (false, false);
+		var onMap = true;
+
+		void Refuse( string reason, string? counted = null )
+		{
+			if ( why != null )
+				return;
+
+			why = reason;
+			gap = counted;
+		}
+
+		foreach ( var (cx, cy) in new[] { (x, y), (x + 1, y), (x, y + 1), (x + 1, y + 1) } )
+		{
+			if ( !ParkState.OnMap( cx, cy ) )
+			{
+				Refuse( $"({cx},{cy}) is off the map" );
+				land = true;
+				onMap = false;
 				continue;
 			}
 
+			var under = state.Record( cx, cy );
+
+			if ( (under.Flags & 0x40) != 0 )
+			{
+				Refuse( $"({cx},{cy}) is outside the park's land" );
+				land = true;
+			}
+			else if ( under.Type is CellEdge.Footprint or CellEdge.RideEnd or CellEdge.RideFarEnd or 7 or 0x15 or CellEdge.Approach )
+				Refuse( $"({cx},{cy}) is map type {under.Type}" );
+			else if ( last && ParkState.OnMap( x, y ) && state.Record( x, y ).TrackType != type
+				&& (under.Type is ParkRideChoice.QueueCellType or CellEdge.RideEnd || (under.Flags & 0x20) != 0) )
+				Refuse( $"({cx},{cy}) is map type {under.Type}, flags 0x{under.Flags:x}, where a run may not end" );
+			else if ( under.Type is CellEdge.Path or ParkRideChoice.QueueCellType )
+				Refuse( $"({cx},{cy}) is map type {under.Type}, which the original crosses with a hill (not built)", "TRACK_RUN_OVER_PATH" );
+			else if ( (cx, cy) != (x, y) && under.TrackType != 0 )
+			{
+				// The three other cells: any ride's track but this one's refuses (0x00539c47..0x00539dbb).
+				var parent = under.TrackType is ParkTrackPieces.KartCell or ParkTrackPieces.WaterCell
+					? state.Record( MapStep.CellAt( under.TrackParentId ).X, MapStep.CellAt( under.TrackParentId ).Y )
+					: under;
+
+				if ( parent.TrackType is not 0 && parent.TrackParentId != owner )
+				{
+					Refuse( $"({cx},{cy}) is another ride's track" );
+					near = true;
+				}
+			}
+		}
+
+		if ( !onMap )
+			return new CellJudged( why, gap, CellRefusal.Land, false );
+
+		var cell = state.Record( x, y );
+
+		if ( cell.TrackType != 0 )
+		{
 			if ( cell.TrackParentId != owner )
 				Refuse( $"({x},{y}) is another ride's track" );
 			else if ( cell.TrackType is ParkTrackPieces.KartStation or ParkTrackPieces.WaterStation )
@@ -401,12 +444,136 @@ public static class ParkTrackTool
 			}
 		}
 
-		var over = total > state.Balance;
+		var kind = why == null ? CellRefusal.None
+			: land ? CellRefusal.Land
+			: near ? CellRefusal.NearTrack
+			: CellRefusal.After;
 
-		if ( over )
-			Refuse( $"the run's {total} is more than the balance {state.Balance}" );
+		return new CellJudged( why, gap, kind, cell.TrackType == 0 );
+	}
 
-		return new Judged( why != null, why, total, over );
+	/// <summary>
+	/// The armed tool's preview of a run, as its pass draws it (<c>BuildTool_PreviewPass</c> <c>0x005234d0</c>, modes
+	/// <c>0xb</c> and <c>0x10</c>: the pointer taken onto the anchor's row or column and grid, then <c>FUN_0053aac0</c> with
+	/// op <c>0x10b</c> or <c>0x110</c>, one <c>Track_CellOp</c> square arm, <c>0x005370e0</c>, an anchor): the squares, one
+	/// an anchor on the map, from the anchor to the target; whether any is red (the pass's refusal <c>DAT_00816d48</c>,
+	/// <c>c_noplace</c>), whether the last met its own track (<c>DAT_00816d4c</c>, <c>c_end</c>), whether the run's total
+	/// passed the balance (<c>DAT_00816d5c</c>, <c>c_cash</c>), the refusal latch the pass leaves (<c>DAT_00816d50</c>), and
+	/// the run's total (<c>DAT_0081af4c</c>).
+	/// </summary>
+	public readonly record struct Previewed( List<ParkPathBuilding.QueueSquare> Squares, bool Red, bool End, bool OverBalance,
+		bool Latched, int Total );
+
+	/// <summary>
+	/// <see cref="Previewed"/> for a run from <paramref name="from"/> to <paramref name="to"/>. Each anchor is judged by
+	/// <see cref="JudgeCell"/>, in the original's order (<c>Track_CellVerdict</c>, <c>0x00539760</c>): land outside the park
+	/// answers red first and latches nothing; another ride's track beside it latches; a latch an earlier cell left answers
+	/// red before the charge; then an empty cell's price is added to the run's total, and a total above the balance answers
+	/// red and latches (<c>0x00539f87</c>..<c>0x00539fb6</c>); then any other refusal answers red and leaves the latch
+	/// pending for the next cell. A cell not refused is blue (texture 0), or <c>m_end</c> (11, the verdict's answer
+	/// <c>0xb</c>, <c>0x0053a1c6</c>) where it is the run's last and its own track: the anchor itself, or an end the run
+	/// closes on. Every red square is judged again (<c>0x00537a29</c>, third argument 1): past the land, an empty cell is
+	/// charged again and the total asked again, raising <c>DAT_00816d5c</c> alone. Each square covers its anchor's two by two
+	/// (<see cref="ParkPathBuilding.QueueSquare.Wide"/>: the queue's <c>+0x18</c> 1, <c>0x00537a5c</c>, which
+	/// <c>FUN_0053df30</c> lays 20 wide, <c>0x0053df39</c>). The own-track rules are <see cref="Verdict"/>'s, so the squares
+	/// are red where this game's click refuses; where the original's answers differ (a hill over path or queue, a crossing,
+	/// the station along its flow) <see cref="Verdict"/> says so.
+	/// <b>Not reproduced:</b> for the one pass after the pointer leaves an anchor it rested on, the original's first square
+	/// is judged as a last (<c>DAT_00818688</c>, <c>0x0053a0ce</c>); here the anchor is a last only while the pointer is on it.
+	/// </summary>
+	public static Previewed Preview( ParkState state, int type, ushort owner, (int X, int Y) from, (int X, int Y) to, int price )
+	{
+		var (cells, dx, dy) = CellsOf( from, to );
+		var step = HeadingOf( dx, dy );
+		var squares = new List<ParkPathBuilding.QueueSquare>();
+		var (latch, pending, red, end, over, total) = (false, false, false, false, false, 0);
+
+		for ( var i = 0; i < cells.Count; ++i )
+		{
+			var (x, y) = cells[i];
+			var last = i == cells.Count - 1;
+
+			// FUN_0053aac0 asks Track_CellOp only of an anchor on the map (FUN_004d8300).
+			if ( !ParkState.OnMap( x, y ) )
+				continue;
+
+			var judged = JudgeCell( state, type, owner, (x, y), i == 0, last );
+
+			// The anchor, its own end, with the run leading back against its way on: the verdict's own-track rules answer it
+			// red alone, latching nothing (0x0053a216 to 0x0053a251, then 0x0053a4e9: links not three), where the click lays
+			// nothing anyway, for the cell beyond is its own track or its station.
+			if ( i == 0 && !last && judged.Kind == CellRefusal.None && step != 0 && state.Record( x, y ) is var anchor
+				&& anchor.TrackType == type && anchor.TrackDirection == CellEdge.Opposite( step ) )
+				judged = judged with { Why = $"({x},{y}) is left against its way on", Kind = CellRefusal.Land };
+
+			var refused = true;
+			var unaffordable = false;
+
+			if ( judged.Kind != CellRefusal.Land )
+			{
+				latch |= pending || judged.Kind == CellRefusal.NearTrack;
+				pending = false;
+
+				if ( !latch )
+				{
+					if ( judged.Empty )
+						total += price;
+
+					if ( total > state.Balance )
+						(latch, over, unaffordable) = (true, true, true);
+					else if ( judged.Kind == CellRefusal.After )
+						pending = true;
+					else
+						refused = false;
+				}
+
+				// The red square's second judgement: no latch answers first, so an empty cell is charged again.
+				if ( refused && judged.Empty )
+				{
+					total += price;
+					over |= total > state.Balance;
+				}
+			}
+
+			var cell = state.Record( x, y );
+			var own = last && !refused && cell.TrackType == type && cell.TrackParentId == owner;
+
+			red |= refused;
+			end |= own;
+
+			squares.Add( new ParkPathBuilding.QueueSquare( x, y,
+				refused ? ParkPathBuilding.MarkerRed : own ? ParkPathBuilding.MarkerEnd : ParkPathBuilding.MarkerBlue,
+				refused ? judged.Why ?? "the refusal latched" : null, unaffordable, total, Wide: true ) );
+		}
+
+		return new Previewed( squares, red, end, over, latch, total );
+	}
+
+	/// <summary>
+	/// The preview for the pointer's cell with the track tool armed, in the park now loaded: <see cref="Preview"/> from the
+	/// anchor to <see cref="TargetOf"/>, or, unanchored, the pointer's cell alone (the pass's <c>FUN_0053aac0</c> from the
+	/// cell to itself); none where no ride is served.
+	/// </summary>
+	public static Previewed PreviewOver( int x, int y )
+	{
+		if ( Level.Current is not { ParkState: { } state } level || level.Catalogue is not { } catalogue
+			|| state.Objects.FirstOrDefault( o => o.ThingId == ParkBuildMode.Serves ) is not { ThingId: not 0 } ride
+			|| !catalogue.TryGet( ride.CatalogueId, out var item ) )
+			return new Previewed( [], false, false, false, false, 0 );
+
+		return PreviewFor( state, ride, ParkTrackPieces.PieceCost( level, item.TrackType ), x, y );
+	}
+
+	/// <summary><see cref="PreviewOver"/> for a park and the ride the tool serves, the anchor being <see cref="ParkBuildMode.Anchor"/>.</summary>
+	internal static Previewed PreviewFor( ParkState state, ParkWorld.CatalogueObject ride, int price, int x, int y )
+	{
+		var type = ParkBuildMode.Current == ParkBuildMode.WaterTrack ? ParkTrackPieces.WaterAnchor : ParkTrackPieces.KartAnchor;
+		var owner = (ushort)MapStep.CellId( ride.CellX, ride.CellY );
+
+		if ( !ParkBuildMode.Anchored )
+			return Preview( state, type, owner, (x, y), (x, y), price );
+
+		return Preview( state, type, owner, ParkBuildMode.Anchor, TargetOf( ParkBuildMode.Anchor, x, y ), price );
 	}
 
 	/// <summary>What a run did: whether its last cell was track already (the retile pass answers nought), and what it charged.</summary>
@@ -1062,40 +1229,24 @@ public static class ParkTrackTool
 	}
 
 	/// <summary>
-	/// The armed tool's pointer over a cell (<c>FUN_0052f950</c>, <c>0x0052f9a9</c>): <c>c_track.ani</c> (cursor 6),
-	/// <c>c_noplace</c> (8) where the run's preview is red, and <c>c_cash</c> (<c>0x14</c>) where its total passes the
-	/// balance, which wins over the red even where the run is refused for something else too. The verdict's <c>c_end</c>
-	/// (<c>0x12</c>; its latch <c>DAT_00816d4c</c>, set at <c>0x0053a1c6</c> where an end of the run meets its own track by
-	/// rules on its links and way on) is counted where the run's last cell is its own track, <c>TRACK_TOOL_CURSOR_END</c>;
-	/// <c>c_link</c> (5) is the path verdict's alone.
+	/// The armed tool's pointer over a cell (<c>FUN_0052f950</c>, <c>0x0052f9a9</c>), from its preview
+	/// (<see cref="PreviewOver"/>): <c>c_end</c> (<c>0x12</c>) where the run's last square met its own track
+	/// (<c>DAT_00816d4c</c>), else <c>c_track.ani</c> (cursor 6); over either <c>c_noplace</c> (8) where any square is red,
+	/// and over that <c>c_cash</c> (<c>0x14</c>) where the run's total passed the balance, which wins over the red even where
+	/// the run is refused for something else too. <c>c_link</c> (5) is the path verdict's alone.
 	/// </summary>
-	public static Input.CursorTypes CursorOver( int x, int y )
-	{
-		if ( Level.Current is not { ParkState: { } state } level || level.Catalogue is not { } catalogue
-			|| state.Objects.FirstOrDefault( o => o.ThingId == ParkBuildMode.Serves ) is not { ThingId: not 0 } ride
-			|| !catalogue.TryGet( ride.CatalogueId, out var item ) )
-			return Input.CursorTypes.Track;
-
-		return CursorFor( state, ride, ParkTrackPieces.PieceCost( level, item.TrackType ), x, y );
-	}
+	public static Input.CursorTypes CursorOver( int x, int y ) => CursorOf( PreviewOver( x, y ) );
 
 	/// <summary><see cref="CursorOver"/> for a park and the ride the tool serves, the anchor being <see cref="ParkBuildMode.Anchor"/>.</summary>
 	internal static Input.CursorTypes CursorFor( ParkState state, ParkWorld.CatalogueObject ride, int price, int x, int y )
-	{
-		if ( !ParkBuildMode.Anchored )
-			return Input.CursorTypes.Track;
+		=> CursorOf( PreviewFor( state, ride, price, x, y ) );
 
-		var type = ParkBuildMode.Current == ParkBuildMode.WaterTrack ? ParkTrackPieces.WaterAnchor : ParkTrackPieces.KartAnchor;
-		var anchor = ParkBuildMode.Anchor;
-		var target = TargetOf( anchor, x, y );
-
-		if ( target != anchor && ParkState.OnMap( target.X, target.Y ) && state.Record( target.X, target.Y ).TrackType == type )
-			Unimplemented.Report( "TRACK_TOOL_CURSOR_END" );
-
-		var judged = Verdict( state, type, (ushort)MapStep.CellId( ride.CellX, ride.CellY ), anchor, target, price, count: false );
-
-		return !judged.Refused ? Input.CursorTypes.Track : judged.OverBalance ? Input.CursorTypes.Cash : Input.CursorTypes.NoGo;
-	}
+	/// <summary>The pointer a preview gives: each of <c>FUN_0052f950</c>'s tests over the last (<c>0x0052f9a9</c>..).</summary>
+	internal static Input.CursorTypes CursorOf( Previewed preview )
+		=> preview.OverBalance ? Input.CursorTypes.Cash
+			: preview.Red ? Input.CursorTypes.NoGo
+			: preview.End ? Input.CursorTypes.End
+			: Input.CursorTypes.Track;
 
 	/// <summary>
 	/// The idle click on a piece: arms the tool for its ride at its track's open end. A ride whose track is closed is

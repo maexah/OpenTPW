@@ -93,7 +93,7 @@ public sealed class ParkBuildMarkers : ModelEntity
 	/// One square of the mesh: its cell, its marker, how far over the ground its corners start, the compass bit its
 	/// texture is turned by (<see cref="TurnedUvs"/>), and whether it glides (<see cref="Glide"/>).
 	/// </summary>
-	private readonly record struct Square( int X, int Y, int Marker, float Over, int Turn = 0, bool Glides = false );
+	private readonly record struct Square( int X, int Y, int Marker, float Over, int Turn = 0, bool Glides = false, int Size = 1 );
 
 	/// <summary>The squares the mesh holds now, and its vertices, so the wave can move them every frame.</summary>
 	private List<Square> _strip = [];
@@ -264,7 +264,7 @@ public sealed class ParkBuildMarkers : ModelEntity
 		var patrol = PatrolSquares( _patrolQueued, PatrolLatch( ParkBuildMode.RefusalLatched, carried ) );
 		_patrolQueued = [];
 
-		var built = string.Join( ";", strip.Select( square => $"{square.X},{square.Y},{square.Marker}" ) )
+		var built = string.Join( ";", strip.Select( square => $"{square.X},{square.Y},{square.Marker}{(square.Wide ? "#2" : "")}" ) )
 			+ "|" + string.Join( ";", carried.Select( square => $"{square.X},{square.Y},{square.Marker},{square.Turn}" ) )
 			+ "|" + string.Join( ";", patrol.Select( square => $"{square.X},{square.Y},{square.Marker}" ) )
 			+ "|" + string.Join( ";", stranded.Select( cell => $"{cell.X},{cell.Y}" ) );
@@ -340,7 +340,7 @@ public sealed class ParkBuildMarkers : ModelEntity
 	public string Census()
 	{
 		string Line( Square square ) => $"{square.X},{square.Y},{square.Marker}^{square.Over - Lift:0}"
-			+ (square.Turn is 0 or 0x01 ? "" : $"@{square.Turn:x2}");
+			+ (square.Turn is 0 or 0x01 ? "" : $"@{square.Turn:x2}") + (square.Size == 1 ? "" : $"#{square.Size}");
 
 		var tool = _strip.Take( _toolSquares ).Select( Line ).ToArray();
 		var patrol = _strip.Skip( _toolSquares ).Take( _patrolSquares ).Select( Line ).ToArray();
@@ -429,22 +429,27 @@ public sealed class ParkBuildMarkers : ModelEntity
 		// 0x0053df67..0x0053dfcf) applies to every square and wall whose no-glide word is 0 whenever the mode is 4, 0xe or
 		// 0x13, and the patrol edges' red arm queues its square with that word 0 (0x0053394b); so while a thing is
 		// carried a followed member's patrol edges slide in the original, and here they stand still.
-		var squares = strip.Select( square => (square.X, square.Y, square.Marker, Turn: 0, Glides: false) )
-			.Concat( carried.Select( square => (square.X, square.Y, square.Marker, square.Turn, Glides: true) ) )
-			.Concat( patrol.Select( square => (square.X, square.Y, square.Marker, Turn: 0, Glides: false) ) );
+		var squares = strip.Select( square => (square.X, square.Y, square.Marker, Turn: 0, Glides: false, Size: square.Wide ? 2 : 1) )
+			.Concat( carried.Select( square => (square.X, square.Y, square.Marker, square.Turn, Glides: true, Size: 1) ) )
+			.Concat( patrol.Select( square => (square.X, square.Y, square.Marker, Turn: 0, Glides: false, Size: 1) ) );
 
 		float LiftAt( int x, int y ) => ParkState.Current is { } state
 			? LiftOver( state, Level.Current?.Catalogue, field, x, y )
 			: 0f;
 
+		// The track tool's squares are lifted by their own rule (TrackLiftOver), which lifts none here, so they have no
+		// walls either.
+		float SquareLift( int x, int y, int size ) => size == 1 ? LiftAt( x, y )
+			: ParkState.Current is { } state ? TrackLiftOver( state, x, y ) : 0f;
+
 		float? NeighbourLift( int x, int y ) => OnTheField( x, y ) ? LiftAt( x, y ) : null;
 
 		var lifts = squares.Where( square => OnTheField( square.X, square.Y ) )
-			.Select( square => (Square: square, Lift: LiftAt( square.X, square.Y )) )
+			.Select( square => (Square: square, Lift: SquareLift( square.X, square.Y, square.Size )) )
 			.ToList();
 
 		_strip = lifts.Select( square => new Square( square.Square.X, square.Square.Y, square.Square.Marker, RecordHeight( square.Lift ),
-				square.Square.Turn, square.Square.Glides ) )
+				square.Square.Turn, square.Square.Glides, square.Square.Size ) )
 			.ToList();
 		_toolSquares = strip.Count( square => OnTheField( square.X, square.Y ) ) + carried.Count( square => OnTheField( square.X, square.Y ) );
 		_patrolSquares = _strip.Count - _toolSquares;
@@ -496,7 +501,7 @@ public sealed class ParkBuildMarkers : ModelEntity
 
 		var glide = GlideOffset();
 
-		foreach ( var (x, y, marker, over, turn, glides) in _strip )
+		foreach ( var (x, y, marker, over, turn, glides, size) in _strip )
 		{
 			var slot = Math.Max( 0, Array.IndexOf( Drawn, marker ) );
 			var offset = glides ? glide : (0f, 0f);
@@ -505,10 +510,11 @@ public sealed class ParkBuildMarkers : ModelEntity
 			// A red square that is not showing is laid with no area: all four corners on its first.
 			var gone = marker == ParkPathBuilding.MarkerRed && !_redShown;
 
+			// A wide square is one quad over its cell's two by two, 20 by 20 (FUN_0053df30, 0x0053df39).
 			_vertices[vertex++] = Corner( field, x, y, uvs[0], slot, over, offset );
-			_vertices[vertex++] = Corner( field, gone ? x : x + 1, y, uvs[1], slot, over, offset );
-			_vertices[vertex++] = Corner( field, gone ? x : x + 1, gone ? y : y + 1, uvs[2], slot, over, offset );
-			_vertices[vertex++] = Corner( field, x, gone ? y : y + 1, uvs[3], slot, over, offset );
+			_vertices[vertex++] = Corner( field, gone ? x : x + size, y, uvs[1], slot, over, offset );
+			_vertices[vertex++] = Corner( field, gone ? x : x + size, gone ? y : y + size, uvs[2], slot, over, offset );
+			_vertices[vertex++] = Corner( field, x, gone ? y : y + size, uvs[3], slot, over, offset );
 		}
 
 		foreach ( var wall in _walls )
@@ -620,6 +626,24 @@ public sealed class ParkBuildMarkers : ModelEntity
 		// them, so the square stays on the ground.
 		if ( cell.TrackType is 11 or 12 or 16 or 17 or 25 )
 			Unimplemented.Report( "MARKER_LIFT_OVER_TRACK_THING" );
+
+		return 0f;
+	}
+
+	/// <summary>
+	/// How far a track tool's square is lifted: <c>FUN_00536ca0</c> on the anchor's map record (<c>0x0053724c</c>) asks its
+	/// two by two, its own cell, then south, east and the far corner, and takes the lift of the last whose MAP type is
+	/// <c>0xb</c>, <c>0x10</c>, <c>0x19</c>, 7, 4, 9 or 10 (<c>FUN_00452ae0</c> there, rounded up to ten); its walls go down to
+	/// its one-cell neighbours' lifts, asked the same way, each 20 wide. None of that is built: the square lies on the
+	/// ground, unwalled, and where any of the four would lift it the gap is counted (<c>MARKER_LIFT_OVER_TRACK_THING</c>).
+	/// </summary>
+	internal static float TrackLiftOver( ParkState state, int x, int y )
+	{
+		foreach ( var (cx, cy) in new[] { (x, y), (x, y + 1), (x + 1, y), (x + 1, y + 1) } )
+		{
+			if ( ParkState.OnMap( cx, cy ) && state.Record( cx, cy ).Type is 0xb or 0x10 or 0x19 or 7 or 4 or 9 or 10 )
+				Unimplemented.Report( "MARKER_LIFT_OVER_TRACK_THING" );
+		}
 
 		return 0f;
 	}

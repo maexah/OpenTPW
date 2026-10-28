@@ -10783,6 +10783,18 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   and the water ride's (22,19) and (16,19) the same; the other mouth red at a low value (`pulsing 23`,
   `ours-3-run1-b.png`) as in the original's `q587/orig/B-3-run1.png`, earlier evidence for the same clicks; the
   original not run this session. mutate.py: 22 bugs, 21 fail, one equivalent.
+- [x] **Q768. The armed track tool's preview squares and its `c_end` (Q587's seventh piece).** `ParkTrackTool.Preview`,
+  `JudgeCell`, `CursorOf` (`BuildTool_PreviewPass`, `0x005234d0`; `FUN_0053aac0` with op `0x10b`/`0x110`; `Track_CellOp`'s
+  square arm, `0x005370e0`; `Track_CellVerdict`, `0x00539760`; read in the real Ghidra project, `q768/dump`; `park.md`,
+  "The track tool", the preview): a square over each anchor's two by two (`+0x18`, 20 wide), blue, red in the verdict's
+  order (land alone; another ride's track beside latching before the charge; a latch; the money; the rest pending),
+  each red one charged again, the anchor red where the run leads back against its way, `m_end` where the last meets its
+  own track; the pointer `c_end`, `c_track`, `c_noplace`, `c_cash` from it. `TRACK_TOOL_PREVIEW` and
+  `TRACK_TOOL_CURSOR_END` are gone. Ours on the final binary (`q768/ours-a`, SCORE 7 of 7, `PREDICTION.txt`) and the
+  original this session (`q768/orig`, `squares.py` now reading the 20-wide flag), the same purchase and clicks: on the
+  mouth one `m_end` square and cursor 0x12 in both; toward (34,29) three blue (`ours-2-run.png`, `O-O2.png`); toward the
+  station three red, the mouth with them (`ours-3-back.png`, `O-O3.png`); on the other mouth blue, blue, `m_end`. Left
+  in Q587: the squares' lift and walls (`FUN_00536ca0`), which the original's have.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.
