@@ -5,6 +5,17 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q776 (a path or queue tool's square over a kart piece; Q587's tenth piece). Ours on the final binary (`q776/ours-a`, dll
+  a5ad2c04, SCORE 1 of 1), on the desktop, the stock park, Q581's purchase, the path tool anchored on (34,23): the `strip`
+  census with the pointer on the mouth (34,25) reads `34,25,0^10` (blue, lifted 10) with one north wall, on its 0xc cell
+  (34,26) `34,25,0^10;34,26,0^10` with walls north of (34,25) and south of (34,26), and on the other mouth (28,25) (anchor
+  (28,22)) `28,25,0^0`, no wall (`ours-A1..A3.png`; no `MARKER_LIFT_OVER_TRACK_THING` count). The original this session under
+  Proton (`q776/orig`, tags O and P3run, `squares.py`): the same records, 1.5 higher, in all three poses, the squares blue
+  (`O-P1.png`, `O-P2.png`, `P3run-P3.png`; the cameras differ, so the pictures are not a pixel pair). Missed predictions
+  (`q776/PREDICTION.txt`): the squares over a piece are blue, not red, in both games; ours' strip began at (34,22), the
+  original's anchor landed on (34,23). Not seen: the water ride's pieces; a click over a piece (only the preview was
+  read, so whether the click refuses is open); the bug put back in the game (the unit tests carry it: 8 of 8 mutants
+  fail). Still counted: the boundary's things' height (`MARKER_LIFT_OVER_TRACK_THING`, Q587).
 - Q775 (the track tool's squares lifted and walled; Q587's ninth piece). Ours on the final binary (`q775/ours-a`, dll
   1fd5fd5e, SCORE 6 of 6), on the desktop, the stock park, Q581's purchase and the tool armed on the mouth: the `strip`
   census at five poses, the mouth (34,25) `11^10` with walls north, east and south; toward (34,29); red toward (30,25) with

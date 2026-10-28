@@ -116,6 +116,12 @@ internal static class FreshParkBoundary
 			var flags = (ushort)(blocks.Contains( (x, y) ) ? 1 : 0);
 			var (row, turn) = ParkBoundaryHoarding.PieceFor( mask, direction, flags, gateEnds.Contains( (x, y) ), ref seed, variants );
 			pieces.Add( new( x, y, mask, direction, flags, row, turn ) );
+
+			// The retile keeps the piece's family, row and rotation on the anchor's track record (0x0053b02b..0x0053b04c).
+			cells[y * ParkWorld.MapSize + x] = cells[y * ParkWorld.MapSize + x] with
+			{
+				TrackTileSet = ParkBoundaryHoarding.Family, TrackTileIndex = row, TrackTileAngle = turn
+			};
 		}
 
 		return pieces;

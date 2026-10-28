@@ -79,15 +79,11 @@ filed the items that cite it.
   the track tool and lays its runs; Q763 walks the circuit as a loop closes (the sections, `+0x2c`, the opening); Q765
   takes a run back with Backspace; Q766 makes each section's collision objects and buoy; Q767 walks from the mouths and
   pulses the open end; Q768 draws the armed tool's preview squares and its `c_end`; Q773 answers blue over a feature of priority
-  below 3 and tears it down at the click (op `0x87`); Q775 lifts and walls the preview squares; Q776 lifts a path or queue tool's square over a piece. What is left: an add-on's end
+  below 3 and tears it down at the click (op `0x87`); Q775 lifts and walls the preview squares; Q776 lifts a path or queue tool's square over a piece; Q777 lifts a square over the boundary's hoardings by their `.hmp`. What is left: an add-on's end
   caps in the walk (`TRACK_WALK_ADD_ON`), the pieces' clips after a close
   (`TRACK_PIECES_CLIP`: `TrackRide_PlayPiecesFromMouth`, `0x0052a490`, and `TrackRide_PlayPiecesFromEnd`); the move's
   put-down walk (`0x00524d0a`; ours moves as a sale and a purchase); the put-down's check of the mouths, op 0x20b or
-  0x210, whose refusal refuses the placement (`PUT_DOWN_TRACK_OVER_TRACK`: ours lays no anchor over track instead); the boundary's
-  track things' height (track type 0x19; `ParkBoundaryHoarding` draws them, but a square over one or over a 0xc cell parented
-  to one, path, queue or track tool's, stays on the ground and is counted, `MARKER_LIFT_OVER_TRACK_THING`: read their `.hmp`
-  (the Q775 review's note, not checked here: the hoarding loader passes flags `0x422` and `hoarding.wad` ships one for all nine
-  models); the original's (93,21) and (94,21) lift 20, Q436); a take-back's other cell or
+  0x210, whose refusal refuses the placement (`PUT_DOWN_TRACK_OVER_TRACK`: ours lays no anchor over track instead); a take-back's other cell or
   add-on (`TRACK_CLEAR_PIECE_CELL`, `TRACK_CLEAR_ADD_ON`); a closed loop's two-click edit (`TRACK_EDIT_CLOSED_LOOP`);
   a run over path or queue mid-run, an end or straight laid there as a hill and a bend or junction plain in the original
   (`TRACK_RUN_OVER_PATH`; the river takes a plain piece, built), a crossing or junction

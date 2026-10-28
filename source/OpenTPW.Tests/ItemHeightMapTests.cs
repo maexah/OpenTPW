@@ -181,10 +181,10 @@ public class ItemHeightMapTests
 	/// tool's (Q776; <c>FUN_00532fc0</c> asks <c>FUN_00452ae0</c>, whose track-layer object comes first): over the
 	/// station laid from (30,24) the mouth (34,25) reads 3.49 so 10, its 0xc cell (34,26) by its anchor 3.88 so 10, the
 	/// other mouth (28,25) nought. The ground there is -3 and -8, and a cell asked as the ground (or a 0xc cell not
-	/// followed to its anchor) lifts nought. Nothing is counted, but a 0xc cell parented to a boundary thing (its <c>.hmp</c> not read)
-	/// still is, and stays on the ground.
+	/// followed to its anchor) lifts nought. Nothing is counted; a boundary hoarding's is
+	/// <see cref="ASquareOverABoundaryHoardingIsLiftedByItsFile"/>.
 	/// </summary>
-	/// <remarks><b>Mutation:</b> the piece not asked; a 0xc cell not followed to its anchor; the boundary lifted by its ground; a map type 4 or 7 cell asked as the ground.</remarks>
+	/// <remarks><b>Mutation:</b> the piece not asked; a 0xc cell not followed to its anchor; a map type 4 or 7 cell asked as the ground.</remarks>
 	[TestMethod]
 	public void APathSquareOverAKartPieceIsLiftedByThePiece()
 	{
@@ -215,13 +215,121 @@ public class ItemHeightMapTests
 
 		Assert.AreEqual( 10f, ParkBuildMarkers.LiftOver( state, catalogue, field, 34, 26, "jungle" ), "land of type 7 under the piece: the piece first" );
 
-		Assert.IsTrue( field.HeightAt( 74, 66 ) > 20, "raised ground, which a lift by the ground would show" );
+		Unimplemented.Forget();
 
+		// A boundary anchor whose record holds no piece of family 5 is the gap, and stays on the ground.
 		state.SetRecord( 73, 66, ParkState.CellFor( world, 73, 66 ) with { Type = 0, TrackType = 25 } );
 		state.SetRecord( 74, 66, ParkState.CellFor( world, 74, 66 ) with { Type = 0, TrackType = ParkTrackPieces.KartCell, TrackParentId = (ushort)((66 * 128) + 73 + 1) } );
 
-		Assert.AreEqual( 0f, ParkBuildMarkers.LiftOver( state, catalogue, field, 74, 66, "jungle" ), "a boundary thing's cell stays on the ground" );
+		Assert.AreEqual( 0f, ParkBuildMarkers.LiftOver( state, catalogue, field, 74, 66, "jungle" ), "an anchor with no piece named stays on the ground" );
 		Assert.IsTrue( Unimplemented.Summary.Any( entry => entry.What == "MARKER_LIFT_OVER_TRACK_THING" ), "and is counted" );
+	}
+
+	/// <summary>
+	/// A path or queue tool's square over a boundary hoarding, or over a 0xc cell parented to one, lifts by the hoarding's
+	/// <c>.hmp</c> (Q777; the original's (93,21) and (94,21) lift 20, Q436). The stock park's anchor (93,21) is record row 2
+	/// (<c>ho_fos1</c>), turned 180, whose file is 51 over all four cells, 19.99 so 20 over ground 0; its 0xc cell (94,21) reads
+	/// the same by its anchor. Cells outside the two by two, and a cell asked as ground, lift nought. Nothing is counted.
+	/// On ground raised above 20 the model's root stands there, so the lift is the file's height plus the root's, not the ground's.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the hoarding not asked (ground only); a 0xc cell not followed to its anchor; the file's height dropped
+	/// (the root alone); the root dropped (the file alone); the record's row not read (row 0); the family not required.</remarks>
+	[TestMethod]
+	public void ASquareOverABoundaryHoardingIsLiftedByItsFile()
+	{
+		using var stream = new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
+		var state = new ParkState( world );
+		var catalogue = new ParkItemCatalogue( "jungle", data, instantAction: true );
+
+		HeightfieldFile field;
+
+		using ( var terrain = data.OpenRead( "levels/jungle/terrain/base.MD2" ) )
+			field = new HeightfieldFile( terrain );
+
+		Unimplemented.Forget();
+
+		Assert.AreEqual( 25, state.Record( 93, 21 ).TrackType, "the stock park's east wall" );
+		Assert.AreEqual( 20f, ParkBuildMarkers.LiftOver( state, catalogue, field, 93, 21, "jungle" ), "the anchor" );
+		Assert.AreEqual( 20f, ParkBuildMarkers.LiftOver( state, catalogue, field, 94, 21, "jungle" ), "its 0xc cell, by its anchor" );
+		Assert.AreEqual( 0f, ParkBuildMarkers.LiftOver( state, catalogue, field, 92, 21, "jungle" ), "bare ground beside it" );
+		Assert.IsFalse( Unimplemented.Summary.Any( entry => entry.What == "MARKER_LIFT_OVER_TRACK_THING" ), "a built hoarding is not a gap" );
+
+		// Raised ground: row 2 turned 0 at (73,66), whose file is 51 and whose root stands on the ground under its two by two.
+		Assert.IsTrue( field.HeightAt( 74, 66 ) > 20, "raised ground, which a lift by the ground would show" );
+
+		state.SetRecord( 73, 66, ParkState.CellFor( world, 73, 66 ) with { Type = 0, TrackType = 25, TrackTileSet = 5, TrackTileIndex = 2, TrackTileAngle = 0 } );
+		state.SetRecord( 74, 66, ParkState.CellFor( world, 74, 66 ) with { Type = 0, TrackType = ParkTrackPieces.KartCell, TrackParentId = (ushort)((66 * 128) + 73 + 1) } );
+
+		var root = ParkBoundaryHoarding.StandOf( ParkBoundaryHoarding.PieceAt( 73, 66, state.Record( 73, 66 ) )!.Value, field ).Origin.Z;
+		var top = (int)((51 * ItemHeightMapFile.UnitsPerByte) + root);
+
+		Assert.IsTrue( root > 20 && top > (int)root, "the file adds to the root" );
+		Assert.AreEqual( (top + 9) / 10 * 10, ParkBuildMarkers.LiftOver( state, catalogue, field, 74, 66, "jungle" ), "the file over the root" );
+		Assert.AreEqual( (top + 9) / 10 * 10, ParkBuildMarkers.LiftOver( state, catalogue, field, 73, 66, "jungle" ), "and at the anchor" );
+		Assert.AreNotEqual( ((int)root + 9) / 10 * 10, ParkBuildMarkers.LiftOver( state, catalogue, field, 74, 66, "jungle" ), "not the root alone" );
+		Assert.IsFalse( Unimplemented.Summary.Any( entry => entry.What == "MARKER_LIFT_OVER_TRACK_THING" ), "nothing is counted" );
+
+		// The track tool asks the same height of each cell of its two by two.
+		float At( int x, int y ) => ParkItemHeights.AtCell( state, catalogue, field, x, y, "jungle" );
+		Assert.AreEqual( top, (int)At( 74, 66 ), "the track tool's cell height" );
+		Assert.AreEqual( top, (int)At( 73, 66 ), "at the anchor" );
+	}
+
+	/// <summary>
+	/// Every anchor of the stock park's boundary (143, rows of five models) lifts a path square over its own two by two by its
+	/// row's file: over the four cells the lowest lift is the file's lowest byte (as a height over the root, rounded up to ten)
+	/// and the highest its highest, whatever the turn, so the row the record names is the model read (Q777; ho_fos1's 51 is
+	/// 20, ho_fos2's 76 and 71 are 30, ho_fob2's 25 is 10 beside three 20s, ho_fob1's 0 beside three 20s).
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the record's row not read (row 0); the file's own cells not asked; the family not required; the
+	/// anchor's piece standing a cell off.</remarks>
+	[TestMethod]
+	public void EveryStockBoundaryAnchorLiftsByItsRowsFile()
+	{
+		using var stream = new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
+		var state = new ParkState( world );
+		var catalogue = new ParkItemCatalogue( "jungle", data, instantAction: true );
+
+		HeightfieldFile field;
+
+		using ( var terrain = data.OpenRead( "levels/jungle/terrain/base.MD2" ) )
+			field = new HeightfieldFile( terrain );
+
+		Unimplemented.Forget();
+
+		var anchors = 0;
+		var rows = new System.Collections.Generic.HashSet<int>();
+
+		for ( var y = 0; y < ParkWorld.MapSize; ++y )
+		{
+			for ( var x = 0; x < ParkWorld.MapSize; ++x )
+			{
+				var cell = state.Record( x, y );
+
+				if ( cell.TrackType != ParkTrackPieces.Boundary )
+					continue;
+
+				++anchors;
+				rows.Add( cell.TrackTileIndex );
+
+				var piece = ParkBoundaryHoarding.PieceAt( x, y, cell )!.Value;
+				var file = ItemHeightMapFile.Read( data.ReadAllBytes( $"levels/jungle/hoarding/{ParkBoundaryHoarding.ModelOf( cell.TrackTileIndex )}.hmp" ) )!;
+				var root = ParkBoundaryHoarding.StandOf( piece, field ).Origin.Z;
+				var lifts = new[] { (x, y), (x + 1, y), (x, y + 1), (x + 1, y + 1) }
+					.Select( at => ParkBuildMarkers.LiftOver( state, catalogue, field, at.Item1, at.Item2, "jungle" ) ).ToArray();
+
+				Assert.AreEqual( ParkBuildMarkers.CeilingTen( (int)((file.CellMaxima.Min() * ItemHeightMapFile.UnitsPerByte) + root) ), lifts.Min(),
+					$"({x},{y}) row {cell.TrackTileIndex}: the lowest" );
+				Assert.AreEqual( ParkBuildMarkers.CeilingTen( (int)((file.CellMaxima.Max() * ItemHeightMapFile.UnitsPerByte) + root) ), lifts.Max(),
+					$"({x},{y}) row {cell.TrackTileIndex}: the highest" );
+			}
+		}
+
+		Assert.AreEqual( 143, anchors );
+		Assert.IsTrue( rows.Count >= 5, $"{rows.Count} rows of the table stand in the park, among them the unevenly high ones" );
+		Assert.IsFalse( Unimplemented.Summary.Any( entry => entry.What == "MARKER_LIFT_OVER_TRACK_THING" ), "nothing is counted" );
 	}
 
 	/// <summary>The original's rounding: <c>(t + 9) / 10 * 10</c>, integer division towards nought.</summary>

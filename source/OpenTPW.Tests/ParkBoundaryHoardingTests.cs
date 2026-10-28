@@ -294,5 +294,25 @@ public class ParkBoundaryHoardingTests
 		}
 	}
 
+	/// <summary>
+	/// A park made fresh keeps each piece's family, row and rotation on its anchor's track record, as the original's retile
+	/// does (<c>0x0053b02b</c>), so the record names the piece the walk chose and a square over it can be lifted by its file (Q777).
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the record not written; the row or the turn dropped; the family left nought.</remarks>
+	[TestMethod]
+	public void AFreshParksAnchorRecordNamesItsChosenPiece()
+	{
+		var (fresh, _) = Fresh();
+
+		foreach ( var anchor in fresh.Boundary )
+		{
+			var record = fresh.CellAt( anchor.X, anchor.Y );
+
+			Assert.AreEqual( (ParkBoundaryHoarding.Family, anchor.Row, anchor.Turn), (record.TrackTileSet, record.TrackTileIndex, record.TrackTileAngle),
+				$"({anchor.X},{anchor.Y})" );
+			Assert.AreEqual( ParkBoundaryHoarding.PieceOf( anchor ), ParkBoundaryHoarding.PieceAt( anchor.X, anchor.Y, record ), $"({anchor.X},{anchor.Y})" );
+		}
+	}
+
 	private static int Counted( string gap ) => Unimplemented.Summary.FirstOrDefault( entry => entry.What == gap ).Times;
 }

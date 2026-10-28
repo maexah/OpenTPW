@@ -2549,7 +2549,7 @@ positions at `+0x64`):
   20.5 to 22.4 over ground 0.
 - (93,21) and (94,21), track kinds 25 and 12, lift 20 too. Their object is a 2×2 thing of the track layer: object 42,
   root at ground 0, turned 180, with its own `.hmp`. The layer's kind-25 cells anchor such things (the roots of the two over (64,40) and
-  (76,40) stand at 5.0); OpenTPW draws them but does not read their `.hmp` for the lift (counted, `MARKER_LIFT_OVER_TRACK_THING`).
+  (76,40) stand at 5.0); OpenTPW reads their `.hmp` for the lift since Q777 (`park.md`, "The boundary's things lift a square too").
 - A lifted square also gets walls down to a lower neighbour, records at 11.5 and 1.5 on the same cell.
 
 **The walls** (decoded and measured 2026-10-17, Q436). After the flat square (face 0), the `0x100` arm asks the four

@@ -30,23 +30,26 @@ One line per system; the detail, item by item, is `docs/WORKS.md` (grep it by ar
 
 ## Next
 
-`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next Q587 (the rest of the karts' and the water ride's track: the closed loop's edit, crossings and hills, the add-on's caps, the pieces' clips; the first open item in the file; its decode is done, Q687, its station, mouths and drawn pieces, Q688, the track tool's runs, Q762, the circuit's walk as a loop closes, Q763, Backspace's take-back, Q765, the sections' objects and buoys, Q766, the open end's pulse, Q767, the armed tool's preview squares and `c_end`, Q768, a run over a feature, Q773, the squares' lift and walls, Q775, and a path or queue square over a piece, Q776; Q598, every clip's scale track posed, is done, and so are Q693, the ride window's gauges, Q752 and Q753, put first at Alexah's word 2026-10-27; Q525, ordered before Q638, stands lower in the file; Q543 and Q27, ordered before Q631, and Q31b, Q25, Q51 and Q55, ordered earlier, stand lower in the file): Alexah's play test of 2026-10-21 put Q616 to Q645 first, the display, then what a player hits, then the chosen improvements (`playtest-2026-10-21/notes.md`); Q587 to Q589, the karts' and the water ride's build, follow them in section A (Q598 and Q609 stood before them and are done; Q586 stood above the ordered block; Q608, the draws left both-sided, is filed after Q713): the queue was reordered at Alexah's word, 2026-10-20. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. Gaps 4 and 7: `docs/PLAYER-GAPS.md`. Q13 is done: `docs/history/CLEANUP-PLAN.md`.
+`docs/QUEUE.md`, from the top; every ticked item is in `docs/history/queue-done.md`. Next Q587 (the rest of the karts' and the water ride's track: the closed loop's edit, crossings and hills, the add-on's caps, the pieces' clips; the first open item in the file; its decode is done, Q687, its station, mouths and drawn pieces, Q688, the track tool's runs, Q762, the circuit's walk as a loop closes, Q763, Backspace's take-back, Q765, the sections' objects and buoys, Q766, the open end's pulse, Q767, the armed tool's preview squares and `c_end`, Q768, a run over a feature, Q773, the squares' lift and walls, Q775, a path or queue square over a piece, Q776, and the boundary's things' height, Q777; Q598, every clip's scale track posed, is done, and so are Q693, the ride window's gauges, Q752 and Q753, put first at Alexah's word 2026-10-27; Q525, ordered before Q638, stands lower in the file; Q543 and Q27, ordered before Q631, and Q31b, Q25, Q51 and Q55, ordered earlier, stand lower in the file): Alexah's play test of 2026-10-21 put Q616 to Q645 first, the display, then what a player hits, then the chosen improvements (`playtest-2026-10-21/notes.md`); Q587 to Q589, the karts' and the water ride's build, follow them in section A (Q598 and Q609 stood before them and are done; Q586 stood above the ordered block; Q608, the draws left both-sided, is filed after Q713): the queue was reordered at Alexah's word, 2026-10-20. Q92 evidence and status limitations are in `docs/exe/ride-window-door.md`. Q91b hoarding implementation and evidence are in `docs/exe/ride-hoardings.md`. Q85b's implementation and evidence are in `docs/exe/guest-arrivals.md`. Gaps 4 and 7: `docs/PLAYER-GAPS.md`. Q13 is done: `docs/history/CLEANUP-PLAN.md`.
 
 ## Not verified on screen
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the pre-commit hook: grep it by Q-number.
 
-- Q776 (a path or queue tool's square over a kart piece; Q587's tenth piece). Ours on the final binary (`q776/ours-a`, dll
-  a5ad2c04, SCORE 1 of 1), on the desktop, the stock park, Q581's purchase, the path tool anchored on (34,23): the `strip`
-  census with the pointer on the mouth (34,25) reads `34,25,0^10` (blue, lifted 10) with one north wall, on its 0xc cell
-  (34,26) `34,25,0^10;34,26,0^10` with walls north of (34,25) and south of (34,26), and on the other mouth (28,25) (anchor
-  (28,22)) `28,25,0^0`, no wall (`ours-A1..A3.png`; no `MARKER_LIFT_OVER_TRACK_THING` count). The original this session under
-  Proton (`q776/orig`, tags O and P3run, `squares.py`): the same records, 1.5 higher, in all three poses, the squares blue
-  (`O-P1.png`, `O-P2.png`, `P3run-P3.png`; the cameras differ, so the pictures are not a pixel pair). Missed predictions
-  (`q776/PREDICTION.txt`): the squares over a piece are blue, not red, in both games; ours' strip began at (34,22), the
-  original's anchor landed on (34,23). Not seen: the water ride's pieces; a click over a piece (only the preview was
-  read, so whether the click refuses is open); the bug put back in the game (the unit tests carry it: 8 of 8 mutants
-  fail). Still counted: the boundary's things' height (`MARKER_LIFT_OVER_TRACK_THING`, Q587).
+- Q777 (the boundary's things lift a square; Q587's eleventh piece). Ours on the final binary (`q777/ours-a`, dll 80f525fd,
+  SCORE 4 of 4), on the desktop, the stock park, the path tool anchored on (91,21): the `strip` census with the pointer on the
+  east wall's anchor (93,21) reads `91,21,0^0;92,21,0^0;93,21,1^20` (red, lifted 20) with two walls west of it at 0 and 10; on
+  its 0xc cell (94,21) `...;93,21,1^20;94,21,1^20` with two walls west of (93,21) and two east of (94,21); on bare (92,21)
+  `91,21,0^0;92,21,0^0` and no wall; and with the track tool (Dino Karts bought on (85,25), armed on its mouth (87,25)) the
+  pointer on (93,25) reads `87,25,0^10#2;89,25,0^0#2;91,25,0^0#2;93,25,1^20#2` with the wall on each side; no
+  `MARKER_LIFT_OVER_TRACK_THING` count (`ours-A1..A4.png`). The original this session under Proton (`q777/orig`, tag O5,
+  `squares.py`, `liftcells.py`): the same records at the same heights, texture 1 over the wall, the squares 21.50 high and
+  the walls at 1.50 and 11.50 (`O5-P1..P4.png`; the cameras differ, so the pictures are not a pixel pair). Missed predictions
+  (`q777/PREDICTION.txt`): the wall is two records for a lift of 20 (the rule's two tens), and the track tool's square has a wall
+  on both sides; both recorded and re-predicted. Corrected: a path square over a boundary cell is red in the original, not
+  blue as Q776 wrote of the kart piece's mouth. Not seen: a click over a hoarding (only the previews were read); a wall's
+  cell of row 19 or 3 (lift 10 or 0 beside 20) in either game; a fresh park's wall in the game (the tests carry it); the bug
+  put back in the game (the tests carry it: 12 of 12 mutants fail).
 
 
 ## Numbers (take counts fresh; these go stale within a day)
@@ -54,8 +57,8 @@ Only the item just landed is here. Every earlier item's account is in `docs/hist
 | | | measured |
 |---|---|---|
 | Opcodes | **78** of 106 | 2026-10-20, Q553 (`FADEOBJ`), `case Opcode.` labels vs enum members |
-| Tests | **4198**, 0 fail, 0 skip with the game | 2026-10-28, Q776 |
-| Tests without the game | **1594** ran, **2604** skipped, of 4198 | 2026-10-28, Q776 |
+| Tests | **4201**, 0 fail, 0 skip with the game | 2026-10-28, Q777 |
+| Tests without the game | **1594** ran, **2607** skipped, of 4201 | 2026-10-28, Q777 |
 | Build warnings | 115 after Q753, 132 before it (both `--no-incremental`, the 132 in a fresh worktree of `main`: the seven CA2022 short reads and the `Zio` advisory, repeated for each project that took it, gone); earlier: 121 in the main tree; 130 to 133 in a fresh worktree as NuGet's advisory list was last fetched, the ten or twelve more its advisories on ModKit's ImageSharp 3.1.6 (a sixth, GHSA-v76p-62qx-wwq2, published 2026-10-26: Q75, DECISIONS.md "Package advisories") | 2026-10-27 (the worktree's 133 at Q672's gate, 131 at fix group P's, run 11, and 130 at PERF PASS 1's; the main tree's 121 last counted 2026-10-13) |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 | Park load, Release | **3.1 to 3.4 s**, worst phase `audio` 1.04 s (`ground` 0.52 to 0.57, `terrain` 0.46 to 0.55, `objects` 0.35 to 0.47) | 2026-10-26, three runs, `perf/bench.sh` |

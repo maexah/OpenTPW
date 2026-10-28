@@ -71,10 +71,10 @@ internal static class ParkItemHeights
 
 	/// <summary>
 	/// <c>FUN_00452ae0( x, y, null )</c> with the cell's track-layer object asked first (<c>FUN_0053bf30</c>): the record's own,
-	/// or for a cell of 0xc or 0x11 its anchor's. A kart or water piece standing there answers its own <c>.hmp</c> over the
-	/// cell plus the height its root stands at; the boundary's things (0x19) are drawn, but their <c>.hmp</c> is not read for
-	/// the lift, so such a cell is counted (<c>MARKER_LIFT_OVER_TRACK_THING</c>) and answers as <see cref="Over"/> does, which every cell without a track-layer
-	/// object answers. The pieces are read from <paramref name="theme"/>'s kits, or the park now loaded's.
+	/// or for a cell of 0xc or 0x11 its anchor's. A kart or water piece or a boundary hoarding standing there answers its own
+	/// <c>.hmp</c> over the cell plus the height its root stands at; every cell without a track-layer object answers as
+	/// <see cref="Over"/> does. The pieces are read from <paramref name="theme"/>'s kits and hoarding, or the park now loaded's.
+	/// A boundary anchor whose record names no row of the hoarding table is counted (<c>MARKER_LIFT_OVER_TRACK_THING</c>).
 	/// </summary>
 	public static float AtCell( ParkState state, ParkItemCatalogue? catalogue, HeightfieldFile field, int x, int y,
 		string? theme = null )
@@ -91,16 +91,22 @@ internal static class ParkItemHeights
 	}
 
 	/// <summary>
-	/// How high the kart or water piece standing on the cell is over it - its <c>.hmp</c> there plus the height its root
-	/// stands at (<see cref="PieceTop"/>) - or null where the cell's track-layer object is no piece. A piece whose file is
-	/// not read answers the ground under the cell, as <c>FUN_00452ae0</c> does.
+	/// How high the kart or water piece or the boundary hoarding standing on the cell is over it - its <c>.hmp</c> there plus
+	/// the height its root stands at (<see cref="PieceTop"/>) - or null where the cell's track-layer object is neither. A
+	/// piece whose file is not read answers the ground under the cell, as <c>FUN_00452ae0</c> does.
 	/// </summary>
 	internal static float? PieceTopAt( ParkState state, HeightfieldFile field, int x, int y, string? theme = null )
 	{
 		var (anchorX, anchorY) = TrackAnchorOf( state, x, y );
+		var anchor = state.Record( anchorX, anchorY );
 
-		if ( ParkTrackPieces.PieceAt( anchorX, anchorY, state.Record( anchorX, anchorY ) ) is not { } piece
-			|| (theme ?? ParkTrackPieces.Current?.Theme) is not { } kits )
+		if ( (theme ?? ParkTrackPieces.Current?.Theme) is not { } kits )
+			return null;
+
+		if ( ParkBoundaryHoarding.PieceAt( anchorX, anchorY, anchor ) is { } hoarding )
+			return TopOver( $"levels/{kits}/hoarding", hoarding, field, x, y ) ?? field.HeightAt( x, y );
+
+		if ( ParkTrackPieces.PieceAt( anchorX, anchorY, anchor ) is not { } piece )
 			return null;
 
 		return PieceTop( piece, kits, field, x, y ) ?? field.HeightAt( x, y );
@@ -122,14 +128,20 @@ internal static class ParkItemHeights
 	/// bit <c>0x400</c> of its flags <c>0x10422</c> (<c>0x00462dc9</c>), so each kit piece is given its own.
 	/// </summary>
 	internal static float? PieceTop( ParkTrackPieces.Piece piece, string theme, HeightfieldFile field, int x, int y )
-	{
-		var directory = ParkTrackPieces.KitDirectory( theme, piece.Type );
+		=> TopOver( ParkTrackPieces.KitDirectory( theme, piece.Type ),
+			new ParkBoundaryHoarding.Piece( piece.Model, piece.Row, piece.CellX, piece.CellY, piece.Angle ), field, x, y );
 
+	/// <summary>
+	/// How high a model's own <c>.hmp</c> says it stands over a cell, plus the height its root stands at, or null where the
+	/// file is not read. A boundary hoarding's loader passes flags <c>0x422</c>, whose bit <c>0x400</c> reads the file too
+	/// (<c>docs/exe/park.md</c>, "A track square's lift and walls"); <c>hoarding.wad</c> ships one, two by two, for each model.
+	/// </summary>
+	private static float? TopOver( string directory, ParkBoundaryHoarding.Piece piece, HeightfieldFile field, int x, int y )
+	{
 		if ( Read( $"{directory}/{piece.Model}", $"{directory}/{piece.Model}.hmp", 2, 2 ) is not { } file )
 			return null;
 
-		var (origin, _) = ParkBoundaryHoarding.StandOf( new ParkBoundaryHoarding.Piece( piece.Model, piece.Row, piece.CellX,
-			piece.CellY, piece.Angle ), field );
+		var (origin, _) = ParkBoundaryHoarding.StandOf( piece, field );
 		var root = origin.GetSystemVector3();
 
 		return AboveBase( file, root, piece.Angle, field, x, y ) is { } above ? above + root.Z : null;

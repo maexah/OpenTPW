@@ -1804,16 +1804,39 @@ cell's `AtCell` and draws the same records in every one of those five poses (`q7
 squares ask the same height** (Q776; `ParkBuildMarkers.LiftOver`, `ParkItemHeights.PieceTopAt`): `FUN_00532fc0`'s lift is
 `ceil10( trunc( FUN_00452ae0 ) )` over a map type 4, 7, 9, 10 or `0x1e` cell or a track kind 11, 12, 16, 17 or 25 cell, and
 `FUN_00452ae0` reads the cell's track-layer object first, so a one-cell square over a kart or water piece stands on the
-piece's `.hmp` and its root. **A track piece does not refuse a path square**: a path tool anchored on bare ground at
-(34,23) with the pointer over the mouth (34,25) draws blue (texture 0) squares, the last lifted (the preview; no click was made). Measured in the original
+piece's `.hmp` and its root. **A kart piece's mouth does not refuse a path square** (the verdict `FUN_00535670` refuses a corner
+or junction record, `0x00535bd7`..`0x00535bef`, and track type 0x19, `0x005358b5`; the mouth's links are one, `0x40`, so it passes):
+a path tool anchored on bare ground at (34,23) with the pointer over the mouth (34,25) draws blue (texture 0) squares, the last
+lifted (the preview; no click was made). Measured in the original
 under Proton (`q776/orig`, `run.sh`, tags O and P3run; `squares.py`, `liftcells.py`) on `q581/karts.TPWS`, the karts bought
 on (32,25): (34,23) and (34,24) at 1.5; the mouth (34,25), track 0xb, object 93 with a `.hmp`, root -2, at 11.5 with one wall,
 face 0x1, at 1.5; with the pointer on (34,26), a 0xc cell parented to (34,25), (34,25) and (34,26) at 11.5, walls north of
 (34,25) and south of (34,26), both at 1.5 (the east and west neighbours lift alike); the other mouth (28,25), root -7, with
 the anchor on (28,22): four squares at 1.5, no wall. Ours draws the same records in the three poses (`q776/ours-a`, `strip`).
-Not built: the boundary's things (track type 0x19) are drawn, but their `.hmp` is not read for the lift, so a square over one
-(or over a 0xc cell parented to one) stays on the ground and is counted (`MARKER_LIFT_OVER_TRACK_THING`); `AtCell` answers
-them as the ground or the thing below. The original lifts such a square too (Q436: (93,21) and (94,21) by 20).
+**The boundary's things lift a square too** (Q777; `ParkItemHeights.PieceTopAt`, `ParkBoundaryHoarding.PieceAt`). A boundary
+anchor is track type 0x19 and its other three cells 0xc, parented to it, so `FUN_0053bf30` answers its model for each; the loader
+passes flags `0x422` (`0x00522eb1`), whose bit `0x400` reads `<model>.hmp`, and `hoarding.wad` ships one for each of its nine models
+(156 bytes, two by two; the maxima over the cells: `ho_fos1`, `ho_end1` and `ho_fos4` 51 all four; `ho_fob1` and `ho_fob3`,
+`ho_fob4` 0 beside three 51s; `ho_fob2` 25 beside three 51s; `ho_fos2` 76, 76, 71, 71; `ho_fos3` 56; each byte / 2.55, so 51 is
+19.99997, truncated 19, rounded up to ten 20). The anchor's record names its model: the row at `+0x18` and the rotation at `+0x1c`
+(family 5 at `+0x14`; the file's `mTileData`), the piece standing on the anchor moved by the turn at 360 less it
+(`ParkBoundaryHoarding.PieceOf`), so the cell's height is the file's byte over the cell plus the root's, the middle of the lowest
+and highest ground under its two by two. Over the stock park's east wall (ground 0 from x = 91) every cell lifts 20: (93,21),
+the anchor, row 2 turned 180, and (94,21), its 0xc cell, which Q436 measured; the wall's cells of row 19 or 3 lift 10 or 0 where
+the file's byte is lower. **A path or queue tool's square over a boundary cell is refused** (texture 1) in the original, and so
+is every square after it, as over any track corner; the track tool's, anchored on a cell of track type 0x19, is lifted by
+`Track_CellOp`'s start (`0x0053716f`) and answers red too. Measured in the original under Proton this session (`q777/orig`,
+`run.sh`, tag O5; `squares.py`, `liftcells.py`; `liftcells.py` reads (93,21) track 0x19, object 42, `.hmp` yes, root 0.00; (94,21) and
+(93,22) track 0xc via (93,21); (93,25) 0x19, object 44, its 0xc cells via it) on `q581/karts.TPWS` (the stock park): the path tool
+anchored on (91,21) (1.50, texture 0), pointer (93,21): (91,21) and (92,21) at 1.50 texture 0, (93,21) at 21.50 texture 1 and
+two walls west of it at 1.50 and 11.50 (face `0x40`); pointer (94,21): (93,21) and (94,21) at 21.50 texture 1, walls west of
+(93,21) and east of (94,21), each at 1.50 and 11.50; pointer (92,21): the two squares at 1.50, no wall. The track tool, Dino Karts
+bought on (85,25), armed on its mouth (87,25), pointer (93,25): (87,25) at 11.50 with north, east and south walls at 1.50,
+(89,25) and (91,25) at 1.50, (93,25) at 21.50 texture 1 with walls east and west at 1.50 and 11.50. **Ours** draws the same
+records in all four poses (`q777/ours-a`): `91,21,0^0;92,21,0^0;93,21,1^20` with the two west walls, and so on, the last at
+`93,25,1^20#2`. A fresh park's anchors carry the same three fields (`FreshParkBoundary`, from the chooser's row and turn), where
+before the walk's pieces were only in the boundary's own list. A boundary anchor whose record names no row of the table is
+counted (`MARKER_LIFT_OVER_TRACK_THING`) and stands on the ground; no park to hand holds one.
 **A run over scenery** (Q773; `ParkTrackTool.JudgeCell`, `TearDownUnder`; the click's pass in `LayRun`). The verdict's blue answer is at
 `0x00539961`..`0x00539c24`: after the four cells' flag `0x40` (`0x00539924`..`0x0053995b`), for each of the anchor (the
 verdict's own cell), its east cell and its south-east cell in turn, the last read twice by the listing (the south cell, `ebx`,

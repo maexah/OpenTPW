@@ -21,6 +21,9 @@ namespace OpenTPW;
 /// </summary>
 public sealed class ParkBoundaryHoarding : Entity
 {
+	/// <summary>The family a boundary anchor's retile answers (<c>FUN_0053a540</c>'s <c>row | 0x50000</c>).</summary>
+	public const int Family = 5;
+
 	/// <summary>The item of the hoarding table's row 0; row r is item <c>FirstItem + r</c> (<c>0x4394</c>).</summary>
 	public const int FirstItem = 17300;
 
@@ -175,6 +178,22 @@ public sealed class ParkBoundaryHoarding : Entity
 
 		return new Piece( Rows[named]!, named, anchor.X + (turn is 90 or 180 ? 1 : 0), anchor.Y + (turn is 180 or 270 ? 1 : 0),
 			(360 - turn) % 360 );
+	}
+
+	/// <summary>
+	/// The piece a boundary anchor's track record names - its row and rotation at <c>+0x18</c> and <c>+0x1c</c> (the file's
+	/// <c>mTileData</c>) - as <see cref="PieceOf"/> stands it; null where the cell is no anchor of track type 25, its record
+	/// holds no piece of family 5 (<c>FUN_0053a540</c>'s answer, <c>row | 0x50000</c>) or its row is no row of the table. A
+	/// fresh park's walk writes the same three fields when it chooses each piece.
+	/// </summary>
+	internal static Piece? PieceAt( int x, int y, ParkWorld.MapCell cell )
+	{
+		if ( cell.TrackType != ParkTrackPieces.Boundary || cell.TrackTileSet != Family
+			|| NamedRowOf( cell.TrackTileIndex & 0xffff ) is not { } named )
+			return null;
+
+		return PieceOf( new Anchor( x, y, cell.TrackNeighbours, cell.TrackDirection, cell.TrackFlags, named,
+			((cell.TrackTileAngle % 360) + 360) % 360 ) );
 	}
 
 	/// <summary>The boundary of the park currently loaded, or null outside one.</summary>

@@ -32,7 +32,7 @@ public sealed class ParkTrackPieces : Entity
 	public const int WaterCell = 0x11;
 	public const int WaterStation = 0x12;
 
-	/// <summary>The boundary's anchor type on the track grid, whose things this park does not build.</summary>
+	/// <summary>The boundary's anchor type on the track grid; <see cref="ParkBoundaryHoarding"/> draws its things.</summary>
 	public const int Boundary = 0x19;
 
 	/// <summary>The family a kart piece's retile answers (<c>0x00762f30</c>'s rows carry <c>0x30000</c>).</summary>

@@ -468,8 +468,7 @@ public sealed class ParkBuildMarkers : ModelEntity
 		// Each wall under a square not refused also zeroes the refusal latches DAT_00816d50 and d58 (0x005333bd). That
 		// changes nothing the path and queue tools read, so it is not done: such a square leaves both at nought already,
 		// but for the queue's join, the strip's last square, whose path cell only a track thing lifts (a built piece
-		// never stands on a path cell; a boundary thing's is counted,
-		// MARKER_LIFT_OVER_TRACK_THING), and the d58 a join leaves is read next by a pass, which clears it first.
+		// never stands on a path cell; a boundary thing's lift is read, ParkItemHeights.PieceTopAt), and the d58 a join leaves is read next by a pass, which clears it first.
 		// docs/exe/park-engine.md, "The walls".
 
 		_strip.AddRange( stranded.Where( cell => OnTheField( cell.X, cell.Y ) )
@@ -620,9 +619,9 @@ public sealed class ParkBuildMarkers : ModelEntity
 	/// How far a square over a cell is lifted before the ground under its corner is added - the original's
 	/// <c>ceil10( trunc( FUN_00452ae0 ) )</c> (<c>0x005330ca</c>). Nought except over a cell of type 4, 7, 9, 10 or
 	/// <c>0x1e</c> or a cell of track kind 11, 12, 16, 17 or 25, and then the height of what the cell holds, its
-	/// track-layer object asked first (<see cref="ParkItemHeights.AtCell"/>). A kart or water piece answers its own
-	/// <c>.hmp</c>; the boundary's things, and a 0xc or 0x11 cell parented to one, are drawn but their <c>.hmp</c> is not
-	/// read, so such a cell is counted (<c>MARKER_LIFT_OVER_TRACK_THING</c>) and the square stays on the ground. <b>The height asked already
+	/// track-layer object asked first (<see cref="ParkItemHeights.AtCell"/>). A kart or water piece or a boundary hoarding
+	/// (and a 0xc or 0x11 cell parented to one) answers its own <c>.hmp</c>; a cell whose record names no piece is counted
+	/// (<c>MARKER_LIFT_OVER_TRACK_THING</c>) and the square stays on the ground. <b>The height asked already
 	/// includes the ground under the thing, so on raised ground the ground is counted twice</b>, once here and once
 	/// as the corner is laid; this keeps that, as the original draws it.
 	/// </summary>

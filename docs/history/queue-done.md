@@ -10816,6 +10816,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   stands on its `.hmp` and root, the rule Q775 built for the track tool's (`FUN_00452ae0`'s track-layer object first); a
   boundary thing's cell is still counted. Ours and the original this session draw the same records over the mouth, its
   0xc cell and the other mouth (`q776/ours-a`, `q776/orig`; `park.md`, "A track square's lift and walls").
+- [x] **Q777. The boundary's things lift a square (Q587's eleventh piece).** `ParkItemHeights.PieceTopAt` reads a boundary
+  anchor's record (track type 0x19, family 5, its row and rotation; a 0xc cell by its parent) through
+  `ParkBoundaryHoarding.PieceAt` and answers its model's `.hmp` over the cell plus the root, so a path, queue or track tool's
+  square over the east wall's (93,21) and (94,21) stands at 20 with two walls to the lower ground, red, as the original's; a
+  fresh park's anchors carry the same record (`FreshParkBoundary`). `MARKER_LIFT_OVER_TRACK_THING` now counts only an anchor
+  whose record names no row. Corrects Q776's "a track piece does not refuse a path square" to the kart pieces' mouth
+  (`park.md`, "The boundary's things lift a square too"; `q777/ours-a`, `q777/orig`).
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.
