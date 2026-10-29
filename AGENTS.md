@@ -26,7 +26,9 @@ This file holds the rules every contributor works by, human or agent, and where 
    Then the one `docs/exe/` page for the area you are about to touch: those run to 550 KB, so list its headings (`grep -n '^#'`)
    and read the sections the item needs, never the page whole. Do not read `docs/history/` whole; grep it, and never quote it as current.
 3. Before adding a helper, grep for it. `PeepWalk`, `CellRoute`, `CellSearch`, `MapStep`, `FixedVector`, `ParkState.CellAt` already exist. A harness the same: `docs/TOOLING.md` lists every stored tool and the recipes found by trial; `docs/WORKFLOW.md`, "Verifying", says how a change is proven. Read both before writing a harness script, and add to them what you build (rule 21).
-4. One task at a time. When it is done: build and test alone in a worktree (`tools/check_commit.sh` does both), commit, say what is ready, and stop. A
+4. One task at a time. When it is done: commit, then build and test that commit alone in a worktree
+   (`tools/check_commit.sh` checks a commit, never uncommitted changes); fix what fails, commit again and re-check
+   until it passes; say what is ready, and stop. A
    contributor leaves `docs/QUEUE.md` and `docs/STATUS.md` alone: the maintainer ticks and updates them when the work
    is merged (`docs/WORKFLOW.md`, "Claims"). The maintainer's own sessions follow `docs/WORKFLOW.md`, "Sessions" and
    "Unattended runs", which tick the item and update STATUS in the same commit. If the item changes something `README.md`

@@ -1,18 +1,26 @@
 #!/bin/bash
 # check_commit.sh [commit] [game folder] - AGENTS.md's "build and test alone in a worktree" as one command, for any
-# contributor or agent. Checks the commit out in a throwaway worktree, builds it, runs the tests, runs the content guard
-# on the files the commit changes, prints one summary and removes the worktree. Never commits, pushes or launches the
-# game; the tests read the game folder and write nothing to its save/.
-#   [commit]       default HEAD
+# contributor or agent. Checks a COMMITTED revision out in a throwaway worktree, builds it, runs the tests, runs the
+# content guard on every file in the commit's tree (so a merge or a root commit is checked like any other), prints one
+# summary and removes the worktree. Uncommitted changes are not in it: commit first, then check. Never commits, pushes
+# or launches the game; the tests read the game folder and write nothing to its save/.
+#   [commit]       default HEAD (with a note when tracked files have uncommitted changes)
 #   [game folder]  default $OPENTPW_GAME_PATH; without one the tests that need the game skip, and the summary says so
 # CHECK_DIR=<folder> puts the worktree there (default a new folder under $TMPDIR or /tmp; a build takes about 1 GB).
 # Where systemd-run --user works, the tests run under tools/harness/lib/capped.sh (6 GB), so a runaway test dies alone.
-# Needs git, python3 and the .NET 10 SDK (dotnet on PATH, else $DOTNET_ROOT/dotnet or ~/.dotnet/dotnet).
-# Exit 0 when the build has no error, no test fails and the guard refuses nothing; 1 otherwise; 2 on a usage error.
+# Needs bash (on Windows, Git for Windows' Git Bash), git, python3 or python, and the .NET 10 SDK (dotnet on PATH, else
+# $DOTNET_ROOT/dotnet or ~/.dotnet/dotnet). Exit 0 when the build exits 0 with no error, the tests exit 0 with none
+# failed, and the guard refuses nothing; 1 otherwise; 2 on a usage error.
 set -u
 root=$(git rev-parse --show-toplevel 2>/dev/null) || { echo "check_commit: run it inside the repository" >&2; exit 2; }
 commit=$(git -C "$root" rev-parse --verify --quiet "${1:-HEAD}^{commit}") || { echo "check_commit: no commit '${1:-HEAD}'" >&2; exit 2; }
 game=${2:-${OPENTPW_GAME_PATH:-}}
+dirty=""
+[ -z "${1:-}" ] && ! git -C "$root" diff --quiet HEAD -- 2>/dev/null \
+	&& dirty="tracked files have uncommitted changes, and they are NOT checked: commit them, then run this again"
+[ -n "$dirty" ] && echo "check_commit: note: $dirty" >&2
+python=$(command -v python3 || command -v python || true)
+[ -z "$python" ] && { echo "check_commit: no python3 or python on PATH (the content guard needs it)" >&2; exit 2; }
 dotnet=$(command -v dotnet || true)
 [ -z "$dotnet" ] && for d in "${DOTNET_ROOT:-}" "$HOME/.dotnet"; do [ -n "$d" ] && [ -x "$d/dotnet" ] && { dotnet="$d/dotnet"; break; }; done
 [ -z "$dotnet" ] && { echo "check_commit: no dotnet (PATH, \$DOTNET_ROOT or ~/.dotnet)" >&2; exit 2; }
@@ -28,17 +36,22 @@ fail=0
 
 echo "== build $(git -C "$root" log --oneline -1 "$commit")"
 "$dotnet" build "$tree/source/OpenTPW.sln" --no-incremental >"$work/build.txt" 2>&1
+build_exit=$?
 errors=$(grep -Eo '^ *[0-9]+ Error\(s\)' "$work/build.txt" | grep -Eo '[0-9]+' | tail -1)
 warnings=$(grep -Eo '^ *[0-9]+ Warning\(s\)' "$work/build.txt" | grep -Eo '[0-9]+' | tail -1)
-[ "${errors:-x}" = 0 ] || { fail=1; tail -20 "$work/build.txt"; }
+built=0
+[ "$build_exit" = 0 ] && [ "${errors:-x}" = 0 ] && built=1
+[ "$built" = 1 ] || { fail=1; tail -20 "$work/build.txt"; }
 
 passed=0; failed=0; skipped=0; total=0; tests="not run (the build failed)"
-if [ "${errors:-x}" = 0 ]; then
+if [ "$built" = 1 ]; then
 	wrap=()
-	systemd-run --user --scope --quiet --collect true >/dev/null 2>&1 && wrap=("$root/tools/harness/lib/capped.sh")
+	[ -x "$root/tools/harness/lib/capped.sh" ] && systemd-run --user --scope --quiet --collect true >/dev/null 2>&1 \
+		&& wrap=("$root/tools/harness/lib/capped.sh")
 	echo "== test${game:+ with the game at $game}${wrap:+ (capped at 6 GB)}"
+	# ${wrap[@]+...}: an empty array under set -u is an error in bash 3.2, macOS's /bin/bash
 	( [ -n "$game" ] && export OPENTPW_GAME_PATH="$game" || unset OPENTPW_GAME_PATH
-	  SDL_AUDIODRIVER=dummy "${wrap[@]}" "$dotnet" test "$tree/source/OpenTPW.sln" --no-build ) >"$work/test.txt" 2>&1
+	  SDL_AUDIODRIVER=dummy ${wrap[@]+"${wrap[@]}"} "$dotnet" test "$tree/source/OpenTPW.sln" --no-build ) >"$work/test.txt" 2>&1
 	code=$?
 	# one line per test project: "Passed!  - Failed: 0, Passed: 1648, Skipped: 2637, Total: 4285, ..."
 	while read -r f p s t; do
@@ -52,13 +65,12 @@ if [ "${errors:-x}" = 0 ]; then
 fi
 
 echo "== content guard"
-changed=$(git -C "$root" diff-tree --no-commit-id --name-only -r --diff-filter=ACMR --root "$commit")
-if [ -z "$changed" ]; then guard="no file added or changed"
-else
-	# shellcheck disable=SC2086
-	if (cd "$root" && python3 tools/content_guard.py paths $changed); then guard="passed ($(echo "$changed" | wc -l) files)"
-	else guard="REFUSED"; fail=1; fi
-fi
+# Every file in the commit's tree, not its diff: a merge's diff-tree lists nothing without -m, and the tree is what ships.
+files=$(git -C "$root" ls-tree -r --name-only "$commit" | wc -l | tr -d ' ')
+if [ "$files" = 0 ]; then guard="REFUSED (the commit's tree lists no file)"; fail=1
+elif git -C "$root" ls-tree -r -z --name-only "$commit" | (cd "$root" && xargs -0 "$python" tools/content_guard.py paths) >"$work/guard.txt" 2>&1
+then guard="passed ($files files in the tree)"
+else guard="REFUSED"; fail=1; grep REFUSED "$work/guard.txt" | head -20; fi
 
 if [ -z "$game" ]; then gameline="not given: the tests that need it skipped, so this is not a full pass"
 elif [ ! -d "$game" ]; then gameline="$game is not a folder: the tests that need it skipped"; fail=1
@@ -66,10 +78,11 @@ else gameline="$game"; fi
 
 echo
 echo "== summary of $(git -C "$root" rev-parse --short "$commit")"
-echo "build:   ${errors:-?} errors, ${warnings:-?} warnings"
+echo "build:   exit $build_exit, ${errors:-?} errors, ${warnings:-?} warnings"
 echo "tests:   $tests"
 echo "game:    $gameline"
 echo "guard:   $guard"
+[ -n "$dirty" ] && echo "note:    $dirty"
 echo "not done here: the running game (a screenshot and its census line), the original, Ghidra: say which you did and which not"
 [ "$fail" = 0 ] && echo "result:  OK" || echo "result:  FAILED"
 exit "$fail"

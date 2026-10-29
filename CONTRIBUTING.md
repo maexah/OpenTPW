@@ -125,13 +125,32 @@ textures and models are not committed at all, and `content/ReferenceScreenshots/
 
 No CI tests the code, on purpose. The one workflow, [`weekly.yml`](.github/workflows/weekly.yml), only packages a
 weekly build from a tag the maintainer pushes and runs the content guard that keeps the game's files out of the zip; it
-runs no test and decides nothing about your change. So the check is yours. Build and test each commit in a clean
-worktree, and run the content guard on what it changes. One command does all three and prints a summary (the build's
-errors and warnings, the tests passed, failed and skipped, whether the game was given, the guard's answer):
+runs no test and decides nothing about your change. So the check is yours, in this order:
+
+1. **While you work**, build and test your working tree as the quick start does (`dotnet build`, `dotnet test`). That
+   is the only check that sees uncommitted changes.
+2. **Commit** the change.
+3. **Check that exact commit** in a clean worktree. `tools/check_commit.sh` checks out a commit (HEAD unless you name
+   one) where your uncommitted changes cannot reach it, builds it, runs the tests, runs the content guard on every
+   file in it, prints a summary (the build's exit code, errors and warnings; the tests passed, failed and skipped;
+   whether the game was given; the guard's answer) and exits 0 only when all of them pass. Run with HEAD while tracked
+   files still have uncommitted changes, it says they were not checked.
+4. **If it fails**, fix it, commit again, and check again. Open the pull request when it passes.
 
 ```sh
-tools/check_commit.sh                      # HEAD; add a commit, and your game folder for a full pass
-tools/check_commit.sh HEAD "<game folder>"
+tools/check_commit.sh                        # HEAD
+tools/check_commit.sh HEAD "<game folder>"   # every test runs; without the game, read the skip count
+```
+
+The script needs bash. **On Windows** run it from Git Bash (it comes with Git for Windows): `bash tools/check_commit.sh`.
+*It has been run on Linux only*, not on Windows or macOS. From PowerShell, the same check by hand (the pre-commit hook
+has already run the content guard on what you staged):
+
+```powershell
+git worktree add ..\opentpw-check HEAD
+dotnet build ..\opentpw-check\source\OpenTPW.sln --no-incremental
+dotnet test  ..\opentpw-check\source\OpenTPW.sln --no-build
+git worktree remove ..\opentpw-check
 ```
 
 ## Pull requests
