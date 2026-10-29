@@ -176,6 +176,9 @@ here.
 Set by Alexah 2026-09-26, after one staleness audit spent about 40M subagent tokens and hit the weekly limit. None of
 this removes a check: the adversarial verify and the review of applied edits stay.
 
+The stages are kinds of work, not models; Claude Code's agent types below are one way to run them. An agent with no
+subagents runs them in order itself (`AGENTS.md`, "Other agents and environments").
+
 **Model by stage.** Every agent names its type: `tpw-gather` (Haiku), `tpw-sweep` (Sonnet, high effort) or
 `tpw-verify` (Opus, high effort), in `.claude/agents/`. In a workflow script that is `agentType: 'tpw-gather'` on every
 `agent()` call; with the Agent tool it is `subagent_type`. **An agent with no type is not matched to its stage**: every
@@ -241,7 +244,7 @@ say so before launching it.
 - **One task per session.** Start Claude Code from the repo root. Read `AGENTS.md` (Claude Code loads it through `CLAUDE.md`) and `docs/STATUS.md`, take the first unticked item in `docs/QUEUE.md` (unless Alexah names another; read the file's head and that item, not the whole queue), then read the one `docs/exe/` page for its area. Check Ghidra answers at the start of work, if you use it (`AGENTS.md` rule 7).
 - Keep a multi-step task's checklist in the live plan and tick each step before moving on (rule 16).
 - `docs/STATUS.md`'s "Not verified on screen" holds the item just landed and no other. Write a new item's account above the one before it; the maintainer's pre-commit hook runs `tools/maintainer/status-sweep.py`, which moves every earlier account to `docs/history/not-verified.md`.
-- End the session when the task is committed, its `docs/QUEUE.md` item ticked and `docs/STATUS.md` updated, and what the item made work in `docs/WORKS.md` (STATUS's one line per system changes only when a system moves; the item's "not verified" account goes above the last one's). The maintainer's pre-commit hook (`tools/maintainer/hooks/pre-commit`, see "Hooks") runs `tools/maintainer/queue-sweep.py`, which moves every ticked item to `docs/history/queue-done.md` and stages both files; do not move one by hand. Do not carry the next task in the same context. When Alexah says a clear is coming, read `docs/QUEUE.md` and show the next five unticked items with what each asks (rule 17).
+- End the session when the task is committed, its `docs/QUEUE.md` item ticked and `docs/STATUS.md` updated, and what the item made work in `docs/WORKS.md`, its gap taken out of `docs/DOES-NOT.md` (STATUS's one line per system changes only when a system moves; the item's "not verified" account goes above the last one's). The maintainer's pre-commit hook (`tools/maintainer/hooks/pre-commit`, see "Hooks") runs `tools/maintainer/queue-sweep.py`, which moves every ticked item to `docs/history/queue-done.md` and stages both files; do not move one by hand. Do not carry the next task in the same context. When Alexah says a clear is coming, read `docs/QUEUE.md` and show the next five unticked items with what each asks (rule 17).
 - Memory files hold rules and the live plan only, each under 300 lines, and nothing that is finished. Facts go in `docs/`. Corrections replace old text.
 
 ## Unattended runs

@@ -17,6 +17,41 @@ This file holds the rules every contributor works by, human or agent, and where 
 - **Don't guess, verify.** A claim about a binary layout is measured across all the game's data (all 2,129 `.md2`, all 308 `.RSE`, all 46 sprite banks), never inferred from one file.
 - **A deviation from the original is said at the site**, in the code, and in the report.
 
+## How a task runs
+
+1. **Start from the repo root**, always. Agents key their memory to the working directory.
+2. **Do the task your person gave you, and only that.** An agent never takes a queue item unasked: `docs/QUEUE.md` is
+   the maintainer's work list, not yours to start from. Read `docs/STATUS.md` (what works today), then, if your person
+   named a queue item, that item (read the file's first hundred lines or so with a line limit, never the whole queue).
+   Then the one `docs/exe/` page for the area you are about to touch: those run to 550 KB, so list its headings (`grep -n '^#'`)
+   and read the sections the item needs, never the page whole. Do not read `docs/history/` whole; grep it, and never quote it as current.
+3. Before adding a helper, grep for it. `PeepWalk`, `CellRoute`, `CellSearch`, `MapStep`, `FixedVector`, `ParkState.CellAt` already exist. A harness the same: `docs/TOOLING.md` lists every stored tool and the recipes found by trial; `docs/WORKFLOW.md`, "Verifying", says how a change is proven. Read both before writing a harness script, and add to them what you build (rule 21).
+4. One task at a time. When it is done: build and test alone in a worktree (`tools/check_commit.sh` does both), commit, say what is ready, and stop. A
+   contributor leaves `docs/QUEUE.md` and `docs/STATUS.md` alone: the maintainer ticks and updates them when the work
+   is merged (`docs/WORKFLOW.md`, "Claims"). The maintainer's own sessions follow `docs/WORKFLOW.md`, "Sessions" and
+   "Unattended runs", which tick the item and update STATUS in the same commit. If the item changes something `README.md`
+   claims (what works, what is saved, where the log goes), change `README.md` in the same commit.
+5. Agent memory holds rules and the live plan only. Facts go in `docs/`.
+6. **Say what you checked and what you did not.** Name the claims you established yourself (the source, a test, the
+   running game, Ghidra), the ones you took from a doc, and the ones you could not check and why. Give a test run's
+   command and its passed, failed and skipped counts: a pass with skips is not a full pass.
+
+## Other agents and environments
+
+The rules bind every agent; the means are your tool's own. No agent has to imitate Claude Code to contribute.
+
+- **Claude Code's parts** are `CLAUDE.md`, `CLAUDE.local.md` and `.claude/` (its subagent types and hooks). Another
+  agent uses its own equivalents: machine paths in your tool's uncommitted local file, never in the repo.
+- **The hooks are git's**, so they run for any agent once `core.hooksPath` is set. Where they do not run, run
+  `python3 tools/content_guard.py staged` before every commit.
+- **Subagents**: the gather, sweep and verify stages are `docs/WORKFLOW.md`, "Subagents"; which model takes which kind
+  of work is "Tiers" there. With no subagents, do the stages in order in one session: the verify still challenges
+  every finding and hunts what the sweep missed.
+- **Without git** (a copied snapshot): read, review, build and test, but you cannot branch or commit. Hand back a patch
+  or a written report and say it was made without the history.
+- **Without the game, Ghidra or Proton**: `CONTRIBUTING.md`, "Do you need the game?", says what you can still do, and
+  rule 7 what to say about what you could not check.
+
 ## Rules
 
 The maintainer set each of these; the date is when. Other pages cite them by number ("`AGENTS.md` rule 4"), so a
@@ -48,9 +83,10 @@ kept in their local file; they bind nobody else.
 12. **Test runs touch nothing of the player's** (2026-09-18). Run verification with `SDL_AUDIODRIVER=dummy` unless a
     person is listening, use the game's real paths, drive only what the real game would do (`greet`, not an
     arbitrary speech sample), and never wipe `save/`. Delete only what your run created.
-13. **Agents that share a working tree do not build in it at the same time.** Give a review agent its own worktree
-    or make it read-only. Never build or test while another agent is editing. Clean up `.claude/worktrees/` and
-    `worktree-*` branches afterwards. Stage files explicitly; never `git add -A`.
+13. **Agents that share a working tree do not build in it at the same time.** An agent working alone keeps only the
+    last sentence. Give a review agent its own worktree or make it read-only. Never build or test while another agent
+    is editing. Remove the worktrees and branches your agents made when done (Claude Code's are `.claude/worktrees/`
+    and `worktree-*`). Stage files explicitly; never `git add -A`.
 14. **File-format facts go to the FileFormats docs** ([maexah/OpenTPW.FileFormats](https://github.com/maexah/OpenTPW.FileFormats))
     in the same piece of work (bytes in a shipped file). **Executable facts go to `docs/exe/`** (what the game does
     with them). See `docs/README.md`.
@@ -120,19 +156,3 @@ The map of the projects, the folders inside the game and `tools/` is [`ARCHITECT
 - Once per clone, enable the hooks: `git config core.hooksPath tools/hooks`. The pre-commit hook refuses a commit that
   stages a file of the game's (`tools/content_guard.py`). The queue and status sweeps and the website push are the
   maintainer's: they run only in a clone with `git config opentpw.maintainer true` (`docs/WORKFLOW.md`, "Hooks").
-
-## How a task runs
-
-1. **Start from the repo root**, always. Agents key their memory to the working directory.
-2. **Do the task your person gave you, and only that.** An agent never takes a queue item unasked: `docs/QUEUE.md` is
-   the maintainer's work list, not yours to start from. Read `docs/STATUS.md` (what works today), then, if your person
-   named a queue item, that item (read the file's first hundred lines or so with a line limit, never the whole queue).
-   Then the one `docs/exe/` page for the area you are about to touch: those run to 550 KB, so list its headings (`grep -n '^#'`)
-   and read the sections the item needs, never the page whole. Do not read `docs/history/` whole; grep it, and never quote it as current.
-3. Before adding a helper, grep for it. `PeepWalk`, `CellRoute`, `CellSearch`, `MapStep`, `FixedVector`, `ParkState.CellAt` already exist. A harness the same: `docs/TOOLING.md` lists every stored tool and the recipes found by trial; `docs/WORKFLOW.md`, "Verifying", says how a change is proven. Read both before writing a harness script, and add to them what you build (rule 21).
-4. One task at a time. When it is done: build and test alone in a worktree, commit, say what is ready, and stop. A
-   contributor leaves `docs/QUEUE.md` and `docs/STATUS.md` alone: the maintainer ticks and updates them when the work
-   is merged (`docs/WORKFLOW.md`, "Claims"). The maintainer's own sessions follow `docs/WORKFLOW.md`, "Sessions" and
-   "Unattended runs", which tick the item and update STATUS in the same commit. If the item changes something `README.md`
-   claims (what works, what is saved, where the log goes), change `README.md` in the same commit.
-5. Agent memory holds rules and the live plan only. Facts go in `docs/`.

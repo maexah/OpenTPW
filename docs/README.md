@@ -6,6 +6,7 @@ Where the project's memory lives. Code says what; these files say why, and what 
 |---|---|---|
 | `STATUS.md` | What works, what does not, what was never verified. Short. Replaces the README's narrative. | Every task, last commit |
 | `WORKS.md` | What works, item by item: every item's account of what it made work. Grepped, never read whole. | An item that makes something work |
+| `DOES-NOT.md` | What does not work yet, in detail, by system; STATUS keeps one line each. Grepped, never read whole. | An item that makes one of its gaps work (taken out here) or leaves a new one |
 | `GLOSSARY.md` | One line per term: Peep, Thing, Object, Item, ParkWorld vs ParkState, Time vs GameClock vs the thing tick... | Whenever a term is coined |
 | `VERIFYING.md` | **The numbered instrument rules.** Every one is a postmortem of a measurement that agreed with its author while being wrong. Other pages cite them by number, so a number never changes meaning. | Whenever an instrument lies |
 | `QUEUE.md` | **The work queue.** Numbered items, bugs first, one per session, taken from the top unless Alexah reorders. Each is ticked in the commit that lands it; the maintainer's pre-commit hook moves it to `history/queue-done.md`. | Every task |
