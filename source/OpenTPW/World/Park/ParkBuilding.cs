@@ -1767,6 +1767,66 @@ public static class ParkBuilding
 		return $"hand: holding {name}, turned {CarryingAngle}" + (CarryingFor != 0 ? $", for ride thing {CarryingFor}" : "");
 	}
 
+	/// <summary>
+	/// Where each standing object's floor plate meets the ground, for the debug console: the height the model stands at, the lowest
+	/// and highest ground corner under its footprint, and so the largest step between the plate's rim and the terrain corner beside
+	/// it (half the spread, the plate being stood midway). Queue cells follow, each stood at its near corner's height, and the
+	/// largest step at their edges. The original conforms the rim to the corners (<c>docs/exe/park-engine.md</c>, "Where a placed
+	/// object's model stands"); here it does not, so a step is an open face the frame's clear colour shows through.
+	/// </summary>
+	public static IEnumerable<string> RimCensus()
+	{
+		if ( Level.Current is not { } level || level.ParkState is not { } state || ParkGround.Current?.Heightfield is not { } field )
+			yield break;
+
+		var stepped = 0;
+		var largest = 0f;
+
+		foreach ( var placed in state.Objects )
+		{
+			if ( level.Catalogue is not { } catalogue || !catalogue.TryGet( placed.CatalogueId, out var item ) )
+				continue;
+
+			var origin = ParkObjects.ModelOriginFor( item, placed, field );
+
+			if ( ParkObjects.FootprintHeights( item.Shape, origin, placed.Angle, field ) is not var (low, high) )
+				continue;
+
+			var step = (high - low) * 0.5f;
+			stepped += step > 0.05f ? 1 : 0;
+			largest = MathF.Max( largest, step );
+
+			yield return $"thing {placed.ThingId,3} '{item.Name}' at ({placed.CellX},{placed.CellY}) turned {placed.Angle} " +
+				$"stands {origin.Z:F2} ground {low:F2}..{high:F2} step {step:F2}";
+		}
+
+		var queueStepped = 0;
+		var queues = 0;
+		var queueLargest = 0f;
+
+		if ( level.Park is { } world )
+		{
+			for ( var y = 0; y < field.CellsY - 1; ++y )
+			{
+				for ( var x = 0; x < field.CellsX - 1; ++x )
+				{
+					if ( !ParkQueues.IsQueue( ParkState.CellFor( world, x, y ) ) )
+						continue;
+
+					var near = field.HeightAt( x, y );
+					var step = MathF.Max( MathF.Abs( field.HeightAt( x + 1, y ) - near ),
+						MathF.Max( MathF.Abs( field.HeightAt( x, y + 1 ) - near ), MathF.Abs( field.HeightAt( x + 1, y + 1 ) - near ) ) );
+					++queues;
+					queueStepped += step > 0.05f ? 1 : 0;
+					queueLargest = MathF.Max( queueLargest, step );
+				}
+			}
+		}
+
+		yield return $"rim: {stepped} of the objects stand over a step above 0.05, the largest {largest:F2}; " +
+			$"{queueStepped} of {queues} queue cells, the largest {queueLargest:F2}";
+	}
+
 	/// <summary>Every object standing in the park now, for the debug console.</summary>
 	public static IEnumerable<string> Census()
 	{

@@ -703,6 +703,13 @@ public sealed class ParkObjects : Entity
 	/// turn. Null where the item has no shape or the shape fills no cell, which leaves the ground under the model's cell.
 	/// </summary>
 	internal static float? BaseHeight( ItemShape? shape, Vector3 origin, int angle, HeightfieldFile field )
+		=> FootprintHeights( shape, origin, angle, field ) is var (low, high) ? (low + high) * 0.5f : null;
+
+	/// <summary>
+	/// The lowest and the highest ground vertex at the corners of the cells an item's shape fills (the two
+	/// <see cref="BaseHeight"/> halves), each corner carried through the model's place and turn; null where the shape fills no cell.
+	/// </summary>
+	internal static (float Low, float High)? FootprintHeights( ItemShape? shape, Vector3 origin, int angle, HeightfieldFile field )
 	{
 		if ( shape == null )
 			return null;
@@ -731,7 +738,7 @@ public sealed class ParkObjects : Entity
 			}
 		}
 
-		return low > high ? null : (low + high) * 0.5f;
+		return low > high ? null : (low, high);
 	}
 
 	/// <summary>A cell's size in world units, for the one case where there is no ground to ask.</summary>

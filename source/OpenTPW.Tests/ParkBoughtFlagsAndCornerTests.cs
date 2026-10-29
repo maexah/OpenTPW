@@ -199,6 +199,66 @@ public class ParkBoughtFlagsAndCornerTests
 		Assert.AreEqual( (fileX, fileHeight, fileZ), ((int)at.X, (int)at.Y, (int)at.Z) );
 	}
 
+	/// <summary>
+	/// <b>The ground under a footprint's corners spreads where the land slopes</b>, and the plate stands midway
+	/// (<see cref="ParkObjects.FootprintHeights"/>): half the spread is how far the plate's rim stands off the terrain corner beside it,
+	/// the step the original's conform closes (<c>docs/exe/park-engine.md</c>, "Where a placed object's model stands") and this game
+	/// leaves open, a face the frame's clear colour shows through (Q804). Alexah's Sun God on the slope (<c>rim</c>: ground -7 to -2,
+	/// stands -4.5) and the stock park's Belly Bounce on level ground, which draws no gap.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the last corner's height for the highest; the shape's kind test turned; the turn ignored; the base at the low end.</remarks>
+	[TestMethod]
+	[DataRow( 1106, 15, 26, 270, -7f, -2f, DisplayName = "the Sun God on a slope: a step of two and a half" )]
+	[DataRow( 1100, 51, 23, 0, 0f, 0f, DisplayName = "the stock Belly Bounce on level ground: none" )]
+	[DataRow( 1113, 30, 19, 0, -7f, -2f, DisplayName = "the Tom Tom Twister, unturned: two and a half" )]
+	[DataRow( 1501, 17, 21, 90, -9f, -6f, DisplayName = "the Dino Karts Tunnel, turned a quarter: one and a half" )]
+	[DataRow( 1304, 30, 27, 180, -8f, -5f, DisplayName = "the Laughing Hyenas, turned a half: one and a half" )]
+	[DataRow( 1411, 20, 24, 180, -10f, -8f, DisplayName = "a staff room, turned a half: one" )]
+	public void AFootprintsGroundSpreadIsHowFarItsRimStandsOffTheTerrain( int id, int x, int y, int angle, float low, float high )
+	{
+		var data = GameData.Required();
+		var catalogue = new ParkItemCatalogue( "jungle", data );
+
+		using var ground = data.OpenReadOrNull( "levels/jungle/terrain/base.MD2" )!;
+		var field = new HeightfieldFile( ground );
+
+		Assert.IsTrue( catalogue.TryGet( id, out var item ) );
+
+		var origin = ParkObjects.ModelOriginFor( item, ParkBuilding.Constructed( item, 900, x, y, angle, 1, 1, default ), field );
+		var spread = ParkObjects.FootprintHeights( item.Shape, origin, angle, field );
+
+		Assert.IsNotNull( spread );
+		Assert.AreEqual( low, spread.Value.Low, 0.001f );
+		Assert.AreEqual( high, spread.Value.High, 0.001f );
+		Assert.AreEqual( (low + high) * 0.5f, origin.Z, 0.001f );
+	}
+
+	/// <summary>
+	/// A footprint's corner a hair short of a cell line is read as on it (<c>FUN_00454050</c> adds a tenth of a cell before it cuts), so a
+	/// float's error in a turned corner does not read the cell beyond: the Sun God stood a thousandth of a unit short of its cell has
+	/// the spread it has stood on it.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the corner cut without its tenth.</remarks>
+	[TestMethod]
+	public void AFootprintCornerAHairShortOfALineReadsTheCellOnIt()
+	{
+		var data = GameData.Required();
+		var catalogue = new ParkItemCatalogue( "jungle", data );
+
+		using var ground = data.OpenReadOrNull( "levels/jungle/terrain/base.MD2" )!;
+		var field = new HeightfieldFile( ground );
+
+		Assert.IsTrue( catalogue.TryGet( 1106, out var item ) );
+
+		var origin = ParkObjects.ModelOriginFor( item, ParkBuilding.Constructed( item, 900, 15, 26, 0, 1, 1, default ), field );
+		var exact = ParkObjects.FootprintHeights( item.Shape, origin, 0, field );
+		var short_ = ParkObjects.FootprintHeights( item.Shape, origin with { X = origin.X - 0.001f, Y = origin.Y - 0.001f }, 0, field );
+
+		Assert.IsNotNull( exact );
+		Assert.AreNotEqual( exact.Value.Low, exact.Value.High );
+		Assert.AreEqual( exact, short_ );
+	}
+
 	/// <summary>Every placed object of the shipped park holds the corner its item and its angle give.</summary>
 	[TestMethod]
 	public void EveryPlacedObjectsCornerIsItsItems()

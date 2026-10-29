@@ -10947,6 +10947,24 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   screenshots folder. (12) FileFormats: outsiders may put findings in the PR for us to write up; linked PRs welcome.
   Extras: a reverse-engineering note (describe, never paste decompiled code; `docs/exe/` is what is shared), a place
   to ask questions. Docs and tools only; no game run needed except the guard's test.
+- [x] **Q807. What Q804's blue lines are** (2026-10-29, lane A; the first piece of Q804, filed after the 2026-10-29 ordering
+  block). They are the frame's clear colour (72, 216, 248) showing through open steps where a floor plate's rim, or a queue piece's
+  flat plane, meets sloped ground that is not drawn under it, and not a ground gap, a drawn border, the sea (`sea y -2000` changed
+  nothing), the build markers (`strip` empty) or the turn of the thing. The original conforms the rim to the terrain corners
+  (`park-engine.md`, "Where a placed object's model stands"; ours does not: Q750, Q695). Measured by the new console `rim` and
+  `lib/clearseam.py`: the stock park, 14 things and 4 queue cells all at step 0.00, 0 pixels; Alexah's jungle, 58 objects over a
+  step above 0.05 (Sun God 2.5) and 58 of 78 queue cells, 5,751 pixels at the Sun God; its level plots 0; the original, same file
+  and camera, 0 (`q804/PREDICTION.txt`, `orig/sungod/`). The build is Q804's open part.
+- [x] **Q804. Blue gaps in the ground along the cells under rides, shops and queues.** From the website photographs,
+  2026-10-29 (Alexah: "terrible and pretty much unusable"). Alexah's Full Simulation jungle (`New Save.TPWS`, a copy
+  loaded at tick 19004), main `2e101169`, desktop GPU: thin light-blue lines run along the edges of the plots of
+  rides, shops, sideshows and queue lines, at every zoom and yaw tried (about 100 frames, `shots-2026-10-29/run1/`,
+  `s_sungod_240.png` the plainest). Not yet known whether they are a gap in the ground (what is behind showing
+  through), a border drawn in the wrong colour, or something of Q618's; find which before changing anything, and
+  check the stock park too. Confirm: the same cameras in Alexah's park and in the original, the lines gone.
+  **Split (2026-10-29):** the "find which" half is done as Q807 (the open step between a plate's rim and sloped ground, which the
+  original closes by conforming the rim: Q750 for placed things, Q695 for queue and boundary pieces; the lines are the frame's clear
+  colour). The build and the "lines gone" confirm are Q808.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

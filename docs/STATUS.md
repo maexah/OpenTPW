@@ -23,7 +23,7 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 - Park and saving: no loan screen, litter or day's end; a written park holds no kart, water or tracked ride, and some voices, puffs and the music voice are not written (Q420, Q803); forty-four of the advisor's 155 polled messages are built.
 - Map and windows: the map's overlay, hover and click are decoded, not built (Q684, Q685); five of the nine object windows are unbuilt (Q31b).
 - Guests: the deciding turn's vomit, litter, fireworks and pranks and four queue turns are counted (Q224 to Q226, Q228); a failed route is not revived (Q104); queues lose more happiness than the original's (Q746).
-- Building: a carried member of staff shows nothing; a bought thing's sparkles are not drawn (Q683); the buy screen's panel has no model (Q158).
+- Building: a carried member of staff shows nothing; a bought thing's sparkles are not drawn (Q683); the buy screen's panel has no model (Q158); a placed thing's and a queue piece's floor rim is not conformed to sloped ground, so thin light-blue slivers show along plots there, none on level ground (Q750, Q695; the build is Q808).
 - Lobby, keys and interface: the fly-in's fade (Q61) and F8 (Q65) are unbuilt; some keys and lists act differently from the original's (Q120, Q231, Q232); some meshes are drawn both-sided (Q613). No video or networking.
 - Sound: a per-effect repeat delay that is really a priority (Q43); most of a park file's live voices are counted, not put back (Q741).
 - Staff: the handyman's litter search and the guard's chase are unbuilt; a strike's posts are counted (Q212, Q229).
@@ -38,12 +38,12 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- Q801 (the rest of a park made fresh's file) and its review fixes. The original under Proton loaded r1's file (`q801/orig/l2`), not r2's,
-  one comment apart. The script header count now matches the original's (file + records + made - gone: a load and save writes 28 over
-  fourteen records, as an Instant Action save does), so a load and save here is no longer byte for byte the file; checked by test and by
-  the original loading such a file (`q801fix/`). Not checked: a car's channel (karts, boats) through `WrittenChannel`, and a missing-clip
-  start before any clip played, on a Lost Kingdom script. Q803 holds the leftovers (the weather's first week, the music voice, the other
-  themes).
+- Q807 (what Q804's blue lines are: the open steps at floor rims on sloped ground, which the original conforms) and the console's `rim`.
+  Compared on screen: ours (final build) against the original under Proton loading a copy of Alexah's `New Save.TPWS`, one camera
+  (160, 270, zoom 90): 5,751 sliver pixels against 0 (`lib/clearseam.py`); the stock park and Alexah's level plots 0 in ours. Not
+  compared: the original's rim vertices against the terrain corners (Q750's decode), a queue piece's drape (Q695), and the lines
+  gone: nothing is built, the conform is Q808, which Q804 split into.
+
 
 
 

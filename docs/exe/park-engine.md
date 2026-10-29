@@ -245,6 +245,20 @@ traced). The instancer then sets `0x10000` on every node of every instance it ma
 (`0x00463937`), which recomputes the face normals of the nodes so flagged (`FUN_00473a40`, cross products into the node's
 face-normal block) and clears header `0x40000`; whether the face normals reach the lighting is unread.
 
+**What its absence looks like in OpenTPW** (Q804, Q807; measured 2026-10-29, `q804/`). Ours stands the plate at its midway height and draws no
+ground under a footprint or a queue piece (the compositor's `0x1`), so on a slope the step between the plate's rim (a queue piece's
+flat plane at its near corner's height) and the terrain corner beside it is an open face: a ray through it meets nothing and the frame's
+clear colour `0x44DDFF` shows, a thin light-blue sliver along the plot's edge (orange once, where the lava under the ground lies behind
+it; the line's pixels sit about a unit inside a cell line, `pick`). The console's `rim` counts the steps: the stock park's 14 things and 4
+queue cells stand on level ground (every step 0.00) and draw none; Alexah's Full Simulation jungle (`New Save.TPWS`, tick 19004) has 58
+objects over a step above 0.05 (the Sun God: ground -7 to -2, stands -4.5, step 2.5; the Tom Tom Twister 2.5; the Costume Shop 1.5) and
+58 of its 78 queue cells (largest 1.00). `lib/clearseam.py` at one camera (160, 270, zoom 90, yaw 240): 5,751 pixels in ours, 0 in the
+original's frames of the same file (`orig/sungod/o-t19198.png`, loaded by a Full Simulation player under Proton); a level plot in the same
+park, the Belly Bounce and the Aztec Mayhem (step 0.00), draws 0 in ours, the Tom Tom Twister 16,308 and the Costume Shop 7,844. A ground
+quad drawn 0.3 under the skipped cells took the sliver count from 12,166 to 2,044 at a close camera but is a step itself, and hid part of
+the queue's base: not the cure. The cure is the conform (Q750 for the objects, Q695 for the queue and boundary pieces). Not read: how the
+original's queue piece is draped at its rim (Q695), which the original's frame shows closed.
+
 ---
 
 ## base.map / terrain.map: the header is 72 bytes, not 80

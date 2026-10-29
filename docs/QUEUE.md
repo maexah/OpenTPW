@@ -64,13 +64,6 @@ default, Alexah's second pre-weekly list), then the rest in the order below.
 **Ordered at Alexah's word (2026-10-29):** Q804, Q805 and Q806, found while photographing Alexah's Full Simulation
 park for the website, go first. Q804 stopped the photographs: no picture with the blue lines will be used.
 
-- [ ] **Q804. Blue gaps in the ground along the cells under rides, shops and queues.** From the website photographs,
-  2026-10-29 (Alexah: "terrible and pretty much unusable"). Alexah's Full Simulation jungle (`New Save.TPWS`, a copy
-  loaded at tick 19004), main `2e101169`, desktop GPU: thin light-blue lines run along the edges of the plots of
-  rides, shops, sideshows and queue lines, at every zoom and yaw tried (about 100 frames, `shots-2026-10-29/run1/`,
-  `s_sungod_240.png` the plainest). Not yet known whether they are a gap in the ground (what is behind showing
-  through), a border drawn in the wrong colour, or something of Q618's; find which before changing anything, and
-  check the stock park too. Confirm: the same cameras in Alexah's park and in the original, the lines gone.
 - [ ] **Q805. The gate's doors are drawn shut while guests walk in.** From the same photographs. With 311 guests
   inside and arrivals coming through, `gate` answered `gate 11 closed 0 command 1 status 1` (tick 19510), yet the
   doors stand shut in every frame (`H165_0_120.png`: guests on the path, passing the shut doors). Alexah: the gate
@@ -82,7 +75,13 @@ park for the website, go first. Q804 stopped the photographs: no picture with th
   frames, `ax_375_365.png`). The `boundary` census was not taken: take it first (anchors in the file, pieces made,
   `BOUNDARY_HOARDING_*` gaps), then compare with the original's frame of the same park. Confirm: the wall in the
   gate's view beside the original's, with the census.
-
+- [ ] **Q808. Close the open steps at floor rims on sloped ground (Q804's build).** From Q804 and Q807. Build the original's
+  conform of the rim to the terrain corners (Q750 for placed things, Q695 for queue and boundary pieces; decode what those items
+  list first), so that `lib/clearseam.py` reads 0 at the Sun God camera (160, 270, zoom 90, yaw 240; 5,751 now, the original's 0) and
+  at the Tom Tom Twister and Costume Shop cameras of `q804/` in Alexah's Full Simulation jungle, and `rim` (the console) is the
+  census to read the steps by. Her level ground already draws none: photographs of it are usable now. Q750 is what this waits on,
+  so Alexah may want Q750 or this ordered first (a reorder is Alexah's). Confirm: the same cameras in her park and in the original,
+  the lines gone, with the stock park unchanged.
 - [ ] **Q802. What Q800 left for a person or a machine it did not have.** From Q800 (run 13, lane A). Done by the
   coordinator (2026-10-29): `opentpw.maintainer` set in `~/repos/OpenTPW-laneB`, and the Saturday audit runs
   `python3 tools/check_docs_paths.py`. The Linux quick start is marked "tested on the maintainer's Linux machine only"
@@ -3176,6 +3175,8 @@ state machine.
   a park, count those cells, and shoot one beside the original's; then drape the pieces as the track tiles are (with Q587).
   The same call, `0x00469940`, also conforms the base vertices of every flag-8 object to the terrain's corners, a thing bought or
   loaded (Q750; fork watch 2026-10-27, verify-world H1).
+  - **Counted (Q807):** 58 of 78 queue cells of Alexah's Full Simulation jungle lie on sloped ground (largest corner step 1.00; the
+    stock park's 4 are level), and ours draws open slivers at them that the original's frame of the same file does not (Q804).
 - [ ] **Q750. Every placed thing's floor edge conformed to the terrain, as the original's (`0x469940` apply mode).** From the fork
   watch 2026-10-27 (verify-world H1, verify-other L2; a lead the fork found and ours had not). Every thing made with flag `0x8`
   (a purchase, `0x3fa`, `0x00430883`; every thing of a loaded park, `0x32f`, `0x004dd64f`; the coaster pieces too) runs
@@ -3192,6 +3193,11 @@ state machine.
   original's; then build. Confirm with a sloped footprint in both games, the rim's vertex heights against the terrain's
   corners read from the original with `tpwmem.py`. Next to Q398 (the diagonal), Q695 (the drape of queue and boundary pieces)
   and Q210 (hoardings' base-vertex gate).
+  - **Counted (Q807, the "count the footprints on sloped ground" step):** in Alexah's Full Simulation jungle 58 placed things stand
+    over a step above 0.05 between the plate's midway height and a terrain corner under the footprint (the Sun God, Tom Tom Twister
+    2.5; Costume Shop, Steak Restaurant, Giant Puzzle 1.5), the stock park's 14 none (`rim` on the console). Their rims draw as
+    open light-blue slivers in ours, none in the original's frame of the same file and camera (Q804, `q804/`). Alexah's ordering
+    block names this item after Q804: it is what Q804 waits on, so it may want to come first.
   - **Note (fork watch 2026-10-27, verify-world M1):** the blended floor's composite clamps in the original (no wrap bits,
     `0x00590a80`; park-engine.md, "The blended floor's texture clamps"), so `ProceduralFloorTests.EveryBlendedFloorFrameLiesInsideOneOrWraps`
     rests on a wrap the original does not do. Not counted: how many of the 36 frames have a face whose shifted UVs span more than 1.

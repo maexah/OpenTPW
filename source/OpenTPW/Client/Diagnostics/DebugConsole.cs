@@ -2735,6 +2735,22 @@ public static class DebugConsole
 
 				break;
 
+			// Where each standing object's floor plate meets the ground, and how far the rim is from the terrain corners beside it;
+			// the last line counts the objects and queue cells over a step (the rim the original conforms and this game does not).
+			case "rim":
+				var rims = ParkBuilding.RimCensus().ToArray();
+
+				if ( rims.Length == 0 )
+				{
+					Reply( "rim: none - a park has to be loaded" );
+					break;
+				}
+
+				foreach ( var rim in rims )
+					Reply( rim );
+
+				break;
+
 			// One of the gadget's CATEGORY screens, by the original's own screen number: 3 park status,
 			// 4 all staff, 5 all items, 6 all visitors, 7 finances, 8 loans, 9 staff costs, 10 entry
 			// price. It exists for the reason `buyscreen` does - a screen is verifiable by eye and by
