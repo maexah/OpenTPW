@@ -153,8 +153,8 @@ public static class ParkCoasterTrack
 /// that space, from id 1.
 /// </summary>
 /// <remarks>
-/// The bank's clip (role <c>B</c>) rolls the knot about the way it faces and is not posed: the measure reads the knot's
-/// place and facing alone.
+/// The bank's clip (role <c>B</c>) rolls the knot about the way it faces and is not posed for the measure (KnotAt, DirectionAt), which reads the knot's
+/// place and facing alone; the drawn pylon poses it (Pose, Morph).
 /// </remarks>
 public sealed class ParkCoasterPylon
 {
@@ -514,11 +514,11 @@ public sealed class ParkCoasterPylon
 
 	/// <summary>
 	/// The node of the type's named pylon part <paramref name="which"/> (1 to 4: the type flags <c>0x400</c>, <c>0x800</c>, <c>0x1000</c>
-	/// and <c>0x2000</c>), or -1 where its model has none: the last lookup record in space <c>0x80000</c> whose id is <paramref name="which"/>
-	/// (<c>Coaster_SetupPylonModel</c>, <c>0x00430590</c>: records walked in order, the later overwriting).
+	/// and <c>0x2000</c>), or -1 where its model has none: the last of the first four lookup records in space <c>0x80000</c> whose id is <paramref name="which"/>
+	/// (<c>Coaster_SetupPylonModel</c>, <c>0x004307ce</c>..<c>0x00430833</c>: records 1 to 4 walked in order, the later overwriting).
 	/// </summary>
 	public int NamedNode( int which )
-		=> Records( 0x80000 ).Where( node => _model.Nodes[node].Id == which ).DefaultIfEmpty( -1 ).Last();
+		=> Records( 0x80000 ).Take( 4 ).Where( node => _model.Nodes[node].Id == which ).DefaultIfEmpty( -1 ).Last();
 
 	/// <summary>The name of node <paramref name="node"/> in the pylon's model, for the console's census.</summary>
 	public string NodeName( int node ) => node >= 0 && node < _model.Nodes.Count ? _model.Nodes[node].Name : "-";

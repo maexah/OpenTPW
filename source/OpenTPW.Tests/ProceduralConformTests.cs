@@ -358,7 +358,7 @@ public class ProceduralConformTests
 	/// two corners the cell's edge joins.
 	/// </summary>
 	/// <remarks><b>Mutations:</b> the corner taken by truncation in the high arms; the neighbour on the wrong side; the fraction and its
-	/// complement swapped; the model's height not taken off; the snap's 0.1 widened to 0.5 or dropped; the x and y arms swapped.</remarks>
+	/// complement swapped; the model's height not taken off; the snap's 0.1 widened to 0.5 or dropped; the x and y arms swapped; the arm chosen by the y line (<c>onY</c>) rather than the x line's absence.</remarks>
 	[TestMethod]
 	public void TheInterpolatingPassBlendsTheGroundAlongTheLineInFourArms()
 	{
@@ -392,6 +392,10 @@ public class ProceduralConformTests
 		Expect( At( cx + 0.06f, cy + 0.4f ), cx, cy + 0.4f, Along( H( cx, cy ), H( cx, cy + 1 ), 0.4f ), "x snapped low" );
 		Expect( At( cx + 0.94f, cy + 0.4f ), cx + 1, cy + 0.4f, Along( H( cx + 1, cy ), H( cx + 1, cy + 1 ), 0.4f ), "x snapped high" );
 		Expect( At( cx + 0.4f, cy + 0.94f ), cx + 0.4f, cy + 1, Along( H( cx, cy + 1 ), H( cx + 1, cy + 1 ), 0.4f ), "y snapped high" );
+
+		// On a line both ways it takes the y arms, whatever the x (0x0046a09f tests x alone); on neither it takes an x arm and snaps nothing.
+		Expect( At( cx + 0.05f, cy + 0.96f ), cx, cy + 1, Along( H( cx, cy ), H( cx, cy + 1 ), 0.96f ), "both on a line: the y arm" );
+		Expect( At( cx + 0.3f, cy + 0.4f ), cx + 0.3f, cy + 0.4f, Along( H( cx, cy ), H( cx + 1, cy ), 0.3f ), "neither on a line: the x arm" );
 
 		// Past 0.1 it is off the line and does not snap.
 		var apart = ProceduralConform.Interpolated( field, At( cx + 0.13f, cy ), baseHeight );
@@ -487,8 +491,8 @@ public class ProceduralConformTests
 	}
 
 	/// <summary>
-	/// <b>The interpolating count takes a vertex within 0.1 of a cell line, and the conform's within 0.01</b> (<c>0x006fe854</c>,
-	/// <c>0x006fe85c</c>): the station's and the Lava Jump's lists stand when the grid is moved 0.4 of a unit under the model (0.04 of a
+	/// <b>The interpolating count takes a vertex within 0.1 of a cell line, and the conform's within 0.01</b> (<c>0x00469a96</c>,
+	/// <c>0x00469aa8</c>): the station's and the Lava Jump's lists stand when the grid is moved 0.4 of a unit under the model (0.04 of a
 	/// cell) and are lost when it is moved the other way by 1.5 (0.15 of a cell; a position below the grid's origin is taken as on a line, so the grid is not moved above the model).
 	/// </summary>
 	/// <remarks><b>Mutations:</b> the interpolating tolerance 0.01 or 0.5.</remarks>

@@ -2128,7 +2128,7 @@ same cameras (Q620, `q620/overlay-gate-final.png`); a fresh park's in both games
 
 **Alexah's Full Simulation jungle drew none until Q810, and why (Q811, `q806/`, every prediction in its `PREDICTION.txt`, 7 of 7 held).**
 `ParkBoundaryHoarding.Read` takes the records from `ParkThingStates`, the walk that stopped (until Q810) in her `New Save.TPWS` at 2058464 of
-2101020 (a Temple of Gloom's 40 pylon records, item 1181, `StdPylon` made `0x3fa` by `Coaster_SetupPylonModel` (`0x00430590`); its cars are item 1183, `park-gate.md`, "What draws the doors"; Q779), and answered none while the walk had a
+2101020 (a Temple of Gloom's 40 pylon records, item 1181, `StdPylon` made `0x3fa` by `Coaster_AddNode` (`0x00434276`) or re-claimed (`0x00434257`; `Coaster_SetupPylonModel`, `0x00430590`, makes only a measuring model it destroys at `0x00430a99`); its cars are item 1183, `park-gate.md`, "What draws the doors"; Q779), and answered none while the walk had a
 problem. Her file holds 163 records of item 17300 on (`records.py`, `lib/parkfile.py`: rows 2 x 98, 3 x 10, 9 x 12, 19 x 7, 20 x 16,
 23 x 19, 26 x 1), 82 of them in slots after the first 1181 record (a different measure from the stop, which lies after the second one's record, 2058182), so the walk's partial list could not hold the wall. Ours, main
 `b8a71167`, her file's copy: `boundary pieces 0 anchors 163 unmade 163`, `BOUNDARY_HOARDING_UNMADE` 163, no wall at the gate's
@@ -2302,9 +2302,9 @@ Alexah's played Dino Karts lies. Each kart or water anchor draws the piece its r
 hidden by the row's mask: Alexah's played file's 28 pieces are its 28 records' (`q688/ours-f2`), and the chooser
 (`ParkTrackPieces.PieceFor`) gives every one of its 31 anchors the row and turn the file holds. A sale of a ride owning only
 its station and mouths clears them and pays nothing net. Counted, not built: the carried squares and their check
-(`CARRY_PREVIEW_TRACK_START`; the drape is built, Q808, and so is the interpolating pass of the rides' and add-ons' own meshes, Q815, which no piece carries), a
+(`CARRY_PREVIEW_TRACK_START`), a
 written park's piece records (`SAVE_PARK_TRACK_PIECE_MODEL`), and the sale of a ride with more track
-(`SALE_TRACK_TEARDOWN`). The put-down's check of the mouths (op 0x20b or 0x210) is not built: an anchor whose two by two holds
+(`SALE_TRACK_TEARDOWN`). The drape is built (Q808), and the interpolating pass of the rides' and add-ons' own meshes (Q815); no piece carries such a mesh. The put-down's check of the mouths (op 0x20b or 0x210) is not built: an anchor whose two by two holds
 track already is not laid, and counted (`PUT_DOWN_TRACK_OVER_TRACK`, Q765). The pieces are stood again after a change
 keeping each model its anchor still names, so only a changed piece is made again (Q765). The track tool's runs are Q762 ("The track tool", above), the circuit's walk and the opening
 Q763 ("The walk", above); the rest is Q587.

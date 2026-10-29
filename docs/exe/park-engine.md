@@ -230,8 +230,8 @@ tells apart from their neighbours'.
 **The same flag `0x8` also conforms the model's base vertices to the ground** (Q750; fork watch 2026-10-27, verify-world H1,
 verify-other L2). After the model is made, `test bl,8` (`0x00463329`) and `FUN_00469940( [instance + 8], DAT_007a0854, base
 height, 0 )` (`0x00463347`) run `FUN_00469a80` in its apply mode, the mode whose drape arm is Q398's and Q695's. Flag `0x8` is in
-`0x32f` (a purchase and every thing of a loaded park, `0x004dd64f`), `0x3fa` (the coaster's pylons, made by `Coaster_AddNode`, `0x00434276`; the type's own model at `0x00430883`, in `Coaster_SetupPylonModel`) and `0x33a` (the kart, water, queue
-and hoarding pieces); a pylon is conformed again when its cell is stood and when it is moved (`0x00432f2f`, `0x004432db`; "A coaster's pylons", below). Only the vertices the type load listed are
+`0x32f` (a purchase and every thing of a loaded park, `0x004dd64f`), `0x3fa` (the coaster's pylons, made by `Coaster_AddNode`, `0x00434276`; the type's own temporary model at `0x00430883`, in `Coaster_SetupPylonModel`, destroyed at `0x00430a99`) and `0x33a` (the kart, water, queue
+and hoarding pieces); a pylon with a floor mesh is conformed again when it is the bottom of its cell's stack and the cell is stood, and when it is moved to another cell (`0x00432f2f`, `0x004432db`; "A coaster's pylons", below). Only the vertices the type load listed are
 taken (the record's list at `+0x14`, counted by `ProceduralBase_Build` at `0x0046a808` and copied at `0x0046a853`..`0x0046a87b`,
 on nodes the count flagged `0x1000`): the base vertices `ProceduralBase.FloorMesh` already counts, on every node that has one.
 Each is carried into world space (the node chain, `0x004702d0`); x and z snap to the grid line when within 0.01 of it
@@ -309,10 +309,10 @@ hands each model record's saved word (`+0x15`) to `FUN_00463060` as its flags (`
 **Measured in the original** (Q812, `q812/orig/orig1/`, `original/basevertices.py`): a Full Simulation player under Proton
 loading a copy of Alexah's `New Save.TPWS`, about tick 19300. 917 of the 925 listed base vertices of its placed things were seen, and every one stands
 at its terrain corner's height, none off (the other 8 are the floors of the two coaster pylons in slots 202 and 210, which that reader's walk passed over for their `0x80000000`; walked as `FUN_00469a80` walks, all 925 stand on a corner: "A coaster's pylons", below, Q816): the Sun God (`incagod`, made `0x32f`, root at -4.5) 18 of 18 on its `Base` mesh (flags
-`0x5101`), all 18 moved from rest; the Tom Tom Twister 20 of 20, the Costume Shop 12 of 12. Its 270 draped pieces (368 meshes: 78 queue pieces,
+`0x5101`), all 18 moved from rest; the Tom Tom Twister 20 of 20, the Costume Shop 12 of 12. Its 270 draped pieces (368 meshes, by the walk that passes over a node flagged `0x80000000`; `basevertices.py --as-original` counts 402 and one more corner on slot 173's monkey: 78 queue pieces,
 163 hoarding pieces, 28 kart track pieces, `gk_mam1`) each rise by the ground under each vertex less one value, the piece's own
-root height, to 0.0001. The interpolating pass moved the kart station's 16 listed vertices (`gk_TRACK01`) and the
-Lava Jump's 20 (`gk_brdge`) each by the ground along its cell line less the root height, to 0.0001 (`orig2/bv80.txt`). Things were made `0x32f` (119) or `0x3fa` (40, the coaster's pylons), pieces `0x33a` (269). In its `bv75` the 119 things list 765 base vertices and use 765, the 40 pylons list 160 and use 152 (765 + 152 = 917 used, 765 + 160 = 925 listed); a mesh whose lookup record carries `0x10000` (`mammtunn`'s `gk_mam1`) is skipped by the count (`0x0044a94b`, `0x00469ad0`), so the Dino Karts Tunnel lists 7, all on `gk_tracktop01`. Its frame at
+root height, to 0.0001. The interpolating pass lists the kart station's 16 vertices (`gk_TRACK01`; 17 of its vertices differ from the master's) and the
+Lava Jump's 20 (`gk_brdge`; 16 differ), each standing by the ground along its cell line less the root height, to 0.0001 (`orig2/bv80.txt`). Things were made `0x32f` (119) or `0x3fa` (40, the coaster's pylons), pieces `0x33a` (269). In its `bv75` the 119 things list 765 base vertices and use 765, the 40 pylons list 160 and use 152 (765 + 152 = 917 used, 765 + 160 = 925 listed); a mesh whose lookup record carries `0x10000` (`mammtunn`'s `gk_mam1`) is skipped by the count (`0x0044a94b`, `0x00469ad0`), so the Dino Karts Tunnel lists 7, all on `gk_tracktop01`. Its frame at
 the Sun God camera holds no clear-coloured sliver (`o-t19197.png`, 0); ours at the same camera, unchanged, 5,652 (`q812/ours1`).
 **The control word** (Q819): the conform sets none (the executable's `fldcw`s are the CRT's, `__ftol`'s, the frame
 renderer's `FUN_00591250` and a coaster routine's own chop at `0x00439ab0`..`0x00439c30`), so it runs under the one in
@@ -331,37 +331,37 @@ fraction in `double`, `ProceduralConform`), which matches the original's stored 
 - **The bottom pylon** (level 0): its root's height is the cell's (`+0x20`, the midpoint of its corners, `FUN_00466d70`), its clips
   are posed (`Model_AdvanceChannels( model, 1, 0 )`), its floor mesh (the instance's `+0x2c`, the mesh `ProceduralBase_Build`
   found, `StdPylon`'s `mc_pylbase`) is shown by taking off `0x10` alone, and `FUN_00469940( [model + 8], scene, cell height, 0 )`
-  conforms it (`0x00432f2f`): its listed base vertices stand on the corners, as a placed thing's.
+  conforms it (`0x00432f2f`): its listed base vertices stand on the corners, as a placed thing's. Both the show and the conform are skipped when the type has no floor mesh (`0x00432f0a`..`0x00432f0f`).
 - **A stacked pylon** (level 1 or more): its root stands at the height of the pylon below's **stack-height record**, the lookup record
   flagged `0x100000` the type's `+0x18` names (`0x00430780`..`0x004307ab`; `StackHeightDummy` on `StdPylon`, not its knot; its `+0x34`;
   nought where the type has none), or, where the node below is flagged `0x2000`, at that node's `+0x50` plus the type's step `+0xc4`, which is
   that record's height less the knot's (`0x004309e3`); its clips are posed; and unless the type's flag word holds `0x10` its floor is hidden, `0x80000010`
   (`0x00432ed9`). It is not conformed here.
-- **The type's four named nodes** (flag `0x400` and node `+0x1c`, `0x800` and `+0x20`, `0x1000` and `+0x24`, `0x2000` and `+0x28`):
+- **The type's four named nodes** (`Coaster_SetupPylonModel` walks the lookup records flagged `0x80000` and files each one's index by the record's id 1 to 4 (`0x004307b2`..`0x0043082c`), setting the type flag below; the stand turns the index to a node by adding the header's word `+0x46`, taking `[header + 0x70] + n * 0xa0` below word `+0x44`, else `[header + 0x74] + (n - word) * 0x58` (`0x00432f4e`..`0x00432f8f`); `StdPylon` has one record, `mc_bridge` of id 1, `LoopPylon` none): flag `0x400` and node `+0x1c`, `0x800` and `+0x20`, `0x1000` and `+0x24`, `0x2000` and `+0x28`):
   at the top of the stack `0x400` hides its node and `0x800` shows its; below the top `0x400` shows its (where the node above is
   not `0x2000`) and `0x800` hides its; at the bottom `0x1000` hides and `0x2000` shows; above it `0x1000` shows and `0x2000` hides.
   A hide is `Coaster_HideNode( node, 1 )` (`0x00433220`: `0x80000010`; with nought, `0x10` alone); a show takes off `0x10` alone.
 
-With `quiet` nought it also marks each node, and the node at its `+0x68`, `0x200000`. It runs at a load over every cell of the coaster
+With `quiet` nought it also marks each node, and the node at its `+0x68`, `0x200000`. It runs at a load over every cell of the coaster except one whose `+4` holds `0x1` (`0x00438014`..`0x00438018`)
 (`Coaster_LoadModule`, `0x004380c1`, `force` nought, `quiet` 1; while `0x00790afc` is set only a call with `force` runs), when a node
 joins a cell (`Coaster_StackNodeOnCell`, `0x00433f54`) or leaves one (`FUN_00436490`, `0x004365ea`, `0x004366fb`), and from the track
 tool's `FUN_004424e0`, `FUN_00443f40` and `FUN_00444cb0`. **`Coaster_MoveNodeToCell` (`0x00442f40`)**, the track tool moving a node to
 another cell, takes it off its old cell and stands that one again where others are left on it (a cell it holds alone moves with it,
 its place and height rewritten), moves the model (`FUN_004671f0` with `0x3fa`), puts it on the new
 cell (`Coaster_NewCell` or `Coaster_StackNodeOnCell`, which stands it), poses it (`FUN_004346f0`), sets its header's `+0x30` `0x4000`
-and conforms it whatever its level (`0x004432db`, the new cell's height), a stacked pylon's hidden floor too.
+and conforms it (`0x004432db`, the new cell's height) whatever its level, a stacked pylon's hidden floor too. A target that is the node's own cell takes none of that: it stands the cell again and leaves (`0x00442f55`..`0x00442f63`, `0x00442fc5`, then `0x004432e0`, stack cleanup only).
 
 **A pylon shown again keeps `0x80000000`**: the stand clears `0x10` and nothing else, and the park file's node word `0x400` (`saves.md`,
 "A node word") puts `0x80000000` back at a load. **Measured** (Q816, `q816/orig/orig1`, `orig2`: the original, a Full Simulation player,
-a copy of Alexah's `New Save.TPWS`, ticks 19048 and 19322, `original/coaster.py pylons`, `original/basevertices.py`): the Temple of
+a copy of Alexah's `New Save.TPWS`, ticks 19283 and 19322, `original/coaster.py pylons`, `original/basevertices.py`): the Temple of
 Gloom's 40 pylons each stand alone on their cell (no stack in her park), type flags `0x5ed` (`0x400` set, `0x10`, `0x800`, `0x1000`
-and `0x2000` clear), and every one's `mc_bridge` holds `0x80000010` (39 `0x807408b1`, one `0x817408b1`), hidden by the top-of-stack arm. 38 floors read `0x5101`; the
+and `0x2000` clear), and every one's `mc_bridge` holds `0x80000010` (39 `0x807408b1`, one `0x817408b1`), hidden (the type's `0x400` node is `mc_bridge`, `Coaster_SetupPylonModel` `0x004307ff`; the saved word `0xda3` already carries it, so the measure does not tell the stand's write from the load's). 38 floors read `0x5101`; the
 two of slots 202 and 210 (nodes 4 and 5, cells (29,35) and (32,35), the only two at loft 1, their knots at 100) read `0x80005101`,
 `0x10` clear, and their records in the file hold node word `0x408` on `mc_pylbase` where the other 38 hold `0x0` or `0x8`. Both
-floors are drawn (`orig2/o-t19442.png`: a sandy square at each tower's foot) and conformed: walked as `FUN_00469a80` walks
+floors are drawn (`orig2/o-t19442.png`: a sandy square at each tower's foot) and stood by the same walk: walked as `FUN_00469a80` walks
 (`basevertices.py --as-original`), 925 of the park's 925 listed base vertices stand on a corner, 4 of 4 on each of the two (the ground
-under them is 0, so their rest and conformed places coincide). How the file came to hold `0x400` there is not recoverable from it; a
-hide by the stand or the type's arms, then a show, leaves exactly that word.
+under them is 0, so this measure cannot tell their conformed places from rest; the bottom arm calls the conform whenever the floor mesh exists). How the file came to hold `0x400` there is not recoverable from it; a
+hide by the stacked arm (`0x00432ed9`; the type's arms touch only the four named nodes, `mc_bridge` on `StdPylon`, never `mc_pylbase`) then the bottom's show (`0x00432f15`) leaves exactly that word.
 
 **OpenTPW draws the pylons** (Q817, `ParkCoasterPylons`; the plan is `ParkCoasterHeights.Pylons`). One for each of the coaster's station nodes
 1 and 3 (the second stands at its track node, with none) and each saved piece: her park's 40, the original's. Each is a `StdPylon` model made on its cell,
@@ -370,7 +370,7 @@ corners, the original's 160 over 40; made on none it lists nothing, and the floo
 (`ProceduralConform.Conform`), then posed by `ParkCoasterPylon.Pose` (the loft clip's position tracks; the rotate and incline and bank clips' rotation keys as
 the nodes' turns, which the file leaves unturned there) and morphed (`ParkCoasterPylon.Morph`). **A pylon model is additive (header `0x4`) and its
 morph and texture keys are offsets**: `FUN_004714a0` adds each clip's keys to the vertex where it otherwise assigns them (`0x00471bef` passes the
-header's `0x4`, `FUN_00470e90`), so the vertex is its rest plus the loft clip's key (0 at frame 0, 90 up at frame 100 on the column's raised vertices, the foot's none),
+header's `0x4`, `FUN_00470e90`) and the texture keys likewise (the poser hands `FUN_004745c0` the same `+0x30 & 4`, `0x004721c0`..`0x004721cd`, which adds the sampled UV at `0x004746ae` where it otherwise assigns it at `0x004747e4`), so the vertex is its rest plus the loft clip's key (0 at frame 0, 90 up at frame 100 on the column's raised vertices, the foot's none),
 the incline's and the bank's (up or down by about 3.5 by the vertex's side, which tips the column's head), and its V the rest plus the loft's 15 at the top (a lattice repeat
 to 6 units) and the incline's and the bank's (about ±0.58);
 measured on `StdPylonL`, `I` and `B` (`q817/morphprobe.txt`). A pylon alone on its cell is the bottom and the top of its stack, so the type's part flagged
@@ -396,12 +396,12 @@ vertices on a corner, the Tom Tom Twister 20 of 20, the Costume Shop 12 of 12 (t
 
 **OpenTPW builds the interpolating pass** (Q815, `ProceduralConform.Interpolate`, run by `ParkObjects.StandOnGround` after the conform and the
 drape, on a model with the header's `0x8`). `ProceduralBase.InterpolatedVertices` is the second count: of each mesh the lookup records mark `0x8`
-but the floor, the vertices within 0.1 of a cell line on either axis (`0x006fe854`) and within 100 of the model's zero height (`0x006fe858`) in
+but the floor, the vertices within 0.1 of a cell line on either axis (the immediate at `0x00469a96`) and within 100 of the model's zero height (`0x00469a9e`) in
 the model's own space, on a side of the footprint's outline: the count is the conform's, `ProceduralBase.IsBase`, with that tolerance, the
 either-axis rule, and each side's bit counted only for the axis the vertex is on a line of (`FUN_00469a80`'s four terms in its count mode: x on a line with the
 x-low bit `0x2` or the x-high bit `0x8`, y on a line with `0x1` or `0x4`). The edge table is the one `ProceduralBase_Build` fills from the
 item's footprint before either count and leaves in `DAT_007afe20` (the head of the function at `0x0046a5a0`); with no footprint, or the header's `0x80`, it is
-cleared and the second count lists nothing. `ProceduralConform.Interpolated` stands one listed vertex (`FUN_00469a80`, `in_stack_70` set, apply
+cleared; a piece's meshes are drape nodes and count nothing (`0x0046a43d`), and a model with no footprint reads the side bits from before the table (`0x007afdcc`, via `0x0046a489`..`0x0046a48f`), which is unread. `ProceduralConform.Interpolated` stands one listed vertex (`FUN_00469a80`, `in_stack_70` set, apply
 mode, not a drape node; the constants `0x006fe850` = 1, `0x006fe860` = 0, `0x006fe864` = -1, `0x006fe868` = 0.5): each axis's grid position
 (a negative taken as nought) splits by `modf` into a whole cell and a fraction; the **nearest corner** is the whole, or the whole plus one from a
 fraction of 0.5 (`0x00469e40`..`0x00469efb`; a corner past the heightfield's last, row stride `[grid + 0x18] + 1`, ends the mesh); a fraction
@@ -421,7 +421,7 @@ own `s` (near 0 or 1), so a corner a few hundredths off a line is not given the 
 world height; the model is carried back by the float LU inverse as the conform's. **Measured in OpenTPW** (Q815, Alexah's New Save, a copy):
 `rim` reads the Dino Karts station `interpolated 16 listed largest rise off 0.0000` and the Dino Karts Jump `interpolated 20 listed largest
 rise off 0.0000`, the original's counts and difference (Q812); the rise off is each listed vertex's drawn rise less the ground at its drawn place
-(the cell's own triangle, `DrapeHeight`) less H. The original moved 17 vertices of `gk_TRACK01`, ours 16: the 17th (which a spurious conform
+(the cell's own triangle, `DrapeHeight`) less H. The original changed 17 of `gk_TRACK01`'s 77 vertices from the master's (by more than 0.0001, `basevertices.py`), so at least one is outside the 16 it lists, and ours writes only the 16 listed (the Jump's `gk_brdge`: 16 of its 20 listed changed in the original); the 17th (which a spurious conform
 is a candidate for, unproven: the first pass compares the mesh's vertex indices with the type list's next word, which for the last mesh of the walk is
 past its end) is not reproduced.
 

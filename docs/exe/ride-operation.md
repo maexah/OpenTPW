@@ -4090,7 +4090,7 @@ Save` (Temple Of Gloom, the Minecart).
    midpoint; 25 of them differ from the cell's near vertex by 0.5 (the first piece's cell (26, 35): vertex 2.0, midpoint
    2.5, its knot at 21.5). The Minecart's knot stands `fMinHeight + ( fMaxHeight - fMinHeight ) x loft` above it (the
    type's `+0xbc`, `+0xc0`, 10 and 100: the knot's height with the loft clip at its two ends, `Coaster_SetupPylonModel`
-   `0x00430590`). A stacked pylon (node `+4` not nought) stands at the height of the one it names plus H plus `+0xc4` (20).
+   `0x00430590`). A stacked pylon (node `+4` not nought) stands at the pylon below's stack-height record, or, where that node is flagged `0x2000`, at its `+0x50` plus `+0xc4` (20): `park-engine.md`, "A coaster's pylons".
 3. **The knots.** Each node holds its knots on two rails (`+0x90`: count, rail 1, rail 2; 0x58 bytes, place at `+0x40`).
    `Coaster_SetupPylonModel` (`0x00430590`) finds them in the pylon's model (`Coaster_FindKnotNodes` (`0x004344c0`)): a model with two records
    flagged `0x1000000` stacks, with a second rail and one knot, track node 2 in space `0x400000`; with one, a knot for each

@@ -103,7 +103,7 @@ channel, on role 5, so this runs for it). What those two do to the drawn doors w
 channel 0 held on its opening clip: flags `0x4`, role 5, entry 1 (`gatechan.out`, read by `rsys.py`): the stock
 `Easymode.TPWI`, and Alexah's Full Simulation `New Save.TPWS` and `autosave.TPWS`. Ours reads the same channel through
 `ParkThingStates` only, and until Q810 that walk stopped in Alexah's file at 2058464 of the module's 2101020 (the Temple of
-Gloom's 40 pylon records, item 1181 (`StdPylon`, made `0x3fa` by `Coaster_SetupPylonModel`, `0x00430590`), read as one channel each where the original reads five, Q814). So none of her park's channels came back and the gate
+Gloom's 40 pylon records, item 1181 (`StdPylon`, made `0x3fa` by `Coaster_AddNode`, `0x00434276`, or re-claimed, `0x00434257`; `Coaster_SetupPylonModel`, `0x00430590`, makes only a measuring model it destroys at `0x00430a99`), read as one channel each where the original reads five, Q814). So none of her park's channels came back and the gate
 stood idle at its rest pose, the doors shut, while `gate` read command 1, status 1. **The park's state was right;
 the pose was lost on load.** The walk now takes a pylon's five (Q810, below the table).
 

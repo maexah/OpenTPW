@@ -119,7 +119,9 @@ public sealed class ParkCoasterPylons : Entity
 			model.PoseNodes( poser => type.Pose( poser, place.Loft, place.Yaw, place.Incline, place.Bank ) );
 			type.Morph( model, place.Loft, place.Incline, place.Bank );
 
-			// Alone on its cell it is the bottom and the top of the stack (0x00432df0).
+			// Every pylon is taken as alone on its cell: the bottom and the top of the stack (0x00432df0). The pylon under a stacked
+			// piece is not handled: it is the bottom but not the top, and the original shows its 0x400 node there and hides the
+			// 0x800 one (0x00432ff8..0x0043304d); ours hides the 0x400 node on it (QUEUE.md, Q818).
 			var hidden = 0;
 
 			foreach ( var (node, visible) in PartsOf( type ) )

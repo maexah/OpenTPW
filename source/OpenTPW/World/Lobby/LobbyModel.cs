@@ -824,7 +824,7 @@ public sealed class LobbyModel : IChannelPosed
 		else
 		{
 			// FUN_00470d10 composes an additive model's rotation key with the node's own; not decoded, and MeshRotator would
-			// replace the turn. The 49 such clips are the coaster pylons' and their kin's, and no source loads a pylon model.
+			// replace the turn. The 49 such clips are the coaster pylons' and their kin's, and a pylon model is posed through PoseNodes, not here.
 			if ( _additive && animation.RotationTracks.Count > 0 )
 				Unimplemented.Report( "ANIM_ADDITIVE_ROTATION" );
 

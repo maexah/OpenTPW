@@ -67,7 +67,7 @@ park for the website, go first. Q804 stopped the photographs: no picture with th
 - [ ] **Q820. What Q818 left of the conform and the drape: the ground's split, the stacked and loop pylons.** From Q818 (run 14, lane A;
   its piece (3), the face normals and the control word, is Q819). (1) The ground mesh still splits every cell one way (Q398), so a
   draped vertex on a cell flagged `0x4` follows the original's triangle where the ground beside it follows ours. Confirm it in
-  both games as Q808 did (`lib/clearseam.py`, `original/basevertices.py`). (2) Left by Q817: a stacked pylon stands on the
+  both games as Q808 did (`lib/clearseam.py`, `original/basevertices.py`). (2) Left by Q817: the pylon under a stacked piece is drawn with the alone-on-its-cell arms (the bottom of a stack that is not its top shows the `0x400` node and hides the `0x800` one, `0x00432ff8`..`0x0043304d`; ours hides `mc_bridge` on it); a stacked pylon stands on the
   stack-height record (`StackHeightDummy` on `StdPylon`), the type flag `0x10` keeps its floor, a loop pylon is another model:
   none is in her park, so each needs a park that holds one (a coaster built in the original, then loaded in both games).
   (3) Left by Q819: say at `ProceduralConform` that ours works the conform in `float` where the original runs under the

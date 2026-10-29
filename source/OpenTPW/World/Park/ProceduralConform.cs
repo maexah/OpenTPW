@@ -16,6 +16,8 @@ namespace OpenTPW;
 /// The <b>interpolating pass</b> is the second of <c>FUN_00469940</c>'s two: the meshes the lookup records mark <c>0x8</c>
 /// (the kart station's track and the water ride's, and their add-ons' bridges and tunnels) have the vertices the type load listed along
 /// their cell lines snapped to the line and raised by the ground interpolated along it.
+/// Not reproduced: the original's first pass also walks a mesh the second count flagged <c>0x1000</c> against the type list's
+/// next vertex index (<c>0x00469b7c</c>); <c>gk_TRACK01</c> changes 17 vertices in the original against the 16 it lists (park-engine.md).
 /// Not built: the control word the original's arithmetic runs under (moves the last bits only), and the recomputed face normals
 /// (<c>FUN_00473c30</c>).
 /// </remarks>
@@ -24,7 +26,7 @@ public static class ProceduralConform
 	/// <summary>A node's lookup-record flag that becomes the run-time <c>0x20000</c>: the drape arm takes the mesh (<c>0x0044a942</c>).</summary>
 	internal const uint LookupDrapes = 0x10000;
 
-	/// <summary>How near a cell line a vertex must be to be snapped to it (<c>0x006fe854</c>).</summary>
+	/// <summary>How near a cell line a vertex must be to be snapped to it (the immediate at <c>0x00469a96</c>).</summary>
 	private const float SnapNear = 0.1f;
 
 	/// <summary>The cell flag that sends a cell's split to its other diagonal (<c>0x0046a34c</c>; Q398's note).</summary>
@@ -129,7 +131,7 @@ public static class ProceduralConform
 	}
 
 	/// <summary>
-	/// The interpolating pass (<c>FUN_00469a80</c>'s second call, <c>0x0046a2a7</c>..<c>0x0046a32d</c>): of each mesh the lookup records
+	/// The interpolating pass (<c>FUN_00469a80</c>'s second call; the four arms are <c>0x0046a0b4</c>..<c>0x0046a0ea</c> and <c>0x0046a2a7</c>..<c>0x0046a32d</c>): of each mesh the lookup records
 	/// mark <c>0x8</c>, the vertices <see cref="ProceduralBase.InterpolatedVertices"/> lists are snapped to the cell line they are
 	/// within 0.1 of and raised by the ground interpolated along that line less <paramref name="origin"/>'s height, the height the
 	/// model was made at (<see cref="Interpolated"/>). Answers how many vertices it moved.
@@ -316,17 +318,13 @@ public static class ProceduralConform
 
 	/// <summary>
 	/// Drapes a queue, hoarding, kart or water piece over the ground it is made on: every mesh (<see cref="EveryMesh"/>), at the
-	/// ground the park has. Counts <c>PROCEDURAL_BASE_INTERPOLATE</c> where a piece carries a mesh the lookup records mark <c>0x8</c>:
-	/// none of Lost Kingdom's does (the nine such meshes are in the rides' and add-ons' models, <see cref="Interpolate"/>), and a piece
-	/// is made with no outline for the pass to list along. Answers how many vertices it moved; none where there is no ground.
+	/// ground the park has. A piece's meshes are all drape nodes, which the interpolating pass's count
+	/// skips (<c>0x0046a43d</c>), so nothing of <see cref="Interpolate"/> is owed here. Answers how many vertices it moved; none where there is no ground.
 	/// </summary>
 	public static int DrapeOver( ModelFile file, Vector3 origin, Quaternion turn )
 	{
 		if ( ParkGround.Current?.Heightfield is not { } field )
 			return 0;
-
-		if ( InterpolatedMeshes( file ) > 0 )
-			Unimplemented.Report( "PROCEDURAL_BASE_INTERPOLATE" );
 
 		return Drape( file, EveryMesh, origin.GetSystemVector3(), turn, field );
 	}
@@ -334,10 +332,6 @@ public static class ProceduralConform
 	/// <summary>The meshes of a placed object's model whose lookup record carries <c>0x10000</c> (Lost Kingdom's one: <c>mammtunn</c>'s <c>gk_mam1</c>).</summary>
 	public static Func<int, bool> LookupDraped( ModelFile file )
 		=> mesh => mesh < file.Nodes.Count && (file.Nodes[mesh].IdFlags & LookupDrapes) != 0;
-
-	/// <summary>How many meshes of a model carry the lookup flag <c>0x8</c>, the ones the interpolating pass takes (<see cref="Interpolate"/>), which a piece's drape does not.</summary>
-	public static int InterpolatedMeshes( ModelFile file )
-		=> file.Meshes.Where( ( _, mesh ) => mesh < file.Nodes.Count && (file.Nodes[mesh].IdFlags & ProceduralBase.LookupInterpolates) != 0 ).Count();
 
 	/// <summary>
 	/// The ground's height under a world position as the draped vertex takes it (<c>0x0046a34c</c>, Q398's note): the cell by

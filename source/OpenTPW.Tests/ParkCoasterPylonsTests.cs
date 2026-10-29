@@ -205,7 +205,7 @@ public class ParkCoasterPylonsTests
 	/// 15 to the V of the top vertices (one lattice repeat to 6 units). Read as absolute positions the column's first frame would be a
 	/// pile of vertices at the origin.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> <c>MeshAnimator.PoseAdditive</c> assigning the keys (the first frame collapses the column).</remarks>
+	/// <remarks>A data test: it reads the clip file through the decoders and calls no pose code (the pose is <see cref="TheMorphIsTheRestPlusEveryClipsKeysAtItsFrame"/>'s).</remarks>
 	[TestMethod]
 	public void TheLoftClipsKeysAreOffsetsAndAddOneLatticeRepeatPerSixUnits()
 	{
@@ -276,7 +276,7 @@ public class ParkCoasterPylonsTests
 	}
 
 	/// <summary>The clips and frames a pylon is morphed by: the loft, incline and bank clips at their shares of their own length (the loft 0 to 100, the others 0 to 20, the neutral pitch at the middle frame).</summary>
-	/// <remarks><b>Mutations:</b> the loft's share taken as nought; the incline's neutral half dropped.</remarks>
+	/// <remarks><b>Mutations:</b> the loft's share taken as nought; the incline's neutral half dropped; the incline and the bank given each other's input.</remarks>
 	[TestMethod]
 	public void AMorphedPylonsClipsStandAtTheirShares()
 	{
@@ -290,6 +290,58 @@ public class ParkCoasterPylonsTests
 		Assert.AreEqual( 10f, tall[1].Frame, 0.01f );
 		Assert.AreEqual( 10f, tall[2].Frame, 0.01f );
 		Assert.AreEqual( 50f, pylon.MorphPoses( 0.5f, 0f, 0f )[0].Frame, 0.01f );
+
+		// The incline and the bank clips are 20 frames, neutral at 10, and each value is turns of a circle times the multiplier (4.5 on the
+		// incline, -4.5 on the bank here): different inputs give different frames, so the two shares cannot be swapped or share a multiplier.
+		var leaning = pylon.MorphPoses( 1f, 0.4f, -0.3f );
+
+		Assert.AreEqual( 10f + (20f * 0.4f / (2f * MathF.PI) * 4.5f), leaning[1].Frame, 0.01f );
+		Assert.AreEqual( 10f + (20f * -0.3f / (2f * MathF.PI) * -4.5f), leaning[2].Frame, 0.01f );
+	}
+
+	/// <summary>
+	/// <b>The bank clip turns the pylon</b> (<c>Coaster_PosePylon</c>, <c>0x00430ca0</c>): posed at a bank, a node's turn differs from the same pose
+	/// with none, and a bank of the other sign turns it the other way.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the bank clip left out of the turns (<c>bankable ? ... : null</c> always null); the bank's sign dropped.</remarks>
+	[TestMethod]
+	public void ABankTurnsTheBankClipsNodeAndTheOtherSignTurnsItTheOtherWay()
+	{
+		var data = GameData.Required();
+		var pylon = ParkCoasterPylon.Load( Minecart, data )!;
+		var file = Model( data );
+
+		NodePoser Posed( float bank )
+		{
+			var poser = new NodePoser( file );
+
+			pylon.Pose( poser, 0.5f, 0f, 0f, bank );
+
+			return poser;
+		}
+
+		var level = Posed( 0f );
+		var left = Posed( 0.3f );
+		var right = Posed( -0.3f );
+		var turned = Enumerable.Range( 0, level.Count ).Where( node => level.Local( node ) != left.Local( node ) ).ToList();
+
+		Assert.IsTrue( turned.Count > 0, "a bank turns a node" );
+
+		foreach ( var node in turned )
+			Assert.AreNotEqual( left.Local( node ), right.Local( node ), $"node {node}: the two signs turn it differently" );
+	}
+
+	/// <summary>
+	/// The named parts a pylon hides or shows by their id: 1 hides, 2 shows, 3 hides, 4 shows (<c>Coaster_StandCellPylons</c>, <c>0x00432f37</c>..<c>0x004331fa</c>
+	/// for a pylon alone on its cell). The Minecart's pylon has only id 1 and no shipped pylon here names the others, so the table of the other arms is read from the source; they are unexercised by a model.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> an arm's visible flag flipped in the table.</remarks>
+	[TestMethod]
+	public void TheFourNamedPartsHideShowHideShowInThatOrder()
+	{
+		var text = File.ReadAllText( Path.Join( RepoFiles.Root(), "source", "OpenTPW", "World", "Park", "ParkCoasterPylons.cs" ) );
+
+		StringAssert.Contains( text, "new[] { (1, false), (2, true), (3, false), (4, true) }" );
 	}
 
 	/// <summary>A pylon alone on its cell hides the Minecart's bridge and nothing else (the others of the type's four named parts are not in its model).</summary>

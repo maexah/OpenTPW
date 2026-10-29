@@ -25,7 +25,7 @@ public static class ProceduralBase
 	/// <summary>How near a cell line and the ground a vertex must be to be a base vertex.</summary>
 	private const float Near = 0.01f;
 
-	/// <summary>How near a cell line, and how near the model's zero height, a vertex of the interpolating pass must be (<c>0x006fe854</c>, <c>0x006fe858</c>).</summary>
+	/// <summary>How near a cell line, and how near the model's zero height, a vertex of the interpolating pass must be (the immediates at <c>0x00469a96</c> and <c>0x00469a9e</c>).</summary>
 	private const float InterpolateNear = 0.1f, InterpolateHeight = 100f;
 
 	/// <summary>Header flag 0x100: every base vertex on a cell corner counts, wherever the outline runs.</summary>
