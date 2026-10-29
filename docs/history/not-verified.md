@@ -1,10 +1,15 @@
 # Not verified on screen, item by item
 
 What each finished item did NOT confirm in the running game or in the original, verbatim from `../STATUS.md`,
-newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's account here when the next item's is
+newest first. The pre-commit hook (`tools/maintainer/status-sweep.py`) moves an item's account here when the next item's is
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q782 (a player's data folder). Compared: this Linux machine only, with `HOME` an empty folder and `XDG_DATA_HOME` unset, the main binary and this
+  branch's, each to the lobby (`q782/before`, `before2`, `after`; their lobby pictures differ only by the lobby's random weather): the cache's folder is
+  made under `$HOME/.local/share/OpenTPW/cache` now, and was relative before. Not verified: Windows and macOS were not run. Windows's answers are .NET's
+  documented `ApplicationData` and `LocalApplicationData`; macOS's is read from .NET's source (`TARGET_OSX` asks the system for its Application
+  Support folder), not from a Mac's `console.log`, so what a Mac's cache or log folder holds is untested.
 - Q783 (a park made fresh, saved). Compared in the original: its own fresh `restart.INTS` of a clean-memory run (`q327/orig/a`, not made this
   session) against ours module by module (`lib/freshcmp.py`): ten modules and ten of the world's twelve things (all but the weather and the advisor) byte for byte, the cells but for the
   boundary straights' variant rows; the original under Proton loaded the file ours wrote (`q783/orig/l3`, tick falling to 0, $50000, the gate drawn).

@@ -45,6 +45,8 @@ macOS builds are untested. You still need your own copy of the game.
 
 ## Build it yourself
 
+Wanting to change something? [`CONTRIBUTING.md`](CONTRIBUTING.md) has a quick start for Linux, macOS and Windows, and says what needs the game and what does not.
+
 1. Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
 2. Copy your game disc to a folder - see [Getting the game's files](#getting-the-games-files).
 3. Build and run:

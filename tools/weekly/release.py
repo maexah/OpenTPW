@@ -14,9 +14,11 @@ only stops a zip that would ship the game's files or leave out what the game or 
 (docs/WORKFLOW.md, "Weekly builds"). Python 3.8 or newer, nothing to install."""
 import os, re, stat, sys, zipfile
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from content_guard import disc   # the one list of the disc's names and types (tools/content_guard.py)
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
-DISC_LIST = os.path.join(REPO, "source", "OpenTPW", "Client", "DiscData.txt")
 
 # What a published build is made of, as paths inside the zip's one folder. Nothing else may be in it.
 ALLOW = [
@@ -58,20 +60,6 @@ REQUIRED = [
 TEXT_EXEMPT = {"README.txt", "content/fonts/LICENSE.txt"}
 # Executables inside the zip: kept runnable on Linux and macOS.
 RUNNABLE = {"OpenTPW", "createdump"}
-
-
-def disc():
-    """The disc's file names (lower case) and file types, from the list the game itself counts against."""
-    names, types = set(), set()
-    for line in open(DISC_LIST, encoding="utf-8"):
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-        base = line.rsplit("/", 1)[-1].lower()
-        names.add(base)
-        if "." in base:
-            types.add(base.rsplit(".", 1)[1])
-    return names, types
 
 
 def check(entries, top):

@@ -88,18 +88,7 @@ OPENTPW_LOG_DIR=<folder> ...                         # where console.log / conso
 
 ## Where things are
 
-| Project | What it is |
-|---|---|
-| `OpenTPW.Common` | Window, display, virtual file system (`BaseFileSystem`), vector types, `Logger`, `Unimplemented`. `GlobalNamespace.cs` holds the static `Log`, `FileSystem`, `SaveFileSystem`, `CacheFileSystem`. |
-| `OpenTPW.Files` | Binary format readers. `Formats/<kind>/`. `Public/` is the old upstream API: its `SettingsFile`, `StringFile` and `BaseFormat` are still the live entry points; `MapFile` and `Public/ModelFile.cs` are used by nothing, and `SoundFile` is live only through `SdtArchive`, which reads every `.sdt` entry with it. |
-| `OpenTPW` | The game. `Program.cs` → `Client/Game.cs` (boot order lives here) → `World/Level.cs` (builds a scene). |
-| `OpenTPW.Tests` | MSTest, flat folder, named by area. `GameData.cs` is the shared fixture. |
-| `OpenTPW.ModKit` | Upstream ImGui file browser. Referenced by no project. The maintainer's call; leave it. |
-
-Inside `source/OpenTPW/`: `Client/` (startup, `GameDir`, options, renderer, `Diagnostics/DebugConsole.cs`), `World/Park/` (the running park: start with `ParkState`, `ParkPeople`, `PeepBehaviour`, `ParkRides`), `VM/RideScript.cs` (the live VM), `UI/` (the game's own UI: `UiControl`, `WindowStack`; `UI/FrontEnd/` lobby, `UI/Park/` gadget), `Audio/`.
-
-`tools/` holds the git hooks (`tools/hooks/`), the shared test harnesses (`tools/harness/`), the weekly build's
-packaging (`tools/weekly/`) and the player's guide to running the original (`tools/play-the-original/`).
+The map of the projects, the folders inside the game and `tools/` is [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 ## Words that mean one thing
 
@@ -128,19 +117,21 @@ packaging (`tools/weekly/`) and the player's guide to running the original (`too
 - `upstream/main` is the mirror of the upstream project. The maintainer merges it into `main` when it moves. Never
   rebase or force-push `main`.
 - The FileFormats repo follows the same rules: its `master` is the tip, one short branch per task off it.
-- Once per clone, enable the hooks: `git config core.hooksPath tools/hooks`. The pre-commit hook moves a ticked queue
-  item to `docs/history/queue-done.md`; the pre-push hook republishes the website only where its repo sits beside this one.
+- Once per clone, enable the hooks: `git config core.hooksPath tools/hooks`. The pre-commit hook refuses a commit that
+  stages a file of the game's (`tools/content_guard.py`). The queue and status sweeps and the website push are the
+  maintainer's: they run only in a clone with `git config opentpw.maintainer true` (`docs/WORKFLOW.md`, "Hooks").
 
 ## How a task runs
 
 1. **Start from the repo root**, always. Agents key their memory to the working directory.
-2. Read `docs/STATUS.md`, then the item you are taking in `docs/QUEUE.md` (the first unticked one, unless you were
-   given another; read the file's first hundred lines or so with a line limit, never the whole queue), then the one
-   `docs/exe/` page for the area you are about to touch: those run to 550 KB, so list its headings (`grep -n '^#'`)
+2. **Do the task your person gave you, and only that.** An agent never takes a queue item unasked: `docs/QUEUE.md` is
+   the maintainer's work list, not yours to start from. Read `docs/STATUS.md` (what works today), then, if your person
+   named a queue item, that item (read the file's first hundred lines or so with a line limit, never the whole queue).
+   Then the one `docs/exe/` page for the area you are about to touch: those run to 550 KB, so list its headings (`grep -n '^#'`)
    and read the sections the item needs, never the page whole. Do not read `docs/history/` whole; grep it, and never quote it as current.
 3. Before adding a helper, grep for it. `PeepWalk`, `CellRoute`, `CellSearch`, `MapStep`, `FixedVector`, `ParkState.CellAt` already exist. A harness the same: `docs/TOOLING.md` lists every stored tool and the recipes found by trial; `docs/WORKFLOW.md`, "Verifying", says how a change is proven. Read both before writing a harness script, and add to them what you build (rule 21).
-4. One task at a time. When it is done: build and test alone in a worktree, commit, tick the item in
-   `docs/QUEUE.md`, and update `docs/STATUS.md` in the same commit (what the item made work goes in `docs/WORKS.md`;
-   STATUS's one line per system changes only when a system moves; the item's "not verified" account goes above the
-   last one's). Say what is ready, and stop.
+4. One task at a time. When it is done: build and test alone in a worktree, commit, say what is ready, and stop. A
+   contributor leaves `docs/QUEUE.md` and `docs/STATUS.md` alone: the maintainer ticks and updates them when the work
+   is merged (`docs/WORKFLOW.md`, "Claims"). The maintainer's own sessions follow `docs/WORKFLOW.md`, "Sessions" and
+   "Unattended runs", which tick the item and update STATUS in the same commit.
 5. Agent memory holds rules and the live plan only. Facts go in `docs/`.

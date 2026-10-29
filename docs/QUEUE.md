@@ -4,9 +4,12 @@ Begun 2026-09-22 against `main` at `9b0ebab`; items from Q35 on were filed again
 numbers in Q13-Q34 are from `9b0ebab` and have drifted (`park-engine.md` by up to ~1,100 lines): find the member or
 the heading, never the line.
 
-**How to use this file.** One item per session. Take the first unticked item and do only that one. Tick it in the
-commit that lands it, with the number that proves it; the pre-commit hook then moves it to the end of its section in
-`history/queue-done.md`, which holds every finished item. A page citing a Q-number that is not here means that finished
+**How to use this file.** One item per session. The maintainer's sessions take the first unticked item and do only
+that one, and tick it in the commit that lands it, with the number that proves it; the maintainer's pre-commit hook
+then moves it to the end of its section in `history/queue-done.md`, which holds every finished item. A contributor
+takes an item that has no `Claimed:` line (the ones tagged "good first" are the gentlest), claims it as `WORKFLOW.md`,
+"Claims" says, and leaves the tick to the maintainer, who ticks it when the work is merged. An agent takes an item
+only when its person names it (`AGENTS.md`, "How a task runs"). A page citing a Q-number that is not here means that finished
 entry. If an item turns out to be two, split it into two lines here and stop after the first. The maintainer may
 reorder the queue; nobody else does. A line **Needs Alexah (date):** at the end of an item is a question an unattended
 run left (`WORKFLOW.md`, "Unattended runs"): the item waits for the answer, and the session that gets it takes the
@@ -15,7 +18,7 @@ line out.
 **Every contributor, on every item, no exceptions.**
 
 - Start from the repo root. Read `AGENTS.md` (or `CLAUDE.md`, which loads it), `docs/STATUS.md`, then this file's head
-  and its first unticked item: the first hundred lines or so. The rest of the queue is other sessions'; grep it for a
+  and your item: the first hundred lines or so. The rest of the queue is other sessions'; grep it for a
   Q-number when a note is to be filed under one.
 - Branch from `main`, one short branch per item, named `<you>/<what-it-changes>`.
 - "Confirm" means the running game: a screenshot **and** the census or log line that goes with it, both. Predict the
@@ -25,12 +28,14 @@ line out.
 - Facts found go in `docs/exe/`, and bytes in a shipped file in the FileFormats clone (`AGENTS.md` rule 14). The
   commit message says why. The code comment says what the code does now. No "used to say", no dates, no `>>>`
   banners in code.
-- Update `docs/STATUS.md` in the same commit. It stays under 120 lines.
-- Commit locally, tick the item and stop. Do not start the next item.
+- The maintainer's sessions update `docs/STATUS.md` in the same commit (it stays under 120 lines). A contributor's pull
+  request leaves STATUS and the tick to the maintainer, and says in its description what the item made work.
+- Commit locally and stop. Do not start the next item.
 - End with four lines: what is ready, what was confirmed on screen, what was not, what the next item is.
 
 **The maintainer's own steps (Alexah's; a contributor outside the project skips them).**
 
+- They tick the item and update `docs/STATUS.md` when a contributor's work is merged.
 - Their branches are `alexah/N-<what-it-changes>`, N the next number after the highest local `alexah/*` branch.
 - They reorder this file, and say so in a block headed "Ordered at Alexah's word".
 - When an item is confirmed they fast-forward merge its branch into `main`. Pushing `main`, and opening or merging
@@ -56,28 +61,17 @@ fork watch).
 Q249 (saving a park made fresh; its build is Q783), then Q782 (a player's data folder) and Q800 (contributors by
 default, Alexah's second pre-weekly list), then the rest in the order below.
 
-- [ ] **Q800. Contributors by default; the Sentinel's way for the maintainer only.** Alexah's pre-weekly list
-  (2026-10-28), every point before any weekly build. (1) Hooks: `tools/hooks/` keeps only a content guard for
-  everyone; the queue/status sweeps and the website push move to a maintainer folder. (2) `AGENTS.md`: an agent does
-  the task its person gave it and never takes a queue item unasked; the queue run's steps move to the maintainer part
-  of `docs/WORKFLOW.md`. (3) `CONTRIBUTING.md`: the game is needed to play and to confirm behaviour, not for docs,
-  tools or tests (the no-game run's counts). (4) `.editorconfig` says `crlf`, every `.cs` is LF: make it `lf`, add
-  `.gitattributes` (`* text=auto eol=lf`). (5)+(8) Newcomers start from a few issues made from queue items tagged
-  "good first", each naming its Q-number, where to look, what is expected, the tools it needs. (6) `ARCHITECTURE.md`
-  takes `AGENTS.md`'s "Where things are" map (moved, not copied). (7) A script checks every path and type named in
-  README, CONTRIBUTING and ARCHITECTURE still exists; the Saturday audit runs it. Quick start for Linux/macOS and
-  Windows; the Linux steps checked in a clean container (build, no-game tests, a launch under Xvfb and lavapipe), the
-  Windows and macOS steps marked "these launch steps are not tested" until someone runs them; a no-game path and an advanced path (game,
-  Ghidra, Proton harnesses Linux-only). (9) Claims: a `Claimed: @user, #issue, date` line on a queue item; the
-  Sentinel skips claimed items and reads open issues and PRs at a run's start; a claim lapses after 14 quiet days;
-  the maintainer ticks QUEUE and STATUS at merge (the PR template changes to match). (10) A portable verification
-  record for new items: prediction, command, census or log lines, result. Screenshots are allowed where they really
-  help (Alexah: screenshots are fine; raw textures and models are not), best attached to the PR or issue, since a
-  committed picture stays in the history after it is removed. (11) One guard script, shared with `tools/weekly/release.py`, refuses game
-  file types and `save/` in staged files; run by the contributor hook and by hand; `.gitignore` the reference
-  screenshots folder. (12) FileFormats: outsiders may put findings in the PR for us to write up; linked PRs welcome.
-  Extras: a reverse-engineering note (describe, never paste decompiled code; `docs/exe/` is what is shared), a place
-  to ask questions. Docs and tools only; no game run needed except the guard's test.
+- [ ] **Q802. What Q800 left for a person or a machine it did not have.** From Q800 (run 12, lane A), every other point
+  built: (1) the Linux quick start is marked "tested on the maintainer's Linux machine only" (Alexah, 2026-10-28: no
+  container is to be installed; `tools/harness/lib/quickstart_check.sh` ran it from an empty `HOME`); the Windows and
+  macOS launch steps stay marked "not tested" until someone runs them. (2) The four issues in `docs/GOOD-FIRST-ISSUES.md`
+  (Q159, Q160, Q284, Q288) are drafts: creating them on GitHub is a push-like act and Alexah's; put each issue's number
+  in its draft and in the queue item's `Claimed:` line when somebody takes it. (3) The Saturday audit's own script
+  (outside the repo) must call `python3 tools/check_docs_paths.py`; `docs/WORKFLOW.md`, "Hooks", says it does.
+  (4) `git config opentpw.maintainer true` is set in this clone; set it in every other clone of the maintainer's
+  (`~/repos/OpenTPW-laneB` and the worktrees' parent) or its queue and status sweeps and the website push stop running
+  silently. (5) "A place to ask questions" is issues titled "Question: ..." for now; GitHub Discussions are Alexah's to
+  switch on. (6) A test for `tools/check_docs_paths.py` (it is run by hand and the audit; nothing tests it).
 
 - [ ] **Q801. The rest of a park made fresh's file.** From Q783, filed after the 2026-10-28 ordering block (a reorder is Alexah's). What Q783 writes
   differently from the original's file at tick nought, each counted: (1) the advisor module's `+0x38` to `+0x64` (each slot's head node and five mouth
@@ -510,6 +504,7 @@ filed the items that cite it.
   Jungle's `LobbySfxHD.sdt` and `AmbientHD.sdt` store eight such names. No caller opens a `.sdt` entry by name yet
   (the archive handler `Game` registers reaches it through `OpenFile`). Match an equal name, or, for a stored name
   that fills its field, the request's prefix of that length. A test on the eight. No game run.
+  **Good first** (Q800; `docs/GOOD-FIRST-ISSUES.md` has the issue text; no game, no Ghidra).
 - [ ] **Q160. Two park tests do not test what their names say.** Found by the 2026-09-26 staleness audit.
   `ParkFootprintOccupancyTests.LeavingACellTheThingIsNotOnKeepsWhoeverStandsBehindIt` passes whatever `LeaveCell`
   does: `LeaveCell( 58, 15, Ride )` already unlinks the ride from (58,16)'s list, `LeaveCell( 58, 16, Guest )` then
@@ -519,6 +514,7 @@ filed the items that cite it.
   `QueueSizeInCells` times four, nought on the Drinks Shop and the three toilets, where the gate measures their walked
   cells (`ParkRideChoice.QueueCellsFor`); a run that queues a guest at a toilet fails it falsely. Use the walked
   count. Put the bug back for each (`AGENTS.md` rule 6). No game run.
+  **Good first** (Q800; `docs/GOOD-FIRST-ISSUES.md` has the issue text; no game, no Ghidra).
 
 - [ ] **Q210. Hoardings: the original's terrain rectangle and its base-vertex gate.** Found by the 2026-10-04 review
   (`u6-hoardings-1`, `-2`, `-4`; `docs/exe/ride-hoardings.md`). `ParkRideHoarding.Ground` samples `x0 + gx` where the
@@ -1027,6 +1023,7 @@ filed the items that cite it.
   the slot was not understood, as it does for a slot out of range; `particles abc` in a park with an emitter in
   slot 0 shows it. From the week-end audit (stage 6, the second reading of commit `03326e26`; read from the code,
   not reproduced in the game). `OpenTPW/Client/Diagnostics/DebugConsole.cs`, line 1804.
+  **Good first** (Q800; `docs/GOOD-FIRST-ISSUES.md` has the issue text; no game, no Ghidra).
 
 - [ ] **Q285. Seven unbuilt paths the game reaches count nothing.** From the week-end audit (stage 6, the second
   reading of each commit; read from the code). `AGENTS.md` rule 4 asks each for an `Unimplemented.Report`; build
@@ -1182,6 +1179,7 @@ filed the items that cite it.
     nothing in the file decodes or uses; this is known from the constants' own comments and the three uses at
     lines 321, 373, 468 and 508, so they should be renamed DrawFlagsLocal and DrawFlagsValue.
     (`OpenTPW/World/Park/SpriteScript.cs`)
+  **Good first** (Q800; `docs/GOOD-FIRST-ISSUES.md` has the issue text; no game, no Ghidra).
 
 - [ ] **Q289. Two members only tests call, which a built path needs.** From the week-end audit (stage 6, the
   dead-code census). Neither is dead by code: placed content reaches the path each belongs to, and the path is

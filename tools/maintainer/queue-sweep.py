@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Move every ticked item of docs/QUEUE.md, verbatim, to the end of its section in docs/history/queue-done.md.
 
-Run from anywhere in the repo; the pre-commit hook (tools/hooks/pre-commit) runs it on a commit that stages
+Run from anywhere in the repo; the pre-commit hook (tools/maintainer/hooks/pre-commit) runs it on a commit that stages
 docs/QUEUE.md. An item is its
 '- [x]' line plus every following blank or indented line, up to the next unindented one. Prints what it moved and
 refuses to write if any Q-number would end up missing or doubled across the two files.

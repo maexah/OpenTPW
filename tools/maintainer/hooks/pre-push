@@ -1,0 +1,19 @@
+#!/bin/sh
+# When main is pushed to origin, the fan website is built and published again, so its Ride Status board says what
+# main says (docs/WORKFLOW.md, "The website"). The website is its own repo, in the folder OpenTPW.Website beside
+# this one, or where OPENTPW_WEBSITE points. Its tools/publish.sh does the work and is told which commit is going
+# up, because this hook runs before origin/main has moved. It publishes nothing while the website's own repo
+# holds work that is not pushed yet. Whatever happens there, this push goes on: the hook never refuses one.
+# The maintainer's part: tools/hooks/pre-push runs this where the clone has `git config opentpw.maintainer true`.
+root=$(git rev-parse --show-toplevel) || exit 0
+site=${OPENTPW_WEBSITE:-$root/../OpenTPW.Website}
+while read -r local_ref local_sha remote_ref remote_sha; do
+	if [ "$remote_ref" = "refs/heads/main" ] && [ "$local_sha" != "0000000000000000000000000000000000000000" ]; then
+		if [ ! -x "$site/tools/publish.sh" ]; then
+			echo "pre-push: no website at $site; it was not updated" >&2
+		elif ! env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE -u GIT_PREFIX OTPW_ENGINE_REF="$local_sha" "$site/tools/publish.sh" --only-if-pushed < /dev/null; then
+			echo "pre-push: the website was not updated (the reason is above). The push goes on." >&2
+		fi
+	fi
+done
+exit 0

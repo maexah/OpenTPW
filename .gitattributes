@@ -1,0 +1,8 @@
+# Every text file is LF in the repository and in the working tree, on every system.
+* text=auto eol=lf
+
+# Binary files git would otherwise guess at.
+*.png binary
+*.tga binary
+*.ico binary
+*.ttf binary

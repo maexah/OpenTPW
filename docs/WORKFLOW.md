@@ -3,7 +3,39 @@
 The workflow rules from `AGENTS.md`, with the traps behind them. `AGENTS.md` loads every session and this
 file does not, so where the two differ `AGENTS.md` wins. **Pushing**, **The website**, **Weekly builds** and
 **Unattended runs** are the maintainer's own procedures; a contributor's route to `main` is a pull request
-(`CONTRIBUTING.md`).
+(`CONTRIBUTING.md`). **Sessions** below is the maintainer's queue routine; a contributor's agent does the task its
+person gave it (`AGENTS.md`, "How a task runs"). **Hooks** and **Claims** are for everyone.
+
+## Hooks
+
+`git config core.hooksPath tools/hooks`, once per clone. What runs depends on who you are.
+
+- **Everyone:** `tools/hooks/pre-commit` runs `tools/content_guard.py staged`, which refuses a commit that stages a
+  file of the game's: a name on the disc's list (`source/OpenTPW/Client/DiscData.txt`), a type the disc uses, a saved
+  park (`.TPWS`), a disc image, anything in `save/` or in `content/ReferenceScreenshots/`. The weekly build's
+  `tools/weekly/release.py guard` uses the same list. A file of ours that shares a name or type goes on `EXEMPT` in
+  the guard. By hand: `python3 tools/content_guard.py staged`, or `paths <name>...`. `tools/hooks/pre-push` does nothing.
+- **The maintainer only:** `git config opentpw.maintainer true` makes the same two hooks also run
+  `tools/maintainer/hooks/pre-commit` (moves each ticked queue item to `docs/history/queue-done.md` and every old
+  "Not verified on screen" account to `docs/history/not-verified.md`, with `tools/maintainer/queue-sweep.py` and
+  `status-sweep.py`) and `tools/maintainer/hooks/pre-push` (republishes the website when `main` is pushed). Set it in
+  each of the maintainer's clones; without it those sweeps and the website push do not run.
+- **The Saturday audit runs** `python3 tools/check_docs_paths.py` (every path, type and link that `README.md`,
+  `CONTRIBUTING.md` and `ARCHITECTURE.md` name must still exist) and fixes what it lists, and reads the Quick start's
+  steps against the build (`tools/harness/lib/quickstart_check.sh`, `docs/TOOLING.md`).
+
+## Claims
+
+A contributor says which queue item they have taken, so two people do not do the same work.
+
+1. Open an issue, or comment on the one made from the item, saying you will take it, and add a last line to the item
+   in `docs/QUEUE.md` in your pull request, or ask the maintainer to: `Claimed: @user, #123, 2026-10-28` (your GitHub
+   name, the issue or pull request, the date).
+2. A claim lapses after 14 quiet days (no commit, comment or pull request on that issue): the maintainer, or the next
+   person who asks on the issue, takes the line out.
+3. A queue run reads the open issues and pull requests at its start and skips an item with a `Claimed:` line.
+4. The maintainer ticks `docs/QUEUE.md` and updates `docs/STATUS.md` when the work is merged; a contributor's pull
+   request leaves both alone (the pull request template asks what the work made work, in its own words).
 
 ## Branches
 
@@ -40,8 +72,8 @@ The fan website is at https://maexah.github.io/OpenTPW/ . It is its own project:
 `OpenTPW.Website` beside this one, with its own `CLAUDE.md`, plan and rules. Only two things tie it to this repo
 (Alexah, 2026-10-11: "ensure updating the site when relevant is part of the workflow").
 
-- **A push of `main` brings it up to date by itself.** `tools/hooks/pre-push` (the same `core.hooksPath` as the
-  pre-commit hook) runs the website's `tools/publish.sh`. That rebuilds the pages and sends them to the branch
+- **A push of `main` brings it up to date by itself.** `tools/maintainer/hooks/pre-push` (run by `tools/hooks/pre-push`
+  where the clone has `opentpw.maintainer` set, "Hooks" below) runs the website's `tools/publish.sh`. That rebuilds the pages and sends them to the branch
   `gh-pages` of this repo on origin, which GitHub Pages serves. The website's Ride Status board is read from
   `docs/STATUS.md` (the "Numbers" table's `Opcodes` and `Known gaps` rows) and `docs/QUEUE.md` (the open items'
   ids and titles, in order) of the commit being pushed. So those two files are public words: a queue title is
@@ -187,8 +219,8 @@ say so before launching it.
 
 - **One task per session.** Start Claude Code from the repo root. Read `AGENTS.md` (Claude Code loads it through `CLAUDE.md`) and `docs/STATUS.md`, take the first unticked item in `docs/QUEUE.md` (unless Alexah names another; read the file's head and that item, not the whole queue), then read the one `docs/exe/` page for its area. Check Ghidra answers at the start of work, if you use it (`AGENTS.md` rule 7).
 - Keep a multi-step task's checklist in the live plan and tick each step before moving on (rule 16).
-- `docs/STATUS.md`'s "Not verified on screen" holds the item just landed and no other. Write a new item's account above the one before it; the same pre-commit hook runs `tools/status-sweep.py`, which moves every earlier account to `docs/history/not-verified.md`.
-- End the session when the task is committed, its `docs/QUEUE.md` item ticked and `docs/STATUS.md` updated. The pre-commit hook (`tools/hooks/pre-commit`, enabled once per clone with `git config core.hooksPath tools/hooks`) runs `tools/queue-sweep.py`, which moves every ticked item to `docs/history/queue-done.md` and stages both files; do not move one by hand. Do not carry the next task in the same context. When Alexah says a clear is coming, read `docs/QUEUE.md` and show the next five unticked items with what each asks (rule 17).
+- `docs/STATUS.md`'s "Not verified on screen" holds the item just landed and no other. Write a new item's account above the one before it; the maintainer's pre-commit hook runs `tools/maintainer/status-sweep.py`, which moves every earlier account to `docs/history/not-verified.md`.
+- End the session when the task is committed, its `docs/QUEUE.md` item ticked and `docs/STATUS.md` updated. The maintainer's pre-commit hook (`tools/maintainer/hooks/pre-commit`, see "Hooks") runs `tools/maintainer/queue-sweep.py`, which moves every ticked item to `docs/history/queue-done.md` and stages both files; do not move one by hand. Do not carry the next task in the same context. When Alexah says a clear is coming, read `docs/QUEUE.md` and show the next five unticked items with what each asks (rule 17).
 - Memory files hold rules and the live plan only, each under 300 lines, and nothing that is finished. Facts go in `docs/`. Corrections replace old text.
 
 ## Unattended runs
@@ -201,6 +233,7 @@ until told to stop. The overnight run of 2026-10-06 was fifteen items in one ses
   with an empty context, the same model and effort, and the permission mode a session at the desk has. `status` shows
   it, `stop` ends it after the item in hand, `abort` ends it now, and `smoke` is one short session that touches
   nothing: run it after Claude Code or the script changes.
+- **A run reads the open issues and pull requests at its start** and skips a queue item that has a `Claimed:` line ("Claims" above).
 - **A session inside a run** sees `OPENTPW_AUTORUN=1` and is told what `prompt.md` beside the script says: one item,
   every rule, nothing trimmed. Its last line is `DONE <Qn>`, `BLOCKED <Qn>`, `STOPPED <reason>` or `NOTHING-LEFT`.
 - **An item that needs Alexah is skipped, never guessed:** a decision that is theirs, their eyes or ears, or an item
@@ -267,4 +300,9 @@ The two READMEs (this repo's and the FileFormats clone's) are written for player
 - **A test's "other" value is written as a constant**, neither nought nor the real one: made by arithmetic on the real one (`held ^ 0x10000`) it can come out as the empty value, and a put-back bug lives on that.
 - **Keep a capture of the original until every instrument planned for it has been tried.**
 - **A script that appends a line to a doc checks the file's last byte:** split on newlines and added after the last, empty piece, the line goes in without the final newline.
+- **A record a stranger can repeat.** A new item's confirmation is written as four things: the **prediction** (made
+  before the run), the **command** or clicks and the build, the census or **log lines** it printed, and the **result**
+  (held, or missed with its cause). Screenshots are welcome where they really help; attach one to the pull request
+  or issue, because a committed picture stays in the history after it is removed. The game's raw textures and models
+  are never committed. `CONTRIBUTING.md`, "Showing how you checked", gives the contributor's version.
 - Say what was **not** verified.

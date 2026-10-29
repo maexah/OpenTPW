@@ -2,7 +2,7 @@
 """Keep docs/STATUS.md's "Not verified on screen" to the item just landed.
 
 Moves every bullet of that section but the first, with the indented lines that continue it, verbatim, to the top of
-docs/history/not-verified.md, so the newest stays first there too. The pre-commit hook (tools/hooks/pre-commit) runs it on a commit that stages
+docs/history/not-verified.md, so the newest stays first there too. The pre-commit hook (tools/maintainer/hooks/pre-commit) runs it on a commit that stages
 docs/STATUS.md. A new item's account is written ABOVE the one before it; the hook does the rest. Prints what it
 moved and refuses to write if a bullet or a line would be lost.
 """

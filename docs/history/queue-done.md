@@ -10907,6 +10907,29 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   ones and now name the three systems; the old test expected `~/.local/share` on every non-Windows system and would have failed on a Mac.
   Windows and macOS were not run: the Windows answers are .NET's documented `ApplicationData` and `LocalApplicationData`, the macOS one is read
   from the source above. Their tests (`UserFoldersTests`) skip here.
+- [x] **Q800. Contributors by default; the Sentinel's way for the maintainer only.** Alexah's pre-weekly list
+  (2026-10-28), every point before any weekly build. (1) Hooks: `tools/hooks/` keeps only a content guard for
+  everyone; the queue/status sweeps and the website push move to a maintainer folder. (2) `AGENTS.md`: an agent does
+  the task its person gave it and never takes a queue item unasked; the queue run's steps move to the maintainer part
+  of `docs/WORKFLOW.md`. (3) `CONTRIBUTING.md`: the game is needed to play and to confirm behaviour, not for docs,
+  tools or tests (the no-game run's counts). (4) `.editorconfig` says `crlf`, every `.cs` is LF: make it `lf`, add
+  `.gitattributes` (`* text=auto eol=lf`). (5)+(8) Newcomers start from a few issues made from queue items tagged
+  "good first", each naming its Q-number, where to look, what is expected, the tools it needs. (6) `ARCHITECTURE.md`
+  takes `AGENTS.md`'s "Where things are" map (moved, not copied). (7) A script checks every path and type named in
+  README, CONTRIBUTING and ARCHITECTURE still exists; the Saturday audit runs it. Quick start for Linux/macOS and
+  Windows; the Linux steps run natively on the maintainer's machine (build, no-game tests, a launch under Xvfb and lavapipe;
+  Alexah, 2026-10-28: no container is to be installed) and marked "tested on the maintainer's Linux machine only", the
+  Windows and macOS steps marked "these launch steps are not tested" until someone runs them; a no-game path and an advanced path (game,
+  Ghidra, Proton harnesses Linux-only). (9) Claims: a `Claimed: @user, #issue, date` line on a queue item; the
+  Sentinel skips claimed items and reads open issues and PRs at a run's start; a claim lapses after 14 quiet days;
+  the maintainer ticks QUEUE and STATUS at merge (the PR template changes to match). (10) A portable verification
+  record for new items: prediction, command, census or log lines, result. Screenshots are allowed where they really
+  help (Alexah: screenshots are fine; raw textures and models are not), best attached to the PR or issue, since a
+  committed picture stays in the history after it is removed. (11) One guard script, shared with `tools/weekly/release.py`, refuses game
+  file types and `save/` in staged files; run by the contributor hook and by hand; `.gitignore` the reference
+  screenshots folder. (12) FileFormats: outsiders may put findings in the PR for us to write up; linked PRs welcome.
+  Extras: a reverse-engineering note (describe, never paste decompiled code; `docs/exe/` is what is shared), a place
+  to ask questions. Docs and tools only; no game run needed except the guard's test.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

@@ -1,0 +1,24 @@
+#!/bin/sh
+# On a commit that stages docs/QUEUE.md, moves ticked queue items to docs/history/queue-done.md
+# (tools/maintainer/queue-sweep.py); on one that stages docs/STATUS.md, moves every account but the newest of STATUS's
+# "Not verified on screen" to docs/history/not-verified.md (tools/maintainer/status-sweep.py), and stages what it moved.
+# Refuses the commit when a file it would sweep has unstaged changes, or when a sweep fails. Needs python3.
+# The maintainer's part: tools/hooks/pre-commit runs this after the content guard where the clone has
+# `git config opentpw.maintainer true`; a contributor's clone does not run it (docs/WORKFLOW.md, "Hooks").
+root=$(git rev-parse --show-toplevel) || exit 1
+if ! git diff --cached --quiet -- docs/QUEUE.md; then
+	if ! git diff --quiet -- docs/QUEUE.md docs/history/queue-done.md; then
+		echo "queue-sweep: docs/QUEUE.md or queue-done.md has unstaged changes; stage them or sweep by hand" >&2
+		exit 1
+	fi
+	python3 "$root/tools/maintainer/queue-sweep.py" || exit 1
+	git add -- "$root/docs/QUEUE.md" "$root/docs/history/queue-done.md"
+fi
+if ! git diff --cached --quiet -- docs/STATUS.md; then
+	if ! git diff --quiet -- docs/STATUS.md docs/history/not-verified.md; then
+		echo "status-sweep: docs/STATUS.md or not-verified.md has unstaged changes; stage them or sweep by hand" >&2
+		exit 1
+	fi
+	python3 "$root/tools/maintainer/status-sweep.py" || exit 1
+	git add -- "$root/docs/STATUS.md" "$root/docs/history/not-verified.md"
+fi

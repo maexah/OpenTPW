@@ -4,6 +4,13 @@
 
 ## How it was checked
 
+A record someone else could repeat (`CONTRIBUTING.md`, "Showing how you checked"):
+
+- Prediction (written before you ran it):
+- Command or clicks, and the build:
+- Lines it printed:
+- Result (held, or missed and why):
+
 - [ ] Built and tested alone in a clean worktree, with `OPENTPW_GAME_PATH` set
 - Test counts (passed / failed / skipped):
 - [ ] Put the bug back and saw a test fail (or say why there is no test)
@@ -19,6 +26,6 @@
 
 ## Docs
 
-- [ ] `docs/QUEUE.md` ticked and `docs/STATUS.md` updated, if this finishes a queue item
+- Queue item (Q-number), if this finishes one: the maintainer ticks `docs/QUEUE.md` and updates `docs/STATUS.md` at merge. Say here, in a line or two, what now works that did not.
 - [ ] File-format facts sent to OpenTPW.FileFormats, executable facts to `docs/exe/`, if any were found
 - [ ] No game content committed
