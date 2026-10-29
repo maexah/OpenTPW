@@ -90,6 +90,6 @@ public class ShaderTests
 
 		StringAssert.Contains( text, $"binding = {Material.TextureSlots + 1} ) uniform sampler s_ColorClamp;" );
 		StringAssert.Contains( text, $"const uint FLAG_CLAMP = 0x{LobbyModel.ClampFlag:x};" );
-		StringAssert.Contains( text, "if ((outMatFlags & FLAG_CLAMP) != 0)\n            return texture(sampler2D(colour, s_ColorClamp), uv);\n\n        return texture(sampler2D(colour, s_Color), uv);" );
+		StringAssert.Contains( text, "if ((outMatFlags & FLAG_CLAMP) != 0)\n            return textureGrad(sampler2D(colour, s_ColorClamp), uv, colourDx, colourDy);\n\n        return textureGrad(sampler2D(colour, s_Color), uv, colourDx, colourDy);" );
 	}
 }

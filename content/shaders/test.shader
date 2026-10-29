@@ -228,17 +228,34 @@ fragment {
     // texture is drawn at its own brightness whatever the light (DrawList_AddMaterialFaces 0x00580530): the water.
     const uint FLAG_UNLIT = 0x80000;
 
+    // Computed before the per-material branches: implicit derivatives inside divergent
+    // control flow are undefined. Each invocation keeps its own footprint here.
+    vec2 colourDx;
+    vec2 colourDy;
+
     vec4 SampleColor(texture2D colour, vec2 uv)
     {
-        if ((outMatFlags & FLAG_CLAMP) != 0)
-            return texture(sampler2D(colour, s_ColorClamp), uv);
+        // A constant UV has no texture footprint: sample the base level explicitly. Lavapipe in
+        // Mesa 25.0.7 returns black there on the advisor's gloves; 25.2.8 draws them without it.
+        if (all(equal(colourDx, vec2(0.0))) && all(equal(colourDy, vec2(0.0))))
+        {
+            if ((outMatFlags & FLAG_CLAMP) != 0)
+                return textureLod(sampler2D(colour, s_ColorClamp), uv, 0.0);
 
-        return texture(sampler2D(colour, s_Color), uv);
+            return textureLod(sampler2D(colour, s_Color), uv, 0.0);
+        }
+
+        if ((outMatFlags & FLAG_CLAMP) != 0)
+            return textureGrad(sampler2D(colour, s_ColorClamp), uv, colourDx, colourDy);
+
+        return textureGrad(sampler2D(colour, s_Color), uv, colourDx, colourDy);
     }
 
     void main()
     {
         vec2 finalTexCoords = vs_out.vTexCoords;
+        colourDx = dFdx(finalTexCoords);
+        colourDy = dFdy(finalTexCoords);
 
         vec3 N = normalize(g_oUbo.g_flWorldNormals > 0.5 ? vs_out.vWorldNormal : vs_out.vNormal);
         // g_vLightPos is a world-space point - Level.SunLight.Position - so what it is measured

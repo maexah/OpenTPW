@@ -30,9 +30,9 @@ assert if its jungle folder already holds NAME.TPWS. OUT receives confirm.txt, r
                               (cell x 10; send it, `step 2`, then take the census again and save)
 
 OFFSCREEN = True runs on a private Xvfb (:78, or OFFSCREEN_DISPLAY) drawn by lavapipe, beside a run on the desktop, in a second private
-game folder. It keeps time and takes real clicks, but
-every texture is drawn white: its census and its log are evidence, its photographs are NOT. The run prints that once
-at its start; shot() does not repeat it."""
+game folder. It keeps time and takes real clicks, and lavapipe draws the textures as the desktop's GPU does, only
+slower; a change to what is drawn is still photographed on the desktop (AGENTS.md rule 6). The run says so once at its
+start; shot() does not repeat it."""
 import os, shutil, subprocess as _sub, sys, time as _time
 import paths   # the calling script put tools/harness/lib on sys.path (README.md, "Writing a run")
 import pk
@@ -72,7 +72,7 @@ if globals().get("AUDIO_FILE"):   # the game's own mix written to a file (f32le 
     _LIB = _LIB.replace('SDL_AUDIODRIVER="dummy"', f'SDL_AUDIODRIVER="disk", SDL_DISKAUDIOFILE="{AUDIO_FILE}"')
 exec(_LIB)
 if _OFF:
-    print(f"OFF-SCREEN on {_DISP} (lavapipe): the census and the log are evidence, the photographs are not (white textures)")
+    print(f"OFF-SCREEN on {_DISP} (lavapipe): photograph a change to what is drawn on the desktop, not here")
 
 score = [0, 0]
 def said(ok, what):

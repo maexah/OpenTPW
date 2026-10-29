@@ -39,7 +39,7 @@ Everything here runs on **Linux with X11** (or XWayland). Nothing here is part o
    that slot and read `save/users/1ref/`.
 5. Check it: `python3 -u tools/harness/lib/parkrun-smoke.py ~/.cache/opentpw-harness/smoke source/OpenTPW/bin/Debug/net10.0`
    enters the park, saves, loads the file back and prints `SCORE 1 of 1`. Add `off` to run it on a private display
-   (it needs `Xvfb` and the lavapipe Vulkan driver; every texture is drawn white there, so its pictures are not evidence).
+   (it needs `Xvfb` and the lavapipe Vulkan driver, which draws the game as the desktop's GPU does, only slower).
 
 ## Writing a run
 

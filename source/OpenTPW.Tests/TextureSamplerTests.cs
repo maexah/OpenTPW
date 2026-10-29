@@ -20,6 +20,21 @@ namespace OpenTPW.Tests;
 public class TextureSamplerTests
 {
 	/// <summary>
+	/// The shaders read RGBA with sampler2D, not depth with sampler2DShadow. Enabling comparison
+	/// (even Always) makes lavapipe draw white instead of the artwork. Exercise the description
+	/// CreateSampler actually passes to the device for every material sampler.
+	/// </summary>
+	[DataTestMethod]
+	[DataRow( SamplerType.Anisotropic )]
+	[DataRow( SamplerType.Linear )]
+	[DataRow( SamplerType.Point )]
+	[DataRow( SamplerType.AnisotropicWrap )]
+	[DataRow( SamplerType.AnisotropicRepeat )]
+	public void ColourSamplersDoNotEnableDepthComparison( SamplerType type )
+		=> Assert.IsNull( Material.SamplerDescriptionFor( type ).ComparisonKind,
+			"Colour sampling requires comparison disabled, not an Always comparison." );
+
+	/// <summary>
 	/// The lobby's sea asks for <see cref="TextureFlags.Wrap"/>, and that has to mean the wrapping
 	/// sampler. The sky's two textures ask for it too, and the loading screen's status strip asks for
 	/// <see cref="TextureFlags.PointFilter"/>; every other request gets the default.

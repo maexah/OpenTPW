@@ -103,6 +103,10 @@ public partial class Material : Asset
 	];
 
 	private static Sampler CreateSampler( SamplerType type )
+		=> Device.ResourceFactory.CreateSampler( SamplerDescriptionFor( type ) );
+
+	/// <summary>The sampling state used by every material texture, testable without a graphics device.</summary>
+	internal static SamplerDescription SamplerDescriptionFor( SamplerType type )
 	{
 		var samplerFilter = type switch
 		{
@@ -120,20 +124,20 @@ public partial class Material : Asset
 			_ => throw new NotImplementedException()
 		};
 
-		var samplerDescription = new SamplerDescription(
+		return new SamplerDescription(
 			samplerAddressMode,
 			samplerAddressMode,
 			samplerAddressMode,
 			samplerFilter,
-			ComparisonKind.Always,
+			// These shaders sample colour with sampler2D. Even Always enables depth comparison;
+			// lavapipe then returns white instead of the texel. Null disables comparison sampling.
+			null,
 			(type == SamplerType.Anisotropic || type == SamplerType.AnisotropicWrap || type == SamplerType.AnisotropicRepeat) ? 16u : 0u,
 			0,
 			10,
 			0,
 			SamplerBorderColor.TransparentBlack
 		);
-
-		return Device.ResourceFactory.CreateSampler( samplerDescription );
 	}
 
 	/// <summary>
