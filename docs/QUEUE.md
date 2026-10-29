@@ -64,13 +64,15 @@ default, Alexah's second pre-weekly list), then the rest in the order below.
 **Ordered at Alexah's word (2026-10-29):** Q804, Q805 and Q806, found while photographing Alexah's Full Simulation
 park for the website, go first. Q804 stopped the photographs: no picture with the blue lines will be used.
 
-- [ ] **Q818. What Q813 left of the conform and the drape: the normals, the control word, the ground's split.** From Q813 (run 14, lane A).
-  (3) The recomputed face normals (`FUN_00473c30`, whether they reach the lighting; a pylon's morph leaves its normals as made too) and the
-  control word the conform runs under are unread (Q750's note). (4) The ground mesh still splits every cell one way (Q398), so a
-  draped vertex on a cell flagged `0x4` follows the original's triangle where the ground beside it follows ours. Confirm each in
-  both games as Q808 did (`lib/clearseam.py`, `original/basevertices.py`). Also left by Q817: a stacked pylon stands on the stack-height
-  record (`StackHeightDummy` on `StdPylon`), the type flag `0x10` keeps its floor, a loop pylon is another model: none is in her park, so each
-  needs a park that holds one (a coaster built in the original, then loaded in both games).
+- [ ] **Q820. What Q818 left of the conform and the drape: the ground's split, the stacked and loop pylons.** From Q818 (run 14, lane A;
+  its piece (3), the face normals and the control word, is Q819). (1) The ground mesh still splits every cell one way (Q398), so a
+  draped vertex on a cell flagged `0x4` follows the original's triangle where the ground beside it follows ours. Confirm it in
+  both games as Q808 did (`lib/clearseam.py`, `original/basevertices.py`). (2) Left by Q817: a stacked pylon stands on the
+  stack-height record (`StackHeightDummy` on `StdPylon`), the type flag `0x10` keeps its floor, a loop pylon is another model:
+  none is in her park, so each needs a park that holds one (a coaster built in the original, then loaded in both games).
+  (3) Left by Q819: say at `ProceduralConform` that ours works the conform in `float` where the original runs under the
+  control word in force (`0x27f`, 53-bit, under Proton: `park-engine.md`, "The control word"); what Windows' own DirectDraw
+  leaves under `DDSCL_FPUSETUP` needs real Windows. Q819 found nothing to build for the face normals.
 - [ ] **Q849. What Q810 left: two counted gaps her played park's save now reaches, and two loads never run.** (From Q810's review,
   run 14.) Q810 made her Full Simulation `New Save.TPWS` read whole, so the save goes through the running-things writer for the
   first time (before, the model walk failed and the whole module was written as the file's). Two counters then fire, in

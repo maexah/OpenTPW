@@ -11085,6 +11085,21 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   conform, the saved node word's `0x400`. `park-engine.md`, "OpenTPW draws the pylons". Confirmed against the original's live nodes and frames of the same
   file taken this session (each pylon's loft, yaw, incline, bank and knot to 0.002); 22 bugs put back, 20 caught (the other two, a footprint of two cells and the rotate
   clip's sign, change nothing for the Minecart: a wider footprint lists the same four corners and its clip turns one way).
+- [x] **Q818. What Q813 left of the conform and the drape.** Split in run 14, lane A: (3), the face normals and the control word, is
+  Q819 (the decode); (4), the ground's split, and Q817's stacked and loop pylons are Q820.
+- [x] **Q819. Whether the recomputed face normals reach the lighting, and the control word the conform runs under (Q818's piece (3),
+  decode first).** Done 2026-10-29 (run 14, lane A, `alexah/779-face-normals-decode`). **They do not**: `FUN_00473a40` writes each
+  face's normal at the entry its first word names, the lighter (`0x00574660`) and the normal-made UV read only the table's first run
+  (one entry per vertex-order entry), and no park model's face names a first-run entry (the 153 meshes under `data/` whose faces do
+  are all `ui.wad`'s, `lib/facenormals.py --sweep`). Every instance has its own table (the clone's `0x8`). The face entries feed the
+  picker and the height a point stands on; ours' picker already takes each triangle's own plane. A mesh flagged `0x1000000` holds a
+  colour stream at `+0x64` (the pulse, the hover's tint). **The control word** at `FUN_00469940` and `FUN_00473c30` during a file's
+  load is `0x27f`, 53-bit, under Proton (40 of 40); the executable sets none there, and Windows' own DirectDraw needs real Windows.
+  Measured in the original on a copy of Alexah's Full Simulation New Save (`original/facenormals.py`, `original/brk.sh`): 1,192
+  meshes, all own, the first run the master's but for the highlighted pylon's two meshes (slot 202, `[0x007a1ce0]`), no face on the
+  first run, every face not marked stale agreeing with its triangle to 1e-4. `park-engine.md`, "The recomputed face normals never
+  reach the lighting" and "The control word". 8 predictions, 1 missed (P3: the tint read as changed normals).
+
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

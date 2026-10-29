@@ -244,9 +244,40 @@ vertices, its box only widened. A corner past the heightfield's last ends that n
 `FUN_004557c0` -> `FUN_00454a10` with `0x211f` (`0x231f` under its own `0x800`), which copies each mesh node's 0xa0-byte record
 whole (`0x00454d72`), so `0x1000`, `0x20000` and the list pointer at `+0x98` come across; bit `0x4` becomes `0x100` (`0x00454a4e`..`0x00454a67`), which copies the vertex blocks too
 (`0x00454f64`, `0x00454fa1`, each node's `+0x60` moved onto the copy from `0x00454fd2`), so the conform writes the instance's own vertices and
-reads the type's (`[header + 0x9c]`, the master) at rest. The instancer then sets `0x10000` on every node of every instance it makes and calls `FUN_00473c30`
-(`0x00463937`), which recomputes the face normals of the nodes so flagged (`FUN_00473a40`, cross products into the node's
-face-normal block) and clears header `0x40000`; whether the face normals reach the lighting is unread.
+reads the type's (`[header + 0x9c]`, the master) at rest. The instancer then sets `0x10000` on every node of every instance it makes and calls `Model_RecomputeStaleFaceNormals`
+(`FUN_00473c30`, `0x00463937`), which recomputes the face normals of the nodes so flagged (`Mesh_RecomputeFaceNormals`,
+`FUN_00473a40`) and clears header `0x40000`.
+
+**The recomputed face normals never reach the lighting** (Q819). Each node's normals table (`+0x64`, twelve bytes an
+entry) is two runs (FileFormats `models.md`, "Normals"): one entry per vertex-order entry, then the faces'. The clone's
+`0x8` (in the instancer's `0x211f`) copies the header's normals pool (`+0x5c`, `+0x4a` entries; `0x00454f05`..`0x00454f44`)
+and rebases each node's `+0x64` into it (`0x00455012`..`0x0045503f`), so every instance has its own table. `Mesh_RecomputeFaceNormals`
+takes each face record (word, a, b, c), its corners through the vertex order (`+0x94`) into the vertices (`+0x60`), and
+writes normalise( (c - b) x (a - b) ) at the entry the word's low 15 bits name, or (0, -1, 0) when that is not a number
+(`FUN_0067b410`); then clears the node's `0x10000`. The lighter (`Light_ModelVertexColours`, `0x00574660`) reads only the
+first run, entry i for vertex-order entry i (`+0x5e` of them), and so does the draw list's normal-made UV
+(`DrawList_AddMaterialFaces`, for a texture flagged `0x8000000`: u = (n . r + 1) / 2, scaled and offset, from the view's rows at
+`[0x0087afe8]`, `0x005806f8`..`0x005807b4`), indexed by vertex. No park model's face names an entry in the first run: of
+the 4,917 meshes of the 2,123 `.md2` under `data/`, 153 have such faces, all in `ui.wad` (`lib/facenormals.py --sweep`),
+and the vertex count never passes the vertex-order length. The face entries' readers are the picker
+(`PickMarch_MeetModel`, `0x0045d16a`; `PickMarch_AskCell` first recomputes a model's stale nodes, `0x0045ced9`) and the
+height a point stands on (`FUN_00451390`, `0x0045142b`, when no normals are handed in). After a conform `FUN_00469940`
+marks only the instance's root node `0x10000` and its header `0x40000` (`0x00469a56`..`0x00469a6b`); the instancer marks
+every node after it, a pylon's later stand does not, and `Model_AdvanceChannels` recomputes marked nodes only for a header
+flagged `0x4` (`0x00473dc1`). **Measured in the original** (`q819/orig/o3`, `o5`, `original/facenormals.py`; a Full
+Simulation player loading a copy of Alexah's `New Save.TPWS`, 200 s; o3's counts, o5's within three meshes): 1,192 meshes, every table the instance's own; the
+first run as the master's in every mesh but two colour-swapped ones (below); no face names a first-run entry; 31,167 of
+33,709 faces hold the normal worked out from their instance's own vertices to 1e-4, and the other 2,542 are all in the 60
+meshes still marked `0x10000`; 6,774 face entries differ from the master's (`gates.MD2`'s 187 among them, its file
+entries lying off their planes; which of the rest are conformed floors was not counted). **A mesh flagged `0x1000000` holds colours at `+0x64`, not normals**: the lighter passes it
+over (`Light_ModelSetup`, `0x0057aa10`) and the draw takes `+0x64` as its colour stream (`DrawList_AddMesh`,
+`0x00581d56`). `Model_PulseOn` (`0x00469580`) sets it on every node and its tick writes one `0xffffVVVV` word per
+vertex-order entry into the table, over the first run (a new pool only where the instance still shares the master's);
+`Model_PulseOff` (`0x00469650`) copies the master's first run back. The hover's highlight swap `FUN_00469180` points
+`+0x64` at a tint block and keeps the old pointer in `[0x007afd94]`: in the run the two were the pylon under the Load
+click's pointer (`[0x007a1ce0]` = slot 202, `mc_pylon` and `mc_bridge`, 160 entries; the pulse list empty), drawn bright
+yellow under "Left-click to edit this track" (`q819/orig/o5/o-t19651.png`). OpenTPW's picker takes each triangle's plane from its
+placed corners (`ParkPickMarch.MeshTriangles`), the same vector, and it lights by its own normals, so nothing is to build.
 
 **`FUN_00469940( model, scene, H, mode )` makes two passes** (Q812). The first is `FUN_00469a80( master root, instance root )`
 over the whole tree (`0x004699d2`); the second runs it again on each mesh node with a list at `+0x98` (`0x004699eb`), that node
@@ -283,7 +314,13 @@ at its terrain corner's height, none off (the other 8 are the floors of the two 
 root height, to 0.0001. The interpolating pass moved the kart station's 16 listed vertices (`gk_TRACK01`) and the
 Lava Jump's 20 (`gk_brdge`) each by the ground along its cell line less the root height, to 0.0001 (`orig2/bv80.txt`). Things were made `0x32f` (119) or `0x3fa` (40, the coaster's pylons), pieces `0x33a` (269). In its `bv75` the 119 things list 765 base vertices and use 765, the 40 pylons list 160 and use 152 (765 + 152 = 917 used, 765 + 160 = 925 listed); a mesh whose lookup record carries `0x10000` (`mammtunn`'s `gk_mam1`) is skipped by the count (`0x0044a94b`, `0x00469ad0`), so the Dino Karts Tunnel lists 7, all on `gk_tracktop01`. Its frame at
 the Sun God camera holds no clear-coloured sliver (`o-t19197.png`, 0); ours at the same camera, unchanged, 5,652 (`q812/ours1`).
-Not settled: the control word the arithmetic runs under (Q750's note), which moves only the last bits.
+**The control word** (Q819): the conform sets none (the executable's `fldcw`s are the CRT's, `__ftol`'s, the frame
+renderer's `FUN_00591250` and a coaster routine's own chop at `0x00439ab0`..`0x00439c30`), so it runs under the one in
+force. Under Proton it is `0x27f` (53-bit, nearest, all masked): `original/brk.sh` on `FUN_00469940` and `FUN_00473c30`
+read it 40 times of 40 during the load of a copy of Alexah's `New Save.TPWS` (`q819/orig/o2/brk.txt`, every hit at the
+file's tick 19004). What Windows' own DirectDraw leaves under `DDSCL_FPUSETUP` cannot be read without real Windows
+("Which rounding is live is not settled", below); it moves only the last bits. OpenTPW works the conform in `float` (the corner's
+fraction in `double`, `ProceduralConform`), which matches the original's stored vertices to 0.0001 (above).
 
 **A coaster's pylons** (Q816). Each node of a coaster's track that stands on a cell has a pylon, made `0x3fa` by `Coaster_AddNode`
 (`FUN_00463060` at `0x00434276`, which conforms it as it is made, as above; or an existing instance re-claimed by `FUN_00463ab0` at
@@ -352,7 +389,7 @@ grid line and sets the height to the nearest corner's, nothing added (always, an
 piece, and the meshes a placed object's lookup record marks `0x10000` (`mammtunn`'s `gk_mam1`), and raises each vertex by the
 height under it on the cell's triangle (`DrapeHeight`, the flag `0x4` as above) less the model's own height; a source vertex moves
 under every drawn vertex that names it, and `SourceVertices` stay the rest the floor search and the hoardings read. The cell's
-triangle here is the original's, while the ground mesh is still split one way (Q398). **Not built:** the recomputed face normals and the control word the arithmetic runs under. **Measured in OpenTPW** (Q808, Alexah's New Save, a copy): the Sun God 18 of 18 listed rim
+triangle here is the original's, while the ground mesh is still split one way (Q398). Nothing is to build for the recomputed face normals or the control word (Q819, "The recomputed face normals never reach the lighting" and "The control word", above). **Measured in OpenTPW** (Q808, Alexah's New Save, a copy): the Sun God 18 of 18 listed rim
 vertices on a corner, the Tom Tom Twister 20 of 20, the Costume Shop 12 of 12 (the original's counts), 1,782 queue vertices and
 1,736 track-piece vertices draped, and the clear-coloured sliver pixels at the Sun God camera 5,751 to 11, the Tom Tom Twister's
 16,308 to 0, the Costume Shop's 7,844 to 0.
@@ -1439,7 +1476,8 @@ asked axis may leave its cell.
 
 **Which rounding is live is not settled.** The CRT starts the FPU at 53-bit precision (`0x006804da`). In the running
 original a breakpoint at `0x0059e17b` read the control word `0x27f`, 53-bit, on ticks 970 and 1125 (`advisor-park.md`,
-"The product is a double of the float key"), beside the 24-bit clock accumulator below: both states occur (fork watch
+"The product is a double of the float key"), and at the conform during a file's load 40 times of 40 (Q819, "The
+control word" above), beside the 24-bit clock accumulator below: both states occur (fork watch
 2026-10-18, `verify-world-a.md` H2). The frame
 renderer `FUN_00576ec0` switches to 24-bit at `0x00576fa7` and has three exits. On success it restores the saved word
 (`0x00577310`), or, when the `0x2` bit of `[0x008bd508]` is set (`TEST AL,0x2` at `0x005772f6`), the saved word with the precision bits set,
