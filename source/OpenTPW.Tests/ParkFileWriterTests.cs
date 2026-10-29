@@ -572,7 +572,7 @@ public class ParkFileWriterTests
 			// Two seconds are 64 ticks and 16 ms owed toward the next: the file's moment is the frame's, not the last tick's.
 			Assert.AreEqual( shipped.Clock.Reading + (64u * 31u) + 16u, written.Clock.Reading );
 			Assert.AreEqual( 31, written.Objects.Single( placed => placed.ThingId == 13 ).FirstInQueue );
-			Assert.IsNull( written.ThingStates( id => catalogue.TryGet( id, out var item ) ? item.AnimationChannels : 1 ).Problem, "the Jungle Spray's three channels are walked as three" );
+			Assert.IsNull( written.ThingStates( id => catalogue.ChannelsFor( id ) ).Problem, "the Jungle Spray's three channels are walked as three" );
 			Assert.IsFalse( Unimplemented.Summary.Any( gap => gap.What == "SAVE_PARK_THINGS_AS_THE_FILE" ) );
 
 			Assert.IsNotNull( Level.WritePark( shipped, state, "jungle", "Carried" ) );
@@ -701,7 +701,7 @@ public class ParkFileWriterTests
 			Assert.AreEqual( (ape, 91), ((int)script.Thing, script.ModelHandle) );
 			Assert.IsNull( written.ScriptStates.For( 6 ), "the shop's script" );
 
-			var models = written.ThingStates( id => catalogue.TryGet( id, out var item ) ? item.AnimationChannels : 1 );
+			var models = written.ThingStates( id => catalogue.ChannelsFor( id ) );
 
 			Assert.IsNull( models.Problem );
 			Assert.AreEqual( (1101, rides.ScriptFor( ape )), (models.Things.Single( thing => thing.Slot == 90 ).CatalogueId, models.Things.Single( thing => thing.Slot == 90 ).ScriptHandle) );
@@ -841,7 +841,7 @@ public class ParkFileWriterTests
 			Assert.AreEqual( (x, z), (floated.CentreX, floated.CentreZ) );
 			CollectionAssert.AreEqual( new[] { (leaver, false), (boarder, true) }, boat.TrackRides.Listed.Select( peep => (peep.Peep, peep.Boarding) ).ToArray() );
 
-			ParkThingStates Models( ParkWorld world ) => world.ThingStates( item => catalogue.TryGet( item, out var known ) ? known.AnimationChannels : 1 );
+			ParkThingStates Models( ParkWorld world ) => world.ThingStates( item => catalogue.ChannelsFor( item ) );
 
 			var models = Models( boat );
 			var (own, wake) = (floated.Word( 0x08 ) - 1, floated.Word( 0x0c ) - 1);

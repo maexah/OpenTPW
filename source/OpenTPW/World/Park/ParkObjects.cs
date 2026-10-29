@@ -266,7 +266,7 @@ public sealed class ParkObjects : Entity
 
 		if ( world is ParkWorld savedWorld )
 		{
-			var states = savedWorld.ThingStates( id => catalogue.TryGet( id, out var item ) ? item.AnimationChannels : 1 );
+			var states = savedWorld.ThingStates( catalogue.ChannelsFor );
 			if ( states.Problem == null )
 				foreach ( var saved in states.Things ) _savedHoardings[saved.Slot + 1] = saved;
 			else Log.Warning( $"Hoarding restore: {states.Problem}" );

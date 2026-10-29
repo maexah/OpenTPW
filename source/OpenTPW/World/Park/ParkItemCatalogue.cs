@@ -323,6 +323,7 @@ public sealed class ParkItemCatalogue
 					Log.Warning( $"{themeName}: items '{existing.Stem}' and '{stem}' both claim catalogue number {item.Id}" );
 
 				_items[item.Id] = item;
+				ReadPylonTypes( item.Directory );
 			}
 		}
 
@@ -501,6 +502,52 @@ public sealed class ParkItemCatalogue
 
 	/// <summary>The item that calls itself <paramref name="id"/>, if this theme has one.</summary>
 	public bool TryGet( int id, out Item item ) => _items.TryGetValue( id, out item );
+
+	/// <summary>How many channels a coaster's pylon model has, whatever the item (<c>Coaster_RegisterModels</c>, <c>0x0042fcbf</c>).</summary>
+	public const int PylonChannels = 5;
+
+	/// <summary>The type ids the catalogued coasters' <c>coaster.sam</c> files give their pylons, <c>asPylonControls[n].uiPylonTypeUniqueID</c>.</summary>
+	private readonly HashSet<int> _pylonTypes = [];
+
+	/// <summary>
+	/// Takes the pylon types of the coaster in <paramref name="directory"/>, if it holds a <c>coaster.sam</c>. The original
+	/// registers two (<c>Coaster_RegisterModels</c>, <c>0x0042fcbf</c> and <c>0x0042fd36</c>, from <c>Coaster_LoadPylonControls</c>
+	/// <c>0x0042eb70</c>), and a type its file does not name has no id to register.
+	/// </summary>
+	private void ReadPylonTypes( string directory )
+	{
+		try
+		{
+			using var stream = Files.OpenReadOrNull( $"{directory}/coaster.sam" );
+
+			if ( stream == null )
+				return;
+
+			var sam = new SettingsFile( stream );
+
+			for ( var index = 0; index < PylonTypesPerCoaster; ++index )
+			{
+				if ( int.TryParse( sam[$"asPylonControls[{index}].uiPylonTypeUniqueID"], out var id ) )
+					_pylonTypes.Add( id );
+			}
+		}
+		catch ( Exception e )
+		{
+			Log.Warning( $"{directory}: its coaster.sam would not read, so its pylons' channels are taken as one - {e.Message}" );
+		}
+	}
+
+	private const int PylonTypesPerCoaster = 2;
+
+	/// <summary>
+	/// How many channels the model of the saved record naming <paramref name="id"/> holds, which the walk of a park file's model
+	/// module must know to step over a record (<c>RideSystem_LoadModels</c>, <c>0x004647a0</c>; <c>docs/exe/saves.md</c>,
+	/// "How many channels a saved model has"): an item's own <c>NumSimultAnims</c>, a coaster's pylon type's
+	/// <see cref="PylonChannels"/>, and one for every other type (a car, an item's extra mesh, a queue, track or hoarding
+	/// piece) and for an id nothing here names.
+	/// </summary>
+	public int ChannelsFor( int id )
+		=> TryGet( id, out var item ) ? item.AnimationChannels : _pylonTypes.Contains( id ) ? PylonChannels : 1;
 
 	/// <summary>
 	/// Everything this theme catalogued, as the dictionary yields it (the order it was read in while nothing is removed, which RegisterParticleEffects counts on) - what a screen listing what a park may

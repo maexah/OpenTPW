@@ -62,7 +62,7 @@ public class ParkFileWriterEmitterTests
 		Unimplemented.Forget();
 	}
 
-	private int ChannelsFor( int id ) => catalogue.TryGet( id, out var item ) ? item.AnimationChannels : 1;
+	private int ChannelsFor( int id ) => catalogue.ChannelsFor( id );
 
 	private ParkFileWriter.Running Carried => new( shipped.GameTick, shipped.ParkClosed != 0,
 		shipped.NumberOfVisitorsToDate, shipped.Economy!.Value.Balance, shipped.Camera.Saved!.Value );

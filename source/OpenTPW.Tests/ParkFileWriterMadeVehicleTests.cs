@@ -81,7 +81,7 @@ public class ParkFileWriterMadeVehicleTests
 		return new ParkWorld( body, reader.Preamble );
 	}
 
-	private int ChannelsFor( int id ) => catalogue.TryGet( id, out var item ) ? item.AnimationChannels : 1;
+	private int ChannelsFor( int id ) => catalogue.ChannelsFor( id );
 
 	private static int Times( string gap ) => Unimplemented.Summary.Where( counted => counted.What == gap ).Sum( counted => counted.Times );
 

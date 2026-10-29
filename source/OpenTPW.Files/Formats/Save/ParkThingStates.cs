@@ -203,8 +203,8 @@ public sealed partial class ParkThingStates
 	/// Reads the module out of the inflated payload.
 	/// </summary>
 	/// <param name="channelsFor">
-	/// How many animation channels a given catalogue id's item runs at once - its
-	/// <c>NumSimultAnims</c>. Answer 1 for anything unknown, which is what the engine floors it to.
+	/// How many channels the model a record names holds (<c>ParkItemCatalogue.ChannelsFor</c>): an item's
+	/// <c>NumSimultAnims</c>, five for a coaster's pylon type, one for anything else, which is what the engine floors it to.
 	/// </param>
 	public ParkThingStates( byte[] inflatedPayload, Func<int, int> channelsFor )
 	{

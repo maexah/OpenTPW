@@ -751,14 +751,13 @@ public sealed class ParkRides : Entity
 	/// models"), which is what tells three Small Toilets' records apart. A record of another item than the thing's
 	/// is not its model's, and is left.
 	/// </summary>
-	private Dictionary<int, SavedThing> PairSavedThings( ParkWorld world, ParkItemCatalogue catalogue )
+	internal Dictionary<int, SavedThing> PairSavedThings( ParkWorld world, ParkItemCatalogue catalogue )
 	{
 		var paired = new Dictionary<int, SavedThing>();
 
 		// How many channels an item runs at once - the one thing the module does not carry, and without
 		// which its records cannot be stepped over at all.
-		var states = world.ThingStates(
-			id => catalogue.TryGet( id, out var item ) ? item.AnimationChannels : 1 );
+		var states = world.ThingStates( catalogue.ChannelsFor );
 
 		if ( states.Problem != null )
 		{
@@ -935,7 +934,7 @@ public sealed class ParkRides : Entity
 	/// </para>
 	/// </summary>
 	/// <param name="objects">The file's objects as they run, in the file's order.</param>
-	/// <param name="channelsFor">How many channels an item's model runs, its <c>NumSimultAnims</c>.</param>
+	/// <param name="channelsFor">How many channels a record's model holds (<see cref="ParkItemCatalogue.ChannelsFor"/>).</param>
 	/// <param name="hoardingFor">A thing's hoarding, or null for a thing with none.</param>
 	/// <param name="bought">The objects bought since the load, each written whole with its script and its model.</param>
 	/// <param name="gone">The file's objects sold since, whose records are taken out.</param>

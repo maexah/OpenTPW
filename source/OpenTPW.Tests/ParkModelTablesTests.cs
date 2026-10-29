@@ -33,7 +33,7 @@ public class ParkModelTablesTests
 		catalogue = new ParkItemCatalogue( Theme, data );
 	}
 
-	private int ChannelsFor( int id ) => catalogue.TryGet( id, out var item ) ? item.AnimationChannels : 1;
+	private int ChannelsFor( int id ) => catalogue.ChannelsFor( id );
 
 	private (ModelFile Model, RideAnimations Clips, ParkItemCatalogue.Item Item) Load( int id )
 	{

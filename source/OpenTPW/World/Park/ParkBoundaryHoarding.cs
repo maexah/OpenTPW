@@ -248,7 +248,7 @@ public sealed class ParkBoundaryHoarding : Entity
 		if ( park?.Save is not { } save )
 			return pieces;
 
-		var states = save.ThingStates( id => catalogue != null && catalogue.TryGet( id, out var item ) ? item.AnimationChannels : 1 );
+		var states = save.ThingStates( id => catalogue?.ChannelsFor( id ) ?? 1 );
 
 		if ( states.Problem != null )
 		{

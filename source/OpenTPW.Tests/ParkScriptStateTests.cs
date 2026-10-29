@@ -232,7 +232,7 @@ public class ParkScriptStateTests
 		var catalogue = new ParkItemCatalogue( "jungle", data );
 
 		var states = park.ThingStates(
-			id => catalogue.TryGet( id, out var item ) ? item.AnimationChannels : 1 );
+			id => catalogue.ChannelsFor( id ) );
 
 		Assert.IsNull( states.Problem, "the model module should read without a surprise" );
 		Assert.IsTrue( states.ClosedOnEnd, "and the walk must land exactly on the module's end" );
@@ -438,7 +438,7 @@ public class ParkScriptStateTests
 		var catalogue = new ParkItemCatalogue( "jungle", data );
 		var clock = park.Clock;
 
-		var states = park.ThingStates( id => catalogue.TryGet( id, out var item ) ? item.AnimationChannels : 1 );
+		var states = park.ThingStates( id => catalogue.ChannelsFor( id ) );
 		var bouncy = states.For( 1100, 0 )!.Value.Channels[0];
 
 		Assert.AreEqual( -1376, clock.Since( bouncy.StartTime ), "the Belly Bounce's loop began this long before the save" );

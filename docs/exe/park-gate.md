@@ -102,10 +102,10 @@ channel, on role 5, so this runs for it). What those two do to the drawn doors w
 **Measured (Q809, `q805/`, every prediction in its `PREDICTION.txt`, 8 of 8 held).** All three files save the gate's
 channel 0 held on its opening clip: flags `0x4`, role 5, entry 1 (`gatechan.out`, read by `rsys.py`): the stock
 `Easymode.TPWI`, and Alexah's Full Simulation `New Save.TPWS` and `autosave.TPWS`. Ours reads the same channel through
-`ParkThingStates` only, and that walk stops in Alexah's file at 2058464 of the module's 2101020 (Q779: the Temple of
-Gloom's 40 pylon records, item 1181 (`StdPylon`, made `0x3fa` by `Coaster_SetupPylonModel`, `0x00430590`), read as one channel each). So none of her park's channels comes back and the gate
-stands idle at its rest pose, the doors shut, while `gate` reads command 1, status 1. **The park's state is right;
-the pose is lost on load.**
+`ParkThingStates` only, and until Q810 that walk stopped in Alexah's file at 2058464 of the module's 2101020 (the Temple of
+Gloom's 40 pylon records, item 1181 (`StdPylon`, made `0x3fa` by `Coaster_SetupPylonModel`, `0x00430590`), read as one channel each where the original reads five, Q814). So none of her park's channels came back and the gate
+stood idle at its rest pose, the doors shut, while `gate` read command 1, status 1. **The park's state was right;
+the pose was lost on load.** The walk now takes a pylon's five (Q810, below the table).
 
 | Run | Binary | Log and census | Frame (camera 480 165 120 0) |
 |---|---|---|---|
@@ -114,9 +114,15 @@ the pose is lost on load.**
 | The original under Proton, a copy of the same file | `TP-nodisc.exe` | (frames only) | `orig/gate/o-t19017.png`: open |
 | Probe, not a fix: item 1181 (the pylons) read as 5 channels | a throwaway worktree | "106 animation channels put back"; thing 11 `HELD flags 0x14` | `run3probe/gate_fs.png`: open |
 
-The probe's count is `rsys.py`'s reading, not the original's (Q779 decodes that). That probe changed `ParkRides`' count alone, so
+The probe's count was `rsys.py`'s reading; the original's is decoded (Q814: five for a pylon type) and built (Q810). That probe changed `ParkRides`' count alone, so
 its frame still shows no boundary wall: the hoardings' and the boundary's own reads of the walk stayed broken. With all four callers
 given the count the wall stands too (`park.md`, "The boundary hoarding's piece", Q811).
+
+**Built (Q810, `q810-a7/`, every prediction in its `PREDICTION.txt`, 11 of 11 held).** On the build with `ParkItemCatalogue.ChannelsFor` (dll md5 `9c40d6b4`), her
+`New Save.TPWS` copy: no "would not read" line; "124 of them can see their own animations; 124 resumed ...; 106 animation channels put back"; thing 11
+`channels [0:role 5 entry 1 frame 50.0/50.0 HELD flags 0x14]`, `gate 11 closed 0 ... command 1 status 1`; `boundary pieces 163 anchors 163 unmade 0`;
+`run3fs/gate_fs.png`: the doors open and the wall round the gate towers, as `q805/orig/gate/o-t19017.png` (the original's frame of the same file and camera,
+taken for Q809 and not retaken for Q810; 1024 x 768 with the HUD, ours 1280 x 720 without). The stock park: 15 put back, wall 143, doors open (`run4stock/`).
 
 The frames are not alike in size: `orig/gate/o-t19017.png` is 1024 x 768 with the HUD, the hint bar and the wall; the other three are 1280 x 720 with no HUD.
 

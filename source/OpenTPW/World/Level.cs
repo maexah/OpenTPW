@@ -914,7 +914,7 @@ public class Level
 		} ).ToList();
 
 		var things = rides?.Written( loaded, objects,
-			id => catalogue != null && catalogue.TryGet( id, out var item ) ? item.AnimationChannels : 1, state.HoardingFor,
+			id => catalogue?.ChannelsFor( id ) ?? 1, state.HoardingFor,
 			bought, gone, state.BuiltItems );
 
 		// Each track ride made or gone, for the track-rides module, and each of the file's still standing. One with

@@ -195,7 +195,7 @@ public class RideHoardingTests
 		using var input = data.OpenRead( "levels/jungle/Easymode.TPWI" );
 		var world = new ParkWorld( new SaveReader( input ).ReadFile() );
 		var catalogue = new ParkItemCatalogue( "jungle", data );
-		var saved = world.ThingStates( id => catalogue.TryGet( id, out var known ) ? known.AnimationChannels : 1 );
+		var saved = world.ThingStates( id => catalogue.ChannelsFor( id ) );
 		Assert.IsNull( saved.Problem );
 		Assert.AreEqual( 161, saved.Things.Count );
 		Assert.IsTrue( saved.Things.All( s => float.IsFinite( s.HoardingProgress ) && s.HoardingProgress >= 0 && s.HoardingProgress <= 1 ) );

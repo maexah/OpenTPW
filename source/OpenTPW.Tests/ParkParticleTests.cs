@@ -728,7 +728,7 @@ public class ParkParticleTests
 
 		spray.Effects!.Add( 2, 2, Jet, 1, spray.Nodes!.EffectIndex( 2, 2 ) );
 
-		int ChannelsFor( int id ) => catalogue.TryGet( id, out var item ) ? item.AnimationChannels : 1;
+		int ChannelsFor( int id ) => catalogue.ChannelsFor( id );
 
 		var things = first.Written( shipped, state.WrittenObjects( shipped ), ChannelsFor, state.HoardingFor )!;
 		var carried = new ParkFileWriter.Running( shipped.GameTick, shipped.ParkClosed != 0, shipped.NumberOfVisitorsToDate,

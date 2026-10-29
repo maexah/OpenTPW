@@ -13,14 +13,14 @@ One line per system; the detail, item by item, is `docs/WORKS.md` (grep it by ar
 - Staff: all five kinds hired and working their kind's decide (cleaning, performing, researching), strikes, their voices.
 - Rides: every placed thing runs its script, the rest of the opcodes counted; screams, particles, hoardings; the ride window closes and reopens its ride.
 - Running the park: the gadget, the info and money screens, the entry price and the gate, the research lab and its screen, golden tickets, the advisor's messages.
-- Saving: Save, Load, Restart Park, the quicksave keys; a Full Simulation park started empty, saved too (Q783: its file at tick nought, which the original loads).
+- Saving: Save, Load, Restart Park, the quicksave keys; a played park with a coaster's pylons loads whole, its gate's doors open and its boundary wall drawn (Q810); a Full Simulation park started empty, saved too (Q783: its file at tick nought, which the original loads).
 - The original runs under Proton as the reference instrument.
 
 ## Does not
 
 One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-number, never read it whole).
 
-- Park and saving: a played park with a coaster's pylons (Alexah's Temple of Gloom: our walk reads a pylon's record as one channel where the original reads five, Q814) loads none of its models' saved clips, so its gate stands shut and its boundary wall is not drawn (Q810, Q811); no loan screen, litter or day's end; a written park holds no kart, water or tracked ride, and some voices, puffs and the music voice are not written (Q420, Q803); forty-four of the advisor's 155 polled messages are built.
+- Park and saving: no loan screen, litter or day's end; a written park holds no kart, water or tracked ride, and some voices, puffs and the music voice are not written (Q420, Q803); forty-four of the advisor's 155 polled messages are built.
 - Map and windows: the map's overlay, hover and click are decoded, not built (Q684, Q685); five of the nine object windows are unbuilt (Q31b).
 - Guests: the deciding turn's vomit, litter, fireworks and pranks and four queue turns are counted (Q224 to Q226, Q228); a failed route is not revived (Q104); queues lose more happiness than the original's (Q746).
 - Building: a carried member of staff shows nothing; a bought thing's sparkles are not drawn (Q683); the buy screen's panel has no model (Q158); the kart and water pieces' interpolating pass, the coaster pylons' conform and the recomputed face normals are unbuilt (Q813).
@@ -38,15 +38,14 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- Q808 (the floor rim conformed to the ground and the queue, hoarding and track pieces draped; `ProceduralConform`). Read in ours on
-  a copy of Alexah's Full Simulation `New Save.TPWS` (`q808/run*`): the console's `rim` reads the Sun God 18 of 18 listed rim vertices on a
-  terrain corner, the Tom Tom Twister 20 of 20, the Costume Shop 12 of 12, and 1,782 queue-piece and 1,736 track-piece vertices draped;
-  the clear-coloured sliver pixels (`lib/clearseam.py`) 5,751 to 11 at the Sun God camera, 16,308 to 0 at the Tom Tom Twister's, 7,844
-  to 0 at the Costume Shop's, 0 at the level plots and the stock park's Belly Bounce. The original's frames of the same file at the Tom
-  Tom Twister's and Costume Shop's cameras (`q808/orig/`, Proton, this session) hold 0 to 32 such pixels in their last frames, its Sun
-  God's 0 (Q812's). Not verified: the shape of the rim beside the original's vertex by vertex (only the corner heights and the frames
-  are compared); the control word the conform runs under, the face normals, the interpolating pass and the coaster pylons (Q813); a
-  thing bought and put down in a sloped park (`Place` is the same path, not photographed).
+- Q810 (a coaster's pylon type read as five channels, so a played park's model records read whole: `ParkItemCatalogue.ChannelsFor`, Q779's
+  build). Read in ours on a copy of Alexah's Full Simulation `New Save.TPWS` (`q810-a7/run3fs`, the final build): no "would not read" line, 106
+  animation channels put back, the gate's channel held, `boundary pieces 163 anchors 163 unmade 0`, the doors open and the wall round the gate at
+  the camera 480 165 120 0; saved from there, the file's module walks closed with 462 records (40 of item 1181 at five channels); the stock park
+  unchanged (15 put back, wall 143). Not verified: the original's frame is Q809's earlier one (same file and camera), not retaken; the wall piece
+  by piece against the original's; the loaded Dino Karts Tunnel's and Jump's end caps, which the walk now lets the load lay (the log says hidden and
+  shown as the file left them, not photographed; the lock of a hidden cap is the counted `TRACK_CAP_LOCK_LOADED`); the 43 other original-written
+  park files (other themes among them), which only the file walk closes (Q814), not our game.
 
 ## Numbers (take counts fresh; these go stale within a day)
 

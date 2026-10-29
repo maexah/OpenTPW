@@ -72,7 +72,7 @@ public class ParkFileWriterQueueCellTests
 
 	private static int Index( int x, int y ) => (y * ParkWorld.MapSize) + x;
 
-	private int ChannelsFor( int id ) => catalogue.TryGet( id, out var item ) ? item.AnimationChannels : 1;
+	private int ChannelsFor( int id ) => catalogue.ChannelsFor( id );
 
 	private ParkThingStates Models( ParkWorld world ) => world.ThingStates( ChannelsFor );
 

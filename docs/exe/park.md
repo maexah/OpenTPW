@@ -1960,7 +1960,9 @@ side, read `0xc1000111` at once (hidden); a Jump bought onto (16,13), between th
 (`ParkObjects.SavedCaps`), the rest of a model's words left to this game's clips; the walk finds the thing as the head of the
 parent's live list (`ParkState.CellAt`), so a thing just put down is found. Seen in this game (Q780, `q780/R1`): the put-down's
 walk hides the bought Tunnel's caps and leaves the bought Jump's shown, as the original's. The played file's model records do
-not read here (Q779), so the loaded Tunnel's caps are not laid at the load; the first walk hides them. The add-ons themselves are drawn: the
+not read here until Q810, so the loaded Tunnel's caps were not laid at the load and the first walk hid them. Since Q810 the file's model records read and
+the log says "'Dino Karts Tunnel' (thing 404) stands with its end caps as the file left them: 0x1 hidden, 0x10 hidden" and the Jump's "0x1 shown, 0x10 shown"
+(`q810-a7/run3fs.out`; counted `TRACK_CAP_LOCK_LOADED` 1x; not photographed). The add-ons themselves are drawn: the
 sky `q688/ours-f2` showed under them was that run's Instant Action catalogue, which holds no `upgrades` item (its log:
 "nothing in this theme is catalogue number 1501"), and a Full Simulation player's load stands both where the original's do
 (`q778/R2`, `O1`, `O2`).
@@ -2132,7 +2134,8 @@ problem. Her file holds 163 records of item 17300 on (`records.py`, `lib/parkfil
 `b8a71167`, her file's copy: `boundary pieces 0 anchors 163 unmade 163`, `BOUNDARY_HOARDING_UNMADE` 163, no wall at the gate's
 view (`run1fs/gate_fs.png`); the stock park 143 of 143 (`run2stock/`); a probe reading item 1181 as 5 channels in the three load-side callers of
 `ThingStates` (`ParkRides.cs:760`, `ParkObjects.cs:264`, `ParkBoundaryHoarding.cs:250`; a fourth, `ParkRides.cs:950`, writes): `pieces 163 anchors 163 unmade 0`, the wall laid round the gate like the original's, by eye at one camera (`run3probe/gate_fs.png`; the original's frame is Q809's `q805/orig/gate/o-t19017.png`, the same file and camera, taken
-for Q809, not again for this; it is 1024 x 768 with the HUD and the wall, ours 1280 x 720 without the HUD). The count 5 is `rsys.py`'s reading, not the original's (Q779). The wall comes back with Q779 (built by Q810).
+for Q809, not again for this; it is 1024 x 768 with the HUD and the wall, ours 1280 x 720 without the HUD). The count 5 was `rsys.py`'s reading; the original's is Q814's and Q810 built it: all four callers read, her copy `boundary pieces 163 anchors 163 unmade 0`
+with the wall at the gate's view (`q810-a7/run3fs/gate_fs.png`).
 
 #### A track piece's model, price and open end
 

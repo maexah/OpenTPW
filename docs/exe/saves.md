@@ -1442,6 +1442,12 @@ her `New Save.TPWS` (`original/modeltypes.py`, 80 s on): all 127 registered type
 1183 one), all 462 models their type's, the 40 of 1181 made `0x3fa` and the 29 of `0x101` the vehicles (the Minecart's 24 cars,
 `gokarts`' 1151 to 1154 and `tourride`'s 1171); its gate frame at Q805's camera shows the doors open and the wall standing (`q810/orig/gate/o-t19017.png`).
 
+**OpenTPW's side (Q810).** `ParkItemCatalogue.ChannelsFor( id )` answers the rule: an item's `NumSimultAnims`, five for an id a catalogued
+coaster's `coaster.sam` names as one of its two `asPylonControls[n].uiPylonTypeUniqueID`, one for any other; the four callers of
+`ParkWorld.ThingStates` (`ParkRides` twice, `ParkObjects`, `ParkBoundaryHoarding`, and `Level`'s save) pass it. The twelve coasters of the
+four themes name 21 pylon types, none an item (`ParkPylonChannelsTests`). Her `New Save.TPWS` copy then reads whole, and a park saved from
+it walks closed with 462 records, 40 of item 1181 at five channels (`q810-a7/run3fs-walk.txt`).
+
 ### OpenTPW's writer, the objects
 
 The fourth stage (Q252), for the things the file holds; a thing bought or sold is the fifth's ("OpenTPW's
