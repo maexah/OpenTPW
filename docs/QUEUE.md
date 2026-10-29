@@ -61,6 +61,28 @@ fork watch).
 Q249 (saving a park made fresh; its build is Q783), then Q782 (a player's data folder) and Q800 (contributors by
 default, Alexah's second pre-weekly list), then the rest in the order below.
 
+**Ordered at Alexah's word (2026-10-29):** Q804, Q805 and Q806, found while photographing Alexah's Full Simulation
+park for the website, go first. Q804 stopped the photographs: no picture with the blue lines will be used.
+
+- [ ] **Q804. Blue gaps in the ground along the cells under rides, shops and queues.** From the website photographs,
+  2026-10-29 (Alexah: "terrible and pretty much unusable"). Alexah's Full Simulation jungle (`New Save.TPWS`, a copy
+  loaded at tick 19004), main `2e101169`, desktop GPU: thin light-blue lines run along the edges of the plots of
+  rides, shops, sideshows and queue lines, at every zoom and yaw tried (about 100 frames, `shots-2026-10-29/run1/`,
+  `s_sungod_240.png` the plainest). Not yet known whether they are a gap in the ground (what is behind showing
+  through), a border drawn in the wrong colour, or something of Q618's; find which before changing anything, and
+  check the stock park too. Confirm: the same cameras in Alexah's park and in the original, the lines gone.
+- [ ] **Q805. The gate's doors are drawn shut while guests walk in.** From the same photographs. With 311 guests
+  inside and arrivals coming through, `gate` answered `gate 11 closed 0 command 1 status 1` (tick 19510), yet the
+  doors stand shut in every frame (`H165_0_120.png`: guests on the path, passing the shut doors). Alexah: the gate
+  never closes while guests are in the park, and guests cannot come in through a shut gate. Find what drives the
+  doors' pose in the original (decode first) and whether ours draws the wrong pose or the park's state is wrong.
+  Confirm: the gate's view in both games at the same moment, the doors open.
+- [ ] **Q806. The boundary wall is not drawn in Alexah's Full Simulation park.** From the same photographs. Q620 draws
+  it in the stock park (143 pieces); in Alexah's jungle no wall stands at the park's edge in any frame (the gate's
+  frames, `ax_375_365.png`). The `boundary` census was not taken: take it first (anchors in the file, pieces made,
+  `BOUNDARY_HOARDING_*` gaps), then compare with the original's frame of the same park. Confirm: the wall in the
+  gate's view beside the original's, with the census.
+
 - [ ] **Q802. What Q800 left for a person or a machine it did not have.** From Q800 (run 13, lane A). Done by the
   coordinator (2026-10-29): `opentpw.maintainer` set in `~/repos/OpenTPW-laneB`, and the Saturday audit runs
   `python3 tools/check_docs_paths.py`. The Linux quick start is marked "tested on the maintainer's Linux machine only"
