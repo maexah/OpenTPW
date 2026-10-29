@@ -73,10 +73,8 @@ internal static class Game
 		Players.Roster.Load();
 
 		//
-		// Dead by CODE in the game: nothing in it reads CacheFileSystem, so making the folder is all this does.
-		// Its one reader is ModKit's thumbnail cache (Editor.cs), a separate program that never sets it. Kept and
-		// labelled, not deleted, with the property, which ModKit names. A folder that cannot be made is logged and
-		// the game goes on without it.
+		// Dead by CODE: nothing reads CacheFileSystem, so making the folder is all this does. Kept and labelled, not
+		// deleted, with the property. A folder that cannot be made is logged and the game goes on without it.
 		//
 		// The folder is kept with the player rather than in whatever directory the game was started from: a copy
 		// of the game may sit somewhere nothing may write to, and nothing in here is worth keeping if it is lost.

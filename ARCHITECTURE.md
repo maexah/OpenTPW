@@ -10,7 +10,6 @@ Where things are. `AGENTS.md` holds the rules; [`CONTRIBUTING.md`](CONTRIBUTING.
 | `OpenTPW.Files` | Binary format readers. `Formats/<kind>/`. `Public/` is the old upstream API: its `SettingsFile`, `StringFile` and `BaseFormat` are still the live entry points; `MapFile` and `Public/ModelFile.cs` are used by nothing, and `SoundFile` is live only through `SdtArchive`, which reads every `.sdt` entry with it. |
 | `OpenTPW` | The game. `Program.cs` → `Client/Game.cs` (boot order lives here) → `World/Level.cs` (builds a scene). |
 | `OpenTPW.Tests` | MSTest, flat folder, named by area. `GameData.cs` is the shared fixture. |
-| `OpenTPW.ModKit` | Upstream ImGui file browser. Referenced by no project. The maintainer's call; leave it. |
 
 Inside `source/OpenTPW/`: `Client/` (startup, `GameDir`, options, renderer, `Diagnostics/DebugConsole.cs`), `World/Park/` (the running park: start with `ParkState`, `ParkPeople`, `PeepBehaviour`, `ParkRides`), `VM/RideScript.cs` (the live VM), `UI/` (the game's own UI: `UiControl`, `WindowStack`; `UI/FrontEnd/` lobby, `UI/Park/` gadget), `Audio/`.
 

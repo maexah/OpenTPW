@@ -2150,12 +2150,11 @@ filed the items that cite it.
   Read by the week-end audit (2026-10-11), not re-measured: `wad.md`'s name length and the `mFlags` `0x8` bit read
   corrected. Still to judge: `saves.md`'s version `85`, its "sixth person model is the visitor", `0x14E`, and
   `vm/info.md`'s per-script variable ids.
-- [ ] **Q75. The 2026-09-12 review's Phase F, what is left.** Opportunistic, never alone. Left: `SixLabors.ImageSharp` 3.1.6 in
-  `OpenTPW.ModKit.csproj`; `content/textures/test.png`; `.editorconfig`'s `end_of_line = crlf` with no
+- [ ] **Q75. The 2026-09-12 review's Phase F, what is left.** Opportunistic, never alone. Left: `content/textures/test.png`; `.editorconfig`'s `end_of_line = crlf` with no
   `.gitattributes`; and, to LABEL as dead by CODE rather than delete (rule 3), `Public/ModelFile.cs` and
   `Public/MapFile.cs` (both unreferenced), `Render/Primitives/Cube.cs` and `ReadUIntN`. `Singleton.cs` is used by
   `UI/Cursor.cs`, though nothing reads its `Instance`. Left to Alexah's call, not to be started: `.gitignore` for `.claude/`,
-  `.vscode/` and `.mcp.json`, ModKit as a whole, and the nullable warnings except in passing.
+  `.vscode/` and `.mcp.json`.
   Also left (the 2026-09-26 staleness audit): the `PreferredBackend` setting in `App.config` and `Settings.settings`,
   which nothing reads (`Settings.Default` is read for `GamePath` and `GameWindowSize` only). Label it as dead by CODE
   at its sites; remove it only on Alexah's word.
@@ -3159,8 +3158,8 @@ state machine.
   "4.4.2002" to "4.29.2002" (`q707/p707t/orig/O/g-*.png`). Decode the original's date writer for the gadget, then write
   the date its way whatever the machine.
 - [ ] **Q694. Move to the newest NeoVeldrid (1.3.1 on 2026-10-26).** Alexah, 2026-10-25: 1.3.0 released 2026-10-24, 1.3.1 by
-  2026-10-26 (`lib/nvwatch.py` reports newer ones); we are on 1.2.1 (`OpenTPW.Common`,
-  `OpenTPW`, and `OpenTPW.ModKit`'s references). 1.3.0's notes list Native AOT and trimming support (#104) and a backend-aware
+  2026-10-26 (`lib/nvwatch.py` reports newer ones); we are on 1.2.1 (`OpenTPW.Common`'s
+  and `OpenTPW`'s references). 1.3.0's notes list Native AOT and trimming support (#104) and a backend-aware
   window creation in StartupUtilities (#92), with no breaking change and nothing in Vulkan, SDL2, SPIRV, texture formats,
   samplers or present (https://github.com/jhm-ciberman/neo-veldrid/releases/tag/v1.3.0; the compare diff not read).
   Read the compare diffs `v1.2.1...v1.3.0` and `v1.3.0...v1.3.1` (and the 1.3.1 notes, not yet read) first; bump every NeoVeldrid package together; build, test, and photograph

@@ -41,8 +41,8 @@ was profiled from 8.08 s to 6.73 s, and to 5.61 s once one blank texture was han
 
 The test project's `Microsoft.NET.Test.Sdk` 16.11.0 is the only source of the high-severity `Newtonsoft.Json`
 9.0.1 advisory, and it ships in nothing but the tests. Alexah was asked on 2026-09-13 and chose to leave it for
-now; do not raise it again. One more advisory stands and was not put to Alexah: `SixLabors.ImageSharp` 3.1.6 (moderate and high, in
-`OpenTPW.ModKit` only, which the game no longer builds in). `Zio` 0.17.0 (low) is gone: Q753 dropped it from
+now; do not raise it again. `SixLabors.ImageSharp` 3.1.6 (moderate and high) went with `OpenTPW.ModKit`, the upstream
+editor nothing built in, which Alexah had removed on 2026-10-29. `Zio` 0.17.0 (low) is gone: Q753 dropped it from
 `OpenTPW.Common.csproj`, nothing referenced it and it shipped in every weekly zip.
 
 ## A press goes to what the pointer is over (2026-09-25)

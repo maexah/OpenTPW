@@ -30,9 +30,9 @@ public class BaseFileSystem
 	/// </para>
 	/// <para>
 	/// A listing is dropped when this class writes into the directory (<see cref="Forget"/>), which is the only
-	/// thing it does that changes what one holds. It is a ConcurrentDictionary because the ModKit reads through
-	/// this object from a background task; each listing is built once and never changed, so two threads
-	/// building the same one race only to store the same answer.
+	/// thing it does that changes what one holds. It is a ConcurrentDictionary so that a read from another
+	/// thread is safe; each listing is built once and never changed, so two threads building the same one race
+	/// only to store the same answer.
 	/// </para>
 	/// </summary>
 	private readonly ConcurrentDictionary<string, Dictionary<string, string?>> listings = new();
