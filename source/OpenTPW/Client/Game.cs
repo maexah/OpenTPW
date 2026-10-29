@@ -81,8 +81,7 @@ internal static class Game
 		// The folder is kept with the player rather than in whatever directory the game was started from: a copy
 		// of the game may sit somewhere nothing may write to, and nothing in here is worth keeping if it is lost.
 		//
-		var cacheFolder = Path.Join(
-			Environment.GetFolderPath( Environment.SpecialFolder.LocalApplicationData ), "OpenTPW", "cache" );
+		var cacheFolder = UserFolders.Cache();
 
 		try
 		{

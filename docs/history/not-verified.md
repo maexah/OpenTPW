@@ -5,6 +5,12 @@ newest first. The pre-commit hook (`tools/status-sweep.py`) moves an item's acco
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q783 (a park made fresh, saved). Compared in the original: its own fresh `restart.INTS` of a clean-memory run (`q327/orig/a`, not made this
+  session) against ours module by module (`lib/freshcmp.py`): ten modules and ten of the world's twelve things (all but the weather and the advisor) byte for byte, the cells but for the
+  boundary straights' variant rows; the original under Proton loaded the file ours wrote (`q783/orig/l3`, tick falling to 0, $50000, the gate drawn).
+  Not verified: the loaded park's guests, rides and sounds (the original ran about ten seconds, no guest arrived); a park saved after play and
+  loaded in the original (only tick 0); the other three themes' files; the advisor module's model words, the object controls' `+0x08`, the gates' and
+  lights' model tables, the constructor's weather and the music voice (Q801); a Fantasy or Halloween fresh park written here was not loaded anywhere.
 - Q249 (a park made fresh: its file at tick nought, the decode; the build is Q783). Measured on seventeen Lost Kingdom
   `restart.INTS` the original wrote (Alexah's and fifteen of earlier items' are earlier evidence; one made this session,
   `q249/orig/r1`, `fresh-park.png`, P1 to P7 held). Not verified: the action recording's 135 bytes and the challenge

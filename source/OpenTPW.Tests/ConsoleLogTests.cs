@@ -272,17 +272,8 @@ public class ConsoleLogTests
 	}
 
 	[TestMethod]
-	public void TheUserFolderIsAppDataOnWindowsAndTheLocalShareElsewhere()
-	{
-		var expected = OperatingSystem.IsWindows()
-			? Environment.GetFolderPath( Environment.SpecialFolder.ApplicationData )
-			: Path.Join( Environment.GetEnvironmentVariable( "HOME" ) ?? Environment.GetFolderPath( Environment.SpecialFolder.UserProfile ), ".local", "share" );
-
-		if ( !OperatingSystem.IsWindows() && Environment.GetEnvironmentVariable( "XDG_DATA_HOME" ) is { Length: > 0 } )
-			Assert.Inconclusive( "XDG_DATA_HOME moves the local share." );
-
-		Assert.AreEqual( Path.Join( expected, "OpenTPW" ), ConsoleLog.UserFolder() );
-	}
+	public void TheLogsUserFolderIsTheDataFolderTheRuntimeNamesForThisSystem()
+		=> Assert.AreEqual( UserFolders.Data(), ConsoleLog.UserFolder() );
 
 	/// <summary>A file that takes writes until <see cref="Full"/>, then fails as a full disk does.</summary>
 	private sealed class FailingStream : MemoryStream

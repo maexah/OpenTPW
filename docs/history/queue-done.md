@@ -10887,6 +10887,26 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   it as any loaded park's; the gates and the lights are made as bought things, with fixed-item model records (flags `0x361` on the item's cell). Against the
   original's clean fresh file only what varies per run differs, beside the counted gaps filed as Q801. Confirmed: `q783/confirm/r2` (entry writes
   `restart.INTS`, Restart Park reads it, the park saved after it), `q783/orig/l3` (the original under Proton loads the saved file and draws the gate).
+- [x] **Q782. A player's data folder that does not exist yet, and macOS's.** From Q798. (1) `Game.cs` makes the cache folder
+  from `Environment.GetFolderPath( LocalApplicationData )` without `DoNotVerify`, which answers an empty string for a folder
+  that is not there (a new Linux account has no `~/.local/share`), so the cache would land in the working directory;
+  `ConsoleLog.UserFolder` was fixed in Q798 and this one was not. (2) The zip's README, the issue forms and
+  `CONTRIBUTING.md` give macOS's data folder as `~/Library/Application Support/OpenTPW`, and `ConsoleLog`'s comment says
+  `~/.local/share/OpenTPW` "elsewhere": what .NET answers on a Mac is not known here (its `CoreLib` for osx-arm64 holds no
+  `XDG_DATA_HOME` string, so it asks differently), and no Mac has run the build. Decide it from a Mac's `console.log`, or from
+  the runtime's source, and make the four places say one thing. Confirm: a run with `HOME` set to an empty folder writes the
+  cache under it.
+  **DONE 2026-10-28 (Q782, on `alexah/772-user-data-folders`).** (1) `UserFolders.Cache()` (OpenTPW.Common) is the cache's folder, asked
+  with `DoNotVerify` as `ConsoleLog.UserFolder` was (now `UserFolders.Data()`); `Game.cs` calls it. Measured on this Linux machine with
+  `HOME` an empty folder and `XDG_DATA_HOME` unset: the main binary's launch made `OpenTPW/cache` in its working directory (a scratch
+  folder, run `before`) or, started from the build folder, which holds a file called `OpenTPW`, logged "Cache folder: OpenTPW/cache cannot
+  be made" (`before2`); this branch's made `$HOME/.local/share/OpenTPW/cache` and nothing in the working directory (`after`). (2) macOS:
+  .NET's own source (`Environment.GetFolderPathCore.Unix.cs`, v10.0.0, `TARGET_OSX`) answers `NSSearchPath( NSApplicationSupportDirectory )`
+  for both `ApplicationData` and `LocalApplicationData` and reads no XDG variable, so a Mac's folder is `~/Library/Application Support/OpenTPW`
+  as the README, the issue forms and `CONTRIBUTING.md` say; `ConsoleLog`'s two comments (Linux's `~/.local/share` "elsewhere") were the wrong
+  ones and now name the three systems; the old test expected `~/.local/share` on every non-Windows system and would have failed on a Mac.
+  Windows and macOS were not run: the Windows answers are .NET's documented `ApplicationData` and `LocalApplicationData`, the macOS one is read
+  from the source above. Their tests (`UserFoldersTests`) skip here.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

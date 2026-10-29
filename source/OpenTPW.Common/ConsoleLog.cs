@@ -12,8 +12,8 @@ namespace OpenTPW;
 ///
 /// <para>
 /// The file goes in the game folder beside <c>save\</c>; where that cannot be written (a Program Files install)
-/// it goes in the player's own data folder (<c>%AppData%\OpenTPW</c> on Windows, <c>~/.local/share/OpenTPW</c>
-/// elsewhere), and the terminal says which. <c>OPENTPW_LOG_DIR</c> names a folder instead, which a harness
+/// it goes in the player's own data folder (<c>%AppData%\OpenTPW</c> on Windows, <c>~/.local/share/OpenTPW</c> on
+/// Linux, <c>~/Library/Application Support/OpenTPW</c> on macOS), and the terminal says which. <c>OPENTPW_LOG_DIR</c> names a folder instead, which a harness
 /// that starts the game sets to its own, so a run never rotates the player's own logs away. What is printed
 /// before the folder is known is held and written once it is.
 /// </para>
@@ -91,15 +91,8 @@ public static class ConsoleLog
 	/// <summary>Cuts a player's name from the file from here on (<see cref="SafePaths.HidePlayer"/>); nothing before <see cref="Open"/>.</summary>
 	public static void HidePlayer( string name, int slot ) => _safe?.HidePlayer( name, slot );
 
-	/// <summary>The player's own data folder for the log: <c>%AppData%\OpenTPW</c> on Windows, <c>~/.local/share/OpenTPW</c> elsewhere.</summary>
-	public static string UserFolder()
-	{
-		var root = OperatingSystem.IsWindows() ? Environment.SpecialFolder.ApplicationData : Environment.SpecialFolder.LocalApplicationData;
-
-		// DoNotVerify: asked to verify, the runtime answers an empty string for a folder that is not there yet
-		// (a new account has no ~/.local/share), and the log would land in whatever folder the game was started from.
-		return System.IO.Path.Join( Environment.GetFolderPath( root, Environment.SpecialFolderOption.DoNotVerify ), "OpenTPW" );
-	}
+	/// <summary>The player's own data folder for the log (<see cref="UserFolders.Data"/>).</summary>
+	public static string UserFolder() => UserFolders.Data();
 
 	/// <summary>The folders to try, in order: the variable's alone when set, otherwise the game's and then the player's own.</summary>
 	public static string[] Candidates( string gameFolder, string? variable, string userFolder )

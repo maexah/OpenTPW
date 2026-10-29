@@ -56,15 +56,6 @@ fork watch).
 Q249 (saving a park made fresh; its build is Q783), then Q782 (a player's data folder) and Q800 (contributors by
 default, Alexah's second pre-weekly list), then the rest in the order below.
 
-- [ ] **Q782. A player's data folder that does not exist yet, and macOS's.** From Q798. (1) `Game.cs` makes the cache folder
-  from `Environment.GetFolderPath( LocalApplicationData )` without `DoNotVerify`, which answers an empty string for a folder
-  that is not there (a new Linux account has no `~/.local/share`), so the cache would land in the working directory;
-  `ConsoleLog.UserFolder` was fixed in Q798 and this one was not. (2) The zip's README, the issue forms and
-  `CONTRIBUTING.md` give macOS's data folder as `~/Library/Application Support/OpenTPW`, and `ConsoleLog`'s comment says
-  `~/.local/share/OpenTPW` "elsewhere": what .NET answers on a Mac is not known here (its `CoreLib` for osx-arm64 holds no
-  `XDG_DATA_HOME` string, so it asks differently), and no Mac has run the build. Decide it from a Mac's `console.log`, or from
-  the runtime's source, and make the four places say one thing. Confirm: a run with `HOME` set to an empty folder writes the
-  cache under it.
 - [ ] **Q800. Contributors by default; the Sentinel's way for the maintainer only.** Alexah's pre-weekly list
   (2026-10-28), every point before any weekly build. (1) Hooks: `tools/hooks/` keeps only a content guard for
   everyone; the queue/status sweeps and the website push move to a maintainer folder. (2) `AGENTS.md`: an agent does
