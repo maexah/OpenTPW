@@ -18,8 +18,10 @@ namespace OpenTPW;
 /// their cell lines snapped to the line and raised by the ground interpolated along it.
 /// Not reproduced: the original's first pass also walks a mesh the second count flagged <c>0x1000</c> against the type list's
 /// next vertex index (<c>0x00469b7c</c>); <c>gk_TRACK01</c> changes 17 vertices in the original against the 16 it lists (park-engine.md).
-/// Not built: the control word the original's arithmetic runs under (moves the last bits only), and the recomputed face normals
-/// (<c>FUN_00473c30</c>).
+/// The arithmetic is <c>float</c> (the corner's fraction <c>double</c>), where the original's runs on the x87 under the control
+/// word in force, <c>0x27f</c> (53-bit) under Proton; what Windows' DirectDraw leaves under <c>DDSCL_FPUSETUP</c> is not read
+/// (park-engine.md, "The control word"). It moves the last bits only: the stored vertices agree to 0.0001. The original's
+/// recomputed face normals (<c>FUN_00473c30</c>) reach no lighting, and are not made here.
 /// </remarks>
 public static class ProceduralConform
 {

@@ -64,18 +64,21 @@ default, Alexah's second pre-weekly list), then the rest in the order below.
 **Ordered at Alexah's word (2026-10-29):** Q804, Q805 and Q806, found while photographing Alexah's Full Simulation
 park for the website, go first. Q804 stopped the photographs: no picture with the blue lines will be used.
 
-- [ ] **Q820. What Q818 left of the conform and the drape: the stacked and loop pylons, the float note, and what Q821 left.** From Q818 (run 14, lane A;
-  its piece (3), the face normals and the control word, is Q819; its piece (1), the ground's per-cell diagonal, is Q821, which ticks Q398). (2) Left by Q817: the pylon under a stacked piece is drawn with the alone-on-its-cell arms (the bottom of a stack that is not its top shows the `0x400` node and hides the `0x800` one, `0x00432ff8`..`0x0043304d`; ours hides `mc_bridge` on it); a stacked pylon stands on the
+- [ ] **Q820. What Q818, Q821 and Q822 left: the stacked and loop pylons, the original's picture of a flipped diagonal, and the heights by the original's samplers.** From Q818 (run 14, lane A;
+  its piece (3), the face normals and the control word, is Q819; its piece (1), the ground's per-cell diagonal, is Q821, which ticks Q398; the decode
+  of piece (4) and the float note are Q822). (2) Left by Q817: the pylon under a stacked piece is drawn with the alone-on-its-cell arms (the bottom of a stack that is not its top shows the `0x400` node and hides the `0x800` one, `0x00432ff8`..`0x0043304d`; ours hides `mc_bridge` on it); a stacked pylon stands on the
   stack-height record (`StackHeightDummy` on `StdPylon`), the type flag `0x10` keeps its floor, a loop pylon is another model:
   none is in her park, so each needs a park that holds one (a coaster built in the original, then loaded in both games).
-  (3) Left by Q819: say at `ProceduralConform` that ours works the conform in `float` where the original runs under the
-  control word in force (`0x27f`, 53-bit, under Proton: `park-engine.md`, "The control word"); what Windows' own DirectDraw
-  leaves under `DDSCL_FPUSETUP` needs real Windows. Q819 found nothing to build for the face normals.
-  (4) Left by Q821: the original's picture of a flipped diagonal was not got (its frames drift, the in-game date rolls: `q821/orig/poke7`), so the
+  (3) Left by Q821: the original's picture of a flipped diagonal was not got (its frames drift, the in-game date rolls: `q821/orig/poke7`), so the
   original's drawing by `0x2` stands on the decode and the live bits (all 7,001 ground cells' diagonal bits equal the file's); poke one cell's `0x2`/`0x4`
-  in the original and film it with the camera held (`original/setcam.py`'s follow off) and the clock paused. `ParkCamcorderCameraMode` still takes
-  `HeightfieldFile.HeightAtWorld`, the bilinear height (no decode of the camcorder's sampler: `FUN_00452560` is the park camera's); the other
-  `HeightAtWorld` users (shadows, picking, balloons) the same, each needing its own look at what the original calls there.
+  in the original and film it with the camera held (`original/setcam.py`'s follow off) and the clock paused.
+  (4) The build of Q822's decode (`park-engine.md`, "Which height each asker takes"; `HeightfieldFile`): set `0x800` at the load where `FUN_004504c0`
+  does (Lost Kingdom 566 cells), so `ScapeHeight` splits as `FUN_004527f0`; stand the sprites (the walk's draw, `Feet`, `DrawBalloon`) and the build
+  markers' glide (`ParkBuildMarkers.Corner`) on it in place of the bilinear `HeightAtWorld`; the camcorder's eye on `CameraHeight` + 5 taken
+  straight each frame (`ParkCamcorderCameraMode.GroundUnderStand` eases it, a deviation said nowhere); the pick's ground as the original's two
+  planes a cell by `0x2`, each met anywhere in the cell's square, or that deviation said at `ParkPicking.MeetGround`. On the ground the bilinear
+  height is off by at most 0.25 (0.5 in space), so measure each at a flagged cell in both games (`dotnet/hfsamplers` finds them; the original's
+  eye: `original/eyeprobe.py`).
 - [ ] **Q849. What Q810 left: two counted gaps her played park's save now reaches, and two loads never run.** (From Q810's review,
   run 14.) Q810 made her Full Simulation `New Save.TPWS` read whole, so the save goes through the running-things writer for the
   first time (before, the model walk failed and the whole module was written as the file's). Two counters then fire, in

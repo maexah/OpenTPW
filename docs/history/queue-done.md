@@ -11125,6 +11125,11 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
     (`0x0046a34c`: clear, fz <= fx takes h00, h10, h11, else h00, h01, h11; set, 1 - fz <= fx takes h01, h11, h10, else h00, h10, h01),
     and the vertex moves by h - H, H the instance's height. The kart, water, queue and boundary-hoarding kinds also carry the
     run-time header flag `0x80` (`0x004625f4`), the landscape's height (`FUN_004527f0`), so they take this split too.
+- [x] **Q822. Which height the original asks at each `HeightAtWorld` user, and the float note at `ProceduralConform` (Q820's pieces (4) and (3), decode).**
+  `park-engine.md`, "Which height each asker takes": the camcorder's eye is `FUN_00452560` + 5 stored straight (`0x0042c729`);
+  every sprite and the build markers' wave take `FUN_004527f0`, which splits only the cells the load flags `0x800`; the pick
+  meets two planes a cell by `0x2`, each anywhere in the square; the shadow keeps its own near-corner plane. Ours sets no `0x800`
+  (`ScapeHeight` never splits). Measured over the four parks (`dotnet/hfsamplers`) and in the original's first person.
 
 ## B. Docs and comments
 

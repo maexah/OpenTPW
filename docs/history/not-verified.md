@@ -5,6 +5,12 @@ newest first. The pre-commit hook (`tools/maintainer/status-sweep.py`) moves an 
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q821 (the ground cut on each cell's own diagonal, `ParkGround`/`ParkPaths`, and the park camera's height, `HeightfieldFile.CameraHeight`; Q820's piece (1), Q398's build). Ours on a copy of Alexah's Full Simulation `New Save.TPWS`
+  (`q821/run5`, the final binary): the log's 2,530 of 6,487 drawn ground cells cut the second way (0 with the console's `cut old`); at two staircases of four `0x44` cells,
+  `cut new` against `cut old` in one session changes 60,864 and 79,293 pixels outside the HUD in four patches of a cell each, `cut new` against `cut new` 0 (`lib/framediff.py`);
+  the camera's height at cell (3,13)'s centre 0.000 against bilinear -0.250. The original's live cell words (`groundcell.py READ`, `q821/orig/poke7/cells75.txt`): all 7,001 ground cells hold the file's `0x2`/`0x4`.
+  Not verified: the original's own picture of one cell's diagonal flipped (its frames drift under a poke; the decode and the live bits stand for it); no frame was compared with the original's at one camera
+  (two launches' tiles differ); the camcorder's and the shadows' and picking's heights are still bilinear (Q820 (4)); the Sun God's 11 to 14 clear-coloured pixels are not the cut's and are unexplained.
 - Q817 (a played coaster's pylons drawn, `ParkCoasterPylons`; Q813's piece (2)). Ours on a copy of Alexah's Full Simulation `New Save.TPWS` (`q817/run7`, the final binary; the
   console's `pylons`): 40 pylons (the station's two and 38 pieces, the original's 40), each knot where `ParkCoasterHeights` puts it (off 0.0000), each floor's 4 listed
   base vertices on a corner (160), `mc_bridge` hidden on all; and each one's loft, yaw, incline, bank and knot equal to the original's live node of the same file this session

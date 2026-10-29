@@ -89,6 +89,56 @@ height by at most half that; the other cut shows on screen as a different warp o
 `cut old` against `cut new`, 60,864 and 79,293 pixels over two staircases of four `0x44` cells, 0 where no cell differs). Not seen: the original's own
 picture of one cell's diagonal flipped (its frames drift under a poke, `q821/orig/poke7`).
 
+### Which height each asker takes
+
+Q822 (Ghidra, and the stored disassembly `lib/testme.objdump`). The landscape's height under a point has three readers in
+the original, and every caller of the first two is known (`FUN_004527f0`, six calls; `FUN_00452560`, two):
+
+| Who asks | Where | What it answers | OpenTPW |
+|---|---|---|---|
+| The park camera (orbit) | `FUN_0042b1c0`, `0x0042c817` | `FUN_00452560( x, z, 1 )`: the cell's triangle by `0x4`, every cell | `CameraHeight` (Q821) |
+| First person (the camcorder) | `FUN_0042b1c0`, `0x0042c729` | `FUN_00452560( stand x, z, 1 )` less `[0x006fde10]` (-5), stored straight as the eye's height `0x00790aa4` each frame: no easing | `HeightAtWorld`, eased (`ParkCamcorderCameraMode.GroundUnderStand`) |
+| Every sprite: walkers, staff, balloons | `FUN_00542010`, `0x005420ee`, for each sprite of the list (`FUN_00475430`) | `FUN_004527f0( +0x88, +0x90 )` plus the sprite's `+0x8c`; a sprite whose word `+0xc4` carries `0x1000000` stands at `+0x8c` itself | `HeightAtWorld` (`ParkGuestSprites`: the walk's draw, `Feet`, `DrawBalloon`) |
+| A person put on a sprite | `Person_PlaceSprite`, `0x004f9e8c` | stores the height less `FUN_004527f0` under it in `+0x8c`, so the draw above gives the height back exactly | `HeightAtWorld` |
+| A person's particles | `FUN_004fa470`, `0x004fa4dc` | `FUN_004527f0` at the person's place moved by `FUN_00519410`/`FUN_00519420` × `[0x00700698]` (not read) | not checked |
+| The build markers' wave | `FUN_0053ddd0`, `0x0053ddea` | `FUN_004527f0` at the corner it is handed, after the glide | `HeightAt` on a corner, `HeightAtWorld` gliding (`ParkBuildMarkers.Corner`) |
+| The scene's height, mode 1; placement feedback | `FUN_004511a0`, `0x004511e6`; `FUN_00452ae0`, `0x00452c89` | `FUN_004527f0` (`park.md`, "The scene's height under a point") | `ScapeHeight` (`ParkSceneHeight.Under`) |
+| A person's shadow | `SpriteShadow_BuildQuad` (`0x00589410`) | the near corner's plane, its own sampler, no flag read ("First person's shadow", below) | `CornerPlaneAt` |
+| The pointer's pick | `FUN_0045bf90`'s terrain test | its own: two planes a cell by `0x2` (below) | `HeightAtWorld`, marched (`ParkPicking.MeetGround`) |
+
+**`FUN_00452560( x, z, flag )`.** Nought off the map (`x` or `z` below nought, at or past the cells × 10, or the grid
+fraction past the cells); the cell's triangle by `0x4` (above). A third argument of nought answers `FLT_MAX`
+(`[0x006fe400]`) on a hole (`0x1`); both callers pass 1, so that arm is dead by CODE. First person is
+`gui_CameraFlags & 0x16` set and `& 0x3c` clear (`0x0042c6c4`, `0x0042c6f8`); with `& 0x3c` set (a ride's view) the
+update skips the sample (`0x0042c96d`). **Measured in the original** (`q822/orig/run.sh`, `original/eyeprobe.py`; the stock park in
+first person by Q496's way in, flags `0x202`): the stand held at (0.6, 0.3) inside cell (71,54), word `0x0d42`, corners 19,
+19, 20.006, 19, gives the eye 24.0000, the triangle by `0x4` plus 5 to the last digit, where bilinear would give 24.1207
+and the near corner's plane 24.3018; moved to cell (78,72), word `0x0d44`, the eye goes from 24.0000 to 17.1000 between
+two polls 2 ms apart, with no value between (`a-eyeprobe.out`, frame `a-A5-after-probe.png`).
+
+**`FUN_004527f0( x, z )`** splits only a cell the load flagged `0x800` (above), and takes the near corner's plane on the
+rest. `FUN_004504c0` flags a cell where the unit normals of its two triangles across `(x+1,z)`-`(x,z+1)` (edges of 10
+across, `[0x006fe384]`) meet with a dot under 0.9999 (`[0x006fe39c]`, `0x0045073c`..`0x0045075d`). So on a flat cell all
+four corners' planes agree and `FUN_004527f0` answers what `FUN_00452560` does, but **a cell bent under that tolerance
+is not flagged**. Measured over the four parks' `base.MD2` (`dotnet/hfsamplers`, `q822/hfsamplers-run2.txt`, a 10 × 10
+grid of points in every cell): in Lost Kingdom 566 cells flag (158 ground, 73 of them with `0x4`; the section above
+says 589, and the 23 apart are holes, unexplained), and 464 ground cells bend yet do not, by at most 0.063; on the
+ground, `FUN_00452560` (ours `CameraHeight`) differs from `FUN_004527f0` on 14 cells by at most 0.06 (fantasy 36, 0.011;
+hallow 5, 0.06; space 26, 0.006). Bilinear (ours `HeightAtWorld`) differs from it on 172 ground cells by up to 0.249
+(fantasy 196, 0.249; hallow 173, 0.248; space 198, 0.495). **Ours' `ScapeHeight` never splits**: the files carry no
+`0x800` and ours does not set it at load, so it takes the near corner's plane on all 566 flagged cells too (by up to
+0.5 on the ground, 24.96 on a hole).
+
+**The pick's terrain** (`FUN_0045bf90`). Over every cell the ray's line crosses and whose corners' height range it
+meets, it intersects the planes of the cell's two triangles cut by **`0x2`** (`0x0045c6b7`): set, the triangles
+(x+1,z)-(x,z)-(x+1,z+1) and (x,z+1)-(x+1,z+1)-(x,z), split on (x,z)-(x+1,z+1); clear, the near corner's and the far
+corner's, split on (x+1,z)-(x,z+1). Each plane's hit counts **anywhere inside the cell's square** (`0x0045c88e`..
+`0x0045c8db`: four bounds, no test of which triangle), and the nearest `|t|` is kept (`0x0045c8e0`). So where a cell
+folds up into a ridge, the plane of one triangle carried over the other half is met first, and the pick lands on it,
+above the drawn ground. On a ground cell `0x2` and `0x4` name the same diagonal (all four parks, 0 cells otherwise);
+every hole carries neither bit (Lost Kingdom 1,159), so on a hole the pick splits on (x+1,z)-(x,z+1) where a flagged
+hole's `FUN_004527f0` splits on (x,z)-(x+1,z+1).
+
 ### What the render-state `0x0800` tests are
 
 The terrain renderer `FUN_0056f670` has 16 sites pairing `TEST ?H,0x8` with a test of `0x4` in the cell's high byte (`TEST byte ptr [reg+0x1],0x4`, or `TEST AH,0x4` at `0x0056fb0e` and `0x0056fd67`), which look like a diagonal rule. They are not. All 16 sites were traced and every one has the same shape:
