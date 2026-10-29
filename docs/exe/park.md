@@ -2124,6 +2124,17 @@ straights drawing the fresh park's generator; the laying's draws before that are
 `FRESH_BOUNDARY_LAYING_DRAWS`. Measured: the stock park's wall right of the gate and along row 13 in both games at the
 same cameras (Q620, `q620/overlay-gate-final.png`); a fresh park's in both games (Q656).
 
+**Alexah's Full Simulation jungle draws none, and why (Q811, `q806/`, every prediction in its `PREDICTION.txt`, 7 of 7 held).**
+`ParkBoundaryHoarding.Read` takes the records from `ParkThingStates`, the walk that stops in her `New Save.TPWS` at 2058464 of
+2101020 (a Temple of Gloom's car records, item 1181, `park-gate.md`, "What draws the doors"; Q779), and answers none while the walk has a
+problem. Her file holds 163 records of item 17300 on (`records.py`, `lib/parkfile.py`: rows 2 x 98, 3 x 10, 9 x 12, 19 x 7, 20 x 16,
+23 x 19, 26 x 1), 82 of them in slots after the first 1181 record, so the walk's partial list could not hold the wall. Ours, main
+`b8a71167`, her file's copy: `boundary pieces 0 anchors 163 unmade 163`, `BOUNDARY_HOARDING_UNMADE` 163, no wall at the gate's
+view (`run1fs/gate_fs.png`); the stock park 143 of 143 (`run2stock/`); a probe reading item 1181 as 5 channels in all three callers of
+`ThingStates` (`ParkRides`, `ParkObjects`, `ParkBoundaryHoarding`): `pieces 163 anchors 163 unmade 0`, the wall laid round the gate as
+the original's (`run3probe/gate_fs.png`; the original's frame is Q809's `q805/orig/gate/o-t19017.png`, the same file and camera, taken
+for Q809, not again for this). The count 5 is `rsys.py`'s reading, not the original's (Q779). The wall comes back with Q779 (built by Q810).
+
 #### A track piece's model, price and open end
 
 Read for Q687 in Ghidra and measured in the original under Proton on `q581/karts.TPWS` (`q587/orig`, `original/trackcells.py`,

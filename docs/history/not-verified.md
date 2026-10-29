@@ -5,6 +5,12 @@ newest first. The pre-commit hook (`tools/maintainer/status-sweep.py`) moves an 
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q809 (what draws Q805's gate doors: the gate model's held channel, which ours loses on loading Alexah's park because her model
+  records do not read, Q779). Compared on screen at one camera (480 165 120 0): ours (main's build) on a copy of her `New Save.TPWS`,
+  doors shut with "0 animation channels put back", against the original under Proton loading a copy of the same file, doors open;
+  the stock park in ours open; a throwaway probe (item 1181 read as 5 channels) open. Not compared: the two games at the same tick
+  (the original's frame is at tick 19017, ours paused at 19015), and the doors open in ours with the original's real channel count,
+  which is Q810 (Q779).
 - Q807 (what Q804's blue lines are: the open steps at floor rims on sloped ground, which the original conforms) and the console's `rim`.
   Compared on screen: ours (final build) against the original under Proton loading a copy of Alexah's `New Save.TPWS`, one camera
   (160, 270, zoom 90): 5,751 sliver pixels against 0 (`lib/clearseam.py`); the stock park and Alexah's level plots 0 in ours. Not

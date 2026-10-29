@@ -111,8 +111,9 @@ the pose is lost on load.**
 | The original under Proton, a copy of the same file | `TP-nodisc.exe` | (frames only) | `orig/gate/o-t19017.png`: open |
 | Probe, not a fix: item 1181 read as 5 channels | a throwaway worktree | "106 animation channels put back"; thing 11 `HELD flags 0x14` | `run3probe/gate_fs.png`: open |
 
-The probe's count is `rsys.py`'s reading, not the original's (Q779 decodes that). Its frame still shows no boundary
-wall, and the hoarding restore's own walk still logs "the walk ended at 2058464": a lead for Q806, not checked.
+The probe's count is `rsys.py`'s reading, not the original's (Q779 decodes that). That probe changed `ParkRides`' count alone, so
+its frame still shows no boundary wall: the hoardings' and the boundary's own reads of the walk stayed broken. With all three callers
+given the count the wall stands too (`park.md`, "The boundary hoarding's piece", Q811).
 
 ## Implementation and verification (Q89b)
 

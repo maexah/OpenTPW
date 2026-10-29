@@ -64,14 +64,6 @@ default, Alexah's second pre-weekly list), then the rest in the order below.
 **Ordered at Alexah's word (2026-10-29):** Q804, Q805 and Q806, found while photographing Alexah's Full Simulation
 park for the website, go first. Q804 stopped the photographs: no picture with the blue lines will be used.
 
-- [ ] **Q806. The boundary wall is not drawn in Alexah's Full Simulation park.** From the same photographs. Q620 draws
-  it in the stock park (143 pieces); in Alexah's jungle no wall stands at the park's edge in any frame (the gate's
-  frames, `ax_375_365.png`). The `boundary` census was not taken: take it first (anchors in the file, pieces made,
-  `BOUNDARY_HOARDING_*` gaps), then compare with the original's frame of the same park. Confirm: the wall in the
-  gate's view beside the original's, with the census.
-  From Q809: loading her file, the hoarding restore logs "the walk ended at 2058464 and the module ends at 2101020", the
-  walk Q779 names, and a probe that read item 1181 as 5 channels for `ParkRides` alone (not for the hoardings) still drew no
-  wall (`q805/run3probe/gate_fs.png`). Not checked whether the walk is the whole cause.
 - [ ] **Q808. Close the open steps at floor rims on sloped ground (Q804's build).** From Q804 and Q807. Build the original's
   conform of the rim to the terrain corners (Q750 for placed things, Q695 for queue and boundary pieces; decode what those items
   list first), so that `lib/clearseam.py` reads 0 at the Sun God camera (160, 270, zoom 90, yaw 240; 5,751 now, the original's 0) and
@@ -84,7 +76,9 @@ park for the website, go first. Q804 stopped the photographs: no picture with th
   `ParkThingStates` reads her `New Save.TPWS` and `autosave.TPWS` whole and the gate's channel comes back held on role 5 entry 1;
   tick Q779 with this. Q779 stays where it is; ordering it is Alexah's. Confirm: the gate's view (camera 480 165 120 0) in her park
   beside the original's `q805/orig/gate/o-t19017.png`, the doors open, with `rides` thing 11 `HELD` and the restore line's channels
-  put back above nought; the stock park still 15.
+  put back above nought; the stock park still 15. **And the wall (Q811):** the same file's `boundary` reads `pieces 163 anchors 163
+  unmade 0` (ho_fob1 10, ho_fob2 7, ho_fob3 1, ho_fos1 98, ho_fos2 16, ho_fos3 19, ho_fos4 12; 0 of 163 now) and the gate's view shows the
+  wall beside the original's; the stock park still 143.
 - [ ] **Q802. What Q800 left for a person or a machine it did not have.** From Q800 (run 13, lane A). Done by the
   coordinator (2026-10-29): `opentpw.maintainer` set in `~/repos/OpenTPW-laneB`, and the Saturday audit runs
   `python3 tools/check_docs_paths.py`. The Linux quick start is marked "tested on the maintainer's Linux machine only"

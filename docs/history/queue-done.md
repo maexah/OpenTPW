@@ -10980,6 +10980,23 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Confirm: the gate's view in both games at the same moment, the doors open.
   **Split (2026-10-29):** the "find what drives the doors" half is done as Q809 (the gate model's held channel, lost because
   Alexah's model records do not read, Q779). Reading them and the doors-open confirm are Q810.
+- [x] **Q811. Why Alexah's Full Simulation park draws no boundary wall** (2026-10-29, lane A; the first piece of Q806, filed after the
+  2026-10-29 ordering block). The wall's pieces are made again from the park file's model records through `ParkThingStates`, the one
+  walk Q779 names, which stops at 2058464 of 2101020 in her file, so `ParkBoundaryHoarding.Read` answers none: `boundary pieces 0
+  anchors 163 unmade 163`, 163 `BOUNDARY_HOARDING_UNMADE` counted, and no wall in the gate's view. Her file holds the 163 records
+  (82 of them in slots after the first record of item 1181, so a partial read cannot hold the wall); the original's frame of the same file and camera
+  has the wall; a probe reading item 1181 as 5 channels in the three callers of `ThingStates` (`ParkRides`, `ParkObjects`, `ParkBoundaryHoarding`) gives `pieces 163 unmade 0` and the wall in the frame, laid as the original's
+  (`q806/PREDICTION.txt`, 7 of 7 held, the original's frame is Q809's). The stock park is 143 of 143. The build is Q810's.
+- [x] **Q806. The boundary wall is not drawn in Alexah's Full Simulation park.** From the same photographs. Q620 draws
+  it in the stock park (143 pieces); in Alexah's jungle no wall stands at the park's edge in any frame (the gate's
+  frames, `ax_375_365.png`). The `boundary` census was not taken: take it first (anchors in the file, pieces made,
+  `BOUNDARY_HOARDING_*` gaps), then compare with the original's frame of the same park. Confirm: the wall in the
+  gate's view beside the original's, with the census.
+  From Q809: loading her file, the hoarding restore logs "the walk ended at 2058464 and the module ends at 2101020", the
+  walk Q779 names, and a probe that read item 1181 as 5 channels for `ParkRides` alone (not for the hoardings) still drew no
+  wall (`q805/run3probe/gate_fs.png`). Not checked whether the walk is the whole cause.
+  **Split (2026-10-29):** the census and the cause are done as Q811 (the same walk Q779 names, so the wall comes back with it). Reading
+  the records and the wall-in-the-gate's-view confirm are Q810's.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

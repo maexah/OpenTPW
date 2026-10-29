@@ -20,7 +20,7 @@ One line per system; the detail, item by item, is `docs/WORKS.md` (grep it by ar
 
 One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-number, never read it whole).
 
-- Park and saving: a played park whose model records do not read (Alexah's, with a Temple of Gloom: Q779) loads none of its models' saved clips, so its gate stands shut (Q810); no loan screen, litter or day's end; a written park holds no kart, water or tracked ride, and some voices, puffs and the music voice are not written (Q420, Q803); forty-four of the advisor's 155 polled messages are built.
+- Park and saving: a played park whose model records do not read (Alexah's, with a Temple of Gloom: Q779) loads none of its models' saved clips, so its gate stands shut and its boundary wall is not drawn (Q810, Q811); no loan screen, litter or day's end; a written park holds no kart, water or tracked ride, and some voices, puffs and the music voice are not written (Q420, Q803); forty-four of the advisor's 155 polled messages are built.
 - Map and windows: the map's overlay, hover and click are decoded, not built (Q684, Q685); five of the nine object windows are unbuilt (Q31b).
 - Guests: the deciding turn's vomit, litter, fireworks and pranks and four queue turns are counted (Q224 to Q226, Q228); a failed route is not revived (Q104); queues lose more happiness than the original's (Q746).
 - Building: a carried member of staff shows nothing; a bought thing's sparkles are not drawn (Q683); the buy screen's panel has no model (Q158); a placed thing's and a queue piece's floor rim is not conformed to sloped ground, so thin light-blue slivers show along plots there, none on level ground (Q750, Q695; the build is Q808).
@@ -38,12 +38,13 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- Q809 (what draws Q805's gate doors: the gate model's held channel, which ours loses on loading Alexah's park because her model
-  records do not read, Q779). Compared on screen at one camera (480 165 120 0): ours (main's build) on a copy of her `New Save.TPWS`,
-  doors shut with "0 animation channels put back", against the original under Proton loading a copy of the same file, doors open;
-  the stock park in ours open; a throwaway probe (item 1181 read as 5 channels) open. Not compared: the two games at the same tick
-  (the original's frame is at tick 19017, ours paused at 19015), and the doors open in ours with the original's real channel count,
-  which is Q810 (Q779).
+- Q811 (why Alexah's Full Simulation park draws no boundary wall: `ParkBoundaryHoarding.Read` takes its records from the walk Q779
+  names, which stops in her file, so none of her 163 wall records is read). Compared on screen at one camera (480 165 120 0): ours
+  (main `b8a71167`) on a copy of her `New Save.TPWS`, `boundary pieces 0 anchors 163 unmade 163`, no wall; a throwaway probe (item
+  1181 read as 5 channels in the three callers of `ThingStates`) `pieces 163 unmade 0` with the wall round the gate; the stock park
+  143 of 143. The original's frame of the same file and camera is Q809's, taken earlier the same day, not retaken. Not compared:
+  the wall's pieces one by one against the original's (the two frames differ in aspect, HUD and tick), and the wall in ours with the
+  original's real channel count, which is Q810 (Q779).
 
 
 
