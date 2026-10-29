@@ -82,6 +82,38 @@ same script instance without resetting its control flow. This is an end sequence
 **not an interchangeable ordinary close command**.
 These are decoded script effects, not observed animation timing or screenshots.
 
+## What draws the doors (Q809)
+
+**The doors are the gate model's channel 0, and nothing else.** The command and status words draw nothing. The
+opening path's `WAITANIM 5,1` (jungle word 24) plays role 5 (M) entry 1, and the channel is left held on
+that clip's final frame (flag `0x4`, as all three files below save it; the end-of-clip paths are `park.md`, "End of
+clip is five outcomes"; which of them the gate's model takes was not read). The closing path's `TRIGANIM 5,0,0` plays entry 0 the same way. Between clips the
+script waits in its dispatch loop at word 2 and triggers nothing, so a gate resumed with status 1 shows only what its
+channel was saved holding.
+
+**A load puts the channel back whole.** `RideSystem_LoadModels` (`0x004647a0`) copies each saved channel's eleven
+dwords onto the channel (`0x00464bcb`..`0x00464c17`: flags, role, entry, the three stamps, the speed, the queue's
+four), ORs `0x10` onto a held one (`0x00464bf2`..`0x00464bfd`), binds the clip (`0x00464c2c`) and marks the model
+live where a channel is below role 12 (`0x00464cbe`..`0x00464cde`). The original's loaded gate stands as it was saved.
+
+**Measured (Q809, `q805/`, every prediction in its `PREDICTION.txt`, 8 of 8 held).** All three files save the gate's
+channel 0 held on its opening clip: flags `0x4`, role 5, entry 1 (`gatechan.out`, read by `rsys.py`): the stock
+`Easymode.TPWI`, and Alexah's Full Simulation `New Save.TPWS` and `autosave.TPWS`. Ours reads the same channel through
+`ParkThingStates` only, and that walk stops in Alexah's file at 2058464 of the module's 2101020 (Q779: the Temple of
+Gloom's car records, item 1181, read as one channel each). So none of her park's channels comes back and the gate
+stands idle at its rest pose, the doors shut, while `gate` reads command 1, status 1. **The park's state is right;
+the pose is lost on load.**
+
+| Run | Binary | Log and census | Frame (camera 480 165 120 0) |
+|---|---|---|---|
+| Ours, a copy of `New Save.TPWS` | main `e1c123e9` | "model states would not read ... 2058464 ... 2101020"; "0 animation channels put back"; thing 11 `channels [0:idle]`; `gate 11 closed 0 command 1 status 1` | `run1fs/gate_fs.png`: shut |
+| Ours, the stock park | the same | "15 animation channels put back"; thing 11 `role 5 entry 1 frame 50.0/50.0 HELD flags 0x14` | `run2stock/gate_stock.png`: open |
+| The original under Proton, a copy of the same file | `TP-nodisc.exe` | (frames only) | `orig/gate/o-t19017.png`: open |
+| Probe, not a fix: item 1181 read as 5 channels | a throwaway worktree | "106 animation channels put back"; thing 11 `HELD flags 0x14` | `run3probe/gate_fs.png`: open |
+
+The probe's count is `rsys.py`'s reading, not the original's (Q779 decodes that). Its frame still shows no boundary
+wall, and the hoarding restore's own walk still logs "the walk ended at 2058464": a lead for Q806, not checked.
+
 ## Implementation and verification (Q89b)
 
 `ParkPeople.DoorMoved` commands the gate before its ride loop. The guest census reads live

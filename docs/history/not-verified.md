@@ -5,6 +5,11 @@ newest first. The pre-commit hook (`tools/maintainer/status-sweep.py`) moves an 
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q807 (what Q804's blue lines are: the open steps at floor rims on sloped ground, which the original conforms) and the console's `rim`.
+  Compared on screen: ours (final build) against the original under Proton loading a copy of Alexah's `New Save.TPWS`, one camera
+  (160, 270, zoom 90): 5,751 sliver pixels against 0 (`lib/clearseam.py`); the stock park and Alexah's level plots 0 in ours. Not
+  compared: the original's rim vertices against the terrain corners (Q750's decode), a queue piece's drape (Q695), and the lines
+  gone: nothing is built, the conform is Q808, which Q804 split into.
 - Q801 (the rest of a park made fresh's file) and its review fixes. The original under Proton loaded r1's file (`q801/orig/l2`), not r2's,
   one comment apart. The script header count now matches the original's (file + records + made - gone: a load and save writes 28 over
   fourteen records, as an Instant Action save does), so a load and save here is no longer byte for byte the file; checked by test and by

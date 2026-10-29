@@ -20,7 +20,7 @@ One line per system; the detail, item by item, is `docs/WORKS.md` (grep it by ar
 
 One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-number, never read it whole).
 
-- Park and saving: no loan screen, litter or day's end; a written park holds no kart, water or tracked ride, and some voices, puffs and the music voice are not written (Q420, Q803); forty-four of the advisor's 155 polled messages are built.
+- Park and saving: a played park whose model records do not read (Alexah's, with a Temple of Gloom: Q779) loads none of its models' saved clips, so its gate stands shut (Q810); no loan screen, litter or day's end; a written park holds no kart, water or tracked ride, and some voices, puffs and the music voice are not written (Q420, Q803); forty-four of the advisor's 155 polled messages are built.
 - Map and windows: the map's overlay, hover and click are decoded, not built (Q684, Q685); five of the nine object windows are unbuilt (Q31b).
 - Guests: the deciding turn's vomit, litter, fireworks and pranks and four queue turns are counted (Q224 to Q226, Q228); a failed route is not revived (Q104); queues lose more happiness than the original's (Q746).
 - Building: a carried member of staff shows nothing; a bought thing's sparkles are not drawn (Q683); the buy screen's panel has no model (Q158); a placed thing's and a queue piece's floor rim is not conformed to sloped ground, so thin light-blue slivers show along plots there, none on level ground (Q750, Q695; the build is Q808).
@@ -38,11 +38,12 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- Q807 (what Q804's blue lines are: the open steps at floor rims on sloped ground, which the original conforms) and the console's `rim`.
-  Compared on screen: ours (final build) against the original under Proton loading a copy of Alexah's `New Save.TPWS`, one camera
-  (160, 270, zoom 90): 5,751 sliver pixels against 0 (`lib/clearseam.py`); the stock park and Alexah's level plots 0 in ours. Not
-  compared: the original's rim vertices against the terrain corners (Q750's decode), a queue piece's drape (Q695), and the lines
-  gone: nothing is built, the conform is Q808, which Q804 split into.
+- Q809 (what draws Q805's gate doors: the gate model's held channel, which ours loses on loading Alexah's park because her model
+  records do not read, Q779). Compared on screen at one camera (480 165 120 0): ours (main's build) on a copy of her `New Save.TPWS`,
+  doors shut with "0 animation channels put back", against the original under Proton loading a copy of the same file, doors open;
+  the stock park in ours open; a throwaway probe (item 1181 read as 5 channels) open. Not compared: the two games at the same tick
+  (the original's frame is at tick 19017, ours paused at 19015), and the doors open in ours with the original's real channel count,
+  which is Q810 (Q779).
 
 
 

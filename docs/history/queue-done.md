@@ -10965,6 +10965,21 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   **Split (2026-10-29):** the "find which" half is done as Q807 (the open step between a plate's rim and sloped ground, which the
   original closes by conforming the rim: Q750 for placed things, Q695 for queue and boundary pieces; the lines are the frame's clear
   colour). The build and the "lines gone" confirm are Q808.
+- [x] **Q809. What draws Q805's gate doors** (2026-10-29, lane A; the first piece of Q805, filed after the 2026-10-29 ordering
+  block). The doors are the gate model's channel 0 alone, held on its opening clip's last frame (role 5 entry 1, flag `0x4`), and a
+  load puts the saved channel back whole (`RideSystem_LoadModels` `0x004647a0`; `park-gate.md`, "What draws the doors"). Alexah's two
+  files and the stock park all save it so. Ours drops it: `ParkThingStates`' walk stops at 2058464 of 2101020 in her file
+  (Q779), so "0 animation channels put back" and the gate stands idle and shut while `gate` reads command 1, status 1; the stock park
+  15 put back and the doors open; the original, same file and camera, open; a probe reading item 1181 as 5 channels, 106 put back and
+  open (`q805/PREDICTION.txt`, 8 of 8 held). The park's state is right; the pose is lost. The build is Q810.
+- [x] **Q805. The gate's doors are drawn shut while guests walk in.** From the same photographs. With 311 guests
+  inside and arrivals coming through, `gate` answered `gate 11 closed 0 command 1 status 1` (tick 19510), yet the
+  doors stand shut in every frame (`H165_0_120.png`: guests on the path, passing the shut doors). Alexah: the gate
+  never closes while guests are in the park, and guests cannot come in through a shut gate. Find what drives the
+  doors' pose in the original (decode first) and whether ours draws the wrong pose or the park's state is wrong.
+  Confirm: the gate's view in both games at the same moment, the doors open.
+  **Split (2026-10-29):** the "find what drives the doors" half is done as Q809 (the gate model's held channel, lost because
+  Alexah's model records do not read, Q779). Reading them and the doors-open confirm are Q810.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

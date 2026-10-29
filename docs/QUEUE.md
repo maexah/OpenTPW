@@ -64,17 +64,14 @@ default, Alexah's second pre-weekly list), then the rest in the order below.
 **Ordered at Alexah's word (2026-10-29):** Q804, Q805 and Q806, found while photographing Alexah's Full Simulation
 park for the website, go first. Q804 stopped the photographs: no picture with the blue lines will be used.
 
-- [ ] **Q805. The gate's doors are drawn shut while guests walk in.** From the same photographs. With 311 guests
-  inside and arrivals coming through, `gate` answered `gate 11 closed 0 command 1 status 1` (tick 19510), yet the
-  doors stand shut in every frame (`H165_0_120.png`: guests on the path, passing the shut doors). Alexah: the gate
-  never closes while guests are in the park, and guests cannot come in through a shut gate. Find what drives the
-  doors' pose in the original (decode first) and whether ours draws the wrong pose or the park's state is wrong.
-  Confirm: the gate's view in both games at the same moment, the doors open.
 - [ ] **Q806. The boundary wall is not drawn in Alexah's Full Simulation park.** From the same photographs. Q620 draws
   it in the stock park (143 pieces); in Alexah's jungle no wall stands at the park's edge in any frame (the gate's
   frames, `ax_375_365.png`). The `boundary` census was not taken: take it first (anchors in the file, pieces made,
   `BOUNDARY_HOARDING_*` gaps), then compare with the original's frame of the same park. Confirm: the wall in the
   gate's view beside the original's, with the census.
+  From Q809: loading her file, the hoarding restore logs "the walk ended at 2058464 and the module ends at 2101020", the
+  walk Q779 names, and a probe that read item 1181 as 5 channels for `ParkRides` alone (not for the hoardings) still drew no
+  wall (`q805/run3probe/gate_fs.png`). Not checked whether the walk is the whole cause.
 - [ ] **Q808. Close the open steps at floor rims on sloped ground (Q804's build).** From Q804 and Q807. Build the original's
   conform of the rim to the terrain corners (Q750 for placed things, Q695 for queue and boundary pieces; decode what those items
   list first), so that `lib/clearseam.py` reads 0 at the Sun God camera (160, 270, zoom 90, yaw 240; 5,751 now, the original's 0) and
@@ -82,6 +79,12 @@ park for the website, go first. Q804 stopped the photographs: no picture with th
   census to read the steps by. Her level ground already draws none: photographs of it are usable now. Q750 is what this waits on,
   so Alexah may want Q750 or this ordered first (a reorder is Alexah's). Confirm: the same cameras in her park and in the original,
   the lines gone, with the stock park unchanged.
+- [ ] **Q810. The gate's doors stand open in Alexah's Full Simulation park (Q805's build).** From Q805 and Q809. Do Q779 here,
+  its decode first (how many channels the original makes a car's model with, and what its loader reads for them), so that
+  `ParkThingStates` reads her `New Save.TPWS` and `autosave.TPWS` whole and the gate's channel comes back held on role 5 entry 1;
+  tick Q779 with this. Q779 stays where it is; ordering it is Alexah's. Confirm: the gate's view (camera 480 165 120 0) in her park
+  beside the original's `q805/orig/gate/o-t19017.png`, the doors open, with `rides` thing 11 `HELD` and the restore line's channels
+  put back above nought; the stock park still 15.
 - [ ] **Q802. What Q800 left for a person or a machine it did not have.** From Q800 (run 13, lane A). Done by the
   coordinator (2026-10-29): `opentpw.maintainer` set in `~/repos/OpenTPW-laneB`, and the Saturday audit runs
   `python3 tools/check_docs_paths.py`. The Linux quick start is marked "tested on the maintainer's Linux machine only"
@@ -3151,6 +3154,7 @@ state machine.
   falls just after a 1181 record (`q778/where.py`; `parkfile.py -H` prints the counts). Decode first how many channels the original makes a car's model with
   (the car's launch, which makes the two records) and what its loader reads for them, then read them so; check against
   both of Alexah's jungle files and the 45 files `saves.md` counts.
+  Q810 (Q805's build) does this item; Q809 measured its effect on the gate (`park-gate.md`, "What draws the doors").
 - [ ] **Q601. The gadget's date is written with the machine's culture; the original's reads "4.13.2002".** Seen in
   Q707's runs (`q707/p707t/side-by-side.png`): ours letters `GameCalendar.Now.ToShortDateString()` (`ParkGadget.ShowDate`),
   "4/18/2002" on this machine, and would letter another order on a machine of another culture; the original's frames read
