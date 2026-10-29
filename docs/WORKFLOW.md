@@ -157,6 +157,20 @@ font and its licence, the README, `LICENSE.md` and `THIRD-PARTY-NOTICES.md`; `We
   the system and `console.log`; a launch that finds no game writes that file too, in the player's own data folder
   (`FailedStartLogTests`).
 
+## Tiers
+
+Before a session starts on a queue item, read its tier from what the item says ("decode first", "Ghidra", "cause
+known"); items carry no tier line. The tier says how hard the work is, not which model does it, so it holds for any
+agent. An item's tier is its hardest step. Only the table below names models: Claude's, as this project runs them.
+Someone using another agent maps the three tiers to their own models and effort levels; nobody keeps a list of theirs
+here.
+
+| Tier | The work | Claude here |
+|---|---|---|
+| **light** | Mechanical, no game run: a doc or comment fix, a rename, a test for code that already works | Sonnet, low effort |
+| **standard** | Building what is already understood: the cause is known and its decode is in `docs/exe/`; confirmed in the game | Sonnet, high effort |
+| **deep** | Decoding, Ghidra, the original under Proton, a cause nobody knows yet, or a format claim measured across the game's files | Opus, high effort |
+
 ## Subagents
 
 Set by Alexah 2026-09-26, after one staleness audit spent about 40M subagent tokens and hit the weekly limit. None of
