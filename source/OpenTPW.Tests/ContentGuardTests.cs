@@ -141,7 +141,10 @@ public class ContentGuardTests
 					.Select( d => Path.Join( d, tool ) ).FirstOrDefault( File.Exists );
 
 				if ( found == null )
+				{
 					Assert.Inconclusive( $"skipped: no {tool} here" );
+					return;
+				}
 
 				File.CreateSymbolicLink( Path.Join( bin, tool ), found );
 			}
