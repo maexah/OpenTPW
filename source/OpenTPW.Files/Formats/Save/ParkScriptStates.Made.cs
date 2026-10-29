@@ -193,6 +193,20 @@ public sealed partial class ParkScriptStates
 		return relisted;
 	}
 
+	/// <summary>
+	/// Counts the header's script count, DAT_008791ac, up by each record the file holds, as the engine's load does for each record it reads
+	/// (0x005599cd): a park loaded and saved holds the file's count and its records. Once, on <paramref name="body"/>, a copy of the payload
+	/// this was read from, before <see cref="Splice"/>; docs/exe/saves.md, "The rest of a park made fresh's file".
+	/// </summary>
+	public void PutCount( byte[] body )
+	{
+		if ( Problem != null || !ClosedOnGuard || _headerAt < 0 )
+			throw new InvalidOperationException( $"the park file's scripts were not read whole: {Problem}" );
+
+		if ( _headerBytes >= (CountDword + 1) * 4 )
+			PutInt32( body, _headerAt + (CountDword * 4), BinaryPrimitives.ReadInt32LittleEndian( body.AsSpan( _headerAt + (CountDword * 4), 4 ) ) + _order.Count );
+	}
+
 	/// <summary>The size of one record of a script's object list, the effects it has started.</summary>
 	private const int EffectRecordSize = 28;
 
@@ -255,9 +269,8 @@ public sealed partial class ParkScriptStates
 
 		BinaryPrimitives.WriteInt32LittleEndian( result.AsSpan( _countAt, 4 ), kept + made.Count );
 
-		// The header's count, DAT_008791ac, which nothing walks by: one up for each script made (0x005588ba) and one down for
-		// each destroyed (0x00558656). A deviation, said here: the engine's load also counts one up for each record it reads
-		// (0x005599cd), so its park loaded and saved holds twice its scripts there; this keeps the file's.
+		// The header's count, DAT_008791ac, one up for each script made (0x005588ba) and one down for each destroyed (0x00558656);
+		// the load's one up per record read is PutCount's.
 		if ( _headerBytes >= (CountDword + 1) * 4 )
 		{
 			var count = result.AsSpan( _headerAt + (CountDword * 4), 4 );

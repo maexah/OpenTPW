@@ -248,7 +248,7 @@ public sealed class AnimTimeControl
 		}
 
 		// A role the model does not carry stops the channel rather than leaving it running - the engine
-		// restores the rest pose and writes the sentinel, and answers nothing at all. An entry past a loaded
+		// restores the rest pose, writes the sentinel and speed 1 (0x00473139, 0x00473159), and answers nothing at all. An entry past a loaded
 		// role's count stops here too, where the engine plays on with the role standing (see
 		// RideAnimations.Trigger).
 		if ( frames <= 0f )
@@ -256,6 +256,7 @@ public sealed class AnimTimeControl
 			AnimID = RideAnimations.NoRole;
 			SubAnim = 0;
 			Speed = 1f;
+			Started = true;
 			StartAnimTime = 0;
 			AnimTime = 0;
 			NoPauseAnimTime = 0;

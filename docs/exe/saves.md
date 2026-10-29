@@ -935,17 +935,25 @@ starting cash**; **the clock holds month 0 and day -1 until its first update** (
 - **The rest of the file** (Q801), decoded and built: the controls' `+0x08`, the two objects' model tables and channels and their scripts' words,
   below.
 
+- **The sound** holds the land's five voices of Lost Kingdom as the original puts them back (handles `0x36` to `0x3a`, slots 97, 96, 94, 99, 95)
+  and not the session's own (the music's voice, `0x350062` under Proton, with the state's `+0x00` naming it): nought here.
+
+**Confirmed** (`q783/confirm/r2`, `orig/l3`): a fresh Full Simulation park entered, its `restart.INTS` written (30,320 bytes, tick 0, closed, 12 things,
+$50000), a feature bought and the park run to tick 104, Restart Park by clicks: tick 0, $50000, "park file holds 12 things, 2 of them objects"; the park saved
+after it writes the same size; the original under Proton loaded that file, the tick falling to 0 and the park running on, the gates and the wall drawn.
+
 ### The rest of a park made fresh's file
 
 Decoded and built on 2026-10-29 (Q801), against the clean-memory file `q327/orig/a/proton-restart.INTS`.
 
 **The object controls' `+0x08` is the item's `FatigueEffect`.** The control manager (the world's `+0x1d943c`; serialised by `FUN_004d3aa0`,
-`ControlManager_Serialise`, both ways) is filled by `FUN_004d3e00` (`ControlManager_FillFromItems`, from its constructor `FUN_004d3de0`), which
-walks every item description (`FUN_00412e60` / `FUN_00412e70`) and, for an id it holds no record of, appends one: the id, `+0x04` the
+`ControlManager_Serialise`, both ways) is filled by `FUN_004d3e00` (`ControlManager_FillFromItems`, from its constructor `FUN_004d3de0` and again at the load's end,
+`FUN_00415140`, `0x0041517a`), which
+walks every item description (`FUN_00412e60` / `FUN_00412e70`) and, for an id it holds no record of (at the load's end, an item the file lacks), appends one: the id, `+0x04` the
 descriptor's `+0x1b8` (`Upgrades[0].CostOfUpgrade`), `+0x08` its `+0xe8` (`UsageInfo.FatigueEffect`, `ride-operation.md`), `+0x0c` its
 `+0x16c` (`RipOffOK`), `+0x10` whether its `+0x180` (`Upgrades[0].CostOfResearch`) is nought, the rest nought. The two lookups,
-`FUN_004d3d10` (`ControlManager_GetObjectControl`, which caches the last key and record at `+0x12c4` and `+0x12c8`) and `FUN_004d3d80` (the same
-without the cache), have 32 call sites; none reads or writes the record's `+0x08`, and the settle-up subtracts the descriptor's own `+0xe8`
+`FUN_004d3d10` (`ControlManager_GetObjectControl`, which caches the last key and record at `+0x12c4` and `+0x12c8`) and `FUN_004d3d80` (the same,
+reading the cache without storing it), have 34 call sites; none reads or writes the record's `+0x08`, and the settle-up subtracts the descriptor's own `+0xe8`
 (`0x004fd9fb`), so the word is written and never read. Only the category files declare it (5 in `Rides.sam`, `Shops.sam` and `SideShow.sam`
 of all four themes, none in `Features.sam` or `Upgrades.sam`), which is why the three add-ons of the upgrades folder, 1500 to 1502, read nought.
 
@@ -960,16 +968,15 @@ down per instruction before anything else reads it, so a load never reads it; th
 369 of 374 records in six files hold -1 after. Its `+0xa8`, the looping key, is `0xffff` from the loader (`0x00558c4f`). The header's script
 count is the global `DAT_008791ac`: the reader zeroes it (`0x00559822`), reads the file's over it and counts one up per record (`0x005599cd`),
 the loader counts one up per script made (`0x005588ba`) and the destroyer one down (`0x00558656`); nothing walks by it, so a fresh park's file
-holds 2 and a park loaded and saved twice its records. A record's folder is spelt as the executable's strings spell it: `Rides`, `Features`,
+holds 2 and a park loaded and saved holds the file's count plus its records read, plus made, less gone (an Instant Action save written after a load holds 28 over fourteen records). A record's folder is spelt as the executable's strings spell it: `Rides`, `Features`,
 `Upgrades`, `Shops`, `Sideshow` (every park file read).
 
 **OpenTPW** writes each: `FreshParkFile` the item's `FatigueEffect` at `+0x08` (`ItemDescriptionFile.FatigueEffect`, the category's where the
 item's own file says nothing); `ParkRides` gives an object the file holds no record of (a fresh park's two) its model's fresh tables
 (`ParkModelTables.Running`), as `BindNew` gives a thing bought; a made model's channel that never started a clip (`AnimTimeControl.Started`)
 is written at speed nought; `RideScript` starts its looping key at `0xffff` and a made record holds `+0x98` nought until its first turn
-(`MadeScript.HadATurn`); the made scripts count one up each in the header and the gone one down (`ParkScriptStates.Splice`); and the folder is
-`ParkItemCatalogue.EngineDirectory`'s. **A deviation, said at `Splice`:** the count is not raised by the records a load reads, so a park loaded
-and saved here keeps the file's count where the original's doubles it; nothing reads it.
+(`MadeScript.HadATurn`); the header's count is the file's plus one for each record it holds (`ParkScriptStates.PutCount`), one up for each script made and one down for the gone (`Splice`); and the folder is
+`ParkItemCatalogue.EngineDirectory`'s.
 
 **Confirmed** (`q801/confirm/r1`, `q801/orig/l2`; `PREDICTION.txt` P1 to P6): a fresh Full Simulation park entered here, its `restart.INTS`
 against the original's (`freshcmp.py`): the controls differ in `mPreviousSearchKey` alone, the ride system is the original's 11,311 bytes with the
@@ -977,12 +984,6 @@ gates' and the lights' records byte for byte the original's (their tables and ch
 ride scripts the same but for seven ranges of heap addresses the reader replaces; the census counts `FRESH_PARK_FILE_MUSIC_VOICE` alone. A bush
 bought and the park saved on tick 102: the two records declare their tables still. The original under Proton loaded that file (tick 134 to 102,
 running on to 440 in 85 s, $49,900) and drew the gates (`orig/l2/g-08.png`).
-- **The sound** holds the land's five voices of Lost Kingdom as the original puts them back (handles `0x36` to `0x3a`, slots 97, 96, 94, 99, 95)
-  and not the session's own (the music's voice, `0x350062` under Proton, with the state's `+0x00` naming it): nought here.
-
-**Confirmed** (`q783/confirm/r2`, `orig/l3`): a fresh Full Simulation park entered, its `restart.INTS` written (30,320 bytes, tick 0, closed, 12 things,
-$50000), a feature bought and the park run to tick 104, Restart Park by clicks: tick 0, $50000, "park file holds 12 things, 2 of them objects"; the park saved
-after it writes the same size; the original under Proton loaded that file, the tick falling to 0 and the park running on, the gates and the wall drawn.
 
 ### OpenTPW's writer, the first stage
 

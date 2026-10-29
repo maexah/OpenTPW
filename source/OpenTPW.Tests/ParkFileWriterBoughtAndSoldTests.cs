@@ -406,7 +406,7 @@ public class ParkFileWriterBoughtAndSoldTests
 
 		// The header's count, after the module's tag, its header's length, the set-up flag, the tick and the next handle: one down (0x00558656).
 		int Count( byte[] of ) => Int( of, of.AsSpan().IndexOf( "RYLFRSSE"u8 ) + 8 + 16 );
-		Assert.AreEqual( (14, 13), (Count( plain ), Count( body )), "the header's count, one down for the script destroyed" );
+		Assert.AreEqual( (28, 27), (Count( plain ), Count( body )), "the header's count, the file's plus a count for each record, one down for the script destroyed" );
 		Assert.AreEqual( shipped.ScriptStates.Declared - 1, written.ScriptStates.Declared );
 		CollectionAssert.AreEqual( shipped.ScriptStates.Order.Where( handle => handle != DrinksScript ).ToArray(), written.ScriptStates.Order.ToArray() );
 		CollectionAssert.AreEqual( new[] { DrinksScript }, shipped.ScriptStates.HandlesOf( DrinksShop ).ToArray() );

@@ -10678,7 +10678,7 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   - **Done (Q609, lane B, off-screen):** built (`EntrancesPatrolled`, `ParkPeople.MechanicPatrols`); on that load
     `poll message=19 row=19 days=828 score=325 threshold=25 tick=19084 result=post months=27 mechanics=5 areas=5
     entrances=25/71`, queued behind `0x13a` (said 19059), then the 19100 awards, 311 and 315; said on 22142, `response=57
-    sample=57 line=2`, `wearing 5,0` (`q801/PREDICTION.txt`, run3). 22 bugs put back, all caught. The tick differs from
+    sample=57 line=2`, `wearing 5,0` (`q801/PREDICTION-q609.txt`, run3). 22 bugs put back, all caught. The tick differs from
     the original's 19084 for the hint's sake: Q662's note.
 - [x] **Q692. Do the game menu and the options screen switch the camera table off?** From the Q631 review (run 9),
   decode. `WindowStack.CameraTableOff` holds the camera keys off under a message box and the Save and Load screens only,

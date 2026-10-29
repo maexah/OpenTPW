@@ -66,6 +66,7 @@ internal static class ParkCarWriter
 		{
 			var model = Model( car.Mesh );
 			var players = boats?.AnimationsOf( car.Index ) ?? Players( item, car, model, files, now );
+			// Reaches ParkRides.WrittenChannel as every other channel does; no test drives a car's channel through it.
 			var channel = players?.Channel( 0 ) is { } running ? ParkRides.WrittenChannel( running, CarChannel, reading, now ) : CarChannel;
 
 			ParkThingStates.ModelTables? tables = null;

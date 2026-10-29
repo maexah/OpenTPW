@@ -335,6 +335,7 @@ public static class ParkFileWriter
 
 			var objects = loaded.PutObjects( body, run.Objects );
 			var scripts = loaded.ScriptStates.Put( body, run.SchedulerTick, run.NextHandle, run.Scripts );
+			loaded.ScriptStates.PutCount( body );
 
 			// A track ride taken out, sold or to be written again, gives up its cars' models and the heads on them.
 			var tracks = run.Tracks ?? [];

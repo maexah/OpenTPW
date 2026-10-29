@@ -183,6 +183,23 @@ public class ParkFileWriterThingsTests
 	private static void Put16( byte[] body, int at, int value ) => BinaryPrimitives.WriteInt16LittleEndian( body.AsSpan( at, 2 ), (short)value );
 
 	/// <summary>Every byte that differs between two bodies of one length.</summary>
+	/// <summary>
+	/// The file's script count and the count a load and save leaves: the header's, one up for each of the fourteen records read (0x005599cd),
+	/// the one dword a park written as it was loaded changes; the file again with that count put back.
+	/// </summary>
+	private static byte[] WithTheFilesScriptCount( byte[] payload, byte[] body )
+	{
+		var at = payload.AsSpan().IndexOf( "RYLFRSSE"u8 ) + 8 + 16;
+
+		Assert.AreEqual( (14, 28), (Int( payload, at ), Int( body, at )), "the count: the file's, and the records read counted again" );
+
+		var again = (byte[])body.Clone();
+
+		BinaryPrimitives.WriteInt32LittleEndian( again.AsSpan( at, 4 ), Int( payload, at ) );
+
+		return again;
+	}
+
 	private static List<int> Differing( byte[] a, byte[] b )
 	{
 		Assert.AreEqual( a.Length, b.Length, "no record changes its length" );
@@ -193,7 +210,7 @@ public class ParkFileWriterThingsTests
 	// ---- the files' side ----
 
 	/// <summary>
-	/// Every record read and handed straight back changes no byte: each field is written where it is read, and
+	/// Every record read and handed straight back changes no byte but the header's script count: each field is written where it is read, and
 	/// nothing else is touched.
 	/// </summary>
 	[TestMethod]
@@ -202,7 +219,7 @@ public class ParkFileWriterThingsTests
 		var body = ParkFileWriter.Body( shipped, Carried with { Things = AsTheFile() }, out _, out var things );
 
 		CollectionAssert.AreEqual( payload, ParkFileWriter.Body( shipped, Carried ), "the control: the file carried is the file" );
-		CollectionAssert.AreEqual( payload, body );
+		CollectionAssert.AreEqual( payload, WithTheFilesScriptCount( payload, body ) );
 		Assert.AreEqual( new ParkFileWriter.ThingsWritten( 14, 14, 0, 161 ), things );
 	}
 
@@ -844,7 +861,7 @@ public class ParkFileWriterThingsTests
 		Assert.AreEqual( (shipped.ScriptStates.Tick, shipped.ScriptStates.NextHandle), (things.SchedulerTick, things.NextHandle) );
 		Assert.AreEqual( 7, things.Models.Sum( model => model.Channels.Count( channel => (channel.Flags & 0x14) == 0x4 ) ),
 			"the bound things' held channels go out with the file's own word: the Jungle Spray's three, the bin's and the toilets'" );
-		Assert.AreEqual( 0, Differing( payload, body ).Count );
+		Assert.AreEqual( 0, Differing( payload, WithTheFilesScriptCount( payload, body ) ).Count );
 	}
 
 	/// <summary>
@@ -1623,6 +1640,23 @@ public class ParkFileWriterThingsTests
 		Assert.IsTrue( played.IsIdle && played.Started );
 		Assert.AreEqual( new SavedChannel( ParkThingStates.NoRole, 0, 0x40, 1f, 0, 0, 0, ParkThingStates.NoRole, 0, 0, 0f ),
 			ParkRides.WrittenChannel( played, file, moment => (uint)moment, 9000 ) );
+	}
+
+	/// <summary>
+	/// A start on a clip the model lacks, over a channel never started, is a start as the engine's is (0x00473139, 0x00473159): the channel
+	/// is written idle at speed 1, not as the never-started file's nought.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the missing-clip start not marking the channel started.</remarks>
+	[TestMethod]
+	public void AStartOnAMissingClipWritesSpeedOne()
+	{
+		var file = new SavedChannel( ParkThingStates.NoRole, 0, 0x40, 0f, 0, 0, 0, ParkThingStates.NoRole, 0, 0, 0f );
+		var channel = new AnimTimeControl();
+
+		channel.Start( 5, 0, 0, 1f, now: 0, frames: 0f );
+
+		Assert.IsTrue( channel.IsIdle && channel.Started );
+		Assert.AreEqual( file with { Speed = 1f }, ParkRides.WrittenChannel( channel, file, moment => (uint)moment, 9000 ) );
 	}
 
 	/// <summary>
