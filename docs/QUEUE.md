@@ -64,17 +64,13 @@ default, Alexah's second pre-weekly list), then the rest in the order below.
 **Ordered at Alexah's word (2026-10-29):** Q804, Q805 and Q806, found while photographing Alexah's Full Simulation
 park for the website, go first. Q804 stopped the photographs: no picture with the blue lines will be used.
 
-- [ ] **Q813. What Q808 left of the conform and the drape.** From Q808 (run 14, lane A). (1) **The interpolating pass** is done as Q815
-  (the original's 17th moved vertex of `gk_TRACK01`, against the 16 it lists, is not reproduced: `park-engine.md`). (2) **The coaster's
-  pylons**, decoded as Q816 (`park-engine.md`, "A coaster's pylons"): nothing here draws a pylon yet (its model is read only for the
-  track's heights, `ParkCoasterHeights`). Draw each node's pylon on its cell, posed as `ParkCoasterHeights` already poses its knot, its
-  floor conformed at the bottom of a stack as a placed thing's; a stacked one's floor hidden unless its type has `0x10`; the type's
-  four named nodes hidden and shown by place in the stack (the Minecart's `mc_bridge` hidden on every top); a saved node word's
-  `0x400` kept. Confirm at the Temple of Gloom in both games (`original/coaster.py pylons`, `original/basevertices.py --as-original`).
-  (3) The recomputed face normals (`FUN_00473c30`, whether they reach the lighting) and the
+- [ ] **Q818. What Q813 left of the conform and the drape: the normals, the control word, the ground's split.** From Q813 (run 14, lane A).
+  (3) The recomputed face normals (`FUN_00473c30`, whether they reach the lighting; a pylon's morph leaves its normals as made too) and the
   control word the conform runs under are unread (Q750's note). (4) The ground mesh still splits every cell one way (Q398), so a
   draped vertex on a cell flagged `0x4` follows the original's triangle where the ground beside it follows ours. Confirm each in
-  both games as Q808 did (`lib/clearseam.py`, `original/basevertices.py`).
+  both games as Q808 did (`lib/clearseam.py`, `original/basevertices.py`). Also left by Q817: a stacked pylon stands on the stack-height
+  record (`StackHeightDummy` on `StdPylon`), the type flag `0x10` keeps its floor, a loop pylon is another model: none is in her park, so each
+  needs a park that holds one (a coaster built in the original, then loaded in both games).
 - [ ] **Q849. What Q810 left: two counted gaps her played park's save now reaches, and two loads never run.** (From Q810's review,
   run 14.) Q810 made her Full Simulation `New Save.TPWS` read whole, so the save goes through the running-things writer for the
   first time (before, the model walk failed and the whole module was written as the file's). Two counters then fire, in
@@ -283,12 +279,11 @@ filed the items that cite it.
   Build them as the original's after Q720 settles whether the keypad's digits reach their rows and the cheat flag's
   first-key clear is run in the original; whether this game's R binding also opens the research screen under Alt
   (the original's row needs no modifier, matched by `==`) is to be checked in the same session.
-- [ ] **Q594. A loaded coaster's track and pylons are drawn.** From Q706 (`q706c/side-by-side-coaster.png`: the
+- [ ] **Q594. A loaded coaster's track is drawn (its pylons are Q817).** From Q706 (`q706c/side-by-side-coaster.png`: the
   original's `q706b/O2/o-t19061.png` beside ours `q706c/run3-A/A-coaster.png`, both at 310,355 zoom 130 rotation 0, Alexah's
-  jungle `New Save`). The original draws the Temple Of Gloom's track over its 38 pylons; ours draws neither, though Q706
-  rebuilds the track's knots, curve and samples from the save (`ParkCoasterHeights`, `ParkCoasterPylon`). Build the
-  pylons (each piece's `StdPylon` posed by its loft, rotate, incline and bank clips at its cell, as `ParkCoasterPylon`
-  poses the knot) and the track's mesh from the samples and the `coaster.sam` cross sections (FileFormats `sam.md`, "A
+  jungle `New Save`). The original draws the Temple Of Gloom's track over its 40 pylons; ours draws the pylons (Q817) and not the
+  track, though Q706 rebuilds the track's knots, curve and samples from the save (`ParkCoasterHeights`, `ParkCoasterPylon`). Build
+  the track's mesh from the samples and the `coaster.sam` cross sections (FileFormats `sam.md`, "A
   `coaster.sam`'s tables"; the mesh builder not decoded: decode first). Confirm by the same two frames side by side.
 - [ ] **Q605. The deletes this game never makes.** From Q582 (`ride-operation.md`, the `FUN_0050b780` row): the
   original also deletes a guest a guard throws out (`FUN_004feb50`, from the guard's catch `FUN_004d6790`), one in
@@ -976,7 +971,8 @@ filed the items that cite it.
   the knot and its parent have no turn of their own. `FUN_00470d10` (`Anim_ComposeAdditiveTurn`) is a 3 x 3 product of the
   key's matrix (`Anim_QuatToMatrix3`, `0x00474120`) and the node's own rows; decode the order exactly and whether the
   additive restore `FUN_00473c70`/`0x00473d0c` puts the turn back every advance, then build it in both posers when the
-  coaster pylons are drawn (Q594). Confirm by a pylon's turn beside the original's.
+  coaster pylons are drawn (Q594). Confirm by a pylon's turn beside the original's. (Q817 draws the pylons by taking each rotation key as the
+  node's turn, which is the composition on the nodes the file leaves unturned, as `ParkCoasterPylon` does for the knot; the general order stays here.)
 - [ ] **Q573. A node a clip's route moves, followed (`RIDE_NODE_ON_A_ROUTE`).** From the run 6 review of Q555 (`VERIFY-14.md`, Q555 5).
   `RideNodes.Follow` poses a thing's node tree for its particle records through `NodePoser`, which since Q561 carries a
   node along its route and since Q583 turns it to face along it, and through which `LobbyModel.Pose` now draws every

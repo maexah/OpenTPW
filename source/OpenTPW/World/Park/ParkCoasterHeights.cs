@@ -66,6 +66,27 @@ public static class ParkCoasterHeights
 	internal static float? Measure( ParkWorld save, ParkWorld.CatalogueObject placed, ParkItemCatalogue.Item item,
 		HeightfieldFile field, BaseFileSystem files )
 	{
+		if ( SetUp( save, placed, item, field, files ) is not { } coaster )
+			return null;
+
+		var chain = Chain( save.Coasters.FirstPieces, coaster.Pylon, field, coaster.RootHeight, coaster.TrackNode );
+
+		return chain == null ? null : ParkCoasterTrack.Highest( ParkCoasterTrack.Samples( chain, coaster.Curviness ) );
+	}
+
+	/// <summary>A placed coaster's pylon type, curviness and station nodes, stood where the coaster stands.</summary>
+	/// <param name="RootHeight">The height of the coaster model's root, which a station pylon's height is measured from.</param>
+	internal sealed record CoasterSetup( ParkCoasterPylon Pylon, float Curviness, RideNodes Station, float RootHeight )
+	{
+		/// <summary>Where the coaster model's track node of an id stands, in the engine's axes, or null.</summary>
+		public Numerics.Vector3? TrackNode( int id )
+			=> Station.Find( id, ParkCoasterPylon.TrackSpace, out var at ) is NodeEnd.Posed or NodeEnd.RestPose ? at : null;
+	}
+
+	/// <summary>One coaster's setup, or null where its record, files or pylon cannot be read (each reason counted).</summary>
+	internal static CoasterSetup? SetUp( ParkWorld save, ParkWorld.CatalogueObject placed, ParkItemCatalogue.Item item,
+		HeightfieldFile field, BaseFileSystem files )
+	{
 		// A coaster made here carries no model instance, and one past the first in the module cannot be found.
 		if ( save.Coasters.For( placed.MeshInstance ) is null )
 		{
@@ -89,14 +110,81 @@ public static class ParkCoasterHeights
 			return null;
 		}
 
-		ParkRides.Stand( station, placed.CatalogueId, ParkObjects.ModelOriginFor( item, placed, field ), placed.Angle );
+		var origin = ParkObjects.ModelOriginFor( item, placed, field );
 
-		var chain = Chain( save.Coasters.FirstPieces, pylon, field, ParkObjects.ModelOriginFor( item, placed, field ).Z,
-			id => station.Find( id, ParkCoasterPylon.TrackSpace, out var at ) is NodeEnd.Posed or NodeEnd.RestPose
-				? at : null );
+		ParkRides.Stand( station, placed.CatalogueId, origin, placed.Angle );
 
-		return chain == null ? null : ParkCoasterTrack.Highest( ParkCoasterTrack.Samples( chain, curviness.Value ) );
+		return new CoasterSetup( pylon, curviness.Value, station, origin.Z );
 	}
+
+	/// <summary>
+	/// One pylon of a coaster's track: the cell it stands on, how far up its range its knot is, and the yaw, incline and bank its
+	/// clips are set to; <paramref name="Which"/> names the node it carries, for the census.
+	/// </summary>
+	public readonly record struct PylonPlace( int CellX, int CellY, float Loft, float Yaw, float Incline, float Bank, string Which );
+
+	/// <summary>
+	/// Every pylon a coaster's track stands on a cell: the station's first and third nodes, which face along the station, and a
+	/// piece's each (<c>Coaster_AddNode</c>, <c>0x00434276</c>). A stacked or loop piece is counted and has none here; null where a
+	/// station node is missing.
+	/// </summary>
+	public static List<PylonPlace>? Pylons( IReadOnlyList<SavedCoasterPiece> pieces, ParkCoasterPylon pylon, HeightfieldFile field,
+		float rootHeight, Func<int, Numerics.Vector3?> trackNode )
+	{
+		var stations = StationPylons( pylon, rootHeight, trackNode );
+
+		if ( stations == null )
+			return null;
+
+		var along = StationPlace( stations[2], pylon, field ) - StationPlace( stations[0], pylon, field );
+		var level = Numerics.Vector3.Normalize( new Numerics.Vector3( along.X, 0f, along.Z ) );
+		var yaw = pylon.YawFacing( level );
+
+		var found = new List<PylonPlace>
+		{
+			new( stations[0].X, stations[0].Y, stations[0].Loft, yaw, 0f, 0f, "station 1" ),
+			new( stations[2].X, stations[2].Y, stations[2].Loft, yaw, 0f, 0f, "station 3" )
+		};
+
+		for ( var index = 0; index < pieces.Count; ++index )
+		{
+			var piece = pieces[index];
+
+			if ( piece.Stack != 0 || piece.IsLoop )
+			{
+				Unimplemented.Report( piece.IsLoop ? "COASTER_LOOP_PYLON" : "COASTER_STACKED_PYLON" );
+				continue;
+			}
+
+			found.Add( new PylonPlace( piece.X, piece.Y, piece.Loft, piece.Yaw, piece.Incline, piece.Bank, $"piece {index + 1}" ) );
+		}
+
+		return found;
+	}
+
+	/// <summary>A station node's pylon: the cell under the track node and the loft that stands its knot at the node's height.</summary>
+	private readonly record struct StationPylon( int X, int Y, float Loft, Numerics.Vector3 Node );
+
+	private static StationPylon[]? StationPylons( ParkCoasterPylon pylon, float rootHeight, Func<int, Numerics.Vector3?> trackNode )
+	{
+		var found = new StationPylon[3];
+
+		for ( var k = 0; k < 3; ++k )
+		{
+			if ( trackNode( k + 1 ) is not { } at )
+			{
+				Unimplemented.Report( "COASTER_STATION_NODE" );
+				return null;
+			}
+
+			found[k] = new StationPylon( (int)(at.X * 0.1f), (int)(at.Z * 0.1f), pylon.LoftFor( at.Y - rootHeight ), at );
+		}
+
+		return found;
+	}
+
+	private static Numerics.Vector3 StationPlace( StationPylon station, ParkCoasterPylon pylon, HeightfieldFile field )
+		=> OnPylon( station.X, station.Y, station.Loft, pylon, field );
 
 	/// <summary>
 	/// The coaster's chain of knots: the station's three, a piece's each, the closing one; null where a station node is
@@ -107,19 +195,13 @@ public static class ParkCoasterHeights
 	public static List<ParkCoasterTrack.Knot>? Chain( IReadOnlyList<SavedCoasterPiece> pieces, ParkCoasterPylon pylon,
 		HeightfieldFile field, float rootHeight, Func<int, Numerics.Vector3?> trackNode )
 	{
-		var places = new Numerics.Vector3[3];
+		var stations = StationPylons( pylon, rootHeight, trackNode );
 
-		for ( var k = 0; k < 3; ++k )
-		{
-			if ( trackNode( k + 1 ) is not { } at )
-			{
-				Unimplemented.Report( "COASTER_STATION_NODE" );
-				return null;
-			}
+		if ( stations == null )
+			return null;
 
-			// The first and the third stand on a pylon on the cell under them, the second where its node is.
-			places[k] = k == 1 ? at : OnPylon( (int)(at.X * 0.1f), (int)(at.Z * 0.1f), pylon.LoftFor( at.Y - rootHeight ), pylon, field );
-		}
+		// The first and the third stand on a pylon on the cell under them, the second where its node is.
+		var places = new[] { StationPlace( stations[0], pylon, field ), stations[1].Node, StationPlace( stations[2], pylon, field ) };
 
 		var along = places[2] - places[0];
 		var level = Numerics.Vector3.Normalize( new Numerics.Vector3( along.X, 0f, along.Z ) );

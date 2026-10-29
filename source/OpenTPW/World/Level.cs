@@ -469,6 +469,10 @@ public class Level
 		_ = new ParkTrackPieces( ThemeName, park );
 		load.Mark( "track" );
 
+		// The pylons a played park's coasters stand on.
+		_ = new ParkCoasterPylons( ThemeName, catalogue );
+		load.Mark( "coaster pylons" );
+
 		// And the scripts those objects run. After the objects, because a script belongs to something
 		// standing in the park rather than the other way round - and now literally so: a script is handed
 		// the very animation player its own thing's model is posed from, and its tick loop is what drives

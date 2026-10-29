@@ -11075,6 +11075,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   back from their file's node word `0x408` (the other 38: `0x0` or `0x8`): drawn, and conformed (925 of 925 listed base vertices on a
   corner walked as `FUN_00469a80`, 917 by the old walk, which passed over `0x80000000`). `park-engine.md`, "A coaster's pylons"; tools
   `original/coaster.py pylons`, `original/basevertices.py --as-original`. 6 predictions held, 2 missed (the first guess: stacked).
+- [x] **Q813. What Q808 left of the conform and the drape.** Split across run 14, lane A: (1) the interpolating pass is Q815, (2) the coaster's
+  pylons are Q816 (the decode) and Q817 (the build), (3) and (4) are Q818.
+- [x] **Q817. A coaster's pylons drawn (Q813's piece (2), the build).** From Q816's decode (`park-engine.md`, "A coaster's pylons"). Done
+  2026-10-29 (run 14, lane A, `alexah/778-coaster-pylons-drawn`): `ParkCoasterPylons` draws each of a played coaster's pylons, the station's first
+  and third nodes and each piece, on its cell. Her Temple of Gloom: 40, the original's; each knot where `ParkCoasterHeights` puts it, each floor's four
+  corners conformed (160), `mc_bridge` hidden on all. The pylon's morph and texture keys are offsets added to the rest (an additive model), which
+  stretches the column and its lattice with the loft. Not built, counted: a stacked pylon (`COASTER_STACKED_PYLON`) and a loop pylon (`COASTER_LOOP_PYLON`), the move's
+  conform, the saved node word's `0x400`. `park-engine.md`, "OpenTPW draws the pylons". Confirmed against the original's live nodes and frames of the same
+  file taken this session (each pylon's loft, yaw, incline, bank and knot to 0.002); 22 bugs put back, 20 caught (the other two, a footprint of two cells and the rotate
+  clip's sign, change nothing for the Minecart: a wider footprint lists the same four corners and its clip turns one way).
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

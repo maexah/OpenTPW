@@ -709,6 +709,18 @@ public sealed class LobbyModel : IChannelPosed
 	/// </summary>
 	internal Matrix4x4? PosedLocal( int node ) => _poser != null && node >= 0 && node < _poser.Count ? _poser.Local( node ) : null;
 
+	/// <summary>
+	/// Poses the node tree with <paramref name="pose"/> and puts every mesh where it leaves its node: for a model whose pose is
+	/// worked out outside a clip player (a coaster's pylon, <see cref="ParkCoasterPylon.Pose"/>).
+	/// </summary>
+	internal void PoseNodes( Action<NodePoser> pose )
+	{
+		var poser = Poser();
+
+		pose( poser );
+		PlacePosed( Entities, poser, _scale, _placedRotation, _placedOrigin );
+	}
+
 	/// <summary>The node tree's poser, made by the first clip that moves a node (<see cref="NodePoser.Drives"/>).</summary>
 	private NodePoser Poser()
 	{

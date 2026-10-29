@@ -5,6 +5,13 @@ newest first. The pre-commit hook (`tools/maintainer/status-sweep.py`) moves an 
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q816 (decode only: how a coaster's pylons are conformed, `Coaster_StandCellPylons` `0x00432df0`, `Coaster_MoveNodeToCell` `0x00442f40`). Read in
+  the original under Proton on a copy of Alexah's Full Simulation `New Save.TPWS` (`q816/orig/orig1`, `orig2`, `original/coaster.py pylons`): her 40
+  pylons stand alone on their cells; slots 202 and 210's floors read `0x80005101` (`0x10` clear) where 38 read `0x5101`, their file records' node
+  word `0x408`; walked as `FUN_00469a80` (`basevertices.py --as-original`) all 925 listed base vertices stand on a corner, 4 of 4 on each of the two;
+  both floors drawn (`orig2/o-t19442.png`, `foot-right-tower-crop.png`). Not verified: a stacked pylon (none in her park), the type's
+  flags `0x10`, `0x800`, `0x1000`, `0x2000` and the move's conform (read from the listing only); the two floors' conform moved nothing,
+  their ground being 0; which tower in the frame is which node is by height; OpenTPW draws no pylon, so nothing of ours was compared.
 - Q815 (the interpolating pass of the nine lookup-`0x8` meshes: `ProceduralConform.Interpolate`, `ProceduralBase.InterpolatedVertices`). Read in ours on a
   copy of Alexah's Full Simulation `New Save.TPWS` (`q815/run2`, the final build): `rim` reads the Dino Karts station `interpolated 16 listed largest
   rise off 0.0000` and the Dino Karts Jump `interpolated 20 listed largest rise off 0.0000`; `PROCEDURAL_BASE_INTERPOLATE` is gone from the census (2 on

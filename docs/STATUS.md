@@ -7,7 +7,7 @@ Last updated: 2026-10-29. **This header names no branch and no sha, deliberately
 One line per system; the detail, item by item, is `docs/WORKS.md` (grep it by area or Q-number, never read it whole).
 
 - Lobby: the four islands, the front end, players and their saves, options, the advisor, weather, the island gate and the fly-in.
-- The park's world: ground, paths, queues, placed and fixed objects, the boundary wall, sky, sea, weather, music, the calendar on the park's own clock, lighting, the camcorder.
+- The park's world: ground, paths, queues, placed and fixed objects, a played coaster's pylons (Q817), the boundary wall, sky, sea, weather, music, the calendar on the park's own clock, lighting, the camcorder.
 - Building: the buy and hire screens, paths and queues laid by pointing, a ride carried over its squares and placed with its queue, a bought thing joining the running park with the original's next id, a kart or water ride's station and mouths and every track piece drawn, and its track laid run by run with the track tool, taken back a run at a time with Backspace, its circuit walked as the loop closes, each section with its collision objects and buoy, its open end pulsing red while the loop is open, each run shown by its squares before the click, lifted and walled as the original's, a run over a feature taking it down, an add-on's end caps shown and hidden by the put-down's walk (seen once in ours: the Tunnel's caps hid at the click), an add-on put down on its own ride's track by the original's snap, the hand turned to nought after it, the pieces' clips after a close and an add-on's put-down.
 - Guests: eight kinds arrive, choose by the original's score, queue, ride, buy and pay; 23 of Lost Kingdom's 31 rides, shops and sideshows run for them (the website's ride list).
 - Staff: all five kinds hired and working their kind's decide (cleaning, performing, researching), strikes, their voices.
@@ -23,7 +23,7 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 - Park and saving: no loan screen, litter or day's end; a written park holds no kart, water or tracked ride, and some voices, puffs and the music voice are not written (Q420, Q803); forty-four of the advisor's 155 polled messages are built.
 - Map and windows: the map's overlay, hover and click are decoded, not built (Q684, Q685); five of the nine object windows are unbuilt (Q31b).
 - Guests: the deciding turn's vomit, litter, fireworks and pranks and four queue turns are counted (Q224 to Q226, Q228); a failed route is not revived (Q104); queues lose more happiness than the original's (Q746).
-- Building: a carried member of staff shows nothing; a bought thing's sparkles are not drawn (Q683); the buy screen's panel has no model (Q158); a coaster's pylons are not drawn (decoded, Q816) and the recomputed face normals are unbuilt (Q813).
+- Building: a carried member of staff shows nothing; a bought thing's sparkles are not drawn (Q683); the buy screen's panel has no model (Q158); a played coaster's track is not drawn (Q594), nor a stacked or loop pylon, and the recomputed face normals are unbuilt (Q818).
 - Lobby, keys and interface: the fly-in's fade (Q61) and F8 (Q65) are unbuilt; some keys and lists act differently from the original's (Q120, Q231, Q232); some meshes are drawn both-sided (Q613). No video or networking.
 - Sound: a per-effect repeat delay that is really a priority (Q43); most of a park file's live voices are counted, not put back (Q741).
 - Staff: the handyman's litter search and the guard's chase are unbuilt; a strike's posts are counted (Q212, Q229).
@@ -38,13 +38,15 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- Q816 (decode only: how a coaster's pylons are conformed, `Coaster_StandCellPylons` `0x00432df0`, `Coaster_MoveNodeToCell` `0x00442f40`). Read in
-  the original under Proton on a copy of Alexah's Full Simulation `New Save.TPWS` (`q816/orig/orig1`, `orig2`, `original/coaster.py pylons`): her 40
-  pylons stand alone on their cells; slots 202 and 210's floors read `0x80005101` (`0x10` clear) where 38 read `0x5101`, their file records' node
-  word `0x408`; walked as `FUN_00469a80` (`basevertices.py --as-original`) all 925 listed base vertices stand on a corner, 4 of 4 on each of the two;
-  both floors drawn (`orig2/o-t19442.png`, `foot-right-tower-crop.png`). Not verified: a stacked pylon (none in her park), the type's
-  flags `0x10`, `0x800`, `0x1000`, `0x2000` and the move's conform (read from the listing only); the two floors' conform moved nothing,
-  their ground being 0; which tower in the frame is which node is by height; OpenTPW draws no pylon, so nothing of ours was compared.
+- Q817 (a played coaster's pylons drawn, `ParkCoasterPylons`; Q813's piece (2)). Ours on a copy of Alexah's Full Simulation `New Save.TPWS` (`q817/run6`, the
+  console's `pylons`): 40 pylons (the station's two and 38 pieces, the original's 40), each knot where `ParkCoasterHeights` puts it (off 0.0000), each floor's 4 listed
+  base vertices on a corner (160), `mc_bridge` hidden on all; and each one's loft, yaw, incline, bank and knot equal to the original's live node of the same file this session
+  (`q817/orig/o1/coaster80.txt`, `cmp.py`: largest differences 0.0005 on angles, 0.002 on places, the station ends' yaw, solved here, 1.5708 in both). Frames: ours
+  `run6/match_280_355.png` beside the original's `orig/o1/o-t19443.png`, the towers' lattice and sandy floors alike (`side-by-side-original-left-ours-right.png`).
+  Not verified: the frames are not pixel-aligned (the camera maps differently, and ours draws no track, Q594), so no tower's lean was compared to the pixel;
+  the additive morph is the listing's (`0x00471bef`, `FUN_004714a0`) and matched by look, not read back from the original's vertices; a stacked pylon, a loop
+  pylon and the type flag `0x10` (none in her park; counted, not drawn); `mc_bridge` hidden in the original is Q816's reading, not retaken; the incline's and the bank's turns of
+  `TrackCentreDummy` are not composed (no mesh hangs from it); the vertex normals stay as made (Q818).
 
 ## Numbers (take counts fresh; these go stale within a day)
 

@@ -661,7 +661,7 @@ public class ProceduralConformTests
 	[TestMethod]
 	public void EveryMakerOfAGroundedModelPassesTheStandHookAndTheModelRunsItFirst()
 	{
-		foreach ( var file in new[] { "ParkObjects.cs", "ParkQueues.cs", "ParkBoundaryHoarding.cs", "ParkTrackPieces.cs" } )
+		foreach ( var file in new[] { "ParkObjects.cs", "ParkQueues.cs", "ParkBoundaryHoarding.cs", "ParkTrackPieces.cs", "ParkCoasterPylons.cs" } )
 		{
 			var text = Source( "OpenTPW", "World", "Park", file );
 			var from = text.IndexOf( "new LobbyModel(", StringComparison.Ordinal );

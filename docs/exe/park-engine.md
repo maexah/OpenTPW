@@ -295,9 +295,10 @@ Not settled: the control word the arithmetic runs under (Q750's note), which mov
   are posed (`Model_AdvanceChannels( model, 1, 0 )`), its floor mesh (the instance's `+0x2c`, the mesh `ProceduralBase_Build`
   found, `StdPylon`'s `mc_pylbase`) is shown by taking off `0x10` alone, and `FUN_00469940( [model + 8], scene, cell height, 0 )`
   conforms it (`0x00432f2f`): its listed base vertices stand on the corners, as a placed thing's.
-- **A stacked pylon** (level 1 or more): its root stands at the knot of the pylon below (that model's lookup record the type's
-  `+0x18` names, its `+0x34`; nought where it has none), or, where the node below is flagged `0x2000`, at that node's `+0x50` plus the
-  type's step `+0xc4`; its clips are posed; and unless the type's flag word holds `0x10` its floor is hidden, `0x80000010`
+- **A stacked pylon** (level 1 or more): its root stands at the height of the pylon below's **stack-height record**, the lookup record
+  flagged `0x100000` the type's `+0x18` names (`0x00430780`..`0x004307ab`; `StackHeightDummy` on `StdPylon`, not its knot; its `+0x34`;
+  nought where the type has none), or, where the node below is flagged `0x2000`, at that node's `+0x50` plus the type's step `+0xc4`, which is
+  that record's height less the knot's (`0x004309e3`); its clips are posed; and unless the type's flag word holds `0x10` its floor is hidden, `0x80000010`
   (`0x00432ed9`). It is not conformed here.
 - **The type's four named nodes** (flag `0x400` and node `+0x1c`, `0x800` and `+0x20`, `0x1000` and `+0x24`, `0x2000` and `+0x28`):
   at the top of the stack `0x400` hides its node and `0x800` shows its; below the top `0x400` shows its (where the node above is
@@ -325,6 +326,25 @@ floors are drawn (`orig2/o-t19442.png`: a sandy square at each tower's foot) and
 under them is 0, so their rest and conformed places coincide). How the file came to hold `0x400` there is not recoverable from it; a
 hide by the stand or the type's arms, then a show, leaves exactly that word.
 
+**OpenTPW draws the pylons** (Q817, `ParkCoasterPylons`; the plan is `ParkCoasterHeights.Pylons`). One for each of the coaster's station nodes
+1 and 3 (the second stands at its track node, with none) and each saved piece: her park's 40, the original's. Each is a `StdPylon` model made on its cell,
+its root at the midpoint of the cell's corners and the cell's corner for x and y, **made on a one-cell footprint** (the floor search then lists `mc_pylbase`'s four
+corners, the original's 160 over 40; made on none it lists nothing, and the floor is left unconformed), the floor conformed as a placed thing's
+(`ProceduralConform.Conform`), then posed by `ParkCoasterPylon.Pose` (the loft clip's position tracks; the rotate and incline and bank clips' rotation keys as
+the nodes' turns, which the file leaves unturned there) and morphed (`ParkCoasterPylon.Morph`). **A pylon model is additive (header `0x4`) and its
+morph and texture keys are offsets**: `FUN_004714a0` adds each clip's keys to the vertex where it otherwise assigns them (`0x00471bef` passes the
+header's `0x4`, `FUN_00470e90`), so the vertex is its rest plus the loft clip's key (0 at frame 0, 90 up at frame 100 on the column's raised vertices, the foot's none),
+the incline's and the bank's (up or down by about 3.5 by the vertex's side, which tips the column's head), and its V the rest plus the loft's 15 at the top (a lattice repeat
+to 6 units) and the incline's and the bank's (about ±0.58);
+measured on `StdPylonL`, `I` and `B` (`q817/morphprobe.txt`). A pylon alone on its cell is the bottom and the top of its stack, so the type's part flagged
+`0x400` (found as `Coaster_SetupPylonModel` finds it, the record of id 1 in space `0x80000`: `mc_bridge`) is hidden and the others the model has are hidden or shown
+by the arms above; its floor is shown. **Not built:** a stacked pylon and a loop pylon (counted `COASTER_STACKED_PYLON`, `COASTER_LOOP_PYLON`; their coaster keeps
+its other pylons, drawn); `Coaster_MoveNodeToCell`'s conform (a coaster is not edited here; its same-cell path only stands the cell again, `0x00442f55`..`0x00442f63`);
+the saved node word's `0x400` (the `0x80000000` it puts back changes nothing drawn); the incline and bank clips' turns of `TrackCentreDummy`
+composed (both clips turn that node, which no mesh hangs from: the later replaces the earlier); the vertex normals the morph leaves as made (Q818).
+**Measured in OpenTPW** (Q817, Alexah's New Save, a copy; the final binary): `pylons` lists 40, each knot drawn where `ParkCoasterHeights.OnPylon` puts it (off 0.0000),
+each floor 4 listed and 4 on a corner (160 conformed vertices), `mc_bridge` hidden on all 40; the two at cells (29, 35) and (32, 35) (loft 1) stand 100 up.
+
 **OpenTPW builds the conform and the drape** (Q808, `ProceduralConform`): `LobbyModel`'s `stand` hook moves the drawn vertices of the
 model's file as it is made, before the meshes are built from them, in the model's own place and turn. The conform takes the base
 vertices `ProceduralBase.BaseVertices` lists (the floor search's own walk) of a model with the header's `0x8`, snaps x and y to the
@@ -332,8 +352,7 @@ grid line and sets the height to the nearest corner's, nothing added (always, an
 piece, and the meshes a placed object's lookup record marks `0x10000` (`mammtunn`'s `gk_mam1`), and raises each vertex by the
 height under it on the cell's triangle (`DrapeHeight`, the flag `0x4` as above) less the model's own height; a source vertex moves
 under every drawn vertex that names it, and `SourceVertices` stay the rest the floor search and the hoardings read. The cell's
-triangle here is the original's, while the ground mesh is still split one way (Q398). **Not built:** the recomputed face normals, the
-coaster's pylons, which nothing here draws yet (their model is read only for the track's heights, `ParkCoasterHeights`; Q813), and the control word the arithmetic runs under. **Measured in OpenTPW** (Q808, Alexah's New Save, a copy): the Sun God 18 of 18 listed rim
+triangle here is the original's, while the ground mesh is still split one way (Q398). **Not built:** the recomputed face normals and the control word the arithmetic runs under. **Measured in OpenTPW** (Q808, Alexah's New Save, a copy): the Sun God 18 of 18 listed rim
 vertices on a corner, the Tom Tom Twister 20 of 20, the Costume Shop 12 of 12 (the original's counts), 1,782 queue vertices and
 1,736 track-piece vertices draped, and the clear-coloured sliver pixels at the Sun God camera 5,751 to 11, the Tom Tom Twister's
 16,308 to 0, the Costume Shop's 7,844 to 0.

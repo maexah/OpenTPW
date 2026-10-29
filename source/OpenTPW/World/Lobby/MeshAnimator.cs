@@ -80,13 +80,7 @@ public class MeshAnimator
 		_vertices = (Vertex[])restVertices.Clone();
 		_positions = new Vector3[mesh.VertexCount];
 
-		_restPositions = new Vector3[mesh.VertexCount];
-		for ( int i = 0; i < mesh.Vertices.Length && i < mesh.VertexOrder.Length; ++i )
-		{
-			var source = mesh.VertexOrder[i];
-			if ( source < _restPositions.Length )
-				_restPositions[source] = mesh.Vertices[i].Position;
-		}
+		_restPositions = RestOf( mesh );
 
 		_restUvs = new System.Numerics.Vector2[restVertices.Length];
 		for ( int i = 0; i < restVertices.Length; ++i )
@@ -229,9 +223,84 @@ public class MeshAnimator
 		=> Math.Max( animation.LastFrame - animation.FirstFrame, 1 ) / AnimationFile.FramesPerSecond;
 
 	private Vector3 SamplePosition( AnimationFile.MorphTrack track, int channelId, float frame )
+		=> KeyAt( track, channelId, frame ) ?? _restPositions[channelId];
+
+	/// <summary>
+	/// An additive model's morph (header <c>0x4</c>: <c>Anim_PoseTrack</c>, <c>0x00471bef</c> passes it to <c>FUN_004714a0</c>, which
+	/// then adds each clip's keys to the vertex where it otherwise assigns them): the mesh's rest positions and texture coordinates plus every
+	/// pose's keys at its frame, which are offsets (the pylon's loft clip reads nought at its first frame and 90 up at its last). A clip with no morph for
+	/// this mesh adds nothing.
+	/// </summary>
+	public void PoseAdditive( IEnumerable<(AnimationFile Clip, float Frame)> poses )
+	{
+		var (positions, uvs) = Additive( _mesh, _targetIndex, _restPositions, _restUvs, poses );
+
+		Array.Copy( positions, _positions, _positions.Length );
+
+		for ( int i = 0; i < _vertices.Length; ++i )
+			_vertices[i].TexCoords = uvs[i];
+
+		WritePositions( _positions );
+		_morphed = true;
+		_atRest = false;
+		Upload();
+	}
+
+	/// <summary>
+	/// The positions and texture coordinates <see cref="PoseAdditive"/> writes: the rest plus every pose's keys at its frame. The pylon's
+	/// loft clip adds up to 15 to the V of its column's top, one repeat of the lattice for every 6 units it rises.
+	/// </summary>
+	internal static (Vector3[] Positions, System.Numerics.Vector2[] Uvs) Additive( ModelFile.Mesh mesh, int targetIndex, Vector3[] restPositions,
+		System.Numerics.Vector2[] restUvs, IEnumerable<(AnimationFile Clip, float Frame)> poses )
+	{
+		var positions = (Vector3[])restPositions.Clone();
+		var uvs = (System.Numerics.Vector2[])restUvs.Clone();
+
+		foreach ( var (clip, frame) in poses )
+		{
+			var morph = clip.MorphTrackFor( targetIndex );
+
+			if ( morph != null && morph.ChannelCount == mesh.VertexCount + 2 )
+			{
+				for ( int v = 0; v < positions.Length; ++v )
+					positions[v] += KeyAt( morph, v, frame ) ?? Vector3.Zero;
+			}
+
+			if ( clip.UvTrackFor( targetIndex ) is { } uv )
+			{
+				for ( int entry = 0; entry < uv.EntryCount && entry < uvs.Length; ++entry )
+				{
+					var offset = uv.Sample( entry, frame );
+
+					uvs[entry] = new System.Numerics.Vector2( uvs[entry].X + offset.X, uvs[entry].Y + offset.Y );
+				}
+			}
+		}
+
+		return (positions, uvs);
+	}
+
+	/// <summary>The mesh's source vertices as the animator keeps them at rest, in the mesh's own space (the file's axes).</summary>
+	internal static Vector3[] RestOf( ModelFile.Mesh mesh )
+	{
+		var rest = new Vector3[mesh.VertexCount];
+
+		for ( int i = 0; i < mesh.Vertices.Length && i < mesh.VertexOrder.Length; ++i )
+		{
+			var source = mesh.VertexOrder[i];
+
+			if ( source < rest.Length )
+				rest[source] = mesh.Vertices[i].Position;
+		}
+
+		return rest;
+	}
+
+	/// <summary>The key a morph track holds for one vertex at <paramref name="frame"/>, or null where the track names no record for it.</summary>
+	private static Vector3? KeyAt( AnimationFile.MorphTrack track, int channelId, float frame )
 	{
 		if ( !track.TryGetChannel( channelId, out var record, out var slot ) || record == null )
-			return _restPositions[channelId];
+			return null;
 
 		var frames = record.FrameIndices;
 

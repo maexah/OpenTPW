@@ -124,6 +124,24 @@ public sealed class NodePoser : IChannelPosed
 	/// <summary>Node <paramref name="node"/>'s own transform within its parent, as last posed.</summary>
 	public Matrix4x4 Local( int node ) => _local[node];
 
+	/// <summary>
+	/// Puts node <paramref name="node"/>'s turn within its parent to <paramref name="turn"/>, its place unchanged, and composes the
+	/// tree: the additive rotation key of a coaster pylon's rotate, incline and bank clips on a node whose own turn is none
+	/// (<c>Anim_ComposeAdditiveTurn</c>, <c>0x00470d10</c>; <see cref="ParkCoasterPylon.Pose"/>).
+	/// </summary>
+	internal void Turn( int node, Quaternion turn )
+	{
+		if ( !Holds( node ) )
+			return;
+
+		var local = Matrix4x4.CreateFromQuaternion( turn );
+
+		local.Translation = _local[node].Translation;
+		_local[node] = local;
+
+		Compose();
+	}
+
 	/// <summary>Poses every track <paramref name="clip"/> carries at <paramref name="frame"/>, then the whole tree.</summary>
 	public void Pose( AnimationFile clip, float frame )
 	{

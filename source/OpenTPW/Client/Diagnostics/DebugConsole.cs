@@ -2735,6 +2735,20 @@ public static class DebugConsole
 
 				break;
 
+			// The coasters' pylons standing: each one's cell, clip settings, knot drawn against asked, and floor against the corners (Q817).
+			case "pylons":
+				if ( ParkCoasterPylons.Current is not { } pylons )
+				{
+					Reply( "pylons: none - a park has to be loaded" );
+					break;
+				}
+
+				Reply( $"pylons {pylons.Count} floor vertices conformed {pylons.Conformed}" );
+
+				foreach ( var pylonLine in pylons.Census() ) Reply( $"  {pylonLine}" );
+
+				break;
+
 			// Where each standing object's floor plate meets the ground, and how far the rim is from the terrain corners beside it;
 			// the last line counts the objects and queue cells over a step (the rim the original conforms and this game does not).
 			case "rim":

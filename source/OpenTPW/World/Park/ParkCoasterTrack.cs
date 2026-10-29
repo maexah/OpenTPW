@@ -178,6 +178,7 @@ public sealed class ParkCoasterPylon
 	private readonly Channel _loft;
 	private readonly Channel _rotate;
 	private readonly Channel _incline;
+	private readonly Channel _bank;
 	private readonly int _knot;
 
 	/// <summary>The type's <c>fMinHeight</c> and <c>fMaxHeight</c> (<c>+0x68</c>, <c>+0x6c</c>), the first raised to <see cref="Lowest"/>.</summary>
@@ -210,6 +211,7 @@ public sealed class ParkCoasterPylon
 		_loft = For( "Loft", LoftRole );
 		_rotate = For( "Rotate", RotateRole );
 		_incline = For( "Incline", InclineRole );
+		_bank = For( "Bank", BankRole );
 
 		// Two ends make a pylon that stacks, with one knot, id 2; one end, a knot for each track record from id 1.
 		var ends = Records( EndSpace ).Count();
@@ -245,7 +247,7 @@ public sealed class ParkCoasterPylon
 		if ( modelStream == null )
 			return null;
 
-		return new ParkCoasterPylon( new ModelFile( modelStream ), RideAnimations.Load( directory, stem, files ), sam, index );
+		return new ParkCoasterPylon( new ModelFile( modelStream ), RideAnimations.Load( directory, stem, files ), sam, index ) { Stem = stem };
 	}
 
 	/// <summary>The roles of the pylon's loft, rotate and incline clips (<c>0x0074ca70</c>: 3, 10, 2).</summary>
@@ -254,6 +256,8 @@ public sealed class ParkCoasterPylon
 	private const int RotateRole = 10;
 
 	private const int InclineRole = 2;
+
+	private const int BankRole = 9;
 
 	/// <summary>
 	/// Whether its knot can be posed here: one knot, found; the nodes the rotate and incline clips turn unturned in the file,
@@ -402,16 +406,7 @@ public sealed class ParkCoasterPylon
 		if ( _loft.Clip != null )
 			poser.Pose( _loft.Clip, FrameAt( _loft.Clip, loft ) );
 
-		var turns = new Dictionary<int, Quaternion>();
-
-		foreach ( var (clip, share) in new[] { (_rotate.Clip, rotate), (_incline.Clip, incline) } )
-		{
-			foreach ( var track in clip?.RotationTracks ?? [] )
-			{
-				if ( track.Rotations.Length > 0 )
-					turns[track.TargetIndex] = Turn( track, FrameAt( clip!, share ) );
-			}
-		}
+		var turns = Turns( rotate, incline, null );
 
 		var world = Matrix4x4.Identity;
 
@@ -430,6 +425,121 @@ public sealed class ParkCoasterPylon
 		}
 
 		return (world.Translation, Numerics.Vector3.Normalize( Numerics.Vector3.TransformNormal( Numerics.Vector3.UnitZ, world ) ));
+	}
+
+	/// <summary>
+	/// The turn each node the rotate, incline and (where given) bank clips turn takes at those shares of the clips.
+	/// </summary>
+	private Dictionary<int, Quaternion> Turns( float rotate, float incline, float? bank )
+	{
+		var turns = new Dictionary<int, Quaternion>();
+
+		var clips = new List<(AnimationFile? Clip, float Share)> { (_rotate.Clip, rotate), (_incline.Clip, incline) };
+
+		if ( bank is { } rolled )
+			clips.Add( (_bank.Clip, rolled) );
+
+		foreach ( var (clip, share) in clips )
+		{
+			foreach ( var track in clip?.RotationTracks ?? [] )
+			{
+				if ( track.Rotations.Length > 0 )
+					turns[track.TargetIndex] = Turn( track, FrameAt( clip!, share ) );
+			}
+		}
+
+		return turns;
+	}
+
+	/// <summary>
+	/// Poses a pylon's model the way <c>Coaster_PosePylon</c> (<c>0x00430ca0</c>) sets its clips: the loft clip at <paramref name="loft"/>,
+	/// the rotate clip at the yaw's share of a turn, the incline clip at <c>incline / 2π × fInclineAnimMultiplier + 0.5</c> and the bank
+	/// clip likewise at the bank, each rotation key taken as the node's turn (the nodes they turn are unturned in the file, so the additive
+	/// key is the turn). A bank clip that turns a node the file turns is left unposed and counted.
+	/// </summary>
+	internal void Pose( NodePoser poser, float loft, float yaw, float incline, float bank )
+	{
+		if ( _loft.Clip != null )
+			poser.Pose( _loft.Clip, FrameAt( _loft.Clip, _loft.Share( loft ) ) );
+
+		var turns = yaw / (2f * MathF.PI);
+		turns -= MathF.Floor( turns );
+
+		var bankable = (_bank.Clip?.RotationTracks ?? []).All( track => track.Rotations.Length == 0 || IsUnturned( _model.Nodes[track.TargetIndex].LocalTransform ) );
+
+		if ( !bankable )
+			Unimplemented.Report( "COASTER_PYLON_BANK_TURNED_NODE" );
+
+		foreach ( var (node, turn) in Turns( _rotate.Share( turns ), _incline.Share( incline / (2f * MathF.PI), 0.5f ),
+			bankable ? _bank.Share( bank / (2f * MathF.PI), 0.5f ) : null ) )
+			poser.Turn( node, turn );
+	}
+
+	/// <summary>
+	/// Morphs a made pylon's meshes as <c>Coaster_PosePylon</c> sets its clips (<c>0x00430ca0</c>): the loft, incline and bank clips' vertex
+	/// keys, offsets added to the model's rest (<see cref="MeshAnimator.PoseAdditive"/>), each at the share the same arithmetic gives
+	/// <see cref="Pose"/> and <see cref="KnotAt"/>.
+	/// </summary>
+	internal void Morph( LobbyModel model, float loft, float incline, float bank )
+	{
+		var poses = MorphPoses( loft, incline, bank );
+
+		foreach ( var animator in model.Animators )
+			animator.PoseAdditive( poses );
+	}
+
+	/// <summary>The clips <see cref="Morph"/> poses and the frame of each: the loft, incline and bank clips at their shares of their own length.</summary>
+	internal List<(AnimationFile Clip, float Frame)> MorphPoses( float loft, float incline, float bank )
+	{
+		var poses = new List<(AnimationFile, float)>();
+
+		foreach ( var (channel, share) in new[] { (_loft, _loft.Share( loft )), (_incline, _incline.Share( incline / (2f * MathF.PI), 0.5f )),
+			(_bank, _bank.Share( bank / (2f * MathF.PI), 0.5f )) } )
+		{
+			if ( channel.Clip != null )
+				poses.Add( (channel.Clip, FrameAt( channel.Clip, share )) );
+		}
+
+		return poses;
+	}
+
+	/// <summary>The clips the pylon is posed by (loft, rotate, incline, bank): what a model made for it is given, which finds none beside the file by its own naming.</summary>
+	public IReadOnlyList<AnimationFile> Clips => new[] { _loft.Clip, _rotate.Clip, _incline.Clip, _bank.Clip }.OfType<AnimationFile>().ToArray();
+
+	/// <summary>The pylon's model file name without its extension, in the coaster's folder.</summary>
+	public string Stem { get; private init; } = string.Empty;
+
+	/// <summary>The model's node the knot is: the one the track passes through.</summary>
+	public int KnotNode => _knot;
+
+	/// <summary>
+	/// The node of the type's named pylon part <paramref name="which"/> (1 to 4: the type flags <c>0x400</c>, <c>0x800</c>, <c>0x1000</c>
+	/// and <c>0x2000</c>), or -1 where its model has none: the last lookup record in space <c>0x80000</c> whose id is <paramref name="which"/>
+	/// (<c>Coaster_SetupPylonModel</c>, <c>0x00430590</c>: records walked in order, the later overwriting).
+	/// </summary>
+	public int NamedNode( int which )
+		=> Records( 0x80000 ).Where( node => _model.Nodes[node].Id == which ).DefaultIfEmpty( -1 ).Last();
+
+	/// <summary>The name of node <paramref name="node"/> in the pylon's model, for the console's census.</summary>
+	public string NodeName( int node ) => node >= 0 && node < _model.Nodes.Count ? _model.Nodes[node].Name : "-";
+
+	/// <summary>
+	/// The yaw whose rotate clip faces the knot along <paramref name="level"/> (a direction on the ground, in the engine's axes): the
+	/// angle between the knot's heading at yaw 0 and the wanted one, taken the way a small yaw turns it.
+	/// </summary>
+	public float YawFacing( Numerics.Vector3 level )
+	{
+		static float Heading( Numerics.Vector3 v ) => MathF.Atan2( v.X, v.Z );
+
+		var at0 = Heading( DirectionAt( 0f, 0f ) );
+		var small = Heading( DirectionAt( 0.2f, 0f ) ) - at0;
+
+		small -= MathF.Round( small / (2f * MathF.PI) ) * 2f * MathF.PI;
+
+		var wanted = Heading( level ) - at0;
+		var yaw = (small >= 0f ? wanted : -wanted) % (2f * MathF.PI);
+
+		return yaw < 0f ? yaw + (2f * MathF.PI) : yaw;
 	}
 
 	/// <summary>A channel's place at <paramref name="share"/> of its clip: the share of its declared length, from its start.</summary>
