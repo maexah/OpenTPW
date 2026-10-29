@@ -460,6 +460,10 @@ public sealed class ParkRides : Entity
 				// fourteen things frozen for good. See Restore.
 				if ( _saved.TryGetValue( placed.ThingId, out var savedThing ) )
 					Restore( script, savedThing );
+				// One with no saved record, a park made fresh's gates and lights, has its model's tables as the model maker
+				// leaves them, as a thing bought has (BindNew): the words of its file at rest, no clip bound.
+				else if ( TableModel( placed.CatalogueId ) is { } fresh )
+					script.Animations.Nodes = new ParkModelTables.Running( fresh.Model, script.Animations.ChannelCount );
 			}
 		}
 
@@ -974,7 +978,7 @@ public sealed class ParkRides : Entity
 			for ( var index = 0; index < channels.Length; ++index )
 			{
 				channels[index] = animations?.Channel( index ) is { } channel
-					? WrittenChannel( channel, MadeChannel, Reading, now )
+					? WrittenChannel( channel, channel.Started ? MadeChannel : NeverStartedChannel, Reading, now )
 					: MadeChannel;
 			}
 
@@ -1125,6 +1129,12 @@ public sealed class ParkRides : Entity
 	private static readonly SavedChannel MadeChannel =
 		new( ParkThingStates.NoRole, 0, 0, 1f, 0, 0, 0, ParkThingStates.NoRole, 0, 0, 1f );
 
+	/// <summary>
+	/// A made model's channel no clip has ever been started on: the model maker's zeroed one, its two speeds nought, as the
+	/// original's park made fresh holds its gates' and lights' at tick nought (FileFormats <c>saves.md</c>, "A park made fresh").
+	/// </summary>
+	private static readonly SavedChannel NeverStartedChannel = MadeChannel with { Speed = 0f, QueuedSpeed = 0f };
+
 	/// <summary>The park's items, for a model's own file as the park file's two tables are written.</summary>
 	private readonly ParkItemCatalogue? _catalogue;
 
@@ -1176,9 +1186,9 @@ public sealed class ParkRides : Entity
 
 		if ( channel.IsIdle )
 		{
-			// One idle in the file and idle still has had nothing started on it: the file's word and speed stand.
+			// One idle in the file that has had nothing started on it since: the file's word and speed stand.
 			// One stopped since holds nought in its three stamps, as every idle channel in the files does.
-			return file.Role == ParkThingStates.NoRole
+			return file.Role == ParkThingStates.NoRole && !channel.Started
 				? file with { QueuedRole = queued.Role, QueuedEntry = queued.Entry, QueuedFlags = queued.Flags, QueuedSpeed = queued.Speed }
 				: new SavedChannel( ParkThingStates.NoRole, 0, (file.Flags & ~ChannelFlagsKept) | (channel.Flags & ChannelFlagsKept),
 					channel.Speed, 0, 0, 0, queued.Role, queued.Entry, queued.Flags, queued.Speed );

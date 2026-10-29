@@ -153,7 +153,11 @@ public sealed class ParkItemCatalogue
 		int CreateParticleEffect = 0,
 
 		// What its cells answer a tool that builds over them - ItemDescriptionFile.OverwritePriority. ParkTrackTool.JudgeCell reads it.
-		int OverwritePriority = 0 )
+		int OverwritePriority = 0,
+
+		// What a go takes off a guest's tiredness, which its control record keeps at +0x08 - ItemDescriptionFile.FatigueEffect.
+		// FreshParkFile writes it.
+		int FatigueEffect = 0 )
 	{
 		/// <summary>A tier's <c>CostOfUpgrade</c>: tier nought's is <see cref="BuildPrice"/>, nought past the third.</summary>
 		public int UpgradeCostAt( int tier ) => tier switch { 0 => BuildPrice, 1 => UpgradeCost1, 2 => UpgradeCost2, _ => 0 };
@@ -211,6 +215,25 @@ public sealed class ParkItemCatalogue
 	/// that attach to a ride: no buy list shows one until it is researched, and no shipped park places one.
 	/// </summary>
 	private static readonly string[] Folders = ["rides", "features", "upgrades", "shops", "sideshow"];
+
+	/// <summary>The same folders as the engine's own strings spell them, which a park file's script records hold.</summary>
+	private static readonly string[] EngineFolders = ["Rides", "Features", "Upgrades", "Shops", "Sideshow"];
+
+	/// <summary>
+	/// An item's folder as a park file's script record holds it, the engine's: <c>data\levels\jungle\Features\gates\</c>
+	/// for <c>levels/jungle/features/gates</c>, its folder spelt as the executable's strings spell it.
+	/// </summary>
+	public static string EngineDirectory( string directory )
+	{
+		// levels, the theme, the folder, the item's own.
+		var parts = directory.Replace( '\\', '/' ).Trim( '/' ).Split( '/' );
+		var folder = parts.Length > 2 ? Array.FindIndex( Folders, name => name.Equals( parts[2], StringComparison.OrdinalIgnoreCase ) ) : -1;
+
+		if ( folder >= 0 )
+			parts[2] = EngineFolders[folder];
+
+		return "data\\" + string.Join( '\\', parts ) + "\\";
+	}
 
 	/// <summary>
 	/// Where the items are read from. A running game passes nothing and gets the one it mounted; a test
@@ -397,7 +420,7 @@ public sealed class ParkItemCatalogue
 					RideTypeStringIndex: description.RideTypeStringIndex,
 					AddOnUpgradesId: description.AddOnUpgradesId, AddOnUpgradeType: description.AddOnUpgradeType,
 					ShopType: description.ShopType, CreateParticleEffect: description.CreateParticleEffect,
-					OverwritePriority: description.OverwritePriority );
+					OverwritePriority: description.OverwritePriority, FatigueEffect: description.FatigueEffect );
 
 			return true;
 		}

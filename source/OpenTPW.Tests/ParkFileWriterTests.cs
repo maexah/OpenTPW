@@ -687,9 +687,10 @@ public class ParkFileWriterTests
 			Assert.AreEqual( (1417, 92, rides.ScriptFor( speaker )), (written.Objects.Single( thing => thing.ThingId == speaker ).CatalogueId, written.Objects.Single( thing => thing.ThingId == speaker ).MeshInstance, written.Objects.Single( thing => thing.ThingId == speaker ).RideScript), "a thing with emitter files is written as any other" );
 			Assert.AreEqual( ape, written.People.Single( person => person.ThingId == walker.Key ).Guest!.Value.MajorDest, "a handle to a thing bought" );
 
-			// The script's folder as the engine keeps one, and the model's footprint across then down.
+			// The script's folder as the engine keeps one, its folder spelt as the executable's strings, and the model's footprint
+			// across then down.
 			var body = Inflate( File.ReadAllBytes( Path.Combine( Jungle, "Bought.TPWS" ) ) );
-			var folder = "data\\levels\\jungle\\rides\\monkey\\\0";
+			var folder = "data\\levels\\jungle\\Rides\\monkey\\\0";
 			var folderAt = body.AsSpan().IndexOf( Encoding.ASCII.GetBytes( folder ) );
 
 			Assert.IsTrue( folderAt > 4 && BitConverter.ToInt32( body, folderAt - 4 ) == folder.Length, "its length before it" );

@@ -865,12 +865,12 @@ is the original's own value. What decides the class is not read.
 |---|---|---|---|
 | The action recording | `mLoadedPublishedPark` 0, length 135; the recorder's fresh buffer (not decoded) | no | the measured bytes, constant |
 | `WRLD` header | tick 0, closed 1, no visitors, no vehicles, the twelve things' ids (`park-engine.md`, "A fresh Full Simulation world"), `mFirstObject` 12, no staff | `mRandomSeed`: the generator after the boundary's draws (`FreshPark.RandomSeed`) | `FreshPark` |
-| The object controls | each item's researched flag, tier, count (the gates and lights 1) and price | no | `FreshPark.ObjectControlRecords` |
+| The object controls | each item's researched flag, tier, count (the gates and lights 1), price and, at `+0x08`, its `FatigueEffect` (the control manager's fill, `FUN_004d3e00`, below) | no | `FreshPark.ObjectControlRecords` |
 | The staff pool | 22 of its 32 slots, five candidates of each of kinds 0 to 3 and two of kind 4 (Q422) | every candidate: the top-up's draws | the pool as `ParkStaffPool` stands |
 | The clock and arrival | the calendar's start 2000-01-01, the session's FILETIME, month 0, day -1 (`Calendar_Construct`'s, not the date of tick 0), rate 15000; the arrival block | the session's FILETIME | the clock as it runs; month 0 and day -1 |
 | The cells | `FreshPark`'s: 16,384, each with its map and track parts | the boundary pieces' cells and four path tiles' art (the generator's coin, `FRESH_PARK_PATH_ART_VARIANT`) | `FreshPark` and `Boundary` |
 | Things 1 to 10 | the managers as their constructors leave them: the staff HQ, mechanics' HQ (`mNextObject` 0), advisor (every record fresh, slot 0 `(0, 0, 0, 100000, 1, -1)`), models 12 and 17 (the base alone), the analyser (grid 4, 32, 32, 128, 128; 1,024 blocks of (x, y, 4, 4) with nine (-999, 0) pairs; four rings at -1, 3; six kept (-999, 0); sixteen int rings at -1, 144; the six stamps 2000-01-01), the lab (Q349's fill), the weather (wind 90, force 0.5, no forecast, its location three words of leftover memory), the economy (the balance's), the challenge manager | the weather's quality | each record afresh by its rule; the leftover words as nought |
-| Things 11, 12 | the gates and the lights (`FreshPark.FixedObject`), unplaced, in cell 1's chain | no | `FreshPark.Objects` |
+| Things 11, 12 | the gates and the lights (`FreshPark.FixedObject`), unplaced, in cell 1's chain; their model records as the model maker leaves them, never run (the gates' words `0 0 0 601 601 401`, lookups `(9, -1)` `(0x21, -1)`, shared 1; the lights' eight noughts and `401`; each channel idle at speed nought) | no | `FreshPark.Objects`; the tables by "The rule for a record's two tables" |
 | `SPSC` | 100 slots, all empty | no | constant |
 | `PART` | the live header (2,048 particles, in every Lost Kingdom file the generator's seed `0x18be873a` and the next counts 2 and 1; Fantasy and Halloween hold seed 1, counts 1 and 1 and no emitter; `+0x1c` `0x803b68` and `+0x24` `0x5d60c0` in all nineteen, which a load ignores, `FUN_0051f7a0` keeping the live system's two), one emitter in use (Lost Kingdom): the land's `WaterFall` (effect 20) at (532.3, 4.9, 526.1), raw 34068, 312, 33668, handle `0x10000`; the library with the jungle's `.emt` pair in slots 101 and 102 | the density (the options' graphics: 1500 on Windows, 1000 under Proton), the emitter's density-scaled words, one heap pointer | the library and the land's emitter as the park has them, at its density |
 | `MESS` | the 29 sets of the twelve things by the rule of "What ties the modules together", the singletons as every file has them (set `0x1c` thing 9) | no | afresh from the thing list |
@@ -879,7 +879,7 @@ is the original's own value. What decides the class is not read.
 | `RSYS` | 109 slots: the gates', the lights' and the boundary's 107 (Q656: its anchors' records, FileFormats "A boundary piece's record") | each boundary piece's item (this session's: 69, 10, 1, 6, 9 and 12 of the six) | the gates' and lights' as a thing bought; the boundary's from `FreshPark.Boundary` |
 | `TRAK` | the stamp alone: `15:25:02`, `Mar 17 2000` (the 2.0 build's; the shipped park's is 1999's) | no | constant |
 | `FLYR` | set up, no flyer; the four values 190000, 70000, 140000, 30000 | no | constant |
-| `RSSE` | two scripts, the gates' (handle 1) and the lights' (2), with no object; the next handle 3 | the records' heap pointers | the two scripts as a thing bought's |
+| `RSSE` | two scripts, the gates' (handle 1) and the lights' (2), with no object; the next handle 3, the header's count 2; neither has had a turn (`+0x98` nought, the looping key `0xffff`), each in `data\levels\jungle\Features\<stem>\` | the records' heap pointers | the two scripts as a thing bought's |
 | `KAME` | zoom 110, rotation 0, flags 0, the point (475, 0, 175), nothing saved | no | constant (the orbit camera's at the write, as any save) |
 | `COAS` | no coaster: `0 0 0 1` | no | constant |
 | `ADVS` | `Advisor_ResetState`'s 360 bytes (`0x005989c0`: zeroed, `+0x110` 5, `+0x12c` -1, the head node at `+0x38 + slot*4` and five mouth nodes at `+0x40 + slot*20` of each slot's model, found by name (`FUN_0044b2e0`), then twenty clip lengths in ms at `+0x68` to `+0xb4` from slot 1's model, else slot 0's, clip 14's (`+0x9c`, entry 13) nought), then eight words of the balance (four pairs from `0x7856f4`) at `+0x144` to `+0x150` and `+0x154` to `+0x160`: the theme's costume piece ids, `AddOns` and `SubOffs` (`FUN_004080e0`; `advisor-park.md`, the costume row), no buffer | no (by theme: the theme's advisor) | afresh from the theme's advisor model and the balance |
@@ -926,18 +926,57 @@ starting cash**; **the clock holds month 0 and day -1 until its first update** (
   original's load reads the file's 0x168 bytes over its own advisor** (`0x599d84`; nothing recomputes them), so words of nought there would give
   it twenty clip lengths of 0 (every line waiting 1 s, not its length) and all its mouths on node 0. Its costume words (`+0x144` to `+0x150`,
   `+0x154` to `+0x160`) are the theme's `ThemeAdvisorCostumes`, as `FUN_004080e0` copies them (the ADVS row above).
-- **Differences from the original's file that are neither per-run nor counted, said at `FreshParkFile` and the writers:** the advisor thing's slot 0
+- **A difference from the original's file that is neither per-run nor counted, said at `FreshParkFile` and the writers:** the advisor thing's slot 0
   `mValid` is 0 here and 1 there (`PutAdvisorSlots` writes the slots this game holds, and it posts no message 0, Q543), so the original loading a
-  file from here has no welcome in its slot list; the made ride scripts' RSSE words differ (the header's script count 0 here, 2 there, which is only
-  counted; each script's `+0x98` -1 here and 0 there; `+0xa8` 0 here and `0xffff` there; the directory `features` there `Features`).
+  file from here has no welcome in its slot list.
 - **Not built, counted** (`Unimplemented`): `FRESH_PARK_FILE_MUSIC_VOICE`: the sound state's `+0x00` and the session's music voice it names are nought.
-  `FRESH_PARK_FILE_OBJECT_CONTROL_WORD_8`: the object controls' dword at `+0x08` is 5 on 31 of the 70
-  records in every clean file (17 of the 20 rides but 1500 to 1502, the 8 shops, the 5 sideshows, and item 100) and nought on the others, and
-  on 23 of Easymode's 50 (its 12 rides, 6 shops, 4 sideshows and item 100) and 29 to 32 of the played saves'; its rule is not decoded, and the
-  original loads the file this game writes with nought on all. `SAVE_PARK_MADE_MODEL_TABLES` (twice a save): the gates' and the lights' model
-  records declare no node words or lookup records (the original's: 6 words and 2 lookups, 9 words), so the module is 76 bytes short and the original
-  makes the tables afresh. `FRESH_PARK_FILE_OTHER_THEME`: the flyers' values, the land's emitter and voices, the generator's seed and the ride
+  `FRESH_PARK_FILE_OTHER_THEME`: the flyers' values, the land's emitter and voices, the generator's seed and the ride
   system's counts are Lost Kingdom's (the other themes' files were measured beside it, not built).
+- **The rest of the file** (Q801), decoded and built: the controls' `+0x08`, the two objects' model tables and channels and their scripts' words,
+  below.
+
+### The rest of a park made fresh's file
+
+Decoded and built on 2026-10-29 (Q801), against the clean-memory file `q327/orig/a/proton-restart.INTS`.
+
+**The object controls' `+0x08` is the item's `FatigueEffect`.** The control manager (the world's `+0x1d943c`; serialised by `FUN_004d3aa0`,
+`ControlManager_Serialise`, both ways) is filled by `FUN_004d3e00` (`ControlManager_FillFromItems`, from its constructor `FUN_004d3de0`), which
+walks every item description (`FUN_00412e60` / `FUN_00412e70`) and, for an id it holds no record of, appends one: the id, `+0x04` the
+descriptor's `+0x1b8` (`Upgrades[0].CostOfUpgrade`), `+0x08` its `+0xe8` (`UsageInfo.FatigueEffect`, `ride-operation.md`), `+0x0c` its
+`+0x16c` (`RipOffOK`), `+0x10` whether its `+0x180` (`Upgrades[0].CostOfResearch`) is nought, the rest nought. The two lookups,
+`FUN_004d3d10` (`ControlManager_GetObjectControl`, which caches the last key and record at `+0x12c4` and `+0x12c8`) and `FUN_004d3d80` (the same
+without the cache), have 32 call sites; none reads or writes the record's `+0x08`, and the settle-up subtracts the descriptor's own `+0xe8`
+(`0x004fd9fb`), so the word is written and never read. Only the category files declare it (5 in `Rides.sam`, `Shops.sam` and `SideShow.sam`
+of all four themes, none in `Features.sam` or `Upgrades.sam`), which is why the three add-ons of the upgrades folder, 1500 to 1502, read nought.
+
+**The gates' and the lights' model records are their models as made, never run.** In the original's file the gates declare six node words
+`0 0 0 601 601 401`, two lookup records `(9, -1)` and `(0x21, -1)` and shared flags 1, the lights nine words (eight noughts, `401`), none and 0:
+the rule's words at rest ("The rule for a record's two tables"), no clip bound, as the fixed items are made before any script turn. Their one
+channel each is idle with its speed and queued speed nought, the model maker's zeroed channel: a channel no clip was ever started on holds nought
+(1,216 of the 1,272 channels of the boundary's pieces in eight of the original's files), one that played and went idle 1.0.
+
+**Their scripts have had no turn.** A script's `+0x98` is its turn's budget: each turn copies `+0x94` (50) into it (`0x0055170f`) and counts it
+down per instruction before anything else reads it, so a load never reads it; the loader's zeroed struct holds nought until the first turn, and
+369 of 374 records in six files hold -1 after. Its `+0xa8`, the looping key, is `0xffff` from the loader (`0x00558c4f`). The header's script
+count is the global `DAT_008791ac`: the reader zeroes it (`0x00559822`), reads the file's over it and counts one up per record (`0x005599cd`),
+the loader counts one up per script made (`0x005588ba`) and the destroyer one down (`0x00558656`); nothing walks by it, so a fresh park's file
+holds 2 and a park loaded and saved twice its records. A record's folder is spelt as the executable's strings spell it: `Rides`, `Features`,
+`Upgrades`, `Shops`, `Sideshow` (every park file read).
+
+**OpenTPW** writes each: `FreshParkFile` the item's `FatigueEffect` at `+0x08` (`ItemDescriptionFile.FatigueEffect`, the category's where the
+item's own file says nothing); `ParkRides` gives an object the file holds no record of (a fresh park's two) its model's fresh tables
+(`ParkModelTables.Running`), as `BindNew` gives a thing bought; a made model's channel that never started a clip (`AnimTimeControl.Started`)
+is written at speed nought; `RideScript` starts its looping key at `0xffff` and a made record holds `+0x98` nought until its first turn
+(`MadeScript.HadATurn`); the made scripts count one up each in the header and the gone one down (`ParkScriptStates.Splice`); and the folder is
+`ParkItemCatalogue.EngineDirectory`'s. **A deviation, said at `Splice`:** the count is not raised by the records a load reads, so a park loaded
+and saved here keeps the file's count where the original's doubles it; nothing reads it.
+
+**Confirmed** (`q801/confirm/r1`, `q801/orig/l2`; `PREDICTION.txt` P1 to P6): a fresh Full Simulation park entered here, its `restart.INTS`
+against the original's (`freshcmp.py`): the controls differ in `mPreviousSearchKey` alone, the ride system is the original's 11,311 bytes with the
+gates' and the lights' records byte for byte the original's (their tables and channels) and only the boundary pieces' per-run items differing, the
+ride scripts the same but for seven ranges of heap addresses the reader replaces; the census counts `FRESH_PARK_FILE_MUSIC_VOICE` alone. A bush
+bought and the park saved on tick 102: the two records declare their tables still. The original under Proton loaded that file (tick 134 to 102,
+running on to 440 in 85 s, $49,900) and drew the gates (`orig/l2/g-08.png`).
 - **The sound** holds the land's five voices of Lost Kingdom as the original puts them back (handles `0x36` to `0x3a`, slots 97, 96, 94, 99, 95)
   and not the session's own (the music's voice, `0x350062` under Proton, with the state's `+0x00` naming it): nought here.
 

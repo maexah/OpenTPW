@@ -207,39 +207,49 @@ public class RideScriptChannelTests
 	/// <b><c>TRIGANIM_CH</c> does not stamp the looping key, and plain <c>TRIGANIM</c> does.</b> The two
 	/// handlers are identical until the very end, where <c>TRIGANIM</c> jumps to a shared tail
 	/// (<c>0x00552fe5</c>) that writes the deadline <i>and</i> the key at <c>+0xa8</c>, while
-	/// <c>TRIGANIM_CH</c> ends inline having written only the deadline.
-	///
-	/// <para>
-	/// <b>The difference is observable through the next <c>LOOPANIM</c>.</b> Its key for role 0 entry 0 is
-	/// nought, which is what the field starts at here, where the engine's loader writes <c>0xFFFF</c> - a
-	/// difference no shipped <c>LOOPANIM</c> meets. So after a <c>_CH</c> trigger the loop reads here as
-	/// "already looping" and takes the early exit, queueing nothing, whereas after a plain trigger
-	/// the field holds <c>0xFFFF</c>, the keys differ, and the loop really is asked for. Copying
+	/// <c>TRIGANIM_CH</c> ends inline having written only the deadline. The key starts at <c>0xFFFF</c>, where the
+	/// engine's loader writes it (<c>0x00558c4f</c>), so each script here first loops role 0 entry 0, key nought:
+	/// a plain trigger then leaves <c>0xFFFF</c> and a <c>_CH</c> trigger the loop's nought. Copying
 	/// <c>TriggerAnimation</c> and adding a channel would fail this and nothing else.
-	/// </para>
 	/// </summary>
+	/// <remarks><b>Mutations:</b> the key starting at nought; <c>TRIGANIM_CH</c> stamping it.</remarks>
 	[TestMethod]
 	public void OnlyThePlainTriggerStampsTheLoopingKey()
 	{
-		var afterPlain = Junspray();
+		Assert.AreEqual( 0xFFFF, Running( Junspray(), Word( Opcode.END ) ).LoopingKey, "the loader's key" );
 
-		Running( afterPlain,
+		var afterPlain = Running( Junspray(),
+			Word( Opcode.LOOPANIM ), Lit( 0 ), Lit( 0 ),
 			Word( Opcode.TRIGANIM ), Lit( 0 ), Lit( 0 ), Lit( 0 ),
+			Word( Opcode.END ) );
+
+		afterPlain.Turn( 0f );
+		Assert.AreEqual( 0xFFFF, afterPlain.LoopingKey, "a plain trigger stamps OneShot over the loop's key" );
+
+		var afterChannel = Running( Junspray(),
 			Word( Opcode.LOOPANIM ), Lit( 0 ), Lit( 0 ),
-			Word( Opcode.END ) ).Turn( 0f );
-
-		Assert.IsTrue( afterPlain.Channel( 0 )!.HasQueued,
-			"a plain trigger leaves the key at OneShot, so the loop that follows differs from it and is obeyed" );
-
-		var afterChannel = Junspray();
-
-		Running( afterChannel,
 			Word( Opcode.TRIGANIM_CH ), Lit( 0 ), Lit( 0 ), Lit( 0 ), Lit( 0 ),
-			Word( Opcode.LOOPANIM ), Lit( 0 ), Lit( 0 ),
-			Word( Opcode.END ) ).Turn( 0f );
+			Word( Opcode.END ) );
 
-		Assert.IsFalse( afterChannel.Channel( 0 )!.HasQueued,
-			"a _CH trigger leaves the key alone, so the loop matches its starting nought and takes the early exit" );
+		afterChannel.Turn( 0f );
+		Assert.AreEqual( 0, afterChannel.LoopingKey, "a _CH trigger leaves the loop's key alone" );
+	}
+
+	/// <summary>
+	/// A script that has had no turn is written with the loader's nought in its turn's budget, <c>+0x98</c>, and one that has had a turn with -1
+	/// (<c>0x0055170f</c>; <c>docs/exe/saves.md</c>, "The rest of a park made fresh's file").
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the turn never marked.</remarks>
+	[TestMethod]
+	public void AScriptIsMadeWithNoTurnUntilItsFirst()
+	{
+		var script = Running( Junspray(), Word( Opcode.END ) );
+
+		Assert.IsFalse( script.Made( _ => 0u, 50, "data\\levels\\jungle\\Features\\gates\\" ).HadATurn, "not yet run" );
+
+		script.Turn( 0f );
+
+		Assert.IsTrue( script.Made( _ => 0u, 50, "data\\levels\\jungle\\Features\\gates\\" ).HadATurn, "after its first turn" );
 	}
 
 	/// <summary>

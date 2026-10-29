@@ -190,6 +190,9 @@ public sealed partial class ParkScriptStates
 	/// <summary>The next handle's place in the header block.</summary>
 	private const int NextHandleDword = 2;
 
+	/// <summary>The script count's place in the header block, <c>DAT_008791ac</c>, which nothing walks by.</summary>
+	private const int CountDword = 3;
+
 	/// <summary>Where the program counter sits in the saved struct - <c>+0x3c</c>, so dword 15.</summary>
 	private const int PositionDword = 15;
 

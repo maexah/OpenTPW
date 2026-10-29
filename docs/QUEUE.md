@@ -73,16 +73,16 @@ default, Alexah's second pre-weekly list), then the rest in the order below.
   silently. (5) "A place to ask questions" is issues titled "Question: ..." for now; GitHub Discussions are Alexah's to
   switch on. (6) A test for `tools/check_docs_paths.py` (it is run by hand and the audit; nothing tests it).
 
-- [ ] **Q801. The rest of a park made fresh's file.** From Q783, filed after the 2026-10-28 ordering block (a reorder is Alexah's). What Q783 writes
-  differently from the original's file at tick nought, each counted or said at its site: (1) the advisor's model words are now built
-  (the head and mouth nodes by name, the twenty clip lengths; the original's load copies the file's 0x168 bytes over its own advisor, `0x599d84`, so
-  noughts there ran every line's wait as 1 s and left its mouths on node 0) and `saves.md`'s ADVS row holds the rule; what is left of it is slot 0's `mValid`
-  (0 here, 1 there: no welcome in the original on a file from here, Q543) and the made scripts' RSSE words (said at `FreshParkFile`, not counted); (2) the
-  object controls' dword at `+0x08`, 5 on rides, shops and sideshows but the track rides 1500 to 1502, and on item 100 (`FRESH_PARK_FILE_OBJECT_CONTROL_WORD_8`):
-  find the writer in the control manager and its rule; (3) the gates' and lights' model records' node words and lookup records (6 and 2, 9 and 0), which
-  the made path leaves out (`SAVE_PARK_MADE_MODEL_TABLES`, 76 bytes); (4) the weather as the constructor leaves it (wind 90, force 0.5) where this game
-  writes its own roll; (5) the other three themes' files (flyers, land voices and emitter, seed, ride-system counts: `FRESH_PARK_FILE_OTHER_THEME`);
-  (6) the session's own voices (the music's, `+0x00` of the sound state, `FRESH_PARK_FILE_MUSIC_VOICE`). Confirm each by the same diff against the original's file (`lib/freshcmp.py`).
+- [ ] **Q803. What Q801 left of a park made fresh's file.** From Q801 (run 13, lane A), filed after the 2026-10-28 ordering block (a
+  reorder is Alexah's). (1) **The weather's first week.** The original's constructor rolls a quality and stores it unapplied, its stamps
+  nought and its wind 90 at 0.5 (`Weather_Construct`, `0x00511f70`), and its first forecast comes on the first tick past three days and
+  lands four days later (`weather.md`, "The forecast is real"), so a fresh park of the original's is dry with that wind for its first week
+  and its file at tick nought holds them; `ParkWeather`'s constructor here applies its roll at once (beside Q529, a loaded park's weather).
+  Decode what reads the stored quality in that week, then start a fresh park's weather as the constructor leaves it. (2) **The session's
+  music voice** (`FRESH_PARK_FILE_MUSIC_VOICE`): the sound state's `+0x00` and the voice it names, nought here; decode what the original's
+  load does with them first. (3) **The other three themes' files** (`FRESH_PARK_FILE_OTHER_THEME`: the flyers' values, the land's emitter
+  and voices, the generator's seed, the ride system's counts): waits, Lost Kingdom first. The advisor's slot 0 `mValid` is Q543's (the
+  welcome). Confirm each by the same diff against the original's file (`lib/freshcmp.py`).
 
 **Ordered at Alexah's word (2026-10-21), after their own play of Lost Kingdom:** showing the original's art as well as it can
 be shown comes first, and improvements over the original are ON by default, each said at the site as a deviation (full

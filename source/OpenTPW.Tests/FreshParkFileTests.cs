@@ -586,6 +586,116 @@ public class FreshParkFileTests
 	}
 
 	/// <summary>
+	/// The two objects as the original's own file at tick nought holds them (<c>q327/orig/a</c>; <c>docs/exe/saves.md</c>, "OpenTPW's
+	/// writer, a park made fresh"): their model records' tables as the model maker leaves them, the gates' words <c>0 0 0 601 601 401</c>
+	/// with two lookups <c>(9, -1)</c> and <c>(0x21, -1)</c> and shared flags 1, the lights' eight noughts and <c>401</c> with none, and each
+	/// one's channel never started, at speed nought; their scripts never yet run, the budget word <c>+0x98</c> nought and the looping key
+	/// <c>0xFFFF</c>, the header counting the two, each in the folder the executable spells <c>Features</c>.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> no fresh tables for an object with no saved record; a never-started channel at speed 1; <c>+0x98</c> -1
+	/// before a turn; the looping key starting at nought; the made scripts left uncounted; the folder lower case.</remarks>
+	[TestMethod]
+	public void TheGatesAndTheLightsAreWrittenAsTheOriginalsAtTickNought()
+	{
+		GameClock.Rebase();
+
+		// The two stand in the park as its objects do in a running game, which is what binds an unplaced fixed item's script.
+		var objects = new ParkObjects( "jungle", null, null );
+
+		foreach ( var placed in fresh.Objects )
+		{
+			Assert.IsTrue( catalogue.TryGet( placed.CatalogueId, out var item ) );
+			objects.Stand( placed.ThingId, null!, RideAnimations.Load( item.Directory, item.Stem, data, item.AnimationChannels ) );
+		}
+
+		var rides = new ParkRides( "jungle", fresh, catalogue, data, objects );
+
+		try
+		{
+			var state = new ParkState( fresh );
+			var people = new ParkPeople( fresh, new ParkBalance( "jungle", easyMode: false ), null, state, catalogue );
+			var path = Level.WritePark( fresh, state, "jungle", "FreshTables", people, null, rides, catalogue );
+
+			Assert.IsNotNull( path );
+			Assert.AreEqual( 0, Unimplemented.Summary.Where( counted => counted.What == "SAVE_PARK_MADE_MODEL_TABLES" ).Sum( counted => counted.Times ) );
+
+			var file = SaveFileSystem.ReadAllBytes( "users/1Test/jungle/" + Path.GetFileName( path ) );
+			var body = new SaveReader( new MemoryStream( file ) ).ReadFile();
+			var world = new ParkWorld( body, file[..0x60D] );
+			var models = world.ThingStates( _ => 1 );
+
+			// Slot 0 is the gates' model (handle 1), slot 1 the lights' (handle 2).
+
+			var gates = models.InSlot( 0 )!.Value;
+			var lights = models.InSlot( 1 )!.Value;
+
+			Assert.AreEqual( (1601, 1603), (gates.CatalogueId, lights.CatalogueId) );
+			CollectionAssert.AreEqual( new uint[] { 0, 0, 0, 0x601, 0x601, 0x401 }, gates.NodeWords );
+			CollectionAssert.AreEqual( new uint[] { 0, 0, 0, 0, 0, 0, 0, 0, 0x401 }, lights.NodeWords );
+
+			var gateLookups = models.LookupsOf( 0 )!.Value;
+			CollectionAssert.AreEqual( new[] { (9, -1), (0x21, -1) }, gateLookups.Records );
+			Assert.AreEqual( 1, gateLookups.Shared );
+			Assert.AreEqual( (0, 0), (models.LookupsOf( 1 )!.Value.Records.Length, models.LookupsOf( 1 )!.Value.Shared) );
+
+			foreach ( var channel in gates.Channels.Concat( lights.Channels ) )
+				Assert.AreEqual( (ParkThingStates.NoRole, 0f, 0f), (channel.Role, channel.Speed, channel.QueuedSpeed), "a channel never started" );
+
+			var scripts = Modules( body )["RSSE"].At;
+			Assert.AreEqual( (3, 2), (BitConverter.ToInt32( body, scripts + 16 ), BitConverter.ToInt32( body, scripts + 20 )), "the next handle, and the count of the two made" );
+
+			foreach ( var handle in new[] { 1, 2 } )
+				Assert.AreEqual( 0xFFFF, world.ScriptStates.For( handle )!.Value.LoopingKey, "the loader's looping key" );
+
+			// The newest first: the lights' struct opens the records, after the module's header, five discarded dwords, the count and the size.
+			var first = scripts + 8 + 20 + 20 + 8;
+			Assert.AreEqual( (2, 0), (BitConverter.ToInt32( body, first + 8 ), BitConverter.ToInt32( body, first + 0x98 )), "no turn yet: the budget word nought" );
+
+			foreach ( var stem in new[] { "gates", "lights" } )
+			{
+				Assert.IsTrue( body.AsSpan().IndexOf( Encoding.ASCII.GetBytes( $"data\\levels\\jungle\\Features\\{stem}\\\0" ) ) > 0, $"the {stem}' folder" );
+			}
+		}
+		finally
+		{
+			TestRun.DeleteEvery<ParkPeople>();
+			rides.Delete();
+			Entity.ApplyDeletions();
+		}
+	}
+
+	/// <summary>
+	/// The object controls' <c>+0x08</c>, the item's <c>FatigueEffect</c> (<c>FUN_004d3e00</c>): 5 on 31 of the 70, the rides, the shops,
+	/// the sideshows and item 100, as every fresh file of the original's holds it; nought on the rest, the three add-ons 1500 to 1502 among them.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the word nought; RipOffOK in its place; the category's fallback dropped.</remarks>
+	[TestMethod]
+	public void TheObjectControlsHoldEachItemsFatigueEffect()
+	{
+		var (_, body) = Save();
+		var controls = 143 + 64;
+		var fives = new List<int>();
+
+		for ( var record = 0; record < fresh.ObjectControlRecords.Count; ++record )
+		{
+			var word = BitConverter.ToInt32( body, controls + record * 32 + 8 );
+			Assert.IsTrue( word is 0 or 5, $"record {record}: {word}" );
+
+			if ( word == 5 )
+				fives.Add( BitConverter.ToUInt16( body, controls + record * 32 ) );
+		}
+
+		Assert.AreEqual( 31, fives.Count );
+		Assert.AreEqual( 17, fives.Count( item => item is >= 1100 and < 1200 ) );
+		Assert.AreEqual( (8, 5), (fives.Count( item => catalogue.TryGet( item, out var shop ) && shop.Directory.Contains( "/shops/" ) ),
+			fives.Count( item => catalogue.TryGet( item, out var side ) && side.Directory.Contains( "/sideshow/" ) )) );
+		CollectionAssert.Contains( fives, 100 );
+		CollectionAssert.DoesNotContain( fives, 1500 );
+		CollectionAssert.DoesNotContain( fives, 1601 );
+		Assert.AreEqual( 0, BitConverter.ToInt32( body, controls + 8 + 32 * fresh.ObjectControlRecords.ToList().FindIndex( control => control.ItemId == 1601 ) ) );
+	}
+
+	/// <summary>
 	/// A park made fresh holds month 0 and day -1 while its tick is nought, and its date from the first sweep on; so does one read back from a
 	/// file that holds day -1, which is how a restart of it runs.
 	/// </summary>

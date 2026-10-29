@@ -1603,6 +1603,29 @@ public class ParkFileWriterThingsTests
 	}
 
 	/// <summary>
+	/// A channel the file holds idle and never started, its two speeds nought as the model maker leaves them (a fresh park's gates at tick
+	/// nought, FileFormats <c>saves.md</c>, "A park made fresh"), stands as the file's while nothing is started on it; one that has played a
+	/// clip and stopped since is written at its own speed, 1, with nought in its stamps and the file's queue leftovers.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the channel's start never marked; the idle branch not asking whether it started.</remarks>
+	[TestMethod]
+	public void AnIdleChannelThatPlayedSinceIsWrittenAtItsOwnSpeed()
+	{
+		var file = new SavedChannel( ParkThingStates.NoRole, 0, 0x40, 0f, 0, 0, 0, ParkThingStates.NoRole, 0, 0, 0f );
+
+		Assert.AreEqual( file, ParkRides.WrittenChannel( new AnimTimeControl(), file, moment => (uint)moment, 9000 ), "nothing started: the file's" );
+
+		var played = new AnimTimeControl();
+
+		played.Start( 5, 0, 0, 1.5f, now: 1000, frames: 30f );
+		played.Start( 7, 0, 0, 2f, now: 2000, frames: 0f );
+
+		Assert.IsTrue( played.IsIdle && played.Started );
+		Assert.AreEqual( new SavedChannel( ParkThingStates.NoRole, 0, 0x40, 1f, 0, 0, 0, ParkThingStates.NoRole, 0, 0, 0f ),
+			ParkRides.WrittenChannel( played, file, moment => (uint)moment, 9000 ) );
+	}
+
+	/// <summary>
 	/// A channel still on the file's clip from the file's start, and held on neither side, is a running channel and
 	/// not one "held since before the load": of its flag word the low six bits are the channel's own and the rest the
 	/// file's. Here a role nought clip of twenty frames has run past its end and been marked 0x8 since, so the

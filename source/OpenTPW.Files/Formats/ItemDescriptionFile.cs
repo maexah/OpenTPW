@@ -438,6 +438,19 @@ public sealed partial class ItemDescriptionFile
 	public int InitPricePerUse => _initPricePerUse ?? _category?.InitPricePerUse ?? 0;
 
 	/// <summary>
+	/// What a go takes off a guest's <c>mTiredness</c> - <c>UsageInfo.FatigueEffect</c>, descriptor <c>+0xe8</c>, which the
+	/// control manager copies into the item's control record at <c>+0x08</c> as it makes it (<c>FUN_004d3e00</c>) and the
+	/// settle-up subtracts (<c>0x004fd9fb</c>; <c>docs/exe/ride-operation.md</c>, the descriptor's fields).
+	///
+	/// <para>
+	/// <b>The category files set it</b>: 5 in each theme's <c>Rides.sam</c>, <c>Shops.sam</c> and <c>SideShow.sam</c> (and
+	/// jungle's <c>Burger.sam</c>); <c>Features.sam</c> and <c>Upgrades.sam</c> do not declare it, so a feature and an add-on
+	/// (the jumps and tunnels, 1500 to 1502) read nought.
+	/// </para>
+	/// </summary>
+	public int FatigueEffect => _fatigueEffect ?? _category?.FatigueEffect ?? 0;
+
+	/// <summary>
 	/// How far over what a thing is worth a guest will still pay, in per cent - <c>UsageInfo.RipOffOK</c>,
 	/// descriptor <c>+0x16c</c>, which the level's control record keeps at <c>+0xc</c> and the price opinion
 	/// <c>FUN_004fde50</c> reads.
@@ -688,6 +701,7 @@ public sealed partial class ItemDescriptionFile
 	private int? _chanceOfLosing;
 	private int? _costOfGoods;
 	private int? _initPricePerUse;
+	private int? _fatigueEffect;
 	private int? _ripOffOK;
 	private int? _specialIngredient;
 	private int? _appearanceEffect;
@@ -1076,6 +1090,10 @@ public sealed partial class ItemDescriptionFile
 
 				case "UsageInfo.InitPricePerUse":
 					_initPricePerUse = Number( line );
+					break;
+
+				case "UsageInfo.FatigueEffect":
+					_fatigueEffect = Number( line );
 					break;
 
 				case "UsageInfo.RipOffOK":

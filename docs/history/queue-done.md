@@ -10887,6 +10887,23 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   it as any loaded park's; the gates and the lights are made as bought things, with fixed-item model records (flags `0x361` on the item's cell). Against the
   original's clean fresh file only what varies per run differs, beside the counted gaps filed as Q801. Confirmed: `q783/confirm/r2` (entry writes
   `restart.INTS`, Restart Park reads it, the park saved after it), `q783/orig/l3` (the original under Proton loads the saved file and draws the gate).
+- [x] **Q801. The rest of a park made fresh's file.** From Q783, filed after the 2026-10-28 ordering block (a reorder is Alexah's). What Q783 writes
+  differently from the original's file at tick nought, each counted or said at its site: (1) the advisor's model words are now built
+  (the head and mouth nodes by name, the twenty clip lengths; the original's load copies the file's 0x168 bytes over its own advisor, `0x599d84`, so
+  noughts there ran every line's wait as 1 s and left its mouths on node 0) and `saves.md`'s ADVS row holds the rule; what is left of it is slot 0's `mValid`
+  (0 here, 1 there: no welcome in the original on a file from here, Q543) and the made scripts' RSSE words (said at `FreshParkFile`, not counted); (2) the
+  object controls' dword at `+0x08`, 5 on rides, shops and sideshows but the track rides 1500 to 1502, and on item 100 (`FRESH_PARK_FILE_OBJECT_CONTROL_WORD_8`):
+  find the writer in the control manager and its rule; (3) the gates' and lights' model records' node words and lookup records (6 and 2, 9 and 0), which
+  the made path leaves out (`SAVE_PARK_MADE_MODEL_TABLES`, 76 bytes); (4) the weather as the constructor leaves it (wind 90, force 0.5) where this game
+  writes its own roll; (5) the other three themes' files (flyers, land voices and emitter, seed, ride-system counts: `FRESH_PARK_FILE_OTHER_THEME`);
+  (6) the session's own voices (the music's, `+0x00` of the sound state, `FRESH_PARK_FILE_MUSIC_VOICE`). Confirm each by the same diff against the original's file (`lib/freshcmp.py`).
+  **DONE 2026-10-29 (Q801, on `alexah/773-fresh-park-file-rest`; the piece built: points 2 and 3, and 1's script words; the rest is Q803).** Decoded
+  (`saves.md`, "The rest of a park made fresh's file"): the controls' `+0x08` is the item's `FatigueEffect`, copied by the control manager's fill
+  (`ControlManager_FillFromItems`, `0x004d3e00`) and read by nothing; a script's `+0x98` is its turn's budget, nought before a first turn; the
+  looping key starts `0xffff`; the header's count is counted up per script made and down per destroyed; the folder is the executable's `Features`;
+  a channel never started holds speed nought. Built: each written as the original's; the gates' and lights' records take their models' fresh tables.
+  Against the original's file only per-run words and heap addresses differ there; the original loads the file saved after play (`q801/confirm/r1`,
+  `q801/orig/l2`). Left (Q803): the weather's first week, the session's music voice, the other themes; slot 0's `mValid` is Q543's.
 - [x] **Q782. A player's data folder that does not exist yet, and macOS's.** From Q798. (1) `Game.cs` makes the cache folder
   from `Environment.GetFolderPath( LocalApplicationData )` without `DoNotVerify`, which answers an empty string for a folder
   that is not there (a new Linux account has no `~/.local/share`), so the cache would land in the working directory;

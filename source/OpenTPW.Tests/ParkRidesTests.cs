@@ -457,7 +457,7 @@ public class ParkRidesTests
 
 		Assert.AreEqual( 0, rides.ChannelsRestored, "no channel put back" );
 		Assert.AreEqual( rides.LoadedAt + 63f, bouncy.WaitDeadline, "its wait still comes back" );
-		Assert.AreEqual( 0, bouncy.LoopingKey, "but not the key of a loop its channel is not playing" );
+		Assert.AreEqual( 0xFFFF, bouncy.LoopingKey, "but not the key of a loop its channel is not playing: the loader's" );
 
 		for ( var tick = 1; tick <= 24; ++tick )
 			rides.Scheduler.Advance( rides.LoadedAt + (tick * 31f) );

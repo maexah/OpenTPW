@@ -131,10 +131,9 @@ public sealed class RideScript
 	/// Which animation is looping - the engine's field <c>+0xa8</c>, holding the key
 	/// <c>(second &lt;&lt; 16) + first</c>, and <see cref="OneShot"/> after a one-shot trigger or a
 	/// <c>WAITANIM</c>'s first visit (<see cref="WaitOutAnimation"/>).
-	/// It starts at nought, where the engine's loader writes <see cref="OneShot"/> (<c>0x00558c4f</c>), a
-	/// difference no shipped <c>LOOPANIM</c> meets, as none has the key nought; a load puts the saved key back.
+	/// It starts at <see cref="OneShot"/>, as the engine's loader writes it (<c>0x00558c4f</c>); a load puts the saved key back.
 	/// </summary>
-	private int _looping;
+	private int _looping = OneShot;
 
 	/// <summary>
 	/// What <c>TRIGWAITANIM</c> is holding out for - the engine's field <c>+0xbc</c>, holding the role it
@@ -1615,7 +1614,13 @@ public sealed class RideScript
 	/// <param name="speed">The speed word, which no script here keeps: its thing's operating speed, or the loader's 50.</param>
 	/// <param name="directory">The folder it was loaded from, as the engine keeps it at <c>+0x38</c>.</param>
 	internal MadeScript Made( Func<float, uint> reading, int speed, string directory )
-		=> new( Written( reading ), ThingId, _file.Body, _file.StringBlob, _nameOffset, _file.TimeSlice, speed, directory );
+		=> new( Written( reading ), ThingId, _file.Body, _file.StringBlob, _nameOffset, _file.TimeSlice, speed, directory, _hadATurn );
+
+	/// <summary>
+	/// Whether it has had a turn: the engine sets its turn's budget, <c>+0x98</c>, from <c>+0x94</c> as each turn begins
+	/// (<c>0x0055170f</c>), so one that has had none holds the loader's nought there (<see cref="Made"/>).
+	/// </summary>
+	private bool _hadATurn;
 
 	/// <summary>
 	/// Moves every clock reading a load hands this script in its variables or its result register onto the clock it
@@ -1787,6 +1792,7 @@ public sealed class RideScript
 		// (FUN_005516b0, 0x00551715); this floors it to one instead, a deviation nothing shipped reaches:
 		// every file says 50.
 		_budget = _file.TimeSlice > 0 ? _file.TimeSlice : 1;
+		_hadATurn = true;
 
 		// Nothing brings a channel up to date here, and that is deliberate. The engine sweeps its animation
 		// players once per FRAME, off a clock snapshot taken outside the fixed-step loop the scripts run in,

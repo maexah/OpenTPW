@@ -33,9 +33,8 @@ public static class FreshParkFile
 		var body = new Sink( 1_600_000 );
 
 		// What the original holds that is not built here (docs/exe/saves.md, "A park made fresh: its file at tick nought"): the
-		// object controls' word at +0x08, 5 on 31 of the 70, whose rule is not decoded; the session's music voice, which is
-		// nought here (Sound); and, off Lost Kingdom, the flyers' four values, the land's own voices and its emitter.
-		Unimplemented.Report( "FRESH_PARK_FILE_OBJECT_CONTROL_WORD_8" );
+		// session's music voice, which is nought here (Sound); and, off Lost Kingdom, the flyers' four values, the land's own
+		// voices and its emitter.
 		Unimplemented.Report( "FRESH_PARK_FILE_MUSIC_VOICE" );
 
 		if ( !park.Theme.Equals( "jungle", StringComparison.OrdinalIgnoreCase ) )
@@ -139,9 +138,11 @@ public static class FreshParkFile
 			body.Zeros( 32 );
 			body.Poke16( at, control.ItemId );
 			body.Poke32( at + 4, control.Price );
-			body.Poke32( at + 8, 0 );
-			var ripOff = catalogue.TryGet( control.ItemId, out var item ) ? item.RipOffOK : 0;
-			body.Poke32( at + 0xc, ripOff );
+			// The item's FatigueEffect and RipOffOK, which the control manager copies from the item as it makes the record
+			// (ControlManager_FillFromItems, 0x004d3e00; docs/exe/saves.md, "The rest of a park made fresh's file").
+			var known = catalogue.TryGet( control.ItemId, out var item );
+			body.Poke32( at + 8, known ? item.FatigueEffect : 0 );
+			body.Poke32( at + 0xc, known ? item.RipOffOK : 0 );
 			body.Poke8( at + 0x10, control.Researched ? 1 : 0 );
 			body.Poke32( at + 0x14, control.TierResearched );
 			body.Poke32( at + 0x18, control.Standing );
@@ -518,10 +519,8 @@ public static class FreshParkFile
 	}
 
 	/// <summary>
-	/// The ride scripts: the subsystem set up, no script (the gates' and the lights' are made as any bought thing's), the
-	/// next handle 1, and the size of a script's struct. <b>The made scripts' words differ from the original's, said here and not counted:</b>
-	/// the header's script count is 0 where the original's is 2 (only counted up and down there), each script's <c>+0x98</c> is -1 where
-	/// the original's is 0, its <c>+0xa8</c> 0 where the original's is <c>0xffff</c>, and the directory <c>features</c> where it is <c>Features</c>.
+	/// The ride scripts: the subsystem set up, no script (the gates' and the lights' are made as any bought thing's, which counts
+	/// them into the header's count), the next handle 1, and the size of a script's struct.
 	/// </summary>
 	private static void RideScripts( Sink body )
 	{

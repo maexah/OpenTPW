@@ -7,10 +7,10 @@ namespace OpenTPW;
 /// A script started since the load, as a park file holds one (<c>docs/exe/saves.md</c>, "OpenTPW's writer, a thing
 /// bought and a thing sold"): its running state, the thing it belongs to, and what its loader took from its
 /// <c>.RSE</c> file - the body, the string blob, the time slice - with the offset of its name in the blob (-1
-/// until it names itself), its speed word and the folder it was loaded from.
+/// until it names itself), its speed word, the folder it was loaded from and whether it has had a turn.
 /// </summary>
 public sealed record MadeScript( WrittenScript Script, int Thing, byte[] Body, byte[] Strings, int NameAt,
-	int TimeSlice, int Speed, string Directory );
+	int TimeSlice, int Speed, string Directory, bool HadATurn = true );
 
 public sealed partial class ParkScriptStates
 {
@@ -58,7 +58,9 @@ public sealed partial class ParkScriptStates
 		Dword( 0x23, script.Variables.Length );
 		Dword( 0x24, made.Strings.Length );
 		Dword( 0x25, made.TimeSlice );
-		Dword( 0x26, -1 );
+		// The turn's budget: set from the time slice as each turn begins (0x0055170f) before anything reads it, so a load
+		// never reads it; the loader's nought before a first turn, and -1, as 369 of 374 records in six files hold, after one.
+		Dword( 0x26, made.HadATurn ? -1 : 0 );
 		Dword( WaitDeadlineDword, (int)script.WaitDeadline );
 		Dword( AnimationDeadlineDword, (int)script.AnimationDeadline );
 		Dword( LoopingKeyDword, script.LoopingKey );
@@ -252,6 +254,16 @@ public sealed partial class ParkScriptStates
 		var result = stream.ToArray();
 
 		BinaryPrimitives.WriteInt32LittleEndian( result.AsSpan( _countAt, 4 ), kept + made.Count );
+
+		// The header's count, DAT_008791ac, which nothing walks by: one up for each script made (0x005588ba) and one down for
+		// each destroyed (0x00558656). A deviation, said here: the engine's load also counts one up for each record it reads
+		// (0x005599cd), so its park loaded and saved holds twice its scripts there; this keeps the file's.
+		if ( _headerBytes >= (CountDword + 1) * 4 )
+		{
+			var count = result.AsSpan( _headerAt + (CountDword * 4), 4 );
+			BinaryPrimitives.WriteInt32LittleEndian( count,
+				BinaryPrimitives.ReadInt32LittleEndian( count ) + made.Count - (_order.Count - kept) );
+		}
 
 		return result;
 	}

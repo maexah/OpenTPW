@@ -102,6 +102,12 @@ public sealed class AnimTimeControl
 	/// <summary>How fast it plays. 1.0 is normal, and the engine seeds every idle restart with exactly that.</summary>
 	public float Speed { get; private set; } = 1f;
 
+	/// <summary>
+	/// Whether a clip has ever been started on it. One never started holds the speed the engine's zeroed model leaves, nought,
+	/// in a park file (<c>docs/exe/saves.md</c>, "OpenTPW's writer, a park made fresh"): <c>ParkRides.Written</c> reads it.
+	/// </summary>
+	public bool Started { get; private set; }
+
 	/// <summary>The engine's <c>StartAnimTime</c>: the millisecond the clip began, moved backwards to carry an overshoot.</summary>
 	public int StartAnimTime { get; private set; }
 
@@ -269,6 +275,7 @@ public sealed class AnimTimeControl
 		SubAnim = entry;
 		AnimID = role;
 		Speed = speed;
+		Started = true;
 		TotalAnimFrames = frames;
 
 		if ( carry <= 0f )

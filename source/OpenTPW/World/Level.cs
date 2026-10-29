@@ -904,7 +904,7 @@ public class Level
 			var (lineA, lineB) = ParkObjectNames.Lines( thing.CatalogueId, names )!.Value;
 
 			return new ParkRides.BoughtThing( new ParkWorld.MadeObject( thing, lineA, lineB ), item.Width, item.Depth,
-				"data\\" + item.Directory.Replace( '/', '\\' ).TrimEnd( '\\' ) + "\\", ParkFixedItems.IsVehicle( thing.CatalogueId ),
+				ParkItemCatalogue.EngineDirectory( item.Directory ), ParkFixedItems.IsVehicle( thing.CatalogueId ),
 				// The gates and the lights are fixed items: their models are recorded on the item's own cell, not the object's.
 				ParkFixedItems.IsGatesOrLights( thing.CatalogueId ) ? item.EngineMapOffset ?? (ParkThingStates.FixedItemCellX, ParkThingStates.FixedItemCellY) : null );
 		} ).ToList();
