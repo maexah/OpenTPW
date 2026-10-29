@@ -11066,6 +11066,15 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Dino Karts Jump `interpolated 20 listed largest rise off 0.0000` (the original's 16 and 20, to 0.0000, Q812's `basevertices.py` on the same
   file), `PROCEDURAL_BASE_INTERPOLATE` is gone from the census (2 on main) and the stock park is unchanged. The leftover is Q813 (2) to (4); the
   original's 17th moved vertex of `gk_TRACK01` is not reproduced (ours moves the 16).
+- [x] **Q816. How a coaster's pylons are conformed, and the two whose floor Q812's reader did not see (Q813's piece (2), decode first).**
+  From Q813 (run 14, lane A; its piece (2), split off 2026-10-29). `Coaster_StandCellPylons` (`0x00432df0`) stands a cell's stack of
+  pylons: the bottom one at the cell's height, posed, its floor (`mc_pylbase`) shown by taking off `0x10` and conformed (`0x00432f2f`);
+  a stacked one at the knot below, its floor hidden `0x80000010` unless its type has `0x10`, not conformed; the type's four named nodes
+  hidden or shown by place in the stack. `Coaster_MoveNodeToCell` (`0x00442f40`) conforms a moved pylon at any level (`0x004432db`).
+  The two of Q812-F2 (slots 202 and 210, nodes 4 and 5, alone on their cells) hold `0x80000000` on their floor with `0x10` clear, put
+  back from their file's node word `0x408` (the other 38: `0x0` or `0x8`): drawn, and conformed (925 of 925 listed base vertices on a
+  corner walked as `FUN_00469a80`, 917 by the old walk, which passed over `0x80000000`). `park-engine.md`, "A coaster's pylons"; tools
+  `original/coaster.py pylons`, `original/basevertices.py --as-original`. 6 predictions held, 2 missed (the first guess: stacked).
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

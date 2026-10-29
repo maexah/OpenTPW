@@ -7,9 +7,13 @@ own walk) and over all; then the pylon chain (head +0x54, next +0x64): each node
 index, its +0x1c..+0x24 place, its +0x18 pylon type with heights +0xbc/+0xc0 and stack step +0xc4), stack level (+4),
 loft (+0xe8), its place (+0x4c..+0x54) and its knots (+0x90 -> count, rail 1, rail 2; 0x58 bytes, place at +0x40).
 docs/exe/ride-operation.md, "A coaster's highest track point" (Q593). With SECS, a block whenever the summary changes
-(stamped with mGameTick); 'full' also prints every sample. Read-only."""
+(stamped with mGameTick); 'full' also prints every sample. 'pylons' adds to each node its pylon model (+0x70, the index into
+0x007a4610), the flags it was made with (+0xe4), its root's height ([[[model+8]+4]+0x78]+0x44), its base node ([model+8]+0x2c)
+and that node's flag word (0x80000010 hidden), the pylon type's flag word (cell +0x18, +0), and the cell's stack (+0x30
+count, +0x34 nodes: id:flags each): the stack Coaster_StandCellPylons (0x00432df0) walks (park-engine.md, "A coaster's
+pylons", Q816). Read-only."""
 import struct, sys, time
-pid = int(sys.argv[1]); secs = float(sys.argv[2]) if len(sys.argv) > 2 else 0; full = 'full' in sys.argv[3:]
+pid = int(sys.argv[1]); secs = float(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2][0].isdigit() else 0; full = 'full' in sys.argv[2:]; pylons = 'pylons' in sys.argv[2:]
 f = open(f'/proc/{pid}/mem', 'rb', buffering=0)
 def rd(a, fmt='I'):
     f.seek(a); return struct.unpack('<' + fmt, f.read(struct.calcsize('<' + fmt)))[0]
@@ -19,6 +23,14 @@ def p3(v): return '(%.3f, %.3f, %.3f)' % v
 def tick():
     try: return rd(rd(0x0080239c) + 0x1da70c)
     except (OSError, struct.error, ValueError): return -1
+def pylon(node, cell, pt):
+    idx = rd(node + 0x70); model = rd(0x007a4610 + 4 * idx) if idx < 4096 else 0
+    inst = rd(model + 8) if model else 0; base = rd(inst + 0x2c) if inst else 0
+    rooty = fl(rd(rd(inst + 4) + 0x78) + 0x44) if inst else 0.0
+    count = rd(cell + 0x30) if cell else 0
+    stack = ' '.join(f"{rd(rd(cell + 0x34 + 4 * i))}:{rd(rd(cell + 0x34 + 4 * i) + 8):#x}" for i in range(min(count, 8)) if rd(cell + 0x34 + 4 * i))
+    return (f" | model {idx} made {rd(model + 0xe4) if model else 0:#x} root y {rooty:.3f} base {base:#x} flags "
+            f"{rd(base) if base else 0:#x} type flags {rd(pt) if pt else 0:#x} cell stack {count}: {stack}")
 def snapshot():
     out, ctl, guard = [], rd(0x00790fe0), 0
     while ctl and guard < 16:
@@ -41,7 +53,7 @@ def snapshot():
                        f"cellplace {p3(v3(cell + 0x1c)) if cell else '-'} H {fl(pt + 0xbc) if pt else 0:.3f}..{fl(pt + 0xc0) if pt else 0:.3f} "
                        f"step {fl(pt + 0xc4) if pt else 0:.3f} loft {fl(node + 0xe8):.4f} place {p3(v3(node + 0x4c))} "
                        f"yaw {fl(node + 0xe0):.4f} bank {fl(node + 0xd8):.4f} incl {fl(node + 0xdc):.4f} +0xfc {rd(node + 0xfc)} "
-                       f"knots {kc}: {' '.join(knots)}")
+                       f"knots {kc}: {' '.join(knots)}" + (pylon(node, cell, pt) if pylons else ''))
             node, k = rd(node + 0x64), k + 1
         if full:
             for i in range(n):

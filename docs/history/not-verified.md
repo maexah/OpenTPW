@@ -5,6 +5,14 @@ newest first. The pre-commit hook (`tools/maintainer/status-sweep.py`) moves an 
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q815 (the interpolating pass of the nine lookup-`0x8` meshes: `ProceduralConform.Interpolate`, `ProceduralBase.InterpolatedVertices`). Read in ours on a
+  copy of Alexah's Full Simulation `New Save.TPWS` (`q815/run2`, the final build): `rim` reads the Dino Karts station `interpolated 16 listed largest
+  rise off 0.0000` and the Dino Karts Jump `interpolated 20 listed largest rise off 0.0000`; `PROCEDURAL_BASE_INTERPOLATE` is gone from the census (2 on
+  main); the same code with the call removed reads the station's 1.2008 off (`run-nopass`); the stock park unchanged. The station's track no longer
+  shows a gap of ground beside the step (`station_70_240-track-crop-main-final-original.png`; the original's frame of the same file at the same camera
+  numbers this session shows none, the framing not pixel-aligned). Not verified: the original's 16 and 20 are Q812's earlier read of the same file, not
+  retaken; the original's 17th moved vertex of `gk_TRACK01` is not reproduced (ours moves 16); the water ride's and its add-ons' meshes (`wr_*`),
+  which no park of hers holds, only by the unit tests' count; a thing bought and put down on a slope.
 - Q811 (why Alexah's Full Simulation park draws no boundary wall: `ParkBoundaryHoarding.Read` takes its records from the walk Q779
   names, which stops in her file, so none of her 163 wall records is read). Compared on screen at one camera (480 165 120 0): ours
   (main `b8a71167`) on a copy of her `New Save.TPWS`, `boundary pieces 0 anchors 163 unmade 163`, no wall; a throwaway probe (item

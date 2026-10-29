@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""basevertices.py PID [MODEL...] [--verbose] - the ORIGINAL's memory, read-only: how every placed model instance's
+"""basevertices.py PID [MODEL...] [--verbose] [--as-original] - the ORIGINAL's memory, read-only: how every placed model instance's
 vertices stand on the park's ground, against the conform and drape `FUN_00469a80` runs at the making (Q812;
 docs/exe/park-engine.md, "Where a placed object's model stands").
 
@@ -21,10 +21,11 @@ carries each mesh vertex (+0x58 count, +0x60 in groups of four: x[4] y[4] z[4]) 
            less the root's height, the interpolating pass of 0x0046a2a7; the largest difference is printed.
   other    every other mesh: its vertices at a cell corner, and how many of them stand at the corner's height.
 
-Where this walk differs from FUN_00469a80's (Q812 review): it skips a node flagged 0x80000000 (meshes()) and a mesh whose
-vertex count differs from its master's, and moves the list cursor only on meshes it visits; FUN_00469a80 tests no 0x80000000 and
-skips only nodes flagged 0x200. A mesh this walk skips that the original walks leaves the cursor behind, so 'used' can fall short of
-'listed' (917 of 925 in Alexah's park: the two StdPylon bases, slots 202 and 210; the cause is not settled).
+Where this walk differs from FUN_00469a80's (Q812 review): by default it skips a node flagged 0x80000000 (meshes()) and a mesh
+whose vertex count differs from its master's, and moves the list cursor only on meshes it visits; FUN_00469a80 tests no 0x80000000
+and passes over only nodes flagged 0x200 (0x00469b0e), their children not. A mesh this walk skips that the original walks leaves the
+cursor behind, so 'used' can fall short of 'listed': 917 of 925 in Alexah's park, the two StdPylon bases of slots 202 and 210, whose
+mc_pylbase the park file's node word 0x400 marks 0x80000000 with 0x10 clear (Q816). --as-original walks as FUN_00469a80 does.
 
 One line an instance: slot, name, the flags it was made with (+0xe4, FUN_00463060's second argument), the root's translation, then each kind's counts. --verbose prints a line a mesh.
 
@@ -33,7 +34,7 @@ One line an instance: slot, name, the flags it was made with (+0xe4, FUN_0046306
 """
 import struct, sys
 
-pid = int(sys.argv[1]); args = [a for a in sys.argv[2:] if not a.startswith('--')]; VERBOSE = '--verbose' in sys.argv
+pid = int(sys.argv[1]); args = [a for a in sys.argv[2:] if not a.startswith('--')]; VERBOSE = '--verbose' in sys.argv; AS_ORIGINAL = '--as-original' in sys.argv
 f = open(f'/proc/{pid}/mem', 'rb', buffering=0)
 def rd(a, n): f.seek(a); return f.read(n)
 def u32(a): return struct.unpack('<I', rd(a, 4))[0]
@@ -85,7 +86,7 @@ def meshes(inst, master, ms_parent=None):
 	"""The mesh pairs of the instance's tree and its master's, walked together (same shape: the clone copies the tree)."""
 	while inst and master:
 		flags = u32(inst)
-		if not flags & 0x80000000 and u16(inst + 0x58):
+		if (not flags & 0x200 if AS_ORIGINAL else not flags & 0x80000000) and u16(inst + 0x58):
 			yield inst, master, flags
 		yield from meshes(u32(inst + 0xc), u32(master + 0xc))
 		inst, master = u32(inst + 8), u32(master + 8)

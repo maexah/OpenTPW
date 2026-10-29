@@ -1921,7 +1921,7 @@ is laid over the fresh node's: the reader clears the eleven bits below on the no
 | `0x100` | `0x400000` | that track's flags hold `0x10000` |
 | `0x800` | `0x100000` | that track's flags hold any of `0x289` |
 | `0x200` | `0x20000000` | the node's lookup record has a position, its file flags meeting `0x30`: the md2 loader's pass over the lookup records (`FUN_0044a870`, `0x0044a90c`), which sets the record's `0x1` and its handle `-1` in the same breath |
-| `0x400` | `0x80000000` | the node is transform-only, its file flags holding `0x200`: the same closing loop (`0x00462f47`), one `OR` of `0x80000010`, so such a node is hidden as it is marked. A hide list spares a node with it; a visibility track does not (`FUN_00471860` tests no such bit). The head pass (`FUN_0044ba60`) writes the same on each head record's node |
+| `0x400` | `0x80000000` | the node is transform-only, its file flags holding `0x200`: the same closing loop (`0x00462f47`), one `OR` of `0x80000010`, so such a node is hidden as it is marked. A hide list spares a node with it; a visibility track does not (`FUN_00471860` tests no such bit). The head pass (`FUN_0044ba60`) writes the same on each head record's node; so does `Coaster_HideNode` (`0x00433220`) and the stand's hide of a stacked pylon's floor (`0x00432ed9`), whose shows take off `0x10` alone, so a pylon's node shown again keeps `0x80000000` (`park-engine.md`, "A coaster's pylons", Q816) |
 
 `FUN_00472d70( clip, mesh )` (the model's `+8`) runs as a clip is started on a channel without the caller's flag `0x8`
 (`FUN_00472f60`, `0x00473117`) and from `FUN_004726d0`. **A load does not run it**: the

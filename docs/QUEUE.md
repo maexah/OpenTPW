@@ -65,10 +65,13 @@ default, Alexah's second pre-weekly list), then the rest in the order below.
 park for the website, go first. Q804 stopped the photographs: no picture with the blue lines will be used.
 
 - [ ] **Q813. What Q808 left of the conform and the drape.** From Q808 (run 14, lane A). (1) **The interpolating pass** is done as Q815
-  (the original's 17th moved vertex of `gk_TRACK01`, against the 16 it lists, is not reproduced: `park-engine.md`). (2) **The coaster's pieces and pylons** are made through `0x00432f2f` and `0x004432db`, which also run the
-  conform (made `0x3fa`: 40 of the 159 instances in her park); ours stands them rigid (`ParkCoasterHeights`), and the first
-  reading of Q812 (`review14/q812/FINDINGS.md`, F2) says two `StdPylon` instances list 4 base vertices and use none (no `0x1000` on their mesh), so
-  decode that before building it. (3) The recomputed face normals (`FUN_00473c30`, whether they reach the lighting) and the
+  (the original's 17th moved vertex of `gk_TRACK01`, against the 16 it lists, is not reproduced: `park-engine.md`). (2) **The coaster's
+  pylons**, decoded as Q816 (`park-engine.md`, "A coaster's pylons"): nothing here draws a pylon yet (its model is read only for the
+  track's heights, `ParkCoasterHeights`). Draw each node's pylon on its cell, posed as `ParkCoasterHeights` already poses its knot, its
+  floor conformed at the bottom of a stack as a placed thing's; a stacked one's floor hidden unless its type has `0x10`; the type's
+  four named nodes hidden and shown by place in the stack (the Minecart's `mc_bridge` hidden on every top); a saved node word's
+  `0x400` kept. Confirm at the Temple of Gloom in both games (`original/coaster.py pylons`, `original/basevertices.py --as-original`).
+  (3) The recomputed face normals (`FUN_00473c30`, whether they reach the lighting) and the
   control word the conform runs under are unread (Q750's note). (4) The ground mesh still splits every cell one way (Q398), so a
   draped vertex on a cell flagged `0x4` follows the original's triangle where the ground beside it follows ours. Confirm each in
   both games as Q808 did (`lib/clearseam.py`, `original/basevertices.py`).

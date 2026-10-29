@@ -230,8 +230,8 @@ tells apart from their neighbours'.
 **The same flag `0x8` also conforms the model's base vertices to the ground** (Q750; fork watch 2026-10-27, verify-world H1,
 verify-other L2). After the model is made, `test bl,8` (`0x00463329`) and `FUN_00469940( [instance + 8], DAT_007a0854, base
 height, 0 )` (`0x00463347`) run `FUN_00469a80` in its apply mode, the mode whose drape arm is Q398's and Q695's. Flag `0x8` is in
-`0x32f` (a purchase and every thing of a loaded park, `0x004dd64f`), `0x3fa` (the coaster's pylons, `0x00430883`, in `Coaster_SetupPylonModel`) and `0x33a` (the kart, water, queue
-and hoarding pieces); the coaster pieces run it too (`0x00432f2f`, `0x004432db`). Only the vertices the type load listed are
+`0x32f` (a purchase and every thing of a loaded park, `0x004dd64f`), `0x3fa` (the coaster's pylons, made by `Coaster_AddNode`, `0x00434276`; the type's own model at `0x00430883`, in `Coaster_SetupPylonModel`) and `0x33a` (the kart, water, queue
+and hoarding pieces); a pylon is conformed again when its cell is stood and when it is moved (`0x00432f2f`, `0x004432db`; "A coaster's pylons", below). Only the vertices the type load listed are
 taken (the record's list at `+0x14`, counted by `ProceduralBase_Build` at `0x0046a808` and copied at `0x0046a853`..`0x0046a87b`,
 on nodes the count flagged `0x1000`): the base vertices `ProceduralBase.FloorMesh` already counts, on every node that has one.
 Each is carried into world space (the node chain, `0x004702d0`); x and z snap to the grid line when within 0.01 of it
@@ -277,13 +277,53 @@ hands each model record's saved word (`+0x15`) to `FUN_00463060` as its flags (`
 
 **Measured in the original** (Q812, `q812/orig/orig1/`, `original/basevertices.py`): a Full Simulation player under Proton
 loading a copy of Alexah's `New Save.TPWS`, about tick 19300. 917 of the 925 listed base vertices of its placed things were seen, and every one stands
-at its terrain corner's height, none off (the other 8 are the two coaster pylons in slots 202 and 210, `StdPylon`, whose base the reader's walk does not see: why is open, and `basevertices.py`'s walk differs from `FUN_00469a80`'s there; whether the original conformed them is unread): the Sun God (`incagod`, made `0x32f`, root at -4.5) 18 of 18 on its `Base` mesh (flags
+at its terrain corner's height, none off (the other 8 are the floors of the two coaster pylons in slots 202 and 210, which that reader's walk passed over for their `0x80000000`; walked as `FUN_00469a80` walks, all 925 stand on a corner: "A coaster's pylons", below, Q816): the Sun God (`incagod`, made `0x32f`, root at -4.5) 18 of 18 on its `Base` mesh (flags
 `0x5101`), all 18 moved from rest; the Tom Tom Twister 20 of 20, the Costume Shop 12 of 12. Its 270 draped pieces (368 meshes: 78 queue pieces,
 163 hoarding pieces, 28 kart track pieces, `gk_mam1`) each rise by the ground under each vertex less one value, the piece's own
 root height, to 0.0001. The interpolating pass moved the kart station's 16 listed vertices (`gk_TRACK01`) and the
 Lava Jump's 20 (`gk_brdge`) each by the ground along its cell line less the root height, to 0.0001 (`orig2/bv80.txt`). Things were made `0x32f` (119) or `0x3fa` (40, the coaster's pylons), pieces `0x33a` (269). In its `bv75` the 119 things list 765 base vertices and use 765, the 40 pylons list 160 and use 152 (765 + 152 = 917 used, 765 + 160 = 925 listed); a mesh whose lookup record carries `0x10000` (`mammtunn`'s `gk_mam1`) is skipped by the count (`0x0044a94b`, `0x00469ad0`), so the Dino Karts Tunnel lists 7, all on `gk_tracktop01`. Its frame at
 the Sun God camera holds no clear-coloured sliver (`o-t19197.png`, 0); ours at the same camera, unchanged, 5,652 (`q812/ours1`).
 Not settled: the control word the arithmetic runs under (Q750's note), which moves only the last bits.
+
+**A coaster's pylons** (Q816). Each node of a coaster's track that stands on a cell has a pylon, made `0x3fa` by `Coaster_AddNode`
+(`FUN_00463060` at `0x00434276`, which conforms it as it is made, as above; or an existing instance re-claimed by `FUN_00463ab0` at
+`0x00434257`, which conforms nothing). A cell holds a stack of nodes (`+0x30` count, `+0x34` the nodes, bottom first; each node's
+`+4` its level, `+0x100` its cell) and names its pylon type (`+0x18`). **`Coaster_StandCellPylons( type, cell, force, quiet )`
+(`0x00432df0`) stands a cell's stack**, node by node, passing over a node flagged `0x2000`:
+
+- **The bottom pylon** (level 0): its root's height is the cell's (`+0x20`, the midpoint of its corners, `FUN_00466d70`), its clips
+  are posed (`Model_AdvanceChannels( model, 1, 0 )`), its floor mesh (the instance's `+0x2c`, the mesh `ProceduralBase_Build`
+  found, `StdPylon`'s `mc_pylbase`) is shown by taking off `0x10` alone, and `FUN_00469940( [model + 8], scene, cell height, 0 )`
+  conforms it (`0x00432f2f`): its listed base vertices stand on the corners, as a placed thing's.
+- **A stacked pylon** (level 1 or more): its root stands at the knot of the pylon below (that model's lookup record the type's
+  `+0x18` names, its `+0x34`; nought where it has none), or, where the node below is flagged `0x2000`, at that node's `+0x50` plus the
+  type's step `+0xc4`; its clips are posed; and unless the type's flag word holds `0x10` its floor is hidden, `0x80000010`
+  (`0x00432ed9`). It is not conformed here.
+- **The type's four named nodes** (flag `0x400` and node `+0x1c`, `0x800` and `+0x20`, `0x1000` and `+0x24`, `0x2000` and `+0x28`):
+  at the top of the stack `0x400` hides its node and `0x800` shows its; below the top `0x400` shows its (where the node above is
+  not `0x2000`) and `0x800` hides its; at the bottom `0x1000` hides and `0x2000` shows; above it `0x1000` shows and `0x2000` hides.
+  A hide is `Coaster_HideNode( node, 1 )` (`0x00433220`: `0x80000010`; with nought, `0x10` alone); a show takes off `0x10` alone.
+
+With `quiet` nought it also marks each node, and the node at its `+0x68`, `0x200000`. It runs at a load over every cell of the coaster
+(`Coaster_LoadModule`, `0x004380c1`, `force` nought, `quiet` 1; while `0x00790afc` is set only a call with `force` runs), when a node
+joins a cell (`Coaster_StackNodeOnCell`, `0x00433f54`) or leaves one (`FUN_00436490`, `0x004365ea`, `0x004366fb`), and from the track
+tool's `FUN_004424e0`, `FUN_00443f40` and `FUN_00444cb0`. **`Coaster_MoveNodeToCell` (`0x00442f40`)**, the track tool moving a node to
+another cell, takes it off its old cell and stands that one again where others are left on it (a cell it holds alone moves with it,
+its place and height rewritten), moves the model (`FUN_004671f0` with `0x3fa`), puts it on the new
+cell (`Coaster_NewCell` or `Coaster_StackNodeOnCell`, which stands it), poses it (`FUN_004346f0`), sets its header's `+0x30` `0x4000`
+and conforms it whatever its level (`0x004432db`, the new cell's height), a stacked pylon's hidden floor too.
+
+**A pylon shown again keeps `0x80000000`**: the stand clears `0x10` and nothing else, and the park file's node word `0x400` (`saves.md`,
+"A node word") puts `0x80000000` back at a load. **Measured** (Q816, `q816/orig/orig1`, `orig2`: the original, a Full Simulation player,
+a copy of Alexah's `New Save.TPWS`, ticks 19048 and 19322, `original/coaster.py pylons`, `original/basevertices.py`): the Temple of
+Gloom's 40 pylons each stand alone on their cell (no stack in her park), type flags `0x5ed` (`0x400` set, `0x10`, `0x800`, `0x1000`
+and `0x2000` clear), and every one's `mc_bridge` holds `0x80000010` (39 `0x807408b1`, one `0x817408b1`), hidden by the top-of-stack arm. 38 floors read `0x5101`; the
+two of slots 202 and 210 (nodes 4 and 5, cells (29,35) and (32,35), the only two at loft 1, their knots at 100) read `0x80005101`,
+`0x10` clear, and their records in the file hold node word `0x408` on `mc_pylbase` where the other 38 hold `0x0` or `0x8`. Both
+floors are drawn (`orig2/o-t19442.png`: a sandy square at each tower's foot) and conformed: walked as `FUN_00469a80` walks
+(`basevertices.py --as-original`), 925 of the park's 925 listed base vertices stand on a corner, 4 of 4 on each of the two (the ground
+under them is 0, so their rest and conformed places coincide). How the file came to hold `0x400` there is not recoverable from it; a
+hide by the stand or the type's arms, then a show, leaves exactly that word.
 
 **OpenTPW builds the conform and the drape** (Q808, `ProceduralConform`): `LobbyModel`'s `stand` hook moves the drawn vertices of the
 model's file as it is made, before the meshes are built from them, in the model's own place and turn. The conform takes the base
@@ -293,7 +333,7 @@ piece, and the meshes a placed object's lookup record marks `0x10000` (`mammtunn
 height under it on the cell's triangle (`DrapeHeight`, the flag `0x4` as above) less the model's own height; a source vertex moves
 under every drawn vertex that names it, and `SourceVertices` stay the rest the floor search and the hoardings read. The cell's
 triangle here is the original's, while the ground mesh is still split one way (Q398). **Not built:** the recomputed face normals, the
-coaster pylons' conform (Q813), and the control word the arithmetic runs under. **Measured in OpenTPW** (Q808, Alexah's New Save, a copy): the Sun God 18 of 18 listed rim
+coaster's pylons, which nothing here draws yet (their model is read only for the track's heights, `ParkCoasterHeights`; Q813), and the control word the arithmetic runs under. **Measured in OpenTPW** (Q808, Alexah's New Save, a copy): the Sun God 18 of 18 listed rim
 vertices on a corner, the Tom Tom Twister 20 of 20, the Costume Shop 12 of 12 (the original's counts), 1,782 queue vertices and
 1,736 track-piece vertices draped, and the clear-coloured sliver pixels at the Sun God camera 5,751 to 11, the Tom Tom Twister's
 16,308 to 0, the Costume Shop's 7,844 to 0.
