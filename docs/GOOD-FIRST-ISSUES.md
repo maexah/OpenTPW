@@ -4,7 +4,7 @@ The text of the GitHub issues the maintainer makes from the queue items tagged *
 This page is drafts: nothing here is on GitHub until the maintainer creates the issue (a push-like act), and the
 issue's number then goes on the queue item as `Claimed:` when somebody takes it (`docs/WORKFLOW.md`, "Claims"). Delete
 a draft here when its issue exists. Label each issue `good first issue`. Every one below needs the .NET 10 SDK and
-nothing else: **no game, no Ghidra, no Proton** ([`CONTRIBUTING.md`](../CONTRIBUTING.md), "Quick start"). Line numbers
+nothing else (**no Ghidra, no Proton**; Q160's second test also needs the game, see its draft) ([`CONTRIBUTING.md`](../CONTRIBUTING.md), "Quick start"). Line numbers
 drift; find the member by name.
 
 How to take one: comment "I'll take this", branch off `main` as `<you>/<what-it-changes>`, and open a pull request
@@ -43,7 +43,7 @@ toilets, whose room the gate measures in walked cells (`ParkRideChoice.QueueCell
 leave `LeaveCell` as it is (the maintainer decides from the disassembly). The second uses the walked count. For each,
 put the bug back and show the test failing.
 
-**Tools.** `dotnet test`. Without the game these park tests may skip; if they do, say so, and the maintainer runs them
+**Tools.** `dotnet test`. `ParkFootprintOccupancyTests` needs no game; `ParkRideJoinTests` skips without it. Say so, and the maintainer runs them
 with the game.
 
 ## Q284: the console's `particles <slot>` reads a word as slot 0

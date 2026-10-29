@@ -11,10 +11,10 @@ A record someone else could repeat (`CONTRIBUTING.md`, "Showing how you checked"
 - Lines it printed:
 - Result (held, or missed and why):
 
-- [ ] Built and tested alone in a clean worktree, with `OPENTPW_GAME_PATH` set
+- [ ] Built and tested alone in a clean worktree, with `OPENTPW_GAME_PATH` set if you have the game (else give the skip count)
 - Test counts (passed / failed / skipped):
 - [ ] Put the bug back and saw a test fail (or say why there is no test)
-- [ ] Seen in the running game. Screenshot below if anything drawn changed.
+- [ ] Seen in the running game, if it changes what the game does. Screenshot below if anything drawn changed.
 
 ## Differences from the original
 

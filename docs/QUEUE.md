@@ -61,17 +61,14 @@ fork watch).
 Q249 (saving a park made fresh; its build is Q783), then Q782 (a player's data folder) and Q800 (contributors by
 default, Alexah's second pre-weekly list), then the rest in the order below.
 
-- [ ] **Q802. What Q800 left for a person or a machine it did not have.** From Q800 (run 12, lane A), every other point
-  built: (1) the Linux quick start is marked "tested on the maintainer's Linux machine only" (Alexah, 2026-10-28: no
-  container is to be installed; `tools/harness/lib/quickstart_check.sh` ran it from an empty `HOME`); the Windows and
-  macOS launch steps stay marked "not tested" until someone runs them. (2) The four issues in `docs/GOOD-FIRST-ISSUES.md`
-  (Q159, Q160, Q284, Q288) are drafts: creating them on GitHub is a push-like act and Alexah's; put each issue's number
-  in its draft and in the queue item's `Claimed:` line when somebody takes it. (3) The Saturday audit's own script
-  (outside the repo) must call `python3 tools/check_docs_paths.py`; `docs/WORKFLOW.md`, "Hooks", says it does.
-  (4) `git config opentpw.maintainer true` is set in this clone; set it in every other clone of the maintainer's
-  (`~/repos/OpenTPW-laneB` and the worktrees' parent) or its queue and status sweeps and the website push stop running
-  silently. (5) "A place to ask questions" is issues titled "Question: ..." for now; GitHub Discussions are Alexah's to
-  switch on. (6) A test for `tools/check_docs_paths.py` (it is run by hand and the audit; nothing tests it).
+- [ ] **Q802. What Q800 left for a person or a machine it did not have.** From Q800 (run 13, lane A). Done by the
+  coordinator (2026-10-29): `opentpw.maintainer` set in `~/repos/OpenTPW-laneB`, and the Saturday audit runs
+  `python3 tools/check_docs_paths.py`. The Linux quick start is marked "tested on the maintainer's Linux machine only"
+  and the Windows and macOS launch steps "not tested" (Alexah, 2026-10-28: no container). Left: (1) the four issues in
+  `docs/GOOD-FIRST-ISSUES.md` (Q159, Q160, Q284, Q288) are drafts: creating them on GitHub is a push-like act and
+  Alexah's; put each issue's number in its draft and in the queue item's `Claimed:` line when somebody takes it.
+  (2) "A place to ask questions" is issues titled "Question: ..." for now; GitHub Discussions are Alexah's to switch
+  on. (3) A test for `tools/check_docs_paths.py` (it is run by hand and by the audit; nothing tests it).
 
 - [ ] **Q803. What Q801 left of a park made fresh's file.** From Q801 (run 13, lane A), filed after the 2026-10-28 ordering block (a
   reorder is Alexah's). (1) **The weather's first week.** The original's constructor rolls a quality and stores it unapplied, its stamps
@@ -515,7 +512,7 @@ filed the items that cite it.
   `QueueSizeInCells` times four, nought on the Drinks Shop and the three toilets, where the gate measures their walked
   cells (`ParkRideChoice.QueueCellsFor`); a run that queues a guest at a toilet fails it falsely. Use the walked
   count. Put the bug back for each (`AGENTS.md` rule 6). No game run.
-  **Good first** (Q800; `docs/GOOD-FIRST-ISSUES.md` has the issue text; no game, no Ghidra).
+  **Good first** (Q800; `docs/GOOD-FIRST-ISSUES.md` has the issue text; no Ghidra; only the `ParkFootprintOccupancyTests` half needs no game, `ParkRideJoinTests` skips without it).
 
 - [ ] **Q210. Hoardings: the original's terrain rectangle and its base-vertex gate.** Found by the 2026-10-04 review
   (`u6-hoardings-1`, `-2`, `-4`; `docs/exe/ride-hoardings.md`). `ParkRideHoarding.Ground` samples `x0 + gx` where the

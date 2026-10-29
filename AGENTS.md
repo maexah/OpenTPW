@@ -3,7 +3,7 @@
 A re-implementation of Theme Park World (1999) in C# / .NET 10 on NeoVeldrid (Vulkan).
 It reads the original game's data files. It ships no game content.
 
-This file holds the rules every contributor works by, human or agent, and the map. Any coding agent reads it
+This file holds the rules every contributor works by, human or agent, and where things are (`ARCHITECTURE.md` is the map). Any coding agent reads it
 (Claude Code reads it through `CLAUDE.md`). The guide for people is `CONTRIBUTING.md`. Paths on your own machine go in
 `CLAUDE.local.md` or your agent's equivalent, never committed. Long-form knowledge lives in `docs/`.
 

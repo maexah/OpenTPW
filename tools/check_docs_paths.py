@@ -3,7 +3,8 @@
 
     check_docs_paths.py [file.md ...]     the three pages, or the files named
 
-Looks at the text between backticks and at markdown link targets. A name that looks like a path (it has a slash, or
+Looks at the text between backticks (each path-like word of a command, and of a fenced block too) and at markdown link
+targets. A dot-name with no slash (`.gitattributes`) is skipped: it cannot be told from a file type (`.wad`). A name that looks like a path (it has a slash, or
 ends in a file type the repository holds) must match a tracked file or folder: whole, or as the tail of a path (so
 `Client/GameDir.cs` is found under source/OpenTPW/). A name that looks like a type (`ParkState`, `ParkState.CellAt`)
 must be declared as a class, struct, enum, interface or record in source/ (and a member after the dot must appear
@@ -77,6 +78,21 @@ def headings(path):
     return {slug(m.group(1)) for m in re.finditer(r"^#{1,6}\s+(.*)$", text, re.M)}
 
 
+def words_in(page, no, text, index):
+    """The path-like words (a slash and a known file type) of a fenced line or a backticked command; each must exist."""
+    problems = []
+    for word in re.split(r"[\s\"'=,;()]+", text):
+        word = word.strip("`:")
+        if (not word or "<" in word or "*" in word or "$" in word or "{" in word or word.startswith(("/", "~", "%", "-", "http", "C:"))
+                or word in NOT_OURS or word.startswith(GAME_FOLDERS + NOT_TRACKED_ON_PURPOSE)
+                or word.startswith(("./", "../")) or "/" not in word or "//" in word):
+            continue
+        if word.rsplit("/", 1)[-1].rsplit(".", 1)[-1] in PATH_TYPES or word.endswith("/"):
+            if not index.path_exists(word):
+                problems.append((page, no, word, "no such file or folder"))
+    return problems
+
+
 def check(page, index):
     problems = []
     in_fence = False
@@ -85,6 +101,7 @@ def check(page, index):
             in_fence = not in_fence
             continue
         if in_fence:
+            problems += words_in(page, no, line, index)
             continue
         for m in re.finditer(r"\]\(([^)\s]+)\)", line):
             target = m.group(1)
@@ -98,9 +115,17 @@ def check(page, index):
                 problems.append((page, no, target, "link to a heading that is not there"))
         for m in re.finditer(r"`([^`]+)`", line):
             name = m.group(1).strip()
-            if name in NOT_OURS or " " in name or "<" in name or "*" in name or "$" in name or "=" in name:
+            if " " in name:
+                problems += words_in(page, no, name, index)
                 continue
-            if name.startswith(("/", "~", "%", "-", "http", "git ", "dotnet ", "C:", ".")) or name.startswith(GAME_FOLDERS + NOT_TRACKED_ON_PURPOSE):
+            call = re.fullmatch(r"([A-Z][A-Za-z0-9]+\.[A-Za-z0-9]+)\(.*\)", name)
+            if call:
+                name = call.group(1)
+            if name in NOT_OURS or "<" in name or "*" in name or "$" in name or "=" in name:
+                continue
+            if name.startswith(("/", "~", "%", "-", "http", "git ", "dotnet ", "C:")) or name.startswith(GAME_FOLDERS + NOT_TRACKED_ON_PURPOSE):
+                continue
+            if name.startswith(".") and "/" not in name:
                 continue
             if re.fullmatch(r"OpenTPW(\.[A-Za-z]+)+", name) and ("source/" + name) in index.dirs:
                 continue

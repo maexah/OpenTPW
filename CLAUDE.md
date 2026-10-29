@@ -2,7 +2,7 @@
 
 @AGENTS.md
 
-`AGENTS.md`, above, holds every rule and the map; "`CLAUDE.md` rule N" in older pages means the same numbered rule
+`AGENTS.md`, above, holds every rule and where things are; "`CLAUDE.md` rule N" in older pages means the same numbered rule
 there. This file adds only what is particular to Claude Code. Your own machine's paths and working rules go in
 `CLAUDE.local.md` (not committed; Claude Code loads it beside this file).
 

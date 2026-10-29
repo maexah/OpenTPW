@@ -8,7 +8,7 @@ Where the project's memory lives. Code says what; these files say why, and what 
 | `WORKS.md` | What works, item by item: every item's account of what it made work. Grepped, never read whole. | An item that makes something work |
 | `GLOSSARY.md` | One line per term: Peep, Thing, Object, Item, ParkWorld vs ParkState, Time vs GameClock vs the thing tick... | Whenever a term is coined |
 | `VERIFYING.md` | **The numbered instrument rules.** Every one is a postmortem of a measurement that agreed with its author while being wrong. Other pages cite them by number, so a number never changes meaning. | Whenever an instrument lies |
-| `QUEUE.md` | **The work queue.** Numbered items, bugs first, one per session, taken from the top unless Alexah reorders. Each is ticked in the commit that lands it; the pre-commit hook moves it to `history/queue-done.md`. | Every task |
+| `QUEUE.md` | **The work queue.** Numbered items, bugs first, one per session, taken from the top unless Alexah reorders. Each is ticked in the commit that lands it; the maintainer's pre-commit hook moves it to `history/queue-done.md`. | Every task |
 | `REVIEW-2026-09-21.md`, `REVIEW-2026-09-22.md` | The two dated codebase reviews `QUEUE.md` was drawn from; the detail behind Q1-Q12. Their line numbers are from the tip each was written against. | Never |
 | `DECISIONS.md` | Choices that could have gone another way, one paragraph each, dated: what was chosen, why, and where its facts now live. | When a choice is made |
 | `GOOD-FIRST-ISSUES.md` | The text of the GitHub issues made from queue items tagged "Good first"; drafts until the maintainer creates them. | When an item is tagged or its issue made |
@@ -17,7 +17,7 @@ Where the project's memory lives. Code says what; these files say why, and what 
 | `TOOLING.md` | The stored tools every item reuses (`AGENTS.md` rule 21) and the recipes found by trial, with the original game under Proton and the executable's own routines under unicorn | When a tool is built or a recipe is found |
 | `exe/` | Reverse-engineering facts as tables: addresses, offsets, field names, counts from shipped data | Whenever a fact is found |
 | FileFormats docs clone | File-format facts: the bytes in a shipped file. A separate repo, `OpenTPW.FileFormats` - see "The FileFormats docs clone" below. | Whenever a format fact is found |
-| `history/` | Superseded plans and per-branch ledgers, **verbatim**. Grep it; never read it whole, and never edit it by hand — history is kept as it was written. | The pre-commit hook, which adds to `queue-done.md` and `not-verified.md` |
+| `history/` | Superseded plans and per-branch ledgers, **verbatim**. Grep it; never read it whole, and never edit it by hand — history is kept as it was written. | The maintainer's pre-commit hook, which adds to `queue-done.md` and `not-verified.md` |
 
 **The root `ARCHITECTURE.md` is a map** (the projects, the folders inside the game, `tools/`). How a frame runs, how a
 scene is built, who owns the tick and the init order are still not written down: the memory diet's last step was closed

@@ -33,12 +33,91 @@ public class ContentGuardTests
 	[DataRow( "docs/notes.txt" )]
 	[DataRow( "disc.iso" )]
 	[DataRow( "jungle.tpws" )]
+	[DataRow( "testme.exe" )]
+	[DataRow( "TP.ICD" )]
+	[DataRow( "users/x/jungle/restart.INTS" )]
+	[DataRow( "Save/Config.tcf" )]
+	[DataRow( "game/save/opentpw.cfg" )]
+	[DataRow( "extracted/Bouncy.RSE" )]
+	[DataRow( "extracted/BIGLA___.TTF" )]
+	[DataRow( "menus/MENU1.DAL" )]
+	[DataRow( "docs/manual.pdf" )]
 	public void AFileOfAGameTypeIsRefused( string path )
 	{
 		var (exit, output) = Guard( path );
 
 		Assert.AreEqual( 1, exit, output );
 		StringAssert.Contains( output, "REFUSED " + path );
+	}
+
+	/// <remarks><b>Mutation:</b> refusing every .ttf or every Save/ folder fails this.</remarks>
+	[TestMethod]
+	public void OurFontsIconsAndSaveFormatSourcesAreLetThrough()
+	{
+		var (exit, output) = Guard( "content/fonts/Roboto-Medium.ttf", "content/icon.ico", "source/OpenTPW/icon.ico", "source/OpenTPW.Files/Formats/Save/SaveFile.cs" );
+
+		Assert.AreEqual( 0, exit, output );
+	}
+
+	/// <summary>Runs the hook or the guard in a scratch repository that holds copies of the guard, the disc's list, the hook, and the files.</summary>
+	private static (int Exit, string Output) InScratchRepo( bool hook, params (string Name, bool Stage)[] files )
+	{
+		var root = RepoFiles.Root();
+		var folder = Path.Join( Path.GetTempPath(), "opentpw-guard-" + Guid.NewGuid().ToString( "N" ) );
+
+		try
+		{
+			Directory.CreateDirectory( Path.Join( folder, "tools", "hooks" ) );
+			Directory.CreateDirectory( Path.Join( folder, "source", "OpenTPW", "Client" ) );
+			File.Copy( Path.Join( root, "tools", "content_guard.py" ), Path.Join( folder, "tools", "content_guard.py" ) );
+			File.Copy( Path.Join( root, "tools", "hooks", "pre-commit" ), Path.Join( folder, "tools", "hooks", "pre-commit" ) );
+			File.Copy( Path.Join( root, "source", "OpenTPW", "Client", "DiscData.txt" ), Path.Join( folder, "source", "OpenTPW", "Client", "DiscData.txt" ) );
+
+			if ( RepoFiles.Run( "git", new[] { "init", "-q" }, null, folder ) is not { Exit: 0 } )
+				Assert.Inconclusive( "skipped: no git here" );
+
+			foreach ( var (name, stage) in files )
+			{
+				File.WriteAllText( Path.Join( folder, name ), "x" );
+
+				if ( stage )
+					Assert.AreEqual( 0, RepoFiles.Run( "git", new[] { "add", name }, null, folder )!.Value.Exit );
+			}
+
+			var result = hook
+				? RepoFiles.Run( "sh", new[] { "tools/hooks/pre-commit" }, null, folder )
+				: RepoFiles.Run( "python3", new[] { "tools/content_guard.py", "staged" }, null, folder ) ?? RepoFiles.Run( "python", new[] { "tools/content_guard.py", "staged" }, null, folder );
+
+			if ( result == null )
+				Assert.Inconclusive( "skipped: no Python or sh here" );
+
+			return result!.Value;
+		}
+		finally
+		{
+			try { Directory.Delete( folder, true ); } catch ( IOException ) { }
+		}
+	}
+
+	/// <remarks><b>Mutation:</b> dropping --cached from staged() reads the working tree's unstaged changes and checks nothing here; splitting its output on newline instead of NUL checks one joined name, so the .wad passes.</remarks>
+	[TestMethod]
+	public void StagedChecksEveryStagedFileAndOnlyTheStagedOnes()
+	{
+		var (exit, output) = InScratchRepo( false, ("a.wad", true), ("ok.md", true), ("unstaged.wad", false) );
+
+		Assert.AreEqual( 1, exit, output );
+		StringAssert.Contains( output, "2 path(s) checked, 1 refused" );
+		StringAssert.Contains( output, "REFUSED a.wad" );
+		Assert.IsFalse( output.Contains( "REFUSED unstaged.wad" ), output );
+		Assert.IsFalse( output.Contains( "REFUSED ok.md" ), output );
+	}
+
+	/// <remarks><b>Mutation:</b> the hook running the guard without <c>|| exit 1</c> lets a commit with a .wad through.</remarks>
+	[TestMethod]
+	public void TheHookRefusesAStagedGameFileAndPassesACleanCommit()
+	{
+		Assert.AreEqual( 1, InScratchRepo( true, ("a.wad", true), ("ok.md", true) ).Exit );
+		Assert.AreEqual( 0, InScratchRepo( true, ("ok.md", true) ).Exit );
 	}
 
 	/// <remarks><b>Mutation:</b> dropping the save/ rule from content_guard.py passes this.</remarks>

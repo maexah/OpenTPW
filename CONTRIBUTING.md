@@ -15,7 +15,7 @@ sounds, text) may ever be committed.
 |---|---|
 | Documentation, the website text, queue notes | No |
 | Tools and scripts (`tools/`), the Python harness libraries | No |
-| Building, and running the tests | No. Without the game, the tests that need it skip: on 2026-10-28, 1,640 of the 4,277 ran and 2,637 skipped, with 0 failing. Read the skip count: a pass with skips is not a full pass. |
+| Building, and running the tests | No. Without the game, the tests that need it skip: on 2026-10-28, 1,648 of the 4,285 ran and 2,637 skipped, with 0 failing. Read the skip count: a pass with skips is not a full pass. |
 | Playing the game, and confirming that a change to what is drawn or how the game behaves is right | **Yes** |
 | The harnesses that drive the running game or the original under Proton | **Yes**, and a Linux machine for the Proton ones |
 
@@ -76,7 +76,7 @@ task needs one, [`docs/TOOLING.md`](docs/TOOLING.md) lists each tool and the rec
 
 - **Lost Kingdom comes first.** Work on the jungle park (`data/levels/jungle`) is what is wanted now; the other three
   themes wait.
-- **Start from a "good first" issue.** A few queue items are made into issues with the label `good first issue`. Each
+- **Start from a "good first" issue.** A few queue items will be made into issues with the label `good first issue`. Each
   names its Q-number, where to look, what is expected, and the tools it needs. They are small, and none needs Ghidra.
 - **Or pick from the queue.** [`docs/QUEUE.md`](docs/QUEUE.md) is the maintainer's work list; take an item with no
   `Claimed:` line. Read [`docs/STATUS.md`](docs/STATUS.md) first for what works today. For anything big, or not in the

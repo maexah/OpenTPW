@@ -11,9 +11,13 @@ person gave it (`AGENTS.md`, "How a task runs"). **Hooks** and **Claims** are fo
 `git config core.hooksPath tools/hooks`, once per clone. What runs depends on who you are.
 
 - **Everyone:** `tools/hooks/pre-commit` runs `tools/content_guard.py staged`, which refuses a commit that stages a
-  file of the game's: a name on the disc's list (`source/OpenTPW/Client/DiscData.txt`), a type the disc uses, a saved
-  park (`.TPWS`), a disc image, anything in `save/` or in `content/ReferenceScreenshots/`. The weekly build's
-  `tools/weekly/release.py guard` uses the same list. A file of ours that shares a name or type goes on `EXEMPT` in
+  file of the game's: a name on the disc's list (`source/OpenTPW/Client/DiscData.txt`), a type the disc's `data/`
+  folder uses, a type the rest of an install has (the executables and libraries, `.vol`, `.icd`, the installer and menu
+  files, `.pdf`, `.mpg`, a saved park's `.TPWS` and `.INTS`, `Config.tcf`) or that the wads' members have (`.RSE`,
+  `.hmp`, `.sgn` and the other model, sprite and sound types, listed in `ALWAYS_REFUSED_TYPES`), the game's own fonts
+  (`fonts.wad`'s TTFs, by name), a disc image, anything in a `save/` folder (lower case, at any depth) or in
+  `content/ReferenceScreenshots/`. The weekly build's `tools/weekly/release.py guard` shares only the disc's names and
+  types (`disc()`); `EXEMPT`, `ALWAYS_REFUSED_TYPES` and these folder rules are the commit guard's alone. A file of ours that shares a name or type goes on `EXEMPT` in
   the guard. By hand: `python3 tools/content_guard.py staged`, or `paths <name>...`. `tools/hooks/pre-push` does nothing.
 - **The maintainer only:** `git config opentpw.maintainer true` makes the same two hooks also run
   `tools/maintainer/hooks/pre-commit` (moves each ticked queue item to `docs/history/queue-done.md` and every old
@@ -28,12 +32,15 @@ person gave it (`AGENTS.md`, "How a task runs"). **Hooks** and **Claims** are fo
 
 A contributor says which queue item they have taken, so two people do not do the same work.
 
-1. Open an issue, or comment on the one made from the item, saying you will take it, and add a last line to the item
-   in `docs/QUEUE.md` in your pull request, or ask the maintainer to: `Claimed: @user, #123, 2026-10-28` (your GitHub
-   name, the issue or pull request, the date).
+1. Open an issue, or comment on the one made from the item, saying you will take it. The maintainer adds a last line to
+   the item in `docs/QUEUE.md` (a contributor's pull request leaves it alone): `Claimed: @user, #123, 2026-10-28` (your
+   GitHub name, the issue or pull request, the date).
 2. A claim lapses after 14 quiet days (no commit, comment or pull request on that issue): the maintainer, or the next
    person who asks on the issue, takes the line out.
-3. A queue run reads the open issues and pull requests at its start and skips an item with a `Claimed:` line.
+3. A queue run reads the open issues and pull requests at its start and skips an item with a `Claimed:` line. It
+   lists issues and pull requests with `gh` (not on a non-interactive PATH: call it by its full path, such as
+   `/home/alex/.local/bin/gh issue list` and `gh pr list`) or reads `git ls-remote upstream 'refs/pull/*/head'`, which
+   lists closed pull requests too, so read a pull request's state before treating it as a claim.
 4. The maintainer ticks `docs/QUEUE.md` and updates `docs/STATUS.md` when the work is merged; a contributor's pull
    request leaves both alone (the pull request template asks what the work made work, in its own words).
 
@@ -220,7 +227,7 @@ say so before launching it.
 - **One task per session.** Start Claude Code from the repo root. Read `AGENTS.md` (Claude Code loads it through `CLAUDE.md`) and `docs/STATUS.md`, take the first unticked item in `docs/QUEUE.md` (unless Alexah names another; read the file's head and that item, not the whole queue), then read the one `docs/exe/` page for its area. Check Ghidra answers at the start of work, if you use it (`AGENTS.md` rule 7).
 - Keep a multi-step task's checklist in the live plan and tick each step before moving on (rule 16).
 - `docs/STATUS.md`'s "Not verified on screen" holds the item just landed and no other. Write a new item's account above the one before it; the maintainer's pre-commit hook runs `tools/maintainer/status-sweep.py`, which moves every earlier account to `docs/history/not-verified.md`.
-- End the session when the task is committed, its `docs/QUEUE.md` item ticked and `docs/STATUS.md` updated. The maintainer's pre-commit hook (`tools/maintainer/hooks/pre-commit`, see "Hooks") runs `tools/maintainer/queue-sweep.py`, which moves every ticked item to `docs/history/queue-done.md` and stages both files; do not move one by hand. Do not carry the next task in the same context. When Alexah says a clear is coming, read `docs/QUEUE.md` and show the next five unticked items with what each asks (rule 17).
+- End the session when the task is committed, its `docs/QUEUE.md` item ticked and `docs/STATUS.md` updated, and what the item made work in `docs/WORKS.md` (STATUS's one line per system changes only when a system moves; the item's "not verified" account goes above the last one's). The maintainer's pre-commit hook (`tools/maintainer/hooks/pre-commit`, see "Hooks") runs `tools/maintainer/queue-sweep.py`, which moves every ticked item to `docs/history/queue-done.md` and stages both files; do not move one by hand. Do not carry the next task in the same context. When Alexah says a clear is coming, read `docs/QUEUE.md` and show the next five unticked items with what each asks (rule 17).
 - Memory files hold rules and the live plan only, each under 300 lines, and nothing that is finished. Facts go in `docs/`. Corrections replace old text.
 
 ## Unattended runs

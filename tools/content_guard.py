@@ -4,9 +4,11 @@
     content_guard.py staged           every file staged for the next commit (added, copied, modified or renamed)
     content_guard.py paths <path>...  the named paths, as repo-relative names (nothing is read from disk)
 
-A path is refused when its name is a file on the game's disc, its type is one the disc uses, it is in the player's
-`save/` folder or a saved park (.TPWS), it is a disc image (.iso), or it is in content/ReferenceScreenshots/. The disc's
-own file list is source/OpenTPW/Client/DiscData.txt. EXEMPT names the few files of ours that share a name or a type
+A path is refused when its name is a file on the game's disc, its type is one the disc uses (the disc's data/ folder:
+source/OpenTPW/Client/DiscData.txt) or one the rest of the install and the wads' members have (ALWAYS_REFUSED_TYPES:
+the executables, libraries, installer and menu files, park files, extracted models, sprites and sounds), it is one of
+the game's fonts (the TTF members of fonts.wad), it is in a `save/` folder at any depth, or it is in
+content/ReferenceScreenshots/. EXEMPT names the few files of ours that share a name or a type
 with the disc's; add to it only for a file that is ours. The weekly build's zip is held to the same list of names and
 types by tools/weekly/release.py (docs/WORKFLOW.md, "Weekly builds"). The pre-commit hook in tools/hooks runs
 `staged`; run it by hand before a pull request. Exit 1 when anything is refused. Python 3.8 or newer, nothing to install."""
@@ -21,12 +23,25 @@ EXEMPT = {
     "content/fonts/LICENSE.txt",
     "content/icon.tga",
     "content/icon-sm.tga",
+    "content/icon.ico",
+    "source/OpenTPW/icon.ico",
     "source/OpenTPW/Client/DiscData.txt",
     "tools/harness/requirements.txt",
     "tools/weekly/README.txt",
 }
-# Types that are never ours although the disc's list does not hold them: a disc image and a saved park.
-ALWAYS_REFUSED_TYPES = {"iso", "tpws"}
+# Types that are never ours although the disc's data/ list does not hold them (commit side only: tools/weekly/release.py
+# imports disc(), and its zip legitimately holds .exe and .dll). Measured over every file of a game install, every
+# member of its 312 wads and the repo's tracked files: none of these is a type a tracked file has, except .ico (EXEMPT).
+ALWAYS_REFUSED_TYPES = set(
+    "iso tpws ints "
+    "exe dll sys drv vxd cpl icd vol inf ini bat hlp gid cnt cab ex_ ins pkg lib z fls lid bln tag bin new tmp "
+    "ddb csp acv uc 118 x86 nec mpd sbk dls 016 256 apm tre img dal dah daw bmp pdf mpg cfg tcf ico "
+    "rse hmp sgn esp tpc fpc lnd tct emt mp2 wav".split())
+# The TTF members of fonts.wad (lower case). Roboto, ours, shares the type, so these are refused by name.
+GAME_FONTS = set(
+    "bigla___.ttf bigloa__.ttf clunab__.ttf cluna___.ttf eggitaoe.ttf garga___.ttf gargsai_.ttf gargsa__.ttf "
+    "hauntaoe.ttf intrab__.ttf intra___.ttf krelab__.ttf krela___.ttf linupa__.ttf tannao__.ttf tanna___.ttf "
+    "younia__.ttf".split())
 
 
 def disc():
@@ -48,16 +63,18 @@ def refusal(path, names, types):
     path = path.replace(os.sep, "/")
     if path in EXEMPT:
         return None
-    if path == "save" or path.startswith("save/"):
-        return "it is in save/, the player's own folder"
+    if path.startswith("save/") or "/save/" in path:   # case-sensitive: source/OpenTPW.Files/Formats/Save/ is ours
+        return "it is in a save/ folder, the player's own"
     if path.startswith("content/ReferenceScreenshots/"):
         return "content/ReferenceScreenshots/ holds pictures of the game (attach a picture to the pull request instead)"
     base = path.rsplit("/", 1)[-1].lower()
     kind = base.rsplit(".", 1)[1] if "." in base else ""
     if base in names:
         return "a file of that name is on the game's disc"
+    if base in GAME_FONTS:
+        return "a file of that name is one of the game's fonts"
     if kind in ALWAYS_REFUSED_TYPES:
-        return f".{kind} is a disc image or a saved park"
+        return f".{kind} is a type the game's install, wads or saves hold, or a disc image"
     if kind in types:
         return f".{kind} is one of the game's file types"
     return None
