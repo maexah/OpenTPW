@@ -15,7 +15,7 @@ person gave it (`AGENTS.md`, "How a task runs"). **Hooks** and **Claims** are fo
   folder uses, a type the rest of an install has (the executables and libraries, `.vol`, `.icd`, the installer and menu
   files, `.pdf`, `.mpg`, a saved park's `.TPWS` and `.INTS`, `Config.tcf`) or that the wads' members have (`.RSE`,
   `.hmp`, `.sgn` and the other model, sprite and sound types, listed in `ALWAYS_REFUSED_TYPES`), the game's own fonts
-  (`fonts.wad`'s TTFs, by name), a disc image, anything in a `save/` folder (lower case, at any depth) or in
+  (`fonts.wad`'s TTFs, by name), a disc image, anything in a save folder (any case, any depth, except under `source/`, which holds the `Formats/Save/` readers) or in
   `content/ReferenceScreenshots/`. The weekly build's `tools/weekly/release.py guard` shares only the disc's names and
   types (`disc()`); `EXEMPT`, `ALWAYS_REFUSED_TYPES` and these folder rules are the commit guard's alone. A file of ours that shares a name or type goes on `EXEMPT` in
   the guard. By hand: `python3 tools/content_guard.py staged`, or `paths <name>...`. `tools/hooks/pre-push` does nothing.

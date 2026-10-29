@@ -25,7 +25,7 @@ OpenTPW re-implements the engine of Theme Park World (1999) so it runs on modern
 - **The lobby works.** The four islands, the front end, the advisor, weather, the options screen and your saved players.
 - **Lost Kingdom runs.** Instant Action starts the park the game ships, already built. Full Simulation starts it as an empty park. Guests arrive, queue, ride and buy things. Most of its rides, shops and sideshows run.
 - **You can build and manage.** Buy, sell and move rides, lay paths and queues, hire, train and place staff, set the entry price and research new rides.
-- **Saving works.** Save, Load, Restart Park and the quicksave keys. Not saved yet: a Full Simulation park started empty, and karts, water rides and track rides bought in a park.
+- **Saving works.** Save, Load, Restart Park and the quicksave keys. A Full Simulation park started empty is saved too. Not saved yet: karts, water rides and track rides bought in a park.
 - **Not built yet:** loans, litter, and a park ending when the money runs out. The other three islands are not worked on yet.
 
 [`docs/STATUS.md`](docs/STATUS.md) lists everything that works and everything that does not.
@@ -142,9 +142,11 @@ OPENTPW_SYSTEM_SDL=1 dotnet source/OpenTPW/bin/Debug/net10.0/OpenTPW.dll --game 
 
 **No sound.** Not fatal - OpenTPW warns and carries on.
 
-**Reporting a problem.** Every start writes `console.log` in the game's folder, beside `save`. It names the build,
-your system and your graphics card, and holds no personal details. [Open an issue](https://github.com/maexah/OpenTPW/issues)
-and attach it.
+**Reporting a problem.** Every start writes `console.log` in the game's folder, beside `save`. If the game's folder cannot be
+written, or OpenTPW cannot find the game, it is in your own data folder instead (`%AppData%\OpenTPW` on Windows,
+`~/.local/share/OpenTPW` on Linux, `~/Library/Application Support/OpenTPW` on macOS). It names the build, your system
+and your graphics card. Your home folder is written as `~` in it, but read it before you attach it to a public page.
+[Open an issue](https://github.com/maexah/OpenTPW/issues) and attach it.
 
 ## For developers
 
@@ -226,7 +228,7 @@ per command. Add a new command to this table.
 | Models (.MD2) | ⚠️ Meshes load; some animation channel kinds are not decoded yet |
 | Sound categories (cat_\*.map) | ⚠️ Decoded; a few fields are unnamed |
 | Park signs (.SGN) | ⚠️ Read and drawn; a gradient fill is drawn flat |
-| Park saves (.TPWS) | ⚠️ Read and written, Lost Kingdom only; not yet a park started empty, or karts, water rides and track rides bought |
+| Park saves (.TPWS) | ⚠️ Read and written, Lost Kingdom only, a park started empty included; not yet karts, water rides and track rides bought |
 | Ride scripts (.RSE) | ⚠️ Every shipped script runs; some instructions are not built yet |
 | Materials (.MTR) | ❌ |
 | Video (.TGQ) | ❌ |

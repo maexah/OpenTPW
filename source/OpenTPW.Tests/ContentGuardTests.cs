@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -38,6 +39,9 @@ public class ContentGuardTests
 	[DataRow( "users/x/jungle/restart.INTS" )]
 	[DataRow( "Save/Config.tcf" )]
 	[DataRow( "game/save/opentpw.cfg" )]
+	[DataRow( "Save/notes.md" )]
+	[DataRow( "SAVE/x" )]
+	[DataRow( "game/Save/users/x.md" )]
 	[DataRow( "extracted/Bouncy.RSE" )]
 	[DataRow( "extracted/BIGLA___.TTF" )]
 	[DataRow( "menus/MENU1.DAL" )]
@@ -54,13 +58,16 @@ public class ContentGuardTests
 	[TestMethod]
 	public void OurFontsIconsAndSaveFormatSourcesAreLetThrough()
 	{
-		var (exit, output) = Guard( "content/fonts/Roboto-Medium.ttf", "content/icon.ico", "source/OpenTPW/icon.ico", "source/OpenTPW.Files/Formats/Save/SaveFile.cs" );
+		var (exit, output) = Guard( "content/fonts/Roboto-Medium.ttf", "content/icon.ico", "source/OpenTPW/icon.ico", "source/OpenTPW.Files/Formats/Save/SaveFile.cs", "source/OpenTPW.Files/Formats/Save/X.cs", "docs/saved.md", "save.md" );
 
 		Assert.AreEqual( 0, exit, output );
 	}
 
 	/// <summary>Runs the hook or the guard in a scratch repository that holds copies of the guard, the disc's list, the hook, and the files.</summary>
 	private static (int Exit, string Output) InScratchRepo( bool hook, params (string Name, bool Stage)[] files )
+		=> InScratchRepo( hook, null, files );
+
+	private static (int Exit, string Output) InScratchRepo( bool hook, Dictionary<string, string?>? environment, params (string Name, bool Stage)[] files )
 	{
 		var root = RepoFiles.Root();
 		var folder = Path.Join( Path.GetTempPath(), "opentpw-guard-" + Guid.NewGuid().ToString( "N" ) );
@@ -85,7 +92,7 @@ public class ContentGuardTests
 			}
 
 			var result = hook
-				? RepoFiles.Run( "sh", new[] { "tools/hooks/pre-commit" }, null, folder )
+				? RepoFiles.Run( "sh", new[] { "tools/hooks/pre-commit" }, environment, folder )
 				: RepoFiles.Run( "python3", new[] { "tools/content_guard.py", "staged" }, null, folder ) ?? RepoFiles.Run( "python", new[] { "tools/content_guard.py", "staged" }, null, folder );
 
 			if ( result == null )
@@ -118,6 +125,34 @@ public class ContentGuardTests
 	{
 		Assert.AreEqual( 1, InScratchRepo( true, ("a.wad", true), ("ok.md", true) ).Exit );
 		Assert.AreEqual( 0, InScratchRepo( true, ("ok.md", true) ).Exit );
+	}
+
+	/// <remarks><b>Mutation:</b> the hook's no-Python branch without its <c>exit 1</c> (a warning only) lets the commit through.</remarks>
+	[TestMethod]
+	public void TheHookRefusesWhenThereIsNoPythonAndSaysHowToSkipIt()
+	{
+		var bin = Directory.CreateTempSubdirectory( "tpw-nopython" ).FullName;
+
+		try
+		{
+			foreach ( var tool in new[] { "git", "sh" } )
+			{
+				var found = ( Environment.GetEnvironmentVariable( "PATH" ) ?? "" ).Split( Path.PathSeparator )
+					.Select( d => Path.Join( d, tool ) ).FirstOrDefault( File.Exists );
+
+				if ( found == null )
+					Assert.Inconclusive( $"skipped: no {tool} here" );
+
+				File.CreateSymbolicLink( Path.Join( bin, tool ), found );
+			}
+
+			var (exit, output) = InScratchRepo( true, new Dictionary<string, string?> { ["PATH"] = bin }, ("ok.md", true) );
+
+			Assert.AreEqual( 1, exit, output );
+			StringAssert.Contains( output, "git commit --no-verify" );
+			StringAssert.Contains( output, "Install Python" );
+		}
+		finally { Directory.Delete( bin, true ); }
 	}
 
 	/// <remarks><b>Mutation:</b> dropping the save/ rule from content_guard.py passes this.</remarks>

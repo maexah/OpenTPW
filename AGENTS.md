@@ -133,5 +133,6 @@ The map of the projects, the folders inside the game and `tools/` is [`ARCHITECT
 4. One task at a time. When it is done: build and test alone in a worktree, commit, say what is ready, and stop. A
    contributor leaves `docs/QUEUE.md` and `docs/STATUS.md` alone: the maintainer ticks and updates them when the work
    is merged (`docs/WORKFLOW.md`, "Claims"). The maintainer's own sessions follow `docs/WORKFLOW.md`, "Sessions" and
-   "Unattended runs", which tick the item and update STATUS in the same commit.
+   "Unattended runs", which tick the item and update STATUS in the same commit. If the item changes something `README.md`
+   claims (what works, what is saved, where the log goes), change `README.md` in the same commit.
 5. Agent memory holds rules and the live plan only. Facts go in `docs/`.

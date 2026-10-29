@@ -152,7 +152,7 @@ cd - && git worktree remove ../opentpw-check
 ## Reporting a bug
 
 [Open an issue](https://github.com/maexah/OpenTPW/issues/new/choose). Attach `console.log` from the game's folder,
-beside `save`: it names the build, your system and your graphics card, and holds no personal details. If the game's
+beside `save`: it names the build, your system and your graphics card. Your home folder is written as `~` in it, but read it before you attach it publicly. If the game's
 folder cannot be written, or OpenTPW found no game to start, the file is in your own data folder instead
 (`%AppData%\OpenTPW` on Windows, `~/.local/share/OpenTPW` on Linux, `~/Library/Application Support/OpenTPW` on macOS).
 

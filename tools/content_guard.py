@@ -7,7 +7,7 @@
 A path is refused when its name is a file on the game's disc, its type is one the disc uses (the disc's data/ folder:
 source/OpenTPW/Client/DiscData.txt) or one the rest of the install and the wads' members have (ALWAYS_REFUSED_TYPES:
 the executables, libraries, installer and menu files, park files, extracted models, sprites and sounds), it is one of
-the game's fonts (the TTF members of fonts.wad), it is in a `save/` folder at any depth, or it is in
+the game's fonts (the TTF members of fonts.wad), it is in a save folder (any case, any depth; nothing under source/ counts, which holds the Save/ format readers), or it is in
 content/ReferenceScreenshots/. EXEMPT names the few files of ours that share a name or a type
 with the disc's; add to it only for a file that is ours. The weekly build's zip is held to the same list of names and
 types by tools/weekly/release.py (docs/WORKFLOW.md, "Weekly builds"). The pre-commit hook in tools/hooks runs
@@ -63,7 +63,7 @@ def refusal(path, names, types):
     path = path.replace(os.sep, "/")
     if path in EXEMPT:
         return None
-    if path.startswith("save/") or "/save/" in path:   # case-sensitive: source/OpenTPW.Files/Formats/Save/ is ours
+    if not path.startswith("source/") and "save" in [part.lower() for part in path.split("/")[:-1]]:   # source/OpenTPW.Files/Formats/Save/ is ours
         return "it is in a save/ folder, the player's own"
     if path.startswith("content/ReferenceScreenshots/"):
         return "content/ReferenceScreenshots/ holds pictures of the game (attach a picture to the pull request instead)"

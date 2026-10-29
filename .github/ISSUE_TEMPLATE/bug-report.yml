@@ -35,6 +35,6 @@ body:
     id: log
     attributes:
       label: console.log
-      description: Drag console.log into this box. It is in the game's folder, beside "save", or where OPENTPW_LOG_DIR points. If the game's folder cannot be written, or no game was found, it is in your own data folder: %AppData%\OpenTPW (Windows), ~/.local/share/OpenTPW (Linux) or ~/Library/Application Support/OpenTPW (macOS).
+      description: Drag console.log into this box after reading it: your home folder is already written as "~", but check it for anything else you would not post publicly. It is in the game's folder, beside "save", or where OPENTPW_LOG_DIR points. If the game's folder cannot be written, or no game was found, it is in your own data folder: %AppData%\OpenTPW (Windows), ~/.local/share/OpenTPW (Linux) or ~/Library/Application Support/OpenTPW (macOS).
     validations:
       required: false

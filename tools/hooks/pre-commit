@@ -1,6 +1,6 @@
 #!/bin/sh
 # The hook everyone runs. It refuses a commit that stages a file of the game's (tools/content_guard.py: the disc's
-# file names and types, save/, a saved park, a disc image, content/ReferenceScreenshots/). Needs python3.
+# file names and types, save/, a saved park, a disc image, content/ReferenceScreenshots/). Needs python3 or python; without one it refuses (git commit --no-verify skips it).
 # Enable once per clone: git config core.hooksPath tools/hooks
 # The maintainer's clone also has `git config opentpw.maintainer true`, which adds tools/maintainer/hooks/pre-commit
 # (the queue and status sweeps); nobody else needs it.
@@ -10,7 +10,10 @@ if command -v python3 >/dev/null 2>&1; then
 elif command -v python >/dev/null 2>&1; then
 	python "$root/tools/content_guard.py" staged || exit 1
 else
-	echo "content guard: no python3 on PATH, so the staged files were not checked (tools/content_guard.py staged)" >&2
+	echo "content guard: no python3 or python on PATH, so the staged files cannot be checked, and the commit is refused." >&2
+	echo "  Install Python 3.8 or newer (python.org, or your package manager: apt install python3, brew install python) and try again." >&2
+	echo "  To commit without the check, deliberately: git commit --no-verify" >&2
+	exit 1
 fi
 if [ "$(git config --get opentpw.maintainer)" = "true" ] && [ -x "$root/tools/maintainer/hooks/pre-commit" ]; then
 	"$root/tools/maintainer/hooks/pre-commit" "$@" || exit 1

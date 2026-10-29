@@ -66,9 +66,9 @@ public class WeeklyReleaseTests
 		return entries;
 	}
 
-	private static string Zip( IEnumerable<string> entries )
+	private static string Zip( IEnumerable<string> entries, string rid = "linux-x64" )
 	{
-		var path = Path.Join( Directory.CreateTempSubdirectory( "tpw-weekly" ).FullName, $"{Top}-linux-x64.zip" );
+		var path = Path.Join( Directory.CreateTempSubdirectory( "tpw-weekly" ).FullName, $"{Top}-{rid}.zip" );
 
 		using ( var zip = ZipFile.Open( path, ZipArchiveMode.Create ) )
 		{
@@ -80,9 +80,9 @@ public class WeeklyReleaseTests
 	}
 
 	/// <summary>The guard's exit code and what it printed, over a zip of these entries; the end of the test where there is no Python.</summary>
-	private static (int Exit, string Output) Guard( IEnumerable<string> entries )
+	private static (int Exit, string Output) Guard( IEnumerable<string> entries, string rid = "linux-x64" )
 	{
-		var zip = Zip( entries );
+		var zip = Zip( entries, rid );
 
 		try
 		{
@@ -183,6 +183,37 @@ public class WeeklyReleaseTests
 				StringAssert.Contains( output, "missing: " + label, $"{system}: {entry}" );
 			}
 		}
+	}
+
+	private static readonly string[] MoltenVk = ["libMoltenVK.dylib", "MoltenVK_icd.json"];
+
+	/// <remarks><b>Mutation:</b> an empty REQUIRED_OSX in release.py passes the zips without the file.</remarks>
+	[TestMethod]
+	public void AMacZipWithoutMoltenVkOrItsManifestIsRefused()
+	{
+		var root = RepoFiles.Root();
+		var full = Complete( root, system: Os.MacOs ).Concat( MoltenVk ).ToList();
+
+		Assert.AreEqual( 0, Guard( full, "osx-arm64" ).Exit, "a complete macOS build passes" );
+
+		foreach ( var (file, label) in new[] { ( MoltenVk[0], "MoltenVK (macOS)" ), ( MoltenVk[1], "the Vulkan driver's manifest (macOS)" ) } )
+		{
+			var (exit, output) = Guard( full.Where( e => e != file ), "osx-arm64" );
+
+			Assert.AreEqual( 1, exit, $"{file} is required: {output}" );
+			StringAssert.Contains( output, "missing: " + label );
+			Assert.AreEqual( 1, output.Split( "missing:" ).Length - 1, output );
+		}
+	}
+
+	/// <remarks><b>Mutation:</b> putting the MoltenVK files in REQUIRED itself refuses these.</remarks>
+	[TestMethod]
+	public void ALinuxOrWindowsZipNeedsNoMoltenVk()
+	{
+		var root = RepoFiles.Root();
+
+		Assert.AreEqual( 0, Guard( Complete( root, system: Os.Linux ), "linux-x64" ).Exit );
+		Assert.AreEqual( 0, Guard( Complete( root, system: Os.Windows ), "win-x64" ).Exit );
 	}
 
 	[TestMethod]

@@ -8,7 +8,7 @@ The zip holds one folder, OpenTPW-<tag>/, with the published build, README.txt (
 THIRD-PARTY-NOTICES.md and the font's licence (content/fonts/LICENSE.txt). The guard fails (exit 1) when an entry is
 outside that folder, matches none of ALLOW, has a file type the game's disc uses (the extensions in
 source/OpenTPW/Client/DiscData.txt, the disc's own file list) or the name of a file on the disc, or when a file on
-REQUIRED is missing: a zip of only the notes, or without the font or the notices, is refused. It prints how many
+REQUIRED is missing (and, for a zip named -osx-<arch>.zip, libMoltenVK.dylib and MoltenVK_icd.json): a zip of only the notes, or without the font or the notices, is refused. It prints how many
 entries each rule let in, so a new kind of file is seen, not waved through. It decides nothing about the code: it
 only stops a zip that would ship the game's files or leave out what the game or its licences need
 (docs/WORKFLOW.md, "Weekly builds"). Python 3.8 or newer, nothing to install."""
@@ -56,13 +56,18 @@ REQUIRED = [
     ("LICENSE.md", r"LICENSE\.md"),
     ("the third-party notices", r"THIRD-PARTY-NOTICES\.md"),
 ]
+# What a macOS zip (a name ending -osx-<arch>.zip) must hold besides REQUIRED: the Vulkan driver MoltenVK.
+REQUIRED_OSX = [
+    ("MoltenVK (macOS)", r"libMoltenVK\.dylib"),
+    ("the Vulkan driver's manifest (macOS)", r"MoltenVK_icd\.json"),
+]
 # Entries of a file type the disc also has (.txt) which are ours: the notes and the font's licence.
 TEXT_EXEMPT = {"README.txt", "content/fonts/LICENSE.txt"}
 # Executables inside the zip: kept runnable on Linux and macOS.
 RUNNABLE = {"OpenTPW", "createdump"}
 
 
-def check(entries, top):
+def check(entries, top, osx=False):
     """The problems with a zip's entry names (none for a clean zip), and how many entries each rule let in."""
     names, types = disc()
     problems, counts = [], {label: 0 for label, _ in ALLOW}
@@ -87,7 +92,7 @@ def check(entries, top):
             continue
         counts[label] += 1
     held = [e[len(top) + 1:] for e in entries if e.startswith(top + "/") and not e.endswith("/")]
-    for label, pattern in REQUIRED:
+    for label, pattern in REQUIRED + (REQUIRED_OSX if osx else []):
         if not any(re.fullmatch(pattern, inside) for inside in held):
             problems.append(f"missing: {label}")
     return problems, counts
@@ -98,7 +103,8 @@ def guard(path):
         entries = z.namelist()
     tops = {e.split("/", 1)[0] for e in entries}
     top = tops.pop() if len(tops) == 1 else ""
-    problems, counts = check(entries, top or "<one folder>")
+    osx = re.search(r"-osx-[A-Za-z0-9_]+\.zip$", os.path.basename(path)) is not None   # package names the zip with its rid
+    problems, counts = check(entries, top or "<one folder>", osx)
     print(f"{os.path.basename(path)}: {len(entries)} entries in {top or 'more than one folder'}/: " +
           ", ".join(f"{n} {label}" for label, n in counts.items()))
     for p in problems:
