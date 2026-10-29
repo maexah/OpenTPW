@@ -292,12 +292,42 @@ grid line and sets the height to the nearest corner's, nothing added; the drape 
 piece, and the meshes a placed object's lookup record marks `0x10000` (`mammtunn`'s `gk_mam1`), and raises each vertex by the
 height under it on the cell's triangle (`DrapeHeight`, the flag `0x4` as above) less the model's own height; a source vertex moves
 under every drawn vertex that names it, and `SourceVertices` stay the rest the floor search and the hoardings read. The cell's
-triangle here is the original's, while the ground mesh is still split one way (Q398). **Not built:** the interpolating pass for the
-nine lookup-`0x8` meshes (`PROCEDURAL_BASE_INTERPOLATE`), the recomputed face normals, the coaster pylons' conform (Q813), and the
-control word the arithmetic runs under. **Measured in OpenTPW** (Q808, Alexah's New Save, a copy): the Sun God 18 of 18 listed rim
+triangle here is the original's, while the ground mesh is still split one way (Q398). **Not built:** the recomputed face normals, the
+coaster pylons' conform (Q813), and the control word the arithmetic runs under. **Measured in OpenTPW** (Q808, Alexah's New Save, a copy): the Sun God 18 of 18 listed rim
 vertices on a corner, the Tom Tom Twister 20 of 20, the Costume Shop 12 of 12 (the original's counts), 1,782 queue vertices and
 1,736 track-piece vertices draped, and the clear-coloured sliver pixels at the Sun God camera 5,751 to 11, the Tom Tom Twister's
 16,308 to 0, the Costume Shop's 7,844 to 0.
+
+**OpenTPW builds the interpolating pass** (Q815, `ProceduralConform.Interpolate`, run by `ParkObjects.StandOnGround` after the conform and the
+drape, on a model with the header's `0x8`). `ProceduralBase.InterpolatedVertices` is the second count: of each mesh the lookup records mark `0x8`
+but the floor, the vertices within 0.1 of a cell line on either axis (`0x006fe854`) and within 100 of the model's zero height (`0x006fe858`) in
+the model's own space, on a side of the footprint's outline: the count is the conform's, `ProceduralBase.IsBase`, with that tolerance, the
+either-axis rule, and each side's bit counted only for the axis the vertex is on a line of (`FUN_00469a80`'s four terms in its count mode: x on a line with the
+x-low bit `0x2` or the x-high bit `0x8`, y on a line with `0x1` or `0x4`). The edge table is the one `ProceduralBase_Build` fills from the
+item's footprint before either count and leaves in `DAT_007afe20` (the head of the function at `0x0046a5a0`); with no footprint, or the header's `0x80`, it is
+cleared and the second count lists nothing. `ProceduralConform.Interpolated` stands one listed vertex (`FUN_00469a80`, `in_stack_70` set, apply
+mode, not a drape node; the constants `0x006fe850` = 1, `0x006fe860` = 0, `0x006fe864` = -1, `0x006fe868` = 0.5): each axis's grid position
+(a negative taken as nought) splits by `modf` into a whole cell and a fraction; the **nearest corner** is the whole, or the whole plus one from a
+fraction of 0.5 (`0x00469e40`..`0x00469efb`; a corner past the heightfield's last, row stride `[grid + 0x18] + 1`, ends the mesh); a fraction
+within 0.1 of 0 or 1 is **on a line** (`0x0046a028`), and snaps that axis to the nearest corner's line (`(whole - (-1)) * cell + origin` from 0.5,
+else `whole * cell + origin`); and the height rises by `blend - H` (H = the made height, `0x0046a0b4`..`0x0046a0ea`, `0x0046a2a7`..`0x0046a32d`)
+in four arms, the blend taking the heights of the two corners the cell edge joins at the vertex's fraction `t` (or `s` for y):
+
+| x on a line? | arm | blend |
+|---|---|---|
+| no | x, fraction under 0.5 | `(1 - t) * h[i] + t * h[i + 1]` |
+| no | x, from 0.5 | `t * h[i] + (1 - t) * h[i - 1]` |
+| yes | y, fraction under 0.5 | `(1 - s) * h[i] + s * h[i + W + 1]` |
+| yes | y, from 0.5 | `s * h[i] + (1 - s) * h[i - W - 1]` |
+
+(`i` the nearest corner's index, `W` the heightfield's width, so `W + 1` its row stride.) A vertex on a line both ways takes the y arms with its
+own `s` (near 0 or 1), so a corner a few hundredths off a line is not given the corner's height exactly. The rise is added to the vertex's own
+world height; the model is carried back by the float LU inverse as the conform's. **Measured in OpenTPW** (Q815, Alexah's New Save, a copy):
+`rim` reads the Dino Karts station `interpolated 16 listed largest rise off 0.0000` and the Dino Karts Jump `interpolated 20 listed largest
+rise off 0.0000`, the original's counts and difference (Q812); the rise off is each listed vertex's drawn rise less the ground at its drawn place
+(the cell's own triangle, `DrapeHeight`) less H. The original moved 17 vertices of `gk_TRACK01`, ours 16: the 17th (which a spurious conform
+is a candidate for, unproven: the first pass compares the mesh's vertex indices with the type list's next word, which for the last mesh of the walk is
+past its end) is not reproduced.
 
 **What its absence looked like in OpenTPW, before Q808** (Q804, Q807; measured 2026-10-29, `q804/`). Ours stands the plate at its midway height and draws no
 ground under a footprint or a queue piece (the compositor's `0x1`), so on a slope the step between the plate's rim (a queue piece's

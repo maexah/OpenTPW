@@ -13,16 +13,19 @@ namespace OpenTPW;
 /// <see cref="ModelFile.Mesh.Vertices"/>: <see cref="ModelFile.Mesh.SourceVertices"/> stay the model's rest, which the floor search,
 /// the floor blend and the ride hoardings read. A vertex goes through the mesh's node chain into the world (the model's place
 /// and turn), moves there, and is carried back through the inverse: the original's float LU inverse, here the matrix inverse.
-/// Not built: the interpolating pass for the nine track meshes (<c>PROCEDURAL_BASE_INTERPOLATE</c>), the control word the
-/// original's arithmetic runs under (moves the last bits only), and the recomputed face normals (<c>FUN_00473c30</c>).
+/// The <b>interpolating pass</b> is the second of <c>FUN_00469940</c>'s two: the meshes the lookup records mark <c>0x8</c>
+/// (the kart station's track and the water ride's, and their add-ons' bridges and tunnels) have the vertices the type load listed along
+/// their cell lines snapped to the line and raised by the ground interpolated along it.
+/// Not built: the control word the original's arithmetic runs under (moves the last bits only), and the recomputed face normals
+/// (<c>FUN_00473c30</c>).
 /// </remarks>
 public static class ProceduralConform
 {
 	/// <summary>A node's lookup-record flag that becomes the run-time <c>0x20000</c>: the drape arm takes the mesh (<c>0x0044a942</c>).</summary>
 	private const uint LookupDrapes = 0x10000;
 
-	/// <summary>A node's lookup-record flag that becomes the run-time <c>0x40</c>: the interpolating pass takes the mesh.</summary>
-	private const uint LookupInterpolates = 0x8;
+	/// <summary>How near a cell line a vertex must be to be snapped to it (<c>0x006fe854</c>).</summary>
+	private const float SnapNear = 0.1f;
 
 	/// <summary>The cell flag that sends a cell's split to its other diagonal (<c>0x0046a34c</c>; Q398's note).</summary>
 	private const ushort OtherDiagonal = 0x4;
@@ -119,8 +122,107 @@ public static class ProceduralConform
 		return moved;
 	}
 
-	/// <summary>What <see cref="Measure"/> reads: the listed base vertices, how many of them the drawn model stands on a terrain corner, and the largest height off.</summary>
-	public readonly record struct Measurement( int Listed, int OnCorner, float LargestOff );
+	/// <summary>
+	/// The interpolating pass (<c>FUN_00469a80</c>'s second call, <c>0x0046a2a7</c>..<c>0x0046a32d</c>): of each mesh the lookup records
+	/// mark <c>0x8</c>, the vertices <see cref="ProceduralBase.InterpolatedVertices"/> lists are snapped to the cell line they are
+	/// within 0.1 of and raised by the ground interpolated along that line less <paramref name="origin"/>'s height, the height the
+	/// model was made at (<see cref="Interpolated"/>). Answers how many vertices it moved.
+	/// </summary>
+	public static int Interpolate( ModelFile file, ItemShape? shape, Vec origin, Quaternion turn, HeightfieldFile field )
+	{
+		if ( (file.HeaderFlags & 0x8) == 0 )
+			return 0;
+
+		var grid = new ProceduralBase.Grid( field.OriginX, field.OriginY, field.CellSizeX, field.CellSizeY );
+		var moved = 0;
+
+		foreach ( var (index, vertices) in ProceduralBase.InterpolatedVertices( file, shape, grid ) )
+		{
+			var mesh = file.Meshes[index];
+			var made = new Vec?[mesh.SourceVertices.Length];
+
+			foreach ( var vertex in vertices )
+			{
+				var world = WorldOf( mesh, mesh.SourceVertices[vertex].GetSystemVector3(), origin, turn );
+
+				// A vertex past the heightfield's last corner ends the mesh's pass (0x00469dd7..0x0046a2a0).
+				if ( Interpolated( field, world, origin.Z ) is not { } stands )
+					break;
+
+				made[vertex] = ModelOf( mesh, stands, origin, turn );
+			}
+
+			moved += Put( mesh, made );
+		}
+
+		return moved;
+	}
+
+	/// <summary>
+	/// Where the interpolating pass stands one vertex given in the world: x and y are snapped to the cell line within 0.1 of them
+	/// (the line the nearest corner names, a fraction of a half or more taking the next), and the height rises by the ground
+	/// interpolated along that line less <paramref name="baseHeight"/>. Four arms by where the vertex is: off the x line, the
+	/// ground is blended along x from the corner on its side of the cell towards the neighbour on its other side; on it, along y.
+	/// Null where the nearest corner is past the heightfield's last.
+	/// </summary>
+	public static Vec? Interpolated( HeightfieldFile field, Vec world, float baseHeight )
+	{
+		var (cornerX, fractionX, onX) = AlongAxis( world.X, field.OriginX, field.CellSizeX );
+		var (cornerY, fractionY, onY) = AlongAxis( world.Y, field.OriginY, field.CellSizeY );
+
+		if ( cornerX > field.CellsX || cornerY > field.CellsY )
+			return null;
+
+		var highX = fractionX >= 0.5f;
+		var highY = fractionY >= 0.5f;
+
+		float Height( int x, int y ) => field.HeightAt( Math.Clamp( x, 0, field.CellsX ), Math.Clamp( y, 0, field.CellsY ) );
+
+		float ground;
+
+		if ( !onX )
+		{
+			ground = highX
+				? (fractionX * Height( cornerX, cornerY )) + ((1f - fractionX) * Height( cornerX - 1, cornerY ))
+				: ((1f - fractionX) * Height( cornerX, cornerY )) + (fractionX * Height( cornerX + 1, cornerY ));
+		}
+		else
+		{
+			ground = highY
+				? (fractionY * Height( cornerX, cornerY )) + ((1f - fractionY) * Height( cornerX, cornerY - 1 ))
+				: ((1f - fractionY) * Height( cornerX, cornerY )) + (fractionY * Height( cornerX, cornerY + 1 ));
+		}
+
+		return new Vec( onX ? field.OriginX + (cornerX * field.CellSizeX) : world.X,
+			onY ? field.OriginY + (cornerY * field.CellSizeY) : world.Y,
+			world.Z + (ground - baseHeight) );
+	}
+
+	/// <summary>
+	/// One axis of a world position on the grid: the nearest corner's index (a fraction of a half or more takes the next), the
+	/// fraction past the cell's low line (a position below the origin is taken as on it), and whether it is within
+	/// <see cref="SnapNear"/> of a line.
+	/// </summary>
+	private static (int Corner, float Fraction, bool On) AlongAxis( float world, float origin, float size )
+	{
+		var position = (world - origin) / size;
+
+		if ( position < 0f )
+			position = 0f;
+
+		var whole = Math.Floor( (double)position );
+		var fraction = (float)((double)position - whole);
+		var corner = (int)whole + (fraction >= 0.5f ? 1 : 0);
+
+		return (corner, fraction, MathF.Abs( fraction ) < SnapNear || MathF.Abs( fraction - 1f ) < SnapNear);
+	}
+
+	/// <summary>
+	/// What <see cref="Measure"/> reads: the listed base vertices, how many of them the drawn model stands on a terrain corner, and the
+	/// largest height off; and the interpolating pass's listed vertices with the largest difference of their rise from the ground along
+	/// their line less the model's height.
+	/// </summary>
+	public readonly record struct Measurement( int Listed, int OnCorner, float LargestOff, int Interpolated = 0, float LargestRiseOff = 0f );
 
 	/// <summary>
 	/// How the drawn model stands against the ground: of the base vertices the type load would list, how many have their drawn
@@ -161,7 +263,46 @@ public static class ProceduralConform
 			}
 		}
 
-		return new Measurement( listed, on, largest );
+		var (interpolated, riseOff) = MeasureInterpolated( file, shape, origin, turn, field );
+
+		return new Measurement( listed, on, largest, interpolated, riseOff );
+	}
+
+	/// <summary>
+	/// The interpolating pass read back (<c>original/basevertices.py</c>'s <c>interp</c>): of the vertices it lists, each one's drawn rise
+	/// from its rest place against the ground under the drawn place less the model's height, the ground taken by the cell's own triangle
+	/// (<see cref="DrapeHeight"/>) and not by the pass's blend along the line. Answers the vertices listed and the largest difference.
+	/// </summary>
+	private static (int Listed, float Largest) MeasureInterpolated( ModelFile file, ItemShape? shape, Vec origin, Quaternion turn, HeightfieldFile field )
+	{
+		var grid = new ProceduralBase.Grid( field.OriginX, field.OriginY, field.CellSizeX, field.CellSizeY );
+		var listed = 0;
+		var largest = 0f;
+
+		foreach ( var (index, vertices) in ProceduralBase.InterpolatedVertices( file, shape, grid ) )
+		{
+			var mesh = file.Meshes[index];
+			var drawn = new Dictionary<int, int>();
+
+			for ( var i = 0; i < mesh.VertexOrder.Length && i < mesh.Vertices.Length; ++i )
+				drawn.TryAdd( mesh.VertexOrder[i], i );
+
+			foreach ( var vertex in vertices )
+			{
+				++listed;
+
+				if ( !drawn.TryGetValue( vertex, out var at ) )
+					continue;
+
+				var rest = WorldOf( mesh, mesh.SourceVertices[vertex].GetSystemVector3(), origin, turn );
+				var now = WorldOf( mesh, mesh.Vertices[at].Position.GetSystemVector3(), origin, turn );
+				var difference = (now.Z - rest.Z) - (DrapeHeight( field, now.X, now.Y ) - origin.Z);
+
+				largest = MathF.Max( largest, MathF.Abs( difference ) );
+			}
+		}
+
+		return (listed, largest);
 	}
 
 	/// <summary>Every mesh: the queue, hoarding, kart and water pieces, loaded with load bit <c>0x2</c>, which marks all of their meshes <c>0x20000</c> (<c>FUN_00461f10</c>).</summary>
@@ -169,8 +310,9 @@ public static class ProceduralConform
 
 	/// <summary>
 	/// Drapes a queue, hoarding, kart or water piece over the ground it is made on: every mesh (<see cref="EveryMesh"/>), at the
-	/// ground the park has. Counts <c>PROCEDURAL_BASE_INTERPOLATE</c> where a mesh the lookup records mark <c>0x8</c> then wants the
-	/// interpolating pass, unbuilt. Answers how many vertices it moved; none where there is no ground.
+	/// ground the park has. Counts <c>PROCEDURAL_BASE_INTERPOLATE</c> where a piece carries a mesh the lookup records mark <c>0x8</c>:
+	/// none of Lost Kingdom's does (the nine such meshes are in the rides' and add-ons' models, <see cref="Interpolate"/>), and a piece
+	/// is made with no outline for the pass to list along. Answers how many vertices it moved; none where there is no ground.
 	/// </summary>
 	public static int DrapeOver( ModelFile file, Vector3 origin, Quaternion turn )
 	{
@@ -187,9 +329,9 @@ public static class ProceduralConform
 	public static Func<int, bool> LookupDraped( ModelFile file )
 		=> mesh => mesh < file.Nodes.Count && (file.Nodes[mesh].IdFlags & LookupDrapes) != 0;
 
-	/// <summary>How many meshes of a model carry the lookup flag <c>0x8</c>, the ones the interpolating pass takes and this does not (<c>PROCEDURAL_BASE_INTERPOLATE</c>).</summary>
+	/// <summary>How many meshes of a model carry the lookup flag <c>0x8</c>, the ones the interpolating pass takes (<see cref="Interpolate"/>), which a piece's drape does not.</summary>
 	public static int InterpolatedMeshes( ModelFile file )
-		=> file.Meshes.Where( ( _, mesh ) => mesh < file.Nodes.Count && (file.Nodes[mesh].IdFlags & LookupInterpolates) != 0 ).Count();
+		=> file.Meshes.Where( ( _, mesh ) => mesh < file.Nodes.Count && (file.Nodes[mesh].IdFlags & ProceduralBase.LookupInterpolates) != 0 ).Count();
 
 	/// <summary>
 	/// The ground's height under a world position as the draped vertex takes it (<c>0x0046a34c</c>, Q398's note): the cell by

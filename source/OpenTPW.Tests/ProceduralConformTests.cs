@@ -286,4 +286,313 @@ public class ProceduralConformTests
 
 		CollectionAssert.AreEqual( new[] { "mammtunn:gk_mam1" }, draped, string.Join( ", ", draped ) );
 	}
+
+	/// <summary>
+	/// <b>The interpolating count lists the vertices the original listed</b> (Q812, <c>original/basevertices.py</c> on Alexah's New Save:
+	/// the kart station's 16 on <c>gk_TRACK01</c>, the Lava Jump's 20 on <c>gk_brdge</c>), and only the nine meshes the lookup records mark
+	/// <c>0x8</c> list any.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the tolerance 0.01 for 0.1; both axes required to be on a line; the height limit 0.01 for 100; the floor
+	/// mesh not left out; the outline's sides ignored.</remarks>
+	[TestMethod]
+	public void TheInterpolatingCountListsTheVerticesTheOriginalListed()
+	{
+		var catalogue = new ParkItemCatalogue( "jungle", FileSystem );
+		var listed = new System.Collections.Generic.List<string>();
+
+		for ( var id = 1000; id < 1600; ++id )
+		{
+			if ( !catalogue.TryGet( id, out var item ) )
+				continue;
+
+			ModelFile file;
+
+			try { file = new ModelFile( $"{item.Directory}/{item.Stem}.MD2" ); }
+			catch ( Exception ) { continue; }
+
+			foreach ( var (mesh, vertices) in ProceduralBase.InterpolatedVertices( file, item.Shape, ProceduralBase.ParkGrid ) )
+				listed.Add( $"{item.Stem.ToLowerInvariant()}:{file.Meshes[mesh].Name.TrimEnd( '\0' )}:{vertices.Length}" );
+		}
+
+		CollectionAssert.AreEquivalent( new[] { "gokarts:gk_TRACK01:16", "lavajump:gk_brdge:20" }, listed.Where( l => l.StartsWith( "gokarts" ) || l.StartsWith( "lavajump" ) ).ToArray(), string.Join( ", ", listed ) );
+		Assert.IsTrue( listed.All( l => l.Split( ':' )[1] is "gk_TRACK01" or "gk_brdge" or "wr_log1" or "wr_log2" or "wr_water3" or "wr_water4" or "wr_mwater1" or "wr_mwater2" or "wr_mwater04" ),
+			string.Join( ", ", listed ) );
+	}
+
+	/// <summary>The catalogue's item whose model has the stem, Lost Kingdom's ids running 1000 to 1599.</summary>
+	private static ParkItemCatalogue.Item ItemNamed( ParkItemCatalogue catalogue, string stem )
+	{
+		for ( var id = 1000; id < 1600; ++id )
+		{
+			if ( catalogue.TryGet( id, out var item ) && item.Stem.Equals( stem, StringComparison.OrdinalIgnoreCase ) )
+				return item;
+		}
+
+		Assert.Fail( $"no item {stem}" );
+		return default;
+	}
+
+	/// <summary>A cell, in the range the models are made on, whose four corners all stand at heights at least 0.5 apart from the next, so a wrong neighbour or weight gives a different height.</summary>
+	private (int X, int Y) CellOfFourHeights()
+	{
+		for ( var y = 8; y < 120; ++y )
+		{
+			for ( var x = 8; x < 120; ++x )
+			{
+				var corners = new[] { field.HeightAt( x, y ), field.HeightAt( x + 1, y ), field.HeightAt( x, y + 1 ), field.HeightAt( x + 1, y + 1 ), field.HeightAt( x - 1, y ), field.HeightAt( x, y - 1 ) };
+
+				if ( corners.OrderBy( h => h ).Zip( corners.OrderBy( h => h ).Skip( 1 ) ).All( pair => pair.Second - pair.First >= 0.4f ) )
+					return (x, y);
+			}
+		}
+
+		Assert.Fail( "the jungle ground has no such cell" );
+		return default;
+	}
+
+	/// <summary>
+	/// <b>The interpolating pass stands a vertex on the line it is within 0.1 of, at the ground blended along that line</b> less the
+	/// model's height, in the original's four arms (<c>0x0046a0b4</c>..<c>0x0046a0ea</c>, <c>0x0046a2a7</c>..<c>0x0046a32d</c>): off the
+	/// x line the blend runs along x from the corner on the vertex's side, on it along y; either way from the low corner when the
+	/// fraction is under a half, from the high one when not. The expected heights are written here as the straight line between the
+	/// two corners the cell's edge joins.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the corner taken by truncation in the high arms; the neighbour on the wrong side; the fraction and its
+	/// complement swapped; the model's height not taken off; the snap's 0.1 widened to 0.5 or dropped; the x and y arms swapped.</remarks>
+	[TestMethod]
+	public void TheInterpolatingPassBlendsTheGroundAlongTheLineInFourArms()
+	{
+		var (cx, cy) = CellOfFourHeights();
+		const float baseHeight = 7.25f, rest = 3f;
+
+		float H( int x, int y ) => field.HeightAt( x, y );
+		float Along( float a, float b, float fraction ) => a + ((b - a) * fraction);
+
+		Vec At( float gx, float gy ) => new( field.OriginX + (gx * field.CellSizeX), field.OriginY + (gy * field.CellSizeY), rest );
+
+		void Expect( Vec world, float gx, float gy, float ground, string arm )
+		{
+			var stands = ProceduralConform.Interpolated( field, world, baseHeight );
+
+			Assert.IsNotNull( stands, arm );
+			Assert.AreEqual( field.OriginX + (gx * field.CellSizeX), stands!.Value.X, 0.001f, $"{arm}: x" );
+			Assert.AreEqual( field.OriginY + (gy * field.CellSizeY), stands.Value.Y, 0.001f, $"{arm}: y" );
+			Assert.AreEqual( rest + (ground - baseHeight), stands.Value.Z, 0.001f, $"{arm}: height" );
+		}
+
+		// Off the x line, on the y line: along x, from the low corner and from the high one.
+		Expect( At( cx + 0.3f, cy ), cx + 0.3f, cy, Along( H( cx, cy ), H( cx + 1, cy ), 0.3f ), "x low" );
+		Expect( At( cx + 0.7f, cy ), cx + 0.7f, cy, Along( H( cx, cy ), H( cx + 1, cy ), 0.7f ), "x high" );
+
+		// On the x line, off the y line: along y.
+		Expect( At( cx, cy + 0.3f ), cx, cy + 0.3f, Along( H( cx, cy ), H( cx, cy + 1 ), 0.3f ), "y low" );
+		Expect( At( cx, cy + 0.7f ), cx, cy + 0.7f, Along( H( cx, cy ), H( cx, cy + 1 ), 0.7f ), "y high" );
+
+		// Within 0.1 of a line is on it: the vertex snaps, the blend runs along the other axis, and the fraction used is the one past the cell's low line.
+		Expect( At( cx + 0.06f, cy + 0.4f ), cx, cy + 0.4f, Along( H( cx, cy ), H( cx, cy + 1 ), 0.4f ), "x snapped low" );
+		Expect( At( cx + 0.94f, cy + 0.4f ), cx + 1, cy + 0.4f, Along( H( cx + 1, cy ), H( cx + 1, cy + 1 ), 0.4f ), "x snapped high" );
+		Expect( At( cx + 0.4f, cy + 0.94f ), cx + 0.4f, cy + 1, Along( H( cx, cy + 1 ), H( cx + 1, cy + 1 ), 0.4f ), "y snapped high" );
+
+		// Past 0.1 it is off the line and does not snap.
+		var apart = ProceduralConform.Interpolated( field, At( cx + 0.13f, cy ), baseHeight );
+		Assert.AreEqual( field.OriginX + ((cx + 0.13f) * field.CellSizeX), apart!.Value.X, 0.001f, "0.13 of a cell is off the line" );
+
+		// The heightfield's last corner is a corner; past it ends the pass.
+		Assert.IsNotNull( ProceduralConform.Interpolated( field, At( field.CellsX, cy + 0.3f ), baseHeight ), "on the last line" );
+		Assert.IsNull( ProceduralConform.Interpolated( field, At( field.CellsX + 0.7f, cy ), baseHeight ), "past the last corner" );
+		Assert.IsNull( ProceduralConform.Interpolated( field, At( cx, field.CellsY + 0.7f ), baseHeight ), "past the last row" );
+	}
+
+	/// <summary>
+	/// <b>Made on a slope, the kart station's and the Lava Jump's listed vertices each stand on the ground along their line</b> and
+	/// nothing else moves (the original: 16 and 20 vertices, each raised by the ground along its line less the root's height, to
+	/// 0.0001). The ground is read here by the cell's own triangle at the snapped place, not by the pass's blend.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the model's height not taken off; every vertex of the mesh moved, not the listed ones; the floor mesh
+	/// not left out of the list; the vertex carried back without the turn.</remarks>
+	[TestMethod]
+	public void TheKartStationsAndTheLavaJumpsListedVerticesStandOnTheGroundAlongTheirLine()
+	{
+		var catalogue = new ParkItemCatalogue( "jungle", FileSystem );
+		var checkedStems = 0;
+
+		for ( var id = 1000; id < 1600; ++id )
+		{
+			if ( !catalogue.TryGet( id, out var item ) || item.Stem.ToLowerInvariant() is not ("gokarts" or "lavajump") )
+				continue;
+
+			foreach ( var angle in new[] { 0, 90, 180, 270 } )
+			{
+				var (x, y) = SlopedSite( item, angle );
+				var origin = ParkObjects.OriginFor( x, y, angle, field );
+				origin = origin with { Z = ParkObjects.BaseHeight( item.Shape, origin, angle, field ) ?? origin.Z };
+
+				var at = origin.GetSystemVector3();
+				var turn = ParkObjects.Turn( angle );
+				var before = new ModelFile( $"{item.Directory}/{item.Stem}.MD2" );
+				var made = new ModelFile( $"{item.Directory}/{item.Stem}.MD2" );
+				var listed = ProceduralBase.InterpolatedVertices( made, item.Shape, ProceduralBase.ParkGrid );
+				var count = listed.Sum( pair => pair.Vertices.Length );
+				var moved = ProceduralConform.Interpolate( made, item.Shape, at, turn, field );
+
+				Assert.IsTrue( count > 0, $"{item.Stem}: lists vertices" );
+				Assert.AreEqual( count, moved, $"{item.Stem} turned {angle}: vertices moved" );
+
+				var named = listed.ToDictionary( pair => pair.Mesh, pair => pair.Vertices.ToHashSet() );
+				var risen = 0;
+
+				for ( var m = 0; m < before.Meshes.Count; ++m )
+				{
+					for ( var i = 0; i < before.Meshes[m].Vertices.Length; ++i )
+					{
+						var restPlace = Drawn( before.Meshes[m], before.Meshes[m].Vertices[i].Position.GetSystemVector3(), at, turn );
+						var now = Drawn( made.Meshes[m], made.Meshes[m].Vertices[i].Position.GetSystemVector3(), at, turn );
+
+						if ( !named.TryGetValue( m, out var which ) || !which.Contains( before.Meshes[m].VertexOrder[i] ) )
+						{
+							Assert.AreEqual( restPlace, now, $"{item.Stem} mesh {m} vertex {i} is not listed and stays" );
+							continue;
+						}
+
+						// A listed vertex sits on the grid in the model, so the snap does not move it; the ground at its place less the model's height is its rise.
+						Assert.AreEqual( restPlace.X, now.X, 0.002f, $"{item.Stem} turned {angle} mesh {m} vertex {i}: x" );
+						Assert.AreEqual( restPlace.Y, now.Y, 0.002f, $"{item.Stem} turned {angle} mesh {m} vertex {i}: y" );
+
+						var rise = ProceduralConform.DrapeHeight( field, now.X, now.Y ) - origin.Z;
+						Assert.AreEqual( restPlace.Z + rise, now.Z, 0.002f, $"{item.Stem} turned {angle} mesh {m} vertex {i}: height" );
+						risen += MathF.Abs( rise ) > 0.3f ? 1 : 0;
+					}
+				}
+
+				Assert.IsTrue( risen > 0, $"{item.Stem} turned {angle} at ({x},{y}): a level site proves nothing" );
+			}
+
+			++checkedStems;
+		}
+
+		Assert.AreEqual( 2, checkedStems, "the kart station and the Lava Jump" );
+	}
+
+	/// <summary>A model with no mesh the lookup records mark <c>0x8</c> is left alone by the interpolating pass.</summary>
+	[TestMethod]
+	public void AModelWithNoInterpolatedMeshIsLeftAlone()
+	{
+		var catalogue = new ParkItemCatalogue( "jungle", FileSystem );
+		Assert.IsTrue( catalogue.TryGet( 1100, out var item ) );
+
+		var file = new ModelFile( $"{item!.Directory}/{item.Stem}.MD2" );
+		var (x, y) = SlopedSite( item, 0 );
+
+		Assert.AreEqual( 0, ProceduralConform.Interpolate( file, item.Shape, ParkObjects.OriginFor( x, y, 0, field ).GetSystemVector3(), ParkObjects.Turn( 0 ), field ) );
+	}
+
+	/// <summary>
+	/// <b>The interpolating count takes a vertex within 0.1 of a cell line, and the conform's within 0.01</b> (<c>0x006fe854</c>,
+	/// <c>0x006fe85c</c>): the station's and the Lava Jump's lists stand when the grid is moved 0.4 of a unit under the model (0.04 of a
+	/// cell) and are lost when it is moved the other way by 1.5 (0.15 of a cell; a position below the grid's origin is taken as on a line, so the grid is not moved above the model).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the interpolating tolerance 0.01 or 0.5.</remarks>
+	[TestMethod]
+	public void TheInterpolatingCountTakesAVertexWithinATenthOfACellOfALine()
+	{
+		var catalogue = new ParkItemCatalogue( "jungle", FileSystem );
+
+		foreach ( var (stem, expected) in new[] { ("gokarts", 16), ("lavajump", 20) })
+		{
+			var item = ItemNamed( catalogue, stem );
+			var file = new ModelFile( $"{item.Directory}/{item.Stem}.MD2" );
+
+			int Listed( float shift ) => ProceduralBase.InterpolatedVertices( file, item.Shape, new ProceduralBase.Grid( shift, shift, 10f, 10f ) ).Sum( pair => pair.Vertices.Length );
+
+			Assert.AreEqual( expected, Listed( 0f ), $"{stem}: on the grid" );
+			Assert.AreEqual( expected, Listed( -0.4f ), $"{stem}: 0.04 of a cell below" );
+			Assert.AreEqual( expected, Listed( 0.4f ), $"{stem}: 0.04 of a cell above" );
+			Assert.AreEqual( 0, Listed( -1.5f ), $"{stem}: 0.15 of a cell is off the line" );
+		}
+	}
+
+	/// <summary>
+	/// <b>The ground's edge ends the pass for the mesh:</b> a vertex whose corner is past the heightfield's last stops the vertices
+	/// after it in the list (<c>0x00469dd7</c>..<c>0x0046a2a0</c>), the ones before it standing already.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the pass carrying on past the vertex; the last corner counted as past.</remarks>
+	[TestMethod]
+	public void AVertexPastTheGroundsLastCornerEndsTheMeshsPass()
+	{
+		var catalogue = new ParkItemCatalogue( "jungle", FileSystem );
+		var item = ItemNamed( catalogue, "gokarts" );
+		var file = new ModelFile( $"{item.Directory}/{item.Stem}.MD2" );
+		var listed = ProceduralBase.InterpolatedVertices( file, item.Shape, ProceduralBase.ParkGrid );
+		var all = listed.Sum( pair => pair.Vertices.Length );
+
+		var after = 0;
+		var standing = 0;
+
+		// The station's listed vertices stand in two columns 40 units apart (x 0 and 40 in the model): put the model at each turn with the far
+		// edge of the heightfield between them or beside them, so some listed vertices are past it and others, before and after them in the list, not.
+		foreach ( var angle in new[] { 0, 90, 180, 270 } )
+		{
+			foreach ( var (shiftX, shiftY) in new[] { -20f, 20f, -150f }.SelectMany( x => new[] { -150f, -20f, -13f, -7f, 0f }.Select( y => (x, y) ) ) )
+			{
+				var at = new Vec( field.OriginX + (field.CellsX * field.CellSizeX) + shiftX, field.OriginY + (field.CellsY * field.CellSizeY) + shiftY, 0f );
+				var turn = ParkObjects.Turn( angle );
+				var made = new ModelFile( $"{item.Directory}/{item.Stem}.MD2" );
+				var rest = new ModelFile( $"{item.Directory}/{item.Stem}.MD2" );
+				var moved = ProceduralConform.Interpolate( made, item.Shape, at, turn, field );
+
+				Assert.IsTrue( moved <= all, $"turned {angle}: no more than the {all} listed vertices move" );
+
+				foreach ( var (mesh, vertices) in listed )
+				{
+					var stopped = false;
+
+					foreach ( var vertex in vertices )
+					{
+						var world = Drawn( rest.Meshes[mesh], rest.Meshes[mesh].SourceVertices[vertex].GetSystemVector3(), at, turn );
+						var drawnAt = Enumerable.Range( 0, rest.Meshes[mesh].VertexOrder.Length ).First( i => rest.Meshes[mesh].VertexOrder[i] == vertex );
+						var now = Drawn( made.Meshes[mesh], made.Meshes[mesh].Vertices[drawnAt].Position.GetSystemVector3(), at, turn );
+						var past = (world.X - field.OriginX) / field.CellSizeX >= field.CellsX + 0.5f || (world.Y - field.OriginY) / field.CellSizeY >= field.CellsY + 0.5f;
+
+						// The nearest corner is past the last when the vertex stands past half a cell beyond it.
+						if ( past )
+							stopped = true;
+						else if ( stopped )
+						{
+							// A vertex after the first one past the edge, itself inside, is left where it was.
+							Assert.AreEqual( world, now, $"turned {angle} mesh {mesh} vertex {vertex} comes after the one past the edge and is not moved" );
+							++after;
+						}
+						else
+							standing += now != world ? 1 : 0;
+					}
+				}
+			}
+		}
+
+		Assert.IsTrue( standing > 0, "some vertex before the edge was raised" );
+		Assert.IsTrue( after > 0, "some vertex inside the edge comes after one past it, which a pass that carried on would raise" );
+	}
+
+	/// <summary>
+	/// <b>A placed thing's making runs all three passes:</b> the rim conform, the drape and the interpolating pass, so the station
+	/// moves its 14 listed base vertices and its 16 interpolated ones (<c>rim</c>: <c>moved 30</c> on the original's 14 and 16).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> <see cref="ParkObjects.StandOnGround"/> not calling the interpolating pass.</remarks>
+	[TestMethod]
+	public void AThingsMakingRunsTheInterpolatingPassToo()
+	{
+		var catalogue = new ParkItemCatalogue( "jungle", FileSystem );
+		var item = ItemNamed( catalogue, "gokarts" );
+		var file = new ModelFile( $"{item.Directory}/{item.Stem}.MD2" );
+
+		var (x, y) = SlopedSite( item, 0 );
+		var origin = ParkObjects.OriginFor( x, y, 0, field );
+		origin = origin with { Z = ParkObjects.BaseHeight( item.Shape, origin, 0, field ) ?? origin.Z };
+
+		var listed = ProceduralBase.BaseVertices( file, item.Shape, ProceduralBase.ParkGrid ).Sum( pair => pair.Vertices.Length )
+			+ ProceduralBase.InterpolatedVertices( file, item.Shape, ProceduralBase.ParkGrid ).Sum( pair => pair.Vertices.Length );
+
+		Assert.AreEqual( 30, listed, "the original's 14 base vertices and 16 interpolated" );
+		Assert.AreEqual( listed, ParkObjects.StandOnGround( file, item, origin, ParkObjects.Turn( 0 ), field ) );
+	}
 }

@@ -64,12 +64,8 @@ default, Alexah's second pre-weekly list), then the rest in the order below.
 **Ordered at Alexah's word (2026-10-29):** Q804, Q805 and Q806, found while photographing Alexah's Full Simulation
 park for the website, go first. Q804 stopped the photographs: no picture with the blue lines will be used.
 
-- [ ] **Q813. What Q808 left of the conform and the drape.** From Q808 (run 14, lane A). (1) **The interpolating pass** for the nine
-  lookup-`0x8` meshes (the kart station `gk_TRACK01`, `wr_log1`, `wr_log2`, `wr_water3`, `wr_water4`, and the add-ons' `gk_brdge`,
-  `wr_mwater1`, `wr_mwater2`, `wr_mwater04`; `park-engine.md`, "Where a placed object's model stands"): each such mesh's listed
-  vertices snap to the cell line within 0.1 and rise by the ground interpolated along that line less H; counted now as
-  `PROCEDURAL_BASE_INTERPOLATE`. `original/basevertices.py` reads the original's side (the station's 16 and the Lava Jump's 20
-  vertices to 0.0001). (2) **The coaster's pieces and pylons** are made through `0x00432f2f` and `0x004432db`, which also run the
+- [ ] **Q813. What Q808 left of the conform and the drape.** From Q808 (run 14, lane A). (1) **The interpolating pass** is done as Q815
+  (the original's 17th moved vertex of `gk_TRACK01`, against the 16 it lists, is not reproduced: `park-engine.md`). (2) **The coaster's pieces and pylons** are made through `0x00432f2f` and `0x004432db`, which also run the
   conform (made `0x3fa`: 40 of the 159 instances in her park); ours stands them rigid (`ParkCoasterHeights`), and the first
   reading of Q812 (`review14/q812/FINDINGS.md`, F2) says two `StdPylon` instances list 4 base vertices and use none (no `0x1000` on their mesh), so
   decode that before building it. (3) The recomputed face normals (`FUN_00473c30`, whether they reach the lighting) and the

@@ -21,8 +21,8 @@ namespace OpenTPW;
 /// stop on pulses red to white and back (<see cref="SetPulse"/>). An add-on's anchor takes no piece: the add-on is a placed
 /// thing whose model stands over its cells (<see cref="ParkObjects"/>), its end caps shown and hidden by the walk
 /// (<see cref="ParkObjects.ShowAddOnCaps"/>). A piece's vertices are draped over the ground at its making
-/// (<see cref="ProceduralConform.Drape"/>); the interpolating pass of the station's and the water pieces' meshes is not built
-/// (<c>PROCEDURAL_BASE_INTERPOLATE</c>). Each piece is made at rest, and the pieces' walks after a close or an add-on's put-down
+/// (<see cref="ProceduralConform.Drape"/>); the station's own track mesh and the add-ons' are interpolated along their cell lines
+/// when those are made (<see cref="ProceduralConform.Interpolate"/>), which no piece is. Each piece is made at rest, and the pieces' walks after a close or an add-on's put-down
 /// play its <c>M</c> clip or rest it (<see cref="PlayClip"/>).
 /// </para>
 /// </summary>

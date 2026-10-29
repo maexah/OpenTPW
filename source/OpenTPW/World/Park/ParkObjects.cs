@@ -454,23 +454,21 @@ public sealed class ParkObjects : Entity
 
 	/// <summary>
 	/// A placed thing's model stood on the ground as the original makes it (flag <c>0x8</c>, <c>0x00463329</c>): the floor's rim vertices
-	/// on the terrain's corners, and the meshes the lookup records mark <c>0x10000</c> draped (<see cref="ProceduralConform"/>). The
-	/// nine track meshes' interpolating pass is a counted gap. Answers how many vertices moved.
+	/// on the terrain's corners, the meshes the lookup records mark <c>0x10000</c> draped, and the nine track meshes the records mark
+	/// <c>0x8</c> interpolated along their cell lines (<see cref="ProceduralConform"/>). Answers how many vertices moved.
 	/// </summary>
-	private static int StandOnGround( ModelFile file, ParkItemCatalogue.Item item, Vector3 origin, Quaternion turn )
-	{
-		if ( ParkGround.Current?.Heightfield is not { } field )
-			return 0;
+	internal static int StandOnGround( ModelFile file, ParkItemCatalogue.Item item, Vector3 origin, Quaternion turn )
+		=> ParkGround.Current?.Heightfield is { } field ? StandOnGround( file, item, origin, turn, field ) : 0;
 
+	/// <summary><see cref="StandOnGround(ModelFile, ParkItemCatalogue.Item, Vector3, Quaternion)"/> on the ground it is given.</summary>
+	internal static int StandOnGround( ModelFile file, ParkItemCatalogue.Item item, Vector3 origin, Quaternion turn, HeightfieldFile field )
+	{
 		var at = origin.GetSystemVector3();
 		var moved = ProceduralConform.Conform( file, item.Shape, at, turn, field );
 
 		moved += ProceduralConform.Drape( file, ProceduralConform.LookupDraped( file ), at, turn, field );
 
-		if ( ProceduralConform.InterpolatedMeshes( file ) > 0 )
-			Unimplemented.Report( "PROCEDURAL_BASE_INTERPOLATE" );
-
-		return moved;
+		return moved + ProceduralConform.Interpolate( file, item.Shape, at, turn, field );
 	}
 
 	/// <summary>
@@ -481,12 +479,13 @@ public sealed class ParkObjects : Entity
 	{
 		foreach ( var (thingId, standing) in _standing.OrderBy( pair => pair.Key ) )
 		{
-			if ( standing.Measure?.Invoke() is not { Listed: > 0 } measured )
+			if ( standing.Measure?.Invoke() is not { } measured || (measured.Listed == 0 && measured.Interpolated == 0) )
 				continue;
 
 			var name = Level.Current?.Catalogue is { } catalogue && catalogue.TryGet( standing.CatalogueId, out var item ) ? item.Name : $"item {standing.CatalogueId}";
 
-			yield return $"thing {thingId,3} '{name}' base vertices {measured.Listed} on a corner {measured.OnCorner} largest off {measured.LargestOff:F4} moved {standing.Conformed}";
+			yield return $"thing {thingId,3} '{name}' base vertices {measured.Listed} on a corner {measured.OnCorner} largest off {measured.LargestOff:F4} moved {standing.Conformed}"
+				+ (measured.Interpolated > 0 ? $" interpolated {measured.Interpolated} listed largest rise off {measured.LargestRiseOff:F4}" : "");
 		}
 	}
 

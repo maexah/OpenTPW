@@ -11056,6 +11056,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   165 120 0) with the doors open and the wall standing; saved from there it writes its models and the file walks closed (462 records, 40 of item 1181
   at five); the stock park unchanged (15, 143). The original's frame is Q809's, not retaken. The Tunnel's and Jump's caps are now laid at the load
   (counted `TRACK_CAP_LOCK_LOADED`, filed). Ticks Q779.
+- [x] **Q815. The interpolating pass of the nine lookup-`0x8` meshes (Q813's first piece).** From Q813 (run 14, lane A; its piece (1),
+  split off 2026-10-29). The meshes the lookup records mark `0x8` (the kart station's `gk_TRACK01`, the water ride's `wr_log1`, `wr_log2`,
+  `wr_water3`, `wr_water4`, and the add-ons' `gk_brdge`, `wr_mwater1`, `wr_mwater2`, `wr_mwater04`) have the vertices the type load's second count
+  lists snapped to the cell line within 0.1 and raised by the ground interpolated along that line less the height the model was made at
+  (`park-engine.md`, "Where a placed object's model stands"). **Done (2026-10-29, run 14, lane A, `ProceduralConform.Interpolate`,
+  `ProceduralBase.InterpolatedVertices`):** `ParkObjects.StandOnGround` runs it after the conform and the drape. In Alexah's Full Simulation
+  New Save (a copy), on the build, the console's `rim` reads the Dino Karts station `interpolated 16 listed largest rise off 0.0000` and the
+  Dino Karts Jump `interpolated 20 listed largest rise off 0.0000` (the original's 16 and 20, to 0.0000, Q812's `basevertices.py` on the same
+  file), `PROCEDURAL_BASE_INTERPOLATE` is gone from the census (2 on main) and the stock park is unchanged. The leftover is Q813 (2) to (4); the
+  original's 17th moved vertex of `gk_TRACK01` is not reproduced (ours moves the 16).
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

@@ -25,6 +25,9 @@ public static class ProceduralBase
 	/// <summary>How near a cell line and the ground a vertex must be to be a base vertex.</summary>
 	private const float Near = 0.01f;
 
+	/// <summary>How near a cell line, and how near the model's zero height, a vertex of the interpolating pass must be (<c>0x006fe854</c>, <c>0x006fe858</c>).</summary>
+	private const float InterpolateNear = 0.1f, InterpolateHeight = 100f;
+
 	/// <summary>Header flag 0x100: every base vertex on a cell corner counts, wherever the outline runs.</summary>
 	private const uint CountsEveryCorner = 0x100;
 
@@ -93,11 +96,31 @@ public static class ProceduralBase
 	/// load keeps at <c>[[model + 8] + 0x14]</c> and the conform takes (<see cref="ProceduralConform"/>).
 	/// </summary>
 	public static IReadOnlyList<(int Mesh, int[] Vertices)> BaseVertices( ModelFile model, ItemShape? shape, Grid grid )
+		=> Walk( model, shape, grid, interpolating: false, takes: _ => true );
+
+	/// <summary>
+	/// The vertices <c>ProceduralBase_Build</c>'s second count lists for the interpolating pass (<c>0x0046a8a3</c>..<c>0x0046a934</c>),
+	/// mesh by mesh: each mesh the lookup records mark <c>0x8</c> (run-time <c>0x40</c>) other than the floor, the vertices within
+	/// 0.1 of a cell line on either axis and within 100 of the model's zero height, on a side of the footprint's outline the vertex
+	/// is on. The type load keeps each mesh's list at <c>+0x98</c> and the interpolating arms of <c>FUN_00469a80</c> take them.
+	/// </summary>
+	public static IReadOnlyList<(int Mesh, int[] Vertices)> InterpolatedVertices( ModelFile model, ItemShape? shape, Grid grid )
+	{
+		var floor = FloorMesh( model, shape, grid, out _ );
+
+		return Walk( model, shape, grid, interpolating: true,
+			takes: mesh => mesh != floor && mesh < model.Nodes.Count && (model.Nodes[mesh].IdFlags & LookupInterpolates) != 0 );
+	}
+
+	/// <summary>A node's lookup-record flag that becomes the run-time <c>0x40</c>: the second count and the interpolating pass take the mesh.</summary>
+	public const uint LookupInterpolates = 0x8;
+
+	private static IReadOnlyList<(int Mesh, int[] Vertices)> Walk( ModelFile model, ItemShape? shape, Grid grid, bool interpolating, Func<int, bool> takes )
 	{
 		var edges = Edges( shape );
 		var width = shape?.Width ?? 0;
 		var depth = shape?.Depth ?? 0;
-		var every = (model.HeaderFlags & CountsEveryCorner) != 0;
+		var every = !interpolating && (model.HeaderFlags & CountsEveryCorner) != 0;
 		var found = new List<(int, int[])>();
 
 		void Visit( int node, int guard )
@@ -106,7 +129,7 @@ public static class ProceduralBase
 			{
 				var flags = model.Nodes[node].Flags;
 
-				if ( node < model.Meshes.Count && (flags & SkippedNode) == 0 && (flags & CountsNothing) == 0 )
+				if ( node < model.Meshes.Count && (flags & SkippedNode) == 0 && (flags & CountsNothing) == 0 && takes( node ) )
 				{
 					var mesh = model.Meshes[node];
 					var bases = new List<int>();
@@ -116,7 +139,7 @@ public static class ProceduralBase
 						var source = mesh.SourceVertices[index];
 						var at = System.Numerics.Vector3.Transform( new System.Numerics.Vector3( source.X, source.Y, source.Z ), mesh.WorldTransform );
 
-						if ( IsBase( at, grid, edges, width, depth, every ) )
+						if ( IsBase( at, grid, edges, width, depth, every, interpolating ) )
 							bases.Add( index );
 					}
 
@@ -134,23 +157,27 @@ public static class ProceduralBase
 	}
 
 	/// <summary>
-	/// <c>FUN_00469a80</c>'s test of one vertex in model space (the file's axes, y up): at the ground, on a cell line
-	/// both ways, and on a side of its cell the outline runs along. A coordinate below the grid's origin is taken as
-	/// on it; a cell past the footprint's last is its last, seen from the far side.
+	/// <c>FUN_00469a80</c>'s test of one vertex in model space (the file's axes, y up). The conform's count: at the ground
+	/// (within 0.01), on a cell line both ways (within 0.01), and on a side of its cell the outline runs along. The interpolating
+	/// count (<paramref name="interpolating"/>, tolerance 0.1 and a height under 100): on a line either way, and on a side of
+	/// its cell the outline runs along on an axis it is on a line of. A coordinate below the grid's origin is taken as on it; a
+	/// cell past the footprint's last is its last, seen from the far side.
 	/// </summary>
 	/// <remarks>
 	/// The original also stops the mesh's walk, and its children's, at a vertex past the ground's last cell (96 x 85, 960 x 850
 	/// units); no Lost Kingdom mesh reaches past 502 units (its offset and its box), so that end is not kept.
 	/// </remarks>
-	private static bool IsBase( System.Numerics.Vector3 at, Grid grid, int[,]? edges, int width, int depth, bool every )
+	private static bool IsBase( System.Numerics.Vector3 at, Grid grid, int[,]? edges, int width, int depth, bool every, bool interpolating )
 	{
-		if ( MathF.Abs( at.Y ) >= Near )
+		var near = interpolating ? InterpolateNear : Near;
+
+		if ( MathF.Abs( at.Y ) >= (interpolating ? InterpolateHeight : Near) )
 			return false;
 
-		var (cellX, onX, lowX) = Line( at.X, grid.OriginX, grid.CellX, width );
-		var (cellZ, onZ, lowZ) = Line( at.Z, grid.OriginZ, grid.CellZ, depth );
+		var (cellX, onX, lowX) = Line( at.X, grid.OriginX, grid.CellX, width, near );
+		var (cellZ, onZ, lowZ) = Line( at.Z, grid.OriginZ, grid.CellZ, depth, near );
 
-		if ( !onX || !onZ )
+		if ( interpolating ? !(onX || onZ) : !(onX && onZ) )
 			return false;
 
 		if ( every )
@@ -161,15 +188,17 @@ public static class ProceduralBase
 
 		var bits = edges[cellX, cellZ];
 
-		return (lowX && (bits & LowX) != 0) || (!lowX && (bits & HighX) != 0)
-			|| (lowZ && (bits & LowZ) != 0) || (!lowZ && (bits & HighZ) != 0);
+		// Each side's bit counts only for the axis the vertex is on a line of: on both axes, as the conform's count requires,
+		// that is all four.
+		return (onX && ((lowX && (bits & LowX) != 0) || (!lowX && (bits & HighX) != 0)))
+			|| (onZ && ((lowZ && (bits & LowZ) != 0) || (!lowZ && (bits & HighZ) != 0)));
 	}
 
 	/// <summary>
 	/// Where a coordinate lies on one axis: its cell (truncated, after a negative is taken as nought), whether it is
-	/// within 0.01 of a line, and whether that is the cell's low side (a fraction under a half).
+	/// within <paramref name="near"/> of a line, and whether that is the cell's low side (a fraction under a half).
 	/// </summary>
-	private static (int Cell, bool On, bool Low) Line( float value, float origin, float size, int cells )
+	private static (int Cell, bool On, bool Low) Line( float value, float origin, float size, int cells, float near )
 	{
 		var position = (value - origin) / size;
 
@@ -187,7 +216,7 @@ public static class ProceduralBase
 			low = false;
 		}
 
-		var on = MathF.Abs( fraction ) < Near || MathF.Abs( fraction - 1f ) < Near;
+		var on = MathF.Abs( fraction ) < near || MathF.Abs( fraction - 1f ) < near;
 
 		return (cell, on, low);
 	}

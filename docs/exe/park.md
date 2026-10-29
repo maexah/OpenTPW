@@ -2302,7 +2302,7 @@ Alexah's played Dino Karts lies. Each kart or water anchor draws the piece its r
 hidden by the row's mask: Alexah's played file's 28 pieces are its 28 records' (`q688/ours-f2`), and the chooser
 (`ParkTrackPieces.PieceFor`) gives every one of its 31 anchors the row and turn the file holds. A sale of a ride owning only
 its station and mouths clears them and pays nothing net. Counted, not built: the carried squares and their check
-(`CARRY_PREVIEW_TRACK_START`), the station's and water pieces' interpolating pass (`PROCEDURAL_BASE_INTERPOLATE`; the drape itself is built, Q808), a
+(`CARRY_PREVIEW_TRACK_START`), (the drape is built, Q808, and the interpolating pass of the rides' and add-ons' own meshes, Q815; no piece carries one), a
 written park's piece records (`SAVE_PARK_TRACK_PIECE_MODEL`), and the sale of a ride with more track
 (`SALE_TRACK_TEARDOWN`). The put-down's check of the mouths (op 0x20b or 0x210) is not built: an anchor whose two by two holds
 track already is not laid, and counted (`PUT_DOWN_TRACK_OVER_TRACK`, Q765). The pieces are stood again after a change

@@ -23,7 +23,7 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 - Park and saving: no loan screen, litter or day's end; a written park holds no kart, water or tracked ride, and some voices, puffs and the music voice are not written (Q420, Q803); forty-four of the advisor's 155 polled messages are built.
 - Map and windows: the map's overlay, hover and click are decoded, not built (Q684, Q685); five of the nine object windows are unbuilt (Q31b).
 - Guests: the deciding turn's vomit, litter, fireworks and pranks and four queue turns are counted (Q224 to Q226, Q228); a failed route is not revived (Q104); queues lose more happiness than the original's (Q746).
-- Building: a carried member of staff shows nothing; a bought thing's sparkles are not drawn (Q683); the buy screen's panel has no model (Q158); the kart and water pieces' interpolating pass, the coaster pylons' conform and the recomputed face normals are unbuilt (Q813).
+- Building: a carried member of staff shows nothing; a bought thing's sparkles are not drawn (Q683); the buy screen's panel has no model (Q158); the coaster pylons' conform and the recomputed face normals are unbuilt (Q813).
 - Lobby, keys and interface: the fly-in's fade (Q61) and F8 (Q65) are unbuilt; some keys and lists act differently from the original's (Q120, Q231, Q232); some meshes are drawn both-sided (Q613). No video or networking.
 - Sound: a per-effect repeat delay that is really a priority (Q43); most of a park file's live voices are counted, not put back (Q741).
 - Staff: the handyman's litter search and the guard's chase are unbuilt; a strike's posts are counted (Q212, Q229).
@@ -38,14 +38,14 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- Q810 (a coaster's pylon type read as five channels, so a played park's model records read whole: `ParkItemCatalogue.ChannelsFor`, Q779's
-  build). Read in ours on a copy of Alexah's Full Simulation `New Save.TPWS` (`q810-a7/run3fs`, the final build): no "would not read" line, 106
-  animation channels put back, the gate's channel held, `boundary pieces 163 anchors 163 unmade 0`, the doors open and the wall round the gate at
-  the camera 480 165 120 0; saved from there, the file's module walks closed with 462 records (40 of item 1181 at five channels); the stock park
-  unchanged (15 put back, wall 143). Not verified: the original's frame is Q809's earlier one (same file and camera), not retaken; the wall piece
-  by piece against the original's; the loaded Dino Karts Tunnel's and Jump's end caps, which the walk now lets the load lay (the log says hidden and
-  shown as the file left them, not photographed; the lock of a hidden cap is the counted `TRACK_CAP_LOCK_LOADED`); the 43 other original-written
-  park files (other themes among them), which only the file walk closes (Q814), not our game.
+- Q815 (the interpolating pass of the nine lookup-`0x8` meshes: `ProceduralConform.Interpolate`, `ProceduralBase.InterpolatedVertices`). Read in ours on a
+  copy of Alexah's Full Simulation `New Save.TPWS` (`q815/run2`, the final build): `rim` reads the Dino Karts station `interpolated 16 listed largest
+  rise off 0.0000` and the Dino Karts Jump `interpolated 20 listed largest rise off 0.0000`; `PROCEDURAL_BASE_INTERPOLATE` is gone from the census (2 on
+  main); the same code with the call removed reads the station's 1.2008 off (`run-nopass`); the stock park unchanged. The station's track no longer
+  shows a gap of ground beside the step (`station_70_240-track-crop-main-final-original.png`; the original's frame of the same file at the same camera
+  numbers this session shows none, the framing not pixel-aligned). Not verified: the original's 16 and 20 are Q812's earlier read of the same file, not
+  retaken; the original's 17th moved vertex of `gk_TRACK01` is not reproduced (ours moves 16); the water ride's and its add-ons' meshes (`wr_*`),
+  which no park of hers holds, only by the unit tests' count; a thing bought and put down on a slope.
 
 ## Numbers (take counts fresh; these go stale within a day)
 
