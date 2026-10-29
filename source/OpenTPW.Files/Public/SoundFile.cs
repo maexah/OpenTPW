@@ -8,35 +8,26 @@ namespace OpenTPW;
 /// </summary>
 public class SoundFile : BaseFormat
 {
-	private ExpandedMemoryStream memoryStream;
-	public byte[] buffer;
+	private readonly ExpandedMemoryStream memoryStream;
+	public readonly byte[] buffer;
 
-	public SoundFile( string path )
+	public SoundFile( string path ) : this( ReadAll( path ) )
 	{
-		ReadFromFile( path );
 	}
 
-	public SoundFile( Stream stream )
+	public SoundFile( Stream stream ) : this( ReadAll( stream ) )
 	{
-		ReadFromStream( stream );
+	}
+
+	private SoundFile( byte[] bytes )
+	{
+		buffer = bytes;
+		memoryStream = new ExpandedMemoryStream( buffer );
 	}
 
 	public void Dispose()
 	{
 		memoryStream.Dispose();
-	}
-
-	protected override void ReadFromStream( Stream stream )
-	{
-		// Set up read buffer
-		var tempStreamReader = new StreamReader( stream );
-		var fileLength = (int)tempStreamReader.BaseStream.Length;
-
-		buffer = new byte[fileLength];
-		tempStreamReader.BaseStream.ReadAtLeast( buffer, fileLength, throwOnEndOfStream: false );
-		tempStreamReader.Close();
-
-		memoryStream = new ExpandedMemoryStream( buffer );
 	}
 
 	/// <summary>

@@ -570,7 +570,7 @@ public sealed class RideAnimations
 	{
 		try
 		{
-			using var stream = files.OpenRead( path );
+			using var stream = files.OpenReadOrNull( path );
 
 			if ( stream == null )
 				return null;

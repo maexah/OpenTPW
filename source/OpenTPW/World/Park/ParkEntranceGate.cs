@@ -118,7 +118,7 @@ public sealed class ParkEntranceGate
 	{
 		try
 		{
-			using var stream = files.OpenRead( $"{item.Directory}/{item.Stem}.MD2" );
+			using var stream = files.OpenReadOrNull( $"{item.Directory}/{item.Stem}.MD2" );
 
 			if ( stream != null )
 				return new ModelFile( stream ).FindNode( ViewNodeId, ViewSpace ) >= 0;

@@ -3,33 +3,25 @@
 namespace OpenTPW;
 public sealed class BFMUReader : BaseFormat
 {
-	private ExpandedMemoryStream memoryStream;
-	public byte[] buffer;
+	private readonly ExpandedMemoryStream memoryStream;
+	public readonly byte[] buffer;
 
-	public BFMUReader( string path )
+	public BFMUReader( string path ) : this( ReadAll( path ) )
 	{
-		ReadFromFile( path );
 	}
 
-	public BFMUReader( Stream stream )
+	public BFMUReader( Stream stream ) : this( ReadAll( stream ) )
 	{
-		ReadFromStream( stream );
 	}
+
 	public void Dispose()
 	{
 		memoryStream.Dispose();
 	}
 
-	protected override void ReadFromStream( Stream stream )
+	private BFMUReader( byte[] bytes )
 	{
-		// Set up read buffer
-		var tempStreamReader = new StreamReader( stream );
-		var fileLength = (int)tempStreamReader.BaseStream.Length;
-
-		buffer = new byte[fileLength];
-		tempStreamReader.BaseStream.ReadAtLeast( buffer, fileLength, throwOnEndOfStream: false );
-		tempStreamReader.Close();
-
+		buffer = bytes;
 		memoryStream = new ExpandedMemoryStream( buffer );
 
 		var magicNumber = memoryStream.ReadString( 4 );

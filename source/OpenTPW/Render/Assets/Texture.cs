@@ -1,4 +1,5 @@
 ﻿using StbImageSharp;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using NeoVeldrid;
 
@@ -118,6 +119,7 @@ public partial class Texture : Asset
 	/// <summary>
 	/// Update from an image format supported by the STB library (jpg, png, gif, tga, etc.)
 	/// </summary>
+	[MemberNotNull( nameof( NativeTexture ), nameof( NativeTextureView ) )]
 	private void UpdateFromStb( string path, TextureFlags flags )
 	{
 		var fileData = File.ReadAllBytes( path );
@@ -133,6 +135,7 @@ public partial class Texture : Asset
 	/// <summary>
 	/// Update from a Bullfrog WCT file
 	/// </summary>
+	[MemberNotNull( nameof( NativeTexture ), nameof( NativeTextureView ) )]
 	private void UpdateFromWct( string path, TextureFlags flags )
 	{
 		var (image, alpha) = ReadWct( path );
@@ -187,7 +190,7 @@ public partial class Texture : Asset
 
 		if ( _notFound == null )
 		{
-			using var stream = FileSystem.OpenRead( NotFoundPath );
+			using var stream = FileSystem.OpenReadOrNull( NotFoundPath );
 
 			// An install missing the not-found texture as well leaves TextureFile's own last
 			// resort in place, which is the only thing left to draw.
@@ -341,6 +344,7 @@ public partial class Texture : Asset
 		return SamplerType.AnisotropicRepeat;
 	}
 
+	[MemberNotNull( nameof( NativeTexture ), nameof( NativeTextureView ) )]
 	private void CreateTexture( string debugName, byte[] data, uint width, uint height, TextureFlags flags,
 		TextureAlpha? alpha = null )
 	{

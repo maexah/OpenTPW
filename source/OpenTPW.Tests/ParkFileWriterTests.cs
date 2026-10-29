@@ -26,7 +26,7 @@ public class ParkFileWriterTests
 	private byte[] raw = null!;
 	private ParkWorld shipped = null!;
 	private string? root;
-	private BaseFileSystem oldSaves = null!;
+	private BaseFileSystem? oldSaves;
 
 	private string Jungle => Path.Combine( root!, "users", "1Test", "jungle" );
 
@@ -38,7 +38,7 @@ public class ParkFileWriterTests
 		raw = FileSystem.ReadAllBytes( ShippedPark );
 		shipped = Read( raw );
 
-		oldSaves = SaveFileSystem;
+		oldSaves = SaveFileSystemOrNull;
 		root = Directory.CreateTempSubdirectory( "opentpw-park-writer-" ).FullName;
 		Directory.CreateDirectory( Jungle );
 		SaveFileSystem = new BaseFileSystem( root );
@@ -53,7 +53,7 @@ public class ParkFileWriterTests
 			return;
 
 		SetCurrentPlayer( null );
-		SaveFileSystem = oldSaves;
+		SaveFileSystemOrNull = oldSaves;
 		Directory.Delete( root, true );
 		ParkOrbitCameraMode.Forget();
 		Unimplemented.Forget();
@@ -1563,7 +1563,7 @@ public class ParkFileWriterTests
 
 			HeightfieldFile field;
 
-			using ( var stream = FileSystem.OpenRead( "levels/jungle/terrain/base.MD2" )! )
+			using ( var stream = FileSystem.OpenReadOrNull( "levels/jungle/terrain/base.MD2" )! )
 				field = new HeightfieldFile( stream );
 
 			var scene = new ParkSceneHeight( catalogue );

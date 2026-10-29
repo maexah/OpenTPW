@@ -156,11 +156,11 @@ public sealed class SignFile : BaseFormat
 
 	protected override void ReadFromFile( string path )
 	{
-		// FileSystem.FileExists is archive-blind and OpenRead returns null for a missing entry,
+		// FileSystem.FileExists is archive-blind and OpenReadOrNull returns null for a missing entry,
 		// so the null check here is the only thing standing between a park without a sign and a
 		// crash during scene setup. A miss is left unlogged because callers try more than one
 		// candidate name - see LobbyIsland - and only they know when it was the last one.
-		using var stream = FileSystem.OpenRead( path );
+		using var stream = FileSystem.OpenReadOrNull( path );
 
 		if ( stream == null )
 			return;

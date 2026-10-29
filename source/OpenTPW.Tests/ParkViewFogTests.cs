@@ -11,7 +11,7 @@ namespace OpenTPW.Tests;
 [TestClass]
 public class ParkViewFogTests
 {
-	private Level _level = null!;
+	private Level? _level;
 
 	[TestInitialize]
 	public void Remember()

@@ -520,7 +520,7 @@ public sealed class ParkObjects : Entity
 
 		try
 		{
-			using var stream = FileSystem.OpenRead( $"{item.Directory}/{item.Stem}c.md2" );
+			using var stream = FileSystem.OpenReadOrNull( $"{item.Directory}/{item.Stem}c.md2" );
 
 			if ( stream == null )
 				return;

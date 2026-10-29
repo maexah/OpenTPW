@@ -11,14 +11,14 @@ public class PlayersOwnParkTests
 	private static readonly DateTime Old = new( 2001, 1, 1, 0, 0, 0, DateTimeKind.Utc );
 
 	private string root = null!;
-	private BaseFileSystem oldSaves = null!;
+	private BaseFileSystem? oldSaves;
 
 	private string Jungle => Path.Combine( root, "users", "1Test", "jungle" );
 
 	[TestInitialize]
 	public void IsolateSaves()
 	{
-		oldSaves = SaveFileSystem;
+		oldSaves = SaveFileSystemOrNull;
 		root = Directory.CreateTempSubdirectory( "opentpw-own-park-" ).FullName;
 		Directory.CreateDirectory( Jungle );
 		SaveFileSystem = new BaseFileSystem( root );
@@ -28,7 +28,7 @@ public class PlayersOwnParkTests
 	public void RestoreSaves()
 	{
 		SetCurrentPlayer( null );
-		SaveFileSystem = oldSaves;
+		SaveFileSystemOrNull = oldSaves;
 		Directory.Delete( root, true );
 	}
 

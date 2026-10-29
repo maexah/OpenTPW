@@ -10,5 +10,5 @@ public interface IBaseFileSystem
 	Stream OpenRead( string relativePath );
 	byte[] ReadAllBytes( string relativePath );
 	string ReadAllText( string relativePath );
-	void RegisterArchiveHandler<T>( string extension ) where T : IArchive;
+	void RegisterArchiveHandler( string extension, Func<string, IArchive> open );
 }

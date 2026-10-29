@@ -83,11 +83,14 @@ partial class ShaderPreprocessor
 				}
 			}
 
-			if ( !blocks.TryGetValue( "vertex", out vertexShader ) )
+			if ( !blocks.TryGetValue( "vertex", out var vertex ) )
 				throw new Exception( "Vertex block is required, but wasn't found!" );
 
-			if ( !blocks.TryGetValue( "fragment", out fragmentShader ) )
+			if ( !blocks.TryGetValue( "fragment", out var fragment ) )
 				throw new Exception( "Fragment block is required, but wasn't found!" );
+
+			vertexShader = vertex;
+			fragmentShader = fragment;
 
 			if ( blocks.TryGetValue( "common", out var common ) )
 			{

@@ -143,7 +143,7 @@ internal static class ParkCarWriter
 
 		try
 		{
-			using var stream = files.OpenRead( $"{item.Directory}/{Path.GetFileNameWithoutExtension( file )}.MD2" );
+			using var stream = files.OpenReadOrNull( $"{item.Directory}/{Path.GetFileNameWithoutExtension( file )}.MD2" );
 
 			return stream is null ? null : new ModelFile( stream );
 		}

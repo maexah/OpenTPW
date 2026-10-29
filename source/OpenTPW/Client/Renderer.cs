@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using NeoVeldrid;
 using NeoVeldrid.StartupUtilities;
 
@@ -58,6 +59,7 @@ public partial class Renderer
 		_lastFrame = _frameClock.Elapsed;
 	}
 
+	[MemberNotNull( nameof( _colorTarget ), nameof( _depthTarget ), nameof( ResolveColorTexture ), nameof( MultisampledFramebuffer ) )]
 	private void CreateMultisampledFramebuffer( Point2 size )
 	{
 		var colorTextureInfo = TextureDescription.Texture2D(
@@ -109,8 +111,8 @@ public partial class Renderer
 	/// at 1080p the pair is around a hundred megabytes, and a window being dragged would otherwise
 	/// leak that much again every time it settled on a new size.
 	/// </summary>
-	private NeoVeldrid.Texture _colorTarget = null!;
-	private NeoVeldrid.Texture _depthTarget = null!;
+	private NeoVeldrid.Texture _colorTarget;
+	private NeoVeldrid.Texture _depthTarget;
 
 	private Pipeline _blitPipeline;
 	private ResourceSet _blitResourceSet;
@@ -120,6 +122,7 @@ public partial class Renderer
 	/// What copies each finished frame to the window. Made with the renderer rather than when the
 	/// game loop starts, as the loading screen presents frames before then.
 	/// </summary>
+	[MemberNotNull( nameof( _blitResourceLayout ), nameof( _blitPipeline ), nameof( _blitResourceSet ) )]
 	private void CreateBlitPipeline()
 	{
 		var layoutDescription = new ResourceLayoutDescription(

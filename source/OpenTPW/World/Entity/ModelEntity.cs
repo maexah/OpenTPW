@@ -84,8 +84,8 @@ public partial class ModelEntity : Entity
 	/// person's fog (<see cref="Level.LinearFog"/>).
 	/// </summary>
 	internal ObjectUniformBuffer SceneUniforms() => Uniforms( Camera.ViewMatrix, Camera.ProjMatrix,
-		Level.SunLight?.Position ?? Vector3.Zero, Level.SunLight?.Color ?? Vector3.One, Level.FogDensity, worldNormals: true,
-		parkLight: Level.ParkLight, linearFog: Level.LinearFog );
+		Level?.SunLight?.Position ?? Vector3.Zero, Level?.SunLight?.Color ?? Vector3.One, Level.FogDensity, worldNormals: true,
+		parkLight: Level?.ParkLight, linearFog: Level.LinearFog );
 
 	/// <summary>
 	/// Draws one half of this model - its solid half, or with <paramref name="translucent"/> its

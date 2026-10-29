@@ -18,7 +18,8 @@ public class Window
 	/// </summary>
 	public static readonly Point2 MinimumSize = new( 512, 384 );
 
-	public static Window Current { get; set; }
+	/// <summary>The first window made, or null before there is one (a test run makes none).</summary>
+	public static Window? Current { get; set; }
 	public Sdl2Window SdlWindow { get; private set; }
 	public Point2 Size => new Point2( SdlWindow.Width, SdlWindow.Height );
 

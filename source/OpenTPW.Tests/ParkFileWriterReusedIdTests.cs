@@ -23,7 +23,7 @@ public class ParkFileWriterReusedIdTests
 	private const int CrazyApe = 1101, DrinksShop = 16, DrinksScript = 6, Researcher = 8;
 
 	private BaseFileSystem data = null!;
-	private BaseFileSystem oldSaves = null!;
+	private BaseFileSystem? oldSaves;
 	private string? root;
 	private ParkWorld shipped = null!;
 	private ParkItemCatalogue catalogue = null!;
@@ -39,7 +39,7 @@ public class ParkFileWriterReusedIdTests
 		shipped = Read( data.ReadAllBytes( ShippedPark ) );
 		catalogue = new ParkItemCatalogue( Theme, data );
 
-		oldSaves = SaveFileSystem;
+		oldSaves = SaveFileSystemOrNull;
 		root = Directory.CreateTempSubdirectory( "opentpw-reused-id-" ).FullName;
 		Directory.CreateDirectory( Jungle );
 		SaveFileSystem = new BaseFileSystem( root );
@@ -61,7 +61,7 @@ public class ParkFileWriterReusedIdTests
 		if ( root != null )
 		{
 			typeof( Players ).GetProperty( nameof( Players.Current ) )!.SetValue( Players.Roster, null );
-			SaveFileSystem = oldSaves;
+			SaveFileSystemOrNull = oldSaves;
 			Directory.Delete( root, true );
 		}
 

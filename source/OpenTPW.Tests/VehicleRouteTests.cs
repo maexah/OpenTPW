@@ -32,8 +32,8 @@ public class VehicleRouteTests
 
 	private static (ModelFile Model, AnimationFile Clip) Load( BaseFileSystem data, string folder, string model, string clip )
 	{
-		using var modelStream = data.OpenRead( $"{folder}/{model}" )!;
-		using var clipStream = data.OpenRead( $"{folder}/{clip}" )!;
+		using var modelStream = data.OpenReadOrNull( $"{folder}/{model}" )!;
+		using var clipStream = data.OpenReadOrNull( $"{folder}/{clip}" )!;
 
 		return (new ModelFile( modelStream ), new AnimationFile( clipStream ));
 	}

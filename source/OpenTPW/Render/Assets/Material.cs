@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using NeoVeldrid;
 
 namespace OpenTPW;
@@ -485,6 +486,7 @@ public partial class Material : Asset
 
 	private static bool _depthTestLogged;
 
+	[MemberNotNull( nameof( _resourceLayouts ), nameof( ScratchBuffer ) )]
 	private void SetupResources( MaterialFlags flags )
 	{
 		var vertexLayout = new VertexLayoutDescription( Vertex.VertexElementDescriptions );

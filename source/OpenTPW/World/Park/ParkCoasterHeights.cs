@@ -163,7 +163,7 @@ public static class ParkCoasterHeights
 	/// <summary>The coaster type's <c>sCoasterType.fCurviness</c> (<c>+8</c>), 1.25 where its <c>coaster.sam</c> does not set it (<c>0x0042fd90</c>); null with no file.</summary>
 	public static float? Curviness( string directory, BaseFileSystem files )
 	{
-		using var stream = files.OpenRead( $"{directory}/coaster.sam" );
+		using var stream = files.OpenReadOrNull( $"{directory}/coaster.sam" );
 
 		if ( stream == null )
 			return null;

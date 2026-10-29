@@ -313,7 +313,7 @@ public class ParkTagRecordsTests
 		Unimplemented.Forget();
 		FileSystem = GameData.Required();
 		var shipped = Read( FileSystem.ReadAllBytes( ShippedPark ) );
-		var oldSaves = SaveFileSystem;
+		var oldSaves = SaveFileSystemOrNull;
 		var root = Directory.CreateTempSubdirectory( "opentpw-park-tags-" ).FullName;
 		var jungle = Path.Combine( root, "users", "1Test", "jungle" );
 
@@ -347,7 +347,7 @@ public class ParkTagRecordsTests
 		{
 			Time.PinWall( null );
 			SetCurrentPlayer( null );
-			SaveFileSystem = oldSaves;
+			SaveFileSystemOrNull = oldSaves;
 			Directory.Delete( root, true );
 			ParkOrbitCameraMode.Forget();
 			Unimplemented.Forget();

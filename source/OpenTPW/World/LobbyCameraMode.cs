@@ -905,7 +905,7 @@ public class LobbyCameraMode : CameraMode
 	/// <summary>Reads lobby.txt's camera settings - see <see cref="CameraSettings"/>.</summary>
 	internal static CameraSettings ReadSettings()
 	{
-		using var stream = FileSystem.OpenRead( "lobby/lobby.txt" );
+		using var stream = FileSystem.OpenReadOrNull( "lobby/lobby.txt" );
 
 		if ( stream == null )
 			return ReadSettings( TextReader.Null );

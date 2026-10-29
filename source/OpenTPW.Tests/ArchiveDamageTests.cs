@@ -44,8 +44,12 @@ public class ArchiveDamageTests
 	private static byte[] Read( byte[] bytes )
 	{
 		using var archive = new WadArchive( new MemoryStream( bytes ) );
-		return archive.GetFile( "x" ).GetData();
+		return Entry( archive, "x" ).GetData();
 	}
+
+	/// <summary>The entry at <paramref name="path"/>, which the test needs to be there.</summary>
+	private static ArchiveFile Entry( WadArchive archive, string path )
+		=> archive.GetFile( path ) ?? throw new AssertFailedException( $"{path} is not in the archive" );
 
 	[TestMethod]
 	public void EveryTruncatedArchivePrefixIsRejected()
@@ -145,7 +149,7 @@ public class ArchiveDamageTests
 	{
 		var stream = new ShortReads( Wad( [7, 8, 9] ) );
 		using var archive = new WadArchive( stream );
-		CollectionAssert.AreEqual( new byte[] { 7, 8, 9 }, archive.GetFile( "x" ).GetData() );
+		CollectionAssert.AreEqual( new byte[] { 7, 8, 9 }, Entry( archive, "x" ).GetData() );
 		Assert.IsFalse( stream.CanRead );
 	}
 
@@ -175,7 +179,7 @@ public class ArchiveDamageTests
 			{
 				foreach ( var name in archive.GetFiles( folder ) )
 				{
-					var file = (WadArchiveFile)archive.GetFile( folder + name );
+					var file = (WadArchiveFile)Entry( archive, folder + name );
 					var decoded = file.GetData();
 					hashes.Add( Path.GetRelativePath( GameDir.Data, path ).Replace( '\\', '/' ).ToLowerInvariant()
 						+ "\0" + (folder + name).ToLowerInvariant() + "\0"

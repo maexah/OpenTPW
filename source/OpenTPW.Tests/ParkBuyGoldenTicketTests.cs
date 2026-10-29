@@ -165,7 +165,7 @@ public class ParkBuyGoldenTicketTests
 
 		string Answer( int x, int y )
 		{
-			var built = build.Invoke( null, [state, Level.Current.Park, catalogue, null, null, 1170, x, y, 0, 0] )!;
+			var built = build.Invoke( null, [state, TestRun.CurrentLevel.Park, catalogue, null, null, 1170, x, y, 0, 0] )!;
 			return (string)built.GetType().GetProperty( "Answer" )!.GetValue( built )!;
 		}
 
@@ -210,7 +210,7 @@ public class ParkBuyGoldenTicketTests
 
 		string Answer( int x, int y )
 		{
-			var built = build.Invoke( null, [state, Level.Current.Park, catalogue, objects, null, 1170, x, y, 0, 0] )!;
+			var built = build.Invoke( null, [state, TestRun.CurrentLevel.Park, catalogue, objects, null, 1170, x, y, 0, 0] )!;
 			return (string)built.GetType().GetProperty( "Answer" )!.GetValue( built )!;
 		}
 
@@ -248,7 +248,7 @@ public class ParkBuyGoldenTicketTests
 
 		string Answer( int x, int y )
 		{
-			var built = build.Invoke( null, [state, Level.Current.Park, catalogue, null, null, 1170, x, y, 0, 0] )!;
+			var built = build.Invoke( null, [state, TestRun.CurrentLevel.Park, catalogue, null, null, 1170, x, y, 0, 0] )!;
 			return (string)built.GetType().GetProperty( "Answer" )!.GetValue( built )!;
 		}
 

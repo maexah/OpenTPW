@@ -507,7 +507,7 @@ public sealed class ParkGround : ModelEntity
 		{
 			try
 			{
-				using var stream = FileSystem.OpenRead( file );
+				using var stream = FileSystem.OpenReadOrNull( file );
 				var data = new TextureFile( stream ).Data;
 				texture = ProceduralGround.PathTexture.FromRgba( data.Data, data.Width, data.Height );
 			}
@@ -574,7 +574,7 @@ public sealed class ParkGround : ModelEntity
 
 		try
 		{
-			using var stream = FileSystem.OpenRead( path );
+			using var stream = FileSystem.OpenReadOrNull( path );
 			var data = new TextureFile( stream ).Data;
 			texture = ProceduralGround.PathTexture.FromRgba( data.Data, data.Width, data.Height );
 		}

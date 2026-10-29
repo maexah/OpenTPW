@@ -68,7 +68,7 @@ public sealed class LobbyWeather : Entity
 
 		// Deviation (Q696): the level is the island's RAINY value, where the original counts drops by the
 		// camera's distance to the RAINY islands.
-		_rain.Level = DebugRain ?? script.Rainy;
+		_rain.Amount = DebugRain ?? script.Rainy;
 
 		UpdateLightning( script );
 	}
@@ -111,8 +111,8 @@ public sealed class LobbyWeather : Entity
 
 		var flash = _lightning.Flash;
 
-		if ( Level.SunLight != null )
-			Level.SunLight.Color = Vector3.One * (1f + (flash * Lightning.MaxFlash));
+		if ( Level?.SunLight is { } sun )
+			sun.Color = Vector3.One * (1f + (flash * Lightning.MaxFlash));
 	}
 
 	/// <summary>

@@ -21,7 +21,7 @@ public class ParkMoodChangeTests
 	{
 		Log ??= new();
 
-		var before = FileSystem;
+		var before = FileSystemOrNull;
 		var root = Directory.CreateTempSubdirectory( "opentpw-mood-" );
 
 		try
@@ -40,7 +40,7 @@ public class ParkMoodChangeTests
 		}
 		finally
 		{
-			FileSystem = before;
+			FileSystemOrNull = before;
 			root.Delete( recursive: true );
 		}
 	}

@@ -35,8 +35,8 @@ internal static class GameData
 		var data = new BaseFileSystem( GameDir.Data );
 
 		// Exactly what Game.Run registers, so the tests see the game's own file system and not a near miss.
-		data.RegisterArchiveHandler<WadArchive>( ".wad" );
-		data.RegisterArchiveHandler<SdtArchive>( ".sdt" );
+		data.RegisterArchiveHandler( ".wad", path => new WadArchive( path ) );
+		data.RegisterArchiveHandler( ".sdt", path => new SdtArchive( path ) );
 
 		return _data = data;
 	}

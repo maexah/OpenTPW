@@ -524,7 +524,7 @@ public sealed class ParkWeather : Entity
 			Drops = 0;
 
 			if ( _rain != null )
-				_rain.Level = 0f;
+				_rain.Amount = 0f;
 
 			ParkAudio.Current?.StopRain();
 			return;
@@ -540,7 +540,7 @@ public sealed class ParkWeather : Entity
 		// pool, which is the lobby's nine hundred. Matching the two exactly is a thing to do once
 		// there is a reason to believe the park's pool size, rather than now.
 		if ( _rain != null )
-			_rain.Level = _drops / (float)_maxRaindrops;
+			_rain.Amount = _drops / (float)_maxRaindrops;
 
 		ParkAudio.Current?.SetRainLevel( RainLevel( _drops, _maxRaindrops ) );
 	}

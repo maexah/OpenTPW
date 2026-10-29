@@ -53,7 +53,7 @@ public class ParkMakeFailureReachTests
 	{
 		try
 		{
-			using var stream = data.OpenRead( ParkRides.ScriptPathFor( item ) );
+			using var stream = data.OpenReadOrNull( ParkRides.ScriptPathFor( item ) );
 
 			return stream != null && new RideScriptFile( stream ) is { IsValid: true } file && new RideScript( file ) != null;
 		}

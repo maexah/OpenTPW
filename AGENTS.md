@@ -107,7 +107,7 @@ kept in their local file; they bind nobody else.
 ## Build, test, run
 
 ```sh
-dotnet build source/OpenTPW.sln --no-incremental    # 0 errors expected; the known warnings are left alone
+dotnet build source/OpenTPW.sln --no-incremental    # 0 errors, 0 warnings; a new warning is fixed, never silenced
 dotnet test  source/OpenTPW.sln --no-build          # ~1 s. Without the game, every test that needs it skips
 OPENTPW_GAME_PATH="<game folder>" dotnet test source/OpenTPW.sln --no-build   # every test runs, none skip
 dotnet source/OpenTPW/bin/Debug/net10.0/OpenTPW.dll --game "<game folder>"

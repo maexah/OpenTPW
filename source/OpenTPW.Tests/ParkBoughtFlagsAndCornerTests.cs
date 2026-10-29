@@ -185,7 +185,7 @@ public class ParkBoughtFlagsAndCornerTests
 		var data = GameData.Required();
 		var catalogue = new ParkItemCatalogue( "jungle", data );
 
-		using var ground = data.OpenRead( "levels/jungle/terrain/base.MD2" )!;
+		using var ground = data.OpenReadOrNull( "levels/jungle/terrain/base.MD2" )!;
 		var field = new HeightfieldFile( ground );
 
 		Assert.IsTrue( catalogue.TryGet( id, out var item ) );

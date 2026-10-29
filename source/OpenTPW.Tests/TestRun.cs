@@ -48,6 +48,9 @@ public static class TestRun
 		Environment.FailFast( $"TestRun: {left} ParkPeople left in Entity.All; delete each in its test's cleanup" );
 	}
 
+	/// <summary>The level the test made current, which it needs there.</summary>
+	public static Level CurrentLevel => Level.Current ?? throw new AssertFailedException( "No level is current" );
+
 	/// <summary>
 	/// Ends every <typeparamref name="T"/> still in <see cref="Entity.All"/> and takes it out, so what one test made
 	/// is not walked by, or <c>Current</c> for, whatever runs next.

@@ -165,7 +165,7 @@ public sealed class ParkRides : Entity
 		{
 			try
 			{
-				script.Nodes = RideNodes.Load( item.Directory, item.Stem, _files, item.DoHeadProcessing,
+				script.Nodes = RideNodes.Load( item.Directory, item.Stem, Files, item.DoHeadProcessing,
 					script.Animations.AllClips );
 				script.Nodes?.PlaceFixed();
 			}
@@ -236,7 +236,10 @@ public sealed class ParkRides : Entity
 	public RideScriptScheduler Scheduler { get; } = new();
 
 	/// <summary>Where the scripts are read from - see <see cref="ParkItemCatalogue"/> for why this is asked for.</summary>
-	private readonly BaseFileSystem _files;
+	private readonly BaseFileSystem? _files;
+
+	/// <summary>The one passed in, or the game's as it stood when this was made; read with neither, it says so.</summary>
+	private BaseFileSystem Files => _files ?? throw new InvalidOperationException( "The rides were made with no file system to read" );
 
 	/// <summary>
 	/// The things standing in this park, or null where there are none to stand - a test binds scripts
@@ -311,7 +314,7 @@ public sealed class ParkRides : Entity
 		// nothing still runs scripts, and something bought afterwards has to be able to find this.
 		Current = this;
 
-		_files = files ?? FileSystem;
+		_files = files ?? FileSystemOrNull;
 		_objects = objects;
 		_catalogue = catalogue;
 
@@ -1155,7 +1158,7 @@ public sealed class ParkRides : Entity
 		{
 			try
 			{
-				using var stream = _files.OpenRead( $"{item.Directory}/{item.Stem}.MD2" );
+				using var stream = Files.OpenReadOrNull( $"{item.Directory}/{item.Stem}.MD2" );
 
 				if ( stream != null )
 					read = (new ModelFile( stream ), item.DoHeadProcessing);
@@ -1254,7 +1257,7 @@ public sealed class ParkRides : Entity
 	{
 		try
 		{
-			using var stream = _files.OpenRead( path );
+			using var stream = Files.OpenReadOrNull( path );
 
 			if ( stream == null )
 				return null;
@@ -1316,7 +1319,7 @@ public sealed class ParkRides : Entity
 				+ "its animations and no clip it triggers ever ends" );
 		}
 
-		return RideAnimations.Load( item.Directory, item.Stem, _files, item.AnimationChannels );
+		return RideAnimations.Load( item.Directory, item.Stem, Files, item.AnimationChannels );
 	}
 
 	/// <summary>
@@ -1360,7 +1363,7 @@ public sealed class ParkRides : Entity
 
 		try
 		{
-			nodes = RideNodes.Load( item.Directory, item.Stem, _files, item.DoHeadProcessing,
+			nodes = RideNodes.Load( item.Directory, item.Stem, Files, item.DoHeadProcessing,
 				script.Animations?.AllClips ?? [] );
 		}
 		catch ( Exception e )

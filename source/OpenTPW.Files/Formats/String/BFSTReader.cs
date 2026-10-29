@@ -5,8 +5,8 @@ namespace OpenTPW;
 
 internal sealed class BFSTReader : BaseFormat
 {
-	private ExpandedMemoryStream memoryStream;
-	public byte[] buffer;
+	private readonly ExpandedMemoryStream memoryStream;
+	public readonly byte[] buffer;
 
 	/// <summary>The character table a <see cref="StringFile"/> read from a stream is decoded through, its folder unknown.</summary>
 	public const string EnglishCharacterTable = "Language/English/MBToUni.dat";
@@ -45,35 +45,26 @@ internal sealed class BFSTReader : BaseFormat
 	/// Reads a <c>.str</c> file, decoded through the character table in its own folder. Dead by CODE: nothing calls it,
 	/// <see cref="StringFile"/> reads through the stream constructor.
 	/// </summary>
-	public BFSTReader( string path )
+	public BFSTReader( string path ) : this( ReadAll( path ), CharacterTableFor( path ) )
 	{
-		_characterTable = CharacterTableFor( path );
-		ReadFromFile( path );
 	}
 
 	/// <summary>Reads a table from a stream, decoded through <paramref name="characterTable"/>.</summary>
-	public BFSTReader( Stream stream, string characterTable )
+	public BFSTReader( Stream stream, string characterTable ) : this( ReadAll( stream ), characterTable )
 	{
-		_characterTable = characterTable;
-		ReadFromStream( stream );
-	}
-	public void Dispose()
-	{
-		memoryStream.Dispose();
 	}
 
 	/// <summary>Takes the file's bytes. Nothing is parsed until <see cref="ReadFile"/> is called.</summary>
-	protected override void ReadFromStream( Stream stream )
+	private BFSTReader( byte[] bytes, string characterTable )
 	{
-		// Set up read buffer
-		var tempStreamReader = new StreamReader( stream );
-		var fileLength = (int)tempStreamReader.BaseStream.Length;
-
-		buffer = new byte[fileLength];
-		tempStreamReader.BaseStream.ReadAtLeast( buffer, fileLength, throwOnEndOfStream: false );
-		tempStreamReader.Close();
-
+		_characterTable = characterTable;
+		buffer = bytes;
 		memoryStream = new ExpandedMemoryStream( buffer );
+	}
+
+	public void Dispose()
+	{
+		memoryStream.Dispose();
 	}
 
 	public string[] ReadFile()

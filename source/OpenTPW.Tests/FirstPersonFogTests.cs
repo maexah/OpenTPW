@@ -12,7 +12,7 @@ namespace OpenTPW.Tests;
 [TestClass]
 public class FirstPersonFogTests
 {
-	private Level _level = null!;
+	private Level? _level;
 
 	[TestInitialize]
 	public void Remember()

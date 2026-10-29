@@ -2,43 +2,33 @@
 
 public class SdtArchive : IArchive
 {
-	private ExpandedMemoryStream memoryStream;
-	private SoundFile mp2Reader;
+	private readonly ExpandedMemoryStream memoryStream;
+	private readonly SoundFile mp2Reader;
 
-	public byte[] buffer;
-	public List<MP2File> soundFiles;
+	public readonly byte[] buffer;
+	public List<MP2File> soundFiles = new();
 
-	public SdtArchive( string path )
+	/// <summary>Reads a bank from the disk, not the game's file system.</summary>
+	public SdtArchive( string path ) : this( File.ReadAllBytes( path ) )
 	{
-		soundFiles = new List<MP2File>();
-		using var fileStream = File.OpenRead( path );
-		ReadFromStream( fileStream );
 	}
 
-	public SdtArchive( Stream stream )
+	public SdtArchive( Stream stream ) : this( BaseFormat.ReadAll( stream ) )
 	{
-		soundFiles = new List<MP2File>();
-		ReadFromStream( stream );
+	}
+
+	private SdtArchive( byte[] bytes )
+	{
+		buffer = bytes;
+		memoryStream = new ExpandedMemoryStream( buffer );
+		mp2Reader = new SoundFile( new MemoryStream( buffer ) );
+
+		ReadArchive();
 	}
 
 	public void Dispose()
 	{
 		memoryStream.Dispose();
-	}
-
-	public void ReadFromStream( Stream stream )
-	{
-		// Set up read buffer
-		var tempStreamReader = new StreamReader( stream );
-		var fileLength = (int)tempStreamReader.BaseStream.Length;
-
-		buffer = new byte[fileLength];
-		tempStreamReader.BaseStream.ReadAtLeast( buffer, fileLength, throwOnEndOfStream: false );
-		tempStreamReader.Close();
-		memoryStream = new ExpandedMemoryStream( buffer );
-		mp2Reader = new SoundFile( new MemoryStream(buffer) );
-
-		ReadArchive();
 	}
 
 	public void ReadArchive(bool dataOnly = false)

@@ -123,7 +123,7 @@ public sealed class RideNodes
 	public static RideNodes? Load( string directory, string stem, BaseFileSystem files, bool doHeadProcessing,
 		IEnumerable<AnimationFile> clips )
 	{
-		using var stream = files.OpenRead( $"{directory}/{stem}.MD2" );
+		using var stream = files.OpenReadOrNull( $"{directory}/{stem}.MD2" );
 
 		return stream == null ? null : new RideNodes( new ModelFile( stream ), stem, doHeadProcessing, clips );
 	}

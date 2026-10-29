@@ -215,7 +215,7 @@ public partial class ModelFile : BaseFormat
 
 	public class Mesh
 	{
-		public string Name { get; set; }
+		public string Name { get; set; } = "";
 		public uint VertexOffset { get; set; }
 		public uint UvOffset { get; set; }
 		public uint VertCnt { get; set; }
@@ -225,11 +225,11 @@ public partial class ModelFile : BaseFormat
 		public uint VertexCount { get; set; }
 		public uint VertexOrderLen { get; set; }
 		public uint VertexOrderOffset { get; set; }
-		public Vertex[] Vertices { get; set; }
+		public Vertex[] Vertices { get; set; } = [];
 		/// <summary>Unreordered source positions, used by the hoarding corner fitter.</summary>
 		public Vector3[] SourceVertices { get; set; } = [];
-		public uint[] Indices { get; set; }
-		public Vector2[] TexCoords { get; set; }
+		public uint[] Indices { get; set; } = [];
+		public Vector2[] TexCoords { get; set; } = [];
 		/// <summary>This mesh's own transform, relative to its parent node.</summary>
 		public Matrix4x4 TransformMatrix { get; set; }
 
@@ -241,9 +241,9 @@ public partial class ModelFile : BaseFormat
 
 		/// <summary>Index into the model's node list, or -1 for a root. See this class's notes.</summary>
 		public int ParentIndex { get; set; } = -1;
-		public MaterialData[] Materials { get; set; }
+		public MaterialData[] Materials { get; set; } = [];
 
-		public Vector3[] Normals { get; set; }
+		public Vector3[] Normals { get; set; } = [];
 
 		/// <summary>
 		/// Bounding box of this mesh. Not the box its animations quantise vertex positions into -
@@ -302,7 +302,7 @@ public partial class ModelFile : BaseFormat
 		/// </summary>
 		public bool IsUnlit => (Word & 0x1) != 0;
 
-		public string Name;
+		public string Name = "";
 
 		/// <summary>
 		/// The material's flag word, read from the first four bytes of its texture-list entry - so

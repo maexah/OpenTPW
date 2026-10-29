@@ -37,7 +37,7 @@ public class FileSystemCaseTests
 		File.WriteAllBytes( Path.Combine( root, "global", "Speech", "lips.WAD" ), [] );
 
 		files = new BaseFileSystem( root );
-		files.RegisterArchiveHandler<WadArchive>( ".wad" );
+		files.RegisterArchiveHandler( ".wad", path => new WadArchive( path ) );
 	}
 
 	[TestCleanup]

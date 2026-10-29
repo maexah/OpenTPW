@@ -1,10 +1,12 @@
-﻿using OpenTPW.UI;
+﻿using System.Diagnostics.CodeAnalysis;
+using OpenTPW.UI;
 
 namespace OpenTPW;
 
 public class Level
 {
-	internal static Level Current { get; set; }
+	/// <summary>The scene being played, or null before the first one is built.</summary>
+	internal static Level? Current { get; set; }
 
 	public RootPanel Hud { get; set; }
 	public Sun SunLight { get; set; }
@@ -237,6 +239,7 @@ public class Level
 		SetupHud();
 	}
 
+	[MemberNotNull( nameof( SunLight ) )]
 	private void SetupEntities()
 	{
 		// The sun stands in front of the park gates, which is where every gate in the lobby faces.
@@ -315,6 +318,7 @@ public class Level
 	/// through eight slots and polls one. The original's other park messages are not built.
 	/// </para>
 	/// </summary>
+	[MemberNotNull( nameof( SunLight ) )]
 	private void SetupParkEntities()
 	{
 		// The theme's own numbers, global defaults underneath - see ParkBalance for why that stack
@@ -1398,6 +1402,7 @@ public class Level
 	/// widgets the original makes - which is why <see cref="ParkFrontEnd"/> stands beside
 	/// <see cref="FrontEnd"/> rather than a flag being added to it.
 	/// </summary>
+	[MemberNotNull( nameof( Hud ) )]
 	private void SetupParkHud()
 	{
 		Hud = new();
@@ -1433,6 +1438,7 @@ public class Level
 		return pointer;
 	}
 
+	[MemberNotNull( nameof( Hud ) )]
 	private void SetupHud()
 	{
 		Hud = new();

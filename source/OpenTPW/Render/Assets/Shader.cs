@@ -36,7 +36,9 @@ public partial class Shader : Asset
 
 		Recompile();
 
-		var directoryName = System.IO.Path.GetDirectoryName( Path );
+		// A resolved path is rooted, so only a root itself has no folder, and a shader is a file in one.
+		var directoryName = System.IO.Path.GetDirectoryName( Path )
+			?? throw new InvalidOperationException( $"Shader {Path} is not in a folder to watch" );
 		var fileName = System.IO.Path.GetFileName( Path );
 
 		watcher = new FileSystemWatcher( directoryName, fileName );

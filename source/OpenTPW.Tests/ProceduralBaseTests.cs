@@ -12,17 +12,17 @@ namespace OpenTPW.Tests;
 [TestClass]
 public class ProceduralBaseTests
 {
-	private BaseFileSystem was = null!;
+	private BaseFileSystem? was;
 
 	[TestInitialize]
 	public void MountTheGame()
 	{
-		was = FileSystem;
+		was = FileSystemOrNull;
 		FileSystem = GameData.Required();
 	}
 
 	[TestCleanup]
-	public void PutItBack() => FileSystem = was;
+	public void PutItBack() => FileSystemOrNull = was;
 
 	private static readonly ProceduralBase.Grid Park = new( 0f, 0f, 10f, 10f );
 

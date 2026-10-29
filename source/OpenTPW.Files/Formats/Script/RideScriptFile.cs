@@ -248,10 +248,10 @@ public sealed class RideScriptFile : BaseFormat
 
 	protected override void ReadFromFile( string path )
 	{
-		// OpenRead answers null for a member that is not there, and a ride without a script is a
+		// OpenReadOrNull answers null for a member that is not there, and a ride without a script is a
 		// normal thing to ask about - so this is left quiet, as SignFile is, for callers that try
 		// more than one candidate name.
-		using var stream = FileSystem.OpenRead( path );
+		using var stream = FileSystem.OpenReadOrNull( path );
 
 		if ( stream == null )
 			return;

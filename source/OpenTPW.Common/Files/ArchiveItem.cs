@@ -5,5 +5,5 @@
 /// </summary>
 public class ArchiveItem
 {
-	public string? Name { get; set; } = "Unnnamed";
+	public string Name { get; set; } = "Unnnamed";
 }

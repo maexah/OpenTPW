@@ -20,7 +20,7 @@ namespace OpenTPW.Tests;
 [TestClass]
 public class ParkCamcorderKeyOnReleaseTests
 {
-	private Level _level = null!;
+	private Level? _level;
 	private Vector3 _orbitLooksAt;
 	private float _orbitYaw;
 

@@ -289,7 +289,7 @@ public static class SignTexture
 
 	private static byte[]? ReadFont( string fileName )
 	{
-		using var stream = FileSystem.OpenRead( $"fonts/{fileName}" );
+		using var stream = FileSystem.OpenReadOrNull( $"fonts/{fileName}" );
 
 		if ( stream == null )
 		{

@@ -15,7 +15,7 @@ public class BaseFileSystem
 	/// it ships has a lower-case extension except data\global\Speech\lips.WAD, the advisor's lip sync, and
 	/// the five speechHD.SDT speech banks, one in data\global\Speech and one in each theme's Speech folder.
 	/// </summary>
-	private readonly Dictionary<string, Type> archiveHandlers = new( StringComparer.OrdinalIgnoreCase );
+	private readonly Dictionary<string, Func<string, IArchive>> archiveHandlers = new( StringComparer.OrdinalIgnoreCase );
 
 	private readonly ConcurrentDictionary<string, IArchive> archiveCache = new();
 
@@ -56,9 +56,10 @@ public class BaseFileSystem
 			throw new DirectoryNotFoundException( $"There is no directory at {basePath}" );
 	}
 
-	public void RegisterArchiveHandler<T>( string extension ) where T : IArchive
+	/// <summary>Reads every file ending <paramref name="extension"/> as an archive, opened from its path by <paramref name="open"/>.</summary>
+	public void RegisterArchiveHandler( string extension, Func<string, IArchive> open )
 	{
-		archiveHandlers[extension] = typeof( T );
+		archiveHandlers[extension] = open;
 	}
 
 	public string ReadAllText( string relativePath )
@@ -98,8 +99,8 @@ public class BaseFileSystem
 			throw new NotImplementedException( "Can't write to archives" );
 		}
 
-		string? directoryName = Path.GetDirectoryName( absolutePath );
-		if ( !Directory.Exists( directoryName ) )
+		var directoryName = Path.GetDirectoryName( absolutePath );
+		if ( !string.IsNullOrEmpty( directoryName ) )
 			Directory.CreateDirectory( directoryName );
 
 		// What these directories hold is about to change - see Listing.
@@ -136,7 +137,18 @@ public class BaseFileSystem
 		Forget( absolutePath );
 	}
 
+	/// <summary>
+	/// Opens a file that must be there: one an archive does not hold throws, as a missing loose file does.
+	/// <see cref="OpenReadOrNull"/> is for a caller that has something to fall back on.
+	/// </summary>
 	public Stream OpenRead( string relativePath )
+		=> OpenReadOrNull( relativePath ) ?? throw new FileNotFoundException( $"{relativePath} is not in its archive", relativePath );
+
+	/// <summary>
+	/// Opens a file, or null where an archive does not hold it (or there is no reader for the archive). A missing
+	/// loose file still throws, as <see cref="File.Open(string, FileMode)"/> does.
+	/// </summary>
+	public Stream? OpenReadOrNull( string relativePath )
 	{
 		var absolutePath = GetAbsolutePath( relativePath );
 		var (archivePath, internalPath) = FindArchivePath( absolutePath );
@@ -196,7 +208,9 @@ public class BaseFileSystem
 		if ( !string.IsNullOrEmpty( archivePath ) )
 		{
 			var archive = GetArchive( archivePath );
-			var entries = directories ? archive.GetDirectories( internalPath ) : archive.GetFiles( internalPath );
+			// An archive with no reader lists as empty, as it opens as null and sizes as nought.
+			string[] entries = archive == null ? []
+				: directories ? archive.GetDirectories( internalPath ) : archive.GetFiles( internalPath );
 			return entries.Select( entry => Path.Combine( relativePath, entry ) ).ToArray();
 		}
 
@@ -219,7 +233,7 @@ public class BaseFileSystem
 		}
 	}
 
-	private IArchive GetArchive( string archivePath )
+	private IArchive? GetArchive( string archivePath )
 	{
 		if ( archiveCache.TryGetValue( archivePath, out var archive ) )
 		{
@@ -227,9 +241,9 @@ public class BaseFileSystem
 		}
 
 		var extension = Path.GetExtension( archivePath );
-		if ( archiveHandlers.TryGetValue( extension, out var handlerType ) )
+		if ( archiveHandlers.TryGetValue( extension, out var open ) )
 		{
-			archive = (IArchive)Activator.CreateInstance( handlerType, new[] { archivePath } );
+			archive = open( archivePath );
 			archiveCache[archivePath] = archive;
 			return archive;
 		}

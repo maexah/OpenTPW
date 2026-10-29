@@ -498,7 +498,7 @@ public class ParkCamcorderWalkTests
 								$"walking {(forward > 0f ? "forward" : "sideways")} from ({fromX},{fromY}) toward ({x},{y}) " +
 								$"landed on the footprint cell ({landedX},{landedY})" );
 
-							Level.Current = null!;
+							Level.Current = null;
 
 							var (freeX, freeY) = Walked( from, yaw + turned, forward, right );
 

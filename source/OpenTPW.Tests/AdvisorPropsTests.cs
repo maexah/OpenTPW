@@ -148,7 +148,7 @@ public class AdvisorPropsTests
 	[TestMethod]
 	public void LostKingdomsBalanceNamesThePithHelmet()
 	{
-		var before = FileSystem;
+		var before = FileSystemOrNull;
 		FileSystem = GameData.Required();
 
 		try
@@ -159,7 +159,7 @@ public class AdvisorPropsTests
 		}
 		finally
 		{
-			FileSystem = before;
+			FileSystemOrNull = before;
 		}
 	}
 

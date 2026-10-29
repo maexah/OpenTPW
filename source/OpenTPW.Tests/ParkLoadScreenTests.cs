@@ -20,7 +20,7 @@ public class ParkLoadScreenTests
 	private static readonly Vector2 Grass = new( 1100, 800 );
 
 	private string? root;
-	private BaseFileSystem oldSaves = null!;
+	private BaseFileSystem? oldSaves;
 	private Point2 _screen;
 	private Level? _level;
 
@@ -32,7 +32,7 @@ public class ParkLoadScreenTests
 		Log ??= new();
 		FileSystem = GameData.Required();
 
-		oldSaves = SaveFileSystem;
+		oldSaves = SaveFileSystemOrNull;
 		root = Directory.CreateTempSubdirectory( "opentpw-load-park-" ).FullName;
 		Directory.CreateDirectory( Jungle );
 		SaveFileSystem = new BaseFileSystem( root );
@@ -58,7 +58,7 @@ public class ParkLoadScreenTests
 
 		ForgetWhatWasAsked();
 		SetCurrentPlayer( null );
-		SaveFileSystem = oldSaves;
+		SaveFileSystemOrNull = oldSaves;
 		Directory.Delete( root, true );
 
 		ParkBuildMode.Forget();

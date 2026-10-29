@@ -6,7 +6,7 @@ namespace OpenTPW;
 
 public class Entity
 {
-	public Level Level { get; set; }
+	public Level? Level { get; set; }
 	/// <summary>
 	/// Every entity alive, which each one joins in its own constructor.
 	/// </summary>

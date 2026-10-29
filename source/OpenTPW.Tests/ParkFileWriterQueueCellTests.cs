@@ -18,7 +18,7 @@ public class ParkFileWriterQueueCellTests
 	private const uint ShippedClock = 114374804;
 
 	private BaseFileSystem data = null!;
-	private BaseFileSystem oldSaves = null!;
+	private BaseFileSystem? oldSaves;
 	private string? root;
 	private byte[] payload = null!;
 	private ParkWorld shipped = null!;
@@ -41,7 +41,7 @@ public class ParkFileWriterQueueCellTests
 		catalogue = new ParkItemCatalogue( Theme, data );
 		GameClock.Rebase();
 
-		oldSaves = SaveFileSystem;
+		oldSaves = SaveFileSystemOrNull;
 		root = Directory.CreateTempSubdirectory( "opentpw-queue-cells-" ).FullName;
 		Directory.CreateDirectory( Jungle );
 		SaveFileSystem = new BaseFileSystem( root );
@@ -62,7 +62,7 @@ public class ParkFileWriterQueueCellTests
 		if ( root != null )
 		{
 			typeof( Players ).GetProperty( nameof( Players.Current ) )!.SetValue( Players.Roster, null );
-			SaveFileSystem = oldSaves;
+			SaveFileSystemOrNull = oldSaves;
 			Directory.Delete( root, true );
 		}
 

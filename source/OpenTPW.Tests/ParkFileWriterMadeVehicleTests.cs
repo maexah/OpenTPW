@@ -22,7 +22,7 @@ public class ParkFileWriterMadeVehicleTests
 	private const int FerryItem = 1604, Bus = 15;
 
 	private BaseFileSystem data = null!;
-	private BaseFileSystem oldSaves = null!;
+	private BaseFileSystem? oldSaves;
 	private ParkFixedItems? oldItems;
 	private string? root;
 	private ParkWorld shipped = null!;
@@ -40,7 +40,7 @@ public class ParkFileWriterMadeVehicleTests
 		shipped = Read( data.ReadAllBytes( ShippedPark ), out _ );
 		catalogue = new ParkItemCatalogue( Theme, data );
 
-		oldSaves = SaveFileSystem;
+		oldSaves = SaveFileSystemOrNull;
 		oldItems = ParkFixedItems.Current;
 		root = Directory.CreateTempSubdirectory( "opentpw-made-vehicle-" ).FullName;
 		Directory.CreateDirectory( Jungle );
@@ -63,7 +63,7 @@ public class ParkFileWriterMadeVehicleTests
 		{
 			typeof( Players ).GetProperty( nameof( Players.Current ) )!.SetValue( Players.Roster, null );
 			typeof( ParkFixedItems ).GetProperty( nameof( ParkFixedItems.Current ) )!.SetValue( null, oldItems );
-			SaveFileSystem = oldSaves;
+			SaveFileSystemOrNull = oldSaves;
 			Directory.Delete( root, true );
 		}
 

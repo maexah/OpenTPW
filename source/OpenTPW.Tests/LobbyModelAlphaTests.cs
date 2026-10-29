@@ -76,7 +76,7 @@ public class LobbyModelAlphaTests
 	[TestMethod]
 	public void AWctTextureTakesItsFilesAlpha()
 	{
-		var was = FileSystem;
+		var was = FileSystemOrNull;
 		FileSystem = data;
 
 		try
@@ -91,7 +91,7 @@ public class LobbyModelAlphaTests
 		}
 		finally
 		{
-			FileSystem = was;
+			FileSystemOrNull = was;
 		}
 	}
 

@@ -71,7 +71,7 @@ public class ParkRidesTests
 	{
 		try
 		{
-			using var stream = data.OpenRead( path );
+			using var stream = data.OpenReadOrNull( path );
 
 			return stream != null;
 		}

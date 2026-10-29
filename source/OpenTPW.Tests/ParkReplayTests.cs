@@ -24,7 +24,7 @@ public class ParkReplayTests
 		using var clock = new SimulationClockScope();
 		var previousState = ParkState.Current;
 		var previousPeople = ParkPeople.Current;
-		var previousFiles = FileSystem;
+		var previousFiles = FileSystemOrNull;
 		ParkPeople? people = null;
 		try
 		{
@@ -71,7 +71,7 @@ public class ParkReplayTests
 			people?.Delete();
 			Entity.ApplyDeletions();
 			typeof( ParkPeople ).GetProperty( "Current", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic )!.SetValue( null, previousPeople );
-			FileSystem = previousFiles;
+			FileSystemOrNull = previousFiles;
 			typeof( ParkState ).GetProperty( nameof( ParkState.Current ) )!.SetValue( null, previousState );
 		}
 	}

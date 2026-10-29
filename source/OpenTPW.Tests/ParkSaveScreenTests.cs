@@ -30,7 +30,7 @@ public class ParkSaveScreenTests
 	private static readonly Vector2 InTheBox = new( 974, 853 );
 
 	private string? root;
-	private BaseFileSystem oldSaves = null!;
+	private BaseFileSystem? oldSaves;
 	private Point2 _screen;
 	private Level? _level;
 
@@ -42,7 +42,7 @@ public class ParkSaveScreenTests
 		Log ??= new();
 		FileSystem = GameData.Required();
 
-		oldSaves = SaveFileSystem;
+		oldSaves = SaveFileSystemOrNull;
 		root = Directory.CreateTempSubdirectory( "opentpw-save-park-" ).FullName;
 		Directory.CreateDirectory( Jungle );
 		SaveFileSystem = new BaseFileSystem( root );
@@ -68,7 +68,7 @@ public class ParkSaveScreenTests
 
 		ForgetWhatWasAsked();
 		SetCurrentPlayer( null );
-		SaveFileSystem = oldSaves;
+		SaveFileSystemOrNull = oldSaves;
 		Directory.Delete( root, true );
 
 		ParkBuildMode.Forget();
@@ -364,7 +364,7 @@ public class ParkSaveScreenTests
 		Assert.AreEqual( "a.TPWS", Parks() );
 
 		SetCurrentPlayer( new Player( 0, "Test", new PlayerFile { InstantAction = true } ) );
-		Level.Current = null!;
+		Level.Current = null;
 		Click( OpenSavePark( stack ), Ok );
 		Assert.AreEqual( "ParkGadget, ParkViewfinder", Names( stack ) );
 		Assert.AreEqual( "a.TPWS", Parks(), "no park, no save" );
@@ -381,7 +381,7 @@ public class ParkSaveScreenTests
 		RunningPark( 900 );
 		ParkBuildMode.Arm( ParkBuildMode.Path );
 
-		Assert.IsNotNull( Level.Current.WritePark( "held" ) );
+		Assert.IsNotNull( TestRun.CurrentLevel.WritePark( "held" ) );
 		Assert.AreEqual( ParkBuildMode.None, ParkBuildMode.Current );
 		Assert.AreEqual( 900, TickIn( Path.Combine( Jungle, "held.TPWS" ) ) );
 	}
@@ -405,7 +405,7 @@ public class ParkSaveScreenTests
 
 		try
 		{
-			Assert.IsNotNull( Level.Current.WritePark( "ordered" ) );
+			Assert.IsNotNull( TestRun.CurrentLevel.WritePark( "ordered" ) );
 		}
 		finally
 		{
@@ -426,7 +426,7 @@ public class ParkSaveScreenTests
 	{
 		RunningPark( 900 );
 
-		var people = new ParkPeople( Level.Current.Park, state: Level.Current.ParkState );
+		var people = new ParkPeople( TestRun.CurrentLevel.Park, state: TestRun.CurrentLevel.ParkState );
 
 		try
 		{
@@ -438,7 +438,7 @@ public class ParkSaveScreenTests
 			Assert.AreEqual( (cellX, cellY), member.Navigator.Position.Cell, "off the middle, in the same cell" );
 			Assert.IsTrue( people.PickUp( member.ThingId ) );
 
-			Assert.IsNotNull( Level.Current.WritePark( "held" ) );
+			Assert.IsNotNull( TestRun.CurrentLevel.WritePark( "held" ) );
 			Assert.AreEqual( 0, people.CarriedStaff, "put down" );
 
 			var read = ParkIn( Path.Combine( Jungle, "held.TPWS" ) ).People.Single( person => person.ThingId == member.ThingId );
@@ -465,7 +465,7 @@ public class ParkSaveScreenTests
 		RunningPark( 900 );
 
 		var failing = DispatchProxy.Create<IParkInitialState, FailingPark>();
-		((FailingPark)(object)failing).Park = Level.Current.Park!;
+		((FailingPark)(object)failing).Park = TestRun.CurrentLevel.Park!;
 		typeof( Level ).GetProperty( nameof( Level.Park ) )!.SetValue( Level.Current, failing );
 
 		var errors = new List<string>();
@@ -553,7 +553,7 @@ public class ParkSaveScreenTests
 
 		RunningPark( 1234 );
 
-		Assert.AreEqual( "users/1Test/jungle/autosave.TPWS", Level.Current.WriteParkOnLeaving() );
+		Assert.AreEqual( "users/1Test/jungle/autosave.TPWS", TestRun.CurrentLevel.WriteParkOnLeaving() );
 		Assert.AreEqual( "New Save.TPWS, autosave.TPWS", Parks() );
 		Assert.AreEqual( 1234, TickIn( Path.Combine( Jungle, "autosave.TPWS" ) ) );
 		Assert.AreEqual( "autosave.TPWS", Path.GetFileName( SaveFolder.NewestPark( 0, "Test", "jungle" ) ) );
@@ -574,14 +574,14 @@ public class ParkSaveScreenTests
 		Put( "easymode.TPWI", new DateTime( 2026, 10, 1, 14, 18, 0, DateTimeKind.Local ) );
 		RunningPark( 1234 );
 
-		Assert.AreEqual( "users/1Test/jungle/restart.INTS", Level.Current.WriteRestartOnEntering() );
+		Assert.AreEqual( "users/1Test/jungle/restart.INTS", TestRun.CurrentLevel.WriteRestartOnEntering() );
 		Assert.AreEqual( 1234, TickIn( Path.Combine( Jungle, "restart.INTS" ) ) );
 		Assert.IsTrue( File.Exists( Path.Combine( Jungle, "..", "gms.dat" ) ), "the player is written first" );
 		Assert.AreEqual( "", Parks(), "not a saved park" );
 		Assert.AreEqual( "easymode.TPWI", Path.GetFileName( SaveFolder.NewestPark( 0, "Test", "jungle" ) ), "nor entered with" );
 
 		RunningPark( 2000 );
-		Assert.IsNull( Level.Current.WriteRestartOnEntering() );
+		Assert.IsNull( TestRun.CurrentLevel.WriteRestartOnEntering() );
 		Assert.AreEqual( 1234, TickIn( Path.Combine( Jungle, "restart.INTS" ) ), "the park as first entered stays" );
 		Assert.AreEqual( "", Counted() );
 	}
@@ -793,13 +793,13 @@ public class ParkSaveScreenTests
 		Press( menu, Key.Escape );
 		Assert.AreEqual( "ParkGadget, ParkViewfinder, GameMenu", Names( menu ) );
 		Windows( menu );
-		Assert.IsTrue( Level.Current.PausedByWindow() );
+		Assert.IsTrue( TestRun.CurrentLevel.PausedByWindow() );
 		TheFourKeysDoNothing( "behind the game menu" );
 
 		var view = new UI.WindowStack();
 		view.Cover( true );
 		Windows( view );
-		Assert.IsTrue( Level.Current.FullScreenView );
+		Assert.IsTrue( TestRun.CurrentLevel.FullScreenView );
 		TheFourKeysDoNothing( "under the full-screen view" );
 
 		Windows( null );

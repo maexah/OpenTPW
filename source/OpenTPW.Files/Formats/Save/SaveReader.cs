@@ -5,34 +5,27 @@ namespace OpenTPW;
 
 public class SaveReader : BaseFormat
 {
-	private ExpandedMemoryStream memoryStream;
-	public byte[] buffer;
+	private readonly ExpandedMemoryStream memoryStream;
+	public readonly byte[] buffer;
 
-	public SaveReader( string path )
+	/// <summary>Reads a park file from the disk, not the game's file system.</summary>
+	public SaveReader( string path ) : this( File.ReadAllBytes( path ) )
 	{
-		using var fileStream = File.OpenRead( path );
-		ReadFromStream( fileStream );
 	}
 
-	public SaveReader( Stream stream )
+	public SaveReader( Stream stream ) : this( ReadAll( stream ) )
 	{
-		ReadFromStream( stream );
 	}
+
+	private SaveReader( byte[] bytes )
+	{
+		buffer = bytes;
+		memoryStream = new ExpandedMemoryStream( buffer );
+	}
+
 	public void Dispose()
 	{
 		memoryStream.Dispose();
-	}
-
-	protected override void ReadFromStream( Stream stream )
-	{
-		// Set up read buffer
-		var tempStreamReader = new StreamReader( stream );
-		var fileLength = (int)tempStreamReader.BaseStream.Length;
-
-		buffer = new byte[fileLength];
-		tempStreamReader.BaseStream.ReadAtLeast( buffer, fileLength, throwOnEndOfStream: false );
-		tempStreamReader.Close();
-		memoryStream = new ExpandedMemoryStream( buffer );
 	}
 
 	/// <summary>

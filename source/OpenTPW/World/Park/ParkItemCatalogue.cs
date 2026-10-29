@@ -240,10 +240,13 @@ public sealed class ParkItemCatalogue
 	/// passes its own, so that cataloguing a real theme needs no global to have been set - which is the
 	/// rule every other park test already follows.
 	/// </summary>
-	private readonly BaseFileSystem _files;
+	private readonly BaseFileSystem? _files;
 
-	/// <summary>The file system the items were read from, where their models are too.</summary>
-	public BaseFileSystem Files => _files;
+	/// <summary>
+	/// The file system the items were read from, where their models are too: the one passed in, or the game's as it
+	/// stood when this was made. Read with neither, it says so.
+	/// </summary>
+	public BaseFileSystem Files => _files ?? throw new InvalidOperationException( "The catalogue was made with no file system to read" );
 
 	/// <summary>
 	/// Whether this is Instant Action's catalogue: each item's <c>Easy_&lt;stem&gt;.sam</c> laid over its own file, and
@@ -259,7 +262,7 @@ public sealed class ParkItemCatalogue
 	/// </param>
 	public ParkItemCatalogue( string themeName, BaseFileSystem? files = null, bool instantAction = false )
 	{
-		_files = files ?? FileSystem;
+		_files = files ?? FileSystemOrNull;
 		InstantAction = instantAction;
 
 		var theme = themeName.ToLowerInvariant();
@@ -274,7 +277,7 @@ public sealed class ParkItemCatalogue
 
 			try
 			{
-				directories = _files.GetDirectories( path );
+				directories = Files.GetDirectories( path );
 			}
 			catch ( Exception e )
 			{
@@ -335,10 +338,10 @@ public sealed class ParkItemCatalogue
 
 		foreach ( var item in All )
 		{
-			foreach ( var path in _files.GetFiles( item.Directory ).Where( path =>
+			foreach ( var path in Files.GetFiles( item.Directory ).Where( path =>
 				Path.GetExtension( path ).Equals( ".emt", StringComparison.OrdinalIgnoreCase ) ) )
 			{
-				using var stream = _files.OpenRead( path );
+				using var stream = Files.OpenRead( path );
 				var slot = library.RegisterEffect( stream );
 				Log.Info( $"Particle catalogue: {path} -> slot {slot}" );
 			}
@@ -356,7 +359,7 @@ public sealed class ParkItemCatalogue
 		try
 		{
 			var own = $"{directory}/{stem}.sam";
-			using var stream = _files.OpenRead( own );
+			using var stream = Files.OpenRead( own );
 			var description = new ItemDescriptionFile( stream, category );
 
 			if ( Refuses( own, description ) )
@@ -365,7 +368,7 @@ public sealed class ParkItemCatalogue
 			// Only where the wad holds one: whether an item without it is catalogued at all is the gate's to say.
 			if ( InstantAction && Exists( EasyPath( directory, stem ) ) )
 			{
-				using var easy = _files.OpenRead( EasyPath( directory, stem ) );
+				using var easy = Files.OpenRead( EasyPath( directory, stem ) );
 				description.Overlay( easy );
 
 				if ( Refuses( EasyPath( directory, stem ), description ) )
@@ -468,7 +471,7 @@ public sealed class ParkItemCatalogue
 	{
 		try
 		{
-			using var stream = _files.OpenRead( $"{path}/{folder}.sam" );
+			using var stream = Files.OpenRead( $"{path}/{folder}.sam" );
 
 			return new ItemDescriptionFile( stream );
 		}
@@ -488,7 +491,7 @@ public sealed class ParkItemCatalogue
 	{
 		try
 		{
-			return _files.GetSize( path ) > 0;
+			return Files.GetSize( path ) > 0;
 		}
 		catch ( Exception )
 		{

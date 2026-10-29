@@ -61,7 +61,7 @@ internal sealed class ParkSceneHeight( ParkItemCatalogue? catalogue )
 	/// <summary>What an item's model adds to the landscape's height, or null where its height is taken another way, counted once.</summary>
 	private float? LiftOf( ParkItemCatalogue.Item item )
 	{
-		using var stream = FileSystem.OpenRead( $"{item.Directory}/{item.Stem}.MD2" );
+		using var stream = FileSystem.OpenReadOrNull( $"{item.Directory}/{item.Stem}.MD2" );
 
 		if ( stream is null )
 			return null;

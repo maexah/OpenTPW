@@ -446,7 +446,7 @@ public class Sky : Entity
 	/// </summary>
 	private static ImageResult? Decode( string path )
 	{
-		using var stream = FileSystem.OpenRead( path );
+		using var stream = FileSystem.OpenReadOrNull( path );
 
 		if ( stream == null )
 			return null;

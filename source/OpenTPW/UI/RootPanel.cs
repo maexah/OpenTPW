@@ -64,11 +64,8 @@ public class RootPanel
 		Children.ForEach( child => child.Update() );
 	}
 
-	public T AddChild<T>( T? obj = null ) where T : Panel
+	public T AddChild<T>( T obj ) where T : Panel
 	{
-		if ( obj is null )
-			obj = Activator.CreateInstance( typeof( T ) ) as T;
-
 		Children.Add( obj );
 
 		return obj;

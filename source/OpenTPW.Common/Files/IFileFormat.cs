@@ -1,5 +1,6 @@
 ﻿namespace OpenTPW;
 
+// Dead by CODE: nothing implements it. An archive reads its bytes in its constructor, never through this.
 public interface IFileFormat
 {
 	/// <summary>

@@ -1580,7 +1580,7 @@ public class ParkStaffBehaviourTests
 	{
 		Log ??= new();
 
-		var before = FileSystem;
+		var before = FileSystemOrNull;
 		var root = Directory.CreateTempSubdirectory( "opentpw-staff-consts-" );
 
 		try
@@ -1613,7 +1613,7 @@ public class ParkStaffBehaviourTests
 		}
 		finally
 		{
-			FileSystem = before;
+			FileSystemOrNull = before;
 			root.Delete( recursive: true );
 		}
 	}
@@ -1639,7 +1639,7 @@ public class ParkStaffBehaviourTests
 	{
 		Log ??= new();
 
-		var before = FileSystem;
+		var before = FileSystemOrNull;
 		var root = Directory.CreateTempSubdirectory( "opentpw-staff-grades-" );
 
 		try
@@ -1692,7 +1692,7 @@ public class ParkStaffBehaviourTests
 		}
 		finally
 		{
-			FileSystem = before;
+			FileSystemOrNull = before;
 			root.Delete( recursive: true );
 		}
 	}

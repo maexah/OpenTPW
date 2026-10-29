@@ -78,7 +78,7 @@ public class ParkPeopleTests
 	public void AnArrivalJoinsEveryListThatHasToKnowAboutIt()
 	{
 		// The balance is read through the game's own file system, and without it the park names no crossing.
-		var filesBefore = FileSystem;
+		var filesBefore = FileSystemOrNull;
 		FileSystem = data;
 
 		try
@@ -87,7 +87,7 @@ public class ParkPeopleTests
 		}
 		finally
 		{
-			FileSystem = filesBefore;
+			FileSystemOrNull = filesBefore;
 		}
 	}
 

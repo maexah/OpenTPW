@@ -1,12 +1,7 @@
 ﻿namespace OpenTPW;
 
-public interface IArchive : IFileFormat, IDisposable
+public interface IArchive : IDisposable
 {
-	/// <summary>
-	/// Disposes of the resources used by the archive
-	/// </summary>
-	void Dispose();
-
 	/// <summary>
 	/// Retrieves the names of all files within a specified internal path in the archive
 	/// </summary>

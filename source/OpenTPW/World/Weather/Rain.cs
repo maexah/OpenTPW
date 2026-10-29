@@ -90,7 +90,7 @@ public sealed class Rain : WeatherSprites
 	/// 0 for dry, 1 for a park asking for RAINY(1) in the lobby or for the heaviest rain a park's balance
 	/// file allows. Set by <see cref="LobbyWeather"/> and <see cref="ParkWeather"/>.
 	/// </summary>
-	public float Level { get; set; }
+	public float Amount { get; set; }
 
 	private readonly Vector3[] _drops;
 	private readonly Random _rng = new( 0x2A1D );
@@ -106,9 +106,9 @@ public sealed class Rain : WeatherSprites
 	{
 		// Fade rather than snap, because the level changes the moment the camera starts moving
 		// to another island and a storm blinking out mid-flight looks like a bug.
-		_visible = _visible.LerpTo( Level, Time.SmoothingFactor( FadeRate ) );
+		_visible = _visible.LerpTo( Amount, Time.SmoothingFactor( FadeRate ) );
 
-		if ( _visible < 0.01f && Level <= 0f )
+		if ( _visible < 0.01f && Amount <= 0f )
 		{
 			// Fully dry: leave the pool collapsed and stop doing any work at all.
 			if ( _seeded )

@@ -777,7 +777,7 @@ public class ParkFileWriterBoughtAndSoldTests
 		// build path's start of its construction clip on channel 0, frozen on frame nought (RideAnimations.StandOnBuildClip).
 		Assert.IsTrue( catalogue.TryGet( CrazyApe, out var apeItem ) );
 
-		using ( var modelFile = data.OpenRead( $"{apeItem.Directory}/{apeItem.Stem}.MD2" ) )
+		using ( var modelFile = data.OpenReadOrNull( $"{apeItem.Directory}/{apeItem.Stem}.MD2" ) )
 		{
 			var model = new ModelFile( modelFile! );
 			var clips = RideAnimations.Load( apeItem.Directory, apeItem.Stem, data, apeItem.AnimationChannels );
@@ -1154,7 +1154,7 @@ public class ParkFileWriterBoughtAndSoldTests
 		var body = ParkFileWriter.Body( shipped, Running( things ) with { People = people }, out var report, out _ );
 		var written = new ParkWorld( body );
 		var lookups = Models( written ).LookupsOf( 90 )!.Value;
-		var fresh = ParkModelTables.Lookups( new ModelFile( data.OpenRead( "levels/jungle/Rides/monkey/monkey.MD2" )! ), false );
+		var fresh = ParkModelTables.Lookups( new ModelFile( data.OpenReadOrNull( "levels/jungle/Rides/monkey/monkey.MD2" )! ), false );
 
 		Assert.IsNull( written.Problem );
 		Assert.AreEqual( (7, 2, 2), (lookups.Shared, lookups.Attached, report!.Value.Heads) );
@@ -1526,7 +1526,7 @@ public class ParkFileWriterBoughtAndSoldTests
 
 		Assert.IsTrue( catalogue.TryGet( AztecMayhem, out var item ) );
 
-		var fresh = ParkModelTables.Lookups( new ModelFile( data.OpenRead( $"{item.Directory}/{item.Stem}.MD2" )! ), item.DoHeadProcessing );
+		var fresh = ParkModelTables.Lookups( new ModelFile( data.OpenReadOrNull( $"{item.Directory}/{item.Stem}.MD2" )! ), item.DoHeadProcessing );
 
 		Assert.IsNull( written.Problem );
 		Assert.IsTrue( item.DoHeadProcessing );

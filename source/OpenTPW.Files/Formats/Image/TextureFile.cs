@@ -36,9 +36,13 @@ public partial class TextureFile : BaseFormat
 	static float ComputeDequantizationScaleCbCr( int n ) => 1.0f - ((float)n * -0.25f);
 	static float ComputeDequantizationScaleA( int n ) => (float)n + 1.0f;
 
-	public TextureFile( Stream stream )
+	/// <summary>Reads a texture, or with no stream (a file not found) the last resort, <see cref="LastResort"/>.</summary>
+	public TextureFile( Stream? stream )
 	{
-		ReadFromStream( stream );
+		if ( stream == null )
+			LastResort();
+		else
+			ReadFromStream( stream );
 	}
 
 	public TextureFile( string path )
@@ -52,16 +56,28 @@ public partial class TextureFile : BaseFormat
 		Decode( fileData );
 	}
 
+	/// <summary>A texture an archive does not hold reads as <see cref="LastResort"/>, not a throw.</summary>
+	protected override void ReadFromFile( string path )
+	{
+		using var stream = FileSystem.OpenReadOrNull( path );
+
+		if ( stream == null )
+			LastResort();
+		else
+			ReadFromStream( stream );
+	}
+
+	/// <summary>
+	/// Last resort only. Anything drawn into the world goes through Texture, which substitutes the game's own
+	/// not-found texture before this can reach the screen.
+	/// </summary>
+	private void LastResort()
+	{
+		Data = new TextureData( 1, 1, new byte[] { 255, 0, 255, 255 } );
+	}
+
 	protected override void ReadFromStream( Stream stream )
 	{
-		if ( stream == null )
-		{
-			// Last resort only. Anything drawn into the world goes through Texture, which
-			// substitutes the game's own not-found texture before this can reach the screen.
-			Data = new TextureData( 1, 1, new byte[] { 255, 0, 255, 255 } );
-			return;
-		}
-
 		using var binaryReader = new BinaryReader( stream );
 
 		//

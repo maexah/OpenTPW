@@ -49,8 +49,8 @@ internal static class Game
 
 		// Register game data directory
 		FileSystem = new BaseFileSystem( GameDir.Data );
-		FileSystem.RegisterArchiveHandler<WadArchive>( ".wad" );
-		FileSystem.RegisterArchiveHandler<SdtArchive>( ".sdt" );
+		FileSystem.RegisterArchiveHandler( ".wad", path => new WadArchive( path ) );
+		FileSystem.RegisterArchiveHandler( ".sdt", path => new SdtArchive( path ) );
 
 		//
 		// Register save data directory - save\ beside the game's data, where the original keeps it, so that a
@@ -136,8 +136,8 @@ internal static class Game
 		// Run game loop, over whichever level is current - a level built between two frames in place of
 		// another is the one the next frame runs.
 		//
-		Render.OnUpdate += () => Level.Current.Update();
-		Render.OnRender += () => Level.Current.Render();
+		Render.OnUpdate += () => Level.Current?.Update();
+		Render.OnRender += () => Level.Current?.Render();
 		Render.PostUpdate += ReloadLobbyIfAsked;
 		Render.Run();
 
@@ -154,7 +154,7 @@ internal static class Game
 	{
 		// The game closed with a park up leaves the park first, as Game_Shutdown runs state 0xb (0x005503f0), so
 		// Quit Game and the window's own close both write the autosave before the player is saved.
-		Level.Current.WriteParkOnLeaving();
+		Level.Current?.WriteParkOnLeaving();
 
 		// Whoever is still playing is saved as the game closes, however it was closed (WinMain_Main, 0x0045acfc).
 		Players.Roster.SaveAndDeselect();
@@ -206,7 +206,7 @@ internal static class Game
 	/// screen draws its own frames with.
 	/// </summary>
 	private static void ReloadLobbyIfAsked()
-		=> ChangeSceneIfAsked( Level.Current.Unload, LoadPark, () => LoadLobby( openAudio: false ) );
+		=> ChangeSceneIfAsked( () => Level.Current?.Unload(), LoadPark, () => LoadLobby( openAudio: false ) );
 
 	/// <summary>
 	/// <see cref="ReloadLobbyIfAsked"/> with the scene's unload and the two loads handed in, apart only so a test can
@@ -222,7 +222,7 @@ internal static class Game
 			var parkFile = _parkFileAsked;
 			_parkFileAsked = null;
 
-			var fromAPark = Level.Current.Kind == Level.Scene.Park;
+			var fromAPark = Level.Current?.Kind == Level.Scene.Park;
 			UI.ParkCategoryScreens.ParkAsked( fromAPark );
 
 			// The original loads into the running park, whose calendar year no file holds.
@@ -235,7 +235,7 @@ internal static class Game
 			// State 9 goes on to 0xf, which writes restart.INTS when the folder has none (0x0054f3f7). A park built again
 			// from a park here (Load Park's row, Alt+L, Restart Park) is loaded in place there and never passes it.
 			if ( !fromAPark )
-				Level.Current.WriteRestartOnEntering();
+				Level.Current?.WriteRestartOnEntering();
 
 			return;
 		}
@@ -246,7 +246,7 @@ internal static class Game
 		_lobbyReloadAsked = false;
 
 		// State 0xb writes the autosave before it takes a park down; Restart Park and Load Park pass it by.
-		Level.Current.WriteParkOnLeaving();
+		Level.Current?.WriteParkOnLeaving();
 		unload();
 		loadLobby();
 	}

@@ -166,7 +166,7 @@ public sealed record LobbyScript
 	/// </summary>
 	public static LobbyScript Read( string themeName )
 	{
-		using var stream = FileSystem.OpenRead( $"lobby/{themeName.ToLowerInvariant()}.txt" );
+		using var stream = FileSystem.OpenReadOrNull( $"lobby/{themeName.ToLowerInvariant()}.txt" );
 
 		if ( stream == null )
 		{

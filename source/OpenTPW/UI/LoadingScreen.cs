@@ -197,7 +197,7 @@ internal sealed class LoadingScreen : IDisposable
 			return null;
 		}
 
-		using var stream = FileSystem.OpenRead( chosen );
+		using var stream = FileSystem.OpenReadOrNull( chosen );
 		var image = ImageResult.FromStream( stream, ColorComponents.RedGreenBlueAlpha );
 
 		return new Texture( image.Data, image.Width, image.Height, TextureFlags.OwnPixels );

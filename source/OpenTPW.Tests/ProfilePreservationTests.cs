@@ -11,8 +11,8 @@ namespace OpenTPW.Tests;
 public class ProfilePreservationTests
 {
 	private string root = null!;
-	private BaseFileSystem oldData = null!;
-	private BaseFileSystem oldSaves = null!;
+	private BaseFileSystem? oldData;
+	private BaseFileSystem? oldSaves;
 	private GameOptions oldOptions = null!;
 	private object? oldThemes;
 	private static readonly FieldInfo Themes = typeof( SaveFolder ).GetField( "_themes", BindingFlags.NonPublic | BindingFlags.Static )!;
@@ -21,8 +21,8 @@ public class ProfilePreservationTests
 	[TestInitialize]
 	public void IsolateFiles()
 	{
-		oldData = FileSystem;
-		oldSaves = SaveFileSystem;
+		oldData = FileSystemOrNull;
+		oldSaves = SaveFileSystemOrNull;
 		oldOptions = GameOptions.Current;
 		oldThemes = Themes.GetValue( null );
 		root = Directory.CreateTempSubdirectory( "opentpw-profiles-" ).FullName;
@@ -38,8 +38,8 @@ public class ProfilePreservationTests
 	[TestCleanup]
 	public void RestoreFiles()
 	{
-		FileSystem = oldData;
-		SaveFileSystem = oldSaves;
+		FileSystemOrNull = oldData;
+		SaveFileSystemOrNull = oldSaves;
 		GameOptions.Current = oldOptions;
 		oldOptions.ApplySound();
 		Themes.SetValue( null, oldThemes );

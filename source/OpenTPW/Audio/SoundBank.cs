@@ -73,9 +73,9 @@ public sealed class SoundBank
 
 		try
 		{
-			using var stream = file == null ? null : FileSystem.OpenRead( file );
+			using var stream = file == null ? null : FileSystem.OpenReadOrNull( file );
 
-			if ( stream == null )
+			if ( file == null || stream == null )
 			{
 				Log.Warning( $"Sound bank '{wanted}' is not there" );
 				return null;

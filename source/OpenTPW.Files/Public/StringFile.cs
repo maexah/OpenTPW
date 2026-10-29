@@ -2,7 +2,7 @@
 
 public sealed class StringFile : BaseFormat
 {
-	public string[] Entries { get; private set; }
+	public string[] Entries { get; private set; } = [];
 
 	/// <summary>
 	/// Each string's parts, text and parameters in the order they stand. <see cref="Entries"/> holds a string's

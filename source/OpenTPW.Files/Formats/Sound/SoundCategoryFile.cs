@@ -461,7 +461,7 @@ public sealed class SoundCategoryFile
 	{
 		try
 		{
-			using var stream = FileSystem.OpenRead( path );
+			using var stream = FileSystem.OpenReadOrNull( path );
 
 			if ( stream == null )
 				return Array.Empty<byte>();

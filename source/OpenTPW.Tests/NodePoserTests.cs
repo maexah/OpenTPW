@@ -191,8 +191,8 @@ public class NodePoserTests
 	{
 		var data = GameData.Required();
 
-		using var modelStream = data.OpenRead( "levels/jungle/features/end/End.MD2" )!;
-		using var clipStream = data.OpenRead( "levels/jungle/features/end/Endm1.MD2" )!;
+		using var modelStream = data.OpenReadOrNull( "levels/jungle/features/end/End.MD2" )!;
+		using var clipStream = data.OpenReadOrNull( "levels/jungle/features/end/Endm1.MD2" )!;
 
 		var model = new ModelFile( modelStream );
 		var clip = new AnimationFile( clipStream );
@@ -228,8 +228,8 @@ public class NodePoserTests
 	{
 		var data = GameData.Required();
 
-		using var modelStream = data.OpenRead( "levels/jungle/features/bus/Bus.MD2" )!;
-		using var clipStream = data.OpenRead( "levels/jungle/features/bus/Busm1.MD2" )!;
+		using var modelStream = data.OpenReadOrNull( "levels/jungle/features/bus/Bus.MD2" )!;
+		using var clipStream = data.OpenReadOrNull( "levels/jungle/features/bus/Busm1.MD2" )!;
 
 		var model = new ModelFile( modelStream );
 		var clip = new AnimationFile( clipStream );

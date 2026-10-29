@@ -394,7 +394,7 @@ public sealed class ParkBumperBoats : Entity
 
 		file = null;
 
-		using var stream = FileSystem.OpenRead( path );
+		using var stream = FileSystem.OpenReadOrNull( path );
 
 		if ( stream is null )
 			return seats;

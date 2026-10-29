@@ -39,9 +39,9 @@ was profiled from 8.08 s to 6.73 s, and to 5.61 s once one blank texture was han
 
 ## Package advisories (2026-09-13)
 
-The test project's `Microsoft.NET.Test.Sdk` 16.11.0 is the only source of the high-severity `Newtonsoft.Json`
-9.0.1 advisory, and it ships in nothing but the tests. Alexah was asked on 2026-09-13 and chose to leave it for
-now; do not raise it again. `SixLabors.ImageSharp` 3.1.6 (moderate and high) went with `OpenTPW.ModKit`, the upstream
+The test project's `Microsoft.NET.Test.Sdk` 16.11.0 was the only source of the high-severity `Newtonsoft.Json`
+9.0.1 advisory, shipped in nothing but the tests. Alexah chose on 2026-09-13 to leave it for then, and on 2026-10-29
+asked for every build warning to be fixed at its cause: 17.14.1 takes a patched `Newtonsoft.Json`. `SixLabors.ImageSharp` 3.1.6 (moderate and high) went with `OpenTPW.ModKit`, the upstream
 editor nothing built in, which Alexah had removed on 2026-10-29. `Zio` 0.17.0 (low) is gone: Q753 dropped it from
 `OpenTPW.Common.csproj`, nothing referenced it and it shipped in every weekly zip.
 

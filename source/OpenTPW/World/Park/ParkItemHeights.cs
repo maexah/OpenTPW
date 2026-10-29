@@ -33,7 +33,7 @@ internal static class ParkItemHeights
 		// answers a missing member with no stream at all.
 		try
 		{
-			using var stream = FileSystem.OpenRead( path );
+			using var stream = FileSystem.OpenReadOrNull( path );
 
 			if ( stream != null )
 			{

@@ -26,7 +26,7 @@ public class ParkRegionEffectsTests
 	private BaseFileSystem data = null!;
 	private ParkWorld shipped = null!;
 	private string? root;
-	private BaseFileSystem oldSaves = null!;
+	private BaseFileSystem? oldSaves;
 
 	private string Jungle => Path.Combine( root!, "users", "1Test", "jungle" );
 
@@ -38,7 +38,7 @@ public class ParkRegionEffectsTests
 		FileSystem = data;
 		shipped = Read( data.ReadAllBytes( ShippedPark ) );
 
-		oldSaves = SaveFileSystem;
+		oldSaves = SaveFileSystemOrNull;
 		root = Directory.CreateTempSubdirectory( "opentpw-region-effects-" ).FullName;
 		Directory.CreateDirectory( Jungle );
 		SaveFileSystem = new BaseFileSystem( root );
@@ -52,7 +52,7 @@ public class ParkRegionEffectsTests
 			return;
 
 		SetCurrentPlayer( null );
-		SaveFileSystem = oldSaves;
+		SaveFileSystemOrNull = oldSaves;
 		Directory.Delete( root, true );
 		ParkOrbitCameraMode.Forget();
 		Unimplemented.Forget();

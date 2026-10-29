@@ -16,7 +16,7 @@ public class SoundFileTests
 	public void ABankReadByPathHoldsItsBytes()
 	{
 		var folder = Directory.CreateTempSubdirectory( "opentpw-soundfile-" );
-		var previous = FileSystem;
+		var previous = FileSystemOrNull;
 
 		try
 		{
@@ -30,7 +30,7 @@ public class SoundFileTests
 		}
 		finally
 		{
-			FileSystem = previous;
+			FileSystemOrNull = previous;
 			folder.Delete( recursive: true );
 		}
 	}

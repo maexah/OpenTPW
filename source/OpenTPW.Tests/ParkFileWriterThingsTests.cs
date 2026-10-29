@@ -619,7 +619,7 @@ public class ParkFileWriterThingsTests
 	{
 		Assert.IsTrue( catalogue.TryGet( shipped.Objects.Single( placed => placed.ThingId == thing ).CatalogueId, out var item ) );
 
-		using var stream = data.OpenRead( ParkRides.ScriptPathFor( item ) );
+		using var stream = data.OpenReadOrNull( ParkRides.ScriptPathFor( item ) );
 
 		return new RideScriptFile( stream! );
 	}
@@ -628,7 +628,7 @@ public class ParkFileWriterThingsTests
 	{
 		try
 		{
-			using var stream = data.OpenRead( ParkRides.ScriptPathFor( item ) );
+			using var stream = data.OpenReadOrNull( ParkRides.ScriptPathFor( item ) );
 
 			return stream == null ? null : new RideScript( new RideScriptFile( stream ) );
 		}

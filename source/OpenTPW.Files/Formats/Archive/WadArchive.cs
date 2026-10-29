@@ -15,12 +15,20 @@ public sealed class WadArchiveFile : ArchiveFile
 
 	internal byte[]? CachedData { get; set; }
 
+	/// <summary>The archive this entry's bytes are read from.</summary>
+	private readonly WadArchive _archive;
+
+	internal WadArchiveFile( WadArchive archive )
+	{
+		_archive = archive;
+	}
+
 	public override byte[] GetData()
 	{
 		if ( CachedData != null )
 			return CachedData;
 
-		var data = Archive.GetData( OffsetInArchive, SizeInArchive );
+		var data = _archive.GetData( OffsetInArchive, SizeInArchive );
 
 		// Decompress file if necessary
 		if ( Compressed )
@@ -43,24 +51,35 @@ public sealed class WadArchiveFile : ArchiveFile
 
 public sealed class WadArchive : IArchive
 {
-	private ExpandedMemoryStream memoryStream;
-	public byte[] Buffer { get; internal set; }
+	private readonly ExpandedMemoryStream memoryStream;
+	public byte[] Buffer { get; }
 
 	/// <summary>
 	/// The root directory ("/") for this archive.
 	/// This may contain a collection of <see cref="ArchiveItem"/>s as children.
 	/// </summary>
-	public ArchiveDirectory Root { get; internal set; }
+	public ArchiveDirectory Root { get; } = new( "/" );
 
-	public WadArchive( string path )
+	/// <summary>Reads an archive from the disk, not the game's file system.</summary>
+	public WadArchive( string path ) : this( File.OpenRead( path ) )
 	{
-		using var fileStream = File.OpenRead( path );
-		ReadFromStream( fileStream );
 	}
 
+	/// <summary>Reads an archive from where <paramref name="stream"/> stands; it consumes and closes the stream.</summary>
 	public WadArchive( Stream stream )
 	{
-		ReadFromStream( stream );
+		using ( stream )
+		{
+			var length = stream.Length - stream.Position;
+			if ( length < 88 || length > int.MaxValue )
+				throw new InvalidDataException( "Unsupported or truncated WAD length." );
+			Buffer = new byte[(int)length];
+			stream.ReadExactly( Buffer );
+		}
+
+		memoryStream = new ExpandedMemoryStream( Buffer );
+
+		ReadArchive();
 	}
 
 	public void Dispose()
@@ -139,10 +158,7 @@ public sealed class WadArchive : IArchive
 			// Unused / unknown
 			memoryStream.Seek( 4, SeekOrigin.Current );
 
-			var newFile = new WadArchiveFile
-			{
-				Archive = this
-			};
+			var newFile = new WadArchiveFile( this );
 
 			// Filename offset
 			var filenameOffset = memoryStream.ReadUInt32();
@@ -197,7 +213,7 @@ public sealed class WadArchive : IArchive
 
 				foreach ( string dir in splitPath )
 				{
-					ArchiveDirectory newSubDir;
+					ArchiveDirectory? newSubDir;
 
 					// The same comparison the tree is read back with, so "Generic" and "generic" are one
 					// directory both going in and coming out.
@@ -223,24 +239,6 @@ public sealed class WadArchive : IArchive
 		}
 	}
 
-	public void ReadFromStream( Stream stream )
-	{
-		// Preserve this API's ownership contract: it consumes and closes the supplied stream.
-		using ( stream )
-		{
-			var length = stream.Length - stream.Position;
-			if ( length < 88 || length > int.MaxValue )
-				throw new InvalidDataException( "Unsupported or truncated WAD length." );
-			Buffer = new byte[(int)length];
-			stream.ReadExactly( Buffer );
-		}
-
-		memoryStream = new ExpandedMemoryStream( Buffer );
-		Root = new ArchiveDirectory( "/" );
-
-		ReadArchive();
-	}
-
 	/// <summary>
 	/// Whether two names in the archive are the same name.
 	///
@@ -258,7 +256,7 @@ public sealed class WadArchive : IArchive
 	/// </summary>
 	private static string[] SplitPath( string path ) => path.Split( ['\\', '/'], StringSplitOptions.RemoveEmptyEntries );
 
-	private T GetItem<T>( string internalPath ) where T : ArchiveItem
+	private T? GetItem<T>( string internalPath ) where T : ArchiveItem
 	{
 		var internalDirectory = Root;
 
@@ -282,9 +280,9 @@ public sealed class WadArchive : IArchive
 		throw new FileNotFoundException( $"File not found: {internalPath}" );
 	}
 
-	private List<T> EnumerateItems<T>( string internalPath ) where T : ArchiveItem
+	private List<T>? EnumerateItems<T>( string internalPath ) where T : ArchiveItem
 	{
-		var internalDirectory = Root;
+		ArchiveDirectory? internalDirectory = Root;
 
 		if ( internalPath != "" )
 		{
@@ -294,16 +292,16 @@ public sealed class WadArchive : IArchive
 			}
 		}
 
-		return internalDirectory?.Children.OfType<T>().ToList() ?? null;
+		return internalDirectory?.Children.OfType<T>().ToList();
 	}
 
-	public ArchiveFile GetFile( string internalPath )
+	public ArchiveFile? GetFile( string internalPath )
 	{
 		return GetItem<ArchiveFile>( internalPath );
 	}
 
 	// Dead by CODE: nothing calls it.
-	public ArchiveDirectory GetDirectory( string internalPath )
+	public ArchiveDirectory? GetDirectory( string internalPath )
 	{
 		return GetItem<ArchiveDirectory>( internalPath );
 	}
@@ -311,13 +309,13 @@ public sealed class WadArchive : IArchive
 	public string[] GetFiles( string internalPath )
 	{
 		var files = EnumerateItems<ArchiveFile>( internalPath );
-		return (files?.Select( x => x.Name ).ToArray() ?? Array.Empty<string>())!;
+		return files?.Select( x => x.Name ).ToArray() ?? [];
 	}
 
 	public string[] GetDirectories( string internalPath )
 	{
 		var files = EnumerateItems<ArchiveDirectory>( internalPath );
-		return (files?.Select( x => x.Name ).ToArray() ?? Array.Empty<string>())!;
+		return files?.Select( x => x.Name ).ToArray() ?? [];
 	}
 
 	private void ValidateSpan( long offset, long length, string field )
@@ -333,7 +331,7 @@ public sealed class WadArchive : IArchive
 		return memoryStream.ReadBytes( length );
 	}
 
-	public Stream OpenFile( string path )
+	public Stream? OpenFile( string path )
 	{
 		var file = GetFile( path );
 
@@ -345,7 +343,7 @@ public sealed class WadArchive : IArchive
 
 	public long GetFileSize( string path )
 	{
-		return GetFile( path ).GetData().Length;
+		return GetFile( path )?.GetData().Length ?? 0L;
 	}
 
 	public DateTime GetModifiedTime()

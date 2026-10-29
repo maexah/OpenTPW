@@ -229,7 +229,7 @@ public sealed class ParkCoasterPylon
 	/// <summary>The pylon type <paramref name="index"/> of the coaster item in <paramref name="directory"/>, or null where its files do not read.</summary>
 	public static ParkCoasterPylon? Load( string directory, BaseFileSystem files, int index = 0 )
 	{
-		using var samStream = files.OpenRead( $"{directory}/coaster.sam" );
+		using var samStream = files.OpenReadOrNull( $"{directory}/coaster.sam" );
 
 		if ( samStream == null )
 			return null;
@@ -240,7 +240,7 @@ public sealed class ParkCoasterPylon
 		if ( string.IsNullOrEmpty( stem ) )
 			return null;
 
-		using var modelStream = files.OpenRead( $"{directory}/{stem}.MD2" );
+		using var modelStream = files.OpenReadOrNull( $"{directory}/{stem}.MD2" );
 
 		if ( modelStream == null )
 			return null;

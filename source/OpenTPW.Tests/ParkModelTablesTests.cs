@@ -39,7 +39,7 @@ public class ParkModelTablesTests
 	{
 		Assert.IsTrue( catalogue.TryGet( id, out var item ) );
 
-		using var stream = data.OpenRead( $"{item.Directory}/{item.Stem}.MD2" );
+		using var stream = data.OpenReadOrNull( $"{item.Directory}/{item.Stem}.MD2" );
 
 		return (new ModelFile( stream! ), RideAnimations.Load( item.Directory, item.Stem, data, item.AnimationChannels ), item);
 	}

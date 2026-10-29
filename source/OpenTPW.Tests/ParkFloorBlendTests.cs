@@ -18,17 +18,17 @@ namespace OpenTPW.Tests;
 [TestClass]
 public class ParkFloorBlendTests
 {
-	private BaseFileSystem was = null!;
+	private BaseFileSystem? was;
 
 	[TestInitialize]
 	public void MountTheGame()
 	{
-		was = FileSystem;
+		was = FileSystemOrNull;
 		FileSystem = GameData.Required();
 	}
 
 	[TestCleanup]
-	public void PutItBack() => FileSystem = was;
+	public void PutItBack() => FileSystemOrNull = was;
 
 	/// <summary>
 	/// <b>The tile is handed on bottom up</b>: its row k lands at the texture's row n - 1 - k, opaque, each channel kept.

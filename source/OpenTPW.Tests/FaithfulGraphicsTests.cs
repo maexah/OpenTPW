@@ -25,7 +25,7 @@ public class FaithfulGraphicsTests
 		var folder = Path.Combine( Path.GetTempPath(), $"opentpw-graphics-{System.Guid.NewGuid():N}" );
 		Directory.CreateDirectory( folder );
 		var was = GameOptions.Current;
-		var wasSaves = SaveFileSystem;
+		var wasSaves = SaveFileSystemOrNull;
 
 		try
 		{
@@ -88,7 +88,7 @@ public class FaithfulGraphicsTests
 		finally
 		{
 			GameOptions.Current = was;
-			SaveFileSystem = wasSaves;
+			SaveFileSystemOrNull = wasSaves;
 			Directory.Delete( folder, true );
 		}
 	}

@@ -26,7 +26,7 @@ public class FreshParkFileTests
 	private FreshPark fresh = null!;
 	private ParkItemCatalogue catalogue = null!;
 	private string? root;
-	private BaseFileSystem oldSaves = null!;
+	private BaseFileSystem? oldSaves;
 
 	private string Jungle => Path.Combine( root!, "users", "1Test", "jungle" );
 
@@ -39,7 +39,7 @@ public class FreshParkFileTests
 		catalogue = new ParkItemCatalogue( "jungle", data );
 		fresh = new FreshPark( "jungle", new ParkBalance( "jungle", easyMode: false ), catalogue, data, seed: 1 );
 
-		oldSaves = SaveFileSystem;
+		oldSaves = SaveFileSystemOrNull;
 		root = Directory.CreateTempSubdirectory( "opentpw-fresh-file-" ).FullName;
 		Directory.CreateDirectory( Jungle );
 		SaveFileSystem = new BaseFileSystem( root );
@@ -54,7 +54,7 @@ public class FreshParkFileTests
 			return;
 
 		typeof( Players ).GetProperty( nameof( Players.Current ) )!.SetValue( Players.Roster, null );
-		SaveFileSystem = oldSaves;
+		SaveFileSystemOrNull = oldSaves;
 		Directory.Delete( root, true );
 		ParkOrbitCameraMode.Forget();
 		Unimplemented.Forget();

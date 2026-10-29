@@ -149,7 +149,7 @@ public abstract class WeatherSprites : ModelEntity
 	/// </summary>
 	private static Texture LoadTexture( string path )
 	{
-		using var stream = FileSystem.OpenRead( path );
+		using var stream = FileSystem.OpenReadOrNull( path );
 
 		if ( stream == null )
 		{

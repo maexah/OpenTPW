@@ -53,6 +53,6 @@ public class Panel
 	public void Delete()
 	{
 		OnDelete();
-		Level.Current.Hud.Children.Remove( this );
+		Level.Current?.Hud.Children.Remove( this );
 	}
 }

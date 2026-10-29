@@ -18,7 +18,6 @@ public sealed class MP2File : ArchiveFile
 		MP2_STEREO = 37 // stereo: 112kbit/s Layer II or 64kbit/s Layer I in the shipped banks
 	}
 
-	public string Name { get; set; }
 	public int Header { get; set; }
 
 	/// <summary>The audio on its own, without the entry's header.</summary>

@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace OpenTPW;
 
 partial class Texture
@@ -61,6 +63,7 @@ partial class Texture
 	/// rather than becoming a dictionary that would need invalidating by hand.
 	/// </para>
 	/// </summary>
+	[MemberNotNullWhen( true, nameof( NativeTexture ), nameof( NativeTextureView ) )]
 	private bool TryAdoptCached( string path, TextureFlags flags )
 	{
 		if ( !TryGetCachedTexture( path, out var cached ) )

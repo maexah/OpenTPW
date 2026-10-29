@@ -90,9 +90,6 @@ internal sealed class OptionsScreen : UiWindow
 	/// <summary>Every row's line is a child with this id (0x004a43b0 asks each panel for it).</summary>
 	private const int LineId = 0x1d4c9;
 
-	/// <summary>How many video cards there are to choose from - OpenTPW draws on whichever the system gives it.</summary>
-	private const int VideoCards = 1;
-
 	private static readonly UiColour TitleColour = new( 234, 239, 102 );
 
 	/// <summary>The options as they were when the screen opened, for the cross to put back.</summary>
@@ -348,13 +345,14 @@ internal sealed class OptionsScreen : UiWindow
 		ShowResolution();
 	}
 
-	/// <summary>The video card (0x1d4d3): to the secondary if there is one, back to the primary if not.</summary>
+	/// <summary>
+	/// The video card (0x1d4d3). The original switches to a secondary card where there is one; OpenTPW draws on
+	/// whichever card the system gives it, so there is never a secondary, and the button only takes back one a
+	/// saved config asked for (the row is dead, <c>docs/exe/ui.md</c>).
+	/// </summary>
 	private void SwitchVideoCard()
 	{
-		if ( Options.SecondaryVideoCard )
-			Options.SecondaryVideoCard = false;
-		else if ( VideoCards > 1 )
-			Options.SecondaryVideoCard = true;
+		Options.SecondaryVideoCard = false;
 
 		ShowVideoCard();
 	}
@@ -466,8 +464,9 @@ internal sealed class OptionsScreen : UiWindow
 		};
 	}
 
+	/// <summary>Always the primary card, a saved secondary included: there is no secondary to draw on (<see cref="SwitchVideoCard"/>).</summary>
 	private void ShowVideoCard()
-		=> _videoCard.Text = Line( UIStrings.Videocard, Localization.Get( Options.SecondaryVideoCard && VideoCards > 1 ? UIStrings.Secondary : UIStrings.Primary ) );
+		=> _videoCard.Text = Line( UIStrings.Videocard, Localization.Get( UIStrings.Primary ) );
 
 	/// <summary>
 	/// The resolution line. It is only a choice in full screen, where the display is given a mode of
