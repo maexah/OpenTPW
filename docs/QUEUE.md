@@ -71,6 +71,13 @@ park for the website, go first. Q804 stopped the photographs: no picture with th
   census to read the steps by. Her level ground already draws none: photographs of it are usable now. Q750 is what this waits on,
   so Alexah may want Q750 or this ordered first (a reorder is Alexah's). Confirm: the same cameras in her park and in the original,
   the lines gone, with the stock park unchanged.
+  **Split (2026-10-29):** the decode is done as Q812 (`park-engine.md`, "Where a placed object's model stands"). Left, the build:
+  at a thing's making and at a load, (1) set each base vertex `ProceduralBase` lists (every mesh of the walk, in its order) to its
+  nearest terrain corner's height, carried back into the mesh's own space; (2) drape every vertex of a queue piece, a hoarding piece
+  and a kart or water track piece (and `mammtunn`'s `gk_mam1`) by the ground under it less the height it was made at, on the
+  cell's own triangle (with Q398, or say at the site where ours splits differently); (3) the interpolating pass for the nine
+  lookup-`0x8` meshes, or a counted gap for it. `original/basevertices.py` reads the original's side: 917 on, 0 off, drape spread
+  0.0001 in her park. Ticks Q750 and Q695 with it; the track pieces' drape is `TRACK_PIECE_DRAPE` (`ParkTrackPieces`).
 - [ ] **Q810. The gate's doors stand open in Alexah's Full Simulation park (Q805's build).** From Q805 and Q809. Do Q779 here,
   its decode first (how many channels the original makes a car's model with, and what its loader reads for them), so that
   `ParkThingStates` reads her `New Save.TPWS` and `autosave.TPWS` whole and the gate's channel comes back held on role 5 entry 1;
@@ -3173,6 +3180,9 @@ state machine.
   a park, count those cells, and shoot one beside the original's; then drape the pieces as the track tiles are (with Q587).
   The same call, `0x00469940`, also conforms the base vertices of every flag-8 object to the terrain's corners, a thing bought or
   loaded (Q750; fork watch 2026-10-27, verify-world H1).
+  - **Proven (Q812):** a loaded park's pieces are draped too: `RideSystem_LoadModels` remakes each with its saved flags (`0x33a`,
+    `0x00464942`), and in the original's memory, loading Alexah's New Save, all 78 queue pieces and 163 hoarding pieces follow the
+    ground under each vertex to 0.0001 (`original/basevertices.py`). The build is Q808's.
   - **Counted (Q807):** 58 of 78 queue cells of Alexah's Full Simulation jungle lie on sloped ground (largest corner step 1.00; the
     stock park's 4 are level), and ours draws open slivers at them that the original's frame of the same file does not (Q804).
 - [ ] **Q750. Every placed thing's floor edge conformed to the terrain, as the original's (`0x469940` apply mode).** From the fork
@@ -3191,6 +3201,9 @@ state machine.
   original's; then build. Confirm with a sloped footprint in both games, the rim's vertex heights against the terrain's
   corners read from the original with `tpwmem.py`. Next to Q398 (the diagonal), Q695 (the drape of queue and boundary pieces)
   and Q210 (hoardings' base-vertex gate).
+  - **Decoded (Q812):** the instance nodes carry the type's `0x1000` (the clone copies each mesh record whole, `0x00454d72`), and
+    the original's live memory shows every listed base vertex on its corner in Alexah's park (917 of 917). The control word is still
+    unsettled (the note below). The build is Q808's.
   - **Counted (Q807, the "count the footprints on sloped ground" step):** in Alexah's Full Simulation jungle 58 placed things stand
     over a step above 0.05 between the plate's midway height and a terrain corner under the footprint (the Sun God, Tom Tom Twister
     2.5; Costume Shop, Steak Restaurant, Giant Puzzle 1.5), the stock park's 14 none (`rim` on the console). Their rims draw as

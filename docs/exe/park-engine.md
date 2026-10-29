@@ -240,10 +240,50 @@ nothing added (`0x0046a332`..`0x0046a33c`; the base height is used only by the d
 carried back through the float LU inverse (`0x00470040`, `0x00469b37`, applied at `0x0046a121`) into the instance node's own
 vertices, its box only widened. A corner past the heightfield's last ends that node and skips its children (`0x00469dd7`..
 `0x0046a2a0`). So on a slope the floor's rim lies on the terrain's corners while the inner floor stays at the height above.
-Read from the bytes; not read: that the instance nodes carry the type node's `0x1000` (the clone in `FUN_00463060` is not
-traced). The instancer then sets `0x10000` on every node of every instance it makes and calls `FUN_00473c30`
+**The instance's nodes carry the type's flags and their own vertices** (Q812). `FUN_00463060` makes the instance by
+`FUN_004557c0` -> `FUN_00454a10` with `0x211f` (`0x231f` under its own `0x800`), which copies each mesh node's 0xa0-byte record
+whole (`0x00454d72`), so `0x1000`, `0x20000` and the list pointer at `+0x98` come across; bit `0x4` copies the vertex blocks too
+(`0x00454fa1`, each node's `+0x60` moved onto the copy from `0x00454fd2`), so the conform writes the instance's own vertices and
+reads the type's (`[header + 0x9c]`, the master) at rest. The instancer then sets `0x10000` on every node of every instance it makes and calls `FUN_00473c30`
 (`0x00463937`), which recomputes the face normals of the nodes so flagged (`FUN_00473a40`, cross products into the node's
 face-normal block) and clears header `0x40000`; whether the face normals reach the lighting is unread.
+
+**`FUN_00469940( model, scene, H, mode )` makes two passes** (Q812). The first is `FUN_00469a80( master root, instance root )`
+over the whole tree (`0x004699d2`); the second runs it again on each mesh node with a list at `+0x98` (`0x004699eb`), that node
+alone (`0x00469b1d`) and in the interpolating mode (tolerances 0.1 and 100, `0x00469a96`). The mode's bit `0x1` is the header's
+`0x100`; bits `0x2` (draped nodes only) and `0x4` (no draped node) are never passed by the instancer. In the apply mode, node by
+node, children after their parent (a node flagged `0x200` is passed over, its children not, `0x00469b0e`):
+
+- **Drape**, a node flagged `0x20000` (`0x00469ad0`): every vertex is carried into the world, its cell's triangle chosen by the
+  cell word's `0x4` (`0x0046a34c`; Q398's note), and the vertex raised by the height there less H, then carried back.
+- **Conform**, any other node, and only one flagged `0x1000` (`0x00469af7`): a vertex is taken only where its index is the next
+  entry of the type load's list (`[[model + 8] + 0x14]`, `+0xc` entries, consumed in the walk's order), and stands at the nearest
+  corner, as above.
+- **Interpolate**, the second pass: the vertices `ProceduralBase_Build`'s second count listed for a mesh flagged `0x40` other
+  than the floor (`0x0046a8a3`..`0x0046a934`: that node alone, a vertex within 0.1 of a cell line on either axis at any height,
+  on a side the footprint's outline runs along; the list `{ count, pointer }` at `+0x98`). The vertex snaps to the line within
+  0.1 and rises by the ground interpolated along that cell line, less H (`0x0046a2a7`..`0x0046a32d`).
+
+**Which nodes take which.** A mesh node's run-time `0x40` is its node-lookup record's flag `0x8`, and `0x20000` the record's
+`0x10000` (`FUN_0044a870`, `0x0044a942`..`0x0044a954`); `FUN_00461f10` also marks `0x20000` on every mesh of a model loaded with
+load bit `0x2`, the queue, kart, water and hoarding pieces (`textures.md`), whose run-time header `0x80` leaves
+`ProceduralBase_Build` no outline, so they list nothing. In Lost Kingdom's wads lookup `0x8` is on nine meshes, all of the kart
+and water rides (`gk_TRACK01`; `wr_log1`, `wr_log2`, `wr_water3`, `wr_water4`) and their add-ons (`lavajump`'s `gk_brdge`;
+`watertun`'s `wr_mwater1`, `wr_mwater2`, `wr_mwater04`), and `0x10000` on one, `mammtunn`'s `gk_mam1` (`q812/lookflags.py`). So
+every placed object's floor rim takes the conform; the queue, hoarding and track pieces and `gk_mam1` the drape; those nine
+meshes the interpolating pass. A fixed item (`0x361`: the gate, lights, bus, ferry, seaplane) and a vehicle (`0x101`: a ride's
+car, a kart, the bird) are made without `0x8` and take none. **A loaded park conforms and drapes again**: `RideSystem_LoadModels`
+hands each model record's saved word (`+0x15`) to `FUN_00463060` as its flags (`0x00464942`).
+
+**Measured in the original** (Q812, `q812/orig/orig1/`, `original/basevertices.py`): a Full Simulation player under Proton
+loading a copy of Alexah's `New Save.TPWS`, about tick 19300. Every one of the 917 listed base vertices of its placed things stands
+at its terrain corner's height, none off: the Sun God (`incagod`, made `0x32f`, root at -4.5) 18 of 18 on its `Base` mesh (flags
+`0x5101`), all 18 moved from rest; the Tom Tom Twister 20 of 20, the Costume Shop 12 of 12. Its 368 draped meshes (78 queue pieces,
+163 hoarding pieces, 28 kart track pieces, `gk_mam1`) each rise by the ground under each vertex less one value, the piece's own
+root height, to 0.0001. The interpolating pass moved the kart station's 16 listed vertices (`gk_TRACK01`) and the
+Lava Jump's 20 (`gk_brdge`) each by the ground along its cell line less the root height, to 0.0001 (`orig2/bv80.txt`). Things were made `0x32f` (119) or `0x3fa` (40, the coaster's pylons), pieces `0x33a` (269). Its frame at
+the Sun God camera holds no clear-coloured sliver (`o-t19197.png`, 0); ours at the same camera, unchanged, 5,652 (`q812/ours1`).
+Not settled: the control word the arithmetic runs under (Q750's note), which moves only the last bits.
 
 **What its absence looks like in OpenTPW** (Q804, Q807; measured 2026-10-29, `q804/`). Ours stands the plate at its midway height and draws no
 ground under a footprint or a queue piece (the compositor's `0x1`), so on a slope the step between the plate's rim (a queue piece's
@@ -256,8 +296,8 @@ objects over a step above 0.05 (the Sun God: ground -7 to -2, stands -4.5, step 
 original's frames of the same file (`orig/sungod/o-t19198.png`, loaded by a Full Simulation player under Proton); a level plot in the same
 park, the Belly Bounce and the Aztec Mayhem (step 0.00), draws 0 in ours, the Tom Tom Twister 16,308 and the Costume Shop 7,844. A ground
 quad drawn 0.3 under the skipped cells took the sliver count from 12,166 to 2,044 at a close camera but is a step itself, and hid part of
-the queue's base: not the cure. The cure is the conform (Q750 for the objects, Q695 for the queue and boundary pieces). Not read: how the
-original's queue piece is draped at its rim (Q695), which the original's frame shows closed.
+the queue's base: not the cure. The cure is the conform (Q750 for the objects, Q695 for the queue and boundary pieces): the
+queue piece is draped vertex by vertex, as above, which the original's frame shows closed.
 
 ---
 

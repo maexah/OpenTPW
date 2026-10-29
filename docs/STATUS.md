@@ -38,13 +38,12 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- Q811 (why Alexah's Full Simulation park draws no boundary wall: `ParkBoundaryHoarding.Read` takes its records from the walk Q779
-  names, which stops in her file, so none of her 163 wall records is read). Compared on screen at one camera (480 165 120 0): ours
-  (main `b8a71167`) on a copy of her `New Save.TPWS`, `boundary pieces 0 anchors 163 unmade 163`, no wall; a throwaway probe (item
-  1181 read as 5 channels in the three callers of `ThingStates`) `pieces 163 unmade 0` with the wall round the gate; the stock park
-  143 of 143. The original's frame of the same file and camera is Q809's, taken earlier the same day, not retaken. Not compared:
-  the wall's pieces one by one against the original's (the two frames differ in aspect, HUD and tick), and the wall in ours with the
-  original's real channel count, which is Q810 (Q779).
+- Q812 (how the original conforms a floor rim and drapes a queue piece; Q808's decode, docs and a harness reader only). Read in
+  the original's memory under Proton, a Full Simulation player loading a copy of Alexah's `New Save.TPWS`: 917 of 917 listed base
+  vertices on their corners, 368 draped meshes following the ground to 0.0001 (`original/basevertices.py`, `q812/orig/orig1/bv75.txt`),
+  and its Sun God frame (160 270 90, rotation 120) 0 sliver pixels (`o-t19197.png`); ours, unchanged, 5,652 at the same camera
+  (`q812/ours1/k_sungod_240.png`, this session). The interpolating pass read too: the kart station's 16 and the Lava Jump's 20 listed vertices
+  each as decoded (`q812/orig/orig2/bv80.txt`). Not read: the control word the conform runs under (Q750's note).
 
 
 

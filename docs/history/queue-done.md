@@ -10997,6 +10997,15 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   wall (`q805/run3probe/gate_fs.png`). Not checked whether the walk is the whole cause.
   **Split (2026-10-29):** the census and the cause are done as Q811 (the same walk Q779 names, so the wall comes back with it). Reading
   the records and the wall-in-the-gate's-view confirm are Q810's.
+- [x] **Q812. How the original conforms a floor rim and drapes a queue piece (Q808's decode)** (2026-10-29, lane A; the first piece
+  of Q808, filed after the 2026-10-29 ordering block). An instance's nodes are copies of the type's whole records, `0x1000` and
+  `0x20000` with them, and its vertices its own (`0x00454d72`, `0x00454fa1`); `FUN_00469940` drapes every `0x20000` mesh, conforms the
+  listed base vertices of every `0x1000` mesh to their corners, then runs an interpolating pass over the lookup-`0x8` meshes (nine in
+  Lost Kingdom, all of the kart and water rides); a loaded park's models are remade with their saved flags and run it again
+  (`park-engine.md`, "Where a placed object's model stands"). Measured in the original loading a copy of Alexah's New Save
+  (`original/basevertices.py`): 917 of 917 listed base vertices on their corners (the Sun God 18 of 18), 368 draped meshes (the 78
+  queue pieces among them) each following the ground to 0.0001, the kart station's and Lava Jump's 36 interpolated vertices as
+  decoded, and its Sun God frame 0 sliver pixels; ours, unchanged, 5,652 (`q812/PREDICTION.txt`, 5 of 6 held). The build is Q808's.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

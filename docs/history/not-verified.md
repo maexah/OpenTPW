@@ -5,6 +5,13 @@ newest first. The pre-commit hook (`tools/maintainer/status-sweep.py`) moves an 
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q811 (why Alexah's Full Simulation park draws no boundary wall: `ParkBoundaryHoarding.Read` takes its records from the walk Q779
+  names, which stops in her file, so none of her 163 wall records is read). Compared on screen at one camera (480 165 120 0): ours
+  (main `b8a71167`) on a copy of her `New Save.TPWS`, `boundary pieces 0 anchors 163 unmade 163`, no wall; a throwaway probe (item
+  1181 read as 5 channels in the three callers of `ThingStates`) `pieces 163 unmade 0` with the wall round the gate; the stock park
+  143 of 143. The original's frame of the same file and camera is Q809's, taken earlier the same day, not retaken. Not compared:
+  the wall's pieces one by one against the original's (the two frames differ in aspect, HUD and tick), and the wall in ours with the
+  original's real channel count, which is Q810 (Q779).
 - Q809 (what draws Q805's gate doors: the gate model's held channel, which ours loses on loading Alexah's park because her model
   records do not read, Q779). Compared on screen at one camera (480 165 120 0): ours (main's build) on a copy of her `New Save.TPWS`,
   doors shut with "0 animation channels put back", against the original under Proton loading a copy of the same file, doors open;
