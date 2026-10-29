@@ -20,8 +20,9 @@ namespace OpenTPW;
 /// park file to hand that holds a kart track the two agree (<c>ParkTrackPieceTests</c>). The open end the mouths' walks
 /// stop on pulses red to white and back (<see cref="SetPulse"/>). An add-on's anchor takes no piece: the add-on is a placed
 /// thing whose model stands over its cells (<see cref="ParkObjects"/>), its end caps shown and hidden by the walk
-/// (<see cref="ParkObjects.ShowAddOnCaps"/>). Not built here: the drape of a piece's vertices over the ground
-/// (<c>TRACK_PIECE_DRAPE</c>). Each piece is made at rest, and the pieces' walks after a close or an add-on's put-down
+/// (<see cref="ParkObjects.ShowAddOnCaps"/>). A piece's vertices are draped over the ground at its making
+/// (<see cref="ProceduralConform.Drape"/>); the interpolating pass of the station's and the water pieces' meshes is not built
+/// (<c>PROCEDURAL_BASE_INTERPOLATE</c>). Each piece is made at rest, and the pieces' walks after a close or an add-on's put-down
 /// play its <c>M</c> clip or rest it (<see cref="PlayClip"/>).
 /// </para>
 /// </summary>
@@ -366,6 +367,9 @@ public sealed class ParkTrackPieces : Entity
 	private static float _pulsePhase;
 	private readonly string _theme;
 
+	/// <summary>How many vertices of the pieces the ground draped (<see cref="ProceduralConform.Drape"/>).</summary>
+	public int Draped { get; private set; }
+
 	/// <summary>The theme the pieces are read from, lower-case.</summary>
 	public string Theme => _theme;
 	private readonly IParkInitialState? _park;
@@ -440,19 +444,18 @@ public sealed class ParkTrackPieces : Entity
 
 		try
 		{
-			var model = new LobbyModel( $"{directory}/{piece.Model}.MD2", $"{directory}/textures", Vector3.Zero,
-				sharedTextureDirectory: $"levels/{_theme}/sharetex" );
-
 			var (origin, turn) = ParkBoundaryHoarding.StandOf( new ParkBoundaryHoarding.Piece( piece.Model, piece.Row, piece.CellX,
 				piece.CellY, piece.Angle ), ParkGround.Current?.Heightfield );
 
+			// The original drapes a piece's every vertex over the ground under it at its making (0x00469940), and runs the
+			// interpolating pass over the lookup-0x8 meshes after it (not built). A water piece is then put to clip 0xc, no role, so
+			// it stands at rest (FUN_004732a0 at its making), as every piece here does until a walk plays its clip (PlayClip).
+			var model = new LobbyModel( $"{directory}/{piece.Model}.MD2", $"{directory}/textures", Vector3.Zero,
+				sharedTextureDirectory: $"levels/{_theme}/sharetex",
+				stand: file => Draped += ProceduralConform.DrapeOver( file, origin, turn ) );
+
 			model.SetTransform( origin, turn );
 			model.HideCaps( CapMaskOf( piece ) );
-
-			// The original drapes a piece's every vertex over the ground under it at its making (0x00469940), which is not
-			// built. A water piece is then put to clip 0xc, no role, so it stands at rest (FUN_004732a0 at its making), as
-			// every piece here does until a walk plays its clip (PlayClip).
-			Unimplemented.Report( "TRACK_PIECE_DRAPE" );
 
 			return model;
 		}

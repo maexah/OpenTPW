@@ -1771,8 +1771,10 @@ public static class ParkBuilding
 	/// Where each standing object's floor plate meets the ground, for the debug console: the height the model stands at, the lowest
 	/// and highest ground corner under its footprint, and so the largest step between the plate's rim and the terrain corner beside
 	/// it (half the spread, the plate being stood midway). Queue cells follow, each stood at its near corner's height, and the
-	/// largest step at their edges. The original conforms the rim to the corners (<c>docs/exe/park-engine.md</c>, "Where a placed
-	/// object's model stands"); here it does not, so a step is an open face the frame's clear colour shows through.
+	/// largest step at their edges. The original conforms the rim to the corners and drapes a queue piece
+	/// (<c>docs/exe/park-engine.md</c>, "Where a placed object's model stands"; <see cref="ProceduralConform"/>), so a step between
+	/// the plate's midway height and a corner is no open face; each thing's line says how many of its listed rim vertices stand
+	/// on a corner, and the last how many vertices the pieces' drape moved.
 	/// </summary>
 	public static IEnumerable<string> RimCensus()
 	{
@@ -1800,6 +1802,10 @@ public static class ParkBuilding
 				$"stands {origin.Z:F2} ground {low:F2}..{high:F2} step {step:F2}";
 		}
 
+		// What the conform and the drape did (ProceduralConform): each thing's rim vertices against their terrain corners.
+		foreach ( var line in ParkObjects.Current?.ConformCensus() ?? [] )
+			yield return line;
+
 		var queueStepped = 0;
 		var queues = 0;
 		var queueLargest = 0f;
@@ -1824,7 +1830,9 @@ public static class ParkBuilding
 		}
 
 		yield return $"rim: {stepped} of the objects stand over a step above 0.05, the largest {largest:F2}; " +
-			$"{queueStepped} of {queues} queue cells, the largest {queueLargest:F2}";
+			$"{queueStepped} of {queues} queue cells, the largest {queueLargest:F2}; " +
+			$"draped vertices: queue {ParkQueues.Current?.Draped ?? 0}, boundary {ParkBoundaryHoarding.Current?.Draped ?? 0}, " +
+			$"track {ParkTrackPieces.Current?.Draped ?? 0}";
 	}
 
 	/// <summary>Every object standing in the park now, for the debug console.</summary>

@@ -278,12 +278,16 @@ public sealed class ParkQueues : Entity
 			var turn = TurnOf( cell );
 			var shared = $"levels/{theme}/sharetex";
 
+			var origin = ParkObjects.OriginFor( x, y, turn );
+			var turned = ParkObjects.Turn( turn );
+
 			var model = new LobbyModel( $"{directory}/{piece}.MD2", $"{directory}/textures", Vector3.Zero,
 				sharedTextureDirectory: shared,
 				opaqueFrames: ProceduralBase.ForQueuePiece,
-				frameTextures: file => BlendFloor( file, x, y, turn, $"{directory}/textures", shared ) );
+				frameTextures: file => BlendFloor( file, x, y, turn, $"{directory}/textures", shared ),
+				stand: file => Draped += ProceduralConform.DrapeOver( file, origin, turned ) );
 
-			model.SetTransform( ParkObjects.OriginFor( x, y, turn ), ParkObjects.Turn( turn ) );
+			model.SetTransform( origin, turned );
 
 			_models.Add( model );
 		}
@@ -298,6 +302,9 @@ public sealed class ParkQueues : Entity
 
 	/// <summary>The pieces' cells blended into the ground's tiles (<see cref="BlendFloor"/>).</summary>
 	public int FloorCellsBlended { get; private set; }
+
+	/// <summary>How many vertices of the pieces the ground draped (<see cref="ProceduralConform.Drape"/>).</summary>
+	public int Draped { get; private set; }
 
 	/// <summary>
 	/// A piece's one cell blended into the ground's tiles (<see cref="ProceduralFloor.Blend"/>) at the angle the model maker is

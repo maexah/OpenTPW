@@ -68,14 +68,37 @@ public static class ProceduralBase
 	/// </summary>
 	public static int? FloorMesh( ModelFile model, ItemShape? shape, Grid grid, out int count )
 	{
+		int? floor = null;
+		var most = 0;
+		var total = 0;
+
+		foreach ( var (node, vertices) in BaseVertices( model, shape, grid ) )
+		{
+			total += vertices.Length;
+
+			if ( vertices.Length > most )
+			{
+				most = vertices.Length;
+				floor = node;
+			}
+		}
+
+		count = total;
+		return floor;
+	}
+
+	/// <summary>
+	/// The base vertices <c>FUN_00469a80</c> counts, mesh by mesh in its walk (the root's tree, children after their parent):
+	/// each mesh that has any, with the indices of its <see cref="ModelFile.Mesh.SourceVertices"/>. This is the list the type
+	/// load keeps at <c>[[model + 8] + 0x14]</c> and the conform takes (<see cref="ProceduralConform"/>).
+	/// </summary>
+	public static IReadOnlyList<(int Mesh, int[] Vertices)> BaseVertices( ModelFile model, ItemShape? shape, Grid grid )
+	{
 		var edges = Edges( shape );
 		var width = shape?.Width ?? 0;
 		var depth = shape?.Depth ?? 0;
 		var every = (model.HeaderFlags & CountsEveryCorner) != 0;
-
-		int? floor = null;
-		var most = 0;
-		var total = 0;
+		var found = new List<(int, int[])>();
 
 		void Visit( int node, int guard )
 		{
@@ -86,23 +109,19 @@ public static class ProceduralBase
 				if ( node < model.Meshes.Count && (flags & SkippedNode) == 0 && (flags & CountsNothing) == 0 )
 				{
 					var mesh = model.Meshes[node];
-					var bases = 0;
+					var bases = new List<int>();
 
-					foreach ( var source in mesh.SourceVertices )
+					for ( var index = 0; index < mesh.SourceVertices.Length; ++index )
 					{
+						var source = mesh.SourceVertices[index];
 						var at = System.Numerics.Vector3.Transform( new System.Numerics.Vector3( source.X, source.Y, source.Z ), mesh.WorldTransform );
 
-						if ( !IsBase( at, grid, edges, width, depth, every ) )
-							continue;
-
-						++total;
-
-						if ( ++bases > most )
-						{
-							most = bases;
-							floor = node;
-						}
+						if ( IsBase( at, grid, edges, width, depth, every ) )
+							bases.Add( index );
 					}
+
+					if ( bases.Count > 0 )
+						found.Add( (node, [.. bases]) );
 				}
 
 				Visit( model.Nodes[node].FirstChild, guard - 1 );
@@ -111,8 +130,7 @@ public static class ProceduralBase
 
 		Visit( model.RootNode, model.Nodes.Count + 1 );
 
-		count = total;
-		return floor;
+		return found;
 	}
 
 	/// <summary>

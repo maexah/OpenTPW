@@ -171,6 +171,11 @@ public sealed class LobbyModel : IChannelPosed
 	/// thing's floor blended into the ground's tiles (<see cref="ProceduralFloor"/>), each the model's own, as the
 	/// original's model keeps its own frame table. Null for none.
 	/// </param>
+	/// <param name="stand">
+	/// Moves the model's drawn vertices before its meshes are built from them, once the opaque frames and the frame textures
+	/// have read the model as it was made: a thing's floor rim conformed to the ground and a piece draped over it
+	/// (<see cref="ProceduralConform"/>). Null for none.
+	/// </param>
 	/// <param name="vertexNormals">
 	/// The normal each mesh's vertex is lit by, given the mesh and the vertex, in place of the loader's: the terrain's
 	/// meshes on land outside the park (<see cref="TerrainHalfLight"/>). Null for the loader's own.
@@ -182,7 +187,8 @@ public sealed class LobbyModel : IChannelPosed
 		IReadOnlyList<AnimationFile>? clips = null,
 		Func<ModelFile, IReadOnlySet<uint>>? opaqueFrames = null,
 		Func<ModelFile, IReadOnlyDictionary<uint, Texture>>? frameTextures = null,
-		Func<ModelFile.Mesh, int, Vector3>? vertexNormals = null )
+		Func<ModelFile.Mesh, int, Vector3>? vertexNormals = null,
+		Action<ModelFile>? stand = null )
 	{
 		var modelFile = new ModelFile( modelPath );
 		_file = modelFile;
@@ -190,6 +196,7 @@ public sealed class LobbyModel : IChannelPosed
 		_additive = (modelFile.HeaderFlags & 0x4) != 0;
 		var opaque = opaqueFrames?.Invoke( modelFile ) ?? NoFrames;
 		var framed = frameTextures?.Invoke( modelFile );
+		stand?.Invoke( modelFile );
 		var meshCount = modelFile.Meshes.Count;
 
 		var supplied = clips is { Count: > 0 };

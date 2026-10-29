@@ -64,20 +64,6 @@ default, Alexah's second pre-weekly list), then the rest in the order below.
 **Ordered at Alexah's word (2026-10-29):** Q804, Q805 and Q806, found while photographing Alexah's Full Simulation
 park for the website, go first. Q804 stopped the photographs: no picture with the blue lines will be used.
 
-- [ ] **Q808. Close the open steps at floor rims on sloped ground (Q804's build).** From Q804 and Q807. Build the original's
-  conform of the rim to the terrain corners (Q750 for placed things, Q695 for queue and boundary pieces; decode what those items
-  list first), so that `lib/clearseam.py` reads 0 at the Sun God camera (160, 270, zoom 90, yaw 240; 5,751 now, the original's 0) and
-  at the Tom Tom Twister and Costume Shop cameras of `q804/` in Alexah's Full Simulation jungle, and `rim` (the console) is the
-  census to read the steps by. Her level ground already draws none: photographs of it are usable now. Q750 is what this waits on,
-  so Alexah may want Q750 or this ordered first (a reorder is Alexah's). Confirm: the same cameras in her park and in the original,
-  the lines gone, with the stock park unchanged.
-  **Split (2026-10-29):** the decode is done as Q812 (`park-engine.md`, "Where a placed object's model stands"). Left, the build:
-  at a thing's making and at a load, (1) set each base vertex `ProceduralBase` lists (every mesh of the walk, in its order) to its
-  nearest terrain corner's height, carried back into the mesh's own space; (2) drape every vertex of a queue piece, a hoarding piece
-  and a kart or water track piece (and `mammtunn`'s `gk_mam1`) by the ground under it less the height it was made at, on the
-  cell's own triangle (with Q398, or say at the site where ours splits differently); (3) the interpolating pass for the nine
-  lookup-`0x8` meshes, or a counted gap for it. `original/basevertices.py` reads the original's side: 917 on, 0 off, drape spread
-  0.0001 in her park. Ticks Q750 and Q695 with it; the track pieces' drape is `TRACK_PIECE_DRAPE` (`ParkTrackPieces`).
 - [ ] **Q810. The gate's doors stand open in Alexah's Full Simulation park (Q805's build).** From Q805 and Q809. Do Q779 here,
   its decode first (how many channels the original makes a car's model with, and what its loader reads for them), so that
   `ParkThingStates` reads her `New Save.TPWS` and `autosave.TPWS` whole and the gate's channel comes back held on role 5 entry 1;
@@ -86,6 +72,18 @@ park for the website, go first. Q804 stopped the photographs: no picture with th
   put back above nought; the stock park still 15. **And the wall (Q811):** the same file's `boundary` reads `pieces 163 anchors 163
   unmade 0` (ho_fob1 10, ho_fob2 7, ho_fob3 1, ho_fos1 98, ho_fos2 16, ho_fos3 19, ho_fos4 12; 0 of 163 now) and the gate's view shows the
   wall beside the original's; the stock park still 143.
+- [ ] **Q813. What Q808 left of the conform and the drape.** From Q808 (run 14, lane A). (1) **The interpolating pass** for the nine
+  lookup-`0x8` meshes (the kart station `gk_TRACK01`, `wr_log1`, `wr_log2`, `wr_water3`, `wr_water4`, and the add-ons' `gk_brdge`,
+  `wr_mwater1`, `wr_mwater2`, `wr_mwater04`; `park-engine.md`, "Where a placed object's model stands"): each such mesh's listed
+  vertices snap to the cell line within 0.1 and rise by the ground interpolated along that line less H; counted now as
+  `PROCEDURAL_BASE_INTERPOLATE`. `original/basevertices.py` reads the original's side (the station's 16 and the Lava Jump's 20
+  vertices to 0.0001). (2) **The coaster's pieces and pylons** are made through `0x00432f2f` and `0x004432db`, which also run the
+  conform (made `0x3fa`: 40 of the 159 instances in her park); ours stands them rigid (`ParkCoasterHeights`), and the first
+  reading of Q812 (`review14/q812/FINDINGS.md`, F2) says two `StdPylon` instances list 4 base vertices and use none (no `0x1000` on their mesh), so
+  decode that before building it. (3) The recomputed face normals (`FUN_00473c30`, whether they reach the lighting) and the
+  control word the conform runs under are unread (Q750's note). (4) The ground mesh still splits every cell one way (Q398), so a
+  draped vertex on a cell flagged `0x4` follows the original's triangle where the ground beside it follows ours. Confirm each in
+  both games as Q808 did (`lib/clearseam.py`, `original/basevertices.py`).
 - [ ] **Q802. What Q800 left for a person or a machine it did not have.** From Q800 (run 13, lane A). Done by the
   coordinator (2026-10-29): `opentpw.maintainer` set in `~/repos/OpenTPW-laneB`, and the Saturday audit runs
   `python3 tools/check_docs_paths.py`. The Linux quick start is marked "tested on the maintainer's Linux machine only"
@@ -3168,59 +3166,6 @@ state machine.
   samplers or present (https://github.com/jhm-ciberman/neo-veldrid/releases/tag/v1.3.0; the compare diff not read).
   Read the compare diffs `v1.2.1...v1.3.0` and `v1.3.0...v1.3.1` (and the 1.3.1 notes, not yet read) first; bump every NeoVeldrid package together; build, test, and photograph
   the lobby and a park before and after at one camera (pictures equal within a frame's own spread).
-- [ ] **Q695. Queue pieces and the boundary hoarding draped vertex by vertex, like the track tiles.** From the fork watch 2026-10-25
-  (verify-all.md N1; a lead the fork missed). The original loads queue pieces (`FUN_00522900`, flags `0x12423`, or `0x112423` when the
-  row's byte `+5` is set: `0x00522954`) and the boundary-hoarding pieces (`FUN_00522e40`, `0x422`: `0x00522eb1`) with load bit `0x2`,
-  and makes both with `FUN_00463060` flags `0x33a`, as it does the kart and water tiles. Every node then carries `0x20000`
-  and is draped per vertex (`0x00469940`, `0x00469a80`; Q398's note), and the model's header carries the run-time flag `0x80`
-  (`0x004625f4`). Ours stands them rigid: `ParkQueues.Place` uses the near corner's height (`ParkObjects.OriginFor`) and
-  `ParkBoundaryHoarding.StandOf` the footprint height, so on a sloped cell ours is a flat plate where the original's follows the
-  ground. Not proven: that a loaded park's pieces are draped too (they are remade from the save's records, `FUN_004647a0`, flags `0x33a`, from the same
-  loaded models; not traced), and how many Lost Kingdom queue or boundary cells lie on sloped ground (not counted). First load
-  a park, count those cells, and shoot one beside the original's; then drape the pieces as the track tiles are (with Q587).
-  The same call, `0x00469940`, also conforms the base vertices of every flag-8 object to the terrain's corners, a thing bought or
-  loaded (Q750; fork watch 2026-10-27, verify-world H1).
-  - **Proven (Q812):** a loaded park's pieces are draped too: `RideSystem_LoadModels` remakes each with its saved flags (`0x33a`,
-    `0x00464942`), and in the original's memory, loading Alexah's New Save, all 78 queue pieces and 163 hoarding pieces follow the
-    ground under each vertex to 0.0001 (`original/basevertices.py`). The build is Q808's.
-  - **Counted (Q807):** 58 of 78 queue cells of Alexah's Full Simulation jungle lie on sloped ground (largest corner step 1.00; the
-    stock park's 4 are level), and ours draws open slivers at them that the original's frame of the same file does not (Q804).
-- [ ] **Q750. Every placed thing's floor edge conformed to the terrain, as the original's (`0x469940` apply mode).** From the fork
-  watch 2026-10-27 (verify-world H1, verify-other L2; a lead the fork found and ours had not). Every thing made with flag `0x8`
-  (a purchase, `0x3fa`, `0x00430883`; every thing of a loaded park, `0x32f`, `0x004dd64f`; the coaster pieces too) runs
-  `FUN_00469940` -> `FUN_00469a80` in its apply mode (`0x00463329`, `0x00463347`): each base vertex the type load listed is set in
-  world space to the nearest terrain corner's height (x and z snapped to the grid line within 0.01, y that corner's, nothing added),
-  then carried back by the float LU inverse into the instance's own vertices. The mechanism is written once in
-  `docs/exe/park-engine.md`, "Where a placed object's model stands". Ours stands every model rigid at `ParkObjects.ModelOriginFor`'s
-  height (halfway between the lowest and highest ground), so on a slope the floor's rim floats over or sinks under the ground
-  where the original's lies on the corners. `ProceduralBase` already finds the same vertices (`textures.md`, 54 of 54 Lost
-  Kingdom models), so the list the conform needs exists. Plan: first decode what remains (the instance nodes' `0x1000` flag is
-  inferred, not read: trace the clone in `FUN_00463060`; the control word the conform runs under, `0x7f` against the park tick's
-  `0x27f`, is unread: a `watch.sh` break at `0x00469940` while buying a ride would settle it, and 104 of the fork's 400 conforms
-  differ in the last bits between the two); then count the Lost Kingdom footprints on sloped ground; photograph one beside the
-  original's; then build. Confirm with a sloped footprint in both games, the rim's vertex heights against the terrain's
-  corners read from the original with `tpwmem.py`. Next to Q398 (the diagonal), Q695 (the drape of queue and boundary pieces)
-  and Q210 (hoardings' base-vertex gate).
-  - **Decoded (Q812):** the instance nodes carry the type's `0x1000` (the clone copies each mesh record whole, `0x00454d72`), and
-    the original's live memory shows every listed base vertex on its corner in Alexah's park (917 of 917). The control word is still
-    unsettled (the note below). The build is Q808's.
-  - **Counted (Q807, the "count the footprints on sloped ground" step):** in Alexah's Full Simulation jungle 58 placed things stand
-    over a step above 0.05 between the plate's midway height and a terrain corner under the footprint (the Sun God, Tom Tom Twister
-    2.5; Costume Shop, Steak Restaurant, Giant Puzzle 1.5), the stock park's 14 none (`rim` on the console). Their rims draw as
-    open light-blue slivers in ours, none in the original's frame of the same file and camera (Q804, `q804/`). Alexah's ordering
-    block names this item after Q804: it is what Q804 waits on, so it may want to come first.
-  - **Note (fork watch 2026-10-27, verify-world M1):** the blended floor's composite clamps in the original (no wrap bits,
-    `0x00590a80`; park-engine.md, "The blended floor's texture clamps"), so `ProceduralFloorTests.EveryBlendedFloorFrameLiesInsideOneOrWraps`
-    rests on a wrap the original does not do. Not counted: how many of the 36 frames have a face whose shifted UVs span more than 1.
-    Count them with this item; a floor whose face does is drawn wrapped here and clamped there.
-  - **Note (fork watch 2026-10-28, verify-world W1/C2 (unsettled, as 10-27)):** nothing in the executable settles the control word
-    the conform runs under: twelve thread starts, none runs the park tick; every `fldcw` in game code is `0x591233`, `0x591243`,
-    `0x59125c`, `0x439ac8`/`0x439c30` (the coaster crossing pass's chop), `0x62f9c3`, `__ftol` and the CRT. New: the executable
-    asks for DirectX 6 interfaces only (`IID_IDirectDraw2`/`4` at `0x7071f0`/`0x707200`, `IID_IDirect3D2`/`3` at
-    `0x707510`/`0x707520`, `IID_IDirect3DHALDevice` `0x707550`; no `IDirect3D7`), so the fork's "D3DIM CreateDevice" is
-    `IDirect3D3::CreateDevice`. What the DX6 runtime does to the word under `DDSCL_FPUSETUP` (the fork's `0x7F`) is not in the
-    executable; our `0x27f` is a measurement under Proton. It settles only by a reading on real Windows at `FUN_0042b1c0`'s entry
-    (`park-engine.md`, the peeps' single-precision paragraph, which ends with logging the word at `FUN_0042b1c0`'s entry; Q222 item 7).
 - [ ] **Q696. The lobby's rain count follows the camera's distance to the rainy islands.** From the fork watch 2026-10-25 (verify-forks.md
   section 1; low priority: the lobby, not Lost Kingdom's park). In `FUN_005e0470` (`0x005e0e29` to `0x005e0f18`) the original works
   the drop count out every frame: over every island whose RAINY (`+0x60`) is not zero (RAINY is a flag; its value is never

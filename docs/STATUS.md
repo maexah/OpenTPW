@@ -23,7 +23,7 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 - Park and saving: a played park whose model records do not read (Alexah's, with a Temple of Gloom: Q779) loads none of its models' saved clips, so its gate stands shut and its boundary wall is not drawn (Q810, Q811); no loan screen, litter or day's end; a written park holds no kart, water or tracked ride, and some voices, puffs and the music voice are not written (Q420, Q803); forty-four of the advisor's 155 polled messages are built.
 - Map and windows: the map's overlay, hover and click are decoded, not built (Q684, Q685); five of the nine object windows are unbuilt (Q31b).
 - Guests: the deciding turn's vomit, litter, fireworks and pranks and four queue turns are counted (Q224 to Q226, Q228); a failed route is not revived (Q104); queues lose more happiness than the original's (Q746).
-- Building: a carried member of staff shows nothing; a bought thing's sparkles are not drawn (Q683); the buy screen's panel has no model (Q158); a placed thing's and a queue piece's floor rim is not conformed to sloped ground, so thin light-blue slivers show along plots there, none on level ground (Q750, Q695; the build is Q808).
+- Building: a carried member of staff shows nothing; a bought thing's sparkles are not drawn (Q683); the buy screen's panel has no model (Q158); the kart and water pieces' interpolating pass, the coaster pylons' conform and the recomputed face normals are unbuilt (Q813).
 - Lobby, keys and interface: the fly-in's fade (Q61) and F8 (Q65) are unbuilt; some keys and lists act differently from the original's (Q120, Q231, Q232); some meshes are drawn both-sided (Q613). No video or networking.
 - Sound: a per-effect repeat delay that is really a priority (Q43); most of a park file's live voices are counted, not put back (Q741).
 - Staff: the handyman's litter search and the guard's chase are unbuilt; a strike's posts are counted (Q212, Q229).
@@ -38,16 +38,15 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- Q812 (how the original conforms a floor rim and drapes a queue piece; Q808's decode, docs and a harness reader only). Read in
-  the original's memory under Proton, a Full Simulation player loading a copy of Alexah's `New Save.TPWS`: 917 of 917 listed base
-  vertices on their corners, 368 draped meshes following the ground to 0.0001 (`original/basevertices.py`, `q812/orig/orig1/bv75.txt`),
-  and its Sun God frame (160 270 90, rotation 120) 0 sliver pixels (`o-t19197.png`); ours, unchanged, 5,652 at the same camera
-  (`q812/ours1/k_sungod_240.png`, this session). The interpolating pass read too: the kart station's 16 and the Lava Jump's 20 listed vertices
-  each as decoded (`q812/orig/orig2/bv80.txt`). Not read: the control word the conform runs under (Q750's note).
-
-
-
-
+- Q808 (the floor rim conformed to the ground and the queue, hoarding and track pieces draped; `ProceduralConform`). Read in ours on
+  a copy of Alexah's Full Simulation `New Save.TPWS` (`q808/run*`): the console's `rim` reads the Sun God 18 of 18 listed rim vertices on a
+  terrain corner, the Tom Tom Twister 20 of 20, the Costume Shop 12 of 12, and 1,782 queue-piece and 1,736 track-piece vertices draped;
+  the clear-coloured sliver pixels (`lib/clearseam.py`) 5,751 to 11 at the Sun God camera, 16,308 to 0 at the Tom Tom Twister's, 7,844
+  to 0 at the Costume Shop's, 0 at the level plots and the stock park's Belly Bounce. The original's frames of the same file at the Tom
+  Tom Twister's and Costume Shop's cameras (`q808/orig/`, Proton, this session) hold 0 to 32 such pixels in their last frames, its Sun
+  God's 0 (Q812's). Not verified: the shape of the rim beside the original's vertex by vertex (only the corner heights and the frames
+  are compared); the control word the conform runs under, the face normals, the interpolating pass and the coaster pylons (Q813); a
+  thing bought and put down in a sloped park (`Place` is the same path, not photographed).
 
 ## Numbers (take counts fresh; these go stale within a day)
 

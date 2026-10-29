@@ -285,7 +285,21 @@ Lava Jump's 20 (`gk_brdge`) each by the ground along its cell line less the root
 the Sun God camera holds no clear-coloured sliver (`o-t19197.png`, 0); ours at the same camera, unchanged, 5,652 (`q812/ours1`).
 Not settled: the control word the arithmetic runs under (Q750's note), which moves only the last bits.
 
-**What its absence looks like in OpenTPW** (Q804, Q807; measured 2026-10-29, `q804/`). Ours stands the plate at its midway height and draws no
+**OpenTPW builds the conform and the drape** (Q808, `ProceduralConform`): `LobbyModel`'s `stand` hook moves the drawn vertices of the
+model's file as it is made, before the meshes are built from them, in the model's own place and turn. The conform takes the base
+vertices `ProceduralBase.BaseVertices` lists (the floor search's own walk) of a model with the header's `0x8`, snaps x and y to the
+grid line and sets the height to the nearest corner's, nothing added; the drape takes every mesh of a queue, hoarding, kart or water
+piece, and the meshes a placed object's lookup record marks `0x10000` (`mammtunn`'s `gk_mam1`), and raises each vertex by the
+height under it on the cell's triangle (`DrapeHeight`, the flag `0x4` as above) less the model's own height; a source vertex moves
+under every drawn vertex that names it, and `SourceVertices` stay the rest the floor search and the hoardings read. The cell's
+triangle here is the original's, while the ground mesh is still split one way (Q398). **Not built:** the interpolating pass for the
+nine lookup-`0x8` meshes (`PROCEDURAL_BASE_INTERPOLATE`), the recomputed face normals, the coaster pylons' conform (Q813), and the
+control word the arithmetic runs under. **Measured in OpenTPW** (Q808, Alexah's New Save, a copy): the Sun God 18 of 18 listed rim
+vertices on a corner, the Tom Tom Twister 20 of 20, the Costume Shop 12 of 12 (the original's counts), 1,782 queue vertices and
+1,736 track-piece vertices draped, and the clear-coloured sliver pixels at the Sun God camera 5,751 to 11, the Tom Tom Twister's
+16,308 to 0, the Costume Shop's 7,844 to 0.
+
+**What its absence looked like in OpenTPW, before Q808** (Q804, Q807; measured 2026-10-29, `q804/`). Ours stands the plate at its midway height and draws no
 ground under a footprint or a queue piece (the compositor's `0x1`), so on a slope the step between the plate's rim (a queue piece's
 flat plane at its near corner's height) and the terrain corner beside it is an open face: a ray through it meets nothing and the frame's
 clear colour `0x44DDFF` shows, a thin light-blue sliver along the plot's edge (orange once, where the lava under the ground lies behind

@@ -287,16 +287,20 @@ public sealed class ParkBoundaryHoarding : Entity
 		return (origin, ParkObjects.Turn( piece.Angle ));
 	}
 
+	/// <summary>How many vertices of the pieces the ground draped (<see cref="ProceduralConform.Drape"/>).</summary>
+	public int Draped { get; private set; }
+
 	private void Place( Piece piece )
 	{
 		var directory = $"levels/{_theme}/hoarding";
 
 		try
 		{
-			var model = new LobbyModel( $"{directory}/{piece.Model}.MD2", $"{directory}/textures", Vector3.Zero,
-				sharedTextureDirectory: $"levels/{_theme}/sharetex" );
-
 			var (origin, turn) = StandOf( piece, ParkGround.Current?.Heightfield );
+
+			var model = new LobbyModel( $"{directory}/{piece.Model}.MD2", $"{directory}/textures", Vector3.Zero,
+				sharedTextureDirectory: $"levels/{_theme}/sharetex",
+				stand: file => Draped += ProceduralConform.DrapeOver( file, origin, turn ) );
 
 			model.SetTransform( origin, turn );
 

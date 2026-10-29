@@ -66,6 +66,11 @@ public sealed class ParkObjects : Entity
 		/// <summary>How many cells of its floor were blended.</summary>
 		public int FloorCells { get; init; }
 
+		/// <summary>The rim vertices the ground moved, and what the model measures against the ground now (<see cref="ProceduralConform.Measure"/>).</summary>
+		public int Conformed { get; init; }
+
+		public Func<ProceduralConform.Measurement>? Measure { get; init; }
+
 		public LobbyModel Model { get; } = model;
 
 		public RideAnimations Animations { get; } = animations;
@@ -371,12 +376,17 @@ public sealed class ParkObjects : Entity
 			var blended = new List<Texture>();
 			var floorCells = 0;
 
+			var origin = ModelOriginFor( item, placed );
+			var turn = Turn( placed.Angle );
+			var conformed = 0;
+
 			var model = new LobbyModel( $"{item.Directory}/{item.Stem}.MD2", $"{item.Directory}/textures", Vector3.Zero,
 				textureOverrides: sign,
 				sharedTextureDirectory: shared,
 				clips: animations.AllClips,
 				opaqueFrames: file => ProceduralBase.ForItem( file, item.Shape ),
-				frameTextures: file => BlendFloor( file, item, placed.Angle, covered, shared, blended, out floorCells ) );
+				frameTextures: file => BlendFloor( file, item, placed.Angle, covered, shared, blended, out floorCells ),
+				stand: file => conformed = StandOnGround( file, item, origin, turn ) );
 
 			// Put away whatever building it left behind before it is stood anywhere.
 			PoseAsBuilt( model, item );
@@ -398,13 +408,18 @@ public sealed class ParkObjects : Entity
 					+ string.Join( ", ", AddOnCapSides.Select( side => $"0x{side:x} " + CapState( model, side ) ) ) );
 			}
 
-			var origin = ModelOriginFor( item, placed );
-			var turn = Turn( placed.Angle );
-
 			model.SetTransform( origin, turn );
 
 			_models.Add( model );
-			_standing[placed.ThingId] = new Standing( model, animations, placed.CatalogueId, sign ) { Footprint = footprint, Blended = blended, FloorCells = floorCells };
+			_standing[placed.ThingId] = new Standing( model, animations, placed.CatalogueId, sign )
+			{
+				Footprint = footprint,
+				Blended = blended,
+				FloorCells = floorCells,
+				Conformed = conformed,
+				Measure = () => ProceduralConform.Measure( model.Source, item.Shape, origin.GetSystemVector3(), turn,
+					ParkGround.Current?.Heightfield )
+			};
 
 			// The original gates on the base vertices FUN_00469a80 counts (0x0046a838) and reads the mesh with the
 			// most of them (0x0046a82c). The node count and the first mesh stand in for both: the same mesh in
@@ -434,6 +449,44 @@ public sealed class ParkObjects : Entity
 		catch ( Exception e )
 		{
 			Log.Warning( $"{ThemeName}: '{item.Name}' would not load, so it is missing from ({placed.CellX},{placed.CellY}) - {e.Message}" );
+		}
+	}
+
+	/// <summary>
+	/// A placed thing's model stood on the ground as the original makes it (flag <c>0x8</c>, <c>0x00463329</c>): the floor's rim vertices
+	/// on the terrain's corners, and the meshes the lookup records mark <c>0x10000</c> draped (<see cref="ProceduralConform"/>). The
+	/// nine track meshes' interpolating pass is a counted gap. Answers how many vertices moved.
+	/// </summary>
+	private static int StandOnGround( ModelFile file, ParkItemCatalogue.Item item, Vector3 origin, Quaternion turn )
+	{
+		if ( ParkGround.Current?.Heightfield is not { } field )
+			return 0;
+
+		var at = origin.GetSystemVector3();
+		var moved = ProceduralConform.Conform( file, item.Shape, at, turn, field );
+
+		moved += ProceduralConform.Drape( file, ProceduralConform.LookupDraped( file ), at, turn, field );
+
+		if ( ProceduralConform.InterpolatedMeshes( file ) > 0 )
+			Unimplemented.Report( "PROCEDURAL_BASE_INTERPOLATE" );
+
+		return moved;
+	}
+
+	/// <summary>
+	/// For the console's <c>rim</c>: each standing thing's listed rim vertices and how many of them the drawn model has on a terrain
+	/// corner (<see cref="ProceduralConform.Measure"/>), and the largest distance of one from its corner's height.
+	/// </summary>
+	internal IEnumerable<string> ConformCensus()
+	{
+		foreach ( var (thingId, standing) in _standing.OrderBy( pair => pair.Key ) )
+		{
+			if ( standing.Measure?.Invoke() is not { Listed: > 0 } measured )
+				continue;
+
+			var name = Level.Current?.Catalogue is { } catalogue && catalogue.TryGet( standing.CatalogueId, out var item ) ? item.Name : $"item {standing.CatalogueId}";
+
+			yield return $"thing {thingId,3} '{name}' base vertices {measured.Listed} on a corner {measured.OnCorner} largest off {measured.LargestOff:F4} moved {standing.Conformed}";
 		}
 	}
 
