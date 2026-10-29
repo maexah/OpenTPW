@@ -180,7 +180,40 @@ public sealed class HeightfieldFile
 		if ( (flags & SplitFlag) == 0 )
 			return ((alongY - near) * v) + ((1f - u) * near) + (alongX * u);
 
-		if ( (flags & OtherDiagonalFlag) == 0 )
+		return TriangleHeight( near, alongX, alongY, far, u, v, (flags & OtherDiagonalFlag) != 0 );
+	}
+
+	/// <summary>
+	/// The height of the ground under a world position as the park camera's sampler takes it - <c>FUN_00452560</c>, called with
+	/// its third argument 1 (<c>0x0042c817</c>): the plane of whichever triangle of the cell the point is in, the cell cut on
+	/// the diagonal its flag <c>0x4</c> names, on every cell and not only the ones flagged <c>0x800</c> (<c>0x00452719</c>;
+	/// <c>park-engine.md</c>, "The triangle diagonal"). Off the map it answers the nearest edge's height where the original
+	/// answers nought, so a camera scrolled past the edge stays level with the ground it left (a deviation, as <see cref="HeightAtWorld"/> has it).
+	/// </summary>
+	public float CameraHeight( float worldX, float worldY )
+	{
+		var gridX = (worldX - OriginX) / CellSizeX;
+		var gridY = (worldY - OriginY) / CellSizeY;
+
+		var x = Math.Clamp( (int)MathF.Floor( gridX ), 0, CellsX - 1 );
+		var y = Math.Clamp( (int)MathF.Floor( gridY ), 0, CellsY - 1 );
+
+		var u = Math.Clamp( gridX - x, 0f, 1f );
+		var v = Math.Clamp( gridY - y, 0f, 1f );
+
+		return TriangleHeight( HeightAt( x, y ), HeightAt( x + 1, y ), HeightAt( x, y + 1 ), HeightAt( x + 1, y + 1 ),
+			u, v, (FlagsAt( x, y ) & OtherDiagonalFlag) != 0 );
+	}
+
+	/// <summary>
+	/// The plane of the triangle of a cell a point (u, v) is in: split from the near corner to the far one, the point at or
+	/// under the diagonal (<c>v &lt;= u</c>) takes the near, along-x and far corners and the other side the near, along-y and
+	/// far corners; split the other way (<paramref name="otherDiagonal"/>), the point at or over it (<c>1 - v &lt;= u</c>) takes the
+	/// along-y, far and along-x corners and the other side the near, along-x and along-y corners.
+	/// </summary>
+	private static float TriangleHeight( float near, float alongX, float alongY, float far, float u, float v, bool otherDiagonal )
+	{
+		if ( !otherDiagonal )
 		{
 			return v <= u
 				? ((far - alongX) * v) + (u * alongX) + ((1f - u) * near)

@@ -64,15 +64,18 @@ default, Alexah's second pre-weekly list), then the rest in the order below.
 **Ordered at Alexah's word (2026-10-29):** Q804, Q805 and Q806, found while photographing Alexah's Full Simulation
 park for the website, go first. Q804 stopped the photographs: no picture with the blue lines will be used.
 
-- [ ] **Q820. What Q818 left of the conform and the drape: the ground's split, the stacked and loop pylons.** From Q818 (run 14, lane A;
-  its piece (3), the face normals and the control word, is Q819). (1) The ground mesh still splits every cell one way (Q398), so a
-  draped vertex on a cell flagged `0x4` follows the original's triangle where the ground beside it follows ours. Confirm it in
-  both games as Q808 did (`lib/clearseam.py`, `original/basevertices.py`). (2) Left by Q817: the pylon under a stacked piece is drawn with the alone-on-its-cell arms (the bottom of a stack that is not its top shows the `0x400` node and hides the `0x800` one, `0x00432ff8`..`0x0043304d`; ours hides `mc_bridge` on it); a stacked pylon stands on the
+- [ ] **Q820. What Q818 left of the conform and the drape: the stacked and loop pylons, the float note, and what Q821 left.** From Q818 (run 14, lane A;
+  its piece (3), the face normals and the control word, is Q819; its piece (1), the ground's per-cell diagonal, is Q821, which ticks Q398). (2) Left by Q817: the pylon under a stacked piece is drawn with the alone-on-its-cell arms (the bottom of a stack that is not its top shows the `0x400` node and hides the `0x800` one, `0x00432ff8`..`0x0043304d`; ours hides `mc_bridge` on it); a stacked pylon stands on the
   stack-height record (`StackHeightDummy` on `StdPylon`), the type flag `0x10` keeps its floor, a loop pylon is another model:
   none is in her park, so each needs a park that holds one (a coaster built in the original, then loaded in both games).
   (3) Left by Q819: say at `ProceduralConform` that ours works the conform in `float` where the original runs under the
   control word in force (`0x27f`, 53-bit, under Proton: `park-engine.md`, "The control word"); what Windows' own DirectDraw
   leaves under `DDSCL_FPUSETUP` needs real Windows. Q819 found nothing to build for the face normals.
+  (4) Left by Q821: the original's picture of a flipped diagonal was not got (its frames drift, the in-game date rolls: `q821/orig/poke7`), so the
+  original's drawing by `0x2` stands on the decode and the live bits (all 7,001 ground cells' diagonal bits equal the file's); poke one cell's `0x2`/`0x4`
+  in the original and film it with the camera held (`original/setcam.py`'s follow off) and the clock paused. `ParkCamcorderCameraMode` still takes
+  `HeightfieldFile.HeightAtWorld`, the bilinear height (no decode of the camcorder's sampler: `FUN_00452560` is the park camera's); the other
+  `HeightAtWorld` users (shadows, picking, balloons) the same, each needing its own look at what the original calls there.
 - [ ] **Q849. What Q810 left: two counted gaps her played park's save now reaches, and two loads never run.** (From Q810's review,
   run 14.) Q810 made her Full Simulation `New Save.TPWS` read whole, so the save goes through the running-things writer for the
   first time (before, the model walk failed and the whole module was written as the file's). Two counters then fire, in
@@ -1251,19 +1254,6 @@ filed the items that cite it.
   the row for the queue's remeasure). `OpenTPW/World/Park/ParkState.cs`, line 1688. Confirm: the back cell's stamp
   read in both games after one queue edit.
 
-- [ ] **Q398. Each ground cell is split on its own diagonal.** From the fork review 2, 2026-10-16 (`verify-formats.md`
-  H1, checked again in Ghidra by the main session). `ParkGround` splits every cell from (x, y) to (x + 1, y + 1) and
-  says so at the site; the original draws each cell by its flag `0x2` and takes heights by `0x4`, the same split
-  (`park-engine.md`, "The triangle diagonal"; FileFormats `models.md`, "A cell's diagonal"). In Lost Kingdom 2,708 of
-  the 7,001 ground cells take the other diagonal. Fix the mesh and this game's height under a point (the camera's, a
-  draped model's, and `FUN_004527f0`'s users, which split only the cells the load marks `0x800`). Confirm: a slope
-  cell carrying `0x4` shot beside the original's, the same camera.
-
-  - **Note (fork watch 2026-10-25, verify-all.md H1, N2):** a draped model's height is taken per vertex (`0x00469a80`): the vertex goes through the
-    instance matrix, the cell is (x - grid `+8`) / grid `+0x10` and the same for z, the cell flag byte `& 4` picks the triangle
-    (`0x0046a34c`: clear, fz <= fx takes h00, h10, h11, else h00, h01, h11; set, 1 - fz <= fx takes h01, h11, h10, else h00, h10, h01),
-    and the vertex moves by h - H, H the instance's height. The kart, water, queue and boundary-hoarding kinds also carry the
-    run-time header flag `0x80` (`0x004625f4`), the landscape's height (`FUN_004527f0`), so they take this split too.
 - [ ] **Q399. Ride boards lettered as the original letters them.** From the fork review 2, 2026-10-16
   (`verify-objects-signs-other.md` H1, H3, M1). `ParkObjects.BuildSign` letters the `.sam`'s `Name`, split; the
   original letters the item's `OBJECT_NAMES` rows (FileFormats `sgn.md`): in English Lost Kingdom only Dino Karts

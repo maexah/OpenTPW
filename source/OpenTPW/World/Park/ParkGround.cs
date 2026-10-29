@@ -335,6 +335,8 @@ public sealed class ParkGround : ModelEntity
 
 		var halfLit = 0;
 		var tiled = 0;
+		var otherDiagonal = 0;
+		_cut = new sbyte[field.CellCount];
 
 		for ( var y = 0; y < field.CellsY; ++y )
 		{
@@ -398,17 +400,16 @@ public sealed class ParkGround : ModelEntity
 				vertices[vertex++] = Corner( field, x + 1, y + 1, Uv( x, y, uvs[2], tile ), slot, flags );
 				vertices[vertex++] = Corner( field, x, y + 1, Uv( x, y, uvs[3], tile ), slot, flags );
 
-				// Two triangles over those four corners, always split from (x, y) to (x + 1, y + 1) -
-				// which is not what the original does, and this is where to fix it (Q398). The original
-				// cuts each cell on the diagonal its flag 0x0002 names, the other one where the cell
-				// carries 0x0004 instead (docs/exe/park-engine.md, "The triangle diagonal").
-				elements[element++] = (uint)corner;
-				elements[element++] = (uint)(corner + 1);
-				elements[element++] = (uint)(corner + 2);
+				// Two triangles over those four corners, split on the diagonal the cell's flag 0x0002 names
+				// (docs/exe/park-engine.md, "The triangle diagonal").
+				var cellFlags = field.FlagsAt( x, y );
 
-				elements[element++] = (uint)corner;
-				elements[element++] = (uint)(corner + 2);
-				elements[element++] = (uint)(corner + 3);
+				_cut[(y * field.CellsX) + x] = SplitsNearToFar( cellFlags ) ? (sbyte)1 : (sbyte)2;
+
+				if ( !SplitsNearToFar( cellFlags ) )
+					++otherDiagonal;
+
+				element = PutCellElements( elements, element, corner, cellFlags );
 			}
 		}
 
@@ -424,7 +425,79 @@ public sealed class ParkGround : ModelEntity
 		Model = new Model( vertices[..vertex], elements[..element], material );
 
 		Log.Info( $"{_themeName}: ground {element / 6} cells drawn, {tiled} of them with a composited tile, {halfLit} at half light, " +
+			$"{otherDiagonal} split on the diagonal from the far x corner to the far y one, " +
 			$"{field.CellCount - (element / 6)} left to the scenery, to the paths and to what is built on them" );
+	}
+
+	/// <summary>How each cell was cut when the mesh was built: 0 not drawn here, 1 from (x, y) to (x + 1, y + 1), 2 from (x + 1, y) to (x, y + 1).</summary>
+	private sbyte[] _cut = [];
+
+	/// <summary>
+	/// One cell's cut for the debug console: its flags, the diagonal the built mesh holds, and the height the camera's sampler answers at its
+	/// centre against the two diagonals' midpoints.
+	/// </summary>
+	public string CutReport( int x, int y )
+	{
+		var field = Heightfield;
+
+		if ( x < 0 || y < 0 || x >= field.CellsX || y >= field.CellsY )
+			return $"cell ({x},{y}) is off the map";
+
+		var cut = _cut.Length == field.CellCount ? _cut[(y * field.CellsX) + x] : (sbyte)0;
+		var centre = field.CameraHeight( (x + 0.5f) * field.CellSizeX, (y + 0.5f) * field.CellSizeY );
+
+		return $"cell ({x},{y}) flags 0x{field.FlagsAt( x, y ):x4} mesh " + cut switch
+		{
+			1 => "cut (x,y)-(x+1,y+1)",
+			2 => "cut (x+1,y)-(x,y+1)",
+			_ => "not drawn here",
+		} + $" corners {field.HeightAt( x, y ):0.00} {field.HeightAt( x + 1, y ):0.00} {field.HeightAt( x, y + 1 ):0.00} {field.HeightAt( x + 1, y + 1 ):0.00}" +
+			$" camera height at centre {centre:0.000} (bilinear {field.HeightAtWorld( (x + 0.5f) * field.CellSizeX, (y + 0.5f) * field.CellSizeY ):0.000})";
+	}
+
+	/// <summary>
+	/// Whether a cell's two triangles meet on the diagonal from its near corner (x, y) to its far one (x + 1, y + 1): the
+	/// terrain pass reads the cell's flag <c>0x0002</c> (<c>TEST AL,0x2</c> at <c>0x0056fac1</c>) and fans the quad from its
+	/// first corner, so set draws that diagonal and clear draws (x + 1, y) to (x, y + 1) (<c>park-engine.md</c>, "The triangle diagonal").
+	/// </summary>
+	internal static bool SplitsNearToFar( ushort flags ) => !CutByFlag || (flags & 0x0002) != 0;
+
+	/// <summary>
+	/// On, every ground cell is cut on its flag's diagonal. The debug console's <c>cut old</c> turns it off and rebuilds the ground, so
+	/// every cell is cut from (x, y) to (x + 1, y + 1) as this game did before Q398, and a frame of each is taken in one session.
+	/// </summary>
+	internal static bool CutByFlag { get; set; } = true;
+
+	/// <summary>
+	/// Writes a cell's two triangles over its four vertices at <paramref name="corner"/> (x, y), (x + 1, y), (x + 1, y + 1),
+	/// (x, y + 1), cut on the diagonal its flags name (<see cref="SplitsNearToFar"/>), both wound the same way. Answers the next element.
+	/// </summary>
+	internal static int PutCellElements( uint[] elements, int element, int corner, ushort flags )
+	{
+		uint c = (uint)corner;
+
+		if ( SplitsNearToFar( flags ) )
+		{
+			elements[element++] = c;
+			elements[element++] = c + 1;
+			elements[element++] = c + 2;
+
+			elements[element++] = c;
+			elements[element++] = c + 2;
+			elements[element++] = c + 3;
+		}
+		else
+		{
+			elements[element++] = c;
+			elements[element++] = c + 1;
+			elements[element++] = c + 3;
+
+			elements[element++] = c + 1;
+			elements[element++] = c + 2;
+			elements[element++] = c + 3;
+		}
+
+		return element;
 	}
 
 	/// <summary>

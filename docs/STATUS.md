@@ -7,7 +7,7 @@ Last updated: 2026-10-29. **This header names no branch and no sha, deliberately
 One line per system; the detail, item by item, is `docs/WORKS.md` (grep it by area or Q-number, never read it whole).
 
 - Lobby: the four islands, the front end, players and their saves, options, the advisor, weather, the island gate and the fly-in.
-- The park's world: ground, paths, queues, placed and fixed objects, a played coaster's pylons (Q817), the boundary wall, sky, sea, weather, music, the calendar on the park's own clock, lighting, the camcorder.
+- The park's world: ground (each cell cut on its own diagonal, Q821), paths, queues, placed and fixed objects, a played coaster's pylons (Q817), the boundary wall, sky, sea, weather, music, the calendar on the park's own clock, lighting, the camcorder.
 - Building: the buy and hire screens, paths and queues laid by pointing, a ride carried over its squares and placed with its queue, a bought thing joining the running park with the original's next id, a kart or water ride's station and mouths and every track piece drawn, and its track laid run by run with the track tool, taken back a run at a time with Backspace, its circuit walked as the loop closes, each section with its collision objects and buoy, its open end pulsing red while the loop is open, each run shown by its squares before the click, lifted and walled as the original's, a run over a feature taking it down, an add-on's end caps shown and hidden by the put-down's walk (seen once in ours: the Tunnel's caps hid at the click), an add-on put down on its own ride's track by the original's snap, the hand turned to nought after it, the pieces' clips after a close and an add-on's put-down.
 - Guests: eight kinds arrive, choose by the original's score, queue, ride, buy and pay; 23 of Lost Kingdom's 31 rides, shops and sideshows run for them (the website's ride list).
 - Staff: all five kinds hired and working their kind's decide (cleaning, performing, researching), strikes, their voices.
@@ -38,23 +38,21 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- Q817 (a played coaster's pylons drawn, `ParkCoasterPylons`; Q813's piece (2)). Ours on a copy of Alexah's Full Simulation `New Save.TPWS` (`q817/run7`, the final binary; the
-  console's `pylons`): 40 pylons (the station's two and 38 pieces, the original's 40), each knot where `ParkCoasterHeights` puts it (off 0.0000), each floor's 4 listed
-  base vertices on a corner (160), `mc_bridge` hidden on all; and each one's loft, yaw, incline, bank and knot equal to the original's live node of the same file this session
-  (`q817/orig/o1/coaster80.txt`, `cmp.py`: largest differences 0.0005 on angles, 0.002 on places, the station ends' yaw, solved here, 1.5708 in both). Frames: ours
-  `run7/match_280_355.png` beside the original's `orig/o1/o-t19443.png`, the towers' lattice and sandy floors alike (`side-by-side-original-left-ours-right.png`).
-  Not verified: the frames are not pixel-aligned (the camera maps differently, and ours draws no track, Q594), so no tower's lean was compared to the pixel;
-  the additive morph is the listing's (positions `0x00471bef`, `FUN_004714a0`; UV `0x004746ae`, `FUN_004745c0`, gated at `0x004721c0`) and matched by look, not read back from the original's vertices; a stacked pylon, a loop
-  pylon and the type flag `0x10` (none in her park; counted, not drawn); `mc_bridge` hidden in the original is Q816's reading, not retaken; the incline's and the bank's turns of
-  `TrackCentreDummy` are not composed (no mesh hangs from it); the vertex normals stay as made (Q818).
+- Q821 (the ground cut on each cell's own diagonal, `ParkGround`/`ParkPaths`, and the park camera's height, `HeightfieldFile.CameraHeight`; Q820's piece (1), Q398's build). Ours on a copy of Alexah's Full Simulation `New Save.TPWS`
+  (`q821/run5`, the final binary): the log's 2,530 of 6,487 drawn ground cells cut the second way (0 with the console's `cut old`); at two staircases of four `0x44` cells,
+  `cut new` against `cut old` in one session changes 60,864 and 79,293 pixels outside the HUD in four patches of a cell each, `cut new` against `cut new` 0 (`lib/framediff.py`);
+  the camera's height at cell (3,13)'s centre 0.000 against bilinear -0.250. The original's live cell words (`groundcell.py READ`, `q821/orig/poke7/cells75.txt`): all 7,001 ground cells hold the file's `0x2`/`0x4`.
+  Not verified: the original's own picture of one cell's diagonal flipped (its frames drift under a poke; the decode and the live bits stand for it); no frame was compared with the original's at one camera
+  (two launches' tiles differ); the camcorder's and the shadows' and picking's heights are still bilinear (Q820 (4)); the Sun God's 11 to 14 clear-coloured pixels are not the cut's and are unexplained.
+
 
 ## Numbers (take counts fresh; these go stale within a day)
 
 | | | measured |
 |---|---|---|
 | Opcodes | **78** of 106 | 2026-10-20, Q553 (`FADEOBJ`), `case Opcode.` labels vs enum members |
-| Tests | **4366**, 0 fail, 2 skip with the game (the macOS and Windows tests of `UserFoldersTests`, run on Linux) | 2026-10-29, Q819 |
-| Tests without the game | **1679** ran, **2687** skipped, of 4366 | 2026-10-29, Q819 |
+| Tests | **4373**, 0 fail, 2 skip with the game (the macOS and Windows tests of `UserFoldersTests`, run on Linux) | 2026-10-29, Q821 |
+| Tests without the game | **1683** ran, **2690** skipped, of 4373 | 2026-10-29, Q821 |
 | Build warnings | **0**, `--no-incremental` (none silenced: the nullable ones fixed at their cause, ModKit and its ImageSharp advisories removed, the test SDK past its Newtonsoft.Json advisory); 115 before | 2026-10-29 |
 | Park load | **2.5 s**, worst phase `terrain` 0.72 s | 2026-09-21, three jungle runs |
 | Park load, Release | **3.1 to 3.4 s**, worst phase `audio` 1.04 s (`ground` 0.52 to 0.57, `terrain` 0.46 to 0.55, `objects` 0.35 to 0.47) | 2026-10-26, three runs, `perf/bench.sh` |

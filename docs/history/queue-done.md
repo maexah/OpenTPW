@@ -11099,6 +11099,32 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   meshes, all own, the first run the master's but for the highlighted pylon's two meshes (slot 202, `[0x007a1ce0]`), no face on the
   first run, every face not marked stale agreeing with its triangle to 1e-4. `park-engine.md`, "The recomputed face normals never
   reach the lighting" and "The control word". 8 predictions, 1 missed (P3: the tint read as changed normals).
+- [x] **Q821. The ground cut on each cell's own diagonal (Q820's piece (1), the build of Q398).** Done 2026-10-29 (run 14, lane A,
+  `alexah/780-ground-cell-diagonal`): `ParkGround` and `ParkPaths` cut each cell on the diagonal its flag `0x2` names (set: (x, y) to (x + 1, y + 1), clear:
+  (x + 1, y) to (x, y + 1); `ParkGround.PutCellElements`), and the park camera's height is the plane of the triangle the cell's `0x4` picks, on every cell
+  (`HeightfieldFile.CameraHeight`, `FUN_00452560` decompiled again: no `0x800` test, nought off the map where ours holds the edge). The console's `cut X Y`
+  prints a cell's flags, the diagonal its mesh holds and the camera's height at its centre against the bilinear one; `cut old` / `cut new` rebuilds the ground cut
+  the old way or by the flags, for an A/B in one session. Lost Kingdom: 2,530 of the 6,487 drawn ground cells cut the second way (the log line). One session, `cut new`
+  then `cut old` then `cut new`, same file (Alexah's Full Simulation New Save copy), camera over a staircase of `0x44` cells: new against old differs in 60,864
+  (cells (3..6, 13..16)) and 79,293 pixels ((62..65, 16..19)) outside the HUD, in four patches of one cell each, and new against new in 0; the cells it leaves
+  (`0x42`, as before) change in none. The camera's height at (3, 13) centre reads 0.000 where bilinear read -0.250. The original's live cell words, read
+  with `groundcell.py READ`: of the 7,001 ground cells 0 differ from the file's in `0x2`/`0x4` (4,293 and 2,708); a write of one cell's `0x4` to `0x2` reads back. Not
+  got: the original's picture of a flipped cell (Q820 (4)). The sliver of clear colour at the Sun God stays (12 to 14 pixels in all four frames, main's too): not the cut's.
+  13 bugs put back, 13 caught (one, the debug switch ignored, first survived: its test is `TheDebugSwitchCutsEveryCellTheOldWay`); the mesh's wiring in `ParkGround`
+  and `ParkPaths` and the orbit camera's call are covered by the census and the frames, not by a unit test (they build a GPU model).
+- [x] **Q398. Each ground cell is split on its own diagonal.** Built by Q821 (run 14, lane A, `alexah/780-ground-cell-diagonal`; the account is Q821's). From the fork review 2, 2026-10-16 (`verify-formats.md`
+  H1, checked again in Ghidra by the main session). `ParkGround` splits every cell from (x, y) to (x + 1, y + 1) and
+  says so at the site; the original draws each cell by its flag `0x2` and takes heights by `0x4`, the same split
+  (`park-engine.md`, "The triangle diagonal"; FileFormats `models.md`, "A cell's diagonal"). In Lost Kingdom 2,708 of
+  the 7,001 ground cells take the other diagonal. Fix the mesh and this game's height under a point (the camera's, a
+  draped model's, and `FUN_004527f0`'s users, which split only the cells the load marks `0x800`). Confirm: a slope
+  cell carrying `0x4` shot beside the original's, the same camera.
+
+  - **Note (fork watch 2026-10-25, verify-all.md H1, N2):** a draped model's height is taken per vertex (`0x00469a80`): the vertex goes through the
+    instance matrix, the cell is (x - grid `+8`) / grid `+0x10` and the same for z, the cell flag byte `& 4` picks the triangle
+    (`0x0046a34c`: clear, fz <= fx takes h00, h10, h11, else h00, h01, h11; set, 1 - fz <= fx takes h01, h11, h10, else h00, h10, h01),
+    and the vertex moves by h - H, H the instance's height. The kart, water, queue and boundary-hoarding kinds also carry the
+    run-time header flag `0x80` (`0x004625f4`), the landscape's height (`FUN_004527f0`), so they take this split too.
 
 ## B. Docs and comments
 

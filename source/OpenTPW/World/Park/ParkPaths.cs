@@ -234,15 +234,9 @@ public sealed class ParkPaths : ModelEntity
 			vertices[vertex++] = Corner( field, x + 1, y + 1, CornerUvs[corners[2]], slot );
 			vertices[vertex++] = Corner( field, x, y + 1, CornerUvs[corners[3]], slot );
 
-			// Split the same way the ground splits its own quads, so a path and the grass beside it are
-			// cut alike and the seam between them cannot show.
-			elements[element++] = (uint)corner;
-			elements[element++] = (uint)(corner + 1);
-			elements[element++] = (uint)(corner + 2);
-
-			elements[element++] = (uint)corner;
-			elements[element++] = (uint)(corner + 2);
-			elements[element++] = (uint)(corner + 3);
+			// Cut on the diagonal the cell's flag 0x0002 names, as the ground cuts its own cells, so a path and the grass
+			// beside it are cut alike and the seam between them cannot show.
+			element = ParkGround.PutCellElements( elements, element, corner, field.FlagsAt( x, y ) );
 		}
 
 		// Both faces drawn, where the original culls (render-states.md, "Which draws the test covers"; Q613).

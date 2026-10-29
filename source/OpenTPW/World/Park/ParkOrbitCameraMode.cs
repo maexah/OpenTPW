@@ -103,7 +103,7 @@ public sealed class ParkOrbitCameraMode : CameraMode
 	/// <remarks>See <c>ParkCamcorderCameraMode.PeekGround</c> - the first un-eased sample belongs to
 	/// the first <see cref="Update"/>, not to a constructor.</remarks>
 	private static float PeekGround()
-		=> ParkGround.Current?.Heightfield?.HeightAtWorld( PointOfInterest.X, PointOfInterest.Y ) ?? 0f;
+		=> ParkGround.Current?.Heightfield?.CameraHeight( PointOfInterest.X, PointOfInterest.Y ) ?? 0f;
 
 	/// <summary>
 	/// The ground under the point of interest, eased. The original raises the eye by this so that
@@ -122,7 +122,7 @@ public sealed class ParkOrbitCameraMode : CameraMode
 		if ( field == null )
 			return 0f;
 
-		var sample = field.HeightAtWorld( PointOfInterest.X, PointOfInterest.Y );
+		var sample = field.CameraHeight( PointOfInterest.X, PointOfInterest.Y );
 
 		if ( !_groundSampled )
 		{
@@ -586,7 +586,7 @@ public sealed class ParkOrbitCameraMode : CameraMode
 	/// </summary>
 	public static string State()
 	{
-		var ground = ParkGround.Current?.Heightfield?.HeightAtWorld( PointOfInterest.X, PointOfInterest.Y );
+		var ground = ParkGround.Current?.Heightfield?.CameraHeight( PointOfInterest.X, PointOfInterest.Y );
 
 		// The cell the point of interest stands in, which is the world position divided by the cell
 		// size - not the (world - 5) / 10 above, which recovers the cell a CENTRE belongs to and comes

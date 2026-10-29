@@ -2749,6 +2749,25 @@ public static class DebugConsole
 
 				break;
 
+			// A cell's cut: its flags, the diagonal the ground mesh holds and the camera's height at its centre (Q398); `cut old` / `cut new` cut every cell the old way or by its flag.
+			case "cut":
+				if ( ParkGround.Current is { } cutSwitch && parts.Length == 2 && parts[1] is "old" or "new" )
+				{
+					ParkGround.CutByFlag = parts[1] == "new";
+					cutSwitch.Rebuild();
+					Reply( $"cut: the ground is cut {(ParkGround.CutByFlag ? "by each cell's flag" : "from (x,y) to (x+1,y+1) in every cell")}" );
+					break;
+				}
+
+				if ( ParkGround.Current is not { } cutGround || parts.Length < 3 || !int.TryParse( parts[1], out var cutX ) || !int.TryParse( parts[2], out var cutY ) )
+				{
+					Reply( "cut: cut X Y, or cut old / cut new - a park has to be loaded" );
+					break;
+				}
+
+				Reply( cutGround.CutReport( cutX, cutY ) );
+				break;
+
 			// Where each standing object's floor plate meets the ground, and how far the rim is from the terrain corners beside it;
 			// the last line counts the objects and queue cells over a step (the rim the original conforms and this game does not).
 			case "rim":

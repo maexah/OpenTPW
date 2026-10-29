@@ -5,6 +5,15 @@ newest first. The pre-commit hook (`tools/maintainer/status-sweep.py`) moves an 
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q817 (a played coaster's pylons drawn, `ParkCoasterPylons`; Q813's piece (2)). Ours on a copy of Alexah's Full Simulation `New Save.TPWS` (`q817/run7`, the final binary; the
+  console's `pylons`): 40 pylons (the station's two and 38 pieces, the original's 40), each knot where `ParkCoasterHeights` puts it (off 0.0000), each floor's 4 listed
+  base vertices on a corner (160), `mc_bridge` hidden on all; and each one's loft, yaw, incline, bank and knot equal to the original's live node of the same file this session
+  (`q817/orig/o1/coaster80.txt`, `cmp.py`: largest differences 0.0005 on angles, 0.002 on places, the station ends' yaw, solved here, 1.5708 in both). Frames: ours
+  `run7/match_280_355.png` beside the original's `orig/o1/o-t19443.png`, the towers' lattice and sandy floors alike (`side-by-side-original-left-ours-right.png`).
+  Not verified: the frames are not pixel-aligned (the camera maps differently, and ours draws no track, Q594), so no tower's lean was compared to the pixel;
+  the additive morph is the listing's (positions `0x00471bef`, `FUN_004714a0`; UV `0x004746ae`, `FUN_004745c0`, gated at `0x004721c0`) and matched by look, not read back from the original's vertices; a stacked pylon, a loop
+  pylon and the type flag `0x10` (none in her park; counted, not drawn); `mc_bridge` hidden in the original is Q816's reading, not retaken; the incline's and the bank's turns of
+  `TrackCentreDummy` are not composed (no mesh hangs from it); the vertex normals stay as made (Q818).
 - Q816 (decode only: how a coaster's pylons are conformed, `Coaster_StandCellPylons` `0x00432df0`, `Coaster_MoveNodeToCell` `0x00442f40`). Read in
   the original under Proton on a copy of Alexah's Full Simulation `New Save.TPWS` (`q816/orig/orig1`, `orig2`, `original/coaster.py pylons`): her 40
   pylons stand alone on their cells; slots 202 and 210's floors read `0x80005101` (`0x10` clear) where 38 read `0x5101`, their file records' node

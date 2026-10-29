@@ -78,6 +78,17 @@ diagonal"). The drawing and the heights read the two bits and take the same spli
 
 Read 2026-10-16 from a lead in another fork (`meneerkrabs/OpenTPW`), checked in Ghidra and over the five heightfields.
 
+**Built in OpenTPW** (Q821, 2026-10-29). `ParkGround` and `ParkPaths` cut each cell by `0x0002` (`PutCellElements`), and `HeightfieldFile.CameraHeight` is
+`FUN_00452560` on every cell (the same planes as `ScapeHeight`'s split arm and `ProceduralConform.DrapeHeight`; ours holds the edge's height off the map where the
+original answers nought, and subtracts the grid's origin, which is nought in every park). Lost Kingdom's file, as the original's live memory holds it
+(`groundcell.py READ` over all 8,160 cells at 75 s into a load of Alexah's Full Simulation New Save, `q821/orig/poke7/cells75.txt`): of the 7,001 ground cells,
+4,293 carry `0x2` and 2,708 carry `0x4`, and the live word's `0x2`/`0x4` equals the file's in every one (the load adds `0x0800` and the tile's `0x0100`, clears the
+mirror and turn of the cells the compositor covers, and sets `0x0400` outside the park: `0x0804`, `0x0d02`, `0x0904` for file words `0x44`, `0x42`, `0x44`). A cell
+only bends by at most 2 world units there (the ground's heights are whole units, apart from a few cells of a ride's floor), so a wrong diagonal moves the
+height by at most half that; the other cut shows on screen as a different warp of the tile across the cell, over exactly the cells that carry `0x4` (ours,
+`cut old` against `cut new`, 60,864 and 79,293 pixels over two staircases of four `0x44` cells, 0 where no cell differs). Not seen: the original's own
+picture of one cell's diagonal flipped (its frames drift under a poke, `q821/orig/poke7`).
+
 ### What the render-state `0x0800` tests are
 
 The terrain renderer `FUN_0056f670` has 16 sites pairing `TEST ?H,0x8` with a test of `0x4` in the cell's high byte (`TEST byte ptr [reg+0x1],0x4`, or `TEST AH,0x4` at `0x0056fb0e` and `0x0056fd67`), which look like a diagonal rule. They are not. All 16 sites were traced and every one has the same shape:
@@ -389,7 +400,7 @@ grid line and sets the height to the nearest corner's, nothing added (always, an
 piece, and the meshes a placed object's lookup record marks `0x10000` (`mammtunn`'s `gk_mam1`), and raises each vertex by the
 height under it on the cell's triangle (`DrapeHeight`, the flag `0x4` as above) less the model's own height; a source vertex moves
 under every drawn vertex that names it, and `SourceVertices` stay the rest the floor search and the hoardings read. The cell's
-triangle here is the original's, while the ground mesh is still split one way (Q398). Nothing is to build for the recomputed face normals or the control word (Q819, "The recomputed face normals never reach the lighting" and "The control word", above). **Measured in OpenTPW** (Q808, Alexah's New Save, a copy): the Sun God 18 of 18 listed rim
+triangle here is the original's, and the ground mesh is cut on the same diagonal since Q821. Nothing is to build for the recomputed face normals or the control word (Q819, "The recomputed face normals never reach the lighting" and "The control word", above). **Measured in OpenTPW** (Q808, Alexah's New Save, a copy): the Sun God 18 of 18 listed rim
 vertices on a corner, the Tom Tom Twister 20 of 20, the Costume Shop 12 of 12 (the original's counts), 1,782 queue vertices and
 1,736 track-piece vertices draped, and the clear-coloured sliver pixels at the Sun God camera 5,751 to 11, the Tom Tom Twister's
 16,308 to 0, the Costume Shop's 7,844 to 0.

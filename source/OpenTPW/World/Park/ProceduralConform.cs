@@ -337,8 +337,8 @@ public static class ProceduralConform
 	/// The ground's height under a world position as the draped vertex takes it (<c>0x0046a34c</c>, Q398's note): the cell by
 	/// truncation, and the plane of the triangle its flag <c>0x4</c> picks - clear, the point below the diagonal (<c>z &lt;= x</c> in
 	/// the cell) takes corners (0,0), (1,0), (1,1) and above it (0,0), (0,1), (1,1); set, the point (<c>1 - z &lt;= x</c>) takes
-	/// (0,1), (1,1), (1,0) and else (0,0), (1,0), (0,1). The ground mesh here is always split the first way (Q398), so on a cell
-	/// flagged <c>0x4</c> a draped vertex stands on the original's triangle and the mesh beside it on ours.
+	/// (0,1), (1,1), (1,0) and else (0,0), (1,0), (0,1). The ground mesh is cut on the same diagonal, by the cell's flag <c>0x2</c>
+	/// (<see cref="ParkGround.PutCellElements"/>), so a draped vertex stands on the triangle the ground beside it draws.
 	/// </summary>
 	public static float DrapeHeight( HeightfieldFile field, float worldX, float worldY )
 	{
