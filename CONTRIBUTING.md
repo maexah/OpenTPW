@@ -125,15 +125,13 @@ textures and models are not committed at all, and `content/ReferenceScreenshots/
 
 No CI tests the code, on purpose. The one workflow, [`weekly.yml`](.github/workflows/weekly.yml), only packages a
 weekly build from a tag the maintainer pushes and runs the content guard that keeps the game's files out of the zip; it
-runs no test and decides nothing about your change. So the check is yours. Build and test your branch in a clean
-worktree, and run the content guard on what you staged (the pre-commit hook does it too):
+runs no test and decides nothing about your change. So the check is yours. Build and test each commit in a clean
+worktree, and run the content guard on what it changes. One command does all three and prints a summary (the build's
+errors and warnings, the tests passed, failed and skipped, whether the game was given, the guard's answer):
 
 ```sh
-python3 tools/content_guard.py staged
-git worktree add ../opentpw-check HEAD
-cd ../opentpw-check
-dotnet build source/OpenTPW.sln --no-incremental && dotnet test source/OpenTPW.sln --no-build
-cd - && git worktree remove ../opentpw-check
+tools/check_commit.sh                      # HEAD; add a commit, and your game folder for a full pass
+tools/check_commit.sh HEAD "<game folder>"
 ```
 
 ## Pull requests
