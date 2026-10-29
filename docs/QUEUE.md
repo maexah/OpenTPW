@@ -64,12 +64,14 @@ default, Alexah's second pre-weekly list), then the rest in the order below.
 **Ordered at Alexah's word (2026-10-29):** Q804, Q805 and Q806, found while photographing Alexah's Full Simulation
 park for the website, go first. Q804 stopped the photographs: no picture with the blue lines will be used.
 
-- [ ] **Q810. The gate's doors stand open in Alexah's Full Simulation park (Q805's build).** From Q805 and Q809. Do Q779 here,
-  its decode first (how many channels the original makes a car's model with, and what its loader reads for them), so that
-  `ParkThingStates` reads her `New Save.TPWS` and `autosave.TPWS` whole and the gate's channel comes back held on role 5 entry 1;
-  tick Q779 with this. Q779 stays where it is; ordering it is Alexah's. Confirm: the gate's view (camera 480 165 120 0) in her park
+- [ ] **Q810. Make the gate's doors and the boundary wall come back in Alexah's Full Simulation park (Q805's and Q806's build).** From Q805, Q809 and Q811. Do Q779 here,
+  its decode first (how many channels the original makes the pylon's model with, `Coaster_SetupPylonModel` `0x00430590`, channels 0 to 4 posed by
+  `Coaster_PosePylon`, `ride-operation.md`; and what its loader reads for them), so that
+  `ParkThingStates` reads her `New Save.TPWS` and `autosave.TPWS` whole and the gate's channel comes back held on role 5 entry 1.
+  `ThingStates` has four callers, `ParkRides.cs:760` and `:950`, `ParkObjects.cs:264` and `ParkBoundaryHoarding.cs:250`; the count belongs
+  inside the walk so that all four are mended at once. Tick Q779 with this. Q779 stays where it is; ordering it is Alexah's. Confirm: the gate's view (camera 480 165 120 0) in her park
   beside the original's `q805/orig/gate/o-t19017.png`, the doors open, with `rides` thing 11 `HELD` and the restore line's channels
-  put back above nought; the stock park still 15. **And the wall (Q811):** the same file's `boundary` reads `pieces 163 anchors 163
+  put back above nought; the stock park still 15. **And the wall (Q811, `ParkBoundaryHoarding.Read`):** the same file's `boundary` reads `pieces 163 anchors 163
   unmade 0` (ho_fob1 10, ho_fob2 7, ho_fob3 1, ho_fos1 98, ho_fos2 16, ho_fos3 19, ho_fos4 12; 0 of 163 now) and the gate's view shows the
   wall beside the original's; the stock park still 143.
   **Split (2026-10-29):** the decode is done as Q814 (`saves.md`, "How many channels a saved model has"): item 1181 is the
@@ -3148,17 +3150,16 @@ state machine.
   through a park's menu, where ours holds them (`Audio.HoldPlaced`) and lets their samples pass unheard. Read what
   `[manager + 0x60]` points to and who writes it, then measure the original's mix in a paused Lost Kingdom park
   (`mixer.py`: the sea's channel volume and distance with the menu open).
-- [ ] **Q779. A played park's model records do not read when it holds a Temple of Gloom: a car's channel count.** From Q778
+- [ ] **Q779. A played park's model records do not read when it holds a Temple of Gloom: a pylon's channel count.** From Q778
   (`q778/PREDICTION.txt`, R1). Loading Alexah's played Full Simulation jungle park (`New Save.TPWS`, and its `autosave`),
   `ParkThingStates` stops at 2058464 of the module's 2101020 ("Hoarding restore: the walk ended at ...", and `ParkRides`'
   "the park file's model states would not read"), so nothing of that file's model states is restored: hoardings, clips'
-  stamps, node words, an add-on's caps. The walk asks `channelsFor` the item, and a car's model record is the ride's item
-  plus one plus its mesh (FileFormats `saves.md`, "A car's two model records"), which the catalogue does not hold, so it is
-  taken as 1 channel; `rsys.py` reads 40 records of item 1181 (ride 1180's car) with 5 and 24 of 1183 with 1, and the stop
-  falls just after a 1181 record (`q778/where.py`; `parkfile.py -H` prints the counts). Decode first how many channels the original makes a car's model with
-  (the car's launch, which makes the two records) and what its loader reads for them, then read them so; check against
+  stamps, node words, an add-on's caps. The walk asks `channelsFor` the item, and the ride's extra model records (item 1181 is a pylon's, 1183 the cart's; FileFormats `saves.md`, "A car's two model records" names the pair) are
+  items the catalogue does not hold, so each is taken as 1 channel; `rsys.py` reads 40 records of item 1181 (the Temple of Gloom's `StdPylon` pylons, made `0x3fa` by `Coaster_SetupPylonModel`, `0x00430590`) with 5 and 24 of 1183 (the carts) with 1, and the stop
+  falls just after the second 1181 record (`q778/where.py`; `parkfile.py -H` prints the counts). Decode first how many channels the original makes the pylon's model with
+  (`Coaster_SetupPylonModel`; `Coaster_PosePylon` poses channels 0 to 4, `ride-operation.md`) and what its loader reads for them, then read them so; check against
   both of Alexah's jungle files and the 45 files `saves.md` counts.
-  Q810 (Q805's build) does this item; Q809 measured its effect on the gate (`park-gate.md`, "What draws the doors").
+  Q810 (Q805's and Q811's build) does this item, and the boundary wall (Q811) returns with it; Q809 measured its effect on the gate (`park-gate.md`, "What draws the doors").
   - **Decoded (Q814):** the 40 records of 1181 are the Minecart's `StdPylon`s (made `0x3fa`), not its cars (1183, one channel);
     a pylon's model has five channels, and the rule (`saves.md`, "How many channels a saved model has") closes all 45 files. The
     build is Q810's.

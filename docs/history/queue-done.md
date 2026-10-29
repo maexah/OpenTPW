@@ -10954,7 +10954,7 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   (`park-engine.md`, "Where a placed object's model stands"; ours does not: Q750, Q695). Measured by the new console `rim` and
   `lib/clearseam.py`: the stock park, 14 things and 4 queue cells all at step 0.00, 0 pixels; Alexah's jungle, 58 objects over a
   step above 0.05 (Sun God 2.5) and 58 of 78 queue cells, 5,751 pixels at the Sun God; its level plots 0; the original, same file
-  and camera, 0 (`q804/PREDICTION.txt`, `orig/sungod/`). The build is Q804's open part.
+  and camera, 0 (`q804/PREDICTION.txt`, `orig/sungod/`). The build is Q808.
 - [x] **Q804. Blue gaps in the ground along the cells under rides, shops and queues.** From the website photographs,
   2026-10-29 (Alexah: "terrible and pretty much unusable"). Alexah's Full Simulation jungle (`New Save.TPWS`, a copy
   loaded at tick 19004), main `2e101169`, desktop GPU: thin light-blue lines run along the edges of the plots of
@@ -10985,7 +10985,7 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   walk Q779 names, which stops at 2058464 of 2101020 in her file, so `ParkBoundaryHoarding.Read` answers none: `boundary pieces 0
   anchors 163 unmade 163`, 163 `BOUNDARY_HOARDING_UNMADE` counted, and no wall in the gate's view. Her file holds the 163 records
   (82 of them in slots after the first record of item 1181, so a partial read cannot hold the wall); the original's frame of the same file and camera
-  has the wall; a probe reading item 1181 as 5 channels in the three callers of `ThingStates` (`ParkRides`, `ParkObjects`, `ParkBoundaryHoarding`) gives `pieces 163 unmade 0` and the wall in the frame, laid as the original's
+  has the wall; a probe reading item 1181 (the pylons) as 5 channels in the three load-side callers of `ThingStates` (`ParkRides`, `ParkObjects`, `ParkBoundaryHoarding`; a fourth writes) gives `pieces 163 unmade 0` and the wall in the frame, laid like the original's by eye
   (`q806/PREDICTION.txt`, 7 of 7 held, the original's frame is Q809's). The stock park is 143 of 143. The build is Q810's.
 - [x] **Q806. The boundary wall is not drawn in Alexah's Full Simulation park.** From the same photographs. Q620 draws
   it in the stock park (143 pieces); in Alexah's jungle no wall stands at the park's edge in any frame (the gate's
@@ -11003,7 +11003,7 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   listed base vertices of every `0x1000` mesh to their corners, then runs an interpolating pass over the lookup-`0x8` meshes (nine in
   Lost Kingdom, all of the kart and water rides); a loaded park's models are remade with their saved flags and run it again
   (`park-engine.md`, "Where a placed object's model stands"). Measured in the original loading a copy of Alexah's New Save
-  (`original/basevertices.py`): 917 of 917 listed base vertices on their corners (the Sun God 18 of 18), 368 draped meshes (the 78
+  (`original/basevertices.py`): 917 used of 925 listed base vertices on their corners (the Sun God 18 of 18; two pylons unseen), 270 draped pieces (368 meshes, the 78
   queue pieces among them) each following the ground to 0.0001, the kart station's and Lava Jump's 36 interpolated vertices as
   decoded, and its Sun God frame 0 sliver pixels; ours, unchanged, 5,652 (`q812/PREDICTION.txt`, 5 of 6 held). The build is Q808's.
 - [x] **Q808. Close the open steps at floor rims on sloped ground (Q804's build).** From Q804 and Q807. Build the original's
@@ -11018,7 +11018,7 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   nearest terrain corner's height, carried back into the mesh's own space; (2) drape every vertex of a queue piece, a hoarding piece
   and a kart or water track piece (and `mammtunn`'s `gk_mam1`) by the ground under it less the height it was made at, on the
   cell's own triangle (with Q398, or say at the site where ours splits differently); (3) the interpolating pass for the nine
-  lookup-`0x8` meshes, or a counted gap for it. `original/basevertices.py` reads the original's side: 917 on, 0 off, drape spread
+  lookup-`0x8` meshes, or a counted gap for it. `original/basevertices.py` reads the original's side: 917 used of 925 listed, 0 off (two pylons unseen), drape spread
   0.0001 in her park. Ticks Q750 and Q695 with it; the track pieces' drape is `TRACK_PIECE_DRAPE` (`ParkTrackPieces`).
   **Done (2026-10-29, run 14, lane A, `ProceduralConform`):** (1) and (2) are built, (3) is the counted gap `PROCEDURAL_BASE_INTERPOLATE`, filed
   as Q813 with what else Q808 leaves. In Alexah's Full Simulation New Save (a copy), on the build: the console's `rim` reads the Sun God
@@ -11211,7 +11211,7 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   corners read from the original with `tpwmem.py`. Next to Q398 (the diagonal), Q695 (the drape of queue and boundary pieces)
   and Q210 (hoardings' base-vertex gate).
   - **Decoded (Q812):** the instance nodes carry the type's `0x1000` (the clone copies each mesh record whole, `0x00454d72`), and
-    the original's live memory shows every listed base vertex on its corner in Alexah's park (917 of 917). The control word is still
+    the original's live memory shows every listed base vertex on its corner in Alexah's park (917 used of 925 listed; two StdPylon instances unseen, cause open). The control word is still
     unsettled (the note below). Built by Q808 (`ProceduralConform`); the control word is still unread.
   - **Counted (Q807, the "count the footprints on sloped ground" step):** in Alexah's Full Simulation jungle 58 placed things stand
     over a step above 0.05 between the plate's midway height and a terrain corner under the footprint (the Sun God, Tom Tom Twister

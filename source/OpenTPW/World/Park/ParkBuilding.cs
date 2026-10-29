@@ -1812,9 +1812,9 @@ public static class ParkBuilding
 
 		if ( level.Park is { } world )
 		{
-			for ( var y = 0; y < field.CellsY - 1; ++y )
+			for ( var y = 0; y < field.CellsY; ++y )
 			{
-				for ( var x = 0; x < field.CellsX - 1; ++x )
+				for ( var x = 0; x < field.CellsX; ++x )
 				{
 					if ( !ParkQueues.IsQueue( ParkState.CellFor( world, x, y ) ) )
 						continue;

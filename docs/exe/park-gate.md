@@ -84,23 +84,26 @@ These are decoded script effects, not observed animation timing or screenshots.
 
 ## What draws the doors (Q809)
 
-**The doors are the gate model's channel 0, and nothing else.** The command and status words draw nothing. The
+**The doors are drawn by the gate model's channel 0, as far as measured.** The command and status words draw nothing. (The probe below also put the node flag words back, which hide nodes 3 to 5 of the gate; the channel alone was not isolated.) The
 opening path's `WAITANIM 5,1` (jungle word 24) plays role 5 (M) entry 1, and the channel is left held on
 that clip's final frame (flag `0x4`, as all three files below save it; the end-of-clip paths are `park.md`, "End of
-clip is five outcomes"; which of them the gate's model takes was not read). The closing path's `TRIGANIM 5,0,0` plays entry 0 the same way. Between clips the
+clip is five outcomes"; which of them the gate's model takes was not read). The closing path's `TRIGANIM 5,0,0` plays entry 0, not measured: every saved and run state here is the opening one. Between clips the
 script waits in its dispatch loop at word 2 and triggers nothing, so a gate resumed with status 1 shows only what its
 channel was saved holding.
 
 **A load puts the channel back whole.** `RideSystem_LoadModels` (`0x004647a0`) copies each saved channel's eleven
 dwords onto the channel (`0x00464bcb`..`0x00464c17`: flags, role, entry, the three stamps, the speed, the queue's
-four), ORs `0x10` onto a held one (`0x00464bf2`..`0x00464bfd`), binds the clip (`0x00464c2c`) and marks the model
-live where a channel is below role 12 (`0x00464cbe`..`0x00464cde`). The original's loaded gate stands as it was saved.
+four), ORs `0x10` onto a held one (`0x00464bf2`..`0x00464bfd`), binds the clip (`0x00464c55`, `FUN_00472cb0`, after the
+predicate `FUN_00472d10` at `0x00464c2c` finds the clip) and marks the model live where a channel is below role 12
+(`0x00464cbe`..`0x00464cde`). It also restores the node flag words (`0x00464acc`..`0x00464b87`, only when the record's counts match
+the model's) and, with no channel on role 0, clears node `0x800` where `0x100` is set (`FUN_00473550`, `0x00464ca1`: the gate has one
+channel, on role 5, so this runs for it). What those two do to the drawn doors was not read; the doors were seen open after the load, not traced to one step.
 
 **Measured (Q809, `q805/`, every prediction in its `PREDICTION.txt`, 8 of 8 held).** All three files save the gate's
 channel 0 held on its opening clip: flags `0x4`, role 5, entry 1 (`gatechan.out`, read by `rsys.py`): the stock
 `Easymode.TPWI`, and Alexah's Full Simulation `New Save.TPWS` and `autosave.TPWS`. Ours reads the same channel through
 `ParkThingStates` only, and that walk stops in Alexah's file at 2058464 of the module's 2101020 (Q779: the Temple of
-Gloom's car records, item 1181, read as one channel each). So none of her park's channels comes back and the gate
+Gloom's 40 pylon records, item 1181 (`StdPylon`, made `0x3fa` by `Coaster_SetupPylonModel`, `0x00430590`), read as one channel each). So none of her park's channels comes back and the gate
 stands idle at its rest pose, the doors shut, while `gate` reads command 1, status 1. **The park's state is right;
 the pose is lost on load.**
 
@@ -109,11 +112,13 @@ the pose is lost on load.**
 | Ours, a copy of `New Save.TPWS` | main `e1c123e9` | "model states would not read ... 2058464 ... 2101020"; "0 animation channels put back"; thing 11 `channels [0:idle]`; `gate 11 closed 0 command 1 status 1` | `run1fs/gate_fs.png`: shut |
 | Ours, the stock park | the same | "15 animation channels put back"; thing 11 `role 5 entry 1 frame 50.0/50.0 HELD flags 0x14` | `run2stock/gate_stock.png`: open |
 | The original under Proton, a copy of the same file | `TP-nodisc.exe` | (frames only) | `orig/gate/o-t19017.png`: open |
-| Probe, not a fix: item 1181 read as 5 channels | a throwaway worktree | "106 animation channels put back"; thing 11 `HELD flags 0x14` | `run3probe/gate_fs.png`: open |
+| Probe, not a fix: item 1181 (the pylons) read as 5 channels | a throwaway worktree | "106 animation channels put back"; thing 11 `HELD flags 0x14` | `run3probe/gate_fs.png`: open |
 
 The probe's count is `rsys.py`'s reading, not the original's (Q779 decodes that). That probe changed `ParkRides`' count alone, so
-its frame still shows no boundary wall: the hoardings' and the boundary's own reads of the walk stayed broken. With all three callers
+its frame still shows no boundary wall: the hoardings' and the boundary's own reads of the walk stayed broken. With all four callers
 given the count the wall stands too (`park.md`, "The boundary hoarding's piece", Q811).
+
+The frames are not alike in size: `orig/gate/o-t19017.png` is 1024 x 768 with the HUD, the hint bar and the wall; the other three are 1280 x 720 with no HUD.
 
 ## Implementation and verification (Q89b)
 

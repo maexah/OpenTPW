@@ -222,7 +222,8 @@ public sealed class ParkBoundaryHoarding : Entity
 		foreach ( var piece in pieces )
 			Place( piece );
 
-		// An anchor no record names; no park file to hand holds one.
+		// An anchor no record names (no park file to hand holds one), or every anchor when Read answered none because the park file's
+		// model-record walk failed (Alexah's Full Simulation jungle, Q779: 163 of 163).
 		for ( var unmade = Anchors - pieces.Count; unmade > 0; --unmade )
 			Unimplemented.Report( "BOUNDARY_HOARDING_UNMADE" );
 
@@ -250,7 +251,10 @@ public sealed class ParkBoundaryHoarding : Entity
 		var states = save.ThingStates( id => catalogue != null && catalogue.TryGet( id, out var item ) ? item.AnimationChannels : 1 );
 
 		if ( states.Problem != null )
+		{
+			Log.Warning( $"Boundary hoarding: the park file's model states would not read ({states.Problem}), so no piece is made" );
 			return pieces;
+		}
 
 		foreach ( var record in states.Things )
 		{

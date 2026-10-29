@@ -230,7 +230,7 @@ tells apart from their neighbours'.
 **The same flag `0x8` also conforms the model's base vertices to the ground** (Q750; fork watch 2026-10-27, verify-world H1,
 verify-other L2). After the model is made, `test bl,8` (`0x00463329`) and `FUN_00469940( [instance + 8], DAT_007a0854, base
 height, 0 )` (`0x00463347`) run `FUN_00469a80` in its apply mode, the mode whose drape arm is Q398's and Q695's. Flag `0x8` is in
-`0x3fa` (a purchase, `0x00430883`), `0x32f` (every thing of a loaded park, `0x004dd64f`) and `0x33a` (the kart, water, queue
+`0x32f` (a purchase and every thing of a loaded park, `0x004dd64f`), `0x3fa` (the coaster's pylons, `0x00430883`, in `Coaster_SetupPylonModel`) and `0x33a` (the kart, water, queue
 and hoarding pieces); the coaster pieces run it too (`0x00432f2f`, `0x004432db`). Only the vertices the type load listed are
 taken (the record's list at `+0x14`, counted by `ProceduralBase_Build` at `0x0046a808` and copied at `0x0046a853`..`0x0046a87b`,
 on nodes the count flagged `0x1000`): the base vertices `ProceduralBase.FloorMesh` already counts, on every node that has one.
@@ -242,8 +242,8 @@ vertices, its box only widened. A corner past the heightfield's last ends that n
 `0x0046a2a0`). So on a slope the floor's rim lies on the terrain's corners while the inner floor stays at the height above.
 **The instance's nodes carry the type's flags and their own vertices** (Q812). `FUN_00463060` makes the instance by
 `FUN_004557c0` -> `FUN_00454a10` with `0x211f` (`0x231f` under its own `0x800`), which copies each mesh node's 0xa0-byte record
-whole (`0x00454d72`), so `0x1000`, `0x20000` and the list pointer at `+0x98` come across; bit `0x4` copies the vertex blocks too
-(`0x00454fa1`, each node's `+0x60` moved onto the copy from `0x00454fd2`), so the conform writes the instance's own vertices and
+whole (`0x00454d72`), so `0x1000`, `0x20000` and the list pointer at `+0x98` come across; bit `0x4` becomes `0x100` (`0x00454a4e`..`0x00454a67`), which copies the vertex blocks too
+(`0x00454f64`, `0x00454fa1`, each node's `+0x60` moved onto the copy from `0x00454fd2`), so the conform writes the instance's own vertices and
 reads the type's (`[header + 0x9c]`, the master) at rest. The instancer then sets `0x10000` on every node of every instance it makes and calls `FUN_00473c30`
 (`0x00463937`), which recomputes the face normals of the nodes so flagged (`FUN_00473a40`, cross products into the node's
 face-normal block) and clears header `0x40000`; whether the face normals reach the lighting is unread.
@@ -260,9 +260,9 @@ node, children after their parent (a node flagged `0x200` is passed over, its ch
   entry of the type load's list (`[[model + 8] + 0x14]`, `+0xc` entries, consumed in the walk's order), and stands at the nearest
   corner, as above.
 - **Interpolate**, the second pass: the vertices `ProceduralBase_Build`'s second count listed for a mesh flagged `0x40` other
-  than the floor (`0x0046a8a3`..`0x0046a934`: that node alone, a vertex within 0.1 of a cell line on either axis at any height,
+  than the floor (`0x0046a8a3`..`0x0046a934`: that node alone, a vertex within 0.1 of a cell line on either axis and within 100 of the model's own zero height (`0x0046a44f`..`0x0046a45e`),
   on a side the footprint's outline runs along; the list `{ count, pointer }` at `+0x98`). The vertex snaps to the line within
-  0.1 and rises by the ground interpolated along that cell line, less H (`0x0046a2a7`..`0x0046a32d`).
+  0.1 and rises by the ground interpolated along that cell line, less H, in four arms (`0x0046a0b4`..`0x0046a0ea` and `0x0046a2a7`..`0x0046a32d`).
 
 **Which nodes take which.** A mesh node's run-time `0x40` is its node-lookup record's flag `0x8`, and `0x20000` the record's
 `0x10000` (`FUN_0044a870`, `0x0044a942`..`0x0044a954`); `FUN_00461f10` also marks `0x20000` on every mesh of a model loaded with
@@ -271,14 +271,14 @@ load bit `0x2`, the queue, kart, water and hoarding pieces (`textures.md`), whos
 and water rides (`gk_TRACK01`; `wr_log1`, `wr_log2`, `wr_water3`, `wr_water4`) and their add-ons (`lavajump`'s `gk_brdge`;
 `watertun`'s `wr_mwater1`, `wr_mwater2`, `wr_mwater04`), and `0x10000` on one, `mammtunn`'s `gk_mam1` (`q812/lookflags.py`). So
 every placed object's floor rim takes the conform; the queue, hoarding and track pieces and `gk_mam1` the drape; those nine
-meshes the interpolating pass. A fixed item (`0x361`: the gate, lights, bus, ferry, seaplane) and a vehicle (`0x101`: a ride's
+meshes the interpolating pass. The second count also sets `0x1000` on each such mesh that has a listed vertex (`0x0046a516`..`0x0046a523`), which the apply mode needs there (`0x00469af7`), so the first pass visits the mesh too and compares its vertices with the type's list's next word (`0x00469b7c`): a coinciding index would be conformed and would use up an entry meant for a later mesh. `gk_TRACK01` carries `0x40001141` in the original, and 17 of its vertices moved against 16 listed; the 17th is unexplained. A fixed item (`0x361`: the gate, lights, bus, ferry, seaplane) and a vehicle (`0x101`: a ride's
 car, a kart, the bird) are made without `0x8` and take none. **A loaded park conforms and drapes again**: `RideSystem_LoadModels`
 hands each model record's saved word (`+0x15`) to `FUN_00463060` as its flags (`0x00464942`).
 
 **Measured in the original** (Q812, `q812/orig/orig1/`, `original/basevertices.py`): a Full Simulation player under Proton
-loading a copy of Alexah's `New Save.TPWS`, about tick 19300. Every one of the 917 listed base vertices of its placed things stands
-at its terrain corner's height, none off: the Sun God (`incagod`, made `0x32f`, root at -4.5) 18 of 18 on its `Base` mesh (flags
-`0x5101`), all 18 moved from rest; the Tom Tom Twister 20 of 20, the Costume Shop 12 of 12. Its 368 draped meshes (78 queue pieces,
+loading a copy of Alexah's `New Save.TPWS`, about tick 19300. 917 of the 925 listed base vertices of its placed things were seen, and every one stands
+at its terrain corner's height, none off (the other 8 are the two coaster pylons in slots 202 and 210, `StdPylon`, whose base the reader's walk does not see: why is open, and `basevertices.py`'s walk differs from `FUN_00469a80`'s there; whether the original conformed them is unread): the Sun God (`incagod`, made `0x32f`, root at -4.5) 18 of 18 on its `Base` mesh (flags
+`0x5101`), all 18 moved from rest; the Tom Tom Twister 20 of 20, the Costume Shop 12 of 12. Its 270 draped pieces (368 meshes: 78 queue pieces,
 163 hoarding pieces, 28 kart track pieces, `gk_mam1`) each rise by the ground under each vertex less one value, the piece's own
 root height, to 0.0001. The interpolating pass moved the kart station's 16 listed vertices (`gk_TRACK01`) and the
 Lava Jump's 20 (`gk_brdge`) each by the ground along its cell line less the root height, to 0.0001 (`orig2/bv80.txt`). Things were made `0x32f` (119) or `0x3fa` (40, the coaster's pylons), pieces `0x33a` (269). Its frame at
@@ -303,7 +303,7 @@ vertices on a corner, the Tom Tom Twister 20 of 20, the Costume Shop 12 of 12 (t
 ground under a footprint or a queue piece (the compositor's `0x1`), so on a slope the step between the plate's rim (a queue piece's
 flat plane at its near corner's height) and the terrain corner beside it is an open face: a ray through it meets nothing and the frame's
 clear colour `0x44DDFF` shows, a thin light-blue sliver along the plot's edge (orange once, where the lava under the ground lies behind
-it; the line's pixels sit about a unit inside a cell line, `pick`). The console's `rim` counts the steps: the stock park's 14 things and 4
+it; `pick` on a sliver answers a ground point about a unit short of the cell line, where its ray meets the ground behind the step). The console's `rim` counts the steps: the stock park's 14 things and 4
 queue cells stand on level ground (every step 0.00) and draw none; Alexah's Full Simulation jungle (`New Save.TPWS`, tick 19004) has 58
 objects over a step above 0.05 (the Sun God: ground -7 to -2, stands -4.5, step 2.5; the Tom Tom Twister 2.5; the Costume Shop 1.5) and
 58 of its 78 queue cells (largest 1.00). `lib/clearseam.py` at one camera (160, 270, zoom 90, yaw 240): 5,751 pixels in ours, 0 in the

@@ -2126,14 +2126,13 @@ same cameras (Q620, `q620/overlay-gate-final.png`); a fresh park's in both games
 
 **Alexah's Full Simulation jungle draws none, and why (Q811, `q806/`, every prediction in its `PREDICTION.txt`, 7 of 7 held).**
 `ParkBoundaryHoarding.Read` takes the records from `ParkThingStates`, the walk that stops in her `New Save.TPWS` at 2058464 of
-2101020 (a Temple of Gloom's car records, item 1181, `park-gate.md`, "What draws the doors"; Q779), and answers none while the walk has a
+2101020 (a Temple of Gloom's 40 pylon records, item 1181, `StdPylon` made `0x3fa` by `Coaster_SetupPylonModel` (`0x00430590`); its cars are item 1183, `park-gate.md`, "What draws the doors"; Q779), and answers none while the walk has a
 problem. Her file holds 163 records of item 17300 on (`records.py`, `lib/parkfile.py`: rows 2 x 98, 3 x 10, 9 x 12, 19 x 7, 20 x 16,
-23 x 19, 26 x 1), 82 of them in slots after the first 1181 record, so the walk's partial list could not hold the wall. Ours, main
+23 x 19, 26 x 1), 82 of them in slots after the first 1181 record (a different measure from the stop, which lies after the second one's record, 2058182), so the walk's partial list could not hold the wall. Ours, main
 `b8a71167`, her file's copy: `boundary pieces 0 anchors 163 unmade 163`, `BOUNDARY_HOARDING_UNMADE` 163, no wall at the gate's
-view (`run1fs/gate_fs.png`); the stock park 143 of 143 (`run2stock/`); a probe reading item 1181 as 5 channels in all three callers of
-`ThingStates` (`ParkRides`, `ParkObjects`, `ParkBoundaryHoarding`): `pieces 163 anchors 163 unmade 0`, the wall laid round the gate as
-the original's (`run3probe/gate_fs.png`; the original's frame is Q809's `q805/orig/gate/o-t19017.png`, the same file and camera, taken
-for Q809, not again for this). The count 5 is `rsys.py`'s reading, not the original's (Q779). The wall comes back with Q779 (built by Q810).
+view (`run1fs/gate_fs.png`); the stock park 143 of 143 (`run2stock/`); a probe reading item 1181 as 5 channels in the three load-side callers of
+`ThingStates` (`ParkRides.cs:760`, `ParkObjects.cs:264`, `ParkBoundaryHoarding.cs:250`; a fourth, `ParkRides.cs:950`, writes): `pieces 163 anchors 163 unmade 0`, the wall laid round the gate like the original's, by eye at one camera (`run3probe/gate_fs.png`; the original's frame is Q809's `q805/orig/gate/o-t19017.png`, the same file and camera, taken
+for Q809, not again for this; it is 1024 x 768 with the HUD and the wall, ours 1280 x 720 without the HUD). The count 5 is `rsys.py`'s reading, not the original's (Q779). The wall comes back with Q779 (built by Q810).
 
 #### A track piece's model, price and open end
 

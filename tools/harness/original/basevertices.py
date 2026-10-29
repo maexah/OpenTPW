@@ -21,6 +21,11 @@ carries each mesh vertex (+0x58 count, +0x60 in groups of four: x[4] y[4] z[4]) 
            less the root's height, the interpolating pass of 0x0046a2a7; the largest difference is printed.
   other    every other mesh: its vertices at a cell corner, and how many of them stand at the corner's height.
 
+Where this walk differs from FUN_00469a80's (Q812 review): it skips a node flagged 0x80000000 (meshes()) and a mesh whose
+vertex count differs from its master's, and moves the list cursor only on meshes it visits; FUN_00469a80 tests no 0x80000000 and
+skips only nodes flagged 0x200. A mesh this walk skips that the original walks leaves the cursor behind, so 'used' can fall short of
+'listed' (917 of 925 in Alexah's park: the two StdPylon bases, slots 202 and 210; the cause is not settled).
+
 One line an instance: slot, name, the flags it was made with (+0xe4, FUN_00463060's second argument), the root's translation, then each kind's counts. --verbose prints a line a mesh.
 
   basevertices.py %PID%                    every placed instance
