@@ -110,8 +110,9 @@ public readonly record struct WrittenHeads( IReadOnlyList<int> Records, IReadOnl
 ///
 /// <para>
 /// <b>The walk needs one thing the module does not carry: how many channels each thing has.</b> That is
-/// the item's own <c>NumSimultAnims</c> - the Jungle Spray runs three lanes and everything else one -
-/// so a lookup is passed in: the walk lands on the module's end only with the real counts.
+/// how many channels the model the record names holds - an item's own <c>NumSimultAnims</c> (the Jungle Spray
+/// three), a coaster pylon type's five, one for anything else (<c>ParkItemCatalogue.ChannelsFor</c>) - so a
+/// lookup is passed in: the walk lands on the module's end only with the real counts.
 /// </para>
 ///
 /// <para>

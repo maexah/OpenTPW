@@ -512,7 +512,10 @@ public sealed class ParkItemCatalogue
 	/// <summary>
 	/// Takes the pylon types of the coaster in <paramref name="directory"/>, if it holds a <c>coaster.sam</c>. The original
 	/// registers two (<c>Coaster_RegisterModels</c>, <c>0x0042fcbf</c> and <c>0x0042fd36</c>, from <c>Coaster_LoadPylonControls</c>
-	/// <c>0x0042eb70</c>), and a type its file does not name has no id to register.
+	/// <c>0x0042eb70</c>), and a type its file does not name has no id to register. An id of nought is not registered
+	/// (<c>0x0042ebd7</c>). Left out, because no shipped <c>coaster.sam</c> needs them: the test of the control's mesh name
+	/// (<c>0x0042ebc9</c>) and of the float at <c>[sam + 0x38b4]</c> (<c>0x0042ebdf</c>), the restriction to an item of
+	/// TrackType 3 (<c>0x00414132</c>), and a control index past 1 landing in the second slot (<c>0x0042eba9</c>).
 	/// </summary>
 	private void ReadPylonTypes( string directory )
 	{
@@ -527,7 +530,7 @@ public sealed class ParkItemCatalogue
 
 			for ( var index = 0; index < PylonTypesPerCoaster; ++index )
 			{
-				if ( int.TryParse( sam[$"asPylonControls[{index}].uiPylonTypeUniqueID"], out var id ) )
+				if ( int.TryParse( sam[$"asPylonControls[{index}].uiPylonTypeUniqueID"], out var id ) && id != 0 )
 					_pylonTypes.Add( id );
 			}
 		}

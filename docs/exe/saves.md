@@ -1414,7 +1414,7 @@ empty slot and read back so). **OpenTPW was not run**: `ParkWorld` was not asked
 
 Q810's decode first (Q779's question). **The loader reads as many channels as the model it has just made holds**
 (`RideSystem_LoadModels`, `0x004647a0`: the channel loop runs to the model's `+0xe`), and the model holds its type's
-count: `Model_CloneType` (`0x004557c0`) copies the type's first `0x3f` dwords, `+0xe` with them, and sizes the channels by it. **A type
+count: `Model_CloneType` (`0x004557c0`) copies the type's first `0x3f` dwords, `+0xe` with them, and sizes the channels by it (a model made with `0x400` takes the type's `p%s` alternate at `+0xd0` instead, one channel, `0x0046309b`; it is registered only for a type whose flags hold `0x20000`, `0x00462bd1`, and none of the 7,688 saved records is made so). **A type
 holds the count it was registered with**, the seventh argument of `RideSystem_RegisterType` (`0x004629d0`), which appends the type to the list at
 `0x007ae6a8`, sets its `+0xf8` (the item id a record names) and passes the count to `FUN_00461f10` (`+0xe`; none is one,
 `0x00462ad5`). Its callers that reach a park:
@@ -1427,23 +1427,25 @@ holds the count it was registered with**, the seventh argument of `RideSystem_Re
 | `Coaster_RegisterCarType` (`0x0043015b`) | a coaster's car types | `asCarTypes[n].uiCarTypeUniqueID` | 1 |
 | `FUN_00522900`, `TrackKit_LoadKartPieces`, `TrackKit_LoadWaterPieces`, `Hoarding_LoadPieceModels` | queue, track and hoarding pieces | their tables' | 1 |
 
-The one caller left, `FUN_005d7fd0`, is the lobby's (`Lobby_Start`). The pylon's five are the channels `Coaster_SetupPylonModel`
+The one caller left, `FUN_005d7fd0`, is the lobby's model builder `FUN_005d8870`'s (called from `Lobby_Start`, `0x005dd14a`, among others); its count is a variable that was not read. The pylon's five are the channels `Coaster_SetupPylonModel`
 (`0x00430590`) starts on the model it makes with `0x3fa` and `Coaster_PosePylon` sets (`ride-operation.md`, "A coaster's
 highest track point", step 3). So item 1181 in Alexah's played jungle park is the Minecart's `StdPylon` (`minecart.wad`'s
 `coaster.sam` names 1181 `StdPylon`, 1182 `LoopPylon` and 1183 its `Cart`): 40 records of five channels, its 24 cars one.
-OpenTPW's walk takes every id outside the catalogue as one channel, so it misreads the first pylon record and stops.
+Before Q810 OpenTPW's walk took every id outside the catalogue as one channel; it misread the first pylon record and stopped after the second (2058464 of 2101020).
+
+**The loader finds a record's type by scanning the type list from the last registered to the first** (`0x00464880`..`0x0046489d`), and `RideSystem_RegisterType` checks no id before it appends, so where two types share an id the later one decides, and ids can repeat by design: an item's extra meshes are `item + 1 + i` from `i = 0` (`0x00414339`, `0x00414361`), so the Minecart's (1180) first extra mesh would be 1181, its `StdPylon`'s id. The rule here and `lib/modelchannels.py` key one flat `{id: count}`, which is right while no id repeats; in her park's 127 types none does (`q810/orig/gate/modeltypes.txt`). Other themes' type lists were not read.
 
 **Measured** (`q810/PREDICTION.txt`). Walked by this rule alone, no search (`lib/modelchannels.py`: 300 ids from every
 `.sam`, 21 of them pylon types), the module closes on its end in all 45 park files the original wrote
 (`q257/files-original.txt`; 7,688 records, every count equal to `rsys.py`'s searched one), her jungle `New Save.TPWS` and
-`autosave.TPWS` among them (462 records each). With the pylons at one, the walk of either stops after 202 records; the stock
+`autosave.TPWS` among them (462 records each). Only those two files hold pylon records (80 of the 7,688): the other 43 close with or without the pylon rule, so the five of the pylon types rests on the register code and the original's live type list, not on any other file. With the pylons at one, the walk of either stops after 202 records; the stock
 park, which holds no pylon record, still closes. **In the original under Proton**, a Full Simulation player loading a copy of
 her `New Save.TPWS` (`original/modeltypes.py`, 80 s on): all 127 registered types hold the rule's count (1181 and 1182 five,
 1183 one), all 462 models their type's, the 40 of 1181 made `0x3fa` and the 29 of `0x101` the vehicles (the Minecart's 24 cars,
 `gokarts`' 1151 to 1154 and `tourride`'s 1171); its gate frame at Q805's camera shows the doors open and the wall standing (`q810/orig/gate/o-t19017.png`).
 
 **OpenTPW's side (Q810).** `ParkItemCatalogue.ChannelsFor( id )` answers the rule: an item's `NumSimultAnims`, five for an id a catalogued
-coaster's `coaster.sam` names as one of its two `asPylonControls[n].uiPylonTypeUniqueID`, one for any other; the four callers of
+coaster's `coaster.sam` names as one of its up to two `asPylonControls[n].uiPylonTypeUniqueID` (three of the twelve coasters name one: 1186, 4181, 2187), one for any other; the four callers of
 `ParkWorld.ThingStates` (`ParkRides` twice, `ParkObjects`, `ParkBoundaryHoarding`, and `Level`'s save) pass it. The twelve coasters of the
 four themes name 21 pylon types, none an item (`ParkPylonChannelsTests`). Her `New Save.TPWS` copy then reads whole, and a park saved from
 it walks closed with 462 records, 40 of item 1181 at five channels (`q810-a7/run3fs-walk.txt`).

@@ -34,7 +34,11 @@ public static class ProceduralBase
 	/// <summary>A node record flagged 0x200 is skipped by <c>FUN_00469a80</c>, its children not.</summary>
 	private const uint SkippedNode = 0x200;
 
-	/// <summary>A mesh flagged 0x20000 is walked by <c>FUN_00469a80</c> and counts nothing.</summary>
+	/// <summary>
+	/// A mesh flagged 0x20000 is walked by <c>FUN_00469a80</c> and counts nothing. The flag is the run-time one, which a lookup
+	/// record's <see cref="ProceduralConform.LookupDrapes"/> (<c>0x10000</c>) also sets (<c>0x0044a94b</c>): <c>mammtunn</c>'s
+	/// <c>gk_mam1</c> counts nothing though its file flags are <c>0x1</c>.
+	/// </summary>
 	private const uint CountsNothing = 0x20000;
 
 	/// <summary>The edge bits <c>ProceduralBase_Build</c> gives a footprint cell where its neighbour differs.</summary>
@@ -96,7 +100,8 @@ public static class ProceduralBase
 	/// load keeps at <c>[[model + 8] + 0x14]</c> and the conform takes (<see cref="ProceduralConform"/>).
 	/// </summary>
 	public static IReadOnlyList<(int Mesh, int[] Vertices)> BaseVertices( ModelFile model, ItemShape? shape, Grid grid )
-		=> Walk( model, shape, grid, interpolating: false, takes: _ => true );
+		=> Walk( model, shape, grid, interpolating: false,
+			takes: mesh => mesh >= model.Nodes.Count || (model.Nodes[mesh].IdFlags & ProceduralConform.LookupDrapes) == 0 );
 
 	/// <summary>
 	/// The vertices <c>ProceduralBase_Build</c>'s second count lists for the interpolating pass (<c>0x0046a8a3</c>..<c>0x0046a934</c>),

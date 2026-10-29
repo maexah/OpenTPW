@@ -447,8 +447,8 @@ public sealed class ParkTrackPieces : Entity
 			var (origin, turn) = ParkBoundaryHoarding.StandOf( new ParkBoundaryHoarding.Piece( piece.Model, piece.Row, piece.CellX,
 				piece.CellY, piece.Angle ), ParkGround.Current?.Heightfield );
 
-			// The original drapes a piece's every vertex over the ground under it at its making (0x00469940), and runs the
-			// interpolating pass over the lookup-0x8 meshes after it (not built). A water piece is then put to clip 0xc, no role, so
+			// The original drapes a piece's every vertex over the ground under it at its making (0x00469940); no piece carries a
+			// lookup-0x8 mesh, so the interpolating pass never takes one. A water piece is then put to clip 0xc, no role, so
 			// it stands at rest (FUN_004732a0 at its making), as every piece here does until a walk plays its clip (PlayClip).
 			var model = new LobbyModel( $"{directory}/{piece.Model}.MD2", $"{directory}/textures", Vector3.Zero,
 				sharedTextureDirectory: $"levels/{_theme}/sharetex",

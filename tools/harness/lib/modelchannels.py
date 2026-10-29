@@ -5,7 +5,9 @@ original's own rule, no search (Q814; docs/exe/saves.md, "How many channels a sa
 and a type holds the count it was registered with (FUN_004629d0's seventh argument): a catalogue item's own model its
 UsageInfo.NumSimultAnims (0x00414175, 0x004141c7; none or nought is one, 0x00462ad5), a coaster's pylon type five
 (0x0042fcbf, 0x0042fd36; its id is coaster.sam's asPylonControls[n].uiPylonTypeUniqueID), and every other type one (a
-coaster's car, an item's extra mesh, a queue, hoarding or track piece). counts() is that table from the game's .sam
+coaster's car, an item's extra mesh, a queue, hoarding or track piece). The loader scans the type list last-registered first,
+so where two types share an id the later decides (ids can repeat by design: an item's extra meshes are item+1+i); the
+flat {id: count} here is right only while no id repeats, as in her park's 127 types (docs/exe/saves.md). counts() is that table from the game's .sam
 files, cached in modelchannels.json under the harness work folder (paths.work); walk(p) answers (closed, [(slot, at, item, channels)]).
 Run alone it prints, for each file, whether the walk closed on the module's end, the records by item and channel count,
 and how many records rsys.py's searched count reads otherwise."""

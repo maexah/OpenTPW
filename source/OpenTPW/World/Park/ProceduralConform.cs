@@ -22,7 +22,7 @@ namespace OpenTPW;
 public static class ProceduralConform
 {
 	/// <summary>A node's lookup-record flag that becomes the run-time <c>0x20000</c>: the drape arm takes the mesh (<c>0x0044a942</c>).</summary>
-	private const uint LookupDrapes = 0x10000;
+	internal const uint LookupDrapes = 0x10000;
 
 	/// <summary>How near a cell line a vertex must be to be snapped to it (<c>0x006fe854</c>).</summary>
 	private const float SnapNear = 0.1f;
@@ -57,6 +57,12 @@ public static class ProceduralConform
 	/// y snap to the grid line, z is that corner's height outright, nothing added. A model made without the header's
 	/// <c>0x8</c> (a procedural base) lists none. Answers how many vertices it moved.
 	/// </summary>
+	/// <remarks>
+	/// <b>A deviation:</b> ours always snaps x and y and clamps a corner past the field to its edge; the original snaps an axis
+	/// only within 0.01 of a line (<c>0x00469f71</c>..<c>0x0046a028</c>) and ends the node and its children at a corner past
+	/// the field. No placed thing reaches the difference (every origin is on a corner, a listed vertex on a line in model
+	/// space). docs/exe/park-engine.md, "Where a placed object's model stands".
+	/// </remarks>
 	public static int Conform( ModelFile file, ItemShape? shape, Vec origin, Quaternion turn, HeightfieldFile field )
 	{
 		if ( (file.HeaderFlags & 0x8) == 0 )
@@ -74,7 +80,7 @@ public static class ProceduralConform
 			{
 				var world = WorldOf( mesh, mesh.SourceVertices[vertex].GetSystemVector3(), origin, turn );
 
-				// The nearest corner: a fraction of a half or more takes the next.
+				// The nearest corner: a fraction of a half or more takes the next. Always snapped and clamped: see the remarks.
 				var cornerX = Math.Clamp( (int)MathF.Floor( ((world.X - field.OriginX) / field.CellSizeX) + 0.5f ), 0, field.CellsX );
 				var cornerY = Math.Clamp( (int)MathF.Floor( ((world.Y - field.OriginY) / field.CellSizeY) + 0.5f ), 0, field.CellsY );
 

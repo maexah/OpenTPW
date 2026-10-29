@@ -10,7 +10,7 @@ namespace OpenTPW.Tests;
 /// <summary>
 /// How the original stands a made model's vertices on the ground (<c>docs/exe/park-engine.md</c>, "Where a placed object's model
 /// stands"): a thing's floor rim on the terrain's corners (the conform), a queue piece draped vertex by vertex. The original's own
-/// numbers (Q812, <c>original/basevertices.py</c> on Alexah's New Save): every listed base vertex on its corner, 917 of 917, and
+/// numbers (Q812, <c>original/basevertices.py</c> on Alexah's New Save): every listed base vertex on its corner, 917 used of 925 listed, and
 /// each draped vertex raised by the ground under it less the piece's height to 0.0001. These read game files and skip without them.
 /// </summary>
 [TestClass]
@@ -155,7 +155,7 @@ public class ProceduralConformTests
 
 	/// <summary>
 	/// <b>A thing's listed base vertices all stand on a terrain corner</b> once the model is made on a slope, and the rest of the
-	/// model stays where it was (the original: 917 of 917 on, the Sun God 18 of 18, the Tom Tom Twister 20 of 20, the Costume Shop
+	/// model stays where it was (the original: 917 used of 925 listed on, the Sun God 18 of 18, the Tom Tom Twister 20 of 20, the Costume Shop
 	/// 12 of 12). The Belly Bounce, the Huge Hollow Rock and a sign, at every turn, on ground spreading at least 1.5; before the
 	/// conform some of the listed vertices are off, which is what a level site could not show.
 	/// </summary>
@@ -594,5 +594,89 @@ public class ProceduralConformTests
 
 		Assert.AreEqual( 30, listed, "the original's 14 base vertices and 16 interpolated" );
 		Assert.AreEqual( listed, ParkObjects.StandOnGround( file, item, origin, ParkObjects.Turn( 0 ), field ) );
+	}
+
+	/// <summary>
+	/// <b>A model with a lookup record marked <c>0x10000</c> is not counted for the conform</b> (<c>0x0044a94b</c>, <c>0x00469ad0</c>): the
+	/// Dino Karts Tunnel lists 7 base vertices, all on <c>gk_tracktop01</c> (the original's <c>bv75</c>), and none on <c>gk_mam1</c>, which the drape takes.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the <c>IdFlags &amp; 0x10000</c> skip in <see cref="ProceduralBase.BaseVertices"/> removed (14 listed, 8 on <c>gk_mam1</c>).</remarks>
+	[TestMethod]
+	public void ADrapedMeshListsNoBaseVertex()
+	{
+		var item = ItemNamed( new ParkItemCatalogue( "jungle", FileSystem ), "mammtunn" );
+		var file = new ModelFile( $"{item.Directory}/{item.Stem}.MD2" );
+		var listed = ProceduralBase.BaseVertices( file, item.Shape, new ProceduralBase.Grid( field.OriginX, field.OriginY, field.CellSizeX, field.CellSizeY ) );
+
+		CollectionAssert.AreEqual( new[] { "gk_tracktop01" }, listed.Select( pair => file.Meshes[pair.Mesh].Name.TrimEnd( '\0' ) ).ToArray() );
+		Assert.AreEqual( 7, listed.Sum( pair => pair.Vertices.Length ) );
+	}
+
+	/// <summary>
+	/// <b>A placed thing is stood on the ground by the conform of its listed rim and the drape of its lookup-marked meshes only</b>
+	/// (<c>StandOnGround</c>): on the Dino Karts Tunnel at a sloped site <c>gk_mam1</c> and the listed vertices move and every other vertex stays.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> <c>StandOnGround</c> passing <see cref="ProceduralConform.EveryMesh"/> in place of <see cref="ProceduralConform.LookupDraped"/>.</remarks>
+	[TestMethod]
+	public void StandingAThingDrapesOnlyTheMeshesItsLookupMarks()
+	{
+		var item = ItemNamed( new ParkItemCatalogue( "jungle", FileSystem ), "mammtunn" );
+		var (x, y) = SlopedSite( item, 0 );
+		var origin = ParkObjects.OriginFor( x, y, 0, field );
+		var rest = new ModelFile( $"{item.Directory}/{item.Stem}.MD2" );
+		var made = new ModelFile( $"{item.Directory}/{item.Stem}.MD2" );
+		var listed = ProceduralBase.BaseVertices( made, item.Shape, new ProceduralBase.Grid( field.OriginX, field.OriginY, field.CellSizeX, field.CellSizeY ) )
+			.ToDictionary( pair => pair.Mesh, pair => pair.Vertices.ToHashSet() );
+
+		Assert.IsTrue( ParkObjects.StandOnGround( made, item, origin, ParkObjects.Turn( 0 ), field ) > 0 );
+
+		var drapedMesh = Enumerable.Range( 0, made.Meshes.Count ).Single( m => made.Meshes[m].Name.TrimEnd( '\0' ) == "gk_mam1" );
+		var drapedMoved = 0;
+
+		for ( var m = 0; m < made.Meshes.Count; ++m )
+		{
+			for ( var i = 0; i < made.Meshes[m].Vertices.Length; ++i )
+			{
+				var same = rest.Meshes[m].Vertices[i].Position.GetSystemVector3() == made.Meshes[m].Vertices[i].Position.GetSystemVector3();
+
+				if ( m == drapedMesh )
+					drapedMoved += same ? 0 : 1;
+				else if ( !( listed.TryGetValue( m, out var rim ) && rim.Contains( made.Meshes[m].VertexOrder[i] ) ) )
+					Assert.IsTrue( same, $"mesh {m} vertex {i} is neither draped nor listed and stays" );
+			}
+		}
+
+		Assert.IsTrue( drapedMoved > 0, "gk_mam1 is draped" );
+	}
+
+	private static string Source( params string[] path ) => File.ReadAllText( Path.Join( RepoFiles.Root(), "source", Path.Combine( path ) ) );
+
+	/// <summary>
+	/// <b>Every place a park makes a model that stands on the ground hands <see cref="LobbyModel"/> its <c>stand</c> hook, and the model
+	/// runs it before it builds its meshes.</b> The constructor needs a graphics device, so this reads the source: the four makers
+	/// (placed things, queue pieces, boundary hoarding, track pieces) each pass <c>stand:</c>, and the constructor calls it before
+	/// the entities are built from the file's vertices.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> a <c>stand:</c> argument removed from any of the four; <c>stand?.Invoke</c> moved below the entities' construction.</remarks>
+	[TestMethod]
+	public void EveryMakerOfAGroundedModelPassesTheStandHookAndTheModelRunsItFirst()
+	{
+		foreach ( var file in new[] { "ParkObjects.cs", "ParkQueues.cs", "ParkBoundaryHoarding.cs", "ParkTrackPieces.cs" } )
+		{
+			var text = Source( "OpenTPW", "World", "Park", file );
+			var from = text.IndexOf( "new LobbyModel(", StringComparison.Ordinal );
+			var to = text.IndexOf( ");", from, StringComparison.Ordinal );
+
+			Assert.IsTrue( from >= 0 && to > from, $"{file} makes a LobbyModel" );
+			StringAssert.Contains( text.Substring( from, to - from ), "stand: file =>", $"{file}: the model is made with no stand hook" );
+		}
+
+		var model = Source( "OpenTPW", "World", "Lobby", "LobbyModel.cs" );
+		var invoke = model.IndexOf( "stand?.Invoke( modelFile )", StringComparison.Ordinal );
+		var built = model.IndexOf( "Entities = new ModelEntity[", StringComparison.Ordinal );
+		var vertices = model.IndexOf( "meshVertices[", StringComparison.Ordinal );
+
+		Assert.IsTrue( invoke > 0, "the constructor runs the stand hook" );
+		Assert.IsTrue( invoke < built && invoke < vertices, "the stand hook runs before the meshes are built from the vertices" );
 	}
 }

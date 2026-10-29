@@ -755,7 +755,7 @@ public sealed class ParkRides : Entity
 	{
 		var paired = new Dictionary<int, SavedThing>();
 
-		// How many channels an item runs at once - the one thing the module does not carry, and without
+		// How many channels each record's model holds - the one thing the module does not carry, and without
 		// which its records cannot be stepped over at all.
 		var states = world.ThingStates( catalogue.ChannelsFor );
 

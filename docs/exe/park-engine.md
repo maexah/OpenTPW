@@ -281,14 +281,14 @@ at its terrain corner's height, none off (the other 8 are the two coaster pylons
 `0x5101`), all 18 moved from rest; the Tom Tom Twister 20 of 20, the Costume Shop 12 of 12. Its 270 draped pieces (368 meshes: 78 queue pieces,
 163 hoarding pieces, 28 kart track pieces, `gk_mam1`) each rise by the ground under each vertex less one value, the piece's own
 root height, to 0.0001. The interpolating pass moved the kart station's 16 listed vertices (`gk_TRACK01`) and the
-Lava Jump's 20 (`gk_brdge`) each by the ground along its cell line less the root height, to 0.0001 (`orig2/bv80.txt`). Things were made `0x32f` (119) or `0x3fa` (40, the coaster's pylons), pieces `0x33a` (269). Its frame at
+Lava Jump's 20 (`gk_brdge`) each by the ground along its cell line less the root height, to 0.0001 (`orig2/bv80.txt`). Things were made `0x32f` (119) or `0x3fa` (40, the coaster's pylons), pieces `0x33a` (269). In its `bv75` the 119 things list 765 base vertices and use 765, the 40 pylons list 160 and use 152 (765 + 152 = 917 used, 765 + 160 = 925 listed); a mesh whose lookup record carries `0x10000` (`mammtunn`'s `gk_mam1`) is skipped by the count (`0x0044a94b`, `0x00469ad0`), so the Dino Karts Tunnel lists 7, all on `gk_tracktop01`. Its frame at
 the Sun God camera holds no clear-coloured sliver (`o-t19197.png`, 0); ours at the same camera, unchanged, 5,652 (`q812/ours1`).
 Not settled: the control word the arithmetic runs under (Q750's note), which moves only the last bits.
 
 **OpenTPW builds the conform and the drape** (Q808, `ProceduralConform`): `LobbyModel`'s `stand` hook moves the drawn vertices of the
 model's file as it is made, before the meshes are built from them, in the model's own place and turn. The conform takes the base
 vertices `ProceduralBase.BaseVertices` lists (the floor search's own walk) of a model with the header's `0x8`, snaps x and y to the
-grid line and sets the height to the nearest corner's, nothing added; the drape takes every mesh of a queue, hoarding, kart or water
+grid line and sets the height to the nearest corner's, nothing added (always, and a corner past the field clamps to its edge, where the original snaps an axis only within 0.01 of a line, `0x00469f71`..`0x0046a028`, and ends the node and its children at a corner past the field, `0x00469daf`..`0x00469efe`; no placed thing reaches the difference); the drape takes every mesh of a queue, hoarding, kart or water
 piece, and the meshes a placed object's lookup record marks `0x10000` (`mammtunn`'s `gk_mam1`), and raises each vertex by the
 height under it on the cell's triangle (`DrapeHeight`, the flag `0x4` as above) less the model's own height; a source vertex moves
 under every drawn vertex that names it, and `SourceVertices` stay the rest the floor search and the hoardings read. The cell's

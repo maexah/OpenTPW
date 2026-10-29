@@ -11265,7 +11265,7 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   (`q778/PREDICTION.txt`, R1). Loading Alexah's played Full Simulation jungle park (`New Save.TPWS`, and its `autosave`),
   `ParkThingStates` stops at 2058464 of the module's 2101020 ("Hoarding restore: the walk ended at ...", and `ParkRides`'
   "the park file's model states would not read"), so nothing of that file's model states is restored: hoardings, clips'
-  stamps, node words, an add-on's caps. The walk asks `channelsFor` the item, and the ride's extra model records (item 1181 is a pylon's, 1183 the cart's; FileFormats `saves.md`, "A car's two model records" names the pair) are
+  stamps, node words, an add-on's caps. The walk asks `channelsFor` the item, and the ride's extra model records (item 1181 is a pylon's, 1183 the cart's; `docs/exe/saves.md`, "How many channels a saved model has" names the pair) are
   items the catalogue does not hold, so each is taken as 1 channel; `rsys.py` reads 40 records of item 1181 (the Temple of Gloom's `StdPylon` pylons, made `0x3fa` by `Coaster_SetupPylonModel`, `0x00430590`) with 5 and 24 of 1183 (the carts) with 1, and the stop
   falls just after the second 1181 record (`q778/where.py`; `parkfile.py -H` prints the counts). Decode first how many channels the original makes the pylon's model with
   (`Coaster_SetupPylonModel`; `Coaster_PosePylon` poses channels 0 to 4, `ride-operation.md`) and what its loader reads for them, then read them so; check against

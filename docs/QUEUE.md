@@ -72,6 +72,26 @@ park for the website, go first. Q804 stopped the photographs: no picture with th
   control word the conform runs under are unread (Q750's note). (4) The ground mesh still splits every cell one way (Q398), so a
   draped vertex on a cell flagged `0x4` follows the original's triangle where the ground beside it follows ours. Confirm each in
   both games as Q808 did (`lib/clearseam.py`, `original/basevertices.py`).
+- [ ] **Q849. What Q810 left: two counted gaps her played park's save now reaches, and two loads never run.** (From Q810's review,
+  run 14.) Q810 made her Full Simulation `New Save.TPWS` read whole, so the save goes through the running-things writer for the
+  first time (before, the model walk failed and the whole module was written as the file's). Two counters then fire, in
+  `q810-a7/run3fs/run.log` at 2382 and 2411 (the census at the end: 6x and 1x), and neither is in the commit message, `WORKS.md`
+  or `park-gate.md`. (a) `SAVE_PARK_SCRIPT_ENDED` x6 (`ParkRides.Written`, `ParkRides.cs:1027-1031`): a script the loaded file's
+  `ScriptStates.Order` holds that is neither running in ours nor gone by a sale, so its record is left the file's
+  (`docs/exe/saves.md`, the script paragraph). It has no queue line. Find which six of her file's scripts are not running in ours
+  after the load (the console's `rides` / `scripts` census against the file's `ScriptStates.Order`), why each ended or never
+  started (counted gaps, a script that ends by design, a thing ours does not run), and whether the original runs the same six
+  after loading the same file (`loadfile.sh`, `modeltypes.py`/`tpwmem.py`). A script that the original also ends is correct and
+  only needs saying. (b) `SAVE_PARK_TRACK_RIDE_AS_THE_FILE` x1 (`Level.cs:935` or `:951`, the track-rides module): one of her
+  track rides is left the file's because `bumpers.Written` has no record for it (:935) or `ParkCarWriter.Track` cannot write it
+  whole with its cars (:951). Find which ride and which of the two, and build the record or say why it stays the file's. (c) Not
+  run, and said by no doc: her `autosave.TPWS` was not loaded in ours (only `New Save.TPWS`; the rule closes it in
+  `modelchannels.py`, so the risk is low), and the park ours saved from her file (`q810-a7/run3fs/q810a7fs.TPWS`) was walked
+  closed (462 records, 40 of item 1181 at five channels) but not loaded back in ours or in the original. `STATUS.md`'s "a played
+  park with a coaster's pylons loads whole" is true of the load only. Load `autosave.TPWS` in ours, then load the saved file back
+  in ours (the round trip: the same things, scripts and hoardings) and in the original under Proton (`loadfile.sh`), and say what
+  each shows. Acceptance: (a) and (b) each named and settled or built, (c) each load run and its result written in `WORKS.md`'s
+  Q810 entry.
 - [ ] **Q802. What Q800 left for a person or a machine it did not have.** From Q800 (run 13, lane A). Done by the
   coordinator (2026-10-29): `opentpw.maintainer` set in `~/repos/OpenTPW-laneB`, and the Saturday audit runs
   `python3 tools/check_docs_paths.py`. The Linux quick start is marked "tested on the maintainer's Linux machine only"
@@ -157,7 +177,7 @@ filed the items that cite it.
     `0x00522cde`) is draped vertex by vertex at its placing, every vertex ending at its authored height above the ground
     under it. The chain: `0x004629d0` turns load bit `0x2` into loader flag `0x40`; `0x00461f10` sets `0x20000` on every node
     (`0x00462614`); the instancer `0x00463060` (flags `0x33a`, kart `0x522b90`, water `0x522d50`) calls `0x00469940` (`0x00463347`), which calls
-    `0x00469a80` per node (cell triangle by flag `0x4`, Q398's note). Draw them so, not as flat plates (counted `TRACK_PIECE_DRAPE`). Not proven: whether the cars' sampler reads the draped copy.
+    `0x00469a80` per node (cell triangle by flag `0x4`, Q398's note). Built by Q808 (`ProceduralConform`; `TRACK_PIECE_DRAPE` is gone). Not proven: whether the cars' sampler reads the draped copy.
     The same call also conforms every flag-8 object's base vertices to the terrain corners (Q750; fork watch 2026-10-27, verify-world H1).
   From the run 13 review (`review13/q781`, finding 3): no test reaches `PlayClip`, `_playing` or the clip census on a real
   water piece (`ParkTrackPieces` builds `LobbyModel`s, which no test makes without a window); test it when the pieces' clips are
