@@ -1324,7 +1324,7 @@ count (`+0xe`), which the record does not hold.
 | `0x01` | `+0xf8` | the item id |
 | `0x05`, `0x09` | `+0xe8`, `+0xec` | the cell: an object's `mTopLeft`, a queue piece's own cell |
 | `0x0d`, `0x11` | `+0xf0`, `+0xf4` | the footprint, cells across and down (whether turned with the angle was not measured: no turned object to hand is longer one way) |
-| `0x15` | `+0xe4` | the flags it was made with: `0x32f` a placed object, `0x361` a fixed one (gates, lights, a vehicle), `0x33a` a queue piece |
+| `0x15` | `+0xe4` | the flags it was made with: `0x32f` a placed object, `0x361` a fixed one (gates, lights, a vehicle), `0x33a` a queue piece, `0x3fa` a coaster's pylon, `0x101` a ride's car ("How many channels a saved model has") |
 | `0x19` | `+0xd4` | **the script handle of the thing it is the model of**; nought for a queue piece and the other scenery |
 | `0x27` | the mesh's `+0x10` | the angle: an object's `mAngle`; a queue piece's 360 less its tile's angle |
 
@@ -1409,6 +1409,38 @@ made or gone; a thing whose model has emitters (`FUN_004368f0`, reached under fl
 is a copy of another camera's); an object control's count (one camera in and one out leaves it 2); a freed
 thing id used again; what frees a slot and where it leaves the cursor (the file's cursor was set to the lowest
 empty slot and read back so). **OpenTPW was not run**: `ParkWorld` was not asked to read the three files.
+
+### How many channels a saved model has (Q814)
+
+Q810's decode first (Q779's question). **The loader reads as many channels as the model it has just made holds**
+(`RideSystem_LoadModels`, `0x004647a0`: the channel loop runs to the model's `+0xe`), and the model holds its type's
+count: `Model_CloneType` (`0x004557c0`) copies the type's first `0x3f` dwords, `+0xe` with them, and sizes the channels by it. **A type
+holds the count it was registered with**, the seventh argument of `RideSystem_RegisterType` (`0x004629d0`), which appends the type to the list at
+`0x007ae6a8`, sets its `+0xf8` (the item id a record names) and passes the count to `FUN_00461f10` (`+0xe`; none is one,
+`0x00462ad5`). Its callers that reach a park:
+
+| Caller | What it registers | Its id | Channels |
+|---|---|---|---|
+| `FUN_00413c10` (`0x00414175`, `0x004141c7`) | an item's own model | `Info.Id` | its `UsageInfo.NumSimultAnims` (the item's `+0x170`) |
+| `FUN_00413c10` (`0x0041437e`) | an item's extra meshes | the item's plus one plus the mesh | 1 |
+| `Coaster_RegisterModels` (`0x0042fcbf`, `0x0042fd36`) | a coaster's two pylon types | `coaster.sam`'s `asPylonControls[n].uiPylonTypeUniqueID` (`Coaster_LoadPylonControls`, `0x0042eb70`) | **5** |
+| `Coaster_RegisterCarType` (`0x0043015b`) | a coaster's car types | `asCarTypes[n].uiCarTypeUniqueID` | 1 |
+| `FUN_00522900`, `TrackKit_LoadKartPieces`, `TrackKit_LoadWaterPieces`, `Hoarding_LoadPieceModels` | queue, track and hoarding pieces | their tables' | 1 |
+
+The one caller left, `FUN_005d7fd0`, is the lobby's (`Lobby_Start`). The pylon's five are the channels `Coaster_SetupPylonModel`
+(`0x00430590`) starts on the model it makes with `0x3fa` and `Coaster_PosePylon` sets (`ride-operation.md`, "A coaster's
+highest track point", step 3). So item 1181 in Alexah's played jungle park is the Minecart's `StdPylon` (`minecart.wad`'s
+`coaster.sam` names 1181 `StdPylon`, 1182 `LoopPylon` and 1183 its `Cart`): 40 records of five channels, its 24 cars one.
+OpenTPW's walk takes every id outside the catalogue as one channel, so it misreads the first pylon record and stops.
+
+**Measured** (`q810/PREDICTION.txt`). Walked by this rule alone, no search (`lib/modelchannels.py`: 300 ids from every
+`.sam`, 21 of them pylon types), the module closes on its end in all 45 park files the original wrote
+(`q257/files-original.txt`; 7,688 records, every count equal to `rsys.py`'s searched one), her jungle `New Save.TPWS` and
+`autosave.TPWS` among them (462 records each). With the pylons at one, the walk of either stops after 202 records; the stock
+park, which holds no pylon record, still closes. **In the original under Proton**, a Full Simulation player loading a copy of
+her `New Save.TPWS` (`original/modeltypes.py`, 80 s on): all 127 registered types hold the rule's count (1181 and 1182 five,
+1183 one), all 462 models their type's, the 40 of 1181 made `0x3fa` and the 29 of `0x101` the vehicles (the Minecart's 24 cars,
+`gokarts`' 1151 to 1154 and `tourride`'s 1171); its gate frame at Q805's camera shows the doors open and the wall standing (`q810/orig/gate/o-t19017.png`).
 
 ### OpenTPW's writer, the objects
 

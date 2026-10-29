@@ -72,6 +72,11 @@ park for the website, go first. Q804 stopped the photographs: no picture with th
   put back above nought; the stock park still 15. **And the wall (Q811):** the same file's `boundary` reads `pieces 163 anchors 163
   unmade 0` (ho_fob1 10, ho_fob2 7, ho_fob3 1, ho_fos1 98, ho_fos2 16, ho_fos3 19, ho_fos4 12; 0 of 163 now) and the gate's view shows the
   wall beside the original's; the stock park still 143.
+  **Split (2026-10-29):** the decode is done as Q814 (`saves.md`, "How many channels a saved model has"): item 1181 is the
+  Minecart's `StdPylon`, not a car, and a pylon's model has five channels (`Coaster_RegisterModels`, `0x0042fcbf`). Left, the
+  build: in `ParkThingStates`' walk, take each id that a coaster's `coaster.sam` names as `asPylonControls[n].uiPylonTypeUniqueID`
+  as five channels and every id outside the catalogue as one, so all four callers (`ParkRides.cs` twice, `ParkObjects.cs`,
+  `ParkBoundaryHoarding.cs`) read her files whole; `lib/modelchannels.py` reads the same rule (45 of 45 files close).
 - [ ] **Q813. What Q808 left of the conform and the drape.** From Q808 (run 14, lane A). (1) **The interpolating pass** for the nine
   lookup-`0x8` meshes (the kart station `gk_TRACK01`, `wr_log1`, `wr_log2`, `wr_water3`, `wr_water4`, and the add-ons' `gk_brdge`,
   `wr_mwater1`, `wr_mwater2`, `wr_mwater04`; `park-engine.md`, "Where a placed object's model stands"): each such mesh's listed
@@ -3154,6 +3159,9 @@ state machine.
   (the car's launch, which makes the two records) and what its loader reads for them, then read them so; check against
   both of Alexah's jungle files and the 45 files `saves.md` counts.
   Q810 (Q805's build) does this item; Q809 measured its effect on the gate (`park-gate.md`, "What draws the doors").
+  - **Decoded (Q814):** the 40 records of 1181 are the Minecart's `StdPylon`s (made `0x3fa`), not its cars (1183, one channel);
+    a pylon's model has five channels, and the rule (`saves.md`, "How many channels a saved model has") closes all 45 files. The
+    build is Q810's.
 - [ ] **Q601. The gadget's date is written with the machine's culture; the original's reads "4.13.2002".** Seen in
   Q707's runs (`q707/p707t/side-by-side.png`): ours letters `GameCalendar.Now.ToShortDateString()` (`ParkGadget.ShowDate`),
   "4/18/2002" on this machine, and would letter another order on a machine of another culture; the original's frames read

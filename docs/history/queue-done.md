@@ -11026,6 +11026,15 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   1,782 queue-piece and 1,736 track-piece vertices draped; `clearseam.py` at the Sun God camera 5,751 to 11 (the original's frame 0), the
   Tom Tom Twister's 16,308 to 0 and the Costume Shop's 7,844 to 0 (the original's last four frames of the same file at the same camera setting
   hold 0 to 32 and 0 to 8; the pictures are not pixel-aligned, the original's loaded view differing from ours, Q359); the level plots and the stock park's Belly Bounce stay 0 (`q808/`, `PREDICTION.txt`). Ticks Q750 and Q695.
+- [x] **Q814. How many channels the original reads for a saved model (Q810's decode, Q779's question)** (2026-10-29, lane A; the
+  first piece of Q810, filed after the 2026-10-29 ordering block). The loader reads as many channels as the model it makes holds,
+  and a model holds the count its type was registered with (`RideSystem_RegisterType`, `0x004629d0`): an item's own model its
+  `NumSimultAnims`, a coaster's pylon type five (`Coaster_RegisterModels`, `0x0042fcbf`; its id `coaster.sam`'s
+  `uiPylonTypeUniqueID`), every other type one (`saves.md`, "How many channels a saved model has"). Item 1181 in Alexah's jungle park
+  is the Minecart's `StdPylon`, not a car. By that rule alone (`lib/modelchannels.py`) the ride system module closes on its end in all
+  45 park files the original wrote, her two jungle files among them, and with the pylons at one hers stop after 202 records. In the
+  original loading a copy of her New Save (`original/modeltypes.py`): 127 of 127 types and 462 of 462 models hold the rule's count,
+  and its gate frame shows the doors open (`q810/PREDICTION.txt`, 6 of 6 held). The build is Q810's.
 ## B. Docs and comments
 
 - [x] **Q88. One label from Q50's decode.** Done 2026-09-26, `alexah/163-q88-heldbyathing-state8-label`.

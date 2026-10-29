@@ -20,7 +20,7 @@ One line per system; the detail, item by item, is `docs/WORKS.md` (grep it by ar
 
 One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-number, never read it whole).
 
-- Park and saving: a played park whose model records do not read (Alexah's, with a Temple of Gloom: Q779) loads none of its models' saved clips, so its gate stands shut and its boundary wall is not drawn (Q810, Q811); no loan screen, litter or day's end; a written park holds no kart, water or tracked ride, and some voices, puffs and the music voice are not written (Q420, Q803); forty-four of the advisor's 155 polled messages are built.
+- Park and saving: a played park with a coaster's pylons (Alexah's Temple of Gloom: our walk reads a pylon's record as one channel where the original reads five, Q814) loads none of its models' saved clips, so its gate stands shut and its boundary wall is not drawn (Q810, Q811); no loan screen, litter or day's end; a written park holds no kart, water or tracked ride, and some voices, puffs and the music voice are not written (Q420, Q803); forty-four of the advisor's 155 polled messages are built.
 - Map and windows: the map's overlay, hover and click are decoded, not built (Q684, Q685); five of the nine object windows are unbuilt (Q31b).
 - Guests: the deciding turn's vomit, litter, fireworks and pranks and four queue turns are counted (Q224 to Q226, Q228); a failed route is not revived (Q104); queues lose more happiness than the original's (Q746).
 - Building: a carried member of staff shows nothing; a bought thing's sparkles are not drawn (Q683); the buy screen's panel has no model (Q158); the kart and water pieces' interpolating pass, the coaster pylons' conform and the recomputed face normals are unbuilt (Q813).
