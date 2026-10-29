@@ -33,11 +33,10 @@ public static class FreshParkFile
 		var body = new Sink( 1_600_000 );
 
 		// What the original holds that is not built here (docs/exe/saves.md, "A park made fresh: its file at tick nought"): the
-		// advisor's head and mouth nodes and his twenty clip lengths, which come from his model; the object controls' word at
-		// +0x08, 5 on 31 of the 70, whose rule is not decoded; and, off Lost Kingdom, the flyers' four values, the land's own voices
-		// and its emitter.
-		Unimplemented.Report( "FRESH_PARK_FILE_ADVISOR_MODEL_WORDS" );
+		// object controls' word at +0x08, 5 on 31 of the 70, whose rule is not decoded; the session's music voice, which is
+		// nought here (Sound); and, off Lost Kingdom, the flyers' four values, the land's own voices and its emitter.
 		Unimplemented.Report( "FRESH_PARK_FILE_OBJECT_CONTROL_WORD_8" );
+		Unimplemented.Report( "FRESH_PARK_FILE_MUSIC_VOICE" );
 
 		if ( !park.Theme.Equals( "jungle", StringComparison.OrdinalIgnoreCase ) )
 			Unimplemented.Report( "FRESH_PARK_FILE_OTHER_THEME" );
@@ -327,7 +326,9 @@ public static class FreshParkFile
 	/// <summary>
 	/// The advisor's record as his constructor leaves it (FileFormats <c>saves.md</c>, "The advisor"): the first of the eight slots
 	/// taken by message 0 at a score of 100000 with the line to take next in turn, and every one of the 351 messages never
-	/// said, the line -1.
+	/// said, the line -1. <b>Written differently from the original, said here and not counted:</b> slot 0's <c>mValid</c> is written 0 by
+	/// <c>ParkWorld.PutAdvisorSlots</c> where the original's file holds 1, because this game posts no message 0 (Q543), so the original loading
+	/// a file from here has no welcome in its slot list (docs/exe/saves.md, "A park made fresh").
 	/// </summary>
 	private static void AdvisorThing( Sink body, int at )
 	{
@@ -435,7 +436,7 @@ public static class FreshParkFile
 		body.Zeros( ParkParticles.LiveSize );
 
 		// The live header: the particle count, the generator's seed, the next emitter's count and the next effector's, the
-		// density, and two words (heap addresses of the original's, 0x803b68 and 0x5d60c0, which a load keeps its own over).
+		// density, and two words (the live system's, a data address 0x803b68 and a function's 0x5d60c0, which a load keeps its own over).
 		body.Poke32( live + 0x0c, 2048 );
 		body.Poke32( live + 0x10, jungle ? JungleParticleSeed : 1 );
 		body.Poke32( live + 0x14, 1 );
@@ -518,7 +519,9 @@ public static class FreshParkFile
 
 	/// <summary>
 	/// The ride scripts: the subsystem set up, no script (the gates' and the lights' are made as any bought thing's), the
-	/// next handle 1, and the size of a script's struct.
+	/// next handle 1, and the size of a script's struct. <b>The made scripts' words differ from the original's, said here and not counted:</b>
+	/// the header's script count is 0 where the original's is 2 (only counted up and down there), each script's <c>+0x98</c> is -1 where
+	/// the original's is 0, its <c>+0xa8</c> 0 where the original's is <c>0xffff</c>, and the directory <c>features</c> where it is <c>Features</c>.
 	/// </summary>
 	private static void RideScripts( Sink body )
 	{
@@ -538,7 +541,8 @@ public static class FreshParkFile
 
 	/// <summary>
 	/// The advisor: <c>ADV_</c>, 360 bytes of <c>Advisor_ResetState</c> (<c>0x005989c0</c>: zeroed, <c>+0x110</c> 5 and
-	/// <c>+0x12c</c> -1) and the length of a buffer, nought.
+	/// <c>+0x12c</c> -1, the nodes and clip lengths of his models, the costume) and the length of a buffer, nought
+	/// (<c>docs/exe/saves.md</c>, the <c>ADVS</c> row).
 	/// </summary>
 	private static void Advisor( Sink body, FreshPark park, ParkBalance balance )
 	{
@@ -550,6 +554,29 @@ public static class FreshParkFile
 		body.Poke32( at + 0x110, 5 );
 		body.Poke32( at + 0x12c, -1 );
 
+		// The models' words: slot 0 is the lobby's fly, slot 1 the level's own. A load copies these bytes over the original's
+		// advisor, which runs its lines' lengths and mouths from them.
+		var theme = park.Theme.ToLowerInvariant();
+		var slots = new[]
+		{
+			AdvisorModelWords( "global/advisor/Advisor.md2" ),
+			AdvisorModelWords( $"levels/{theme}/advisor/Advisor_{theme[..Math.Min( theme.Length, 3 )].ToUpperInvariant()}.md2" )
+		};
+
+		for ( var slot = 0; slot < slots.Length; ++slot )
+		{
+			body.Poke32( at + 0x38 + slot * 4, slots[slot].Head );
+
+			for ( var mouth = 0; mouth < slots[slot].Mouths.Length; ++mouth )
+				body.Poke32( at + 0x40 + slot * 20 + mouth * 4, slots[slot].Mouths[mouth] );
+		}
+
+		// The twenty clip lengths are one model's, slot 1's where there is one, and clip 14's (entry 13) is nought.
+		var lengths = slots[1].Found ? slots[1].Clips : slots[0].Clips;
+
+		for ( var clip = 0; clip < lengths.Length; ++clip )
+			body.Poke32( at + 0x68 + clip * 4, clip == 13 ? 0 : lengths[clip] );
+
 		// The theme's costume, four pairs copied from the balance (FUN_004080e0): the add-ons from +0x144, the sub-offs from +0x154.
 		var costume = AdvisorProps.CostumeOf( key => balance.Int( key ) );
 
@@ -560,6 +587,54 @@ public static class FreshParkFile
 		}
 
 		body.Int32( 0 );
+	}
+
+	/// <summary>
+	/// What <c>Advisor_ResetState</c> takes from one advisor model: the node named <c>bug head</c> and the five mouths (nought where
+	/// there is no such node, <c>FUN_0044b2e0</c>), and the twenty clips' lengths (<see cref="AdvisorModel.MillisecondsOf"/>, nought
+	/// where the clip is not shipped).
+	/// </summary>
+	internal static (bool Found, int Head, int[] Mouths, int[] Clips) AdvisorModelWords( string path )
+	{
+		var mouths = new int[5];
+		var clips = new int[20];
+
+		try
+		{
+			var model = new ModelFile( path );
+			var head = NodeNamed( model, "bug head" );
+			string[] names = ["mouth - normal", "mouth - aah", "mouth - eee", "mouth - ooh", "mouth - sss"];
+
+			for ( var mouth = 0; mouth < mouths.Length; ++mouth )
+				mouths[mouth] = NodeNamed( model, names[mouth] );
+
+			var stem = path[..path.LastIndexOf( '.' )];
+
+			for ( var clip = 1; clip <= clips.Length; ++clip )
+			{
+				if ( AnimationFile.TryLoad( $"{stem}M{clip}.md2", out var animation ) )
+					clips[clip - 1] = AdvisorModel.MillisecondsOf( animation! );
+			}
+
+			return (true, head, mouths, clips);
+		}
+		catch ( Exception e ) // a missing file reads as no model, as the original's lookup does
+		{
+			Log.Warning( $"FreshParkFile: advisor model {path} would not read - {e.Message}" );
+			return (false, 0, mouths, clips);
+		}
+	}
+
+	/// <summary>A node's index by name, ignoring case; nought where there is none, as the engine answers.</summary>
+	private static int NodeNamed( ModelFile model, string name )
+	{
+		for ( var node = 0; node < model.Nodes.Count; ++node )
+		{
+			if ( string.Equals( model.Nodes[node].Name.TrimEnd( '\0' ).Trim(), name, StringComparison.OrdinalIgnoreCase ) )
+				return node;
+		}
+
+		return 0;
 	}
 
 	/// <summary>
@@ -575,7 +650,8 @@ public static class FreshParkFile
 		var state = body.Length;
 		body.Zeros( 0x54 );
 
-		// The music's and the crowd's voice handles are nought (no voice is in the list); the four volumes, a word that is 1 in
+		// The music's voice handle is nought, a deviation from the original's (its session's own voice, FRESH_PARK_FILE_MUSIC_VOICE),
+		// and so is the crowd's (no voice is in the list); the four volumes, a word that is 1 in
 		// every file, and the three on-flags.
 		body.Poke32( state + 0x08, 1 );
 		body.Poke32( state + 0x18, 100 );

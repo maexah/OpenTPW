@@ -827,9 +827,11 @@ public sealed class ParkState
 		Balance = park?.Economy?.Balance ?? 0;
 		AdmissionFee = park?.Economy?.AdmissionFee ?? 0;
 
+		// The clock holds month 0 and day -1 until its first update: a park made fresh, or a file that holds day -1.
+		_freshCalendar = park is FreshPark || park?.Save?.Calendar is { DayAtLastUpdate: -1 };
+
 		// The bank's constructor starts withdrawals on and the rest at nought (FUN_004cf7c0), but the last balance, which a
 		// park made fresh starts at its cash (the original's file at tick nought, FreshPark).
-		_freshCalendar = park is FreshPark || park?.Save?.Calendar is { DayAtLastUpdate: -1 };
 		WithdrawalsEnabled = park?.Economy?.WithdrawalsEnabled ?? 1;
 		LastBalance = park?.Economy?.LastBalance ?? 0;
 		TurnEnteredRed = park?.Economy?.TurnEnteredRed ?? 0;

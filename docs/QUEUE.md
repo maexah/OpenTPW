@@ -74,14 +74,15 @@ default, Alexah's second pre-weekly list), then the rest in the order below.
   switch on. (6) A test for `tools/check_docs_paths.py` (it is run by hand and the audit; nothing tests it).
 
 - [ ] **Q801. The rest of a park made fresh's file.** From Q783, filed after the 2026-10-28 ordering block (a reorder is Alexah's). What Q783 writes
-  differently from the original's file at tick nought, each counted: (1) the advisor module's `+0x38` to `+0x64` (each slot's head node and five mouth
-  nodes, found by name, `FUN_0044b2e0`) and `+0x68` to `+0xb4` (twenty clip lengths in ms of one model, slot 1's else slot 0's, clip 14 nought), nought
-  here (`FRESH_PARK_FILE_ADVISOR_MODEL_WORDS`; the corrected rows are `review13/q249/FINDINGS.md`, finding 1, to be written to `saves.md` first); (2) the
+  differently from the original's file at tick nought, each counted or said at its site: (1) the advisor's model words are now built
+  (the head and mouth nodes by name, the twenty clip lengths; the original's load copies the file's 0x168 bytes over its own advisor, `0x599d84`, so
+  noughts there ran every line's wait as 1 s and left its mouths on node 0) and `saves.md`'s ADVS row holds the rule; what is left of it is slot 0's `mValid`
+  (0 here, 1 there: no welcome in the original on a file from here, Q543) and the made scripts' RSSE words (said at `FreshParkFile`, not counted); (2) the
   object controls' dword at `+0x08`, 5 on rides, shops and sideshows but the track rides 1500 to 1502, and on item 100 (`FRESH_PARK_FILE_OBJECT_CONTROL_WORD_8`):
   find the writer in the control manager and its rule; (3) the gates' and lights' model records' node words and lookup records (6 and 2, 9 and 0), which
   the made path leaves out (`SAVE_PARK_MADE_MODEL_TABLES`, 76 bytes); (4) the weather as the constructor leaves it (wind 90, force 0.5) where this game
   writes its own roll; (5) the other three themes' files (flyers, land voices and emitter, seed, ride-system counts: `FRESH_PARK_FILE_OTHER_THEME`);
-  (6) the session's own voices (the music's, `+0x00` of the sound state). Confirm each by the same diff against the original's file (`lib/freshcmp.py`).
+  (6) the session's own voices (the music's, `+0x00` of the sound state, `FRESH_PARK_FILE_MUSIC_VOICE`). Confirm each by the same diff against the original's file (`lib/freshcmp.py`).
 
 **Ordered at Alexah's word (2026-10-21), after their own play of Lost Kingdom:** showing the original's art as well as it can
 be shown comes first, and improvements over the original are ON by default, each said at the site as a deviation (full

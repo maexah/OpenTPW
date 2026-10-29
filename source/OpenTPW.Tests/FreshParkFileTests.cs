@@ -203,6 +203,18 @@ public class FreshParkFileTests
 		Assert.AreEqual( 0, BitConverter.ToInt32( body, ride + 12 ) );
 		Assert.AreEqual( 0, body[ride + 16], "slot 0 is empty" );
 		Assert.AreEqual( 1, body[ride + 18], "slot 2 holds the first piece" );
+
+		// Each piece's record, in the walk's order: its item, cell, two cells square, the queue piece's flags and its angle.
+		for ( var anchor = 0; anchor < fresh.Boundary.Count; ++anchor )
+		{
+			var piece = ParkBoundaryHoarding.PieceOf( fresh.Boundary[anchor] );
+			var record = ride + 18 + anchor * 103;
+
+			Assert.AreEqual( (ParkBoundaryHoarding.FirstItem + piece.Row, piece.CellX, piece.CellY, 2, 2, 0x33a, piece.Angle),
+				(BitConverter.ToInt32( body, record + 1 ), BitConverter.ToInt32( body, record + 5 ), BitConverter.ToInt32( body, record + 9 ),
+				BitConverter.ToInt32( body, record + 0x0d ), BitConverter.ToInt32( body, record + 0x11 ), BitConverter.ToInt32( body, record + 0x15 ),
+				BitConverter.ToInt32( body, record + 0x27 )), $"piece {anchor}" );
+		}
 	}
 
 	/// <summary>
@@ -367,6 +379,7 @@ public class FreshParkFileTests
 	}
 
 	/// <summary>The sound: the land's five voices of Lost Kingdom, two of them following the listener in a rectangle.</summary>
+	/// <remarks><b>Mutations:</b> a voice's handle, place, range, category or rectangle changed; the voices in another order.</remarks>
 	[TestMethod]
 	public void TheSoundHoldsTheLandsFiveVoices()
 	{
@@ -378,6 +391,35 @@ public class FreshParkFileTests
 		Assert.AreEqual( 5, BitConverter.ToInt32( body, sound + 12 + 84 + 12 + 4 ) );
 		Assert.AreEqual( 0, BitConverter.ToInt32( body, sound + 12 ), "no music voice is saved" );
 		Assert.IsNotNull( world );
+
+		// The category record and the pool's block count sit between the count and the first voice.
+		var at = sound + 12 + 84 + 12 + 8;
+		at += 8 + BitConverter.ToInt32( body, at ) + 4;
+
+		var voices = new List<(int Handle, float X, float Z, float Range, int Category, bool Rectangle, int Corners)>();
+
+		for ( var voice = 0; voice < 5; ++voice )
+		{
+			var handle = BitConverter.ToInt32( body, at );
+			var rectangle = BitConverter.ToInt32( body, at + 52 ) != 0;
+			var corners = rectangle ? BitConverter.ToInt32( body, at + 56 + 8 ) + BitConverter.ToInt32( body, at + 56 + 12 )
+				+ BitConverter.ToInt32( body, at + 56 + 16 ) + BitConverter.ToInt32( body, at + 56 + 20 ) : 0;
+
+			voices.Add( (handle, BitConverter.ToSingle( body, at + 12 ), BitConverter.ToSingle( body, at + 20 ), BitConverter.ToSingle( body, at + 28 ),
+				BitConverter.ToInt32( body, at + 32 ), rectangle, corners) );
+
+			// 13 dwords, the rectangle's flag, its eight controller bytes and four corners, the mark, a byte, the handle and a nought.
+			at += 52 + 4 + (rectangle ? 24 : 0) + 4 + 1 + 4 + 4;
+		}
+
+		CollectionAssert.AreEqual( new[] { 0x360061, 0x370060, 0x38005e, 0x390063, 0x3a005f }, voices.Select( voice => voice.Handle ).ToArray() );
+		CollectionAssert.AreEqual( new[] { 353f, 372f, 21f, 530f, 511f }, voices.Select( voice => voice.X ).ToArray() );
+		CollectionAssert.AreEqual( new[] { 31f, 21f, 39f, 513f, 664f }, voices.Select( voice => voice.Z ).ToArray() );
+		CollectionAssert.AreEqual( new[] { 0f, 0f, 19f, 97f, 97f }, voices.Select( voice => voice.Range ).ToArray() );
+		CollectionAssert.AreEqual( new[] { 1, 1, 7, 1, 1 }, voices.Select( voice => voice.Category ).ToArray() );
+		CollectionAssert.AreEqual( new[] { true, true, false, false, false }, voices.Select( voice => voice.Rectangle ).ToArray() );
+		CollectionAssert.AreEqual( new[] { 353 + 31 + 450 - 66, 372 + 21 + 567 - 174, 0, 0, 0 }, voices.Select( voice => voice.Corners ).ToArray() );
+		Assert.AreEqual( at, sound + Modules( body )["SOUN"].Length, "the five voices end the module" );
 	}
 
 	/// <summary>The object controls: each of the 70 items' record reads back as the fresh park's own, the count after the 150 slots 70.</summary>
@@ -462,6 +504,124 @@ public class FreshParkFileTests
 			rides.Delete();
 			Entity.ApplyDeletions();
 		}
+	}
+
+	/// <summary>
+	/// The advisor's model words (<c>Advisor_ResetState</c>): each slot's head node and five mouths, found by name, and twenty clip lengths of
+	/// one model, slot 1's, with clip 14's nought. Lost Kingdom's: the lobby fly's mouths are nodes 5 to 9 and the level's 7 to 11, the
+	/// two have no node named <c>bug head</c>, and the level's clips run 1666, 2500, 3333 ... 666 then 28666, 633, 2966, 1300 and 2000.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the mouths in the other slot's place; the lengths from slot 0; clip 14 kept; an entry off by one.</remarks>
+	[TestMethod]
+	public void TheAdvisorsModelWordsAreTheModelsOwn()
+	{
+		var (_, body) = Save();
+		var advisor = Modules( body )["ADVS"].At + 8;
+		int Word( int offset ) => BitConverter.ToInt32( body, advisor + offset );
+
+		Assert.AreEqual( (0, 0), (Word( 0x38 ), Word( 0x3c )), "no node is named bug head" );
+		CollectionAssert.AreEqual( new[] { 5, 6, 7, 8, 9 }, Enumerable.Range( 0, 5 ).Select( mouth => Word( 0x40 + mouth * 4 ) ).ToArray() );
+		CollectionAssert.AreEqual( new[] { 7, 8, 9, 10, 11 }, Enumerable.Range( 0, 5 ).Select( mouth => Word( 0x54 + mouth * 4 ) ).ToArray() );
+		CollectionAssert.AreEqual(
+			new[] { 1666, 2500, 3333, 4166, 5000, 7500, 9166, 10000, 10833, 12500, 3333, 5000, 11000, 0, 666, 28666, 633, 2966, 1300, 2000 },
+			Enumerable.Range( 0, 20 ).Select( clip => Word( 0x68 + clip * 4 ) ).ToArray() );
+
+		// The rule, from the models: the same words by name and by the declared span.
+		var lobby = FreshParkFile.AdvisorModelWords( "global/advisor/Advisor.md2" );
+		var level = FreshParkFile.AdvisorModelWords( "levels/jungle/advisor/Advisor_JUN.md2" );
+
+		Assert.IsTrue( lobby.Found && level.Found );
+		CollectionAssert.AreEqual( lobby.Mouths, Enumerable.Range( 0, 5 ).Select( mouth => Word( 0x40 + mouth * 4 ) ).ToArray() );
+		CollectionAssert.AreEqual( level.Mouths, Enumerable.Range( 0, 5 ).Select( mouth => Word( 0x54 + mouth * 4 ) ).ToArray() );
+		Assert.AreEqual( 0, FreshParkFile.AdvisorModelWords( "levels/jungle/advisor/NoSuchAdvisor.md2" ).Clips.Sum(), "a model that is not there gives noughts" );
+	}
+
+	/// <summary>
+	/// The gates and the lights reach the file as fixed items through the whole writer (the level's bought things, the rides' record, the
+	/// file writer): the gates' record is (45, 16) six by three and the lights' (48, 17) one by one, both with flags 0x361.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> <c>Level.WritePark</c> passes no fixed cell; <c>ParkRides.Written</c> drops <c>FixedCell</c>; the file writer ignores it.</remarks>
+	[TestMethod]
+	public void TheGatesAndTheLightsReachTheFileAsFixedItemsThroughTheWholeWriter()
+	{
+		GameClock.Rebase();
+		var rides = new ParkRides( "jungle", fresh, catalogue, data );
+
+		try
+		{
+			var state = new ParkState( fresh );
+			var people = new ParkPeople( fresh, new ParkBalance( "jungle", easyMode: false ), null, state, catalogue );
+			var path = Level.WritePark( fresh, state, "jungle", "FreshGates", people, null, rides, catalogue );
+
+			Assert.IsNotNull( path );
+
+			var body = new SaveReader( new MemoryStream( SaveFileSystem.ReadAllBytes( "users/1Test/jungle/" + Path.GetFileName( path ) ) ) ).ReadFile();
+			var ride = Modules( body )["RSYS"].At;
+
+			// Slot 0 is the gates' record and slot 1 the lights', each a whole record (a record's flag byte, item, then the cell, the
+			// footprint and the flags): found by their words, which no placed object's record shares (its flags are 0x32f).
+			var module = Modules( body )["RSYS"];
+			bool Holds( params int[] words )
+			{
+				for ( var at = ride + 16; at + 4 * words.Length <= ride + module.Length; ++at )
+				{
+					if ( words.Select( ( word, n ) => BitConverter.ToInt32( body, at + 4 * n ) == word ).All( same => same ) )
+						return true;
+				}
+
+				return false;
+			}
+
+			Assert.AreEqual( 1, body[ride + 16], "slot 0 holds the gates" );
+			Assert.IsTrue( Holds( 45, 16, 6, 3, 0x361 ), "the gates, on (45, 16)" );
+			Assert.IsTrue( Holds( 48, 17, 1, 1, 0x361 ), "the lights, on (48, 17)" );
+			Assert.IsFalse( Holds( 6, 3, 0x32f ) || Holds( 1, 1, 0x32f ), "no placed object's record: the gates and lights stand on no cell of their own" );
+		}
+		finally
+		{
+			TestRun.DeleteEvery<ParkPeople>();
+			rides.Delete();
+			Entity.ApplyDeletions();
+		}
+	}
+
+	/// <summary>
+	/// A park made fresh holds month 0 and day -1 while its tick is nought, and its date from the first sweep on; so does one read back from a
+	/// file that holds day -1, which is how a restart of it runs.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the tick-nought test dropped; the file's day -1 arm dropped.</remarks>
+	[TestMethod]
+	public void AFreshParksCalendarHoldsDayMinusOneUntilItsFirstSweep()
+	{
+		var state = new ParkState( fresh );
+
+		Assert.AreEqual( (0, -1), state.CalendarAtLastUpdate );
+
+		state.SetGameTick( 1 );
+		Assert.AreNotEqual( (0, -1), state.CalendarAtLastUpdate, "a later tick writes its own date" );
+		Assert.AreEqual( (0, 1), state.CalendarAtLastUpdate, "the first of January" );
+
+		var (file, body) = Save();
+		var world = new ParkWorld( body, file[..0x60D] );
+		var again = new ParkState( world );
+
+		Assert.IsNotNull( world.Calendar );
+		Assert.AreEqual( -1, world.Calendar.DayAtLastUpdate );
+		Assert.AreEqual( (0, -1), again.CalendarAtLastUpdate, "read back from the file" );
+
+		again.SetGameTick( 1 );
+		Assert.AreEqual( (0, 1), again.CalendarAtLastUpdate );
+	}
+
+	/// <summary>The camera's rotation is written as +0 where the yaw is nought (<c>0f - Yaw</c>), not as a negative zero.</summary>
+	/// <remarks><b>Mutations:</b> <c>-Yaw</c> in <c>Level.WritePark</c>.</remarks>
+	[TestMethod]
+	public void TheCameraYawOfNoughtIsWrittenAsPositiveZero()
+	{
+		ParkOrbitCameraMode.Forget();
+		var (_, body) = Save();
+
+		Assert.AreEqual( 0, BitConverter.ToInt32( body, Modules( body )["KAME"].At + 4 ), "the rotation's bits" );
 	}
 
 	private static int FindThing( byte[] body, int from, int model )

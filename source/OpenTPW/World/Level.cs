@@ -1004,7 +1004,8 @@ public class Level
 			things = things with { QueueCells = pieces };
 
 		var running = new ParkFileWriter.Running( state.GameTick, state.ParkIsClosed, state.VisitorsToDate, state.Balance,
-			new ParkCameraModule.View( ParkOrbitCameraMode.Zoom, 0f - ParkOrbitCameraMode.Yaw, point.X, point.Y ), cells,
+			new ParkCameraModule.View( ParkOrbitCameraMode.Zoom, // 0f - Yaw, not -Yaw: a yaw of nought is written as +0, not the sign bit
+				0f - ParkOrbitCameraMode.Yaw, point.X, point.Y ), cells,
 			writtenPeople, pool?.Written(), people?.WrittenArrival( things != null ? written.Contains : null ), things, people?.WrittenLetGo(),
 			WrittenEffects( loaded, state, written.Contains, asTheFile: things == null ),
 			written.Contains( state.MechanicCursor ) ? state.MechanicCursor : 0,

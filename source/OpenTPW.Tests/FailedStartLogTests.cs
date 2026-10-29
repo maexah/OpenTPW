@@ -29,7 +29,8 @@ public class FailedStartLogTests
 		environment["SDL_AUDIODRIVER"] = "dummy";
 
 		// A path that goes wrong lands in scratch, never in the player's own data folder (AGENTS.md rule 12): the data
-		// folder follows XDG_DATA_HOME on Linux, HOME on macOS and APPDATA on Windows.
+		// folder follows XDG_DATA_HOME (else HOME) on Linux only. On Windows it is the shell's known folder and on macOS the system's
+		// Application Support folder, and no variable set here moves either.
 		environment.TryAdd( "HOME", Path.Join( workingFolder, "home" ) );
 		environment.TryAdd( "USERPROFILE", environment["HOME"] );
 		environment.TryAdd( "XDG_DATA_HOME", Path.Join( workingFolder, "xdg" ) );

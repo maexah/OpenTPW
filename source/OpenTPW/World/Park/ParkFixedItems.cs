@@ -124,10 +124,10 @@ public sealed class ParkFixedItems : Entity
 		_ => BusCatalogueId
 	};
 
-	/// <summary>Whether a catalogue item is one of the three arrival vehicles.</summary>
 	/// <summary>Whether the item is the park gate or the traffic lights, the two fixed objects a park is made with.</summary>
 	internal static bool IsGatesOrLights( int catalogueId ) => catalogueId is GatesCatalogueId or LightsCatalogueId;
 
+	/// <summary>Whether a catalogue item is one of the three arrival vehicles.</summary>
 	internal static bool IsVehicle( int catalogueId ) => catalogueId is BusCatalogueId or SeaplaneCatalogueId or FerryCatalogueId;
 
 	/// <summary>

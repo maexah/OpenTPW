@@ -7,7 +7,7 @@ FRESH Full Simulation park (no park file, the catalogue's 70 items, tick nought)
 
 It sets GAME_FOLDER. The folder's save/users is made again on every run, so each run's park is new. Pause straight after
 enter(): the advisor's poll starts on tick 1 (row 80's first turn is tick 50). The console's `hire <candidate> x y`
-and `buy <item> x y 0` work there under pause; a fresh park cannot be saved (SAVE_PARK_WITH_NO_FILE). Q349."""
+and `buy <item> x y 0` work there under pause; a fresh park is saved since Q783 (its file is `FreshParkFile`'s). Q349."""
 import os, shutil, sys
 import paths   # the calling script put tools/harness/lib on sys.path (README.md, "Writing a run")
 import gamefolder

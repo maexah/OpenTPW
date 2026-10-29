@@ -920,10 +920,18 @@ starting cash**; **the clock holds month 0 and day -1 until its first update** (
   loader zeroes it), the particles' heap pointer at `+0x28` nought.
 - The weather, the staff pool and the clock's readings are the running park's, by the stages above: the weather's quality, wind, stamps and
   thunder countdown are OpenTPW's own roll, not the constructor's (wind 90, force 0.5).
-- **Not built, counted** (`Unimplemented`): `FRESH_PARK_FILE_ADVISOR_MODEL_WORDS`: the advisor module's `+0x38` to `+0x64` (each slot's head
-  node and five mouth nodes, found by name) and `+0x68` to `+0xb4` (twenty clip lengths of one model) are nought; its costume words (`+0x144`
-  to `+0x150`, `+0x154` to `+0x160`) are the theme's `ThemeAdvisorCostumes`, as `FUN_004080e0` copies them (the corrected rows are the review's,
-  `review13/q249/FINDINGS.md`, finding 1). `FRESH_PARK_FILE_OBJECT_CONTROL_WORD_8`: the object controls' dword at `+0x08` is 5 on 31 of the 70
+- **The advisor's model words are built** (`FreshParkFile.AdvisorModelWords`): the module's `+0x38` to `+0x64` (each slot's head node and five
+  mouth nodes, found by name in the lobby's `Advisor.md2` and the level's `Advisor_<THE>.md2`, nought where there is none) and `+0x68` to `+0xb4`
+  (twenty clip lengths of one model, slot 1's else slot 0's, clip 14 nought) are what `Advisor_ResetState` makes of the models, because **the
+  original's load reads the file's 0x168 bytes over its own advisor** (`0x599d84`; nothing recomputes them), so words of nought there would give
+  it twenty clip lengths of 0 (every line waiting 1 s, not its length) and all its mouths on node 0. Its costume words (`+0x144` to `+0x150`,
+  `+0x154` to `+0x160`) are the theme's `ThemeAdvisorCostumes`, as `FUN_004080e0` copies them (the ADVS row above).
+- **Differences from the original's file that are neither per-run nor counted, said at `FreshParkFile` and the writers:** the advisor thing's slot 0
+  `mValid` is 0 here and 1 there (`PutAdvisorSlots` writes the slots this game holds, and it posts no message 0, Q543), so the original loading a
+  file from here has no welcome in its slot list; the made ride scripts' RSSE words differ (the header's script count 0 here, 2 there, which is only
+  counted; each script's `+0x98` -1 here and 0 there; `+0xa8` 0 here and `0xffff` there; the directory `features` there `Features`).
+- **Not built, counted** (`Unimplemented`): `FRESH_PARK_FILE_MUSIC_VOICE`: the sound state's `+0x00` and the session's music voice it names are nought.
+  `FRESH_PARK_FILE_OBJECT_CONTROL_WORD_8`: the object controls' dword at `+0x08` is 5 on 31 of the 70
   records in every clean file (17 of the 20 rides but 1500 to 1502, the 8 shops, the 5 sideshows, and item 100) and nought on the others, and
   on 23 of Easymode's 50 (its 12 rides, 6 shops, 4 sideshows and item 100) and 29 to 32 of the played saves'; its rule is not decoded, and the
   original loads the file this game writes with nought on all. `SAVE_PARK_MADE_MODEL_TABLES` (twice a save): the gates' and the lights' model
@@ -3579,7 +3587,7 @@ the month's change, the mechanic's `mPercentageThroughGrade` (thing 26's `+0x1e8
 point (run b). This game given its own file read `budgets 0,75,0,0,0 evertrained 1` and trained the same 15 at
 its own month's change (`q352/run-month2`).
 
-Not run: a park made with no file saved (`SAVE_PARK_WITH_NO_FILE`), a file with all five budgets set.
+Not run: a file with all five budgets set (a park made fresh is saved since Q783).
 
 ### OpenTPW's writer, the strike records
 
@@ -3649,7 +3657,10 @@ the date of the running park's `mGameTick` (`ParkWorld.PutCalendar`, handed `Par
 `ParkFileWriter.Running.Calendar`). That is what the original's hold at any save: `Calendar_Update` (`0x004f8260`,
 `weather.md`, "The calendar") stores the date it compared on every sweep, the sweep that counts the tick on, so between
 sweeps they are the tick's date. The start, the session and the rate are the file's, as the original's own load leaves
-them (`Calendar_Serialise` reads all five and writes them back as they lie); the year at `+0x18` is not in the file.
+them (`Calendar_Serialise` reads all five and writes them back as they lie); the year at `+0x18` is not in the file. **The one
+exception** is a park made fresh while its `mGameTick` is nought, and a park read back from a file that holds day -1: they write month 0 and
+day -1, the clock before its first update (`ParkState.CalendarAtLastUpdate`; "A park made fresh"), a stale date making the original run a month's
+change on its first tick.
 The save logs `Save: calendar written: month M day D, the date of tick T, YYYY-MM-DD`. A load here reads the block
 (`ParkWorld.Calendar`): the first sweep's date is compared with its month and day and the rate is its own
 (`GameCalendar.Rebase`, Q149), as the original's.
@@ -3675,7 +3686,7 @@ main's it read month 1 day 2 and on its first tick, 16973, set month 0 day 6, to
 from 150 to -1138 (`orig/b-load.log`). **Its own file** saved from its menu on 18352 (`orig/Q526ORIG-by-the-original.TPWS`)
 holds month 2 day 7, that tick's date.
 
-Not run: a park made with no file (its clock would be the constructor's, `SAVE_PARK_WITH_NO_FILE`), a rate other than
+Not run: a rate other than
 15000 (none shipped), Full Simulation (not asked: the calendar is either mode's), the other three themes. The original's
 year message on a load past 2000 is its own, not this piece's: it comes to its own files too (`weather.md`).
 
