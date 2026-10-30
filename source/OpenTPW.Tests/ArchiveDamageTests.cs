@@ -411,6 +411,9 @@ public class ArchiveDamageTests
 		Assert.IsTrue( archives.Length > 0 );
 		var count = 0;
 		var hashes = new List<string>();
+		var decodeTicks = 0L;
+		var decodeBytes = 0L;
+		var decodedBytes = 0L;
 		foreach ( var path in archives )
 		{
 			using var archive = new WadArchive( path );
@@ -421,7 +424,12 @@ public class ArchiveDamageTests
 				foreach ( var name in archive.GetFiles( folder ) )
 				{
 					var file = (WadArchiveFile)Entry( archive, folder + name );
+					var bytesBefore = GC.GetAllocatedBytesForCurrentThread();
+					var started = System.Diagnostics.Stopwatch.GetTimestamp();
 					var decoded = file.GetData();
+					decodeTicks += System.Diagnostics.Stopwatch.GetTimestamp() - started;
+					decodeBytes += GC.GetAllocatedBytesForCurrentThread() - bytesBefore;
+					decodedBytes += decoded.Length;
 					Assert.AreEqual( (long)decoded.Length, archive.GetFileSize( folder + name ), $"{path}: {folder}{name}" );
 					hashes.Add( Path.GetRelativePath( GameDir.Data, path ).Replace( '\\', '/' ).ToLowerInvariant()
 						+ "\0" + (folder + name).ToLowerInvariant() + "\0"
@@ -435,5 +443,6 @@ public class ArchiveDamageTests
 		hashes.Sort( StringComparer.Ordinal );
 		Console.WriteLine( "Decoded corpus SHA256: " + Convert.ToHexString( SHA256.HashData( Encoding.UTF8.GetBytes( string.Concat( hashes ) ) ) ) );
 		Console.WriteLine( $"Decoded {count} entries in {archives.Length} installed WAD archives." );
+		Console.WriteLine( $"GetData over the corpus: {decodeTicks * 1000.0 / System.Diagnostics.Stopwatch.Frequency:F0} ms, {decodeBytes / 1048576.0:F1} MB allocated for {decodedBytes / 1048576.0:F1} MB decoded." );
 	}
 }

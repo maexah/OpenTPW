@@ -51,7 +51,7 @@ public sealed class WadArchiveFile : ArchiveFile
 		if ( Compressed )
 		{
 			var refpack = new Refpack( data );
-			data = refpack.Decompress( DecompressedSize ).ToArray();
+			data = refpack.Decompress( DecompressedSize );
 		}
 
 		Interlocked.Add( ref ReadTicks, System.Diagnostics.Stopwatch.GetTimestamp() - started );

@@ -765,6 +765,9 @@ after its poller starts**, so a key meant inside either line cannot be sent afte
   again, written in place in M ms" (or "the texture made again" where the pixels are kept) is the cost. `lib/memrun.py <out> <bin> stock|fs` with `PATHS=1` adds that
   path stage to its memory stages: the `mem gc` / `mem compact` figures at the park's entry, 30 s in and after the paths. `LEAVE=1` adds the lobby after, `LEAVE=1 AGAIN=1` the park entered again
   30 s on (`park` from the lobby; what a lobby round trip leaves, Q831: `mem wads` at each stage).
+- **What reading every WAD entry costs, and that a decoder change leaves every byte alone** (Q836): `dotnet test source/OpenTPW.sln --no-build --filter "FullyQualifiedName~EveryInstalledWadEntryStillDecodes" --logger "console;verbosity=detailed"` with `OPENTPW_GAME_PATH` set
+  prints the decoded corpus's SHA256 (`6CBD6C22...AB1077` on the 13,392 entries of the 312 installed archives), the count, and `GetData over the corpus: N ms, M MB allocated for D MB decoded` (the time and the allocation of `GetData` alone, hashing left out). The hash must be the same either side of a change to
+  `Refpack` or `WadArchive`; run each side three times (the time is steady to 2%, the allocation exact). The game's own cost is `mem wads` (reads, ms) at `lib/memrun.py stock`'s 30 s, whose reads' ms moved between two runs of one binary by 5% (388, 406) and 14% (114, 130), the count not at all.
 - **This game at the original's look: four bits a channel, 16-pixel tiles, stepped pumps, jumping flags, letters at 1** (Q616,
   Q645; the improvements are the default): `gamefolder.make( DEST, {} )`, then append `graphics faithful` to
   `DEST/save/opentpw.cfg`, and hand DEST to `parkrun.py` as `GAME_FOLDER`; the run's log says "Graphics: opentpw.cfg's
