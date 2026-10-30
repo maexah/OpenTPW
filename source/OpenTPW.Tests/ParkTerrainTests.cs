@@ -319,4 +319,73 @@ public class ParkTerrainTests
 		Console.WriteLine( $"cells not flagged 0x800: {plain}; flagged: {split}; flagged with 0x4: {other}; not flat: {bent}" );
 		Assert.IsTrue( plain > 0 && bent > 0, "the parks have cells of the plain kind, and cells that are not flat" );
 	}
+
+	/// <summary>
+	/// The load flags <c>0x800</c> where a cell's two triangles do not lie in one plane as the load's test sees it (<c>FUN_004504c0</c>,
+	/// <c>0x0045075d</c>: each triangle's edges made unit vectors and crossed, the two products not made unit, their dot under
+	/// 0.9999), which no file stores. The counts are those <c>dotnet/hfsamplers</c> got over the four parks (<c>q820-a14/hfsamplers-run3.txt</c>):
+	/// cells flagged, the ground among them (<c>0x1</c> clear) and the ground carrying <c>0x4</c>. Lost Kingdom's 589 are the
+	/// original's own, cell for cell (its live heightfield with the stock park loaded: 589, the same cells). A test that also
+	/// made the cross products unit reads 566 there; a looser dot or a clamped edge reads other counts.
+	/// </summary>
+	[TestMethod]
+	public void TheLoadFlagsTheCellsWhoseTwoTrianglesAreNotOnePlane()
+	{
+		(string Theme, int Flagged, int Ground, int GroundWith4)[] want =
+			[("jungle", 589, 158, 73), ("fantasy", 273, 160, 80), ("hallow", 365, 168, 82), ("space", 354, 172, 87)];
+
+		foreach ( var (theme, flagged, ground, groundWith4) in want )
+		{
+			var field = Landscape( theme );
+			int gotFlagged = 0, gotGround = 0, gotWith4 = 0;
+
+			for ( var y = 0; y < field.CellsY; ++y )
+			{
+				for ( var x = 0; x < field.CellsX; ++x )
+				{
+					var flags = field.FlagsAt( x, y );
+
+					if ( (flags & 0x800) == 0 )
+						continue;
+
+					++gotFlagged;
+
+					if ( (flags & 0x1) == 0 )
+					{
+						++gotGround;
+
+						if ( (flags & 0x4) != 0 )
+							++gotWith4;
+					}
+				}
+			}
+
+			Assert.AreEqual( (flagged, ground, groundWith4), (gotFlagged, gotGround, gotWith4), theme );
+		}
+	}
+
+	/// <summary>
+	/// <b>A person's feet and the first-person eye stand on the original's samplers</b>, read at the two cells the original's live eye was
+	/// polled in (Q822, <c>q822/orig/a-eyeprobe.out</c>): (716, 543) in cell (71,54), the eye 24.0000, and (786, 723) in cell (78,72), 17.1000. The
+	/// feet are the cell's triangle by <c>0x4</c> (<c>FUN_004527f0</c> on a cell the load flagged <c>0x800</c>), the eye that plus 5; the
+	/// bilinear height reads 19.1207 and 12.28 there.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> either one back on the bilinear height, the eye's cell not found by truncation, or the load's flag
+	/// not set, each fails.</remarks>
+	[TestMethod]
+	public void APersonsFeetAndTheEyeStandOnTheOriginalsSamplers()
+	{
+		var field = Landscape( "jungle" );
+
+		foreach ( var (x, y, feet, bilinear) in new[] { (716f, 543f, 19.0f, 19.1207f), (786f, 723f, 12.1f, 12.28f) } )
+		{
+			var at = new FixedVector( (int)(x / field.CellSizeX * FixedVector.One), (int)(y / field.CellSizeY * FixedVector.One) );
+
+			Assert.AreEqual( feet, ParkGuestSprites.FeetOn( field, at ).Z, 0.001f, $"feet at ({x},{y})" );
+			Assert.AreEqual( feet, ParkGuestSprites.StandsOn( field, x, y ), 0.001f, $"the draw's ground at ({x},{y})" );
+			Assert.AreEqual( feet, ParkCamcorderCameraMode.EyeGround( field, new Vector3( x, y, 0f ) ), 0.001f, $"eye ground at ({x},{y})" );
+			Assert.AreEqual( bilinear, field.HeightAtWorld( x, y ), 0.001f, $"the bilinear height there, which neither takes ({x},{y})" );
+			Assert.AreNotEqual( 0, field.FlagsAt( (int)(x / 10f), (int)(y / 10f) ) & 0x800, "a cell the load flagged" );
+		}
+	}
 }

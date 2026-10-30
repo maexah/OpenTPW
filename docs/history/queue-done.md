@@ -11130,6 +11130,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   every sprite and the build markers' wave take `FUN_004527f0`, which splits only the cells the load flags `0x800`; the pick
   meets two planes a cell by `0x2`, each anywhere in the square; the shadow keeps its own near-corner plane. Ours sets no `0x800`
   (`ScapeHeight` never splits). Measured over the four parks (`dotnet/hfsamplers`) and in the original's first person.
+- [x] **Q823. The heights by the original's samplers (Q820's piece (4), the build of Q822's decode).** Done 2026-10-30 (run 14, lane A, `alexah/766-heights-by-the-originals-samplers`).
+  `HeightfieldFile` sets `0x800` at the load by `FUN_004504c0`'s rule (each triangle's edges made unit, their cross products not, the dot under 0.9999: Lost Kingdom's
+  589 cells, 158 ground, 73 of those with `0x4`; the first rule, from Q822's text with the products made unit, read 566 and was wrong: the 23 missing were holes). Ours' set
+  is the original's, cell for cell: the stock park loaded in the original (`original/livecells.sh`), its 8,160 live words, flag 589 cells and so does ours (0 either side
+  only; `q820-a14/orig/cells-stock.txt`, `jungle-flags2.txt`). `ScapeHeight` therefore splits those cells; the walk's draw, `Feet`, `DrawBalloon` and its census line
+  stand on it (`ParkGuestSprites.StandsOn`), and the build markers' glide on it; the camcorder's eye is `CameraHeight` + 5 taken each frame, the ease removed
+  (`ParkCamcorderCameraMode.GroundUnderStand`), as the original stores it straight. The pick keeps the bilinear height and says so at `ParkPicking.Ground`. In the game
+  (`q820-a14/run3/`): at cell (71,54) the console's `ground 716 543` reads stands 19.0000, camera 19.0000, bilinear 19.1207, and `camcorder 716 543` eye 24.0000; at (78,72)
+  12.1000 and 17.1000, the two eyes the original reads there (`q822/orig/a-eyeprobe.out`); the second `camcorder` at the first point at once 24.0000 with the clock paused.
+  Q822's 566 corrected in `park-engine.md` and `park.md`.
 
 ## B. Docs and comments
 

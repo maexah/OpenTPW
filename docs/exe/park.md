@@ -1481,9 +1481,9 @@ A miss in mode 2 answers -100 (`0xc2c80000`) plus the header's float like any ot
 flags lack `0x800`, `near + (alongX - near) × u + (alongZ - near) × v`: the plane of the near corner and its two
 neighbours across the whole cell, the far corner not read. With `0x800` the cell is two triangles, split from the
 near corner (`v <= u` takes near, alongX, far) or, with `0x4`, along the other diagonal. No cell of the four parks' files
-carries `0x800` (32,640 counted), but the load sets it on every cell whose two triangles' normals meet with a dot under 0.9999 (`FUN_004504c0`;
-Lost Kingdom 566 cells, 158 of them ground), so both arms run (`park-engine.md`, "Which height each asker takes"). Ours
-reads the file's flags, so its split arm never runs (Q822).
+carries `0x800` (32,640 counted), but the load sets it on every cell whose two triangles' faces meet with a dot under 0.9999 (`FUN_004504c0`;
+Lost Kingdom 589 cells, 158 of them ground), so both arms run (`park-engine.md`, "Which height each asker takes"). Ours
+sets it at load by the same rule (Q820) and runs both.
 
 **The Hot Pot** (`bumper.MD2`): no record with `0x2`, no face with `0x8000`, and `+0xa0` = **29.8**. So a boat's corner
 reads the ground under it plus 29.8, and the water mesh is never asked: its top stands at about 30.005. Measured

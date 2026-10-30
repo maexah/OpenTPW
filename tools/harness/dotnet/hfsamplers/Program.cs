@@ -28,6 +28,8 @@ foreach ( var path in args.Skip( 1 ) )
 		var isGround = (flags & 0x1) == 0;
 		var (h00, h10, h01, h11) = (field.HeightAt( x, y ), field.HeightAt( x + 1, y ), field.HeightAt( x, y + 1 ), field.HeightAt( x + 1, y + 1 ));
 		var bend = MathF.Abs( h11 - h10 - h01 + h00 );
+		if ( Environment.GetEnvironmentVariable( "HFS_DUMP" ) is { Length: > 0 } dump )
+			File.AppendAllText( dump, $"{x} {y} {flags:x4}\n" );
 		var load800 = LoadFlags( h00, h10, h01, h11, field.CellSizeX, field.CellSizeY );
 		var split4 = (flags & 0x4) != 0;
 
@@ -81,19 +83,17 @@ foreach ( var path in args.Skip( 1 ) )
 	Console.WriteLine( $"  ground only: bent {groundBent} (most {groundMaxBend:0.###}), bent yet unflagged {groundBentUnflagged} (most {groundMaxUnflaggedBend:0.######}); off FUN_004527f0 by over 0.001: bilinear {groundBilinearOff} (most {groundMaxBilinear:0.###}), CameraHeight {groundCameraOff} (most {groundMaxCamera:0.###})" );
 }
 
-// FUN_004504c0's test (0x0045075d): the unit normals of (near, alongX, alongZ) and (far, alongZ, alongX), dot under 0.9999.
+// FUN_004504c0's test (0x0045075d): each triangle's two edges made unit vectors (0x43a9a0), crossed and NOT normalised
+// (0x004506c0, 0x00450725), the two crosses' dot (0x43a970) under 0.9999.
 static bool LoadFlags( float h00, float h10, float h01, float h11, float dx, float dz )
 {
-	var a = Normal( new( dx, h10 - h00, 0f ), new( 0f, h01 - h00, dz ) );
-	var b = Normal( new( -dx, h01 - h11, 0f ), new( 0f, h10 - h11, -dz ) );
+	var a = Face( new( dx, h10 - h00, 0f ), new( 0f, h01 - h00, dz ) );
+	var b = Face( new( -dx, h01 - h11, 0f ), new( 0f, h10 - h11, -dz ) );
 	return System.Numerics.Vector3.Dot( a, b ) < 0.9999f;
 }
 
-static System.Numerics.Vector3 Normal( System.Numerics.Vector3 p, System.Numerics.Vector3 q )
-{
-	var n = System.Numerics.Vector3.Normalize( System.Numerics.Vector3.Cross( q, p ) );
-	return n.Y < 0f ? -n : n;
-}
+static System.Numerics.Vector3 Face( System.Numerics.Vector3 p, System.Numerics.Vector3 q )
+	=> System.Numerics.Vector3.Cross( System.Numerics.Vector3.Normalize( q ), System.Numerics.Vector3.Normalize( p ) );
 
 // FUN_004527f0's split arms (0x004528f8): 0x4 clear cuts (x,z)-(x+1,z+1), set cuts (x+1,z)-(x,z+1).
 static float Triangle( float h00, float h10, float h01, float h11, float u, float v, bool other )

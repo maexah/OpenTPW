@@ -5,6 +5,12 @@ newest first. The pre-commit hook (`tools/maintainer/status-sweep.py`) moves an 
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q822 (decode: which height the original asks at each of ours' `HeightAtWorld` users, `park-engine.md`, "Which height each asker takes"; and the float note at
+  `ProceduralConform`; Q820's pieces (4) and (3)). Read in Ghidra and the disassembly: the camcorder's eye `FUN_00452560` + 5, every sprite and the build markers' wave
+  `FUN_004527f0`, the pick two planes a cell by `0x2`. Measured in the original (`q822/orig/a-eyeprobe.out`, frame `a-A5-after-probe.png`, the stock park in first person):
+  the eye 24.0000 at a point of cell (71,54), the triangle by `0x4` + 5 (bilinear 24.1207), and 24.0000 to 17.1000 between two polls with nothing between. Over the four
+  parks' files (`dotnet/hfsamplers`): Lost Kingdom's load flags 566 cells `0x800` (158 ground); bilinear is off `FUN_004527f0` on 172 ground cells by up to 0.249.
+  Not verified: the sprites', markers' and pick's samplers live (read from the code only); the 566 against `park-engine.md`'s earlier 589 (23 holes, unexplained); `FUN_004fa470`'s offset. Nothing built (Q820 (4)).
 - Q821 (the ground cut on each cell's own diagonal, `ParkGround`/`ParkPaths`, and the park camera's height, `HeightfieldFile.CameraHeight`; Q820's piece (1), Q398's build). Ours on a copy of Alexah's Full Simulation `New Save.TPWS`
   (`q821/run5`, the final binary): the log's 2,530 of 6,487 drawn ground cells cut the second way (0 with the console's `cut old`); at two staircases of four `0x44` cells,
   `cut new` against `cut old` in one session changes 60,864 and 79,293 pixels outside the HUD in four patches of a cell each, `cut new` against `cut new` 0 (`lib/framediff.py`);

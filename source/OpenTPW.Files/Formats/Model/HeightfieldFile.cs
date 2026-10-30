@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using N = System.Numerics;
 
 namespace OpenTPW;
 
@@ -244,6 +245,36 @@ public sealed class HeightfieldFile
 		return near + ((HeightAt( x + 1, y ) - near) * (gridX - x)) + ((HeightAt( x, y + 1 ) - near) * (gridY - y));
 	}
 
+	/// <summary>
+	/// The load's pass over the cells - <c>FUN_004504c0</c>, <c>0x0045075d</c>: the two triangles across the diagonal from the
+	/// along-x corner to the along-y one each take the cross product of their two edges (each edge made a unit vector first,
+	/// <c>0x43a9a0</c>; the cross products are <b>not</b> made unit, <c>0x004506c0</c>, <c>0x00450725</c>), and a cell whose
+	/// two products have a dot (<c>0x43a970</c>) under 0.9999 gets <see cref="SplitFlag"/>, so <see cref="ScapeHeight"/> splits
+	/// it as the original does (<c>docs/exe/park-engine.md</c>, "Which height each asker takes"). The file never stores the flag.
+	/// A cell is flagged by this where its edges are not at right angles, which is every cell that bends and every hole's.
+	/// </summary>
+	private void FlagNonPlanarCells()
+	{
+		for ( var y = 0; y < CellsY; ++y )
+		for ( var x = 0; x < CellsX; ++x )
+		{
+			var (near, alongX, alongY, far) = (HeightAt( x, y ), HeightAt( x + 1, y ), HeightAt( x, y + 1 ), HeightAt( x + 1, y + 1 ));
+
+			var a = Face( new N.Vector3( CellSizeX, alongX - near, 0f ), new N.Vector3( 0f, alongY - near, CellSizeY ) );
+			var b = Face( new N.Vector3( -CellSizeX, alongY - far, 0f ), new N.Vector3( 0f, alongX - far, -CellSizeY ) );
+
+			if ( N.Vector3.Dot( a, b ) < PlanarDot )
+				Cells[(y * CellsX) + x] |= SplitFlag;
+		}
+	}
+
+	/// <summary>The dot of the two triangles' faces under which the load calls a cell not planar (<c>[0x006fe39c]</c>).</summary>
+	private const float PlanarDot = 0.9999f;
+
+	/// <summary>The cross product of two edges each made a unit vector first, as the load takes it.</summary>
+	private static N.Vector3 Face( N.Vector3 p, N.Vector3 q )
+		=> N.Vector3.Cross( N.Vector3.Normalize( q ), N.Vector3.Normalize( p ) );
+
 	/// <summary>The flag word of a cell - the low half of its record.</summary>
 	public ushort FlagsAt( int x, int y ) => (ushort)(Cells[(y * CellsX) + x] & 0xFFFF);
 
@@ -283,6 +314,8 @@ public sealed class HeightfieldFile
 		Cells = new uint[CellCount];
 		for ( var i = 0; i < Cells.Length; ++i )
 			Cells[i] = ReadUInt32( data, cellsOffset + (i * 4) );
+
+		FlagNonPlanarCells();
 
 		TextureNames = ReadTextureNames( data, length );
 	}

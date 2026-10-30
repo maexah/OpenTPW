@@ -942,12 +942,12 @@ public sealed class ParkGuestSprites : ModelEntity
 			var picture = loaded.Pictures[index];
 
 			// The stored height is an offset above the ground rather than a height, so the land under the
-			// sprite is what decides where its feet go - unless a ride is carrying them, in which case
+			// sprite (FUN_004527f0, FUN_00542010's sampler) is what decides where its feet go - unless a ride is carrying them, in which case
 			// the ride says where they are. The simulation never moves a rider, here or in the original,
 			// so their walk still reports the cell they queued on; the script holds them in a bounce slot
 			// naming a node of the ride's own model, and that node is where they are drawn, height and
 			// all. See Centre for why the choice lives in a function of its own.
-			var ground = field?.HeightAtWorld( x, y ) ?? 0f;
+			var ground = StandsOn( field, x, y );
 			var seat = Seated( people, person.ThingId );
 
 			// The original lifts a bouncing rider by a phase-driven sine height (FUN_00557c75; docs/exe/ride-operation.md,
@@ -1181,7 +1181,7 @@ public sealed class ParkGuestSprites : ModelEntity
 		if ( index < 0 || index >= bank.Pictures.Length )
 			return used;
 
-		var ground = field?.HeightAtWorld( balloon.X, balloon.Y ) ?? 0f;
+		var ground = StandsOn( field, balloon.X, balloon.Y );
 
 		WriteQuad( used, new Vector3( balloon.X, balloon.Y, ground + balloon.Height ), bank.Pictures[index], false,
 			sprite.Alpha );
@@ -1268,14 +1268,22 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// loaded. It is what the original reads off a walking person's sprite (<c>FUN_004754e0</c>).
 	/// </summary>
 	internal static Vector3? Feet( FixedVector at )
-	{
-		if ( ParkGround.Current?.Heightfield is not { } field )
-			return null;
+		=> ParkGround.Current?.Heightfield is { } field ? FeetOn( field, at ) : null;
 
+	/// <summary>
+	/// The ground a person, a balloon's anchor or a marker's feet stand on: the sampler the sprites' draw takes, <c>FUN_004527f0</c> (<c>0x005420ee</c>),
+	/// nought with no ground loaded.
+	/// </summary>
+	internal static float StandsOn( HeightfieldFile? field, float x, float y )
+		=> field?.ScapeHeight( x, y ) ?? 0f;
+
+	/// <summary>Where a person at <paramref name="at"/> stands on <paramref name="field"/>: the ground under it by the sampler the sprites' draw takes (<c>FUN_004527f0</c>).</summary>
+	internal static Vector3 FeetOn( HeightfieldFile field, FixedVector at )
+	{
 		var x = (at.X / (float)FixedVector.One) * field.CellSizeX;
 		var y = (at.Y / (float)FixedVector.One) * field.CellSizeY;
 
-		return new Vector3( x, y, field.HeightAtWorld( x, y ) );
+		return new Vector3( x, y, StandsOn( field, x, y ) );
 	}
 
 	/// <summary>
@@ -1810,5 +1818,5 @@ public sealed class ParkGuestSprites : ModelEntity
 		=> $"{whose} set {balloon.Sprite.Set} frame {balloon.Sprite.Frame} alpha {balloon.Sprite.Alpha} " +
 			$"shown {balloon.Sprite.Shown} script {balloon.Sprite.Script}@{balloon.Sprite.Pc} " +
 			$"at ({balloon.X:0.000},{balloon.Y:0.000}) height {balloon.Height:0.000} " +
-			$"ground {field?.HeightAtWorld( balloon.X, balloon.Y ) ?? 0f:0.000}";
+			$"ground {StandsOn( field, balloon.X, balloon.Y ):0.000}";
 }

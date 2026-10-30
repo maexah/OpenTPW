@@ -1509,10 +1509,7 @@ public static class DebugConsole
 					if ( !ParkCamcorderCameraMode.Active )
 						ParkCamcorderCameraMode.Enter();
 
-					// StandAt rather than Stand: this puts the viewer down somewhere else rather than
-					// walking them there, so the eye takes the ground as-is. Assigning Stand would leave it
-					// easing up from the old height, which never finishes while the clock is stopped -
-					// and a stopped clock is how frames are captured.
+					// StandAt rather than Stand: this puts the viewer down somewhere else rather than walking them there.
 					ParkCamcorderCameraMode.StandAt( new Vector3( Argument( 1 ), Argument( 2 ), 0f ) );
 
 					// An optional heading, in radians, because a capture cannot otherwise be AIMED.
@@ -1534,6 +1531,24 @@ public static class DebugConsole
 				Reply( ParkCamcorderCameraMode.Active
 					? ParkCamcorderCameraMode.State()
 					: $"orbit - {ParkOrbitCameraMode.State()}" );
+				break;
+
+			// The ground's height under a world point by each of the original's samplers, for a point read off the original
+			// (docs/exe/park-engine.md, "Which height each asker takes"): what a person, balloon or build marker stands on
+			// (FUN_004527f0), the camera's (FUN_00452560) and the bilinear height nothing asks for now.
+			case "ground":
+				if ( ParkGround.Current?.Heightfield is not { } ground )
+				{
+					Reply( "ground: only in a park" );
+					break;
+				}
+
+				var (groundX, groundY) = (Argument( 1 ), Argument( 2 ));
+				var (cellX, cellY) = ((int)MathF.Floor( groundX / ground.CellSizeX ), (int)MathF.Floor( groundY / ground.CellSizeY ));
+				var cellFlags = cellX >= 0 && cellY >= 0 && cellX < ground.CellsX && cellY < ground.CellsY ? ground.FlagsAt( cellX, cellY ) : 0;
+
+				Reply( $"ground ({groundX:F3},{groundY:F3}) cell ({cellX},{cellY}) flags 0x{cellFlags:x4}: stands {ground.ScapeHeight( groundX, groundY ):F4} " +
+					$"camera {ground.CameraHeight( groundX, groundY ):F4} bilinear {ground.HeightAtWorld( groundX, groundY ):F4}" );
 				break;
 
 			// Walking on the ground, driven by hand, because `camcorder x y` TELEPORTS - it calls

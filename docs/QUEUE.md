@@ -72,13 +72,12 @@ park for the website, go first. Q804 stopped the photographs: no picture with th
   (3) Left by Q821: the original's picture of a flipped diagonal was not got (its frames drift, the in-game date rolls: `q821/orig/poke7`), so the
   original's drawing by `0x2` stands on the decode and the live bits (all 7,001 ground cells' diagonal bits equal the file's); poke one cell's `0x2`/`0x4`
   in the original and film it with the camera held (`original/setcam.py`'s follow off) and the clock paused.
-  (4) The build of Q822's decode (`park-engine.md`, "Which height each asker takes"; `HeightfieldFile`): set `0x800` at the load where `FUN_004504c0`
-  does (Lost Kingdom 566 cells), so `ScapeHeight` splits as `FUN_004527f0`; stand the sprites (the walk's draw, `Feet`, `DrawBalloon`) and the build
-  markers' glide (`ParkBuildMarkers.Corner`) on it in place of the bilinear `HeightAtWorld`; the camcorder's eye on `CameraHeight` + 5 taken
-  straight each frame (`ParkCamcorderCameraMode.GroundUnderStand` eases it, a deviation said nowhere); the pick's ground as the original's two
-  planes a cell by `0x2`, each met anywhere in the cell's square, or that deviation said at `ParkPicking.MeetGround`. On the ground the bilinear
-  height is off by at most 0.25 (0.5 in space), so measure each at a flagged cell in both games (`dotnet/hfsamplers` finds them; the original's
-  eye: `original/eyeprobe.py`).
+  (4) Built by Q823 (`alexah/766-heights-by-the-originals-samplers`): `0x800` at the load, the sprites, balloons, `Feet` and the build markers' glide on
+  `ScapeHeight`, the camcorder's eye on `CameraHeight` + 5 each frame. Left: the pick's ground as the original's two planes a cell by `0x2`, each met
+  anywhere in the cell's square (`ParkPicking.Ground` says the deviation; on the ground the bilinear height is off by at most 0.25, 0.5 in space), the
+  person's particles' sampler (`FUN_004fa470`, `0x004fa4dc`, not read), a sprite whose word `+0xc4` carries `0x1000000` standing at `+0x8c` itself (not read in
+  ours), the eye's further term (`[0x00790abc]` from `0x007908f4`, added at `0x0042c9e2`: nought in the probe, not decoded), and a film of the sprites
+  and markers at a flagged cell against the original (Q823 compared the samplers by census and the load's flag by the original's live heightfield, not a frame).
 - [ ] **Q849. What Q810 left: two counted gaps her played park's save now reaches, and two loads never run.** (From Q810's review,
   run 14.) Q810 made her Full Simulation `New Save.TPWS` read whole, so the save goes through the running-things writer for the
   first time (before, the model walk failed and the whole module was written as the file's). Two counters then fire, in

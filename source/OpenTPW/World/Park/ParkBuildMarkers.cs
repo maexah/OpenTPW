@@ -603,8 +603,8 @@ public sealed class ParkBuildMarkers : ModelEntity
 	{
 		var (worldX, worldY) = ((x * field.CellSizeX) + offset.X, (y * field.CellSizeY) + offset.Y);
 
-		// A gliding corner stands on the ground under where it is drawn, as FUN_0053ddd0 asks it after the shift.
-		var ground = offset == (0f, 0f) ? field.HeightAt( x, y ) : field.HeightAtWorld( worldX, worldY );
+		// A gliding corner stands on the ground under where it is drawn, as FUN_0053ddd0 asks it after the shift (FUN_004527f0, ScapeHeight).
+		var ground = offset == (0f, 0f) ? field.HeightAt( x, y ) : field.ScapeHeight( worldX, worldY );
 
 		return new()
 		{

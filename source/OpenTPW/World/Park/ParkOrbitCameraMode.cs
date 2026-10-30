@@ -100,8 +100,7 @@ public sealed class ParkOrbitCameraMode : CameraMode
 	private bool _groundSampled;
 
 	/// <summary>The ground under the point of interest right now, without touching the easing.</summary>
-	/// <remarks>See <c>ParkCamcorderCameraMode.PeekGround</c> - the first un-eased sample belongs to
-	/// the first <see cref="Update"/>, not to a constructor.</remarks>
+	/// <remarks>The first un-eased sample belongs to the first <see cref="Update"/>, not to a constructor.</remarks>
 	private static float PeekGround()
 		=> ParkGround.Current?.Heightfield?.CameraHeight( PointOfInterest.X, PointOfInterest.Y ) ?? 0f;
 

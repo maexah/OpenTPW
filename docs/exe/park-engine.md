@@ -59,7 +59,7 @@ Jungle: **96x85 cells, 97x86 vertices, 8342 heights, 8160 cell records.** Valida
 | `0x0100` | **The composited tile is stale**: on the cell's next view `FUN_0056f090` composites it again even from the cache, and clears the bit ("The procedural ground"). Set with `0x0001` by `FUN_0046df50`; every cell caught on its first composite carried it (Q483) | Ghidra; live, Q483 |
 | `0x0200` | Set by the footprint stamper | Confirmed |
 | `0x0400` | **Land outside the park, drawn at half light**: the terrain pass halves the corner's colour, and the terrain model's meshes over it take normals 0.225 long. `Terrain_MarkLandOutsidePark` (`0x00450d10`) sets it where the map cell's `mFlags` has `0x40` and not `0x80` ("The park view's colours") | Confirmed at three separate sites; measured (Q479) |
-| `0x0800` | "This cell is not planar." **Computed at load, never stored on disk**: `FUN_004504c0` sets it (`0x0045075d`) where the cell's two triangles' normals differ (dot under 0.9999) | Confirmed |
+| `0x0800` | "This cell is not planar." **Computed at load, never stored on disk**: `FUN_004504c0` sets it (`0x0045075d`) where the cell's two triangles' faces differ (the dot of their cross products under 0.9999; the products are not made unit, see "Which height each asker takes") | Confirmed; the Lost Kingdom set read cell for cell in the original's live heightfield (Q820) |
 
 ### The triangle diagonal
 
@@ -97,11 +97,11 @@ the original, and every caller of the first two is known (`FUN_004527f0`, six ca
 | Who asks | Where | What it answers | OpenTPW |
 |---|---|---|---|
 | The park camera (orbit) | `FUN_0042b1c0`, `0x0042c817` | `FUN_00452560( x, z, 1 )`: the cell's triangle by `0x4`, every cell | `CameraHeight` (Q821) |
-| First person (the camcorder) | `FUN_0042b1c0`, `0x0042c729` | `FUN_00452560( stand x, z, 1 )` less `[0x006fde10]` (-5), stored straight as the eye's height `0x00790aa4` each frame: no easing | `HeightAtWorld`, eased (`ParkCamcorderCameraMode.GroundUnderStand`) |
-| Every sprite: walkers, staff, balloons | `FUN_00542010`, `0x005420ee`, for each sprite of the list (`FUN_00475430`) | `FUN_004527f0( +0x88, +0x90 )` plus the sprite's `+0x8c`; a sprite whose word `+0xc4` carries `0x1000000` stands at `+0x8c` itself | `HeightAtWorld` (`ParkGuestSprites`: the walk's draw, `Feet`, `DrawBalloon`) |
-| A person put on a sprite | `Person_PlaceSprite`, `0x004f9e8c` | stores the height less `FUN_004527f0` under it in `+0x8c`, so the draw above gives the height back exactly | `HeightAtWorld` |
+| First person (the camcorder) | `FUN_0042b1c0`, `0x0042c729` | `FUN_00452560( stand x, z, 1 )` less `[0x006fde10]` (-5), stored straight as the eye's height `0x00790aa4` each frame: no easing | `CameraHeight` + 5, taken each frame (`ParkCamcorderCameraMode.GroundUnderStand`; Q820) |
+| Every sprite: walkers, staff, balloons | `FUN_00542010`, `0x005420ee`, for each sprite of the list (`FUN_00475430`) | `FUN_004527f0( +0x88, +0x90 )` plus the sprite's `+0x8c`; a sprite whose word `+0xc4` carries `0x1000000` stands at `+0x8c` itself | `ScapeHeight` (`ParkGuestSprites`: the walk's draw, `Feet`, `DrawBalloon`; Q820) |
+| A person put on a sprite | `Person_PlaceSprite`, `0x004f9e8c` | stores the height less `FUN_004527f0` under it in `+0x8c`, so the draw above gives the height back exactly | `ScapeHeight` (Q820) |
 | A person's particles | `FUN_004fa470`, `0x004fa4dc` | `FUN_004527f0` at the person's place moved by `FUN_00519410`/`FUN_00519420` × `[0x00700698]` (not read) | not checked |
-| The build markers' wave | `FUN_0053ddd0`, `0x0053ddea` | `FUN_004527f0` at the corner it is handed, after the glide | `HeightAt` on a corner, `HeightAtWorld` gliding (`ParkBuildMarkers.Corner`) |
+| The build markers' wave | `FUN_0053ddd0`, `0x0053ddea` | `FUN_004527f0` at the corner it is handed, after the glide | `HeightAt` on a corner, `ScapeHeight` gliding (`ParkBuildMarkers.Corner`; Q820) |
 | The scene's height, mode 1; placement feedback | `FUN_004511a0`, `0x004511e6`; `FUN_00452ae0`, `0x00452c89` | `FUN_004527f0` (`park.md`, "The scene's height under a point") | `ScapeHeight` (`ParkSceneHeight.Under`) |
 | A person's shadow | `SpriteShadow_BuildQuad` (`0x00589410`) | the near corner's plane, its own sampler, no flag read ("First person's shadow", below) | `CornerPlaneAt` |
 | The pointer's pick | `FUN_0045bf90`'s terrain test | its own: two planes a cell by `0x2` (below) | `HeightAtWorld`, marched (`ParkPicking.MeetGround`) |
@@ -117,17 +117,20 @@ and the near corner's plane 24.3018; moved to cell (78,72), word `0x0d44`, the e
 two polls 2 ms apart, with no value between (`a-eyeprobe.out`, frame `a-A5-after-probe.png`).
 
 **`FUN_004527f0( x, z )`** splits only a cell the load flagged `0x800` (above), and takes the near corner's plane on the
-rest. `FUN_004504c0` flags a cell where the unit normals of its two triangles across `(x+1,z)`-`(x,z+1)` (edges of 10
-across, `[0x006fe384]`) meet with a dot under 0.9999 (`[0x006fe39c]`, `0x0045073c`..`0x0045075d`). So on a flat cell all
-four corners' planes agree and `FUN_004527f0` answers what `FUN_00452560` does, but **a cell bent under that tolerance
+rest. `FUN_004504c0` takes, for the two triangles across `(x+1,z)`-`(x,z+1)` (edges of 10 across, `[0x006fe384]`), each
+triangle's two edges made unit vectors (`0x43a9a0`, and the same inline sqrt and divide for the first), their cross products
+(`0x004506c0`, `0x00450725`) **not** made unit, and flags the cell where the dot of the two products (`0x43a970`) is under 0.9999
+(`[0x006fe39c]`, `0x0045073c`..`0x0045075d`). (Q822 first read the products as unit normals and got 566 for Lost Kingdom;
+the 23 it lacked were all holes. Q820 took the products as the disassembly has them: 589, and the original's own live
+heightfield, the stock park loaded, `q820-a14/orig/cells-stock.txt`, flags those 589 cells and no other, cell for cell.) So on a flat
+cell all four corners' planes agree and `FUN_004527f0` answers what `FUN_00452560` does, but **a cell bent under that tolerance
 is not flagged**. Measured over the four parks' `base.MD2` (`dotnet/hfsamplers`, `q822/hfsamplers-run2.txt`, a 10 × 10
-grid of points in every cell): in Lost Kingdom 566 cells flag (158 ground, 73 of them with `0x4`; the section above
-says 589, and the 23 apart are holes, unexplained), and 464 ground cells bend yet do not, by at most 0.063; on the
+grid of points in every cell): in Lost Kingdom 589 cells flag (158 ground, 73 of them with `0x4`; the rest are holes; `q820-a14/hfsamplers-run3.txt`: fantasy 273, hallow 365, space 354), and 464 ground cells bend yet do not, by at most 0.063; on the
 ground, `FUN_00452560` (ours `CameraHeight`) differs from `FUN_004527f0` on 14 cells by at most 0.06 (fantasy 36, 0.011;
 hallow 5, 0.06; space 26, 0.006). Bilinear (ours `HeightAtWorld`) differs from it on 172 ground cells by up to 0.249
-(fantasy 196, 0.249; hallow 173, 0.248; space 198, 0.495). **Ours' `ScapeHeight` never splits**: the files carry no
-`0x800` and ours does not set it at load, so it takes the near corner's plane on all 566 flagged cells too (by up to
-0.5 on the ground, 24.96 on a hole).
+(fantasy 196, 0.249; hallow 173, 0.248; space 198, 0.495). **Built (Q820 piece 4):** `HeightfieldFile` sets `0x800` at load by that rule, so `ScapeHeight` splits those cells
+(before, it took the near corner's plane on them, by up to 0.5 on the ground, 24.96 on a hole); sprites, balloons, `Feet` and the
+build markers' glide stand on it; the camcorder's eye is `CameraHeight` + 5 each frame, not eased. The pick still marches the bilinear height (said at `ParkPicking.Ground`).
 
 **The pick's terrain** (`FUN_0045bf90`). Over every cell the ray's line crosses and whose corners' height range it
 meets, it intersects the planes of the cell's two triangles cut by **`0x2`** (`0x0045c6b7`): set, the triangles
@@ -201,7 +204,7 @@ This distribution is itself corroboration of the `{flags, texture}` split rather
 
 ### `0x0800` is computed at load, not stored
 
-`0x0800` is absent from every shipped park because the loader derives it. After loading `base.md2`, `FUN_004504c0` walks every cell, builds the normals of its **two triangles** from the four corner heights, and where their dot product falls below `_DAT_006fe39c = 0.99990` (**0.81 degrees** of divergence — a very tight test, so most non-flat cells trip it) it does
+`0x0800` is absent from every shipped park because the loader derives it. After loading `base.md2`, `FUN_004504c0` walks every cell, builds the cross products of its **two triangles'** unit edges from the four corner heights (not made unit again, Q820), and where their dot product falls below `_DAT_006fe39c = 0.99990` (**0.81 degrees** of divergence — a very tight test, so most non-flat cells trip it) it does
 
     pbVar3 = (byte *)(cells + 1 + (y * cellsX + x) * 4);   *pbVar3 |= 8;
 

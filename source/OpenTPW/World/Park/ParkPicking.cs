@@ -627,7 +627,10 @@ public static class ParkPicking
 		return enter <= leave;
 	}
 
-	/// <summary>The land under a world position inside the heightfield, which is all <see cref="MeetGround"/> asks.</summary>
+	/// <summary>The land under a world position inside the heightfield, which is all <see cref="MeetGround"/> asks.
+	/// <b>A deviation:</b> the bilinear height, where the original intersects the ray with the two planes of each cell cut by its flag
+	/// <c>0x2</c>, a plane's hit counting anywhere in the cell's square (<c>FUN_0045bf90</c>, <c>0x0045c6b7</c>; <c>docs/exe/park-engine.md</c>,
+	/// "Which height each asker takes"). On the ground the two differ by at most 0.25.</summary>
 	private static float Ground( HeightfieldFile field, Vector3 at )
 		=> field.HeightAtWorld( at.X, at.Y );
 

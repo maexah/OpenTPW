@@ -171,20 +171,6 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	/// </summary>
 	private const float WalkSpeed = 40f;
 
-	/// <summary>As <see cref="ParkOrbitCameraMode"/>'s, so the eye rides the ground the same way.</summary>
-	private const float GroundFollowRate = 22.36f;
-
-	private float _groundHeight;
-	private bool _groundSampled;
-
-	/// <summary>
-	/// Set when the viewer has been put somewhere else outright rather than walking there, so that the
-	/// next ground sample is taken as-is instead of eased into - see <see cref="StandAt"/>. Static
-	/// because the thing doing the putting has no instance to talk to: the camera mode is rebuilt from
-	/// scratch whenever the camera changes.
-	/// </summary>
-	private static bool _restand;
-
 	/// <summary>
 	/// Stands the viewer where the orbit camera was looking, facing the way it faced, and hands the
 	/// camera over. Called when the player asks for camcorder mode. <b>A deviation:</b> the original waits
@@ -270,20 +256,11 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	}
 
 	/// <summary>
-	/// Puts the viewer down somewhere else outright, and takes the ground there as-is.
+	/// Puts the viewer down somewhere else outright (the debug console's <c>camcorder</c>; a person walking writes <see cref="Stand"/> a step at a time).
 	/// </summary>
-	/// <remarks>
-	/// <see cref="Stand"/> on its own is what <see cref="Walk"/> writes a step at a time, and the eye
-	/// eases up to the ground so that walking over a ridge lifts it rather than stepping it. Being
-	/// picked up and put down is not walking: easing from the height of wherever the viewer used to be
-	/// is meaningless, and with the clock stopped - which is how frames are captured - the ease never
-	/// advances at all, so the eye would stay at the old height for good.
-	/// </remarks>
+	/// <remarks>The eye is sampled straight from the ground under <see cref="Stand"/> each frame, so there is no easing to restart.</remarks>
 	public static void StandAt( Vector3 where )
-	{
-		Stand = where;
-		_restand = true;
-	}
+		=> Stand = where;
 
 	public ParkCamcorderCameraMode()
 	{
@@ -291,12 +268,7 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 		FieldOfView = ParkOrbitCameraMode.Lens;
 
 		// Already standing where Enter put the viewer, before anything reads the camera - see Place.
-		// The ground is PEEKED rather than sampled: GroundUnderStand spends its one un-eased sample on
-		// its first call, and whoever spends it decides where the eye snaps to. The debug console sets
-		// Stand AFTER Enter has built this, so spending it here would leave the eye at the height of
-		// wherever the orbit camera had been looking - and with the clock paused, which is how frames
-		// are captured, the ease that should correct it never advances at all.
-		Place( PeekGround() );
+		Place( GroundUnderStand() );
 	}
 
 	public override void Update()
@@ -806,48 +778,22 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	private static float PutBack( int cell, float step )
 		=> step < 0f ? (float)((double)cell * CellSize) : (float)(FarSide + ((double)cell * CellSize));
 
-	/// <summary>The ground under the viewer right now, without touching the easing.</summary>
-	/// <remarks>
-	/// For placing the camera before its first <see cref="Update"/>. <see cref="GroundUnderStand"/>
-	/// takes its one un-eased sample on the first call, so a constructor must not take it while
-	/// <see cref="Stand"/> can still move before that first update - which is exactly what the debug
-	/// console's two-argument <c>camcorder</c> does.
-	/// </remarks>
-	private static float PeekGround()
-		=> ParkGround.Current?.Heightfield?.HeightAtWorld( Stand.X, Stand.Y ) ?? 0f;
-
 	/// <summary>
-	/// The ground under the viewer, eased, so that walking over a ridge lifts the eye with the land
-	/// instead of stepping it. The first sample is taken outright, as the orbit camera's is, so
-	/// entering camcorder mode does not rise into place over the first second.
+	/// The ground under the viewer, as the camera's own sampler answers it (<c>FUN_00452560</c>, <c>0x0042c729</c>): the cell's triangle
+	/// by its flag <c>0x4</c>, taken straight every frame and not eased, so the eye steps at a cell's edge as the original's does
+	/// (measured: 24.0000 to 17.1000 between two polls 2 ms apart; <c>docs/exe/park-engine.md</c>, "Which height each asker takes").
 	/// </summary>
-	private float GroundUnderStand()
-	{
-		var field = ParkGround.Current?.Heightfield;
+	private static float GroundUnderStand()
+		=> ParkGround.Current?.Heightfield is { } field ? EyeGround( field, Stand ) : 0f;
 
-		if ( field == null )
-			return 0f;
-
-		var sample = field.HeightAtWorld( Stand.X, Stand.Y );
-
-		if ( !_groundSampled || _restand )
-		{
-			_groundHeight = sample;
-			_groundSampled = true;
-			_restand = false;
-		}
-		else
-		{
-			_groundHeight = _groundHeight.LerpTo( sample, Time.SmoothingFactor( GroundFollowRate ) );
-		}
-
-		return _groundHeight;
-	}
+	/// <summary>The ground the eye stands over at <paramref name="stand"/> on <paramref name="field"/>, before <see cref="EyeHeight"/> is added.</summary>
+	internal static float EyeGround( HeightfieldFile field, Vector3 stand )
+		=> field.CameraHeight( stand.X, stand.Y );
 
 	/// <summary>Where the viewer is standing and looking, for the debug console.</summary>
 	public static string State()
 	{
-		var ground = ParkGround.Current?.Heightfield?.HeightAtWorld( Stand.X, Stand.Y );
+		var ground = ParkGround.Current?.Heightfield?.CameraHeight( Stand.X, Stand.Y );
 
 		// The cell actually stood in, as an index rather than the fractional `cell=` beside it, with what
 		// the map says is built on it. A pure getter, and the one the collision is read off: "the viewer
@@ -864,7 +810,7 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 			$"cell=({Stand.X / 10f:F1},{Stand.Y / 10f:F1}) " +
 			$"at=({cellX},{cellY}) type={type} " +
 			$"yaw={Yaw:F2} pitch={Pitch:F1} " +
-			$"ground={(ground.HasValue ? ground.Value.ToString( "F1" ) : "-")} " +
-			$"eye={(ground ?? 0f) + EyeHeight:F1}";
+			$"ground={(ground.HasValue ? ground.Value.ToString( "F4" ) : "-")} " +
+			$"eye={(ground ?? 0f) + EyeHeight:F4}";
 	}
 }
