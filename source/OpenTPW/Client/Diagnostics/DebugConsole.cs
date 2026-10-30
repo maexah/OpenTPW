@@ -2975,8 +2975,25 @@ public static class DebugConsole
 			plain += unpacked;
 		}
 
+		var (askedEntries, asks, reads, milliseconds) = (0, 0L, 0L, 0.0);
+		var once = (Entries: 0, Bytes: 0L);
+
+		foreach ( var wad in wads )
+		{
+			var (e, a, r, ms) = wad.Asked();
+			askedEntries += e;
+			asks += a;
+			reads += r;
+			milliseconds += ms;
+
+			var (n, packed, unpacked) = wad.Cached( count => count == 1 );
+			once = (once.Entries + n, once.Bytes + packed + unpacked);
+		}
+
 		return $"{wads.Length} archives, {held / 1048576.0:F1}MB of files held whole, {entries} entries cached: "
-			+ $"{compressed / 1048576.0:F1}MB decompressed from refpack, {plain / 1048576.0:F1}MB copied out of the files as they are";
+			+ $"{compressed / 1048576.0:F1}MB decompressed from refpack, {plain / 1048576.0:F1}MB copied out of the files as they are; "
+			+ $"{askedEntries} entries asked for, {asks} asks, {reads} reads of the file ({milliseconds:F0}ms), {once.Entries} cached entries asked for once ({once.Bytes / 1048576.0:F1}MB); "
+			+ "most asked: " + string.Join( ", ", wads.SelectMany( w => w.MostAsked( 6 ) ).OrderByDescending( m => m.Asks ).Take( 6 ).Select( m => $"{m.Name} x{m.Asks}" ) );
 	}
 
 	/// <summary>

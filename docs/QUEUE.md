@@ -66,14 +66,12 @@ park for the website, go first. Q804 stopped the photographs: no picture with th
 
 **Ordered at Alexah's word (2026-10-30):** Q954 (the memory ours holds) first, before the weekly builds go out: that much memory would shut out a player on a lower-end computer. Then the rest in the order below.
 
-- [ ] **Q826. What Q954, Q827, Q828 and Q829 left: the WAD entries' cache, textures kept by path, and NeoVeldrid's chunks.** The managed heap's `Byte[]` was 145.6 MB (9,624
+- [ ] **Q826. What Q954, Q827, Q828, Q829 and Q830 left: textures kept by path, and NeoVeldrid's chunks.** The managed heap's `Byte[]` was 145.6 MB (9,624
   objects, `q827/run2/fs/heapstat.txt`, Full Simulation; 145.7 MB in 9,659 on the final binary, `run3/fs`; a gcroot in `q827/dump1`, stock on the unchanged build, of 15 of its 683 arrays of 30 KB or more, 118 MB): the ground's kept pixels, 33 MB
   (gone with Q829: a changed tile is written in the texture on the card, the pixels kept only at four bits a channel), the sound banks' compressed bytes (the park's music bank 33 MB and another 10 MB, kept by design:
-  `SoundBank._encoded`), and the WAD archives, whose files Q828 no longer holds (22.7 MB gone). What is left of them is the entries cached beyond that: `mem wads` says
-  **11.7 MB** stock (10.4 MB decompressed from refpack, 1.3 MB copied out as they are) to **15.2 MB** (Full Simulation) (`q828/new-stock`, `new-fs`). Candidates, each measured before and after as
-  Q954, Q827, Q828 and Q829 did: drop `WadArchiveFile.CachedData` for the entries read once (count the reads per entry first: a dropped entry read twice is decompressed twice, and the
-  load's phases are 5 s), and `Refpack` decompressing into a growing
-  `List<byte>` that is copied to an array though the size is known (`Refpack.cs:16-19`; a load-time copy, not held).
+  `SoundBank._encoded`), and the WAD archives, whose files Q828 no longer holds (22.7 MB gone) and whose entries Q830 keeps only from their second ask (`mem wads`: 87 entries, **2.4 MB** stock;
+  179 and 3.5 MB Full Simulation; was 11.7 and 15.2). What is left, each measured before and after as Q954, Q827, Q828, Q829 and Q830 did: `Refpack` decompressing into a growing
+  `List<byte>` that is copied to an array though the size is known (`Refpack.cs:16-19`; a load-time copy, not held; the 1,014 reads of a stock park take 312 ms in all, `q830/base-stock2`).
   From the Sentinel's reader: textures loaded by path are never released (the lobby's four islands' kept for the process's life), and NeoVeldrid never returns a Vulkan chunk to the
   driver (`mem vulkan` reads `_totalAllocatedBytes`: 204 MB stock, 237 MB Full Simulation, flat over 30 s, so no growth seen here). None is a measured loss beyond the figures above.
   Also left by Q829: the load's `Lay` (730 ms of the park's 5 s load, the 33 MB built once and handed to the card) and, at four bits a channel (`graphics faithful`), a path laid still makes the whole texture again, 140 to 167 ms (`CutLevels` over the box).

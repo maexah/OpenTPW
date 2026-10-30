@@ -11211,6 +11211,17 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   and N3b's whole-frame equality (the waterfall) missed, causes recorded; the rest held.
   Q826 is rewritten for what is left: the entries' cache, textures by path, NeoVeldrid's chunks, and the four-bit mode's cost.
   Not measured: off-screen under lavapipe (lane B's display), a Release build, a long drag of path, the original's tiles.
+- [x] **Q830. A WAD entry's bytes are kept from its second ask, not its first (Q826's fourth piece).** Done 2026-10-30 (run 15, lane A, `alexah/788-wad-entries-read-once-not-kept`).
+  `WadArchiveFile.GetData` cached every entry it decoded. The stock park asks for 1,014 entries and 927 of them once (9.4 MB of the 11.7 MB cached); three models are asked for 90, 50
+  and 50 times (`ho_fos1.MD2`, `Batm1.MD2`, `Bat.MD2`), 395 of the 1,409 asks hit the cache. An entry is now kept from its second ask (`KeepFromAsk`): the first hands the bytes over and
+  holds none. `mem wads` says how many entries were asked for, the asks, the reads of the file and their time, the cached entries asked for once, and the six asked for most
+  (`WadArchive.Asked`, `Cached( asked )`, `MostAsked`). Desk, 30 s in, `mem gc` and `mem compact`, the build before (counters only, dll `1d583ecb`, the same script) against this (`b8c1c950`):
+  cached entries 1,014 -> 87 and 11.7 -> 2.4 MB stock (1,554 -> 179 and 15.2 -> 3.5 MB Full Simulation); managed total 166.4 -> 155.7 MB stock (189.9 -> 176.5 Full Simulation), resident
+  432.0 -> 423.4 MB (464.1 -> 450.5); reads of the file 1,014 -> 1,101 (1,554 -> 1,733), their time 312 -> 370 ms (389 -> 458); the load 4,943 -> 5,011 ms stock (8,421 -> 8,593 Full Simulation);
+  `park.png` mean 85.0 -> 84.9 (83.2 -> 83.0) (`q830/base-stock2`, `new-stock`, `base-fs`, `new-fs`). By test: the first ask keeps nothing, the second keeps and reads the file again, the third is answered from
+  the kept bytes, `Free` lets them go. `mutate.py`: 12 bugs, 11 fail a test and the 12th (a most-asked list that counts an entry asked for once) fails the test strengthened for it.
+  `PREDICTION.txt`: B2 missed (395 of 1,409 asks, 28%, hit the cache, not under 10%: three models are asked for 50 to 90 times); the rest held.
+  Not measured: off-screen under lavapipe (lane B's display), a Release build, a park played long enough for a re-read entry to be asked for a third time by a new thing, a slow drive (the reads are 87 to 179 more).
 
 ## B. Docs and comments
 

@@ -248,6 +248,46 @@ public class ArchiveDamageTests
 	}
 
 	[TestMethod]
+	public void AnEntryAskedForOnceIsNotKeptAndOneAskedForAgainIsKeptFromThatAsk()
+	{
+		using var archive = new WadArchive( new MemoryStream( Wad( Pack( 4, "E061626364FC" ), true, 4 ) ) );
+		var file = (WadArchiveFile)Entry( archive, "x" );
+
+		var first = file.GetData();
+		CollectionAssert.AreEqual( new byte[] { 0x61, 0x62, 0x63, 0x64 }, first );
+		Assert.AreEqual( 0, archive.Cached().Entries, "the first ask keeps nothing" );
+		Assert.AreEqual( 0, archive.MostAsked( 3 ).Count(), "an entry asked for once is not among the most asked" );
+		Assert.AreEqual( (1, 1L, 1L), (archive.Asked().Entries, archive.Asked().Asks, archive.Asked().Reads) );
+
+		var second = file.GetData();
+		CollectionAssert.AreEqual( first, second, "the second ask returns the same bytes" );
+		Assert.AreEqual( 1, archive.Cached().Entries, "the second ask keeps them" );
+		Assert.AreEqual( 4L, archive.Cached().Compressed );
+		Assert.AreEqual( 2L, archive.Asked().Reads, "the second ask read the file again" );
+
+		var third = file.GetData();
+		Assert.AreSame( second, third, "the third ask is answered from the kept bytes" );
+		Assert.AreEqual( (3L, 2L), (archive.Asked().Asks, archive.Asked().Reads) );
+
+		file.Free();
+		Assert.AreEqual( 0, archive.Cached().Entries, "Free lets them go" );
+	}
+
+	[TestMethod]
+	public void EntriesAskedForOnceAreCountedApartFromTheKept()
+	{
+		using var archive = new WadArchive( new MemoryStream( Wad( [1, 2, 3, 4, 5, 6] ) ) );
+		var file = (WadArchiveFile)Entry( archive, "x" );
+		file.GetData();
+		file.GetData();
+
+		Assert.AreEqual( 0, archive.Cached( asks => asks == 1 ).Entries, "an entry asked for twice is not one asked for once" );
+		Assert.AreEqual( 1, archive.Cached( asks => asks == 2 ).Entries );
+		Assert.AreEqual( 6L, archive.Cached( asks => asks == 2 ).Plain );
+		Assert.AreEqual( "x", archive.MostAsked( 3 ).Single().Name );
+	}
+
+	[TestMethod]
 	public void EveryInstalledWadEntryStillDecodes()
 	{
 		GameData.Required();

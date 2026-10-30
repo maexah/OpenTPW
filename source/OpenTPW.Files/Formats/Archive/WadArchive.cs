@@ -16,7 +16,17 @@ public sealed class WadArchiveFile : ArchiveFile
 	internal uint DecompressedSize { get; set; }
 	internal int OffsetInArchive { get; set; } 
 
+	/// <summary>The ask from which an entry's bytes are kept; the ask before it hands the bytes over and holds none.</summary>
+	internal const int KeepFromAsk = 2;
+
 	internal byte[]? CachedData { get; set; }
+
+	/// <summary>How many times the entry's bytes were asked for, and how many of those read the file (the rest were answered from <see cref="CachedData"/>); Q830's account.</summary>
+	internal int Asks;
+	internal int Reads;
+
+	/// <summary>The Stopwatch ticks spent reading the file and decompressing, summed over <see cref="Reads"/>.</summary>
+	internal long ReadTicks;
 
 	/// <summary>The archive this entry's bytes are read from.</summary>
 	private readonly WadArchive _archive;
@@ -28,9 +38,13 @@ public sealed class WadArchiveFile : ArchiveFile
 
 	public override byte[] GetData()
 	{
+		var asks = Interlocked.Increment( ref Asks );
+
 		if ( CachedData != null )
 			return CachedData;
 
+		Interlocked.Increment( ref Reads );
+		var started = System.Diagnostics.Stopwatch.GetTimestamp();
 		var data = _archive.GetData( OffsetInArchive, SizeInArchive );
 
 		// Decompress file if necessary
@@ -40,8 +54,12 @@ public sealed class WadArchiveFile : ArchiveFile
 			data = refpack.Decompress( DecompressedSize ).ToArray();
 		}
 
-		// Save off data so we can use it again quickly if we need to
-		CachedData = data;
+		Interlocked.Add( ref ReadTicks, System.Diagnostics.Stopwatch.GetTimestamp() - started );
+
+		// An entry asked for once is not kept; one asked for again is, from that second ask: 927 of the stock park's
+		// 1,014 entries are asked for once, and the three models asked for most are asked for 50 to 90 times.
+		if ( asks >= KeepFromAsk )
+			CachedData = data;
 
 		return data;
 	}
@@ -72,12 +90,18 @@ public sealed class WadArchive : IArchive
 	/// <summary>How many entries have their bytes kept, and how many bytes that is, split by whether the entry is stored compressed.</summary>
 	public (int Entries, long Compressed, long Plain) Cached()
 	{
+		return Cached( _ => true );
+	}
+
+	/// <summary>As <see cref="Cached()"/>, for the entries whose number of asks satisfies <paramref name="asked"/>.</summary>
+	public (int Entries, long Compressed, long Plain) Cached( Func<int, bool> asked )
+	{
 		var count = 0;
 		long compressed = 0, plain = 0;
 
 		foreach ( var entry in _entries )
 		{
-			if ( entry.CachedData is not { } data )
+			if ( entry.CachedData is not { } data || !asked( entry.Asks ) )
 				continue;
 
 			++count;
@@ -89,6 +113,32 @@ public sealed class WadArchive : IArchive
 		}
 
 		return (count, compressed, plain);
+	}
+
+	/// <summary>How many entries were asked for at all, how many asks there were, and how many of them read the file (the rest hit the cache).</summary>
+	public (int Entries, long Asks, long Reads, double Milliseconds) Asked()
+	{
+		int entries = 0;
+		long asks = 0, reads = 0, ticks = 0;
+
+		foreach ( var entry in _entries )
+		{
+			if ( entry.Asks == 0 )
+				continue;
+
+			++entries;
+			asks += entry.Asks;
+			reads += entry.Reads;
+			ticks += entry.ReadTicks;
+		}
+
+		return (entries, asks, reads, ticks * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
+	}
+
+	/// <summary>The entries asked for most often, as "name xN".</summary>
+	public IEnumerable<(string Name, int Asks)> MostAsked( int count )
+	{
+		return _entries.Where( e => e.Asks > 1 ).OrderByDescending( e => e.Asks ).Take( count ).Select( e => (e.Name, e.Asks) );
 	}
 
 	/// <summary>
