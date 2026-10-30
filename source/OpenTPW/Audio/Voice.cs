@@ -399,7 +399,7 @@ public sealed class Voice
 					at = 0;
 			}
 
-			var gain = _volume * master * frameDuck * _pauseGain;
+			var gain = _volume * master * frameDuck * _pauseGain * AudioClip.Scale;
 
 			if ( channels == 1 )
 			{

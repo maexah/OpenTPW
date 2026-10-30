@@ -2954,8 +2954,29 @@ public static class DebugConsole
 			+ $"allocated ever {GC.GetTotalAllocatedBytes() / 1048576.0:F0}MB, collected-first {collect})" );
 		lines.Add( "mem " + GpuMemory.Summary() );
 		lines.Add( "mem vulkan: " + VulkanAllocated() );
+		lines.Add( "mem wads: " + WadAccount() );
 
 		return lines;
+	}
+
+	/// <summary>The opened WAD archives: how many, the bytes of their files held whole, and the entries cached beyond that (Q827).</summary>
+	private static string WadAccount()
+	{
+		var wads = FileSystem.OpenArchives.OfType<WadArchive>().ToArray();
+		long held = 0, compressed = 0, plain = 0;
+		var entries = 0;
+
+		foreach ( var wad in wads )
+		{
+			held += wad.Buffer.Length;
+			var (count, packed, unpacked) = wad.Cached();
+			entries += count;
+			compressed += packed;
+			plain += unpacked;
+		}
+
+		return $"{wads.Length} archives, {held / 1048576.0:F1}MB of files held whole, {entries} entries cached: "
+			+ $"{compressed / 1048576.0:F1}MB decompressed from refpack, {plain / 1048576.0:F1}MB copied out of the files as they are";
 	}
 
 	/// <summary>

@@ -66,14 +66,16 @@ park for the website, go first. Q804 stopped the photographs: no picture with th
 
 **Ordered at Alexah's word (2026-10-30):** Q954 (the memory ours holds) first, before the weekly builds go out: that much memory would shut out a player on a lower-end computer. Then the rest in the order below.
 
-- [ ] **Q826. What Q954 left: the sounds held as 32-bit floats, textures kept by path, and NeoVeldrid's chunks.** The managed heap's live 345 MB (Full Simulation park,
-  after a compaction; `q954/run12/heapstat.txt`) is 145.6 MB of `Single[]` (2,015 decoded clips, every bank of the park decoded up front, 32 bits a sample where the
-  original clamps each voice to 16) and 145.6 MB of `Byte[]` (9,622: the jungle music bank's 33 MB and another 10 MB kept compressed by design, the rest ~93 MB in small
-  arrays whose owner was not found; an outside audit says WAD entries are cached whole for ever, at most 122 MB for all 312 WADs: grep `WadArchiveFile.GetData`).
-  A 16-bit store halves the floats (about 73 MB) but changes the mixer's input and needs the audio verified by capture (`verifying-audio-by-capture`). Also from the
-  Sentinel's reader: textures loaded by path are never released (the lobby's four islands' kept for the process's life), and NeoVeldrid never returns a Vulkan chunk to the driver
-  (`mem vulkan` reads `_totalAllocatedBytes`: 204 MB stock, 237 MB Full Simulation, flat over 30 s, so no growth seen here). Each is a candidate, not a measured loss: measure
-  `mem` before and after, desk and off-screen, as Q954 did. Also (the same audit, G): `Refpack` decompresses into a growing `List<byte>` and copies it to an array, though the size is known (`Refpack.cs:16-19`): a load-time copy, not held.
+- [ ] **Q826. What Q954 and Q827 left: the WAD archives' bytes, the ground's kept pixels, textures kept by path, and NeoVeldrid's chunks.** The managed heap's `Byte[]` is 145.6 MB (9,624
+  objects; `q827/dump1`, a gcroot of 15 of the 683 arrays of 30 KB or more, 118 MB): `GroundTiles`'s `_pixels` 33 MB (kept so a tile can be laid again, `Remake`; the box's whole
+  texture twice over, once in the heap and once on the card), the sound banks' compressed bytes (the park's music bank 33 MB and another 10 MB, kept by design:
+  `SoundBank._encoded`), and the WAD archives: `mem wads` says 82 archives open for the life of the process hold their files whole, **22.7 MB**, and cache entries beyond that,
+  **11.9 MB** (stock, of which 10.6 MB decompressed from refpack and 1.3 MB copied out as they are) to **15.4 MB** (Full Simulation) (`q827/run1`): at most about 38 MB of 345, not the 122 MB
+  an outside audit gave (that is all 312 WADs; a park opens 82). Candidates, each measured before and after as Q954 and Q827 did: read an archive's entries from the file
+  instead of holding it whole (`WadArchive.Buffer`), drop `WadArchiveFile.CachedData` for the entries read once, keep `GroundTiles._pixels` only until the first `Remake` (or lay a
+  tile from its overlay again), and `Refpack` decompressing into a growing `List<byte>` that is copied to an array though the size is known (`Refpack.cs:16-19`; a load-time copy, not held).
+  From the Sentinel's reader: textures loaded by path are never released (the lobby's four islands' kept for the process's life), and NeoVeldrid never returns a Vulkan chunk to the
+  driver (`mem vulkan` reads `_totalAllocatedBytes`: 204 MB stock, 237 MB Full Simulation, flat over 30 s, so no growth seen here). None is a measured loss beyond the figures above.
 - [ ] **Q820. What Q818, Q821 and Q822 left: the stacked and loop pylons, the original's picture of a flipped diagonal, and the heights by the original's samplers.** From Q818 (run 14, lane A;
   its piece (3), the face normals and the control word, is Q819; its piece (1), the ground's per-cell diagonal, is Q821, which ticks Q398; the decode
   of piece (4) and the float note are Q822). (2) Left by Q817: the pylon under a stacked piece is drawn with the alone-on-its-cell arms (the bottom of a stack that is not its top shows the `0x400` node and hides the `0x800` one, `0x00432ff8`..`0x0043304d`; ours hides `mc_bridge` on it); a stacked pylon stands on the

@@ -19,6 +19,9 @@ public class BaseFileSystem
 
 	private readonly ConcurrentDictionary<string, IArchive> archiveCache = new();
 
+	/// <summary>The archives opened so far, which stay open for the life of the process.</summary>
+	public IReadOnlyCollection<IArchive> OpenArchives => archiveCache.Values.ToArray();
+
 	/// <summary>
 	/// What each directory really holds, keyed by the directory's absolute path: a name as it might be asked
 	/// for, mapped to the name the directory really uses. See <see cref="Resolve"/> for why.

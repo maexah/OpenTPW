@@ -54,6 +54,31 @@ public sealed class WadArchive : IArchive
 	private readonly ExpandedMemoryStream memoryStream;
 	public byte[] Buffer { get; }
 
+	/// <summary>Every entry of the archive, in the order the table lists them.</summary>
+	private readonly List<WadArchiveFile> _entries = new();
+
+	/// <summary>How many entries have their bytes kept, and how many bytes that is, split by whether the entry is stored compressed.</summary>
+	public (int Entries, long Compressed, long Plain) Cached()
+	{
+		var count = 0;
+		long compressed = 0, plain = 0;
+
+		foreach ( var entry in _entries )
+		{
+			if ( entry.CachedData is not { } data )
+				continue;
+
+			++count;
+
+			if ( entry.Compressed )
+				compressed += data.Length;
+			else
+				plain += data.Length;
+		}
+
+		return (count, compressed, plain);
+	}
+
 	/// <summary>
 	/// The root directory ("/") for this archive.
 	/// This may contain a collection of <see cref="ArchiveItem"/>s as children.
@@ -233,6 +258,7 @@ public sealed class WadArchive : IArchive
 
 			// Add to selected subdirectory
 			subDirectory.Children.Add( newFile );
+			_entries.Add( newFile );
 
 			// Return to initial position, skip to the next file's data
 			memoryStream.Seek( initialPos + 40, SeekOrigin.Begin );

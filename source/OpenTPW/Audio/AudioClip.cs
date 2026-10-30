@@ -3,7 +3,7 @@ using NLayer;
 namespace OpenTPW;
 
 /// <summary>
-/// One decoded sound, held as 32-bit float PCM at <see cref="Audio.SampleRate"/> and ready to
+/// One decoded sound, held as 16-bit PCM at <see cref="Audio.SampleRate"/> and ready to
 /// mix.
 ///
 /// Everything the game ships is MPEG audio - 3,739 samples across every .sdt, and not one of
@@ -14,18 +14,21 @@ namespace OpenTPW;
 /// Huffman tables and an MDCT.
 ///
 /// Clips are decoded whole rather than streamed. The largest in the lobby is jungle's 91-second
-/// ambient bed, which comes to 8MB of float; each park's lobby theme is 3 to 3.7MB. That is small
+/// ambient bed, which comes to 4MB of 16-bit samples; each park's lobby theme is 1.5 to 1.9MB. That is small
 /// enough that streaming would only buy trouble - a decoder cannot be driven from the mixer
 /// callback without a lock, and the whole point of the callback is that it never waits.
 /// </summary>
 public sealed class AudioClip
 {
 	/// <summary>
-	/// Interleaved samples, <see cref="Channels"/> per frame, nominally -1 to 1. Not clamped: 336 shipped clips
-	/// peak past 1, where the original clamps each voice to 16 bits as it decodes (<c>0x006c9270</c>; docs/exe/audio.md,
-	/// "How a voice is decoded"). Only the final mix, in <c>Audio.Mix</c>, is clamped.
+	/// Interleaved samples, <see cref="Channels"/> per frame, 16 bits each, which <see cref="Scale"/> brings to -1 to 1. A voice
+	/// is clamped to 16 bits as it is decoded, as the original's is (<c>0x006c9270</c>; docs/exe/audio.md, "How a voice is
+	/// decoded"): 336 shipped clips peak past full scale in a float decode. The final mix, in <c>Audio.Mix</c>, is clamped again.
 	/// </summary>
-	public float[] Samples { get; }
+	public short[] Samples { get; }
+
+	/// <summary>What a stored sample is multiplied by to be a float, nominally -1 to 1.</summary>
+	public const float Scale = 1f / 32768f;
 
 	public int Channels { get; }
 
@@ -37,7 +40,7 @@ public sealed class AudioClip
 	/// <summary>What it was called in the bank it came out of, for logging.</summary>
 	public string Name { get; }
 
-	private AudioClip( string name, float[] samples, int channels )
+	private AudioClip( string name, short[] samples, int channels )
 	{
 		Name = name;
 		Samples = samples;
@@ -94,13 +97,24 @@ public sealed class AudioClip
 			if ( mpeg.SampleRate != Audio.SampleRate )
 				pcm = Resample( pcm, channels, mpeg.SampleRate, Audio.SampleRate );
 
-			return new AudioClip( name, pcm, channels );
+			return new AudioClip( name, Quantise( pcm ), channels );
 		}
 		catch ( Exception e )
 		{
 			Log.Warning( $"Sound '{name}' would not decode: {e.Message}" );
 			return null;
 		}
+	}
+
+	/// <summary>Each sample to 16 bits, rounded and held to the range a 16-bit word has, as the original's decoder stores one.</summary>
+	internal static short[] Quantise( float[] source )
+	{
+		var target = new short[source.Length];
+
+		for ( int i = 0; i < source.Length; ++i )
+			target[i] = (short)Math.Clamp( MathF.Round( source[i] * 32768f ), short.MinValue, short.MaxValue );
+
+		return target;
 	}
 
 	/// <summary>
@@ -111,7 +125,7 @@ public sealed class AudioClip
 	/// voice on every frame - the odd ones out are brought down once, here, when they load.
 	/// Linear is audibly poor for a big ratio; for a clean 2:1 it is averaging adjacent pairs.
 	/// </summary>
-	private static float[] Resample( float[] source, int channels, int fromRate, int toRate )
+	internal static float[] Resample( float[] source, int channels, int fromRate, int toRate )
 	{
 		var sourceFrames = source.Length / channels;
 		var targetFrames = (int)((long)sourceFrames * toRate / fromRate);

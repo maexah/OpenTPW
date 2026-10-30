@@ -1454,8 +1454,10 @@ shipped entries peak past full scale in a floating-point decode (FileFormats `so
 takes effect on those entries: ffmpeg's 16-bit decode clips them the same way. How QMixer adds 16-bit voices
 together is not in the executable.
 
-OpenTPW does not clamp a voice: `AudioClip` keeps NLayer's floats, up to 1.40, and only the final mix is clamped
-(`Audio.Mix`), so a clip past full scale played below full volume is louder at its peaks than the original's.
+OpenTPW stores each clip as 16-bit words (`AudioClip.Quantise`: the float decode taken to the nearest word and held to -32768..32767), so a voice is
+clamped as the original's is; the mix is summed in float and clamped once more in `Audio.Mix`. Measured across the 3,739 shipped clips (`AudioClipTests`, Q827):
+336 peak past full scale in NLayer's float decode, the five at 44,100 Hz included, and the speech sample `sp_203` (index 202, float peak 1.200) is 1.20 times
+louder at its peak in the mix of the build before (peak 0.15602) than after (0.13000) at the same bus and master, its rms over the line the same (0.01867).
 
 ## The fade, the SoundInfo settings and the reverb
 

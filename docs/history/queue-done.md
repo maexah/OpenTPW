@@ -11176,6 +11176,15 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   managed objects (live 286 -> 134 MB, the first lobby's) and its GPU account (161 -> 79 MB). The Material key's flags put back (a copy): 8 pipelines and the ground
   gone from the frame. Not a leak: the live managed heap is 345 MB, 145 MB of it the decoded sounds (`float[]`), 53 MB compressed banks kept by design.
   Left: Q826. Tools stored: `lib/memmap.py`; `mem` and `mem gc|compact` in the console.
+- [x] **Q827. Sounds held as 16-bit words, clamped as the original's decoder clamps a voice (Q826's first piece).** Done 2026-10-30 (run 15, lane A, `alexah/785-sounds-as-16-bit`).
+  `AudioClip.Samples` is `short[]` (`AudioClip.Quantise`: the float decode to the nearest word, held to -32768..32767; the mixer multiplies by `AudioClip.Scale`), so the
+  2,015 decoded clips of Alexah's Full Simulation park are 73.2 MB (`Int16[]`, 2,000 objects) where they were 145.6 MB of `Single[]`: on the desk the managed heap after a
+  collection fell from 315.5 to 243.1 MB there (289.4 to 221.0 stock), the process's resident size from 590 to 521 MB (560 to 489), the load's peak from 0.63 to 0.56 GB
+  (0.62 to 0.54) (`q827/run1`, `run3`; the build before and after, 30 s in, `mem compact`). It is also the original's own rule (`0x006c9270`, `docs/exe/audio.md`, "How a
+  voice is decoded"): a clip past full scale was louder at its peaks here than there. Measured by test across all 3,739 shipped clips (`AudioClipTests`: each stored word
+  is NLayer's float taken to the nearest word; exactly 336 peak past full scale), and in the mix (`q827/audio-old`, `audio-final`: the advisor's `sp_203`, float peak 1.200,
+  peak 0.15602 before and 0.13000 after, ratio 1.2002, rms over the line equal 0.01867; the mixer's scale put back out: peak 1.0, gain 4.3, `audio-mutant-v1`). Also built: the console's `mem wads`, which measured the WAD half of Q826 (below).
+  Not measured: off-screen under lavapipe (lane B's display), a Release build.
 
 ## B. Docs and comments
 
