@@ -98,10 +98,10 @@ the original, and every caller of the first two is known (`FUN_004527f0`, six ca
 | Who asks | Where | What it answers | OpenTPW |
 |---|---|---|---|
 | The park camera (orbit) | `FUN_0042b1c0`, `0x0042c817` | `FUN_00452560( x, z, 1 )`: the cell's triangle by `0x4`, every cell | `CameraHeight` (Q821) |
-| First person (the camcorder) | `FUN_0042b1c0`, `0x0042c729` | `FUN_00452560( stand x, z, 1 )` less `[0x006fde10]` (-5), stored straight as the eye's height `0x00790aa4` each frame: no easing; the update then adds the stand's y (`[0x00790abc]`, copied from `[0x007908f4]`) at `0x0042c9b8`..`0x0042c9e2`, nought in the probe (1,440 polls read exactly sampler + 5; whether it is ever not is not settled) | `CameraHeight` + 5, taken each frame (`ParkCamcorderCameraMode.GroundUnderStand`; Q820) |
-| Every sprite: walkers, staff, balloons (a held balloon is a sprite of that list: `FUN_004fa030` -> `0x004fe900` -> `0x00475480` writes its `+0x88`/`+0x8c`/`+0x90` in the table `FUN_00475430` walks; its `+0xc4` bit `0x1000000` is unread) | `FUN_00542010`, `0x005420ee`, for each sprite of the list (`FUN_00475430`) | `FUN_004527f0( +0x88, +0x90 )` plus the sprite's `+0x8c`; a sprite whose word `+0xc4` carries `0x1000000` stands at `+0x8c` itself | `ScapeHeight` (`ParkGuestSprites`: the walk's draw, `Feet`, `DrawBalloon`; Q820) |
+| First person (the camcorder) | `FUN_0042b1c0`, `0x0042c729` | `FUN_00452560( stand x, z, 1 )` less `[0x006fde10]` (-5), stored straight as the eye's height `0x00790aa4` each frame: no easing; the update then adds the stand's y (`[0x00790abc]`, copied from `[0x007908f4]`) at `0x0042c9b8`..`0x0042c9e2`, nought: entering first person sets the stand's y `0x007908f4` to nought (`Camera_ToggleFirstPerson`, `0x0042af76`; leaving puts the saved one back, `0x0042afa9`) and the sweep writes it back as it read it (`0x0042c5cd`), so the term is nought in first person by code (Q825; 1,440 polls read exactly sampler + 5, Q822; `[0x00790abc]` and `[0x007908f4]` read 0 in 160 polls of two parks, orbit camera) | `CameraHeight` + 5, taken each frame (`ParkCamcorderCameraMode.GroundUnderStand`; Q820) |
+| Every sprite: walkers, staff, balloons (a held balloon is a sprite of that list: `FUN_004fa030` -> `0x004fe900` -> `0x00475480` writes its `+0x88`/`+0x8c`/`+0x90` in the table `FUN_00475430` walks; its `+0xc4` bit `0x1000000`: below) | `FUN_00542010`, `0x005420ee`, for each sprite of the list (`FUN_00475430`) | `FUN_004527f0( +0x88, +0x90 )` plus the sprite's `+0x8c`; a sprite whose word `+0xc4` carries `0x1000000` stands at `+0x8c` itself (`+0xe8` takes `+0x8c`, `+0xe4`, `+0xec` the place, `0x005420af`..`0x005420e0`; the other arm adds `+0x8c` to the sampler, `0x005420f3`) | `ScapeHeight` (`ParkGuestSprites`: the walk's draw, `Feet`, `DrawBalloon`; Q820) |
 | A person put on a sprite | `Person_PlaceSprite`, `0x004f9e8c` | stores the height less `FUN_004527f0` under it in `+0x8c`, so the draw above gives the height back exactly | none: ours reads the saved `+0x8c` and draws it over `ScapeHeight`, so a saved person stands where the original put them |
-| A person's particles | `FUN_004fa470`, `0x004fa4dc` | `FUN_004527f0` at the person's place moved by `FUN_00519410`/`FUN_00519420` × `[0x00700698]` (not read) | not checked |
+| A person's particles | `FUN_004fa470`, `0x004fa4dc` | the sprite's place (`FUN_004754e0`) moved in x and z by `FUN_00519410`/`FUN_00519420` (absolute reads of `0x00785584`, `0x00785588`) × `[0x00700698]` (10.0), the height `FUN_004527f0` at the moved place, NOT the sprite's `+0x8c`; all three then × `[0x007006ec]` (1024.0) and truncated for `Particles_Spawn`. Both offsets read 0 (below) | none: ours spawns none of the callers' puffs (`LEAVER_BOARDING_PARTICLE`, `STAFF_DISMISSAL_PARTICLE`; the other three callers' are not counted under a name found), so there is no place to compare (Q900) |
 | The build markers' wave | `FUN_0053ddd0`, `0x0053ddea` | `FUN_004527f0` at the corner it is handed, after the glide | `HeightAt` on a corner, `ScapeHeight` gliding (`ParkBuildMarkers.Corner`; Q820) |
 | The scene's height, mode 1; placement feedback | `FUN_004511a0`, `0x004511e6`; `FUN_00452ae0`, `0x00452c89` | `FUN_004527f0` (`park.md`, "The scene's height under a point") | `ScapeHeight` (`ParkSceneHeight.Under`) |
 | A person's shadow | `SpriteShadow_BuildQuad` (`0x00589410`) | the near corner's plane, its own sampler, no flag read ("First person's shadow", below) | `CornerPlaneAt` |
@@ -157,6 +157,39 @@ product of the two edge differences (made unit at `0x0045c7ea`; the quotient doe
 along the line; a hit stays only inside the cell's square (`<=` on all four sides) and under the kept `|t|` (`<`, started at
 `FLT_MAX`), so the first of two equal hits stands. Ours: `ParkPickGround.Meet`. Not ported: the object march and the choice
 between its hit and the land's (`ParkPickMarch`, `ParkPicking` say theirs).
+
+**The three words Q822 left unread** (Q825; Ghidra, the stored disassembly, and the original under Proton, `q825/`).
+
+1. **A person's particle is placed by the sprite's own place, moved by two globals that are nought, at the ground's height.** `FUN_004fa470`
+   (`this+0xc` the sprite) takes the place `FUN_004754e0` copies (`+0x88`, `+0x8c`, `+0x90`), adds `FUN_00519410()` and `FUN_00519420()` × 10.0
+   (`[0x00700698]`) to x and z (`0x004fa496`..`0x004fa4d2`), then takes the height from `FUN_004527f0` at that x, z (`0x004fa4dc`) and drops the
+   sprite's own `+0x8c`, and passes the three × 1024.0 (`[0x007006ec]`), truncated, to `Particles_Spawn( effect, x, y, z )` (`0x004fa51d`). The
+   two accessors return the absolute words `0x00785584` and `0x00785588` (`0x00519410`, `0x00519420`: `mov eax, ds:..; ret`); the listing holds
+   only READ references to them, and the file's value is 0. **Measured**: both read 0 at every one of 120 polls in the stock park
+   (`orig/spriteflags-stock.txt`, 60 s) and 40 polls in Alexah's Full Simulation park (`orig/fs/spriteflags-fs.txt`), and a `gdb` write watch on
+   each (`watch.sh`, 20 s) fired 0 times: a silence in a quiet park with no control that fires, so the static fact (no store in the listing, though
+   an object's field written through a pointer would not show as one) is the stronger half. So the offset is nought and a person's puff stands at
+   the person's x and z, at the ground's height there by `ScapeHeight`, not at the sprite's `+0x8c` (about nought for a walker, `Person_PlaceSprite`).
+   Its five callers: `FUN_00501db0` (`0x00501fce`, `0x005020ed`), `FUN_004faec0` (`0x004fb26e`, the guest's constructor), `FUN_004f7c60`
+   (`0x004f7c76`, `0x004f7c81`), `FUN_00500bd0` (`0x00500c35`, the leaver's boarding puff) and `FUN_00505790` (`0x005059c3`, the staff dismissal). Ours
+   counts the puffs of two and spawns neither (`LEAVER_BOARDING_PARTICLE`, `STAFF_DISMISSAL_PARTICLE`); what the other three spawn, and whether ours counts
+   them, was not looked at; so nothing is placed yet (Q900).
+2. **`0x1000000` in a sprite's `+0xc4` is the head sprites' alone.** The word is the sprite script's local 16 (`saves.md`, "a person's sprite's
+   drawing flags"); the constructor writes it nought (`0x004758f0`) and the two copies write `& 0xfffffdff | 0x50000` (`0x00475d70`,
+   `0x00475ee3`). The one script word that sets local 16 to a value holding `0x1000000` is word 1709 (`0x3000080`), of 55 `SetLocal 0x10` words in
+   `DAT_0074dab8` (44 set `0x1200`, 8 `0x80000`, one each `0x80`, `0x51000` and `0x3000080`; no other opcode was looked for): a scan of the table's first `0x3000` words for `0x4766d0, 0x10, v`.
+   **Measured** in the original with Alexah's park loaded by a Full Simulation player (`orig/fs/spriteflags-fs.txt`, 40 polls): 65 distinct sprites
+   carry the bit, every one of kinds 1 and 3 (kids' and costume heads) with the word exactly `0x3000080`; no person's sprite (kinds 0, 2, 4 to 8, `0x1200`)
+   does, and the stock park (no rider on a ride) holds none. A head's `+0x8c` is a world height (6.2 to 57.7 on the 20 the poll printed, the unhung ones nought): the draw
+   keeps it, as the table above says, where a person's is the offset above the ground.
+   **Ours** stands a ride's head where its node is drawn (`ParkGuestSprites.HeadOnRide`, `TryDrawnNodeOn`, absolute, no sampler added), so the
+   rule is already kept by construction; nothing is to build. **Measured in ours** (Q825, her park's copy, the final binary): the `rides` census lists the Tom Tom's 3 of 40 heads, the Inca God's 1 of 32, the Pork Pie's 4 of 8 and the Simulator's 5, each at the drawn node (`q825/ours3/run.out`), and the frame shows the Tom Tom Twister's heads on its drums (`tomtom-heads.png`); not compared head by head with the original's, whose ride is at another moment.
+3. **The eye's further term is nought in first person.** `0x007908f4` is the camera's look-at height: `Camera_ToggleFirstPerson` saves it and sets it
+   to nought on the way in (`0x0042af76`) and puts the saved one back on the way out (`0x0042afa9`); the walk's sweep writes the stand back with the
+   y it read (`0x0042c5cd`; the helper `0x0042cd80` converts x and z only). The orbit camera's resets write it from `0x006fdd4c`, which is 0
+   (`0x0042a9ce`, `0x0042b550`, `0x0042a176`). `0x0042c6b9` copies it to `[0x00790abc]` each frame and `0x0042c9b8` adds that to the eye; in first
+   person it is nought, and in orbit the eye's height is the orbit's. **Measured** both read 0 at every poll of the two parks (orbit camera); the first-person
+   reading is Q822's 1,440 polls (the eye exactly the sampler + 5), not repeated.
 
 ### What the render-state `0x0800` tests are
 

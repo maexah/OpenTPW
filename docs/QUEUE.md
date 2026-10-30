@@ -73,9 +73,10 @@ park for the website, go first. Q804 stopped the photographs: no picture with th
   original's drawing by `0x2` stands on the decode and the live bits (all 7,001 ground cells' diagonal bits equal the file's); poke one cell's `0x2`/`0x4`
   in the original and film it with the camera held (`original/setcam.py`'s follow off) and the clock paused.
   (4) Built by Q823 (`alexah/766-heights-by-the-originals-samplers`): `0x800` at the load, the sprites, balloons, `Feet` and the build markers' glide on
-  `ScapeHeight`, the camcorder's eye on `CameraHeight` + 5 each frame. The pick's ground as the original's two planes a cell is Q824. Left: the
-  person's particles' sampler (`FUN_004fa470`, `0x004fa4dc`, not read), a sprite whose word `+0xc4` carries `0x1000000` standing at `+0x8c` itself (not read in
-  ours), the eye's further term (`[0x00790abc]` from `0x007908f4`, added at `0x0042c9e2`: nought in the probe, not decoded), and a film of the sprites
+  `ScapeHeight`, the camcorder's eye on `CameraHeight` + 5 each frame. The pick's ground as the original's two planes a cell is Q824. The person's particles'
+  sampler, the sprites carrying `0x1000000` and the eye's further term are decoded and measured in Q825 (`park-engine.md`, "The three words Q822 left unread": the
+  particle's offset is nought, the bit is the head sprites' alone and ours already stands them absolutely, the eye's term is nought in first person; the
+  puffs themselves are Q900). Left: a film of the sprites
   and markers at a flagged cell against the original (Q823 compared the samplers by census and the load's flag by the original's live heightfield, not a frame).
 - [ ] **Q849. What Q810 left: two counted gaps her played park's save now reaches, and two loads never run.** (From Q810's review,
   run 14.) Q810 made her Full Simulation `New Save.TPWS` read whole, so the save goes through the running-things writer for the
@@ -119,6 +120,14 @@ park for the website, go first. Q804 stopped the photographs: no picture with th
   `PutOff` (twice), `Yawn` (PeepBehaviour.cs) and `Till` (ParkRideOperation.cs). `ParkAudio` places them with a distance gain, so
   on raised ground the heard distance differs; the size was not measured. Build: give those sounds the sprite's own `+0x8c`, or
   measure first that the difference is audible.
+- [ ] **Q900. The puffs a person's departure and a dismissal spawn (particle `0x13`), placed as the original's `FUN_004fa470` places them.** (From Q825's
+  decode of Q820's piece (4).) Ours counts both (`LEAVER_BOARDING_PARTICLE`, `PeepBehaviour.cs`; `STAFF_DISMISSAL_PARTICLE`, `ParkPeople.cs`) and spawns
+  neither. The place is decoded (`park-engine.md`, "The three words Q822 left unread", 1): the person's x and z, the height `ScapeHeight` there (not the
+  sprite's `+0x8c`), the two offset globals nought in the original (measured). Build: spawn effect `0x13` through the world particles at that place when the
+  leaver is taken off the cell's head (`FUN_00500bd0`, `0x00500c35`) and when a member is dismissed (`FUN_00505790`, `0x005059c3`); look also at the
+  other three callers of `FUN_004fa470` (`FUN_00501db0` at `0x00501fce` and `0x005020ed`, the guest constructor `FUN_004faec0` at `0x004fb26e`,
+  `FUN_004f7c60` at `0x004f7c76` and `0x004f7c81`) for what they spawn and whether ours counts it. Confirm in both games: the emitter's place against the
+  person's, by `particledump.py` and the console's `particles`, and a frame of the puff.
 - [ ] **Q802. What Q800 left for a person or a machine it did not have.** From Q800 (run 13, lane A). Done by the
   coordinator (2026-10-29): `opentpw.maintainer` set in `~/repos/OpenTPW-laneB`, and the Saturday audit runs
   `python3 tools/check_docs_paths.py`. The Linux quick start is marked "tested on the maintainer's Linux machine only"

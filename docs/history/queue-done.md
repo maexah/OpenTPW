@@ -11157,6 +11157,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   pixels off, to 0.872). Tests: a valley met on the ground and a ridge on the other triangle's plane in each cut, and a 1,000-ray reference over every cell;
   12 of 12 put-back bugs fail a test. Decode in `park-engine.md`, "The pick's terrain". Left, none new: a looking-up ray's behind-the-eye hit is decoded and
   unit-tested, not watched in the original.
+- [x] **Q825. The three words Q822 left unread: a person's particle's offset, the sprite flag `0x1000000`, the camcorder's further term (Q820's piece (4), the rest).** Done 2026-10-30 (run 15, lane A, `alexah/783-unread-words-decoded`).
+  A decode and a measurement, nothing built. A person's particle (`FUN_004fa470`) is placed at the sprite's x and z moved by `0x00785584` and `0x00785588` (x 10.0), at
+  the ground's height, not the sprite's `+0x8c`; both globals read 0 at 160 of 160 polls in the original (stock park, and Alexah's Full Simulation park). The bit `0x1000000`
+  is the head sprites' alone (one of 55 `SetLocal 0x10` words sets it, `0x3000080`; 65 live sprites carry it, all kinds 1 and 3, none a person's), and ours already
+  stands a head at its drawn node. The camcorder's further term is nought in first person (`Camera_ToggleFirstPerson` zeroes it). Ours on her park's copy: the `rides`
+  census's heads at their drawn nodes and a frame of the Tom Tom Twister's heads on its drums. Decode in `park-engine.md`, "The three words Q822 left unread".
+  Tool stored: `original/spriteflags.py`. Left: the puffs are Q900; ours' heads against the original's head by head was not made.
 
 ## B. Docs and comments
 
