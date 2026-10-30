@@ -126,6 +126,11 @@ font and its licence, the README, `LICENSE.md` and `THIRD-PARTY-NOTICES.md`; `We
   every one is kept: none is deleted when a newer one comes (Alexah, 2026-10-27).
 - **A week with nothing meaningful gets no release.** The next changelog covers the gap.
 - **The Sunday routine**, in order:
+  0. A performance look, before the build (about an hour, desk): `lib/memrun.py <out> <Release bin> stock` and `fs`,
+     and `perf/bench.sh` on the stock park. Compare `game memory peak` and the uncapped frame time with `docs/STATUS.md`'s
+     Numbers rows "Memory, jungle park" and "Frame, stock jungle park". A figure more than 15% worse files one queue item
+     (both numbers and the commits since the last tag), ahead of the weekly; otherwise update those rows' dates and
+     figures and stop. No digging without a regression (Alexah, 2026-10-30).
   1. Everything is pushed after the usual gate (rule 1's yes, `Pushing` above). Before the tag, read the zip's
      `tools/weekly/README.txt` and the two issue forms against `docs/STATUS.md`: what the README says starts, what
      the build does without a game, and where `console.log` is must still be true of this tag (Q798). Also that the runtime pack the publish takes (`weekly.yml` says 10.0.x) is still the version

@@ -66,37 +66,11 @@ park for the website, go first. Q804 stopped the photographs: no picture with th
 
 **Ordered at Alexah's word (2026-10-30):** Q954 (the memory ours holds) first, before the weekly builds go out: that much memory would shut out a player on a lower-end computer. Then the rest in the order below.
 
-- [ ] **Q826. What Q954, Q827, Q828, Q829 and Q830 left: textures kept by path, and NeoVeldrid's chunks.** The managed heap's `Byte[]` was 145.6 MB (9,624
-  objects, `q827/run2/fs/heapstat.txt`, Full Simulation; 145.7 MB in 9,659 on the final binary, `run3/fs`; a gcroot in `q827/dump1`, stock on the unchanged build, of 15 of its 683 arrays of 30 KB or more, 118 MB): the ground's kept pixels, 33 MB
-  (gone with Q829: a changed tile is written in the texture on the card, the pixels kept only at four bits a channel), the sound banks' compressed bytes (the park's music bank 33 MB and another 10 MB, kept by design:
-  `SoundBank._encoded`), and the WAD archives, whose files Q828 no longer holds (22.7 MB gone) and whose entries Q830 keeps only from their second ask and Q831 counts from the level's start (`mem wads`: 75 entries, **1.9 MB** stock;
-  168 and 3.1 MB Full Simulation; was 11.7 and 15.2). What is left, each measured before and after as Q954, Q827, Q828, Q829 and Q830 did: `Refpack`'s growing list and its copy are Q836's (the decode writes once into an array of the declared size;
-  the lobby's and a stock park's 1,247 reads take 114 to 130 ms where they took 388 to 406).
-  Textures loaded by path are kept for the life of the process, and Q832 measured what that costs and buys (see its entry in `docs/history/queue-done.md`): after a park the lobby holds 337 more textures, 13.5 MB on the card, and a park entered again loads in 3.1 s against 5.0 s; kept by design, `docs/DECISIONS.md`. NeoVeldrid's Vulkan chunks and its staging pool are read and settled by Q834 (`docs/DECISIONS.md`, "NeoVeldrid's memory": the library never gives a chunk back, the desk's three chunks are 384 MB for the whole run, and the 37.3 MB staging pool its first park leaves is Q835). Q830's saving lasted one park load (the ask counts were never reset): Q831 resets them, and frees the kept entries, at each level's end.
-  Also left by Q829: the load's `Lay` (730 ms of the park's 5 s load, the 33 MB built once and handed to the card) and, at four bits a channel (`graphics faithful`), a path laid still makes the whole texture again, 140 to 167 ms (`CutLevels` over the box).
-- [ ] **Q835. Trim NeoVeldrid's staging pool after a park (Q834's find): 37.3 MB of staging textures kept for the device's life.** The pool (`VkGraphicsDevice._availableStagingTextures`) holds 5.4 MB in the fresh lobby and 37.3 MB (9
-  textures) after the first park on the desk, 35.8 MB (3) under lavapipe, host-visible memory (the mapped chunks' used bytes rise by the same), and the library gives none of it back (`docs/DECISIONS.md`, "NeoVeldrid's memory"). Measure what a trim
-  would save where device memory is process memory (`OFFSCREEN=1`, `lib/roundtrip.py`'s `mem vulkan` and resident size) before building anything: predict first (VmRSS in the lobby after a park falls by about the pool's growth, 30 MB, at most). Ways: a
-  trim of the pool at a level's end by reflection (takes the library's `_stagingResourcesLock`, disposes the textures not in `_submittedStagingTextures`; fragile across an upgrade, which `VulkanMemoryTests` already guards by name), or uploading a
-  large texture without a staging texture. Decide in `docs/DECISIONS.md` from the figures; the park's next load re-makes the pool (the second park's load time must not move). (Filed by Q834.)
-- [ ] **Q833. A trip to the park and back leaves a little each time: about one texture and 10 MB of managed heap (Q832's find).** Q832's four trips (`q832/runs/final-2`, `final-3`; stock park, `mem gc` then `mem compact`
-  at each stage): the lobby's textures 583, 584, 586, 587 (6 new and 2 gone from the first return to the fourth: three `21x11` textures, one more at every lobby entry and none at a park entry, which nothing deletes, maker not yet found (a `UiText` is the likely kind); and the `Cpic` cursor, one of about 20 pictures in `/data/ui/cursors/` loaded by path, so a plateau, not a leak. The two `Stream` textures, remade at every stage, are not part of the creep; the
-  console's `assets list` names them and `lib/assetdiff.py` counts them), its resident size 346, 362, 369, 374 MB (final-2: 342, 355, 369, 366), the managed heap committed 75.7 MB in the fresh lobby and 95.4 and
-  106.4 MB after the first and second return though the managed total falls (75.4, 69.1, 59.0 MB: the fragmented figure 0.3, 16.9, 27.7 MB, so what stands between the live objects is not given back, and whatever
-  pins it is not found), and the park's peak 485, 501, 501, 506 MB. The steps shrink (+16, +7, +5), so this may be a plateau; the question is where it ends and what pins the heap. Do first: ten trips, to see
-  whether the lobby's resident size stops, and a `dotnet-dump` pinned census at the third return (`roundtrip.py DUMP=1`, which keeps the .dmp under `~/.cache/dn-tmp`; run `gcroot` on it by hand, it needs an object address); then the `21x11`'s owner (origin-tag the textures' makers). Measure before and after; do not release the textures of Q832's decision (the park's load needs them).
-- [ ] **Q959. Re-measure a release of the path textures at a level's end (Q832's decision rests on a wrong reason).** Q832 kept
-  the textures loaded by path for the life of the process, saying a release would not lower the park's peak; its probe refused
-  cache hits and released nothing, and VmHWM is CPU memory, which does not count the textures. The lobby's 234 textures alive in
-  the park (the 135 lobby/terrain ones 6.9 MB with mips, up to 8.6 MB with the interface's and the advisor's) are video memory, or
-  system memory under lavapipe or integrated graphics. Build a probe (never committed) that `Delete`s every texture registered by
-  path at `Level.Unload`, the lobby's end included, and clears the eleven statics that hold textures (`UiMesh.Loaded` and
-  `_blank`, `UiMeter.Skins`, `ParkShopWindow.Loaded`, `ParkObjectWindow.Skins`, `_green` and `_red`, the three `_highlight`s,
-  `ParkFootprintPicture._textures`). Run `tools/harness/lib/roundtrip.py` with `TRIPS=1 OFFSCREEN=1` (lavapipe, where device
-  memory is process memory) on it and on the unchanged binary, on the same display. Predict first: park1's `mem gpu` Texture
-  account falls by 6.9 to 8.6 MB from 108.8 MB, VmHWM falls by about as much, `mem vulkan` (204.5 MB) falls by less or not at all
-  (the pool may reuse the space); the second park loads in about 4.8 to 5.0 s against 3.1 s. Add `memmap.drm` vram on the desk if
-  wanted. Decide the keep or release in `docs/DECISIONS.md` from the figures (about 1.75 s a re-entry against the saving). (Filed by the Sentinel from the run 15 review of Q832, VERIFY-2.)
+**Ordered at Alexah's word (2026-10-30, later):** the memory work is done (Q954 and its pieces Q827-Q832, Q834, Q836);
+its leftovers Q826, Q835, Q833 and Q959 move to the end of this section, and Q820 is first again, then the rest in the
+order below. Memory and frame time are checked before each weekly build instead (`WORKFLOW.md`, the Sunday routine, step
+0).
+
 - [ ] **Q820. What Q818, Q821 and Q822 left: the stacked and loop pylons, the original's picture of a flipped diagonal, and the heights by the original's samplers.** From Q818 (run 14, lane A;
   its piece (3), the face normals and the control word, is Q819; its piece (1), the ground's per-cell diagonal, is Q821, which ticks Q398; the decode
   of piece (4) and the float note are Q822). (2) Left by Q817: the pylon under a stacked piece is drawn with the alone-on-its-cell arms (the bottom of a stack that is not its top shows the `0x400` node and hides the `0x800` one, `0x00432ff8`..`0x0043304d`; ours hides `mc_bridge` on it); a stacked pylon stands on the
@@ -2267,6 +2241,37 @@ filed the items that cite it.
   culling frustum each frame (`park-engine.md`, `FUN_0056bb00`, row near line 865): decode what it culls and by what bounds (whole
   object, node, sprite), then cull the same, keeping the draw order. Confirm: the census of drawn models at a few cameras against
   the original's, frames before and after the same, frame time measured. (Q613 is back-face culling, a different thing.)
+- [ ] **Q826. What Q954, Q827, Q828, Q829 and Q830 left: textures kept by path, and NeoVeldrid's chunks.** The managed heap's `Byte[]` was 145.6 MB (9,624
+  objects, `q827/run2/fs/heapstat.txt`, Full Simulation; 145.7 MB in 9,659 on the final binary, `run3/fs`; a gcroot in `q827/dump1`, stock on the unchanged build, of 15 of its 683 arrays of 30 KB or more, 118 MB): the ground's kept pixels, 33 MB
+  (gone with Q829: a changed tile is written in the texture on the card, the pixels kept only at four bits a channel), the sound banks' compressed bytes (the park's music bank 33 MB and another 10 MB, kept by design:
+  `SoundBank._encoded`), and the WAD archives, whose files Q828 no longer holds (22.7 MB gone) and whose entries Q830 keeps only from their second ask and Q831 counts from the level's start (`mem wads`: 75 entries, **1.9 MB** stock;
+  168 and 3.1 MB Full Simulation; was 11.7 and 15.2). What is left, each measured before and after as Q954, Q827, Q828, Q829 and Q830 did: `Refpack`'s growing list and its copy are Q836's (the decode writes once into an array of the declared size;
+  the lobby's and a stock park's 1,247 reads take 114 to 130 ms where they took 388 to 406).
+  Textures loaded by path are kept for the life of the process, and Q832 measured what that costs and buys (see its entry in `docs/history/queue-done.md`): after a park the lobby holds 337 more textures, 13.5 MB on the card, and a park entered again loads in 3.1 s against 5.0 s; kept by design, `docs/DECISIONS.md`. NeoVeldrid's Vulkan chunks and its staging pool are read and settled by Q834 (`docs/DECISIONS.md`, "NeoVeldrid's memory": the library never gives a chunk back, the desk's three chunks are 384 MB for the whole run, and the 37.3 MB staging pool its first park leaves is Q835). Q830's saving lasted one park load (the ask counts were never reset): Q831 resets them, and frees the kept entries, at each level's end.
+  Also left by Q829: the load's `Lay` (730 ms of the park's 5 s load, the 33 MB built once and handed to the card) and, at four bits a channel (`graphics faithful`), a path laid still makes the whole texture again, 140 to 167 ms (`CutLevels` over the box).
+- [ ] **Q835. Trim NeoVeldrid's staging pool after a park (Q834's find): 37.3 MB of staging textures kept for the device's life.** The pool (`VkGraphicsDevice._availableStagingTextures`) holds 5.4 MB in the fresh lobby and 37.3 MB (9
+  textures) after the first park on the desk, 35.8 MB (3) under lavapipe, host-visible memory (the mapped chunks' used bytes rise by the same), and the library gives none of it back (`docs/DECISIONS.md`, "NeoVeldrid's memory"). Measure what a trim
+  would save where device memory is process memory (`OFFSCREEN=1`, `lib/roundtrip.py`'s `mem vulkan` and resident size) before building anything: predict first (VmRSS in the lobby after a park falls by about the pool's growth, 30 MB, at most). Ways: a
+  trim of the pool at a level's end by reflection (takes the library's `_stagingResourcesLock`, disposes the textures not in `_submittedStagingTextures`; fragile across an upgrade, which `VulkanMemoryTests` already guards by name), or uploading a
+  large texture without a staging texture. Decide in `docs/DECISIONS.md` from the figures; the park's next load re-makes the pool (the second park's load time must not move). (Filed by Q834.)
+- [ ] **Q833. A trip to the park and back leaves a little each time: about one texture and 10 MB of managed heap (Q832's find).** Q832's four trips (`q832/runs/final-2`, `final-3`; stock park, `mem gc` then `mem compact`
+  at each stage): the lobby's textures 583, 584, 586, 587 (6 new and 2 gone from the first return to the fourth: three `21x11` textures, one more at every lobby entry and none at a park entry, which nothing deletes, maker not yet found (a `UiText` is the likely kind); and the `Cpic` cursor, one of about 20 pictures in `/data/ui/cursors/` loaded by path, so a plateau, not a leak. The two `Stream` textures, remade at every stage, are not part of the creep; the
+  console's `assets list` names them and `lib/assetdiff.py` counts them), its resident size 346, 362, 369, 374 MB (final-2: 342, 355, 369, 366), the managed heap committed 75.7 MB in the fresh lobby and 95.4 and
+  106.4 MB after the first and second return though the managed total falls (75.4, 69.1, 59.0 MB: the fragmented figure 0.3, 16.9, 27.7 MB, so what stands between the live objects is not given back, and whatever
+  pins it is not found), and the park's peak 485, 501, 501, 506 MB. The steps shrink (+16, +7, +5), so this may be a plateau; the question is where it ends and what pins the heap. Do first: ten trips, to see
+  whether the lobby's resident size stops, and a `dotnet-dump` pinned census at the third return (`roundtrip.py DUMP=1`, which keeps the .dmp under `~/.cache/dn-tmp`; run `gcroot` on it by hand, it needs an object address); then the `21x11`'s owner (origin-tag the textures' makers). Measure before and after; do not release the textures of Q832's decision (the park's load needs them).
+- [ ] **Q959. Re-measure a release of the path textures at a level's end (Q832's decision rests on a wrong reason).** Q832 kept
+  the textures loaded by path for the life of the process, saying a release would not lower the park's peak; its probe refused
+  cache hits and released nothing, and VmHWM is CPU memory, which does not count the textures. The lobby's 234 textures alive in
+  the park (the 135 lobby/terrain ones 6.9 MB with mips, up to 8.6 MB with the interface's and the advisor's) are video memory, or
+  system memory under lavapipe or integrated graphics. Build a probe (never committed) that `Delete`s every texture registered by
+  path at `Level.Unload`, the lobby's end included, and clears the eleven statics that hold textures (`UiMesh.Loaded` and
+  `_blank`, `UiMeter.Skins`, `ParkShopWindow.Loaded`, `ParkObjectWindow.Skins`, `_green` and `_red`, the three `_highlight`s,
+  `ParkFootprintPicture._textures`). Run `tools/harness/lib/roundtrip.py` with `TRIPS=1 OFFSCREEN=1` (lavapipe, where device
+  memory is process memory) on it and on the unchanged binary, on the same display. Predict first: park1's `mem gpu` Texture
+  account falls by 6.9 to 8.6 MB from 108.8 MB, VmHWM falls by about as much, `mem vulkan` (204.5 MB) falls by less or not at all
+  (the pool may reuse the space); the second park loads in about 4.8 to 5.0 s against 3.1 s. Add `memmap.drm` vram on the desk if
+  wanted. Decide the keep or release in `docs/DECISIONS.md` from the figures (about 1.75 s a re-entry against the saving). (Filed by the Sentinel from the run 15 review of Q832, VERIFY-2.)
 
 ## B. Docs and comments
 
