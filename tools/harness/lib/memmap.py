@@ -79,12 +79,12 @@ def drm( pid ):
 	return out
 
 
-def report( pid, tag, top=12 ):
+def report( pid, tag, top=12, out=print ):
 	s = status( pid )
-	print( f"== memory {tag}: VmRSS {s.get( 'VmRSS', 0 ) / 1048576:.2f} GB (anon {s.get( 'RssAnon', 0 ) / 1048576:.2f}, file {s.get( 'RssFile', 0 ) / 1048576:.2f}, "
+	out( f"== memory {tag}: VmRSS {s.get( 'VmRSS', 0 ) / 1048576:.2f} GB (anon {s.get( 'RssAnon', 0 ) / 1048576:.2f}, file {s.get( 'RssFile', 0 ) / 1048576:.2f}, "
 		+ f"shmem {s.get( 'RssShmem', 0 ) / 1048576:.2f}), VmHWM {s.get( 'VmHWM', 0 ) / 1048576:.2f} GB" )
 	g = drm( pid )
 	if g:
-		print( "   drm fdinfo: " + ", ".join( f"{k} {v / 1048576:.2f} GB" for k, v in sorted( g.items() ) ) )
+		out( "   drm fdinfo: " + ", ".join( f"{k} {v / 1048576:.2f} GB" for k, v in sorted( g.items() ) ) )
 	for n, rss, priv, cnt in by_mapping( pid )[:top]:
-		print( f"   {rss / 1024:9.1f} MB rss {priv / 1024:9.1f} MB private-dirty  x{cnt:<4} {n[:90]}" )
+		out( f"   {rss / 1024:9.1f} MB rss {priv / 1024:9.1f} MB private-dirty  x{cnt:<4} {n[:90]}" )

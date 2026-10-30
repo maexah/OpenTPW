@@ -18,7 +18,7 @@ import memmap
 COPY = os.path.join(JUNGLE, "memrun-fs.TPWS")
 
 def stage(tag):
-    memmap.report(game.pid, tag)
+    memmap.report(game.pid, tag, out=print)   # parkrun's print: the block lands in confirm.txt
     for c in ("mem gc", "mem compact", "stats"):
         for l in reply(c, 1.5, 0): print("  " + l)
 

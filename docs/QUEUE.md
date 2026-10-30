@@ -2227,14 +2227,14 @@ filed the items that cite it.
   scan in `Shader.Cache.cs:12`) over a Full Simulation park's turnover before changing it. Also `ParkGuestSprites.cs:859`: a new
   `Vector3[4]` per drawn shadow per frame (debug data; STATUS names "the shadow arrays"). Direction: buffers with spare room that
   grow when needed. Fidelity first: the crowd drawn the same (a frame), the census the same.
-- [ ] **Q957. A shader recompile leaks its GPU objects and freezes the materials' uniforms.** From an outside audit (Alexah,
-  2026-10-30), checked against `8a566e88` (`VERIFY-gpt-perf.md`, P6, P2). Each shader has a `FileSystemWatcher` in every build
-  (`Shader.cs:44-58`); `Recompile` (`:79-87`) replaces the vertex/fragment shaders without disposing them, and each material's
-  `SetupResources` (`Material.cs:490-532`) overwrites `Pipeline` and `ScratchBuffer` without disposal. Worse: after a recompile
-  `Set<T>` (`:218-223`) writes the new uniform buffer but never marks the sets dirty, so the cached sets bind the old one and
-  those draws run on uniforms frozen at the reload; `_resourceLayouts ??=` (`:503`) keeps the old layouts if the bindings changed.
-  Noted 2026-09-14 (`docs/history/current-task-archive.md:4892`) and never filed. Q954 changed how pipelines are owned (shared):
-  read it there first. Decide whether a shipped build should watch shader files at all (a player never edits them; a deviation
+- [ ] **Q957. A shader recompile leaks the old compiled shaders.** From an outside audit (Alexah,
+  2026-10-30), checked against `8a566e88` (`VERIFY-gpt-perf.md`, P6, P2); the text is corrected to the code at `3bc9708e` (Q954). Each
+  shader has a `FileSystemWatcher` in every build (`Shader.cs:44-58`); `Recompile` (`:79-87`) replaces the vertex/fragment shaders
+  without disposing them. Q954 already made `Material.SetupResources` swap the shared pipeline and layouts on a recompile, mark the
+  resource sets dirty and bump the bindings (so the frozen-uniform and the `_resourceLayouts ??=` claims are fixed), and the old
+  pipeline is disposed with its last user; the old `ScratchBuffer` is disposed by the review fixes of run 15. What is left: the
+  old compiled shaders are not disposed, and a recompile that is never run was not tested at all (Q954 ran none).
+  Noted 2026-09-14 (`docs/history/current-task-archive.md:4892`) and never filed. Decide whether a shipped build should watch shader files at all (a player never edits them; a deviation
   from nothing in the original), and if it does, dispose and rebind. One more, UNSETTLED: `VkResourceLayout.Dispose` is immediate
   in NeoVeldrid 1.2.1 while sets and pipelines are freed after the frame's fence, so `Material.Delete` may destroy a layout a set
   in flight still uses; one run under the Vulkan validation layer settles it.

@@ -551,8 +551,8 @@ public static class ParkPicking
 
 	/// <summary>
 	/// Where the ray's line meets the land, by the original's two planes a cell (<see cref="ParkPickGround"/>). Answers false where
-	/// none of the heightfield's cells the line covers is met - pointing at the sky, past its last column or row, or over the sea
-	/// before its first: the original's terrain test walks only the heightfield's cells.
+	/// none of the heightfield's cells the line covers is met - past its last column or row, over the sea before its first, or straight
+	/// up: a ray aimed above the horizon meets the land behind the eye, as the original's does.
 	/// </summary>
 	internal static bool MeetGround( HeightfieldFile field, Vector3 from, Vector3 direction, out Vector3 hit )
 		=> ParkPickGround.Meet( field, from, direction, out hit );

@@ -3,7 +3,7 @@
 (default 10) reads FUN_00519410/FUN_00519420's globals 0x00785584 and 0x00785588 (a person's particle's offset, FUN_004fa470),
 [0x00790abc] and [0x007908f4] (the camcorder's further term, 0x0042c9b8), and the sprite table 0x007b49f0 (count 0x007b49f4):
 a histogram of each sprite's +0xc4 drawing flags by kind (+0xac), and the place (+0x88/+0x8c/+0x90) of each sprite carrying
-0x1000000, which FUN_00542010 (0x005420ae) stands at +0x8c itself. Prints every distinct reading once and a summary."""
+0x1000000, which FUN_00542010 (0x005420af) stands at +0x8c itself. Prints every distinct reading once and a summary."""
 import struct, sys, time
 from collections import Counter
 pid = int(sys.argv[1]); secs = float(sys.argv[2]) if len(sys.argv) > 2 else 10.0

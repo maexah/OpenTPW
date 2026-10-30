@@ -44,6 +44,8 @@ internal static class ParkPickGround
 			{
 				var left = field.OriginX + (sizeX * cx);
 				var right = left + sizeX;
+				// The original bounds the hit's z with the x spacing (0x0045c789); the y spacing here differs only where a heightfield is
+				// not square, and every shipped one is 10 x 10 (park-engine.md, "The pick's terrain").
 				var near = field.OriginY + (sizeY * cy);
 				var far = near + sizeY;
 

@@ -241,7 +241,7 @@ public class ParkPickingTests
 	/// <b>The pick meets the land as the original's two planes a cell</b> (<c>FUN_0045bf90</c>, <c>0x0045c6b7</c>): in a valley cell, in
 	/// either cut and either triangle, a ray aimed at the drawn ground meets it; in a ridge cell it meets the other triangle's plane
 	/// carried over the half it was aimed at, above the drawn ground by that plane's rise (solved here by the plane's gradient, not
-	/// the picker's normal), where the bilinear march it replaces lands on the ground.
+	/// the picker's normal).
 	/// </summary>
 	/// <remarks><b>Mutations:</b> the diagonal flag read the wrong way round; the nearest hit replaced by the first or the last; the
 	/// distance taken without its sign; the cell's square not bounding the plane's hit.</remarks>

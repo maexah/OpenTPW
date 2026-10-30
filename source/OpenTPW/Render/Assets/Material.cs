@@ -146,9 +146,9 @@ public partial class Material : Asset
 	/// progress is done with it.
 	///
 	/// <para>
-	/// <b>Only what it owns.</b> Its layouts and its resource sets are minted here from the shader's
-	/// descriptions - see <see cref="CreateResourceLayouts"/> - so they belong to this material and
-	/// nothing else holds them. Three things it holds are <i>not</i> its: the <see cref="Shader"/>,
+	/// <b>Only what it owns.</b> Its resource sets, uniform blocks and scratch buffer are its own. Its pipeline and
+	/// resource layouts (<see cref="CreateResourceLayouts"/>) are shared with every material of the same shaders and
+	/// flags (<see cref="SharedPipeline"/>), and are disposed here only when this was their last user. Three things it holds are <i>not</i> its: the <see cref="Shader"/>,
 	/// which is cached by path and shared by every material drawn with it; the samplers, which are one
 	/// static set for the whole program; and the textures bound into its resource sets, which are
 	/// cached by path and shared - disposing a resource set does not touch what the set binds, which is
@@ -168,6 +168,10 @@ public partial class Material : Asset
 			return;
 		}
 
+		// A second Delete must not take another user off the shared pipeline
+		if ( _shared == null )
+			return;
+
 		Shader.OnRecompile -= _onShaderRecompiled;
 
 		All.Remove( this );
@@ -175,7 +179,9 @@ public partial class Material : Asset
 		// Read out before the queue runs, so what is disposed is what this material held when it was
 		// deleted rather than whatever it might be left pointing at.
 		var scratch = ScratchBuffer;
-		var lastUser = ReleaseShared( _shared ) ? _shared!.Value : null;
+		var shared = _shared;
+		_shared = null;
+		var lastUser = ReleaseShared( shared ) ? shared!.Value : null;
 		var sets = _cachedResourceSets;
 		var rounds = _frameBlocks;
 
@@ -489,8 +495,8 @@ public partial class Material : Asset
 
 	/// <summary>
 	/// A pipeline and the resource layouts it was made with, shared by every material that draws with the same shader program
-	/// and flags (Q954). A model builds its own material, so a park of 1,031 models made 1,031 pipelines of 20-odd distinct
-	/// states; the software Vulkan driver (lavapipe) keeps several megabytes of compiled-shader state for each, 6 GB in all.
+	/// and flags (Q954). A model builds its own material, so a park of 1,031 models made 1,033 pipelines (their materials and the two
+	/// static ones) of 13 distinct states; the software Vulkan driver (lavapipe) keeps several megabytes of compiled-shader state for each, 6 GB in all.
 	/// What a pipeline is made of is only the shader, the flags, the vertex layout, the blend, depth and rasterizer states they
 	/// choose and the output description: nothing here is a material's own.
 	/// </summary>
@@ -509,14 +515,22 @@ public partial class Material : Asset
 		}
 	}
 
-	private static readonly SharedCache<(NeoVeldrid.Shader Vertex, NeoVeldrid.Shader Fragment, MaterialFlags Flags), SharedPipeline> _sharedPipelines = new();
+	/// <summary>
+	/// The cache is in a class of its own so that it is made on first use, whichever part of <see cref="Material"/> builds a static
+	/// material first (<see cref="UI"/> and <see cref="Default"/> are in another file, and C# leaves the order of a partial class's
+	/// static initializers unspecified).
+	/// </summary>
+	private static class Pipelines
+	{
+		internal static readonly SharedCache<PipelineKey, SharedPipeline> Cache = new();
+	}
 
-	private SharedCache<(NeoVeldrid.Shader Vertex, NeoVeldrid.Shader Fragment, MaterialFlags Flags), SharedPipeline>.Entry? _shared;
+	private SharedCache<PipelineKey, SharedPipeline>.Entry? _shared;
 
 	/// <summary>Takes one user off <paramref name="shared"/>; true when it was the last, and the caller is to dispose it once the frame is done.</summary>
-	private static bool ReleaseShared( SharedCache<(NeoVeldrid.Shader Vertex, NeoVeldrid.Shader Fragment, MaterialFlags Flags), SharedPipeline>.Entry? shared )
+	private static bool ReleaseShared( SharedCache<PipelineKey, SharedPipeline>.Entry? shared )
 	{
-		if ( !_sharedPipelines.Release( shared ) )
+		if ( !Pipelines.Cache.Release( shared ) )
 			return false;
 
 		GpuMemory.Remove( GpuMemory.Kind.Pipeline, 0 );
@@ -536,12 +550,12 @@ public partial class Material : Asset
 		// Share the pipeline and its resource layouts with every material that would build the same ones
 		//
 		var program = Shader.ShaderProgram;
-		var key = (program[0], program[1], flags);
+		var key = PipelineKey.For( program[0], program[1], flags );
 
-		var count = _sharedPipelines.Count;
-		var shared = _sharedPipelines.Acquire( key, CreateSharedPipeline );
+		var count = Pipelines.Cache.Count;
+		var shared = Pipelines.Cache.Acquire( key, CreateSharedPipeline );
 
-		if ( _sharedPipelines.Count != count )
+		if ( Pipelines.Cache.Count != count )
 			GpuMemory.Add( GpuMemory.Kind.Pipeline, 0 );
 
 		var previous = _shared;
@@ -559,12 +573,19 @@ public partial class Material : Asset
 				Render.ScheduleDelete( previous.Value.Dispose );
 		}
 
+		// A recompile makes a new scratch buffer: the old one goes once the frame is done with it
+		if ( previous != null && ScratchBuffer is { } oldScratch )
+		{
+			GpuMemory.Remove( GpuMemory.Kind.UniformBuffer, oldScratch.SizeInBytes );
+			Render.ScheduleDelete( oldScratch.Dispose );
+		}
+
 		var bufferDescription = new BufferDescription( 16 * 128, BufferUsage.UniformBuffer | BufferUsage.Dynamic );
 		ScratchBuffer = Device.ResourceFactory.CreateBuffer( bufferDescription );
 		GpuMemory.Add( GpuMemory.Kind.UniformBuffer, bufferDescription.SizeInBytes );
 	}
 
-	private SharedPipeline CreateSharedPipeline( (NeoVeldrid.Shader Vertex, NeoVeldrid.Shader Fragment, MaterialFlags Flags) key )
+	private SharedPipeline CreateSharedPipeline( PipelineKey key )
 	{
 		var flags = key.Flags;
 		var vertexLayout = new VertexLayoutDescription( Vertex.VertexElementDescriptions );
@@ -586,7 +607,7 @@ public partial class Material : Asset
 
 			PrimitiveTopology = PrimitiveTopology.TriangleList,
 			ResourceLayouts = [.. layouts],
-			ShaderSet = new ShaderSetDescription( [vertexLayout], [key.Vertex, key.Fragment] ),
+			ShaderSet = new ShaderSetDescription( [vertexLayout], [(NeoVeldrid.Shader)key.Vertex, (NeoVeldrid.Shader)key.Fragment] ),
 			Outputs = Render.MultisampledFramebuffer.OutputDescription
 		};
 
