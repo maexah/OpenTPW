@@ -17,11 +17,9 @@ namespace OpenTPW;
 /// </para>
 ///
 /// <para>
-/// <b>A declared deviation: this marches and refines where the original intersects triangles.</b> The
-/// step is a quarter of a cell and the crossing is then bisected, which lands the hit well inside the
-/// cell it belongs to - the cell is the answer, and a hit anywhere in it gives the same one. Testing
-/// two triangles per cell would be more faithful and is what to write if the sub-cell position ever
-/// starts mattering (it would, for a ride that has to sit on a slope).
+/// <b>The terrain is the original's two planes a cell</b> (<see cref="ParkPickGround"/>): each cell's triangles cut by its
+/// <c>0x2</c>, a plane's hit counting anywhere in the cell's square, the nearest kept - so where a cell folds into a ridge
+/// the pick lands where the original's does, above the drawn ground.
 /// </para>
 ///
 /// <para>
@@ -95,19 +93,6 @@ public static class ParkPicking
 
 		return true;
 	}
-
-	/// <summary>How far along the ray to look before giving up, in world units.</summary>
-	/// <remarks>
-	/// The park is 128 cells of ten units and the camera sits between 70 and 130 units out, so a ray
-	/// that has travelled four thousand units either left the map or is running along the sky.
-	/// </remarks>
-	private const float Reach = 4000f;
-
-	/// <summary>How far each step of the march goes, as a fraction of a cell.</summary>
-	private const float StepOfACell = 0.25f;
-
-	/// <summary>How many times the crossing is halved once the march has straddled the ground.</summary>
-	private const int Refinements = 12;
 
 	/// <summary>
 	/// Works out what the pointer is over, once a frame.
@@ -565,89 +550,12 @@ public static class ParkPicking
 			(a.X * b.Y) - (a.Y * b.X) );
 
 	/// <summary>
-	/// Walks the ray forward across the heightfield until it passes below the ground, then halves the crossing to find
-	/// where. Answers false where the ray never meets the land inside the heightfield - pointing at the sky, past its last
-	/// column or row, or over the sea before its first: the original's terrain test walks only the heightfield's cells.
+	/// Where the ray's line meets the land, by the original's two planes a cell (<see cref="ParkPickGround"/>). Answers false where
+	/// none of the heightfield's cells the line covers is met - pointing at the sky, past its last column or row, or over the sea
+	/// before its first: the original's terrain test walks only the heightfield's cells.
 	/// </summary>
 	internal static bool MeetGround( HeightfieldFile field, Vector3 from, Vector3 direction, out Vector3 hit )
-	{
-		hit = default;
-
-		var step = MathF.Min( field.CellSizeX, field.CellSizeY ) * StepOfACell;
-
-		if ( step <= 0f )
-			return false;
-
-		var (enter, leave) = (0f, Reach);
-
-		if ( !Slab( from.X, direction.X, field.OriginX, field.OriginX + (field.CellsX * field.CellSizeX), ref enter, ref leave )
-			|| !Slab( from.Y, direction.Y, field.OriginY, field.OriginY + (field.CellsY * field.CellSizeY), ref enter, ref leave ) )
-			return false;
-
-		var previous = from + (direction * enter);
-		var wasAbove = previous.Z >= Ground( field, previous );
-
-		for ( var travelled = enter; travelled < leave; )
-		{
-			travelled = MathF.Min( travelled + step, leave );
-
-			var at = from + (direction * travelled);
-			var above = at.Z >= Ground( field, at );
-
-			// Above then below is the crossing. Starting below the ground - which the camera never is -
-			// would otherwise report the first step as a hit.
-			if ( wasAbove && !above )
-			{
-				hit = Bisect( field, previous, at );
-				return true;
-			}
-
-			previous = at;
-			wasAbove = above;
-		}
-
-		return false;
-	}
-
-	/// <summary>Narrows the ray's stretch <paramref name="enter"/> to <paramref name="leave"/> to where one coordinate lies
-	/// between <paramref name="low"/> and <paramref name="high"/>; false where none of it does.</summary>
-	private static bool Slab( float from, float along, float low, float high, ref float enter, ref float leave )
-	{
-		if ( MathF.Abs( along ) < 1e-6f )
-			return from >= low && from <= high;
-
-		var (near, far) = ((low - from) / along, (high - from) / along);
-
-		if ( near > far )
-			(near, far) = (far, near);
-
-		enter = MathF.Max( enter, near );
-		leave = MathF.Min( leave, far );
-
-		return enter <= leave;
-	}
-
-	/// <summary>The land under a world position inside the heightfield, which is all <see cref="MeetGround"/> asks.
-	/// <b>A deviation:</b> the bilinear height, where the original intersects the ray with the two planes of each cell cut by its flag
-	/// <c>0x2</c>, a plane's hit counting anywhere in the cell's square (<c>FUN_0045bf90</c>, <c>0x0045c6b7</c>; <c>docs/exe/park-engine.md</c>,
-	/// "Which height each asker takes"). On the ground the two differ by at most 0.25.</summary>
-	private static float Ground( HeightfieldFile field, Vector3 at )
-		=> field.HeightAtWorld( at.X, at.Y );
-
-	private static Vector3 Bisect( HeightfieldFile field, Vector3 above, Vector3 below )
-	{
-		for ( var i = 0; i < Refinements; ++i )
-		{
-			var middle = (above + below) * 0.5f;
-
-			if ( middle.Z >= Ground( field, middle ) )
-				above = middle;
-			else
-				below = middle;
-		}
-
-		return (above + below) * 0.5f;
-	}
+		=> ParkPickGround.Meet( field, from, direction, out hit );
 
 	/// <summary>
 	/// A one-line summary for the debug console. The cell is printed both packed and as a pair,
@@ -682,6 +590,7 @@ public static class ParkPicking
 
 		return $"pick: cell ({cellX},{cellY}) packed {answer.Cell} " +
 			$"world ({answer.World.X:F1},{answer.World.Y:F1},{answer.World.Z:F1}) " +
+			$"exact ({answer.World.X:F3},{answer.World.Y:F3},{answer.World.Z:F3}) " +
 			$"standing {occupant} object {placed} latched {answer.Latched}{(answer.Met ? "" : " (nothing met: the last cell stands)")}" +
 			$"{(answer.Marched != 0 ? $" marched thing {answer.Marched}" : "")} - " +
 			$"{asked} {size}";

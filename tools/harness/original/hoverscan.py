@@ -10,7 +10,7 @@ the default). With `click` it presses there at once (0.2 s held: a few seconds o
 the click keeps: the person [0x007c2650] (FUN_0048c920) and the object [0x007c2654] (FUN_0048c930), each as a thing id.
 Each line: the point, the category, the cell (x,y), the person as id and kind. Read-only apart from the pointer and the
 one click; exits 1 when no point matched.
-With `pick` (Q494) each line also gives the picker's point P [0x007a1c70] (x, height, z) and the model record the
+With `pick` (Q494) each line also gives (`exact`, Q824: to three places instead of one) the picker's point P [0x007a1c70] (x, height, z) and the model record the
 object march met [0x007a1cd4] as its handle in the table at 0x007a4610 (0: the ground answered; park-engine.md, "The
 picker's object march").
 Default grid: 220..1000 by 40 across, 120..680 by 40 down (off the gadget and the money)."""
@@ -18,6 +18,7 @@ import os, struct, subprocess, sys, time
 pid = int(sys.argv[1]); cats = {int(c) for c in sys.argv[2].split(',')}
 want = next((a for a in sys.argv[3:] if a in ('person', 'noperson', 'any')), 'any'); click = 'click' in sys.argv[3:]
 pick = 'pick' in sys.argv[3:]
+places = 3 if 'exact' in sys.argv[3:] else 1
 grid = (220, 1000, 40, 120, 680, 40)
 if 'grid' in sys.argv: grid = tuple(int(v) for v in sys.argv[sys.argv.index('grid') + 1].split(','))
 disp = os.environ.get('DISPLAY', ':77')
@@ -38,7 +39,7 @@ def handle(rec):
 def picked():
     if not pick: return ''
     px, py, pz = rd(0x007a1c70, 'f'), rd(0x007a1c74, 'f'), rd(0x007a1c78, 'f')
-    return f' P ({px:.1f},{py:.1f},{pz:.1f}) met {handle(rd(0x007a1cd4))}'
+    return f' P ({px:.{places}f},{py:.{places}f},{pz:.{places}f}) met {handle(rd(0x007a1cd4))}'
 def xdo(*a): subprocess.run(['xdotool', *a], env=dict(os.environ, DISPLAY=disp), check=False)
 def state(by):
     cat = rd(0x007c24f4); cell = rd(0x007b05cc, 'H'); p = rd(0x007b05ac)

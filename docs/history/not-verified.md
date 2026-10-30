@@ -5,6 +5,10 @@ newest first. The pre-commit hook (`tools/maintainer/status-sweep.py`) moves an 
 written above it. **Grep it by Q-number; never read it whole.** Each account is frozen at its item's date: a
 later item may have run what an earlier one lists as untested.
 
+- Q823 (Q820's piece (4): the heights by the original's samplers). Measured in the original: the stock park loaded (`original/livecells.sh`), its live heightfield's 8,160 cell words flag 589 cells `0x800`, the same cells as ours' load pass
+  (0 either side only; the first rule, Q822's text with the cross products made unit, read 566 and missed 23 holes). Measured in ours: the console's formulas (`ground`, `camcorder`) at two flagged cells read the original's values (24.0000, 17.1000;
+  the original's from Q822's earlier run); the eye as placed and its ease are read from the code only, and a test pins each caller's sampler at a bent unflagged point (677, 727). Not verified: the sprites', balloons' and markers' draws against the original's frames (no sprite or balloon census was taken; the frames show the first-person view,
+  not the sprites); the pick's planes (not built); the eye's further term (`[0x00790abc]`) and a person's particles' sampler (not decoded); the other three themes' load flags against the original (the rule is the same; Lost Kingdom only was read live).
 - Q822 (decode: which height the original asks at each of ours' `HeightAtWorld` users, `park-engine.md`, "Which height each asker takes"; and the float note at
   `ProceduralConform`; Q820's pieces (4) and (3)). Read in Ghidra and the disassembly: the camcorder's eye `FUN_00452560` + 5, every sprite and the build markers' wave
   `FUN_004527f0`, the pick two planes a cell by `0x2`. Measured in the original (`q822/orig/a-eyeprobe.out`, frame `a-A5-after-probe.png`, the stock park in first person):

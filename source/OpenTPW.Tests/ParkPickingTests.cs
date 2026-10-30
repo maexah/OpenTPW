@@ -173,4 +173,216 @@ public class ParkPickingTests
 		Assert.IsNull( ParkPicking.PlacedThing( state, 0 ), "nought is no thing" );
 		Assert.IsNull( ParkPicking.PlacedThing( state, objects.Max( o => o.ThingId ) + 1000 ), "a thing nobody placed" );
 	}
+
+	/// <summary>One triangle of a cell as the original cuts it: its three corners as (u, v, height), u across and v down the cell.</summary>
+	private static (float U, float V, float H)[] Triangle( HeightfieldFile field, int cellX, int cellY, bool diagonal, bool nearHalf )
+	{
+		(float U, float V, float H) Corner( int du, int dv ) => (du, dv, field.HeightAt( cellX + du, cellY + dv ));
+
+		// Cut from (x, y) to (x+1, y+1): c-d-a holds v >= u, b-a-d the rest. Cut from (x+1, y) to (x, y+1): a-b-c holds u + v <= 1, d-c-b the rest.
+		return (diagonal, nearHalf) switch
+		{
+			(false, true) => [Corner( 0, 0 ), Corner( 1, 0 ), Corner( 0, 1 )],
+			(false, false) => [Corner( 1, 1 ), Corner( 0, 1 ), Corner( 1, 0 )],
+			(true, true) => [Corner( 0, 1 ), Corner( 1, 1 ), Corner( 0, 0 )],
+			(true, false) => [Corner( 1, 0 ), Corner( 0, 0 ), Corner( 1, 1 )],
+		};
+	}
+
+	/// <summary>The height at (u, v) of the plane through three corners, solved by Cramer's rule rather than the picker's normal.</summary>
+	private static float PlaneAt( (float U, float V, float H)[] corner, float u, float v )
+	{
+		var (a, b, c) = (corner[0], corner[1], corner[2]);
+		var det = ((b.U - a.U) * (c.V - a.V)) - ((c.U - a.U) * (b.V - a.V));
+		var gradU = (((b.H - a.H) * (c.V - a.V)) - ((c.H - a.H) * (b.V - a.V))) / det;
+		var gradV = (((c.H - a.H) * (b.U - a.U)) - ((b.H - a.H) * (c.U - a.U))) / det;
+
+		return a.H + (gradU * (u - a.U)) + (gradV * (v - a.V));
+	}
+
+	/// <summary>
+	/// The first ground cell (no hole bit) cut the given way where, at (u, v) in its <paramref name="nearHalf"/> triangle, the other
+	/// triangle's plane carried over stands at least a fifth of a unit above (<paramref name="ridge"/>: the drawn ground is the lower
+	/// plane) or below (a valley: the drawn ground is the higher one).
+	/// </summary>
+	private (int X, int Y) FindCell( HeightfieldFile field, bool diagonal, bool nearHalf, bool ridge, float u, float v )
+	{
+		for ( var y = 0; y < field.CellsY; ++y )
+		{
+			for ( var x = 0; x < field.CellsX; ++x )
+			{
+				var word = field.FlagsAt( x, y );
+
+				if ( (word & 0x1) != 0 || ((word & 0x2) != 0) != diagonal )
+					continue;
+
+				var own = PlaneAt( Triangle( field, x, y, diagonal, nearHalf ), u, v );
+				var other = PlaneAt( Triangle( field, x, y, diagonal, !nearHalf ), u, v );
+
+				if ( ridge ? other - own >= 0.2f : own - other >= 0.2f )
+					return (x, y);
+			}
+		}
+
+		Assert.Fail( $"no cell cut diagonal {diagonal}, near half {nearHalf}, ridge {ridge}" );
+		return default;
+	}
+
+	/// <summary>An eye 60 up and 30 across and 15 down from a cell's point (u, v), the ray from it through the point on <paramref name="height"/>.</summary>
+	private static (Vector3 Eye, Vector3 Direction, Vector3 Aim) RayAt( HeightfieldFile field, (int X, int Y) cell, float u, float v, float height )
+	{
+		var aim = new Vector3( field.OriginX + ((cell.X + u) * field.CellSizeX), field.OriginY + ((cell.Y + v) * field.CellSizeY), height );
+		var eye = aim + new Vector3( 30f, 15f, 60f );
+
+		return (eye, Toward( eye, aim ), aim);
+	}
+
+	/// <summary>
+	/// <b>The pick meets the land as the original's two planes a cell</b> (<c>FUN_0045bf90</c>, <c>0x0045c6b7</c>): in a valley cell, in
+	/// either cut and either triangle, a ray aimed at the drawn ground meets it; in a ridge cell it meets the other triangle's plane
+	/// carried over the half it was aimed at, above the drawn ground by that plane's rise (solved here by the plane's gradient, not
+	/// the picker's normal), where the bilinear march it replaces lands on the ground.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the diagonal flag read the wrong way round; the nearest hit replaced by the first or the last; the
+	/// distance taken without its sign; the cell's square not bounding the plane's hit.</remarks>
+	[TestMethod]
+	public void ARidgeIsMetOnTheOtherTrianglesPlaneAndAValleyOnTheGround()
+	{
+		var field = Jungle();
+
+		foreach ( var diagonal in new[] { false, true } )
+		{
+			foreach ( var nearHalf in new[] { true, false } )
+			{
+				// A point off the diagonal in the half asked for, and off the line u = v, where the two legs of a triangle's plane would swap unseen.
+				var (u, v) = (diagonal, nearHalf) switch
+				{
+					(false, true) => (0.15f, 0.3f),
+					(false, false) => (0.85f, 0.6f),
+					(true, true) => (0.2f, 0.7f),
+					_ => (0.7f, 0.2f),
+				};
+
+				var label = $"diagonal {diagonal}, half {(nearHalf ? "near" : "far")}";
+
+				var valley = FindCell( field, diagonal, nearHalf, ridge: false, u, v );
+				var ground = PlaneAt( Triangle( field, valley.X, valley.Y, diagonal, nearHalf ), u, v );
+				var (eye, direction, aim) = RayAt( field, valley, u, v, ground );
+
+				Assert.IsTrue( ParkPicking.MeetGround( field, eye, direction, out var hit ), $"valley, {label}" );
+				Assert.AreEqual( aim.X, hit.X, 0.002f, $"valley x, {label}" );
+				Assert.AreEqual( aim.Y, hit.Y, 0.002f, $"valley y, {label}" );
+				Assert.AreEqual( ground, hit.Z, 0.002f, $"valley height, {label}" );
+
+				// The same line run the other way (aimed up and away from the land) meets the same point: the distance is taken either way.
+				Assert.IsTrue( ParkPicking.MeetGround( field, eye, -direction, out hit ), $"valley, behind the eye, {label}" );
+				Assert.AreEqual( ground, hit.Z, 0.002f, $"valley behind, {label}" );
+
+				var ridge = FindCell( field, diagonal, nearHalf, ridge: true, u, v );
+				var own = Triangle( field, ridge.X, ridge.Y, diagonal, nearHalf );
+				var other = Triangle( field, ridge.X, ridge.Y, diagonal, !nearHalf );
+				var floor = PlaneAt( own, u, v );
+				(eye, direction, aim) = RayAt( field, ridge, u, v, floor );
+
+				// Along the line eye + s * direction the other plane stands at h0 + gradient . (p - p0): solve for the s where it meets the line.
+				var cell = (X: field.OriginX + (ridge.X * field.CellSizeX), Y: field.OriginY + (ridge.Y * field.CellSizeY));
+				float OtherAt( float s ) => PlaneAt( other, (eye.X + (s * direction.X) - cell.X) / field.CellSizeX, (eye.Y + (s * direction.Y) - cell.Y) / field.CellSizeY );
+				var (s0, s1) = (0f, 100f);
+				var (f0, f1) = (eye.Z - OtherAt( s0 ), eye.Z + (s1 * direction.Z) - OtherAt( s1 ));
+				var along = s0 - (f0 * (s1 - s0) / (f1 - f0));
+
+				Assert.IsTrue( ParkPicking.MeetGround( field, eye, direction, out hit ), $"ridge, {label}" );
+				Assert.AreEqual( eye.X + (along * direction.X), hit.X, 0.002f, $"ridge x, {label}" );
+				Assert.AreEqual( eye.Y + (along * direction.Y), hit.Y, 0.002f, $"ridge y, {label}" );
+				Assert.AreEqual( eye.Z + (along * direction.Z), hit.Z, 0.002f, $"ridge height, {label}" );
+				Assert.IsTrue( hit.Z - PlaneAt( own, (hit.X - cell.X) / field.CellSizeX, (hit.Y - cell.Y) / field.CellSizeY ) > 0.05f, $"ridge above the drawn ground, {label}" );
+			}
+		}
+	}
+
+	/// <summary>
+	/// <b>The pick meets the land where every cell's two planes, tried in turn, say</b>: a thousand rays from above the jungle's
+	/// park toward random points of it (and the same lines run backward) are met at the same point as a reference that tries all
+	/// 8,160 cells with no cull and no rectangle, solving each plane by Cramer's rule and keeping the nearest by distance either way.
+	/// The picker's cull of cells is the original's (<c>0x0045c4f4</c> and <c>0x0045c648</c>); a hit it drops is a hit outside the cell's
+	/// heights, which a ray from above the park never has the nearest of.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the diagonal flag inverted; a triangle's plane through the wrong corners; the nearest replaced by the last.</remarks>
+	[TestMethod]
+	public void EveryRayMeetsWhereAllTheCellsPlanesSay()
+	{
+		var field = Jungle();
+		var random = new System.Random( 824 );
+		var differing = 0;
+		var met = 0;
+
+		for ( var i = 0; i < 1000; ++i )
+		{
+			var aim = new Vector3( random.NextSingle() * 940f + 10f, random.NextSingle() * 830f + 10f, 0f );
+			aim.Z = field.HeightAtWorld( aim.X, aim.Y );
+			var eye = aim + new Vector3( (random.NextSingle() - 0.5f) * 160f, (random.NextSingle() - 0.5f) * 160f, 40f + (random.NextSingle() * 90f) );
+			var direction = Toward( eye, aim );
+
+			foreach ( var along in new[] { direction, -direction } )
+			{
+				var expected = EveryPlane( field, eye, along );
+				var found = ParkPicking.MeetGround( field, eye, along, out var hit );
+
+				if ( expected is null || !found )
+				{
+					Assert.AreEqual( expected is not null, found, $"ray {i}: met" );
+					continue;
+				}
+
+				++met;
+
+				if ( (hit - expected.Value).Length > 0.01f )
+					++differing;
+			}
+		}
+
+		Assert.IsTrue( met > 1500, $"the control: most rays meet the land ({met})" );
+		Assert.AreEqual( 0, differing, "rays met elsewhere than by every plane" );
+	}
+
+	/// <summary>The nearest hit of a line with every cell's two triangle planes, each counting anywhere in its cell's square.</summary>
+	private static Vector3? EveryPlane( HeightfieldFile field, Vector3 eye, Vector3 direction )
+	{
+		Vector3? best = null;
+		var nearest = double.MaxValue;
+
+		for ( var cy = 0; cy < field.CellsY; ++cy )
+		{
+			for ( var cx = 0; cx < field.CellsX; ++cx )
+			{
+				var diagonal = (field.FlagsAt( cx, cy ) & 0x2) != 0;
+
+				foreach ( var nearHalf in new[] { true, false } )
+				{
+					var corner = Triangle( field, cx, cy, diagonal, nearHalf );
+					var (a, b, c) = (corner[0], corner[1], corner[2]);
+					var det = ((b.U - a.U) * (c.V - a.V)) - ((c.U - a.U) * (b.V - a.V));
+					var gradU = (((b.H - a.H) * (c.V - a.V)) - ((c.H - a.H) * (b.V - a.V))) / det;
+					var gradV = (((c.H - a.H) * (b.U - a.U)) - ((b.H - a.H) * (c.U - a.U))) / det;
+
+					// eye.Z + s * direction.Z = a.H + gradU * (u - a.U) + gradV * (v - a.V), u and v linear in s.
+					var u0 = (eye.X - field.OriginX) / field.CellSizeX - cx;
+					var v0 = (eye.Y - field.OriginY) / field.CellSizeY - cy;
+					var du = direction.X / field.CellSizeX;
+					var dv = direction.Y / field.CellSizeY;
+					var s = (a.H + (gradU * (u0 - a.U)) + (gradV * (v0 - a.V)) - eye.Z)
+						/ (direction.Z - (gradU * du) - (gradV * dv));
+					var (u, v) = (u0 + (s * du), v0 + (s * dv));
+
+					if ( u >= 0 && u <= 1 && v >= 0 && v <= 1 && System.Math.Abs( s ) < nearest )
+					{
+						nearest = System.Math.Abs( s );
+						best = eye + (direction * s);
+					}
+				}
+			}
+		}
+
+		return best;
+	}
 }

@@ -11149,6 +11149,14 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   (67,72), and the callers' helpers (`StandsOn`, `CornerGround`, `EyeGround`, `OrbitGround`), so a revert or a swap of a helper fails. A call site that bypassed its
   helper would not (the draw's line is covered through `StandsOn`). The eye's further term, the stand's y (`[0x00790abc]`, added at `0x0042c9e2`), is
   unread; `Feet` sounds a person at the ground's height where the original's `FUN_004754e0` hands the sprite's height above it (filed).
+- [x] **Q824. The pick meets the land by the original's two planes a cell (Q820's piece (4), the pick).** Done 2026-10-30 (run 15, lane A, `alexah/782-pick-two-planes`).
+  `ParkPickGround.Meet` ports `FUN_0045bf90`'s terrain test (rectangle of cells from the line's cut at the heightfield's low and high height, the footprint and
+  height-range culls, two planes a cell by `0x2`, each plane's hit anywhere in the cell's square, the nearest `|t|` either way along the line); `MeetGround` is
+  that and the bilinear march is gone. The eye read from the original's memory and its P through it, 840 pixels over six cameras of the stock park (three
+  over the bent hills), handed to `pickray`: 804 pixels over the ground answered P within 0.001 and in the original's cell (the bilinear march: 19 of 420 hill
+  pixels off, to 0.872). Tests: a valley met on the ground and a ridge on the other triangle's plane in each cut, and a 1,000-ray reference over every cell;
+  12 of 12 put-back bugs fail a test. Decode in `park-engine.md`, "The pick's terrain". Left, none new: a looking-up ray's behind-the-eye hit is decoded and
+  unit-tested, not watched in the original.
 
 ## B. Docs and comments
 

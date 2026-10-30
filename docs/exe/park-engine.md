@@ -105,7 +105,7 @@ the original, and every caller of the first two is known (`FUN_004527f0`, six ca
 | The build markers' wave | `FUN_0053ddd0`, `0x0053ddea` | `FUN_004527f0` at the corner it is handed, after the glide | `HeightAt` on a corner, `ScapeHeight` gliding (`ParkBuildMarkers.Corner`; Q820) |
 | The scene's height, mode 1; placement feedback | `FUN_004511a0`, `0x004511e6`; `FUN_00452ae0`, `0x00452c89` | `FUN_004527f0` (`park.md`, "The scene's height under a point") | `ScapeHeight` (`ParkSceneHeight.Under`) |
 | A person's shadow | `SpriteShadow_BuildQuad` (`0x00589410`) | the near corner's plane, its own sampler, no flag read ("First person's shadow", below) | `CornerPlaneAt` |
-| The pointer's pick | `FUN_0045bf90`'s terrain test | its own: two planes a cell by `0x2` (below) | `HeightAtWorld`, marched (`ParkPicking.MeetGround`) |
+| The pointer's pick | `FUN_0045bf90`'s terrain test | its own: two planes a cell by `0x2` (below) | `ParkPickGround.Meet`, the same planes (Q824) |
 
 **`FUN_00452560( x, z, flag )`.** Nought off the map (`x` or `z` below nought, at or past the cells × 10, or the grid
 fraction past the cells); the cell's triangle by `0x4` (above). A third argument of nought answers `FLT_MAX`
@@ -131,7 +131,7 @@ ground, `FUN_00452560` (ours `CameraHeight`) differs from `FUN_004527f0` on 14 c
 hallow 5, 0.06; space 26, 0.006). Bilinear (ours `HeightAtWorld`) differs from it on 172 ground cells by up to 0.249
 (fantasy 196, 0.249; hallow 173, 0.248; space 198, 0.495). **Built (Q820 piece 4):** `HeightfieldFile` sets `0x800` at load by that rule, so `ScapeHeight` splits those cells
 (before, it took the near corner's plane on them, by up to 0.5 on the ground, 24.96 on a hole); sprites, balloons, `Feet` and the
-build markers' glide stand on it; the camcorder's eye is `CameraHeight` + 5 each frame, not eased. The pick still marches the bilinear height (said at `ParkPicking.Ground`).
+build markers' glide stand on it; the camcorder's eye is `CameraHeight` + 5 each frame, not eased. The pick takes its own planes (below; Q824).
 
 **The pick's terrain** (`FUN_0045bf90`). Over every cell the ray's line crosses and whose corners' height range it
 meets, it intersects the planes of the cell's two triangles cut by **`0x2`** (`0x0045c6b7`): set, the triangles
@@ -142,6 +142,21 @@ folds up into a ridge, the plane of one triangle carried over the other half is 
 above the drawn ground. On a ground cell `0x2` and `0x4` name the same diagonal (all four parks, 0 cells otherwise);
 every hole carries neither bit (Lost Kingdom 1,159), so on a hole the pick splits on (x+1,z)-(x,z+1) where a flagged
 hole's `FUN_004527f0` splits on (x,z)-(x+1,z+1).
+
+**Which cells it tries, and in what order** (Q824, from `FUN_0045bf90` from `0x0045c254`, the rectangle at `0x0045c257`..`0x0045c344`, and the disassembly). The line
+(the eye and the ray's direction, taken **both ways**: nothing tests the sign of `t`, so a plane behind the eye is met by its
+distance like one ahead) is cut at the heightfield's low and high height (`+0x20`, `+0x24`, jungle -10 and 60), the two points'
+cells (truncated, nought below, the last cell above) bound a rectangle of cells, and the rows run outside, the columns inside.
+A cell is tried only if the line crosses its square (the line's side of two opposite corners, strictly opposite; the pair is the
+one rising across the cell when the line's two horizontal components share a sign, signs read at `0x0045c347`..`0x0045c3c9`, tested at `0x0045c4f4`..`0x0045c515`) and then its heights'
+range (the same test in x and height against the least and greatest of the four corners, `0x0045c648`..`0x0045c665`; a plane
+hit can fall outside that range, so the test drops hits, as the 1,000-ray reference in `ParkPickingTests` shows it does not
+for rays from above the park). Then the cell's two triangles in turn (`0x2` clear: a-b-c, then d-c-b; set: c-d-a, then
+b-a-d, with a (x,z), b (x+1,z), c (x,z+1), d (x+1,z+1)), each plane through its first corner with the normal the cross
+product of the two edge differences (made unit at `0x0045c7ea`; the quotient does not depend on it), `t` the signed distance
+along the line; a hit stays only inside the cell's square (`<=` on all four sides) and under the kept `|t|` (`<`, started at
+`FLT_MAX`), so the first of two equal hits stands. Ours: `ParkPickGround.Meet`. Not ported: the object march and the choice
+between its hit and the land's (`ParkPickMarch`, `ParkPicking` say theirs).
 
 ### What the render-state `0x0800` tests are
 
