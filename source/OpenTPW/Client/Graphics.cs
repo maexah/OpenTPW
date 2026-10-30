@@ -25,6 +25,9 @@ internal static partial class Graphics
 		indexBuffer = Device.ResourceFactory.CreateBuffer(
 			new BufferDescription( MaxIndexCount * uintSize, BufferUsage.IndexBuffer | BufferUsage.Dynamic )
 		);
+
+		GpuMemory.Add( GpuMemory.Kind.VertexBuffer, vertexBuffer.SizeInBytes );
+		GpuMemory.Add( GpuMemory.Kind.IndexBuffer, indexBuffer.SizeInBytes );
 	}
 
 	private static Matrix4x4 CreateScreenMatrix( Point2 screenSize )

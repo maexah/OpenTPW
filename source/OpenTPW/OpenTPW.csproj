@@ -22,6 +22,16 @@
 		<InformationalVersion>$(OpenTPWBuildTag)</InformationalVersion>
 	</PropertyGroup>
 
+	<!--
+		The garbage collector compacts the large object heap while it loads (Q954). The load turns over hundreds of megabytes of
+		transient arrays (decoded textures, file buffers); at the default the holes they leave stay, and a Full Simulation park
+		stood at 0.94 GB resident against 0.63 GB with this set, the same 310 MB of live managed objects either way. Load time
+		is the same (8.3 s, three runs each).
+	-->
+	<ItemGroup>
+		<RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="7" />
+	</ItemGroup>
+
 	<ItemGroup>
 		<!-- The disc's file list, which LaunchReport counts a game folder against. -->
 		<EmbeddedResource Include="Client\DiscData.txt" LogicalName="OpenTPW.DiscData.txt" />

@@ -58,6 +58,11 @@ public class Model : Asset
 		var vertexBuffer = VertexBuffer;
 		var indexBuffer = IndexBuffer;
 
+		GpuMemory.Remove( GpuMemory.Kind.VertexBuffer, vertexBuffer.SizeInBytes );
+
+		if ( indexBuffer != null )
+			GpuMemory.Remove( GpuMemory.Kind.IndexBuffer, indexBuffer.SizeInBytes );
+
 		Render.ScheduleDelete( () =>
 		{
 			indexBuffer?.Dispose();
@@ -77,6 +82,8 @@ public class Model : Asset
 			new BufferDescription( vertexCount * vertexStructSize, BufferUsage.VertexBuffer )
 		);
 
+		GpuMemory.Add( GpuMemory.Kind.VertexBuffer, VertexBuffer.SizeInBytes );
+
 		Device.UpdateBuffer( VertexBuffer, 0, vertices );
 	}
 
@@ -90,6 +97,8 @@ public class Model : Asset
 		IndexBuffer = factory.CreateBuffer(
 			new BufferDescription( indexCount * sizeof( uint ), BufferUsage.IndexBuffer )
 		);
+
+		GpuMemory.Add( GpuMemory.Kind.IndexBuffer, IndexBuffer.SizeInBytes );
 
 		Device.UpdateBuffer( IndexBuffer, 0, indices );
 	}

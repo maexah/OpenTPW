@@ -11164,6 +11164,18 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   stands a head at its drawn node. The camcorder's further term is nought in first person (`Camera_ToggleFirstPerson` zeroes it). Ours on her park's copy: the `rides`
   census's heads at their drawn nodes and a frame of the Tom Tom Twister's heads on its drums. Decode in `park-engine.md`, "The three words Q822 left unread".
   Tool stored: `original/spriteflags.py`. Left: the puffs are Q900; ours' heads against the original's head by head was not made.
+- [x] **Q954. Ours holds about 7 GB for the stock park and over 12 GB for a Full Simulation park.** Done 2026-10-30 (run 15, lane A, `alexah/784-game-memory-cut`).
+  Measured on the desk and off-screen, the stock park and Alexah's Full Simulation one (`q954/`, the console's new `mem` line, `lib/memmap.py`, the amdgpu fdinfo, a
+  `dotnet-dump` heap census). **On the desk it was never big**: 0.76 GB resident (managed heap 0.5 GB, the game's own GPU account 161 MB, video memory 0.28 GB). **The
+  gigabytes were the software driver's, and ours asked for them**: every model builds its own `Material`, so a park of 1,031 models made 1,031 pipelines of 13
+  distinct states, and lavapipe kept 5.99 GB of malloc'd compile state for them (`[heap]`; its device memory, `memfd` 218 MB, was small). Materials of one shader,
+  one set of flags now share one pipeline and its layouts (`Render/SharedCache.cs`, `Material`; the key is the two compiled shaders and the flags): off-screen stock
+  6.81 -> 1.08 GB, Full Simulation 12+ -> 1.25 GB (the off-screen frame, mean at park entry, 38 -> 24 ms). Then `System.GC.ConserveMemory` 7 (`OpenTPW.csproj`): the load's transient arrays left
+  hundreds of MB of holes in the large object heap (heap 806 MB, 494 MB of it fragmented, for 311 MB live); same load time, p99 frame 7.15 ms against 7.35. Final binary:
+  desk stock 0.61 GB peak (0.56 at 30 s), desk Full Simulation 0.63 GB, off-screen stock 0.88 GB, off-screen Full Simulation 0.95 GB; leaving a park gives back its
+  managed objects (live 286 -> 134 MB, the first lobby's) and its GPU account (161 -> 79 MB). The Material key's flags put back (a copy): 8 pipelines and the ground
+  gone from the frame. Not a leak: the live managed heap is 345 MB, 145 MB of it the decoded sounds (`float[]`), 53 MB compressed banks kept by design.
+  Left: Q826. Tools stored: `lib/memmap.py`; `mem` and `mem gc|compact` in the console.
 
 ## B. Docs and comments
 

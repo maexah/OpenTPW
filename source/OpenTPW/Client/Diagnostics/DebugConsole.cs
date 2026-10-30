@@ -420,6 +420,14 @@ public static class DebugConsole
 				Reply( Stats() );
 				break;
 
+			// Where the process's memory is (Q954): the kernel's figures for it, the managed heap, and what the game asked
+			// the device to hold. `mem gc` collects first, so the managed figure is what is reachable, not what is waiting.
+			case "mem":
+				foreach ( var memLine in MemoryReport( parts.Length > 1 && parts[1] is "gc" or "compact", parts.Length > 1 && parts[1] == "compact" ) )
+					Reply( memLine );
+
+				break;
+
 			// What a scene leaves behind, by name rather than by count: `stats` can say how many
 			// assets survive a lobby-park-lobby cycle and cannot say which. Bare `assets` summarises; `assets list` prints one
 			// line each, so a harness can diff the sets between scene builds. The diff has to count
@@ -2905,6 +2913,80 @@ public static class DebugConsole
 		return $"near flyers closest={Radii( LobbyFlyer.DebugClosestApproach )}r "
 			+ $"closestSolid={Radii( LobbyFlyer.DebugClosestSolid )}r "
 			+ $"bolt axisDist={boltDistance} opacity={bolt?.DebugOpacity ?? 0f:F2}";
+	}
+
+	/// <summary>
+	/// The lines of the `mem` command: the kernel's resident figures for this process (<c>/proc/self/status</c>, Linux only), the
+	/// managed heap and what the collector holds, and <see cref="GpuMemory"/>'s account of what the game asked the device for.
+	/// </summary>
+	private static IEnumerable<string> MemoryReport( bool collect, bool compact = false )
+	{
+		if ( compact )
+		{
+			System.Runtime.GCSettings.LargeObjectHeapCompactionMode = System.Runtime.GCLargeObjectHeapCompactionMode.CompactOnce;
+			GC.Collect( 2, GCCollectionMode.Aggressive, blocking: true, compacting: true );
+		}
+		else if ( collect )
+		{
+			GC.Collect();
+			GC.WaitForPendingFinalizers();
+			GC.Collect();
+		}
+
+		var lines = new List<string>();
+
+		try
+		{
+			var kernel = File.ReadLines( "/proc/self/status" )
+				.Where( l => l.StartsWith( "VmRSS" ) || l.StartsWith( "VmHWM" ) || l.StartsWith( "RssAnon" ) || l.StartsWith( "RssFile" ) || l.StartsWith( "RssShmem" ) )
+				.Select( l => l.Split( ':' ) is [var key, var value] ? $"{key} {value.Trim()}" : l );
+
+			lines.Add( "mem process: " + string.Join( ", ", kernel ) );
+		}
+		catch ( IOException )
+		{
+			lines.Add( "mem process: /proc/self/status is not readable here" );
+		}
+
+		var info = GC.GetGCMemoryInfo();
+		lines.Add( $"mem managed: heap {info.HeapSizeBytes / 1048576.0:F1}MB (total {GC.GetTotalMemory( false ) / 1048576.0:F1}MB, committed {info.TotalCommittedBytes / 1048576.0:F1}MB, "
+			+ $"fragmented {info.FragmentedBytes / 1048576.0:F1}MB, gen0 {GC.CollectionCount( 0 )} gen1 {GC.CollectionCount( 1 )} gen2 {GC.CollectionCount( 2 )}, "
+			+ $"allocated ever {GC.GetTotalAllocatedBytes() / 1048576.0:F0}MB, collected-first {collect})" );
+		lines.Add( "mem " + GpuMemory.Summary() );
+		lines.Add( "mem vulkan: " + VulkanAllocated() );
+
+		return lines;
+	}
+
+	/// <summary>
+	/// The bytes NeoVeldrid's Vulkan memory manager has taken from the driver, which it never gives back (its private
+	/// <c>_totalAllocatedBytes</c>, read by reflection: the library has no property for it). The game's own account
+	/// (<see cref="GpuMemory"/>) is what it asked for; this is what the driver was asked for, in chunks.
+	/// </summary>
+	private static string VulkanAllocated()
+	{
+		try
+		{
+			const System.Reflection.BindingFlags all = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public;
+
+			for ( var type = Device.GetType(); type != null; type = type.BaseType )
+			{
+				foreach ( var field in type.GetFields( all ) )
+				{
+					if ( field.FieldType.Name != "VkDeviceMemoryManager" || field.GetValue( Device ) is not { } manager )
+						continue;
+
+					var total = manager.GetType().GetField( "_totalAllocatedBytes", all )?.GetValue( manager );
+					return total is ulong bytes ? $"{bytes / 1048576.0:F1}MB allocated from the driver" : "_totalAllocatedBytes not found";
+				}
+			}
+
+			return "no memory manager on this device";
+		}
+		catch ( Exception e )
+		{
+			return $"unreadable ({e.GetType().Name})";
+		}
 	}
 
 	private static string Stats()

@@ -174,13 +174,19 @@ public partial class Material : Asset
 
 		// Read out before the queue runs, so what is disposed is what this material held when it was
 		// deleted rather than whatever it might be left pointing at.
-		var pipeline = Pipeline;
 		var scratch = ScratchBuffer;
-		var layouts = _resourceLayouts;
+		var lastUser = ReleaseShared( _shared ) ? _shared!.Value : null;
 		var sets = _cachedResourceSets;
 		var rounds = _frameBlocks;
 
 		_boundResources.Clear();
+
+		foreach ( var round in rounds )
+			foreach ( var _ in round )
+				GpuMemory.Remove( GpuMemory.Kind.UniformBuffer, 16 * 128 );
+
+		if ( scratch != null )
+			GpuMemory.Remove( GpuMemory.Kind.UniformBuffer, scratch.SizeInBytes );
 
 		Render.ScheduleDelete( () =>
 		{
@@ -200,14 +206,8 @@ public partial class Material : Asset
 				round.Clear();
 			}
 
-			if ( layouts != null )
-			{
-				foreach ( var layout in layouts )
-					layout.Dispose();
-			}
-
 			scratch?.Dispose();
-			pipeline?.Dispose();
+			lastUser?.Dispose();
 		} );
 	}
 
@@ -257,6 +257,7 @@ public partial class Material : Asset
 		{
 			var description = new BufferDescription( 16 * 128, BufferUsage.UniformBuffer | BufferUsage.Dynamic );
 			round.Add( new FrameBlock( Device.ResourceFactory.CreateBuffer( description ) ) );
+			GpuMemory.Add( GpuMemory.Kind.UniformBuffer, description.SizeInBytes );
 		}
 
 		var block = round[_frameBlocksUsed++];
@@ -486,11 +487,45 @@ public partial class Material : Asset
 
 	private static bool _depthTestLogged;
 
-	[MemberNotNull( nameof( _resourceLayouts ), nameof( ScratchBuffer ) )]
+	/// <summary>
+	/// A pipeline and the resource layouts it was made with, shared by every material that draws with the same shader program
+	/// and flags (Q954). A model builds its own material, so a park of 1,031 models made 1,031 pipelines of 20-odd distinct
+	/// states; the software Vulkan driver (lavapipe) keeps several megabytes of compiled-shader state for each, 6 GB in all.
+	/// What a pipeline is made of is only the shader, the flags, the vertex layout, the blend, depth and rasterizer states they
+	/// choose and the output description: nothing here is a material's own.
+	/// </summary>
+	private sealed class SharedPipeline( Pipeline pipeline, ResourceLayout[] layouts )
+	{
+		public Pipeline Pipeline { get; } = pipeline;
+		public ResourceLayout[] Layouts { get; } = layouts;
+		public int Users { get; set; }
+
+		public void Dispose()
+		{
+			foreach ( var layout in Layouts )
+				layout.Dispose();
+
+			Pipeline.Dispose();
+		}
+	}
+
+	private static readonly SharedCache<(NeoVeldrid.Shader Vertex, NeoVeldrid.Shader Fragment, MaterialFlags Flags), SharedPipeline> _sharedPipelines = new();
+
+	private SharedCache<(NeoVeldrid.Shader Vertex, NeoVeldrid.Shader Fragment, MaterialFlags Flags), SharedPipeline>.Entry? _shared;
+
+	/// <summary>Takes one user off <paramref name="shared"/>; true when it was the last, and the caller is to dispose it once the frame is done.</summary>
+	private static bool ReleaseShared( SharedCache<(NeoVeldrid.Shader Vertex, NeoVeldrid.Shader Fragment, MaterialFlags Flags), SharedPipeline>.Entry? shared )
+	{
+		if ( !_sharedPipelines.Release( shared ) )
+			return false;
+
+		GpuMemory.Remove( GpuMemory.Kind.Pipeline, 0 );
+		return true;
+	}
+
+	[MemberNotNull( nameof( _resourceLayouts ), nameof( ScratchBuffer ), nameof( _shared ) )]
 	private void SetupResources( MaterialFlags flags )
 	{
-		var vertexLayout = new VertexLayoutDescription( Vertex.VertexElementDescriptions );
-
 		if ( !_depthTestLogged )
 		{
 			_depthTestLogged = true;
@@ -498,13 +533,43 @@ public partial class Material : Asset
 		}
 
 		//
-		// Create resource layout - but only from what we're using/need
+		// Share the pipeline and its resource layouts with every material that would build the same ones
 		//
-		_resourceLayouts ??= CreateResourceLayouts();
+		var program = Shader.ShaderProgram;
+		var key = (program[0], program[1], flags);
 
-		//
-		// Create pipeline
-		//
+		var count = _sharedPipelines.Count;
+		var shared = _sharedPipelines.Acquire( key, CreateSharedPipeline );
+
+		if ( _sharedPipelines.Count != count )
+			GpuMemory.Add( GpuMemory.Kind.Pipeline, 0 );
+
+		var previous = _shared;
+		_shared = shared;
+		_resourceLayouts = shared.Value.Layouts;
+		Pipeline = shared.Value.Pipeline;
+
+		if ( previous != null )
+		{
+			// A recompile gave this material another pipeline: its resource sets were made against the old layouts
+			_resourceSetsDirty = true;
+			_bindings++;
+
+			if ( ReleaseShared( previous ) )
+				Render.ScheduleDelete( previous.Value.Dispose );
+		}
+
+		var bufferDescription = new BufferDescription( 16 * 128, BufferUsage.UniformBuffer | BufferUsage.Dynamic );
+		ScratchBuffer = Device.ResourceFactory.CreateBuffer( bufferDescription );
+		GpuMemory.Add( GpuMemory.Kind.UniformBuffer, bufferDescription.SizeInBytes );
+	}
+
+	private SharedPipeline CreateSharedPipeline( (NeoVeldrid.Shader Vertex, NeoVeldrid.Shader Fragment, MaterialFlags Flags) key )
+	{
+		var flags = key.Flags;
+		var vertexLayout = new VertexLayoutDescription( Vertex.VertexElementDescriptions );
+		var layouts = CreateResourceLayouts();
+
 		var pipelineDescription = new GraphicsPipelineDescription()
 		{
 			BlendState = flags.HasFlag( MaterialFlags.Multiply )
@@ -520,15 +585,12 @@ public partial class Material : Asset
 			RasterizerState = RasterizerStateFor( flags ),
 
 			PrimitiveTopology = PrimitiveTopology.TriangleList,
-			ResourceLayouts = [.. _resourceLayouts],
-			ShaderSet = new ShaderSetDescription( [vertexLayout], Shader.ShaderProgram ),
+			ResourceLayouts = [.. layouts],
+			ShaderSet = new ShaderSetDescription( [vertexLayout], [key.Vertex, key.Fragment] ),
 			Outputs = Render.MultisampledFramebuffer.OutputDescription
 		};
 
-		Pipeline = Device.ResourceFactory.CreateGraphicsPipeline( pipelineDescription );
-
-		var bufferDescription = new BufferDescription( 16 * 128, BufferUsage.UniformBuffer | BufferUsage.Dynamic );
-		ScratchBuffer = Device.ResourceFactory.CreateBuffer( bufferDescription );
+		return new SharedPipeline( Device.ResourceFactory.CreateGraphicsPipeline( pipelineDescription ), layouts );
 	}
 }
 

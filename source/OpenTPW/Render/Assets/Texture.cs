@@ -72,6 +72,9 @@ public partial class Texture : Asset
 	private static TextureData? _notFound;
 
 	internal NeoVeldrid.Texture NativeTexture;
+
+	/// <summary>The bytes this texture counted into <see cref="GpuMemory"/>, taken back at <see cref="Delete"/>.</summary>
+	private long _gpuBytes;
 	internal TextureView NativeTextureView;
 
 	/// <summary>
@@ -258,6 +261,12 @@ public partial class Texture : Asset
 
 		All.Remove( this );
 
+		if ( _gpuBytes != 0 )
+		{
+			GpuMemory.Remove( GpuMemory.Kind.Texture, _gpuBytes );
+			_gpuBytes = 0;
+		}
+
 		var texture = NativeTexture;
 		var view = NativeTextureView;
 
@@ -373,6 +382,9 @@ public partial class Texture : Asset
 		);
 
 		var texture = Device.ResourceFactory.CreateTexture( textureDescription );
+
+		_gpuBytes = GpuMemory.TextureBytes( width, height, mipLevels );
+		GpuMemory.Add( GpuMemory.Kind.Texture, _gpuBytes );
 
 		Path = debugName;
 		NativeTexture = texture;

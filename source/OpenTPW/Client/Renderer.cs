@@ -100,7 +100,14 @@ public partial class Renderer
 		};
 
 		MultisampledFramebuffer = Device.ResourceFactory.CreateFramebuffer( framebufferDescription );
+
+		_targetBytes = GpuMemory.TextureBytes( (uint)size.X, (uint)size.Y, 1, 4, 4 ) + GpuMemory.TextureBytes( (uint)size.X, (uint)size.Y, 1, 8, 4 )
+			+ GpuMemory.TextureBytes( (uint)size.X, (uint)size.Y, 1, 4 );
+		GpuMemory.Add( GpuMemory.Kind.RenderTarget, _targetBytes );
 	}
+
+	/// <summary>What the render targets counted into <see cref="GpuMemory"/>, taken back when they are disposed.</summary>
+	private long _targetBytes;
 
 	public Framebuffer MultisampledFramebuffer;
 	public NeoVeldrid.Texture ResolveColorTexture;
@@ -420,6 +427,8 @@ public partial class Renderer
 		_colorTarget?.Dispose();
 		_depthTarget?.Dispose();
 		_blitResourceSet?.Dispose();
+
+		GpuMemory.Remove( GpuMemory.Kind.RenderTarget, _targetBytes );
 
 		CreateMultisampledFramebuffer( size );
 

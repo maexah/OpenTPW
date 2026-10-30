@@ -12,6 +12,7 @@ Set by environment variable; each default is what an unset variable means (READM
     OPENTPW_EMU_PYTHON     a Python with unicorn and pefile, for the scripts that run the executable's own code
     OPENTPW_GHIDRA_CLIENT  a command that runs `run_python code=...` against a Ghidra server holding testme.exe
     OPENTPW_FULLSIM_PLAYER a Full Simulation player's folder (save/users/<n><name>) written by the original
+    OPENTPW_FULLSIM_PARK   a Full Simulation park file (.TPWS) written by the original, for memrun.py's `fs`
     OPENTPW_XVFB           an Xvfb binary for off-screen runs (default `Xvfb` on PATH)
     OPENTPW_MUTATE_ROOT    where mutate.py makes its copies of the tree (default <work>/mutate)
     OPENTPW_STRYKER        the dotnet-stryker command (default `dotnet-stryker` on PATH); OPENTPW_STRYKER_WORK its copy
