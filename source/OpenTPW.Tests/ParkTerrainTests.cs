@@ -388,4 +388,31 @@ public class ParkTerrainTests
 			Assert.AreNotEqual( 0, field.FlagsAt( (int)(x / 10f), (int)(y / 10f) ) & 0x800, "a cell the load flagged" );
 		}
 	}
+
+	/// <summary>
+	/// <b>On a bent ground cell the load leaves unflagged, the sprites' sampler and the camera's sampler part</b>: at (677, 727), cell (67,72), word
+	/// <c>0x42</c>, corners 37.9800, 38.0160, 37.9080, 38.0069, <c>FUN_004527f0</c> takes the near corner's plane, 37.9548 (a person's feet, the draw, a
+	/// balloon, a gliding marker corner), <c>FUN_00452560</c> the triangle by <c>0x4</c>, 37.9989 (the park camera and the eye), and the bilinear
+	/// height reads 37.9856. Every flagged cell gives the two samplers the same answer, so only this point tells a swap from the right build.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> <c>StandsOn</c> or <c>CornerGround</c> back on <c>HeightAtWorld</c>, <c>StandsOn</c> on <c>CameraHeight</c>,
+	/// <c>EyeGround</c> or <c>OrbitGround</c> on <c>HeightAtWorld</c> or <c>ScapeHeight</c>: each fails.</remarks>
+	[TestMethod]
+	public void OnABentCellTheLoadLeavesUnflaggedEachCallerTakesItsOwnSampler()
+	{
+		var field = Landscape( "jungle" );
+		const float x = 677f, y = 727f;
+		var at = new FixedVector( (int)(x / field.CellSizeX * FixedVector.One), (int)(y / field.CellSizeY * FixedVector.One) );
+
+		Assert.AreEqual( 0, field.FlagsAt( 67, 72 ) & 0x800, "the control: the load leaves this cell unflagged" );
+		Assert.AreEqual( 37.9856f, field.HeightAtWorld( x, y ), 0.001f, "the bilinear height, which no caller takes" );
+
+		Assert.AreEqual( 37.9548f, ParkGuestSprites.StandsOn( field, x, y ), 0.001f, "the draw's ground (the walk, a balloon, its census)" );
+		Assert.AreEqual( 37.9548f, ParkGuestSprites.FeetOn( field, at ).Z, 0.001f, "feet" );
+		Assert.AreEqual( 37.9548f, ParkBuildMarkers.CornerGround( field, 67, 72, (7f, 7f) ), 0.001f, "a gliding marker corner" );
+		Assert.AreEqual( field.HeightAt( 67, 72 ), ParkBuildMarkers.CornerGround( field, 67, 72, (0f, 0f) ), 0.0001f, "an unshifted corner is the corner" );
+
+		Assert.AreEqual( 37.9989f, ParkCamcorderCameraMode.EyeGround( field, new Vector3( x, y, 0f ) ), 0.001f, "the eye's ground" );
+		Assert.AreEqual( 37.9989f, ParkOrbitCameraMode.OrbitGround( field, x, y ), 0.001f, "the park camera's ground" );
+	}
 }

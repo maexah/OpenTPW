@@ -599,12 +599,18 @@ public sealed class ParkBuildMarkers : ModelEntity
 		_ => [new( 0f, 0f ), new( 1f, 0f ), new( 1f, 1f ), new( 0f, 1f )]
 	};
 
+	/// <summary>
+	/// The ground a square's corner stands on: the corner's own height, or, gliding, the ground under where it is drawn, as
+	/// <c>FUN_0053ddd0</c> asks it after the shift (<c>FUN_004527f0</c>, <see cref="HeightfieldFile.ScapeHeight"/>).
+	/// </summary>
+	internal static float CornerGround( HeightfieldFile field, int x, int y, (float X, float Y) offset )
+		=> offset == (0f, 0f) ? field.HeightAt( x, y ) : field.ScapeHeight( (x * field.CellSizeX) + offset.X, (y * field.CellSizeY) + offset.Y );
+
 	private Vertex Corner( HeightfieldFile field, int x, int y, Vector2 uv, int slot, float over, (float X, float Y) offset )
 	{
 		var (worldX, worldY) = ((x * field.CellSizeX) + offset.X, (y * field.CellSizeY) + offset.Y);
 
-		// A gliding corner stands on the ground under where it is drawn, as FUN_0053ddd0 asks it after the shift (FUN_004527f0, ScapeHeight).
-		var ground = offset == (0f, 0f) ? field.HeightAt( x, y ) : field.ScapeHeight( worldX, worldY );
+		var ground = CornerGround( field, x, y, offset );
 
 		return new()
 		{

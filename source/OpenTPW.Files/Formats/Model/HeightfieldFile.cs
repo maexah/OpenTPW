@@ -248,10 +248,11 @@ public sealed class HeightfieldFile
 	/// <summary>
 	/// The load's pass over the cells - <c>FUN_004504c0</c>, <c>0x0045075d</c>: the two triangles across the diagonal from the
 	/// along-x corner to the along-y one each take the cross product of their two edges (each edge made a unit vector first,
-	/// <c>0x43a9a0</c>; the cross products are <b>not</b> made unit, <c>0x004506c0</c>, <c>0x00450725</c>), and a cell whose
+	/// <c>0x43a9a0</c>, or inline for the near triangle; the cross products are <b>not</b> made unit, <c>0x004506c0</c>, <c>0x00450725</c>), and a cell whose
 	/// two products have a dot (<c>0x43a970</c>) under 0.9999 gets <see cref="SplitFlag"/>, so <see cref="ScapeHeight"/> splits
 	/// it as the original does (<c>docs/exe/park-engine.md</c>, "Which height each asker takes"). The file never stores the flag.
-	/// A cell is flagged by this where its edges are not at right angles, which is every cell that bends and every hole's.
+	/// A cell is flagged where its two faces differ, or where both edges of a triangle slope so that the product falls short of
+	/// unit. A cell bent by under about 0.1 passes, and so do most holes (Lost Kingdom flags 431 of 1,159).
 	/// </summary>
 	private void FlagNonPlanarCells()
 	{

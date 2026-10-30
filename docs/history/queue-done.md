@@ -11092,11 +11092,12 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   face's normal at the entry its first word names, the lighter (`0x00574660`) and the normal-made UV read only the table's first run
   (one entry per vertex-order entry), and no park model's face names a first-run entry (the 153 meshes under `data/` whose faces do
   are all `ui.wad`'s, `lib/facenormals.py --sweep`). Every instance has its own table (the clone's `0x8`). The face entries feed the
-  picker and the height a point stands on; ours' picker already takes each triangle's own plane. A mesh flagged `0x1000000` holds a
+  picker, the height a point stands on and (corrected by run 14's review) the pose walk's face-anchored heads, which recomputes a morphing parent's
+  face normals first (`0x0044afe0`) where ours takes the file's, so a head on a morphing face is off (filed); ours' picker already takes each triangle's own plane. A mesh flagged `0x1000000` holds a
   colour stream at `+0x64` (the pulse, the hover's tint). **The control word** at `FUN_00469940` and `FUN_00473c30` during a file's
-  load is `0x27f`, 53-bit, under Proton (40 of 40); the executable sets none there, and Windows' own DirectDraw needs real Windows.
+  load is `0x27f`, 53-bit, under Proton (the first 40 calls); the executable sets none there, and Windows' own DirectDraw needs real Windows.
   Measured in the original on a copy of Alexah's Full Simulation New Save (`original/facenormals.py`, `original/brk.sh`): 1,192
-  meshes, all own, the first run the master's but for the highlighted pylon's two meshes (slot 202, `[0x007a1ce0]`), no face on the
+  meshes (24 of them `cart.MD2`'s, unread), all own, the first run the master's but for the highlighted pylon's two meshes (slot 202, `[0x007a1ce0]`), no face on the
   first run, every face not marked stale agreeing with its triangle to 1e-4. `park-engine.md`, "The recomputed face normals never
   reach the lighting" and "The control word". 8 predictions, 1 missed (P3: the tint read as changed normals).
 - [x] **Q821. The ground cut on each cell's own diagonal (Q820's piece (1), the build of Q398).** Done 2026-10-29 (run 14, lane A,
@@ -11140,6 +11141,14 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   (`q820-a14/run3/`): at cell (71,54) the console's `ground 716 543` reads stands 19.0000, camera 19.0000, bilinear 19.1207, and `camcorder 716 543` eye 24.0000; at (78,72)
   12.1000 and 17.1000, the two eyes the original reads there (`q822/orig/a-eyeprobe.out`); the second `camcorder` at the first point at once 24.0000 with the clock paused.
   Q822's 566 corrected in `park-engine.md` and `park.md`.
+  **What was and was not measured** (run 14's review): the console's `camcorder X Y` prints a formula, `CameraHeight( stand ) + EyeHeight`, computed in `State()`,
+  not the eye `Place` set, so the 24.0000 and 17.1000 readings, and "at once with the clock paused", would read the same with `GroundUnderStand` back on the bilinear
+  height or the ease put back: the eye as placed and its ease are read from the code only (`ParkTerrainTests` pins `EyeGround`, not the ease). `ground` calls
+  `HeightfieldFile` directly, so it measures the samplers, not their callers; no sprite or balloon census was taken, so "the samplers by census only" means the
+  `ground` lines. The test then read two flagged cells, where `CameraHeight` and `ScapeHeight` agree; the review added a bent unflagged point, (677, 727) in cell
+  (67,72), and the callers' helpers (`StandsOn`, `CornerGround`, `EyeGround`, `OrbitGround`), so a revert or a swap of a helper fails. A call site that bypassed its
+  helper would not (the draw's line is covered through `StandsOn`). The eye's further term, the stand's y (`[0x00790abc]`, added at `0x0042c9e2`), is
+  unread; `Feet` sounds a person at the ground's height where the original's `FUN_004754e0` hands the sprite's height above it (filed).
 
 ## B. Docs and comments
 

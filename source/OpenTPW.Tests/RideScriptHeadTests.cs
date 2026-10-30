@@ -235,8 +235,9 @@ public class RideScriptHeadTests
 
 	/// <summary>
 	/// <b>A head follows its tentacle</b>: move the face's third corner, as a morph frame might, and the face point moves by
-	/// <c>v</c> times as much, the third corner's weight (the face normal, which the morph routine does not write, does not
-	/// turn).
+	/// <c>v</c> times as much, the third corner's weight. The face normal is the file's and does not turn: the original's pose walk
+	/// recomputes it from the morphed corners, so this pins a deviation (park-engine.md, "The recomputed face normals never reach
+	/// the lighting").
 	/// </summary>
 	[TestMethod]
 	public void MovingTheTentacleMovesTheHeadWithIt()

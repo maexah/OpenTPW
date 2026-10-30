@@ -98,6 +98,28 @@ park for the website, go first. Q804 stopped the photographs: no picture with th
   in ours (the round trip: the same things, scripts and hoardings) and in the original under Proton (`loadfile.sh`), and say what
   each shows. Acceptance: (a) and (b) each named and settled or built, (c) each load run and its result written in `WORKS.md`'s
   Q810 entry.
+- [ ] **Q848. Face-anchored heads read the morphed face's recomputed normal, as the original's pose walk does.** (From run 14's
+  review of Q819, VERIFY-5 finding 1.) The pose walk marks the parent of every face-anchored record `0x10000000`
+  (`FUN_0044a870`, `0x0044a93c`), the morph marks the mesh stale (`0x10000`, `0x00471931`), and the pose walk recomputes the
+  parent's face normals (`FUN_00473a40`, called at `0x0044afe0`, before the children are walked at `0x0044afe8`) from the
+  morphed `+0x60` before a head reads its face's normal (`0x0044ad11`..`0x0044ad2a`, in `FUN_0044ab90`). Ours takes the file's
+  entry (`ModelFile.PointOnFace`, fed by `LobbyModel.TryGetDrawnNode`), so a head on a morphing face is off by the offset (1.0
+  to 1.7 units) times the normal's change: by a decode of the morph tracks (linear keys, not read live) 1.1 to 3.1 units for
+  Mumbo's five heads in his morph clips (`mumbom`, `Pmumbom1`, `mumbos`, `mumboe`, `mumboc`), up to about 0.37 for the Crazy
+  Ape's `Head1`..`16` (`Head17` up to 1.03); equal at rest (0.00 degrees on all 30 anchors), which is why
+  `AtRestEachFaceAnchoredHeadIsOnItsNode` passes. Build: `PointOnFace` takes the face's normal from the posed corners,
+  normalise( (c - b) x (a - b) ) (`lib/facenormals.py`'s `recomputed`, `FUN_00473a40`), when the parent mesh carries a morph
+  track, with `MovingTheTentacleMovesTheHeadWithIt` changed to pin the turn. Confirm: Mumbo's heads in a morph clip in both games
+  (ours and the original under Proton, the same clip and frame), and a census of each head's position against the original's
+  live node (its posed matrix read from memory).
+- [ ] **Q847. A person's sound is placed at the height of their sprite's offset above the ground, as the original's is.** (From run 14's
+  review of Q823, finding 4.) `FUN_004754e0` copies the sprite's `+0x88`, `+0x8c`, `+0x90` as they are
+  (`0x00475513`..`0x00475533`), and `+0x8c` is the height less `FUN_004527f0` (`Person_PlaceSprite`, `fsubr` at `0x004f9e91`, stored
+  through `0x00475480` at `0x004754bd`), so the original sounds a walker (`Person_PlaySound`, `0x004faa00`) at about 0 height, not at
+  the ground's height. Ours sounds them at `Feet`, the ground's height (now `ScapeHeight`), in `StaffSound` (ParkPeople.cs),
+  `PutOff` (twice), `Yawn` (PeepBehaviour.cs) and `Till` (ParkRideOperation.cs). `ParkAudio` places them with a distance gain, so
+  on raised ground the heard distance differs; the size was not measured. Build: give those sounds the sprite's own `+0x8c`, or
+  measure first that the difference is audible.
 - [ ] **Q802. What Q800 left for a person or a machine it did not have.** From Q800 (run 13, lane A). Done by the
   coordinator (2026-10-29): `opentpw.maintainer` set in `~/repos/OpenTPW-laneB`, and the Saturday audit runs
   `python3 tools/check_docs_paths.py`. The Linux quick start is marked "tested on the maintainer's Linux machine only"

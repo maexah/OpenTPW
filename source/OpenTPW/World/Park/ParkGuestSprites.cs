@@ -1265,7 +1265,9 @@ public sealed class ParkGuestSprites : ModelEntity
 
 	/// <summary>
 	/// Where a person stands in the world: their position on the ground under it, or null with no ground
-	/// loaded. It is what the original reads off a walking person's sprite (<c>FUN_004754e0</c>).
+	/// loaded. <b>A deviation:</b> the original's <c>FUN_004754e0</c> hands a person's sound the sprite's own <c>+0x88</c>,
+	/// <c>+0x8c</c>, <c>+0x90</c>, and <c>+0x8c</c> is the height above the ground (<c>FUN_004527f0</c> taken off by
+	/// <c>Person_PlaceSprite</c>, <c>0x004f9e91</c>), about nought for a walker, where this answers the ground's height itself.
 	/// </summary>
 	internal static Vector3? Feet( FixedVector at )
 		=> ParkGround.Current?.Heightfield is { } field ? FeetOn( field, at ) : null;

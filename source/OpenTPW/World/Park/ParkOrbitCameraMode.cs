@@ -102,7 +102,11 @@ public sealed class ParkOrbitCameraMode : CameraMode
 	/// <summary>The ground under the point of interest right now, without touching the easing.</summary>
 	/// <remarks>The first un-eased sample belongs to the first <see cref="Update"/>, not to a constructor.</remarks>
 	private static float PeekGround()
-		=> ParkGround.Current?.Heightfield?.CameraHeight( PointOfInterest.X, PointOfInterest.Y ) ?? 0f;
+		=> ParkGround.Current?.Heightfield is { } field ? OrbitGround( field, PointOfInterest.X, PointOfInterest.Y ) : 0f;
+
+	/// <summary>The ground under a point as the park camera asks it: <c>FUN_00452560</c> (<c>0x0042c817</c>), the cell's triangle by its <c>0x4</c>.</summary>
+	internal static float OrbitGround( HeightfieldFile field, float x, float y )
+		=> field.CameraHeight( x, y );
 
 	/// <summary>
 	/// The ground under the point of interest, eased. The original raises the eye by this so that
@@ -121,7 +125,7 @@ public sealed class ParkOrbitCameraMode : CameraMode
 		if ( field == null )
 			return 0f;
 
-		var sample = field.CameraHeight( PointOfInterest.X, PointOfInterest.Y );
+		var sample = OrbitGround( field, PointOfInterest.X, PointOfInterest.Y );
 
 		if ( !_groundSampled )
 		{
@@ -210,8 +214,8 @@ public sealed class ParkOrbitCameraMode : CameraMode
 		FieldOfView = Lens;
 
 		// Already over the point of interest before anything reads the camera - see Place. The ground
-		// is PEEKED rather than sampled, for the reason ParkCamcorderCameraMode.PeekGround gives: the
-		// one un-eased sample belongs to the first Update, when the statics have settled.
+		// is PEEKED rather than sampled: the one un-eased sample belongs to the first Update, when the
+		// statics have settled (PeekGround).
 		Place( PeekGround() );
 	}
 

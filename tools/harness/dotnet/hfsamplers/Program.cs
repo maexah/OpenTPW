@@ -2,10 +2,10 @@ using OpenTPW;
 using OpenTPW.Common;
 // dotnet/hfsamplers (Q822): a park heightfield's cells under the original's height samplers, against OpenTPW's.
 //   hfsamplers <data dir> <path in data>...      e.g. levels/jungle/terrain/base.MD2
-// Per file: the cells the load flags 0x800 (FUN_004504c0: the two triangles across (x+1,z)-(x,z+1), unit normals' dot
-// under 0.9999), the bend of the cells it leaves unflagged, and, on a 10 x 10 grid of points in every cell, how far
+// Per file: the cells the load flags 0x800 (FUN_004504c0: the two triangles across (x+1,z)-(x,z+1), the cross products of
+// their unit edges, not made unit, their dot under 0.9999), the bend of the cells it leaves unflagged, and, on a 10 x 10 grid of points in every cell, how far
 // FUN_004527f0 (0x800 cells split by 0x4, the rest the near-corner plane), FUN_00452560 (split by 0x4 on every cell),
-// HeightfieldFile.HeightAtWorld (bilinear), ScapeHeight (the file's flags) and CameraHeight answer apart; and the cells
+// HeightfieldFile.HeightAtWorld (bilinear), ScapeHeight (the loader's flags, so it matches FUN_004527f0 by construction) and CameraHeight answer apart; and the cells
 // whose 0x2 (the pick's and the drawing's split) and 0x4 (the heights' split) name different diagonals.
 var fs = new BaseFileSystem( args[0] );
 fs.RegisterArchiveHandler( ".wad", path => new WadArchive( path ) );
@@ -78,7 +78,7 @@ foreach ( var path in args.Skip( 1 ) )
 	Console.WriteLine( $"{path}: {field.CellsX} x {field.CellsY} = {cells} cells, {ground} ground; most bend {maxBend:0.###}" );
 	Console.WriteLine( $"  load 0x800: {flagged} cells, {flaggedGround} ground, {flaggedGround4} of those with 0x4; unflagged yet bent {bentUnflagged} (most {maxUnflaggedBend:0.######})" );
 	Console.WriteLine( $"  holes' 0x2|0x4 bits: {string.Join( ", ", holeBits.OrderBy( p => p.Key ).Select( p => $"0x{p.Key:x}={p.Value}" ) )}" );
-	Console.WriteLine( $"  0x2 and 0x4 name the same diagonal: {sameBits} cells ({groundSameBits} ground, {sameBitsBent} bent)" );
+	Console.WriteLine( $"  0x2 and 0x4 name different diagonals (equal bits): {sameBits} cells ({groundSameBits} ground, {sameBitsBent} bent)" );
 	Console.WriteLine( $"  against FUN_004527f0, cells off by over 0.001: bilinear {bilinearOff} (most {maxBilinear:0.###}), ScapeHeight {scapeOff} (most {maxScape:0.###}), CameraHeight {cameraOff} (most {maxCamera:0.###})" );
 	Console.WriteLine( $"  ground only: bent {groundBent} (most {groundMaxBend:0.###}), bent yet unflagged {groundBentUnflagged} (most {groundMaxUnflaggedBend:0.######}); off FUN_004527f0 by over 0.001: bilinear {groundBilinearOff} (most {groundMaxBilinear:0.###}), CameraHeight {groundCameraOff} (most {groundMaxCamera:0.###})" );
 }

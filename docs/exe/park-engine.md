@@ -82,10 +82,11 @@ Read 2026-10-16 from a lead in another fork (`meneerkrabs/OpenTPW`), checked in 
 `FUN_00452560` on every cell (the same planes as `ScapeHeight`'s split arm and `ProceduralConform.DrapeHeight`; ours holds the edge's height off the map where the
 original answers nought, and subtracts the grid's origin, which is nought in every park). Lost Kingdom's file, as the original's live memory holds it
 (`groundcell.py READ` over all 8,160 cells at 75 s into a load of Alexah's Full Simulation New Save, `q821/orig/poke7/cells75.txt`): of the 7,001 ground cells,
-4,293 carry `0x2` and 2,708 carry `0x4`, and the live word's `0x2`/`0x4` equals the file's in every one (the load adds `0x0800` and the tile's `0x0100`, clears the
-mirror and turn of the cells the compositor covers, and sets `0x0400` outside the park: `0x0804`, `0x0d02`, `0x0904` for file words `0x44`, `0x42`, `0x44`). A cell
-only bends by at most 2 world units there (the ground's heights are whole units, apart from a few cells of a ride's floor), so a wrong diagonal moves the
-height by at most half that; the other cut shows on screen as a different warp of the tile across the cell, over exactly the cells that carry `0x4` (ours,
+4,293 carry `0x2` and 2,708 carry `0x4`, and the live word's `0x2`/`0x4` equals the file's in every one (the load adds `0x0800` on the cells that are not planar only, 142 of the 6,447 live ground cells there, 158 in the stock park, and the tile's `0x0100` on cells
+awaiting a composite, not on all (cell (4,13) reads `0x0004`); it clears the mirror and turn of the cells the compositor covers, and sets `0x0400` outside the park:
+`0x0804`, `0x0d02`, `0x0904` for file words `0x44`, `0x42`, `0x44`). A cell
+only bends by at most 2 world units there (the corner spread; its twist h00 + h11 - h10 - h01 is at most 1.01, so the two cuts differ by at most half the
+twist, 0.505 at the centre; the ground's heights are whole units, apart from a few cells of a ride's floor); the other cut shows on screen as a different warp of the tile across the cell, over the `0x4` cells that are not planar (73 of the file's 2,708; a planar cell draws the same either way) (ours,
 `cut old` against `cut new`, 60,864 and 79,293 pixels over two staircases of four `0x44` cells, 0 where no cell differs). Not seen: the original's own
 picture of one cell's diagonal flipped (its frames drift under a poke, `q821/orig/poke7`).
 
@@ -97,9 +98,9 @@ the original, and every caller of the first two is known (`FUN_004527f0`, six ca
 | Who asks | Where | What it answers | OpenTPW |
 |---|---|---|---|
 | The park camera (orbit) | `FUN_0042b1c0`, `0x0042c817` | `FUN_00452560( x, z, 1 )`: the cell's triangle by `0x4`, every cell | `CameraHeight` (Q821) |
-| First person (the camcorder) | `FUN_0042b1c0`, `0x0042c729` | `FUN_00452560( stand x, z, 1 )` less `[0x006fde10]` (-5), stored straight as the eye's height `0x00790aa4` each frame: no easing | `CameraHeight` + 5, taken each frame (`ParkCamcorderCameraMode.GroundUnderStand`; Q820) |
-| Every sprite: walkers, staff, balloons | `FUN_00542010`, `0x005420ee`, for each sprite of the list (`FUN_00475430`) | `FUN_004527f0( +0x88, +0x90 )` plus the sprite's `+0x8c`; a sprite whose word `+0xc4` carries `0x1000000` stands at `+0x8c` itself | `ScapeHeight` (`ParkGuestSprites`: the walk's draw, `Feet`, `DrawBalloon`; Q820) |
-| A person put on a sprite | `Person_PlaceSprite`, `0x004f9e8c` | stores the height less `FUN_004527f0` under it in `+0x8c`, so the draw above gives the height back exactly | `ScapeHeight` (Q820) |
+| First person (the camcorder) | `FUN_0042b1c0`, `0x0042c729` | `FUN_00452560( stand x, z, 1 )` less `[0x006fde10]` (-5), stored straight as the eye's height `0x00790aa4` each frame: no easing; the update then adds the stand's y (`[0x00790abc]`, copied from `[0x007908f4]`) at `0x0042c9b8`..`0x0042c9e2`, nought in the probe (1,440 polls read exactly sampler + 5; whether it is ever not is not settled) | `CameraHeight` + 5, taken each frame (`ParkCamcorderCameraMode.GroundUnderStand`; Q820) |
+| Every sprite: walkers, staff, balloons (a held balloon is a sprite of that list: `FUN_004fa030` -> `0x004fe900` -> `0x00475480` writes its `+0x88`/`+0x8c`/`+0x90` in the table `FUN_00475430` walks; its `+0xc4` bit `0x1000000` is unread) | `FUN_00542010`, `0x005420ee`, for each sprite of the list (`FUN_00475430`) | `FUN_004527f0( +0x88, +0x90 )` plus the sprite's `+0x8c`; a sprite whose word `+0xc4` carries `0x1000000` stands at `+0x8c` itself | `ScapeHeight` (`ParkGuestSprites`: the walk's draw, `Feet`, `DrawBalloon`; Q820) |
+| A person put on a sprite | `Person_PlaceSprite`, `0x004f9e8c` | stores the height less `FUN_004527f0` under it in `+0x8c`, so the draw above gives the height back exactly | none: ours reads the saved `+0x8c` and draws it over `ScapeHeight`, so a saved person stands where the original put them |
 | A person's particles | `FUN_004fa470`, `0x004fa4dc` | `FUN_004527f0` at the person's place moved by `FUN_00519410`/`FUN_00519420` × `[0x00700698]` (not read) | not checked |
 | The build markers' wave | `FUN_0053ddd0`, `0x0053ddea` | `FUN_004527f0` at the corner it is handed, after the glide | `HeightAt` on a corner, `ScapeHeight` gliding (`ParkBuildMarkers.Corner`; Q820) |
 | The scene's height, mode 1; placement feedback | `FUN_004511a0`, `0x004511e6`; `FUN_00452ae0`, `0x00452c89` | `FUN_004527f0` (`park.md`, "The scene's height under a point") | `ScapeHeight` (`ParkSceneHeight.Under`) |
@@ -125,7 +126,7 @@ the 23 it lacked were all holes. Q820 took the products as the disassembly has t
 heightfield, the stock park loaded, `q820-a14/orig/cells-stock.txt`, flags those 589 cells and no other, cell for cell.) So on a flat
 cell all four corners' planes agree and `FUN_004527f0` answers what `FUN_00452560` does, but **a cell bent under that tolerance
 is not flagged**. Measured over the four parks' `base.MD2` (`dotnet/hfsamplers`, `q822/hfsamplers-run2.txt`, a 10 × 10
-grid of points in every cell): in Lost Kingdom 589 cells flag (158 ground, 73 of them with `0x4`; the rest are holes; `q820-a14/hfsamplers-run3.txt`: fantasy 273, hallow 365, space 354), and 464 ground cells bend yet do not, by at most 0.063; on the
+grid of points in every cell): in Lost Kingdom 589 cells flag (158 ground, 73 of them with `0x4`; the rest are holes; `q820-a14/hfsamplers-run3.txt`: fantasy 273, hallow 365, space 354), and 14 ground cells bend by 0.001 to 0.063 yet do not flag (the 450 others of the 464 that bend at all bend by float rounding, under 1e-5); on the
 ground, `FUN_00452560` (ours `CameraHeight`) differs from `FUN_004527f0` on 14 cells by at most 0.06 (fantasy 36, 0.011;
 hallow 5, 0.06; space 26, 0.006). Bilinear (ours `HeightAtWorld`) differs from it on 172 ground cells by up to 0.249
 (fantasy 196, 0.249; hallow 173, 0.248; space 198, 0.495). **Built (Q820 piece 4):** `HeightfieldFile` sets `0x800` at load by that rule, so `ScapeHeight` splits those cells
@@ -204,15 +205,15 @@ This distribution is itself corroboration of the `{flags, texture}` split rather
 
 ### `0x0800` is computed at load, not stored
 
-`0x0800` is absent from every shipped park because the loader derives it. After loading `base.md2`, `FUN_004504c0` walks every cell, builds the cross products of its **two triangles'** unit edges from the four corner heights (not made unit again, Q820), and where their dot product falls below `_DAT_006fe39c = 0.99990` (**0.81 degrees** of divergence — a very tight test, so most non-flat cells trip it) it does
+`0x0800` is absent from every shipped park because the loader derives it. After loading `base.md2`, `FUN_004504c0` walks every cell, builds the cross products of its **two triangles'** unit edges from the four corner heights (not made unit again, Q820), and where their dot product falls below `_DAT_006fe39c = 0.99990` (not an angle: the products are not made unit, so their lengths are the sines of the edges' angle, and a steep planar cell can flag; a cell bent by under about 0.1 passes) it does
 
     pbVar3 = (byte *)(cells + 1 + (y * cellsX + x) * 4);   *pbVar3 |= 8;
 
-Byte `+1` of the 4-byte record is the HIGH byte of the flags u16, so `|= 8` there is `0x0800` in the word. It means "this cell is not planar"; nothing that reads it has been found (above). **A loader must derive this bit itself; reading it off disk gives zero everywhere.**
+Byte `+1` of the 4-byte record is the HIGH byte of the flags u16, so `|= 8` there is `0x0800` in the word. It means "this cell is not planar"; `FUN_004527f0` reads it (`0x004528f8`, above). **A loader must derive this bit itself; reading it off disk gives zero everywhere.**
 
 | Address | What it is |
 |---|---|
-| `_DAT_006fe39c` | 0.99990 — the planarity dot-product threshold (0.81 deg) |
+| `_DAT_006fe39c` | 0.99990 — the threshold the dot of the two cross products is held to (not an angle) |
 | `_DAT_006fe384` | 10.0 — the cell run |
 | `_DAT_006fe390` | the **double** -100.0, so `sqrt(d*d - that)` is `sqrt(d*d + 100)`, the hypotenuse over one cell |
 | `FUN_004508b0` | A plain cross product |
@@ -321,15 +322,34 @@ writes normalise( (c - b) x (a - b) ) at the entry the word's low 15 bits name, 
 (`FUN_0067b410`); then clears the node's `0x10000`. The lighter (`Light_ModelVertexColours`, `0x00574660`) reads only the
 first run, entry i for vertex-order entry i (`+0x5e` of them), and so does the draw list's normal-made UV
 (`DrawList_AddMaterialFaces`, for a texture flagged `0x8000000`: u = (n . r + 1) / 2, scaled and offset, from the view's rows at
-`[0x0087afe8]`, `0x005806f8`..`0x005807b4`), indexed by vertex. No park model's face names an entry in the first run: of
-the 4,917 meshes of the 2,123 `.md2` under `data/`, 153 have such faces, all in `ui.wad` (`lib/facenormals.py --sweep`),
-and the vertex count never passes the vertex-order length. The face entries' readers are the picker
-(`PickMarch_MeetModel`, `0x0045d16a`; `PickMarch_AskCell` first recomputes a model's stale nodes, `0x0045ced9`) and the
-height a point stands on (`FUN_00451390`, `0x0045142b`, when no normals are handed in). After a conform `FUN_00469940`
+`[0x0087afe8]`; the normal-made UV loads `+0x64` at `0x00580691`, `0x00580873` and `0x00581488`, and `0x005806f8`..`0x005807b4` is one),
+which index differently: the lighter steps its entries by the order's position (`ebx += 0xc`, `0x00574797`), the UV reads the entry
+of the vertex number the order names (`0x00580707`..`0x00580715`). The first run has two more users: the Terrain's `base.md2` scaler
+(`FUN_00450b36`, `0x00450b81`, reads and writes it in place, the half-lit land of Q619) and the pulse (below); the highlight swap
+(`0x00469288`) copies only the face run. No park model's face names an entry in the first run: of the 4,917 meshes of the 841
+version-`0xDD` `.md2` that have a mesh table among the 2,123 under `data/` (the four others with one, `wr_tunnel.md2` and the two
+arrow models `garrow`/`rarrow`, are never drawn and the engine refuses to load a version above `0xDD`, `0x0046d768`), 153
+have such faces, all in `ui.wad` (`lib/facenormals.py --sweep`), and the vertex count never passes the vertex-order length
+(checked over the 4,917 by a scratch script, not stored). **The face entries' readers are three**: the picker
+(`PickMarch_MeetModel`, `0x0045d16a`; `PickMarch_AskCell` first recomputes a model's stale nodes, `0x0045ced9`), the
+height a point stands on (`FUN_00451390`, `0x0045142b`, when no normals are handed in) and **the pose walk**
+(`FUN_0044ab90`, `0x0044ad11`..`0x0044ad2a`: for a node anchored on a face of its parent mesh, flags `0x40040` and the parent
+`0x200000`, the face's normal times the anchor's offset is added to the head's place, "Where a head on a morphing face stands",
+`park.md`). **Who marks a head's parent stale**: `FUN_0044a870`, the lookup-record pass the item loader calls (`0x004627ce`),
+sets `0x10000000` on the parent of every face-anchored record (`or [ecx], 0x10000000`, `0x0044a93c`); the pose walk gives each
+visited node with `0x10000000` and `0x10000` the recompute (`FUN_00473a40`, `0x0044afe0`) before its children are walked
+(`0x0044afe8`), and the morph (`FUN_00471860`, `0x00471931`; `FUN_004714a0`) sets `0x10000` on the morphed mesh, so **each pose
+works a morphing parent's face normals out again from the morphed `+0x60` before a head reads one**. Ours does not
+(`ModelFile.PointOnFace` takes the file's entry, `LobbyModel.TryGetDrawnNode` hands it the morphed corners only), so a
+head on a morphing face stands off the original's place by the offset times the normal's change: by VERIFY's decode of the
+morph tracks (linear keys; not read live), at most 1.1 to 3.1 units for Mumbo's five heads in his morph clips (`mumbom`,
+`Pmumbom1`, `mumbos`, `mumboe` 1.08 to 1.71, `mumboc` up to 3.08), 0.24 to 0.37 for the Crazy Ape's `Head1`..`16` and up to 1.03 for
+his `Head17`; at rest the file's entries equal the recomputed ones (0.00 degrees on all 30 anchors), so the rest pose agrees. Filed
+as a build item, not built. After a conform `FUN_00469940`
 marks only the instance's root node `0x10000` and its header `0x40000` (`0x00469a56`..`0x00469a6b`); the instancer marks
-every node after it, a pylon's later stand does not, and `Model_AdvanceChannels` recomputes marked nodes only for a header
-flagged `0x4` (`0x00473dc1`). **Measured in the original** (`q819/orig/o3`, `o5`, `original/facenormals.py`; a Full
-Simulation player loading a copy of Alexah's `New Save.TPWS`, 200 s; o3's counts, o5's within three meshes): 1,192 meshes, every table the instance's own; the
+every node after it, a pylon's later stand does not, and `Model_AdvanceChannels` recomputes marked nodes for a header
+flagged `0x4` (`0x00473dc1`, `0x00473ddf`) and the pose walk those flagged `0x10000000` (`0x0044afe0`); `FUN_00473a40` has three callers (`0x0044afe0`, `0x00473c4f`, `0x00473ddf`). **Measured in the original** (`q819/orig/o3`, `o5`, `original/facenormals.py`; a Full
+Simulation player loading a copy of Alexah's `New Save.TPWS`, 200 s; o3's counts, o5's within three meshes): 1,192 meshes (24 of them the unread `cart.MD2` meshes, slots 330 to 353, counted but never compared, so 1,168 read; why they do not read was not found), every table the instance's own; the
 first run as the master's in every mesh but two colour-swapped ones (below); no face names a first-run entry; 31,167 of
 33,709 faces hold the normal worked out from their instance's own vertices to 1e-4, and the other 2,542 are all in the 60
 meshes still marked `0x10000`; 6,774 face entries differ from the master's (`gates.MD2`'s 187 among them, its file
@@ -341,7 +361,7 @@ vertex-order entry into the table, over the first run (a new pool only where the
 `+0x64` at a tint block and keeps the old pointer in `[0x007afd94]`: in the run the two were the pylon under the Load
 click's pointer (`[0x007a1ce0]` = slot 202, `mc_pylon` and `mc_bridge`, 160 entries; the pulse list empty), drawn bright
 yellow under "Left-click to edit this track" (`q819/orig/o5/o-t19651.png`). OpenTPW's picker takes each triangle's plane from its
-placed corners (`ParkPickMarch.MeshTriangles`), the same vector, and it lights by its own normals, so nothing is to build.
+placed corners (`ParkPickMarch.MeshTriangles`), the same vector (the cross product before the original normalises), and it lights by its own normals, so **for the lighting and the picker nothing is to build; for a head on a morphing face the pose walk's recompute is a build** (above).
 
 **`FUN_00469940( model, scene, H, mode )` makes two passes** (Q812). The first is `FUN_00469a80( master root, instance root )`
 over the whole tree (`0x004699d2`); the second runs it again on each mesh node with a list at `+0x98` (`0x004699eb`), that node
@@ -379,9 +399,9 @@ root height, to 0.0001. The interpolating pass lists the kart station's 16 verti
 Lava Jump's 20 (`gk_brdge`; 16 differ), each standing by the ground along its cell line less the root height, to 0.0001 (`orig2/bv80.txt`). Things were made `0x32f` (119) or `0x3fa` (40, the coaster's pylons), pieces `0x33a` (269). In its `bv75` the 119 things list 765 base vertices and use 765, the 40 pylons list 160 and use 152 (765 + 152 = 917 used, 765 + 160 = 925 listed); a mesh whose lookup record carries `0x10000` (`mammtunn`'s `gk_mam1`) is skipped by the count (`0x0044a94b`, `0x00469ad0`), so the Dino Karts Tunnel lists 7, all on `gk_tracktop01`. Its frame at
 the Sun God camera holds no clear-coloured sliver (`o-t19197.png`, 0); ours at the same camera, unchanged, 5,652 (`q812/ours1`).
 **The control word** (Q819): the conform sets none (the executable's `fldcw`s are the CRT's, `__ftol`'s, the frame
-renderer's `FUN_00591250` and a coaster routine's own chop at `0x00439ab0`..`0x00439c30`), so it runs under the one in
+renderer's `FUN_00591220` and `FUN_00591250` (called at `0x00576fa7` and `0x00577304`; the three `fldcw` are at `0x00591233`..`0x0059125c`), a class method at `0x0062f9c3` and a coaster routine's own chop at `0x00439ab0`..`0x00439c30`; none lies in `0x469xxx` or `0x473xxx`), so it runs under the one in
 force. Under Proton it is `0x27f` (53-bit, nearest, all masked): `original/brk.sh` on `FUN_00469940` and `FUN_00473c30`
-read it 40 times of 40 during the load of a copy of Alexah's `New Save.TPWS` (`q819/orig/o2/brk.txt`, every hit at the
+read it on the first 40 calls (the cap of the reader's hits; the load makes more) during the load of a copy of Alexah's `New Save.TPWS` (`q819/orig/o2/brk.txt`, every hit at the
 file's tick 19004). What Windows' own DirectDraw leaves under `DDSCL_FPUSETUP` cannot be read without real Windows
 ("Which rounding is live is not settled", below); it moves only the last bits. OpenTPW works the conform in `float` (the corner's
 fraction in `double`, `ProceduralConform`), which matches the original's stored vertices to 0.0001 (above).
@@ -442,7 +462,7 @@ measured on `StdPylonL`, `I` and `B` (`q817/morphprobe.txt`). A pylon alone on i
 by the arms above; its floor is shown. **Not built:** a stacked pylon and a loop pylon (counted `COASTER_STACKED_PYLON`, `COASTER_LOOP_PYLON`; their coaster keeps
 its other pylons, drawn); `Coaster_MoveNodeToCell`'s conform (a coaster is not edited here; its same-cell path only stands the cell again, `0x00442f55`..`0x00442f63`);
 the saved node word's `0x400` (the `0x80000000` it puts back changes nothing drawn); the incline and bank clips' turns of `TrackCentreDummy`
-composed (both clips turn that node, which no mesh hangs from: the later replaces the earlier); the vertex normals the morph leaves as made (Q818).
+composed (both clips turn that node, which no mesh hangs from: the later replaces the earlier). Not a gap: a morphed pylon's vertex normals stay as made, as the original's do (the lighter reads the first run, which neither the morph nor the recompute writes, Q819).
 **Measured in OpenTPW** (Q817, Alexah's New Save, a copy; the final binary): `pylons` lists 40, each knot drawn where `ParkCoasterHeights.OnPylon` puts it (off 0.0000),
 each floor 4 listed and 4 on a corner (160 conformed vertices), `mc_bridge` hidden on all 40; the two at cells (29, 35) and (32, 35) (loft 1) stand 100 up.
 
@@ -453,7 +473,7 @@ grid line and sets the height to the nearest corner's, nothing added (always, an
 piece, and the meshes a placed object's lookup record marks `0x10000` (`mammtunn`'s `gk_mam1`), and raises each vertex by the
 height under it on the cell's triangle (`DrapeHeight`, the flag `0x4` as above) less the model's own height; a source vertex moves
 under every drawn vertex that names it, and `SourceVertices` stay the rest the floor search and the hoardings read. The cell's
-triangle here is the original's, and the ground mesh is cut on the same diagonal since Q821. Nothing is to build for the recomputed face normals or the control word (Q819, "The recomputed face normals never reach the lighting" and "The control word", above). **Measured in OpenTPW** (Q808, Alexah's New Save, a copy): the Sun God 18 of 18 listed rim
+triangle here is the original's, and the ground mesh is cut on the same diagonal since Q821. Nothing is to build for the control word or for the recomputed face normals' lighting (Q819, "The recomputed face normals never reach the lighting" and "The control word", above); the pose walk's recompute for a head on a morphing face is a build, filed. **Measured in OpenTPW** (Q808, Alexah's New Save, a copy): the Sun God 18 of 18 listed rim
 vertices on a corner, the Tom Tom Twister 20 of 20, the Costume Shop 12 of 12 (the original's counts), 1,782 queue vertices and
 1,736 track-piece vertices draped, and the clear-coloured sliver pixels at the Sun God camera 5,751 to 11, the Tom Tom Twister's
 16,308 to 0, the Costume Shop's 7,844 to 0.
@@ -2896,7 +2916,7 @@ moves it). Decoded 2026-10-25 (Q633):
 - **The squares glide.** `FUN_0053c3f0` moves a point `DAT_00820afc`, `DAT_00820af8` half the way to the preview cell × 10
   every rendered frame (`0x00700de4`, 0.5), and in modes 4, `0xe` and `0x13` every square and wall below texture `0xd`
   is drawn that far from its own place as the point is from the cell (`0x0053df67`), its ground and wave asked at the
-  shifted corner (`FUN_0053ddd0`). The no-glide flag `DAT_00874fc4` is only ever written nought (`0x005239f6`,
+  shifted corner (`FUN_0053ddd0`; its 17 callers are 16 in `FUN_0053df30`, `0x0053e083`..`0x0053e444`, and `0x0053e580`). The no-glide flag `DAT_00874fc4` is only ever written nought (`0x005239f6`,
   `0x0053c000`).
 - **The pointer** (`FUN_0052f950`, mode 4): cursor 7, `c_place`; 8, `c_noplace`, under the pass's refusal `DAT_00816d48`
   (`FUN_00527950`); `0x14`, `c_cash`, under `DAT_00816d5c`.
@@ -3521,7 +3541,7 @@ sum to 6.2821855 (`0x006fe678`) or more. The first face inside gives the point (
 the answer is the first face in that order, not the nearest. **The faces' normals in the running game are the
 triangles' own**: in gates.MD2's gateway the 196 entries the faces name all lie parallel to their triangles in the
 running game, 37 of them already so in the file (`q494/orig/a-gatenormals.txt`); the table's other entries were not
-compared, and what rewrites the 159 is not read. File side: 26 of the 196 lie more than 8 degrees off in the file
+compared; what rewrites the 159 is the instancer's `0x10000` on every node and `FUN_00473c30` (`0x00463937`, Q819: "The recomputed face normals never reach the lighting"). File side: 26 of the 196 lie more than 8 degrees off in the file
 (FileFormats `models.md`, "Normals"; `q494/fixB-normals-sweep.py`).
 
 The record met goes to `[0x007a1cd4]` and to `[0x007afda0]` (`FUN_00469340`, the highlight's model, Q24), and the

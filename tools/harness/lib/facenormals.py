@@ -13,7 +13,7 @@ the vertex-order length overwrites a normal the lighter uses; one at or past it 
                                           lit entry, then the totals
 
 A mesh line: vertex-order length, faces, faces naming a lit entry ("lit"), and of those how many the recompute turns
-by more than 1 degree from the file's entry ("turned"). Importable: `recomputed( mesh, corners )`, `lit_faces( mesh )`.
+by more than 1 degree from the file's entry ("turned"). Importable: `recomputed( corner_a, corner_b, corner_c )`, `lit_faces( model, mesh )`.
 """
 import math
 import os

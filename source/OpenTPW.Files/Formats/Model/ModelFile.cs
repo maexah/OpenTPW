@@ -263,7 +263,9 @@ public partial class ModelFile : BaseFormat
 
 		/// <summary>
 		/// The face normals the mesh record's +0x64 points at, three floats each, as many as the faces name. The
-		/// engine reads them for a node anchored on a face (<see cref="FaceAnchor"/>); its morph routine does not write them.
+		/// engine reads them for a node anchored on a face (<see cref="FaceAnchor"/>). The morph routine does not write them, but the pose walk
+		/// recomputes a morphed parent's face normals before a head reads one (<c>0x0044afe0</c>), which this file's table does not follow
+		/// (park-engine.md, "The recomputed face normals never reach the lighting").
 		/// </summary>
 		public Vector3[] FaceNormals { get; set; } = Array.Empty<Vector3>();
 
@@ -838,8 +840,9 @@ public partial class ModelFile : BaseFormat
 	/// <summary>
 	/// The point <paramref name="face"/> names on <paramref name="mesh"/>, in the mesh's own space, with each source
 	/// vertex where <paramref name="sourcePosition"/> says it stands - at rest, or as a morph poses it: the face's corners
-	/// lerped as <c>FUN_0044b040</c> lerps them, then the face's normal times the offset. Null where the face, a corner or
-	/// its normal is not in the mesh.
+	/// lerped as <c>FUN_0044b040</c> lerps them, then the face's normal times the offset. The normal is the file's entry; a
+	/// morphed parent's is recomputed by the original's pose walk before it is read (<c>0x0044afe0</c>), which this does not do.
+	/// Null where the face, a corner or its normal is not in the mesh.
 	/// </summary>
 	public static Vector3? PointOnFace( Mesh mesh, FaceAnchor face, Func<int, Vector3> sourcePosition )
 	{

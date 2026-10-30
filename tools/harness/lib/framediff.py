@@ -17,7 +17,7 @@ h, w = A.shape[:2]; s = h / 720
 keep = np.ones((h, w), bool)
 if not a.hud:
 	keep[:int(130 * s), :int(430 * s)] = False; keep[int(380 * s):, :int(240 * s)] = False
-	keep[:int(140 * s), int(1090 * s * w / (1280 * s)):] = False; keep[int(665 * s):, int(420 * s):int(860 * s)] = False
+	keep[:int(140 * s), int(1090 * s):] = False; keep[int(665 * s):, int(420 * s):int(860 * s)] = False
 d = np.abs(A - B).max(axis=2) * keep
 ys, xs = np.nonzero(d > a.levels)
 print(f"{a.a} {a.b}: {len(ys)} pixels differ by more than {a.levels} levels" + (f", in x {xs.min()}..{xs.max()}, y {ys.min()}..{ys.max()}" if len(ys) else ""))
