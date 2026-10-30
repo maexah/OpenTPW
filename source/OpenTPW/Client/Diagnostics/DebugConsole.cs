@@ -2968,7 +2968,7 @@ public static class DebugConsole
 
 		foreach ( var wad in wads )
 		{
-			held += wad.Buffer.Length;
+			held += wad.HeldBytes;
 			var (count, packed, unpacked) = wad.Cached();
 			entries += count;
 			compressed += packed;

@@ -161,6 +161,82 @@ public class ArchiveDamageTests
 		Assert.AreEqual( 0L, bytes.Position, "reject before allocating or consuming a partial field" );
 	}
 
+	/// <summary>A WAD written to a temporary file, opened by its path; the file is gone when the test ends.</summary>
+	private sealed class TempWad : IDisposable
+	{
+		public string Path { get; } = System.IO.Path.Combine( System.IO.Path.GetTempPath(), $"opentpw-wad-{Guid.NewGuid():N}.wad" );
+
+		public TempWad( byte[] bytes ) => File.WriteAllBytes( Path, bytes );
+
+		public void Dispose() => File.Delete( Path );
+	}
+
+	[TestMethod]
+	public void AnArchiveOnDiskHoldsNoneOfItsBytesAndReadsAnEntryFromTheFileWhenAsked()
+	{
+		var bytes = Wad( [7, 8, 9] );
+		using var wad = new TempWad( bytes );
+		using var onDisk = new WadArchive( wad.Path );
+		using var fromStream = new WadArchive( new MemoryStream( bytes ) );
+
+		Assert.AreEqual( 0L, onDisk.HeldBytes, "the file is not held" );
+		Assert.AreEqual( (long)bytes.Length, fromStream.HeldBytes, "a stream is consumed, so its bytes are" );
+		CollectionAssert.AreEqual( new byte[] { 7, 8, 9 }, Entry( onDisk, "x" ).GetData() );
+		CollectionAssert.AreEqual( fromStream.GetData( 128, 3 ), onDisk.GetData( 128, 3 ) );
+		Reject( () => onDisk.GetData( bytes.Length - 1, 2 ) );
+	}
+
+	[TestMethod]
+	public void AnArchiveOnDiskIsRejectedWhereAStreamIsAndItsFileIsLetGo()
+	{
+		var complete = Wad( [1, 2, 3] );
+		for ( var length = 0; length < complete.Length; ++length )
+		{
+			using var wad = new TempWad( complete[..length] );
+			Assert.ThrowsException<InvalidDataException>( () => new WadArchive( wad.Path ).Dispose(), $"a {length}-byte file is a damaged archive, found when it is opened" );
+			Assert.IsTrue( CanBeTakenAlone( wad.Path ), $"a rejected {length}-byte archive left its file open" );
+		}
+
+		using var good = new TempWad( complete );
+		new WadArchive( good.Path ).Dispose();
+		Assert.IsTrue( CanBeTakenAlone( good.Path ), "a disposed archive left its file open" );
+	}
+
+	/// <summary>Whether nothing has the file open: the runtime's share modes, which Linux holds as locks too, refuse a writer that shares with no one.</summary>
+	private static bool CanBeTakenAlone( string path )
+	{
+		try
+		{
+			using var alone = new FileStream( path, FileMode.Open, FileAccess.Write, FileShare.None );
+			return true;
+		}
+		catch ( IOException )
+		{
+			return false;
+		}
+	}
+
+	[TestMethod]
+	public void AnArchiveOnDiskFailsAnEntryReadAfterItsFileShrank()
+	{
+		var bytes = Wad( [1, 2, 3, 4, 5, 6] );
+		using var wad = new TempWad( bytes );
+		using var archive = new WadArchive( wad.Path );
+		using ( var file = new FileStream( wad.Path, FileMode.Open, FileAccess.Write, FileShare.ReadWrite ) )
+			file.SetLength( 130 );
+		Reject( () => Entry( archive, "x" ).GetData() );
+	}
+
+	[TestMethod]
+	public void AnEntrysSizeIsReadFromTheTableNotByDecodingIt()
+	{
+		using var plain = new WadArchive( new MemoryStream( Wad( [1, 2, 3] ) ) );
+		Assert.AreEqual( 3L, plain.GetFileSize( "x" ) );
+		using var compressed = new WadArchive( new MemoryStream( Wad( Pack( 4, "E061626364FC" ), true, 4 ) ) );
+		Assert.AreEqual( 4L, compressed.GetFileSize( "x" ) );
+		Assert.AreEqual( 0L, compressed.GetFileSize( "missing" ) );
+	}
+
 	[TestMethod]
 	public void EveryInstalledWadEntryStillDecodes()
 	{
@@ -181,6 +257,7 @@ public class ArchiveDamageTests
 				{
 					var file = (WadArchiveFile)Entry( archive, folder + name );
 					var decoded = file.GetData();
+					Assert.AreEqual( (long)decoded.Length, archive.GetFileSize( folder + name ), $"{path}: {folder}{name}" );
 					hashes.Add( Path.GetRelativePath( GameDir.Data, path ).Replace( '\\', '/' ).ToLowerInvariant()
 						+ "\0" + (folder + name).ToLowerInvariant() + "\0"
 						+ Convert.ToHexString( SHA256.HashData( decoded ) ).ToLowerInvariant() + "\n" );

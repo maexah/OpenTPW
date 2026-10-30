@@ -1,3 +1,6 @@
+using Microsoft.Win32.SafeHandles;
+using System.Text;
+
 namespace OpenTPW;
 
 /*
@@ -51,11 +54,20 @@ public sealed class WadArchiveFile : ArchiveFile
 
 public sealed class WadArchive : IArchive
 {
-	private readonly ExpandedMemoryStream memoryStream;
-	public byte[] Buffer { get; }
+	/// <summary>The archive's file, opened for reading entries on demand; null for an archive read from a stream.</summary>
+	private readonly SafeFileHandle? _file;
+
+	/// <summary>The whole archive, for one read from a stream, which is consumed and closed; null for an archive on disk.</summary>
+	private readonly byte[]? _held;
+
+	/// <summary>The archive's length in bytes.</summary>
+	private readonly long _length;
 
 	/// <summary>Every entry of the archive, in the order the table lists them.</summary>
 	private readonly List<WadArchiveFile> _entries = new();
+
+	/// <summary>How many bytes of the archive are held in memory: all of them for a stream's, none for a file's.</summary>
+	public long HeldBytes => _held?.Length ?? 0;
 
 	/// <summary>How many entries have their bytes kept, and how many bytes that is, split by whether the entry is stored compressed.</summary>
 	public (int Entries, long Compressed, long Plain) Cached()
@@ -85,9 +97,27 @@ public sealed class WadArchive : IArchive
 	/// </summary>
 	public ArchiveDirectory Root { get; } = new( "/" );
 
-	/// <summary>Reads an archive from the disk, not the game's file system.</summary>
-	public WadArchive( string path ) : this( File.OpenRead( path ) )
+	/// <summary>
+	/// Opens an archive on the disk, not the game's file system. Only its table and names are read here; an
+	/// entry's bytes are read from the file when it is asked for.
+	/// </summary>
+	public WadArchive( string path )
 	{
+		_file = File.OpenHandle( path, FileMode.Open, FileAccess.Read, FileShare.Read, FileOptions.RandomAccess );
+
+		try
+		{
+			_length = RandomAccess.GetLength( _file );
+			if ( _length < 88 || _length > int.MaxValue )
+				throw new InvalidDataException( "Unsupported or truncated WAD length." );
+
+			ReadArchive();
+		}
+		catch
+		{
+			_file.Dispose();
+			throw;
+		}
 	}
 
 	/// <summary>Reads an archive from where <paramref name="stream"/> stands; it consumes and closes the stream.</summary>
@@ -98,24 +128,42 @@ public sealed class WadArchive : IArchive
 			var length = stream.Length - stream.Position;
 			if ( length < 88 || length > int.MaxValue )
 				throw new InvalidDataException( "Unsupported or truncated WAD length." );
-			Buffer = new byte[(int)length];
-			stream.ReadExactly( Buffer );
+			_held = new byte[(int)length];
+			stream.ReadExactly( _held );
+			_length = length;
 		}
-
-		memoryStream = new ExpandedMemoryStream( Buffer );
 
 		ReadArchive();
 	}
 
 	public void Dispose()
 	{
-		memoryStream.Dispose();
+		_file?.Dispose();
+	}
+
+	/// <summary>The <paramref name="length"/> bytes of the archive from <paramref name="offset"/>, which the caller has checked lie inside it.</summary>
+	private byte[] ReadAt( long offset, int length )
+	{
+		if ( _held != null )
+			return _held.AsSpan( (int)offset, length ).ToArray();
+
+		var bytes = new byte[length];
+		var done = 0;
+
+		while ( done < length )
+		{
+			var read = RandomAccess.Read( _file!, bytes.AsSpan( done ), offset + done );
+			if ( read == 0 )
+				throw new EndOfStreamException( "The WAD file ends before the length it had when it was opened." );
+			done += read;
+		}
+
+		return bytes;
 	}
 
 	private void ReadArchive()
 	{
 		ValidateSpan( 0, 88, "header" );
-		memoryStream.Seek( 0, SeekOrigin.Begin );
 
 		/* 
 		 * Header:
@@ -128,32 +176,34 @@ public sealed class WadArchive : IArchive
 		 * 4 - null
 		 */
 
-		var magicNumber = memoryStream.ReadString( 4 );
+		using var header = new ExpandedMemoryStream( ReadAt( 0, 88 ) );
+		var magicNumber = header.ReadString( 4 );
 
 		// Magic number
 		if ( magicNumber != "DWFB" )
 			throw new InvalidDataException( $"WAD magic number did not match: {magicNumber}" );
 
 		// Version
-		_ = memoryStream.ReadInt32();
+		_ = header.ReadInt32();
 
 		// Padding
-		memoryStream.Seek( 64, SeekOrigin.Current ); // Skip padding
+		header.Seek( 64, SeekOrigin.Current ); // Skip padding
 
 		// File count
-		var fileCount = memoryStream.ReadInt32();
+		var fileCount = header.ReadInt32();
 
 		// Filename string block, not the entry table (FileFormats: wad.md).
-		var namesOffset = memoryStream.ReadUInt32();
+		var namesOffset = header.ReadUInt32();
 
-		var namesLength = memoryStream.ReadUInt32();
+		var namesLength = header.ReadUInt32();
 		if ( fileCount < 0 )
 			throw new InvalidDataException( "Negative WAD entry count." );
 		ValidateSpan( 88, (long)fileCount * 40, "entry table" );
 		ValidateSpan( namesOffset, namesLength, "filename block" );
 
-		// Unused / unknown
-		_ = memoryStream.ReadInt32();
+		// The table and the names are read once and let go; the shipped archives keep the names after the data.
+		using var table = new ExpandedMemoryStream( ReadAt( 88, fileCount * 40 ) );
+		var names = ReadAt( namesOffset, (int)namesLength );
 
 		//
 		// Whenever a filename contains a directory name (e.g. "textures\hi.wct"),
@@ -178,44 +228,44 @@ public sealed class WadArchive : IArchive
 			 */
 
 			// Save the current position so that we can go back to it later
-			var initialPos = memoryStream.Position;
+			var initialPos = table.Position;
 
 			// Unused / unknown
-			memoryStream.Seek( 4, SeekOrigin.Current );
+			table.Seek( 4, SeekOrigin.Current );
 
 			var newFile = new WadArchiveFile( this );
 
 			// Filename offset
-			var filenameOffset = memoryStream.ReadUInt32();
+			var filenameOffset = table.ReadUInt32();
 
 			// Filename length
-			var filenameLength = memoryStream.ReadUInt32();
+			var filenameLength = table.ReadUInt32();
 
 			// Data offset
-			var dataOffset = memoryStream.ReadUInt32();
+			var dataOffset = table.ReadUInt32();
 
 			// Data length
-			var dataLength = memoryStream.ReadUInt32();
+			var dataLength = table.ReadUInt32();
 			ValidateSpan( dataOffset, dataLength, "entry data" );
 			newFile.OffsetInArchive = (int)dataOffset;
 			newFile.SizeInArchive = (int)dataLength;
 
 			// Compression type
-			var compression = memoryStream.ReadUInt32();
+			var compression = table.ReadUInt32();
 			if ( compression is not (0 or 4) )
 				throw new InvalidDataException( $"Unsupported WAD compression type {compression}." );
 			newFile.Compressed = compression == 4;
 
 			// Decompressed size
-			newFile.DecompressedSize = memoryStream.ReadUInt32();
+			newFile.DecompressedSize = table.ReadUInt32();
 			if ( filenameLength == 0 || filenameOffset < namesOffset
 				|| (long)filenameOffset + filenameLength > (long)namesOffset + namesLength )
 				throw new InvalidDataException( "WAD filename lies outside its string block." );
 
 			// Set file's name name
-			memoryStream.Seek( filenameOffset, SeekOrigin.Begin );
-			newFile.Name = memoryStream.ReadString( (int)filenameLength - 1 );
-			if ( memoryStream.ReadByte() != 0 || newFile.Name.Contains( '\0' ) )
+			var nameStart = (int)(filenameOffset - namesOffset);
+			newFile.Name = Encoding.ASCII.GetString( names, nameStart, (int)filenameLength - 1 );
+			if ( names[nameStart + (int)filenameLength - 1] != 0 || newFile.Name.Contains( '\0' ) )
 				throw new InvalidDataException( "WAD filename is not a single NUL-terminated string." );
 
 			//
@@ -260,8 +310,8 @@ public sealed class WadArchive : IArchive
 			subDirectory.Children.Add( newFile );
 			_entries.Add( newFile );
 
-			// Return to initial position, skip to the next file's data
-			memoryStream.Seek( initialPos + 40, SeekOrigin.Begin );
+			// Skip to the next file's record
+			table.Seek( initialPos + 40, SeekOrigin.Begin );
 		}
 	}
 
@@ -346,15 +396,14 @@ public sealed class WadArchive : IArchive
 
 	private void ValidateSpan( long offset, long length, string field )
 	{
-		if ( offset < 0 || length < 0 || offset > Buffer.Length || length > Buffer.Length - offset )
+		if ( offset < 0 || length < 0 || offset > _length || length > _length - offset )
 			throw new InvalidDataException( $"WAD {field} extends beyond the archive." );
 	}
 
 	public byte[] GetData( int offset, int length )
 	{
 		ValidateSpan( offset, length, "requested data" );
-		memoryStream.Seek( offset, SeekOrigin.Begin );
-		return memoryStream.ReadBytes( length );
+		return ReadAt( offset, length );
 	}
 
 	public Stream? OpenFile( string path )
@@ -369,7 +418,7 @@ public sealed class WadArchive : IArchive
 
 	public long GetFileSize( string path )
 	{
-		return GetFile( path )?.GetData().Length ?? 0L;
+		return GetFile( path ) is WadArchiveFile file ? file.Compressed ? file.DecompressedSize : file.SizeInArchive : 0L;
 	}
 
 	public DateTime GetModifiedTime()

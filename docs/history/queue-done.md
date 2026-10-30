@@ -11185,6 +11185,17 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   is NLayer's float taken to the nearest word; exactly 336 peak past full scale), and in the mix (`q827/audio-old`, `audio-final`: the advisor's `sp_203`, float peak 1.200,
   peak 0.15602 before and 0.13000 after, ratio 1.2002, rms over the line equal 0.01867; the mixer's scale put back out: peak 1.0, gain 4.3, `audio-mutant-v1`). Also built: the console's `mem wads`, which measured the WAD half of Q826 (below).
   Not measured: off-screen under lavapipe (lane B's display), a Release build.
+- [x] **Q828. The WAD archives are read from their files when an entry is asked for, not held whole (Q826's second piece).** Done 2026-10-30 (run 15, lane A, `alexah/786-wad-archives-read-from-the-file`).
+  `new WadArchive( path )` opens the file and reads only its header, entry table and names block (the shipped archives keep the names at the end, all 312); an entry's bytes are
+  read from the file by offset (`RandomAccess.Read`, which has no cursor to share) and cached as before; an archive read from a stream
+  (the tests') still holds its bytes. `GetFileSize` reads the table's sizes instead of decoding the entry to count it. On the desk, 30 s in, `mem gc`, the build before against this one
+  (`q828/base-stock`, `new-stock`, `base-fs`, `new-fs`): `mem wads` 22.7 MB held whole -> 0.0; managed total 221.0 -> 196.9 MB (stock), 243.8 -> 219.7 (Full Simulation); resident
+  487.6 -> 461.3 MB (523.5 -> 498.8); the load's peak 562 -> 529 MB (587 -> 557); the park's load 4,990 -> 5,012 ms (stock; no phase more than 26 ms longer; Full Simulation 8,488 -> 8,472)
+  and its frame the same (mean brightness 76.36 against 76.47, Full Simulation 78.77 against 79.02, 0.9% and 3.5% of pixels differing as two runs of one build do). By test: the decoded
+  corpus of all 13,392 entries of the 312 installed archives hashes as before (`6CBD6C22...`) and every entry's table size is its decoded length. `mutate.py`: 12 bugs, 11 fail a test (one
+  hangs the run: an end-of-file read not told apart loops for ever), one survived the first test and fails the strengthened one. `PREDICTION.txt`: P5 (the peak) missed, its cause recorded.
+  Q826 is rewritten for what is left: the entries' cache (11.7 to 15.2 MB), GroundTiles' kept 33 MB of pixels, textures by path, NeoVeldrid's chunks.
+  Not measured: off-screen under lavapipe (lane B's display), a Release build, Windows (the open handles' share mode is `FileShare.Read`; the test of a closed handle uses the runtime's share modes, which Linux holds as locks).
 
 ## B. Docs and comments
 
