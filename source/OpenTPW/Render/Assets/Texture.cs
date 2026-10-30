@@ -244,7 +244,7 @@ public partial class Texture : Asset
 	/// Rewrites a rectangle of the first level in place, from <paramref name="data"/> (RGBA, <paramref name="width"/> x
 	/// <paramref name="height"/>, its first row the rectangle's top), and leaves the smaller levels as they were until
 	/// <see cref="RebuildMips"/>. For a texture kept at eight bits only: a cut one makes every level from the whole of its
-	/// first on the CPU (<see cref="Upload"/>), so its owner keeps the whole and uses <see cref="UpdatePixels"/>.
+	/// first on the CPU (<see cref="Upload"/>), so its owner keeps the whole and makes the texture again (<c>GroundTiles.Remake</c>).
 	/// </summary>
 	public void UpdateRegion( byte[] data, int x, int y, int width, int height )
 	{

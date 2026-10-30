@@ -56,8 +56,8 @@ public sealed class WadArchiveFile : ArchiveFile
 
 		Interlocked.Add( ref ReadTicks, System.Diagnostics.Stopwatch.GetTimestamp() - started );
 
-		// An entry asked for once is not kept; one asked for again is, from that second ask: 927 of the stock park's
-		// 1,014 entries are asked for once, and the three models asked for most are asked for 50 to 90 times.
+		// An entry asked for once is not kept; one asked for again is, from that second ask: 927 of the 1,014 entries the lobby and
+		// the stock park ask for are asked for once, and the three models asked for most are asked for 50 to 90 times.
 		if ( asks >= KeepFromAsk )
 			CachedData = data;
 

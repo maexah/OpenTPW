@@ -11203,25 +11203,25 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   on the CPU from the whole, the pixels are kept and the texture made again as before (`KeepsPixels`). Desk, 30 s in, `mem gc` and `mem compact`, the build before (`e54099ed`, the same
   script, two timing lines added) against this (`63ed8e17`): managed total 198.1 -> 165.1 MB stock and 219.3 -> 189.5 MB Full Simulation, resident 462 -> 428 and 498 -> 464 MB,
   the load's peak 526 -> 510 and 554 -> 527 MB, the card's account the same (161.2 MB); six `path` cells laid under a pause, camera held (`q829/cam1`, `cam4`): their patch and every
-  pixel below row 230 equal to the pixel (the waterfall's phase is all that differs, in the frames before the paths as well); a Remake took 2 to 4 ms (the first 22 to 32) against 28 to 50
+  pixel below row 230 equal to the pixel (the waterfall's phase is all that differs, in the frames before the paths as well); a Remake took 2 to 4 ms after the first two (19 to 32 ms), CPU time, against 28 to 50
   and a second 33 MB texture on the card (peak 147 MB, now 109); in `graphics faithful` the patch is equal too (`camf-base`, `camf-new3`). The box's `Lay` alone is 730 ms (`base/run.log`),
   which is why the pixels are not simply laid again at a path. By test: a tile's rectangle is the bytes the whole texture holds there, only a tile whose path changed is handed over, the pixels
   are kept only where the texture is cut. `mutate.py`: 12 bugs, 10 fail a test; the two that cannot (the constructor's keep line builds a GPU texture) were built and run in the game: one
   shows "the texture made again" and the 33 MB back, the other crashes at the first path. `PREDICTION.txt`: Q0's Lay time (730 ms, not 150 to 600), N2's first call (over 20 ms), N4's peak
   and N3b's whole-frame equality (the waterfall) missed, causes recorded; the rest held.
   Q826 is rewritten for what is left: the entries' cache, textures by path, NeoVeldrid's chunks, and the four-bit mode's cost.
-  Not measured: off-screen under lavapipe (lane B's display), a Release build, a long drag of path, the original's tiles.
+  Not measured: the changed tiles' smaller mip levels (no far-camera frame), off-screen under lavapipe (lane B's display), a Release build, a long drag of path, the original's tiles.
 - [x] **Q830. A WAD entry's bytes are kept from its second ask, not its first (Q826's fourth piece).** Done 2026-10-30 (run 15, lane A, `alexah/788-wad-entries-read-once-not-kept`).
-  `WadArchiveFile.GetData` cached every entry it decoded. The stock park asks for 1,014 entries and 927 of them once (9.4 MB of the 11.7 MB cached); three models are asked for 90, 50
-  and 50 times (`ho_fos1.MD2`, `Batm1.MD2`, `Bat.MD2`), 395 of the 1,409 asks hit the cache. An entry is now kept from its second ask (`KeepFromAsk`): the first hands the bytes over and
+  `WadArchiveFile.GetData` cached every entry it decoded. The lobby and the stock park ask for 1,014 entries and 927 of them once (9.4 MB of the 11.7 MB cached); three models are asked for 90, 50
+  and 50 times (the park's boundary piece `ho_fos1.MD2`, and the 50 bats of the lobby's hallow island, `Bat.MD2` and its clip `Batm1.MD2`), 395 of the 1,409 asks hit the cache. An entry is now kept from its second ask (`KeepFromAsk`): the first hands the bytes over and
   holds none. `mem wads` says how many entries were asked for, the asks, the reads of the file and their time, the cached entries asked for once, and the six asked for most
   (`WadArchive.Asked`, `Cached( asked )`, `MostAsked`). Desk, 30 s in, `mem gc` and `mem compact`, the build before (counters only, dll `1d583ecb`, the same script) against this (`b8c1c950`):
   cached entries 1,014 -> 87 and 11.7 -> 2.4 MB stock (1,554 -> 179 and 15.2 -> 3.5 MB Full Simulation); managed total 166.4 -> 155.7 MB stock (189.9 -> 176.5 Full Simulation), resident
-  432.0 -> 423.4 MB (464.1 -> 450.5); reads of the file 1,014 -> 1,101 (1,554 -> 1,733), their time 312 -> 370 ms (389 -> 458); the load 4,943 -> 5,011 ms stock (8,421 -> 8,593 Full Simulation);
+  432.0 -> 423.4 MB (464.1 -> 450.5); reads of the file 1,014 -> 1,101 (1,554 -> 1,733), their time 312 -> 370 ms (389 -> 458); the load 4,943 -> 5,011 ms stock (8,421 -> 8,593 Full Simulation), one run each, inside the spread of runs of one build (4,943 and 5,023 ms stock);
   `park.png` mean 85.0 -> 84.9 (83.2 -> 83.0) (`q830/base-stock2`, `new-stock`, `base-fs`, `new-fs`). By test: the first ask keeps nothing, the second keeps and reads the file again, the third is answered from
   the kept bytes, `Free` lets them go. `mutate.py`: 12 bugs, 11 fail a test and the 12th (a most-asked list that counts an entry asked for once) fails the test strengthened for it.
   `PREDICTION.txt`: B2 missed (395 of 1,409 asks, 28%, hit the cache, not under 10%: three models are asked for 50 to 90 times); the rest held.
-  Not measured: off-screen under lavapipe (lane B's display), a Release build, a park played long enough for a re-read entry to be asked for a third time by a new thing, a slow drive (the reads are 87 to 179 more).
+  Not measured: off-screen under lavapipe (lane B's display), a Release build, a park played long enough for a re-read entry to be asked for a third time by a new thing, a slow drive (the reads are 87 to 179 more), the saving lasts until the next park load: the ask counts are never reset (the next piece of Q826).
 
 ## B. Docs and comments
 

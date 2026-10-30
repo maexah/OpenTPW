@@ -4,7 +4,7 @@
 OPENTPW_FULLSIM_PARK, a .TPWS made by the original; a Full Simulation player's profile from OPENTPW_FULLSIM_PLAYER). At park
 entry and 30 s on it prints `memmap.report` (resident split, the largest mappings, the DRM video memory) and the game's own
 `mem gc`, `mem compact` and `stats` replies, then a frame (park.png). Environment: OFFSCREEN=1 runs on the private display
-under lavapipe (where the process, not the video memory, holds the device's bytes); LEAVE=1 goes back to the lobby after and
+under lavapipe (where the process, not the video memory, holds the device's bytes); PATHS=1 lays six path cells (60,15) to (62,16) after the 30 s and reports again (Q829); LEAVE=1 goes back to the lobby after and
 reports again (what a park leaves behind); DUMP=1 collects a `dotnet-dump` heap dump and writes `dumpheap` output (DUMPCMD,
 `|` between commands, default `dumpheap -stat`) to DUMPOUT (default heapstat.txt) in the outdir, the dump itself removed;
 OPENTPW_DOTNET_DUMP names the tool. The run's last line is `game memory peak` (gamedrive.py)."""
@@ -42,6 +42,13 @@ try:
     time.sleep(30)
     stage("park +30 s")
     shot("park")
+    if os.environ.get("PATHS"):
+        for x_, y_ in [(60, 15), (61, 15), (62, 15), (60, 16), (61, 16), (62, 16)]:
+            for l in reply(f"path {x_} {y_}", 1.5, 0): print("  " + l)
+        time.sleep(2)
+        shot("paths")
+        for l in re.findall(r".*ground tiles.*", logtext()): print("  LOG " + l)
+        stage("after paths")
     if os.environ.get("DUMP"):
         reply("mem compact", 1.5, 0)
         dump()
