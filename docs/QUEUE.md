@@ -73,7 +73,7 @@ park for the website, go first. Q804 stopped the photographs: no picture with th
   A 16-bit store halves the floats (about 73 MB) but changes the mixer's input and needs the audio verified by capture (`verifying-audio-by-capture`). Also from the
   Sentinel's reader: textures loaded by path are never released (the lobby's four islands' kept for the process's life), and NeoVeldrid never returns a Vulkan chunk to the driver
   (`mem vulkan` reads `_totalAllocatedBytes`: 204 MB stock, 237 MB Full Simulation, flat over 30 s, so no growth seen here). Each is a candidate, not a measured loss: measure
-  `mem` before and after, desk and off-screen, as Q954 did.
+  `mem` before and after, desk and off-screen, as Q954 did. Also (the same audit, G): `Refpack` decompresses into a growing `List<byte>` and copies it to an array, though the size is known (`Refpack.cs:16-19`): a load-time copy, not held.
 - [ ] **Q820. What Q818, Q821 and Q822 left: the stacked and loop pylons, the original's picture of a flipped diagonal, and the heights by the original's samplers.** From Q818 (run 14, lane A;
   its piece (3), the face normals and the control word, is Q819; its piece (1), the ground's per-cell diagonal, is Q821, which ticks Q398; the decode
   of piece (4) and the float note are Q822). (2) Left by Q817: the pylon under a stacked piece is drawn with the alone-on-its-cell arms (the bottom of a stack that is not its top shows the `0x400` node and hides the `0x800` one, `0x00432ff8`..`0x0043304d`; ours hides `mc_bridge` on it); a stacked pylon stands on the
@@ -2206,6 +2206,44 @@ filed the items that cite it.
   (`AModuleWithAPylonWalksToItsEndOnlyWithFiveChannels`, and the fixture's own one-channel `Problem`). Check that the three
   consumer tests (the boundary wall and the two after it) still pass for the right reason: put the fixture's count back and
   see whether any test notices; if none does, a test that reads `Header` or `Slots` is wanted.
+- [ ] **Q955. The UI's draws: a resource set made each time the shared UI material's texture changes, and every quad's index
+  upload ending the render pass.** From an outside audit (Alexah, 2026-10-30), checked against `8a566e88` by the Sentinel's Opus
+  reader (`~/.cache/tpw-harnesses/rev-1030/VERIFY-gpt-perf.md`, P1, D, E; source only, not measured). Q954 (`3bc9708e`) since made
+  materials share their pipeline: read `Material.cs` there first. (1) One `Material.UI` is rebound to each text's, control's and
+  cursor's texture in turn (`UiText.cs:71`, `UiControl.cs:507`, `UiList.cs:905`, `Cursor.cs:73` and nine more); a changed texture
+  marks its sets dirty and the next draw makes a new `ResourceSet[]` and queues the old (`Material.cs:352-371`, `:413-434`, called
+  per quad at `Graphics.cs:82`): every frame, each time two quads in a row differ. Keep a set per texture. (STATUS's 23% is
+  `FlushNewResourceSets`, the per-draw bind every model pays, not this.) (2) `Graphics.Quad` uploads the same six indices with
+  every quad (`Graphics.cs:75-76`; the comment at `:63-65` says they are not rebuilt); in NeoVeldrid each `UpdateBuffer` is a
+  staging copy that ends the render pass, so each UI quad ends and restarts the 4x MSAA pass. Upload the indices once. (3)
+  `UiMesh` keeps a `Model` and `Material` per new frame size for ever (`UiMesh.cs:44,55,108-121`): bounded by the layouts' sizes;
+  count them. Measure first (sets made a frame, render passes a frame, frame time), then cut; the picture must not change (rule 6:
+  a frame before and after).
+- [ ] **Q956. A guest's arrival or departure rebuilds the whole crowd's model, material and shadows.** From an outside audit
+  (Alexah, 2026-10-30), checked against `8a566e88` (`VERIFY-gpt-perf.md`, P4, A). `ParkPeople.cs:393, 616, 765` (add) and `:981,
+  2096` (remove) call `ParkGuestSprites.Build` (`:520-558`): a new index array, `new Material`, `new Model` (static buffers, then
+  `EnableFrequentUpdates` makes a dynamic one, `Model.cs:112-125`) and `BuildShadows` (`:577-602`) the same again; `:880` for
+  balloons. Since Q954 the materials share a pipeline, so measure what each rebuild still costs (buffers, sets, the `Asset.All`
+  scan in `Shader.Cache.cs:12`) over a Full Simulation park's turnover before changing it. Also `ParkGuestSprites.cs:859`: a new
+  `Vector3[4]` per drawn shadow per frame (debug data; STATUS names "the shadow arrays"). Direction: buffers with spare room that
+  grow when needed. Fidelity first: the crowd drawn the same (a frame), the census the same.
+- [ ] **Q957. A shader recompile leaks its GPU objects and freezes the materials' uniforms.** From an outside audit (Alexah,
+  2026-10-30), checked against `8a566e88` (`VERIFY-gpt-perf.md`, P6, P2). Each shader has a `FileSystemWatcher` in every build
+  (`Shader.cs:44-58`); `Recompile` (`:79-87`) replaces the vertex/fragment shaders without disposing them, and each material's
+  `SetupResources` (`Material.cs:490-532`) overwrites `Pipeline` and `ScratchBuffer` without disposal. Worse: after a recompile
+  `Set<T>` (`:218-223`) writes the new uniform buffer but never marks the sets dirty, so the cached sets bind the old one and
+  those draws run on uniforms frozen at the reload; `_resourceLayouts ??=` (`:503`) keeps the old layouts if the bindings changed.
+  Noted 2026-09-14 (`docs/history/current-task-archive.md:4892`) and never filed. Q954 changed how pipelines are owned (shared):
+  read it there first. Decide whether a shipped build should watch shader files at all (a player never edits them; a deviation
+  from nothing in the original), and if it does, dispose and rebind. One more, UNSETTLED: `VkResourceLayout.Dispose` is immediate
+  in NeoVeldrid 1.2.1 while sets and pipelines are freed after the frame's fence, so `Material.Delete` may destroy a layout a set
+  in flight still uses; one run under the Vulkan validation layer settles it.
+- [ ] **Q958. World models outside the camera's view are drawn: the original culls them.** From an outside audit (Alexah,
+  2026-10-30), checked against `8a566e88` (`VERIFY-gpt-perf.md`, C). `Entity.cs:87-105` draws every entity in each pass and
+  `ModelEntity.cs:66-79` draws whenever it has a model; nothing in `World/` or `Render/` tests the view. The original builds a
+  culling frustum each frame (`park-engine.md`, `FUN_0056bb00`, row near line 865): decode what it culls and by what bounds (whole
+  object, node, sprite), then cull the same, keeping the draw order. Confirm: the census of drawn models at a few cameras against
+  the original's, frames before and after the same, frame time measured. (Q613 is back-face culling, a different thing.)
 
 ## B. Docs and comments
 
