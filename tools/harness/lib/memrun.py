@@ -8,7 +8,7 @@ under lavapipe (where the process, not the video memory, holds the device's byte
 reports again (what a park leaves behind); AGAIN=1 (with LEAVE) then enters the park a second time, waits 30 s and reports (park-again.png; Q826:
 `mem wads` after a lobby round trip); DUMP=1 collects a `dotnet-dump` heap dump and writes `dumpheap` output (DUMPCMD,
 `|` between commands, default `dumpheap -stat`) to DUMPOUT (default heapstat.txt) in the outdir, the dump itself removed;
-OPENTPW_DOTNET_DUMP names the tool. The run's last line is `game memory peak` (gamedrive.py)."""
+OPENTPW_DOTNET_DUMP names the tool (default `~/.cache/dn-tmp/tools/dotnet-dump`; `memdump.py`). The run's last line is `game memory peak` (gamedrive.py)."""
 import os, sys, shutil, time, subprocess
 OUT = sys.argv[1]; BIN = sys.argv[2]; MODE = sys.argv[3]; NAME = "memrun"
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lib")); import paths
@@ -24,15 +24,8 @@ def stage(tag):
         for l in reply(c, 1.5, 0): print("  " + l)
 
 def dump():
-    tool = os.environ.get("OPENTPW_DOTNET_DUMP", os.path.expanduser("~/.dotnet/tools/dotnet-dump"))
-    env = dict(os.environ, DOTNET_ROOT=paths.dotnet_env()["DOTNET_ROOT"])
-    file = os.path.join(os.environ.get("TMPDIR", "/tmp"), f"memrun-{game.pid}.dmp")
-    r = subprocess.run([tool, "collect", "-p", str(game.pid), "--type", "Heap", "-o", file], capture_output=True, text=True, env=env)
-    print("dump:", (r.stdout + r.stderr)[-200:].strip())
-    cmds = os.environ.get("DUMPCMD", "dumpheap -stat").split("|")
-    r = subprocess.run([tool, "analyze", file, *sum([["-c", c] for c in cmds], []), "-c", "exit"], capture_output=True, text=True, env=env)
-    open(os.path.join(OUT, os.environ.get("DUMPOUT", "heapstat.txt")), "w").write(r.stdout + r.stderr)
-    os.remove(file)
+    import memdump
+    memdump.dump(game.pid, OUT)
 
 try:
     if MODE == "fs":

@@ -113,7 +113,8 @@ folders stayed out, and so did anything made from the game's files.
 A texture made from a path is kept in `Asset.All` and shared by every later request for the path (`Texture.TryAdoptCached`), and nothing releases it when a level ends. Q832 measured the
 trade on the stock Lost Kingdom park: after a park the lobby holds 337 more textures and 13.5 MB more on the card (the park's 157 `levels/jungle` textures, its interface's 163 and 14
 `generic/*`), and a park entered again loads in 3.1 s against 5.0 s the first time (the terrain phase 780 -> 66 ms). Letting go at a level's end would give the 13.5 MB back in the lobby and
-cost about 1.75 s on each park entered again (an experiment that refused cache hits across a level's end: 4.83 s); it would not lower the park's peak, which is what a smaller computer meets,
-and eleven statics hold textures that would have to be cleared with them (`UiMesh.Loaded` and the other interface caches). So they stay. Whoever reopens this should
-begin with a measure of the lobby's memory on a computer that has less than the desk's, and with Q833, which finds what else a round trip leaves. The figures and runs are Q832's
+cost about 1.75 s on each park entered again (a probe that refused cache hits across a level's end, which released nothing: 4.83 s). The lobby's own 234 textures stay alive in the park (the 135 lobby/terrain
+ones 6.9 MB with mips by their file headers, up to 8.6 MB with the interface's and the advisor's): that is video memory, which the desk's VmHWM (485 MB, CPU memory) does not count, so the peak the desk measured says nothing
+for it, and what a release at the lobby's end would save on a smaller computer is not measured (a prediction of 6.9 to 8.6 MB of the park's 108.8 MB texture account is filed to be tried). Eleven statics hold textures that would have to be cleared with them (`UiMesh.Loaded` and the other interface caches). So they stay. Whoever reopens this should
+begin with the re-measure of a release at the lobby's end (a probe build that deletes the path textures at `Level.Unload`; `roundtrip.py` with `TRIPS=1 OFFSCREEN=1`, park1's VmHWM, `mem gpu` and `mem vulkan` against the unchanged binary's 108.8 and 204.5 MB), and with Q833, which finds what else a round trip leaves. The figures and runs are Q832's
 entry in `docs/history/queue-done.md`.

@@ -7,8 +7,8 @@ namespace OpenTPW.Tests;
 
 /// <summary>
 /// Leaving a park lets go of the park itself, so that it is not kept in memory through the lobby: the rides as
-/// they are deleted (<see cref="ParkRides"/>' <c>OnDelete</c>), and the running state and the hiring pool last of
-/// all (<see cref="Level.ForgetRunningPark"/>).
+/// they are deleted (<see cref="ParkRides"/>' <c>OnDelete</c>), and the running state and the hiring pool after
+/// them (<see cref="Level.ForgetRunningPark"/>).
 ///
 /// <para>
 /// <b>The question is asked of the garbage collector</b>, as <see cref="ParkCamcorderForgetTests"/> asks it, and

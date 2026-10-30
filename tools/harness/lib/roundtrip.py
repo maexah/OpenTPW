@@ -7,13 +7,14 @@ VmRSS, VmHWM, the game's own `mem` lines) and `assets list`, saves the census as
 totals and `terrain` and `objects` phases, the resident figures, and `assetdiff.py`'s account of what the first return
 and the last left in the lobby that the lobby did not hold before. OFFSCREEN=1 runs on the private display as parkrun does.
 What a trip leaves behind is the lobby's figures against `lobby0`'s: Q832 read 339 textures and 349 UI meshes kept, and
-a creep of about one texture and 8 MB resident a trip (Q833)."""
+a creep of about one texture and 8 MB resident a trip (Q833). DUMP=1 collects a `dotnet-dump` heap dump at the third
+return (or the last, if TRIPS is fewer) and keeps the .dmp under `~/.cache/dn-tmp` (`memdump.py`: DUMPCMD, DUMPOUT)."""
 import os, sys, time, re
 OUT = sys.argv[1]; BIN = sys.argv[2]; NAME = "memrun"; TRIPS = int(os.environ.get("TRIPS", "3"))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lib")); import paths
 if os.environ.get("OFFSCREEN"): OFFSCREEN = True
 exec(open(paths.LIB + "/parkrun.py").read())
-import memmap, assetdiff
+import memmap, assetdiff, memdump
 os.makedirs(OUT, exist_ok=True)
 stages = {}
 def stage(tag):
@@ -39,6 +40,8 @@ try:
     stage("park1"); shot("park1")
     for i in range(1, TRIPS + 1):
         lobby_back(i + 1); stage(f"lobby{i}"); shot(f"lobby{i}")
+        if os.environ.get("DUMP") and i == min(3, TRIPS):
+            print("DUMP kept:", memdump.dump(game.pid, OUT, keep=True))
         send("park jungle")
         end = time.monotonic() + 120
         while time.monotonic() < end and len(loads()) < i + 1: time.sleep(0.5)

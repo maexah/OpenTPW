@@ -2997,7 +2997,7 @@ public static class DebugConsole
 	}
 
 	/// <summary>
-	/// The bytes NeoVeldrid's Vulkan memory manager has taken from the driver, which it never gives back (its private
+	/// The bytes NeoVeldrid's Vulkan memory manager has taken from the driver (whether it ever gives a chunk back is not settled without its source; its private
 	/// <c>_totalAllocatedBytes</c>, read by reflection: the library has no property for it). The game's own account
 	/// (<see cref="GpuMemory"/>) is what it asked for; this is what the driver was asked for, in chunks.
 	/// </summary>

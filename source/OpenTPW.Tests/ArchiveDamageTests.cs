@@ -320,6 +320,9 @@ public class ArchiveDamageTests
 			Assert.AreEqual( (0, 0L, 0L, 0.0), wad.Asked(), "the counts start again" );
 
 		foreach ( var file in files )
+			Assert.AreEqual( (0, 0L), (file.Reads, file.ReadTicks), "the reads and their time start again" );
+
+		foreach ( var file in files )
 			file.GetData();
 
 		foreach ( var wad in archives.Cast<WadArchive>() )
@@ -345,6 +348,24 @@ public class ArchiveDamageTests
 		Assert.AreEqual( 0, file.Asks );
 		CollectionAssert.AreEqual( kept, file.GetData(), "and the entry still reads" );
 		Assert.AreEqual( 0, archive.Cached().Entries, "the first ask of the next level keeps nothing" );
+	}
+
+	/// <summary>
+	/// Q826: <c>Level.Unload</c> ends the level by calling <see cref="Level.ForgetWadAsks"/> on the open archives, after
+	/// <c>ForgetRunningPark()</c>. No test can run <c>Unload</c>, so its source is read, as
+	/// <c>ParkCoasterPylonsTests.TheLevelMakesThePylonsAndTheConsoleListsThem</c> reads <c>Level.cs</c>.
+	/// <b>Mutation:</b> the call removed from <c>Unload</c>.
+	/// </summary>
+	[TestMethod]
+	public void LevelUnloadEndsWithForgetWadAsks()
+	{
+		var source = File.ReadAllText( Path.Join( RepoFiles.Root(), "source", "OpenTPW", "World", "Level.cs" ) );
+		var start = source.IndexOf( "\tpublic void Unload()", StringComparison.Ordinal );
+		Assert.IsTrue( start >= 0, "Unload is found" );
+		var end = source.IndexOf( "\n\t}", start, StringComparison.Ordinal );
+		var body = source.Substring( start, end - start );
+
+		StringAssert.Contains( body, "ForgetRunningPark();\n\t\tForgetWadAsks( FileSystem.OpenArchives );" );
 	}
 
 	/// <summary>Q826: every entry of an archive starts again, not the first one alone.</summary>

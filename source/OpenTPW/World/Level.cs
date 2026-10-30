@@ -3031,7 +3031,7 @@ public class Level
 
 	/// <summary>
 	/// Lets go of the running park itself - its state and its hiring pool - which would otherwise hold a left park
-	/// in memory through the lobby. The last of <see cref="Unload"/>, after everything standing in the park has been
+	/// in memory through the lobby. Next to last of <see cref="Unload"/> (only <see cref="ForgetWadAsks"/> follows), after everything standing in the park has been
 	/// deleted, as the original destroys every thing before it frees the world the pool is part of and zeroes its
 	/// pointer (<c>0x004091b8</c>). See docs/exe/park-engine.md, "Leaving a park with something in the hand".
 	/// Apart from <see cref="Unload"/> only so a test can reach it.
