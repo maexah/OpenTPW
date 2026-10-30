@@ -3230,3 +3230,19 @@ state machine.
   between ticks (the sprite pass, `original/spritepass.py`, `particleheights.py`) and whether it eases by the frame's
   own time; if it does, build it (an improvement or the original's own, said at the site), if not, keep the comment.
   Confirm: a particle film (`rectfilm.py`) in both games on an effect whose rate is known.
+- [ ] **Q950. The lobby's attract flight (nobody playing) against the original's: what differs, for Alexah to choose.** Not a
+  priority (Alexah, 2026-10-30: "the camera drifting between islands ... and the audio fading between parks is kinda weird").
+  Investigated, nothing built: `docs/exe/lobby.md`, "Attract" (the 2026-10-30 measurement). The pacing already matches (an
+  island change every 18 to 20 s, 10 units a second, the aim about 11 s to reach a new island). What differs, largest first:
+  (1) sound: the original plays one park's music and bed the whole time (the first island's, measured by `original/islandvoices.py`)
+  plus the nearest island's random one-shots; ours plays all four parks at once, placed at their islands, so the mix slides as
+  the camera flies (a deviation at Alexah's word, 2026-09-20, `audio.md`, "The lobby was entirely non-positional"); (2) height:
+  the original's box is 50 to 100 high (median 72, looking down at sea and islands), ours 30 to 60 (Alexah's word,
+  `LobbyCameraMode.WanderCentre`), flatter and closer, and a simulation of ours' rules (`lobbyattract/sim.py`, which matches
+  the original's measured numbers when given its rules) whips the view at up to 200 to 300 degrees a second on a close pass,
+  where the original reaches 75; (3) the sky colour snaps in the original at a change of island and fades in ours
+  (`LobbyWeather`); (4) small: ours' aim ramps at 3 x its cap a second (60 frames), the original's per frame, and ours is 16:9.
+  Ask Alexah which of (1) to (3) go back to the original before building any. Measure ours live first: there is no console
+  readout of ours' attract eye and aim, so add one (`lobbycam` or the like) and run `lobbyattract/stats.py` on it beside
+  `original/attractcam.py`. Evidence `~/.cache/tpw-harnesses/lobbyattract/` (`FINDINGS.md`, `side-by-side.mp4`).
+  Confirm: the same 300 s statistics in both games, a side-by-side film, and for (1) the lobby's mix by the disk driver.

@@ -425,6 +425,14 @@ near a change than away from one — median 5.31 against 5.59 degrees a second, 
 (15.62 against 19.07) — and over 120 s **no frame at all** stepped more than five times the median
 per-frame step. There is no swing and no jerk to find.
 
+**Measured again 2026-10-30 at 30 frames a second** (`original/attractcam.py`, 300 s, off-screen): an island change every
+18 s, the eye a median 89.9 units from the nearest island (p10 58, p90 118) at a median height of 71.5 (52 to 91), 10.0
+units a second, the view turning a median 6.1 degrees a second (at most 74.7), and the aim reaching a new island a median
+10.7 s after the change. The same pass copies the nearest island's `+0x64..+0x6c` to the render camera's `+0x50..+0x58`,
+so its sky colour **snaps** at a change (ours fades it, `LobbyWeather`). And only the first island in the list has a park
+sound while it flies (`original/islandvoices.py`, 40 s, two changes of nearest island): music and bed both live on it, none on
+the other three, and a change touches neither; ours' four positional parks are the deviation below. Q950.
+
 ### Globe: spin, home, pull in
 
 | State `[5]` | What it does |
