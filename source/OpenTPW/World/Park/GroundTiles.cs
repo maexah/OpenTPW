@@ -41,8 +41,12 @@ public sealed class GroundTiles
 	/// <summary>The tile maker the tiles were laid by, which a built thing's floor is blended by too (<see cref="ParkGround.BlendFloor"/>).</summary>
 	internal ProceduralGround Ground => _ground;
 
-	/// <summary>The texture's pixels, kept so that a tile can be laid again.</summary>
-	private readonly byte[] _pixels;
+	/// <summary>
+	/// The texture's pixels, kept so that a tile can be laid again, only where the texture is cut to four bits a channel
+	/// (<see cref="Texture.Cut"/>), which is made whole from them. At eight bits, the default, a tile laid again is written
+	/// into the texture where it lies (<see cref="Texture.UpdateRegion"/>) and nothing is kept: null.
+	/// </summary>
+	private readonly byte[]? _pixels;
 
 	/// <summary>The path laid over each tile of the box, by <c>row x across + column</c>.</summary>
 	private readonly ProceduralGround.Overlay?[] _overlays;
@@ -51,14 +55,20 @@ public sealed class GroundTiles
 		(int X0, int Y0, int X1, int Y1) box, int tileSize )
 	{
 		_ground = ground;
-		_pixels = pixels;
 		_overlays = overlays;
 		(X0, Y0, X1, Y1) = box;
 		TileSize = tileSize;
 		_width = (X1 - X0 + 1) * tileSize;
 		_height = (Y1 - Y0 + 1) * tileSize;
 		Texture = new Texture( pixels, _width, _height );
+		_pixels = KeepsPixels() ? pixels : null;
 	}
+
+	/// <summary>
+	/// Whether the pixels are kept: where the ground's texture is cut to four bits a channel (<see cref="Texture.CutsFor"/>),
+	/// which is made whole from them, and not at eight, where a tile is written into the texture on the card.
+	/// </summary>
+	internal static bool KeepsPixels() => Texture.CutsFor( TextureFlags.None );
 
 	/// <summary>Whether cell (x, y) is inside the box, and so draws its tile.</summary>
 	public bool Covers( int x, int y ) => x >= X0 && x <= X1 && y >= Y0 && y <= Y1;
@@ -117,31 +127,57 @@ public sealed class GroundTiles
 			for ( var column = 0; column < across; ++column )
 				overlays[(row * across) + column] = overlay( box.Item1 + column, box.Item2 + row );
 
+		var clock = System.Diagnostics.Stopwatch.StartNew();
 		var pixels = Lay( ground, across, down, overlays, out var grey );
 
 		Log.Info( $"{themeName}: procedural ground - box {box.Item1},{box.Item2} to {box.Item3},{box.Item4}, " +
 			$"{across * down} tiles of {tileSize} pixels, {grey} grey where the map's byte 0 refuses, " +
-			$"{overlays.Count( o => o != null )} with a path laid over" );
+			$"{overlays.Count( o => o != null )} with a path laid over; laid in {clock.ElapsedMilliseconds} ms" );
 
 		return new GroundTiles( ground, pixels, overlays, box, tileSize );
 	}
 
 	/// <summary>
 	/// Lays again every tile whose path laid over has changed, as the original composites a cell again under
-	/// <c>0x0100</c>, and makes the texture again where any did: how many were laid. The old texture is the caller's
-	/// to let go of once nothing draws with it.
+	/// <c>0x0100</c>: how many were laid. At eight bits each is written into <see cref="Texture"/> where it lies and its
+	/// smaller levels made again, so the texture is the same and <paramref name="replaced"/> null; cut to four, the
+	/// kept pixels are changed and the texture made again where any was, and the old one is the caller's to let go of
+	/// once nothing draws with it.
 	/// </summary>
 	public int Remake( Func<int, int, ProceduralGround.Overlay?> overlay, out Texture? replaced )
 	{
-		var changed = Relay( _ground, _pixels, _overlays, X1 - X0 + 1, Y1 - Y0 + 1, ( column, row ) => overlay( X0 + column, Y0 + row ) );
+		var clock = System.Diagnostics.Stopwatch.StartNew();
+		var across = X1 - X0 + 1;
+		var down = Y1 - Y0 + 1;
+		var changed = 0;
 
 		replaced = null;
 
-		if ( changed > 0 )
+		if ( _pixels == null )
 		{
-			replaced = Texture;
-			Texture = new Texture( _pixels, _width, _height );
+			changed = Relay( _ground, _overlays, across, down, ( column, row ) => overlay( X0 + column, Y0 + row ),
+				( column, row, tile ) =>
+				{
+					var (x, y) = RegionAt( column, row, TileSize, _height );
+					Texture.UpdateRegion( Region( tile, TileSize ), x, y, TileSize, TileSize );
+				} );
+
+			if ( changed > 0 )
+				Texture.RebuildMips();
 		}
+		else
+		{
+			changed = Relay( _ground, _pixels, _overlays, across, down, ( column, row ) => overlay( X0 + column, Y0 + row ) );
+
+			if ( changed > 0 )
+			{
+				replaced = Texture;
+				Texture = new Texture( _pixels, _width, _height );
+			}
+		}
+
+		if ( changed > 0 )
+			Log.Info( $"ground tiles: {changed} laid again, {(_pixels == null ? "written in place" : "the texture made again")} in {clock.ElapsedMilliseconds} ms" );
 
 		return changed;
 	}
@@ -184,8 +220,16 @@ public sealed class GroundTiles
 	/// </summary>
 	internal static int Relay( ProceduralGround ground, byte[] pixels, ProceduralGround.Overlay?[] overlays, int across, int down,
 		Func<int, int, ProceduralGround.Overlay?> overlay )
+		=> Relay( ground, overlays, across, down, overlay,
+			( column, row, tile ) => Place( pixels, across * ground.TileSize, down * ground.TileSize, column, row, ground.TileSize, tile ) );
+
+	/// <summary>
+	/// Each box tile (column, row) whose path laid over is no longer <paramref name="overlays"/>' is made again with the
+	/// new one, handed to <paramref name="put"/>, and the new one kept. How many were.
+	/// </summary>
+	internal static int Relay( ProceduralGround ground, ProceduralGround.Overlay?[] overlays, int across, int down,
+		Func<int, int, ProceduralGround.Overlay?> overlay, Action<int, int, byte[]> put )
 	{
-		var size = ground.TileSize;
 		var changed = 0;
 
 		for ( var row = 0; row < down; ++row )
@@ -198,12 +242,40 @@ public sealed class GroundTiles
 					continue;
 
 				overlays[(row * across) + column] = now;
-				Place( pixels, across * size, down * size, column, row, size, ground.Tile( column, row, now ) );
+				put( column, row, ground.Tile( column, row, now ) );
 				++changed;
 			}
 		}
 
 		return changed;
+	}
+
+	/// <summary>Where tile (column, row)'s rectangle begins on a texture <paramref name="height"/> rows tall: its top row, tiles laid bottom up as <see cref="Place"/> lays them.</summary>
+	internal static (int X, int Y) RegionAt( int column, int row, int tileSize, int height )
+		=> (column * tileSize, height - ((row + 1) * tileSize));
+
+	/// <summary>
+	/// A tile as the rectangle of RGBA it is on the texture: its rows bottom up, as <see cref="Place"/> lays them, so that
+	/// it is the same bytes the whole texture holds there.
+	/// </summary>
+	internal static byte[] Region( byte[] tile, int size )
+	{
+		var region = new byte[size * size * 4];
+
+		for ( var k = 0; k < size; ++k )
+		{
+			for ( var j = 0; j < size; ++j )
+			{
+				var from = ((k * size) + j) * 3;
+				var to = ((((size - 1 - k) * size)) + j) * 4;
+				region[to] = tile[from];
+				region[to + 1] = tile[from + 1];
+				region[to + 2] = tile[from + 2];
+				region[to + 3] = 255;
+			}
+		}
+
+		return region;
 	}
 
 	private static void Place( byte[] pixels, int width, int height, int column, int row, int size, byte[] tile )

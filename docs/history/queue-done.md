@@ -11196,6 +11196,21 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   hangs the run: an end-of-file read not told apart loops for ever), one survived the first test and fails the strengthened one. `PREDICTION.txt`: P5 (the peak) missed, its cause recorded.
   Q826 is rewritten for what is left: the entries' cache (11.7 to 15.2 MB), GroundTiles' kept 33 MB of pixels, textures by path, NeoVeldrid's chunks.
   Not measured: off-screen under lavapipe (lane B's display), a Release build, Windows (the open handles' share mode is `FileShare.Read`; the test of a closed handle uses the runtime's share modes, which Linux holds as locks).
+- [x] **Q829. The ground keeps no copy of its pixels: a tile that changes is written into its texture on the card (Q826's third piece).** Done 2026-10-30 (run 15, lane A, `alexah/787-ground-pixels-not-kept`).
+  `GroundTiles` held the box's whole texture (33.4 MB, 8,160 tiles of 32 pixels) so that `Remake` could lay a changed tile and make the texture again. At eight bits a channel
+  (the default) a changed tile is now made, put in its rectangle of the texture (`Texture.UpdateRegion`; `RegionAt` and `Region` give where and in what order, tiles laid bottom up) and
+  the mips made again on the device (`Texture.RebuildMips`, the call `Upload` makes); nothing is kept but the overlays. Cut to four bits (`graphics faithful`), which makes every level
+  on the CPU from the whole, the pixels are kept and the texture made again as before (`KeepsPixels`). Desk, 30 s in, `mem gc` and `mem compact`, the build before (`e54099ed`, the same
+  script, two timing lines added) against this (`63ed8e17`): managed total 198.1 -> 165.1 MB stock and 219.3 -> 189.5 MB Full Simulation, resident 462 -> 428 and 498 -> 464 MB,
+  the load's peak 526 -> 510 and 554 -> 527 MB, the card's account the same (161.2 MB); six `path` cells laid under a pause, camera held (`q829/cam1`, `cam4`): their patch and every
+  pixel below row 230 equal to the pixel (the waterfall's phase is all that differs, in the frames before the paths as well); a Remake took 2 to 4 ms (the first 22 to 32) against 28 to 50
+  and a second 33 MB texture on the card (peak 147 MB, now 109); in `graphics faithful` the patch is equal too (`camf-base`, `camf-new3`). The box's `Lay` alone is 730 ms (`base/run.log`),
+  which is why the pixels are not simply laid again at a path. By test: a tile's rectangle is the bytes the whole texture holds there, only a tile whose path changed is handed over, the pixels
+  are kept only where the texture is cut. `mutate.py`: 12 bugs, 10 fail a test; the two that cannot (the constructor's keep line builds a GPU texture) were built and run in the game: one
+  shows "the texture made again" and the 33 MB back, the other crashes at the first path. `PREDICTION.txt`: Q0's Lay time (730 ms, not 150 to 600), N2's first call (over 20 ms), N4's peak
+  and N3b's whole-frame equality (the waterfall) missed, causes recorded; the rest held.
+  Q826 is rewritten for what is left: the entries' cache, textures by path, NeoVeldrid's chunks, and the four-bit mode's cost.
+  Not measured: off-screen under lavapipe (lane B's display), a Release build, a long drag of path, the original's tiles.
 
 ## B. Docs and comments
 

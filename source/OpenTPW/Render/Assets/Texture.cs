@@ -241,6 +241,38 @@ public partial class Texture : Asset
 	}
 
 	/// <summary>
+	/// Rewrites a rectangle of the first level in place, from <paramref name="data"/> (RGBA, <paramref name="width"/> x
+	/// <paramref name="height"/>, its first row the rectangle's top), and leaves the smaller levels as they were until
+	/// <see cref="RebuildMips"/>. For a texture kept at eight bits only: a cut one makes every level from the whole of its
+	/// first on the CPU (<see cref="Upload"/>), so its owner keeps the whole and uses <see cref="UpdatePixels"/>.
+	/// </summary>
+	public void UpdateRegion( byte[] data, int x, int y, int width, int height )
+	{
+		if ( NativeTexture == null || Cut || ReferenceEquals( this, _missing ) )
+			throw new InvalidOperationException( "Texture.UpdateRegion: only a texture of its own, kept at eight bits, is rewritten in part" );
+
+		if ( x < 0 || y < 0 || x + width > Width || y + height > Height || data.Length < width * height * 4 )
+			throw new ArgumentOutOfRangeException( nameof( data ), "Texture.UpdateRegion: the rectangle is not inside the texture" );
+
+		var ptr = Marshal.AllocHGlobal( width * height * 4 );
+		Marshal.Copy( data, 0, ptr, width * height * 4 );
+		Device.UpdateTexture( NativeTexture, ptr, (uint)(width * height * 4), (uint)x, (uint)y, 0, (uint)width, (uint)height, 1, 0, 0 );
+		Marshal.FreeHGlobal( ptr );
+	}
+
+	/// <summary>Makes the smaller levels again from the first, on the device, after <see cref="UpdateRegion"/>.</summary>
+	public void RebuildMips()
+	{
+		if ( NativeTexture == null )
+			return;
+
+		Render.ImmediateSubmit( cmd =>
+		{
+			cmd.GenerateMipmaps( NativeTexture );
+		} );
+	}
+
+	/// <summary>
 	/// Releases the GPU texture and takes this out of <see cref="Asset.All"/>, once the frame in
 	/// progress is done with it.
 	///

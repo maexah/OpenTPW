@@ -756,6 +756,12 @@ after its poller starts**, so a key meant inside either line cannot be sent afte
   **A sea's colour is the eight phases' mean, P = 1 + k 4π/8, k 0 to 7, in both games** (Q700, `q700/ours.py`,
   `q700/orig/run.sh`): the words are drawn afresh each run, so a k0 frame differs between two runs drawing the same
   pixels (main twice 4.4; main and the branch at TEXTURE32 1, 1.8), while the eight's mean holds to under 1 a channel.
+- **The ground's texture after a path is laid, frame against frame** (Q829, `q829/confirm.py <out> <bin>`; `GAMEF=<folder>` for another game folder, such as the `graphics faithful` one above):
+  the stock park entered, `pause`, `camera 615 160 60 0` (the six cells (60,15) to (62,16) are the tan patch in the crop 440,260,840,400 of a 1280 x 720 frame), `path X Y` for each, 2 s, frames
+  before and after (a paused frame repeats to the pixel: `before` and `before2` differ at 0). The build to compare runs the same script; the patch must match to the pixel. The top-left waterfall
+  (x 107 to 463, y 0 to 215) is at another phase from one run to the next whatever the build: compare below row 230 and in the patch, never the whole frame. The log's "ground tiles: N laid
+  again, written in place in M ms" (or "the texture made again" where the pixels are kept) is the cost. `q829/measure.py <out> <bin> stock|fs` (with `PATHS=1`) is Q828's memory-stage script with that
+  path stage added: the `mem gc` / `mem compact` figures at the park's entry, 30 s in and after the paths.
 - **This game at the original's look: four bits a channel, 16-pixel tiles, stepped pumps, jumping flags, letters at 1** (Q616,
   Q645; the improvements are the default): `gamefolder.make( DEST, {} )`, then append `graphics faithful` to
   `DEST/save/opentpw.cfg`, and hand DEST to `parkrun.py` as `GAME_FOLDER`; the run's log says "Graphics: opentpw.cfg's

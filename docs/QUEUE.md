@@ -66,16 +66,17 @@ park for the website, go first. Q804 stopped the photographs: no picture with th
 
 **Ordered at Alexah's word (2026-10-30):** Q954 (the memory ours holds) first, before the weekly builds go out: that much memory would shut out a player on a lower-end computer. Then the rest in the order below.
 
-- [ ] **Q826. What Q954, Q827 and Q828 left: the WAD entries' cache, the ground's kept pixels, textures kept by path, and NeoVeldrid's chunks.** The managed heap's `Byte[]` was 145.6 MB (9,624
-  objects, `q827/run2/fs/heapstat.txt`, Full Simulation; 145.7 MB in 9,659 on the final binary, `run3/fs`; a gcroot in `q827/dump1`, stock on the unchanged build, of 15 of its 683 arrays of 30 KB or more, 118 MB): `GroundTiles`'s `_pixels` 33 MB (kept so a tile can be laid again, `Remake`; the box's whole
-  texture twice over, once in the heap and once on the card), the sound banks' compressed bytes (the park's music bank 33 MB and another 10 MB, kept by design:
+- [ ] **Q826. What Q954, Q827, Q828 and Q829 left: the WAD entries' cache, textures kept by path, and NeoVeldrid's chunks.** The managed heap's `Byte[]` was 145.6 MB (9,624
+  objects, `q827/run2/fs/heapstat.txt`, Full Simulation; 145.7 MB in 9,659 on the final binary, `run3/fs`; a gcroot in `q827/dump1`, stock on the unchanged build, of 15 of its 683 arrays of 30 KB or more, 118 MB): the ground's kept pixels, 33 MB
+  (gone with Q829: a changed tile is written in the texture on the card, the pixels kept only at four bits a channel), the sound banks' compressed bytes (the park's music bank 33 MB and another 10 MB, kept by design:
   `SoundBank._encoded`), and the WAD archives, whose files Q828 no longer holds (22.7 MB gone). What is left of them is the entries cached beyond that: `mem wads` says
   **11.7 MB** stock (10.4 MB decompressed from refpack, 1.3 MB copied out as they are) to **15.2 MB** (Full Simulation) (`q828/new-stock`, `new-fs`). Candidates, each measured before and after as
-  Q954, Q827 and Q828 did: drop `WadArchiveFile.CachedData` for the entries read once (count the reads per entry first: a dropped entry read twice is decompressed twice, and the
-  load's phases are 5 s), keep `GroundTiles._pixels` only until the first `Remake` (or lay a tile from its overlay again), and `Refpack` decompressing into a growing
+  Q954, Q827, Q828 and Q829 did: drop `WadArchiveFile.CachedData` for the entries read once (count the reads per entry first: a dropped entry read twice is decompressed twice, and the
+  load's phases are 5 s), and `Refpack` decompressing into a growing
   `List<byte>` that is copied to an array though the size is known (`Refpack.cs:16-19`; a load-time copy, not held).
   From the Sentinel's reader: textures loaded by path are never released (the lobby's four islands' kept for the process's life), and NeoVeldrid never returns a Vulkan chunk to the
   driver (`mem vulkan` reads `_totalAllocatedBytes`: 204 MB stock, 237 MB Full Simulation, flat over 30 s, so no growth seen here). None is a measured loss beyond the figures above.
+  Also left by Q829: the load's `Lay` (730 ms of the park's 5 s load, the 33 MB built once and handed to the card) and, at four bits a channel (`graphics faithful`), a path laid still makes the whole texture again, 140 to 167 ms (`CutLevels` over the box).
 - [ ] **Q820. What Q818, Q821 and Q822 left: the stacked and loop pylons, the original's picture of a flipped diagonal, and the heights by the original's samplers.** From Q818 (run 14, lane A;
   its piece (3), the face normals and the control word, is Q819; its piece (1), the ground's per-cell diagonal, is Q821, which ticks Q398; the decode
   of piece (4) and the float note are Q822). (2) Left by Q817: the pylon under a stacked piece is drawn with the alone-on-its-cell arms (the bottom of a stack that is not its top shows the `0x400` node and hides the `0x800` one, `0x00432ff8`..`0x0043304d`; ours hides `mc_bridge` on it); a stacked pylon stands on the
@@ -2021,8 +2022,8 @@ filed the items that cite it.
   slower: `[load] jungle: ground took 731 ms` at 16 against `1472 ms` at 32, the whole load 5.6 s against 6.2 s (the same
   dll, `q618/runB` and `runA`), and the atlas is four times the memory (3072 x 2720, 33 MB). Measure where the 0.74 s goes
   (`GroundTiles.Make`'s `Lay` of 8160 tiles, `ProceduralGround.Upsample`, the 33 MB `Texture`, or the `Remake` that makes the
-  texture again whenever a path changes), and cut it where it is cheap: `Lay` per tile in parallel, or the texture made
-  once and its changed tiles written in place. Confirm with the `[load]` step times before and after, and the frame rate at
+  texture again whenever a path changes: now written in place, Q829), and cut it where it is cheap: `Lay` per tile in parallel
+  (it is already, 730 ms whole at 32, Q829's `base/run.log`). Confirm with the `[load]` step times before and after, and the frame rate at
   32 beside 16 (not yet measured).
 - [ ] **Q654. The screams' chain on a due millisecond.** From the run 9 review (Q612 M3). The original's chain tick extends nothing
   when `now == +0x1c` (`0x006bdb88`, `now > due`) and prunes the newest child (`0x006bdc23`, `now >= due`), so the list is

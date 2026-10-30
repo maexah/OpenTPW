@@ -1,5 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -393,5 +394,81 @@ public class ProceduralGroundTests
 		Assert.AreEqual( 0, GroundTiles.Relay( ground, pixels, overlays, 4, 5, on ) );
 		Assert.AreEqual( 1, GroundTiles.Relay( ground, pixels, overlays, 4, 5, ( _, _ ) => null ) );
 		CollectionAssert.AreEqual( first, pixels );
+	}
+
+	/// <summary>
+	/// A tile as the rectangle <see cref="GroundTiles.Region"/> hands to the card is the same bytes the whole texture holds
+	/// where the tile lies, so a texture rewritten tile by tile is the texture laid whole: in a box of 4 x 5 jungle tiles
+	/// of 16, tile (2, 3) with a path over it, on the texture's rows 16 x 5 - 4 x 16 = 16 to 31, from column 32.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the region's rows top down; the region without its alpha of 255; the region cut to the
+	/// tile's first channel only.</remarks>
+	[TestMethod]
+	public void ATilesRegionIsTheBytesTheWholeTextureHoldsThere()
+	{
+		var ground = Ground( "jungle" );
+		var path = new ProceduralGround.Overlay( PathTexture( "jpa_tju1" ), 0x88 );
+		var overlays = new ProceduralGround.Overlay?[20];
+		overlays[(3 * 4) + 2] = path;
+		var pixels = GroundTiles.Lay( ground, 4, 5, overlays, out _ );
+		var region = GroundTiles.Region( ground.Tile( 2, 3, path ), 16 );
+
+		Assert.AreEqual( 16 * 16 * 4, region.Length );
+		Assert.AreEqual( (32, 16), GroundTiles.RegionAt( 2, 3, 16, 80 ), "tile (2, 3) of a box 4 x 5 of 16: column 2 x 16, row 80 - 4 x 16" );
+		Assert.AreEqual( (0, 64), GroundTiles.RegionAt( 0, 0, 16, 80 ), "the first tile is the texture's last 16 rows" );
+
+		for ( var r = 0; r < 16; ++r )
+		{
+			var at = (((80 - ((3 + 1) * 16) + r) * 64) + 32) * 4;
+			CollectionAssert.AreEqual( pixels[at..(at + 64)], region[(r * 64)..((r * 64) + 64)], $"region row {r}" );
+		}
+	}
+
+	/// <summary>
+	/// The tiles handed to the card's rewrite are the ones whose path changed and no others, each with its new path: a
+	/// path put on (2, 3) hands over tile (2, 3) made with it, the same path again none, the path taken off the tile
+	/// made without it. Nothing but the overlays is kept.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the new overlay not kept hands the tile over again on the second call; every tile handed
+	/// over; the tile handed over made without its overlay.</remarks>
+	[TestMethod]
+	public void OnlyATileWhosePathChangedIsHandedToTheCard()
+	{
+		var ground = Ground( "jungle" );
+		var overlays = new ProceduralGround.Overlay?[20];
+		var path = new ProceduralGround.Overlay( PathTexture( "jpa_tju1" ), 0x88 );
+		var handed = new List<(int Column, int Row, byte[] Tile)>();
+		Func<int, int, ProceduralGround.Overlay?> on = ( x, y ) => (x, y) == (2, 3) ? path : null;
+
+		Assert.AreEqual( 1, GroundTiles.Relay( ground, overlays, 4, 5, on, ( c, r, t ) => handed.Add( (c, r, t) ) ) );
+		Assert.AreEqual( (2, 3), (handed[0].Column, handed[0].Row) );
+		CollectionAssert.AreEqual( ground.Tile( 2, 3, path ), handed[0].Tile );
+		Assert.AreEqual( 0, GroundTiles.Relay( ground, overlays, 4, 5, on, ( c, r, t ) => handed.Add( (c, r, t) ) ) );
+		Assert.AreEqual( 1, GroundTiles.Relay( ground, overlays, 4, 5, ( _, _ ) => null, ( c, r, t ) => handed.Add( (c, r, t) ) ) );
+		Assert.AreEqual( 2, handed.Count );
+		CollectionAssert.AreEqual( ground.Tile( 2, 3 ), handed[1].Tile );
+	}
+
+	/// <summary>
+	/// The ground keeps its pixels where its texture is cut to four bits, which is made from them whole, and keeps none at
+	/// eight, the default, where a changed tile is written on the card.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the pixels always kept; never kept.</remarks>
+	[TestMethod]
+	public void TheGroundKeepsItsPixelsOnlyWhereItsTextureIsCut()
+	{
+		var was = Texture.KeepsEightBits;
+
+		try
+		{
+			Texture.KeepsEightBits = true;
+			Assert.IsFalse( GroundTiles.KeepsPixels(), "eight bits a channel: nothing kept" );
+			Texture.KeepsEightBits = false;
+			Assert.IsTrue( GroundTiles.KeepsPixels(), "four bits a channel: the pixels kept" );
+		}
+		finally
+		{
+			Texture.KeepsEightBits = was;
+		}
 	}
 }
