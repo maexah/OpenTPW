@@ -24,7 +24,9 @@ assert if its jungle folder already holds NAME.TPWS. OUT receives confirm.txt, r
     save()                    `savepark NAME`; answers (pk.Park of the file, the save's last log lines); copies it to OUT
     load(row=1)               the menu's Load row and the list's row by real clicks, then `pause`;
                               answers (the path read, the clock's first tick, where the log stood at the click)
-    done()                    in `finally`: prints SCORE, quits (kills a game that stays), removes the file, stops the private display,
+    own_file(path)            lists a file the run makes in the private folder (answers path); done() removes it, or the next start
+                              if this run is killed. NAME.TPWS is listed already
+    done()                    in `finally`: prints SCORE and the game's memory peak, quits (kills a game that stays), removes the run's files, stops the private display,
                               lists the private jungle folder, prints the real save/'s sum beside the one taken at the start
     original_view(x, y)       the `camera` command whose SAVED view shows world point (x, y) mid-frame in the ORIGINAL
                               (cell x 10; send it, `step 2`, then take the census again and save)
@@ -53,7 +55,19 @@ if _OFF and not _OWN and not os.path.isdir(PRIVATE):
         if entry == "save": shutil.copytree(src, os.path.join(PRIVATE, entry))
         else: os.symlink(os.readlink(src), os.path.join(PRIVATE, entry))
 JUNGLE = os.path.join(PRIVATE, "save/users/1ref/jungle"); WROTE = os.path.join(JUNGLE, NAME + ".TPWS")
+# Files a run makes in the private folder are listed in a ledger as they are made (own_file); done() removes them, and a
+# run killed before done() has them removed by the next run's start (2026-10-30: a timeout left a park copy behind).
+_LEDGER = os.path.join(PRIVATE, ".parkrun-made")
+if os.path.exists(_LEDGER):
+    for _left in open(_LEDGER).read().split("\n"):
+        if _left and os.path.exists(_left): os.remove(_left); print(f"  removed {_left}: a run before this one was killed")
+    os.remove(_LEDGER)
+def own_file(path):
+    """Lists a file this run is about to make in the private folder, so it goes at done(), or at the next start if killed."""
+    with open(_LEDGER, "a") as f: f.write(os.path.abspath(path) + "\n"); f.flush(); os.fsync(f.fileno())
+    return path
 assert not os.path.exists(WROTE), f"remove the last run's file first: {WROTE}"
+own_file(WROTE)
 _REAL = f"find '{paths.game()}/save' -type f -exec md5sum {{}} \\; | sort | md5sum"
 REAL0 = _sub.run(_REAL, shell=True, capture_output=True, text=True).stdout.strip()
 
@@ -78,8 +92,22 @@ score = [0, 0]
 def said(ok, what):
     score[0] += bool(ok); score[1] += 1; print(f"  RESULT {'as predicted' if ok else 'NOT as predicted'}: {what}")
 def logtext(): log.flush(); return open(os.path.join(OUT, "run.log"), errors="replace").read()
-def reply(cmd, secs=1.2, show=3):
-    drain(); send(cmd); got = [tail(l) for l in collect(secs) if "[dbg]" in l]
+_fences = [0]
+def reply(cmd, secs=1.2, show=3, limit=90):
+    # Fenced: a unique unknown command follows `cmd`, and the console answers in order, so every line before the fence's
+    # answer is this command's, however slow the frames (off-screen, a big park's `sell` outlasted 2 s and every later
+    # reply came one command late, 2026-10-30). Waits at least `secs` (callers pace by it) and at most `limit`, then stops loudly.
+    _fences[0] += 1; fence = f"fence-{os.getpid()}-{_fences[0]}"
+    drain(); send(cmd); send(fence); got = []; fenced = False; start = time.monotonic()
+    while not fenced or time.monotonic() - start < secs:
+        if time.monotonic() - start > limit:
+            raise SystemExit(f"reply({cmd!r}): the console did not answer in {limit} s")
+        try: l = lines.get(timeout=0.2)
+        except queue.Empty:
+            if game.poll() is not None: raise SystemExit(f"reply({cmd!r}): the game exited ({game.returncode})")
+            continue
+        if fence in l: fenced = True
+        elif "[dbg]" in l: got.append(tail(l))
     for g in got[:show]: print(f"  {cmd:<14} -> {g[:300]}")
     return got
 def place(cid):
@@ -131,7 +159,10 @@ def original_view(x, y):
 def done():
     print(f"SCORE {score[0]} of {score[1]}")
     finish()
-    if os.path.exists(WROTE): os.remove(WROTE)
+    if os.path.exists(_LEDGER):
+        for _made in open(_LEDGER).read().split("\n"):
+            if _made and os.path.exists(_made): os.remove(_made)
+        os.remove(_LEDGER)
     if _xvfb: _xvfb.terminate()
     print("private jungle folder:", sorted(os.listdir(JUNGLE)))
     print("real save/:", _sub.run(_REAL, shell=True, capture_output=True, text=True).stdout.strip(), "(started", REAL0, ")")

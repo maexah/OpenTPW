@@ -30,7 +30,15 @@ before = save_sum(); print("save/ before:", before)
 print("binary md5:", hashlib.md5(open(os.path.join(BIN, "OpenTPW.dll"), "rb").read()).hexdigest())
 env = dict(os.environ, DOTNET_ROOT=paths.dotnet_env()['DOTNET_ROOT'], OPENTPW_DEBUG_CONSOLE="1",
            OPENTPW_GAME_PATH=GAME, SDL_AUDIODRIVER="dummy")
-game = subprocess.Popen([paths.dotnet(), "OpenTPW.dll", "--game", GAME], cwd=BIN,
+# The game runs in a systemd scope of its own under a memory cap (OPENTPW_GAME_MEMMAX, "8G" by default, "off" for none), so
+# a runaway is killed alone and never the terminal's scope with every session in it (2026-10-30: 11.1 GB off-screen on a
+# Full Simulation park, Q954). Without systemd-run the game runs uncapped.
+_CAP = os.environ.get("OPENTPW_GAME_MEMMAX", "8G")
+_CMD = [paths.dotnet(), "OpenTPW.dll", "--game", GAME]
+if _CAP != "off" and __import__("shutil").which("systemd-run"):
+    _CMD = ["systemd-run", "--user", "--scope", "--quiet", "--collect", "-p", f"MemoryMax={_CAP}", "-p", "MemorySwapMax=0", "--"] + _CMD
+    print(f"game memory cap: {_CAP}")
+game = subprocess.Popen(_CMD, cwd=BIN,
                         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                         env=env, text=True, bufsize=1)
 lines = queue.Queue(); log = open(os.path.join(OUT, "run.log"), "w")
@@ -44,7 +52,7 @@ def wait_for(t, to):
     while time.monotonic() < end:
         try: l = lines.get(timeout=0.5)
         except queue.Empty:
-            if game.poll() is not None: raise SystemExit("game exited early")
+            if game.poll() is not None: raise SystemExit(f"game exited early ({game.returncode}" + (", killed: the memory cap?" if game.returncode in (-9, 137) else "") + ")")
             continue
         if t in l: return l
     raise SystemExit(f"timed out waiting for {t!r}")
@@ -126,7 +134,15 @@ def count(name):
     n = [l for l in got if name in l]
     print(f"  unimplemented -> {tail(n[0]) if n else name + ' absent'}")
     return n[0] if n else None
+def memory_peak():
+    """The game's peak resident memory (VmHWM) so far, in GB; None once it has gone."""
+    try:
+        for l in open(f"/proc/{game.pid}/status"):
+            if l.startswith("VmHWM:"): return int(l.split()[1]) / 1048576
+    except OSError: return None
 def finish():
+    peak = memory_peak()
+    if peak is not None: print(f"game memory peak: {peak:.2f} GB")
     try: send("quit")
     except Exception: pass
     time.sleep(2)
