@@ -2163,6 +2163,39 @@ filed the items that cite it.
   (`NewPlayerDialog.cs`, `HelpText` 358 and 359 on both) shows the row on either, now marked at the site. Build: the help row of
   the chosen toggle empty. Confirm: first shoot the original's dialog with the pointer on each toggle in each mode (the help bar's
   text), predicting the chosen one empty; then ours the same, the bug put back.
+- [ ] **Q951. A sold or moved coaster's pylons stay standing.** From an outside review of `1efacc58` (Alexah, 2026-10-30;
+  source-established, checked by the Sentinel against `c67821bf`). `ParkCoasterPylons` (Q817) builds its pylon entities once, when a
+  park loads (`Level.cs:473`), and takes them down only on its own `OnDelete` at unload (`TakeDown`). A sale (`ParkBuilding.Demolish`)
+  frees the coaster's track ride and object and rebuilds `ParkSurfaces`, and a move goes through the same `Demolish`
+  (`PickUp`); neither touches `ParkCoasterPylons`, the only other reader of which is the console's `pylons`. Partly run
+  (`~/.cache/tpw-harnesses/rev-1030/`, off-screen, her Full Simulation park as Q817's `ours.py`): `pylons 40` before, `sell 236`
+  sold the Temple Of Gloom for 10000 and it left `objects`; the count after was not read (run1's replies came one command late,
+  run2 went over its 12 GB cap under lavapipe: ours on that park peaked at 11.1 GB off-screen), so run it on the desk. Decode
+  first what the original's demolisher does with a coaster's track and pylons (`FUN_00527ee0`'s track arm for `WhichTrackType` 3,
+  which Q449 says withdraws nought; whether `FUN_00530830` / `FUN_00530b70` or another walk drops the pylon instances), then
+  take the pylons of the sold coaster down (and on a move, put them back where the original does). Related, not the same:
+  Q607 (the file's id of a sold object), Q594 (the track drawn), `SALE_TRACK_TEARDOWN`. Confirm: `pylons` before and after a
+  sale and a move, with a frame of the empty spot, against the original selling the same coaster; a test that fails with the
+  teardown put back.
+- [ ] **Q952. Three harness tools no longer build: `RegisterArchiveHandler<WadArchive>`.** From an outside review of
+  `1efacc58` (Alexah, 2026-10-30), reproduced by the Sentinel at `c67821bf`: `d2b46bbe` (the build warnings) changed
+  `BaseFileSystem.RegisterArchiveHandler` to take a factory (`( ".wad", path => new WadArchive( path ) )`, as `Game.cs:52`,
+  `GameData.cs:38` and `hfsamplers` call it), and `tools/harness/dotnet/cliptracks/Program.cs` (lines 9 and 11),
+  `normdump/Program.cs:7` and `walkriders/Program.cs:8` still call the generic form: each fails with CS0308 (`dotnet build
+  tools/harness/dotnet/<tool>` in a clone, the solution built first, since `walkriders` references its dlls). `hfsamplers` builds.
+  The solution does not build them, so the gate cannot see it. Change the four calls; build all the `tools/harness/dotnet/`
+  projects alone; run each one's `docs/TOOLING.md` command once. Then consider one narrow check that builds every
+  `tools/harness/dotnet/*` project against the commit (a line in `check_commit.sh` or `gate.sh`), nothing wider.
+- [ ] **Q953. The pylon fixture of `ParkPylonChannelsTests` writes the present count into the free field.** From an outside
+  review of `1efacc58` (Alexah, 2026-10-30), confirmed by the Sentinel from the source at `c67821bf` (not run). `WithAPylon()`
+  (`ParkPylonChannelsTests.cs:136-147`) appends one present record to the stock park's model module and writes
+  `present + 1` at `module + 8`, which is the FREE count: the header is present, free, cursor (`ParkThingStates.Walk`,
+  `ParkThingStates.cs:452-456`; `saves.md`, "The model table": the shipped park's 161, 7, 90). So the fixture's module says
+  161 present and 162 free, and its walk still closes only because it stops at the module's end. Make the fixture consistent
+  (162, 7, 90: the present count at `module + 4`), assert the header the reader returns, and keep the old-rule negative
+  (`AModuleWithAPylonWalksToItsEndOnlyWithFiveChannels`, and the fixture's own one-channel `Problem`). Check that the three
+  consumer tests (the boundary wall and the two after it) still pass for the right reason: put the fixture's count back and
+  see whether any test notices; if none does, a test that reads `Header` or `Slots` is wanted.
 
 ## B. Docs and comments
 
