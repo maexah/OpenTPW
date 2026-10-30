@@ -11178,10 +11178,10 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Left: Q826. Tools stored: `lib/memmap.py`; `mem` and `mem gc|compact` in the console.
 - [x] **Q827. Sounds held as 16-bit words, clamped as the original's decoder clamps a voice (Q826's first piece).** Done 2026-10-30 (run 15, lane A, `alexah/785-sounds-as-16-bit`).
   `AudioClip.Samples` is `short[]` (`AudioClip.Quantise`: the float decode to the nearest word, held to -32768..32767; the mixer multiplies by `AudioClip.Scale`), so the
-  2,015 decoded clips of Alexah's Full Simulation park are 73.2 MB (`Int16[]`, 2,000 objects) where they were 145.6 MB of `Single[]`: on the desk the managed heap after a
+  2,015 decoded clips of Alexah's Full Simulation park are 73.2 MB (`Int16[]`, 2,000 objects) where they were 145.6 MB of `Single[]` (`q954/run12/heapstat.txt`, an earlier binary; `q827/run1` took no census): on the desk the managed heap after a
   collection fell from 315.5 to 243.1 MB there (289.4 to 221.0 stock), the process's resident size from 590 to 521 MB (560 to 489), the load's peak from 0.63 to 0.56 GB
   (0.62 to 0.54) (`q827/run1`, `run3`; the build before and after, 30 s in, `mem compact`). It is also the original's own rule (`0x006c9270`, `docs/exe/audio.md`, "How a
-  voice is decoded"): a clip past full scale was louder at its peaks here than there. Measured by test across all 3,739 shipped clips (`AudioClipTests`: each stored word
+  voice is decoded"): a clip past full scale was louder at its peaks here than there. Measured by test across the 3,659 of the 3,739 shipped clips that NLayer decodes (it refuses 80) (`AudioClipTests`: each stored word
   is NLayer's float taken to the nearest word; exactly 336 peak past full scale), and in the mix (`q827/audio-old`, `audio-final`: the advisor's `sp_203`, float peak 1.200,
   peak 0.15602 before and 0.13000 after, ratio 1.2002, rms over the line equal 0.01867; the mixer's scale put back out: peak 1.0, gain 4.3, `audio-mutant-v1`). Also built: the console's `mem wads`, which measured the WAD half of Q826 (below).
   Not measured: off-screen under lavapipe (lane B's display), a Release build.
@@ -11191,7 +11191,7 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   (the tests') still holds its bytes. `GetFileSize` reads the table's sizes instead of decoding the entry to count it. On the desk, 30 s in, `mem gc`, the build before against this one
   (`q828/base-stock`, `new-stock`, `base-fs`, `new-fs`): `mem wads` 22.7 MB held whole -> 0.0; managed total 221.0 -> 196.9 MB (stock), 243.8 -> 219.7 (Full Simulation); resident
   487.6 -> 461.3 MB (523.5 -> 498.8); the load's peak 562 -> 529 MB (587 -> 557); the park's load 4,990 -> 5,012 ms (stock; no phase more than 26 ms longer; Full Simulation 8,488 -> 8,472)
-  and its frame the same (mean brightness 76.36 against 76.47, Full Simulation 78.77 against 79.02, 0.9% and 3.5% of pixels differing as two runs of one build do). By test: the decoded
+  and its frame the same (mean brightness 85.0 against 85.1, Full Simulation 83.0 against 83.1 (luma, as confirm.txt measures), 0.9% and 3.5% of pixels differing as two runs of one build do). By test: the decoded
   corpus of all 13,392 entries of the 312 installed archives hashes as before (`6CBD6C22...`) and every entry's table size is its decoded length. `mutate.py`: 12 bugs, 11 fail a test (one
   hangs the run: an end-of-file read not told apart loops for ever), one survived the first test and fails the strengthened one. `PREDICTION.txt`: P5 (the peak) missed, its cause recorded.
   Q826 is rewritten for what is left: the entries' cache (11.7 to 15.2 MB), GroundTiles' kept 33 MB of pixels, textures by path, NeoVeldrid's chunks.

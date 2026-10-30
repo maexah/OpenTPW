@@ -43,7 +43,7 @@ public class AudioClipTests
 	/// word is that float taken to the nearest 16-bit word and held to the range. The clips that peak past full scale are the ones a missing
 	/// clamp gets wrong, and they are counted.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> truncation for rounding; no clamp (a wrapped word); the resampled clips quantised before they are resampled.</remarks>
+	/// <remarks><b>Mutations:</b> truncation for rounding; no clamp (a wrapped word); each fails here against the expression written in the test. Quantising before resampling is not caught: it is equivalent on the shipped clips, whose five 44,100 Hz members resample 2:1 exactly (blend 0).</remarks>
 	[TestMethod]
 	public void EveryShippedClipIsItsFloatDecodeTakenTo16BitsAndHeldToTheRange()
 	{
@@ -122,16 +122,26 @@ public class AudioClipTests
 			Assert.AreEqual( floats.Length, clip!.Samples.Length, $"{path}:{entry.Name}" );
 			Assert.AreEqual( channels, clip.Channels );
 
-			if ( !AudioClip.Quantise( floats ).AsSpan().SequenceEqual( clip.Samples ) )
-				firstWrong.Add( $"{path}:{entry.Name}" );
+			// The expected word is written out here, not taken from Quantise: nearest-even rounding of f * 32768, then held to -32768..32767.
+			for ( int i = 0; i < floats.Length; ++i )
+			{
+				var word = Math.Round( (double)floats[i] * 32768.0, MidpointRounding.ToEven );
+				var expected = (short)(word > 32767.0 ? 32767.0 : word < -32768.0 ? -32768.0 : word);
+
+				if ( clip.Samples[i] != expected )
+				{
+					firstWrong.Add( $"{path}:{entry.Name}[{i}]" );
+					break;
+				}
+			}
 
 			Interlocked.Increment( ref compared );
 		} );
 
 		Assert.AreEqual( 0, firstWrong.Count, "stored words differ from the float decode's: " + string.Join( ", ", firstWrong.Take( 5 ) ) );
-		Assert.IsTrue( compared > 3000, $"only {compared} clips compared" );
+		Assert.AreEqual( 3659, compared, "the clips NLayer decodes, compared" );
 		Assert.AreEqual( 336, past, "clips whose float decode peaks past full scale (docs/exe/audio.md says 336)" );
 		Assert.AreEqual( 5, resampled, "the clips shipped at 44,100 Hz" );
-		Assert.IsTrue( skipped < 100, $"{skipped} clips set aside" );
+		Assert.AreEqual( 80, skipped, "the clips NLayer refuses, set aside (Decode refuses them too)" );
 	}
 }

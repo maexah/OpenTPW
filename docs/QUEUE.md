@@ -67,7 +67,7 @@ park for the website, go first. Q804 stopped the photographs: no picture with th
 **Ordered at Alexah's word (2026-10-30):** Q954 (the memory ours holds) first, before the weekly builds go out: that much memory would shut out a player on a lower-end computer. Then the rest in the order below.
 
 - [ ] **Q826. What Q954, Q827 and Q828 left: the WAD entries' cache, the ground's kept pixels, textures kept by path, and NeoVeldrid's chunks.** The managed heap's `Byte[]` was 145.6 MB (9,624
-  objects; `q827/dump1`, a gcroot of 15 of the 683 arrays of 30 KB or more, 118 MB): `GroundTiles`'s `_pixels` 33 MB (kept so a tile can be laid again, `Remake`; the box's whole
+  objects, `q827/run2/fs/heapstat.txt`, Full Simulation; 145.7 MB in 9,659 on the final binary, `run3/fs`; a gcroot in `q827/dump1`, stock on the unchanged build, of 15 of its 683 arrays of 30 KB or more, 118 MB): `GroundTiles`'s `_pixels` 33 MB (kept so a tile can be laid again, `Remake`; the box's whole
   texture twice over, once in the heap and once on the card), the sound banks' compressed bytes (the park's music bank 33 MB and another 10 MB, kept by design:
   `SoundBank._encoded`), and the WAD archives, whose files Q828 no longer holds (22.7 MB gone). What is left of them is the entries cached beyond that: `mem wads` says
   **11.7 MB** stock (10.4 MB decompressed from refpack, 1.3 MB copied out as they are) to **15.2 MB** (Full Simulation) (`q828/new-stock`, `new-fs`). Candidates, each measured before and after as

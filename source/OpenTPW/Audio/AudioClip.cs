@@ -123,7 +123,7 @@ public sealed class AudioClip
 	/// Five of the game's samples are 44,100Hz and the rest are 22,050, so rather than run the
 	/// mixer at the higher rate for the sake of five sounds - or make it interpolate on every
 	/// voice on every frame - the odd ones out are brought down once, here, when they load.
-	/// Linear is audibly poor for a big ratio; for a clean 2:1 it is averaging adjacent pairs.
+	/// Linear is audibly poor for a big ratio; for a clean 2:1 it takes every other sample (the blend is always 0), with no filtering.
 	/// </summary>
 	internal static float[] Resample( float[] source, int channels, int fromRate, int toRate )
 	{

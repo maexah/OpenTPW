@@ -22,6 +22,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 ap = argparse.ArgumentParser(); ap.add_argument("mutations"); ap.add_argument("--copies", type=int, default=8)
 ap.add_argument("--only", nargs="*", default=[]); ap.add_argument("--log"); ap.add_argument("--keep", action="store_true")
 ap.add_argument("--tree", default=paths.REPO)
+ap.add_argument("--timeout", type=int, default=900, help="seconds one copy's dotnet test may run before it is killed and counted a failure")
 ap.add_argument("--root", default=os.environ.get("OPENTPW_MUTATE_ROOT") or os.path.join(paths.WORK, "mutate")); a = ap.parse_args()
 ns = {}; exec(open(a.mutations).read(), ns); M = [m for m in ns["M"] if not a.only or m[0] in a.only]; FILTER = ns.get("FILTER")
 ROOT = os.path.expanduser(a.root)
@@ -47,9 +48,16 @@ def build(tree): return subprocess.run([DN, "build", "source/OpenTPW.sln", "-m:2
 def test(tree):
     # capped.sh: a mutant that runs away is killed alone at 6G, never the machine (2026-10-21 OOM).
     cmd = [os.path.join(paths.LIB, "capped.sh"), DN, "test", "source/OpenTPW.sln", "--no-build"] + (["--filter", FILTER] if FILTER else [])
-    t = subprocess.run(cmd, cwd=tree, env=ENV, capture_output=True, text=True)
+    # A mutant that hangs (a loop that never ends) is killed with its process group at --timeout and recorded as a failure, not left to hang the run.
+    proc = subprocess.Popen(cmd, cwd=tree, env=ENV, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, start_new_session=True)
+    try:
+        out_text, _ = proc.communicate(timeout=a.timeout); hung = False
+    except subprocess.TimeoutExpired:
+        os.killpg(proc.pid, 9); out_text, _ = proc.communicate(); hung = True
+    t = subprocess.CompletedProcess(cmd, proc.returncode, out_text, "")
     failed = [l.strip().split()[1] for l in t.stdout.splitlines() if l.strip().startswith("Failed ") and "[" in l]
-    if t.returncode == 137: failed = failed + ["<killed at the memory cap: the tests ran away>"]
+    if hung: failed = failed + [f"<hung: killed at {a.timeout} s>"]
+    if t.returncode == 137 and not hung: failed = failed + ["<killed at the memory cap: the tests ran away>"]
     return failed, ("Passed!" in t.stdout or bool(failed))
 def make(i):
     tree = os.path.join(ROOT, f"c{i}"); os.makedirs(tree, exist_ok=True)

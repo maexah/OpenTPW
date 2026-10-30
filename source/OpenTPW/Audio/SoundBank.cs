@@ -4,11 +4,11 @@ namespace OpenTPW;
 /// A .sdt bank, with its samples decoded and ready to play.
 ///
 /// A small bank is decoded whole when it loads. The lobby's all are - each park's three lobby
-/// themes come to 9 to 11MB of float, the biggest sfx bank jungle's 8MB ambient bed - and for those,
+/// themes come to 4.5 to 5.5MB of 16-bit words, the biggest sfx bank jungle's ambient bed at 4MB - and for those,
 /// decoding a sample at the moment it is wanted would mean decoding on the frame a strike lands.
 ///
 /// A big one is not, because one bank is very big indeed: data\global\Speech holds all 641 of
-/// the advisor's lines, and decoding those up front costs 375MB of float and three seconds of
+/// the advisor's lines, and decoding those up front costs 188MB of 16-bit words and three seconds of
 /// startup for the sake of the one line he is about to say. Past
 /// <see cref="DecodeEverythingBelow"/> a bank keeps the compressed bytes instead and decodes an
 /// entry the first time it is asked for, which for a twenty-second line is a few milliseconds -
@@ -20,11 +20,11 @@ public sealed class SoundBank
 	/// <summary>
 	/// How much decoded audio a bank may hold before it switches to decoding on demand.
 	///
-	/// 32MB of float is about six minutes of mono at 22,050Hz, which clears every lobby sound bank -
-	/// the largest is hallow's lobby music at 11MB - and catches the global speech bank, each park's
+	/// 16MB of 16-bit words is about six minutes of mono at 22,050Hz, which clears every lobby sound bank -
+	/// the largest is hallow's lobby music at 5.5MB - and catches the global speech bank, each park's
 	/// music bank and the global kids bank, which are the only banks above it.
 	/// </summary>
-	private const int DecodeEverythingBelow = 32 * 1024 * 1024;
+	private const int DecodeEverythingBelow = 16 * 1024 * 1024;
 
 	/// <summary>How long each sample is, for <see cref="SoundCategoryFile.ReadSamples"/>.</summary>
 	public IReadOnlyList<TimeSpan> Durations { get; }
@@ -88,7 +88,7 @@ public sealed class SoundBank
 
 			// The .sdt header carries the length the game plays of each entry, under three frames short of what it decodes to, so about how much this bank would cost
 			// is known before a single frame is decoded.
-			var decoded = archive.soundFiles.Sum( entry => (long)entry.DecodedSize * 2 );
+			var decoded = archive.soundFiles.Sum( entry => (long)entry.DecodedSize );
 			var lazy = decoded > DecodeEverythingBelow;
 
 			var encoded = lazy ? new (string, byte[])[archive.soundFiles.Count] : null;

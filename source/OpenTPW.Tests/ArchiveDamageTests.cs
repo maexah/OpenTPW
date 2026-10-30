@@ -217,11 +217,20 @@ public class ArchiveDamageTests
 	}
 
 	[TestMethod]
+	[Timeout( 10000 )]
 	public void AnArchiveOnDiskFailsAnEntryReadAfterItsFileShrank()
 	{
 		var bytes = Wad( [1, 2, 3, 4, 5, 6] );
 		using var wad = new TempWad( bytes );
 		using var archive = new WadArchive( wad.Path );
+
+		// On Windows the archive's FileShare.Read keeps every writer out, so the file cannot shrink under it.
+		if ( OperatingSystem.IsWindows() )
+		{
+			Assert.ThrowsException<IOException>( () => new FileStream( wad.Path, FileMode.Open, FileAccess.Write, FileShare.ReadWrite ).Dispose(), "FileShare.Read keeps writers out" );
+			return;
+		}
+
 		using ( var file = new FileStream( wad.Path, FileMode.Open, FileAccess.Write, FileShare.ReadWrite ) )
 			file.SetLength( 130 );
 		Reject( () => Entry( archive, "x" ).GetData() );
@@ -234,6 +243,7 @@ public class ArchiveDamageTests
 		Assert.AreEqual( 3L, plain.GetFileSize( "x" ) );
 		using var compressed = new WadArchive( new MemoryStream( Wad( Pack( 4, "E061626364FC" ), true, 4 ) ) );
 		Assert.AreEqual( 4L, compressed.GetFileSize( "x" ) );
+		Assert.AreEqual( 0, compressed.Cached().Entries, "the size was read without decoding" );
 		Assert.AreEqual( 0L, compressed.GetFileSize( "missing" ) );
 	}
 

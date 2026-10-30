@@ -1455,7 +1455,7 @@ takes effect on those entries: ffmpeg's 16-bit decode clips them the same way. H
 together is not in the executable.
 
 OpenTPW stores each clip as 16-bit words (`AudioClip.Quantise`: the float decode taken to the nearest word and held to -32768..32767), so a voice is
-clamped as the original's is; the mix is summed in float and clamped once more in `Audio.Mix`. Measured across the 3,739 shipped clips (`AudioClipTests`, Q827):
+clamped as the original's is; the mix is summed in float and clamped once more in `Audio.Mix`. Measured across the 3,659 of the 3,739 shipped clips that NLayer decodes (it refuses 80; `AudioClipTests`, Q827):
 336 peak past full scale in NLayer's float decode, the five at 44,100 Hz included, and the speech sample `sp_203` (index 202, float peak 1.200) is 1.20 times
 louder at its peak in the mix of the build before (peak 0.15602) than after (0.13000) at the same bus and master, its rms over the line the same (0.01867).
 
