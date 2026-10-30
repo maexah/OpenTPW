@@ -107,3 +107,13 @@ another person's desk. Outside work reaches `main` by a pull request the maintai
 with no CI. The shared harness (`lib/`, `original/`, and the C# readers) moved from the maintainer's cache into
 `tools/harness/`, every folder it names now read from an environment variable (`paths.py`); the per-item evidence
 folders stayed out, and so did anything made from the game's files.
+
+## Textures loaded by path stay for the life of the process (2026-10-30)
+
+A texture made from a path is kept in `Asset.All` and shared by every later request for the path (`Texture.TryAdoptCached`), and nothing releases it when a level ends. Q832 measured the
+trade on the stock Lost Kingdom park: after a park the lobby holds 337 more textures and 13.5 MB more on the card (the park's 157 `levels/jungle` textures, its interface's 163 and 14
+`generic/*`), and a park entered again loads in 3.1 s against 5.0 s the first time (the terrain phase 780 -> 66 ms). Letting go at a level's end would give the 13.5 MB back in the lobby and
+cost about 1.75 s on each park entered again (an experiment that refused cache hits across a level's end: 4.83 s); it would not lower the park's peak, which is what a smaller computer meets,
+and eleven statics hold textures that would have to be cleared with them (`UiMesh.Loaded` and the other interface caches). So they stay. Whoever reopens this should
+begin with a measure of the lobby's memory on a computer that has less than the desk's, and with Q833, which finds what else a round trip leaves. The figures and runs are Q832's
+entry in `docs/history/queue-done.md`.

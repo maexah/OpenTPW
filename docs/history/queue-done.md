@@ -11234,6 +11234,18 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   (`Unload` not calling it) cannot be run in a test and is what the build before is. `memrun.py` gained `AGAIN=1`. `PREDICTION.txt`: P1's entry count missed (356 kept at the second park, not 600: the second park asks for fewer of the entries), causes recorded; the rest held.
   Not measured: off-screen under lavapipe (lane B's display), a Release build, a park entered from a park's own Load menu (no lobby between: it goes through `Unload` too, not run), the first
   park's loss of the lobby's asks in a long play, a slow drive (a park's second read of each kept entry is the same cost as Q830's).
+- [x] **Q832. Textures loaded by path stay for the life of the process: measured, and kept (Q826's sixth piece).** Done 2026-10-30 (run 15, lane A, `alexah/783-textures-by-path-measured`).
+  Q826 listed it as a loss nobody had measured. Desk, the stock Lost Kingdom park, the lobby and the park four times over, `mem gc` and `mem compact` at each stage (`tools/harness/lib/roundtrip.py`, new;
+  `q832/runs/final-2`, `final-3`, dll `124c8344`, the tree of main `00e47cdc`, nothing in the game changed): the lobby after the first park holds 583 textures / 26.5 MB against the fresh lobby's 246 / 13.0, 339 new
+  (`levels/jungle/*` 157, the park's interface `ui/textures/*` 163, `generic/*` 14, five others) and 2 gone, with the park's 349 UI meshes (`UiMesh.Loaded`, "loaded once") and their materials, 0.1 MB of vertex buffer in all; the lobby's own 244 stay.
+  What it buys: the park loads in 5.03 s the first time and 3.09, 3.08, 3.06 s after (terrain 780 -> 66 ms, objects 771 -> 371); an experiment that refused every cache hit made it 34 s (the cache also
+  serves the 1,047 repeated reads inside one load), and one that refused a hit across a level's end made the second park 4.83 s and the lobby's return about a second slower (one run, a second's resolution; `q832/epoch`, run once, a probe
+  build never committed). So releasing at a level's end would save 13.5 MB logical on the card in the lobby (which stands 48 MB resident above its start after a park, 298 -> 346 compacted, the textures a part of that and the driver's 54 MB of chunks, kept either way, another), leave the park's peak
+  where it is (VmHWM 485 MB), and cost about 1.75 s on each park entered again, and eleven statics (`UiMesh.Loaded` and `_blank`, `UiMeter.Skins`, `ParkShopWindow.Loaded`, `ParkObjectWindow.Skins`, `_green` and `_red`, the three `_highlight`s,
+  `ParkFootprintPicture._textures`) hold textures, the park's interface's 163 among them, that a release would have to clear with it. Kept: `docs/DECISIONS.md`. The run found a creep, filed as Q833. New tools:
+  `lib/roundtrip.py` and `lib/assetdiff.py` (`TOOLING.md`). No game code changed, so no mutation run: `PREDICTION.txt` holds ten predictions, six missed and one half (a player's slot makes a richer park; the cache
+  refused everywhere is 34 s; compacted baselines; the terrain bound), causes recorded.
+  Not measured: off-screen under lavapipe, a Release build, a player's own park (richer: 1,149 textures and 782 in the lobby after it, in the `ref` player's, `final-1`), a theme other than Lost Kingdom (the textures of two themes would sit in the lobby together).
 
 ## B. Docs and comments
 
