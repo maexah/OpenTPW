@@ -68,6 +68,15 @@ public sealed class WadArchiveFile : ArchiveFile
 	{
 		CachedData = null;
 	}
+
+	/// <summary>Lets go of the kept bytes and starts the entry's asks from nought, as if it had not been asked for yet (Q826).</summary>
+	internal void ForgetAsks()
+	{
+		CachedData = null;
+		Asks = 0;
+		Reads = 0;
+		ReadTicks = 0;
+	}
 }
 
 public sealed class WadArchive : IArchive
@@ -83,6 +92,17 @@ public sealed class WadArchive : IArchive
 
 	/// <summary>Every entry of the archive, in the order the table lists them.</summary>
 	private readonly List<WadArchiveFile> _entries = new();
+
+	/// <summary>
+	/// Lets go of every entry's kept bytes and starts every entry's asks from nought. A level's end calls it: the archives
+	/// live as long as the process, so without it an entry asked for once in one level and once in the next would be kept
+	/// at that second ask (Q830's rule, which counts asks from the entry's first).
+	/// </summary>
+	public void ForgetAsks()
+	{
+		foreach ( var entry in _entries )
+			entry.ForgetAsks();
+	}
 
 	/// <summary>How many bytes of the archive are held in memory: all of them for a stream's, none for a file's.</summary>
 	public long HeldBytes => _held?.Length ?? 0;

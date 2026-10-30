@@ -2989,7 +2989,7 @@ public class Level
 	/// close, and the front end empties the advisor's queue through his crying stop. Then every entity, in the
 	/// order they were made, which ends the lobby's sound and weather before the advisor himself. Then the camera
 	/// lets go of its island, every voice still sounding fades, the particle system shuts down, and a park's
-	/// running state goes last - see <see cref="ForgetRunningPark"/>.
+	/// running state goes next - see <see cref="ForgetRunningPark"/> - and the WAD archives' ask counts last, <see cref="ForgetWadAsks"/>.
 	///
 	/// Only between frames: nothing may update or draw a level while it ends, or be half way through a walk over
 	/// its entities.
@@ -3013,6 +3013,20 @@ public class Level
 		ParticleSystem.Current?.Shutdown();
 
 		ForgetRunningPark();
+		ForgetWadAsks( FileSystem.OpenArchives );
+	}
+
+	/// <summary>
+	/// Starts the WAD archives' ask counts again and lets go of the entries they kept. The archives stay open for the life
+	/// of the process, and an entry is kept from its second ask (<see cref="WadArchiveFile.KeepFromAsk"/>), so without this
+	/// the lobby's asks and every earlier level's count toward the next level's: after a trip to the lobby and back a
+	/// park keeps every entry it asks for again, which is the memory Q830 saved. The last of <see cref="Unload"/>; apart
+	/// from it only so a test can reach it.
+	/// </summary>
+	internal static void ForgetWadAsks( IEnumerable<IArchive> archives )
+	{
+		foreach ( var wad in archives.OfType<WadArchive>() )
+			wad.ForgetAsks();
 	}
 
 	/// <summary>

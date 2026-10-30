@@ -11222,6 +11222,18 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the kept bytes, `Free` lets them go. `mutate.py`: 12 bugs, 11 fail a test and the 12th (a most-asked list that counts an entry asked for once) fails the test strengthened for it.
   `PREDICTION.txt`: B2 missed (395 of 1,409 asks, 28%, hit the cache, not under 10%: three models are asked for 50 to 90 times); the rest held.
   Not measured: off-screen under lavapipe (lane B's display), a Release build, a park played long enough for a re-read entry to be asked for a third time by a new thing, a slow drive (the reads are 87 to 179 more), the saving lasts until the next park load: the ask counts are never reset (the next piece of Q826).
+- [x] **Q831. The WAD ask counts start again at each level's end (Q826's fifth piece).** Done 2026-10-30 (run 15, lane A, `alexah/782-wad-asks-reset-at-teardown`).
+  Q830 keeps a WAD entry's bytes from its second ask, but the counts (`WadArchiveFile.Asks`) and the archives lived as long as the process, so an entry asked for once in the lobby and once in a park, or once
+  in each of two parks, was kept at that second ask: after a trip to the lobby and back the saving was gone. `Level.Unload` now ends with `Level.ForgetWadAsks( FileSystem.OpenArchives )`:
+  every `WadArchive` lets go of its entries' kept bytes and starts their asks, reads and read time from nought (`WadArchive.ForgetAsks`, `WadArchiveFile.ForgetAsks`). Desk, the stock park
+  30 s in, the lobby, the park again 30 s in, `mem gc` and `mem compact` each time, the build before (main `439a76d8`, dll `e43c5ea0`) against this (`7dbbf9e9`), `lib/memrun.py` with `LEAVE=1 AGAIN=1`
+  (`q826/before-stock`, `new-stock`, `before-fs`, `new-fs`): entries kept at the second park 356 -> 77 and 9.7 -> 1.9 MB stock (590 -> 163 and 11.8 -> 3.1 MB Full Simulation; the first park 87 -> 75
+  and 2.4 -> 1.9 MB, 179 -> 168 and 3.5 -> 3.1, since the lobby's asks no longer count toward it); the lobby between them keeps 23 entries and 0.3 MB (130 and 3.5 MB before); the managed
+  total at the second park 162.2 -> 155.6 MB stock (187.6 -> 175.8 Full Simulation); `park.png` and `park-again.png` mean 85.0 and 84.9 (83.1 and 83.8) against 85.0 and 85.0 (83.1 and 83.2) before.
+  By test: a level's end starts the counts at nought and frees the bytes for every entry of every archive, and the entry still reads. `mutate.py`: 8 bugs, 7 fail a test; the 8th
+  (`Unload` not calling it) cannot be run in a test and is what the build before is. `memrun.py` gained `AGAIN=1`. `PREDICTION.txt`: P1's entry count missed (356 kept at the second park, not 600: the second park asks for fewer of the entries), causes recorded; the rest held.
+  Not measured: off-screen under lavapipe (lane B's display), a Release build, a park entered from a park's own Load menu (no lobby between: it goes through `Unload` too, not run), the first
+  park's loss of the lobby's asks in a long play, a slow drive (a park's second read of each kept entry is the same cost as Q830's).
 
 ## B. Docs and comments
 

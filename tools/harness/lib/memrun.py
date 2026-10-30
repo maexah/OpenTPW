@@ -5,7 +5,8 @@ OPENTPW_FULLSIM_PARK, a .TPWS made by the original; a Full Simulation player's p
 entry and 30 s on it prints `memmap.report` (resident split, the largest mappings, the DRM video memory) and the game's own
 `mem gc`, `mem compact` and `stats` replies, then a frame (park.png). Environment: OFFSCREEN=1 runs on the private display
 under lavapipe (where the process, not the video memory, holds the device's bytes); PATHS=1 lays six path cells (60,15) to (62,16) after the 30 s and reports again (Q829); LEAVE=1 goes back to the lobby after and
-reports again (what a park leaves behind); DUMP=1 collects a `dotnet-dump` heap dump and writes `dumpheap` output (DUMPCMD,
+reports again (what a park leaves behind); AGAIN=1 (with LEAVE) then enters the park a second time, waits 30 s and reports (park-again.png; Q826:
+`mem wads` after a lobby round trip); DUMP=1 collects a `dotnet-dump` heap dump and writes `dumpheap` output (DUMPCMD,
 `|` between commands, default `dumpheap -stat`) to DUMPOUT (default heapstat.txt) in the outdir, the dump itself removed;
 OPENTPW_DOTNET_DUMP names the tool. The run's last line is `game memory peak` (gamedrive.py)."""
 import os, sys, shutil, time, subprocess
@@ -55,6 +56,10 @@ try:
     if os.environ.get("LEAVE"):
         send("lobby"); wait_for("Loaded the lobby", 60); time.sleep(8)
         stage("lobby again (left the park)")
+        if os.environ.get("AGAIN"):
+            send("park " + ("jungle")); wait_for("Loaded jungle", 180); time.sleep(30)
+            stage("park again +30 s")
+            shot("park-again")
 finally:
     done()
     if MODE == "fs":

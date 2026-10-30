@@ -29,6 +29,30 @@ public class ArchiveDamageTests
 		return bytes.ToArray();
 	}
 
+	/// <summary>An archive of two plain entries, "x" and "y".</summary>
+	private static byte[] TwoEntryWad( byte[] x, byte[] y )
+	{
+		using var bytes = new MemoryStream();
+		using var writer = new BinaryWriter( bytes );
+		var data = 88 + 80;
+		var names = data + x.Length + y.Length;
+		writer.Write( Encoding.ASCII.GetBytes( "DWFB" ) );
+		writer.Write( 2 );
+		writer.Write( new byte[64] );
+		writer.Write( 2 );
+		writer.Write( names );
+		writer.Write( 4 );
+		writer.Write( 0 );
+		foreach ( var word in new[] { 123, names, 2, data, x.Length, 0, 0, 0, 0, 0 } )
+			writer.Write( word );
+		foreach ( var word in new[] { 123, names + 2, 2, data + x.Length, y.Length, 0, 0, 0, 0, 0 } )
+			writer.Write( word );
+		writer.Write( x );
+		writer.Write( y );
+		writer.Write( new byte[] { (byte)'x', 0, (byte)'y', 0 } );
+		return bytes.ToArray();
+	}
+
 	private static byte[] Pack( int size, string commands ) =>
 		new byte[] { 0x10, 0xfb, (byte)(size >> 16), (byte)(size >> 8), (byte)size }
 			.Concat( Convert.FromHexString( commands ) ).ToArray();
@@ -271,6 +295,76 @@ public class ArchiveDamageTests
 
 		file.Free();
 		Assert.AreEqual( 0, archive.Cached().Entries, "Free lets them go" );
+	}
+
+	/// <summary>
+	/// Q826: a level's end starts every archive's asks again, so an entry asked for once in one level and once in the next is
+	/// asked for once each time and never kept. <b>Mutations:</b> <see cref="Level.ForgetWadAsks"/> that frees the bytes and
+	/// leaves the counts, that resets the counts and leaves the bytes, that skips an archive, or an entry that forgets
+	/// only its reads, each fail here.
+	/// </summary>
+	[TestMethod]
+	public void AnEntryAskedForOnceInEachOfTwoLevelsIsNeverKept()
+	{
+		using var first = new WadArchive( new MemoryStream( Wad( [1, 2, 3, 4] ) ) );
+		using var second = new WadArchive( new MemoryStream( Wad( Pack( 4, "E061626364FC" ), true, 4 ) ) );
+		var archives = new IArchive[] { first, second };
+		var files = archives.Cast<WadArchive>().Select( a => (WadArchiveFile)Entry( a, "x" ) ).ToArray();
+
+		foreach ( var file in files )
+			file.GetData();
+
+		Level.ForgetWadAsks( archives );
+
+		foreach ( var wad in archives.Cast<WadArchive>() )
+			Assert.AreEqual( (0, 0L, 0L, 0.0), wad.Asked(), "the counts start again" );
+
+		foreach ( var file in files )
+			file.GetData();
+
+		foreach ( var wad in archives.Cast<WadArchive>() )
+		{
+			Assert.AreEqual( 0, wad.Cached().Entries, "one ask in the next level keeps nothing" );
+			Assert.AreEqual( (1, 1L, 1L), (wad.Asked().Entries, wad.Asked().Asks, wad.Asked().Reads) );
+		}
+	}
+
+	/// <summary>Q826: what the level before kept is let go of at its end, not left until the next level asks again.</summary>
+	[TestMethod]
+	public void AnEntryKeptInOneLevelIsLetGoOfAtItsEnd()
+	{
+		using var archive = new WadArchive( new MemoryStream( Wad( Pack( 4, "E061626364FC" ), true, 4 ) ) );
+		var file = (WadArchiveFile)Entry( archive, "x" );
+		file.GetData();
+		var kept = file.GetData();
+		Assert.AreEqual( 1, archive.Cached().Entries );
+
+		Level.ForgetWadAsks( [archive] );
+
+		Assert.AreEqual( 0, archive.Cached().Entries, "the kept bytes are gone" );
+		Assert.AreEqual( 0, file.Asks );
+		CollectionAssert.AreEqual( kept, file.GetData(), "and the entry still reads" );
+		Assert.AreEqual( 0, archive.Cached().Entries, "the first ask of the next level keeps nothing" );
+	}
+
+	/// <summary>Q826: every entry of an archive starts again, not the first one alone.</summary>
+	[TestMethod]
+	public void EveryEntryOfAnArchiveStartsAgainAtALevelsEnd()
+	{
+		using var archive = new WadArchive( new MemoryStream( TwoEntryWad( [1, 2], [3, 4, 5] ) ) );
+		var files = new[] { "x", "y" }.Select( name => (WadArchiveFile)Entry( archive, name ) ).ToArray();
+		CollectionAssert.AreEqual( new byte[] { 3, 4, 5 }, files[1].GetData() );
+
+		foreach ( var file in files )
+			file.GetData();
+
+		Assert.AreEqual( 1, archive.Cached().Entries, "y was asked for twice and kept, x once" );
+
+		Level.ForgetWadAsks( [archive] );
+
+		Assert.AreEqual( (0, 0L, 0L, 0.0), archive.Asked() );
+		Assert.AreEqual( 0, archive.Cached().Entries );
+		Assert.AreEqual( 0, files[1].Asks, "the second entry's count too" );
 	}
 
 	[TestMethod]
