@@ -64,6 +64,20 @@ default, Alexah's second pre-weekly list), then the rest in the order below.
 **Ordered at Alexah's word (2026-10-29):** Q804, Q805 and Q806, found while photographing Alexah's Full Simulation
 park for the website, go first. Q804 stopped the photographs: no picture with the blue lines will be used.
 
+**Ordered at Alexah's word (2026-10-30):** Q954 (the memory ours holds) first, before the weekly builds go out: that much memory would shut out a player on a lower-end computer. Then the rest in the order below.
+
+- [ ] **Q954. Ours holds about 7 GB for the stock park and over 12 GB for a Full Simulation park.** Measured by the Sentinel
+  2026-10-30 off-screen (lavapipe, `:79`, this build at `c67821bf`; `~/.cache/tpw-harnesses/rev-1030/`): the stock Instant Action
+  Lost Kingdom park peaked at 6.81 GB resident (`s-check.out`, `game memory peak`; 7.12 GB in `s-kill`), with `stats` at
+  574 entities, 1031 models, 2695 assets; Alexah's Full Simulation park (Q817's copy, `q812a.TPWS`) stood at 11.1 GB 58 s after
+  launch (the watchdog, 12:10 EDT) and went past a 12 GB cap during or after its 44 s load (`run2`). The desk was not measured.
+  Alexah (2026-10-30): there is no valid reason for that much memory, on any renderer. Account for it before changing anything:
+  the managed heap against the process's resident size (`GC.GetGCMemoryInfo`, `dotnet-counters`), the Vulkan memory (lavapipe
+  keeps device memory in host RAM, so off-screen the desk's video memory shows as RAM: count the bytes uploaded per texture and
+  buffer), CPU copies of textures or meshes kept after upload, models loaded once per instance (1031 models for 574 entities),
+  sounds decoded whole; on the desk and off-screen, the stock park and the Full Simulation one. Then cut the largest holders,
+  confirm each by `game memory peak` (`gamedrive.py`) and a frame, and put a memory row in STATUS's Numbers. The harness's
+  cap (`OPENTPW_GAME_MEMMAX`, 8G) stays as the safety net.
 - [ ] **Q820. What Q818, Q821 and Q822 left: the stacked and loop pylons, the original's picture of a flipped diagonal, and the heights by the original's samplers.** From Q818 (run 14, lane A;
   its piece (3), the face normals and the control word, is Q819; its piece (1), the ground's per-cell diagonal, is Q821, which ticks Q398; the decode
   of piece (4) and the float note are Q822). (2) Left by Q817: the pylon under a stacked piece is drawn with the alone-on-its-cell arms (the bottom of a stack that is not its top shows the `0x400` node and hides the `0x800` one, `0x00432ff8`..`0x0043304d`; ours hides `mc_bridge` on it); a stacked pylon stands on the
@@ -2196,18 +2210,6 @@ filed the items that cite it.
   (`AModuleWithAPylonWalksToItsEndOnlyWithFiveChannels`, and the fixture's own one-channel `Problem`). Check that the three
   consumer tests (the boundary wall and the two after it) still pass for the right reason: put the fixture's count back and
   see whether any test notices; if none does, a test that reads `Header` or `Slots` is wanted.
-- [ ] **Q954. Ours holds about 7 GB for the stock park and over 12 GB for a Full Simulation park.** Measured by the Sentinel
-  2026-10-30 off-screen (lavapipe, `:79`, this build at `c67821bf`; `~/.cache/tpw-harnesses/rev-1030/`): the stock Instant Action
-  Lost Kingdom park peaked at 6.81 GB resident (`s-check.out`, `game memory peak`; 7.12 GB in `s-kill`), with `stats` at
-  574 entities, 1031 models, 2695 assets; Alexah's Full Simulation park (Q817's copy, `q812a.TPWS`) stood at 11.1 GB 58 s after
-  launch (the watchdog, 12:10 EDT) and went past a 12 GB cap during or after its 44 s load (`run2`). The desk was not measured.
-  Alexah (2026-10-30): there is no valid reason for that much memory, on any renderer. Account for it before changing anything:
-  the managed heap against the process's resident size (`GC.GetGCMemoryInfo`, `dotnet-counters`), the Vulkan memory (lavapipe
-  keeps device memory in host RAM, so off-screen the desk's video memory shows as RAM: count the bytes uploaded per texture and
-  buffer), CPU copies of textures or meshes kept after upload, models loaded once per instance (1031 models for 574 entities),
-  sounds decoded whole; on the desk and off-screen, the stock park and the Full Simulation one. Then cut the largest holders,
-  confirm each by `game memory peak` (`gamedrive.py`) and a frame, and put a memory row in STATUS's Numbers. The harness's
-  cap (`OPENTPW_GAME_MEMMAX`, 8G) stays as the safety net.
 
 ## B. Docs and comments
 
