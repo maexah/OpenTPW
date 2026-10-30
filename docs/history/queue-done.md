@@ -11245,6 +11245,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `lib/roundtrip.py` and `lib/assetdiff.py` (`TOOLING.md`). No game code changed, so no mutation run: `PREDICTION.txt` holds ten predictions, six missed and one half (a player's slot makes a richer park; the cache
   refused everywhere is 34 s; compacted baselines; the terrain bound), causes recorded.
   Not measured: off-screen under lavapipe, a Release build, a player's own park (richer: 1,149 textures and 782 in the lobby after it, in the `ref` player's, `final-1`), a theme other than Lost Kingdom (the textures of two themes would sit in the lobby together).
+- [x] **Q834. What `mem vulkan` counts, and what NeoVeldrid keeps (Q826's seventh piece).** Done 2026-10-30 (run 15, lane A, `alexah/789-vulkan-memory-chunks`).
+  Q826 left it unsettled "without the library's source". NeoVeldrid 1.2.1 decompiled (ilspycmd 11.2): `_totalAllocatedBytes`, printed as "allocated from the driver", is the **live blocks**
+  (rounded up, added at `Allocate`, taken off at `Free`: the 85 MB fall from the park to the lobby is textures and buffers freed), not chunks. The chunks are 64 MB (mapped) and 256 MB (unmapped), a new one whenever none has a free block that fits,
+  and **no chunk is ever given back** before the device is disposed; a request of a chunk's size or more is its own allocation and goes back. The device also keeps a staging pool of textures (never let go of) and buffers (only above 512 bytes).
+  `mem vulkan` now reads all three (`VulkanMemory`, by reflection; a test holds the library's names and the arithmetic, 12 of 12 put-back bugs fail it, one needed a second test). Desk, final binary `e4b29df7`, `lib/roundtrip.py` TRIPS=2
+  (`q834/runs/final-2`): live 67.3 / 204.3 / 119.5 MB at the lobby's start / the park / the lobby after it, the same at every park and lobby after; **chunks 384 MB (2 mapped, 1 unmapped) at all seven stages**, none given back, the park fits in them;
+  **staging pool 5.4 MB at the lobby's start, 37.3 MB (9 textures) after the first park and for ever after**, which is the 40 MB the lobby's live blocks (119.5) exceed the game's own account (78.6) by after a park (3.6 MB left over, the rounding likely, not
+  measured), and the mapped chunks' used bytes rise by 32.6 MB against the pool's 31.9. Under lavapipe, TRIPS=1 (`final-3`): chunks 320 MB, pool 35.8 MB (3 textures), live 68.5 / 197.7 / 115.1. Frames: `final-2/park1.png`, `lobby3.png` (whole).
+  Q826's own list loses this piece; what is left of it is `Refpack`'s growing list (a load-time copy, not held). Filed: Q835, the pool. `PREDICTION.txt`: 10 made over three runs, 3 missed or half (the park needs no new chunk the lobby lacks;
+  the rounding residual 5.9 MB, not under 4, at the park stages; lavapipe's park live 6.6 MB under the desk's), causes recorded. Not measured: a Release build, Full Simulation or a player's own park, another theme, a smaller computer's card.
 
 ## B. Docs and comments
 

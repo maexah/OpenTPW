@@ -2997,29 +2997,14 @@ public static class DebugConsole
 	}
 
 	/// <summary>
-	/// The bytes NeoVeldrid's Vulkan memory manager has taken from the driver (whether it ever gives a chunk back is not settled without its source; its private
-	/// <c>_totalAllocatedBytes</c>, read by reflection: the library has no property for it). The game's own account
-	/// (<see cref="GpuMemory"/>) is what it asked for; this is what the driver was asked for, in chunks.
+	/// NeoVeldrid's Vulkan memory manager: the live blocks, the chunks it has taken from the driver and keeps until the device ends, and the
+	/// staging pool (<see cref="VulkanMemory"/>). The game's own account (<see cref="GpuMemory"/>) is what it asked for; the chunks are what the driver was asked for.
 	/// </summary>
 	private static string VulkanAllocated()
 	{
 		try
 		{
-			const System.Reflection.BindingFlags all = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public;
-
-			for ( var type = Device.GetType(); type != null; type = type.BaseType )
-			{
-				foreach ( var field in type.GetFields( all ) )
-				{
-					if ( field.FieldType.Name != "VkDeviceMemoryManager" || field.GetValue( Device ) is not { } manager )
-						continue;
-
-					var total = manager.GetType().GetField( "_totalAllocatedBytes", all )?.GetValue( manager );
-					return total is ulong bytes ? $"{bytes / 1048576.0:F1}MB allocated from the driver" : "_totalAllocatedBytes not found";
-				}
-			}
-
-			return "no memory manager on this device";
+			return VulkanMemory.Read( Device )?.ToString() ?? "no memory manager on this device, or its fields are not as the reader expects";
 		}
 		catch ( Exception e )
 		{

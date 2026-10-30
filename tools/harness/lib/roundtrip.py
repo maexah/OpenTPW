@@ -23,9 +23,10 @@ def stage(tag):
     lines_ = reply("assets list", 3, 0, 300)
     open(os.path.join(OUT, tag + ".assets"), "w").write("\n".join(lines_))
     rss = memmap.status(game.pid)
-    stages[tag] = dict(textures=[l for l in got if "mem gpu" in l][0], rss=rss["VmRSS"] / 1024, hwm=rss["VmHWM"] / 1024,
-                       assets=assetdiff.census("\n".join(lines_)))
+    stages[tag] = dict(textures=[l for l in got if "mem gpu" in l][0], vulkan=[l for l in got if "mem vulkan" in l][0], rss=rss["VmRSS"] / 1024,
+                       hwm=rss["VmHWM"] / 1024, assets=assetdiff.census("\n".join(lines_)))
     print(f"STAGE {tag}: VmRSS {rss['VmRSS']/1024:.0f} MB VmHWM {rss['VmHWM']/1024:.0f} MB; " + stages[tag]["textures"][:120])
+    print(f"VULKAN {tag}: " + stages[tag]["vulkan"])
 def loads(): return [int(x) for x in re.findall(r"\[load\] jungle: (\d+) ms in total", logtext())]
 def phase(name): return [int(x) for x in re.findall(r"\[load\] jungle: " + name + r" took (\d+) ms", logtext())]
 def lobby_back(n):
