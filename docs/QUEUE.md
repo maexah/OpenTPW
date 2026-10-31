@@ -158,8 +158,9 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   `ParkLoadScreen.Load` asks `Game.RequestParkLoad` for the whole scene again; Restart Park is the same
   (`ParkFrontEnd.RestartPark`). And the stream's scrollbar (control 1: `!slider`, `b_up`, `b_scroller`, `b_down`)
   is built on no list here: a list longer than its window is counted as `LOAD_PARK_LIST_SCROLLBAR` on this screen
-  and the wheel scrolls it. Decode the teardown first, then decide with Alexah whether the park is rebuilt in
-  place. Confirm: a load timed against the original's 1.3 s, and a folder of fourteen saves scrolled by the bar.
+  and the wheel scrolls it. The teardown is decoded (Q854; `saves.md`, "The in-place load, call by call", whose last
+  paragraph sets out the choice). Alexah decides whether the park is rebuilt in place; the scrollbar and the saved camera
+  do not wait on that. Confirm: a load timed against the original's 1.3 s, and a folder of fourteen saves scrolled by the bar.
   From Q241f: no load here reads the camera module, which the writer now writes (`ParkWorld.Camera` holds it,
   `FUN_0042cec0`; `saves.md`, "Loading the modules", Camera): a loaded park opens on the default view, where the
   original's opens where the save's camera stood. The file's rotation is the orbit camera's yaw negated.

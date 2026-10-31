@@ -11509,6 +11509,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   (a `Device.WaitForIdle()` before the queue ran made the same run print 0). `Texture.Delete` now asks `Render.ScheduleRetire`, and `Renderer.Present` submits the frame with a fence **only when something waits**
   (`FenceRetireQueue`; one queue runs submissions in order, so that fence signalling means every frame up to it is done); the fences are reused. The same run prints no `VUID` line, the lobby after the leave draws as before, `mem retire` counts what was let go.
   Left (not filed: nothing placed shows it): the other things the deletion queue lets go of (buffers, resource sets, pipelines) are not behind a fence; the layer reports none of them, and it has no in-use check for a descriptor-set layout or a shader module, so its silence says nothing of those.
+- [x] **Q854. Q247's decode: the original's in-place load (the twelve teardown calls, `FUN_00415140`, Restart Park's path).**
+  Lane B, private Ghidra copy, no game run. `saves.md`, "The in-place load, call by call": every call of `FUN_00414d40`'s teardown
+  (`0x0041501d`..`0x00415088`) and rebuild (`0x00415144`..`0x00415254`), the modes, the callers, Restart Park from `FUN_0048b5b0` to
+  `0x00550371`. Found: a load replaces instances and keeps the world object, the model records and the interface, reaching
+  none of state 0xb's frees and no scene-state write (1,727 functions by direct calls, 296 indirect calls not followed);
+  `FUN_00415140` runs even after a module failed; Restart Park drops the load's answer. Not settled: a window open on a deleted
+  thing, first person across a load, a carried object at a quickload. Evidence `q854/`. The build stays Q247's, Alexah's decision.
 
 ## B. Docs and comments
 

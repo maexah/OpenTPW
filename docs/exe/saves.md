@@ -399,10 +399,110 @@ mode 2, failure 9), the preamble (`FUN_00416240`, failure 7), the rest of the fi
 taken down where it stands** - `FUN_00457e10`, `FUN_004d8330`, `FUN_0052f8d0( 0x80, 0x80 )`, `FUN_005191e0`,
 `FUN_00515fb0`, `FUN_00515f30`, `FUN_0042a190`, `FUN_005445d0`, `FUN_00437150`, `FUN_005584b0`,
 `Advisor_StopQuietly( 0 )`, `FUN_004815d0` - the modules are read over it (`FUN_00415270`, "Loading the modules"
-above), and `FUN_00415140` puts it back together (its calls run from `FUN_005508c0` to `FUN_0051c1c0( 0 )`, with
-the loaded fonts dropped on the way; none is decoded here). A module that fails leaves "Loading failed.  System state now (possibly) inconsistent." in the log and
+above), and `FUN_00415140` puts it back together ("The in-place load, call by call" below has every call). A module that fails leaves "Loading failed.  System state now (possibly) inconsistent." in the log and
 failure 6. There is no loading screen and no change of scene: under Proton the park was back four seconds after
 the click, its date gone from 2.9.2000 to the save's 2.7.2000.
+
+### The in-place load, call by call
+
+Decoded for Q247 from the listing (`q854/` in the harness folder); nothing here was run. `FUN_00414d40( path, buffer, mode )`
+is one call: the present `FUN_0044e540` is called only from `Game_StateMachine` (`0x0054e72f`, `0x0054fb6c`), so no frame is
+shown until it returns. The park stops for as long as the load takes (inside 1.3 s in Q241c), and the next frame is the
+loaded park.
+
+**The modes.** 2 is the whole load, from every caller a player reaches. 0 stops after the preamble (`0x00414e9f`). 1 reads
+the preamble and the action recording alone and skips the teardown and the rebuild (`0x0041501b`, `0x004150b1`, and the
+test of `param_2` in `FUN_00415270`): its one caller is the online branch of state 9 (`0x0054f113`), which
+passes `[online + 0x3e4]` (`FUN_005b96a0`, a getter that leaves the two pushes on the stack) and a buffer.
+
+**Who calls it, mode 2.** All through `FUN_005ac650` (`0x005ac739`), but for entering a park.
+
+| Route | Reached by | Then |
+|---|---|---|
+| `FUN_005ac5d0` (`.TPWS`) | a row of the list (`0x0049e955`, inside the click's message `0x400`, the game paused) | the window is sent message 4 (`0x0049e967`); its going, `0x14`, sets `g_ParkRunning` and resumes (`FUN_00409300`) |
+| `FUN_005ac5d0` | `GameKey_QuickLoad` (`0x0040c09e`) | logs `QuickSave Loaded` or `QuickSave Load Failed` |
+| `FUN_005ac5d0` | `FUN_00407e00` (`0x00407eae`), state 9, only with `0x00788160` set | behind state 9's loading screen |
+| `FUN_005ac5f0` (`.INTS`) | state 0xe (`0x0055036c`): Restart Park | state 10 again (`0x00550371`) |
+| `FUN_005ac5f0` | `GameOptions_Accept` (`0x0042386b`): `Refresh.INTS` | the pair around a sound-quality change |
+| `FUN_00414d40` itself | `FUN_005accf0` (`0x005ad054`), entering, over the new world | behind state 9's loading screen |
+
+**Restart Park's path.** The menu's handler `FUN_0048b5b0` (a data reference at `0x0048b837`) writes reason 1
+(`FUN_005508b0( 1 )`, `0x005508b4`), unpauses where the menu paused and hides the menu. State 10's pass reads the reason at
+its end (`0x0054fdfe`) and writes state 0xd (`0x0054fe23`); 0xd writes 0xe (`0x0055034d`); 0xe stops the advisor, fading
+(`Advisor_StopQuietly( 1 )`, `0x0055035a`), loads, and writes state 10 and reason nought (`0x00550371`, `0x0055037b`). It
+drops the load's answer: a failed Restart Park and a good one go on alike. No state in the walk is 9, 0xb or 0xf.
+
+**The twelve teardown calls**, in mode 2, after the file has been read whole and inflated (`0x0041501d`..`0x00415088`).
+
+| | Call | At | What it does |
+|---|---|---|---|
+| 1 | `FUN_00457e10` | `0x0041501d` | `FUN_00450a30( [0x007a0854], [0x0079fc54] )`: copies the private heightfield copy's cell words over the live ones, so the ground's flags are the level's again (`park-engine.md`, `FUN_00450950`) |
+| 2 | `FUN_004d8330` | `0x0041502d` | Over all 16,384 cells, on the cell's `0x44` record (world `+0x2d8`) and its `0x28` record (world `+0x1102b0`): `FUN_00536780` destroys the model at `+4` and noughts it (`FUN_00522a90`, `FUN_00463c80`) |
+| 3 | `FUN_0052f8d0( 0x80, 0x80 )` | `0x0041503c` | Over the same cells: `FUN_00536490( 1 )` and `FUN_0053af00` put both records back to a bare cell, the first choosing the kind from the cell's `+0x26` bits and `FUN_00450420`. The same pair runs in `FUN_0052f050` (`0x0052f0dd`, `0x0052f0f3`) and the cells' read (`0x004d7f5a`, `0x004d7f7d`) |
+| 4 | `FUN_005191e0` | `0x0041504a` | Walks the things not yet deleted: kinds 1, 4, 5, 6, 7, 8 and `0x12` free the sprite at `+0xc` (`FUN_004d4170`, `FUN_00475550`), kind 3 destroys the model at `+0x20` (`FUN_00463c80`) |
+| 5 | `FUN_00515fb0` | `0x00415055` | World state 2 (`0x00515fba`, "the whole park is being emptied", `park.md`), `Thing_Delete` on every thing with `+3` clear, the delete queue `0x00801f3c` drained slot by slot (`Thing_FreeSlot`, `0x00516103`), world state 1 |
+| 6 | `FUN_00515f30` | `0x00415060` | The thing table noughted and every slot chained free (head `0x00801bbc`). `FUN_005179c0` does it again first thing (`0x005179de`) |
+| 7 | `FUN_0042a190` | `0x00415065` | With the camera flag 4 up, the ride view, leaves it (`FUN_0042a560`) and, where that answers, sets the look-at point and rotation from the ride's cell (`FUN_0042a1d0`). `FUN_00463c80` already does this for a ride it destroys (`0x00463cd8`) |
+| 8 | `FUN_005445d0` | `0x0041506a` | The track rides, with the `GFEJ` magic: every record's state 4, its cars deleted (`FUN_0054ae50`), its lists let go, the slot noughted, the free list `0x00877b8c` rebuilt |
+| 9 | `FUN_00437150` | `0x0041506f` | The coaster list `0x00790fe0`: each node's records and models freed, the head nought |
+| 10 | `FUN_005584b0` | `0x00415074` | The scripts: the list `0x008791b0` freed (`FUN_00558500`), `0x008791a0` nought, an assert on `0x008791b8` |
+| 11 | `Advisor_StopQuietly( 0 )` | `0x0041507b` | Stops the advisor's speech at once, where the fading form is the rebuild's |
+| 12 | `FUN_004815d0` | `0x00415088` | With the interface hidden (`FUN_004a2a90`), shows it (`FUN_004a29d0`, on to off) |
+
+**The modules** follow (`FUN_00415270`, "Loading the modules" above). A module that fails returns at once, and **`FUN_00415140`
+still runs** (`0x004150ae` tests the mode, `0x004150ba` the answer), so a failed load rebuilds from what it got.
+
+**The rebuild `FUN_00415140`**, in order.
+
+| Call | At | What it does |
+|---|---|---|
+| `FUN_005508c0` | `0x00415144` | With the bolt object `0x008bcbac`, the snow, raindrop and lightning textures are given to it again |
+| `FUN_00550930` | `0x00415149` | With `0x008c47a0`, the `alphkid` shadow texture again |
+| `FUN_0055e3b0` | `0x0041514e` | Each flying ride of the 99 at `0x008791fc`, each of its twenty slots with a model: `FUN_00463ab0` puts the item's `+0x4bc` model on the loaded record |
+| `FUN_00519120` | `0x00415159` | Each object, kind 3: `FUN_004dd500( 1 )` puts its item's `+0x490` model on the loaded record |
+| `FUN_004d83a0` | `0x00415169` | Each cell: `FUN_005366e0` (a family 2 cell's piece made, the rest given to the ground by `FUN_00450470`) and `FUN_0053b1a0` (a kart, water or hoarding piece made, `park.md`, "`mTileData`") |
+| `ControlManager_FillFromItems` | `0x0041517a` | Appends a record for an item the file lacks (`hud.md`) |
+| `Terrain_MarkLandOutsidePark` | `0x0041517f` | `park-engine.md` |
+| `[0x00879070] = 1` | `0x00415189` | The first park frame re-bases the tick loop's `last`, so the clock's jump runs no catch-up (`0x0054f40b`) |
+| `FUN_00402e80` | `0x00415193` | Both clocks read their saved readings |
+| `Anim_TakeFrameClock` | `0x00415198` | The frame clock taken fresh |
+| `FUN_00468500` | `0x0041519d` | The list at world `+0x1da746`: an object whose model has flag `0x8000000` has its name drawn on it again (`FUN_004682b0`, `FUN_00467a80`, fonts from `Data\Fonts`) |
+| the font list | `0x004151a2`.. | `0x00789c1c`'s records are removed from Windows (`RemoveFontResourceA`, `0x004151bb`) and emptied: `FUN_00467a80` is what adds them (`AddFontResourceA` in `FUN_005ec680`, `0x00468097`) |
+| `FUN_004815e0` | `0x00415227` | Three words at `0x007c264c` noughted (`FUN_0048c980`); with world state 4 the end-of-park tree loaded (`FUN_0048adb0`); the keys back (`FUN_00486b60`); the gadget's date and trend |
+| `Advisor_StopQuietly( 1 )` | `0x0041522e` | Stops any advisor speech, fading |
+| `Particles_SetLowDetail` | `0x00415245` | From the option `0x0078d8e0` |
+| `FUN_00475f40` | `0x0041524d` | Each sprite's frame `+0xb0` taken modulo its bank's count |
+| `FUN_0051c1c0( 0 )` | `0x00415254` | The sound's pause word off (`0x00803ad2`; the pause writes 1, `0x004092e8`) |
+
+**What it leaves standing, and why it is quick.** From `FUN_00414d40`, 1,727 functions are reached by direct calls (296 indirect
+calls at 140 sites were not followed), and none writes the scene state `0x0087906c` or the leave reason `0x00879088`; all
+of those writes are in `Game_StateMachine`, `Boot_Init`, `Game_Shutdown` and `FUN_005508b0`. None reaches what state 0xb
+calls: `FUN_00409180` (`0x0054ff91`, which frees the world object `[0x007cf83c]`), `FUN_00457d50` (`0x0054ff98`, among
+it the model records `FUN_00463ed0` and the private heightfield copy `FUN_00450a80`), `FUN_004752e0` (`0x0054ffa0`, the
+sprite table) and the interface's two, `FUN_0048a520` and `FUN_0048a290` (`0x0054ff80`, `0x0054ff87`). So the world object, the
+model records and the interface stand through a load, and what was placed on them goes: **the load replaces instances, not
+what they are made from.** That is the difference between it and state 9, which `FUN_005accf0` makes plain: entering a park is a new world
+behind a loading screen, and then this same load over it.
+
+**No loading screen is reachable.** The closure does reach `LoadingScreen_Step` (`0x00587c80`), from `SpritePack_Load`
+(`0x005881d9`) and `FUN_00579e00` (`0x0057a0b2`), but each of those two calls is behind `[0x008bd508] & 1`, which
+`LoadingScreen_Begin` sets (`0x0058744c`) and a present with the window in focus clears (`0x00576f4a`, `FUN_00576ec0`, with
+`LoadingScreen_End`). It is clear in a running park, and neither `LoadingScreen_Begin` nor `LoadingScreen_End` is reached
+by a direct call. Whether the bit can be left up in a running park (the focus lost across the last present) was not followed.
+
+**Not settled.** What `MsgBus_Send` does with `Thing_Delete`'s message (vtable `0x006fd848`, the thing's id) for a window open on
+that thing, which is how Alt+L over an open ride window would behave; first person, flag 2, which no teardown call leaves
+(`FUN_0048aff0` does at state 0xb) and only the camera module's noughting of the flags (`0x0042d04c`) clears; and a carried
+object at the moment of a quickload. Neither the sound module's stop of the live voices (`0x006b6da0`, "Loading the modules")
+nor the three unnamed calls of state 0xb's head (`FUN_00576260`, `FUN_0058dd60`, `FUN_00576820`) was followed further.
+
+**What it means for Q247, whose decision is Alexah's.** `Game.ChangeSceneIfAsked` ends the scene and `Level.CreatePark`
+builds it again, so OpenTPW's load is the original's state 9 route, assets read again where the original keeps them. The
+figures to hand are not one comparison: entering a park from the lobby here takes 2.5 s to 3.4 s (`STATUS.md`, "Numbers");
+the original's Load Park was inside 1.3 s (Q241c); OpenTPW's Load Park has not been timed. A build in place would keep the `Level` and its models, textures and interface, empty what
+these twelve empty, read the file over it and run what `FUN_00415140` runs, and it would check the file first, which also
+settles Q994. Its risk is the size of what is emptied: every place that holds a thing, a sprite or a script across a load. The
+list's scrollbar and the saved camera do not depend on that decision.
 
 ### OpenTPW's Load Park
 
@@ -693,7 +793,7 @@ A failed save or load was not run in the original: the listing's alone. Nor was 
 overwrite question when the name in it is the opening's own, still selected (here it stays selected once the box
 is clicked), nor a click heard for Enter and Escape (the reference runs silent). A folder with two saves
 was (Q241c), under Wine, whose listing order need not be Windows'. The `0x100`-byte field's 32 bytes at `0x00802080` and the failure number's reader
-are not traced. `FUN_00415140` and the twelve teardown calls are named, not decoded. `addresses.md` is not
+are not traced. `addresses.md` is not
 regenerated.
 
 **The harness** is `q241/` in the harness folder: `ghidra/` (the dumps), `treewalk.py <address>` (any layout
