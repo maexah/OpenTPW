@@ -11266,18 +11266,18 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
 - [x] **Q837. The original's picture of a flipped diagonal (Q820's piece (3)).** Done 2026-10-30 (run 15, lane A, `alexah/791-original-flipped-diagonal`).
   `tools/harness/original/flipdiag.sh` (and `flipdiag.py`) hold the original's camera (`setcam.py ... off`) and clock (`memhold.py 0x007859a0=1`), take two frames (0 pixels apart over the whole
   frame), poke the diagonal flag of the stock park's four bent cells (3,13)..(6,16) from `0x0804` to `0x0802`, held, and take two more, put it back and take two more: the flip changes 7,327
-  pixels (the mouse arrow left out) in four patches, one a cell, nothing else; the put-back returns the first frame in 0; the same count and patches in three launches (`q837/run1`, `run4`, `run5`).
-  Ours at the same camera (`cut new` against `cut old`): the whole staircase of eight cells changes, 0.80 of the smaller set's pixels shared in the original's four boxes. Not seen, and said in
+  pixels (the mouse arrow left out) in four patches, one a cell, nothing else; the put-back returns the first frame in 0 (run1 and run5); the same mask, bit for bit, in three launches (`q837/run1`, `run4`, `run5`); the poke moved `0x4` and `0x2` together.
+  Ours at the same camera (`cut new` against `cut old`): the whole staircase changes (nine diamonds by a script count), 0.80 of the smaller set's pixels shared in the original's four boxes. Not seen, and said in
   `park-engine.md`: which diagonal each state draws (Q820's piece (3) keeps it). No code changed.
 - [x] **Q838. The build markers' corners at a flagged ground cell, read in the original's own mesh (Q820's piece (4), the markers' half).** Done 2026-10-30 (run 15, lane A, `alexah/792-markers-at-a-flagged-cell`).
   `FUN_0053ddd0` stores each marker corner's height in the mesh's arrays; `tools/harness/original/markercorners.py` reads them (the clock held, the glide words held at nine offsets), `markerup.sh` carries a Belly Bounce to a cell, `lib/markerheights.py` compares them with ours.
-  Two launches (the pointer on (63,32), on (65,30)): the height is wave + `FUN_004527f0` + 1.5, and the sampler is ours `ScapeHeight` at all 81 corner points in the flagged cells (62,33)..(67,28), worst 0.0000; the near corner's plane, the rule
-  before Q823, is off by up to 0.50 at 44 of them and bilinear by up to 0.25 at 64; in unflagged cells all agree to one wave-table step. `CameraHeight` equals the original everywhere seen, so the picture cannot name `ScapeHeight` over it
+  Two launches (the pointer on (63,32), on (65,30)): the height is wave + `FUN_004527f0` + 1.5, and the sampler is ours `ScapeHeight` at all 81 readings (69 distinct points) in the flagged cells (62,33)..(67,28), worst 0.0000; bilinear, the markers' glide
+  before Q823, is off by up to 0.25 at 64 of them, and the near corner's plane, `ScapeHeight`'s answer before Q823, by up to 0.80 at the same 64; in unflagged cells all agree to one wave-table step. `CameraHeight` equals the original everywhere seen, so the picture cannot name `ScapeHeight` over it
   (`park-engine.md`). No code changed. Left in Q820 (4): the sprites at a flagged cell.
 - [x] **Q839. A person at a flagged ground cell, drawn at the height the original's sprite pass gives (Q820's piece (4), the sprites' half).** Done 2026-10-30 (run 15, lane A, `alexah/793-sprites-at-a-flagged-cell`).
   `FUN_00542010` stores each sprite's drawn place in the sprite (`+0xe4`, `+0xe8`, `+0xec`), and the stock park's walkers are all on flat ground (a poll and 400 `brk.sh` hits at `0x005420f3` read 0), so
-  `original/spritehold.py` holds one guest at 279 points (a 3 x 3 grid in each of the 31 cells the load flags `0x800`) and reads `+0xe8` less `+0x8c`: 279 of 279 caught in each of two fresh launches, the runs identical,
-  and the sampler is ours `ScapeHeight` at all 279 (worst 0.0001; `lib/spriteheights.py`); the near corner's plane, the rule before Q823, at 134 (up to 2.63 off), the bilinear at 0 (up to 1.31 off); at (595,355) the
+  `original/spritehold.py` holds one guest at 279 points (a 3 x 3 grid in each of 31 flagged cells (20 ground, 11 holes) on the stock park's two ridges and the cells by them) and reads `+0xe8` less `+0x8c`: 279 of 279 caught in each of two fresh launches, the runs identical,
+  and the sampler is ours `ScapeHeight` at all 279 (worst 0.0001; `lib/spriteheights.py`); the near corner's plane, `ScapeHeight` before Q823, at 60 (up to 4.47 off), the bilinear at 0 (up to 1.31 off); at (595,355) the
   original draws 2.6265. A guest held there is in the frame (`q839/orig/frame-B-held.png`, 719 pixels against the frame without it). Not seen: a balloon, ours' person in a frame there, the feet's pixel row. No code changed.
 
 ## B. Docs and comments

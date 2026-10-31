@@ -7,10 +7,11 @@ y = wave + FUN_004527f0( x, z ) + the squares' record height (1.5, `squares.py`)
 This game, in one park (the console's `ground X Y`, run through parkrun.py, BIN the build's folder): at every distinct point,
 `stands` (ScapeHeight), `camera` (CameraHeight) and `bilinear`, and at the four corners of every cell the load flags 0x800 the
 vertex heights. Prints, for the points in a flagged cell and for the others, how many each sampler matches to 0.0015 (the wave
-table's one step, 0.0015, is the reading's own grain) and how many the pre-Q823 rule (the near corner's plane) matches.
+table's one step, 0.0015, is the reading's own grain) and how many the near corner's plane matches (FUN_004527f0's unflagged rule, ours ScapeHeight before Q823; the markers' own
+glide before Q823 was bilinear).
 Writes ours.json (points) and corners.json (vertex heights) beside the log.
 
-  ~/.cache/tpw-harnesses/review-codex/venv/bin/python -u markerheights.py $OUT $BIN $ORIGDIR
+  <a python with Xlib> -u markerheights.py $OUT $BIN $ORIGDIR   (docs/TOOLING.md, "A harness run needs a python with Xlib and PIL")
 """
 import sys, os, json, glob, math
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -49,8 +50,7 @@ try:
 		if isf:
 			cx, cz = math.floor(x / 10), math.floor(z / 10); fx, fz = x / 10 - cx, z / 10 - cz
 			h = lambda i, j: verts[(10 * (cx + i), 10 * (cz + j))]
-			i, j = round(fx), round(fz)
-			old = h(i, j) + abs(fx - i) * (h(1 - i, j) - h(i, j)) + abs(fz - j) * (h(i, 1 - j) - h(i, j))
+			old = h(0, 0) + fx * (h(1, 0) - h(0, 0)) + fz * (h(0, 1) - h(0, 0))   # the floor corner's plane (truncated index)
 			t[4] += abs(old - s) <= TOL; t[5] = max(t[5], abs(old - s))
 	for isf in (True, False):
 		n, a, b, c, d, wo, wb = tally[isf]

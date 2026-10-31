@@ -2,10 +2,10 @@
 """spritedrawn.py PID [SECS] [STEP] - the ORIGINAL's sprites' DRAWN place, read-only (Q839). Every STEP seconds (default 0.2) for SECS
 (default 30) walks the sprite table (0x007b49f0, count 0x007b49f4: the list FUN_00475430 walks) and, for each sprite, reads its place
 (+0x88 x, +0x8c offset, +0x90 z) and the place FUN_00542010 stored for the draw (+0xe4 x, +0xe8 y, +0xec z: `fst`/`fstp` at 0x005420ca
-and 0x0054225a..0x005422af). A sprite without +0xc4 bit 0x1000000 is drawn at y = FUN_004527f0( x, z ) + offset, so
+and 0x005422a5..0x005422af). A sprite without +0xc4 bit 0x1000000 is drawn at y = FUN_004527f0( x, z ) + offset, so
 st0 = y - offset is the sampler the draw asked; a sprite with the bit stands at +0x8c itself and is skipped. Prints one line per
 distinct (slot, x, z) in the words original/brk.sh's sampler run uses, `spr kind K flags F x X z Z off O st0 S` (S = y - offset),
-then the draw's own x and z against the place (`drawn dx dz`), so lib/spriteheights.py reads either. A `POLL` for loadfile.sh."""
+a sprite whose drawn place (+0xe4, +0xec) is not its place is skipped (caught between the write and the draw), so lib/spriteheights.py reads either. A `POLL` for loadfile.sh."""
 import struct, sys, time
 pid = int(sys.argv[1]); secs = float(sys.argv[2]) if len(sys.argv) > 2 else 30.0; step = float(sys.argv[3]) if len(sys.argv) > 3 else 0.2
 f = open(f'/proc/{pid}/mem', 'rb', buffering=0)

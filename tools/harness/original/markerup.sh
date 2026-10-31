@@ -4,8 +4,9 @@
 # Ctrl+click on the stock one at (51,23)); then the pointer is centred (at an edge it scrolls the camera), the camera is set over the
 # cell (CELLX*10, CELLY*10, zoom 125, rot 180, follow off), cellfind.py finds its pixel and the pointer goes there. Prints the
 # hover cell [0x008186b8],[0x008186b4], the tool [0x0081ae2c] (4) and the cursor [0x007cb2d8] (7 or 8), and takes <outdir>/aimed.png.
-# Then markercorners.py PID reads the squares (memhold.py PID SECS 0x007859a0:I=1 first); `loadfile.sh stop` ends it, and
-# save/ is checked either side. Needs OPENTPW_HARNESS_WORK, OPENTPW_XVFB (loadfile.sh's) and a python with Xlib (the review-codex venv).
+# Then markercorners.py PID reads the squares (memhold.py PID SECS 0x007859a0:I=1 first); `loadfile.sh stop` ends it. Only
+# <outdir>/save-before.md5 is written here: after `stop`, md5 save/ the same way and compare it yourself. Needs OPENTPW_HARNESS_WORK,
+# OPENTPW_XVFB (loadfile.sh's) and a python with Xlib (docs/TOOLING.md, "A harness run needs a python with Xlib and PIL").
 set -uo pipefail
 O="$(cd "$(dirname "$0")" && pwd)"; . "$O/../lib/paths.sh"
 D=$1; CX=$2; CY=$3; mkdir -p "$D"; export GDISPLAY=:77

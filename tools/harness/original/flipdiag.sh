@@ -4,14 +4,20 @@
 # (memhold.py 0x007859a0, a frame keeps drawing), then takes frames A1 A2 (nothing changed: the control), pokes each
 # cell of CELLS from FROM to TO in the live heightfield (groundcell.py, held) and takes B1 B2, puts the bits back and
 # takes C1 C2, and stops the original. `flipdiag.py <outdir>` then counts the pixels that differ between the frames.
-#   FILE=<park file> (default q325's stock park; its cells (3,13),(4,14),(5,15),(6,16) read 0x0804 and are the only bent ones in view
-#   at 50,150 zoom 70 rot 0, the defaults)  CELLS="3,13 4,14 5,15 6,16"  FROM=0x4  TO=0x2
-# Needs OPENTPW_HARNESS_WORK, OPENTPW_XVFB (loadfile.sh's) and a python with Xlib (the review-codex venv: lib/paths.py).
+#   FILE=<park file> (default q325's stock park; its cells (3,13),(4,14),(5,15),(6,16) read 0x0804 and are the lowest four of the
+#   staircase in view at 50,150 zoom 70 rot 0, the defaults; (7,17) reads 0x0804 too and is in the frame, not poked)
+#   CELLS="3,13 4,14 5,15 6,16"  FROM=0x4  TO=0x2. poke() always clears FROM and sets TO, so the two bits move together; a one-bit
+#   poke is not expressible here yet.
+# Needs OPENTPW_HARNESS_WORK, OPENTPW_XVFB (loadfile.sh's) and a python with Xlib and PIL (docs/TOOLING.md, "A harness run needs a
+# python with Xlib and PIL"). On a failure (or Ctrl+C) the trap stops memhold and the original and removes LOADFILE.TPWS.
 set -euo pipefail
 O="$(cd "$(dirname "$0")" && pwd)"; . "$O/../lib/paths.sh"
 D=$1; CAM=${2:-50,150}; ZOOM=${3:-70}; ROT=${4:-0}; mkdir -p "$D"
 FILE=${FILE:-$WORK/q325/stock.TPWS}; CELLS=${CELLS:-"3,13 4,14 5,15 6,16"}; FROM=${FROM:-0x4}; TO=${TO:-0x2}
 PY=${PY:-python3}
+HOLD=
+cleanup() { [ -n "$HOLD" ] && kill "$HOLD" 2>/dev/null; "$O/loadfile.sh" stop >/dev/null 2>&1; rm -f "$OSAVE/users/1ref/jungle/LOADFILE.TPWS"; echo "flipdiag.sh failed: stopped the original and removed LOADFILE.TPWS" >&2; }
+trap cleanup ERR INT TERM
 shot() { import -window root -display :77 -crop 1024x768+0+0 "$D/$1.png"; }
 poke() { local a=(); for c in $CELLS; do a+=("$c=-$1" "$c=+$2"); done; echo "${a[@]}"; }
 find "$OSAVE" -type f -exec md5sum {} \; | sort | md5sum > "$D/save-before.md5"
@@ -35,6 +41,7 @@ sleep 3; shot C1; sleep 1; shot C2
 wait $PK || true
 READ=2,12:7,17 $PY -u "$O/groundcell.py" "$P" 0.1 > "$D/after.log" 2>&1 || true
 $PY -u "$O/camera.py" "$P" 2>&1 | sed -n 1,12p | tee -a "$D/run.log"
+trap - ERR INT TERM
 kill "$HOLD" 2>/dev/null || true; sleep 1
 "$O/loadfile.sh" stop 2>&1 | tee "$D/stop.out"
 find "$OSAVE" -type f -exec md5sum {} \; | sort | md5sum > "$D/save-after.md5"

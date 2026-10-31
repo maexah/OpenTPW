@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 """spriteheights.py OUT BIN SAMPLES... - the sprite pass's ground sampler, the original's against this game's (Q839).
 
-SAMPLES are files of lines `spr kind K flags F x X z Z off O st0 S` that `original/spritesampler.sh` writes: a hardware breakpoint
-(brk.sh) at 0x005420f3, the instruction after FUN_00542010's call to FUN_004527f0 (0x005420ee) for a sprite whose +0xc4 lacks
+SAMPLES are files of lines `spr kind K flags F x X z Z off O st0 S` that `original/spritehold.py` or `spritedrawn.py` print, or `original/brk.sh 0x005420f3` with a `BRK_PRINT` of those words (TOOLING.md, Recipes): a hardware breakpoint at 0x005420f3, the instruction after FUN_00542010's call to FUN_004527f0 (0x005420ee) for a sprite whose +0xc4 lacks
 0x1000000, so st0 is the sampler the original asked at the sprite's +0x88, +0x90. This game, in one park (the console's
 `ground X Z`, run through parkrun.py, BIN the build's folder): at every distinct (x, z) `stands` (ScapeHeight), `camera`
 (CameraHeight) and `bilinear`. Prints how many samples each sampler matches to TOL, split into the flagged 0x800 cells and the
-others, and every sample in a flagged cell with the three values and the near corner's plane (the rule before Q823: the cell's
-nearest vertex plus the two edge slopes). Writes ours.json beside the log.
+others, and every sample in a flagged cell with the three values and the near corner's plane (`FUN_004527f0`'s unflagged rule, the cell's floor corner plus the
+two edge slopes: ours `ScapeHeight` before Q823). Writes ours.json beside the log.
 
-  ~/.cache/tpw-harnesses/review-codex/venv/bin/python -u spriteheights.py $OUT $BIN samples.txt ...
+  python3 -u spriteheights.py $OUT $BIN samples.txt ...
 
 SHOT="X,Z,ZOOM,ROT" (the original's camera words, setcam.py's) also takes a frame of this game at that camera, paused, `ours-rest.png`: the ground a
 person would stand on, to put beside the original's frame of a person held there (original/spritehold.py --stay).
@@ -45,9 +44,9 @@ try:
 			for i in (0, 1):
 				for j in (0, 1):
 					if (10 * (cx + i), 10 * (cz + j)) not in verts: verts[(10 * (cx + i), 10 * (cz + j))] = ground(10 * (cx + i), 10 * (cz + j))[1]
-			fx, fz = x / 10 - cx, z / 10 - cz; i, j = round(fx), round(fz)
+			fx, fz = x / 10 - cx, z / 10 - cz
 			h = lambda a, b: verts[(10 * (cx + a), 10 * (cz + b))]
-			plane = h(i, j) + abs(fx - i) * (h(1 - i, j) - h(i, j)) + abs(fz - j) * (h(i, 1 - j) - h(i, j))
+			plane = h(0, 0) + fx * (h(1, 0) - h(0, 0)) + fz * (h(0, 1) - h(0, 0))
 		else: plane = stands
 		res.append(dict(kind=kind, flags=flags, x=x, z=z, off=off, st0=st0, cell=[math.floor(x / 10), math.floor(z / 10)], cflags=fl, stands=stands, camera=camera, bilinear=bil, plane=plane))
 	json.dump(res, open(os.path.join(OUT, "ours.json"), "w"))

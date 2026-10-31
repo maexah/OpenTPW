@@ -4,7 +4,8 @@ differ by more than N levels (8) in any channel between the pairs, and where. Th
 changed between them: 0 pixels when the clock and camera are held), the flip is A1 against B1, and the put-back is C1
 against A1 (0 when the poke wrote nothing else). --mask leaves a box out (default 880,590,950,650: the pointer loadfile.sh
 leaves at 900,600, whose picture changes between frames by itself). Writes diff_A1_B1.png (the difference times 30) and
-prints the changed pixels' bounding box and each connected patch (a dilation of 6 pixels joins a patch's speckle)."""
+prints the changed pixels' bounding box and each connected patch (a dilation of 6 pixels joins a patch's speckle, not wrapping at the
+frame's edges). flipstats.py takes the same patches and prints their luma change and content shift."""
 import argparse, os
 import numpy as np
 from PIL import Image
@@ -25,7 +26,10 @@ Image.fromarray(np.clip(np.abs(f["A1"] - f["B1"]).max(axis=2) * 30, 0, 255).asty
 # patches: flood-fill the dilated mask
 h, w = d.shape; dil = d.copy()
 for dx in range(-6, 7):
-	for dy in range(-6, 7): dil |= np.roll(np.roll(d, dx, 1), dy, 0)
+	for dy in range(-6, 7):
+		s = np.zeros_like(d)   # shifted copy without wrap: a change at one edge must not join a patch at the opposite one
+		s[max(0, dy):h + min(0, dy), max(0, dx):w + min(0, dx)] = d[max(0, -dy):h + min(0, -dy), max(0, -dx):w + min(0, -dx)]
+		dil |= s
 lab = np.zeros((h, w), int); n = 0
 for y0, x0 in zip(*np.nonzero(dil)):
 	if lab[y0, x0]: continue
