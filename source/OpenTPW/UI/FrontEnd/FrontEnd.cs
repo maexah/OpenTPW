@@ -99,7 +99,7 @@ internal sealed class FrontEnd : Panel
 	}
 
 	/// <summary>Quit Game (0x004a61d0): asks, and quits on the tick.</summary>
-	internal void AskToQuit() => _stack.Open( new MessageBox( _stack, Localization.Get( UIStrings.ConfirmQuit ), Quit ) );
+	internal void AskToQuit() => _stack.Open( new MessageBox( _stack, SaveTrouble.QuitQuestion( Localization.Get( UIStrings.ConfirmQuit ) ), Quit ) );
 
 	/// <summary>
 	/// Select New Player, once its box is ticked (0x0048bc50). The player is saved and stops playing

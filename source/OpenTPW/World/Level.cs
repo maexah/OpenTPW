@@ -213,6 +213,9 @@ public class Level
 		ThemeName = levelName.ToLowerInvariant();
 		Kind = kind;
 
+		// What the game writes on its own is told once to each scene (SaveTrouble).
+		SaveTrouble.NewVisit();
+
 		Global = new SettingsFile( $"/levels/{levelName}/global.sam" );
 		Current = this;
 
@@ -730,6 +733,7 @@ public class Level
 		catch ( Exception e )
 		{
 			Log.Error( $"Save: '{name}' is not written - the save failed: {e}" );
+			SaveTrouble.Failed( "PARK", e );
 			return null;
 		}
 	}
@@ -1682,6 +1686,8 @@ public class Level
 		// Whatever was deleted during that walk leaves the list now the walk is over - see Entity.Delete.
 		Entity.ApplyDeletions();
 
+		TellSaveTrouble();
+
 		ParticleSystem.Current?.Update();
 
 		// What the pointer is over, before the interface deals out this frame's clicks - so a click
@@ -2461,10 +2467,31 @@ public class Level
 	/// with no question. The original hands "QuickSave OK" or "Quicksave failed" to its empty logger, so nothing is
 	/// shown either way (<c>docs/exe/saves.md</c>, "The quicksave and quickload keys").
 	/// </summary>
+	/// <remarks>
+	/// <b>A deviation</b> (Q982): where the folder cannot be written the player is told in a message box
+	/// (<see cref="SaveTrouble"/>); the original shows nothing either way.
+	/// </remarks>
 	internal string QuickSaveKey()
-		=> WritePark( ThemeName ) is { } written
-			? $"Quicksave: QuickSave OK - written to {written}"
-			: "Quicksave: Quicksave failed - the log says why";
+	{
+		if ( WritePark( ThemeName ) is { } written )
+			return $"Quicksave: QuickSave OK - written to {written}";
+
+		SaveTrouble.Asked();
+		return "Quicksave: Quicksave failed - the log says why";
+	}
+
+	/// <summary>
+	/// Opens the message box for a write to the save folder that failed (<see cref="SaveTrouble"/>), once the front
+	/// window has nothing modal up, so it never lands over another question.
+	/// </summary>
+	private void TellSaveTrouble()
+	{
+		if ( !SaveTrouble.Pending || _windows is not { ModalUp: false } windows )
+			return;
+
+		if ( SaveTrouble.Take() is { } text )
+			windows.Open( new UI.MessageBox( windows, text, null ) );
+	}
 
 	/// <summary>
 	/// Alt+L, the game table's row 11, <c>GameKey_QuickLoad</c> (<c>0x0040c040</c>): <c>&lt;theme&gt;.TPWS</c> loaded over the running park, as a

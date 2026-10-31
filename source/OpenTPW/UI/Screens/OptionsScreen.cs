@@ -309,6 +309,9 @@ internal sealed class OptionsScreen : UiWindow
 		SaveFolder.SaveConfig();
 		SaveFolder.SaveDisplay();
 
+		// A deviation (Q982): the original says nothing when its options are not written.
+		SaveTrouble.Asked();
+
 		// The display is changed here rather than as the row is clicked, so that stepping through the
 		// modes does not take the screen with it, and a tick that changed nothing about the display
 		// leaves the window alone entirely.

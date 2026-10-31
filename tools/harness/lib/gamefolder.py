@@ -9,6 +9,10 @@ and each changed file's folders are real folders of links down to the file, whic
 and answers the file's text (latin-1). An existing DEST is rebuilt, its save/ kept. Hand DEST to parkrun.py as
 GAME_FOLDER. `gamefolder.py DEST REL OLD NEW` does one replacement from the shell and fails if OLD is not there once.
 
+`gamefolder.py lock DEST` makes DEST (as `make( DEST, {} )` does) with its save/ read-only at every level and the first
+player's `restart.INTS` taken out, so a run meets a save folder that cannot be written (Q982: `lock( DEST )`); `unlock( DEST )`
+puts the write bit back, which removing the folder needs. A new player's first entry then fails to write `restart.INTS`.
+
 `gamefolder.py private` makes paths.PRIVATE_GAME itself, once per computer: links to the real game's entries and an
 empty save/ of its own. The runs click the first player slot and read save/users/1ref, so start OpenTPW once on that
 folder and make a player named "ref" in the first slot (README.md, "Setting up")."""
@@ -42,11 +46,24 @@ def make(dest, changes):
         text = open(real, encoding="latin-1", newline="").read(); new = change(text); assert new != text, rel + ": the change changed nothing"
         open(at, "w", encoding="latin-1", newline="").write(new)
     return dest
+def lock(dest, keep_restart=False):
+    dest = make(dest, {}); jungle = os.path.join(dest, "save/users/1ref/jungle")
+    if not keep_restart and os.path.exists(os.path.join(jungle, "restart.INTS")): os.remove(os.path.join(jungle, "restart.INTS"))
+    for root, _, files in os.walk(os.path.join(dest, "save")):
+        for name in files: os.chmod(os.path.join(root, name), 0o444)
+        os.chmod(root, 0o555)
+    return dest
+def unlock(dest):
+    for root, _, files in os.walk(os.path.join(os.path.expanduser(dest), "save")):
+        os.chmod(root, 0o755)
+        for name in files: os.chmod(os.path.join(root, name), 0o644)
 def once(old, new):
     def change(text):
         assert text.count(old) == 1, (old, text.count(old)); return text.replace(old, new)
     return change
 if __name__ == "__main__" and sys.argv[1:] == ["private"]:
     print(private())
+elif __name__ == "__main__" and sys.argv[1:2] == ["lock"]:
+    print(lock(sys.argv[2]))
 elif __name__ == "__main__":
     print(make(sys.argv[1], {sys.argv[2]: once(sys.argv[3], sys.argv[4])}))

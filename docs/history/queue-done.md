@@ -11311,6 +11311,22 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   **Done (2026-10-31, Windows PC, `alexah/win-977-suite-on-windows`):** with the game 4,415 tests, 4,407 passed, 0 failed, 8
   skipped; without it 1,712 passed, 0 failed, 2,703 skipped; with Python hidden the 42 that run a Python script give 1
   passed, 41 skipped.
+- [x] **Q982. A save folder that cannot be written.** Sim Theme Park under `Program Files (x86)` is not
+  writable by a player unless something opened it (the PC tried has a third-party `PermissionFix.exe`, Everyone full
+  control). With the write denied (w4: list allowed, write refused) the game reaches the lobby and logs nothing; what
+  happens at the first real write (a new player, a park saved, the options) is not known. Measure that on Windows with a
+  copy denied (WD,AD), then say so to the player (Q978's box, or the game's own style) rather than lose a save quietly.
+  Also look, on a PC without the permission fix, whether the original's saves went to Windows' VirtualStore
+  (`%LOCALAPPDATA%\VirtualStore\Program Files (x86)\SimTheme Park\save`); whether OpenTPW should read them there is
+  Alexah's call.
+  Done 2026-10-31, branch `alexah/758-save-folder-cannot-be-written`, Linux only. Measured on Windows by w5 (save denied
+  (OI)(CI)(WD,AD)): nothing crashes; every write goes through its `.tmp`, is caught and logged, and the player was told
+  nothing (Alt+S, Save Park, Exit To Lobby, the options, Quit; a fresh player's first entry not exercised). Built: the
+  game's own message box, cross only, `PARK NOT SAVED` / `OPTIONS NOT SAVED` / `PLAYER NOT SAVED`, `The save folder cannot be
+  written.`, `Log: <path>` (what the player asked for every time, what the game does on its own once a scene); Quit Game's
+  question takes a line more. A deviation, said at the site (`SaveTrouble`, `docs/exe/saves.md`). Confirmed on Linux in a
+  private game folder with a read-only `save/` (8 of 8 predicted; the same clicks in a writable copy open none). The
+  Windows side is Q901; the VirtualStore question is Q902.
 
 ## B. Docs and comments
 

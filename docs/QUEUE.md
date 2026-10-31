@@ -97,21 +97,28 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   opens a console window (w3: hidden behind the game, on the taskbar). At Alexah's word (2026-10-31): the published
   Windows build opens none (`WinExe` for the release), the Debug build keeps its console for the debug console's stdin.
   Confirm on Windows: a double-click of the zip's exe, screenshot of the desktop and taskbar.
-- [ ] **Q982. A save folder that cannot be written. Measure first.** Sim Theme Park under `Program Files (x86)` is not
-  writable by a player unless something opened it (the PC tried has a third-party `PermissionFix.exe`, Everyone full
-  control). With the write denied (w4: list allowed, write refused) the game reaches the lobby and logs nothing; what
-  happens at the first real write (a new player, a park saved, the options) is not known. Measure that on Windows with a
-  copy denied (WD,AD), then say so to the player (Q978's box, or the game's own style) rather than lose a save quietly.
-  Also look, on a PC without the permission fix, whether the original's saves went to Windows' VirtualStore
-  (`%LOCALAPPDATA%\VirtualStore\Program Files (x86)\SimTheme Park\save`); whether OpenTPW should read them there is
-  Alexah's call.
-
-- [ ] **Q850. Q978's message box on Windows (the confirm Q978 could not make on Linux).** Built and seen on Linux only
+- [x] **Q850. Q978's message box on Windows (the confirm Q978 could not make on Linux).** Built and seen on Linux only
   (SDL's X11 box on a private Xvfb). On the Windows PC: a double-click of the build with no game, the box's screenshot
   (the reason lines, where it looked, how to fix it, the log's place; does the long text fit and wrap), the log's
   `Start failure: message box shown`; the same with `save\` denied (w3's `UnauthorizedAccessException` at
   `SaveFolder.LoadConfig`, `Game.cs:66`), the box naming the exception; the Linux zip's apphost the same. If the
   Windows box looks wrong (a cut line, a missing log path), fix `StartFailure.Compose`.
+  Done 2026-10-31 on the Windows PC at a9c35591 (`tpw-work\q978`): the box on no game, a missing folder and an unreadable `save\`, none on a good start, exit 1, native box, nothing cut. The Linux zip's apphost is Q978's own Linux run; not re-run.
+- [ ] **Q901. Q982 on Windows.** The box that tells a save folder cannot be written was confirmed on Linux only (a
+  read-only `save/`). On the Windows PC with `save\` denied (OI)(CI)(WD,AD), on a copy of the install: entering a park
+  (a player with no `restart.INTS`), Alt+S, Save Park, the options tick, Exit To Lobby (the box in the lobby) and Quit
+  Game (the line in its question, and its tick still quits). Screenshot of each box; the path of `console.log` must
+  read well in it (on Linux it wraps at the dot: `...console.` / `log`).
+- [ ] **Q902. Where the original's saves went on a PC without the permission fix.** Alexah's call, from Q982: whether the
+  original's saves went to Windows' VirtualStore (`%LOCALAPPDATA%\VirtualStore\Program Files (x86)\SimTheme
+  Park\save`) when `Program Files (x86)` was not writable, and whether OpenTPW should read them there. Not tested: the
+  PC tried has a third-party `PermissionFix.exe` (Everyone full control), so the original wrote straight to `save\`.
+  **Needs Alexah (2026-10-31):** should OpenTPW read a player's saves from the VirtualStore when `save\` has none? (It
+  would need a PC where the original's saves were made without the fix to look at first.)
+- [ ] **Q903. A save lost as the window closes is told in the log only.** The window's own close with a park up writes
+  the autosave and the player, then the process ends: no scene is left to open a box (Quit Game's question says
+  beforehand, Q982). Counted, not built: a close that asked first would be a deviation the original does not have;
+  the log's `Leaving the park: autosave is not written` is all there is. Look at it only if a player meets it.
 
 - [ ] **Q950. The lobby's attract flight (nobody playing) against the original's: what differs, for Alexah to choose.** Not a
   priority (Alexah, 2026-10-30: "the camera drifting between islands ... and the audio fading between parks is kinda weird").

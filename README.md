@@ -85,6 +85,11 @@ location. It does not search parent folders.
 **Saves** go to `save/` beside the game's data, where the original keeps them, so the original and OpenTPW share
 options and players.
 
+If `save/` cannot be written (a game installed under `Program Files` that your account may not change), the game still
+runs, and says on screen when a save, the options or a player is lost: a box reading `PARK NOT SAVED`, `OPTIONS NOT SAVED`
+or `PLAYER NOT SAVED`, with the path of `console.log`. Give your account write access to the game's folder, or run the
+game from a folder you own.
+
 </details>
 
 ## Controls

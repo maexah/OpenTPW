@@ -490,6 +490,33 @@ the box was clicked, then "Old Parky"; Enter closed the screen with `1x SAVE_GAM
 unchanged; OK over "New Save" and the question's tick closed both, `2x`. The unchanged build's Save row opened
 nothing and counted `SAVE_GAME` (`q241d/control`).
 
+### OpenTPW's save folder that cannot be written (Q982)
+
+**A deviation: the original says nothing when a save fails** (its save answers a failure number and the screen closes
+all the same; "The save" above, step 3), and this game now says so on screen. The case is real on Windows: Sim Theme
+Park installs under `Program Files (x86)`, which a player cannot write unless something has opened it. With `save\`
+denied (OI)(CI)(WD,AD) on a Windows 11 PC (the Sentinel's job w5, 2026-10-31; its evidence is on that PC, not here) the
+game never crashed, every write went through its `<name>.tmp` and was caught and logged, and the player was told nothing:
+Alt+S (log only), Save Park (the screen closed), Exit To Lobby (the autosave lost), the options tick (kept in the
+game, lost at exit) and Quit. A fresh player's first entry (`restart.INTS`) was not exercised there.
+
+`SaveTrouble` keeps a write that failed for want of a folder that can be written (an `IOException` or
+`UnauthorizedAccessException`, so a file left alone on purpose, `InvalidDataException`, is not one) and
+`Level.Update` opens the game's own message box with its cross alone (`MessageBox`, no tick; the research opener's
+kind) once nothing modal is up: `PARK NOT SAVED`, `PLAYER NOT SAVED` or `OPTIONS NOT SAVED`, then `The save folder
+cannot be written.` and `Log: <console.log's path>`. What the player asked for (Alt+S, Save Park, the options tick)
+is told every time; what the game does on its own (the autosave at leaving, `restart.INTS` at entering, the
+loading bar's counts, which are never told) once to a scene, so a folder that stays shut does not nag. The autosave at
+Exit To Lobby fails before the lobby is built, and the box opens in the lobby: the exit is never held. Quit Game
+cannot tell afterwards, as the window is gone, so its question (UITEXT 9) takes a line more where a probe file
+cannot be made in `save\` (`SaveFolder.CanWrite`): `The save folder cannot be written, so nothing is saved.` Its tick
+still quits. The window's own close, with a park up, writes the autosave as before and tells nobody; the log says.
+
+Measured on Linux with a private game folder whose `save/` was read-only at every level and no `restart.INTS`
+(`q982/confirm.py`, 2026-10-31): entering the park, Alt+S, Save Park, the options tick and Exit To Lobby each opened the
+box once, the lobby's carrying the autosave, and the lobby's Quit question carried the extra line; the same clicks in a
+writable copy opened none. The Windows side is not verified.
+
 ### The other callers
 
 | Site | What |

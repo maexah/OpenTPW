@@ -608,7 +608,7 @@ internal sealed class ParkFrontEnd : Panel
 	}
 
 	/// <summary>Quit Game (case 8), which asks in a message box with UITEXT 9 and quits on the tick.</summary>
-	private void AskToQuit() => _stack.Open( new MessageBox( _stack, Localization.Get( UIStrings.ConfirmQuit ), Quit ) );
+	private void AskToQuit() => _stack.Open( new MessageBox( _stack, SaveTrouble.QuitQuestion( Localization.Get( UIStrings.ConfirmQuit ) ), Quit ) );
 
 	/// <summary>
 	/// Leaves the game, the way <see cref="FrontEnd"/> does: the window closes once the frame in progress

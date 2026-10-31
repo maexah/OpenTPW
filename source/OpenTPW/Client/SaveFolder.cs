@@ -111,6 +111,7 @@ internal static class SaveFolder
 		catch ( Exception e )
 		{
 			Log.Warning( $"Saves: the options could not be written to {path} - {e.Message}" );
+			SaveTrouble.Failed( "OPTIONS", e );
 		}
 	}
 
@@ -196,7 +197,8 @@ internal static class SaveFolder
 	/// Writes save\opentpw.cfg - see <see cref="LoadDisplay"/>. Written with Config.tcf by the options screen's tick,
 	/// and alone when a loading screen has learned a new step count.
 	/// </summary>
-	public static void SaveDisplay()
+	/// <param name="tell">Whether a folder that cannot be written is told to the player (<see cref="SaveTrouble"/>); the loading screen's own write is not, as no choice of theirs was lost.</param>
+	public static void SaveDisplay( bool tell = true )
 	{
 		var path = Find( DisplayName ) ?? DisplayName;
 		var options = GameOptions.Current;
@@ -241,6 +243,9 @@ internal static class SaveFolder
 		catch ( Exception e )
 		{
 			Log.Warning( $"Saves: the display settings could not be written to {path} - {e.Message}" );
+
+			if ( tell )
+				SaveTrouble.Failed( "OPTIONS", e );
 		}
 	}
 
@@ -329,6 +334,7 @@ internal static class SaveFolder
 		catch ( Exception e )
 		{
 			Log.Warning( $"Saves: the folder for '{name}' could not be made - {e.Message}" );
+			SaveTrouble.Failed( "PLAYER", e );
 		}
 
 		SavePlayer( slot, name, file );
@@ -377,6 +383,7 @@ internal static class SaveFolder
 		catch ( Exception e )
 		{
 			Log.Warning( $"Saves: {path} could not be written - {e.Message}" );
+			SaveTrouble.Failed( "PLAYER", e );
 			return false;
 		}
 	}
@@ -514,7 +521,34 @@ internal static class SaveFolder
 		catch ( Exception e )
 		{
 			Log.Warning( $"Saves: {path} could not be written - {e.Message}" );
+			SaveTrouble.Failed( "PARK", e );
 			return null;
+		}
+	}
+
+	/// <summary>
+	/// Whether a file can be made in the save folder: one is made and let go at once, leaving the folder as it was.
+	/// Asked before Quit Game, which cannot tell afterwards (<see cref="SaveTrouble.QuitQuestion"/>).
+	/// </summary>
+	public static bool CanWrite()
+	{
+		// With no save folder mounted (a test's lobby) there is nothing to be told about.
+		if ( SaveFileSystemOrNull is not { } saves )
+			return true;
+
+		try
+		{
+			var folder = saves.GetAbsolutePath( "" );
+			Directory.CreateDirectory( folder );
+			var probe = Path.Join( folder, ".write-test" );
+
+			using ( new FileStream( probe, FileMode.Create, FileAccess.Write, FileShare.None, 1, FileOptions.DeleteOnClose ) )
+				return true;
+		}
+		catch ( Exception e ) when ( e is IOException or UnauthorizedAccessException )
+		{
+			Log.Warning( $"Saves: the save folder cannot be written - {e.Message}" );
+			return false;
 		}
 	}
 

@@ -13,7 +13,7 @@ One line per system; the detail, item by item, is `docs/WORKS.md` (grep it by ar
 - Staff: all five kinds hired and working their kind's decide (cleaning, performing, researching), strikes, their voices.
 - Rides: every placed thing runs its script, the rest of the opcodes counted; screams, particles, hoardings; the ride window closes and reopens its ride.
 - Running the park: the gadget, the info and money screens, the entry price and the gate, the research lab and its screen, golden tickets, the advisor's messages.
-- Saving: Save, Load, Restart Park, the quicksave keys; a played park with a coaster's pylons loads whole, its gate's doors open and its boundary wall drawn (Q810); a Full Simulation park started empty, saved too (Q783: its file at tick nought, which the original loads).
+- Saving: Save, Load, Restart Park, the quicksave keys; a played park with a coaster's pylons loads whole, its gate's doors open and its boundary wall drawn (Q810); a Full Simulation park started empty, saved too (Q783: its file at tick nought, which the original loads). A save folder that cannot be written is told on screen, which the original never does (Q982; shown on Linux, not yet on Windows).
 - Graphics card: a discrete card is drawn with in preference to a built-in one, or the card `save/opentpw.cfg`'s `gpu` line names (Q980; shown on Linux, not yet on Windows).
 - The original runs under Proton as the reference instrument.
 
@@ -39,7 +39,7 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- **Q977 (run 16, Windows):** the suite on the Windows 11 PC at the commit before this rebase: `dotnet test` with the game 4407 passed, 0 failed, 8 skipped of 4415; without 1712 passed, 2703 skipped; with Python hidden, 41 of the 42 Python tests skip, none fail. All eight skips are named in the item. Linux at this commit: the gate. Windows was not re-run on this rebased commit, which also holds Q978 and Q980.
+- Q982 (a save folder that cannot be written; shown on Linux only). `SaveTrouble` keeps a write that failed because the folder cannot be written and `Level.Update` opens the game's own message box (cross alone) once nothing modal is up: `PARK NOT SAVED`, `OPTIONS NOT SAVED` or `PLAYER NOT SAVED`, `The save folder cannot be written.`, `Log: <path>`; Quit Game's question takes a line more where a probe file cannot be made. A deviation, said at the site. Seen on the desk in a private game folder with `save/` read-only at every level and no `restart.INTS`: the box on entering the park, on Alt+S, on Save Park, on the options tick and, in the lobby, after Exit To Lobby; the extra line in the Quit question and its tick still quitting; a writable copy opened none (`q982/run4`, `run5`, 8 of 8 and 7 of 7 as predicted, on the final build; the real `save/` unchanged). Not verified: **the Windows side is not verified yet** (Q901), the Sentinel confirms it; the measure that it is lost quietly there is w5's, not mine; the window's own close with a park up tells nobody, the log says (Q903); on Linux the long `console.log` path wraps at its dot; the VirtualStore question is Q902; `Level.QuickSaveKey`'s one hook and the poll in `Level.Update` have no unit test, only the run (the quicksave hook put back: the second box did not open), the 16 bugs in `SaveTrouble` and `SaveFolder` are caught by `SaveTroubleTests`.
 
 
 

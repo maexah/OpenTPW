@@ -168,7 +168,7 @@ internal sealed class LoadingScreen : IDisposable
 		// save folder untouched. SaveDisplay writes the whole file, settings and counts together, so it
 		// is the one writer and the options screen's tick cannot clobber what was learned here.
 		if ( LoadStepCounts.TakeChanged() )
-			SaveFolder.SaveDisplay();
+			SaveFolder.SaveDisplay( tell: false );
 	}
 
 	/// <summary>
