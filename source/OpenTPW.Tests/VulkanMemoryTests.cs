@@ -10,7 +10,7 @@ namespace OpenTPW.Tests;
 /// chunks apart by whether they are mapped, and the free blocks of each. The reader goes by the library's private names, so a
 /// test holds the library to them: an upgrade that renames one fails here, not as a silent "0 chunks" in the game.
 /// <b>Mutations:</b> live and chunk bytes swapped; the mapped and unmapped lists swapped; a chunk's size not added; the free blocks
-/// not summed, or only the last one; the largest free block taken as the sum; a manager missing a field read as zeros.
+/// not summed, or only the last one; the largest free block taken as the sum; a manager missing a field read as zeros; an inner member renamed read as zeros.
 /// </summary>
 [TestClass]
 public class VulkanMemoryTests
@@ -107,6 +107,88 @@ public class VulkanMemoryTests
 		internal int Handle => _memoryManager.GetHashCode();
 	}
 
+	private class RenamedSet
+	{
+		private readonly List<FakeChunk> _chunks = new() { new FakeChunk( 64UL << 20, 1UL << 20 ) };
+	}
+
+	private class RenamedChunk
+	{
+		internal readonly ulong _size = 64UL << 20;
+		private readonly List<FakeBlock> _freeBlocks = new() { new FakeBlock { Size = 1UL << 20 } };
+	}
+
+	private class RenamedBlockSize
+	{
+		public FakeBlock[] Free { get; } = new[] { new FakeBlock { Size = 1UL << 20 } };
+	}
+
+	private class RenamedChunkHolder
+	{
+		private readonly List<object> _allocators;
+
+		public RenamedChunkHolder( object chunk ) => _allocators = new List<object> { chunk };
+	}
+
+	private class RenamedPoolEntry
+	{
+		public RenamedBlockSize Memory { get; } = new();
+	}
+
+	// The manager's inner shapes are objects, so a test can put a renamed one in without a second manager type.
+	private static class Loose
+	{
+		public class VkDeviceMemoryManager
+		{
+			internal ulong _totalAllocatedBytes = 1;
+			private readonly Dictionary<uint, object> _allocatorsByMemoryType = new();
+			private readonly Dictionary<uint, object> _allocatorsByMemoryTypeUnmapped = new();
+
+			public VkDeviceMemoryManager( object mapped ) => _allocatorsByMemoryType[1] = mapped;
+		}
+
+		public class Device
+		{
+			private readonly VkDeviceMemoryManager _memoryManager;
+			private readonly List<object> _availableStagingTextures;
+			private readonly List<object> _availableStagingBuffers = new();
+
+			public Device( object mapped, object? texture = null )
+			{
+				_memoryManager = new VkDeviceMemoryManager( mapped );
+				_availableStagingTextures = texture is null ? new() : new() { texture };
+			}
+		}
+	}
+
+	/// <summary>An inner member renamed (the set's list, a chunk's size or free list, a block's size, a pooled texture's size) reads as null, not as "0MB".</summary>
+	[TestMethod]
+	public void ARenamedInnerMemberIsNotReadAsNought()
+	{
+		Assert.IsNotNull( VulkanMemory.Read( new Loose.Device( new FakeSet( new FakeChunk( 64UL << 20, 1UL << 20 ) ) ) ), "the control reads" );
+		Assert.IsNull( VulkanMemory.Read( new Loose.Device( new RenamedSet() ) ), "the set's list" );
+		Assert.IsNull( VulkanMemory.Read( new Loose.Device( new RenamedChunkHolder( new RenamedChunk() ) ) ), "a chunk's size" );
+		Assert.IsNull( VulkanMemory.Read( new Loose.Device( new RenamedChunkHolder( new FakeChunkWithoutFreeList() ) ) ), "a chunk's free list" );
+		Assert.IsNull( VulkanMemory.Read( new Loose.Device( new RenamedChunkHolder( new FakeChunkWithRenamedBlock() ) ) ), "a free block's size" );
+		Assert.IsNull( VulkanMemory.Read( new Loose.Device( new FakeSet(), new RenamedPoolEntry() ) ), "a pooled texture's size" );
+	}
+
+	private class FakeChunkWithoutFreeList
+	{
+		internal readonly ulong _totalMemorySize = 64UL << 20;
+	}
+
+	private struct RenamedBlock
+	{
+		public ulong Length;
+	}
+
+	private class FakeChunkWithRenamedBlock
+	{
+		internal readonly ulong _totalMemorySize = 64UL << 20;
+		private readonly List<RenamedBlock> _freeBlocks = new() { new RenamedBlock { Length = 1 } };
+	}
+
 	/// <summary>A device without a manager, or without the fields, reads as null, never as an empty account.</summary>
 	[TestMethod]
 	public void ADeviceWithoutTheFieldsIsNotReadAsEmpty()
@@ -126,6 +208,8 @@ public class VulkanMemoryTests
 		Assert.AreEqual( typeof( ulong ), manager.GetField( "_totalAllocatedBytes", all )?.FieldType );
 
 		var device = library.GetType( "NeoVeldrid.Vk.VkGraphicsDevice" ) ?? throw new AssertFailedException( "VkGraphicsDevice is gone" );
+
+		Assert.IsTrue( device.GetFields( all ).Any( f => f.FieldType == manager ), "VkGraphicsDevice no longer holds a VkDeviceMemoryManager field" );
 
 		foreach ( var name in new[] { "_availableStagingTextures", "_availableStagingBuffers" } )
 		{

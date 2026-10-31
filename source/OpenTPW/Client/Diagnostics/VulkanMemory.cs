@@ -5,7 +5,7 @@ namespace OpenTPW;
 
 /// <summary>
 /// What NeoVeldrid's Vulkan memory manager holds, read by reflection because the library has no property for it (Q834; the
-/// decompile is in <c>docs/exe/graphics.md</c>, "NeoVeldrid's memory manager"). Its <c>_totalAllocatedBytes</c> is the live
+/// decompile's facts are in <c>docs/DECISIONS.md</c>, "NeoVeldrid's memory: what it counts, and what it keeps"). Its <c>_totalAllocatedBytes</c> is the live
 /// blocks, the sizes handed out and not yet freed. The driver is asked for memory in chunks of 64 MB (mapped) or 256 MB
 /// (unmapped), one list per memory type, a new chunk whenever no chunk has a free block that fits; a chunk goes back to the
 /// driver only when the whole manager is disposed. A block of a chunk's size or more is its own allocation and goes back at
@@ -37,7 +37,7 @@ public static class VulkanMemory
 
 	private const BindingFlags All = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
 
-	/// <summary>The manager's live bytes, its chunks and the device's staging pool; null where the device has no manager (OpenGL, or a library that renamed it or its fields).</summary>
+	/// <summary>The manager's live bytes, its chunks and the device's staging pool; null where the device has no manager (OpenGL, or a library that renamed it or any field the reader goes by, inner ones too).</summary>
 	public static Snapshot? Read( object device )
 	{
 		if ( FindManager( device ) is not { } manager )
@@ -52,10 +52,10 @@ public static class VulkanMemory
 		if ( live is null || mapped is null || unmapped is null || textures is null || buffers is null )
 			return null;
 
-		var (textureCount, textureBytes) = Held( textures );
-		var (bufferCount, bufferBytes) = Held( buffers );
+		if ( Held( textures ) is not { } heldTextures || Held( buffers ) is not { } heldBuffers || Sum( mapped ) is not { } mappedChunks || Sum( unmapped ) is not { } unmappedChunks )
+			return null;
 
-		return new Snapshot( live.Value, Sum( mapped ), Sum( unmapped ), new Pool( textureCount, textureBytes, bufferCount, bufferBytes ) );
+		return new Snapshot( live.Value, mappedChunks, unmappedChunks, new Pool( heldTextures.Count, heldTextures.Bytes, heldBuffers.Count, heldBuffers.Bytes ) );
 	}
 
 	private static object? FindManager( object device )
@@ -72,8 +72,8 @@ public static class VulkanMemory
 		return null;
 	}
 
-	/// <summary>The device memory of each pooled staging resource (each has a <c>Memory</c> block).</summary>
-	private static (int Count, ulong Bytes) Held( IEnumerable pool )
+	/// <summary>The device memory of each pooled staging resource (each has a <c>Memory</c> block); null where one has no readable size.</summary>
+	private static (int Count, ulong Bytes)? Held( IEnumerable pool )
 	{
 		int count = 0;
 		ulong bytes = 0;
@@ -81,13 +81,18 @@ public static class VulkanMemory
 		foreach ( var resource in pool )
 		{
 			count++;
-			bytes += Member( Member( resource, "Memory" ) ?? new object(), "Size" ) as ulong? ?? 0;
+
+			if ( Member( Member( resource, "Memory" ) ?? new object(), "Size" ) is not ulong size )
+				return null;
+
+			bytes += size;
 		}
 
 		return (count, bytes);
 	}
 
-	private static Chunks Sum( IDictionary sets )
+	/// <summary>The chunks of one side; null where a list, a chunk's size or a block's size is not readable.</summary>
+	private static Chunks? Sum( IDictionary sets )
 	{
 		int count = 0;
 		ulong bytes = 0, free = 0, largest = 0;
@@ -95,19 +100,22 @@ public static class VulkanMemory
 		foreach ( var set in sets.Values )
 		{
 			if ( Member( set, "_allocators" ) is not IEnumerable chunks )
-				continue;
+				return null;
 
 			foreach ( var chunk in chunks )
 			{
 				count++;
-				bytes += Member( chunk, "_totalMemorySize" ) as ulong? ?? 0;
 
-				if ( Member( chunk, "_freeBlocks" ) is not IEnumerable blocks )
-					continue;
+				if ( Member( chunk, "_totalMemorySize" ) is not ulong total || Member( chunk, "_freeBlocks" ) is not IEnumerable blocks )
+					return null;
+
+				bytes += total;
 
 				foreach ( var block in blocks )
 				{
-					var size = Member( block, "Size" ) as ulong? ?? 0;
+					if ( Member( block, "Size" ) is not ulong size )
+					return null;
+
 					free += size;
 					largest = Math.Max( largest, size );
 				}

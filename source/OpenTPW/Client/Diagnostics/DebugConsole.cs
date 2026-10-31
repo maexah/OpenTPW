@@ -2998,7 +2998,7 @@ public static class DebugConsole
 
 	/// <summary>
 	/// NeoVeldrid's Vulkan memory manager: the live blocks, the chunks it has taken from the driver and keeps until the device ends, and the
-	/// staging pool (<see cref="VulkanMemory"/>). The game's own account (<see cref="GpuMemory"/>) is what it asked for; the chunks are what the driver was asked for.
+	/// staging pool (<see cref="VulkanMemory"/>). The game's own account (<see cref="GpuMemory"/>) is what it asked for; the chunks are what the driver was asked for in chunks (a block of a chunk's size or more, or a dedicated one, is its own allocation: counted in live, not in the chunks).
 	/// </summary>
 	private static string VulkanAllocated()
 	{

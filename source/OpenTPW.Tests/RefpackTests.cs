@@ -7,7 +7,7 @@ namespace OpenTPW.Tests;
 
 /// <summary>
 /// Refpack decoding into an array of the declared size (Q836). The streams are made by a generator written from the
-/// format's description alone (the command bit patterns of the FileFormats docs), which keeps its own copy of the output,
+/// format's description alone (the command bit patterns of the RefPack description that `formats/wad.md` of the FileFormats docs links, wiki.niotso.org/RefPack), which keeps its own copy of the output,
 /// so the decoder is checked against a second reading of the format rather than against itself.
 /// </summary>
 [TestClass]
