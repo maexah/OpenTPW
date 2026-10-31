@@ -71,10 +71,54 @@ its leftovers Q826, Q835, Q833 and Q959 move to the end of this section, and Q82
 order below. Memory and frame time are checked before each weekly build instead (`WORKFLOW.md`, the Sunday routine, step
 0).
 
+**Ordered at Alexah's word (2026-10-31, later), before the first weekly build:** the lobby first, as a new player sees
+it: Q950 (the attract flight's sound and camera, back to the original's), Q770 (the extra bed) and Q749 (the eye after a
+quit); then the block below.
+
 **Ordered at Alexah's word (2026-10-31), before the first weekly build:** Q849 (saving a played park, the round trip
 never run), Q216 (settings and profile saves: back up, then overwrite), Q957 (shipped builds watch the shader files),
 Q247 (the Load Park list's scrollbar) first; then Q820 and the rest in the order below.
 
+- [ ] **Q950. The lobby's attract flight (nobody playing) against the original's: what differs, for Alexah to choose.** Not a
+  priority (Alexah, 2026-10-30: "the camera drifting between islands ... and the audio fading between parks is kinda weird").
+  Investigated, nothing built: `docs/exe/lobby.md`, "Attract" (the 2026-10-30 measurement). The pacing already matches (an
+  island change every 18 to 20 s, 10 units a second, the aim about 11 s to reach a new island). What differs, largest first:
+  (1) sound: the original plays one park's music and bed the whole time (the first island's, measured by `original/islandvoices.py`)
+  plus the nearest island's random one-shots; ours plays all four parks at once, placed at their islands, so the mix slides as
+  the camera flies (a deviation at Alexah's word, 2026-09-20, `audio.md`, "The lobby was entirely non-positional"); (2) height:
+  the original's box is 50 to 100 high (median 72, looking down at sea and islands), ours 30 to 60 (Alexah's word,
+  `LobbyCameraMode.WanderCentre`), flatter and closer, and a simulation of ours' rules (`lobbyattract/sim.py`, which matches
+  the original's measured numbers when given its rules) whips the view at up to 200 to 300 degrees a second on a close pass,
+  where the original reaches 75; (3) the sky colour snaps in the original at a change of island and fades in ours
+  (`LobbyWeather`); (4) small: ours' aim ramps at 3 x its cap a second (60 frames), the original's per frame, and ours is 16:9.
+  Ask Alexah which of (1) to (3) go back to the original before building any. Measure ours live first: there is no console
+  readout of ours' attract eye and aim, so add one (`lobbycam` or the like) and run `lobbyattract/stats.py` on it beside
+  `original/attractcam.py`. Evidence `~/.cache/tpw-harnesses/lobbyattract/` (`FINDINGS.md`, `side-by-side.mp4`).
+  Confirm: the same 300 s statistics in both games, a side-by-side film, and for (1) the lobby's mix by the disk driver.
+  **Decided by Alexah (2026-10-31), after sitting in the lobby ("chaotic compared to the original ... almost nausea inducing ...
+  the camera tends to not even point the right direction"):** match the original fully, undoing the 2026-09-20 deviations: one
+  park's music and bed the whole time plus the nearest island's one-shots (not all four parks placed at their islands), and the
+  original's camera box (50 to 100 high) and turning, so no fast whips on a close pass. Take the deviation comments out where the
+  code returns to the original. Confirm against the original's film and mix.
+- [ ] **Q770. The island lobby plays no global lobby sound 2 or 3; ours loops effect 3 as a bed.** From the fork watch
+  2026-10-28 (verify-hz-ui-hud M1, L2; `audio.md`, "The lobby was entirely non-positional"). Global lobby effects 2 and 3 are
+  started by `Lobby_Start` (`0x005dcfe0`, at `0x005dd0eb` and `0x005dd0fe`), which is the globe page's start; the globe's
+  deactivate (`0x005dd690`) stops both. The island lobby, the page that opens (`0x005d5bf1` -> `0x005e18d0`), never runs it; the
+  other uses of the global lobby category's handle `[0x00803a48]` are effect 4 (`0x004b90aa`, park entry) and effect 1 (thunder,
+  `0x005e1110`). Ours (`LobbyAudio.KeepGlobalPlaying`, `GlobalAmbientBed` 3) plays effect 3 as a bed from the lobby's opening,
+  which was unmarked and now carries a deviation comment; its own text already guessed effect 2 belonged to the globe. Build: take
+  the bed out of the island lobby (the original has none), and when Q62's globe page is built start effects 2 and 3 there at (0,
+  0, 0) and stop them at its deactivate; or, if Alexah wants the texture, keep it as a said deviation. Confirm: the island lobby's
+  mix by the disk driver for 60 s in the original holds none of effect 3's samples (predict silence of that bed), then ours the
+  same with the bug put back (`verifying-audio-by-capture`).
+- [ ] **Q749. After a quit to the lobby ours' eye eases out from where the last flight ended; the original seeds it from its render camera. Film both first. (from the run 11 review of Q670, M1, unsettled.)**
+  `LobbyCameraMode._placed` (and `_position`, `_lookAt`) are static and reset only by `DebugSettle`, so after a park is quit
+  ours' first lobby frame eases from where the last flight ended (radius under 8 at the old island) out to the orbit. The
+  original's island camera constructor seeds its eye `+0x28` and look point `+0x40` (and `+0x34`, `+0x4c`) from the render
+  camera `[0xf83778]` `+8` and `+0x14` (`0x005dfd3c`..`0x005dfd99`), and the render camera is itself rebuilt by FrontEnd_Init
+  (`0x005d8b00`, `0x005d5abf`). Whether ours visibly flies out where the original does not is not read: film the lobby's
+  first second after a quit in both games (`record.sh`, `lobbycam.py`), then build (the orbit is already zeroed on a lobby's
+  build, `LobbyCameraMode.BeginLobby`). Confirm: the two films' first second side by side.
 - [ ] **Q849. What Q810 left: two counted gaps her played park's save now reaches, and two loads never run.** (From Q810's review,
   run 14.) Q810 made her Full Simulation `New Save.TPWS` read whole, so the save goes through the running-things writer for the
   first time (before, the model walk failed and the whole module was written as the file's). Two counters then fire, in
@@ -2154,17 +2198,6 @@ filed the items that cite it.
   the lobby camera's eye, target, right and up. Do Q681's measure first, so the light is judged on the file's own normals. Confirm
   beside the original under Proton: one island, the camera frozen (`X` or `freeze`) at two orbit angles, a lit face's colour
   against the original's; predict it first (ambient 68/255 plus 0xee/255 x max( 0, -d.n ) before the texel), and put the bug back.
-- [ ] **Q770. The island lobby plays no global lobby sound 2 or 3; ours loops effect 3 as a bed.** From the fork watch
-  2026-10-28 (verify-hz-ui-hud M1, L2; `audio.md`, "The lobby was entirely non-positional"). Global lobby effects 2 and 3 are
-  started by `Lobby_Start` (`0x005dcfe0`, at `0x005dd0eb` and `0x005dd0fe`), which is the globe page's start; the globe's
-  deactivate (`0x005dd690`) stops both. The island lobby, the page that opens (`0x005d5bf1` -> `0x005e18d0`), never runs it; the
-  other uses of the global lobby category's handle `[0x00803a48]` are effect 4 (`0x004b90aa`, park entry) and effect 1 (thunder,
-  `0x005e1110`). Ours (`LobbyAudio.KeepGlobalPlaying`, `GlobalAmbientBed` 3) plays effect 3 as a bed from the lobby's opening,
-  which was unmarked and now carries a deviation comment; its own text already guessed effect 2 belonged to the globe. Build: take
-  the bed out of the island lobby (the original has none), and when Q62's globe page is built start effects 2 and 3 there at (0,
-  0, 0) and stop them at its deactivate; or, if Alexah wants the texture, keep it as a said deviation. Confirm: the island lobby's
-  mix by the disk driver for 60 s in the original holds none of effect 3's samples (predict silence of that bed), then ours the
-  same with the bug put back (`verifying-audio-by-capture`).
 - [ ] **Q771. A text control's bitmap is its box, and the original cuts the text at it; ours never cuts.** From the fork watch
   2026-10-28 (verify-ui-hud H2, verify-other O2; `ui.md`, "The two-pass text class"). Every text control of the original makes its
   bitmap once (guard `+0x44`) at its box's size: width (x1 - x0) x `[0xFAA5C4]` / 2048 toward nought (`0x48F47B`..`0x48F49E`,
@@ -2905,14 +2938,6 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   second Escape opens the menu), so settle that first. Confirm: `lib/lobbyentry.py`'s `particles screen` reads effect 97
   "owner no window (drawn over all)" at 0.1 to 0.4 s, and a frame at +0.1 s shows the twinkles at the price beside
   `q630/orig-a/film`.
-- [ ] **Q749. After a quit to the lobby ours' eye eases out from where the last flight ended; the original seeds it from its render camera. Film both first. (from the run 11 review of Q670, M1, unsettled.)**
-  `LobbyCameraMode._placed` (and `_position`, `_lookAt`) are static and reset only by `DebugSettle`, so after a park is quit
-  ours' first lobby frame eases from where the last flight ended (radius under 8 at the old island) out to the orbit. The
-  original's island camera constructor seeds its eye `+0x28` and look point `+0x40` (and `+0x34`, `+0x4c`) from the render
-  camera `[0xf83778]` `+8` and `+0x14` (`0x005dfd3c`..`0x005dfd99`), and the render camera is itself rebuilt by FrontEnd_Init
-  (`0x005d8b00`, `0x005d5abf`). Whether ours visibly flies out where the original does not is not read: film the lobby's
-  first second after a quit in both games (`record.sh`, `lobbycam.py`), then build (the orbit is already zeroed on a lobby's
-  build, `LobbyCameraMode.BeginLobby`). Confirm: the two films' first second side by side.
 - [ ] **Q32. Graphics tiers.** `Level` reads the detail files (`low.sam`, `med.sam`, `high.sam`) for `GameOptions.PARTICLEDENSITY`
   and `NUMKIDS` (the kid and staff bank caps) and for three `GraphicalOptions.*` keys: `LIGHTING` (a counted no-op),
   `TEXTUREQUALITY` (the sea's and the flags' folder) and `PROCEDURALTEXTURING` (the ground's tile size). `SPRITESHADOW` is read too (Q480: medium's silhouette built, the own
@@ -3354,19 +3379,3 @@ state machine.
   between ticks (the sprite pass, `original/spritepass.py`, `particleheights.py`) and whether it eases by the frame's
   own time; if it does, build it (an improvement or the original's own, said at the site), if not, keep the comment.
   Confirm: a particle film (`rectfilm.py`) in both games on an effect whose rate is known.
-- [ ] **Q950. The lobby's attract flight (nobody playing) against the original's: what differs, for Alexah to choose.** Not a
-  priority (Alexah, 2026-10-30: "the camera drifting between islands ... and the audio fading between parks is kinda weird").
-  Investigated, nothing built: `docs/exe/lobby.md`, "Attract" (the 2026-10-30 measurement). The pacing already matches (an
-  island change every 18 to 20 s, 10 units a second, the aim about 11 s to reach a new island). What differs, largest first:
-  (1) sound: the original plays one park's music and bed the whole time (the first island's, measured by `original/islandvoices.py`)
-  plus the nearest island's random one-shots; ours plays all four parks at once, placed at their islands, so the mix slides as
-  the camera flies (a deviation at Alexah's word, 2026-09-20, `audio.md`, "The lobby was entirely non-positional"); (2) height:
-  the original's box is 50 to 100 high (median 72, looking down at sea and islands), ours 30 to 60 (Alexah's word,
-  `LobbyCameraMode.WanderCentre`), flatter and closer, and a simulation of ours' rules (`lobbyattract/sim.py`, which matches
-  the original's measured numbers when given its rules) whips the view at up to 200 to 300 degrees a second on a close pass,
-  where the original reaches 75; (3) the sky colour snaps in the original at a change of island and fades in ours
-  (`LobbyWeather`); (4) small: ours' aim ramps at 3 x its cap a second (60 frames), the original's per frame, and ours is 16:9.
-  Ask Alexah which of (1) to (3) go back to the original before building any. Measure ours live first: there is no console
-  readout of ours' attract eye and aim, so add one (`lobbycam` or the like) and run `lobbyattract/stats.py` on it beside
-  `original/attractcam.py`. Evidence `~/.cache/tpw-harnesses/lobbyattract/` (`FINDINGS.md`, `side-by-side.mp4`).
-  Confirm: the same 300 s statistics in both games, a side-by-side film, and for (1) the lobby's mix by the disk driver.
