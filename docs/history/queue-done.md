@@ -11291,6 +11291,12 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   (2026-10-31): prefer a discrete GPU by default, with a setting to choose another (first look whether the original's
   Options lists a device, `UIStrings.GPURendering` 316; else an `opentpw.cfg` line). A deviation, said at the site. Find
   first whether NeoVeldrid lets the device be chosen, and how. Confirm on Windows: the `GPU:` line names the GTX 1650.
+- [x] **Q978. A failed start says why in a message box.** Done 2026-10-31 (run 16, lane B, `alexah/800-failed-start-message-box`; Linux only, Q850 is the Windows confirm). `StartFailure`: an SDL error box with the log's reason lines (where it looked, how to put it right) and where `console.log` is, for a game that is not found and for an exception before the main loop begins (its type and message; the stack is in the log); `OPENTPW_NO_MESSAGE_BOX` keeps it off for tests and harnesses. Seen on a private Xvfb (`q978/final/`, `lib/boxshot.py`), a `--game` that does not exist and a folder that makes the window fail. Filed as: A start that cannot find the game logs the reason
+  (`GameDir.Explain`) and exits 1; on Windows a double-click shows a terminal for about a second and nothing else (w3).
+  Any other exception before the window (w3 met one in `SaveFolder.LoadConfig`, `Game.cs:66`) does the same. At Alexah's
+  word (2026-10-31), on every system: an SDL message box with the log's reason lines, where it looked, how to fix it and
+  where the log is; an exception before the first frame the same, with its message. A deviation, said at the site (the
+  original never needed one). Confirm on Windows: a double-click with no game, screenshot; the Linux zip's apphost the same.
 
 ## B. Docs and comments
 

@@ -84,12 +84,6 @@ meets first, found on a Windows 11 PC by a Remote Control session, jobs w1 to w4
 `C:\Users\alexa\tpw-work`): Q976, Q978, Q981, Q979, Q980, Q982, Q977, in that order; then the blocks below. A
 confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
 
-- [ ] **Q978. A failed start says why in a message box.** A start that cannot find the game logs the reason
-  (`GameDir.Explain`) and exits 1; on Windows a double-click shows a terminal for about a second and nothing else (w3).
-  Any other exception before the window (w3 met one in `SaveFolder.LoadConfig`, `Game.cs:66`) does the same. At Alexah's
-  word (2026-10-31), on every system: an SDL message box with the log's reason lines, where it looked, how to fix it and
-  where the log is; an exception before the first frame the same, with its message. A deviation, said at the site (the
-  original never needed one). Confirm on Windows: a double-click with no game, screenshot; the Linux zip's apphost the same.
 - [ ] **Q981. A Windows install of Sim Theme Park is not found.** The default looked in is `C:\Program Files
   (x86)\Bullfrog\Theme Park World`; Sim Theme Park installs in `C:\Program Files (x86)\SimTheme Park` on the PC tried
   (w4). The registry names no folder; the folder is recorded only in the uninstall entry
@@ -122,6 +116,13 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   case-sensitive disk. Skips to look at: "no git here" though git is on PATH, "no bash here" (Git Bash's `bash.exe` is
   not on PATH; look in Git's folder), three "the built program ... cannot be found". Fix the tests, not the game, unless
   a test shows the game wrong on Windows. Confirm: the suite on the Windows PC, every remaining skip named.
+
+- [ ] **Q850. Q978's message box on Windows (the confirm Q978 could not make on Linux).** Built and seen on Linux only
+  (SDL's X11 box on a private Xvfb). On the Windows PC: a double-click of the build with no game, the box's screenshot
+  (the reason lines, where it looked, how to fix it, the log's place; does the long text fit and wrap), the log's
+  `Start failure: message box shown`; the same with `save\` denied (w3's `UnauthorizedAccessException` at
+  `SaveFolder.LoadConfig`, `Game.cs:66`), the box naming the exception; the Linux zip's apphost the same. If the
+  Windows box looks wrong (a cut line, a missing log path), fix `StartFailure.Compose`.
 
 - [ ] **Q950. The lobby's attract flight (nobody playing) against the original's: what differs, for Alexah to choose.** Not a
   priority (Alexah, 2026-10-30: "the camera drifting between islands ... and the audio fading between parks is kinda weird").

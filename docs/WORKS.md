@@ -197,6 +197,11 @@ belongs to or at the end. Grep it by area or Q-number; never read it whole.
   (`q751/run6-names`); `lib/logpii.py` finds no account name, host name or home folder in a
   real launch's log (`q751/run3`). A self-contained Linux publish, zipped as the weekly workflow zips it, starts and
   draws the lobby (`q751/run5-zip`).
+- **A failed start says why in a message box** (Q978, a deviation: the original had no start that could fail so; Linux seen, Windows
+  not yet): a game that cannot be found, or an exception before the main loop begins, shows an SDL error box (`StartFailure`)
+  holding the log's reason lines (where it looked, how to put it right) or the exception's type and message, and where
+  `console.log` is, then exits 1; `OPENTPW_NO_MESSAGE_BOX` keeps it off. With no display SDL has no box and the log says
+  so. Seen on a private Xvfb with a `--game` that does not exist and with a folder that makes the window fail.
 - **The lobby letters this build's name bottom right, where the original's says "v 2.0"** (Q752): `VersionLabel`, under
   every window and taking no pointer, letters `LaunchReport.BuildName` (`weekly-YYYY-MM-DD`, a dry run's `weekly-test-N`, `local` for a build not given the tag) as the
   original letters its own version (`FUN_0048b020`, `boot.md`, "Which build this is"): font 6, plain white with no edge,

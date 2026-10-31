@@ -28,6 +28,9 @@ public class FailedStartLogTests
 		environment["OPENTPW_GAME_PATH"] = null;
 		environment["SDL_AUDIODRIVER"] = "dummy";
 
+		// The message box a failed start shows (Q978) must not open on the desktop of whoever runs the suite.
+		environment[StartFailure.SuppressVariable] = "1";
+
 		// A path that goes wrong lands in scratch, never in the player's own data folder (AGENTS.md rule 12): the data
 		// folder follows XDG_DATA_HOME (else HOME) on Linux only. On Windows it is the shell's known folder and on macOS the system's
 		// Application Support folder, and no variable set here moves either.
@@ -57,6 +60,7 @@ public class FailedStartLogTests
 			StringAssert.Contains( log, "(no game folder was found)" );
 			StringAssert.Contains( log, "does not hold Theme Park World" );
 			StringAssert.Contains( log, "Game files:" );
+			StringAssert.Contains( log, $"Start failure: no message box, {StartFailure.SuppressVariable} is set", "the start went on to the box, which the variable kept off" );
 			StringAssert.Contains( output, $"this run is kept in {Path.Join( logs, ConsoleLog.FileName )}", "the terminal says where it is" );
 			Assert.IsFalse( File.Exists( Path.Join( folder, ConsoleLog.FileName ) ), "nothing is written in the folder that was named" );
 		}
@@ -135,5 +139,35 @@ public class FailedStartLogTests
 		CollectionAssert.AreEqual( new[] { "/data/OpenTPW" }, ConsoleLog.NoGameCandidates( null, "/data/OpenTPW" ) );
 		CollectionAssert.AreEqual( new[] { "/data/OpenTPW" }, ConsoleLog.NoGameCandidates( "  ", "/data/OpenTPW" ) );
 		CollectionAssert.AreEqual( new[] { "/logs" }, ConsoleLog.NoGameCandidates( "/logs", "/data/OpenTPW" ) );
+	}
+
+	/// <summary>
+	/// An exception before the main loop is logged, answered by the box (kept off here) and ends the run with exit 1 (Q978).
+	/// Linux only: with no display variable SDL has no window to make, which is the exception; elsewhere the same start would
+	/// open a window on whoever runs the suite.
+	/// </summary>
+	[TestMethod]
+	public void AnExceptionBeforeTheMainLoopIsLoggedAndEndsTheRunWithExit1()
+	{
+		if ( !OperatingSystem.IsLinux() )
+			Assert.Inconclusive( "skipped: only Linux can be given no display to fail on" );
+
+		var folder = Scratch();
+		var logs = Path.Join( folder, "logs" );
+
+		try
+		{
+			Directory.CreateDirectory( Path.Join( folder, "game", "data", "levels" ) );
+
+			var (exit, output) = Start( folder, new() { ["OPENTPW_LOG_DIR"] = logs, ["DISPLAY"] = null, ["WAYLAND_DISPLAY"] = null }, "--game", Path.Join( folder, "game" ) );
+
+			Assert.AreEqual( 1, exit, output );
+
+			var log = File.ReadAllText( Path.Join( logs, ConsoleLog.FileName ) );
+
+			StringAssert.Contains( log, "Unhandled exception:", "the stack is in the log" );
+			StringAssert.Contains( log, $"Start failure: no message box, {StartFailure.SuppressVariable} is set" );
+		}
+		finally { Directory.Delete( folder, true ); }
 	}
 }

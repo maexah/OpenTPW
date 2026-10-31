@@ -37,6 +37,10 @@ internal static class Game
 			// There is no game folder to keep the log in, but the lines that say why are still worth keeping.
 			ConsoleLog.OpenWithoutGame();
 
+			// A double-click leaves no terminal to read these in, so the box says them (Q978, a deviation: the
+			// original never had a start that could fail this way).
+			StartFailure.Show( StartFailure.Compose( StartFailure.Head, GameDir.Reasons, ConsoleLog.Path ) );
+
 			Environment.ExitCode = 1;
 			return;
 		}
@@ -139,6 +143,9 @@ internal static class Game
 		Render.OnUpdate += () => Level.Current?.Update();
 		Render.OnRender += () => Level.Current?.Render();
 		Render.PostUpdate += ReloadLobbyIfAsked;
+
+		// From here an exception is the game's own and not a failed start (StartFailure).
+		StartFailure.Started = true;
 		Render.Run();
 
 		LeaveOnClose();

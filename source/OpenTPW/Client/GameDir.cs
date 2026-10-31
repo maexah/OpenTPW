@@ -63,6 +63,8 @@ public static class GameDir
 	/// </summary>
 	public static bool Find( string[] args )
 	{
+		_reasons.Clear();
+
 		var tried = new List<(string Where, string Path)>();
 		var shortNamed = new List<string>();
 
@@ -78,7 +80,7 @@ public static class GameDir
 			{
 				if ( named )
 				{
-					Log.Error( $"Game files: there is no folder at {path}, given by {where}." );
+					Fail( $"Game files: there is no folder at {path}, given by {where}." );
 					return false;
 				}
 
@@ -95,8 +97,8 @@ public static class GameDir
 			{
 				if ( named )
 				{
-					Log.Error( $"Game files: {folder}, given by {where}, does not hold Theme Park World." );
-					Log.Error( $"Game files: a folder counts when it holds a {DataName} folder with the game's {LevelsName} in it - the folder TP.exe was installed in." );
+					Fail( $"Game files: {folder}, given by {where}, does not hold Theme Park World." );
+					Fail( $"Game files: a folder counts when it holds a {DataName} folder with the game's {LevelsName} in it - the folder TP.exe was installed in." );
 					return false;
 				}
 
@@ -126,6 +128,20 @@ public static class GameDir
 
 		Explain( tried, shortNamed );
 		return false;
+	}
+
+	private static readonly List<string> _reasons = [];
+
+	/// <summary>
+	/// The lines <see cref="Find"/> logged as errors in its last call, in order: why nothing was found, where it looked
+	/// and what would put it right. <see cref="StartFailure"/> shows them in a message box (Q978).
+	/// </summary>
+	public static IReadOnlyList<string> Reasons => _reasons;
+
+	private static void Fail( string line )
+	{
+		Log.Error( line );
+		_reasons.Add( line );
 	}
 
 	/// <summary>
@@ -283,8 +299,8 @@ public static class GameDir
 			return;
 		}
 
-		Log.Error( "Game files: Theme Park World was not found." );
-		Log.Error( $"Game files: a folder counts when it holds a {DataName} folder with the game's {LevelsName} in it - the folder TP.exe was installed in." );
+		Fail( "Game files: Theme Park World was not found." );
+		Fail( $"Game files: a folder counts when it holds a {DataName} folder with the game's {LevelsName} in it - the folder TP.exe was installed in." );
 
 		// One line for each place looked. Two of these can name the same folder - a build started from the
 		// directory it sits in - and Find tries it once, under the first, so it is not said twice.
@@ -292,10 +308,10 @@ public static class GameDir
 		{
 			var first = tried.First( entry => entry.Where == where ).Path;
 
-			Log.Error( $"Game files: looked in {first} ({where})" );
+			Fail( $"Game files: looked in {first} ({where})" );
 		}
 
-		Log.Error( $"Game files: put this build in with the game's files, or start it with {PathArgument} <folder>, or set {PathVariable} to that folder." );
+		Fail( $"Game files: put this build in with the game's files, or start it with {PathArgument} <folder>, or set {PathVariable} to that folder." );
 	}
 
 	/// <summary>
@@ -306,9 +322,9 @@ public static class GameDir
 	private static void ExplainShortNames( List<string> folders )
 	{
 		foreach ( var folder in folders )
-			Log.Error( $"Game files: {folder} holds the game, but its names have been cut short - CHALLE~0.SAM where the game asks for {LongName}." );
+			Fail( $"Game files: {folder} holds the game, but its names have been cut short - CHALLE~0.SAM where the game asks for {LongName}." );
 
-		Log.Error( "Game files: that is the disc's plain ISO 9660 tree. Its Joliet tree holds the long names, and the long names are the ones every file in the game asks for." );
-		Log.Error( "Game files: copy the disc again with its long names kept - mount it and copy from the mount, rather than unpacking the short-name tree." );
+		Fail( "Game files: that is the disc's plain ISO 9660 tree. Its Joliet tree holds the long names, and the long names are the ones every file in the game asks for." );
+		Fail( "Game files: copy the disc again with its long names kept - mount it and copy from the mount, rather than unpacking the short-name tree." );
 	}
 }

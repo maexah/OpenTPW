@@ -144,6 +144,10 @@ OPENTPW_SYSTEM_SDL=1 dotnet source/OpenTPW/bin/Debug/net10.0/OpenTPW.dll --game 
 
 **No sound.** Not fatal - OpenTPW warns and carries on.
 
+**A start that fails.** When OpenTPW cannot find the game, or something goes wrong before the game's window is up,
+it shows a message box with the reason, where it looked, how to put it right and where the log is, on every system,
+and exits. The original had no such box (a deviation). Under a terminal the same lines are printed too.
+
 **Reporting a problem.** Every start writes `console.log` in the game's folder, beside `save`. If the game's folder cannot be
 written, or OpenTPW cannot find the game, it is in your own data folder instead (`%AppData%\OpenTPW` on Windows,
 `~/.local/share/OpenTPW` on Linux, `~/Library/Application Support/OpenTPW` on macOS). It names the build, your system
@@ -171,6 +175,7 @@ Most tests read the real game files and skip when the game is not found; set `OP
 | `OPENTPW_SYSTEM_SDL=1` | Use your system's SDL2 instead of the one in the build. |
 | `OPENTPW_DEBUG_CONSOLE=1` | Turn on the debug console. |
 | `OPENTPW_LOG_DIR=<folder>` | Write `console.log` there instead of the game's folder. |
+| `OPENTPW_NO_MESSAGE_BOX=1` | Do not show the message box of a failed start (a script that fails a start on purpose). |
 | `OPENTPW_PROFILE=1` | Log the frame time, frames a second and memory use every 120 frames. |
 | `OPENTPW_TEXT_CENSUS=1` | Log every piece of interface text with its drawn size and box. |
 
