@@ -951,7 +951,8 @@ public static class ParkTrackTool
 	/// </summary>
 	/// <returns>
 	/// What the ride's <c>mIsTrackRideValid</c> (<c>+0x2c</c>) takes, 1 for a closed circuit, else 0; and how many cells
-	/// it stepped from, the count each cell's <c>+0x24</c> takes in the original (<c>FUN_0053aef0</c>), not kept here.
+	/// it stepped from, the count each cell's <c>+0x24</c> takes in the original (<c>FUN_0053aef0</c>), not kept here (a file written from this walk holds 0xffff in each anchor, counted
+	/// <c>SAVE_PARK_TRACK_SEGMENT</c>).
 	/// </returns>
 	/// <param name="addOnCaps">
 	/// What shows and hides an add-on's end caps, given its thing and the bits (<see cref="ParkObjects.ShowAddOnCaps"/>

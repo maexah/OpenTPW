@@ -371,6 +371,11 @@ public static class ParkBuilding
 			StateOfRepair: 100f,
 			RemainingLife: 100f,
 			TrackRide: trackRide,
+
+			// mIsTrackRideValid: the constructor writes 1 (0x004db0df) and the place commit zeroes it for any item with a
+			// queue and a track type, a coaster as well as a kart or water ride (0x00524daa, 0x00524db7, 0x00524de1,
+			// 0x005251b8); the track tool sets it again when the loop closes.
+			IsTrackRideValid: item.HasQueue && item.TrackType != 0 ? 0 : 1,
 			Built: built );
 	}
 

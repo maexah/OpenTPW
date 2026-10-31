@@ -14,10 +14,16 @@ namespace OpenTPW;
 /// <param name="Performance">The record's <c>+0x1c</c>, which the loader hands <c>Bumper_SetPerformance</c>.</param>
 /// <param name="MeshBase">Its <c>+0x14</c>: the first supplemental mesh a car is.</param>
 /// <param name="MeshCount">Its <c>+0x18</c>: how many a car cycles through.</param>
-/// <param name="Duration">Its <c>+0x04</c>: what a car's timer is set to, in track ticks.</param>
+/// <param name="Duration">Its <c>+0x04</c>: what a car's timer is set to, in track ticks, or for a kart or water ride minus the laps it lasts when negative (<c>docs/exe/park.md</c>, "The two templates").</param>
 /// <param name="State">Its <c>+0x50</c>: 0 closed, 1 loading, 2 running.</param>
+/// <param name="Sections">
+/// The sections of its list in circuit order, each its type dword and its cell times <c>0xc00</c>, for a ride written
+/// whole (<see cref="ParkTrackRides.RideChunks(SavedTrackRide)"/>); null for one read, whose sections are
+/// <see cref="ParkTrackRides.Sections"/>, and for one written over where it lies.
+/// </param>
 public readonly record struct SavedTrackRide( int Handle, int X, int Y, int Orientation, int ItemId,
-	int Performance = 0, int MeshBase = 0, int MeshCount = 0, int Duration = 0, int State = 0 );
+	int Performance = 0, int MeshBase = 0, int MeshCount = 0, int Duration = 0, int State = 0,
+	IReadOnlyList<(int Type, int X, int Y)>? Sections = null );
 
 /// <summary>
 /// One section of track as a park save left it.
@@ -92,7 +98,7 @@ public sealed record WrittenTrackRide( SavedTrackRide Ride, IReadOnlyList<SavedT
 /// </para>
 /// <para>
 /// <b>Written</b> by <see cref="Splice"/> (<c>docs/exe/saves.md</c>, "OpenTPW's writer, a track ride's record"): a
-/// ride made since the load goes in as its record and its close, and one gone is taken out with every chunk under
+/// ride made since the load goes in as its record, the sections it has laid and its close, and one gone is taken out with every chunk under
 /// its handle; one with a car out is taken out and put in again as it runs, its cars, their riders and its two
 /// lists with it (<c>docs/exe/saves.md</c>, "OpenTPW's writer, a track ride's cars").
 /// </para>
@@ -119,6 +125,9 @@ public sealed class ParkTrackRides
 
 	/// <summary>A close chunk's size: the header and the handle.</summary>
 	private const int CloseSize = 16;
+
+	/// <summary>A section chunk's size: the header, the handle, the type dword and the cell.</summary>
+	private const int SectionSize = 28;
 
 	/// <summary>A car chunk's size: the header, the handle, the car's bytes and five dwords.</summary>
 	private const int CarSize = HeaderSize + 4 + SavedTrackCar.Size + 20;
@@ -299,27 +308,34 @@ public sealed class ParkTrackRides
 	public int CarsOf( int handle ) => _chunks.Count( chunk => chunk.Type == CarType && chunk.Handle == handle );
 
 	/// <summary>
-	/// A ride's record and its close as the original's writer leaves them for a ride with no section, no car and
-	/// nobody on its lists (<c>FUN_005428e0</c>): the type 3 chunk, then the type 6.
+	/// A ride's record, each section of its list and its close as the original's writer leaves them for a ride with
+	/// no car and nobody on its lists (<c>FUN_005428e0</c>): the type 3 chunk, a type 4 for each section in circuit
+	/// order, then the type 6.
 	/// </summary>
 	public static byte[] RideChunks( SavedTrackRide ride )
 	{
-		var chunks = new byte[RideSize + CloseSize];
+		var sections = ride.Sections ?? [];
+		var chunks = new byte[RideSize + (sections.Count * SectionSize) + CloseSize];
 
-		int[] record =
-		[
+		var record = new List<int>
+		{
 			RideType, RideSize, RideSize, ride.Handle, ride.X, ride.Y, ride.Orientation, ride.ItemId, ride.Performance,
-			ride.MeshBase, ride.MeshCount, ride.Duration, ride.State, CloseType, CloseSize, CloseSize, ride.Handle
-		];
+			ride.MeshBase, ride.MeshCount, ride.Duration, ride.State
+		};
 
-		Buffer.BlockCopy( record, 0, chunks, 0, chunks.Length );
+		foreach ( var (type, x, y) in sections )
+			record.AddRange( [SectionType, SectionSize, SectionSize, ride.Handle, type, x, y] );
+
+		record.AddRange( [CloseType, CloseSize, CloseSize, ride.Handle] );
+
+		Buffer.BlockCopy( record.ToArray(), 0, chunks, 0, chunks.Length );
 
 		return chunks;
 	}
 
 	/// <summary>
-	/// A ride's chunks as the original's writer leaves them for a ride with no section (<c>FUN_005428e0</c>): its
-	/// record (3); each car (5) followed by a chunk for each of its riders (9); a chunk for each peep of the leaving
+	/// A ride's chunks as the original's writer leaves them (<c>FUN_005428e0</c>): its
+	/// record (3); each section (4); each car (5) followed by a chunk for each of its riders (9); a chunk for each peep of the leaving
 	/// list (7), then of the boarding list (8); and the close (6). No chunk holds another: each one's whole size is
 	/// its own.
 	/// </summary>
@@ -340,7 +356,8 @@ public sealed class ParkTrackRides
 			writer.Write( handle );
 		}
 
-		writer.Write( RideChunks( written.Ride ), 0, RideSize );
+		// The ride's record and its sections; the close follows the cars and the lists.
+		writer.Write( RideChunks( written.Ride ), 0, RideSize + ((written.Ride.Sections?.Count ?? 0) * SectionSize) );
 
 		foreach ( var car in written.Cars )
 		{

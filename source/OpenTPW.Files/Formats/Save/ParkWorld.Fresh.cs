@@ -11,8 +11,9 @@ public sealed partial class ParkWorld
 
 	/// <summary>
 	/// What a cell's track record holds that <see cref="MapCell"/> does not: its model (<c>mMeshInstance</c>, the boundary's
-	/// piece's slot plus one), its <c>mHoardingNeighbours</c>, and the segment number, <c>0xffff</c> on every cell of every
-	/// file measured.
+	/// piece's slot plus one), its <c>mHoardingNeighbours</c>, and the segment number: <c>0xffff</c> on every cell of the shipped park, where a played file holds the
+	/// walk's step on each kart or water anchor (<c>FUN_0053aef0</c>; <c>docs/exe/saves.md</c>, "OpenTPW's writer, a kart's or water
+	/// ride's record"), which the writer does not keep (<c>SAVE_PARK_TRACK_SEGMENT</c>).
 	/// </summary>
 	public readonly record struct TrackExtras( int MeshInstance = 0, byte HoardingNeighbours = 0, ushort Segment = 0xffff );
 

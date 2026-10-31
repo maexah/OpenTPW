@@ -64,8 +64,134 @@ public sealed class ParkTrackRideTable
 	/// <summary>Each slot's buoys in the order laid (<c>+0xa8</c>, linked through <c>+0x14</c>; the count <c>+0xac</c>).</summary>
 	private readonly List<Buoy>[] _buoys = new List<Buoy>[Slots];
 
+	/// <summary>Each slot's kart or water ride record, null for any other ride - see <see cref="KartRide"/>.</summary>
+	private readonly KartRide?[] _kart = new KartRide?[Slots];
+
 	/// <summary>The bumper family's records and the cars every ride shares - see <see cref="ParkBumperCars"/>.</summary>
 	public ParkBumperCars Cars { get; }
+
+	/// <summary>
+	/// The words of a kart or water ride's <c>0xd0</c> entry that a park file keeps (<c>FUN_005428e0</c>'s type 3:
+	/// <c>+0x1c</c>, <c>+0x14</c>, <c>+0x18</c>, <c>+0x04</c>, <c>+0x50</c>) and the place the placer put it at
+	/// (<c>+0xb4</c>, <c>+0xb8</c>). The karts' scripts run no <c>BUMP</c> here (Q587), so no state or car moves them:
+	/// a ride holds the template's words and its speed word's performance, and a loaded one the file's. Two
+	/// deviations, written out as they stand: a speed set in the ride's window after the bind is not pushed into
+	/// <c>Performance</c> (the original's scheduler pushes it into <c>+0x1c</c>; the next visit of the ride's script heals
+	/// it), and an opened ride writes <c>State</c> 0, <c>Duration</c> the template's and no car, where the original holds
+	/// state 1 or 2 and <c>BUMP 14</c>'s value (<c>docs/exe/saves.md</c>, "OpenTPW's writer, a kart's or water ride's record").
+	/// <c>docs/exe/park.md</c>, "The two templates".
+	/// </summary>
+	public sealed class KartRide
+	{
+		public int Performance { get; internal set; }
+
+		public int MeshBase { get; init; }
+
+		public int MeshCount { get; init; }
+
+		public int Duration { get; internal set; }
+
+		public int State { get; internal set; }
+
+		/// <summary>Where the placer put it, in map cells times <c>0xc00</c>.</summary>
+		public int X { get; internal set; }
+
+		public int Y { get; internal set; }
+
+		/// <summary>Whether <see cref="X"/> and <see cref="Y"/> are the park's: a ride made is placed by its object's bind, one loaded came so.</summary>
+		public bool Placed { get; internal set; }
+	}
+
+	/// <summary>
+	/// The templates the kart and water rides of Lost Kingdom are made from (<c>0x764178</c>, read from the executable's
+	/// data): the Dino Karts' -4 lasts -3 laps and cycles 4 meshes from 0, the water ride's -5 lasts -1 and has the one;
+	/// both start at performance 50. Another theme's kart or water ride has no template here: it is left out at the save, counted
+	/// <c>SAVE_PARK_OBJECT_BOUGHT</c>, and its sections <c>TRACK_SECTION_TEMPLATE_n</c> when laid.
+	/// </summary>
+	private static KartRide? KartFor( int bumperType ) => bumperType switch
+	{
+		-4 => new KartRide { Performance = 50, MeshBase = 0, MeshCount = 4, Duration = -3 },
+		-5 => new KartRide { Performance = 50, MeshBase = 0, MeshCount = 1, Duration = -1 },
+		_ => null
+	};
+
+	/// <summary>A kart or water ride's record, or null for a stale handle or a ride of another kind.</summary>
+	public KartRide? KartOf( int handle ) => Holds( handle ) ? _kart[handle & 0xff] : null;
+
+	/// <summary>
+	/// A kart or water ride as a park file's track-rides module takes it whole: its record and its sections in
+	/// circuit order. Null for a handle that names none, or one not yet placed.
+	/// </summary>
+	public SavedTrackRide? KartWritten( int handle, int angle, int itemId )
+	{
+		if ( KartOf( handle ) is not { Placed: true } ride )
+			return null;
+
+		var orientation = angle switch { 90 => 5, 180 => 6, 270 => 1, _ => 0 };
+
+		return new SavedTrackRide( handle, ride.X, ride.Y, orientation, itemId, ride.Performance, ride.MeshBase, ride.MeshCount,
+			ride.Duration, ride.State, SectionsOf( handle ).ToArray() );
+	}
+
+	/// <summary>How a park file's writer takes a kart or water ride (<see cref="KartToWrite"/>).</summary>
+	public enum KartWriting
+	{
+		/// <summary>Made since the load: its record and sections are put into the module.</summary>
+		Made,
+
+		/// <summary>The file's, carless, with the file's sections: its five words are written over where they lie.</summary>
+		Over,
+
+		/// <summary>The file's, carless, with sections laid since: taken out of the module and written again whole.</summary>
+		Whole,
+
+		/// <summary>The file's, with cars in the file: left as the file has it, counted.</summary>
+		AsTheFile
+	}
+
+	/// <summary>
+	/// What a park file's writer does with a kart or water ride, and the record to write: null for a handle that names
+	/// none here. A car in the file keeps it the file's (the cars of a kart are the file's: Q993), as the sections it
+	/// has gained since are not written over a record that holds cars.
+	/// </summary>
+	/// <param name="loaded">The file's track-rides module where the file holds this ride, null for a ride made since the load.</param>
+	public (KartWriting How, SavedTrackRide? Ride)? KartToWrite( int handle, int angle, int itemId, ParkTrackRides? loaded )
+	{
+		if ( KartWritten( handle, angle, itemId ) is not { } ride )
+			return null;
+
+		if ( loaded == null )
+			return (KartWriting.Made, ride);
+
+		if ( loaded.CarsOf( handle ) != 0 )
+			return (KartWriting.AsTheFile, null);
+
+		var held = loaded.Sections.Where( section => section.Handle == handle ).Select( section => (section.Type, section.X, section.Y) );
+
+		return ride.Sections!.SequenceEqual( held ) ? (KartWriting.Over, ride with { Sections = null }) : (KartWriting.Whole, ride);
+	}
+
+	/// <summary>
+	/// Places a kart or water ride made here where the placer put it and gives it its speed word's performance (the
+	/// object constructor's push, <c>0x004db534</c>). A ride loaded keeps the file's.
+	/// </summary>
+	internal void PlaceKart( int handle, int x, int y, int speedWord )
+	{
+		if ( KartOf( handle ) is not { } ride )
+			return;
+
+		if ( ride.Placed )
+		{
+			Log.Info( $"Track rides: 0x{handle:x8} is the file's, at ({ride.X / 0xc00},{ride.Y / 0xc00}); the placer's formula gives ({x / 0xc00},{y / 0xc00})"
+				+ ((ride.X, ride.Y) == (x, y) ? ", the same" : ", not the same") );
+			return;
+		}
+
+		ride.X = x;
+		ride.Y = y;
+		ride.Performance = Math.Clamp( speedWord, 0, 100 );
+		ride.Placed = true;
+	}
 
 	/// <param name="saved">The save's track-rides module, or null for a park with none.</param>
 	public ParkTrackRideTable( ParkTrackRides? saved = null )
@@ -133,6 +259,14 @@ public sealed class ParkTrackRideTable
 		Cars.Open( ride.Handle, bumperType );
 		Cars.Place( ride.Handle, ride.X + (ParkBumperCars.CellUnits / 2), ride.Y + (ParkBumperCars.CellUnits / 2) );
 		Cars.Restore( ride );
+
+		_kart[slot] = KartFor( bumperType ) is not null
+			? new KartRide
+			{
+				Performance = ride.Performance, MeshBase = ride.MeshBase, MeshCount = ride.MeshCount, Duration = ride.Duration,
+				State = ride.State, X = ride.X, Y = ride.Y, Placed = true
+			}
+			: null;
 	}
 
 	/// <summary>
@@ -350,6 +484,7 @@ public sealed class ParkTrackRideTable
 			_bumperType[slot] = bumperType;
 			_sections[slot].Clear();
 			_buoys[slot].Clear();
+			_kart[slot] = KartFor( bumperType );
 			Cars.Open( HandleOf( slot ), bumperType );
 
 			return HandleOf( slot );

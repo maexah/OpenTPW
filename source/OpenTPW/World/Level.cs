@@ -884,10 +884,10 @@ public class Level
 		// original's file holds each one, and the file's own puffs stay as the file has them.
 		//
 		// A track ride is written where its record in the track-rides module can be: a ride of the bumper family
-		// with a record here, made, with its cars; and one of the file's, taken out, with no car under its handle
-		// or of that family (docs/exe/saves.md, "OpenTPW's writer, a track ride's record" and "a track ride's
-		// cars"). A ride with no record here (the karts, the water ride) with a car, and a tracked ride, stay as
-		// the file has them, counted.
+		// with a record here, made, with its cars; a kart or water ride, made, with its sections; and one of the
+		// file's, taken out, with no car under its handle or of that family (docs/exe/saves.md, "OpenTPW's writer, a
+		// track ride's record", "a track ride's cars" and "a kart's or water ride's record"). A kart or water ride of
+		// the file's with a car, and a coaster, stay as the file has them, counted.
 		bool FileRideWritable( int handle )
 			=> loaded.TrackRides.ClosedOnTag && (loaded.TrackRides.CarsOf( handle ) == 0 || ParkBumperCars.HasRecord( handle >> 8 ));
 
@@ -902,12 +902,12 @@ public class Level
 				return FileRideWritable( thing.TrackRide );
 
 			// A ride of the file's sold and left in the file keeps its slot there, and no ride made takes it.
-			return state.TrackRides.Cars.RideOf( thing.TrackRide ) != null
+			return (state.TrackRides.Cars.RideOf( thing.TrackRide ) != null || state.TrackRides.KartOf( thing.TrackRide ) != null)
 				&& loaded.TrackRides.Rides.All( ride => (ride.Handle & 0xff) != (thing.TrackRide & 0xff) || FileRideWritable( ride.Handle ) );
 		}
 
 		Func<ParkWorld.CatalogueObject, bool>? writable = rides != null && people != null && catalogue != null
-			? thing => catalogue.TryGet( thing.CatalogueId, out var item ) && item.TrackType == 0
+			? thing => catalogue.TryGet( thing.CatalogueId, out var item ) && WritesTrackKind( item.TrackType ) && !ParkTrackAddOn.Is( item )
 				&& (item.BumperType != 0) == (thing.TrackRide != 0) && TrackWritable( thing )
 				&& ParkObjectNames.Lines( thing.CatalogueId, names ) != null
 			: null;
@@ -928,7 +928,7 @@ public class Level
 
 		var things = rides?.Written( loaded, objects,
 			id => catalogue?.ChannelsFor( id ) ?? 1, state.HoardingFor,
-			bought, gone, state.BuiltItems );
+			bought, gone, state.WrittenBuilt( loaded, made, gone ) );
 
 		// Each track ride made or gone, for the track-rides module, and each of the file's still standing. One with
 		// no car in the file and none out here is written over where it lies, or put in; one with a car, here or in
@@ -941,9 +941,35 @@ public class Level
 			var whole = new List<ParkFileWriter.WrittenTrack>();
 			var bumpers = state.TrackRides.Cars;
 
-			void Take( ParkWorld.CatalogueObject thing, List<SavedTrackRide> carless )
+			void Take( ParkWorld.CatalogueObject thing, List<SavedTrackRide> carless, bool fromFile )
 			{
-				if ( bumpers.Written( thing.TrackRide, thing.Angle, thing.CatalogueId ) is not { } record )
+				var written = bumpers.Written( thing.TrackRide, thing.Angle, thing.CatalogueId );
+
+				if ( written is null && state.TrackRides.KartToWrite( thing.TrackRide, thing.Angle, thing.CatalogueId,
+					fromFile ? loaded.TrackRides : null ) is var (how, kart) )
+				{
+					// A kart or water ride has no car here: its record and its sections go out whole where it was made, and
+					// where the file's own is carless, over it - the five words alone while its sections are the file's.
+					switch ( how )
+					{
+						case ParkTrackRideTable.KartWriting.AsTheFile:
+							Log.Info( $"Save: track ride {thing.TrackRide} (thing {thing.ThingId}, catalogue {thing.CatalogueId}) has cars in the file, so it stays the file's" );
+							Unimplemented.Report( "SAVE_PARK_TRACK_RIDE_AS_THE_FILE" );
+							break;
+
+						case ParkTrackRideTable.KartWriting.Whole:
+							whole.Add( new ParkFileWriter.WrittenTrack( kart!.Value, [], [], [] ) );
+							break;
+
+						default:
+							carless.Add( kart!.Value );
+							break;
+					}
+
+					return;
+				}
+
+				if ( written is not { } record )
 				{
 					Log.Info( $"Save: track ride {thing.TrackRide} (thing {thing.ThingId}, catalogue {thing.CatalogueId}) has no record in the bumper cars, so it stays the file's" );
 					Unimplemented.Report( "SAVE_PARK_TRACK_RIDE_AS_THE_FILE" );
@@ -968,10 +994,10 @@ public class Level
 			}
 
 			foreach ( var thing in objects.Where( thing => thing.TrackRide != 0 ) )
-				Take( thing, kept );
+				Take( thing, kept, fromFile: true );
 
 			foreach ( var thing in made.Where( thing => thing.TrackRide != 0 ) )
-				Take( thing, bare );
+				Take( thing, bare, fromFile: false );
 
 			things = things with
 			{
@@ -1357,10 +1383,21 @@ public class Level
 			if ( SameGround( was, now ) )
 				continue;
 
-			// A kart or water piece laid here is written as its track record; its model record is not made, so the original
-			// loading the file draws no piece there.
+			// A kart or water piece first laid here (not one the file holds already, whose word the file keeps) is written as its
+			// track record; its model record is not made, so the original loading the file draws no piece there, and its segment
+			// word is written 0xffff where the original's walk stores the
+			// step (FUN_0053aef0, called at 0x0052b295), which the closed-loop edit compares (FUN_0053aec0's callers,
+			// 0x005268d4..0x005268e6): docs/exe/saves.md, "OpenTPW's writer, a kart's or water ride's record".
 			if ( ParkTrackPieces.IsPieceAnchor( now.TrackType ) && (was.TrackType, was.TrackTileIndex) != (now.TrackType, now.TrackTileIndex) )
+			{
 				Unimplemented.Report( "SAVE_PARK_TRACK_PIECE_MODEL" );
+				Unimplemented.Report( "SAVE_PARK_TRACK_SEGMENT" );
+			}
+
+			// A file's kart or water piece cleared here (a ride sold bare, or a run taken back) leaves the model its record
+			// named in the file: the writer frees no slot for it, so it stays a piece model nothing owns.
+			if ( ParkTrackPieces.IsPieceAnchor( was.TrackType ) && !ParkTrackPieces.IsPieceAnchor( now.TrackType ) )
+				Unimplemented.Report( "SAVE_PARK_TRACK_PIECE_MODEL_LEFT" );
 
 			var footprintWas = IsFootprint( was.Type );
 			var footprintNow = IsFootprint( now.Type );
@@ -1401,6 +1438,14 @@ public class Level
 				pieces[index] = queueNow ? new ParkFileWriter.QueuePiece( now.TileIndex, now.TileAngle ) : null;
 		}
 	}
+
+	/// <summary>
+	/// Whether the objects of an item of this <c>Bumper.WhichTrackType</c> are written when bought or sold: those of no
+	/// track, the karts' car track (1) and the water ride's (2). A coaster (3) stays out, counted
+	/// (<c>SAVE_PARK_OBJECT_BOUGHT</c>), and so do the track add-ons, whose items hold TrackType 1 as well
+	/// (<see cref="ParkTrackAddOn.Is"/>, <c>writable</c> asks), undeclared and unrun.
+	/// </summary>
+	internal static bool WritesTrackKind( int trackType ) => trackType != ItemDescriptionFile.CoasterTrack;
 
 	private static bool IsFootprint( int type ) => type is CellEdge.Footprint or CellEdge.RideEnd or CellEdge.RideFarEnd;
 

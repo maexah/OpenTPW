@@ -700,7 +700,7 @@ public sealed class ParkState
 	///
 	/// <para>
 	/// <b>Only a thing <paramref name="writable"/> passes is written so.</b> Any other (a track ride of a
-	/// BumperType with no record here, a tracked ride) is counted and left as it was: one sold stays in the file, one bought is not in it.
+	/// BumperType whose template is not read here, another theme's, or a coaster) is counted and left as it was: one sold stays in the file, one bought is not in it.
 	/// With no test given nothing is made or taken out.
 	/// </para>
 	/// </summary>
@@ -777,6 +777,53 @@ public sealed class ParkState
 
 	/// <summary>Every item's standing count and first-build stamp as the park runs them, for a park file's object controls.</summary>
 	internal IReadOnlyDictionary<int, (int Standing, uint FirstBuilt)> BuiltItems => _built;
+
+	/// <summary>
+	/// <see cref="BuiltItems"/> as the written file stands: an object bought and left out of the file
+	/// (<c>SAVE_PARK_OBJECT_BOUGHT</c>) is not counted in it, and an object of the file's that is sold and kept in it
+	/// (<c>SAVE_PARK_OBJECT_SOLD</c>) is, so the control's count agrees with the objects that stand there
+	/// (<c>docs/exe/saves.md</c>, "OpenTPW's writer, a thing bought and a thing sold"). An item whose only builds were
+	/// left out takes the file's own first-build stamp back.
+	/// </summary>
+	/// <param name="loaded">The file the park came from.</param>
+	/// <param name="made">The objects bought since the load that are written.</param>
+	/// <param name="gone">The ids of the file's objects sold and taken out of the file.</param>
+	internal IReadOnlyDictionary<int, (int Standing, uint FirstBuilt)> WrittenBuilt( ParkWorld loaded,
+		IReadOnlyCollection<ParkWorld.CatalogueObject> made, IReadOnlySet<int> gone )
+	{
+		var standing = new HashSet<int>( loaded.Objects.Where( file => !_deletedSinceLoad.Contains( file.ThingId ) && TryObject( file.ThingId, out _ ) )
+			.Select( file => file.ThingId ) );
+
+		var madeIds = made.Select( thing => thing.ThingId ).ToHashSet();
+		var result = new Dictionary<int, (int Standing, uint FirstBuilt)>( _built );
+		var touched = new HashSet<int>();
+
+		foreach ( var left in _objects.Where( thing => !standing.Contains( thing.ThingId ) && !madeIds.Contains( thing.ThingId ) ) )
+		{
+			result[left.CatalogueId] = (result[left.CatalogueId].Standing - 1, result[left.CatalogueId].FirstBuilt);
+			touched.Add( left.CatalogueId );
+		}
+
+		foreach ( var kept in loaded.Objects.Where( file => !standing.Contains( file.ThingId ) && !gone.Contains( file.ThingId ) ) )
+		{
+			result[kept.CatalogueId] = (result.GetValueOrDefault( kept.CatalogueId ).Standing + 1, result.GetValueOrDefault( kept.CatalogueId ).FirstBuilt);
+			touched.Add( kept.CatalogueId );
+		}
+
+		foreach ( var item in touched )
+		{
+			var (count, stamp) = result[item];
+			var file = loaded.ObjectControlRecords.Cast<ParkWorld.ObjectControl?>().FirstOrDefault( record => record!.Value.ItemId == item );
+
+			// Nothing of the item was built that the file holds: its stamp is the file's.
+			if ( file != null && !made.Any( thing => thing.CatalogueId == item ) )
+				stamp = file.Value.FirstBuilt;
+
+			result[item] = (count, stamp);
+		}
+
+		return result;
+	}
 
 	/// <summary>
 	/// The State of repair below which a toilet is dirty - 25.0 (<c>0x00700550</c>), which the original holds the

@@ -646,6 +646,52 @@ public class ParkFileWriterBoughtAndSoldTests
 	}
 
 	/// <summary>
+	/// The standing count a file's control holds is of the objects the file holds: a thing bought and left out is not
+	/// in it, a sold one the file keeps is, and the stamp of an item built only in what is left out is the file's.
+	/// </summary>
+	[TestMethod]
+	public void TheStandingCountIsOfTheObjectsTheFileHolds()
+	{
+		var state = new ParkState( shipped );
+		var fileApe = shipped.ObjectControlRecords.Single( record => record.ItemId == CrazyApe );
+		var fileCamera = shipped.ObjectControlRecords.Single( record => record.ItemId == CameraItem );
+
+		Buy( state, null, CrazyApe, 41, 22 );
+		Buy( state, null, CameraItem, 46, 27 );
+
+		Assert.IsTrue( state.RemoveObject( 18 ) );
+
+		state.WrittenObjects( shipped, thing => thing.CatalogueId != CameraItem, out var bought, out var gone );
+
+		var running = state.BuiltItems;
+		var written = state.WrittenBuilt( shipped, bought, gone );
+
+		Assert.AreEqual( fileApe.Standing + 1, written[CrazyApe].Standing, "the ape is written" );
+		Assert.AreEqual( running[CrazyApe], written[CrazyApe], "and counted as it runs" );
+
+		// The camera bought is left out and the camera sold is kept: the file holds what it held.
+		Assert.AreEqual( fileCamera.Standing, running[CameraItem].Standing, "the running count: one bought, one sold" );
+		Assert.AreEqual( fileCamera.Standing, written[CameraItem].Standing, "the written count: the bought not in it, the sold in it" );
+		Assert.AreEqual( fileCamera.FirstBuilt, written[CameraItem].FirstBuilt );
+	}
+
+	[TestMethod]
+	public void AnItemBoughtOnlyInWhatIsLeftOutTakesTheFilesCountAndStampBack()
+	{
+		var state = new ParkState( shipped );
+		var fileApe = shipped.ObjectControlRecords.Single( record => record.ItemId == CrazyApe );
+
+		Buy( state, null, CrazyApe, 41, 22 );
+
+		// Here the ape will not write: the running count and its stamp (the file's is nought) are the park's, the written the file's.
+		state.WrittenObjects( shipped, thing => thing.CatalogueId != CrazyApe, out var bought, out var gone );
+
+		Assert.AreEqual( (fileApe.Standing + 1, (uint)state.GameTick), state.BuiltItems[CrazyApe] );
+		Assert.AreEqual( 0u, fileApe.FirstBuilt, "the file's ape was never built" );
+		Assert.AreEqual( (fileApe.Standing, fileApe.FirstBuilt), state.WrittenBuilt( shipped, bought, gone )[CrazyApe] );
+	}
+
+	/// <summary>
 	/// A sold thing the file keeps (the camera, which here will not write) keeps its id there: a thing bought on the
 	/// id is counted and not handed over, and nothing is taken out.
 	/// </summary>

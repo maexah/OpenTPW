@@ -2696,6 +2696,12 @@ public static class DebugConsole
 					Reply( $"track ride 0x{trackRide.TrackRide:x} thing {trackRide.ThingId} +0x2c {trackRide.IsTrackRideValid} "
 						+ $"can load {trackRide.CanLoad} sections {sections.Count}" );
 
+					if ( ParkState.Current!.TrackRides.KartOf( trackRide.TrackRide ) is { } kart )
+					{
+						Reply( $"  kart record: performance {kart.Performance} mesh {kart.MeshBase}+{kart.MeshCount} duration {kart.Duration} "
+							+ $"state {kart.State} at ({kart.X / 0xc00},{kart.Y / 0xc00}) placed {kart.Placed}" );
+					}
+
 					var buoys = ParkState.Current!.TrackRides.BuoysOf( trackRide.TrackRide );
 
 					Reply( $"    buoys {buoys.Count}" );
@@ -2764,6 +2770,26 @@ public static class DebugConsole
 							+ (meshesModel.PosedLocal( node ) is null ? " rest" : "") );
 					}
 				}
+
+				break;
+
+			// Each item's standing count and first-build stamp (ParkState.BuiltOf): the items named, or every item with a count
+			// or a stamp. What a park file's object controls hold (Q858).
+			case "built":
+				if ( ParkState.Current is not { } builtState )
+				{
+					Reply( "built: a park has to be loaded" );
+					break;
+				}
+
+				var builtAsked = parts.Skip( 1 ).Select( part => int.TryParse( part, out var itemId ) ? itemId : -1 ).ToArray();
+				var counted = (builtAsked.Length > 0 ? builtAsked : builtState.BuiltItems.Keys.Order().ToArray()).Select( itemId => (Id: itemId, Built: builtState.BuiltOf( itemId )) )
+					.Where( entry => builtAsked.Length > 0 || entry.Built != default ).ToArray();
+
+				Reply( $"built {counted.Length}" );
+
+				foreach ( var (itemId, built) in counted )
+					Reply( $"  item {itemId} standing {built.Standing} first built {built.FirstBuilt}" );
 
 				break;
 

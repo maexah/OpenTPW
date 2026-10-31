@@ -2008,7 +2008,7 @@ the two the original does not survive (`TRACK_SECTION_OUT_OF_OBJECTS`, its pool 
 (`q766/ours-b`), by Q581's clicks: both loops' buoys and objects as the two logs' (earlier evidence, the original not
 run for Q766).
 
-**The two templates** (`0x764178`, "How a bumper ride ends a go"): −4 duration −3 (laps), car radius 900, `w` 2048,
+**The two templates** (`0x764178`, "How a bumper ride ends a go"; the duration, meshes and performance of all 14 records are in `saves.md`, "OpenTPW's writer, a kart's or water ride's record", read by `lib/bumpertemplates.py`): −4 duration −3 (laps), car radius 900, `w` 2048,
 meshes 4 from 0 (`gk_blue`, `gk_green`, `gk_orange`, `gk_purple`), thrust 16–30, friction 960–950, turn 18–34,
 restitution 900, most cars 8, arrival radius 2048; −5 duration −1, radius 1024, `w` 1281, one mesh (`wr_ring`), 4–9,
 970–1000, 7–14, 980, most 64, arrival 512. At 60, measured: 24, 954, 27, 900 and 7, 988, 11, 980. `Bumper_LayRide`

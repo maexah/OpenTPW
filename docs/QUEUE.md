@@ -2008,8 +2008,8 @@ filed the items that cite it.
 - [ ] **Q734. A test for `Level.TrackWritable`'s `!state.DeletedSinceLoad.Contains` term.** From the run 7 review of
   Q606 (VERIFY-13, Q606 4). Tried and not written: a Hot Pot (the one jungle ride with a track record) and a kart ride
   bought on a sold shop's id both pass with the term removed, because on Lost Kingdom data a bumper-family ride made
-  always has a record here, so the file's judgement (`FileRideWritable`) and the made one agree; the karts are refused
-  earlier by the writable predicate. Needs a case where the two differ: a ride made whose record is not in this park's
+  always has a record here, so the file's judgement (`FileRideWritable`) and the made one agree; a kart on a reused id
+  reaches `TrackWritable` since Q858 (`CarsOf` is 0 either way, so the two branches still agree). Needs a case where the two differ: a ride made whose record is not in this park's
   table on a reused id (another theme's bumper family, `HasRecord` false), or Q420's teardown. Write it with that case
   and show it failing with the term removed.
 - [ ] **Q735. A walk rider's saved sprite.** From Q585 5 (VERIFY-14). `ParkPeople.Written` keeps a sprite for a rider of
@@ -2429,28 +2429,35 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   constructor clears `0x3d` dwords (`0x005588a8`); `ADDHEAD` (`0x00554c8f`..`0x00554cd3`) asks for a free slot first, redraws until it gets
   0 and does no duplicate test; `NAME` is `0x0055429a`, with -1 at `0x00558c4c`. Compare with `RideScript` and `park.md`, "The head
   table", and file what differs.
-- [ ] **Q993. What a written park leaves out has no owner: a bought kart, water or tracked ride, and fifteen counted names.** From the
-  week-end audit 2026-10-31 (S-D1, S-S1, the Standing count; N8 of the docs sweep). `ParkState.cs:769-772`: the else of `writable( now )`
-  only counts `SAVE_PARK_OBJECT_BOUGHT`, so the thing is left out; `Level.cs:909-912` makes `writable` need `TrackType == 0` and a bumper
-  record. What goes out is a mix: the object, its script and its model are left out, the footprint cells stay the file's (`Level.cs:1368-1372`,
-  `SAVE_PARK_FOOTPRINT_CELL`), the track cells are written (`:1355-1361`, `:1381-1382`), and the balance goes out as it runs (`:1023`), so the
-  price stays spent: Dino Karts bought, Exit To Lobby, enter again, and the money is gone with track cells that nothing owns (by reading;
-  `ParkTrackPieces.cs:320-336`, `PieceAt` needs only the cell). `AddObject` counts every buy (`ParkState.cs:553`) and `BuiltItems` goes out
-  whenever anything else structural does (`Level.cs:931`, `ParkFileWriter.cs:491-492`), so a kart plus a shop writes Standing +1 for a kart
-  with no kart in the file, and the load seeds it (`ParkState.cs:897`); read by `ParkWorth.cs:52`, `ParkGoldenTickets.cs:177`
-  (`EverythingDone`), `ParkItemsScreen.cs:368`, `ParkPeople.cs:2978` (inferred, not run). The original writes the object whole in its park file
-  (`saves.md`, "OpenTPW's writer", the object module; its controls are `FUN_004d3aa0`'s). The owner named was Q420, ticked (`queue-done.md:8157`; its leftovers
-  Q539 are the refusal latch's, not the writer's): STATUS's "(Q420, ...)" now reads Q803 and this item, DOES-NOT's writer gaps (a boat's sound and wake, a coaster's or a tour's new head, the riders' puffs) are this item's, and QUEUE `:1593`, `:1955` and `:2066`
-  ("filed under Q420", "Q420's gap", "Q420's teardown") mean this item. Four open items were tried as owners and none is (Q587 the piece
-  model, Q607 and Q734 cite the gap, Q727(4) the pylon chain). The counted names with no owner, by a raw name match against this file:
+- [ ] **Q993. What a written park still leaves out: a bought coaster, a kart's cars and pieces' models, and the counted names.** From the
+  week-end audit 2026-10-31 (S-D1, S-S1, the Standing count; N8 of the docs sweep). **Done as Q858:** a bought kart or water ride is written whole
+  (the object, script, model, footprint cells, the ride's record and sections) and the Standing count is of the objects the file holds
+  (`ParkState.WrittenBuilt`: what is left out is not counted in it, a sold object the file keeps is). **Left:** (1) **A coaster bought**
+  (`item.TrackType` 3: `Level.WritesTrackKind`) is counted (`SAVE_PARK_OBJECT_BOUGHT`) and not written, with its pylon chain (Q727(4)) and its
+  track pieces. (2) **A loaded kart with cars** (`SAVE_PARK_TRACK_RIDE_AS_THE_FILE`, `review17/q849/SECOND.md` D3) stays the file's with its cars
+  while every `BUMP` is a no-op for a kart here, so the script walks the riders off and spins at word 15 where the file held it at word 197 (`VAR_ONRIDE`
+  4, `VAR_RUNNING` 1): the written file contradicts itself (`saves.md:1522`, "a file agrees with itself"). Write the kart's record from what runs, with
+  its cars, or run the kart's script as the original does; the original ran on with the file, whether the four seated riders ever get off there is not
+  read. (3) **The kart's and the water ride's pieces' models** (`SAVE_PARK_TRACK_PIECE_MODEL`, 16 for the two loops of Q858's run): a track piece is a
+  model record like a queue piece's (`TrackKit_LoadKartPieces`, `TrackKit_LoadWaterPieces`, "OpenTPW's writer, a queue cell's model"), which a
+  written park does not hold, so the original loading the file draws no piece, by reading. **Also left (review of Q858):** the three track add-ons (1500 to 1502, TrackType 1 in Upgrades.sam) stay out of the writer, counted `SAVE_PARK_OBJECT_BOUGHT`, a sold file add-on kept; the object's `+0x2c` word follows the running object where the ride stays the file's (`SAVE_PARK_TRACK_RIDE_AS_THE_FILE`), not the file's; each anchor's
+  `mSegmentNumber` is written `0xffff` where the original's walk stores its step (`SAVE_PARK_TRACK_SEGMENT`; the closed-loop edit compares it,
+  `saves.md`, "OpenTPW's writer, a kart's or water ride's record"), keep the walk's step on the anchor and write it; a file's kart sold bare leaves its
+  piece models (`SAVE_PARK_TRACK_PIECE_MODEL_LEFT`); an opened kart's state, duration and cars, and a speed set in the ride's window, are not written as the
+  original holds them. (4) **The two rides' companion scripts**
+  (`SAVE_PARK_SCRIPT_MADE_SINCE_THE_LOAD`, 2 in Q858's run: a child each spawned; the sound map: Q911's) and a boat's sound and wake, a coaster's or a tour's
+  new head and the riders' puffs (`DOES-NOT.md`). (5) **The counted names with no owner**, by a raw name match against this file:
   `PARK_FILE_SOUND_WRITER_LIVE_VOICES`, `SAVE_PARK_ARRIVAL_VEHICLE`, `SAVE_PARK_CAR_NO_HEIGHT`, `SAVE_PARK_CAR_SMOKE`,
   `SAVE_PARK_EMITTER_DIRECTED`, `SAVE_PARK_EMITTER_ITEM_EFFECT`, `SAVE_PARK_EMITTER_NO_PLACE`, `SAVE_PARK_EMITTER_NOT_STARTED`,
   `SAVE_PARK_FOOTPRINT_CELL`, `SAVE_PARK_GUEST_ON_A_THING`, `SAVE_PARK_HANDLE_TO_AN_UNWRITTEN_THING`, `SAVE_PARK_MADE_MODEL_TABLES`,
-  `SAVE_PARK_OBJECT_BOUGHT`, `SAVE_PARK_QUEUE_CELL_MODEL`, `SAVE_PARK_SPRITE_SET_BYTE` (an item may carry one in words). `SAVE_PARK_TRACK_RIDE_AS_THE_FILE` is this item's too: a kart or water ride of the file's with a car is kept as the file's
-  until written (`saves.md`, "Left as the file has it"), and its script does not stay the file's (`saves.md`, "One split in what is written": her Dino Karts' script 110 goes
-  from word 197, ONRIDE 4, RUNNING 1 to word 15, 0, 0 over cars still holding four riders). Sort them: build each, or say at the site why it is not. Until a kart, water or tracked ride is written, the gap is said at
-  the site, counted, and told to the player (README lines 28 and 252). Dead by GAP (AGENTS.md rule 3): placed content reaches it, so it is
-  the real queue, and Lost Kingdom at 100% cannot close without it. Confirm: buy Dino Karts, Exit To Lobby, enter again, in both games; and load her Full Simulation file, save, and read the kart's script and its cars' riders in the file against the original's (whether the four seated riders get off or board again there was not read).
+  `SAVE_PARK_OBJECT_BOUGHT`, `SAVE_PARK_QUEUE_CELL_MODEL`, `SAVE_PARK_SPRITE_SET_BYTE` (an item may carry one in words; Q420's leftovers
+  Q539 are the refusal latch's, not the writer's; Q587 the piece model, Q607 and Q734 cite the gap, Q727(4) the pylon chain: none owns it).
+  Sort them: build each, or say at the site why it is not. The original writes the object whole in its park file (`saves.md`, "OpenTPW's
+  writer", the object module; its controls are `FUN_004d3aa0`'s). Dead by GAP (AGENTS.md rule 3): placed content reaches it, and Lost Kingdom at
+  100% cannot close without it. Confirm: (2) load her Full Simulation file, save, and read the kart's script and its cars' riders in the file against the original's (whether the four seated riders get off or board again there was not read), in both games; (1), (3) a coaster, and a kart
+  bought here, loaded in the original. **Needs the desk (2026-10-31):** the original given a file ours wrote with a bought kart (Q858's
+  `q858/rebased-fix/autosave.TPWS`: Dino Karts and Splish Splash, each looped): does it load, does the ride run and its sections draw without the
+  pieces' models? Lane B may not run the original, so Q858 saw ours only.
 - [ ] **Q994. A file that will not load keeps the running park, as the original does.** From the week-end audit 2026-10-31 (S-D3).
   `FUN_00414d40` leaves before its first teardown call (`0x0041501d`) on a failed open (`0x00414dc2`), version read (`0x00414e09`), a version
   above 500 (`0x00414e3c`, mode 2 only), preamble (`0x00414e76`), length (`0x00414ec1`), read (`0x00414eef`), block size (`0x00414f2f`) and

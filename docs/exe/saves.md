@@ -1793,9 +1793,10 @@ and the object constructor `FUN_004db090` was read beside the two files.
   have left them, and a pair a lookup record, a head hung on a node among them ("OpenTPW's writer, a rider's
   head"). The header's three counts are kept.
 - **The controls** (`ParkWorld.PutControls`): every item's standing count and first-build stamp as
-  `ParkState.BuiltItems` runs them.
-- **Not written, counted, and left as the file has them:** a track ride of a
-  BumperType with no record here and a tracked ride (`SAVE_PARK_OBJECT_BOUGHT`, `SAVE_PARK_OBJECT_SOLD`); with
+  `ParkState.WrittenBuilt` has them: `BuiltItems`, less what is bought and left out and with what is sold and
+  kept ("OpenTPW's writer, a kart's or water ride's record", Q858).
+- **Not written, counted, and left as the file has them:** a coaster (`SAVE_PARK_OBJECT_BOUGHT`,
+  `SAVE_PARK_OBJECT_SOLD`) and a kart or water ride of the file's with cars; with
   each stay its cells. A track ride with no car is written ("OpenTPW's writer, a track ride's
   record"), and a bumper ride with a car out is written whole with its cars ("OpenTPW's writer, a track ride's cars"). A thing
   whose folder holds emitter files is written since Q257n ("OpenTPW's writer, a thing with emitter files"). A
@@ -2856,9 +2857,10 @@ its ride and its close, before the first ride left of a higher slot; one of the 
 with every chunk under its handle; one **kept** has its five words written over where they lie. That is a ride
 with no car, here or in the file; **one with a car out is written whole with its cars** ("OpenTPW's writer, a
 track ride's cars", below). Only a ride of the bumper family with a record here, the Hot Pot's BumperType alone
-(`ParkBumperCars.Open`, `HasRecord`). **Left as the file has it, and counted:** a ride of another BumperType
-(the karts, the water ride) and a tracked ride, bought (`SAVE_PARK_OBJECT_BOUGHT`); such a ride of the file's
-with a car, sold (`SAVE_PARK_OBJECT_SOLD`) or kept (`SAVE_PARK_TRACK_RIDE_AS_THE_FILE`); and a ride bought into
+(`ParkBumperCars.Open`, `HasRecord`); the karts' and the water ride's are written by their own record
+("OpenTPW's writer, a kart's or water ride's record", below). **Left as the file has it, and counted:** a
+coaster bought (`SAVE_PARK_OBJECT_BOUGHT`); a kart or water ride of the file's with a car, sold
+(`SAVE_PARK_OBJECT_SOLD`) or kept (`SAVE_PARK_TRACK_RIDE_AS_THE_FILE`); and a ride bought into
 the slot of a file's ride that was sold and left.
 
 **Confirmed in the game** (`q257o/confirm.py`: scene `a` 6 of 6 and scene `b` 2 of 2 on the desktop at the second
@@ -2890,6 +2892,94 @@ things left after the sale are 41 (the original's file holds 42, not the stock p
 (scene `b` saved it untouched); a ride made between two of the file's; a turned ride (the three codes stand on
 the listing: the one file with a turned track ride holds 6 on a Dino Karts). **Not seen in the original:** a
 load of a file whose ride record says open and holds no car. `docs/exe/addresses.md` not regenerated.
+
+### OpenTPW's writer, a kart's or water ride's record
+
+Q858, the first piece of Q993. A kart or water ride bought is written whole; before, the writer refused it
+(`Level.WritePark`'s `writable` asked `TrackType == 0`, and a kart is 1 and the water ride 2), so the file held
+neither the ride nor its object while the balance went out as it ran, and its track cells stayed: Dino Karts bought,
+Exit To Lobby, entered again gave the money gone, a loop of track nothing owned and a Standing count one too many.
+
+**What is written.** The object, its script, its model and its footprint cells as for any ride bought ("a thing
+bought and a thing sold"); in the track-rides module its ride (type 3), **each section of its list in circuit order
+(type 4: handle, type dword, cell times `0xc00`)** and its close (type 6), in slot order; the coaster (TrackType 3)
+stays out and is counted. `ParkTrackRideTable` keeps the five words and the place the module holds
+(`KartRide`), made from the template when the ride is bought (`Take`), placed when the object binds
+(`ParkRides.BindTrackRide`: `ArenaCentre` less the half cell, the item's speed word as its performance) and
+read from the file when the file holds the ride (`Seat`); the sections are the list the circuit's walk lays
+(`SectionsOf`). A file's carless kart whose sections are the file's takes the five words over where they lie
+(`ParkTrackRides.Put`); one whose list has grown is taken out and written again whole; one with cars stays the file's
+(`SAVE_PARK_TRACK_RIDE_AS_THE_FILE`, Q993's rest: "a kart's cars"). Only the two templates of Lost Kingdom are
+read here. Another theme's kart or water ride (the BumperTypes -7 to -10, -12, -13) is not: `ParkBumperCars.Open`
+returns at `!IsBumperFamily` before it reports a template, so it is left out at the write, counted
+`SAVE_PARK_OBJECT_BOUGHT`, and its sections are counted `TRACK_SECTION_TEMPLATE_n` when laid.
+
+**`mIsTrackRideValid` (`+0x2c`, record offset 222) goes out as the ride holds it.** The object constructor writes 1
+(`0x004db0df`) and the place commit zeroes it for any item with a queue and a track type, a coaster as well as a kart or water ride
+(`0x00524daa`, `0x00524db7`, `0x00524de1`, `0x005251b8`; her Temple Of Gloom holds 0), which the closing click's walk sets to 1;
+`Constructed` (`HasQueue && TrackType != 0`) and `PutObject` do the same, so a kart bought and not looped is written 0 and a
+looped one 1. Where a ride stays the file's (`SAVE_PARK_TRACK_RIDE_AS_THE_FILE`, a kart with cars) its object's word still
+follows the running object, not the file's (filed under Q993).
+
+**The track add-ons are left out.** Upgrades.sam gives the three add-ons (1500, 1501, 1502) TrackType 1, so the
+track-kind test alone would let them in; `writable` also asks `!ParkTrackAddOn.Is( item )`. A bought add-on is left out, counted
+`SAVE_PARK_OBJECT_BOUGHT`, and a sold add-on of the file's stays in it, as before (undeclared and unrun; Q993).
+A file with 1 and no section is opened by the original and crashes on the first car (`0x00546d02`, `mov ecx,[edi+0x98]`
+with no null test; by reading, not run); with 0 the ride's script stays at `BUMP 5`.
+
+**The templates, read from the executable's data** (`0x764178`, 14 records of `0xd0`, the BumperType in the first
+word, -1 first; the loader fills a record from its template, `FUN_00545890`): the words the file keeps are the
+duration (`+0x04`), the first mesh (`+0x14`), how many (`+0x18`) and the performance (`+0x1c`, 50 in every one).
+
+| BumperType | Duration | Meshes (from, count) | | BumperType | Duration | Meshes (from, count) |
+|---|---|---|---|---|---|---|
+| -1 (Hot Pot) | 4350 | 1, 1 | | -8 | -1 | 0, 1 |
+| -2 | 4350 | 0, 4 | | -9 | -3 | 1, 4 |
+| -3 | 4350 | 0, 1 | | -10 | -3 | 1, 1 |
+| -4 (Dino Karts) | -3 | 0, 4 | | -11 | 150 | 0, 1 |
+| -5 (Splish Splash) | -1 | 0, 1 | | -12 | -1 | 0, 1 |
+| -6 | 150 | 0, 1 | | -13 | -1 | 0, 1 |
+| -7 | -3 | 0, 4 | | -14 | 150 | 0, 1 |
+
+Read by `lib/bumpertemplates.py` (a PE walk of `testme.exe`), not run in the original. The performance in a played ride's record is the item's speed word, not the template's 50: Alexah's played
+Dino Karts holds `0x3c` and the Hot Pot of Q257o `0x3c`, and `BindTrackRide` pushes the item's `InitSpeed` (60 for both
+items) as the object constructor does (`0x004db534`). The duration is laps for the karts (-3) and a single run for
+the water ride (-1): `BUMP 14` stores minus the laps (`park.md`, "The two templates").
+
+**Where it lies.** The placer's point is `ParkBumperCars.ArenaCentre` less the half cell: for Alexah's played Dino
+Karts, turned 180 on its anchor, the formula gives (24,20), which the file's ride chunk holds
+(`0x12000`, `0xf000`); a bought Dino Karts on (32,25) turned 0 lies at (32,26) and Splish Splash on (20,20) at (20,20).
+
+**The Standing count.** The object controls' standing count (`+0x18`) and first-build stamp (`+0x1c`) go out with the
+other structural edits (`ParkWorld.PutControls`). The park counts every purchase (`AddObject`) and every sale, so
+what is bought and left out of the file (a coaster) is not in the file and what is sold and kept in it is:
+`ParkState.WrittenBuilt` writes the count of the objects the file holds, and an item whose only builds were left
+out takes the file's stamp back. Before, a kart bought with a shop wrote Standing +1 for a kart that was not in the
+file, which `ParkWorth`, `EverythingDone` (the golden tickets), the items screen and the people's choice read.
+
+**Measured, off-screen, in this game** (`q858/`, Lost Kingdom's stock park, `confirm.py`): a Dino Karts on (32,25)
+and a Splish Splash on (20,20), each loop laid by the clicks of Q763 (10 sections each, `9 9 7 10 6 9 9 5 10 8` and
+`9 9 6 10 7 9 9 8 10 5`), Exit To Lobby, entered again from the autosave. The autosave's module is 740 bytes, `2 3
+4x10 6 3 4x10 6`; the karts' ride is `fffffc00 18000 13800 0 47e 3c 0 4 fffffffd 0`, the water ride's
+`fffffb01 f000 f000 0 488 3c 0 1 ffffffff 0`; 44 things headed 44, then 43; `built` reads 1150 and 1160 standing 1
+on ticks 763 and 764 before the exit and after the entry; the balance is 73787 both sides and the 16 track pieces
+stand. The control (main's build) wrote a 44-byte module and 42 things, and entered with the money gone, no ride and
+the same 16 pieces. **Not written** (counted): the pieces' models (`SAVE_PARK_TRACK_PIECE_MODEL`, 16 here: the
+original loading this file would draw no piece, by reading, since its pieces are model records like a queue
+piece's), and the two rides' companion scripts (`SAVE_PARK_SCRIPT_MADE_SINCE_THE_LOAD`, 2 here: a child spawned; Q911),
+and each anchor's segment number (`mSegmentNumber`, the last two bytes of the 31-byte track sub-record, `SAVE_PARK_TRACK_SEGMENT`, which counts a piece's first write only: a piece the file holds keeps the file's word):
+the file written holds `0xffff` on every cell, where Alexah's played file holds the walk's step on each of its 33 anchors
+(`FUN_0053aef0` at `0x0052b295`, the crossing's last visit winning). `FUN_0053aec0` returns it (16 callers, 0xc and 0x11
+returning the anchor's own) and the closed-loop edit compares two of them signed (`0x005268d4`..`0x005268e6`), so with
+both -1 the original's first edit of a loop ours wrote takes one branch whichever cell was clicked; its check walk then
+writes the steps again. **Also left, said at the site:** a file's kart or water piece cleared by a sale leaves its model
+record in the file (`SAVE_PARK_TRACK_PIECE_MODEL_LEFT`); an opened kart writes state 0, the template's duration and no car, where the
+original holds state 1 or 2 and `BUMP 14`'s value; and a speed set in the ride's window goes out as the performance
+bound at purchase (the original's scheduler pushes it into `+0x1c`).
+**Not run, read:** P8, that every kart and water anchor and its other cells name the ride's thing, is read from the
+autosave's cells (all 10 anchors and 30 other cells of each ride name 3103 and 2323), not scripted in the harness.
+**Not given the original:** lane B may not run it, so that the original loads this file, runs the ride and whether
+its sections draw without the piece models are not seen; Q993 holds the check.
 
 ### OpenTPW's reader, a track ride's cars
 

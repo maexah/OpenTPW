@@ -25,7 +25,7 @@ OpenTPW re-implements the engine of Theme Park World (1999) so it runs on modern
 - **The lobby works.** The four islands, the front end, the advisor, weather, the options screen and your saved players.
 - **Lost Kingdom runs.** Instant Action starts the park the game ships, already built. Full Simulation starts it as an empty park. Guests arrive, queue, ride and buy things. Most of its rides, shops and sideshows run.
 - **You can build and manage.** Buy, sell and move rides, lay paths and queues, hire, train and place staff, set the entry price and research new rides.
-- **Saving works.** Save, Load, Restart Park and the quicksave keys. A Full Simulation park started empty is saved too. Not saved yet: karts, water rides and track rides bought in a park.
+- **Saving works.** Save, Load, Restart Park and the quicksave keys. A Full Simulation park started empty is saved too. Not saved yet: coasters bought in a park, and the pieces of a kart or water ride's track as models (a bought kart or water ride is saved, with its track).
 - **Not built yet:** loans, litter, and a park ending when the money runs out. The other three islands are not worked on yet.
 
 [`docs/STATUS.md`](docs/STATUS.md) lists everything that works and everything that does not.
@@ -212,7 +212,7 @@ the console of a Debug build (`dotnet build`); the Release build, which the Wind
 | Lobby camera and weather | `orbit`, `freeze`, `unfreeze`, `attract`, `aim`, `settle`, `near`, `rain`, `weather`, `strike`, `bolt`, `flags` |
 | Park camera and drawing | `camera`, `camcorder`, `facing`, `walk`, `fog`, `sea`, `shadows`, `sprites`, `meshes`, `circle`, `cut` |
 | Sound and the advisor | `volume`, `mute`, `sound`, `voices`, `place`, `speech`, `advisor`, `greet`, `duck`, `music`, `crowd`, `bus`, `placed`, `parkcue`, `scriptsounds`, `sayas`, `advisorgame`, `tutorial` |
-| Reading the park | `guests`, `peeps`, `staff`, `candidates`, `rides`, `vehicles`, `paths`, `arrivals`, `objects`, `catalogue`, `money`, `loans`, `budgets`, `research`, `tickets`, `outlets`, `happiness`, `rings`, `spend`, `why`, `cell`, `ground`, `drawn`, `scriptvar`, `bumpers`, `gate`, `boundary`, `hoardings`, `strikes`, `effects`, `emitters`, `particles`, `endfeature`, `thingids`, `track`, `pylons`, `rim`, `scripts` |
+| Reading the park | `guests`, `peeps`, `staff`, `candidates`, `rides`, `vehicles`, `paths`, `arrivals`, `objects`, `catalogue`, `money`, `loans`, `budgets`, `research`, `tickets`, `outlets`, `happiness`, `rings`, `spend`, `why`, `cell`, `ground`, `drawn`, `scriptvar`, `bumpers`, `gate`, `boundary`, `hoardings`, `strikes`, `effects`, `emitters`, `particles`, `endfeature`, `thingids`, `track`, `pylons`, `rim`, `scripts`, `built` |
 | Changing guests | `arrive`, `admit`, `send`, `load`, `depart`, `happy`, `cash`, `thirst`, `balloon`, `toilet`, `need` |
 | Building and staff | `buy`, `put`, `sell`, `move`, `path`, `delpath`, `queue`, `delqueue`, `hire`, `fire`, `pickup`, `putstaff`, `carry`, `drop`, `hand`, `strip`, `tool`, `staffrest`, `forcestrike` |
 | Mouse, keys and windows | `pick`, `pickray`, `click`, `rightclick`, `rmbcancel`, `worldclick`, `hover`, `pointer`, `backspace`, `stall`, `menu`, `buyscreen`, `hirescreen`, `researchscreen`, `openthing`, `shopwindow`, `staffwindow`, `visitorwindow`, `screen`, `windows`, `control`, `state`, `footprint`, `buymoney`, `preview`, `map`, `locator`, `tags`, `helpbar` |
@@ -250,7 +250,7 @@ per command. Add a new command to this table.
 | Models (.MD2) | ⚠️ Meshes load; some animation channel kinds are not decoded yet |
 | Sound categories (cat_\*.map) | ⚠️ Decoded; a few fields are unnamed |
 | Park signs (.SGN) | ⚠️ Read and drawn; a gradient fill is drawn flat |
-| Park saves (.TPWS) | ⚠️ Read and written, Lost Kingdom only, a park started empty included; not yet karts, water rides and track rides bought |
+| Park saves (.TPWS) | ⚠️ Read and written, Lost Kingdom only, a park started empty included; not yet coasters bought, nor the pieces of a kart's or water ride's track as models |
 | Ride scripts (.RSE) | ⚠️ Every shipped script runs; some instructions are not built yet |
 | Materials (.MTR) | ❌ |
 | Video (.TGQ) | ❌ |

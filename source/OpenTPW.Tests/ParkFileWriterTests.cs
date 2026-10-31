@@ -648,7 +648,7 @@ public class ParkFileWriterTests
 			state.SetGameTick( 900 );
 
 			var ape = Buy( 1101, 41, 22 );
-			// The karts: a track ride with no record of the bumper family's, so it is counted and left out.
+			// The karts: a track ride with a record of its own here, written with the rest (Q858).
 			var racers = catalogue.All.First( item => item.BumperType != 0 && !ParkBumperCars.IsBumperFamily( item.BumperType ) );
 			var karts = Buy( racers.Id, 20, 20 );
 			var tracked = catalogue.All.First( item => item.BumperType == 0 && item.TrackType != 0 );
@@ -682,9 +682,10 @@ public class ParkFileWriterTests
 			Assert.AreEqual( "Crazy", Encoding.Unicode.GetString( [.. Enumerable.Range( 0, 5 ).SelectMany( i => record.AsSpan( 60 + (i * 4), 2 ).ToArray() )] ) );
 			Assert.AreEqual( "Ape", Encoding.Unicode.GetString( [.. Enumerable.Range( 0, 3 ).SelectMany( i => record.AsSpan( 62 + (i * 4), 2 ).ToArray() )] ) );
 			Assert.AreEqual( bounce, written.FirstObject, "the newest heads the object list" );
-			Assert.IsFalse( written.Objects.Any( thing => thing.ThingId is 16 || thing.ThingId == karts || thing.ThingId == coaster ), "the shop sold, and the two track rides left out" );
-			Assert.AreEqual( 16, written.Objects.Count );
-			Assert.AreEqual( (1417, 92, rides.ScriptFor( speaker )), (written.Objects.Single( thing => thing.ThingId == speaker ).CatalogueId, written.Objects.Single( thing => thing.ThingId == speaker ).MeshInstance, written.Objects.Single( thing => thing.ThingId == speaker ).RideScript), "a thing with emitter files is written as any other" );
+			Assert.IsFalse( written.Objects.Any( thing => thing.ThingId is 16 || thing.ThingId == coaster ), "the shop sold, and the coaster left out" );
+			Assert.AreEqual( 0xfffffc00, (uint)written.Objects.Single( thing => thing.ThingId == karts ).TrackRide, "the karts written, with their ride's handle" );
+			Assert.AreEqual( 17, written.Objects.Count );
+			Assert.AreEqual( (1417, 93, rides.ScriptFor( speaker )), (written.Objects.Single( thing => thing.ThingId == speaker ).CatalogueId, written.Objects.Single( thing => thing.ThingId == speaker ).MeshInstance, written.Objects.Single( thing => thing.ThingId == speaker ).RideScript), "a thing with emitter files is written as any other" );
 			Assert.AreEqual( ape, written.People.Single( person => person.ThingId == walker.Key ).Guest!.Value.MajorDest, "a handle to a thing bought" );
 
 			// The script's folder as the engine keeps one, its folder spelt as the executable's strings, and the model's footprint
@@ -706,7 +707,7 @@ public class ParkFileWriterTests
 			Assert.IsNull( models.Problem );
 			Assert.AreEqual( (1101, rides.ScriptFor( ape )), (models.Things.Single( thing => thing.Slot == 90 ).CatalogueId, models.Things.Single( thing => thing.Slot == 90 ).ScriptHandle) );
 			Assert.IsFalse( models.Things.Any( thing => thing.Slot == 115 ), "the shop's model" );
-			Assert.AreEqual( (163, 5, 93), models.Header );
+			Assert.AreEqual( (164, 4, 94), models.Header, "one model more than before the karts were written" );
 
 			var anchor = written.Cells[(22 * 128) + 41];
 			var sold = written.Cells[(30 * 128) + 43];
@@ -718,12 +719,20 @@ public class ParkFileWriterTests
 			CollectionAssert.Contains( written.MessageSets()![0xb].ToList(), ape );
 			CollectionAssert.DoesNotContain( written.MessageSets()![0xb].ToList(), 16 );
 
-			Assert.AreEqual( (speaker, 92), ((int)written.ScriptStates.For( rides.ScriptFor( speaker ) )!.Value.Thing, written.ScriptStates.For( rides.ScriptFor( speaker ) )!.Value.ModelHandle) );
-			Assert.AreEqual( 1417, models.Things.Single( thing => thing.Slot == 91 ).CatalogueId );
-			Assert.AreEqual( 2, Unimplemented.Summary.Single( gap => gap.What == "SAVE_PARK_OBJECT_BOUGHT" ).Times, "the two track rides alone" );
+			Assert.AreEqual( (speaker, 93), ((int)written.ScriptStates.For( rides.ScriptFor( speaker ) )!.Value.Thing, written.ScriptStates.For( rides.ScriptFor( speaker ) )!.Value.ModelHandle) );
+			Assert.AreEqual( 1417, models.Things.Single( thing => thing.Slot == 92 ).CatalogueId );
+			Assert.AreEqual( 1, Unimplemented.Summary.Single( gap => gap.What == "SAVE_PARK_OBJECT_BOUGHT" ).Times, "the coaster alone" );
 			Assert.AreNotEqual( bounce, karts );
 			Assert.IsFalse( Unimplemented.Summary.Any( gap => gap.What == "SAVE_PARK_OBJECT_SOLD" ) );
-			Assert.IsTrue( written.Cells[(20 * 128) + 20].Type != 4, "and its cells are the file's" );
+			Assert.AreEqual( (4, MapStep.CellId( 20, 20 )), ((int)written.Cells[(20 * 128) + 20].Type, (int)written.Cells[(20 * 128) + 20].ParentId), "the karts' cells are written" );
+			Assert.IsTrue( written.Cells[(90 * 128) + 90].Type != 4, "and the coaster's are the file's" );
+
+			// The karts' record and close in the track-rides module, and the control's count of what the file holds.
+			var kartRide = written.TrackRides.Rides.Single();
+
+			Assert.AreEqual( (0xfffffc00, racers.Id, 60, 0, 4, -3, 0), ((uint)kartRide.Handle, kartRide.ItemId, kartRide.Performance, kartRide.MeshBase, kartRide.MeshCount, kartRide.Duration, kartRide.State), "the template's words and the speed word the object's bind pushes" );
+			Assert.AreEqual( 0, written.TrackRides.Sections.Count, "no loop laid, so no section" );
+			Assert.AreEqual( 1, written.ObjectControlRecords.Single( control => control.ItemId == racers.Id ).Standing );
 
 			// Without the people nothing bought or sold is written, and each is counted.
 			Unimplemented.Forget();
@@ -1052,6 +1061,145 @@ public class ParkFileWriterTests
 		{
 			rides.Delete();
 			again?.Delete();
+			Entity.ApplyDeletions();
+			TestRun.DeleteEvery<ParkPeople>();
+		}
+	}
+
+	/// <summary>
+	/// A kart bought is written with <c>mIsTrackRideValid</c> nought until its loop is closed (the place commit zeroes it,
+	/// <c>0x005251b8</c>; the original reading a one on a ride with no section crashes on its first car, <c>0x00546d02</c>),
+	/// and one at one: bought, then kept by a later save with the sections laid since (<c>Level.WritePark</c>'s
+	/// <c>Whole</c> arm for a ride the file holds), and both words survive the reload.
+	/// <para>
+	/// <b>Mutations:</b> <c>Constructed</c> writing 1 for a kart; <see cref="ParkWorld.MadeObjectRecord"/> writing the constant
+	/// 1; <c>PutObject</c> not writing the word; <c>Take( thing, kept, fromFile: false )</c>; <c>whole.Add</c> dropped.
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void AKartIsWrittenValidOnlyOnceItsLoopIsClosedAndItsLaterSectionsAreKept()
+	{
+		SetCurrentPlayer( new Player( 0, "Test", new PlayerFile { InstantAction = true } ) );
+
+		var catalogue = new ParkItemCatalogue( "jungle", FileSystem );
+		var people = new ParkPeople( shipped );
+		var state = people.State;
+		var rides = new ParkRides( "jungle", shipped, catalogue, FileSystem );
+		ParkRides? again = null;
+
+		ParkWorld Written( string name ) => Read( File.ReadAllBytes( Path.Combine( Jungle, name + ".TPWS" ) ) );
+
+		try
+		{
+			var racers = catalogue.All.First( item => item.BumperType != 0 && !ParkBumperCars.IsBumperFamily( item.BumperType ) );
+			var id = state.NextThingId();
+
+			Assert.IsTrue( racers.TrackType is ItemDescriptionFile.CarTrack or ItemDescriptionFile.WaterTrack );
+
+			var placed = ParkBuilding.Constructed( racers, id, 20, 20, 0, MapStep.CellId( 20 + racers.EntryDeltaX, 20 + racers.EntryDeltaY ),
+				MapStep.CellId( 20 + racers.ExitDeltaX, 20 + racers.ExitDeltaY ), ParkWorld.BuiltWhen.At( state.CalendarNow ),
+				ParkBuilding.TakeTrackRide( state, racers ) );
+
+			state.AddObject( placed );
+			ParkBuilding.BindOperation( state, rides, placed, racers );
+			ParkBuilding.Stamp( state, ParkObjects.FootprintAt( racers, 20, 20, 0 ), 20, 20 );
+			state.EnterCell( 20, 20, id );
+
+			Assert.AreEqual( 0, placed.IsTrackRideValid, "bought, no loop" );
+
+			// A kart piece laid on a cell the file holds none on: its record is written, its model and its segment word are not.
+			state.SetRecord( 50, 50, shipped.CellAt( 50, 50 ) with { TrackType = 11, TrackTileIndex = 3 } );
+			Unimplemented.Forget();
+			Assert.IsNotNull( Level.WritePark( shipped, state, "jungle", "Half", people, null, rides, catalogue ) );
+			Assert.AreEqual( (1, 1, 0), (Counted( "SAVE_PARK_TRACK_PIECE_MODEL" ), Counted( "SAVE_PARK_TRACK_SEGMENT" ), Counted( "SAVE_PARK_TRACK_PIECE_MODEL_LEFT" )) );
+
+			var half = Written( "Half" );
+
+			Assert.AreEqual( 0, half.Objects.Single( thing => thing.ThingId == id ).IsTrackRideValid, "a half-laid kart is not offered by the file" );
+			Assert.AreEqual( 0, half.TrackRides.Sections.Count( section => section.Handle == placed.TrackRide ) );
+
+			// The loop closes: the track tool's walk stores 1.
+			Assert.IsTrue( state.ReplaceObject( placed with { IsTrackRideValid = 1 } ) );
+			Assert.IsNotNull( Level.WritePark( shipped, state, "jungle", "Closed", people, null, rides, catalogue ) );
+			Assert.AreEqual( 1, Written( "Closed" ).Objects.Single( thing => thing.ThingId == id ).IsTrackRideValid, "a closed loop" );
+
+			// The half file loaded, a run laid since, and saved again: the object keeps its nought and the file's carless kart
+			// is written again whole with the section.
+			rides.Delete();
+			Entity.ApplyDeletions();
+			TestRun.DeleteEvery<ParkPeople>();
+
+			var loadedPeople = new ParkPeople( half );
+			var loaded = loadedPeople.State;
+
+			again = new ParkRides( "jungle", half, catalogue, FileSystem );
+
+			Assert.IsTrue( loaded.TrackRides.Lay( placed.TrackRide, 9, 40 * 0xc00, 40 * 0xc00 ) );
+			loaded.SetRecord( 50, 50, half.CellAt( 50, 50 ) with { TrackType = 0, TrackTileIndex = 0 } );
+			Unimplemented.Forget();
+			Assert.IsNotNull( Level.WritePark( half, loaded, "jungle", "HalfLater", loadedPeople, null, again, catalogue ) );
+			Assert.AreEqual( (0, 0, 1), (Counted( "SAVE_PARK_TRACK_PIECE_MODEL" ), Counted( "SAVE_PARK_TRACK_SEGMENT" ), Counted( "SAVE_PARK_TRACK_PIECE_MODEL_LEFT" )), "a piece the file holds, taken back" );
+
+			var later = Written( "HalfLater" );
+
+			Assert.AreEqual( 0, later.Objects.Single( thing => thing.ThingId == id ).IsTrackRideValid, "the kept object keeps its word" );
+			CollectionAssert.AreEqual( new[] { (40 * 0xc00, 40 * 0xc00) },
+				later.TrackRides.Sections.Where( section => section.Handle == placed.TrackRide ).Select( section => (section.X, section.Y) ).ToArray(),
+				"the section laid since the load is written" );
+			Assert.AreEqual( 0, Counted( "SAVE_PARK_TRACK_RIDE_AS_THE_FILE" ) );
+		}
+		finally
+		{
+			rides.Delete();
+			again?.Delete();
+			Entity.ApplyDeletions();
+			TestRun.DeleteEvery<ParkPeople>();
+		}
+	}
+
+	/// <summary>
+	/// The constructor's <c>mIsTrackRideValid</c>: 1, but nought for any item with a queue and a track type, a coaster as well
+	/// as a kart (<c>0x00524daa</c>..<c>0x00524de1</c>), and a Hot Pot or a track add-on keep 1. The three track add-ons stay out
+	/// of the writer, counted <c>SAVE_PARK_OBJECT_BOUGHT</c>, though their items hold TrackType 1.
+	/// <para><b>Mutations:</b> the condition on the track type alone; <c>HasQueue</c> dropped; <c>!ParkTrackAddOn.Is</c> dropped from <c>writable</c>.</para>
+	/// </summary>
+	[TestMethod]
+	public void AnItemWithAQueueAndATrackTypeIsConstructedInvalidAndATrackAddOnIsNotWritten()
+	{
+		SetCurrentPlayer( new Player( 0, "Test", new PlayerFile { InstantAction = true } ) );
+
+		var catalogue = new ParkItemCatalogue( "jungle", FileSystem );
+		var people = new ParkPeople( shipped );
+		var state = people.State;
+		var rides = new ParkRides( "jungle", shipped, catalogue, FileSystem );
+
+		try
+		{
+			ParkWorld.CatalogueObject Made( ParkItemCatalogue.Item item )
+				=> ParkBuilding.Constructed( item, state.NextThingId(), 60, 60, 0, 1, 1, ParkWorld.BuiltWhen.At( state.CalendarNow ) );
+
+			var coaster = catalogue.All.First( item => item.TrackType == ItemDescriptionFile.CoasterTrack && item.HasQueue );
+			Assert.IsTrue( catalogue.TryGet( 1140, out var hotPot ) );
+			var addOn = catalogue.All.First( ParkTrackAddOn.Is );
+
+			Assert.AreEqual( (0, 1, 1), (Made( coaster ).IsTrackRideValid, Made( hotPot ).IsTrackRideValid, Made( addOn ).IsTrackRideValid) );
+
+			var id = state.NextThingId();
+			var placed = ParkBuilding.Constructed( addOn, id, 60, 60, 0, 1, 1, ParkWorld.BuiltWhen.At( state.CalendarNow ) );
+
+			state.AddObject( placed );
+			ParkBuilding.BindOperation( state, rides, placed, addOn );
+			Unimplemented.Forget();
+			Assert.IsNotNull( Level.WritePark( shipped, state, "jungle", "AddOn", people, null, rides, catalogue ) );
+
+			var written = Read( File.ReadAllBytes( Path.Combine( Jungle, "AddOn.TPWS" ) ) );
+
+			Assert.IsFalse( written.Objects.Any( thing => thing.ThingId == id ), "a bought add-on is not in the file" );
+			Assert.AreEqual( 1, Counted( "SAVE_PARK_OBJECT_BOUGHT" ) );
+		}
+		finally
+		{
+			rides.Delete();
 			Entity.ApplyDeletions();
 			TestRun.DeleteEvery<ParkPeople>();
 		}

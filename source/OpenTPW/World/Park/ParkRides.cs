@@ -1577,7 +1577,13 @@ public sealed class ParkRides : Entity
 
 		// The speed word the object constructor pushes (0x004db534), which the scheduler then pushes into the ride's
 		// performance at each visit: the item's starting speed when over nought, else the loader's 50.
-		cars.BindSpeedWord( placed.TrackRide, item.InitSpeed > 0 ? item.InitSpeed : 50 );
+		var speedWord = item.InitSpeed > 0 ? item.InitSpeed : 50;
+		cars.BindSpeedWord( placed.TrackRide, speedWord );
+
+		// A kart or water ride has no record in the cars: its words are the track table's, placed at the place the
+		// placer handed the record (its arena's centre less the half cell the record adds).
+		ParkState.Current.TrackRides.PlaceKart( placed.TrackRide, x - (ParkBumperCars.CellUnits / 2), z - (ParkBumperCars.CellUnits / 2),
+			speedWord );
 	}
 
 	/// <summary>
