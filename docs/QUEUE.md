@@ -224,6 +224,7 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
 - [ ] **Q857. A park made fresh's file, off Lost Kingdom.** Split from Q803 (run 17, lane B); waits, Lost Kingdom first. **The other three themes' files**
   (`FRESH_PARK_FILE_OTHER_THEME`: the flyers' values, the music's and the land's voices and its emitter, the generator's seed, the ride system's counts). The advisor's slot
   0 `mValid` is Q543's (the welcome). Confirm by the diff against the original's file (`lib/freshcmp.py`).
+  Also owed from Q803: the original loading a fresh file and keeping its music (the whole basis of the file's music voice, read in the disassembly and not run: load the file in the original under Proton and listen or poll the music voice), and the desk's photograph of the gates' flags at 90 in the first 93 sweeps of a fresh park.
 
 **Ordered at Alexah's word (2026-10-21), after their own play of Lost Kingdom:** showing the original's art as well as it can
 be shown comes first, and improvements over the original are ON by default, each said at the site as a deviation (full

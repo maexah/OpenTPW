@@ -66,7 +66,7 @@ public sealed class ParkWeather : Entity
 	/// <summary>The foot of that same bolt, on the ground. Kept because drawing one needs both ends.</summary>
 	public Vector3 LastStrikeGround { get; private set; }
 
-	/// <summary>Which way the rain is driven, in degrees, and how hard - both from the quality.</summary>
+	/// <summary>Which way the rain is driven, in degrees, and how hard - the force from the quality; the heading the constructor's 90 for a fresh park, the file's for a loaded one.</summary>
 	public float WindDirection { get; private set; }
 
 	public float WindForce { get; private set; }
@@ -165,7 +165,7 @@ public sealed class ParkWeather : Entity
 
 	/// <param name="savedWindDirection">As the public constructor's.</param>
 	/// <param name="drawn">Whether it makes the rain and the bolt that draw it; a weather that draws nothing needs no device.</param>
-	/// Dead by CODE with <paramref name="drawn"/> false: only ParkFileWriterTests passes it.
+	/// Dead by CODE with <paramref name="drawn"/> false: only ParkFileWriterTests and ParkWeatherFreshTests pass it.
 	internal ParkWeather( float? savedWindDirection, bool drawn )
 	{
 		Current = this;
@@ -479,7 +479,7 @@ public sealed class ParkWeather : Entity
 		WindDirection = Turned( WindDirection, _rng.Next( 90 ) - 45, _heldWind );
 	}
 
-	/// <summary>The wind a park opens with: the file's <c>mWindDir</c> over the constructor's roll, where there is a file.</summary>
+	/// <summary>The wind a park opens with: the file's <c>mWindDir</c> where there is a file, else the constructor's 90 (<paramref name="rolled"/>; the original rolls no wind).</summary>
 	internal static float StartingWind( float rolled, float? saved ) => saved ?? rolled;
 
 	/// <summary>The wind after a change of weather: turned by <paramref name="turn"/> degrees and wrapped to [0, 360), unless held.</summary>

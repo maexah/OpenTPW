@@ -400,7 +400,7 @@ public class FreshParkFileTests
 		var at = sound + 12 + 84 + 12 + 8;
 		at += 8 + BitConverter.ToInt32( body, at ) + 4;
 
-		var voices = new List<(int Handle, int Type, float X, float Z, float Range, int Category, bool Rectangle, int Corners, int Key, int Held)>();
+		var voices = new List<(int Handle, int Type, float X, float Z, float Range, int Category, int Effect, int Variation, int Sample, bool Rectangle, int Corners, int Key, int Held)>();
 
 		for ( var voice = 0; voice < 6; ++voice )
 		{
@@ -410,7 +410,8 @@ public class FreshParkFileTests
 				+ BitConverter.ToInt32( body, at + 56 + 16 ) + BitConverter.ToInt32( body, at + 56 + 20 ) : 0;
 
 			voices.Add( (handle, BitConverter.ToInt32( body, at + 4 ), BitConverter.ToSingle( body, at + 12 ), BitConverter.ToSingle( body, at + 20 ),
-				BitConverter.ToSingle( body, at + 28 ), BitConverter.ToInt32( body, at + 32 ), rectangle, corners, rectangle ? body[at + 56] : 0,
+				BitConverter.ToSingle( body, at + 28 ), BitConverter.ToInt32( body, at + 32 ), BitConverter.ToInt32( body, at + 36 ), BitConverter.ToInt32( body, at + 40 ),
+				BitConverter.ToInt32( body, at + 44 ), rectangle, corners, rectangle ? body[at + 56] : 0,
 				body[at + 52 + 4 + (rectangle ? 24 : 0) + 4]) );
 
 			// 13 dwords, the rectangle's flag, its eight controller bytes and four corners, the mark, a byte, the handle and a nought.
@@ -423,6 +424,9 @@ public class FreshParkFileTests
 		CollectionAssert.AreEqual( new[] { 0f, 31f, 21f, 39f, 513f, 664f }, voices.Select( voice => voice.Z ).ToArray() );
 		CollectionAssert.AreEqual( new[] { 0f, 0f, 0f, 19f, 97f, 97f }, voices.Select( voice => voice.Range ).ToArray() );
 		CollectionAssert.AreEqual( new[] { 10, 1, 1, 7, 1, 1 }, voices.Select( voice => voice.Category ).ToArray() );
+		CollectionAssert.AreEqual( new[] { 0, 4, 6, 4, 5, 3 }, voices.Select( voice => voice.Effect ).ToArray(), "the effect index the reader rebuilds each voice from" );
+		CollectionAssert.AreEqual( new[] { 0, 0, 1, 0, 0, 0 }, voices.Select( voice => voice.Variation ).ToArray() );
+		CollectionAssert.AreEqual( new[] { 0, 1, 0, 0, 0, 0 }, voices.Select( voice => voice.Sample ).ToArray() );
 		CollectionAssert.AreEqual( new[] { true, true, true, false, false, false }, voices.Select( voice => voice.Rectangle ).ToArray() );
 		CollectionAssert.AreEqual( new[] { 0, 353 + 31 + 450 - 66, 372 + 21 + 567 - 174, 0, 0, 0 }, voices.Select( voice => voice.Corners ).ToArray() );
 		CollectionAssert.AreEqual( new[] { 4, 0, 0, 0, 0, 0 }, voices.Select( voice => voice.Key ).ToArray() );

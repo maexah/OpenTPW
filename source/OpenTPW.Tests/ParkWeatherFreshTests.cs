@@ -51,6 +51,32 @@ public class ParkWeatherFreshTests
 	}
 
 	/// <summary>
+	/// <b>The stored roll is the roll, unclamped</b> (<c>Weather_Construct</c> stores <c>FUN_00512e10</c>'s answer at <c>+0x0c</c>; only
+	/// <c>Weather_ApplyQuality</c> clamps): the season's exceptional roll is wholly random, 0 to 99, so a fresh park is found holding 0.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> <c>Quality = Math.Clamp( Roll(), 1, 100 )</c> in the constructor.</remarks>
+	[TestMethod]
+	public void AFreshParksStoredQualityIsTheUnclampedRoll()
+	{
+		for ( var run = 0; run < 30000; ++run )
+		{
+			var weather = new ParkWeather( null, drawn: false );
+
+			try
+			{
+				if ( weather.Quality == 0 )
+					return;
+			}
+			finally
+			{
+				weather.Delete();
+			}
+		}
+
+		Assert.Fail( "no fresh park held a stored quality of 0 in 30000 (about one in a thousand each)" );
+	}
+
+	/// <summary>
 	/// <b>Its first forecast comes on sweep 1</b>, its nought stamp being long past (the original's Halloween file saved on
 	/// sweep 4: forecast 1.00, due 93.16), <b>and the rolled quality stands until that lands</b>: unread and unchanged, the
 	/// wind with it, to sweep 92, then the forecast's on the day edge of sweep 93, where the original's is 94.
@@ -108,7 +134,7 @@ public class ParkWeatherFreshTests
 
 	/// <summary>
 	/// <b>A park with a file still applies its roll and takes the file's wind</b>, the deviation until Q529: stamped as it
-	/// opens, so its first forecast waits three days, and its force the roll's.
+	/// opens, so its first forecast waits for the third calendar day's edge (sweep 47), and its force the roll's.
 	/// </summary>
 	/// <remarks><b>Mutations:</b> a loaded park standing as a fresh one does.</remarks>
 	[TestMethod]
@@ -126,6 +152,19 @@ public class ParkWeatherFreshTests
 			weather.Update();
 
 			Assert.AreEqual( -1, weather.Forecast );
+
+			var first = 0;
+
+			for ( var sweep = 2; sweep <= 120 && first == 0; ++sweep )
+			{
+				GameCalendar.Update( sweep );
+				weather.Update();
+
+				if ( weather.Forecast >= 0 )
+					first = sweep;
+			}
+
+			Assert.AreEqual( 47, first, "the first sweep of its forecast: by day edges (Q529) the third calendar day's, not a one-day wait's (sweep 24 or under)" );
 		}
 		finally
 		{

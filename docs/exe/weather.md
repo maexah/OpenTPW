@@ -41,8 +41,7 @@ Read from the named save stream in `FUN_00512010` (`Weather_Serialise` in Ghidra
 **A load reads the 99 bytes in this order** (`FUN_00512010`, its save twin beside it), so a field's place in the record
 is the sum of the sizes before it (FileFormats `saves.md`, "The weather"): `mWindDir` is at the record's +90 of 99. All six
 park files hold it whole, 24 to 350, and the original's live wind on the stock park was its file's 139
-(Q491). **OpenTPW reads `mWindDir` alone** (`ParkWorld.WindDirection`, Q493): `ParkWeather` rolls and moves the wind as
-the constructor does, then takes the file's over it, as the load does; the gates' flags turn to it, eased where the original's jump (Q643; `park-engine.md`, "The gates' flags"). In a loaded park the quality, the
+(Q491). **OpenTPW reads `mWindDir` alone** (`ParkWorld.WindDirection`, Q493): a fresh park keeps the constructor's wind 90 (the original rolls none), and a park with a file takes the file's over the roll, as the load does; the gates' flags turn to it, eased where the original's jump (Q643; `park-engine.md`, "The gates' flags"). In a loaded park the quality, the
 schedule and the rest stay fresh (Q529); a fresh park stands as the constructor leaves it ("A park's first days", below). The writer writes the running weather (Q528; `saves.md`, "OpenTPW's writer,
 the weather thing").
 

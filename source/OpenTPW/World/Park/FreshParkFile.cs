@@ -12,7 +12,7 @@ namespace OpenTPW;
 /// </summary>
 /// <remarks>
 /// <b>Deviations</b>, said where each is written: the words of a module that the original leaves as whatever memory held
-/// (the weather's location, the lab past its used projects, the advisor's records' unused bytes) are nought, the value the
+/// (the weather's location and forecast quality, the lab past its used projects, the advisor's records' unused bytes) are nought, the value the
 /// clean runs hold.
 /// </remarks>
 public static class FreshParkFile

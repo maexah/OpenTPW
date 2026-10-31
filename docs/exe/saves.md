@@ -213,8 +213,8 @@ voice, its handle (`+0x2c`) and a record (`0x006bccf0`); it skips a voice whose 
 clear, else reads the count, the record (`0x006c0f50`) and the handle counter, advances the allocator by saved minus current
 (`0x006b69b0`) and, per voice, reads the handle (low 16 bits) and a type 1 to 6 (jump table `0x006b7020`) and rebuilds the voice.
 
-**The 84 bytes are 21 words** at `0x00803aa0`, by every reference to `0x00803aa0`..`0x00803af4` in the text: `+0x00` written only by
-`0x0051e730`, the music voice's handle (`audio.md`, "A park file's voices"); `+0x04` by `0x0051e7b0`; `+0x08` written only by the init `0x0051b660` (`0x0051b6fa`) and read by `0x0051e7b0` (`audio.md`
+**The 84 bytes are 21 words** at `0x00803aa0`, by every reference to `0x00803aa0`..`0x00803af4` in the text: `+0x00` written by
+`0x0051e730`, the music voice's handle (also `0x0051e7a6`, `Sound_SetMusicLevel`, and the loader, `0x0051c45f`) (`audio.md`, "A park file's voices"); `+0x04` by `0x0051e7b0`; `+0x08` written only by the init `0x0051b660` (`0x0051b6fa`) and read by `0x0051e7b0` (`audio.md`
 calls it "sound is up"); `+0x0c` by `0x0051e830`, a voice's handle too; `+0x10` by `0x0051e7b0`; `+0x14` the reverb preset (init, `0x0051b9c7`, `0x0051c8d0` and
 the loader); `+0x18`, `+0x1c`, `+0x20`, `+0x24` set by `0x0051bb60`, `0x0051bba0`, `0x0051bb80`, `0x0051bbc0`; `+0x28` set by those seven
 setters and by `0x0051e710`, read and cleared by the tick `0x0051bd70` (`0x0051bf90`); `+0x2c` by `0x0051e6f0`; `+0x30` (u16) by
@@ -1069,7 +1069,7 @@ starting cash**; **the clock holds month 0 and day -1 until its first update** (
 
 **Written differently from the original, said at the site:**
 - The words the original leaves as whatever memory held (the weather's location and forecast quality, the lab past its used projects, the advisor's 1,172 and the
-  challenge manager's leftover bytes, the two objects' day rings) are nought, the clean runs' value; `mPreviousSearchKey` is nought (the
+  challenge manager's leftover bytes, the two objects' day rings) are nought here (the weather's location and forecast quality hold memory in every fresh file of the original's, seventeen of seventeen read; the clean runs hold nought elsewhere); `mPreviousSearchKey` is nought (the
   loader zeroes it), the particles' heap pointer at `+0x28` nought.
 - The staff pool and the clock's readings are the running park's, by the stages above. The weather's are the constructor's, as a run of the
   original's, its quality a roll (`weather.md`, "A park's first days").
@@ -1137,7 +1137,7 @@ is written at speed nought; `RideScript` starts its looping key at `0xffff` and 
 **Confirmed** (`q801/confirm/r1`, `q801/orig/l2`; `PREDICTION.txt` P1 to P6): a fresh Full Simulation park entered here, its `restart.INTS`
 against the original's (`freshcmp.py`): the controls differ in `mPreviousSearchKey` alone, the ride system is the original's 11,311 bytes with the
 gates' and the lights' records byte for byte the original's (their tables and channels) and only the boundary pieces' per-run items differing, the
-ride scripts the same but for seven ranges of heap addresses the reader replaces; the census counts `FRESH_PARK_FILE_MUSIC_VOICE` alone. A bush
+ride scripts the same but for seven ranges of heap addresses the reader replaces; the census then counted `FRESH_PARK_FILE_MUSIC_VOICE` alone (Q801's run; that name is gone, Q803 writes the voice). A bush
 bought and the park saved on tick 102: the two records declare their tables still. The original under Proton loaded that file (tick 134 to 102,
 running on to 440 in 85 s, $49,900) and drew the gates (`orig/l2/g-08.png`).
 

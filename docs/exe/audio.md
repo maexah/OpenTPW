@@ -1272,7 +1272,7 @@ its parameter 4, called from `0x0054f870`), and `+0xc` (`0x00803aac`) is the han
 `0x21` of `[0x00803a20]`, parameter 8; callers `0x00512ad0`, `0x00550032`). Over the 65 different lists on hand `+0x0`
 names a saved voice in 59 (always type 1, the `cat_music` category's effect index 0) and nought in 6; `+0xc` names one in
 1 (`cat_ambient` index 7), nought in 59 and a handle with no voice in 5. **`0x0051e730` (`Sound_StartMusic` in Ghidra) runs before the list is read**: both are in state 9, the start at
-`0x0054ec9f` and the park's load at `0x0054f113`. So the list's reader, which stops every live voice first, stops the music
+`0x0054ec9f` and the load behind `FUN_005accf0` at `0x0054f12b` (`0x005ad054`, mode 2); Restart Park and the Load row load with the music already running. (`0x0054f113` is the online branch's mode 1, which reads no sound.) So the list's reader, which stops every live voice first, stops the music
 just started, and the file's words go over the handle. A file whose list holds the music's voice keeps it. One that names
 none has no music voice after the load, and nothing starts another: `Sound_StartMusic` has that one caller. This is read,
 not run. `0x0051e770` is `Sound_StopMusic`, `0x0051e790` `Sound_SetMusicLevel`.
