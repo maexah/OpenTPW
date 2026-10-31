@@ -36,6 +36,34 @@ public class GameDataTests
 		Assert.IsFalse( GameData.Locate( "/some/where", _ => false ), "a folder the game does not accept is no game" );
 	}
 
+	/// <summary>
+	/// <b>No variable is the end of the test, with nothing asked</b> (Q987): <c>Required</c> goes through <c>Mount</c>, and a
+	/// variable that is not set (or blank) is Inconclusive, the skipped state, without <c>GameDir.Find</c> being called.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> <c>Mount</c> calling <c>find( [] )</c> before or instead of <c>Locate</c> (the working directory, the build's folder and the registry's places) calls <c>find</c> here; a <c>Mount</c> that carries on when <c>Locate</c> is false does not throw Inconclusive.</remarks>
+	[TestMethod]
+	[DataRow( null )]
+	[DataRow( "" )]
+	[DataRow( "   " )]
+	public void NoVariableIsInconclusiveAndFindIsNeverCalled( string? named )
+	{
+		var asked = 0;
+
+		Assert.ThrowsException<AssertInconclusiveException>( () => GameData.Mount( named, _ => { asked++; return true; } ) );
+		Assert.AreEqual( 0, asked, "GameDir.Find was called although no folder was named" );
+	}
+
+	/// <remarks>A folder named that the game does not accept is the same end, after one ask with that folder alone.</remarks>
+	[TestMethod]
+	public void ANamedFolderThatIsNotTheGameIsInconclusiveAfterOneAsk()
+	{
+		var asked = new List<string[]>();
+
+		Assert.ThrowsException<AssertInconclusiveException>( () => GameData.Mount( "/some/where", args => { asked.Add( args ); return false; } ) );
+		Assert.AreEqual( 1, asked.Count );
+		CollectionAssert.AreEqual( new[] { "--game", "/some/where" }, asked[0] );
+	}
+
 	/// <remarks>The folder must be named as <c>--game</c>: that is the one source <c>GameDir.Find</c> never falls through to the places a player's install can be.</remarks>
 	[TestMethod]
 	public void ANamedFolderThatIsNotTheGameDoesNotFallThroughToAnotherPlace()

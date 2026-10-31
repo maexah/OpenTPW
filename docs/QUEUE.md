@@ -123,7 +123,6 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   say so): the small fix is a notice on the kept path when the player's folder holds players (`SaveHome.HoldsPlayers`). A test
   next to `AFolderThatCanBeWrittenIsKeptAndTheProbeLeavesNothing`.
 
-- [ ] **Q987. Two small leftovers of Q986 (its review, 2026-10-31).** (1) `OptionsScreen.Keep` compares the display with `_before`, not `_applied`: after RESTART GAME's cross, a second tick that sets the display back to the opening mode skips `Display.Apply` and writes the old mode to `opentpw.cfg` while the window stays in the tick's mode; compare with `_applied ?? (_before.DisplayMode, _before.FullScreenSize)` (read, not run). (2) `GameDataTests` pin `Locate` only: putting `GameDir.Find( [] )` back into `Required` stays green. Give `Required` a seam so a test shows that no variable means Inconclusive with `Find` never called.
 - [ ] **Q849. What Q810 left: two counted gaps her played park's save now reaches, and two loads never run.** (From Q810's review,
   run 14.) Q810 made her Full Simulation `New Save.TPWS` read whole, so the save goes through the running-things writer for the
   first time (before, the model walk failed and the whole module was written as the file's). Two counters then fire, in

@@ -261,6 +261,30 @@ public class GpuChoiceTests
 	}
 
 	/// <summary>
+	/// <b>A second tick compares with the display the first put into effect</b> (Q987): after RESTART GAME's cross the window shows the
+	/// first tick's display, so a tick that sets the display back to the one the screen opened with must still change the window, and
+	/// one that keeps what the first tick applied must not. With no earlier tick the screen's opening display is what the window shows.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> comparing with the opening display alone (the old rule) fails the "back to the opening display" step; comparing only the mode, only the size, or never applying fails another.</remarks>
+	[TestMethod]
+	public void ASecondTickChangesTheWindowAgainstWhatTheFirstTickShowed()
+	{
+		var opening = new VideoMode( 1280, 720, 60 );
+		var other = new VideoMode( 1920, 1080, 60 );
+		var before = new GameOptions { DisplayMode = DisplayMode.Windowed, FullScreenSize = opening };
+		GameOptions Now( DisplayMode mode, VideoMode size ) => new() { DisplayMode = mode, FullScreenSize = size };
+
+		Assert.IsFalse( UI.OptionsScreen.DisplayToApply( null, before, Now( DisplayMode.Windowed, opening ) ), "no tick before and nothing changed" );
+		Assert.IsTrue( UI.OptionsScreen.DisplayToApply( null, before, Now( DisplayMode.BorderlessFullScreen, opening ) ), "a first tick, another mode" );
+		Assert.IsTrue( UI.OptionsScreen.DisplayToApply( null, before, Now( DisplayMode.Windowed, other ) ), "a first tick, another size" );
+
+		var applied = (DisplayMode.BorderlessFullScreen, opening);
+		Assert.IsTrue( UI.OptionsScreen.DisplayToApply( applied, before, Now( DisplayMode.Windowed, opening ) ), "back to the opening display: the window still shows the first tick's" );
+		Assert.IsFalse( UI.OptionsScreen.DisplayToApply( applied, before, Now( DisplayMode.BorderlessFullScreen, opening ) ), "the first tick's display kept: nothing to change" );
+		Assert.IsTrue( UI.OptionsScreen.DisplayToApply( applied, before, Now( DisplayMode.BorderlessFullScreen, other ) ), "the first tick's mode, another size" );
+	}
+
+	/// <summary>
 	/// <b>The fallback itself</b> (Q980, Q985): a device that cannot be made while the choice's settings are in force is made again
 	/// once after they are taken back; with none in force the failure is the caller's, and a second failure is too.
 	/// </summary>

@@ -332,13 +332,9 @@ internal sealed class OptionsScreen : UiWindow
 
 		// The display is changed here rather than as the row is clicked, so that stepping through the
 		// modes does not take the screen with it, and a tick that changed nothing about the display
-		// leaves the window alone entirely (a first run's full screen, whose size KeptSize has just set, is a change).
-		if ( (Options.DisplayMode != _before.DisplayMode || Options.FullScreenSize != _before.FullScreenSize)
-			&& Window.Current is { } window )
-		{
-			Display.Apply( window, Options.DisplayMode, Options.FullScreenSize );
-			_applied = (Options.DisplayMode, Options.FullScreenSize);
-		}
+		// leaves the window alone entirely (a first run's full screen, whose size KeptSize has just set, is a change). What
+		// the window shows is what an earlier tick of this screen put into effect, else what it opened with (Q987).
+		ApplyDisplay( Window.Current is { } window ? ( mode, size ) => Display.Apply( window, mode, size ) : null );
 
 		// 0x004237d4 raises the restart level for a changed video card, and at that level 0x004237f0 shows RESTART GAME
 		// (UITEXT 403) in place of closing: the options above are already kept, so the cross leaves them kept and the
@@ -381,6 +377,26 @@ internal sealed class OptionsScreen : UiWindow
 	/// is drawn on from the next start, unasked (a gap, said at the site, Q999; the original asks, <c>docs/exe/ui.md</c>).
 	/// </summary>
 	internal static bool AsksToRestart( GameOptions before, GameOptions now, bool optionsLost ) => NeedsRestart( before, now ) && !optionsLost;
+
+	/// <summary>Puts the options' display into effect through <paramref name="apply"/> (none where there is no window) if <see cref="DisplayToApply"/> says so, and remembers it for the cross.</summary>
+	internal void ApplyDisplay( Action<DisplayMode, VideoMode>? apply )
+	{
+		if ( apply is null || !DisplayToApply( _applied, _before, Options ) )
+			return;
+
+		apply( Options.DisplayMode, Options.FullScreenSize );
+		_applied = (Options.DisplayMode, Options.FullScreenSize);
+	}
+
+	/// <summary>
+	/// Whether the tick has to change the window: the options ask for a display other than the one it shows, which is the one an
+	/// earlier tick put into effect (after RESTART GAME's cross the screen is still open) or else the one the screen opened with.
+	/// </summary>
+	internal static bool DisplayToApply( (DisplayMode Mode, VideoMode Size)? applied, GameOptions before, GameOptions now )
+	{
+		var shown = applied ?? (before.DisplayMode, before.FullScreenSize);
+		return now.DisplayMode != shown.Mode || now.FullScreenSize != shown.Size;
+	}
 
 	/// <summary>Whether the cross has to put the window back: the tick put a display into effect that is not the one the screen opened with.</summary>
 	internal static bool DisplayToUndo( (DisplayMode Mode, VideoMode Size)? applied, GameOptions before )

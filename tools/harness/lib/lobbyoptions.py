@@ -1,12 +1,12 @@
-"""lobbyoptions.py WORKDIR CASE FOLDER [gpu=LINE] [vc=N] [dispN] [clickN] [locksave] [tick] [box=tick|cross] [exit=cross] [ENV=VAL ...]: one start of the build on a private game
+"""lobbyoptions.py WORKDIR CASE FOLDER [gpu=LINE] [vc=N] [dispN] [clickN] [backN] [locksave] [tick] [box=tick|cross] [exit=cross] [ENV=VAL ...]: one start of the build on a private game
 folder (made on first use under WORKDIR/game-FOLDER, kept between cases that name the same FOLDER, so a saved Config.tcf carries
 to the next start), the lobby, the Options screen opened from the lobby menu, screenshots (lobby, options, click1..N), optionally
 N clicks on the Video Card row and the tick, then the log's Graphics card / GPU / Options lines. box=tick|cross answers the RESTART GAME box the tick raises after a card change (Q985): cross ticks again and shows the box again, tick waits for the game to end. gpu=LINE sets opentpw.cfg's gpu
 line ("-" removes it); dispN clicks the Display row's arrow N times before the card's clicks (Windowed, FullScreen, Borderless in turn; the row is checked in the log and
 the screenshots); locksave makes the private save/ folder read-only once the Options screen is open (restored at the end), so the start found it writable and the tick's writes fail
 as a folder that cannot be written does (Q982, Q986; a read-only file is no use, the save replaces it); exit=cross
-presses the Options screen's own cross after the RESTART GAME box's cross (Q986), and the opentpw.cfg display line and the window's size are printed before and after; vc=N sets Config.tcf's video card field (byte 16; byte 12 is graphics quality). Output in WORKDIR/runs/CASE.
-BIN names the build's folder (default this repo's Debug build). Run with the harness Python (Xlib), on the desktop display.
+presses the Options screen's own cross after the RESTART GAME box's cross (Q986); backN clicks the Display row's arrow N more times after the box's cross and before the second tick, so the second tick sets the display back (Q987; needs dispN); and the opentpw.cfg display line and the window's size are printed before and after; vc=N sets Config.tcf's video card field (byte 16; byte 12 is graphics quality). Output in WORKDIR/runs/CASE.
+BIN names the build's folder (default this repo's Debug build). Run with the harness Python (Xlib), on the desktop display, or with OFFSCREEN_DISPLAY=:79 in the environment on a private Xvfb drawn by lavapipe (Q987; lane B).
 Q983: TOOLING.md, the table row `lib/lobbyoptions.py`."""
 import os, sys, re, shutil, struct
 LIB = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, LIB)
@@ -14,13 +14,14 @@ REPO = os.path.dirname(os.path.dirname(os.path.dirname(LIB)))
 os.environ["OPENTPW_NO_MESSAGE_BOX"] = "1"
 import gamefolder
 HERE = os.path.abspath(os.path.expanduser(sys.argv[1])); CASE, FOLDER = sys.argv[2], sys.argv[3]
-GPU = VC = None; CLICKS = 0; TICK = False; BOX = None; DISP = 0; LOCKSAVE = False; EXIT = None
+GPU = VC = None; CLICKS = 0; BACK = 0; TICK = False; BOX = None; DISP = 0; LOCKSAVE = False; EXIT = None
 for kv in sys.argv[4:]:
     if kv.startswith("gpu="): GPU = kv[4:]
     elif kv.startswith("vc="): VC = int(kv[3:])
     elif kv.startswith("disp"): DISP = int(kv[4:] or 1)
     elif kv == "locksave": LOCKSAVE = True
     elif kv.startswith("exit="): EXIT = kv[5:]
+    elif kv.startswith("back"): BACK = int(kv[4:] or 1)
     elif kv.startswith("click"): CLICKS = int(kv[5:] or 1)
     elif kv == "tick": TICK = True
     elif kv.startswith("box="): BOX = kv[4:]; TICK = True
@@ -43,7 +44,31 @@ def vcbyte():
 def displayline():
     return next((l.strip() for l in open(cfg) if l.startswith("display")), None) if os.path.exists(cfg) else None
 os.environ["OPENTPW_LOG_DIR"] = OUT
+_xvfb = None
+if os.environ.get("OFFSCREEN_DISPLAY"):   # the parkrun.py way: a private Xvfb, lavapipe drawing, no Wayland
+    import subprocess, time as _t, paths
+    _disp = os.environ["OFFSCREEN_DISPLAY"]
+    _xvfb = subprocess.Popen([paths.xvfb(), _disp, "-screen", "0", "1600x900x24", "-nolisten", "tcp", "-noreset"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    _t.sleep(2)
+    os.environ.update(DISPLAY=_disp, SDL_VIDEODRIVER="x11")
+    # one lavapipe, unless the run names its own driver files: two copies of lvp_icd.json (VK_DRIVER_FILES=a.json:b.json) list it twice, so the card row offers Secondary (Q987)
+    os.environ.setdefault("VK_DRIVER_FILES", "/usr/share/vulkan/icd.d/lvp_icd.json"); os.environ.setdefault("VK_ICD_FILENAMES", os.environ["VK_DRIVER_FILES"])
+    os.environ.pop("WAYLAND_DISPLAY", None)
 exec(open(os.path.join(LIB, "gamedrive.py")).read())
+def fit():
+    """On a private Xvfb there is no window manager to give a window the desktop's size, so a tick that went full screen or borderless leaves the
+    game drawing 1.25 times the window's size, clipped, and its controls where no click reaches (Q987). The window is sized to the screen, as a manager would."""
+    if not os.environ.get("OFFSCREEN_DISPLAY"): return
+    last = [l for l in open(os.path.join(OUT, "run.log"), errors="replace") if " Display: " in l and ", window " in l]
+    if last and re.search(r"Display: (BorderlessFullScreen|FullScreen)", last[-1]):
+        g = root.get_geometry(); win.configure(x=0, y=0, width=g.width, height=g.height); d.sync(); time.sleep(1.5)
+        print(f"  window sized to the screen, {g.width}x{g.height}, as no window manager does")
+    elif last:   # windowed again: SDL sizes the window to the mode but a manager is what places it
+        win.configure(x=0, y=0); d.sync(); time.sleep(1.0)
+        g = win.get_geometry(); print(f"  window put at the corner, {g.width}x{g.height}, as no window manager does")
+def display_arrow():
+    l = ask("control 1d4d2", "control"); m = re.search(r"at \((-?\d+),(-?\d+)\) size \((\d+),(\d+)\)", l)
+    return [int(v) for v in m.groups()]
 try:
     print(f"CASE {CASE}: Config.tcf video card dword at the start: {vcbyte()}")
     wait_for("GPU:", 60)
@@ -74,6 +99,7 @@ try:
         tx, ty, tw, th = [int(v) for v in m.groups()]
         move(tx + tw / 2, ty + th / 2, "the tick"); button(1, "tick"); time.sleep(1.5)
         if not BOX: shot("after-tick", 1.0)
+        fit()
     if BOX:
         # RESTART GAME (Q985): the box after a card change. Its cross (9873c8) leaves the Options screen open, so "cross" ticks again
         # and photographs the second box; its tick (9873c9) quits the lobby, so "tick" waits for the game to end and prints the exit code.
@@ -81,10 +107,14 @@ try:
             l = ask("control " + cid, "control"); print("  ", l)
             m = re.search(r"at \((-?\d+),(-?\d+)\) size \((\d+),(\d+)\)", l)
             bx, by, bw, bh = [int(v) for v in m.groups()]
-            move(bx + bw / 2, by + bh / 2, what); button(1, what); time.sleep(1.5)
+            move(bx + bw / 2, by + bh / 2, what); button(1, what); time.sleep(1.5); fit()
         time.sleep(0.5); shot("restart", 0.5)
         if BOX == "cross":
             box_button("9873c8", "the box's cross"); shot("after-cross", 0.5)
+            for i in range(BACK):
+                dx, dy, dw, dh = display_arrow()
+                move(dx + dw / 2, dy + dh / 2, "the Display arrow, back"); button(1, "arrow"); time.sleep(1.0)
+                shot(f"back{i+1}", 0.5)
             box_button("ffffffff", "the Options tick again"); shot("again", 0.5)
             box_button("9873c8", "the box's cross again"); shot("after-cross2", 0.5)
             if EXIT == "cross":
@@ -99,6 +129,7 @@ try:
     if DISP: print(f"  opentpw.cfg after: {displayline()}  window {win.get_geometry().width}x{win.get_geometry().height}")
 finally:
     finish()
+    if _xvfb: _xvfb.terminate()
     if LOCKSAVE: os.chmod(os.path.join(PRIVATE, "save"), 0o755)
 for l in open(os.path.join(OUT, "run.log"), errors="replace"):
     if re.search(r"Graphics card|GPU:|opentpw.cfg|Options:|Display:|video card|Saves: wrote|NOT SAVED|Save trouble|Message box|quitting|Front end", l): print("LOG>", l.rstrip())

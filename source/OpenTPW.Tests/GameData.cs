@@ -36,12 +36,16 @@ internal static class GameData
 	/// throws, and MSTest reports what it throws from as skipped rather than failed.
 	/// </summary>
 	public static BaseFileSystem Required()
-	{
-		if ( _data != null )
-			return _data;
+		=> _data ??= Mount( Environment.GetEnvironmentVariable( GamePathVariable ), GameDir.Find );
 
+	/// <summary>
+	/// <see cref="Required"/> without the cache: the folder <paramref name="named"/>, asked through <paramref name="find"/>, or
+	/// the end of the calling test where it is not the game. The seam a test uses to show that no variable asks nothing (Q987).
+	/// </summary>
+	internal static BaseFileSystem Mount( string? named, Func<string[], bool> find )
+	{
 		// GameDir says where it looked through the log, which TestRun makes before any test runs.
-		if ( !Locate( Environment.GetEnvironmentVariable( GamePathVariable ), GameDir.Find ) )
+		if ( !Locate( named, find ) )
 			Assert.Inconclusive( $"skipped: {GamePathVariable} does not name a Theme Park World installation" );
 
 		var data = new BaseFileSystem( GameDir.Data );
@@ -50,6 +54,6 @@ internal static class GameData
 		data.RegisterArchiveHandler( ".wad", path => new WadArchive( path ) );
 		data.RegisterArchiveHandler( ".sdt", path => new SdtArchive( path ) );
 
-		return _data = data;
+		return data;
 	}
 }
