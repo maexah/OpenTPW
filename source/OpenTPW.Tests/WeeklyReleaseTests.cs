@@ -87,7 +87,7 @@ public class WeeklyReleaseTests
 		try
 		{
 			var script = Path.Join( RepoFiles.Root(), "tools", "weekly", "release.py" );
-			var result = RepoFiles.Run( "python3", script, "guard", zip ) ?? RepoFiles.Run( "python", script, "guard", zip );
+			var result = RepoFiles.Python( [script, "guard", zip] );
 
 			if ( result == null )
 				Assert.Inconclusive( "skipped: no Python here" );
@@ -247,7 +247,7 @@ public class WeeklyReleaseTests
 			}
 
 			var script = Path.Join( root, "tools", "weekly", "release.py" );
-			var result = RepoFiles.Run( "python3", script, "package", publish, "weekly-test-1", "linux-x64", output ) ?? RepoFiles.Run( "python", script, "package", publish, "weekly-test-1", "linux-x64", output );
+			var result = RepoFiles.Python( [script, "package", publish, "weekly-test-1", "linux-x64", output] );
 
 			if ( result == null )
 				Assert.Inconclusive( "skipped: no Python here" );

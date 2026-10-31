@@ -19,9 +19,9 @@ public class FailedStartLogTests
 	private static (int Exit, string Output) Start( string workingFolder, Dictionary<string, string?> environment, params string[] arguments )
 	{
 		var dll = Path.Join( AppContext.BaseDirectory, "OpenTPW.dll" );
-		var host = Environment.ProcessPath;
+		var host = RepoFiles.Dotnet();
 
-		if ( !File.Exists( dll ) || host == null || !Path.GetFileNameWithoutExtension( host ).Equals( "dotnet", StringComparison.OrdinalIgnoreCase ) )
+		if ( !File.Exists( dll ) || host == null )
 			Assert.Inconclusive( "skipped: the built program or the dotnet that runs it cannot be found from here" );
 
 		// A game folder named in the environment must not rescue the run: --game below is the one that is looked at.

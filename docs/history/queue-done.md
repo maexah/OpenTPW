@@ -11297,6 +11297,20 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   word (2026-10-31), on every system: an SDL message box with the log's reason lines, where it looked, how to fix it and
   where the log is; an exception before the first frame the same, with its message. A deviation, said at the site (the
   original never needed one). Confirm on Windows: a double-click with no game, screenshot; the Linux zip's apphost the same.
+- [x] **Q977. The test suite on Windows.** With the game, 4342 passed, 56 failed, 17 skipped of 4415 (Linux 4413, 0, 2;
+  w2, w3's trx). Besides Q976's seven: 33 need Python and fail where it is missing (`WeeklyReleaseTests`, the content
+  guard's file-type cases, `EveryShaderInTheRepositoryIsRequired`; they should skip as the bash ones do, and say so); 5
+  `ConsoleLogTests` read the log with `File.ReadAllText` while the writer holds it (`FileShare.Read | Delete`; open with
+  `ReadWrite` sharing in the test; Notepad and `type` read it fine, w3); 2 `ContentGuardTests` cannot delete their
+  scratch repository (read-only git objects); 6 `ParkSaveScreenTests` expect `/` where Windows gives `\`
+  (`ParkSaveScreenTests.cs` 556 to 807); `FaithfulGraphicsTests.TheToggleIsKeptInOpenTpwCfg` expects LF (`AppendLine`
+  writes CRLF there; decide which the file should have); `ANameInTwoCasesIsWrittenInTheCaseAskedAbout` assumes a
+  case-sensitive disk. Skips to look at: "no git here" though git is on PATH, "no bash here" (Git Bash's `bash.exe` is
+  not on PATH; look in Git's folder), three "the built program ... cannot be found". Fix the tests, not the game, unless
+  a test shows the game wrong on Windows. Confirm: the suite on the Windows PC, every remaining skip named.
+  **Done (2026-10-31, Windows PC, `alexah/win-977-suite-on-windows`):** with the game 4,415 tests, 4,407 passed, 0 failed, 8
+  skipped; without it 1,712 passed, 0 failed, 2,703 skipped; with Python hidden the 42 that run a Python script give 1
+  passed, 41 skipped.
 
 ## B. Docs and comments
 

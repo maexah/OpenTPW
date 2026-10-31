@@ -11,6 +11,18 @@ public class ConsoleLogTests
 {
 	private static string Scratch() => Directory.CreateTempSubdirectory( "tpw-consolelog" ).FullName;
 
+	/// <summary>A log's text, read while the sink that writes it still has it open: the sink shares the file for reading and deleting only (<see cref="FileShare.Read"/> | <see cref="FileShare.Delete"/>), which refuses <see cref="File.ReadAllText(string)"/>'s own sharing on Windows; a reader that shares writing too is let in on every system.</summary>
+	private static string Read( string path )
+	{
+		using var stream = new FileStream( path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete );
+		using var reader = new StreamReader( stream );
+
+		return reader.ReadToEnd();
+	}
+
+	private static string[] ReadLines( string path )
+		=> Read( path ).ReplaceLineEndings( "\n" ).TrimEnd( '\n' ).Split( '\n' );
+
 	[TestMethod]
 	public void TheFirstLaunchWritesConsoleLogWithTheHeaderThenWhatWasHeld()
 	{
@@ -25,7 +37,7 @@ public class ConsoleLogTests
 			Assert.IsTrue( sink.Open( [folder], "HEADER" ) );
 			tee.WriteLine( "after" );
 
-			var lines = File.ReadAllLines( Path.Join( folder, ConsoleLog.FileName ) );
+			var lines = ReadLines( Path.Join( folder, ConsoleLog.FileName ) );
 
 			CollectionAssert.AreEqual( new[] { "HEADER", "before the folder is known", "after" }, lines );
 			Assert.IsFalse( File.Exists( Path.Join( folder, ConsoleLog.PreviousName ) ) );
@@ -47,8 +59,8 @@ public class ConsoleLogTests
 				sink.Write( $"body {run}\n" );
 			}
 
-			Assert.AreEqual( "run 3\nbody 3\n", File.ReadAllText( Path.Join( folder, ConsoleLog.FileName ) ).ReplaceLineEndings( "\n" ) );
-			Assert.AreEqual( "run 2\nbody 2\n", File.ReadAllText( Path.Join( folder, ConsoleLog.PreviousName ) ).ReplaceLineEndings( "\n" ) );
+			Assert.AreEqual( "run 3\nbody 3\n", Read( Path.Join( folder, ConsoleLog.FileName ) ).ReplaceLineEndings( "\n" ) );
+			Assert.AreEqual( "run 2\nbody 2\n", Read( Path.Join( folder, ConsoleLog.PreviousName ) ).ReplaceLineEndings( "\n" ) );
 		}
 		finally { Directory.Delete( folder, true ); }
 	}
@@ -70,8 +82,8 @@ public class ConsoleLogTests
 			Assert.IsFalse( sink.Open( [folder], "H" ), "no folder could be written" );
 			StringAssert.Contains( sink.Failures, "Input/output error" );
 
-			Assert.AreEqual( "old current", File.ReadAllText( Path.Join( folder, ConsoleLog.FileName ) ) );
-			Assert.AreEqual( "old previous", File.ReadAllText( Path.Join( folder, ConsoleLog.PreviousName ) ) );
+			Assert.AreEqual( "old current", Read( Path.Join( folder, ConsoleLog.FileName ) ) );
+			Assert.AreEqual( "old previous", Read( Path.Join( folder, ConsoleLog.PreviousName ) ) );
 			CollectionAssert.AreEquivalent( new[] { ConsoleLog.FileName, ConsoleLog.PreviousName },
 				Directory.GetFiles( folder ).Select( Path.GetFileName ).ToArray(), "nothing else was left behind" );
 		}
@@ -95,8 +107,8 @@ public class ConsoleLogTests
 
 			Assert.IsTrue( sink.Open( [first, Path.Join( folder, "second" )], "H" ) );
 			Assert.AreEqual( Path.Join( folder, "second", ConsoleLog.FileName ), sink.Path );
-			Assert.AreEqual( "old current", File.ReadAllText( Path.Join( first, ConsoleLog.FileName ) ) );
-			Assert.AreEqual( "old previous", File.ReadAllText( Path.Join( first, ConsoleLog.PreviousName ) ) );
+			Assert.AreEqual( "old current", Read( Path.Join( first, ConsoleLog.FileName ) ) );
+			Assert.AreEqual( "old previous", Read( Path.Join( first, ConsoleLog.PreviousName ) ) );
 		}
 		finally { Directory.Delete( folder, true ); }
 	}
@@ -118,8 +130,8 @@ public class ConsoleLogTests
 
 			Assert.AreEqual( Path.Join( folder, ConsoleLog.FileName ), sink.Path );
 			Assert.AreEqual( string.Empty, sink.Failures );
-			Assert.AreEqual( "HEADER\nbody\n", File.ReadAllText( Path.Join( folder, ConsoleLog.FileName ) ).ReplaceLineEndings( "\n" ) );
-			Assert.AreEqual( "old current", File.ReadAllText( Path.Join( folder, ConsoleLog.PreviousName ) ) );
+			Assert.AreEqual( "HEADER\nbody\n", Read( Path.Join( folder, ConsoleLog.FileName ) ).ReplaceLineEndings( "\n" ) );
+			Assert.AreEqual( "old current", Read( Path.Join( folder, ConsoleLog.PreviousName ) ) );
 			Assert.IsFalse( File.Exists( Path.Join( folder, ConsoleLog.FileName + ConsoleLog.NewSuffix ) ) );
 		}
 		finally { Directory.Delete( folder, true ); }
@@ -153,8 +165,8 @@ public class ConsoleLogTests
 
 			Assert.AreEqual( kept, sink.Path );
 			StringAssert.Contains( sink.Failures, "could not be moved into place" );
-			StringAssert.Contains( File.ReadAllText( kept ), "body" );
-			Assert.AreEqual( "old current", File.ReadAllText( Path.Join( folder, ConsoleLog.FileName ) ) );
+			StringAssert.Contains( Read( kept ), "body" );
+			Assert.AreEqual( "old current", Read( Path.Join( folder, ConsoleLog.FileName ) ) );
 		}
 		finally { Directory.Delete( folder, true ); }
 	}
@@ -174,7 +186,7 @@ public class ConsoleLogTests
 
 			Assert.IsTrue( sink.Open( [blocked, Path.Join( folder, "own" )], "H" ) );
 			Assert.AreEqual( Path.Join( folder, "own", ConsoleLog.FileName ), sink.Path );
-			StringAssert.Contains( File.ReadAllText( sink.Path ), "cannot be written" );
+			StringAssert.Contains( Read( sink.Path ), "cannot be written" );
 			StringAssert.Contains( sink.Failures, "blocked" );
 		}
 		finally { Directory.Delete( folder, true ); }
@@ -206,7 +218,7 @@ public class ConsoleLogTests
 			tee.Write( "f".AsSpan() );
 
 			Assert.AreEqual( "abdef", terminal.ToString() );
-			Assert.AreEqual( "abdef", File.ReadAllText( Path.Join( folder, ConsoleLog.FileName ) ).ReplaceLineEndings( "" ) );
+			Assert.AreEqual( "abdef", Read( Path.Join( folder, ConsoleLog.FileName ) ).ReplaceLineEndings( "" ) );
 		}
 		finally { Directory.Delete( folder, true ); }
 	}

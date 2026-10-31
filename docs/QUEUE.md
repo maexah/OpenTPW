@@ -105,17 +105,6 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   Also look, on a PC without the permission fix, whether the original's saves went to Windows' VirtualStore
   (`%LOCALAPPDATA%\VirtualStore\Program Files (x86)\SimTheme Park\save`); whether OpenTPW should read them there is
   Alexah's call.
-- [ ] **Q977. The test suite on Windows.** With the game, 4342 passed, 56 failed, 17 skipped of 4415 (Linux 4413, 0, 2;
-  w2, w3's trx). Besides Q976's seven: 33 need Python and fail where it is missing (`WeeklyReleaseTests`, the content
-  guard's file-type cases, `EveryShaderInTheRepositoryIsRequired`; they should skip as the bash ones do, and say so); 5
-  `ConsoleLogTests` read the log with `File.ReadAllText` while the writer holds it (`FileShare.Read | Delete`; open with
-  `ReadWrite` sharing in the test; Notepad and `type` read it fine, w3); 2 `ContentGuardTests` cannot delete their
-  scratch repository (read-only git objects); 6 `ParkSaveScreenTests` expect `/` where Windows gives `\`
-  (`ParkSaveScreenTests.cs` 556 to 807); `FaithfulGraphicsTests.TheToggleIsKeptInOpenTpwCfg` expects LF (`AppendLine`
-  writes CRLF there; decide which the file should have); `ANameInTwoCasesIsWrittenInTheCaseAskedAbout` assumes a
-  case-sensitive disk. Skips to look at: "no git here" though git is on PATH, "no bash here" (Git Bash's `bash.exe` is
-  not on PATH; look in Git's folder), three "the built program ... cannot be found". Fix the tests, not the game, unless
-  a test shows the game wrong on Windows. Confirm: the suite on the Windows PC, every remaining skip named.
 
 - [ ] **Q850. Q978's message box on Windows (the confirm Q978 could not make on Linux).** Built and seen on Linux only
   (SDL's X11 box on a private Xvfb). On the Windows PC: a double-click of the build with no game, the box's screenshot

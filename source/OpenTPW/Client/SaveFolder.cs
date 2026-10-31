@@ -233,7 +233,9 @@ internal static class SaveFolder
 			foreach ( var (key, steps) in LoadStepCounts.All )
 				text.AppendLine( $"{LoadStepCounts.LineName} {key} {steps}" );
 
-			SaveFileSystem.WriteAllBytes( path, Encoding.UTF8.GetBytes( text.ToString() ) );
+			// Lines end in LF on every system: AppendLine writes the system's own, and a file moved between a Windows and a Linux
+			// install (the game folder is shared with the original's) should not change its bytes. LoadDisplay reads either.
+			SaveFileSystem.WriteAllBytes( path, Encoding.UTF8.GetBytes( text.ToString().ReplaceLineEndings( "\n" ) ) );
 			Log.Info( $"Saves: wrote the display settings to {path}" );
 		}
 		catch ( Exception e )

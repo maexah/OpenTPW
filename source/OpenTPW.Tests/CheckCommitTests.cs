@@ -25,13 +25,20 @@ public class CheckCommitTests
 		private string Bin => Path.Join( Folder, "bin" );
 		public string Temp => Path.Join( Folder, "tmp" );
 		public string Repo => Path.Join( Folder, "repo" );
+		private readonly string Bash;
 
 		public Scratch()
 		{
 			var root = RepoFiles.Root();
 
-			if ( OperatingSystem.IsWindows() || RepoFiles.Run( "bash", "-c", "true" ) is not { Exit: 0 } )
+			Bash = RepoFiles.Bash() ?? "";
+
+			if ( Bash.Length == 0 )
 				Assert.Inconclusive( "skipped: no bash here (the script is run on Linux and macOS, and on Windows from Git Bash)" );
+
+			// check_commit.sh runs the content guard and refuses to start without python3 or python.
+			if ( RepoFiles.Python( ["--version"], launcher: false ) is not { Exit: 0 } )
+				Assert.Inconclusive( "skipped: no Python here" );
 
 			Directory.CreateDirectory( Path.Join( Repo, "tools" ) );
 			Directory.CreateDirectory( Path.Join( Repo, "source", "OpenTPW", "Client" ) );
@@ -88,7 +95,7 @@ public class CheckCommitTests
 				["FAKE_TEST_OUT"] = tests,
 				["FAKE_TEST_EXIT"] = testExit.ToString(),
 			};
-			var result = RepoFiles.Run( "bash", new[] { "tools/check_commit.sh" }.Concat( arguments ).ToArray(), environment, Repo );
+			var result = RepoFiles.Run( Bash, new[] { "tools/check_commit.sh" }.Concat( arguments ).ToArray(), environment, Repo );
 
 			Assert.IsNotNull( result );
 
@@ -100,7 +107,7 @@ public class CheckCommitTests
 
 		public void Dispose()
 		{
-			try { Directory.Delete( Folder, true ); } catch ( IOException ) { } catch ( UnauthorizedAccessException ) { }
+			RepoFiles.DeleteTree( Folder );
 		}
 	}
 

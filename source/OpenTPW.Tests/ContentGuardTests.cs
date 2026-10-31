@@ -18,7 +18,7 @@ public class ContentGuardTests
 	{
 		var script = Path.Join( RepoFiles.Root(), "tools", "content_guard.py" );
 		var arguments = new[] { script, "paths" }.Concat( paths ).ToArray();
-		var result = RepoFiles.Run( "python3", arguments, null, null ) ?? RepoFiles.Run( "python", arguments, null, null );
+		var result = RepoFiles.Python( arguments );
 
 		if ( result == null )
 			Assert.Inconclusive( "skipped: no Python here" );
@@ -72,6 +72,10 @@ public class ContentGuardTests
 		var root = RepoFiles.Root();
 		var folder = Path.Join( Path.GetTempPath(), "opentpw-guard-" + Guid.NewGuid().ToString( "N" ) );
 
+		// The hook and the guard both need Python; a test that sets its own PATH is the one that runs without.
+		if ( environment == null && RepoFiles.Python( ["--version"], launcher: !hook ) is not { Exit: 0 } )
+			Assert.Inconclusive( "skipped: no Python here" );
+
 		try
 		{
 			Directory.CreateDirectory( Path.Join( folder, "tools", "hooks" ) );
@@ -92,8 +96,8 @@ public class ContentGuardTests
 			}
 
 			var result = hook
-				? RepoFiles.Run( "sh", new[] { "tools/hooks/pre-commit" }, environment, folder )
-				: RepoFiles.Run( "python3", new[] { "tools/content_guard.py", "staged" }, null, folder ) ?? RepoFiles.Run( "python", new[] { "tools/content_guard.py", "staged" }, null, folder );
+				? RepoFiles.Sh() is { } sh ? RepoFiles.Run( sh, new[] { "tools/hooks/pre-commit" }, environment, folder ) : null
+				: RepoFiles.Python( new[] { "tools/content_guard.py", "staged" }, null, folder );
 
 			if ( result == null )
 				Assert.Inconclusive( "skipped: no Python or sh here" );
@@ -102,7 +106,7 @@ public class ContentGuardTests
 		}
 		finally
 		{
-			try { Directory.Delete( folder, true ); } catch ( IOException ) { }
+			RepoFiles.DeleteTree( folder );
 		}
 	}
 
@@ -135,21 +139,41 @@ public class ContentGuardTests
 
 		try
 		{
-			foreach ( var tool in new[] { "git", "sh" } )
-			{
-				var found = ( Environment.GetEnvironmentVariable( "PATH" ) ?? "" ).Split( Path.PathSeparator )
-					.Select( d => Path.Join( d, tool ) ).FirstOrDefault( File.Exists );
+			var path = bin;
+			var git = ( Environment.GetEnvironmentVariable( "PATH" ) ?? "" ).Split( Path.PathSeparator )
+				.Select( d => Path.Join( d, OperatingSystem.IsWindows() ? "git.exe" : "git" ) ).FirstOrDefault( File.Exists );
 
-				if ( found == null )
+			if ( git == null )
+			{
+				Assert.Inconclusive( "skipped: no git here" );
+				return;
+			}
+
+			if ( OperatingSystem.IsWindows() )
+			{
+				// Git's own tools stop working when linked away from the DLLs beside them (and a link needs a privilege), so the
+				// PATH is the folders of git and of its sh, which hold no Python.
+				if ( RepoFiles.Sh() is not { } shell )
 				{
-					Assert.Inconclusive( $"skipped: no {tool} here" );
+					Assert.Inconclusive( "skipped: no sh here" );
 					return;
 				}
 
-				File.CreateSymbolicLink( Path.Join( bin, tool ), found );
+				path = string.Join( Path.PathSeparator, new[] { Path.GetDirectoryName( git )!, Path.GetDirectoryName( shell )! }.Distinct() );
+			}
+			else
+			{
+				if ( ( Environment.GetEnvironmentVariable( "PATH" ) ?? "" ).Split( Path.PathSeparator ).Select( d => Path.Join( d, "sh" ) ).FirstOrDefault( File.Exists ) is not { } sh )
+				{
+					Assert.Inconclusive( "skipped: no sh here" );
+					return;
+				}
+
+				File.CreateSymbolicLink( Path.Join( bin, "git" ), git );
+				File.CreateSymbolicLink( Path.Join( bin, "sh" ), sh );
 			}
 
-			var (exit, output) = InScratchRepo( true, new Dictionary<string, string?> { ["PATH"] = bin }, ("ok.md", true) );
+			var (exit, output) = InScratchRepo( true, new Dictionary<string, string?> { ["PATH"] = path }, ("ok.md", true) );
 
 			Assert.AreEqual( 1, exit, output );
 			StringAssert.Contains( output, "git commit --no-verify" );

@@ -506,6 +506,10 @@ public class ParkSaveScreenTests
 	{
 		Put( "a.TPWS", DateTime.Now );
 		Put( "A.TPWS", DateTime.Now );
+
+		if ( Directory.GetFiles( Jungle ).Length != 2 )
+			Assert.Inconclusive( "skipped: this disk keeps a.TPWS and A.TPWS as one file (Windows and macOS disks do not tell the cases apart), so there are not two to choose between" );
+
 		RunningPark( 1234 );
 
 		var stack = APark();
@@ -553,7 +557,7 @@ public class ParkSaveScreenTests
 
 		RunningPark( 1234 );
 
-		Assert.AreEqual( "users/1Test/jungle/autosave.TPWS", TestRun.CurrentLevel.WriteParkOnLeaving() );
+		Assert.AreEqual( "users/1Test/jungle/autosave.TPWS", Slashed( TestRun.CurrentLevel.WriteParkOnLeaving() ) );
 		Assert.AreEqual( "New Save.TPWS, autosave.TPWS", Parks() );
 		Assert.AreEqual( 1234, TickIn( Path.Combine( Jungle, "autosave.TPWS" ) ) );
 		Assert.AreEqual( "autosave.TPWS", Path.GetFileName( SaveFolder.NewestPark( 0, "Test", "jungle" ) ) );
@@ -574,7 +578,7 @@ public class ParkSaveScreenTests
 		Put( "easymode.TPWI", new DateTime( 2026, 10, 1, 14, 18, 0, DateTimeKind.Local ) );
 		RunningPark( 1234 );
 
-		Assert.AreEqual( "users/1Test/jungle/restart.INTS", TestRun.CurrentLevel.WriteRestartOnEntering() );
+		Assert.AreEqual( "users/1Test/jungle/restart.INTS", Slashed( TestRun.CurrentLevel.WriteRestartOnEntering() ) );
 		Assert.AreEqual( 1234, TickIn( Path.Combine( Jungle, "restart.INTS" ) ) );
 		Assert.IsTrue( File.Exists( Path.Combine( Jungle, "..", "gms.dat" ) ), "the player is written first" );
 		Assert.AreEqual( "", Parks(), "not a saved park" );
@@ -947,7 +951,11 @@ public class ParkSaveScreenTests
 
 	/// <summary>The park the game has been asked to load between frames, and the file to load it from.</summary>
 	private static (string? Theme, string? File) WhatWasAsked()
-		=> ((string?)Asked( "_parkAsked" ).GetValue( null ), (string?)Asked( "_parkFileAsked" ).GetValue( null ));
+		=> ((string?)Asked( "_parkAsked" ).GetValue( null ), Slashed( (string?)Asked( "_parkFileAsked" ).GetValue( null ) ));
+
+	/// <summary>A path as the tests write it, with <c>/</c>: the game joins with the system's own separator, which Windows makes <c>\</c>.</summary>
+	private static string? Slashed( string? path )
+		=> path?.Replace( '\\', '/' );
 
 	private static void ForgetWhatWasAsked()
 	{
