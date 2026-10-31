@@ -71,21 +71,10 @@ its leftovers Q826, Q835, Q833 and Q959 move to the end of this section, and Q82
 order below. Memory and frame time are checked before each weekly build instead (`WORKFLOW.md`, the Sunday routine, step
 0).
 
-- [ ] **Q820. What Q818, Q821 and Q822 left: the stacked and loop pylons, the original's picture of a flipped diagonal, and the heights by the original's samplers.** From Q818 (run 14, lane A;
-  its piece (3), the face normals and the control word, is Q819; its piece (1), the ground's per-cell diagonal, is Q821, which ticks Q398; the decode
-  of piece (4) and the float note are Q822). (2) Left by Q817: the pylon under a stacked piece is drawn with the alone-on-its-cell arms (the bottom of a stack that is not its top shows the `0x400` node and hides the `0x800` one, `0x00432ff8`..`0x0043304d`; ours hides `mc_bridge` on it); a stacked pylon stands on the
-  stack-height record (`StackHeightDummy` on `StdPylon`), the type flag `0x10` keeps its floor, a loop pylon is another model:
-  none is in her park, so each needs a park that holds one (a coaster built in the original, then loaded in both games).
-  (3) Piece done by Q837 (the original's picture of a flipped diagonal: with its camera and clock held, `0x0804` -> `0x0802` on four bent cells changes 7,327 pixels in four patches and putting it back returns the frame in 0 in two launches). Left:
-  which diagonal each flag state draws is not seen in the picture (the poke moved `0x4` and `0x2` together, so the frame does not separate them; a one-bit poke, `flipdiag.sh`'s poke() extended to set or clear one bit, would settle which bit moved the pixels) (the brightness and the centre's shift were near nought, and a path texture written onto the cells did not reach the frame), so the original's drawing by `0x2` stands on the decode and the live bits;
-  the cuts differ by at most 0.505 at a cell's centre (`park-engine.md`), so only a feature that crosses the diagonal names it: a path built by real clicks on one of the bent cells in the original (the `t@` write did not reach the frame), the flag flipped on it, and the kink of its edges read.
-  (4) Built by Q823 (`alexah/766-heights-by-the-originals-samplers`): `0x800` at the load, the sprites, balloons, `Feet` and the build markers' glide on
-  `ScapeHeight`, the camcorder's eye on `CameraHeight` + 5 each frame. The pick's ground as the original's two planes a cell is Q824. The person's particles'
-  sampler, the sprites carrying `0x1000000` and the eye's further term are decoded and measured in Q825 (`park-engine.md`, "The three words Q822 left unread": the
-  particle's offset is nought, the bit is the head sprites' alone and ours already stands them absolutely, the eye's term is nought in first person; the
-  puffs themselves are Q900). The markers' corners at a flagged cell are read in the original's own mesh and equal ours (Q838), and a person's drawn height at a flagged cell is read in the original
-  and equals ours (Q839: 279 points of 31 flagged cells (20 ground, 11 holes) on the stock park's two ridges and the cells by them, a guest held at each). Left: a balloon at a flagged cell (the same pass; `spritehold.py` holds a walker only), ours' own person drawn on a flagged cell in a
-  frame beside the original's (no console command puts one there), and the feet's pixel row against the projected ground point.
+**Ordered at Alexah's word (2026-10-31), before the first weekly build:** Q849 (saving a played park, the round trip
+never run), Q216 (settings and profile saves: back up, then overwrite), Q957 (shipped builds watch the shader files),
+Q247 (the Load Park list's scrollbar) first; then Q820 and the rest in the order below.
+
 - [ ] **Q849. What Q810 left: two counted gaps her played park's save now reaches, and two loads never run.** (From Q810's review,
   run 14.) Q810 made her Full Simulation `New Save.TPWS` read whole, so the save goes through the running-things writer for the
   first time (before, the model walk failed and the whole module was written as the file's). Two counters then fire, in
@@ -106,6 +95,56 @@ order below. Memory and frame time are checked before each weekly build instead 
   in ours (the round trip: the same things, scripts and hoardings) and in the original under Proton (`loadfile.sh`), and say what
   each shows. Acceptance: (a) and (b) each named and settled or built, (c) each load run and its result written in `WORKS.md`'s
   Q810 entry.
+- [ ] **Q216. The save-preservation policy. Alexah's call first.** Found by the 2026-10-04 review (`u9-foundation-2`,
+  `-5`). OpenTPW will not rewrite a gms.dat or Config.tcf it did not read whole; the original overwrites. A Config.tcf
+  of version 0, of another version or with a tail blocks saving the options for good, and nothing on screen says a
+  save was refused (rule 11: say it in the game's own style). Decide whether to keep it. Either way, measure the
+  stricter `ExpandedMemoryStream.ReadBytes` over all 47 `.sdt`, the 42 `.str` and the saves: a short read it used to
+  pad now throws. **Decided by Alexah (2026-10-31):** back up, then overwrite, for both files: an odd `Config.tcf` or `gms.dat` is
+  copied beside itself (a name the game does not read) and then written, as the original writes it; nothing is refused silently.
+  The `ReadBytes` measure stays.
+- [ ] **Q957. A shader recompile leaks the old compiled shaders.** From an outside audit (Alexah,
+  2026-10-30), checked against `8a566e88` (`VERIFY-gpt-perf.md`, P6, P2); the text is corrected to the code at `3bc9708e` (Q954). Each
+  shader has a `FileSystemWatcher` in every build (`Shader.cs:44-58`); `Recompile` (`:79-87`) replaces the vertex/fragment shaders
+  without disposing them. Q954 already made `Material.SetupResources` swap the shared pipeline and layouts on a recompile, mark the
+  resource sets dirty and bump the bindings (so the frozen-uniform and the `_resourceLayouts ??=` claims are fixed), and the old
+  pipeline is disposed with its last user; the old `ScratchBuffer` is disposed by the review fixes of run 15. What is left: the
+  old compiled shaders are not disposed, and a recompile that is never run was not tested at all (Q954 ran none).
+  Noted 2026-09-14 (`docs/history/current-task-archive.md:4892`) and never filed. Decide whether a shipped build should watch shader files at all (a player never edits them; a deviation
+  from nothing in the original), and if it does, dispose and rebind. One more, UNSETTLED: `VkResourceLayout.Dispose` is immediate
+  in NeoVeldrid 1.2.1 while sets and pipelines are freed after the frame's fence, so `Material.Delete` may destroy a layout a set
+  in flight still uses; one run under the Vulkan validation layer settles it.
+- [ ] **Q247. A loaded park is built again behind the loading screen, and the list has no scrollbar.** Left by
+  Q241c (`saves.md`, "OpenTPW's Load Park"). The original reads a park file over the running park, with no loading
+  screen and no change of scene (`FUN_00414d40`: twelve teardown calls, the modules, `FUN_00415140`), where
+  `ParkLoadScreen.Load` asks `Game.RequestParkLoad` for the whole scene again; Restart Park is the same
+  (`ParkFrontEnd.RestartPark`). And the stream's scrollbar (control 1: `!slider`, `b_up`, `b_scroller`, `b_down`)
+  is built on no list here: a list longer than its window is counted as `LOAD_PARK_LIST_SCROLLBAR` on this screen
+  and the wheel scrolls it. Decode the teardown first, then decide with Alexah whether the park is rebuilt in
+  place. Confirm: a load timed against the original's 1.3 s, and a folder of fourteen saves scrolled by the bar.
+  From Q241f: no load here reads the camera module, which the writer now writes (`ParkWorld.Camera` holds it,
+  `FUN_0042cec0`; `saves.md`, "Loading the modules", Camera): a loaded park opens on the default view, where the
+  original's opens where the save's camera stood. The file's rotation is the orbit camera's yaw negated.
+  - **Note (fork watch 2026-10-19, `verify-audio-fx.md` M2; `hud.md`, "Which window the click sound is for"):** the bar's
+    arrows are repeating buttons (flag `0x21`): first repeat after 500 ms, then every 125 ms (`+0x13c`, `+0x140` of every
+    button). An arrow clicked without repeating plays `Select3` (`0xbd`, the bar's flags `0x10`); one held past 500 ms
+    plays **nothing**, neither at the repeats nor on release (the repeat messages are not `0x100`, and the release posts
+    none after a repeat). The thumb and the track play nothing.
+- [ ] **Q820. What Q818, Q821 and Q822 left: the stacked and loop pylons, the original's picture of a flipped diagonal, and the heights by the original's samplers.** From Q818 (run 14, lane A;
+  its piece (3), the face normals and the control word, is Q819; its piece (1), the ground's per-cell diagonal, is Q821, which ticks Q398; the decode
+  of piece (4) and the float note are Q822). (2) Left by Q817: the pylon under a stacked piece is drawn with the alone-on-its-cell arms (the bottom of a stack that is not its top shows the `0x400` node and hides the `0x800` one, `0x00432ff8`..`0x0043304d`; ours hides `mc_bridge` on it); a stacked pylon stands on the
+  stack-height record (`StackHeightDummy` on `StdPylon`), the type flag `0x10` keeps its floor, a loop pylon is another model:
+  none is in her park, so each needs a park that holds one (a coaster built in the original, then loaded in both games).
+  (3) Piece done by Q837 (the original's picture of a flipped diagonal: with its camera and clock held, `0x0804` -> `0x0802` on four bent cells changes 7,327 pixels in four patches and putting it back returns the frame in 0 in two launches). Left:
+  which diagonal each flag state draws is not seen in the picture (the poke moved `0x4` and `0x2` together, so the frame does not separate them; a one-bit poke, `flipdiag.sh`'s poke() extended to set or clear one bit, would settle which bit moved the pixels) (the brightness and the centre's shift were near nought, and a path texture written onto the cells did not reach the frame), so the original's drawing by `0x2` stands on the decode and the live bits;
+  the cuts differ by at most 0.505 at a cell's centre (`park-engine.md`), so only a feature that crosses the diagonal names it: a path built by real clicks on one of the bent cells in the original (the `t@` write did not reach the frame), the flag flipped on it, and the kink of its edges read.
+  (4) Built by Q823 (`alexah/766-heights-by-the-originals-samplers`): `0x800` at the load, the sprites, balloons, `Feet` and the build markers' glide on
+  `ScapeHeight`, the camcorder's eye on `CameraHeight` + 5 each frame. The pick's ground as the original's two planes a cell is Q824. The person's particles'
+  sampler, the sprites carrying `0x1000000` and the eye's further term are decoded and measured in Q825 (`park-engine.md`, "The three words Q822 left unread": the
+  particle's offset is nought, the bit is the head sprites' alone and ours already stands them absolutely, the eye's term is nought in first person; the
+  puffs themselves are Q900). The markers' corners at a flagged cell are read in the original's own mesh and equal ours (Q838), and a person's drawn height at a flagged cell is read in the original
+  and equals ours (Q839: 279 points of 31 flagged cells (20 ground, 11 holes) on the stock park's two ridges and the cells by them, a guest held at each). Left: a balloon at a flagged cell (the same pass; `spritehold.py` holds a walker only), ours' own person drawn on a flagged cell in a
+  frame beside the original's (no console command puts one there), and the feet's pixel row against the projected ground point.
 - [ ] **Q848. Face-anchored heads read the morphed face's recomputed normal, as the original's pose walk does.** (From run 14's
   review of Q819, VERIFY-5 finding 1.) The pose walk marks the parent of every face-anchored record `0x10000000`
   (`FUN_0044a870`, `0x0044a93c`), the morph marks the mesh stale (`0x10000`, `0x00471931`), and the pose walk recomputes the
@@ -663,12 +702,6 @@ filed the items that cite it.
   response groups 150 and 151 for the door); `Advisor_SayResponse` answers 0 for a sample of no length; event 10 keeps
   the cooldown stamp. Count each, then build. Confirm: press the door in the original under Proton and hear whether
   he speaks (Q90 predicted silence from the scores and never ran it), then the same in OpenTPW.
-- [ ] **Q216. The save-preservation policy. Alexah's call first.** Found by the 2026-10-04 review (`u9-foundation-2`,
-  `-5`). OpenTPW will not rewrite a gms.dat or Config.tcf it did not read whole; the original overwrites. A Config.tcf
-  of version 0, of another version or with a tail blocks saving the options for good, and nothing on screen says a
-  save was refused (rule 11: say it in the game's own style). Decide whether to keep it. Either way, measure the
-  stricter `ExpandedMemoryStream.ReadBytes` over all 47 `.sdt`, the 42 `.str` and the saves: a short read it used to
-  pad now throws.
 - [ ] **Q217. Three leftovers among the park's people.** Found by the 2026-10-04 review (`u3-staff-paths-1`,
   `u4-gate-1`, `u2-arrivals-4`). Staff are kept on paths by a fence the original does not have; its own recovery is
   the no-links arm (`0x004f95c0`), built for staff (Q112): ask Alexah whether the fence stays. `ParkPeople` holds two
@@ -834,22 +867,6 @@ filed the items that cite it.
   From Q375 (`hud.md`, "The miscellaneous tab: a row an object, and each tab's sort"): the pick is built for the
   four all-items lists too (their handler has no `0x401` arm); the all-staff and visitors lists still count it.
 
-- [ ] **Q247. A loaded park is built again behind the loading screen, and the list has no scrollbar.** Left by
-  Q241c (`saves.md`, "OpenTPW's Load Park"). The original reads a park file over the running park, with no loading
-  screen and no change of scene (`FUN_00414d40`: twelve teardown calls, the modules, `FUN_00415140`), where
-  `ParkLoadScreen.Load` asks `Game.RequestParkLoad` for the whole scene again; Restart Park is the same
-  (`ParkFrontEnd.RestartPark`). And the stream's scrollbar (control 1: `!slider`, `b_up`, `b_scroller`, `b_down`)
-  is built on no list here: a list longer than its window is counted as `LOAD_PARK_LIST_SCROLLBAR` on this screen
-  and the wheel scrolls it. Decode the teardown first, then decide with Alexah whether the park is rebuilt in
-  place. Confirm: a load timed against the original's 1.3 s, and a folder of fourteen saves scrolled by the bar.
-  From Q241f: no load here reads the camera module, which the writer now writes (`ParkWorld.Camera` holds it,
-  `FUN_0042cec0`; `saves.md`, "Loading the modules", Camera): a loaded park opens on the default view, where the
-  original's opens where the save's camera stood. The file's rotation is the orbit camera's yaw negated.
-  - **Note (fork watch 2026-10-19, `verify-audio-fx.md` M2; `hud.md`, "Which window the click sound is for"):** the bar's
-    arrows are repeating buttons (flag `0x21`): first repeat after 500 ms, then every 125 ms (`+0x13c`, `+0x140` of every
-    button). An arrow clicked without repeating plays `Select3` (`0xbd`, the bar's flags `0x10`); one held past 500 ms
-    plays **nothing**, neither at the repeats nor on release (the repeat messages are not `0x100`, and the release posts
-    none after a repeat). The thumb and the track play nothing.
 
 - [ ] **Q680. How often a fresh park's boundary laying draws the generator (from Q656), decode first.** `FreshParkBoundary`
   chooses each anchor's piece once, in the walk's order, which gives the original's pattern of straights' variants
@@ -2225,17 +2242,6 @@ filed the items that cite it.
   scan in `Shader.Cache.cs:12`) over a Full Simulation park's turnover before changing it. Also `ParkGuestSprites.cs:859`: a new
   `Vector3[4]` per drawn shadow per frame (debug data; STATUS names "the shadow arrays"). Direction: buffers with spare room that
   grow when needed. Fidelity first: the crowd drawn the same (a frame), the census the same.
-- [ ] **Q957. A shader recompile leaks the old compiled shaders.** From an outside audit (Alexah,
-  2026-10-30), checked against `8a566e88` (`VERIFY-gpt-perf.md`, P6, P2); the text is corrected to the code at `3bc9708e` (Q954). Each
-  shader has a `FileSystemWatcher` in every build (`Shader.cs:44-58`); `Recompile` (`:79-87`) replaces the vertex/fragment shaders
-  without disposing them. Q954 already made `Material.SetupResources` swap the shared pipeline and layouts on a recompile, mark the
-  resource sets dirty and bump the bindings (so the frozen-uniform and the `_resourceLayouts ??=` claims are fixed), and the old
-  pipeline is disposed with its last user; the old `ScratchBuffer` is disposed by the review fixes of run 15. What is left: the
-  old compiled shaders are not disposed, and a recompile that is never run was not tested at all (Q954 ran none).
-  Noted 2026-09-14 (`docs/history/current-task-archive.md:4892`) and never filed. Decide whether a shipped build should watch shader files at all (a player never edits them; a deviation
-  from nothing in the original), and if it does, dispose and rebind. One more, UNSETTLED: `VkResourceLayout.Dispose` is immediate
-  in NeoVeldrid 1.2.1 while sets and pipelines are freed after the frame's fence, so `Material.Delete` may destroy a layout a set
-  in flight still uses; one run under the Vulkan validation layer settles it.
 - [ ] **Q958. World models outside the camera's view are drawn: the original culls them.** From an outside audit (Alexah,
   2026-10-30), checked against `8a566e88` (`VERIFY-gpt-perf.md`, C). `Entity.cs:87-105` draws every entity in each pass and
   `ModelEntity.cs:66-79` draws whenever it has a model; nothing in `World/` or `Render/` tests the view. The original builds a
