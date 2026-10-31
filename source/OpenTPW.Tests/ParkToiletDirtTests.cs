@@ -38,7 +38,7 @@ public class ParkToiletDirtTests
 
 	private RideScript ToiletScript()
 	{
-		using var stream = data.OpenRead( "levels/jungle/features/Toilet.rse" );
+		using var stream = data.OpenRead( "levels/jungle/features/toilet/toilet.RSE" );
 		return new RideScript( new RideScriptFile( stream ) );
 	}
 

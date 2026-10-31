@@ -11279,6 +11279,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `original/spritehold.py` holds one guest at 279 points (a 3 x 3 grid in each of 31 flagged cells (20 ground, 11 holes) on the stock park's two ridges and the cells by them) and reads `+0xe8` less `+0x8c`: 279 of 279 caught in each of two fresh launches, the runs identical,
   and the sampler is ours `ScapeHeight` at all 279 (worst 0.0001; `lib/spriteheights.py`); the near corner's plane, `ScapeHeight` before Q823, at 60 (up to 4.47 off), the bilinear at 0 (up to 1.31 off); at (595,355) the
   original draws 2.6265. A guest held there is in the frame (`q839/orig/frame-B-held.png`, 719 pixels against the frame without it). Not seen: a balloon, ours' person in a frame there, the feet's pixel row. No code changed.
+- [x] **Q976. Seven tests read a script that is not on the disc.** `ParkToiletDirtTests`, `ParkMechanicRepairTests` and
+  `ParkHandymanCleanTests` open a loose `levels/jungle/features/Toilet.rse`; the disc has it only inside `toilet.wad`
+  (780 bytes). A stray loose copy in the maintainer's game folder (and a loose `Bouncy.RSE` beside the jungle's wads),
+  left by an old harness, is why they pass on Linux; on a clean copy they throw `FileNotFoundException` (seven failures
+  on Windows, w2). Read the script out of the wad, as the game does; then, at Alexah's word (2026-10-31), delete the two
+  strays from the game folder (after the change is committed) and run the suite with the game: nothing may newly fail
+  or skip. Check that no other test reads a file the disc does not have (the ISO's listing against the game folder).
 
 ## B. Docs and comments
 

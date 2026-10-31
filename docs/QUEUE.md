@@ -84,13 +84,6 @@ meets first, found on a Windows 11 PC by a Remote Control session, jobs w1 to w4
 `C:\Users\alexa\tpw-work`): Q976, Q978, Q981, Q979, Q980, Q982, Q977, in that order; then the blocks below. A
 confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
 
-- [ ] **Q976. Seven tests read a script that is not on the disc.** `ParkToiletDirtTests`, `ParkMechanicRepairTests` and
-  `ParkHandymanCleanTests` open a loose `levels/jungle/features/Toilet.rse`; the disc has it only inside `toilet.wad`
-  (780 bytes). A stray loose copy in the maintainer's game folder (and a loose `Bouncy.RSE` beside the jungle's wads),
-  left by an old harness, is why they pass on Linux; on a clean copy they throw `FileNotFoundException` (seven failures
-  on Windows, w2). Read the script out of the wad, as the game does; then, at Alexah's word (2026-10-31), delete the two
-  strays from the game folder (after the change is committed) and run the suite with the game: nothing may newly fail
-  or skip. Check that no other test reads a file the disc does not have (the ISO's listing against the game folder).
 - [ ] **Q978. A failed start says why in a message box.** A start that cannot find the game logs the reason
   (`GameDir.Explain`) and exits 1; on Windows a double-click shows a terminal for about a second and nothing else (w3).
   Any other exception before the window (w3 met one in `SaveFolder.LoadConfig`, `Game.cs:66`) does the same. At Alexah's
