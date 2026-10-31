@@ -10,8 +10,7 @@ namespace OpenTPW;
 ///   - <b>the globe page's start</b> (FUN_005dcfe0), right after it loads data\lobby\globe, starts
 ///     two continuous voices from the global lobby sfx category - effects 2 and 3 - and the globe's
 ///     deactivate stops them. The island lobby, the page that opens, never runs it and plays
-///     neither; effect 3 is played here as a bed anyway, a deviation (Q770), and effect 2 is not.
-///     See <see cref="KeepGlobalPlaying"/>.
+///     neither, so neither is played here (Q770); the globe page is unbuilt (Q62).
 ///   - <b>selecting an island</b> (FUN_005e14a0, and the same three lines again in the next- and
 ///     previous-island handlers) stops whatever the last island had going and starts two more:
 ///     effect 1 of that park's local lobby <i>music</i> category, and effect 2 of its local lobby
@@ -55,7 +54,7 @@ public sealed class LobbyAudio : Entity
 	/// counted.
 	/// </summary>
 	private const int GlobalThunder = 1;
-	// Dead by CODE: nothing calls it.
+	// Dead by CODE: the globe page's two voices (Q62, Q770); the island lobby plays neither.
 	private const int GlobalMusicBed = 2;
 	private const int GlobalAmbientBed = 3;
 	private const int LocalMusic = 1;
@@ -90,13 +89,12 @@ public sealed class LobbyAudio : Entity
 	///     park beds        -16.5   (-16.1 jungle, -23.6 fantasy, -16.9 hallow, -13.1 space)
 	///     one-shots        -17.0
 	///     thunder          -16.2
-	///     global ambience  -12.4
 	///
 	/// So the music is the <b>quietest</b> thing in the lobby as recorded, by five to seven
 	/// decibels, and playing every layer at roughly equal gain buries it.
 	/// Each constant below is therefore a correction rather than a
 	/// level: it is what puts that layer's median at the target it should sit at, which is
-	/// -26 dBFS for the theme, -34 for the bed and the one-shots, -36 for the global ambience,
+	/// -26 dBFS for the theme, -34 for the bed and the one-shots,
 	/// and -24 for thunder. The theme therefore leads the ambience by about eight decibels and
 	/// thunder is the only thing above it.
 	///
@@ -111,8 +109,8 @@ public sealed class LobbyAudio : Entity
 	/// The peaks matter as much as the averages. This is 1999 game audio and it is mastered hot -
 	/// nearly every sample in the lobby peaks within a decibel of full scale - so gains that look
 	/// modest still sum past 1.0 and clip, and clipping is most of what "too loud" turns out to
-	/// mean. Worst case here, with a theme, a bed, a one-shot, a thunder and the global ambience
-	/// all peaking on the same sample, comes to 1.18 before the master volume and 0.59 after it,
+	/// mean. Worst case here, with a theme, a bed, a one-shot and a thunder
+	/// all peaking on the same sample, comes to 1.11 before the master volume and 0.55 after it,
 	/// so <see cref="Audio"/>'s clamp is a backstop that never actually fires. Forty seconds of
 	/// Lost Kingdom measures -30.7 dBFS RMS peaking at -11.4.
 	/// </summary>
@@ -120,7 +118,6 @@ public sealed class LobbyAudio : Entity
 	private const float BedVolume = 0.13f;
 	private const float OneShotVolume = 0.14f;
 	private const float ThunderVolume = 0.40f;
-	private const float GlobalBedVolume = 0.07f;
 
 	/// <summary>
 	/// How long a park's theme and bed take to come in and go out when the camera moves.
@@ -170,7 +167,6 @@ public sealed class LobbyAudio : Entity
 	private const string SoundNodeName = "ant_emitter";
 
 	private ParkSounds? _current;
-	private Voice? _globalBed;
 	private string? _playing;
 
 	/// <summary>Where the island on show wants its ambience to come from, or null to play it flat.</summary>
@@ -292,9 +288,6 @@ public sealed class LobbyAudio : Entity
 		if ( _global == null )
 			StartGlobal();
 
-		if ( !Muted )
-			KeepGlobalPlaying();
-
 		var island = LobbyCameraMode.CurrentIsland;
 
 		if ( island == null )
@@ -353,44 +346,13 @@ public sealed class LobbyAudio : Entity
 
 	private static string Describe( Voice? voice ) => voice is { Playing: true } ? voice.Name : "-";
 
-	/// <summary>Loads the category the thunder and the global ambience both come from.</summary>
+	/// <summary>Loads the global lobby category the thunder and the park-entry cue come from.</summary>
 	private void StartGlobal()
 	{
 		_global = new SoundCategory( "global", "global/sound", "globallobbysfx" );
 
 		if ( !_global.IsValid )
 			Log.Warning( "Lobby audio: no global lobby sfx category - there will be no thunder" );
-	}
-
-	/// <summary>
-	/// Keeps the lobby's global ambience going.
-	///
-	/// The original starts <i>two</i> voices from the globe page's start, and its deactivate stops
-	/// them - effects 2 and 3 of the global lobby sfx category - and the island lobby plays neither.
-	/// This plays effect 3 from the lobby's opening, a deviation (Q770).
-	///
-	/// Effect 2 is left out deliberately. Its two samples are level4c and level4w from the global
-	/// music bank, and level4c is the same recording as one of Space Zone's three lobby themes -
-	/// the two files differ by eleven bytes out of 253,807, all of them in the final MPEG frame,
-	/// and the decoded audio correlates at 1.0000. So playing it does what it sounds like: Space
-	/// Zone's music comes up over whichever park you are actually looking at, every twenty-odd
-	/// seconds, on top of that park's own theme. Whatever it was for in the original - most likely
-	/// the globe view, which the lobby here never shows because it always has an island selected -
-	/// it reads as a bug in this one.
-	///
-	/// Effect 3 is the one worth having: four short atmospheric samples on a five-second delay,
-	/// which is texture rather than melody and does not fight anything.
-	///
-	/// Like the per-park beds it is replayed rather than looped, on its own effect's delay.
-	/// </summary>
-	private void KeepGlobalPlaying()
-	{
-		if ( _global is not { IsValid: true } )
-			return;
-
-		// Deviation, Q770: the original's island lobby plays no global bed.
-		if ( _globalBed is not { Playing: true } )
-			_globalBed = _global.Play( GlobalAmbientBed, GlobalBedVolume, fadeInSeconds: CrossfadeSeconds );
 	}
 
 	/// <summary>
@@ -604,10 +566,6 @@ public sealed class LobbyAudio : Entity
 		foreach ( var theme in _voices.Keys.ToArray() )
 			Silence( theme, 0.15f );
 
-		_globalBed?.FadeOut( 0.15f );
-		_globalBed = null;
-
-		_global?.Release( GlobalAmbientBed );
 	}
 
 	private ParkSounds? ParkFor( string theme )

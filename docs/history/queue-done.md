@@ -11489,6 +11489,19 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   a running park by a `touch` of `test.shader` (log, not a picture), in both builds and with the variable; the validation run (`lib/vkvalidate.sh`) printed nothing about a
   layout, a shader module or a pipeline after two recompiles and a leave of the park, so the layout question is settled for that path (lavapipe, one layer version). Not done: the desk's card, Windows.
   What the run found is Q853.
+- [x] **Q770. The island lobby plays no global lobby sound 2 or 3; ours loops effect 3 as a bed.** From the fork watch
+  2026-10-28 (verify-hz-ui-hud M1, L2; `audio.md`, "The lobby was entirely non-positional"). Global lobby effects 2 and 3 are
+  started by `Lobby_Start` (`0x005dcfe0`, at `0x005dd0eb` and `0x005dd0fe`), which is the globe page's start; the globe's
+  deactivate (`0x005dd690`) stops both. The island lobby, the page that opens (`0x005d5bf1` -> `0x005e18d0`), never runs it; the
+  other uses of the global lobby category's handle `[0x00803a48]` are effect 4 (`0x004b90aa`, park entry) and effect 1 (thunder,
+  `0x005e1110`). Ours (`LobbyAudio.KeepGlobalPlaying`, `GlobalAmbientBed` 3) plays effect 3 as a bed from the lobby's opening,
+  which was unmarked and now carries a deviation comment; its own text already guessed effect 2 belonged to the globe. Build: take
+  the bed out of the island lobby (the original has none), and when Q62's globe page is built start effects 2 and 3 there at (0,
+  0, 0) and stop them at its deactivate; or, if Alexah wants the texture, keep it as a said deviation. Confirm: the island lobby's
+  mix by the disk driver for 60 s in the original holds none of effect 3's samples (predict silence of that bed), then ours the
+  same with the bug put back (`verifying-audio-by-capture`).
+  **Built (2026-10-31):** the bed is out of `LobbyAudio` (the original has none), kept out rather than a said deviation: the goal is the original as closely
+  as possible. The globe page's two voices are Q62's, noted there. Measured: `docs/exe/audio.md`, "The lobby was entirely non-positional"; the stored tool `lib/lobbyvoices.py`.
 
 ## B. Docs and comments
 

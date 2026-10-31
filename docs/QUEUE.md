@@ -124,17 +124,6 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   next to `AFolderThatCanBeWrittenIsKeptAndTheProbeLeavesNothing`.
 
 - [ ] **Q987. Two small leftovers of Q986 (its review, 2026-10-31).** (1) `OptionsScreen.Keep` compares the display with `_before`, not `_applied`: after RESTART GAME's cross, a second tick that sets the display back to the opening mode skips `Display.Apply` and writes the old mode to `opentpw.cfg` while the window stays in the tick's mode; compare with `_applied ?? (_before.DisplayMode, _before.FullScreenSize)` (read, not run). (2) `GameDataTests` pin `Locate` only: putting `GameDir.Find( [] )` back into `Required` stays green. Give `Required` a seam so a test shows that no variable means Inconclusive with `Find` never called.
-- [ ] **Q770. The island lobby plays no global lobby sound 2 or 3; ours loops effect 3 as a bed.** From the fork watch
-  2026-10-28 (verify-hz-ui-hud M1, L2; `audio.md`, "The lobby was entirely non-positional"). Global lobby effects 2 and 3 are
-  started by `Lobby_Start` (`0x005dcfe0`, at `0x005dd0eb` and `0x005dd0fe`), which is the globe page's start; the globe's
-  deactivate (`0x005dd690`) stops both. The island lobby, the page that opens (`0x005d5bf1` -> `0x005e18d0`), never runs it; the
-  other uses of the global lobby category's handle `[0x00803a48]` are effect 4 (`0x004b90aa`, park entry) and effect 1 (thunder,
-  `0x005e1110`). Ours (`LobbyAudio.KeepGlobalPlaying`, `GlobalAmbientBed` 3) plays effect 3 as a bed from the lobby's opening,
-  which was unmarked and now carries a deviation comment; its own text already guessed effect 2 belonged to the globe. Build: take
-  the bed out of the island lobby (the original has none), and when Q62's globe page is built start effects 2 and 3 there at (0,
-  0, 0) and stop them at its deactivate; or, if Alexah wants the texture, keep it as a said deviation. Confirm: the island lobby's
-  mix by the disk driver for 60 s in the original holds none of effect 3's samples (predict silence of that bed), then ours the
-  same with the bug put back (`verifying-audio-by-capture`).
 - [ ] **Q749. After a quit to the lobby ours' eye eases out from where the last flight ended; the original seeds it from its render camera. Film both first. (from the run 11 review of Q670, M1, unsettled.)**
   `LobbyCameraMode._placed` (and `_position`, `_lookAt`) are static and reset only by `DebugSettle`, so after a park is quit
   ours' first lobby frame eases from where the last flight ended (radius under 8 at the old island) out to the orbit. The
@@ -3008,7 +2997,7 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
     font 6, `Button_SetRepeatDelays( 0, 10 )` on 0x16001, 0x16002, 0x16004, 0x16005, callback `FUN_004c56e0`), `FUN_004b9a70()`
     (tree `0x7581a0`, the hover readout), `Lobby_Start` `0x005dcfe0`, then `0x005d6060` on `[0xf85614]+0x14`; the trees are
     created here, not at lobby start. `Lobby_Start` is the globe scene's start: FOV 60, ambient 0x202020, a white directional
-    light, `[0x008bcbc8] |= 0x2000000`, model `data\lobby\globe`, global lobby effects 2 and 3 (Q770), the online object
+    light, `[0x008bcbc8] |= 0x2000000`, model `data\lobby\globe`, global lobby effects 2 and 3 (ours plays them nowhere since Q770, the globe page being unbuilt: start both at (0, 0, 0) here and stop them at the deactivate), the online object
     `[0x00f7d88c]` made if absent (`FUN_005b50b0`), `FUN_005b6070()` and `FUN_005bc7d0( 0x5dcfc0, this )`, and the fog off
     (`0x005dd04c`, Q502). The return, the panel callback `0x004c53f0` case `0x004c5568`: globe `+0x20`, island `+0x1c`, then
     `0x005d6110( 0x258, 1 )` on `[0xf85614]+0x14` (`0x004c5589`): advisor response 600 queued; the globe's deactivate `0x005dd690`
