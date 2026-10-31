@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Backstage: the code, and how to help. OpenTPW</title>
+<meta name="description" content="Where OpenTPW&#039;s code and its notes on the old game&#039;s file formats are kept, how to report a fault, and how to help build it.">
+<link rel="canonical" href="https://maexah.github.io/OpenTPW/backstage.html">
+<meta property="og:url" content="https://maexah.github.io/OpenTPW/backstage.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="OpenTPW">
+<meta property="og:locale" content="en_GB">
+<meta property="og:title" content="Backstage: the code, and how to help. OpenTPW">
+<meta property="og:description" content="Where OpenTPW&#039;s code and its notes on the old game&#039;s file formats are kept, how to report a fault, and how to help build it.">
+<meta property="og:image" content="https://maexah.github.io/OpenTPW/assets/img/screens/lost-kingdom-gate.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="720">
+<meta property="og:image:alt" content="The Lost Kingdom island seen from the sea, its stone gate facing the camera.">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Front Gate","item":"https://maexah.github.io/OpenTPW/"},{"@type":"ListItem","position":2,"name":"Backstage","item":"https://maexah.github.io/OpenTPW/backstage.html"}]}]}</script>
+	<meta name="theme-color" content="#064858">
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preload" href="assets/fonts/Boogaloo.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/Itim-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/css/site.css">
+<link rel="stylesheet" href="assets/css/pages.css">
+<script src="assets/js/look-first.js"></script>
+</head>
+<body class="page-backstage">
+<a class="skip-link" href="#main">Skip to the park</a>
+
+<div class="alert-bar" role="region" aria-label="Park notice">
+	<span class="alert-mark" aria-hidden="true">!</span>
+	<p><strong class="alert-name">Park notice:</strong> Lost Kingdom is open early.<span class="alert-rest"> The other three lands are not open yet.</span></p>
+	<a href="ride-status.html" data-help="Opens the Ride Status page"><span><span class="alert-see">See </span>Ride Status</span></a>
+</div>
+
+<header class="site-head">
+	<a class="wordmark" href="./" aria-label="OpenTPW, the Front Gate" data-help="Goes to the Front Gate, the home page">
+		<span class="wordmark-open">Open</span><span class="wordmark-tpw">TPW</span>
+	</a>
+
+	<button class="menu-button" type="button" aria-expanded="false" aria-controls="site-menu" data-help="Opens the menu" data-help-on="Closes the menu">
+		<span class="menu-bars" aria-hidden="true"></span>
+		<span>Menu</span>
+	</button>
+
+	<nav id="site-menu" class="site-menu" aria-label="Main">
+		<ul>
+			<li><a href="./" data-help="Goes to the Front Gate, the home page">Front Gate</a></li>
+			<li><a href="plan-your-visit.html" data-help="Opens Plan Your Visit: how to get OpenTPW running">Get Started</a></li>
+			<li><a href="./#lands-title" data-help="Goes to the four lands on the Front Gate">The Lands</a></li>
+			<li><a href="ride-status.html" data-help="Opens the Ride Status page">Ride Status</a></li>
+			<li><a href="guest-services.html" data-help="Opens Guest Services: questions and answers">Help</a></li>
+			<li><a href="backstage.html" aria-current="page" data-help="Opens Backstage: the code, and how to help">Code</a></li>
+		</ul>
+	</nav>
+
+		<div class="site-tools">
+		<button class="switch" id="easy-read-switch" type="button" aria-pressed="false" data-ui="switch" data-help="Makes the words bigger and stops everything moving" data-help-on="Turns easy read off">
+			<span class="switch-icon" aria-hidden="true">Aa</span>
+			<span class="switch-label">Easy read</span>
+			<span class="switch-track" aria-hidden="true"><span class="switch-state" aria-hidden="true" data-on="On" data-off="Off">Off</span></span>
+		</button>
+		<button class="switch" id="stop-motion-switch" type="button" aria-pressed="false" data-ui="switch" data-help="Stops everything moving. The words stay as they are" data-help-off="Lets things move again" data-help-on="Lets things move again" data-held-easy="Easy read keeps the page still" data-held-device="Your device asks for no motion">
+			<span class="switch-icon switch-icon-still" aria-hidden="true"></span>
+			<span class="switch-label">Stop motion<span class="unseen switch-why"></span></span>
+			<span class="switch-track" aria-hidden="true"><span class="switch-state" aria-hidden="true" data-on="On" data-off="Off">Off</span></span>
+		</button>
+		<a class="panel-link easy-more" href="#easy-options" data-help="Goes to the choices for Easy read, lower on this page">Options</a>
+		<a class="key-count" id="key-count" href="golden-keys.html" data-help="Opens the golden key hunt" hidden><span class="key-count-icon" aria-hidden="true"></span><span id="key-count-words">Golden keys</span></a>
+	</div>
+
+	<a class="ticket" href="plan-your-visit.html" data-ui="ticket" data-help="Shows how to build OpenTPW and try it">
+		<span class="ticket-stub" aria-hidden="true">Admit one</span>
+		<span class="ticket-main">Build and try it</span>
+	</a>
+</header>
+	<main id="main" class="page backstage-page">
+
+<header class="page-head">
+	<h1 class="sign-head">Backstage</h1>
+	<p class="page-plain">Code</p>
+	<p class="page-lead">Staff only? Not here. Come and see how the park is built.</p>
+	<p>This page is for people who want to read the code, learn how the old game works, or help.</p>
+</header>
+
+<ul class="notes doors">
+	<li class="note">
+		<h2>The code</h2>
+		<p>All of this fork of OpenTPW is on GitHub. It is written in C#. Anyone may read it, copy it and change it, under the MIT licence.</p>
+		<p><a class="panel-link" href="https://github.com/maexah/OpenTPW" data-help="Opens this fork on GitHub">This fork on GitHub</a></p>
+	</li>
+	<li class="note">
+		<h2>Where it came from</h2>
+		<p>OpenTPW was started by Alex Guthrie and its contributors. The code this site shows is a fork: a copy that carries their work on. It is not the original project's own site.</p>
+		<p><a class="panel-link" href="https://github.com/OpenTPW/OpenTPW" data-help="Opens the original OpenTPW project on GitHub">The original project on GitHub</a></p>
+	</li>
+	<li class="note">
+		<h2>The file format notes</h2>
+		<p>The old game keeps its models, pictures, sounds and saved parks in its own kinds of file. The project writes down what it learns about each kind, so that anyone can read them.</p>
+		<p><a class="panel-link" href="https://github.com/maexah/OpenTPW.FileFormats" data-help="Opens the file format notes on GitHub">The file format notes</a></p>
+	</li>
+	<li class="note">
+		<h2>Report a fault</h2>
+		<p>Did something break, or look different from the old game? Please say so. Tell us what you did, what you saw, and which computer you use.</p>
+		<p><a class="panel-link" href="https://github.com/maexah/OpenTPW/issues" data-help="Opens this fork's list of faults on GitHub">Report a fault on GitHub</a></p>
+	</li>
+</ul>
+
+<section class="panel backstage-help" aria-labelledby="help-title">
+	<h2 id="help-title">How to help</h2>
+	<div class="panel-screen">
+		<ol class="plain-list">
+			<li>Make your own copy of this fork on GitHub.</li>
+			<li>Make a branch for your change. Name it <code>YourName/WhatItChanges</code>.</li>
+			<li>Build it and run the tests. The two commands are below.</li>
+			<li>Open a pull request when you are ready.</li>
+		</ol>
+	</div>
+	<pre class="type" tabindex="0" role="group" aria-label="Commands"><code>dotnet build source/OpenTPW.sln
+dotnet test source/OpenTPW.sln</code></pre>
+	<p>Most tests read the real game files. Without the game they are skipped.</p>
+	<p>You do not have to write code to help. Trying OpenTPW on Windows, on a Mac, or with the Theme Park World disc, and saying how it went, is a real help.</p>
+</section>
+
+<section class="backstage-read" aria-labelledby="read-title">
+	<h2 id="read-title" class="sign-head">Good places to start reading</h2>
+	<ul class="notes">
+		<li class="note">
+			<h3>How much is built</h3>
+			<p>The project keeps one honest list of what works and what does not. This site's Ride Status board shows it in numbers.</p>
+			<p><a href="ride-status.html" data-help="Opens the Ride Status page">Ride Status</a> · <a href="https://github.com/maexah/OpenTPW/blob/main/docs/STATUS.md" data-help="Opens the list on GitHub">The list on GitHub</a></p>
+		</li>
+		<li class="note">
+			<h3>The work queue</h3>
+			<p>The jobs still to do, in order.</p>
+			<p><a href="https://github.com/maexah/OpenTPW/blob/main/docs/QUEUE.md" data-help="Opens the work queue on GitHub">The queue on GitHub</a></p>
+		</li>
+		<li class="note">
+			<h3>How the old game behaves</h3>
+			<p>Notes on what the original program does, worked out piece by piece, so that OpenTPW can do the same.</p>
+			<p><a href="https://github.com/maexah/OpenTPW/tree/main/docs/exe" data-help="Opens the notes on GitHub">The notes on GitHub</a></p>
+		</li>
+	</ul>
+</section>
+
+<section class="panel backstage-site" aria-labelledby="site-title">
+	<h2 id="site-title">About this website</h2>
+	<div class="panel-screen">
+		<ul class="plain-list">
+			<li>It holds no files from the game. Its drawings and its 3-D islands are new, made in code.</li>
+			<li>The only words from the game are its names, and one short quote from its advisor on each land's page.</li>
+			<li>The pictures under "See it running" are OpenTPW itself, running. What they show is the game's own art.</li>
+			<li>It makes no sound. Your browser loads nothing from any other website.</li>
+			<li>The numbers on Ride Status are read from the project's own notes each time this website is updated.</li>
+			<li>Its own code and drawings are free to read, copy and change, under the MIT licence.</li>
+			<li>The 3-D islands are drawn with three.js. The lettering is Boogaloo, Itim, Atkinson Hyperlegible and OpenDyslexic. All are free to use.</li>
+		</ul>
+	</div>
+	<span class="key-spot"><button class="gold-key" type="button" data-key="backstage" data-ui="key" data-help="A golden key! Press to take it" aria-label="A hidden golden key. Press to take it." hidden></button></span>
+	</section>
+
+<p class="way-back"><a class="ticket" href="./" data-ui="ticket" data-help="Goes to the Front Gate, the home page"><span class="ticket-stub" aria-hidden="true">This way</span><span class="ticket-main">Back to the Front Gate</span></a>
+	</p>
+
+</main>
+<section class="easy-options" id="easy-options" aria-labelledby="easy-options-title" tabindex="-1">
+	<h2 id="easy-options-title">Easy read options</h2>
+	<p>Pick what is easiest for you. Your choice is kept for your next visit.</p>
+	<div class="easy-choices">
+		<fieldset>
+			<legend>Letters</legend>
+				<button class="panel-link choice choice-font-atkinson" type="button" value="font-atkinson" aria-pressed="true" data-help="Uses the Atkinson Hyperlegible letters">Clear letters</button>
+				<button class="panel-link choice choice-font-dyslexic" type="button" value="font-dyslexic" aria-pressed="false" data-help="Uses the OpenDyslexic letters">Dyslexia letters</button>
+				<button class="panel-link choice choice-font-system" type="button" value="font-system" aria-pressed="false" data-help="Uses the letters your own device uses">My device&#039;s letters</button>
+			</fieldset>
+		<fieldset>
+			<legend>Page colour</legend>
+				<button class="panel-link choice choice-paper-sea" type="button" value="paper-sea" aria-pressed="true" data-help="Keeps the dark sea behind the words">Sea</button>
+				<button class="panel-link choice choice-paper-cream" type="button" value="paper-cream" aria-pressed="false" data-help="Puts cream paper behind the words">Cream paper</button>
+			</fieldset>
+	</div>
+</section>
+	<footer class="site-foot">
+	<div class="waves" aria-hidden="true"></div>
+	<p><strong>OpenTPW is a fan project.</strong> It rebuilds the game Theme Park World. In America the game is called Sim Theme Park.</p>
+	<p>It holds no game files. You need your own copy of the game to play.</p>
+	<p>It is not made or approved by the game's makers or publishers.</p>
+	<p>OpenTPW was started by Alex Guthrie and its contributors. This site follows a fork of their work. <a href="https://github.com/OpenTPW/OpenTPW" data-help="Opens the original OpenTPW project on GitHub">The original project on GitHub</a></p>
+	<p><a href="https://github.com/maexah/OpenTPW" data-help="Opens this fork on GitHub">This fork on GitHub</a> <a class="js-only" href="golden-keys.html" data-help="Opens the golden key hunt">The golden key hunt</a></p>
+</footer>
+
+<p class="key-say" id="key-say" role="status"></p>
+
+<div class="help-strip" id="help-strip" aria-hidden="true"></div>
+
+<script type="application/json" id="otpw-data">{"lands":[{"id":"lost-kingdom","name":"Lost Kingdom","url":"lost-kingdom.html","open":true,"badge":"Open","keys":1,"blurb":"Dinosaurs, palm trees and the first rides that run."},{"id":"wonder-land","name":"Wonder Land","url":"wonder-land.html","open":false,"badge":"Not open yet","keys":3,"blurb":"A garden where you are the size of an ant."},{"id":"halloween-world","name":"Halloween World","url":"halloween-world.html","open":false,"badge":"Not open yet","keys":1,"blurb":"Spooky, stormy and friendly all the same."},{"id":"space-zone","name":"Space Zone","url":"space-zone.html","open":false,"badge":"Not open yet","keys":5,"blurb":"A purple planet under a sunset sky."}],"site":{"keys":["index","lost-kingdom","wonder-land","halloween-world","space-zone","ride-status","plan-your-visit","guest-services","backstage"]}}</script>
+<script type="module" src="assets/js/main.js"></script>
+</body>
+</html>
+	

@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lost Kingdom, a land of Theme Park World. OpenTPW</title>
+<meta name="description" content="Lost Kingdom, a land of Theme Park World. Dinosaurs, palm trees and the first rides that run. See its rides, shops and sideshows, and which run in OpenTPW today.">
+<link rel="canonical" href="https://maexah.github.io/OpenTPW/lost-kingdom.html">
+<meta property="og:url" content="https://maexah.github.io/OpenTPW/lost-kingdom.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="OpenTPW">
+<meta property="og:locale" content="en_GB">
+<meta property="og:title" content="Lost Kingdom, a land of Theme Park World. OpenTPW">
+<meta property="og:description" content="Lost Kingdom, a land of Theme Park World. Dinosaurs, palm trees and the first rides that run. See its rides, shops and sideshows, and which run in OpenTPW today.">
+<meta property="og:image" content="https://maexah.github.io/OpenTPW/assets/img/screens/lost-kingdom-gate.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="720">
+<meta property="og:image:alt" content="The Lost Kingdom island seen from the sea, its stone gate facing the camera.">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Front Gate","item":"https://maexah.github.io/OpenTPW/"},{"@type":"ListItem","position":2,"name":"Lost Kingdom","item":"https://maexah.github.io/OpenTPW/lost-kingdom.html"}]}]}</script>
+	<meta name="theme-color" content="#064858">
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preload" href="assets/fonts/Boogaloo.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/Itim-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/css/site.css">
+<link rel="stylesheet" href="assets/css/pages.css">
+<script src="assets/js/look-first.js"></script>
+</head>
+<body class="page-lost-kingdom">
+<a class="skip-link" href="#main">Skip to the park</a>
+
+<div class="alert-bar" role="region" aria-label="Park notice">
+	<span class="alert-mark" aria-hidden="true">!</span>
+	<p><strong class="alert-name">Park notice:</strong> Lost Kingdom is open early.<span class="alert-rest"> The other three lands are not open yet.</span></p>
+	<a href="ride-status.html" data-help="Opens the Ride Status page"><span><span class="alert-see">See </span>Ride Status</span></a>
+</div>
+
+<header class="site-head">
+	<a class="wordmark" href="./" aria-label="OpenTPW, the Front Gate" data-help="Goes to the Front Gate, the home page">
+		<span class="wordmark-open">Open</span><span class="wordmark-tpw">TPW</span>
+	</a>
+
+	<button class="menu-button" type="button" aria-expanded="false" aria-controls="site-menu" data-help="Opens the menu" data-help-on="Closes the menu">
+		<span class="menu-bars" aria-hidden="true"></span>
+		<span>Menu</span>
+	</button>
+
+	<nav id="site-menu" class="site-menu" aria-label="Main">
+		<ul>
+			<li><a href="./" data-help="Goes to the Front Gate, the home page">Front Gate</a></li>
+			<li><a href="plan-your-visit.html" data-help="Opens Plan Your Visit: how to get OpenTPW running">Get Started</a></li>
+			<li><a href="./#lands-title" data-help="Goes to the four lands on the Front Gate">The Lands</a></li>
+			<li><a href="ride-status.html" data-help="Opens the Ride Status page">Ride Status</a></li>
+			<li><a href="guest-services.html" data-help="Opens Guest Services: questions and answers">Help</a></li>
+			<li><a href="backstage.html" data-help="Opens Backstage: the code, and how to help">Code</a></li>
+		</ul>
+	</nav>
+
+		<div class="site-tools">
+		<button class="switch" id="easy-read-switch" type="button" aria-pressed="false" data-ui="switch" data-help="Makes the words bigger and stops everything moving" data-help-on="Turns easy read off">
+			<span class="switch-icon" aria-hidden="true">Aa</span>
+			<span class="switch-label">Easy read</span>
+			<span class="switch-track" aria-hidden="true"><span class="switch-state" aria-hidden="true" data-on="On" data-off="Off">Off</span></span>
+		</button>
+		<button class="switch" id="stop-motion-switch" type="button" aria-pressed="false" data-ui="switch" data-help="Stops everything moving. The words stay as they are" data-help-off="Lets things move again" data-help-on="Lets things move again" data-held-easy="Easy read keeps the page still" data-held-device="Your device asks for no motion">
+			<span class="switch-icon switch-icon-still" aria-hidden="true"></span>
+			<span class="switch-label">Stop motion<span class="unseen switch-why"></span></span>
+			<span class="switch-track" aria-hidden="true"><span class="switch-state" aria-hidden="true" data-on="On" data-off="Off">Off</span></span>
+		</button>
+		<a class="panel-link easy-more" href="#easy-options" data-help="Goes to the choices for Easy read, lower on this page">Options</a>
+		<a class="key-count" id="key-count" href="golden-keys.html" data-help="Opens the golden key hunt" hidden><span class="key-count-icon" aria-hidden="true"></span><span id="key-count-words">Golden keys</span></a>
+	</div>
+
+	<a class="ticket" href="plan-your-visit.html" data-ui="ticket" data-help="Shows how to build OpenTPW and try it">
+		<span class="ticket-stub" aria-hidden="true">Admit one</span>
+		<span class="ticket-main">Build and try it</span>
+	</a>
+</header>
+	<main id="main" class="land-page land-lost-kingdom">
+
+<section class="hero land-hero" aria-labelledby="land-title">
+	<div class="lobby-frame">
+	<div class="lobby island-stage">
+		<canvas id="island-canvas" data-land="lost-kingdom" data-view="{&quot;far&quot;:26,&quot;high&quot;:12,&quot;lookY&quot;:4.6,&quot;fov&quot;:60}" aria-hidden="true"></canvas>
+		<p class="unseen picture-words">A 3-D picture of the Lost Kingdom island, seen from the sea.</p>
+		<button class="lobby-pause" id="lobby-pause" type="button" data-help="Holds the picture still" data-help-pause="Holds the picture still" data-help-play="Lets the picture move again" hidden><span class="pause-icon" aria-hidden="true"></span><span class="pause-words">Pause</span></button>
+	</div>
+	</div>
+
+	<div class="hero-card">
+		<div class="land-scenery" aria-hidden="true"><svg class="scenery-layer scenery-far" viewBox="0 0 320 150" focusable="false"><g transform="translate(78 18) rotate(-20) scale(0.7)"><path d="M-11 0 C-5 -8 5 -8 11 0 C5 8 -5 8 -11 0 Z"/></g><g transform="translate(150 60) rotate(30) scale(0.75)"><path d="M-11 0 C-5 -8 5 -8 11 0 C5 8 -5 8 -11 0 Z"/></g><g transform="translate(232 20) rotate(15) scale(0.7)"><path d="M-11 0 C-5 -8 5 -8 11 0 C5 8 -5 8 -11 0 Z"/></g><g transform="translate(262 96) rotate(-35) scale(0.8)"><path d="M-11 0 C-5 -8 5 -8 11 0 C5 8 -5 8 -11 0 Z"/></g><g transform="translate(180 126) rotate(10) scale(0.7)"><path d="M-11 0 C-5 -8 5 -8 11 0 C5 8 -5 8 -11 0 Z"/></g></svg><svg class="scenery-layer scenery-near" viewBox="0 0 320 150" focusable="false"><g transform="translate(122 16) rotate(25) scale(1.05)"><path d="M-11 0 C-5 -8 5 -8 11 0 C5 8 -5 8 -11 0 Z"/></g><g transform="translate(196 22) rotate(-30) scale(1.1)"><path d="M-11 0 C-5 -8 5 -8 11 0 C5 8 -5 8 -11 0 Z"/></g><g transform="translate(292 58) rotate(55) scale(1.15)"><path d="M-11 0 C-5 -8 5 -8 11 0 C5 8 -5 8 -11 0 Z"/></g><g transform="translate(218 112) rotate(-15) scale(1.2)"><path d="M-11 0 C-5 -8 5 -8 11 0 C5 8 -5 8 -11 0 Z"/></g><g transform="translate(296 130) rotate(30) scale(1)"><path d="M-11 0 C-5 -8 5 -8 11 0 C5 8 -5 8 -11 0 Z"/></g></svg></div>
+		<h1 id="land-title">Lost Kingdom</h1>
+		<p class="land-state"><span class="badge badge-open">Open</span></p>
+		<figure class="land-welcome">
+			<blockquote><p>&ldquo;Enter a land of prehistoric mystery, where reptilian giants roam the land, where you season the primordial soup! Welcome to Lost Kingdom, the theme park that time forgot.&rdquo;</p></blockquote>
+			<figcaption>The advisor, in the game</figcaption>
+		</figure>
+		<p>A green island on a brown cliff, with vines hanging down its sides.</p>
+		<p>A big blue dinosaur with purple spots stands by a stone gate. Butterflies drift over the palm trees.</p>
+		<p class="park-sign"><span class="park-sign-mark" aria-hidden="true">i</span> In the game, you need 1 golden key to get in.</p>
+	</div>
+
+	<div class="waves" aria-hidden="true"></div>
+</section>
+
+<div class="below land-below">
+
+	<section class="panel land-today" aria-labelledby="today-title">
+		<h2 id="today-title">In OpenTPW today</h2>
+		<div class="panel-screen">
+			<p>This is the land that works in OpenTPW today. You can open the park the game comes with.</p>
+			<ul class="plain-list">
+				<li><strong>Guests:</strong> They arrive, queue, ride and buy drinks.</li>
+				<li><strong>Building:</strong> You can lay paths, and buy and sell rides.</li>
+				<li><strong>Staff:</strong> You can hire them, and set a training budget for each kind.</li>
+				<li><strong>Breakdowns:</strong> Rides wear out and break down. A mechanic walks over and mends them.</li>
+				<li><strong>Advisor:</strong> He warns you about problems in your park. Some of his tags open the screen that fixes them.</li>
+				<li><strong>Saving and finishing:</strong> You can save your park and load it again, even one you started empty. When the last research is done, the park&#039;s ending show plays.</li>
+			</ul>
+		</div>
+		<p><a class="panel-link" href="ride-status.html" data-help="Opens the Ride Status page">See the full Ride Status board</a></p>
+	</section>
+
+	<section class="land-things" aria-labelledby="things-title">
+		<h2 id="things-title" class="sign-head">What is in Lost Kingdom</h2>
+		<p>These are the game's rides, shops and sideshows for this land. A green sticker with a tick means guests can use it in OpenTPW today. Those are listed first.</p>
+		<div class="boards">
+		<section class="panel board board-rides" aria-labelledby="board-rides">
+			<h2 id="board-rides">Rides <span class="board-count">(18)</span></h2>
+			<div class="panel-screen">
+				<ul class="board-list">
+					<li>
+						<span class="board-name">Belly Bounce</span>
+						<span class="badge badge-open">Running</span>
+					</li>
+					<li>
+						<span class="board-name">The Hot Pot</span>
+						<span class="badge badge-open">Running</span>
+					</li>
+					<li>
+						<span class="board-name">Sun God</span>
+						<span class="badge badge-open">Running</span>
+					</li>
+					<li>
+						<span class="board-name">Mayan Spinner</span>
+						<span class="badge badge-open">Running</span>
+					</li>
+					<li>
+						<span class="board-name">Crazy Ape</span>
+						<span class="badge badge-open">Running</span>
+					</li>
+					<li>
+						<span class="board-name">Mumbo</span>
+						<span class="badge badge-open">Running</span>
+					</li>
+					<li>
+						<span class="board-name">Rocky Racers</span>
+						<span class="badge badge-open">Running</span>
+					</li>
+					<li>
+						<span class="board-name">Tom Tom Twister</span>
+						<span class="badge badge-open">Running</span>
+					</li>
+					<li>
+						<span class="board-name">Inca Totem</span>
+						<span class="badge badge-open">Running</span>
+					</li>
+					<li>
+						<span class="board-name">Aztec Mayhem</span>
+						<span class="badge badge-open">Running</span>
+					</li>
+					<li>
+						<span class="board-name">Chac Atak</span>
+						<span class="badge">Not yet</span>
+					</li>
+					<li>
+						<span class="board-name">Gorilla Thrilla</span>
+						<span class="badge">Not yet</span>
+					</li>
+					<li>
+						<span class="board-name">Dino Karts</span>
+						<span class="badge">Not yet</span>
+					</li>
+					<li>
+						<span class="board-name">Temple Of Gloom</span>
+						<span class="badge">Not yet</span>
+					</li>
+					<li>
+						<span class="board-name">Mystery</span>
+						<span class="badge">Not yet</span>
+					</li>
+					<li>
+						<span class="board-name">Jurassic Tours</span>
+						<span class="badge">Not yet</span>
+					</li>
+					<li>
+						<span class="board-name">Eruption</span>
+						<span class="badge">Not yet</span>
+					</li>
+					<li>
+						<span class="board-name">Splish Splash</span>
+						<span class="badge">Not yet</span>
+					</li>
+				</ul>
+			</div>
+		</section>
+			<section class="panel board board-shops" aria-labelledby="board-shops">
+			<h2 id="board-shops">Shops <span class="board-count">(8)</span></h2>
+			<div class="panel-screen">
+				<ul class="board-list">
+					<li>
+						<span class="board-name">Balloon Shop</span>
+						<span class="badge badge-open">Running</span>
+					</li>
+					<li>
+						<span class="board-name">Burger Shop</span>
+						<span class="badge badge-open">Running</span>
+					</li>
+					<li>
+						<span class="board-name">Drinks Shop</span>
+						<span class="badge badge-open">Running</span>
+					</li>
+					<li>
+						<span class="board-name">Costume Shop</span>
+						<span class="badge badge-open">Running</span>
+					</li>
+					<li>
+						<span class="board-name">Fries Shop</span>
+						<span class="badge badge-open">Running</span>
+					</li>
+					<li>
+						<span class="board-name">Gift Shop</span>
+						<span class="badge badge-open">Running</span>
+					</li>
+					<li>
+						<span class="board-name">Ice Cream Shop</span>
+						<span class="badge badge-open">Running</span>
+					</li>
+					<li>
+						<span class="board-name">Steak Restaurant</span>
+						<span class="badge badge-open">Running</span>
+					</li>
+				</ul>
+			</div>
+		</section>
+			<section class="panel board board-sideshows" aria-labelledby="board-sideshows">
+			<h2 id="board-sideshows">Sideshows <span class="board-count">(5)</span></h2>
+			<div class="panel-screen">
+				<ul class="board-list">
+					<li>
+						<span class="board-name">Arcade</span>
+						<span class="badge badge-open">Running</span>
+					</li>
+					<li>
+						<span class="board-name">Laughing Hyenas</span>
+						<span class="badge badge-open">Running</span>
+					</li>
+					<li>
+						<span class="board-name">Jungle Spray</span>
+						<span class="badge badge-open">Running</span>
+					</li>
+					<li>
+						<span class="board-name">Giant Puzzle</span>
+						<span class="badge badge-open">Running</span>
+					</li>
+					<li>
+						<span class="board-name">Strength Bird</span>
+						<span class="badge badge-open">Running</span>
+					</li>
+				</ul>
+			</div>
+		</section>
+	<span class="key-spot"><button class="gold-key" type="button" data-key="lost-kingdom" data-ui="key" data-help="A golden key! Press to take it" aria-label="A hidden golden key. Press to take it." hidden></button></span>
+			</div>
+	</section>
+
+	<section class="gallery" aria-labelledby="gallery-title">
+		<h2 id="gallery-title">See it running</h2>
+		<p>These pictures are OpenTPW itself, playing the game's own files.</p>
+		<ul class="shots">
+			<li>
+				<a href="assets/img/screens/lost-kingdom-gate.jpg" data-help="Shows this picture bigger">
+					<picture>
+						<source type="image/avif" srcset="assets/img/screens/lost-kingdom-gate-640.avif">
+						<img src="assets/img/screens/lost-kingdom-gate-small.jpg" width="640" height="360" loading="lazy" decoding="async" alt="The Lost Kingdom island seen from the sea, its stone gate facing the camera.">
+					</picture>
+					<span>Lost Kingdom, from the lobby</span>
+				</a>
+			</li>
+			<li>
+				<a href="assets/img/screens/lobby-lost-kingdom.jpg" data-help="Shows this picture bigger">
+					<picture>
+						<source type="image/avif" srcset="assets/img/screens/lobby-lost-kingdom-640.avif">
+						<img src="assets/img/screens/lobby-lost-kingdom-small.jpg" width="640" height="360" loading="lazy" decoding="async" alt="The lobby showing Lost Kingdom, with a golden key above it and the island buttons.">
+					</picture>
+					<span>Choosing a land</span>
+				</a>
+			</li>
+			<li>
+				<a href="assets/img/screens/lost-kingdom-crowds.jpg" data-help="Shows this picture bigger">
+					<picture>
+						<source type="image/avif" srcset="assets/img/screens/lost-kingdom-crowds-640.avif">
+						<img src="assets/img/screens/lost-kingdom-crowds-small.jpg" width="640" height="360" loading="lazy" decoding="async" alt="Busy paths seen from far above, with a balloon shop shaped like a dinosaur, sideshows and a giant ape.">
+					</picture>
+					<span>A busy day in the park</span>
+				</a>
+			</li>
+			<li>
+				<a href="assets/img/screens/lost-kingdom-sun-god.jpg" data-help="Shows this picture bigger">
+					<picture>
+						<source type="image/avif" srcset="assets/img/screens/lost-kingdom-sun-god-640.avif">
+						<img src="assets/img/screens/lost-kingdom-sun-god-small.jpg" width="640" height="360" loading="lazy" decoding="async" alt="A giant golden statue on a purple stone base, beside a steak restaurant and a long queue of guests.">
+					</picture>
+					<span>Sun God and Steak Restaurant</span>
+				</a>
+			</li>
+			<li>
+				<a href="assets/img/screens/lost-kingdom-costume-shop.jpg" data-help="Shows this picture bigger">
+					<picture>
+						<source type="image/avif" srcset="assets/img/screens/lost-kingdom-costume-shop-640.avif">
+						<img src="assets/img/screens/lost-kingdom-costume-shop-small.jpg" width="640" height="360" loading="lazy" decoding="async" alt="A shop shaped like a mask with a tall crown of rainbow feathers, beside a path through the grass.">
+					</picture>
+					<span>Costume Shop</span>
+				</a>
+			</li>
+			<li>
+				<a href="assets/img/screens/lost-kingdom-belly-bounce.jpg" data-help="Shows this picture bigger">
+					<picture>
+						<source type="image/avif" srcset="assets/img/screens/lost-kingdom-belly-bounce-640.avif">
+						<img src="assets/img/screens/lost-kingdom-belly-bounce-small.jpg" width="640" height="360" loading="lazy" decoding="async" alt="A pink dinosaur ride among crowded paths, queue lines and shops.">
+					</picture>
+					<span>Belly Bounce</span>
+				</a>
+			</li>
+			<li>
+				<a href="assets/img/screens/lost-kingdom-crazy-ape.jpg" data-help="Shows this picture bigger">
+					<picture>
+						<source type="image/avif" srcset="assets/img/screens/lost-kingdom-crazy-ape-640.avif">
+						<img src="assets/img/screens/lost-kingdom-crazy-ape-small.jpg" width="640" height="360" loading="lazy" decoding="async" alt="A huge orange ape leaning over a wooden ride, with a winding queue of guests.">
+					</picture>
+					<span>Crazy Ape</span>
+				</a>
+			</li>
+			<li>
+				<a href="assets/img/screens/lost-kingdom-aztec-mayhem.jpg" data-help="Shows this picture bigger">
+					<picture>
+						<source type="image/avif" srcset="assets/img/screens/lost-kingdom-aztec-mayhem-640.avif">
+						<img src="assets/img/screens/lost-kingdom-aztec-mayhem-small.jpg" width="640" height="360" loading="lazy" decoding="async" alt="A purple stone temple with Aztec Mayhem carved over its door, seen from the front, a river behind it.">
+					</picture>
+					<span>Aztec Mayhem</span>
+				</a>
+			</li>
+			<li>
+				<a href="assets/img/screens/lost-kingdom-balloon-shop.jpg" data-help="Shows this picture bigger">
+					<picture>
+						<source type="image/avif" srcset="assets/img/screens/lost-kingdom-balloon-shop-640.avif">
+						<img src="assets/img/screens/lost-kingdom-balloon-shop-small.jpg" width="640" height="360" loading="lazy" decoding="async" alt="Crowds of guests on a wide path between a balloon shop shaped like a dinosaur and a treasure chest shop.">
+					</picture>
+					<span>Crowds by the Balloon Shop</span>
+				</a>
+			</li>
+			<li>
+				<a href="assets/img/screens/lost-kingdom-tom-tom-twister.jpg" data-help="Shows this picture bigger">
+					<picture>
+						<source type="image/avif" srcset="assets/img/screens/lost-kingdom-tom-tom-twister-640.avif">
+						<img src="assets/img/screens/lost-kingdom-tom-tom-twister-small.jpg" width="640" height="360" loading="lazy" decoding="async" alt="A ride of spinning drums around a tall golden figure over a glowing pit, with shops behind it.">
+					</picture>
+					<span>Tom Tom Twister</span>
+				</a>
+			</li>
+			<li>
+				<a href="assets/img/screens/lost-kingdom-gift-shop.jpg" data-help="Shows this picture bigger">
+					<picture>
+						<source type="image/avif" srcset="assets/img/screens/lost-kingdom-gift-shop-640.avif">
+						<img src="assets/img/screens/lost-kingdom-gift-shop-small.jpg" width="640" height="360" loading="lazy" decoding="async" alt="The Strength Bird sideshow among busy paths, with a treasure chest shop and a giant ape nearby.">
+					</picture>
+					<span>Strength Bird</span>
+				</a>
+			</li>
+			<li>
+				<a href="assets/img/screens/lost-kingdom-from-above.jpg" data-help="Shows this picture bigger">
+					<picture>
+						<source type="image/avif" srcset="assets/img/screens/lost-kingdom-from-above-640.avif">
+						<img src="assets/img/screens/lost-kingdom-from-above-small.jpg" width="640" height="360" loading="lazy" decoding="async" alt="The park from high above: paths, rides, shops and guests everywhere.">
+					</picture>
+					<span>A park from above</span>
+				</a>
+			</li>
+		</ul>
+	</section>
+
+	<section class="lands" aria-labelledby="lands-title">
+		<h2 id="lands-title">The other lands</h2>
+		<ul class="land-cards">
+			<li class="land-card land-wonder-land">
+				<a href="wonder-land.html" data-ui="card" data-help="Opens the Wonder Land page">
+					<span class="land-card-name">Wonder Land</span>
+					<svg class="land-emblem" viewBox="0 0 48 48" aria-hidden="true" focusable="false" stroke="#07154a" stroke-width="2.4" stroke-linejoin="round"><ellipse cx="24" cy="43.5" rx="16" ry="3.5" fill="#8a5524"/><path d="M27 42 C31 35 19 31 23 23" fill="none" stroke-width="15" stroke-linecap="round"/><path d="M27 42 C31 35 19 31 23 23" fill="none" stroke="#f7a3b5" stroke-width="10.5" stroke-linecap="round"/><path d="M22 36.5 q4 1.8 8 0 M20.5 31.5 q4 1.8 8 0" fill="none" stroke="#d9728a" stroke-width="1.6" stroke-linecap="round"/><circle cx="23" cy="20.5" r="8.2" fill="#f7a3b5"/><circle cx="20" cy="19.5" r="2.5" fill="#fff" stroke-width="1.4"/><circle cx="26.2" cy="19.5" r="2.5" fill="#fff" stroke-width="1.4"/><circle cx="20.4" cy="19.9" r="1" fill="#07154a" stroke="none"/><circle cx="26.6" cy="19.9" r="1" fill="#07154a" stroke="none"/><path d="M19.5 24 Q23 27 26.5 24" fill="none" stroke-width="1.6" stroke-linecap="round"/><g class="emb-hat"><path d="M15.5 13 C15.5 3.5 30.5 3.5 30.5 13 Z" fill="#27305c"/><path d="M15.8 10.2 L30.2 10.2" fill="none" stroke="#e8312a" stroke-width="2.2"/><rect x="11.5" y="12" width="23" height="3.6" rx="1.8" fill="#27305c"/></g></svg>
+					<span class="badge">Not open yet</span>
+					<span class="land-card-blurb">A garden where you are the size of an ant.</span>
+				</a>
+			</li>
+			<li class="land-card land-halloween-world">
+				<a href="halloween-world.html" data-ui="card" data-help="Opens the Halloween World page">
+					<span class="land-card-name">Halloween World</span>
+					<svg class="land-emblem" viewBox="0 0 48 48" aria-hidden="true" focusable="false" stroke="#07154a" stroke-width="2.4" stroke-linejoin="round"><g class="emb-lid"><path d="M20.5 17 C20 12 22 8 27 5.5 L30.5 8.5 C27.5 10.5 27 13.5 28 17 Z" fill="#2c8a2e"/></g><ellipse cx="24" cy="29.5" rx="18.5" ry="14" fill="#f08a1c"/><path d="M24 15.5 C18.5 21 18.5 38 24 43.5 M24 15.5 C29.5 21 29.5 38 24 43.5 M13.5 18.5 C8.5 24 8.5 35.5 14 41 M34.5 18.5 C39.5 24 39.5 35.5 34 41" fill="none" stroke="#c4620c" stroke-width="1.6"/><path class="emb-face" d="M12.5 27.5 l4.5 -6.5 l3.5 6.5 Z M27.5 27.5 l3.5 -6.5 l4.5 6.5 Z M22 30 l2 -3 l2 3 Z M11.5 32 l4 2 l3.2 -2.2 l3 2.2 l2.3 -2.2 l2.3 2.2 l3 -2.2 l3.2 2.2 l4 -2 C34.5 38.5 28.5 41 24 41 C19.5 41 13.5 38.5 11.5 32 Z" stroke-width="1.6"/></svg>
+					<span class="badge">Not open yet</span>
+					<span class="land-card-blurb">Spooky, stormy and friendly all the same.</span>
+				</a>
+			</li>
+			<li class="land-card land-space-zone">
+				<a href="space-zone.html" data-ui="card" data-help="Opens the Space Zone page">
+					<span class="land-card-name">Space Zone</span>
+					<svg class="land-emblem" viewBox="0 0 48 48" aria-hidden="true" focusable="false" stroke="#07154a" stroke-width="2.4" stroke-linejoin="round"><g class="emb-lift"><path class="emb-flame" d="M19 34 C19 39.5 22 41.5 24 46.5 C26 41.5 29 39.5 29 34 Z" fill="#ffb52e" stroke-width="1.8"/><path d="M16 23 L7.5 36 L16.5 33 Z M32 23 L40.5 36 L31.5 33 Z" fill="#e8312a"/><path d="M24 3.5 C31.5 10 33.5 20 32 32 L16 32 C14.5 20 16.5 10 24 3.5 Z" fill="#f4f4ff"/><path d="M24 3.5 C27.6 6.6 29.9 10.2 31.2 14 L16.8 14 C18.1 10.2 20.4 6.6 24 3.5 Z" fill="#e8312a"/><circle cx="24" cy="21.5" r="4.2" fill="#50b2ed"/><rect x="19" y="32" width="10" height="3" rx="1" fill="#7c83a6"/></g></svg>
+					<span class="badge">Not open yet</span>
+					<span class="land-card-blurb">A purple planet under a sunset sky.</span>
+				</a>
+			</li>
+		</ul>
+		<p class="way-back"><a class="ticket" href="./" data-ui="ticket" data-help="Goes to the Front Gate, the home page"><span class="ticket-stub" aria-hidden="true">This way</span><span class="ticket-main">Back to the Front Gate</span></a>
+	</p>
+	</section>
+
+</div>
+</main>
+	<section class="easy-options" id="easy-options" aria-labelledby="easy-options-title" tabindex="-1">
+	<h2 id="easy-options-title">Easy read options</h2>
+	<p>Pick what is easiest for you. Your choice is kept for your next visit.</p>
+	<div class="easy-choices">
+		<fieldset>
+			<legend>Letters</legend>
+				<button class="panel-link choice choice-font-atkinson" type="button" value="font-atkinson" aria-pressed="true" data-help="Uses the Atkinson Hyperlegible letters">Clear letters</button>
+				<button class="panel-link choice choice-font-dyslexic" type="button" value="font-dyslexic" aria-pressed="false" data-help="Uses the OpenDyslexic letters">Dyslexia letters</button>
+				<button class="panel-link choice choice-font-system" type="button" value="font-system" aria-pressed="false" data-help="Uses the letters your own device uses">My device&#039;s letters</button>
+			</fieldset>
+		<fieldset>
+			<legend>Page colour</legend>
+				<button class="panel-link choice choice-paper-sea" type="button" value="paper-sea" aria-pressed="true" data-help="Keeps the dark sea behind the words">Sea</button>
+				<button class="panel-link choice choice-paper-cream" type="button" value="paper-cream" aria-pressed="false" data-help="Puts cream paper behind the words">Cream paper</button>
+			</fieldset>
+	</div>
+</section>
+	<footer class="site-foot">
+	<div class="waves" aria-hidden="true"></div>
+	<p><strong>OpenTPW is a fan project.</strong> It rebuilds the game Theme Park World. In America the game is called Sim Theme Park.</p>
+	<p>It holds no game files. You need your own copy of the game to play.</p>
+	<p>It is not made or approved by the game's makers or publishers.</p>
+	<p>OpenTPW was started by Alex Guthrie and its contributors. This site follows a fork of their work. <a href="https://github.com/OpenTPW/OpenTPW" data-help="Opens the original OpenTPW project on GitHub">The original project on GitHub</a></p>
+	<p><a href="https://github.com/maexah/OpenTPW" data-help="Opens this fork on GitHub">This fork on GitHub</a> <a class="js-only" href="golden-keys.html" data-help="Opens the golden key hunt">The golden key hunt</a></p>
+</footer>
+
+<p class="key-say" id="key-say" role="status"></p>
+
+<div class="help-strip" id="help-strip" aria-hidden="true"></div>
+
+<script type="application/json" id="otpw-data">{"lands":[{"id":"lost-kingdom","name":"Lost Kingdom","url":"lost-kingdom.html","open":true,"badge":"Open","keys":1,"blurb":"Dinosaurs, palm trees and the first rides that run."},{"id":"wonder-land","name":"Wonder Land","url":"wonder-land.html","open":false,"badge":"Not open yet","keys":3,"blurb":"A garden where you are the size of an ant."},{"id":"halloween-world","name":"Halloween World","url":"halloween-world.html","open":false,"badge":"Not open yet","keys":1,"blurb":"Spooky, stormy and friendly all the same."},{"id":"space-zone","name":"Space Zone","url":"space-zone.html","open":false,"badge":"Not open yet","keys":5,"blurb":"A purple planet under a sunset sky."}],"site":{"keys":["index","lost-kingdom","wonder-land","halloween-world","space-zone","ride-status","plan-your-visit","guest-services","backstage"]}}</script>
+<script type="module" src="assets/js/main.js"></script>
+</body>
+</html>
+	

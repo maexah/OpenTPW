@@ -1,0 +1,1 @@
+export const TOP=9,SIDE=8.95,HALF=5.6,YARD_Z=-.35,GATE_Z=5.25,POST_X=2.55,POST_WIDE=1.75,POST_TALL=4.1,HINGE_X=1.6749999999999998,TOWER=[.15,-.35-2.95],TREE=[-3.1,1.2],PILLAR_Z=14.3,PIER_Z=16.4,PIER_HALF=5.6,PATH_HALF=.8,SKINS=["rock","moss","cobble","stone","fronts","bark"];const o=t=>[1-(t+1)/4+.006,1-t/4-.006];export const SLATES=o(0),BOARDS=o(1),PANEL=o(2),PLASTER=o(3);
