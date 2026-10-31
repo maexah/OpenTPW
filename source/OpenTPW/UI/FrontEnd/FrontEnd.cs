@@ -112,6 +112,8 @@ internal sealed class FrontEnd : Panel
 		_stack.Close( _islandPanel );
 		ApplyGameMode();
 
+		// FUN_005e14a0 stops the pair that sounds and plays the head island's afresh.
+		LobbyAudio.Current?.SlotsOpened();
 		ShowPlayerSlots();
 	}
 

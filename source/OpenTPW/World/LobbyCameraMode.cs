@@ -587,7 +587,7 @@ public class LobbyCameraMode : CameraMode
 	///
 	/// <para>
 	/// The island it picks is put in <see cref="CurrentIsland"/>, because the original keeps the
-	/// nearest island in the very field the picked one uses - which is what makes the lobby's sound and
+	/// nearest island in the very field the picked one uses - which is what makes the lobby's one-shots and
 	/// its weather follow the camera round for free rather than needing to be told.
 	/// </para>
 	/// </summary>

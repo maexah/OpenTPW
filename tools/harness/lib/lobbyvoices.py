@@ -3,7 +3,7 @@
 Desktop run, the mix to a file by SDL's disk driver. Polls the console's `voices` and `sound` about every 0.6 s for SECS (default 60) into
 voices.txt (the time, the mix file's size, the reply), takes two shots (lobby_00, lobby_01), then prints how many polls name one of SAMPLES
 (the census check) and scores each sample's first 1.5 s against the whole mix (the capture check), beside the jungle themes the census
-names as a control (one that played whole scores high; a low one is a theme cut by the window, not a blind measure).
+names as a control (a theme heard whole at full gain scores 0.65 to 0.94; the first slot sits under the advisor's opening line and scores low, 0.09 to 0.50, so read a later one).
 SAMPLES is the env var `LOBBY_SAMPLES`, `<sdt under the game's data>:<index>,<index>...`; the default `global/sound/sSfxHD.sdt:0,1,2,3` is
 global lobby effect 3's ew_space_1 to 4. The original's side is `original/voices.py` and `original/capmatch.py` (TOOLING.md, "The original
 under Proton"). Run it with a Python that has numpy and Xlib (`review-codex/venv` here)."""
@@ -49,8 +49,11 @@ names = {n for n, _ in temps}
 hit = sum(1 for l in rows if any(n in l for n in names))
 print(f"voices with SAMPLES' names {sorted(names)}: {hit} of {len(rows)} polls")
 mix = mixmatch.window(AUDIO_FILE, 0, os.path.getsize(AUDIO_FILE))
+for n, t in temps:
+    sc, g, at, rms = mixmatch.match(mix, t, 1.5)
+    print(f"  {n}  score {sc:.3f} gain {g:.4f} at {at:.2f} s")
 themes = sorted({m.group(1) for l in rows for m in re.finditer(r"(\S+\.mp2) Music", l)})
 lm = os.path.join(paths.game(), "data", "levels/jungle/Sound/LobbyMusicHD.sdt"); ents = [n for n, _ in mixmatch.entries(lm)]
 for th in (t for t in themes if t in ents):
     sc, g, at, rms = mixmatch.match(mix, mixmatch.template(lm, ents.index(th))[1], 6.0)
-    print(f"  control {th} (a jungle theme the census names; one that played whole must score high) score {sc:.3f} gain {g:.4f}")
+    print(f"  control {th} (a jungle theme the census names; a later slot, heard at full gain, scores high) score {sc:.3f} gain {g:.4f}")

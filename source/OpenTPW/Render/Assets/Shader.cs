@@ -64,10 +64,11 @@ public partial class Shader : Asset
 		Register();
 
 		Recompile();
+		RequireCompiled( shaderInfo.VertexShader, Path );
 
 		// A resolved path is rooted, so only a root itself has no folder, and a shader is a file in one.
 		var directoryName = System.IO.Path.GetDirectoryName( Path )
-			?? throw new InvalidOperationException( $"Shader {Path} is not in a folder to watch" );
+			?? throw new InvalidOperationException( $"Shader {Path} is not in a folder" );
 		var fileName = System.IO.Path.GetFileName( Path );
 
 		if ( !WatchesFiles( Environment.GetEnvironmentVariable( WatchVariable ), DebugBuild ) )
@@ -75,7 +76,7 @@ public partial class Shader : Asset
 			if ( !_unwatchedLogged )
 			{
 				_unwatchedLogged = true;
-				Log.Info( $"Shaders: files are not watched in this build, so an edit on disk is not compiled again ({WatchVariable}=1 turns it on)" );
+				Log.Info( $"Shaders: files are not watched ({(DebugBuild ? $"{WatchVariable}=0" : "a Release build")}), so an edit on disk is not compiled again ({WatchVariable}=1 turns it on)" );
 			}
 
 			return;
@@ -121,23 +122,55 @@ public partial class Shader : Asset
 		if ( !IsFileReady( Path ) )
 			return;
 
-		var old = shaderInfo;
-		shaderInfo = ShaderCompiler.CompileShader( Path );
-		OnRecompile?.Invoke();
+		var hadOld = shaderInfo.VertexShader != null;
+		var rebuilt = OnRecompile != null;
+
+		// Only this shader's materials are given a new pipeline (OnRecompile). The blit pipeline (Renderer.CreateBlitPipeline)
+		// subscribes to nothing: an edit of blit.shader compiles it, disposes the old modules under the pipeline that was
+		// built from them and goes on drawing with that one - Vulkan allows it - so a blit edit needs a restart to show.
+		Replace( ref shaderInfo, () => ShaderCompiler.CompileShader( Path ), info => (info.VertexShader, info.FragmentShader),
+			() => OnRecompile?.Invoke(), action => Render.ScheduleDelete( action ) );
 		IsDirty = false;
 
-		// After OnRecompile, which gave every material its new pipeline and queued the old one for disposal: the
-		// queue runs in order, so the old shaders go once the pipeline built from them has. The renderer is asked
-		// only then, as the first compile (the blit shader's) is made while the renderer is still being built.
-		Retire( old.VertexShader, old.FragmentShader, action => Render.ScheduleDelete( action ) );
+		if ( hadOld )
+			Log.Info( $"Shader {System.IO.Path.GetFileName( Path )} compiled again: the old vertex and fragment shaders are queued for disposal ({Retired} let go in all){(rebuilt ? string.Empty : "; nothing built from it is rebuilt, so the edit shows after a restart")}" );
+	}
 
-		if ( old.VertexShader != null )
-			Log.Info( $"Shader {System.IO.Path.GetFileName( Path )} compiled again: the old vertex and fragment shaders are queued for disposal ({Retired} let go in all)" );
+	/// <summary>
+	/// A shader that is missing or empty compiles to nothing, which a pipeline built from it would meet as a null reference
+	/// with no path; the game stops naming the file instead, in a Release build as in a Debug one, where the shader is first asked for
+	/// (the blit shader at the start; a material's in its static initialiser, whose wrapper <c>StartFailure</c> unwraps).
+	/// </summary>
+	internal static void RequireCompiled( object? compiled, string path )
+	{
+		if ( compiled == null )
+			throw new FileNotFoundException( $"Shader {path} is missing or empty (is the content/shaders folder beside the game?)", path );
+	}
+
+	/// <summary>
+	/// The order of a recompile: the new compile is stored, <paramref name="notify"/> runs (every material builds its new
+	/// pipeline and queues the old one), and then the old pair is queued. The renderer is asked only then, as the first
+	/// compile (the blit shader's) is made while the renderer is still being built and has no old pair.
+	///
+	/// <para>
+	/// The order is for tidiness, not safety: NeoVeldrid frees a pipeline when the frames using it have ended but destroys a
+	/// shader module at once, and Vulkan lets a module go while pipelines made from it are in use.
+	/// </para>
+	/// </summary>
+	internal static void Replace<T>( ref T current, Func<T> compile, Func<T, (IDisposable? Vertex, IDisposable? Fragment)> halves,
+		Action notify, Action<Action> schedule )
+	{
+		var old = current;
+		current = compile();
+		notify();
+
+		var (vertex, fragment) = halves( old );
+		Retire( vertex, fragment, schedule );
 	}
 
 	/// <summary>
 	/// Queues each compiled shader that is there for disposal on <paramref name="schedule"/> (the renderer's queue, which
-	/// runs when the frame's work is done) and counts it.
+	/// runs once the frame is submitted; nothing waits for the GPU) and counts it.
 	/// </summary>
 	internal static void Retire( IDisposable? vertex, IDisposable? fragment, Action<Action> schedule )
 	{

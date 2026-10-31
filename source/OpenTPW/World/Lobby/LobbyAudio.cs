@@ -130,6 +130,8 @@ public sealed class LobbyAudio : Entity
 	/// <para>
 	/// <b>This length applies only to an arrival.</b> While the camera is flying, the head island's
 	/// park sounds from the lobby's opening to its end and nothing fades - see <see cref="KeepPlaying"/>.
+	/// The one other change is Select New Player, where the park that was on show is let go in
+	/// <see cref="SlotsOpened"/> over a short fade (<see cref="SlotsOpenedFadeSeconds"/>), where the original cuts it.
 	/// </para>
 	/// </summary>
 	private const float CrossfadeSeconds = 0.9f;
@@ -191,14 +193,15 @@ public sealed class LobbyAudio : Entity
 		public bool MusicDrawn;
 	}
 
-	/// <summary>What each park has sounding, by theme. A park with nothing playing keeps no entry.</summary>
+	/// <summary>What each park has sounding, by theme. A park let go keeps its entry, with no voices.</summary>
 	private readonly Dictionary<string, ParkVoices> _voices = new( StringComparer.OrdinalIgnoreCase );
 
 	/// <summary>
 	/// Whether the lobby is flying itself, which is when the head island's park sounds whichever island is nearest.
 	///
 	/// The same condition the camera branches on - see <see cref="LobbyCameraMode"/> - so the sound
-	/// and the picture cannot disagree about which mode the lobby is in.
+	/// and the picture agree about which mode the lobby is in, except under the debug console's
+	/// <c>attract off</c>, which holds the camera's orbit with nobody playing.
 	/// </summary>
 	private static bool Attracting => Players.Roster.Current is null;
 
@@ -341,7 +344,7 @@ public sealed class LobbyAudio : Entity
 			: $"mode={(Attracting ? "flying" : "playing")} park={_playing ?? "none"} sounds={SoundingTheme( Attracting, IslandThemes(), _playing ) ?? "none"} "
 				+ $"theme={Describe( Sounding?.Music )} bed={Describe( Sounding?.Bed )} "
 				+ $"sounding={_voices.Values.Count( v => v.Music is { Playing: true } || v.Bed is { Playing: true } )} "
-				+ $"placed={OneShotPosition?.ToString() ?? "flat"} "
+				+ $"placed={SoundPosition( Attracting, _ambiencePosition )?.ToString() ?? "flat"} "
 				+ $"muted={Muted} volume={Audio.MasterVolume:0.00}";
 
 	private static string Describe( Voice? voice ) => voice is { Playing: true } ? voice.Name : "-";
@@ -397,7 +400,9 @@ public sealed class LobbyAudio : Entity
 
 		var voices = VoicesFor( island.ThemeName );
 
-		if ( voices.Music is { Playing: true } || voices.Bed is { Playing: true } )
+		// Kept from the flight: the music has drawn its pick and not been silenced since. Asked of the draw, not of
+		// Playing, so a choice landing in the gap between two takes (both repeat delays running) keeps the pair too.
+		if ( voices.MusicDrawn )
 		{
 			Log.Info( $"Lobby audio: {island.ThemeName} - theme '{Describe( voices.Music )}', bed '{Describe( voices.Bed )}' (kept from the flight)" );
 			return;
@@ -407,11 +412,36 @@ public sealed class LobbyAudio : Entity
 		// no step, so it may open on the track last heard here, and stores its pick for the restarts (KeepParkPlaying).
 		// The pick is kept per effect, not per voice; the same, as only one voice of effect 1 sounds at a time.
 		voices.Music = _current.Music.Play( LocalMusic, MusicVolume, fadeInSeconds: CrossfadeSeconds,
-			bus: AudioBus.Music, avoidRepeat: false );
+			bus: AudioBus.Music, position: SoundPosition( Attracting, _ambiencePosition ), avoidRepeat: false );
 		voices.MusicDrawn = voices.Music != null;
-		voices.Bed = _current.Ambience.Play( LocalBed, BedVolume, fadeInSeconds: CrossfadeSeconds );
+		voices.Bed = _current.Ambience.Play( LocalBed, BedVolume, fadeInSeconds: CrossfadeSeconds,
+			position: SoundPosition( Attracting, _ambiencePosition ) );
 
 		Log.Info( $"Lobby audio: {island.ThemeName} - theme '{Describe( voices.Music )}', bed '{Describe( voices.Bed )}'" );
+	}
+
+	/// <summary>How long Select New Player takes to let the parks go. The original cuts them at once.</summary>
+	private const float SlotsOpenedFadeSeconds = 0.15f;
+
+	/// <summary>
+	/// The parks the player slots opening stops: the one that was on show and the head island's. The original's
+	/// <c>FUN_005e14a0</c> (<c>0x004a6a33</c>) stops the pair it was holding and plays the head's afresh, so a flight
+	/// started from Lost Kingdom restarts too. A park named twice is named once.
+	/// </summary>
+	internal static IReadOnlyList<string> ParksStoppedBySlotsOpening( string? onShow, string? head )
+		=> new[] { onShow, head }.Where( theme => theme is not null ).Select( theme => theme! )
+			.Distinct( StringComparer.OrdinalIgnoreCase ).ToList();
+
+	/// <summary>
+	/// The player slots have opened (Select New Player; <c>FrontEnd_ShowPlayerSlots</c>, <c>0x004a6580</c>): the park on
+	/// show and the head island's are silenced, so the flight's <see cref="KeepPlaying"/> starts the head's theme and
+	/// bed fresh, as <c>0x005e14a0</c> does. A difference: the park on show fades over <see cref="SlotsOpenedFadeSeconds"/>
+	/// where the original cuts, so the old take and the new one overlap for that long. Not run in the game.
+	/// </summary>
+	internal void SlotsOpened()
+	{
+		foreach ( var theme in ParksStoppedBySlotsOpening( _playing, SoundingTheme( true, IslandThemes(), _playing ) ) )
+			Silence( theme, SlotsOpenedFadeSeconds );
 	}
 
 	/// <summary>Stops a park and lets its two effects go, so it may start them again next time.</summary>
@@ -468,7 +498,7 @@ public sealed class LobbyAudio : Entity
 
 		// Flat while nobody is playing, as the original plays it; the island on show's node when somebody is.
 		if ( sounding is { } playing )
-			KeepParkPlaying( playing, Attracting ? null : _ambiencePosition );
+			KeepParkPlaying( playing, SoundPosition( Attracting, _ambiencePosition ) );
 	}
 
 	/// <summary>Each theme's music voice whose pick was last logged.</summary>
@@ -522,15 +552,14 @@ public sealed class LobbyAudio : Entity
 		// The place is the island's node, where somebody is playing and it marks one. The original plays every
 		// lobby sound at (0,0,0), so placing it is a deviation - see the note at the top of this class.
 		_current!.Ambience.Play( LocalOneShotFirst + _random.Next( LocalOneShotCount ), OneShotVolume,
-			position: OneShotPosition );
+			position: SoundPosition( Attracting, _ambiencePosition ) );
 	}
 
 	/// <summary>
-	/// Where a one-shot is heard from: flat while the camera is flying, as the original plays it, and
-	/// <see cref="_ambiencePosition"/> with somebody playing - the node where the island marks one, and
-	/// flat where it does not.
+	/// Where the lobby's park sounds are heard from: flat while the camera is flying, as the original plays them, and
+	/// <paramref name="node"/> with somebody playing - the node where the island marks one, and flat where it does not.
 	/// </summary>
-	private Vector3? OneShotPosition => Attracting ? null : _ambiencePosition;
+	internal static Vector3? SoundPosition( bool attracting, Vector3? node ) => attracting ? null : node;
 
 	/// <summary>
 	/// Plays one of the island's continuous ambient samples at <paramref name="position"/>, or at the

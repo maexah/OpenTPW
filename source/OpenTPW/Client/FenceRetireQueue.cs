@@ -2,8 +2,9 @@ namespace OpenTPW;
 
 /// <summary>
 /// Things to let go of once the GPU has finished the frame they were asked for in (Q853). <see cref="Renderer"/>'s deletion
-/// queue runs right after a frame is presented, with the frame's commands still executing, so an image view destroyed there
-/// can still be bound by a descriptor set that frame draws with (the Khronos layer's <c>VUID-vkDestroyImageView-imageView-01026</c>).
+/// queue runs right after a frame is presented, with the frame's commands still executing, so a texture disposed there loses its
+/// full view and its image at once (NeoVeldrid's <c>Texture.Dispose</c> decrements the view twice and takes no count on the image),
+/// which the frame's descriptor set still binds (the Khronos layer's <c>VUID-vkDestroyImageView-imageView-01026</c>).
 /// Here an action waits for the fence of the next frame submitted: one queue runs submissions in order, so that fence signalling
 /// means every frame up to it is done.
 /// </summary>

@@ -1,5 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace OpenTPW.Tests;
 
@@ -7,6 +8,13 @@ namespace OpenTPW.Tests;
 /// The lobby's attract flight is the original's (Q950): the box its camera wanders in is 300 to 700 across and 50 to 100
 /// high (<c>FUN_005dfcd0</c>, <c>docs/exe/lobby.md</c>, "The object"), and with nobody playing one park sounds, the head
 /// island's, wherever the camera is (<c>docs/exe/lobby.md</c>, "Island sound is one island at a time").
+///
+/// <para>
+/// <b>Not tested:</b> that the one-shots are rolled from the <i>nearest</i> island's category (<c>RollOneShot</c> reads
+/// <c>_current</c>, which <c>MoveTo</c> sets from a built island); the evidence is the mix measure, Jungle's samples scoring 0.57 to 0.88 in
+/// Jungle windows and at most 0.24 elsewhere. Nor the voices themselves: <c>MoveTo</c>'s kept
+/// branch and <c>KeepPlaying</c> read live voices.
+/// </para>
 /// </summary>
 [TestClass]
 public class LobbyAttractOriginalTests
@@ -49,5 +57,35 @@ public class LobbyAttractOriginalTests
 		Assert.AreEqual( "Jungle", LobbyAudio.SoundingTheme( true, islands, null ), "flying with no island picked yet" );
 		Assert.AreEqual( "Space", LobbyAudio.SoundingTheme( false, islands, "Space" ), "somebody playing: the island on show" );
 		Assert.IsNull( LobbyAudio.SoundingTheme( true, new List<(int, string)>(), null ), "no islands, no park" );
+	}
+
+	/// <summary>
+	/// <b>The lobby's park sounds are flat in flight and at the island's node otherwise.</b> A node that exists and one that
+	/// does not are both tried each way.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the node returned while flying; flat with somebody playing; the node dropped.</remarks>
+	[TestMethod]
+	public void TheLobbyPlacesNoSoundWhileFlying()
+	{
+		var node = new System.Numerics.Vector3( 1f, 2f, 3f );
+
+		Assert.IsNull( LobbyAudio.SoundPosition( true, node ), "flying: flat even where the island marks a node" );
+		Assert.IsNull( LobbyAudio.SoundPosition( true, null ), "flying, no node" );
+		Assert.AreEqual( node, LobbyAudio.SoundPosition( false, node ), "somebody playing: the node" );
+		Assert.IsNull( LobbyAudio.SoundPosition( false, null ), "somebody playing, the island marks none: flat" );
+	}
+
+	/// <summary>
+	/// <b>The slots opening stops the park on show and the head's</b> (<c>0x005e14a0</c>): Lost Kingdom's pair restarts when it
+	/// was already the one on show, and a park named twice is named once.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> only the park on show; only the head; both listed twice; nothing for a null park on show.</remarks>
+	[TestMethod]
+	public void TheSlotsOpeningStopsTheParkOnShowAndTheHeads()
+	{
+		CollectionAssert.AreEquivalent( new[] { "Space", "Jungle" }, LobbyAudio.ParksStoppedBySlotsOpening( "Space", "Jungle" ).ToArray(), "from another island" );
+		CollectionAssert.AreEqual( new[] { "Jungle" }, LobbyAudio.ParksStoppedBySlotsOpening( "Jungle", "Jungle" ).ToArray(), "Lost Kingdom on show: once" );
+		CollectionAssert.AreEqual( new[] { "Jungle" }, LobbyAudio.ParksStoppedBySlotsOpening( null, "Jungle" ).ToArray(), "nothing on show yet" );
+		Assert.AreEqual( 0, LobbyAudio.ParksStoppedBySlotsOpening( null, null ).Count, "no islands" );
 	}
 }

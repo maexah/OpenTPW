@@ -4,7 +4,9 @@ Phase 1: nobody playing, `aim` and `sound` polled for SECS (default 300): the ca
          shots of the flight. Phase 2: a player chosen by a real click while the nearest island is not Lost Kingdom:
          the log, `sound` before and after, the mix's rms either side of the click, a shot.
 Run it with a python that has Xlib, PIL and numpy. The camera numbers are the ones `original/attractcam.py` and lobbyattract/stats.py give the original
-(`docs/exe/lobby.md`, "Attract"); the sound census reads the console's `sound` line. Its `said()` lines are the checks of Q950 and are edited per item."""
+(`docs/exe/lobby.md`, "Attract"); the sound census reads the console's `sound` line. Its view-turn statistic is taken over a window of at
+least 0.2 s (about 0.25 s between polls); `stats.py`'s is row to row at 0.05 s, so the two differ: on this window the original's
+run reads median 5.39, p90 11.8, max 54.4 (against 5.1, 12.5, 62.5). Its `said()` lines are the checks of Q950 and are edited per item."""
 import os, sys, math, statistics as st
 OUT = sys.argv[1]; BIN = sys.argv[2]; SECS = float(sys.argv[3]) if len(sys.argv) > 3 else 300.0
 NAME = "LOBBYFLY"; AUDIO_FILE = os.path.join(OUT, "mix.f32")
@@ -123,7 +125,7 @@ try:
     sec = 22050 * 2 * 4   # bytes a second if the file is 22050 Hz stereo f32; only the RATIO below is relied on
     before_r = rms_between(m_click - 2 * sec, m_click - 0 * sec); after_r = rms_between(m_click + 1 * sec, m_click + 3 * sec)
     print(f"  mix rms 2 s before the click's release {before_r:.4f}, 2 s after (from +1 s) {after_r:.4f}, ratio {after_r / max(before_r, 1e-9):.2f}")
-    said(not any("theme '-', bed '-'" in l for l in lob) and any("kept from the flight" in l for l in lob), "H1 no 'theme - bed -' line; 'kept from the flight'")
+    said(not any("theme '-', bed '-'" in l and "kept from the flight" not in l for l in lob) and any("kept from the flight" in l for l in lob), "H1 no 'theme - bed -' line; 'kept from the flight'")
     th_pre = re.search(r"theme=(\S+)", pre).group(1); th_post = {re.search(r"theme=(\S+)", s).group(1) for _, s in post}
     cnt_post = {int(re.search(r"sounding=(\d+)", s).group(1)) for _, s in post}
     print(f"  theme before {th_pre}, after {sorted(th_post)}; sounding after {sorted(cnt_post)}")

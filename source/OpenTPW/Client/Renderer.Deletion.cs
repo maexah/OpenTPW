@@ -19,8 +19,8 @@ partial class Renderer
 	}
 
 	/// <summary>
-	/// What <see cref="ScheduleDelete"/> cannot be trusted with: a texture's image view, which a frame still executing on the GPU
-	/// may have bound. Runs <paramref name="action"/> once the next frame submitted has finished (<see cref="FenceRetireQueue{TFence}"/>).
+	/// What <see cref="ScheduleDelete"/> cannot be trusted with: a texture, which NeoVeldrid does not hold for a frame still executing
+	/// on the GPU. Runs <paramref name="action"/> once the next frame submitted has finished (<see cref="FenceRetireQueue{TFence}"/>).
 	/// </summary>
 	public void ScheduleRetire( Action action )
 	{

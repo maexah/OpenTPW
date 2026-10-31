@@ -1,5 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace OpenTPW.Tests;
 
@@ -25,6 +27,36 @@ public class FenceRetireQueueTests
 		() => { var f = new FakeFence(); _made.Add( f ); return f; },
 		f => f.Signaled,
 		f => { f.Signaled = false; f.Resets++; } );
+
+	/// <summary>
+	/// <b>The wiring:</b> <see cref="Texture.Delete"/> asks the renderer's retire queue and leaves the immediate deletion queue
+	/// alone. A renderer is stood in for (no device), as <c>ParkFloorBlendTests</c> does.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> <see cref="Texture.Delete"/> back on <c>ScheduleDelete</c>.</remarks>
+	[TestMethod]
+	public void ATextureIsDeletedThroughTheRetireQueue()
+	{
+		const BindingFlags any = BindingFlags.NonPublic | BindingFlags.Instance;
+		var texture = (Texture)RuntimeHelpers.GetUninitializedObject( typeof( Texture ) );
+		var render = Global.Render;
+		var stand = (Renderer)RuntimeHelpers.GetUninitializedObject( typeof( Renderer ) );
+		var immediate = new List<System.Action>();
+		typeof( Renderer ).GetField( "_deletionQueue", any )!.SetValue( stand, immediate );
+		Global.Render = stand;
+
+		try
+		{
+			texture.Delete();
+
+			Assert.AreEqual( 1, stand.RetireCounts.Pending, "asked of the retire queue" );
+			Assert.AreEqual( 0, immediate.Count, "not of the queue that runs at once" );
+		}
+		finally
+		{
+			Global.Render = render;
+			Asset.All.Remove( texture );
+		}
+	}
 
 	[TestMethod]
 	public void NothingAskedForNeedsNoFence()

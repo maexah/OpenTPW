@@ -48,6 +48,17 @@ public class StartFailureTests
 		StringAssert.Contains( text, "/l" );
 	}
 
+	/// <summary>A shader missing at a static initialiser is named by its file, not by the wrapper (Q957).</summary>
+	/// <remarks><b>Mutation:</b> the wrapper's own type and message shown.</remarks>
+	[TestMethod]
+	public void ATypeInitialiserFailureNamesItsCause()
+	{
+		var text = StartFailure.Compose( new TypeInitializationException( "OpenTPW.Material", new System.IO.FileNotFoundException( "Shader /g/ui.shader is missing" ) ), "/l" );
+
+		StringAssert.Contains( text, "FileNotFoundException: Shader /g/ui.shader is missing" );
+		Assert.IsFalse( text.Contains( "TypeInitializationException" ), text );
+	}
+
 	[TestMethod]
 	public void FindKeepsTheLinesItLoggedAndASecondFindStartsOver()
 	{

@@ -67,9 +67,15 @@ internal static class StartFailure
 
 	private static string Sentence( string line ) => line.Length > 0 ? char.ToUpperInvariant( line[0] ) + line[1..] : line;
 
-	/// <summary>The message for an exception: its type and message, then where the log (which has the stack) is.</summary>
+	/// <summary>The message for an exception (the cause of a type initialiser's): its type and message, then where the log (which has the stack) is.</summary>
 	public static string Compose( Exception e, string logPath )
-		=> Compose( Head, [$"{e.GetType().Name}: {e.Message}"], logPath );
+	{
+		// A static initialiser that throws arrives wrapped (Material's shaders are built in one); the box names the cause.
+		while ( e is TypeInitializationException { InnerException: { } inner } )
+			e = inner;
+
+		return Compose( Head, [$"{e.GetType().Name}: {e.Message}"], logPath );
+	}
 
 	/// <summary>
 	/// Shows <paramref name="message"/> in an error box and answers whether SDL did. The log is told which, so a

@@ -160,7 +160,7 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   is built on no list here: a list longer than its window is counted as `LOAD_PARK_LIST_SCROLLBAR` on this screen
   and the wheel scrolls it. The teardown is decoded (Q854; `saves.md`, "The in-place load, call by call", whose last
   paragraph sets out the choice). Alexah decides whether the park is rebuilt in place; the scrollbar and the saved camera
-  do not wait on that. Confirm: a load timed against the original's 1.3 s, and a folder of fourteen saves scrolled by the bar.
+  do not wait on that. Confirm: a load timed in both games the same way (the original's "1.3 s" is a poll bound, not a timing), and a folder of fourteen saves scrolled by the bar.
   From Q241f: no load here reads the camera module, which the writer now writes (`ParkWorld.Camera` holds it,
   `FUN_0042cec0`; `saves.md`, "Loading the modules", Camera): a loaded park opens on the default view, where the
   original's opens where the save's camera stood. The file's rotation is the orbit camera's yaw negated.
@@ -2490,7 +2490,7 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   state 9 goes on (`0x0054f12b`, `0x0054f130`), so the new world stands and state 0xf writes `restart.INTS` from it. Ours: `Game.cs:244-245`
   ends the scene first, so Load Park on a bad `.TPWS`, Alt+L, or Restart Park on a bad `restart.INTS` drops the running park for an empty
   one, and entering with a bad file gives `Park` null (`Level.cs:676-681`): nothing placed, no gate, and `Level.cs:864-868` refuses every
-  save. The fresh-park arm is `Level.cs:622-625`. Build: read and check the file before the scene ends; on a failure keep the park (loading)
+  save. The fresh-park arm is `Level.cs:622-625`. Build: read and check the file before the scene ends (no in-place build is needed: Q247's choice does not change this); on a failure keep the park (loading)
   or make the world fresh (entering). Said at the site (`Level.CreatePark`). A copied or damaged file, a short one the original left
   (`0x00414c37`) or an online one (`SaveReader.cs:95`) reaches it; not a file this game writes. The Restart Park comment at
   `ParkFrontEnd.cs:587-590` (S-M3, Q997) belongs with it. Confirm: a truncated copy in each of the three routes, in both games.

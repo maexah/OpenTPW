@@ -302,7 +302,7 @@ public partial class Texture : Asset
 		var texture = NativeTexture;
 		var view = NativeTextureView;
 
-		// Not the deletion queue: that runs while the frame just drawn may still be executing with this view bound (Q853)
+		// Not the deletion queue: NeoVeldrid's VkTexture frees its image and its full view at once, whatever frame in flight has them bound (Q853; docs/DECISIONS.md, "NeoVeldrid's memory")
 		Render.ScheduleRetire( () =>
 		{
 			view.Dispose();

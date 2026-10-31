@@ -411,9 +411,12 @@ width would halve the camera's distance and look like a fix:
 
 **OpenTPW matches every one of them but one.** The look-speed ramp, which the original steps per frame, is 3.0 of
 the cap a second, as at sixty frames (`LookRampPerSecond`); a simulation of both flights (`lobbyattract/sim.py`, 3 seeds, 300 s)
-gives the same turning with the ramp at 1.5 (the original at 30 frames a second) and at 3.0. The box's height band was 30–60
+gives the same turning with the ramp edited to 1.5 (the original at 30 frames a second) and at 3.0 (the stored file hard-codes ours' ramp at 3.0 and ours' height at the old 30 to 60, with no switch for either). The box's height band was 30–60
 from 2026-09-20 and is the original's 50–100 again (Q950, Alexah's word, 2026-10-31: the lower flight whipped the view and
-"the camera tends to not even point the right direction"). In the original's box the flight was measured in the running game to confirm
+"the camera tends to not even point the right direction"). In a simulation of 40 seeds at 300 s the worst turn falls from a median 88
+deg/s (at most 254) in the lowered box to 36 (at most 150) in the original's, whose rules the new box shares; live, ours read 24 to
+39 deg/s in the new box and 45 in 150 s of the old one, so no live run showed a whip. The box bounds the flight's targets, not the eye:
+the eased heading carries the eye out of it after a turn (the original's dipped to height 24.5 in one run, ours reached 104.8). In the original's box the flight was measured in the running game to confirm
 it rather than only the constants: over 60 s the camera stayed inside the box on all three axes
 (z 55–79 of the 50–100 the box allows), a median of **101.5 units** from the nearest island, and
 three island changes. The per-frame movement independently re-derives the speed: 10 units a second
@@ -427,13 +430,15 @@ near a change than away from one — median 5.31 against 5.59 degrees a second, 
 per-frame step. There is no swing and no jerk to find.
 
 **Measured again 2026-10-30 at 30 frames a second** (`original/attractcam.py`, 300 s, off-screen): an island change every
-18 s, the eye a median 89.9 units from the nearest island (p10 58, p90 118) at a median height of 71.5 (52 to 91), 10.0
+18 s, the eye a median 89.9 units from the nearest island (p10 58, p90 118) at a median height of 71.5 (p10 52, p90 91), 10.0
 units a second, the view turning a median 6.1 degrees a second (at most 74.7), and the aim reaching a new island a median
 10.7 s after the change. The same pass copies the nearest island's `+0x64..+0x6c` to the render camera's `+0x50..+0x58`,
 so its sky colour **snaps** at a change (ours fades it, `LobbyWeather`). And only the first island in the list has a park
 sound while it flies (`original/islandvoices.py`, 40 s, two changes of nearest island): music and bed both live on it, none on
 the other three, and a change touches neither. Ours does the same since Q950 (`LobbyAudio.SoundingTheme`): the head island's
-park, flat, with the nearest island's one-shots on top.
+park, flat, with the nearest island's one-shots on top. Select New Player stops the pair that sounds and plays the head's afresh
+(`FUN_005e14a0`, `0x004a6a33`); ours does the same (`LobbyAudio.SlotsOpened`), except that the park on show fades over 0.15 s where the
+original cuts (so the old take and the new one overlap for that long). Not run in either game.
 
 ### Globe: spin, home, pull in
 

@@ -21,7 +21,7 @@ partial class Shader
 
 	/// <summary>
 	/// Returns the already-compiled Shader for this path if one exists (so multiple
-	/// Materials using the same shader source share one compile and one file watcher),
+	/// Materials using the same shader source share one compile, and one file watcher where files are watched),
 	/// otherwise compiles and caches a new one.
 	/// </summary>
 	internal static Shader GetOrCreate( string path )

@@ -8,7 +8,7 @@
 set -e
 SO=${OPENTPW_VK_VALIDATION_SO:?set OPENTPW_VK_VALIDATION_SO to a libVkLayer_khronos_validation.so}
 DIR=${1:-${OPENTPW_HARNESS_WORK:?set OPENTPW_HARNESS_WORK or give a folder}/vklayer}
-mkdir -p "$DIR"; SO=$(readlink -f "$SO"); cp -f "$SO" "$DIR/libVkLayer_khronos_validation.so"
+mkdir -p "$DIR"; DIR=$(readlink -f "$DIR"); SO=$(readlink -f "$SO"); cp -f "$SO" "$DIR/libVkLayer_khronos_validation.so"
 cat > "$DIR/VkLayer_khronos_validation.json" <<JSON
 {"file_format_version":"1.2.0","layer":{"name":"VK_LAYER_KHRONOS_validation","type":"GLOBAL","library_path":"$DIR/libVkLayer_khronos_validation.so","api_version":"1.3.290","implementation_version":"1","description":"Khronos Validation Layer"}}
 JSON

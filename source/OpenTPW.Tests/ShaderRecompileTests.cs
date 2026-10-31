@@ -10,7 +10,10 @@ namespace OpenTPW.Tests;
 /// </summary>
 /// <remarks><b>Mutations:</b> <see cref="Shader.Retire"/> disposing at once instead of scheduling, skipping the fragment
 /// shader, counting a null, or not counting; <see cref="Shader.WatchesFiles"/> answering the build's own kind whatever the
-/// variable says, reading "0" as on, or watching in a Release build with no variable.</remarks>
+/// variable says, reading "0" as on, or watching in a Release build with no variable; <see cref="Shader.Replace"/> queuing
+/// before it notifies, disposing at once, reading the old pair after the compile, or never queuing; <see cref="Shader.RequireCompiled"/>
+/// letting a null through; the new pair stored after the notify. The constructor's call of <see cref="Shader.RequireCompiled"/> and <c>Recompile</c>'s call of
+/// <see cref="Shader.Replace"/> are the run's alone.</remarks>
 [TestClass]
 public class ShaderRecompileTests
 {
@@ -77,4 +80,53 @@ public class ShaderRecompileTests
 	[DataRow( "yes", true, true )]
 	public void OnlyADebugBuildOrTheVariableWatches( string? setting, bool debugBuild, bool expected )
 		=> Assert.AreEqual( expected, OpenTPW.Shader.WatchesFiles( setting, debugBuild ), $"setting {setting ?? "(none)"}, debug build {debugBuild}" );
+
+	/// <summary>
+	/// A recompile stores the new pair, notifies, and only then queues the old pair; the old pair is the one held before the
+	/// compile, and nothing is disposed at once.
+	/// </summary>
+	[TestMethod]
+	public void AReplaceNotifiesBeforeItQueuesAndQueuesTheOldPair()
+	{
+		var events = new List<string>();
+		var disposed = new List<string>();
+		var queue = new List<Action>();
+		var current = ("oldV", "oldF");
+
+		OpenTPW.Shader.Replace( ref current, () =>
+			{
+				events.Add( "compile" );
+				return ("newV", "newF");
+			},
+			pair => (new Shader( pair.Item1, disposed ), new Shader( pair.Item2, disposed )),
+			() =>
+			{
+				events.Add( "notify" );
+				Assert.AreEqual( ("newV", "newF"), current, "stored before the materials are told" );
+			},
+			action =>
+			{
+				events.Add( "queue" );
+				queue.Add( action );
+			} );
+
+		CollectionAssert.AreEqual( new[] { "compile", "notify", "queue", "queue" }, events );
+		Assert.AreEqual( ("newV", "newF"), current, "the new pair is stored" );
+		Assert.AreEqual( 0, disposed.Count, "nothing disposed at once" );
+
+		foreach ( var action in queue )
+			action();
+
+		CollectionAssert.AreEqual( new[] { "oldV", "oldF" }, disposed, "the pair let go is the one held before the compile" );
+	}
+
+	/// <summary>A shader that compiled to nothing is refused with its path, not left to a null reference later.</summary>
+	[TestMethod]
+	public void AMissingShaderIsNamedAtTheStart()
+	{
+		var thrown = Assert.ThrowsException<System.IO.FileNotFoundException>( () => OpenTPW.Shader.RequireCompiled( null, "/game/content/shaders/blit.shader" ) );
+
+		StringAssert.Contains( thrown.Message, "/game/content/shaders/blit.shader" );
+		OpenTPW.Shader.RequireCompiled( new object(), "/game/content/shaders/blit.shader" );
+	}
 }
