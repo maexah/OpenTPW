@@ -87,10 +87,14 @@ It does not search parent folders.
 **Saves** go to `save/` beside the game's data, where the original keeps them, so the original and OpenTPW share
 options and players.
 
-If `save/` cannot be written (a game installed under `Program Files` that your account may not change), the game still
-runs, and says on screen when a save, the options or a player is lost: a box reading `PARK NOT SAVED`, `OPTIONS NOT SAVED`
-or `PLAYER NOT SAVED`, with the path of `console.log`. Give your account write access to the game's folder, or run the
-game from a folder you own.
+If `save/` cannot be written (a game installed under `Program Files` that your account may not change), OpenTPW keeps
+its saves in `save` in your own data folder instead (`%AppData%\OpenTPW\save` on Windows, `~/.local/share/OpenTPW/save`
+on Linux, `~/Library/Application Support/OpenTPW/save` on macOS) and plays as usual; `console.log` says which folder it
+chose. This is a deviation from the original, which would keep them in the game's folder. The test is a file really made
+there, so a folder you can write is kept. A `save/` that already holds players but cannot be written is read by nothing:
+the players in it are not copied (Q902 is open), and the game says so once on screen. Where that folder cannot be
+written either, the game still runs and says on screen when a save, the options or a player is lost: a box reading
+`PARK NOT SAVED`, `OPTIONS NOT SAVED` or `PLAYER NOT SAVED`, with the path of `console.log`.
 
 </details>
 

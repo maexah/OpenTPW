@@ -59,12 +59,15 @@ internal static class Game
 		//
 		// Register save data directory - save\ beside the game's data, where the original keeps it, so that a
 		// park saved by one is seen by the other. Made here if it is not there: a copy of the game that has
-		// never been played has no save folder yet, and mapping one does not make it.
+		// never been played has no save folder yet, and mapping one does not make it. A deviation (Q984): where
+		// that folder cannot be written, a stock Program Files install, saves go in the player's data folder.
 		//
-		var saveFolder = GameDir.FindSaveFolder();
+		var saves = SaveHome.Choose( GameDir.FindSaveFolder(), SaveHome.PlayersFolder() );
 
-		Directory.CreateDirectory( saveFolder );
-		SaveFileSystem = new BaseFileSystem( saveFolder );
+		SaveFileSystem = new BaseFileSystem( saves.Folder );
+
+		if ( saves.Notice is { } notice )
+			SaveTrouble.Tell( notice );
 
 		// The machine's options, which the original reads in WinMain's setup, before its message loop (0x00424930).
 		SaveFolder.LoadConfig();

@@ -87,7 +87,7 @@ public static class GameDir
 					return false;
 				}
 
-				tried.Add( (where, path) );
+				NoteMissing( tried, where, path );
 				continue;
 			}
 
@@ -195,7 +195,7 @@ public static class GameDir
 
 		// Only once it has been set. What it ships with is where the original installs itself on Windows,
 		// which is a guess like any other rather than something the player asked for, so that value is tried
-		// last instead - and on anything but Windows it is a path that cannot exist.
+		// among the defaults instead - and on anything but Windows it is a path that cannot exist.
 		if ( !string.IsNullOrWhiteSpace( setting ) && setting != byDefault )
 			candidates.Add( (SettingSource, setting) );
 
@@ -209,8 +209,8 @@ public static class GameDir
 
 		// The places a Windows install can be, after every place the player could have meant: the folder the
 		// uninstall entry names (it is where the installer really put the game, whatever it was told), then the
-		// two defaults. Sim Theme Park, the retail box's name, installs in "SimTheme Park", the disc's own
-		// setup in "Bullfrog\Theme Park World" (Q981).
+		// two defaults. The retail box's Sim Theme Park installs in "SimTheme Park" and the original's default
+		// is "Bullfrog\Theme Park World"; the disc's setup chooses between the two (Q981).
 		foreach ( var folder in registered )
 			candidates.Add( (RegistrySource, folder) );
 
@@ -304,6 +304,17 @@ public static class GameDir
 		=> FindEntry( data, LongName ) == null
 			&& ShortNames.Any( name => FindEntry( data, name ) != null );
 
+	/// <summary>A place that is not there, noted for the list unless the same path is already on it under another source.</summary>
+	internal static void NoteMissing( List<(string Where, string Path)> tried, string where, string path )
+	{
+		if ( !tried.Any( entry => entry.Path == path ) )
+			tried.Add( (where, path) );
+	}
+
+	/// <summary>The "looked in" line for each place tried, one for each distinct source and folder.</summary>
+	internal static IEnumerable<string> LookedIn( IEnumerable<(string Where, string Path)> tried )
+		=> tried.Distinct().Select( entry => $"Game files: looked in {entry.Path} ({entry.Where})" );
+
 	/// <summary>Says what was looked at, and what would make the game findable, once nothing has been found.</summary>
 	private static void Explain( List<(string Where, string Path)> tried, List<string> shortNamed )
 	{
@@ -318,14 +329,11 @@ public static class GameDir
 		Fail( "Game files: Theme Park World was not found." );
 		Fail( $"Game files: a folder counts when it holds a {DataName} folder with the game's {LevelsName} in it - the folder TP.exe was installed in." );
 
-		// One line for each place looked. Two of these can name the same folder - a build started from the
-		// directory it sits in - and Find tries it once, under the first, so it is not said twice.
-		foreach ( var where in tried.Select( entry => entry.Where ).Distinct() )
-		{
-			var first = tried.First( entry => entry.Where == where ).Path;
-
-			Fail( $"Game files: looked in {first} ({where})" );
-		}
+		// One line for each place looked, and each folder the uninstall entries name is a place. Two of these can name the
+		// same folder - a build started from the directory it sits in - and Find tries it once, under the first, so it
+		// is not said twice.
+		foreach ( var line in LookedIn( tried ) )
+			Fail( line );
 
 		Fail( $"Game files: put this build in with the game's files, or start it with {PathArgument} <folder>, or set {PathVariable} to that folder." );
 	}

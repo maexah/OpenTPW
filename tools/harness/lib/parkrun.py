@@ -2,7 +2,7 @@
 
 exec() it after setting OUT (the run's folder), BIN (the build's bin folder) and NAME (the park file's name, "Q255").
 Optional before the exec: GAME_FOLDER = "<path>" (a private game folder of the script's own, used on the desktop or off it: lib/gamefolder.py
-makes one whose data differs in the files named), AUDIO_FILE = "<path>" (the mix to a file; lib/mixmatch.py measures a sample in it), OFFSCREEN = True, SLOT_CONTROL = "7a14" (player slot 1).
+makes one whose data differs in the files named), AUDIO_FILE = "<path>" (the mix to a file; lib/mixmatch.py measures a sample in it), OFFSCREEN = True, SLOT_CONTROL = "7a14" (player slot 1), LEDGER = "<path>" (where the ledger of made files is kept; the private game folder otherwise, which a read-only one, `gamefolder.fresh`, refuses).
 
 It starts the game in a PRIVATE game folder (links to the real one, a save/ of its own) through q119/lib.py, so every
 name of that library is here too (send, ask, collect, drain, tail, wait_for, attach, move, button, key, shot, grab,
@@ -57,7 +57,7 @@ if _OFF and not _OWN and not os.path.isdir(PRIVATE):
 JUNGLE = os.path.join(PRIVATE, "save/users/1ref/jungle"); WROTE = os.path.join(JUNGLE, NAME + ".TPWS")
 # Files a run makes in the private folder are listed in a ledger as they are made (own_file); done() removes them, and a
 # run killed before done() has them removed by the next run's start (2026-10-30: a timeout left a park copy behind).
-_LEDGER = os.path.join(PRIVATE, ".parkrun-made")
+_LEDGER = os.path.expanduser(globals().get("LEDGER") or os.path.join(PRIVATE, ".parkrun-made"))
 if os.path.exists(_LEDGER):
     for _left in open(_LEDGER).read().split("\n"):
         if _left and os.path.exists(_left): os.remove(_left); print(f"  removed {_left}: a run before this one was killed")

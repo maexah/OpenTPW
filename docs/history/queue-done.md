@@ -11357,6 +11357,24 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   exes' PE subsystem 2 (Release) and 3 (Debug), the box and log with no console handles, the Debug build's debug console.
   The Windows confirm is Q852.
 - [x] **Q983. The Options screen's Video Card row works, and the review of run 16's fixes.** Done 2026-10-31 (lane A, `alexah/760-video-card-row`; Linux seen, **the Windows side is not verified yet**: the Sentinel confirms the row on its Windows PC). Q980 said the original has no card list: false. It lists up to four DirectDraw drivers (`0x00563574`) and its Primary / Secondary row switches the card (`0x004a361c`, `0x0044e1eb`: `docs/exe/ui.md`). The row is Primary (the card `GpuChoice.Pick` prefers) or Secondary (`GpuChoice.Ranked`'s next), Secondary offered only where the loader lists more than one device, kept in Config.tcf's video card field, drawn on from the next start (the card is chosen before the window, as the original applies it as its window is made), the row reading truthfully (a saved Secondary with one card reads Primary; opentpw.cfg's `gpu` line still wins and the row then says the card in use). A chosen card that cannot open is taken back and the device made again (`GpuSelector.Withdraw`). Q980's findings 1 to 8, Q976's minor and cosmetic ones, Q977's five and Q978's eight (its defect as the second reader settled it: the exception is logged by the catch's filter before anything unwinds, and a load that threw is only taken down, with no "Loaded" line and no step count) fixed in the same commit. Confirmed on the desk: `q983/`.
+- [x] **Q984. Saves fall back to the player's folder, and the Q981, Q982 and Q979 review fixes.** Done 2026-10-31 (lane A,
+  `alexah/782-saves-in-the-players-folder`; Linux seen, **the Windows side is not verified yet**: the Sentinel confirms on its
+  Windows PC, Q907). A stock Sim Theme Park under Program Files cannot be written (OpenTPW is `asInvoker`; the original's exe has no
+  manifest, so Windows redirects its writes to the VirtualStore) and a fresh install has no `save\`, so Q981 finding the game
+  ended the start in Q978's box (`Game.cs`'s unguarded `CreateDirectory`). Now `SaveHome` makes a file in the game's `save\` and
+  lets it go (made first if it is not there): where that works the folder is kept, as the original; where it does not, saves go
+  in `save` in the player's data folder (`UserFolders.Data()`: `%AppData%\OpenTPW\save`), the log saying once which it chose. A
+  `save\` that holds players but cannot be written is read by nothing and nothing is copied (Q902, Alexah's, stays open); the
+  game says so once on screen (`SAVES GO IN`, the folder, `Players in the game's own folder are not copied.`). Q982's boxes fire
+  only where the player's folder cannot be written either; where it cannot even be made the start ends in Q978's box with both
+  reasons. A deviation, said at `SaveHome`, `Game.cs`, README.md and the zip's README. Review fixes: Q982's F1 (Alt+S under F2
+  opened the box on the hidden interface and stopped the clock: the box now waits, pending, until the interface is back, and is held
+  under a cover), F3 to F8 (`SaveDisplay`'s `tell` required, `Asked()` after any park write, the deviation said at its sites, the
+  box's blank line under its heading); Q981's F2 to F11 (the zip README's order, the unquoted `-f` ends at the next switch, a `-f`
+  naming no path goes on to the next, a drive's root keeps its separator, one registry look per view and per entry, the box's
+  `looked in` lines per folder and not twice, the stale comments, Q851 rewritten so it can be carried out); Q979's three (the
+  prompt returns at once under `cmd`, the stale `StartFailure` summary, a test that the Release group comes after the group it
+  overrides). Confirmed on the desk off-screen: `q984/`.
 
 ## B. Docs and comments
 

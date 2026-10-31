@@ -709,7 +709,8 @@ public class Level
 	/// costs them the old one. The bytes go to a file beside it that then takes its place
 	/// (<see cref="BaseFileSystem.WriteAllBytes"/>), so a failure never leaves a part-written park either. A failure
 	/// of any kind is logged and answered with null, and the game goes on, as the original's save answers a failure
-	/// number and its screen closes all the same.
+	/// number and its screen closes all the same. A deviation (Q982): where the save folder cannot be written the player
+	/// is also told in a message box (<see cref="SaveTrouble"/>).
 	/// </para>
 	/// </summary>
 	internal string? WritePark( string name, string extension = SaveFolder.SavedParkExtension )
@@ -2473,20 +2474,26 @@ public class Level
 	/// </remarks>
 	internal string QuickSaveKey()
 	{
-		if ( WritePark( ThemeName ) is { } written )
+		var written = WritePark( ThemeName );
+
+		// What the player asked for is told whether the park or only the player's file (written first) was lost.
+		SaveTrouble.Asked();
+
+		if ( written != null )
 			return $"Quicksave: QuickSave OK - written to {written}";
 
-		SaveTrouble.Asked();
 		return "Quicksave: Quicksave failed - the log says why";
 	}
 
 	/// <summary>
-	/// Opens the message box for a write to the save folder that failed (<see cref="SaveTrouble"/>), once the front
-	/// window has nothing modal up, so it never lands over another question.
+	/// A deviation (Q982, Q984): opens the message box for a write to the save folder that failed, or for where saves
+	/// go (<see cref="SaveTrouble"/>), once the front window has nothing modal up and nothing covers it, so it never
+	/// lands over another question. Held while F2 hides the interface: the box pauses the park and cannot be seen or
+	/// clicked there, so it waits, pending, for the frame after the interface is back.
 	/// </summary>
 	private void TellSaveTrouble()
 	{
-		if ( !SaveTrouble.Pending || _windows is not { ModalUp: false } windows )
+		if ( !SaveTrouble.Pending || UI.RootPanel.Hidden || _windows is not { ModalUp: false, Covered: false } windows )
 			return;
 
 		if ( SaveTrouble.Take() is { } text )

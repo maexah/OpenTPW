@@ -98,7 +98,7 @@ internal sealed class FrontEnd : Panel
 		ClosePlayerSlots( newPlayer: true );
 	}
 
-	/// <summary>Quit Game (0x004a61d0): asks, and quits on the tick.</summary>
+	/// <summary>Quit Game (0x004a61d0): asks, and quits on the tick. A deviation (Q982): the question carries a line more where the save folder cannot be written.</summary>
 	internal void AskToQuit() => _stack.Open( new MessageBox( _stack, SaveTrouble.QuitQuestion( Localization.Get( UIStrings.ConfirmQuit ) ), Quit ) );
 
 	/// <summary>

@@ -242,7 +242,7 @@ public class GpuChoiceTests
 			Assert.AreEqual( "#1", GameOptions.Current.Gpu, "a line with nothing after it is passed over" );
 
 			GameOptions.Current = new() { Gpu = "NVIDIA GeForce GTX 1650" };
-			SaveFolder.SaveDisplay();
+			SaveFolder.SaveDisplay( tell: true );
 			var text = File.ReadAllText( file );
 			StringAssert.Contains( text, "\ngpu NVIDIA GeForce GTX 1650\n" );
 			StringAssert.Contains( text, "# gpu auto:" );
@@ -252,7 +252,7 @@ public class GpuChoiceTests
 			Assert.AreEqual( "NVIDIA GeForce GTX 1650", GameOptions.Current.Gpu, "written, read back" );
 
 			GameOptions.Current = new() { Gpu = "  " };
-			SaveFolder.SaveDisplay();
+			SaveFolder.SaveDisplay( tell: true );
 			StringAssert.Contains( File.ReadAllText( file ), "\ngpu auto\n", "an empty setting is written as auto" );
 			Assert.AreEqual( 1, File.ReadAllLines( file ).Count( l => l.StartsWith( "gpu ", System.StringComparison.Ordinal ) ), "one gpu line" );
 		}

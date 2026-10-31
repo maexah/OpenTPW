@@ -199,7 +199,7 @@ internal static class SaveFolder
 	/// and alone when a loading screen has learned a new step count.
 	/// </summary>
 	/// <param name="tell">Whether a folder that cannot be written is told to the player (<see cref="SaveTrouble"/>); the loading screen's own write is not, as no choice of theirs was lost.</param>
-	public static void SaveDisplay( bool tell = true )
+	public static void SaveDisplay( bool tell )
 	{
 		var path = Find( DisplayName ) ?? DisplayName;
 		var options = GameOptions.Current;
@@ -537,20 +537,11 @@ internal static class SaveFolder
 		if ( SaveFileSystemOrNull is not { } saves )
 			return true;
 
-		try
-		{
-			var folder = saves.GetAbsolutePath( "" );
-			Directory.CreateDirectory( folder );
-			var probe = Path.Join( folder, ".write-test" );
+		if ( SaveHome.Unwritable( saves.GetAbsolutePath( "" ) ) is not { } why )
+			return true;
 
-			using ( new FileStream( probe, FileMode.Create, FileAccess.Write, FileShare.None, 1, FileOptions.DeleteOnClose ) )
-				return true;
-		}
-		catch ( Exception e ) when ( e is IOException or UnauthorizedAccessException )
-		{
-			Log.Warning( $"Saves: the save folder cannot be written - {e.Message}" );
-			return false;
-		}
+		Log.Warning( $"Saves: the save folder cannot be written - {why}" );
+		return false;
 	}
 
 	/// <summary>Whether a player's folder holds a gms.dat at all, readable or not.</summary>

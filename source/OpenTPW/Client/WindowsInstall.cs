@@ -34,7 +34,8 @@ public static class WindowsInstall
 
 	/// <summary>
 	/// The folder the uninstall entries name, in the order found. Nothing off Windows, and nothing when the
-	/// registry will not open: a registry that cannot be read is no reason to stop, the defaults are tried next.
+	/// registry will not open: a view or an entry that cannot be read is passed over with a warning and is no reason
+	/// to stop, the defaults are tried next.
 	/// </summary>
 	public static IReadOnlyList<string> RegisteredFolders()
 	{
@@ -43,14 +44,17 @@ public static class WindowsInstall
 		if ( !OperatingSystem.IsWindows() )
 			return folders;
 
-		try
+		// One look per view and one per entry, so a locked sibling costs that sibling and nothing after it.
+		foreach ( var view in new[] { RegistryView.Registry32, RegistryView.Registry64 } )
 		{
-			foreach ( var view in new[] { RegistryView.Registry32, RegistryView.Registry64 } )
+			try
+			{
 				ReadView( view, folders );
-		}
-		catch ( Exception e )
-		{
-			Log.Warning( $"Game files: the Windows uninstall list could not be read, so it is passed over - {e.Message}" );
+			}
+			catch ( Exception e )
+			{
+				Log.Warning( $"Game files: the Windows uninstall list ({view}) could not be read, so it is passed over - {e.Message}" );
+			}
 		}
 
 		return folders;
@@ -67,21 +71,31 @@ public static class WindowsInstall
 
 		foreach ( var name in list.GetSubKeyNames() )
 		{
-			using var entry = list.OpenSubKey( name );
-
-			if ( entry == null )
-				continue;
-
-			if ( !IsTheGame( name, entry.GetValue( "DisplayName" ) as string ) )
-				continue;
-
-			var folder = FolderOfUninstallString( entry.GetValue( "UninstallString" ) as string );
-
-			Log.Info( $"Game files: the uninstall entry {name} ({view}) names {folder ?? "no folder"}" );
-
-			if ( folder != null && !folders.Contains( folder, StringComparer.OrdinalIgnoreCase ) )
-				folders.Add( folder );
+			try
+			{
+				ReadEntry( view, list, name, folders );
+			}
+			catch ( Exception e )
+			{
+				Log.Warning( $"Game files: the uninstall entry {name} ({view}) could not be read, so it is passed over - {e.Message}" );
+			}
 		}
+	}
+
+	[SupportedOSPlatform( "windows" )]
+	private static void ReadEntry( RegistryView view, RegistryKey list, string name, List<string> folders )
+	{
+		using var entry = list.OpenSubKey( name );
+
+		if ( entry == null || !IsTheGame( name, entry.GetValue( "DisplayName" ) as string ) )
+			return;
+
+		var folder = FolderOfUninstallString( entry.GetValue( "UninstallString" ) as string );
+
+		Log.Info( $"Game files: the uninstall entry {name} ({view}) names {folder ?? "no folder"}" );
+
+		if ( folder != null && !folders.Contains( folder, StringComparer.OrdinalIgnoreCase ) )
+			folders.Add( folder );
 	}
 
 	/// <summary>
@@ -100,8 +114,9 @@ public static class WindowsInstall
 
 	/// <summary>
 	/// The install folder inside an InstallShield uninstall string, <c>C:\WINDOWS\IsUninst.exe -f"C:\Program Files
-	/// (x86)\SimTheme Park\Uninst.isu"</c>: the folder of the file the <c>-f</c> switch names, quoted or not. Null
-	/// when there is no such switch, or what follows it is no path.
+	/// (x86)\SimTheme Park\Uninst.isu"</c>: the folder of the file the <c>-f</c> switch names. Quoted, the file ends at
+	/// the closing quote; unquoted, at the next switch (whitespace, then a dash: the real string goes on with
+	/// <c>-c</c>). A <c>-f</c> that names no path is passed over for the next one. Null when none does.
 	/// </summary>
 	public static string? FolderOfUninstallString( string? uninstallString )
 	{
@@ -122,15 +137,33 @@ public static class WindowsInstall
 				var close = file.IndexOf( '"', 1 );
 				file = close < 0 ? file[1..] : file[1..close];
 			}
+			else
+			{
+				var next = EndOfUnquoted( file );
+				file = next < 0 ? file : file[..next];
+			}
 
 			var cut = file.LastIndexOfAny( ['\\', '/'] );
 
 			if ( cut <= 0 || file.Length < 3 || !((char.IsLetter( file[0] ) && file[1] == ':') || file.StartsWith( @"\\" )) )
-				return null;
+				continue;
 
-			return file[..cut];
+			// A drive's root keeps its separator: "D:" alone is that drive's current folder, not its root.
+			return file[..(cut == 2 ? 3 : cut)];
 		}
 
 		return null;
+	}
+
+	/// <summary>Where an unquoted file name ends: the first whitespace followed by a dash, or -1 where it runs to the end.</summary>
+	private static int EndOfUnquoted( string text )
+	{
+		for ( int i = 1; i < text.Length - 1; ++i )
+		{
+			if ( char.IsWhiteSpace( text[i] ) && text[i + 1] == '-' )
+				return i;
+		}
+
+		return -1;
 	}
 }

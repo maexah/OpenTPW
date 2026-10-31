@@ -89,7 +89,9 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   Park\save`) when `Program Files (x86)` was not writable, and whether OpenTPW should read them there. Not tested: the
   PC tried has a third-party `PermissionFix.exe` (Everyone full control), so the original wrote straight to `save\`.
   **Needs Alexah (2026-10-31):** should OpenTPW read a player's saves from the VirtualStore when `save\` has none? (It
-  would need a PC where the original's saves were made without the fix to look at first.)
+  would need a PC where the original's saves were made without the fix to look at first.) Q984 left it open: a `save\`
+  that holds players but cannot be written is read by nothing, and nothing is copied out of it to the player's folder
+  (whether to copy or read them is this item's); the game says so once on screen.
 - [ ] **Q903. A save lost as the window closes is told in the log only.** The window's own close with a park up writes
   the autosave and the player, then the process ends: no scene is left to open a box (Quit Game's question says
   beforehand, Q982). Counted, not built: a close that asked first would be a deviation the original does not have;
@@ -106,19 +108,41 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   behind the box (`Audio.Shutdown` is not on the catch's path). (4) `ConsoleLog.Path` empty after a failed `Open`: the catch opens
   `OpenWithoutGame` a second time on the same folder, which fails again and prints a second `[console log]` line. None seen.
 
-- [ ] **Q851. Q981's Windows confirm (the uninstall entry's read, which Linux cannot run).** Built and tested on plain
-  strings; the registry read (`WindowsInstall.RegisteredFolders`) ran on no Windows PC. On the PC with Sim Theme Park in
-  `C:\Program Files (x86)\SimTheme Park`: the zip with no `--game` finds it, the log holds `Game files: the uninstall entry
-  Theme Park World (Registry32) names C:\Program Files (x86)\SimTheme Park` and `Theme Park World in ... (the Windows uninstall
-  entry)`; then with the key renamed away in a copy of the machine's state or `--game` pointing elsewhere unchanged, the
-  box's list ends with the two defaults. Do not write `save\` (copy the install, or quit at the lobby's first frame). If
-  the key sits in the 64-bit view or under another name on another PC, widen `IsTheGame`.
+- [ ] **Q906. Two failing save-folder writes are not told (Q982's review, F6).** `SaveFolder.DeletePlayer` catches a failure and logs
+  it, then `Players.Delete` empties the slot, so the player looks gone and is back at the next launch (it is also reached from
+  `Players.Create` over a used slot); `PLAYER NOT SAVED` is the wrong words for a delete, so it wants its own. `ScanPlayers` makes the
+  theme folders of each player inside its loop: a player folder lacking one throws in a folder that cannot be written and the
+  outer catch ends the scan, so the players after it are missing for the run (rare: a folder made whole has every theme; it runs
+  before any scene, so `SaveTrouble` could tell it at the lobby's first frame). Counted, not built; look at it when a player meets it.
+- [ ] **Q907. Q984's Windows confirm (saves fall back to the player's folder, and the review fixes).** Linux seen, Windows not.
+  On the Windows 11 PC with Sim Theme Park in `C:\Program Files (x86)\SimTheme Park` and **no** permission fix (an ordinary
+  account, no `PermissionFix.exe`; Q850's PC has the fix, so make the case in a copy under `Program Files` or take the Everyone
+  rights off, and put them back after): (1) the zip's `OpenTPW.exe` with no `--game` and no `save\` in the install starts, finds
+  the game, and `console.log` holds `Saves: ... cannot be written (...), so saves go in ...\OpenTPW\save`; no box; a new player,
+  a park entered and Alt+S write `%AppData%\OpenTPW\save\users\...`, and the install gains no `save\` (list it before and
+  after). (2) With a `save\` that holds a player and cannot be written: one box `SAVES GO IN`, the folder and `Players in the
+  game's own folder are not copied.` at the lobby, once; the game's `save\` is unchanged. (3) With `%AppData%\OpenTPW\save`
+  read-only too: Q982's boxes. (4) Q981's parse (the real `UninstallString` with `-c` and `-BFLANG` after the file) as Q851
+  reads it, and the box's `looked in` lines naming each registered folder. Do not touch `save\` the install already has.
+
+- [ ] **Q851. Q981's Windows confirm, the part left (a start on the real install, with nothing renamed).** Done on the Windows 11
+  PC (2026-10-31, `ad33c209`, the read-only harness): the uninstall entry in the 32-bit view names the `SimTheme Park` folder, and
+  `save\` did not change. Left, all on the unchanged machine (no registry key renamed, nothing in the install touched): in a
+  copy of the install's files in a folder you own, with the zip's `OpenTPW.exe` and **no** `--game`, started from a prompt
+  with `OPENTPW_LOG_DIR` set to an empty folder: the log holds `Game files: the uninstall entry Theme Park World (Registry32)
+  names <game folder>` (the log writes the game's folder as `<game folder>`, so read the registry's own value with `reg query`
+  beside it) and `Game files: Theme Park World in <game folder> (the Windows uninstall entry)`. That is the whole of it. What
+  this item used to ask and no longer does: the box's list of places with the key renamed away (a named `--game` stops at its
+  first failure and prints no list, and the box default finds the game on that PC either way, so no box opens), which Linux
+  shows (the list's lines and their order are tests) and which needs a PC with no install at all. If the key sits in the 64-bit
+  view or under another name on another PC, widen `IsTheGame`. A stock Program Files install with no `save\` is Q907's.
 
 - [ ] **Q852. Q979's Windows confirm (no terminal behind the game, which Linux cannot show).** On the Windows 11 PC, the
   weekly zip's (or a `-c Release -r win-x64` publish's) `OpenTPW.exe`: a double-click shows no console window and no second
   taskbar entry (screenshot of the desktop and taskbar); started from `cmd` as `OpenTPW.exe --game "<folder>"` its lines
-  print into that prompt (`ParentConsole.Attach` is called and never seen to work, and the debug console's stdin is not
-  promised there); a start that fails (a `--game` that is not a game, double-clicked or from a shortcut) still shows
+  print into that prompt (`ParentConsole.Attach` is called and never seen to work; `cmd` does not wait for a windowed
+  program, so the prompt returns at once and the lines land after it: note where they land, and that a line typed there
+  goes to `cmd` or to the debug console, whichever reads first, which a Release build is not promised to have); a start that fails (a `--game` that is not a game, double-clicked or from a shortcut) still shows
   Q978's box and writes `console.log`; a Debug build (`dotnet build`) still opens its console and the debug console
   reads from it. Do not write `save\`.
 

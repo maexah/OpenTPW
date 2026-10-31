@@ -5,8 +5,7 @@ namespace OpenTPW;
 ///
 /// <para>
 /// A start that cannot find the game logs its reasons (<see cref="GameDir"/>) and exits, and on Windows a start from
-/// Explorer then shows a terminal for about a second and nothing else; the same holds for an exception before the
-/// game's main loop begins. The original never needed this, so it is a deviation, made on every system at the
+/// Explorer has no terminal to show them on; the same holds for an exception before the game's main loop begins. The original never needed this, so it is a deviation, made on every system at the
 /// maintainer's word (Q978): an SDL message box holding the reason lines, where the game looked, how to put it right
 /// and where the log is. The log keeps the same lines whether or not the box could be shown.
 /// </para>

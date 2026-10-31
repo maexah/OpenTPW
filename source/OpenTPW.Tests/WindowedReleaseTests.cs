@@ -28,6 +28,17 @@ public class WindowedReleaseTests
 	public void AReleaseBuildIsAWindowedProgram()
 		=> Assert.AreEqual( "WinExe", OutputTypeUnder( "'$(Configuration)' == 'Release'" ) );
 
+	// MSBuild's last write wins: the conditioned group above the plain one would leave every Release build an Exe.
+	[TestMethod]
+	public void TheReleaseGroupComesAfterTheGroupItOverrides()
+	{
+		var groups = Groups();
+		var plain = Array.FindIndex( groups, g => (string?)g.Attribute( "Condition" ) == null && g.Element( "OutputType" ) != null );
+		var release = Array.FindIndex( groups, g => (string?)g.Attribute( "Condition" ) == "'$(Configuration)' == 'Release'" && g.Element( "OutputType" ) != null );
+
+		Assert.IsTrue( plain >= 0 && release > plain, $"plain at {plain}, Release at {release}" );
+	}
+
 	[TestMethod]
 	public void OnlyReleaseIsWindowed()
 	{

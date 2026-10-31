@@ -131,8 +131,9 @@ internal sealed class ParkSaveScreen : ParkFileScreen
 		var name = _name.Value;
 		var written = Level.Current?.WritePark( name );
 
-		if ( written == null )
-			SaveTrouble.Asked();
+		// A deviation (Q982): the original says nothing when the save fails. What the player asked for is told
+		// whether the park or only the player's file (written first) was lost, so a good save shows nothing.
+		SaveTrouble.Asked();
 
 		Log.Info( written != null
 			? $"Save Park: '{name}' is written to {written}, and the screen closes"

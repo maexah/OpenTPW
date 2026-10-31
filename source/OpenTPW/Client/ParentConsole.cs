@@ -5,8 +5,10 @@ namespace OpenTPW;
 /// <summary>
 /// A Release build on Windows has no console of its own (the project's WinExe output, Q979), so a start from a terminal
 /// would print nowhere. This joins the terminal that started the process, when there is one, so
-/// <c>OpenTPW.exe --game ...</c> typed at a prompt prints its lines there as it always did. A start from Explorer has no
-/// such terminal: the call fails and nothing opens, the log and the failed start's box are all there is. A Debug build
+/// <c>OpenTPW.exe --game ...</c> typed at a prompt prints its lines there. <c>cmd</c> does not wait for a windowed
+/// program: its prompt comes back at once, the lines land after it, and a line typed there goes to <c>cmd</c> or to the
+/// debug console, whichever reads first; the debug console wants a Debug build. A start from Explorer has no such
+/// terminal: the call fails and nothing opens, the log and the failed start's box are all there is. A Debug build
 /// already has its console, and the call fails there too, harmlessly.
 /// </summary>
 public static class ParentConsole

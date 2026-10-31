@@ -13,6 +13,10 @@ GAME_FOLDER. `gamefolder.py DEST REL OLD NEW` does one replacement from the shel
 player's `restart.INTS` taken out, so a run meets a save folder that cannot be written (Q982: `lock( DEST )`); `unlock( DEST )`
 puts the write bit back, which removing the folder needs. A new player's first entry then fails to write `restart.INTS`.
 
+`gamefolder.py fresh DEST` makes DEST (`fresh( DEST )`) as a stock Program Files install stands for a player whose account may not write
+there: the game's entries linked, **no save/** and the folder itself read-only (Q984: the game then keeps its saves in the player's data folder, so set
+XDG_DATA_HOME to a folder of the run's first, and `LEDGER` for parkrun.py); `unfresh( DEST )` puts the write bit back, which removing it needs.
+
 `gamefolder.py private` makes paths.PRIVATE_GAME itself, once per computer: links to the real game's entries and an
 empty save/ of its own. The runs click the first player slot and read save/users/1ref, so start OpenTPW once on that
 folder and make a player named "ref" in the first slot (README.md, "Setting up")."""
@@ -57,12 +61,20 @@ def unlock(dest):
     for root, _, files in os.walk(os.path.join(os.path.expanduser(dest), "save")):
         os.chmod(root, 0o755)
         for name in files: os.chmod(os.path.join(root, name), 0o644)
+def fresh(dest):
+    dest = make(dest, {}); save = os.path.join(dest, "save")
+    if os.path.isdir(save): unlock(dest); shutil.rmtree(save)
+    os.chmod(dest, 0o555); return dest
+def unfresh(dest):
+    os.chmod(os.path.expanduser(dest), 0o755)
 def once(old, new):
     def change(text):
         assert text.count(old) == 1, (old, text.count(old)); return text.replace(old, new)
     return change
 if __name__ == "__main__" and sys.argv[1:] == ["private"]:
     print(private())
+elif __name__ == "__main__" and sys.argv[1:2] == ["fresh"]:
+    print(fresh(sys.argv[2]))
 elif __name__ == "__main__" and sys.argv[1:2] == ["lock"]:
     print(lock(sys.argv[2]))
 elif __name__ == "__main__":

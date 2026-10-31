@@ -71,7 +71,7 @@ public class SaveTroubleTests
 		var text = SaveTrouble.Take();
 
 		Assert.IsNotNull( text );
-		StringAssert.StartsWith( text, "PARK NOT SAVED\nThe save folder cannot be written." );
+		StringAssert.StartsWith( text, "PARK NOT SAVED\n\nThe save folder cannot be written." );
 		Assert.IsFalse( SaveTrouble.Pending );
 	}
 
@@ -108,6 +108,31 @@ public class SaveTroubleTests
 	}
 
 	[TestMethod]
+	public void ANoticeIsToldOnceAndAheadOfAFailure()
+	{
+		BlockTheThemeFolder();
+		SaveFolder.WritePark( 0, "Test", "jungle", "jungle", [1] );
+		SaveTrouble.Tell( "SAVES GO IN\n\n/somewhere" );
+
+		Assert.IsTrue( SaveTrouble.Pending );
+		Assert.AreEqual( "SAVES GO IN\n\n/somewhere", SaveTrouble.Take(), "the notice first" );
+		Assert.IsTrue( SaveTrouble.Pending, "the failure is still waiting" );
+		StringAssert.StartsWith( SaveTrouble.Take(), "PARK NOT SAVED" );
+		Assert.IsFalse( SaveTrouble.Pending );
+		Assert.IsNull( SaveTrouble.Take(), "told once" );
+	}
+
+	[TestMethod]
+	public void ANoticeAloneIsPendingUntilTaken()
+	{
+		SaveTrouble.Tell( "SAVES GO IN\n\n/somewhere" );
+
+		Assert.IsTrue( SaveTrouble.Pending, "nothing failed, and the notice still waits to be told" );
+		Assert.AreEqual( "SAVES GO IN\n\n/somewhere", SaveTrouble.Take() );
+		Assert.IsFalse( SaveTrouble.Pending );
+	}
+
+	[TestMethod]
 	public void AFileLeftAloneOnPurposeIsNotTroubleWithTheFolder()
 	{
 		SaveTrouble.Failed( "PLAYER", new InvalidDataException( "the player was not fully understood" ) );
@@ -129,7 +154,7 @@ public class SaveTroubleTests
 	public void TheOptionsThatCannotBeWrittenAreToldAsOptions()
 	{
 		BlockTheSaveFolder();
-		SaveFolder.SaveDisplay();
+		SaveFolder.SaveDisplay( tell: true );
 
 		StringAssert.StartsWith( SaveTrouble.Take(), "OPTIONS NOT SAVED" );
 	}

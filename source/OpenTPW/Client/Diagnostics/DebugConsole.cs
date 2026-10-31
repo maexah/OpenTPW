@@ -578,6 +578,7 @@ public static class DebugConsole
 				Reply( Level.Current?.Hud?.Children.OfType<UI.WindowStack>().FirstOrDefault() is { } shown
 					? $"windows: {(shown.Windows.Count == 0 ? "none" : string.Join( ", ", shown.Windows.Select( window => window is UI.ParkBuyScreen buy ? $"{nameof( UI.ParkBuyScreen )} tab {buy.Tab}" : window is UI.ParkHireScreen hire ? $"{nameof( UI.ParkHireScreen )} tab {hire.Tab}" : window.GetType().Name ) ))}"
 						+ (shown.Covered ? " - under the full-screen view" : "")
+						+ (UI.RootPanel.Hidden ? " - interface hidden (F2)" : "")
 						+ $"; left on {UI.ParkCategoryScreens.LeftOn( UI.ParkCategoryScreens.Building )},{UI.ParkCategoryScreens.LeftOn( UI.ParkCategoryScreens.Information )},{UI.ParkCategoryScreens.LeftOn( UI.ParkCategoryScreens.Finance )}"
 					: "windows: no window stack" );
 				break;

@@ -22,8 +22,8 @@ How to start it
 
    Windows:  OpenTPW asks Windows where the game was installed (its
              uninstall entry) and tries the usual places,
-               C:\Program Files (x86)\SimTheme Park
                C:\Program Files (x86)\Bullfrog\Theme Park World
+               C:\Program Files (x86)\SimTheme Park
              so if the game is installed, just double-click
              OpenTPW.exe. Otherwise, in a terminal in the OpenTPW
              folder, run
@@ -36,6 +36,12 @@ How to start it
 
 OpenTPW saves into the game's "save" folder, the same one the
 original game uses. Keep a copy of that folder before you play.
+Where that folder cannot be written (a game installed under
+Program Files that your account may not change), OpenTPW keeps its
+saves in a "save" folder in your own data folder instead
+(%AppData%\OpenTPW\save on Windows) and plays as usual, saying in
+console.log which one it chose. Players already in the game's own
+save folder are not copied there; the game says so once.
 
 
 The first time you start it

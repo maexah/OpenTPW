@@ -308,7 +308,7 @@ internal sealed class OptionsScreen : UiWindow
 	{
 		Options.ApplySound();
 		SaveFolder.SaveConfig();
-		SaveFolder.SaveDisplay();
+		SaveFolder.SaveDisplay( tell: true );
 
 		// A deviation (Q982): the original says nothing when its options are not written.
 		SaveTrouble.Asked();

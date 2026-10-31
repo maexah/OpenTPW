@@ -24,9 +24,16 @@ internal static class SaveTrouble
 	private static string? _what;
 	private static bool _asked;
 	private static bool _told;
+	private static string? _notice;
 
-	/// <summary>Whether a failure waits to be told.</summary>
-	internal static bool Pending => _what != null;
+	/// <summary>Whether a failure or a notice waits to be told.</summary>
+	internal static bool Pending => _what != null || _notice != null;
+
+	/// <summary>
+	/// Something the player is told once, not a failure: where saves go when the game's folder cannot be written
+	/// (<see cref="SaveHome"/>, Q984). Shown by the same poll, ahead of a failure.
+	/// </summary>
+	internal static void Tell( string text ) => _notice = text;
 
 	/// <summary>
 	/// A write failed. Only a folder that cannot be written counts: a file the game left alone on purpose
@@ -59,6 +66,12 @@ internal static class SaveTrouble
 	/// </summary>
 	internal static string? Take()
 	{
+		if ( _notice is { } notice )
+		{
+			_notice = null;
+			return notice;
+		}
+
 		if ( _what is not { } what )
 			return null;
 
@@ -75,7 +88,7 @@ internal static class SaveTrouble
 		_told = true;
 
 		var log = ConsoleLog.Path;
-		return $"{what} NOT SAVED\nThe save folder cannot be written." + (log.Length > 0 ? $"\nLog: {log}" : "");
+		return $"{what} NOT SAVED\n\nThe save folder cannot be written." + (log.Length > 0 ? $"\nLog: {log}" : "");
 	}
 
 	/// <summary>Quit Game's question, with a line more where nothing can be saved.</summary>

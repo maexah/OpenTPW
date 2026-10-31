@@ -607,7 +607,7 @@ internal sealed class ParkFrontEnd : Panel
 		Log.Info( $"Park menu: {choice} - {why}, so nothing more happens" );
 	}
 
-	/// <summary>Quit Game (case 8), which asks in a message box with UITEXT 9 and quits on the tick.</summary>
+	/// <summary>Quit Game (case 8), which asks in a message box with UITEXT 9 and quits on the tick. A deviation (Q982): the question carries a line more where the save folder cannot be written.</summary>
 	private void AskToQuit() => _stack.Open( new MessageBox( _stack, SaveTrouble.QuitQuestion( Localization.Get( UIStrings.ConfirmQuit ) ), Quit ) );
 
 	/// <summary>

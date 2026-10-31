@@ -19,6 +19,10 @@ public class WindowsInstallTests
 	[DataRow( @"C:\WINDOWS\ISUN0409.EXE -f""C:\Program Files (x86)\Bullfrog\Theme Park World\Uninst.isu"" -c""C:\x\uninst.dll""", @"C:\Program Files (x86)\Bullfrog\Theme Park World" )]
 	[DataRow( @"C:\WINDOWS\IsUninst.exe -F""C:\Program Files (x86)\SimTheme Park\Uninst.isu""", Box )]
 	[DataRow( @"C:\WINDOWS\IsUninst.exe -fC:\Games\TPW\Uninst.isu", @"C:\Games\TPW" )]
+	[DataRow( @"C:\WINDOWS\IsUninst.exe -fC:\Games\TPW\Uninst.isu -cC:\Games\TPW\uninst.dll -BFLANG=1033", @"C:\Games\TPW" )]
+	[DataRow( @"C:\WINDOWS\IsUninst.exe -f""C:\Program Files (x86)\SimTheme Park\Uninst.isu"" -c""C:\Program Files (x86)\SimTheme Park\uninst.dll"" -BFLANG=1033", Box )]
+	[DataRow( @"""C:\Old -f tools\IsUninst.exe"" -f""C:\Games\TPW\Uninst.isu""", @"C:\Games\TPW" )]
+	[DataRow( @"C:\WINDOWS\IsUninst.exe -f""D:\Uninst.isu""", @"D:\" )]
 	public void TheFolderIsTheFolderOfTheFileTheSwitchNames( string text, string expected )
 		=> Assert.AreEqual( expected, WindowsInstall.FolderOfUninstallString( text ) );
 
@@ -97,6 +101,46 @@ public class WindowsInstallTests
 		if ( System.OperatingSystem.IsWindows() )
 			Assert.Inconclusive( "this is the Windows PC's check: RegisteredFolders reads the registry here" );
 
-		Assert.AreEqual( 0, WindowsInstall.RegisteredFolders().Count );
+		// Without the IsWindows guard the look would throw here (no registry), be caught and warned: so none is the proof.
+		var warnings = new List<string>();
+		Logger.LogDelegate keep = ( severity, text ) => { if ( severity == Logger.Level.Warning ) warnings.Add( text ); };
+		var old = Logger.OnLog;
+		Logger.OnLog = keep;
+
+		try
+		{
+			Assert.AreEqual( 0, WindowsInstall.RegisteredFolders().Count );
+		}
+		finally
+		{
+			Logger.OnLog = old;
+		}
+
+		Assert.AreEqual( 0, warnings.Count, string.Join( "; ", warnings ) );
+	}
+
+	[TestMethod]
+	public void TwoRegisteredFoldersAreBothSaidAndAMissingPathIsNotSaidTwice()
+	{
+		var tried = new List<(string Where, string Path)>
+		{
+			("the working directory", @"E:\Work"),
+			("the Windows uninstall entry", @"E:\A"),
+		};
+
+		GameDir.NoteMissing( tried, "the Windows uninstall entry", @"E:\B" );
+		GameDir.NoteMissing( tried, "where Sim Theme Park installs itself", Box );
+		GameDir.NoteMissing( tried, "where Sim Theme Park installs itself", Box );
+		GameDir.NoteMissing( tried, "where the original installs itself", Box );
+
+		var lines = GameDir.LookedIn( tried ).ToList();
+
+		Assert.AreEqual( 4, lines.Count, string.Join( "\n", lines ) );
+		CollectionAssert.Contains( lines, @"Game files: looked in E:\A (the Windows uninstall entry)" );
+		CollectionAssert.Contains( lines, @"Game files: looked in E:\B (the Windows uninstall entry)" );
+		Assert.AreEqual( 1, lines.Count( line => line.Contains( Box ) ), "a stale entry that names a default is said once" );
+
+		tried.Add( ("the working directory", @"E:\Work") );
+		Assert.AreEqual( 4, GameDir.LookedIn( tried ).Count(), "the same source and folder twice is one line" );
 	}
 }

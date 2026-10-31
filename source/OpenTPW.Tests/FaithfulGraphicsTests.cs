@@ -75,7 +75,7 @@ public class FaithfulGraphicsTests
 			StringAssert.Contains( warned[0], "\"graphics faithful\" replaces it" );
 
 			GameOptions.Current = new() { Faithful = true };
-			SaveFolder.SaveDisplay();
+			SaveFolder.SaveDisplay( tell: true );
 			StringAssert.Contains( File.ReadAllText( file ), "\ngraphics faithful\n" );
 
 			// Lines end in LF on every system (SaveFolder.SaveDisplay); the line above can only fail on Windows, where AppendLine writes CRLF.
@@ -85,7 +85,7 @@ public class FaithfulGraphicsTests
 			Assert.IsTrue( GameOptions.Current.Faithful, "written faithful, read back" );
 
 			GameOptions.Current = new();
-			SaveFolder.SaveDisplay();
+			SaveFolder.SaveDisplay( tell: true );
 			StringAssert.Contains( File.ReadAllText( file ), "\ngraphics improved\n" );
 		}
 		finally

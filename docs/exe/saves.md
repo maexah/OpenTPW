@@ -490,10 +490,21 @@ the box was clicked, then "Old Parky"; Enter closed the screen with `1x SAVE_GAM
 unchanged; OK over "New Save" and the question's tick closed both, `2x`. The unchanged build's Save row opened
 nothing and counted `SAVE_GAME` (`q241d/control`).
 
-### OpenTPW's save folder that cannot be written (Q982)
+### OpenTPW's save folder that cannot be written (Q982, Q984)
+
+**A second deviation, Q984: the folder may not be the game's.** Where a file cannot be made in the game's `save\` (made
+first when it is not there) saves go in `save` in the player's data folder (`UserFolders.Data()`: `%AppData%\OpenTPW\save`
+on Windows) and the log says so once (`SaveHome`). A stock Program Files install is that case on Windows: the original's exe
+has no manifest, so Windows sends its writes to the VirtualStore (Q902, open: whether OpenTPW should read them there), and
+OpenTPW's is `asInvoker`, which is not redirected. A `save\` that holds players but cannot be written is read by nothing, and
+nothing is copied out of it; the game says so once (`SAVES GO IN`). The boxes below fire only where the player's folder
+cannot be written either.
 
 **A deviation: the original says nothing when a save fails** (its save answers a failure number and the screen closes
-all the same; "The save" above, step 3), and this game now says so on screen. The case is real on Windows: Sim Theme
+all the same; "The save" above, step 3; from the listing, not run: the failure table's handle, `0x0078ba88`, is read at 29
+places in the executable, 27 of them the boot failure report's switch at `0x00405750` and the others `0x0047f41f` and
+`0x005aa53b`, and no save path was found pushing a row of it, though the shipped `ERRORMSG.str` has two rows about a save
+that failed; whether to use the game's own words is Alexah's), and this game now says so on screen. The case is real on Windows: Sim Theme
 Park installs under `Program Files (x86)`, which a player cannot write unless something has opened it. With `save\`
 denied (OI)(CI)(WD,AD) on a Windows 11 PC (the Sentinel's job w5, 2026-10-31; its evidence is on that PC, not here) the
 game never crashed, every write went through its `<name>.tmp` and was caught and logged, and the player was told nothing:
@@ -1048,7 +1059,8 @@ over the copy, never the one held.
   as it was, where the original deletes it on all but three of its failures ("The save", step 3): a fill in the
   player's favour, so a failed save never costs them the old one. The bytes go to a file beside the path that then
   takes its place, so no failure leaves a part-written park. Any failure is logged and the game goes on, the screen
-  closing, as the original's does whatever its save answered. Where the folder holds the name in two cases, which
+  closing, as the original's does whatever its save answered; a deviation (Q982) is the message box that says so
+  ("OpenTPW's save folder that cannot be written"). Where the folder holds the name in two cases, which
   only a file copied in can make, the one in the typed case is written, the one the question named.
 - **The load does not read the camera module**: a park loaded here opens on the default view (Q247).
 
