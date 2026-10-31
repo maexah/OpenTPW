@@ -198,6 +198,11 @@ belongs to or at the end. Grep it by area or Q-number; never read it whole.
   (`q751/run6-names`); `lib/logpii.py` finds no account name, host name or home folder in a
   real launch's log (`q751/run3`). A self-contained Linux publish, zipped as the weekly workflow zips it, starts and
   draws the lobby (`q751/run5-zip`).
+- **A Windows install is found** (Q981; Linux seen, Windows not yet, Q851): on Windows the game is looked for, after the
+  places the player names, in the folder the uninstall entry (`Theme Park World` or `SimTheme Park`, key or display name)
+  gives in its `UninstallString`'s `-f"<folder>\Uninst.isu"`, then `C:\Program Files (x86)\Bullfrog\Theme Park World`, then
+  `C:\Program Files (x86)\SimTheme Park`. Off Windows the registry is not read and the two defaults are listed as places
+  looked. The parse, the names and the order are tested on strings.
 - **A failed start says why in a message box** (Q978, a deviation: the original had no start that could fail so; Linux seen, Windows
   not yet): a game that cannot be found, or an exception before the main loop begins, shows an SDL error box (`StartFailure`)
   holding the log's reason lines (where it looked, how to put it right) or the exception's type and message, and where

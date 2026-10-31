@@ -79,8 +79,10 @@ use a tool that keeps the long (Joliet) names.
 
 **Where OpenTPW looks.** A folder counts as the game when it has a `data` folder with `levels` inside it, in any
 capitalisation. OpenTPW tries, in order: `--game` on the command line, `OPENTPW_GAME_PATH`, the `GamePath` setting
-if you have changed it, the folder the build sits in, the working directory, and the default Windows install
-location. It does not search parent folders.
+if you have changed it, the folder the build sits in, the working directory, and then, on Windows, the folder the
+game's uninstall entry in the registry names (`Theme Park World` or `SimTheme Park`), the original's default
+`C:\Program Files (x86)\Bullfrog\Theme Park World` and Sim Theme Park's `C:\Program Files (x86)\SimTheme Park`.
+It does not search parent folders.
 
 **Saves** go to `save/` beside the game's data, where the original keeps them, so the original and OpenTPW share
 options and players.

@@ -9,7 +9,8 @@ namespace OpenTPW;
 /// that can be written to, put this build in with the game's files, and start it. <see cref="Find"/> takes
 /// the first of these that holds the game: --game on the command line, OPENTPW_GAME_PATH in the environment,
 /// the GamePath setting if it has been set away from the value it ships with, the folder this build sits in,
-/// the working directory, and last the place the original installs itself on Windows. Each of those is one
+/// the working directory, and last the places a Windows install can be: the folder its uninstall entry names, the place
+/// the original installs itself and the folder Sim Theme Park installs in (Q981). Each of those is one
 /// folder: nothing walks up into the folders above them looking for a game nobody pointed at.
 /// </para>
 /// <para>
@@ -36,6 +37,8 @@ public static class GameDir
 	private const string BuildSource = "the folder this build is in";
 	private const string WorkingSource = "the working directory";
 	private const string DefaultSource = "where the original installs itself";
+	private const string RegistrySource = "the Windows uninstall entry";
+	private const string BoxSource = "where Sim Theme Park installs itself";
 
 	private const string DataName = "data";
 	private const string SaveName = "save";
@@ -175,6 +178,10 @@ public static class GameDir
 
 	/// <summary>Everywhere the game might be, in the order they are believed.</summary>
 	private static List<(string Where, string Path)> Candidates( string[] args )
+		=> Candidates( args, WindowsInstall.RegisteredFolders(), WindowsInstall.DefaultFolder() );
+
+	/// <summary><see cref="Candidates(string[])"/> with the registry's folders and the box's default given, for a test off Windows.</summary>
+	internal static List<(string Where, string Path)> Candidates( string[] args, IEnumerable<string> registered, string boxDefault )
 	{
 		var candidates = new List<(string, string)>();
 
@@ -200,8 +207,17 @@ public static class GameDir
 
 		candidates.Add( (WorkingSource, Directory.GetCurrentDirectory()) );
 
+		// The places a Windows install can be, after every place the player could have meant: the folder the
+		// uninstall entry names (it is where the installer really put the game, whatever it was told), then the
+		// two defaults. Sim Theme Park, the retail box's name, installs in "SimTheme Park", the disc's own
+		// setup in "Bullfrog\Theme Park World" (Q981).
+		foreach ( var folder in registered )
+			candidates.Add( (RegistrySource, folder) );
+
 		if ( !string.IsNullOrWhiteSpace( byDefault ) )
 			candidates.Add( (DefaultSource, byDefault) );
+
+		candidates.Add( (BoxSource, boxDefault) );
 
 		return candidates;
 	}

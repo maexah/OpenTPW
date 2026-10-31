@@ -84,15 +84,6 @@ meets first, found on a Windows 11 PC by a Remote Control session, jobs w1 to w4
 `C:\Users\alexa\tpw-work`): Q976, Q978, Q981, Q979, Q980, Q982, Q977, in that order; then the blocks below. A
 confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
 
-- [ ] **Q981. A Windows install of Sim Theme Park is not found.** The default looked in is `C:\Program Files
-  (x86)\Bullfrog\Theme Park World`; Sim Theme Park installs in `C:\Program Files (x86)\SimTheme Park` on the PC tried
-  (w4). The registry names no folder; the folder is recorded only in the uninstall entry
-  `HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Theme Park World` (`DisplayName` SimTheme
-  Park, the folder inside `UninstallString`'s `-f"<folder>\Uninst.isu"`) and the Start menu and Public Desktop shortcuts
-  (`SimTheme Park.lnk`, target `<folder>\TP.exe`). Read the uninstall entry (both Theme Park World and Sim Theme Park
-  names) and try the SimTheme Park folder among the defaults; `README.md`'s "Where OpenTPW looks" and the zip's
-  README say the new order. Confirm on Windows: the zip started with no `--game` finds the install; its `save\` must not
-  be written by the confirm (copy the install, or read the log's choice and quit at once).
 - [ ] **Q979. The Windows release opens a terminal behind the game.** `OutputType` is `Exe`, so a start from Explorer
   opens a console window (w3: hidden behind the game, on the taskbar). At Alexah's word (2026-10-31): the published
   Windows build opens none (`WinExe` for the release), the Debug build keeps its console for the debug console's stdin.
@@ -119,6 +110,14 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   the autosave and the player, then the process ends: no scene is left to open a box (Quit Game's question says
   beforehand, Q982). Counted, not built: a close that asked first would be a deviation the original does not have;
   the log's `Leaving the park: autosave is not written` is all there is. Look at it only if a player meets it.
+
+- [ ] **Q851. Q981's Windows confirm (the uninstall entry's read, which Linux cannot run).** Built and tested on plain
+  strings; the registry read (`WindowsInstall.RegisteredFolders`) ran on no Windows PC. On the PC with Sim Theme Park in
+  `C:\Program Files (x86)\SimTheme Park`: the zip with no `--game` finds it, the log holds `Game files: the uninstall entry
+  Theme Park World (Registry32) names C:\Program Files (x86)\SimTheme Park` and `Theme Park World in ... (the Windows uninstall
+  entry)`; then with the key renamed away in a copy of the machine's state or `--game` pointing elsewhere unchanged, the
+  box's list ends with the two defaults. Do not write `save\` (copy the install, or quit at the lobby's first frame). If
+  the key sits in the 64-bit view or under another name on another PC, widen `IsTheGame`.
 
 - [ ] **Q950. The lobby's attract flight (nobody playing) against the original's: what differs, for Alexah to choose.** Not a
   priority (Alexah, 2026-10-30: "the camera drifting between islands ... and the audio fading between parks is kinda weird").

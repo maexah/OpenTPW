@@ -20,10 +20,13 @@ How to start it
    holds TP.exe and a folder called "data".
 3. Start OpenTPW and give it that folder:
 
-   Windows:  if the game is in its usual place,
+   Windows:  OpenTPW asks Windows where the game was installed (its
+             uninstall entry) and tries the usual places,
+               C:\Program Files (x86)\SimTheme Park
                C:\Program Files (x86)\Bullfrog\Theme Park World
-             just double-click OpenTPW.exe. Otherwise, in a terminal
-             in the OpenTPW folder, run
+             so if the game is installed, just double-click
+             OpenTPW.exe. Otherwise, in a terminal in the OpenTPW
+             folder, run
                OpenTPW.exe --game "D:\Games\Theme Park World"
    Linux:    ./OpenTPW --game "/path/to/Theme Park World"
    macOS:    ./OpenTPW --game "/path/to/Theme Park World"

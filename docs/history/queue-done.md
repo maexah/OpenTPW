@@ -11327,6 +11327,15 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   question takes a line more. A deviation, said at the site (`SaveTrouble`, `docs/exe/saves.md`). Confirmed on Linux in a
   private game folder with a read-only `save/` (8 of 8 predicted; the same clicks in a writable copy open none). The
   Windows side is Q901; the VirtualStore question is Q902.
+- [x] **Q981. A Windows install of Sim Theme Park is not found.** The default looked in is `C:\Program Files
+  (x86)\Bullfrog\Theme Park World`; Sim Theme Park installs in `C:\Program Files (x86)\SimTheme Park` on the PC tried
+  (w4). The registry names no folder; the folder is recorded only in the uninstall entry
+  `HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Theme Park World` (`DisplayName` SimTheme
+  Park, the folder inside `UninstallString`'s `-f"<folder>\Uninst.isu"`) and the Start menu and Public Desktop shortcuts
+  (`SimTheme Park.lnk`, target `<folder>\TP.exe`). Read the uninstall entry (both Theme Park World and Sim Theme Park
+  names) and try the SimTheme Park folder among the defaults; `README.md`'s "Where OpenTPW looks" and the zip's
+  README say the new order. Confirm on Windows: the zip started with no `--game` finds the install; its `save\` must not
+  be written by the confirm (copy the install, or read the log's choice and quit at once).
 
 ## B. Docs and comments
 
