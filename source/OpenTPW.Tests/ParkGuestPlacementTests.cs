@@ -135,17 +135,16 @@ public class ParkGuestPlacementTests
 		const float WalkX = 525.4f;
 		const float WalkY = 234.0f;
 		const float Ground = 0.5f;
-		const float SpriteHeight = 3f;
 
 		// And where the ride says they are: one of the Belly Bounce's ten body nodes, up in the air.
 		var seat = new Vector3( 525.4f, 252.6f, 10.3f );
 
-		var on = ParkGuestSprites.Centre( seat, WalkX, WalkY, Ground, SpriteHeight );
+		var on = ParkGuestSprites.Centre( seat, WalkX, WalkY, Ground );
 
 		Assert.AreEqual( seat.X, on.X, 0.0001f, "a rider is drawn at their seat's x" );
 		Assert.AreEqual( seat.Y, on.Y, 0.0001f, "and its y - this is the one the bug got wrong" );
-		Assert.AreEqual( seat.Z + SpriteHeight, on.Z, 0.0001f,
-			"and above it by the sprite's own offset, exactly as a walker stands above the land" );
+		Assert.AreEqual( seat.Z, on.Z, 0.0001f,
+			"and its height: the sprite's own height is the node's less the ground, which the draw adds back, so no offset is added to the node" );
 
 		// <b>The guard that kills the bug.</b> Drawing them at the walk position is precisely what left
 		// the children standing in the queue for the whole ride, so the two must not agree.
@@ -153,11 +152,11 @@ public class ParkGuestPlacementTests
 
 		// And with nobody carrying them, the ground answer is unchanged - so this cannot have been
 		// bought by breaking everybody who is merely walking about.
-		var walking = ParkGuestSprites.Centre( null, WalkX, WalkY, Ground, SpriteHeight );
+		var walking = ParkGuestSprites.Centre( null, WalkX, WalkY, Ground );
 
 		Assert.AreEqual( WalkX, walking.X, 0.0001f );
 		Assert.AreEqual( WalkY, walking.Y, 0.0001f );
-		Assert.AreEqual( Ground + SpriteHeight, walking.Z, 0.0001f,
+		Assert.AreEqual( Ground, walking.Z, 0.0001f,
 			"the land under them is what decides where their feet go" );
 	}
 

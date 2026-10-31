@@ -1633,6 +1633,12 @@ and a model's channels their count, so nothing moves, and they go in before the 
   script another made at its start (`SPAWNCHILD`: the parent's `+0x0c` holds the child's handle and the child's `+0x10` the parent's; `SPAWNSOUND`: the parent's `+0x14`, the child
   with no thing and no parent), which the loader builds from the file as records like any other (the original's list after loading her file: 130 nodes, the same handles, the
   links intact, read live by `origscripts.py`, `q849/runC`) and which ours does not start (Q910).
+  **One split in what is written** (Q849, `q849/runD`, `runE`): her Dino Karts (thing 289, script handle 110) is a kart ride with no record in `ParkBumperCars`, so its record and its
+  cars are left the file's (`SAVE_PARK_TRACK_RIDE_AS_THE_FILE`) while its script runs in ours with every `BUMP` a no-op. Her file has script 110 at word 197, `VAR_ONRIDE` 4,
+  `VAR_RUNNING` 1, and `RYLFTRAK` cars holding riders 226, 278, 114 and 355; in the saves ours made from it the cars and riders are the same byte for byte and the script is at word 15, `VAR_ONRIDE` 0,
+  `VAR_RUNNING` 0, `VAR_LETMEON` 94, within 11 `mGameTick`s (one pass of words 134..150 four times, four `BUMP`s at 117, 122, 142 and 189 that move no one, then word 15 for good). So the
+  written file disagrees with itself for this ride: not by design, a gap, owned by Q993. The original run on the file with the script at words 138, 117 and 197 (`q849/runF`); whether its four
+  seated riders get off or board again was not read.
 - **A model** (`ParkRides.Written`, `ParkThingStates.Put`), into the record that names its thing's script: each
   channel as the engine keeps one. A running channel's clip time and third stamp are the save's moment and its
   start where it began; a held one's clip time is a whole clip past its start (`AnimTimeControl.HeldTime`). Of

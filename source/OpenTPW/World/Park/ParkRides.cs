@@ -919,7 +919,7 @@ public sealed class ParkRides : Entity
 	/// </para>
 	/// <para>
 	/// A script is written under the handle the scheduler runs it on, into the file's record of that handle; one
-	/// the file holds no record for (a child spawned) is not written, and a record whose script has ended is left
+	/// the file holds no record for (a child spawned) is not written, and a record whose script has ended, or that the load never started (a companion another script spawned: Q910), is left
 	/// as the file's, each counted (the scheduler drops a script as it ends). A model is written into the record
 	/// that names its thing's script. A thing bought is handed over whole, its script as it runs with what its
 	/// loader took from its file and its model's channels, and a thing sold by its id.

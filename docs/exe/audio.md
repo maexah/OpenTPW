@@ -803,7 +803,7 @@ return chain `0x004faa52` (`Person_PlaySound`), `0x004fe1d0` (the charge), `0x00
 (`ExitRide`), `0x004e14ba` (`FUN_004e1410`). Four at (525, 0, 300) with the price 20 in `edi` (the Jungle Spray's), four
 at (434 or 435, 0, 303 or 304) with 30 (the Coconut Kiosk's, whose bubbles stand at (440, 6, 312)). Q565's runs counted
 30 to 60 a run at the same two places (`oneshots.py`). **OpenTPW** (`ParkRideOperation.Charge`) banks the price and
-takes it off the guest at the same point, and now sounds kids 208 between them (Q611, `ParkAudio.Charge`: `Feet` of the
+takes it off the guest at the same point, and now sounds kids 208 between them (Q611, `ParkAudio.Charge`: `Heard` of the
 guest, its own range 60, no repeat delay, the variation's volume 42, which the channel makes 32 of 127, and pitch
 nought). The stock park here (`q611/run1`, off-screen): 13 "paid" lines in 150 s, 13 charge lines, all `cashD2b.mp2`
 at volume 0.1760, pitch 0, range 60, at (525, 305) (the Spray's) and (435, 305) (the Kiosk's), and the sample is
@@ -818,6 +818,24 @@ Spray's (525, 300) is its `.sam` stand point (0.5, 0.1) truncated; the Kiosk's p
 default 0.5, 0.5 would put every guest at exactly (435, 305)), so which point the model holds there is not decoded.
 Nor is the original's place whole-unit in ours: it is made an integer (`_ftol`, `0x0067a830`) before `0x0051bfc0`, ours
 is a float.
+
+**The height of a person's sound** (Q847). `Person_PlaySound` hands `Sound_PlayEffect` the sprite's own `+0x88`, `+0x8c`, `+0x90`
+(`FUN_004754e0`, `0x00475513`..`0x00475533`). Who sets `+0x8c`: for anyone the walk places (walker, queuer, staff) `FUN_004fa030` writes
+it exactly nought every frame (`FUN_004f9f00` stores the literal at `0x004f9ffd`; `0x004fa09b`..`0x004fa0b3` pass it to `0x00475480` unless
+`+0x28` is set; `FUN_00518f90` calls it for every person each frame, `0x00519012`), so a saved `+0x8c` on a walker is overwritten on the
+first frame (Alexah's Full Simulation save: 319 of 328 people read exactly 0.0). Only a rider a ride holds (`+0x28` set) keeps
+`Person_PlaceSprite`'s height less `FUN_004527f0`'s ground (`0x004f9e91`; callers `0x00557d0f`, `0x005583f5`..`0x0055849c`; `park-engine.md`,
+"Which height each asker takes"). So the original sounds a walker at 0, not at the ground's height, and on raised ground the distance to
+the listener (all three axes, `AudioListener.RangeGain`) differs from a sound at the ground. **OpenTPW**: `ParkGuestSprites.Heard` places the sound for `StaffSound`, a queue's `PutOff`, `Yawn` and the till (the `PutOffSound.Feet` arm) at
+the person's x and y and the height nought; no site of those is a held rider, and the pool's saved sprite `Height` is not read for sound. A rider's put-off on the Seat and Walk arms
+(`PutOffPoint`) stands at the node's or the placer's point less the ground (`0x004f9e91`). The draw adds no saved offset either: a walker stands on the ground, and a seated rider
+is drawn at the node, which already holds the height the original's draw adds the ground back to. Deviation: the original truncates all three coordinates to
+whole units (`_ftol`, `0x004faa27`..`0x004faa3b`); ours keeps the float. Seen here, off-screen (`q847/`): the five staff put down on the
+stock park's 20.0 plateau (cells (40..64, 58)) voice at z 20.0 and then the ground's height as they walk off before (49 voices, 3.5
+to 20.0), at z 0.0 after (40 and 51 voices, all 0.0). Not seen: the original's own sound on raised ground (the second float of
+`Sound_PlayEffect`'s place at `0x0051bfc0`, Q856), a guest's put-off, yawn or till on raised ground in ours (the stock park's guests
+walk on flat ground, 0 there). A saved offset on a walker is one the original overwrites, so the run that wrote 5.0 on the staff only shows
+ours' old rule.
 
 | Address | Original name | What it is | Evidence |
 |---|---|---|---|
@@ -856,7 +874,7 @@ as strings of syllables ("lam lam lam", "do do do", "whoa whoa whoa"), the `_st`
 nothing or one syllable. No person has listened to them.
 
 **OpenTPW** (`ParkAudio.StaffSound`): a variation evenly, a sample by weight, one placed one-shot on the effects
-group at the member's feet, its rate from the drawn pitch (`ParkCarSounds.Rate`), the blank played as any other.
+group at the member's place (`ParkGuestSprites.Heard`), its rate from the drawn pitch (`ParkCarSounds.Rate`), the blank played as any other.
 The byte plays at the channel's own number (`ParkAudio.ChannelGain`, "A channel's volume" above): 24 is 18 of 127
 beside the music's 60, as the original's staff channels read, and the voice is turned down over its variation's own
 range ("The mixer's distance law").

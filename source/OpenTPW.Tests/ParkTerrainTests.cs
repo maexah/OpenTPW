@@ -365,9 +365,9 @@ public class ParkTerrainTests
 	}
 
 	/// <summary>
-	/// <b>A person's feet and the first-person eye stand on the original's samplers</b>, read at the two cells the original's live eye was
+	/// <b>A person's draw ground and the first-person eye stand on the original's samplers</b>, read at the two cells the original's live eye was
 	/// polled in (Q822, <c>q822/orig/a-eyeprobe.out</c>): (716, 543) in cell (71,54), the eye 24.0000, and (786, 723) in cell (78,72), 17.1000. The
-	/// feet are the cell's triangle by <c>0x4</c> (<c>FUN_004527f0</c> on a cell the load flagged <c>0x800</c>), the eye that plus 5; the
+	/// ground is the cell's triangle by <c>0x4</c> (<c>FUN_004527f0</c> on a cell the load flagged <c>0x800</c>), the eye that plus 5; the
 	/// bilinear height reads 19.1207 and 12.28 there.
 	/// </summary>
 	/// <remarks><b>Mutations:</b> either one back on the bilinear height, the eye's cell not found by truncation, or the load's flag
@@ -379,9 +379,6 @@ public class ParkTerrainTests
 
 		foreach ( var (x, y, feet, bilinear) in new[] { (716f, 543f, 19.0f, 19.1207f), (786f, 723f, 12.1f, 12.28f) } )
 		{
-			var at = new FixedVector( (int)(x / field.CellSizeX * FixedVector.One), (int)(y / field.CellSizeY * FixedVector.One) );
-
-			Assert.AreEqual( feet, ParkGuestSprites.FeetOn( field, at ).Z, 0.001f, $"feet at ({x},{y})" );
 			Assert.AreEqual( feet, ParkGuestSprites.StandsOn( field, x, y ), 0.001f, $"the draw's ground at ({x},{y})" );
 			Assert.AreEqual( feet, ParkCamcorderCameraMode.EyeGround( field, new Vector3( x, y, 0f ) ), 0.001f, $"eye ground at ({x},{y})" );
 			Assert.AreEqual( bilinear, field.HeightAtWorld( x, y ), 0.001f, $"the bilinear height there, which neither takes ({x},{y})" );
@@ -390,8 +387,26 @@ public class ParkTerrainTests
 	}
 
 	/// <summary>
+	/// <b>A person's sound is at their x and y and the height nought, not the ground's</b>: at (716, 543), where the ground stands 19.0 (the test above), a person
+	/// is heard at nought (<c>FUN_004fa030</c> writes a walker's <c>+0x8c</c> nought each frame, <c>0x004f9ffd</c>), at the point their cell fraction names, not at 19.0.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the height on the ground, or x and y swapped, each fails.</remarks>
+	[TestMethod]
+	public void APersonsSoundIsAtTheirXAndYAndNoughtNotTheGrounds()
+	{
+		var field = Landscape( "jungle" );
+		var at = new FixedVector( (int)(716f / field.CellSizeX * FixedVector.One), (int)(543f / field.CellSizeY * FixedVector.One) );
+		var heard = ParkGuestSprites.HeardOn( field, at );
+
+		Assert.AreEqual( 716f, heard.X, 0.01f );
+		Assert.AreEqual( 543f, heard.Y, 0.01f );
+		Assert.AreEqual( 0f, heard.Z, 0.0001f, "nought, not the ground's 19.0" );
+		Assert.AreEqual( 19.0f, ParkGuestSprites.StandsOn( field, heard.X, heard.Y ), 0.001f, "a control: the ground there is not nought" );
+	}
+
+	/// <summary>
 	/// <b>On a bent ground cell the load leaves unflagged, the sprites' sampler and the camera's sampler part</b>: at (677, 727), cell (67,72), word
-	/// <c>0x42</c>, corners 37.9800, 38.0160, 37.9080, 38.0069, <c>FUN_004527f0</c> takes the near corner's plane, 37.9548 (a person's feet, the draw, a
+	/// <c>0x42</c>, corners 37.9800, 38.0160, 37.9080, 38.0069, <c>FUN_004527f0</c> takes the near corner's plane, 37.9548 (the draw, a
 	/// balloon, a gliding marker corner), <c>FUN_00452560</c> the triangle by <c>0x4</c>, 37.9989 (the park camera and the eye), and the bilinear
 	/// height reads 37.9856. Every flagged cell gives the two samplers the same answer, so only this point tells a swap from the right build.
 	/// </summary>
@@ -402,13 +417,11 @@ public class ParkTerrainTests
 	{
 		var field = Landscape( "jungle" );
 		const float x = 677f, y = 727f;
-		var at = new FixedVector( (int)(x / field.CellSizeX * FixedVector.One), (int)(y / field.CellSizeY * FixedVector.One) );
 
 		Assert.AreEqual( 0, field.FlagsAt( 67, 72 ) & 0x800, "the control: the load leaves this cell unflagged" );
 		Assert.AreEqual( 37.9856f, field.HeightAtWorld( x, y ), 0.001f, "the bilinear height, which no caller takes" );
 
 		Assert.AreEqual( 37.9548f, ParkGuestSprites.StandsOn( field, x, y ), 0.001f, "the draw's ground (the walk, a balloon, its census)" );
-		Assert.AreEqual( 37.9548f, ParkGuestSprites.FeetOn( field, at ).Z, 0.001f, "feet" );
 		Assert.AreEqual( 37.9548f, ParkBuildMarkers.CornerGround( field, 67, 72, (7f, 7f) ), 0.001f, "a gliding marker corner" );
 		Assert.AreEqual( field.HeightAt( 67, 72 ), ParkBuildMarkers.CornerGround( field, 67, 72, (0f, 0f) ), 0.0001f, "an unshifted corner is the corner" );
 

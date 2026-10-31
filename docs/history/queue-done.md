@@ -11562,12 +11562,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   back in ours (scripts 124, the 526 things' kinds, the 124 objects' items, script handles and models, the boundary, hoardings, pylons and thing ids the same, the
   gate's doors open) and in the original (loaded at tick 19015, 130 scripts, no fault); the details and what was not compared are `WORKS.md`'s Q810 entry and `STATUS.md`.
 - [x] **Q847. A person's sound is placed at the height of their sprite's offset above the ground, as the original's is.** (From run 14's
-  review of Q823, finding 4.) Lane B, off-screen, no original run. `ParkGuestSprites.Heard` (x, y and the pool's sprite `Height`, the
-  saved `+0x8c`) replaces `Feet` (the ground's height) at `StaffSound`, `PutOff` (twice), `Yawn` and the till (`audio.md`, "The height of a
-  person's sound"; `park-engine.md`, "Which height each asker takes"). Seen (`q847/`, five staff put down on the stock park's 20.0
-  plateau, final build): voices at z 0.0 (40; 51 on the build one seam earlier) where the build before read the ground, 3.5 to 20.0 (49); with the sprites'
-  `+0x8c` written 5.0 in a saved file and loaded, 5.0 (49) against 16.7 to 20.0 before. Not seen: the original's own sound on raised
-  ground, and a guest's put-off, yawn or till on raised ground (Q856).
+  review of Q823, finding 4.) Lane B, off-screen, no original run. `ParkGuestSprites.Heard` (x and y, at height nought) replaces `Feet` (the ground's
+  height) at `StaffSound`, `PutOff` (twice), `Yawn` and the till (`audio.md`, "The height of a person's sound"; `park-engine.md`, "Which height each asker
+  takes"): the original's sprite `+0x8c` is exactly nought for anyone the walk places (`FUN_004fa030`, `0x004f9ffd`), so a person is heard at nought, and a
+  rider's put-off on a seat or a walk at the point less the ground. A seated rider's draw adds no saved offset to the node. Seen (`q847/`, five staff put down
+  on the stock park's 20.0 plateau): voices at z 0.0 (40) where the build before read the ground, 3.5 to 20.0 (49); with the sprites' `+0x8c` written 5.0 in a
+  saved file and loaded, z 0.0 (43, `round4/`, predicted first). Not seen: the original's own sound on raised ground, and a guest's put-off, yawn or till on
+  raised ground (Q856).
 - [x] **Q803. What Q801 left of a park made fresh's file: the weather's first week and the music's voice.** From Q801 (run 13, lane A); its
   other themes' files are split off as Q857 (lane B, run 17). (1) **The weather.** A decode corrected this item: the first forecast does not wait three days. The stamp is
   nought, so the compare holds on sweep 1 and it lands on 94, four days, and nothing reads the stored quality before that but a save (`weather.md`, "A park's first

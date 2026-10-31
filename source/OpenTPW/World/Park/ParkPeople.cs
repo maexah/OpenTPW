@@ -333,8 +333,8 @@ public sealed partial class ParkPeople : Entity
 			StateGroupsOf = member => BankOf( member.ThingId )?.StateGroupsInUse ?? 0,
 			Sound = static ( member, effect ) =>
 			{
-				if ( ParkGuestSprites.Feet( member.Navigator.Position ) is { } feet )
-					ParkAudio.Current?.StaffSound( effect, feet );
+				if ( ParkGuestSprites.Heard( member.Navigator.Position ) is { } heard )
+					ParkAudio.Current?.StaffSound( effect, heard );
 			}
 		};
 
@@ -2725,7 +2725,7 @@ public sealed partial class ParkPeople : Entity
 	/// <remarks>
 	/// <b>Putting out is <c>FUN_004ddd20</c> and then <c>FUN_005012f0</c></b>: off the queue, the admit slot
 	/// emptied if it names them, <see cref="ParkAdmission.MediumHappinessChange"/> off, back to deciding,
-	/// and the kids' sound at their feet when their id divides by eight (<c>0x0050133d</c>). The head is the
+	/// and the kids' sound where their sprite sounds (<see cref="ParkGuestSprites.Heard"/>) when their id divides by eight (<c>0x0050133d</c>). The head is the
 	/// ride's own, so they leave its queue whatever they name. It runs on every turn of a closed ride and on
 	/// every turn of one broken down, waiting for an upgrade or condemned.
 	/// </remarks>
@@ -2758,14 +2758,14 @@ public sealed partial class ParkPeople : Entity
 	}
 
 	/// <summary>
-	/// The kids' sound for a guest put out of a queue, at their feet, when their id divides by eight - see
+	/// The kids' sound for a guest put out of a queue, where their sprite sounds (<see cref="ParkGuestSprites.Heard"/>), when their id divides by eight - see
 	/// <see cref="SoundFor"/>.
 	/// </summary>
 	internal static void PutOffAtTheirFeet( Peep peep, ParkWorld.CatalogueObject thing )
 	{
 		if ( SoundFor( PeepBehaviour.PutOff.Queueing, peep.ThingId, thing.Flags, seated: false ) == PutOffSound.Feet
-			&& ParkGuestSprites.Feet( peep.Navigator.Position ) is { } feet )
-			ParkAudio.Current?.PutOff( feet );
+			&& ParkGuestSprites.Heard( peep.Navigator.Position ) is { } heard )
+			ParkAudio.Current?.PutOff( heard );
 	}
 
 	/// <summary>
@@ -3279,8 +3279,9 @@ public sealed partial class ParkPeople : Entity
 
 			var sound = SoundFor( how, peep.ThingId, thing.Flags, seat is not null, walked is not null );
 			Vector3? heardAt = sound == PutOffSound.Feet
-				? ParkGuestSprites.Feet( peep.Navigator.Position )
-				: PutOffPoint( sound, seat, walked?.Hidden ?? false, walked?.At ?? default );
+				? ParkGuestSprites.Heard( peep.Navigator.Position )
+				: PutOffPoint( sound, seat, walked?.Hidden ?? false, walked?.At ?? default,
+					( x, y ) => ParkGuestSprites.StandsOn( ParkGround.Current?.Heightfield, x, y ) );
 
 			if ( heardAt is { } at )
 				ParkAudio.Current?.PutOff( at );
@@ -3371,8 +3372,7 @@ public sealed partial class ParkPeople : Entity
 	/// under action 1, 2 or 4: <c>FUN_004f9ed0</c> frees the sprite and writes its handle 0) has none, so the
 	/// eviction makes one and the sound plays at the origin, as for a thing without the flag
 	/// (<c>docs/exe/ride-operation.md</c>, "Where a walk's rider is drawn"). The point is <see cref="ParkGuestSprites.WalkedOnRide"/>'s,
-	/// the absolute one as <see cref="PutOffSound.Seat"/>'s is: the original's sprite height is the point's less the
-	/// ground, and every coordinate is truncated to a whole unit.
+	/// the ground taken off its height as <see cref="PutOffSound.Seat"/>'s is (<see cref="PutOffPoint"/>), and the original truncates every coordinate to a whole unit.
 	/// </para>
 	/// </remarks>
 	internal static PutOffSound SoundFor( PeepBehaviour.PutOff how, int guestId, int thingFlags, bool seated, bool walked = false )
@@ -3387,16 +3387,23 @@ public sealed partial class ParkPeople : Entity
 
 	/// <summary>
 	/// Where a put-off sound other than <see cref="PutOffSound.Feet"/> plays: the origin, the seat, or a walk's rider
-	/// (hidden by the placer: the origin; else the point it put them at), null for none.
+	/// (hidden by the placer: the origin; else the point it put them at), null for none. The sprite's height there is the point's
+	/// less the ground under it (<c>Person_PlaceSprite</c>, <c>0x004f9e91</c>), so <paramref name="groundAt"/> is taken off the
+	/// point's z (nought where none is given).
 	/// </summary>
-	internal static Vector3? PutOffPoint( PutOffSound sound, Vector3? seat, bool walkHidden, Vector3 walkAt )
-		=> sound switch
+	internal static Vector3? PutOffPoint( PutOffSound sound, Vector3? seat, bool walkHidden, Vector3 walkAt, Func<float, float, float>? groundAt = null )
+	{
+		static Vector3 Less( Vector3 point, Func<float, float, float>? groundAt )
+			=> groundAt is null ? point : point with { Z = point.Z - groundAt( point.X, point.Y ) };
+
+		return sound switch
 		{
 			PutOffSound.Origin => Vector3.Zero,
-			PutOffSound.Seat => seat,
-			PutOffSound.Walk => walkHidden ? Vector3.Zero : walkAt,
+			PutOffSound.Seat => seat is { } on ? Less( on, groundAt ) : null,
+			PutOffSound.Walk => walkHidden ? Vector3.Zero : Less( walkAt, groundAt ),
 			_ => null
 		};
+	}
 
 	/// <summary>The seat node a ride's script holds this rider on, in the world, or null.</summary>
 	private Vector3? SeatOn( ParkWorld.CatalogueObject thing, Peep rider )

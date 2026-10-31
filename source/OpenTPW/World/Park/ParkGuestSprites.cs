@@ -956,8 +956,9 @@ public sealed class ParkGuestSprites : ModelEntity
 				Unimplemented.Report( "RIDER_BOUNCE" );
 
 			// The walk's point is the feet's own: FUN_004f9e60 stores its height above the ground under it, which the
-			// draw adds back.
-			var centre = walked?.At ?? Centre( seat, x, y, ground, sprite.Height );
+			// draw adds back. A saved sprite offset is not added: FUN_004fa030 writes a walker's nought each frame (0x004f9ffd), and a
+			// rider's is the node's height less the ground (0x004f9e91), which the draw adds back to the node.
+			var centre = walked?.At ?? Centre( seat, x, y, ground );
 
 			WriteQuad( used++, centre, picture, mirrored, sprite.Alpha, pulled: Pulled );
 			_drawn.Add( new SpritePick.Drawn( person.ThingId, centre, picture.Width, picture.Height, picture.OriginX, picture.OriginY, mirrored ) );
@@ -1254,23 +1255,30 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// which wants a graphics device; this much is arithmetic and needs none. That a seat is correctly
 	/// RESOLVED rests on the screenshots and the ride census.
 	/// <para>
-	/// The sprite's own height is an offset above whatever it stands on, so it is added either way -
-	/// a rider sits above their node exactly as a walker stands above the land.
+	/// The seat is returned as it is: a rider's sprite height is the node's less the ground (<c>0x004f9e91</c>), which the draw adds back, so
+	/// adding a saved offset to the node would lift them twice. A walker stands on the ground; the offset is nought for them (<c>0x004f9ffd</c>).
 	/// </para>
 	/// </remarks>
-	internal static Vector3 Centre( Vector3? seat, float x, float y, float ground, float spriteHeight )
-		=> seat is { } on
-			? new Vector3( on.X, on.Y, on.Z + spriteHeight )
-			: new Vector3( x, y, ground + spriteHeight );
+	internal static Vector3 Centre( Vector3? seat, float x, float y, float ground )
+		=> seat ?? new Vector3( x, y, ground );
 
 	/// <summary>
-	/// Where a person stands in the world: their position on the ground under it, or null with no ground
-	/// loaded. <b>A deviation:</b> the original's <c>FUN_004754e0</c> hands a person's sound the sprite's own <c>+0x88</c>,
-	/// <c>+0x8c</c>, <c>+0x90</c>, and <c>+0x8c</c> is the height above the ground (<c>FUN_004527f0</c> taken off by
-	/// <c>Person_PlaceSprite</c>, <c>0x004f9e91</c>), about nought for a walker, where this answers the ground's height itself.
+	/// Where a person's sound is placed: their x and y at the height nought, as the original's <c>Person_PlaySound</c> (<c>0x004faa00</c>) places
+	/// it: <c>FUN_004754e0</c> copies the sprite's <c>+0x88</c>, <c>+0x8c</c>, <c>+0x90</c> as they are (<c>0x00475513</c>..<c>0x00475533</c>), and
+	/// anyone the walk places has <c>+0x8c</c> exactly nought, written each frame (<c>FUN_004fa030</c>, <c>0x004f9ffd</c>, <c>0x004fa0b3</c>).
+	/// Not the ground's height. Null with no ground loaded (a test's). See <c>docs/exe/audio.md</c>, "The height of a person's sound".
 	/// </summary>
-	internal static Vector3? Feet( FixedVector at )
-		=> ParkGround.Current?.Heightfield is { } field ? FeetOn( field, at ) : null;
+	/// <remarks>
+	/// A deviation: the original truncates all three coordinates to whole units first (<c>_ftol</c>, <c>0x004faa27</c>..<c>0x004faa3b</c>);
+	/// this keeps the float. A rider a ride holds has the node's height less the ground there, which no site reaches here (queue
+	/// put-offs, yawns, the till and staff are not held; a seat's and a walk's put-off are <see cref="ParkPeople.PutOffPoint"/>'s).
+	/// </remarks>
+	internal static Vector3? Heard( FixedVector at )
+		=> ParkGround.Current?.Heightfield is { } field ? HeardOn( field, at ) : null;
+
+	/// <summary>Where a person at <paramref name="at"/> is heard on <paramref name="field"/>: the point the sprite's x and z name, at height nought.</summary>
+	internal static Vector3 HeardOn( HeightfieldFile field, FixedVector at )
+		=> new( at.X / (float)FixedVector.One * field.CellSizeX, at.Y / (float)FixedVector.One * field.CellSizeY, 0f );
 
 	/// <summary>
 	/// The ground a person, a balloon's anchor or a marker's feet stand on: the sampler the sprites' draw takes, <c>FUN_004527f0</c> (<c>0x005420ee</c>),
@@ -1278,15 +1286,6 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// </summary>
 	internal static float StandsOn( HeightfieldFile? field, float x, float y )
 		=> field?.ScapeHeight( x, y ) ?? 0f;
-
-	/// <summary>Where a person at <paramref name="at"/> stands on <paramref name="field"/>: the ground under it by the sampler the sprites' draw takes (<c>FUN_004527f0</c>).</summary>
-	internal static Vector3 FeetOn( HeightfieldFile field, FixedVector at )
-	{
-		var x = (at.X / (float)FixedVector.One) * field.CellSizeX;
-		var y = (at.Y / (float)FixedVector.One) * field.CellSizeY;
-
-		return new Vector3( x, y, StandsOn( field, x, y ) );
-	}
 
 	/// <summary>
 	/// Where a ride is carrying this person, or null when none is.

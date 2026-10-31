@@ -65,4 +65,23 @@ public class ParkPutOffSoundTests
 		Assert.IsNull( ParkPeople.PutOffPoint( ParkPeople.PutOffSound.None, null, false, at ) );
 		Assert.IsNull( ParkPeople.PutOffPoint( ParkPeople.PutOffSound.Feet, null, false, at ) );
 	}
+
+	/// <summary>
+	/// <b>A seat's and a walk's put-off sound is at the sprite's height, the point's less the ground under it</b> (<c>Person_PlaceSprite</c>,
+	/// <c>0x004f9e91</c>): a seat at (30, 40, 25) over ground 20 is heard at 5, a walk's point the same; the ground is sampled at the point's own x and y;
+	/// the origin and a hidden walk are not lifted by it.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the ground not taken off, taken off the wrong arm, or sampled at (y, x) each fails.</remarks>
+	[TestMethod]
+	public void ASeatsAndAWalksSoundIsAtTheSpritesHeightLessTheGround()
+	{
+		float Ground( float x, float y ) => x == 30f && y == 40f ? 20f : 1000f;
+		var at = new Vector3( 30f, 40f, 25f );
+
+		Assert.AreEqual( new Vector3( 30f, 40f, 5f ), ParkPeople.PutOffPoint( ParkPeople.PutOffSound.Seat, at, false, default, Ground ) );
+		Assert.AreEqual( new Vector3( 30f, 40f, 5f ), ParkPeople.PutOffPoint( ParkPeople.PutOffSound.Walk, null, false, at, Ground ) );
+		Assert.AreEqual( Vector3.Zero, ParkPeople.PutOffPoint( ParkPeople.PutOffSound.Walk, null, true, at, Ground ) );
+		Assert.AreEqual( Vector3.Zero, ParkPeople.PutOffPoint( ParkPeople.PutOffSound.Origin, null, false, at, Ground ) );
+		Assert.IsNull( ParkPeople.PutOffPoint( ParkPeople.PutOffSound.Seat, null, false, at, Ground ) );
+	}
 }

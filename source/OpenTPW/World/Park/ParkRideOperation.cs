@@ -25,7 +25,7 @@ namespace OpenTPW;
 public sealed class ParkRideOperation
 {
 	/// <summary>Where a paying guest's till sounds; null where the park has no ground to stand on (a test's).</summary>
-	internal Func<Peep, Vector3?> TillPlace { get; init; } = peep => ParkGuestSprites.Feet( peep.Navigator.Position );
+	internal Func<Peep, Vector3?> TillPlace { get; init; } = peep => ParkGuestSprites.Heard( peep.Navigator.Position );
 
 	/// <summary>Sounds the till at a place. The game's is the park's audio; a test hands in its own.</summary>
 	internal Action<Vector3> Till { get; init; } = at => ParkAudio.Current?.Charge( at );

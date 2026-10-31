@@ -162,7 +162,7 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   (3) Piece done by Q837 (the original's picture of a flipped diagonal: with its camera and clock held, `0x0804` -> `0x0802` on four bent cells changes 7,327 pixels in four patches and putting it back returns the frame in 0 in two launches). Left:
   which diagonal each flag state draws is not seen in the picture (the poke moved `0x4` and `0x2` together, so the frame does not separate them; a one-bit poke, `flipdiag.sh`'s poke() extended to set or clear one bit, would settle which bit moved the pixels) (the brightness and the centre's shift were near nought, and a path texture written onto the cells did not reach the frame), so the original's drawing by `0x2` stands on the decode and the live bits;
   the cuts differ by at most 0.505 at a cell's centre (`park-engine.md`), so only a feature that crosses the diagonal names it: a path built by real clicks on one of the bent cells in the original (the `t@` write did not reach the frame), the flag flipped on it, and the kink of its edges read.
-  (4) Built by Q823 (`alexah/766-heights-by-the-originals-samplers`): `0x800` at the load, the sprites, balloons, `Feet` and the build markers' glide on
+  (4) Built by Q823 (`alexah/766-heights-by-the-originals-samplers`): `0x800` at the load, the sprites, balloons and the build markers' glide on
   `ScapeHeight`, the camcorder's eye on `CameraHeight` + 5 each frame. The pick's ground as the original's two planes a cell is Q824. The person's particles'
   sampler, the sprites carrying `0x1000000` and the eye's further term are decoded and measured in Q825 (`park-engine.md`, "The three words Q822 left unread": the
   particle's offset is nought, the bit is the head sprites' alone and ours already stands them absolutely, the eye's term is nought in first person; the
@@ -195,14 +195,15 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   track, with `MovingTheTentacleMovesTheHeadWithIt` changed to pin the turn. Confirm: Mumbo's heads in a morph clip in both games
   (ours and the original under Proton, the same clip and frame), and a census of each head's position against the original's
   live node (its posed matrix read from memory).
-- [ ] **Q847. A person's sound is placed at the height of their sprite's offset above the ground, as the original's is.** (From run 14's
-  review of Q823, finding 4.) `FUN_004754e0` copies the sprite's `+0x88`, `+0x8c`, `+0x90` as they are
-  (`0x00475513`..`0x00475533`), and `+0x8c` is the height less `FUN_004527f0` (`Person_PlaceSprite`, `fsubr` at `0x004f9e91`, stored
-  through `0x00475480` at `0x004754bd`), so the original sounds a walker (`Person_PlaySound`, `0x004faa00`) at about 0 height, not at
-  the ground's height. Ours sounds them at `Feet`, the ground's height (now `ScapeHeight`), in `StaffSound` (ParkPeople.cs),
-  `PutOff` (twice), `Yawn` (PeepBehaviour.cs) and `Till` (ParkRideOperation.cs). `ParkAudio` places them with a distance gain, so
-  on raised ground the heard distance differs; the size was not measured. Build: give those sounds the sprite's own `+0x8c`, or
-  measure first that the difference is audible.
+- [ ] **Q856. A person's sound's height against the original's, and a guest's on raised ground.** (From Q847.) Q847 built the sound from the decode
+  (`FUN_004754e0`, `0x00475513`..`0x00475533`): nought for anyone the walk places (`FUN_004fa030` writes the sprite's `+0x8c` nought each frame,
+  `0x004f9ffd`, `0x004fa0b3`), a seat's and a walk's put-off at the point less the ground. Seen in ours
+  only: staff on a raised plateau at z 0.0. Left: (1) the original with a person on a raised flat cell (the stock park's 20.0 plateau, cells
+  (40..64, 58); `putstaff` has no twin there, so a guest or a staff member placed by `spritehold.py`'s write of `+0x88`/`+0x90`):
+  `brk.sh` on `Sound_PlayEffect`'s place form (`0x0051bfc0`, called from `Person_PlaySound` at `0x004faa4d`) for the effect and read the place's height
+  against the sprite's `+0x8c`, nought for a walker, not the ground's; and a rider's, which the decode says is the point less the ground. (2) A guest's
+  put-off, yawn and till on raised ground in ours (the stock park's guests walk on flat ground, where the two builds agree); the code is the
+  staff's (`Heard`), the tests are `HeardIn`'s.
 - [ ] **Q900. The puffs a person's departure and a dismissal spawn (particle `0x13`), placed as the original's `FUN_004fa470` places them.** (From Q825's
   decode of Q820's piece (4).) Ours counts both (`LEAVER_BOARDING_PARTICLE`, `PeepBehaviour.cs`; `STAFF_DISMISSAL_PARTICLE`, `ParkPeople.cs`) and spawns
   neither. The place is decoded (`park-engine.md`, "The three words Q822 left unread", 1): the person's x and z, the height `ScapeHeight` there (not the
@@ -2450,16 +2451,17 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   with no kart in the file, and the load seeds it (`ParkState.cs:897`); read by `ParkWorth.cs:52`, `ParkGoldenTickets.cs:177`
   (`EverythingDone`), `ParkItemsScreen.cs:368`, `ParkPeople.cs:2978` (inferred, not run). The original writes the object whole in its park file
   (`saves.md`, "OpenTPW's writer", the object module; its controls are `FUN_004d3aa0`'s). The owner named was Q420, ticked (`queue-done.md:8157`; its leftovers
-  Q539 are the refusal latch's, not the writer's): STATUS's "(Q420, ...)" now reads Q849 and this item, DOES-NOT's writer gaps (a boat's sound and wake, a coaster's or a tour's new head, the riders' puffs) are this item's, and QUEUE `:1593`, `:1955` and `:2066`
+  Q539 are the refusal latch's, not the writer's): STATUS's "(Q420, ...)" now reads Q803 and this item, DOES-NOT's writer gaps (a boat's sound and wake, a coaster's or a tour's new head, the riders' puffs) are this item's, and QUEUE `:1593`, `:1955` and `:2066`
   ("filed under Q420", "Q420's gap", "Q420's teardown") mean this item. Four open items were tried as owners and none is (Q587 the piece
   model, Q607 and Q734 cite the gap, Q727(4) the pylon chain). The counted names with no owner, by a raw name match against this file:
   `PARK_FILE_SOUND_WRITER_LIVE_VOICES`, `SAVE_PARK_ARRIVAL_VEHICLE`, `SAVE_PARK_CAR_NO_HEIGHT`, `SAVE_PARK_CAR_SMOKE`,
   `SAVE_PARK_EMITTER_DIRECTED`, `SAVE_PARK_EMITTER_ITEM_EFFECT`, `SAVE_PARK_EMITTER_NO_PLACE`, `SAVE_PARK_EMITTER_NOT_STARTED`,
   `SAVE_PARK_FOOTPRINT_CELL`, `SAVE_PARK_GUEST_ON_A_THING`, `SAVE_PARK_HANDLE_TO_AN_UNWRITTEN_THING`, `SAVE_PARK_MADE_MODEL_TABLES`,
-  `SAVE_PARK_OBJECT_BOUGHT`, `SAVE_PARK_QUEUE_CELL_MODEL`, `SAVE_PARK_SPRITE_SET_BYTE` (an item may carry one in words; `SAVE_PARK_TRACK_RIDE_AS_THE_FILE`
-  is Q849's). Sort them: build each, or say at the site why it is not. Until a kart, water or tracked ride is written, the gap is said at
+  `SAVE_PARK_OBJECT_BOUGHT`, `SAVE_PARK_QUEUE_CELL_MODEL`, `SAVE_PARK_SPRITE_SET_BYTE` (an item may carry one in words). `SAVE_PARK_TRACK_RIDE_AS_THE_FILE` is this item's too: a kart or water ride of the file's with a car is kept as the file's
+  until written (`saves.md`, "Left as the file has it"), and its script does not stay the file's (`saves.md`, "One split in what is written": her Dino Karts' script 110 goes
+  from word 197, ONRIDE 4, RUNNING 1 to word 15, 0, 0 over cars still holding four riders). Sort them: build each, or say at the site why it is not. Until a kart, water or tracked ride is written, the gap is said at
   the site, counted, and told to the player (README lines 28 and 252). Dead by GAP (AGENTS.md rule 3): placed content reaches it, so it is
-  the real queue, and Lost Kingdom at 100% cannot close without it. Confirm: buy Dino Karts, Exit To Lobby, enter again, in both games.
+  the real queue, and Lost Kingdom at 100% cannot close without it. Confirm: buy Dino Karts, Exit To Lobby, enter again, in both games; and load her Full Simulation file, save, and read the kart's script and its cars' riders in the file against the original's (whether the four seated riders get off or board again there was not read).
 - [ ] **Q994. A file that will not load keeps the running park, as the original does.** From the week-end audit 2026-10-31 (S-D3).
   `FUN_00414d40` leaves before its first teardown call (`0x0041501d`) on a failed open (`0x00414dc2`), version read (`0x00414e09`), a version
   above 500 (`0x00414e3c`, mode 2 only), preamble (`0x00414e76`), length (`0x00414ec1`), read (`0x00414eef`), block size (`0x00414f2f`) and

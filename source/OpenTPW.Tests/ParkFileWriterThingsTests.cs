@@ -867,7 +867,8 @@ public class ParkFileWriterThingsTests
 	/// <summary>
 	/// A record of the file's with no script running here is left the file's, counted, and its log line names the
 	/// handle and the thing the file gives it, so a played park's census can be read against the file's list
-	/// (Q849: the six companions of her Full Simulation park).
+	/// (Q849: the six companions of her Full Simulation park; this fixture's three are bound objects, so the thing-0 path of a
+	/// real companion is not run here).
 	/// </summary>
 	[TestMethod]
 	public void AScriptTheLoadDidNotStartIsNamedWhereItIsCounted()
@@ -894,7 +895,11 @@ public class ParkFileWriterThingsTests
 		foreach ( var handle in ended )
 		{
 			var thing = shipped.ScriptStates.For( handle )!.Value.Thing;
-			Assert.IsTrue( named.Any( line => line.Contains( $"the file's script {handle} (thing {thing}," ) ), $"script {handle} is named with its thing {thing}" );
+			var catalogue = shipped.Objects.Single( placed => placed.ThingId == thing ).CatalogueId;
+
+			Assert.AreNotEqual( 0, catalogue, "a control: the catalogue id is one a wrong or zero id cannot match" );
+			Assert.IsTrue( named.Any( line => line.Contains( $"the file's script {handle} (thing {thing}, catalogue {catalogue})" ) ),
+				$"script {handle} is named with its thing {thing} and its catalogue {catalogue}" );
 		}
 	}
 

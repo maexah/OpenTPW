@@ -1998,8 +1998,8 @@ public sealed class PeepBehaviour
 	/// </remarks>
 	internal void PlaySpotAnimation( Peep peep, int animation, int tick )
 	{
-		if ( Yawns( animation, peep.ThingId ) && ParkGuestSprites.Feet( peep.Navigator.Position ) is { } feet )
-			ParkAudio.Current?.Yawn( feet );
+		if ( Yawns( animation, peep.ThingId ) && ParkGuestSprites.Heard( peep.Navigator.Position ) is { } heard )
+			ParkAudio.Current?.Yawn( heard );
 
 		peep.NextAnimation = animation;
 		peep.SavedState = peep.State;
@@ -2015,7 +2015,7 @@ public sealed class PeepBehaviour
 	/// <summary>
 	/// Where every arm of <see cref="QueueTurn"/> that gives up ends - <c>0x0050049e</c> - and the join's and the
 	/// door's failed walks to a place: the ride lets them go (<see cref="_leaveQueue"/>, <c>FUN_004ddd20</c>), they
-	/// are put out (<see cref="DismissFromTheQueue"/>, <c>FUN_005012f0</c>), and the kids' sound plays at their feet
+	/// are put out (<see cref="DismissFromTheQueue"/>, <c>FUN_005012f0</c>), and the kids' sound plays where their sprite sounds (<see cref="ParkGuestSprites.Heard"/>)
 	/// for an id divisible by eight.
 	/// </summary>
 	/// <param name="by">What put them out, for the log.</param>
