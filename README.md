@@ -191,6 +191,7 @@ Most tests read the real game files and skip when the game is not found; set `OP
 | `OPENTPW_NO_MESSAGE_BOX=1` | Do not show the message box of a failed start (a script that fails a start on purpose). |
 | `OPENTPW_PROFILE=1` | Log the frame time, frames a second and memory use every 120 frames. |
 | `OPENTPW_TEXT_CENSUS=1` | Log every piece of interface text with its drawn size and box. |
+| `OPENTPW_SHADER_WATCH=1` or `=0` | Compile a shader again when its file changes on disk (`1`) or never (`0`). Unset, a Debug build does and a Release build does not. |
 
 **Opening the debug console.** Start OpenTPW from a terminal with `OPENTPW_DEBUG_CONSOLE=1` set, then type commands
 into that terminal and press Enter. Every reply starts with `[dbg]`.

@@ -11473,6 +11473,22 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   of nearest island; its own mix holds Lost Kingdom's three themes (6 s matches 0.29 to 0.48; the other nine 0.08 to 0.13). Not done, filed:
   **Q909** (the sky colour's snap, (3)). (4): ours is still 16:9, the ramp as above. The control (the old box and the nearest island's park
   put back) fails the same checks (`q950/ctl`).
+- [x] **Q957. A shader recompile leaks the old compiled shaders.** From an outside audit (Alexah,
+  2026-10-30), checked against `8a566e88` (`VERIFY-gpt-perf.md`, P6, P2); the text is corrected to the code at `3bc9708e` (Q954). Each
+  shader has a `FileSystemWatcher` in every build (`Shader.cs:44-58`); `Recompile` (`:79-87`) replaces the vertex/fragment shaders
+  without disposing them. Q954 already made `Material.SetupResources` swap the shared pipeline and layouts on a recompile, mark the
+  resource sets dirty and bump the bindings (so the frozen-uniform and the `_resourceLayouts ??=` claims are fixed), and the old
+  pipeline is disposed with its last user; the old `ScratchBuffer` is disposed by the review fixes of run 15. What is left: the
+  old compiled shaders are not disposed, and a recompile that is never run was not tested at all (Q954 ran none).
+  Noted 2026-09-14 (`docs/history/current-task-archive.md:4892`) and never filed. Decide whether a shipped build should watch shader files at all (a player never edits them; a deviation
+  from nothing in the original), and if it does, dispose and rebind. One more, UNSETTLED: `VkResourceLayout.Dispose` is immediate
+  in NeoVeldrid 1.2.1 while sets and pipelines are freed after the frame's fence, so `Material.Delete` may destroy a layout a set
+  in flight still uses; one run under the Vulkan validation layer settles it.
+  **TICKED 2026-10-31 (lane B, `alexah/831-shader-recompile-disposes-old`).** Decided: a shipped (Release) build does not watch shader files, a Debug build does, and
+  `OPENTPW_SHADER_WATCH=1`/`0` overrides either way (README's table). `Shader.Recompile` queues the old pair for disposal after `OnRecompile`, so they go after the old pipeline. Seen in
+  a running park by a `touch` of `test.shader` (log, not a picture), in both builds and with the variable; the validation run (`lib/vkvalidate.sh`) printed nothing about a
+  layout, a shader module or a pipeline after two recompiles and a leave of the park, so the layout question is settled for that path (lavapipe, one layer version). Not done: the desk's card, Windows.
+  What the run found is Q853.
 
 ## B. Docs and comments
 
