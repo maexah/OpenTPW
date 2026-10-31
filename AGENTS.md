@@ -117,7 +117,7 @@ OPENTPW_LOG_DIR=<folder> ...                         # where console.log / conso
 
 - `dotnet test` does not accept `--no-incremental`; build first, then test with `--no-build`.
 - **Name the game folder on every launch and test run** (`--game` or `OPENTPW_GAME_PATH`). `GameDir` looks only in
-  the build's folder and the working directory; a run with neither exits 1 after listing the folders it tried, and
+  the build's folder and the working directory; a run with neither exits 1 after listing the folders it tried (with a display, once its message box is answered), and
   that is correct. Never commit a path into `source/OpenTPW/App.config`.
 - Tests that need the game call `GameData.Required()` and skip when it is absent. A green run with skips is normal without the game; compare the counts with the dated ones in `docs/STATUS.md`, "Numbers", never with a figure written here.
 - Take every count fresh (tests, warnings, opcodes). Never quote one from memory; the numbers in prose go stale within a day.

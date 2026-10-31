@@ -153,7 +153,7 @@ belongs to or at the end. Grep it by area or Q-number; never read it whole.
   Bounce (`q649/side-by-side-floor.png`) the plate's square edge is gone and the floor reads 1.82 and 1.58 times the
   ground's sharpness against the original's 1.55 and 1.19, in its colours. With the compositor off a floor draws its own
   texture, as the original's.
-- **The graphics card is chosen, not the loader's first** (Q980, Alexah 2026-10-31; a deviation, the original's video-card row is dead):
+- **The graphics card is chosen, not the loader's first** (Q980, Alexah 2026-10-31; the choice by name and by `gpu` is a deviation, the original's Primary / Secondary row is Q983's):
   NeoVeldrid takes the first Vulkan device and offers no choice (`VkGraphicsDevice.CreatePhysicalDevice`, "Just use the first
   one"), which on a PC with a built-in GPU and a card can be the built-in one. `GpuSelector.Choose` (called first in
   `Renderer.CreateGraphicsDevice`) lists the devices through a throwaway instance, `GpuChoice.Pick` takes a discrete card
@@ -164,6 +164,13 @@ belongs to or at the end. Grep it by area or Q-number; never read it whole.
   Linux shown (`q980/`: the RX 6700 XT by default, llvmpipe by `gpu llvmpipe` / `gpu #1`, the loader's driver filter
   when the Mesa layer is disabled); the Windows PC (AMD built-in + GTX 1650) is the Sentinel's to confirm, and its
   manifest names (`nv-vk*`, `amd-vulkan*`, `igvk*`) are not read from a Windows machine.
+- **The Options screen's Video Card row works** (Q983, Alexah 2026-10-31): the original enumerates up to four drivers and its row
+  switches Primary and Secondary (`docs/exe/ui.md`, "Video card row"). Here Primary is `GpuChoice.Pick`'s card and Secondary the
+  next best (`GpuChoice.Ranked`), offered only where `GpuSelector.Count` is above 1; the click toggles Config.tcf's video card
+  field, the tick logs it and the card is drawn on from the next start (`GpuSelector.Choose` reads it before the device is made);
+  opentpw.cfg's `gpu` line wins and the row then says the role of the card in use. A chosen card that cannot be opened is taken
+  back and the device made again on the loader's first (`GpuSelector.Withdraw`). Linux shown (`q983/`); Windows is the
+  Sentinel's to confirm.
 - **One line brings the original's look back: `graphics faithful` in `save/opentpw.cfg`** (Q645, Alexah 2026-10-21; off
   by default, read as the game starts, `GameOptions.Faithful`). It turns every chosen improvement off at once: the art
   cut to four bits a channel (Q616), 16-pixel ground tiles (Q618), the research pumps stepped picture by picture (Q677),
@@ -210,8 +217,9 @@ belongs to or at the end. Grep it by area or Q-number; never read it whole.
 - **A failed start says why in a message box** (Q978, a deviation: the original had no start that could fail so; Linux seen, Windows
   not yet): a game that cannot be found, or an exception before the main loop begins, shows an SDL error box (`StartFailure`)
   holding the log's reason lines (where it looked, how to put it right) or the exception's type and message, and where
-  `console.log` is, then exits 1; `OPENTPW_NO_MESSAGE_BOX` keeps it off. With no display SDL has no box and the log says
-  so. Seen on a private Xvfb with a `--game` that does not exist and with a folder that makes the window fail.
+  `console.log` is, then exits 1; `OPENTPW_NO_MESSAGE_BOX` keeps it off and the log keeps the text. The exception and its stack are
+  logged before anything unwinds, and a load that threw keeps no "Loaded" line and no step count. With no display SDL has no
+  box and the log says so. Seen on a private Xvfb with a `--game` that does not exist and with a folder that makes the window fail.
 - **The lobby letters this build's name bottom right, where the original's says "v 2.0"** (Q752): `VersionLabel`, under
   every window and taking no pointer, letters `LaunchReport.BuildName` (`weekly-YYYY-MM-DD`, a dry run's `weekly-test-N`, `local` for a build not given the tag) as the
   original letters its own version (`FUN_0048b020`, `boot.md`, "Which build this is"): font 6, plain white with no edge,

@@ -77,6 +77,9 @@ public class FaithfulGraphicsTests
 			GameOptions.Current = new() { Faithful = true };
 			SaveFolder.SaveDisplay();
 			StringAssert.Contains( File.ReadAllText( file ), "\ngraphics faithful\n" );
+
+			// Lines end in LF on every system (SaveFolder.SaveDisplay); the line above can only fail on Windows, where AppendLine writes CRLF.
+			Assert.IsFalse( File.ReadAllText( file ).Contains( '\r' ), "no carriage return in the file" );
 			GameOptions.Current = new();
 			SaveFolder.LoadDisplay();
 			Assert.IsTrue( GameOptions.Current.Faithful, "written faithful, read back" );

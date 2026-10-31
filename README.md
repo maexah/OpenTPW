@@ -126,7 +126,7 @@ game from a folder you own.
 
 Every platform draws with Vulkan; on macOS through MoltenVK, which ships with the build. Only Linux x64 is tested. Bug reports from other platforms are very welcome.
 
-**Two graphics cards (a built-in GPU and a graphics card).** OpenTPW lists the Vulkan devices in `console.log` (the `Graphics card:` lines) and draws with a discrete card in preference to a built-in one; the `GPU:` line names the one in use. To choose another, put a line in `save/opentpw.cfg`: `gpu GTX 1650` (the first card whose name holds that text), `gpu #1` (the second card of the logged list) or `gpu auto` (the default). The original has no such choice; this one is OpenTPW's own.
+**Two graphics cards (a built-in GPU and a graphics card).** OpenTPW lists the Vulkan devices in `console.log` (the `Graphics card:` lines) and draws with a discrete card in preference to a built-in one; the `GPU:` line names the one in use. To choose another, put a line in `save/opentpw.cfg`: `gpu GTX 1650` (the first card whose name holds that text), `gpu #1` (the second card of the logged list) or `gpu auto` (the default). The Options screen's Video Card row is the original's own Primary or Secondary: Primary is the card above, Secondary the next one (offered only where there is more than one card), and it is drawn on from the next start. `gpu` names a card exactly and wins over the row; that line is OpenTPW's own. Two cards of one maker (an AMD built-in GPU beside a Radeon, an Intel one beside an Arc) cannot be told apart on Windows: the log warns and the first device is drawn on.
 
 <details>
 <summary>Linux on Wayland</summary>
@@ -151,10 +151,10 @@ OPENTPW_SYSTEM_SDL=1 dotnet source/OpenTPW/bin/Debug/net10.0/OpenTPW.dll --game 
 
 **No sound.** Not fatal - OpenTPW warns and carries on.
 
-**A start that fails.** When OpenTPW cannot find the game, or something goes wrong before the game's window is up,
-it shows a message box with the reason, where it looked, how to put it right and where the log is, on every system,
-and exits. The original had no such box (a deviation). Started from a terminal, the same lines are printed there too. The
-Windows download opens no terminal window of its own.
+**A start that fails.** When OpenTPW cannot find the game, a message box says where it looked and how to put it right.
+If something else goes wrong before the game's main loop begins, the box names the error. Either box says where the log
+is, and OpenTPW then exits. With no display there is no box, only the log and the terminal. The original had no such box
+(a deviation). The Windows download opens no terminal window of its own.
 
 **Reporting a problem.** Every start writes `console.log` in the game's folder, beside `save`. If the game's folder cannot be
 written, or OpenTPW cannot find the game, it is in your own data folder instead (`%AppData%\OpenTPW` on Windows,

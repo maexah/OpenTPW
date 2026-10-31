@@ -11298,7 +11298,7 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   where the log is; an exception before the first frame the same, with its message. A deviation, said at the site (the
   original never needed one). Confirm on Windows: a double-click with no game, screenshot; the Linux zip's apphost the same.
 - [x] **Q977. The test suite on Windows.** With the game, 4342 passed, 56 failed, 17 skipped of 4415 (Linux 4413, 0, 2;
-  w2, w3's trx). Besides Q976's seven: 33 need Python and fail where it is missing (`WeeklyReleaseTests`, the content
+  w2, w3's trx). Besides Q976 (done; nine test cases failed on Linux, seven on Windows): 33 need Python and fail where it is missing (`WeeklyReleaseTests`, the content
   guard's file-type cases, `EveryShaderInTheRepositoryIsRequired`; they should skip as the bash ones do, and say so); 5
   `ConsoleLogTests` read the log with `File.ReadAllText` while the writer holds it (`FileShare.Read | Delete`; open with
   `ReadWrite` sharing in the test; Notepad and `type` read it fine, w3); 2 `ContentGuardTests` cannot delete their
@@ -11356,6 +11356,7 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Done on Linux (2026-10-31): `WinExe` for Release only, `ParentConsole.Attach` for a start from a prompt; the win-x64
   exes' PE subsystem 2 (Release) and 3 (Debug), the box and log with no console handles, the Debug build's debug console.
   The Windows confirm is Q852.
+- [x] **Q983. The Options screen's Video Card row works, and the review of run 16's fixes.** Done 2026-10-31 (lane A, `alexah/760-video-card-row`; Linux seen, **the Windows side is not verified yet**: the Sentinel confirms the row on its Windows PC). Q980 said the original has no card list: false. It lists up to four DirectDraw drivers (`0x00563574`) and its Primary / Secondary row switches the card (`0x004a361c`, `0x0044e1eb`: `docs/exe/ui.md`). The row is Primary (the card `GpuChoice.Pick` prefers) or Secondary (`GpuChoice.Ranked`'s next), Secondary offered only where the loader lists more than one device, kept in Config.tcf's video card field, drawn on from the next start (the card is chosen before the window, as the original applies it as its window is made), the row reading truthfully (a saved Secondary with one card reads Primary; opentpw.cfg's `gpu` line still wins and the row then says the card in use). A chosen card that cannot open is taken back and the device made again (`GpuSelector.Withdraw`). Q980's findings 1 to 8, Q976's minor and cosmetic ones, Q977's five and Q978's eight (its defect as the second reader settled it: the exception is logged by the catch's filter before anything unwinds, and a load that threw is only taken down, with no "Loaded" line and no step count) fixed in the same commit. Confirmed on the desk: `q983/`.
 
 ## B. Docs and comments
 

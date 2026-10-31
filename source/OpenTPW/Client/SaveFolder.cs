@@ -118,8 +118,9 @@ internal static class SaveFolder
 	/// <summary>
 	/// Reads save\opentpw.cfg: the settings that are OpenTPW's own, because the original's files have
 	/// nowhere to put them. How the game fills the screen, and the mode full screen asks the display
-	/// for - see <see cref="Display"/>; and the faithful graphics toggle (<see cref="GameOptions.Faithful"/>), read
-	/// before the first texture is made, and set nowhere else.
+	/// for - see <see cref="Display"/>; the faithful graphics toggle (<see cref="GameOptions.Faithful"/>), read
+	/// before the first texture is made, and set nowhere else; and the graphics card's <c>gpu</c> line
+	/// (<see cref="GameOptions.Gpu"/>), read before the device is made.
 	///
 	/// <para>
 	/// It is a plain text file of its own rather than more fields in Config.tcf, so that the original's
@@ -224,7 +225,7 @@ internal static class SaveFolder
 				.AppendLine( "# tiles, the pumps stepped picture by picture, the flags jumping, the letters at the original's size and unsharpened." )
 				.AppendLine( "# Read as the game starts." )
 				.AppendLine( $"{GraphicsName} {(options.Faithful ? GraphicsFaithful : GraphicsImproved)}" )
-				.AppendLine( "# gpu auto: the Vulkan graphics card is a discrete one if there is one, else the first. gpu <part of a name>:" )
+				.AppendLine( "# gpu auto: the Vulkan graphics card the Options screen's Video Card row says, a discrete one if there is one, else a built-in one. gpu <part of a name>:" )
 				.AppendLine( "# the first card whose name holds it, e.g. gpu GTX 1650. gpu #1: the second card of the list console.log prints" )
 				.AppendLine( "# (\"Graphics card:\"). Read as the game starts." )
 				.AppendLine( $"{GpuName} {(string.IsNullOrWhiteSpace( options.Gpu ) ? GpuChoice.Auto : options.Gpu)}" );
@@ -237,7 +238,7 @@ internal static class SaveFolder
 
 			// Lines end in LF on every system: AppendLine writes the system's own, and a file moved between a Windows and a Linux
 			// install (the game folder is shared with the original's) should not change its bytes. LoadDisplay reads either.
-			SaveFileSystem.WriteAllBytes( path, Encoding.UTF8.GetBytes( text.ToString().ReplaceLineEndings( "\n" ) ) );
+			SaveFileSystem.WriteAllBytes( path, Encoding.UTF8.GetBytes( text.ToString().Replace( "\r\n", "\n" ) ) );
 			Log.Info( $"Saves: wrote the display settings to {path}" );
 		}
 		catch ( Exception e )

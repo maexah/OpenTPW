@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace OpenTPW.Tests;
@@ -77,5 +78,67 @@ public class StartFailureTests
 			Assert.IsFalse( StartFailure.Show( "text" ) );
 		}
 		finally { Environment.SetEnvironmentVariable( StartFailure.SuppressVariable, before ); }
+	}
+
+	/// <summary>
+	/// <b>The filter logs the exception with its stack before anything unwinds, keeps the first one, and lets a failed start
+	/// through only until the main loop begins.</b>
+	/// </summary>
+	/// <remarks><b>Mutation:</b> a filter that logs nothing, one that keeps the last exception, or one that ignores
+	/// <see cref="StartFailure.Started"/>, fails a step.</remarks>
+	[TestMethod]
+	public void TheFilterLogsTheFirstExceptionAndOnlyBeforeTheLoop()
+	{
+		var error = Console.Error;
+		var wasStarted = StartFailure.Started;
+		var written = new System.IO.StringWriter();
+
+		try
+		{
+			Console.SetError( written );
+			StartFailure.ResetForTest();
+			StartFailure.Started = false;
+
+			Assert.IsTrue( StartFailure.IsFailedStart( new InvalidOperationException( "the cause" ) ) );
+			Assert.IsTrue( StartFailure.IsFailedStart( new InvalidOperationException( "thrown while unwinding" ) ) );
+
+			StringAssert.Contains( written.ToString(), "Unhandled exception: System.InvalidOperationException: the cause" );
+			Assert.AreEqual( "the cause", StartFailure.First!.Message, "the first exception is the one the box names" );
+
+			StartFailure.Started = true;
+			written.GetStringBuilder().Clear();
+			Assert.IsFalse( StartFailure.IsFailedStart( new InvalidOperationException( "in the loop" ) ) );
+			Assert.AreEqual( string.Empty, written.ToString(), "nothing logged for an exception once the loop runs" );
+		}
+		finally
+		{
+			Console.SetError( error );
+			StartFailure.Started = wasStarted;
+			StartFailure.ResetForTest();
+		}
+	}
+
+	/// <summary><b>The box kept off still logs what it would have said</b>, so a test or a harness can read it.</summary>
+	[TestMethod]
+	public void ASuppressedBoxLogsItsMessageOnOneLine()
+	{
+		var before = Environment.GetEnvironmentVariable( StartFailure.SuppressVariable );
+		var lines = new List<string>();
+		Logger.LogDelegate capture = ( _, text ) => lines.Add( text );
+
+		try
+		{
+			Environment.SetEnvironmentVariable( StartFailure.SuppressVariable, "1" );
+			Log = new();
+			Logger.OnLog += capture;
+			StartFailure.Show( "head\n\nreason\n\nLog: /l" );
+		}
+		finally
+		{
+			Logger.OnLog -= capture;
+			Environment.SetEnvironmentVariable( StartFailure.SuppressVariable, before );
+		}
+
+		Assert.IsTrue( lines.Any( line => line.Contains( "head |  | reason |  | Log: /l" ) ), string.Join( "\n", lines ) );
 	}
 }

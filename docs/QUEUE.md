@@ -94,6 +94,17 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   the autosave and the player, then the process ends: no scene is left to open a box (Quit Game's question says
   beforehand, Q982). Counted, not built: a close that asked first would be a deviation the original does not have;
   the log's `Leaving the park: autosave is not written` is all there is. Look at it only if a player meets it.
+- [ ] **Q904. Two cards of one maker cannot be told apart on Windows.** The loader's driver filter works per manifest file and
+  `MESA_VK_DEVICE_SELECT` is a Mesa layer's, so an AMD built-in GPU beside a Radeon, or an Intel one beside an Arc, share one
+  manifest and `GpuChoice.Levers` cannot put the second first: the log warns and the first device is drawn on (README and
+  `GpuChoice.Levers` say so). A way to name one of them (a bus or LUID id) needs NeoVeldrid to take a device, which it does not
+  (`VkGraphicsDevice.CreatePhysicalDevice`: "Just use the first one"). Look at it only if a player has such a PC.
+- [ ] **Q905. What Q978's box could not settle (leftovers).** (1) A box with no parent window: with `opentpw.cfg` on full screen it
+  may open behind a topmost window on Windows, leaving a frozen loading screen and a process waiting on an unseen box (hide the
+  window first, or add it to Q850's confirm). (2) A non-ASCII path in the box on Windows (`C:\Users\Zoë`): which encoding Silk
+  marshals for `ShowSimpleMessageBox` is not read. (3) After a load that fails once `Audio.Init` has run, nothing stops the sound
+  behind the box (`Audio.Shutdown` is not on the catch's path). (4) `ConsoleLog.Path` empty after a failed `Open`: the catch opens
+  `OpenWithoutGame` a second time on the same folder, which fails again and prints a second `[console log]` line. None seen.
 
 - [ ] **Q851. Q981's Windows confirm (the uninstall entry's read, which Linux cannot run).** Built and tested on plain
   strings; the registry read (`WindowsInstall.RegisteredFolders`) ran on no Windows PC. On the PC with Sim Theme Park in
@@ -3360,7 +3371,7 @@ state machine.
     `base.md2` (`0x450523`) into `[0x79fcb4]`, the terrain base model a park uses: the original's lobby loads it as its land
     model. Not read: whether its sea meshes are drawn each frame.
 - [ ] **Q79. Robustness (plan item 12, the rest).** Atomic save writes exist (`BaseFileSystem.WriteAllBytes`) and
-  input is dropped while unfocused (Q42). Open: top-level error containment (nothing in `Program.Main` or `Game.Run` catches a failure of the load or the run loop),
+  input is dropped while unfocused (Q42). Open: top-level error containment (nothing catches a failure of the run loop; a failed start is `StartFailure`, Q978),
   and easing the render rate and music while the window is unfocused.
 - [ ] **Q80. Two tests the lobby audit asked for (plan item 13, the rest).** A save round trip against a real
   game-written file (it wants a sitting with the original to make one), and `LobbyScript` over the four shipped island

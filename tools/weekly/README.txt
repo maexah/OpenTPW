@@ -72,10 +72,11 @@ the game's files look complete. It does not hold your name or your
 computer's name: folder paths in it are cut down to "<game folder>"
 and "~", and each player's name to "<player 1>" and so on.
 
-If OpenTPW cannot find Theme Park World it says where it looked and
-stops, and it still writes console.log. There is no game folder to
-put it in, so it is in the folder listed above, and its first line
-says "no game folder was found".
+If OpenTPW cannot find Theme Park World, or stops before the game
+begins, a message box says why and where console.log is. It still
+writes console.log. When the game was not found there is no game
+folder to put it in, so it is in the folder listed above, and its
+first line says "no game folder was found".
 
 To report a problem, open an issue at
    https://github.com/maexah/OpenTPW/issues

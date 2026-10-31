@@ -49,7 +49,7 @@ with zipfile.ZipFile(ZIP) as z:
 top = os.path.join(UNZ, f"OpenTPW-{tag}")
 before = save_sum()
 env = {k: v for k, v in os.environ.items() if k != "DOTNET_ROOT"}
-env.update(SDL_AUDIODRIVER="dummy", OPENTPW_DEBUG_CONSOLE="1", OPENTPW_LOG_DIR=OUT)
+env.update(SDL_AUDIODRIVER="dummy", OPENTPW_DEBUG_CONSOLE="1", OPENTPW_LOG_DIR=OUT, OPENTPW_NO_MESSAGE_BOX="1")
 logf = open(os.path.join(OUT, "run.log"), "w")
 game = subprocess.Popen(["./OpenTPW", "--game", GAME], cwd=top, env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                         stderr=subprocess.STDOUT, text=True)

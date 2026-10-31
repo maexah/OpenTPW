@@ -178,7 +178,7 @@ internal static class Game
 	/// <param name="openAudio">Whether to open the audio device behind this loading screen - only the first.</param>
 	private static void LoadLobby( bool openAudio )
 	{
-		using ( new LoadingScreen( "the lobby", LobbyLoadSteps ) )
+		using ( var loading = new LoadingScreen( "the lobby", LobbyLoadSteps ) )
 		{
 			//
 			// Init audio. Opening the device can fail - no sound card, no audio server - and that
@@ -194,6 +194,8 @@ internal static class Game
 			// Create level
 			//
 			_ = new Level( "jungle" );
+
+			loading.Finished();
 		}
 
 		Audio.Duck( 1f, 0f );
@@ -309,9 +311,11 @@ internal static class Game
 	/// <summary>Builds a park behind the loading screen, the way <see cref="LoadLobby"/> builds the lobby.</summary>
 	private static void LoadPark( string themeName, string? parkFile = null )
 	{
-		using ( new LoadingScreen( themeName, ParkLoadSteps ) )
+		using ( var loading = new LoadingScreen( themeName, ParkLoadSteps ) )
 		{
 			_ = new Level( themeName, Level.Scene.Park, parkFile );
+
+			loading.Finished();
 		}
 
 		Audio.Duck( 1f, 0f );

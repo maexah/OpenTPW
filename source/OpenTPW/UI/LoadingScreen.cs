@@ -139,6 +139,15 @@ internal sealed class LoadingScreen : IDisposable
 		screen.Pump();
 	}
 
+	/// <summary>Whether <see cref="Finished"/> was called: the load ran to its end.</summary>
+	private bool _finished;
+
+	/// <summary>
+	/// The load reached its end: the last line inside the <c>using</c>. A screen disposed without it was left by an exception,
+	/// and is only taken down (<see cref="Dispose"/>): no last frame, no "Loaded" line, no step count kept.
+	/// </summary>
+	public void Finished() => _finished = true;
+
 	public void Dispose()
 	{
 		if ( _current != this )
@@ -146,8 +155,9 @@ internal sealed class LoadingScreen : IDisposable
 
 		// One last frame, however recently the one before was drawn, so what stays on the screen
 		// until the level's first frame replaces it is the finished count rather than one a few
-		// steps behind.
-		Pump( force: true );
+		// steps behind. Not after a load an exception ended: the frame could throw again and hide the first exception.
+		if ( _finished )
+			Pump( force: true );
 
 		_current = null;
 		Logger.OnLog -= OnLog;
@@ -156,6 +166,12 @@ internal sealed class LoadingScreen : IDisposable
 		_darkRed.Delete();
 		_red.Delete();
 		_status.Delete();
+
+		if ( !_finished )
+		{
+			Log.Warning( $"Loading {_what} stopped after {_steps} steps; the loading bar's count is not kept" );
+			return;
+		}
 
 		// Says how far off the expectation was. A gap is only news after the first run of a situation:
 		// before that it is the seed being approximate, which is what seeds are.

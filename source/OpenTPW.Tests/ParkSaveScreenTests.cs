@@ -953,9 +953,9 @@ public class ParkSaveScreenTests
 	private static (string? Theme, string? File) WhatWasAsked()
 		=> ((string?)Asked( "_parkAsked" ).GetValue( null ), Slashed( (string?)Asked( "_parkFileAsked" ).GetValue( null ) ));
 
-	/// <summary>A path as the tests write it, with <c>/</c>: the game joins with the system's own separator, which Windows makes <c>\</c>.</summary>
+	/// <summary>A path as the tests write it, with <c>/</c>: the game joins with the system's own separator, which Windows makes <c>\</c>. A no-op on Linux, where a backslash in a path would stay one.</summary>
 	private static string? Slashed( string? path )
-		=> path?.Replace( '\\', '/' );
+		=> path?.Replace( Path.DirectorySeparatorChar, '/' );
 
 	private static void ForgetWhatWasAsked()
 	{

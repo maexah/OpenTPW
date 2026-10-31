@@ -29,7 +29,7 @@ def save_sum():
 before = save_sum(); print("save/ before:", before)
 print("binary md5:", hashlib.md5(open(os.path.join(BIN, "OpenTPW.dll"), "rb").read()).hexdigest())
 env = dict(os.environ, DOTNET_ROOT=paths.dotnet_env()['DOTNET_ROOT'], OPENTPW_DEBUG_CONSOLE="1",
-           OPENTPW_GAME_PATH=GAME, SDL_AUDIODRIVER="dummy")
+           OPENTPW_GAME_PATH=GAME, SDL_AUDIODRIVER="dummy", OPENTPW_NO_MESSAGE_BOX="1")
 # The game runs in a systemd scope of its own under a memory cap (OPENTPW_GAME_MEMMAX, "8G" by default, "off" for none), so
 # a runaway is killed alone and never the terminal's scope with every session in it (2026-10-30: 11.1 GB off-screen on a
 # Full Simulation park, Q954). Without systemd-run the game runs uncapped.

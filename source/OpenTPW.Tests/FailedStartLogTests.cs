@@ -43,6 +43,10 @@ public class FailedStartLogTests
 		return RepoFiles.Run( host!, [dll, .. arguments], environment, workingFolder )!.Value;
 	}
 
+	/// <summary>The line the log keeps of the box that was kept off: the message it would have shown, on one line.</summary>
+	private static string BoxLine( string log )
+		=> log.Split( '\n' ).Single( line => line.Contains( $"Start failure: no message box, {StartFailure.SuppressVariable} is set" ) );
+
 	[TestMethod]
 	public void AFolderThatIsNotTheGameLeavesAConsoleLogWithTheReason()
 	{
@@ -61,6 +65,12 @@ public class FailedStartLogTests
 			StringAssert.Contains( log, "does not hold Theme Park World" );
 			StringAssert.Contains( log, "Game files:" );
 			StringAssert.Contains( log, $"Start failure: no message box, {StartFailure.SuppressVariable} is set", "the start went on to the box, which the variable kept off" );
+
+			// What the box would have said: the reasons, and the log's place (a box shown before the log is opened says "Log: none").
+			var box = BoxLine( log );
+			StringAssert.Contains( box, StartFailure.Head );
+			StringAssert.Contains( box, "does not hold Theme Park World" );
+			StringAssert.Contains( box, $"Log: {Path.Join( logs, ConsoleLog.FileName )}" );
 			StringAssert.Contains( output, $"this run is kept in {Path.Join( logs, ConsoleLog.FileName )}", "the terminal says where it is" );
 			Assert.IsFalse( File.Exists( Path.Join( folder, ConsoleLog.FileName ) ), "nothing is written in the folder that was named" );
 		}
@@ -166,7 +176,10 @@ public class FailedStartLogTests
 			var log = File.ReadAllText( Path.Join( logs, ConsoleLog.FileName ) );
 
 			StringAssert.Contains( log, "Unhandled exception:", "the stack is in the log" );
-			StringAssert.Contains( log, $"Start failure: no message box, {StartFailure.SuppressVariable} is set" );
+
+			var box = BoxLine( log );
+			StringAssert.Contains( box, "Exception: ", "the box names the exception" );
+			StringAssert.Contains( box, $"Log: {Path.Join( logs, ConsoleLog.FileName )}" );
 		}
 		finally { Directory.Delete( folder, true ); }
 	}

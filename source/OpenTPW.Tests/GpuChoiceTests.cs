@@ -1,4 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -82,6 +83,97 @@ public class GpuChoiceTests
 	}
 
 	/// <summary>
+	/// <b>The Options row's Secondary is the card after the best one</b> (Q983): Primary the discrete card, Secondary the
+	/// built-in one; with three, the second best; with one there is no other; a named card wins over the row; an unmet
+	/// setting falls back to the row's pick and still says it was not met.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> Secondary taking the worst card or the loader's second device, ignored with one card, or
+	/// winning over a named card, fails a step.</remarks>
+	[TestMethod]
+	public void SecondaryIsTheCardAfterThePreferredOne()
+	{
+		var all = new[] { Amd, Nvidia, Software };
+
+		Assert.AreEqual( 1, GpuChoice.Pick( all, null, secondary: false ).Index, "Primary: the discrete card" );
+		Assert.AreEqual( 0, GpuChoice.Pick( all, null, secondary: true ).Index, "Secondary: the built-in one, not the software renderer" );
+		Assert.AreEqual( 0, GpuChoice.Pick( new[] { Amd, Software }, "" ).Index, "two cards, Primary is the built-in one" );
+		Assert.AreEqual( 2, GpuChoice.Pick( new[] { Amd, Software }, "auto", secondary: true ).Index, "two cards: the other one" );
+		Assert.AreEqual( 0, GpuChoice.Pick( new[] { Amd }, null, secondary: true ).Index, "one card: nothing after it" );
+		Assert.AreEqual( 1, GpuChoice.Pick( all, "gtx", secondary: true ).Index, "a named card wins over the row" );
+		Assert.AreEqual( 2, GpuChoice.Pick( all, "#2", secondary: true ).Index );
+
+		var (index, why, met) = GpuChoice.Pick( all, "voodoo", secondary: true );
+		Assert.AreEqual( 0, index, "an unmet setting takes the row's pick" );
+		Assert.IsFalse( met );
+		StringAssert.Contains( why, "matches no device name" );
+		StringAssert.Contains( why, "Secondary" );
+
+		CollectionAssert.AreEqual( new[] { 1, 0, 2 }, GpuChoice.Ranked( all ).Select( d => d.Index ).ToList() );
+		Assert.IsTrue( GpuChoice.Names( "gtx" ) );
+		Assert.IsTrue( GpuChoice.Names( "#1" ) );
+		Assert.IsFalse( GpuChoice.Names( " AUTO " ) );
+		Assert.IsFalse( GpuChoice.Names( null ) );
+		Assert.IsFalse( GpuChoice.Names( "  " ) );
+	}
+
+	/// <summary>
+	/// <b>The Video Card row</b> (Q983, 0x004a361c): a click takes Secondary back to Primary always and Primary to Secondary only
+	/// with more than one card; the row reads the saved choice where it can be had and otherwise the card drawn on.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> a click that ignores the count, one that cannot go back, a row that reads a saved Secondary
+	/// with one card, or that ignores a named card, fails a step.</remarks>
+	[TestMethod]
+	public void TheVideoCardRowClicksAndReadsAsTheOriginalsDoes()
+	{
+		Assert.IsTrue( GpuChoice.Clicked( false, 2 ), "Primary to Secondary where there is another card" );
+		Assert.IsTrue( GpuChoice.Clicked( false, 4 ) );
+		Assert.IsFalse( GpuChoice.Clicked( false, 1 ), "with one card there is no Secondary" );
+		Assert.IsFalse( GpuChoice.Clicked( false, 0 ), "with none listed neither" );
+		Assert.IsFalse( GpuChoice.Clicked( true, 2 ), "Secondary back to Primary" );
+		Assert.IsFalse( GpuChoice.Clicked( true, 1 ), "back to Primary even with one card, as a Secondary saved elsewhere is cleared" );
+
+		Assert.IsTrue( GpuChoice.Shows( true, 2, false, true ), "the saved choice, two cards" );
+		Assert.IsFalse( GpuChoice.Shows( false, 2, false, false ), "the saved choice, two cards, whatever is drawn on until the next start" );
+		Assert.IsFalse( GpuChoice.Shows( true, 1, false, true ), "a saved Secondary with one card reads Primary" );
+		Assert.IsFalse( GpuChoice.Shows( true, 0, false, true ), "none listed reads Primary" );
+		Assert.IsTrue( GpuChoice.Shows( false, 2, true, false ), "a named card that is not the preferred one reads Secondary" );
+		Assert.IsFalse( GpuChoice.Shows( true, 2, true, true ), "a named card that is the preferred one reads Primary" );
+	}
+
+	/// <summary>
+	/// <b>A choice that cannot be used is taken back</b> (Q980): the loader variables the choice left set are removed and
+	/// the start goes on. A variable the choice did not set is not touched.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> a Withdraw that removes nothing, or one that removes a variable of the person's, fails a step.</remarks>
+	[TestMethod]
+	public void AChoiceThatCannotBeUsedIsTakenBack()
+	{
+		const string theirs = "OPENTPW_TEST_THEIRS";
+		const string ours = "OPENTPW_TEST_OURS";
+
+		try
+		{
+			Log = new();
+			Environment.SetEnvironmentVariable( theirs, "keep" );
+			GpuSelector.Set( ours, "x" );
+			GpuSelector.Track( ours );
+			Assert.IsTrue( GpuSelector.IsSet );
+			Assert.AreEqual( "x", GpuSelector.Get( ours ), "set where the loader looks" );
+
+			GpuSelector.Withdraw( new InvalidOperationException( "cannot present" ) );
+
+			Assert.IsFalse( GpuSelector.IsSet );
+			Assert.IsNull( GpuSelector.Get( ours ), "taken back where the loader looks" );
+			Assert.AreEqual( "keep", Environment.GetEnvironmentVariable( theirs ) );
+		}
+		finally
+		{
+			Environment.SetEnvironmentVariable( theirs, null );
+			GpuSelector.Set( ours, null );
+		}
+	}
+
+	/// <summary>
 	/// <b>The log's words and the loader settings for a device</b>: the list line, and Mesa's select by the hex
 	/// vendor and device ids (four digits, as Mesa reads them), then the driver filter for the vendors it knows.
 	/// </summary>
@@ -101,6 +193,16 @@ public class GpuChoiceTests
 		StringAssert.Contains( levers[1].Value, "nvidia_icd" );
 		StringAssert.Contains( levers[1].Value, "nv-vk" );
 		Assert.AreEqual( 2, levers.Count );
+
+		var amd = GpuChoice.Levers( Amd );
+		Assert.AreEqual( ("MESA_VK_DEVICE_SELECT", "1002:1638"), amd[0] );
+		foreach ( var part in new[] { "radeon_icd", "amd_icd", "amd-vulkan", "amdvlk" } )
+			StringAssert.Contains( amd[1].Value, $"*{part}*", "AMD driver row" );
+
+		var intel = GpuChoice.Levers( new GpuInfo( 0, "Intel(R) UHD Graphics", 0x8086, 0x9a49, GpuKind.Integrated ) );
+		Assert.AreEqual( "8086:9a49", intel[0].Value );
+		foreach ( var part in new[] { "intel_icd", "igvk" } )
+			StringAssert.Contains( intel[1].Value, $"*{part}*", "Intel driver row" );
 
 		Assert.AreEqual( "10005:0000", GpuChoice.Levers( Software )[0].Value );
 		Assert.AreEqual( "*lvp_icd*", GpuChoice.Levers( Software )[1].Value );

@@ -68,8 +68,9 @@ namespace OpenTPW.UI;
 /// Config.tcf and written back to it, and still caps graphics quality, so nothing about the original's
 /// file changes.
 /// <para>
-/// <b>Still dead, by choice:</b> the video card does nothing, and with one card counted it never
-/// leaves Primary, as on a machine with one (0x004a3480). Audio quality, Tutorial, Confirmations,
+/// <b>The video card row works as the original's does</b> (Q983, 0x004a361c): Primary or Secondary, Secondary offered only
+/// where more than one card is listed, kept in Config.tcf's video card field, and applied at the next start, as the card
+/// is chosen before the window exists (see <see cref="SwitchVideoCard"/>). Audio quality, Tutorial, Confirmations,
 /// Rotation and Scroll are kept, but nothing reads them yet - they belong to the sound library's set-up
 /// and to parks. RMB cancel is read by the park's quick right click (<c>Level.QuickRightClick</c>) and by first person's
 /// right click (<c>ParkViewfinder.RightClicked</c>).
@@ -321,6 +322,9 @@ internal sealed class OptionsScreen : UiWindow
 			Display.Apply( window, Options.DisplayMode, Options.FullScreenSize );
 		}
 
+		if ( Options.SecondaryVideoCard != _before.SecondaryVideoCard )
+			Log.Info( $"Options: the video card is now {(Options.SecondaryVideoCard ? "Secondary" : "Primary")}, drawn on from the next start" );
+
 		Log.Info( "Options: kept" );
 		Stack.Close( this );
 	}
@@ -349,13 +353,18 @@ internal sealed class OptionsScreen : UiWindow
 	}
 
 	/// <summary>
-	/// The video card (0x1d4d3). The original switches to a secondary card where there is one; OpenTPW draws on
-	/// whichever card the system gives it, so there is never a secondary, and the button only takes back one a
-	/// saved config asked for (the row is dead, <c>docs/exe/ui.md</c>).
+	/// The video card (0x1d4d3), as 0x004a361c does it: from Secondary back to Primary always, from Primary to Secondary only
+	/// where the loader lists more than one card (<see cref="GpuSelector.Count"/>). The choice is kept with the tick
+	/// (Config.tcf's video card field) and takes effect <b>at the next start</b>: the card is chosen before the window exists
+	/// (<see cref="GpuSelector"/>), where the original applies it as its window is made (0x0044e1eb). A card named by
+	/// opentpw.cfg's <c>gpu</c> line wins over the row, which then only says what is drawn on.
 	/// </summary>
 	private void SwitchVideoCard()
 	{
-		Options.SecondaryVideoCard = false;
+		if ( GpuSelector.Exact )
+			Log.Info( "Options: the video card is chosen by opentpw.cfg's \"gpu\" line, which wins over this row" );
+		else
+			Options.SecondaryVideoCard = GpuChoice.Clicked( Options.SecondaryVideoCard, GpuSelector.Count );
 
 		ShowVideoCard();
 	}
@@ -467,9 +476,18 @@ internal sealed class OptionsScreen : UiWindow
 		};
 	}
 
-	/// <summary>Always the primary card, a saved secondary included: there is no secondary to draw on (<see cref="SwitchVideoCard"/>).</summary>
+	/// <summary>
+	/// Primary or Secondary (0x004a3650), truthfully: the choice kept in the options where it can be had, otherwise the card
+	/// that is drawn on. That is the case with one card listed (a Secondary saved on another PC reads Primary) and with a card
+	/// named in opentpw.cfg (<see cref="GpuSelector.Exact"/>), where the row says whether the card in use is the preferred one.
+	/// A change just made reads as made and is drawn at the next start (<see cref="SwitchVideoCard"/>).
+	/// </summary>
 	private void ShowVideoCard()
-		=> _videoCard.Text = Line( UIStrings.Videocard, Localization.Get( UIStrings.Primary ) );
+	{
+		var secondary = GpuChoice.Shows( Options.SecondaryVideoCard, GpuSelector.Count, GpuSelector.Exact, GpuSelector.DrawsOnPrimary );
+
+		_videoCard.Text = Line( UIStrings.Videocard, Localization.Get( secondary ? UIStrings.Secondary : UIStrings.Primary ) );
+	}
 
 	/// <summary>
 	/// The resolution line. It is only a choice in full screen, where the display is given a mode of

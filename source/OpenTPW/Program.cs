@@ -20,18 +20,17 @@ public class Program
 		{
 			Game.Run( args );
 		}
-		catch ( Exception e ) when ( !StartFailure.Started )
+		catch ( Exception e ) when ( StartFailure.IsFailedStart( e ) )
 		{
-			// Before the main loop, nobody is watching a terminal: log it and say it in a box (Q978). The
-			// stack goes to the log; the box has the message. An exception once the loop runs is not caught
-			// here and is reported as it always was.
-			Console.Error.WriteLine( $"Unhandled exception: {e}" );
+			// Before the main loop, nobody is watching a terminal: the filter has logged the exception and its stack
+			// before anything unwound, and the box has the message of the first one. An exception once the loop runs is not
+			// caught here and is reported as it always was.
 
 			// An exception ahead of the game folder's being found leaves no log yet: keep it where a failed look does.
 			if ( ConsoleLog.Path.Length == 0 )
 				ConsoleLog.OpenWithoutGame();
 
-			StartFailure.Show( StartFailure.Compose( e, ConsoleLog.Path ) );
+			StartFailure.Show( StartFailure.Compose( StartFailure.First ?? e, ConsoleLog.Path ) );
 
 			Environment.ExitCode = 1;
 		}

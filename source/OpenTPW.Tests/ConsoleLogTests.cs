@@ -20,8 +20,17 @@ public class ConsoleLogTests
 		return reader.ReadToEnd();
 	}
 
+	/// <summary>The lines of a file as <c>File.ReadAllLines</c> gives them (a blank line at the end stays one, an empty file has none), read while the sink still holds it open.</summary>
 	private static string[] ReadLines( string path )
-		=> Read( path ).ReplaceLineEndings( "\n" ).TrimEnd( '\n' ).Split( '\n' );
+	{
+		using var reader = new StringReader( Read( path ) );
+		var lines = new System.Collections.Generic.List<string>();
+
+		while ( reader.ReadLine() is { } line )
+			lines.Add( line );
+
+		return lines.ToArray();
+	}
 
 	[TestMethod]
 	public void TheFirstLaunchWritesConsoleLogWithTheHeaderThenWhatWasHeld()

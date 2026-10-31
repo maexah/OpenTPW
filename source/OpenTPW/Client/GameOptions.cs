@@ -79,10 +79,11 @@ internal sealed class GameOptions
 	public bool Faithful { get; set; }
 
 	/// <summary>
-	/// Which Vulkan graphics card the game draws with (Q980): <c>auto</c>, the default, takes a discrete card over a built-in
-	/// one; <c>#N</c> the Nth device the log lists; any other text the first device whose name holds it
-	/// (<see cref="GpuChoice.Pick"/>). <b>OpenTPW's own</b>, a deviation from the original, whose video-card row is dead
-	/// (<see cref="SecondaryVideoCard"/>). opentpw.cfg's <c>gpu</c> line sets it, read once as the game starts
+	/// Which Vulkan graphics card the game draws with (Q980): <c>auto</c>, the default, takes the card the Options screen's
+	/// Video Card row says (<see cref="SecondaryVideoCard"/>: a discrete card over a built-in one, or the next one); <c>#N</c>
+	/// the Nth device the log lists; any other text the first device whose name holds it (<see cref="GpuChoice.Pick"/>).
+	/// <b>OpenTPW's own</b>, a deviation from the original, whose row is only Primary or Secondary: this line names a card
+	/// exactly and wins over the row. opentpw.cfg's <c>gpu</c> line sets it, read once as the game starts
 	/// (<see cref="SaveFolder.LoadDisplay"/>) and used by <see cref="GpuSelector"/> before the device is made.
 	/// </summary>
 	public string Gpu { get; set; } = GpuChoice.Auto;
@@ -90,7 +91,11 @@ internal sealed class GameOptions
 	/// <summary>+0x08: low, medium or high, as 0, 1 or 2.</summary>
 	public int GraphicsQuality { get; set; } = 1;
 
-	/// <summary>+0x0c: the secondary video card rather than the primary. <b>Dead</b> for now, by choice.</summary>
+	/// <summary>
+	/// +0x0c: the secondary video card rather than the primary, the Options screen's Video Card row (Q983). Read as the game
+	/// starts, before the window is made, and applied then (<see cref="GpuSelector.Choose"/>), as the original applies it
+	/// as its window is made (0x0044e1eb).
+	/// </summary>
 	public bool SecondaryVideoCard { get; set; }
 
 	/// <summary>+0x10 and +0x14: whether sound effects are on, and how loud out of 100.</summary>

@@ -11,8 +11,8 @@ namespace OpenTPW;
 /// and where the log is. The log keeps the same lines whether or not the box could be shown.
 /// </para>
 /// <para>
-/// SDL's message box may be called before SDL is initialised, and falls back to the terminal's own when there is no
-/// display; a machine with neither shows nothing, and the log's line says so. <c>OPENTPW_NO_MESSAGE_BOX</c> set to
+/// SDL's message box may be called before SDL is initialised. With no display it answers an error and shows nothing
+/// (nothing reaches the terminal either), and the log's line says so. <c>OPENTPW_NO_MESSAGE_BOX</c> set to
 /// anything keeps the box off, which the tests and harnesses that start the program on purpose without a game set.
 /// </para>
 /// </summary>
@@ -28,6 +28,28 @@ internal static class StartFailure
 
 	/// <summary>Whether the main loop has begun: an exception after this is not a failed start.</summary>
 	public static bool Started { get; set; }
+
+	/// <summary>The first exception <see cref="IsFailedStart"/> saw: the cause, which a later one thrown while unwinding must not replace.</summary>
+	public static Exception? First { get; private set; }
+
+	/// <summary>Forgets <see cref="First"/>: a test that stands in for a start.</summary>
+	internal static void ResetForTest() => First = null;
+
+	/// <summary>
+	/// The filter of <c>Program.Main</c>'s catch, run before anything unwinds: answers whether <paramref name="e"/> ended the
+	/// start (the loop has not begun), and if so logs it with its stack there and then, so the log has the cause ahead of
+	/// anything unwinding says ("Loaded ..." lines, a later exception) as it did before the catch existed.
+	/// </summary>
+	public static bool IsFailedStart( Exception e )
+	{
+		if ( Started )
+			return false;
+
+		Console.Error.WriteLine( $"Unhandled exception: {e}" );
+		First ??= e;
+
+		return true;
+	}
 
 	/// <summary>The message: the head, the reason lines as the log has them, and the log's place.</summary>
 	public static string Compose( string head, IEnumerable<string> reasons, string logPath )
@@ -58,7 +80,7 @@ internal static class StartFailure
 	{
 		if ( Environment.GetEnvironmentVariable( SuppressVariable ) is { Length: > 0 } )
 		{
-			Log.Info( $"Start failure: no message box, {SuppressVariable} is set" );
+			Log.Info( $"Start failure: no message box, {SuppressVariable} is set: {message.ReplaceLineEndings( " | " )}" );
 			return false;
 		}
 

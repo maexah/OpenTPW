@@ -356,8 +356,9 @@ public partial class Renderer
 	private void CreateGraphicsDevice()
 	{
 		// NeoVeldrid takes the first device the Vulkan loader lists, so the loader is asked first to list the chosen one
-		// first - a discrete card by default, opentpw.cfg's "gpu" line to say otherwise (GpuSelector, Q980).
-		GpuSelector.Choose( GameOptions.Current.Gpu );
+		// first - a discrete card by default, the Options screen's Video Card row (Config.tcf) for the next one, and
+		// opentpw.cfg's "gpu" line to say a card exactly (GpuSelector, Q980, Q983).
+		GpuSelector.Choose( GameOptions.Current.Gpu, GameOptions.Current.SecondaryVideoCard );
 
 		var options = new GraphicsDeviceOptions()
 		{
@@ -388,7 +389,16 @@ public partial class Renderer
 			options.SyncToVerticalBlank,
 			options.SwapchainSrgbFormat );
 
-		Device = GraphicsDevice.CreateVulkan( options, swapchain );
+		try
+		{
+			Device = GraphicsDevice.CreateVulkan( options, swapchain );
+		}
+		catch ( Exception e ) when ( GpuSelector.IsSet )
+		{
+			// The card the loader was asked to list first could not present or open: the loader's own first device, once.
+			GpuSelector.Withdraw( e );
+			Device = GraphicsDevice.CreateVulkan( options, swapchain );
+		}
 	}
 
 	/// <summary>The size the window has become, until the render targets have been built for it.</summary>

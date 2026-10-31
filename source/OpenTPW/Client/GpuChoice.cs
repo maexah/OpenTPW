@@ -14,9 +14,11 @@ internal enum GpuKind
 internal readonly record struct GpuInfo( int Index, string Name, uint VendorId, uint DeviceId, GpuKind Kind );
 
 /// <summary>
-/// Which graphics card the game draws with, decided from what the Vulkan loader lists. <b>OpenTPW's own, a deviation
-/// from the original</b>, which asks DirectDraw for the primary card and has no list (its video-card row is dead,
-/// <c>docs/exe/ui.md</c>).
+/// Which graphics card the game draws with, decided from what the Vulkan loader lists. The original lists up to four
+/// DirectDraw drivers and its Options row switches between the primary one and a secondary one (0x00563574,
+/// 0x004a361c; <c>docs/exe/ui.md</c>, "Video card"); that row is Primary and Secondary here too (Q983), over the Vulkan
+/// devices: <b>Primary is the card <see cref="Pick"/> prefers, Secondary the next one after it</b>. Choosing by the
+/// <c>gpu</c> line of opentpw.cfg, or by name, is OpenTPW's own, a deviation from the original.
 ///
 /// <para>
 /// NeoVeldrid takes the first device the loader lists and offers no way to name another (<c>VkGraphicsDevice.CreatePhysicalDevice</c>:
@@ -42,9 +44,10 @@ internal static class GpuChoice
 	/// best kind (a discrete card, then a built-in one, then anything else, a software renderer last; the loader's own
 	/// order breaks a tie), <c>#N</c> for the Nth device in the list, or any other text for the first device whose name
 	/// holds it, ignoring case. A setting nothing matches falls back to the automatic pick, the reason says so and
-	/// <c>Met</c> is false (the caller warns).
+	/// <c>Met</c> is false (the caller warns). <paramref name="secondary"/> is the Options row's Secondary: the automatic
+	/// pick takes the card after the best one (the best one, where there is no other); a setting that is met wins over it.
 	/// </summary>
-	public static (int Index, string Why, bool Met) Pick( IReadOnlyList<GpuInfo> devices, string? setting )
+	public static (int Index, string Why, bool Met) Pick( IReadOnlyList<GpuInfo> devices, string? setting, bool secondary = false )
 	{
 		if ( devices.Count == 0 )
 			throw new ArgumentException( "no devices to choose from", nameof( devices ) );
@@ -73,17 +76,39 @@ internal static class GpuChoice
 			}
 		}
 
-		var best = devices[0];
+		var ranked = Ranked( devices );
 
-		foreach ( var device in devices )
-		{
-			if ( Rank( device.Kind ) < Rank( best.Kind ) )
-				best = device;
-		}
+		if ( secondary && ranked.Count > 1 )
+			return (ranked[1].Index, fallback + "the Options row says Secondary: the card after the preferred one", fallback.Length == 0);
 
+		var best = ranked[0];
 		var kind = best.Kind == GpuKind.Discrete ? "a discrete card is preferred" : $"no discrete card, so the first {KindName( best.Kind )} one";
 		return (best.Index, fallback + kind, fallback.Length == 0);
 	}
+
+	/// <summary>
+	/// The devices best first (<see cref="Rank"/>, the loader's order within a kind): the first is Primary, the second
+	/// Secondary, as the original's list has them (0x004a361c).
+	/// </summary>
+	public static IReadOnlyList<GpuInfo> Ranked( IReadOnlyList<GpuInfo> devices )
+		=> devices.OrderBy( device => Rank( device.Kind ) ).ToList();
+
+	/// <summary>
+	/// The Video Card row's click (0x004a361c): Secondary goes back to Primary always, Primary goes to Secondary only where
+	/// the loader lists more than one card (<paramref name="count"/>).
+	/// </summary>
+	public static bool Clicked( bool secondary, int count ) => !secondary && count > 1;
+
+	/// <summary>
+	/// Whether the row reads Secondary (0x004a3650), truthfully: the saved choice where it can be had, otherwise the card
+	/// drawn on (<paramref name="drawsOnPrimary"/>), which is the case with one card listed and with a card named by the
+	/// <c>gpu</c> line (<paramref name="exact"/>).
+	/// </summary>
+	public static bool Shows( bool secondary, int count, bool exact, bool drawsOnPrimary ) => count > 1 && !exact ? secondary : !drawsOnPrimary;
+
+	/// <summary>Whether <paramref name="setting"/> names a card (a name or <c>#N</c>) rather than leaving it to the game.</summary>
+	public static bool Names( string? setting )
+		=> !string.IsNullOrWhiteSpace( setting ) && !setting.Trim().Equals( Auto, StringComparison.OrdinalIgnoreCase );
 
 	/// <summary>Lower is better: a discrete card, a built-in one, then the rest, a software renderer last.</summary>
 	private static int Rank( GpuKind kind ) => kind switch
@@ -131,6 +156,9 @@ internal static class GpuChoice
 	/// file names match, so the card's driver is the one left. The names are the vendors' usual ones and not read from
 	/// any machine here but this Linux one's; where they miss, the check says so.</item>
 	/// </list>
+	/// <b>Two cards of one maker cannot be told apart by either lever on Windows</b>: the loader's filter works per manifest
+	/// file, so an AMD built-in GPU and a Radeon, or an Intel built-in GPU and an Arc, share one and both are kept in the
+	/// loader's own order. Choosing the second of them ends in the warning and the loader's first device (Q904).
 	/// </summary>
 	public static IReadOnlyList<(string Name, string Value)> Levers( GpuInfo device )
 	{
