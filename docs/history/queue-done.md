@@ -11388,6 +11388,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   **Done (2026-10-25, with Q643):** they are the gates' eight flags, decoded by Q491 and built by Q493: their poles stand
   at cells (41,3) to (55,5), either side of `BusStopA` (42,5) and `BusStopB` (53,5), which pixels at the two glass
   shelters of camera B's frame pick (`q643/ours/runF2`, `T0a.png`).
+- [x] **Q22. Riders sit still on the Belly Bounce.** Folded into Q511 at Alexah's word (2026-10-31): the same rider, and Q511 has the current decode. Seat positions are read once from the model's rest
+  pose (the `LobbyModel` constructor) and never from the animated pose. A riding peep's sprite is `None`
+  (`Peep.AnimationFor`). Decode: which frame a rider shows, and how the original re-resolves the seat
+  node each frame (`ride-operation.md`, "Where a rider is drawn", and `FUN_005580a0` under "The WALK family").
+  Then build both. Q175 re-read the lookup by id and flag (`audio.md`, "Node lookup is by id AND a capability flag")
+  and decoded where a node's position comes from (the posed matrix, refreshed on screen; `ride-operation.md`, "How
+  long a leg lasts, and where its ends are"), and `FUN_005580a0`'s interpolation; which frame a rider shows is still
+  open. The engine finds a bounce rider's node by id in `0x800` ("Where a rider is drawn"); `ModelFile.FindNode` is
+  that lookup and `RideNodes` the stored positions at rest (Q175b), not the animated pose a rider needs. A walk's riders
+  are placed by `FUN_005580a0` from the posed nodes since Q585 (`ride-operation.md`, "Where a walk's rider is drawn").
 
 ## E. Large
 

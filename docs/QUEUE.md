@@ -100,6 +100,7 @@ Q247 (the Load Park list's scrollbar) first; then Q820 and the rest in the order
   park's music and bed the whole time plus the nearest island's one-shots (not all four parks placed at their islands), and the
   original's camera box (50 to 100 high) and turning, so no fast whips on a close pass. Take the deviation comments out where the
   code returns to the original. Confirm against the original's film and mix.
+  - **Note (play test 2026-10-31):** still: the island's ambient sound clips or drops out at the moment a park is chosen. The log shows the choice from the attract state starting no theme and no bed (`Lobby audio: Jungle - theme '-', bed '-'`, console.log line 195) while the other three islands fade; check that hand-over here too. Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
 - [ ] **Q770. The island lobby plays no global lobby sound 2 or 3; ours loops effect 3 as a bed.** From the fork watch
   2026-10-28 (verify-hz-ui-hud M1, L2; `audio.md`, "The lobby was entirely non-positional"). Global lobby effects 2 and 3 are
   started by `Lobby_Start` (`0x005dcfe0`, at `0x005dd0eb` and `0x005dd0fe`), which is the globe page's start; the globe's
@@ -503,6 +504,7 @@ filed the items that cite it.
   established, which the disassembly does not bear out. Build the filter once for both, and for `HeadingForExit`'s
   change of mind when it is built. Confirm: the Belly Bounce full, the music level and the gauge read before and
   after, predicted first; a screenshot of the gauge.
+  - **Note (play test 2026-10-31):** the gauge moves the moment a guest is dropped off at the stop, before admission (`ParkGadget.ShowHappiness` averages every peep through `ParkPeople.AverageHappiness`; `GuestsInsideHappiness` is the filtered one). Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
 - [ ] **Q150. Scripts and the thing sweep take a frame's ticks in two loops, where the original takes both per tick.**
   Found by the 2026-09-26 staleness audit. The original's park loop runs the scripts (`0x0054f56b`) and the thing
   sweep (`0x0054f7bb`) inside one loop over the frame's ticks. `ParkRides` and `ParkPeople` each loop over
@@ -652,6 +654,7 @@ filed the items that cite it.
     object window's preview, (437,162) 360 by 363 (QUEUE:408-411); the object window's preview is built (Q188) but
     `ParkObjectPreview` wants a placed thing (QUEUE:409). Q450 (1) is the buy stats panel (QUEUE:2398-2402): settle
     there which of the two owns the buy screen's picture.
+  - **Note (play test 2026-10-31):** the buy screens still show no model in the description panel. Nothing counts it. Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
 - [ ] **Q159. `SdtArchive.GetFile` matches a truncated name the wrong way round.** Found by the 2026-09-26 staleness
   audit. It tests `x.Name.StartsWith( name )`, the stored name against the one asked for. A `.sdt` name field is 16
   bytes and a longer name is cut to fit, so asking for "TP SCREECH 11.mp2", stored as "TP SCREECH 11.m", never
@@ -910,7 +913,6 @@ filed the items that cite it.
   path in the original's visitors runs (the second and tenth rows) before looking for anything else.
   From Q375 (`hud.md`, "The miscellaneous tab: a row an object, and each tab's sort"): the pick is built for the
   four all-items lists too (their handler has no `0x401` arm); the all-staff and visitors lists still count it.
-
 
 - [ ] **Q680. How often a fresh park's boundary laying draws the generator (from Q656), decode first.** `FreshParkBoundary`
   chooses each anchor's piece once, in the walk's order, which gives the original's pattern of straights' variants
@@ -1403,6 +1405,7 @@ filed the items that cite it.
   `0x005805ed`, `0x005818c5` and `0x00581e48` while `DAT_008bd550 & 0x40`, which comes from `DAT_00785884`, very
   likely `GraphicalOptions.ANIMATINGTEXTURES` (inferred from the order in `FUN_0044d8f0`: read it first). Confirm: the
   queue fire burning beside the original's.
+  - **Note (play test 2026-10-31):** Aztec Mayhem (`tvsim`) shows its screen's picture while idle; Alexah remembers a black screen until a go starts. Settle which texture frame the original shows at rest and while running. Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
 
 - [ ] **Q401. Self-lit materials.** From the fork review 2, 2026-10-16 (`verify-formats.md` M3). A material whose word
   `+0xC` carries `0x1` (tested at `0x00580c51`) gives every vertex the colour mask itself, white in play, in place of
@@ -1472,6 +1475,7 @@ filed the items that cite it.
     `0x0074f758`: not read.
   - **Note (play test 2026-10-21, note 18):** the hire screen shows no staff picture. Figure made at `0x0049bb4a` to
     `0x0049bb64`, sprite script `0x0074f758`, frames 0 to 7 (QUEUE:1170-1173).
+  - **Note (play test 2026-10-31):** the same missing figure is reported on the placing cursor (Q40); settle whether this box and Q31b's `STAFF_WINDOW_PREVIEW` share one decode. Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
 - [ ] **Q404. A park six months in the red ends.** From the fork review 2, 2026-10-16
   (`verify-economy-guests-paths.md` L4, M2). Counted, `BANK_PARK_ENDS_IN_THE_RED`. What the end does is
   `ride-operation.md`, "The end of the park": world state 4, the end screen, `VAR_BREAKSTAT` 1 on every ride guests
@@ -1665,6 +1669,7 @@ filed the items that cite it.
   content reaches it. Not read: whether a4 is a heading sector, and `[ [+0x1c] + 0x1c ]` (template 3 and `visitor mod 7`).
   Read those first. Confirm in both games: a rider's height over a few seconds on the same ride, predicted from the formula,
   beside the original (`record.sh`); a screenshot of each.
+  - **Note (play test 2026-10-31):** Belly Bounce riders stand still and never jump (`RIDER_BOUNCE` reached). Q22, an older copy of this item, is folded into it (Alexah, 2026-10-31); its notes on the posed node and Q585 are in its finished entry. Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
 - [ ] **Q512. The ride window's Buy Upgrades list.** From the fork watch, 2026-10-18 (`verify-world-b.md` L1,
   `verify-ui-hud.md` U3). The ride window's upgrades button (`RIDE_WINDOW_UPGRADES`, counted) opens the original's list
   (stream `0x00755750`; `FUN_004ae560`, rows `FUN_004ae140`, choice `FUN_004ae430` and `FUN_004af480`): the add-on rows
@@ -1676,6 +1681,7 @@ filed the items that cite it.
   Instant Action. Neighbours: Q272 (a mechanic and a waiting upgrade), Q452 (Buy Rides lists a researched upgrade), Q402 (the
   sound). Confirm in Full Simulation: a ride at level 0 and at level 2, the list's rows and prices, an order and its cancel,
   beside the original; a screenshot of each.
+  - **Note (play test 2026-10-31):** the upgrade screen is missed (`RIDE_WINDOW_UPGRADES` reached). The log also says `Could not load texture 'ui/textures/b_callmechg.wct'` and `'b_upgradeg.wct'` (the greyed buttons, lines 327-328); check whether those exist in the game's data. Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
 - [ ] **Q513. The window a click on an add-on opens.** From the fork watch, 2026-10-18 (`verify-world-b.md` L2 and L3,
   `verify-world-a.md` M5). Lost Kingdom's add-ons (1500 to 1502, `AddOn.UpgradeType` 1) are the items; their snap, put-down
   and `+0x30` (`mUpgradeParent`) are Q780's, built. A click on the add-on opens its ride's window when the word is non-zero
@@ -1870,6 +1876,7 @@ filed the items that cite it.
   Confirm: a fresh park's first seconds in both games, the record and a frame.
   - **Note (play test 2026-10-21, note 3):** the advisor does not say his opening lines in a fresh park. Nothing here
     posts message 0 on tick 1 (`map.md`; Q543 is decode first and unstarted).
+  - **Note (play test 2026-10-31):** the advisor still says no opening lines in a fresh Full Simulation park: polls from tick 1 log `result=no-score`, row 281 plays at tick 612. Nothing counts the missing welcome; add the count with the fix. Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
 - [ ] **Q547. The cursor Up and Down keys step an object window.** From Q31. The base window proc `0x0048d200` takes key
   down `0x2600` and `0x2800` to `0x0048cbe0` and `0x0048caf0` (`hud.md`, "The shop, sideshow and ride windows"), which
   apply and step to the next or the previous object of the class; no object window here hears a key. Build it for the
@@ -2313,6 +2320,81 @@ filed the items that cite it.
   (the pool may reuse the space); the second park loads in about 4.8 to 5.0 s against 3.1 s. Add `memmap.drm` vram on the desk if
   wanted. Decide the keep or release in `docs/DECISIONS.md` from the figures (about 1.75 s a re-entry against the saving). (Filed by the Sentinel from the run 15 review of Q832, VERIFY-2.)
 
+**Filed from Alexah's play test of 2026-10-30/31 (Full Simulation, Lost Kingdom), at the end of the bugs at their word.**
+Their notes, the console.log and the screenshots are in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`; each report was checked against the code, the log and
+the docs before filing. The reports already queued got a note in their own item (Q27, Q31b, Q40, Q55, Q148, Q158, Q400,
+Q408, Q419, Q511, Q512, Q543, Q648, Q950). The research advisor's "built all of the available features" line was checked
+and matches the decode (row 80, `advisor-park.md`); not filed.
+- [ ] **Q960. The sideshow's window.** Split from Q31b at Alexah's word (2026-10-31). A click on a sideshow counts
+  `SIDESHOW_WINDOW` and opens nothing (`Level.cs`, the object click's UI type 2). Q31b's notes have the decoded figures
+  and the inset bars (`hud.md`, "The shop, sideshow and ride windows"). Confirm: the Strength Bird's window beside the
+  original's, a screenshot of each.
+- [ ] **Q961. The feature window (the Security Camera's).** Split from Q31b at Alexah's word (2026-10-31). A click on a
+  feature counts `FEATURE_WINDOW` and opens nothing (UI type 3). Decode `FUN_00499eb0` and its handler `0x00499bb0`
+  (`park-engine.md`, the nine object windows) first, and whether it has the camera's view Alexah wants to ride
+  (`FUN_0042a440`'s views, Q246). Confirm beside the original, a screenshot of each.
+- [ ] **Q962. Joining a queue to a path plays no click.** Counted, never filed: `QUEUE_TOOL_LINK_SOUND_0x8B`
+  (`ParkPathBuilding.cs`, the join) and `PATH_LINK_SOUND_0x8B` (`ParkPathNeighbours.cs`, a queue retiled where it is
+  joined). The original plays cat_ui `0x8b` at `0x00527587` (`park-engine.md`, the queue tool's finishing link). Check
+  at a breakpoint that both sites play in the original (Q671's method), then build. Confirm by the disk driver's mix.
+- [ ] **Q963. A queue left unjoined says nothing.** Counted, never filed: `QUEUE_MODE_ADVISOR_MESSAGE_0x151`
+  (`ParkPathBuilding.cs`, the anchor click and a run ending on its own queue). The original's op `0x81` ends the tool
+  through `FUN_0052f200( 0, 0 )` and posts advisor message `0x151` when the queue is not joined (`park-engine.md`).
+  Likely global sample 623, "you didn't connect the line to a path..." (inferred, not read): read message `0x151`'s
+  record and how it is withdrawn (`hud.md`, the mode setter) first.
+- [ ] **Q964. Does an unjoined queue pulse red outside the queue tool? Check the original first.** Alexah remembers it;
+  no `docs/exe/` page says so. The track's open end pulses (`Model_PulseOff`, `park.md`; Q767). Film an unjoined queue
+  in the original with no tool held. If it pulses, find the producer (likely through `FUN_004de4a0`, the back of queue
+  joined) and build it; if not, close this item with the film.
+- [ ] **Q965. Turning a carried object with , and . before it is put down.** Alexah is sure the original has it
+  (2026-10-31); `park-engine.md` found no manual rotate on any traced path. `InputButton.TurnBlueprintLeft` and
+  `TurnBlueprintRight` are bound and nothing reads them; every purchase is put down at angle 0. Find the key in the
+  original first (press , and . and their Shift forms while carrying; then the row in the key tables and the angle
+  write, perhaps near `0x00523804`). Build it, counted until then. Confirm: a shop turned twice and put down, beside
+  the original.
+- [ ] **Q966. The Clear Land tool.** The buy screen's Clear Land row counts `BUY_LAND_TOOL` and logs "the land tools
+  are not built"; Delete counts `CLEAR_LAND_TOOL`. Alexah wants the tool built (2026-10-31): it should at least remove
+  paths. Decode mode `0x3a` and its click (`park-engine.md`) for what it removes and what it costs, then build.
+  Backspace over a path still deletes it. Confirm beside the original.
+- [ ] **Q967. Putting a bought object down makes no sound.** Not counted. The original's commit `FUN_00524960` reads
+  `DAT_008186d8` at `0x00524a77`, which gates a sound (`park-engine.md`), and the script loader has a sound zone at
+  `0x00558fda` (`park.md`, not decoded). Name the effect at a breakpoint for a ride, a shop and a feature, then build.
+  Confirm by the disk driver's mix.
+- [ ] **Q968. The ground, paths and queues look blurred and show their cell squares.** VisibleGridLines1.png and
+  VisibleGridlines2.png: faint lines along cell edges, and the ground softer than the walls and models beside it.
+  `GroundTiles` lays every tile side by side in one atlas whose mips average across tile edges, sampled
+  `AnisotropicWrap` (`ParkGround.cs`, `Material.cs`); the original gives each tile its own clamped texture, magnified
+  LINEAR, minified POINT, one mip level (`render-states.md`, "Texture filtering" and "Texture addressing"). Q15 is
+  the wrap half on paths. Measure first: the lines at tile or cell edges, and whether clamping or per-tile mips (or
+  padding) removes them; then the sharpness against the original at the same view (Q618 settled 32-px tiles).
+- [ ] **Q969. The clear colour shows through near the back mountain.** BlueClipping.png: long straight lines of
+  (72, 216, 248), the frame's clear colour, on open ground and on the rock face, away from any plot rim (Q807 and
+  Q808 closed the rims). Find the camera, measure with `lib/clearseam.py`, find which edge opens (ground against the
+  scenery's rock, or a cell's diagonal since Q821), then close it. Confirm: the clear-colour count at that view.
+- [ ] **Q970. A guest on a toilet is drawn in its doorway.** BathroomClipping.png: the person shows through the hut's
+  door while inside. Read what the original does with a toilet's user (Q52's flag `0x20` test hides a rider's sprite,
+  or the toilet's script), then build. Confirm beside the original.
+- [ ] **Q971. A broken-down ride keeps its idle animation. Check the original first.** Alexah remembers a broken look
+  until it is repaired. Ours raises the broken hoardings and closes it (`ParkPeople.BreakDown`, counted
+  `RIDE_BROKEN_DOWN_EVENT`); `ride-operation.md` says only that. Film a broken Belly Bounce in the original; read the
+  scripts' `VAR_BROKEN`, `VAR_BREAKSTAT` and the `LOOPANIM` after a break (`park.md`). Build what differs.
+- [ ] **Q972. Closing a ride with riders and a queue: how fast both empty. Check the original first.** Alexah remembers
+  both emptied at once. Ours follows the decode: one head turned away a turn (`FUN_004e0450`,
+  `ride-operation.md`), riders let off by the script reading `VAR_RIDECLOSED`. Close a full Belly Bounce in both games
+  and count riders and queue after 10 s. If the original empties faster, the decode is incomplete.
+- [ ] **Q973. A fresh Full Simulation park's first guests. Check the original first.** Alexah remembers a decent load
+  dropped at the first stop while the park is still closed. Ours dropped 4 (then 2): `(NewParkBonus 20 + worth 0) x 1.2
+  / PointsPerVisitor 6` (`guest-arrivals.md`; only the stock park's 13 is measured). Read the original's first load
+  and its tick in a fresh Full Simulation park, and which `.sam` block it reads.
+- [ ] **Q974. Choosing a park in the lobby cuts the advisor off and the island sound stutters.** Not counted. The log
+  (line 180-196): a line cut mid-way, a cry (sample 641, `Advisor.StopSpeaking`, as `0x005994e0` does) and a new line
+  in the same second as the island's music changes. Capture both games' mixes at the choice by the disk driver; say
+  whether the original cries out there, and whether the mix clamps (32 voices, the hard clamp in `Audio.cs`). Q950 (1)
+  is the attract sound; do this after it.
+- [ ] **Q975. The lobby's shoreline ripples flicker.** The islands' `Post Ripples01` mesh, a UV scroll drawn in the
+  translucent half, writing depth, unsorted (`LobbyModel.cs`, `Entity.cs`). Film the ripples beside the original's,
+  then compare the draw's depth write and blend with `render-states.md`.
+
 ## B. Docs and comments
 
 - [ ] **Q14. Comment sweep of the cleanup commits.** Replace history-voice comments with what the code does now,
@@ -2475,16 +2557,6 @@ filed the items that cite it.
 
 The decode session writes the finding to `docs/exe/` and stops. The build is the next session.
 
-- [ ] **Q22. Riders sit still on the Belly Bounce.** Seat positions are read once from the model's rest
-  pose (the `LobbyModel` constructor) and never from the animated pose. A riding peep's sprite is `None`
-  (`Peep.AnimationFor`). Decode: which frame a rider shows, and how the original re-resolves the seat
-  node each frame (`ride-operation.md`, "Where a rider is drawn", and `FUN_005580a0` under "The WALK family").
-  Then build both. Q175 re-read the lookup by id and flag (`audio.md`, "Node lookup is by id AND a capability flag")
-  and decoded where a node's position comes from (the posed matrix, refreshed on screen; `ride-operation.md`, "How
-  long a leg lasts, and where its ends are"), and `FUN_005580a0`'s interpolation; which frame a rider shows is still
-  open. The engine finds a bounce rider's node by id in `0x800` ("Where a rider is drawn"); `ModelFile.FindNode` is
-  that lookup and `RideNodes` the stored positions at rest (Q175b), not the animated pose a rider needs. A walk's riders
-  are placed by `FUN_005580a0` from the posed nodes since Q585 (`ride-operation.md`, "Where a walk's rider is drawn").
 - [ ] **Q23. Camera rotation snaps by 45 degrees.** `ParkOrbitCameraMode.Update`, the two rotate keys. The 90-degree
   option exists (`GameOptions.NinetyDegreeRotation`, set on the Options screen and kept in the player file) and the camera does not read it. Decode the original's step
   and its easing (`park-engine.md`, "The park camera", has the saved and required rotation, not the rate). Build what
@@ -2566,6 +2638,7 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   - **Note (play test 2026-10-21, note 4):** Alexah finds the game unplayable without edge scrolling; push to scroll
     does nothing. The original pans only with `[0x0078d910]` clear (`park-engine.md:412`); nothing here reads the option
     (QUEUE:1938-1939).
+  - **Note (play test 2026-10-31):** still broken: about 1,000 `Camera: pan by key` lines in the log and not one from the pointer. Nothing counts the gap; add the count with the fix. Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
 - [ ] **Q28. Renaming parks and rides.** The save carries a name per park (`saves.md`, the `gms.dat` theme record's park name). No rename
   control exists; signs read fixed names (`ParkFixedItems.BuildSign`, `ParkObjects.BuildSign`,
   `LobbyIsland.DisplayNames`). Decode where the original edits the name and what it writes, then build the
@@ -2629,6 +2702,7 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   in their costume under the pointer and puts a red square on a cell the click would refuse; here the
   pointer is plain (`STAFF_CARRY_PREVIEW`). Confirm: carry a candidate over a cell the rule refuses, click,
   still in the hand and the red square photographed; then a path cell, hired.
+  - **Note (play test 2026-10-31):** still no figure at the pointer while placing a hired member (`STAFF_CARRY_PREVIEW` reached). Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
 - [ ] **Q43. The number read as a repeat delay is a priority, and the original throttles nothing.** Found by
   Q9's decode (`docs/exe/audio.md`, "How the engine plays an effect: priority, not a repeat delay").
   `SoundCategoryFile.Effect.RepeatDelay` is the effect record's `+0x0c`, which the original reads only as a voice
@@ -2688,6 +2762,7 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   - **Note (play test 2026-10-21, note 21):** staff sometimes walk in place. Q55's guard put out of a sold rest area is
     one cause (QUEUE:2037-2041); the note names no case, so confirm in the play which others there are (Q281, QUEUE:839,
     is the other known one).
+  - **Note (play test 2026-10-31):** staff still sometimes walk in place; which state they are in was not caught (use the `staff` census). Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
 - [ ] **Q52. A rider on a thing without flag `0x20` is hidden in the original.** Found by Q36's decode. Admission
   tests the object's flag bit `0x20` (`0x0050212b`) and, without it, destroys the rider's sprite (`0x00502147`);
   OpenTPW never hides a rider. Every visitable thing in Lost Kingdom's save carries the bit, so nothing there shows
@@ -2858,6 +2933,7 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
     `SIDESHOW_WINDOW` and `FEATURE_WINDOW` (`source/OpenTPW/World/Level.cs:2732-2733`).
   - **Note (Q636's review, run 9):** the sideshow window's bars `0xa094`, `0xa096`, `0xa099`, `0xa09e`, the toilet window's
     `0x15bbb` and the resting-staff list `0x1e7b` are inset (0, 10) by `FUN_00485e30` in the original: build them so.
+  - **Note (play test 2026-10-31):** clicking a walking member's window shows no figure (`STAFF_WINDOW_PREVIEW` reached). The sideshow window is split out as Q960 and the feature window (the Security Camera) as Q961; this item keeps the rest. Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
 - [ ] **Q681. Light every model by its file's own normals, as the original does (from Q657). Measure first.** The
   original's lighter takes entry *i* of a mesh's `+0x64` table for vertex-order entry *i* (`Light_ModelVertexColours`
   `0x00574660`, the one routine for every model); OpenTPW lights the advisor by it (Q657) and every other model, the
@@ -3111,6 +3187,7 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   max( 12000, ground + 5000 ); patrol corners at ±25000; 30000 near stations; bounds from the park, `FUN_0055ab50`), a
   rider's head ((car `+0xd8` + count) mod car `+0xdc`) + 1, TOUR 9's effects (worn particle 39, broken 40, a repair
   sound `0xbb` and clip 10), the draw `0x0055ce60`. Waits on Q706 and Q709.
+  - **Note (play test 2026-10-31):** Jurassic Tours still does not run (`TOUR at 9/12/15/18 ...` reached). Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
 
 - [ ] **Q409. Full Simulation's loans and challenges.** From the fork review 2, 2026-10-16
   (`verify-economy-guests-paths.md` L1, L5). A loan offer passes when its amount is at most the net worth less what
@@ -3221,6 +3298,7 @@ Back to the advisor in a park; saving a fresh park is Q783, in section A. Also l
 - [ ] **Q648. Halloween World: guests stick at the crosswalk.** Alexah's own play, 2026-10-22: the park otherwise ran.
   Out of scope until Lost Kingdom is whole (`CLAUDE.md`, the goal); kept so it is not lost. Reproduce in `hallow` with a
   `guests` census at the crossing, then find what the walk asks of the crosswalk cells there.
+  - **Note (play test 2026-10-31):** still seen in a short look at Halloween World; not the priority. Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
 
 ## G. The lobby plan's open items
 
