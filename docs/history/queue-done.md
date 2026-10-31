@@ -11336,6 +11336,19 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   names) and try the SimTheme Park folder among the defaults; `README.md`'s "Where OpenTPW looks" and the zip's
   README say the new order. Confirm on Windows: the zip started with no `--game` finds the install; its `save\` must not
   be written by the confirm (copy the install, or read the log's choice and quit at once).
+- [x] **Q850. Q978's message box on Windows (the confirm Q978 could not make on Linux).** Built and seen on Linux only
+  (SDL's X11 box on a private Xvfb). On the Windows PC: a double-click of the build with no game, the box's screenshot
+  (the reason lines, where it looked, how to fix it, the log's place; does the long text fit and wrap), the log's
+  `Start failure: message box shown`; the same with `save\` denied (w3's `UnauthorizedAccessException` at
+  `SaveFolder.LoadConfig`, `Game.cs:66`), the box naming the exception; the Linux zip's apphost the same. If the
+  Windows box looks wrong (a cut line, a missing log path), fix `StartFailure.Compose`.
+  Done 2026-10-31 on the Windows PC at a9c35591 (`tpw-work\q978`): the box on no game, a missing folder and an unreadable `save\`, none on a good start, exit 1, native box, nothing cut. The Linux zip's apphost is Q978's own Linux run; not re-run.
+- [x] **Q901. Q982 on Windows.** The box that tells a save folder cannot be written was confirmed on Linux only (a
+  read-only `save/`). On the Windows PC with `save\` denied (OI)(CI)(WD,AD), on a copy of the install: entering a park
+  (a player with no `restart.INTS`), Alt+S, Save Park, the options tick, Exit To Lobby (the box in the lobby) and Quit
+  Game (the line in its question, and its tick still quits). Screenshot of each box; the path of `console.log` must
+  read well in it (on Linux it wraps at the dot: `...console.` / `log`).
+  Done 2026-10-31 on the Windows PC at 2131dc1e (`tpw-work\q901`): every box as predicted, on a player with no `restart.INTS` too; the writable control shows none; the log's path fits on one line there.
 
 ## B. Docs and comments
 

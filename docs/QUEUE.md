@@ -88,18 +88,6 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   opens a console window (w3: hidden behind the game, on the taskbar). At Alexah's word (2026-10-31): the published
   Windows build opens none (`WinExe` for the release), the Debug build keeps its console for the debug console's stdin.
   Confirm on Windows: a double-click of the zip's exe, screenshot of the desktop and taskbar.
-- [x] **Q850. Q978's message box on Windows (the confirm Q978 could not make on Linux).** Built and seen on Linux only
-  (SDL's X11 box on a private Xvfb). On the Windows PC: a double-click of the build with no game, the box's screenshot
-  (the reason lines, where it looked, how to fix it, the log's place; does the long text fit and wrap), the log's
-  `Start failure: message box shown`; the same with `save\` denied (w3's `UnauthorizedAccessException` at
-  `SaveFolder.LoadConfig`, `Game.cs:66`), the box naming the exception; the Linux zip's apphost the same. If the
-  Windows box looks wrong (a cut line, a missing log path), fix `StartFailure.Compose`.
-  Done 2026-10-31 on the Windows PC at a9c35591 (`tpw-work\q978`): the box on no game, a missing folder and an unreadable `save\`, none on a good start, exit 1, native box, nothing cut. The Linux zip's apphost is Q978's own Linux run; not re-run.
-- [ ] **Q901. Q982 on Windows.** The box that tells a save folder cannot be written was confirmed on Linux only (a
-  read-only `save/`). On the Windows PC with `save\` denied (OI)(CI)(WD,AD), on a copy of the install: entering a park
-  (a player with no `restart.INTS`), Alt+S, Save Park, the options tick, Exit To Lobby (the box in the lobby) and Quit
-  Game (the line in its question, and its tick still quits). Screenshot of each box; the path of `console.log` must
-  read well in it (on Linux it wraps at the dot: `...console.` / `log`).
 - [ ] **Q902. Where the original's saves went on a PC without the permission fix.** Alexah's call, from Q982: whether the
   original's saves went to Windows' VirtualStore (`%LOCALAPPDATA%\VirtualStore\Program Files (x86)\SimTheme
   Park\save`) when `Program Files (x86)` was not writable, and whether OpenTPW should read them there. Not tested: the

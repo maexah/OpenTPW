@@ -13,13 +13,9 @@ One line per system; the detail, item by item, is `docs/WORKS.md` (grep it by ar
 - Staff: all five kinds hired and working their kind's decide (cleaning, performing, researching), strikes, their voices.
 - Rides: every placed thing runs its script, the rest of the opcodes counted; screams, particles, hoardings; the ride window closes and reopens its ride.
 - Running the park: the gadget, the info and money screens, the entry price and the gate, the research lab and its screen, golden tickets, the advisor's messages.
-<<<<<<< HEAD
-- Saving: Save, Load, Restart Park, the quicksave keys; a played park with a coaster's pylons loads whole, its gate's doors open and its boundary wall drawn (Q810); a Full Simulation park started empty, saved too (Q783: its file at tick nought, which the original loads). A save folder that cannot be written is told on screen, which the original never does (Q982; shown on Linux, not yet on Windows).
-=======
-- Saving: Save, Load, Restart Park, the quicksave keys; a played park with a coaster's pylons loads whole, its gate's doors open and its boundary wall drawn (Q810); a Full Simulation park started empty, saved too (Q783: its file at tick nought, which the original loads).
+- Saving: Save, Load, Restart Park, the quicksave keys; a played park with a coaster's pylons loads whole, its gate's doors open and its boundary wall drawn (Q810); a Full Simulation park started empty, saved too (Q783: its file at tick nought, which the original loads). A save folder that cannot be written is told on screen, which the original never does (Q982)..
 - Finding the game on Windows: the uninstall entry's folder, then the original's and Sim Theme Park's default folders (Q981; shown on Linux, not yet on Windows).
->>>>>>> 3abf754f (Q981: a Windows install of Sim Theme Park is found)
-- Graphics card: a discrete card is drawn with in preference to a built-in one, or the card `save/opentpw.cfg`'s `gpu` line names (Q980; shown on Linux, not yet on Windows).
+- Graphics card: a discrete card is drawn with in preference to a built-in one, or the card `save/opentpw.cfg`'s `gpu` line names (Q980; its Options row is not built yet).
 - The original runs under Proton as the reference instrument.
 
 ## Does not
