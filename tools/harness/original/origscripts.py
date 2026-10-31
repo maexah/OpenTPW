@@ -4,7 +4,7 @@
 A script is a node of the list at [0x008791b0] (docs/exe/saves.md, "A script's record is its struct"): the handle at +8, the
 program counter at +0x3c, the thing at +0xac (low word; a SPAWNCHILD companion has its parent's, 0x0055516e; 0 for a SPAWNSOUND child), and the links to other scripts: +0x0c its child
 (SPAWNCHILD), +0x10 its parent, +0x14 its sound child (SPAWNSOUND). mGameTick is [[0x0080239c] + 0x1da70c].
-Every EVERY seconds (default 5) until SECS have gone, one block: `tick T scripts N (C with no thing)`, then one line a script,
+Every EVERY seconds (default 5) until SECS have gone, one block: `tick T scripts N (C with no thing: the SPAWNSOUND's)`, then one line a script,
 `h HANDLE pc PC thing THING child C parent P sound S`. Compare the handles with this game's `scripts` console command."""
 import struct, sys, time
 pid = int(sys.argv[1]); secs = float(sys.argv[2]); every = float(sys.argv[3]) if len(sys.argv) > 3 else 5.0

@@ -45,6 +45,16 @@ namespace OpenTPW;
 /// </param>
 /// <param name="AnimationMark"><c>+0xbc</c>: <c>TRIGWAITANIM</c>'s mark, the role it waits for plus one; nought for none.</param>
 /// <param name="TimerDeadline"><c>+0xc4</c>: the deadline <c>SETTIMER</c> last set, a reading of the same clock; nought for none.</param>
+/// <param name="Child">
+/// <c>+0x0c</c>, dword 3: the handle of the script this one's <c>SPAWNCHILD</c> made, nought for none (<c>0x0055512b</c>).
+/// </param>
+/// <param name="Parent">
+/// <c>+0x10</c>, dword 4: the handle of the script that spawned this one with <c>SPAWNCHILD</c>, nought for none. A
+/// <c>SPAWNSOUND</c>'s script holds nought here: the instruction stores <c>+0x14</c> and returns (<c>0x00555255</c>).
+/// </param>
+/// <param name="SoundChild">
+/// <c>+0x14</c>, dword 5: the handle of the script this one's <c>SPAWNSOUND</c> made, nought for none.
+/// </param>
 /// <param name="Heads">
 /// The head table, <c>+0x30</c>: the visitor <c>ADDHEAD</c> put on each head node, slot n on node n + 1, nought for a
 /// free slot. Its length is the saved block's, which <c>FUN_005597a0</c> takes as the count <c>+0x4c</c>; empty for a
@@ -55,7 +65,8 @@ public readonly record struct SavedScript( int Handle, int Position, int BodyWor
 	uint WaitDeadline, uint AnimationDeadline, int LoopingKey, int AnimationMark, uint TimerDeadline,
 	int[]? Heads = null, SavedLimboSlot[]? Limbo = null, int InLimbo = 0,
 	SavedBounceSlot[]? Bounce = null, int Bouncing = 0, int BounceBase = 0, int BounceNode = 0,
-	SavedWalkSlot[]? Walk = null, int Thing = 0, int ModelHandle = 0, SavedEffect[]? Effects = null );
+	SavedWalkSlot[]? Walk = null, int Thing = 0, int ModelHandle = 0, SavedEffect[]? Effects = null,
+	int Child = 0, int Parent = 0, int SoundChild = 0 );
 
 /// <summary>
 /// One record of a script's object list, an effect <c>ADDOBJ</c> started (<c>docs/exe/saves.md</c>, "OpenTPW's
@@ -195,6 +206,9 @@ public sealed partial class ParkScriptStates
 
 	/// <summary>Where the program counter sits in the saved struct - <c>+0x3c</c>, so dword 15.</summary>
 	private const int PositionDword = 15;
+
+	/// <summary>The link words: <c>+0x0c</c> the child, <c>+0x10</c> the parent, <c>+0x14</c> the sound child.</summary>
+	private const int ChildDword = 3, ParentDword = 4, SoundChildDword = 5;
 
 	/// <summary>The call index - <c>+0x40</c>, so dword 16.</summary>
 	private const int CallIndexDword = 16;
@@ -545,7 +559,9 @@ public sealed partial class ParkScriptStates
 			limbo, ReadInt32At( start + (InLimboDword * 4) ),
 			bounce, ReadInt16At( start + BouncingAt ), ReadInt16At( start + BouncingAt + 2 ),
 			ReadInt32At( start + (BounceNodeDword * 4) ), walk,
-			(ushort)ReadInt16At( start + ThingAt ), ReadInt32At( start + (ModelHandleDword * 4) ), effects );
+			(ushort)ReadInt16At( start + ThingAt ), ReadInt32At( start + (ModelHandleDword * 4) ), effects,
+			ReadInt32At( start + (ChildDword * 4) ), ReadInt32At( start + (ParentDword * 4) ),
+			ReadInt32At( start + (SoundChildDword * 4) ) );
 
 		if ( !_byHandle.TryAdd( handle, saved ) )
 			throw new InvalidDataException( $"two saved scripts both call themselves handle {handle}" );

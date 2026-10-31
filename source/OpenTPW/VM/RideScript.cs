@@ -3465,17 +3465,48 @@ public sealed class RideScript
 		if ( name.Kind != RideOperandKind.String )
 			return false;
 
+		return PathOf( name, out path );
+	}
+
+	/// <summary>
+	/// The path a spawning instruction's string operand names: the engine builds it from the prefix its loader left at
+	/// <c>+0x38</c> - see <see cref="Directory"/>, and note that the prefix is what makes the answer unambiguous rather
+	/// than merely convenient.
+	/// </summary>
+	private bool PathOf( RideOperand name, out string path )
+	{
+		path = string.Empty;
+
 		var text = _file.StringAt( name.Value );
 
 		if ( text is null )
 			return false;
 
-		// The engine builds the path the same way, from the prefix its loader left at +0x38 - see
-		// Directory, and note that the prefix is what makes the answer unambiguous rather than merely
-		// convenient.
 		path = Directory.Length == 0 ? text : $"{Directory}/{text}";
 
 		return true;
+	}
+
+	/// <summary>How many words the body holds, which a saved record of this script declares as its own length (<c>+0x50</c>).</summary>
+	internal int BodyWords => _file.Body.Length / 4;
+
+	/// <summary>
+	/// The files this script's <paramref name="spawn"/> instructions (<c>SPAWNCHILD</c> or <c>SPAWNSOUND</c>) name, each once, as
+	/// the paths they load. What a load asks to tell which file a saved companion record is: the parent's own
+	/// instruction names it, and the record holds no name of the file.
+	/// </summary>
+	internal IReadOnlyList<string> SpawnPaths( Opcode spawn )
+	{
+		var paths = new List<string>();
+
+		foreach ( var instruction in _file.Instructions )
+		{
+			if ( instruction.Opcode == spawn && instruction.Operands.Count > 0 && instruction.Operands[0].Kind == RideOperandKind.String
+				&& PathOf( instruction.Operands[0], out var path ) && !paths.Contains( path, StringComparer.OrdinalIgnoreCase ) )
+				paths.Add( path );
+		}
+
+		return paths;
 	}
 
 	/// <summary>

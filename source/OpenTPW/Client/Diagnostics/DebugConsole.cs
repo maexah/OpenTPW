@@ -873,7 +873,7 @@ public static class DebugConsole
 
 			// Every script the scheduler is running, one line each: its id, the thing it drives, its directory and name,
 			// its place, and the scripts it was spawned by and has spawned. A script with a parent is a SPAWNCHILD
-			// companion (it carries its parent's thing); thing 0 is a SPAWNSOUND child's. A park file's scripts are counted against this list (Q849).
+			// companion (it carries its parent's thing); thing 0 is a SPAWNSOUND child's. A park file's scripts are counted against this list (Q849, Q910).
 			case "scripts":
 				if ( ParkRides.Current is not { } scripted )
 				{

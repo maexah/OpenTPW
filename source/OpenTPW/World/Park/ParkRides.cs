@@ -371,8 +371,19 @@ public sealed class ParkRides : Entity
 		var inSaveOrder = world.Objects
 			.OrderBy( placed => saveOrder.TryGetValue( placed.RideScript, out var at ) ? at : int.MaxValue );
 
+		// The scripts the save holds that no object owns, which the object loop below does not start: a companion, a script an
+		// object's script made with SPAWNCHILD (the parent's +0x0c) or SPAWNSOUND (+0x14). The parents made them at their start
+		// and resume past that instruction, so they are started here from the save, at their place in its order (Q910).
+		var companions = saved == null ? [] : CompanionsOf( world, catalogue, saved, saveOrder );
+		var nextCompanion = 0;
+
 		foreach ( var placed in inSaveOrder )
 		{
+			var placedAt = saveOrder.TryGetValue( placed.RideScript, out var found ) ? found : int.MaxValue;
+
+			while ( nextCompanion < companions.Count && saveOrder[companions[nextCompanion].Handle] < placedAt )
+				StartCompanion( companions[nextCompanion++] );
+
 			// Everything this park actually stood up, which is not the same as everything it placed. The gate
 			// and the traffic lights carry no position of their own - the engine builds those two by name out
 			// of the item descriptions rather than from the save's placements (FUN_005156a0) - but they are
@@ -470,6 +481,12 @@ public sealed class ParkRides : Entity
 			}
 		}
 
+		while ( nextCompanion < companions.Count )
+			StartCompanion( companions[nextCompanion++] );
+
+		if ( saved != null )
+			LinkCompanions( world, saved );
+
 		// A gate without saved state starts open or closed with its park. A resumed gate keeps its own
 		// command and animation state. Last, because it needs the binding above to have run.
 		CommandTheGate( world, gateResumed );
@@ -484,7 +501,138 @@ public sealed class ParkRides : Entity
 			$"; {Resumed} resumed where the save left them" +
 			(NotResumed > 0 ? $" and {NotResumed} did not" : "") +
 			$"; {ChannelsRestored} animation channels put back" +
-			$"; {KeptReadingsMoved} kept clock readings moved" );
+			$"; {KeptReadingsMoved} kept clock readings moved" +
+			(CompanionsStarted > 0 ? $"; {CompanionsStarted} companions started from the save" : "") );
+	}
+
+	/// <summary>
+	/// A companion script the save holds: the record <see cref="Handle"/> that a parent's <c>+0x0c</c> (<c>SPAWNCHILD</c>) or
+	/// <c>+0x14</c> (<c>SPAWNSOUND</c>, <paramref name="Sound"/>) names, the parent's handle, and the file the parent's
+	/// instruction loads for it.
+	/// </summary>
+	private readonly record struct Companion( int Handle, int Parent, string Path, bool Sound );
+
+	private readonly List<Companion> _companions = [];
+
+	/// <summary>How many companion scripts a load started from the save's records (<see cref="CompanionsOf"/>).</summary>
+	public int CompanionsStarted { get; private set; }
+
+	/// <summary>
+	/// The companions of the park's objects, in the order the save holds them: for each object whose saved script has a
+	/// child or a sound child, the record each names and the file it is. The record holds no name of its file, so it is
+	/// the one of the parent's <c>SPAWNCHILD</c> (or <c>SPAWNSOUND</c>) files whose body is as long as the record's body;
+	/// a record that fits none, or more than one, is counted and not started (<c>AGENTS.md</c> rule 4).
+	/// </summary>
+	private List<Companion> CompanionsOf( IParkInitialState world, ParkItemCatalogue catalogue, ParkWorld saved, Dictionary<int, int> saveOrder )
+	{
+		var found = new List<Companion>();
+
+		if ( saved.ScriptStates.Problem != null )
+			return found;
+
+		foreach ( var placed in world.Objects )
+		{
+			if ( !placed.IsPlaced && _objects?.AnimationsFor( placed.ThingId ) is null )
+				continue;
+
+			if ( !catalogue.TryGet( placed.CatalogueId, out var item ) || !saveOrder.ContainsKey( placed.RideScript )
+				|| saved.ScriptStates.For( placed.RideScript ) is not { } parent || (parent.Child == 0 && parent.SoundChild == 0) )
+				continue;
+
+			if ( Load( ScriptPathFor( item ) ) is not { } parentScript )
+				continue;
+
+			foreach ( var (handle, spawn) in new[] { (parent.Child, Opcode.SPAWNCHILD), (parent.SoundChild, Opcode.SPAWNSOUND) } )
+			{
+				if ( handle == 0 )
+					continue;
+
+				var path = saved.ScriptStates.For( handle ) is { } record && saveOrder.ContainsKey( handle )
+					? FileOfCompanion( parentScript, spawn, record ) : null;
+
+				if ( path is null )
+				{
+					Log.Info( $"{ThemeName}: the file's script {handle}, named by script {placed.RideScript}'s {spawn} link, is not a file that script loads, so it is not started" );
+					Unimplemented.Report( "LOADED_COMPANION_NOT_STARTED" );
+					continue;
+				}
+
+				found.Add( new Companion( handle, placed.RideScript, path, spawn == Opcode.SPAWNSOUND ) );
+			}
+		}
+
+		return found.OrderBy( companion => saveOrder[companion.Handle] ).ToList();
+	}
+
+	/// <summary>The one file <paramref name="parent"/>'s <paramref name="spawn"/> instructions load whose body is as long as <paramref name="record"/>'s, or null for none or for more than one.</summary>
+	private string? FileOfCompanion( RideScript parent, Opcode spawn, SavedScript record )
+	{
+		var fits = parent.SpawnPaths( spawn ).Where( path => Load( path )?.BodyWords == record.BodyWords ).ToList();
+
+		return fits.Count == 1 ? fits[0] : null;
+	}
+
+	/// <summary>Makes one companion under its saved handle; <see cref="LinkCompanions"/> links and resumes it once every script stands.</summary>
+	private void StartCompanion( Companion companion )
+	{
+		if ( Scheduler.Spawn( companion.Path, companion.Handle ) == 0 )
+		{
+			Log.Info( $"{ThemeName}: the file's script {companion.Handle} ({companion.Path}) could not be made, so it is not started" );
+			Unimplemented.Report( "LOADED_COMPANION_NOT_STARTED" );
+			return;
+		}
+
+		_companions.Add( companion );
+	}
+
+	/// <summary>
+	/// Links each started companion to its parent as the spawning instruction does (<c>0x0055512b</c>, <c>0x00555255</c>):
+	/// the parent's child or sound child, and for a child its parent, its thing and its model, then resumes it as an
+	/// object's script is. Last, a count of the records the save holds that no object owns and nothing started.
+	/// </summary>
+	private void LinkCompanions( IParkInitialState world, ParkWorld saved )
+	{
+		foreach ( var companion in _companions )
+		{
+			var child = Scheduler.Find( companion.Handle );
+
+			if ( child is null || Scheduler.Find( companion.Parent ) is not { } parent || saved.ScriptStates.For( companion.Handle ) is not { } record )
+			{
+				Log.Info( $"{ThemeName}: the file's script {companion.Handle} has no script {companion.Parent} to belong to, so it is not started" );
+				Unimplemented.Report( "LOADED_COMPANION_NOT_STARTED" );
+				Scheduler.Destroy( companion.Handle );
+				continue;
+			}
+
+			if ( companion.Sound )
+				parent.SoundChildId = companion.Handle;
+			else
+			{
+				parent.ChildId = companion.Handle;
+				child.ParentId = parent.Id;
+				child.ThingId = parent.ThingId;
+				child.Animations = parent.Animations;
+				child.Nodes = parent.Nodes;
+			}
+
+			Resume( child, record, $"script {companion.Handle} (the {(companion.Sound ? "sound child" : "child")} of script {companion.Parent}, thing {child.ThingId})",
+				false, saved );
+			++CompanionsStarted;
+		}
+
+		if ( saved.ScriptStates.Problem != null )
+			return;
+
+		var owned = world.Objects.Select( placed => placed.RideScript ).ToHashSet();
+
+		foreach ( var handle in saved.ScriptStates.Order )
+		{
+			if ( owned.Contains( handle ) || Scheduler.Find( handle ) is not null )
+				continue;
+
+			Log.Info( $"{ThemeName}: the file's script {handle} belongs to no object and no script's link starts it, so it is not started" );
+			Unimplemented.Report( "LOADED_COMPANION_NOT_STARTED" );
+		}
 	}
 
 	/// <summary>
@@ -827,6 +975,16 @@ public sealed class ParkRides : Entity
 			return false;
 		}
 
+		return Resume( script, saved, $"thing {placed.ThingId}", _saved.ContainsKey( placed.ThingId ), world );
+	}
+
+	/// <summary>
+	/// Resumes <paramref name="script"/> from its saved record, <paramref name="who"/> naming it in the log;
+	/// <paramref name="channels"/> is whether its thing's model channels are put back, which the looping key and the mark
+	/// answer for. A companion has none of its own (it shares its parent's, or has no model at all).
+	/// </summary>
+	private bool Resume( RideScript script, SavedScript saved, string who, bool channels, ParkWorld world )
+	{
 		// The name first, because resuming steps over the NAME every one of these scripts opens with, and
 		// a nameless script cannot be found by FINDSCRIPTRAND - see RideScript.TakeDeclaredName.
 		script.TakeDeclaredName();
@@ -835,7 +993,7 @@ public sealed class ParkRides : Entity
 		// record belongs to. Said rather than silently truncated, because the slots would still be written.
 		if ( saved.Variables.Length != script.Variables.Count )
 		{
-			Log.Info( $"{ThemeName}: thing {placed.ThingId} declares {script.Variables.Count} variables and "
+			Log.Info( $"{ThemeName}: {who} declares {script.Variables.Count} variables and "
 				+ $"the save holds {saved.Variables.Length} for script handle {saved.Handle}" );
 		}
 
@@ -848,7 +1006,7 @@ public sealed class ParkRides : Entity
 		// thing that cannot be resumed is better left running from its beginning, with the loader's stacks.
 		if ( !script.ResumeAt( saved.Position ) )
 		{
-			Log.Warning( $"{ThemeName}: thing {placed.ThingId} was saved at word {saved.Position} of "
+			Log.Warning( $"{ThemeName}: {who} was saved at word {saved.Position} of "
 				+ $"{saved.BodyWords}, which is not the start of an instruction, so it starts from the beginning" );
 
 			++NotResumed;
@@ -860,7 +1018,7 @@ public sealed class ParkRides : Entity
 		// length is the stack's size, as the engine takes it (FUN_005597a0, 0x00559af1).
 		if ( saved.Stack.Length != script.Stack.Count )
 		{
-			Log.Info( $"{ThemeName}: thing {placed.ThingId} declares a stack of {script.Stack.Count} and the "
+			Log.Info( $"{ThemeName}: {who} declares a stack of {script.Stack.Count} and the "
 				+ $"save holds {saved.Stack.Length} for script handle {saved.Handle}" );
 		}
 
@@ -870,8 +1028,6 @@ public sealed class ParkRides : Entity
 		// channels. Where the save's model states would not read, or hold no record for this thing, its channels start
 		// idle, and a restored key would make its next LOOPANIM of that loop do nothing over a channel playing none -
 		// a gap of this reader's, since the engine always reads both.
-		var channels = _saved.ContainsKey( placed.ThingId );
-
 		script.RestoreClockState( OnThisClock( saved.WaitDeadline ), OnThisClock( saved.AnimationDeadline ),
 			channels ? saved.LoopingKey : script.LoopingKey, channels ? saved.AnimationMark : script.AnimationMark,
 			OnThisClock( saved.TimerDeadline ) ?? 0f );
@@ -880,7 +1036,7 @@ public sealed class ParkRides : Entity
 		var riders = script.RestoreRiders( saved, reading => reading != 0 ? Moved( reading ) : null );
 
 		if ( riders > 0 )
-			Log.Info( $"{ThemeName}: thing {placed.ThingId} (script {saved.Handle} at word {saved.Position}) holds {riders} guests in its limbo, bounce and walk slots" );
+			Log.Info( $"{ThemeName}: {who} (script {saved.Handle} at word {saved.Position}) holds {riders} guests in its limbo, bounce and walk slots" );
 
 		RidersRestored += riders;
 
@@ -896,7 +1052,7 @@ public sealed class ParkRides : Entity
 		var kept = _clock?.Reading is not null ? script.MoveKeptReadings( reading => Moved( unchecked((uint)reading) )!.Value ) : 0;
 
 		if ( kept > 0 )
-			Log.Info( $"{ThemeName}: thing {placed.ThingId} (script {saved.Handle} at word {saved.Position}) had {kept} kept clock readings moved" );
+			Log.Info( $"{ThemeName}: {who} (script {saved.Handle} at word {saved.Position}) had {kept} kept clock readings moved" );
 
 		KeptReadingsMoved += kept;
 

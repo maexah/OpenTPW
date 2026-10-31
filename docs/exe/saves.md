@@ -1629,10 +1629,13 @@ and a model's channels their count, so nothing moves, and they go in before the 
   spliced in where it is not ("OpenTPW's writer, a script's started effects"). A bounce slot and a walk slot are written
   whole, in use or let go ("OpenTPW's writer, a bounce slot let go", "a walk slot's facing", "a walk slot let go"). **Counted:** a script the file holds no record for (`SAVE_PARK_SCRIPT_MADE_SINCE_THE_LOAD`:
   a thing bought and left out of the file (`SAVE_PARK_OBJECT_BOUGHT`), a child spawned), and
-  a record whose script has ended (`SAVE_PARK_SCRIPT_ENDED`), left the file's. In her played Full Simulation park the six are not ended but never started: companions, a
+  a record whose script has ended (`SAVE_PARK_SCRIPT_ENDED`), left the file's. In her played Full Simulation park the six are not ended but companions, a
   script another made at its start (`SPAWNCHILD`: the parent's `+0x0c` holds the child's handle and the child's `+0x10` the parent's; `SPAWNSOUND`: the parent's `+0x14`, the child
   with no thing and no parent), which the loader builds from the file as records like any other (the original's list after loading her file: 130 nodes, the same handles, the
-  links intact, read live by `origscripts.py`, `q849/runC`) and which ours does not start (Q910).
+  links intact, read live by `origscripts.py`, `q849/runC`). A load here starts each record a parent's `+0x0c` or `+0x14` names (`ParkRides.CompanionsOf`; Q910), under its handle and
+  in its place in the file's order, from the one file of the parent's own `SPAWNCHILD` or `SPAWNSOUND` instructions whose body is as long as the record's (the record holds no name of its file; one that fits no
+  file, or more than one, is counted, `LOADED_COMPANION_NOT_STARTED`, as is a record no object owns and no link names), and resumes it as an object's script is resumed.
+  A child spawned since the load has no record and is not written, as before.
   **One split in what is written** (Q849, `q849/runD`, `runE`): her Dino Karts (thing 289, script handle 110) is a kart ride with no record in `ParkBumperCars`, so its record and its
   cars are left the file's (`SAVE_PARK_TRACK_RIDE_AS_THE_FILE`) while its script runs in ours with every `BUMP` a no-op. Her file has script 110 at word 197, `VAR_ONRIDE` 4,
   `VAR_RUNNING` 1, and `RYLFTRAK` cars holding riders 226, 278, 114 and 355; in the saves ours made from it the cars and riders are the same byte for byte and the script is at word 15, `VAR_ONRIDE` 0,

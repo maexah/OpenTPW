@@ -855,6 +855,123 @@ public class ParkFileWriterBoughtAndSoldTests
 		Assert.IsTrue( things.Made!.Single().Tables!.Value.Lookups.All( lookup => (lookup.Flags & 0x8) != 0 ) );
 	}
 
+	private const int SimulatorItem = 1104, HotPotItem = 1140;
+
+	/// <summary>Where the record of script <paramref name="handle"/> begins in <paramref name="body"/>: its handle at dword 2, its length at dword 20, the same length in bytes ahead of the body.</summary>
+	private static int StructAt( byte[] body, ParkScriptStates states, int handle )
+	{
+		var words = states.For( handle )!.Value.BodyWords;
+
+		for ( var at = 0; at + states.StructSize + 4 <= body.Length; ++at )
+		{
+			if ( BinaryPrimitives.ReadInt32LittleEndian( body.AsSpan( at + 8, 4 ) ) == handle
+				&& BinaryPrimitives.ReadInt32LittleEndian( body.AsSpan( at + 0x50, 4 ) ) == words
+				&& BinaryPrimitives.ReadInt32LittleEndian( body.AsSpan( at + states.StructSize, 4 ) ) == words * 4 )
+				return at;
+		}
+
+		Assert.Fail( $"no record of script {handle}" );
+
+		return -1;
+	}
+
+	/// <summary>
+	/// A bought ride with a script it made, written, and the file given that script's record and the parent's link to it
+	/// (a played park's file has both, as the original writes them; this writer does not write a spawned script yet).
+	/// </summary>
+	private (byte[] Body, int Parent, int Child, RideScript Made, RideScript ParentScript) ParkWithACompanion( int itemId, int x, int y, bool sound, int linkedTo = 0, string? scriptOf = null )
+	{
+		var rides = Bind( shipped );
+		var state = new ParkState( shipped );
+		var bought = Buy( state, rides, itemId, x, y );
+		var parentHandle = rides.ScriptFor( bought.ThingId );
+		var parent = rides.Scheduler.Find( parentHandle )!;
+
+		parent.TakeDeclaredName();
+
+		var childHandle = rides.Scheduler.Spawn( scriptOf ?? parent.SpawnPaths( sound ? Opcode.SPAWNSOUND : Opcode.SPAWNCHILD ).Single() );
+		var child = rides.Scheduler.Find( childHandle )!;
+
+		child.TakeDeclaredName();
+		Assert.IsTrue( Enumerable.Range( 1, 12 ).Any( word => child.ResumeAt( word ) ), "an instruction starts within the first twelve words, past the first" );
+		child.SeedVariable( 0, 4242 );
+
+		var kept = state.WrittenObjects( shipped, id => true, out var madeObjects, out var gone );
+		Assert.IsTrue( catalogue.TryGet( itemId, out var item ) );
+
+		var things = rides.Written( shipped, kept, ChannelsFor, state.HoardingFor,
+			[new ParkRides.BoughtThing( new ParkWorld.MadeObject( madeObjects.Single( placed => placed.ThingId == bought.ThingId ), "A", "B" ), item.Width, item.Depth, "x" )], gone, state.BuiltItems )!;
+		var written = Written( things, out var body );
+		var modelHandle = written.ScriptStates.For( parentHandle )!.Value.ModelHandle;
+		var record = ParkScriptStates.MadeRecord( child.Made( rides.Readings!, ParkScriptStates.LoaderSpeed, "x" ) with { Thing = sound ? 0 : bought.ThingId },
+			sound ? 0 : modelHandle, written.ScriptStates.StructSize );
+		var spliced = written.ScriptStates.Splice( body, [record], [] );
+		var linked = new ParkWorld( spliced );
+
+		Assert.IsNull( linked.ScriptStates.Problem );
+
+		BinaryPrimitives.WriteInt32LittleEndian( spliced.AsSpan( StructAt( spliced, linked.ScriptStates, parentHandle ) + (sound ? 0x14 : 0x0c), 4 ), linkedTo != 0 ? linkedTo : childHandle );
+
+		if ( !sound )
+			BinaryPrimitives.WriteInt32LittleEndian( spliced.AsSpan( StructAt( spliced, linked.ScriptStates, childHandle ) + 0x10, 4 ), parentHandle );
+
+		Unimplemented.Forget();
+
+		return (spliced, parentHandle, childHandle, child, parent);
+	}
+
+	/// <summary>
+	/// A load starts each script a parent's link names, under the handle the file holds it by, linked to its parent as the
+	/// spawning instruction links one, and resumed where it was saved (Q910: Alexah's Full Simulation park holds six).
+	/// </summary>
+	[TestMethod]
+	[DataRow( SimulatorItem, 20, 60, false, DisplayName = "the TV Sim's torches (SPAWNCHILD, +0x0c)" )]
+	[DataRow( HotPotItem, 60, 60, true, DisplayName = "the Hot Pot's EventMap (SPAWNSOUND, +0x14)" )]
+	public void ALoadStartsTheCompanionsItsParentsLinkNames( int itemId, int x, int y, bool sound )
+	{
+		var (body, parentHandle, childHandle, made, parentScript) = ParkWithACompanion( itemId, x, y, sound );
+		var loaded = new ParkWorld( body );
+		var rides = Bind( loaded );
+
+		var child = rides.Scheduler.Find( childHandle );
+		var parent = rides.Scheduler.Find( parentHandle )!;
+
+		Assert.IsNotNull( child, "the companion is running" );
+		Assert.AreEqual( 1, rides.CompanionsStarted );
+		Assert.AreEqual( sound ? (0, childHandle) : (childHandle, 0), (parent.ChildId, parent.SoundChildId), "the parent holds it" );
+		Assert.AreEqual( sound ? 0 : parentHandle, child!.ParentId );
+		Assert.AreEqual( sound ? 0 : parent.ThingId, child.ThingId, "a SPAWNSOUND's script has no thing, a SPAWNCHILD's has its parent's" );
+		Assert.AreEqual( made.Position, child.Position, "resumed where it was saved" );
+		Assert.AreEqual( 4242, child.VariableAt( 0 ), "with the variables it was saved holding" );
+		Assert.AreEqual( 0, Times( "LOADED_COMPANION_NOT_STARTED" ) );
+		Assert.AreEqual( childHandle, rides.Scheduler.Scripts.First().Id, "at its place in the file's order (it is the file's first record), as the engine's reader lists it" );
+
+		// A park loaded and written again keeps the record as a running script's, where it was counted ended.
+		var state = new ParkState( loaded );
+		var things = rides.Written( loaded, state.WrittenObjects( loaded ), ChannelsFor, state.HoardingFor )!;
+
+		Assert.IsTrue( things.Scripts.Any( script => script.Handle == childHandle ), "written as the running script it is" );
+		Assert.AreEqual( 3, Times( "SAVE_PARK_SCRIPT_ENDED" ), "only the gates, the lights and the bus, as every loaded fixture" );
+	}
+
+	/// <summary>
+	/// A record a parent's link names that is not a file the parent loads is left unstarted and counted, never guessed at
+	/// (<c>AGENTS.md</c> rule 4): the TV Sim's link names the drinks shop's script, or a record that is a Hot Pot's
+	/// <c>EventMap.rse</c>, which the TV Sim never loads.
+	/// </summary>
+	[TestMethod]
+	[DataRow( DrinksScript, null, 2, DisplayName = "a record an object owns" )]
+	[DataRow( 0, "levels/jungle/rides/bumper/EventMap.rse", 2, DisplayName = "a record of another file" )]
+	public void ARecordNoFileOfItsParentFitsIsCountedAndNotStarted( int linkedTo, string? scriptOf, int counted )
+	{
+		var (body, _, childHandle, _, _) = ParkWithACompanion( SimulatorItem, 20, 60, sound: false, linkedTo, scriptOf );
+		var rides = Bind( new ParkWorld( body ) );
+
+		Assert.AreEqual( 0, rides.CompanionsStarted );
+		Assert.IsNull( rides.Scheduler.Find( childHandle ), "the companion is not started" );
+		Assert.AreEqual( counted, Times( "LOADED_COMPANION_NOT_STARTED" ), "the named record, and the record no script's link starts" );
+	}
+
 	/// <summary>A script with no thing bought behind it is still counted, and a file's script that has ended with its thing standing.</summary>
 	[TestMethod]
 	public void OtherScriptsAreStillCounted()
