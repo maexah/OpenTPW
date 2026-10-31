@@ -123,26 +123,6 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   say so): the small fix is a notice on the kept path when the player's folder holds players (`SaveHome.HoldsPlayers`). A test
   next to `AFolderThatCanBeWrittenIsKeptAndTheProbeLeavesNothing`.
 
-- [ ] **Q849. What Q810 left: two counted gaps her played park's save now reaches, and two loads never run.** (From Q810's review,
-  run 14.) Q810 made her Full Simulation `New Save.TPWS` read whole, so the save goes through the running-things writer for the
-  first time (before, the model walk failed and the whole module was written as the file's). Two counters then fire, in
-  `q810-a7/run3fs/run.log` at 2382 and 2411 (the census at the end: 6x and 1x), and neither is in the commit message, `WORKS.md`
-  or `park-gate.md`. (a) `SAVE_PARK_SCRIPT_ENDED` x6 (`ParkRides.Written`, `ParkRides.cs:1027-1031`): a script the loaded file's
-  `ScriptStates.Order` holds that is neither running in ours nor gone by a sale, so its record is left the file's
-  (`docs/exe/saves.md`, the script paragraph). It has no queue line. Find which six of her file's scripts are not running in ours
-  after the load (the console's `rides` / `scripts` census against the file's `ScriptStates.Order`), why each ended or never
-  started (counted gaps, a script that ends by design, a thing ours does not run), and whether the original runs the same six
-  after loading the same file (`loadfile.sh`, `modeltypes.py`/`tpwmem.py`). A script that the original also ends is correct and
-  only needs saying. (b) `SAVE_PARK_TRACK_RIDE_AS_THE_FILE` x1 (`Level.cs:935` or `:951`, the track-rides module): one of her
-  track rides is left the file's because `bumpers.Written` has no record for it (:935) or `ParkCarWriter.Track` cannot write it
-  whole with its cars (:951). Find which ride and which of the two, and build the record or say why it stays the file's. (c) Not
-  run, and said by no doc: her `autosave.TPWS` was not loaded in ours (only `New Save.TPWS`; the rule closes it in
-  `modelchannels.py`, so the risk is low), and the park ours saved from her file (`q810-a7/run3fs/q810a7fs.TPWS`) was walked
-  closed (462 records, 40 of item 1181 at five channels) but not loaded back in ours or in the original. `STATUS.md`'s "a played
-  park with a coaster's pylons loads whole" is true of the load only. Load `autosave.TPWS` in ours, then load the saved file back
-  in ours (the round trip: the same things, scripts and hoardings) and in the original under Proton (`loadfile.sh`), and say what
-  each shows. Acceptance: (a) and (b) each named and settled or built, (c) each load run and its result written in `WORKS.md`'s
-  Q810 entry.
 - [ ] **Q247. A loaded park is built again behind the loading screen, and the list has no scrollbar.** Left by
   Q241c (`saves.md`, "OpenTPW's Load Park"). The original reads a park file over the running park, with no loading
   screen and no change of scene (`FUN_00414d40`: twelve teardown calls, the modules, `FUN_00415140`), where
@@ -160,6 +140,20 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
     button). An arrow clicked without repeating plays `Select3` (`0xbd`, the bar's flags `0x10`); one held past 500 ms
     plays **nothing**, neither at the repeats nor on release (the repeat messages are not `0x100`, and the release posts
     none after a repeat). The thumb and the track play nothing.
+- [ ] **Q910. A loaded park's companion scripts are not started: six in Alexah's Full Simulation park.** From Q849. The load (`ParkRides.cs`, the
+  `inSaveOrder` loop) spawns one script per placed object under its saved handle and never a companion: a script an object's script made with `SPAWNCHILD` (its parent's
+  record `+0x0c`, its own `+0x10` the parent) or `SPAWNSOUND` (`+0x14`, no parent, thing 0). Her New Save holds six (handle 123 Mumbo's `effects.RSE`, 42 the TV Sim's
+  `torches.RSE` with four effects, 41 the Pork Pie's `Worn.RSE`; 116, 111 and 91 the Minecart's, the Dino Karts' and the Tour Ride's `EventMap.RSE`), the parents resume past
+  the instruction that made them, and so after a load `scripts` lists 124 and the parents' `ChildId` and `SoundChildId` are 0, where the original runs all 130 with the links
+  (`q849/runC/load.log`, `tools/harness/original/origscripts.py`; ours `q849/runB-fs/scripts.txt`). The parents make their companions at their start (the `rselisting`s of the
+  five: `SPAWNSOUND "EventMap.rse"` at word 2 in the Dino Karts', the Minecart's and the Tour Ride's, `SPAWNCHILD "Effects.rse"` at 10 in Mumbo's, `"worn.rse"` at 5 in the Pork Pie's; the TV Sim's at 10 and again at 211 after a
+  `REMOVECHILD`), so a loaded park never makes them again and only the TV Sim's torches come back, at its next cycle. `effects.RSE` is "Smoke and Steam for Mumbo": a loop of `WAIT 200`, a random
+  `EVENT` and `ENDSLICE`, alive in the original's list at every read, ticks 19132 to 19374. The stock Easymode.TPWI holds no ride with a companion (14 scripts, none), so only a played park shows it. What each
+  of `Worn.RSE` and `EventMap.RSE` does after the load is not read (a `SETVARINCHILD` or a `REMOVECHILD` in a parent that has no child does nothing). Build: after the objects' scripts, for each saved record whose parent link names a record the file holds, make the child under its handle
+  from the file the parent's instruction names (the record's body words say which of the directory's scripts it is), put the links and, for a `SPAWNCHILD`, the thing, the model and the nodes
+  as `RideScript.SpawnChild` does, resume it at the record's counter, variables and effects, and let `RideScript.Written` write it so `SAVE_PARK_SCRIPT_ENDED` is nought.
+  Confirm: `scripts` after the load lists the file's 130 with the same links as `origscripts.py` of the original, and each companion's effect seen in both games. Dead by
+  GAP (`AGENTS.md` rule 3): placed content (any played park holding a ride with a companion) reaches it.
 - [ ] **Q820. What Q818, Q821 and Q822 left: the stacked and loop pylons, the original's picture of a flipped diagonal, and the heights by the original's samplers.** From Q818 (run 14, lane A;
   its piece (3), the face normals and the control word, is Q819; its piece (1), the ground's per-cell diagonal, is Q821, which ticks Q398; the decode
   of piece (4) and the float note are Q822). (2) Left by Q817: the pylon under a stacked piece is drawn with the alone-on-its-cell arms (the bottom of a stack that is not its top shows the `0x400` node and hides the `0x800` one, `0x00432ff8`..`0x0043304d`; ours hides `mc_bridge` on it); a stacked pylon stands on the

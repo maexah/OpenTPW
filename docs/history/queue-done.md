@@ -11532,6 +11532,35 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   restores the original's `+0x28` after an attract flight is not decoded.
 - [x] **Q987. Two small leftovers of Q986 (its review, 2026-10-31).** (1) `OptionsScreen.Keep` compares the display with `_before`, not `_applied`: after RESTART GAME's cross, a second tick that sets the display back to the opening mode skips `Display.Apply` and writes the old mode to `opentpw.cfg` while the window stays in the tick's mode; compare with `_applied ?? (_before.DisplayMode, _before.FullScreenSize)` (read, not run). (2) `GameDataTests` pin `Locate` only: putting `GameDir.Find( [] )` back into `Required` stays green. Give `Required` a seam so a test shows that no variable means Inconclusive with `Find` never called.
   **TICKED 2026-10-31 (lane B).** (1) `Keep` asks `OptionsScreen.DisplayToApply( _applied, _before, Options )` through `ApplyDisplay`: a second tick compares with what the first put into effect (read: `_applied ?? (before's display)`). (2) `GameData.Required` is `Mount( variable, GameDir.Find )` with a cache; `Mount` is the seam, and a test shows no variable, or a blank one, is Inconclusive with `Find` never called. Ten bugs put back, none survive. Off-screen on a private Xvfb (llvmpipe listed twice so the card row offers Secondary; `q987/`): tick, RESTART GAME's cross, the Display row back to Windowed, a second tick: the log's second `Display: Windowed` line comes at the tick on the fix and only at the screen's cross on the old rule. Not seen: the window's size going back (no window manager on Xvfb).
+- [x] **Q849. What Q810 left: two counted gaps her played park's save now reaches, and two loads never run.** (From Q810's review,
+  run 14.) Q810 made her Full Simulation `New Save.TPWS` read whole, so the save goes through the running-things writer for the
+  first time (before, the model walk failed and the whole module was written as the file's). Two counters then fire, in
+  `q810-a7/run3fs/run.log` at 2382 and 2411 (the census at the end: 6x and 1x), and neither is in the commit message, `WORKS.md`
+  or `park-gate.md`. (a) `SAVE_PARK_SCRIPT_ENDED` x6 (`ParkRides.Written`, `ParkRides.cs:1027-1031`): a script the loaded file's
+  `ScriptStates.Order` holds that is neither running in ours nor gone by a sale, so its record is left the file's
+  (`docs/exe/saves.md`, the script paragraph). It has no queue line. Find which six of her file's scripts are not running in ours
+  after the load (the console's `rides` / `scripts` census against the file's `ScriptStates.Order`), why each ended or never
+  started (counted gaps, a script that ends by design, a thing ours does not run), and whether the original runs the same six
+  after loading the same file (`loadfile.sh`, `modeltypes.py`/`tpwmem.py`). A script that the original also ends is correct and
+  only needs saying. (b) `SAVE_PARK_TRACK_RIDE_AS_THE_FILE` x1 (`Level.cs:935` or `:951`, the track-rides module): one of her
+  track rides is left the file's because `bumpers.Written` has no record for it (:935) or `ParkCarWriter.Track` cannot write it
+  whole with its cars (:951). Find which ride and which of the two, and build the record or say why it stays the file's. (c) Not
+  run, and said by no doc: her `autosave.TPWS` was not loaded in ours (only `New Save.TPWS`; the rule closes it in
+  `modelchannels.py`, so the risk is low), and the park ours saved from her file (`q810-a7/run3fs/q810a7fs.TPWS`) was walked
+  closed (462 records, 40 of item 1181 at five channels) but not loaded back in ours or in the original. `STATUS.md`'s "a played
+  park with a coaster's pylons loads whole" is true of the load only. Load `autosave.TPWS` in ours, then load the saved file back
+  in ours (the round trip: the same things, scripts and hoardings) and in the original under Proton (`loadfile.sh`), and say what
+  each shows. Acceptance: (a) and (b) each named and settled or built, (c) each load run and its result written in `WORKS.md`'s
+  Q810 entry.
+  **Done (lane A run 17, `q849/`, final binary md5 `c902956b`; the commit's own logging build):** (a) the six are companion scripts of rides ours
+  runs (her file's handles 123 Mumbo's `effects.RSE` on thing 312, 42 the TV Sim's `torches.RSE` on thing 52, 41 the Pork Pie's `Worn.RSE` on thing 54, all
+  `SPAWNCHILD` (the parent's `+0x0c`), and 116, 111 and 91 the Minecart's, the Dino Karts' and the Tour Ride's `EventMap.RSE`, `SPAWNSOUND` (the parent's `+0x14`, no
+  thing)): the load builds one script per placed object and never a companion, so ours' census is 124 where the file holds 130 and the original's (loaded,
+  `origscripts.py`: 130, the six linked to their parents, running on) is 130. Not a script the original ends: a gap, Q910. (b) the one track ride is her Dino Karts
+  (thing 289, item 1150, handle -1024): a kart ride has no record in `ParkBumperCars` (the family built is the bumper cars and boats), so its record and cars stay the
+  file's by design, counted, and the written kart is Q993's. (c) her `autosave.TPWS` loads in ours (the same park three ticks on, same census) and ours' saved file loads
+  back in ours (scripts 124, the 526 things' kinds, the 124 objects' items, script handles and models, the boundary, hoardings, pylons and thing ids the same, the
+  gate's doors open) and in the original (loaded at tick 19015, 130 scripts, no fault); the details and what was not compared are `WORKS.md`'s Q810 entry and `STATUS.md`.
 
 ## B. Docs and comments
 

@@ -1514,9 +1514,9 @@ over fourteen records), and nothing walks by it.
 Measured over the six files' 374 records (`q241i/rsse.py`, `rsse-census.txt`): the records fall by handle, the
 newest first; every object's `mRideScriptHandle` names a record that holds the object's id at `+0xac` and its
 `MeshInstanceID` at `+0xc8`, 360 of 360; of the other fourteen records six share a thing and its model with
-that thing's own script and eight have no thing. `+0x0c`, `+0x10` and `+0x14` hold another script's handle on a
-few records, in pairs (Mumbo's 122 and 123 name each other, the mine cart's 115 names 116): the links between a
-script and one it started, not read in the listing. `+0x60` is the count in limbo and
+that thing's own script and eight have no thing. `+0x0c` is the handle of the script's `SPAWNCHILD` child, `+0x10` the
+child's parent and `+0x14` the handle of its `SPAWNSOUND` child (Mumbo's 122 and 123, the mine cart's 115 and 116; read per word over her 130
+records, FileFormats `saves.md`, the script struct). `+0x60` is the count in limbo and
 `+0x6c` the count bouncing with `+0x6e` beside it (`0x80006` on a Belly Bounce with six aboard).
 
 **Who is on a thing is in both halves, and a file agrees with itself** (`q241i/riders.py`, the played jungle and
@@ -1626,7 +1626,10 @@ and a model's channels their count, so nothing moves, and they go in before the 
   spliced in where it is not ("OpenTPW's writer, a script's started effects"). A bounce slot and a walk slot are written
   whole, in use or let go ("OpenTPW's writer, a bounce slot let go", "a walk slot's facing", "a walk slot let go"). **Counted:** a script the file holds no record for (`SAVE_PARK_SCRIPT_MADE_SINCE_THE_LOAD`:
   a thing bought and left out of the file (`SAVE_PARK_OBJECT_BOUGHT`), a child spawned), and
-  a record whose script has ended (`SAVE_PARK_SCRIPT_ENDED`), left the file's.
+  a record whose script has ended (`SAVE_PARK_SCRIPT_ENDED`), left the file's. In her played Full Simulation park the six are not ended but never started: companions, a
+  script another made at its start (`SPAWNCHILD`: the parent's `+0x0c` holds the child's handle and the child's `+0x10` the parent's; `SPAWNSOUND`: the parent's `+0x14`, the child
+  with no thing and no parent), which the loader builds from the file as records like any other (the original's list after loading her file: 130 nodes, the same handles, the
+  links intact, read live by `origscripts.py`, `q849/runC`) and which ours does not start (Q910).
 - **A model** (`ParkRides.Written`, `ParkThingStates.Put`), into the record that names its thing's script: each
   channel as the engine keeps one. A running channel's clip time and third stamp are the save's moment and its
   start where it began; a held one's clip time is a whole clip past its start (`AnimTimeControl.HeldTime`). Of

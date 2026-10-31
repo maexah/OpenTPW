@@ -945,6 +945,7 @@ public class Level
 			{
 				if ( bumpers.Written( thing.TrackRide, thing.Angle, thing.CatalogueId ) is not { } record )
 				{
+					Log.Info( $"Save: track ride {thing.TrackRide} (thing {thing.ThingId}, catalogue {thing.CatalogueId}) has no record in the bumper cars, so it stays the file's" );
 					Unimplemented.Report( "SAVE_PARK_TRACK_RIDE_AS_THE_FILE" );
 					return;
 				}
@@ -961,6 +962,7 @@ public class Level
 				}
 				else
 				{
+					Log.Info( $"Save: track ride {thing.TrackRide} (thing {thing.ThingId}, catalogue {thing.CatalogueId}) with its cars could not be written whole, so it stays the file's" );
 					Unimplemented.Report( "SAVE_PARK_TRACK_RIDE_AS_THE_FILE" );
 				}
 			}

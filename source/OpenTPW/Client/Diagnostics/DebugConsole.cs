@@ -870,6 +870,24 @@ public static class DebugConsole
 
 				break;
 
+			// Every script the scheduler is running, one line each: its id, the thing it drives, its directory and name,
+			// its place, and the scripts it was spawned by and has spawned. A script with no thing is a companion
+			// (a SPAWNCHILD's or a SPAWNSOUND's), which is what a park file's scripts are counted against (Q849).
+			case "scripts":
+				if ( ParkRides.Current is not { } scripted )
+				{
+					Reply( "scripts: none - a park has to be loaded" );
+					break;
+				}
+
+				Reply( $"scripts {scripted.Scheduler.Count}" );
+
+				foreach ( var script in scripted.Scheduler.Scripts.OrderBy( script => script.Id ) )
+					Reply( $"  script {script.Id} thing {script.ThingId} dir {script.Directory} name '{script.Name}' at {script.Position} "
+						+ $"parent {script.ParentId} child {script.ChildId} sound {script.SoundChildId}" );
+
+				break;
+
 			// Writes one of a thing's script variables by name, as the engine writes VAR_BREAKSTAT, VAR_WORN and the rest
 			// from outside the script - an instrument for an arm nothing built here reaches yet (breakdowns, wear).
 			// With no value it reads the variable instead.

@@ -1026,8 +1026,14 @@ public sealed class ParkRides : Entity
 
 		foreach ( var handle in loaded.ScriptStates.Order )
 		{
-			if ( !running.Contains( handle ) && !goneHandles.Contains( handle ) )
-				Unimplemented.Report( "SAVE_PARK_SCRIPT_ENDED" );
+			if ( running.Contains( handle ) || goneHandles.Contains( handle ) )
+				continue;
+
+			var thingId = loaded.ScriptStates.For( handle )?.Thing ?? 0;
+			var catalogueId = loaded.Objects.Where( thing => thing.ThingId == thingId ).Select( thing => thing.CatalogueId ).FirstOrDefault();
+
+			Log.Info( $"{ThemeName}: the file's script {handle} (thing {thingId}, catalogue {catalogueId}) is not running here, so its record stays the file's" );
+			Unimplemented.Report( "SAVE_PARK_SCRIPT_ENDED" );
 		}
 
 		var models = new List<WrittenModel>();

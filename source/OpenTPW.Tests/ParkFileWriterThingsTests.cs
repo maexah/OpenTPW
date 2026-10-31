@@ -865,6 +865,40 @@ public class ParkFileWriterThingsTests
 	}
 
 	/// <summary>
+	/// A record of the file's with no script running here is left the file's, counted, and its log line names the
+	/// handle and the thing the file gives it, so a played park's census can be read against the file's list
+	/// (Q849: the six companions of her Full Simulation park).
+	/// </summary>
+	[TestMethod]
+	public void AScriptTheLoadDidNotStartIsNamedWhereItIsCounted()
+	{
+		var rides = Bind( shipped );
+		var state = new ParkState( shipped );
+		var said = new List<string>();
+		Logger.LogDelegate listen = ( _, line ) => said.Add( line );
+		Logger.OnLog += listen;
+
+		try
+		{
+			rides.Written( shipped, state.WrittenObjects( shipped ), ChannelsFor, state.HoardingFor );
+		}
+		finally { Logger.OnLog -= listen; }
+
+		var running = rides.Scheduler.Scripts.Select( script => script.Id ).ToHashSet();
+		var ended = shipped.ScriptStates.Order.Where( handle => !running.Contains( handle ) ).ToArray();
+		var named = said.Where( line => line.Contains( "is not running here" ) ).ToArray();
+
+		Assert.AreEqual( 3, ended.Length );
+		Assert.AreEqual( ended.Length, named.Length, "one line each" );
+
+		foreach ( var handle in ended )
+		{
+			var thing = shipped.ScriptStates.For( handle )!.Value.Thing;
+			Assert.IsTrue( named.Any( line => line.Contains( $"the file's script {handle} (thing {thing}," ) ), $"script {handle} is named with its thing {thing}" );
+		}
+	}
+
+	/// <summary>
 	/// Time passed moves the clock and every deadline with it: the cameras' waits and the Belly Bounce's keep their
 	/// distance from the file's clock, which reads the load's reading and the time since.
 	/// </summary>
