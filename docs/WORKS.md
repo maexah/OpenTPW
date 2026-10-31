@@ -203,6 +203,10 @@ belongs to or at the end. Grep it by area or Q-number; never read it whole.
   gives in its `UninstallString`'s `-f"<folder>\Uninst.isu"`, then `C:\Program Files (x86)\Bullfrog\Theme Park World`, then
   `C:\Program Files (x86)\SimTheme Park`. Off Windows the registry is not read and the two defaults are listed as places
   looked. The parse, the names and the order are tested on strings.
+- **The Windows download opens no terminal behind the game** (Q979; the exe's header seen, a start from Explorer not yet): a
+  Release build is a `WinExe` (a Debug build stays an `Exe`, which keeps the debug console's stdin); `ParentConsole.Attach`
+  joins the terminal that started it, when there is one, so a start from a prompt still prints there. The failed start's
+  box and `console.log` do not need a console: seen with stdin, stdout and stderr on `/dev/null`.
 - **A failed start says why in a message box** (Q978, a deviation: the original had no start that could fail so; Linux seen, Windows
   not yet): a game that cannot be found, or an exception before the main loop begins, shows an SDL error box (`StartFailure`)
   holding the log's reason lines (where it looked, how to put it right) or the exception's type and message, and where

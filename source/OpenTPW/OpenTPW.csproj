@@ -12,6 +12,15 @@
 	</PropertyGroup>
 
 	<!--
+		A Release build is a windowed program (Q979): started from Explorer it opens no terminal behind the game. A Debug
+		build keeps its console, which is where the debug console reads its commands (DebugConsole) and where a start's lines
+		are seen. A start from a terminal still prints there (ParentConsole). On Linux and macOS the setting changes nothing.
+	-->
+	<PropertyGroup Condition="'$(Configuration)' == 'Release'">
+		<OutputType>WinExe</OutputType>
+	</PropertyGroup>
+
+	<!--
 		The build's name, which the console's log prints first (LaunchReport.Build). The weekly workflow passes
 		-p:OpenTPWBuildTag=weekly-YYYY-MM-DD; every other build is "local". The SDK adds "+<commit>" from git
 		after it, so a local build names its commit too (the commit checked out: changes not yet committed are

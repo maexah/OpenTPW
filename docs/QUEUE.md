@@ -84,10 +84,6 @@ meets first, found on a Windows 11 PC by a Remote Control session, jobs w1 to w4
 `C:\Users\alexa\tpw-work`): Q976, Q978, Q981, Q979, Q980, Q982, Q977, in that order; then the blocks below. A
 confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
 
-- [ ] **Q979. The Windows release opens a terminal behind the game.** `OutputType` is `Exe`, so a start from Explorer
-  opens a console window (w3: hidden behind the game, on the taskbar). At Alexah's word (2026-10-31): the published
-  Windows build opens none (`WinExe` for the release), the Debug build keeps its console for the debug console's stdin.
-  Confirm on Windows: a double-click of the zip's exe, screenshot of the desktop and taskbar.
 - [ ] **Q902. Where the original's saves went on a PC without the permission fix.** Alexah's call, from Q982: whether the
   original's saves went to Windows' VirtualStore (`%LOCALAPPDATA%\VirtualStore\Program Files (x86)\SimTheme
   Park\save`) when `Program Files (x86)` was not writable, and whether OpenTPW should read them there. Not tested: the
@@ -106,6 +102,14 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   entry)`; then with the key renamed away in a copy of the machine's state or `--game` pointing elsewhere unchanged, the
   box's list ends with the two defaults. Do not write `save\` (copy the install, or quit at the lobby's first frame). If
   the key sits in the 64-bit view or under another name on another PC, widen `IsTheGame`.
+
+- [ ] **Q852. Q979's Windows confirm (no terminal behind the game, which Linux cannot show).** On the Windows 11 PC, the
+  weekly zip's (or a `-c Release -r win-x64` publish's) `OpenTPW.exe`: a double-click shows no console window and no second
+  taskbar entry (screenshot of the desktop and taskbar); started from `cmd` as `OpenTPW.exe --game "<folder>"` its lines
+  print into that prompt (`ParentConsole.Attach` is called and never seen to work, and the debug console's stdin is not
+  promised there); a start that fails (a `--game` that is not a game, double-clicked or from a shortcut) still shows
+  Q978's box and writes `console.log`; a Debug build (`dotnet build`) still opens its console and the debug console
+  reads from it. Do not write `save\`.
 
 - [ ] **Q950. The lobby's attract flight (nobody playing) against the original's: what differs, for Alexah to choose.** Not a
   priority (Alexah, 2026-10-30: "the camera drifting between islands ... and the audio fading between parks is kinda weird").

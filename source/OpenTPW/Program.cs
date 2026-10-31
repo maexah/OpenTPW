@@ -7,6 +7,9 @@ public class Program
 {
 	public static void Main( string[] args )
 	{
+		// A Release build has no console of its own; a start from a terminal prints into that terminal (Q979).
+		ParentConsole.Attach();
+
 		// What is printed from here on is kept in console.log once the game's folder is found - see ConsoleLog.
 		ConsoleLog.Start();
 

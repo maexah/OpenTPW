@@ -11349,6 +11349,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Game (the line in its question, and its tick still quits). Screenshot of each box; the path of `console.log` must
   read well in it (on Linux it wraps at the dot: `...console.` / `log`).
   Done 2026-10-31 on the Windows PC at 2131dc1e (`tpw-work\q901`): every box as predicted, on a player with no `restart.INTS` too; the writable control shows none; the log's path fits on one line there.
+- [x] **Q979. The Windows release opens a terminal behind the game.** `OutputType` is `Exe`, so a start from Explorer
+  opens a console window (w3: hidden behind the game, on the taskbar). At Alexah's word (2026-10-31): the published
+  Windows build opens none (`WinExe` for the release), the Debug build keeps its console for the debug console's stdin.
+  Confirm on Windows: a double-click of the zip's exe, screenshot of the desktop and taskbar.
+  Done on Linux (2026-10-31): `WinExe` for Release only, `ParentConsole.Attach` for a start from a prompt; the win-x64
+  exes' PE subsystem 2 (Release) and 3 (Debug), the box and log with no console handles, the Debug build's debug console.
+  The Windows confirm is Q852.
 
 ## B. Docs and comments
 

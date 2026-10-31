@@ -153,7 +153,8 @@ OPENTPW_SYSTEM_SDL=1 dotnet source/OpenTPW/bin/Debug/net10.0/OpenTPW.dll --game 
 
 **A start that fails.** When OpenTPW cannot find the game, or something goes wrong before the game's window is up,
 it shows a message box with the reason, where it looked, how to put it right and where the log is, on every system,
-and exits. The original had no such box (a deviation). Under a terminal the same lines are printed too.
+and exits. The original had no such box (a deviation). Started from a terminal, the same lines are printed there too. The
+Windows download opens no terminal window of its own.
 
 **Reporting a problem.** Every start writes `console.log` in the game's folder, beside `save`. If the game's folder cannot be
 written, or OpenTPW cannot find the game, it is in your own data folder instead (`%AppData%\OpenTPW` on Windows,
@@ -193,7 +194,8 @@ into that terminal and press Enter. Every reply starts with `[dbg]`.
 OPENTPW_DEBUG_CONSOLE=1 dotnet source/OpenTPW/bin/Debug/net10.0/OpenTPW.dll --game "/path/to/Sim Theme Park"
 ```
 
-On Windows, run `set OPENTPW_DEBUG_CONSOLE=1` first, then start OpenTPW in the same window.
+On Windows, run `set OPENTPW_DEBUG_CONSOLE=1` first, then start OpenTPW in the same window. The debug console reads its commands from
+the console of a Debug build (`dotnet build`); the Release build, which the Windows download is, has no console window of its own.
 
 **Commands.** Most take numbers after the name, for example `island 2` or `step 10`. Many work only in a park.
 
