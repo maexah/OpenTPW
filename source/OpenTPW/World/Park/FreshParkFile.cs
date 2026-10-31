@@ -32,11 +32,8 @@ public static class FreshParkFile
 	{
 		var body = new Sink( 1_600_000 );
 
-		// What the original holds that is not built here (docs/exe/saves.md, "A park made fresh: its file at tick nought"): the
-		// session's music voice, which is nought here (Sound); and, off Lost Kingdom, the flyers' four values, the land's own
-		// voices and its emitter.
-		Unimplemented.Report( "FRESH_PARK_FILE_MUSIC_VOICE" );
-
+		// What the original holds that is not built here (docs/exe/saves.md, "A park made fresh: its file at tick nought"): off
+		// Lost Kingdom, the flyers' four values, the music's and the land's own voices and its emitter.
 		if ( !park.Theme.Equals( "jungle", StringComparison.OrdinalIgnoreCase ) )
 			Unimplemented.Report( "FRESH_PARK_FILE_OTHER_THEME" );
 
@@ -649,9 +646,11 @@ public static class FreshParkFile
 		var state = body.Length;
 		body.Zeros( 0x54 );
 
-		// The music's voice handle is nought, a deviation from the original's (its session's own voice, FRESH_PARK_FILE_MUSIC_VOICE),
-		// and so is the crowd's (no voice is in the list); the four volumes, a word that is 1 in
-		// every file, and the three on-flags.
+		// The handle of the music's voice, which the list below holds; the crowd's is nought (no voice is in the list); the four
+		// volumes, a word that is 1 in every file, and the three on-flags.
+		if ( park.Theme.Equals( "jungle", StringComparison.OrdinalIgnoreCase ) )
+			body.Poke32( state, LostKingdomVoices[0].Handle );
+
 		body.Poke32( state + 0x08, 1 );
 		body.Poke32( state + 0x18, 100 );
 		body.Poke32( state + 0x1c, 75 );
@@ -712,8 +711,8 @@ public static class FreshParkFile
 		// The voice pool's blocks of 100 slots.
 		body.Int32( 1 );
 
-		// The land's own voices, as the original puts them back on entering a park (measured; FileFormats saves.md, "What the
-		// shipped park holds"). Only Lost Kingdom's are known: another theme's file holds none here, a deviation.
+		// The music's voice and the land's own, as the original holds them on entering a park (measured; FileFormats saves.md,
+		// "A park made fresh"). Only Lost Kingdom's are known: another theme's file holds none here, a deviation.
 		var voices = theme == "jungle" ? LostKingdomVoices : [];
 
 		foreach ( var voice in voices )
@@ -732,13 +731,14 @@ public static class FreshParkFile
 			body.Int32( voice.Sample );
 			body.Int32( VoiceMark );
 
-			// The controllers of a voice that follows the listener in a rectangle: four key bytes and four value bytes
-			// (nought here), then the rectangle's z1, x1, x2 and z2.
+			// The controllers of a voice with a parameter or that follows the listener in a rectangle: four key bytes (the
+			// music's first is its parameter 4) and four value bytes (nought here), then the rectangle's z1, x1, x2 and z2.
 			body.Int32( voice.Rectangle != null ? 1 : 0 );
 
 			if ( voice.Rectangle is { } corners )
 			{
-				body.Zeros( 8 );
+				body.Byte( voice.Music ? MusicParameter : 0 );
+				body.Zeros( 7 );
 				body.Int32( corners.Z1 );
 				body.Int32( corners.X1 );
 				body.Int32( corners.X2 );
@@ -746,7 +746,7 @@ public static class FreshParkFile
 			}
 
 			body.Int32( VoiceMark );
-			body.Byte( voice.Rectangle != null ? 1 : 0 );
+			body.Byte( voice.Rectangle != null && !voice.Music ? 1 : 0 );
 			body.Int32( voice.Handle );
 			body.Int32( 0 );
 		}
@@ -757,12 +757,23 @@ public static class FreshParkFile
 
 	private const int VoiceMark = 0x0012d591;
 
-	private readonly record struct LandVoice( int Handle, int Type, float X, float Z, float Range, int Category, int Effect,
-		int Variation, int Sample, (int X1, int Z1, int X2, int Z2)? Rectangle = null );
+	/// <summary>The parameter the park loop sets on the music's voice (<c>Sound_SetMusicLevel</c>, <c>0x0051e790</c>).</summary>
+	private const int MusicParameter = 4;
 
-	/// <summary>Lost Kingdom's five: the global ambient's two plain voices that follow the listener in a rectangle, the level's ambient, and two one-shots.</summary>
+	private readonly record struct LandVoice( int Handle, int Type, float X, float Z, float Range, int Category, int Effect,
+		int Variation, int Sample, (int X1, int Z1, int X2, int Z2)? Rectangle = null, bool Music = false );
+
+	/// <summary>
+	/// Lost Kingdom's six: the music's, then the land's five, the global ambient's two plain voices that follow the listener in
+	/// a rectangle, the level's ambient, and two one-shots.
+	/// </summary>
+	/// <remarks>
+	/// <b>A deviation:</b> the music's sample is the first, where the original's is the track its session drew (0 to 14 over
+	/// its files), and it is not the one playing here (<c>docs/exe/saves.md</c>, "A park made fresh: its file at tick nought").
+	/// </remarks>
 	private static readonly List<LandVoice> LostKingdomVoices =
 	[
+		new( 0x350062, 1, 0f, 0f, 0f, 10, 0, 0, 0, (0, 0, 0, 0), Music: true ),
 		new( 0x360061, 5, 353f, 31f, 0f, 1, 4, 0, 1, (353, 31, 450, -66) ),
 		new( 0x370060, 5, 372f, 21f, 0f, 1, 6, 1, 0, (372, 21, 567, -174) ),
 		new( 0x38005e, 5, 21f, 39f, 19f, 7, 4, 0, 0 ),

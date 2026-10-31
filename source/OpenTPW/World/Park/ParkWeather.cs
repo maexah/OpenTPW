@@ -42,7 +42,8 @@ public sealed class ParkWeather : Entity
 	/// <summary>
 	/// The quality the park's weather is at, 1 to 100, low being bad. Clamped into that range by
 	/// FUN_00512f00 before anything reads it, which is also why the snow band of -1/-1 can never be
-	/// entered.
+	/// entered. A fresh park's is the constructor's roll, unclamped and applied to nothing: only a save reads it
+	/// before the first delivery writes over it (<c>docs/exe/weather.md</c>, "A park's first days").
 	/// </summary>
 	public int Quality { get; private set; }
 
@@ -108,7 +109,7 @@ public sealed class ParkWeather : Entity
 	private int _counterSeen = GameCalendar.Counter;
 
 	// What the thing's saved record holds (FUN_00512010): the park calendar, a FILETIME, as the quality was last
-	// applied (FUN_00512f00 stamps mLastChanged) and as the last forecast was made, with its due time and quality
+	// applied (FUN_00512f00 stamps mLastChanged; nought until one is) and as the last forecast was made, with its due time and quality
 	// (message 2, FUN_005127a0); the forecast's stay after it is delivered, as the original's do, and are null until
 	// this park makes one.
 	private long _lastChanged;
@@ -148,9 +149,15 @@ public sealed class ParkWeather : Entity
 	/// <summary>The park is 128 cells square at ten units a cell - see <c>ParkGround</c>.</summary>
 	private static float MapExtent => OpenTPW.ParkWorld.MapSize * 10f;
 
+	/// <summary>The wind's direction <c>Weather_Construct</c> leaves, its <c>+0x5c</c>, in degrees.</summary>
+	internal const float ConstructedWind = 90f;
+
+	/// <summary>The wind's force <c>Weather_Construct</c> leaves, its <c>+0x60</c>.</summary>
+	internal const float ConstructedForce = 0.5f;
+
 	/// <param name="savedWindDirection">
-	/// The park file's <c>mWindDir</c>, or null for a fresh park: the original's constructor rolls and moves the wind,
-	/// then a load reads the saved one over it (<c>FUN_00512010</c>), so a loaded park's flags stand as they were saved.
+	/// The park file's <c>mWindDir</c>, or null for a fresh park, which stands as the original's constructor leaves it;
+	/// a load reads the saved wind over that (<c>FUN_00512010</c>), so a loaded park's flags stand as they were saved.
 	/// </param>
 	public ParkWeather( float? savedWindDirection = null ) : this( savedWindDirection, drawn: true )
 	{
@@ -202,9 +209,15 @@ public sealed class ParkWeather : Entity
 		_maxRaindrops = Int( balance, "WeatherEffects.MaxRaindrops", 600 );
 
 		// The original's constructor rolls a quality and stores it unapplied (0x00511fc4), its stamps nought and
-		// its wind 90 at 0.5, and a load reads the file over it. This applies the roll at once, a deviation
-		// until Q529 starts the weather from the file.
-		Apply( Roll() );
+		// its wind 90 at 0.5, and a fresh park stands so: dry until its first forecast lands.
+		Quality = Roll();
+		WindDirection = ConstructedWind;
+		WindForce = ConstructedForce;
+
+		// A load reads the file over all of that. This applies the roll at once and takes the file's wind alone, a
+		// deviation until Q529 starts the weather from the file.
+		if ( savedWindDirection != null )
+			Apply( Quality );
 
 		WindDirection = StartingWind( WindDirection, savedWindDirection );
 
@@ -343,6 +356,12 @@ public sealed class ParkWeather : Entity
 	/// three days after the last change and arrives four days after that.
 	/// </para>
 	/// <para>
+	/// <b>A fresh park forecasts on its first tick.</b> Its <c>mLastChanged</c> is nought, 1601, so the first compare
+	/// (<c>0x005129c5</c>, now past that plus the lead) already holds, and the constructor's quality stands only until that
+	/// forecast lands. This counts day edges (see <see cref="Written"/>), so it lands on sweep 93 where the original's lands
+	/// on 94.
+	/// </para>
+	/// <para>
 	/// Whether the original ever showed that warning to the player - an advisor line, a forecast panel -
 	/// is <b>not established</b>; only that it schedules this way.
 	/// </para>
@@ -354,7 +373,7 @@ public sealed class ParkWeather : Entity
 
 		var lead = Math.Max( _daysBetweenChanges - _daysOfWarning, 0 );
 
-		if ( GameCalendar.Days < _lastChangedDay + lead )
+		if ( _lastChanged != 0 && GameCalendar.Days < _lastChangedDay + lead )
 			return;
 
 		Forecast = Roll();

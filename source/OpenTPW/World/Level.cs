@@ -543,8 +543,8 @@ public class Level
 
 		load.Mark( "audio" );
 
-		// After the audio, because a park opens with its weather already rolled and that first roll
-		// may want to start the rain straight away.
+		// After the audio, because a loaded park opens with its weather already rolled and that first
+		// roll may want to start the rain straight away.
 		_ = new ParkWeather( park?.Save?.WindDirection );
 		load.Mark( "weather" );
 

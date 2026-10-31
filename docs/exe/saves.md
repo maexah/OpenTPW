@@ -1036,7 +1036,7 @@ is the original's own value. What decides the class is not read.
 | `KAME` | zoom 110, rotation 0, flags 0, the point (475, 0, 175), nothing saved | no | constant (the orbit camera's at the write, as any save) |
 | `COAS` | no coaster: `0 0 0 1` | no | constant |
 | `ADVS` | `Advisor_ResetState`'s 360 bytes (`0x005989c0`: zeroed, `+0x110` 5, `+0x12c` -1, the head node at `+0x38 + slot*4` and five mouth nodes at `+0x40 + slot*20` of each slot's model, found by name (`FUN_0044b2e0`), then twenty clip lengths in ms at `+0x68` to `+0xb4` from slot 1's model, else slot 0's, clip 14's (`+0x9c`, entry 13) nought), then eight words of the balance (four pairs from `0x7856f4`) at `+0x144` to `+0x150` and `+0x154` to `+0x160`: the theme's costume piece ids, `AddOns` and `SubOffs` (`FUN_004080e0`; `advisor-park.md`, the costume row), no buffer | no (by theme: the theme's advisor) | afresh from the theme's advisor model and the balance |
-| `SOUN` | five voices of the land at fixed places (two plain voices of the global ambient, held; the jungle's ambient effect 181, range 19; two one-shots of the global ambient, range 97) and whatever the session had playing: the lobby's one-shots and a speech one-shot on Windows, the music's voice under Proton (and a lobby one-shot in two runs) | the voices, the handles, the category slots | the running park's voices, as any save |
+| `SOUN` | five voices of the land at fixed places (two plain voices of the global ambient, held; the jungle's ambient effect 181, range 19; two one-shots of the global ambient, range 97) and whatever the session had playing: the lobby's one-shots and a speech one-shot on Windows, the music's voice under Proton (and a lobby one-shot in two runs) | the voices, the handles, the category slots | the land's five and the music's, then the running park's voices as any save |
 | `CHTS`, `ADSC`, the UI block | nought; no tag (`ADSC` 258 in the Halloween file) | no | constant |
 
 So nothing of the shipped park file but its legal text belongs in a fresh park's file, and every module is made from
@@ -1068,11 +1068,11 @@ it is laid twice: measured on all 1,819 anchors of the seventeen files) and noug
 starting cash**; **the clock holds month 0 and day -1 until its first update** (the writer holds them while `mGameTick` is nought).
 
 **Written differently from the original, said at the site:**
-- The words the original leaves as whatever memory held (the weather's location, the lab past its used projects, the advisor's 1,172 and the
+- The words the original leaves as whatever memory held (the weather's location and forecast quality, the lab past its used projects, the advisor's 1,172 and the
   challenge manager's leftover bytes, the two objects' day rings) are nought, the clean runs' value; `mPreviousSearchKey` is nought (the
   loader zeroes it), the particles' heap pointer at `+0x28` nought.
-- The weather, the staff pool and the clock's readings are the running park's, by the stages above: the weather's quality, wind, stamps and
-  thunder countdown are OpenTPW's own roll, not the constructor's (wind 90, force 0.5).
+- The staff pool and the clock's readings are the running park's, by the stages above. The weather's are the constructor's, as a run of the
+  original's, its quality a roll (`weather.md`, "A park's first days").
 - **The advisor's model words are built** (`FreshParkFile.AdvisorModelWords`): the module's `+0x38` to `+0x64` (each slot's head node and five
   mouth nodes, found by name in the lobby's `Advisor.md2` and the level's `Advisor_<THE>.md2`, nought where there is none) and `+0x68` to `+0xb4`
   (twenty clip lengths of one model, slot 1's else slot 0's, clip 14 nought) are what `Advisor_ResetState` makes of the models, because **the
@@ -1082,14 +1082,17 @@ starting cash**; **the clock holds month 0 and day -1 until its first update** (
 - **A difference from the original's file that is neither per-run nor counted, said at `FreshParkFile` and the writers:** the advisor thing's slot 0
   `mValid` is 0 here and 1 there (`PutAdvisorSlots` writes the slots this game holds, and it posts no message 0, Q543), so the original loading a
   file from here has no welcome in its slot list.
-- **Not built, counted** (`Unimplemented`): `FRESH_PARK_FILE_MUSIC_VOICE`: the sound state's `+0x00` and the session's music voice it names are nought.
-  `FRESH_PARK_FILE_OTHER_THEME`: the flyers' values, the land's emitter and voices, the generator's seed and the ride
+- **Not built, counted** (`Unimplemented`): `FRESH_PARK_FILE_OTHER_THEME`: the flyers' values, the land's emitter and voices, the generator's seed and the ride
   system's counts are Lost Kingdom's (the other themes' files were measured beside it, not built).
 - **The rest of the file** (Q801), decoded and built: the controls' `+0x08`, the two objects' model tables and channels and their scripts' words,
   below.
 
 - **The sound** holds the land's five voices of Lost Kingdom as the original puts them back (handles `0x36` to `0x3a`, slots 97, 96, 94, 99, 95)
-  and not the session's own (the music's voice, `0x350062` under Proton, with the state's `+0x00` naming it): nought here.
+  and the music's voice before them, handle `0x350062`, slot 98, with the state's `+0x00` naming it (`audio.md`, "A park file's voices": a file
+  without it leaves the original's park with no music). 16 of the 17 files hold that voice: type 1, the music's category, effect index 0,
+  variation 0, parameter key 4, not held, a serial that varies, and a sample that is the session's draw, 0 to 14. Alexah's Windows file holds none, and what
+  decides that is not read. **Here its sample is the first and not the one playing**, a deviation at `FreshParkFile.LostKingdomVoices`. The
+  voice's words past that are nought, where the rectangle voices' key bytes in the reference hold `97, 116, 97`, memory.
 
 **Confirmed** (`q783/confirm/r2`, `orig/l3`): a fresh Full Simulation park entered, its `restart.INTS` written (30,320 bytes, tick 0, closed, 12 things,
 $50000), a feature bought and the park run to tick 104, Restart Park by clicks: tick 0, $50000, "park file holds 12 things, 2 of them objects"; the park saved
@@ -3954,7 +3957,7 @@ until the drops next end or it snows (modes 1 and 2 stop the handle, whatever it
 This park's schedule counts day edges of its own calendar (Q529), not the original's instants, so its forecast is made
 and delivered on a whole day where the original's is made on the first tick past an instant; the stamps written are
 the park calendar's on the tick it happened here, so the original loading the file runs its own schedule from them.
-A load here still reads only `mWindDir` (Q493): the quality, the forecast and the storm are rolled fresh (Q529).
+A load here still reads only `mWindDir` (Q493): the quality, the forecast and the storm are rolled fresh (Q529). A fresh park's are the constructor's (`weather.md`, "A park's first days").
 
 **Measured across the files** (`q528/wsweep.py`, the 741 park files on this machine; `parkfile.weather`, `-W`): in the 48
 park files in the original's folders (three of them files this game wrote, kept there to be loaded; ten byte copies of

@@ -599,6 +599,8 @@ Each was found by trial in the item named, and cost a run to find.
 **In OpenTPW, through the console** (`OPENTPW_DEBUG_CONSOLE=1`; the `case` labels in `DebugConsole.cs` are the
 whole list):
 
+- **A fresh park's first days of weather** (Q803, `q803/confirm.py <out> <bin> fresh|stock`, off-screen): enter, pause (sweep 8), read `weather`'s "as saved"
+  and `flags`, resume to sweep 84, then `step 6` a half sweep at a time past the delivery; `final1` is the shape of a run. The weather thing's record against the original's: `q803/w7.py <mine> <ref>`.
 - **A fresh Full Simulation park, in both games** (Q349). This game: `lib/freshpark.py` (a player folder with no
   `gms.dat` is a new Full Simulation player); the park's first log line is `jungle: fresh park: ...`, the poll
   starts on tick 1, so pause at once (tick 8 on the desktop and off it), and row N's first turn is its place

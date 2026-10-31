@@ -15,7 +15,7 @@ sounds, text) may ever be committed.
 |---|---|
 | Documentation, the website text, queue notes | No |
 | Tools and scripts (`tools/`), the Python harness libraries | No |
-| Building, and running the tests | No. Without the game, the tests that need it skip: on 2026-10-31, 1,863 of the 4,569 ran and 2,706 skipped (Linux; `docs/STATUS.md` has the Windows run's own counts), with 0 failing. Read the skip count: a pass with skips is not a full pass. The tests mount the game only through `OPENTPW_GAME_PATH`; they never mount from the working directory, the build's folder or, on Windows, the registry (two tests of `GameDir.Find` walk the build's folder and the working directory, with the registry's folders faked, and mount nothing), so a run never touches a copy of the game you play (Q986). |
+| Building, and running the tests | No. Without the game, the tests that need it skip: on 2026-10-31, 1,866 of the 4,572 ran and 2,706 skipped (Linux; `docs/STATUS.md` has the Windows run's own counts), with 0 failing. Read the skip count: a pass with skips is not a full pass. The tests mount the game only through `OPENTPW_GAME_PATH`; they never mount from the working directory, the build's folder or, on Windows, the registry (two tests of `GameDir.Find` walk the build's folder and the working directory, with the registry's folders faked, and mount nothing), so a run never touches a copy of the game you play (Q986). |
 | Playing the game, and confirming that a change to what is drawn or how the game behaves is right | **Yes** |
 | The harnesses that drive the running game or the original under Proton | **Yes**, and a Linux machine for the Proton ones |
 

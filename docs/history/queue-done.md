@@ -11561,6 +11561,20 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   file's by design, counted, and the written kart is Q993's. (c) her `autosave.TPWS` loads in ours (the same park three ticks on, same census) and ours' saved file loads
   back in ours (scripts 124, the 526 things' kinds, the 124 objects' items, script handles and models, the boundary, hoardings, pylons and thing ids the same, the
   gate's doors open) and in the original (loaded at tick 19015, 130 scripts, no fault); the details and what was not compared are `WORKS.md`'s Q810 entry and `STATUS.md`.
+- [x] **Q847. A person's sound is placed at the height of their sprite's offset above the ground, as the original's is.** (From run 14's
+  review of Q823, finding 4.) Lane B, off-screen, no original run. `ParkGuestSprites.Heard` (x, y and the pool's sprite `Height`, the
+  saved `+0x8c`) replaces `Feet` (the ground's height) at `StaffSound`, `PutOff` (twice), `Yawn` and the till (`audio.md`, "The height of a
+  person's sound"; `park-engine.md`, "Which height each asker takes"). Seen (`q847/`, five staff put down on the stock park's 20.0
+  plateau, final build): voices at z 0.0 (40; 51 on the build one seam earlier) where the build before read the ground, 3.5 to 20.0 (49); with the sprites'
+  `+0x8c` written 5.0 in a saved file and loaded, 5.0 (49) against 16.7 to 20.0 before. Not seen: the original's own sound on raised
+  ground, and a guest's put-off, yawn or till on raised ground (Q856).
+- [x] **Q803. What Q801 left of a park made fresh's file: the weather's first week and the music's voice.** From Q801 (run 13, lane A); its
+  other themes' files are split off as Q857 (lane B, run 17). (1) **The weather.** A decode corrected this item: the first forecast does not wait three days. The stamp is
+  nought, so the compare holds on sweep 1 and it lands on 94, four days, and nothing reads the stored quality before that but a save (`weather.md`, "A park's first
+  days"). `ParkWeather`'s constructor leaves a park with no file so: the roll stored, wind 90 at 0.5, stamps nought, forecast on sweep 1. It lands here on 93 (day edges, Q529). (2) **The session's
+  music voice.** State 9 starts the music before the file loads, and the reader stops every live voice, so a file naming none leaves the original's park silent (read, not run; `audio.md`).
+  `FreshParkFile` writes it, first in the list, with the state's `+0x00` naming it, its sample the first where the original's is a draw. `SOUN` 1,017 bytes as the original's, 7 differing.
+  Confirmed off-screen on the final binary, no original run (`q803/`, `PREDICTION.txt`).
 
 ## B. Docs and comments
 

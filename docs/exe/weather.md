@@ -42,8 +42,8 @@ Read from the named save stream in `FUN_00512010` (`Weather_Serialise` in Ghidra
 is the sum of the sizes before it (FileFormats `saves.md`, "The weather"): `mWindDir` is at the record's +90 of 99. All six
 park files hold it whole, 24 to 350, and the original's live wind on the stock park was its file's 139
 (Q491). **OpenTPW reads `mWindDir` alone** (`ParkWorld.WindDirection`, Q493): `ParkWeather` rolls and moves the wind as
-the constructor does, then takes the file's over it, as the load does; the gates' flags turn to it, eased where the original's jump (Q643; `park-engine.md`, "The gates' flags"). The quality, the
-schedule and the rest stay fresh (Q529). The writer writes the running weather (Q528; `saves.md`, "OpenTPW's writer,
+the constructor does, then takes the file's over it, as the load does; the gates' flags turn to it, eased where the original's jump (Q643; `park-engine.md`, "The gates' flags"). In a loaded park the quality, the
+schedule and the rest stay fresh (Q529); a fresh park stands as the constructor leaves it ("A park's first days", below). The writer writes the running weather (Q528; `saves.md`, "OpenTPW's writer,
 the weather thing").
 
 ### Quality is the only input
@@ -70,7 +70,7 @@ fall speed = 0.8 for snow, 2.5 for rain (FUN_0057dc40)
 | `FUN_00516330` | — | Coin flip; decides the winner when a quality qualifies as both snow and rain | Call in `FUN_00512f00` |
 | `FUN_0057d920` | — | Wind setter `(angleDegrees, force)`; stored normalised with **y fixed at -1 before normalisation** | Decompile |
 | `FUN_0057dc40` | — | Fall-speed setter (velocity in units/sec) | Decompile |
-| `FUN_00512e10` | — | Rolls a new quality for the next cycle | Call in `FUN_00512880` |
+| `FUN_00512e10` | — | `Weather_RollQuality` in Ghidra: rolls a new quality for the next cycle, unclamped (0 to 99 in Lost Kingdom's first season), and the constructor's | Calls in `FUN_00512880` and `FUN_00511f70` |
 
 ## The calendar: "funny time", and why it must be reproduced as a counter
 
@@ -170,6 +170,18 @@ Descriptors carry no target address; the binder `FUN_00401030` computes them pos
 ### The forecast is real
 
 `FUN_00512880` schedules the next change at `mLastChanged + (DaysBetweenChanges - DaysOfWarning)` = 3 days (the first tick past that instant: 69.12 ticks, so 909 to 979 in the original's own files; `saves.md`, "OpenTPW's writer, the weather thing"), rolls the new quality with `FUN_00512e10`, and publishes it as a forecast; the thing applies it **`DaysOfWarning` (4) days later**, so the full cycle is 7 days. **Whether the warning is ever player-visible** (an advisor line, a forecast panel) is **not established**.
+
+### A park's first days
+
+`Weather_Construct` (`0x00511f70`) rolls a quality with the season's roll and stores it at `+0x0c` without applying it (`0x00511fc4`): the stamps, the forecast and the ramp nought, nothing in the lightning, the wind 90 at 0.5. The forecast's quality (`+0x28`), the location and `mPType` are not written, so a file holds memory there (the forecast's quality in all seventeen fresh files, `q249/fresh-list.txt`).
+
+**Nothing reads the stored quality before it is overwritten but a save.** The whole text was swept (`q803/thingswitch.py`). The world's `mWeather` (`+0x1da724`) is touched at four places: its set (`0x00515a79`), the two serialisers (`0x005172a1`, `0x00517f7f`) and the getter `World_Weather` (`0x00519590`). The getter has three callers, and they read `mCurrentDrops` (`0x004cf60e`, `0x004fd277`) and `mWindDir` (`0x0053c6c6`), never the quality. In the weather's own code `+0x0c` is read in `Weather_ApplyQuality`, after it has written it, and passed to the serialiser (`0x00512076`, `0x00512518`). Of the switches on a thing's type byte only three have a case for 15: the update, the message dispatcher and `0x0050b800`, whose `0x00512000` frees the weather's art.
+
+**The first forecast comes on sweep 1, not three days in.** The compare is now past `mLastChanged` + 3 days (`0x00512995`, `FUN_005fc570` at `0x005129c5`), and a nought stamp is the year 1601. So a fresh park rolls its forecast on its first sweep and it lands on the first sweep past 1 + 92.16, 94. A Halloween World autosave of the original's on sweep 4 holds a nought stamp, forecasted 1.00, due 93.16, valid 1, thunder -4. The stock park's stamps are that chain run on: 94 + 4 x 163 = 746, its `mLastChanged`, with 653 its forecast. So a fresh park is dry with wind 90 at 0.5 for four days, about 23 seconds, not a week.
+
+**OpenTPW** stands the same (`ParkWeather`'s constructor, for a park with no file). It counts day edges (Q529), so its first delivery falls on sweep 93, one before the original's. A park with a file still applies a roll at once and takes the file's wind alone, until Q529.
+
+Seen off-screen, with a fresh Full Simulation park on the final binary (`q803/final1`): quality 80 and 0 drops at the entry, wind 90, forecast made on tick 1.00 and due 93.16, quality 80 to sweep 92, the forecast's 72 on 93, wind 87 at 0.28.
 
 ## Weather is per-theme
 

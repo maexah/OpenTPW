@@ -378,48 +378,56 @@ public class FreshParkFileTests
 			Assert.AreEqual( -1, BitConverter.ToInt32( body, at + 204 + 16 * message + 4 ), $"message {message}'s line" );
 	}
 
-	/// <summary>The sound: the land's five voices of Lost Kingdom, two of them following the listener in a rectangle.</summary>
-	/// <remarks><b>Mutations:</b> a voice's handle, place, range, category or rectangle changed; the voices in another order.</remarks>
+	/// <summary>
+	/// The sound: the music's voice, named by the state's first word, with its parameter's key and not held, then the land's five
+	/// voices of Lost Kingdom, two of them following the listener in a rectangle.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> a voice's handle, place, range, category or rectangle changed; the voices in another order; the state
+	/// naming no voice; the music's key nought; the music held.</remarks>
 	[TestMethod]
-	public void TheSoundHoldsTheLandsFiveVoices()
+	public void TheSoundHoldsTheMusicAndTheLandsFiveVoices()
 	{
 		var (file, body) = Save();
 		var world = new ParkWorld( body, file[..0x60D] );
 		var sound = Modules( body )["SOUN"].At;
 
 		// 12 bytes of state header, the 84 of the state, 12 of floats, then the list's length and voice count.
-		Assert.AreEqual( 5, BitConverter.ToInt32( body, sound + 12 + 84 + 12 + 4 ) );
-		Assert.AreEqual( 0, BitConverter.ToInt32( body, sound + 12 ), "no music voice is saved" );
+		Assert.AreEqual( 6, BitConverter.ToInt32( body, sound + 12 + 84 + 12 + 4 ) );
+		Assert.AreEqual( 0x350062, BitConverter.ToInt32( body, sound + 12 ), "the state names the music's voice" );
 		Assert.IsNotNull( world );
 
 		// The category record and the pool's block count sit between the count and the first voice.
 		var at = sound + 12 + 84 + 12 + 8;
 		at += 8 + BitConverter.ToInt32( body, at ) + 4;
 
-		var voices = new List<(int Handle, float X, float Z, float Range, int Category, bool Rectangle, int Corners)>();
+		var voices = new List<(int Handle, int Type, float X, float Z, float Range, int Category, bool Rectangle, int Corners, int Key, int Held)>();
 
-		for ( var voice = 0; voice < 5; ++voice )
+		for ( var voice = 0; voice < 6; ++voice )
 		{
 			var handle = BitConverter.ToInt32( body, at );
 			var rectangle = BitConverter.ToInt32( body, at + 52 ) != 0;
 			var corners = rectangle ? BitConverter.ToInt32( body, at + 56 + 8 ) + BitConverter.ToInt32( body, at + 56 + 12 )
 				+ BitConverter.ToInt32( body, at + 56 + 16 ) + BitConverter.ToInt32( body, at + 56 + 20 ) : 0;
 
-			voices.Add( (handle, BitConverter.ToSingle( body, at + 12 ), BitConverter.ToSingle( body, at + 20 ), BitConverter.ToSingle( body, at + 28 ),
-				BitConverter.ToInt32( body, at + 32 ), rectangle, corners) );
+			voices.Add( (handle, BitConverter.ToInt32( body, at + 4 ), BitConverter.ToSingle( body, at + 12 ), BitConverter.ToSingle( body, at + 20 ),
+				BitConverter.ToSingle( body, at + 28 ), BitConverter.ToInt32( body, at + 32 ), rectangle, corners, rectangle ? body[at + 56] : 0,
+				body[at + 52 + 4 + (rectangle ? 24 : 0) + 4]) );
 
 			// 13 dwords, the rectangle's flag, its eight controller bytes and four corners, the mark, a byte, the handle and a nought.
 			at += 52 + 4 + (rectangle ? 24 : 0) + 4 + 1 + 4 + 4;
 		}
 
-		CollectionAssert.AreEqual( new[] { 0x360061, 0x370060, 0x38005e, 0x390063, 0x3a005f }, voices.Select( voice => voice.Handle ).ToArray() );
-		CollectionAssert.AreEqual( new[] { 353f, 372f, 21f, 530f, 511f }, voices.Select( voice => voice.X ).ToArray() );
-		CollectionAssert.AreEqual( new[] { 31f, 21f, 39f, 513f, 664f }, voices.Select( voice => voice.Z ).ToArray() );
-		CollectionAssert.AreEqual( new[] { 0f, 0f, 19f, 97f, 97f }, voices.Select( voice => voice.Range ).ToArray() );
-		CollectionAssert.AreEqual( new[] { 1, 1, 7, 1, 1 }, voices.Select( voice => voice.Category ).ToArray() );
-		CollectionAssert.AreEqual( new[] { true, true, false, false, false }, voices.Select( voice => voice.Rectangle ).ToArray() );
-		CollectionAssert.AreEqual( new[] { 353 + 31 + 450 - 66, 372 + 21 + 567 - 174, 0, 0, 0 }, voices.Select( voice => voice.Corners ).ToArray() );
-		Assert.AreEqual( at, sound + Modules( body )["SOUN"].Length, "the five voices end the module" );
+		CollectionAssert.AreEqual( new[] { 0x350062, 0x360061, 0x370060, 0x38005e, 0x390063, 0x3a005f }, voices.Select( voice => voice.Handle ).ToArray() );
+		CollectionAssert.AreEqual( new[] { 1, 5, 5, 5, 3, 3 }, voices.Select( voice => voice.Type ).ToArray() );
+		CollectionAssert.AreEqual( new[] { 0f, 353f, 372f, 21f, 530f, 511f }, voices.Select( voice => voice.X ).ToArray() );
+		CollectionAssert.AreEqual( new[] { 0f, 31f, 21f, 39f, 513f, 664f }, voices.Select( voice => voice.Z ).ToArray() );
+		CollectionAssert.AreEqual( new[] { 0f, 0f, 0f, 19f, 97f, 97f }, voices.Select( voice => voice.Range ).ToArray() );
+		CollectionAssert.AreEqual( new[] { 10, 1, 1, 7, 1, 1 }, voices.Select( voice => voice.Category ).ToArray() );
+		CollectionAssert.AreEqual( new[] { true, true, true, false, false, false }, voices.Select( voice => voice.Rectangle ).ToArray() );
+		CollectionAssert.AreEqual( new[] { 0, 353 + 31 + 450 - 66, 372 + 21 + 567 - 174, 0, 0, 0 }, voices.Select( voice => voice.Corners ).ToArray() );
+		CollectionAssert.AreEqual( new[] { 4, 0, 0, 0, 0, 0 }, voices.Select( voice => voice.Key ).ToArray() );
+		CollectionAssert.AreEqual( new[] { 0, 1, 1, 0, 0, 0 }, voices.Select( voice => voice.Held ).ToArray() );
+		Assert.AreEqual( at, sound + Modules( body )["SOUN"].Length, "the six voices end the module" );
 	}
 
 	/// <summary>The object controls: each of the 70 items' record reads back as the fresh park's own, the count after the 150 slots 70.</summary>

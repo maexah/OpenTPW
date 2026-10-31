@@ -220,16 +220,9 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   (2) "A place to ask questions" is issues titled "Question: ..." for now; GitHub Discussions are Alexah's to switch
   on. (3) A test for `tools/check_docs_paths.py` (it is run by hand and by the audit; nothing tests it).
 
-- [ ] **Q803. What Q801 left of a park made fresh's file.** From Q801 (run 13, lane A), filed after the 2026-10-28 ordering block (a
-  reorder is Alexah's). (1) **The weather's first week.** The original's constructor rolls a quality and stores it unapplied, its stamps
-  nought and its wind 90 at 0.5 (`Weather_Construct`, `0x00511f70`), and its first forecast comes on the first tick past three days and
-  lands four days later (`weather.md`, "The forecast is real"), so a fresh park of the original's is dry with that wind for its first week
-  and its file at tick nought holds them; `ParkWeather`'s constructor here applies its roll at once (beside Q529, a loaded park's weather).
-  Decode what reads the stored quality in that week, then start a fresh park's weather as the constructor leaves it. (2) **The session's
-  music voice** (`FRESH_PARK_FILE_MUSIC_VOICE`): the sound state's `+0x00` and the voice it names, nought here; decode what the original's
-  load does with them first. (3) **The other three themes' files** (`FRESH_PARK_FILE_OTHER_THEME`: the flyers' values, the land's emitter
-  and voices, the generator's seed, the ride system's counts): waits, Lost Kingdom first. The advisor's slot 0 `mValid` is Q543's (the
-  welcome). Confirm each by the same diff against the original's file (`lib/freshcmp.py`).
+- [ ] **Q857. A park made fresh's file, off Lost Kingdom.** Split from Q803 (run 17, lane B); waits, Lost Kingdom first. **The other three themes' files**
+  (`FRESH_PARK_FILE_OTHER_THEME`: the flyers' values, the music's and the land's voices and its emitter, the generator's seed, the ride system's counts). The advisor's slot
+  0 `mValid` is Q543's (the welcome). Confirm by the diff against the original's file (`lib/freshcmp.py`).
 
 **Ordered at Alexah's word (2026-10-21), after their own play of Lost Kingdom:** showing the original's art as well as it can
 be shown comes first, and improvements over the original are ON by default, each said at the site as a deviation (full
@@ -1792,9 +1785,9 @@ filed the items that cite it.
   3 days, the forecast's `mTime`; the first tick past each) rather than day edges of `GameCalendar` (Q149), so a
   forecast read from a file falls due on the original's tick. Look first at what the load leaves undrawn: the original
   sets the particles only on a step of the ramp, so a file whose drops stand at their target rains nowhere until the
-  next change (filmed, `q528/orig/e-rain-film.png`), and its voice's handle is the saving process's. The constructor does not apply its roll
-  (`docs/exe/weather.md`, `FUN_00511f70`), so a park with no file holds the roll unapplied until its first forecast
-  arrives. Confirm: q528's `run3/q528-fix2.TPWS`
+  next change (filmed, `q528/orig/e-rain-film.png`), and its voice's handle is the saving process's. A park with no file stands as the constructor leaves it (Q803). A file at tick
+  nought, as Restart Park reads, holds a nought stamp, so its load forecasts on sweep 1 where this game's applies a roll
+  (`docs/exe/weather.md`, "A park's first days"), and the instants move a fresh park's first delivery from sweep 93 to the original's 94. Confirm: q528's `run3/q528-fix2.TPWS`
   loaded here and in the original, the quality, the drops and the forecast's delivery tick (17097) predicted, a frame
   of each.
 - [ ] **Q712. The television static on entering or leaving first person.** From the fork watch of 2026-10-19
