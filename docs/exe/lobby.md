@@ -409,10 +409,11 @@ width would halve the camera's distance and look like a fix:
 | `[0x1c]` / `[0x1d]` | 1.0 / 100.0 | Wander speed per tick; arrival threshold, **squared** |
 | `[0x2a]` / `[0x2b]` / `[0x2c]` | 2.0 / 2.0 / 50.0 | Look-speed cap, look speed seeded at the cap, arrival threshold **squared** |
 
-**OpenTPW matches every one of them but two.** The look-speed ramp, which the original steps per frame, is 3.0 of
-the cap a second, as at sixty frames (`LookRampPerSecond`). And at Alexah's word the box's height band is 30–60
-rather than 50–100, a deviation said at `LobbyCameraMode.WanderCentre` that brings the median distance to 74.0.
-In the original's box the flight was measured in the running game to confirm
+**OpenTPW matches every one of them but one.** The look-speed ramp, which the original steps per frame, is 3.0 of
+the cap a second, as at sixty frames (`LookRampPerSecond`); a simulation of both flights (`lobbyattract/sim.py`, 3 seeds, 300 s)
+gives the same turning with the ramp at 1.5 (the original at 30 frames a second) and at 3.0. The box's height band was 30–60
+from 2026-09-20 and is the original's 50–100 again (Q950, Alexah's word, 2026-10-31: the lower flight whipped the view and
+"the camera tends to not even point the right direction"). In the original's box the flight was measured in the running game to confirm
 it rather than only the constants: over 60 s the camera stayed inside the box on all three axes
 (z 55–79 of the 50–100 the box allows), a median of **101.5 units** from the nearest island, and
 three island changes. The per-frame movement independently re-derives the speed: 10 units a second
@@ -431,7 +432,8 @@ units a second, the view turning a median 6.1 degrees a second (at most 74.7), a
 10.7 s after the change. The same pass copies the nearest island's `+0x64..+0x6c` to the render camera's `+0x50..+0x58`,
 so its sky colour **snaps** at a change (ours fades it, `LobbyWeather`). And only the first island in the list has a park
 sound while it flies (`original/islandvoices.py`, 40 s, two changes of nearest island): music and bed both live on it, none on
-the other three, and a change touches neither; ours' four positional parks are the deviation below. Q950.
+the other three, and a change touches neither. Ours does the same since Q950 (`LobbyAudio.SoundingTheme`): the head island's
+park, flat, with the nearest island's one-shots on top.
 
 ### Globe: spin, home, pull in
 
@@ -802,23 +804,15 @@ only per-island audio it produces is the **ambient one-shot** — `Sound_PlayEff
 by `rand % 3`, gated on `((rand >> 13) & 0xf) == 1` — drawn from whichever island is **nearest that
 frame**. That, rather than any accumulation of themes, is what the attract path makes audible.
 
-**OpenTPW deviates here, deliberately and at Alexah's word (2026-09-20), and the deviation is larger
-than a fade.** While its attract camera is flying, **all four parks sound at once**, each positioned at
-its own island — the marked emitter node where there is one, the island itself where there is not — so
-the blend between parks is **distance**, not a cross-fade. With somebody playing it collapses to the
-single island on show, flat or at its node.
-
-The engine end of that is the original's own: `Sound_PlayEffect( handle, category, effect, x, y, z )`
-really is positional, and the game delay-loads QMixer (QSound) for it. What the original never did was
-spend any of it in the **lobby**, which is why this is an improvement rather than a restoration.
-
-Measured by disk capture over 60 s of flying (the `lobbyaudio.py` harness), on the build
-that shipped: **`sounding=4` on 17 of 20 readings** — the three dips to 3 are a voice inside its
-effect's repeat delay, visible as `bed=-` or `theme=-` in the same line — with **peak 0.2499
-(−12.0 dBFS)** and **rms 0.0280 (−31.0 dBFS)**, and **zero `placed=flat` while flying**. Four parks
-summing therefore does **not** clip: the levels calibrated for one park still stand, against a
-documented worst case of 1.18 before master volume. A muted control measured exactly 0.0, which is what
-proves the capture is the game's own mix. See `LobbyAudio.KeepPlaying`.
+**OpenTPW did otherwise from 2026-09-20 to 2026-10-31 and does as the original does again (Q950, Alexah's word, 2026-10-31).**
+Until then, while its attract camera flew, all four parks sounded at once, each positioned at its own island, so the mix slid
+between parks as the camera passed (rms −31.0 dBFS, `sounding=4`); Alexah, after sitting in the lobby, found it "chaotic compared
+to the original". Now, with nobody playing, the head island's park (Lost Kingdom, the first in the running order) sounds flat
+from the lobby's opening, the nearest island's one-shots play flat on top, and `LobbyAudio.SoundingTheme` is the one
+rule. Choosing a player puts the lobby on the first island (`FrontEnd_ClosePlayerSlots`, `0x005e1fa0`), so the pair that
+was sounding is the one the island on show wants and is kept, not restarted (`LobbyAudio.MoveTo`); any other park's pair
+the flight or the player had going is faded out. With somebody playing, the island on show sounds flat, or at Space's
+`ant_emitter` node, which stays ours alone (a deviation, `audio.md`, "The lobby was entirely non-positional").
 
 ### Not sound: `FUN_005d83f0` / `FUN_005d8440`
 

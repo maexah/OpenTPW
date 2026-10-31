@@ -1358,7 +1358,7 @@ Related node-record facts: the node **name** is at `+0x54` in every record, the 
 
 ## The lobby was entirely non-positional
 
-`Lobby_Start`, the globe page's start, plays global effects 2 and 3 at `(0,0,0)` (the globe's deactivate `0x005dd690` stops both, `0x005dd772`/`0x005dd77e`; the island lobby, the page that opens, plays neither: fork watch 2026-10-28, verify-hz-ui-hud M1; ours plays effect 3 as a bed, Q770); `FUN_005e1640` plays each park's music and bed (effects 1 and 2) at `(0,0,0)`. **So positional lobby audio in OpenTPW is a deliberate deviation — an improvement on the original, not a restoration. Always say so when lobby audio is reported on.**
+`Lobby_Start`, the globe page's start, plays global effects 2 and 3 at `(0,0,0)` (the globe's deactivate `0x005dd690` stops both, `0x005dd772`/`0x005dd77e`; the island lobby, the page that opens, plays neither: fork watch 2026-10-28, verify-hz-ui-hud M1; ours plays effect 3 as a bed, Q770); `FUN_005e1640` plays each park's music and bed (effects 1 and 2) at `(0,0,0)`. **So positional lobby audio in OpenTPW is a deliberate deviation — an improvement on the original, not a restoration. Always say so when lobby audio is reported on.** It is now one case only: with somebody playing, Space's island sounds from its `ant_emitter` node. With nobody playing, everything is flat, as the original's (Q950; four parks placed at their islands, 2026-09-20 to 2026-10-31, is gone).
 
 | Address | Original name | What it is | Evidence |
 |---|---|---|---|

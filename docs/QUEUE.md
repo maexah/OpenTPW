@@ -124,28 +124,6 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   next to `AFolderThatCanBeWrittenIsKeptAndTheProbeLeavesNothing`.
 
 - [ ] **Q987. Two small leftovers of Q986 (its review, 2026-10-31).** (1) `OptionsScreen.Keep` compares the display with `_before`, not `_applied`: after RESTART GAME's cross, a second tick that sets the display back to the opening mode skips `Display.Apply` and writes the old mode to `opentpw.cfg` while the window stays in the tick's mode; compare with `_applied ?? (_before.DisplayMode, _before.FullScreenSize)` (read, not run). (2) `GameDataTests` pin `Locate` only: putting `GameDir.Find( [] )` back into `Required` stays green. Give `Required` a seam so a test shows that no variable means Inconclusive with `Find` never called.
-- [ ] **Q950. The lobby's attract flight (nobody playing) against the original's: what differs, for Alexah to choose.** Not a
-  priority (Alexah, 2026-10-30: "the camera drifting between islands ... and the audio fading between parks is kinda weird").
-  Investigated, nothing built: `docs/exe/lobby.md`, "Attract" (the 2026-10-30 measurement). The pacing already matches (an
-  island change every 18 to 20 s, 10 units a second, the aim about 11 s to reach a new island). What differs, largest first:
-  (1) sound: the original plays one park's music and bed the whole time (the first island's, measured by `original/islandvoices.py`)
-  plus the nearest island's random one-shots; ours plays all four parks at once, placed at their islands, so the mix slides as
-  the camera flies (a deviation at Alexah's word, 2026-09-20, `audio.md`, "The lobby was entirely non-positional"); (2) height:
-  the original's box is 50 to 100 high (median 72, looking down at sea and islands), ours 30 to 60 (Alexah's word,
-  `LobbyCameraMode.WanderCentre`), flatter and closer, and a simulation of ours' rules (`lobbyattract/sim.py`, which matches
-  the original's measured numbers when given its rules) whips the view at up to 200 to 300 degrees a second on a close pass,
-  where the original reaches 75; (3) the sky colour snaps in the original at a change of island and fades in ours
-  (`LobbyWeather`); (4) small: ours' aim ramps at 3 x its cap a second (60 frames), the original's per frame, and ours is 16:9.
-  Ask Alexah which of (1) to (3) go back to the original before building any. Measure ours live first: there is no console
-  readout of ours' attract eye and aim, so add one (`lobbycam` or the like) and run `lobbyattract/stats.py` on it beside
-  `original/attractcam.py`. Evidence `~/.cache/tpw-harnesses/lobbyattract/` (`FINDINGS.md`, `side-by-side.mp4`).
-  Confirm: the same 300 s statistics in both games, a side-by-side film, and for (1) the lobby's mix by the disk driver.
-  **Decided by Alexah (2026-10-31), after sitting in the lobby ("chaotic compared to the original ... almost nausea inducing ...
-  the camera tends to not even point the right direction"):** match the original fully, undoing the 2026-09-20 deviations: one
-  park's music and bed the whole time plus the nearest island's one-shots (not all four parks placed at their islands), and the
-  original's camera box (50 to 100 high) and turning, so no fast whips on a close pass. Take the deviation comments out where the
-  code returns to the original. Confirm against the original's film and mix.
-  - **Note (play test 2026-10-31):** still: the island's ambient sound clips or drops out at the moment a park is chosen. The log shows the choice from the attract state starting no theme and no bed (`Lobby audio: Jungle - theme '-', bed '-'`, console.log line 195) while the other three islands fade; check that hand-over here too. Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
 - [ ] **Q770. The island lobby plays no global lobby sound 2 or 3; ours loops effect 3 as a bed.** From the fork watch
   2026-10-28 (verify-hz-ui-hud M1, L2; `audio.md`, "The lobby was entirely non-positional"). Global lobby effects 2 and 3 are
   started by `Lobby_Start` (`0x005dcfe0`, at `0x005dd0eb` and `0x005dd0fe`), which is the globe page's start; the globe's
@@ -232,6 +210,13 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
     `0x00590fb0` tests both together and answers only when `[0x008bd524] == 1`. Whether this explains Q968's seams is not
     shown. The loop bit (`0x0042fd57`) is read under the definition's `[ebx+0x10]`. The pylon's ground node is already in
     `park-engine.md` (bottom node `0x00432f2f` to `0x00469940`); "four ground vertices on every PC pylon" is unproven.
+- [ ] **Q909. The lobby's sky colour snaps in the original at a change of nearest island; ours fades it (Q950's item 3, left).** The original's
+  attract pass copies the nearest island's `+0x64..+0x6c` to the render camera's `+0x50..+0x58` every frame (`docs/exe/lobby.md`, "Attract"),
+  so the sky and fog colour change in one frame when the nearest island changes; `LobbyWeather` fades it over `SkyRate` (about 1 s, a deviation
+  unmarked at Alexah's word). Alexah's 2026-10-31 decision named the sound and the camera, not this. Ask whether it goes back to the original's
+  snap; if so, take the fade out of the attract path (with somebody playing it stays: the globe's change of island is a different pass) and film
+  the first second after a change in both games (`record.sh`, `attractcam.py` prints the render camera's colour beside the nearest island).
+
 - [ ] **Q848. Face-anchored heads read the morphed face's recomputed normal, as the original's pose walk does.** (From run 14's
   review of Q819, VERIFY-5 finding 1.) The pose walk marks the parent of every face-anchored record `0x10000000`
   (`FUN_0044a870`, `0x0044a93c`), the morph marks the mesh stale (`0x10000`, `0x00471931`), and the pose walk recomputes the

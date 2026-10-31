@@ -11437,6 +11437,42 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   pad now throws. **Decided by Alexah (2026-10-31):** back up, then overwrite, for both files: an odd `Config.tcf` or `gms.dat` is
   copied beside itself (a name the game does not read) and then written, as the original writes it; nothing is refused silently.
   The `ReadBytes` measure stays.
+- [x] **Q950. The lobby's attract flight (nobody playing) against the original's: what differs, for Alexah to choose.** Not a
+  priority (Alexah, 2026-10-30: "the camera drifting between islands ... and the audio fading between parks is kinda weird").
+  Investigated, nothing built: `docs/exe/lobby.md`, "Attract" (the 2026-10-30 measurement). The pacing already matches (an
+  island change every 18 to 20 s, 10 units a second, the aim about 11 s to reach a new island). What differs, largest first:
+  (1) sound: the original plays one park's music and bed the whole time (the first island's, measured by `original/islandvoices.py`)
+  plus the nearest island's random one-shots; ours plays all four parks at once, placed at their islands, so the mix slides as
+  the camera flies (a deviation at Alexah's word, 2026-09-20, `audio.md`, "The lobby was entirely non-positional"); (2) height:
+  the original's box is 50 to 100 high (median 72, looking down at sea and islands), ours 30 to 60 (Alexah's word,
+  `LobbyCameraMode.WanderCentre`), flatter and closer, and a simulation of ours' rules (`lobbyattract/sim.py`, which matches
+  the original's measured numbers when given its rules) whips the view at up to 200 to 300 degrees a second on a close pass,
+  where the original reaches 75; (3) the sky colour snaps in the original at a change of island and fades in ours
+  (`LobbyWeather`); (4) small: ours' aim ramps at 3 x its cap a second (60 frames), the original's per frame, and ours is 16:9.
+  Ask Alexah which of (1) to (3) go back to the original before building any. Measure ours live first: there is no console
+  readout of ours' attract eye and aim, so add one (`lobbycam` or the like) and run `lobbyattract/stats.py` on it beside
+  `original/attractcam.py`. Evidence `~/.cache/tpw-harnesses/lobbyattract/` (`FINDINGS.md`, `side-by-side.mp4`).
+  Confirm: the same 300 s statistics in both games, a side-by-side film, and for (1) the lobby's mix by the disk driver.
+  **Decided by Alexah (2026-10-31), after sitting in the lobby ("chaotic compared to the original ... almost nausea inducing ...
+  the camera tends to not even point the right direction"):** match the original fully, undoing the 2026-09-20 deviations: one
+  park's music and bed the whole time plus the nearest island's one-shots (not all four parks placed at their islands), and the
+  original's camera box (50 to 100 high) and turning, so no fast whips on a close pass. Take the deviation comments out where the
+  code returns to the original. Confirm against the original's film and mix.
+  - **Note (play test 2026-10-31):** still: the island's ambient sound clips or drops out at the moment a park is chosen. The log shows the choice from the attract state starting no theme and no bed (`Lobby audio: Jungle - theme '-', bed '-'`, console.log line 195) while the other three islands fade; check that hand-over here too. Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
+  **TICKED 2026-10-31 (a1, run of 2026-10-31, branch `alexah/790-lobby-attract-original`; Alexah's decision applied).** (1) Sound: with
+  nobody playing, the head island's park (Lost Kingdom) sounds flat from the lobby's opening and the nearest island's one-shots play flat
+  on top (`LobbyAudio.SoundingTheme`); the four placed parks are gone. A player chosen from the flight keeps that pair (the original puts the
+  lobby on the first island when the slots close), so the 2026-10-31 note's drop-out at the choice is gone: `Lobby audio: Jungle ... (kept
+  from the flight)`. (2) Camera: the box is the original's 50 to 100 high again (`WanderCentre`, `WanderExtent`); a simulation of ours' rules
+  in that box (3 seeds, 300 s) gives the original's turning, so the look ramp (3 x cap a second) stays and no whip is left (view turn max 24
+  to 39 deg/s live, 218 to 303 in the old box). Both deviation comments are out. Measured live on the final binary (`q950/run4`, 300 s, 473
+  polls): height min 50.3, median 71.9, max 97.9; 92.5 units from the nearest island (the original this session: 90.1); view turn median
+  5.72, p90 11.9, max 24.1 deg/s (the original: 5.1, 12.5, 62.5); eye 10.00 u/s; `sounds=Jungle`, `placed=flat` and `sounding` at most 1 on
+  every poll through all four parks as nearest; the mix -31.3 dBFS rms, peak -9.4 (the four-park mix: -31.0 / -12.0, which distance had
+  attenuated). The original, this session (`q950/orig`): island 0's music and bed handles live and the other three none through six changes
+  of nearest island; its own mix holds Lost Kingdom's three themes (6 s matches 0.29 to 0.48; the other nine 0.08 to 0.13). Not done, filed:
+  **Q909** (the sky colour's snap, (3)). (4): ours is still 16:9, the ramp as above. The control (the old box and the nearest island's park
+  put back) fails the same checks (`q950/ctl`).
 
 ## B. Docs and comments
 

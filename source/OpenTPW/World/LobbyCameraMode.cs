@@ -75,29 +75,13 @@ public class LobbyCameraMode : CameraMode
 	/// </para>
 	/// </summary>
 	/// <remarks>
-	/// <b>A deliberate deviation, at Alexah's word: the box's height band is lowered.</b> The original's box
-	/// is <c>centre (500, 75, 500)</c> with extents <c>(400, 50, 400)</c>, which in this world's axes is centre
-	/// <c>(500, 500, 75)</c> and extents <c>(400, 400, 50)</c> - X and Z spanning 300 to 700, height 50 to 100 -
-	/// and a flight inside it keeps a median of <b>101.5 units</b> from the nearest island, at most 143.5. The aim
-	/// mechanism, the speeds, the arrival radii and both eases are all the original's and stay that way; only
-	/// the box moves.
-	///
-	/// <para>
-	/// <b>The lever is the HEIGHT, not the width.</b> The islands stand at the CORNERS of the square, (400,400),
-	/// (600,400), (600,600) and (400,600), so the original's 300-700 box already centres each island in its own
-	/// quadrant, and pulling the box in toward (500,500) moves the camera toward the one point farthest from all
-	/// four - 141 units from each: a box narrowed to 360-640 flies a median of 104.3, farther than 101.5. Its
-	/// horizontal median is 82.6, so about 64 units of that distance is vertical. So the horizontal box is the
-	/// original's and only the band is lowered, from 50-100 to <b>30-60</b>. The islands' own camera targets sit
-	/// 12.5 (jungle) to 38 (hallow) above them, so that leaves roughly 20 units of height over the thing being
-	/// looked at, and brings the distance to about <see cref="NominalDistance"/> - the
-	/// <c>sqrt(SPINRADIUS^2 + VERTICALOFFSET^2)</c> the lobby is composed at.
-	/// </para>
+	/// Measured in the running original (<c>docs/exe/lobby.md</c>, "Attract"): a flight inside this box stays a median 89.9 units
+	/// from the nearest island at a median height of 71.5, and turns the view a median 6.1 degrees a second.
 	/// </remarks>
-	private static readonly Vector3 WanderCentre = new( 500f, 500f, 45f );
+	private static readonly Vector3 WanderCentre = new( 500f, 500f, 75f );
 
 	/// <summary>The full size of <see cref="WanderCentre"/>'s box - see there.</summary>
-	private static readonly Vector3 WanderExtent = new( 400f, 400f, 30f );
+	private static readonly Vector3 WanderExtent = new( 400f, 400f, 50f );
 
 	/// <summary>
 	/// How fast the camera flies, in units a second. The constructor keeps <b>1.0</b>, which is per
@@ -660,10 +644,11 @@ public class LobbyCameraMode : CameraMode
 
 	/// <summary>A point somewhere inside <see cref="WanderCentre"/>'s box, the way the original rolls one.</summary>
 	private static Vector3 RandomPointInBox()
-		=> WanderCentre + new Vector3(
-			(Random.Shared.NextSingle() - 0.5f) * WanderExtent.X,
-			(Random.Shared.NextSingle() - 0.5f) * WanderExtent.Y,
-			(Random.Shared.NextSingle() - 0.5f) * WanderExtent.Z );
+		=> PointInBox( Random.Shared.NextSingle(), Random.Shared.NextSingle(), Random.Shared.NextSingle() );
+
+	/// <summary>The box's point for three rolls of 0 to 1: <c>centre + roll * extent - extent / 2</c>.</summary>
+	internal static Vector3 PointInBox( float x, float y, float z )
+		=> WanderCentre + new Vector3( (x - 0.5f) * WanderExtent.X, (y - 0.5f) * WanderExtent.Y, (z - 0.5f) * WanderExtent.Z );
 
 	/// <summary>
 	/// The unit bearing from one point to another, or straight along X where there is none - which is
@@ -822,6 +807,7 @@ public class LobbyCameraMode : CameraMode
 			$"aimDir=({direction.X:F5},{direction.Y:F5},{direction.Z:F5}) " +
 			$"aimDist={MathF.Sqrt( aim.LengthSquared ):F3} " +
 			$"island={(nearest != null ? islands.IndexOf( nearest ) : -1)} " +
+			$"aimAt=({nearest?.CameraTarget.X:F3},{nearest?.CameraTarget.Y:F3},{nearest?.CameraTarget.Z:F3}) " +
 			$"name='{nearest?.ParkName}'";
 	}
 
