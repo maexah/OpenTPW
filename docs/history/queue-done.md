@@ -11264,6 +11264,12 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   mean brightness 89.7 / 89.8 against 89.7 (Full Simulation 83.1 both). The park's load total is **not** moved beyond the machine's own spread (7.2 to 7.8 s stock either side): the phases that decode most fall (`guest sprites` 289 to 195 ms, `advisor` 54 to 39), `objects` (2.7 s) is not decoding. New: `RefpackTests` (a generator written from
   the format's bit patterns, 40 streams of about 200 KB each of every command, copies of more than 255 bytes, more than 65,536 back, overlapping; five damaged streams; the one-byte/stop edge). 20 of 20 put-back bugs fail a test (one first put back was an equivalent mutant, replaced). `PREDICTION.txt`: 7 made, 2 half-missed (the read count was Q831's, not Q830's; the compacted total's own run-to-run spread),
   causes recorded. Not measured: a Release build, a player's own park, another theme, a smaller computer.
+- [x] **Q837. The original's picture of a flipped diagonal (Q820's piece (3)).** Done 2026-10-30 (run 15, lane A, `alexah/791-original-flipped-diagonal`).
+  `tools/harness/original/flipdiag.sh` (and `flipdiag.py`) hold the original's camera (`setcam.py ... off`) and clock (`memhold.py 0x007859a0=1`), take two frames (0 pixels apart over the whole
+  frame), poke the diagonal flag of the stock park's four bent cells (3,13)..(6,16) from `0x0804` to `0x0802`, held, and take two more, put it back and take two more: the flip changes 7,327
+  pixels (the mouse arrow left out) in four patches, one a cell, nothing else; the put-back returns the first frame in 0; the same count and patches in three launches (`q837/run1`, `run4`, `run5`).
+  Ours at the same camera (`cut new` against `cut old`): the whole staircase of eight cells changes, 0.80 of the smaller set's pixels shared in the original's four boxes. Not seen, and said in
+  `park-engine.md`: which diagonal each state draws (Q820's piece (3) keeps it). No code changed.
 
 ## B. Docs and comments
 

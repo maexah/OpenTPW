@@ -87,8 +87,20 @@ awaiting a composite, not on all (cell (4,13) reads `0x0004`); it clears the mir
 `0x0804`, `0x0d02`, `0x0904` for file words `0x44`, `0x42`, `0x44`). A cell
 only bends by at most 2 world units there (the corner spread; its twist h00 + h11 - h10 - h01 is at most 1.01, so the two cuts differ by at most half the
 twist, 0.505 at the centre; the ground's heights are whole units, apart from a few cells of a ride's floor); the other cut shows on screen as a different warp of the tile across the cell, over the `0x4` cells that are not planar (73 of the file's 2,708; a planar cell draws the same either way) (ours,
-`cut old` against `cut new`, 60,864 and 79,293 pixels over two staircases of four `0x44` cells, 0 where no cell differs). Not seen: the original's own
-picture of one cell's diagonal flipped (its frames drift under a poke, `q821/orig/poke7`).
+`cut old` against `cut new`, 60,864 and 79,293 pixels over two staircases of four `0x44` cells, 0 where no cell differs).
+
+**The original's own picture of a flipped diagonal** (Q837, 2026-10-30, `tools/harness/original/flipdiag.sh`, three launches of the original off-screen, the stock park by `loadfile.sh`,
+`q837/run1`, `run4`, `run5`). Camera set at point (50, 150), zoom 70, rotation 0 with `setcam.py ... off` (read back 0.000 units off the formula) and the clock held with
+`memhold.py 0x007859a0=1` (tick 882 through the run): two frames 2 s apart differ in **0** pixels over the whole 1,024 x 768 frame (the run-14 poke's drift
+was a running clock and a camera that was not held; the mouse arrow changes by itself, so its box is left out). The stock park's cells (3,13), (4,14), (5,15) and (6,16) read `0x0804` in the live heightfield and
+each stands on three corners of one height and one a unit lower (`cut X Y`, `run3.out`); `groundcell.py` clearing `0x4` and setting `0x2` on those four cells and holding it changes **7,327** pixels (more than 8 levels in a channel), in four separate
+patches, one on each of the four cells' projected squares (1,581, 1,856, 1,213 and 2,677 pixels, `run5/diff_A1_B1.png`) and nowhere else in the frame; two poked frames differ in 0, and writing `0x4` back and clearing `0x2`
+returns the first frame in 0 pixels, so the draw reads the cell's diagonal flag every frame and the poke wrote nothing else. The same count and the same four patches in all three launches. What changes in a patch is the tile's warp across the cell (mean brightness +0.04 levels over the changed pixels; the
+content at the cell's centre moves 2 to 3 pixels down, flat minima): the cut does not show as a crease. Ours at the same camera (`lib/bothcam.py`, `cut new` against `cut old`, desktop, `q837/run2`) changes the whole staircase of `0x0804`
+cells in view, eight patches ((3,13) to (9,19); the original's frame holds the first four) and no flat cell, the control pair (`cut new` twice) differing in 3,311 pixels, all in the top 150 rows (the park's sprites), none over a patch the original shows; in the original's four boxes the two games' changed pixels, each dilated by 5, overlap 0.80 of the smaller set
+(21,539 of 26,816; IoU 0.53: ours changes 1.5 to 2.6 times the pixels a cell, its tiles are sharper). **Not seen:** which diagonal each flag state draws: the brightness sign and the centre's shift
+did not decide it (both near 0), and a path cell's texture index written onto the four cells (`t@`) did not reach the frame at all (322 pixels, the arrow; why is not found, the ground's tiles are composited, `textures.md`), so `0x2` drawing `(x,y)-(x+1,y+1)` stands on the decode above and
+`PutCellElements`, not on a picture of either state.
 
 ### Which height each asker takes
 

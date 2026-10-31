@@ -76,9 +76,9 @@ order below. Memory and frame time are checked before each weekly build instead 
   of piece (4) and the float note are Q822). (2) Left by Q817: the pylon under a stacked piece is drawn with the alone-on-its-cell arms (the bottom of a stack that is not its top shows the `0x400` node and hides the `0x800` one, `0x00432ff8`..`0x0043304d`; ours hides `mc_bridge` on it); a stacked pylon stands on the
   stack-height record (`StackHeightDummy` on `StdPylon`), the type flag `0x10` keeps its floor, a loop pylon is another model:
   none is in her park, so each needs a park that holds one (a coaster built in the original, then loaded in both games).
-  (3) Left by Q821: the original's picture of a flipped diagonal was not got (its frames drift, the in-game date rolls: `q821/orig/poke7`), so the
-  original's drawing by `0x2` stands on the decode and the live bits (all 7,001 ground cells' diagonal bits equal the file's); poke one cell's `0x2`/`0x4`
-  in the original and film it with the camera held (`original/setcam.py`'s follow off) and the clock paused.
+  (3) Piece done by Q837 (the original's picture of a flipped diagonal: with its camera and clock held, `0x0804` -> `0x0802` on four bent cells changes 7,327 pixels in four patches and putting it back returns the frame in 0). Left:
+  which diagonal each flag state draws is not seen in the picture (the brightness and the centre's shift were near nought, and a path texture written onto the cells did not reach the frame), so the original's drawing by `0x2` stands on the decode and the live bits;
+  the cuts differ by at most 0.505 at a cell's centre (`park-engine.md`), so only a feature that crosses the diagonal names it: a path built by real clicks on one of the bent cells in the original (the `t@` write did not reach the frame), the flag flipped on it, and the kink of its edges read.
   (4) Built by Q823 (`alexah/766-heights-by-the-originals-samplers`): `0x800` at the load, the sprites, balloons, `Feet` and the build markers' glide on
   `ScapeHeight`, the camcorder's eye on `CameraHeight` + 5 each frame. The pick's ground as the original's two planes a cell is Q824. The person's particles'
   sampler, the sprites carrying `0x1000000` and the eye's further term are decoded and measured in Q825 (`park-engine.md`, "The three words Q822 left unread": the
