@@ -55,7 +55,7 @@ namespace OpenTPW.UI;
 /// <item>The display and the resolution are put into effect by the tick instead, and need no restart:
 /// the window here is resized while the game runs. They are the only settings the tick acts on rather
 /// than merely keeping, and it acts only when one of them actually changed, so a tick that moved a
-/// volume leaves the screen alone.</item>
+/// volume leaves the screen alone. The exception is a first run's full screen, whose size of nothing the tick sets to the mode the line shows (<see cref="KeptSize"/>).</item>
 /// </list>
 /// </para>
 /// <para>
@@ -316,6 +316,14 @@ internal sealed class OptionsScreen : UiWindow
 	private void Keep()
 	{
 		Options.ApplySound();
+		var kept = KeptSize( Options.DisplayMode, Options.FullScreenSize, Chosen() );
+
+		if ( kept != Options.FullScreenSize )
+		{
+			Options.FullScreenSize = kept;
+			Options.ScreenResolution = OriginalsResolution( kept );
+		}
+
 		SaveFolder.SaveConfig();
 		SaveFolder.SaveDisplay( tell: true );
 
@@ -324,7 +332,7 @@ internal sealed class OptionsScreen : UiWindow
 
 		// The display is changed here rather than as the row is clicked, so that stepping through the
 		// modes does not take the screen with it, and a tick that changed nothing about the display
-		// leaves the window alone entirely.
+		// leaves the window alone entirely (a first run's full screen, whose size KeptSize has just set, is a change).
 		if ( (Options.DisplayMode != _before.DisplayMode || Options.FullScreenSize != _before.FullScreenSize)
 			&& Window.Current is { } window )
 		{
@@ -347,6 +355,17 @@ internal sealed class OptionsScreen : UiWindow
 		Stack.Close( this );
 	}
 
+	/// <summary>The nearest of the original's own three resolutions to a mode (<see cref="GameOptions.ScreenResolution"/>).</summary>
+	internal static int OriginalsResolution( VideoMode mode ) => mode.Width <= 512 ? 0 : mode.Width <= 640 ? 1 : 2;
+
+	/// <summary>
+	/// The mode full screen is kept with. A size of nothing (a first run) shows as the mode the slider sits on, so that is the
+	/// one applied and saved; SDL would otherwise take the window's size for it (<see cref="GameOptions.FullScreenSize"/>). Only in
+	/// full screen: the other two ways never ask for a mode, and their saved line is left as it is.
+	/// </summary>
+	internal static VideoMode KeptSize( DisplayMode mode, VideoMode size, VideoMode? shown )
+		=> mode == DisplayMode.FullScreen && (size.Width <= 0 || size.Height <= 0) && shown is { } line ? line : size;
+
 	/// <summary>
 	/// Whether the tick has to ask for a restart (0x00423740, the levels it raises): the video card is chosen before the
 	/// window exists, so a card changed since the screen opened is drawn on only from the next start. A display or
@@ -357,8 +376,9 @@ internal sealed class OptionsScreen : UiWindow
 
 	/// <summary>
 	/// Whether the tick shows RESTART GAME: <see cref="NeedsRestart"/>, unless the options could not be written (a deviation,
-	/// Q986). The card was not kept then, so there is nothing to restart for, and the box would hold the screen modal over
-	/// OPTIONS NOT SAVED until the tick left the game with it still untold.
+	/// Q986). The box would hold the screen modal over OPTIONS NOT SAVED until the tick left the game with it still untold.
+	/// Either file lost suppresses it: the card is in Config.tcf, so where only opentpw.cfg was lost the card is kept anyway and
+	/// is drawn on from the next start, unasked (a gap, said at the site, Q999; the original asks, <c>docs/exe/ui.md</c>).
 	/// </summary>
 	internal static bool AsksToRestart( GameOptions before, GameOptions now, bool optionsLost ) => NeedsRestart( before, now ) && !optionsLost;
 
@@ -436,7 +456,7 @@ internal sealed class OptionsScreen : UiWindow
 
 			// And the nearest of the original's own three into the field its Config.tcf owns, so that
 			// file still says something true about the game - see GameOptions.ScreenResolution.
-			Options.ScreenResolution = mode.Width <= 512 ? 0 : mode.Width <= 640 ? 1 : 2;
+			Options.ScreenResolution = OriginalsResolution( mode );
 		}
 
 		ShowResolution();

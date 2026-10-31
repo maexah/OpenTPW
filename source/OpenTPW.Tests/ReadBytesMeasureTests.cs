@@ -21,7 +21,6 @@ public class ReadBytesMeasureTests
 		return Directory.EnumerateFiles( GameDir.Data, pattern, options ).Order().ToArray();
 	}
 
-	/// <remarks><b>Mutation:</b> a <c>ReadBytes</c> that asks for one byte more than it is given fails the 47.</remarks>
 	[TestMethod]
 	public void All47SoundBanksReadEveryMember()
 	{
@@ -37,6 +36,7 @@ public class ReadBytesMeasureTests
 			foreach ( var member in archive.soundFiles )
 			{
 				Assert.IsTrue( member.SoundData.Length > 0, $"{path}: {member.Name} holds no bytes" );
+				Assert.AreEqual( BitConverter.ToInt32( member.Data, 4 ), member.SoundData.Length, $"{path}: {member.Name} is cut short of its header's size" );
 				members++;
 			}
 		}
@@ -55,7 +55,21 @@ public class ReadBytesMeasureTests
 		var strings = 0;
 
 		foreach ( var path in paths )
-			strings += new StringFile( Path.GetRelativePath( GameDir.Data, path ).Replace( '\\', '/' ) ).Entries.Length;
+		{
+			var entries = new StringFile( Path.GetRelativePath( GameDir.Data, path ).Replace( '\\', '/' ) ).Entries.Length;
+			strings += entries;
+
+			// ReadByte answers -1 past the end, so the characters are checked against the file's size here.
+			var bytes = File.ReadAllBytes( path );
+			Assert.AreEqual( BitConverter.ToInt32( bytes, 8 ), entries, $"{path}: the header's count" );
+
+			for ( var i = 0; i < entries; i++ )
+			{
+				var at = BitConverter.ToInt32( bytes, 12 + (4 * i) ) + 12;
+				var length = bytes[at + 1] | (bytes[at + 2] << 8) | (bytes[at + 3] << 16);
+				Assert.IsTrue( at + 4 + length <= bytes.Length, $"{path}: string {i} runs past the end" );
+			}
+		}
 
 		Assert.IsTrue( strings > 0 );
 		Console.WriteLine( $"ReadBytes measure: {paths.Length} .str, {strings} strings, none short" );

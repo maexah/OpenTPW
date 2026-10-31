@@ -60,7 +60,13 @@ macOS:    THE MAC BUILD IS UNTESTED: nobody has run it on a Mac yet.
 Linux:    you need a Vulkan driver for your graphics card (Mesa's
           on AMD and Intel, the NVIDIA driver on NVIDIA). If the
           window does not open, install your system's
-          "vulkan" or "mesa-vulkan-drivers" package.
+          "vulkan" or "mesa-vulkan-drivers" package. On Wayland
+          it runs through XWayland, and without XWayland the
+          window does not open: install XWayland, or start it
+          with OPENTPW_SYSTEM_SDL=1 to use your system's SDL2.
+          If it stops at once naming ICU or libicu, install your
+          system's ICU package (not tested: no machine without
+          it was tried).
 
 
 If something goes wrong
@@ -73,6 +79,7 @@ beside "save". If that folder cannot be written, it is here instead:
    Linux:    ~/.local/share/OpenTPW
    macOS:    ~/Library/Application Support/OpenTPW
 
+The start before is kept beside it as console-prev.log.
 The log names the build, your system and graphics card, and whether
 the game's files look complete. It does not hold your name or your
 computer's name: folder paths in it are cut down to "<game folder>"

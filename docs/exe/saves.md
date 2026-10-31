@@ -9,7 +9,7 @@ that belong to the installation, `save\users\<N><name>\gms.dat` holds a player p
 the options that belong to a person — and `<playerdir>\<theme>\*.TPWS` holds a park. Every one is
 `[dword version][fields, raw little-endian]` with no checksum, and no tag or length but `gms.dat`'s two counts and its name lengths and a park file's deflated block and module markers ("Parks: the `.TPWS` container"), so a reader that is one field
 out still produces a plausible-looking result. Traced read-only in Ghidra from `testme.exe`. Paths are relative to the
-game's working directory, whose `save\` OpenTPW maps as `SaveFileSystem` (`<GamePath>/save/`).
+game's working directory, whose `save\` OpenTPW maps as `SaveFileSystem` (`<GamePath>/save/`, or the player's own `save` folder where that cannot be written: `SaveHome`, Q984).
 
 ## The shared pattern
 
@@ -49,8 +49,7 @@ The directory names *are* the slot table; there is no index file. The player's n
 directory name.
 
 **Boot scan (`FUN_005c7590`)** creates `save\`, `save\users\` and `save\online\`, then reads each directory's `gms.dat`
-mode byte. It accepts a directory named `<digit 1-4><name>` where the name is at least one character and does not
-start with a dot. A later directory carrying the same digit overwrites the earlier one. A missing or bad `gms.dat`
+mode byte. It accepts a directory named `<digit 1-4><name>` where the name is at least one character (the test is on byte 0 of the entry, `0x005c523d`, which `0x005c7753` then requires to be a digit, so a name that starts with a dot is accepted: `1.foo` is a player). A later directory carrying the same digit overwrites the earlier one. A missing or bad `gms.dat`
 falls back to defaults (mode 0); a partial read keeps whatever was read. It creates `<slotdir>\<theme>` for each theme.
 
 **Create (`FUN_005c7f40`)** deletes any old directory in that slot, makes `<playerdir>\<theme>` per theme, copies
@@ -3897,7 +3896,7 @@ back screen with key 1 and per-player options restored; delete works; an Instant
 
 The original's own `Config.tcf` and `gms.dat` exist, in Alexah's Full Simulation saves (`CLAUDE.local.md`).
 A disposable copy of the Full Simulation profile reads complete: four parks, one unlocked ride and one key;
-an award persists as two keys. A truncated copy is kept beside itself (`gms.dat.opentpw-backup`) when a default profile is offered for saving, and then written over (Q216).
+an award persists as two keys. A truncated copy is kept beside itself (`gms.dat.opentpw-backup`) when a default profile is offered for saving, and then written over (Q216; by the code and `ProfilePreservationTests`, not run on that copy).
 The original machine options have not been checked here.
 
 Caution: a run of the game writes into the real installation's `save/` (`Config.tcf`, `opentpw.cfg`, player folders).
@@ -3908,7 +3907,9 @@ Never empty it: delete only what that run created (`AGENTS.md` rule 12).
 The original overwrites `Config.tcf` and `gms.dat` without looking at what is there (`0x004237f0`, `0x005afc60`). OpenTPW does
 too, with one addition (Alexah, 2026-10-31): a file this game did not read whole is copied beside itself first, to
 `<name>.opentpw-backup` (then `.opentpw-backup2` and on, so an earlier copy is never replaced), a name neither game reads. Nothing is
-refused. This is not the original's behaviour.
+refused. This is not the original's behaviour. OpenTPW's own `opentpw.cfg` (not a file of the original's) is copied the same way
+when it exists and would not read at the start (`SaveFolder._unreadDisplay`), so its lines are not lost to the defaults that the
+loading screen writes.
 
 "Read whole" is `PlayerFile.ReadWhole` and `ConfigFile.ReadWhole`: a complete record of the version the game writes (player 12, options
 1), read to its end. A version of 0, another version, a tail or a short file is not. `SaveFolder` copies the file aside when any of these
@@ -3916,7 +3917,7 @@ holds at the write: the file on disk is not read whole when it is read again at 
 the profile in memory is not what the disk held (`PlayerFile.NoteFailedReload`: a selection whose reload would not open the
 file keeps the profile it had); a gms.dat has appeared since the player was read with none (`Player.FileMissing`); or Config.tcf's
 load failed (`SaveFolder._unreadConfig`). A write that follows reads the file back whole, and `PlayerFile.NoteWritten` says so, so
-one odd file is copied once, however many saves follow. A copy that cannot be made (the file will not open, or the folder cannot
+one odd file is copied once, however many saves follow, and a copy is not made again while the newest backup holds the same bytes (a write that fails after a good copy). A copy that cannot be made (the file will not open, or the folder cannot
 be written) throws before anything is written over it, and `SaveTrouble` tells the player as it does any save that failed.
 
 A folder with no gms.dat at all is a player nobody has saved yet (`SaveFolder.ScanPlayers`): there is nothing to copy, and the first
@@ -3932,7 +3933,7 @@ pair of writes, and a control with whole files that makes none.
 **The stricter `ExpandedMemoryStream.ReadBytes` (Q216).** It throws where a field runs past the end of the stream; it once padded a
 short read with nought. Measured on 2026-10-31: all 47 `.sdt` (3,739 members), all 42 `.str` (4,730 strings), the shipped
 `Easymode.TPWI` and nine saved parks (Alexah's Full Simulation set and the game's own `save/`, read, not changed) read with no short
-read. `ReadBytesMeasureTests` repeats the shipped three.
+read (`restart.INTS` was not measured: the measure took `.TPW*` only, and its output was not kept; not re-measured). `ReadBytesMeasureTests` repeats the shipped three, and asserts each sound member's data is the header's size and each string lies inside its file.
 
 ## Unresolved
 

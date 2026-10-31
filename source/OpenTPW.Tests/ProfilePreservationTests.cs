@@ -98,7 +98,7 @@ public class ProfilePreservationTests
 
 		using var saved = File.OpenRead( Profile );
 		var written = PlayerFile.Read( saved );
-		Assert.IsTrue( written.ReadWhole, "what is written is a whole version 1 file" );
+		Assert.IsTrue( written.ReadWhole, "what is written is a whole version 12 file" );
 		Assert.IsFalse( File.Exists( Profile + ".tmp" ) );
 		Assert.IsFalse( File.Exists( Backup + "2" ), "one odd file is copied once, however many saves follow" );
 	}
@@ -137,6 +137,7 @@ public class ProfilePreservationTests
 		players.Current!.AddKey();
 		players.SaveAndDeselect();
 		Assert.IsFalse( File.Exists( Backup ), "a file this game read whole needs no copy" );
+		Assert.AreEqual( 8, Saved().KeysGiven, "and it was written over" );
 	}
 
 	[TestMethod]
@@ -373,5 +374,185 @@ public class ProfilePreservationTests
 		SaveFolder.SaveConfig();
 		CollectionAssert.AreEqual( new byte[] { 9, 9 }, File.ReadAllBytes( path + ".opentpw-backup" ) );
 		CollectionAssert.AreEqual( new byte[] { 7 }, File.ReadAllBytes( path + ".opentpw-backup2" ) );
+		File.WriteAllBytes( path, new byte[] { 5, 5, 5 } );
+		SaveFolder.SaveConfig();
+		CollectionAssert.AreEqual( new byte[] { 9, 9 }, File.ReadAllBytes( path + ".opentpw-backup" ), "a third odd file replaces nothing" );
+		CollectionAssert.AreEqual( new byte[] { 7 }, File.ReadAllBytes( path + ".opentpw-backup2" ) );
+		CollectionAssert.AreEqual( new byte[] { 5, 5, 5 }, File.ReadAllBytes( path + ".opentpw-backup3" ) );
+	}
+
+	/// <remarks><b>Mutation:</b> the copy wrapped in a catch that goes on (<c>try { BackUp( path ); } catch { }</c> in <c>SaveConfig</c>): the file is replaced with no copy, and nothing is told.</remarks>
+	[TestMethod]
+	public void AConfigThatCannotBeCopiedIsNotWrittenOverAndIsTold()
+	{
+		var path = Path.Combine( root, "save", "Config.tcf" );
+		File.WriteAllBytes( path, new byte[] { 1 } );
+		Directory.CreateDirectory( path + ".opentpw-backup" );
+		SaveFolder.LoadConfig();
+
+		try
+		{
+			SaveFolder.SaveConfig();
+
+			CollectionAssert.AreEqual( new byte[] { 1 }, File.ReadAllBytes( path ), "it could not be copied, so it was not written over" );
+			Assert.IsTrue( SaveTrouble.LostAWrite, "and the player is told" );
+		}
+		finally
+		{
+			SaveTrouble.Asked();
+			SaveTrouble.Take();
+			SaveTrouble.NewVisit();
+		}
+	}
+
+	/// <remarks><b>Mutation:</b> <c>BackUp</c> without the same-bytes test: the retry makes <c>.opentpw-backup2</c>.</remarks>
+	[TestMethod]
+	public void AWriteThatFailsAfterAGoodCopyDoesNotCopyAgainAtTheRetry()
+	{
+		var odd = UnreadPlayer( "tail" );
+		File.WriteAllBytes( Profile, odd );
+		Directory.CreateDirectory( Profile + ".tmp" );
+		var file = PlayerFile.Read( new MemoryStream( odd ) );
+		Assert.IsFalse( file.ReadWhole );
+
+		try
+		{
+			Assert.IsFalse( SaveFolder.SavePlayer( 0, "Test", file ) );
+			Assert.IsFalse( SaveFolder.SavePlayer( 0, "Test", file ) );
+
+			CollectionAssert.AreEqual( odd, File.ReadAllBytes( Backup ) );
+			Assert.IsFalse( File.Exists( Backup + "2" ), "the same bytes are not copied twice" );
+			CollectionAssert.AreEqual( odd, File.ReadAllBytes( Profile ), "the file was not written over" );
+			Assert.IsTrue( SaveTrouble.LostAWrite );
+		}
+		finally
+		{
+			SaveTrouble.Asked();
+			SaveTrouble.Take();
+			SaveTrouble.NewVisit();
+		}
+	}
+
+	/// <summary>
+	/// <b>A player's name is hidden before the scan logs a path</b> (the week-end audit of 2026-10-31, R-F1): a gms.dat that ended early
+	/// is logged with its folder, which holds the name, and the log file is already open. Each line is scrubbed as the log's own would be,
+	/// at the moment it is printed.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> <c>ConsoleLog.HidePlayer</c> taken out of <c>ScanPlayers</c> (it is then called only after the scan, in <c>Players.Load</c>): the name is in a line.</remarks>
+	[TestMethod]
+	public void ThePlayersNameIsHiddenBeforeTheScanLogsItsFolder()
+	{
+		var safeField = typeof( ConsoleLog ).GetField( "_safe", BindingFlags.NonPublic | BindingFlags.Static )!;
+		var oldSafe = safeField.GetValue( null );
+		var oldLog = Logger.OnLog;
+		var printed = new System.Collections.Generic.List<string>();
+
+		try
+		{
+			safeField.SetValue( null, SafePaths.ForThisMachine( root ) );
+			Logger.OnLog = ( _, text ) => printed.Add( ( (SafePaths)safeField.GetValue( null )! ).Scrub( text ) );
+
+			var folder = Path.Combine( root, "save", "users", "2Zebulon Pike" );
+			Directory.CreateDirectory( folder );
+			File.WriteAllBytes( Path.Combine( folder, "gms.dat" ), UnreadPlayer( "truncated" ) );
+
+			var found = SaveFolder.ScanPlayers();
+
+			Assert.IsTrue( found.Any( player => player.Name == "Zebulon Pike" ) );
+			Assert.IsTrue( printed.Any( line => line.Contains( "ended early" ) ), "the scan logged the unreadable file" );
+			Assert.IsFalse( printed.Any( line => line.Contains( "Zebulon" ) ), string.Join( "\n", printed ) );
+		}
+		finally
+		{
+			Logger.OnLog = oldLog;
+			safeField.SetValue( null, oldSafe );
+		}
+	}
+
+	/// <summary>
+	/// <b>An opentpw.cfg that will not read is copied aside before the defaults replace it</b> (ST-F6), as Config.tcf's is: its <c>gpu</c>
+	/// line is not lost to the loading screen's own write. The open failure is a lock another handle holds.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the <c>_unreadDisplay</c> test taken out of <c>SaveDisplay</c>: no copy, the file is replaced.</remarks>
+	[TestMethod]
+	public void AnUnreadDisplayFileIsCopiedAsideBeforeItIsWrittenOver()
+	{
+		var path = Path.Combine( root, "save", "opentpw.cfg" );
+		var original = "display fullscreen\ngpu GTX 1650\n";
+		File.WriteAllText( path, original );
+
+		using ( new FileStream( path, FileMode.Open, FileAccess.ReadWrite, FileShare.None ) )
+		{
+			SaveFolder.LoadDisplay();
+			SaveFolder.SaveDisplay( tell: false );
+			Assert.IsFalse( File.Exists( path + ".opentpw-backup" ) );
+		}
+
+		Assert.AreEqual( original, File.ReadAllText( path ), "it could not be copied, so it was not written over" );
+
+		SaveFolder.SaveDisplay( tell: false );
+		Assert.AreEqual( original, File.ReadAllText( path + ".opentpw-backup" ), "once it opens, what it held is kept" );
+		StringAssert.Contains( File.ReadAllText( path ), "graphics improved" );
+
+		GameOptions.Current.Faithful = true;
+		SaveFolder.SaveDisplay( tell: false );
+		Assert.IsFalse( File.Exists( path + ".opentpw-backup2" ), "the file is the one this game wrote now" );
+	}
+
+	/// <summary>
+	/// <b>A file that reads is written over with no copy</b>, and the gpu line with a letter outside ASCII reads back whole (S-M5):
+	/// the file is written as UTF-8 and was read as ASCII.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the read back to <c>ReadAllText</c> (ASCII): the line reads with replacement characters.</remarks>
+	[TestMethod]
+	public void ADisplayFileReadsBackAsItWasWrittenWithNoCopy()
+	{
+		var path = Path.Combine( root, "save", "opentpw.cfg" );
+		GameOptions.Current.Gpu = "Radeon \u00c9clair \u2122";
+		SaveFolder.SaveDisplay( tell: false );
+		GameOptions.Current.Gpu = "";
+
+		SaveFolder.LoadDisplay();
+		Assert.AreEqual( "Radeon \u00c9clair \u2122", GameOptions.Current.Gpu );
+
+		SaveFolder.SaveDisplay( tell: false );
+		Assert.IsFalse( File.Exists( path + ".opentpw-backup" ) );
+		Assert.AreEqual( "Radeon \u00c9clair \u2122", File.ReadAllText( path ).Split( '\n' ).Single( l => l.StartsWith( "gpu " ) )[4..].Trim() );
+	}
+
+	/// <remarks><b>Mutation:</b> <c>SameBytes</c> without its catch: a newest copy that will not open fails the save.</remarks>
+	[TestMethod]
+	public void ANewestCopyThatWillNotOpenDoesNotStopTheSave()
+	{
+		var path = Path.Combine( root, "save", "Config.tcf" );
+		File.WriteAllBytes( path, new byte[] { 9, 9 } );
+		File.WriteAllBytes( path + ".opentpw-backup", new byte[] { 9, 9 } );
+		SaveFolder.LoadConfig();
+
+		using ( new FileStream( path + ".opentpw-backup", FileMode.Open, FileAccess.ReadWrite, FileShare.None ) )
+			SaveFolder.SaveConfig();
+
+		CollectionAssert.AreEqual( new byte[] { 9, 9 }, File.ReadAllBytes( path + ".opentpw-backup2" ), "a fresh copy is made" );
+		using var saved = File.OpenRead( path );
+		Assert.IsTrue( ConfigFile.Read( saved )!.ReadWhole, "and the file is written over" );
+	}
+
+	/// <summary>A hand-made opentpw.cfg with a byte order mark, or one a text editor saved as UTF-16, still reads its first line (the review of the week-end audit's fixes).</summary>
+	/// <remarks><b>Mutation:</b> the read back to <c>Encoding.UTF8.GetString</c>: the mark joins the first line and the card is lost; the UTF-16 file reads as nothing.</remarks>
+	[DataTestMethod]
+	[DataRow( "utf8" )]
+	[DataRow( "utf16" )]
+	public void ADisplayFileWithAByteOrderMarkReadsItsFirstLine( string kind )
+	{
+		var path = Path.Combine( root, "save", "opentpw.cfg" );
+		var text = "gpu GTX 1650\ndisplay borderless\n";
+		File.WriteAllBytes( path, kind == "utf8"
+			? new byte[] { 0xEF, 0xBB, 0xBF }.Concat( System.Text.Encoding.UTF8.GetBytes( text ) ).ToArray()
+			: new byte[] { 0xFF, 0xFE }.Concat( System.Text.Encoding.Unicode.GetBytes( text ) ).ToArray() );
+
+		SaveFolder.LoadDisplay();
+
+		Assert.AreEqual( "GTX 1650", GameOptions.Current.Gpu );
+		Assert.AreEqual( DisplayMode.BorderlessFullScreen, GameOptions.Current.DisplayMode );
 	}
 }

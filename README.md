@@ -68,7 +68,7 @@ The build includes every library OpenTPW needs. You may also need a **Vulkan dri
 If OpenTPW says the file names **"have been cut short"**, the copy went wrong. Delete the folder and copy the disc
 again by dragging the files in your file manager.
 
-If OpenTPW says it **cannot find the game**, check the folder you gave it. It lists every folder it looked in.
+If OpenTPW says a folder **does not hold Theme Park World**, or that there is no such folder, check the folder you gave it. If you gave none and it says the game **was not found**, it lists every folder it looked in.
 
 <details>
 <summary>For technical users</summary>
@@ -131,7 +131,7 @@ written either, the game still runs and says on screen when a save, the options 
 
 Every platform draws with Vulkan; on macOS through MoltenVK, which ships with the build. Linux x64 and Windows x64 are tested. Bug reports from other platforms are very welcome.
 
-**Two graphics cards (a built-in GPU and a graphics card).** OpenTPW lists the Vulkan devices in `console.log` (the `Graphics card:` lines) and draws with a discrete card in preference to a built-in one; the `GPU:` line names the one in use. To choose another, put a line in `save/opentpw.cfg`: `gpu GTX 1650` (the first card whose name holds that text), `gpu #1` (the second card of the logged list) or `gpu auto` (the default). The Options screen's Video Card row is the original's own Primary or Secondary: Primary is the card above, Secondary the next one (offered only where there is more than one card), and it is drawn on from the next start. `gpu` names a card exactly and wins over the row; that line is OpenTPW's own. Two cards of one maker (an AMD built-in GPU beside a Radeon, an Intel one beside an Arc) cannot be told apart on Windows: the log warns and the first device is drawn on.
+**Two graphics cards (a built-in GPU and a graphics card).** OpenTPW lists the Vulkan devices in `console.log` (the `Graphics card:` lines) and draws with a discrete card in preference to a built-in one; the `GPU:` line names the one in use. To choose another, put a line in `opentpw.cfg` in the save folder in use (`save/`, or the fallback under Saves): `gpu GTX 1650` (the first card whose name holds that text), `gpu #1` (the second card of the logged list) or `gpu auto` (the default). The Options screen's Video Card row is the original's own Primary or Secondary: Primary is the card above, Secondary the next one (offered only where there is more than one card), and it is drawn on from the next start. `gpu` names a card exactly and wins over the row; that line is OpenTPW's own. On macOS the card is not chosen: MoltenVK's own is used, and the `gpu` line and the row do nothing. Two cards of one maker (an AMD built-in GPU beside a Radeon, an Intel one beside an Arc) cannot be told apart on Windows: the log warns and the first device is drawn on.
 
 <details>
 <summary>Linux on Wayland</summary>
@@ -146,7 +146,7 @@ OPENTPW_SYSTEM_SDL=1 dotnet source/OpenTPW/bin/Debug/net10.0/OpenTPW.dll --game 
 
 ## Troubleshooting
 
-**"Theme Park World was not found."** Check the folder you gave OpenTPW - see [Getting the game's files](#getting-the-games-files).
+**"Theme Park World was not found", or "does not hold Theme Park World".** Check the folder you gave OpenTPW - see [Getting the game's files](#getting-the-games-files).
 
 **"its names have been cut short."** The disc was copied without its long file names. Copy it again - see [Getting the game's files](#getting-the-games-files).
 
@@ -164,7 +164,7 @@ is, and OpenTPW then exits. With no display there is no box, only the log and th
 **Reporting a problem.** Every start writes `console.log` in the game's folder, beside `save`. If the game's folder cannot be
 written, or OpenTPW cannot find the game, it is in your own data folder instead (`%AppData%\OpenTPW` on Windows,
 `~/.local/share/OpenTPW` on Linux, `~/Library/Application Support/OpenTPW` on macOS). It names the build, your system
-and your graphics card. Your home folder is written as `~` in it, but read it before you attach it to a public page.
+and your graphics card. The start before is kept beside it as `console-prev.log`. Your home folder is written as `~` in it, but read it before you attach it to a public page.
 [Open an issue](https://github.com/maexah/OpenTPW/issues) and attach it.
 
 ## For developers
@@ -212,11 +212,11 @@ the console of a Debug build (`dotnet build`); the Release build, which the Wind
 | Lobby camera and weather | `orbit`, `freeze`, `unfreeze`, `attract`, `aim`, `settle`, `near`, `rain`, `weather`, `strike`, `bolt`, `flags` |
 | Park camera and drawing | `camera`, `camcorder`, `facing`, `walk`, `fog`, `sea`, `shadows`, `sprites`, `meshes`, `circle`, `cut` |
 | Sound and the advisor | `volume`, `mute`, `sound`, `voices`, `place`, `speech`, `advisor`, `greet`, `duck`, `music`, `crowd`, `bus`, `placed`, `parkcue`, `scriptsounds`, `sayas`, `advisorgame`, `tutorial` |
-| Reading the park | `guests`, `peeps`, `staff`, `candidates`, `rides`, `vehicles`, `paths`, `arrivals`, `objects`, `catalogue`, `money`, `loans`, `budgets`, `research`, `tickets`, `outlets`, `happiness`, `rings`, `spend`, `why`, `cell`, `ground`, `drawn`, `scriptvar`, `bumpers`, `gate`, `boundary`, `hoardings`, `strikes`, `effects`, `emitters`, `particles`, `endfeature`, `thingids` |
+| Reading the park | `guests`, `peeps`, `staff`, `candidates`, `rides`, `vehicles`, `paths`, `arrivals`, `objects`, `catalogue`, `money`, `loans`, `budgets`, `research`, `tickets`, `outlets`, `happiness`, `rings`, `spend`, `why`, `cell`, `ground`, `drawn`, `scriptvar`, `bumpers`, `gate`, `boundary`, `hoardings`, `strikes`, `effects`, `emitters`, `particles`, `endfeature`, `thingids`, `track`, `pylons`, `rim` |
 | Changing guests | `arrive`, `admit`, `send`, `load`, `depart`, `happy`, `cash`, `thirst`, `balloon`, `toilet`, `need` |
 | Building and staff | `buy`, `put`, `sell`, `move`, `path`, `delpath`, `queue`, `delqueue`, `hire`, `fire`, `pickup`, `putstaff`, `carry`, `drop`, `hand`, `strip`, `tool`, `staffrest`, `forcestrike` |
 | Mouse, keys and windows | `pick`, `pickray`, `click`, `rightclick`, `rmbcancel`, `worldclick`, `hover`, `pointer`, `backspace`, `stall`, `menu`, `buyscreen`, `hirescreen`, `researchscreen`, `openthing`, `shopwindow`, `staffwindow`, `visitorwindow`, `screen`, `windows`, `control`, `state`, `footprint`, `buymoney`, `preview`, `map`, `locator`, `tags`, `helpbar` |
-| Measuring | `stats`, `assets`, `parks`, `huds`, `water`, `size`, `strings`, `thingfill`, `unimplemented` |
+| Measuring | `stats`, `assets`, `parks`, `huds`, `water`, `size`, `strings`, `thingfill`, `mem`, `unimplemented` |
 
 Each command's arguments are in [`DebugConsole.cs`](source/OpenTPW/Client/Diagnostics/DebugConsole.cs), one `case`
 per command. Add a new command to this table.

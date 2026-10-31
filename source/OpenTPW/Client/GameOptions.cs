@@ -62,7 +62,8 @@ internal sealed class GameOptions
 
 	/// <summary>
 	/// The mode <see cref="DisplayMode.FullScreen"/> asks the display for. <b>OpenTPW's own.</b> A size
-	/// of nothing means the display's current mode, which is what the first run gets.
+	/// of nothing asks for no mode, and SDL then takes the window's own size (<see cref="Display"/>), not the desktop's: the first run
+	/// has it, until the Options screen's tick sets the mode its line shows (<see cref="OptionsScreen.KeptSize"/>).
 	/// </summary>
 	public VideoMode FullScreenSize { get; set; }
 

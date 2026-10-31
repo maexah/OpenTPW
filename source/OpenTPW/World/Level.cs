@@ -602,7 +602,10 @@ public class Level
 	/// </remarks>
 	/// <param name="parkFile">
 	/// A park file in the save folder to read instead, the row clicked on the Load Park screen (0x005ac5d0). One that
-	/// will not read leaves the park with nothing placed in it; the original's failed load leaves its state undefined.
+	/// will not read leaves the park with nothing placed in it. <b>A gap, said at the site</b> (Q994, <c>docs/exe/saves.md</c>,
+	/// "The load"): the original checks the file before it takes anything down (<c>FUN_00414d40</c>), so a bad file loaded from a park
+	/// keeps that park running, and one entered with leaves the new world standing; only a module's failure after the teardown
+	/// leaves its state undefined. Here the scene has already ended (<c>Game.cs</c>) and the park is null.
 	/// </param>
 	internal static IParkInitialState? CreatePark( string theme, ParkBalance balance, ParkItemCatalogue catalogue,
 		string? parkFile = null )
@@ -707,7 +710,8 @@ public class Level
 	/// leaves the file already at its path as it was, where the original deletes it on most failures after the
 	/// open (<c>docs/exe/saves.md</c>, "The save", step 3): a fill in the player's favour, so a failed save never
 	/// costs them the old one. The bytes go to a file beside it that then takes its place
-	/// (<see cref="BaseFileSystem.WriteAllBytes"/>), so a failure never leaves a part-written park either. A failure
+	/// (<see cref="BaseFileSystem.WriteAllBytes"/>), so a failure leaves the old file whole; a kill during the write can leave the copy
+	/// (<c>.tmp</c>) beside it, which <see cref="SaveFolder.NewestPark"/> and the Load Park list do not take for a park. A failure
 	/// of any kind is logged and answered with null, and the game goes on, as the original's save answers a failure
 	/// number and its screen closes all the same. A deviation (Q982): where the save folder cannot be written the player
 	/// is also told in a message box (<see cref="SaveTrouble"/>).

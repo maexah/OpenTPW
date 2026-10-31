@@ -1286,7 +1286,7 @@ first (event 10, `0x0054f24e`; not built here, Q454), so there it can be said.
 ### OpenTPW (`ParkAdvisorMessages.ExplainTooltips`, a second topic with `Polled` and an `AgeSection`)
 
 A row of `ParkTopics` and nothing else: the poll, the score by the park's age, the gate, the records, the slots
-and the action are Q312's to Q316's. `PARK_ADVISOR_POLLED_ROW_NOT_BUILT` was counted for 153 rows a round then; it is counted for the polled rows no topic builds, 108 a round since Q530.
+and the action are Q312's to Q316's. `PARK_ADVISOR_POLLED_ROW_NOT_BUILT` was counted for 153 rows a round then; it is counted for the polled rows no topic builds, 83 a round at the tip (`ParkAdvisorMessageTests`).
 
 **Predicted first** (`q317/PREDICTION.txt`, `q317/confirm.py stock|control|fresh|nofile|cutoff`; twelve of
 twelve, every number written before any build or run). **The stock park** (four of four): `restored message=282
@@ -4105,7 +4105,7 @@ original's own research and what that does to the kinds on offer, the other thre
 record this game reads the projects, the five kinds' records (Q701), `mWorkLoad` and `mMostExpensiveProject` (Q590);
 `mLabActive` is named and not read. The hold's turn in the two games
 is not the same turn (972 here, 1127 there): the original's byte was not held through its load, which reads
-the game type for its catalogue. Row 76 (`SideshowsResearchMore`) is built since, below; the other twenty-nine
+the game type for its catalogue. Row 76 (`SideshowsResearchMore`) is built since, below; twenty-four of the thirty-one
 polled rows of mode 0 are not. **Rows 83 and 84 are posted and no poster is found**: row 83's score is the stub
 `FUN_005d60c0`, which answers nought, row 84's (`0x0059e410`) answers `FeaturesFarToToilets.Score` alone, and
 neither `0x53` nor `0x54` is handed to `FUN_0059b590` or `FUN_0059bf20` by any defined code, nor stored into a
@@ -4515,8 +4515,7 @@ No line leaves that tag, because row 85 is never said, so `ParkTags.Rows` does n
 `ParkPeople.AdvisorFacts` counts the guests inside over `ThirstierThan` and `HungrierThan` (each key's low byte), each
 need cut to its whole number's low byte, beside row 82's count. Rows 3 and 4 score the count times the key; the poll line
 ends ` thirsty=N/inside over=N` (` hungry=`). A topic's `SecondProp` is the response's `+0x18`, and `PropsOf` answers both.
-Row 85 is a topic that answers nought, so it leaves the `PARK_ADVISOR_POLLED_ROW_NOT_BUILT` census (108 rows a round,
-from 111). The console's `need hunger N` sets every guest's hunger, as `thirst N` the thirst.
+Row 85 is a topic that answers nought, so it leaves the `PARK_ADVISOR_POLLED_ROW_NOT_BUILT` census. The console's `need hunger N` sets every guest's hunger, as `thirst N` the thirst.
 
 **The scenes** (`q530/mkscene.py`): Q415's `ent.TPWS` (93 inside, the entertainer kept) with every guest inside at thirst
 100 (`thirsty.TPWS`, the record's `+509`) or hunger 100 (`hungry.TPWS`, `+426`).

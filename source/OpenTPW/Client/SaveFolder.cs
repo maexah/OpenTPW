@@ -19,10 +19,11 @@ namespace OpenTPW;
 /// </para>
 /// <para>
 /// A file that will not read is reported, and whatever it held keeps its default. Every
-/// file is written whole to one beside it and then moved into place, so a save cut short never leaves half
-/// a file behind. Config.tcf and gms.dat are written over as the original writes them, but one this game did not
-/// read whole (another version, a tail, a short file, or one that appeared since it was read) is first copied
-/// beside itself under a name the game does not read (<see cref="BackUp"/>).
+/// file is written whole to one beside it (<see cref="BaseFileSystem.TemporarySuffix"/>) and then moved into place, so a
+/// save cut short leaves the old file whole; the half-written copy may stay beside it, and <see cref="NewestPark"/>
+/// does not take it for a park. Config.tcf and gms.dat are written over as the original writes them, but one this game did
+/// not read whole (another version, a tail, a short file, or one that appeared since it was read) is first copied
+/// beside itself under a name the game does not read (<see cref="BackUp"/>); so is opentpw.cfg, where it would not read.
 /// </para>
 /// </summary>
 internal static class SaveFolder
@@ -49,6 +50,9 @@ internal static class SaveFolder
 	// A failed load leaves defaults in memory, so whatever is in Config.tcf when they are written was never
 	// read: it is copied aside first. Scoped to the mapped filesystem so another installation is independent.
 	private static BaseFileSystem? _unreadConfig;
+
+	// The same for opentpw.cfg: a read that failed left the defaults in memory, which the next write would put over the file's lines.
+	private static BaseFileSystem? _unreadDisplay;
 
 	/// <summary>
 	/// The themes every player has a folder and a park record for: the folders under data\levels that hold
@@ -135,19 +139,42 @@ internal static class SaveFolder
 		}
 	}
 
+	/// <summary>Whether the copy at <paramref name="copy"/> holds <paramref name="bytes"/>; one that will not read is not the same, and a fresh copy is made.</summary>
+	private static bool SameBytes( string copy, byte[] bytes )
+	{
+		try
+		{
+			return bytes.AsSpan().SequenceEqual( SaveFileSystem.ReadAllBytes( copy ) );
+		}
+		catch ( Exception e ) when ( e is IOException or UnauthorizedAccessException )
+		{
+			return false;
+		}
+	}
+
 	/// <summary>
 	/// Copies a file beside itself, to a name neither game reads, before it is written over: <c>.opentpw-backup</c>,
-	/// then <c>.opentpw-backup2</c> and on, so an earlier copy is never replaced. A copy that cannot be made throws,
-	/// and the file is left as it is.
+	/// then <c>.opentpw-backup2</c> and on, so an earlier copy is never replaced. The newest copy already holding
+	/// the file's bytes is enough. A copy that cannot be made throws, and the file is left as it is.
 	/// </summary>
 	private static void BackUp( string path )
 	{
 		var backup = path + BackupSuffix;
+		var newest = (string?)null;
 
 		for ( var n = 2; SaveFileSystem.FileExists( backup ); n++ )
+		{
+			newest = backup;
 			backup = $"{path}{BackupSuffix}{n}";
+		}
 
-		SaveFileSystem.WriteAllBytes( backup, SaveFileSystem.ReadAllBytes( path ) );
+		var bytes = SaveFileSystem.ReadAllBytes( path );
+
+		// The write that follows a good copy can fail and be tried again: the same bytes are not copied twice.
+		if ( newest != null && SameBytes( newest, bytes ) )
+			return;
+
+		SaveFileSystem.WriteAllBytes( backup, bytes );
 		Log.Warning( $"Saves: {path} was not read whole by this game, so it is copied to {backup} before it is written" );
 	}
 
@@ -168,12 +195,23 @@ internal static class SaveFolder
 	/// </summary>
 	public static void LoadDisplay()
 	{
+		_unreadDisplay = null;
+
 		if ( Find( DisplayName ) is not { } path )
 			return;
 
+		_unreadDisplay = SaveFileSystem;
+
 		try
 		{
-			foreach ( var line in SaveFileSystem.ReadAllText( path ).Split( '\n' ) )
+			// UTF-8, as SaveDisplay writes it (a gpu line can name a card with a letter outside ASCII), through a reader that
+			// takes a byte order mark off and reads a UTF-16 file a text editor made as what it is.
+			string text;
+
+			using ( var reader = new StreamReader( SaveFileSystem.OpenRead( path ), Encoding.UTF8 ) )
+				text = reader.ReadToEnd();
+
+			foreach ( var line in text.Split( '\n' ) )
 			{
 				var parts = line.Trim().Split( ' ', StringSplitOptions.RemoveEmptyEntries );
 
@@ -222,6 +260,7 @@ internal static class SaveFolder
 				}
 			}
 
+			_unreadDisplay = null;
 			Log.Info( $"Saves: read the display settings from {path}" );
 		}
 		catch ( Exception e )
@@ -237,7 +276,8 @@ internal static class SaveFolder
 	/// <param name="tell">Whether a folder that cannot be written is told to the player (<see cref="SaveTrouble"/>); the loading screen's own write is not, as no choice of theirs was lost.</param>
 	public static void SaveDisplay( bool tell )
 	{
-		var path = Find( DisplayName ) ?? DisplayName;
+		var existing = Find( DisplayName );
+		var path = existing ?? DisplayName;
 		var options = GameOptions.Current;
 
 		var mode = options.DisplayMode switch
@@ -249,6 +289,10 @@ internal static class SaveFolder
 
 		try
 		{
+			// A file this game never read: its lines are copied aside before the defaults replace them (as Config.tcf's are).
+			if ( existing != null && ReferenceEquals( _unreadDisplay, SaveFileSystem ) )
+				BackUp( path );
+
 			var text = new StringBuilder()
 				.AppendLine( "# OpenTPW's own settings. The original's Config.tcf beside this one holds the" )
 				.AppendLine( "# options it knows about; these are the ones it has no room for." )
@@ -275,6 +319,7 @@ internal static class SaveFolder
 			// Lines end in LF on every system: AppendLine writes the system's own, and a file moved between a Windows and a Linux
 			// install (the game folder is shared with the original's) should not change its bytes. LoadDisplay reads either.
 			SaveFileSystem.WriteAllBytes( path, Encoding.UTF8.GetBytes( text.ToString().Replace( "\r\n", "\n" ) ) );
+			_unreadDisplay = null;
 			Log.Info( $"Saves: wrote the display settings to {path}" );
 		}
 		catch ( Exception e )
@@ -314,6 +359,9 @@ internal static class SaveFolder
 
 				var slot = folder[0] - '1';
 				var name = folder[1..];
+
+				// Before anything logs the folder's path, which holds the name: a tester's console.log says <player N> (SafePaths).
+				ConsoleLog.HidePlayer( name, slot );
 
 				players.Add( (slot, name, LoadPlayer( slot, name )) );
 				MakeThemeFolders( PlayerFolder( slot, name ) );
@@ -422,7 +470,8 @@ internal static class SaveFolder
 	/// <summary>
 	/// The park file a player enters a theme with - 0x005accf0 (<c>docs/exe/saves.md</c>, "Entering a park"): of the
 	/// files in their folder for the theme named <c>*.TPW*</c>, the one written last. That takes in the copied
-	/// easymode.TPWI and every saved park, and leaves restart.INTS out. A file written at the same instant as the
+	/// easymode.TPWI and every saved park, and leaves restart.INTS out. A <c>.tmp</c> beside a park (a write that was cut
+	/// short, <see cref="BaseFileSystem.TemporarySuffix"/>) is not one here; the original's own search would take it, as the folder is shared (Q997). A file written at the same instant as the
 	/// one held does not replace it. Null where the folder holds none: the original loads nothing then.
 	/// </summary>
 	/// <remarks>
@@ -444,7 +493,8 @@ internal static class SaveFolder
 			var parks = SaveFileSystem.GetFiles( folder )
 				.Select( Path.GetFileName )
 				.OfType<string>()
-				.Where( file => file.Contains( ParkPattern, StringComparison.OrdinalIgnoreCase ) )
+				.Where( file => file.Contains( ParkPattern, StringComparison.OrdinalIgnoreCase )
+					&& !file.EndsWith( BaseFileSystem.TemporarySuffix, StringComparison.OrdinalIgnoreCase ) )
 				.OrderBy( file => file, StringComparer.OrdinalIgnoreCase );
 
 			foreach ( var file in parks )

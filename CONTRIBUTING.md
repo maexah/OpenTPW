@@ -15,7 +15,7 @@ sounds, text) may ever be committed.
 |---|---|
 | Documentation, the website text, queue notes | No |
 | Tools and scripts (`tools/`), the Python harness libraries | No |
-| Building, and running the tests | No. Without the game, the tests that need it skip: on 2026-10-28, 1,648 of the 4,285 ran and 2,637 skipped, with 0 failing. Read the skip count: a pass with skips is not a full pass. The tests find the game only through `OPENTPW_GAME_PATH`; they never look in the working directory, the build's folder or, on Windows, the registry, so a run never touches a copy of the game you play (Q986). |
+| Building, and running the tests | No. Without the game, the tests that need it skip: on 2026-10-31, 1,837 of the 4,539 ran and 2,702 skipped (Linux; `docs/STATUS.md` has the Windows run's own counts), with 0 failing. Read the skip count: a pass with skips is not a full pass. The tests find the game only through `OPENTPW_GAME_PATH`; they never look in the working directory, the build's folder or, on Windows, the registry, so a run never touches a copy of the game you play (Q986). |
 | Playing the game, and confirming that a change to what is drawn or how the game behaves is right | **Yes** |
 | The harnesses that drive the running game or the original under Proton | **Yes**, and a Linux machine for the Proton ones |
 
@@ -64,8 +64,7 @@ dotnet source\OpenTPW\bin\Debug\net10.0\OpenTPW.dll --game "$env:OPENTPW_GAME_PA
 **What has been tried.** *The Linux steps are tested on the maintainer's Linux machine only* (copy the tracked files,
 build, the tests without the game, a refused staged `.wad`, a launch under Xvfb and lavapipe that reached the lobby;
 run on 2026-10-28 by `tools/harness/lib/quickstart_check.sh` from an empty home folder and a cleaned environment, no
-container). *These launch steps are not tested on Windows or macOS* until someone runs them there; the build and the
-tests are plain .NET and should work. If you try them, say how it went in an issue.
+container). *On Windows 11 the build, the tests and a launch to the lobby ran on 2026-10-31 from a copied tree, not from a fresh clone; none of it is tested on macOS.* If you try them, say how it went in an issue.
 
 **Advanced (the maintainer's tooling, Linux only).** Ghidra on `testme.exe`, the Python harnesses in
 [`tools/harness/`](tools/harness/README.md) that drive the game and read park files, and the original game under Proton
@@ -143,7 +142,7 @@ tools/check_commit.sh HEAD "<game folder>"   # every test runs; without the game
 ```
 
 The script needs bash. **On Windows** run it from Git Bash (it comes with Git for Windows): `bash tools/check_commit.sh`.
-*It has been run on Linux only*, not on Windows or macOS. From PowerShell, the same check by hand (the pre-commit hook
+*It has been run on Linux and on Windows 11*, not on macOS. From PowerShell, the same check by hand (the pre-commit hook
 has already run the content guard on what you staged):
 
 ```powershell

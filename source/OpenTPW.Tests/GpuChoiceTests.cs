@@ -207,20 +207,41 @@ public class GpuChoiceTests
 	}
 
 	/// <summary>
-	/// <b>RESTART GAME is not asked where the options were not written</b> (Q986): the card was not kept, and the box would hold the
-	/// screen modal over OPTIONS NOT SAVED, which the tick would then leave the game with untold.
+	/// <b>RESTART GAME is not asked where the options were not written</b> (Q986): the box would hold the screen modal over
+	/// OPTIONS NOT SAVED, which the tick would then leave the game with untold (the card may have been kept all the same, in Config.tcf).
 	/// </summary>
 	/// <remarks><b>Mutation:</b> a rule that ignores the lost write, or one that never asks, fails a step.</remarks>
 	[TestMethod]
-	public void RestartGameIsNotAskedWhereTheOptionsWereNotWritten()
+	public void RestartGameIsNotAskedWhereAnOptionsFileWasNotWritten()
 	{
 		var before = new GameOptions { SecondaryVideoCard = false };
 		var now = before.Copy();
 		now.SecondaryVideoCard = true;
 
 		Assert.IsTrue( UI.OptionsScreen.AsksToRestart( before, now, optionsLost: false ), "a changed card, written: asked" );
-		Assert.IsFalse( UI.OptionsScreen.AsksToRestart( before, now, optionsLost: true ), "a changed card, not written: told as OPTIONS NOT SAVED instead" );
+		Assert.IsFalse( UI.OptionsScreen.AsksToRestart( before, now, optionsLost: true ), "a changed card, a write lost: told as OPTIONS NOT SAVED instead" );
 		Assert.IsFalse( UI.OptionsScreen.AsksToRestart( before, before.Copy(), optionsLost: false ), "no change: not asked" );
+	}
+
+	/// <summary>
+	/// <b>A first run's full screen is kept at the mode its line shows</b> (the week-end audit of 2026-10-31, ST-F2): a size of nothing asks SDL for
+	/// no mode and it takes the window's size, so the tick sets the slider's mode in full screen. The other two ways, and a size already
+	/// chosen, are left as they are.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> a rule that returns the size unchanged, or fills it in every display mode, or over a chosen size, fails a step.</remarks>
+	[TestMethod]
+	public void AFirstRunsFullScreenIsKeptAtTheModeTheLineShows()
+	{
+		var shown = new VideoMode( 2560, 1440, 144 );
+		var none = new VideoMode( 0, 0, 0 );
+		var chosen = new VideoMode( 1920, 1080, 60 );
+
+		Assert.AreEqual( shown, UI.OptionsScreen.KeptSize( DisplayMode.FullScreen, none, shown ) );
+		Assert.AreEqual( shown, UI.OptionsScreen.KeptSize( DisplayMode.FullScreen, new VideoMode( 0, 1080, 0 ), shown ), "a half-empty size is nothing too" );
+		Assert.AreEqual( chosen, UI.OptionsScreen.KeptSize( DisplayMode.FullScreen, chosen, shown ), "a size chosen is kept" );
+		Assert.AreEqual( none, UI.OptionsScreen.KeptSize( DisplayMode.Windowed, none, shown ), "a window asks for no mode" );
+		Assert.AreEqual( none, UI.OptionsScreen.KeptSize( DisplayMode.BorderlessFullScreen, none, shown ), "borderless takes the desktop's" );
+		Assert.AreEqual( none, UI.OptionsScreen.KeptSize( DisplayMode.FullScreen, none, null ), "no mode listed: nothing to keep" );
 	}
 
 	/// <summary>

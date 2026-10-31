@@ -1,9 +1,9 @@
-"""oddsaves.py OUT BIN [tcf=KIND] [gms=KIND]: Config.tcf and gms.dat written over when this game did not read them whole (Q216).
+"""oddsaves.py OUT BIN [tcf=KIND] [gms=KIND] [desktop]: (OUT must be a new folder; a game folder kept there keeps its odd or replaced files and backups.) Config.tcf and gms.dat written over when this game did not read them whole (Q216).
 Enters the stock jungle park on a private game folder (OUT + "-game", made from paths.PRIVATE_GAME) whose Config.tcf and the player's
 gms.dat are made odd first: KIND is one of `newer` (version dword +1), `zero` (version 0), `tail` (two bytes more), `short` (cut to
 12 bytes), or `whole` (left as they are, the control). The Options screen's tick writes Config.tcf; `savepark` writes gms.dat
 (Player.Save); each is done twice. Prints each file's md5 at the start, after each write, and each backup's, with the
-`Saves:` log lines. Shots `oddsaves-options` and `oddsaves-after-tick`. OFFSCREEN on :79 (lane B), or the desktop with `desktop` as an
+`Saves:` log lines. Shots `oddsaves-options1`, `2` and `oddsaves-after-tick1`, `2`. OFFSCREEN on :79 (lane B), or the desktop with `desktop` as an
 option. Run with review-codex/venv/bin/python -u; parkrun.py's names are in scope, so take none of them (README.md, "Writing a run")."""
 import os, sys, hashlib, glob
 LIB = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, LIB)

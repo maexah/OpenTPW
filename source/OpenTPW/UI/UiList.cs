@@ -235,7 +235,11 @@ internal sealed class UiList : UiControl
 		foreach ( var cells in _slots )
 		{
 			foreach ( var cell in cells )
+			{
+				// The window's close walks Children to let go of every text, and these are no longer in it.
+				cell.ReleaseText();
 				Children.Remove( cell );
+			}
 		}
 
 		_slots.Clear();

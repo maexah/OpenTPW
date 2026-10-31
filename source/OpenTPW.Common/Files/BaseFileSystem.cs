@@ -114,6 +114,9 @@ public class BaseFileSystem
 		return File.Open( absolutePath, FileMode.Create, FileAccess.Write );
 	}
 
+	/// <summary>Appended to a file's name for the copy <see cref="WriteAllBytes"/> writes first; a kill during the write leaves it behind.</summary>
+	public const string TemporarySuffix = ".tmp";
+
 	/// <summary>
 	/// Writes a whole file, replacing whatever was there. The bytes go to a file beside it first, which then
 	/// takes its place, so a game that stops partway through a save leaves the old file whole rather than
@@ -132,7 +135,7 @@ public class BaseFileSystem
 		if ( !string.IsNullOrEmpty( directoryName ) )
 			Directory.CreateDirectory( directoryName );
 
-		var temporary = absolutePath + ".tmp";
+		var temporary = absolutePath + TemporarySuffix;
 		File.WriteAllBytes( temporary, bytes );
 		File.Move( temporary, absolutePath, overwrite: true );
 

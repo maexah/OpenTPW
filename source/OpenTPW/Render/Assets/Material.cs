@@ -504,6 +504,7 @@ public partial class Material : Asset
 	{
 		public Pipeline Pipeline { get; } = pipeline;
 		public ResourceLayout[] Layouts { get; } = layouts;
+		// Dead by CODE (AGENTS.md rule 3): nothing reads or sets it; the count lives on SharedCache.Entry.Users.
 		public int Users { get; set; }
 
 		public void Dispose()

@@ -110,8 +110,33 @@ public class SaveHomeTests
 		Assert.IsFalse( pick.Fallback );
 		Assert.IsNull( pick.Notice, "nothing is lost to the player" );
 		Assert.IsFalse( Directory.Exists( players ), "the player's folder is not made when it is not used" );
-		Assert.IsFalse( File.Exists( Path.Join( game, ".write-test" ) ) );
+		Assert.AreEqual( 0, Directory.GetFiles( game, ".write-test*" ).Length );
 		Assert.AreEqual( 1, Directory.GetFileSystemEntries( game ).Length, "only users\\ is there" );
+	}
+
+	/// <remarks><b>Mutation:</b> the probe back on the fixed name <c>.write-test</c> with <see cref="FileMode.Create"/>: the file is emptied and removed.</remarks>
+	[TestMethod]
+	public void AFileOfThePlayersNamedLikeTheOldProbeIsLeftAlone()
+	{
+		Directory.CreateDirectory( game );
+		var theirs = Path.Join( game, ".write-test" );
+		File.WriteAllText( theirs, "mine" );
+
+		Assert.IsNull( SaveHome.Unwritable( game ) );
+
+		Assert.AreEqual( "mine", File.ReadAllText( theirs ) );
+		Assert.AreEqual( 1, Directory.GetFileSystemEntries( game ).Length );
+	}
+
+	/// <remarks><b>Mutation:</b> the probe on the fixed name with <see cref="FileShare.None"/>: a probe held open by another copy makes this one say unwritable.</remarks>
+	[TestMethod]
+	public void AProbeHeldOpenByAnotherCopyDoesNotMakeTheFolderUnwritable()
+	{
+		Directory.CreateDirectory( game );
+
+		using var other = new FileStream( Path.Join( game, ".write-test" ), FileMode.Create, FileAccess.Write, FileShare.None );
+
+		Assert.IsNull( SaveHome.Unwritable( game ) );
 	}
 
 	[TestMethod]

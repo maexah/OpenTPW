@@ -65,7 +65,8 @@ internal static class SaveHome
 
 	/// <summary>
 	/// Why a file cannot be made in the folder (made first if it is not there), or null where one can: one is made and let
-	/// go at once, leaving the folder as it was.
+	/// go at once, leaving the folder as it was. Its name is its own and it must be new (<see cref="FileMode.CreateNew"/>), so a
+	/// file of the player's, or another copy's probe at the same moment, is neither emptied nor taken for a reason to move the saves.
 	/// </summary>
 	internal static string? Unwritable( string folder )
 	{
@@ -73,7 +74,7 @@ internal static class SaveHome
 		{
 			Directory.CreateDirectory( folder );
 
-			using ( new FileStream( Path.Join( folder, ".write-test" ), FileMode.Create, FileAccess.Write, FileShare.None, 1, FileOptions.DeleteOnClose ) )
+			using ( new FileStream( Path.Join( folder, $".write-test-{Guid.NewGuid():N}" ), FileMode.CreateNew, FileAccess.Write, FileShare.None, 1, FileOptions.DeleteOnClose ) )
 				return null;
 		}
 		catch ( Exception e ) when ( e is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException )

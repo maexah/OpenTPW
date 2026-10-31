@@ -795,8 +795,7 @@ filed the items that cite it.
   `NoteFailedReload`, a mutant of it failing it): leave (3) out. (4) `ParkBoughtClosedTests.ALoadedDisconnectedRideKeepsItsSavedDoor` builds a new ride and rebinds it; no save
   is read. Load one, or name the test for what it does. (5) `docs/exe/ride-operation.md` says the remeasure tail
   `FUN_004de1f0` leaves at once when `+0x68` is non-zero; `ParkRideOperation.ReopenAfterRemeasure` clears
-  `AssignedStaff` whatever was decided and cites `0x004de48c`. Read the tail in Ghidra and make the two agree. Also
-  two sentences, which Q216's rewrite of `docs/exe/saves.md` and `WORKS.md` took out. Put the bug back for each test (`AGENTS.md` rule 6). No game run.
+  `AssignedStaff` whatever was decided and cites `0x004de48c`. Read the tail in Ghidra and make the two agree. Put the bug back for each test (`AGENTS.md` rule 6). No game run.
 
 - [ ] **Q219. Light the models from the normals the file stores. Decode first.** Found by the 2026-10-04 effort
   audit (`r-f1`, `r-c2`). The original's model lighter `FUN_00574660` takes one normal per vertex-order entry from the
@@ -1321,8 +1320,8 @@ filed the items that cite it.
     (`OpenTPW.Files/Formats/Save/ParkWorld.People.cs`, line 402)
   - SaveFolder.LoadConfig logs "Saves: read the options from <path>" after ConfigFile.Read returns null for a
     version-0 Config.tcf, when nothing was applied and the defaults stand, and equally when a file of an unknown
-    version was applied but left _unreadConfig set. In both cases a later SaveConfig refuses to write and the
-    load's log never says why; known from SaveFolder.cs:57-75 and ConfigFile.cs:61-66, by code only.
+    version was applied but left _unreadConfig set. In both cases a later SaveConfig copies the file aside
+    (Q216), and the load's log never says why; known from SaveFolder.cs:57-75 and ConfigFile.cs:61-66, by code only.
     (`OpenTPW/Client/SaveFolder.cs`, line 75)
   - SaveFolder.DeletePlayer logs "Saves: deleted the player '<name>' in slot N" whether the folder was absent or
     DeleteFolder left it behind because it held a dot-named entry, which its own doc comment says happens. Known
@@ -2329,6 +2328,12 @@ filed the items that cite it.
   scan in `Shader.Cache.cs:12`) over a Full Simulation park's turnover before changing it. Also `ParkGuestSprites.cs:859`: a new
   `Vector3[4]` per drawn shadow per frame (debug data; STATUS names "the shadow arrays"). Direction: buffers with spare room that
   grow when needed. Fidelity first: the crowd drawn the same (a frame), the census the same.
+  - **Note (week-end audit 2026-10-31, L-F2):** the shadow's pipeline is not shared in this path. `ParkGuestSprites.cs:579-580` deletes
+    `_shadowModel` before `:597` makes the new material; `Model.Delete` releases the material's `SharedCache` entry at once
+    (`Material.cs:176-184`, `SharedCache.cs:45-48`), the silhouette key has one user (`ParkGuestSprites.cs:597` is its only use), so the entry
+    goes and the new material compiles a pipeline in that frame, at each `Build` with med.sam's `SPRITESHADOW 1`. `Build`'s own order
+    (`:548-553`, new material first, old model after) keeps its pipeline. So "Since Q954 the materials share a pipeline" is untrue of this
+    one. Measure it with the rest; the cheap fix is the same order.
 - [ ] **Q958. World models outside the camera's view are drawn: the original culls them.** From an outside audit (Alexah,
   2026-10-30), checked against `8a566e88` (`VERIFY-gpt-perf.md`, C). `Entity.cs:87-105` draws every entity in each pass and
   `ModelEntity.cs:66-79` draws whenever it has a model; nothing in `World/` or `Render/` tests the view. The original builds a
@@ -2470,6 +2475,96 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   constructor clears `0x3d` dwords (`0x005588a8`); `ADDHEAD` (`0x00554c8f`..`0x00554cd3`) asks for a free slot first, redraws until it gets
   0 and does no duplicate test; `NAME` is `0x0055429a`, with -1 at `0x00558c4c`. Compare with `RideScript` and `park.md`, "The head
   table", and file what differs.
+- [ ] **Q993. What a written park leaves out has no owner: a bought kart, water or tracked ride, and fifteen counted names.** From the
+  week-end audit 2026-10-31 (S-D1, S-S1, the Standing count; N8 of the docs sweep). `ParkState.cs:769-772`: the else of `writable( now )`
+  only counts `SAVE_PARK_OBJECT_BOUGHT`, so the thing is left out; `Level.cs:909-912` makes `writable` need `TrackType == 0` and a bumper
+  record. What goes out is a mix: the object, its script and its model are left out, the footprint cells stay the file's (`Level.cs:1368-1372`,
+  `SAVE_PARK_FOOTPRINT_CELL`), the track cells are written (`:1355-1361`, `:1381-1382`), and the balance goes out as it runs (`:1023`), so the
+  price stays spent: Dino Karts bought, Exit To Lobby, enter again, and the money is gone with track cells that nothing owns (by reading;
+  `ParkTrackPieces.cs:320-336`, `PieceAt` needs only the cell). `AddObject` counts every buy (`ParkState.cs:553`) and `BuiltItems` goes out
+  whenever anything else structural does (`Level.cs:931`, `ParkFileWriter.cs:491-492`), so a kart plus a shop writes Standing +1 for a kart
+  with no kart in the file, and the load seeds it (`ParkState.cs:897`); read by `ParkWorth.cs:52`, `ParkGoldenTickets.cs:177`
+  (`EverythingDone`), `ParkItemsScreen.cs:368`, `ParkPeople.cs:2978` (inferred, not run). The original writes the object whole in its park file
+  (`saves.md`, "OpenTPW's writer", the object module; its controls are `FUN_004d3aa0`'s). The owner named was Q420, ticked (`queue-done.md:8157`; its leftovers
+  Q539 are the refusal latch's, not the writer's): STATUS's "(Q420, ...)" now reads Q849 and this item, DOES-NOT's writer gaps (a boat's sound and wake, a coaster's or a tour's new head, the riders' puffs) are this item's, and QUEUE `:1593`, `:1955` and `:2066`
+  ("filed under Q420", "Q420's gap", "Q420's teardown") mean this item. Four open items were tried as owners and none is (Q587 the piece
+  model, Q607 and Q734 cite the gap, Q727(4) the pylon chain). The counted names with no owner, by a raw name match against this file:
+  `PARK_FILE_SOUND_WRITER_LIVE_VOICES`, `SAVE_PARK_ARRIVAL_VEHICLE`, `SAVE_PARK_CAR_NO_HEIGHT`, `SAVE_PARK_CAR_SMOKE`,
+  `SAVE_PARK_EMITTER_DIRECTED`, `SAVE_PARK_EMITTER_ITEM_EFFECT`, `SAVE_PARK_EMITTER_NO_PLACE`, `SAVE_PARK_EMITTER_NOT_STARTED`,
+  `SAVE_PARK_FOOTPRINT_CELL`, `SAVE_PARK_GUEST_ON_A_THING`, `SAVE_PARK_HANDLE_TO_AN_UNWRITTEN_THING`, `SAVE_PARK_MADE_MODEL_TABLES`,
+  `SAVE_PARK_OBJECT_BOUGHT`, `SAVE_PARK_QUEUE_CELL_MODEL`, `SAVE_PARK_SPRITE_SET_BYTE` (an item may carry one in words; `SAVE_PARK_TRACK_RIDE_AS_THE_FILE`
+  is Q849's). Sort them: build each, or say at the site why it is not. Until a kart, water or tracked ride is written, the gap is said at
+  the site, counted, and told to the player (README lines 28 and 252). Dead by GAP (AGENTS.md rule 3): placed content reaches it, so it is
+  the real queue, and Lost Kingdom at 100% cannot close without it. Confirm: buy Dino Karts, Exit To Lobby, enter again, in both games.
+- [ ] **Q994. A file that will not load keeps the running park, as the original does.** From the week-end audit 2026-10-31 (S-D3).
+  `FUN_00414d40` leaves before its first teardown call (`0x0041501d`) on a failed open (`0x00414dc2`), version read (`0x00414e09`), a version
+  above 500 (`0x00414e3c`, mode 2 only), preamble (`0x00414e76`), length (`0x00414ec1`), read (`0x00414eef`), block size (`0x00414f2f`) and
+  memory file (`0x00414f96`); the inflate (`0x00414f5d`) is unchecked, so a file whose header reads but whose body is cut goes on to the
+  teardown and failure 6 (the only undefined case). Entering: `FUN_005accf0` drops the load's answer (`0x005ad054`, next `0x005ad059`) and
+  state 9 goes on (`0x0054f12b`, `0x0054f130`), so the new world stands and state 0xf writes `restart.INTS` from it. Ours: `Game.cs:244-245`
+  ends the scene first, so Load Park on a bad `.TPWS`, Alt+L, or Restart Park on a bad `restart.INTS` drops the running park for an empty
+  one, and entering with a bad file gives `Park` null (`Level.cs:676-681`): nothing placed, no gate, and `Level.cs:864-868` refuses every
+  save. The fresh-park arm is `Level.cs:622-625`. Build: read and check the file before the scene ends; on a failure keep the park (loading)
+  or make the world fresh (entering). Said at the site (`Level.CreatePark`). A copied or damaged file, a short one the original left
+  (`0x00414c37`) or an online one (`SaveReader.cs:95`) reaches it; not a file this game writes. The Restart Park comment at
+  `ParkFrontEnd.cs:587-590` (S-M3, Q997) belongs with it. Confirm: a truncated copy in each of the three routes, in both games.
+- [ ] **Q995. One copy at a time, keyed per game folder.** From the week-end audit 2026-10-31 (ST-F1). The original lets one copy run:
+  `WinMain_Main` calls `0x0045f640` first (`0x0045a97f`) and leaves unless it answers 1 (`0x0045a988`); that calls `CreateMutexA`
+  (`0x0045f666`), tests `GetLastError` against `0xb7`, ERROR_ALREADY_EXISTS (`0x0045f675`, `0x0045f67b`), and closes the handle
+  (`0x0045f699`). `docs/exe/boot.md:7`, `:266`. OpenTPW has no lock (`Program.cs:8-23` goes to `Game.Run`), so two copies share one
+  `save/`: the last `Player.Save` wins (`Players.cs:129`); both write through the one `<file>.tmp` (`BaseFileSystem.cs:138-140`), so one
+  copy's move can find the other's file gone and say PARK NOT SAVED over "The save folder cannot be written" (`SaveTrouble.Failed`, an
+  `IOException`); and the second start rotates the first's live `console.log` to `console-prev.log` (`ConsoleLog.cs:131`, `:170`).
+  Build it **keyed per game folder, never machine-wide** (the second reader's constraint): `docs/WORKFLOW.md:324` and the harness run lanes side by
+  side on separate game folders, and a machine-wide lock would make the second lane quit silently. It must be taken **before
+  `ConsoleLog.Open`** (`Game.cs:49`), so the game folder is the key. The mutex's name is not established (`0x7a2508` is outside the file's
+  bytes). Until it is built the deviation is said at the site (`Program.cs`; the goal's line, "a deviation from the original is said at the site"). The box in Confirm is itself unsaid, since the original quits silently: say so there when it is built.
+  Confirm: two starts on one folder, the second refused with a box; two on different folders, both run.
+- [ ] **Q996. A failed route is not revived; a binding read on its press is rebuilt as the frame ends.** From the week-end audit 2026-10-31
+  (D1, D2 of the docs sweep). (1) The original's walker revives a failed route when the ground near the guest has changed since the last plan
+  and walks them to the loser's back of queue (`0x0050ed79`); `PeepBehaviour.cs:2459` says so, `docs/exe/ride-operation.md:4557` and STATUS
+  say "not revived", and Q104's Done text records it as not built, but no `Unimplemented.Report` and no open item carries it. Here `Walked`
+  gives up before its step when no route is held. Count it (`Unimplemented.Report`), then build it. Whether placed content reaches it is
+  not measured. (2) `Input.cs:228`: a binding read on its press or as a held state is rebuilt as the frame ends; Q120's decode covers
+  key-ups only, so whether a press-time reading differs from the original at all is not established. Decode it first. Confirm: (1) a route
+  blocked and cleared, in both games; (2) two events in one frame, both games.
+- [ ] **Q997. The small findings of the week-end audit 2026-10-31.** Each by reading, none run. S-M1: `ParkFileWriter.cs:491-492` puts
+  `loaded.PutControls( body, built )` inside the `if` of `:366`, so an item bought and sold since a load, with nothing else structural, leaves
+  no stamp, where the original's stays (`0x004dd0e1`; `ParkState.cs:292-300`); the next build takes a later one and `ParkWorth.cs:52`, `:59`
+  ages by it. S-M2: a park read in part refuses every save (`ParkFileWriter.cs:236-240`) with a log line and no `SaveTrouble.Failed`
+  (`Level.cs:1065-1069`), so Save Park, Alt+S and the autosave lose the play in silence; the original has no such refusal. S-M3: Restart Park
+  on a fresh park with no `restart.INTS` calls `Game.RequestParkLoad` (`ParkFrontEnd.cs:587-590`, `:562-564`) through `Level.cs:619`
+  `NewestPark`, so any `*.TPW*` from an Alt+S since loads; with `Park` null it reads the same bad file again; the original loads nothing
+  (`0x0055036c`, the open fails). S-M4: `SaveFolder`'s deletes use raw `File` and `Directory` calls (`DeletePlayer`, at `:634` and `:672`), so
+  `BaseFileSystem`'s listing is not dropped (`Resolve`, `RealName`, `Listing`, `BaseFileSystem.cs:322-388`); delete "Kim" from slot 1,
+  make "KIM": the folder is made as `1Kim`, the case lost. ST-F5: the log's head and `Display.cs:155` read the window's size before the
+  event is pumped (`console.log:53814`: `FullScreen at 2560 x 1440, window 2560x1359`); the `LaunchReport` line (`Game.cs:122-125`,
+  `LaunchReport.cs:171`) is inferred. ST-F8: `--game` as the last argument is ignored (`GameDir.cs:250`, `i + 1 < args.Length`) and falls
+  through to the search, where `GameDir.cs:80` says a named folder never does; a bare `--game` names no folder, so say so in a box. ST-F9:
+  `Renderer.cs:35` reads `Settings.Default` unguarded, against `GameDir.cs:226-227`'s "not a reason to stop"; a damaged `user.config`
+  stops the start in Q978's box (inferred). L-F3: a sold thing's name board stays on the card until the park ends (`ParkObjects.cs:316-318`,
+  `:361-364`, `:1062-1068`), two 128 x 128 textures per place of a signed item; said at the site; waits for `ParkObjectPreview`'s sign.
+  Also the gaps DOES-NOT filed under the finished Q420 and Q443 that no open item carries: the theme's advisor's golden-ticket clips are
+  not built; a rider standing on a node a clip moves faces as it does at rest; his lines that wait thirty days from the newest build
+  still come before the original's; and the line about an unjoined queue passes over the ride the queue tool is armed for and no other,
+  where the original's passes over the builder's object, whose life is not read. Another: a leftover `*.TPWS.tmp` is not taken for a park here
+  (Q997's S-D2 fix), but the original's own `.TPW*` search would take it, the folder being shared, and nothing deletes it.
+  Build or close each with a note.
+- [ ] **Q998. No on-screen word that a copy was made.** From the week-end audit 2026-10-31 (Q216's review, finding 7; STATUS says "Not built"
+  and no line carried it). Since Q216 a Config.tcf or gms.dat this game did not read whole is copied beside itself (`.opentpw-backup`) and then
+  written over, and only `console.log` says so. It matters most for a good gms.dat that would not open at the read: its whole bytes go to the
+  backup, a blank stand-in becomes the live file, and the player sees only lost progress. The overwrite itself is Alexah's decision and is
+  tested on purpose; whether to say it on screen, and in what words, is Alexah's call (a message box in the game's style, as `SaveTrouble`'s
+  are, or a decision that none is wanted, said at the site).
+- [ ] **Q999. The Options tick over a lost opentpw.cfg alone: RESTART GAME is not asked.** From the week-end audit 2026-10-31 (the outside lead 2,
+  `OptionsScreen.cs`, `Keep`; `SaveTrouble.LostAWrite`). The video card lives in Config.tcf (`GameOptions.cs:157`, `:175`), not opentpw.cfg. Where
+  Config.tcf is written and opentpw.cfg is not (a per-file fault: on Windows a read-only or locked opentpw.cfg, or a scanner's hold on the `.tmp`),
+  `LostAWrite` suppresses RESTART GAME, so the card arrives at the next start unasked, with OPTIONS NOT SAVED shown; the original asks
+  (`docs/exe/ui.md`, "The video card row"). Said at the site. Alexah's call: words only (as now), or about fifteen lines of behaviour (`SaveConfig`
+  returns whether it wrote, `AsksToRestart` takes that alone, the RESTART box carries `SaveTrouble.Take()`'s text; box room unchecked). The naive
+  fix brings back what Q986 removed (RESTART held over OPTIONS NOT SAVED, and the lobby's tick quitting with it untold). Test seam: make
+  `opentpw.cfg.tmp` a directory. The reverse (Config.tcf failing, opentpw.cfg written) is right as it stands. Also Q216's refused Config.tcf
+  (`InvalidDataException`) never sets `LostAWrite`, so RESTART GAME is asked with the card not written; Q216's back-up-then-overwrite removed that refusal.
 
 ## B. Docs and comments
 
@@ -3002,7 +3097,7 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
     (`0x0074c980`, the sum of twelve) is not copied (`0x0042b070`). Our `ParkRideViewCameraMode` was not compared.
 
 ## E. Large
-- [ ] **Q31b. The other seven object windows.** After Q31's shop window: the sideshow's, the toilet's and the rest
+- [ ] **Q31b. The other three object windows: the toilet's, the staff room's and the upgrade's.** After Q31's shop window: the sideshow's, the toilet's and the rest
   of `park-engine.md`'s nine, one window per session. Q31 carries the decoded figures and the `UIStrings` rows.
   From Q251: the staff window's days employed are `FUN_00505b70`, the calendar's now less `mTimeHired` over a
   day, handed to UITEXT `0x1bb` by `FUN_004b58b0` (`saves.md`, "`mTimeHired`"); `Staff.TimeHired` holds it.
@@ -3010,7 +3105,7 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
     `FUN_004b5cb0` (fire, with UITEXT `0x18d`'s box when the options ask; pick up; the patrol toggle, tool `0x36`;
     locate; all staff), arrows walking all staff newest first and wrapping (hidden under two staff), stats refreshed
     every 4000 ms (`FUN_004b58b0`), advisor lines `0xc0`, `0xc1` and `0xd4` posted and withdrawn.
-  From the run review (2026-10-17): both person windows are built (Q430, Q431), so five of the seven are left, and their
+  From the run review (2026-10-17): both person windows are built (Q430, Q431), and the sideshow's and the misc item's are Q960 and Q961, so three of the seven are left, and their
   leftovers belong here; Q420's notes from Q430 and Q431 list them: the visitor's preview (`VISITOR_WINDOW_PREVIEW`) and a
   guest gone (`VISITOR_WINDOW_GUEST_GONE`), the lists' lines `0x11e` and `0x11d`, the staff member's name edit, preview and
   member gone (`STAFF_WINDOW_NAME_EDIT`, `STAFF_WINDOW_PREVIEW`, `STAFF_WINDOW_MEMBER_GONE`), the staff room's row

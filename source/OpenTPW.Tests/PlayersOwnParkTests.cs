@@ -56,6 +56,24 @@ public class PlayersOwnParkTests
 		Assert.AreEqual( "lower.tpws", Path.GetFileName( SaveFolder.NewestPark( 0, "Test", "jungle" ) ) );
 	}
 
+	/// <summary>
+	/// <b>The copy a write leaves behind is not a park</b> (the week-end audit of 2026-10-31, S-D2): a game killed inside
+	/// <see cref="BaseFileSystem.WriteAllBytes"/> leaves <c>autosave.TPWS.tmp</c>, which holds <c>.TPW</c> and is the newest file.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the <c>.tmp</c> test taken out of <c>NewestPark</c>'s match: the part-written copy is entered.</remarks>
+	[TestMethod]
+	public void ALeftoverTemporaryCopyIsNotTakenForTheNewestPark()
+	{
+		Put( "autosave.TPWS", Old );
+		Put( "autosave.TPWS" + BaseFileSystem.TemporarySuffix, Old.AddDays( 5 ) );
+		Put( "easymode.TPWI.TMP", Old.AddDays( 6 ) );
+
+		Assert.AreEqual( "autosave.TPWS", Path.GetFileName( SaveFolder.NewestPark( 0, "Test", "jungle" ) ) );
+
+		File.Delete( Path.Combine( Jungle, "autosave.TPWS" ) );
+		Assert.IsNull( SaveFolder.NewestPark( 0, "Test", "jungle" ), "only the copies are left, and they are no park" );
+	}
+
 	[TestMethod]
 	public void AFileWrittenAtTheSameInstantDoesNotReplaceTheOneHeld()
 	{

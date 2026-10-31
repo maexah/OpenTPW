@@ -278,9 +278,9 @@ internal sealed class ParkFrontEnd : Panel
 	/// A shortcuts table's row let go, rows 1 to 15. Each row's handler is a stub into the same opener the gadget's
 	/// button reaches, the tab it was left on with it (<c>-1</c>), and every opener notes itself as its category's screen
 	/// (<c>FUN_004a0810</c>), so a row opens what <see cref="ParkCategoryScreens.Show"/> opens and the category button
-	/// opens it next. The map's row is <c>FUN_005f0b40</c>, the map button's. Park status, finances, loans and research
+	/// opens it next. The map's row is <c>FUN_005f0b40</c>, the map button's. Park status, finances and loans
 	/// are not built and are counted where they would open (loans refuse in Instant Action); so is the postcard
-	/// (<c>FUN_004a9380</c>). The staff and visitor locators open on the gadget's arm (<see cref="ParkLocator"/>).
+	/// (<c>FUN_004a9380</c>); research goes to its opener. The staff and visitor locators open on the gadget's arm (<see cref="ParkLocator"/>).
 	/// <para>
 	/// The table is heard over the park with nothing in front, and under a park screen, whose handler runs the
 	/// shortcuts' table alone (<c>FUN_00488ba0</c>, <c>0x00488c13</c>): there a row opens its screen in that one's place.

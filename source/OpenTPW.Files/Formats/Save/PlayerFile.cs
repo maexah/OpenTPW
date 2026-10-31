@@ -6,7 +6,7 @@ namespace OpenTPW;
 /// <para>
 /// The player's name is not in it: their folder's name is their slot's number and then their name, and
 /// that is all there is of either. The original writes the file when the player is made, when a new
-/// player is handed their first key, after every park is saved, and when the player is saved on Select
+/// player is handed their first key, before every park is saved (0x005ac7dc), and when the player is saved on Select
 /// New Player or on quitting (0x005afc60, through 0x005aff50). Every field is little-endian:
 /// </para>
 /// <code>
@@ -75,7 +75,7 @@ public sealed class PlayerFile
 	public bool IsComplete { get; private set; } = true;
 
 	/// <summary>
-	/// Whether this is a complete version 1 file read to its end, or one made here. A partial read, an unfamiliar
+	/// Whether this is a complete version 12 file read to its end, or one made here. A partial read, an unfamiliar
 	/// version or trailing data clears it; writing still replaces the file as the original does, and
 	/// <c>SaveFolder</c> copies the file aside first when this is clear.
 	/// </summary>
