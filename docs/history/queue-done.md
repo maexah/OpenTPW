@@ -11286,6 +11286,11 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   on Windows, w2). Read the script out of the wad, as the game does; then, at Alexah's word (2026-10-31), delete the two
   strays from the game folder (after the change is committed) and run the suite with the game: nothing may newly fail
   or skip. Check that no other test reads a file the disc does not have (the ISO's listing against the game folder).
+- [x] **Q980. Choose the graphics card.** NeoVeldrid takes the first Vulkan device; on the PC tried that is the AMD built-in
+  GPU, not the GTX 1650 (`vulkaninfo`: GPU0 integrated, GPU1 discrete; the log's `GPU:` line, w2). At Alexah's word
+  (2026-10-31): prefer a discrete GPU by default, with a setting to choose another (first look whether the original's
+  Options lists a device, `UIStrings.GPURendering` 316; else an `opentpw.cfg` line). A deviation, said at the site. Find
+  first whether NeoVeldrid lets the device be chosen, and how. Confirm on Windows: the `GPU:` line names the GTX 1650.
 
 ## B. Docs and comments
 

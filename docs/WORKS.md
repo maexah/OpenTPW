@@ -152,6 +152,17 @@ belongs to or at the end. Grep it by area or Q-number; never read it whole.
   Bounce (`q649/side-by-side-floor.png`) the plate's square edge is gone and the floor reads 1.82 and 1.58 times the
   ground's sharpness against the original's 1.55 and 1.19, in its colours. With the compositor off a floor draws its own
   texture, as the original's.
+- **The graphics card is chosen, not the loader's first** (Q980, Alexah 2026-10-31; a deviation, the original's video-card row is dead):
+  NeoVeldrid takes the first Vulkan device and offers no choice (`VkGraphicsDevice.CreatePhysicalDevice`, "Just use the first
+  one"), which on a PC with a built-in GPU and a card can be the built-in one. `GpuSelector.Choose` (called first in
+  `Renderer.CreateGraphicsDevice`) lists the devices through a throwaway instance, `GpuChoice.Pick` takes a discrete card
+  over a built-in one over a software renderer (or `save/opentpw.cfg`'s `gpu <part of a name>` / `gpu #N` / `gpu auto`,
+  `GameOptions.Gpu`), and the loader is asked to list it first: `MESA_VK_DEVICE_SELECT=vendor:device` first, then
+  `VK_LOADER_DRIVERS_SELECT=<the vendor's manifest names>`, each kept only if a second listing shows the choice first.
+  The log's `Graphics card:` lines say the list, the pick and the result; the `GPU:` line is the device NeoVeldrid took.
+  Linux shown (`q980/`: the RX 6700 XT by default, llvmpipe by `gpu llvmpipe` / `gpu #1`, the loader's driver filter
+  when the Mesa layer is disabled); the Windows PC (AMD built-in + GTX 1650) is the Sentinel's to confirm, and its
+  manifest names (`nv-vk*`, `amd-vulkan*`, `igvk*`) are not read from a Windows machine.
 - **One line brings the original's look back: `graphics faithful` in `save/opentpw.cfg`** (Q645, Alexah 2026-10-21; off
   by default, read as the game starts, `GameOptions.Faithful`). It turns every chosen improvement off at once: the art
   cut to four bits a channel (Q616), 16-pixel ground tiles (Q618), the research pumps stepped picture by picture (Q677),

@@ -777,6 +777,12 @@ after its poller starts**, so a key meant inside either line cannot be sent afte
 - **What reading every WAD entry costs, and that a decoder change leaves every byte alone** (Q836): `dotnet test source/OpenTPW.sln --no-build --filter "FullyQualifiedName~EveryInstalledWadEntryStillDecodes" --logger "console;verbosity=detailed"` with `OPENTPW_GAME_PATH` set
   prints the decoded corpus's SHA256 (`6CBD6C22...AB1077` on the 13,392 entries of the 312 installed archives), the count, and `GetData over the corpus: N ms, M MB allocated for D MB decoded` (the time and the allocation of `GetData` alone, hashing left out). The hash must be the same either side of a change to
   `Refpack` or `WadArchive`; run each side three times (the time is steady to 2%, the allocation exact). The game's own cost is `mem wads` (reads, ms) at `lib/memrun.py stock`'s 30 s, whose reads' ms moved between two runs of one binary by 5% (388, 406) and 14% (114, 130), the count not at all.
+- **This game on another graphics card, and the loader's levers on a Linux desk** (Q980, `q980/run.py CASE "gpu llvmpipe" [ENV=VAL]`):
+  a lobby start on a private folder whose `save/opentpw.cfg` carries the `gpu` line, one screenshot, the log's `Graphics card:`
+  and `GPU:` lines (the desk lists the RX 6700 XT and llvmpipe). `vulkaninfo --summary` with `MESA_VK_DEVICE_SELECT=10005:0000`
+  lists llvmpipe first; with `VK_LOADER_DRIVERS_SELECT='*lvp*'` it lists only llvmpipe. To make the first lever fail and see the
+  second work, add `VK_LOADER_LAYERS_DISABLE=VK_LAYER_MESA_device_select` (the case's `ENV=VAL`). Any of the levers already set in
+  the environment is left alone and said so. The Windows manifest names are not read from a Windows machine.
 - **This game at the original's look: four bits a channel, 16-pixel tiles, stepped pumps, jumping flags, letters at 1** (Q616,
   Q645; the improvements are the default): `gamefolder.make( DEST, {} )`, then append `graphics faithful` to
   `DEST/save/opentpw.cfg`, and hand DEST to `parkrun.py` as `GAME_FOLDER`; the run's log says "Graphics: opentpw.cfg's

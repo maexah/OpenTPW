@@ -355,6 +355,10 @@ public partial class Renderer
 	/// </summary>
 	private void CreateGraphicsDevice()
 	{
+		// NeoVeldrid takes the first device the Vulkan loader lists, so the loader is asked first to list the chosen one
+		// first - a discrete card by default, opentpw.cfg's "gpu" line to say otherwise (GpuSelector, Q980).
+		GpuSelector.Choose( GameOptions.Current.Gpu );
+
 		var options = new GraphicsDeviceOptions()
 		{
 			// Vulkan's clip space has Y running down the screen where OpenGL's and Metal's run up it. This

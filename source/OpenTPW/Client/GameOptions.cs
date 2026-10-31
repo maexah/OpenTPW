@@ -30,8 +30,8 @@ namespace OpenTPW;
 /// belong to the player, in their gms.dat (<see cref="PlayerOptions"/>), with the movie volume again - the
 /// player's copy wins when they are picked. Every gms.dat written takes the options as they stand.
 /// <para>
-/// The three that are OpenTPW's own - <see cref="DisplayMode"/>, <see cref="FullScreenSize"/> and
-/// <see cref="Faithful"/> - go in a third file, save\opentpw.cfg (<see cref="SaveFolder.LoadDisplay"/>), rather than into fields the
+/// The four that are OpenTPW's own - <see cref="DisplayMode"/>, <see cref="FullScreenSize"/>,
+/// <see cref="Faithful"/> and <see cref="Gpu"/> - go in a third file, save\opentpw.cfg (<see cref="SaveFolder.LoadDisplay"/>), rather than into fields the
 /// original's own file has no room for. That way Config.tcf stays a file the original can still read.
 /// </para>
 /// </para>
@@ -77,6 +77,15 @@ internal sealed class GameOptions
 	/// pixel or more (<see cref="UI.UiText.PrescaleFor(float)"/>).
 	/// </summary>
 	public bool Faithful { get; set; }
+
+	/// <summary>
+	/// Which Vulkan graphics card the game draws with (Q980): <c>auto</c>, the default, takes a discrete card over a built-in
+	/// one; <c>#N</c> the Nth device the log lists; any other text the first device whose name holds it
+	/// (<see cref="GpuChoice.Pick"/>). <b>OpenTPW's own</b>, a deviation from the original, whose video-card row is dead
+	/// (<see cref="SecondaryVideoCard"/>). opentpw.cfg's <c>gpu</c> line sets it, read once as the game starts
+	/// (<see cref="SaveFolder.LoadDisplay"/>) and used by <see cref="GpuSelector"/> before the device is made.
+	/// </summary>
+	public string Gpu { get; set; } = GpuChoice.Auto;
 
 	/// <summary>+0x08: low, medium or high, as 0, 1 or 2.</summary>
 	public int GraphicsQuality { get; set; } = 1;

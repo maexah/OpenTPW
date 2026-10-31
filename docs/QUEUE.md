@@ -103,11 +103,6 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   opens a console window (w3: hidden behind the game, on the taskbar). At Alexah's word (2026-10-31): the published
   Windows build opens none (`WinExe` for the release), the Debug build keeps its console for the debug console's stdin.
   Confirm on Windows: a double-click of the zip's exe, screenshot of the desktop and taskbar.
-- [ ] **Q980. Choose the graphics card.** NeoVeldrid takes the first Vulkan device; on the PC tried that is the AMD built-in
-  GPU, not the GTX 1650 (`vulkaninfo`: GPU0 integrated, GPU1 discrete; the log's `GPU:` line, w2). At Alexah's word
-  (2026-10-31): prefer a discrete GPU by default, with a setting to choose another (first look whether the original's
-  Options lists a device, `UIStrings.GPURendering` 316; else an `opentpw.cfg` line). A deviation, said at the site. Find
-  first whether NeoVeldrid lets the device be chosen, and how. Confirm on Windows: the `GPU:` line names the GTX 1650.
 - [ ] **Q982. A save folder that cannot be written. Measure first.** Sim Theme Park under `Program Files (x86)` is not
   writable by a player unless something opened it (the PC tried has a third-party `PermissionFix.exe`, Everyone full
   control). With the write denied (w4: list allowed, write refused) the game reaches the lobby and logs nothing; what

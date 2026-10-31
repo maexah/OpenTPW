@@ -28,6 +28,7 @@ internal static class SaveFolder
 	private const string ConfigName = "Config.tcf";
 	private const string DisplayName = "opentpw.cfg";
 	private const string GraphicsName = "graphics";
+	private const string GpuName = "gpu";
 	private const string GraphicsImproved = "improved";
 	private const string GraphicsFaithful = "faithful";
 	private const string UsersFolder = "users";
@@ -165,6 +166,11 @@ internal static class SaveFolder
 						GameOptions.Current.Faithful = parts[1].Equals( GraphicsFaithful, StringComparison.OrdinalIgnoreCase );
 						break;
 
+					// The graphics card (Q980): the rest of the line, so a name with spaces in it reads whole.
+					case GpuName:
+						GameOptions.Current.Gpu = string.Join( ' ', parts.Skip( 1 ) );
+						break;
+
 					// The two lines "graphics" replaced (Q616, Q618): read no more, and the next write drops them, so say so.
 					case "textures" or "ground" when parts[1].Equals( "original", StringComparison.OrdinalIgnoreCase ):
 						Log.Warning( $"Saves: {path}: \"{parts[0]} {parts[1]}\" is read no more; \"{GraphicsName} {GraphicsFaithful}\" replaces it, and the next save of the file drops the old line" );
@@ -215,7 +221,11 @@ internal static class SaveFolder
 				.AppendLine( "# graphics faithful: every one off, as the original draws them today: four bits a channel unless the detail file says TEXTURE32 1, 16-pixel" )
 				.AppendLine( "# tiles, the pumps stepped picture by picture, the flags jumping, the letters at the original's size and unsharpened." )
 				.AppendLine( "# Read as the game starts." )
-				.AppendLine( $"{GraphicsName} {(options.Faithful ? GraphicsFaithful : GraphicsImproved)}" );
+				.AppendLine( $"{GraphicsName} {(options.Faithful ? GraphicsFaithful : GraphicsImproved)}" )
+				.AppendLine( "# gpu auto: the Vulkan graphics card is a discrete one if there is one, else the first. gpu <part of a name>:" )
+				.AppendLine( "# the first card whose name holds it, e.g. gpu GTX 1650. gpu #1: the second card of the list console.log prints" )
+				.AppendLine( "# (\"Graphics card:\"). Read as the game starts." )
+				.AppendLine( $"{GpuName} {(string.IsNullOrWhiteSpace( options.Gpu ) ? GpuChoice.Auto : options.Gpu)}" );
 
 			// How many steps each kind of load took last time, which is how the loading bar knows how far
 			// to fill without being told - see LoadStepCounts. These are measurements rather than choices,

@@ -1,6 +1,6 @@
 # Status
 
-Last updated: 2026-10-30. **This header names no branch and no sha, deliberately**: a line in the commit that moves the tip cannot name it. Read the current state from the repository, which cannot lag: `git log --oneline -1`. **`docs/QUEUE.md` is the work queue**, one item per session, taken from the top unless Alexah reorders.
+Last updated: 2026-10-31. **This header names no branch and no sha, deliberately**: a line in the commit that moves the tip cannot name it. Read the current state from the repository, which cannot lag: `git log --oneline -1`. **`docs/QUEUE.md` is the work queue**, one item per session, taken from the top unless Alexah reorders.
 
 ## Works
 
@@ -14,6 +14,7 @@ One line per system; the detail, item by item, is `docs/WORKS.md` (grep it by ar
 - Rides: every placed thing runs its script, the rest of the opcodes counted; screams, particles, hoardings; the ride window closes and reopens its ride.
 - Running the park: the gadget, the info and money screens, the entry price and the gate, the research lab and its screen, golden tickets, the advisor's messages.
 - Saving: Save, Load, Restart Park, the quicksave keys; a played park with a coaster's pylons loads whole, its gate's doors open and its boundary wall drawn (Q810); a Full Simulation park started empty, saved too (Q783: its file at tick nought, which the original loads).
+- Graphics card: a discrete card is drawn with in preference to a built-in one, or the card `save/opentpw.cfg`'s `gpu` line names (Q980; shown on Linux, not yet on Windows).
 - The original runs under Proton as the reference instrument.
 
 ## Does not
@@ -38,7 +39,7 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- Q976 (tests only, nothing drawn; no screenshot applies). `ParkToiletDirtTests`, `ParkMechanicRepairTests` and `ParkHandymanCleanTests` now read `levels/jungle/features/toilet/toilet.RSE` out of `toilet.wad`, as the game does, not a loose `Toilet.rse`. The ISO's listing (`isoinfo -J -f`, case folded) against the game folder (`save/` left out) differs by four files: `console.log`, `testme.exe`, `data/levels/jungle/Bouncy.RSE` and `data/levels/jungle/features/Toilet.rse`; no test reads the first three (the tests only name `testme.exe` as a string, and no test opens the loose `Bouncy.RSE`). The two strays were deleted from the game folders at Alexah's word after the commit; the account of the runs is `q976/PREDICTION.txt`. Not verified: a Windows run (the seven failures were seen there by w2; the Windows session confirms them gone).
+- Q980 (the graphics card; shown on Linux only). NeoVeldrid takes the loader's first Vulkan device and cannot be told another (its `CreatePhysicalDevice`: "Just use the first one"), so `GpuSelector` lists the devices, `GpuChoice` picks (a discrete card, else `opentpw.cfg`'s `gpu` line) and the loader is asked to list the pick first: `MESA_VK_DEVICE_SELECT`, then `VK_LOADER_DRIVERS_SELECT`, each kept only if a second listing shows the pick first. Seen on the desk (RX 6700 XT discrete, llvmpipe), lobby screenshot per case, the log's `Graphics card:` and `GPU:` lines: the default takes the RX 6700 XT; `gpu llvmpipe` and `gpu #1` take llvmpipe through the Mesa variable; with the Mesa layer disabled the second lever does it; an unmatched setting warns and falls back; a variable already set is left alone (`q980/runs/f1` to `f8`). Not verified: **the Windows PC (AMD built-in plus GTX 1650) is not verified yet**, the Sentinel confirms it; the Windows driver names (`nv-vk*`, `amd-vulkan*`, `igvk*`) are guesses from the vendors' usual file names, not read from any Windows machine, and where they miss, the log says "could not be asked to put it first" and the first device is used; macOS is left to MoltenVK; the selector (the Vulkan side) has no unit test, only these runs, so its bugs were not put back by `mutate.py` (14 of 14 bugs in the pick and the cfg line are caught).
 
 
 
