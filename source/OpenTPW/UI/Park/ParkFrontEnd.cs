@@ -529,7 +529,7 @@ internal sealed class ParkFrontEnd : Panel
 			new( UIStrings.Options, 5, menu =>
 			{
 				_stack.Close( menu );
-				OptionsScreen.Open( _stack );
+				OptionsScreen.Open( _stack, Game.RequestLobbyReload );
 			} ),
 
 			new( UIStrings.ResumeGame, 0, menu => _stack.Close( menu ) ),

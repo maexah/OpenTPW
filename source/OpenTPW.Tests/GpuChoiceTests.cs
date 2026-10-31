@@ -120,8 +120,8 @@ public class GpuChoiceTests
 	/// <b>The Video Card row</b> (Q983, 0x004a361c): a click takes Secondary back to Primary always and Primary to Secondary only
 	/// with more than one card; the row reads the saved choice where it can be had and otherwise the card drawn on.
 	/// </summary>
-	/// <remarks><b>Mutation:</b> a click that ignores the count, one that cannot go back, a row that reads a saved Secondary
-	/// with one card, or that ignores a named card, fails a step.</remarks>
+	/// <remarks><b>Mutation:</b> a click that ignores the count, one that cannot go back, a row that follows the choice
+	/// where the card drawn has the other role, or that ignores a named card, a <c>Kept</c> that does not clear with one card, fails a step.</remarks>
 	[TestMethod]
 	public void TheVideoCardRowClicksAndReadsAsTheOriginalsDoes()
 	{
@@ -132,12 +132,22 @@ public class GpuChoiceTests
 		Assert.IsFalse( GpuChoice.Clicked( true, 2 ), "Secondary back to Primary" );
 		Assert.IsFalse( GpuChoice.Clicked( true, 1 ), "back to Primary even with one card, as a Secondary saved elsewhere is cleared" );
 
-		Assert.IsTrue( GpuChoice.Shows( true, 2, false, true ), "the saved choice, two cards" );
-		Assert.IsFalse( GpuChoice.Shows( false, 2, false, false ), "the saved choice, two cards, whatever is drawn on until the next start" );
-		Assert.IsFalse( GpuChoice.Shows( true, 1, false, true ), "a saved Secondary with one card reads Primary" );
-		Assert.IsFalse( GpuChoice.Shows( true, 0, false, true ), "none listed reads Primary" );
-		Assert.IsTrue( GpuChoice.Shows( false, 2, true, false ), "a named card that is not the preferred one reads Secondary" );
-		Assert.IsFalse( GpuChoice.Shows( true, 2, true, true ), "a named card that is the preferred one reads Primary" );
+		// Shows( secondary now, exact, drawsOnPrimary, asked at the start )
+		Assert.IsTrue( GpuChoice.Shows( true, false, false, true ), "Secondary asked and drawn" );
+		Assert.IsFalse( GpuChoice.Shows( false, false, true, false ), "Primary asked and drawn" );
+		Assert.IsTrue( GpuChoice.Shows( true, false, true, false ), "a click just made reads as made, drawn on from the next start" );
+		Assert.IsFalse( GpuChoice.Shows( true, false, true, true ), "Secondary asked but Primary drawn (the card could not be used) reads Primary" );
+		Assert.IsTrue( GpuChoice.Shows( false, false, false, false ), "Primary asked but Secondary drawn reads Secondary" );
+		Assert.IsFalse( GpuChoice.Shows( false, false, true, true ), "Secondary asked, Primary drawn, clicked to Primary: still the card drawn" );
+		Assert.IsTrue( GpuChoice.Shows( true, false, false, false ), "Primary asked, Secondary drawn, clicked to Secondary: still the card drawn" );
+		Assert.IsTrue( GpuChoice.Shows( false, true, false, false ), "a named card that is not the preferred one reads Secondary" );
+		Assert.IsFalse( GpuChoice.Shows( true, true, true, true ), "a named card that is the preferred one reads Primary" );
+		Assert.IsFalse( GpuChoice.Shows( true, true, true, false ), "a click does not move a named card" );
+
+		Assert.IsTrue( GpuChoice.Kept( true, 2 ), "a saved Secondary stays where there is another card" );
+		Assert.IsFalse( GpuChoice.Kept( true, 1 ), "one card: cleared (0x0044e334)" );
+		Assert.IsFalse( GpuChoice.Kept( true, 0 ), "none listed: cleared" );
+		Assert.IsFalse( GpuChoice.Kept( false, 2 ), "Primary stays Primary" );
 	}
 
 	/// <summary>
@@ -169,6 +179,75 @@ public class GpuChoiceTests
 		finally
 		{
 			Environment.SetEnvironmentVariable( theirs, null );
+			GpuSelector.Set( ours, null );
+		}
+	}
+
+	/// <summary>
+	/// <b>The tick asks RESTART GAME for a changed video card</b> (Q985, 0x004237d4): a card different from the one the screen
+	/// opened with, either way round; nothing else the screen keeps is asked for.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> a rule that asks only for Secondary, that never asks, or that asks for any change, fails a step.</remarks>
+	[TestMethod]
+	public void TheTickAsksToRestartOnlyForAChangedVideoCard()
+	{
+		var before = new GameOptions { SecondaryVideoCard = false };
+		var now = before.Copy();
+		Assert.IsFalse( UI.OptionsScreen.NeedsRestart( before, now ), "nothing changed" );
+
+		now.SecondaryVideoCard = true;
+		Assert.IsTrue( UI.OptionsScreen.NeedsRestart( before, now ), "Primary to Secondary" );
+		Assert.IsTrue( UI.OptionsScreen.NeedsRestart( now, before ), "Secondary back to Primary is a change from how the screen opened" );
+
+		var other = before.Copy();
+		other.GraphicsQuality = (other.GraphicsQuality + 1) % 3;
+		other.Advisor = !other.Advisor;
+		other.DisplayMode = DisplayMode.BorderlessFullScreen;
+		Assert.IsFalse( UI.OptionsScreen.NeedsRestart( before, other ), "other options are kept without asking" );
+	}
+
+	/// <summary>
+	/// <b>The fallback itself</b> (Q980, Q985): a device that cannot be made while the choice's settings are in force is made again
+	/// once after they are taken back; with none in force the failure is the caller's, and a second failure is too.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> a <c>Make</c> that does not catch, one that catches with nothing set, one that does not take the
+	/// settings back, or one that tries a third time, fails a step.</remarks>
+	[TestMethod]
+	public void ADeviceThatCannotBeMadeIsMadeAgainWithTheSettingsTakenBack()
+	{
+		const string ours = "OPENTPW_TEST_MAKE";
+
+		try
+		{
+			Log = new();
+			GpuSelector.Set( ours, "x" );
+			GpuSelector.Track( ours );
+
+			var calls = 0;
+			var seen = new List<string?>();
+			var made = GpuSelector.Make( () =>
+			{
+				seen.Add( GpuSelector.Get( ours ) );
+				return ++calls == 1 ? throw new InvalidOperationException( "cannot present" ) : "device";
+			} );
+
+			Assert.AreEqual( "device", made );
+			Assert.AreEqual( 2, calls );
+			CollectionAssert.AreEqual( new string?[] { "x", null }, seen, "the second try runs with the setting gone" );
+			Assert.IsFalse( GpuSelector.IsSet );
+
+			calls = 0;
+			Assert.ThrowsException<InvalidOperationException>( () => GpuSelector.Make<string>( () => { ++calls; throw new InvalidOperationException( "no setting" ); } ) );
+			Assert.AreEqual( 1, calls, "with nothing set the failure is not retried" );
+
+			GpuSelector.Set( ours, "x" );
+			GpuSelector.Track( ours );
+			calls = 0;
+			Assert.ThrowsException<InvalidOperationException>( () => GpuSelector.Make<string>( () => { ++calls; throw new InvalidOperationException( "still" ); } ) );
+			Assert.AreEqual( 2, calls, "the retry is once" );
+		}
+		finally
+		{
 			GpuSelector.Set( ours, null );
 		}
 	}

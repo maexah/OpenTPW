@@ -14,7 +14,7 @@ namespace OpenTPW;
 /// </para>
 /// <para>
 /// Q902 (Alexah's, open): a <c>save\</c> that holds players but cannot be written is read by nothing, and nothing is
-/// copied out of it. The game says so once (<see cref="SaveTrouble.Tell"/>).
+/// copied out of it. The game says so once each start (<see cref="SaveTrouble.Tell"/>; nothing is kept between starts).
 /// </para>
 /// </summary>
 internal static class SaveHome

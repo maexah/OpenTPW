@@ -48,10 +48,10 @@ namespace OpenTPW.UI;
 /// <list type="bullet">
 /// <item>The original's cross puts the copy back without applying the group volumes, so a volume moved
 /// before cancelling is still heard until the options are next applied. Here the cross applies them.</item>
-/// <item>The tick's checks are left out. In the original, a change of rendering, resolution or video card,
-/// or a graphics quality whose detail file needs a restart (0x00423bc0), shows RESTART GAME (UITEXT 403)
-/// instead of closing. A change of audio quality across one of sound.sam's thresholds stops every voice
-/// and sets the sound library up again (0x0051b920).</item>
+/// <item>Most of the tick's checks are left out. In the original, a change of rendering or resolution, or a
+/// graphics quality whose detail file needs a restart (0x00423bc0), shows RESTART GAME (UITEXT 403) instead of
+/// closing; here only a changed video card does (<see cref="NeedsRestart"/>). A change of audio quality across one
+/// of sound.sam's thresholds stops every voice and sets the sound library up again (0x0051b920).</item>
 /// <item>The display and the resolution are put into effect by the tick instead, and need no restart:
 /// the window here is resized while the game runs. They are the only settings the tick acts on rather
 /// than merely keeping, and it acts only when one of them actually changed, so a tick that moved a
@@ -70,7 +70,8 @@ namespace OpenTPW.UI;
 /// <para>
 /// <b>The video card row works as the original's does</b> (Q983, 0x004a361c): Primary or Secondary, Secondary offered only
 /// where more than one card is listed, kept in Config.tcf's video card field, and applied at the next start, as the card
-/// is chosen before the window exists (see <see cref="SwitchVideoCard"/>). Audio quality, Tutorial, Confirmations,
+/// is chosen before the window exists (see <see cref="SwitchVideoCard"/>). As in the original, a tick that changed it
+/// shows RESTART GAME and leaves the screen open until that box is answered (Q985, <see cref="RestartGame"/>). Audio quality, Tutorial, Confirmations,
 /// Rotation and Scroll are kept, but nothing reads them yet - they belong to the sound library's set-up
 /// and to parks. RMB cancel is read by the park's quick right click (<c>Level.QuickRightClick</c>) and by first person's
 /// right click (<c>ParkViewfinder.RightClicked</c>).
@@ -92,6 +93,9 @@ internal sealed class OptionsScreen : UiWindow
 	private const int LineId = 0x1d4c9;
 
 	private static readonly UiColour TitleColour = new( 234, 239, 102 );
+
+	/// <summary>What the tick of RESTART GAME does after the screen has closed: the lobby quits, a park is left for the lobby.</summary>
+	private readonly Action _leave;
 
 	/// <summary>The options as they were when the screen opened, for the cross to put back.</summary>
 	private readonly GameOptions _before = GameOptions.Current.Copy();
@@ -145,7 +149,8 @@ internal sealed class OptionsScreen : UiWindow
 	/// away the windows that are open (message 6); and opens the screen over everything. It does nothing while
 	/// the screen is already up (0x007cb2fc).
 	/// </summary>
-	public static void Open( WindowStack stack )
+	/// <param name="leave">What RESTART GAME's tick does once the screen has closed - see <see cref="RestartGame"/>.</param>
+	public static void Open( WindowStack stack, Action leave )
 	{
 		if ( stack.Windows.Any( window => window is OptionsScreen ) )
 			return;
@@ -157,11 +162,12 @@ internal sealed class OptionsScreen : UiWindow
 		foreach ( var window in stack.Windows )
 			window.PutAway = true;
 
-		stack.Open( new OptionsScreen( stack ) );
+		stack.Open( new OptionsScreen( stack, leave ) );
 	}
 
-	private OptionsScreen( WindowStack stack ) : base( stack )
+	private OptionsScreen( WindowStack stack, Action leave ) : base( stack )
 	{
+		_leave = leave;
 		Modal = true;
 		Pauses = true;
 
@@ -322,11 +328,39 @@ internal sealed class OptionsScreen : UiWindow
 			Display.Apply( window, Options.DisplayMode, Options.FullScreenSize );
 		}
 
-		if ( Options.SecondaryVideoCard != _before.SecondaryVideoCard )
-			Log.Info( $"Options: the video card is now {(Options.SecondaryVideoCard ? "Secondary" : "Primary")}, drawn on from the next start" );
+		// 0x004237d4 raises the restart level for a changed video card, and at that level 0x004237f0 shows RESTART GAME
+		// (UITEXT 403) in place of closing: the options above are already kept, so the cross leaves them kept and the
+		// screen open (0x00424c10 only clears the level), and the tick leaves the game (RestartGame).
+		if ( NeedsRestart( _before, Options ) )
+		{
+			Log.Info( $"Options: kept; the video card is now {(Options.SecondaryVideoCard ? "Secondary" : "Primary")}, drawn on from the next start, so RESTART GAME is asked" );
+			Stack.Open( new MessageBox( Stack, Localization.Get( UIStrings.RestartGame ), RestartGame ) );
+			return;
+		}
 
 		Log.Info( "Options: kept" );
 		Stack.Close( this );
+	}
+
+	/// <summary>
+	/// Whether the tick has to ask for a restart (0x00423740, the levels it raises): the video card is chosen before the
+	/// window exists, so a card changed since the screen opened is drawn on only from the next start. A display or
+	/// resolution change is put into effect by the tick instead, which is a deviation (see the class remarks), and
+	/// a graphics quality's detail-file check (0x00423bc0) is left out.
+	/// </summary>
+	internal static bool NeedsRestart( GameOptions before, GameOptions now ) => now.SecondaryVideoCard != before.SecondaryVideoCard;
+
+	/// <summary>
+	/// RESTART GAME's tick (<c>GameOptions_RestartBox_Tick</c>, 0x00424bb0): the screen closes and the game is left by the
+	/// way it was opened from. In the lobby the original gives the lobby a choice that is not "play a park" and its
+	/// state machine quits (`Game_StateMachine` 0x0054e360, state 3 to 0xc); in a park it writes leave reason 2 and the autosave, as Exit To Lobby
+	/// does, and the lobby is built again. The caller of <see cref="Open"/> says which.
+	/// </summary>
+	private void RestartGame()
+	{
+		Log.Info( "Options: RESTART GAME ticked" );
+		Stack.Close( this );
+		_leave();
 	}
 
 	/// <summary>The cross (-2): the options go back to how they were - 0x00423ad0, and the group volumes with them.</summary>
@@ -484,7 +518,7 @@ internal sealed class OptionsScreen : UiWindow
 	/// </summary>
 	private void ShowVideoCard()
 	{
-		var secondary = GpuChoice.Shows( Options.SecondaryVideoCard, GpuSelector.Count, GpuSelector.Exact, GpuSelector.DrawsOnPrimary );
+		var secondary = GpuChoice.Shows( Options.SecondaryVideoCard, GpuSelector.Exact, GpuSelector.DrawsOnPrimary, GpuSelector.Asked );
 
 		_videoCard.Text = Line( UIStrings.Videocard, Localization.Get( secondary ? UIStrings.Secondary : UIStrings.Primary ) );
 	}

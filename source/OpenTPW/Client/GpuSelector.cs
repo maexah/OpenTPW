@@ -27,6 +27,9 @@ internal static class GpuSelector
 	/// <summary>Whether the card drawn on is the one <see cref="GpuChoice.Pick"/> prefers (Primary) rather than another (Secondary).</summary>
 	public static bool DrawsOnPrimary { get; private set; } = true;
 
+	/// <summary>The choice the start asked for after <see cref="GpuChoice.Kept"/>: Secondary only where there was another card to be second.</summary>
+	public static bool Asked { get; private set; }
+
 	private static bool _firstIsPrimary = true;
 
 	/// <summary>The loader variables <see cref="Choose"/> left set; <see cref="Withdraw"/> takes them back.</summary>
@@ -50,6 +53,7 @@ internal static class GpuSelector
 	{
 		Count = 0;
 		Exact = false;
+		Asked = false;
 		DrawsOnPrimary = _firstIsPrimary = true;
 		Left.Clear();
 
@@ -71,6 +75,7 @@ internal static class GpuSelector
 			}
 
 			Count = devices.Count;
+			Asked = GpuChoice.Kept( secondary, Count );
 			Log.Info( $"Graphics card: {devices.Count} Vulkan device{(devices.Count == 1 ? "" : "s")}: {string.Join( "; ", devices.Select( GpuChoice.Describe ) )}" );
 
 			var (index, why, met) = GpuChoice.Pick( devices, setting, secondary );
@@ -135,9 +140,26 @@ internal static class GpuSelector
 	private static bool Is( IReadOnlyList<GpuInfo> devices, GpuInfo drawn, int primary ) => drawn.Index == primary || Same( drawn, devices[primary] );
 
 	/// <summary>
+	/// Makes the device with <paramref name="make"/>. If that throws while <see cref="Choose"/>'s settings are in force, they are
+	/// taken back (<see cref="Withdraw"/>) and it is made once more with the loader's own first device; any other failure is the caller's.
+	/// </summary>
+	public static T Make<T>( Func<T> make )
+	{
+		try
+		{
+			return make();
+		}
+		catch ( Exception e ) when ( IsSet )
+		{
+			Withdraw( e );
+			return make();
+		}
+	}
+
+	/// <summary>
 	/// Takes back the loader variables <see cref="Choose"/> set, after the device the choice put first could not be made
 	/// (it cannot present to the window, or open): the start then goes on with the loader's own first device. A variable a
-	/// person set was never touched. The Options row then says what is drawn on (<see cref="DrawsOnPrimary"/>).
+	/// person set was never touched. The Options row then says what is drawn on (<see cref="DrawsOnPrimary"/>, <see cref="GpuChoice.Shows"/>).
 	/// </summary>
 	public static void Withdraw( Exception why )
 	{

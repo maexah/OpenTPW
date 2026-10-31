@@ -119,28 +119,75 @@ public class WindowsInstallTests
 		Assert.AreEqual( 0, warnings.Count, string.Join( "; ", warnings ) );
 	}
 
+	/// <summary>
+	/// The box's list through <c>Find</c> itself (Q981 F5, Q985): two registered folders are both said, and a folder that the
+	/// uninstall entry and the box's default write in their own way (a trailing separator here) is said once, under the first.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> <c>Find</c> noting a missing path without comparing it (<c>tried.Add</c>), a comparison that
+	/// keeps the separator, or a loop that names only the first registered folder, fails a step.</remarks>
 	[TestMethod]
-	public void TwoRegisteredFoldersAreBothSaidAndAMissingPathIsNotSaidTwice()
+	public void TwoRegisteredFoldersAreBothSaidAndAFolderIsSaidOnceUnderItsFirstSource()
 	{
-		var tried = new List<(string Where, string Path)>
+		var old = System.Environment.GetEnvironmentVariable( "OPENTPW_GAME_PATH" );
+		System.Environment.SetEnvironmentVariable( "OPENTPW_GAME_PATH", null );
+
+		try
 		{
-			("the working directory", @"E:\Work"),
-			("the Windows uninstall entry", @"E:\A"),
-		};
+			const string registered = "/q985-none/Sim Theme Park/";
+			const string other = "/q985-none/Other";
 
-		GameDir.NoteMissing( tried, "the Windows uninstall entry", @"E:\B" );
-		GameDir.NoteMissing( tried, "where Sim Theme Park installs itself", Box );
-		GameDir.NoteMissing( tried, "where Sim Theme Park installs itself", Box );
-		GameDir.NoteMissing( tried, "where the original installs itself", Box );
+			Assert.IsFalse( GameDir.Find( [], [registered, other], "/q985-none/Sim Theme Park" ) );
 
-		var lines = GameDir.LookedIn( tried ).ToList();
+			var said = GameDir.Reasons.Where( line => line.Contains( "/q985-none/" ) ).ToList();
+			Assert.AreEqual( 2, said.Count, string.Join( "\n", said ) );
+			Assert.AreEqual( $"Game files: looked in {registered} (the Windows uninstall entry)", said[0] );
+			Assert.AreEqual( $"Game files: looked in {other} (the Windows uninstall entry)", said[1] );
+		}
+		finally
+		{
+			System.Environment.SetEnvironmentVariable( "OPENTPW_GAME_PATH", old );
+		}
+	}
 
-		Assert.AreEqual( 4, lines.Count, string.Join( "\n", lines ) );
-		CollectionAssert.Contains( lines, @"Game files: looked in E:\A (the Windows uninstall entry)" );
-		CollectionAssert.Contains( lines, @"Game files: looked in E:\B (the Windows uninstall entry)" );
-		Assert.AreEqual( 1, lines.Count( line => line.Contains( Box ) ), "a stale entry that names a default is said once" );
+	/// <summary>A folder that exists, named by the uninstall entry and again, written another way, by the box's default, is tried and said once.</summary>
+	/// <remarks><b>Mutation:</b> an existing folder tried again under a second source (the comparison dropped) says it twice.</remarks>
+	[TestMethod]
+	public void AFolderThatExistsIsTriedOnceWhateverSourceNamesItAgain()
+	{
+		var old = System.Environment.GetEnvironmentVariable( "OPENTPW_GAME_PATH" );
+		System.Environment.SetEnvironmentVariable( "OPENTPW_GAME_PATH", null );
+		var folder = System.IO.Path.Join( System.IO.Path.GetTempPath(), "q985-exists-" + System.Guid.NewGuid().ToString( "N" ) );
+		System.IO.Directory.CreateDirectory( folder );
 
-		tried.Add( ("the working directory", @"E:\Work") );
-		Assert.AreEqual( 4, GameDir.LookedIn( tried ).Count(), "the same source and folder twice is one line" );
+		try
+		{
+			Assert.IsFalse( GameDir.Find( [], [folder], folder + System.IO.Path.DirectorySeparatorChar ) );
+
+			var said = GameDir.Reasons.Where( line => line.Contains( folder ) ).ToList();
+			Assert.AreEqual( 1, said.Count, string.Join( "\n", said ) );
+			StringAssert.EndsWith( said[0], "(the Windows uninstall entry)" );
+		}
+		finally
+		{
+			System.Environment.SetEnvironmentVariable( "OPENTPW_GAME_PATH", old );
+			System.IO.Directory.Delete( folder );
+		}
+	}
+
+	[TestMethod]
+	public void TheSameFolderWrittenTwoWaysIsOnePlace()
+	{
+		var tried = new List<(string Where, string Path)> { ("the working directory", "/work/") };
+
+		GameDir.NoteMissing( tried, "the Windows uninstall entry", "/a/b" );
+		GameDir.NoteMissing( tried, "where Sim Theme Park installs itself", "/a/b/" );
+		GameDir.NoteMissing( tried, "where the original installs itself", "/work" );
+		GameDir.NoteMissing( tried, "where the original installs itself", "/a/c" );
+
+		Assert.AreEqual( 3, tried.Count, string.Join( "\n", tried ) );
+		Assert.AreEqual( "the Windows uninstall entry", tried[1].Where, "under the first source" );
+		Assert.IsTrue( GameDir.SamePlace( "/a/b", "/a/b/" ) );
+		Assert.IsFalse( GameDir.SamePlace( "/a/b", "/a/c" ) );
+		Assert.AreEqual( !System.OperatingSystem.IsWindows() && !System.OperatingSystem.IsMacOS(), !GameDir.SamePlace( "/a/B", "/a/b" ), "case counts where the system's folders are case-sensitive" );
 	}
 }

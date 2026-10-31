@@ -497,7 +497,7 @@ first when it is not there) saves go in `save` in the player's data folder (`Use
 on Windows) and the log says so once (`SaveHome`). A stock Program Files install is that case on Windows: the original's exe
 has no manifest, so Windows sends its writes to the VirtualStore (Q902, open: whether OpenTPW should read them there), and
 OpenTPW's is `asInvoker`, which is not redirected. A `save\` that holds players but cannot be written is read by nothing, and
-nothing is copied out of it; the game says so once (`SAVES GO IN`). The boxes below fire only where the player's folder
+nothing is copied out of it; the game says so once each start (`SAVES GO IN`; nothing is kept between starts). The boxes below fire only where the player's folder
 cannot be written either.
 
 **A deviation: the original says nothing when a save fails** (its save answers a failure number and the screen closes
@@ -592,7 +592,7 @@ The second site is the options screen's RESTART GAME box (UITEXT 403, `GameOptio
 `GameOptions_RestartBox_Tick` (`0x00424bb0`, handed to the box at `0x004238a8`), writes leave reason 2 and, when no
 lobby object stands (`[0x00f82884]` nought, so in a park), the autosave at once (`0x00424bd7`), sets `[0x00786b80]`
 and calls `FUN_004a4580`; in the lobby it sets the lobby object's `+0x14` to 3 instead. OpenTPW's options screen
-applies its display and resolution without that box (`ui.md`, `GameOptions_Accept`), so nothing reaches it here.
+asks it for a changed video card only (`ui.md`, "The tick answers a changed card with RESTART GAME"): the tick quits from the lobby and, in a park, does what Exit To Lobby does (the autosave, then the lobby again); display and resolution apply without it.
 
 Entering the theme again then finds the autosave as the newest `*.TPW*` ("Entering a park", below), so a park left
 is entered at the tick it was left on.

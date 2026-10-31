@@ -16,7 +16,7 @@ internal readonly record struct GpuInfo( int Index, string Name, uint VendorId, 
 /// <summary>
 /// Which graphics card the game draws with, decided from what the Vulkan loader lists. The original lists up to four
 /// DirectDraw drivers and its Options row switches between the primary one and a secondary one (0x00563574,
-/// 0x004a361c; <c>docs/exe/ui.md</c>, "Video card"); that row is Primary and Secondary here too (Q983), over the Vulkan
+/// 0x004a361c; <c>docs/exe/ui.md</c>, the video card row's paragraph under "Game Options"); that row is Primary and Secondary here too (Q983), over the Vulkan
 /// devices: <b>Primary is the card <see cref="Pick"/> prefers, Secondary the next one after it</b>. Choosing by the
 /// <c>gpu</c> line of opentpw.cfg, or by name, is OpenTPW's own, a deviation from the original.
 ///
@@ -100,11 +100,19 @@ internal static class GpuChoice
 	public static bool Clicked( bool secondary, int count ) => !secondary && count > 1;
 
 	/// <summary>
-	/// Whether the row reads Secondary (0x004a3650), truthfully: the saved choice where it can be had, otherwise the card
-	/// drawn on (<paramref name="drawsOnPrimary"/>), which is the case with one card listed and with a card named by the
-	/// <c>gpu</c> line (<paramref name="exact"/>).
+	/// The saved choice that stands at the start (0x0044e334): a Secondary saved with fewer than two cards listed is cleared to
+	/// Primary, which is why the original's row reads Primary there and why its next tick writes 0.
 	/// </summary>
-	public static bool Shows( bool secondary, int count, bool exact, bool drawsOnPrimary ) => count > 1 && !exact ? secondary : !drawsOnPrimary;
+	public static bool Kept( bool secondary, int count ) => secondary && count > 1;
+
+	/// <summary>
+	/// Whether the row reads Secondary (0x004a3650), truthfully: the choice as it stands where the card drawn on has the role the choice
+	/// <paramref name="asked"/> for at the start, otherwise the role of the card drawn on. A card named by the <c>gpu</c> line
+	/// (<paramref name="exact"/>) never follows the row. Where the card drawn has not the role asked for (it could not be made, or no
+	/// setting could put it first) the row reads the card drawn whichever way it is clicked, and the click is kept for the next start.
+	/// </summary>
+	public static bool Shows( bool secondary, bool exact, bool drawsOnPrimary, bool asked )
+		=> !exact && drawsOnPrimary != asked ? secondary : !drawsOnPrimary;
 
 	/// <summary>Whether <paramref name="setting"/> names a card (a name or <c>#N</c>) rather than leaving it to the game.</summary>
 	public static bool Names( string? setting )

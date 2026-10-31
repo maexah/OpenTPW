@@ -41,7 +41,7 @@ Program Files that your account may not change), OpenTPW keeps its
 saves in a "save" folder in your own data folder instead
 (%AppData%\OpenTPW\save on Windows) and plays as usual, saying in
 console.log which one it chose. Players already in the game's own
-save folder are not copied there; the game says so once.
+save folder are not copied there; the game says so once each start.
 
 
 The first time you start it

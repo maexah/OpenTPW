@@ -416,7 +416,7 @@ internal sealed class FrontEnd : Panel
 			new( UIStrings.Options, 11, menu =>
 			{
 				_stack.Close( menu );
-				OptionsScreen.Open( _stack );
+				OptionsScreen.Open( _stack, Quit );
 			} )
 		};
 

@@ -92,8 +92,8 @@ its saves in `save` in your own data folder instead (`%AppData%\OpenTPW\save` on
 on Linux, `~/Library/Application Support/OpenTPW/save` on macOS) and plays as usual; `console.log` says which folder it
 chose. This is a deviation from the original, which would keep them in the game's folder. The test is a file really made
 there, so a folder you can write is kept. A `save/` that already holds players but cannot be written is read by nothing:
-the players in it are not copied (Q902 is open), and the game says so once on screen. Where that folder cannot be
-written either, the game still runs and says on screen when a save, the options or a player is lost: a box reading
+the players in it are not copied (Q902 is open), and the game says so once each start on screen. Where that folder exists but cannot be
+written either, the game still runs and says on screen when a save, the options or a player is lost; where it cannot be made at all, OpenTPW stops and a box says why: a box reading
 `PARK NOT SAVED`, `OPTIONS NOT SAVED` or `PLAYER NOT SAVED`, with the path of `console.log`.
 
 </details>
@@ -158,7 +158,7 @@ OPENTPW_SYSTEM_SDL=1 dotnet source/OpenTPW/bin/Debug/net10.0/OpenTPW.dll --game 
 **A start that fails.** When OpenTPW cannot find the game, a message box says where it looked and how to put it right.
 If something else goes wrong before the game's main loop begins, the box names the error. Either box says where the log
 is, and OpenTPW then exits. With no display there is no box, only the log and the terminal. The original had no such box
-(a deviation). The Windows download opens no terminal window of its own.
+(a deviation). Started from a terminal, the same lines are printed there too. The Windows download opens no terminal window of its own.
 
 **Reporting a problem.** Every start writes `console.log` in the game's folder, beside `save`. If the game's folder cannot be
 written, or OpenTPW cannot find the game, it is in your own data folder instead (`%AppData%\OpenTPW` on Windows,

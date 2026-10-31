@@ -11375,6 +11375,47 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `looked in` lines per folder and not twice, the stale comments, Q851 rewritten so it can be carried out); Q979's three (the
   prompt returns at once under `cmd`, the stale `StartFailure` summary, a test that the Release group comes after the group it
   overrides). Confirmed on the desk off-screen: `q984/`.
+- [x] **Q907. Q984's Windows confirm (saves fall back to the player's folder, and the review fixes).** Done 2026-10-31 on the Windows PC at `942a9348` (the Sentinel's run log, `run-2026-10-31-win/log.md`, 09:04 and 09:08 UTC): cases A, B and C held, then (3) the read-only fallback and (4) the real `UninstallString` with the box's `looked in` lines; the `looked in` lines were read by a harness, not photographed from an SDL box. What it found, fixed in Q985: the box named `C:\Program Files (x86)\SimTheme Park` twice, once as the uninstall entry and once as the default.
+  On the Windows 11 PC with Sim Theme Park in `C:\Program Files (x86)\SimTheme Park` and **no** permission fix (an ordinary
+  account, no `PermissionFix.exe`; Q850's PC has the fix, so make the case in a copy under `Program Files` or take the Everyone
+  rights off, and put them back after): (1) the zip's `OpenTPW.exe` with no `--game` and no `save\` in the install starts, finds
+  the game, and `console.log` holds `Saves: ... cannot be written (...), so saves go in ...\OpenTPW\save`; no box; a new player,
+  a park entered and Alt+S write `%AppData%\OpenTPW\save\users\...`, and the install gains no `save\` (list it before and
+  after). (2) With a `save\` that holds a player and cannot be written: one box `SAVES GO IN`, the folder and `Players in the
+  game's own folder are not copied.` at the lobby, once; the game's `save\` is unchanged. (3) With `%AppData%\OpenTPW\save`
+  read-only too: Q982's boxes. (4) Q981's parse (the real `UninstallString` with `-c` and `-BFLANG` after the file) as Q851
+  reads it, and the box's `looked in` lines naming each registered folder. Do not touch `save\` the install already has.
+- [x] **Q985. RESTART GAME for a changed video card, and the Q983 and Q984 review fixes.** Done 2026-10-31 (lane A,
+  `alexah/794-restart-game-box`; Linux seen on the desk, **the Windows side is not verified yet**: the Sentinel confirms the box on
+  its Windows PC). The original answers a changed video card with RESTART GAME (UITEXT 403) after the options are kept
+  (`GameOptions_Accept` `0x004237f0`, level 2 from `0x004237d4`): the cross leaves the Options screen open (`0x00424c10` clears
+  the level), the tick quits from the lobby (`0x00424bb0` gives the lobby a choice that is not "play a park", and state 3 goes to
+  0xc) and in a park writes the autosave and builds the lobby again. `OptionsScreen.Open( stack, leave )` takes what the tick does
+  from each caller (the lobby's `Quit`, the park's `Game.RequestLobbyReload`); `NeedsRestart` is the rule. A saved Secondary with
+  fewer than two cards listed is cleared at the start (`0x0044e334`, `GpuChoice.Kept`); the row reads the card drawn where the pick
+  could not be honoured (`GpuSelector.Asked`); `GpuSelector.Make` is the device's one retry, under a test. Q983's findings 1 to 12 and
+  Q984's 1 to 9 are fixed (counts corrected in `not-verified.md`, "once each start", the README, `gamefolder.py` refusing without
+  `XDG_DATA_HOME`, Q851 and Q852 and Q907 ticked with what was done, Q908 filed for Q984's F2), and the no-game box names a folder
+  once, under its first source (`GameDir.SamePlace`). Confirmed on the final binary: `q985/`.
+- [x] **Q851. Q981's Windows confirm, the part left (a start on the real install, with nothing renamed).** Done 2026-10-31. Held on the Windows PC at `ad33c209` by a read-only harness (`tpw-work\q851`): the uninstall entry in the 32-bit view gives the SimTheme Park folder; no full no-argument start on the real install, and the key was not renamed away: unit tests cover that list. The start with no `--game` that the rewrite asks for was then made as Q907's case A at `942a9348` (the game found with no argument and no `save\`). Done on the Windows 11
+  PC (2026-10-31, `ad33c209`, the read-only harness): the uninstall entry in the 32-bit view names the `SimTheme Park` folder, and
+  `save\` did not change. Left, all on the unchanged machine (no registry key renamed, nothing in the install touched): in a
+  copy of the install's files in a folder you own, with the zip's `OpenTPW.exe` and **no** `--game`, started from a prompt
+  with `OPENTPW_LOG_DIR` set to an empty folder: the log holds `Game files: the uninstall entry Theme Park World (Registry32)
+  names <game folder>` (the log writes the game's folder as `<game folder>`, so read the registry's own value with `reg query`
+  beside it) and `Game files: Theme Park World in <game folder> (the Windows uninstall entry)`. That is the whole of it. What
+  this item used to ask and no longer does: the box's list of places with the key renamed away (a named `--game` stops at its
+  first failure and prints no list, and the box default finds the game on that PC either way, so no box opens), which Linux
+  shows (the list's lines and their order are tests) and which needs a PC with no install at all. If the key sits in the 64-bit
+  view or under another name on another PC, widen `IsTheGame`. A stock Program Files install with no `save\` is Q907's.
+- [x] **Q852. Q979's Windows confirm (no terminal behind the game, which Linux cannot show).** Done 2026-10-31. All four held at `f49a0097` on the real zip (`tpw-work\q852`). A Debug start with no `--game` on that PC ran about 20 s on the real install and wrote one file, `save\opentpw.cfg` (1100 bytes), 12 existing files byte-identical; it was not deleted (Alexah's call). On the Windows 11 PC, the
+  weekly zip's (or a `-c Release -r win-x64` publish's) `OpenTPW.exe`: a double-click shows no console window and no second
+  taskbar entry (screenshot of the desktop and taskbar); started from `cmd` as `OpenTPW.exe --game "<folder>"` its lines
+  print into that prompt (`ParentConsole.Attach` is called and never seen to work; `cmd` does not wait for a windowed
+  program, so the prompt returns at once and the lines land after it: note where they land, and that a line typed there
+  goes to `cmd` or to the debug console, whichever reads first, which a Release build is not promised to have); a start that fails (a `--game` that is not a game, double-clicked or from a shortcut) still shows
+  Q978's box and writes `console.log`; a Debug build (`dotnet build`) still opens its console and the debug console
+  reads from it. Do not write `save\`.
 
 ## B. Docs and comments
 

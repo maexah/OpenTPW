@@ -123,7 +123,17 @@ internal sealed class LoadingScreen : IDisposable
 		_current = this;
 
 		Log.Info( $"Loading {what}" );
-		Pump( force: true );
+
+		// A frame that throws here leaves no using block to dispose this, so it is taken down before the exception goes on.
+		try
+		{
+			Pump( force: true );
+		}
+		catch
+		{
+			Release();
+			throw;
+		}
 	}
 
 	/// <summary>
@@ -148,6 +158,18 @@ internal sealed class LoadingScreen : IDisposable
 	/// </summary>
 	public void Finished() => _finished = true;
 
+	/// <summary>Stops listening to the log, stands down as the screen being drawn and frees what it drew with.</summary>
+	private void Release()
+	{
+		_current = null;
+		Logger.OnLog -= OnLog;
+
+		_picture?.Delete();
+		_darkRed.Delete();
+		_red.Delete();
+		_status.Delete();
+	}
+
 	public void Dispose()
 	{
 		if ( _current != this )
@@ -156,16 +178,16 @@ internal sealed class LoadingScreen : IDisposable
 		// One last frame, however recently the one before was drawn, so what stays on the screen
 		// until the level's first frame replaces it is the finished count rather than one a few
 		// steps behind. Not after a load an exception ended: the frame could throw again and hide the first exception.
-		if ( _finished )
-			Pump( force: true );
-
-		_current = null;
-		Logger.OnLog -= OnLog;
-
-		_picture?.Delete();
-		_darkRed.Delete();
-		_red.Delete();
-		_status.Delete();
+		// If it throws all the same the screen is taken down before the exception goes on, so a failed start's log does not draw.
+		try
+		{
+			if ( _finished )
+				Pump( force: true );
+		}
+		finally
+		{
+			Release();
+		}
 
 		if ( !_finished )
 		{

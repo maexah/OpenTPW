@@ -3,8 +3,8 @@ using System.Text;
 namespace OpenTPW;
 
 /// <summary>
-/// The game's save folder - save\ beside its data, which <see cref="SaveFileSystem"/> maps - laid out as the
-/// original lays it out.
+/// The game's save folder - save\ beside its data, or in the player's data folder where that cannot be written
+/// (<see cref="SaveHome"/>), which <see cref="SaveFileSystem"/> maps - laid out as the original lays it out.
 ///
 /// <para>
 /// The original keeps the options that belong to the machine in save\Config.tcf (<see cref="ConfigFile"/>),

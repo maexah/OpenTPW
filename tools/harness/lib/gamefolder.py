@@ -10,8 +10,11 @@ and answers the file's text (latin-1). An existing DEST is rebuilt, its save/ ke
 GAME_FOLDER. `gamefolder.py DEST REL OLD NEW` does one replacement from the shell and fails if OLD is not there once.
 
 `gamefolder.py lock DEST` makes DEST (as `make( DEST, {} )` does) with its save/ read-only at every level and the first
-player's `restart.INTS` taken out, so a run meets a save folder that cannot be written (Q982: `lock( DEST )`); `unlock( DEST )`
-puts the write bit back, which removing the folder needs. A new player's first entry then fails to write `restart.INTS`.
+player's `restart.INTS` taken out (Q982: `lock( DEST )`); `unlock( DEST )` puts the write bit back, which removing the folder needs.
+Since Q984 the game does not stay in a `save/` it cannot write: its saves go in the player's data folder (`$XDG_DATA_HOME/OpenTPW/save`,
+`~/.local/share/OpenTPW/save`), and a locked `save/` that holds players opens the one SAVES GO IN box. **Set XDG_DATA_HOME to a folder of the
+run's own first** (and make that folder read-only too for Q982's boxes, which fire only when the fallback cannot be written); `lock()` and
+`fresh()` print a warning, and refuse with `GAMEFOLDER_ALLOW_REAL_HOME=1` unset, when it is not set (AGENTS.md rule 12).
 
 `gamefolder.py fresh DEST` makes DEST (`fresh( DEST )`) as a stock Program Files install stands for a player whose account may not write
 there: the game's entries linked, **no save/** and the folder itself read-only (Q984: the game then keeps its saves in the player's data folder, so set
@@ -50,7 +53,12 @@ def make(dest, changes):
         text = open(real, encoding="latin-1", newline="").read(); new = change(text); assert new != text, rel + ": the change changed nothing"
         open(at, "w", encoding="latin-1", newline="").write(new)
     return dest
+def _home_check():
+    if os.environ.get("XDG_DATA_HOME"): return
+    print("gamefolder: XDG_DATA_HOME is not set, so a game started on this folder would write saves in the real ~/.local/share/OpenTPW/save (Q984)")
+    if os.environ.get("GAMEFOLDER_ALLOW_REAL_HOME") != "1": raise SystemExit("gamefolder: set XDG_DATA_HOME to a folder of the run's own (or GAMEFOLDER_ALLOW_REAL_HOME=1)")
 def lock(dest, keep_restart=False):
+    _home_check()
     dest = make(dest, {}); jungle = os.path.join(dest, "save/users/1ref/jungle")
     if not keep_restart and os.path.exists(os.path.join(jungle, "restart.INTS")): os.remove(os.path.join(jungle, "restart.INTS"))
     for root, _, files in os.walk(os.path.join(dest, "save")):
@@ -62,6 +70,7 @@ def unlock(dest):
         os.chmod(root, 0o755)
         for name in files: os.chmod(os.path.join(root, name), 0o644)
 def fresh(dest):
+    _home_check()
     dest = make(dest, {}); save = os.path.join(dest, "save")
     if os.path.isdir(save): unlock(dest); shutil.rmtree(save)
     os.chmod(dest, 0o555); return dest

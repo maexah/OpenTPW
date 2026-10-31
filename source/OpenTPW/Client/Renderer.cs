@@ -358,7 +358,15 @@ public partial class Renderer
 		// NeoVeldrid takes the first device the Vulkan loader lists, so the loader is asked first to list the chosen one
 		// first - a discrete card by default, the Options screen's Video Card row (Config.tcf) for the next one, and
 		// opentpw.cfg's "gpu" line to say a card exactly (GpuSelector, Q980, Q983).
-		GpuSelector.Choose( GameOptions.Current.Gpu, GameOptions.Current.SecondaryVideoCard );
+		var saved = GameOptions.Current.SecondaryVideoCard;
+		GpuSelector.Choose( GameOptions.Current.Gpu, saved );
+
+		// A saved Secondary is cleared when fewer than two cards are listed (0x0044e334), as the original's window-making does.
+		if ( saved && !GpuChoice.Kept( saved, GpuSelector.Count ) )
+		{
+			GameOptions.Current.SecondaryVideoCard = false;
+			Log.Info( $"Graphics card: Config.tcf says Secondary, but {GpuSelector.Count} card{(GpuSelector.Count == 1 ? " is" : "s are")} listed, so the Video Card is Primary" );
+		}
 
 		var options = new GraphicsDeviceOptions()
 		{
@@ -389,16 +397,8 @@ public partial class Renderer
 			options.SyncToVerticalBlank,
 			options.SwapchainSrgbFormat );
 
-		try
-		{
-			Device = GraphicsDevice.CreateVulkan( options, swapchain );
-		}
-		catch ( Exception e ) when ( GpuSelector.IsSet )
-		{
-			// The card the loader was asked to list first could not present or open: the loader's own first device, once.
-			GpuSelector.Withdraw( e );
-			Device = GraphicsDevice.CreateVulkan( options, swapchain );
-		}
+		// The card the loader was asked to list first could not present or open: the loader's own first device, once.
+		Device = GpuSelector.Make( () => GraphicsDevice.CreateVulkan( options, swapchain ) );
 	}
 
 	/// <summary>The size the window has become, until the render targets have been built for it.</summary>

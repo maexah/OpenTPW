@@ -502,7 +502,7 @@ public class ParkFullScreenViewTests
 			WorldFrame( stack, park, Up( Key.A ), Up( Key.Up ) );
 			TurnAndResetKeysAreSilent( "the game menu" );
 
-			UI.OptionsScreen.Open( stack );
+			UI.OptionsScreen.Open( stack, () => { } );
 			WorldFrame( stack, park, Down( Key.A ), Down( Key.Up ) );
 			Assert.AreEqual( (from, 110f, false), (ParkOrbitCameraMode.PointOfInterest, ParkOrbitCameraMode.Zoom, ParkOrbitCameraMode.Panning), "under the options screen: none" );
 			WorldFrame( stack, park, Up( Key.A ), Up( Key.Up ) );

@@ -65,13 +65,17 @@ public static class GameDir
 	/// right, because a player who cannot start the game needs the list rather than a stack trace.
 	/// </summary>
 	public static bool Find( string[] args )
+		=> Find( args, WindowsInstall.RegisteredFolders(), WindowsInstall.DefaultFolder() );
+
+	/// <summary><see cref="Find(string[])"/> with the registry's folders and the box's default given, for a test off Windows.</summary>
+	internal static bool Find( string[] args, IEnumerable<string> registered, string boxDefault )
 	{
 		_reasons.Clear();
 
 		var tried = new List<(string Where, string Path)>();
 		var shortNamed = new List<string>();
 
-		foreach ( var (where, path) in Candidates( args ) )
+		foreach ( var (where, path) in Candidates( args, registered, boxDefault ) )
 		{
 			// A folder named for this run is never fallen through, whether it is missing or simply wrong.
 			// Carrying on down the list would start the game somewhere the player did not ask for, or bury
@@ -91,7 +95,7 @@ public static class GameDir
 				continue;
 			}
 
-			if ( tried.Any( entry => entry.Path == folder ) )
+			if ( tried.Any( entry => SamePlace( entry.Path, folder ) ) )
 				continue;
 
 			tried.Add( (where, folder) );
@@ -176,11 +180,7 @@ public static class GameDir
 		return resolved;
 	}
 
-	/// <summary>Everywhere the game might be, in the order they are believed.</summary>
-	private static List<(string Where, string Path)> Candidates( string[] args )
-		=> Candidates( args, WindowsInstall.RegisteredFolders(), WindowsInstall.DefaultFolder() );
-
-	/// <summary><see cref="Candidates(string[])"/> with the registry's folders and the box's default given, for a test off Windows.</summary>
+	/// <summary>Everywhere the game might be, in the order they are believed. The registry's folders and the box's default are given, for a test off Windows.</summary>
 	internal static List<(string Where, string Path)> Candidates( string[] args, IEnumerable<string> registered, string boxDefault )
 	{
 		var candidates = new List<(string, string)>();
@@ -304,12 +304,21 @@ public static class GameDir
 		=> FindEntry( data, LongName ) == null
 			&& ShortNames.Any( name => FindEntry( data, name ) != null );
 
-	/// <summary>A place that is not there, noted for the list unless the same path is already on it under another source.</summary>
+	/// <summary>A place that is not there, noted for the list unless the same place is already on it under another source: it is said once, under the first.</summary>
 	internal static void NoteMissing( List<(string Where, string Path)> tried, string where, string path )
 	{
-		if ( !tried.Any( entry => entry.Path == path ) )
+		if ( !tried.Any( entry => SamePlace( entry.Path, path ) ) )
 			tried.Add( (where, path) );
 	}
+
+	/// <summary>
+	/// Whether two paths name the same folder as a person would say it: a trailing separator and, on a system whose folders are
+	/// not case-sensitive, a difference of case do not make another place (the uninstall entry and the box's default write the
+	/// same Program Files folder in their own way).
+	/// </summary>
+	internal static bool SamePlace( string a, string b )
+		=> string.Equals( Path.TrimEndingDirectorySeparator( a.Trim() ), Path.TrimEndingDirectorySeparator( b.Trim() ),
+			OperatingSystem.IsWindows() || OperatingSystem.IsMacOS() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal );
 
 	/// <summary>The "looked in" line for each place tried, one for each distinct source and folder.</summary>
 	internal static IEnumerable<string> LookedIn( IEnumerable<(string Where, string Path)> tried )
