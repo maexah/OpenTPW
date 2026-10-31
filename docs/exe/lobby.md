@@ -371,15 +371,40 @@ nulls `[0x00f83778]`), so the seed does not depend on where a park or the last l
 `original/rendereye.py` polling the global through Exit To Lobby from the jungle park, `lobbyexit.sh`; `q749/orig/a-eye.txt`): the global is 0 in the park,
 and 0.45 s after the click a new object stands there, 4 ms of uninitialised memory and then **eye (500, 100, 500), look (500, 0, 500), angle 115**
 (then 100, `ISLANDFOV`), in the original's y-up axes: the middle of the four islands, 100 up, looking straight down at the sea. The island
-camera's first pass came 0.64 s later with a delta of 5.0 (a loading frame of 0.5 s) and took half the way: eye (453.49, 66.25, 484.82), look
+camera's first pass came 0.64 s later with a delta of 5.0 and took half the way: eye (453.49, 66.25, 484.82), look
 (400, 12.5, 400) (the look point already on the island: its easing is at `delta x 0.2` and the first pass's 5.0 closes it
-whole). The eye then eases at 1.0 a second (`delta x 0.1`): (429.0, 44.6, 474.2) 1 s on, (427, 40, 471) at 2.4 s. The film (`q749/orig/q749a.mkv`) opens on the
-sea straight down for a frame or two and then pans up to the island. The seed is the same on every entry, a first one included. The update saves
-the eased eye in `+0x78` after each orbit pass (`0x005e07a0`) and a later branch copies `+0x78` back into `+0x28` (`0x005e0dfd`..`0x005e0e12`); which
-branch that is, and so where a player chosen after an attract flight eases from, is not decoded (ours leaves its eye alone while the attract flight runs). **OpenTPW** seeds the eye (500, 500, 100) and the look point (500, 500, 0), z-up, in
-`LobbyCameraMode.BeginLobby`, and eases on `Time.Delta` as before; ours' first lobby frame carries a frame's delta, not the original's
-0.5 s loading frame, so ours is 59 units behind the original's eye at the first pass, 17 at 1 s and 5 to 6 from 2 s (`q749/compare.txt`, the
-orbit's phase). The console's `lobbyeye` reads ours back in the original's axes.
+whole). That 5.0 is the lobby's delta cap, not a chance hitch: `0x005d5c6f` clamps the pass's milliseconds to `0x1f4` and `0x005d5c96`
+multiplies by 0.01, so any lobby whose build takes over half a second takes exactly 5.0 on its first pass (0.5 s of ours' seconds; the
+orbit's first pass adds `5.0 x 0.02 = 0.1` rad, and the eye's blend is `0.1 x 5.0 = 0.5`, the look point's `0.2 x 5.0 = 1.0`, linear).
+Read on one clock, seconds after that first pass (`q749/orig/a-eye.txt`): the eye is (442.89, 58.16, 481.12) at 0.25 s, (429.04, 44.62, 474.16) at
+1 s, (427.26, 39.57, 470.53) at 1.5 s, (428.74, 36.87, 467.52) at 2 s and (431.30, 35.40, 464.93) at 2.4 s, the look point
+(400, 12.5, 400) throughout (the first pass came 1.09 s after the click). The eye eases at 1.0 a second (`delta x 0.1`). The film
+(`q749/orig/q749a.mkv`) opens on the sea straight down for a frame or two and then pans up to the island.
+
+**The two modes share one eye** (read from the disassembly; the pick measured below). The seed is written by `FUN_005d8b50`, slot 1 of the
+render camera's vtable `0x00702a90` (`0x005d8c0b`..`0x005d8c31`: `+8` 500, `+0xc` 100, `+0x10` 500, `+0x14` 500, `+0x18` 0, `+0x1c` 500,
+`+4` 115), which `FrontEnd_Init` reaches through `call [edx+4]` at `0x005d5b40`; the constructor `FUN_005d8b00` sets only the vtable
+and `+0x20`. The island camera keeps the eye it eases at `+0x28` and its look point at `+0x40`, and the attract flight's at `+0x78` and `+0xb4`.
+**The attract pass ends by copying the flight's eye and look point into `+0x28` and `+0x40`** (`0x005e0dfd`..`0x005e0e26`, the fall-through
+of the attract path from `0x005e07cc`, every pass), so the seed is overwritten on the first attract pass. The ease `FUN_005e1210` updates `+0x28` and `+0x40` in place from their targets
+`+0x34` and `+0x4c` (the stores at `0x005e12c5`..`0x005e12cc` and `0x005e12ea` on); of the plain stores to them in `0x005dfcd0`..`0x005e3c00`
+only the constructor's (`0x005dfd5e`, `0x005dfd90`) and the attract tail's (`0x005e0e03`, `0x005e0e1a`) are the island camera's (the float stores of
+other code were not listed; `0x005e1fa0` and `0x005e2750` write only `+0xc` and `+0x14`, by the review's listing). **The orbit pass copies them back** after its ease (`call 0x005e1210`, then `0x005e07a0`..`0x005e07c7`, joining at
+`0x005e0e20`): `+0x28` to `+0x78`, `+0x40` to `+0xb4`. So a player chosen out of the attract flight eases from the flight's eye and look
+point, and a Select New Player flight takes off from where the orbit stood. Only a lobby entered with a player (a return from a park) shows
+the seed. Measured at a pick from the flight (the slot click of `q749/orig/run.sh`, lines 79 and 80 of `a-eye.txt`): eye (573.187, 81.048, 475.556)
+then (559.593, 77.212, 475.117), look (600.051, 17.472, 400.036) then (568.443, 16.686, 400.030), delta 0.79: 0.079 of the eye's way and
+0.158 of the look point's, a continuous ease, pitch 38.4 then 38.7 degrees below the horizon.
+
+**OpenTPW** seeds the eye (500, 500, 100) and the look point (500, 500, 0), z-up, in `LobbyCameraMode.BeginLobby`. The attract pass
+ends with the first copy (`_position = _wanderPosition`, `_lookAt = _lookPosition`), the orbit pass with the reverse (rolling the flight first if the
+lobby was built with a player, as the constructor does, so the roll cannot overwrite the copy), and a lobby's first pass takes the original's
+cap: `FirstPassStep( Time.RawDelta )`, `min( raw frame, 0.5 s )`, the orbit advancing by that step and the eye and look point blending
+`min( 1, 1.0 x step )` and `min( 1, 2.0 x step )`, linearly, where every later pass is a frame's `Time.Delta` through `Time.SmoothingFactor`.
+Where it is still not the original's (Q855): the attract flight's own first pass takes `Time.Delta` (the 0.1 s frame clamp), not the cap, and
+every later lobby pass is clamped at 0.1 s where the original's is at 0.5 s; and ours draws no frame at the seed: the original's film opens on
+the sea straight down, ours' first drawn lobby frame is the first pass. The console's `lobbyeye` reads ours back in the original's axes
+(`q749-fix/` for the first seconds of both entries: ours' first pass, ours against the original's by `lobbyeyecmp.py`).
 
 ### The lens
 

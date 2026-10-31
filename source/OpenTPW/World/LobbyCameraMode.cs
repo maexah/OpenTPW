@@ -202,10 +202,24 @@ public class LobbyCameraMode : CameraMode
 	// (BeginLobby), as the original's constructor zeroes its angle (0x005dfd30).
 	private static float _orbitTime;
 
-	// Where the camera and its aim have actually got to, as opposed to where they are headed.
+	// Where the camera and its aim have actually got to, as opposed to where they are headed. The original's island
+	// camera keeps them at +0x28 and +0x40, and the attract flight's eye and look point at +0x78 and +0xb4: the attract
+	// pass ends by copying the flight's into these (0x005e0dfd..0x005e0e26) and the orbit pass by copying these back
+	// (0x005e07a0..0x005e07c7), so the two modes share one eye (docs/exe/lobby.md, "The orbit's seed").
 	private static Vector3 _position;
 	private static Vector3 _lookAt;
 	private static bool _placed;
+
+	// True from a lobby being built until its first pass has run. The original's delta is capped at 0x1f4 milliseconds
+	// (0x005d5c6f) and its eases are linear in it, so a pass that follows a long build takes the cap, not a frame's
+	// clamped delta - see FirstPassStep.
+	private static bool _firstPass;
+
+	/// <summary>
+	/// The longest step, in seconds, the original's lobby takes in one pass: 0x1f4 milliseconds (<c>0x005d5c6f</c>). Ours
+	/// clamps a frame to <see cref="Time"/>'s 0.1 s everywhere else; only a lobby's first pass takes this one.
+	/// </summary>
+	internal const float FirstPassCap = 0.5f;
 
 	private List<LobbyIsland>? _islands;
 	private CameraSettings? _settings;
@@ -258,14 +272,24 @@ public class LobbyCameraMode : CameraMode
 		// game would look hung rather than wrong.
 		if ( Players.Roster.Current is null && !DebugHoldOrbit && _leaving == Leaving.No )
 		{
+			_firstPass = false;
 			Attract( islands );
 
 			FieldOfView = LensOf( settings );
 			return;
 		}
 
+		// A lobby's first pass takes the original's capped step; every other pass ours' frame (Time.Delta).
+		var firstPass = _firstPass;
+		_firstPass = false;
+
+		var step = firstPass ? FirstPassStep( Time.RawDelta ) : Time.Delta;
+
+		if ( firstPass )
+			Log.Info( $"Lobby camera: the first pass after a build steps {step:F3} s (raw frame {Time.RawDelta:F3} s, capped at {FirstPassCap:F1} s)" );
+
 		if ( !Paused && _leaving == Leaving.No )
-			_orbitTime += Time.Delta;
+			_orbitTime += step;
 
 		CurrentIsland = islands[Math.Clamp( IslandIndex, 0, islands.Count - 1 )];
 
@@ -285,22 +309,42 @@ public class LobbyCameraMode : CameraMode
 
 		if ( _placed )
 		{
-			_position = _position.LerpTo( wantedPosition, Time.SmoothingFactor( PositionRate ) );
-			_lookAt = _lookAt.LerpTo( wantedLookAt, Time.SmoothingFactor( LookAtRate ) );
+			// The original's first pass blends linearly, by rate x step (0.1 x delta and 0.2 x delta, delta being
+			// ten a second); every later pass of ours is the exponential the same rates give (PositionRate).
+			var eye = firstPass ? MathF.Min( 1f, PositionRate * step ) : Time.SmoothingFactor( PositionRate );
+			var look = firstPass ? MathF.Min( 1f, LookAtRate * step ) : Time.SmoothingFactor( LookAtRate );
+
+			_position = _position.LerpTo( wantedPosition, eye );
+			_lookAt = _lookAt.LerpTo( wantedLookAt, look );
 		}
 		else
 		{
-			// The first frame has nothing to ease from.
+			// Reached only after DebugSettle: a lobby is built placed (BeginLobby), at the render camera's seed.
 			_position = wantedPosition;
 			_lookAt = wantedLookAt;
 			_placed = true;
 		}
+
+		// The reverse of the attract pass's copy (0x005e07a0..0x005e07c7): a flight that starts now, by Select New
+		// Player, takes off from where the orbit has got to. A lobby entered with a player has not rolled its flight
+		// yet, so it is rolled here, as the original's constructor rolls it, before the orbit's eye is written over it.
+		if ( !_wandering )
+			SeedFlight();
+
+		_wanderPosition = _position;
+		_lookPosition = _lookAt;
 
 		Position = _position;
 		Rotation = Rotation.LookAt( _lookAt - _position );
 
 		FieldOfView = LensOf( settings );
 	}
+
+	/// <summary>
+	/// The step of a lobby's first pass, in seconds: the frame, as long as the original's cap (<see cref="FirstPassCap"/>,
+	/// <c>0x005d5c6f</c>) lets it be. A lobby whose build took over half a second takes exactly the cap.
+	/// </summary>
+	internal static float FirstPassStep( float rawDelta ) => MathF.Min( rawDelta, FirstPassCap );
 
 	/// <summary>Which part of the leaving sequence is running - see <see cref="LeaveForPark"/>.</summary>
 	private enum Leaving { No, Homing, FlyingIn }
@@ -594,19 +638,7 @@ public class LobbyCameraMode : CameraMode
 	private void Attract( List<LobbyIsland> islands )
 	{
 		if ( !_wandering )
-		{
-			// Seeded exactly as the constructor seeds it: a random point to stand at, another to head
-			// for, and the aim already at full speed.
-			_wanderPosition = RandomPointInBox();
-			_wanderTarget = RandomPointInBox();
-			_wanderDirection = Heading( _wanderPosition, _wanderTarget );
-
-			_lookPosition = RandomPointInBox();
-			_lookDirection = Heading( _lookPosition, RandomPointInBox() );
-			_lookSpeed = LookSpeedCap;
-
-			_wandering = true;
-		}
+			SeedFlight();
 
 		if ( !Paused )
 		{
@@ -638,8 +670,31 @@ public class LobbyCameraMode : CameraMode
 				: MathF.Max( _lookSpeed - step, 0f );
 		}
 
+		// The pass ends by copying the flight's eye and look point into the island camera's (0x005e0dfd..0x005e0e26,
+		// every pass), so a player chosen out of the flight eases from where the flight stood.
+		_position = _wanderPosition;
+		_lookAt = _lookPosition;
+		_placed = true;
+
 		Position = _wanderPosition;
 		Rotation = Rotation.LookAt( _lookPosition - _wanderPosition );
+	}
+
+	/// <summary>
+	/// Rolls the flight, exactly as the original's constructor seeds it: a random point to stand at, another to head
+	/// for, and the aim already at full speed. Run by the first pass of either mode, whichever comes first.
+	/// </summary>
+	private static void SeedFlight()
+	{
+		_wanderPosition = RandomPointInBox();
+		_wanderTarget = RandomPointInBox();
+		_wanderDirection = Heading( _wanderPosition, _wanderTarget );
+
+		_lookPosition = RandomPointInBox();
+		_lookDirection = Heading( _lookPosition, RandomPointInBox() );
+		_lookSpeed = LookSpeedCap;
+
+		_wandering = true;
 	}
 
 	/// <summary>A point somewhere inside <see cref="WanderCentre"/>'s box, the way the original rolls one.</summary>
@@ -765,8 +820,9 @@ public class LobbyCameraMode : CameraMode
 		=> Entity.All.OfType<LobbyIsland>().OrderBy( island => island.Index ).ToList();
 
 	/// <summary>
-	/// Drops the camera onto wherever it is currently headed, for DebugConsole - the same path
-	/// the very first frame takes, so there is no separate teleport to keep working.
+	/// Drops the camera onto wherever it is currently headed, for DebugConsole - the orbit's unplaced
+	/// branch, which a lobby build no longer reaches (<see cref="BeginLobby"/> places it), so there is
+	/// no separate teleport to keep working.
 	/// </summary>
 	internal static void DebugSettle() => _placed = false;
 
@@ -819,10 +875,21 @@ public class LobbyCameraMode : CameraMode
 	/// the angle the orbit has run to since then, not from the last click's (<c>docs/exe/lobby.md</c>, "The flight
 	/// measured"). The same constructor copies its eye <c>+0x28</c> and look point <c>+0x40</c> from the render camera
 	/// <c>[0x00f83778]</c> (<c>0x005dfd3c</c>..<c>0x005dfd99</c>), which <c>FrontEnd_Init</c> has just built (a park destroys it, so
-	/// nothing of the park or of the last lobby survives), and that camera's constructor leaves its eye at (500, 100, 500)
-	/// and its look point at (500, 0, 500) in the original's y-up axes (<c>docs/exe/lobby.md</c>, "The orbit's seed"). Ours
-	/// is z-up, so the seed is the eye (500, 500, 100) over the look point (500, 500, 0), the middle of the four islands:
-	/// the first lobby pass eases from there, on the next frames, to the island's orbit.
+	/// nothing of the park or of the last lobby survives), and that camera's eye is written by <c>FUN_005d8b50</c>, slot 1
+	/// of its vtable (<c>0x005d8c1b</c>..<c>0x005d8c31</c>), as (500, 100, 500) with the look point at (500, 0, 500) in the
+	/// original's y-up axes (<c>docs/exe/lobby.md</c>, "The orbit's seed"). Ours is z-up, so the seed is the eye
+	/// (500, 500, 100) over the look point (500, 500, 0), the middle of the four islands.
+	///
+	/// <para>
+	/// Who sees the seed: a lobby built with a player picked (a return from a park). A launch's lobby has nobody playing, so
+	/// its attract pass copies the flight's eye over the seed on its first pass (<see cref="Attract"/>) and a player chosen
+	/// out of the flight eases from the flight.
+	/// </para>
+	/// <para>
+	/// <b>Where ours differs.</b> The original's first pass takes the lobby's delta cap, 500 ms (<c>0x005d5c6f</c>), whenever
+	/// the build took longer; ours takes <see cref="FirstPassStep"/> of <see cref="Time.RawDelta"/> on an orbit first pass,
+	/// and the attract flight's own first pass (the other first pass) takes <see cref="Time.Delta"/>, the 0.1 s frame clamp.
+	/// </para>
 	/// </summary>
 	internal static void BeginLobby()
 	{
@@ -830,17 +897,19 @@ public class LobbyCameraMode : CameraMode
 		_position = SeedEye;
 		_lookAt = SeedLookAt;
 		_placed = true;
+		_firstPass = true;
 	}
 
-	/// <summary>The render camera's constructor eye, (500, 100, 500) y-up in the original (<c>docs/exe/lobby.md</c>), as ours has it.</summary>
+	/// <summary>The render camera's seed eye, (500, 100, 500) y-up in the original (<c>FUN_005d8b50</c>, <c>docs/exe/lobby.md</c>), as ours has it.</summary>
 	internal static readonly Vector3 SeedEye = new( 500f, 500f, 100f );
 
-	/// <summary>The render camera's constructor look point, (500, 0, 500) y-up in the original, as ours has it.</summary>
+	/// <summary>The render camera's seed look point, (500, 0, 500) y-up in the original (<c>FUN_005d8b50</c>), as ours has it.</summary>
 	internal static readonly Vector3 SeedLookAt = new( 500f, 500f, 0f );
 
 	/// <summary>
 	/// Where the island camera's eye and look point have got to, in the original's y-up axes so they set beside
-	/// <c>original/rendereye.py</c>'s rows, for the debug console. A pure getter.
+	/// <c>original/rendereye.py</c>'s rows, for the debug console. A pure getter. While the attract flight runs they
+	/// are the flight's own, as the original's are (<c>0x005e0dfd</c>), so the reply is the camera's wherever it is.
 	/// </summary>
 	internal static string EyeState()
 		=> $"eye ({_position.X:F3}, {_position.Z:F3}, {_position.Y:F3}) look ({_lookAt.X:F3}, {_lookAt.Z:F3}, {_lookAt.Y:F3}) "
@@ -848,9 +917,8 @@ public class LobbyCameraMode : CameraMode
 
 	/// <summary>
 	/// Lets go of the island on show as the lobby ends, so nothing reads an island out of a lobby that has gone,
-	/// and of any leave for a park still under way. Which island it was, and where the camera has got to (not its
-	/// orbit, which <see cref="BeginLobby"/> zeroes), are kept, as they are across camera modes - see
-	/// <see cref="Paused"/>.
+	/// and of any leave for a park still under way. The island's index is kept, as it is across camera modes - see
+	/// <see cref="Paused"/>; the orbit and the eye are replaced by <see cref="BeginLobby"/> when the next lobby is built.
 	/// </summary>
 	internal static void ForgetIsland()
 	{

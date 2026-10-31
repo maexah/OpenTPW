@@ -3,8 +3,8 @@
 the object's address (the global [0x00f83778]; FrontEnd_Init builds a new one on every entry to the lobby, 0x005d5ab3..0x005d5ace),
 its eye +8/+0xc/+0x10, its look point +0x14/+0x18/+0x1c, its angle +4, its fade word +0x60 and the delta [0x00f82884]+8.
 The island camera copies the eye and the look point from here in its constructor (0x005dfd3c..0x005dfd99) and writes its eased
-eye and look point back every pass (FUN_005e1210, 0x005e1308..0x005e1360), so the first row after the pointer changes
-is the seed. Read-only. The first line is the wall clock of the start (time.time(), against record.sh's NAME.t0)."""
+eye and look point back every pass (FUN_005e1210, 0x005e1308..0x005e133b), so the first row after the pointer changes whose
+values are finite (the new object's first row or two are uninitialised memory, eye around 1e24) is the seed. Read-only. The first line is the wall clock of the start (time.time(), against record.sh's NAME.t0)."""
 import struct, sys, time
 
 SCENE, LENS = 0x00f82884, 0x00f83778

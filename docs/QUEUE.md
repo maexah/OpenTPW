@@ -3670,3 +3670,17 @@ state machine.
   between ticks (the sprite pass, `original/spritepass.py`, `particleheights.py`) and whether it eases by the frame's
   own time; if it does, build it (an improvement or the original's own, said at the site), if not, keep the comment.
   Confirm: a particle film (`rectfilm.py`) in both games on an effect whose rate is known.
+
+- [ ] **Q855. What Q749's fix left in the lobby's first seconds: the passes' clamp, and the seed's picture.** (1) The lobby's other passes
+  take ours' 0.1 s frame clamp where the original's is 0.5 s (Q749's review, finding 2). (2) The original draws the seed's picture, the
+  sea from straight above, for its first frames before the island camera's first pass (`docs/exe/lobby.md`, "The orbit's seed"; its film's
+  first panel); ours' first drawn lobby frame is already the first pass, eye half way and look on the island (`q749-fix/after/quit-sheet-fullrate.png`,
+  the loading screen then the island at pitch 28 degrees), where the build before the fix drew the sea (and then panned slowly). To match, the first
+  frame would be drawn at the seed and the cap taken by the pass after it, the step counted from the build's end.
+  On (1): the original clamps every lobby pass's milliseconds at `0x1f4` (`0x005d5c6f`) and multiplies by 0.01, so a pass after a
+  long frame steps up to 0.5 s; Q749's fix gives an orbit's first pass after a build that cap (`LobbyCameraMode.FirstPassStep`,
+  `min( Time.RawDelta, 0.5 )`, blends linear), but the attract flight's own first pass (a launch's first) and every later pass
+  of either mode still take `Time.Delta`, clamped at 0.1 s (`Time.LongestFrame`). It shows only after a stall over 0.1 s
+  (the flight, at 10 units a second, steps 1 unit where the original's steps 5 after a half-second hitch); nothing placed reaches it in a normal
+  run. Decide whether the lobby, as the one scene that clamps at 0.5 s, takes its own limit (`docs/exe/lobby.md`, "The
+  orbit's seed"); a measurement of the original's flight across a stall comes first.

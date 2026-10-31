@@ -5,8 +5,8 @@ namespace OpenTPW.Tests;
 /// <summary>
 /// A lobby's island camera starts from the original's seed (Q749): the render camera <c>[0x00f83778]</c> is built afresh by
 /// <c>FrontEnd_Init</c> on every entry to the lobby, with its eye at (500, 100, 500) and its look point at (500, 0, 500) in the
-/// original's y-up axes, and the island camera's constructor copies both (<c>0x005dfd3c</c>..<c>0x005dfd99</c>;
-/// <c>docs/exe/lobby.md</c>, "The orbit's seed"). Ours is z-up, and <see cref="LobbyCameraMode.EyeState"/> reads back in the
+/// original's y-up axes (written by <c>FUN_005d8b50</c>, <c>0x005d8c1b</c>..<c>0x005d8c31</c>), and the island camera's
+/// constructor copies both (<c>0x005dfd3c</c>..<c>0x005dfd99</c>; <c>docs/exe/lobby.md</c>, "The orbit's seed"). Ours is z-up, and <see cref="LobbyCameraMode.EyeState"/> reads back in the
 /// original's axes.
 /// </summary>
 [TestClass]
