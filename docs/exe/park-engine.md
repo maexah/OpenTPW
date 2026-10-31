@@ -157,9 +157,22 @@ at all 41 (the two agree on these cells; they part only on the 14 unflagged bent
 0.50 off): at (633, 324), inside (63,32) (`0x0842`, `0x4` clear), the original's corner is 1.5 + (-2.0), where the near corner's plane gives -2.3 and bilinear -2.18. The other 207 points,
 in unflagged cells, agree with all three to 0.0014, one step of the wave table (four of them read it a step off because their index sits within 0.02 of a half; `PREDICTION.txt` P5). The frame:
 with the glide held at (5, 5) the squares are drawn five units down and across from their cells (`q838/orig/run1/frame-B-glide5_5.png` against `frame-A-rest.png`, 39,348 pixels apart). Not seen: a person or a
-balloon at a flagged cell (the sprites' own sampler is the same function, `FUN_00542010`, not measured in a frame), the corners of a square over a cell with a lift, and a flagged cell on any other theme.
+balloon at a flagged cell (the sprites' sampler is read in Q839), the corners of a square over a cell with a lift, and a flagged cell on any other theme.
 A second launch (`markerup.sh`, the pointer on (65,30), phase 177.20161, nine offsets, `q838/orig/run2`, `ours6`) met the flagged cells (64,31), (65,30), (66,29) and (67,28): 40 points, ours `ScapeHeight` and `CameraHeight`
 equal to the original's at all 40, bilinear at 4 (up to 0.25 off), the near corner's plane at 14 (up to 0.50 off); its 193 other points agree to 0.0013.
+
+**The sprites' drawn height at a flagged cell** (Q839, 2026-10-30, `original/spritedrawn.py`, `spritehold.py`, `lib/spriteheights.py`, `q839/`). `FUN_00542010` stores the place it drew each sprite at **in the sprite**: x at
+`+0xe4` (`0x005420d4`, `0x005422a8`), **y at `+0xe8`** (`fst` at `0x005420ca` for the `0x1000000` arm, `fstp [eax+0x18]` at `0x005422a5` with `eax = esi + 0xd0` for the other) and z at `+0xec` (`0x005420da`, `0x005422af`), so a poll of the
+sprite table (`0x007b49f0`) reads what the draw asked without a breakpoint; the unflagged arm's y is `FUN_004527f0( +0x88, +0x90 )` plus `+0x8c` (`0x005420ee`, `0x005420f3`), so **y - `+0x8c` is the sampler**. In the stock
+park every walker is on flat ground (1,959 of 2,034 distinct places polled in 20 s read 0.000000, the rest under 0.00001; `q839/orig/drawn-test.txt`) and 400 hits of a `brk.sh` at `0x005420f3` (st0, the sampler) all read 0
+with ours' `stands` 0 there, so no guest walks a flagged cell and a poll proves nothing about one. `spritehold.py` writes one guest's `+0x88` and `+0x90` over and over at each of 279 points (a 0.15, 0.5, 0.85 grid in
+each of the 31 cells the load flags `0x800` in the stock park: (28,24), (28,33)..(28,37), the diagonal (29,25)..(36,32), (59,35)..(60,37) and the diagonal (61,34)..(70,25)) until the draw's `+0xe4` and `+0xec` are the same, then reads `+0xe8`: **279 of 279 caught in each of two fresh launches
+(the points in the two orders; identical to 0.0000), and the sampler is ours `ScapeHeight` at all 279 (worst 0.0001)**, and `CameraHeight` at all 279 (they part only on the 14 unflagged bent cells), the
+bilinear at 0 (worst 1.31 off) and the near corner's plane, the rule before Q823, at 134 (worst 2.63 off): at the centre of (59,35), (595, 355), the original draws 2.626502 where the plane gives 0.0 and the bilinear 1.3133.
+Held there for 8 s (`--stay 595,355,8`) the draw stood at that place at 890,172 of 891,076 reads, and the frame shows a guest on the raised mound that the frame without it does not (`q839/orig/frame-B-held.png`,
+`frame-A-rest.png`: 719 pixels in a 20 x 60 box); ours' ground at the same camera is `q839/ours4/ours-rest.png` (no person: nothing puts one on that cell). Ours stands a person on `ScapeHeight`
+(`ParkGuestSprites.StandsOn`, tested in `ParkTerrainTests`). Not seen: a balloon (the same pass, not held), ours' own person drawn on a flagged cell in a frame, the pixel row of the feet against the projected ground point, a
+flagged cell on any other theme, and the `0x1000000` arm (the head sprites stand at `+0x8c` itself, Q825).
 
 **The pick's terrain** (`FUN_0045bf90`). Over every cell the ray's line crosses and whose corners' height range it
 meets, it intersects the planes of the cell's two triangles cut by **`0x2`** (`0x0045c6b7`): set, the triangles

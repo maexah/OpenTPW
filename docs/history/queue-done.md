@@ -11274,6 +11274,11 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Two launches (the pointer on (63,32), on (65,30)): the height is wave + `FUN_004527f0` + 1.5, and the sampler is ours `ScapeHeight` at all 81 corner points in the flagged cells (62,33)..(67,28), worst 0.0000; the near corner's plane, the rule
   before Q823, is off by up to 0.50 at 44 of them and bilinear by up to 0.25 at 64; in unflagged cells all agree to one wave-table step. `CameraHeight` equals the original everywhere seen, so the picture cannot name `ScapeHeight` over it
   (`park-engine.md`). No code changed. Left in Q820 (4): the sprites at a flagged cell.
+- [x] **Q839. A person at a flagged ground cell, drawn at the height the original's sprite pass gives (Q820's piece (4), the sprites' half).** Done 2026-10-30 (run 15, lane A, `alexah/793-sprites-at-a-flagged-cell`).
+  `FUN_00542010` stores each sprite's drawn place in the sprite (`+0xe4`, `+0xe8`, `+0xec`), and the stock park's walkers are all on flat ground (a poll and 400 `brk.sh` hits at `0x005420f3` read 0), so
+  `original/spritehold.py` holds one guest at 279 points (a 3 x 3 grid in each of the 31 cells the load flags `0x800`) and reads `+0xe8` less `+0x8c`: 279 of 279 caught in each of two fresh launches, the runs identical,
+  and the sampler is ours `ScapeHeight` at all 279 (worst 0.0001; `lib/spriteheights.py`); the near corner's plane, the rule before Q823, at 134 (up to 2.63 off), the bilinear at 0 (up to 1.31 off); at (595,355) the
+  original draws 2.6265. A guest held there is in the frame (`q839/orig/frame-B-held.png`, 719 pixels against the frame without it). Not seen: a balloon, ours' person in a frame there, the feet's pixel row. No code changed.
 
 ## B. Docs and comments
 
