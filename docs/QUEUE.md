@@ -79,6 +79,62 @@ quit); then the block below.
 never run), Q216 (settings and profile saves: back up, then overwrite), Q957 (shipped builds watch the shader files),
 Q247 (the Load Park list's scrollbar) first; then Q820 and the rest in the order below.
 
+**Ordered at Alexah's word (2026-10-31, Windows), first of all, before the first weekly build:** what a Windows player
+meets first, found on a Windows 11 PC by a Remote Control session, jobs w1 to w4 (`~/.cache/tpw-harnesses/handoff/run-2026-10-31-win/log.md`; its files are on that PC under
+`C:\Users\alexa\tpw-work`): Q976, Q978, Q981, Q979, Q980, Q982, Q977, in that order; then the blocks below. A
+confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
+
+- [ ] **Q976. Seven tests read a script that is not on the disc.** `ParkToiletDirtTests`, `ParkMechanicRepairTests` and
+  `ParkHandymanCleanTests` open a loose `levels/jungle/features/Toilet.rse`; the disc has it only inside `toilet.wad`
+  (780 bytes). A stray loose copy in the maintainer's game folder (and a loose `Bouncy.RSE` beside the jungle's wads),
+  left by an old harness, is why they pass on Linux; on a clean copy they throw `FileNotFoundException` (seven failures
+  on Windows, w2). Read the script out of the wad, as the game does; then, at Alexah's word (2026-10-31), delete the two
+  strays from the game folder (after the change is committed) and run the suite with the game: nothing may newly fail
+  or skip. Check that no other test reads a file the disc does not have (the ISO's listing against the game folder).
+- [ ] **Q978. A failed start says why in a message box.** A start that cannot find the game logs the reason
+  (`GameDir.Explain`) and exits 1; on Windows a double-click shows a terminal for about a second and nothing else (w3).
+  Any other exception before the window (w3 met one in `SaveFolder.LoadConfig`, `Game.cs:66`) does the same. At Alexah's
+  word (2026-10-31), on every system: an SDL message box with the log's reason lines, where it looked, how to fix it and
+  where the log is; an exception before the first frame the same, with its message. A deviation, said at the site (the
+  original never needed one). Confirm on Windows: a double-click with no game, screenshot; the Linux zip's apphost the same.
+- [ ] **Q981. A Windows install of Sim Theme Park is not found.** The default looked in is `C:\Program Files
+  (x86)\Bullfrog\Theme Park World`; Sim Theme Park installs in `C:\Program Files (x86)\SimTheme Park` on the PC tried
+  (w4). The registry names no folder; the folder is recorded only in the uninstall entry
+  `HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Theme Park World` (`DisplayName` SimTheme
+  Park, the folder inside `UninstallString`'s `-f"<folder>\Uninst.isu"`) and the Start menu and Public Desktop shortcuts
+  (`SimTheme Park.lnk`, target `<folder>\TP.exe`). Read the uninstall entry (both Theme Park World and Sim Theme Park
+  names) and try the SimTheme Park folder among the defaults; `README.md`'s "Where OpenTPW looks" and the zip's
+  README say the new order. Confirm on Windows: the zip started with no `--game` finds the install; its `save\` must not
+  be written by the confirm (copy the install, or read the log's choice and quit at once).
+- [ ] **Q979. The Windows release opens a terminal behind the game.** `OutputType` is `Exe`, so a start from Explorer
+  opens a console window (w3: hidden behind the game, on the taskbar). At Alexah's word (2026-10-31): the published
+  Windows build opens none (`WinExe` for the release), the Debug build keeps its console for the debug console's stdin.
+  Confirm on Windows: a double-click of the zip's exe, screenshot of the desktop and taskbar.
+- [ ] **Q980. Choose the graphics card.** NeoVeldrid takes the first Vulkan device; on the PC tried that is the AMD built-in
+  GPU, not the GTX 1650 (`vulkaninfo`: GPU0 integrated, GPU1 discrete; the log's `GPU:` line, w2). At Alexah's word
+  (2026-10-31): prefer a discrete GPU by default, with a setting to choose another (first look whether the original's
+  Options lists a device, `UIStrings.GPURendering` 316; else an `opentpw.cfg` line). A deviation, said at the site. Find
+  first whether NeoVeldrid lets the device be chosen, and how. Confirm on Windows: the `GPU:` line names the GTX 1650.
+- [ ] **Q982. A save folder that cannot be written. Measure first.** Sim Theme Park under `Program Files (x86)` is not
+  writable by a player unless something opened it (the PC tried has a third-party `PermissionFix.exe`, Everyone full
+  control). With the write denied (w4: list allowed, write refused) the game reaches the lobby and logs nothing; what
+  happens at the first real write (a new player, a park saved, the options) is not known. Measure that on Windows with a
+  copy denied (WD,AD), then say so to the player (Q978's box, or the game's own style) rather than lose a save quietly.
+  Also look, on a PC without the permission fix, whether the original's saves went to Windows' VirtualStore
+  (`%LOCALAPPDATA%\VirtualStore\Program Files (x86)\SimTheme Park\save`); whether OpenTPW should read them there is
+  Alexah's call.
+- [ ] **Q977. The test suite on Windows.** With the game, 4342 passed, 56 failed, 17 skipped of 4415 (Linux 4413, 0, 2;
+  w2, w3's trx). Besides Q976's seven: 33 need Python and fail where it is missing (`WeeklyReleaseTests`, the content
+  guard's file-type cases, `EveryShaderInTheRepositoryIsRequired`; they should skip as the bash ones do, and say so); 5
+  `ConsoleLogTests` read the log with `File.ReadAllText` while the writer holds it (`FileShare.Read | Delete`; open with
+  `ReadWrite` sharing in the test; Notepad and `type` read it fine, w3); 2 `ContentGuardTests` cannot delete their
+  scratch repository (read-only git objects); 6 `ParkSaveScreenTests` expect `/` where Windows gives `\`
+  (`ParkSaveScreenTests.cs` 556 to 807); `FaithfulGraphicsTests.TheToggleIsKeptInOpenTpwCfg` expects LF (`AppendLine`
+  writes CRLF there; decide which the file should have); `ANameInTwoCasesIsWrittenInTheCaseAskedAbout` assumes a
+  case-sensitive disk. Skips to look at: "no git here" though git is on PATH, "no bash here" (Git Bash's `bash.exe` is
+  not on PATH; look in Git's folder), three "the built program ... cannot be found". Fix the tests, not the game, unless
+  a test shows the game wrong on Windows. Confirm: the suite on the Windows PC, every remaining skip named.
+
 - [ ] **Q950. The lobby's attract flight (nobody playing) against the original's: what differs, for Alexah to choose.** Not a
   priority (Alexah, 2026-10-30: "the camera drifting between islands ... and the audio fading between parks is kinda weird").
   Investigated, nothing built: `docs/exe/lobby.md`, "Attract" (the 2026-10-30 measurement). The pacing already matches (an
