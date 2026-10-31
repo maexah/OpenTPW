@@ -836,10 +836,11 @@ records of `0x208` bytes at `0x007c26b0` (the control, in use, the text).
   (`FUN_0065cd95( 0, -h, 0, 0 )`), the tag is put across the mast's middle with its top eight under the mast's
   new top, and the red top `0x2e`, which follows the mast's top edge, plays the stream at `0x00752e48` at 50 ms a row,
   unless one plays on it already (`0x004a135b`; `hud.md`, "The aerial's squash").
-- `0x100002`, a tag taken off: hidden, then message 5 to it, at once with a 1 and half a second on otherwise.
+- `0x100002`, a tag taken off: hidden, then message 5 to it, at once with a 1 and half a second on otherwise. It acts only on a tag whose
+  `+0x48` bit 0 is set (`0x004a13f3`): a tag inside its first half second is left alone (fork watch 2026-10-31, `verify-ui-hud.md` L1).
 - `0x100003`, the top's right click (`FUN_004a1190`): message 5 to each tag from the first, 100 ms after the one
   before, the first 100 ms on.
-- A tag's message 5 (`FUN_0048dae0`): its particle killed, its timers stopped, its record freed, the mast's top
+- A tag's message 5 (`FUN_0048dae0`) first runs the decline where property 6 is `0x1b` (an offer's tag, `0x0048db8b`..`0x0048dbb0`; fork watch 2026-10-31, `verify-ui-hud.md` L1): its particle killed, its timers stopped, its record freed, the mast's top
   put down by its height and ten, each later tag moved down the same and played the stream at `0x007502f0` at 20 ms
   a row unless one plays on it (`0x0048dcda`), the red top the same at 50 ms, started over (`0x0048dd06`), and the message bar retracted where it showed this tag.
 

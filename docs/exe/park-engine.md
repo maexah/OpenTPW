@@ -493,8 +493,10 @@ the Sun God camera holds no clear-coloured sliver (`o-t19197.png`, 0); ours at t
 renderer's `FUN_00591220` and `FUN_00591250` (called at `0x00576fa7` and `0x00577304`; the three `fldcw` are at `0x00591233`..`0x0059125c`), a class method at `0x0062f9c3` and a coaster routine's own chop at `0x00439ab0`..`0x00439c30`; none lies in `0x469xxx` or `0x473xxx`), so it runs under the one in
 force. Under Proton it is `0x27f` (53-bit, nearest, all masked): `original/brk.sh` on `FUN_00469940` and `FUN_00473c30`
 read it on the first 40 calls (the cap of the reader's hits; the load makes more) during the load of a copy of Alexah's `New Save.TPWS` (`q819/orig/o2/brk.txt`, every hit at the
-file's tick 19004). What Windows' own DirectDraw leaves under `DDSCL_FPUSETUP` cannot be read without real Windows
-("Which rounding is live is not settled", below); it moves only the last bits. OpenTPW works the conform in `float` (the corner's
+file's tick 19004). What DirectX 6.1 leaves under `DDSCL_FPUSETUP` is read from the disc's own `Redist/DIRECTX/` DLLs (fork watch 2026-10-31, `verify-world.md` H2): its
+DDRAW turns flag `0x800` into a local flag, and D3DIM (`0x56664f77`..`0x56664f9e`) then sets the control word to `0x7f` (24-bit) on a
+device of class 2, a HAL with DrawPrimitives2; a class 0 or 1 device leaves `0x27f`. Proton's ddraw and wined3d set nothing, so
+under Proton it stays `0x27f` ("Which rounding is live is not settled", below). It moves only the last bits. OpenTPW works the conform in `float` (the corner's
 fraction in `double`, `ProceduralConform`), which matches the original's stored vertices to 0.0001 (above).
 
 **A coaster's pylons** (Q816). Each node of a coaster's track that stands on a cell has a pylon, made `0x3fa` by `Coaster_AddNode`
@@ -1088,17 +1090,20 @@ FPU's current precision.**
 | `0x00fa71e0` | — | Its object: `+0x0` QPC flag, `+0x4` divisor (10000 for a 10 MHz counter), `+0x8` offset (`timeGetTime` at start-up), `+0x10` start QPC | `/proc/pid/mem` |
 
 **The consequence:** the raw clock is milliseconds since boot, and so is the accumulator. The accumulator is added at 24-bit precision (measured), so it can only
-hold multiples of 2^(e-23), where 2^e ≤ its value: 64 ms from 6.2 to 12.4 days of uptime. Which code leaves 24-bit in
-force there is not settled: a Direct3D without `DDSCL_FPUPRESERVE` was the first guess (Wine does the same), but the
-running original read control word `0x27f`, 53-bit, at a park tick (`advisor-park.md`, "The product is a double of the
-float key"), and the renderer's own switch is `0x00591220` with a failure exit that restores nothing (`0x00577433`;
-"Which rounding is live is not settled" below). Both states occur (fork watch 2026-10-18, `verify-world-a.md` H2). A frame's time much
+hold multiples of 2^(e-23), where 2^e ≤ its value: 64 ms from 6.2 to 12.4 days of uptime. What leaves 24-bit in force
+at the add is the renderer's own window (`FUN_00591220`, from `0x00576fa7` to `0x00577310`): the clock add runs inside it (behind `test ah,1`, `0x00576da0`, and the `0x100` view flag, unread for a park frame) (`0x00576ec0` to `0x00577127`, `0x00576a00`, `0x00576dab`, `0x0057ff60`, `0x0057ff74`, `0x00402d70`, `0x004031e0`,
+`0x00402f10`, `0x004030d0`, `0x004033a0`, `fadd [esi+0x18]`; fork watch 2026-10-31, `verify-world.md` H2 point 7), while a park tick outside it reads
+`0x27f` (`advisor-park.md`, "The product is a double of the float key"). Under Proton nothing else sets the word (Wine does not do
+what was guessed first). Not read at the add itself, and whether the `0x100` view flag that gates `0x0057ff60` is set in a park frame is
+not read; the prediction (`original/brk.sh` on `0x004033c8`: `0x7f` through `0x0057ff79`, `0x27f` through the park loop's `0x0054f47f`)
+is not yet run. On DX6.1 with a DP2 driver D3DIM sets `0x7f` besides (the paragraph below). A frame's time much
 shorter than that is rounded away, and a slightly shorter one is rounded up. Measured at 6.5 days of uptime, with the
 tick counter `0x00877d34` against the wall clock: uncapped, about 275 fps, 0 ticks in 30 s (the park froze); at 30 fps,
-44.5-49.6 ticks/s, the clock at 1.38-1.54 times real time; at about 4.5 fps, 32.9 ticks/s (real time). A second
-thread writes the same accumulator at full precision, so the values are not always multiples of 64, and the
-measured speeds fall short of a pure rounding model. The 24-bit mode itself is
-inferred from the multiple-of-64 value and Wine's documented ddraw behaviour; it was not read from the FPU.
+44.5-49.6 ticks/s, the clock at 1.38-1.54 times real time; at about 4.5 fps, 32.9 ticks/s (real time). Something
+writes the same accumulator at full precision, so the values are not always multiples of 64, and the
+measured speeds fall short of a pure rounding model. It is not a second thread by the direct calls (none of the six worker roots
+reaches `0x004033a0`; indirect calls were not in the graph), more likely the main loop's reads outside the window; unproven until the
+`brk.sh` run above. The 24-bit mode is inferred from the multiple-of-64 value and the window above; it was not read from the FPU.
 OpenTPW's `GameClock` does not copy this, and should not (`CLAUDE.md`, "A deviation from the original is said at
 the site").
 
@@ -1663,7 +1668,9 @@ for the rest of the run. The thing sweep runs beside the renderer, never inside 
 the last exit left (Q173). DirectDraw is set up with `DDSCL_FPUSETUP`: `SetCooperativeLevel` (vtable slot `0x50`) is called with `0x851`
 (FULLSCREEN | EXCLUSIVE | ALLOWMODEX | FPUSETUP; `push` at `0x0056390b`, call `0x00563914`) and with `0x808` (NORMAL |
 FPUSETUP; `0x00563b7a`, call `0x00563b92`); neither carries FPUPRESERVE `0x1000`. What that does to the control word
-belongs to the runtime, not the executable (fork watch 2026-10-18, `verify-world-a.md` H2). It matters only at the margin: at 53 bits a positive step landing exactly on a
+is the runtime's: DX6.1's D3DIM sets `0x7f` on a class 2 device only, one whose HAL has DrawPrimitives2 and with the registry's
+`DisableDP`, `DisableDP2` not set (a DX5-style HAL, or the software path, leaves `0x27f`); the fork's "and any later runtime" is unproven, only 6.1 was on hand; Proton sets nothing (fork watch 2026-10-31, `verify-world.md` H2 points 2 to 6). Every `0x27f` we measured is a Proton fact; which to match is
+Alexah's decision (Q221 (7)). It matters only at the margin: at 53 bits a positive step landing exactly on a
 boundary, `245 + 5`, has reach 0.99999928 and is asked; at 24 bits its reach is 1.0, it is taken whole, and step 7
 puts it back. The cell in step 1 is the same either way. The walking speed's ease (`FUN_004fa870`, `ride-operation.md`,
 "Where a WALKING peep is drawn") leaves a fingerprint in the saves. In Alexah's two played Lost Kingdom saves no guest
@@ -3770,11 +3777,16 @@ carries something, the item with `FUN_0052f880`. **Neither sets the rotation**: 
 unless it is an add-on hovered over one of the five track types, which the tool-4 preview snaps (`FUN_0052f1b0` at
 `0x005237f7`, inside the preview's add-on branch; the `0x3b` arm has no snap, so nothing turns a carried move).
 A put-down that reaches `FUN_005253b8` (by the `je` at `0x00524db1`) resets the rotation **unless exactly Ctrl is held**
-(fork watch 2026-10-18, `verify-ui-hud.md` U6). `FUN_0046b420` reads the modifiers as Shift 3, Ctrl `0xC`, Alt `0x30`. With
-the word `0xC` the function jumps to `0x00525a06` and changes nothing. Otherwise it calls `FUN_0052f580( 0, 0 )` (idle) and
+(fork watch 2026-10-18, `verify-ui-hud.md` U6). The put-down's modifier word comes from `FUN_00486aa0` (GetAsyncKeyState) through `0x004815c0`, in `0x0046c610`, a vtable slot of the build tool
+object; `FUN_0046b420` (GetKeyState) feeds the binding matchers (the live caller is `0x0046c610`; `0x00523f6a`'s word, the replay's and four callers of `FUN_0046b420` were not traced) (fork watch 2026-10-31, `verify-ui-hud.md` UI-031). The word reads Shift 3,
+Ctrl `0xC`, Alt `0x30`. With the word `0xC` the function jumps to `0x00525a06` and changes nothing. Otherwise it calls `FUN_0052f580( 0, 0 )` (idle) and
 `FUN_0052f1b0( 0, 0 )`, which saves the old rotation in `0x0081b134` and writes **0 into `0x0081d7a4`** (`0x0052f1d3`-
-`0x0052f1de`); the tail at `0x005259ae` ends with `FUN_0052f1b0( 0, 0 )` again unless Ctrl is held. Not read: which
-placements take the `0x00524db1` branch, and whether the last click of a queue re-arms the tool (the queue tool's commit).
+`0x0052f1de`); the tail at `0x005259ae` ends with `FUN_0052f1b0( 0, 0 )` again unless Ctrl is held. Read since fork watch 2026-10-31 (`verify-ui-hud.md` UI-031): the `je` is taken for a thing whose sub-record's `+0x40` is nought (`[0x0081b0cc]`, `0x0046d639`,
+`0x0052797b`; default 1, `0x0052f139`; `FUN_0052fab0` answers 0 for an add-on, `0x008187f8`). The queue tool's commit (`0x005275b1`..`0x005275f2`)
+ends the tool with `FUN_0052f200( 0, 0 )` whatever the modifier, angle 0, and nothing re-arms it: none of the seven `0xc` compares in
+`0x524960`..`0x527670` lies in `0x527170`..`0x527650` (ranges). A line tool with none pending (`0x00527146`) keeps the tool on exactly Ctrl and
+otherwise ends it. The add-on's `0x00524d6d` keeps the tool but always resets the angle. Not checked: whether a Move put-down reaches
+`ParkBuilding.cs`'s put-down arm.
 
 **The add-on's snap, its put-down, its open ends and the window a click opens** (fork watch 2026-10-18, `verify-world-b.md` L2
 and L3, `verify-world-a.md` M5; the snap, the verdict and the put-down read again for Q780 from `q780/dump` and measured in the
@@ -4456,7 +4468,7 @@ The park management gadget is stream `0x00752940`.
 
 `FUN_00498790` builds it: `DAT_007ca1c8 = UI_LoadTree( &DAT_00751530, FUN_004982a0 )`, then `UI_SetVisible(0)` — **built hidden**, like the camcorder/postcard sub-panel beside it. **It is not the management gadget** (that is stream `0x00752940`).
 
-**Every button on it is a `cb_*` mesh — coaster builder**, dumped from the stream: `cb_incline` (`0x19`), `cb_loft` (`0x1a`), `cb_move` (`0x1b`), `cb_rotate` (`0x1c`), `cb_swapdown` (`0x1d`), `cb_swapup` (`0x1e`), `cb_track` (`0x1f`), `cb_dellast` (`0x21`), with **`0x20` carrying no mesh at all**, and the bar is framed by `!f_plain`. It is the track-laying bar for a coaster, not a general build toolbar, and it sits at (859,916)-(1534,1190) on the virtual screen.
+**Every button on it is a `cb_*` mesh — coaster builder**, dumped from the stream: `cb_incline` (`0x19`), `cb_loft` (`0x1a`), `cb_move` (`0x1b`), `cb_rotate` (`0x1c`), `cb_swapdown` (`0x1d`), `cb_swapup` (`0x1e`), `cb_track` (`0x1f`), `cb_dellast` (`0x21`), with `0x20` carrying no mesh in the stream (the refresh `0x004987f0` gives it `cb_loop` or `cb_trough`), and the bar is framed by `!f_plain`. It is the track-laying bar for a coaster, not a general build toolbar. (859,916)-(1534,1190) is the stream table's rectangle; on screen the arm carries the bar from left -394 to (486, 1145) (fork watch 2026-10-31, `verify-ui-hud.md` L2).
 
 **It also runs keys, through the camera and coaster tables.** `FUN_004982a0` handles `0x1000a` by calling `FUN_0040c900( key, mods )` and `0x1000b` by calling `FUN_0040c990` — the binding matchers — on the camera table (`[0x00787c14]`) and then the coaster table (`[0x00787294]`, rows at `0x00748350`, `abortcoaster` among them). The park's own game and shortcuts tables run from layer 0's `Park_MouseMessageProc` (`scenes.md`, "The park Escape route"). Message `0x14` clears `DAT_007ca1c8` (the panel handle).
 

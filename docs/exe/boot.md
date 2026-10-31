@@ -156,7 +156,7 @@ whole blocks, so it yields a few samples more than the header counts (`bf.tgq`: 
 counted with `InterlockedIncrement`: the player reads and decodes on its own thread. `FUN_0066efd0` starts it at `0x0066f050` (`0x0066efe8`) when the settings' flag `0x10000` is set, and `FUN_0051b010` always sets it (`0x0051b127`); its loop `FUN_0066f090` calls the chunk reader's caller `FUN_0066f380` and the frame decoder `FUN_00670c20`. `FUN_006727c0` starts a second thread at `0x006724a0`, not read.
 
 **Not established.** Which x87 precision the original decodes under. The unicorn runs used `0x027F` (53-bit, the
-Windows default); 64-bit gives the same pixels; 24-bit (Direct3D's default) changes 37.5% of the samples of
+Windows default); 64-bit gives the same pixels; 24-bit (what DX6.1's D3DIM sets on a device whose HAL has DrawPrimitives2, `park-engine.md`, "Which rounding is live is not settled"; Proton sets nothing) changes 37.5% of the samples of
 `bf.tgq` frame 120, by up to 46 of 127 (`fpcw.py`). A movie port should not claim bit-exact until the decoding thread's control word is read in the
 original under Proton. Also unread: the colour tables' arithmetic.
 

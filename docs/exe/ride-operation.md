@@ -1945,8 +1945,9 @@ script starter then writes the id to it (`FUN_004dcf90` to `FUN_004685c0`, the m
 `max( 0, 0.1v + Σ|g| + 5|b| − ( |g0| + U ) )`, plus half the last, from `fInitialExcitement` 1.0). The weights are
 `sCoasterType` fields (`FUN_0042f390`) that no shipped `Coaster.sam` sets, so the compiled defaults (`FUN_0042fd90`)
 are live. The run is redone on the next state tick (`FUN_00435a30` from `0x0054fa8f`) for a node whose `node[0]` bit 0
-is set, as `FUN_0043c3d0` sets it whenever the speed setting changes: the cap `+0x34` = `80 × ( 1 − s / 100 ) + 130 × s
-/ 100` (`fMaxSpeedAtMinSetting`, `fMaxSpeedAtMaxSetting`). The script's speed word `+0xc0` is pushed at `COAST 8`
+is set, as `FUN_0043c3d0` sets it whenever the speed setting changes: the cap `+0x34`: t = s × 0.01f, then `( 1 − t ) × min + t × max`
+(`0x0043c406`..`0x0043c426`; `fMaxSpeedAtMinSetting` 80, `fMaxSpeedAtMaxSetting` 130; equal to `80 × ( 1 − s / 100 ) + 130 × s / 100` at 53 bits
+for s = 0 to 100, and, worked at 24 bits, one ulp from the 53-bit result for s = 3, 4, 67, 85, 92; fork watch 2026-10-31, `verify-world.md` C3). The script's speed word `+0xc0` is pushed at `COAST 8`
 (`0x00554ab4`) and on every VM turn (`0x005517d7`..`0x005517ea`), redoing the run only on a change (`0x0043b2c6`) and not at all, while no layout replay runs (`DAT_00785a2c` nought), for a node whose `+0` has bit `0x8000` (`0x0043b2ca..0x0043b2d9`; that bit is set only by the replayed speed action, `0x00447e30` from `0x00404ad3`, action `0x45` of the online park load, and nothing clears it: dead by CONTENT offline; fork watch 2026-10-21, verify-world-other L1), so
 the player's speed and an upgrade's (`0x004dfabc`) reach `f` through the cap; the tier does not. A new node starts at
 setting 60, cap 110 (`FUN_004368f0`'s `FUN_0043c3d0( node, 0x3c )`). The coasters module (`SAOC`) saves neither rating

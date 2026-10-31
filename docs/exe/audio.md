@@ -1,6 +1,6 @@
 # exe/audio — positional audio
 
-The original really had 3D sound. It delay-loads **QMixer.dll** (QSound's mixer, shipped in the install, dated Jan 2000) and resolves 27 named entry points, including `SetSourcePosition`, `SetListenerPosition`, `SetListenerOrientation`, `SetListenerVelocity`, `SetSourceCone`, `SetDistanceMapping`, `SetSpeedOfSound`, `SetSpeakerPlacement`, `SetPanRate`, `SetFrequency` and `GetSourcePosition`. Every sound in the game goes through one entry point, `Sound_PlayEffect(handle, category, effect, x, y, z)`, and a 2D sound is played at `(0,0,0)` — **but that does not mean a 2D sound is merely a 3D source sitting at the origin, and reading it that way is a trap.** The engine has a separate, genuinely listener-*independent* path (`QSWaveMixSetPosition`) chosen per voice by a flag whose writer was never found; see "The listener, and what a pause does to it". Positions come from `.MD2` nodes that the id table marks as emitters with the flag word `0x211`. The lobby used none of it: everything there played at `(0,0,0)`.
+The original really had 3D sound. It delay-loads **QMixer.dll** (QSound's mixer, shipped in the install, dated Jan 2000) and resolves 27 named entry points, including `SetSourcePosition`, `SetListenerPosition`, `SetListenerOrientation`, `SetListenerVelocity`, `SetSourceCone`, `SetDistanceMapping`, `SetSpeedOfSound`, `SetSpeakerPlacement`, `SetPanRate`, `SetFrequency` and `GetSourcePosition`. Every sound in the game goes through one entry point, `Sound_PlayEffect(handle, category, effect, x, y, z)`, and a 2D sound is played at `(0,0,0)` — **but that does not mean a 2D sound is merely a 3D source sitting at the origin, and reading it that way is a trap.** The engine has a separate, genuinely listener-*independent* path (`QSWaveMixSetPosition`) chosen per voice by a flag whose writer is `0x006bc5d7` (a flat voice leaves it clear) (fork watch 2026-10-31, `verify-other.md` H1); see "The listener, and what a pause does to it". Positions come from `.MD2` nodes that the id table marks as emitters with the flag word `0x211`. The lobby used none of it: everything there played at `(0,0,0)`.
 
 ## QMixer
 
@@ -30,7 +30,7 @@ The delay-load IAT *can* be found, but not by searching for a string or a VA: th
 
 The three ints become floats in a stack record `{vtable 00700b90, category, effect, x, y, z}`, virtual-called through `DAT_00802bcc`'s vtable+8. `DAT_00802bcc` is not the manager: it is an 8-byte forwarder (vptr `0x0070a288`, the manager at `+4`) whose `+8` (`0x006b5b40`) calls the manager's `+0x10`, `0x006b87d0`, which is the real play. See "How the engine plays an effect" below.
 
-**`Sound_PlayEffect` has no 2D form: a caller that wants a flat sound passes (0,0,0).** `UI_PlaySound` is literally `Sound_PlayEffect(0, uiCat, id, 0, 0, 0)`. The engine gives such a voice no place against the listener and no distance mapping when its effect is flagged `0x200`, as every effect of `cat_uiSFX.map` is: it takes the `QSWaveMixSetPosition` path, and what the mixer makes of that path is not read (see "The listener, and what a pause does to it"). OpenTPW copies the shape: one call, optional position (`Audio.Play`, null for flat).
+**`Sound_PlayEffect` has no 2D form: a caller that wants a flat sound passes (0,0,0).** `UI_PlaySound` is literally `Sound_PlayEffect(0, uiCat, id, 0, 0, 0)`. The engine gives such a voice no place against the listener and no distance mapping when its effect is flagged `0x200`, as every effect of `cat_uiSFX.map` is: it takes the `QSWaveMixSetPosition` path, which the mixer treats as a flat voice: azimuth 0, a range of 9.16e-5 (room 3.0 / 32,767), gain 1 (QMixer `0x18007b16`, `0x1800931c`; fork watch 2026-10-31, `verify-other.md` H1; see "The listener, and what a pause does to it"). A placed voice is not this path (below). OpenTPW copies the shape: one call, optional position (`Audio.Play`, null for flat).
 
 | Address | Original name | What it is | Evidence |
 |---|---|---|---|
@@ -145,7 +145,7 @@ and keeps a range that is not nought at the voice's `+0x40`:
 | `0x4` | `0x2` | |
 | `0x200` | `0x8` | No range and no place: the service never silences it, and its place is written as the whole words 0, 1, 0 (`0x006bc51d`, `FUN_006bb220`; the slots are floats, so its y is the bit pattern 1, 1.4e-45, and not 1.0), with bit `0x1` at `params + 0xc`; it reaches `QSWaveMixSetPosition` (`0x006d272b`), where a placed voice, with bit `0x20` there, reaches `QSWaveMixSetSourcePosition` |
 | `0x20` | `0x200` | |
-| `0x4000` | `0x20000` | |
+| `0x4000` | `0x20000` | `0x006bc29f` ORs `0x4` into the request's `+0xc` instead of the `0xC0` of every other voice, so the voice lacks the no-Doppler bit. 0 of the 1,267 records of every shipped `.map` carry `0x4000` (`verify-audio-fx.md` M1, fork watch 2026-10-31); `verify-other.md` M7 did not check the data |
 | a range given | `0x80` | The range at `+0x40` is the voice's own |
 
 **Each service pass silences what is out of range** (`FUN_006bca10`, from `SoundService_Pass`'s (`FUN_006b62b0`) walk of the voice
@@ -225,6 +225,11 @@ in `0x1800a980`, which reads the channel's parameter block at `+0x1a4`:
   whatever it was handed, and its one caller `0x006d2320` (the wrapper's slot `+0x68`) passes the result to
   `QSWaveMixEnableChannel`. So a placed voice's law is the linear arm: with the game's 2.0, its range and 0.8,
   `((range - d) / (range - 2)) ^ 0.8`.
+- **The rest of that word** (fork watch 2026-10-31, `verify-audio-fx.md`, the stream's flag word): the stream's `+0x14` is the request's `+0xc`
+  (`0x006bb3f5`..`0x006bb3ff`), not the request's `+0x14`, which is a field mask. Bit `0x1` is set for a flat voice only (`0x006bc52d`)
+  and makes the mode `0x1000000`; a placed voice is clear and takes `0x2000000` (`0x006d23ab`..`0x006d23bb`). Bit `0x40` (`0x006bc2af`,
+  every voice without voice flag `0x20000`) makes channel bit `0x10`, which the mixer reads as no Doppler (`0x1800ad97`); `0x100` when the
+  device rate is not 11,025. Channel bit 1 needs word bit `0x1000` with bit `0x1` clear (`0x006d22e6`..`0x006d22f0`). This is why the measured channels read `0x1111` placed and `0x1110` flat.
 - The channel's final gain (`+0x260`) is its volume (`+0x1f0`) times the distance's gain (`+0x25c`) times the
   cone's (`+0x258`). The volume is `QSWaveMixSetVolume`'s number over 32,767 (command type 2).
 
@@ -253,9 +258,9 @@ rounded. The code that makes the number is read in "A channel's volume", below. 
 pause's lift (below) is past any range.
 
 **Not read:** how the mixer applies the final gain to a sample (taken as a plain factor); what the pan and
-QSound's own processing make of a place (flag `0x1`); the two channels that read a place of (0, 0, 0), a
+QSound's own processing make of a placed voice (mode `0x2000000`: DirectSound 3D's `SetAllParameters`, QMixer `0x18005971` on the DirectSound class `0x18005870`, or the software class `0x1800b130`; its rolloff, whether QMixer sets min and max, and which class a real run uses are unproven; fork watch 2026-10-31, `verify-other.md` H1, `verify-audio-fx.md` H2); the two channels that read a place of (0, 0, 0), a
 mapping of 2.0, 100.0 and 0.8 and a distance of 50.00, stale as they were read; the 2D path's distance
-(`QSWaveMixSetPosition`, command type 7, a range given as a number).
+(`QSWaveMixSetPosition`, command type 6 with three integers, which the mixer re-issues as type 7; type 7 alone is SetPolarPosition. Read since fork watch 2026-10-31: the range times the room's size over 32,767, 9.16e-5, `verify-other.md` H1).
 
 **What OpenTPW does.** `AudioListener.RangeGain` is the linear arm, and a voice played with a range of its own
 (`Audio.Play`'s `range`) is turned down by it, the distance over three axes. A park under the orbit camera is
@@ -1398,7 +1403,7 @@ That last one is why the flag is better read as **"the world is not being heard 
 
 **How much a sound is turned down by that lift is the mixer's law.** The lift decides **which** sounds a pause takes: a listener cannot reach a sound that was never placed against it. The mixer decides **how much**: a listener 10,000 units up is past every voice's range, and the mixer plays nothing of a channel past its range ("The mixer's distance law"; a paused park's channel read a distance of 10,000.32 and a gain of nought). A voice with no range, flag `0x8`, is not shown to be silenced, and neither is a voice with a rectangle, flag `0x1000`, which the service keeps at the listener's own height (`FUN_006bd5f0`).
 
-There is also a genuine **2D path**, so "a 2D sound is just one played at (0,0,0)" is true of `Sound_PlayEffect`'s shape but misleading about the engine: wrapper slot `+0x74` (`0x006d2640`) takes a flag — non-zero calls `QSWaveMixSetSourcePosition` (listener-relative), zero calls `QSWaveMixSetPosition` (**listener-independent**). The choice is made per voice at one place, `FUN_006b7fa0`, from **bit `0x20` of `params+0xc`**, which `FUN_006bc410` sets for a placed voice (`0x006bc5d7`) and leaves clear for a voice with flag `0x8`, which is given bit `0x1` instead (`0x006bc52d`). The music's and the UI's effect records hold `0x200` (music 2 is `0x0606` in all four themes, and all 45 effects of `cat_uiSFX.map` carry the bit), so their voices take the `QSWaveMixSetPosition` path; what the mixer makes of that path under the lift is not read.
+There is also a genuine **2D path**, so "a 2D sound is just one played at (0,0,0)" is true of `Sound_PlayEffect`'s shape but misleading about the engine: wrapper slot `+0x74` (`0x006d2640`) takes a flag — non-zero calls `QSWaveMixSetSourcePosition` (listener-relative), zero calls `QSWaveMixSetPosition` (**listener-independent**). The choice is made per voice at one place, `FUN_006b7fa0`, from **bit `0x20` of `params+0xc`**, which `FUN_006bc410` sets for a placed voice (`0x006bc5d7`) and leaves clear for a voice with flag `0x8`, which is given bit `0x1` instead (`0x006bc52d`). The music's and the UI's effect records hold `0x200` (music 2 is `0x0606` in all four themes, and all 45 effects of `cat_uiSFX.map` carry the bit), so their voices take the `QSWaveMixSetPosition` path, a flat voice to the mixer (mode `0x1000000`, azimuth 0, gain 1: "The mixer's distance law"); a lifted listener moves nothing of it. A placed voice is mode `0x2000000` (a DirectSound 3D buffer or QMixer's software class; fork watch 2026-10-31, `verify-other.md` H1).
 
 OpenTPW reproduces the *which* and the *how much* by another means: `Audio.HoldPlaced` holds every voice that has a place to silence, where the original lifts the listener past their ranges.
 
@@ -1428,17 +1433,24 @@ At **`0x00711920`** — not `0x00711980`, which appears nowhere in the image. Th
 | `+0x24` | `OpenWaveEx` / `PlayEx` / `ConfigureChannel` / `FreeWave` |
 | `+0x28` | `StopChannel` |
 | `+0x2c` | `PauseChannel` |
-| `+0x30` | `Restart` / `Stop` |
+| `+0x30` | `Restart` |
+| `+0x34`, `+0x38`, `+0x3c` | `Stop`, `Pause`, `Restart` for all channels |
 | `+0x60` | **`SetDistanceMapping`** |
 | `+0x64` | `SetSpeakerPlacement` |
-| `+0x68` | `SetPanRate` |
+| `+0x68` | `0x006d2320`: `SetPanRate` (`0x1f4` under word bit `0x400`, else `0x21`), then `EnableChannel` |
 | `+0x6c` | `SetSpeedOfSound` |
+| `+0x70` | `SetPanRate` (`0x006d2ca0`) |
 | `+0x74` | **`SetSourcePosition` / `SetPosition`** (3D or 2D, per the flag above) |
 | `+0x78` | `GetSourcePosition` |
 | `+0x7c` | `SetSourceCone` |
 | `+0x80` | `SetVolume` |
-| `+0x88`, `+0x98` | `SetListenerPosition` |
+| `+0x84` | `SetListenerVelocity` (`0x006d27b0`, `QSWaveMixSetListenerVelocity`; every channel measured has the no-Doppler bit, so the feed changes no pitch) |
+| `+0x88` | `SetListenerPosition` (`+0x98` is past this table: the base vtable `0x007119b8`, slot 0, the destructor `0x006d29f0`) |
+| `+0x8c` | `SetListenerOrientation` (`0x006d2b20`) |
+| `+0x90` | `SetFrequency`, scaled (`0x006d2820`) |
 | `+0x94` | `SetFrequency` |
+
+fork watch 2026-10-31 (`verify-audio-fx.md`, `verify-other.md`): slot `+0x18` also calls `SetListenerPosition` and `OpenChannel`. The fork's `QMixer.dll` is another build: map its addresses by shape, never by value.
 
 ## How a voice is decoded
 

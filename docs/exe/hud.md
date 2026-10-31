@@ -2803,7 +2803,7 @@ x `[0x00faa5c4]` / 2048, h = (rect.b - rect.t) x `[0x00faa5c0]` / 1536 (the cont
 `0x0047fb30` stores `+0x1c` ymin, `+0x24` ymax, `+0x2c` the divisions, and `0x0047fb10` `+0x18`, `+0x20`, `+0x28` the count. The
 colours (`0x005f73a0`): `+0x30` and `+0x35` (0, 200, 0) the axes, `+0x3f` (0, 0, 0) the fill, `+0x3a` (0, 100, 0) the grid. The
 status screen's call (`0x004a5132`) passes 10 divisions and a count of 12 (`0x004a511f`..`0x004a5124`); the finance call
-(`0x0049a734`) pushes 10 and 12 too (how its 36 and 144 reach `+0x28` was not read). **Draw** (`0x004808bd`..`0x004808cb`): the fill
+(`0x0049a734`) pushes 10 and 12 too (the period buttons call `0x0047fb10( 0, count - 1, count )`: (0, 0xb, 0xc), (0, 0x23, 0x24), (0, 0x8f, 0x90), Finance `0x0049a38f`..`0x0049a3c7`, Status `0x004a4c39`..`0x004a4c55`; Finance has no such call after its setup, and whether a reopened Finance grid stays 12 is unproven; fork watch 2026-10-31, `verify-ui-hud.md` L3). **Draw** (`0x004808bd`..`0x004808cb`): the fill
 `0x0047fc00`, the grid `0x0047fcd0`, the axes `0x0047fc50`.
 
 - **Grid columns** step by the sample count: 12 draws every sample, 36 every 3rd, 144 every 12th (`0x0047fd06`..`0x0047fd5d`); **any
@@ -2814,6 +2814,15 @@ status screen's call (`0x004a5132`) passes 10 divisions and a count of 12 (`0x00
   `0x005f9860( left, (int)y, right )` (right as the length), y -= dy.
 - **The zero axis** `0x0047fc50`: row = bottom + 1, or bottom + height x ymin / (ymax - ymin) when ymin < 0 and ymax - ymin > 0;
   `0x005f9860( left - 1, row, right + 1 )` and `0x005f98d0( left - 1, top - 1, bottom + 1 )`.
+- **A series' line** (fork watch 2026-10-31, `verify-ui-hud.md` L3), `0x0047fe90( samples, n, count, colour )`: n segments, x from the plot's left in float steps of
+  width / count (so with fewer months held than the period the line starts at the left and stops part way, the right of the plot empty),
+  each segment `0x005f97f0( x0, y0, x1, y1, colour )` (no width), a hollow 3 x 3 box round each segment's end, only while count is under `0x90` (`0x0047ffd5`), none at the first point
+  (`0x00480003`..`0x00480077`); y is 32-bit (`imul`, `idiv`), so a large balance overflows in the original. A flat range puts both ends at the bottom.
+  `0x00480460` takes n = min( period, wrapped ? `+0x248` : head + 1 ) and n + 1 samples, **oldest first** (`0x004804db` counts the age down
+  from n x stride into the buffer at `0x007b4bf8`); when held is at most the period the oldest read falls outside the ring and stays 0, so the
+  line starts at a value of 0. Every caller strides 1. Finance draws up to eight series (`0x0049aa61`..`0x0049ab70`, each behind a bit of `[0x00751fa0]`); Status five, one of them the float ring through `0x00480570` (`0x004a47a8`). After the loop (`0x004800ab`..`0x00480173`) the newest sample is printed `%d` (wide, `0x0074f9d8`) through `0x004929f0` and
+  `0x00492750` in the series' colour, in the rectangle (plot left, y - 6, the line's end x, plot bottom), top and left held to at least 2.
+  Not read: that label's alignment word (2, `0x00480151`).
 
 **Measured** (`q390/sweep.py`): the shipped `Easymode.TPWI` holds the 10th one month closed on 0 and the 12th on 1, the
 Belly Bounce; over all 587 park files on hand both months so far are 0; in all 188 whose park value sums to their 2nd
@@ -4431,5 +4440,6 @@ not built (Q714).
 - **Hover, `0x004a4700`.** Message `0xc` sets the help to row (the icon's stored frame + 1) of `THOUGHTS.str` (`[0x0078ba9c]`,
   `0x006ace60`): each icon names its own thought (the type-6 setter `0x0066da4d` stores `+0x13c`, the getter `0x0066dad2` reads it).
 - **Refresh:** the builder arms a timer of `0x3e8` (1000 ms) with id `0x80083` (`0x004a5309`).
-- **Not proven:** whether an icon hidden by `0x0065d9dd( 0 )` is ever shown again (neither setter calls a show; the window proc
-  `0x004a4830` was not read).
+- **Proven** (fork watch 2026-10-31, `verify-ui-hud.md` L6): an icon hidden by `0x0065d9dd( 0 )` stays hidden until the window is rebuilt. The only
+  `0x0065d9dd` calls in `0x4a4000`..`0x4a6000` (a range) are the three `( 0 )` in `0x004a4ab0`; the icon's proc `0x004a4700` takes only message `0xc`;
+  the timer `0x80083` re-runs `0x004a4ab0` (`0x004a4996`), which only sets frames.

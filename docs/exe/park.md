@@ -1223,7 +1223,7 @@ Decoded 2026-09-23 as disassembly, every claim re-derived by a refuter.
 | Mode | When | Evidence |
 |---|---|---|
 | **0** | the whole park is being emptied: `[[0x80239c]+0x1da738]` (the world state) is 2, which only `FUN_00515dd0` (`0x515dd7`, `0x515e17`) and `FUN_00515fb0` (`0x515fba`) write as a constant, each deleting every thing and then writing 1. The field is also saved and loaded (`0x5172ee`, `0x517fcd`), so a save could carry another value | three immediate writers |
-| **4** | a loaded save's layout is being replayed: `DAT_00785a2c`, field `+0x24` of the action recorder at `0x785a08`, set to 1 only at `0x0040414e` by `FUN_00404140` ("Starting layout replay"), cleared at `0x4034fb`, `0x404478`, `0x404550` | disassembly |
+| **4** | an online park's layout is being replayed (game type 1 only: the one call of `FUN_00404140`, `0x0054f11f`, is behind `[0x00fb3b7c] == 1`; offline, Lost Kingdom included, the mode is never 4; fork watch 2026-10-31, `verify-audio-fx.md` C1): `DAT_00785a2c`, field `+0x24` of the action recorder at `0x785a08`, set to 1 only at `0x0040414e` by `FUN_00404140` ("Starting layout replay"), cleared at `0x4034fb`, `0x404478`, `0x404550` | disassembly |
 | **7** | everything else — every sell and every move pickup in play, through the demolisher's call at `0x00528590`. `FUN_0050b780` also reaches the destructor from `0x4e850e` and `0x516c65`; whether either deletes a placed thing in play is untraced | disassembly |
 
 `REMOVECHILD` (`0x55526a`) and the tick loop's negative-PC path (`0x551ac6`) pass **0**. The RSSE shutdown `FUN_005584b0` and the save-state reader `FUN_005597a0` call the flat destructor directly with 0.
@@ -1249,7 +1249,7 @@ Q663. The yellow and green sparkles a bought thing rises among are its item's `I
 
 | Address | What it does | Evidence |
 |---|---|---|
-| `0x004dd070` | The object's script start `FUN_004dcf90` (from `Object_Construct`, `0x004db517`) calls the loader with the thing's id and a third argument of `DAT_00785a2c`, which is 1 only while a loaded save's layout is replayed | Decompiled |
+| `0x004dd070` | The object's script start `FUN_004dcf90` (from `Object_Construct`, `0x004db517`) calls the loader with the thing's id and a third argument of `DAT_00785a2c`, which is 1 only while an online park's layout is replayed (nought offline; fork watch 2026-10-31, `verify-audio-fx.md` C1) | Decompiled |
 | `0x00558e12`..`0x00558e2b` | The block runs only when that argument is nought and the script's thing word `+0xac` is set | Listing |
 | `0x00558e5d`..`0x00558e81` | The item record (`FUN_00412e90` on the thing's `+0xe` item id, `[0x007cfb90 + id x 0x14]`); its `+0x60` nought spawns nothing | Listing |
 | `0x00558e87`..`0x00558ea5` | It needs the script's model (`+0xc8`) and that model's box, `FUN_00466b70` (`ride-operation.md`: the cells `+0xc0`..`+0xc4` x 10, the heights from the `.hmp`); with none, nothing | Listing |
