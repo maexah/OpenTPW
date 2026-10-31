@@ -362,6 +362,25 @@ Built by `FUN_005dfcd0`, vtable `0x00702cb0`. Its `[2]` is a 0x10-byte island li
 The box is the lobby's own geometry: the four islands stand at 400 and 600 in X and Z, centred on
 (500, 500), and the camera wanders a 400×400 box around them between heights 50 and 100.
 
+### The orbit's seed
+
+The island camera's constructor (`FUN_005dfcd0`) copies its eye `+0x28` (and its copy `+0x34`) and its look point `+0x40` (and
+`+0x4c`) from the render camera `[0x00f83778]` `+8` and `+0x14` (`0x005dfd3c`..`0x005dfd99`). `FrontEnd_Init` builds that render camera
+afresh on every entry to the lobby (`FUN_005d8b00`, `0x005d5abf`, `0x005d5ace`) and a park destroys it (`FUN_005d5cf0`
+nulls `[0x00f83778]`), so the seed does not depend on where a park or the last lobby left the camera. Measured (Q749,
+`original/rendereye.py` polling the global through Exit To Lobby from the jungle park, `lobbyexit.sh`; `q749/orig/a-eye.txt`): the global is 0 in the park,
+and 0.45 s after the click a new object stands there, 4 ms of uninitialised memory and then **eye (500, 100, 500), look (500, 0, 500), angle 115**
+(then 100, `ISLANDFOV`), in the original's y-up axes: the middle of the four islands, 100 up, looking straight down at the sea. The island
+camera's first pass came 0.64 s later with a delta of 5.0 (a loading frame of 0.5 s) and took half the way: eye (453.49, 66.25, 484.82), look
+(400, 12.5, 400) (the look point already on the island: its easing is at `delta x 0.2` and the first pass's 5.0 closes it
+whole). The eye then eases at 1.0 a second (`delta x 0.1`): (429.0, 44.6, 474.2) 1 s on, (427, 40, 471) at 2.4 s. The film (`q749/orig/q749a.mkv`) opens on the
+sea straight down for a frame or two and then pans up to the island. The seed is the same on every entry, a first one included. The update saves
+the eased eye in `+0x78` after each orbit pass (`0x005e07a0`) and a later branch copies `+0x78` back into `+0x28` (`0x005e0dfd`..`0x005e0e12`); which
+branch that is, and so where a player chosen after an attract flight eases from, is not decoded (ours leaves its eye alone while the attract flight runs). **OpenTPW** seeds the eye (500, 500, 100) and the look point (500, 500, 0), z-up, in
+`LobbyCameraMode.BeginLobby`, and eases on `Time.Delta` as before; ours' first lobby frame carries a frame's delta, not the original's
+0.5 s loading frame, so ours is 59 units behind the original's eye at the first pass, 17 at 1 s and 5 to 6 from 2 s (`q749/compare.txt`, the
+orbit's phase). The console's `lobbyeye` reads ours back in the original's axes.
+
 ### The lens
 
 The lobby's render camera is a second object, held by the global `[0x00f83778]` (`FrontEnd_Init` builds it, `FUN_005d8b00`, vtable
@@ -516,7 +535,7 @@ turn's plus 3.1 s, and the turn's is where the orbit stands at the click against
 written once, by the constructor (`0x005dfd30`), and never by SetIsland (`0x005e2750`), so it starts at nought and turns
 0.2 a second while a player is chosen. The constructor runs on every entry to the lobby, a quit from a park included (boot state 1
 builds a new lobby, `0x0054e656`..`0x0054e671`, and so a new island camera: `0x005e3dc0`, constructor `0x005dfcd0` at `0x005e3dfb`);
-ours zeroes its orbit when the lobby is built (`LobbyCameraMode.BeginLobby`), but its eye is not re-seeded (queued): how long the player waits on the panel sets the turn, up to pi at 0.5 a second.
+ours zeroes its orbit and seeds its eye and look point when the lobby is built (`LobbyCameraMode.BeginLobby`, "The orbit's seed", Q749): how long the player waits on the panel sets the turn, up to pi at 0.5 a second.
 The turn ends at the island's `+0x14` + pi, which reads 1.57080 for Lost Kingdom (4.712 at state 2, both runs); ours
 ends at one pi for every island (Q721). The fly-in is 92 decay passes, as a steady 1/30 s gives (70 down to 7.976): the poll's 93rd "state 2" row is state 1's
 arriving pass, which sets the state and does not decay (92 of 92 rows after it equal r x (1 - 0.07 delta), in both polls).

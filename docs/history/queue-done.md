@@ -11516,6 +11516,20 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   none of state 0xb's frees and no scene-state write (1,727 functions by direct calls, 296 indirect calls not followed);
   `FUN_00415140` runs even after a module failed; Restart Park drops the load's answer. Not settled: a window open on a deleted
   thing, first person across a load, a carried object at a quickload. Evidence `q854/`. The build stays Q247's, Alexah's decision.
+- [x] **Q749. After a quit to the lobby ours' eye eases out from where the last flight ended; the original seeds it from its render camera. Film both first. (from the run 11 review of Q670, M1, unsettled.)**
+  `LobbyCameraMode._placed` (and `_position`, `_lookAt`) are static and reset only by `DebugSettle`, so after a park is quit
+  ours' first lobby frame eases from where the last flight ended (radius under 8 at the old island) out to the orbit. The
+  original's island camera constructor seeds its eye `+0x28` and look point `+0x40` (and `+0x34`, `+0x4c`) from the render
+  camera `[0xf83778]` `+8` and `+0x14` (`0x005dfd3c`..`0x005dfd99`), and the render camera is itself rebuilt by FrontEnd_Init
+  (`0x005d8b00`, `0x005d5abf`). Whether ours visibly flies out where the original does not is not read: film the lobby's
+  first second after a quit in both games (`record.sh`, `lobbycam.py`), then build (the orbit is already zeroed on a lobby's
+  build, `LobbyCameraMode.BeginLobby`). Confirm: the two films' first second side by side.
+  Done (2026-10-31, lane A): measured first, `docs/exe/lobby.md`, "The orbit's seed": the original's render camera is built fresh on every
+  lobby entry with eye (500, 100, 500) and look (500, 0, 500) (y-up), the island camera copies it and eases from there, 0 in a park, so
+  the quit's last eye plays no part; ours had eased from the old orbit. `BeginLobby` now seeds (500, 500, 100) / (500, 500, 0) z-up; the
+  console's `lobbyeye` reads it back; `LobbyEyeSeedTests`; evidence `q749/` (the original's film and polls, ours before and after).
+  Left: ours' first lobby frame has no 0.5 s loading delta (a hitch the original's first pass takes as one step), and which branch
+  restores the original's `+0x28` after an attract flight is not decoded.
 
 ## B. Docs and comments
 

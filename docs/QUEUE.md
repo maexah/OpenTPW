@@ -124,14 +124,6 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   next to `AFolderThatCanBeWrittenIsKeptAndTheProbeLeavesNothing`.
 
 - [ ] **Q987. Two small leftovers of Q986 (its review, 2026-10-31).** (1) `OptionsScreen.Keep` compares the display with `_before`, not `_applied`: after RESTART GAME's cross, a second tick that sets the display back to the opening mode skips `Display.Apply` and writes the old mode to `opentpw.cfg` while the window stays in the tick's mode; compare with `_applied ?? (_before.DisplayMode, _before.FullScreenSize)` (read, not run). (2) `GameDataTests` pin `Locate` only: putting `GameDir.Find( [] )` back into `Required` stays green. Give `Required` a seam so a test shows that no variable means Inconclusive with `Find` never called.
-- [ ] **Q749. After a quit to the lobby ours' eye eases out from where the last flight ended; the original seeds it from its render camera. Film both first. (from the run 11 review of Q670, M1, unsettled.)**
-  `LobbyCameraMode._placed` (and `_position`, `_lookAt`) are static and reset only by `DebugSettle`, so after a park is quit
-  ours' first lobby frame eases from where the last flight ended (radius under 8 at the old island) out to the orbit. The
-  original's island camera constructor seeds its eye `+0x28` and look point `+0x40` (and `+0x34`, `+0x4c`) from the render
-  camera `[0xf83778]` `+8` and `+0x14` (`0x005dfd3c`..`0x005dfd99`), and the render camera is itself rebuilt by FrontEnd_Init
-  (`0x005d8b00`, `0x005d5abf`). Whether ours visibly flies out where the original does not is not read: film the lobby's
-  first second after a quit in both games (`record.sh`, `lobbycam.py`), then build (the orbit is already zeroed on a lobby's
-  build, `LobbyCameraMode.BeginLobby`). Confirm: the two films' first second side by side.
 - [ ] **Q849. What Q810 left: two counted gaps her played park's save now reaches, and two loads never run.** (From Q810's review,
   run 14.) Q810 made her Full Simulation `New Save.TPWS` read whole, so the save goes through the running-things writer for the
   first time (before, the model walk failed and the whole module was written as the file's). Two counters then fire, in

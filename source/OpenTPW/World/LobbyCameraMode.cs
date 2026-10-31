@@ -812,14 +812,39 @@ public class LobbyCameraMode : CameraMode
 	}
 
 	/// <summary>
-	/// A lobby is being built: its orbit starts at nought. The original builds the island camera afresh on every entry
-	/// to the lobby, a quit from a park included (boot state 1, <c>0x0054e656</c>..<c>0x0054e671</c>), and its
-	/// constructor stores 0 to the orbit angle at <c>+0x18</c> (<c>0x005dfd30</c>), so a player who waits on the island
-	/// panel after a return turns for the park from the angle the orbit has run to since then, not from the last
-	/// click's (<c>docs/exe/lobby.md</c>, "The flight measured"). Where the camera's eye stands is not reset here: the
-	/// original seeds it from its render camera (<c>0x005dfd3c</c>..<c>0x005dfd99</c>), which ours does not read (queued).
+	/// A lobby is being built: its orbit starts at nought and its eye and look point stand where the original's island
+	/// camera seeds them. The original builds the island camera afresh on every entry to the lobby, a quit from a park
+	/// included (boot state 1, <c>0x0054e656</c>..<c>0x0054e671</c>), and its constructor stores 0 to the orbit angle at
+	/// <c>+0x18</c> (<c>0x005dfd30</c>), so a player who waits on the island panel after a return turns for the park from
+	/// the angle the orbit has run to since then, not from the last click's (<c>docs/exe/lobby.md</c>, "The flight
+	/// measured"). The same constructor copies its eye <c>+0x28</c> and look point <c>+0x40</c> from the render camera
+	/// <c>[0x00f83778]</c> (<c>0x005dfd3c</c>..<c>0x005dfd99</c>), which <c>FrontEnd_Init</c> has just built (a park destroys it, so
+	/// nothing of the park or of the last lobby survives), and that camera's constructor leaves its eye at (500, 100, 500)
+	/// and its look point at (500, 0, 500) in the original's y-up axes (<c>docs/exe/lobby.md</c>, "The orbit's seed"). Ours
+	/// is z-up, so the seed is the eye (500, 500, 100) over the look point (500, 500, 0), the middle of the four islands:
+	/// the first lobby pass eases from there, on the next frames, to the island's orbit.
 	/// </summary>
-	internal static void BeginLobby() => _orbitTime = 0f;
+	internal static void BeginLobby()
+	{
+		_orbitTime = 0f;
+		_position = SeedEye;
+		_lookAt = SeedLookAt;
+		_placed = true;
+	}
+
+	/// <summary>The render camera's constructor eye, (500, 100, 500) y-up in the original (<c>docs/exe/lobby.md</c>), as ours has it.</summary>
+	internal static readonly Vector3 SeedEye = new( 500f, 500f, 100f );
+
+	/// <summary>The render camera's constructor look point, (500, 0, 500) y-up in the original, as ours has it.</summary>
+	internal static readonly Vector3 SeedLookAt = new( 500f, 500f, 0f );
+
+	/// <summary>
+	/// Where the island camera's eye and look point have got to, in the original's y-up axes so they set beside
+	/// <c>original/rendereye.py</c>'s rows, for the debug console. A pure getter.
+	/// </summary>
+	internal static string EyeState()
+		=> $"eye ({_position.X:F3}, {_position.Z:F3}, {_position.Y:F3}) look ({_lookAt.X:F3}, {_lookAt.Z:F3}, {_lookAt.Y:F3}) "
+			+ $"placed={_placed} orbit={_orbitTime:F3} time={Time.Now:F3}";
 
 	/// <summary>
 	/// Lets go of the island on show as the lobby ends, so nothing reads an island out of a lobby that has gone,

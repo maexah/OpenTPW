@@ -354,6 +354,13 @@ public static class DebugConsole
 					: "aim: only in the lobby" );
 				break;
 
+			// Where the lobby's island camera has eased to, a pure getter in the original's y-up axes (Q749).
+			case "lobbyeye":
+				Reply( Level.Current?.Kind == Level.Scene.Lobby
+					? LobbyCameraMode.EyeState()
+					: "lobbyeye: only in the lobby" );
+				break;
+
 			case "settle":
 				// Drops the camera straight onto where it is headed, so a screenshot taken next
 				// frame is the same every run instead of depending on how long the ease had.
