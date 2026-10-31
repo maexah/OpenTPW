@@ -83,8 +83,10 @@ order below. Memory and frame time are checked before each weekly build instead 
   `ScapeHeight`, the camcorder's eye on `CameraHeight` + 5 each frame. The pick's ground as the original's two planes a cell is Q824. The person's particles'
   sampler, the sprites carrying `0x1000000` and the eye's further term are decoded and measured in Q825 (`park-engine.md`, "The three words Q822 left unread": the
   particle's offset is nought, the bit is the head sprites' alone and ours already stands them absolutely, the eye's term is nought in first person; the
-  puffs themselves are Q900). Left: a film of the sprites
-  and markers at a flagged cell against the original (Q823 compared the samplers by census and the load's flag by the original's live heightfield, not a frame).
+  puffs themselves are Q900). The markers' corners at a flagged cell are read in the original's own mesh and equal ours (Q838). Left: a frame of a person
+  or a balloon standing on a flagged cell against the original (the walk's draw, `Feet` and `DrawBalloon` stand on `ScapeHeight`, Q823 compared the samplers by census and
+  the load's flag by the original's live heightfield; the sprites' own draw, `FUN_00542010`, is not yet read in a frame; the stock park's flagged ground is the ridge
+  (61,34) to (66,29) and (36,32) to (33,29): find a person walking it, or a balloon held there, and read the sprite's drawn height against `ScapeHeight`).
 - [ ] **Q849. What Q810 left: two counted gaps her played park's save now reaches, and two loads never run.** (From Q810's review,
   run 14.) Q810 made her Full Simulation `New Save.TPWS` read whole, so the save goes through the running-things writer for the
   first time (before, the model walk failed and the whole module was written as the file's). Two counters then fire, in

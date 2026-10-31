@@ -11269,6 +11269,11 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   pixels (the mouse arrow left out) in four patches, one a cell, nothing else; the put-back returns the first frame in 0; the same count and patches in three launches (`q837/run1`, `run4`, `run5`).
   Ours at the same camera (`cut new` against `cut old`): the whole staircase of eight cells changes, 0.80 of the smaller set's pixels shared in the original's four boxes. Not seen, and said in
   `park-engine.md`: which diagonal each state draws (Q820's piece (3) keeps it). No code changed.
+- [x] **Q838. The build markers' corners at a flagged ground cell, read in the original's own mesh (Q820's piece (4), the markers' half).** Done 2026-10-30 (run 15, lane A, `alexah/792-markers-at-a-flagged-cell`).
+  `FUN_0053ddd0` stores each marker corner's height in the mesh's arrays; `tools/harness/original/markercorners.py` reads them (the clock held, the glide words held at nine offsets), `markerup.sh` carries a Belly Bounce to a cell, `lib/markerheights.py` compares them with ours.
+  Two launches (the pointer on (63,32), on (65,30)): the height is wave + `FUN_004527f0` + 1.5, and the sampler is ours `ScapeHeight` at all 81 corner points in the flagged cells (62,33)..(67,28), worst 0.0000; the near corner's plane, the rule
+  before Q823, is off by up to 0.50 at 44 of them and bilinear by up to 0.25 at 64; in unflagged cells all agree to one wave-table step. `CameraHeight` equals the original everywhere seen, so the picture cannot name `ScapeHeight` over it
+  (`park-engine.md`). No code changed. Left in Q820 (4): the sprites at a flagged cell.
 
 ## B. Docs and comments
 

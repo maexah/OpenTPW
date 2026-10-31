@@ -114,7 +114,7 @@ the original, and every caller of the first two is known (`FUN_004527f0`, six ca
 | Every sprite: walkers, staff, balloons (a held balloon is a sprite of that list: `FUN_004fa030` -> `0x004fe900` -> `0x00475480` writes its `+0x88`/`+0x8c`/`+0x90` in the table `FUN_00475430` walks; its `+0xc4` bit `0x1000000`: below) | `FUN_00542010`, `0x005420ee`, for each sprite of the list (`FUN_00475430`) | `FUN_004527f0( +0x88, +0x90 )` plus the sprite's `+0x8c`; a sprite whose word `+0xc4` carries `0x1000000` stands at `+0x8c` itself (`+0xe8` takes `+0x8c`, `+0xe4`, `+0xec` the place, `0x005420af`..`0x005420e0`; the other arm adds `+0x8c` to the sampler, `0x005420f3`) | `ScapeHeight` (`ParkGuestSprites`: the walk's draw, `Feet`, `DrawBalloon`; Q820) |
 | A person put on a sprite | `Person_PlaceSprite`, `0x004f9e8c` | stores the height less `FUN_004527f0` under it in `+0x8c`, so the draw above gives the height back exactly | none: ours reads the saved `+0x8c` and draws it over `ScapeHeight`, so a saved person stands where the original put them |
 | A person's particles | `FUN_004fa470`, `0x004fa4dc` | the sprite's place (`FUN_004754e0`) moved in x and z by `FUN_00519410`/`FUN_00519420` (absolute reads of `0x00785584`, `0x00785588`) × `[0x00700698]` (10.0), the height `FUN_004527f0` at the moved place, NOT the sprite's `+0x8c`; all three then × `[0x007006ec]` (1024.0) and truncated for `Particles_Spawn`. Both offsets read 0 (below) | none: ours spawns none of the callers' puffs (`LEAVER_BOARDING_PARTICLE`, `STAFF_DISMISSAL_PARTICLE`; the other three callers' are not counted under a name found), so there is no place to compare (Q900) |
-| The build markers' wave | `FUN_0053ddd0`, `0x0053ddea` | `FUN_004527f0` at the corner it is handed, after the glide | `HeightAt` on a corner, `ScapeHeight` gliding (`ParkBuildMarkers.Corner`; Q820) |
+| The build markers' wave | `FUN_0053ddd0`, `0x0053ddea` | `FUN_004527f0` at the corner it is handed, after the glide | `HeightAt` on a corner, `ScapeHeight` gliding (`ParkBuildMarkers.Corner`; Q820; read in the original's own mesh, Q838, below) |
 | The scene's height, mode 1; placement feedback | `FUN_004511a0`, `0x004511e6`; `FUN_00452ae0`, `0x00452c89` | `FUN_004527f0` (`park.md`, "The scene's height under a point") | `ScapeHeight` (`ParkSceneHeight.Under`) |
 | A person's shadow | `SpriteShadow_BuildQuad` (`0x00589410`) | the near corner's plane, its own sampler, no flag read ("First person's shadow", below) | `CornerPlaneAt` |
 | The pointer's pick | `FUN_0045bf90`'s terrain test | its own: two planes a cell by `0x2` (below) | `ParkPickGround.Meet`, the same planes (Q824) |
@@ -144,6 +144,22 @@ hallow 5, 0.06; space 26, 0.006). Bilinear (ours `HeightAtWorld`) differs from i
 (fantasy 196, 0.249; hallow 173, 0.248; space 198, 0.495). **Built (Q820 piece 4):** `HeightfieldFile` sets `0x800` at load by that rule, so `ScapeHeight` splits those cells
 (before, it took the near corner's plane on them, by up to 0.5 on the ground, 24.96 on a hole); sprites, balloons, `Feet` and the
 build markers' glide stand on it; the camcorder's eye is `CameraHeight` + 5 each frame, not eased. The pick takes its own planes (below; Q824).
+
+**The build markers' corners, read in the original's own mesh** (Q838, 2026-10-30, `tools/harness/original/markercorners.py` and `lib/markerheights.py`, `q838/orig/run1`, `ours5`).
+A carried thing's squares are the records `FUN_0053c8d0` appends (x, the height 1.5 for all fourteen of a Belly Bounce's, z; `squares.py`); `FUN_0053df30` shifts a square's x and z by
+the glide words `[0x00820afc]`, `[0x00820af8]` less the pointer cell's corner (when the mode `FUN_0052f840` is 4, `0xe` or `0x13`; the words ease toward the corner by `[0x00700de4]`
+a frame, `FUN_0053c3f0`, `0x0053c61b`) and hands each corner to `FUN_0053ddd0`, which stores into the mesh's arrays (x, y, z in runs of four, 0x30 bytes a quad at `[mesh + 0x64]`,
+the corner count `[mesh + 0x9c]`, the meshes `[0x00871f64]`, `[0x00871ee4]`, `[0x00871ed8]`) a height of **wave + `FUN_004527f0`( x, z ) + the record's height**, the wave being the table
+`0x007b0968` at `mask & round( ( [0x00874fc0] + z + x ) * [0x007b095c] )` (a sine of 4,096 entries). Measured: the original paused (`memhold.py 0x007859a0:I=1`; the phase stood at 381.61407 on every read),
+the glide words held at nine offsets over the pointer cell (63,32) (0,0), (3,4), (7,2), (1,9), (5,5), (2,2), (8,8), (0,5), (5,0), 248 distinct corner points read, the sampler taken as y - wave - 1.5. In
+the four cells of the ridge the points met, (62,33), (63,32), (64,31) and (65,30), all flagged `0x800`, 41 points: the original's sampler is **ours `ScapeHeight` at all 41** (worst difference 0.0000) and `CameraHeight`
+at all 41 (the two agree on these cells; they part only on the 14 unflagged bent ground cells, by up to 0.06, none in view), bilinear at 13 (up to 0.25 off), and the near corner's plane, the rule before Q823, at 23 (up to
+0.50 off): at (633, 324), inside (63,32) (`0x0842`, `0x4` clear), the original's corner is 1.5 + (-2.0), where the near corner's plane gives -2.3 and bilinear -2.18. The other 207 points,
+in unflagged cells, agree with all three to 0.0014, one step of the wave table (four of them read it a step off because their index sits within 0.02 of a half; `PREDICTION.txt` P5). The frame:
+with the glide held at (5, 5) the squares are drawn five units down and across from their cells (`q838/orig/run1/frame-B-glide5_5.png` against `frame-A-rest.png`, 39,348 pixels apart). Not seen: a person or a
+balloon at a flagged cell (the sprites' own sampler is the same function, `FUN_00542010`, not measured in a frame), the corners of a square over a cell with a lift, and a flagged cell on any other theme.
+A second launch (`markerup.sh`, the pointer on (65,30), phase 177.20161, nine offsets, `q838/orig/run2`, `ours6`) met the flagged cells (64,31), (65,30), (66,29) and (67,28): 40 points, ours `ScapeHeight` and `CameraHeight`
+equal to the original's at all 40, bilinear at 4 (up to 0.25 off), the near corner's plane at 14 (up to 0.50 off); its 193 other points agree to 0.0013.
 
 **The pick's terrain** (`FUN_0045bf90`). Over every cell the ray's line crosses and whose corners' height range it
 meets, it intersects the planes of the cell's two triangles cut by **`0x2`** (`0x0045c6b7`): set, the triangles
