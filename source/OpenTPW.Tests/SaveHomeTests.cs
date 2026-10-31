@@ -1,13 +1,15 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.AccessControl;
 
 namespace OpenTPW.Tests;
 
 /// <summary>
 /// Where saves go when the game's own save folder cannot be written (Q984). A folder is made unwritable by putting a file
-/// where it must go, or, off Windows, by taking the write permission from it.
+/// where it must go, or by taking the write permission from it (the mode bits off Windows, an explicit deny in the ACL on it).
 /// </summary>
 [TestClass]
 [DoNotParallelize]
@@ -26,10 +28,18 @@ public class SaveHomeTests
 		Directory.CreateDirectory( Path.GetDirectoryName( game )! );
 	}
 
+	/// <summary>The folders a Windows test denied the account the right to create in, to be given back before the scratch is deleted.</summary>
+	private readonly List<string> _denied = [];
+
 	[TestCleanup]
 	public void Restore()
 	{
-		if ( !OperatingSystem.IsWindows() )
+		if ( OperatingSystem.IsWindows() )
+		{
+			foreach ( var folder in _denied )
+				AllowCreatingIn( folder );
+		}
+		else
 		{
 			foreach ( var folder in Directory.EnumerateDirectories( root, "*", SearchOption.AllDirectories ) )
 				File.SetUnixFileMode( folder, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute );
@@ -38,11 +48,51 @@ public class SaveHomeTests
 		Directory.Delete( root, true );
 	}
 
-	/// <summary>Takes the write permission from the folder; false where the system keeps the right (a superuser, Windows).</summary>
+	/// <summary>
+	/// An explicit deny of creating files and folders in <paramref name="folder"/>, for the account that runs the test: a read-only
+	/// attribute on a folder stops nothing, but a deny entry in its ACL does, whatever the account's other rights are.
+	/// </summary>
+	[System.Runtime.Versioning.SupportedOSPlatform( "windows" )]
+	private static void DenyCreating( string folder )
+	{
+		var rule = new FileSystemAccessRule( System.Security.Principal.WindowsIdentity.GetCurrent().User!,
+			FileSystemRights.CreateFiles | FileSystemRights.CreateDirectories | FileSystemRights.WriteData | FileSystemRights.AppendData,
+			InheritanceFlags.None, PropagationFlags.None, AccessControlType.Deny );
+		var info = new DirectoryInfo( folder );
+		var security = info.GetAccessControl();
+
+		security.AddAccessRule( rule );
+		info.SetAccessControl( security );
+	}
+
+	[System.Runtime.Versioning.SupportedOSPlatform( "windows" )]
+	private static void AllowCreatingIn( string folder )
+	{
+		var info = new DirectoryInfo( folder );
+
+		if ( !info.Exists )
+			return;
+
+		var security = info.GetAccessControl();
+
+		foreach ( FileSystemAccessRule rule in security.GetAccessRules( true, false, typeof( System.Security.Principal.SecurityIdentifier ) ) )
+		{
+			if ( rule.AccessControlType == AccessControlType.Deny )
+				security.RemoveAccessRule( rule );
+		}
+
+		info.SetAccessControl( security );
+	}
+
+	/// <summary>Takes the write permission from the folder; false where the system keeps the right (a superuser).</summary>
 	private bool TakeWriteFrom( string folder )
 	{
 		if ( OperatingSystem.IsWindows() )
-			return false;
+		{
+			DenyCreating( folder );
+			_denied.Add( folder );
+			return SaveHome.Unwritable( folder ) != null;
+		}
 
 		File.SetUnixFileMode( folder, UnixFileMode.UserRead | UnixFileMode.UserExecute );
 		return SaveHome.Unwritable( folder ) != null;

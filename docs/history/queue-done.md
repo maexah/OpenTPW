@@ -11416,6 +11416,19 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   goes to `cmd` or to the debug console, whichever reads first, which a Release build is not promised to have); a start that fails (a `--game` that is not a game, double-clicked or from a shortcut) still shows
   Q978's box and writes `console.log`; a Debug build (`dotnet build`) still opens its console and the debug console
   reads from it. Do not write `save\`.
+- [x] **Q986. The last fixes of run 16: the Windows log test, the tests that reached a player's install, the ACL denies, and Q985's review.**
+  Done 2026-10-31 (lane A, `alexah/782-run16-last-fixes`; Linux seen on the desk; the Windows suite is the Sentinel's to run).
+  (1) `FailedStartLogTests` wrote the expected log path unshortened where the log writes the home folder as `~` (Windows' temporary
+  folder is under it): the expectation goes through `SafePaths` now, and the first test makes the scratch folder the child's home so
+  Linux writes `~/logs/...` too. (2) **AGENTS.md rule 12:** `GameData.Required` reached the player's own install through Q981's registry
+  look (four extra failures from its data, nothing written): the tests' lookup takes only `OPENTPW_GAME_PATH`, asked as the one `--game`
+  folder (`GameData.Locate`), and no variable means no game on every system; `GameDataTests` prove it. (3) The three `SaveHome` tests that
+  skipped on Windows deny creating files in the folder with an ACL entry (`System.IO.FileSystemAclExtensions`, no package) and give it
+  back in cleanup; not run on Linux. Q985's findings: 1 (README's clause), 2 (the screen's cross after the box's cross puts the display
+  back, `DisplayToUndo`), 3 (no RESTART GAME where the options could not be written, `AsksToRestart`; both deviations are in `ui.md`),
+  4 (the "not yet on Windows" words in WORKS and `ui.md`), 5 (the tests' account, in STATUS), 6 (STATUS's claim), 7 (`saves.md`'s second
+  autosave) are fixed. Q985 held on the real zip on Windows at `2aa8495f` and is recorded in WORKS and STATUS. Confirmed on the final
+  binary: `q986/`. Tools: `lobbyoptions.py` gained `dispN`, `locksave` and `exit=cross`.
 
 ## B. Docs and comments
 

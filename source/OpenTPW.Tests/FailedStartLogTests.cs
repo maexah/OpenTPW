@@ -43,6 +43,14 @@ public class FailedStartLogTests
 		return RepoFiles.Run( host!, [dll, .. arguments], environment, workingFolder )!.Value;
 	}
 
+	/// <summary>
+	/// A path as the log writes it: the child's home folder is <c>~</c>. On Windows the home folder is the account's known folder,
+	/// which no variable moves and which holds the temporary folder, so a path of a test's own there is written with <c>~</c>.
+	/// </summary>
+	private static string AsTheLogWritesIt( string homeNamedToTheChild, string path )
+		=> new SafePaths( [(OperatingSystem.IsWindows() ? Environment.GetFolderPath( Environment.SpecialFolder.UserProfile ) : homeNamedToTheChild, SafePaths.HomeName)],
+			Environment.UserName, ignoreCase: OperatingSystem.IsWindows() || OperatingSystem.IsMacOS() ).Scrub( path );
+
 	/// <summary>The line the log keeps of the box that was kept off: the message it would have shown, on one line.</summary>
 	private static string BoxLine( string log )
 		=> log.Split( '\n' ).Single( line => line.Contains( $"Start failure: no message box, {StartFailure.SuppressVariable} is set" ) );
@@ -55,7 +63,8 @@ public class FailedStartLogTests
 
 		try
 		{
-			var (exit, output) = Start( folder, new() { ["OPENTPW_LOG_DIR"] = logs }, "--game", folder );
+			// The home folder is the scratch folder, so the log's place is under it and is written with ~ here as it is on Windows.
+			var (exit, output) = Start( folder, new() { ["OPENTPW_LOG_DIR"] = logs, ["HOME"] = folder, ["USERPROFILE"] = folder }, "--game", folder );
 
 			Assert.AreEqual( 1, exit, output );
 
@@ -70,7 +79,7 @@ public class FailedStartLogTests
 			var box = BoxLine( log );
 			StringAssert.Contains( box, StartFailure.Head );
 			StringAssert.Contains( box, "does not hold Theme Park World" );
-			StringAssert.Contains( box, $"Log: {Path.Join( logs, ConsoleLog.FileName )}" );
+			StringAssert.Contains( box, $"Log: {AsTheLogWritesIt( folder, Path.Join( logs, ConsoleLog.FileName ) )}" );
 			StringAssert.Contains( output, $"this run is kept in {Path.Join( logs, ConsoleLog.FileName )}", "the terminal says where it is" );
 			Assert.IsFalse( File.Exists( Path.Join( folder, ConsoleLog.FileName ) ), "nothing is written in the folder that was named" );
 		}
@@ -179,7 +188,7 @@ public class FailedStartLogTests
 
 			var box = BoxLine( log );
 			StringAssert.Contains( box, "Exception: ", "the box names the exception" );
-			StringAssert.Contains( box, $"Log: {Path.Join( logs, ConsoleLog.FileName )}" );
+			StringAssert.Contains( box, $"Log: {AsTheLogWritesIt( Path.Join( folder, "home" ), Path.Join( logs, ConsoleLog.FileName ) )}" );
 		}
 		finally { Directory.Delete( folder, true ); }
 	}

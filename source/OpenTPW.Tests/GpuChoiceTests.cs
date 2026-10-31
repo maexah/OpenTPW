@@ -207,6 +207,39 @@ public class GpuChoiceTests
 	}
 
 	/// <summary>
+	/// <b>RESTART GAME is not asked where the options were not written</b> (Q986): the card was not kept, and the box would hold the
+	/// screen modal over OPTIONS NOT SAVED, which the tick would then leave the game with untold.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> a rule that ignores the lost write, or one that never asks, fails a step.</remarks>
+	[TestMethod]
+	public void RestartGameIsNotAskedWhereTheOptionsWereNotWritten()
+	{
+		var before = new GameOptions { SecondaryVideoCard = false };
+		var now = before.Copy();
+		now.SecondaryVideoCard = true;
+
+		Assert.IsTrue( UI.OptionsScreen.AsksToRestart( before, now, optionsLost: false ), "a changed card, written: asked" );
+		Assert.IsFalse( UI.OptionsScreen.AsksToRestart( before, now, optionsLost: true ), "a changed card, not written: told as OPTIONS NOT SAVED instead" );
+		Assert.IsFalse( UI.OptionsScreen.AsksToRestart( before, before.Copy(), optionsLost: false ), "no change: not asked" );
+	}
+
+	/// <summary>
+	/// <b>The cross puts back the display the tick put into effect</b> (Q986): after RESTART GAME's cross the screen is still open with
+	/// the window already changed, so the screen's cross must change it back; where the tick changed no display there is nothing to undo.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> a rule that compares only the mode, only the size, or never undoes, fails a step.</remarks>
+	[TestMethod]
+	public void TheCrossUndoesOnlyADisplayTheTickPutIntoEffect()
+	{
+		var before = new GameOptions { DisplayMode = DisplayMode.Windowed, FullScreenSize = new VideoMode( 1280, 720, 60 ) };
+
+		Assert.IsFalse( UI.OptionsScreen.DisplayToUndo( null, before ), "the tick applied nothing" );
+		Assert.IsFalse( UI.OptionsScreen.DisplayToUndo( (before.DisplayMode, before.FullScreenSize), before ), "applied the display the screen opened with" );
+		Assert.IsTrue( UI.OptionsScreen.DisplayToUndo( (DisplayMode.BorderlessFullScreen, before.FullScreenSize), before ), "another mode" );
+		Assert.IsTrue( UI.OptionsScreen.DisplayToUndo( (before.DisplayMode, new VideoMode( 1920, 1080, 60 )), before ), "another size" );
+	}
+
+	/// <summary>
 	/// <b>The fallback itself</b> (Q980, Q985): a device that cannot be made while the choice's settings are in force is made again
 	/// once after they are taken back; with none in force the failure is the caller's, and a second failure is too.
 	/// </summary>

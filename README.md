@@ -93,8 +93,8 @@ on Linux, `~/Library/Application Support/OpenTPW/save` on macOS) and plays as us
 chose. This is a deviation from the original, which would keep them in the game's folder. The test is a file really made
 there, so a folder you can write is kept. A `save/` that already holds players but cannot be written is read by nothing:
 the players in it are not copied (Q902 is open), and the game says so once each start on screen. Where that folder exists but cannot be
-written either, the game still runs and says on screen when a save, the options or a player is lost; where it cannot be made at all, OpenTPW stops and a box says why: a box reading
-`PARK NOT SAVED`, `OPTIONS NOT SAVED` or `PLAYER NOT SAVED`, with the path of `console.log`.
+written either, the game still runs and says on screen when a save, the options or a player is lost: a box reading
+`PARK NOT SAVED`, `OPTIONS NOT SAVED` or `PLAYER NOT SAVED`, with the path of `console.log`. Where it cannot be made at all, OpenTPW stops and a box says why.
 
 </details>
 
@@ -173,7 +173,7 @@ dotnet build source/OpenTPW.sln
 dotnet test source/OpenTPW.sln
 ```
 
-Most tests read the real game files and skip when the game is not found; set `OPENTPW_GAME_PATH` to run them all.
+Most tests read the real game files and skip when the game is not found; set `OPENTPW_GAME_PATH` to run them all. That variable is the only place the tests look: never your working directory, the build's folder or, on Windows, an install the registry names, so a run on a PC with the game installed does not touch your copy.
 
 <details>
 <summary>Launch options and the debug console</summary>

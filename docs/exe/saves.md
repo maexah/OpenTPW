@@ -591,7 +591,7 @@ online only (not decoded). Restart Park (reason 1, states 0xd and 0xe) and a loa
 The second site is the options screen's RESTART GAME box (UITEXT 403, `GameOptions_Accept`): its tick,
 `GameOptions_RestartBox_Tick` (`0x00424bb0`, handed to the box at `0x004238a8`), writes leave reason 2 and, when no
 lobby object stands (`[0x00f82884]` nought, so in a park), the autosave at once (`0x00424bd7`), sets `[0x00786b80]`
-and calls `FUN_004a4580`; in the lobby it sets the lobby object's `+0x14` to 3 instead. OpenTPW's options screen
+and calls `FUN_004a4580`; in the lobby it sets the lobby object's `+0x14` to 3 instead (`[0x00786b80]` is stored first, at `0x00424bc1`, on both paths, and again in the park). In a park the autosave may be written a second time: reason 2 reaches state `0xb` (`0x0054fe1b`), whose autosave call (`0x0054ff10`) sits behind a compare with `[0x00fb3b7c]` that is not decoded here. The same file, nothing a player sees; OpenTPW writes it once. OpenTPW's options screen
 asks it for a changed video card only (`ui.md`, "The tick answers a changed card with RESTART GAME"): the tick quits from the lobby and, in a park, does what Exit To Lobby does (the autosave, then the lobby again); display and resolution apply without it.
 
 Entering the theme again then finds the autosave as the newest `*.TPW*` ("Entering a park", below), so a park left

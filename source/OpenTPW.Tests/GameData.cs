@@ -1,3 +1,4 @@
+using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace OpenTPW.Tests;
@@ -6,8 +7,10 @@ namespace OpenTPW.Tests;
 /// Where the tests that read real game files get them from.
 ///
 /// <para>
-/// The path is asked of the game itself, so there is one answer to "where is Theme Park World" and the tests
-/// cannot drift away from it.
+/// A test run reaches only the folder <c>OPENTPW_GAME_PATH</c> names, asked of the game's own <see cref="GameDir"/> so that
+/// folder is judged as the game judges it. Nothing else is looked in: not the working directory, not the build's folder, and
+/// not the places a Windows install can be, because a PC with Sim Theme Park installed would then run the suite against a
+/// player's own copy (AGENTS.md rule 12; Q986). No variable means no game, on every system.
 /// </para>
 /// <para>
 /// Where there is no installation the tests needing one are skipped rather than failed, so a contributor who
@@ -16,6 +19,15 @@ namespace OpenTPW.Tests;
 /// </summary>
 internal static class GameData
 {
+	public const string GamePathVariable = "OPENTPW_GAME_PATH";
+
+	/// <summary>
+	/// Whether the folder <paramref name="named"/> holds the game, asked through <paramref name="find"/> with that one folder
+	/// given as <c>--game</c>. Nothing named is false without asking, so the game's other places are never reached.
+	/// </summary>
+	internal static bool Locate( string? named, Func<string[], bool> find )
+		=> !string.IsNullOrWhiteSpace( named ) && find( ["--game", named] );
+
 	/// <summary>Mounted once and kept: every test using it would otherwise read the archives again each time.</summary>
 	private static BaseFileSystem? _data;
 
@@ -29,8 +41,8 @@ internal static class GameData
 			return _data;
 
 		// GameDir says where it looked through the log, which TestRun makes before any test runs.
-		if ( !GameDir.Find( [] ) )
-			Assert.Inconclusive( "skipped: no Theme Park World installation found" );
+		if ( !Locate( Environment.GetEnvironmentVariable( GamePathVariable ), GameDir.Find ) )
+			Assert.Inconclusive( $"skipped: {GamePathVariable} does not name a Theme Park World installation" );
 
 		var data = new BaseFileSystem( GameDir.Data );
 

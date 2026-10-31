@@ -30,6 +30,9 @@ internal static class SaveTrouble
 	/// <summary>Whether a failure or a notice waits to be told.</summary>
 	internal static bool Pending => _what != null || _notice != null;
 
+	/// <summary>Whether a failed write waits to be told (not the start's notice): what was just written was lost.</summary>
+	internal static bool LostAWrite => _what != null;
+
 	/// <summary>
 	/// Something the player is told once, not a failure: where saves go when the game's folder cannot be written
 	/// (<see cref="SaveHome"/>, Q984). Shown by the same poll, ahead of a failure.

@@ -100,6 +100,9 @@ internal sealed class OptionsScreen : UiWindow
 	/// <summary>The options as they were when the screen opened, for the cross to put back.</summary>
 	private readonly GameOptions _before = GameOptions.Current.Copy();
 
+	/// <summary>The display the tick put into effect, until the screen closes: the cross after RESTART GAME's cross has to undo it.</summary>
+	private (DisplayMode Mode, VideoMode Size)? _applied;
+
 	/// <summary>The green screen everything sits on, over the dimmed window - see the constructor.</summary>
 	private readonly UiControl _screen;
 
@@ -326,12 +329,14 @@ internal sealed class OptionsScreen : UiWindow
 			&& Window.Current is { } window )
 		{
 			Display.Apply( window, Options.DisplayMode, Options.FullScreenSize );
+			_applied = (Options.DisplayMode, Options.FullScreenSize);
 		}
 
 		// 0x004237d4 raises the restart level for a changed video card, and at that level 0x004237f0 shows RESTART GAME
 		// (UITEXT 403) in place of closing: the options above are already kept, so the cross leaves them kept and the
-		// screen open (0x00424c10 only clears the level), and the tick leaves the game (RestartGame).
-		if ( NeedsRestart( _before, Options ) )
+		// screen open (0x00424c10 only clears the level), and the tick leaves the game (RestartGame). Not where the options
+		// could not be written (AsksToRestart).
+		if ( AsksToRestart( _before, Options, SaveTrouble.LostAWrite ) )
 		{
 			Log.Info( $"Options: kept; the video card is now {(Options.SecondaryVideoCard ? "Secondary" : "Primary")}, drawn on from the next start, so RESTART GAME is asked" );
 			Stack.Open( new MessageBox( Stack, Localization.Get( UIStrings.RestartGame ), RestartGame ) );
@@ -351,6 +356,17 @@ internal sealed class OptionsScreen : UiWindow
 	internal static bool NeedsRestart( GameOptions before, GameOptions now ) => now.SecondaryVideoCard != before.SecondaryVideoCard;
 
 	/// <summary>
+	/// Whether the tick shows RESTART GAME: <see cref="NeedsRestart"/>, unless the options could not be written (a deviation,
+	/// Q986). The card was not kept then, so there is nothing to restart for, and the box would hold the screen modal over
+	/// OPTIONS NOT SAVED until the tick left the game with it still untold.
+	/// </summary>
+	internal static bool AsksToRestart( GameOptions before, GameOptions now, bool optionsLost ) => NeedsRestart( before, now ) && !optionsLost;
+
+	/// <summary>Whether the cross has to put the window back: the tick put a display into effect that is not the one the screen opened with.</summary>
+	internal static bool DisplayToUndo( (DisplayMode Mode, VideoMode Size)? applied, GameOptions before )
+		=> applied is { } shown && (shown.Mode != before.DisplayMode || shown.Size != before.FullScreenSize);
+
+	/// <summary>
 	/// RESTART GAME's tick (<c>GameOptions_RestartBox_Tick</c>, 0x00424bb0): the screen closes and the game is left by the
 	/// way it was opened from. In the lobby the original gives the lobby a choice that is not "play a park" and its
 	/// state machine quits (`Game_StateMachine` 0x0054e360, state 3 to 0xc); in a park it writes leave reason 2 and the autosave, as Exit To Lobby
@@ -368,6 +384,15 @@ internal sealed class OptionsScreen : UiWindow
 	{
 		GameOptions.Current = _before;
 		GameOptions.Current.ApplySound();
+
+		// After RESTART GAME's cross the tick's display is already in effect and in opentpw.cfg; the original has no such
+		// case, as its display change waits for the restart. The window goes back with the options (Q986).
+		if ( DisplayToUndo( _applied, _before ) && Window.Current is { } window )
+		{
+			Display.Apply( window, _before.DisplayMode, _before.FullScreenSize );
+			SaveFolder.SaveDisplay( tell: true );
+		}
+
 		Log.Info( "Options: cancelled" );
 		Stack.Close( this );
 	}

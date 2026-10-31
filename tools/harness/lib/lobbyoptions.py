@@ -1,8 +1,11 @@
-"""lobbyoptions.py WORKDIR CASE FOLDER [gpu=LINE] [vc=N] [clickN] [tick] [box=tick|cross] [ENV=VAL ...]: one start of the build on a private game
+"""lobbyoptions.py WORKDIR CASE FOLDER [gpu=LINE] [vc=N] [dispN] [clickN] [locksave] [tick] [box=tick|cross] [exit=cross] [ENV=VAL ...]: one start of the build on a private game
 folder (made on first use under WORKDIR/game-FOLDER, kept between cases that name the same FOLDER, so a saved Config.tcf carries
 to the next start), the lobby, the Options screen opened from the lobby menu, screenshots (lobby, options, click1..N), optionally
 N clicks on the Video Card row and the tick, then the log's Graphics card / GPU / Options lines. box=tick|cross answers the RESTART GAME box the tick raises after a card change (Q985): cross ticks again and shows the box again, tick waits for the game to end. gpu=LINE sets opentpw.cfg's gpu
-line ("-" removes it); vc=N sets Config.tcf's video card field (byte 16; byte 12 is graphics quality). Output in WORKDIR/runs/CASE.
+line ("-" removes it); dispN clicks the Display row's arrow N times before the card's clicks (Windowed, FullScreen, Borderless in turn; the row is checked in the log and
+the screenshots); locksave makes the private save/ folder read-only once the Options screen is open (restored at the end), so the start found it writable and the tick's writes fail
+as a folder that cannot be written does (Q982, Q986; a read-only file is no use, the save replaces it); exit=cross
+presses the Options screen's own cross after the RESTART GAME box's cross (Q986), and the opentpw.cfg display line and the window's size are printed before and after; vc=N sets Config.tcf's video card field (byte 16; byte 12 is graphics quality). Output in WORKDIR/runs/CASE.
 BIN names the build's folder (default this repo's Debug build). Run with the harness Python (Xlib), on the desktop display.
 Q983: TOOLING.md, the table row `lib/lobbyoptions.py`."""
 import os, sys, re, shutil, struct
@@ -11,10 +14,13 @@ REPO = os.path.dirname(os.path.dirname(os.path.dirname(LIB)))
 os.environ["OPENTPW_NO_MESSAGE_BOX"] = "1"
 import gamefolder
 HERE = os.path.abspath(os.path.expanduser(sys.argv[1])); CASE, FOLDER = sys.argv[2], sys.argv[3]
-GPU = VC = None; CLICKS = 0; TICK = False; BOX = None
+GPU = VC = None; CLICKS = 0; TICK = False; BOX = None; DISP = 0; LOCKSAVE = False; EXIT = None
 for kv in sys.argv[4:]:
     if kv.startswith("gpu="): GPU = kv[4:]
     elif kv.startswith("vc="): VC = int(kv[3:])
+    elif kv.startswith("disp"): DISP = int(kv[4:] or 1)
+    elif kv == "locksave": LOCKSAVE = True
+    elif kv.startswith("exit="): EXIT = kv[5:]
     elif kv.startswith("click"): CLICKS = int(kv[5:] or 1)
     elif kv == "tick": TICK = True
     elif kv.startswith("box="): BOX = kv[4:]; TICK = True
@@ -34,6 +40,8 @@ if VC is not None:
     b = bytearray(open(tcf, "rb").read()); b[16:20] = struct.pack("<I", VC); open(tcf, "wb").write(b)
 def vcbyte():
     return struct.unpack("<I", open(tcf, "rb").read()[16:20])[0] if os.path.exists(tcf) else None
+def displayline():
+    return next((l.strip() for l in open(cfg) if l.startswith("display")), None) if os.path.exists(cfg) else None
 os.environ["OPENTPW_LOG_DIR"] = OUT
 exec(open(os.path.join(LIB, "gamedrive.py")).read())
 try:
@@ -46,9 +54,18 @@ try:
     x, y, w_, h = [int(v) for v in m.groups()]
     move(x + w_ / 2, y + h / 2, "Options"); button(1, "Options"); time.sleep(1.5)
     shot("options", 0.5)
+    if LOCKSAVE: os.chmod(os.path.join(PRIVATE, "save"), 0o555); print("  save/ made read-only")
     l = ask("control 1d4d3", "control"); print("  ", l)
     m = re.search(r"at \((-?\d+),(-?\d+)\) size \((\d+),(\d+)\)", l)
     x, y, w_, h = [int(v) for v in m.groups()]
+    if DISP:
+        l = ask("control 1d4d2", "control"); print("  ", l)
+        m = re.search(r"at \((-?\d+),(-?\d+)\) size \((\d+),(\d+)\)", l)
+        dx, dy, dw, dh = [int(v) for v in m.groups()]
+        print(f"  opentpw.cfg before: {displayline()}  window {win.get_geometry().width}x{win.get_geometry().height}")
+        for i in range(DISP):
+            move(dx + dw / 2, dy + dh / 2, "the Display arrow"); button(1, "arrow"); time.sleep(1.0)
+            shot(f"disp{i+1}", 0.5)
     for i in range(CLICKS):
         move(x + w_ / 2, y + h / 2, "the Video Card arrow"); button(1, "arrow"); time.sleep(1.0)
         shot(f"click{i+1}", 0.5)
@@ -56,6 +73,7 @@ try:
         l = ask("control ffffffff", "control"); m = re.search(r"at \((-?\d+),(-?\d+)\) size \((\d+),(\d+)\)", l)
         tx, ty, tw, th = [int(v) for v in m.groups()]
         move(tx + tw / 2, ty + th / 2, "the tick"); button(1, "tick"); time.sleep(1.5)
+        if not BOX: shot("after-tick", 1.0)
     if BOX:
         # RESTART GAME (Q985): the box after a card change. Its cross (9873c8) leaves the Options screen open, so "cross" ticks again
         # and photographs the second box; its tick (9873c9) quits the lobby, so "tick" waits for the game to end and prints the exit code.
@@ -69,6 +87,8 @@ try:
             box_button("9873c8", "the box's cross"); shot("after-cross", 0.5)
             box_button("ffffffff", "the Options tick again"); shot("again", 0.5)
             box_button("9873c8", "the box's cross again"); shot("after-cross2", 0.5)
+            if EXIT == "cross":
+                box_button("fffffffe", "the Options screen's cross"); time.sleep(1.5); shot("screen-closed", 0.5)
         else:
             box_button("9873c9", "the box's tick")
             for _ in range(40):
@@ -76,7 +96,9 @@ try:
                 time.sleep(0.5)
             print(f"  exit code after the box's tick: {game.poll()}")
     print(f"  Config.tcf video card dword at the end: {vcbyte()}")
+    if DISP: print(f"  opentpw.cfg after: {displayline()}  window {win.get_geometry().width}x{win.get_geometry().height}")
 finally:
     finish()
+    if LOCKSAVE: os.chmod(os.path.join(PRIVATE, "save"), 0o755)
 for l in open(os.path.join(OUT, "run.log"), errors="replace"):
-    if re.search(r"Graphics card|GPU:|opentpw.cfg|Options:|video card|Saves: wrote|Message box|quitting|Front end", l): print("LOG>", l.rstrip())
+    if re.search(r"Graphics card|GPU:|opentpw.cfg|Options:|Display:|video card|Saves: wrote|NOT SAVED|Save trouble|Message box|quitting|Front end", l): print("LOG>", l.rstrip())
