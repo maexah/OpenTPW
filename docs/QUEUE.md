@@ -168,10 +168,6 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
     button). An arrow clicked without repeating plays `Select3` (`0xbd`, the bar's flags `0x10`); one held past 500 ms
     plays **nothing**, neither at the repeats nor on release (the repeat messages are not `0x100`, and the release posts
     none after a repeat). The thumb and the track play nothing.
-- [ ] **Q853. Leaving a park destroys image views a descriptor set in flight still uses.** Found by Q957's validation run (`lib/vkvalidate.sh`; `q957/runs/p5-control-notouch`, a control with no shader touched): from the stock
-  jungle park, `lobby` makes the Khronos layer print 8 distinct errors `VUID-vkDestroyImageView-imageView-01026` (24 log lines), `vkDestroyImageView() can't be called on VkImageView ... that is currently in use by VkDescriptorSet ...`,
-  and no other kind. Cause not looked for: the textures' `ScheduleDelete` (`Texture.cs`) and the deletion queue's order against the sets that bind them (`Material.DestroyResourceSets`) are where to start. Lavapipe has not crashed on it; a real
-  card may. Acceptance: the same run prints no `VUID` line, and the lobby after the leave draws as before.
 - [ ] **Q820. What Q818, Q821 and Q822 left: the stacked and loop pylons, the original's picture of a flipped diagonal, and the heights by the original's samplers.** From Q818 (run 14, lane A;
   its piece (3), the face normals and the control word, is Q819; its piece (1), the ground's per-cell diagonal, is Q821, which ticks Q398; the decode
   of piece (4) and the float note are Q822). (2) Left by Q817: the pylon under a stacked piece is drawn with the alone-on-its-cell arms (the bottom of a stack that is not its top shows the `0x400` node and hides the `0x800` one, `0x00432ff8`..`0x0043304d`; ours hides `mc_bridge` on it); a stacked pylon stands on the

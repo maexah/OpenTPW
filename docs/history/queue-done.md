@@ -11502,6 +11502,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   same with the bug put back (`verifying-audio-by-capture`).
   **Built (2026-10-31):** the bed is out of `LobbyAudio` (the original has none), kept out rather than a said deviation: the goal is the original as closely
   as possible. The globe page's two voices are Q62's, noted there. Measured: `docs/exe/audio.md`, "The lobby was entirely non-positional"; the stored tool `lib/lobbyvoices.py`.
+- [x] **Q853. Leaving a park destroys image views a descriptor set in flight still uses.** Found by Q957's validation run (`lib/vkvalidate.sh`; `q957/runs/p5-control-notouch`, a control with no shader touched): from the stock
+  jungle park, the Khronos layer printed 8 errors `VUID-vkDestroyImageView-imageView-01026` (each message names the VUID three times: 24 occurrences, 8 messages), `vkDestroyImageView() can't be called on VkImageView ... that is currently in use by VkDescriptorSet ...`,
+  and no other kind. Not the park's leave alone: **four after entering the park and four after leaving it**, the four textures `LoadingScreen.Release` deletes at the end of each load (`_picture`, `_darkRed`, `_red`, `_status`).
+  Done (`q853/`, lane B, 2026-10-31): the cause is the deletion queue, which runs right after a frame is presented with that frame still executing on the GPU, so a view destroyed there can still be bound by the set the frame drew with
+  (a `Device.WaitForIdle()` before the queue ran made the same run print 0). `Texture.Delete` now asks `Render.ScheduleRetire`, and `Renderer.Present` submits the frame with a fence **only when something waits**
+  (`FenceRetireQueue`; one queue runs submissions in order, so that fence signalling means every frame up to it is done); the fences are reused. The same run prints no `VUID` line, the lobby after the leave draws as before, `mem retire` counts what was let go.
+  Left (not filed: nothing placed shows it): the other things the deletion queue lets go of (buffers, resource sets, pipelines) are not behind a fence; the layer reports none of them, and it has no in-use check for a descriptor-set layout or a shader module, so its silence says nothing of those.
 
 ## B. Docs and comments
 

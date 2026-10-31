@@ -2955,6 +2955,7 @@ public static class DebugConsole
 			+ $"allocated ever {GC.GetTotalAllocatedBytes() / 1048576.0:F0}MB, collected-first {collect})" );
 		lines.Add( "mem " + GpuMemory.Summary() );
 		lines.Add( "mem vulkan: " + VulkanAllocated() );
+		lines.Add( $"mem retire: {Render.RetireCounts.Ran} texture views let go after their frame's fence, {Render.RetireCounts.Pending} waiting" );
 		lines.Add( "mem wads: " + WadAccount() );
 
 		return lines;

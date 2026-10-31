@@ -302,7 +302,8 @@ public partial class Texture : Asset
 		var texture = NativeTexture;
 		var view = NativeTextureView;
 
-		Render.ScheduleDelete( () =>
+		// Not the deletion queue: that runs while the frame just drawn may still be executing with this view bound (Q853)
+		Render.ScheduleRetire( () =>
 		{
 			view.Dispose();
 			texture.Dispose();

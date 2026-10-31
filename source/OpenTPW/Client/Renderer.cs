@@ -271,7 +271,7 @@ public partial class Renderer
 	{
 		CommandList.End();
 
-		Device.SubmitCommands( CommandList );
+		Device.SubmitCommands( CommandList, _retireQueue.FenceForSubmit() );
 		Device.SwapBuffers();
 	}
 
