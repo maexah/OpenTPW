@@ -151,7 +151,8 @@ public class LobbyCameraMode : CameraMode
 	/// stand. <see cref="DebugSelect"/>, <see cref="DebugOrbit"/> and <see cref="DebugSettle"/> are all
 	/// ignored while it is flying, because <see cref="Update"/> returns before it reads any of them.
 	/// Two lobbies in one run therefore cannot be photographed from the same viewpoint, which is what
-	/// this is for: the orbit branch takes its position from the island and the orbit angle alone.
+	/// this is for: after `attract off`, <see cref="DebugSettle"/> puts the orbit branch's position at the island and the orbit angle alone
+	/// (without it the first orbit pass eases from the flight's eye, which is random).
 	/// </para>
 	///
 	/// <para>
@@ -881,14 +882,16 @@ public class LobbyCameraMode : CameraMode
 	/// (500, 500, 100) over the look point (500, 500, 0), the middle of the four islands.
 	///
 	/// <para>
-	/// Who sees the seed: a lobby built with a player picked (a return from a park). A launch's lobby has nobody playing, so
+	/// Who starts from the seed: a lobby built with a player picked (a return from a park). A launch's lobby has nobody playing, so
 	/// its attract pass copies the flight's eye over the seed on its first pass (<see cref="Attract"/>) and a player chosen
-	/// out of the flight eases from the flight.
+	/// out of the flight eases from the flight. Whether the original draws the seed in a launch's lobby before that first pass is not measured.
 	/// </para>
 	/// <para>
 	/// <b>Where ours differs.</b> The original's first pass takes the lobby's delta cap, 500 ms (<c>0x005d5c6f</c>), whenever
 	/// the build took longer; ours takes <see cref="FirstPassStep"/> of <see cref="Time.RawDelta"/> on an orbit first pass,
-	/// and the attract flight's own first pass (the other first pass) takes <see cref="Time.Delta"/>, the 0.1 s frame clamp.
+	/// and the attract flight's own first pass (the other first pass) takes <see cref="Time.Delta"/>, the 0.1 s frame clamp. Ours also
+	/// draws no frame at the seed: the first pass runs before the first lobby frame is drawn, where the original's opening frames
+	/// show the seed (Q855).
 	/// </para>
 	/// </summary>
 	internal static void BeginLobby()

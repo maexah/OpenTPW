@@ -3678,3 +3678,10 @@ state machine.
   (the flight, at 10 units a second, steps 1 unit where the original's steps 5 after a half-second hitch); nothing placed reaches it in a normal
   run. Decide whether the lobby, as the one scene that clamps at 0.5 s, takes its own limit (`docs/exe/lobby.md`, "The
   orbit's seed"); a measurement of the original's flight across a stall comes first.
+  (3) The first lobby frame after a quit, found by the review of Q749's fix (`q749-fix/after/quit.mkv`, about 1.6 s in, lavapipe, about 0.1 s): two film
+  frames read "Park Name" over a flat cyan sky with no clouds, the next "Lost Kingdom" and the normal sky; the original's first panel reads Lost
+  Kingdom and its film has no such change. The label is proven in code: `Level.Unload` (`Level.cs`, `ForgetIsland`) nulls `CurrentIsland`,
+  `IslandPanel` reads it in `Level.Update`, and the camera sets it only later, in `Level.Render`; the control shows the same label. The cloudless
+  sky is newly seen because the fix's first frame looks at the sky where the control's looked at the sea; its cause is not traced (the sky's or
+  weather's first update). Give the panel the island before the first `Update` when a player is current (the lobby build setting `CurrentIsland`
+  from `IslandIndex`), and find which pass sets the sky's tint.

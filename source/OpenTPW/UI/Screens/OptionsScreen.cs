@@ -100,7 +100,7 @@ internal sealed class OptionsScreen : UiWindow
 	/// <summary>The options as they were when the screen opened, for the cross to put back.</summary>
 	private readonly GameOptions _before = GameOptions.Current.Copy();
 
-	/// <summary>The display the tick put into effect, until the screen closes: the cross after RESTART GAME's cross has to undo it.</summary>
+	/// <summary>The display the last tick put into effect, until the screen closes: the next tick compares with it, and the cross after RESTART GAME's cross has to undo it.</summary>
 	private (DisplayMode Mode, VideoMode Size)? _applied;
 
 	/// <summary>The green screen everything sits on, over the dimmed window - see the constructor.</summary>
@@ -313,7 +313,10 @@ internal sealed class OptionsScreen : UiWindow
 	}
 
 	/// <summary>The tick (-1): the changes stay - 0x004237f0, less its checks - see the class remarks.</summary>
-	private void Keep()
+	private void Keep() => Keep( Window.Current is { } window ? ( mode, size ) => Display.Apply( window, mode, size ) : null );
+
+	/// <summary>The tick with the way the display is put into effect given: none where there is no window (a test).</summary>
+	internal void Keep( Action<DisplayMode, VideoMode>? apply )
 	{
 		Options.ApplySound();
 		var kept = KeptSize( Options.DisplayMode, Options.FullScreenSize, Chosen() );
@@ -334,7 +337,7 @@ internal sealed class OptionsScreen : UiWindow
 		// modes does not take the screen with it, and a tick that changed nothing about the display
 		// leaves the window alone entirely (a first run's full screen, whose size KeptSize has just set, is a change). What
 		// the window shows is what an earlier tick of this screen put into effect, else what it opened with (Q987).
-		ApplyDisplay( Window.Current is { } window ? ( mode, size ) => Display.Apply( window, mode, size ) : null );
+		ApplyDisplay( apply );
 
 		// 0x004237d4 raises the restart level for a changed video card, and at that level 0x004237f0 shows RESTART GAME
 		// (UITEXT 403) in place of closing: the options above are already kept, so the cross leaves them kept and the

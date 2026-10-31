@@ -43,7 +43,10 @@ public class OptionsKeepTests
 		Directory.Delete( root, true );
 	}
 
-	/// <remarks><b>Mutations:</b> the <c>KeptSize</c> call taken out of <c>Keep</c>: the size stays nought and is saved so; the <c>ScreenResolution</c> line taken out: Config.tcf keeps 1.</remarks>
+	/// <remarks>
+	/// <b>Mutations:</b> the <c>KeptSize</c> call taken out of <c>Keep</c>: the size stays nought and is saved so; the <c>ScreenResolution</c> line taken out: Config.tcf keeps 1;
+	/// the <c>ApplyDisplay</c> call taken out of <c>Keep</c>, or moved above the <c>KeptSize</c> block: nothing, or the size of nothing, reaches <c>apply</c>.
+	/// </remarks>
 	[TestMethod]
 	public void TheTickKeepsAFirstRunsFullScreenAtTheModeTheSliderShows()
 	{
@@ -56,20 +59,72 @@ public class OptionsKeepTests
 		var shown = new VideoMode( 2560, 1440, 144 );
 		typeof( UI.OptionsScreen ).GetField( "_modes", BindingFlags.NonPublic | BindingFlags.Instance )!.SetValue( screen, new[] { shown } );
 
-		typeof( UI.OptionsScreen ).GetMethod( "Keep", BindingFlags.NonPublic | BindingFlags.Instance )!.Invoke( screen, null );
+		var applied = new List<(DisplayMode, VideoMode)>();
+		screen.Keep( ( mode, size ) => applied.Add( (mode, size) ) );
 
 		Assert.AreEqual( shown, GameOptions.Current.FullScreenSize );
 		Assert.AreEqual( 2, GameOptions.Current.ScreenResolution, "Config.tcf gets the nearest of the original's three, as the slider's move sets it" );
 		StringAssert.Contains( File.ReadAllText( Path.Combine( root, "opentpw.cfg" ) ), "fullscreen 2560 1440 144" );
+		CollectionAssert.AreEqual( new[] { (DisplayMode.FullScreen, shown) }, applied, "Keep's own call: the window is asked for the mode the slider shows, once" );
 	}
 
 	/// <summary>
-	/// <b>The tick's own call</b> (Q987): a first tick that changes the display applies it, a second that sets it back to the opening one applies that
-	/// too (RESTART GAME's cross leaves the screen open), and one that keeps what is in effect applies nothing; with no window nothing is applied.
+	/// <b>The display the tick applies</b> (Q987), through <c>ApplyDisplay</c> (what <c>Keep</c> calls; <c>Keep</c>'s own call is the test above): a first tick that
+	/// changes the display applies it with its size, a second that sets it back to the opening one applies that too (RESTART GAME's cross leaves the
+	/// screen open), and one that keeps what is in effect applies nothing, at the same size or not; with no window nothing is applied.
 	/// </summary>
-	/// <remarks><b>Mutation:</b> <c>Keep</c> comparing with the opening options alone (the old rule) fails the second step; not remembering what was applied fails the third.</remarks>
+	/// <remarks>
+	/// <b>Mutations:</b> comparing with the opening options alone (the old rule) fails "set back to the opening display" here and the Keep test below; not remembering what was applied fails "not again" (the borderless step);
+	/// <c>apply( Options.DisplayMode, _before.FullScreenSize )</c> fails "the size asked for"; <c>_applied</c> remembering <c>_before.FullScreenSize</c> fails "not again at the new size".
+	/// </remarks>
 	[TestMethod]
 	public void TheTickAppliesTheDisplayAgainstWhatIsInEffect()
+	{
+		var shown = new VideoMode( 1280, 720, 60 );
+		var other = new VideoMode( 1920, 1080, 60 );
+		GameOptions.Current = new GameOptions { DisplayMode = DisplayMode.Windowed, FullScreenSize = shown };
+		var stack = new UI.WindowStack();
+		UI.OptionsScreen.Open( stack, () => { } );
+		var screen = stack.Windows.OfType<UI.OptionsScreen>().Single();
+
+		var applied = new List<(DisplayMode, VideoMode)>();
+		Action<DisplayMode, VideoMode> apply = ( mode, size ) => applied.Add( (mode, size) );
+
+		screen.ApplyDisplay( apply );
+		Assert.AreEqual( 0, applied.Count, "nothing changed, nothing applied" );
+
+		GameOptions.Current.DisplayMode = DisplayMode.BorderlessFullScreen;
+		screen.ApplyDisplay( null );
+		Assert.AreEqual( 0, applied.Count, "no window, nothing applied" );
+
+		screen.ApplyDisplay( apply );
+		screen.ApplyDisplay( apply );
+		CollectionAssert.AreEqual( new[] { (DisplayMode.BorderlessFullScreen, shown) }, applied, "applied once, and not again while it is the one in effect" );
+
+		GameOptions.Current.DisplayMode = DisplayMode.Windowed;
+		screen.ApplyDisplay( apply );
+		CollectionAssert.AreEqual( new[] { (DisplayMode.BorderlessFullScreen, shown), (DisplayMode.Windowed, shown) }, applied, "set back to the opening display: the window still shows the first tick's" );
+
+		GameOptions.Current.DisplayMode = DisplayMode.FullScreen;
+		GameOptions.Current.FullScreenSize = other;
+		screen.ApplyDisplay( apply );
+		screen.ApplyDisplay( apply );
+		Assert.AreEqual( 3, applied.Count, "not again at the new size" );
+		Assert.AreEqual( (DisplayMode.FullScreen, other), applied[2], "the size asked for is the options' own, not the opening one" );
+
+		GameOptions.Current.FullScreenSize = shown;
+		screen.ApplyDisplay( apply );
+		Assert.AreEqual( (DisplayMode.FullScreen, shown), applied[^1], "the size set back to the opening one is still a change from the one in effect" );
+		Assert.AreEqual( 4, applied.Count );
+	}
+
+	/// <summary>
+	/// <b>The tick's own sequence</b> (Q987), through <c>Keep( apply )</c>: the display and the video card changed, the tick (RESTART GAME's box opens and
+	/// the screen stays), the display set back to the opening one, the tick again: the second tick puts the window back.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> <c>DisplayToApply</c> comparing with the opening options alone (the old rule) applies nothing on the second tick.</remarks>
+	[TestMethod]
+	public void ASecondTickThroughKeepSetsTheWindowBack()
 	{
 		var shown = new VideoMode( 1280, 720, 60 );
 		GameOptions.Current = new GameOptions { DisplayMode = DisplayMode.Windowed, FullScreenSize = shown };
@@ -77,22 +132,16 @@ public class OptionsKeepTests
 		UI.OptionsScreen.Open( stack, () => { } );
 		var screen = stack.Windows.OfType<UI.OptionsScreen>().Single();
 
-		var applied = new List<DisplayMode>();
-		Action<DisplayMode, VideoMode> apply = ( mode, _ ) => applied.Add( mode );
-
-		screen.ApplyDisplay( apply );
-		CollectionAssert.AreEqual( System.Array.Empty<DisplayMode>(), applied, "nothing changed, nothing applied" );
+		var applied = new List<(DisplayMode, VideoMode)>();
+		Action<DisplayMode, VideoMode> apply = ( mode, size ) => applied.Add( (mode, size) );
 
 		GameOptions.Current.DisplayMode = DisplayMode.BorderlessFullScreen;
-		screen.ApplyDisplay( null );
-		CollectionAssert.AreEqual( System.Array.Empty<DisplayMode>(), applied, "no window, nothing applied" );
-
-		screen.ApplyDisplay( apply );
-		screen.ApplyDisplay( apply );
-		CollectionAssert.AreEqual( new[] { DisplayMode.BorderlessFullScreen }, applied, "applied once, and not again while it is the one in effect" );
+		GameOptions.Current.SecondaryVideoCard = true;
+		screen.Keep( apply );
+		CollectionAssert.AreEqual( new[] { (DisplayMode.BorderlessFullScreen, shown) }, applied, "the first tick applies the new display" );
 
 		GameOptions.Current.DisplayMode = DisplayMode.Windowed;
-		screen.ApplyDisplay( apply );
-		CollectionAssert.AreEqual( new[] { DisplayMode.BorderlessFullScreen, DisplayMode.Windowed }, applied, "set back to the opening display: the window still shows the first tick's" );
+		screen.Keep( apply );
+		CollectionAssert.AreEqual( new[] { (DisplayMode.BorderlessFullScreen, shown), (DisplayMode.Windowed, shown) }, applied, "the second tick puts the window back to the opening display" );
 	}
 }

@@ -313,8 +313,8 @@ public static class DebugConsole
 				break;
 
 			// Runs the world on for a counted number of fixed-size frames and stops again, so a
-			// caller can put the lobby at exactly the same point every run: pause, `attract off`, pick an
-			// island, step, shoot (with nobody playing, `island` pins nothing until the attract camera is off -
+			// caller can put the lobby at exactly the same point every run: `attract off`, pick an island, `settle`, pause,
+			// step, shoot (with nobody playing, `island` pins nothing until the attract camera is off -
 			// docs/VERIFYING.md rule 98). Poll `state` for stepping=0 to know it has finished.
 			case "step":
 				Time.Paused = true;
@@ -338,8 +338,9 @@ public static class DebugConsole
 			// Which of the lobby's two cameras runs. With nobody playing it FLIES - and that flight is
 			// seeded afresh every time a lobby is built, so `island`, `orbit` and `settle` are all
 			// ignored and two lobbies in one run stand in different places. `attract off` forces the
-			// orbiting camera instead, whose position comes from the island and the orbit angle alone,
-			// which is the only way to photograph the lobby before and after something from one spot.
+			// orbiting camera instead, whose position comes from the island and the orbit angle alone once
+			// `settle` has been sent (else it eases from the flight's eye), which is the only way to photograph the lobby before
+			// and after something from one spot.
 			case "attract":
 				LobbyCameraMode.DebugHoldOrbit = parts.Length > 1 && parts[1].ToLowerInvariant() == "off";
 				Reply( $"attract {(LobbyCameraMode.DebugHoldOrbit ? "off - orbiting the selected island" : "on - the camera flies itself")}" );

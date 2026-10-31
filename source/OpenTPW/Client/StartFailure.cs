@@ -81,32 +81,56 @@ internal static class StartFailure
 	/// Shows <paramref name="message"/> in an error box and answers whether SDL did. The log is told which, so a
 	/// start that showed nothing says why.
 	/// </summary>
-	public static unsafe bool Show( string message )
+	public static bool Show( string message ) => Show( message, ShowWithSdl, line => Log.Info( line ), line => Log.Warning( line ) );
+
+	/// <summary>The SDL box: null where it was shown, else what SDL said. Throws where SDL itself would not load.</summary>
+	private static unsafe string? ShowWithSdl( string message )
+	{
+		var sdl = NeoVeldrid.Sdl2.Sdl2Window.SdlInstance;
+
+		return sdl.ShowSimpleMessageBox( (uint)Silk.NET.SDL.MessageBoxFlags.Error, Title, message, (Silk.NET.SDL.Window*)null ) == 0
+			? null
+			: sdl.GetErrorS();
+	}
+
+	/// <summary><see cref="Show(string)"/> with the box and the log's two lines given, for a test.</summary>
+	internal static bool Show( string message, Func<string, string?> box, Action<string> info, Action<string> warn )
 	{
 		if ( Environment.GetEnvironmentVariable( SuppressVariable ) is { Length: > 0 } )
 		{
-			Log.Info( $"Start failure: no message box, {SuppressVariable} is set: {message.ReplaceLineEndings( " | " )}" );
+			info( $"Start failure: no message box, {SuppressVariable} is set: {message.ReplaceLineEndings( " | " )}" );
 			return false;
 		}
 
+		string? error;
+
 		try
 		{
-			var sdl = NeoVeldrid.Sdl2.Sdl2Window.SdlInstance;
-
-			if ( sdl.ShowSimpleMessageBox( (uint)Silk.NET.SDL.MessageBoxFlags.Error, Title, message, (Silk.NET.SDL.Window*)null ) == 0 )
-			{
-				Log.Info( "Start failure: message box shown" );
-				return true;
-			}
-
-			Log.Warning( $"Start failure: no message box, SDL said '{sdl.GetErrorS()}'" );
+			error = box( message );
 		}
 		catch ( Exception e )
 		{
 			// SDL itself would not load: the log and the terminal are all there is.
-			Log.Warning( $"Start failure: no message box, SDL could not be used ({e.GetType().Name}: {e.Message})" );
+			warn( $"Start failure: no message box, SDL could not be used ({e.GetType().Name}: {e.Message})" );
+			return false;
 		}
 
-		return false;
+		if ( error is not null )
+		{
+			warn( $"Start failure: no message box, SDL said '{error}'" );
+			return false;
+		}
+
+		// Outside the try: the log's hook may draw (the loading screen's), and a throw from it says nothing about the box, which was shown.
+		try
+		{
+			info( "Start failure: message box shown" );
+		}
+		catch ( Exception e )
+		{
+			Console.Error.WriteLine( $"Start failure: the log's hook threw after the box line ({e.GetType().Name}: {e.Message})" );
+		}
+
+		return true;
 	}
 }

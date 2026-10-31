@@ -122,11 +122,10 @@ internal sealed class LoadingScreen : IDisposable
 		Logger.OnLog += OnLog;
 		_current = this;
 
-		Log.Info( $"Loading {what}" );
-
-		// A frame that throws here leaves no using block to dispose this, so it is taken down before the exception goes on.
+		// A frame that throws here (the log line itself redraws) leaves no using block to dispose this, so it is taken down before the exception goes on.
 		try
 		{
+			Log.Info( $"Loading {what}" );
 			Pump( force: true );
 		}
 		catch

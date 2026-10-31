@@ -7,10 +7,12 @@ namespace OpenTPW.Tests;
 /// Where the tests that read real game files get them from.
 ///
 /// <para>
-/// A test run reaches only the folder <c>OPENTPW_GAME_PATH</c> names, asked of the game's own <see cref="GameDir"/> so that
-/// folder is judged as the game judges it. Nothing else is looked in: not the working directory, not the build's folder, and
+/// Tests mount the game only through <c>OPENTPW_GAME_PATH</c>, asked of the game's own <see cref="GameDir"/> so that
+/// folder is judged as the game judges it. Nothing else is looked in to mount: not the working directory, not the build's folder, and
 /// not the places a Windows install can be, because a PC with Sim Theme Park installed would then run the suite against a
-/// player's own copy (AGENTS.md rule 12; Q986). No variable means no game, on every system.
+/// player's own copy (AGENTS.md rule 12; Q986). No variable means no game, on every system. The exception is the two
+/// <c>GameDir.Find</c> tests of <c>WindowsInstallTests</c>, which walk the build's folder and the working directory, with the registry's
+/// folders faked, and mount nothing; and on Windows <c>Required</c> reads the registered folders whenever the variable is set, and ignores them.
 /// </para>
 /// <para>
 /// Where there is no installation the tests needing one are skipped rather than failed, so a contributor who

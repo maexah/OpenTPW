@@ -388,11 +388,10 @@ and `+0x20`. The island camera keeps the eye it eases at `+0x28` and its look po
 **The attract pass ends by copying the flight's eye and look point into `+0x28` and `+0x40`** (`0x005e0dfd`..`0x005e0e26`, the fall-through
 of the attract path from `0x005e07cc`, every pass), so the seed is overwritten on the first attract pass. The ease `FUN_005e1210` updates `+0x28` and `+0x40` in place from their targets
 `+0x34` and `+0x4c` (the stores at `0x005e12c5`..`0x005e12cc` and `0x005e12ea` on); of the plain stores to them in `0x005dfcd0`..`0x005e3c00`
-only the constructor's (`0x005dfd5e`, `0x005dfd90`) and the attract tail's (`0x005e0e03`, `0x005e0e1a`) are the island camera's (the float stores of
-other code were not listed; `0x005e1fa0` and `0x005e2750` write only `+0xc` and `+0x14`, by the review's listing). **The orbit pass copies them back** after its ease (`call 0x005e1210`, then `0x005e07a0`..`0x005e07c7`, joining at
+only the constructor's (`0x005dfd5e`, `0x005dfd90`) and the attract tail's (`0x005e0e03`, `0x005e0e1a`) are the island camera's (no other store in `0x005dfcd0`..`0x005e3c00` reaches them; `0x005e13d8`, `0x005e2473` and `0x005e1bb8` are the render camera's `+0x28`..`+0x30`; `0x005e1fa0` and `0x005e2750` write only `+0xc` and `+0x14`). **The orbit pass copies them back** after its ease (`call 0x005e1210`, then `0x005e07a0`..`0x005e07c7`, joining at
 `0x005e0e20`): `+0x28` to `+0x78`, `+0x40` to `+0xb4`. So a player chosen out of the attract flight eases from the flight's eye and look
-point, and a Select New Player flight takes off from where the orbit stood. Only a lobby entered with a player (a return from a park) shows
-the seed. Measured at a pick from the flight (the slot click of `q749/orig/run.sh`, lines 79 and 80 of `a-eye.txt`): eye (573.187, 81.048, 475.556)
+point, and a Select New Player flight takes off from where the orbit stood. Only a lobby entered with a player (a return from a park) eases from
+the seed; whether a launch's lobby draws the seed before its first attract pass is not measured. Measured at a pick from the flight (the slot click of `q749/orig/run.sh`, lines 79 and 80 of `a-eye.txt`): eye (573.187, 81.048, 475.556)
 then (559.593, 77.212, 475.117), look (600.051, 17.472, 400.036) then (568.443, 16.686, 400.030), delta 0.79: 0.079 of the eye's way and
 0.158 of the look point's, a continuous ease, pitch 38.4 then 38.7 degrees below the horizon.
 

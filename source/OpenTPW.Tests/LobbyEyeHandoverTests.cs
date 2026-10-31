@@ -15,7 +15,9 @@ namespace OpenTPW.Tests;
 /// <para>
 /// <b>What these cannot see.</b> The islands are stand-ins made without their constructors and handed to the camera
 /// directly, so that a lobby builds its islands and runs this camera every frame rests on the game run. The expected
-/// numbers are written out from the law, not read from the code under test.
+/// numbers are written out from the law, not read from the code under test. Nor can they see that the renderer carries a
+/// build's length in the next frame's delta (<c>Time.RawDelta</c> is set by hand): a <c>_lastFrame</c> reset after a load
+/// would make the first pass an ordinary frame's, and only the log line "the first pass after a build steps" shows it.
 /// </para>
 /// </summary>
 [TestClass]
@@ -57,7 +59,7 @@ public class LobbyEyeHandoverTests
 	/// </summary>
 	/// <remarks>
 	/// <b>Mutations:</b> the attract pass not copying its eye and look into the island camera's (the cut to the seed);
-	/// the copy of the eye alone; the copy of the look point alone.
+	/// the copy of the eye alone; the copy of the look point alone; the copy at the top of the pass, before the flight's step.
 	/// </remarks>
 	[TestMethod]
 	public void APlayerChosenOutOfTheFlightEasesFromTheFlightsEye()
@@ -77,6 +79,20 @@ public class LobbyEyeHandoverTests
 
 		AssertNear( new Vector3( 300f, 650f, 60f ), GetStatic( "_position" ), 0.001f, "the island camera's eye is the flight's" );
 		AssertNear( new Vector3( 350f, 400f, 30f ), GetStatic( "_lookAt" ), 0.001f, "and its look point" );
+
+		// A pass that does step: the copy is of the flight after its step (0x005e0dfd comes after the flight's moves), not the pass before's.
+		Time.RawDelta = Time.Delta = 0.05f;
+		camera.Update();
+
+		var stepped = GetStatic( "_wanderPosition" );
+		Assert.IsTrue( (stepped - new Vector3( 300f, 650f, 60f )).Length > 0.1f, "the flight stepped in this pass" );
+		AssertNear( stepped, GetStatic( "_position" ), 0.0001f, "the copy is of the flight after its step: the eye" );
+		AssertNear( GetStatic( "_lookPosition" ), GetStatic( "_lookAt" ), 0.0001f, "and the look point" );
+
+		SetStatic( "_wanderPosition", new Vector3( 300f, 650f, 60f ) );
+		SetStatic( "_lookPosition", new Vector3( 350f, 400f, 30f ) );
+		Time.RawDelta = Time.Delta = 0f;
+		camera.Update();
 
 		LobbyCountedGapsTests.SetCurrentPlayer( new Player( 0, "Test", new PlayerFile() ) );
 		Time.RawDelta = Time.Delta = 0.05f;

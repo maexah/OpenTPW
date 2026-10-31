@@ -86,7 +86,7 @@ if globals().get("AUDIO_FILE"):   # the game's own mix written to a file (f32le 
     _LIB = _LIB.replace('SDL_AUDIODRIVER="dummy"', f'SDL_AUDIODRIVER="disk", SDL_DISKAUDIOFILE="{AUDIO_FILE}"')
 exec(_LIB)
 if _OFF:
-    print(f"OFF-SCREEN on {_DISP} (lavapipe, textured; the frame rate is the software driver's)")
+    print(f"OFF-SCREEN on {_DISP} (lavapipe, textured): photograph a change to what is drawn on the desktop, not here")
 
 score = [0, 0]
 def said(ok, what):

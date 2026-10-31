@@ -53,6 +53,40 @@ public class GameDataTests
 		Assert.AreEqual( 0, asked, "GameDir.Find was called although no folder was named" );
 	}
 
+	/// <summary>
+	/// <b><c>Required</c>'s own line</b> (Q987): with the variable unset it is Inconclusive and does not call <c>GameDir.Find</c> at all (any call clears and refills
+	/// <c>Reasons</c>); the cache and the variable are put back as they were.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> <c>GameDir.Find( [] )</c> put back into <c>Required</c> (the working directory, the build's folder and the registry's places) empties <c>Reasons</c>.</remarks>
+	[TestMethod]
+	public void RequiredWithNoVariableIsInconclusiveAndLeavesGameDirAlone()
+	{
+		var field = typeof( GameData ).GetField( "_data", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static )!;
+		var cached = field.GetValue( null );
+		var old = System.Environment.GetEnvironmentVariable( GameData.GamePathVariable );
+		var folder = System.IO.Directory.CreateTempSubdirectory( "tpw-gamedata-req" ).FullName;
+
+		try
+		{
+			// Plant a reason: a named folder that is no game. Only a later call of Find would clear them.
+			Assert.IsFalse( GameDir.Find( ["--game", System.IO.Path.Join( folder, "not-the-game" )] ) );
+			var planted = GameDir.Reasons.ToList();
+			Assert.IsTrue( planted.Count > 0 );
+
+			field.SetValue( null, null );
+			System.Environment.SetEnvironmentVariable( GameData.GamePathVariable, null );
+
+			Assert.ThrowsException<AssertInconclusiveException>( () => GameData.Required() );
+			CollectionAssert.AreEqual( planted, GameDir.Reasons.ToList(), "GameDir.Find was called by Required" );
+		}
+		finally
+		{
+			System.Environment.SetEnvironmentVariable( GameData.GamePathVariable, old );
+			field.SetValue( null, cached );
+			System.IO.Directory.Delete( folder, true );
+		}
+	}
+
 	/// <remarks>A folder named that the game does not accept is the same end, after one ask with that folder alone.</remarks>
 	[TestMethod]
 	public void ANamedFolderThatIsNotTheGameIsInconclusiveAfterOneAsk()

@@ -152,4 +152,47 @@ public class StartFailureTests
 
 		Assert.IsTrue( lines.Any( line => line.Contains( "head |  | reason |  | Log: /l" ) ), string.Join( "\n", lines ) );
 	}
+
+	/// <summary>
+	/// <b>A box that was shown is reported as shown</b> even where the log's hook throws on the line that says so (the
+	/// loading screen's hook redraws, and after a failed draw it throws: desk2, <c>ui.shader</c> removed).
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the <c>info</c> call put back inside the <c>try</c> that wraps the box: <c>Show</c> answers false and warns "SDL could not be used".</remarks>
+	[TestMethod]
+	public void ABoxThatWasShownIsNotReportedAsNotShownWhenTheLogThrows()
+	{
+		var old = Environment.GetEnvironmentVariable( StartFailure.SuppressVariable );
+		var warned = new List<string>();
+
+		try
+		{
+			Environment.SetEnvironmentVariable( StartFailure.SuppressVariable, null );
+
+			var shown = StartFailure.Show( "m", _ => null, _ => throw new InvalidOperationException( "the hook drew" ), warned.Add );
+
+			Assert.IsTrue( shown );
+			Assert.AreEqual( 0, warned.Count, string.Join( " | ", warned ) );
+		}
+		finally { Environment.SetEnvironmentVariable( StartFailure.SuppressVariable, old ); }
+	}
+
+	[TestMethod]
+	public void ABoxThatSdlCouldNotShowIsReportedAsNotShown()
+	{
+		var old = Environment.GetEnvironmentVariable( StartFailure.SuppressVariable );
+
+		try
+		{
+			Environment.SetEnvironmentVariable( StartFailure.SuppressVariable, null );
+
+			var warned = new List<string>();
+			Assert.IsFalse( StartFailure.Show( "m", _ => "no display", _ => { }, warned.Add ) );
+			StringAssert.Contains( warned.Single(), "SDL said 'no display'" );
+
+			warned.Clear();
+			Assert.IsFalse( StartFailure.Show( "m", _ => throw new InvalidOperationException( "no sdl" ), _ => { }, warned.Add ) );
+			StringAssert.Contains( warned.Single(), "SDL could not be used (InvalidOperationException: no sdl)" );
+		}
+		finally { Environment.SetEnvironmentVariable( StartFailure.SuppressVariable, old ); }
+	}
 }
