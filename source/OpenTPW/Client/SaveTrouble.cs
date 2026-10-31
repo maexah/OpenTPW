@@ -40,7 +40,7 @@ internal static class SaveTrouble
 	internal static void Tell( string text ) => _notice = text;
 
 	/// <summary>
-	/// A write failed. Only a folder that cannot be written counts: a file the game left alone on purpose
+	/// A write failed. Only a folder that cannot be written counts: a fault in a file's format
 	/// (<see cref="InvalidDataException"/>) is not this. One failure is told: the first waiting, except that the park
 	/// outranks the player's file written before it and the options.
 	/// </summary>

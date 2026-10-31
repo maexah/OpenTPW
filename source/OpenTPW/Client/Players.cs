@@ -56,8 +56,8 @@ internal sealed class Players
 			ConsoleLog.HidePlayer( name, slot );
 
 			// A folder with no gms.dat is a player nobody has saved yet, and is written like any other. A
-			// gms.dat that would not read is not a new player: its stand-in stays read-only even if the file
-			// becomes readable before saving, and only a successful select replaces it.
+			// gms.dat that would not read is not a new player: its stand-in is not what the file holds, so the file
+			// is copied aside if it becomes readable before saving.
 			var missing = file == null && !SaveFolder.HasPlayerFile( slot, name );
 
 			_slots[slot] = new Player( slot, name, file ?? (missing ? new PlayerFile() : PlayerFile.Read( Stream.Null )) )
@@ -109,7 +109,7 @@ internal sealed class Players
 		}
 
 		else if ( SaveFolder.HasPlayerFile( slot, player.Name ) )
-			player.File.PreserveAfterFailedReload();
+			player.File.NoteFailedReload();
 
 		else
 			player.FileMissing = true;
@@ -158,7 +158,7 @@ internal sealed class Player( int slot, string name, PlayerFile file )
 
 	/// <summary>
 	/// No gms.dat was in their folder when it was last read. Saving then makes one; but a file that has
-	/// appeared since was never read, and is left alone - see <see cref="SaveFolder.SavePlayer"/>.
+	/// appeared since was never read, and is copied aside before it is written over - see <see cref="SaveFolder.SavePlayer"/>.
 	/// </summary>
 	public bool FileMissing { get; set; }
 

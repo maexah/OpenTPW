@@ -11429,6 +11429,14 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   4 (the "not yet on Windows" words in WORKS and `ui.md`), 5 (the tests' account, in STATUS), 6 (STATUS's claim), 7 (`saves.md`'s second
   autosave) are fixed. Q985 held on the real zip on Windows at `2aa8495f` and is recorded in WORKS and STATUS. Confirmed on the final
   binary: `q986/`. Tools: `lobbyoptions.py` gained `dispN`, `locksave` and `exit=cross`.
+- [x] **Q216. The save-preservation policy. Alexah's call first.** Found by the 2026-10-04 review (`u9-foundation-2`,
+  `-5`). OpenTPW will not rewrite a gms.dat or Config.tcf it did not read whole; the original overwrites. A Config.tcf
+  of version 0, of another version or with a tail blocks saving the options for good, and nothing on screen says a
+  save was refused (rule 11: say it in the game's own style). Decide whether to keep it. Either way, measure the
+  stricter `ExpandedMemoryStream.ReadBytes` over all 47 `.sdt`, the 42 `.str` and the saves: a short read it used to
+  pad now throws. **Decided by Alexah (2026-10-31):** back up, then overwrite, for both files: an odd `Config.tcf` or `gms.dat` is
+  copied beside itself (a name the game does not read) and then written, as the original writes it; nothing is refused silently.
+  The `ReadBytes` measure stays.
 
 ## B. Docs and comments
 

@@ -75,16 +75,17 @@ public sealed class PlayerFile
 	public bool IsComplete { get; private set; } = true;
 
 	/// <summary>
-	/// Whether writing can preserve every understood record. A partial read, an unfamiliar version or
-	/// trailing data makes the file read-only. This is OpenTPW's preservation policy, not the original's.
+	/// Whether this is a complete version 1 file read to its end, or one made here. A partial read, an unfamiliar
+	/// version or trailing data clears it; writing still replaces the file as the original does, and
+	/// <c>SaveFolder</c> copies the file aside first when this is clear.
 	/// </summary>
-	public bool CanWrite { get; private set; } = true;
+	public bool ReadWhole { get; private set; } = true;
 
-	/// <summary>
-	/// Retains a cached profile for reading after its reload failed, without permission to save it.
-	/// Only replacing it with a successfully read profile restores writing; this is OpenTPW's preservation policy.
-	/// </summary>
-	public void PreserveAfterFailedReload() => CanWrite = false;
+	/// <summary>Marks a cached profile whose reload failed: what is held may not match the file, so the file is copied aside before it is replaced.</summary>
+	public void NoteFailedReload() => ReadWhole = false;
+
+	/// <summary>Marks the file on disk as this profile's own, after it was written.</summary>
+	public void NoteWritten() => ReadWhole = true;
 
 	/// <summary>Whether it holds the player's options whole - always, for a file made here rather than read.</summary>
 	public bool HasOptions { get; private set; } = true;
@@ -209,7 +210,7 @@ public sealed class PlayerFile
 
 	public static PlayerFile Read( Stream stream )
 	{
-		var file = new PlayerFile { HasOptions = false, CanWrite = false };
+		var file = new PlayerFile { HasOptions = false, ReadWhole = false };
 
 		try
 		{
@@ -225,7 +226,7 @@ public sealed class PlayerFile
 			}
 
 			file.Record( record );
-			file.CanWrite = version == CurrentVersion && stream.ReadByte() == -1;
+			file.ReadWhole = version == CurrentVersion && stream.ReadByte() == -1;
 		}
 		catch ( Exception e ) when ( e is EndOfStreamException or InvalidDataException )
 		{
@@ -237,9 +238,6 @@ public sealed class PlayerFile
 
 	public void Write( Stream stream )
 	{
-		if ( !CanWrite )
-			throw new InvalidDataException( "The player file was not fully understood; writing it would discard unread data" );
-
 		var record = RecordStream.ForWriting( stream );
 
 		var version = CurrentVersion;

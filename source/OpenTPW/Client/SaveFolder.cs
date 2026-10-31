@@ -18,9 +18,11 @@ namespace OpenTPW;
 /// shipped beside it copies to "config.tcf" - so a file is written back under whatever name it was found by.
 /// </para>
 /// <para>
-/// A file that will not read is reported and left alone, and whatever it held keeps its default. Every
+/// A file that will not read is reported, and whatever it held keeps its default. Every
 /// file is written whole to one beside it and then moved into place, so a save cut short never leaves half
-/// a file behind.
+/// a file behind. Config.tcf and gms.dat are written over as the original writes them, but one this game did not
+/// read whole (another version, a tail, a short file, or one that appeared since it was read) is first copied
+/// beside itself under a name the game does not read (<see cref="BackUp"/>).
 /// </para>
 /// </summary>
 internal static class SaveFolder
@@ -41,8 +43,11 @@ internal static class SaveFolder
 
 	private static string[]? _themes;
 
-	// A failed load leaves defaults in memory. A later readable destination does not make those
-	// defaults safe to write over it. Scoped to the mapped filesystem so another installation is independent.
+	// Appended to a file's name for the copy made before an odd one is written over; neither game reads it.
+	private const string BackupSuffix = ".opentpw-backup";
+
+	// A failed load leaves defaults in memory, so whatever is in Config.tcf when they are written was never
+	// read: it is copied aside first. Scoped to the mapped filesystem so another installation is independent.
 	private static BaseFileSystem? _unreadConfig;
 
 	/// <summary>
@@ -72,7 +77,7 @@ internal static class SaveFolder
 			if ( ConfigFile.Read( stream ) is { } file )
 			{
 				GameOptions.Current.Apply( file );
-				if ( file.CanWrite )
+				if ( file.ReadWhole )
 					_unreadConfig = null;
 			}
 
@@ -91,21 +96,19 @@ internal static class SaveFolder
 
 		try
 		{
-			if ( ReferenceEquals( _unreadConfig, SaveFileSystem ) )
-				throw new InvalidDataException( "the options were not loaded successfully; leaving the original unchanged" );
-
 			if ( Find( ConfigName ) is { } existing )
 			{
 				path = existing;
-				using var original = SaveFileSystem.OpenRead( path );
-				if ( ConfigFile.Read( original ) is not { CanWrite: true } )
-					throw new InvalidDataException( "the existing options were not fully understood; leaving them unchanged" );
+
+				if ( ReferenceEquals( _unreadConfig, SaveFileSystem ) || !IsWhole( path, stream => ConfigFile.Read( stream )?.ReadWhole == true ) )
+					BackUp( path );
 			}
 
 			using var memory = new MemoryStream();
 			GameOptions.Current.ToConfigFile().Write( memory );
 
 			SaveFileSystem.WriteAllBytes( path, memory.ToArray() );
+			_unreadConfig = null;
 			Log.Info( $"Saves: wrote the options to {path}" );
 		}
 		catch ( Exception e )
@@ -113,6 +116,39 @@ internal static class SaveFolder
 			Log.Warning( $"Saves: the options could not be written to {path} - {e.Message}" );
 			SaveTrouble.Failed( "OPTIONS", e );
 		}
+	}
+
+	/// <summary>
+	/// Whether the file at <paramref name="path"/> is one <paramref name="whole"/> takes as read whole. A file that ends
+	/// early or is not in the format is not; one that will not open throws, and so nothing is written over it.
+	/// </summary>
+	private static bool IsWhole( string path, Func<Stream, bool> whole )
+	{
+		try
+		{
+			using var stream = SaveFileSystem.OpenRead( path );
+			return whole( stream );
+		}
+		catch ( Exception e ) when ( e is EndOfStreamException or InvalidDataException )
+		{
+			return false;
+		}
+	}
+
+	/// <summary>
+	/// Copies a file beside itself, to a name neither game reads, before it is written over: <c>.opentpw-backup</c>,
+	/// then <c>.opentpw-backup2</c> and on, so an earlier copy is never replaced. A copy that cannot be made throws,
+	/// and the file is left as it is.
+	/// </summary>
+	private static void BackUp( string path )
+	{
+		var backup = path + BackupSuffix;
+
+		for ( var n = 2; SaveFileSystem.FileExists( backup ); n++ )
+			backup = $"{path}{BackupSuffix}{n}";
+
+		SaveFileSystem.WriteAllBytes( backup, SaveFileSystem.ReadAllBytes( path ) );
+		Log.Warning( $"Saves: {path} was not read whole by this game, so it is copied to {backup} before it is written" );
 	}
 
 	/// <summary>
@@ -348,7 +384,7 @@ internal static class SaveFolder
 	/// <param name="slot">The player's slot.</param>
 	/// <param name="name">The player's name.</param>
 	/// <param name="file">What to write.</param>
-	/// <param name="expectMissing">No gms.dat was there when this player was read; one found now is someone else's.</param>
+	/// <param name="expectMissing">No gms.dat was there when this player was read; one found now was never read, so it is copied aside.</param>
 	/// <returns>Whether the file was written.</returns>
 	public static bool SavePlayer( int slot, string name, PlayerFile file, bool expectMissing = false )
 	{
@@ -357,20 +393,13 @@ internal static class SaveFolder
 
 		try
 		{
-			// A readable prefix is useful in memory, but never permission to replace the original.
-			// Recheck the destination too: LoadPlayer may have failed and left a default PlayerFile.
-			if ( !file.CanWrite )
-				throw new InvalidDataException( "the player was not fully understood; leaving the original unchanged" );
-
+			// What is there is a file this profile did not read whole - or never read at all, if it appeared since.
 			if ( Find( PlayerFileName, folder ) is { } existing )
 			{
-				if ( expectMissing )
-					throw new InvalidDataException( "a player file has appeared that was never read; leaving it unchanged" );
-
 				path = existing;
-				using var original = SaveFileSystem.OpenRead( path );
-				if ( !PlayerFile.Read( original ).CanWrite )
-					throw new InvalidDataException( "the existing player was not fully understood; leaving it unchanged" );
+
+				if ( expectMissing || !file.ReadWhole || !IsWhole( path, stream => PlayerFile.Read( stream ).ReadWhole ) )
+					BackUp( path );
 			}
 
 			file.Options = GameOptions.Current.ToPlayerOptions();
@@ -378,6 +407,7 @@ internal static class SaveFolder
 			file.Write( memory );
 
 			SaveFileSystem.WriteAllBytes( path, memory.ToArray() );
+			file.NoteWritten();
 			Log.Info( $"Saves: wrote {path}" );
 			return true;
 		}

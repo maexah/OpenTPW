@@ -185,14 +185,6 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   in ours (the round trip: the same things, scripts and hoardings) and in the original under Proton (`loadfile.sh`), and say what
   each shows. Acceptance: (a) and (b) each named and settled or built, (c) each load run and its result written in `WORKS.md`'s
   Q810 entry.
-- [ ] **Q216. The save-preservation policy. Alexah's call first.** Found by the 2026-10-04 review (`u9-foundation-2`,
-  `-5`). OpenTPW will not rewrite a gms.dat or Config.tcf it did not read whole; the original overwrites. A Config.tcf
-  of version 0, of another version or with a tail blocks saving the options for good, and nothing on screen says a
-  save was refused (rule 11: say it in the game's own style). Decide whether to keep it. Either way, measure the
-  stricter `ExpandedMemoryStream.ReadBytes` over all 47 `.sdt`, the 42 `.str` and the saves: a short read it used to
-  pad now throws. **Decided by Alexah (2026-10-31):** back up, then overwrite, for both files: an odd `Config.tcf` or `gms.dat` is
-  copied beside itself (a name the game does not read) and then written, as the original writes it; nothing is refused silently.
-  The `ReadBytes` measure stays.
 - [ ] **Q957. A shader recompile leaks the old compiled shaders.** From an outside audit (Alexah,
   2026-10-30), checked against `8a566e88` (`VERIFY-gpt-perf.md`, P6, P2); the text is corrected to the code at `3bc9708e` (Q954). Each
   shader has a `FileSystemWatcher` in every build (`Shader.cs:44-58`); `Recompile` (`:79-87`) replaces the vertex/fragment shaders
@@ -821,14 +813,12 @@ filed the items that cite it.
   with the most base vertices in every shipped outline; the corpus test reads `Meshes[0]` and never counts them.
   Measure it over all 129 outlines and assert it, or take the sentence out. (3) `ProfilePreservationTests` has no
   profile that reads at `Load` and fails at `Select`: the unreadable one is unreadable before `Load`, the cached one
-  is deleted. Write that case (readable, then mode 0, then restored) and put the `CanWrite` revoke back out to see it
-  fail. (4) `ParkBoughtClosedTests.ALoadedDisconnectedRideKeepsItsSavedDoor` builds a new ride and rebinds it; no save
+  is deleted. Q216 wrote that case (`AFailedReloadOfAGoodProfileBacksUpWhateverOpensLater`; the revoke is now
+  `NoteFailedReload`, a mutant of it failing it): leave (3) out. (4) `ParkBoughtClosedTests.ALoadedDisconnectedRideKeepsItsSavedDoor` builds a new ride and rebinds it; no save
   is read. Load one, or name the test for what it does. (5) `docs/exe/ride-operation.md` says the remeasure tail
   `FUN_004de1f0` leaves at once when `+0x68` is non-zero; `ParkRideOperation.ReopenAfterRemeasure` clears
   `AssignedStaff` whatever was decided and cites `0x004de48c`. Read the tail in Ghidra and make the two agree. Also
-  two sentences: `docs/exe/saves.md`'s "None of this is the original's behaviour" follows a sentence that says the
-  first save is the original's, and `STATUS.md`'s "cached profiles stay read-only" is true of an unreadable file
-  only. Put the bug back for each test (`AGENTS.md` rule 6). No game run.
+  two sentences, which Q216's rewrite of `docs/exe/saves.md` and `WORKS.md` took out. Put the bug back for each test (`AGENTS.md` rule 6). No game run.
 
 - [ ] **Q219. Light the models from the normals the file stores. Decode first.** Found by the 2026-10-04 effort
   audit (`r-f1`, `r-c2`). The original's model lighter `FUN_00574660` takes one normal per vertex-order entry from the

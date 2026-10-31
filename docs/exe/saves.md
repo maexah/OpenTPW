@@ -512,7 +512,7 @@ Alt+S (log only), Save Park (the screen closed), Exit To Lobby (the autosave los
 game, lost at exit) and Quit. A fresh player's first entry (`restart.INTS`) was not exercised there.
 
 `SaveTrouble` keeps a write that failed for want of a folder that can be written (an `IOException` or
-`UnauthorizedAccessException`, so a file left alone on purpose, `InvalidDataException`, is not one) and
+`UnauthorizedAccessException`, so a file in a format fault, `InvalidDataException`, is not one) and
 `Level.Update` opens the game's own message box with its cross alone (`MessageBox`, no tick; the research opener's
 kind) once nothing modal is up: `PARK NOT SAVED`, `PLAYER NOT SAVED` or `OPTIONS NOT SAVED`, then `The save folder
 cannot be written.` and `Log: <console.log's path>`. What the player asked for (Alt+S, Save Park, the options tick)
@@ -3897,33 +3897,42 @@ back screen with key 1 and per-player options restored; delete works; an Instant
 
 The original's own `Config.tcf` and `gms.dat` exist, in Alexah's Full Simulation saves (`CLAUDE.local.md`).
 A disposable copy of the Full Simulation profile reads complete: four parks, one unlocked ride and one key;
-an award persists as two keys. A truncated copy remains unchanged when a default profile is offered for saving.
+an award persists as two keys. A truncated copy is kept beside itself (`gms.dat.opentpw-backup`) when a default profile is offered for saving, and then written over (Q216).
 The original machine options have not been checked here.
 
 Caution: a run of the game writes into the real installation's `save/` (`Config.tcf`, `opentpw.cfg`, player folders).
 Never empty it: delete only what that run created (`AGENTS.md` rule 12).
 
-### OpenTPW preservation policy
+### OpenTPW's policy for a file it did not read whole (Q216)
 
-OpenTPW may display the readable prefix of an incomplete player, but refuses to write it back. `PlayerFile.CanWrite`
-requires a complete version-12 record with no trailing bytes; machine options require version 1 with no trailing
-bytes. `SaveFolder` also rechecks an existing destination before replacing it, so a failed load followed by default
-in-memory state cannot overwrite unread data. This is a deliberate preservation policy, not recovered executable
-behaviour. A player loaded read-only can still be selected, but their changes remain in memory and the log says why.
-`ProfilePreservationTests` drives selection, key awards and deselection over disposable files, including truncation,
-unknown versions, invalid counts, trailing bytes and a destination damaged after selection.
+The original overwrites `Config.tcf` and `gms.dat` without looking at what is there (`0x004237f0`, `0x005afc60`). OpenTPW does
+too, with one addition (Alexah, 2026-10-31): a file this game did not read whole is copied beside itself first, to
+`<name>.opentpw-backup` (then `.opentpw-backup2` and on, so an earlier copy is never replaced), a name neither game reads. Nothing is
+refused. This is not the original's behaviour.
 
-**A reload that fails, and a file that is not there (Q207, Q209).** When a player is selected and their gms.dat is
-there but will not read, the cached profile keeps its readable progress and loses `CanWrite`; key saves and
-deselection stay blocked even if a valid file returns, and only a successful reload restores writing. A folder with
-no gms.dat at all is different: it is a player nobody has saved yet (`SaveFolder.ScanPlayers`), there is nothing to
-protect, and the first save makes the file, as the original's writer does (`0x005afc60` writes unconditionally).
-`Player.FileMissing` records that no file was there when the player was read; if one has appeared by the time of
-the save it was never read, and `SaveFolder.SavePlayer` leaves it alone. None of this is the original's behaviour.
+"Read whole" is `PlayerFile.ReadWhole` and `ConfigFile.ReadWhole`: a complete record of the version the game writes (player 12, options
+1), read to its end. A version of 0, another version, a tail or a short file is not. `SaveFolder` copies the file aside when any of these
+holds at the write: the file on disk is not read whole when it is read again at the write (so a file damaged after selection counts);
+the profile in memory is not what the disk held (`PlayerFile.NoteFailedReload`: a selection whose reload would not open the
+file keeps the profile it had); a gms.dat has appeared since the player was read with none (`Player.FileMissing`); or Config.tcf's
+load failed (`SaveFolder._unreadConfig`). A write that follows reads the file back whole, and `PlayerFile.NoteWritten` says so, so
+one odd file is copied once, however many saves follow. A copy that cannot be made (the file will not open, or the folder cannot
+be written) throws before anything is written over it, and `SaveTrouble` tells the player as it does any save that failed.
 
-`ProfilePreservationTests` covers each: a folder with no file is saved and reads back; a file appearing after such a
-read is not replaced; a file that would not open is not replaced once it can; a file removed and then restored with
-other contents during a session is kept, and a successful reload then saves normally.
+A folder with no gms.dat at all is a player nobody has saved yet (`SaveFolder.ScanPlayers`): there is nothing to copy, and the first
+save makes the file, as the original's writer does.
+
+`ProfilePreservationTests` covers each: six kinds of odd gms.dat and four of Config.tcf copied and then replaced; a default profile
+over an odd file; a file damaged after selection; a file that appeared later; a file that would not open, copied once it can be; a good
+profile whose reload failed, over a file that opens later; and a whole file replaced with no copy. Shown in the running game by
+`tools/harness/lib/oddsaves.py` (Q216, `q216/`): a Config.tcf of version 2 and a gms.dat with two bytes of tail, each copied under
+its `.opentpw-backup` name on the first write (the Options tick, `savepark`) and written over whole, no second copy at the next
+pair of writes, and a control with whole files that makes none.
+
+**The stricter `ExpandedMemoryStream.ReadBytes` (Q216).** It throws where a field runs past the end of the stream; it once padded a
+short read with nought. Measured on 2026-10-31: all 47 `.sdt` (3,739 members), all 42 `.str` (4,730 strings), the shipped
+`Easymode.TPWI` and nine saved parks (Alexah's Full Simulation set and the game's own `save/`, read, not changed) read with no short
+read. `ReadBytesMeasureTests` repeats the shipped three.
 
 ## Unresolved
 

@@ -37,7 +37,7 @@ public class PlayerFileRideIdsTests
 		using var input = new MemoryStream( Original );
 		var file = PlayerFile.Read( input );
 
-		Assert.IsTrue( file.CanWrite );
+		Assert.IsTrue( file.ReadWhole );
 		Assert.AreEqual( (1, 1), (file.TicketsSpent, file.KeysGiven) );
 		CollectionAssert.AreEqual( new ushort[] { 1170 }, file.RideIds );
 		CollectionAssert.AreEqual( Original, Written( file ) );
