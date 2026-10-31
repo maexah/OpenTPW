@@ -46,6 +46,8 @@ Only the item just landed is here. Every earlier item's account is in `docs/hist
 
 ## Numbers (take counts fresh; these go stale within a day)
 
+- Windows 11 at 631f7625, 2026-10-31 (`tools/check_commit.sh` with the game): 4492 passed, 0 failed, 11 skipped of 4503, every skip a platform's; with no game named, 1797 passed, 0 failed, 2706 skipped. Linux at the same commit: 4501, 0, 2.
+
 | | | measured |
 |---|---|---|
 | Opcodes | **78** of 106 | 2026-10-20, Q553 (`FADEOBJ`), `case Opcode.` labels vs enum members |

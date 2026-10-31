@@ -125,10 +125,11 @@ written either, the game still runs and says on screen when a save, the options 
 |----------|--------|------|
 | Linux x64 | ✅ | ✅ Developed and tested here |
 | Linux arm64 | ✅ | ❔ Never run |
-| Windows x64, arm64 | ✅ | ❔ Not run recently |
+| Windows x64 | ✅ | ✅ Tested 2026-10-31 (Windows 11) |
+| Windows arm64 | ✅ | ❔ Not run |
 | macOS Intel, Apple Silicon | ✅ | ❔ Never run |
 
-Every platform draws with Vulkan; on macOS through MoltenVK, which ships with the build. Only Linux x64 is tested. Bug reports from other platforms are very welcome.
+Every platform draws with Vulkan; on macOS through MoltenVK, which ships with the build. Linux x64 and Windows x64 are tested. Bug reports from other platforms are very welcome.
 
 **Two graphics cards (a built-in GPU and a graphics card).** OpenTPW lists the Vulkan devices in `console.log` (the `Graphics card:` lines) and draws with a discrete card in preference to a built-in one; the `GPU:` line names the one in use. To choose another, put a line in `save/opentpw.cfg`: `gpu GTX 1650` (the first card whose name holds that text), `gpu #1` (the second card of the logged list) or `gpu auto` (the default). The Options screen's Video Card row is the original's own Primary or Secondary: Primary is the card above, Secondary the next one (offered only where there is more than one card), and it is drawn on from the next start. `gpu` names a card exactly and wins over the row; that line is OpenTPW's own. Two cards of one maker (an AMD built-in GPU beside a Radeon, an Intel one beside an Arc) cannot be told apart on Windows: the log warns and the first device is drawn on.
 

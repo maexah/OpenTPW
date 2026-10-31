@@ -123,6 +123,7 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   say so): the small fix is a notice on the kept path when the player's folder holds players (`SaveHome.HoldsPlayers`). A test
   next to `AFolderThatCanBeWrittenIsKeptAndTheProbeLeavesNothing`.
 
+- [ ] **Q987. Two small leftovers of Q986 (its review, 2026-10-31).** (1) `OptionsScreen.Keep` compares the display with `_before`, not `_applied`: after RESTART GAME's cross, a second tick that sets the display back to the opening mode skips `Display.Apply` and writes the old mode to `opentpw.cfg` while the window stays in the tick's mode; compare with `_applied ?? (_before.DisplayMode, _before.FullScreenSize)` (read, not run). (2) `GameDataTests` pin `Locate` only: putting `GameDir.Find( [] )` back into `Required` stays green. Give `Required` a seam so a test shows that no variable means Inconclusive with `Find` never called.
 - [ ] **Q950. The lobby's attract flight (nobody playing) against the original's: what differs, for Alexah to choose.** Not a
   priority (Alexah, 2026-10-30: "the camera drifting between islands ... and the audio fading between parks is kinda weird").
   Investigated, nothing built: `docs/exe/lobby.md`, "Attract" (the 2026-10-30 measurement). The pacing already matches (an
