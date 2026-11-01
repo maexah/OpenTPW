@@ -561,6 +561,7 @@ filed the items that cite it.
   What the original shows with it set is not established.
 - [ ] **Q942. The suite has an unnamed one-off failure.** From the Q154 review (run 17). A full-suite run with the game has failed once,
   not named and not repeated, on 2026-10-20, 2026-10-24 and 2026-11-01 (the third on Q154's run; one rerun and the gate passed).
+  **Measured 2026-11-01, after a reboot: 4 of 7 full suites failed once each, on fixed data:** `AudioClipTests.EveryShippedClipIsItsFloatDecodeTakenTo16BitsAndHeldToTheRange` twice (one sample of `MusicHD.sdt:level4cc.mp2` differed), `FullSimulationCreatesTwelveThingsWithRegularLoans` and `EveryTileOfEveryParkIsTheOriginals` (space, 16). The clip test alone passed 30 of 30. Read it as machine memory until memtest clears it: the kernel faulted that morning on a pointer one bit off NULL.
   Suspects, none shown: simulations that are not seeded (238 of 260 `new ParkPeople(`; `new Random()` at `ParkPeople.cs:201-202` and
   `ParkAudioScripts.cs:38`) and machine load under the real-clock zone. Keep every full-suite run's output (`capped.sh` ... `| tee`
   into a file under `~/.cache/tpw-harnesses/`) so the next failure is named when it comes; then seed or fix what it names, and
