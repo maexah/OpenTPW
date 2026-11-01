@@ -6,8 +6,9 @@
 # takes C1 C2, and stops the original. `flipdiag.py <outdir>` then counts the pixels that differ between the frames.
 #   FILE=<park file> (default q325's stock park; its cells (3,13),(4,14),(5,15),(6,16) read 0x0804 and are the lowest four of the
 #   staircase in view at 50,150 zoom 70 rot 0, the defaults; (7,17) reads 0x0804 too and is in the frame, not poked)
-#   CELLS="3,13 4,14 5,15 6,16"  FROM=0x4  TO=0x2. poke() always clears FROM and sets TO, so the two bits move together; a one-bit
-#   poke is not expressible here yet.
+#   CELLS="3,13 4,14 5,15 6,16"  FROM=0x4  TO=0x2  MODE=both|set|clear. both (default) clears FROM and sets TO, so the two bits move
+#   together (Q837); set only ORs TO in (0x0804 -> 0x0806) and clear only clears FROM (0x0804 -> 0x0800), the one-bit pokes that
+#   say which bit the picture follows (Q914). The put-back undoes whatever the poke did.
 # Needs OPENTPW_HARNESS_WORK, OPENTPW_XVFB (loadfile.sh's) and a python with Xlib and PIL (docs/TOOLING.md, "A harness run needs a
 # python with Xlib and PIL"). On a failure (or Ctrl+C) the trap stops memhold and the original and removes LOADFILE.TPWS.
 set -euo pipefail
@@ -19,7 +20,10 @@ HOLD=
 cleanup() { [ -n "$HOLD" ] && kill "$HOLD" 2>/dev/null; "$O/loadfile.sh" stop >/dev/null 2>&1; rm -f "$OSAVE/users/1ref/jungle/LOADFILE.TPWS"; echo "flipdiag.sh failed: stopped the original and removed LOADFILE.TPWS" >&2; }
 trap cleanup ERR INT TERM
 shot() { import -window root -display :77 -crop 1024x768+0+0 "$D/$1.png"; }
-poke() { local a=(); for c in $CELLS; do a+=("$c=-$1" "$c=+$2"); done; echo "${a[@]}"; }
+MODE=${MODE:-both}
+# poke <bit to clear> <bit to set>: a 0 for either leaves that half out
+poke() { local a=(); for c in $CELLS; do [ "$1" != 0 ] && a+=("$c=-$1"); [ "$2" != 0 ] && a+=("$c=+$2"); done; echo "${a[@]}"; }
+case $MODE in both) PK_OUT="$FROM $TO"; PK_BACK="$TO $FROM";; set) PK_OUT="0 $TO"; PK_BACK="$TO 0";; clear) PK_OUT="$FROM 0"; PK_BACK="0 $FROM";; *) echo "MODE=both|set|clear" >&2; exit 2;; esac
 find "$OSAVE" -type f -exec md5sum {} \; | sort | md5sum > "$D/save-before.md5"
 "$O/loadfile.sh" load "$FILE" "$D" load > "$D/load.out" 2>&1
 sleep 8
@@ -31,11 +35,11 @@ sleep 3
 $PY -u "$O/setcam.py" "$P" "$CAM" "$ZOOM" "$ROT" off 2>&1 | tee -a "$D/run.log"
 READ=2,12:7,17 $PY -u "$O/groundcell.py" "$P" 0.1 > "$D/before.log" 2>&1 || true
 sleep 1; shot A1; sleep 2; shot A2
-$PY -u "$O/groundcell.py" "$P" 7 $(poke "$FROM" "$TO") > "$D/poke.log" 2>&1 &
+$PY -u "$O/groundcell.py" "$P" 7 $(poke $PK_OUT) > "$D/poke.log" 2>&1 &
 PK=$!
 sleep 3; shot B1; sleep 2; shot B2
 wait $PK || true
-$PY -u "$O/groundcell.py" "$P" 5 $(poke "$TO" "$FROM") > "$D/unpoke.log" 2>&1 &
+$PY -u "$O/groundcell.py" "$P" 5 $(poke $PK_BACK) > "$D/unpoke.log" 2>&1 &
 PK=$!
 sleep 3; shot C1; sleep 1; shot C2
 wait $PK || true
