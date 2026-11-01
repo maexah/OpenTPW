@@ -593,7 +593,7 @@ public sealed class Advisor : Entity
 			return 0;
 		}
 
-		var row = gestureRow >= 0 ? AdvisorGestures.Read( gestureRow, ClipMilliseconds ) : null;
+		var (row, clips, clipFlags, gesturesMilliseconds) = PlanClips( gestureRow, (int)_speech.Length( sample ).TotalMilliseconds, ClipMilliseconds, _random.Next );
 		var leadIn = row?.LeadIn ?? true;
 
 		// Advisor_SayResponse empties the glints' channel as a line begins (0x005993b3).
@@ -606,28 +606,10 @@ public sealed class Advisor : Entity
 		if ( row is { CueAt: not null } )
 			_cue = HandOverKey;
 
-		var sampleMilliseconds = (int)_speech.Length( sample ).TotalMilliseconds;
-		int gesturesMilliseconds;
-
-		if ( row is { Milliseconds: > 0 } played )
-		{
-			_gestures.Clear();
-			_clipFlags.Clear();
-
-			foreach ( var (clip, flags) in played.Clips )
-			{
-				_gestures.Add( clip );
-				_clipFlags.Add( flags );
-			}
-
-			gesturesMilliseconds = played.Milliseconds;
-		}
-		else
-		{
-			gesturesMilliseconds = BuildGestures( sampleMilliseconds + GestureMarginMilliseconds );
-			_clipFlags.Clear();
-			_clipFlags.AddRange( _gestures.Select( _ => 0 ) );
-		}
+		_gestures.Clear();
+		_gestures.AddRange( clips );
+		_clipFlags.Clear();
+		_clipFlags.AddRange( clipFlags );
 
 		(_speakAt, _cueAt, _gesturesEndAt) = LineTimes( _now, leadIn, cue?.Seconds ?? 0f, row?.CueAt, gesturesMilliseconds );
 
@@ -770,24 +752,23 @@ public sealed class Advisor : Entity
 	/// none is). Clip 15 last. Clip 14's length is set to zero before any of this, so it covers
 	/// nothing and adds nothing to the total.
 	/// </summary>
-	private int BuildGestures( int toCover )
+	internal static (List<int> Clips, int Milliseconds) BuildGestures( int toCover, Func<int, int> lengthOf, Func<int, int> roll )
 	{
-		_gestures.Clear();
-		_gestures.Add( StartClip );
+		var gestures = new List<int> { StartClip };
 
 		var total = 0;
 
-		while ( toCover >= 1 && _gestures.Count < MostClipsBeforeEnd )
+		while ( toCover >= 1 && gestures.Count < MostClipsBeforeEnd )
 		{
-			var clip = _random.Next( TalkingClips ) + 1;
+			var clip = roll( TalkingClips ) + 1;
 
-			if ( toCover < ClipMilliseconds( clip ) )
+			if ( toCover < lengthOf( clip ) )
 			{
 				clip = TalkingClips;
 
 				for ( int candidate = 1; candidate <= TalkingClips; ++candidate )
 				{
-					if ( toCover <= ClipMilliseconds( candidate ) )
+					if ( toCover <= lengthOf( candidate ) )
 					{
 						clip = candidate;
 						break;
@@ -795,22 +776,38 @@ public sealed class Advisor : Entity
 				}
 			}
 
-			var length = ClipMilliseconds( clip );
+			var length = lengthOf( clip );
 
 			// A clip that takes no time cannot cover anything, and the engine would stop at its
 			// nineteen-clip limit; stop now rather than fill the list with it.
 			if ( length <= 0 )
 				break;
 
-			_gestures.Add( clip );
+			gestures.Add( clip );
 			total += length;
 			toCover -= length;
 		}
 
-		_gestures.Add( EndClip );
-		total += ClipMilliseconds( EndClip );
+		gestures.Add( EndClip );
+		total += lengthOf( EndClip );
 
-		return total;
+		return (gestures, total);
+	}
+
+	/// <summary>
+	/// The clips a line plays: its gesture row's where it names one that adds up to more than nought, the random chain
+	/// (<see cref="BuildGestures"/>) otherwise. Each clip comes with its flags, which the random chain leaves nought.
+	/// </summary>
+	internal static ((List<(int Clip, int Flags)> Clips, int Milliseconds, int? CueAt, bool LeadIn)? Row, List<int> Clips, List<int> Flags, int Milliseconds)
+		PlanClips( int gestureRow, int sampleMilliseconds, Func<int, int> lengthOf, Func<int, int> roll )
+	{
+		var row = gestureRow >= 0 ? AdvisorGestures.Read( gestureRow, lengthOf ) : null;
+
+		if ( row is { Milliseconds: > 0 } played )
+			return (row, played.Clips.Select( c => c.Clip ).ToList(), played.Clips.Select( c => c.Flags ).ToList(), played.Milliseconds);
+
+		var (clips, milliseconds) = BuildGestures( sampleMilliseconds + GestureMarginMilliseconds, lengthOf, roll );
+		return (row, clips, clips.Select( _ => 0 ).ToList(), milliseconds);
 	}
 
 	/// <summary>
