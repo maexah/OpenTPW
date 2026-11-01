@@ -514,6 +514,9 @@ public sealed class ParkRides : Entity
 
 	private readonly List<Companion> _companions = [];
 
+	/// <summary>The file's records a parent's link names that the load did not start, counted <c>LOADED_COMPANION_NOT_STARTED</c>: a save keeps them and their links as the file holds them.</summary>
+	private readonly HashSet<int> _notStarted = [];
+
 	/// <summary>How many companion scripts a load started from the save's records (<see cref="CompanionsOf"/>).</summary>
 	public int CompanionsStarted { get; private set; }
 
@@ -554,6 +557,7 @@ public sealed class ParkRides : Entity
 				{
 					Log.Info( $"{ThemeName}: the file's script {handle}, named by script {placed.RideScript}'s {spawn} link, is not a file that script loads, so it is not started" );
 					Unimplemented.Report( "LOADED_COMPANION_NOT_STARTED" );
+					_notStarted.Add( handle );
 					continue;
 				}
 
@@ -579,6 +583,7 @@ public sealed class ParkRides : Entity
 		{
 			Log.Info( $"{ThemeName}: the file's script {companion.Handle} ({companion.Path}) could not be made, so it is not started" );
 			Unimplemented.Report( "LOADED_COMPANION_NOT_STARTED" );
+			_notStarted.Add( companion.Handle );
 			return;
 		}
 
@@ -601,6 +606,7 @@ public sealed class ParkRides : Entity
 				Log.Info( $"{ThemeName}: the file's script {companion.Handle} has no script {companion.Parent} to belong to, so it is not started" );
 				Unimplemented.Report( "LOADED_COMPANION_NOT_STARTED" );
 				Scheduler.Destroy( companion.Handle );
+				_notStarted.Add( companion.Handle );
 				continue;
 			}
 
@@ -616,7 +622,7 @@ public sealed class ParkRides : Entity
 			}
 
 			Resume( child, record, $"script {companion.Handle} (the {(companion.Sound ? "sound child" : "child")} of script {companion.Parent}, thing {child.ThingId})",
-				false, saved );
+				!companion.Sound && _saved.ContainsKey( parent.ThingId ), saved );
 			++CompanionsStarted;
 		}
 
@@ -981,7 +987,8 @@ public sealed class ParkRides : Entity
 	/// <summary>
 	/// Resumes <paramref name="script"/> from its saved record, <paramref name="who"/> naming it in the log;
 	/// <paramref name="channels"/> is whether its thing's model channels are put back, which the looping key and the mark
-	/// answer for. A companion has none of its own (it shares its parent's, or has no model at all).
+	/// answer for. A <c>SPAWNCHILD</c> companion shares its parent's channels, so it is whether the parent's are; a
+	/// <c>SPAWNSOUND</c> companion has no model.
 	/// </summary>
 	private bool Resume( RideScript script, SavedScript saved, string who, bool channels, ParkWorld world )
 	{
@@ -1074,9 +1081,13 @@ public sealed class ParkRides : Entity
 	/// reading of now, so every deadline and stamp keeps its distance from the save's moment.
 	/// </para>
 	/// <para>
-	/// A script is written under the handle the scheduler runs it on, into the file's record of that handle; one
-	/// the file holds no record for (a child spawned) is not written, and a record whose script has ended, or that the load never started (a companion another script spawned: Q910), is left
-	/// as the file's, each counted (the scheduler drops a script as it ends). A model is written into the record
+	/// A script is written under the handle the scheduler runs it on, into the file's record of that handle, and its
+	/// three link words as they stand (nought for a child that has gone, REMOVECHILD's or its own end's). A child or sound
+	/// child the file holds no record for is written whole, its thing and model its parent's for a child and none for a
+	/// sound child (<see cref="ParkFileWriter.MadeCompanion"/>); any other script the file holds no record for is not
+	/// written, counted. A record whose script has ended is left as the file's, counted, unless it is a companion
+	/// the load started and its parent stands: that is taken out with its emitters. A record the load could not start is
+	/// the file's, its parent's link too (the scheduler drops a script as it ends). A model is written into the record
 	/// that names its thing's script. A thing bought is handed over whole, its script as it runs with what its
 	/// loader took from its file and its model's channels, and a thing sold by its id.
 	/// </para>
@@ -1122,12 +1133,19 @@ public sealed class ParkRides : Entity
 			var placed = thing.Object.Object;
 			MadeScript? record = null;
 			RideAnimations? animations = null;
+			IReadOnlyList<ParkFileWriter.MadeCompanion>? companions = null;
 
 			if ( _scripts.TryGetValue( placed.ThingId, out var handle ) && Scheduler.Find( handle ) is { } script )
 			{
-				record = script.Made( Reading, ParkRideWear.SpeedWord( placed ),
-					thing.Directory );
+				var speed = ParkRideWear.SpeedWord( placed );
+
+				companions = MadeCompanionsOf( script, speed, thing.Directory, loaded, Reading );
+
+				var ownRecord = script.Made( Reading, speed, thing.Directory );
+
+				record = ownRecord with { Script = Linked( ownRecord.Script, script, loaded ) };
 				madeHandles.Add( handle );
+				madeHandles.UnionWith( companions.Select( companion => companion.Script.Script.Handle ) );
 				animations = script.Animations;
 			}
 
@@ -1157,8 +1175,27 @@ public sealed class ParkRides : Entity
 			made.Add( new ParkFileWriter.MadeThing( thing.Object, thing.Across, thing.Down, record, channels,
 				raised?.Flags ?? 0, raised?.Progress ?? 0f, tables,
 				tables != null && _scripts.TryGetValue( placed.ThingId, out var own ) ? WrittenHeads( Scheduler.Find( own ), placed.CatalogueId ) : null,
-				thing.Vehicle, thing.FixedCell ) );
+				thing.Vehicle, thing.FixedCell, companions ) );
 		}
+
+		// The file's parents' children and sound children made since the load: whole, ahead of the file's records.
+		var madeCompanions = new List<ParkFileWriter.MadeCompanion>();
+
+		foreach ( var parent in Scheduler.Scripts )
+		{
+			if ( madeHandles.Contains( parent.Id ) || loaded.ScriptStates.For( parent.Id ) is not { } held )
+				continue;
+
+			if ( held.Directory is null )
+			{
+				Unimplemented.Report( "SAVE_PARK_SCRIPT_MADE_SINCE_THE_LOAD" );
+				continue;
+			}
+
+			madeCompanions.AddRange( MadeCompanionsOf( parent, held.Speed, held.Directory, loaded, Reading ) );
+		}
+
+		madeHandles.UnionWith( madeCompanions.Select( companion => companion.Script.Script.Handle ) );
 
 		var goneHandles = new HashSet<int>( (gone ?? new HashSet<int>()).SelectMany( loaded.ScriptStates.HandlesOf ) );
 		var scripts = new List<WrittenScript>();
@@ -1177,12 +1214,25 @@ public sealed class ParkRides : Entity
 				continue;
 			}
 
-			scripts.Add( script.Written( Reading ) );
+			scripts.Add( Linked( script.Written( Reading ), script, loaded ) );
+		}
+
+		// A companion the load started whose script has ended, its parent standing: its record goes from the file with its emitters.
+		var ended = new HashSet<int>();
+
+		foreach ( var companion in _companions )
+		{
+			if ( !running.Contains( companion.Handle ) && running.Contains( companion.Parent ) && !goneHandles.Contains( companion.Handle )
+				&& loaded.ScriptStates.For( companion.Handle ) is not null )
+			{
+				Log.Info( $"{ThemeName}: the file's script {companion.Handle}, script {companion.Parent}'s {(companion.Sound ? "sound child" : "child")}, has ended, so its record is left out of the save" );
+				ended.Add( companion.Handle );
+			}
 		}
 
 		foreach ( var handle in loaded.ScriptStates.Order )
 		{
-			if ( running.Contains( handle ) || goneHandles.Contains( handle ) )
+			if ( running.Contains( handle ) || goneHandles.Contains( handle ) || ended.Contains( handle ) )
 				continue;
 
 			var thingId = loaded.ScriptStates.For( handle )?.Thing ?? 0;
@@ -1218,7 +1268,57 @@ public sealed class ParkRides : Entity
 		}
 
 		return new ParkFileWriter.RunningThings( objects, Scheduler.Tick, Scheduler.NextHandle, scripts, states, models,
-			Reading( now ), made, gone, built );
+			Reading( now ), made, gone, built, MadeScripts: madeCompanions, GoneScripts: ended );
+	}
+
+	/// <summary>
+	/// The child and the sound child <paramref name="parent"/> made since the load, each written whole: the thing of a
+	/// child is its parent's and a sound child's is none, the speed word a child's is its parent's (<paramref name="speed"/>)
+	/// and a sound child's the loader's, and the folder is the parent's (90 of 90 children and 90 of 90 sound children in
+	/// the park files on the desk). A link whose script the file already holds a record for is the load's, not made here.
+	/// </summary>
+	private List<ParkFileWriter.MadeCompanion> MadeCompanionsOf( RideScript parent, int speed, string directory, ParkWorld loaded,
+		Func<float, uint> reading )
+	{
+		var found = new List<ParkFileWriter.MadeCompanion>();
+
+		foreach ( var (id, sound) in new[] { (parent.ChildId, false), (parent.SoundChildId, true) } )
+		{
+			if ( id == 0 || Scheduler.Find( id ) is not { } child || loaded.ScriptStates.For( id ) is not null )
+				continue;
+
+			if ( child.ChildId != 0 || child.SoundChildId != 0 )
+				Unimplemented.Report( "SAVE_PARK_SCRIPT_MADE_SINCE_THE_LOAD" );
+
+			var made = child.Made( reading, sound ? ParkScriptStates.LoaderSpeed : speed, directory );
+
+			found.Add( new ParkFileWriter.MadeCompanion( made with
+			{
+				Script = made.Script with { Child = 0, SoundChild = 0, Parent = sound ? 0 : parent.Id }
+			}, parent.Id, sound ) );
+		}
+
+		return found;
+	}
+
+	/// <summary>
+	/// <paramref name="written"/> with its three link words as <paramref name="script"/> stands: its child, its parent and its
+	/// sound child where each is a script that stands, nought where it has gone (REMOVECHILD took it down, or it ended), and the
+	/// file's, <c>-1</c>, where the load could not start the record the file's link names (<see cref="_notStarted"/>).
+	/// </summary>
+	private WrittenScript Linked( WrittenScript written, RideScript script, ParkWorld loaded )
+	{
+		var file = loaded.ScriptStates.For( script.Id );
+
+		int Link( int live, int fromFile )
+			=> live != 0 && Scheduler.Find( live ) is not null ? live : fromFile != 0 && _notStarted.Contains( fromFile ) ? -1 : 0;
+
+		return written with
+		{
+			Child = Link( script.ChildId, file?.Child ?? 0 ),
+			SoundChild = Link( script.SoundChildId, file?.SoundChild ?? 0 ),
+			Parent = script.ParentId != 0 && Scheduler.Find( script.ParentId ) is not null ? script.ParentId : 0
+		};
 	}
 
 	/// <summary>

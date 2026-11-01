@@ -38,6 +38,9 @@ public sealed partial class ParkScriptStates
 		void Dword( int index, int value ) => PutInt32( record, index * 4, value );
 
 		Dword( HandleDword, script.Handle );
+		Dword( ChildDword, Math.Max( script.Child, 0 ) );
+		Dword( ParentDword, Math.Max( script.Parent, 0 ) );
+		Dword( SoundChildDword, Math.Max( script.SoundChild, 0 ) );
 		Dword( PositionDword, script.Position );
 		Dword( CallIndexDword, script.CallIndex );
 		Dword( HeapIndexDword, script.HeapIndex );
@@ -210,9 +213,17 @@ public sealed partial class ParkScriptStates
 	/// <summary>The size of one record of a script's object list, the effects it has started.</summary>
 	private const int EffectRecordSize = 28;
 
-	/// <summary>The script records of the file that belong to <paramref name="thing"/>: its own and any it started.</summary>
-	public IEnumerable<int> HandlesOf( int thing ) =>
-		_order.Where( handle => _byHandle.TryGetValue( handle, out var saved ) && saved.Thing == thing );
+	/// <summary>
+	/// The script records of the file that belong to <paramref name="thing"/>: its own, the child its <c>SPAWNCHILD</c> made
+	/// (it holds the thing too) and the sound child its <c>SPAWNSOUND</c> made, which holds no thing and is named by the link alone.
+	/// </summary>
+	public IEnumerable<int> HandlesOf( int thing )
+	{
+		var own = _order.Where( handle => _byHandle.TryGetValue( handle, out var saved ) && saved.Thing == thing ).ToList();
+
+		return own.Concat( own.Select( handle => _byHandle[handle].SoundChild )
+			.Where( sound => sound != 0 && _byHandle.ContainsKey( sound ) && !own.Contains( sound ) ) );
+	}
 
 	/// <summary>
 	/// <paramref name="body"/> with <paramref name="made"/> ahead of the file's records, the newest first as the

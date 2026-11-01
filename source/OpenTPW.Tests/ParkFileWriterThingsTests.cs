@@ -866,9 +866,7 @@ public class ParkFileWriterThingsTests
 
 	/// <summary>
 	/// A record of the file's with no script running here is left the file's, counted, and its log line names the
-	/// handle and the thing the file gives it, so a played park's census can be read against the file's list
-	/// (Q849: the six companions of her Full Simulation park; this fixture's three are bound objects, so the thing-0 path of a
-	/// real companion is not run here).
+	/// handle and the thing the file gives it, so a played park's census can be read against the file's list.
 	/// </summary>
 	[TestMethod]
 	public void AScriptTheLoadDidNotStartIsNamedWhereItIsCounted()

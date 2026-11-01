@@ -132,13 +132,31 @@ public static class ParkFileWriter
 	/// Each track ride written whole with its cars (<see cref="WrittenTrack"/>), made since the load or the file's:
 	/// every chunk the file holds under its handle is taken out and the ride put in again as it runs.
 	/// </param>
+	/// <param name="MadeScripts">
+	/// The companions made since the load by a script the file holds (<see cref="MadeCompanion"/>), each written whole
+	/// ahead of the file's records; a bought thing's are its <see cref="MadeThing.Companions"/>.
+	/// </param>
+	/// <param name="GoneScripts">
+	/// The file's companion records whose scripts ended while their parents stand: each is left out with its emitters,
+	/// its parent's link word written nought (<see cref="WrittenScript.Child"/>). The records of a sold thing are
+	/// <paramref name="Gone"/>'s.
+	/// </param>
 	public sealed record RunningThings( IReadOnlyList<ParkWorld.CatalogueObject> Objects, int SchedulerTick,
 		int NextHandle, IReadOnlyList<WrittenScript> Scripts, ParkThingStates ModelStates,
 		IReadOnlyList<WrittenModel> Models, uint Clock, IReadOnlyList<MadeThing>? Made = null,
 		IReadOnlySet<int>? Gone = null, IReadOnlyDictionary<int, (int Standing, uint FirstBuilt)>? Built = null,
 		IReadOnlyDictionary<int, QueuePiece?>? QueueCells = null, IReadOnlyList<SavedTrackRide>? MadeTracks = null,
 		IReadOnlyCollection<int>? GoneTracks = null, IReadOnlyList<SavedTrackRide>? KeptTracks = null,
-		IReadOnlyList<WrittenTrack>? Tracks = null );
+		IReadOnlyList<WrittenTrack>? Tracks = null, IReadOnlyList<MadeCompanion>? MadeScripts = null,
+		IReadOnlySet<int>? GoneScripts = null );
+
+	/// <summary>
+	/// A script a parent made since the load, as a park file holds one (<c>docs/exe/saves.md</c>, "A companion made since
+	/// the load"): its record whole, <paramref name="Parent"/> the handle of the script whose <c>SPAWNCHILD</c> or
+	/// <c>SPAWNSOUND</c> (<paramref name="Sound"/>) made it. A child holds its parent's thing and model handle, a sound
+	/// child none, which the writer lays over <paramref name="Script"/> as it writes the record.
+	/// </summary>
+	public sealed record MadeCompanion( MadeScript Script, int Parent, bool Sound );
 
 	/// <summary>One model of a track car, its own or its wake's: the supplemental mesh's item, its one channel and its two tables (null declares none).</summary>
 	public sealed record CarModel( int Item, SavedChannel Channel, ParkThingStates.ModelTables? Tables );
@@ -179,7 +197,8 @@ public static class ParkFileWriter
 	/// </summary>
 	public sealed record MadeThing( ParkWorld.MadeObject Object, int Across, int Down, MadeScript? Script,
 		IReadOnlyList<SavedChannel> Channels, uint HoardingFlags = 0, float HoardingProgress = 0f,
-		ParkThingStates.ModelTables? Tables = null, WrittenHeads? Heads = null, bool Vehicle = false, (int X, int Y)? FixedCell = null );
+		ParkThingStates.ModelTables? Tables = null, WrittenHeads? Heads = null, bool Vehicle = false, (int X, int Y)? FixedCell = null,
+		IReadOnlyList<MadeCompanion>? Companions = null );
 
 	/// <summary>What was done with <see cref="RunningThings"/>: the records written over, the script tables left the file's, the things made and taken out, and each queue cell's new handle beside the one it gave up.</summary>
 	public readonly record struct ThingsWritten( int Objects, int Scripts, int ScriptTablesLeft, int Models,
@@ -363,7 +382,11 @@ public static class ParkFileWriter
 			// A kept script whose object list is another length: its record is written again with the rest.
 			var relisted = loaded.ScriptStates.Relisted( run.Scripts );
 
-			if ( made.Count > 0 || gone.Count > 0 || pieces.Count > 0 || relisted.Count > 0 || tracksOut.Count > 0 )
+			var madeScripts = run.MadeScripts ?? [];
+			var endedScripts = run.GoneScripts ?? new HashSet<int>();
+
+			if ( made.Count > 0 || gone.Count > 0 || pieces.Count > 0 || relisted.Count > 0 || tracksOut.Count > 0
+				|| madeScripts.Count > 0 || endedScripts.Count > 0 )
 			{
 				if ( running.People == null && (made.Count > 0 || gone.Count > 0) )
 					throw new InvalidOperationException( "a thing bought or sold is written with the people, and none were given" );
@@ -371,7 +394,7 @@ public static class ParkFileWriter
 				// From the back of the file forwards, so each module is still where the file has it when its turn
 				// comes: the scripts, the track rides, the models, then the world with the people.
 				var goneSlots = new HashSet<int>( carSlots );
-				var goneScripts = new HashSet<int>();
+				var goneScripts = new HashSet<int>( endedScripts );
 
 				foreach ( var thing in loaded.Objects.Where( thing => gone.Contains( thing.ThingId ) ) )
 				{
@@ -424,11 +447,20 @@ public static class ParkFileWriter
 						heads != null ? WithHeads( thing, madeHeadSlots ) : thing.Tables, thing.Vehicle, thing.FixedCell )) );
 
 					if ( thing.Script is { } script )
+					{
 						scriptRecords.Add( (handle, ParkScriptStates.MadeRecord( script, slots[i] + 1, loaded.ScriptStates.StructSize )) );
+
+						foreach ( var companion in thing.Companions ?? [] )
+							scriptRecords.Add( (companion.Script.Script.Handle, CompanionRecord( companion, slots[i] + 1 )) );
+					}
 
 					records.Add( (placed.ThingId, ParkWorld.MadeObjectRecord(
 						thing.Object with { Object = placed with { RideScript = handle } }, slots[i] + 1 )) );
 				}
+
+				// A file parent's companions: the parent's model is the file's.
+				foreach ( var companion in madeScripts )
+					scriptRecords.Add( (companion.Script.Script.Handle, CompanionRecord( companion, loaded.ScriptStates.For( companion.Parent )?.ModelHandle ?? 0 )) );
 
 				var handles = cellsInOrder.ToDictionary( entry => entry.Key, _ => 0 );
 
@@ -529,6 +561,10 @@ public static class ParkFileWriter
 		return body;
 	}
 
+	/// <summary>A companion's whole record: a child holds <paramref name="parentModel"/>, a sound child no model.</summary>
+	private static byte[] CompanionRecord( MadeCompanion companion, int parentModel )
+		=> ParkScriptStates.MadeRecord( companion.Script, companion.Sound ? 0 : parentModel );
+
 	/// <summary>
 	/// Makes the file's live emitters follow the scripts' records (<c>docs/exe/saves.md</c>, "OpenTPW's writer, an
 	/// emitter started"), and writes the live image where it lies. A particle record the file's script held and the
@@ -555,6 +591,8 @@ public static class ParkFileWriter
 		var tracks = run.Tracks ?? [];
 		var asked = run.Scripts.Sum( script => script.Emitters?.Count( spawn => spawn != null ) ?? 0 )
 			+ made.Sum( thing => thing.Script?.Script.Emitters?.Count( spawn => spawn != null ) ?? 0 )
+			+ made.Sum( thing => (thing.Companions ?? []).Sum( companion => companion.Script.Script.Emitters?.Count( spawn => spawn != null ) ?? 0 ) )
+			+ (run.MadeScripts ?? []).Sum( companion => companion.Script.Script.Emitters?.Count( spawn => spawn != null ) ?? 0 )
 			+ tracks.Sum( track => track.Cars.Count( car => car.Smoke != null ) );
 
 		if ( loaded.Particles.Problem != null )
@@ -581,6 +619,10 @@ public static class ParkFileWriter
 			foreach ( var handle in loaded.ScriptStates.HandlesOf( thing.ThingId ) )
 				Kill( loaded.ScriptStates.For( handle )?.Effects ?? [] );
 		}
+
+		// A companion that ended with its parent standing has its emitters taken down as its script's end does.
+		foreach ( var handle in run.GoneScripts ?? new HashSet<int>() )
+			Kill( loaded.ScriptStates.For( handle )?.Effects ?? [] );
 
 		foreach ( var script in run.Scripts )
 		{
@@ -618,11 +660,21 @@ public static class ParkFileWriter
 			return script with { Effects = records };
 		}
 
+		MadeCompanion StartedCompanion( MadeCompanion companion )
+			=> companion with { Script = companion.Script with { Script = Started( companion.Script.Script ) } };
+
 		run = run with
 		{
 			Scripts = [.. run.Scripts.Select( Started )],
 			Made = made.Count == 0 ? run.Made : [.. OldestFirst( made, ids )
-				.Select( thing => thing.Script is { } script ? thing with { Script = script with { Script = Started( script.Script ) } } : thing )]
+				.Select( thing => thing.Script is { } script
+					? thing with
+					{
+						Script = script with { Script = Started( script.Script ) },
+						Companions = thing.Companions is { } companions ? [.. companions.Select( StartedCompanion )] : null
+					}
+					: thing )],
+			MadeScripts = run.MadeScripts is { } madeCompanions ? [.. madeCompanions.Select( StartedCompanion )] : null
 		};
 
 		// A smoking car's emitter (FUN_00544c80): the one its file's handle names is put where the car's node

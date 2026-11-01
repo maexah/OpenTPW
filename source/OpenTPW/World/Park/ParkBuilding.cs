@@ -1729,7 +1729,7 @@ public static class ParkBuilding
 		// +0x2c, its pieces' clips and, closed and let, its opening; the walk shows and hides the add-on's end caps.
 		if ( built.AddOnFor != 0 && state.TryObject( built.AddOnFor, out var ride ) && catalogue.TryGet( ride.CatalogueId, out var rideItem ) )
 		{
-			var script = rides?.Scheduler.Scripts.FirstOrDefault( s => s.ThingId == ride.ThingId );
+			var script = rides?.Scheduler.Find( rides.ScriptFor( ride.ThingId ) );
 			var (valid, steps) = ParkTrackTool.WalkAfterAddOn( state, park, script, ride, rideItem.TrackType );
 
 			Log.Info( $"Building: add-on thing {built.ThingId} walked ride thing {ride.ThingId}'s circuit, {steps} steps, +0x2c {valid}" );

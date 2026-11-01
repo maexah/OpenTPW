@@ -231,6 +231,25 @@ public class RideScriptRelativeTests
 	}
 
 	/// <summary>
+	/// <c>SPAWNCHILD</c> stores the loader's answer in the child slot before it tests it (<c>0x0055512b</c>, then <c>test eax,eax</c> at
+	/// <c>0x0055512e</c>), so a load that fails after a first one left nought there, as <c>SPAWNSOUND</c> does.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the slot written only after the test.</remarks>
+	[TestMethod]
+	public void ASpawnWhoseFileWillNotLoadEmptiesTheChildSlot()
+	{
+		var parent = Script( 1, ["child.rse"], Word( Opcode.SPAWNCHILD ), Str( 0 ), Word( Opcode.SPAWNCHILD ), Str( 0 ), Word( Opcode.END ) );
+		var loaded = 0;
+		var scheduler = new RideScriptScheduler { Loader = _ => loaded++ == 0 ? Script( 1, [], Word( Opcode.END ) ) : null };
+
+		scheduler.Add( 1, parent );
+		parent.Turn( 0f );
+
+		Assert.AreEqual( 2, loaded, "both spawns reached the loader" );
+		Assert.AreEqual( 0, parent.ChildId, "the failed second load wrote its nought over the first child's id" );
+	}
+
+	/// <summary>
 	/// With nothing to load with, spawning is counted rather than guessed - the same answer
 	/// <c>COAST</c> gives without a ride and <c>ADDOBJ</c> without somewhere to put an effect.
 	/// </summary>

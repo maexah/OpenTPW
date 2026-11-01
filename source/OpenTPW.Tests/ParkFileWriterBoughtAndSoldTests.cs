@@ -987,6 +987,13 @@ public class ParkFileWriterBoughtAndSoldTests
 		Assert.AreEqual( sound ? (0, childHandle) : (childHandle, 0), (parent.ChildId, parent.SoundChildId), "the parent holds it" );
 		Assert.AreEqual( sound ? 0 : parentHandle, child!.ParentId );
 		Assert.AreEqual( sound ? 0 : parent.ThingId, child.ThingId, "a SPAWNSOUND's script has no thing, a SPAWNCHILD's has its parent's" );
+
+		if ( !sound )
+		{
+			Assert.IsNotNull( parent.Animations, "the bought ride's model" );
+			Assert.AreSame( parent.Animations, child.Animations, "a child plays on its parent's model" );
+			Assert.AreSame( parent.Nodes, child.Nodes );
+		}
 		Assert.AreEqual( made.Position, child.Position, "resumed where it was saved" );
 		Assert.AreEqual( 4242, child.VariableAt( 0 ), "with the variables it was saved holding" );
 		Assert.AreEqual( 0, Times( "LOADED_COMPANION_NOT_STARTED" ) );
@@ -1010,12 +1017,224 @@ public class ParkFileWriterBoughtAndSoldTests
 	[DataRow( 0, "levels/jungle/rides/bumper/EventMap.rse", 2, DisplayName = "a record of another file" )]
 	public void ARecordNoFileOfItsParentFitsIsCountedAndNotStarted( int linkedTo, string? scriptOf, int counted )
 	{
-		var (body, _, childHandle, _, _) = ParkWithACompanion( SimulatorItem, 20, 60, sound: false, linkedTo, scriptOf );
-		var rides = Bind( new ParkWorld( body ) );
+		var (body, parentHandle, childHandle, _, _) = ParkWithACompanion( SimulatorItem, 20, 60, sound: false, linkedTo, scriptOf );
+		var loaded = new ParkWorld( body );
+		var rides = Bind( loaded );
 
 		Assert.AreEqual( 0, rides.CompanionsStarted );
 		Assert.IsNull( rides.Scheduler.Find( childHandle ), "the companion is not started" );
 		Assert.AreEqual( counted, Times( "LOADED_COMPANION_NOT_STARTED" ), "the named record, and the record no script's link starts" );
+
+		// What the load could not start, the next save keeps as the file holds it: the record and its parent's link.
+		var written = Resaved( loaded, rides );
+
+		Assert.AreEqual( linkedTo != 0 ? linkedTo : childHandle, written.ScriptStates.For( parentHandle )!.Value.Child, "the link is the file's" );
+		Assert.IsNotNull( written.ScriptStates.For( childHandle ), "and so is the record" );
+	}
+
+	/// <summary>The loaded park written as it runs: the file's own body under <paramref name="loaded"/>, its scripts and things as <paramref name="rides"/> has them, read back.</summary>
+	private ParkWorld Resaved( ParkWorld loaded, ParkRides rides )
+	{
+		var state = new ParkState( loaded );
+		var things = rides.Written( loaded, state.WrittenObjects( loaded ), ChannelsFor, state.HoardingFor )!;
+		var body = ParkFileWriter.Body( loaded, new ParkFileWriter.Running( loaded.GameTick, loaded.ParkClosed != 0, loaded.NumberOfVisitorsToDate,
+			loaded.Economy!.Value.Balance, loaded.Camera.Saved!.Value, People: new ParkPeople( loaded ).Written( id => true ), Things: things ) );
+		var written = new ParkWorld( body );
+
+		Assert.IsNull( written.Problem );
+		Assert.IsNull( written.ScriptStates.Problem, "the scripts read" );
+
+		return written;
+	}
+
+	/// <summary>
+	/// A companion taken down after the load (REMOVECHILD, or its own end) is out of the next save, and its parent's link word is
+	/// nought, so the next load starts nothing on a closed ride (Q910's load starts what a link names; the TV Sim closed, saved at
+	/// its word 207 and loaded again lit its torches and doubled them at the reopen).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the links not written; the ended companion's record left; the parent's link left the file's.</remarks>
+	[TestMethod]
+	[DataRow( SimulatorItem, 20, 60, false, DisplayName = "the TV Sim's torches, taken down by REMOVECHILD" )]
+	[DataRow( HotPotItem, 60, 60, true, DisplayName = "the Hot Pot's EventMap, ended" )]
+	public void ACompanionGoneAfterTheLoadIsNeitherLinkedNorKeptByTheNextSave( int itemId, int x, int y, bool sound )
+	{
+		var (body, parentHandle, childHandle, _, _) = ParkWithACompanion( itemId, x, y, sound );
+		var loaded = new ParkWorld( body );
+		var rides = Bind( loaded );
+		var parent = rides.Scheduler.Find( parentHandle )!;
+
+		Assert.AreEqual( 1, rides.CompanionsStarted );
+		Assert.IsTrue( rides.Scheduler.Destroy( childHandle ), "the scheduler's own take-down, which REMOVECHILD and a script's end call" );
+
+		// A child tells its parent through its own parent word; a sound child holds none, so the engine leaves the parent's
+		// +0x14 naming it, and the writer writes nought for a link whose script no longer stands.
+		Assert.AreEqual( sound ? childHandle : 0, sound ? parent.SoundChildId : parent.ChildId, sound ? "a sound child's end tells nobody" : "it told its parent" );
+
+		var written = Resaved( loaded, rides );
+		var held = written.ScriptStates.For( parentHandle )!.Value;
+
+		Assert.IsNull( written.ScriptStates.For( childHandle ), "its record is out of the file" );
+		Assert.AreEqual( (0, 0), (held.Child, held.SoundChild), "and the parent's links are nought" );
+		Assert.AreEqual( loaded.ScriptStates.Order.Count - 1, written.ScriptStates.Order.Count );
+		Assert.AreEqual( 3, Times( "SAVE_PARK_SCRIPT_ENDED" ), "only the gates, the lights and the bus: the companion is not counted ended" );
+
+		var again = Bind( written );
+
+		Assert.AreEqual( 0, again.CompanionsStarted, "nothing starts on the closed ride" );
+		Assert.IsNull( again.Scheduler.Find( childHandle ) );
+		Assert.AreEqual( 0, Times( "LOADED_COMPANION_NOT_STARTED" ) );
+	}
+
+	/// <summary>A companion the load started and that still runs is written with the links it was loaded under.</summary>
+	/// <remarks><b>Mutations:</b> the parent's link or the child's parent word written nought.</remarks>
+	[TestMethod]
+	[DataRow( SimulatorItem, 20, 60, false, DisplayName = "the TV Sim's torches" )]
+	[DataRow( HotPotItem, 60, 60, true, DisplayName = "the Hot Pot's EventMap" )]
+	public void ALoadedCompanionThatStillRunsKeepsItsLinksThroughTheNextSave( int itemId, int x, int y, bool sound )
+	{
+		var (body, parentHandle, childHandle, _, _) = ParkWithACompanion( itemId, x, y, sound );
+
+		// The file's child says nobody spawned it: the save puts its parent word right from the running link.
+		BinaryPrimitives.WriteInt32LittleEndian( body.AsSpan( StructAt( body, new ParkWorld( body ).ScriptStates, childHandle ) + 0x10, 4 ), 0 );
+
+		var loaded = new ParkWorld( body );
+		var written = Resaved( loaded, Bind( loaded ) );
+		var parent = written.ScriptStates.For( parentHandle )!.Value;
+		var child = written.ScriptStates.For( childHandle )!.Value;
+
+		Assert.AreEqual( sound ? (0, childHandle) : (childHandle, 0), (parent.Child, parent.SoundChild) );
+		Assert.AreEqual( (sound ? 0 : parentHandle, 0, 0), (child.Parent, child.Child, child.SoundChild) );
+		Assert.AreEqual( loaded.ScriptStates.Order.Count, written.ScriptStates.Order.Count, "nothing was added or taken out" );
+	}
+
+	/// <summary>
+	/// The child a ride makes since the load (the TV Sim's reopen at word 211) is written whole, its parent's link and its own
+	/// parent word set, its thing, model, speed and folder its parent's; the load after starts exactly that one and the old
+	/// handle's record is not left behind to start a second set of torches.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the made child not written; its parent word, thing or model left nought; the old record kept; the speed or folder the loader's.</remarks>
+	[TestMethod]
+	public void AChildMadeAfterTheLoadIsWrittenAsTheRecordTheParentNamesAndTheOldOneIsLeft()
+	{
+		var (body, parentHandle, oldHandle, _, _) = ParkWithACompanion( SimulatorItem, 20, 60, sound: false );
+		var loaded = new ParkWorld( body );
+		var rides = Bind( loaded );
+		var parent = rides.Scheduler.Find( parentHandle )!;
+		var held = loaded.ScriptStates.For( parentHandle )!.Value;
+
+		rides.Scheduler.Destroy( oldHandle );
+
+		var reopened = rides.Scheduler.Spawn( parent.SpawnPaths( Opcode.SPAWNCHILD ).Single() );
+		var child = rides.Scheduler.Find( reopened )!;
+
+		Assert.AreNotEqual( oldHandle, reopened, "a handle is never given twice" );
+		parent.ChildId = reopened;
+		child.ParentId = parentHandle;
+		child.ThingId = parent.ThingId;
+
+		var written = Resaved( loaded, rides );
+		var record = written.ScriptStates.For( reopened )!.Value;
+
+		Assert.IsNull( written.ScriptStates.For( oldHandle ), "the old child's record is out" );
+		Assert.AreEqual( reopened, written.ScriptStates.For( parentHandle )!.Value.Child );
+		Assert.AreEqual( (parentHandle, 0, parent.ThingId, held.ModelHandle), (record.Parent, record.SoundChild, record.Thing, record.ModelHandle) );
+		Assert.AreEqual( (held.Speed, held.Directory), (record.Speed, record.Directory), "a child holds its parent's speed word and folder" );
+		Assert.AreEqual( 0, Times( "SAVE_PARK_SCRIPT_MADE_SINCE_THE_LOAD" ) );
+
+		var again = Bind( written );
+
+		Assert.AreEqual( 1, again.CompanionsStarted );
+		Assert.IsNull( again.Scheduler.Find( oldHandle ) );
+		Assert.AreEqual( 1, again.Scheduler.Scripts.Count( script => script.ParentId == parentHandle ), "exactly one set of torches" );
+		Assert.AreEqual( reopened, again.Scheduler.Find( parentHandle )!.ChildId );
+	}
+
+	/// <summary>
+	/// A ride bought since the load writes the child or sound child it made (Q911): the parent's link word set, the record whole under
+	/// the handle, a child's thing and model its parent's and a sound child's none; the load after starts it.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the bought ride's companion not handed over; its link, parent word, thing or model nought; the sound child given its parent's model or thing.</remarks>
+	[TestMethod]
+	[DataRow( SimulatorItem, 20, 60, false, DisplayName = "a TV Sim's torches (SPAWNCHILD)" )]
+	[DataRow( HotPotItem, 60, 60, true, DisplayName = "a Hot Pot's EventMap (SPAWNSOUND)" )]
+	public void ACompanionABoughtRideMadeIsWritten( int itemId, int x, int y, bool sound )
+	{
+		var rides = Bind( shipped );
+		var state = new ParkState( shipped );
+		var bought = Buy( state, rides, itemId, x, y );
+		var parentHandle = rides.ScriptFor( bought.ThingId );
+		var parent = rides.Scheduler.Find( parentHandle )!;
+
+		parent.TakeDeclaredName();
+
+		var childHandle = rides.Scheduler.Spawn( parent.SpawnPaths( sound ? Opcode.SPAWNSOUND : Opcode.SPAWNCHILD ).Single() );
+		var child = rides.Scheduler.Find( childHandle )!;
+
+		child.TakeDeclaredName();
+
+		if ( sound )
+			parent.SoundChildId = childHandle;
+		else
+		{
+			parent.ChildId = childHandle;
+			child.ParentId = parentHandle;
+			child.ThingId = parent.ThingId;
+		}
+
+		var kept = state.WrittenObjects( shipped, id => true, out var madeObjects, out var gone );
+		Assert.IsTrue( catalogue.TryGet( itemId, out var item ) );
+
+		var things = rides.Written( shipped, kept, ChannelsFor, state.HoardingFor,
+			[new ParkRides.BoughtThing( new ParkWorld.MadeObject( madeObjects.Single( placed => placed.ThingId == bought.ThingId ), "A", "B" ), item.Width, item.Depth, "x" )],
+			gone, state.BuiltItems )!;
+		var written = Written( things, out _ );
+		var parentRecord = written.ScriptStates.For( parentHandle )!.Value;
+		var childRecord = written.ScriptStates.For( childHandle );
+
+		Assert.IsNotNull( childRecord, "the companion has its record" );
+		Assert.AreEqual( sound ? (0, childHandle) : (childHandle, 0), (parentRecord.Child, parentRecord.SoundChild) );
+		Assert.AreEqual( sound ? (0, 0, 0, 0) : (parentHandle, bought.ThingId, parentRecord.ModelHandle, parentRecord.Speed),
+			(childRecord!.Value.Parent, childRecord.Value.Thing, childRecord.Value.ModelHandle, sound ? 0 : childRecord.Value.Speed),
+			"a child holds its parent's thing, model and speed, a sound child none and the loader's speed" );
+		Assert.AreEqual( sound ? ParkScriptStates.LoaderSpeed : parentRecord.Speed, childRecord.Value.Speed );
+		Assert.AreEqual( "x", childRecord.Value.Directory );
+		Assert.IsTrue( parentRecord.ModelHandle > 0 );
+		Assert.AreEqual( 0, Times( "SAVE_PARK_SCRIPT_MADE_SINCE_THE_LOAD" ), "nothing is left uncounted-for" );
+		Assert.IsTrue( written.ScriptStates.Order.ToList().IndexOf( childHandle ) < written.ScriptStates.Order.ToList().IndexOf( parentHandle ), "newest first: the child lies ahead of its parent" );
+
+		var again = Bind( written );
+
+		Assert.AreEqual( 1, again.CompanionsStarted, "the load starts it" );
+		Assert.IsNotNull( again.Scheduler.Find( childHandle ) );
+	}
+
+	/// <summary>A ride sold takes the sound child its SPAWNSOUND made with it, though that child holds no thing; the file's other scripts stay.</summary>
+	[TestMethod]
+	public void ASoldRidesSoundChildGoesWithIt()
+	{
+		var (body, parentHandle, childHandle, _, _) = ParkWithACompanion( HotPotItem, 60, 60, sound: true );
+		var loaded = new ParkWorld( body );
+		var thing = loaded.ScriptStates.For( parentHandle )!.Value.Thing;
+
+		Assert.AreEqual( 0, loaded.ScriptStates.For( childHandle )!.Value.Thing, "the sound child holds no thing" );
+		CollectionAssert.AreEquivalent( new[] { parentHandle, childHandle }, loaded.ScriptStates.HandlesOf( thing ).ToArray() );
+	}
+
+	/// <summary>A SPAWNCHILD companion shares its parent's channels, so its looping key comes back with them; a SPAWNSOUND one has no model and keeps the loader's.</summary>
+	/// <remarks><b>Mutations:</b> the flag false for a child; true for a sound child.</remarks>
+	[TestMethod]
+	[DataRow( SimulatorItem, 20, 60, false, 0x00020003, DisplayName = "a child keeps the key it was saved with" )]
+	[DataRow( HotPotItem, 60, 60, true, 0xffff, DisplayName = "a sound child has no channels to carry one" )]
+	public void ACompanionsLoopingKeyComesBackOnlyWithItsParentsChannels( int itemId, int x, int y, bool sound, int expected )
+	{
+		var (body, _, childHandle, _, _) = ParkWithACompanion( itemId, x, y, sound );
+		var states = new ParkWorld( body ).ScriptStates;
+
+		BinaryPrimitives.WriteInt32LittleEndian( body.AsSpan( StructAt( body, states, childHandle ) + 0xa8, 4 ), 0x00020003 );
+
+		var rides = Bind( new ParkWorld( body ) );
+
+		Assert.AreEqual( expected, rides.Scheduler.Find( childHandle )!.LoopingKey );
 	}
 
 	/// <summary>A script with no thing bought behind it is still counted, and a file's script that has ended with its thing standing.</summary>

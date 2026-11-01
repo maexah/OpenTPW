@@ -1623,19 +1623,28 @@ and a model's channels their count, so nothing moves, and they go in before the 
 - **A script** (`RideScript.Written`, `ParkScriptStates.Put`), under the handle the scheduler runs it on: the
   counter, both stack indices and the stack, the result, the variables, the five clock and animation fields,
   limbo with its count, the bounce slots with the two words beside them and the node base, the walk slots and
-  the head table; and in the header the scheduler's tick and the next handle. The record's other bytes stay the
-  file's: the links to other scripts, the name's offset, the speed word, the play rate, the scream's handle, the
+  the head table; the three link words (below); and in the header the scheduler's tick and the next handle. The record's other bytes stay the
+  file's: the name's offset, the speed word, the play rate, the scream's handle, the
   body and the strings. The effects it has started are written where the list is as long as the file's, and
   spliced in where it is not ("OpenTPW's writer, a script's started effects"). A bounce slot and a walk slot are written
-  whole, in use or let go ("OpenTPW's writer, a bounce slot let go", "a walk slot's facing", "a walk slot let go"). **Counted:** a script the file holds no record for (`SAVE_PARK_SCRIPT_MADE_SINCE_THE_LOAD`:
-  a thing bought and left out of the file (`SAVE_PARK_OBJECT_BOUGHT`), a child spawned), and
-  a record whose script has ended (`SAVE_PARK_SCRIPT_ENDED`), left the file's. In her played Full Simulation park the six are not ended but companions, a
+  whole, in use or let go ("OpenTPW's writer, a bounce slot let go", "a walk slot's facing", "a walk slot let go"). **Counted:** a script the file holds no record for and no parent wrote whole (`SAVE_PARK_SCRIPT_MADE_SINCE_THE_LOAD`:
+  a thing bought and left out of the file (`SAVE_PARK_OBJECT_BOUGHT`), the End's two scripts, a grandchild), and
+  a record whose script has ended (`SAVE_PARK_SCRIPT_ENDED`), left the file's, unless it is a companion (below). In her played Full Simulation park the six are not ended but companions, a
   script another made at its start (`SPAWNCHILD`: the parent's `+0x0c` holds the child's handle and the child's `+0x10` the parent's; `SPAWNSOUND`: the parent's `+0x14`, the child
   with no thing and no parent), which the loader builds from the file as records like any other (the original's list after loading her file: 130 nodes, the same handles, the
   links intact, read live by `origscripts.py`, `q849/runC`). A load here starts each record a parent's `+0x0c` or `+0x14` names (`ParkRides.CompanionsOf`; Q910), under its handle and
   in its place in the file's order, from the one file of the parent's own `SPAWNCHILD` or `SPAWNSOUND` instructions whose body is as long as the record's (the record holds no name of its file; one that fits no
   file, or more than one, is counted, `LOADED_COMPANION_NOT_STARTED`, as is a record no object owns and no link names), and resumes it as an object's script is resumed.
-  A child spawned since the load has no record and is not written, as before.
+  **A companion's links, and one made since the load** (Q911, with the Q910 regression; `q911/`): the writer puts each script's three link words right from the running scripts (`ParkRides.Linked`):
+  the parent's `+0x0c` and `+0x14` the handle of its child and sound child while that script stands, nought where it has gone, and the child's `+0x10` its parent's. A TV Sim loaded, closed
+  (word 205 `REMOVECHILD` takes the child down; the ride's window door, a real click) and saved at its word 207 holds nought in `+0x0c` and no record 42, and loads with no torches on the closed ride; the
+  Q910 build wrote the file's link and loaded the child on a closed ride, whose reopen (word 211) then made a second set (`q911/control`). A sound child's end tells its parent nothing (its `+0x10` is nought, the
+  engine leaves the parent's `+0x14`), so the writer checks the link's script still stands. A companion the load started whose script has gone while its parent stands is taken out of the file with its
+  emitters (as a sold thing's are); one the load could not start keeps its record and its parent's link as the file holds them. A child or sound child a parent made since the load, of a bought
+  ride (Q911's Hot Pot and TV Sim) or a loaded one (the reopened TV Sim's torches), is written whole as `ParkScriptStates.MadeRecord` writes a bought thing's script, newest first: its thing and model handle
+  its parent's for a child (the record's `+0xac`, `+0xc8`; `0x0055516e` copies them), none for a sound child, its speed word (`+0xc0`) its parent's for a child and the loader's 50 for a sound child, and its folder its parent's (measured
+  over every child and sound child of the 30 distinct park files on this machine: 90 of 90 and 90 of 90, `q911` session notes). A sold ride's sound child goes with it though it holds no thing
+  (`ParkScriptStates.HandlesOf` follows the `+0x14` link). `SPAWNCHILD` stores the loader's answer in `+0x0c` before it tests it (`0x0055512b`, `test eax,eax` at `0x0055512e`), so a failed load empties the slot, as `SPAWNSOUND`'s does.
   **One split in what is written** (Q849, `q849/runD`, `runE`): her Dino Karts (thing 289, script handle 110) is a kart ride with no record in `ParkBumperCars`, so its record and its
   cars are left the file's (`SAVE_PARK_TRACK_RIDE_AS_THE_FILE`) while its script runs in ours with every `BUMP` a no-op. Her file has script 110 at word 197, `VAR_ONRIDE` 4,
   `VAR_RUNNING` 1, and `RYLFTRAK` cars holding riders 226, 278, 114 and 355; in the saves ours made from it the cars and riders are the same byte for byte and the script is at word 15, `VAR_ONRIDE` 0,

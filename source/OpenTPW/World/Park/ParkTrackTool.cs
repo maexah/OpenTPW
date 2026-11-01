@@ -1623,7 +1623,7 @@ public static class ParkTrackTool
 			return $"track: thing {ParkBuildMode.Serves} is gone - the tool is put away";
 		}
 
-		var script = ParkRides.Current?.Scheduler.Scripts.FirstOrDefault( s => s.ThingId == ride.ThingId );
+		var script = ParkRides.Current is { } rides ? rides.Scheduler.Find( rides.ScriptFor( ride.ThingId ) ) : null;
 
 		return RunOn( state, level.Park, script, ride, item.TrackType, ParkTrackPieces.PieceCost( level, item.TrackType ), clickX, clickY,
 			pressReachedTheTool );

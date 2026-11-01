@@ -60,13 +60,21 @@ namespace OpenTPW;
 /// free slot. Its length is the saved block's, which <c>FUN_005597a0</c> takes as the count <c>+0x4c</c>; empty for a
 /// script with none. Null only where a record was made without a save.
 /// </param>
+/// <param name="Speed">
+/// <c>+0xc0</c>, dword 48: the speed word. A <c>SPAWNCHILD</c> child holds its parent's, a <c>SPAWNSOUND</c> child the loader's 50
+/// (<see cref="ParkScriptStates.LoaderSpeed"/>; 90 of 90 children and 90 of 90 sound children in the 30 distinct park files on the desk).
+/// </param>
+/// <param name="Directory">
+/// The folder the script was loaded from, the string after the head table (<c>data\levels\jungle\Rides\mumbo\</c>), without its
+/// nought; a child holds its parent's (90 of 90). Null only where a record was made without a save.
+/// </param>
 public readonly record struct SavedScript( int Handle, int Position, int BodyWords, int[] Variables,
 	int CallIndex, int HeapIndex, int Result, int[] Stack,
 	uint WaitDeadline, uint AnimationDeadline, int LoopingKey, int AnimationMark, uint TimerDeadline,
 	int[]? Heads = null, SavedLimboSlot[]? Limbo = null, int InLimbo = 0,
 	SavedBounceSlot[]? Bounce = null, int Bouncing = 0, int BounceBase = 0, int BounceNode = 0,
 	SavedWalkSlot[]? Walk = null, int Thing = 0, int ModelHandle = 0, SavedEffect[]? Effects = null,
-	int Child = 0, int Parent = 0, int SoundChild = 0 );
+	int Child = 0, int Parent = 0, int SoundChild = 0, int Speed = 0, string? Directory = null );
 
 /// <summary>
 /// One record of a script's object list, an effect <c>ADDOBJ</c> started (<c>docs/exe/saves.md</c>, "OpenTPW's
@@ -101,12 +109,18 @@ public readonly record struct SavedWalkSlot( short WalkNode, short HeadNode, sho
 /// that is null, or not the length the file's record holds, leaves the file's. <paramref name="Emitters"/> lies beside
 /// <paramref name="Effects"/>: where it holds one, the writer starts that emitter and writes its handle into the
 /// record (<see cref="ParkParticles.Edit.Start"/>).
+///
+/// <para>
+/// <paramref name="Child"/>, <paramref name="SoundChild"/> and <paramref name="Parent"/> are the script's link words
+/// (<c>+0x0c</c>, <c>+0x14</c>, <c>+0x10</c>) as it stands: a handle, nought for none, or -1 to leave the file's
+/// (<see cref="ParkScriptStates.Put"/>).
+/// </para>
 /// </summary>
 public readonly record struct WrittenScript( int Handle, int Position, int CallIndex, int HeapIndex, int Result,
 	int[] Stack, int[] Variables, uint WaitDeadline, uint AnimationDeadline, int LoopingKey, int AnimationMark,
 	uint TimerDeadline, SavedLimboSlot[]? Limbo, int InLimbo, SavedBounceSlot[]? Bounce, int Bouncing, int BounceBase,
 	int BounceNode, SavedWalkSlot[]? Walk, int[]? Heads, SavedEffect[]? Effects = null,
-	ParkParticles.Spawn?[]? Emitters = null );
+	ParkParticles.Spawn?[]? Emitters = null, int Child = -1, int SoundChild = -1, int Parent = -1 );
 
 /// <summary>
 /// The <c>RSSE</c> module of a park save: every running script's program counter and variables.
@@ -257,6 +271,9 @@ public sealed partial class ParkScriptStates
 
 	/// <summary>The model handle of the script's thing - <c>+0xc8</c>, so dword 50.</summary>
 	private const int ModelHandleDword = 50;
+
+	/// <summary>The speed word - <c>+0xc0</c>, so dword 48.</summary>
+	private const int SpeedDword = 48;
 
 	/// <summary>Which block holds limbo, eight bytes a slot, counting the body as nought.</summary>
 	private const int LimboBlock = 4;
@@ -520,7 +537,13 @@ public sealed partial class ParkScriptStates
 		var headsAt = _at;
 		var heads = ReadInts( headBytes / 4 );
 
-		Skip( ReadInt32() );
+		var directoryLength = ReadInt32();
+		var directoryAt = _at;
+
+		Skip( directoryLength );
+
+		var directory = directoryLength > 0
+			? System.Text.Encoding.Latin1.GetString( _data, directoryAt, directoryLength ).TrimEnd( '\0' ) : null;
 
 		var guard = ReadString( ObjectGuard.Length );
 
@@ -561,7 +584,7 @@ public sealed partial class ParkScriptStates
 			ReadInt32At( start + (BounceNodeDword * 4) ), walk,
 			(ushort)ReadInt16At( start + ThingAt ), ReadInt32At( start + (ModelHandleDword * 4) ), effects,
 			ReadInt32At( start + (ChildDword * 4) ), ReadInt32At( start + (ParentDword * 4) ),
-			ReadInt32At( start + (SoundChildDword * 4) ) );
+			ReadInt32At( start + (SoundChildDword * 4) ), ReadInt32At( start + (SpeedDword * 4) ), directory );
 
 		if ( !_byHandle.TryAdd( handle, saved ) )
 			throw new InvalidDataException( $"two saved scripts both call themselves handle {handle}" );
@@ -589,8 +612,8 @@ public sealed partial class ParkScriptStates
 	/// Writes the scheduler's tick and next handle over the header's, and each running script over its record in
 	/// <paramref name="body"/>, a copy of the payload this was read from: the struct's fields
 	/// <see cref="SavedScript"/> reads, and the stack, the variables, limbo, the bounce slots, the walk slots and
-	/// the head table where they lie. The record's other bytes stay the file's: the links to other scripts, the
-	/// name's offset, the speed word, the play rate, the body and the strings. The object list, the effects the
+	/// the head table where they lie, and the three link words where <see cref="WrittenScript"/> gives them. The
+	/// record's other bytes stay the file's: the name's offset, the speed word, the play rate, the body and the strings. The object list, the effects the
 	/// script has started, is written where it holds as many records as the file's; one of another length is
 	/// <see cref="Splice"/>'s (<see cref="Relisted"/>).
 	///
@@ -634,6 +657,15 @@ public sealed partial class ParkScriptStates
 			PutInt32( body, at + (LoopingKeyDword * 4), script.LoopingKey );
 			PutInt32( body, at + (AnimationMarkDword * 4), script.AnimationMark );
 			PutInt32( body, at + (TimerDeadlineDword * 4), (int)script.TimerDeadline );
+
+			if ( script.Child >= 0 )
+				PutInt32( body, at + (ChildDword * 4), script.Child );
+
+			if ( script.Parent >= 0 )
+				PutInt32( body, at + (ParentDword * 4), script.Parent );
+
+			if ( script.SoundChild >= 0 )
+				PutInt32( body, at + (SoundChildDword * 4), script.SoundChild );
 
 			if ( script.Stack.Length == saved.Stack.Length )
 				PutInts( body, place.Stack, script.Stack );

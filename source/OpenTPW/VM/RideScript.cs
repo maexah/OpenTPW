@@ -928,9 +928,8 @@ public sealed class RideScript
 	/// <c>FUN_0055a3e0</c>, which takes a script id and a variable index, follows that script's
 	/// <c>+0x14</c> to the sound script and answers one of <i>its</i> variables - and it has 29 callers,
 	/// none of them in the interpreter. So the point of <c>SPAWNSOUND</c> is to publish a block of
-	/// variables the ride and sound code reads by id, which is why every use loads the same file. Nothing
-	/// here consumes <i>that block</i>; the slot is kept so that whatever does will find it already
-	/// filled. <b>The slot itself is read</b> - <c>RideScriptScheduler</c>'s teardown follows it to take
+	/// variables the ride and sound code reads by id, which is why every use loads the same file; the car
+	/// sounds read it (<see cref="RideScriptScheduler.SoundVariable"/>). <b>The slot itself is read</b> - <c>RideScriptScheduler</c>'s teardown follows it to take
 	/// the spawned sound script down with its parent.
 	/// </para>
 	/// </summary>
@@ -3263,11 +3262,12 @@ public sealed class RideScript
 
 		var id = Host!.Spawn( path );
 
-		// SPAWNCHILD guards the loader's answer where SPAWNSOUND does not - TEST EAX,EAX / JZ at 0x55512e.
+		// The slot takes the loader's answer first, nought included (0x0055512b); then TEST EAX,EAX / JZ at 0x55512e
+		// leaves the instruction without linking anything.
+		ChildId = id;
+
 		if ( id == 0 )
 			return;
-
-		ChildId = id;
 
 		var child = Host.Find( id );
 
@@ -3434,9 +3434,8 @@ public sealed class RideScript
 		if ( !CanSpawn( name, out var path ) )
 			return;
 
-		// No guard here, and the asymmetry is the engine's: SPAWNCHILD tests the loader's answer before it
-		// stores, this one stores whatever came back. So a load that failed writes a nought into the slot
-		// and empties it, where the same failure leaves SPAWNCHILD's slot untouched.
+		// The slot takes whatever the loader answered, nought included, and the instruction returns (0x00555255);
+		// SPAWNCHILD stores the same way and then tests the answer.
 		SoundChildId = Host!.Spawn( path );
 	}
 

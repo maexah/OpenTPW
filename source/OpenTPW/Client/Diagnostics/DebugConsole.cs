@@ -2749,7 +2749,7 @@ public static class DebugConsole
 					.Select( ( mesh, index ) => (Name: mesh.Name.TrimEnd( '\0' ), Index: index) )
 					.Where( mesh => meshesModel.Entities[mesh.Index].Opacity <= 0f )
 					.Select( mesh => $"{mesh.Index} {mesh.Name}" );
-				var meshesPlayers = ParkRides.Current?.Scheduler.Scripts.FirstOrDefault( script => script.ThingId == meshesThing )?.Animations;
+				var meshesPlayers = ParkRides.Current is { } meshesRides ? meshesRides.Scheduler.Find( meshesRides.ScriptFor( meshesThing ) )?.Animations : null;
 				var meshesChannel = meshesPlayers?.Channel( 0 );
 
 				Reply( $"meshes {meshesThing}: {meshesModel.Entities.Length} meshes, hidden [{string.Join( ", ", putAway )}]; channel 0 "
