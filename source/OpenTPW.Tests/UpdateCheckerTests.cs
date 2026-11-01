@@ -334,6 +334,7 @@ public class UpdateCheckerTests
 		try
 		{
 			await UpdateChecker.StartAsync( true, Installed, () => new Fake { Throws = new HttpRequestException( "offline" ) } );
+			Assert.IsNull( UpdateChecker.Available, "a failed check leaves no offer" );
 		}
 		finally
 		{
@@ -369,15 +370,147 @@ public class UpdateCheckerTests
 			UpdateChecker.OpenReleasePage();
 			CollectionAssert.AreEqual( new[] { "https://github.com/maexah/OpenTPW/releases/tag/weekly-2026-11-08" }, opened );
 
-			UpdateChecker.Launch = _ => "no browser";
-			UpdateChecker.OpenReleasePage();
+			var warned = new List<string>();
+			Logger.LogDelegate hear = ( severity, text ) =>
+			{
+				if ( severity == Logger.Level.Warning && text.StartsWith( "Update check", StringComparison.Ordinal ) )
+					warned.Add( text );
+			};
 
-			UpdateChecker.Launch = _ => throw new InvalidOperationException( "no display" );
-			UpdateChecker.OpenReleasePage();
+			Logger.OnLog += hear;
+
+			try
+			{
+				UpdateChecker.Launch = _ => "no browser";
+				UpdateChecker.OpenReleasePage();
+				Assert.AreEqual( 1, warned.Count, "a refused open is logged once" );
+				StringAssert.Contains( warned[0], "no browser" );
+				StringAssert.Contains( warned[0], "weekly-2026-11-08" );
+
+				UpdateChecker.Launch = _ => throw new InvalidOperationException( "no display" );
+				UpdateChecker.OpenReleasePage();
+				Assert.AreEqual( 2, warned.Count, "a throwing opener is logged too" );
+				StringAssert.Contains( warned[1], nameof( InvalidOperationException ) );
+			}
+			finally
+			{
+				Logger.OnLog -= hear;
+			}
 		}
 		finally
 		{
 			UpdateChecker.Launch = was;
+			UpdateChecker.ResetForTests();
+		}
+	}
+
+	/// <summary>A reply larger than the cap is a failure, not a read of megabytes; one under it is read.</summary>
+	[TestMethod]
+	public async Task AReplyOverTheSizeCapIsAFailure()
+	{
+		var big = new Fake { Body = new string( ' ', UpdateChecker.MaxReplyBytes + 1024 ) + Reply( Release( "weekly-2026-11-08", false, Rid ) ) };
+		var outcome = await UpdateChecker.CheckAsync( big, Installed, Rid, TimeSpan.FromSeconds( 5 ) );
+
+		Assert.IsTrue( outcome.Failed, outcome.Note );
+		Assert.IsNull( outcome.Offer );
+		Assert.AreEqual( 4 * 1024 * 1024, UpdateChecker.MaxReplyBytes );
+
+		var fine = new Fake { Body = new string( ' ', 1024 * 1024 ) + Reply( Release( "weekly-2026-11-08", false, Rid ) ) };
+		Assert.AreEqual( "weekly-2026-11-08", (await UpdateChecker.CheckAsync( fine, Installed, Rid, TimeSpan.FromSeconds( 5 ) )).Offer?.Tag, "a megabyte is read" );
+	}
+
+	/// <summary>The game's own handler gives up connecting at the call's limit, so a black-holed address cannot hold it longer.</summary>
+	[TestMethod]
+	public void TheGamesHandlerHasAConnectTimeout()
+	{
+		using var handler = UpdateChecker.NewHandler();
+
+		Assert.AreEqual( UpdateChecker.Timeout, handler.ConnectTimeout );
+	}
+
+	/// <summary>
+	/// On Linux a check looks for libssl first, by the runtime shim's names: found under any one of them it goes on; found under
+	/// none it makes no request and logs one line, as any other check that cannot be made.
+	/// </summary>
+	[TestMethod]
+	public async Task NoLibsslMeansNoRequest()
+	{
+		foreach ( var name in new[] { "libssl.so.3", "libssl.so.1.1", "libssl.so.1.0.2", "libssl.so.1.0.0", "libssl.so.10" } )
+		{
+			Assert.IsTrue( UpdateChecker.OpenSslPresent( probed => probed == name, out _ ), name );
+		}
+
+		Assert.IsFalse( UpdateChecker.OpenSslPresent( _ => false, out var why ) );
+		StringAssert.Contains( why, "libssl" );
+
+		if ( !OperatingSystem.IsLinux() || UpdateChecker.RunningRid() is null )
+			return;
+
+		Log = new();
+		UpdateChecker.ResetForTests();
+		var was = UpdateChecker.OpenSslProbe;
+		var made = 0;
+
+		try
+		{
+			UpdateChecker.OpenSslProbe = _ => false;
+			await UpdateChecker.StartAsync( true, Installed, () =>
+			{
+				++made;
+				return new Fake();
+			} );
+
+			Assert.AreEqual( 0, made, "no libssl: no handler, no request" );
+			Assert.IsNull( UpdateChecker.Available );
+
+			UpdateChecker.ResetForTests();
+			UpdateChecker.OpenSslProbe = _ => true;
+			await UpdateChecker.StartAsync( true, Installed, () =>
+			{
+				++made;
+				return new Fake();
+			} );
+
+			Assert.AreEqual( 1, made, "with libssl the request is made" );
+		}
+		finally
+		{
+			UpdateChecker.OpenSslProbe = was;
+			UpdateChecker.ResetForTests();
+		}
+	}
+
+	/// <summary>
+	/// Deleting the lobby's panel and the label lets go of their text textures (the window stack does as much for a window's). A smoke
+	/// test only: with no drawn text there is no texture to see go, so it proves the overrides run and that a second release is safe.
+	/// </summary>
+	[TestMethod]
+	public void DeletingTheLabelsReleasesTheirText()
+	{
+		FileSystem = GameData.Required();
+		Log = new();
+
+		try
+		{
+			UpdateChecker.ResetForTests();
+			var rid = UpdateChecker.RunningRid() ?? Rid;
+			UpdateChecker.Answer( Reply( Release( "weekly-2026-11-08", false, rid ) ), Installed, rid );
+
+			var label = new VersionLabel( "weekly-2026-01-01" );
+			var panel = new UpdateNotice.LobbyPanel( "weekly-2026-01-01" );
+			label.Update();
+			panel.Update();
+
+			// Both overrides reach ReleaseText on their control without throwing, and the panel's control can be released twice.
+			// Panel.Delete also takes the panel off the running level's Hud, which a test has not got; OnDelete is the part under test.
+			foreach ( var each in new Panel[] { label, panel } )
+				typeof( Panel ).GetMethod( "OnDelete", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic )!.Invoke( each, null );
+
+			label.Control.ReleaseText();
+			panel.Control!.ReleaseText();
+		}
+		finally
+		{
 			UpdateChecker.ResetForTests();
 		}
 	}
@@ -463,9 +596,9 @@ public class UpdateCheckerTests
 	// ---- the lines that show the offer ----
 
 	/// <summary>
-	/// The line says only "Update available" (the tag is in the log and the link), in the label's font, in the menu's resting teal, and
+	/// The line says only "Update available" (the tag is in the log and the link), in the label's font, in the lobby's gold (the player slots' label), and
 	/// goes grey and then white under the pointer as a menu choice does: 33 on the first tick, 32 more each, white at the eighth, and
-	/// straight back to teal when the pointer goes.
+	/// straight back to gold when the pointer goes.
 	/// </summary>
 	[TestMethod]
 	public void TheNoticeIsAMenuChoiceInTheLabelsFont()
@@ -473,9 +606,10 @@ public class UpdateCheckerTests
 		var control = UpdateNotice.Make();
 
 		Assert.AreEqual( "Update available", control.Text );
+		Assert.AreEqual( new UiColour( 236, 162, 4 ), UpdateNotice.Resting, "the lobby's gold, the player slots' label" );
 		Assert.AreEqual( VersionLabel.LabelFont, control.Font );
 		Assert.IsTrue( control.TakesMouse, "it takes the pointer, which the label does not" );
-		Assert.AreEqual( new UiColour( 0, 175, 190 ), control.TextColour, "resting: the Escape menu's teal" );
+		Assert.AreEqual( UpdateNotice.Resting, control.TextColour, "resting: the lobby's gold" );
 		Assert.AreEqual( UiColour.White, new VersionLabel( "weekly-2026-01-01" ).Control.TextColour, "the build label stays plain white" );
 
 		control.Entered!();
@@ -491,10 +625,10 @@ public class UpdateCheckerTests
 
 		control.Exited!();
 		control.Tick();
-		Assert.AreEqual( new UiColour( 0, 175, 190 ), control.TextColour, "straight back to teal" );
+		Assert.AreEqual( UpdateNotice.Resting, control.TextColour, "straight back to gold" );
 	}
 
-	/// <summary>Clicking it reaches the opener with the link, and the stack hits it where no window is.</summary>
+	/// <summary>The stack hits the notice where no window is and not under a modal window; the click reaching the opener is the Escape menu's test and the click test's.</summary>
 	[TestMethod]
 	public void TheNoticeIsHitWhereNoWindowIsAndNotUnderAModalWindow()
 	{
@@ -553,7 +687,7 @@ public class UpdateCheckerTests
 			var build = offered.Root.Children.Single( c => c.Id == VersionLabel.ControlId );
 
 			Assert.AreEqual( "Update available", notice.Text );
-			Assert.AreEqual( new UiColour( 0, 175, 190 ), notice.TextColour, "teal, as a choice rests" );
+			Assert.AreEqual( UpdateNotice.Resting, notice.TextColour, "gold at rest" );
 			Assert.AreEqual( UiColour.White, build.TextColour, "the build stays white" );
 			Assert.IsTrue( notice.TakesMouse, "the menu's dimmer takes the pointer, so the line is wired in the menu" );
 			Assert.AreEqual( build.Rect.Right, notice.Rect.Right, "right-aligned with the build" );
@@ -627,7 +761,7 @@ public class UpdateCheckerTests
 
 	/// <summary>
 	/// The lobby's line is driven by the panel's own clock, 30 ticks a second of <see cref="Time.Delta"/>: a second with the pointer on it
-	/// and it is white; the pointer gone and it is teal on the next frame.
+	/// and it is white; the pointer gone and it is gold on the next frame.
 	/// </summary>
 	[TestMethod]
 	public void TheLobbysNoticeTurnsWhiteUnderThePointerOnTheClock()
@@ -646,7 +780,7 @@ public class UpdateCheckerTests
 			Time.Delta = 1f / 60f;
 			panel.Update();
 
-			Assert.AreEqual( new UiColour( 0, 175, 190 ), panel.Control!.TextColour, "teal at rest, however long the frames run" );
+			Assert.AreEqual( UpdateNotice.Resting, panel.Control!.TextColour, "gold at rest, however long the frames run" );
 
 			panel.Control.Entered!();
 
@@ -657,7 +791,7 @@ public class UpdateCheckerTests
 
 			panel.Control.Exited!();
 			panel.Update();
-			Assert.AreEqual( new UiColour( 0, 175, 190 ), panel.Control.TextColour, "teal once it goes" );
+			Assert.AreEqual( UpdateNotice.Resting, panel.Control.TextColour, "gold once it goes" );
 		}
 		finally
 		{

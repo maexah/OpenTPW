@@ -1532,7 +1532,7 @@ public class Level
 	{
 		Hud = new();
 
-		// The build's name, bottom right, under every window (the original's "v 2.0"; a deviation said there), and beside
+		// The build's name, bottom right, under every window (the original's "v 2.0"; a deviation said there), and above
 		// it the line that a newer weekly build is out, when the update check has found one (Q941).
 		var label = LaunchReport.RunningBuildLabel;
 		Hud.AddChild( new VersionLabel( label ) );

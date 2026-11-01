@@ -42,7 +42,7 @@ internal static class LaunchReport
 	/// <summary>
 	/// The build's name alone, the informational version before its <c>+commit</c>: <c>weekly-YYYY-MM-DD</c> (a dry run's
 	/// <c>weekly-test-N</c>), <c>local</c> for a build not given the tag, <c>unknown</c> where the version is
-	/// missing. The lobby letters it bottom right (<see cref="UI.VersionLabel"/>).
+	/// missing. The lobby letters <see cref="BuildLabel"/> (this, or <c>local - commit</c>) bottom right (<see cref="UI.VersionLabel"/>).
 	/// </summary>
 	public static string BuildName( string? informational )
 	{

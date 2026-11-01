@@ -2395,8 +2395,7 @@ member of staff's window opened and their dismissal confirmed; the running park 
 sum the same before and after.
 **Not run in either game:** fireworks (no Instant Action item was tried, no file holds one), a toilet bought, a
 toilet dirtied or cleaned and then written (tests only), a thing bought and left out of the file, the objects
-going out as the file's. **Not built:** the fireworks' spent turn (`FIREWORKS_SPENT_REGION_EFFECT`), any reader of the running grid (Q257n,
-Q157). `docs/exe/addresses.md` not regenerated.
+going out as the file's. **Not built:** the fireworks' spent turn (`FIREWORKS_SPENT_REGION_EFFECT`), the chooser's reader of the running grid (Q257n; the needs turn reads it since Q668). `docs/exe/addresses.md` not regenerated.
 
 ### OpenTPW's writer, the staff's region effects
 

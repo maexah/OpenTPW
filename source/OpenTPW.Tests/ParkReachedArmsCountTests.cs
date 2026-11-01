@@ -1,5 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
@@ -115,6 +116,39 @@ public class ParkReachedArmsCountTests
 		Assert.AreEqual( counted ? before + 1 : before, Counted( "HEADING_FOR_EXIT_CHANGE_OF_MIND" ), why );
 	}
 
+	/// <summary>
+	/// The change of mind is reached by a running game (Q862): the door shuts the park, a deciding guest with a positive exit level
+	/// sets off (<c>PeepBehaviour.Leave</c> writes no exit level, as <c>0x004fee87</c>..<c>0x004fef13</c> store nothing to
+	/// <c>+0x1bc</c>), the door opens again while they walk, and the next turn is counted. While it stays shut nothing is.
+	/// </summary>
+	[TestMethod]
+	public void AGuestWhoSetOffWhenTheParkShutIsCountedWhenItReopens()
+	{
+		var (behaviour, guest, walk) = Guest( PeepState.Deciding, shut: true );
+		var cell = CellOfType( behaviour.State, 1 );
+
+		behaviour.State.StandOn( guest.ThingId, cell.X, cell.Y );
+		guest.ExitLevel = 100;
+		guest.Happiness = 50;
+
+		var before = Counted( "HEADING_FOR_EXIT_CHANGE_OF_MIND" );
+
+		behaviour.Step( guest, walk, playing: null, tick: 1 );
+
+		Assert.AreEqual( PeepState.HeadingForExit, guest.State, "the shut park sent them out" );
+		Assert.AreEqual( 100, guest.ExitLevel, "setting off writes no exit level" );
+
+		behaviour.Step( guest, walk, playing: null, tick: 2 );
+		Assert.AreEqual( before, Counted( "HEADING_FOR_EXIT_CHANGE_OF_MIND" ), "the park is still shut" );
+
+		// Reopened while they walk: a path cell under them again, as one of the cells on the way is.
+		behaviour.State.SetParkClosed( false );
+		behaviour.State.StandOn( guest.ThingId, cell.X, cell.Y );
+		behaviour.Step( guest, walk, playing: null, tick: 3 );
+
+		Assert.AreEqual( before + 1, Counted( "HEADING_FOR_EXIT_CHANGE_OF_MIND" ), "reopened while they walk out" );
+	}
+
 	private static CellRoute Route( (int X, int Y) start, params (int X, int Y)[] waypoints )
 	{
 		var route = new CellRoute { Start = start, Goal = waypoints[^1] };
@@ -130,7 +164,7 @@ public class ParkReachedArmsCountTests
 	/// </summary>
 	[TestMethod]
 	[DataRow( 10, 10, 11, 11, true, "a one-cell diagonal from the start" )]
-	[DataRow( 10, 10, 10, 11, 11, 11, true, "a one-cell diagonal as the second step" )]
+	[DataRow( 10, 10, 11, 12, 12, 12, false, "open ground drops the waypoint, leaving a knight's step" )]
 	[DataRow( 10, 10, 10, 15, false, "a straight run" )]
 	[DataRow( 10, 10, 10, 11, false, "a one-cell step along one axis" )]
 	[DataRow( 10, 10, 13, 13, false, "a three-cell slant" )]
@@ -147,5 +181,40 @@ public class ParkReachedArmsCountTests
 		CellReroute.Run( route, ( _, _, _ ) => false );
 
 		Assert.AreEqual( counted ? before + 1 : before, Counted( "CELL_REROUTE_DIAGONAL_PASS" ), why );
+	}
+
+	/// <summary>
+	/// A step after the first is looked at too: a wall down the east side of column 10 holds the waypoint (10,11) in place, so the
+	/// route stays (10,10), (10,11), (11,12) and its second step is the one-cell diagonal. A test that read only the first step
+	/// would count none.
+	/// </summary>
+	[TestMethod]
+	public void ADiagonalAsTheSecondStepIsCountedWhereAWallHoldsTheWaypoint()
+	{
+		var route = Route( (10, 10), (10, 11), (11, 12) );
+		var before = Counted( "CELL_REROUTE_DIAGONAL_PASS" );
+
+		CellReroute.Run( route, ( x, _, side ) => x == 10 && side == StepDirection.East );
+
+		CollectionAssert.AreEqual( new[] { (10, 11), (11, 12) }, route.Waypoints, "the wall kept the waypoint" );
+		Assert.AreEqual( before + 1, Counted( "CELL_REROUTE_DIAGONAL_PASS" ) );
+	}
+
+	/// <summary>
+	/// Running out of rounds returns without the diagonal pass (<c>0x00510a1e</c> is reached only by a scan that splices
+	/// nothing). Three shut sides make the route from (5,0) through (11,8) to (12,8) splice nine times, one a round, and come out
+	/// (6,1), (6,3), (9,4), (12,8): a one-cell diagonal in its first step, which a tenth scan would have counted, and none is.
+	/// </summary>
+	[TestMethod]
+	public void NineSplicesEndTheRouteWithNoDiagonalPass()
+	{
+		var shut = new HashSet<(int, int, StepDirection)> { (6, 2, StepDirection.East), (7, 1, StepDirection.South), (8, 4, StepDirection.South) };
+		var route = Route( (5, 0), (11, 8), (12, 8) );
+		var before = Counted( "CELL_REROUTE_DIAGONAL_PASS" );
+
+		CellReroute.Run( route, ( x, y, side ) => shut.Contains( (x, y, side) ) );
+
+		CollectionAssert.AreEqual( new[] { (6, 1), (6, 3), (9, 4), (12, 8) }, route.Waypoints );
+		Assert.AreEqual( before, Counted( "CELL_REROUTE_DIAGONAL_PASS" ), "no scan was left to run the pass" );
 	}
 }

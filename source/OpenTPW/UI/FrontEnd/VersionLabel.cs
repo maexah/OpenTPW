@@ -55,6 +55,8 @@ internal sealed class VersionLabel : Panel
 
 	protected override void OnRender() => Control.Draw();
 
+	protected override void OnDelete() => Control.ReleaseText();
+
 	/// <summary>The box of the label <paramref name="text"/> in the build line's font, or null while the font is not loaded.</summary>
 	internal static UiRect? LabelBox( string text )
 		=> UiFonts.Get( LabelFont ) is { } font ? Box( font.Measure( text ), font.LineHeight, UiFonts.SetScreenHeight ) : null;

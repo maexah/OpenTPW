@@ -67,6 +67,9 @@ Linux:    you need a Vulkan driver for your graphics card (Mesa's
           If it stops at once naming ICU or libicu, install your
           system's ICU package (not tested: no machine without
           it was tried).
+          The check for a newer weekly build needs OpenSSL (libssl,
+          version 3 or 1.1). Where none is installed the check is
+          not made and console.log says so; the game starts as usual.
 
 
 Does it use the internet?

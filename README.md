@@ -46,7 +46,7 @@ macOS builds are untested. You still need your own copy of the game.
 **The game contacts GitHub once as it starts.** A weekly build asks `api.github.com` (no account, no token) whether a newer weekly
 build has been released; if one has, the lobby and the Escape menu say `Update available` above the build's name, and clicking the words opens that
 release's page in your browser. Nothing is downloaded or installed, and a build that is not a weekly one (a `local` build, one you
-made yourself) makes no request. A failed check is one line in `console.log` and nothing else. To turn the request off, put the line
+made yourself) makes no request. A failed check is one line in `console.log` and nothing else (on Linux the check needs OpenSSL, `libssl`; where none is installed it is not made). To turn the request off, put the line
 `updatecheck off` in `opentpw.cfg` in the save folder. This is OpenTPW's own: the original has no such thing.
 
 ## Build it yourself

@@ -28,7 +28,8 @@ internal sealed class PlayerSlots : UiWindow
 {
 	private const int ButtonFont = 5;
 
-	private static readonly UiColour Label = new( 236, 162, 4 );
+	/// <summary>The lobby's gold (0x007540c0), also the update line's resting colour (<see cref="UpdateNotice.Resting"/>).</summary>
+	internal static readonly UiColour Label = new( 236, 162, 4 );
 	private static readonly UiColour Highlighted = new( 255, 255, 0 );
 	private static readonly UiColour QuitHighlighted = new( 255, 0, 0 );
 

@@ -141,7 +141,10 @@ the build asked from is `LaunchReport.RunningBuildName` (no new version system),
 launch never reaches GitHub; the link built from the checked tag, never the reply's address; the off switch one line of `opentpw.cfg`
 (`updatecheck off`, default on, no Options row); no dismissal, no download, install, update server or forced update. No override for the URL is shipped:
 the fake answers of a test run go in through the debug console, behind `OPENTPW_DEBUG_CONSOLE`. The line's look is Alexah's (2026-11-01, after the
-first photographs): its own line above the build label, both right-aligned, the two words alone, the Escape menu's teal with a menu choice's pointer
-ramp. Alongside it: a local build's label reads `local - <first eight of its commit>` (the commit the SDK adds, or, for a source download with no
+first photographs, and changed the same day): its own line above the build label, both right-aligned, the two words alone, at rest in the lobby's gold
+(`new UiColour( 236, 162, 4 )`, the player slots' label, one constant `PlayerSlots.Label` that `UpdateNotice.Resting` names; it replaced the Escape menu's teal, which read
+faintly on the lobby's sea), white under the pointer by a menu choice's ramp. Alongside it: a local build's label reads `local - <first eight of its commit>` (the commit the SDK adds, or, for a source download with no
 `.git`, the one `git archive` writes into `source/OpenTPW/SourceCommit.md`, read only when the SDK found none), so a screenshot of a local build says
-which commit it was.
+which commit it was. On Linux the first HTTPS call loads the runtime's OpenSSL shim, which prints "No usable version of libssl was found" and aborts the process
+where no libssl loads and no `catch` stops it, so a check probes `libssl.so.3`, `.1.1`, `.1.0.2`, `.1.0.0` and `.10` (the shim's own names) first and, finding none, makes no request
+and logs one line, as a failed check does.

@@ -11727,7 +11727,7 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   reached in Lost Kingdom, unbuilt, and calls no `Unimplemented.Report` (`AGENTS.md` rule 4). In `PeepBehaviour`:
   `Entering` lacks `FUN_004ffb20`'s guard (park shut or gate not open, back to the gate), reachable since the
   entry-price door shuts a running park; `HeadingForExit` has no
-  change of mind (`FUN_00500a50`), which a saved guest can take. `CellReroute` never
+  change of mind (`FUN_00500a50`), which a running game reaches (the park shut and reopened while a guest with a positive exit level walks out, Q862). `CellReroute` never
   runs `FUN_005108a0`'s diagonal pass after a scan that splices nothing, which is how most routes end.
   (`Peep.Tick`'s cell's `RegionFX` term is built, Q668.)
   (`ParkRideOperation.Invite`'s `RunsContinuously` is built, Q304.) Count each where the original tests it, and
@@ -11754,10 +11754,10 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   deviation, said at the site and in `docs/DECISIONS.md`, `README.md` and the weekly zip's `README.txt`. **Done (Q941):** `UpdateChecker`
   (the pick, the request through an injectable handler, a 10-second limit, no token, no cache, once a launch, off the render thread),
   `opentpw.cfg`'s `updatecheck off`, `UpdateNotice` and `MenuLine` (`Update available` on its own line above the build label, right-aligned
-  with it, teal and white under the pointer as a menu choice is, Alexah's look of the same day), the Escape menu's build and line in the lobby and a
+  with it, the lobby's gold `(236, 162, 4)` at rest, which replaced the teal the same day, and white under the pointer as a menu choice is, Alexah's look), the Escape menu's build and line in the lobby and a
   park (`GameMenu`), `WindowStack.Notice` for the lobby's click, the debug console's `update fake`, SDL's `OpenURL`; a local build's label reads
   `local - <first eight of the commit>` (a source download with no `.git` too, from `SourceCommit.md` and `export-subst`). 31 tests; 32 put-back bugs all fail one
-  (`q941/mutations.py`); the desk's photographs and logs in `q941/runs/*-final`. Not seen: a real newer release (none exists), Windows and
+  (`q941/mutations.py`). Review fixes (run 17, group M): the gold, a libssl probe on Linux (no libssl, no request: the runtime's shim would abort), the two labels release their text on delete, and tests for the size cap, the connect timeout, no offer after a failure, a failed open logged, the libssl probe and the gold, each failing with its bug put back; the desk's photographs and logs in `q941/runs/*-final`. Not seen: a real newer release (none exists), Windows and
   macOS; they are Q943.
 - [x] **Q865. The five park-screen readouts of Q158 are counted where each is drawn.** Split from Q158 (its counting half; the
   builds stay in Q158). Six names now reach `unimplemented`, each at the site that draws the stand-in: `OBJECT_WINDOW_AGE_WORDING`

@@ -3,7 +3,7 @@ namespace OpenTPW.UI;
 /// <summary>
 /// The line that says a newer weekly build is out (Q941, <see cref="UpdateChecker"/>), on its own line directly above the build label
 /// and right-aligned with it (<see cref="VersionLabel.NoticeBox"/>), in the label's font. It acts as one of the game menu's choices
-/// does (<see cref="MenuLine"/>): the menu's resting teal, white under the pointer; it is clickable, and opens the offered release's
+/// does (<see cref="MenuLine"/>): the lobby's gold at rest (<see cref="Resting"/>, Alexah's choice), white under the pointer; it is clickable, and opens the offered release's
 /// page in the player's browser. <b>OpenTPW's own, a deviation</b>: the original has no such line, so the words are new English. It
 /// is shown when the check has found a newer build, with no way to dismiss it, and it never opens a menu or stops anything. The
 /// words do not name the tag (the log does); the link goes to that tag's page.
@@ -19,6 +19,9 @@ internal static class UpdateNotice
 	/// <summary>The control's id: OpenTPW's own, beside the label's (<see cref="VersionLabel.ControlId"/>).</summary>
 	internal const int ControlId = 0x8cfd56;
 
+	/// <summary>The line's resting colour: the lobby's gold, the player slots' label (<see cref="PlayerSlots.Label"/>, 0x007540c0).</summary>
+	internal static UiColour Resting => PlayerSlots.Label;
+
 	/// <summary>What the line says. The tag is in the log and in the link, not here.</summary>
 	internal const string Words = "Update available";
 
@@ -28,6 +31,7 @@ internal static class UpdateNotice
 		var line = new MenuLine
 		{
 			Id = ControlId,
+			RestColour = Resting,
 			Font = VersionLabel.LabelFont,
 			Text = Words,
 			TextShadow = true,
@@ -88,5 +92,7 @@ internal static class UpdateNotice
 		}
 
 		protected override void OnRender() => _control?.Draw();
+
+		protected override void OnDelete() => _control?.ReleaseText();
 	}
 }

@@ -88,8 +88,8 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   seen: on Windows and macOS the opener (`SDL_OpenURL`), the `updatecheck off` line and the label `local - <commit>` were not run; and the
   pick has met only replies made up in tests and the real GitHub's empty list, because no weekly release exists yet. Once the first weekly
   build is out and a second follows, run the first with the network on and see the line appear (and its click open the page), on Linux and
-  on the Windows PC (`docs/TOOLING.md`, "The update check, and a click on its line"). Also look at the line's teal against the lobby's teal
-  sea (it reads faintly in `q941/runs/fake-final/lobby-with.png`): Alexah chose the colour; the dark edge is all that helps it.
+  on the Windows PC (`docs/TOOLING.md`, "The update check, and a click on its line"). Also look at the line's gold (the lobby's `(236, 162, 4)`, which replaced the teal that read
+  faintly on the lobby's teal sea in `q941/runs/fake-final/lobby-with.png`) in the lobby and both Escape menus: photograph it once, which the first look has not.
 
 - [ ] **Q902. Where the original's saves went on a PC without the permission fix.** Alexah's call, from Q982: whether the
   original's saves went to Windows' VirtualStore (`%LOCALAPPDATA%\VirtualStore\Program Files (x86)\SimTheme
@@ -603,20 +603,31 @@ filed the items that cite it.
   gadget's gauge alone and its fill direction is read (`hud.md`, "The happiness gauge's two quads"); the remark cited
   above is gone.
 - [ ] **Q861. An entering guest turned back at the gate (`ENTERING_GATE_GUARD`).** From Q157, which counts it. `FUN_004ffb20`'s first two tests
-  (`0x004ffb2b`..`0x004ffb42`: `mParkClosed` set, or the gate's status not 1) send the guest to a ticket booth by the draw's low
-  bit (`FUN_004d8610`, then `FUN_004fa530` to it) and put them in state 2 (`HeadingForGate`) in place of the walk through the gate;
-  `PeepBehaviour`'s `Entering` arm counts it (`!GateWillAdmit`) and walks on. Build it as `Wait`'s booth arm sends a guest (`BoothFor`,
-  `SendTo`), its `ParkOpeningWait` untouched. Confirm: the entry-price door shut by a real click with a guest in `Entering`
+  (`0x004ffb2b`..`0x004ffb42`: `mParkClosed` set, or the gate's status not 1) send the guest to a ticket booth and put them in state 2
+  (`HeadingForGate`) in place of the walk through the gate; `PeepBehaviour`'s `Entering` arm counts it (`!GateWillAdmit`) and walks on. The
+  draw is always taken: `FUN_00516330 & 1` into `FUN_004d8610` (`0x004ffb85`..`0x004ffba1`), then `FUN_004fa530` to that cell, so build it as
+  `EitherOf( TicketBoothA, TicketBoothB )` (the way the gate's own `Entering` turn at line 689 picks), not `BoothFor`, which keeps the booth a
+  guest already stands at; `ParkOpeningWait` untouched. Seen in Q157: `7x ENTERING_GATE_GUARD` after `step 2`, which was not predicted as a
+  number and is the seven guests then in `Entering` (things 32, 33, 34, 36, 37, 40, 41 in `q157/run-final2/run.log`), one turn each. Confirm: the entry-price door shut by a real click with a guest in `Entering`
   (`q157/confirm.py` has the click), `peeps` on that guest before and after, predicted first; the count leaves the census.
 - [ ] **Q862. A leaver's change of mind (`HEADING_FOR_EXIT_CHANGE_OF_MIND`).** From Q157, which counts it. `FUN_00500a50`'s first test
   (`0x00500a53`..`0x00500a84`: exit level above nought, happiness byte not nought, the park open, `FUN_004fa990`) puts the guest back in
-  state 6 with `+0x188` = 0 (the "Make up your mind!" line goes to a debug print). The three arms that send a guest out write exit
-  level nought and the needs turn lowers it, so only a file that saves a guest in state 18 with a positive exit level reaches it; find out
-  whether any shipped file does (`parkfile.py` over the shipped parks and Alexah's Full Simulation saves) before building, and if none,
-  say so in `ride-operation.md` and leave the count. Confirm: such a file loaded, the census name present, then the build.
+  state 6 with `+0x188` = 0 (the "Make up your mind!" line goes to a debug print). A running game reaches it:
+  the only stores of nought to `+0x1bc` in `0x004fe000`..`0x00500fff` are the gate's two arms (`0x004ff9af`, `0x004ffaa3`; `Judge`), and
+  the leaving arm of the deciding turn (`PeepBehaviour.Leave`, `0x004fee87`..`0x004fef13`) and the guard's throw-out (`0x004febf6`) store
+  nothing to it. So shut the park with the entry-price door (exit level above nought, the reason logged "the park shut"), and open it again while
+  that guest walks out: `WouldChangeTheirMind` holds and the name is counted (`q157/run-final/console.log` has 13 "leaving, the park shut",
+  4 with a positive exit level). Confirm: pause, shut the door, step until a guest with a positive exit level is `HeadingForExit`, reopen, and
+  predict the count before stepping; build it, then the same sequence shows the guest back in `Deciding`. `ParkReachedArmsCountTests`
+  holds the sequence as a test (`AGuestWhoSetOffWhenTheParkShutIsCountedWhenItReopens`).
 - [ ] **Q863. The route improver's diagonal pass (`CELL_REROUTE_DIAGONAL_PASS`).** From Q157, which counts it where a no-splice scan
   leaves a one-cell diagonal step. `FUN_005108a0` from `0x00510a1e` goes over the route's steps and breaks a one-cell diagonal in two
-  when a shut edge of the corner decides it (`0x00510b15`..`0x00511020`, the inserted corner at `0x00511040`, at most 252 waypoints);
+  when a shut edge of the corner decides it (`0x00510b15`..`0x00511020`, the inserted corner at `0x00511040`, and no more than 251 waypoints:
+  `0x0051104e` skips the insert when the count plus one reaches 252, and 252 is the splice's own limit at `0x00510978`). The decision (read by
+  the second reader of Q157's review, `0x00510b34`, `0x00510c87`, `0x00510dbe`, `0x00510efb`, not decoded again here): it asks the two edges of
+  `to` back along each axis and the two forward edges of `from`, and writes only when exactly one of a pair is shut, through the open corner,
+  the inserted waypoint at `to` plus the offset (`0x0051107d`..`0x00511090`). Counted by Q157 without that test: any one-cell diagonal; a
+  pass that follows nine splices does not run at all (`NineSplicesEndTheRouteWithNoDiagonalPass`);
   `CellReroute.Run` stops where it starts. Decode the corner cases (the other sign combinations from `0x00510c73`), build the pass, and
   run the routes of the stock park through the old and the new to see how many steps change. Confirm: a guest's route over a bent path
   in both builds, the waypoints printed, predicted first.
@@ -626,6 +637,9 @@ filed the items that cite it.
   the reverb"); a negative `+0xd8` sends nothing. Reverb itself stays cut, so only a name in the count is wanted: report it where the
   original calls it (`Unimplemented.Report( "CAMERA_RIDE_REVERB" )`), once a ride is under the camera. Confirm: `unimplemented`
   with the camcorder on a ride, predicted first, and without one.
+  - **Note (Q580, 2026-10-20):** the Sun God reaches `SETREVERB` (`incagod` at 162 and 188, in every run of it), counted at the dispatch
+    default as `Inca God: SETREVERB at 162`. Building it is the store of its operand at the script's `+0xd8` for the preset holder above;
+    with reverb cut nothing would read it, so a name of its own in the count is all it needs (`q580fs/run-S2`).
 
 - [ ] **Q158. Five park-screen readouts are stand-ins, and nothing counts them.** Found by the 2026-09-26 staleness
   audit (`AGENTS.md` rule 4). `ParkObjectWindow`'s Age row prints a bare number: its wording, `FUN_006acd60` with

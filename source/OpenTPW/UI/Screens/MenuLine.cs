@@ -1,7 +1,7 @@
 namespace OpenTPW.UI;
 
 /// <summary>
-/// A line of the game menu's kind: its text in the menu's resting teal, turning grey and then white while the pointer is on it,
+/// A line of the game menu's kind: its text in the menu's resting teal (or another resting colour its owner gives it), turning grey and then white while the pointer is on it,
 /// and straight back when the pointer goes (<c>0x0048b2a0</c>, <c>0x0048b220</c>; <see cref="GameMenu"/>). The menu's choices are
 /// these, and so is the update line (<see cref="UpdateNotice"/>), which behaves as a choice does so that it reads as clickable.
 /// The owner ticks it 30 times a second (<see cref="TicksPerSecond"/>) and calls <see cref="Tick"/>.
@@ -19,6 +19,19 @@ internal class MenuLine : UiControl
 	/// counting down once the pointer has gone, 0 still.
 	/// </summary>
 	public int Ramp { get; set; }
+
+	private UiColour _rest = Resting;
+
+	/// <summary>The colour this line rests in and goes back to: <see cref="Resting"/> unless its owner sets another (the update line's gold).</summary>
+	public UiColour RestColour
+	{
+		get => _rest;
+		init
+		{
+			_rest = value;
+			TextColour = value;
+		}
+	}
 
 	public MenuLine()
 	{
@@ -46,7 +59,7 @@ internal class MenuLine : UiControl
 		}
 		else if ( Ramp < 0 )
 		{
-			TextColour = Resting;
+			TextColour = _rest;
 			Ramp = Ramp + 223 < 0 ? 0 : Ramp - 32;
 		}
 	}

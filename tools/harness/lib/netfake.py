@@ -16,7 +16,7 @@ import os, socket, subprocess, sys, tempfile, threading, time
 
 def listener(mode="record"):
     """A loopback server standing in for a proxy. Answers (the server socket, the list its connections are noted in).
-    mode "closed" answers a socket that was bound and closed again, so connecting is refused and the list stays empty."""
+    mode "closed" answers a socket that is bound and never listened on, so connecting is refused and the list stays empty."""
     srv = socket.socket(); srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     srv.bind(("127.0.0.1", 0)); conns, held = [], []
     if mode == "closed":

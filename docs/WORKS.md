@@ -232,7 +232,7 @@ belongs to or at the end. Grep it by area or Q-number; never read it whole.
   in a box measured from the text and set back from ( 0x7c0, 0x5c0 ), id `0x8cfd55`, which the console's `control
   8cfd55` reads. The text is the deviation, said at the site. The original's box for "v 2.0", read from its memory at
   800 x 600, is ( 1926, 1444, 1984, 1472 ), and ours measures the same text to the same box (`VersionLabelTests`);
-  at 800 x 600 ours reads `control 0x8cfd55 at (754,564) size (21,11) ... 'local' lettered font 6 in (255, 255, 255)
+  at 800 x 600 ours read (a dated measurement; the label now reads `local - <commit>`, wider) `control 0x8cfd55 at (754,564) size (21,11) ... 'local' lettered font 6 in (255, 255, 255)
   without the edge`, its ink's bottom on row 571 as the original's (`q752/ours-a`, `q752/orig-a`).
 - **A weekly build looks once for a newer weekly build, and the lobby and the Escape menu say so** (Q941, OpenTPW's own, a deviation; the words are
   new English): `UpdateChecker` asks `api.github.com/repos/maexah/OpenTPW/releases` (not `/latest`: the weekly builds are pre-releases) once as
@@ -240,11 +240,11 @@ belongs to or at the end. Grep it by area or Q-number; never read it whole.
   `weekly-YYYY-MM-DD` dated after the running build that holds this platform's zip (`OpenTPW-<tag>-<rid>.zip`); a draft, `weekly-test-N`, a bad
   date and a release without the zip are passed over, and the link is built from the tag, never read from the reply. A `local` or
   `weekly-test-N` build asks nothing, nor does `updatecheck off` in `opentpw.cfg` (`GameOptions.UpdateCheck`). A failure (no network, a refusal, a
-  timeout, bad JSON) is one line in the log and nothing else. The offer shows as `Update available` on its own line directly above the build label,
-  right-aligned with it, in the Escape menu's teal and white under the pointer as a menu choice is (`MenuLine`), in the lobby (`UpdateNotice.LobbyPanel`,
+  timeout, bad JSON, or on Linux no libssl: the check is not made) is one line in the log and nothing else. The offer shows as `Update available` on its own line directly above the build label,
+  right-aligned with it, at rest in the lobby's gold (`UpdateNotice.Resting`, the player slots' label `(236, 162, 4)`) and white under the pointer as a menu choice is (`MenuLine`), in the lobby (`UpdateNotice.LobbyPanel`,
   hit through `WindowStack.Notice`) and in the Escape menu of the lobby and of a park (`GameMenu`, which letters the build too); a click opens the
   tag's release page through SDL's `OpenURL`. A check that lands during play shows at the next menu. Seen with the console's `update fake`
-  and an `xdg-open` shim (`q941/runs/fake-final`: the line above the label at the same pixels in all three places, teal then white, the link
+  and an `xdg-open` shim (`q941/runs/fake-final`: the line above the label at the same pixels in all three places, teal then white (teal was the first look; the gold is Alexah's change of the same day and has not been photographed), the link
   at the opener, the menu staying open); the lobby's request and its failures in `q941/runs/*-final`; no real newer release exists yet
   (`UpdateCheckerTests` make up the replies).
 - **A played park's model records read whole when it holds a coaster** (Q810, Q779's build on Q814's decode): the walk of the model

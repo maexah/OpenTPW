@@ -24,7 +24,7 @@ namespace OpenTPW.UI;
 /// <para>
 /// <b>A deviation: the build and the update line.</b> The original's menu shows neither. This one letters the build bottom
 /// right in <see cref="VersionLabel"/>'s style, in the lobby and in a park alike, and above it, when the update check has
-/// found a newer weekly build, <see cref="UpdateNotice"/>'s line, which acts as a choice does (teal, white under the pointer)
+/// found a newer weekly build, <see cref="UpdateNotice"/>'s line, which acts as a choice does (the lobby's gold, white under the pointer)
 /// and opens the release page when clicked (the menu's dimmer takes the pointer, so the line is wired here). Both are read as
 /// the menu opens: a check that lands during play shows at the next menu, and neither is a choice (<see cref="_choices"/> holds
 /// the menu's own).
@@ -53,7 +53,7 @@ internal sealed class GameMenu : UiWindow
 
 	private float _ticks;
 
-	/// <summary>The build, bottom right, and the update line beside it where there is a newer build.</summary>
+	/// <summary>The build, bottom right, and the update line above it where there is a newer build.</summary>
 	private readonly UiControl _build;
 
 	private readonly MenuLine? _notice;

@@ -38,7 +38,7 @@ internal static class UpdateChecker
 	public static readonly TimeSpan Timeout = TimeSpan.FromSeconds( 10 );
 
 	/// <summary>The longest reply read: the thirty newest releases are a few hundred kilobytes at most.</summary>
-	private const int MaxReplyBytes = 4 * 1024 * 1024;
+	internal const int MaxReplyBytes = 4 * 1024 * 1024;
 
 	private static readonly Regex WeeklyTag = new( "^weekly-([0-9]{4})-([0-9]{2})-([0-9]{2})$", RegexOptions.CultureInvariant );
 
@@ -178,7 +178,7 @@ internal static class UpdateChecker
 	}
 
 	/// <summary>
-	/// Asks GitHub through <paramref name="handler"/> and picks. Never throws: a request that fails, times out or is refused
+	/// Asks GitHub through <paramref name="handler"/> and picks. Never throws once the request is made (on Linux <see cref="OpenSslPresent"/> is asked before): a request that fails, times out or is refused
 	/// comes back as a failed <see cref="Outcome"/> whose note names the kind of failure and nothing about the machine.
 	/// </summary>
 	internal static async Task<Outcome> CheckAsync( HttpMessageHandler handler, string installed, string rid, TimeSpan timeout )
@@ -222,7 +222,10 @@ internal static class UpdateChecker
 	/// The start of the game's check: once, on another thread, and only for a weekly build whose setting is on. Returns at once.
 	/// A second call does nothing, so the game asks GitHub once however it is reached.
 	/// </summary>
-	public static void Start( bool enabled, string build ) => _ = StartAsync( enabled, build, () => new SocketsHttpHandler { ConnectTimeout = Timeout } );
+	public static void Start( bool enabled, string build ) => _ = StartAsync( enabled, build, NewHandler );
+
+	/// <summary>The game's handler: a connection that cannot be made gives up at the same limit as the whole call.</summary>
+	internal static SocketsHttpHandler NewHandler() => new() { ConnectTimeout = Timeout };
 
 	/// <summary>
 	/// <see cref="Start"/> with the handler given and the work to wait for: the task ends when the check has, at once where no
@@ -245,6 +248,12 @@ internal static class UpdateChecker
 			return Task.CompletedTask;
 		}
 
+		if ( OperatingSystem.IsLinux() && !OpenSslPresent( OpenSslProbe, out var missing ) )
+		{
+			Log.Info( $"Update check: not made - {missing}" );
+			return Task.CompletedTask;
+		}
+
 		Log.Info( $"Update check: asking GitHub for a weekly build newer than {build} for {rid}" );
 
 		return Task.Run( async () =>
@@ -260,6 +269,41 @@ internal static class UpdateChecker
 				Log.Warning( $"Update check: stopped ({e.GetType().Name}); the game goes on" );
 			}
 		} );
+	}
+
+	/// <summary>
+	/// The names of the OpenSSL library the runtime's crypto shim (<c>libSystem.Security.Cryptography.Native.OpenSsl.so</c>, .NET 10)
+	/// looks for, newest first.
+	/// </summary>
+	internal static readonly string[] OpenSslNames = [ "libssl.so.3", "libssl.so.1.1", "libssl.so.1.0.2", "libssl.so.1.0.0", "libssl.so.10" ];
+
+	/// <summary>Whether a library of that name loads; a seam for tests. The default is <see cref="NativeLibrary.TryLoad(string, out IntPtr)"/>.</summary>
+	internal static Func<string, bool> OpenSslProbe { get; set; } = name =>
+	{
+		if ( !NativeLibrary.TryLoad( name, out var handle ) )
+			return false;
+
+		NativeLibrary.Free( handle );
+		return true;
+	};
+
+	/// <summary>
+	/// On Linux the first HTTPS call loads the runtime's OpenSSL shim, which prints "No usable version of libssl was found" and
+	/// aborts the process where no libssl loads, and no catch stops that. So a check asks first, and without one makes no request.
+	/// </summary>
+	internal static bool OpenSslPresent( Func<string, bool> loads, out string why )
+	{
+		foreach ( var name in OpenSslNames )
+		{
+			if ( loads( name ) )
+			{
+				why = string.Empty;
+				return true;
+			}
+		}
+
+		why = $"no libssl was found ({string.Join( ", ", OpenSslNames )}), and without one the runtime stops the game at the first HTTPS call";
+		return false;
 	}
 
 	/// <summary>Lets a test start again; the game starts the check once and nothing resets it.</summary>

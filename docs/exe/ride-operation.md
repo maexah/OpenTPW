@@ -1610,10 +1610,10 @@ nought or less from any state, is gone. Read with it, first-hand:
 - **State 18, `FUN_00500a50`**: the change of mind first (exit level 1 or more, happiness byte not nought, park open,
   `FUN_004fa990` true: "Make up your mind!", `+0x188` = 0, state 6); else the walk `FUN_004fa2a0`: arrived, state
   `0x13`; stuck (2), "I'm stuck in the park, even though it's closed!!", `+0x188` = 0, **state 6**. OpenTPW builds the
-  stuck arm; the change of mind is counted where it is tested, `HEADING_FOR_EXIT_CHANGE_OF_MIND` (Q157, `PeepBehaviour.WouldChangeTheirMind`: exit level above nought, the happiness byte truncated by `__ftol` not nought, `mParkClosed` (`FUN_0051a280`) clear, `FUN_004fa990` on the guest's own cell), and not built (Q862).
+  stuck arm; the change of mind is counted where it is tested, `HEADING_FOR_EXIT_CHANGE_OF_MIND` (Q157, `PeepBehaviour.WouldChangeTheirMind`: exit level above nought, the happiness byte truncated by `__ftol` not nought, `mParkClosed` (`FUN_0051a280`) clear, `FUN_004fa990` on the guest's own cell), and not built (Q862). A running game reaches it: the leaving arm of the deciding turn and the guard's throw-out write no exit level (the only stores to `+0x1bc` in `0x004fe000`..`0x00500fff` are the gate's two arms at `0x004ff9af` and `0x004ffaa3`; none in `0x004fee87`..`0x004fef13` or at `0x004febf6`), so a guest the shut park sent out keeps a positive one, and reopening the park while they walk makes the test hold.
 - **State 5, the `Entering` turn's guard (`FUN_004ffb20`, `0x004ffb2b`..`0x004ffb42`)**: `FUN_0051a280` (`mParkClosed`) nonzero, or
   `FUN_0051a290` (the gate's status) not 1, skips the walk: a ticket booth by the draw's low bit (`FUN_00516330`, `FUN_004d8610`),
-  `FUN_004fa530` to it, state 2. OpenTPW asks the same pair (`GateWillAdmit`) and counts it, `ENTERING_GATE_GUARD`, then walks on
+  `FUN_004fa530` to it, state 2. The draw is always taken (`0x004ffb85`..`0x004ffba1`), so Q861 builds `EitherOf( TicketBoothA, TicketBoothB )`. OpenTPW asks the same pair (`GateWillAdmit`) and counts it, `ENTERING_GATE_GUARD`, then walks on
   (Q157; built by Q861).
 - **The gate's leavers aim at the crossing too.** `FUN_004ff9d0`'s far-too-expensive arm and `FUN_004ff7f0`'s
   waited-out arm each write `+0x188` = 1, send the guest to `FUN_004d86d0( draw & 1 )`, set state `0x12` and then write
@@ -3265,8 +3265,8 @@ An entertainer's and a guard's is stamped where they are hired, moved before the
 on another cell than `Staff.RecordedCell` (`ParkPeople.MoveEffect`), and taken off round that cell as they are
 fired; `staff` prints the cell recorded. Measured in `saves.md`, "OpenTPW's writer, the staff's region effects".
 **Not built:** no litter is dropped, fireworks' is not taken off on their spent turn (`FIREWORKS_SPENT_REGION_EFFECT`, counted at
-their purchase; a sale always takes it off), and nothing reads the grid: a guest's needs leave the cell's term out
-(Q157) and the chooser still divides by the file's attraction word.
+their purchase; a sale always takes it off), and the guest's needs turn adds the cell's first three words (Q668), and
+the chooser still divides by the file's attraction word.
 
 **The handyman's cleaning.** With no litter in range (`FUN_004c8ed0` answers 0) the decide `FUN_004d7100` calls
 `FUN_004d7880` (`0x004d72f7`), which walks every object from `mFirstObject` and keeps the last toilet (2 says where that is the nearest) that
