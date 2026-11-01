@@ -5685,6 +5685,13 @@ pointer over the empty cell read category 0 and its click opened nothing, and on
 `PeepBehaviour.Step` does for a guest; the pointer takes the person by the sprite drawn under it ("The thing under a
 sprite") and the console's `worldclick` the head of the cell's list.
 
+**What the unlink does with a thing that is not on the cell it is given** (`FUN_004d9280`, `0x004d9280`). It works from
+the thing's own links, previous at `+8` and next at `+0xa`, and never checks that the thing is on the cell it was called
+with: with no previous it writes the next straight into the cell's head (`+0x24`); with a previous it joins the previous
+to the next. Its callers pass the thing's own cell (`FUN_0050b6a0`). So a ride behind a guest on the anchor's list comes
+off that list when it is unlinked from any other cell, and the head is nought once the guest goes. **OpenTPW**:
+`ParkState.LeaveCell` differs in one case: with no previous it writes the head only if the cell names the thing.
+
 **The preview** (`FUN_005234d0` → `FUN_00536100(0x101, …)`, every UI tick): unanchored, one square
 under the pointer, which is both the first and the last cell; anchored, the line from the anchor to the
 pointer snapped to the longer axis (a tie runs along X). Off-map cells get no square. The per-cell
