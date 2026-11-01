@@ -11822,6 +11822,15 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   *First piece done (lane A, 2026-11-01, `q940/`):* measured offline from the original's pauses (`headpause.py` now reads each head's matrix, picture and
   the view; `lib/headframe.py` works `FUN_0044b510` out again). Mumbo: ours' rest matrix picks the original's picture in 4 of 32 samples (mean 98 degrees
   apart); the Crazy Ape: 5 of 8 (0.4 degrees). `docs/exe/ride-operation.md`, "A ride head's matrix against this game's rest matrix". Building it is Q947.
+- [x] **Q159. `SdtArchive.GetFile` matches a truncated name the wrong way round.** Found by the 2026-09-26 staleness
+  audit. It tests `x.Name.StartsWith( name )`, the stored name against the one asked for. A `.sdt` name field is 16
+  bytes and a longer name is cut to fit, so asking for "TP SCREECH 11.mp2", stored as "TP SCREECH 11.m", never
+  matches, which is what its summary says `StartsWith` is there for; and "TP SCREECH 1" would find "TP SCREECH 11.m".
+  Jungle's `LobbySfxHD.sdt` and `AmbientHD.sdt` store eighteen such names (4 and 14; all 47 banks, 3,739 entries, none over 15 characters). No caller opens a `.sdt` entry by name yet
+  (the archive handler `Game` registers reaches it through `OpenFile`). Match an equal name, or, for a stored name
+  that fills its field, the request's prefix of that length. A test on the eight. No game run.
+  **Good first** (Q800; `docs/GOOD-FIRST-ISSUES.md` has the issue text; no game, no Ghidra).
+  **Done 2026-11-01** (PR #1, `1df3fc5c`): `SdtArchiveNameTests`; 4717 passed, 0 failed, 2 skipped of 4719, in the cloud environment as a normal user. No game run: nothing looks a sound up by name yet.
 
 ## B. Docs and comments
 

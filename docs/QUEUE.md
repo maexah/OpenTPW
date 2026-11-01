@@ -677,14 +677,6 @@ filed the items that cite it.
     `ParkObjectPreview` wants a placed thing (QUEUE:409). Q450 (1) is the buy stats panel (QUEUE:2398-2402): settle
     there which of the two owns the buy screen's picture.
   - **Note (play test 2026-10-31):** the buy screens still show no model in the description panel. The model and the kind row are counted (Q865). Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
-- [ ] **Q159. `SdtArchive.GetFile` matches a truncated name the wrong way round.** Found by the 2026-09-26 staleness
-  audit. It tests `x.Name.StartsWith( name )`, the stored name against the one asked for. A `.sdt` name field is 16
-  bytes and a longer name is cut to fit, so asking for "TP SCREECH 11.mp2", stored as "TP SCREECH 11.m", never
-  matches, which is what its summary says `StartsWith` is there for; and "TP SCREECH 1" would find "TP SCREECH 11.m".
-  Jungle's `LobbySfxHD.sdt` and `AmbientHD.sdt` store eight such names. No caller opens a `.sdt` entry by name yet
-  (the archive handler `Game` registers reaches it through `OpenFile`). Match an equal name, or, for a stored name
-  that fills its field, the request's prefix of that length. A test on the eight. No game run.
-  **Good first** (Q800; `docs/GOOD-FIRST-ISSUES.md` has the issue text; no game, no Ghidra).
 - [ ] **Q160. Two park tests do not test what their names say.** Found by the 2026-09-26 staleness audit.
   `ParkFootprintOccupancyTests.LeavingACellTheThingIsNotOnKeepsWhoeverStandsBehindIt` passes whatever `LeaveCell`
   does: `LeaveCell( 58, 15, Ride )` already unlinks the ride from (58,16)'s list, `LeaveCell( 58, 16, Guest )` then
