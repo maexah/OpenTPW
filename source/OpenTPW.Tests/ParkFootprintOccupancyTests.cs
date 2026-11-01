@@ -166,8 +166,9 @@ public class ParkFootprintOccupancyTests
 		park.LeaveCell( 58, 15, Ride );
 		park.LeaveCell( 58, 16, Guest );
 
-		Assert.AreEqual( Ride, ParkPicking.ThingOn( park, 58, 16 ),
-			"the ride is still on its anchor after being taken off a cell it was never on" );
+		// The cell's own list, not ThingOn: that falls back to the cell's owner and answers the ride anyway.
+		Assert.AreEqual( Ride, park.CellAt( 58, 16 ).Occupant,
+			"the ride is still on its anchor's list after being taken off a cell it was never on" );
 	}
 
 	/// <summary>

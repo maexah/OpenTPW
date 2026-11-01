@@ -204,7 +204,7 @@ public class ParkRideJoinTests
 		foreach ( var id in seen.Queued )
 		{
 			var thing = world.Objects.Single( o => o.ThingId == id );
-			var room = thing.QueueSizeInCells * ParkRideChoice.QueueRoomPerCell;
+			var room = ParkRideChoice.QueueCellsFor( world, thing ).Cells * ParkRideChoice.QueueRoomPerCell;
 
 			Assert.IsTrue( seen.Park.QueueLength( id ) <= room,
 				$"thing {id} holds {seen.Park.QueueLength( id )} in a queue with room for {room}" );
