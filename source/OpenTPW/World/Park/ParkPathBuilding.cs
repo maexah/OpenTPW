@@ -210,7 +210,8 @@ public static class ParkPathBuilding
 
 		var cell = ParkState.CellFor( park, cellX, cellY );
 
-		// Already queue: the stamp only counts it again and charges nothing, but the rest of the run's
+		// Already queue: the stamp charges nothing and writes no counter here (the original adds 1 to the cell's
+		// counter on any re-stamp, 0x005346f5; Q860), but the rest of the run's
 		// ops still reach it - the link pass, and the owner - which is how a run's first cell renews its
 		// bond to the entrance.
 		if ( cell.Type == ParkRideChoice.QueueCellType )
@@ -1344,6 +1345,10 @@ public static class ParkPathBuilding
 		if ( ParkHand.LetGo() is { } letGo )
 			Log.Info( $"Hand: {letGo}" );
 
+		// Mode 3 is entered below, and FUN_0052f580( 3, 1 ) posts advisor message 0xcb (response 422, sample 392) and sets
+		// the cursor to 4 (0x0052f78e..0x0052f7ca), as the drain's re-arms do. Counted, not posted.
+		Unimplemented.Report( "EDIT_QUEUE_ADVISOR_0xCB" );
+
 		if ( placed.EntryPos == 0 || !ParkState.OnMap( placed.EntryCellX, placed.EntryCellY ) )
 		{
 			Unimplemented.Report( "EDIT_QUEUE_WITH_NO_ENTRANCE" );
@@ -1351,6 +1356,9 @@ public static class ParkPathBuilding
 			return ParkBuildMode.Arm( ParkBuildMode.Queue, thingId );
 		}
 
+		// The walk's list of cells is dropped here. The original keeps it pending (0x0081b740; FUN_0052f580 writes no
+		// 0x00820a8c), so Backspace (0x0040beb3 -> FUN_0052fe50) would pop the edited queue corner by corner; here Backspace
+		// is BACKSPACE_UNDO_QUEUE_RUN (Level.BackspaceKey), counted, and the pending list is armed as nothing (Q860).
 		var (anchorX, anchorY) = QueueEnds( state, park, placed )[^1];
 
 		state.RemeasureQueue( thingId );

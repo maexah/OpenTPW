@@ -168,12 +168,14 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   snap; if so, take the fade out of the attract path (with somebody playing it stays: the globe's change of island is a different pass) and film
   the first second after a change in both games (`record.sh`, `attractcam.py` prints the render camera's colour beside the nearest island).
 
-- [ ] **Q917. The Crazy Ape's other 13 heads, and a fitted turn for them (from Q916).** Q916 compared three of the Ape's heads (Head02, Head07, Head13) at role 3
-  and found no difference; ours seats five guests on records of its own and the original on others, so the rest were not held in both. Build nothing unless a difference
-  shows. To widen it cheaply: take many more `headpause.py` pauses of the original (14 a five minutes) until its heads cover the records `lib/headpair.py` could not pair
-  (record 10 rests at z 239.13, 2.2 from any head ours has held), and run ours longer or from a loaded file (`headseries.py --load`) until the same heads are held; a pause that
-  holds three paired heads gives the Ape's fitted turn (`headcompare.py --turn --map`). Low value, as the three heads agree to 0.045.
-
+- [ ] **Q917. The Crazy Ape's OnAMesh clips and its other heads, and a fitted turn for them (from Q916).** Q916 compared three of the Ape's heads (Head02, Head07, Head13) in
+  its clip `l` (role 3), the OnAFace branch, and found no difference above about 0.05 (the census rounds to 0.1). Not compared: the OnAMesh branch (roles 4, 5, 6 and `m1` to
+  `m6`), the ride proper's clips (never paused), and a face-anchored head on a non-morphing parent (`LobbyModel.cs:609`). The original named 13 records, ours held 11 heads;
+  `headpair.py` paired 8 by rest place and left records 0, 2, 6, 10 and 15 and ours' Head04, Head12 and Head15, though the model already names the five (0 Head1, 2 Head06,
+  6 Head08, 10 Head09, 15 Head16). Both games number a head by the same ids and rule and differ only in the generator (DOES-NOT), so the same head is rarely held in one loop.
+  Build nothing unless a difference shows. The cheap route: a park file saved during role 5 names the same heads in both games (`headseries.py --load`), then `headpause.py`
+  pauses of roles 4, 5 and 6 and `headcompare.py --turn --map --xz`; a pause where both hold three paired heads gives the Ape's fitted turn (the original's pause at 81.11 holds
+  records 3, 12, 16 and 17, ours has never held three of them together). Low value, as the heads compared agree to 0.05.
 - [ ] **Q940. A rider's head picture is chosen from its node's rest matrix; the original turns it by the recomputed normal and the carried matrix.** (From Q848 and Q915's reviews.) The
   original's `FUN_0044a640` (`0x0044af61`..`0x0044af7d`, flag `0x40000`) builds a head's turn from the face normal worked out again and the matrix the pose walk carries,
   while ours chooses the picture from the node's rest matrix (`RIDER_HEAD_TURN_AT_REST`, `RideScript.cs`; `docs/DOES-NOT.md`). With Mumbo's ring turning (Q915) and the Crazy Ape's
@@ -549,12 +551,17 @@ filed the items that cite it.
   `ParkAudioScripts.cs:38`) and machine load under the real-clock zone. Keep every full-suite run's output (`capped.sh` ... `| tee`
   into a file under `~/.cache/tpw-harnesses/`) so the next failure is named when it comes; then seed or fix what it names, and
   prove it by putting the cause back (`VERIFYING.md`, the flaky-test rule).
-- [ ] **Q860. What the original's queue lay writes into a corner's counter. Decode first.** From Q153. The walk the queue button
+- [ ] **Q860. What the original's queue lay writes into a corner's counter, and what reads it. Decode first.** From Q153. The walk the queue button
   and the sale's drain make (`FUN_00530120`, built as `ParkPathBuilding.QueueEnds`) sets every queue or entrance cell's counter
-  (`+0x20`), 1 on a corner and nought elsewhere; the shipped Belly Bounce's corner (52,22) holds 1 already, but a queue laid here by
-  the tool leaves its corners at nought (Q254's relay: `cell 50 22` and `cell 50 23` read `overlap 0` until the button is pressed,
-  `q153/run-base-relay.out`). Decode what the original's lay (mode 3's apply, `FUN_00535dd0` and the stamp) writes there, and whether
-  anything reads the counter of a queue cell (nobody has searched); if the lay writes 1, write it.
+  (`+0x20`), 1 on a corner and nought elsewhere (`0x005302be`..`0x005302cd`, through `FUN_005228a0`); the shipped Belly Bounce's corner (52,22) holds 1 already, but a queue laid here by
+  the tool leaves its corners at nought until the button is pressed (Q254's relay: `cell 50 22` and `cell 50 23` read `overlap 0` before, 1 after, `q153/run-final-relay.out`).
+  Where the original writes it is not `FUN_00535dd0` (no `+0x20` write): `FUN_005346d0` does `inc WORD [esi+0x20]` (`0x005346f5`) when the cell already is the wanted type, so a re-stamp
+  adds 1 (the code here writes no counter on a re-stamp, `ParkPathBuilding.cs`'s "Already queue" arm; `docs/exe/park-engine.md` already says so). Something reads it: the clear's queue arm
+  of `FUN_005367a0` (type table `0x536c2c` -> `0x536999`): an unstepped press or a corner sets it -1 (`0x005369ec`), a non-corner decrements it (`0x005369f4`), and it stays while >= 0
+  (`0x00536ab2`), so a corner's 1 is ignored and a former corner holding 1 survives one press. `saves-fullsim`: every queue corner holds 1 (14 fantasy, 45 jungle) and 6 straights hold 1; the source of
+  the 1 is another caller of `0x5228a0` (`0x530974`, `0x53099b`, `0x530cfa`, `0x530d21`, `0x530d34`, `0x531921`, `0x53b799`), so writing 1 on the button's corners moves toward the original.
+  Three leftovers belong here: `ParkPathBuilding.LiftQueue` reads no counter where the clear does; `EditQueue` drops the walk's pending list (the original keeps it at `0x0081b740`; its
+  Backspace, `0x0040beb3` -> `FUN_0052fe50`, would pop the edited queue corner by corner, where ours counts `BACKSPACE_UNDO_QUEUE_RUN`, `Level.cs`); and a sideshow's or feature's window, when built, must not offer the button. Decode the lay's writes and the readers; build what the original reads.
 - [ ] **Q155. Every script's speed word is 50, where a placed thing's is its own. Decode first.** Found by the
   2026-09-26 staleness audit. The object constructor pushes the item's operating speed into its script (`FUN_0055a300`
   at `0x004db534`), and the ride window's speed slider writes it (`FUN_004dd6e0`); `docs/exe/park.md`, "The clock, the

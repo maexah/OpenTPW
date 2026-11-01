@@ -11696,13 +11696,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `main`'s at `d206e82a`, md5 `ebbdd262...`); only the tools did. Mumbo's `e` clip (role 6, 200 frames): a 700-sample series of ours reaches frame 200 (Q915's 450
   stopped at 13.7), and five Escape-menu pauses of the original's role 6 (frames 62.8, 102.8, 132.8, 152.0, 192.9) and one of role 4 (103.3), all read twice and identical,
   give the fitted turn of ours onto the original's at 0.06, 0.17, 0.18, -0.04, 0.03 and -0.13 degrees, every residual 0.013 to 0.046, 23 heights within 0.085 (mean 0.026)
-  and 34 head-to-head distances within 0.087 (mean 0.031). The Crazy Ape (the census calls it `'Ape Ride'`; item 1101; role 3, a 125-frame loop; 16
-  heads, of which the rides here seat up to five): the two games give a rider's head a different one of the 16 from run to run, so one loop rarely holds the same head in
+  and 34 head-to-head distances within 0.087 (mean 0.031). The Crazy Ape (the census calls it `'Ape Ride'`; item 1101; role 3, a 125-frame loop; "16 heads" is not established, the original's pauses name records up to 17; the rides here seat up to five; ours held 11 heads, Head02 to Head15, over the series and the original used 13 records): both games number a rider's head by the same ids and the same rule, but each draws the head from its own random generator (ours one per script, seeded 1, not saved: DOES-NOT), so one loop rarely holds the same head in
   both. Paired by REST place (`lib/headpair.py`: the original's records 1, 3, 4, 7, 11, 12, 16, 17 against ours' Head02, Head03, Head07, Head05, Head10, Head14, Head13,
-  Head11, read at its loop's end) three heads were held in both at some of 26 pauses of role 3 (frames 0.4 to 123.3): 13 heights within 0.045 (mean 0.023), the distance
-  between Head02 and Head07 within 0.037 (4), and in `q916/ape-xz.txt` the x within 0.041 and the z within 0.037 over 15 readings. Not seen: a fitted turn for the Ape (no pause holds three paired heads at
-  once), and the other 13 heads: Q917. Tools: `headcompare.py` matched the original's record to the r-th head ours still held, so a head leaving ours (Mumbo's at frame
-  192.9) shifted the rest and the Ape's sparse table did not fit at all; it now matches by the head numbered r + 1 or by `--map`; `headseries.py` keeps each head's
+  Head11, read at its loop's end) three heads were held in both at some of 26 pauses of role 3 (frames 0.4 to 123.3), clip `l`, the OnAFace branch alone. Read again by the
+  fixed `headcompare.py --xz` (a head ours held in another loop of the clip is now found): 15 heights, 14 within 0.045 (mean 0.023) and one, Head02 at frame 97.15, 0.166, at the foot of a
+  dip the series' 0.1 rounding overshoots (ours' sample at 97.0 reads 15.4, the original's pause 15.42); the distance between Head02 and Head07 within 0.035 (6); x within 0.043 and
+  z within 0.037 over 15 readings. Head13 is one reading and Head02 and Head07 share one vertical motion. Not seen: the Ape's other seven records and three heads of ours
+  (records 0, 2, 6, 10 and 15 unpaired, though the model names them: 0 Head1, 2 Head06, 6 Head08, 10 Head09, 15 Head16), a fitted turn for the Ape (no pause holds three paired heads at
+  once in both games, though the original's pause at 81.11 holds records 3, 12, 16 and 17), the Ape's OnAMesh branch (roles 4, 5 and 6, `m1` to `m6`) and the ride proper's clips, which
+  were never paused, and a face-anchored head on a non-morphing parent (`LobbyModel.cs:609`): Q917. The "no difference" of this entry holds for Mumbo's `e` clip and the Ape's clip `l` (role 3) only. Tools: `headcompare.py` matched the original's record to the r-th head ours still held, so a head leaving ours (Mumbo's at frame
+  192.9) shifted the rest and the Ape's table, which has gaps, did not fit at all; it now matches by the head numbered r + 1 or by `--map`; `headseries.py` keeps each head's
   node and takes `--load FILE`. Photographs, each pair at the same role and frame (cameras differ, the original's carries its Escape menu, compared by eye only):
   `q916/photo-mumbo/role6-frame{60,100,150}.png` against `q916/orig-mumbo/shots/orig-role6-frame{60,100,150}.png`, `q916/photo-ape/role3-frame{35,65,110}.png` against
   `q916/orig-ape/shots/orig-role3-frame{35,65,110}.png` (at 110 the Ape stands raised with its arms up and the sign-holder at the same place in both).

@@ -1019,7 +1019,7 @@ public class ParkPathBuildingTests
 
 	/// <summary>
 	/// <b>The queue button writes the walk's counters</b>: every queue or entrance cell the walk crosses has its counter
-	/// set, 1 on a corner and nought elsewhere (<c>0x00530330</c> on), where the build before left whatever the cells held.
+	/// set, 1 on a corner and nought elsewhere (written at <c>0x005302be</c>..<c>0x005302cd</c>), where the build before left whatever the cells held.
 	/// The anchor is the queue's last cell, a queue cell with one link.
 	/// </summary>
 	/// <remarks><b>Mutation:</b> an edit that walks the queue without writing the counters leaves 7, 0, 5 and 5.</remarks>
@@ -1055,6 +1055,38 @@ public class ParkPathBuildingTests
 		Assert.AreEqual( 1, ParkState.CellFor( park, 20, 10 ).OverlapCounter, "the corner" );
 		Assert.AreEqual( 0, ParkState.CellFor( park, 19, 10 ).OverlapCounter, "the straight" );
 		Assert.AreEqual( 0, ParkState.CellFor( park, 18, 10 ).OverlapCounter, "the end" );
+	}
+
+	/// <summary>
+	/// <b>The queue button on a Belly Bounce as the placer leaves it when bought and turned a quarter, with no queue laid</b>:
+	/// the entrance faces west-bound, the placer's NOMODIFY node stands before it, and the button's walk ends on that node, so the
+	/// tool is anchored on it (<c>0x005304ac</c>). It is mode 3's entry too, which posts the queue builder's advisor message
+	/// (<c>FUN_0052f580( 3, 1 )</c>, <c>0x0052f78e</c>..<c>0x0052f7ca</c>) and is counted.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> anchoring on the entrance, not the walk's last cell, answers (18,10) here; dropping the
+	/// report leaves the census unmoved.</remarks>
+	[TestMethod]
+	public void TheQueueButtonOnABoughtTurnedRideWithNoQueueAnchorsOnItsNode()
+	{
+		var park = World();
+		var state = new ParkState( park );
+		var (entryX, entryY) = ParkBuilding.RotateDelta( 1, 0, 90 );
+		var ride = new ParkWorld.CatalogueObject( ThingId: 77, CatalogueId: 1100, RawX: 18 << 8, RawY: 11 << 8, Angle: 90,
+			EntryPos: (ushort)MapStep.CellId( 18 + entryX, 11 + entryY ), ExitPos: (ushort)MapStep.CellId( 18, 14 ) );
+
+		state.AddObject( ride );
+
+		var node = ParkBuilding.MarkWaysInAndOut( state, park, 18 + entryX, 11 + entryY, 18, 14, 0x10, 0x10, 90,
+			hasQueue: true, MapStep.CellId( 18, 11 ) );
+
+		Assert.AreEqual( (17, 10), node, "the placer's node stands west of the turned entrance" );
+
+		var posts = Times( "EDIT_QUEUE_ADVISOR_0xCB" );
+		var reply = PressTheQueueButton( park, state, ride.ThingId );
+
+		Assert.AreEqual( ParkBuildMode.Queue, ParkBuildMode.Current, reply );
+		Assert.AreEqual( node, ParkBuildMode.Anchor, reply );
+		Assert.AreEqual( posts + 1, Times( "EDIT_QUEUE_ADVISOR_0xCB" ), "mode 3's advisor post is counted" );
 	}
 
 	private static int Times( string what )
