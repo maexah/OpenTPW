@@ -1967,7 +1967,9 @@ parent's live list (`ParkState.CellAt`), so a thing just put down is found. Seen
 walk hides the bought Tunnel's caps and leaves the bought Jump's shown, as the original's. The played file's model records do
 not read here until Q810, so the loaded Tunnel's caps were not laid at the load and the first walk hid them. Since Q810 the file's model records read and
 the log says "'Dino Karts Tunnel' (thing 404) stands with its end caps as the file left them: 0x1 hidden, 0x10 hidden" and the Jump's "0x1 shown, 0x10 shown"
-(`q810-a7/run3fs.out`; counted `TRACK_CAP_LOCK_LOADED` 1x; not photographed). The add-ons themselves are drawn: the
+(`q810-a7/run3fs.out`; pictured off-screen since Q799, `q799/run1/`, its frame the previous build's). The word's `0x400` is the walk's lock (`| 0x80000010`): the load lays it too
+(`ParkObjects.SavedLocks`, Q799), so the log says `0x1 hidden locked, 0x10 hidden locked`. No clip of the three Lost Kingdom add-ons (`mammtunnm`, `lavajumpm`, `watertunm`) has a track on or a hide-list entry for a cap node, so
+the lock changes nothing a player sees there; the visibility track `FUN_00471860` that still sets a walk-locked node is not reached by any shipped Lost Kingdom clip (the other themes' were not read). The add-ons themselves are drawn: the
 sky `q688/ours-f2` showed under them was that run's Instant Action catalogue, which holds no `upgrades` item (its log:
 "nothing in this theme is catalogue number 1501"), and a Full Simulation player's load stands both where the original's do
 (`q778/R2`, `O1`, `O2`).

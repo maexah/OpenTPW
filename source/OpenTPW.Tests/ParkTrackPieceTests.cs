@@ -406,6 +406,24 @@ public class ParkTrackPieceTests
 	}
 
 	/// <summary>
+	/// A loaded add-on's cap holds the walk's lock when its saved word holds 0x400, shown or hidden: the played file's tunnel
+	/// (0x401 on both caps) is locked, its jump (nought) is not, and a hidden word without the lock bit is not.
+	/// </summary>
+	[TestMethod]
+	public void ALoadedAddOnsCapsKeepTheirSavedLock()
+	{
+		var data = GameData.Required();
+
+		ModelFile Model( string stem ) => new( new MemoryStream( data.ReadAllBytes( $"levels/jungle/upgrades/{stem}/{stem}.md2" ) ) );
+
+		CollectionAssert.AreEqual( new[] { 3, 4 }, ParkObjects.SavedLocks( Model( "mammtunn" ), [0, 0xa2, 0, 0x401, 0x401, 0x601] ).ToArray(), "the tunnel's" );
+		Assert.AreEqual( 0, ParkObjects.SavedLocks( Model( "lavajump" ), [0, 0, 0, 0, 0, 0, 0x601, 0x601, 0x601, 0x601] ).Count(), "the jump's" );
+		Assert.AreEqual( 0, ParkObjects.SavedLocks( Model( "mammtunn" ), [0x1, 0x1, 0x1, 0x1, 0x1] ).Count(), "hidden without the lock" );
+		CollectionAssert.AreEqual( new[] { 3, 4 }, ParkObjects.SavedLocks( Model( "mammtunn" ), [0x1, 0x1, 0x1, 0x400, 0x401] ).ToArray(), "locked while shown" );
+		CollectionAssert.AreEqual( new[] { 4 }, ParkObjects.SavedLocks( Model( "mammtunn" ), [0, 0, 0, 0x1, 0x400] ).ToArray(), "each cap its own word" );
+	}
+
+	/// <summary>
 	/// What the walk's bits and a load's words do to the caps' visibility, as the code that lays them does it
 	/// (<c>ParkObjects.CapsFor</c>, <c>LoadedCaps</c>, <c>ApplyCaps</c>): on the tunnel, bit 0x01 hides the cap of word 1 (node 3)
 	/// and bit 0x10 the cap of word 0x10 (node 4); a hidden cap is set not visible.

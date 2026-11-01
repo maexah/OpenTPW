@@ -316,13 +316,7 @@ filed the items that cite it.
   `WalkCircuit` the heading as a parameter and pass `CellEdge.Opposite( HeadingOf( angle ) )` from `RunOn` when
   `anchor == target && mouth == target` and the circuit from the mouth does not close; keep the turn's way everywhere
   else (the finder's "opposite on every open no-move close" is wrong). Test it with a bought ride closed at once.
-- [ ] **Q799. A loaded add-on's walk-hidden caps keep their lock.** From the run 13 review of Q778 (F4; `review13/fix-V-queue.md`).
-  A walk's hide sets the cap node's lock (live `0x80000010`, saved `0x400`): ours keeps it in `Running.SetHidden` and
-  `ParkObjects.ShowAddOnCaps` locks the node in the `LobbyModel` (`LockNode`), so its rest and hide spare it. Left: a loaded
-  add-on's caps whose saved word holds `0x400` are not locked by `ParkObjects.Place` (counted, `TRACK_CAP_LOCK_LOADED`;
-  Alexah's played Dino Karts' Tunnel reaches it, `0x401`), and `ParkModelTables`' clip-driven `Unhide`/`Bind` skip every
-  `0x400` node where the original's visibility track (`FUN_00471860`) still sets a walk-locked one. Read first whether the
-  Tunnel's role-5 clips track or hide-list its caps (nodes 3 and 4); if they do not, only the load's lock is left.
+
 - [ ] **Q588. Dino Karts race for guests.** After Q587. The -4 record (`Bumper_LayRide`'s grid and start buoys, the
   template's 3 laps, 2048 arrival), `BUMP 7` to state 1 and the race's first buoy, `BUMP 4` a kart a rider (mesh
   `cars % 4`), the retarget's grid and race arms with the thrust bonus, the buoy arm's laps, state 3 and the end at the

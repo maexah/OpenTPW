@@ -399,13 +399,14 @@ public sealed class ParkObjects : Entity
 			{
 				ApplyCaps( model.SetMeshVisible, loaded );
 
-				// A walk-hidden cap's saved word also holds the lock (0x400), which the LobbyModel's rest and hide must spare
-				// as ShowAddOnCaps' LockNode does; it is not laid here yet.
-				if ( loaded.Any( cap => cap.Hidden ) )
-					Unimplemented.Report( "TRACK_CAP_LOCK_LOADED" );
+				// A cap a walk has been at holds the lock (0x400) in its saved word, which the LobbyModel's rest and hide spare as
+				// ShowAddOnCaps' LockNode makes them.
+				foreach ( var node in SavedLocks( model.Source, record.NodeWords! ) )
+					model.LockNode( node );
 
 				Log.Info( $"{ThemeName}: '{item.Name}' (thing {placed.ThingId}) stands with its end caps as the file left them: "
-					+ string.Join( ", ", AddOnCapSides.Select( side => $"0x{side:x} " + CapState( model, side ) ) ) );
+					+ string.Join( ", ", AddOnCapSides.Select( side => $"0x{side:x} " + CapState( model, side )
+						+ (model.CapNode( side ) is var capNode and >= 0 && model.IsWalkLocked( capNode ) ? " locked" : "") ) ) );
 			}
 
 			model.SetTransform( origin, turn );
@@ -940,6 +941,17 @@ public sealed class ParkObjects : Entity
 		{
 			if ( file.FindNodeByHide( side, 1 ) is var node and >= 0 && node < words.Count )
 				yield return (side, node, (words[node] & 1) != 0);
+		}
+	}
+
+	/// <summary>The caps a park file's node words leave locked: each cap node whose word holds the lock (<c>0x400</c>, saved from a
+	/// walk's <c>0x80000000</c>), shown or hidden.</summary>
+	public static IEnumerable<int> SavedLocks( ModelFile file, IReadOnlyList<uint> words )
+	{
+		foreach ( var side in AddOnCapSides )
+		{
+			if ( file.FindNodeByHide( side, 1 ) is var node and >= 0 && node < words.Count && (words[node] & ParkModelTables.TransformOnly) != 0 )
+				yield return node;
 		}
 	}
 

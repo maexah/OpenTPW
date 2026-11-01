@@ -982,7 +982,10 @@ public sealed class LobbyModel : IChannelPosed
 	/// restore or hide list touches it from then on, as for a transform-only node.</summary>
 	public void LockNode( int node ) => (_walkLocked ??= []).Add( node );
 
-	private bool Spared( int node ) => IsTransformOnly( _file, node ) || (_walkLocked?.Contains( node ) ?? false);
+	/// <summary>Whether <see cref="LockNode"/> locked the node.</summary>
+	public bool IsWalkLocked( int node ) => _walkLocked?.Contains( node ) ?? false;
+
+	private bool Spared( int node ) => IsTransformOnly( _file, node ) || IsWalkLocked( node );
 
 	/// <summary>Whether a node is transform-only (its file flags hold <c>0x200</c>), which no hide list or restore touches.</summary>
 	internal static bool IsTransformOnly( ModelFile file, int node ) => node >= 0 && node < file.Nodes.Count && (file.Nodes[node].Flags & 0x200) != 0;
