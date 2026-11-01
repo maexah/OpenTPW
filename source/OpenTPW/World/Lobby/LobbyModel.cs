@@ -978,7 +978,7 @@ public sealed class LobbyModel : IChannelPosed
 
 	private HashSet<int>? _walkLocked;
 
-	/// <summary>Locks a node as a track add-on's walk does when it hides or shows an end cap (<c>| 0x80000010</c>, <c>0x0052b06d</c>): no
+	/// <summary>Locks a node as a track add-on's walk does when it hides an end cap (<c>| 0x80000010</c>, <c>0x0052b06d</c>; a show locks none): no
 	/// restore or hide list touches it from then on, as for a transform-only node.</summary>
 	public void LockNode( int node ) => (_walkLocked ??= []).Add( node );
 

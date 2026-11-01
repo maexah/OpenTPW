@@ -421,6 +421,24 @@ public class ParkTrackPieceTests
 		Assert.AreEqual( 0, ParkObjects.SavedLocks( Model( "mammtunn" ), [0x1, 0x1, 0x1, 0x1, 0x1] ).Count(), "hidden without the lock" );
 		CollectionAssert.AreEqual( new[] { 3, 4 }, ParkObjects.SavedLocks( Model( "mammtunn" ), [0x1, 0x1, 0x1, 0x400, 0x401] ).ToArray(), "locked while shown" );
 		CollectionAssert.AreEqual( new[] { 4 }, ParkObjects.SavedLocks( Model( "mammtunn" ), [0, 0, 0, 0x1, 0x400] ).ToArray(), "each cap its own word" );
+		CollectionAssert.AreEqual( new[] { 3 }, ParkObjects.SavedLocks( Model( "mammtunn" ), [0, 0, 0, 0x401] ).ToArray(), "a word short of the second cap leaves it out" );
+	}
+
+	/// <summary>
+	/// The wiring no test can run is read from source: a loaded add-on's saved locks reach <c>LockNode</c> where it is placed, only a
+	/// hide locks in <c>ShowAddOnCaps</c>, and the lobby model's rest and hide spare a walk-locked node.
+	/// <b>Mutation:</b> the <c>SavedLocks</c> loop removed, the <c>if ( hidden )</c> removed, or <c>IsWalkLocked</c> left out of <c>Spared</c>.
+	/// </summary>
+	[TestMethod]
+	public void TheWalksLockIsWiredWhereItIsLaidAndSpared()
+	{
+		var root = RepoFiles.Root();
+		var objects = File.ReadAllText( Path.Join( root, "source", "OpenTPW", "World", "Park", "ParkObjects.cs" ) );
+		var lobby = File.ReadAllText( Path.Join( root, "source", "OpenTPW", "World", "Lobby", "LobbyModel.cs" ) );
+
+		StringAssert.Contains( objects, "foreach ( var node in SavedLocks( model.Source, record.NodeWords! ) )\n\t\t\t\t\tmodel.LockNode( node );" );
+		StringAssert.Contains( objects, "if ( hidden )\n\t\t\t\tmodel.LockNode( node );\n\n\t\t\tAnimationsFor( thingId )?.Nodes?.SetHidden( node, hidden );" );
+		StringAssert.Contains( lobby, "private bool Spared( int node ) => IsTransformOnly( _file, node ) || IsWalkLocked( node );" );
 	}
 
 	/// <summary>

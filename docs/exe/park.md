@@ -469,7 +469,7 @@ The proof is the construction clip, which by definition ends on the built object
 
 `FUN_00471860` applies an animation's visibility channel: it walks the entries **from the end**, takes the first whose absolute value is at or before the current frame, and sets 0x10 when that entry is `< 1` (**so a 0 entry hides**) or clears it otherwise. If no entry qualifies **the flag is left alone**, not defaulted to visible.
 
-In the node walks (the picker's `PickMarch_MeetModel`, `FUN_0045d090`, and three others) the walk tests `0x10` **after** computing the node's matrix and then carries on into the children, so **a hidden node does not hide its children** — bit `0x20` is what prunes a subtree. `0x80000000` protects a node from animation visibility altogether.
+In the node walks (the picker's `PickMarch_MeetModel`, `FUN_0045d090`, and three others) the walk tests `0x10` **after** computing the node's matrix and then carries on into the children, so **a hidden node does not hide its children** — bit `0x20` is what prunes a subtree. `0x80000000` is the walk's lock on a node: the visibility track `FUN_00471860` still sets and clears `0x10` on a locked node (`0x004718d1`); the lock spares it the restore and the hide list (FileFormats `saves.md`, "The node flag words").
 
 ### The per-clip hide list
 
@@ -1969,7 +1969,7 @@ not read here until Q810, so the loaded Tunnel's caps were not laid at the load 
 the log says "'Dino Karts Tunnel' (thing 404) stands with its end caps as the file left them: 0x1 hidden, 0x10 hidden" and the Jump's "0x1 shown, 0x10 shown"
 (`q810-a7/run3fs.out`; pictured off-screen since Q799, `q799/run1/`, its frame the previous build's). The word's `0x400` is the walk's lock (`| 0x80000010`): the load lays it too
 (`ParkObjects.SavedLocks`, Q799), so the log says `0x1 hidden locked, 0x10 hidden locked`. No clip of the three Lost Kingdom add-ons (`mammtunnm`, `lavajumpm`, `watertunm`) has a track on or a hide-list entry for a cap node, so
-the lock changes nothing a player sees there; the visibility track `FUN_00471860` that still sets a walk-locked node is not reached by any shipped Lost Kingdom clip (the other themes' were not read). The add-ons themselves are drawn: the
+the lock changes nothing a player sees there; the visibility track `FUN_00471860` that still sets a walk-locked node is not reached by any shipped Lost Kingdom clip (the other themes' were not read: Space's Teleport tracks caps 7 and 8, where the lock is what keeps a hidden cap hidden at a clip change, not seen in ours). Only a hide locks a cap: a show is `and ~0x10` alone (`0x0052afcc`, `0x0052b0a8`, `0x0052b0c1`) and hide `or 0x80000010` (`0x0052b06d`), so a cap shown after a hide keeps the lock (word `0x400`) and one shown from nought has none; ours (`ParkModelTables.Running.SetHidden`, `ShowAddOnCaps`) does the same. The add-ons themselves are drawn: the
 sky `q688/ours-f2` showed under them was that run's Instant Action catalogue, which holds no `upgrades` item (its log:
 "nothing in this theme is catalogue number 1501"), and a Full Simulation player's load stands both where the original's do
 (`q778/R2`, `O1`, `O2`).

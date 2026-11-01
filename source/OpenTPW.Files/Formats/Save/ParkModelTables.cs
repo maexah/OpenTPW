@@ -212,14 +212,15 @@ public static class ParkModelTables
 		public int Count => _words.Length;
 
 		/// <summary>
-		/// Sets or clears one node's hidden bit (<c>0x1</c>) and keeps the node locked (<see cref="TransformOnly"/>), as a
-		/// walk shows or hides an add-on's end cap: its <c>| 0x80000010</c> and <c>&amp; ~0x10</c> leave the live bit
-		/// <c>0x80000000</c> set (<c>0x0052b06d</c>, <c>0x0052afcc</c>), saved as <c>0x400</c>. The lobby model's rest and hide spare it the same way (<c>LobbyModel.LockNode</c>).
+		/// Sets or clears one node's hidden bit (<c>0x1</c>), as a walk hides or shows an add-on's end cap. Only a hide locks the
+		/// node (<see cref="TransformOnly"/>): its <c>| 0x80000010</c> sets the live bit <c>0x80000000</c> (<c>0x0052b06d</c>), saved as
+		/// <c>0x400</c>; a show is <c>&amp; ~0x10</c> alone (<c>0x0052afcc</c>, <c>0x0052b0a8</c>, <c>0x0052b0c1</c>), which leaves
+		/// the lock a hide set and sets none. The lobby model's rest and hide spare a locked node (<c>LobbyModel.LockNode</c>).
 		/// </summary>
 		public void SetHidden( int node, bool hidden )
 		{
 			if ( node >= 0 && node < _words.Length )
-				_words[node] = (_words[node] | TransformOnly) & ~Hidden | (hidden ? Hidden : 0u);
+				_words[node] = hidden ? _words[node] | TransformOnly | Hidden : _words[node] & ~Hidden;
 		}
 
 		/// <summary>

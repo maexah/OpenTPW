@@ -11639,20 +11639,19 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   original's is 0.21, 0.00, 0.02, -0.22 and -0.06 degrees (the old build's, on the same pauses: -53.8, -137.4, -76.4, -95.5, +45.7), and with no fitting every
   head's horizontal place is within 0.092 (26 heads, mean 0.043; the old build's 26.19, mean 17.68); heights within 0.051, distances within 0.078.
   A head's horizontal reach from its rest place over 450 samples is 29.78 (2.66 before). Not seen: `pmumbo`'s `m1` (the ride window's preview) and nine clips of the other themes that now take the tree route (`ccride` `m1` `m2`, `dragfly` `e` `m1` `s`, `b_drip` `m`, `cauldron` `m`, `gyrotron` `m2`, `mbuggy` `r`). The item's lead named `LobbyModel.TryGetDrawnNode`'s remark; the cause was `NodePoser.Drives` answering false, so the clip went to `MeshRotator`, which drops a target past the meshes (node 21). Left: Q916.
-  A head's horizontal reach from its rest place over 450 samples is 29.78 (2.66 before). Left: Q916.
 - [x] **Q799. A loaded add-on's walk-hidden caps keep their lock.** From the run 13 review of Q778 (F4; `review13/fix-V-queue.md`).
-  A walk's hide sets the cap node's lock (live `0x80000010`, saved `0x400`): ours keeps it in `Running.SetHidden` and
-  `ParkObjects.ShowAddOnCaps` locks the node in the `LobbyModel` (`LockNode`), so its rest and hide spare it. Left: a loaded
+  A walk's hide sets the cap node's lock (live `0x80000010`, saved `0x400`; a show, `and ~0x10`, sets none and keeps an earlier one): ours keeps it in `Running.SetHidden` and
+  `ParkObjects.ShowAddOnCaps` locks the node on a hide in the `LobbyModel` (`LockNode`), so its rest and hide spare it. Left: a loaded
   add-on's caps whose saved word holds `0x400` are not locked by `ParkObjects.Place` (counted, `TRACK_CAP_LOCK_LOADED`;
   Alexah's played Dino Karts' Tunnel reaches it, `0x401`), and `ParkModelTables`' clip-driven `Unhide`/`Bind` skip every
   `0x400` node where the original's visibility track (`FUN_00471860`) still sets a walk-locked one. Read first whether the
   Tunnel's role-5 clips track or hide-list its caps (nodes 3 and 4); if they do not, only the load's lock is left.
   Done 2026-10-31 (run 2026-10-31-wk, lane B, `alexah/860-loaded-cap-lock`). Read first: the clips of the three Lost Kingdom add-ons (`mammtunnm`,
   `lavajumpm`, `watertunm`; `lib/cliptracks.py` and the hide lists) track and hide-list no cap node (the Tunnel's one clip has a track on node 1 and
-  hides node 5; its caps are nodes 3 and 4), so the clip-driven `Unhide`/`Bind` half is dead by CONTENT and only the load's lock was left.
+  hides node 5; its caps are nodes 3 and 4), so the clip-driven `Unhide`/`Bind` half is no gap at all: ours already matches the original there, and only the load's lock was left.
   `ParkObjects.SavedLocks` reads each cap's saved word for the lock (`0x400`, shown or hidden) and `Place` calls `LobbyModel.LockNode` for it,
   so a loaded Tunnel's rest and hide spare its caps as a walk's do (`TRACK_CAP_LOCK_LOADED` is gone); the log line says `locked`. Not read: the
-  other three themes' add-on clips (outside the scope).
+  other three themes' add-on clips (outside the scope; Space's Teleport tracks caps 7 and 8, not seen in ours). Review fix, group J: a show had locked the cap too, which the original's does not (`0x0052afcc`); only a hide locks now.
 
 ## B. Docs and comments
 

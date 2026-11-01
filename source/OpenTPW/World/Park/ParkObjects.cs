@@ -399,7 +399,7 @@ public sealed class ParkObjects : Entity
 			{
 				ApplyCaps( model.SetMeshVisible, loaded );
 
-				// A cap a walk has been at holds the lock (0x400) in its saved word, which the LobbyModel's rest and hide spare as
+				// A cap a walk has hidden holds the lock (0x400) in its saved word, which the LobbyModel's rest and hide spare as
 				// ShowAddOnCaps' LockNode makes them.
 				foreach ( var node in SavedLocks( model.Source, record.NodeWords! ) )
 					model.LockNode( node );
@@ -982,7 +982,7 @@ public sealed class ParkObjects : Entity
 
 	/// <summary>
 	/// An add-on's end caps as a walk leaves them (<c>0x0052af54</c>..<c>0x0052b18c</c>): each cap whose side's bit is in
-	/// <paramref name="bits"/> hidden (<c>| 0x80000010</c>), the other shown (<c>&amp; ~0x10</c>), and its node words the
+	/// <paramref name="bits"/> hidden and locked (<c>| 0x80000010</c>), the other shown (<c>&amp; ~0x10</c>, which sets no lock), and its node words the
 	/// same for a save. Answers whether the thing stands here.
 	/// </summary>
 	public bool ShowAddOnCaps( int thingId, int bits )
@@ -996,7 +996,10 @@ public sealed class ParkObjects : Entity
 
 		foreach ( var (_, node, hidden) in caps )
 		{
-			model.LockNode( node );
+			// Only a hide locks a cap; a show leaves the lock an earlier hide set (0x0052b06d, 0x0052afcc).
+			if ( hidden )
+				model.LockNode( node );
+
 			AnimationsFor( thingId )?.Nodes?.SetHidden( node, hidden );
 		}
 

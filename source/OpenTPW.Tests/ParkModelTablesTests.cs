@@ -477,20 +477,21 @@ public class ParkModelTablesTests
 	}
 
 	/// <summary>
-	/// A walk's hide and show leave the node locked (live <c>0x80000000</c>, saved <c>0x400</c>): the played file's tunnel caps
-	/// hold <c>0x401</c> hidden, and <c>0x400</c> once shown again.
+	/// Only a walk's hide locks a node (live <c>0x80000000</c>, saved <c>0x400</c>): a show is <c>and ~0x10</c> alone
+	/// (<c>0x0052afcc</c>), so a cap shown from nought stays unlocked, and one shown after a hide keeps the hide's lock. The played
+	/// file's tunnel caps hold <c>0x401</c> hidden.
 	/// </summary>
 	[TestMethod]
-	public void AWalksHideAndShowKeepTheNodesLockBit()
+	public void OnlyAWalksHideLocksTheNode()
 	{
 		var running = new ParkModelTables.Running( new uint[] { 0, 0, 0, 0, 0 }, new AnimationFile?[] { null } );
 
 		running.SetHidden( 3, true );
 		running.SetHidden( 4, false );
 
-		CollectionAssert.AreEqual( new uint[] { 0, 0, 0, 0x401, 0x400 }, running.Words( [0f] ) );
+		CollectionAssert.AreEqual( new uint[] { 0, 0, 0, 0x401, 0 }, running.Words( [0f] ), "a show alone sets no lock" );
 
 		running.SetHidden( 3, false );
-		Assert.AreEqual( 0x400u, running.Words( [0f] )[3] );
+		Assert.AreEqual( 0x400u, running.Words( [0f] )[3], "a show after a hide keeps its lock" );
 	}
 }
