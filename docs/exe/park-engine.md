@@ -3058,7 +3058,7 @@ render the labels perfectly and leave every value blank.
 | Control | Row | Kind | Filled from |
 |---|---|---|---|
 | `0x3e21` | Users last month | value | The customers ring's last min( filled, **30** ) finished days (`MOV EDI,0x1e`, `0x004ade83`; `FUN_00495d40` gives the filled count when fewer), today's excluded; printed `"%d"` by a number painter in font 6 (`FUN_0048fde0`, `0x0048ff8f`). Its `"CHistory - You asked for the sum of more elements than there is defined history for…"` (`0x004ade8a`, when `mNumEntries` is under 30) goes to the bare `RET` logger and stops nothing ("Every diagnostic string goes to a bare `RET`") |
-| `0x3e1b` | Age | **text** | `FUN_004dd670`, formatted through `FUN_006acd60` with id **`0x1b1`** (433) and a `VARM` placeholder - not a UITEXT row, whose 433 is empty; has an explicit negative-sign limb |
+| `0x3e1b` | Age | **text** | `FUN_004dd670`, formatted through `FUN_006acd60` with id **`0x1b1`** (433) and parameter 8: UITEXT row 433, "{P8} days" (its text follows the parameter, which `StringFile.Entries` does not keep), always "days"; has an explicit negative-sign limb (the helper `0x006add40` reads `+0xc` only, so the sign is the number's own) |
 | `0x3e16` | Excitement | **gauge** | `FUN_004e0560( object, speed, duration, capacity )` |
 | `0x3e18` | Reliability | **gauge** | `FUN_004df640` = `100 - FUN_004df450( …, 1 )` |
 | `0x3e19` | State of repair | **gauge** | `FLD float ptr [object + 0x44]` at `004ae057` |
@@ -4331,7 +4331,7 @@ clears it, then steps the model (`FUN_004864f0`). So the panel changes half a se
 row.
 
 **Where.** The layout stream (`0x00754cf8`) gives the panel `0x1ea` two children: `0x1eb`, type 1, at
-(440,407)-(594,561), and the name `0x1ec`. The builder `FUN_004acc70` gives `0x1eb` a painted surface for a skin
+(440,407)-(594,561), and the kind row `0x1ec`. The builder `FUN_004acc70` gives `0x1eb` a painted surface for a skin
 (`FUN_0048f150`, set by `FUN_0065d1c8`, `0x004acf1f`) and hands `FUN_0065f16b` the control's depth word (`+0xe0`)
 plus 12 (`0x004acf2d`); the model is handed the panel's plus 10 (`0x004ab2be`). The surface is the control's rectangle in screen
 pixels, `154 * screen width / 2048` by `154 * screen height / 1536`, each truncated (`FUN_0048f420`,
@@ -4360,7 +4360,7 @@ the colour of the cell before it (`0x004ab408`); none can arise.
 **Rows with no picture.** For a row id below nought (the two land rows) and for an item with a golden-ticket cost
 (`+0xc4`) not yet bought with tickets (`FUN_004d4b70`), the fill clears the surface and paints nothing
 (`0x004ab4c8`); the model is then item 101 for id -1, item 102 for any other id below 1 and item 100, the mystery
-ride, for the rest, and the name row `0x1ec` takes string `0x86`, `0x87` or `0x89` (`FUN_00485b00`). `FUN_0052c5b0` is not called, so the
+ride, for the rest, and the row `0x1ec` (the item's kind, `ITEMTYPES.str`, for an ordinary item; item `+0x90` `RideTypeStringIndex`) takes UITEXT `0x86` "Buy Land", `0x87` "Clear Land" or `0x89` "??? Mystery Ride! ???" (`FUN_00485b00`). `FUN_0052c5b0` is not called, so the
 grid keeps the item before.
 
 **Over every shipped shape** (274 blocks in the 310 archives searched): the widest is 6 and the deepest 5, so none passes the
@@ -4396,7 +4396,7 @@ and its `Squares` the paint's arithmetic, on a surface the control's rectangle i
 `ParkBuyScreen.RowSelected` and `Update` keep the waiting row and show it after more than 500 ms;
 `UiList.SelectsUnderPointer` is the flag, set on every list (`hud.md`, "The pointer over a list"), and `WindowStack` sends the move. It differs in two
 ways, each said at its site (the wait is real time, `Time.WallMilliseconds`, as the original's is); no row is
-selected as the list fills, so the panel stays empty until the pointer has been over a row (Q232). The model and the name row `0x1ec` are not in the panel (Q158).
+selected as the list fills, so the panel stays empty until the pointer has been over a row (Q232). The model and the kind row `0x1ec` are not in the panel (Q158).
 The console's `footprint` prints the row shown, the row waiting, the cells and the block's place.
 
 **Confirmed in Lost Kingdom** (2026-10-06, a 1280 by 720 window, the pointer moved by XTEST, each number predicted

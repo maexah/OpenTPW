@@ -547,23 +547,19 @@ internal sealed class ParkObjectWindow : UiWindow
 			|| level.Catalogue is not { } catalogue || !catalogue.TryGet( placed.CatalogueId, out var item ) )
 			return;
 
-		// How old it is, in whole days on the park's calendar - FUN_004dd670, which FUN_004ade40 prints signed
-		// (0x004adf40). The Belly Bounce is 32 days old as Lost Kingdom loads.
+		// How old it is, in whole days on the park's calendar - FUN_004dd670 - worded by UITEXT 433, "{P8} days", through
+		// FUN_006acd60 with 0x1b1 (0x004adf40; always "days", a day of one included). The Belly Bounce is 32 days old as
+		// Lost Kingdom loads.
 		if ( _stats.TryGetValue( 0x3e1b, out var age ) )
-		{
-			age.Text = placed.Built.IsSet ? $"{state.AgeInDays( placed )}" : null;
+			age.Text = placed.Built.IsSet ? Localization.Format( AgeText, (8, $"{state.AgeInDays( placed )}") ) : null;
 
-			// The original words the age through FUN_006acd60 with 0x1b1 (below), which is not decoded: a bare number is a stand-in.
-			if ( placed.Built.IsSet )
-				Unimplemented.Report( "OBJECT_WINDOW_AGE_WORDING" );
-		}
-
-		// FUN_004e2400: the age-bucket scrap percentage times the item's build price. That percentage
-		// is SCRAP_VALUE_DEPRECIATION, already counted where Sell refunds - it answers 100 only for a thing under
-		// thirty days old with no customer yet, so today this is the build price and is wrong once a ride is used or ages.
+		// FUN_004e2400: the age-bucket scrap percentage times the item's build price (+0x1b8), over 100, lettered as
+		// money by row 449, "$ {P13}" (FUN_00490250). The percentage (FUN_004e2290, SCRAP_VALUE_DEPRECIATION, already
+		// counted where Sell refunds) answers 100 only for a thing under thirty days old with no customer yet, so the
+		// build price is wrong once a ride is used or ages (Q158).
 		if ( _stats.TryGetValue( 0x3e23, out var scrap ) )
 		{
-			scrap.Text = $"{item.BuildPrice}";
+			scrap.Text = ParkItemsScreen.Money( item.BuildPrice );
 			Unimplemented.Report( "SCRAP_VALUE_DEPRECIATION" );
 		}
 
@@ -596,16 +592,6 @@ internal sealed class ParkObjectWindow : UiWindow
 		// (FUN_004ade40, 0x004ade7d), printed "%d" (0x0048ff8f).
 		if ( _stats.TryGetValue( 0x3e21, out var users ) )
 			users.Text = $"{state.RingsFor( ThingId ).Customers.LastDays( UsersLastMonthDays )}";
-
-		// The age is written as a bare number, and the original's wording for it is NOT known.
-		//
-		// FUN_004ade40 formats it through FUN_006acd60( ..., 0x1f, 0x1b1, &record ) with a VARM
-		// placeholder, and 0x1b1 = 433 read as a UITEXT row is EMPTY. That is not an off-by-one:
-		// sweeping 428..438 in the running game gives "Duration : ", "Duration : ", "Laps : ",
-		// "Cycles : ", "Repetitions : " and then nothing, which is the slider-duration family this
-		// window already uses - the age wording is not in that neighbourhood at all. So 0x1b1 is
-		// something other than a row of UITEXT.str, and until that is decoded a plain number is the
-		// honest output. 0x1f is plainly the 31-byte buffer.
 
 		// The two floats are printed RAW, and at full precision, because a gauge cannot report its own
 		// input: v/100 clamped to 0..1 draws a full bar for 100, for 1e30 and for anything else past
@@ -873,6 +859,9 @@ internal sealed class ParkObjectWindow : UiWindow
 	/// </summary>
 	private void Moved( int which ) => Letter( which );
 
+	/// <summary>UITEXT 433, "{P8} days": a built thing's age.</summary>
+	private const int AgeText = 433;
+
 	/// <summary>
 	/// Re-letters one readout - <c>FUN_004aec30</c>. The wording of the duration one comes from the
 	/// item's <c>DurationUnit</c>, and the engine picks a singular row for a value of one and a plural
@@ -887,21 +876,18 @@ internal sealed class ParkObjectWindow : UiWindow
 
 		_readouts[which].Text = which switch
 		{
-			Speed => $"{Localization.Get( UIStrings.Speed )} {value}",
-			Capacity => $"{Localization.Get( UIStrings.Capacity )} {value}",
-			_ => $"{DurationWord( value )} {value}"
+			Speed => Localization.Format( 426, (5, $"{value}") ),
+			Capacity => Localization.Format( 427, (6, $"{value}") ),
+			_ => Localization.Format( DurationRow( value ), (7, $"{value}") )
 		};
 	}
 
 	/// <summary>
-	/// What a duration is counted in. <c>FUN_004aec30</c> switches on the item's <c>DurationUnit</c>:
-	/// 1 picks UITEXT 428 for a value of one and 429 otherwise, 2 picks Laps, 3 Cycles, 4 Repetitions.
+	/// The UITEXT row a duration is counted in. <c>FUN_004aec30</c> switches on the item's <c>DurationUnit</c>:
+	/// 1 picks 428, "Duration : {P7} sec", for a value of one and 429, "Duration : {P7} secs", otherwise, 2 picks Laps
+	/// (430), 3 Cycles (431), 4 Repetitions (432), each with its value as parameter 7.
 	/// </summary>
-	/// <remarks>
-	/// <b>429 has no name in <see cref="UIStrings"/></b> - it is the plural of 428 - so it is read by
-	/// row rather than given an invented one. See <see cref="Localization.Text"/>.
-	/// </remarks>
-	private string DurationWord( int value )
+	private int DurationRow( int value )
 	{
 		var unit = Level.Current is { } level && level.ParkState is { } state
 			&& state.TryObject( ThingId, out var placed )
@@ -911,11 +897,11 @@ internal sealed class ParkObjectWindow : UiWindow
 
 		return unit switch
 		{
-			1 => value == 1 ? Localization.Get( UIStrings.Duration ) : Localization.Text( 429 ),
-			2 => Localization.Get( UIStrings.Laps ),
-			3 => Localization.Get( UIStrings.Cycles ),
-			4 => Localization.Get( UIStrings.Repetitions ),
-			_ => Localization.Get( UIStrings.Duration )
+			1 => value == 1 ? 428 : 429,
+			2 => 430,
+			3 => 431,
+			4 => 432,
+			_ => 428
 		};
 	}
 

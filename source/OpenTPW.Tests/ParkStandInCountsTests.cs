@@ -8,10 +8,10 @@ using System.Runtime.CompilerServices;
 namespace OpenTPW.Tests;
 
 /// <summary>
-/// Five park-screen readouts are stand-ins for the original's, and each is counted where it is drawn (Q865, the
-/// counting piece of Q158): the object window's age wording (<c>FUN_006acd60</c> with <c>0x1b1</c>) and its scrap row
+/// Four park-screen readouts are stand-ins for the original's, and each is counted where it is drawn (Q865, the
+/// counting piece of Q158): the object window's scrap row
 /// (<c>FUN_004e2400</c>), the entry-price screen's park-name heading (<c>0x00498e4c</c>), the gadget's date (UITEXT 448)
-/// and the buy screen's turning model and name row (<c>0x1ec</c>). Reads the shipped park; skipped without the game
+/// and the buy screen's turning model and kind row (<c>0x1ec</c>). Reads the shipped park; skipped without the game
 /// (<see cref="GameData"/>).
 /// </summary>
 [TestClass]
@@ -62,34 +62,77 @@ public class ParkStandInCountsTests
 	}
 
 	/// <summary>
-	/// <b>An object window of a built ride counts its age wording and its scrap value</b> when its figures are filled,
-	/// and the scrap row counts the same gap the shop window and a sale do.
+	/// <b>An object window letters a built ride's age as UITEXT 433 and its scrap row as money, and counts the scrap
+	/// percentage it does not compute</b>; a thing with no build date has no age, and its scrap row still prints.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the age report taken out; the scrap report taken out; the age counted with no build date; either named for the other.</remarks>
+	/// <remarks><b>Mutations:</b> the scrap report taken out; the age a bare number; the age's row 434 or 435; the age with no build date lettered; the scrap row a bare number.</remarks>
 	[TestMethod]
-	public void AnObjectWindowCountsItsAgeWordingAndItsScrapValue()
+	public void AnObjectWindowWordsItsAgeAsDaysAndLettersItsScrapAsMoneyAndCountsThePercentage()
 	{
-		var age = Times( "OBJECT_WINDOW_AGE_WORDING" );
 		var scrap = Times( "SCRAP_VALUE_DEPRECIATION" );
 
-		_stack.Open( new ParkObjectWindow( _stack, 13 ) );
+		var window = new ParkObjectWindow( _stack, 13 );
+		_stack.Open( window );
 
-		Assert.IsTrue( Times( "OBJECT_WINDOW_AGE_WORDING" ) > age, "the Belly Bounce is built, so its age is a bare number" );
-		Assert.IsTrue( Times( "SCRAP_VALUE_DEPRECIATION" ) > scrap, "its scrap row is the build price" );
-
-		// A thing with no build date prints no age, so there is no wording to count; its scrap row still prints.
 		var state = Level.Current!.ParkState!;
 		Assert.IsTrue( state.TryObject( 13, out var built ) );
+		_catalogue.TryGet( built.CatalogueId, out var item );
+
+		Assert.AreEqual( $"{state.AgeInDays( built )} days", Find( window.Root, 0x3e1b ).Text, "UITEXT 433, always days" );
+		Assert.AreEqual( ParkItemsScreen.Money( item.BuildPrice ), Find( window.Root, 0x3e23 ).Text, "UITEXT 449" );
+		Assert.IsTrue( Find( window.Root, 0x3e23 ).Text!.StartsWith( "$ " ) );
+		Assert.IsTrue( Times( "SCRAP_VALUE_DEPRECIATION" ) > scrap, "its scrap row is the build price" );
+
+		// A thing with no build date prints no age; its scrap row still prints.
 		state.AddObject( new ParkWorld.CatalogueObject( ThingId: 9000, CatalogueId: built.CatalogueId, RawX: built.RawX, RawY: built.RawY, Angle: 0 ) );
 
-		age = Times( "OBJECT_WINDOW_AGE_WORDING" );
 		scrap = Times( "SCRAP_VALUE_DEPRECIATION" );
 
-		_stack.Open( new ParkObjectWindow( _stack, 9000 ) );
+		var unbuilt = new ParkObjectWindow( _stack, 9000 );
+		_stack.Open( unbuilt );
 
-		Assert.AreEqual( age, Times( "OBJECT_WINDOW_AGE_WORDING" ), "no build date, no age" );
+		Assert.IsTrue( string.IsNullOrEmpty( Find( unbuilt.Root, 0x3e1b ).Text ), "no build date, no age" );
 		Assert.IsTrue( Times( "SCRAP_VALUE_DEPRECIATION" ) > scrap, "the scrap row prints for it all the same" );
 	}
+
+	/// <summary>
+	/// <b>The ride window's readouts are their UITEXT rows with the value filled in</b>, so the duration keeps its unit
+	/// word: 428 "Duration : {P7} sec" for one, 429 "Duration : {P7} secs" for any other number (<c>FUN_004aec30</c>).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the unit word dropped (the row's first part alone); the singular chosen for every value; the plural for every value.</remarks>
+	[TestMethod]
+	public void TheRideWindowsReadoutsKeepTheirUnitWords()
+	{
+		var window = new ParkObjectWindow( _stack, 13 );
+		_stack.Open( window );
+
+		var flags = BindingFlags.Instance | BindingFlags.NonPublic;
+		var sliders = (UiSlider[])typeof( ParkObjectWindow ).GetField( "_sliders", flags )!.GetValue( window )!;
+		var readouts = (UiControl[])typeof( ParkObjectWindow ).GetField( "_readouts", flags )!.GetValue( window )!;
+		var letter = typeof( ParkObjectWindow ).GetMethod( "Letter", flags )!;
+
+		Level.Current!.ParkState!.TryObject( 13, out var built );
+		_catalogue.TryGet( built.CatalogueId, out var item );
+		Assert.AreEqual( 1, item.DurationUnit, "the Belly Bounce counts seconds" );
+
+		const int duration = 2;
+		readouts[duration].Visible = true;
+
+		sliders[duration].SetRange( 0, 60 );
+		sliders[duration].SetValue( 30 );
+		letter.Invoke( window, [duration] );
+		Assert.AreEqual( "Duration : 30 secs", readouts[duration].Text );
+
+		sliders[duration].SetValue( 1 );
+		letter.Invoke( window, [duration] );
+		Assert.AreEqual( "Duration : 1 sec", readouts[duration].Text );
+	}
+
+	private static UiControl Find( UiControl root, int id )
+		=> root.Id == id ? root : root.Children.Select( c => FindOrNull( c, id ) ).First( c => c != null )!;
+
+	private static UiControl? FindOrNull( UiControl root, int id )
+		=> root.Id == id ? root : root.Children.Select( c => FindOrNull( c, id ) ).FirstOrDefault( c => c != null );
 
 	/// <summary><b>The entry-price screen counts its empty heading when it is built.</b></summary>
 	/// <remarks><b>Mutations:</b> the report taken out.</remarks>
@@ -122,38 +165,30 @@ public class ParkStandInCountsTests
 	}
 
 	/// <summary>
-	/// <b>The buy screen counts the model and the name row where it paints a footprint</b> and nowhere else: a ride's row
-	/// counts both, a land row (id 0) and a mystery ride's none.
+	/// <b>The buy screen counts the model and the kind row for every row it fills the panel for</b>: a ride's, both land
+	/// rows' (-1 and -2) and a mystery ride's, which clear the picture but still build a model and write the row.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> either report taken out; counted for the land row too; the two names swapped.</remarks>
+	/// <remarks><b>Mutations:</b> either report taken out; counted only where a footprint is painted; the two names swapped.</remarks>
 	[TestMethod]
-	public void TheBuyScreenCountsTheModelAndTheNameRowWhereItPaintsAFootprint()
+	public void TheBuyScreenCountsTheModelAndTheKindRowForEveryRow()
 	{
 		var screen = new ParkBuyScreen( _stack );
 		_stack.Open( screen );
 
 		var preview = typeof( ParkBuyScreen ).GetMethod( "Preview", BindingFlags.Instance | BindingFlags.NonPublic )!;
+		var mystery = _catalogue.All.First( GoldenTickets.IsMystery );
 		var ride = _catalogue.All.First( item => item.Shape is not null && !GoldenTickets.IsMystery( item ) );
 
-		var model = Times( "BUY_SCREEN_ITEM_MODEL" );
-		var name = Times( "BUY_SCREEN_ITEM_NAME_ROW" );
+		foreach ( var (row, what) in new[] { (-1, "Buy Land"), (-2, "Clear Land"), (mystery.Id, mystery.Name), (ride.Id, ride.Name) } )
+		{
+			var model = Times( "BUY_SCREEN_ITEM_MODEL" );
+			var kind = Times( "BUY_SCREEN_ITEM_KIND_ROW" );
 
-		preview.Invoke( screen, [0] );
+			preview.Invoke( screen, [row] );
 
-		Assert.AreEqual( model, Times( "BUY_SCREEN_ITEM_MODEL" ), "a land row paints no footprint" );
-		Assert.AreEqual( name, Times( "BUY_SCREEN_ITEM_NAME_ROW" ) );
-
-		var mystery = _catalogue.All.First( GoldenTickets.IsMystery );
-
-		preview.Invoke( screen, [mystery.Id] );
-
-		Assert.AreEqual( model, Times( "BUY_SCREEN_ITEM_MODEL" ), "a mystery ride's row clears the picture, as the land row does" );
-		Assert.AreEqual( name, Times( "BUY_SCREEN_ITEM_NAME_ROW" ) );
-
-		preview.Invoke( screen, [ride.Id] );
-
-		Assert.AreEqual( model + 1, Times( "BUY_SCREEN_ITEM_MODEL" ), ride.Name );
-		Assert.AreEqual( name + 1, Times( "BUY_SCREEN_ITEM_NAME_ROW" ), ride.Name );
+			Assert.AreEqual( model + 1, Times( "BUY_SCREEN_ITEM_MODEL" ), what );
+			Assert.AreEqual( kind + 1, Times( "BUY_SCREEN_ITEM_KIND_ROW" ), what );
+		}
 	}
 
 	private static int Times( string what ) => Unimplemented.Summary.FirstOrDefault( entry => entry.What == what ).Times;

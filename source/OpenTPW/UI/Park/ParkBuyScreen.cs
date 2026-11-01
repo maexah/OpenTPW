@@ -171,7 +171,7 @@ internal sealed class ParkBuyScreen : UiWindow
 		} );
 
 		// The description panel. Its frame is real art the theme ships; of what goes IN it, the footprint picture is
-		// built and the item's turning model and its name row 0x1ec are not.
+		// built and the item's turning model and its kind row 0x1ec are not.
 		var panel = Root.Add( new UiControl
 		{
 			Id = 0x1ea,
@@ -553,7 +553,8 @@ internal sealed class ParkBuyScreen : UiWindow
 
 	/// <summary>
 	/// Fills the panel for a row - the footprint picture's half of <c>FUN_004ab1b0</c>. A land row and a mystery ride
-	/// clear the picture (<c>0x004ab4c8</c>); any other item's shape is painted.
+	/// clear the picture (<c>0x004ab4c8</c>); any other item's shape is painted. The model and the kind row, which are
+	/// not built, are counted for every row.
 	/// </summary>
 	private void Preview( int rowId )
 	{
@@ -564,13 +565,11 @@ internal sealed class ParkBuyScreen : UiWindow
 				? item.Shape
 				: null;
 
-		// Where the footprint is painted the original also turns the item's model and writes its name in row 0x1ec;
-		// neither is built, so each is counted where the panel is filled.
-		if ( _footprint.Shape is not null )
-		{
-			Unimplemented.Report( "BUY_SCREEN_ITEM_MODEL" );
-			Unimplemented.Report( "BUY_SCREEN_ITEM_NAME_ROW" );
-		}
+		// For every row the original also builds a model and writes row 0x1ec, the item's kind (ITEMTYPES.str). A row that
+		// clears the picture builds item 100 (a mystery ride), 101 (Buy Land) or 102 (any other) and writes UITEXT 0x89,
+		// 0x86 or 0x87 (FUN_00486410, 0x004ab55f..0x004ab654). Neither is built, so both are counted for every row.
+		Unimplemented.Report( "BUY_SCREEN_ITEM_MODEL" );
+		Unimplemented.Report( "BUY_SCREEN_ITEM_KIND_ROW" );
 	}
 
 	/// <summary>What the panel shows and what waits, for the console.</summary>

@@ -84,6 +84,14 @@ meets first, found on a Windows 11 PC by a Remote Control session, jobs w1 to w4
 `C:\Users\alexa\tpw-work`): Q976, Q978, Q981, Q979, Q980, Q982, Q977, in that order; then the blocks below. A
 confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
 
+- [ ] **Q944. A UITEXT row read as its first part alone loses the words after its parameter.** (From Q865's second reader.)
+  `StringFile.Entries` holds a row's first text part only (`Parts` holds all). Swept over `UITEXT.str` and `UIHELPTEXT.str`: the rows
+  whose text follows a parameter are 29, 30 (`UpgradeToLevel`, `CancelLevel`), 181 to 183 (the loan boxes), 205, 213, 215, 399, 428 and 429
+  (" sec", " secs"), 433 to 443 (the day, month and hour words), 444, 446, 447, 451 to 455 and 461 to 463. Of those, 428 and 429 were
+  read bare by the ride window's duration readout and 433 by its age: fixed (Q865's fix, `Localization.Format`). Every other shown use
+  goes through `Format` or has its parameter last (`Speed`, `Capacity`, the money rows); the rest are unread. Build each with `Format` when
+  its screen lands (the loan boxes, the upgrade buttons, the visitor window's age wording); grep `Localization.Get(` and `.Text(` for
+  a row in this list before using it.
 - [ ] **Q943. The update check and its click on Windows and macOS, and against a real newer release (Q941's leftovers).** Counted, not
   seen: on Windows and macOS the opener (`SDL_OpenURL`), the `updatecheck off` line and the label `local - <commit>` were not run; and the
   pick has met only replies made up in tests and the real GitHub's empty list, because no weekly release exists yet. Once the first weekly
@@ -641,30 +649,32 @@ filed the items that cite it.
     default as `Inca God: SETREVERB at 162`. Building it is the store of its operand at the script's `+0xd8` for the preset holder above;
     with reverb cut nothing would read it, so a name of its own in the count is all it needs (`q580fs/run-S2`).
 
-- [ ] **Q158. Five park-screen readouts are stand-ins, and nothing counts them.** Found by the 2026-09-26 staleness
-  audit (`AGENTS.md` rule 4). `ParkObjectWindow`'s Age row prints a bare number: its wording, `FUN_006acd60` with
-  `0x1b1`, is not decoded. Its scrap row prints the build price, where `FUN_004e2400` scales it by the age bucket's
-  percentage, `SCRAP_VALUE_DEPRECIATION`, counted only when something is sold. `ParkEntryPriceScreen`'s heading
+- [ ] **Q158. Four park-screen readouts are stand-ins; each is counted where it is drawn (Q865).** Found by the 2026-09-26 staleness
+  audit (`AGENTS.md` rule 4). `ParkObjectWindow`'s scrap row letters the build price as money (row 449, "$ 500"), where `FUN_004e2400`
+  scales it by the age bucket's percentage (`FUN_004e2290`: `percent x +0x1b8 / 100`, the original's "$ 250"), `SCRAP_VALUE_DEPRECIATION`, counted
+  where something is sold, at the shop window's scrap row and at the object window's. The percentage is the item's four-year
+  `ScrapValueYear1`..`4` (not yet read from `ItemDescriptionFile`) picked by the age, 100 only under 30 days with no customer yet.
+  (The object window's Age row is built: UITEXT 433, "{P8} days".) `ParkEntryPriceScreen`'s heading
   `0x4f3af` is empty, and its remark says "left empty and counted"; the original titles it with the name of the thing
   at world `+0x1da732`, `mParkGates` (`ParkWorld`), and its help row 191 reads "Park name - left-click to edit", so
   the title is the park's name and its edit is Q28's. The name is lettered by `UI_SetTitle` (`0x00485d20`, called at `0x00498e4c`): yellow, with the edge, in
-  the stream's rect widened by half its width either side (749..1221 to 513..1457), where ours letters the empty heading white (Q676). `ParkGadget.ShowDate` prints the machine's short date (Q527). `ParkBuyScreen`'s description panel `0x1ea` draws its frame and the footprint picture, and neither the item's turning model nor its name row `0x1ec`.
+  the stream's rect widened by half its width either side (749..1221 to 513..1457), where ours letters the empty heading white (Q676). `ParkGadget.ShowDate` prints the machine's short date (Q527). `ParkBuyScreen`'s description panel `0x1ea` draws its frame and the footprint picture, and neither the item's turning model nor its kind row `0x1ec`.
   **Counted since Q865** (each where it is drawn: `OBJECT_WINDOW_AGE_WORDING`, `SCRAP_VALUE_DEPRECIATION` at the object window's scrap row,
-  `ENTRY_PRICE_TITLE_PARK_NAME`, `GADGET_DATE_UITEXT_448`, `BUY_SCREEN_ITEM_MODEL` and `BUY_SCREEN_ITEM_NAME_ROW`); **what is left is each build**,
-  and a count goes when its build lands: decode `FUN_006acd60`'s `0x1b1` for the age's wording; scale the scrap row by `FUN_004e2400`; letter the
-  park's name in the heading (`UI_SetTitle`); write the date from UITEXT 448; turn the item's model in the buy panel and write its name row.
+  `ENTRY_PRICE_TITLE_PARK_NAME`, `GADGET_DATE_UITEXT_448`, `BUY_SCREEN_ITEM_MODEL` and `BUY_SCREEN_ITEM_KIND_ROW`, the last two for every row the panel is filled for, land and mystery rows too); **what is left is each build**,
+  and a count goes when its build lands: scale the scrap row by `FUN_004e2400`; letter the
+  park's name in the heading (`UI_SetTitle`); write the date from UITEXT 448; turn the item's model in the buy panel and write its kind row `0x1ec` (`ITEMTYPES.str`, item `+0x90`). Three rows are model-and-string pairs of their own (`FUN_004ab1b0`, `0x004ab55f`..`0x004ab654`, `FUN_00486410` then `FUN_00485b00`): a mystery ride builds item 100 and writes UITEXT `0x89` "??? Mystery Ride! ???"; Buy Land (row -1) builds item 101 and writes `0x86` "Buy Land"; Clear Land (row -2) builds item 102 and writes `0x87` "Clear Land".
   Confirm each: its name leaves `unimplemented` after opening a ride's window, the entry-price screen and the buy screen.
   From Q130e, seen beside the original's lists: the hire list's wages are bare numbers too ("$ 63" there); a buy
   row with no state shows an empty box there and nothing here; Buy Land's price is `[0x0078560c]`, 10 there and 0
   here; and the headings' lettering is larger there than the rows', here the same.
   From Q188: the buy screen's panel is the object window's preview (`ParkObjectPreview`, which wants a placed thing
   today: give it an item); in the original it is (437,162) 360 by 363. The footprint picture at its lower left is
-  built (Q233b) and is drawn in front of the model; the name row `0x1ec` above it is not built.
+  built (Q233b) and is drawn in front of the model; the kind row `0x1ec` above it is not built.
   - **Note (play test 2026-10-21, note 8):** the buy screens show no 3D preview, a black panel. Q158's panel is the
     object window's preview, (437,162) 360 by 363 (QUEUE:408-411); the object window's preview is built (Q188) but
     `ParkObjectPreview` wants a placed thing (QUEUE:409). Q450 (1) is the buy stats panel (QUEUE:2398-2402): settle
     there which of the two owns the buy screen's picture.
-  - **Note (play test 2026-10-31):** the buy screens still show no model in the description panel. Nothing counts it. Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
+  - **Note (play test 2026-10-31):** the buy screens still show no model in the description panel. The model and the kind row are counted (Q865). Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
 - [ ] **Q159. `SdtArchive.GetFile` matches a truncated name the wrong way round.** Found by the 2026-09-26 staleness
   audit. It tests `x.Name.StartsWith( name )`, the stored name against the one asked for. A `.sdt` name field is 16
   bytes and a longer name is cut to fit, so asking for "TP SCREECH 11.mp2", stored as "TP SCREECH 11.m", never
