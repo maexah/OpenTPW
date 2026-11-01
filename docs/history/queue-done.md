@@ -11795,6 +11795,12 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   entry cell), and the arrivals' puffs stand at the bus stop (53, 5) (the Sentinel's review). In the stock park ours made 13 puffs for 13 arrivals at the original's words, 26 at the entry cell for 26
   guests taken on and 23 at the exit cell for 23 let off (`q945/run1`, `run2`); `GUEST_ARRIVAL_PARTICLE` is gone from `unimplemented`; eleven put-back bugs each fail a test.
   Not photographed: the arrival puff (under the bus shelter's roof); the riders' puffs in the original in this item's own run (they are Q900's polls).
+- [x] **Q867. `Level.TurnTheCalendar`'s day roll, month turn and year turn are tested (the first piece of Q220).** Run 2026-11-01 (lane B, no game run, nothing drawn changed):
+  `LevelCalendarTurnsTests` drives the calendar tick by tick from the epoch with no game: the day's change rolls an object's rings once for each day that turned (nineteen days,
+  before the thirty-entry ring wraps), the month's closes the analyser once for each month that turned (January's 700 of costs the newest on 1 February), and the year's zeroes the
+  year's profit at the turn into 2001 and not before. Nine bugs put back in `TurnTheCalendar` (the roll not made, made every tick, made at the month's change; the month closed at the
+  day's, at the year's, never; the year's turn at the month's, at the day's, never) each fail one of the three. The month turn's order (training, the bank, wages) was already asserted by
+  `ParkBankTests` (not put back here). Evidence: `~/.cache/tpw-harnesses/q867/`.
 
 ## B. Docs and comments
 
