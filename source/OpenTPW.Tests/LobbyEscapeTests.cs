@@ -400,6 +400,11 @@ public class LobbyEscapeTests
 		SetBacking( model, "Animators", Array.Empty<MeshAnimator>() );
 		SetBacking( model, "Rotator", rotator );
 
+		// Stand-in meshes, one for each node a clip turns, so that none of its tracks is taken for a dummy's past the meshes
+		// (NodePoser.Drives( clip, meshCount )), which would pose the tree this model has none of.
+		SetBacking( model, "Entities", Enumerable.Range( 0, clips.SelectMany( clip => clip.RotationTracks ).Max( track => track.TargetIndex ) + 1 )
+			.Select( _ => (ModelEntity)RuntimeHelpers.GetUninitializedObject( typeof( ModelEntity ) ) ).ToArray() );
+
 		var gate = (LobbyGate)RuntimeHelpers.GetUninitializedObject( typeof( LobbyGate ) );
 		SetField( gate, "_model", model );
 		SetField( gate, "_clip", -1 );

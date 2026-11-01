@@ -168,15 +168,11 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   snap; if so, take the fade out of the attract path (with somebody playing it stays: the globe's change of island is a different pass) and film
   the first second after a change in both games (`record.sh`, `attractcam.py` prints the render camera's colour beside the nearest island).
 
-- [ ] **Q915. Mumbo's ring of heads turns about a vertical axis in the original and stands still in ours.** (From Q848's confirmation.) In the
-  original, the five heads on Mumbo's tentacle faces turn together as the ride runs: the best rigid turn per pause (`lib/headcompare.py --turn`, 12 pauses of roles 4 and 5
-  holding three or more heads) is -139 to +125 degrees, every head within 0.06 units of its place after it, the heights unchanged. In ours the heads'
-  horizontal places stay within 2.7 units of their rest places over 450 census samples (`rides`; the morph moves them, no turn does), so the tentacle meshes, whose matrices
-  place them, do not turn, and the two pictures differ (`q848/photo-new/`, `q848/orig/r1/shots/`). Lead, unchecked: Mumbo's clips `m`, `e` and `s` carry a track
-  on `jm_dum` (node 21, flags `0x18`, `lib/cliptracks.py <mumbo.wad> mumbo m e s`), a node that is not a mesh, which `LobbyModel.TryGetDrawnNode`'s remark and
-  `park.md` name as one `NodePoser` does not carry; which nodes hang from it, and whether the tentacle meshes do, is not read. Build: pose the node as the pose walk does
-  (`FUN_0044ab90`) and carry what hangs from it, here and for the other rides' clips that turn a dummy (the Crazy Ape's heads were not looked at). Confirm: the
-  fitted turn's residual under 0.1 over a pause set in both games (`lib/headcompare.py --turn`), and the tentacles' picture against the original's at the same channel frame.
+- [ ] **Q916. What Q915 did not see: Mumbo's `e` clip and the Crazy Ape's heads.** (From Q915.) Q915's series of ours has no sample of role 6 (the `e` clip), so the
+  two pauses of the original's role 6 were not compared; and the Crazy Ape's 16 heads (`monkey`, whose `Dummy01` turn already took the tree: it carries a position
+  track) were not read live in either game. Build nothing unless a difference shows. Confirm: `headseries.py monkey` (the Ape, thing 1101) and a Mumbo whose series
+  holds role 6, against `headpause.py` pauses of the original at the same frames, by `headcompare.py --turn` (the fitted turn near nought, residuals under 0.1).
+
 - [ ] **Q856. A person's sound's height against the original's, and a guest's on raised ground.** (From Q847.) Q847 built the sound from the decode
   (`FUN_004754e0`, `0x00475513`..`0x00475533`): nought for anyone the walk places (`FUN_004fa030` writes the sprite's `+0x8c` nought each frame,
   `0x004f9ffd`, `0x004fa0b3`), a seat's and a walk's put-off at the point less the ground. Seen in ours

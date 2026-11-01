@@ -168,6 +168,102 @@ public class NodePoserTests
 		Assert.IsFalse( NodePoser.Drives( turnsOnly ), "a clip that only turns is MeshRotator's" );
 	}
 
+	/// <summary>
+	/// A clip that only turns is the tree's when the node it turns is past the meshes (<see cref="NodePoser.Drives(AnimationFile, int)"/>):
+	/// a dummy the meshes hang from, which <see cref="MeshRotator"/> cannot turn, carries its child mesh round with it.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the overload ignoring the mesh count; the count compared with <c>&gt;</c>.</remarks>
+	[TestMethod]
+	public void ATurnOnADummyPastTheMeshesIsTheTreesAndCarriesItsMesh()
+	{
+		// Mesh 0 at (5, 2, 0) under the dummy, node 1, at (10, 0, 0).
+		var poser = new NodePoser( [Matrix4x4.CreateTranslation( 5, 2, 0 ), Matrix4x4.CreateTranslation( 10, 0, 0 )], [1, -1], 0 );
+
+		var onTheMesh = Clip();
+		onTheMesh.RotationTracks.Add( new() { TargetIndex = 0, FrameIndices = [0], Rotations = [Quaternion.Identity] } );
+
+		var onTheDummy = Clip();
+		onTheDummy.RotationTracks.Add( new()
+		{
+			TargetIndex = 1,
+			FrameIndices = [0],
+			Rotations = [Quaternion.CreateFromAxisAngle( Vector3.UnitY, MathF.PI / 2 )]
+		} );
+
+		Assert.IsFalse( NodePoser.Drives( onTheMesh, 1 ), "a turn on a mesh is MeshRotator's" );
+		Assert.IsTrue( NodePoser.Drives( onTheDummy, 1 ), "a turn on node 1, the first past one mesh, is the tree's" );
+		Assert.IsFalse( NodePoser.Drives( onTheDummy, 2 ), "and on a mesh when there are two" );
+
+		poser.Pose( onTheDummy, 0 );
+
+		// A quarter turn about y takes the mesh's offset (5, 2, 0) to (0, 2, -5): it stays 5 from the dummy and 2 up.
+		Near( new( 10, 2, -5 ), poser.World( 0 ).Translation, "the mesh carried round its dummy" );
+	}
+
+	/// <summary>
+	/// <see cref="LobbyModel.Pose"/> sends a clip through the tree by <see cref="NodePoser.Drives(AnimationFile, int)"/> with the model's mesh
+	/// count, not by the mesh-blind <see cref="NodePoser.Drives(AnimationFile)"/>. A <c>LobbyModel</c> needs the graphics device to be made,
+	/// so the wiring is read from the source, as <c>ParkCoasterPylonsTests</c> reads its own.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> <c>Pose</c> asking <c>Drives( animation )</c>; the log line counting that way.</remarks>
+	[TestMethod]
+	public void ALobbyModelPosesAClipThroughTheTreeByTheMeshCount()
+	{
+		var text = System.IO.File.ReadAllText( System.IO.Path.Join( RepoFiles.Root(), "source", "OpenTPW", "World", "Lobby", "LobbyModel.cs" ) );
+
+		StringAssert.Contains( text, "if ( NodePoser.Drives( animation, Entities.Length ) )" );
+		StringAssert.Contains( text, "Clips.Count( clip => NodePoser.Drives( clip, Entities.Length ) )" );
+		Assert.IsFalse( text.Contains( "NodePoser.Drives( animation ) )", StringComparison.Ordinal ), "no mesh-blind dispatch is left" );
+	}
+
+	/// <summary>
+	/// <b>Mumbo's ring turns with <c>jm_dum</c></b> (Q915): its <c>m</c>, <c>e</c> and <c>s</c> clips turn that node, which is not a mesh and
+	/// which <c>jm_body</c> hangs from, with the five heads' faces on it. Posed over the tree, <c>jm_body</c> goes round the dummy's
+	/// vertical axis by the angle the dummy itself turns, at the radius and height it rests at. Read from the game's own <c>mumbo.wad</c>.
+	/// </summary>
+	[TestMethod]
+	public void MumbosBodyGoesRoundWithItsDummy()
+	{
+		var data = GameData.Required();
+		var item = new ParkItemCatalogue( "jungle", data ).All.Single( item => item.Stem == "mumbo" );
+		using var modelStream = new System.IO.MemoryStream( data.ReadAllBytes( $"{item.Directory}/{item.Stem}.MD2" ) );
+		var model = new ModelFile( modelStream );
+		var dummy = model.Nodes.FindIndex( node => node.Name == "jm_dum" );
+		var body = model.Nodes.FindIndex( node => node.Name == "jm_body" );
+		var widest = 0f;
+
+		Assert.IsTrue( dummy >= model.Meshes.Count, "the dummy is not a mesh" );
+		Assert.AreEqual( dummy, model.Nodes[body].ParentIndex, "the body hangs from it" );
+
+		foreach ( var suffix in new[] { "m", "e", "s" } )
+		{
+			using var clipStream = new System.IO.MemoryStream( data.ReadAllBytes( $"{item.Directory}/{item.Stem}{suffix}.MD2" ) );
+			var clip = new AnimationFile( clipStream );
+			var poser = new NodePoser( model );
+			var rest = poser.World( body ).Translation - poser.World( dummy ).Translation;
+
+			Assert.IsTrue( NodePoser.Drives( clip, model.Meshes.Count ), $"clip {suffix} is the tree's" );
+			Assert.IsFalse( NodePoser.Drives( clip ), $"clip {suffix} has no position, route or scale track" );
+
+			for ( var frame = 0f; frame <= clip.FirstFrame + 200; frame += 5 )
+			{
+				poser.Pose( clip, frame );
+
+				var offset = poser.World( body ).Translation - poser.World( dummy ).Translation;
+				var turn = MathF.Atan2( offset.X, offset.Z ) - MathF.Atan2( rest.X, rest.Z );
+
+				turn = MathF.Atan2( MathF.Sin( turn ), MathF.Cos( turn ) );
+				widest = MathF.Max( widest, MathF.Abs( turn ) );
+
+				Assert.AreEqual( MathF.Sqrt( rest.X * rest.X + rest.Z * rest.Z ), MathF.Sqrt( offset.X * offset.X + offset.Z * offset.Z ), 0.01f,
+					$"{suffix} frame {frame}: the body keeps its distance from the dummy" );
+				Assert.AreEqual( rest.Y, offset.Y, 0.01f, $"{suffix} frame {frame}: and its height above it" );
+			}
+		}
+
+		Assert.IsTrue( widest > 0.5f, $"the clips turn the ring by more than 30 degrees at some frame (widest {widest * 180 / MathF.PI:F1})" );
+	}
+
 	/// <summary>A model whose header carries 0x4 adds the key to the node's own translation: 273 + 98 halfway, from the rest every time.</summary>
 	[TestMethod]
 	public void AnAdditiveModelAddsTheKeyToTheRest()

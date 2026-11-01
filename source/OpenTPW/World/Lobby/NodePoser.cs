@@ -115,6 +115,14 @@ public sealed class NodePoser : IChannelPosed
 	public static bool Drives( AnimationFile clip )
 		=> clip.PositionTracks.Count > 0 || clip.PathTracks.Count > 0 || clip.ScaleTracks.Count > 0;
 
+	/// <summary>
+	/// <see cref="Drives(AnimationFile)"/>, or a clip that turns a node past the model's first <paramref name="meshCount"/> nodes, the
+	/// meshes: a dummy the meshes hang from (Mumbo's <c>jm_dum</c>, which carries <c>jm_body</c> and the heads on its tentacles).
+	/// <see cref="MeshRotator"/> turns meshes alone, and the engine's pose walk carries whatever hangs off a turned node (<c>FUN_0044ab90</c>).
+	/// </summary>
+	public static bool Drives( AnimationFile clip, int meshCount )
+		=> Drives( clip ) || clip.RotationTracks.Exists( track => track.TargetIndex >= meshCount );
+
 	/// <summary>How many nodes the tree holds.</summary>
 	public int Count => _local.Length;
 

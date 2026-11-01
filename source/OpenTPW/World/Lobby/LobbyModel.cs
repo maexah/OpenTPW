@@ -728,7 +728,7 @@ public sealed class LobbyModel : IChannelPosed
 		{
 			_poser = new NodePoser( _file );
 
-			Log.Info( $"{_modelPath}: posing {Clips.Count( NodePoser.Drives )} of {Clips.Count} clip(s) over the node tree, " +
+			Log.Info( $"{_modelPath}: posing {Clips.Count( clip => NodePoser.Drives( clip, Entities.Length ) )} of {Clips.Count} clip(s) over the node tree, " +
 				$"{Clips.Sum( clip => clip.PositionTracks.Count )} position track(s), {Clips.Sum( clip => clip.PathTracks.Count )} route track(s), " +
 				$"{Clips.Sum( clip => clip.ScaleTracks.Count )} scale track(s)" );
 		}
@@ -803,15 +803,16 @@ public sealed class LobbyModel : IChannelPosed
 	/// </para>
 	///
 	/// <para>
-	/// <b>A clip carrying position, route or scale tracks is posed by <see cref="NodePoser"/></b>, rotation, scale, position
-	/// and route together over the whole node tree, so a node a key or a route moves carries what hangs off it, turned by its parents
-	/// (the End's planes and their propellers, the seaplane's propellers as it turns along its route); every other clip
+	/// <b>A clip carrying position, route or scale tracks, or turning a node that is not a mesh, is posed by <see cref="NodePoser"/></b>,
+	/// rotation, scale, position and route together over the whole node tree, so a node a key or a route moves carries what hangs off it,
+	/// turned by its parents (the End's planes and their propellers, the seaplane's propellers as it turns along its route, Mumbo's
+	/// <c>jm_dum</c> with its body and heads); every other clip
 	/// turns its meshes through <see cref="Rotator"/>.
 	/// </para>
 	/// </summary>
 	public void Pose( AnimationFile animation, float frame )
 	{
-		if ( NodePoser.Drives( animation ) )
+		if ( NodePoser.Drives( animation, Entities.Length ) )
 		{
 			// Every mesh from the one tree. Not the original's, whose tree holds every channel's turns: a clip that only
 			// turns, on a channel posed before this one, is drawn at rest until it is posed again, the next frame. No Lost

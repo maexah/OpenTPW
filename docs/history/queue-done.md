@@ -11620,6 +11620,25 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   it equals the file's for Mumbo's 5 and the Ape's 16 anchors; against the original's head sprites (Mumbo with five guests, the Escape menu pausing it at 22
   channel frames of roles 4 and 5) heights are within 0.085 and head-to-head distances within 0.084, where main's were off by 1.355 and 1.839 (`q848/`).
   `MovingTheTentacleMovesTheHeadWithIt` pins the file's normal and two new tests the recompute. Left: Q915.
+- [x] **Q915. Mumbo's ring of heads turns about a vertical axis in the original and stands still in ours.** (From Q848's confirmation.) In the
+  original, the five heads on Mumbo's tentacle faces turn together as the ride runs: the best rigid turn per pause (`lib/headcompare.py --turn`, 12 pauses of roles 4 and 5
+  holding three or more heads) is -139 to +125 degrees, every head within 0.06 units of its place after it, the heights unchanged. In ours the heads'
+  horizontal places stay within 2.7 units of their rest places over 450 census samples (`rides`; the morph moves them, no turn does), so the tentacle meshes, whose matrices
+  place them, do not turn, and the two pictures differ (`q848/photo-new/`, `q848/orig/r1/shots/`). Lead, unchecked: Mumbo's clips `m`, `e` and `s` carry a track
+  on `jm_dum` (node 21, flags `0x18`, `lib/cliptracks.py <mumbo.wad> mumbo m e s`), a node that is not a mesh, which `LobbyModel.TryGetDrawnNode`'s remark and
+  `park.md` name as one `NodePoser` does not carry; which nodes hang from it, and whether the tentacle meshes do, is not read. Build: pose the node as the pose walk does
+  (`FUN_0044ab90`) and carry what hangs from it, here and for the other rides' clips that turn a dummy (the Crazy Ape's heads were not looked at). Confirm: the
+  fitted turn's residual under 0.1 over a pause set in both games (`lib/headcompare.py --turn`), and the tentacles' picture against the original's at the same channel frame.
+  Done 2026-10-31 (run 2026-10-31-wk, lane A, `alexah/797-dummy-turn-carries-its-meshes`). The lead was right: `jm_dum` (node 21) is the parent of
+  `jm_body`, the body mesh whose faces carry the five heads, and `MeshRotator` turns meshes only, so a clip that turns a dummy was posed as
+  nothing. `NodePoser.Drives( clip, meshCount )` now also takes a clip that turns a node past the meshes, which `LobbyModel.Pose` and its
+  log use, so Mumbo's `m`, `e`, `s` and `pmumbo`'s `m1` pose over the whole tree and the body and heads go round with the dummy. Corpus
+  (`q915/scan.out`, all 1,276 clips against their models): 560 rotation tracks on a node that is not a mesh; in Lost Kingdom the ones
+  with no position, route or scale track are Mumbo's four clips, the advisors' (`AdvisorModel`'s own walk) and the dead-by-content pylons'.
+  Against the original, re-measured this session (`q915/orig/pauses.jsonl`: 11 Escape-menu pauses of roles 4 and 5, five of them holding three or more heads): the fitted turn of ours onto the
+  original's is 0.21, 0.00, 0.02, -0.22 and -0.06 degrees (the old build's, on the same pauses: -53.8, -137.4, -76.4, -95.5, +45.7), and with no fitting every
+  head's horizontal place is within 0.092 (26 heads, mean 0.043; the old build's 26.19, mean 17.68); heights within 0.051, distances within 0.078.
+  A head's horizontal reach from its rest place over 450 samples is 29.78 (2.66 before). Left: Q916.
 
 ## B. Docs and comments
 

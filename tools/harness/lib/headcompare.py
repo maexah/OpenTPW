@@ -3,10 +3,11 @@
 (lib/headseries.py's series.json) at the same (role, clip) and channel frame, ours linear between its two nearest samples; record r is
 head r + 1 (Q848).
 
-The original turns Mumbo's whole ring about a vertical axis as the ride runs and this game does not (Q915), so a head's x and z differ
-by the turn. What a turn cannot change is compared: each head's height, and the horizontal distance between each two heads held in the
-same pause. The line at the end gives the maxima and means. --turn adds, for each pause holding three or more heads, the rigid turn (2-D
-rotation and shift) that best takes this game's heads onto the original's: its angle and each head's residual after it."""
+The original turns Mumbo's whole ring about a vertical axis as the ride runs, and this game has since Q915. The comparison keeps to what a
+turn cannot change, so it holds for a build that does not turn the ring too: each head's height, and the horizontal distance between each
+two heads held in the same pause. The line at the end gives the maxima and means. --turn adds, for each pause holding three or more
+heads, the rigid turn (2-D rotation and shift) that best takes this game's heads onto the original's: its angle (near nought when the
+ring turns as the original's) and each head's residual after it."""
 import itertools, json, math, sys
 args = [a for a in sys.argv[1:] if a != "--turn"]; TURN = "--turn" in sys.argv[1:]
 label = args[0]; series = json.load(open(args[1])); pauses = [json.loads(l) for f in args[2:] for l in open(f)]
