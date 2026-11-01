@@ -141,18 +141,18 @@ public class ParkFootprintOccupancyTests
 	}
 
 	/// <summary>
-	/// <b>Taking a thing off a cell it was never on must not cost it the links it holds elsewhere.</b>
-	/// <see cref="ParkState.LeaveCell"/> ends by forgetting the thing's own next and previous whether or
-	/// not it found it on the cell asked about, so a caller that sweeps a footprint reaches the anchor
-	/// last with nothing left to relink - and puts nought into the head instead of promoting whoever
-	/// stood behind it.
+	/// <b>A thing taken off a cell it is not on still comes off the list it IS on, and the cell's owner
+	/// still answers.</b> <c>FUN_004d9280</c> works from the thing's own links and never checks the cell it
+	/// was called with, so the ride behind the guest leaves the anchor's list when it is "left" from the
+	/// corner, and the anchor's <see cref="RuntimeCell.Occupant"/> is nought once the guest goes
+	/// (<c>docs/exe/park-engine.md</c>, "Who a cell's list names as people walk").
+	/// <see cref="ParkPicking.ThingOn"/> still finds the ride, through the cell's parent.
 	/// </summary>
 	/// <remarks>
-	/// <see cref="ParkBuilding"/>'s sell leaves the anchor and nothing else: a sweep of the whole footprint
-	/// loses a guest for a TURNED thing, whose anchor is not the corner the sweep starts from.
+	/// <see cref="ParkBuilding"/>'s sell leaves the anchor and nothing else, so no caller sweeps a footprint.
 	/// </remarks>
 	[TestMethod]
-	public void LeavingACellTheThingIsNotOnKeepsWhoeverStandsBehindIt()
+	public void LeavingACellTheThingIsNotOnUnlinksItFromItsOwnListAndTheOwnerStillAnswers()
 	{
 		var park = Park();
 
@@ -160,15 +160,15 @@ public class ParkFootprintOccupancyTests
 		park.EnterCell( 58, 16, Guest );
 
 		// The guest went on last, so the ride is behind them on the same cell's list.
-		Assert.AreEqual( Guest, ParkPicking.ThingOn( park, 58, 16 ), "the guest is standing on the anchor" );
+		Assert.AreEqual( Guest, park.CellAt( 58, 16 ).Occupant, "the guest heads the anchor's list" );
 
 		// The corner of the footprint, which is not the cell the ride is on.
 		park.LeaveCell( 58, 15, Ride );
 		park.LeaveCell( 58, 16, Guest );
 
-		// The cell's own list, not ThingOn: that falls back to the cell's owner and answers the ride anyway.
-		Assert.AreEqual( Ride, park.CellAt( 58, 16 ).Occupant,
-			"the ride is still on its anchor's list after being taken off a cell it was never on" );
+		Assert.AreEqual( 0, park.CellAt( 58, 16 ).Occupant,
+			"the ride came off the list when it was left from the corner, as the original's unlink does it" );
+		Assert.AreEqual( Ride, ParkPicking.ThingOn( park, 58, 16 ), "the cell's parent still answers the ride" );
 	}
 
 	/// <summary>
