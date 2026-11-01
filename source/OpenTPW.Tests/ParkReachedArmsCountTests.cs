@@ -1,0 +1,151 @@
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using System.IO;
+using System.Linq;
+
+namespace OpenTPW.Tests;
+
+/// <summary>
+/// The guests' reached arms that are counted, not built (Q157): the gate's guard on an entering guest
+/// (<c>FUN_004ffb20</c>), a leaver's change of mind (<c>FUN_00500a50</c>) and the route improver's diagonal pass
+/// (<c>FUN_005108a0</c>). Each name is asserted present where the original tests and absent where it does not.
+/// </summary>
+[TestClass]
+public class ParkReachedArmsCountTests
+{
+	private BaseFileSystem data = null!;
+
+	[TestInitialize]
+	public void MountTheGame() => FileSystem = data = GameData.Required();
+
+	private static int Counted( string gap ) => Unimplemented.Summary.FirstOrDefault( entry => entry.What == gap ).Times;
+
+	private (PeepBehaviour Behaviour, Peep Guest, PeepWalk Walk) Guest( PeepState state, bool shut = false, int gate = ParkRides.GateIsOpen )
+	{
+		using var stream = new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
+		var admission = new ParkAdmission( new ParkBalance( "jungle", easyMode: true ), world.Economy!.Value.AdmissionFee );
+		var parkState = new ParkState( world );
+
+		parkState.SetParkClosed( shut );
+
+		var behaviour = new PeepBehaviour( world, new Random( 1 ), admission, () => gate, parkState );
+		var guest = ParkPeople.PeepsIn( world ).First( peep => peep.ThingId == 38 );
+
+		guest.SetState( state, 0, new Random( 1 ) );
+		guest.Happiness = 50;
+		guest.ExitLevel = 100;
+
+		return (behaviour, guest, new PeepWalk( guest.Navigator, CellEdge.For( world, ParkPeople.WalkingMode ).Blocked ));
+	}
+
+	private static (int X, int Y) CellOfType( ParkState state, int type )
+		=> Enumerable.Range( 0, ParkWorld.MapSize * ParkWorld.MapSize )
+			.Select( at => (X: at % ParkWorld.MapSize, Y: at / ParkWorld.MapSize) )
+			.First( cell => state.Record( cell.X, cell.Y ).Type == type );
+
+	/// <summary>The guard is asked on every turn of the state and counted only when the park or the gate says no.</summary>
+	[TestMethod]
+	[DataRow( false, ParkRides.GateIsOpen, false, "open park, open gate" )]
+	[DataRow( true, ParkRides.GateIsOpen, true, "the entry-price door shut the park" )]
+	[DataRow( false, 0, true, "the gate reports something other than 1" )]
+	[DataRow( false, 2, true, "the gate reports 2" )]
+	public void AnEnteringGuestIsCountedWhereTheGateGuardWouldTurnThemBack( bool shut, int gate, bool counted, string why )
+	{
+		var (behaviour, guest, walk) = Guest( PeepState.Entering, shut, gate );
+		var before = Counted( "ENTERING_GATE_GUARD" );
+
+		behaviour.Step( guest, walk, playing: null, tick: 1 );
+
+		Assert.AreEqual( counted ? before + 1 : before, Counted( "ENTERING_GATE_GUARD" ), why );
+	}
+
+	/// <summary>A guard that is counted changes nothing else: the walk goes on as it did.</summary>
+	[TestMethod]
+	public void TheGateGuardIsOnlyCounted()
+	{
+		var (behaviour, guest, walk) = Guest( PeepState.Entering, shut: true );
+
+		behaviour.Step( guest, walk, playing: null, tick: 1 );
+
+		Assert.AreEqual( PeepState.Entering, guest.State );
+	}
+
+	/// <summary>The other states do not ask the guard.</summary>
+	[TestMethod]
+	public void OnlyAnEnteringGuestIsAskedTheGuard()
+	{
+		var (behaviour, guest, walk) = Guest( PeepState.HeadingForExit, shut: true );
+		var before = Counted( "ENTERING_GATE_GUARD" );
+
+		behaviour.Step( guest, walk, playing: null, tick: 1 );
+
+		Assert.AreEqual( before, Counted( "ENTERING_GATE_GUARD" ) );
+	}
+
+	/// <summary>
+	/// The change of mind is counted when all four of its tests pass (<c>0x00500a53</c>..<c>0x00500a84</c>) and when
+	/// any one fails it is not: the exit level above nought (a negative one is not, <c>JLE</c>), the happiness
+	/// byte not nought (a half is truncated to nought by <c>__ftol</c>), an open park, and a counting cell.
+	/// </summary>
+	[TestMethod]
+	[DataRow( 100, 50f, false, 1, true, "all four pass" )]
+	[DataRow( 1, 50f, false, 1, true, "an exit level of one" )]
+	[DataRow( 0, 50f, false, 1, false, "an exit level of nought" )]
+	[DataRow( -1, 50f, false, 1, false, "a negative exit level" )]
+	[DataRow( 100, 0f, false, 1, false, "no happiness" )]
+	[DataRow( 100, 0.5f, false, 1, false, "half a point truncates to nought" )]
+	[DataRow( 100, 1f, false, 1, true, "a point of happiness" )]
+	[DataRow( 100, 50f, true, 1, false, "a shut park" )]
+	[DataRow( 100, 50f, false, 2, false, "a cell that is a ride's footprint" )]
+	public void AGuestHeadingForTheExitIsCountedWhereTheChangeOfMindIsTested(
+		int exitLevel, float happiness, bool shut, int cellType, bool counted, string why )
+	{
+		var (behaviour, guest, walk) = Guest( PeepState.HeadingForExit, shut );
+		var cell = CellOfType( behaviour.State, cellType );
+
+		behaviour.State.StandOn( guest.ThingId, cell.X, cell.Y );
+		guest.ExitLevel = exitLevel;
+		guest.Happiness = happiness;
+
+		var before = Counted( "HEADING_FOR_EXIT_CHANGE_OF_MIND" );
+
+		behaviour.Step( guest, walk, playing: null, tick: 1 );
+
+		Assert.AreEqual( counted ? before + 1 : before, Counted( "HEADING_FOR_EXIT_CHANGE_OF_MIND" ), why );
+	}
+
+	private static CellRoute Route( (int X, int Y) start, params (int X, int Y)[] waypoints )
+	{
+		var route = new CellRoute { Start = start, Goal = waypoints[^1] };
+
+		route.Waypoints.AddRange( waypoints );
+
+		return route;
+	}
+
+	/// <summary>
+	/// A scan that splices nothing ends in the diagonal pass, which writes only to a step of one cell on both
+	/// axes: the count is made for such a route, not for a straight one or a longer slant.
+	/// </summary>
+	[TestMethod]
+	[DataRow( 10, 10, 11, 11, true, "a one-cell diagonal from the start" )]
+	[DataRow( 10, 10, 10, 11, 11, 11, true, "a one-cell diagonal as the second step" )]
+	[DataRow( 10, 10, 10, 15, false, "a straight run" )]
+	[DataRow( 10, 10, 10, 11, false, "a one-cell step along one axis" )]
+	[DataRow( 10, 10, 13, 13, false, "a three-cell slant" )]
+	[DataRow( 10, 10, 11, 12, false, "a knight's step" )]
+	public void ARouteWithAOneCellDiagonalIsCountedWhereTheDiagonalPassWouldRun( params object[] arguments )
+	{
+		var numbers = arguments.Take( arguments.Length - 2 ).Cast<int>().ToArray();
+		var counted = (bool)arguments[^2];
+		var why = (string)arguments[^1];
+		var cells = Enumerable.Range( 1, numbers.Length / 2 - 1 ).Select( i => (numbers[i * 2], numbers[i * 2 + 1]) ).ToArray();
+		var route = Route( (numbers[0], numbers[1]), cells );
+		var before = Counted( "CELL_REROUTE_DIAGONAL_PASS" );
+
+		CellReroute.Run( route, ( _, _, _ ) => false );
+
+		Assert.AreEqual( counted ? before + 1 : before, Counted( "CELL_REROUTE_DIAGONAL_PASS" ), why );
+	}
+}

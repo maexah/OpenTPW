@@ -920,6 +920,7 @@ after its poller starts**, so a key meant inside either line cannot be sent afte
   to tick 942 or later: save past tick 902 (`pause`, `savepark`) for a file both games say row 1's on tick 923 from
   (`q319/orig/run.sh <file>`, with `CLICKS=0` for no clicks; Q319). The four lines in both games:
   `q320/confirm.py`, `q320/orig/run.sh <file>` (Q320).
+- **A guest caught in one state, then the park shut under them** (Q157, `q157/confirm2.py`): poll `peeps` every 0.3 s from the entry until a line reads `state Entering` (it comes within a few seconds of the stock park's start), `pause`, `screen 10`, `control 4f3b1` and the real click on the door, `step 2`, `unimplemented`. Under the pause the shut flag is set and the guest has not moved, so their next turn is the one that tests it. A shut park left running does not do this: the stock park's guests are all in by tick 1143 and the gate closes on nobody (`q157/run-final.out`, the miss recorded in `PREDICTION.txt`). `q157/confirm.py` is the plain 90 s open run with the three Q157 names read from the census, beside the previous build's.
 - **An open park with nothing to ride, and the advisor's line about it:** in the stock park `pause` on a tick
   from 912 to 919, `sell 13` (the Belly Bounce), `sell 14` (the Jungle Spray), `resume`: row 2 is polled on tick
   924 (769 and every 155 on) and he says sample 4 in the ticket hat and leaves tag 4, whose bar's first button

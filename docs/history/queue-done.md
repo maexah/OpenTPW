@@ -11723,6 +11723,32 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the list). Neither is said at the site. Build `EditQueue` on `QueueEnds`' walk. Confirm: a Belly Bounce bought and
   turned, its window's queue button pressed before any queue is laid, `tool` and `cell` on the anchor, predicted
   first; a screenshot.
+- [x] **Q157. Guests' and rides' reached arms that count nothing.** Found by the 2026-09-26 staleness audit. Each is
+  reached in Lost Kingdom, unbuilt, and calls no `Unimplemented.Report` (`AGENTS.md` rule 4). In `PeepBehaviour`:
+  `Entering` lacks `FUN_004ffb20`'s guard (park shut or gate not open, back to the gate), reachable since the
+  entry-price door shuts a running park; `HeadingForExit` has no
+  change of mind (`FUN_00500a50`), which a saved guest can take. `CellReroute` never
+  runs `FUN_005108a0`'s diagonal pass after a scan that splices nothing, which is how most routes end.
+  (`Peep.Tick`'s cell's `RegionFX` term is built, Q668.)
+  (`ParkRideOperation.Invite`'s `RunsContinuously` is built, Q304.) Count each where the original tests it, and
+  put each build without an item in the queue. Confirm: `unimplemented` over a timed run, each name present, predicted
+  first.
+  - **Note (fork review, 2026-09-30):** `EntertainerConstsPerGrade[g].HappinessEffectOnCell` (4, 8, 12, 16, 20; `Standard.sam`)
+    has no reader in our decode; find it before building the entertainer's half of the region term. Review item peeps-v3.
+    Answered by Q668: no instruction reads the per-grade record's `+4` (`0x0078539c`); the stamp is RegionFX[0]'s
+    (`ride-operation.md`, "The region effects").
+  From Q126: `FUN_0055a470` (`0x0054f828`, every eighth step, a dropped sweep's too) finds the ride the camera is
+  on (`FUN_0042a4e0`, the list at `[0x008791b0]`) and hands its `+0xd8`, or the default `[0x0078578c]`, to
+  `FUN_0051c8d0`, a sound setting not decoded. Nothing here has it, counted or not.
+  - **Note (fork watch 2026-10-18, `verify-other-a.md` H2, `verify-audio-fx.md` F2):** decoded, `audio.md`, "The fade, the SoundInfo
+    settings and the reverb". `FUN_0051c8d0` is the reverb preset holder (`[0x00803ab4]`, posts `0x700b30` only on a
+    change), and `[0x0078578c]` is the level key `Sound.Reverb` (0 in `Standard.sam`, 3 in hallow's, none in jungle's,
+    so Lost Kingdom's is 0). A negative ride `+0xd8` sends nothing. The preset reaches EAX 2.0 hardware only; reverb
+    itself stays cut (`audio.md`).
+  - **Note (Q580, 2026-10-20):** the Sun God reaches `SETREVERB` (`incagod` at 162 and 188, in every run of it), counted
+    at the dispatch default as `Inca God: SETREVERB at 162`. Building it is the store of its operand at the script's
+    `+0xd8` for the preset holder above; with reverb cut nothing would read it, so a name of its own in the count is all
+    it needs (`q580fs/run-S2`).
 
 ## B. Docs and comments
 

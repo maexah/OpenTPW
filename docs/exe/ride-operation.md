@@ -500,7 +500,7 @@ states 6 and 7, for a person whose type byte is not 4..8; "Deciding and wanderin
 (`0x004fa30b`), so on the three queue paths it is nought unless a save loaded it.
 
 The pathfinder (`FUN_0050f8e0` → `FUN_00511420` → `FUN_00511470`, a line stepper with wall-following, 60000 iterations
-and at most 250 cells, then `FUN_005108a0`'s up to nine splices, which cannot rescue a failed first search) takes the
+and at most 250 cells, then `FUN_005108a0`'s up to nine splices, which cannot rescue a failed first search; a scan that splices nothing falls into a pass from `0x00510a1e` that breaks a one-cell diagonal step in two when a shut edge of its corner decides it, writing the corner at `0x00511040`: counted as `CELL_REROUTE_DIAGONAL_PASS` where such a step stands in the route, Q157, built by Q863) takes the
 start and target cells as bytes; the walker keeps a window of five cell-centre waypoints and plans again from where it
 stands when the window is used up, which can fail mid-walk too. Every step asks the edge test
 `FUN_004d8750` - OpenTPW's `CellEdge.Blocked`, line for line. A queue (mType 3) or entrance (9) cell is entered only
@@ -1610,7 +1610,11 @@ nought or less from any state, is gone. Read with it, first-hand:
 - **State 18, `FUN_00500a50`**: the change of mind first (exit level 1 or more, happiness byte not nought, park open,
   `FUN_004fa990` true: "Make up your mind!", `+0x188` = 0, state 6); else the walk `FUN_004fa2a0`: arrived, state
   `0x13`; stuck (2), "I'm stuck in the park, even though it's closed!!", `+0x188` = 0, **state 6**. OpenTPW builds the
-  stuck arm; the change of mind is not built (Q157).
+  stuck arm; the change of mind is counted where it is tested, `HEADING_FOR_EXIT_CHANGE_OF_MIND` (Q157, `PeepBehaviour.WouldChangeTheirMind`: exit level above nought, the happiness byte truncated by `__ftol` not nought, `mParkClosed` (`FUN_0051a280`) clear, `FUN_004fa990` on the guest's own cell), and not built (Q862).
+- **State 5, the `Entering` turn's guard (`FUN_004ffb20`, `0x004ffb2b`..`0x004ffb42`)**: `FUN_0051a280` (`mParkClosed`) nonzero, or
+  `FUN_0051a290` (the gate's status) not 1, skips the walk: a ticket booth by the draw's low bit (`FUN_00516330`, `FUN_004d8610`),
+  `FUN_004fa530` to it, state 2. OpenTPW asks the same pair (`GateWillAdmit`) and counts it, `ENTERING_GATE_GUARD`, then walks on
+  (Q157; built by Q861).
 - **The gate's leavers aim at the crossing too.** `FUN_004ff9d0`'s far-too-expensive arm and `FUN_004ff7f0`'s
   waited-out arm each write `+0x188` = 1, send the guest to `FUN_004d86d0( draw & 1 )`, set state `0x12` and then write
   `mExitLevel` = 0; the expensive arm's leaver (happiness byte nought after the medium change) gets the state and the

@@ -595,32 +595,30 @@ filed the items that cite it.
   original's way. Confirm: the staff screen at a known happiness, photographed. Note (Q244): `UiMeter` is now the
   gadget's gauge alone and its fill direction is read (`hud.md`, "The happiness gauge's two quads"); the remark cited
   above is gone.
-- [ ] **Q157. Guests' and rides' reached arms that count nothing.** Found by the 2026-09-26 staleness audit. Each is
-  reached in Lost Kingdom, unbuilt, and calls no `Unimplemented.Report` (`AGENTS.md` rule 4). In `PeepBehaviour`:
-  `Entering` lacks `FUN_004ffb20`'s guard (park shut or gate not open, back to the gate), reachable since the
-  entry-price door shuts a running park; `HeadingForExit` has no
-  change of mind (`FUN_00500a50`), which a saved guest can take. `CellReroute` never
-  runs `FUN_005108a0`'s diagonal pass after a scan that splices nothing, which is how most routes end.
-  (`Peep.Tick`'s cell's `RegionFX` term is built, Q668.)
-  (`ParkRideOperation.Invite`'s `RunsContinuously` is built, Q304.) Count each where the original tests it, and
-  put each build without an item in the queue. Confirm: `unimplemented` over a timed run, each name present, predicted
-  first.
-  - **Note (fork review, 2026-09-30):** `EntertainerConstsPerGrade[g].HappinessEffectOnCell` (4, 8, 12, 16, 20; `Standard.sam`)
-    has no reader in our decode; find it before building the entertainer's half of the region term. Review item peeps-v3.
-    Answered by Q668: no instruction reads the per-grade record's `+4` (`0x0078539c`); the stamp is RegionFX[0]'s
-    (`ride-operation.md`, "The region effects").
-  From Q126: `FUN_0055a470` (`0x0054f828`, every eighth step, a dropped sweep's too) finds the ride the camera is
-  on (`FUN_0042a4e0`, the list at `[0x008791b0]`) and hands its `+0xd8`, or the default `[0x0078578c]`, to
-  `FUN_0051c8d0`, a sound setting not decoded. Nothing here has it, counted or not.
-  - **Note (fork watch 2026-10-18, `verify-other-a.md` H2, `verify-audio-fx.md` F2):** decoded, `audio.md`, "The fade, the SoundInfo
-    settings and the reverb". `FUN_0051c8d0` is the reverb preset holder (`[0x00803ab4]`, posts `0x700b30` only on a
-    change), and `[0x0078578c]` is the level key `Sound.Reverb` (0 in `Standard.sam`, 3 in hallow's, none in jungle's,
-    so Lost Kingdom's is 0). A negative ride `+0xd8` sends nothing. The preset reaches EAX 2.0 hardware only; reverb
-    itself stays cut (`audio.md`).
-  - **Note (Q580, 2026-10-20):** the Sun God reaches `SETREVERB` (`incagod` at 162 and 188, in every run of it), counted
-    at the dispatch default as `Inca God: SETREVERB at 162`. Building it is the store of its operand at the script's
-    `+0xd8` for the preset holder above; with reverb cut nothing would read it, so a name of its own in the count is all
-    it needs (`q580fs/run-S2`).
+- [ ] **Q861. An entering guest turned back at the gate (`ENTERING_GATE_GUARD`).** From Q157, which counts it. `FUN_004ffb20`'s first two tests
+  (`0x004ffb2b`..`0x004ffb42`: `mParkClosed` set, or the gate's status not 1) send the guest to a ticket booth by the draw's low
+  bit (`FUN_004d8610`, then `FUN_004fa530` to it) and put them in state 2 (`HeadingForGate`) in place of the walk through the gate;
+  `PeepBehaviour`'s `Entering` arm counts it (`!GateWillAdmit`) and walks on. Build it as `Wait`'s booth arm sends a guest (`BoothFor`,
+  `SendTo`), its `ParkOpeningWait` untouched. Confirm: the entry-price door shut by a real click with a guest in `Entering`
+  (`q157/confirm.py` has the click), `peeps` on that guest before and after, predicted first; the count leaves the census.
+- [ ] **Q862. A leaver's change of mind (`HEADING_FOR_EXIT_CHANGE_OF_MIND`).** From Q157, which counts it. `FUN_00500a50`'s first test
+  (`0x00500a53`..`0x00500a84`: exit level above nought, happiness byte not nought, the park open, `FUN_004fa990`) puts the guest back in
+  state 6 with `+0x188` = 0 (the "Make up your mind!" line goes to a debug print). The three arms that send a guest out write exit
+  level nought and the needs turn lowers it, so only a file that saves a guest in state 18 with a positive exit level reaches it; find out
+  whether any shipped file does (`parkfile.py` over the shipped parks and Alexah's Full Simulation saves) before building, and if none,
+  say so in `ride-operation.md` and leave the count. Confirm: such a file loaded, the census name present, then the build.
+- [ ] **Q863. The route improver's diagonal pass (`CELL_REROUTE_DIAGONAL_PASS`).** From Q157, which counts it where a no-splice scan
+  leaves a one-cell diagonal step. `FUN_005108a0` from `0x00510a1e` goes over the route's steps and breaks a one-cell diagonal in two
+  when a shut edge of the corner decides it (`0x00510b15`..`0x00511020`, the inserted corner at `0x00511040`, at most 252 waypoints);
+  `CellReroute.Run` stops where it starts. Decode the corner cases (the other sign combinations from `0x00510c73`), build the pass, and
+  run the routes of the stock park through the old and the new to see how many steps change. Confirm: a guest's route over a bent path
+  in both builds, the waypoints printed, predicted first.
+- [ ] **Q864. The reverb handoff of the camera's ride is neither built nor counted.** From Q157's Q126 note. `FUN_0055a470`
+  (`0x0054f828`, every eighth step) finds the ride the camera is on (`FUN_0042a4e0`) and hands its `+0xd8`, or `[0x0078578c]`
+  (`Sound.Reverb`, 0 in Lost Kingdom), to `FUN_0051c8d0`, the reverb preset holder (`audio.md`, "The fade, the SoundInfo settings and
+  the reverb"); a negative `+0xd8` sends nothing. Reverb itself stays cut, so only a name in the count is wanted: report it where the
+  original calls it (`Unimplemented.Report( "CAMERA_RIDE_REVERB" )`), once a ride is under the camera. Confirm: `unimplemented`
+  with the camcorder on a ride, predicted first, and without one.
 - [ ] **Q158. Five park-screen readouts are stand-ins, and nothing counts them.** Found by the 2026-09-26 staleness
   audit (`AGENTS.md` rule 4). `ParkObjectWindow`'s Age row prints a bare number: its wording, `FUN_006acd60` with
   `0x1b1`, is not decoded. Its scrap row prints the build price, where `FUN_004e2400` scales it by the age bucket's

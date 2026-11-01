@@ -443,11 +443,15 @@ public sealed class PeepBehaviour
 			// Coming through the gate - seven of the thirteen. Arriving is what makes somebody a visitor
 			// (FUN_0051aaf0 at 0x004ffb55, its answer kept at guest +0x1d8).
 			//
-			// The guard this does NOT have is the one at the top of FUN_004ffb20: a guest whose park has
-			// shut under them, or whose gate is not open, is sent back to head for the gate again. Both
-			// halves can be asked (GateWillAdmit), and the entry-price door shuts a running park, so the
-			// guard is a gap rather than an unreachable arm.
+			// The guard this does NOT have is the one at the top of FUN_004ffb20 (0x004ffb2b..0x004ffb42): a
+			// guest whose park has shut under them, or whose gate does not report 1, is sent to a ticket
+			// booth (FUN_004d8610, the draw's low bit) and put in state 2 again. Both halves are asked
+			// (GateWillAdmit), and the entry-price door shuts a running park, so the guard is counted where
+			// it is tested and the walk goes on as before.
 			case PeepState.Entering:
+				if ( !GateWillAdmit )
+					Unimplemented.Report( "ENTERING_GATE_GUARD" );
+
 				if ( Walked( peep, walk, playing ) == WalkVerdict.Arrived )
 				{
 					peep.VisitorNumber = State.Admit();
@@ -747,13 +751,17 @@ public sealed class PeepBehaviour
 			// Heading for the exit, having decided not to stay - FUN_00500a50. They walk to the cell the arm
 			// that sent them here chose, and on arriving go on to pick a cell outside.
 			//
-			// <b>The change-of-mind arm is absent.</b> The original turns a guest back to Deciding - "Make
-			// up your mind!" - when mExitLevel (+0x1bc) is positive AND the happiness byte (+0x19c) is
-			// non-zero AND the park is open AND FUN_004fa990 agrees.
+			// <b>The change-of-mind arm is counted, not built.</b> The original turns a guest back to Deciding
+			// - "Make up your mind!", +0x188 = 0, state 6 - when mExitLevel (+0x1bc) is positive AND the
+			// happiness byte (+0x19c) is non-zero AND the park is open AND FUN_004fa990 agrees
+			// (0x00500a53..0x00500a84).
 			//
 			// Getting stuck prints "I'm stuck in the park, even though it's closed!!" and puts them back to
 			// Deciding, whose leave test sends them off again if it still holds.
 			case PeepState.HeadingForExit:
+				if ( WouldChangeTheirMind( peep ) )
+					Unimplemented.Report( "HEADING_FOR_EXIT_CHANGE_OF_MIND" );
+
 				switch ( Walked( peep, walk, playing ) )
 				{
 					case WalkVerdict.Arrived:
@@ -1484,6 +1492,26 @@ public sealed class PeepBehaviour
 
 	private static int SquaredCells( int x, int y, int toX, int toY )
 		=> (toX - x) * (toX - x) + (toY - y) * (toY - y);
+
+	/// <summary>
+	/// Whether the first test of <c>FUN_00500a50</c> passes for a guest heading for the exit: <c>mExitLevel</c> above
+	/// nought, the happiness byte not nought, the park open and the cell they stand on one <c>FUN_004fa990</c> counts.
+	/// </summary>
+	internal bool WouldChangeTheirMind( Peep peep )
+		=> peep.ExitLevel > 0 && (byte)(int)peep.Happiness != 0 && !ParkIsClosed && OnACountingCell( peep );
+
+	/// <summary>
+	/// Whether the cell a guest stands on counts them (<see cref="Peep.CountsOn"/>): the cell the park has them
+	/// linked into, as the original reads the thing's own cell bytes, or the one under their feet before their
+	/// first turn has linked them.
+	/// </summary>
+	internal bool OnACountingCell( Peep peep )
+	{
+		var (x, y) = State.CellOf( peep.ThingId )
+			?? (peep.Navigator.Position.X >> 16, peep.Navigator.Position.Y >> 16);
+
+		return Peep.CountsOn( State.Record( x, y ).Type );
+	}
 
 	/// <summary>
 	/// Whether a deciding guest sets off home this turn - the test at <c>0x004fee5b</c>: the happiness byte nought,

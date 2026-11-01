@@ -3116,11 +3116,6 @@ public sealed partial class ParkPeople : Entity
 			: 0;
 
 	/// <summary>
-	/// Whether the cell a guest stands on counts them (<see cref="Peep.CountsOn"/>): the cell the park has them
-	/// linked into, as the original reads the thing's own cell bytes, or the one under their feet before their
-	/// first turn has linked them.
-	/// </summary>
-	/// <summary>
 	/// The happiness, illness and hunger words of the region effects on the guest's cell, which their needs turn adds
 	/// (<c>FUN_004d8410</c> at <c>0x005016ba</c>, the cell of the thing's own bytes). A cell off the map has none.
 	/// </summary>
@@ -3137,13 +3132,8 @@ public sealed partial class ParkPeople : Entity
 		return (words[0], words[1], words[2]);
 	}
 
-	internal bool OnACountingCell( Peep peep )
-	{
-		var (x, y) = State.CellOf( peep.ThingId )
-			?? (peep.Navigator.Position.X >> 16, peep.Navigator.Position.Y >> 16);
-
-		return Peep.CountsOn( State.Record( x, y ).Type );
-	}
+	/// <summary>Whether the cell a guest stands on counts them - <see cref="PeepBehaviour.OnACountingCell"/>.</summary>
+	internal bool OnACountingCell( Peep peep ) => _behaviour.OnACountingCell( peep );
 
 	/// <summary>
 	/// How many guests stand on the cells from <paramref name="reach"/> before to <paramref name="reach"/> after a

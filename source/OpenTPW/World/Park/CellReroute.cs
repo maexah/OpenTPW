@@ -21,8 +21,10 @@ namespace OpenTPW;
 /// from there, and starts the scan again from the beginning. A scan that gets all the way through without
 /// splicing anything is the other way out. The two exits are not equivalent in the original: a scan that
 /// changes nothing falls into a further pass that breaks diagonal steps in two, and running out of rounds
-/// returns without it. <b>That diagonal pass is not built yet</b> and is named here rather than quietly
-/// skipped.
+/// returns without it. <b>That diagonal pass is not built yet</b>: it is counted, as
+/// <c>CELL_REROUTE_DIAGONAL_PASS</c>, when a route comes out of a scan that spliced nothing with a one-cell
+/// diagonal step in it, the only step the pass writes to (<c>0x00511040</c>); whether a shut corner makes it
+/// write is not asked.
 /// </para>
 /// <para>
 /// <b>The route's own <see cref="CellRoute.Goal"/> is never read here.</b> Every search this runs is
@@ -87,13 +89,37 @@ public static class CellReroute
 				break;
 			}
 
-			// A whole scan that spliced nothing is the end of it.
+			// A whole scan that spliced nothing is the end of it, and the original's diagonal pass (0x00510a1e)
+			// would run here.
 			if ( !spliced )
+			{
+				if ( HasOneCellDiagonal( route ) )
+					Unimplemented.Report( "CELL_REROUTE_DIAGONAL_PASS" );
+
 				return;
+			}
 
 			if ( --rounds == 0 )
 				return;
 		}
+	}
+
+	/// <summary>
+	/// Whether any step of the route, the start's to the first waypoint included, moves one cell along both axes -
+	/// the steps the diagonal pass (<c>0x00510a84</c>..<c>0x00511040</c>) breaks in two.
+	/// </summary>
+	private static bool HasOneCellDiagonal( CellRoute route )
+	{
+		for ( var i = 0; i < route.Waypoints.Count; ++i )
+		{
+			var from = route.Before( i );
+			var to = route.Waypoints[i];
+
+			if ( Math.Abs( to.X - from.X ) == 1 && Math.Abs( to.Y - from.Y ) == 1 )
+				return true;
+		}
+
+		return false;
 	}
 
 	/// <summary>
