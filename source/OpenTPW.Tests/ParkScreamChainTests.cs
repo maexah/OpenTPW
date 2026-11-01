@@ -519,7 +519,7 @@ public class ParkScreamChainTests
 				StringAssert.StartsWith( first.Name.ToLowerInvariant(), "level1" );
 
 				ToTheBeat();
-				Assert.AreEqual( (0, 1), (park.LevelNow, park.LevelSets), "thirteen guests, all at the bus stop's type 30 cell: none counts (FUN_004fa990), set on the beat" );
+				Assert.AreEqual( (0, 1), (park.LevelNow, park.LevelSets), "thirteen guests, all on the bus stop's type 30 approach: none counts (FUN_004fa990), set on the beat" );
 
 				// The guests walk onto the path (the cells they stand on, and the stop's, which the guests admitted below arrive on).
 				var state = people.State;

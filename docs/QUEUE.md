@@ -534,14 +534,29 @@ filed the items that cite it.
   turned, its window's queue button pressed before any queue is laid, `tool` and `cell` on the anchor, predicted
   first; a screenshot.
 - [ ] **Q859. What the original draws for a queue piece whose index is 8 or more. Decode first.** From Q154. A queue cell's tile
-  index is `2` or `3` (a straight, an end), `+1` for a corner, `+3` per mutual path link, and the table of queue models
-  (`0x76338c`, `FUN_00522900`, `FUN_005229e0`) holds eight; a straight with two mutual links reaches 8 and a corner 10, and the track
-  test cannot refuse them (it answers once per cell, Q154). OpenTPW drops links until the index fits (`ParkPathBuilding.Retile`,
+  index starts at `2` for a straight and `3` for a corner (0 a cell with no links, 1 `quedead`, the end piece 5), `+1` on the four
+  bumped corner pairs, `+3` per mutual path link, and the table of queue models (`0x76338c`, `FUN_00522900`, `FUN_005229e0`) holds
+  eight; a straight with two mutual links reaches 8, a corner 9 and a bumped corner 10, and the track test cannot refuse
+  just one of the two links (it answers once per cell, Q154: set, it refuses both). **Head start (read from the
+  disassembly, not run):** `FUN_005229e0` is unbounded (`0x00522a1d`, `0x00522a22`..`0x00522a2f`; callers `0x00536682`,
+  `0x00536730`), so `park-engine.md`'s "names nothing at all" was wrong; the rows run into the next table (`0x7633e8`..`0x7634d8`,
+  `FUN_00522aa0`): index 8 is `-` with handle 0 (unchecked at `0x00463b11`), 9 `gk_trckQ.md2`, 10 `gk_trckS.md2`, 11 `gk_trckB.md2`, so a
+  bumped corner meeting two paths very probably draws a kart straight in the original. OpenTPW drops links until the index fits (`ParkPathBuilding.Retile`,
   counted `QUEUE_TILE_INDEX_OUTSIDE_TABLE`), a deviation said at the site. Decode what `FUN_005229e0` and the renderer do with an
   index past the table (a read past the table, nothing, a fault), and what a laid queue meeting two paths really shows; if the
   original draws something, draw it. Also counted, never reached: `QUEUE_TILE_TRACK_PARENT_UNNAMED` (a type 12 or 17 queue record
-  naming no parent reads the layer's index `0x6cde`). The gate's refusing branch is covered by unit tests and mutants only; whether a
-  played park can put the flags nibble on a queue cell, and what the original shows there, is not established.
+  naming no parent reads the record `0x6cde` records past the world's base, the last `0x28` bytes of map cell (127,127)'s record:
+  decodable; a unit test covers the counted branch). The gate's refusing branch is covered by unit tests and mutants only. A played
+  park can put the flags nibble on a queue cell: op `0x85` (`0x00538b0b`..`0x00538bc5`) sets `[record+0xe]` to 1 where a 2 x 2 meets
+  map type 1 or 3, so a kart or water ride's end or straight laid over a queue gives it (the other three cells through the parent swap,
+  inferred); OpenTPW's track tool refuses that run (`TRACK_RUN_OVER_PATH`, Q587), so when Q587 builds the hill, cross-link it here.
+  What the original shows with it set is not established.
+- [ ] **Q942. The suite has an unnamed one-off failure.** From the Q154 review (run 17). A full-suite run with the game has failed once,
+  not named and not repeated, on 2026-10-20, 2026-10-24 and 2026-11-01 (the third on Q154's run; one rerun and the gate passed).
+  Suspects, none shown: simulations that are not seeded (238 of 260 `new ParkPeople(`; `new Random()` at `ParkPeople.cs:201-202` and
+  `ParkAudioScripts.cs:38`) and machine load under the real-clock zone. Keep every full-suite run's output (`capped.sh` ... `| tee`
+  into a file under `~/.cache/tpw-harnesses/`) so the next failure is named when it comes; then seed or fix what it names, and
+  prove it by putting the cause back (`VERIFYING.md`, the flaky-test rule).
 - [ ] **Q155. Every script's speed word is 50, where a placed thing's is its own. Decode first.** Found by the
   2026-09-26 staleness audit. The object constructor pushes the item's operating speed into its script (`FUN_0055a300`
   at `0x004db534`), and the ride window's speed slider writes it (`FUN_004dd6e0`); `docs/exe/park.md`, "The clock, the
@@ -1488,11 +1503,6 @@ filed the items that cite it.
   Q369 1). The original averages each member's `ftol(h) & 0xff`: the kind's meter an integer mean then
   `(m << 10) / 100` (`0x004c9cc0`), the all-staff meter a float mean times 1024 times 0.01f (`0x004c7cc0`, `0x00496a7b`),
   in double (`advisor-park.md`, the FPU's precision). Ours scales the raw mean: 896 against 892 on `q369/skill.TPWS`.
-- [ ] **Q459. The happiness gauge keeps the mean's fraction.** From the week-end audit (D8, `VERIFY-4b.md` Q392 2).
-  `FUN_004c7bb0` ends `fidiv` (`0x004c7c96`); the gauge is trunc(mean x 10.24) of 1024 (`0x004a1d3f`..`0x004a1d5a`).
-  The units are built (Q244, `ParkGadget.GaugeUnits`); the mean handed to them is still whole, `AverageHappiness`'s
-  comment calls `FIDIV` an integer division, and `TheMeanIsWholeAndRoundsTowardsNought` pins it.
-  `GuestsInsideHappiness` is the exact routine.
 - [ ] **Q460. Zlib textures round the chroma terms twice.** From the week-end audit (D9, `VERIFY-13b.md` Q355 1). The
   original stores the Cb and Cr terms as float32 at 1.5 x 2^23 (`0x00594f5e`, `0x00594f87`), integers before Y is added;
   `Held` rounds once: 933 of 986 files differ by 1. Green's rounding (the FPU mode) needs a breakpoint at `0x00594f72`.

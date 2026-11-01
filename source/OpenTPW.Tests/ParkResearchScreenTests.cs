@@ -507,7 +507,7 @@ public class ParkResearchScreenTests
 		}
 		finally
 		{
-			Time.PinWall( null );
+			Time.PinWall( 0 );
 		}
 	}
 

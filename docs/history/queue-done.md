@@ -11668,7 +11668,7 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `FUN_004fa990`'s guests, `ParkPeople.GateGuestCensus` and `GuestsInsideHappiness` (one filter, `Peep.CountsOn`, already the gate's):
   `ParkAudio` takes `MusicLevelFor( people )` where it took every peep, and the gauge reads `GuestsInsideHappiness` where
   `ParkPeople.AverageHappiness` (gone) took every guest and cut the mean to a whole number, which `FUN_004c7bb0`'s `FILD`/`FIDIV` does not
-  (so 657 over 13 reads 517 of 1024, not 511). `FUN_004c7fa0` is asked with 0 (`FUN_004c81e0`), so there is no stale count to keep. The stock
+  (so 657 over 13 reads 517 of 1024, not 511). `FUN_004c7fa0` is asked with 0 (`FUN_004c81e0`); it still reuses its cached count within a quarter tick of the last (`0x004c7fb3`..`0x004c7fc4`), which is not built. The stock
   park paused as it loads reads gauge 0 and 0 of 13 counted (the whole mean read 511, the music 6), then 3, 8 and 13 counted. `HeadingForExit`'s
   change of mind is not built, so it has no count to take. Not set beside the original (lane B has no original): see Q270, which keeps that
   half.
@@ -11706,6 +11706,12 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   node and takes `--load FILE`. Photographs, each pair at the same role and frame (cameras differ, the original's carries its Escape menu, compared by eye only):
   `q916/photo-mumbo/role6-frame{60,100,150}.png` against `q916/orig-mumbo/shots/orig-role6-frame{60,100,150}.png`, `q916/photo-ape/role3-frame{35,65,110}.png` against
   `q916/orig-ape/shots/orig-role3-frame{35,65,110}.png` (at 110 the Ape stands raised with its arms up and the sign-holder at the same place in both).
+- [x] **Q459. The happiness gauge keeps the mean's fraction.** From the week-end audit (D8, `VERIFY-4b.md` Q392 2).
+  `FUN_004c7bb0` ends `fidiv` (`0x004c7c96`); the gauge is trunc(mean x 10.24) of 1024 (`0x004a1d3f`..`0x004a1d5a`).
+  The units are built (Q244, `ParkGadget.GaugeUnits`); the mean handed to them is still whole, `AverageHappiness`'s
+  comment calls `FIDIV` an integer division, and `TheMeanIsWholeAndRoundsTowardsNought` pins it.
+  `GuestsInsideHappiness` is the exact routine.
+  Done by Q148: the gauge reads `GuestsInsideHappiness`, the float mean; `AverageHappiness` and its whole-mean test are gone.
 
 ## B. Docs and comments
 

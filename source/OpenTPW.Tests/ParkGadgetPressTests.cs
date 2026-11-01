@@ -847,7 +847,7 @@ public class ParkGadgetPressTests
 		}
 		finally
 		{
-			Time.PinWall( null );
+			Time.PinWall( 0 );
 			ParkCamcorderCameraMode.Leave();
 			ParkOrbitCameraMode.PointOfInterest = orbitLooksAt;
 			ParkOrbitCameraMode.Yaw = orbitYaw;

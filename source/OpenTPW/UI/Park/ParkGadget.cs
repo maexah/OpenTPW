@@ -1803,7 +1803,7 @@ internal sealed class ParkGadget : UiWindow
 	/// What the gauge's timer hands its meter: the mean times 1024 times 0.01f, truncated (<c>0x004a1d44</c>, the
 	/// floats <c>0x006ffa34</c> and <c>0x006ffa38</c>, then <c>__ftol</c>), so 50 is 511 of 1024 and 100 is 1023 at
 	/// 53-bit precision, as 0.01f is a shade under a hundredth (512 and 1024 at 24 bits; which one the original runs
-	/// is not read, <c>docs/exe/hud.md</c>). The original's mean keeps its fraction; this one is whole (Q459).
+	/// is not read, <c>docs/exe/hud.md</c>). The original's mean keeps its fraction, and so does the one handed in here (Q148).
 	/// </summary>
 	internal static int GaugeUnits( double happiness ) => (int)( happiness * 1024.0 * 0.01f );
 

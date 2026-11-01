@@ -345,7 +345,7 @@ public class ParkTagRecordsTests
 		}
 		finally
 		{
-			Time.PinWall( null );
+			Time.PinWall( 0 );
 			SetCurrentPlayer( null );
 			SaveFileSystemOrNull = oldSaves;
 			Directory.Delete( root, true );

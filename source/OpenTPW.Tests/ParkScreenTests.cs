@@ -170,7 +170,7 @@ public class ParkScreenTests
 		}
 		finally
 		{
-			Time.PinWall( null );
+			Time.PinWall( 0 );
 		}
 	}
 
@@ -254,7 +254,7 @@ public class ParkScreenTests
 		}
 		finally
 		{
-			Time.PinWall( null );
+			Time.PinWall( 0 );
 		}
 	}
 

@@ -1864,9 +1864,10 @@ public static class ParkPathBuilding
 		// 2 + 3 + 3 = 8 against a table of eight.
 		//
 		// The BUMP is OpenTPW's, not the original's. The original's track test (PathLinks) asks the
-		// queue cell's own record once for all its links, so it cannot keep a straight with two mutual path
-		// links inside the table: that cell reaches 2 + 3 + 3 = 8 there as well. What the original draws
-		// at an index the table does not hold is not decoded. Dropping links until the index is one
+		// queue cell's own record once for all its links, so the flags refuse both links or neither and it
+		// cannot keep a straight with two mutual path links inside the table: that cell reaches 2 + 3 + 3 = 8 there as
+		// well. What the original draws at an index the table does not hold is not decoded (very probably a kart's
+		// model, since the rows run on into the next table; Q859). Dropping links until the index is one
 		// the table holds keeps the game's own art and the end piece the cell is asking for; the
 		// alternative is the hole. The shipped park cannot arbitrate: its one end piece at (49,22) has
 		// a single path link, so no cell in it ever reaches this.
@@ -1932,8 +1933,9 @@ public static class ParkPathBuilding
 	/// where it is type 12 or 17 (<see cref="TrackRecord"/>).
 	/// </summary>
 	/// <remarks>
-	/// A type 12 or 17 record that names no parent reads the record at index <c>0x6cde</c> of the original's
-	/// layer, which is not decoded; it is counted and its own flags are read. All 429 type-12 cells of the
+	/// A type 12 or 17 record that names no parent reads, in the original, the record <c>0x6cde</c> records past the
+	/// world's base (parent id 0: the last <c>0x28</c> bytes of map cell (127,127)'s record), which is decodable
+	/// and not decoded; it is counted and its own flags are read. All 429 type-12 cells of the
 	/// shipped park name one, and none of them is a queue cell.
 	/// </remarks>
 	private static bool TrackFlagsLeaveLinksCounted( IParkInitialState park, ParkWorld.MapCell cell )

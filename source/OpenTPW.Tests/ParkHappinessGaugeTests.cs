@@ -14,7 +14,7 @@ namespace OpenTPW.Tests;
 ///
 /// <para>
 /// <b>The shipped park is a poor witness on its own.</b> Every guest is saved at exactly fifty and every one stands
-/// on the bus stop's type 30 cell, so a test that only read it would pass against a count that took nobody and a mean
+/// on the bus stop's type 30 approach, so a test that only read it would pass against a count that took nobody and a mean
 /// that took any rule. So the guests are moved onto paths one way or another and given a total whose mean is 50.54,
 /// where a float mean and a whole one disagree in the gauge's units (517 and 511): the original divides with
 /// <c>FILD</c>/<c>FIDIV</c> (<c>0x004c7c96</c>), which is a float division.

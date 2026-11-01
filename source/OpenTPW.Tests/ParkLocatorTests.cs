@@ -350,7 +350,7 @@ public class ParkLocatorTests
 		}
 		finally
 		{
-			Time.PinWall( null );
+			Time.PinWall( 0 );
 		}
 	}
 

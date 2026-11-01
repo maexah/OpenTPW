@@ -2818,7 +2818,7 @@ public sealed partial class ParkPeople : Entity
 	/// <summary>
 	/// The mean happiness of the guests <see cref="GateGuestCensus"/> counts, <c>FUN_004c7bb0</c>: each one's happiness
 	/// truncated and cut to its low byte, summed as a whole number, over their count; nought with none inside or the park
-	/// shut (<c>FUN_0051a280</c>, which returns <c>DAT_0070031c</c>, 0.0f, without looking at anybody). The sum is divided
+	/// shut (<c>FUN_0051a280</c> is the test, and <c>FUN_004c7bb0</c> loads <c>DAT_0070031c</c>, 0.0f, at <c>0x004c7bc7</c> without looking at anybody). The sum is divided
 	/// with <c>FILD</c>/<c>FIDIV</c> (<c>0x004c7c96</c>), a float division, so the mean is not a whole number
 	/// (<c>docs/exe/hud.md</c>, "What the gadget hands it"). The management gadget's gauge reads it
 	/// (<see cref="OpenTPW.UI.Park.ParkGadget"/>), and so do the month's close and the golden tickets.

@@ -72,7 +72,7 @@ public class ParkStaffWindowTests
 		Level.Current = _level!;
 		Screen.Size = _screen;
 		Time.Now = _now;
-		Time.PinWall( null );
+		Time.PinWall( 0 );
 		Input.Mouse = new();
 		ParkOrbitCameraMode.PointOfInterest = _looksAt;
 		GameOptions.Current.Confirmations = _confirmations;

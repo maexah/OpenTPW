@@ -324,6 +324,48 @@ public class ParkPathBuildingTests
 	}
 
 	/// <summary>
+	/// A type 12 record that names no parent (<c>TrackParentId</c> 0) is counted as
+	/// <c>QUEUE_TILE_TRACK_PARENT_UNNAMED</c>, and its own flags are read: the original reads the record at the
+	/// offset <c>0x6cde</c> there, which is not built (<c>park-engine.md</c>, "The tile rule"). No queue cell of
+	/// the shipped park is one, so only this made-up cell reaches the branch.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutation:</b> dropping the count, or reading nothing of the cell's own flags there, fails here.
+	/// </remarks>
+	[TestMethod]
+	public void AQueueCellDeferringToNoParentIsCountedAndReadsItsOwnFlags()
+	{
+		var park = World();
+
+		int Index( ushort flags, ushort trackType = 12 )
+		{
+			var state = new ParkState( park );
+
+			state.SetRecord( 22, 10, ParkState.CellFor( park, 22, 10 ) with { Type = CellEdge.Path, Neighbours = 0x04 } );
+			state.SetRecord( 23, 10, ParkState.CellFor( park, 23, 10 ) with
+			{
+				Type = ParkRideChoice.QueueCellType, Neighbours = 0x44, Direction = 0x04,
+				TrackType = trackType, TrackParentId = 0, TrackFlags = flags
+			} );
+
+			ParkPathBuilding.Retile( state, park, 23, 10 );
+
+			return ParkState.CellFor( park, 23, 10 ).TileIndex;
+		}
+
+		var before = Times( "QUEUE_TILE_TRACK_PARENT_UNNAMED" );
+
+		Assert.AreEqual( 5, Index( 0 ), "clear own flags: two for the straight and three for the link" );
+		Assert.AreEqual( 2, Index( 0x1 ), "its own nibble refuses the link" );
+		Assert.IsTrue( Times( "QUEUE_TILE_TRACK_PARENT_UNNAMED" ) > before, "the unnamed parent is counted" );
+
+		var mid = Times( "QUEUE_TILE_TRACK_PARENT_UNNAMED" );
+
+		Assert.AreEqual( 5, Index( 0, trackType: 0 ), "a type 0 record names no parent to miss" );
+		Assert.AreEqual( mid, Times( "QUEUE_TILE_TRACK_PARENT_UNNAMED" ), "and is not counted" );
+	}
+
+	/// <summary>
 	/// The track test refuses every link of the cell together, since it reads the cell's own record: a corner
 	/// meeting two paths keeps its bare <c>4</c>, and the link-dropping loop is not reached.
 	/// </summary>

@@ -435,7 +435,7 @@ public class ParkMapViewTests
 		}
 		finally
 		{
-			Time.PinWall( null );
+			Time.PinWall( 0 );
 		}
 	}
 

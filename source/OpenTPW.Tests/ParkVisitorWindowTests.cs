@@ -66,7 +66,7 @@ public class ParkVisitorWindowTests
 		Level.Current = _level!;
 		Screen.Size = _screen;
 		Time.Now = _now;
-		Time.PinWall( null );
+		Time.PinWall( 0 );
 		Input.Mouse = new();
 		ParkOrbitCameraMode.PointOfInterest = _looksAt;
 		Unimplemented.Forget();

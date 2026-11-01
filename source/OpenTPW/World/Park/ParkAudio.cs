@@ -109,9 +109,11 @@ public sealed partial class ParkAudio : Entity
 	/// <para>
 	/// <b>It counts the guests <c>FUN_004fa990</c> passes.</b> The caller hands it
 	/// <see cref="ParkPeople.GateGuestCensus"/>: a guest counts only where the cell under them is a cleared cell, a
-	/// path, a queue or a ride's end (<see cref="Peep.CountsOn"/>), so a guest still at the bus stop, or on a ride's
-	/// footprint, is left out. The original asks the count afresh each time (<c>FUN_004c81e0</c> pushes 0 as its
-	/// age limit), so there is no stale count to keep.
+	/// path, a queue or a ride's end (<see cref="Peep.CountsOn"/>), so a guest still on the bus stop's type 30 approach (several
+	/// cells), or on a ride's footprint, is left out. The original asks with an age limit of 0 (<c>FUN_004c81e0</c>
+	/// pushes it); <c>FUN_004c7fa0</c> still reuses its cached count within a quarter tick of the last
+	/// (<c>0x004c7fb3</c>..<c>0x004c7fc4</c>), which is not built. A guest riding stands on a type 9 cell and is counted;
+	/// only the ride's footprint cells of type 4 leave one out.
 	/// </para>
 	/// </summary>
 	public static int CrowdLevel( int guests ) => Math.Clamp( guests / 2, 0, LoudestCrowd );
