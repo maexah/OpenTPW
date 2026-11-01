@@ -139,12 +139,19 @@ public class ParkPylonChannelsTests
 		var spliced = payload[..end].Concat( pylon ).Concat( payload[end..] ).ToArray();
 
 		BitConverter.GetBytes( length + pylon.Length ).CopyTo( spliced, module );
-		BitConverter.GetBytes( BitConverter.ToInt32( payload, module + 4 ) + 1 ).CopyTo( spliced, module + 8 );
+		BitConverter.GetBytes( BitConverter.ToInt32( payload, module + 4 ) + 1 ).CopyTo( spliced, module + 4 );
 
 		var oldRule = new ParkThingStates( spliced, id => catalogue.TryGet( id, out var item ) ? item.AnimationChannels : 1 );
 
 		Assert.IsNotNull( oldRule.Problem, "the pylon's record is what the item-only count cannot walk" );
-		Assert.IsNull( new ParkThingStates( spliced, catalogue.ChannelsFor ).Problem );
+
+		var stockHeader = new ParkThingStates( payload, catalogue.ChannelsFor ).Header;
+		var walked = new ParkThingStates( spliced, catalogue.ChannelsFor );
+
+		Assert.IsNull( walked.Problem );
+		Assert.AreEqual( (stockHeader.Present + 1, stockHeader.Empty, stockHeader.Cursor), walked.Header, "one more present slot; the free count and the cursor are the stock park's" );
+		Assert.AreEqual( stockHeader.Present + 1 + stockHeader.Empty, walked.Slots );
+		Assert.AreEqual( stockHeader.Present + 1, walked.Things.Count );
 
 		return (new ParkWorld( spliced ), catalogue, new ParkWorld( payload ));
 	}
