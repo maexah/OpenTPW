@@ -3583,6 +3583,14 @@ round and tilted about 5° from the boat, so a face points away from the boat's 
 staff folders' cap from the same key (`FUN_0041aa40`: one bank at `NUMKIDS` 0, else two; only the mechanics have two) is
 built with it, and a staff member's saved bank is brought within it as they are drawn.
 
+**A ride head's matrix against this game's rest matrix** (Q940, measured offline from Q848's pauses). `lib/headframe.py` re-works
+`FUN_0044b510` on the original's own record-`+4` matrix and the view matrix at `*[0x790a98]` and gets the sprite's `+0xb8` in 40 of 40
+samples (Mumbo 32, the Crazy Ape's clip `l` 8), so the walk, the three offsets and the 56 directions are as written above. Taking this
+game's REST matrix for the same node and view picks the original's picture in 4 of 32 Mumbo samples (the matrices are a mean 98 degrees
+apart, 31 to 147, since the original's ring turns and ours rests; 96 % of camera directions pick another picture) and in 5 of 8 Ape
+samples (a mean 0.4 degrees, 1.5 % of directions: the Ape's rest matrix is near what the original carries). Mumbo's heads are the case;
+the Ape's are not. Not measured: a clip-driven RestPose head of any other ride.
+
 ### The excitement match — `FUN_004fdcc0`
 
 Decoded first-hand and put to three refuters (Q169), every step at its address. It runs behind the settle-up's gate on
