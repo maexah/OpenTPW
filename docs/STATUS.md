@@ -42,7 +42,7 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- Q940 first piece (lane A, `q940/`; measured offline, no game launched this session, no code built). Seen: from the original's pauses (taken by a18, `orig-mumbo/`, `orig-ape/`), `lib/headframe.py` reads the sprite's picture back from the original's own matrix in 40 of 40 samples; ours' REST matrix picks the original's picture in 4 of 32 Mumbo samples and 5 of 8 Crazy Ape samples. Not seen: ours' drawn turn against the original (the census patch is unbuilt, Q947), anything photographed, any build or test run (the machine's disk stalled, a build never finished); the pauses are a18's of 2026-11-01 04:3x, not made now.
+- Not seen, run 17's last group: the coaster's and water ride's capacity wording in a frame (`Capacity : N per train`, `per car`, rows 463 and 461, `FUN_004aec30` at `0x004aecf0`..`0x004aed9b`; the machine stalled; whether it fits its box is unread).
 
 
 

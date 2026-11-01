@@ -974,7 +974,7 @@ public class RideScriptWalkTests
 	/// <summary>
 	/// <b>A leg's x and z differences are each rounded to a float once and multiplied by themselves unrounded; the y
 	/// difference is squared whole and counts</b> (<c>0x00556fce</c>; docs/exe/ride-operation.md, "How long a leg lasts, and
-	/// where its ends are"). No shipped placement parts the forms - this is the arithmetic worked through at an input
+	/// where its ends are"). None of 22 million random placements of the shipped nodes parted these forms (a sample, no shipped park's list) - this is the arithmetic worked through at an input
 	/// built to part them, not a leg measured in the original, and it says so. The space bumper's nodes 3 and 1 stand
 	/// 45.99999809 apart in x and 0.0000038 in z when the ride stands at (27.967663, 528.47217) turned 90: the double
 	/// difference times its float (46.0) is 2115.9999, which truncates to 45, where both factors rounded (2116) give 46, the

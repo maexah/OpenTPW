@@ -11811,7 +11811,7 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `ALegsXAndZAreRoundedOnceAndItsHeightCounts` (the space bumper's nodes 3 and 1 and the space bouncer's 2 and 11 at placements that part the forms, worked through
   by hand, not measured in the original) kills the factors both rounded, the differences rounded first, a float square root and the missing height term. Four forms
   (x, z or y squared as a float, or everything in doubles) stay alive: over 94 shipped walk models at 4 turns and 30,000 origins each, none parted a truncation from the
-  engine's (184 near-whole legs, 22 million placed legs), so they are equivalent for any placement a float node can reach. Evidence: `~/.cache/tpw-harnesses/q868/`.
+  engine's (184 near-whole legs, 22 million placed legs), so they are taken as equivalent, not proven so. Evidence: `~/.cache/tpw-harnesses/q868/`.
 - [x] **Q940. A rider's head picture is chosen from its node's rest matrix; the original turns it by the recomputed normal and the carried matrix.** (From Q848 and Q915's reviews.) The
   original's `FUN_0044a640` (`0x0044af61`..`0x0044af7d`, flag `0x40000`) builds a head's turn from the face normal worked out again and the matrix the pose walk carries,
   while ours chooses the picture from the node's rest matrix (`RIDER_HEAD_TURN_AT_REST`, `RideScript.cs`; `docs/DOES-NOT.md`). With Mumbo's ring turning (Q915) and the Crazy Ape's

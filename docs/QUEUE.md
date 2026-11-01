@@ -87,9 +87,9 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
 - [ ] **Q944. A UITEXT row read as its first part alone loses the words after its parameter.** (From Q865's second reader.)
   `StringFile.Entries` holds a row's first text part only (`Parts` holds all). Swept over `UITEXT.str` and `UIHELPTEXT.str`: the rows
   whose text follows a parameter are 29, 30 (`UpgradeToLevel`, `CancelLevel`), 181 to 183 (the loan boxes), 205, 213, 215, 399, 428 and 429
-  (" sec", " secs"), 433 to 443 (the day, month and hour words), 444, 446, 447, 451 to 455 and 461 to 463 (the capacity readout's, see below). Of those, 428 and 429 were
+  (" sec", " secs"), 433 to 443 (the day, month and hour words), 444, 446, 447, 451 to 455, 461 and 463 (the capacity readout's, see below). Of those, 428 and 429 were
   read bare by the ride window's duration readout and 433 by its age: fixed (Q865's fix, `Localization.Format`). Every other shown use
-  goes through `Format` or has its parameter last (`Speed`, the money rows); the rest are unread. 461 to 463 are not unread: `Capacity` picks 463, 461 or 427 by the item's `WhichTrackType` as `FUN_004aec30` does. Build each with `Format` when
+  goes through `Format` or has its parameter last (`Speed`, the money rows); the rest are unread. 461 and 463 are not unread: `Capacity` picks 463, 461 or 427 by the item's `WhichTrackType` as `FUN_004aec30` does. Build each with `Format` when
   its screen lands (the loan boxes, the upgrade buttons, the visitor window's age wording); grep `Localization.Get(` and `.Text(` for
   a row in this list before using it.
 - [ ] **Q943. The update check and its click on Windows and macOS, and against a real newer release (Q941's leftovers).** Counted, not
@@ -194,8 +194,8 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
 
 - [ ] **Q947. Choose a ride head's picture by the matrix it is drawn with, not its rest matrix (Mumbo).** (From Q940: Mumbo's heads pick the original's picture in 4 of 32 samples by
   the rest matrix.) The unbuilt census is `~/.cache/tpw-harnesses/q940/a18-wip.patch` (`LobbyModel.TryGetDrawnNodeTurn`: the node's rest turn inside its mesh ancestor, carried by that
-  mesh's drawn turn; the `rides` line then prints `drawnturn [...]`, which `lib/headframe.py` reads). Not built or run: the machine's disk stalled (2026-11-01). Apply it on `main`, load the
-  original's `Q848.TPWS` in ours (`headseries.py --load`), and run `headframe.py` on `q940/orig-mumbo/pauses.jsonl`: if the drawn turn picks the original's picture (predictions P5, P6 in
+  mesh's drawn turn; the `rides` line then prints `drawnturn [...]`, which `lib/headframe.py` reads). Not built or run: the machine's disk stalled (2026-11-01). Apply it on `main` (`git apply --exclude=tools/harness/original/headpause.py`; it holds the `matrix` and `drawnturn` census, which `main` does not print), load the
+  `Q848.TPWS` that `headseries.py` saved in ours (`headseries.py --load`), and run `headframe.py` on `q940/orig-mumbo/pauses.jsonl`: if the drawn turn picks the original's picture (predictions P5, P6 in
   `q940/PREDICTION.txt`), choose `ParkGuestSprites.HeadOnRide`'s picture by it and photograph the heads on the desktop against the original at the same pauses. The Ape needs nothing
   (Q940). Second piece of Q940 (the `jm_leaf` first key in Mumbo's `m`, `e` and `s`, frame 14, `0x00471c56`): still open here, measure the key, then build the skip in `NodePoser.Pose`.
 
