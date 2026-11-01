@@ -157,7 +157,10 @@ public sealed class ParkItemCatalogue
 
 		// What a go takes off a guest's tiredness, which its control record keeps at +0x08 - ItemDescriptionFile.FatigueEffect.
 		// FreshParkFile writes it.
-		int FatigueEffect = 0 )
+		int FatigueEffect = 0,
+
+		// Whether a guest comes off it and goes onto it in a puff - ItemDescriptionFile.RequiresTeleport. See PersonPuffs.
+		bool RequiresTeleport = false )
 	{
 		/// <summary>A tier's <c>CostOfUpgrade</c>: tier nought's is <see cref="BuildPrice"/>, nought past the third.</summary>
 		public int UpgradeCostAt( int tier ) => tier switch { 0 => BuildPrice, 1 => UpgradeCost1, 2 => UpgradeCost2, _ => 0 };
@@ -424,7 +427,8 @@ public sealed class ParkItemCatalogue
 					RideTypeStringIndex: description.RideTypeStringIndex,
 					AddOnUpgradesId: description.AddOnUpgradesId, AddOnUpgradeType: description.AddOnUpgradeType,
 					ShopType: description.ShopType, CreateParticleEffect: description.CreateParticleEffect,
-					OverwritePriority: description.OverwritePriority, FatigueEffect: description.FatigueEffect );
+					OverwritePriority: description.OverwritePriority, FatigueEffect: description.FatigueEffect,
+					RequiresTeleport: description.RequiresTeleport );
 
 			return true;
 		}

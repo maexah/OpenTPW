@@ -187,6 +187,15 @@ public sealed partial class ItemDescriptionFile
 	public bool CannotRide => (_cannotRide ?? _category?._cannotRide ?? 0) != 0;
 
 	/// <summary>
+	/// Whether a guest is teleported onto this and off it - <c>UsageInfo.RequiresTeleport</c>, descriptor <c>+0x100</c>,
+	/// the key between <c>ChillsYouOut</c> (<c>+0xfc</c>) and <c>RideHandlesSprite</c> (<c>+0x104</c>) in the table at
+	/// <c>0x00745980</c>..<c>0x00745bd8</c>. The state setter's cases <c>0xf</c> and <c>0x10</c> send up a puff for a
+	/// guest as they come off one and go onto one (<c>docs/exe/ride-operation.md</c>, "A person's particles"). In Lost
+	/// Kingdom three items set it: the Belly Bounce, the Spider and Mumbo's.
+	/// </summary>
+	public bool RequiresTeleport => (_requiresTeleport ?? _category?._requiresTeleport ?? 0) != 0;
+
+	/// <summary>
 	/// Whether the engine keeps a posed position for every node of this item's model - <c>Info.DoHeadProcessing</c>,
 	/// descriptor <c>+0x84</c>, which the item loader turns into runtime bit 8 on every lookup record (<c>0x00462d4a</c>;
 	/// docs/exe/ride-operation.md, "How long a leg lasts, and where its ends are"). Six items set it, the five whose
@@ -677,6 +686,7 @@ public sealed partial class ItemDescriptionFile
 	private int? _mapOffsetX;
 	private int? _mapOffsetY;
 	private int? _cannotRide;
+	private int? _requiresTeleport;
 	private int? _doHeadProcessing;
 	private int? _excitementLevel;
 	private int? _goldenTicketCost;
@@ -969,6 +979,10 @@ public sealed partial class ItemDescriptionFile
 
 				case "UsageInfo.CannotRide":
 					_cannotRide = Number( line );
+					break;
+
+				case "UsageInfo.RequiresTeleport":
+					_requiresTeleport = Number( line );
 					break;
 
 				case "Info.DoHeadProcessing":

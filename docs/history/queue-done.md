@@ -11786,6 +11786,15 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `StaffBehaviour`, `PeepBehaviour`, and `Random.Shared` in the VM, the lobby camera and the weather) forced to `new Random( S )` for S = 1 to 6 by a scratch patch (not
   committed), three suites at once per wave to put the machine under load: all sixteen passed, 4685 passed, 0 failed, 2 skipped (the macOS and Windows folder tests), so no test is
   shown to depend on a generator and nothing was seeded. Stored: `tools/harness/lib/suiteloop.sh OUTDIR [N]` (a row in `docs/TOOLING.md`). Evidence: `~/.cache/tpw-harnesses/q942/`.
+- [x] **Q945. The other callers of `FUN_004fa470`: a guest's arrival puff, the states `0xf` and `0x10`'s, and `FUN_004f7c60`'s `0x35`/`0x39`.** From Q900.
+  **Done (Q945, `alexah/801-guest-arrival-puff`, lane A, 2026-11-01):** the five callers are all accounted for (`docs/exe/park-engine.md`, "The three words Q822 left unread", 1).
+  The guest constructor's puff (`0x004fb26e`) is built in `ParkPeople.Admit` for a guest made off the park's counting cells (a guest made inside takes the arm that jumps past it); the states
+  `0xf` (`ParkRideOperation.Dismiss`) and `0x10` (`CompleteAdmission`) puff when the item sets `UsageInfo.RequiresTeleport`, descriptor `+0x100` (the key table's order; read now:
+  `ItemDescriptionFile.RequiresTeleport`, `ParkItemCatalogue.Item.RequiresTeleport`): the Belly Bounce, Mumbo's and the Spider. `FUN_004f7c60` is the online mode's alone (`FUN_0050b360` case
+  `0x12` under `DAT_00fb3b7c == 1`) and unreachable here. The item's own account was wrong: the 22 emitters of Q900's poll were the Belly Bounce's riders (13 off at its exit cell, 8 on at its
+  entry cell), and the arrivals' puffs stand at the bus stop (53, 5) (the Sentinel's review). In the stock park ours made 13 puffs for 13 arrivals at the original's words, 26 at the entry cell for 26
+  guests taken on and 23 at the exit cell for 23 let off (`q945/run1`, `run2`); `GUEST_ARRIVAL_PARTICLE` is gone from `unimplemented`; eleven put-back bugs each fail a test.
+  Not photographed: the arrival puff (under the bus shelter's roof); the riders' puffs in the original in this item's own run (they are Q900's polls).
 
 ## B. Docs and comments
 

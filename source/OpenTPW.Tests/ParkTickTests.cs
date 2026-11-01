@@ -1066,13 +1066,21 @@ public class ParkTickTests
 			// vehicle is sent off on that sweep, the manager's turn coming after every guest's.
 			var third = people.Admit( cellX, cellY );
 
+			// The constructor's own puff (FUN_004faec0, 0x004fb26e) goes up with them, at the guest's place as made: the guest
+			// is made off the park's counting cells, the stop's among them.
+			var made = puffs!.Emitters.Where( e => e.Active ).ToList();
+			var (arriveX, arriveHeight, arriveZ) = PersonPuffs.PlaceOn( field, people.Guests[third].Navigator.Position );
+			Assert.AreEqual( 2, made.Count, "a new guest brings a puff of their own" );
+			Assert.AreEqual( (0x13, arriveX >> 4, arriveHeight >> 4, arriveZ >> 4), (made[1].Effect, made[1].X, made[1].Y, made[1].Z),
+				"at the middle of the cell they were made on" );
+
 			people.Guests[third].SetState( PeepState.AtTheBusStop, people.State.GameTick, new Random( 1 ) );
 			Assert.AreEqual( third, (int)people.State.CellAt( cellX, cellY ).Occupant, "the newest heads the cell" );
 
 			Sweep( people );
 			Assert.IsFalse( people.Guests.ContainsKey( third ), "they are gone" );
 			Assert.IsFalse( people.Guests.ContainsKey( second ), "and so is the one who stood behind them, on the same sweep" );
-			Assert.AreEqual( 3, puffs!.Emitters.Count( e => e.Active ), "and each went in a puff" );
+			Assert.AreEqual( 4, puffs!.Emitters.Count( e => e.Active ), "and each of the three went in a puff, beside the first's and the arrival's" );
 			Assert.AreEqual( 1, Triggered(), "and with nobody left at the stop it is sent off" );
 
 			// A vehicle that is a thing already, summoned with none current, is triggered whatever it reports
@@ -1084,6 +1092,14 @@ public class ParkTickTests
 			Sweep( people );
 			Assert.AreEqual( 1, Triggered(), "summoned with none current, the bus is triggered" );
 			Assert.AreEqual( 1, people.CurrentVehicle, "and current" );
+
+			// A guest made on one of the park's counting cells has no puff (FUN_004fa990 passing, 0x004fb1d0, which jumps over
+			// 0x004fb26e).
+			var inside = Enumerable.Range( 0, 128 * 128 ).Select( c => (X: c % 128, Y: c / 128) )
+				.First( c => Peep.CountsOn( people.State.Record( c.X, c.Y ).Type ) );
+			var puffsBefore = puffs!.Emitters.Count( e => e.Active );
+			people.Admit( inside.X, inside.Y );
+			Assert.AreEqual( puffsBefore, puffs!.Emitters.Count( e => e.Active ), "a guest made inside the park comes in no puff" );
 		}
 		finally
 		{

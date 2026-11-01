@@ -3464,7 +3464,7 @@ Alexah's two played Lost Kingdom saves, written by the original, which hold 29 a
    (FileFormats `sprites.md`).
 3. **Drawn with its guest every frame** (`FUN_004fa030`, called for a model-1 thing holding one, `0x004fa184`; from the
    per-frame driver `FUN_00518f90` at `0x00519012`, and from two more callers: the state setter's case `0xf`
-   (`0x00501fc5`, `t` nought, when the left thing's descriptor `+0x100` is set) and the constructor (`0x004fb265`)). The
+   (`0x00501fc5`, `t` nought, when the left thing's descriptor `+0x100`, `UsageInfo.RequiresTeleport`, is set; `park-engine.md`, "The three words Q822 left unread") and the constructor (`0x004fb265`)). The
    guest is sampled twice by `FUN_004f9f00`: at the frame's fraction of the sweep, held to 0..1, and 0.35 of a sweep
    earlier (`0x0075c910`), held to -1..2, each `prev + (cur - prev) × t` truncated by `__ftol` and scaled by 10 over
    65536. `FUN_004fe900` puts the sprite at the guest's `mLastPosX`/`mLastPosY` (`+0x218`, `+0x21c`, file 430 and 434),
@@ -5384,7 +5384,7 @@ The Jungle Spray is queued for and invited in **about one run in five** at that 
 - **`FUN_005019f0` case `0x11`**, the walk of the `mFirstGuard` chain through `+0x210` / `+0x212`.
 - **Whether a shop's duration of nought is correct** (it may simply not read it) where `FUN_004df8f0` would take a clamped value from the descriptor's `+0x1a0`. A bought one's is: the constructor writes `+0x5c` only for a starting duration above nought, and every shop's is nought (Q171).
 - **Refuted, so do not repeat:** "only `UNBOUNCE` writes `VAR_LETMEOFF`" — there are six writers, and the claim is false for 16 of the park theme's 17 dismissing ride scripts. "The shops' `mOperatingCapacity` might be nought, leaving them permanently full" — every visitable object has a non-zero capacity.
-- Descriptor keys present in the `.sam` files that OpenTPW does not read yet: `RequiresTeleport` (`ShopType` is read for the advisor's rows 238 to 257, Q713; its selling challenge's arm is not built).
+- Descriptor keys present in the `.sam` files that OpenTPW does not read yet: none of those named here (`RequiresTeleport`, descriptor `+0x100`, is read since Q945: the guest's puffs onto and off the Belly Bounce, Mumbo's and the Spider; `ShopType` is read for the advisor's rows 238 to 257, Q713; its selling challenge's arm is not built).
 
 ## Measuring the corpus without inventing findings
 

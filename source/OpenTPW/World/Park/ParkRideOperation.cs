@@ -299,7 +299,8 @@ public sealed class ParkRideOperation
 	/// </para>
 	/// </summary>
 	/// <returns>Whether a guest was taken out of the queue and put on the ride.</returns>
-	public bool CompleteAdmission( RideScript? script, int rideId, int tick, Random random )
+	public bool CompleteAdmission( RideScript? script, int rideId, int tick, Random random,
+		ParkWorld.CatalogueObject? ride = null, ParkItemCatalogue? catalogue = null )
 	{
 		ArgumentNullException.ThrowIfNull( random );
 
@@ -316,6 +317,11 @@ public sealed class ParkRideOperation
 
 		_state.LeaveQueue( rideId, head );
 		peep.SetState( PeepState.Riding, tick, random );
+
+		// Case 0x10 of the state setter sends up the puff a guest goes onto a ride that teleports them in, where
+		// they stand, with no placement before it (FUN_00501db0, 0x005020ed: the sprite's place as it stands).
+		if ( ride is { } boarded && ItemOf( boarded, catalogue )?.RequiresTeleport == true )
+			PersonPuffs.Start( peep.Navigator.Position );
 
 		return true;
 	}
@@ -406,7 +412,13 @@ public sealed class ParkRideOperation
 
 		peep.SetState( PeepState.LeavingRide, tick, random );
 
-		// Case 0xf of the state setter builds the balloon boarding took away, in the same colour, when there is life
+		// Case 0xf of the state setter first stamps the guest's place and sends up the puff a guest comes off a ride that
+		// teleports them (FUN_00501db0: FUN_004fa030( 0 ), then FUN_004fa470( 0x13 ), 0x00501fce), at the exit they were
+		// put down on above, which is already stamped (PutDownAtTheExit). The item asked is the thing being left.
+		if ( ItemOf( ride, catalogue )?.RequiresTeleport == true )
+			PersonPuffs.Start( peep.Navigator.Position );
+
+		// It then builds the balloon boarding took away, in the same colour, when there is life
 		// left and the thing left does not give balloons itself (0x00501fd3..0x0050208a): no event, the life as it was.
 		// The original asks it of mMajorDest, the thing being left.
 		if ( peep.BalloonLife != 0 && ItemOf( ride, catalogue )?.AppearanceEffect != Balloon.AppearanceEffect )

@@ -208,13 +208,11 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   against the sprite's `+0x8c`, nought for a walker, not the ground's; and a rider's, which the decode says is the point less the ground. (2) A guest's
   put-off, yawn and till on raised ground in ours (the stock park's guests walk on flat ground, where the two builds agree); the code is the
   staff's (`Heard`), the tests are `HeardIn`'s.
-- [ ] **Q945. The other callers of `FUN_004fa470`: a guest's arrival puff, the states `0xf` and `0x10`'s, and `FUN_004f7c60`'s `0x35`/`0x39`.** From Q900.
-  The place is Q900's (`PersonPuffs.Start`); what is left is the sites. (1) The guest constructor (`FUN_004faec0`, `0x004fb26e`) puts particle `0x13`
-  at every guest made: 13 emitters on the stock park's arrival cell (524.96, 0, 264.96) in 110 s, each at a new sprite's place (`q900/orig/a-poll.log`).
-  Ours counts it, `GUEST_ARRIVAL_PARTICLE` in `ParkPeople.Admit`. Build it and watch that ours' arrivals (where the stock park's first vehicle is the
-  bus, Q997) make one each. (2) 8 more emitters stood at (525, 0, 234) with no sprite beside them: not traced; `FUN_00501db0`'s states `0xf` and `0x10`
-  (`0x00501fce`, `0x005020ed`), each when the item's `+0x100` word is set, are the candidates (a gate, a ride or a shop?): find which state and item, see whether ours counts it
-  (the riders' puffs are Q993). (3) `FUN_004f7c60`'s `0x35` or `0x39` by the byte `+0x3a0` (`0x004f7c76`, `0x004f7c81`): who calls it and whether ours reaches it.
+- [ ] **Q946. A person's exit and stand point on a ride, to the byte.** From Q945. The original puts a guest it lets off the Belly Bounce at 52 + 127/256 cells in x and 26 + 127/256 in z (`q900/orig/a-poll.log`:
+  the sprite at (524.961, 0, 264.961) for 37 of 37 puffs) and ours on the cell's middle, 128/256 (`ParkRideOperation.PutDownAtTheExit`: "the sub-cell part of the exit point is not reproduced"), so the exit puff's
+  raw words are 3 over the original's. `FUN_004dedf0` (decompiled: a byte from the descriptor's float at `+0xdc`/`+0xe0` for an exit point, `+0xd4`/`+0xd8` for a stand point, by `__ftol`, after the "Dodgy X exit point in SAM file"
+  check) makes it: decode the multiplier (`0.5` giving `0x7f` says ×255, a guess until read), apply it to the exit and the stand points of every item that declares them (23 declare an exit; the stock park's
+  Belly Bounce lists them commented out at 0.5 in its `.sam`), and measure a rider's first step from the entry and from the exit in both games.
 - [ ] **Q802. What Q800 left for a person or a machine it did not have.** From Q800 (run 13, lane A). Done by the
   coordinator (2026-10-29): `opentpw.maintainer` set in `~/repos/OpenTPW-laneB`, and the Saturday audit runs
   `python3 tools/check_docs_paths.py`. The Linux quick start is marked "tested on the maintainer's Linux machine only"

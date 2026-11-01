@@ -280,7 +280,7 @@ public sealed partial class ParkPeople : Entity
 			( ride, personId ) => new ParkRideOperation( State, Guests )
 				.AdmitPerson( _scriptFor?.Invoke( ride.ThingId ), ride, personId ),
 			( ride, tick ) => new ParkRideOperation( State, Guests )
-				.CompleteAdmission( _scriptFor?.Invoke( ride.ThingId ), ride.ThingId, tick, _rideRandom ),
+				.CompleteAdmission( _scriptFor?.Invoke( ride.ThingId ), ride.ThingId, tick, _rideRandom, ride, catalogue ),
 			// And the third: telling a thing's script how the visit went, which only something holding the
 			// script lookup can do. A script that declares no such variable takes the write nowhere, which
 			// is the right answer for the shop - Coconut.RSE declares VAR_PARAM and never reads it.
@@ -622,8 +622,12 @@ public sealed partial class ParkPeople : Entity
 		if ( inThePark )
 			peep.VisitorNumber = _behaviour.State.Admit();
 
-		// The constructor puts particle 0x13 up at the guest's feet (FUN_004faec0, 0x004fb26e); not started here (Q945).
-		Unimplemented.Report( "GUEST_ARRIVAL_PARTICLE" );
+		// A guest made off the park's counting cells, which every arrival is, has particle 0x13 put up at their feet
+		// once the constructor has placed them (FUN_004faec0, 0x004fb26e); one made on a counting cell has none.
+		// It stands at the guest's place as made, the cell's middle, where the original's sprite stands 1/256 of a
+		// cell short of it in x and z (docs/exe/park-engine.md, "A person's particles").
+		if ( !inThePark )
+			PersonPuffs.Start( peep.Navigator.Position );
 
 		Log.Info( $"People: guest {thingId} arrived at ({cellX},{cellY}) on mGameTick {State.GameTick} - "
 			+ $"{_peeps.Count} guests now; kind {type} happy {peep.Happiness:0} "
@@ -2738,7 +2742,7 @@ public sealed partial class ParkPeople : Entity
 	{
 		var head = State.FirstInQueue( thing.ThingId );
 
-		if ( operation.CompleteAdmission( script, thing.ThingId, thingTick, _rideRandom ) )
+		if ( operation.CompleteAdmission( script, thing.ThingId, thingTick, _rideRandom, thing, _behaviour.Catalogue ) )
 		{
 			Log.Info( $"Object {thing.ThingId}: script admitted person {head} but he doesn't know yet, "
 				+ "forcing him onto ride" );
