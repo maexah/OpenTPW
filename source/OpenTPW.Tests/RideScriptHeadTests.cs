@@ -262,7 +262,7 @@ public class RideScriptHeadTests
 
 	/// <summary>
 	/// <b>A morphed face's normal is worked out again</b> (<c>FUN_00473a40</c>, called from the pose walk at <c>0x0044afe0</c>):
-	/// at rest it equals the file's entry for all 21 anchors on Mumbo's and the Crazy Ape's tentacles (so the rest pose is
+	/// at rest it equals the file's entry for all 21 heads of Mumbo (5) and the Crazy Ape (16), not every model's anchors (so the rest pose is
 	/// unchanged), and with the third corner lifted the head stands off by the offset times the normal's change - the
 	/// normalised (c - b) x (a - b) of the lifted corners, not the file's.
 	/// </summary>

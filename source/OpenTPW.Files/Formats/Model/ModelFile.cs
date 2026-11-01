@@ -843,8 +843,13 @@ public partial class ModelFile : BaseFormat
 	/// lerped as <c>FUN_0044b040</c> lerps them, then the face's normal times the offset. The normal is the file's entry,
 	/// or, with <paramref name="recomputeNormal"/> (a morphed parent), the one the original's pose walk works out again from
 	/// the posed corners before it reads one (<c>0x0044afe0</c>, <c>FUN_00473a40</c>): <see cref="RecomputedFaceNormal"/>.
-	/// Null where the face, a corner or its normal is not in the mesh.
+	/// Null where the face, a corner or (without <paramref name="recomputeNormal"/>) its normal is not in the mesh.
 	/// </summary>
+	/// <remarks>
+	/// The game calls it only with <paramref name="recomputeNormal"/> (<c>LobbyModel.TryGetDrawnNode</c>, for a morphing parent). The
+	/// file's-entry arm is the rest pose the tests hold the recompute to; nothing placed reaches it (dead by CODE, rule 3, kept as the
+	/// reference the recompute is measured against).
+	/// </remarks>
 	public static Vector3? PointOnFace( Mesh mesh, FaceAnchor face, Func<int, Vector3> sourcePosition, bool recomputeNormal = false )
 	{
 		if ( face.Face < 0 || face.Face >= mesh.FaceNormalIndices.Length || (face.Face * 3) + 2 >= mesh.Indices.Length )
@@ -852,7 +857,7 @@ public partial class ModelFile : BaseFormat
 
 		var normal = mesh.FaceNormalIndices[face.Face];
 
-		if ( normal >= mesh.FaceNormals.Length )
+		if ( !recomputeNormal && normal >= mesh.FaceNormals.Length )
 			return null;
 
 		for ( var corner = 0; corner < 3; ++corner )

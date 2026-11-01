@@ -6,7 +6,7 @@ namespace OpenTPW;
 /// Poses a model's whole node tree from a clip that moves nodes about: its rotation, position and route tracks, each node's
 /// own transform within its parent, composed down from the root as the engine's pose walk does (<c>FUN_0044ab30</c>,
 /// local x parent, <c>FUN_004702d0</c>). <see cref="LobbyModel.Pose"/> uses it for a clip carrying position, route or scale
-/// tracks (<see cref="Drives"/>) and <see cref="MeshRotator"/> for the rest.
+/// tracks, or turning a node past the meshes (<see cref="Drives(AnimationFile, int)"/>), and <see cref="MeshRotator"/> for the rest.
 ///
 /// <para>
 /// <b>A position key replaces the node's translation within its parent</b> (<c>FUN_00471860</c>, <c>0x0047208b</c>),
@@ -111,14 +111,14 @@ public sealed class NodePoser : IChannelPosed
 			: -1;
 	}
 
-	/// <summary>Whether a clip is posed here rather than by <see cref="MeshRotator"/>: one that moves a node, by a key or a route, or scales one.</summary>
+	/// <summary>Whether a clip moves a node, by a key or a route, or scales one; <see cref="Drives(AnimationFile, int)"/> adds the clip that turns a node past the meshes, which is what <see cref="LobbyModel.Pose"/> asks.</summary>
 	public static bool Drives( AnimationFile clip )
 		=> clip.PositionTracks.Count > 0 || clip.PathTracks.Count > 0 || clip.ScaleTracks.Count > 0;
 
 	/// <summary>
 	/// <see cref="Drives(AnimationFile)"/>, or a clip that turns a node past the model's first <paramref name="meshCount"/> nodes, the
 	/// meshes: a dummy the meshes hang from (Mumbo's <c>jm_dum</c>, which carries <c>jm_body</c> and the heads on its tentacles).
-	/// <see cref="MeshRotator"/> turns meshes alone, and the engine's pose walk carries whatever hangs off a turned node (<c>FUN_0044ab90</c>).
+	/// <see cref="MeshRotator"/> turns meshes alone, and the engine's pose walk carries whatever hangs off a turned node (<c>FUN_0044ab30</c>).
 	/// </summary>
 	public static bool Drives( AnimationFile clip, int meshCount )
 		=> Drives( clip ) || clip.RotationTracks.Exists( track => track.TargetIndex >= meshCount );

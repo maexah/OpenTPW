@@ -241,6 +241,7 @@ public class NodePoserTests
 			var clip = new AnimationFile( clipStream );
 			var poser = new NodePoser( model );
 			var rest = poser.World( body ).Translation - poser.World( dummy ).Translation;
+			var keys = clip.RotationTracks.Single( track => track.TargetIndex == dummy );
 
 			Assert.IsTrue( NodePoser.Drives( clip, model.Meshes.Count ), $"clip {suffix} is the tree's" );
 			Assert.IsFalse( NodePoser.Drives( clip ), $"clip {suffix} has no position, route or scale track" );
@@ -258,10 +259,30 @@ public class NodePoserTests
 				Assert.AreEqual( MathF.Sqrt( rest.X * rest.X + rest.Z * rest.Z ), MathF.Sqrt( offset.X * offset.X + offset.Z * offset.Z ), 0.01f,
 					$"{suffix} frame {frame}: the body keeps its distance from the dummy" );
 				Assert.AreEqual( rest.Y, offset.Y, 0.01f, $"{suffix} frame {frame}: and its height above it" );
+
+				// The angle itself: the body's place is its own offset from the dummy turned by the dummy's key, then by the dummy's parent.
+				var expected = Vector3.TransformNormal( Vector3.TransformNormal( model.Nodes[body].LocalTransform.Translation,
+					Matrix4x4.CreateFromQuaternion( keys.Sample( frame ) ) ), poser.World( model.Nodes[dummy].ParentIndex ) );
+
+				Assert.AreEqual( 0f, Vector3.Distance( expected, offset ), 0.01f, $"{suffix} frame {frame}: the body stands where the dummy's key puts it" );
 			}
 		}
 
 		Assert.IsTrue( widest > 0.5f, $"the clips turn the ring by more than 30 degrees at some frame (widest {widest * 180 / MathF.PI:F1})" );
+	}
+
+	/// <summary>
+	/// <see cref="LobbyModel.TryGetDrawnNode"/> asks <see cref="ModelFile.PointOnFace"/> for the recomputed normal of a head on a morphing
+	/// parent (Q848). A <c>LobbyModel</c> needs the graphics device, so the wiring is read from the source.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the call without <c>recomputeNormal: true</c>.</remarks>
+	[TestMethod]
+	public void ALobbyModelReadsAMorphingHeadsNormalRecomputed()
+	{
+		var text = System.IO.File.ReadAllText( System.IO.Path.Join( RepoFiles.Root(), "source", "OpenTPW", "World", "Lobby", "LobbyModel.cs" ) );
+
+		StringAssert.Contains( text, "ModelFile.PointOnFace( _file.Meshes[parent], face, animator.SourcePosition, recomputeNormal: true )" );
+		StringAssert.Contains( text, "is { Morphing: true } animator" );
 	}
 
 	/// <summary>A model whose header carries 0x4 adds the key to the node's own translation: 273 + 98 halfway, from the rest every time.</summary>

@@ -173,6 +173,14 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   track) were not read live in either game. Build nothing unless a difference shows. Confirm: `headseries.py monkey` (the Ape, thing 1101) and a Mumbo whose series
   holds role 6, against `headpause.py` pauses of the original at the same frames, by `headcompare.py --turn` (the fitted turn near nought, residuals under 0.1).
 
+- [ ] **Q940. A rider's head picture is chosen from its node's rest matrix; the original turns it by the recomputed normal and the carried matrix.** (From Q848 and Q915's reviews.) The
+  original's `FUN_0044a640` (`0x0044af61`..`0x0044af7d`, flag `0x40000`) builds a head's turn from the face normal worked out again and the matrix the pose walk carries,
+  while ours chooses the picture from the node's rest matrix (`RIDER_HEAD_TURN_AT_REST`, `RideScript.cs`; `docs/DOES-NOT.md`). With Mumbo's ring turning (Q915) and the Crazy Ape's
+  heads, the pictures may be the wrong ones as the ring turns; the size is unmeasured. Build nothing until a difference shows. Confirm: each head's chosen picture
+  against the original's at the same pauses (`headpause.py`, `headcompare.py`). Second piece: `jm_leaf` in Mumbo's `m`, `e` and `s` starts at frame 14 with a first key
+  unlike its last (about 3.7 degrees, unmeasured here); the original keeps the node's turn until then (`0x00471c56`), `NodePoser` holds the first key (`docs/exe/park.md`, `FUN_00471860`).
+  Measure the key, then build the skip in `NodePoser.Pose` if the original's is as the decode says.
+
 - [ ] **Q856. A person's sound's height against the original's, and a guest's on raised ground.** (From Q847.) Q847 built the sound from the decode
   (`FUN_004754e0`, `0x00475513`..`0x00475533`): nought for anyone the walk places (`FUN_004fa030` writes the sprite's `+0x8c` nought each frame,
   `0x004f9ffd`, `0x004fa0b3`), a seat's and a walk's put-off at the point less the ground. Seen in ours

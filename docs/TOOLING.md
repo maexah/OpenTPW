@@ -1233,7 +1233,7 @@ after its poller starts**, so a key meant inside either line cannot be sent afte
   the heads (about 15 s a pause; keep the camera still, and `SHOTDIR=` for a frame of each). `lib/headcompare.py LABEL series.json out.jsonl --turn`
   compares. The original's channel words (`model + 0x10`): role at word 1, clip 2, the clip's length 7 and the current frame 8 (floats). A build that
   is not the final one (`git worktree add ... <sha>` and `dotnet build`) puts the old rule beside the new on the same frames. Mumbo's heads are records
-  of the lookup table, record r being head r + 1; the original had two to five heads aboard at the pauses, ours five.
+  of the lookup table, record r being head r + 1; the original had one to five heads aboard at the pauses, ours five.
 - **A Crazy Ape running in both games** (Q558): `q558/confirm.py <out> <bin>` pauses the stock park, `buy 1101 41 22 0`
   (thing 43, its queue node (42,21)), `tool queue 43`, `worldclick 42 21`, `worldclick 43 21`, `tool off`, resumes, admits
   six guests on (43,21) and sends them to it, waits for the first loop's `KILLOBJ 10` and saves the park after it

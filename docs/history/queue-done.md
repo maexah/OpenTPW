@@ -11609,7 +11609,7 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   entry (`ModelFile.PointOnFace`, fed by `LobbyModel.TryGetDrawnNode`), so a head on a morphing face is off by the offset (1.0
   to 1.7 units) times the normal's change: by a decode of the morph tracks (linear keys, not read live) 1.1 to 3.1 units for
   Mumbo's five heads in his morph clips (`mumbom`, `Pmumbom1`, `mumbos`, `mumboe`, `mumboc`), up to about 0.37 for the Crazy
-  Ape's `Head1`..`16` (`Head17` up to 1.03); equal at rest (0.00 degrees on all 30 anchors), which is why
+  Ape's `Head1`..`16` (`Head17` up to 1.03); equal at rest for those 21 heads (0.00 degrees; the "30 anchors" first written named no set, and a review's scan found other models' anchors off at rest by up to 0.26 degrees), which is why
   `AtRestEachFaceAnchoredHeadIsOnItsNode` passes. Build: `PointOnFace` takes the face's normal from the posed corners,
   normalise( (c - b) x (a - b) ) (`lib/facenormals.py`'s `recomputed`, `FUN_00473a40`), when the parent mesh carries a morph
   track, with `MovingTheTentacleMovesTheHeadWithIt` changed to pin the turn. Confirm: Mumbo's heads in a morph clip in both games
@@ -11618,7 +11618,7 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Done 2026-10-31 (run 2026-10-31-wk, lane A, `alexah/796-face-anchored-heads-recomputed-normal`). `ModelFile.PointOnFace( recomputeNormal: true )`,
   which `LobbyModel.TryGetDrawnNode` sets for a morphing parent, takes the normal from the posed corners, the last face naming the entry owning it. At rest
   it equals the file's for Mumbo's 5 and the Ape's 16 anchors; against the original's head sprites (Mumbo with five guests, the Escape menu pausing it at 22
-  channel frames of roles 4 and 5) heights are within 0.085 and head-to-head distances within 0.084, where main's were off by 1.355 and 1.839 (`q848/`).
+  channel frames, 19 of roles 4 and 5 compared and three at role 6 not) heights are within 0.085 and head-to-head distances within 0.084, where main's were off by 1.355 and 1.839 (`q848/`).
   `MovingTheTentacleMovesTheHeadWithIt` pins the file's normal and two new tests the recompute. Left: Q915.
 - [x] **Q915. Mumbo's ring of heads turns about a vertical axis in the original and stands still in ours.** (From Q848's confirmation.) In the
   original, the five heads on Mumbo's tentacle faces turn together as the ride runs: the best rigid turn per pause (`lib/headcompare.py --turn`, 12 pauses of roles 4 and 5
@@ -11634,11 +11634,11 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   nothing. `NodePoser.Drives( clip, meshCount )` now also takes a clip that turns a node past the meshes, which `LobbyModel.Pose` and its
   log use, so Mumbo's `m`, `e`, `s` and `pmumbo`'s `m1` pose over the whole tree and the body and heads go round with the dummy. Corpus
   (`q915/scan.out`, all 1,276 clips against their models): 560 rotation tracks on a node that is not a mesh; in Lost Kingdom the ones
-  with no position, route or scale track are Mumbo's four clips, the advisors' (`AdvisorModel`'s own walk) and the dead-by-content pylons'.
-  Against the original, re-measured this session (`q915/orig/pauses.jsonl`: 11 Escape-menu pauses of roles 4 and 5, five of them holding three or more heads): the fitted turn of ours onto the
+  with no position, route or scale track are Mumbo's four clips, the advisors' (`AdvisorModel`'s own walk) and the pylons' (loaded by `ParkCoasterPylons`, posed through `LobbyModel.PoseNodes`, never `Pose`).
+  Against the original, re-measured this session (`q915/orig/pauses.jsonl`: 11 Escape-menu pauses, nine of roles 4 and 5 compared and two at role 6 not, five of them holding three or more heads): the fitted turn of ours onto the
   original's is 0.21, 0.00, 0.02, -0.22 and -0.06 degrees (the old build's, on the same pauses: -53.8, -137.4, -76.4, -95.5, +45.7), and with no fitting every
   head's horizontal place is within 0.092 (26 heads, mean 0.043; the old build's 26.19, mean 17.68); heights within 0.051, distances within 0.078.
-  A head's horizontal reach from its rest place over 450 samples is 29.78 (2.66 before). Left: Q916.
+  A head's horizontal reach from its rest place over 450 samples is 29.78 (2.66 before). Not seen: `pmumbo`'s `m1` (the ride window's preview) and nine clips of the other themes that now take the tree route (`ccride` `m1` `m2`, `dragfly` `e` `m1` `s`, `b_drip` `m`, `cauldron` `m`, `gyrotron` `m2`, `mbuggy` `r`). The item's lead named `LobbyModel.TryGetDrawnNode`'s remark; the cause was `NodePoser.Drives` answering false, so the clip went to `MeshRotator`, which drops a target past the meshes (node 21). Left: Q916.
 
 ## B. Docs and comments
 

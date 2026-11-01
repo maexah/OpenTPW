@@ -438,20 +438,20 @@ for a head on a morphing face (Q848: `ModelFile.PointOnFace` with `recomputeNorm
 to name an entry owns it, as `FUN_00473a40`'s walk leaves it). Before it, a head stood off the original's place by the offset times the
 normal's change: by VERIFY's decode of the morph tracks (linear keys; not read live), at most 1.1 to 3.1 units for Mumbo's five heads in
 his morph clips (`mumbom`, `Pmumbom1`, `mumbos`, `mumboe` 1.08 to 1.71, `mumboc` up to 3.08), 0.24 to 0.37 for the Crazy Ape's
-`Head1`..`16` and up to 1.03 for his `Head17`; at rest the file's entries equal the recomputed ones (0.00 degrees on all 30 anchors, and
+`Head1`..`16` and up to 1.03 for his `Head17`; at rest the file's entries equal the recomputed ones for Mumbo's 5 and the Ape's 16 heads (21 anchors; 0.00 degrees; elsewhere not claimed: a review's scan of the 54 anchors on morphed meshes found squark `Head04` 0.26 degrees, `Head03` 0.03 and mammtunn `Head1` 0.003 off at rest), and
 `ModelFile.PointOnFace` agrees to 0.05 units for Mumbo's 5 and the Ape's 16 in a test), so the rest pose agrees. **Measured against the
 original** (Q848, `q848/`: a Mumbo bought in the stock park with five guests aboard, saved by this game and loaded by the original; the
-Escape menu pausing the original at 22 channel frames of roles 4 and 5, each paused read twice and identical, every held head's sprite
+Escape menu pausing the original at 22 channel frames, 19 of roles 4 and 5 compared (three at role 6 not), each paused read twice and identical, every held head's sprite
 place `+0x88`/`+0x8c`/`+0x90` against this game's census at the same role and frame, record r being head r + 1): the old rule was off by
 up to 1.355 units in height and 1.839 in the distance between two heads (mean 0.606 and 0.405, 66 heights and 107 distances); the new
 by up to 0.085 and 0.084 (mean 0.022 and 0.024). The original also turns the whole ring of heads about a vertical axis as the ride runs
 (a fitted turn of -139 to +125 degrees a pause, every head within 0.06 of its place after it, heights unchanged): Mumbo's `m`, `e`, `s`
-(and `pmumbo`'s `m1`) carry a rotation track (flags `0x18`) on `jm_dum`, node 21, a node that is not a mesh, the parent of `jm_body` (the
+(and `pmumbo`'s `m1`) carry a rotation track (flags `0x18`) on `jm_dum`, node 21 (node 7 in `pmumbo`), a node that is not a mesh, the parent of `jm_body` (the
 tentacle mesh the five heads' faces are on, with `enter01` and `camera`), so the pose walk's composition carries the body and the heads
 round it. **OpenTPW poses them** (Q915): `NodePoser.Drives( clip, meshCount )` sends a clip that turns a node past the meshes through the
-node tree, as one with a position track goes. Re-measured against the original (`q915/orig/pauses.jsonl`, 11 pauses of roles 4 and 5): the fitted turn of ours onto
+node tree, as one with a position track goes. Re-measured against the original (`q915/orig/pauses.jsonl`, 11 pauses, nine of roles 4 and 5 compared and two at role 6 not; `pmumbo`'s `m1` and nine clips of the other themes that changed route are not seen): the fitted turn of ours onto
 the original's at most 0.22 degrees, every head's horizontal place within 0.092 with no fitting (26 heads), where before it was off by up to 26.19. In Lost Kingdom the other clips that turn a
-non-mesh node with no position, route or scale track are the advisors' (their own model walk) and the pylons' (dead by content). After a conform `FUN_00469940`
+non-mesh node with no position, route or scale track are the advisors' (their own model walk) and the pylons' (loaded by `ParkCoasterPylons`, but posed through `LobbyModel.PoseNodes`, never `LobbyModel.Pose`, so not reached through the dispatch). After a conform `FUN_00469940`
 marks only the instance's root node `0x10000` and its header `0x40000` (`0x00469a56`..`0x00469a6b`); the instancer marks
 every node after it, a pylon's later stand does not, and `Model_AdvanceChannels` recomputes marked nodes for a header
 flagged `0x4` (`0x00473dc1`, `0x00473ddf`) and the pose walk those flagged `0x10000000` (`0x0044afe0`); `FUN_00473a40` has three callers (`0x0044afe0`, `0x00473c4f`, `0x00473ddf`). **Measured in the original** (`q819/orig/o3`, `o5`, `original/facenormals.py`; a Full
