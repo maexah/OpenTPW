@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """headcompare.py LABEL OURS_SERIES.json PAUSES.jsonl... [--turn] - the original's paused heads (original/headpause.py) against this game's
 (lib/headseries.py's series.json) at the same (role, clip) and channel frame, ours linear between its two nearest samples; record r is
-head r + 1 (Q848).
+the head numbered r + 1 (Q848) unless --map names ours' head for each record (Q916: the Crazy Ape's table is sparse; the pairing is by rest
+place). A head ours dropped between its two samples is left out, not allowed to shift the others.
 
 The original turns Mumbo's whole ring about a vertical axis as the ride runs, and this game has since Q915. The comparison keeps to what a
 turn cannot change, so it holds for a build that does not turn the ring too: each head's height, and the horizontal distance between each
@@ -9,7 +10,8 @@ two heads held in the same pause. The line at the end gives the maxima and means
 heads, the rigid turn (2-D rotation and shift) that best takes this game's heads onto the original's: its angle (near nought when the
 ring turns as the original's) and each head's residual after it."""
 import itertools, json, math, sys
-args = [a for a in sys.argv[1:] if a != "--turn"]; TURN = "--turn" in sys.argv[1:]
+MAP = json.load(open(sys.argv[sys.argv.index("--map") + 1])) if "--map" in sys.argv else None   # {"record": "HeadNN"}: which of ours' heads is the original's record
+args = [a for a in sys.argv[1:] if a != "--turn" and a != "--map" and not (MAP and a == sys.argv[sys.argv.index("--map") + 1])]; TURN = "--turn" in sys.argv[1:]
 label = args[0]; series = json.load(open(args[1])); pauses = [json.loads(l) for f in args[2:] for l in open(f)]
 samples = [(int(s["channel"][0]), int(s["channel"][1]), float(s["channel"][2]), s["heads"]) for s in series if s["channel"]]
 def ours_at(role, clip, frame):
@@ -31,7 +33,9 @@ for p in pauses:
     held = []
     for r, h, place in a["heads"]:
         if not place: continue
-        name = list(ours)[r]; v = ours[name]; dh = v[2] - place[1]; hs.append(abs(dh)); held.append((r, name, v, place))
+        name = MAP.get(str(r)) if MAP else next((n for n in ours if int("".join(c for c in n if c.isdigit())) == r + 1), None)
+        if name not in ours: print(f"{label} role {a['role']} frame {a['frame']:7.2f} record {r}: ours holds no such head at both samples, left out"); continue
+        v = ours[name]; dh = v[2] - place[1]; hs.append(abs(dh)); held.append((r, name, v, place))
         print(f"{label} role {a['role']} frame {a['frame']:7.2f} record {r} {name}: height ours {v[2]:.3f} original {place[1]:.3f} diff {dh:+.3f}")
     for (r1, n1, v1, o1), (r2, n2, v2, o2) in itertools.combinations(held, 2):
         d_ours = math.hypot(v1[0] - v2[0], v1[1] - v2[1]); d_orig = math.hypot(o1[0] - o2[0], o1[2] - o2[2]); ds.append(abs(d_ours - d_orig))

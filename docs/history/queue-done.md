@@ -11687,6 +11687,25 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   (`QUEUE_TILE_TRACK_FLAGS_GATE` is gone). In the stock park's Belly Bounce relay the tiles are Q254's, unmoved, and the counter that
   base counted twice is absent. The link-dropping loop stays: the gate is one answer per cell, so it does not keep the original
   inside the table of eight; what the original draws there is Q859.
+  A head's horizontal reach from its rest place over 450 samples is 29.78 (2.66 before). Left: Q916.
+- [x] **Q916. What Q915 did not see: Mumbo's `e` clip and the Crazy Ape's heads.** (From Q915.) Q915's series of ours has no sample of role 6 (the `e` clip), so the
+  two pauses of the original's role 6 were not compared; and the Crazy Ape's 16 heads (`monkey`, whose `Dummy01` turn already took the tree: it carries a position
+  track) were not read live in either game. Build nothing unless a difference shows. Confirm: `headseries.py monkey` (the Ape, thing 1101) and a Mumbo whose series
+  holds role 6, against `headpause.py` pauses of the original at the same frames, by `headcompare.py --turn` (the fitted turn near nought, residuals under 0.1).
+  Done 2026-11-01 (run 2026-10-31-wk, lane A, `alexah/798-mumbo-e-clip-and-ape-heads-live`). No difference shows and nothing in the game changed (the binary is
+  `main`'s at `d206e82a`, md5 `ebbdd262...`); only the tools did. Mumbo's `e` clip (role 6, 200 frames): a 700-sample series of ours reaches frame 200 (Q915's 450
+  stopped at 13.7), and five Escape-menu pauses of the original's role 6 (frames 62.8, 102.8, 132.8, 152.0, 192.9) and one of role 4 (103.3), all read twice and identical,
+  give the fitted turn of ours onto the original's at 0.06, 0.17, 0.18, -0.04, 0.03 and -0.13 degrees, every residual 0.013 to 0.046, 23 heights within 0.085 (mean 0.026)
+  and 34 head-to-head distances within 0.087 (mean 0.031). The Crazy Ape (the census calls it `'Ape Ride'`; item 1101; role 3, a 125-frame loop; 16
+  heads, of which the rides here seat up to five): the two games give a rider's head a different one of the 16 from run to run, so one loop rarely holds the same head in
+  both. Paired by REST place (`lib/headpair.py`: the original's records 1, 3, 4, 7, 11, 12, 16, 17 against ours' Head02, Head03, Head07, Head05, Head10, Head14, Head13,
+  Head11, read at its loop's end) three heads were held in both at some of 26 pauses of role 3 (frames 0.4 to 123.3): 13 heights within 0.045 (mean 0.023), the distance
+  between Head02 and Head07 within 0.037 (4), and in `q916/ape-xz.txt` the x within 0.041 and the z within 0.037 over 15 readings. Not seen: a fitted turn for the Ape (no pause holds three paired heads at
+  once), and the other 13 heads: Q917. Tools: `headcompare.py` matched the original's record to the r-th head ours still held, so a head leaving ours (Mumbo's at frame
+  192.9) shifted the rest and the Ape's sparse table did not fit at all; it now matches by the head numbered r + 1 or by `--map`; `headseries.py` keeps each head's
+  node and takes `--load FILE`. Photographs, each pair at the same role and frame (cameras differ, the original's carries its Escape menu, compared by eye only):
+  `q916/photo-mumbo/role6-frame{60,100,150}.png` against `q916/orig-mumbo/shots/orig-role6-frame{60,100,150}.png`, `q916/photo-ape/role3-frame{35,65,110}.png` against
+  `q916/orig-ape/shots/orig-role3-frame{35,65,110}.png` (at 110 the Ape stands raised with its arms up and the sign-holder at the same place in both).
 
 ## B. Docs and comments
 

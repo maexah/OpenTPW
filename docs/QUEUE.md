@@ -168,10 +168,11 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   snap; if so, take the fade out of the attract path (with somebody playing it stays: the globe's change of island is a different pass) and film
   the first second after a change in both games (`record.sh`, `attractcam.py` prints the render camera's colour beside the nearest island).
 
-- [ ] **Q916. What Q915 did not see: Mumbo's `e` clip and the Crazy Ape's heads.** (From Q915.) Q915's series of ours has no sample of role 6 (the `e` clip), so the
-  two pauses of the original's role 6 were not compared; and the Crazy Ape's 16 heads (`monkey`, whose `Dummy01` turn already took the tree: it carries a position
-  track) were not read live in either game. Build nothing unless a difference shows. Confirm: `headseries.py monkey` (the Ape, thing 1101) and a Mumbo whose series
-  holds role 6, against `headpause.py` pauses of the original at the same frames, by `headcompare.py --turn` (the fitted turn near nought, residuals under 0.1).
+- [ ] **Q917. The Crazy Ape's other 13 heads, and a fitted turn for them (from Q916).** Q916 compared three of the Ape's heads (Head02, Head07, Head13) at role 3
+  and found no difference; ours seats five guests on records of its own and the original on others, so the rest were not held in both. Build nothing unless a difference
+  shows. To widen it cheaply: take many more `headpause.py` pauses of the original (14 a five minutes) until its heads cover the records `lib/headpair.py` could not pair
+  (record 10 rests at z 239.13, 2.2 from any head ours has held), and run ours longer or from a loaded file (`headseries.py --load`) until the same heads are held; a pause that
+  holds three paired heads gives the Ape's fitted turn (`headcompare.py --turn --map`). Low value, as the three heads agree to 0.045.
 
 - [ ] **Q940. A rider's head picture is chosen from its node's rest matrix; the original turns it by the recomputed normal and the carried matrix.** (From Q848 and Q915's reviews.) The
   original's `FUN_0044a640` (`0x0044af61`..`0x0044af7d`, flag `0x40000`) builds a head's turn from the face normal worked out again and the matrix the pose walk carries,
