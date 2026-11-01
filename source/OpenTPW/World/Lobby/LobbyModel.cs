@@ -597,7 +597,7 @@ public sealed class LobbyModel : IChannelPosed
 
 		if ( node.Face is { } face && (node.IdFlags & 0x40040) != 0 && parent >= 0 && parent < Entities.Length
 			&& Animators.FirstOrDefault( animator => animator.TargetIndex == parent ) is { Morphing: true } animator
-			&& ModelFile.PointOnFace( _file.Meshes[parent], face, animator.SourcePosition ) is { } local )
+			&& ModelFile.PointOnFace( _file.Meshes[parent], face, animator.SourcePosition, recomputeNormal: true ) is { } local )
 		{
 			position = (Vector3)System.Numerics.Vector3.Transform( Swizzle( local.GetSystemVector3() ), Entities[parent].ModelMatrix );
 			return DrawnNode.OnAFace;

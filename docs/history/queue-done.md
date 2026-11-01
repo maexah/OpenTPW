@@ -11601,6 +11601,25 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `flipdiag.sh`'s `MODE=set` / `MODE=clear` poke one bit: `0x0804` -> `0x0806` changes the same 7,327 pixels as Q837's `0x0802` (the mask bit for bit), `0x0804` -> `0x0800` changes 0 (at 8 levels and at 0). `groundheight.py` writes a corner's height held and `spikecut.sh` raises the
   two off-diagonal corners of the flat cell (4,16) by 15 units, takes frames with `0x2` clear and set: the original draws the heights it reads every frame (38,976 pixels), the ridge between the raised corners with `0x2` clear becomes a valley with it set (the skyline lower in 105 columns, higher in none, by up to 53 rows) and,
   with the other pair raised, a valley becomes a ridge (higher in 113, lower in none); the put-backs read 0 and a second launch reads the same pixels. `0x2` set draws (x,z)-(x+1,z+1): the decode's rule, which `PutCellElements` builds. No code changed. Not done: ours' own frame of the same raise (no command raises a corner here).
+- [x] **Q848. Face-anchored heads read the morphed face's recomputed normal, as the original's pose walk does.** (From run 14's
+  review of Q819, VERIFY-5 finding 1.) The pose walk marks the parent of every face-anchored record `0x10000000`
+  (`FUN_0044a870`, `0x0044a93c`), the morph marks the mesh stale (`0x10000`, `0x00471931`), and the pose walk recomputes the
+  parent's face normals (`FUN_00473a40`, called at `0x0044afe0`, before the children are walked at `0x0044afe8`) from the
+  morphed `+0x60` before a head reads its face's normal (`0x0044ad11`..`0x0044ad2a`, in `FUN_0044ab90`). Ours takes the file's
+  entry (`ModelFile.PointOnFace`, fed by `LobbyModel.TryGetDrawnNode`), so a head on a morphing face is off by the offset (1.0
+  to 1.7 units) times the normal's change: by a decode of the morph tracks (linear keys, not read live) 1.1 to 3.1 units for
+  Mumbo's five heads in his morph clips (`mumbom`, `Pmumbom1`, `mumbos`, `mumboe`, `mumboc`), up to about 0.37 for the Crazy
+  Ape's `Head1`..`16` (`Head17` up to 1.03); equal at rest (0.00 degrees on all 30 anchors), which is why
+  `AtRestEachFaceAnchoredHeadIsOnItsNode` passes. Build: `PointOnFace` takes the face's normal from the posed corners,
+  normalise( (c - b) x (a - b) ) (`lib/facenormals.py`'s `recomputed`, `FUN_00473a40`), when the parent mesh carries a morph
+  track, with `MovingTheTentacleMovesTheHeadWithIt` changed to pin the turn. Confirm: Mumbo's heads in a morph clip in both games
+  (ours and the original under Proton, the same clip and frame), and a census of each head's position against the original's
+  live node (its posed matrix read from memory).
+  Done 2026-10-31 (run 2026-10-31-wk, lane A, `alexah/796-face-anchored-heads-recomputed-normal`). `ModelFile.PointOnFace( recomputeNormal: true )`,
+  which `LobbyModel.TryGetDrawnNode` sets for a morphing parent, takes the normal from the posed corners, the last face naming the entry owning it. At rest
+  it equals the file's for Mumbo's 5 and the Ape's 16 anchors; against the original's head sprites (Mumbo with five guests, the Escape menu pausing it at 22
+  channel frames of roles 4 and 5) heights are within 0.085 and head-to-head distances within 0.084, where main's were off by 1.355 and 1.839 (`q848/`).
+  `MovingTheTentacleMovesTheHeadWithIt` pins the file's normal and two new tests the recompute. Left: Q915.
 
 ## B. Docs and comments
 

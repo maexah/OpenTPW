@@ -235,9 +235,7 @@ public class RideScriptHeadTests
 
 	/// <summary>
 	/// <b>A head follows its tentacle</b>: move the face's third corner, as a morph frame might, and the face point moves by
-	/// <c>v</c> times as much, the third corner's weight. The face normal is the file's and does not turn: the original's pose walk
-	/// recomputes it from the morphed corners, so this pins a deviation (park-engine.md, "The recomputed face normals never reach
-	/// the lighting").
+	/// <c>v</c> times as much, the third corner's weight. Taking the file's normal, it moves by that and nothing else.
 	/// </summary>
 	[TestMethod]
 	public void MovingTheTentacleMovesTheHeadWithIt()
@@ -260,5 +258,102 @@ public class RideScriptHeadTests
 		Assert.AreEqual( 3f * face.V, after.Y - before.Y, 1e-4f, "up with the tentacle, by the third corner's weight" );
 		Assert.AreEqual( 0.5f * face.V, after.X - before.X, 1e-4f );
 		Assert.AreEqual( -1f * face.V, after.Z - before.Z, 1e-4f );
+	}
+
+	/// <summary>
+	/// <b>A morphed face's normal is worked out again</b> (<c>FUN_00473a40</c>, called from the pose walk at <c>0x0044afe0</c>):
+	/// at rest it equals the file's entry for all 21 anchors on Mumbo's and the Crazy Ape's tentacles (so the rest pose is
+	/// unchanged), and with the third corner lifted the head stands off by the offset times the normal's change - the
+	/// normalised (c - b) x (a - b) of the lifted corners, not the file's.
+	/// </summary>
+	[TestMethod]
+	public void AMorphedFacesNormalIsRecomputedFromItsCorners()
+	{
+		var data = GameData.Required();
+		var catalogue = new ParkItemCatalogue( "jungle", data );
+
+		foreach ( var (stem, heads) in new[] { ("mumbo", 5), ("monkey", 16) } )
+		{
+			var item = catalogue.All.Single( item => item.Stem == stem );
+			using var stream = new MemoryStream( data.ReadAllBytes( $"{item.Directory}/{item.Stem}.MD2" ) );
+			var model = new ModelFile( stream );
+
+			for ( var id = 1; id <= heads; ++id )
+			{
+				var node = model.Nodes[model.FindNode( id, RideNodes.HeadSpace )];
+				var mesh = model.Meshes[node.ParentIndex];
+				var rest = RestSources( mesh );
+				var face = node.Face!.Value;
+
+				var file = ModelFile.PointOnFace( mesh, face, source => rest[source] )!.Value;
+				var worked = ModelFile.PointOnFace( mesh, face, source => rest[source], recomputeNormal: true )!.Value;
+
+				Assert.IsTrue( file.Distance( worked ) < 0.05f,
+					$"{stem} head {id} at rest: file {file}, recomputed {worked}" );
+			}
+		}
+
+		{
+			var item = catalogue.All.Single( item => item.Stem == "mumbo" );
+			using var stream = new MemoryStream( data.ReadAllBytes( $"{item.Directory}/{item.Stem}.MD2" ) );
+			var model = new ModelFile( stream );
+			var node = model.Nodes[model.FindNode( 2, RideNodes.HeadSpace )];
+			var mesh = model.Meshes[node.ParentIndex];
+			var rest = RestSources( mesh );
+			var face = node.Face!.Value;
+			var lift = new Vector3( 0.5f, 3f, -1f );
+			var corners = new[] { 0, 1, 2 }.Select( corner => mesh.VertexOrder[mesh.Indices[(face.Face * 3) + corner]] ).ToArray();
+
+			Vector3 Posed( int source ) => source == corners[2] ? rest[source] + lift : rest[source];
+
+			var normal = Vector3.Cross( Posed( corners[2] ) - Posed( corners[1] ), Posed( corners[0] ) - Posed( corners[1] ) ).Normal;
+			var fileMoved = ModelFile.PointOnFace( mesh, face, Posed )!.Value;
+			var recomputed = ModelFile.PointOnFace( mesh, face, Posed, recomputeNormal: true )!.Value;
+
+			Assert.IsTrue( (recomputed - fileMoved).Distance( (normal - mesh.FaceNormals[mesh.FaceNormalIndices[face.Face]]) * face.Offset ) < 1e-4f,
+				"the head moves by the offset times the normal's change" );
+			Assert.IsTrue( recomputed.Distance( fileMoved ) > 0.1f, "a lift of this size turns the normal enough to be seen" );
+		}
+	}
+
+	/// <summary>
+	/// <b>The recompute is the original's rule, face by face</b> (<c>FUN_00473a40</c>), on a mesh made here: the corners go
+	/// through the vertex order, the cross product is (c - b) x (a - b) normalised, and where two faces name one entry the
+	/// last one written is the one a head reads.
+	/// </summary>
+	[TestMethod]
+	public void TheRecomputeFollowsTheOriginalsRuleOnAMadeMesh()
+	{
+		// Drawn vertex i is source vertex VertexOrder[i]: the order reverses the sources, so a corner read without it is wrong.
+		var source = new[] { new Vector3( 0f, 0f, 0f ), new Vector3( 4f, 1f, 0f ), new Vector3( 0f, 2f, 3f ), new Vector3( 5f, 5f, 5f ) };
+		var mesh = new ModelFile.Mesh
+		{
+			VertexOrder = [3, 2, 1, 0],
+			Indices = [0, 1, 2, 1, 3, 2],
+			FaceNormalIndices = [0, 0],
+			FaceNormals = [new Vector3( 0f, 1f, 0f )]
+		};
+		var face = new ModelFile.FaceAnchor( 0, 0f, 0f, 2f );
+
+		// Face 1 owns entry 0: its corners are drawn 1, 3, 2, which are sources 2, 0, 1.
+		System.Numerics.Vector3 At( int s ) => source[s].GetSystemVector3();
+		var expected = System.Numerics.Vector3.Normalize( System.Numerics.Vector3.Cross( At( 1 ) - At( 0 ), At( 2 ) - At( 0 ) ) );
+		var point = ModelFile.PointOnFace( mesh, face, s => source[s], recomputeNormal: true )!.Value;
+		var start = source[3];
+
+		Assert.AreEqual( start.X + (expected.X * 2f), point.X, 1e-5f, "x: the last face's normal, the order's corners" );
+		Assert.AreEqual( start.Y + (expected.Y * 2f), point.Y, 1e-5f, "y" );
+		Assert.AreEqual( start.Z + (expected.Z * 2f), point.Z, 1e-5f, "z" );
+
+		// Without the recompute the file's entry is read, whatever the corners do.
+		var file = ModelFile.PointOnFace( mesh, face, s => source[s] )!.Value;
+		Assert.AreEqual( start.Y + 2f, file.Y, 1e-5f, "the file's normal" );
+
+		// A face with no area has no normal: the original writes (0, -1, 0).
+		var flat = new[] { new Vector3( 0f, 0f, 0f ), new Vector3( 1f, 0f, 0f ), new Vector3( 2f, 0f, 0f ), new Vector3( 0f, 0f, 0f ) };
+		var level = ModelFile.PointOnFace( mesh, face, s => flat[s], recomputeNormal: true )!.Value;
+		Assert.AreEqual( flat[3].Y - 2f, level.Y, 1e-5f, "(0, -1, 0) times the offset" );
+		Assert.AreEqual( flat[3].X, level.X, 1e-5f );
+		Assert.AreEqual( flat[3].Z, level.Z, 1e-5f );
 	}
 }

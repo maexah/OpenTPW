@@ -1137,8 +1137,8 @@ that toward 2 by `v`, and adds the normal times the offset; that is the stored t
 `FUN_0044a640` also turns the matrix to the face's edge and normal and a kept turn. The morph routine (`FUN_00471860`)
 writes `+0x60` and the bounds, not `+0x64`, but it marks the mesh stale (`0x10000`, `0x00471931`) and `FUN_0044a870` has set
 `0x10000000` on every face-anchored node's parent (`0x0044a93c`), so the pose walk recomputes the parent's face normals
-(`FUN_00473a40`, `0x0044afe0`) from the morphed `+0x60` before it reads one here (`0x0044ad11`); OpenTPW takes the file's normal
-(a build item; sizes in `park-engine.md`, "The recomputed face normals never reach the lighting"). Measured (`q190/faces`, all 2,073 readable models): every one of the 248
+(`FUN_00473a40`, `0x0044afe0`) from the morphed `+0x60` before it reads one here (`0x0044ad11`); OpenTPW does the same for a head on a morphing
+face (`ModelFile.PointOnFace`, `recomputeNormal`, Q848; sizes and the measure in `park-engine.md`, "The recomputed face normals never reach the lighting"). Measured (`q190/faces`, all 2,073 readable models): every one of the 248
 anchors lands at rest on its node's stored place within 0.05 units but the Squark's `Head04`, 0.26.
 
 **After a load the head the save names is hung**: the Sun God's `head08`, which Alexah's save's table holds a rider on,

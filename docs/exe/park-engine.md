@@ -433,13 +433,20 @@ height a point stands on (`FUN_00451390`, `0x0045142b`, when no normals are hand
 sets `0x10000000` on the parent of every face-anchored record (`or [ecx], 0x10000000`, `0x0044a93c`); the pose walk gives each
 visited node with `0x10000000` and `0x10000` the recompute (`FUN_00473a40`, `0x0044afe0`) before its children are walked
 (`0x0044afe8`), and the morph (`FUN_00471860`, `0x00471931`; `FUN_004714a0`) sets `0x10000` on the morphed mesh, so **each pose
-works a morphing parent's face normals out again from the morphed `+0x60` before a head reads one**. Ours does not
-(`ModelFile.PointOnFace` takes the file's entry, `LobbyModel.TryGetDrawnNode` hands it the morphed corners only), so a
-head on a morphing face stands off the original's place by the offset times the normal's change: by VERIFY's decode of the
-morph tracks (linear keys; not read live), at most 1.1 to 3.1 units for Mumbo's five heads in his morph clips (`mumbom`,
-`Pmumbom1`, `mumbos`, `mumboe` 1.08 to 1.71, `mumboc` up to 3.08), 0.24 to 0.37 for the Crazy Ape's `Head1`..`16` and up to 1.03 for
-his `Head17`; at rest the file's entries equal the recomputed ones (0.00 degrees on all 30 anchors), so the rest pose agrees. Filed
-as a build item, not built. After a conform `FUN_00469940`
+works a morphing parent's face normals out again from the morphed `+0x60` before a head reads one**. OpenTPW does the same
+for a head on a morphing face (Q848: `ModelFile.PointOnFace` with `recomputeNormal`, which `LobbyModel.TryGetDrawnNode` sets; the last face
+to name an entry owns it, as `FUN_00473a40`'s walk leaves it). Before it, a head stood off the original's place by the offset times the
+normal's change: by VERIFY's decode of the morph tracks (linear keys; not read live), at most 1.1 to 3.1 units for Mumbo's five heads in
+his morph clips (`mumbom`, `Pmumbom1`, `mumbos`, `mumboe` 1.08 to 1.71, `mumboc` up to 3.08), 0.24 to 0.37 for the Crazy Ape's
+`Head1`..`16` and up to 1.03 for his `Head17`; at rest the file's entries equal the recomputed ones (0.00 degrees on all 30 anchors, and
+`ModelFile.PointOnFace` agrees to 0.05 units for Mumbo's 5 and the Ape's 16 in a test), so the rest pose agrees. **Measured against the
+original** (Q848, `q848/`: a Mumbo bought in the stock park with five guests aboard, saved by this game and loaded by the original; the
+Escape menu pausing the original at 22 channel frames of roles 4 and 5, each paused read twice and identical, every held head's sprite
+place `+0x88`/`+0x8c`/`+0x90` against this game's census at the same role and frame, record r being head r + 1): the old rule was off by
+up to 1.355 units in height and 1.839 in the distance between two heads (mean 0.606 and 0.405, 66 heights and 107 distances); the new
+by up to 0.085 and 0.084 (mean 0.022 and 0.024). The original also turns the whole ring of heads about a vertical axis as the ride runs
+(a fitted turn of -139 to +125 degrees a pause, every head within 0.06 of its place after it, heights unchanged), which this game does
+not: Q915. After a conform `FUN_00469940`
 marks only the instance's root node `0x10000` and its header `0x40000` (`0x00469a56`..`0x00469a6b`); the instancer marks
 every node after it, a pylon's later stand does not, and `Model_AdvanceChannels` recomputes marked nodes for a header
 flagged `0x4` (`0x00473dc1`, `0x00473ddf`) and the pose walk those flagged `0x10000000` (`0x0044afe0`); `FUN_00473a40` has three callers (`0x0044afe0`, `0x00473c4f`, `0x00473ddf`). **Measured in the original** (`q819/orig/o3`, `o5`, `original/facenormals.py`; a Full
@@ -569,7 +576,7 @@ grid line and sets the height to the nearest corner's, nothing added (always, an
 piece, and the meshes a placed object's lookup record marks `0x10000` (`mammtunn`'s `gk_mam1`), and raises each vertex by the
 height under it on the cell's triangle (`DrapeHeight`, the flag `0x4` as above) less the model's own height; a source vertex moves
 under every drawn vertex that names it, and `SourceVertices` stay the rest the floor search and the hoardings read. The cell's
-triangle here is the original's, and the ground mesh is cut on the same diagonal since Q821. Nothing is to build for the control word or for the recomputed face normals' lighting (Q819, "The recomputed face normals never reach the lighting" and "The control word", above); the pose walk's recompute for a head on a morphing face is a build, filed. **Measured in OpenTPW** (Q808, Alexah's New Save, a copy): the Sun God 18 of 18 listed rim
+triangle here is the original's, and the ground mesh is cut on the same diagonal since Q821. Nothing is to build for the control word or for the recomputed face normals' lighting (Q819, "The recomputed face normals never reach the lighting" and "The control word", above); the pose walk's recompute for a head on a morphing face is built (Q848). **Measured in OpenTPW** (Q808, Alexah's New Save, a copy): the Sun God 18 of 18 listed rim
 vertices on a corner, the Tom Tom Twister 20 of 20, the Costume Shop 12 of 12 (the original's counts), 1,782 queue vertices and
 1,736 track-piece vertices draped, and the clear-coloured sliver pixels at the Sun God camera 5,751 to 11, the Tom Tom Twister's
 16,308 to 0, the Costume Shop's 7,844 to 0.

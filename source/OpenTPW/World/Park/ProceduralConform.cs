@@ -22,7 +22,7 @@ namespace OpenTPW;
 /// word in force, <c>0x27f</c> (53-bit) under Proton; what Windows' DirectDraw leaves under <c>DDSCL_FPUSETUP</c> is not read
 /// (park-engine.md, "The control word"). It moves the last bits only: the stored vertices agree to 0.0001. The original's
 /// recomputed face normals (<c>FUN_00473c30</c>) light nothing, and are not made here; the pose walk's recompute for a head on a
-/// morphing face (<c>0x0044afe0</c>) is a gap in <c>LobbyModel</c>, not in this conform.
+/// morphing face (<c>0x0044afe0</c>) is <c>ModelFile.PointOnFace</c>'s, not this conform's.
 /// </remarks>
 public static class ProceduralConform
 {

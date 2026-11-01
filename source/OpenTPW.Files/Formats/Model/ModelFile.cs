@@ -264,8 +264,8 @@ public partial class ModelFile : BaseFormat
 		/// <summary>
 		/// The face normals the mesh record's +0x64 points at, three floats each, as many as the faces name. The
 		/// engine reads them for a node anchored on a face (<see cref="FaceAnchor"/>). The morph routine does not write them, but the pose walk
-		/// recomputes a morphed parent's face normals before a head reads one (<c>0x0044afe0</c>), which this file's table does not follow
-		/// (park-engine.md, "The recomputed face normals never reach the lighting").
+		/// recomputes a morphed parent's face normals before a head reads one (<c>0x0044afe0</c>), which <see cref="PointOnFace"/> does for a
+		/// morphed parent and this table does not follow (park-engine.md, "The recomputed face normals never reach the lighting").
 		/// </summary>
 		public Vector3[] FaceNormals { get; set; } = Array.Empty<Vector3>();
 
@@ -840,11 +840,12 @@ public partial class ModelFile : BaseFormat
 	/// <summary>
 	/// The point <paramref name="face"/> names on <paramref name="mesh"/>, in the mesh's own space, with each source
 	/// vertex where <paramref name="sourcePosition"/> says it stands - at rest, or as a morph poses it: the face's corners
-	/// lerped as <c>FUN_0044b040</c> lerps them, then the face's normal times the offset. The normal is the file's entry; a
-	/// morphed parent's is recomputed by the original's pose walk before it is read (<c>0x0044afe0</c>), which this does not do.
+	/// lerped as <c>FUN_0044b040</c> lerps them, then the face's normal times the offset. The normal is the file's entry,
+	/// or, with <paramref name="recomputeNormal"/> (a morphed parent), the one the original's pose walk works out again from
+	/// the posed corners before it reads one (<c>0x0044afe0</c>, <c>FUN_00473a40</c>): <see cref="RecomputedFaceNormal"/>.
 	/// Null where the face, a corner or its normal is not in the mesh.
 	/// </summary>
-	public static Vector3? PointOnFace( Mesh mesh, FaceAnchor face, Func<int, Vector3> sourcePosition )
+	public static Vector3? PointOnFace( Mesh mesh, FaceAnchor face, Func<int, Vector3> sourcePosition, bool recomputeNormal = false )
 	{
 		if ( face.Face < 0 || face.Face >= mesh.FaceNormalIndices.Length || (face.Face * 3) + 2 >= mesh.Indices.Length )
 			return null;
@@ -872,7 +873,39 @@ public partial class ModelFile : BaseFormat
 		var point = (Corner( 1 ) * face.U) + (Corner( 0 ) * (1f - face.U));
 		point = (Corner( 2 ) * face.V) + (point * (1f - face.V));
 
-		return point + (mesh.FaceNormals[normal] * face.Offset);
+		var direction = recomputeNormal ? RecomputedFaceNormal( mesh, face.Face, sourcePosition ) : mesh.FaceNormals[normal];
+
+		return point + (direction * face.Offset);
+	}
+
+	/// <summary>
+	/// The normal the original's <c>FUN_00473a40</c> leaves at the entry <paramref name="anchor"/>'s face names once it has
+	/// walked every face with the source vertices where <paramref name="sourcePosition"/> says: each face writes
+	/// normalise( (c - b) x (a - b) ) of its corners through the vertex order at the entry its word names, (0, -1, 0) when
+	/// that has no length, so the last face to name the entry owns it. The anchored face names it itself, and its corners are
+	/// in the mesh (<see cref="PointOnFace"/> has looked), so the walk back from the last face ends there at the latest.
+	/// </summary>
+	private static Vector3 RecomputedFaceNormal( Mesh mesh, int anchor, Func<int, Vector3> sourcePosition )
+	{
+		var entry = mesh.FaceNormalIndices[anchor];
+
+		for ( var face = mesh.FaceNormalIndices.Length - 1; ; --face )
+		{
+			if ( mesh.FaceNormalIndices[face] != entry || (face * 3) + 2 >= mesh.Indices.Length )
+				continue;
+
+			var a = mesh.Indices[face * 3];
+			var b = mesh.Indices[(face * 3) + 1];
+			var c = mesh.Indices[(face * 3) + 2];
+
+			if ( a >= mesh.VertexOrder.Length || b >= mesh.VertexOrder.Length || c >= mesh.VertexOrder.Length )
+				continue;
+
+			var cross = Vector3.Cross( sourcePosition( mesh.VertexOrder[c] ) - sourcePosition( mesh.VertexOrder[b] ),
+				sourcePosition( mesh.VertexOrder[a] ) - sourcePosition( mesh.VertexOrder[b] ) );
+
+			return cross.Length == 0f || float.IsNaN( cross.Length ) ? new Vector3( 0f, -1f, 0f ) : cross.Normal;
+		}
 	}
 
 	/// <summary>
