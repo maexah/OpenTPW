@@ -11749,6 +11749,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
     at the dispatch default as `Inca God: SETREVERB at 162`. Building it is the store of its operand at the script's
     `+0xd8` for the preset holder above; with reverb cut nothing would read it, so a name of its own in the count is all
     it needs (`q580fs/run-S2`).
+- [x] **Q941. The update checker (Alexah's spec, 2026-11-01), for the first weekly build.** A weekly build asks GitHub's releases list once as it starts
+  and says in the lobby and the Escape menu when a newer weekly build is out; a click opens its release page. OpenTPW's own, a
+  deviation, said at the site and in `docs/DECISIONS.md`, `README.md` and the weekly zip's `README.txt`. **Done (Q941):** `UpdateChecker`
+  (the pick, the request through an injectable handler, a 10-second limit, no token, no cache, once a launch, off the render thread),
+  `opentpw.cfg`'s `updatecheck off`, `UpdateNotice` and `MenuLine` (`Update available` on its own line above the build label, right-aligned
+  with it, teal and white under the pointer as a menu choice is, Alexah's look of the same day), the Escape menu's build and line in the lobby and a
+  park (`GameMenu`), `WindowStack.Notice` for the lobby's click, the debug console's `update fake`, SDL's `OpenURL`; a local build's label reads
+  `local - <first eight of the commit>` (a source download with no `.git` too, from `SourceCommit.md` and `export-subst`). 31 tests; 32 put-back bugs all fail one
+  (`q941/mutations.py`); the desk's photographs and logs in `q941/runs/*-final`. Not seen: a real newer release (none exists), Windows and
+  macOS; they are Q943.
 
 ## B. Docs and comments
 

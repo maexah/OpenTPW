@@ -13,9 +13,10 @@ namespace OpenTPW.UI;
 /// </para>
 /// <para>
 /// <b>A deviation:</b> the original letters its own version (<c>L"v %d.%d"</c>, 2 and 0). This one letters OpenTPW's
-/// build, <c>weekly-YYYY-MM-DD</c> (a dry run's <c>weekly-test-N</c>), <c>local</c> for a build not given the tag
-/// (<see cref="LaunchReport.BuildName"/>),
-/// so a screenshot says which build it came from.
+/// build, <c>weekly-YYYY-MM-DD</c> (a dry run's <c>weekly-test-N</c>), and for a build not given the tag <c>local - </c> and the
+/// first eight characters of its commit, plain <c>local</c> where none is known (<see cref="LaunchReport.BuildLabel"/>),
+/// so a screenshot says which build it came from. The Escape menu letters it again in the same place (<see cref="GameMenu"/>),
+/// and <see cref="UpdateNotice"/> stands on the line above it when a newer weekly build is out.
 /// </para>
 /// </summary>
 internal sealed class VersionLabel : Panel
@@ -48,11 +49,31 @@ internal sealed class VersionLabel : Panel
 
 	protected override void OnUpdate()
 	{
-		if ( UiFonts.Get( LabelFont ) is { } font )
-			Control.Rect = Box( font.Measure( Control.Text ), font.LineHeight, UiFonts.SetScreenHeight );
+		if ( LabelBox( Control.Text! ) is { } box )
+			Control.Rect = box;
 	}
 
 	protected override void OnRender() => Control.Draw();
+
+	/// <summary>The box of the label <paramref name="text"/> in the build line's font, or null while the font is not loaded.</summary>
+	internal static UiRect? LabelBox( string text )
+		=> UiFonts.Get( LabelFont ) is { } font ? Box( font.Measure( text ), font.LineHeight, UiFonts.SetScreenHeight ) : null;
+
+	/// <summary>
+	/// The box of the update notice's <paramref name="notice"/> text: its own line directly above the label's, the two right-aligned to
+	/// the same edge (<see cref="Right"/>).
+	/// </summary>
+	internal static UiRect? NoticeBox( string label, string notice )
+	{
+		if ( UiFonts.Get( LabelFont ) is not { } font )
+			return null;
+
+		var own = Box( font.Measure( notice ), font.LineHeight, UiFonts.SetScreenHeight );
+		var beside = Box( font.Measure( label ), font.LineHeight, UiFonts.SetScreenHeight );
+		var height = own.Bottom - own.Top;
+
+		return new UiRect( own.Left, beside.Top - height, own.Right, beside.Top );
+	}
 
 	/// <summary>
 	/// The label's box on the layout for a text <paramref name="width"/> by <paramref name="height"/> of the font's pixels,

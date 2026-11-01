@@ -22,6 +22,14 @@ namespace OpenTPW.UI;
 /// (0x00492d80) and then does the choice.
 /// </para>
 /// <para>
+/// <b>A deviation: the build and the update line.</b> The original's menu shows neither. This one letters the build bottom
+/// right in <see cref="VersionLabel"/>'s style, in the lobby and in a park alike, and above it, when the update check has
+/// found a newer weekly build, <see cref="UpdateNotice"/>'s line, which acts as a choice does (teal, white under the pointer)
+/// and opens the release page when clicked (the menu's dimmer takes the pointer, so the line is wired here). Both are read as
+/// the menu opens: a check that lands during play shows at the next menu, and neither is a choice (<see cref="_choices"/> holds
+/// the menu's own).
+/// </para>
+/// <para>
 /// <b>Engine and content.</b> The menu list is engine: its layout, its colours and its click, the same for
 /// a park's menu as for the lobby's. The choices - their text, their ids and what each does - are content,
 /// handed over by whoever opens it; the lobby's are the front end's.
@@ -38,17 +46,17 @@ internal sealed class GameMenu : UiWindow
 	/// <summary>How far down the first choice starts, which is the scene's to say - see the class remarks.</summary>
 	private readonly int _firstTop;
 
-	/// <summary>How fast the colour ticks - see the class remarks.</summary>
-	private const float TicksPerSecond = 30f;
-
-	private static readonly UiColour Resting = new( 0, 175, 190 );
-
-	private readonly List<Choice> _choices = new();
+	private readonly List<MenuLine> _choices = new();
 
 	/// <summary>The font set the choices were last sized for.</summary>
 	private int _laidOutFor = -1;
 
 	private float _ticks;
+
+	/// <summary>The build, bottom right, and the update line beside it where there is a newer build.</summary>
+	private readonly UiControl _build;
+
+	private readonly MenuLine? _notice;
 
 	/// <param name="firstTop">
 	/// How far down the first choice starts: five in the lobby and ten in a park - see the class remarks.
@@ -67,6 +75,19 @@ internal sealed class GameMenu : UiWindow
 		foreach ( var item in items )
 			AddChoice( item );
 
+		_build = Root.Add( new UiControl
+		{
+			Id = VersionLabel.ControlId,
+			Font = VersionLabel.LabelFont,
+			Text = LaunchReport.RunningBuildLabel,
+			TextColour = UiColour.White,
+			TextAcross = TextAlign.Start,
+			TextDown = TextAlign.Centre
+		} );
+
+		if ( UpdateChecker.Available != null )
+			_notice = Root.Add( UpdateNotice.Make() );
+
 		LayOut();
 	}
 
@@ -74,23 +95,24 @@ internal sealed class GameMenu : UiWindow
 	{
 		LayOut();
 
-		_ticks = MathF.Min( _ticks + (Time.Delta * TicksPerSecond), TicksPerSecond );
+		_ticks = MathF.Min( _ticks + (Time.Delta * MenuLine.TicksPerSecond), MenuLine.TicksPerSecond );
 
 		for ( ; _ticks >= 1f; _ticks -= 1f )
 		{
 			foreach ( var choice in _choices )
-				Tick( choice );
+				choice.Tick();
+
+			_notice?.Tick();
 		}
 	}
 
 	private void AddChoice( Item item )
 	{
-		var choice = Root.Add( new Choice
+		var choice = Root.Add( new MenuLine
 		{
 			Id = item.Id,
 			Text = Localization.Get( item.Text ),
 			Font = ChoiceFont,
-			TextColour = Resting,
 			TextShadow = true,
 
 			// One column down from the top of the screen, so they keep to the top together however
@@ -99,8 +121,6 @@ internal sealed class GameMenu : UiWindow
 			PinDown = VerticalAnchor.Top
 		} );
 
-		choice.Entered = () => choice.Ramp = 1;
-		choice.Exited = () => choice.Ramp = -1;
 		// A row is not a button: it answers the base proc's click, whatever the button (MenuList_ChoiceCallback,
 		// 0x00492d8f), so a press held half a second chooses nothing.
 		choice.LeftClicked = choice.RightClicked = () => Choose( item );
@@ -130,30 +150,12 @@ internal sealed class GameMenu : UiWindow
 			choice.Rect = new UiRect( left, top, left + width, top + height );
 			top += height + Gap;
 		}
-	}
 
-	/// <summary>One tick of a choice's colour - 0x0048b220.</summary>
-	private static void Tick( Choice choice )
-	{
-		if ( choice.Ramp > 0 )
-		{
-			var grey = choice.Ramp + 32;
-			var next = grey;
+		if ( VersionLabel.LabelBox( _build.Text! ) is { } build )
+			_build.Rect = build;
 
-			if ( grey > 255 )
-			{
-				grey = 255;
-				next = 0;
-			}
-
-			choice.TextColour = new UiColour( (byte)grey, (byte)grey, (byte)grey );
-			choice.Ramp = next;
-		}
-		else if ( choice.Ramp < 0 )
-		{
-			choice.TextColour = Resting;
-			choice.Ramp = choice.Ramp + 223 < 0 ? 0 : choice.Ramp - 32;
-		}
+		if ( _notice != null && VersionLabel.NoticeBox( _build.Text!, _notice.Text! ) is { } notice )
+			_notice.Rect = notice;
 	}
 
 	/// <summary>A choice clicked: the menu's click (effect 193), then whatever the choice does.</summary>
@@ -161,15 +163,5 @@ internal sealed class GameMenu : UiWindow
 	{
 		UiSounds.MenuChoice();
 		item.Chosen( this );
-	}
-
-	/// <summary>A choice, and where its colour is going.</summary>
-	private sealed class Choice : UiControl
-	{
-		/// <summary>
-		/// What 0x0048b2a0 keeps in the control's second slot: above 0 the grey brightening, below 0
-		/// counting down once the pointer has gone, 0 still.
-		/// </summary>
-		public int Ramp { get; set; }
 	}
 }

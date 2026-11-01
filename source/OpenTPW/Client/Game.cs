@@ -75,6 +75,10 @@ internal static class Game
 		// And the ones it has no room for, which are OpenTPW's own - how the game fills the screen.
 		SaveFolder.LoadDisplay();
 
+		// The one look for a newer weekly build (Q941): on another thread, once, and only for a weekly build whose
+		// opentpw.cfg line is not "updatecheck off". Nothing waits for it.
+		UpdateChecker.Start( GameOptions.Current.UpdateCheck, LaunchReport.RunningBuildName );
+
 		// The players in save\users, kept for the whole run as the original keeps them (WinMain, 0x0045aa74)
 		// rather than with the lobby.
 		Players.Roster.Load();

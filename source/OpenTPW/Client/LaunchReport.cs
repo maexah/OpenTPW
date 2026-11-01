@@ -55,7 +55,34 @@ internal static class LaunchReport
 
 	/// <summary>The build's name from the running program's own version (<see cref="BuildName"/>).</summary>
 	public static string RunningBuildName
-		=> BuildName( Assembly.GetEntryAssembly()?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion );
+		=> BuildName( RunningVersion );
+
+	/// <summary>
+	/// What the lobby's label and the Escape menu letter for the build (<see cref="VersionLabel"/>): the name
+	/// (<see cref="BuildName"/>), and for a <c>local</c> build the commit it was built from as <c>local - 01850bd3</c>, the
+	/// first eight characters of the SDK's <c>+commit</c>. A local build with no commit known is plain <c>local</c>. The
+	/// weekly and dry-run names are unchanged. The update check decides from <see cref="RunningBuildName"/>, never from this text.
+	/// </summary>
+	public static string BuildLabel( string? informational )
+	{
+		var name = BuildName( informational );
+
+		if ( name != "local" || informational is null )
+			return name;
+
+		var plus = informational.IndexOf( '+' );
+		var commit = plus < 0 ? string.Empty : informational[(plus + 1)..];
+
+		return commit.Length > 0 && commit.All( Uri.IsHexDigit )
+			? $"local - {commit[..Math.Min( 8, commit.Length )]}"
+			: name;
+	}
+
+	/// <summary><see cref="BuildLabel"/> from the running program's own version.</summary>
+	public static string RunningBuildLabel => BuildLabel( RunningVersion );
+
+	private static string? RunningVersion
+		=> Assembly.GetEntryAssembly()?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
 
 	/// <summary>The system, its release where it names one, the processor and how many threads it runs.</summary>
 	public static string Machine( string os, string? release, Architecture architecture, int threads, string? processor )
@@ -150,7 +177,7 @@ internal static class LaunchReport
 	/// <summary>The lines that need no window: once the game's folder is found and the log is open.</summary>
 	public static void LogMachine( string dataFolder )
 	{
-		Log.Info( Build( Assembly.GetEntryAssembly()?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ) );
+		Log.Info( Build( RunningVersion ) );
 		Log.Info( Machine( Kernel() ?? RuntimeInformation.OSDescription, Release(), RuntimeInformation.OSArchitecture, Environment.ProcessorCount, Processor() ) );
 		Log.Info( Runtime( RuntimeInformation.FrameworkDescription, RuntimeInformation.RuntimeIdentifier, Bundled() ) );
 		Log.Info( Data( DiscFiles(), FilesUnder( dataFolder ) ) );

@@ -84,6 +84,13 @@ meets first, found on a Windows 11 PC by a Remote Control session, jobs w1 to w4
 `C:\Users\alexa\tpw-work`): Q976, Q978, Q981, Q979, Q980, Q982, Q977, in that order; then the blocks below. A
 confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
 
+- [ ] **Q943. The update check and its click on Windows and macOS, and against a real newer release (Q941's leftovers).** Counted, not
+  seen: on Windows and macOS the opener (`SDL_OpenURL`), the `updatecheck off` line and the label `local - <commit>` were not run; and the
+  pick has met only replies made up in tests and the real GitHub's empty list, because no weekly release exists yet. Once the first weekly
+  build is out and a second follows, run the first with the network on and see the line appear (and its click open the page), on Linux and
+  on the Windows PC (`docs/TOOLING.md`, "The update check, and a click on its line"). Also look at the line's teal against the lobby's teal
+  sea (it reads faintly in `q941/runs/fake-final/lobby-with.png`): Alexah chose the colour; the dark edge is all that helps it.
+
 - [ ] **Q902. Where the original's saves went on a PC without the permission fix.** Alexah's call, from Q982: whether the
   original's saves went to Windows' VirtualStore (`%LOCALAPPDATA%\VirtualStore\Program Files (x86)\SimTheme
   Park\save`) when `Program Files (x86)` was not writable, and whether OpenTPW should read them there. Not tested: the

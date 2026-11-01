@@ -1532,11 +1532,15 @@ public class Level
 	{
 		Hud = new();
 
-		// The build's name, bottom right, under every window (the original's "v 2.0"; a deviation said there).
-		Hud.AddChild( new VersionLabel( LaunchReport.RunningBuildName ) );
+		// The build's name, bottom right, under every window (the original's "v 2.0"; a deviation said there), and beside
+		// it the line that a newer weekly build is out, when the update check has found one (Q941).
+		var label = LaunchReport.RunningBuildLabel;
+		Hud.AddChild( new VersionLabel( label ) );
+		var notice = Hud.AddChild( new UpdateNotice.LobbyPanel( label ) );
 
 		// The interface's windows, and what the pointer and the keys do to them.
 		var windows = _windows = Hud.AddChild( new WindowStack() );
+		windows.Notice = () => notice.Control;
 
 		// The lobby's interface - the player slots, its dialogs and the island panel - opened in those windows.
 		// Built here, behind the loading screen, along with everything its windows draw. After the stack, so it

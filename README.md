@@ -43,6 +43,12 @@ Experimental test builds for Windows, Linux and macOS are published as pre-relea
 [Releases page](https://github.com/maexah/OpenTPW/releases). Each zip holds a README that says how to start it. The
 macOS builds are untested. You still need your own copy of the game.
 
+**The game contacts GitHub once as it starts.** A weekly build asks `api.github.com` (no account, no token) whether a newer weekly
+build has been released; if one has, the lobby and the Escape menu say `Update available` above the build's name, and clicking the words opens that
+release's page in your browser. Nothing is downloaded or installed, and a build that is not a weekly one (a `local` build, one you
+made yourself) makes no request. A failed check is one line in `console.log` and nothing else. To turn the request off, put the line
+`updatecheck off` in `opentpw.cfg` in the save folder. This is OpenTPW's own: the original has no such thing.
+
 ## Build it yourself
 
 Wanting to change something? [`CONTRIBUTING.md`](CONTRIBUTING.md) has a quick start for Linux, macOS and Windows, and says what needs the game and what does not.

@@ -149,7 +149,7 @@ font and its licence, the README, `LICENSE.md` and `THIRD-PARTY-NOTICES.md`; `We
      Download box to it, publishes, reads the live page back and checks each link answers. No yes is needed for
      that one change (the website's `AGENTS.md`, rule 1). If the release never goes live, the site keeps its old
      links. The site shows the build's date and links its release page; it quotes nothing from the changelog.
-- **The build's name.** `-p:OpenTPWBuildTag=<tag>` stamps it; every other build is `local`. The SDK adds the commit.
+- **The build's name.** `-p:OpenTPWBuildTag=<tag>` stamps it; every other build is `local`. The SDK adds the commit, which a local build's label shows (`local - 01850bd3`; a source download with no `.git` takes it from `SourceCommit.md`). A weekly build asks GitHub once at start for a newer weekly build (Q941); a `local` or `weekly-test-N` one never does.
   The console log's first lines (`LaunchReport`) print both, and `console.log` is written with paths cut to
   `<game folder>` and `~` and each player's name to `<player N>` (`SafePaths`), so a tester can attach it as it is.
 - **A dry run** is a tag `weekly-test-N`: the same steps with a placeholder note. Delete the release and the tag

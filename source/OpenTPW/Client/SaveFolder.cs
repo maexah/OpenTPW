@@ -32,6 +32,7 @@ internal static class SaveFolder
 	private const string DisplayName = "opentpw.cfg";
 	private const string GraphicsName = "graphics";
 	private const string GpuName = "gpu";
+	private const string UpdateCheckName = "updatecheck";
 	private const string GraphicsImproved = "improved";
 	private const string GraphicsFaithful = "faithful";
 	private const string UsersFolder = "users";
@@ -183,7 +184,8 @@ internal static class SaveFolder
 	/// nowhere to put them. How the game fills the screen, and the mode full screen asks the display
 	/// for - see <see cref="Display"/>; the faithful graphics toggle (<see cref="GameOptions.Faithful"/>), read
 	/// before the first texture is made, and set nowhere else; and the graphics card's <c>gpu</c> line
-	/// (<see cref="GameOptions.Gpu"/>), read before the device is made.
+	/// (<see cref="GameOptions.Gpu"/>), read before the device is made; and the <c>updatecheck</c> line
+	/// (<see cref="GameOptions.UpdateCheck"/>), read before the update check starts.
 	///
 	/// <para>
 	/// It is a plain text file of its own rather than more fields in Config.tcf, so that the original's
@@ -240,6 +242,11 @@ internal static class SaveFolder
 					// "faithful" turns every improvement to the original's look off; anything else keeps them.
 					case GraphicsName:
 						GameOptions.Current.Faithful = parts[1].Equals( GraphicsFaithful, StringComparison.OrdinalIgnoreCase );
+						break;
+
+					// The update check (Q941): "off" stops the one request the game makes as it starts; anything else keeps it.
+					case UpdateCheckName:
+						GameOptions.Current.UpdateCheck = !parts[1].Equals( "off", StringComparison.OrdinalIgnoreCase );
 						break;
 
 					// The graphics card (Q980): the rest of the line, so a name with spaces in it reads whole.
@@ -308,7 +315,10 @@ internal static class SaveFolder
 				.AppendLine( "# gpu auto: the Vulkan graphics card the Options screen's Video Card row says, a discrete one if there is one, else a built-in one. gpu <part of a name>:" )
 				.AppendLine( "# the first card whose name holds it, e.g. gpu GTX 1650. gpu #1: the second card of the list console.log prints" )
 				.AppendLine( "# (\"Graphics card:\"). Read as the game starts." )
-				.AppendLine( $"{GpuName} {(string.IsNullOrWhiteSpace( options.Gpu ) ? GpuChoice.Auto : options.Gpu)}" );
+				.AppendLine( $"{GpuName} {(string.IsNullOrWhiteSpace( options.Gpu ) ? GpuChoice.Auto : options.Gpu)}" )
+				.AppendLine( "# updatecheck on: as it starts, a weekly build asks GitHub whether a newer weekly build has been released, and says so in the lobby and the Escape menu." )
+				.AppendLine( "# updatecheck off: no request is made. Nothing is downloaded or installed either way. Read as the game starts." )
+				.AppendLine( $"{UpdateCheckName} {(options.UpdateCheck ? "on" : "off")}" );
 
 			// How many steps each kind of load took last time, which is how the loading bar knows how far
 			// to fill without being told - see LoadStepCounts. These are measurements rather than choices,

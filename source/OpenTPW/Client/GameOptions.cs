@@ -30,8 +30,8 @@ namespace OpenTPW;
 /// belong to the player, in their gms.dat (<see cref="PlayerOptions"/>), with the movie volume again - the
 /// player's copy wins when they are picked. Every gms.dat written takes the options as they stand.
 /// <para>
-/// The four that are OpenTPW's own - <see cref="DisplayMode"/>, <see cref="FullScreenSize"/>,
-/// <see cref="Faithful"/> and <see cref="Gpu"/> - go in a third file, save\opentpw.cfg (<see cref="SaveFolder.LoadDisplay"/>), rather than into fields the
+/// The five that are OpenTPW's own - <see cref="DisplayMode"/>, <see cref="FullScreenSize"/>,
+/// <see cref="Faithful"/>, <see cref="Gpu"/> and <see cref="UpdateCheck"/> - go in a third file, save\opentpw.cfg (<see cref="SaveFolder.LoadDisplay"/>), rather than into fields the
 /// original's own file has no room for. That way Config.tcf stays a file the original can still read.
 /// </para>
 /// </para>
@@ -88,6 +88,13 @@ internal sealed class GameOptions
 	/// (<see cref="SaveFolder.LoadDisplay"/>) and used by <see cref="GpuSelector"/> before the device is made.
 	/// </summary>
 	public string Gpu { get; set; } = GpuChoice.Auto;
+
+	/// <summary>
+	/// Whether the game asks GitHub, once as it starts, for a newer weekly build (Q941, <see cref="UpdateChecker"/>). <b>OpenTPW's
+	/// own</b>, on by default; opentpw.cfg's <c>updatecheck off</c> stops the request. Read once as the game starts
+	/// (<see cref="SaveFolder.LoadDisplay"/>); the Options screen has no row for it.
+	/// </summary>
+	public bool UpdateCheck { get; set; } = true;
 
 	/// <summary>+0x08: low, medium or high, as 0, 1 or 2.</summary>
 	public int GraphicsQuality { get; set; } = 1;

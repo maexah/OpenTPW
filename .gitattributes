@@ -6,3 +6,7 @@
 *.tga binary
 *.ico binary
 *.ttf binary
+
+# A source download (git archive, GitHub's Download ZIP) has no .git: the build reads its commit from this file, which the
+# archive fills in (source/OpenTPW/OpenTPW.csproj).
+source/OpenTPW/SourceCommit.md export-subst

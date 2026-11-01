@@ -522,7 +522,8 @@ public static class DebugConsole
 
 				if ( (Level.Current?.Hud?.Children.OfType<UI.WindowStack>().FirstOrDefault()?.Windows
 					.Select( window => FindControl( window.Root, controlId ) ).FirstOrDefault( found => found != null )
-					?? Level.Current?.Hud?.Children.OfType<UI.VersionLabel>().Select( label => FindControl( label.Control, controlId ) ).FirstOrDefault()) is not { } control )
+					?? Level.Current?.Hud?.Children.OfType<UI.VersionLabel>().Select( label => FindControl( label.Control, controlId ) ).FirstOrDefault()
+					?? Level.Current?.Hud?.Children.OfType<UI.UpdateNotice.LobbyPanel>().Select( notice => notice.Control is { } line ? FindControl( line, controlId ) : null ).FirstOrDefault()) is not { } control )
 				{
 					Reply( $"control: no open window holds 0x{controlId:x}" );
 					break;
@@ -593,6 +594,34 @@ public static class DebugConsole
 						+ (UI.RootPanel.Hidden ? " - interface hidden (F2)" : "")
 						+ $"; left on {UI.ParkCategoryScreens.LeftOn( UI.ParkCategoryScreens.Building )},{UI.ParkCategoryScreens.LeftOn( UI.ParkCategoryScreens.Information )},{UI.ParkCategoryScreens.LeftOn( UI.ParkCategoryScreens.Finance )}"
 					: "windows: no window stack" );
+				break;
+
+			// The update check's offer (Q941), with no network: "update fake <tag>" feeds a releases reply holding that tag (and this
+			// platform's zip) through the same pick a reply from GitHub goes through, for the running build; "update clear" forgets
+			// the offer; "update" alone says what stands. The notice and the Escape menu read the same offer.
+			case "update":
+				{
+					var build = LaunchReport.RunningBuildName;
+					var rid = UpdateChecker.RunningRid() ?? "linux-x64";
+
+					if ( parts.Length > 2 && parts[1].Equals( "fake", StringComparison.OrdinalIgnoreCase ) )
+					{
+						var json = $$"""[{"tag_name":"{{parts[2]}}","draft":false,"assets":[{"name":"{{UpdateChecker.AssetName( parts[2], rid )}}"}]}]""";
+						var outcome = UpdateChecker.Answer( json, build, rid );
+
+						Reply( $"update: {outcome.Note}; offer {(outcome.Offer is { } made ? made.Tag + " " + made.Url : "none")}" );
+					}
+					else if ( parts.Length > 1 && parts[1].Equals( "clear", StringComparison.OrdinalIgnoreCase ) )
+					{
+						UpdateChecker.Clear();
+						Reply( "update: the offer is forgotten" );
+					}
+					else
+					{
+						Reply( $"update: build {build}, label '{LaunchReport.RunningBuildLabel}', check {(GameOptions.Current.UpdateCheck ? "on" : "off")}, "
+							+ $"offer {(UpdateChecker.Available is { } offer ? offer.Tag + " " + offer.Url : "none")}" );
+					}
+				}
 				break;
 
 			case "volume":

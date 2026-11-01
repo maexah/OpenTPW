@@ -69,6 +69,28 @@ Linux:    you need a Vulkan driver for your graphics card (Mesa's
           it was tried).
 
 
+Does it use the internet?
+-------------------------
+
+Yes, once, as it starts: this build asks GitHub (api.github.com,
+with no account and nothing sent but what any web request carries)
+whether a newer weekly build has been released. If one has, the
+lobby and the Escape menu say "Update available" on the line
+above the name of the build you are running, and clicking those
+words opens that release's page in your browser. Nothing is
+downloaded or installed by the game. If the check fails (no
+internet, GitHub down) console.log says so once and nothing else
+happens.
+
+To stop the request, put the line
+
+   updatecheck off
+
+in opentpw.cfg, in the "save" folder the game uses (the game
+makes that file itself once you have played; or make it yourself,
+with that one line). A build you made yourself ("local") never asks.
+
+
 If something goes wrong
 -----------------------
 

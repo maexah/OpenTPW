@@ -808,6 +808,13 @@ internal sealed class WindowStack : Panel
 		on.LeftClickedAt( x, y );
 	}
 
+	/// <summary>
+	/// The one control that lies under the windows and is hit only where none of them is: the lobby's update notice
+	/// (<see cref="UpdateNotice"/>), which belongs to no window. Asked live, as the notice comes and goes. A modal window shuts it
+	/// out like everything else behind it.
+	/// </summary>
+	internal Func<UiControl?>? Notice { get; set; }
+
 	private UiControl? HitTest( float x, float y )
 	{
 		for ( int i = _windows.Count - 1; i >= 0; --i )
@@ -823,7 +830,7 @@ internal sealed class WindowStack : Panel
 				return null;
 		}
 
-		return null;
+		return Notice?.Invoke()?.HitTest( x, y );
 	}
 
 	/// <summary>

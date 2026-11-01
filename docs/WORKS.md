@@ -227,13 +227,26 @@ belongs to or at the end. Grep it by area or Q-number; never read it whole.
   logged before anything unwinds, and a load that threw keeps no "Loaded" line and no step count. With no display SDL has no
   box and the log says so. Seen on a private Xvfb with a `--game` that does not exist and with a folder that makes the window fail.
 - **The lobby letters this build's name bottom right, where the original's says "v 2.0"** (Q752): `VersionLabel`, under
-  every window and taking no pointer, letters `LaunchReport.BuildName` (`weekly-YYYY-MM-DD`, a dry run's `weekly-test-N`, `local` for a build not given the tag) as the
+  every window and taking no pointer, letters `LaunchReport.BuildLabel` (`weekly-YYYY-MM-DD`, a dry run's `weekly-test-N`, `local - <first eight of the commit>` for a build not given the tag, plain `local` where no commit is known) as the
   original letters its own version (`FUN_0048b020`, `boot.md`, "Which build this is"): font 6, plain white with no edge,
   in a box measured from the text and set back from ( 0x7c0, 0x5c0 ), id `0x8cfd55`, which the console's `control
   8cfd55` reads. The text is the deviation, said at the site. The original's box for "v 2.0", read from its memory at
   800 x 600, is ( 1926, 1444, 1984, 1472 ), and ours measures the same text to the same box (`VersionLabelTests`);
   at 800 x 600 ours reads `control 0x8cfd55 at (754,564) size (21,11) ... 'local' lettered font 6 in (255, 255, 255)
   without the edge`, its ink's bottom on row 571 as the original's (`q752/ours-a`, `q752/orig-a`).
+- **A weekly build looks once for a newer weekly build, and the lobby and the Escape menu say so** (Q941, OpenTPW's own, a deviation; the words are
+  new English): `UpdateChecker` asks `api.github.com/repos/maexah/OpenTPW/releases` (not `/latest`: the weekly builds are pre-releases) once as
+  the game starts, off the render thread, with a User-Agent, no token and a 10-second limit, and `Pick` takes the newest published tag
+  `weekly-YYYY-MM-DD` dated after the running build that holds this platform's zip (`OpenTPW-<tag>-<rid>.zip`); a draft, `weekly-test-N`, a bad
+  date and a release without the zip are passed over, and the link is built from the tag, never read from the reply. A `local` or
+  `weekly-test-N` build asks nothing, nor does `updatecheck off` in `opentpw.cfg` (`GameOptions.UpdateCheck`). A failure (no network, a refusal, a
+  timeout, bad JSON) is one line in the log and nothing else. The offer shows as `Update available` on its own line directly above the build label,
+  right-aligned with it, in the Escape menu's teal and white under the pointer as a menu choice is (`MenuLine`), in the lobby (`UpdateNotice.LobbyPanel`,
+  hit through `WindowStack.Notice`) and in the Escape menu of the lobby and of a park (`GameMenu`, which letters the build too); a click opens the
+  tag's release page through SDL's `OpenURL`. A check that lands during play shows at the next menu. Seen with the console's `update fake`
+  and an `xdg-open` shim (`q941/runs/fake-final`: the line above the label at the same pixels in all three places, teal then white, the link
+  at the opener, the menu staying open); the lobby's request and its failures in `q941/runs/*-final`; no real newer release exists yet
+  (`UpdateCheckerTests` make up the replies).
 - **A played park's model records read whole when it holds a coaster** (Q810, Q779's build on Q814's decode): the walk of the model
   module takes a coaster's pylon type, the ids its `coaster.sam` names as `asPylonControls[n].uiPylonTypeUniqueID`, as five channels
   (`ParkItemCatalogue.ChannelsFor`, read at all four callers), an item's own `NumSimultAnims` as before and every other id as one.
