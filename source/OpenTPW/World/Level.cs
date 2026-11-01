@@ -1408,6 +1408,18 @@ public class Level
 				if ( (footprintNow && !madeAnchors.Contains( now.ParentId )) || (footprintWas && !goneAnchors.Contains( was.ParentId )) )
 				{
 					Unimplemented.Report( "SAVE_PARK_FOOTPRINT_CELL" );
+
+					// A track add-on's footprint (the add-on is left out) lies over a kart's track the file does not hold: the cell
+					// stays the file's on the map, and carries the live track record with the add-on's flag (0x10) cleared, so the
+					// loop the file's ride and sections name is closed on the map as well.
+					if ( footprintNow && !footprintWas && was.TrackType == 0 && now.TrackType != 0 )
+						written[index] = was with
+						{
+							TrackType = now.TrackType, TrackFlags = (ushort)(now.TrackFlags & ~ParkTrackPieces.AddOnFlag), TrackParentId = now.TrackParentId,
+							TrackNeighbours = now.TrackNeighbours, TrackDirection = now.TrackDirection, TrackTileSet = now.TrackTileSet,
+							TrackTileIndex = now.TrackTileIndex, TrackTileAngle = now.TrackTileAngle
+						};
+
 					continue;
 				}
 

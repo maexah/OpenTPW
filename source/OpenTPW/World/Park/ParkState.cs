@@ -700,7 +700,7 @@ public sealed class ParkState
 	///
 	/// <para>
 	/// <b>Only a thing <paramref name="writable"/> passes is written so.</b> Any other (a track ride of a
-	/// BumperType whose template is not read here, another theme's, or a coaster) is counted and left as it was: one sold stays in the file, one bought is not in it.
+	/// BumperType whose template is not read here, another theme's, a coaster, or a track add-on) is counted and left as it was: one sold stays in the file, one bought is not in it.
 	/// With no test given nothing is made or taken out.
 	/// </para>
 	/// </summary>

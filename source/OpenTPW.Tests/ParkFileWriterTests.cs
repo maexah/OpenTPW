@@ -1158,6 +1158,77 @@ public class ParkFileWriterTests
 	}
 
 	/// <summary>
+	/// A track add-on bought on the track of a kart bought (the add-on itself left out of the file) does not take the track under
+	/// its picture out of the written map: each of its track cells is the file's ground there carrying the live track record, the
+	/// add-on's flag cleared, so the loaded map is closed where the file's ride and sections are.
+	/// <para><b>Mutation:</b> the track record dropped from the footprint cell (<c>Level.WrittenCells</c>); the flag left set.</para>
+	/// </summary>
+	[TestMethod]
+	public void AnAddOnBoughtOnABoughtKartLeavesItsTrackOnTheWrittenMap()
+	{
+		SetCurrentPlayer( new Player( 0, "Test", new PlayerFile { InstantAction = true } ) );
+
+		var catalogue = new ParkItemCatalogue( "jungle", FileSystem );
+		var people = new ParkPeople( shipped );
+		var state = people.State;
+		var rides = new ParkRides( "jungle", shipped, catalogue, FileSystem );
+
+		try
+		{
+			var racers = catalogue.All.First( item => item.BumperType != 0 && !ParkBumperCars.IsBumperFamily( item.BumperType ) );
+			var addOn = catalogue.All.First( ParkTrackAddOn.Is );
+			var id = state.NextThingId();
+			var placed = ParkBuilding.Constructed( racers, id, 20, 20, 0, MapStep.CellId( 20 + racers.EntryDeltaX, 20 + racers.EntryDeltaY ),
+				MapStep.CellId( 20 + racers.ExitDeltaX, 20 + racers.ExitDeltaY ), ParkWorld.BuiltWhen.At( state.CalendarNow ),
+				ParkBuilding.TakeTrackRide( state, racers ) );
+
+			state.AddObject( placed );
+			ParkBuilding.BindOperation( state, rides, placed, racers );
+			ParkBuilding.Stamp( state, ParkObjects.FootprintAt( racers, 20, 20, 0 ), 20, 20 );
+			state.EnterCell( 20, 20, id );
+			Assert.IsTrue( state.ReplaceObject( placed with { IsTrackRideValid = 1 } ), "the loop is closed" );
+
+			// A kart's track under the add-on's picture, then the add-on stamped over it.
+			var at = Enumerable.Range( 0, 100 * 100 ).Select( n => (X: 10 + (n % 100), Y: 10 + (n / 100)) ).First( spot => ParkTrackAddOn.Cells( addOn, spot.X, spot.Y, 0 )
+				.All( cell => ParkState.OnMap( cell.X, cell.Y ) && shipped.CellAt( cell.X, cell.Y ) is { TrackType: 0, Type: not (CellEdge.Footprint or CellEdge.RideEnd or CellEdge.RideFarEnd) } ) );
+			var track = ParkTrackAddOn.Cells( addOn, at.X, at.Y, 0 ).Where( cell => ParkTrackAddOn.IsTrackKind( cell.Kind ) ).ToList();
+
+			Assert.IsTrue( track.Count >= 4 );
+
+			foreach ( var (x, y, _) in ParkTrackAddOn.Cells( addOn, at.X, at.Y, 0 ).Where( cell => ParkState.OnMap( cell.X, cell.Y ) ) )
+				state.SetRecord( x, y, shipped.CellAt( x, y ) with { TrackType = 11, TrackNeighbours = 0x05, TrackDirection = 0x04, TrackParentId = (ushort)MapStep.CellId( 20, 20 ) } );
+
+			var addOnId = state.NextThingId();
+
+			state.AddObject( ParkBuilding.Constructed( addOn, addOnId, at.X, at.Y, 0, 1, 1, ParkWorld.BuiltWhen.At( state.CalendarNow ) ) );
+			Assert.AreEqual( track.Count, ParkTrackAddOn.Stamp( state, addOn, at.X, at.Y, 0 ) );
+			Assert.AreEqual( CellEdge.Footprint, state.Record( track[0].X, track[0].Y ).Type, "the live cell is the add-on's" );
+
+			Unimplemented.Forget();
+			Assert.IsNotNull( Level.WritePark( shipped, state, "jungle", "AddOnTrack", people, null, rides, catalogue ) );
+
+			var written = Read( File.ReadAllBytes( Path.Combine( Jungle, "AddOnTrack.TPWS" ) ) );
+
+			Assert.IsFalse( written.Objects.Any( thing => thing.ThingId == addOnId ), "the add-on is not in the file" );
+			Assert.AreEqual( 1, written.Objects.Single( thing => thing.ThingId == id ).IsTrackRideValid );
+
+			foreach ( var (x, y, _) in track )
+			{
+				var cell = written.CellAt( x, y );
+
+				Assert.AreEqual( shipped.CellAt( x, y ).Type, cell.Type, $"({x},{y}) is the file's ground" );
+				Assert.AreEqual( (11, 0x05, 0x04, 0), (cell.TrackType, cell.TrackNeighbours, cell.TrackDirection, cell.TrackFlags & 0x10), $"({x},{y}) holds the track" );
+			}
+		}
+		finally
+		{
+			rides.Delete();
+			Entity.ApplyDeletions();
+			TestRun.DeleteEvery<ParkPeople>();
+		}
+	}
+
+	/// <summary>
 	/// The constructor's <c>mIsTrackRideValid</c>: 1, but nought for any item with a queue and a track type, a coaster as well
 	/// as a kart (<c>0x00524daa</c>..<c>0x00524de1</c>), and a Hot Pot or a track add-on keep 1. The three track add-ons stay out
 	/// of the writer, counted <c>SAVE_PARK_OBJECT_BOUGHT</c>, though their items hold TrackType 1.

@@ -2068,8 +2068,9 @@ saved coaster whose header lies past the first or in a module that will not read
 through). There is still no coaster ride (the node list, `Coaster.sam`, the spline and sample run) and no editor or
 track laying, and the door and the queue turn do not ask `CircuitClosed` (`OPEN_GUARD_COASTER_TRACK_RECORD`,
 `QUEUE_TURN_COASTER_TRACK_RECORD`). OpenTPW asks the gate before the score, which changes only what the `unimplemented`
-census counts. A bought thing starts with `mIsTrackRideValid` nought, where the original's is 1 for any item without
-both a queue and a track type; nothing reads it for track type 0.
+census counts. A bought thing starts with `mIsTrackRideValid` as `ParkBuilding.Constructed` gives it, nought for an
+item with both a queue and a track type and 1 for any other (the Hot Pot, TrackType 0, included), as the original's
+place commit does (`0x005251b8`); `BUMP 5` reads the word and needs only a track-ride handle, not a track type.
 
 **Measured in the game** (`q172run.py`, silent, the stock jungle park, the build before any Q172 change, every reading
 predicted first; `save/` unchanged; runs `q172-run1/`, `q172-run2/`). All three keys read 0 at load and after a `why`

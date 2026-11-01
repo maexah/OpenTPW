@@ -2932,7 +2932,14 @@ follows the running object, not the file's (filed under Q993).
 
 **The track add-ons are left out.** Upgrades.sam gives the three add-ons (1500, 1501, 1502) TrackType 1, so the
 track-kind test alone would let them in; `writable` also asks `!ParkTrackAddOn.Is( item )`. A bought add-on is left out, counted
-`SAVE_PARK_OBJECT_BOUGHT`, and a sold add-on of the file's stays in it, as before (undeclared and unrun; Q993).
+`SAVE_PARK_OBJECT_BOUGHT`, and a sold add-on of the file's stays in it, as before (undeclared and unrun; Q993). **An add-on bought on a bought kart's
+track** stamps its picture's cells as its footprint (`ParkTrackAddOn.Stamp`), which `WrittenCells` would leave the file's, bare
+ground: for such a cell the file's ground is written with the live track record (flags 0x10 cleared), so the loop stays closed
+on the map where the file's ride and sections say it is; the footprint itself is counted `SAVE_PARK_FOOTPRINT_CELL`. **A file's
+kart that a file add-on names** (`mUpgradeParent`) and that is sold (`writable` lets a file's carless kart go) leaves the
+add-on in the file naming a thing the file no longer holds; the sale is counted `SAVE_PARK_TRACK_TEARDOWN`, the word is not
+(`ParkState.TryObject` answers for it; the original's click at `0x004869be` reads it with no check beyond non-zero, whether
+`0x004af980` copes is not read; Q993).
 A file with 1 and no section is opened by the original and crashes on the first car (`0x00546d02`, `mov ecx,[edi+0x98]`
 with no null test; by reading, not run); with 0 the ride's script stays at `BUMP 5`.
 
