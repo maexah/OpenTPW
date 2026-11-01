@@ -178,7 +178,7 @@ internal static class UpdateChecker
 	}
 
 	/// <summary>
-	/// Asks GitHub through <paramref name="handler"/> and picks. Never throws once the request is made (on Linux <see cref="OpenSslPresent"/> is asked before): a request that fails, times out or is refused
+	/// Asks GitHub through <paramref name="handler"/> and picks. Never throws once the request is made (on Linux <see cref="OpenSslPresent"/> is asked before, inside the task): a request that fails, times out or is refused
 	/// comes back as a failed <see cref="Outcome"/> whose note names the kind of failure and nothing about the machine.
 	/// </summary>
 	internal static async Task<Outcome> CheckAsync( HttpMessageHandler handler, string installed, string rid, TimeSpan timeout )
@@ -248,18 +248,18 @@ internal static class UpdateChecker
 			return Task.CompletedTask;
 		}
 
-		if ( OperatingSystem.IsLinux() && !OpenSslPresent( OpenSslProbe, out var missing ) )
-		{
-			Log.Info( $"Update check: not made - {missing}" );
-			return Task.CompletedTask;
-		}
-
-		Log.Info( $"Update check: asking GitHub for a weekly build newer than {build} for {rid}" );
-
 		return Task.Run( async () =>
 		{
 			try
 			{
+				if ( OperatingSystem.IsLinux() && !OpenSslPresent( OpenSslProbe, out var missing ) )
+				{
+					Log.Info( $"Update check: not made - {missing}" );
+					return;
+				}
+
+				Log.Info( $"Update check: asking GitHub for a weekly build newer than {build} for {rid}" );
+
 				using var handler = handlerFactory();
 
 				Publish( await CheckAsync( handler, build, rid, Timeout ).ConfigureAwait( false ) );

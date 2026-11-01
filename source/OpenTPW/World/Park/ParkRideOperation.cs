@@ -413,7 +413,7 @@ public sealed class ParkRideOperation
 		peep.SetState( PeepState.LeavingRide, tick, random );
 
 		// A deviation: where the neighbour's destination will not route, the original refuses the dismissal (FUN_005014e0
-		// returns before pushing 0xf, 0x005015e3, 0x005015ef) and so makes no puff; ours dismisses anyway (above) and
+		// returns before pushing 0xf, at 0x005015e3 where the neighbour has no queue or entrance and at 0x005015ef where its route fails) and so makes no puff; ours dismisses anyway (above) and
 		// the puff follows.
 		// Case 0xf of the state setter first stamps the guest's place and sends up the puff a guest comes off a ride that
 		// teleports them (FUN_00501db0: FUN_004fa030( 0 ), then FUN_004fa470( 0x13 ), 0x00501fce), at the exit they were

@@ -87,9 +87,9 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
 - [ ] **Q944. A UITEXT row read as its first part alone loses the words after its parameter.** (From Q865's second reader.)
   `StringFile.Entries` holds a row's first text part only (`Parts` holds all). Swept over `UITEXT.str` and `UIHELPTEXT.str`: the rows
   whose text follows a parameter are 29, 30 (`UpgradeToLevel`, `CancelLevel`), 181 to 183 (the loan boxes), 205, 213, 215, 399, 428 and 429
-  (" sec", " secs"), 433 to 443 (the day, month and hour words), 444, 446, 447, 451 to 455 and 461 to 463. Of those, 428 and 429 were
+  (" sec", " secs"), 433 to 443 (the day, month and hour words), 444, 446, 447, 451 to 455 and 461 to 463 (the capacity readout's, see below). Of those, 428 and 429 were
   read bare by the ride window's duration readout and 433 by its age: fixed (Q865's fix, `Localization.Format`). Every other shown use
-  goes through `Format` or has its parameter last (`Speed`, `Capacity`, the money rows); the rest are unread. Build each with `Format` when
+  goes through `Format` or has its parameter last (`Speed`, the money rows); the rest are unread. 461 to 463 are not unread: `Capacity` picks 463, 461 or 427 by the item's `WhichTrackType` as `FUN_004aec30` does. Build each with `Format` when
   its screen lands (the loan boxes, the upgrade buttons, the visitor window's age wording); grep `Localization.Get(` and `.Text(` for
   a row in this list before using it.
 - [ ] **Q943. The update check and its click on Windows and macOS, and against a real newer release (Q941's leftovers).** Counted, not
@@ -660,7 +660,7 @@ filed the items that cite it.
   at world `+0x1da732`, `mParkGates` (`ParkWorld`), and its help row 191 reads "Park name - left-click to edit", so
   the title is the park's name and its edit is Q28's. The name is lettered by `UI_SetTitle` (`0x00485d20`, called at `0x00498e4c`): yellow, with the edge, in
   the stream's rect widened by half its width either side (749..1221 to 513..1457), where ours letters the empty heading white (Q676). `ParkGadget.ShowDate` prints the machine's short date (Q527). `ParkBuyScreen`'s description panel `0x1ea` draws its frame and the footprint picture, and neither the item's turning model nor its kind row `0x1ec`.
-  **Counted since Q865** (each where it is drawn: `OBJECT_WINDOW_AGE_WORDING`, `SCRAP_VALUE_DEPRECIATION` at the object window's scrap row,
+  **Counted since Q865** (each where it is drawn: `SCRAP_VALUE_DEPRECIATION` at the object window's scrap row,
   `ENTRY_PRICE_TITLE_PARK_NAME`, `GADGET_DATE_UITEXT_448`, `BUY_SCREEN_ITEM_MODEL` and `BUY_SCREEN_ITEM_KIND_ROW`, the last two for every row the panel is filled for, land and mystery rows too); **what is left is each build**,
   and a count goes when its build lands: scale the scrap row by `FUN_004e2400`; letter the
   park's name in the heading (`UI_SetTitle`); write the date from UITEXT 448; turn the item's model in the buy panel and write its kind row `0x1ec` (`ITEMTYPES.str`, item `+0x90`). Three rows are model-and-string pairs of their own (`FUN_004ab1b0`, `0x004ab55f`..`0x004ab654`, `FUN_00486410` then `FUN_00485b00`): a mystery ride builds item 100 and writes UITEXT `0x89` "??? Mystery Ride! ???"; Buy Land (row -1) builds item 101 and writes `0x86` "Buy Land"; Clear Land (row -2) builds item 102 and writes `0x87` "Clear Land".

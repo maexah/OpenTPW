@@ -877,10 +877,28 @@ internal sealed class ParkObjectWindow : UiWindow
 		_readouts[which].Text = which switch
 		{
 			Speed => Localization.Format( 426, (5, $"{value}") ),
-			Capacity => Localization.Format( 427, (6, $"{value}") ),
+			Capacity => Localization.Format( CapacityRow( TrackTypeOfItem() ), (6, $"{value}") ),
 			_ => Localization.Format( DurationRow( value ), (7, $"{value}") )
 		};
 	}
+
+	/// <summary>
+	/// The UITEXT row the capacity readout uses - <c>FUN_004aec30</c> switches on the item's <c>Bumper.WhichTrackType</c> (+0x9c):
+	/// 3 picks 463, "Capacity : {P6} per train" (0x004aecf0), 2 picks 461, "per car" (0x004aed5b), anything else 427.
+	/// </summary>
+	internal static int CapacityRow( int trackType ) => trackType switch
+	{
+		3 => 463,
+		2 => 461,
+		_ => 427
+	};
+
+	private int TrackTypeOfItem() =>
+		Level.Current is { } level && level.ParkState is { } state
+			&& state.TryObject( ThingId, out var placed )
+			&& level.Catalogue is { } catalogue && catalogue.TryGet( placed.CatalogueId, out var item )
+				? item.TrackType
+				: 0;
 
 	/// <summary>
 	/// The UITEXT row a duration is counted in. <c>FUN_004aec30</c> switches on the item's <c>DurationUnit</c>:

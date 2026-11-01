@@ -11,6 +11,7 @@ case $N in ''|*[!0-9]*) echo "usage: suiteloop.sh OUTDIR [N]  (N a whole number)
 : "${OPENTPW_GAME_PATH:?name the game folder}"
 export SDL_AUDIODRIVER=dummy
 mkdir -p "$OUT"
+OUT=$(readlink -f "$OUT")
 : > "$OUT/summary.txt"
 HERE=$(dirname "$(readlink -f "$0")")
 cd "$HERE/../../.." || exit 1
