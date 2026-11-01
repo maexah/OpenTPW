@@ -3930,8 +3930,8 @@ Secret is ever awarded (`FUN_005afb00`'s one caller, `0x004d4a84`), so nothing f
 that it is that play's profile is an inference: no file or log of the play was saved) holds one
 ticket, jungle Local 0, not Local 2. Lost Kingdom's `Visitors` is 100, cumulative, the lowest of the four themes, with Halloween's 100 too (FileFormats
 `sam.md`), so any park that has let 101 in wins it however unhappy; Local 2 asks a mean over 75 **and** over 150 inside, and
-its mean is already the counted guests' alone (`ParkPeople.GuestsInsideHappiness`, `FUN_004c7bb0`; Q148's open term is the
-gauge's and the music's, not the tickets'). The ticket's own tag says "for getting 100 visitors to your park" (tag 102,
+its mean is the counted guests' alone (`ParkPeople.GuestsInsideHappiness`, `FUN_004c7bb0`; the gauge and the music take the
+same guests since Q148). The ticket's own tag says "for getting 100 visitors to your park" (tag 102,
 `TAG_SYSTEM.str` row 180); the word *happy* is in the first ticket's second line, `0x13b`, sample 598 ("...get lots of
 people in the park all at once or make them really happy..."). **Measured:** the stock park (`Easymode.TPWI`, 8 visitors
 to date) played as Full Simulation by a profile with no ticket, nothing done to it: the original read visitors 98 on tick

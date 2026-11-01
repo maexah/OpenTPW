@@ -207,7 +207,7 @@ internal sealed class ParkGadget : UiWindow
 
 	/// <summary>
 	/// The gauge's moving part - the stream's 0x1f, control type 9. See <see cref="UiMeter"/> for why it
-	/// takes a skin rather than a mesh, and <see cref="ParkPeople.AverageHappiness"/> for the number.
+	/// takes a skin rather than a mesh, and <see cref="ParkPeople.GuestsInsideHappiness"/> for the number.
 	/// </summary>
 	private readonly UiMeter _happiness;
 
@@ -285,9 +285,8 @@ internal sealed class ParkGadget : UiWindow
 		// FUN_004a1d70), which is why a control that draws only a mesh shows nothing here.
 		//
 		// What the timer asks for is
-		// FUN_004c7bb0 - the mean happiness of the park's guests, and nought while the park is shut. See
-		// ParkPeople.AverageHappiness for the arithmetic and for the one term of it that is deliberately
-		// not reproduced, and UiMeter for the skin's two halves.
+		// FUN_004c7bb0 - the mean happiness of the guests on a counting cell, and nought while the park is shut. See
+		// ParkPeople.GuestsInsideHappiness for the arithmetic, and UiMeter for the skin's two halves.
 		_happiness = gaugeHousing.Add( HappinessGauge() );
 
 		_date = body.Add( new UiControl
@@ -1788,7 +1787,7 @@ internal sealed class ParkGadget : UiWindow
 
 	/// <summary>
 	/// How happy the park's visitors are, which is the one thing the gauge has ever been for - see
-	/// <see cref="ParkPeople.AverageHappiness"/> for the number, and <see cref="UiMeter"/> for the drawing.
+	/// <see cref="ParkPeople.GuestsInsideHappiness"/> for the number, and <see cref="UiMeter"/> for the drawing.
 	///
 	/// <para>
 	/// <b>Read every frame where the original reads it every two seconds, and that is a departure.</b> Its
@@ -1798,7 +1797,7 @@ internal sealed class ParkGadget : UiWindow
 	/// here in order to make the reading worse.
 	/// </para>
 	/// </summary>
-	private void ShowHappiness() => _happiness.Value = GaugeUnits( ParkPeople.Current?.AverageHappiness() ?? 0 );
+	private void ShowHappiness() => _happiness.Value = GaugeUnits( ParkPeople.Current?.GuestsInsideHappiness ?? 0f );
 
 	/// <summary>
 	/// What the gauge's timer hands its meter: the mean times 1024 times 0.01f, truncated (<c>0x004a1d44</c>, the

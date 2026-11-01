@@ -281,8 +281,8 @@ whole number, and the sum is divided by the count with `FILD`/`FIDIV` (`0x004c7c
 not 50.
 
 **OpenTPW** (`UiMeter.Quads`, `Percent`; `ParkGadget.GaugeUnits`): the two quads as above, the dark half drawn at nought,
-`Max` 1024 and the units as the gadget's. `ParkPeople.AverageHappiness` still hands it a whole mean of every guest, where
-`GuestsInsideHappiness` is the exact routine (Q459, Q148). The log line `UI: meter 0x1f at <units> of 1024,
+`Max` 1024 and the units as the gadget's. `ParkPeople.GuestsInsideHappiness` hands it the exact routine's float, over the guests on a counting cell only
+(Q459, Q148; the whole mean of every guest the gauge was given before is gone). The log line `UI: meter 0x1f at <units> of 1024,
 the boundary <p>% up` on each change. **Not settled:** the faces show sharp in this game and blurred in the original's
 frames (the eyes and mouths gone, the colours not darker, the gadget's other pictures crisp), the mark of how the texture
 is sampled when minified, its filter and mip levels (Q29, Q519), not checked; the type-0x13 pixels of `meter.wct` are not

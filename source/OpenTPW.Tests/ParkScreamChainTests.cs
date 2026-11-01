@@ -467,12 +467,12 @@ public class ParkScreamChainTests
 	/// <summary>
 	/// <b>The park's music, through <c>ParkAudio.OnUpdate</c> as the game runs it</b> (<c>docs/exe/park-engine.md</c>,
 	/// "The music's level"). The level is set only on a step whose count has its low five bits nought, from the
-	/// guests the park holds then, held to 89, and nought while the world's state is 4. A sample is played at the
+	/// guests the park counts then (the ones on a counting cell, Q148), held to 89, and nought while the world's state is 4. A sample is played at the
 	/// music's one loudness whatever the level, and when it has ended the next comes from the variation whose zone
 	/// holds the level: the first at level 6, the sixth at 89, the first again at nought, never silence.
 	/// </summary>
 	/// <remarks>
-	/// <b>Mutations:</b> the level set every frame; the crowd's level set without the hold and the state; the level
+	/// <b>Mutations:</b> the level set every frame; every guest counted wherever they stand; the crowd's level set without the hold and the state; the level
 	/// never falling; the world's state not handed in; what is played scaled by the level; the variation never
 	/// moving on.
 	/// </remarks>
@@ -519,10 +519,19 @@ public class ParkScreamChainTests
 				StringAssert.StartsWith( first.Name.ToLowerInvariant(), "level1" );
 
 				ToTheBeat();
-				Assert.AreEqual( (6, 1), (park.LevelNow, park.LevelSets), "thirteen guests: level 6, set on the beat" );
+				Assert.AreEqual( (0, 1), (park.LevelNow, park.LevelSets), "thirteen guests, all at the bus stop's type 30 cell: none counts (FUN_004fa990), set on the beat" );
+
+				// The guests walk onto the path (the cells they stand on, and the stop's, which the guests admitted below arrive on).
+				var state = people.State;
+
+				foreach ( var (x, y) in people.Peeps.Select( peep => peep.Navigator.Position.Cell ).Append( (42, 5) ).Distinct().ToList() )
+					state.SetRecord( x, y, state.Record( x, y ) with { Type = 1 } );
 
 				ToTheBeat();
-				Assert.AreEqual( 2, park.LevelSets, "and set again 32 ticks on, not on the frames between" );
+				Assert.AreEqual( (6, 2), (park.LevelNow, park.LevelSets), "thirteen on the path: level 6, set on the beat" );
+
+				ToTheBeat();
+				Assert.AreEqual( 3, park.LevelSets, "and set again 32 ticks on, not on the frames between" );
 				Assert.AreSame( first, Music(), "while a sample plays no other is started" );
 
 				// Two hundred guests: the crowd's level is 100 and the music's is held to 89.

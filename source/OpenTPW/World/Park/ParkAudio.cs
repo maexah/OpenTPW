@@ -107,14 +107,11 @@ public sealed partial class ParkAudio : Entity
 	/// (<see cref="MusicLevel"/>).
 	/// </para>
 	/// <para>
-	/// <b>One term is deliberately missing and is named rather than quietly dropped.</b> The original
-	/// applies a further test to each guest before counting them: <c>FUN_004fa990</c> passes a thing when
-	/// any of five predicates hold, and all five read one dword at <c>thing + 8</c>, against 0, 1, 3, 9 and
-	/// 10. What that field is has not been established - it is not the person type, which runs 0 to 7, and
-	/// not the state, which lives at <c>+0x220</c> - and those predicates are asked of things right across
-	/// the executable rather than of guests alone. So this counts every guest the park simulates, which is
-	/// an <b>upper bound</b> on the original's count; where the filter excludes anybody, a park of ours
-	/// reaches a later variation a little sooner than a park of theirs.
+	/// <b>It counts the guests <c>FUN_004fa990</c> passes.</b> The caller hands it
+	/// <see cref="ParkPeople.GateGuestCensus"/>: a guest counts only where the cell under them is a cleared cell, a
+	/// path, a queue or a ride's end (<see cref="Peep.CountsOn"/>), so a guest still at the bus stop, or on a ride's
+	/// footprint, is left out. The original asks the count afresh each time (<c>FUN_004c81e0</c> pushes 0 as its
+	/// age limit), so there is no stale count to keep.
 	/// </para>
 	/// </summary>
 	public static int CrowdLevel( int guests ) => Math.Clamp( guests / 2, 0, LoudestCrowd );
@@ -134,6 +131,13 @@ public sealed partial class ParkAudio : Entity
 	/// </summary>
 	public static int MusicLevel( int guests, int worldState )
 		=> worldState == SilentWorldState ? 0 : Math.Min( CrowdLevel( guests ), LoudestMusic );
+
+	/// <summary>
+	/// The level the park loop hands the music for <paramref name="people"/>: <see cref="MusicLevel"/> of the guests
+	/// <see cref="ParkPeople.GateGuestCensus"/> counts, nought with no park.
+	/// </summary>
+	internal static int MusicLevelFor( ParkPeople? people, int worldState )
+		=> MusicLevel( people?.GateGuestCensus ?? 0, worldState );
 
 	/// <summary>
 	/// Whether a frame that ran <paramref name="ticksDue"/> ticks ending on <paramref name="lastTick"/> ran one the
@@ -1484,11 +1488,11 @@ public sealed partial class ParkAudio : Entity
 
 			if ( _music is { IsValid: true } )
 			{
-				var guests = ParkPeople.Current?.Peeps.Count ?? 0;
-				var level = MusicLevel( guests, worldState );
+				var guests = ParkPeople.Current?.GateGuestCensus ?? 0;
+				var level = MusicLevelFor( ParkPeople.Current, worldState );
 
 				if ( level != LevelNow )
-					Log.Info( $"Park music: level {LevelNow} to {level} for {guests} guests on tick {GameClock.Ticks}" );
+					Log.Info( $"Park music: level {LevelNow} to {level} for {guests} counted guests on tick {GameClock.Ticks}" );
 
 				LevelNow = level;
 				++LevelSets;

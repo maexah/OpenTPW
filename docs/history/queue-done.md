@@ -11652,6 +11652,26 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `ParkObjects.SavedLocks` reads each cap's saved word for the lock (`0x400`, shown or hidden) and `Place` calls `LobbyModel.LockNode` for it,
   so a loaded Tunnel's rest and hide spare its caps as a walk's do (`TRACK_CAP_LOCK_LOADED` is gone); the log line says `locked`. Not read: the
   other three themes' add-on clips (outside the scope; Space's Teleport tracks caps 7 and 8, not seen in ours). Review fix, group J: a show had locked the cap too, which the original's does not (`0x0052afcc`); only a hide locks now.
+  other three themes' add-on clips (outside the scope).
+- [x] **Q148. The music and the happiness gauge count guests the original leaves out.** Found by the 2026-09-26
+  staleness audit. The original's crowd count behind the music (`FUN_004c7fa0`) and its happiness average both take a
+  guest only where `FUN_004fa990` passes, and that is decoded: it packs the guest's cell from bytes `+5` and `+7`
+  (`0x004fa994`) and passes when the cell's kind is 0, 1, 3, 9 or 10 (`FUN_00536390`, read first-hand, and
+  `FUN_00536310` to `FUN_00536350`, `hud.md`, "The cell codes"; `park-engine.md`, the PICK UP button), so a guest on a
+  ride's footprint (kind 4) or outside the park is left out. `ParkAudio.CrowdLevel` and `ParkPeople.AverageHappiness`
+  count every guest, and `CrowdLevel`'s remark reads the test as a dword at `thing + 8` whose meaning is not
+  established, which the disassembly does not bear out. Build the filter once for both, and for `HeadingForExit`'s
+  change of mind when it is built. Confirm: the Belly Bounce full, the music level and the gauge read before and
+  after, predicted first; a screenshot of the gauge.
+  - **Note (play test 2026-10-31):** the gauge moves the moment a guest is dropped off at the stop, before admission (`ParkGadget.ShowHappiness` averages every peep through `ParkPeople.AverageHappiness`; `GuestsInsideHappiness` is the filtered one). Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
+  Done 2026-11-01 (run 2026-10-31-wk, lane B, `alexah/861-music-gauge-count-filter`). The music's count and the gauge's mean both read
+  `FUN_004fa990`'s guests, `ParkPeople.GateGuestCensus` and `GuestsInsideHappiness` (one filter, `Peep.CountsOn`, already the gate's):
+  `ParkAudio` takes `MusicLevelFor( people )` where it took every peep, and the gauge reads `GuestsInsideHappiness` where
+  `ParkPeople.AverageHappiness` (gone) took every guest and cut the mean to a whole number, which `FUN_004c7bb0`'s `FILD`/`FIDIV` does not
+  (so 657 over 13 reads 517 of 1024, not 511). `FUN_004c7fa0` is asked with 0 (`FUN_004c81e0`), so there is no stale count to keep. The stock
+  park paused as it loads reads gauge 0 and 0 of 13 counted (the whole mean read 511, the music 6), then 3, 8 and 13 counted. `HeadingForExit`'s
+  change of mind is not built, so it has no count to take. Not set beside the original (lane B has no original): see Q270, which keeps that
+  half.
 
 ## B. Docs and comments
 

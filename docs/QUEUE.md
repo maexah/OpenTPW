@@ -469,17 +469,7 @@ filed the items that cite it.
   Ours fits `s_X1`'s part to the control `0x1e0eb` (`IslandPanel`, 1045,191 to 1405,416). Read what bounds the
   original fits (`UiControl_PlaceMesh`, `0x00476f10`: the node `0x00476e80` answers, `+0x78..+0x8c` through its chain)
   and how the "x N" part is chosen, then fit as it does; confirm "x 1" beside the original's.
-- [ ] **Q148. The music and the happiness gauge count guests the original leaves out.** Found by the 2026-09-26
-  staleness audit. The original's crowd count behind the music (`FUN_004c7fa0`) and its happiness average both take a
-  guest only where `FUN_004fa990` passes, and that is decoded: it packs the guest's cell from bytes `+5` and `+7`
-  (`0x004fa994`) and passes when the cell's kind is 0, 1, 3, 9 or 10 (`FUN_00536390`, read first-hand, and
-  `FUN_00536310` to `FUN_00536350`, `hud.md`, "The cell codes"; `park-engine.md`, the PICK UP button), so a guest on a
-  ride's footprint (kind 4) or outside the park is left out. `ParkAudio.CrowdLevel` and `ParkPeople.AverageHappiness`
-  count every guest, and `CrowdLevel`'s remark reads the test as a dword at `thing + 8` whose meaning is not
-  established, which the disassembly does not bear out. Build the filter once for both, and for `HeadingForExit`'s
-  change of mind when it is built. Confirm: the Belly Bounce full, the music level and the gauge read before and
-  after, predicted first; a screenshot of the gauge.
-  - **Note (play test 2026-10-31):** the gauge moves the moment a guest is dropped off at the stop, before admission (`ParkGadget.ShowHappiness` averages every peep through `ParkPeople.AverageHappiness`; `GuestsInsideHappiness` is the filtered one). Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
+
 - [ ] **Q150. Scripts and the thing sweep take a frame's ticks in two loops, where the original takes both per tick.**
   Found by the 2026-09-26 staleness audit. The original's park loop runs the scripts (`0x0054f56b`) and the thing
   sweep (`0x0054f7bb`) inside one loop over the frame's ticks. `ParkRides` and `ParkPeople` each loop over
@@ -995,13 +985,13 @@ filed the items that cite it.
   it too (and what loading a park with the End in it does in the original); otherwise say at the site that both leave
   it out.
 
-- [ ] **Q270. The park music's level counts every guest, where the original counts only those on five kinds of cell.**
-  From the week-end audit (stage 4; read twice from the listing, not yet measured in the original). `FUN_004c7fa0`
-  (`0x004c801f`) asks `FUN_004fa990`, which takes the guest's cell and passes only a cell of type 0, 1, 3, 9 or 10
-  (`scenes.md`, "The level"). `ParkAudio`'s level takes `Peeps.Count` with no cell test, and its comment says the
-  five tests read the thing's `+8` and that the field is not established; `Peep.CountsOn` is already that test.
-  Build the count through it. Q148 and Q217 touch the same filter. Confirm: `music` read with guests standing on a
-  queue cell and off one, beside the original's level for the same file.
+- [ ] **Q270. The music's level and the gauge, set beside the original's.** From the week-end audit (stage 4) and Q148, which built
+  both counts through `FUN_004fa990`'s filter (`ParkPeople.GateGuestCensus`; `Peep.CountsOn`) and saw them in ours alone (`q148/`: the
+  stock park paused as it loads, then guests reach the path). What is left is the original's side: read `FUN_004c81e0`'s level and the
+  gauge for the same file with guests standing on a queue cell and off one (the bus stop's type 30 included), in the original under
+  Proton (`music.py` of `rv4/orig/` reads the voice), and compare the counts with ours (`music` prints the guests by cell type).
+  If they agree, tick it; if not, the filter's cell read (`InsideGateCensus`, the position's cell, or `OnACountingCell`, the link's:
+  Q217) is the first suspect.
 
 - [ ] **Q271. The model under a point misses the park gate's row.** From the week-end audit (stage 4; read twice
   from the listing). `FUN_00527e80` (called at `0x00452a82`) answers the gate thing the world keeps at `+0x1da732`

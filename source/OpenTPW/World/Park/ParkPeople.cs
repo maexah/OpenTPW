@@ -2818,7 +2818,10 @@ public sealed partial class ParkPeople : Entity
 	/// <summary>
 	/// The mean happiness of the guests <see cref="GateGuestCensus"/> counts, <c>FUN_004c7bb0</c>: each one's happiness
 	/// truncated and cut to its low byte, summed as a whole number, over their count; nought with none inside or the park
-	/// shut (<c>FUN_0051a280</c>).
+	/// shut (<c>FUN_0051a280</c>, which returns <c>DAT_0070031c</c>, 0.0f, without looking at anybody). The sum is divided
+	/// with <c>FILD</c>/<c>FIDIV</c> (<c>0x004c7c96</c>), a float division, so the mean is not a whole number
+	/// (<c>docs/exe/hud.md</c>, "What the gadget hands it"). The management gadget's gauge reads it
+	/// (<see cref="OpenTPW.UI.Park.ParkGadget"/>), and so do the month's close and the golden tickets.
 	/// </summary>
 	internal float GuestsInsideHappiness
 	{
@@ -3871,45 +3874,6 @@ public sealed partial class ParkPeople : Entity
 
 	/// <summary>The guests' turn, for a test of what this hands it.</summary>
 	internal PeepBehaviour Behaviour => _behaviour;
-
-	/// <summary>
-	/// How happy the park's visitors are, which is the number the management gadget's gauge shows - the
-	/// original's <c>FUN_004c7bb0</c>. Its meter asks for it every two seconds: <c>FUN_004a1cd0</c> arms a
-	/// 2000ms timer, id 0x80083, and hands back whatever this comes to.
-	///
-	/// <para>
-	/// <b>A shut park reads nought, and that is the original's own early-out rather than a stand-in.</b> It
-	/// fetches <c>mParkClosed</c> through <c>FUN_0051a280</c> and, if the park is closed, returns
-	/// <c>DAT_0070031c</c> without looking at anybody - and that constant is <b>0.0f</b> in the image. The
-	/// same value comes back when nobody qualifies, so an empty park and a shut one read alike. That is
-	/// what makes the gauge rest at the bottom rather than in the middle.
-	/// </para>
-	/// <para>
-	/// <b>It is an integer mean, and the arithmetic is reproduced rather than tidied.</b> The original
-	/// converts each guest's value with <c>__ftol</c>, masks it to a byte, sums into an integer and
-	/// finishes with <c>FILD</c>/<c>FIDIV</c> - an integer division. So the answer moves in whole numbers
-	/// and rounds towards nought. The byte mask is identity over the 0-100 these meters are clamped to, so
-	/// it is not written out: a mask that can never bite would read as a rule rather than as a no-op.
-	/// </para>
-	/// <para>
-	/// <b>ONE TERM IS NOT REPRODUCED.</b> The original counts a guest only where <c>FUN_004fa990</c> agrees,
-	/// and that is a predicate on the CELL the guest stands on: handed the guest (<c>MOV ECX,ESI</c>), it
-	/// packs the cell from the thing's own cell bytes and passes when that cell's <c>mType</c> is 0, 1, 3, 9 or 10,
-	/// through five one-line helpers (<c>FUN_00536310</c> and its neighbours). Every guest is counted here.
-	/// </para>
-	/// </summary>
-	internal int AverageHappiness()
-	{
-		if ( _behaviour.ParkIsClosed || _peeps.Count == 0 )
-			return 0;
-
-		var total = 0;
-
-		foreach ( var peep in _peeps )
-			total += (int)peep.Happiness;
-
-		return total / _peeps.Count;
-	}
 
 	protected override void OnDelete()
 	{
