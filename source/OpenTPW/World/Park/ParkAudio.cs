@@ -224,7 +224,7 @@ public sealed partial class ParkAudio : Entity
 	{
 		var range = bit == 1 ? header.Volume : header.Pitch;
 
-		if ( (header.GapByParameter & bit) != 0 )
+		if ( (header.FirstMask & bit) != 0 )
 			return ParkCarSounds.Controlled( first, range );
 
 		if ( (header.SecondMask & bit) != 0 )
@@ -237,7 +237,7 @@ public sealed partial class ParkAudio : Entity
 
 	/// <summary>Whether one of a variation's two controllers is on its volume and keyed by <paramref name="parameter"/>.</summary>
 	internal static bool NamesOnVolume( SoundCategoryFile.Variation header, int parameter )
-		=> ((header.GapByParameter & 1) != 0 && header.FirstKey == parameter)
+		=> ((header.FirstMask & 1) != 0 && header.FirstKey == parameter)
 			|| ((header.SecondMask & 1) != 0 && header.SecondKey == parameter);
 
 	/// <summary>The level the crowd's voice was last set to (<c>[0x00803ab0]</c>).</summary>

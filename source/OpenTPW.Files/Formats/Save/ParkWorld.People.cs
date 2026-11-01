@@ -430,9 +430,11 @@ public sealed partial class ParkWorld
 			if ( id < 1 || id > HighestThingId )
 				throw new InvalidOperationException( $"thing {id} is past the {HighestThingId} ids a park file can name" );
 
-			if ( Kept( id ) || running.ContainsKey( id ) || !boughtIds.Add( id )
-				|| record.Length != RecordSizes[CatalogueObjectModel] )
+			if ( Kept( id ) || running.ContainsKey( id ) || !boughtIds.Add( id ) )
 				throw new InvalidOperationException( $"thing {id}, an object bought, is in the file or the park already" );
+
+			if ( record.Length != RecordSizes[CatalogueObjectModel] )
+				throw new InvalidOperationException( $"thing {id}, an object bought, has a record of {record.Length} bytes, not the object record's {RecordSizes[CatalogueObjectModel]}" );
 		}
 
 		foreach ( var id in goneObjects )

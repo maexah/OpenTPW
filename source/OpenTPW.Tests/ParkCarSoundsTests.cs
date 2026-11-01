@@ -307,7 +307,7 @@ public class ParkCarSoundsTests
 		var engine = rides.ReadVariations()[rides.IndexOf( 194 )].Single();
 
 		Assert.AreEqual( 16, engine.FirstKey );
-		Assert.AreEqual( 2, engine.GapByParameter, "bit 2, the pitch" );
+		Assert.AreEqual( 2, engine.FirstMask, "bit 2, the pitch" );
 		Assert.AreEqual( 0, engine.SecondKey );
 		Assert.AreEqual( (-24, 36), engine.Pitch );
 		Assert.AreEqual( (68, 68), engine.Volume );

@@ -203,7 +203,7 @@ public sealed class ParkCarSounds : ParkBumperCars.ISounds
 		var (low, high) = range.High < range.Low ? (range.High, range.Low) : range;
 		var span = (uint)(high - low);
 
-		if ( (held.Header.GapByParameter & bit) != 0 )
+		if ( (held.Header.FirstMask & bit) != 0 )
 			return Controlled( held.Values[1], range );
 
 		if ( (held.Header.SecondMask & bit) != 0 )

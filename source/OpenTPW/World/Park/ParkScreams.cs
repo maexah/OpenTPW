@@ -325,7 +325,7 @@ internal sealed class ParkScreams
 			return 0;
 
 		// Bit 4 takes the wait from the voice's parameter instead (0x006c3d80). No scream sets it.
-		if ( (variation.GapByParameter & 4) != 0 )
+		if ( (variation.FirstMask & 4) != 0 )
 			Unimplemented.Report( "SOUND_GAP_BY_PARAMETER" );
 
 		var low = Math.Min( variation.GapMin, variation.GapMax );

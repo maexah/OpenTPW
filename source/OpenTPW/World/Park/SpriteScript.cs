@@ -214,7 +214,7 @@ public sealed class SpriteScript
 
 	private const int FramesLocal = 14;         // +0xbc, the set's frames a direction, which a state start writes
 
-	private const int PaceLocal = 16;           // +0xc4, the draw's flags (0x00542075), which every person script sets
+	private const int DrawFlagsLocal = 16;           // +0xc4, the draw's flags (0x00542075), which every person script sets
 
 	private const int LeadInLocal = 17;         // +0xc8, a state group's third byte, on a sprite made on a state
 
@@ -223,10 +223,10 @@ public sealed class SpriteScript
 	private const int LocalCount = 19;
 
 	/// <summary>
-	/// The value every person script writes into <see cref="PaceLocal"/>. Its <c>0x200</c> bit is one the draw tests
+	/// The value every person script writes into <see cref="DrawFlagsLocal"/>. Its <c>0x200</c> bit is one the draw tests
 	/// (<c>0x005422fb</c>); what that does on screen is not decoded, and the drawing here reads none of the word.
 	/// </summary>
-	private const int PaceValue = 0x1200;
+	private const int DrawFlagsValue = 0x1200;
 
 	/// <summary>
 	/// How long an instance waits between turns when nothing has said otherwise - <c>0x3e</c>, written by the
@@ -318,7 +318,7 @@ public sealed class SpriteScript
 		(1752, new( SpriteOp.LoopWhile, 0, AtMostWord, HoldLocal )),
 		(1756, new( SpriteOp.EndIf, 0, 0 )),
 		(1757, new( SpriteOp.Jump, 1726, 0 )),
-		(1760, new( SpriteOp.SetLocal, PaceLocal, PaceValue )),
+		(1760, new( SpriteOp.SetLocal, DrawFlagsLocal, DrawFlagsValue )),
 		(1763, new( SpriteOp.SetLocal, FrameLocal, 0 )),
 		(1766, new( SpriteOp.If, LeadInLocal, Above, 0 )),
 		(1770, new( SpriteOp.LoopStart, 0, 0 )),
@@ -370,7 +370,7 @@ public sealed class SpriteScript
 			}
 
 			if ( animation.Locals )
-				Write( new ScriptStep( SpriteOp.SetLocal, PaceLocal, PaceValue ) );
+				Write( new ScriptStep( SpriteOp.SetLocal, DrawFlagsLocal, DrawFlagsValue ) );
 
 			if ( animation.Set is { } set )
 				Write( new ScriptStep( SpriteOp.SetSet, set, 0 ) );
@@ -465,7 +465,7 @@ public sealed class SpriteScript
 	/// The drawing flags - the instance's <c>+0xc4</c>, nought until a person's program has run its first word
 	/// and kept through every start after it (<c>FUN_00475b80</c> writes no local but a state's two).
 	/// </summary>
-	public int DrawFlags => _locals[PaceLocal];
+	public int DrawFlags => _locals[DrawFlagsLocal];
 
 	/// <summary>
 	/// Whether the script has reached its end word: hidden and stopped, the instance's state 4. Nothing a person
@@ -505,7 +505,7 @@ public sealed class SpriteScript
 		_locals[FramesLocal] = state.FramesPerDirection;
 		_locals[LeadInLocal] = state.LeadIn;
 		_locals[HoldLocal] = state.Hold;
-		_locals[PaceLocal] = flags;
+		_locals[DrawFlagsLocal] = flags;
 		Ended = ended;
 
 		foreach ( var start in loops ?? [] )

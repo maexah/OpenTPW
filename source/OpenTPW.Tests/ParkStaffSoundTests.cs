@@ -232,7 +232,7 @@ public class ParkStaffSoundTests
 
 			Assert.AreEqual( (volume, volume), header.Volume, $"effect 0x{effect:x}" );
 			Assert.AreEqual( (-10, 10), header.Pitch, $"effect 0x{effect:x}" );
-			Assert.AreEqual( 0, header.GapByParameter | header.SecondMask, "nothing controls its volume or pitch" );
+			Assert.AreEqual( 0, header.FirstMask | header.SecondMask, "nothing controls its volume or pitch" );
 			Assert.IsTrue( names.Contains( "blank44.mp2" ), $"effect 0x{effect:x} has the blank sample" );
 			Assert.IsTrue( names.Count is >= 3 and <= 6, $"effect 0x{effect:x} has {names.Count}" );
 		}

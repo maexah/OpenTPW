@@ -80,11 +80,11 @@ public class SaveReader : BaseFormat
 		// byte and its "padding" are the flag dword, which the loader reads whole.
 		memoryStream.Seek( 0x0604, SeekOrigin.Begin );
 
-		var fileType = memoryStream.ReadInt32();
+		var zeroAndMagicHead = memoryStream.ReadInt32();
 
-		var fileVersion = memoryStream.ReadByte();
-		if ( fileVersion != 133 )
-			throw new Exception( $"File version is not 133." );
+		var magicLastByte = memoryStream.ReadByte();
+		if ( magicLastByte != 133 )
+			throw new Exception( "The byte at 0x608 is not 0x85, the last byte of the magic 0x01221985." );
 
 		// File flag
 		bool isOnline = memoryStream.ReadByte() != 0 ? true : false;

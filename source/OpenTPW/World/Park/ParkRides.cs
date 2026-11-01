@@ -1629,8 +1629,16 @@ public sealed class ParkRides : Entity
 		}
 		catch ( Exception e )
 		{
-			Log.Warning( $"{ThemeName}: thing {placed.ThingId} ('{item.Name}') walks or seats riders but its model "
-				+ $"will not read, so every leg is the shortest and no head is hung - {e.Message}" );
+			if ( script.WalkSlots != 0 || script.UsesHeads )
+			{
+				Log.Warning( $"{ThemeName}: thing {placed.ThingId} ('{item.Name}') walks or seats riders but its model "
+					+ $"will not read, so every leg is the shortest and no head is hung - {e.Message}" );
+			}
+			else
+			{
+				Log.Warning( $"{ThemeName}: thing {placed.ThingId} ('{item.Name}') uses effect nodes but its model "
+					+ $"will not read, so it has none - {e.Message}" );
+			}
 
 			return null;
 		}

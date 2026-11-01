@@ -218,7 +218,7 @@ public partial class ModelFile : BaseFormat
 		public string Name { get; set; } = "";
 		public uint VertexOffset { get; set; }
 		public uint UvOffset { get; set; }
-		public uint VertCnt { get; set; }
+		public uint MaterialCount { get; set; }
 		public uint MaterialOffset { get; set; }
 		public uint FaceOffset { get; set; }
 		public uint FaceCount { get; set; }
@@ -503,7 +503,7 @@ public partial class ModelFile : BaseFormat
 				Meshes.Add( new Mesh
 				{
 					Name = name,
-					VertCnt = materialCount,
+					MaterialCount = materialCount,
 					UvOffset = uvOffset,
 					VertexOffset = vertexOffset,
 					MaterialOffset = materialOffset,

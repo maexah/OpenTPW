@@ -84,9 +84,16 @@ internal static class SaveFolder
 				GameOptions.Current.Apply( file );
 				if ( file.ReadWhole )
 					_unreadConfig = null;
-			}
 
-			Log.Info( $"Saves: read the options from {path}" );
+				if ( file.ReadWhole )
+					Log.Info( $"Saves: read the options from {path}" );
+				else
+					Log.Warning( $"Saves: {path} is not a whole version {ConfigFile.CurrentVersion} file, so what it held was applied and the next write copies it aside" );
+			}
+			else
+			{
+				Log.Warning( $"Saves: {path} is version 0, so nothing was applied, the options keep their defaults and the next write copies it aside" );
+			}
 		}
 		catch ( Exception e )
 		{
@@ -647,10 +654,17 @@ internal static class SaveFolder
 
 		try
 		{
-			if ( Directory.Exists( folder ) )
+			if ( !Directory.Exists( folder ) )
+				Log.Info( $"Saves: the player '{name}' in slot {slot + 1} had no folder to delete" );
+			else
+			{
 				DeleteFolder( folder );
 
-			Log.Info( $"Saves: deleted the player '{name}' in slot {slot + 1}" );
+				if ( Directory.Exists( folder ) )
+					Log.Info( $"Saves: deleted what could be of the player '{name}' in slot {slot + 1}; the folder was left, holding {string.Join( ", ", Directory.EnumerateFileSystemEntries( folder ).Select( Path.GetFileName ) )}" );
+				else
+					Log.Info( $"Saves: deleted the player '{name}' in slot {slot + 1}" );
+			}
 		}
 		catch ( Exception e )
 		{

@@ -811,6 +811,6 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 			$"at=({cellX},{cellY}) type={type} " +
 			$"yaw={Yaw:F2} pitch={Pitch:F1} " +
 			$"ground={(ground.HasValue ? ground.Value.ToString( "F4" ) : "-")} " +
-			$"eye={(ground ?? 0f) + EyeHeight:F4}";
+			$"eyeOverGround={(ground ?? 0f) + EyeHeight:F4}";
 	}
 }

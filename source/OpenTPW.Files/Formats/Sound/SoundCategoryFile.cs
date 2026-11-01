@@ -89,7 +89,7 @@ public sealed class SoundCategoryFile
 	/// </param>
 	/// <param name="GapMax">The longest such wait (<c>u16</c> at <c>+0x12</c>). Four shipped variations
 	/// hold it below <see cref="GapMin"/>, and the original swaps the pair when it draws.</param>
-	/// <param name="GapByParameter">
+	/// <param name="FirstMask">
 	/// The <c>u16</c> at <c>+0x18</c>, the first controller's mask: bit 1 its volume, bit 2 its pitch. With bit 4
 	/// set the original takes the wait from the voice's parameter rather than at random (<c>0x006c3d80</c>); no
 	/// scream variation sets it.
@@ -109,7 +109,7 @@ public sealed class SoundCategoryFile
 	/// </param>
 	/// <param name="FirstKey">
 	/// The byte at <c>+0x16</c>: the parameter id the voice's first controller answers to, 0 none. Its mask is
-	/// <paramref name="GapByParameter"/>, the <c>u16</c> at <c>+0x18</c>: bit 1 volume, bit 2 pitch, bit 4 the wait.
+	/// <paramref name="FirstMask"/>, the <c>u16</c> at <c>+0x18</c>: bit 1 volume, bit 2 pitch, bit 4 the wait.
 	/// </param>
 	/// <param name="SecondKey">The byte at <c>+0x1a</c>: the second controller's parameter id, 0 none.</param>
 	/// <param name="SecondMask">The <c>u16</c> at <c>+0x1c</c>: the second controller's mask, read after the first's.</param>
@@ -121,7 +121,7 @@ public sealed class SoundCategoryFile
 	/// The variation's sample records, as many as <paramref name="Samples"/>, read where the walk steps over them;
 	/// null when the variation was made without them.
 	/// </param>
-	public readonly record struct Variation( int Samples, int GapMin, int GapMax, int GapByParameter,
+	public readonly record struct Variation( int Samples, int GapMin, int GapMax, int FirstMask,
 		long Weight, IReadOnlyList<Zone> Zones, (int Low, int High) Volume = default, (int Low, int High) Pitch = default,
 		int FirstKey = 0, int SecondKey = 0, int SecondMask = 0, float Range = 0f, IReadOnlyList<Sample>? Records = null );
 
@@ -359,7 +359,7 @@ public sealed class SoundCategoryFile
 
 		foreach ( var effect in Effects )
 		{
-			var headers = new List<(int Samples, int Zones, int GapMin, int GapMax, int GapByParameter, long Weight,
+			var headers = new List<(int Samples, int Zones, int GapMin, int GapMax, int FirstMask, long Weight,
 				(int, int) Volume, (int, int) Pitch, int FirstKey, int SecondKey, int SecondMask, float Range)>();
 			long previous = 0;
 
@@ -409,7 +409,7 @@ public sealed class SoundCategoryFile
 				for ( int z = 0; z < zones.Length; ++z, offset += ZoneStride )
 					zones[z] = new Zone( BitConverter.ToInt32( _sfx, offset ) - 1, _sfx[offset + 6], _sfx[offset + 7] );
 
-				variations.Add( new Variation( header.Samples, header.GapMin, header.GapMax, header.GapByParameter,
+				variations.Add( new Variation( header.Samples, header.GapMin, header.GapMax, header.FirstMask,
 					header.Weight, zones, header.Volume, header.Pitch, header.FirstKey, header.SecondKey, header.SecondMask,
 					header.Range, records ) );
 			}

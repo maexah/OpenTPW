@@ -178,7 +178,7 @@ public class ParkScreamChainTests
 			foreach ( var variation in variations )
 			{
 				Assert.AreEqual( (low, high), (variation.GapMin, variation.GapMax ), $"effect {effect}'s wait" );
-				Assert.AreEqual( 0, variation.GapByParameter, $"effect {effect} draws its wait at random" );
+				Assert.AreEqual( 0, variation.FirstMask, $"effect {effect} draws its wait at random" );
 				CollectionAssert.AreEqual(
 					new[] { new SoundCategoryFile.Zone( 0, 0, 25 ), new SoundCategoryFile.Zone( 1, 26, 50 ),
 						new SoundCategoryFile.Zone( 2, 51, 75 ), new SoundCategoryFile.Zone( 3, 76, 100 ) },

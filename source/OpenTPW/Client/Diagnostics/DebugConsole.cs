@@ -995,7 +995,7 @@ public static class DebugConsole
 					}
 				}
 
-				Reply( $"bumpers {report.Count} track tick {bumpers.Ticks} boats drawn {ParkBumperBoats.Current?.Standing ?? 0} "
+				Reply( $"bumpers {report.Count} lines (rides and cars) track tick {bumpers.Ticks} boats drawn {ParkBumperBoats.Current?.Standing ?? 0} "
 					+ $"clips resumed {ParkBumperBoats.Current?.Resumed ?? 0} loaded at {ParkRides.Current?.LoadedAt} now {ParkRides.NowMilliseconds} "
 					+ $"sounds started {bumpers.SoundsStarted}" );
 

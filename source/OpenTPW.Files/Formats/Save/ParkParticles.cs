@@ -37,7 +37,7 @@ public sealed class ParkParticles
 	private const string Magic = "LCTP";
 
 	// The live image's header.
-	private const int OnScreenOnlyAt = 0x08;
+	private const int SuppressesAt = 0x08;
 	private const int SeedAt = 0x10;
 	private const int NextCountAt = 0x18;
 	private const int DensityAt = 0x20;
@@ -49,7 +49,7 @@ public sealed class ParkParticles
 
 	// An emitter.
 	private const int InUseAt = 0x00;
-	private const int HoldsParticlesAt = 0x05;
+	private const int OnScreenAt = 0x05;
 	private const int FirstParticleAt = 0x06;
 	private const int ParticlesAt = 0x08;
 	private const int CountAt = 0x0a;
@@ -73,7 +73,7 @@ public sealed class ParkParticles
 	private const int LinkedFollowsAt = 0xb8;
 	private const int LinkedIsEffectorAt = 0xba;
 	private const int OwnRatesAt = 0xc0;
-	private const int OnScreenAt = 0xc1;
+	private const int SuppressibleAt = 0xc1;
 	private const int RingAt = 0xcc;
 	private const int NextAt = 0xd0;
 	private const int PreviousAt = 0xd2;
@@ -275,7 +275,7 @@ public sealed class ParkParticles
 
 			var from = template * EmitterSize;
 
-			if ( Int32( Live, OnScreenOnlyAt ) != 0 && _templates[from + OnScreenAt] != 0 )
+			if ( Int32( Live, SuppressesAt ) != 0 && _templates[from + SuppressibleAt] != 0 )
 				return 0;
 
 			var slot = Int16( Live, FreeHeadAt );
@@ -313,7 +313,7 @@ public sealed class ParkParticles
 			Put32( Live, at + ZAt, spawn.Z >> 4 );
 
 			// The box its particles have reached: empty, to be grown, for an emitter that keeps one.
-			var keeps = Live[at + HoldsParticlesAt] == 0;
+			var keeps = Live[at + OnScreenAt] == 0;
 
 			for ( var word = 0; word < 6; ++word )
 				Put32( Live, at + BoundsAt + (word * 4), !keeps ? 0 : word < 3 ? int.MaxValue : int.MinValue );

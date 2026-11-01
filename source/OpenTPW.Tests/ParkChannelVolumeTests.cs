@@ -41,10 +41,10 @@ public class ParkChannelVolumeTests
 	public void AParameterIsOnTheVolumeOnlyByAControllerOfTheVariationsOwn()
 	{
 		var plain = new SoundCategoryFile.Variation { Volume = (47, 47) };
-		var first = plain with { FirstKey = 6, GapByParameter = 1 };
+		var first = plain with { FirstKey = 6, FirstMask = 1 };
 		var second = plain with { SecondKey = 6, SecondMask = 1 };
-		var pitch = plain with { FirstKey = 6, GapByParameter = 2, SecondKey = 6, SecondMask = 4 };
-		var other = plain with { FirstKey = 7, GapByParameter = 1 };
+		var pitch = plain with { FirstKey = 6, FirstMask = 2, SecondKey = 6, SecondMask = 4 };
+		var other = plain with { FirstKey = 7, FirstMask = 1 };
 
 		Assert.IsFalse( ParkAudio.NamesOnVolume( plain, 6 ) );
 		Assert.IsTrue( ParkAudio.NamesOnVolume( first, 6 ) );
