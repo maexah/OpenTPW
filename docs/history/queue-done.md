@@ -11781,6 +11781,11 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the formula's words from their sprite's last x and z; a dismissed mechanic held at the plateau (505, 585, ground 20.0) made one at raw (32320, 1280, 37440), and
   ours for a member carried to cell (50, 58) and dismissed made the same words. The other callers: the guest constructor's arrival puff is real
   (13 of 22 emitters in 110 s of the stock park) and is counted `GUEST_ARRIVAL_PARTICLE`, the rest are Q945.
+- [x] **Q866. Run the suite repeatedly and keep every run's output (the first piece of Q942).** Run 2026-11-01 (lane B, `main` 6b4e6b84, the game named, `capped.sh`): ten
+  whole-suite runs one after another, then six more with every unseeded generator in the product (`ParkPeople`, `SoundCategory`, `ParkSea`, `ParkScreams`,
+  `StaffBehaviour`, `PeepBehaviour`, and `Random.Shared` in the VM, the lobby camera and the weather) forced to `new Random( S )` for S = 1 to 6 by a scratch patch (not
+  committed), three suites at once per wave to put the machine under load: all sixteen passed, 4685 passed, 0 failed, 2 skipped (the macOS and Windows folder tests), so no test is
+  shown to depend on a generator and nothing was seeded. Stored: `tools/harness/lib/suiteloop.sh OUTDIR [N]` (a row in `docs/TOOLING.md`). Evidence: `~/.cache/tpw-harnesses/q942/`.
 
 ## B. Docs and comments
 
