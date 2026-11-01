@@ -563,7 +563,7 @@ filed the items that cite it.
   `ParkAudioScripts.cs:38`) and machine load under the real-clock zone. Keep every full-suite run's output (`capped.sh` ... `| tee`
   into a file under `~/.cache/tpw-harnesses/`) so the next failure is named when it comes; then seed or fix what it names, and
   prove it by putting the cause back (`VERIFYING.md`, the flaky-test rule).
-  Piece Q866 (ticked) ran sixteen suites and stored the loop; what is left is the failure itself, still unnamed. Untested: the real-clock zone under a
+  Piece Q866 (ticked) ran sixteen suites (ten plain, six with the generators a lost scratch patch seeded; not every generator in the product: `ParkAudioScripts.cs:38`, `ParkAudio`, `ParkCarSounds`, `Advisor`, `LobbyAudio`, `LobbyFlyer` stood unseeded) and stored the loop; what is left is the failure itself, still unnamed. Untested: the real-clock zone under a
   machine load heavier than three suites at once. Next failure anywhere: `tools/harness/lib/suiteloop.sh OUTDIR [N]` keeps every run's output, so its file names the test.
 - [ ] **Q860. What the original's queue lay writes into a corner's counter, and what reads it. Decode first.** From Q153. The walk the queue button
   and the sale's drain make (`FUN_00530120`, built as `ParkPathBuilding.QueueEnds`) sets every queue or entrance cell's counter

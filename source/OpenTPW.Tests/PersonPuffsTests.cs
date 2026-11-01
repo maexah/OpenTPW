@@ -39,7 +39,6 @@ public class PersonPuffsTests
 	/// ground that is not level, where the height read at the cell's corner, the sprite's own nought, or x and z swapped
 	/// each give another word.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the height nought; the height of the cell's corner; x and z swapped; the factor 1000.</remarks>
 	[TestMethod]
 	[DataRow( 40.0, 58.0 )]
 	[DataRow( 31.37, 62.81 )]
@@ -60,7 +59,6 @@ public class PersonPuffsTests
 	/// <summary>
 	/// <b>Started, it is one emitter of effect 19 at that place</b>, in the particle system's own units (the words over 16).
 	/// </summary>
-	/// <remarks><b>Mutations:</b> another effect; no start; started twice.</remarks>
 	[TestMethod]
 	public void StartingOneMakesAnEmitterOfEffectNineteenThere()
 	{

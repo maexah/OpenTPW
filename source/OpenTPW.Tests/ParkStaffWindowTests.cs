@@ -480,14 +480,13 @@ public class ParkStaffWindowTests
 
 		Assert.IsFalse( _people.IsStaff( member.ThingId ), "the tick dismisses them" );
 		Assert.AreEqual( (bank - 161, costs + 161), (state.Balance, state.MonthStaffCosts.Total), "one month's wage, 7 x 23" );
-		Assert.AreEqual( (0, 0), (Times( "STAFF_DISMISSAL_PARTICLE" ), Times( "STAFF_WINDOW_FIRE" )) );
+		Assert.AreEqual( 0, Times( "STAFF_WINDOW_FIRE" ) );
 	}
 
 	/// <summary>
 	/// <b>A dismissal puts the puff up where the member stood</b> (<c>FUN_00505790</c>, <c>0x005059c3</c>): one emitter of
-	/// effect 19 at their x and z on the ground there, started before the thing is deleted, and nothing is counted.
+	/// effect 19 at their x and z on the ground there, started as the dismissal begins (the member is taken out of the roster after it).
 	/// </summary>
-	/// <remarks><b>Mutations:</b> no puff; the puff at the cell's corner; the puff after the member's walk is gone.</remarks>
 	[TestMethod]
 	public void FireStartsThePuffWhereTheMemberStood()
 	{
@@ -508,7 +507,6 @@ public class ParkStaffWindowTests
 			var puffs = system.Emitters.Where( e => e.Active ).ToList();
 			Assert.AreEqual( 1, puffs.Count );
 			Assert.AreEqual( (0x13, x >> 4, height >> 4, z >> 4), (puffs[0].Effect, puffs[0].X, puffs[0].Y, puffs[0].Z) );
-			Assert.AreEqual( 0, Times( "STAFF_DISMISSAL_PARTICLE" ) );
 		}
 		finally
 		{

@@ -880,7 +880,7 @@ public class Level
 		// folder holds emitter files is written as any other: those are the particle library's templates, which the
 		// file holds whatever stands in the park (docs/exe/saves.md, "OpenTPW's writer, a thing with emitter files").
 		// The particles module's live emitters follow the scripts' records (docs/exe/saves.md, "OpenTPW's writer,
-		// an emitter started"). A deviation: a puff a script's EVENT had alive at the save is not in it, where the
+		// an emitter started"). A deviation: a puff a script's EVENT or a person's leaving or dismissal (PersonPuffs) had alive at the save is not in it, where the
 		// original's file holds each one, and the file's own puffs stay as the file has them.
 		//
 		// A track ride is written where its record in the track-rides module can be: a ride of the bumper family

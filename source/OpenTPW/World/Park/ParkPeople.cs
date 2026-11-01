@@ -972,7 +972,11 @@ public sealed partial class ParkPeople : Entity
 			? Level.Current?.StaffPool?.WageFor( kind, member.PayGrade ) ?? 0
 			: 0;
 
-		// The puff goes up where they stand, before the thing is deleted (FUN_00505790, 0x005059c3).
+		// The puff goes up where they stand, before the thing is deleted (FUN_00505790, 0x005059c3). A deviation: the
+		// original reads the interpolated sprite's x and z (FUN_004fa030, 0x004fa07e..0x004fa0b3); this reads the
+		// navigator's position, so a member dismissed mid-step puffs at the sweep's end place, up to one sweep's step ahead
+		// of the sprite. A leaver stands still, so for it the two agree. A person's puff alive at a save is not written
+		// (Level.WritePark).
 		PersonPuffs.Start( member.Navigator.Position );
 
 		_staff.RemoveAt( at );

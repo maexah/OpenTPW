@@ -6,7 +6,7 @@ namespace OpenTPW;
 /// and at the ground's height there.
 ///
 /// <para>
-/// <b>The place</b> is the sprite's own x and z, moved by two globals (<c>0x00785584</c>, <c>0x00785588</c>) that are
+/// <b>The place</b> is the sprite's own x and z (ours is the navigator's position; see <c>ParkPeople.Fire</c>), moved by two globals (<c>0x00785584</c>, <c>0x00785588</c>) that are
 /// nought in the original, at <c>FUN_004527f0</c>'s height there (<see cref="HeightfieldFile.ScapeHeight"/>), not the
 /// sprite's <c>+0x8c</c>; the three are multiplied by 1024.0 and truncated, as <c>Particles_Spawn</c> takes them. So
 /// a puff stands at the person's feet, whatever a seat or a hand holds them above.

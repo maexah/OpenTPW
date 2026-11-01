@@ -2769,7 +2769,7 @@ screen effect's. In memory the live system is at `0x0080ced0` and emitter slot *
 folder holds `.emt` files as any other. A bought Loudspeaker goes out as any thing
 bought does ("OpenTPW's writer, a thing bought and a thing sold"), and one sold is taken out.
 
-**A deviation, said at `Level.WritePark`:** an `EVENT`'s puff alive at the save is not in the written file (the
+**A deviation, said at `Level.WritePark`:** an `EVENT`'s puff, or a person's leaving or dismissal puff, alive at the save is not in the written file (the
 two above), and the file's own puffs go out as the file has them. An `ADDOBJ`'s emitter is written ("OpenTPW's
 writer, an emitter started").
 
