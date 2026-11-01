@@ -4,7 +4,7 @@ using System.Text.Json;
 // lib/normdump (Q657): every mesh of a model, its file normal table (+0x64) and OpenTPW's computed per-vertex normals.
 //   normdump <data dir> <path in data> <out.json>
 var fs = new BaseFileSystem( args[0] );
-fs.RegisterArchiveHandler<WadArchive>( ".wad" );
+fs.RegisterArchiveHandler( ".wad", path => new WadArchive( path ) );
 var model = new ModelFile( new MemoryStream( fs.ReadAllBytes( args[1] ) ) );
 var list = new List<object>();
 foreach ( var m in model.Meshes )
