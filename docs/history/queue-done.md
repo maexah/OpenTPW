@@ -11791,9 +11791,9 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   The guest constructor's puff (`0x004fb26e`) is built in `ParkPeople.Admit` for a guest made off the park's counting cells (a guest made inside takes the arm that jumps past it); the states
   `0xf` (`ParkRideOperation.Dismiss`) and `0x10` (`CompleteAdmission`) puff when the item sets `UsageInfo.RequiresTeleport`, descriptor `+0x100` (the key table's order; read now:
   `ItemDescriptionFile.RequiresTeleport`, `ParkItemCatalogue.Item.RequiresTeleport`): the Belly Bounce, Mumbo's and the Spider. `FUN_004f7c60` is the online mode's alone (`FUN_0050b360` case
-  `0x12` under `DAT_00fb3b7c == 1`) and unreachable here. The item's own account was wrong: the 22 emitters of Q900's poll were the Belly Bounce's riders (13 off at its exit cell, 8 on at its
-  entry cell), and the arrivals' puffs stand at the bus stop (53, 5) (the Sentinel's review). In the stock park ours made 13 puffs for 13 arrivals at the original's words, 26 at the entry cell for 26
-  guests taken on and 23 at the exit cell for 23 let off (`q945/run1`, `run2`); `GUEST_ARRIVAL_PARTICLE` is gone from `unimplemented`; eleven put-back bugs each fail a test.
+  `0x12` under `DAT_00fb3b7c == 1`) and unreachable here. The item's own account was wrong: 21 of the 22 emitters of Q900's poll were the Belly Bounce's riders (13 off at its exit cell, 8 on at its
+  entry cell; the 22nd is a dismissal), and the arrivals' puffs stand at the bus stop (53, 5) (the Sentinel's review). In the stock park ours made 13 puffs for 13 arrivals at the original's words, 26 at the entry cell for 26
+  guests taken on and 23 at the exit cell for 23 let off (`q945/run1`, `run2`); `GUEST_ARRIVAL_PARTICLE` is gone from `unimplemented`; eleven put-back bugs each fail a test. Review fixes (run 17, group P): a test now puts the guest down on the exit first (`TheExitPuffStandsOnTheExitCell`, the puff sent before the put-down fails it); the dismissal that the original refuses makes a puff in ours, said at the site.
   Not photographed: the arrival puff (under the bus shelter's roof); the riders' puffs in the original in this item's own run (they are Q900's polls).
 - [x] **Q867. `Level.TurnTheCalendar`'s day roll, month turn and year turn are tested (the first piece of Q220).** Run 2026-11-01 (lane B, no game run, nothing drawn changed):
   `LevelCalendarTurnsTests` drives the calendar tick by tick from the epoch with no game: the day's change rolls an object's rings once for each day that turned (nineteen days,
@@ -11801,6 +11801,7 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   year's profit at the turn into 2001 and not before. Nine bugs put back in `TurnTheCalendar` (the roll not made, made every tick, made at the month's change; the month closed at the
   day's, at the year's, never; the year's turn at the month's, at the day's, never) each fail one of the three. The month turn's order (training, the bank, wages) was already asserted by
   `ParkBankTests` (not put back here). Evidence: `~/.cache/tpw-harnesses/q867/`.
+  Review fixes (run 17, group P): the order of one tick that turns day, month and year is now asserted (`TheDayThenTheTrendThenTheMonthThenTheYearThenTheTickets`: day, month, year, then the tickets on the new year's profit, and the trend read before the month closes; the trend after the day, as against before it, is not told apart, since the day's change moves nothing the trend reads), and the day's change on 1 February and 1 January (`TheDaysChangeRollsOnAMonthsAndAYearsFirstDay`); six bugs put back each fail one. The calls pass no people and no catalogue, so a wrong argument for those survives.
 
 ## B. Docs and comments
 

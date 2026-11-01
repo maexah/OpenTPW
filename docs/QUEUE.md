@@ -209,10 +209,12 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   put-off, yawn and till on raised ground in ours (the stock park's guests walk on flat ground, where the two builds agree); the code is the
   staff's (`Heard`), the tests are `HeardIn`'s.
 - [ ] **Q946. A person's exit and stand point on a ride, to the byte.** From Q945. The original puts a guest it lets off the Belly Bounce at 52 + 127/256 cells in x and 26 + 127/256 in z (`q900/orig/a-poll.log`:
-  the sprite at (524.961, 0, 264.961) for 37 of 37 puffs) and ours on the cell's middle, 128/256 (`ParkRideOperation.PutDownAtTheExit`: "the sub-cell part of the exit point is not reproduced"), so the exit puff's
+  the sprite at (524.961, 0, 264.961) for 37 of 37 puffs, 13 + 19 + 5 across the three polls) and ours on the cell's middle, 128/256 (`ParkRideOperation.PutDownAtTheExit`: "the sub-cell part of the exit point is not reproduced"), so the exit puff's
   raw words are 3 over the original's. `FUN_004dedf0` (decompiled: a byte from the descriptor's float at `+0xdc`/`+0xe0` for an exit point, `+0xd4`/`+0xd8` for a stand point, by `__ftol`, after the "Dodgy X exit point in SAM file"
-  check) makes it: decode the multiplier (`0.5` giving `0x7f` says ×255, a guess until read), apply it to the exit and the stand points of every item that declares them (23 declare an exit; the stock park's
-  Belly Bounce lists them commented out at 0.5 in its `.sam`), and measure a rider's first step from the entry and from the exit in both games.
+  check) makes it: the multiplier is read: `0x004df123` is `fmul [0x00700578]`, 255.0, truncated by `0x0067a830`, so 0.5 gives `0x7f`. Left: the thing's rotation (`+0x10`, 0, 90, 180 or 270) swaps x and y and takes
+  1.0 minus, `0x004df0ae`..`0x004df11d`, to be applied with it; then apply it to the exit and the stand points of every item that declares them (25 declare an exit uncommented in Lost Kingdom: 11 rides,
+  3 features, 6 shops and 5 sideshows; 103 over the four themes, 52 of them rides). The Belly Bounce's `.sam` lists its own exit (0.5, 0.9) and stand (0.5, 0.1) commented out; the live 0.5 and 0.5 come
+  from `Rides.sam`. Then measure a rider's first step from the entry and from the exit in both games.
 - [ ] **Q802. What Q800 left for a person or a machine it did not have.** From Q800 (run 13, lane A). Done by the
   coordinator (2026-10-29): `opentpw.maintainer` set in `~/repos/OpenTPW-laneB`, and the Saturday audit runs
   `python3 tools/check_docs_paths.py`. The Linux quick start is marked "tested on the maintainer's Linux machine only"
@@ -801,7 +803,7 @@ filed the items that cite it.
   `TowardsCamera`; `ParkGuestSprites.DrawBalloons` (the bob's rate and write-back); the camcorder's
   `UseFirstPersonPictures` on enter and leave; `ParkObjectWindow`'s 30 days and 4 s; the buy list's features tab.
   Write each test, put its bug back, see it fail (`AGENTS.md` rule 6). No game run.
-  The calendar's day roll, month turn and year turn are Q867 (done); the month turn's order (training, the bank, wages) is `ParkBankTests`.
+  The calendar's day roll, month turn and year turn and their order are Q867 (done; the people and catalogue it hands the month's change are not asserted); the month turn's order (training, the bank, wages) is `ParkBankTests`.
 - [ ] **Q221. Eight leftovers from the effort audit, each dead by content today.** Found by the 2026-10-04 effort
   audit, each read in the listing. (1) `ParkScriptStates` reads the tick and next handle with `header > dword * 4`; it
   should be `>= (dword + 1) * 4`. (2) `ParkBuyScreen.Listed` applies two of the original's four filters: add the

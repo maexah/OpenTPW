@@ -3,7 +3,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace OpenTPW.Tests;
 
 /// <summary>
-/// What <see cref="Level.TurnTheCalendar"/> sends on each of the calendar's three turns (<c>0x004f8260</c>, <c>docs/exe/park-engine.md</c>):
+/// What <see cref="Level.TurnTheCalendar"/> sends on each of the calendar's three turns (<c>0x004f8260</c>, <c>docs/exe/ride-operation.md</c>):
 /// the day's change to every object's rings, the month's to the bank's analyser, the year's to the bank's profit. Each is driven
 /// tick by tick from the epoch with the calendar's own flags counted, so a turn sent on the wrong flag, sent twice or not sent
 /// shows at the tick it happens. None needs the game.
@@ -140,6 +140,113 @@ public class LevelCalendarTurnsTests
 		}
 		finally
 		{
+			GameCalendar.Rebase();
+		}
+	}
+
+	/// <summary>
+	/// <b>The day's change rolls on a month's first day and a year's first day too</b>: the 1st of February 2000 and the 1st of
+	/// January 2001 each roll the rings once, with the month's (and the year's) change on the same tick.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the day's change skipped on the tick the month turns; skipped on the tick the year turns.</remarks>
+	[TestMethod]
+	public void TheDaysChangeRollsOnAMonthsAndAYearsFirstDay()
+	{
+		GameCalendar.Rebase();
+
+		try
+		{
+			var state = new ParkState( parkIsClosed: false, visitorsToDate: 0 );
+			var rings = state.RingsFor( 1 );
+			var days = 0;
+			var firsts = new System.Collections.Generic.List<string>();
+
+			for ( var tick = 1; GameCalendar.Now < new System.DateTime( 2001, 1, 3 ); ++tick )
+			{
+				state.SetGameTick( tick );
+				Level.TurnTheCalendar( state, null, null, _ => { } );
+
+				if ( GameCalendar.DayRolled )
+					++days;
+
+				if ( GameCalendar.MonthRolled )
+					firsts.Add( $"{GameCalendar.Now:yyyy-MM-dd} day {GameCalendar.DayRolled}" );
+
+				Assert.AreEqual( (days - 1) % 30, rings.Takings.CurrentEntry, $"tick {tick}, {GameCalendar.Now:yyyy-MM-dd}: one roll for each day turned, {days} so far" );
+			}
+
+			CollectionAssert.Contains( firsts, "2000-02-01 day True" );
+			CollectionAssert.Contains( firsts, "2001-01-01 day True" );
+			Assert.IsFalse( System.Linq.Enumerable.Any( firsts, f => f.EndsWith( "False" ) ), "every month's first day rolled the day" );
+		}
+		finally
+		{
+			GameCalendar.Rebase();
+		}
+	}
+
+	/// <summary>
+	/// <b>On the tick the day, the month and the year all turn, they are sent in the original's order</b>: the day's change, then
+	/// the gadget's trend read, then the month's, then the year's, then the golden tickets' test on the new year's profit
+	/// (<c>0x004f8260</c>, <c>0x004f83ac</c>, <c>0x004d7b54</c>). The trend is read from the last closed month, so 700 of costs put in
+	/// December do not show as a loss on the 1st of January's tick, which the month's change closes after the read. The trend read
+	/// after the day's change, as against before it, is not told apart here: the day's change moves nothing the trend reads.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the month before the day; the year before the month; the trend read after the month's change;
+	/// the tickets before the year's change.</remarks>
+	[TestMethod]
+	public void TheDayThenTheTrendThenTheMonthThenTheYearThenTheTickets()
+	{
+		GameCalendar.Rebase();
+
+		var events = new System.Collections.Generic.List<string>();
+		Logger.LogDelegate listen = ( _, text ) =>
+		{
+			if ( text.StartsWith( "The day's change:" ) ) events.Add( "day" );
+			else if ( text.StartsWith( "Park: analyser month closed" ) ) events.Add( "month" );
+			else if ( text.StartsWith( "Bank: the year's change" ) ) events.Add( "year" );
+		};
+
+		Logger.OnLog += listen;
+
+		try
+		{
+			var state = new ParkState( parkIsClosed: false, visitorsToDate: 0 );
+			var yearTurns = 0;
+			var profitAtTickets = -1;
+
+			state.Take( 500 );
+			ParkGoldenTickets.TakeOwed();
+
+			for ( var tick = 1; GameCalendar.Now < new System.DateTime( 2001, 1, 3 ); ++tick )
+			{
+				if ( GameCalendar.Now.Date == new System.DateTime( 2000, 12, 31 ) && state.MonthCosts.Total == 0 )
+					state.MonthCosts.Add( 700 );
+
+				events.Clear();
+				ParkGoldenTickets.Owe( ParkGoldenTickets.EverySweeps );
+				state.SetGameTick( tick );
+				Level.TurnTheCalendar( state, null, null, _ =>
+				{
+					events.Add( "tickets" );
+					profitAtTickets = state.ProfitThisYear;
+				} );
+
+				if ( !GameCalendar.YearRolled )
+					continue;
+
+				++yearTurns;
+				CollectionAssert.AreEqual( new[] { "day", "month", "year", "tickets" }, events, "the order of the 1st of January" );
+				Assert.AreEqual( 0, profitAtTickets, "the tickets are tested on the new year's profit" );
+				Assert.AreEqual( 700, state.MonthCosts.Newest, "December's costs closed" );
+				Assert.IsFalse( state.MonthInLoss, "the trend was read before the month closed" );
+			}
+
+			Assert.AreEqual( 1, yearTurns, "one year turned" );
+		}
+		finally
+		{
+			Logger.OnLog -= listen;
 			GameCalendar.Rebase();
 		}
 	}

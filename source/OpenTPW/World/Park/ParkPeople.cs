@@ -624,8 +624,8 @@ public sealed partial class ParkPeople : Entity
 
 		// A guest made off the park's counting cells, which every arrival is, has particle 0x13 put up at their feet
 		// once the constructor has placed them (FUN_004faec0, 0x004fb26e); one made on a counting cell has none.
-		// It stands at the guest's place as made, the cell's middle, where the original's sprite stands 1/256 of a
-		// cell short of it in x and z (docs/exe/park-engine.md, "A person's particles").
+		// It stands at the guest's place as made, the cell's middle, which for an arrival is where the original's
+		// puff stands too (raw (34240, 0, 3520); docs/exe/park-engine.md, "A person's particles").
 		if ( !inThePark )
 			PersonPuffs.Start( peep.Navigator.Position );
 

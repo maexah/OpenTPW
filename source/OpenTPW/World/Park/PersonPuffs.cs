@@ -13,7 +13,9 @@ namespace OpenTPW;
 /// </para>
 /// <para>
 /// <b>The sites built:</b> a leaver taken off the bus stop's cell (<c>FUN_00500bd0</c>, <c>0x00500c35</c>) and a member
-/// of staff dismissed (<c>FUN_00505790</c>, <c>0x005059c3</c>, before the thing is deleted).
+/// of staff dismissed (<c>FUN_00505790</c>, <c>0x005059c3</c>, before the thing is deleted); a guest made off the park's
+/// counting cells (<c>FUN_004faec0</c>, <c>0x004fb26e</c>); and a guest coming off and going onto a ride that
+/// teleports them (<c>FUN_00501db0</c>'s cases <c>0xf</c> and <c>0x10</c>).
 /// </para>
 /// </summary>
 internal static class PersonPuffs

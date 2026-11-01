@@ -87,7 +87,7 @@ public class ParkTeleportPuffTests
 	}
 
 	/// <summary>
-	/// <b>A guest let off a ride that teleports them goes in a puff at their feet</b>, after they are put down on the exit;
+	/// <b>A guest let off a ride that teleports them goes in a puff at their feet</b> (no walk is handed over here, so they stay where they are; <see cref="TheExitPuffStandsOnTheExitCell"/> puts them down first);
 	/// one let off a shop (the Drinks Shop, whose item does not) goes in none.
 	/// </summary>
 	/// <remarks><b>Mutations:</b> no puff; the puff for every item; the puff at the cell's corner.</remarks>
@@ -118,6 +118,34 @@ public class ParkTeleportPuffTests
 		}
 
 		Assert.AreNotEqual( 0, PersonPuffs.PlaceOn( field, Guest( 7, PeepState.Riding ).Navigator.Position ).Height, "on raised ground" );
+	}
+
+	/// <summary>
+	/// <b>The puff is sent up after the guest is put down on the exit</b>, where they now stand, not where they stood on the
+	/// ride: case <c>0xf</c> stamps the place first (<c>FUN_004fa030( 0 )</c>, then <c>FUN_004fa470</c>).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the puff sent before <c>PutDownAtTheExit</c>.</remarks>
+	[TestMethod]
+	public void TheExitPuffStandsOnTheExitCell()
+	{
+		var park = Park();
+		var bounce = park.Objects.Single( o => o.ThingId == BellyBounce );
+		var peep = Guest( 7, PeepState.Riding );
+		var script = Script();
+		script.Set( ParkRideOperation.DismissVariable, 7 );
+		var before = Active().Count;
+		var walk = new PeepWalk( peep.Navigator, ( _, _, _ ) => true );
+
+		Assert.IsTrue( new ParkRideOperation( new ParkState( parkIsClosed: false, visitorsToDate: 0 ),
+			new Dictionary<int, Peep> { [7] = peep } )
+			.Dismiss( script, bounce, tick: 9, new Random( 1 ), id => id == 7 ? walk : null, catalogue: Catalogue() ), "let off" );
+
+		var (x, height, z) = PersonPuffs.PlaceOn( field, new FixedVector(
+			PeepNavigator.WaypointCentre( bounce.ExitCellX ), PeepNavigator.WaypointCentre( bounce.ExitCellY ) ) );
+		var now = Active();
+
+		Assert.AreEqual( before + 1, now.Count, "a puff" );
+		Assert.AreEqual( (0x13, x >> 4, height >> 4, z >> 4), (now[^1].Effect, now[^1].X, now[^1].Y, now[^1].Z), "on the exit cell" );
 	}
 
 	/// <summary>

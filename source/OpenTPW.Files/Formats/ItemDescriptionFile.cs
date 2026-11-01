@@ -190,7 +190,7 @@ public sealed partial class ItemDescriptionFile
 	/// Whether a guest is teleported onto this and off it - <c>UsageInfo.RequiresTeleport</c>, descriptor <c>+0x100</c>,
 	/// the key between <c>ChillsYouOut</c> (<c>+0xfc</c>) and <c>RideHandlesSprite</c> (<c>+0x104</c>) in the table at
 	/// <c>0x00745980</c>..<c>0x00745bd8</c>. The state setter's cases <c>0xf</c> and <c>0x10</c> send up a puff for a
-	/// guest as they come off one and go onto one (<c>docs/exe/ride-operation.md</c>, "A person's particles"). In Lost
+	/// guest as they come off one and go onto one (<c>docs/exe/park-engine.md</c>, "A person's particles"). In Lost
 	/// Kingdom three items set it: the Belly Bounce, the Spider and Mumbo's.
 	/// </summary>
 	public bool RequiresTeleport => (_requiresTeleport ?? _category?._requiresTeleport ?? 0) != 0;
