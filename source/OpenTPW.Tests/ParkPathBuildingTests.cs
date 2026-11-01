@@ -1,4 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
@@ -258,6 +259,127 @@ public class ParkPathBuildingTests
 			+ "nothing and the sky shows through the ground" );
 		Assert.AreEqual( 7, index,
 			"one link is dropped and one kept - as many as the table can express, rather than none" );
+	}
+
+	/// <summary>
+	/// The retile's track test: a queue cell's links each add their three only while the low nibble of the
+	/// flags of the cell's OWN track record - its parent's where it is type 12 or 17 - is clear
+	/// (<c>FUN_00535dd0</c> at <c>0x005360b4</c>, <c>FUN_0053ad20</c>).
+	///
+	/// <para>
+	/// <b>Three things in the values are the ones a wrong rule gets wrong.</b> Flags <c>0x10</c> sit above the
+	/// nibble and leave the link counted; a track type of 0 with flags <c>0x2</c> refuses it, where
+	/// <see cref="CellEdge.TrackCloses"/> (which asks <see cref="CellEdge.TrackCounts"/> of the type first)
+	/// would call that cell open; and a type-12 record answers by its parent's flags, never its own.
+	/// </para>
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutation:</b> counting every link again, asking <see cref="CellEdge.TrackCloses"/> instead, reading
+	/// the cell's own flags where it defers, or reading a mask other than the low nibble, each fails here.
+	/// </remarks>
+	[TestMethod]
+	public void AQueueCellsLinksAreCountedOnlyWhereItsTrackFlagsAreClear()
+	{
+		var park = World();
+
+		int Index( ParkWorld.MapCell track, int? parentFlags = null )
+		{
+			var state = new ParkState( park );
+
+			if ( parentFlags is { } flags )
+				state.SetRecord( 60, 40, ParkState.CellFor( park, 60, 40 ) with { TrackType = 25, TrackFlags = (ushort)flags } );
+
+			state.SetRecord( 22, 10, ParkState.CellFor( park, 22, 10 ) with { Type = CellEdge.Path, Neighbours = 0x04 } );
+			state.SetRecord( 23, 10, ParkState.CellFor( park, 23, 10 ) with
+			{
+				Type = ParkRideChoice.QueueCellType,
+				Neighbours = 0x44,
+				Direction = 0x04,
+				TrackType = track.TrackType,
+				TrackFlags = track.TrackFlags,
+				TrackParentId = track.TrackParentId
+			} );
+
+			ParkPathBuilding.Retile( state, park, 23, 10 );
+
+			return ParkState.CellFor( park, 23, 10 ).TileIndex;
+		}
+
+		var none = default( ParkWorld.MapCell );
+
+		Assert.AreEqual( 5, Index( none ), "clear flags: two for the straight and three for the link" );
+		Assert.AreEqual( 2, Index( none with { TrackFlags = 0x1 } ), "a low-nibble flag refuses the link" );
+		Assert.AreEqual( 2, Index( none with { TrackFlags = 0x8 } ), "any bit of the nibble does" );
+		Assert.AreEqual( 5, Index( none with { TrackFlags = 0x10 } ), "a flag above the nibble does not" );
+		Assert.AreEqual( 2, Index( none with { TrackType = 0, TrackFlags = 0x2 } ),
+			"no track type is asked of the record - TrackCloses would call a type 0 cell open" );
+
+		// A type-12 record answers by its parent's, whose cell is (60,40) here.
+		var deferring = none with { TrackType = 12, TrackParentId = (ushort)MapStep.CellId( 60, 40 ) };
+
+		Assert.AreEqual( 5, Index( deferring with { TrackFlags = 0x1 }, parentFlags: 0 ),
+			"its own flags are not read where it names a parent whose flags are clear" );
+		Assert.AreEqual( 2, Index( deferring, parentFlags: 0x4 ),
+			"and the parent's nibble refuses it though its own is clear" );
+	}
+
+	/// <summary>
+	/// The track test refuses every link of the cell together, since it reads the cell's own record: a corner
+	/// meeting two paths keeps its bare <c>4</c>, and the link-dropping loop is not reached.
+	/// </summary>
+	[TestMethod]
+	public void AQueueCellWithTrackFlagsSetCountsNoLinkAtAll()
+	{
+		var park = World();
+		var state = new ParkState( park );
+
+		state.SetRecord( 25, 10, ParkState.CellFor( park, 25, 10 ) with { Type = CellEdge.Path, Neighbours = 0x04 } );
+		state.SetRecord( 26, 9, ParkState.CellFor( park, 26, 9 ) with { Type = CellEdge.Path, Neighbours = 0x10 } );
+		state.SetRecord( 26, 10, ParkState.CellFor( park, 26, 10 ) with
+		{
+			Type = ParkRideChoice.QueueCellType, Neighbours = 0x41, Direction = 0x01,
+			TrackType = 0, TrackParentId = 0, TrackFlags = 0x8
+		} );
+
+		var outside = Times( "QUEUE_TILE_INDEX_OUTSIDE_TABLE" );
+
+		ParkPathBuilding.Retile( state, park, 26, 10 );
+
+		Assert.AreEqual( 4, ParkState.CellFor( park, 26, 10 ).TileIndex, "3 for the corner and 1 for its bump, no link" );
+		Assert.AreEqual( outside, Times( "QUEUE_TILE_INDEX_OUTSIDE_TABLE" ), "so the table is never overrun" );
+	}
+
+	/// <summary>
+	/// The test above never refuses a link of the shipped park's own queue: each of the four queue cells
+	/// carries clear track flags, so each retiles to the tile the original's save stored.
+	/// </summary>
+	[TestMethod]
+	public void TheShippedQueueCellsRetileToTheirStoredTilesWithTheTrackTestIn()
+	{
+		var park = World();
+		var state = new ParkState( park );
+		var queue = new List<(int X, int Y)>();
+
+		for ( var y = 0; y < 128; ++y )
+			for ( var x = 0; x < 128; ++x )
+				if ( ParkState.CellFor( park, x, y ).Type == ParkRideChoice.QueueCellType )
+					queue.Add( (x, y) );
+
+		Assert.AreEqual( 4, queue.Count, "the shipped park's queue cells" );
+
+		foreach ( var (x, y) in queue )
+		{
+			var stored = ParkState.CellFor( park, x, y );
+
+			Assert.AreEqual( 0, stored.TrackFlags & CellEdge.TrackOpenFlags, $"({x},{y}) track flags: the test lets every link count" );
+
+			ParkPathBuilding.Retile( state, park, x, y );
+
+			var now = ParkState.CellFor( park, x, y );
+
+			Assert.AreEqual( (stored.TileSet, stored.TileIndex, stored.TileAngle), (now.TileSet, now.TileIndex, now.TileAngle),
+				$"({x},{y}) retiles to the tile the save holds" );
+		}
 	}
 
 	/// <summary>

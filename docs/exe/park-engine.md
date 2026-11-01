@@ -5269,17 +5269,26 @@ reading from its reverse, the base on an L and the bump on a straight: the two
 look alike — its single corner carries direction `0x10`, which gives a base of nought either way — so
 the park is not evidence here and the disassembly is what settles it.)* And tile set 2 takes **`+3`
 for each cardinal link reaching a path cell**, but only when the link is **mutual** (the neighbour's
-own mask carries the opposite bit) and a low-nibble flags test passes **on the TRACK cell** beside it
-— a separate `0x28`-stride array, re-targeted through its parent where that cell defers — **not on
-the path cell**.
+own mask carries the opposite bit) and a flags test passes (`0x005360b4`..`0x005360c4`): `FUN_004d0af0` fetches
+**the queue cell's OWN record** in the track layer (the loop's `this`, saved at `0x00535dd9`, never the neighbour),
+`FUN_0053ad90` swaps it for the record at `[0x7cf83c] + (u16 [record+0x10] + 0x6cde) * 0x28` where its type
+(`+0x8`) is 12 or 17 (no zero-parent guard here), and `FUN_0053ad20` answers whether `(record[+0xe] & 0xf) != 0`;
+the `+3` is added when it answers **no**. It is **not** `CellEdge.TrackCloses`: no type is asked of the record
+(`FUN_005363f0`'s five types play no part), so a type-0 record with flags `0x2` refuses the link, and flags above
+the nibble (`0x10`) do not. It reads one record per cell, so **all of a cell's links pass or fail together**.
+(Q154: `ParkPathBuilding.PathLinks`, `TrackFlagsLeaveLinksCounted`. A type-12/17 record naming no parent reads
+the record at index `0x6cde`, undecoded and counted `QUEUE_TILE_TRACK_PARENT_UNNAMED`; no queue cell of the park is
+one. Every queue cell of the shipped park carries clear flags (`ParkPathBuildingTests`); whether a played park can put
+the nibble on a queue cell is not established, so the refusing branch is reached here only by a made-up cell.)
 
 **That `+3` can exceed the MODEL table, and a reimplementation without the gate reaches it.** The queue
 models are a table of **eight** (`0x76338c`, walked by `FUN_00522900` and indexed by `FUN_005229e0`),
 so an index of 8 or more names nothing at all. A straight with two mutual path links takes
 `2 + 3 + 3 = 8`; a corner takes its `+1` first and reaches `3 + 1 + 3 + 3 = 10`. **Lost Kingdom cannot
 arbitrate** — its one end piece at (49,22) has a single path link, so no cell in it ever gets past 5 —
-and whether the track-cell flags gate is what keeps the original inside the table is therefore **not
-established**. Left unguarded, such a cell draws nothing in OpenTPW, and because
+but the flags gate is **not** what keeps the original inside the table (Q154): it is one answer for the whole cell,
+so a straight with two mutual links and clear flags reaches 8 there too, and what the original draws at an index the table
+does not hold is not decoded. Left unguarded, such a cell draws nothing in OpenTPW, and because
 the ground leaves any tile-set-2 cell to the queue renderer, the **sky shows through the hole**. OpenTPW now
 drops path links until the index is in the table (`ParkPathBuilding.Retile`, counted `QUEUE_TILE_INDEX_OUTSIDE_TABLE`).
 

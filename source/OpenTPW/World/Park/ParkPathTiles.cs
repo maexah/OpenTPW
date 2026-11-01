@@ -161,10 +161,9 @@ public static class ParkPathTiles
 			//
 			// TWO THINGS THE CALLER OWES THIS, because neither can be answered from a cell alone. The
 			// link must be MUTUAL - the neighbour's own mask must carry the opposite bit - and the
-			// original then gates the link on a low-nibble flags test whose receiver is the TRACK cell
-			// beside this one (a separate 0x28-stride array, re-targeted through its parent where that
-			// cell defers), NOT the path cell. The caller does not ask the track record here, so that gate is
-			// counted (QUEUE_TILE_TRACK_FLAGS_GATE) and the caller passes only the links it can vouch for.
+			// original then gates the link on the low nibble of the flags of the queue cell's OWN track record
+			// (its parent's where that is type 12 or 17), which ParkPathBuilding.PathLinks asks before it
+			// passes a link here.
 			index += 3 * pathLinks;
 		}
 		else if ( variant )

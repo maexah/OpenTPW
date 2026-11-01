@@ -1863,12 +1863,13 @@ public static class ParkPathBuilding
 		// hole where the piece belongs. A cell with two mutual path links takes
 		// 2 + 3 + 3 = 8 against a table of eight.
 		//
-		// The BUMP is the uncertain part here, not the table row. The original gates each link on a
-		// flags test against the TRACK cell beside this one, which PathLinks counts rather than asks -
-		// so this cannot say which of the two links the original would have refused. Dropping
-		// links until the index is one the table holds keeps the game's own art and the end piece the
-		// cell is asking for; the alternative is the hole. The shipped park cannot arbitrate: its one
-		// end piece at (49,22) has a single path link, so no cell in it ever reaches this.
+		// The BUMP is OpenTPW's, not the original's. The original's track test (PathLinks) asks the
+		// queue cell's own record once for all its links, so it cannot keep a straight with two mutual path
+		// links inside the table: that cell reaches 2 + 3 + 3 = 8 there as well. What the original draws
+		// at an index the table does not hold is not decoded. Dropping links until the index is one
+		// the table holds keeps the game's own art and the end piece the cell is asking for; the
+		// alternative is the hole. The shipped park cannot arbitrate: its one end piece at (49,22) has
+		// a single path link, so no cell in it ever reaches this.
 		while ( queue && index >= ParkQueues.PieceCount && links > 0 )
 		{
 			Unimplemented.Report( "QUEUE_TILE_INDEX_OUTSIDE_TABLE" );
@@ -1892,12 +1893,13 @@ public static class ParkPathBuilding
 	/// neighbour's own mask carries the opposite bit - so a one-sided bit, which a park's mask is
 	/// legitimately full of, does not count.
 	/// <para>
-	/// <b>Its fourth test is NOT reproduced and is counted instead.</b> The original also asks
-	/// <c>FUN_0053ad20</c> of the TRACK cell beside this one - a separate <c>0x28</c>-stride array,
-	/// re-targeted through its parent where that cell defers. The save's copy of that layer is read - the
-	/// <c>Track</c> fields of <see cref="ParkWorld.MapCell"/>, which <see cref="CellEdge.TrackCloses"/>
-	/// asks <c>FUN_0053ad20</c> of - but this does not ask it. So a link this vouches for might be one the
-	/// original refuses.
+	/// <b>Its fourth test is a flags test on the queue cell's OWN track record</b>
+	/// (<c>0x005360b4</c>..<c>0x005360c4</c>): <c>FUN_004d0af0</c> fetches the record, <c>FUN_0053ad90</c>
+	/// swaps it for its parent's where it is type 12 or 17, and <c>FUN_0053ad20</c> answers whether the low
+	/// nibble of its flags is set; a link counts when it is not (<see cref="TrackFlagsLeaveLinksCounted"/>).
+	/// It is not <see cref="CellEdge.TrackCloses"/>: that also asks <see cref="CellEdge.TrackCounts"/> of the
+	/// type, and this does not. It reads the cell's own record, not a neighbour's, so every link
+	/// of one cell passes or fails together.
 	/// </para>
 	/// </remarks>
 	private static int PathLinks( IParkInitialState park, int x, int y, ParkWorld.MapCell cell )
@@ -1917,12 +1919,29 @@ public static class ParkPathBuilding
 			if ( nb.Type != PathType || (nb.Neighbours & CellEdge.Opposite( bit )) == 0 )
 				continue;
 
-			Unimplemented.Report( "QUEUE_TILE_TRACK_FLAGS_GATE" );
-
-			++links;
+			if ( TrackFlagsLeaveLinksCounted( park, cell ) )
+				++links;
 		}
 
 		return links;
+	}
+
+	/// <summary>
+	/// Whether the low nibble of a queue cell's track flags is clear - <c>FUN_0053ad20</c> answering no,
+	/// which is what lets each of the cell's links add its three. The record is the cell's own, or its parent's
+	/// where it is type 12 or 17 (<see cref="TrackRecord"/>).
+	/// </summary>
+	/// <remarks>
+	/// A type 12 or 17 record that names no parent reads the record at index <c>0x6cde</c> of the original's
+	/// layer, which is not decoded; it is counted and its own flags are read. All 429 type-12 cells of the
+	/// shipped park name one, and none of them is a queue cell.
+	/// </remarks>
+	private static bool TrackFlagsLeaveLinksCounted( IParkInitialState park, ParkWorld.MapCell cell )
+	{
+		if ( CellEdge.TrackDefersToParent( cell.TrackType ) && cell.TrackParentId == 0 )
+			Unimplemented.Report( "QUEUE_TILE_TRACK_PARENT_UNNAMED" );
+
+		return (TrackRecord( park, cell ).TrackFlags & CellEdge.TrackOpenFlags) == 0;
 	}
 
 	/// <summary>The eight sides, in ring order, matching <see cref="ParkPathNeighbours"/>'s own table.</summary>

@@ -532,14 +532,15 @@ filed the items that cite it.
   the list). Neither is said at the site. Build `EditQueue` on `QueueEnds`' walk. Confirm: a Belly Bounce bought and
   turned, its window's queue button pressed before any queue is laid, `tool` and `cell` on the anchor, predicted
   first; a screenshot.
-- [ ] **Q154. The queue retile does not ask the track layer.** Found by the 2026-09-26 staleness audit.
-  `ParkPathBuilding.PathLinks`, the original's `FUN_00535dd0` counting a queue cell's mutual path links, leaves out
-  its fourth test, `FUN_0053ad20` of the track record beside the cell, and counts `QUEUE_TILE_TRACK_FLAGS_GATE` on
-  every link instead. The save's track layer is read now (`ParkWorld.MapCell`'s `Track` fields), and
-  `CellEdge.TrackCloses` answers `FUN_0053ad20` for the walk. Whether the retile's test is exactly `TrackCloses`,
-  which also applies `TrackCounts`' five types (`FUN_005363f0`), is not established: read the call first, then ask it
-  and write it to `park-engine.md`. Confirm: the Belly Bounce's queue relaid, `cell` on each queue cell and the
-  counter's absence in `unimplemented`, the tiles predicted first.
+- [ ] **Q859. What the original draws for a queue piece whose index is 8 or more. Decode first.** From Q154. A queue cell's tile
+  index is `2` or `3` (a straight, an end), `+1` for a corner, `+3` per mutual path link, and the table of queue models
+  (`0x76338c`, `FUN_00522900`, `FUN_005229e0`) holds eight; a straight with two mutual links reaches 8 and a corner 10, and the track
+  test cannot refuse them (it answers once per cell, Q154). OpenTPW drops links until the index fits (`ParkPathBuilding.Retile`,
+  counted `QUEUE_TILE_INDEX_OUTSIDE_TABLE`), a deviation said at the site. Decode what `FUN_005229e0` and the renderer do with an
+  index past the table (a read past the table, nothing, a fault), and what a laid queue meeting two paths really shows; if the
+  original draws something, draw it. Also counted, never reached: `QUEUE_TILE_TRACK_PARENT_UNNAMED` (a type 12 or 17 queue record
+  naming no parent reads the layer's index `0x6cde`). The gate's refusing branch is covered by unit tests and mutants only; whether a
+  played park can put the flags nibble on a queue cell, and what the original shows there, is not established.
 - [ ] **Q155. Every script's speed word is 50, where a placed thing's is its own. Decode first.** Found by the
   2026-09-26 staleness audit. The object constructor pushes the item's operating speed into its script (`FUN_0055a300`
   at `0x004db534`), and the ride window's speed slider writes it (`FUN_004dd6e0`); `docs/exe/park.md`, "The clock, the

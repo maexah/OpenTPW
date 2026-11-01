@@ -11672,6 +11672,21 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   park paused as it loads reads gauge 0 and 0 of 13 counted (the whole mean read 511, the music 6), then 3, 8 and 13 counted. `HeadingForExit`'s
   change of mind is not built, so it has no count to take. Not set beside the original (lane B has no original): see Q270, which keeps that
   half.
+- [x] **Q154. The queue retile does not ask the track layer.** Found by the 2026-09-26 staleness audit.
+  `ParkPathBuilding.PathLinks`, the original's `FUN_00535dd0` counting a queue cell's mutual path links, leaves out
+  its fourth test, `FUN_0053ad20` of the track record beside the cell, and counts `QUEUE_TILE_TRACK_FLAGS_GATE` on
+  every link instead. The save's track layer is read now (`ParkWorld.MapCell`'s `Track` fields), and
+  `CellEdge.TrackCloses` answers `FUN_0053ad20` for the walk. Whether the retile's test is exactly `TrackCloses`,
+  which also applies `TrackCounts`' five types (`FUN_005363f0`), is not established: read the call first, then ask it
+  and write it to `park-engine.md`. Confirm: the Belly Bounce's queue relaid, `cell` on each queue cell and the
+  counter's absence in `unimplemented`, the tiles predicted first.
+  Done 2026-11-01 (run 2026-10-31-wk, lane B, `alexah/862-queue-retile-asks-track-layer`). The retile's fourth test is read
+  (`0x005360b4`..`0x005360c4`) and it is **not** `TrackCloses`: it asks the queue cell's **own** track record (its parent's where
+  the record is type 12 or 17), asks no type of it, and a link counts only where the low nibble of the record's flags is clear;
+  so all of a cell's links pass or fail together (`park-engine.md`, "The tile rule"). `ParkPathBuilding.PathLinks` asks it
+  (`QUEUE_TILE_TRACK_FLAGS_GATE` is gone). In the stock park's Belly Bounce relay the tiles are Q254's, unmoved, and the counter that
+  base counted twice is absent. The link-dropping loop stays: the gate is one answer per cell, so it does not keep the original
+  inside the table of eight; what the original draws there is Q859.
 
 ## B. Docs and comments
 
