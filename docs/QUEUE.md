@@ -626,6 +626,7 @@ filed the items that cite it.
   the reverb"); a negative `+0xd8` sends nothing. Reverb itself stays cut, so only a name in the count is wanted: report it where the
   original calls it (`Unimplemented.Report( "CAMERA_RIDE_REVERB" )`), once a ride is under the camera. Confirm: `unimplemented`
   with the camcorder on a ride, predicted first, and without one.
+
 - [ ] **Q158. Five park-screen readouts are stand-ins, and nothing counts them.** Found by the 2026-09-26 staleness
   audit (`AGENTS.md` rule 4). `ParkObjectWindow`'s Age row prints a bare number: its wording, `FUN_006acd60` with
   `0x1b1`, is not decoded. Its scrap row prints the build price, where `FUN_004e2400` scales it by the age bucket's
@@ -633,9 +634,12 @@ filed the items that cite it.
   `0x4f3af` is empty, and its remark says "left empty and counted"; the original titles it with the name of the thing
   at world `+0x1da732`, `mParkGates` (`ParkWorld`), and its help row 191 reads "Park name - left-click to edit", so
   the title is the park's name and its edit is Q28's. The name is lettered by `UI_SetTitle` (`0x00485d20`, called at `0x00498e4c`): yellow, with the edge, in
-  the stream's rect widened by half its width either side (749..1221 to 513..1457), where ours letters the empty heading white (Q676). `ParkGadget.ShowDate` prints the machine's short date (Q527). `ParkBuyScreen`'s description panel `0x1ea` draws its frame and the footprint picture, and neither the item's turning model nor its name row `0x1ec`. Count each
-  where it is drawn. Confirm: `unimplemented` after opening a ride's window, the entry-price screen and the buy
-  screen.
+  the stream's rect widened by half its width either side (749..1221 to 513..1457), where ours letters the empty heading white (Q676). `ParkGadget.ShowDate` prints the machine's short date (Q527). `ParkBuyScreen`'s description panel `0x1ea` draws its frame and the footprint picture, and neither the item's turning model nor its name row `0x1ec`.
+  **Counted since Q865** (each where it is drawn: `OBJECT_WINDOW_AGE_WORDING`, `SCRAP_VALUE_DEPRECIATION` at the object window's scrap row,
+  `ENTRY_PRICE_TITLE_PARK_NAME`, `GADGET_DATE_UITEXT_448`, `BUY_SCREEN_ITEM_MODEL` and `BUY_SCREEN_ITEM_NAME_ROW`); **what is left is each build**,
+  and a count goes when its build lands: decode `FUN_006acd60`'s `0x1b1` for the age's wording; scale the scrap row by `FUN_004e2400`; letter the
+  park's name in the heading (`UI_SetTitle`); write the date from UITEXT 448; turn the item's model in the buy panel and write its name row.
+  Confirm each: its name leaves `unimplemented` after opening a ride's window, the entry-price screen and the buy screen.
   From Q130e, seen beside the original's lists: the hire list's wages are bare numbers too ("$ 63" there); a buy
   row with no state shows an empty box there and nothing here; Buy Land's price is `[0x0078560c]`, 10 there and 0
   here; and the headings' lettering is larger there than the rows', here the same.

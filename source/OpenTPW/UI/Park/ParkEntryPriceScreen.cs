@@ -68,8 +68,11 @@ internal sealed class ParkEntryPriceScreen : UiWindow
 
 		// The heading. THE ORIGINAL PUTS A THING'S NAME HERE, not a fixed string: the builder takes the
 		// gate thing by its handle at world +0x1da732 and calls UI_SetTitle with its name (0x00498e4c),
-		// which help row 191 calls the park name. It is left empty here and nothing counts that; only
-		// its click is counted, below. The label further down belongs to a different control.
+		// which help row 191 calls the park name. It is left empty here and counted as ENTRY_PRICE_TITLE_PARK_NAME
+		// (the name's yellow lettering with the edge, in the widened rect, is counted with it); its click is counted
+		// below. The label further down belongs to a different control.
+		Unimplemented.Report( "ENTRY_PRICE_TITLE_PARK_NAME" );
+
 		Root.Add( new UiControl
 		{
 			Id = 0x4f3af,

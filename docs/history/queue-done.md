@@ -11759,6 +11759,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `local - <first eight of the commit>` (a source download with no `.git` too, from `SourceCommit.md` and `export-subst`). 31 tests; 32 put-back bugs all fail one
   (`q941/mutations.py`); the desk's photographs and logs in `q941/runs/*-final`. Not seen: a real newer release (none exists), Windows and
   macOS; they are Q943.
+- [x] **Q865. The five park-screen readouts of Q158 are counted where each is drawn.** Split from Q158 (its counting half; the
+  builds stay in Q158). Six names now reach `unimplemented`, each at the site that draws the stand-in: `OBJECT_WINDOW_AGE_WORDING`
+  (the object window's age, a built thing's, each fill), `SCRAP_VALUE_DEPRECIATION` (the existing name, now also at the object
+  window's scrap row), `ENTRY_PRICE_TITLE_PARK_NAME` (the entry-price screen's empty heading, when it is built),
+  `GADGET_DATE_UITEXT_448` (`ParkGadget.ShowDate`, each frame), `BUY_SCREEN_ITEM_MODEL` and `BUY_SCREEN_ITEM_NAME_ROW` (the buy
+  panel, where a footprint is painted). Confirmed off-screen, predicted first (`~/.cache/tpw-harnesses/q865/`): the base build names none,
+  the final names each where the screen is open and no earlier.
 
 ## B. Docs and comments
 

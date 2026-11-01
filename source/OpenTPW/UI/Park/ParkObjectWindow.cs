@@ -550,13 +550,22 @@ internal sealed class ParkObjectWindow : UiWindow
 		// How old it is, in whole days on the park's calendar - FUN_004dd670, which FUN_004ade40 prints signed
 		// (0x004adf40). The Belly Bounce is 32 days old as Lost Kingdom loads.
 		if ( _stats.TryGetValue( 0x3e1b, out var age ) )
+		{
 			age.Text = placed.Built.IsSet ? $"{state.AgeInDays( placed )}" : null;
+
+			// The original words the age through FUN_006acd60 with 0x1b1 (below), which is not decoded: a bare number is a stand-in.
+			if ( placed.Built.IsSet )
+				Unimplemented.Report( "OBJECT_WINDOW_AGE_WORDING" );
+		}
 
 		// FUN_004e2400: the age-bucket scrap percentage times the item's build price. That percentage
 		// is SCRAP_VALUE_DEPRECIATION, already counted where Sell refunds - it answers 100 only for a thing under
 		// thirty days old with no customer yet, so today this is the build price and is wrong once a ride is used or ages.
 		if ( _stats.TryGetValue( 0x3e23, out var scrap ) )
+		{
 			scrap.Text = $"{item.BuildPrice}";
+			Unimplemented.Report( "SCRAP_VALUE_DEPRECIATION" );
+		}
 
 		// The two condition gauges that are fully derived. Both are 0..100 in the save and the
 		// original maps them onto a 0..1024 bar with ((v & 0xff) << 10) / 100, so as a proportion

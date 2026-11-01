@@ -1661,7 +1661,11 @@ internal sealed class ParkGadget : UiWindow
 	/// short date, a stand-in and not a match.
 	/// </para>
 	/// </summary>
-	private void ShowDate() => _date.Text = GameCalendar.Now.ToShortDateString();
+	private void ShowDate()
+	{
+		_date.Text = GameCalendar.Now.ToShortDateString();
+		Unimplemented.Report( "GADGET_DATE_UITEXT_448" );
+	}
 
 	/// <summary>
 	/// The golden keys the player holds and the golden tickets they have not spent, read from their progress the way

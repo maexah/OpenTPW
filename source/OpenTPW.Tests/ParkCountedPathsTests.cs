@@ -80,7 +80,7 @@ public class ParkCountedPathsTests
 		Choose( stack, row );
 		Assert.AreEqual( "ParkGadget, ParkViewfinder", Names( stack ), "the menu closes" );
 		Assert.AreEqual( 1, Times( name ), "and the choice is counted" );
-		Assert.AreEqual( name, string.Join( ", ", Unimplemented.Summary.Select( entry => entry.What ) ), "and nothing else is" );
+		Assert.AreEqual( name, Counted(), "and nothing else is" );
 
 		OpenMenu( stack );
 		Choose( stack, row );
@@ -98,7 +98,7 @@ public class ParkCountedPathsTests
 		Choose( stack, 5 );
 
 		Assert.AreEqual( "ParkGadget, ParkViewfinder", Names( stack ), "Resume Game closes the menu" );
-		Assert.IsFalse( Unimplemented.Any, "and counts nothing" );
+		Assert.AreEqual( "", Counted(), "and counts nothing" );
 	}
 
 	/// <summary>
@@ -628,6 +628,10 @@ public class ParkCountedPathsTests
 	/// <summary>Puts first person up or down, as entering and leaving it do, without a camera to move.</summary>
 	private static void InFirstPerson( bool active )
 		=> typeof( ParkCamcorderCameraMode ).GetProperty( nameof( ParkCamcorderCameraMode.Active ) )!.SetValue( null, active );
+
+	/// <summary>What has been counted, less the gadget's date, which it counts each frame it is drawn (Q865).</summary>
+	private static string Counted() => string.Join( ", ", Unimplemented.Summary
+		.Where( entry => entry.What != "GADGET_DATE_UITEXT_448" ).Select( entry => entry.What ) );
 
 	private static int Times( string what ) => Unimplemented.Summary.FirstOrDefault( entry => entry.What == what ).Times;
 

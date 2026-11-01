@@ -563,6 +563,14 @@ internal sealed class ParkBuyScreen : UiWindow
 			&& !GoldenTickets.IsMystery( item )
 				? item.Shape
 				: null;
+
+		// Where the footprint is painted the original also turns the item's model and writes its name in row 0x1ec;
+		// neither is built, so each is counted where the panel is filled.
+		if ( _footprint.Shape is not null )
+		{
+			Unimplemented.Report( "BUY_SCREEN_ITEM_MODEL" );
+			Unimplemented.Report( "BUY_SCREEN_ITEM_NAME_ROW" );
+		}
 	}
 
 	/// <summary>What the panel shows and what waits, for the console.</summary>
