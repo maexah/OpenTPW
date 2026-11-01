@@ -6,9 +6,9 @@
 //   ... -- <data dir> <clip path in the tree>   one clip's declared span and each position track's keys and samples
 using OpenTPW;
 var dataDir = args[0];
-if ( args.Length > 1 ) { var d = new BaseFileSystem( dataDir ); d.RegisterArchiveHandler<WadArchive>( ".wad" ); using var cs = d.OpenRead( args[1] )!; var c = new AnimationFile( cs ); Console.WriteLine( $"declared {c.DeclaredFirstFrame}..{c.DeclaredLastFrame} fps {AnimationFile.FramesPerSecond}" ); foreach ( var t in c.PositionTracks ) { Console.WriteLine( $"node {t.TargetIndex} {(t.IsBezier ? "bez" : "lin")} keys {string.Join(",", t.FrameIndices)}" ); foreach ( var f in new[]{0,50,100,150,200,250,300,350,400,450,500} ) Console.Write( $" f{f}:{t.Sample(f).X:F0},{t.Sample(f).Y:F0},{t.Sample(f).Z:F0}" ); Console.WriteLine(); } return; }
+if ( args.Length > 1 ) { var d = new BaseFileSystem( dataDir ); d.RegisterArchiveHandler( ".wad", path => new WadArchive( path ) ); using var cs = d.OpenRead( args[1] )!; var c = new AnimationFile( cs ); Console.WriteLine( $"declared {c.DeclaredFirstFrame}..{c.DeclaredLastFrame} fps {AnimationFile.FramesPerSecond}" ); foreach ( var t in c.PositionTracks ) { Console.WriteLine( $"node {t.TargetIndex} {(t.IsBezier ? "bez" : "lin")} keys {string.Join(",", t.FrameIndices)}" ); foreach ( var f in new[]{0,50,100,150,200,250,300,350,400,450,500} ) Console.Write( $" f{f}:{t.Sample(f).X:F0},{t.Sample(f).Y:F0},{t.Sample(f).Z:F0}" ); Console.WriteLine(); } return; }
 var data = new BaseFileSystem( dataDir );
-data.RegisterArchiveHandler<WadArchive>( ".wad" );
+data.RegisterArchiveHandler( ".wad", path => new WadArchive( path ) );
 int addRot = 0, withPath = 0, threw = 0, invalid = 0, clips = 0, clipsWithPos = 0, tracks = 0, firstAfter0 = 0, lastBeforeEnd = 0, lastBeforeEndBez = 0, additive = 0, firstMatchesRest = 0, firstOffRest = 0, nestedMoved = 0, alsoRot = 0, notMesh = 0, unreadBase = 0, keyFrameBeyondEnd = 0;
 var offRest = new List<string>(); var late = new List<string>(); var past = new List<string>(); var nested = new List<string>(); var adds = new HashSet<string>();
 foreach ( var wad in Directory.GetFiles( dataDir, "*.wad", SearchOption.AllDirectories ) )

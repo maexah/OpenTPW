@@ -5,7 +5,7 @@ using OpenTPW;
 // args: <data dir> <park file>...  |  <data dir> --objects <park file>  |  <data dir> --nodes <item dir> <stem> <cellX> <cellY> <angle> <space hex> <id>...   (build: dotnet build; run bin/Debug/net10.0/walkriders.dll)
 OpenTPW.Common.GlobalNamespace.Log = new();
 var data = new BaseFileSystem( args[0] );
-data.RegisterArchiveHandler<WadArchive>( ".wad" );
+data.RegisterArchiveHandler( ".wad", path => new WadArchive( path ) );
 OpenTPW.Common.GlobalNamespace.FileSystem = data;
 if ( args.Length > 1 && args[1] == "--nodes" )
 {

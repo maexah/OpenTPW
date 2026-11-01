@@ -43,6 +43,17 @@ built=0
 [ "$build_exit" = 0 ] && [ "${errors:-x}" = 0 ] && built=1
 [ "$built" = 1 ] || { fail=1; tail -20 "$work/build.txt"; }
 
+# The solution does not hold tools/harness/dotnet/*, so its build cannot see one break (Q952). Build each alone, after the
+# solution (walkriders references the main build's dlls).
+harness_built=0; harness_failed=""
+if [ "$built" = 1 ]; then
+	for proj in "$tree"/tools/harness/dotnet/*/*.csproj; do
+		[ -e "$proj" ] || continue
+		if "$dotnet" build "$proj" >"$work/harness-$(basename "$proj").txt" 2>&1; then harness_built=$((harness_built + 1))
+		else harness_failed="$harness_failed $(basename "$proj" .csproj)"; fail=1; fi
+	done
+fi
+
 passed=0; failed=0; skipped=0; total=0; tests="not run (the build failed)"
 if [ "$built" = 1 ]; then
 	wrap=()
@@ -79,6 +90,9 @@ else gameline="$game"; fi
 echo
 echo "== summary of $(git -C "$root" rev-parse --short "$commit")"
 echo "build:   exit $build_exit, ${errors:-?} errors, ${warnings:-?} warnings"
+if [ "$built" != 1 ]; then echo "harness: not built (the solution build failed)"
+elif [ -n "$harness_failed" ]; then echo "harness: $harness_built tools built, FAILED:$harness_failed"
+else echo "harness: $harness_built tools under tools/harness/dotnet built"; fi
 echo "tests:   $tests"
 echo "game:    $gameline"
 echo "guard:   $guard"
