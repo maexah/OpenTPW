@@ -480,7 +480,41 @@ public class ParkStaffWindowTests
 
 		Assert.IsFalse( _people.IsStaff( member.ThingId ), "the tick dismisses them" );
 		Assert.AreEqual( (bank - 161, costs + 161), (state.Balance, state.MonthStaffCosts.Total), "one month's wage, 7 x 23" );
-		Assert.AreEqual( (1, 0), (Times( "STAFF_DISMISSAL_PARTICLE" ), Times( "STAFF_WINDOW_FIRE" )) );
+		Assert.AreEqual( (0, 0), (Times( "STAFF_DISMISSAL_PARTICLE" ), Times( "STAFF_WINDOW_FIRE" )) );
+	}
+
+	/// <summary>
+	/// <b>A dismissal puts the puff up where the member stood</b> (<c>FUN_00505790</c>, <c>0x005059c3</c>): one emitter of
+	/// effect 19 at their x and z on the ground there, started before the thing is deleted, and nothing is counted.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> no puff; the puff at the cell's corner; the puff after the member's walk is gone.</remarks>
+	[TestMethod]
+	public void FireStartsThePuffWhereTheMemberStood()
+	{
+		using var terrain = FileSystem.OpenRead( "levels/jungle/terrain/base.MD2" )!;
+		var field = new HeightfieldFile( terrain );
+		var system = new ParticleSystem( "Particle/Tp2.plb", 1000 );
+
+		try
+		{
+			PersonPuffs.Ground = field;
+			GameClock.Rebase();
+
+			var member = Mechanic;
+			var (x, height, z) = PersonPuffs.PlaceOn( field, member.Navigator.Position );
+
+			Assert.IsTrue( _people.Fire( member.ThingId ) );
+
+			var puffs = system.Emitters.Where( e => e.Active ).ToList();
+			Assert.AreEqual( 1, puffs.Count );
+			Assert.AreEqual( (0x13, x >> 4, height >> 4, z >> 4), (puffs[0].Effect, puffs[0].X, puffs[0].Y, puffs[0].Z) );
+			Assert.AreEqual( 0, Times( "STAFF_DISMISSAL_PARTICLE" ) );
+		}
+		finally
+		{
+			PersonPuffs.Ground = null;
+			system.Shutdown();
+		}
 	}
 
 	/// <summary><b>With the Confirmations option off FIRE dismisses at once</b>, and the window closes; no box.</summary>

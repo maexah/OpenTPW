@@ -928,6 +928,8 @@ public class ParkTickTests
 
 		int Triggered() => script!["VAR_TRIGGER"];
 
+		ParticleSystem? puffs = null;
+
 		try
 		{
 			Assert.IsNotNull( script );
@@ -1040,9 +1042,20 @@ public class ParkTickTests
 			people.Guests[id].Balloon = Balloon.Make( id, sets: 4, now: 0 );
 			Assert.AreEqual( 0, people.Bursting.Count );
 
+			// The puff each leaver goes in (FUN_00500bd0, 0x00500c35): particle 0x13 at their feet.
+			using var terrain = FileSystem.OpenRead( "levels/jungle/terrain/base.MD2" )!;
+			var field = new HeightfieldFile( terrain );
+			puffs = new ParticleSystem( "Particle/Tp2.plb", 1000 );
+			PersonPuffs.Ground = field;
+			GameClock.Rebase();
+			var (puffX, puffHeight, puffZ) = PersonPuffs.PlaceOn( field, guest.Navigator.Position );
+
 			Plays( 4 );
 			Sweep( people );
 			Assert.IsFalse( people.Guests.ContainsKey( id ), "at 4 the head of the cell is gone" );
+			var first = puffs!.Emitters.Where( e => e.Active ).ToList();
+			Assert.AreEqual( 1, first.Count, "and one puff went up" );
+			Assert.AreEqual( (0x13, puffX >> 4, puffHeight >> 4, puffZ >> 4), (first[0].Effect, first[0].X, first[0].Y, first[0].Z), "at their feet" );
 			Assert.AreEqual( 0, people.Bursting.Count, "and the balloon they held is gone with them, not let go" );
 			Assert.IsTrue( people.Guests.ContainsKey( second ), "and the one behind, whose turn came first, is not" );
 			Assert.IsNotNull( people.Guests[second].Balloon, "and keeps theirs" );
@@ -1059,6 +1072,7 @@ public class ParkTickTests
 			Sweep( people );
 			Assert.IsFalse( people.Guests.ContainsKey( third ), "they are gone" );
 			Assert.IsFalse( people.Guests.ContainsKey( second ), "and so is the one who stood behind them, on the same sweep" );
+			Assert.AreEqual( 3, puffs!.Emitters.Count( e => e.Active ), "and each went in a puff" );
 			Assert.AreEqual( 1, Triggered(), "and with nobody left at the stop it is sent off" );
 
 			// A vehicle that is a thing already, summoned with none current, is triggered whatever it reports
@@ -1073,6 +1087,8 @@ public class ParkTickTests
 		}
 		finally
 		{
+			PersonPuffs.Ground = null;
+			puffs?.Shutdown();
 			people.Delete();
 			rides.Delete();
 			Entity.ApplyDeletions();

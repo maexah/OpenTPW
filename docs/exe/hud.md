@@ -3522,7 +3522,7 @@ costs 538 to 699 in the same 1.2 s, exactly 161 (his wage, 7 x 23), his `+3` 1; 
 **OpenTPW** (Q432): FIRE opens `MessageBox` on UITEXT 397 where `GameOptions.Confirmations` is on, its tick
 `ParkPeople.Fire` on the member kept; PICK UP is `ParkPeople.PickUp`; each closes the window. `ParkPeople.Fire` puts a
 carried worker back first. A member in the hand is not drawn in the park (`ParkGuestSprites.InTheHand`; the `guests`
-census says "IN THE HAND, not drawn"; that the draw loop skips him is shown by the census predicate only, not on screen). Counted: the puff (`STAFF_DISMISSAL_PARTICLE`) and the figure at the pointer
+census says "IN THE HAND, not drawn"; that the draw loop skips him is shown by the census predicate only, not on screen). Built since Q900: the puff (`PersonPuffs`). Counted: the figure at the pointer
 (`STAFF_PICKED_UP_PREVIEW`), so our pointer stays the plain arrow while a worker is carried. Its run (`q432/confirm.py`)
 logged one month's wage of 161 paid and put 161 on the staff costs across the tick (the balance moved -86, with income between the reads), the same box (`q432/side-by-side-box.png`).
 

@@ -622,6 +622,9 @@ public sealed partial class ParkPeople : Entity
 		if ( inThePark )
 			peep.VisitorNumber = _behaviour.State.Admit();
 
+		// The constructor puts particle 0x13 up at the guest's feet (FUN_004faec0, 0x004fb26e); not started here (Q945).
+		Unimplemented.Report( "GUEST_ARRIVAL_PARTICLE" );
+
 		Log.Info( $"People: guest {thingId} arrived at ({cellX},{cellY}) on mGameTick {State.GameTick} - "
 			+ $"{_peeps.Count} guests now; kind {type} happy {peep.Happiness:0} "
 			+ $"thirst {thirst} hunger {hunger} toilet {toilet} cash {cash} exit {exitLevel} prankery {peep.PrankeryIndex}" );
@@ -946,7 +949,7 @@ public sealed partial class ParkPeople : Entity
 	/// <para>
 	/// It first installs the idle mode where a worker is carried, which puts them back down
 	/// (<c>0x00505830</c>; <see cref="PutBack"/>). The puff of particle <c>0x13</c> at the member
-	/// (<c>FUN_004fa470</c>) is counted, not built.
+	/// (<c>FUN_004fa470</c>) is <see cref="PersonPuffs"/>'s.
 	/// </para>
 	/// </remarks>
 	internal bool Fire( int thingId )
@@ -964,6 +967,9 @@ public sealed partial class ParkPeople : Entity
 		var severance = kind >= 0
 			? Level.Current?.StaffPool?.WageFor( kind, member.PayGrade ) ?? 0
 			: 0;
+
+		// The puff goes up where they stand, before the thing is deleted (FUN_00505790, 0x005059c3).
+		PersonPuffs.Start( member.Navigator.Position );
 
 		_staff.RemoveAt( at );
 		_staffWalks.Remove( thingId );
@@ -983,8 +989,6 @@ public sealed partial class ParkPeople : Entity
 
 		_behaviour.State.Spend( severance );
 		_behaviour.State.AddStaffCost( severance );
-
-		Unimplemented.Report( "STAFF_DISMISSAL_PARTICLE" );
 
 		Log.Info( $"People: dismissed thing {thingId}, a grade {member.PayGrade} " +
 			$"{ParkStaffPool.NameOfKind( kind ).ToLowerInvariant()} - one month's wage of {severance} paid, " +

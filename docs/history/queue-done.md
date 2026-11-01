@@ -11766,6 +11766,21 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `GADGET_DATE_UITEXT_448` (`ParkGadget.ShowDate`, each frame), `BUY_SCREEN_ITEM_MODEL` and `BUY_SCREEN_ITEM_NAME_ROW` (the buy
   panel, where a footprint is painted). Confirmed off-screen, predicted first (`~/.cache/tpw-harnesses/q865/`): the base build names none,
   the final names each where the screen is open and no earlier.
+- [x] **Q900. The puffs a person's departure and a dismissal spawn (particle `0x13`), placed as the original's `FUN_004fa470` places them.** (From Q825's
+  decode of Q820's piece (4).) Ours counts both (`LEAVER_BOARDING_PARTICLE`, `PeepBehaviour.cs`; `STAFF_DISMISSAL_PARTICLE`, `ParkPeople.cs`) and spawns
+  neither. The place is decoded (`park-engine.md`, "The three words Q822 left unread", 1): the person's x and z, the height `ScapeHeight` there (not the
+  sprite's `+0x8c`), the two offset globals nought in the original (measured). Build: spawn effect `0x13` through the world particles at that place when the
+  leaver is taken off the cell's head (`FUN_00500bd0`, `0x00500c35`) and when a member is dismissed (`FUN_00505790`, `0x005059c3`); look also at the
+  other three callers of `FUN_004fa470` (`FUN_00501db0` at `0x00501fce` and `0x005020ed`, the guest constructor `FUN_004faec0` at `0x004fb26e`,
+  `FUN_004f7c60` at `0x004f7c76` and `0x004f7c81`) for what they spawn and whether ours counts it. Confirm in both games: the emitter's place against the
+  person's, by `particledump.py` and the console's `particles`, and a frame of the puff.
+  **Done (Q900, `alexah/800-person-puffs-at-the-ground`, lane A, 2026-11-01):** `PersonPuffs` (`PersonPuffs.cs`): the walker's x and z, `ScapeHeight` there,
+  each × 1024 truncated, started in the park's particle system at a leaver's going (`PeepBehaviour`) and a dismissal (`ParkPeople.Fire`, before the delete);
+  a `Person puff:` log line names the person's place and the words; the console's `particles` prints the emitter's raw words. The original, measured
+  (`docs/exe/park-engine.md`, "The three words Q822 left unread", 1; `q900/orig/`): 13 of 13 guests that left each had an effect-19 emitter at
+  the formula's words from their sprite's last x and z; a dismissed mechanic held at the plateau (505, 585, ground 20.0) made one at raw (32320, 1280, 37440), and
+  ours for a member carried to cell (50, 58) and dismissed made the same words. The other callers: the guest constructor's arrival puff is real
+  (13 of 22 emitters in 110 s of the stock park) and is counted `GUEST_ARRIVAL_PARTICLE`, the rest are Q945.
 
 ## B. Docs and comments
 

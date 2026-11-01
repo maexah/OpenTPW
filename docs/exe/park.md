@@ -2807,7 +2807,7 @@ whose node's matrix is never stored (`PARK_PARTICLE_NO_DIRECTION`), a start the 
 engine frees and this keeps (`PARK_PARTICLE_NOT_STARTED`). A loaded emitter begins its effect again: the file's
 running words are not read (`LOADED_EMITTER_LIFE_PART_RUN` where its life is not the template's). An effect added
 without its alpha (flags `0x4` with no `0x2000`) is drawn scaled by it (`WORLD_PARTICLE_ADDED_WITHOUT_ALPHA`).
-Not started at all, and counted under their own keys: a rider's puffs (`BUMPER_RIDER_PARTICLE`) and a leaver's (`LEAVER_BOARDING_PARTICLE`) (a broken boat's smoke is started since Q259, below). The
+Not started at all, and counted under their own keys: a rider's puffs (`BUMPER_RIDER_PARTICLE`; a leaver's is built since Q900) (a broken boat's smoke is started since Q259, below). The
 writer is as it was: an emitter is written as it starts, not as the running one stands.
 
 **The density is the park file's** (Q703). The loader copies the file's whole live header over the system's

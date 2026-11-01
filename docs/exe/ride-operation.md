@@ -1690,7 +1690,7 @@ whose entry would let it go. In the game with the same shop: seven holders went 
 left let go by it in 451 polls; on the build before, ten holders went and a let-go balloon stood by the stop on 9
 polls of 452.
 
-Not built: the particle `0x13` as a guest goes (counted, `LEAVER_BOARDING_PARTICLE`); the walking mode `+0x188`.
+Built (Q900): the particle `0x13` as a guest goes (`PersonPuffs`, `docs/exe/park-engine.md`, "The three words Q822 left unread", 1). Not built: the walking mode `+0x188`.
 Not pinned by a test: the facing `0x7ff` for a larger vehicle.
 
 **Q627: how often a vehicle comes, measured in both games.** Every trip a vehicle makes stands at both stops in turn,

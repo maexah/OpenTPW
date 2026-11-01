@@ -2418,7 +2418,7 @@ public static class DebugConsole
 					Reply( $"particles: slot {slot} effect {emitter.Effect} at ({emitter.X / 64},{emitter.Y / 64},{emitter.Z / 64}) "
 						+ $"aim {(emitter.Aim is { } aimed ? $"({aimed.X},{aimed.Y},{aimed.Z})" : "none")} life {emitter.Lifetime} particles {emitter.Count} highest {highest} "
 						+ $"flags 0x{emitter.Template.DrawFlags:x} set {emitter.Template.SpriteSet} frames {emitter.Template.Frames} "
-						+ $"rates ({string.Join( ", ", emitter.Rates )}) most {emitter.MaxParticles}" );
+						+ $"rates ({string.Join( ", ", emitter.Rates )}) most {emitter.MaxParticles} raw ({emitter.X},{emitter.Y},{emitter.Z})" );
 				}
 
 				Reply( $"particles: {ofTheWorld} emitters of the world, {alive} particles alive, {WorldParticles.Current?.Drawn ?? 0} drawn last frame, density {particleSystem.Density}" );

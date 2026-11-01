@@ -647,8 +647,8 @@ public sealed class PeepBehaviour
 				{
 					if ( State.CellAt( hereX, hereY ).Occupant == peep.ThingId )
 					{
-						// The puff they go in is a particle effect this project does not spawn from here.
-						Unimplemented.Report( "LEAVER_BOARDING_PARTICLE" );
+						// The puff they go in, at their feet (FUN_004fa470, 0x00500c35).
+						PersonPuffs.Start( walk.Position );
 						Log.Info( $"Person {peep.ThingId}: gone from the stop at ({hereX},{hereY}), tick {tick}" );
 
 						// A balloon they hold is deleted with them (FUN_004fb330, 0x004fb33e). It is let go only on
