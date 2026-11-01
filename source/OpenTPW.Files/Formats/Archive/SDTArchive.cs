@@ -75,16 +75,33 @@ public class SdtArchive : IArchive
 	}
 
 	/// <summary>
-	/// Finds an entry by name, or null.
-	///
-	/// StartsWith rather than an equality because the name field in a .sdt is a fixed sixteen
-	/// bytes and a longer name is truncated to fit rather than shortened - "TP SCREECH 11.mp2"
-	/// is stored as "TP SCREECH 11.m" - so a caller asking for the real name would never match.
+	/// The most characters a stored name holds: the name field is sixteen bytes and its last is
+	/// the terminating nought in every entry the game ships, so a longer name is cut to fifteen
+	/// ("TP SCREECH 11.mp2" is stored as "TP SCREECH 11.m").
+	/// </summary>
+	public const int StoredNameLength = 15;
+
+	/// <summary>
+	/// Finds an entry by name, or null: the first whose stored name equals <paramref name="name"/>,
+	/// or, where the stored name fills its field, the first whose stored name is
+	/// <paramref name="name"/>'s first fifteen characters. Two names cut to the same fifteen
+	/// characters cannot be told apart, and the first is found.
 	/// </summary>
 	public ArchiveFile? GetFile( string name )
 	{
-		int index = soundFiles.FindIndex( x => x.Name.StartsWith( name, StringComparison.OrdinalIgnoreCase ) );
+		int index = soundFiles.FindIndex( x => NameMatches( x.Name, name ) );
 		return index < 0 ? null : soundFiles[index];
+	}
+
+	/// <summary>Whether <paramref name="stored"/>, a name read from the bank, is <paramref name="asked"/> as the bank stores it.</summary>
+	public static bool NameMatches( string stored, string asked )
+	{
+		if ( string.Equals( stored, asked, StringComparison.OrdinalIgnoreCase ) )
+			return true;
+
+		return stored.Length == StoredNameLength
+			&& asked.Length > StoredNameLength
+			&& asked.StartsWith( stored, StringComparison.OrdinalIgnoreCase );
 	}
 
 	public byte[] GetData( int offset, int length )
