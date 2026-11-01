@@ -11831,6 +11831,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   that fills its field, the request's prefix of that length. A test on the eight. No game run.
   **Good first** (Q800; `docs/GOOD-FIRST-ISSUES.md` has the issue text; no game, no Ghidra).
   **Done 2026-11-01** (PR #1, `1df3fc5c`): `SdtArchiveNameTests`; 4717 passed, 0 failed, 2 skipped of 4719, in the cloud environment as a normal user. No game run: nothing looks a sound up by name yet.
+- [x] **Q284. The console's `particles <slot>` reads a slot that is not a number as slot 0 and prints that
+  emitter's cloud without saying so (`DebugConsole.cs`, `Argument( 1 )` falls back to 0).** It should reply that
+  the slot was not understood, as it does for a slot out of range; `particles abc` in a park with an emitter in
+  slot 0 shows it. From the week-end audit (stage 6, the second reading of commit `03326e26`; read from the code,
+  not reproduced in the game). `OpenTPW/Client/Diagnostics/DebugConsole.cs`, line 1804.
+  **Good first** (Q800; `docs/GOOD-FIRST-ISSUES.md` has the issue text; no game, no Ghidra).
+  **Done 2026-11-01** (`9cc63804`): `ParticlesSlotWordTests`; 4718 passed, 0 failed, 2 skipped of 4720, in the cloud environment as a normal user; the bug put back fails the test. Off-screen in the lobby the console answered `abc` and `1.5` with the new reply; a park's live slot 0 is covered by the test, not by a run.
 
 ## B. Docs and comments
 

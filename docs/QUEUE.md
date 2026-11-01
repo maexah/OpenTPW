@@ -1174,13 +1174,6 @@ filed the items that cite it.
   three draws on would show it From the week-end audit (stage 6, the second reading of commit `d490bc90`; read
   from the code, not reproduced in the game). `OpenTPW.Files/Formats/Save/ParkParticles.cs`, line 376.
 
-- [ ] **Q284. The console's `particles <slot>` reads a slot that is not a number as slot 0 and prints that
-  emitter's cloud without saying so (`DebugConsole.cs`, `Argument( 1 )` falls back to 0).** It should reply that
-  the slot was not understood, as it does for a slot out of range; `particles abc` in a park with an emitter in
-  slot 0 shows it. From the week-end audit (stage 6, the second reading of commit `03326e26`; read from the code,
-  not reproduced in the game). `OpenTPW/Client/Diagnostics/DebugConsole.cs`, line 1804.
-  **Good first** (Q800; `docs/GOOD-FIRST-ISSUES.md` has the issue text; no game, no Ghidra).
-
 - [ ] **Q285. Seven unbuilt paths the game reaches count nothing.** From the week-end audit (stage 6, the second
   reading of each commit; read from the code). `AGENTS.md` rule 4 asks each for an `Unimplemented.Report`; build
   the path where it is small. One bullet a path.
