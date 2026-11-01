@@ -936,7 +936,7 @@ out has `MajorDest` nought and loses nothing more, 15 in all.** A move walks the
 (`0x0048d006`), which cuts the same end, and the demolisher's own walk then gives the same list; it reaches the
 demolisher only while the red-cell latch `DAT_00816d48` is clear.
 
-**OpenTPW builds it** (`docs/QUEUE.md` Q50h): `ParkPathBuilding.QueueEnds` is the list, `DrainQueue` the gate, the
+**OpenTPW builds it** (`docs/QUEUE.md` Q50h; the queue button's `ParkPathBuilding.EditQueue` is the same list, its last cell the anchor, Q153): `ParkPathBuilding.QueueEnds` is the list, `DrainQueue` the gate, the
 pops and the debit, and `ClearQueueLine` one run under force; each pop measures the queue through
 `ParkState.RemeasureQueue`. Counted, not built: the advisor `0xcb` posts, one from the demolisher's mode 3 and one
 from each call's re-arm (`QUEUE_DRAIN_ADVISOR_0xCB`); the

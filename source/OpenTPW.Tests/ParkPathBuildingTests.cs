@@ -935,6 +935,128 @@ public class ParkPathBuildingTests
 		Assert.AreEqual( CellEdge.Nothing, ParkState.CellFor( park, 20, 10 ).Type );
 	}
 
+	/// <summary>Presses the ride window's queue button for <see cref="Ride"/>'s thing in a level that holds this park.</summary>
+	private static string PressTheQueueButton( ParkWorld park, ParkState state, int thingId )
+	{
+		var previous = Level.Current;
+		var level = (Level)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject( typeof( Level ) );
+
+		typeof( Level ).GetProperty( nameof( Level.Park ) )!.SetValue( level, park );
+		typeof( Level ).GetProperty( nameof( Level.ParkState ) )!.SetValue( level, state );
+		Level.Current = level;
+		ParkBuildMode.Forget();
+
+		try
+		{
+			return ParkPathBuilding.EditQueue( thingId );
+		}
+		finally
+		{
+			Level.Current = previous!;
+		}
+	}
+
+	/// <summary>
+	/// <b>The queue button anchors a link-less entrance on the cell the thing's angle names, turned by the entrance's
+	/// direction byte</b> (<c>FUN_00530120</c>, <c>0x005303f1</c>..<c>0x00530487</c>), not on the side the byte itself
+	/// holds. The rows are the cases the two rules part on: at 90 the angle's east side turned by the byte's 2 places
+	/// is south, where the byte alone is east; at 180 north, where the byte is south; at 270 south, where the byte is
+	/// west. Only at 0 do they agree.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutation:</b> stepping along the entrance's direction byte alone (the build before Q153) anchors east, south and
+	/// west on the last three rows.
+	/// </remarks>
+	[TestMethod]
+	[DataRow( 0, 0x01, 20, 10 )]
+	[DataRow( 90, 0x04, 20, 12 )]
+	[DataRow( 180, 0x10, 20, 10 )]
+	[DataRow( 270, 0x40, 20, 12 )]
+	public void TheQueueButtonAnchorsALinklessEntranceOnTheAnglesSide( int angle, int direction, int anchorX, int anchorY )
+	{
+		var park = World();
+		var state = new ParkState( park );
+		var ride = new ParkWorld.CatalogueObject( ThingId: 77, CatalogueId: 1100, RawX: 19 << 8, RawY: 11 << 8, Angle: angle,
+			EntryPos: (ushort)MapStep.CellId( 20, 11 ), ExitPos: (ushort)MapStep.CellId( 20, 14 ) );
+
+		state.AddObject( ride );
+		StandOnItsFootprint( state );
+		state.SetRecord( 20, 11, state.Record( 20, 11 ) with { Type = CellEdge.RideEnd, Neighbours = 0, Direction = (byte)direction } );
+
+		var reply = PressTheQueueButton( park, state, 77 );
+
+		Assert.AreEqual( ParkBuildMode.Queue, ParkBuildMode.Current, reply );
+		Assert.AreEqual( (anchorX, anchorY), ParkBuildMode.Anchor, $"angle {angle}, byte 0x{direction:x2}: {reply}" );
+	}
+
+	/// <summary>
+	/// <b>The queue button cuts the path an entrance faces directly</b>: the walk reaches the path from the entrance and
+	/// the path lets go of its bit toward it, the entrance keeping its own (<c>0x0053036d</c>), and the tool is anchored on
+	/// the path (the last cell pushed, <c>0x005304ac</c>). The build before cut nothing there.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> an edit that only anchors on the faced cell leaves the path's bit toward the entrance at 0x10.</remarks>
+	[TestMethod]
+	public void TheQueueButtonCutsThePathAnEntranceFaces()
+	{
+		var park = World();
+		var state = new ParkState( park );
+		var ride = Ride( state );
+
+		StandOnItsFootprint( state );
+		state.SetRecord( 20, 11, state.Record( 20, 11 ) with { Type = CellEdge.RideEnd, Neighbours = 0x01, Direction = 0x01 } );
+		LayPath( state, park, 20, 10 );
+		LayPath( state, park, 19, 10 );
+		state.SetRecord( 20, 10, state.Record( 20, 10 ) with { Neighbours = 0x10 | 0x40 } );
+		state.SetRecord( 19, 10, state.Record( 19, 10 ) with { Neighbours = 0x04 } );
+
+		var reply = PressTheQueueButton( park, state, ride.ThingId );
+
+		Assert.AreEqual( (20, 10), ParkBuildMode.Anchor, reply );
+		Assert.AreEqual( 0x40, ParkState.CellFor( park, 20, 10 ).Neighbours, "the path lets the entrance go" );
+		Assert.AreEqual( 0x01, ParkState.CellFor( park, 20, 11 ).Neighbours, "the entrance keeps its bit" );
+		Assert.AreEqual( 0x04, ParkState.CellFor( park, 19, 10 ).Neighbours, "the path beyond is as it was" );
+	}
+
+	/// <summary>
+	/// <b>The queue button writes the walk's counters</b>: every queue or entrance cell the walk crosses has its counter
+	/// set, 1 on a corner and nought elsewhere (<c>0x00530330</c> on), where the build before left whatever the cells held.
+	/// The anchor is the queue's last cell, a queue cell with one link.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> an edit that walks the queue without writing the counters leaves 7, 0, 5 and 5.</remarks>
+	[TestMethod]
+	public void TheQueueButtonWritesTheWalksCounters()
+	{
+		var park = World();
+		var state = new ParkState( park );
+		var ride = Ride( state );
+
+		StandOnItsFootprint( state );
+		state.SetRecord( 20, 11, state.Record( 20, 11 ) with { Type = CellEdge.RideEnd, Neighbours = 0x01, Direction = 0x01, OverlapCounter = 7 } );
+
+		foreach ( var (x, y, links, counter) in new[] { (20, 10, 0x50, 0), (19, 10, 0x44, 5), (18, 10, 0x04, 5) } )
+			state.SetRecord( x, y, state.Record( x, y ) with
+			{
+				Type = ParkRideChoice.QueueCellType,
+				Neighbours = (byte)links,
+				Direction = (byte)(links & 0x44),
+				ParentId = (ushort)MapStep.CellId( ride.CellX, ride.CellY ),
+				OverlapCounter = (short)counter
+			} );
+
+		var measured = new List<int>();
+
+		state.QueueRemeasured = thing => measured.Add( thing );
+
+		var reply = PressTheQueueButton( park, state, ride.ThingId );
+
+		CollectionAssert.AreEqual( new[] { ride.ThingId }, measured, "the queue is measured again once (FUN_004de1f0, 0x00526118)" );
+		Assert.AreEqual( (18, 10), ParkBuildMode.Anchor, reply );
+		Assert.AreEqual( 0, ParkState.CellFor( park, 20, 11 ).OverlapCounter, "the entrance" );
+		Assert.AreEqual( 1, ParkState.CellFor( park, 20, 10 ).OverlapCounter, "the corner" );
+		Assert.AreEqual( 0, ParkState.CellFor( park, 19, 10 ).OverlapCounter, "the straight" );
+		Assert.AreEqual( 0, ParkState.CellFor( park, 18, 10 ).OverlapCounter, "the end" );
+	}
+
 	private static int Times( string what )
 		=> Unimplemented.Summary.FirstOrDefault( entry => entry.What == what ).Times;
 }

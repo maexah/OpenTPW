@@ -2831,7 +2831,7 @@ The dispatcher's `0x14` arm (`0x005260f5`..`0x00526120`) calls `FUN_00530120( ob
 list, pushes the cell the entrance's one link faces, walks from the entrance along the queue pushing each corner
 (two perpendicular cardinal links, `FUN_0053ae00`), **unlinks the queue's last cell from the path it reaches** —
 both bits cleared, both cells retiled — and anchors on that last cell. The walk in full, with its other ends, is
-`ride-operation.md`, "The sale's drain". The arm then rewalks and enters mode 3 with `FUN_0052f580(3,0)`. So editing
+`ride-operation.md`, "The sale's drain" (`ParkPathBuilding.EditQueue` presses that walk, `QueueEnds`, and anchors on its last cell). The arm then rewalks and enters mode 3 with `FUN_0052f580(3,0)`. So editing
 a queue always carries on from its end, and finishing the run joins it up again.
 
 ### Where a built thing's entry and exit cells come from

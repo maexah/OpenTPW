@@ -11712,6 +11712,14 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   comment calls `FIDIV` an integer division, and `TheMeanIsWholeAndRoundsTowardsNought` pins it.
   `GuestsInsideHappiness` is the exact routine.
   Done by Q148: the gauge reads `GuestsInsideHappiness`, the float mean; `AverageHappiness` and its whole-mean test are gone.
+- [x] **Q153. Editing a queue parts from the original's walk twice.** Found by the 2026-09-26 staleness audit.
+  `ParkPathBuilding.EditQueue` and `QueueEnds` both cite `FUN_00530120`, and they differ. With no link on the entry
+  cell, `EditQueue` steps along the entry cell's raw `Direction` byte, where the original takes the side the thing's
+  angle names (`0x005303f1`), as `QueueEnds` does with `AngleSide`; and its no-queue arm cuts nothing, where the
+  original takes the path's bit when the entry cell faces a path directly (`ride-operation.md`, "The sale's drain",
+  the list). Neither is said at the site. Build `EditQueue` on `QueueEnds`' walk. Confirm: a Belly Bounce bought and
+  turned, its window's queue button pressed before any queue is laid, `tool` and `cell` on the anchor, predicted
+  first; a screenshot.
 
 ## B. Docs and comments
 

@@ -1322,10 +1322,14 @@ public static class ParkPathBuilding
 	/// window's queue button install (<c>FUN_004af200( 0 )</c> is that button's handler).
 	/// </summary>
 	/// <remarks>
-	/// <c>FUN_00530120</c> walks the queue out from the entrance to its last cell, <b>lets that cell go of
-	/// the path it joined</b> - both bits cleared, both cells retiled - and anchors there; then the queue
-	/// is rewalked and mode 3 is entered with the anchor kept (<c>0x005260f5</c>..<c>0x00526120</c>). So the
-	/// next click carries the queue on from its end, and the run that finishes it joins it up again.
+	/// <b>The apply is <c>FUN_00530120</c> and then the measure</b> (<c>0x005260f5</c>..<c>0x00526120</c>): the
+	/// walk the sale's drain makes (<see cref="QueueEnds"/>), with its counters written and <b>the last queue
+	/// cell let go of the path it joined</b> - both bits cleared, both cells retiled - and the anchor put on the
+	/// last cell it pushed, wherever the walk ended: the far end of the queue, the path an entrance faces
+	/// directly (whose bit goes, the entrance keeping its own), the cell a link-less entrance's angle names, or
+	/// the faced cell of another owner. The queue is then measured again (<c>FUN_004de1f0</c>) and mode 3 entered
+	/// with the anchor kept. So the next click carries the queue on from its end, and the run that finishes it
+	/// joins it up again.
 	/// </remarks>
 	public static string EditQueue( int thingId )
 	{
@@ -1347,68 +1351,12 @@ public static class ParkPathBuilding
 			return ParkBuildMode.Arm( ParkBuildMode.Queue, thingId );
 		}
 
-		// The walk starts where the entrance's link points; with no link at all, at the cell its direction
-		// byte faces - which for a queued thing is the cell the placer laid its node on.
-		var start = ParkRideChoice.StartOfQueue( park, placed );
+		var (anchorX, anchorY) = QueueEnds( state, park, placed )[^1];
 
-		if ( start == 0 )
-		{
-			var facing = ParkState.CellFor( park, placed.EntryCellX, placed.EntryCellY ).Direction;
-			var (acrossBy, downBy) = Sides.FirstOrDefault( side => side.Bit == facing ) is var side && side.Bit != 0
-				? (side.AcrossBy, side.DownBy)
-				: (0, 0);
-
-			start = MapStep.CellId( placed.EntryCellX + acrossBy, placed.EntryCellY + downBy );
-		}
-
-		var (startX, startY) = MapStep.CellAt( start );
-
-		// No queue: the tool is anchored on that faced cell, and the next click lays from it.
-		if ( !ParkState.OnMap( startX, startY ) || ParkState.CellFor( park, startX, startY ).Type != ParkRideChoice.QueueCellType )
-		{
-			state.RemeasureQueue( thingId );
-
-			return ParkBuildMode.ArmAt( ParkBuildMode.Queue, thingId, startX, startY );
-		}
-
-		// Bounded by ParkState.LongestQueue, the original's GetBackOfQueue bound; FUN_00530120's own walk
-		// has none (see QueueEnds).
-		var back = start;
-
-		for ( int cell = start, cells = 0; cell != 0 && cells < ParkState.LongestQueue;
-			cell = ParkRideChoice.StepToNextQueueCell( park, cell ), ++cells )
-			back = cell;
-
-		var (backX, backY) = MapStep.CellAt( back );
-
-		DetachFromPath( state, park, backX, backY );
 		state.RemeasureQueue( thingId );
 		ParkSurfaces.Rebuild();
 
-		return ParkBuildMode.ArmAt( ParkBuildMode.Queue, thingId, backX, backY );
-	}
-
-	/// <summary>Clears the mutual link between a queue's last cell and any path beside it, and redraws both.</summary>
-	internal static void DetachFromPath( ParkState state, IParkInitialState park, int x, int y )
-	{
-		foreach ( var (bit, acrossBy, downBy) in Sides )
-		{
-			if ( bit is not (0x01 or 0x04 or 0x10 or 0x40) || !ParkState.OnMap( x + acrossBy, y + downBy ) )
-				continue;
-
-			var cell = ParkState.CellFor( park, x, y );
-			var nb = ParkState.CellFor( park, x + acrossBy, y + downBy );
-
-			if ( (cell.Neighbours & bit) == 0 || nb.Type != PathType || (nb.Neighbours & CellEdge.Opposite( bit )) == 0 )
-				continue;
-
-			state.SetRecord( x, y, cell with { Neighbours = (byte)(cell.Neighbours & ~bit) } );
-			state.SetRecord( x + acrossBy, y + downBy,
-				nb with { Neighbours = (byte)(nb.Neighbours & ~CellEdge.Opposite( bit )) } );
-
-			Retile( state, park, x, y );
-			Retile( state, park, x + acrossBy, y + downBy );
-		}
+		return ParkBuildMode.ArmAt( ParkBuildMode.Queue, thingId, anchorX, anchorY );
 	}
 
 	/// <summary>
@@ -1479,7 +1427,8 @@ public static class ParkPathBuilding
 	}
 
 	/// <summary>
-	/// The ends of a thing's queue, bottom first - <c>FUN_00530120( object )</c>: the cell the entrance's one
+	/// The ends of a thing's queue, bottom first - <c>FUN_00530120( object )</c>, which the sale's drain and the queue
+	/// button (<see cref="EditQueue"/>, its last cell the anchor) both call: the cell the entrance's one
 	/// link faces, each corner met walking out from the entrance, and the cell the walk stops on. <b>Where
 	/// the walk reaches a path it lets the queue go of it</b>: the last queue cell loses its bit toward the
 	/// path and the path its bit back, and both are retiled.

@@ -525,14 +525,6 @@ filed the items that cite it.
     (depth + 1) in screen units and branch odds of 9 in 512; the midpoint step is `0x0057e4b0` (its offset is not
     perpendicular: it uses |mid|², and its cross term is × 0.0), the branch heading `0x0057e810`, the colour pulse
     `0x0057ee30`, whose grey can pass 255 and wrap to near black. `Lightning.cs` draws one quad 9 wide.
-- [ ] **Q153. Editing a queue parts from the original's walk twice.** Found by the 2026-09-26 staleness audit.
-  `ParkPathBuilding.EditQueue` and `QueueEnds` both cite `FUN_00530120`, and they differ. With no link on the entry
-  cell, `EditQueue` steps along the entry cell's raw `Direction` byte, where the original takes the side the thing's
-  angle names (`0x005303f1`), as `QueueEnds` does with `AngleSide`; and its no-queue arm cuts nothing, where the
-  original takes the path's bit when the entry cell faces a path directly (`ride-operation.md`, "The sale's drain",
-  the list). Neither is said at the site. Build `EditQueue` on `QueueEnds`' walk. Confirm: a Belly Bounce bought and
-  turned, its window's queue button pressed before any queue is laid, `tool` and `cell` on the anchor, predicted
-  first; a screenshot.
 - [ ] **Q859. What the original draws for a queue piece whose index is 8 or more. Decode first.** From Q154. A queue cell's tile
   index starts at `2` for a straight and `3` for a corner (0 a cell with no links, 1 `quedead`, the end piece 5), `+1` on the four
   bumped corner pairs, `+3` per mutual path link, and the table of queue models (`0x76338c`, `FUN_00522900`, `FUN_005229e0`) holds
@@ -557,6 +549,12 @@ filed the items that cite it.
   `ParkAudioScripts.cs:38`) and machine load under the real-clock zone. Keep every full-suite run's output (`capped.sh` ... `| tee`
   into a file under `~/.cache/tpw-harnesses/`) so the next failure is named when it comes; then seed or fix what it names, and
   prove it by putting the cause back (`VERIFYING.md`, the flaky-test rule).
+- [ ] **Q860. What the original's queue lay writes into a corner's counter. Decode first.** From Q153. The walk the queue button
+  and the sale's drain make (`FUN_00530120`, built as `ParkPathBuilding.QueueEnds`) sets every queue or entrance cell's counter
+  (`+0x20`), 1 on a corner and nought elsewhere; the shipped Belly Bounce's corner (52,22) holds 1 already, but a queue laid here by
+  the tool leaves its corners at nought (Q254's relay: `cell 50 22` and `cell 50 23` read `overlap 0` until the button is pressed,
+  `q153/run-base-relay.out`). Decode what the original's lay (mode 3's apply, `FUN_00535dd0` and the stamp) writes there, and whether
+  anything reads the counter of a queue cell (nobody has searched); if the lay writes 1, write it.
 - [ ] **Q155. Every script's speed word is 50, where a placed thing's is its own. Decode first.** Found by the
   2026-09-26 staleness audit. The object constructor pushes the item's operating speed into its script (`FUN_0055a300`
   at `0x004db534`), and the ride window's speed slider writes it (`FUN_004dd6e0`); `docs/exe/park.md`, "The clock, the
