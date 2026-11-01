@@ -11802,6 +11802,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   day's, at the year's, never; the year's turn at the month's, at the day's, never) each fail one of the three. The month turn's order (training, the bank, wages) was already asserted by
   `ParkBankTests` (not put back here). Evidence: `~/.cache/tpw-harnesses/q867/`.
   Review fixes (run 17, group P): the order of one tick that turns day, month and year is now asserted (`TheDayThenTheTrendThenTheMonthThenTheYearThenTheTickets`: day, month, year, then the tickets on the new year's profit, and the trend read before the month closes; the trend after the day, as against before it, is not told apart, since the day's change moves nothing the trend reads), and the day's change on 1 February and 1 January (`TheDaysChangeRollsOnAMonthsAndAYearsFirstDay`); six bugs put back each fail one. The calls pass no people and no catalogue, so a wrong argument for those survives.
+- [x] **Q868. `ParkRides.Resume`'s kept readings, `BindNew`'s nodes and the walk leg's arithmetic are tested (the second piece of Q220).** Run 2026-11-01 (lane B, no game run, nothing drawn changed):
+  of eleven bugs put back in the two wirings only three got through the suite, and two changes close them. `AKeptReadingIsMovedOnlyWhereTheSavesClockReads` now loads on a game clock
+  past nought (the class set-up re-bases it to nought, where a reading moved by the load's moment and one not moved are the same number), which kills the move off by the
+  load's moment; `AThingBoughtIsGivenItsNodesWhereItStandsWithItsClips` buys a Jungle Spray (cell 42, 25, turned 270) and an Aztec Mayhem (46, 33) through `BindNew` and reads
+  the positions the original stored (`RideNodesTests`' numbers), the Mayhem's seat head at rest only when its clips were bound before its nodes were read, which kills the nodes
+  read before the animations are bound and read with no clips. All eleven now die. The walk leg (`RideScript.Leg`): nine bugs put back, all but one got through the suite;
+  `ALegsXAndZAreRoundedOnceAndItsHeightCounts` (the space bumper's nodes 3 and 1 and the space bouncer's 2 and 11 at placements that part the forms, worked through
+  by hand, not measured in the original) kills the factors both rounded, the differences rounded first, a float square root and the missing height term. Four forms
+  (x, z or y squared as a float, or everything in doubles) stay alive: over 94 shipped walk models at 4 turns and 30,000 origins each, none parted a truncation from the
+  engine's (184 near-whole legs, 22 million placed legs), so they are equivalent for any placement a float node can reach. Evidence: `~/.cache/tpw-harnesses/q868/`.
 
 ## B. Docs and comments
 

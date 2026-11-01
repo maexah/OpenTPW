@@ -954,6 +954,44 @@ public class RideScriptWalkTests
 		Assert.AreEqual( 1000, script.Walking().Single().Leg, "the Rat Race's walk on at (51, 30)" );
 	}
 
+	/// <summary>A leg's two ends for a script to walk between, the model's nodes stood at a world <paramref name="origin"/> and a turn.</summary>
+	private int LegAt( string item, string stem, System.Numerics.Vector3 origin, int angle, int fromNode, int toNode )
+	{
+		var animations = RideAnimations.Load( item, stem, _data );
+		var nodes = RideNodes.Load( item, stem, _data, false, animations.AllClips );
+
+		Assert.IsNotNull( nodes, $"{stem}'s model should read" );
+		nodes.Place( origin, angle );
+
+		var script = new RideScript( Build( walkSlots: 1,
+			Word( Opcode.WALKON ), Rider, fromNode, toNode, fromNode, toNode, 1, 1, Word( Opcode.END ) ) ) { Nodes = nodes };
+
+		script.Turn( 0f );
+
+		return script.Walking().Single().Leg!.Value;
+	}
+
+	/// <summary>
+	/// <b>A leg's x and z differences are each rounded to a float once and multiplied by themselves unrounded; the y
+	/// difference is squared whole and counts</b> (<c>0x00556fce</c>; docs/exe/ride-operation.md, "How long a leg lasts, and
+	/// where its ends are"). No shipped placement parts the forms - this is the arithmetic worked through at an input
+	/// built to part them, not a leg measured in the original, and it says so. The space bumper's nodes 3 and 1 stand
+	/// 45.99999809 apart in x and 0.0000038 in z when the ride stands at (27.967663, 528.47217) turned 90: the double
+	/// difference times its float (46.0) is 2115.9999, which truncates to 45, where both factors rounded (2116) give 46, the
+	/// difference rounded to a float first gives 46, and a float square root gives 46. The space bouncer's nodes 2 and 11, at
+	/// (102.09873, 106.296196) unturned, are 23.0 apart with their 17.09 of height, 16 without it.
+	/// </summary>
+	[TestMethod]
+	public void ALegsXAndZAreRoundedOnceAndItsHeightCounts()
+	{
+		Assert.AreEqual( 4500, LegAt( "levels/space/rides/bumper", "bumper", new System.Numerics.Vector3( 27.967663f, 0f, 528.47217f ), 90, 3, 1 ),
+			"45.999998 truncates to 45 whole units" );
+		Assert.AreEqual( 4500, LegAt( "levels/space/rides/bumper", "bumper", new System.Numerics.Vector3( 29.682392f, 0f, 563.4677f ), 90, 3, 1 ),
+			"and at another placement" );
+		Assert.AreEqual( 2300, LegAt( "levels/space/rides/bouncy", "Bouncy", new System.Numerics.Vector3( 102.09873f, 0f, 106.296196f ), 0, 2, 11 ),
+			"17 units of height make it 23, not 16" );
+	}
+
 	/// <summary>
 	/// <b>A walk off starts from its own node, not from the head</b>: the Inca Totem walks rider k on from
 	/// <c>position01</c> to head k, 12.482 to 8.152 units by head, and every rider off from <c>head13</c> to

@@ -2068,9 +2068,21 @@ public class ParkFileWriterBoughtAndSoldTests
 
 		Assert.AreEqual( clock + 7300, unchecked((uint)loaded.ScriptStates.For( handle )!.Value.Variables[slot]), "the file holds it 7,300 ms past its own clock" );
 
+		// The park's clock is some way on when it loads, as a load's is (the setup re-bases it to nought, where a reading moved
+		// by nothing and one moved by the load's moment land on the same number).
+		Time.Paused = false;
+		Time.Update( 0f );
+
+		for ( var frame = 0; frame < 4; ++frame )
+		{
+			Time.Update( 0.5f );
+			GameClock.Update( paused: false, GameClock.ParkCatchUp );
+		}
+
 		var again = Bind( loaded );
 		var resumed = again.Scheduler.Find( again.ScriptFor( ape.ThingId ) )!;
 
+		Assert.IsTrue( again.LoadedAt > 0, "the load's moment is not the clock's nought" );
 		Assert.AreEqual( again.LoadedAt + 7300, resumed["VAR_STARTNOW"], "and the load puts it 7,300 ms past its own moment" );
 		Assert.AreEqual( 1, again.KeptReadingsMoved, "one reading moved, the Crazy Ape's" );
 

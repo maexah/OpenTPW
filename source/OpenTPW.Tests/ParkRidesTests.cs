@@ -324,6 +324,49 @@ public class ParkRidesTests
 	}
 
 	/// <summary>
+	/// <b>A thing bought is given its model's nodes where it stands, turned by its angle, with the clips it carries</b>
+	/// (<c>ParkRides.BindNew</c>, <c>NodesFor</c>), as a thing the save placed is (<c>RideNodesTests</c> pins the same
+	/// numbers from the original's stored matrices). A Jungle Spray bought at cell (42, 25) turned 270 finds its entrance,
+	/// exit and first walk node at the places the original stored them; an Aztec Mayhem bought at (46, 33) finds its seat
+	/// heads at rest, <see cref="NodeEnd.RestPose"/>, because its clips move the seats - so the nodes were read with the
+	/// thing's own animations bound, not before them or without them.
+	/// </summary>
+	[TestMethod]
+	public void AThingBoughtIsGivenItsNodesWhereItStandsWithItsClips()
+	{
+		var rides = Bind( World(), Catalogue() );
+		var catalogue = Catalogue();
+
+		Assert.IsTrue( catalogue.TryGet( 1303, out var sprayItem ), "the jungle offers the Jungle Spray" );
+		Assert.IsTrue( catalogue.TryGet( 1104, out var mayhemItem ), "and the Aztec Mayhem" );
+
+		var spray = new ParkWorld.CatalogueObject( ThingId: 901, CatalogueId: 1303, RawX: 42 << 8, RawY: 25 << 8, Angle: 270 );
+		var mayhem = new ParkWorld.CatalogueObject( ThingId: 902, CatalogueId: 1104, RawX: 46 << 8, RawY: 33 << 8, Angle: 0 );
+
+		Assert.IsTrue( rides.BindNew( spray, sprayItem ), "a Jungle Spray has a script" );
+		Assert.IsTrue( rides.BindNew( mayhem, mayhemItem ), "and so has an Aztec Mayhem" );
+
+		var sprayNodes = rides.Scheduler.Find( rides.ScriptFor( 901 ) )!.Nodes;
+		var mayhemNodes = rides.Scheduler.Find( rides.ScriptFor( 902 ) )!.Nodes;
+
+		Assert.IsNotNull( sprayNodes, "the Jungle Spray walks riders, so it is bound with its nodes" );
+		Assert.AreEqual( NodeEnd.Posed, sprayNodes!.Find( 4, RideNodes.WalkSpace, out var entrance ) );
+		Assert.AreEqual( 429.155945f, entrance.X, 5e-6f, "its entrance's x, turned 270 about where it stands" );
+		Assert.AreEqual( 265.127106f, entrance.Z, 5e-6f, "and its z" );
+		Assert.AreEqual( NodeEnd.Posed, sprayNodes.Find( 1, RideNodes.WalkSpace, out var exit ) );
+		Assert.AreEqual( 421.995117f, exit.X, 5e-6f, "its first node's x" );
+		Assert.AreEqual( 255.931137f, exit.Z, 5e-6f, "and its z" );
+
+		Assert.IsNotNull( mayhemNodes, "the Aztec Mayhem seats riders, so it is bound with its nodes" );
+		Assert.AreEqual( NodeEnd.RestPose, mayhemNodes!.Find( 1, RideNodes.HeadSpace, out var seat ), "its seat head rides a clip-driven seat" );
+		Assert.AreEqual( 470.704193f, seat.X, 5e-6f, "the first seat head's x, as the original stored it" );
+		Assert.AreEqual( 347.201233f, seat.Z, 5e-6f, "and its z" );
+		Assert.AreEqual( NodeEnd.Posed, mayhemNodes.Find( 1, RideNodes.WalkSpace, out var walk ) );
+		Assert.AreEqual( 475f, walk.X, 5e-6f, "its first walk node's x" );
+		Assert.AreEqual( 333f, walk.Z, 5e-6f, "and its z" );
+	}
+
+	/// <summary>
 	/// <b>The load's moment is the clock the park's ticks run on</b>, the last tick's instant as the load finds it,
 	/// which is where the save's own moment is put; every saved deadline keeps its distance from it. With the game
 	/// clock 64 ticks further on, the cameras' waits end 2,329 and 2,341 ms after that instant, not after nought.

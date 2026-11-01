@@ -797,13 +797,13 @@ filed the items that cite it.
   FileFormats models page gets the count. Confirm: one ride and one shop photographed beside the original's under
   Proton, the same sun.
 - [ ] **Q220. Tests for the wiring the effort audit found untested.** Found by the 2026-10-04 effort audit: seventeen
-  bugs put back left all 1,766 tests green. `ParkRides.Resume`'s `MoveKeptReadings` and `BindNew`'s `RideNodes`; the walk leg's x/z form
-  (a leg a hair from a whole unit); the Hot Pot's `ParkBumperBoats.Put` and its drawn heading, the speed word's
+  bugs put back left all 1,766 tests green. The Hot Pot's `ParkBumperBoats.Put` and its drawn heading, the speed word's
   placement wiring, the seating friction 7/10 and the broken ride's 1000, the car's turn, the engine fade's length,
   `TowardsCamera`; `ParkGuestSprites.DrawBalloons` (the bob's rate and write-back); the camcorder's
   `UseFirstPersonPictures` on enter and leave; `ParkObjectWindow`'s 30 days and 4 s; the buy list's features tab.
   Write each test, put its bug back, see it fail (`AGENTS.md` rule 6). No game run.
   The calendar's day roll, month turn and year turn and their order are Q867 (done; the people and catalogue it hands the month's change are not asserted); the month turn's order (training, the bank, wages) is `ParkBankTests`.
+  `ParkRides.Resume`'s `MoveKeptReadings`, `BindNew`'s `RideNodes` and the walk leg's x/z form are Q868 (done).
 - [ ] **Q221. Eight leftovers from the effort audit, each dead by content today.** Found by the 2026-10-04 effort
   audit, each read in the listing. (1) `ParkScriptStates` reads the tick and next handle with `header > dword * 4`; it
   should be `>= (dword + 1) * 4`. (2) `ParkBuyScreen.Listed` applies two of the original's four filters: add the
