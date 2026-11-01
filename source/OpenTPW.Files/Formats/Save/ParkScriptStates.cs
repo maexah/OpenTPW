@@ -62,7 +62,7 @@ namespace OpenTPW;
 /// </param>
 /// <param name="Speed">
 /// <c>+0xc0</c>, dword 48: the speed word. A <c>SPAWNCHILD</c> child holds its parent's, a <c>SPAWNSOUND</c> child the loader's 50
-/// (<see cref="ParkScriptStates.LoaderSpeed"/>; 90 of 90 children and 90 of 90 sound children in the 30 distinct park files on the desk).
+/// (<see cref="ParkScriptStates.LoaderSpeed"/>; 97 of 97 children and 125 of 125 sound children in the 766 distinct park files on the desk).
 /// </param>
 /// <param name="Directory">
 /// The folder the script was loaded from, the string after the head table (<c>data\levels\jungle\Rides\mumbo\</c>), without its

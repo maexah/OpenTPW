@@ -921,12 +921,22 @@ public class ParkFileWriterBoughtAndSoldTests
 		return -1;
 	}
 
+	/// <summary>A live emitter of the shipped park that no script of it names, which a fixture's companion is given a record of.</summary>
+	private ParkParticles.Emitter FileEmitter()
+	{
+		var named = shipped.ScriptStates.Order.SelectMany( handle => shipped.ScriptStates.For( handle )!.Value.Effects ?? [] ).Select( record => record.Handle ).ToHashSet();
+
+		return shipped.Particles.Used.First( emitter => !named.Contains( emitter.Handle ) );
+	}
+
 	/// <summary>
 	/// A bought ride with a script it made, written, and the file given that script's record and the parent's link to it
-	/// (a played park's file has both, as the original writes them; this writer does not write a spawned script yet).
+	/// (a played park's file has both, as the original writes them).
 	/// </summary>
 	private (byte[] Body, int Parent, int Child, RideScript Made, RideScript ParentScript) ParkWithACompanion( int itemId, int x, int y, bool sound, int linkedTo = 0, string? scriptOf = null )
 	{
+		var emitter = FileEmitter();
+
 		var rides = Bind( shipped );
 		var state = new ParkState( shipped );
 		var bought = Buy( state, rides, itemId, x, y );
@@ -941,6 +951,9 @@ public class ParkFileWriterBoughtAndSoldTests
 		child.TakeDeclaredName();
 		Assert.IsTrue( Enumerable.Range( 1, 12 ).Any( word => child.ResumeAt( word ) ), "an instruction starts within the first twelve words, past the first" );
 		child.SeedVariable( 0, 4242 );
+
+		// One particle record the file's child holds, naming an emitter the file has live.
+		child.Effects!.Restore( [new SavedEffect( 1, emitter.Handle, 1, 1, 1 )] );
 
 		var kept = state.WrittenObjects( shipped, id => true, out var madeObjects, out var gone );
 		Assert.IsTrue( catalogue.TryGet( itemId, out var item ) );
@@ -996,6 +1009,7 @@ public class ParkFileWriterBoughtAndSoldTests
 		}
 		Assert.AreEqual( made.Position, child.Position, "resumed where it was saved" );
 		Assert.AreEqual( 4242, child.VariableAt( 0 ), "with the variables it was saved holding" );
+		Assert.AreEqual( FileEmitter().Handle, child.Effects!.Written().Single().Handle, "and the particle record it was saved holding" );
 		Assert.AreEqual( 0, Times( "LOADED_COMPANION_NOT_STARTED" ) );
 		Assert.AreEqual( childHandle, rides.Scheduler.Scripts.First().Id, "at its place in the file's order (it is the file's first record), as the engine's reader lists it" );
 
@@ -1052,7 +1066,7 @@ public class ParkFileWriterBoughtAndSoldTests
 	/// nought, so the next load starts nothing on a closed ride (Q910's load starts what a link names; the TV Sim closed, saved at
 	/// its word 207 and loaded again lit its torches and doubled them at the reopen).
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the links not written; the ended companion's record left; the parent's link left the file's.</remarks>
+	/// <remarks><b>Mutations:</b> the links not written; the ended companion's record left; the parent's link left the file's; its emitters not killed (<c>PutEmitters</c>' <c>GoneScripts</c> loop).</remarks>
 	[TestMethod]
 	[DataRow( SimulatorItem, 20, 60, false, DisplayName = "the TV Sim's torches, taken down by REMOVECHILD" )]
 	[DataRow( HotPotItem, 60, 60, true, DisplayName = "the Hot Pot's EventMap, ended" )]
@@ -1077,6 +1091,7 @@ public class ParkFileWriterBoughtAndSoldTests
 		Assert.AreEqual( (0, 0), (held.Child, held.SoundChild), "and the parent's links are nought" );
 		Assert.AreEqual( loaded.ScriptStates.Order.Count - 1, written.ScriptStates.Order.Count );
 		Assert.AreEqual( 3, Times( "SAVE_PARK_SCRIPT_ENDED" ), "only the gates, the lights and the bus: the companion is not counted ended" );
+		Assert.AreEqual( ParkParticles.KilledLife, written.Particles.At( FileEmitter().Slot ).Life, "its emitter is taken down with it, as its script's end does" );
 
 		var again = Bind( written );
 
@@ -1105,6 +1120,7 @@ public class ParkFileWriterBoughtAndSoldTests
 		Assert.AreEqual( sound ? (0, childHandle) : (childHandle, 0), (parent.Child, parent.SoundChild) );
 		Assert.AreEqual( (sound ? 0 : parentHandle, 0, 0), (child.Parent, child.Child, child.SoundChild) );
 		Assert.AreEqual( loaded.ScriptStates.Order.Count, written.ScriptStates.Order.Count, "nothing was added or taken out" );
+		Assert.AreNotEqual( ParkParticles.KilledLife, written.Particles.At( FileEmitter().Slot ).Life, "a companion that runs keeps its emitter" );
 	}
 
 	/// <summary>
@@ -1112,7 +1128,7 @@ public class ParkFileWriterBoughtAndSoldTests
 	/// parent word set, its thing, model, speed and folder its parent's; the load after starts exactly that one and the old
 	/// handle's record is not left behind to start a second set of torches.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the made child not written; its parent word, thing or model left nought; the old record kept; the speed or folder the loader's.</remarks>
+	/// <remarks><b>Mutations:</b> the made child not written; its parent word, thing or model left nought; the old record kept; the speed or folder the loader's; its emitter not started (<c>StartedCompanion</c> not applied to <c>MadeScripts</c>).</remarks>
 	[TestMethod]
 	public void AChildMadeAfterTheLoadIsWrittenAsTheRecordTheParentNamesAndTheOldOneIsLeft()
 	{
@@ -1131,9 +1147,16 @@ public class ParkFileWriterBoughtAndSoldTests
 		parent.ChildId = reopened;
 		child.ParentId = parentHandle;
 		child.ThingId = parent.ThingId;
+		child.Nodes = parent.Nodes;
+
+		var node = ParticleNode( parent );
+
+		child.Effects!.Add( 1, node, StartableEffect, 1, child.Nodes!.EffectIndex( 1, node ) );
 
 		var written = Resaved( loaded, rides );
 		var record = written.ScriptStates.For( reopened )!.Value;
+
+		AssertStarted( written, record );
 
 		Assert.IsNull( written.ScriptStates.For( oldHandle ), "the old child's record is out" );
 		Assert.AreEqual( reopened, written.ScriptStates.For( parentHandle )!.Value.Child );
@@ -1153,7 +1176,7 @@ public class ParkFileWriterBoughtAndSoldTests
 	/// A ride bought since the load writes the child or sound child it made (Q911): the parent's link word set, the record whole under
 	/// the handle, a child's thing and model its parent's and a sound child's none; the load after starts it.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the bought ride's companion not handed over; its link, parent word, thing or model nought; the sound child given its parent's model or thing.</remarks>
+	/// <remarks><b>Mutations:</b> the bought ride's companion not handed over; its link, parent word, thing or model nought; the sound child given its parent's model or thing; the child's emitter not started (<c>StartedCompanion</c> not applied to <c>Companions</c>).</remarks>
 	[TestMethod]
 	[DataRow( SimulatorItem, 20, 60, false, DisplayName = "a TV Sim's torches (SPAWNCHILD)" )]
 	[DataRow( HotPotItem, 60, 60, true, DisplayName = "a Hot Pot's EventMap (SPAWNSOUND)" )]
@@ -1179,6 +1202,11 @@ public class ParkFileWriterBoughtAndSoldTests
 			parent.ChildId = childHandle;
 			child.ParentId = parentHandle;
 			child.ThingId = parent.ThingId;
+			child.Nodes = parent.Nodes;
+
+			var node = ParticleNode( parent );
+
+			child.Effects!.Add( 1, node, StartableEffect, 1, child.Nodes!.EffectIndex( 1, node ) );
 		}
 
 		var kept = state.WrittenObjects( shipped, id => true, out var madeObjects, out var gone );
@@ -1198,6 +1226,10 @@ public class ParkFileWriterBoughtAndSoldTests
 			"a child holds its parent's thing, model and speed, a sound child none and the loader's speed" );
 		Assert.AreEqual( sound ? ParkScriptStates.LoaderSpeed : parentRecord.Speed, childRecord.Value.Speed );
 		Assert.AreEqual( "x", childRecord.Value.Directory );
+
+		if ( !sound )
+			AssertStarted( written, childRecord.Value );
+
 		Assert.IsTrue( parentRecord.ModelHandle > 0 );
 		Assert.AreEqual( 0, Times( "SAVE_PARK_SCRIPT_MADE_SINCE_THE_LOAD" ), "nothing is left uncounted-for" );
 		Assert.IsTrue( written.ScriptStates.Order.ToList().IndexOf( childHandle ) < written.ScriptStates.Order.ToList().IndexOf( parentHandle ), "newest first: the child lies ahead of its parent" );
@@ -1206,6 +1238,32 @@ public class ParkFileWriterBoughtAndSoldTests
 
 		Assert.AreEqual( 1, again.CompanionsStarted, "the load starts it" );
 		Assert.IsNotNull( again.Scheduler.Find( childHandle ) );
+	}
+
+	/// <summary>An effect the shipped park's particle table starts (the toilet test's).</summary>
+	private const int StartableEffect = 9;
+
+	/// <summary>A node of the script's model with a place in particle space.</summary>
+	private static int ParticleNode( RideScript parent )
+	{
+		for ( var node = 0; node < 64; ++node )
+		{
+			if ( parent.Nodes!.Find( node, RideNodes.ParticleSpace, out _, carried: true ) is { } end && end is not (NodeEnd.Missing or NodeEnd.NegativeId) )
+				return node;
+		}
+
+		Assert.Fail( "the model has no node to put an emitter on" );
+		return -1;
+	}
+
+	/// <summary>A companion made here has its record's one particle named by an emitter the file now holds, started as the file is written.</summary>
+	private static void AssertStarted( ParkWorld written, SavedScript record )
+	{
+		var effect = record.Effects!.Single();
+
+		Assert.AreNotEqual( 0, effect.Handle, "its particle was started" );
+		Assert.IsTrue( written.Particles.At( effect.Handle & 0xffff ).InUse );
+		Assert.AreEqual( effect.Handle, written.Particles.At( effect.Handle & 0xffff ).Handle, "and the record names that emitter" );
 	}
 
 	/// <summary>A ride sold takes the sound child its SPAWNSOUND made with it, though that child holds no thing; the file's other scripts stay.</summary>
@@ -1221,14 +1279,31 @@ public class ParkFileWriterBoughtAndSoldTests
 	}
 
 	/// <summary>A SPAWNCHILD companion shares its parent's channels, so its looping key comes back with them; a SPAWNSOUND one has no model and keeps the loader's.</summary>
-	/// <remarks><b>Mutations:</b> the flag false for a child; true for a sound child.</remarks>
+	/// <remarks><b>Mutations:</b> the flag false for a child; true for a sound child; the parent's saved channels not asked for (<c>_saved.ContainsKey</c> dropped).</remarks>
 	[TestMethod]
 	[DataRow( SimulatorItem, 20, 60, false, 0x00020003, DisplayName = "a child keeps the key it was saved with" )]
 	[DataRow( HotPotItem, 60, 60, true, 0xffff, DisplayName = "a sound child has no channels to carry one" )]
-	public void ACompanionsLoopingKeyComesBackOnlyWithItsParentsChannels( int itemId, int x, int y, bool sound, int expected )
+	[DataRow( SimulatorItem, 20, 60, false, 0xffff, true, DisplayName = "a child whose parent's channels the file does not hold has none to carry one" )]
+	public void ACompanionsLoopingKeyComesBackOnlyWithItsParentsChannels( int itemId, int x, int y, bool sound, int expected, bool parentUnpaired = false )
 	{
-		var (body, _, childHandle, _, _) = ParkWithACompanion( itemId, x, y, sound );
+		var (body, parentHandle, childHandle, _, _) = ParkWithACompanion( itemId, x, y, sound );
 		var states = new ParkWorld( body ).ScriptStates;
+
+		if ( parentUnpaired )
+		{
+			// The model record's script word (its 0x19, a byte offset) nought: no record names the parent, so none of its channels is saved.
+			var model = new ParkWorld( body ).ThingStates( ChannelsFor ).ForScript( parentHandle );
+
+			Assert.IsNotNull( model, "the parent's model is paired in the file" );
+
+			var at = Enumerable.Range( 0, body.Length - 0x20 ).Single( offset => BinaryPrimitives.ReadInt32LittleEndian( body.AsSpan( offset + 0x19, 4 ) ) == parentHandle
+				&& BinaryPrimitives.ReadInt32LittleEndian( body.AsSpan( offset + 0x05, 4 ) ) == model!.Value.CellX
+				&& BinaryPrimitives.ReadInt32LittleEndian( body.AsSpan( offset + 0x09, 4 ) ) == model.Value.CellY
+				&& BinaryPrimitives.ReadInt32LittleEndian( body.AsSpan( offset + 0x01, 4 ) ) == model.Value.CatalogueId );
+
+			BinaryPrimitives.WriteInt32LittleEndian( body.AsSpan( at + 0x19, 4 ), 0 );
+			Assert.IsNull( new ParkWorld( body ).ThingStates( ChannelsFor ).ForScript( parentHandle ), "and is not once its script word is nought" );
+		}
 
 		BinaryPrimitives.WriteInt32LittleEndian( body.AsSpan( StructAt( body, states, childHandle ) + 0xa8, 4 ), 0x00020003 );
 

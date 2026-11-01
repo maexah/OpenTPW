@@ -1643,7 +1643,7 @@ and a model's channels their count, so nothing moves, and they go in before the 
   emitters (as a sold thing's are); one the load could not start keeps its record and its parent's link as the file holds them. A child or sound child a parent made since the load, of a bought
   ride (Q911's Hot Pot and TV Sim) or a loaded one (the reopened TV Sim's torches), is written whole as `ParkScriptStates.MadeRecord` writes a bought thing's script, newest first: its thing and model handle
   its parent's for a child (the record's `+0xac`, `+0xc8`; `0x0055516e` copies them), none for a sound child, its speed word (`+0xc0`) its parent's for a child and the loader's 50 for a sound child, and its folder its parent's (measured
-  over every child and sound child of the 30 distinct park files on this machine: 90 of 90 and 90 of 90, `q911` session notes). A sold ride's sound child goes with it though it holds no thing
+  over every child and sound child of the 766 distinct park files on this machine: 97 of 97 and 125 of 125; the run 17 review). A sold ride's sound child goes with it though it holds no thing
   (`ParkScriptStates.HandlesOf` follows the `+0x14` link). `SPAWNCHILD` stores the loader's answer in `+0x0c` before it tests it (`0x0055512b`, `test eax,eax` at `0x0055512e`), so a failed load empties the slot, as `SPAWNSOUND`'s does.
   **One split in what is written** (Q849, `q849/runD`, `runE`): her Dino Karts (thing 289, script handle 110) is a kart ride with no record in `ParkBumperCars`, so its record and its
   cars are left the file's (`SAVE_PARK_TRACK_RIDE_AS_THE_FILE`) while its script runs in ours with every `BUMP` a no-op. Her file has script 110 at word 197, `VAR_ONRIDE` 4,
@@ -2982,7 +2982,7 @@ on ticks 763 and 764 before the exit and after the entry; the balance is 73787 b
 stand. The control (main's build) wrote a 44-byte module and 42 things, and entered with the money gone, no ride and
 the same 16 pieces. **Not written** (counted): the pieces' models (`SAVE_PARK_TRACK_PIECE_MODEL`, 16 here: the
 original loading this file would draw no piece, by reading, since its pieces are model records like a queue
-piece's), and the two rides' companion scripts (`SAVE_PARK_SCRIPT_MADE_SINCE_THE_LOAD`, 2 here: a child spawned; Q911),
+piece's), and (the two rides' companion scripts are written since Q911, a bought kart's unrun),
 and each anchor's segment number (`mSegmentNumber`, the last two bytes of the 31-byte track sub-record, `SAVE_PARK_TRACK_SEGMENT`, which counts a piece's first write only: a piece the file holds keeps the file's word):
 the file written holds `0xffff` on every cell, where Alexah's played file holds the walk's step on each of its 33 anchors
 (`FUN_0053aef0` at `0x0052b295`, the crossing's last visit winning). `FUN_0053aec0` returns it (16 callers, 0xc and 0x11

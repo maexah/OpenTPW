@@ -151,7 +151,7 @@ public static class ParkFileWriter
 		IReadOnlySet<int>? GoneScripts = null );
 
 	/// <summary>
-	/// A script a parent made since the load, as a park file holds one (<c>docs/exe/saves.md</c>, "A companion made since
+	/// A script a parent made since the load, as a park file holds one (<c>docs/exe/saves.md</c>, "A companion's links, and one made since
 	/// the load"): its record whole, <paramref name="Parent"/> the handle of the script whose <c>SPAWNCHILD</c> or
 	/// <c>SPAWNSOUND</c> (<paramref name="Sound"/>) made it. A child holds its parent's thing and model handle, a sound
 	/// child none, which the writer lays over <paramref name="Script"/> as it writes the record.
@@ -451,7 +451,7 @@ public static class ParkFileWriter
 						scriptRecords.Add( (handle, ParkScriptStates.MadeRecord( script, slots[i] + 1, loaded.ScriptStates.StructSize )) );
 
 						foreach ( var companion in thing.Companions ?? [] )
-							scriptRecords.Add( (companion.Script.Script.Handle, CompanionRecord( companion, slots[i] + 1 )) );
+							scriptRecords.Add( (companion.Script.Script.Handle, CompanionRecord( companion, slots[i] + 1, loaded.ScriptStates.StructSize )) );
 					}
 
 					records.Add( (placed.ThingId, ParkWorld.MadeObjectRecord(
@@ -460,7 +460,7 @@ public static class ParkFileWriter
 
 				// A file parent's companions: the parent's model is the file's.
 				foreach ( var companion in madeScripts )
-					scriptRecords.Add( (companion.Script.Script.Handle, CompanionRecord( companion, loaded.ScriptStates.For( companion.Parent )?.ModelHandle ?? 0 )) );
+					scriptRecords.Add( (companion.Script.Script.Handle, CompanionRecord( companion, loaded.ScriptStates.For( companion.Parent )?.ModelHandle ?? 0, loaded.ScriptStates.StructSize )) );
 
 				var handles = cellsInOrder.ToDictionary( entry => entry.Key, _ => 0 );
 
@@ -562,8 +562,8 @@ public static class ParkFileWriter
 	}
 
 	/// <summary>A companion's whole record: a child holds <paramref name="parentModel"/>, a sound child no model.</summary>
-	private static byte[] CompanionRecord( MadeCompanion companion, int parentModel )
-		=> ParkScriptStates.MadeRecord( companion.Script, companion.Sound ? 0 : parentModel );
+	private static byte[] CompanionRecord( MadeCompanion companion, int parentModel, int structSize )
+		=> ParkScriptStates.MadeRecord( companion.Script, companion.Sound ? 0 : parentModel, structSize );
 
 	/// <summary>
 	/// Makes the file's live emitters follow the scripts' records (<c>docs/exe/saves.md</c>, "OpenTPW's writer, an

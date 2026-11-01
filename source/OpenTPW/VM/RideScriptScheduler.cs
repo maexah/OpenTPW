@@ -21,9 +21,10 @@ namespace OpenTPW;
 /// <para>
 /// <b>What this deliberately does not do.</b> Each turn, the original also pushes the script's speed word
 /// into its ride, its sound and <b>its child</b> - that last one found through this same registry, by the
-/// child id at <c>+0x0c</c> - and moves any particle objects hung off it. The speed word is 50 for every
-/// script that ever runs and no opcode writes it, so copying it into a child could not change anything;
-/// the rest does not exist here yet, and inventing it would put motion in the world that nothing asked
+/// child id at <c>+0x0c</c> - and moves any particle objects hung off it. A child's speed word is 60 in
+/// every file measured (97 of 97), the parent's pushed in at <c>0x00551881</c>..<c>0x00551888</c>; here every script runs at 50 and
+/// no opcode writes it, so the push is not made, and the writer lays the parent's word on a child it writes
+/// (<c>docs/exe/saves.md</c>, "A companion's links, and one made since the load"); the rest does not exist here yet, and inventing it would put motion in the world that nothing asked
 /// for - see <see cref="RideScript"/> for the same reasoning about world-touching opcodes.
 /// </para>
 /// </summary>
