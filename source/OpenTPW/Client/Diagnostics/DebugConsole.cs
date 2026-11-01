@@ -2373,25 +2373,8 @@ public static class DebugConsole
 
 				if ( parts.Length > 1 )
 				{
-					var cloudSlot = (int)Argument( 1 );
-
-					if ( cloudSlot < 0 || cloudSlot >= ParticleSystem.EmitterCount || !particleSystem.Emitters[cloudSlot].Active )
-					{
-						Reply( $"particles: no emitter is running in slot {cloudSlot}" );
-						break;
-					}
-
-					var cloud = particleSystem.Emitters[cloudSlot];
-
-					Reply( $"particles: slot {cloudSlot} effect {cloud.Effect} holds {cloud.Count}" );
-
-					for ( var index = cloud.FirstParticle; index >= 0; index = particleSystem.Particles[index].Next )
-					{
-						var one = particleSystem.Particles[index];
-
-						Reply( $"particles: particle {index} off ({(one.X - cloud.X) / 64f:0.00},{(one.Y - cloud.Y) / 64f:0.00},{(one.Z - cloud.Z) / 64f:0.00}) "
-							+ $"vel ({one.VX},{one.VY},{one.VZ}) size {one.Size} frame {one.Frame} colour 0x{one.Colour:x8} life {one.Life} of {one.Lifetime}" );
-					}
+					foreach ( var cloudLine in ParticleCloudReplies( particleSystem, parts[1] ) )
+						Reply( cloudLine );
 
 					break;
 				}
@@ -3198,6 +3181,38 @@ public static class DebugConsole
 		Reply( $"stall: {_stall} ms from wall {Time.WallMilliseconds}" );
 		System.Threading.Thread.Sleep( _stall );
 		_stall = 0;
+	}
+
+	/// <summary>The replies to `particles &lt;slot&gt;`: one emitter's cloud, or why the word names none.</summary>
+	internal static List<string> ParticleCloudReplies( ParticleSystem particleSystem, string word )
+	{
+		var replies = new List<string>();
+
+		if ( !int.TryParse( word, NumberStyles.Integer, CultureInfo.InvariantCulture, out var cloudSlot ) )
+		{
+			replies.Add( $"particles: {word} is not a slot number" );
+			return replies;
+		}
+
+		if ( cloudSlot < 0 || cloudSlot >= ParticleSystem.EmitterCount || !particleSystem.Emitters[cloudSlot].Active )
+		{
+			replies.Add( $"particles: no emitter is running in slot {cloudSlot}" );
+			return replies;
+		}
+
+		var cloud = particleSystem.Emitters[cloudSlot];
+
+		replies.Add( $"particles: slot {cloudSlot} effect {cloud.Effect} holds {cloud.Count}" );
+
+		for ( var index = cloud.FirstParticle; index >= 0; index = particleSystem.Particles[index].Next )
+		{
+			var one = particleSystem.Particles[index];
+
+			replies.Add( $"particles: particle {index} off ({(one.X - cloud.X) / 64f:0.00},{(one.Y - cloud.Y) / 64f:0.00},{(one.Z - cloud.Z) / 64f:0.00}) "
+				+ $"vel ({one.VX},{one.VY},{one.VZ}) size {one.Size} frame {one.Frame} colour 0x{one.Colour:x8} life {one.Life} of {one.Lifetime}" );
+		}
+
+		return replies;
 	}
 
 	private static void Reply( string message )
