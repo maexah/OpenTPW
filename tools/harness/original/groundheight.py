@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""groundheight.py PID SECS X,Z=+D|-D|=H ... - the ORIGINAL's memory, WRITTEN: the park ground's corner heights (the heightfield
+"""groundheight.py PID SECS X,Z=+D|-D|H ... - the ORIGINAL's memory, WRITTEN: the park ground's corner heights (the heightfield
 [[0x007a0854] + 0x6c]: heights at +0x28, (width + 1) x (height + 1) floats, vertex X,Z at index Z * (width + 1) + X). X,Z=+D adds D
 to the height the corner had when the script first read it, X,Z=-D subtracts it, X,Z=H (no sign) sets it; the new height is held
 (written again whenever it reads otherwise) for SECS, a line a write with mGameTick, and the old height is put back when SECS is up

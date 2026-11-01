@@ -1019,7 +1019,7 @@ public class Level
 
 		// A queue cell's piece is a model, written with the things; without them it is left the file's, counted.
 		var pieces = things != null ? new Dictionary<int, ParkFileWriter.QueuePiece?>() : null;
-		var cells = WrittenCells( loaded, state, made, gone, pieces );
+		var cells = WrittenCells( loaded, state, made, gone, pieces, catalogue );
 		var written = WrittenThings( loaded, made, gone );
 
 		// The file's ids deleted since the load and taken out of it: a thing on one now is a new one, written whole as
@@ -1364,7 +1364,7 @@ public class Level
 	/// </summary>
 	internal static Dictionary<int, ParkWorld.MapCell> WrittenCells( ParkWorld loaded, ParkState state,
 		IReadOnlyList<ParkWorld.CatalogueObject> made, IReadOnlySet<int> gone,
-		Dictionary<int, ParkFileWriter.QueuePiece?>? pieces = null )
+		Dictionary<int, ParkFileWriter.QueuePiece?>? pieces = null, ParkItemCatalogue? catalogue = null )
 	{
 		var written = new Dictionary<int, ParkWorld.MapCell>();
 		var madeAnchors = new HashSet<int>( made.Select( thing => MapStep.CellId( thing.RawX >> 8, thing.RawY >> 8 ) ) );
@@ -1409,16 +1409,23 @@ public class Level
 				{
 					Unimplemented.Report( "SAVE_PARK_FOOTPRINT_CELL" );
 
-					// A track add-on's footprint (the add-on is left out) lies over a kart's track the file does not hold: the cell
-					// stays the file's on the map, and carries the live track record with the add-on's flag (0x10) cleared, so the
-					// loop the file's ride and sections name is closed on the map as well.
-					if ( footprintNow && !footprintWas && was.TrackType == 0 && now.TrackType != 0 )
-						written[index] = was with
+					// A track add-on's footprint (the add-on is left out) lies over a kart's track that is not the file's: the cell
+					// stays the file's on the map (bare ground where the file's thing here was sold), and carries the live track record
+					// with the add-on's flag (0x10) cleared, so the loop the file's ride and sections name is closed on the map as well.
+					// Without a catalogue the owner cannot be told for an add-on, and the cell is left the file's.
+					var goneFootprint = footprintWas && goneAnchors.Contains( was.ParentId );
+
+					if ( footprintNow && (!footprintWas || goneFootprint) && TrackDiffers( was, now ) && OwnerIsAddOn( now.ParentId ) )
+					{
+						var ground = goneFootprint ? ParkPathBuilding.Cleared( was ) with { Flags = (ushort)(was.Flags & ParkPathBuilding.OutsideThePark) } : was;
+
+						written[index] = ground with
 						{
 							TrackType = now.TrackType, TrackFlags = (ushort)(now.TrackFlags & ~ParkTrackPieces.AddOnFlag), TrackParentId = now.TrackParentId,
 							TrackNeighbours = now.TrackNeighbours, TrackDirection = now.TrackDirection, TrackTileSet = now.TrackTileSet,
-							TrackTileIndex = now.TrackTileIndex, TrackTileAngle = now.TrackTileAngle
+							TrackTileIndex = now.TrackTileIndex, TrackTileAngle = now.TrackTileAngle, TrackOverlapCounter = now.TrackOverlapCounter
 						};
+					}
 
 					continue;
 				}
@@ -1434,6 +1441,16 @@ public class Level
 		}
 
 		return written;
+
+		// Whether the cell's track record is not the file's, the add-on's flag aside.
+		static bool TrackDiffers( ParkWorld.MapCell was, ParkWorld.MapCell now )
+			=> (was.TrackType, was.TrackFlags & ~ParkTrackPieces.AddOnFlag, was.TrackParentId, was.TrackNeighbours, was.TrackDirection, was.TrackTileSet, was.TrackTileIndex, was.TrackTileAngle, was.TrackOverlapCounter)
+				!= (now.TrackType, now.TrackFlags & ~ParkTrackPieces.AddOnFlag, now.TrackParentId, now.TrackNeighbours, now.TrackDirection, now.TrackTileSet, now.TrackTileIndex, now.TrackTileAngle, now.TrackOverlapCounter);
+
+		// Whether the thing anchored at this cell id is a track add-on.
+		bool OwnerIsAddOn( int anchorId )
+			=> catalogue != null && state.Objects.Any( thing => MapStep.CellId( thing.RawX >> 8, thing.RawY >> 8 ) == anchorId
+				&& catalogue.TryGet( thing.CatalogueId, out var item ) && ParkTrackAddOn.Is( item ) );
 
 		// A cell whose queue piece is not the file's: handed on, or counted where it cannot be.
 		void NotePiece( int index, ParkWorld.MapCell was, ParkWorld.MapCell now )

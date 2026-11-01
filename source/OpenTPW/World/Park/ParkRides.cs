@@ -1274,8 +1274,8 @@ public sealed class ParkRides : Entity
 	/// <summary>
 	/// The child and the sound child <paramref name="parent"/> made since the load, each written whole: the thing of a
 	/// child is its parent's and a sound child's is none, the speed word a child's is its parent's (<paramref name="speed"/>)
-	/// and a sound child's the loader's, and the folder is the parent's (90 of 90 children and 90 of 90 sound children in
-	/// the park files on the desk). A link whose script the file already holds a record for is the load's, not made here.
+	/// and a sound child's the loader's, and the folder is the parent's (97 of 97 children and 125 of 125 sound children in
+	/// the 766 distinct park files on the desk). A link whose script the file already holds a record for is the load's, not made here.
 	/// </summary>
 	private List<ParkFileWriter.MadeCompanion> MadeCompanionsOf( RideScript parent, int speed, string directory, ParkWorld loaded,
 		Func<float, uint> reading )

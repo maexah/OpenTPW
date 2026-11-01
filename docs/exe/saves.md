@@ -2937,7 +2937,7 @@ track** stamps its picture's cells as its footprint (`ParkTrackAddOn.Stamp`), wh
 ground: for such a cell the file's ground is written with the live track record (flags 0x10 cleared), so the loop stays closed
 on the map where the file's ride and sections say it is; the footprint itself is counted `SAVE_PARK_FOOTPRINT_CELL`. **A file's
 kart that a file add-on names** (`mUpgradeParent`) and that is sold (`writable` lets a file's carless kart go) leaves the
-add-on in the file naming a thing the file no longer holds; the sale is counted `SAVE_PARK_TRACK_TEARDOWN`, the word is not
+add-on in the file naming a thing the file no longer holds; the sale is counted `SALE_TRACK_TEARDOWN`, the word is not
 (`ParkState.TryObject` answers for it; the original's click at `0x004869be` reads it with no check beyond non-zero, whether
 `0x004af980` copes is not read; Q993).
 A file with 1 and no section is opened by the original and crashes on the first car (`0x00546d02`, `mov ecx,[edi+0x98]`
@@ -2982,8 +2982,7 @@ on ticks 763 and 764 before the exit and after the entry; the balance is 73787 b
 stand. The control (main's build) wrote a 44-byte module and 42 things, and entered with the money gone, no ride and
 the same 16 pieces. **Not written** (counted): the pieces' models (`SAVE_PARK_TRACK_PIECE_MODEL`, 16 here: the
 original loading this file would draw no piece, by reading, since its pieces are model records like a queue
-piece's), and (the two rides' companion scripts are written since Q911, a bought kart's unrun),
-and each anchor's segment number (`mSegmentNumber`, the last two bytes of the 31-byte track sub-record, `SAVE_PARK_TRACK_SEGMENT`, which counts a piece's first write only: a piece the file holds keeps the file's word):
+piece's) and each anchor's segment number (`mSegmentNumber`, the last two bytes of the 31-byte track sub-record, `SAVE_PARK_TRACK_SEGMENT`, which counts a piece's first write only: a piece the file holds keeps the file's word):
 the file written holds `0xffff` on every cell, where Alexah's played file holds the walk's step on each of its 33 anchors
 (`FUN_0053aef0` at `0x0052b295`, the crossing's last visit winning). `FUN_0053aec0` returns it (16 callers, 0xc and 0x11
 returning the anchor's own) and the closed-loop edit compares two of them signed (`0x005268d4`..`0x005268e6`), so with

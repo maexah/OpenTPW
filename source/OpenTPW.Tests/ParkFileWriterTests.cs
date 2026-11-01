@@ -1196,7 +1196,7 @@ public class ParkFileWriterTests
 			Assert.IsTrue( track.Count >= 4 );
 
 			foreach ( var (x, y, _) in ParkTrackAddOn.Cells( addOn, at.X, at.Y, 0 ).Where( cell => ParkState.OnMap( cell.X, cell.Y ) ) )
-				state.SetRecord( x, y, shipped.CellAt( x, y ) with { TrackType = 11, TrackNeighbours = 0x05, TrackDirection = 0x04, TrackParentId = (ushort)MapStep.CellId( 20, 20 ) } );
+				state.SetRecord( x, y, shipped.CellAt( x, y ) with { TrackType = 11, TrackNeighbours = 0x05, TrackDirection = 0x04, TrackParentId = (ushort)MapStep.CellId( 20, 20 ), TrackTileSet = 3, TrackTileIndex = 5, TrackTileAngle = 2 } );
 
 			var addOnId = state.NextThingId();
 
@@ -1218,12 +1218,108 @@ public class ParkFileWriterTests
 
 				Assert.AreEqual( shipped.CellAt( x, y ).Type, cell.Type, $"({x},{y}) is the file's ground" );
 				Assert.AreEqual( (11, 0x05, 0x04, 0), (cell.TrackType, cell.TrackNeighbours, cell.TrackDirection, cell.TrackFlags & 0x10), $"({x},{y}) holds the track" );
+				Assert.AreEqual( (MapStep.CellId( 20, 20 ), 3, 5, 2), (cell.TrackParentId, cell.TrackTileSet, cell.TrackTileIndex, cell.TrackTileAngle), $"({x},{y}) holds the track's owner and tile" );
+				Assert.AreEqual( (shipped.CellAt( x, y ).Flags, shipped.CellAt( x, y ).ParentId), (cell.Flags, cell.ParentId), $"({x},{y}) keeps the file's flags and owner on the map" );
 			}
 		}
 		finally
 		{
 			rides.Delete();
 			Entity.ApplyDeletions();
+			TestRun.DeleteEvery<ParkPeople>();
+		}
+	}
+
+	/// <summary>
+	/// A track add-on's footprint over a cell whose track the file holds, and which has changed since: the cell stays the file's
+	/// on the map and takes the live track record (its overlap counter too) with the add-on's flag cleared; with no catalogue, or
+	/// an owner that is not an add-on, it is left the file's.
+	/// <para><b>Mutations:</b> the guard back to <c>was.TrackType == 0</c>; <c>OwnerIsAddOn</c> dropped from the condition;
+	/// <c>TrackOverlapCounter</c> not copied.</para>
+	/// </summary>
+	[TestMethod]
+	public void AnAddOnOverATrackCellTheFileHoldsTakesTheLiveTrack()
+	{
+		var catalogue = new ParkItemCatalogue( "jungle", FileSystem );
+		var people = new ParkPeople( shipped );
+		var state = people.State;
+
+		try
+		{
+			var (x, y) = Enumerable.Range( 0, ParkWorld.MapSize * ParkWorld.MapSize ).Select( n => (X: n % ParkWorld.MapSize, Y: n / ParkWorld.MapSize) )
+				.First( spot => shipped.CellAt( spot.X, spot.Y ) is { TrackType: not 0, Type: not (CellEdge.Footprint or CellEdge.RideEnd or CellEdge.RideFarEnd) } );
+			var was = shipped.CellAt( x, y );
+			var index = (y * ParkWorld.MapSize) + x;
+			var addOn = catalogue.All.First( ParkTrackAddOn.Is );
+			var owner = (ushort)MapStep.CellId( x, y );
+			var racers = catalogue.All.First( item => item.BumperType != 0 && !ParkBumperCars.IsBumperFamily( item.BumperType ) );
+
+			state.AddObject( ParkBuilding.Constructed( addOn, state.NextThingId(), x, y, 0, 1, 1, ParkWorld.BuiltWhen.At( state.CalendarNow ) ) );
+			state.SetRecord( x, y, was with
+			{
+				Type = CellEdge.Footprint, ParentId = owner, Flags = ParkTrackPieces.AddOnFlag, TrackFlags = (ushort)(was.TrackFlags | ParkTrackPieces.AddOnFlag),
+				TrackNeighbours = (byte)(was.TrackNeighbours ^ 0x11), TrackTileIndex = was.TrackTileIndex + 1, TrackOverlapCounter = 3
+			} );
+
+			var cells = Level.WrittenCells( shipped, state, [], new HashSet<int>(), null, catalogue );
+
+			Assert.IsTrue( cells.TryGetValue( index, out var cell ), "the cell is written" );
+			Assert.AreEqual( (was.Type, was.ParentId, was.Flags), (cell.Type, cell.ParentId, cell.Flags), "on the map it stays the file's" );
+			Assert.AreEqual( (was.TrackType, (byte)(was.TrackNeighbours ^ 0x11), was.TrackTileIndex + 1, (short)3), (cell.TrackType, cell.TrackNeighbours, cell.TrackTileIndex, cell.TrackOverlapCounter) );
+			Assert.AreEqual( was.TrackFlags & ~ParkTrackPieces.AddOnFlag, cell.TrackFlags & ~0, "the add-on's flag is cleared" );
+			Assert.AreEqual( 0, cell.TrackFlags & ParkTrackPieces.AddOnFlag );
+
+			Assert.IsFalse( Level.WrittenCells( shipped, state, [], new HashSet<int>(), null, null ).ContainsKey( index ), "no catalogue: left the file's" );
+
+			state.RemoveObject( state.Objects.Last().ThingId );
+			state.AddObject( ParkBuilding.Constructed( racers, state.NextThingId(), x, y, 0, 1, 1, ParkWorld.BuiltWhen.At( state.CalendarNow ) ) );
+			Assert.IsFalse( Level.WrittenCells( shipped, state, [], new HashSet<int>(), null, catalogue ).ContainsKey( index ), "the owner is not an add-on: left the file's" );
+		}
+		finally
+		{
+			TestRun.DeleteEvery<ParkPeople>();
+		}
+	}
+
+	/// <summary>
+	/// The same footprint over the cell of a file's thing that was sold: bare ground on the map, with the live track.
+	/// <para><b>Mutations:</b> the bare ground taken out (the file's footprint kept); <c>goneFootprint</c> not allowed through.</para>
+	/// </summary>
+	[TestMethod]
+	public void AnAddOnOverASoldThingsCellLeavesBareGroundWithTheLiveTrack()
+	{
+		var catalogue = new ParkItemCatalogue( "jungle", FileSystem );
+		var people = new ParkPeople( shipped );
+		var state = people.State;
+
+		try
+		{
+			var thing = shipped.Objects.First( file => Enumerable.Range( 0, ParkWorld.MapSize * ParkWorld.MapSize ).Any( n => shipped.Cells[n] is { Type: CellEdge.Footprint } cell
+				&& cell.ParentId == MapStep.CellId( file.RawX >> 8, file.RawY >> 8 ) ) );
+			var anchor = MapStep.CellId( thing.RawX >> 8, thing.RawY >> 8 );
+			var index = Enumerable.Range( 0, ParkWorld.MapSize * ParkWorld.MapSize ).First( n => shipped.Cells[n] is { Type: CellEdge.Footprint } cell && cell.ParentId == anchor );
+			var was = shipped.Cells[index];
+			var addOn = catalogue.All.First( ParkTrackAddOn.Is );
+			var owner = MapStep.CellId( 1, 1 );
+
+			Assert.AreNotEqual( anchor, owner );
+			state.AddObject( ParkBuilding.Constructed( addOn, state.NextThingId(), 1, 1, 0, 1, 1, ParkWorld.BuiltWhen.At( state.CalendarNow ) ) );
+			state.SetRecord( index % ParkWorld.MapSize, index / ParkWorld.MapSize, was with
+			{
+				ParentId = (ushort)owner, Flags = ParkTrackPieces.AddOnFlag, TrackType = 11, TrackNeighbours = 0x05, TrackDirection = 0x04,
+				TrackFlags = ParkTrackPieces.AddOnFlag, TrackParentId = 7
+			} );
+
+			Assert.IsFalse( Level.WrittenCells( shipped, state, [], new HashSet<int>(), null, catalogue ).ContainsKey( index ), "the file's thing is still there: the cell is left" );
+
+			var cells = Level.WrittenCells( shipped, state, [], new HashSet<int> { thing.ThingId }, null, catalogue );
+
+			Assert.IsTrue( cells.TryGetValue( index, out var cell ), "the cell is written" );
+			Assert.AreEqual( (CellEdge.Nothing, (ushort)0, ParkPathBuilding.Cleared( was ).TileIndex), (cell.Type, cell.ParentId, cell.TileIndex), "bare ground" );
+			Assert.AreEqual( (11, (byte)0x05, (ushort)7, 0), (cell.TrackType, cell.TrackNeighbours, cell.TrackParentId, cell.TrackFlags & ParkTrackPieces.AddOnFlag), "with the live track" );
+		}
+		finally
+		{
 			TestRun.DeleteEvery<ParkPeople>();
 		}
 	}

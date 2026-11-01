@@ -4,7 +4,7 @@
 # 0x007859a0), then takes frames: A1 A2 (pristine), B1 B2 (the two off-diagonal corners of CELL raised by RISE units, held: groundheight.py),
 # C1 C2 (the same, CELL's 0x2 set: groundheight.py's partner groundcell.py), D1 (0x2 cleared again), E1 (the corners put back), then stops
 # the original. `spikecut.py <outdir>` counts and measures them.
-#   FILE=<park file> (default q325's stock park)  CELL=4,16 (a flat cell, flag 0x0004, in the frame at 50,150 zoom 70 rot 0)
+#   FILE=<park file> (default q325's stock park)  CELL=4,16 (a planar cell, flag 0x0004, in the frame at 50,150 zoom 70 rot 0)
 #   RISE=15  CORNERS="5,16 4,17" (the vertices raised: for CELL x,z the pair (x+1,z) and (x,z+1) lies on the cut 0x2 clear draws).
 # Needs the same environment as flipdiag.sh.
 set -euo pipefail

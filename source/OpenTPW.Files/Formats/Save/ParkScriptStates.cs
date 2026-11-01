@@ -66,7 +66,7 @@ namespace OpenTPW;
 /// </param>
 /// <param name="Directory">
 /// The folder the script was loaded from, the string after the head table (<c>data\levels\jungle\Rides\mumbo\</c>), without its
-/// nought; a child holds its parent's (90 of 90). Null only where a record was made without a save.
+/// nought; a child holds its parent's (97 of 97 children and 125 of 125 sound children in the same files). Null only where a record was made without a save.
 /// </param>
 public readonly record struct SavedScript( int Handle, int Position, int BodyWords, int[] Variables,
 	int CallIndex, int HeapIndex, int Result, int[] Stack,
