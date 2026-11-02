@@ -70,6 +70,74 @@ public class ModelFaceCullingTests
 		Assert.AreEqual( ComparisonKind.LessEqual, Material.DepthStateFor( MaterialFlags.DisableCulling ).DepthComparison );
 	}
 
+	/// <summary>
+	/// <b>The pipeline description the device is handed carries those states</b> (<see cref="Material.StatesFor"/>, built by
+	/// <c>CreateSharedPipeline</c>; Q736 (c)): a model's flags cull the back faces, test and write depth less or equal; a
+	/// two-sided one culls none; additive and multiply blend as they are asked. Only the device's building of a pipeline from
+	/// it is left to the game run.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> <c>RasterizerState</c> or <c>DepthStencilState</c> left out of <c>StatesFor</c>.</remarks>
+	[TestMethod]
+	public void TheDescriptionHandedToTheDeviceCarriesTheMaterialsStates()
+	{
+		var model = Material.StatesFor( LobbyModel.DrawFlags( MaterialFlags.DisableCulling ) );
+
+		Assert.AreEqual( FaceCullMode.Back, model.RasterizerState.CullMode );
+		Assert.AreEqual( FrontFace.Clockwise, model.RasterizerState.FrontFace );
+		Assert.AreEqual( ComparisonKind.LessEqual, model.DepthStencilState.DepthComparison );
+		Assert.IsTrue( model.DepthStencilState.DepthWriteEnabled );
+		Assert.AreEqual( PrimitiveTopology.TriangleList, model.PrimitiveTopology );
+		Assert.AreEqual( BlendStateDescription.SingleAlphaBlend, model.BlendState );
+
+		Assert.AreEqual( FaceCullMode.None, Material.StatesFor( MaterialFlags.DisableCulling ).RasterizerState.CullMode );
+		Assert.IsFalse( Material.StatesFor( MaterialFlags.DisableDepthWrite ).DepthStencilState.DepthWriteEnabled );
+		Assert.AreEqual( BlendStateDescription.SingleAdditiveBlend, Material.StatesFor( MaterialFlags.Additive ).BlendState );
+		Assert.AreEqual( BlendFactor.SourceColor, Material.StatesFor( MaterialFlags.Multiply ).BlendState.AttachmentStates[0].DestinationColorFactor );
+	}
+
+	/// <summary>
+	/// <b>Every place that builds a <see cref="Material"/> is accounted for</b> (Q736 (d); <c>render-states.md</c>, "Which draws
+	/// the test covers"): the one that draws a model's meshes (<c>LobbyModel</c>, which every park and lobby model, the advisor
+	/// and the object window's preview go through) takes its flags through <see cref="LobbyModel.DrawFlags"/>; every other
+	/// is a listed draw (the table's two-sided ones, and the culled ones that ask for no flag). A new
+	/// <c>new Material</c> anywhere else fails here until it is put on one list, which is the question of how it is culled.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> <c>LobbyModel</c>'s <c>DrawFlags( materialFlags )</c> taken out; a new <c>new Material</c> in another file.</remarks>
+	[TestMethod]
+	public void EveryMaterialIsBuiltBySomethingTheTableAccountsFor()
+	{
+		var source = Path.Join( RepoFiles.Root(), "source", "OpenTPW" );
+
+		if ( !Directory.Exists( source ) )
+			Assert.Inconclusive( "no source tree beside the tests" );
+
+		var sites = Directory.EnumerateFiles( source, "*.cs", SearchOption.AllDirectories )
+			.Where( file => !file.Contains( $"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}" ) && !file.Contains( $"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}" ) )
+			.Select( file => (Name: Path.GetFileName( file ), Count: File.ReadAllLines( file )
+				.Count( line => !line.TrimStart().StartsWith( "///" ) && System.Text.RegularExpressions.Regex.IsMatch( line, @"\bnew Material\b" ) )) )
+			.Where( site => site.Count > 0 )
+			.OrderBy( site => site.Name, System.StringComparer.Ordinal )
+			.Select( site => $"{site.Name}:{site.Count}" );
+
+		// A model's: LobbyModel. Two-sided in the table: UiMesh, ScreenParticles, WorldParticles, ParkGuestSprites (two: the
+		// people and their shadows), ParkPaths, ParkSea, ParkGround, ParkBuildMarkers, Sky. Asking for no flag, so culled as
+		// a model is: Material.UI (the Default), Water, ParkRideHoarding, ParkFlags. Weather's are culled, its quads turned
+		// to the camera.
+		CollectionAssert.AreEqual(
+			new[]
+			{
+				"LobbyModel.cs:1", "Material.UI.cs:1", "ParkBuildMarkers.cs:1", "ParkFlags.cs:1", "ParkGround.cs:1",
+				"ParkGuestSprites.cs:2", "ParkPaths.cs:1", "ParkRideHoarding.cs:1", "ParkSea.cs:1", "ScreenParticles.cs:1",
+				"Sky.cs:1", "UiMesh.cs:1", "Water.cs:1", "WeatherSprites.cs:1", "WorldParticles.cs:1"
+			},
+			sites.ToArray() );
+
+		var lobby = File.ReadAllText( Path.Join( source, "World", "Lobby", "LobbyModel.cs" ) );
+
+		StringAssert.Contains( lobby, "var flags = DrawFlags( materialFlags );" );
+		StringAssert.Contains( lobby, "new Material<ObjectUniformBuffer>( \"content/shaders/test.shader\", flags )" );
+	}
+
 	/// <summary>A material that neither tests nor writes depth compares nothing.</summary>
 	[TestMethod]
 	public void NoDepthComparesNothing()

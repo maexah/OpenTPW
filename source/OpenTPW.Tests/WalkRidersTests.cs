@@ -631,6 +631,128 @@ public class WalkRidersTests
 		}
 	}
 
+	/// <summary>
+	/// <b>A walk rider put off by a sale is heard where the placer left them, not at the navigator's feet</b>
+	/// (<see cref="ParkPeople.ThingRemoved"/> asks <see cref="ParkGuestSprites.WalkedOnRide"/> before the answer; the
+	/// ask is Q736 (a)). A guest riding the Mayan Spinner, carried under action 6 on node 2, is put off by its sale: the
+	/// one sound is asked for at the walk's point, which is nowhere near the guest's own place; the one carried under
+	/// action 1 (hidden by the placer) is heard at the origin.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutation (fails here):</b> the <c>walked</c> ask in <c>ThingRemoved</c> replaced by <c>null</c> (the sound is then the
+	/// navigator's feet).
+	/// </remarks>
+	[TestMethod]
+	public void ASoldRideHearsItsWalkRiderWhereThePlacerLeftThem()
+	{
+		WithTheSpinnersWalks(
+		[
+			new SavedWalkSlot( 1, 2, 2, 16, 5000, 5700, 29, 6, (short)RideScript.WalkState.Carried, 1, 0 ),
+			new SavedWalkSlot( 1, 2, 2, 16, 5000, 5700, 31, 1, (short)RideScript.WalkState.Carried, 1, 0 ),
+		], ( people, players, nodes ) =>
+		{
+			var statics = typeof( ParkGround ).GetProperty( "Current", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public )!;
+			var groundBefore = statics.GetValue( null );
+			statics.SetValue( null, null );
+
+			try
+			{
+				Assert.IsTrue( people.State.TryObject( 13, out var ride ) );
+				Assert.AreNotEqual( 0, ride.Flags & ParkWorld.CatalogueObject.KeepsRidersSpriteFlag, "the control: the ride keeps its riders' sprites" );
+
+				var heard = new System.Collections.Generic.List<OpenTPW.Vector3>();
+				people.PutOffHeard = heard.Add;
+
+				foreach ( var id in new[] { 29, 31 } )
+				{
+					var peep = people.Peeps.Single( one => one.ThingId == id );
+					peep.MajorDest = 13;
+					peep.SetState( PeepState.Riding, tick: 1, new Random( 1 ) );
+				}
+
+				var carried = ParkGuestSprites.WalkedOnRide( people, 29, 13 )!.Value;
+				var own = ParkGuestSprites.Heard( people.Peeps.Single( one => one.ThingId == 29 ).Navigator.Position );
+
+				Assert.IsFalse( carried.Hidden );
+				Assert.AreNotEqual( carried.At, own, "the control: the feet are elsewhere" );
+
+				people.ThingRemoved( ride );
+
+				CollectionAssert.AreEquivalent(
+					new[] { carried.At, OpenTPW.Vector3.Zero },
+					heard, "the carried rider at the walk's point, the hidden one at the origin" );
+			}
+			finally
+			{
+				statics.SetValue( null, groundBefore );
+			}
+		} );
+	}
+
+	/// <summary>
+	/// <b>The console's <c>sprites</c> census reports a walk rider's place</b> (<see cref="ParkGuestSprites.Census"/>; Q736 (b)): a
+	/// guest carried under action 6 is drawn at the walk's point, so their line says <c>WALK at (x, y, z)</c> with that point and
+	/// the drawn place is the walk's x and y; one carried under action 1 says <c>WALK hides</c>.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutation (fails here):</b> <c>walked is { Hidden: false } w ? w.At</c> dropped from the census' <c>seated</c> (the line then
+	/// says the guest is drawn at their own place).
+	/// </remarks>
+	[TestMethod]
+	public void TheCensusLineNamesAWalkRidersPlace()
+	{
+		var data = GameData.Required();
+		var bankFile = ParkGuestSprites.BanksIn( data, ParkGuestSprites.FolderFor( 0, "jungle" )!, 0 )[0];
+		var bank = new SpriteBankFile( new MemoryStream( data.ReadAllBytes( bankFile ) ) );
+		var pictures = Enumerable.Range( 0, 1024 ).Select( i => new ParkGuestSprites.Region( 0.25f, 0.1f, 0.5f, 0.3f, i + 1, 50, 22, 42 ) ).ToArray();
+
+		var all = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public;
+		var statics = new[] { typeof( ParkBumperBoats ), typeof( ParkGround ), typeof( ParkObjects ) }
+			.Select( type => type.GetProperty( "Current", all )! ).ToArray();
+		var staticsBefore = statics.Select( property => property.GetValue( null ) ).ToArray();
+
+		try
+		{
+			foreach ( var property in statics )
+				property.SetValue( null, null );
+
+			WithTheSpinnersWalks(
+			[
+				new SavedWalkSlot( 1, 2, 2, 16, 5000, 5700, 901, 1, (short)RideScript.WalkState.Carried, 1, 3 ),
+				new SavedWalkSlot( 1, 2, 2, 16, 5000, 5700, 902, 6, (short)RideScript.WalkState.Carried, 1, 0 ),
+			], ( people, players, nodes ) =>
+			{
+				var pool = new ParkGuestSprites( "jungle", null );
+				pool.Resize( 4 );
+
+				var loaded = typeof( ParkGuestSprites ).GetNestedType( "Loaded", all )!;
+				((System.Collections.IDictionary)typeof( ParkGuestSprites ).GetField( "_banks", all )!.GetValue( pool )!)[(0, 0)] = Activator.CreateInstance( loaded, bank, pictures );
+
+				var drawn = (System.Collections.Generic.List<(ParkWorld.Person Person, ParkWorld.Sprite Sprite)>)typeof( ParkGuestSprites ).GetField( "_people", all )!.GetValue( pool )!;
+
+				foreach ( var thing in new[] { 900, 901, 902 } )
+					drawn.Add( (new ParkWorld.Person( thing, 0, 0, 0, thing, 0, default!, null ),
+						new ParkWorld.Sprite( thing, 0, 0, 0, 300f, 200f, 0f, 0, 0, 255, 0, 0, 0 )) );
+
+				var lines = pool.Census().ToDictionary( line => int.Parse( line.Split( ' ', StringSplitOptions.RemoveEmptyEntries )[1] ) );
+				var at = ParkGuestSprites.WalkedOnRide( people, 902 )!.Value.At;
+
+				StringAssert.Contains( lines[902], $" WALK at ({at.X:0.000},{at.Y:0.000},{at.Z:0.000}) facing 0" );
+				StringAssert.Contains( lines[902], $"drawn ({at.X:0.000},{at.Y:0.000})", "drawn on the walk's point" );
+				StringAssert.Contains( lines[902], $" SEATED z {at.Z:0.0}" );
+				StringAssert.Contains( lines[901], " WALK hides" );
+				StringAssert.Contains( lines[901], "drawn (", "the hidden one is drawn where the file has them" );
+				Assert.IsFalse( lines[901].Contains( "SEATED" ) );
+				Assert.IsFalse( lines[900].Contains( "WALK" ), "the control: nobody's walk holds them" );
+			} );
+		}
+		finally
+		{
+			for ( var i = 0; i < statics.Length; ++i )
+				statics[i].SetValue( null, staticsBefore[i] );
+		}
+	}
+
 	private static int Word( Opcode opcode ) => unchecked( (int)(0x80000000u | (uint)opcode) );
 
 	/// <summary>A script declaring <paramref name="walkSlots"/> walk slots, two variables, and <paramref name="body"/>.</summary>

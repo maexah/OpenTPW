@@ -3245,6 +3245,12 @@ public sealed partial class ParkPeople : Entity
 		=> _walks.GetValueOrDefault( thingId ) ?? _staffWalks.GetValueOrDefault( thingId );
 
 	/// <summary>
+	/// A test's ear on <see cref="ThingRemoved"/>: told each point a put-off sound is asked to play at, before the audio is.
+	/// Null in the game. Needs no device, which <see cref="ParkAudio.PutOff"/> does.
+	/// </summary>
+	internal Action<Vector3>? PutOffHeard { get; set; }
+
+	/// <summary>
 	/// Tells everybody in the park a thing has gone - the type-10 message the object destructor
 	/// <c>FUN_004dd0a0</c> sends at <c>0x004dd150</c>, after the thing has left the object chain and before
 	/// its refund and its script teardown. Every guest and every member of staff answers it on their own:
@@ -3289,7 +3295,10 @@ public sealed partial class ParkPeople : Entity
 					( x, y ) => ParkGuestSprites.StandsOn( ParkGround.Current?.Heightfield, x, y ) );
 
 			if ( heardAt is { } at )
+			{
+				PutOffHeard?.Invoke( at );
 				ParkAudio.Current?.PutOff( at );
+			}
 		}
 
 		foreach ( var member in _staff )

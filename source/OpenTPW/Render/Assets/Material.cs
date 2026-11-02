@@ -586,13 +586,12 @@ public partial class Material : Asset
 		GpuMemory.Add( GpuMemory.Kind.UniformBuffer, bufferDescription.SizeInBytes );
 	}
 
-	private SharedPipeline CreateSharedPipeline( PipelineKey key )
-	{
-		var flags = key.Flags;
-		var vertexLayout = new VertexLayoutDescription( Vertex.VertexElementDescriptions );
-		var layouts = CreateResourceLayouts();
-
-		var pipelineDescription = new GraphicsPipelineDescription()
+	/// <summary>
+	/// The part of a material's pipeline description its flags decide (blend, depth, rasterizer, topology): what
+	/// <see cref="CreateSharedPipeline"/> hands the device before it adds the shaders, layouts and outputs.
+	/// </summary>
+	internal static GraphicsPipelineDescription StatesFor( MaterialFlags flags )
+		=> new()
 		{
 			BlendState = flags.HasFlag( MaterialFlags.Multiply )
 				? new BlendStateDescription( RgbaFloat.Black, new BlendAttachmentDescription( true,
@@ -606,11 +605,19 @@ public partial class Material : Asset
 
 			RasterizerState = RasterizerStateFor( flags ),
 
-			PrimitiveTopology = PrimitiveTopology.TriangleList,
-			ResourceLayouts = [.. layouts],
-			ShaderSet = new ShaderSetDescription( [vertexLayout], [(NeoVeldrid.Shader)key.Vertex, (NeoVeldrid.Shader)key.Fragment] ),
-			Outputs = Render.MultisampledFramebuffer.OutputDescription
+			PrimitiveTopology = PrimitiveTopology.TriangleList
 		};
+
+	private SharedPipeline CreateSharedPipeline( PipelineKey key )
+	{
+		var flags = key.Flags;
+		var vertexLayout = new VertexLayoutDescription( Vertex.VertexElementDescriptions );
+		var layouts = CreateResourceLayouts();
+
+		var pipelineDescription = StatesFor( flags );
+		pipelineDescription.ResourceLayouts = [.. layouts];
+		pipelineDescription.ShaderSet = new ShaderSetDescription( [vertexLayout], [(NeoVeldrid.Shader)key.Vertex, (NeoVeldrid.Shader)key.Fragment] );
+		pipelineDescription.Outputs = Render.MultisampledFramebuffer.OutputDescription;
 
 		return new SharedPipeline( Device.ResourceFactory.CreateGraphicsPipeline( pipelineDescription ), layouts );
 	}
