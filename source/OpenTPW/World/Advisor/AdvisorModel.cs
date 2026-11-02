@@ -150,24 +150,39 @@ public sealed class AdvisorModel
 				Log.Info( $"Advisor: the ticket {TicketGrowth:0.000} grown, drawn {across + 0f:0} px across and {down + 0f:0} px down from his pin, "
 					+ $"window {Screen.Width:0}x{Screen.Height:0}" );
 			}
-
-			foreach ( var node in outgoing.HideList )
-				SetMeshVisible( node, true );
 		}
 
-		if ( clip >= 1 && clip < _clips.Length && _clips[clip] is { } incoming )
-		{
-			foreach ( var node in incoming.RotationTracks.Select( track => track.TargetIndex )
+		var outgoingHidden = _startedClip >= 1 && _startedClip < _clips.Length && _clips[_startedClip] is { } left
+			? left.HideList.Select( node => (int)node ) : Enumerable.Empty<int>();
+
+		var (touched, hidden) = clip >= 1 && clip < _clips.Length && _clips[clip] is { } incoming
+			? (incoming.RotationTracks.Select( track => track.TargetIndex )
 				.Concat( incoming.PositionTracks.Select( track => track.TargetIndex ) )
 				.Concat( incoming.VisibilityTracks.Select( track => track.TargetIndex ) )
-				.Concat( incoming.MorphTracks.Select( track => track.TargetIndex ) ) )
-				SetMeshVisible( node, true );
+				.Concat( incoming.MorphTracks.Select( track => track.TargetIndex ) ),
+				incoming.HideList.Select( node => (int)node ))
+			: (Enumerable.Empty<int>(), Enumerable.Empty<int>());
 
-			foreach ( var node in incoming.HideList )
-				SetMeshVisible( node, false );
-		}
-
+		Turnover( outgoingHidden, touched, hidden, SetMeshVisible );
 		_startedClip = clip;
+	}
+
+	/// <summary>
+	/// What a clip's start does to the nodes' visibility, in this order: the nodes the clip before it hid are shown, then every
+	/// node the incoming clip's tracks name, then the incoming clip's hide list is hidden - so a node in both the tracks and the
+	/// hide list ends hidden.
+	/// </summary>
+	internal static void Turnover( IEnumerable<int> outgoingHidden, IEnumerable<int> incomingTouched, IEnumerable<int> incomingHidden,
+		Action<int, bool> setVisible )
+	{
+		foreach ( var node in outgoingHidden )
+			setVisible( node, true );
+
+		foreach ( var node in incomingTouched )
+			setVisible( node, true );
+
+		foreach ( var node in incomingHidden )
+			setVisible( node, false );
 	}
 
 	/// <summary>

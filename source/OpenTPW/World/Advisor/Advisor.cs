@@ -224,7 +224,7 @@ public sealed class Advisor : Entity
 	private LipFile? _lips;
 
 	/// <summary>Something to do partway through a line, and how long after the line is given.</summary>
-	private readonly record struct Cue( float Seconds, Action Action );
+	internal readonly record struct Cue( float Seconds, Action Action );
 
 	/// <summary>Samples waiting their turn, oldest first, each with its cue if it has one.</summary>
 	private readonly Queue<(int Sample, Cue? Cue)> _queue = new();
@@ -292,6 +292,26 @@ public sealed class Advisor : Entity
 	}
 
 	/// <summary>
+	/// An advisor with no model, no theme figure and no speech bank, for a unit test of what he does between a line and the
+	/// glints, the lip file and the clock (<see cref="BeginLine"/>, <see cref="Step"/>, <see cref="StopQuietly"/>). He is not
+	/// <see cref="Current"/> and draws nothing.
+	/// </summary>
+	private Advisor( bool withoutModels )
+	{
+		_costume = AdvisorProps.CostumeOf( _ => 0 );
+		(_light, _lightStrength) = AdvisorModel.LightFor( null, 0, lit: false );
+	}
+
+	/// <summary>The advisor of <see cref="Advisor(bool)"/>: nothing loaded, nothing played.</summary>
+	internal static Advisor WithoutModels() => new( withoutModels: true );
+
+	/// <summary>UI particle channel 0, which a clip word's flags and the end of a line set and empty.</summary>
+	internal UI.UiParticleChannel Glints => _glints;
+
+	/// <summary>The lip file the line being said moves his mouth by, null where it has none (<see cref="LipPath"/>).</summary>
+	internal string? LipFileOfTheLine { get; private set; }
+
+	/// <summary>
 	/// How many advisor records the original has loaded, each filing a white light: the global fly's, and the theme's where a
 	/// park loads one (<c>Advisor_LoadModel</c> <c>0x00429ba0</c>; <see cref="AdvisorModel.LightFor"/>).
 	/// </summary>
@@ -310,15 +330,24 @@ public sealed class Advisor : Entity
 
 		_speech ??= new SoundCategory( "global", "global/Speech", "speech" );
 
+		Step( Time.Delta );
+	}
+
+	/// <summary>
+	/// One update of his own clock, <paramref name="delta"/> seconds on: the sample due, the clips, the glints, the cue,
+	/// and at the end of a line the empty channel and the next queued line.
+	/// </summary>
+	internal void Step( float delta )
+	{
 		// Held where he is: his clips, his lead-in, his cue and his queue all wait along with his voice.
 		if ( _paused )
 			return;
 
-		_now += Time.Delta;
+		_now += delta;
 
-		if ( _pending != 0 && _now >= _speakAt )
+		if ( _pending != 0 && _now >= _speakAt && _speech is { } speech )
 		{
-			_voice = _speech.Play( _pending, SpeechVolume, respectDelay: false, bus: AudioBus.Speech );
+			_voice = speech.Play( _pending, SpeechVolume, respectDelay: false, bus: AudioBus.Speech );
 			Log.Info( $"Advisor: sample={_pending} voicePlaying={_voice is { Playing: true }}" );
 			_pending = 0;
 		}
@@ -593,7 +622,18 @@ public sealed class Advisor : Entity
 			return 0;
 		}
 
-		var (row, clips, clipFlags, gesturesMilliseconds) = PlanClips( gestureRow, (int)_speech.Length( sample ).TotalMilliseconds, ClipMilliseconds, _random.Next );
+		return BeginLine( sample, cue, (int)_speech.Length( sample ).TotalMilliseconds, firstProp, secondProp, slot, lip, gestureRow );
+	}
+
+	/// <summary>
+	/// A line given to a speaker who can say it: everything <see cref="Speak"/> does once it knows the sample's length
+	/// in <paramref name="sampleMilliseconds"/>. Empties the glints' channel, picks the clips, names the lip file
+	/// (<see cref="LipPath"/>), dresses and ducks. Says how long the clips take, in milliseconds.
+	/// </summary>
+	internal int BeginLine( int sample, Cue? cue, int sampleMilliseconds, int firstProp = 0, int secondProp = 0, int slot = 0, int lip = 0,
+		int gestureRow = -1 )
+	{
+		var (row, clips, clipFlags, gesturesMilliseconds) = PlanClips( gestureRow, sampleMilliseconds, ClipMilliseconds, _random.Next );
 		var leadIn = row?.LeadIn ?? true;
 
 		// Advisor_SayResponse empties the glints' channel as a line begins (0x005993b3).
@@ -622,7 +662,8 @@ public sealed class Advisor : Entity
 		_gesturesStartedAt = _now;
 
 		// The response's own lip file (its +0x08): the sample's, but for lines that share one.
-		_lips = LipFile.TryLoad( $"global/Speech/lips/sp_{(lip > 0 ? lip : sample):000}.lip", out var lips ) ? lips : null;
+		LipFileOfTheLine = LipPath( sample, lip );
+		_lips = LipFile.TryLoad( LipFileOfTheLine, out var lips ) ? lips : null;
 
 		_wearing = (firstProp, secondProp);
 
@@ -648,6 +689,12 @@ public sealed class Advisor : Entity
 
 		return gesturesMilliseconds;
 	}
+
+	/// <summary>
+	/// The lip file a line moves his mouth by: the response's own (its <c>+0x08</c>, <paramref name="lip"/>) where it names
+	/// one, the sample's otherwise.
+	/// </summary>
+	internal static string LipPath( int sample, int lip ) => $"global/Speech/lips/sp_{(lip > 0 ? lip : sample):000}.lip";
 
 	/// <summary>
 	/// A clip of the line starting (Advisor_Update 0x00599a46, then Advisor_ClipStarted 0x00598dc0 from 0x00599800): the
