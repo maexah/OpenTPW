@@ -1484,6 +1484,100 @@ public class ParkFileWriterTests
 		}
 	}
 
+	/// <summary>
+	/// <b>A ride made on a sold ride's id is judged by what is made, not by the file's ride on that id</b>
+	/// (<c>Level.TrackWritable</c>'s <c>DeletedSinceLoad</c> term): the file holds a Hot Pot, it is sold, a second is
+	/// bought on its id and its record is then gone from the track-rides table (a stale handle: the case where the file's
+	/// judgement says writable and the made one does not). The made Hot Pot is left out and counted
+	/// <c>SAVE_PARK_OBJECT_BOUGHT</c>; the sold one is still taken out of the file.
+	/// <para>
+	/// <b>Mutations:</b> <c>TrackWritable</c> dropping the <c>!state.DeletedSinceLoad.Contains</c> term (the made ride is then
+	/// judged as the file's on the same handle and is written, with a record the table does not hold).
+	/// </para>
+	/// </summary>
+	[TestMethod]
+	public void ARideMadeOnASoldRidesIdIsJudgedAsMadeNotAsTheFiles()
+	{
+		const int HotPot = 1140;
+		const int Handle = unchecked((int)0xffffff00);
+
+		SetCurrentPlayer( new Player( 0, "Test", new PlayerFile { InstantAction = true } ) );
+
+		var catalogue = new ParkItemCatalogue( "jungle", FileSystem );
+		var people = new ParkPeople( shipped );
+		var rides = new ParkRides( "jungle", shipped, catalogue, FileSystem );
+		ParkRides? again = null;
+
+		int Buy( ParkState state, ParkRides bound )
+		{
+			Assert.IsTrue( catalogue.TryGet( HotPot, out var item ) );
+
+			var id = state.NextThingId();
+			var placed = ParkBuilding.Constructed( item, id, 41, 23, 0, MapStep.CellId( 41 + item.EntryDeltaX, 23 + item.EntryDeltaY ),
+				MapStep.CellId( 41 + item.ExitDeltaX, 23 + item.ExitDeltaY ), ParkWorld.BuiltWhen.At( state.CalendarNow ),
+				ParkBuilding.TakeTrackRide( state, item ) );
+
+			Assert.AreEqual( Handle, placed.TrackRide );
+			state.AddObject( placed );
+			ParkBuilding.BindOperation( state, bound, placed, item );
+			ParkBuilding.Stamp( state, ParkObjects.FootprintAt( item, 41, 23, 0 ), 41, 23 );
+			state.EnterCell( 41, 23, id );
+
+			return id;
+		}
+
+		ParkWorld Written( string name ) => Read( File.ReadAllBytes( Path.Combine( Jungle, name + ".TPWS" ) ) );
+
+		try
+		{
+			var id = Buy( people.State, rides );
+
+			Assert.IsNotNull( Level.WritePark( shipped, people.State, "jungle", "Shut", people, null, rides, catalogue ) );
+
+			var file = Written( "Shut" );
+
+			Assert.IsNull( file.Problem );
+			Assert.AreEqual( id, file.Objects.Single( thing => thing.TrackRide == Handle ).ThingId );
+
+			rides.Delete();
+			Entity.ApplyDeletions();
+			TestRun.DeleteEvery<ParkPeople>();
+
+			var loadedPeople = new ParkPeople( file );
+			var loaded = loadedPeople.State;
+
+			again = new ParkRides( "jungle", file, catalogue, FileSystem );
+
+			StringAssert.StartsWith( ParkBuilding.Sell( loaded, file, catalogue, null, again, id, loadedPeople ), "sell: 'The Hot Pot'" );
+			loaded.FreeDeletedThings();
+
+			var next = Buy( loaded, again );
+
+			Assert.AreEqual( id, next, "the sold ride's id is given out again" );
+
+			// Its record is gone from this park's table: no ride of the made Hot Pot's handle stands.
+			loaded.TrackRides.Free( Handle );
+			Assert.IsNull( loaded.TrackRides.Cars.RideOf( Handle ) );
+			Unimplemented.Forget();
+			Assert.IsNotNull( Level.WritePark( file, loaded, "jungle", "Stale", loadedPeople, null, again, catalogue ) );
+
+			var stale = Written( "Stale" );
+
+			Assert.IsNull( stale.Problem );
+			Assert.IsFalse( stale.Objects.Any( thing => thing.ThingId == id ), "the made ride has no record to write, and the sold one is out" );
+			Assert.AreEqual( 0, stale.TrackRides.Rides.Count );
+			Assert.AreEqual( 1, Counted( "SAVE_PARK_OBJECT_BOUGHT" ) );
+			Assert.AreEqual( 0, Counted( "SAVE_PARK_OBJECT_SOLD" ) );
+		}
+		finally
+		{
+			rides.Delete();
+			again?.Delete();
+			Entity.ApplyDeletions();
+			TestRun.DeleteEvery<ParkPeople>();
+		}
+	}
+
 	/// <summary>The level hands the writer the park's pool of candidates and its arrival timer.</summary>
 	[TestMethod]
 	public void TheLevelWritesThePoolAndTheArrivalTimer()
