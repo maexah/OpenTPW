@@ -1915,11 +1915,6 @@ filed the items that cite it.
   the rotation tracks whose last key falls before their clip's declared end (a corpus scan over all 2,129 `.md2`); where
   there are any, and Lost Kingdom's reach one, make `Sample` wrap and confirm one beside the original's frames;
   otherwise say in `park.md` that none exists and the held last key is dead by CONTENT.
-- [ ] **Q730. The advisor line's wiring has no seam.** From the run 7 review (Q595 4's rest). Not tested, for want of a
-  seam in a unit test: the three `_glints.SetCount( 0 )` calls in `Advisor` (not Busy, `Say`, `Speak`),
-  `AdvisorModel.StartClip`, `ParkPeople` passing the sample's own lip where a row names another, and
-  `ParkGoldenTickets.Sweep`'s order against `TakeTheRidesTurns`. They need an `Advisor` built without its model and
-  audio, or the park run (`parkrun.py`) with the bug put back (`mutate.py`).
 - [ ] **Q731. The swear filter's load after a profile read.** From the run 7 review (Q709 3, VERIFY-11). `FUN_005afd70`
   (`0x005afeba..0x005aff37`): with `+0x25` set, open `Data\Language\<language>\swears.txt` (the language from the
   registry's `Language`, `0x005c0d00`: 0x409 "American", else "English"); when it does not open, clear `+0x25`

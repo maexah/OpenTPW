@@ -12173,3 +12173,9 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
     a pylon's model has five channels, and the rule (`saves.md`, "How many channels a saved model has") closes all 45 files. The
     build is Q810's.
   - **Done (Q810):** `ParkItemCatalogue.ChannelsFor`; her park's records read whole (`q810-a7/`).
+- [x] **Q730. The advisor line's wiring has no seam.** From the run 7 review (Q595 4's rest). Not tested, for want of a
+  seam in a unit test: the three `_glints.SetCount( 0 )` calls in `Advisor` (not Busy, `Say`, `Speak`),
+  `AdvisorModel.StartClip`, `ParkPeople` passing the sample's own lip where a row names another, and
+  `ParkGoldenTickets.Sweep`'s order against `TakeTheRidesTurns`. They need an `Advisor` built without its model and
+  audio, or the park run (`parkrun.py`) with the bug put back (`mutate.py`).
+  **Done 2026-11-02** (PR #10, `142b6e69`): the advisor line's wiring has a seam and tests; 4732 passed, 0 failed, 2 skipped of 4734. Left undone: `ParkGoldenTickets.Sweep` against `TakeTheRidesTurns`, `StartClip` on a real model, `PlayParkResponse` passing `lip` to `Speak`.
