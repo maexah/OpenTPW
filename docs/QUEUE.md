@@ -1960,13 +1960,6 @@ filed the items that cite it.
     settled: the original looks under `Language\American` (`FUN_004893c0`, Windows language `0x409`; `park-engine.md`, the
     end of a park). The reference install shows no End, end-of-park or pause banner where an installed game shows one;
     re-take Q551's and Q703's banner frames once the overlay is applied.
-- [ ] **Q734. A test for `Level.TrackWritable`'s `!state.DeletedSinceLoad.Contains` term.** From the run 7 review of
-  Q606 (VERIFY-13, Q606 4). Tried and not written: a Hot Pot (the one jungle ride with a track record) and a kart ride
-  bought on a sold shop's id both pass with the term removed, because on Lost Kingdom data a bumper-family ride made
-  always has a record here, so the file's judgement (`FileRideWritable`) and the made one agree; a kart on a reused id
-  reaches `TrackWritable` since Q858 (`CarsOf` is 0 either way, so the two branches still agree). Needs a case where the two differ: a ride made whose record is not in this park's
-  table on a reused id (another theme's bumper family, `HasRecord` false), or Q420's teardown. Write it with that case
-  and show it failing with the term removed.
 - [ ] **Q735. A walk rider's saved sprite.** From Q585 5 (VERIFY-14). `ParkPeople.Written` keeps a sprite for a rider of
   a thing with `mFlags` `0x20` (every walk thing), and `ParkWorld.PutSprite` writes it at the navigator with the
   picture's height and the person's facing. The original's files (`q585/walkriders-saves.out`, 38 walk slots) hold **no
@@ -1978,17 +1971,6 @@ filed the items that cite it.
   a park file, not a behaviour. Said at `PutSprite` and in `saves.md` ("A walk's rider is saved with a sprite where the
   original saves none or another place, a deviation"). Confirm: a park saved with the Mayan Spinner and the Jungle Spray
   holding riders, the sprite table beside the original's.
-- [ ] **Q736. Test seams not closed by Review fixes, group G.** From Q585 6 and Q586 F3 (VERIFY-14). (a)
-  `ParkPeople.ThingRemoved`'s own ask of `ParkGuestSprites.WalkedOnRide` (the put-off sound's place for a walk rider)
-  has no seam: its result goes only to `ParkAudio.Current?.PutOff( at )`, which needs a device. The pieces are tested
-  (`ParkPeople.SoundFor` with `walked`, `ParkPeople.PutOffPoint`), but deleting the ask in `ThingRemoved` (the old
-  navigator's-feet point) leaves every test green. A seam (the point returned to a caller, or an injectable sound sink
-  on `ParkPeople`) would close it. (b) `ParkGuestSprites`' census line (`Standing`'s `walked is { Hidden: false } w ?
-  w.At`, ~1722) is read by the console's `sprites` census only; no test reads it. (c) `Material.SetupResources` hands
-  `DepthStateFor` and `RasterizerStateFor` to the device; the call itself is covered by the game run only (a device is
-  needed to build a pipeline). (d) `LobbyModel`'s call of `Material.CullModeFor` through `DrawFlags` is tested; that
-  every model path goes through `DrawFlags` is not (which draws do not: `render-states.md`, "Which draws the test
-  covers", Q608).
 - [ ] **Q737. A placed voice out of range releases its output, and a loop comes back with a fresh one.** From the fork
   watch 2026-10-21 (verify-audio-ui L1). OpenTPW plays a placed voice on unheard when it is out of range
   (`audio.md:265`, a recorded gap with no queue line and no `Unimplemented.Report`). The original gives the channel up:
@@ -2000,10 +1982,6 @@ filed the items that cite it.
   voices that are no script's and no ride's scream (those are already the original's, Q557, Q563-Q565), and count what
   is unbuilt with `Unimplemented.Report`. Confirm: the fountain's loop caught by the disk driver as the camera leaves
   its range and returns, beside the original's (does the sample restart from its start).
-- [ ] **Q738. `Advisor.Speak` has no test that it uses its gesture row.** From the run 7 review (fix group H;
-  `World/Advisor/Advisor.cs`). Testing it needs the audio (`Audio.Ready`, a `SoundCategory`) and a speaker figure. Ask
-  for a seam (the sample length and the clip table handed in) so a test can see that a line given row N plays the row's
-  clips, not the random chain. The sweep's call into the speaker is tested (`ParkPeople.SpeakResponse`).
 - [ ] **Q739. The pause overlay, and plain P in a park.** From the fork watch 2026-10-24 (`verify-world-other.md` L2,
   M2; `verify-audio-ui.md` L1). Plain P in a park reaches nothing and counts nothing (`ParkFrontEnd.ShortcutRow` has no
   plain-P row; `InputButton.Pause` is read only by `InputBindingTests`): a rule 4 gap; first count it. Then build the
@@ -2197,25 +2175,6 @@ filed the items that cite it.
   Q607 (the file's id of a sold object), Q594 (the track drawn), `SALE_TRACK_TEARDOWN`. Confirm: `pylons` before and after a
   sale and a move, with a frame of the empty spot, against the original selling the same coaster; a test that fails with the
   teardown put back.
-- [ ] **Q952. Three harness tools no longer build: `RegisterArchiveHandler<WadArchive>`.** From an outside review of
-  `1efacc58` (Alexah, 2026-10-30), reproduced by the Sentinel at `c67821bf`: `d2b46bbe` (the build warnings) changed
-  `BaseFileSystem.RegisterArchiveHandler` to take a factory (`( ".wad", path => new WadArchive( path ) )`, as `Game.cs:52`,
-  `GameData.cs:38` and `hfsamplers` call it), and `tools/harness/dotnet/cliptracks/Program.cs` (lines 9 and 11),
-  `normdump/Program.cs:7` and `walkriders/Program.cs:8` still call the generic form: each fails with CS0308 (`dotnet build
-  tools/harness/dotnet/<tool>` in a clone, the solution built first, since `walkriders` references its dlls). `hfsamplers` builds.
-  The solution does not build them, so the gate cannot see it. Change the four calls; build all the `tools/harness/dotnet/`
-  projects alone; run each one's `docs/TOOLING.md` command once. Then consider one narrow check that builds every
-  `tools/harness/dotnet/*` project against the commit (a line in `check_commit.sh` or `gate.sh`), nothing wider.
-- [ ] **Q953. The pylon fixture of `ParkPylonChannelsTests` writes the present count into the free field.** From an outside
-  review of `1efacc58` (Alexah, 2026-10-30), confirmed by the Sentinel from the source at `c67821bf` (not run). `WithAPylon()`
-  (`ParkPylonChannelsTests.cs:136-147`) appends one present record to the stock park's model module and writes
-  `present + 1` at `module + 8`, which is the FREE count: the header is present, free, cursor (`ParkThingStates.Walk`,
-  `ParkThingStates.cs:452-456`; `saves.md`, "The model table": the shipped park's 161, 7, 90). So the fixture's module says
-  161 present and 162 free, and its walk still closes only because it stops at the module's end. Make the fixture consistent
-  (162, 7, 90: the present count at `module + 4`), assert the header the reader returns, and keep the old-rule negative
-  (`AModuleWithAPylonWalksToItsEndOnlyWithFiveChannels`, and the fixture's own one-channel `Problem`). Check that the three
-  consumer tests (the boundary wall and the two after it) still pass for the right reason: put the fixture's count back and
-  see whether any test notices; if none does, a test that reads `Header` or `Slots` is wanted.
 - [ ] **Q955. The UI's draws: a resource set made each time the shared UI material's texture changes, and every quad's index
   upload ending the render pass.** From an outside audit (Alexah, 2026-10-30), checked against `8a566e88` by the Sentinel's Opus
   reader (`~/.cache/tpw-harnesses/rev-1030/VERIFY-gpt-perf.md`, P1, D, E; source only, not measured). Q954 (`3bc9708e`) since made
