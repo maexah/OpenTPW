@@ -11913,6 +11913,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   count. Put the bug back for each (`AGENTS.md` rule 6). No game run.
   **Good first** (Q800; `docs/GOOD-FIRST-ISSUES.md` has the issue text; no Ghidra; only the `ParkFootprintOccupancyTests` half needs no game, `ParkRideJoinTests` skips without it).
   **Done 2026-11-02** (PR #4, `9e713e10`, `7a5d2470`): the stricter assert failed, and `FUN_004d9280` (read twice in Ghidra) never checks the cell, so `LeaveCell` stays and the test now states what the original does; `docs/exe/park-engine.md` has the rule. 4732 passed, 0 failed, 2 skipped of 4734, on the maintainer's machine with the RAM at 3200. Bug put back for the first test; not shown for the second, as the run queues no guest at a toilet.
+- [x] **Q918. The Load Park list's scrollbar, and a park opening where its file's camera stood (a piece of Q247).** The stream's scrollbar
+  (control 1: `!slider`, `b_up`, `b_scroller`, `b_down`) was built on no list: a folder longer than its window was counted as
+  `LOAD_PARK_LIST_SCROLLBAR` and the wheel scrolled it; and no load read the camera module the writer writes (`ParkWorld.Camera`, `FUN_0042cec0`), so a
+  loaded park opened on the default view. Built: `UiList.AddScrollbar` and `UiRepeatButton` (the arrow, flag `0x20`: 500 ms, then more than 125 ms, on the real
+  clock; the release after a repeat is no click; `Select3` for a quick click), on the Load Park and Save Park lists, decoded in `hud.md`, "The list's scrollbar"
+  (range `count - visible`, a click on the track a window, the thumb the top row by the truncating quotient); and `Level.TakeTheFilesCamera` /
+  `ParkOrbitCameraMode.TakeSaved` (the zoom and the point as written, the yaw the rotation negated, the rotation rounded to the nearest quarter turn with the Rotation option
+  on 90 degrees: `FUN_0067b24a` is `fmod`), for a park loaded or entered. Counted, not built, and said at the site: the yaw is set at once where the original eases its
+  drawn rotation onto the rounded one (Q23). Confirmed on the desktop (20 saves, real clicks, `q918/run3`) and in the original (`q918/orig`: its list with 21 rows, the camera
+  globals polled from the click); the account is in `STATUS.md`, "Not verified on screen".
 
 ## B. Docs and comments
 

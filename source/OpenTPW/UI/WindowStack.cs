@@ -476,6 +476,9 @@ internal sealed class WindowStack : Panel
 			}
 		}
 
+		// A held scrollbar arrow's repeat, on this frame's hover (Button_RepeatTick, from the interface's tick).
+		(_pressed as UiRepeatButton)?.Tick();
+
 		_glint.Update();
 
 		// The original's move message 0x10001, which goes to the control under the pointer. Sent only on a frame the
@@ -891,7 +894,7 @@ internal sealed class WindowStack : Panel
 		pressed.Pressed = false;
 		pressed.PointerReleased();
 
-		if ( pressed != hit || pressed is UiButton { Enabled: false } )
+		if ( pressed != hit || pressed is UiButton { Enabled: false } or UiRepeatButton { HasRepeated: true } )
 			return;
 
 		// A button tells its parent it was clicked, and UI_Init's hook on every message (0x00485780)
@@ -902,7 +905,7 @@ internal sealed class WindowStack : Panel
 		// (0xbd) for a heading; here a heading is a plain button and plays BUTTON01.
 		if ( pressed is UiButton { Clicks: true } button )
 		{
-			UiSounds.Click( toggle: button.Toggles || pressed.Parent is UiRadioGroup );
+			UiSounds.Click( toggle: button.Toggles || button.ClicksSelect3 || pressed.Parent is UiRadioGroup );
 
 			if ( button.Toggles )
 				button.IsDown = !button.IsDown;

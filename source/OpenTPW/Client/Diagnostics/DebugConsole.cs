@@ -535,6 +535,7 @@ public static class DebugConsole
 					+ (control is UI.UiEdit typedInto ? $" holds '{typedInto.Value}' {(typedInto.HasFocus ? "with" : "without")} the keys"
 						: control.Text is { Length: > 0 } lettered ? $" reads '{lettered.Replace( "\n", " / " )}'" : "")
 					+ (control.Mesh is { } drawnMesh ? $" mesh {drawnMesh.Name} frame {control.Frame}" : "")
+					+ (control is UI.UiList scrolled ? $" list: {scrolled.ScrollCensus()}" : "")
 					+ (control.Text is { Length: > 0 } && control is not UI.UiEdit
 						? $" lettered font {control.Font} in ({control.TextColour.R}, {control.TextColour.G}, {control.TextColour.B}) "
 							+ (control.TextShadow ? "with" : "without") + " the edge"

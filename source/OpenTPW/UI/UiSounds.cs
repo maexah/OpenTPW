@@ -85,6 +85,8 @@ internal static class UiSounds
 	/// <summary>A button was clicked - see the class remarks for which sound.</summary>
 	public static void Click( bool toggle )
 	{
+		LastClick = toggle ? ToggleClick : ButtonClick;
+
 		if ( toggle )
 			Play( ToggleClick, ToggleClickVolume );
 		else
@@ -113,6 +115,9 @@ internal static class UiSounds
 	/// <summary>An effect of the interface's own category played flat, at its variation's own volume (UI_PlaySound, FUN_00485aa0, and FUN_0051bfc0 on cat_ui).</summary>
 	/// True where a voice took it.
 	public static bool Interface( int effect ) => PlayAtItsOwn( effect );
+
+	/// <summary>The effect the last <see cref="Click"/> asked for, <c>BUTTON01</c> (31) or <c>Select3</c> (189); null for none.</summary>
+	internal static int? LastClick { get; set; }
 
 	/// <summary>The last effect played at its variation's own volume, asked for whether or not a voice took it; null for none.</summary>
 	internal static int? LastAsked { get; set; }

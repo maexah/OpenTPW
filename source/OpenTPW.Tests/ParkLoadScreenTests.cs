@@ -280,6 +280,52 @@ public class ParkLoadScreenTests
 		Assert.IsNull( WhatWasAsked().Theme );
 	}
 
+	/// <summary>
+	/// <b>A folder longer than the list's window shows the stream's scrollbar</b>, ranged to the rows past the window, and a short folder hides it; the
+	/// gap is no longer counted.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the bar left unbuilt on this screen; built on the long folder only after the fill (shown at once for a short one); the counted gap put back.
+	/// </remarks>
+	[TestMethod]
+	public void AFolderLongerThanTheWindowShowsTheScrollbar()
+	{
+		SetCurrentPlayer( new Player( 0, "Test", new PlayerFile { InstantAction = true } ) );
+
+		for ( var save = 0; save < 30; ++save )
+			Put( $"Save {save:00}.TPWS", DateTime.Now );
+
+		var list = ListOf( OpenLoadPark( APark() ) );
+		var bar = list.Scrollbar!;
+
+		Assert.AreEqual( 30, list.Rows.Count );
+		Assert.IsTrue( list.Scrolls );
+		Assert.IsTrue( bar.Visible );
+		Assert.AreEqual( (-(30 - list.VisibleRows), 0), (bar.Minimum, bar.Maximum) );
+		Assert.AreEqual( list.VisibleRows, bar.Page );
+		Assert.IsFalse( Unimplemented.Summary.Any( entry => entry.What == "LOAD_PARK_LIST_SCROLLBAR" ) );
+
+		// The stream's rectangles (docs/exe/saves.md, "One screen, two uses": the bar 1528, 285, 1587, 691; the arrows op 6 and op 7, the thumb op 8).
+		var track = new UI.UiRect( 1528, 285, 1587, 691 );
+
+		Assert.AreEqual( 1, list.Children.Count( child => child.Rect == track ), "the track's picture, the skin !slider (no mesh is made without a graphics device)" );
+		Assert.AreEqual( track, bar.Track );
+		Assert.AreEqual( track, bar.HitRect );
+		Assert.AreEqual( new UI.UiRect( 1528, 224, 1588, 284 ), bar.Children.OfType<UI.UiRepeatButton>().Single( arrow => arrow.Id == 1 ).Rect, "up" );
+		Assert.AreEqual( new UI.UiRect( 1528, 696, 1588, 756 ), bar.Children.OfType<UI.UiRepeatButton>().Single( arrow => arrow.Id == 2 ).Rect, "down" );
+		Assert.AreEqual( (1520, 1587, 67), (bar.Thumb!.Rect.Left, bar.Thumb.Rect.Right, bar.Thumb.Rect.Height), "the thumb's width and height as the stream has them" );
+
+		SetCurrentPlayer( new Player( 0, "Test", new PlayerFile { InstantAction = true } ) );
+
+		foreach ( var file in Directory.GetFiles( Jungle ).Skip( 2 ) )
+			File.Delete( file );
+
+		var short_ = ListOf( OpenLoadPark( APark() ) );
+
+		Assert.AreEqual( 2, short_.Rows.Count );
+		Assert.IsFalse( short_.Scrollbar!.Visible, "two rows fit the window" );
+	}
+
 	/// <summary><b>With nobody playing the list is empty.</b></summary>
 	[TestMethod]
 	public void WithNobodyPlayingTheListIsEmpty()

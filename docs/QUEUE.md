@@ -138,23 +138,21 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   say so): the small fix is a notice on the kept path when the player's folder holds players (`SaveHome.HoldsPlayers`). A test
   next to `AFolderThatCanBeWrittenIsKeptAndTheProbeLeavesNothing`.
 
-- [ ] **Q247. A loaded park is built again behind the loading screen, and the list has no scrollbar.** Left by
+- [ ] **Q247. A loaded park is built again behind the loading screen.** Left by
   Q241c (`saves.md`, "OpenTPW's Load Park"). The original reads a park file over the running park, with no loading
   screen and no change of scene (`FUN_00414d40`: twelve teardown calls, the modules, `FUN_00415140`), where
   `ParkLoadScreen.Load` asks `Game.RequestParkLoad` for the whole scene again; Restart Park is the same
-  (`ParkFrontEnd.RestartPark`). And the stream's scrollbar (control 1: `!slider`, `b_up`, `b_scroller`, `b_down`)
-  is built on no list here: a list longer than its window is counted as `LOAD_PARK_LIST_SCROLLBAR` on this screen
-  and the wheel scrolls it. The teardown is decoded (Q854; `saves.md`, "The in-place load, call by call", whose last
-  paragraph sets out the choice). Alexah decides whether the park is rebuilt in place; the scrollbar and the saved camera
-  do not wait on that. Confirm: a load timed in both games the same way (the original's "1.3 s" is a poll bound, not a timing), and a folder of fourteen saves scrolled by the bar.
-  From Q241f: no load here reads the camera module, which the writer now writes (`ParkWorld.Camera` holds it,
-  `FUN_0042cec0`; `saves.md`, "Loading the modules", Camera): a loaded park opens on the default view, where the
-  original's opens where the save's camera stood. The file's rotation is the orbit camera's yaw negated.
-  - **Note (fork watch 2026-10-19, `verify-audio-fx.md` M2; `hud.md`, "Which window the click sound is for"):** the bar's
-    arrows are repeating buttons (flag `0x21`): first repeat after 500 ms, then every 125 ms (`+0x13c`, `+0x140` of every
-    button). An arrow clicked without repeating plays `Select3` (`0xbd`, the bar's flags `0x10`); one held past 500 ms
-    plays **nothing**, neither at the repeats nor on release (the repeat messages are not `0x100`, and the release posts
-    none after a repeat). The thumb and the track play nothing.
+  (`ParkFrontEnd.RestartPark`). The teardown is decoded (Q854; `saves.md`, "The in-place load, call by call", whose last
+  paragraph sets out the choice). Alexah decides whether the park is rebuilt in place. Confirm: a load timed in both games the same
+  way (the original's "1.3 s" is a poll bound, not a timing).
+  **Split (Q918, run 18, lane A):** the list's scrollbar and the saved camera on a load, which did not wait on that choice, are done and
+  ticked as Q918; the other lists' scrollbars are Q919.
+
+- [ ] **Q919. The other lists' scrollbars (the visitors, all-staff, all-items, buy and hire lists).** Q918 built the bar on the Load Park and Save Park lists
+  (`UiList.AddScrollbar( bar, up, down, thumb )` takes the stream's four rectangles). The other `UiList`s have only the wheel and no census counts the gap
+  (`hud.md`, Q371: "Not built: ... the scrollbar"). Each list's stream has an `op 9` rectangle: the buy list's stream is `0x00754cf8` and the hire list's `0x00751fa8`
+  (`lib/uistream.py <VA>` walks one; the arrows' and thumb's rectangles follow it). Build the bar on each where the list is longer than its window, count the
+  wheel-only path until then (`Unimplemented.Report`), and confirm each in the running game against the original's list with more rows than its window.
 
 - [ ] **Q912. The failed-start box's long line is cut off at both ends on a 1024 px display.** Found by the Q978 desk run (`desk4/s4/noui/shot.png`, a start with `ui.shader` missing): `StartFailure`'s SDL message box holds the exception's line unwrapped, so on a 1024-pixel display its head and tail are off the screen (the left of "OpenTPW could not start." and the right of the shader line read "ould not start." and "...beside th"). Build: wrap each reason line to the box's width in `StartFailure.Compose`, the log keeping the lines whole; confirm with the same missing-shader start at 1024 x 768, the whole text on screen. A deviation of ours (the original has no such box, `StartFailure`'s own comment).
 - [ ] **Q913. What Q910 and Q911 left unseen.** What `Worn.RSE`'s and `EventMap.RSE`'s effects look and sound like after a load in both games (the six companions are started and run; only the TV Sim's torches were seen and compared, and the engine's voice and the original's mixer were measured, not heard); a Hot Pot sold after a load and saved, on screen (the unit test `ASoldRidesSoundChildGoesWithIt` is the only proof); the bought TV Sim's ride window opening it (the stock-park scene poked `VAR_RIDECLOSED`: the door click left `canload` 0); the original drawing a TV Sim bought by ours in the stock park (its script list holds it; the frames at the cameras tried show grass, the control's file too); a bought kart's or water ride's companion written (by reading since Q911, never run); a bought Hot Pot's engine after a load in both games (its ride never ran, so neither game was measured; `b-final/` holds no `Engine.mp2`); effect 31's start at height -4 (`started effect 31 ... at (64,-4,264)` in `q911/final/console.log`) against the original's; Volcano closed and saved (it shares the code and was not run); and a load and a save on Windows.
@@ -1167,12 +1165,9 @@ filed the items that cite it.
 - [ ] **Q285. Seven unbuilt paths the game reaches count nothing.** From the week-end audit (stage 6, the second
   reading of each commit; read from the code). `AGENTS.md` rule 4 asks each for an `Unimplemented.Report`; build
   the path where it is small. One bullet a path.
-  - A park loaded from a file with a camera module opens on the default view and counts nothing:
-    `ParkWorld.Camera.Saved` is read from the file and used by no load, and `Level` reports only
-    `PARK_ADVISOR_SAVED_HISTORY` beside it. The original's loader `FUN_0042cec0` puts the zoom, rotation and point
-    back (`saves.md`, "Loading the modules", Camera), so until Q247 builds it the load should call
-    `Unimplemented.Report` under a name of its own, shown by the `unimplemented` census after a Load Park.
-    (`OpenTPW/World/Level.cs`, line 282; commit `2bdbd7fd`)
+  - Built by Q918: a park loaded from a file with a camera module opens on the camera the file holds (`Level.TakeTheFilesCamera`), for a park entered as for
+    one chosen from the Load Park list; it was left on the default view and counted nothing (`ParkWorld.Camera.Saved` was used by no load).
+    (`OpenTPW/World/Level.cs`; commit `2bdbd7fd`)
   - Built by Q241j: `Level.WritePark` writes `gms.dat` first and installs the idle mode before the park, as the
     original's save does on every call; nothing of this bullet is left.
   - Built by Q668: `Peep.Tick` adds the cell's happiness, illness and hunger words on every needs turn

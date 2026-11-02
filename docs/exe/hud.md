@@ -1319,7 +1319,7 @@ window in the original. The game menu's rows, the lobby's player slots and Quit 
 `RightClicked`, the preview `LeftClicked`, and a slider's track pages towards a click of either button
 (`UiSlider.LeftClickedAt`, `RightClickedAt`), where it paged on the press. The console's `click` makes the click a
 short press would. Not built: a list's column message `0x404`, which no screen answers; the middle button; a
-repeating button; a control's flag `0x8`. A button that the pointer leaves and comes back to keeps its press here as
+repeating button other than the scrollbar's arrows (`UiRepeatButton`, Q918); a control's flag `0x8`. A button that the pointer leaves and comes back to keeps its press here as
 there, but the two are not compared.
 
 ### Which window the click sound is for, the scroll bar's arrows and the rename boxes' keys (fork watch 2026-10-19, `verify-audio-fx.md` M1, M2)
@@ -1337,7 +1337,7 @@ control constructor stores the layout's flags at `+0x48` (`0x0065bd2c`) and the 
   sets `+0x13c` 500 and `+0x140` 125 (`0x00668902`, `0x0066890f`); only a button with flag `0x20` (the arrows') repeats. The release posts `0x100`
   to `[button+0x60]` (`0x006691e5`..`0x006691f9`) only while `0x00668eff` answers 1, which it does not after a repeat (`+0x15a` 2, `0x00668f18`).
   So an arrow clicked without repeating plays **`0xbd`** (its receiver is the bar, flags `0x10`), and an arrow **held past 500 ms plays nothing**: the
-  repeats `0x10009` / `0x10008` are not `0x100`. The thumb and the track post no `0x100`. Q247 builds the bar.
+  repeats `0x10009` / `0x10008` are not `0x100`. The thumb and the track post no `0x100`. Q918 built the bar and the arrows: a quick click plays `Select3`, a repeat and the release after one play nothing.
 - **The rename boxes' keys.** The edit control sends `0x802` (Enter, only when its own `+0x48` lacks `0x80`), `0x803` (Tab) and `0x804` (Escape) to its
   parent at once (`0x00667fee`: `0x00668020`, `0x00668054`, `0x00668078`). In the two-line boxes (the object's, handler `0x0048d640`, layout `0x00750090`,
   opener `0x0048d370`; the park's, `0x004993e0`, layout `0x00751928`, opener `0x004990f0`), **Enter on the first line (control `0x3943c`) moves the focus
@@ -2568,6 +2568,35 @@ rect. **Both consume their operand only when the enclosing control's type is 4 o
 parent they read nothing. A walker that always eats 8 bytes for op `0xa` desynchronises the whole tail.
 Op 3's text rect and op `0xa`'s row area happen to hold the same values on both these screens, so
 conflating them looks correct here and breaks elsewhere.
+
+### The list's scrollbar (Q918)
+
+The bar `op 9` makes is a `Slider_Construct` (`0x0066acf9`) slider with flags `0x10`, which leaves `+0x14c` at 1: bit 2 clear, so the thumb runs up and
+down (`Slider_SetPosition` `0x0066b088`; the field is a bit test, `& 2`). Its two ends are `+0x13c` and `+0x138` and its step `+0x144`, its page `+0x148`:
+
+- **Range.** After every add, removal and clear the list calls `FUN_00664495( bar, count, visible, top )`: with `count > visible` it shows the bar
+  (`UI_SetVisible( 1 )`), `Slider_SetRange( count - visible, 0 )` (`0x0066b47d`: `+0x13c` the first argument, `+0x138` the second, and `+0x144` negated to
+  -1 because the second is the smaller) and sets the value to the window's top row through the vtable `+0x1c`; otherwise it **hides** the bar
+  (`UI_SetVisible( 0 )`) and ranges it ( 0, 0 ), leaving the value (`0x006644d2`).
+- **The thumb** stands `(+0x138 - value) x travel / (+0x138 - +0x13c)` below the track's head, the travel the track's height less the thumb's: row 0 at the
+  head, `count - visible` at the foot. `Slider_ReadThumb` (`0x0066af19`) reads it back in whole numbers (a quotient truncated towards nought):
+  `value = (the track's foot - the thumb's foot) x (+0x138 - +0x13c) / travel + +0x13c`, so a thumb dragged to a place whose row is not whole is the row above.
+  The thumb is not moved while it is held: `0x800` goes to the list and the thumb stays where the pointer holds it until it is let go.
+- **Arrows, track and wheel** (`Slider_Callback` `0x0066ba22`): an arrow is a button with the ids 1 (up, `op 6`) and 2 (down, `op 7`); its `0x100`, and each of its repeats
+  `0x10009` and `0x10008`, calls `SetPosition( 1 )` for the up arrow (value plus the step, which is -1: one row up) and `SetPosition( 0 )` for the down arrow. A click
+  on the track (`0x11006`) is `Slider_PageTowards` (`0x0066b8aa`): `SetPosition( 2 )` or `( 3 )`, the value plus or minus the page `+0x148`, which the list's slot builder
+  (`FUN_006639cb`, `0x00663a0f`) sets to its visible rows (`FUN_00663718`'s `+0x172`: row area height over the row's), so **a click on the track moves a whole window**;
+  below the thumb's foot is down. `SetPosition` holds the value between `+0x138` and `+0x13c`. The wheel (`0x1000d`) sets the value less the notch.
+- **The list's side** (`FUN_00664ea3`, on the bar's `0x800`): the value becomes the list's top row (`+0x154`) if it differs, the cells are filled again (`FUN_00663324`) and
+  `0x405` (the top row and the last visible one) is posted to the list's parent.
+- **A repeating arrow** (flag `0x20`, `Button_RepeatTick` `0x00668dd9`, from the interface's tick `0x1e`, the real clock `FUN_0065968e`): state 1 from the press; at 500 ms (`+0x13c`
+  at most the time since the stamp) it becomes 2, the stamp is renewed and `0x10009` is posted if the pointer is on it; in state 2 each time more than 125 ms (`+0x140`) has gone it posts
+  `0x10008` (if the pointer is on it) and renews the stamp, **posted or not**. `Button_EndRepeat` (`0x00668eff`) on the release answers false after a repeat, so no `0x100` follows.
+
+**OpenTPW** (`UiList.AddScrollbar`, `UiRepeatButton`; Load Park and Save Park have it): the bar's value is the top row negated (the range ( -(count - visible), 0 ) is the same line on `UiSlider`,
+which has the thumb's top at the highest value); the bar is a rectangle holding the track, both arrows and the thumb, with the track's own rectangle taking the pointer, because a child
+keeps to its parent's third of a window wider than 4:3 only inside the parent's rectangle (the arrows lie outside the stream's track and its thumb 8 units over it: built under a bar of the track's
+size they were drawn and hit at the window's edge, `q918/run1/1-list.png`). Not built on the other lists (the visitors, all-staff, buy and hire lists' own bars: Q919).
 
 ### Both trees, walked to a balanced op 5
 
@@ -4053,7 +4082,7 @@ its bars 0.5, 0.125, 0.33, 0.902, 1.0, 0.714, 0.527 and 0.5 (the file's happines
 right (0.974), the rides left (0.034) (`q371/side-by-side.png`: the original, this, main). Main's build (`run-control2`)
 lettered 0 and the cash and happiness as bare numbers, every one from the right, and drew no bar. The rows are 56 units
 apart, as the original's 55.8 (Q377, "The rows' font and height"). **Not built**: the first row picked as the list fills
-(Q232); the scrollbar.
+(Q232); the scrollbar (Q919; Load Park's and Save Park's have theirs, Q918).
 
 **OpenTPW** (Q372): `Peep.StayAt`, `ParkVisitorsScreen.HoursIn` and `TimeText`; `RowOf`'s `rewrite` shifts the stay.
 The log's row reads `<cash> <time> (<hours> h) <rides> <bar>`. On `q372/time.TPWS`, paused at the load's tick 964

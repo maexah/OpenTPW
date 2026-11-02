@@ -392,6 +392,8 @@ public class Level
 		var park = CreatePark( ThemeName, Balance, catalogue, _parkFile );
 		Park = park;
 
+		TakeTheFilesCamera( park );
+
 		StartTheCalendar( ThemeName, park );
 
 		ParkState = new ParkState( park )
@@ -623,6 +625,17 @@ public class Level
 		var park = new FreshPark( theme, balance, catalogue );
 		Log.Info( $"{theme}: {park.Census()}" );
 		return park;
+	}
+
+	/// <summary>
+	/// A park opens where its file's camera stood: the camera module is read with the rest of the file (<c>FUN_0042cec0</c>), for the park a
+	/// theme is entered with as for one chosen from the Load Park list (<c>docs/exe/saves.md</c>, "Loading the modules", Camera). A park made
+	/// fresh, or none, leaves the camera as it is.
+	/// </summary>
+	internal static void TakeTheFilesCamera( IParkInitialState? park )
+	{
+		if ( park?.Save?.Camera.Saved is { } saved )
+			ParkOrbitCameraMode.TakeSaved( saved, GameOptions.Current.NinetyDegreeRotation );
 	}
 
 	/// <summary>

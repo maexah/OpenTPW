@@ -126,6 +126,21 @@ public class ParkSaveScreenTests
 		Assert.IsTrue( Input.TextCaptured, "the box has the keys, so the park's shortcuts hear none" );
 	}
 
+	/// <summary><b>The Save Park list has the same scrollbar</b>: the stream is the one screen's, and a long folder shows it.</summary>
+	/// <remarks><b>Mutations:</b> the bar built in the Load screen's constructor alone.</remarks>
+	[TestMethod]
+	public void TheSaveParkListHasTheScrollbarToo()
+	{
+		for ( var save = 0; save < 30; ++save )
+			Put( $"Save {save:00}.TPWS", DateTime.Now );
+
+		var list = ListOf( OpenSavePark( APark() ) );
+
+		Assert.IsNotNull( list.Scrollbar );
+		Assert.IsTrue( list.Scrollbar.Visible );
+		Assert.AreEqual( -(30 - list.VisibleRows), list.Scrollbar.Minimum );
+	}
+
 	/// <summary>
 	/// <b>What is typed first replaces the name the box opened on; a character a file name cannot hold is dropped,
 	/// and so is the sixteenth.</b> The original's box read "ab", then "aba!cdefghijklm" and no more.

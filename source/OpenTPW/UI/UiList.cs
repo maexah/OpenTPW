@@ -666,6 +666,9 @@ internal sealed class UiList : UiControl
 	/// </summary>
 	internal void Refresh()
 	{
+		if ( !_movedByBar )
+			SyncScrollbar();
+
 		for ( var slot = 0; slot < _slots.Count; ++slot )
 		{
 			var index = _scrollTop + slot;
@@ -723,6 +726,110 @@ internal sealed class UiList : UiControl
 				cells[^1].Frame = row.State;
 				cells[^1].Visible = row.State != 0;
 			}
+		}
+	}
+
+	/// <summary>The scrollbar the stream gives a list (<c>op 9</c>): its track with the skin <c>!slider</c>, an arrow at either end and the thumb.</summary>
+	private UiSlider? _bar;
+
+	/// <summary>Whether the bar moved the window this very refresh: it has put its thumb where the pointer holds it, and is not told where it stands.</summary>
+	private bool _movedByBar;
+
+	/// <summary>
+	/// Builds the list's scrollbar (<c>op 9</c>: a type 3 control, flags <c>0x10</c>, id 1, with the arrows <c>op 6</c> and <c>op 7</c>, ids 1 and 2,
+	/// and the thumb <c>op 8</c>, id 3; <c>docs/exe/hud.md</c>, "Ops 9 and 10 are runtime-conditional"). The bar runs up and down along
+	/// <paramref name="bar"/>, its value the window's top row, 0 at the top of the track and <c>count - visible</c> at its foot
+	/// (<c>FUN_00664495</c>); an arrow moves it one row and a click on the track one window (<c>Slider_Callback</c>, <c>Slider_PageTowards</c>).
+	/// </summary>
+	/// <remarks>
+	/// <b>The bar's value here is the top row negated.</b> <see cref="UiSlider"/> runs its thumb from the foot of the track (the lowest value)
+	/// to the head (the highest), as the original's sliders with a positive step do; the original's list bar has the range
+	/// <c>( count - visible, 0 )</c>, which turns the step negative and puts nought at the head. A range of <c>( -(count - visible), 0 )</c> is the same
+	/// line on this class.
+	/// </remarks>
+	internal void AddScrollbar( UiRect bar, UiRect up, UiRect down, UiRect thumb )
+	{
+		// A child keeps to its parent's place on a wide window only where the parent's rectangle holds it (UiControl.Add), and the stream's
+		// arrows stand outside the bar's own rectangle and its thumb a little over it: so the track's picture is its own control, and the
+		// bar is the rectangle holding all four parts, taking the pointer on the track alone.
+		var whole = new UiRect( Math.Min( Math.Min( bar.Left, up.Left ), Math.Min( down.Left, thumb.Left ) ),
+			Math.Min( Math.Min( bar.Top, up.Top ), Math.Min( down.Top, thumb.Top ) ),
+			Math.Max( Math.Max( bar.Right, up.Right ), Math.Max( down.Right, thumb.Right ) ),
+			Math.Max( Math.Max( bar.Bottom, up.Bottom ), Math.Max( down.Bottom, thumb.Bottom ) ) );
+
+		_barSkin = Add( new UiControl { Rect = bar, Mesh = UiMesh.Get( "!slider" ) } );
+
+		_bar = Add( new UiSlider
+		{
+			Id = 1,
+			Rect = whole,
+			HitRect = bar,
+			Track = bar,
+			Vertical = true,
+			Moved = BarMoved,
+			WheelTurned = ScrollByWheel
+		} );
+
+		_bar.Page = VisibleRows;
+		_bar.AddThumb( new UiSliderThumb { Id = 3, Rect = thumb, Mesh = UiMesh.Get( "b_scroller" ) } );
+		_bar.Add( new UiRepeatButton { Id = 1, Rect = up, Mesh = UiMesh.Get( "b_up" ), Clicked = () => Scroll( -1 ), Repeated = () => Scroll( -1 ) } );
+		_bar.Add( new UiRepeatButton { Id = 2, Rect = down, Mesh = UiMesh.Get( "b_down" ), Clicked = () => Scroll( 1 ), Repeated = () => Scroll( 1 ) } );
+
+		SyncScrollbar();
+	}
+
+	/// <summary>The track's picture, the skin <c>!slider</c>: shown and hidden with the bar.</summary>
+	private UiControl? _barSkin;
+
+	/// <summary>The scrollbar, or null for a list that has none.</summary>
+	internal UiSlider? Scrollbar => _bar;
+
+	/// <summary>Where the window and its bar stand, for the console's <c>control</c> and the screens' log lines.</summary>
+	internal string ScrollCensus()
+		=> $"top row {_scrollTop} of {_rows.Count} rows, {VisibleRows} visible"
+			+ (_bar == null ? ", no scrollbar" : $", scrollbar {(_bar.Visible ? "shown" : "hidden")} value {_bar.Value} in ({_bar.Minimum}, {_bar.Maximum})"
+				+ $" page {_bar.Page}, thumb {_bar.Thumb?.Rect.Top} to {_bar.Thumb?.Rect.Bottom}");
+
+	/// <summary>
+	/// <c>FUN_00664495</c> with the bar, the count, the visible rows and the window's top: shown and ranged to <c>count - visible</c> where the list is
+	/// longer than its window, hidden with the range ( 0, 0 ) and the value left where it was where it is not.
+	/// </summary>
+	private void SyncScrollbar()
+	{
+		if ( _bar == null )
+			return;
+
+		_bar.Visible = Scrolls;
+		_barSkin!.Visible = Scrolls;
+
+		if ( !Scrolls )
+		{
+			_bar.SetRange( 0, 0 );
+			return;
+		}
+
+		_bar.SetRange( -(_rows.Count - VisibleRows), 0 );
+		_bar.SetValue( -_scrollTop );
+	}
+
+	/// <summary>The bar's message <c>0x800</c> (<c>FUN_00664ea3</c>): the window's top becomes the bar's value, and the rows are pushed into their cells again if it moved.</summary>
+	private void BarMoved()
+	{
+		var top = -_bar!.Value;
+
+		if ( top == _scrollTop )
+			return;
+
+		_scrollTop = top;
+		_movedByBar = true;
+
+		try
+		{
+			Refresh();
+		}
+		finally
+		{
+			_movedByBar = false;
 		}
 	}
 

@@ -230,14 +230,22 @@ them and is unproven.
 **Camera.** `FUN_0042cec0` reads the zoom, the rotation, the flags, the point looked at, a saved point and a saved
 rotation into `0x007909ec`, `0x00790a38`, `0x00790ab0`, `0x007908f0`, `0x00790ad0` and `0x00790a9c`
 (`FUN_0042cdc0` writes them). Then it zeroes the flags (`0x0042d04c`), copies the rotation
-to `0x007909e0`, and, when the options byte `0x0078d912` is set, **rounds the rotation to a quarter turn**
-(`0x0042d05e`): `FUN_0067b24a` of the rotation and the double π/2 at `0x006fdd88`, taken to be the remainder
-(not read), is taken off, and the rotation moved on to the next quarter when that is past an eighth
-(`0x006fdd98`, `0x006fdd90`). The rotation is in radians: with the byte set (`0x0042b471`) the camera's update
+to `0x007909e0`, and, when the options byte `0x0078d912` is set, **rounds the rotation to the nearest quarter turn**
+(`0x0042d05e`..`0x0042d0da`): `FUN_0067b24a` is the C runtime's `fmod` (its table entry at `0x0077e740` reads "fmod"), taken of the rotation
+and the double π/2 at `0x006fdd88` (the float `0x006fdd68`, 1.5707964, widened); the remainder, which has the rotation's sign, is compared
+with nought (`0x006fdd6c`) and with -π/4 and +π/4 (the floats `0x006fdd90` and `0x006fdd98`, 0.7853982): the rotation is taken less the
+remainder, and less a further quarter turn where the remainder is under -π/4, or plus one where it is over +π/4 (a remainder of exactly
+±π/4 is not past it: the tie goes towards nought). The drawn rotation `0x007909e0` was given the file's own rotation before the rounding and
+eases onto the rounded one (measured, below). The rotation is in radians: with the byte set (`0x0042b471`) the camera's update
 turns it a quarter turn a press (`0x0042b489`, `0x0042b4a4`, the constants `0x006fdd94` and `0x006fdd68`). The
 byte is the options screen's Rotation setting: control `0x1d4c6` flips it (`OptionsScreen_ControlChanged`, `0x004a37cf`..`0x004a37f9`) and the line `0x1d4d0`
 shows UITEXT 352, " Smooth", with it clear and 353, " 90 degs", with it set (`0x004a37f3`; Q23). Measured under Proton (Q241f): a file holding -0.7854 read 0.0 after the load, and one holding
-±1.5708 read as written.
+±1.5708 read as written. **Measured again (Q918, `q918/orig/CAM50p-load.log`, `CAM30p-load.log`, `campoi.py` polling from half a second before the
+list's click, a file made by this game saved with the camera at point (300, 200), zoom 85 and rotation +50 degrees, then +30):** the rotation
+`0x00790a38` read 90.00 and 0.00 (rounded from 50 and 30), the zoom 85.00, the point (299.80, 200.21) at the first poll after the load, where a
+scroll left from before the load (`0x00790a88`, `0x00790a90`: -0.0055, +0.0057 units a millisecond) took it to (299.26, 200.77) and stopped, the drawn
+rotation `0x007909e0` 56.52, 81.08, 88.08, 89.51 and 90.00 at 0.75, 1.0, 1.25, 1.5 and 2.0 s: eased from the file's 50 degrees onto the rounded
+target, not set (the 30-degree file: the point (300.01, 200.01) at the first poll and (300.77, 200.75) where its scroll stopped, the drawn rotation 29.85, 6.67, 1.72, 0.37 and 0.00 at 0.75, 1.0, 1.25, 1.5 and 2.0 s, onto 0).
 
 **Action ids.** The action recorder's ids, and the names `FUN_004041d0` gives them, are `park-engine.md`, "There is no
 drag".
@@ -273,7 +281,7 @@ The stream, walked clean by `treewalk.py` (rects in the 2048 by 1536 space):
 | cancel | 2, `0x1` | -2 | 1671, 818, 1754, 901 | `b_exit` |
 | OK | 2, `0x1` | -1 | 1660, 730, 1743, 813 | `b_okay` |
 | the list | 7, `0x81` | `0x23bce0` | 341, 203, 1614, 772 | `f_load`; rows in 371, 229, 1511, 733 |
-| its scrollbar | 3 | 1 | 1528, 285, 1587, 691 | skin `!slider`; `b_up`, `b_scroller`, `b_down` |
+| its scrollbar | 3, `0x10` | 1 | 1528, 285, 1587, 691 | skin `!slider`; the arrows `op 6` `b_up` (id 1, 1528, 224, 1588, 284) and `op 7` `b_down` (id 2, 1528, 696, 1588, 756), flags `0x21`; the thumb `op 8` `b_scroller` (id 3, 1520, 433, 1587, 500) |
 | the title | 1, `0x1` | `0x23bce1` | 746, 83, 1218, 162 | none |
 | the name box | 5, `0x1` | `0x23bce2` | 605, 811, 1343, 895 | `!frame`; text in 638, 830, 1317, 874 |
 
@@ -508,7 +516,7 @@ things too (SPSC's reader `0x00475730` frees every sprite and the table, the par
 `Level.SetupParkEntities`, `Level.Unload` deletes every entity and HUD panel, `Level.Current` has 180 uses in 35 files and 51 files
 under `World/Park` use a `Current`. So an in-place load would be a reset path per system, or a rebuild behind the same picture; how much is unread. **Q994 stands either way**:
 it needs the file read and checked before the scene ends, which the rebuild gets for the same price, and the original's own check does not
-catch a cut body (the inflate at `0x00414f5d` is unchecked). The list's scrollbar and the saved camera do not depend on the choice.
+catch a cut body (the inflate at `0x00414f5d` is unchecked). The list's scrollbar and the saved camera did not depend on the choice and are built (Q918).
 
 **What Alexah needs to decide.** When a player loads from inside a park (Load Park, Alt+L, Restart Park), does OpenTPW keep ending the park and
 building it again, or swap it in place as the original does? The original shows no loading screen and the picture stops for at most about 1.3 s; ours shows one, probably about 3 s
@@ -534,11 +542,11 @@ OpenTPW reads the English tables, so a file of 8 October reads "8.10.2026 12:28"
 height of the screen its font set is drawn for, plus 6. The original at 640 by 480 keeps 41 at `0x007cb24c`
 (`GAME8.bf4`, 11), read from its memory.
 
-**Two deviations, said at the site.** A row's click ends the park's scene and builds it again from the file behind
+**One deviation, said at the site.** A row's click ends the park's scene and builds it again from the file behind
 the loading screen (`Game.RequestParkLoad( theme, file )`, `Level.CreatePark`'s `parkFile`), where the original
-reads the file over the running park. And the list's scrollbar is not built: the wheel scrolls it, and a list
-longer than its window is counted (`LOAD_PARK_LIST_SCROLLBAR`). Row `0x16`, the second Load, is reached by
-nothing here.
+reads the file over the running park. Row `0x16`, the second Load, is reached by
+nothing here. **The list's scrollbar is built** (Q918; `hud.md`, "The list's scrollbar"): the stream's track, arrows and thumb, shown for a folder
+longer than the window; a park loaded from the list, or entered, opens where its file's camera stood (`TakeSaved`, below, "Loading the modules", Camera).
 
 **Measured (Q241c).** In OpenTPW, a private game folder whose player holds `New Save.TPWS` (`mGameTick` 840,
 balance 88112) and `Old Park.TPWS` (a copy of `easymode.TPWI`: 755, 87987): the list read "New Save 8.10.2026
@@ -771,7 +779,8 @@ logged `... holds no restart file, so nothing is loaded` and the tick ran on. Ma
 Restart Park read the autosave, starting at 825 (`q248/control`). The original's camera went back to the file's area
 with the restart, near the view it was entered on but not the same (about 25 px right and 55 px up on the 1024 x 768
 frame, `a-restarted.png` against `a-entered.png`), and its date went back (2.16.2000 before, 2.11.2000 after); ours
-opens on the default view, as on any load (Q247). A Full Simulation park was not compared.
+opened on the default view then, before Q918 took the file's camera on every load (Restart Park's file holds the view it was entered on).
+A Full Simulation park was not compared.
 
 ### Entering a park
 
@@ -1180,7 +1189,7 @@ over the copy, never the one held.
   closing, as the original's does whatever its save answered; a deviation (Q982) is the message box that says so
   ("OpenTPW's save folder that cannot be written"). Where the folder holds the name in two cases, which
   only a file copied in can make, the one in the typed case is written, the one the question named.
-- **The load does not read the camera module**: a park loaded here opens on the default view (Q247).
+- **The load reads the camera module** (Q918): a park loaded or entered here opens on its file's zoom, point and rotation (negated into the yaw, and rounded to a quarter turn with the Rotation option on 90 degrees), the yaw set at once where the original eases its drawn rotation onto the rounded one (Q23).
 
 **Measured (Q241f, `q241f/`).** Lost Kingdom entered by a player holding `easymode.TPWI` alone (755, 87987, no
 visitors), stepped under `pause` to `mGameTick` 1000, the camera at `camera 480 280 90 90`, then `savepark Q241f`:

@@ -405,6 +405,12 @@ internal class UiButton : UiControl
 	internal virtual bool Clicks => true;
 
 	/// <summary>
+	/// Whether its click is <c>Select3</c> (<c>0xbd</c>) rather than <c>BUTTON01</c>: the click hook picks by the style bit <c>0x10</c> of
+	/// whoever the message is for (<c>0x00485780</c>), and a scrollbar's arrows report to the bar, which carries it.
+	/// </summary>
+	internal virtual bool ClicksSelect3 => false;
+
+	/// <summary>
 	/// Enabled or not. The original's hit test skips a disabled button (flag 0x2) and everything under it, so the pointer
 	/// passes over it to whatever is behind - no hover, no help row, no glint (<c>docs/QUEUE.md</c> Q66).
 	/// </summary>
@@ -415,6 +421,60 @@ internal class UiButton : UiControl
 		: IsDown ? (Hovered ? HighlightedDown : Down)
 		: Hovered ? Highlighted
 		: Normal;
+}
+
+/// <summary>
+/// A scrollbar's arrow: a button with the flag <c>0x20</c>, which repeats while it is held (<c>Button_RepeatTick</c>, <c>0x00668dd9</c>;
+/// <c>docs/exe/hud.md</c>, "Which window the click sound is for, the scroll bar's arrows..."). Every button constructor sets the
+/// delays <c>+0x13c</c> 500 and <c>+0x140</c> 125 (<c>0x00668902</c>, <c>0x0066890f</c>). Held 500 ms by the real clock it posts <c>0x10009</c>, then
+/// <c>0x10008</c> each time more than 125 ms has gone since the last, while the pointer is on it; the release posts <c>0x100</c>
+/// only if none has been posted (<c>Button_EndRepeat</c>, <c>0x00668eff</c>).
+/// </summary>
+internal sealed class UiRepeatButton : UiButton
+{
+	private const long FirstRepeat = 500;
+	private const long NextRepeat = 125;
+
+	/// <summary>The original's <c>+0x15a</c>: 1 from the press, 2 once the first delay has run out.</summary>
+	private int _state;
+
+	private long _stamp;
+
+	/// <summary>Whether this press has repeated: its release then posts nothing, and so plays no click.</summary>
+	internal bool HasRepeated => _state == 2;
+
+	/// <summary>One repeat: the original's <c>0x10009</c> and <c>0x10008</c>.</summary>
+	internal Action? Repeated { get; set; }
+
+	internal override bool ClicksSelect3 => true;
+
+	internal override void PointerPressed( float x, float y )
+	{
+		_state = 1;
+		_stamp = Time.WallMilliseconds;
+	}
+
+	/// <summary>The interface's tick (<c>0x1e</c>): the first repeat once the delay is up, then one each time more than 125 ms has gone.</summary>
+	internal void Tick()
+	{
+		var now = Time.WallMilliseconds;
+
+		if ( _state == 1 && now - _stamp >= FirstRepeat )
+		{
+			_state = 2;
+			_stamp = now;
+
+			if ( Hovered )
+				Repeated?.Invoke();
+		}
+		else if ( _state == 2 && now - _stamp > NextRepeat )
+		{
+			if ( Hovered )
+				Repeated?.Invoke();
+
+			_stamp = now;
+		}
+	}
 }
 
 /// <summary>
@@ -601,7 +661,18 @@ internal sealed class UiRadioGroup : UiControl
 internal sealed class UiSlider : UiControl
 {
 	private const int Step = 1;
-	private const int Page = 1;
+
+	/// <summary>
+	/// How far a click on the track moves the value: the original's <c>+0x148</c>, one until a list sets it to its visible rows
+	/// (<c>0x00663a0f</c>, from <c>FUN_006639cb</c>).
+	/// </summary>
+	public int Page { get; set; } = 1;
+
+	/// <summary>
+	/// What the wheel turning over the bar or its thumb does in place of <see cref="Scroll"/>, handed the notches: a list's
+	/// bar moves the list, which moves the bar (<c>0x1000d</c>, <c>0x00664ee9</c>).
+	/// </summary>
+	internal Action<float>? WheelTurned { get; set; }
 
 	/// <summary>How far into the thumb, across, the pointer took hold of it.</summary>
 	private int _grab;
@@ -703,6 +774,12 @@ internal sealed class UiSlider : UiControl
 	/// </summary>
 	internal void Scroll( float notches )
 	{
+		if ( WheelTurned != null )
+		{
+			WheelTurned( notches );
+			return;
+		}
+
 		if ( Enabled )
 			MoveBy( -(int)notches * Step );
 	}

@@ -12,7 +12,8 @@ namespace OpenTPW.UI;
 /// <para>
 /// <b>The list is the folder</b>, read afresh as the screen opens and again at each click
 /// (<see cref="SaveFolder.SavedParks"/>): the name, then the file's last write in local time, UITEXT 448's date and
-/// the hour and minute. It has no headings and no sort; a row's id is its place in the folder's list.
+/// the hour and minute. It has no headings and no sort; a row's id is its place in the folder's list. A list longer than
+/// its window shows the stream's scrollbar (<see cref="UiList.AddScrollbar"/>).
 /// </para>
 /// </summary>
 internal abstract class ParkFileScreen : UiWindow
@@ -88,6 +89,11 @@ internal abstract class ParkFileScreen : UiWindow
 		} );
 
 		List.Build();
+
+		// The stream's scrollbar, a child of the list (op 9, with the arrows op 7 and op 6 and the thumb op 8): the track
+		// 1528, 285, 1587, 691 under the skin !slider, the thumb's first place the stream's (the bar puts it where the top row belongs).
+		List.AddScrollbar( new UiRect( 1528, 285, 1587, 691 ), up: new UiRect( 1528, 224, 1588, 284 ),
+			down: new UiRect( 1528, 696, 1588, 756 ), thumb: new UiRect( 1520, 433, 1587, 500 ) );
 	}
 
 	/// <summary>A click on a row, the list's <c>0x400</c>, with the row's id.</summary>
@@ -111,10 +117,6 @@ internal abstract class ParkFileScreen : UiWindow
 
 		for ( var index = 0; index < parks.Count; ++index )
 			List.Add( new UiList.Row( index, parks[index].Name, 0, Values: [DateOf( parks[index].Written )] ) );
-
-		// The stream's scrollbar (control 1, b_up, b_scroller and b_down) is not built: the wheel scrolls the list.
-		if ( List.Scrolls )
-			Unimplemented.Report( "LOAD_PARK_LIST_SCROLLBAR" );
 
 		Log.Info( $"{screen}: {parks.Count} saved parks for {Theme}, rows of {List.RowHeight} units"
 			+ string.Concat( parks.Select( park => $"; '{park.Name}' {DateOf( park.Written )}" ) ) );

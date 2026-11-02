@@ -378,6 +378,64 @@ public sealed class ParkOrbitCameraMode : CameraMode
 		PointOfInterest = new Vector3( 475f, 175f, 0f );
 	}
 
+	/// <summary>
+	/// A quarter turn as the loader holds it: the double at <c>0x006fdd88</c> that <c>fmod</c> divides by, which is the float
+	/// <c>0x006fdd68</c> widened.
+	/// </summary>
+	private const double QuarterTurn = 1.5707963705062866;
+
+	/// <summary>An eighth of a turn: the float at <c>0x006fdd98</c>, and at <c>0x006fdd90</c> negated.</summary>
+	private const double EighthTurn = 0.7853981852531433;
+
+	/// <summary>
+	/// The rotation the camera module's loader keeps with the options byte for 90 degrees set (<c>FUN_0042cec0</c>,
+	/// <c>0x0042d05e</c>..<c>0x0042d0da</c>): the file's rotation less its <c>fmod</c> by a quarter turn, moved on to the
+	/// next quarter when that remainder is more than an eighth either way, so the nearest quarter turn, a tie going
+	/// towards nought. With the byte clear the rotation is kept as written.
+	/// </summary>
+	internal static float RoundedToAQuarter( float rotation )
+	{
+		var remainder = rotation % QuarterTurn;
+
+		if ( remainder < 0 )
+			return (float)(remainder < -EighthTurn ? rotation - remainder - QuarterTurn : rotation - remainder);
+
+		return (float)(remainder > EighthTurn ? rotation + QuarterTurn - remainder : rotation - remainder);
+	}
+
+	/// <summary>
+	/// Puts the camera where a park file's camera module says it stood (<c>FUN_0042cec0</c>, read as the load's modules
+	/// are, <c>docs/exe/saves.md</c>, "Loading the modules", Camera): the zoom and the point as written, and the yaw the
+	/// file's rotation negated, rounded to a quarter turn first where the Rotation option is 90 degrees. A view with a
+	/// number in it that is not finite leaves the camera where it is.
+	/// </summary>
+	/// <remarks>
+	/// <b>Two deviations, said here.</b> The original keeps the file's own rotation as the drawn one and eases it onto the
+	/// rounded target (<c>0x007909e0</c> against <c>0x00790a38</c>), where the yaw here is set at once, as every turn
+	/// here is (Q23); and it checks no number, where a file that holds NaN or an infinity would leave this camera with
+	/// nothing to draw.
+	/// </remarks>
+	internal static void TakeSaved( ParkCameraModule.View view, bool quarterTurns )
+	{
+		if ( !float.IsFinite( view.Zoom ) || !float.IsFinite( view.YRotation ) || !float.IsFinite( view.PointX ) || !float.IsFinite( view.PointZ ) )
+		{
+			Log.Warning( $"Camera: the park file's camera ({view}) holds a number that is not finite, so the camera stays where it is" );
+			return;
+		}
+
+		var rotation = quarterTurns ? RoundedToAQuarter( view.YRotation ) : view.YRotation;
+
+		Zoom = view.Zoom;
+
+		// 0f - rotation, not -rotation: a rotation of nought gives +0, as the writer's `0f - Yaw` does (Level.WritePark).
+		Yaw = 0f - rotation;
+		PointOfInterest = new Vector3( view.PointX, view.PointZ, 0f );
+		Scroll = Vector2.Zero;
+
+		Log.Info( $"Camera: taken from the park file: zoom {Zoom:F2}, file rotation {view.YRotation:F4}"
+			+ $"{(quarterTurns ? $" rounded to {rotation:F4}" : "")}, yaw {Yaw:F4}, point of interest ({PointOfInterest.X:F2},{PointOfInterest.Y:F2})" );
+	}
+
 	private static float Held( IReadOnlyCollection<Key> down, Key a, Key b )
 		=> down.Contains( a ) || down.Contains( b ) ? 1f : 0f;
 
