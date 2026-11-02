@@ -11902,6 +11902,17 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
     (`OpenTPW/World/Park/SpriteScript.cs`)
   **Good first** (Q800; `docs/GOOD-FIRST-ISSUES.md` has the issue text; no game, no Ghidra).
   **Done 2026-11-01** (PR #3, `43971748`): every bullet, by rename or reworded message, the magic still not read whole; 4718 passed, 0 failed, 2 skipped of 4720, in the cloud environment as a normal user. The reworded log lines and labels have no test and were not seen in a run.
+- [x] **Q160. Two park tests do not test what their names say.** Found by the 2026-09-26 staleness audit.
+  `ParkFootprintOccupancyTests.LeavingACellTheThingIsNotOnKeepsWhoeverStandsBehindIt` passes whatever `LeaveCell`
+  does: `LeaveCell( 58, 15, Ride )` already unlinks the ride from (58,16)'s list, `LeaveCell( 58, 16, Guest )` then
+  leaves its `Occupant` nought, and `ParkPicking.ThingOn` falls back to the cell's parent and answers the ride anyway.
+  Assert the cell's `Occupant`; if it then fails, check `FUN_004d9280` before making `LeaveCell` ignore a thing not on
+  the cell asked about. `ParkRideJoinTests.NoQueueGrowsPastTheRoomItHas` takes the room as the save's
+  `QueueSizeInCells` times four, nought on the Drinks Shop and the three toilets, where the gate measures their walked
+  cells (`ParkRideChoice.QueueCellsFor`); a run that queues a guest at a toilet fails it falsely. Use the walked
+  count. Put the bug back for each (`AGENTS.md` rule 6). No game run.
+  **Good first** (Q800; `docs/GOOD-FIRST-ISSUES.md` has the issue text; no Ghidra; only the `ParkFootprintOccupancyTests` half needs no game, `ParkRideJoinTests` skips without it).
+  **Done 2026-11-02** (PR #4, `9e713e10`, `7a5d2470`): the stricter assert failed, and `FUN_004d9280` (read twice in Ghidra) never checks the cell, so `LeaveCell` stays and the test now states what the original does; `docs/exe/park-engine.md` has the rule. 4732 passed, 0 failed, 2 skipped of 4734, on the maintainer's machine with the RAM at 3200. Bug put back for the first test; not shown for the second, as the run queues no guest at a toilet.
 
 ## B. Docs and comments
 

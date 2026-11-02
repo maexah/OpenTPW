@@ -677,16 +677,6 @@ filed the items that cite it.
     `ParkObjectPreview` wants a placed thing (QUEUE:409). Q450 (1) is the buy stats panel (QUEUE:2398-2402): settle
     there which of the two owns the buy screen's picture.
   - **Note (play test 2026-10-31):** the buy screens still show no model in the description panel. The model and the kind row are counted (Q865). Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
-- [ ] **Q160. Two park tests do not test what their names say.** Found by the 2026-09-26 staleness audit.
-  `ParkFootprintOccupancyTests.LeavingACellTheThingIsNotOnKeepsWhoeverStandsBehindIt` passes whatever `LeaveCell`
-  does: `LeaveCell( 58, 15, Ride )` already unlinks the ride from (58,16)'s list, `LeaveCell( 58, 16, Guest )` then
-  leaves its `Occupant` nought, and `ParkPicking.ThingOn` falls back to the cell's parent and answers the ride anyway.
-  Assert the cell's `Occupant`; if it then fails, check `FUN_004d9280` before making `LeaveCell` ignore a thing not on
-  the cell asked about. `ParkRideJoinTests.NoQueueGrowsPastTheRoomItHas` takes the room as the save's
-  `QueueSizeInCells` times four, nought on the Drinks Shop and the three toilets, where the gate measures their walked
-  cells (`ParkRideChoice.QueueCellsFor`); a run that queues a guest at a toilet fails it falsely. Use the walked
-  count. Put the bug back for each (`AGENTS.md` rule 6). No game run.
-  **Good first** (Q800; `docs/GOOD-FIRST-ISSUES.md` has the issue text; no Ghidra; only the `ParkFootprintOccupancyTests` half needs no game, `ParkRideJoinTests` skips without it).
 
 - [ ] **Q210. Hoardings: the original's terrain rectangle and its base-vertex gate.** Found by the 2026-10-04 review
   (`u6-hoardings-1`, `-2`, `-4`; `docs/exe/ride-hoardings.md`). `ParkRideHoarding.Ground` samples `x0 + gx` where the
