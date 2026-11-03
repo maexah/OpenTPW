@@ -42,7 +42,7 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- **Q933 (a `users` folder that is no player's no longer brings the CAN'T SEE YOUR PLAYERS box; `q933/`, `PREDICTION.txt`: P2 to P6 held; P1's count missed by one and P6 once on the test's own fixture, both recorded), not seen or not compared:** on the desk in private folders only (this game, Linux, 1280 x 720): the pre-fix binary (the main clone's previous build, label `25f45199`, no source differs from `dd7b58ab`) with `users/notes`, `5spare` and `1` in the player's folder logged the box (`run-pre-notes`), the fixed binary none (`run-fix-notes`), and a real player there still opened it once (`run-fix-kept`, K1 to K4); the original has no such notice, so there is nothing to compare; not run: Windows, macOS, a `save\` that cannot be written (the moved notice shares the rule, covered by the unit test only).
+- **Q880 (the decode for Q934: what the original does with a park file's zoom outside 70 to 130; `q934/`, `PREDICTION.txt`), not run:** a decode from the listing and the private Ghidra copy (`saves.md`, "A zoom outside 70 to 130 in the file"), no build and no game run in either game, so nothing was seen. Not measured: a file with such a zoom loaded in the original (the reader takes it as written and the next camera update clamps it to 70..130, a NaN to 70, all from the listing); whether the x87 runs with its invalid exception masked, so that a negative zoom's root under a live scroll is NaN; what the scroll speeds do after taking one. Q934 stays open for the build.
 
 
 

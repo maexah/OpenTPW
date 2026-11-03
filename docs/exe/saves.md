@@ -247,6 +247,28 @@ scroll left from before the load (`0x00790a88`, `0x00790a90`: -0.0055, +0.0057 u
 rotation `0x007909e0` 56.52, 81.08, 88.08, 89.51 and 90.00 at 0.75, 1.0, 1.25, 1.5 and 2.0 s: eased from the file's 50 degrees onto the rounded
 target, not set (the 30-degree file: the point (300.01, 200.01) at the first poll and (300.77, 200.75) where its scroll stopped, the drawn rotation 29.85, 6.67, 1.72, 0.37 and 0.00 at 0.75, 1.0, 1.25, 1.5 and 2.0 s, onto 0).
 
+**A zoom outside 70 to 130 in the file** (Q880, for Q934; read from the listing and the private Ghidra copy, nothing run). The
+reader takes it as written: `FUN_0042cec0` reads four bytes into `0x007909ec` (the push at `0x0042cee3`) and tests only the
+read's own answer. The bound is the camera update's, on the next pass: `ParkCamera_Update` (`0x0042b1c0`, called from state
+10's pass at `0x0054fa9e`) ends its movement with the clamp `0x0042c621`..`0x0042c6a1` (`park-engine.md`, "A hidden wide zoom"),
+which with bit `0x80` of `[0x00790aac]` set makes a zoom under 70 70 and one over 130 130 (40 and 300 with the hidden bit
+`0x200`). That bit is up on every route a file is read by. Entering a park, state 9 calls `FUN_00457a90` (`0x0054eca4`),
+whose first call is the camera's reset `FUN_0042a990` (`0x00457aac`: zoom 110, the word `([0x00790aac] & 0x200) | 0x80`,
+`0x0042aa64`..`0x0042aa75`), before the file's load (`0x0054f12b`). A Load row, a quickload, Restart Park and `Refresh.INTS`
+call no reset (none of the twelve teardown calls below is one), and the bit stays from the entry: no writer of
+`[0x00790aac]` clears it. The update skips itself only while `gui_CameraFlags` holds `0x80` (`0x0042b1ea`, `jne 0x0042ccef`),
+and the reader noughts those flags (`0x0042d04c`), so the first update after any load clamps the zoom before the frame is
+drawn. Two details of that update:
+- **NaN is made 70.** The test against 70 is `fcomp`, `fnstsw`, `test ah, 1` (`0x0042c66b`..`0x0042c676`); an unordered
+  compare sets C0, so a NaN reads as under 70. An infinity is made 130 or 70 by its sign. (The reader takes a NaN as it
+  takes any word; the other five values were not followed.)
+- **One read comes before the clamp**: the scroll's `fsqrt` of the zoom (`0x0042bc2a`..`0x0042bc30`), inside the scroll
+  step, which runs only while a scroll is asked that pass (bit 4 of `[0x00790aac]`, the pointer at an edge, a held scroll
+  key, or a test of `gui_CameraFlags`' bit `0x800` in a free-look mode: `uVar16`, `bVar4`, `bVar3`, `uVar13` in Ghidra's
+  decompile). With a negative zoom and a scroll asked on that pass, the root is not a number (the x87's invalid exception
+  masked, which was not read from the game) and the two scroll speeds (`0x0042bc90`, `0x0042bc96`) take it; what they do
+  after was not traced (six other instructions write each of them).
+
 **Action ids.** The action recorder's ids, and the names `FUN_004041d0` gives them, are `park-engine.md`, "There is no
 drag".
 

@@ -760,7 +760,7 @@ Separate from the lobby island camera. Save module `"SAD_CAMERA"`, chunk magic `
 
 | Address | Original name | What it is | Evidence |
 |---|---|---|---|
-| `FUN_0042cec0` | — | Loads the camera save block; also persists `gui_CameraFlags` and zeroes the flags immediately after loading them | Decompiled |
+| `FUN_0042cec0` | — | Loads the camera save block; also persists `gui_CameraFlags` and zeroes the flags immediately after loading them; checks no value, the update's clamp bounds the zoom (`saves.md`, "A zoom outside 70 to 130 in the file") | Decompiled |
 | `FUN_0042cdc0` | — | Saves the camera save block | Decompiled |
 | `DAT_00790ab0` | `gui_CameraFlags` | Camera flags word, saved under that name | `FUN_0042cec0` |
 | `FUN_0042b1c0` | — | The camera-mode dispatcher and update, `gui_CameraFlags`' heaviest consumer (Ghidra `ParkCamera_Update`; its point's edge below, Q625) | Decompiled |
