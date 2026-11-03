@@ -627,6 +627,48 @@ public class ProfilePreservationTests
 	}
 
 	/// <summary>
+	/// <b>A hand-edited opentpw.cfg whose last line has no line feed keeps that line</b> (Q932): the text after the last line feed is
+	/// dropped only when it is empty. The last line is one this game does not know, and a comment of the player's in a second case.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the <c>old[^1].Length == 0</c> test in <c>SaveDisplay</c> taken out (the last element is always removed): the last line is lost.</remarks>
+	[DataTestMethod]
+	[DataRow( "futurething 1" )]
+	[DataRow( "# my last note" )]
+	public void ALastLineWithNoLineFeedSurvivesARewrite( string last )
+	{
+		var path = Path.Combine( root, "save", "opentpw.cfg" );
+		File.WriteAllText( path, "display windowed\n" + last );
+
+		SaveFolder.LoadDisplay();
+		SaveFolder.SaveDisplay( tell: false );
+
+		var text = File.ReadAllText( path );
+		Assert.AreEqual( 1, text.Split( '\n' ).Count( l => l == last ), "kept once" );
+		StringAssert.Contains( text, "\n" + last + "\n", "and ends in a line feed" );
+	}
+
+	/// <summary>
+	/// <b>A file that read whole but will not read at the write is left as it is</b> (Q932): the second read inside <c>SaveDisplay</c> throws,
+	/// so the write stops (and is told where asked) instead of replacing the file with only this game's lines.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the second read wrapped in a catch that clears the lines and goes on to write: the unknown line is gone.</remarks>
+	[TestMethod]
+	public void AFileThatWillNotReadAtTheWriteIsNotWrittenOver()
+	{
+		var path = Path.Combine( root, "save", "opentpw.cfg" );
+		File.WriteAllText( path, "display windowed\nfuturething 1\n" );
+		SaveFolder.LoadDisplay();
+		var before = File.ReadAllBytes( path );
+
+		using ( new FileStream( path, FileMode.Open, FileAccess.ReadWrite, FileShare.None ) )
+			SaveFolder.SaveDisplay( tell: true );
+
+		CollectionAssert.AreEqual( before, File.ReadAllBytes( path ), "the file is as it was" );
+		Assert.IsFalse( File.Exists( path + ".opentpw-backup" ) );
+		Assert.IsTrue( SaveTrouble.Pending, "and the player is told" );
+	}
+
+	/// <summary>
 	/// <b>A second rewrite changes nothing</b> (Q932): the kept lines are not written twice and this game's own comments do not pile up,
 	/// and a file this game wrote alone (nothing unknown in it) is written back byte for byte.
 	/// </summary>

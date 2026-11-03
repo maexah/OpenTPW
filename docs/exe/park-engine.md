@@ -2245,7 +2245,7 @@ A mode reports its type from **vtable `+0x24`**, which is a one-instruction `MOV
 |---|---|---|---|
 | `0x006fea10` | 1 | `FUN_0046c6a0` | The default / idle mode |
 | `0x006fe9b0` | — | `FUN_0046ced0` | The **abstract base** — its getter is pure virtual |
-| `0x006fe9e0` | 3 | `FUN_0046c580` / `FUN_0046c5a0` | The carry shell: an item bought (tool 4) or moved (tool `0x3b`); its constructor sets `+8` the tool and a `u16` at `+0x10` the item, and the current mode lives in `DAT_007b05d8` (`FUN_0046c350`'s store), idle vtable `0x006fea10`: read by `original/hand.py` (Q931) |
+| `0x006fe9e0` | 3 | `FUN_0046c580` / `FUN_0046c5a0` | The carry shell: an item bought (tool 4) or moved (tool `0x3b`); `FUN_0046c5a0`'s constructor sets `+8` the tool, `+0xc` = 1 and a `u16` at `+0x10` the item (`FUN_0046c580`'s sets `+8` and `+0xc` = 0 and no item), and the current mode lives in `DAT_007b05d8` (`FUN_0046c350`'s store), idle vtable `0x006fea10`: read by `original/hand.py` (Q931) |
 | `0x006fea40` | 5 | `FUN_0046c6d0` | Place staff: a candidate off the hire screen |
 | `0x006fea70` | 6 | `FUN_0046cbc0` | An employed worker picked up |
 | `0x006fe980` | 7 | — | What `FUN_0046c350` substitutes for a type-1 mode, online only |

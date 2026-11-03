@@ -5,6 +5,6 @@
 # their type). Each item must be in the file's table once (research.py asserts). <in> is only read.
 set -euo pipefail
 R="$(cd "$(dirname "$0")/../original" && pwd)/research.py"; IN="$1"; OUT="$2"; shift 2
-T="$(mktemp)"; cp "$IN" "$T"
+T="$(mktemp)"; U=""; trap 'rm -f "$T" "$U"' EXIT; cp "$IN" "$T"
 for item in "$@"; do U="$(mktemp)"; python3 "$R" "$T" "$U" "$item" >/dev/null; mv "$U" "$T"; done
-mv "$T" "$OUT"; md5sum "$OUT"
+mv "$T" "$OUT"; chmod 644 "$OUT"; md5sum "$OUT"

@@ -245,7 +245,7 @@ public class LobbyEyeHandoverTests
 	/// Kingdom at (400, 400) with the shipped orbit (70, 20): at 30 frames a second the view's pitch below the horizon rises from 35 to a
 	/// peak and falls back, because the look point (twice the eye's rate) reaches the island before the eye has come down. Measured
 	/// on the desk, the original from this state: peak 74.2 degrees, over 45 degrees for 0.87 s; ours: 72.9 and 0.94 s
-	/// (<c>docs/exe/lobby.md</c>, "The pick's swing"). The bounds are the two games' numbers with a frame's room.
+	/// (<c>docs/exe/lobby.md</c>, "The pick's swing"). The bounds are about 7 degrees and 0.15 s either side of the two games' numbers; the exact rates are held by <c>AHeldFlightStandsStillAndAPickEasesFromIt</c>.
 	/// </summary>
 	/// <remarks><b>Mutations:</b> the look point eased at the eye's rate; the eye eased at the look point's rate; the look point
 	/// jumped to the island whole.</remarks>

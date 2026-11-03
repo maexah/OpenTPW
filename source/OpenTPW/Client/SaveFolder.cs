@@ -205,8 +205,9 @@ internal static class SaveFolder
 	/// It is a plain text file of its own rather than more fields in Config.tcf, so that the original's
 	/// file stays a file the original can still read: its resolution field has room for three modes and
 	/// its own options screen shows a blank line for anything else. A line is a name and its values,
-	/// and anything unreadable is passed over; <see cref="SaveDisplay"/> keeps such a line, and a comment of the player's,
-	/// where it stands, so a file from a later version loses nothing it holds that this version does not know.
+	/// and anything unreadable is passed over. A line whose name this version does not know, and a comment of the player's,
+	/// stay where they stand (<see cref="SaveDisplay"/>). A setting it knows is written from what it read, so a value it could not
+	/// read (a later version's new word, a line cut short) is replaced by this version's, and invalid UTF-8 in a kept line is written back as U+FFFD.
 	/// </para>
 	/// </summary>
 	public static void LoadDisplay()
@@ -333,7 +334,8 @@ internal static class SaveFolder
 	/// Writes save\opentpw.cfg - see <see cref="LoadDisplay"/>. Written with Config.tcf by the options screen's tick,
 	/// alone when a loading screen has learned a new step count, and alone when a start's notice box has opened (<see cref="SaveHome.Told"/>).
 	/// A line of the file this game does not know, a blank line and a comment of the player's stay where they stand (Q932); the
-	/// lines it does know are made again, the first of each in its place, the others after the last line.
+	/// lines it does know are made again, the first of each in its place, the others after the last line. A file that will not read now
+	/// is not written, even if it read whole at the start: its lines stay as they are (told where <c>tell</c> is true).
 	/// </summary>
 	/// <param name="tell">Whether a folder that cannot be written is told to the player (<see cref="SaveTrouble"/>); the loading screen's own write is not, as no choice of theirs was lost.</param>
 	public static void SaveDisplay( bool tell )
@@ -355,24 +357,17 @@ internal static class SaveFolder
 			if ( existing != null && ReferenceEquals( _unreadDisplay, SaveFileSystem ) )
 				BackUp( path, "OPTIONS" );
 
-			// What the file holds now, read again rather than remembered: an unreadable file has nothing to keep.
+			// What the file holds now, read again rather than remembered. A file that will not read here stops the write (the catch
+			// below): it still holds lines, and writing over it would lose the ones this game does not know.
 			var old = new List<string>();
 
 			if ( existing != null )
 			{
-				try
-				{
-					old.AddRange( ReadDisplayText( existing ).Split( '\n' ).Select( line => line.TrimEnd( '\r' ) ) );
+				old.AddRange( ReadDisplayText( existing ).Split( '\n' ).Select( line => line.TrimEnd( '\r' ) ) );
 
-					// The text after the last line feed is not a line.
-					if ( old.Count > 0 && old[^1].Length == 0 )
-						old.RemoveAt( old.Count - 1 );
-				}
-				catch ( Exception e )
-				{
-					old.Clear();
-					Log.Warning( $"Saves: {path} would not read, so its lines this game does not know are not kept - {e.Message}" );
-				}
+				// The text after the last line feed is not a line.
+				if ( old.Count > 0 && old[^1].Length == 0 )
+					old.RemoveAt( old.Count - 1 );
 			}
 
 			// Each setting this game knows, with the comments that explain it, in the order a new file holds them.

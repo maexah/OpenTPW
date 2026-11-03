@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # wheel.sh [PID] NOTCHES [N] - N (default 1) mouse-wheel messages of NOTCHES x 120 (negative = toward the player, a zoom out) handed to the
 # running ORIGINAL's window procedure (FUN_0046b600, WM_MOUSEWHEEL 0x20a) by gdb, in the process itself; PID defaults to original.sh pid.
-# The pointer must already stand where the wheel is wanted (gmove.py): the procedure takes no position for the wheel, it posts 0x1000d to
+# The pointer must already stand where the wheel is wanted (gmove.py): the position does not choose the control: the procedure posts 0x1000d to
 # the control the pointer is over (hovered [0x00faa5e0], or the capture [0x00faa5e8]; UI_QueueMessage, 0x00658ccc). From there on it is
 # the game's own code. Why not xdotool: its buttons 4 and 5 (the X wheel) reach the original, under Proton on a private Xvfb, as nothing
 # (Q930: three notches over a scrolling Load Park list scrolled it by none; the same three through this scrolled it by three rows).

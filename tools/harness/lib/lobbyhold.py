@@ -5,7 +5,7 @@ import os, sys, math, threading, subprocess
 OUT = os.path.abspath(os.path.expanduser(sys.argv[1])); BIN = sys.argv[2]
 NAME = "Q920"; AUDIO_FILE = os.path.join(OUT, "mix.f32")
 os.makedirs(OUT, exist_ok=True)
-sys.path.insert(0, "/home/alex/repos/OpenTPW/tools/harness/lib"); import paths
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); import paths
 exec(open(paths.LIB + "/parkrun.py").read())
 
 console = threading.Lock()

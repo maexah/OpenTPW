@@ -408,14 +408,13 @@ the sea straight down, ours' first drawn lobby frame is the first pass. The cons
 ### The pick's swing: both games turn the view through near-empty water from some flight starts (Q920)
 
 A player picked out of the attract flight eases from the flight's eye and look point (above), the eye at rate 1 a second and the look point at 2,
-so the look point reaches Lost Kingdom first. When the flight is looking at the island east of Lost Kingdom with its eye still high and level near it,
-the look point sweeps back under the eye while the eye has barely come down, and the view's pitch below the horizon climbs past 45 degrees and falls back
+so the look point reaches Lost Kingdom first. From some starts (below) the look point sweeps back under the eye while the eye has barely come down, and the view's pitch below the horizon climbs past 45 degrees and falls back
 in about a second, with the picture near-empty water between the flight's island and Lost Kingdom, the island coming in from the lower right. **Measured on the
 desk, both games from the same state** (the original's flight held by `original/lobbypick.py` at the eye (479.466, 86.613, 363.595), look (575.835, 15.470, 392.691), y-up, desk3's C1 start; ours by the console's `lobbyput`;
-a real click on the player's slot in each; the original at its 30 frame cap, rows every 2 ms by `rendereye.py`): the original's pitch 35.3 to a peak **74.2** at +0.45 s, over 45 degrees for **0.87 s**; ours 36.1 to **72.9** at +0.54 s, **0.94 s**. With the original's
+a real click on the player's slot in each; the original at its 30 frame cap, polled every 2 ms by `rendereye.py`, a row a frame): the original's pitch 35.3 to a peak **74.2** at +0.45 s, over 45 degrees for **0.87 s**; ours 36.1 to **72.9** at +0.54 s, **0.94 s**. With the original's
 clock shifted 85 ms (its first moved row is the end of a 33 ms frame; one number fitted over 0 to 2 s) the eye is within 3.1 units and the look point within 4.4 of ours' at every tenth of a second to +1 s. A second state, the original's **own** flight with
 nothing written (nearest island 1, eye (506.7, 83.8, 453.9), look (555.3, 29.3, 559.8), pitch 25.1 at the press): the original's peak is **81.1** at +0.48 s, over 45 degrees for **0.60 s**; ours held at that state, **80.3** at +0.44 s, **0.61 s**, the eye within 2.9 units after a 25 ms shift.
-**The swing depends on the start.** A pick at pitch 33 to 35 with the flight looking along the line to the island does not swing in either game (the original: 33.0 to a peak of 44.0 and down to 16; ours 35.6 down to 20).
+**The swing depends on the start.** From C1 and from the original's own flight (n2), whose look point stood on the far side of the eye from Lost Kingdom (about 140 degrees off the line to it, the eye 87 to 120 units away), both games swing. From the original's n1 (eye (460.8, 579.6), look (487.7, 580.0): 110 degrees off the line, the eye 190 units away; pitch 33.0 to a peak of 44.0 and down to 16) and ours' run1 (35 degrees off the line; 35.6 down to 20) neither swings. What separates a swinging start from a quiet one is not decoded; these are four starts.
 Not measured: how often each game's own flight stands at a swinging start, and Full Simulation.
 
 ### The lens

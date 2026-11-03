@@ -263,6 +263,7 @@ public sealed class ParkOrbitCameraMode : CameraMode
 		//
 		// Handled here rather than centrally for the reason the camcorder key above gives: a camera
 		// mode is what knows when it should give way.
+		// Ours: 5 a notch; the original's FUN_0042a760 steps 10 (0x006fdd5c, 0x006fdd7c), Q937.
 		if ( Input.Mouse.Wheel != 0 && !UI.WindowStack.WheelTaken )
 			Zoom = (Zoom - (Input.Mouse.Wheel * 5f)).Clamp( MinZoom, MaxZoom );
 
