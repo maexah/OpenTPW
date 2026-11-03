@@ -1092,6 +1092,24 @@ public static class DebugConsole
 
 				break;
 
+			// Stands one guest on a ground point of the world, `pin <thing> <x> <z>`, so their person and their balloon are drawn
+			// there: a flagged cell's, which no walker reaches (Q948). `pause` first, or the next tick walks them on.
+			case "pin":
+				if ( ParkPeople.Current is not { } pinners || ParkGround.Current?.Heightfield is not { } pinGround )
+				{
+					Reply( "pin: none - a park has to be loaded" );
+					break;
+				}
+
+				if ( parts.Length < 4 || !pinners.PinGuest( (int)Argument( 1 ), Argument( 2 ), Argument( 3 ), pinGround.CellSizeX, pinGround.CellSizeY ) )
+				{
+					Reply( "pin <guest thing> <x> <z>: that guest is not walking" );
+					break;
+				}
+
+				Reply( $"pin: guest {(int)Argument( 1 )} stands at ({Argument( 2 ):F3},{Argument( 3 ):F3}); stands {pinGround.ScapeHeight( Argument( 2 ), Argument( 3 ) ):F4}" );
+				break;
+
 			// Sets the life of every balloon held - an instrument as `thirst` is, so that a balloon's running out
 			// can be watched without waiting its two minutes: see ParkPeople.SetBalloonLife.
 			case "balloon":

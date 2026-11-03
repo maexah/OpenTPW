@@ -191,6 +191,16 @@ public sealed class PeepWalk
 	public FixedVector Position => _navigator.Position;
 
 	/// <summary>
+	/// Stands this person at <paramref name="at"/> with no step between, the picture's previous place the same: the debug
+	/// console's <c>pin</c>, which puts a guest or their balloon on a chosen ground point to be drawn there (Q948).
+	/// </summary>
+	internal void PinAt( FixedVector at )
+	{
+		_navigator.Position = at;
+		_navigator.StampPrevious();
+	}
+
+	/// <summary>
 	/// Where this person stood when the tick now running began - <see cref="PeepNavigator.Previous"/>,
 	/// which is what the drawing interpolates from. Read through the walk for the same reason
 	/// <see cref="Position"/> is.

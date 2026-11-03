@@ -69,6 +69,38 @@ public class ParkConsoleGuestTests
 	}
 
 	/// <summary>
+	/// <b><c>pin</c> stands a guest on a world point with no step between</b> (Q948): the walk's place is the point in the
+	/// cell's fixed point (a world unit is a tenth of a cell here), and the place the picture interpolates from is the same,
+	/// so nothing slides to it; a guest nobody walks as is refused.
+	/// </summary>
+	[TestMethod]
+	public void APinnedGuestStandsOnTheWorldPointWithNothingToSlideFrom()
+	{
+		var world = World();
+		var state = new ParkState( world );
+		var people = People( world, state );
+
+		try
+		{
+			var id = people.Admit( 55, 30 );
+
+			// A cell 10 across and 5 down, so a swapped axis or a missing scale is not the right answer by accident.
+			Assert.IsTrue( people.PinGuest( id, 595f, 355f, 10f, 5f ), "a walking guest is pinned" );
+
+			var walk = people.WalkFor( id )!;
+			var cell = FixedVector.One;
+
+			Assert.AreEqual( new FixedVector( 59 * cell + cell / 2, 71 * cell ), walk.Position, "the world point in the cell's fixed point" );
+			Assert.AreEqual( walk.Position, walk.Previous, "the place the picture comes from is the same" );
+			Assert.IsFalse( people.PinGuest( -1, 595f, 355f, 10f, 5f ), "nobody walks as that thing" );
+		}
+		finally
+		{
+			Done( people );
+		}
+	}
+
+	/// <summary>
 	/// <b>A guest made by <c>admit</c> has come through the gate</b>: deciding, paid, numbered a visitor, of the kind
 	/// asked for, on the cell asked for - where <see cref="ParkPeople.Admit"/> leaves one at the gate, unpaid.
 	/// </summary>

@@ -9,10 +9,17 @@ st0 S` with S = y - offset: the sampler FUN_004527f0 gave the draw at that point
 own tick writes the place from its cell every game tick, so a point is caught only on a frame between that and the next write; a point
 not caught in 2 s is printed as `miss`. The sprite is left where the person's tick puts it back.
 
+  spritehold.py PID POINTS.json [SLOT] --setoff V   also write the sprite's +0x8c (its height above the ground) as V with every place, so
+        the draw cannot have met a different one (a balloon's own tick bobs +0x8c; a walker's is nought): `off` is then V and `st0` the sampler
+        exactly. Without it `off` is +0x8c read after the draw, which for a balloon may be a tick's bob from the draw's (Q948).
+
   spritehold.py PID POINTS.json [SLOT] --stay X,Z,SECS   after the points (POINTS.json may be `[]`), write the place X, Z over and over
         for SECS and print how often the draw's place (+0xe4, +0xec) was that place and the last y read; a frame grabbed meanwhile
         (import -window root -display :77 -crop 1024x768+0+0 OUT.png) shows the person standing there."""
 import json, struct, sys, time
+setoff = None
+if '--setoff' in sys.argv:
+	i = sys.argv.index('--setoff'); setoff = float(sys.argv[i + 1]); del sys.argv[i:i + 2]
 args = [a for a in sys.argv[1:] if not a.startswith('--stay')]; stay = None
 if '--stay' in sys.argv: stay = [float(v) for v in sys.argv[sys.argv.index('--stay') + 1].split(',')]; args = [a for a in args if a != sys.argv[sys.argv.index('--stay') + 1]]
 pid = int(args[0]); pts = json.load(open(args[1])); slot = int(args[2]) if len(args) > 2 else None
@@ -32,6 +39,7 @@ for x, z in pts:
 	t0 = time.time(); got = None
 	while time.time() - t0 < 2.0:
 		wr(s + 0x88, '<f', fx); wr(s + 0x90, '<f', fz)
+		if setoff is not None: wr(s + 0x8c, '<f', setoff)
 		dx, y, dz = rd(s + 0xe4, '<3f')
 		if dx == fx and dz == fz:
 			# the draw stored this place; the offset and y are from the same pass if the place is still ours
@@ -44,6 +52,7 @@ if stay:
 	t0 = time.time(); seen = n = 0; y = None
 	while time.time() - t0 < stay[2]:
 		wr(s + 0x88, '<f', fx); wr(s + 0x90, '<f', fz); n += 1
+		if setoff is not None: wr(s + 0x8c, '<f', setoff)
 		dx, y2, dz = rd(s + 0xe4, '<3f')
 		if dx == fx and dz == fz: seen += 1; y = y2 - rd(s + 0x8c, '<f')
 	print(f'stay x {fx:.5f} z {fz:.5f}: {n} writes, the draw stood there at {seen} reads, y - off {y}', flush=True)

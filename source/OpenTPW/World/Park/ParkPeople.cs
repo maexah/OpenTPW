@@ -1386,6 +1386,21 @@ public sealed partial class ParkPeople : Entity
 	}
 
 	/// <summary>
+	/// Stands a guest at a world point (the debug console's <c>pin</c>, Q948: a person and their balloon drawn on a chosen
+	/// ground point, a flagged cell's, to be photographed beside the original's); false where nobody walks as that thing.
+	/// Their next tick walks them on, so hold the clock (<c>pause</c>) while it is looked at.
+	/// </summary>
+	internal bool PinGuest( int thingId, float x, float y, float cellX, float cellY )
+	{
+		if ( WalkFor( thingId ) is not { } walk )
+			return false;
+
+		walk.PinAt( new FixedVector( (int)(x / cellX * FixedVector.One), (int)(y / cellY * FixedVector.One) ) );
+
+		return true;
+	}
+
+	/// <summary>
 	/// Sets the life of every balloon held, for the debug console's <c>balloon</c>; a guest holding none is left
 	/// alone. Answers how many.
 	/// </summary>
