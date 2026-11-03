@@ -6,7 +6,7 @@ and lays a path from the street's spur to (32,23) and joins its queue there, sen
 `pause`s, `savepark`s and Loads the saved file (the Load list's row 1), reads it again and steps the paused park. Each read is `scripts` (the count, the ride's line
 and every thing-0 script), the first ride line of `bumpers`, the Engine lines of `voices`, the log's Car sounds lines and the save and load gaps; a frame follows
 each. The saved file is copied to <outdir>/kartload-saved.TPWS (for `lib/scriptrecords.py`) and left in the private folder until done(), so the original can be shown
-it (docs/TOOLING.md, "A bought kart saved and loaded, in both games"). The cars are not in `bumpers`, so the run waits RUNSECS (default 40) seconds, not for a ride "in a go". Run it
+it (docs/TOOLING.md, "A bought kart or water ride saved and loaded, in both games"). The cars are not in `bumpers`, so the run waits RUNSECS (default 40) seconds, not for a ride "in a go". Run it
 with the venv's python; `<bin>` is the build's folder. Prints "READ <tag> ..." lines; confirm.txt and run.log are in <outdir>."""
 import os, sys, shutil, re as _re
 OUT = sys.argv[1]; BIN = sys.argv[2]; WATER = os.environ.get("KIND") == "water"; NAME = "waterl" if WATER else "kartl"

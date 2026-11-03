@@ -330,6 +330,13 @@ filed the items that cite it.
   (`FUN_00549c60`), a kart's height over the track. Confirm against `q581/orig/C-track.log` (the grid, 9 to 16 and 8,
   the timer -3 to 0, state 3, the next kart at the centre) and a frame of a kart on the track (`C-4-race.png`). Moves the
   website's rides list.
+  - **Note (run 19 review, q939 finding 1):** `BUMP 5` (`0x00554836`: the object's `+0x2c`, `mIsTrackRideValid`, into the
+    register; the object from `0x4cd300`, no bumper record) is not answered for a kart or water ride here: `RideScript.Bump`
+    returns at its no-record test before the selector, so a bought Dino Karts with its loop closed and its queue joined loops at
+    `GoKarts.RSE` words 15 to 18 (`BUMP 5, 0`, `BRANCH_Z ->15`) from its first tick, counted `Go Kart: BUMP at 15`, and never
+    admits a guest; the original given the saved file runs on past it (`q939/run3`, `orig3/scripts.log`). Like Q448's BUMP 17 it
+    reads the thing, not a record, so it can be answered before the race (Splish Splash's is word 20, past its closed test at 8).
+    Q993 (2)'s spin at word 15 is the same loop.
   - **Note (fork watch 2026-10-21, verify-world-other L6):** a loaded ride gets the race's first buoy back from the track-ride
     loader's close chunk, type 6 (`0x00543928`, `saves.md`, "The close"): for BumperType -4 (this ride), after the handle check, it walks
     the buoy chain from `+0xa8` to the first buoy after the start buoy (flag 4) not flagged 2, wrapping, into `+0xa4`. Build that
@@ -2318,7 +2325,7 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   (`ParkState.WrittenBuilt`: what is left out is not counted in it, a sold object the file keeps is). **Left:** (1) **A coaster bought**
   (`item.TrackType` 3: `Level.WritesTrackKind`) is counted (`SAVE_PARK_OBJECT_BOUGHT`) and not written, with its pylon chain (Q727(4)) and its
   track pieces. (2) **A loaded kart with cars** (`SAVE_PARK_TRACK_RIDE_AS_THE_FILE`, `review17/q849/SECOND.md` D3) stays the file's with its cars
-  while every `BUMP` is a no-op for a kart here, so the script walks the riders off and spins at word 15 where the file held it at word 197 (`VAR_ONRIDE`
+  while every `BUMP` is a no-op for a kart here, so the script walks the riders off and spins at word 15 (`BUMP 5`'s loop, Q588's note) where the file held it at word 197 (`VAR_ONRIDE`
   4, `VAR_RUNNING` 1): the written file contradicts itself (`saves.md:1522`, "a file agrees with itself"). Write the kart's record from what runs, with
   its cars, or run the kart's script as the original does; the original ran on with the file, whether the four seated riders ever get off there is not
   read. (3) **The kart's and the water ride's pieces' models** (`SAVE_PARK_TRACK_PIECE_MODEL`, 16 for the two loops of Q858's run): a track piece is a
