@@ -126,7 +126,10 @@ public class ShaderRecompileTests
 	{
 		var thrown = Assert.ThrowsException<System.IO.FileNotFoundException>( () => OpenTPW.Shader.RequireCompiled( null, "/game/content/shaders/blit.shader" ) );
 
-		StringAssert.Contains( thrown.Message, "/game/content/shaders/blit.shader" );
+		StringAssert.Contains( thrown.Message, "Shader blit.shader is missing" );
+		Assert.IsFalse( thrown.Message.Contains( "/game/content" ), thrown.Message );
+		Assert.AreEqual( "/game/content/shaders/blit.shader", thrown.FileName, "the path is kept off the message, which the box shows, and on the exception, which the log has" );
+		StringAssert.Contains( thrown.ToString(), "/game/content/shaders/blit.shader" );
 		OpenTPW.Shader.RequireCompiled( new object(), "/game/content/shaders/blit.shader" );
 	}
 }

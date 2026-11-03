@@ -227,8 +227,8 @@ belongs to or at the end. Grep it by area or Q-number; never read it whole.
   box and `console.log` do not need a console: seen with stdin, stdout and stderr on `/dev/null`.
 - **A failed start says why in a message box** (Q978, a deviation: the original had no start that could fail so; Linux seen; Windows seen
   at `a9c35591`, Q850: the box on no game, a missing folder and an unreadable `save\`, none on a good start, exit 1, nothing cut): a game that cannot be found, or an exception before the main loop begins, shows an SDL error box (`StartFailure`)
-  holding the log's reason lines (where it looked, how to put it right) or the exception's type and message, and where
-  `console.log` is, then exits 1; `OPENTPW_NO_MESSAGE_BOX` keeps it off and the log keeps the text. The exception and its stack are
+  holding the log's reason lines (where it looked, how to put it right) or the exception's message (first line; its type and stack are in the log), and where
+  `console.log` is, then exits 1; every line of the box is wrapped to 64 columns (a path breaks after a separator) so none falls off a 1024 or 640 pixel display, and the log keeps each line whole (Q912, seen on a private Xvfb at both sizes; a missing shader is named by its file, the path in the log's `File name:` line); `OPENTPW_NO_MESSAGE_BOX` keeps it off and the log keeps the text. The exception and its stack are
   logged before anything unwinds, and a load that threw keeps no "Loaded" line and no step count. With no display SDL has no
   box and the log says so. Seen on a private Xvfb with a `--game` that does not exist and with a folder that makes the window fail.
 - **The lobby letters this build's name bottom right, where the original's says "v 2.0"** (Q752): `VersionLabel`, under

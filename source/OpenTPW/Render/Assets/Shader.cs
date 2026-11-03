@@ -138,13 +138,13 @@ public partial class Shader : Asset
 
 	/// <summary>
 	/// A shader that is missing or empty compiles to nothing, which a pipeline built from it would meet as a null reference
-	/// with no path; the game stops naming the file instead, in a Release build as in a Debug one, where the shader is first asked for
+	/// with no path; the game stops naming the file instead (its message the file's name, which the failed-start box shows; the exception's <c>FileName</c> and its log line hold the path), in a Release build as in a Debug one, where the shader is first asked for
 	/// (the blit shader at the start; a material's in its static initialiser, whose wrapper <c>StartFailure</c> unwraps).
 	/// </summary>
 	internal static void RequireCompiled( object? compiled, string path )
 	{
 		if ( compiled == null )
-			throw new FileNotFoundException( $"Shader {path} is missing or empty (is the content/shaders folder beside the game?)", path );
+			throw new FileNotFoundException( $"Shader {System.IO.Path.GetFileName( path )} is missing or empty (is the content/shaders folder beside the game?)", path );
 	}
 
 	/// <summary>

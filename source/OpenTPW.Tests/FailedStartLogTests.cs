@@ -187,7 +187,9 @@ public class FailedStartLogTests
 			StringAssert.Contains( log, "Unhandled exception:", "the stack is in the log" );
 
 			var box = BoxLine( log );
-			StringAssert.Contains( box, "Exception: ", "the box names the exception" );
+			StringAssert.Contains( box, "Cannot create a SwapchainSource", "the box has the exception's message" );
+			Assert.IsFalse( box.Contains( "Exception: " ), "and not its type, which the log's stack has" );
+			StringAssert.Contains( log, "Exception: Cannot create a SwapchainSource" );
 			StringAssert.Contains( box, $"Log: {AsTheLogWritesIt( Path.Join( folder, "home" ), Path.Join( logs, ConsoleLog.FileName ) )}" );
 		}
 		finally { Directory.Delete( folder, true ); }

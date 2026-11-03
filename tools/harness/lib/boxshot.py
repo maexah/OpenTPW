@@ -7,7 +7,7 @@
 (the box cannot show: "SDL said 'No message system available'"); OPENTPW_NO_MESSAGE_BOX=1 keeps the box off. There is no window
 manager on the Xvfb, so the box has no title bar. NULLSTD=1 puts stdin, stdout and stderr on /dev/null (the nearest to a Windows start from
 Explorer, which has no console; closed descriptors make .NET abort on Linux, so they are not used), so stdout.txt is not written and the log is all there is. The box is found as the smallest viewable top-level window. The game's HOME is
-<outdir>/home, never the player's. Run with review-codex/venv/bin/python -u (python-xlib, PIL); the display is :79 (lane B's)."""
+<outdir>/home, never the player's. Run with review-codex/venv/bin/python -u (python-xlib, PIL); the display is :79 (lane B's) unless XDISPLAY=:81 (lane A's) is given; SIZE=640x480x24 changes the display's size (Q912)."""
 import os, sys, time, subprocess as sp
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); import paths
 from Xlib import X, display, XK
@@ -18,18 +18,20 @@ env["HOME"] = os.path.abspath(out) + "/home"; os.makedirs(env["HOME"], exist_ok=
 env["XDG_DATA_HOME"] = env["HOME"] + "/xdg"; env.pop("OPENTPW_GAME_PATH", None)
 os.makedirs(out + "/logs", exist_ok=True); logs = os.path.abspath(out) + "/logs"
 env["OPENTPW_LOG_DIR"] = logs
-nodisp = nullstd = False
+nodisp = nullstd = False; xdisp = ":79"; size = "1024x768x24"
 for kv in sys.argv[4:]:
     k, v = kv.split("=", 1)
     if k == "DISPLAY" and v == "none": nodisp = True
     elif k == "NULLSTD": nullstd = v == "1"
+    elif k == "XDISPLAY": xdisp = v      # the private display: lane A's is :81 so it never meets lane B's :79
+    elif k == "SIZE": size = v           # the display's WxHx24, 1024x768x24 by default
     else: env[k] = v
 out = os.path.abspath(out)
 xv = None
 if nodisp: env.pop("DISPLAY", None)
 else:
-    env["DISPLAY"] = ":79"
-    xv = sp.Popen([paths.xvfb(), ":79", "-screen", "0", "1024x768x24", "-nolisten", "tcp"], stdout=sp.DEVNULL, stderr=sp.DEVNULL)
+    env["DISPLAY"] = xdisp
+    xv = sp.Popen([paths.xvfb(), xdisp, "-screen", "0", size, "-nolisten", "tcp"], stdout=sp.DEVNULL, stderr=sp.DEVNULL)
     time.sleep(1.5)
 t0 = time.time()
 cmd = [paths.dotnet(), f"{bindir}/OpenTPW.dll"] + (["--game", game] if game != "-" else [])
@@ -39,7 +41,7 @@ try:
     if nodisp or env.get("OPENTPW_NO_MESSAGE_BOX"):
         rc = p.wait(30); print(f"{label}: exit {rc} after {time.time()-t0:.1f}s, no window expected")
     else:
-        d = display.Display(":79"); root = d.screen().root
+        d = display.Display(xdisp); root = d.screen().root
         win = None
         for _ in range(60):
             time.sleep(0.5)
