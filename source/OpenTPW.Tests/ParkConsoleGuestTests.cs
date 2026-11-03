@@ -6,10 +6,11 @@ using System.Linq;
 namespace OpenTPW.Tests;
 
 /// <summary>
-/// The debug console's two guest instruments: <c>admit</c>, a guest made inside the park already deciding
+/// The debug console's three guest instruments: <c>admit</c>, a guest made inside the park already deciding
 /// (<see cref="ParkPeople.AdmitInside"/>), and <c>send</c>, a guest sent to a thing as if they had chosen it
 /// (<see cref="PeepBehaviour.SendAsChosen"/>). What they must prove is that only the choice is skipped: the sent
-/// guest walks and joins the queue through the guest's own states.
+/// guest walks and joins the queue through the guest's own states. <c>pin</c> stands a guest on a world point
+/// (<see cref="ParkPeople.PinGuest"/>).
 ///
 /// <para>
 /// These read real game files and are skipped where there is no installation - see <see cref="GameData"/>.
@@ -70,7 +71,7 @@ public class ParkConsoleGuestTests
 
 	/// <summary>
 	/// <b><c>pin</c> stands a guest on a world point with no step between</b> (Q948): the walk's place is the point in the
-	/// cell's fixed point (a world unit is a tenth of a cell here), and the place the picture interpolates from is the same,
+	/// cell's fixed point (a world unit is a tenth of a cell across and a fifth of a cell down here), and the place the picture interpolates from is the same,
 	/// so nothing slides to it; a guest nobody walks as is refused.
 	/// </summary>
 	[TestMethod]
