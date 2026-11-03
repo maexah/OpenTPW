@@ -129,13 +129,6 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   outer catch ends the scan, so the players after it are missing for the run (rare: a folder made whole has every theme; it runs
   before any scene, so `SaveTrouble` could tell it at the lobby's first frame). Counted, not built; look at it when a player meets it.
 
-- [ ] **Q908. A folder that becomes writable leaves the fallback's players behind with no word (Q984's review, F2).** Each start
-  chooses the save folder afresh (`SaveHome.Choose`). After weeks in the player's data folder (`%AppData%\OpenTPW\save`), one
-  "Run as administrator", or `PermissionFix.exe` (the fix Q902 names), makes the game's own `save\` writable: `Choose` keeps it,
-  the player slots read empty and the log says only `Saves: the game's own save folder`, so it looks like lost saves. Nothing is
-  deleted. The notice exists for the other direction alone (`SAVES GO IN`). **Alexah (2026-11-02):** say so, no copying and no second folder read: a notice on the kept path when the player's folder holds players (`SaveHome.HoldsPlayers`). A test
-  next to `AFolderThatCanBeWrittenIsKeptAndTheProbeLeavesNothing`.
-
 - [ ] **Q247. A loaded park is built again behind the loading screen.** Left by
   Q241c (`saves.md`, "OpenTPW's Load Park"). The original reads a park file over the running park, with no loading
   screen and no change of scene (`FUN_00414d40`: twelve teardown calls, the modules, `FUN_00415140`), where

@@ -98,7 +98,7 @@ its saves in `save` in your own data folder instead (`%AppData%\OpenTPW\save` on
 on Linux, `~/Library/Application Support/OpenTPW/save` on macOS) and plays as usual; `console.log` says which folder it
 chose. This is a deviation from the original, which would keep them in the game's folder. The test is a file really made
 there, so a folder you can write is kept. A `save/` that already holds players but cannot be written is read by nothing:
-the players in it are not copied (Q902 is open), and the game says so once each start on screen. Where that folder exists but cannot be
+the players in it are not copied (Q902 is open), and the game says so once each start on screen. The other way round, a `save/` that can be written is kept, and where your own data folder still holds players from an earlier fallback, the game says so on screen each start (`SAVES ARE IN`): they are not read and not copied. Where that folder exists but cannot be
 written either, the game still runs and says on screen when a save, the options or a player is lost: a box reading
 `PARK NOT SAVED`, `OPTIONS NOT SAVED` or `PLAYER NOT SAVED`, with the path of `console.log`. Where it cannot be made at all, OpenTPW stops and a box says why.
 

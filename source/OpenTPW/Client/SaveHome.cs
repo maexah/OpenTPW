@@ -16,6 +16,10 @@ namespace OpenTPW;
 /// Q902 (Alexah's, open): a <c>save\</c> that holds players but cannot be written is read by nothing, and nothing is
 /// copied out of it. The game says so once each start (<see cref="SaveTrouble.Tell"/>; nothing is kept between starts).
 /// </para>
+/// <para>
+/// The other way (Q908, Alexah's 2026-11-02): a game folder that has become writable is kept, and the players left in the
+/// player's folder are read by nothing and nothing is copied; the game says so the same way, each start while it is so.
+/// </para>
 /// </summary>
 internal static class SaveHome
 {
@@ -41,6 +45,14 @@ internal static class SaveHome
 		if ( Unwritable( gameSave ) is not { } why )
 		{
 			Log.Info( $"Saves: the game's own save folder, {gameSave}" );
+
+			// Alexah's answer (Q908): say so, copy nothing and read no second folder.
+			if ( !PathsMatch( gameSave, playersSave ) && HoldsPlayers( playersSave ) )
+			{
+				Log.Warning( $"Saves: {playersSave} holds players, and the game's own folder is kept, so they are read by nothing and nothing is copied (Q908)" );
+				return new Pick( gameSave, false, KeptNotice( gameSave, playersSave ) );
+			}
+
 			return new Pick( gameSave, false, null );
 		}
 
@@ -62,6 +74,14 @@ internal static class SaveHome
 	/// <summary>The one line the player is told when the move leaves players behind, in the message box's capitals-then-sentence form.</summary>
 	internal static string Notice( string folder )
 		=> $"SAVES GO IN\n\n{folder}\nPlayers in the game's own folder are not copied.";
+
+	/// <summary>The line the player is told when the game's folder is kept and the player's folder still holds players, in the same form.</summary>
+	internal static string KeptNotice( string gameSave, string playersSave )
+		=> $"SAVES ARE IN\n\n{gameSave}\nPlayers in {playersSave} are not read.";
+
+	private static bool PathsMatch( string a, string b )
+		=> string.Equals( Path.TrimEndingDirectorySeparator( Path.GetFullPath( a ) ), Path.TrimEndingDirectorySeparator( Path.GetFullPath( b ) ),
+			OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal );
 
 	/// <summary>
 	/// Why a file cannot be made in the folder (made first if it is not there), or null where one can: one is made and let

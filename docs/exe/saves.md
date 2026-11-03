@@ -636,7 +636,7 @@ first when it is not there) saves go in `save` in the player's data folder (`Use
 on Windows) and the log says so once (`SaveHome`). A stock Program Files install is that case on Windows: the original's exe
 has no manifest, so Windows sends its writes to the VirtualStore (Q902, open: whether OpenTPW should read them there), and
 OpenTPW's is `asInvoker`, which is not redirected. A `save\` that holds players but cannot be written is read by nothing, and
-nothing is copied out of it; the game says so once each start (`SAVES GO IN`; nothing is kept between starts). The boxes below fire only where the player's folder
+nothing is copied out of it; the game says so once each start (`SAVES GO IN`; nothing is kept between starts). The other way round (Q908, Alexah 2026-11-02): a game folder that has become writable (one "Run as administrator", or the permission fix) is kept, and where the player's folder still holds a player the game says so the same way (`SAVES ARE IN`, the game's folder, `Players in <the player's folder> are not read.`); nothing is copied and no second folder is read, and the notice comes at every start while those players are there. The boxes below fire only where the player's folder
 cannot be written either.
 
 **A deviation: the original says nothing when a save fails** (its save answers a failure number and the screen closes

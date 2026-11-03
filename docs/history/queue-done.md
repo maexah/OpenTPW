@@ -11940,6 +11940,12 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Load Park 2.33, 2.03, 2.04 s off-screen and 2.15, 1.93, 1.91 s on the desk's GPU, Restart Park 2.02, 2.02 and 1.82, 1.89 s, a loading screen between; the original: 0.141, 0.174, 0.167 s and
   0.097, 0.141 s, no third picture, its clock falling to the file's tick 0.07 to 0.13 s after the click. Tools: `lib/loadtime.py`, `lib/filmsheet.py`, `lib/loadtime_ours.py`, `original/loadtime.sh`,
   `original/tickwall.py` (`TOOLING.md`). Not done: a played park's bigger file, and what B touches (Q247).
+- [x] **Q908. A folder that becomes writable leaves the fallback's players behind with no word (Q984's review, F2).** Each start
+  chooses the save folder afresh (`SaveHome.Choose`). After weeks in the player's data folder (`%AppData%\OpenTPW\save`), one
+  "Run as administrator", or `PermissionFix.exe` (the fix Q902 names), makes the game's own `save\` writable: `Choose` keeps it,
+  the player slots read empty and the log says only `Saves: the game's own save folder`, so it looks like lost saves. Nothing is
+  deleted. The notice exists for the other direction alone (`SAVES GO IN`). **Alexah (2026-11-02):** say so, no copying and no second folder read: a notice on the kept path when the player's folder holds players (`SaveHome.HoldsPlayers`). A test
+  next to `AFolderThatCanBeWrittenIsKeptAndTheProbeLeavesNothing`. **Done (run 18, lane A):** `SaveHome.Choose` tells `SAVES ARE IN` on the kept path when `HoldsPlayers( playersSave )` (never where the two paths are one folder); three new tests, seven bugs put back, seen in the running game off-screen (`q908/`).
 
 ## B. Docs and comments
 

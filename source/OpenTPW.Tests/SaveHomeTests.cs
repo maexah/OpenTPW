@@ -114,6 +114,43 @@ public class SaveHomeTests
 		Assert.AreEqual( 1, Directory.GetFileSystemEntries( game ).Length, "only users\\ is there" );
 	}
 
+	/// <remarks><b>Mutation:</b> the notice taken off the kept branch, or <see cref="SaveHome.HoldsPlayers"/> asked of the game's folder.</remarks>
+	[TestMethod]
+	public void AKeptFolderWhileThePlayersFolderHoldsPlayersSaysSoAndCopiesNothing()
+	{
+		Directory.CreateDirectory( game );
+		Directory.CreateDirectory( Path.Join( players, "users", "1Old", "jungle" ) );
+		File.WriteAllText( Path.Join( players, "users", "1Old", "gms.dat" ), "x" );
+
+		var pick = SaveHome.Choose( game, players );
+
+		Assert.AreEqual( game, pick.Folder );
+		Assert.IsFalse( pick.Fallback );
+		StringAssert.StartsWith( pick.Notice, "SAVES ARE IN\n\n" + game );
+		StringAssert.Contains( pick.Notice, players );
+		StringAssert.Contains( pick.Notice, "not read" );
+		Assert.AreEqual( 0, Directory.GetFileSystemEntries( game ).Length, "nothing is copied in (Q908)" );
+		Assert.IsTrue( File.Exists( Path.Join( players, "users", "1Old", "gms.dat" ) ), "and the players left are untouched" );
+	}
+
+	[TestMethod]
+	public void AKeptFolderWhileThePlayersFolderHoldsNoPlayersSaysNothing()
+	{
+		Directory.CreateDirectory( game );
+		Directory.CreateDirectory( Path.Join( players, "users" ) );
+		File.WriteAllText( Path.Join( players, "opentpw.cfg" ), "" );
+
+		Assert.IsNull( SaveHome.Choose( game, players ).Notice, "an options file and an empty users folder are no players" );
+	}
+
+	[TestMethod]
+	public void AKeptFolderThatIsThePlayersFolderToldNothingOfItself()
+	{
+		Directory.CreateDirectory( Path.Join( game, "users", "1Test" ) );
+
+		Assert.IsNull( SaveHome.Choose( game, game + Path.DirectorySeparatorChar ).Notice, "the same folder is not left behind" );
+	}
+
 	/// <remarks><b>Mutation:</b> the probe back on the fixed name <c>.write-test</c> with <see cref="FileMode.Create"/>: the file is emptied and removed.</remarks>
 	[TestMethod]
 	public void AFileOfThePlayersNamedLikeTheOldProbeIsLeftAlone()

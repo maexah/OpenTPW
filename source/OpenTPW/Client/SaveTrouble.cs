@@ -34,8 +34,8 @@ internal static class SaveTrouble
 	internal static bool LostAWrite => _what != null;
 
 	/// <summary>
-	/// Something the player is told once, not a failure: where saves go when the game's folder cannot be written
-	/// (<see cref="SaveHome"/>, Q984). Shown by the same poll, ahead of a failure.
+	/// Something the player is told once, not a failure: where saves go when the game's folder cannot be written, or that the
+	/// player's folder holds players the kept game folder does not read (<see cref="SaveHome"/>, Q984, Q908). Shown by the same poll, ahead of a failure.
 	/// </summary>
 	internal static void Tell( string text ) => _notice = text;
 

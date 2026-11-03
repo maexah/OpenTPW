@@ -1888,6 +1888,7 @@ GH=766` there, or the pointer is off):
   0.4 s (`key_down`, sleep, `key_up`): `key()`'s 0.12 s fell between two frames of an off-screen run four times in this item, and
   the key was never seen;
   `Q984_MUTANT`'s run on a build with `TellSaveTrouble`'s `RootPanel.Hidden` and `Covered` taken out shows the old stop.
+  Q908's other way round (`q908/confirm.py <out> <bin> kept|control`): a writable private `save/` and a `<XDG_DATA_HOME>/OpenTPW/save` holding a third player (`kept`) or none (`control`); `kept` logs `Message box: SAVES ARE IN /  / ...`, the lobby lists the game's two players and `Front end: 2 saved player(s)`.
   `neither.sh` is the start that ends: the game folder read-only and `XDG_DATA_HOME`'s `OpenTPW` a file; exit 1 and the
   reasons in the log (`OPENTPW_NO_MESSAGE_BOX=1` keeps the box off).
 - **`wadcat --cat` is for text**: a binary entry comes out with its bytes turned to `?`. Take a binary with `--dump`
