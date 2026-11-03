@@ -475,10 +475,30 @@ public class SaveHomeTests
 		File.WriteAllText( Path.Join( game, "users", "stray.txt" ), "" );
 		Assert.IsFalse( SaveHome.HoldsPlayers( game ), "a file is no player" );
 
+		Directory.CreateDirectory( Path.Join( game, "users", "notes" ) );
+		Assert.IsFalse( SaveHome.HoldsPlayers( game ), "a folder the scan skips is no player" );
+
+		Directory.CreateDirectory( Path.Join( game, "users", "5Test" ) );
+		Directory.CreateDirectory( Path.Join( game, "users", "1" ) );
+		Assert.IsFalse( SaveHome.HoldsPlayers( game ), "slot 5 and a slot digit with no name are no player" );
+
 		Directory.CreateDirectory( Path.Join( game, "users", "1Test" ) );
 		Assert.IsTrue( SaveHome.HoldsPlayers( game ) );
 		Assert.IsFalse( SaveHome.HoldsPlayers( Path.Join( root, "nowhere" ) ) );
 	}
+
+	/// <remarks><b>Mutation:</b> either bound of the slot digit moved, the length test dropped, or <see cref="SaveHome.HoldsPlayers"/> taking any folder again.</remarks>
+	[TestMethod]
+	[DataRow( "1A", true )]
+	[DataRow( "4zz", true )]
+	[DataRow( "3 Name", true )]
+	[DataRow( "1", false )]
+	[DataRow( "", false )]
+	[DataRow( "0Test", false )]
+	[DataRow( "5Test", false )]
+	[DataRow( "notes", false )]
+	public void APlayerFolderIsASlotDigitOneToFourThenAName( string folder, bool player )
+		=> Assert.AreEqual( player, SaveFolder.IsPlayerFolderName( folder ) );
 
 	[TestMethod]
 	public void TheFallbackIsSaveInThePlayersDataFolder()

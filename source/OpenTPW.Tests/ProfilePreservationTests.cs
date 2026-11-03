@@ -482,6 +482,33 @@ public class ProfilePreservationTests
 	}
 
 	/// <summary>
+	/// <b>Only a folder named for a slot is a player</b> (Q933): <c>users/notes</c>, a slot 5 and a bare slot digit are skipped, and
+	/// <see cref="SaveHome.HoldsPlayers"/> says the same of that folder, so the notices do not count them.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the scan's own length test in place of <see cref="SaveFolder.IsPlayerFolderName"/>: <c>notes</c> and <c>5Test</c> are players.</remarks>
+	[TestMethod]
+	public void OnlyAFolderNamedForASlotIsAPlayer()
+	{
+		var users = Path.Combine( root, "save", "users" );
+
+		Directory.Delete( Path.Combine( users, "1Test" ), true );
+
+		foreach ( var name in new[] { "notes", "5Test", "1", "0Test" } )
+			Directory.CreateDirectory( Path.Combine( users, name ) );
+
+		Assert.AreEqual( 0, SaveFolder.ScanPlayers().Count );
+		Assert.IsFalse( SaveHome.HoldsPlayers( Path.Combine( root, "save" ) ) );
+
+		Directory.CreateDirectory( Path.Combine( users, "4Ann" ) );
+
+		var found = SaveFolder.ScanPlayers();
+
+		Assert.AreEqual( 1, found.Count );
+		Assert.AreEqual( (3, "Ann"), (found[0].Slot, found[0].Name) );
+		Assert.IsTrue( SaveHome.HoldsPlayers( Path.Combine( root, "save" ) ) );
+	}
+
+	/// <summary>
 	/// <b>An opentpw.cfg that will not read is copied aside before the defaults replace it</b> (ST-F6), as Config.tcf's is: its <c>gpu</c>
 	/// line is not lost to the loading screen's own write. The open failure is a lock another handle holds.
 	/// </summary>

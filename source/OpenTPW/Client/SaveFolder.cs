@@ -473,6 +473,10 @@ internal static class SaveFolder
 		}
 	}
 
+	/// <summary>Whether a folder under <c>users</c> is a player's: a slot digit 1 to 4, then the name (at least one character). The scan and <see cref="SaveHome.HoldsPlayers"/> both take it.</summary>
+	public static bool IsPlayerFolderName( string folder )
+		=> folder.Length >= 2 && folder[0] >= '1' && folder[0] <= '4';
+
 	/// <summary>
 	/// The players in save\users - 0x005c7590, as the game starts. It makes save\users and save\online if they
 	/// are missing, and takes every folder named for a slot, 1 to 4, and then a name at least one character long.
@@ -496,7 +500,7 @@ internal static class SaveFolder
 
 			foreach ( var folder in folders )
 			{
-				if ( folder.Length < 2 || folder[0] < '1' || folder[0] > '4' )
+				if ( !IsPlayerFolderName( folder ) )
 					continue;
 
 				var slot = folder[0] - '1';

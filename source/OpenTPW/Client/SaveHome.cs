@@ -150,14 +150,14 @@ internal static class SaveHome
 		}
 	}
 
-	/// <summary>Whether the folder has a player in it: a folder under <c>users</c>, in whatever case the disc spells it.</summary>
+	/// <summary>Whether the folder has a player in it: a folder under <c>users</c> (in whatever case the disc spells it) that <see cref="SaveFolder.IsPlayerFolderName"/> takes.</summary>
 	internal static bool HoldsPlayers( string folder )
 	{
 		try
 		{
 			return Directory.EnumerateDirectories( folder )
 				.Where( entry => string.Equals( Path.GetFileName( entry ), UsersName, StringComparison.OrdinalIgnoreCase ) )
-				.Any( users => Directory.EnumerateDirectories( users ).Any() );
+				.Any( users => Directory.EnumerateDirectories( users ).Any( player => SaveFolder.IsPlayerFolderName( Path.GetFileName( player ) ) ) );
 		}
 		catch ( DirectoryNotFoundException )
 		{
