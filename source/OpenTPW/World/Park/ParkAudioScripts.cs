@@ -43,9 +43,9 @@ public sealed partial class ParkAudio
 	/// <summary>The three categories a script plays in that nothing else in a park loads.</summary>
 	private void LoadScriptCategories( string root )
 	{
-		_levelAmbient = new SoundCategory( root, $"{root}/Sound", "ambient" );
-		_globalRides = new SoundCategory( "global", "global/sound", "rides" );
-		_ui = new SoundCategory( "global", "global/sound", "ui" );
+		_levelAmbient = new SoundCategory( root, $"{root}/Sound", "ambient", keep: true );
+		_globalRides = new SoundCategory( "global", "global/sound", "rides", keep: true );
+		_ui = new SoundCategory( "global", "global/sound", "ui", keep: true );
 
 		if ( !_levelAmbient.IsValid || !_globalRides.IsValid || !_ui.IsValid )
 			Log.Warning( $"Park audio: a script's category would not load (level ambient {_levelAmbient.IsValid}, "

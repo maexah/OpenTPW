@@ -557,32 +557,32 @@ public sealed partial class ParkAudio : Entity
 		// scripts' type 3; the level's own cat_ambient with the scripts' other categories (LoadScriptCategories).
 		var root = $"levels/{themeName.ToLowerInvariant()}";
 
-		_music = new SoundCategory( root, $"{root}/Music", "music" );
+		_music = new SoundCategory( root, $"{root}/Music", "music", keep: true );
 
 		if ( !_music.IsValid )
 			Log.Warning( $"Park audio: {themeName} has no music category in {root}/Music" );
 
 		// And the weather's, which is not the park's own category at all - see ThunderEffect.
-		_ambient = new SoundCategory( "global", "global/sound", "ambient" );
+		_ambient = new SoundCategory( "global", "global/sound", "ambient", keep: true );
 
 		if ( !_ambient.IsValid )
 			Log.Warning( "Park audio: the global ambient category would not load, so the weather is silent" );
 
 		// The rides' own category, in the level's Sound folder, its banks again relative to the level
 		// ("Sound\Ride"). Every caller of the EventMap's slots plays into it ([0x00803a3c]).
-		_rides = new SoundCategory( root, $"{root}/Sound", "rides" );
+		_rides = new SoundCategory( root, $"{root}/Sound", "rides", keep: true );
 
 		if ( !_rides.IsValid )
 			Log.Warning( $"Park audio: {themeName} has no rides category in {root}/Sound, so the rides are silent" );
 
 		// The staff's voices, played by StaffSound, and after them the guests', which is where the
 		// screams are - see Scream.
-		_staff = new SoundCategory( "global", "global/sound", "staff" );
+		_staff = new SoundCategory( "global", "global/sound", "staff", keep: true );
 
 		if ( !_staff.IsValid )
 			Log.Warning( "Park audio: the global staff category would not load, so the staff are silent" );
 
-		_kids = new SoundCategory( "global", "global/sound", "kids" );
+		_kids = new SoundCategory( "global", "global/sound", "kids", keep: true );
 
 		if ( !_kids.IsValid )
 			Log.Warning( "Park audio: the global kids category would not load, so nobody can scream" );

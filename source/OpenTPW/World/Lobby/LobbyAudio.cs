@@ -247,6 +247,9 @@ public sealed class LobbyAudio : Entity
 	{
 		Current = this;
 
+		// A park left for the lobby does not hold its decoded banks through it (SoundBank.Kept).
+		SoundBank.ForgetKept();
+
 		// Every park's sound is built here, rather than when the camera first reaches that island.
 		//
 		// The original loads all of it up front too. Its lobby start walks the island list and runs

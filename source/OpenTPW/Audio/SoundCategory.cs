@@ -76,7 +76,11 @@ public sealed class SoundCategory
 	/// where the .map files live; see <paramref name="maps"/>.
 	/// </param>
 	/// <param name="maps">The folder holding cat_&lt;name&gt;BANK.map and cat_&lt;name&gt;SFX.map.</param>
-	public SoundCategory( string root, string maps, string name )
+	/// <param name="keep">
+	/// Whether the banks that decode whole are kept for the next category built from them (<see cref="SoundBank.Load"/>);
+	/// a park's sound asks, so that a park built again does not decode its banks again.
+	/// </param>
+	public SoundCategory( string root, string maps, string name, bool keep = false )
 	{
 		Name = $"{maps}/{name}";
 
@@ -88,7 +92,7 @@ public sealed class SoundCategory
 		foreach ( var bankPath in file.Banks )
 			// A bank that would not load still takes its slot, because a category addresses banks
 			// by position and dropping one would shift every sample after it onto the wrong file.
-			_banks.Add( SoundBank.Load( root, bankPath ) ?? SoundBank.Empty( bankPath ) );
+			_banks.Add( SoundBank.Load( root, bankPath, keep ) ?? SoundBank.Empty( bankPath ) );
 
 		// The walk steps to each variation's sample records by its header's count, as the original's loader
 		// does (0x006c0510), so a record whose sample is longer or shorter than the map says is read all the

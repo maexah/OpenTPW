@@ -36,6 +36,26 @@ public sealed class SoundBank
 	private readonly AudioClip?[] _clips;
 
 	/// <summary>
+	/// The banks a park asked to keep and that decode whole, by the file they came from, so a Load Park or a Restart Park,
+	/// which build the park's sound again, take them as they stand instead of decoding them a second time (Q924; Q247).
+	/// Held until the lobby starts (<see cref="ForgetKept"/>). Only the game's thread reads or writes it, as it does the
+	/// banks' own caches.
+	/// </summary>
+	private static readonly Dictionary<string, SoundBank> Kept = new( StringComparer.OrdinalIgnoreCase );
+
+	/// <summary>
+	/// Lets go of the kept banks. The lobby calls it as it starts: a park left for the lobby does not hold its sound
+	/// through it, and the lobby's own banks are not among them.
+	/// </summary>
+	public static void ForgetKept()
+	{
+		if ( Kept.Count > 0 )
+			Log.Info( $"Sound banks: {Kept.Count} kept banks let go" );
+
+		Kept.Clear();
+	}
+
+	/// <summary>
 	/// The still-compressed samples, or null once the whole bank has been decoded. An entry goes
 	/// null as it is decoded, so nothing holds the .mp2 bytes for longer than it needs to.
 	/// </summary>
@@ -66,10 +86,17 @@ public sealed class SoundBank
 	/// is no matching set without it, so it is appended here rather than being something a caller
 	/// has to know.
 	/// </summary>
-	public static SoundBank? Load( string root, string bankPath )
+	public static SoundBank? Load( string root, string bankPath, bool keep = false )
 	{
 		var wanted = $"{root}/{bankPath}HD.sdt";
 		var file = Resolve( wanted );
+
+		var key = file == null ? null : FileSystem.GetAbsolutePath( file );
+
+		if ( key != null && Kept.TryGetValue( key, out var kept ) )
+			return kept;
+
+		var timer = System.Diagnostics.Stopwatch.StartNew();
 
 		try
 		{
@@ -108,8 +135,18 @@ public sealed class SoundBank
 			if ( lazy )
 				Log.Info( $"Sound bank '{file}': {clips.Length} samples, "
 					+ $"{decoded / (1024 * 1024)}MB decoded - decoding on demand" );
+			else
+				Log.Info( $"Sound bank '{file}': {clips.Length} samples, {decoded / (1024 * 1024)}MB decoded in {timer.ElapsedMilliseconds} ms" );
 
-			return new SoundBank( file, clips, durations, encoded );
+			var bank = new SoundBank( file, clips, durations, encoded );
+
+			// A bank decoded whole is the same every time it is read, so a park built again (Load Park, Restart Park)
+			// takes the one already decoded. A bank that decodes on demand is not kept: what it has decoded by then
+			// would sit in memory for as long as the bank does.
+			if ( keep && !lazy )
+				Kept[key!] = bank;
+
+			return bank;
 		}
 		catch ( Exception e )
 		{
