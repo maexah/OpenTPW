@@ -2779,7 +2779,7 @@ to whole units by the sweep every tick, so the file holds whole units for it (sa
 the highest seen grows with the time looked), 4.8 aside; the toilet's stink (69) 9.4 over and 8.7 aside.
 
 **What OpenTPW does.** `RideScript.StartParticle` starts a type 1 or 2 in the park's `ParticleSystem` at the
-node's place times 1024 cut to a whole number, the fraction kept (Q928, below; the sweep that follows the script's turn in the same tick cuts a record's emitter to whole units), a type 2 aimed (`Emitter.Aim`: the direction times the effect's speed over 1024
+node's place times 1024 cut to a whole number, the fraction kept (Q928, above; the sweep that follows the script's turn in the same tick cuts a record's emitter to whole units), a type 2 aimed (`Emitter.Aim`: the direction times the effect's speed over 1024
 toward nought, no draw for the emitter's own velocity), and keeps the handle on the record
 (`RideEffects.Record.Emitter`); `KILLOBJ` and a script's end kill it. A load starts again the emitter each
 particle record names in the file, at the file's place and aim (`RideScript.StartRestoredParticles`).

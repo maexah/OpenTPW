@@ -277,7 +277,7 @@ public class ParkParticleTests
 		script.SweepEffects();
 
 		Assert.AreEqual( Units( 555, 10, 174 ), PlaceOf( stink ), "the sweep leaves whole units" );
-		Assert.IsTrue( script.EmittersCarried > 0 );
+		Assert.AreEqual( 0, script.EmittersCarried, "the first sweep cuts the fraction, which is no move" );
 	}
 
 	/// <summary>
@@ -434,7 +434,7 @@ public class ParkParticleTests
 
 		Assert.AreEqual( 1, host.TurnsGiven, "swept on ticks the script was not due a turn" );
 		Assert.AreEqual( Units( (int)further.X, (int)further.Y, (int)further.Z ), PlaceOf( trail ), "carried, cut to whole units" );
-		Assert.IsTrue( script.EmittersCarried > 0 );
+		Assert.AreEqual( 1, script.EmittersCarried, "one move, on tick 2; the first sweep's cut and the ticks after it are none" );
 	}
 
 	/// <summary>

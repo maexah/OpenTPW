@@ -3,10 +3,10 @@
 
 Enters the private jungle folder's park, `parkscene.hot_pot()` (item 1140 on (41,23), its queue joined by clicks, five guests sent), waits until the
 pot is in a go (`bumpers` Running with somebody seated) and a few seconds more, reads the census, `pause`s, `savepark`s and Loads the saved file
-(the Load list's row 1, the newest), reads it again, then steps the paused park `steps` times (default 30) of `sweeps a step` (default 48; about 15 sweeps are a game tick), printing "STEP" lines. Each read is `scripts` (the count and every line of the pot and of every thing-0 script),
+(the Load list's row 1, the newest), reads it again, then steps the paused park `steps` times (default 30) of `sweeps a step` (default 48; about 15 sweeps are a game tick), printing "STEP" lines (the 3-stepped frame is taken at the last step). A pot not in a go in 120 s stops the run as "VOID" (exit status 3), nothing saved. Each read is `scripts` (the count and every line of the pot and of every thing-0 script),
 the first ride line of `bumpers`, the Engine lines of `voices`, the log's Car sounds lines and the save and load gaps; a frame follows each (`camera` is the
 console's, default "435 250 60 180", the pot's site). The saved file is copied to <outdir>/boughtload-saved.TPWS for `lib/scriptrecords.py`, and is
-left in the private folder until done() so the original can be shown it (docs/TOOLING.md, "A bought ride saved and loaded"). Run it with the venv's python;
+left in the private folder until done() so the original can be shown it (docs/TOOLING.md, "A bought Hot Pot saved and loaded, in both games"). Run it with the venv's python;
 `<bin>` is the build's folder. Prints "READ <tag> ..." lines; confirm.txt and run.log are in <outdir>."""
 import os, sys, shutil, re as _re
 OUT = sys.argv[1]; BIN = sys.argv[2]; NAME = "boughtl"
@@ -31,10 +31,13 @@ def reads(tag, pot):
     print(f"READ {tag} gaps: {gaps(r'SAVE_PARK|LOADED_|TRACK_CAP')}")
 try:
     enter(); reply("pause", 0.3, 0)
-    reads("0-entered", 43)
+    reads("0-entered", 43)   # 43 is the thing id the bought pot gets in the stock park, read before it is bought
     reply("resume", 0.3, 0)
     pot, sent = hot_pot(); print("pot", pot, "guests", sent)
-    in_a_go(120); time.sleep(6.0)
+    go = in_a_go(120)
+    if not _re.search(r"state Running .*seated [1-9]", go):
+        print("VOID: the pot was not in a go (state Running, somebody seated) in 120 s; nothing saved or loaded"); reply("pause", 0.3, 0); sys.exit(3)
+    time.sleep(6.0)
     reads("1-bought", pot)
     reply(f"camera {CAMERA}", 0.6, 0); time.sleep(1.0); shot("1-bought", 0.5)
     reply("pause", 0.3, 0)
@@ -52,7 +55,7 @@ try:
         w = [_re.search(r" at (\d+) ", l).group(1) for l in sc if f"thing {pot} " in l]
         b = bumper_line(); v = len([l for l in reply("voices", 0.6, 0) if "Engine" in l])
         print(f"STEP +{i * EVERY:4d} sweeps tick {tick()} word {w} state {field(b, 'state')} seated {field(b, 'seated')} Engine voices {v}")
-        if i == 8: shot("3-stepped", 0.5)
+        if i == STEPS - 1: shot("3-stepped", 0.5)
         reply(f"step {EVERY}", 0.5, 0)
 finally:
     done()

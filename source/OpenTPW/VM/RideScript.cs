@@ -1420,10 +1420,13 @@ public sealed class RideScript
 	}
 
 	/// <summary>
-	/// How many emitters <see cref="SweepEffects"/> has put somewhere other than where they stood, for the console's
-	/// <c>endfeature</c> and the tests.
+	/// How many times <see cref="SweepEffects"/> has put an emitter somewhere other than where its last sweep left it,
+	/// for the console's <c>endfeature</c> and the tests. A record's first sweep is not counted: it only cuts the start's
+	/// fraction to whole units, with the node where it was.
 	/// </summary>
 	public int EmittersCarried { get; private set; }
+
+	private readonly HashSet<int> _sweptEmitters = new();
 
 	/// <summary>
 	/// The engine's walk of a script's effect list, every tick for every script, due a turn or not (<c>FUN_005516b0</c>,
@@ -1491,7 +1494,8 @@ public sealed class RideScript
 
 			int x = (int)place.X << 10, height = (int)place.Y << 10, z = (int)place.Z << 10;
 
-			if ( emitter.X != x >> 4 || emitter.Y != height >> 4 || emitter.Z != z >> 4 )
+			if ( _sweptEmitters.Add( record.Emitter ) is false
+				&& (emitter.X != x >> 4 || emitter.Y != height >> 4 || emitter.Z != z >> 4) )
 				++EmittersCarried;
 
 			system.Move( record.Emitter, x, height, z );
