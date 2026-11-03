@@ -1286,7 +1286,7 @@ public sealed class RideScript
 			if ( !record.IsParticle || record.Restored )
 				continue;
 
-			switch ( Placed( record.Type, record.Node, record.Effect, out var spawn ) )
+			switch ( Placed( record.Type, record.Node, record.Effect, out var spawn, swept: true ) )
 			{
 				case Unplaced.ItemEffect:
 					Unimplemented.Report( "SAVE_PARK_EMITTER_ITEM_EFFECT" );
@@ -1327,11 +1327,13 @@ public sealed class RideScript
 
 	/// <summary>
 	/// The emitter a particle of <paramref name="type"/> on <paramref name="node"/> starts: the effect at the node's
-	/// place cut to whole units and, for a type 2, the way the node points, each of the three times 1024 and cut
-	/// to a whole number (<c>0x005519d8</c>). A node a clip carries is taken where the thing's players last posed it
+	/// place times 1024 cut to a whole number, the fraction kept (<c>0x00557481</c> to <c>0x005574ae</c>, <c>__ftol</c>),
+	/// or, with <paramref name="swept"/>, cut to whole units as the sweep leaves it (<c>0x0055190f</c>), which is
+	/// what a saved file holds; and, for a type 2, the way the node points, each of the three times 1024 and cut to a
+	/// whole number (<c>0x005519d8</c>). A node a clip carries is taken where the thing's players last posed it
 	/// (<see cref="RideNodes.Follow"/>).
 	/// </summary>
-	private Unplaced Placed( int type, int node, int effect, out ParkParticles.Spawn spawn )
+	private Unplaced Placed( int type, int node, int effect, out ParkParticles.Spawn spawn, bool swept = false )
 	{
 		spawn = default;
 
@@ -1358,7 +1360,9 @@ public sealed class RideScript
 			direction = ((int)(way.X * 1024f), (int)(way.Y * 1024f), (int)(way.Z * 1024f));
 		}
 
-		spawn = new ParkParticles.Spawn( effect, (int)place.X << 10, (int)place.Y << 10, (int)place.Z << 10, direction );
+		spawn = swept
+			? new ParkParticles.Spawn( effect, (int)place.X << 10, (int)place.Y << 10, (int)place.Z << 10, direction )
+			: new ParkParticles.Spawn( effect, (int)(place.X * 1024f), (int)(place.Y * 1024f), (int)(place.Z * 1024f), direction );
 
 		return Unplaced.None;
 	}
@@ -1396,7 +1400,7 @@ public sealed class RideScript
 		if ( handle == 0 )
 			Unimplemented.Report( "PARK_PARTICLE_NOT_STARTED" );
 		else
-			Log.Info( $"Particles: script {Id} of thing {ThingId} started effect {effect} (type {type}, node {node}) at ({spawn.X >> 10},{spawn.Height >> 10},{spawn.Z >> 10}), handle 0x{handle:x}" );
+			Log.Info( $"Particles: script {Id} of thing {ThingId} started effect {effect} (type {type}, node {node}) at ({spawn.X},{spawn.Height},{spawn.Z}) over 1024, handle 0x{handle:x}" );
 
 		return handle;
 	}

@@ -76,6 +76,21 @@ public class ParkParticleTests
 
 	private static (int, int, int) Units( int x, int height, int z ) => (x * 64, height * 64, z * 64);
 
+	/// <summary>
+	/// Where a start puts an emitter on a node's place: each coordinate times 1024 cut to a whole number, the fraction
+	/// kept, then over sixteen (<c>0x00557481</c> to <c>0x005574ae</c>, <c>Particles_Spawn</c>'s shift), where the sweep
+	/// that follows cuts it to whole units.
+	/// </summary>
+	private static (int, int, int) StartedAt( System.Numerics.Vector3 place )
+		=> ((int)(place.X * 1024f) >> 4, (int)(place.Y * 1024f) >> 4, (int)(place.Z * 1024f) >> 4);
+
+	private static (int, int, int) StartedAt( RideScript script, int node )
+	{
+		script.Nodes!.Find( node, RideNodes.ParticleSpace, out var place, carried: true );
+
+		return StartedAt( place );
+	}
+
 	private static bool Counted( string prefix ) => Unimplemented.Summary.Any( entry => entry.What.StartsWith( prefix ) );
 
 	private static int Word( Opcode opcode ) => unchecked( (int)( 0x80000000u | (uint)opcode ) );
@@ -169,8 +184,8 @@ public class ParkParticleTests
 
 	/// <summary>
 	/// <b><c>ADDOBJ</c> starts its particle on its node and <c>KILLOBJ</c> stops it</b>: the emitter stands at the
-	/// node's place in whole units, its handle is kept on the record, and the kill sets its life to -2 and takes
-	/// the record. A record of another tag keeps its emitter.
+	/// node's place with its fraction kept (<see cref="StartedAt(RideScript, int)"/>), its handle is kept on the record, and
+	/// the kill sets its life to -2 and takes the record. A record of another tag keeps its emitter.
 	/// </summary>
 	[TestMethod]
 	public void AnObjectAddedStartsItsEmitterAndAKillStopsIt()
@@ -199,8 +214,8 @@ public class ParkParticleTests
 		Assert.AreNotSame( stink, flies );
 		Assert.AreEqual( Stink, stink.Effect );
 		Assert.AreEqual( Flies, flies.Effect );
-		Assert.AreEqual( Units( 555, 10, 174 ), PlaceOf( stink ) );
-		Assert.AreEqual( Units( 555, 10, 174 ), PlaceOf( flies ) );
+		Assert.AreEqual( StartedAt( script, 1 ), PlaceOf( stink ) );
+		Assert.AreEqual( StartedAt( script, 1 ), PlaceOf( flies ) );
 		Assert.IsNull( flies.Aim );
 		Assert.IsFalse( Counted( "PARK_PARTICLE" ) );
 
@@ -232,13 +247,37 @@ public class ParkParticleTests
 		var started = Running.Except( before ).Single();
 
 		Assert.AreEqual( Stink, started.Effect );
-		Assert.AreEqual( Units( 555, 10, 174 ), PlaceOf( started ) );
+		Assert.AreEqual( StartedAt( script, 1 ), PlaceOf( started ) );
 		Assert.AreEqual( 0, script.Effects!.Count );
 		Assert.IsFalse( Counted( "PARK_PARTICLE" ), "a sound's event asks the particles for nothing" );
 
 		script.StopEffects();
 
 		Assert.AreNotEqual( -2, started.Lifetime );
+	}
+
+	/// <summary>
+	/// <b>A start keeps the node's fraction and the sweep cuts it to whole units</b>: Mumbo's smoke, started in the
+	/// original at height -4.618, was seen reaching <c>Particles_Spawn</c> as -4729 over 1024, not -4096 (<c>q928/orig/a/brk.log</c>). The toilet's stink starts at 10.125 up and 174.98 along, and the
+	/// first sweep leaves it at (555, 10, 174).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the start cut to whole units; the sweep not cutting.</remarks>
+	[TestMethod]
+	public void AStartKeepsTheNodesFractionAndTheSweepCutsItToWholeUnits()
+	{
+		var rides = Rides( shipped );
+		var script = OnTheToilet( rides, Word( Opcode.ADDOBJ ), 1, 1, Stink, 1, Word( Opcode.WAIT ), 1000, Word( Opcode.END ) );
+
+		script.Turn( 0f );
+
+		Assert.IsTrue( system.TryEmitter( script.Effects!.Records.Single().Emitter, out var stink ) );
+		Assert.AreEqual( (35520, 648, 11199), PlaceOf( stink ), "the fraction kept: 555.0, 10.125, 174.98 over 64" );
+		Assert.AreNotEqual( Units( 555, 10, 174 ), PlaceOf( stink ) );
+
+		script.SweepEffects();
+
+		Assert.AreEqual( Units( 555, 10, 174 ), PlaceOf( stink ), "the sweep leaves whole units" );
+		Assert.IsTrue( script.EmittersCarried > 0 );
 	}
 
 	/// <summary>
@@ -290,7 +329,7 @@ public class ParkParticleTests
 
 		Assert.IsTrue( system.TryEmitter( script.Effects!.Records.Single().Emitter, out var jet ) );
 		Assert.AreEqual( Jet, jet.Effect );
-		Assert.AreEqual( Units( 525, 5, 311 ), PlaceOf( jet ) );
+		Assert.AreEqual( StartedAt( script, 2 ), PlaceOf( jet ) );
 		Assert.AreEqual( new ParticleVector( 0, 25, 30 ), jet.Aim );
 
 		var template = system.Library.Effects[Jet];
@@ -330,6 +369,9 @@ public class ParkParticleTests
 			.Select( record => system.TryEmitter( record.Emitter, out var emitter ) ? (record.Node, emitter) : default )
 			.ToDictionary( pair => pair.Node, pair => pair.emitter! );
 
+		// The files hold what the sweep leaves, whole units.
+		script.SweepEffects();
+
 		Assert.AreEqual( Water, placed[1].Effect );
 		Assert.AreEqual( (216 * 64, 291 * 64), (placed[1].X, placed[1].Z), "node 1" );
 		Assert.AreEqual( (211 * 64, 281 * 64), (placed[2].X, placed[2].Z), "node 2" );
@@ -337,8 +379,9 @@ public class ParkParticleTests
 
 	/// <summary>
 	/// <b>A trail on a clip's node goes with it</b>: the End's plane 02 flies down the park on <c>Endm1</c>, and the
-	/// trail <c>AnimCtrl.RSE</c> starts on its node 5 is started where the players have posed the node and carried
-	/// there by every sweep, due a turn or not, each place cut to whole units, not left where the node rests.
+	/// trail <c>AnimCtrl.RSE</c> starts on its node 5 is started where the players have posed the node, the fraction
+	/// kept, and carried there by every sweep, due a turn or not, each place cut to whole units, not left where the
+	/// node rests.
 	/// </summary>
 	/// <remarks><b>Mutations:</b> the sweep moving nothing; the node found at rest; the players not followed; the
 	/// scheduler sweeping only a script due a turn; the place rounded rather than cut.</remarks>
@@ -369,7 +412,7 @@ public class ParkParticleTests
 		Assert.IsTrue( system.TryEmitter( script.Effects!.Records.Single().Emitter, out var trail ) );
 		Assert.AreEqual( NodeEnd.Posed, nodes.Find( Node, RideNodes.ParticleSpace, out var flown, carried: true ) );
 		Assert.IsTrue( rest.Z - flown.Z > 20f, $"the plane has come down the park: {rest.Z} to {flown.Z}" );
-		Assert.AreEqual( Units( (int)flown.X, (int)flown.Y, (int)flown.Z ), PlaceOf( trail ), "started where the node is posed" );
+		Assert.AreEqual( StartedAt( flown ), PlaceOf( trail ), "started where the node is posed, the fraction kept" );
 
 		// Id 1 is due a turn on tick 1 and next on tick 9.
 		host.Add( 1, script );

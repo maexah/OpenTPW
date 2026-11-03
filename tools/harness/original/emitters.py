@@ -8,9 +8,13 @@ and in each block's head the live density ([0x0080cef0], the header's +0x20 a lo
 count ([0x0080cee8]) and the free chain's head ([0x00816d20]), and once a second besides the particle counts and
 the own velocity of the emitters of effects 37 and 73 only.
 
+RAW=1 in the environment prints the place raw (+0x14, +0x18, +0x1c as they stand, 64 to a unit), where a start's fraction
+shows (an EVENT's puff keeps no record, so nothing cuts its place to whole units; Q928).
+
 A poller for loadfile.sh:  POLL='python3 tools/harness/original/emitters.py %PID% 40'
 The layout: FileFormats saves.md, "The particles module"."""
-import struct, sys, time
+import os, struct, sys, time
+SHIFT = 0 if os.environ.get('RAW') else 6
 pid = int(sys.argv[1]); secs = float(sys.argv[2])
 f = open(f'/proc/{pid}/mem', 'rb', buffering=0)
 def rd(a, fmt='<I'):
@@ -20,7 +24,7 @@ def used():
     for _ in range(120):
         if s < 0 or s >= 120: break
         e = 0x0080cefc + 0x140 * s
-        out.append((s, rd(e + 0xa, '<H'), rd(e + 0xc, '<h'), (rd(e + 0x14, '<i') >> 6, rd(e + 0x18, '<i') >> 6, rd(e + 0x1c, '<i') >> 6),
+        out.append((s, rd(e + 0xa, '<H'), rd(e + 0xc, '<h'), (rd(e + 0x14, '<i') >> SHIFT, rd(e + 0x18, '<i') >> SHIFT, rd(e + 0x1c, '<i') >> SHIFT),
                     rd(e + 0x20, '<i'), rd(e + 8, '<H'), (rd(e + 0x38, '<i'), rd(e + 0x3c, '<i'), rd(e + 0x40, '<i')),
                     struct.unpack('<4b', bytes(rd(e + 0x68 + i, '<B') for i in range(4))), rd(e + 0x64, '<h')))
         s = rd(e + 0xd0, '<h')

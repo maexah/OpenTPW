@@ -3378,7 +3378,9 @@ handle. It answers `count << 16 | slot`; nought for an effect marked at `+0xc1` 
   `+0x38` set from a direction and no draw ("OpenTPW's writer, a particle with a direction", below).
 - **The sweep moves it** (`FUN_005516b0`, `0x0055190f`): each record with a node has its emitter put where its
   lookup record stands, every tick, each coordinate through `__ftol` and then shifted up ten bits, so the place
-  in a file is in whole units, toward nought (`Particles_Move`, `0x0051fe30`, shifts down four).
+  in a file is in whole units, toward nought (`Particles_Move`, `0x0051fe30`, shifts down four). Only a record is swept: an `EVENT`'s
+  puff keeps none and stands at its start's place, the node's place times 1024 cut toward nought and shifted down four (`park.md`, "A start
+  keeps the node's fraction", Q928).
 - **A kill** (`KILLOBJ`, `FADEOBJ`, a script's end: `FUN_0051ff70( handle, -2 )`, `Particles_Kill`'s own body)
   sets the life to -2 on the emitter the handle names, by `FUN_005222e0`'s test: not nought, a slot under 120
   and the slot's count. The tick (`Particles_Tick`, `0x00520130`) frees an emitter whose life is under nought

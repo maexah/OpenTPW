@@ -2762,12 +2762,24 @@ park, so they are right under either lens.
 `Particles_SpawnFull` with the node's place times 1024 (`saves.md`, "OpenTPW's writer, an emitter started" and
 "a particle with a direction"). The loader keeps a file's emitters and empties their particles (`FUN_0051f7a0`).
 
+**A start keeps the node's fraction** (Q928; `0x00557481` to `0x005574ae` for type 1, `0x00557551` to `0x005575a0` for type 2): each
+of the node's three floats is multiplied by 1024.0 (`0x00700fdc`) and goes through `__ftol` (`0x0067a830`, toward nought) to
+`Particles_Spawn`/`Particles_SpawnFull`, which shift it down four bits into the emitter's place (64ths of a unit). Read in the running original
+(`q928/orig/a`, `b`: `brk.sh` on `0x00521e60`, effect 31 only, her Full Simulation `New Save.TPWS`): Mumbo's smoke (`effects.RSE`, `EVENT 1, node, 31`, nodes 1 to 5)
+arrives as (58952, 63378, 36657, 38461, 66001) across, -4729 high in all five and (250644, 253594, 275561, 253266, 270971) along over 1024, never a multiple
+of 1024; `RAW=1 emitters.py` (`q928/orig/c`) reads the five emitters' places as those over 16, (3684, -296, 15665), (3961, -296, 15849), (2291, -296, 17222),
+(2403, -296, 15829) and (4125, -296, 16935). **An `EVENT` keeps no record, so nothing sweeps its emitter**: the puff stands at that fraction for its whole life, up to a
+unit from the whole-unit place OpenTPW started it at before Q928 (-256 high against -296; 4096 across against 4125 for node 5). A record's emitter (`ADDOBJ`) is cut
+to whole units by the sweep every tick, so the file holds whole units for it (saves.md, "The sweep moves it"). OpenTPW's final build reads the same fifteen numbers in its log
+(`q928/ours/final/effect31.txt`) and the same raw places in `particles` (`q928/ours/final2/steps.txt`); the control, `main` at `befa3946`, reads (4096, -256, 16896) for node 5
+(`q928/ours/control/steps.txt`). Not seen in a frame: a puff 0.6 unit off in a pit under a plant draws no pixel that differs (`q928/ours/close-*`: 0 of 921,600 differ by more than 24).
+
 **Measured in the original** (`q258/orig/`, Q257v's file loaded under Proton): the Drinks Shops' bubbles hold 9 to
 15 particles each and reach 38.4 and 42.2 units over their emitters in 40 s (27.4 to 33.8 in a ten second look:
 the highest seen grows with the time looked), 4.8 aside; the toilet's stink (69) 9.4 over and 8.7 aside.
 
 **What OpenTPW does.** `RideScript.StartParticle` starts a type 1 or 2 in the park's `ParticleSystem` at the
-node's place cut to whole units, a type 2 aimed (`Emitter.Aim`: the direction times the effect's speed over 1024
+node's place times 1024 cut to a whole number, the fraction kept (Q928, below; the sweep that follows the script's turn in the same tick cuts a record's emitter to whole units), a type 2 aimed (`Emitter.Aim`: the direction times the effect's speed over 1024
 toward nought, no draw for the emitter's own velocity), and keeps the handle on the record
 (`RideEffects.Record.Emitter`); `KILLOBJ` and a script's end kill it. A load starts again the emitter each
 particle record names in the file, at the file's place and aim (`RideScript.StartRestoredParticles`).
