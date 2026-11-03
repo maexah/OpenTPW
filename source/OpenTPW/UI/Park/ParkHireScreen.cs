@@ -297,6 +297,10 @@ internal sealed class ParkHireScreen : UiWindow
 		} );
 
 		_list.Build();
+
+		// The stream's scrollbar (op 9 at 0x0075232a, with its arrows and thumb), shown where the tab holds more candidates than rows.
+		_list.AddScrollbar( new UiRect( 1743, 398, 1802, 843 ), up: new UiRect( 1742, 331, 1803, 391 ),
+			down: new UiRect( 1742, 850, 1803, 910 ), thumb: new UiRect( 1735, 651, 1802, 718 ) );
 		Show( openOn ?? _lastKind );
 
 		// Reached every time this screen opens, and not answerable yet: the portrait needs the candidate's own actor

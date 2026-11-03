@@ -2596,7 +2596,28 @@ down (`Slider_SetPosition` `0x0066b088`; the field is a bit test, `& 2`). Its tw
 **OpenTPW** (`UiList.AddScrollbar`, `UiRepeatButton`; Load Park and Save Park have it): the bar's value is the top row negated (the range ( -(count - visible), 0 ) is the same line on `UiSlider`,
 which has the thumb's top at the highest value); the bar is a rectangle holding the track, both arrows and the thumb, with the track's own rectangle taking the pointer, because a child
 keeps to its parent's third of a window wider than 4:3 only inside the parent's rectangle (the arrows lie outside the stream's track and its thumb 8 units over it: built under a bar of the track's
-size they were drawn and hit at the window's edge, `q918/run1/1-list.png`). Not built on the other lists (the visitors, all-staff, buy and hire lists' own bars: Q919).
+size they were drawn and hit at the window's edge, `q918/run1/1-list.png`). Every other list has it since Q919 ("The other lists' bars", below).
+
+#### The other lists' bars (Q919)
+
+Each list's stream holds the same four rectangles, read by `lib/uistream.py` (which reads ops 9 and `0xa` under a type 4 or 7 parent since Q919); `AddScrollbar( bar, up, down, thumb )` is called after `Build()` with them. The thumb is 67 units tall in every
+stream, so a track of height H travels H - 67, and its head is the thumb's first place the bar then moves to the top row's:
+
+| list (control id) | stream | `op 9` track | up `op 6` | down `op 7` | thumb `op 8` | row area (`op 0xa`) | rows visible at 39 units |
+|---|---|---|---|---|---|---|---|
+| visitors (`0x1e497`) | `0x007506c8`, bar `0x00750740` | 1748, 265, 1807, 835 | 1748, 202, 1808, 262 | 1747, 843, 1807, 903 | 1739, 370, 1807, 437 | 294, 315, 1720, 914 | 10 (rows of 56) |
+| all staff (`0x321`) | `0x00750e10`, `0x00750fb4` | 1747, 376, 1806, 719 | 1747, 315, 1807, 375 | 1747, 722, 1807, 782 | 1739, 484, 1806, 551 | 294, 418, 1734, 777 | 9 |
+| all items, rides and shops (`0x190`) | `0x00750ab8`, `0x00750b32` | 1766, 384, 1825, 811 | 1765, 318, 1825, 379 | 1765, 815, 1825, 876 | 1758, 549, 1825, 616 | 275, 428, 1739, 875 | 11 |
+| all items, sideshows and miscellaneous | `0x00750ba0` `0x00750c44`; `0x00750ca0` `0x00750cf0` | the same four rectangles as the rides' | | | | 273, 428, 1741, 876; 275, 428, 1739, 875 | 11 |
+| buy (`0x1f8`) | `0x00754cf8`, `0x00755032` | 1743, 383, 1802, 803 | 1742, 318, 1803, 378 | 1742, 809, 1803, 869 | 1735, 610, 1802, 677 | 1037, 427, 1727, 871 | 11 |
+| hire (`0x248e`) | `0x00751fa8`, `0x0075232a` | 1743, 398, 1802, 843 | 1742, 331, 1803, 391 | 1742, 850, 1803, 910 | 1735, 651, 1802, 718 | 1043, 441, 1729, 911 | 12 |
+
+Where each list is long enough in the shipped park or can be made so (measured 2026-11-02, `q919/probe1..3b`): the stock park's visitors list holds 13 rows of 10 (a range of 3); its all-staff cleaners' tab 1 of 9, its all-items rides tab 1 of 11 and its hire cleaners' tab 3 of 12 are short; the buy list's tabs hold 2, 6, 10 and 3
+rows of 11 at 1280 x 720 (rows stay 39 units after `size 800 600`: the font set is chosen at the launch), so **no shipped catalogue makes the buy list scroll at this row height**. The pool grows past a window by `StaffPoolInfo.TimeBetweenStaffUpdates 1`,
+`MaxNumberOfStaffPerUpdate 30` and `MaxHandymen 30` in `levels/Standard.sam` (a private folder; the original's own file, restored after): 32 candidates, 15 of them cleaners here after 14 s resumed; in the original the foot of the cleaners' list began at the ninth of 12 visible rows, so 20, after about 20 s. Litter Bins (catalogue 1406) added to the miscellaneous tab are a row an object.
+
+**OpenTPW** (Q919): `ParkVisitorsScreen`, `ParkStaffScreen`, `ParkBuyScreen`, `ParkHireScreen` and `ParkItemsScreen` (its three list shapes) call `AddScrollbar` with that table's rectangles; `UiList.Scroll` counts `LIST_SCROLLBAR_NOT_BUILT` for a list longer than its window with no bar (the wheel alone).
+The console's `control` now prefers a shown control to a hidden one of the same id (the items screen builds three lists under id `0x190`).
 
 ### Both trees, walked to a balanced op 5
 
@@ -4082,7 +4103,7 @@ its bars 0.5, 0.125, 0.33, 0.902, 1.0, 0.714, 0.527 and 0.5 (the file's happines
 right (0.974), the rides left (0.034) (`q371/side-by-side.png`: the original, this, main). Main's build (`run-control2`)
 lettered 0 and the cash and happiness as bare numbers, every one from the right, and drew no bar. The rows are 56 units
 apart, as the original's 55.8 (Q377, "The rows' font and height"). **Not built**: the first row picked as the list fills
-(Q232); the scrollbar (Q919; Load Park's and Save Park's have theirs, Q918).
+(Q232); the scrollbar is built since Q919 ("The list's scrollbar", "The other lists' bars").
 
 **OpenTPW** (Q372): `Peep.StayAt`, `ParkVisitorsScreen.HoursIn` and `TimeText`; `RowOf`'s `rewrite` shifts the stay.
 The log's row reads `<cash> <time> (<hours> h) <rides> <bar>`. On `q372/time.TPWS`, paused at the load's tick 964

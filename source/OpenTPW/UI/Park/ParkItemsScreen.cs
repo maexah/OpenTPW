@@ -268,6 +268,10 @@ internal sealed class ParkItemsScreen : UiWindow
 			list.AddFramedHeading( column, headings[column], string.Empty, -1 ).Clicked += () => LogOrder( list );
 
 		list.Build();
+
+		// Each shape's stream gives the same scrollbar (op 9 at 0x00750b32, 0x00750c44 and 0x00750cf0), shown where the tab holds more rows than fit.
+		list.AddScrollbar( new UiRect( 1766, 384, 1825, 811 ), up: new UiRect( 1765, 318, 1825, 379 ),
+			down: new UiRect( 1765, 815, 1825, 876 ), thumb: new UiRect( 1758, 549, 1825, 616 ) );
 		Log.Info( $"Items list: the {columns}-column shape, {list.RowsCensus()}, aligned {string.Join( ' ', list.ColumnAligns )}" );
 
 		_lists[columns] = list;

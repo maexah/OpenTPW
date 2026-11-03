@@ -11923,6 +11923,14 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   on 90 degrees: `FUN_0067b24a` is `fmod`), for a park loaded or entered. Counted, not built, and said at the site: the yaw is set at once where the original eases its
   drawn rotation onto the rounded one (Q23). Confirmed on the desktop (20 saves, real clicks, `q918/run3`) and in the original (`q918/orig`: its list with 21 rows, the camera
   globals polled from the click); the account is in `STATUS.md`, "Not verified on screen".
+- [x] **Q919. The other lists' scrollbars (the visitors, all-staff, all-items, buy and hire lists).** Q918 built the bar on the Load Park and Save Park lists
+  (`UiList.AddScrollbar( bar, up, down, thumb )` takes the stream's four rectangles). The other `UiList`s have only the wheel and no census counts the gap
+  (`hud.md`, Q371: "Not built: ... the scrollbar"). Each list's stream has an `op 9` rectangle: the buy list's stream is `0x00754cf8` and the hire list's `0x00751fa8`
+  (`lib/uistream.py <VA>` walks one; the arrows' and thumb's rectangles follow it). Build the bar on each where the list is longer than its window, count the
+  wheel-only path until then (`Unimplemented.Report`), and confirm each in the running game against the original's list with more rows than its window.
+  **Done 2026-11-02** (run 18, lane A, `alexah/881-other-lists-scrollbars`): the bar is built on all five screens (the items screen's three list shapes) at each stream's own rectangles (`hud.md`, "The other lists' bars"),
+  `LIST_SCROLLBAR_NOT_BUILT` counts a list that scrolls with none; seen on the desk by real clicks on the visitors, hire, all-staff and all-items lists (`q919/run1`, 20 of 20 predictions) and the visitors and hire
+  lists driven in the original (`q919/orig`: the same tops by the same rules); the buy list cannot be made to scroll (its longest tab is 10 rows of 11), so its hidden bar is what was seen.
 
 ## B. Docs and comments
 

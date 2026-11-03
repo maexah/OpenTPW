@@ -841,7 +841,13 @@ internal sealed class UiList : UiControl
 	internal void Scroll( int rows )
 	{
 		if ( Scrolls )
+		{
 			_scrollTop += rows;
+
+			// A list longer than its window with no bar of the stream's built is scrolled by the wheel alone.
+			if ( _bar == null )
+				Unimplemented.Report( "LIST_SCROLLBAR_NOT_BUILT" );
+		}
 
 		_scrollTop = Math.Clamp( _scrollTop, 0, Math.Max( 0, _rows.Count - VisibleRows ) );
 		Refresh();

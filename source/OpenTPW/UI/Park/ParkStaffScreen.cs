@@ -249,6 +249,10 @@ internal sealed class ParkStaffScreen : UiWindow
 		} );
 
 		_list.Build();
+
+		// The stream's scrollbar (op 9 at 0x00750fb4, with its arrows and thumb), shown where there are more members than rows.
+		_list.AddScrollbar( new UiRect( 1747, 376, 1806, 719 ), up: new UiRect( 1747, 315, 1807, 375 ),
+			down: new UiRect( 1747, 722, 1807, 782 ), thumb: new UiRect( 1739, 484, 1806, 551 ) );
 		Show( _lastKind );
 
 		// The opener's last act posts the advisor's message 0x11d (FUN_00496620), which is not built.

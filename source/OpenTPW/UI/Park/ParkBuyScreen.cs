@@ -310,6 +310,10 @@ internal sealed class ParkBuyScreen : UiWindow
 		} );
 
 		_list.Build();
+
+		// The stream's scrollbar (op 9 at 0x00755032, with its arrows and thumb), shown where the tab holds more items than rows.
+		_list.AddScrollbar( new UiRect( 1743, 383, 1802, 803 ), up: new UiRect( 1742, 318, 1803, 378 ),
+			down: new UiRect( 1742, 809, 1803, 869 ), thumb: new UiRect( 1735, 610, 1802, 677 ) );
 		Show( openOn ?? _lastTab );
 
 		// The opener letters the corner itself, as the tick does (FUN_004acc70, 0x004acdae).

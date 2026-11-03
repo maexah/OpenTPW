@@ -521,7 +521,7 @@ public static class DebugConsole
 				}
 
 				if ( (Level.Current?.Hud?.Children.OfType<UI.WindowStack>().FirstOrDefault()?.Windows
-					.Select( window => FindControl( window.Root, controlId ) ).FirstOrDefault( found => found != null )
+					.Select( window => FindControl( window.Root, controlId, shown: true ) ?? FindControl( window.Root, controlId ) ).FirstOrDefault( found => found != null )
 					?? Level.Current?.Hud?.Children.OfType<UI.VersionLabel>().Select( label => FindControl( label.Control, controlId ) ).FirstOrDefault()
 					?? Level.Current?.Hud?.Children.OfType<UI.UpdateNotice.LobbyPanel>().Select( notice => notice.Control is { } line ? FindControl( line, controlId ) : null ).FirstOrDefault()) is not { } control )
 				{
@@ -3154,9 +3154,9 @@ public static class DebugConsole
 	}
 
 	/// <summary>The control with <paramref name="id"/> in the tree under <paramref name="control"/>, or null - for `control`.</summary>
-	private static UI.UiControl? FindControl( UI.UiControl? control, int id )
+	private static UI.UiControl? FindControl( UI.UiControl? control, int id, bool shown = false )
 	{
-		if ( control == null )
+		if ( control == null || (shown && !control.Visible) )
 			return null;
 
 		if ( control.Id == id )
@@ -3164,7 +3164,7 @@ public static class DebugConsole
 
 		foreach ( var child in control.Children )
 		{
-			if ( FindControl( child, id ) is { } found )
+			if ( FindControl( child, id, shown ) is { } found )
 				return found;
 		}
 

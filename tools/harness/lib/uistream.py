@@ -48,6 +48,14 @@ while True:
         if depth < 0: break
     elif op in (6,7,8,0xe,0xf): print(f'{at:08x} {ind}op {op:#x} {rect()}'); depth += 1; stack.append(2)
     elif op in (0xc,0x10): n = s16(); print(f'{at:08x} {ind}op {op:#x} n {n} {rect()}'); depth += 1; stack.append(2)
+    elif op in (9, 0xa):
+        # Runtime-conditional (hud.md, "Ops 9 and 10"): a rect only under a type 4 or 7 parent. 9 is the list's scrollbar and recurses; 0xa is its row area.
+        if stack and stack[-1] in (4, 7):
+            r = rect(); print(f'{at:08x} {ind}op {op:#x} {"SCROLLBAR" if op == 9 else "row area"} {r}')
+            if op == 9: depth += 1; stack.append(3)
+        else:
+            print(f'{at:08x} {ind}op {op:#x} (parent not a list: reads nothing)')
+            if op == 9: depth += 1; stack.append(3)
     elif op == 0xd: print(f'{at:08x} {ind}op 0xd {s16()} {s16()}')
     elif op == 0xb: n = s16(); print(f'{at:08x} {ind}op 0xb {[ (s16(),s16()) for _ in range(n)]}')
     elif op == 0x11: print(f'{at:08x} {ind}help {u32()}')
