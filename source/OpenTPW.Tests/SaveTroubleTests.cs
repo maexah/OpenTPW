@@ -71,8 +71,24 @@ public class SaveTroubleTests
 		var text = SaveTrouble.Take();
 
 		Assert.IsNotNull( text );
-		StringAssert.StartsWith( text, "PARK NOT SAVED\n\nThe save folder cannot be written." );
+		Assert.AreEqual( "PARK NOT SAVED\n\nThe save folder cannot be written.", text, "no path in the box (Q923): the log names it" );
 		Assert.IsFalse( SaveTrouble.Pending );
+	}
+
+	/// <summary>The notice's name is handed out with its text, once, and a failure carries none.</summary>
+	[TestMethod]
+	public void ANoticeKeepsItsNameUntilTaken()
+	{
+		SaveTrouble.Tell( "SOMETHING\n\nA sentence.", "kept" );
+		Assert.AreEqual( "SOMETHING\n\nA sentence.", SaveTrouble.Take( out var name ) );
+		Assert.AreEqual( "kept", name );
+
+		BlockTheThemeFolder();
+		SaveFolder.WritePark( 0, "Test", "jungle", "jungle", [1] );
+		StringAssert.StartsWith( SaveTrouble.Take( out name ), "PARK NOT SAVED" );
+		Assert.IsNull( name, "a failure has no name to count" );
+		Assert.IsNull( SaveTrouble.Take( out name ) );
+		Assert.IsNull( name );
 	}
 
 	[TestMethod]
@@ -112,10 +128,10 @@ public class SaveTroubleTests
 	{
 		BlockTheThemeFolder();
 		SaveFolder.WritePark( 0, "Test", "jungle", "jungle", [1] );
-		SaveTrouble.Tell( "SAVES GO IN\n\n/somewhere" );
+		SaveTrouble.Tell( "SOMETHING\n\nA sentence." );
 
 		Assert.IsTrue( SaveTrouble.Pending );
-		Assert.AreEqual( "SAVES GO IN\n\n/somewhere", SaveTrouble.Take(), "the notice first" );
+		Assert.AreEqual( "SOMETHING\n\nA sentence.", SaveTrouble.Take(), "the notice first" );
 		Assert.IsTrue( SaveTrouble.Pending, "the failure is still waiting" );
 		StringAssert.StartsWith( SaveTrouble.Take(), "PARK NOT SAVED" );
 		Assert.IsFalse( SaveTrouble.Pending );
@@ -125,10 +141,10 @@ public class SaveTroubleTests
 	[TestMethod]
 	public void ANoticeAloneIsPendingUntilTaken()
 	{
-		SaveTrouble.Tell( "SAVES GO IN\n\n/somewhere" );
+		SaveTrouble.Tell( "SOMETHING\n\nA sentence." );
 
 		Assert.IsTrue( SaveTrouble.Pending, "nothing failed, and the notice still waits to be told" );
-		Assert.AreEqual( "SAVES GO IN\n\n/somewhere", SaveTrouble.Take() );
+		Assert.AreEqual( "SOMETHING\n\nA sentence.", SaveTrouble.Take() );
 		Assert.IsFalse( SaveTrouble.Pending );
 	}
 

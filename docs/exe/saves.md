@@ -555,7 +555,7 @@ the 17 MB kids, are not kept (what they have decoded would stay in memory) and a
 | after | 1.01, 0.80, 0.82 s | 0.83, 0.72 s | 0.055 to 0.068 s | 0.65 to 0.92 s |
 
 The first load of a launch is the slow one in both (`ground` 0.49 s the first time, Q921). The saving is 1.1 to 1.3 s a load and the loaded park is the same picture (`q924/before1/3-loaded.png`, `after2/3-loaded.png`: 88087, 2/3/2000, the same camera, the people elsewhere); the park file's voices put back and the
-loading bar's step count are the same on every load. Left of a load, from the third Load's log: `ground` 0.21 s, `objects` 0.17, `terrain` 0.14, `guest sprites` 0.05, `queues` 0.03, `audio` 0.07 (the two banks read again), the rest under 0.02 each, 0.7 s in the log and 0.8 s in the film, about five times the original's 0.14 to 0.17 s and still behind a loading screen. The game's memory is the same
+loading bar's step count are the same on every load. Left of a load, from the third Load's log: `ground` 0.21 s, `objects` 0.17, `terrain` 0.14, `guest sprites` 0.05, `queues` 0.03, `audio` 0.07 (the two banks read again), the rest 0.02 or under each, 0.7 s in the log and 0.8 s in the film, about five times the original's 0.14 to 0.17 s and still behind a loading screen. The game's memory is the same
 within 0.01 GB (`memrun.py stock`, `LEAVE=1`, off-screen: the park at 30 s 0.70 GB against 0.70, back in the lobby 0.66 against 0.65), and the 5-load run's peak is 0.54 GB against 0.52. Not measured: a real sound device (every run is `SDL_AUDIODRIVER=dummy`); the sounds heard; a played park's bigger file; the other themes.
 
 ### OpenTPW's Load Park
@@ -650,7 +650,7 @@ first when it is not there) saves go in `save` in the player's data folder (`Use
 on Windows) and the log says so once (`SaveHome`). A stock Program Files install is that case on Windows: the original's exe
 has no manifest, so Windows sends its writes to the VirtualStore (Q902, open: whether OpenTPW should read them there), and
 OpenTPW's is `asInvoker`, which is not redirected. A `save\` that holds players but cannot be written is read by nothing, and
-nothing is copied out of it; the game says so once (`YOUR GAME SAVES IN A NEW FOLDER`, then `Players saved before are safe, but won't show here.`, Alexah's words, Q922; no folder in the box, the log names both at every start). The other way round (Q908, Alexah 2026-11-02): a game folder that has become writable (one "Run as administrator", or the permission fix) is kept, and where the player's folder still holds a player the game says so (`CAN'T SEE YOUR PLAYERS?`, then `They are safe. Nothing was deleted. If you changed how the game runs, changing it back will show them again.`, Alexah's words, Q922); nothing is copied and no second folder is read. Each box is shown once: `told kept` and `told moved` lines in the chosen save folder's `opentpw.cfg` remember it, and deleting a line shows the box again. The boxes below fire only where the player's folder
+nothing is copied out of it; the game says so once (`YOUR GAME SAVES IN A NEW FOLDER`, then `Players saved before are safe, but won't show here.`, Alexah's words, Q922; no folder in the box, the log names both at every start). The other way round (Q908, Alexah 2026-11-02): a game folder that has become writable (one "Run as administrator", or the permission fix) is kept, and where the player's folder still holds a player the game says so (`CAN'T SEE YOUR PLAYERS?`, then `They are safe. Nothing was deleted. If you changed how the game runs, changing it back will show them again.`, Alexah's words, Q922); nothing is copied and no second folder is read. Each box is shown once, or at every start where `opentpw.cfg` cannot be written (the player's folder shut as well): `told kept` and `told moved` lines in the chosen save folder's `opentpw.cfg` remember it, written as the box opens (a start that fails or a window closed before then leaves it due), and deleting a line shows the box again. The boxes below fire only where the player's folder
 cannot be written either.
 
 **A deviation: the original says nothing when a save fails** (its save answers a failure number and the screen closes
@@ -668,7 +668,7 @@ game, lost at exit) and Quit. A fresh player's first entry (`restart.INTS`) was 
 `UnauthorizedAccessException`, so a file in a format fault, `InvalidDataException`, is not one) and
 `Level.Update` opens the game's own message box with its cross alone (`MessageBox`, no tick; the research opener's
 kind) once nothing modal is up: `PARK NOT SAVED`, `PLAYER NOT SAVED` or `OPTIONS NOT SAVED`, then `The save folder
-cannot be written.` and `Log: <console.log's path>`. What the player asked for (Alt+S, Save Park, the options tick)
+cannot be written.` (no path in the box, Q923; the log names the folder). What the player asked for (Alt+S, Save Park, the options tick)
 is told every time; what the game does on its own (the autosave at leaving, `restart.INTS` at entering, the
 loading bar's counts, which are never told) once to a scene, so a folder that stays shut does not nag. The autosave at
 Exit To Lobby fails before the lobby is built, and the box opens in the lobby: the exit is never held. Quit Game

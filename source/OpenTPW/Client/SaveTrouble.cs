@@ -26,6 +26,7 @@ internal static class SaveTrouble
 	private static bool _asked;
 	private static bool _told;
 	private static string? _notice;
+	private static string? _noticeName;
 
 	/// <summary>Whether a failure or a notice waits to be told.</summary>
 	internal static bool Pending => _what != null || _notice != null;
@@ -34,10 +35,16 @@ internal static class SaveTrouble
 	internal static bool LostAWrite => _what != null;
 
 	/// <summary>
-	/// Something the player is told once, not a failure: where saves go when the game's folder cannot be written, or that the
-	/// player's folder holds players the kept game folder does not read (<see cref="SaveHome"/>, Q984, Q908). Shown by the same poll, ahead of a failure.
+	/// Something the player is told once, not a failure: that the game's folder cannot be written and saves went to the player's,
+	/// or that the player's folder holds players the kept game folder does not read (<see cref="SaveHome"/>, Q984, Q908). Shown by the
+	/// same poll, ahead of a failure.
 	/// </summary>
-	internal static void Tell( string text ) => _notice = text;
+	/// <param name="name">The name opentpw.cfg remembers the notice under; <see cref="Take(out string?)"/> hands it back with the text, for the caller to count it told once its box is open (<see cref="SaveHome.Told"/>).</param>
+	internal static void Tell( string text, string? name = null )
+	{
+		_notice = text;
+		_noticeName = name;
+	}
 
 	/// <summary>
 	/// A write failed. Only a folder that cannot be written counts: a fault in a file's format
@@ -68,11 +75,18 @@ internal static class SaveTrouble
 	/// What to say, or null where nothing waits or the game's own failure was told already this visit. Either
 	/// way the failure waiting is let go.
 	/// </summary>
-	internal static string? Take()
+	internal static string? Take() => Take( out _ );
+
+	/// <summary>As <see cref="Take()"/>; <paramref name="noticeName"/> is the name the start's notice was told under, null for a failure.</summary>
+	internal static string? Take( out string? noticeName )
 	{
+		noticeName = null;
+
 		if ( _notice is { } notice )
 		{
+			noticeName = _noticeName;
 			_notice = null;
+			_noticeName = null;
 			return notice;
 		}
 
@@ -91,8 +105,7 @@ internal static class SaveTrouble
 
 		_told = true;
 
-		var log = ConsoleLog.Path;
-		return $"{what} NOT SAVED\n\nThe save folder cannot be written." + (log.Length > 0 ? $"\nLog: {log}" : "");
+		return $"{what} NOT SAVED\n\nThe save folder cannot be written.";
 	}
 
 	/// <summary>Quit Game's question, with a line more where nothing can be saved.</summary>

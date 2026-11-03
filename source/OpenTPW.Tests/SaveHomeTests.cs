@@ -182,8 +182,8 @@ public class SaveHomeTests
 		Assert.IsNotNull( SaveHome.Choose( game, other ).Notice, "SAVE is not save, and it holds a player" );
 	}
 
-	/// <summary>Each notice is told once: the first start gets it and counts it told, the next gets none, and one notice told does not hush the other.</summary>
-	/// <remarks><b>Mutation:</b> the name not added to the set, or both notices under one name.</remarks>
+	/// <summary>Each notice is told once: it comes until it is in the told set, and one notice told does not hush the other.</summary>
+	/// <remarks><b>Mutation:</b> both notices under one name.</remarks>
 	[TestMethod]
 	public void ANoticeIsToldOnceAndEachOnItsOwn()
 	{
@@ -192,10 +192,86 @@ public class SaveHomeTests
 		var moved = new SaveHome.Pick( players, true, SaveHome.Notice(), SaveHome.MovedName );
 
 		Assert.AreEqual( SaveHome.KeptNotice(), SaveHome.TellOnce( kept, told ) );
+		told.Add( SaveHome.KeptName );
 		Assert.IsNull( SaveHome.TellOnce( kept, told ), "not told again" );
 		Assert.AreEqual( SaveHome.Notice(), SaveHome.TellOnce( moved, told ), "the other notice is its own" );
+		told.Add( SaveHome.MovedName );
 		Assert.IsNull( SaveHome.TellOnce( moved, told ) );
 		Assert.IsNull( SaveHome.TellOnce( new SaveHome.Pick( game, false, null ), told ), "nothing to tell" );
+	}
+
+	/// <summary>A notice given to the box but never opened (the start failed, or the window closed in the load) is not counted told.</summary>
+	/// <remarks><b>Mutation:</b> the name added to the set in <c>TellOnce</c> (or in <c>LoadDisplayAndTell</c>), where it was before the box opened.</remarks>
+	[TestMethod]
+	public void ANoticeGivenButNeverOpenedIsNotCountedTold()
+	{
+		var told = new HashSet<string>( StringComparer.OrdinalIgnoreCase );
+		var kept = new SaveHome.Pick( game, false, SaveHome.KeptNotice(), SaveHome.KeptName );
+
+		Assert.IsNotNull( SaveHome.TellOnce( kept, told ) );
+		Assert.AreEqual( 0, told.Count, "a check counts nothing" );
+		Assert.IsNotNull( SaveHome.TellOnce( kept, told ), "so it is still due" );
+	}
+
+	/// <summary>
+	/// The start's whole path across starts: opentpw.cfg is read before the check, the notice is counted and written only once
+	/// its box has opened, and the start after that has no box. A start that ends before the box leaves the notice due.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutation:</b> the check before <c>LoadDisplay</c> in <c>LoadDisplayAndTell</c> (the box at every start); the write dropped from
+	/// <c>Told</c> (the box at every start, unless a loading screen happened to write); the name added to the set at the start (the
+	/// unopened start is counted, and a write by the loading screen between would reach the disk).
+	/// </remarks>
+	[TestMethod]
+	public void ANoticeIsToldAtTheFirstStartThatOpensItsBoxAndNotAfter()
+	{
+		Directory.CreateDirectory( game );
+		var kept = new SaveHome.Pick( game, false, SaveHome.KeptNotice(), SaveHome.KeptName );
+		var was = GameOptions.Current;
+		var wasSaves = SaveFileSystemOrNull;
+		var file = Path.Join( game, "opentpw.cfg" );
+
+		try
+		{
+			SaveFileSystem = new BaseFileSystem( game );
+			DrainTrouble();
+
+			// Start 1: the notice is given, and the start ends before the box opens. A write by something else in that gap
+			// (the loading screen's, which writes the whole options set) must not carry a told line.
+			GameOptions.Current = new();
+			SaveHome.LoadDisplayAndTell( kept );
+			Assert.IsTrue( SaveTrouble.Pending );
+			SaveFolder.SaveDisplay( tell: false );
+			Assert.IsFalse( File.ReadAllText( file ).Contains( "told" ), "given but not opened: no told line on disk" );
+			DrainTrouble();
+
+			// Start 2: still due; this time the box opens.
+			GameOptions.Current = new();
+			SaveHome.LoadDisplayAndTell( kept );
+			Assert.IsTrue( SaveTrouble.Pending, "the notice came again" );
+			Assert.AreEqual( SaveHome.KeptNotice(), SaveTrouble.Take( out var name ) );
+			Assert.AreEqual( SaveHome.KeptName, name, "the name travels with the text" );
+			SaveHome.Told( name! );
+			StringAssert.Contains( File.ReadAllText( file ), "\ntold kept\n", "written as the box opens" );
+
+			// Start 3: read back, so no box.
+			GameOptions.Current = new();
+			SaveHome.LoadDisplayAndTell( kept );
+			Assert.IsFalse( SaveTrouble.Pending, "told: no box" );
+		}
+		finally
+		{
+			DrainTrouble();
+			GameOptions.Current = was;
+			SaveFileSystemOrNull = wasSaves;
+		}
+	}
+
+	private static void DrainTrouble()
+	{
+		SaveTrouble.Asked();
+		SaveTrouble.Take();
+		SaveTrouble.NewVisit();
 	}
 
 	/// <remarks><b>Mutation:</b> the line not read, not written, or written with no name.</remarks>
@@ -211,7 +287,7 @@ public class SaveHomeTests
 			SaveFileSystem = new BaseFileSystem( game );
 			GameOptions.Current = new();
 			Assert.IsNotNull( SaveHome.TellOnce( new SaveHome.Pick( game, false, SaveHome.KeptNotice(), SaveHome.KeptName ), GameOptions.Current.NoticesTold ) );
-			SaveFolder.SaveDisplay( tell: false );
+			SaveHome.Told( SaveHome.KeptName );
 
 			var file = Path.Join( game, "opentpw.cfg" );
 			StringAssert.Contains( File.ReadAllText( file ), "\ntold kept\n" );
@@ -338,7 +414,7 @@ public class SaveHomeTests
 	}
 
 	[TestMethod]
-	public void AFolderOfPlayersThatCannotBeWrittenIsLeftAloneAndTheNoticeNamesTheNewOne()
+	public void AFolderOfPlayersThatCannotBeWrittenIsLeftAloneAndTheNoticeNamesNoFolder()
 	{
 		Directory.CreateDirectory( Path.Join( game, "Users", "1Test", "jungle" ) );
 		File.WriteAllText( Path.Join( game, "Users", "1Test", "gms.dat" ), "x" );

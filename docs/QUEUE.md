@@ -105,7 +105,7 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   PC tried has a third-party `PermissionFix.exe` (Everyone full control), so the original wrote straight to `save\`.
   **Alexah (2026-11-02):** read nothing from the VirtualStore and keep the notice; look at this again only if a player meets it. Q984 left it open: a `save\`
   that holds players but cannot be written is read by nothing, and nothing is copied out of it to the player's folder
-  (whether to copy or read them is this item's); the game says so once each start on screen.
+  (whether to copy or read them is this item's); the game says so once on screen (`YOUR GAME SAVES IN A NEW FOLDER`, remembered as `told moved`, Q922).
 - [ ] **Q903. A save lost as the window closes is told in the log only.** The window's own close with a park up writes
   the autosave and the player, then the process ends: no scene is left to open a box (Quit Game's question says
   beforehand, Q982). Counted, not built: a close that asked first would be a deviation the original does not have;
@@ -173,9 +173,9 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
     `park-engine.md` (bottom node `0x00432f2f` to `0x00469940`); "four ground vertices on every PC pylon" is unproven.
 
 - [ ] **Q925. What a Load Park and a Restart Park still spend (from Q924).** After Q924 a load from inside a park is 0.7 s in the game's log and 0.7 to 1.0 s in the film (0.14 to 0.17 s in the original, no loading screen). The third Load's phases (`q924/after2/run.log`): `ground` 0.21 s,
-  `objects` 0.17, `terrain` 0.14, `guest sprites` 0.05, `queues` 0.03, `audio` 0.07 (the 189 MB music bank and the 17 MB kids bank are read again, because they decode on demand and were not kept), the rest under 0.02 each; the film adds about 0.1 s to the log's total. Where each could
+  `objects` 0.17, `terrain` 0.14, `guest sprites` 0.05, `queues` 0.03, `audio` 0.07 (the 189 MB music bank and the 17 MB kids bank are read again, because they decode on demand and were not kept), the rest 0.02 or under each; the film adds about 0.1 s to the log's total. Where each could
   be kept across a load (`ground`'s textures and meshes, `terrain`, `objects`' models, the guest sprites) or done off the loading screen, and what keeping costs in memory (the park's 0.70 GB resident), are not looked at; the first load of a launch is 0.2 s slower. Do it only if Alexah wants the load shorter than 0.8 s; Q247's choice on building in place now sets a rebuild of 0.7 to 0.8 s against 0.14 to 0.17 s.
-- [ ] **Q923. The `NOT SAVED` box still holds a path (`Log: <path>`).** `SaveTrouble.Take` ends `PARK NOT SAVED` / `The save folder cannot be written.` with `Log: <console.log's path>`, which wraps mid-word (`Wrap` has no separator rule; Q908's review, finding 2) and which Alexah's standing rule of 2026-11-02 for boxes ("short and plain, no paths") does not meet. Decide with Alexah: drop the line (the log's place is in the readme and the weekly's notes) or keep it. `SaveTroubleTests` pins the line.
+- [x] **Q923. The `NOT SAVED` box still holds a path (`Log: <path>`).** `SaveTrouble.Take` ends `PARK NOT SAVED` / `The save folder cannot be written.` with `Log: <console.log's path>`, which wraps mid-word (`Wrap` has no separator rule; Q908's review, finding 2) and which Alexah's standing rule of 2026-11-02 for boxes ("short and plain, no paths") does not meet. Decide with Alexah: drop the line (the log's place is in the readme and the weekly's notes) or keep it. `SaveTroubleTests` pins the line.
 - [ ] **Q917. The Crazy Ape's OnAMesh clips and its other heads, and a fitted turn for them (from Q916).** Q916 compared three of the Ape's heads (Head02, Head07, Head13) in
   its clip `l` (role 3), the OnAFace branch, and found no difference above about 0.05 (the census rounds to 0.1). Not compared: the OnAMesh branch (roles 4, 5, 6 and `m1` to
   `m6`), the ride proper's clips (never paused), and a face-anchored head on a non-morphing parent (`LobbyModel.cs:609`). The original named 13 records, ours held 11 heads;

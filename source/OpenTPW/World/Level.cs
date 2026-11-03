@@ -2594,8 +2594,8 @@ public class Level
 	}
 
 	/// <summary>
-	/// A deviation (Q982, Q984): opens the message box for a write to the save folder that failed, or for where saves
-	/// go (<see cref="SaveTrouble"/>), once the front window has nothing modal up and nothing covers it, so it never
+	/// A deviation (Q982, Q984): opens the message box for a write to the save folder that failed, or for a notice of the save
+	/// folders (<see cref="SaveTrouble"/>), once the front window has nothing modal up and nothing covers it, so it never
 	/// lands over another question. Held while F2 hides the interface: the box pauses the park and cannot be seen or
 	/// clicked there, so it waits, pending, for the frame after the interface is back.
 	/// </summary>
@@ -2604,8 +2604,14 @@ public class Level
 		if ( !SaveTrouble.Pending || UI.RootPanel.Hidden || _windows is not { ModalUp: false, Covered: false } windows )
 			return;
 
-		if ( SaveTrouble.Take() is { } text )
+		if ( SaveTrouble.Take( out var noticeName ) is { } text )
+		{
 			windows.Open( new UI.MessageBox( windows, text, null ) );
+
+			// The start's notice is counted told now its box is open (Q922), and opentpw.cfg written.
+			if ( noticeName != null )
+				SaveHome.Told( noticeName );
+		}
 	}
 
 	/// <summary>

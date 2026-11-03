@@ -201,7 +201,7 @@ internal sealed class LoadingScreen : IDisposable
 		// What it really cost is what the next load of this same situation will expect.
 		LoadStepCounts.Record( _what, _key, _steps );
 
-		// Written only when a count actually moved, so a run that learns nothing new leaves the player's
+		// Written only when a count actually moved, so a run that learns nothing new (and shows no notice, SaveHome.Told) leaves the player's
 		// save folder untouched. SaveDisplay writes the whole file, settings and counts together, so it
 		// is the one writer and the options screen's tick cannot clobber what was learned here.
 		if ( LoadStepCounts.TakeChanged() )

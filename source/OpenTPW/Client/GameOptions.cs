@@ -30,8 +30,8 @@ namespace OpenTPW;
 /// belong to the player, in their gms.dat (<see cref="PlayerOptions"/>), with the movie volume again - the
 /// player's copy wins when they are picked. Every gms.dat written takes the options as they stand.
 /// <para>
-/// The five that are OpenTPW's own - <see cref="DisplayMode"/>, <see cref="FullScreenSize"/>,
-/// <see cref="Faithful"/>, <see cref="Gpu"/> and <see cref="UpdateCheck"/> - go in a third file, save\opentpw.cfg (<see cref="SaveFolder.LoadDisplay"/>), rather than into fields the
+/// The six that are OpenTPW's own - <see cref="DisplayMode"/>, <see cref="FullScreenSize"/>,
+/// <see cref="Faithful"/>, <see cref="Gpu"/>, <see cref="UpdateCheck"/> and <see cref="NoticesTold"/> - go in a third file, save\opentpw.cfg (<see cref="SaveFolder.LoadDisplay"/>), rather than into fields the
 /// original's own file has no room for. That way Config.tcf stays a file the original can still read.
 /// </para>
 /// </para>

@@ -20,7 +20,7 @@ namespace OpenTPW;
 /// The other way (Q908, Alexah's 2026-11-02): a game folder that has become writable is kept, and the players left in the
 /// player's folder are read by nothing and nothing is copied; the game says so in a short box (<see cref="KeptNotice"/>).
 /// Q922 (Alexah's words, 2026-11-02): neither box holds a path, which a player cannot use and a long one overwhelms; both
-/// folders go to the log at every start. Each box is shown once and remembered (<see cref="TellOnce"/>), in opentpw.cfg.
+/// folders go to the log at every start. Each box is shown once and remembered (<see cref="Told"/>), in opentpw.cfg, or at every start where opentpw.cfg cannot be written.
 /// </para>
 /// </summary>
 internal static class SaveHome
@@ -36,7 +36,7 @@ internal static class SaveHome
 	/// <param name="Folder">The folder to map.</param>
 	/// <param name="Fallback">Whether it is the player's folder, not the game's.</param>
 	/// <param name="Notice">What to tell the player, or null where there is nothing to tell.</param>
-	/// <param name="NoticeName">The name the notice is remembered under in opentpw.cfg once told (<see cref="TellOnce"/>); null with no notice.</param>
+	/// <param name="NoticeName">The name the notice is remembered under in opentpw.cfg once its box has opened (<see cref="Told"/>); null with no notice.</param>
 	internal readonly record struct Pick( string Folder, bool Fallback, string? Notice, string? NoticeName = null );
 
 	/// <summary>The fallback: <c>save</c> in the player's data folder.</summary>
@@ -90,11 +90,36 @@ internal static class SaveHome
 		=> "CAN'T SEE YOUR PLAYERS?\n\nThey are safe. Nothing was deleted. If you changed how the game runs, changing it back will show them again.";
 
 	/// <summary>
-	/// The notice if it has not been told before, and then counted as told in <paramref name="told"/> (opentpw.cfg's <c>told</c>
-	/// lines, <see cref="GameOptions.NoticesTold"/>, which the caller writes out); null where the pick has none or it was told.
+	/// The notice if it is not in <paramref name="told"/> (opentpw.cfg's <c>told</c> lines, <see cref="GameOptions.NoticesTold"/>);
+	/// null where the pick has none or it was told. A check only: the notice is counted when its box is open (<see cref="Told"/>), so
+	/// a start that fails or a window closed before the box does not use it up.
 	/// </summary>
 	internal static string? TellOnce( Pick pick, ISet<string> told )
-		=> pick.Notice != null && pick.NoticeName is { } name && told.Add( name ) ? pick.Notice : null;
+		=> pick.Notice != null && pick.NoticeName is { } name && !told.Contains( name ) ? pick.Notice : null;
+
+	/// <summary>
+	/// The start's reading of opentpw.cfg (<see cref="SaveFolder.LoadDisplay"/>), then the pick's notice handed to
+	/// <see cref="SaveTrouble"/> if it was not told before. The read comes first, as the told lines are what the check looks at.
+	/// </summary>
+	internal static void LoadDisplayAndTell( Pick pick )
+	{
+		SaveFolder.LoadDisplay();
+
+		if ( TellOnce( pick, GameOptions.Current.NoticesTold ) is { } notice )
+			SaveTrouble.Tell( notice, pick.NoticeName );
+		else if ( pick.Notice != null )
+			Log.Info( $"Saves: the notice {pick.NoticeName} was told before, so no box (delete its \"told\" line in opentpw.cfg to see it again)" );
+	}
+
+	/// <summary>
+	/// The notice's box is open: counts it told and writes opentpw.cfg at once, so the next start has the line (where that
+	/// file cannot be written, the box comes at every start).
+	/// </summary>
+	internal static void Told( string name )
+	{
+		if ( GameOptions.Current.NoticesTold.Add( name ) )
+			SaveFolder.SaveDisplay( tell: false );
+	}
 
 	/// <summary>
 	/// Whether two spellings name one folder: the same full path, trailing separators aside, in the system's case rule. A link to a

@@ -291,7 +291,7 @@ internal static class SaveFolder
 
 	/// <summary>
 	/// Writes save\opentpw.cfg - see <see cref="LoadDisplay"/>. Written with Config.tcf by the options screen's tick,
-	/// and alone when a loading screen has learned a new step count.
+	/// alone when a loading screen has learned a new step count, and alone when a start's notice box has opened (<see cref="SaveHome.Told"/>).
 	/// </summary>
 	/// <param name="tell">Whether a folder that cannot be written is told to the player (<see cref="SaveTrouble"/>); the loading screen's own write is not, as no choice of theirs was lost.</param>
 	public static void SaveDisplay( bool tell )

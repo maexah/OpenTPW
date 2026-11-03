@@ -123,9 +123,12 @@ public class SoundBankKeptTests
 		{
 			park = new ParkAudio( "jungle" );
 
-			// One bank only one park category names each: the global ambient's, the level's own rides' and the level's
-			// ambient the scripts play in, so a category that stopped asking to keep shows.
-			(string Root, string Bank)[] banks = [("global", "Sound/Ambient"), ("levels/jungle", "Sound/Ride"), ("levels/jungle", "Sound/Ambient")];
+			// The global ambient's, the level's own rides', the level's ambient the scripts play in, and the staff, kids and
+			// UI banks, so a category that stopped asking to keep shows. Measured by dropping flags: sUi is the UI category's
+			// alone; Staff is named by both the staff category and the scripts' global rides, and xKids by both the kids
+			// category and those rides, so one flag of each pair is redundant and only the pair dropped together shows.
+			(string Root, string Bank)[] banks = [("global", "Sound/Ambient"), ("levels/jungle", "Sound/Ride"), ("levels/jungle", "Sound/Ambient"),
+				("global", "Sound/Staff"), ("global", "Sound/xKids"), ("global", "Sound/sUi")];
 			var kept = banks.Select( bank => SoundBank.Load( bank.Root, bank.Bank ) ).ToArray();
 
 			for ( var i = 0; i < banks.Length; i++ )
@@ -156,7 +159,7 @@ public class SoundBankKeptTests
 	[TestMethod]
 	public void AMissingBankIsNullEachTime()
 	{
-		Assert.IsNull( SoundBank.Load( "global", "Sound/NoSuchBank" ) );
-		Assert.IsNull( SoundBank.Load( "global", "Sound/NoSuchBank" ) );
+		Assert.IsNull( SoundBank.Load( "global", "Sound/NoSuchBank", keep: true ) );
+		Assert.IsNull( SoundBank.Load( "global", "Sound/NoSuchBank", keep: true ) );
 	}
 }
