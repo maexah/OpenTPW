@@ -120,7 +120,8 @@ internal static class SaveTrouble
 
 	/// <summary>
 	/// The failure waiting, as <see cref="Take()"/> gives it after the notices. With <paramref name="cardSaved"/> (the Options tick's
-	/// RESTART GAME, Q999: Config.tcf, which holds the card, was written, so only the other options were lost) the words say so.
+	/// RESTART GAME, Q999: Config.tcf, which holds the card, was written, so only the other options were lost) the words are the title
+	/// alone (<see cref="OptionsNotSavedTitle"/>).
 	/// </summary>
 	private static string? TakeFailure( bool cardSaved = false )
 	{
@@ -140,18 +141,21 @@ internal static class SaveTrouble
 		_told = true;
 
 		return cardSaved && what == "OPTIONS"
-			? "SOME OPTIONS NOT SAVED\n\nYour video card is saved, but some other settings could not be."
+			? OptionsNotSavedTitle
 			: $"{what} NOT SAVED\n\nThe save folder cannot be written.";
 	}
 
 	/// <summary>
 	/// Everything the player has yet to be told of a save but the start's notice, in one text for a box that is already up and has to
 	/// carry it (the Options tick's RESTART GAME, Q998, Q999): a modal box holds the scene's own from opening until the game has been
-	/// left, and the lobby's tick quits, so a backup or a failure left waiting would go untold. Null where nothing waits.
+	/// left, and the lobby's tick quits, so a backup or a failure left waiting would go untold. Null where nothing waits. Each part is its
+	/// title alone, one line (Q938, Alexah's, 2026-11-03): with their bodies the three parts overflow the box's text rectangle at 1024 x 768
+	/// and below, where text is never drawn smaller than the original's (<see cref="UI.UiText.SizeIn"/>). A copy or a failure told on its
+	/// own keeps its full words (<see cref="Take()"/>).
 	/// </summary>
 	internal static string? TakeForARestartBox()
 	{
-		var texts = _backedUp.Select( BackedUpText ).ToList();
+		var texts = _backedUp.Select( BackedUpTitle ).ToList();
 		_backedUp.Clear();
 
 		if ( TakeFailure( cardSaved: true ) is { } lost )
@@ -160,11 +164,15 @@ internal static class SaveTrouble
 		return texts.Count == 0 ? null : string.Join( "\n\n", texts );
 	}
 
+	private const string OptionsNotSavedTitle = "SOME OPTIONS NOT SAVED";
+
+	private static string BackedUpTitle( string what ) => what == "PLAYER" ? "PROGRESS FILE BACKED UP" : "OPTIONS FILE BACKED UP";
+
 	/// <summary>What the player is told of a copy kept: short, plain, no path (the log names it).</summary>
 	private static string BackedUpText( string what )
 		=> what == "PLAYER"
-			? "PROGRESS FILE BACKED UP\n\nThe game didn't read all of your old progress, so it kept a copy before writing over it."
-			: "OPTIONS FILE BACKED UP\n\nThe game didn't read all of your old options, so it kept a copy before writing over it.";
+			? $"{BackedUpTitle( what )}\n\nThe game didn't read all of your old progress, so it kept a copy before writing over it."
+			: $"{BackedUpTitle( what )}\n\nThe game didn't read all of your old options, so it kept a copy before writing over it.";
 
 	/// <summary>Quit Game's question, with a line more where nothing can be saved.</summary>
 	internal static string QuitQuestion( string question )

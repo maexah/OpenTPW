@@ -191,7 +191,8 @@ public class OptionsKeepTests
 
 		Assert.AreEqual( 1, boxes.Length, "RESTART GAME is asked" );
 		StringAssert.StartsWith( boxes[0], Localization.Get( UIStrings.RestartGame ) );
-		StringAssert.EndsWith( boxes[0], "SOME OPTIONS NOT SAVED\n\nYour video card is saved, but some other settings could not be." );
+		StringAssert.EndsWith( boxes[0], "\n\nSOME OPTIONS NOT SAVED" );
+		Assert.IsFalse( boxes[0].Contains( "video card is saved" ), "the title alone (Q938)" );
 		Assert.IsFalse( boxes[0].Contains( "cannot be written" ), "no folder word: the card was written to it" );
 		Assert.IsTrue( stack.Windows.OfType<UI.OptionsScreen>().Any(), "the screen stays open under the box" );
 		Assert.IsFalse( SaveTrouble.Pending, "the box took the failure, so no second box follows" );
@@ -230,6 +231,43 @@ public class OptionsKeepTests
 		StringAssert.Contains( boxes[0], "OPTIONS FILE BACKED UP" );
 		Assert.IsFalse( boxes[0].Contains( "NOT SAVED" ) );
 		Assert.IsFalse( SaveTrouble.Pending );
+	}
+
+	/// <summary>
+	/// <b>The longest RESTART GAME box holds its text</b> (Q938): the game's words, a copy kept and a write lost, wrapped as the box wraps them
+	/// (font 4 of the set the size calls for, at the text rectangle's width) and as tall as the text rectangle at 1024 x 768 and 640 x 480, where
+	/// text is never drawn smaller than the original's (<see cref="UI.UiText.SizeIn"/>). With the parts' bodies it was 252 px in 239 at 1024 x 768
+	/// and 240 in 149 at 640 x 480.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the parts' bodies put back in <c>TakeForARestartBox</c>: the text is taller than the rectangle at both sizes.</remarks>
+	[TestMethod]
+	public void TheLongestRestartBoxHoldsItsTextWhereTheTextIsNotDrawnSmaller()
+	{
+		var screen = Screen.Size;
+
+		try
+		{
+			foreach ( var (width, height) in new[] { (1024, 768), (640, 480) } )
+			{
+				Screen.Size = new Point2( width, height );
+
+				SaveTrouble.NewVisit();
+				SaveTrouble.BackedUp( "OPTIONS" );
+				SaveTrouble.Failed( "OPTIONS", new IOException() );
+				var text = $"{Localization.Get( UIStrings.RestartGame )}\n\n{SaveTrouble.TakeForARestartBox()}";
+
+				var font = UI.UiFonts.Get( 4 ) ?? throw new AssertFailedException( "font 4 did not load" );
+				var area = (Width: (1345 - 610) * UI.VirtualScreen.Scale, Height: (753 - 276) * UI.VirtualScreen.Scale);
+				var lines = UI.UiText.Wrap( font, text, UI.UiText.WrapWidthOf( area.Width ) );
+				var tall = lines.Count * font.LineHeight * UI.UiFonts.Scale;
+
+				Assert.IsTrue( tall <= area.Height + 0.5f, $"{width} x {height}: {lines.Count} lines, {tall:0} px in {area.Height:0}" );
+			}
+		}
+		finally
+		{
+			Screen.Size = screen;
+		}
 	}
 
 	/// <summary>
