@@ -549,6 +549,83 @@ public class ProfilePreservationTests
 		Assert.IsTrue( ConfigFile.Read( saved )!.ReadWhole, "and the file is written over" );
 	}
 
+	/// <summary>
+	/// <b>A rewrite of opentpw.cfg keeps what this game does not know, where it stands</b> (Q932): a directive a later build
+	/// wrote, a comment of the player's, a blank line, in a file that also holds old comments of this game's and settings in another order.
+	/// The settings are made again (the first line of each in its place, a repeat dropped), the old comments are replaced by the
+	/// current ones, and no copy is made, as the file read whole.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the kept branch at the end of the walk in <c>SaveDisplay</c> taken out (the unknown lines and the comment are gone, as before the item); or the <c>OwnComments</c> test taken out (an old comment of this game's is kept and written again at every save).</remarks>
+	[TestMethod]
+	public void AnUnknownLineAndAPlayersCommentSurviveARewriteWhereTheyStand()
+	{
+		var path = Path.Combine( root, "save", "opentpw.cfg" );
+		File.WriteAllText( path,
+			"# my notes: keep the window small\r\n" +
+			"# OpenTPW's own settings. The original's Config.tcf beside this one holds the\r\n" +
+			"gpu GTX 1650\r\n" +
+			"FutureThing on 3\r\n" +
+			"\r\n" +
+			"# ground asked: the ground's tiles are the size the detail file asks, 32 pixels at medium and high, as\r\n" +
+			"Display Fullscreen\r\n" +
+			"ground original\r\n" +
+			"# a comment between two of the game's\r\n" +
+			"updatecheck off\r\n" +
+			"gpu RTX 9999\r\n" +
+			"monitor 2 left\r\n" );
+
+		SaveFolder.LoadDisplay();
+		SaveFolder.SaveDisplay( tell: false );
+
+		var lines = File.ReadAllText( path ).Split( '\n' );
+		Assert.AreEqual( "", lines[Array.IndexOf( lines, "FutureThing on 3" ) + 1], "the blank line stays after the directive" );
+
+		// In place: the player's first comment before the settings, the unknown directive between the gpu block and the display block, and so on.
+		var at = lines.Distinct().ToDictionary( line => line, line => Array.IndexOf( lines, line ), StringComparer.Ordinal );
+		Assert.IsTrue( at["# my notes: keep the window small"] < at["gpu RTX 9999"], "the player's comment is above the gpu block" );
+		Assert.IsTrue( at["gpu RTX 9999"] < at["FutureThing on 3"] && at["FutureThing on 3"] < at["display fullscreen"], "the directive stays between the gpu and the display lines" );
+		Assert.IsTrue( at["display fullscreen"] < at["# a comment between two of the game's"] && at["# a comment between two of the game's"] < at["updatecheck off"] );
+		Assert.IsTrue( at["updatecheck off"] < at["monitor 2 left"], "and the last line stays last of the unknown ones" );
+		Assert.AreEqual( 1, lines.Count( l => l.StartsWith( "gpu " ) ), "the repeated gpu line is made once" );
+		Assert.AreEqual( 1, lines.Count( l => l.StartsWith( "display ", StringComparison.OrdinalIgnoreCase ) ), "a setting named in capitals is the same setting" );
+		Assert.IsFalse( lines.Any( l => l.StartsWith( "ground" ) ), "the retired line is dropped, as its warning says" );
+		Assert.IsFalse( lines.Any( l => l.StartsWith( "# ground asked" ) || l.Contains( '\r' ) ), "an earlier build's comment is replaced and the lines end in LF" );
+		Assert.IsFalse( File.Exists( path + ".opentpw-backup" ), "the file read whole, so it needs no copy" );
+
+		// The settings it read are the ones written (the last gpu line wins on a read).
+		Assert.AreEqual( "RTX 9999", GameOptions.Current.Gpu );
+		StringAssert.Contains( File.ReadAllText( path ), "\ngpu RTX 9999\n" );
+		Assert.AreEqual( DisplayMode.FullScreen, GameOptions.Current.DisplayMode );
+		Assert.IsFalse( GameOptions.Current.UpdateCheck );
+	}
+
+	/// <summary>
+	/// <b>A second rewrite changes nothing</b> (Q932): the kept lines are not written twice and this game's own comments do not pile up,
+	/// and a file this game wrote alone (nothing unknown in it) is written back byte for byte.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the <c>OwnComments</c> test taken out of <c>SaveDisplay</c>: the second write holds the comments twice.</remarks>
+	[TestMethod]
+	public void ARewriteOfARewriteIsTheSameBytes()
+	{
+		var path = Path.Combine( root, "save", "opentpw.cfg" );
+		GameOptions.Current.NoticesTold.Add( "moved" );
+		SaveFolder.SaveDisplay( tell: false );
+		var fresh = File.ReadAllBytes( path );
+
+		SaveFolder.LoadDisplay();
+		SaveFolder.SaveDisplay( tell: false );
+		CollectionAssert.AreEqual( fresh, File.ReadAllBytes( path ), "a file this game wrote is written back as it was" );
+
+		File.WriteAllText( path, "# note\nfuture 1\n" + File.ReadAllText( path ) );
+		SaveFolder.LoadDisplay();
+		SaveFolder.SaveDisplay( tell: false );
+		var once = File.ReadAllBytes( path );
+		SaveFolder.LoadDisplay();
+		SaveFolder.SaveDisplay( tell: false );
+		CollectionAssert.AreEqual( once, File.ReadAllBytes( path ), "and so is one that also holds a line it does not know" );
+		StringAssert.StartsWith( File.ReadAllText( path ), "# note\nfuture 1\n# OpenTPW's own settings." );
+	}
+
 	/// <summary>A hand-made opentpw.cfg with a byte order mark, or one a text editor saved as UTF-16, still reads its first line (the review of the week-end audit's fixes).</summary>
 	/// <remarks><b>Mutation:</b> the read back to <c>Encoding.UTF8.GetString</c>: the mark joins the first line and the card is lost; the UTF-16 file reads as nothing.</remarks>
 	[DataTestMethod]

@@ -4186,7 +4186,8 @@ too, with one addition (Alexah, 2026-10-31): a file this game did not read whole
 `<name>.opentpw-backup` (then `.opentpw-backup2` and on, so an earlier copy is never replaced), a name neither game reads. Nothing is
 refused. This is not the original's behaviour. OpenTPW's own `opentpw.cfg` (not a file of the original's) is copied the same way
 when it exists and would not read at the start (`SaveFolder._unreadDisplay`), so its lines are not lost to the defaults that the
-loading screen writes.
+loading screen writes. A file that read whole is rewritten with the lines it holds that this game does not know (an unknown directive, a
+comment of the player's, a blank line) kept where they stand, and the settings it knows made again in place (Q932; `SaveFolder.SaveDisplay`).
 
 "Read whole" is `PlayerFile.ReadWhole` and `ConfigFile.ReadWhole`: a complete record of the version the game writes (player 12, options
 1), read to its end. A version of 0, another version, a tail or a short file is not. `SaveFolder` copies the file aside when any of these

@@ -205,8 +205,8 @@ internal static class SaveFolder
 	/// It is a plain text file of its own rather than more fields in Config.tcf, so that the original's
 	/// file stays a file the original can still read: its resolution field has room for three modes and
 	/// its own options screen shows a blank line for anything else. A line is a name and its values,
-	/// and anything unreadable is passed over, so a file from a later version loses only what this
-	/// version does not know.
+	/// and anything unreadable is passed over; <see cref="SaveDisplay"/> keeps such a line, and a comment of the player's,
+	/// where it stands, so a file from a later version loses nothing it holds that this version does not know.
 	/// </para>
 	/// </summary>
 	public static void LoadDisplay()
@@ -220,14 +220,7 @@ internal static class SaveFolder
 
 		try
 		{
-			// UTF-8, as SaveDisplay writes it (a gpu line can name a card with a letter outside ASCII), through a reader that
-			// takes a byte order mark off and reads a UTF-16 file a text editor made as what it is.
-			string text;
-
-			using ( var reader = new StreamReader( SaveFileSystem.OpenRead( path ), Encoding.UTF8 ) )
-				text = reader.ReadToEnd();
-
-			foreach ( var line in text.Split( '\n' ) )
+			foreach ( var line in ReadDisplayText( path ).Split( '\n' ) )
 			{
 				var parts = line.Trim().Split( ' ', StringSplitOptions.RemoveEmptyEntries );
 
@@ -295,9 +288,52 @@ internal static class SaveFolder
 		}
 	}
 
+	// UTF-8, as SaveDisplay writes it (a gpu line can name a card with a letter outside ASCII), through a reader that
+	// takes a byte order mark off and reads a UTF-16 file a text editor made as what it is.
+	private static string ReadDisplayText( string path )
+	{
+		using var reader = new StreamReader( SaveFileSystem.OpenRead( path ), Encoding.UTF8 );
+		return reader.ReadToEnd();
+	}
+
+	// Every comment line SaveDisplay has written, this build's and earlier builds' (the lines of a file written by one are
+	// replaced by this build's, not kept as the player's); any other comment is the player's and is kept.
+	private static readonly string[] OwnComments =
+	{
+		"# OpenTPW's own settings. The original's Config.tcf beside this one holds the",
+		"# options it knows about; these are the ones it has no room for.",
+		"# graphics improved: OpenTPW's improvements to the original's look, the default: the art at eight bits a",
+		"# channel, the ground's tiles at the 32 pixels the detail file asks, the research pumps scrolled smoothly,",
+		"# the flags easing between winds, the buy and hire screens lettered larger and large letters sharpened.",
+		"# graphics faithful: every one off, as the original draws them today: four bits a channel unless the detail file says TEXTURE32 1, 16-pixel",
+		"# tiles, the pumps stepped picture by picture, the flags jumping, the letters at the original's size and unsharpened.",
+		"# Read as the game starts.",
+		"# gpu auto: the Vulkan graphics card the Options screen's Video Card row says, a discrete one if there is one, else a built-in one. gpu <part of a name>:",
+		"# the first card whose name holds it, e.g. gpu GTX 1650. gpu #1: the second card of the list console.log prints",
+		"# (\"Graphics card:\"). Read as the game starts.",
+		"# updatecheck on: as it starts, a weekly build asks GitHub whether a newer weekly build has been released, and says so in the lobby and the Escape menu.",
+		"# updatecheck off: no request is made. Nothing is downloaded or installed either way. Read as the game starts.",
+		"# told <name>: a notice about the save folders the game has shown once and will not show again. Delete the line to see it again.",
+
+		// Written by earlier builds only.
+		"# the flags easing between winds, and the buy and hire screens lettered larger. graphics faithful: every one",
+		"# off, as the original draws them today: four bits a channel unless the detail file says TEXTURE32 1, 16-pixel",
+		"# tiles, the pumps stepped picture by picture, the flags jumping, the letters at the original's size.",
+		"# cut to four bits a channel, as the original draws it, unless the detail file says TEXTURE32 1.",
+		"# gpu auto: the Vulkan graphics card is a discrete one if there is one, else the first. gpu <part of a name>:",
+		"# ground asked: the ground's tiles are the size the detail file asks, 32 pixels at medium and high, as",
+		"# the original drew them on the machines of its day. ground original: 16 pixels, as it draws them today.",
+		"# textures full: the game's art keeps eight bits a channel, OpenTPW's improvement. textures original:",
+	};
+
+	// The two lines "graphics" replaced (Q616, Q618), dropped on a write.
+	private static bool IsRetired( string name ) => name is "textures" or "ground";
+
 	/// <summary>
 	/// Writes save\opentpw.cfg - see <see cref="LoadDisplay"/>. Written with Config.tcf by the options screen's tick,
 	/// alone when a loading screen has learned a new step count, and alone when a start's notice box has opened (<see cref="SaveHome.Told"/>).
+	/// A line of the file this game does not know, a blank line and a comment of the player's stay where they stand (Q932); the
+	/// lines it does know are made again, the first of each in its place, the others after the last line.
 	/// </summary>
 	/// <param name="tell">Whether a folder that cannot be written is told to the player (<see cref="SaveTrouble"/>); the loading screen's own write is not, as no choice of theirs was lost.</param>
 	public static void SaveDisplay( bool tell )
@@ -319,44 +355,112 @@ internal static class SaveFolder
 			if ( existing != null && ReferenceEquals( _unreadDisplay, SaveFileSystem ) )
 				BackUp( path, "OPTIONS" );
 
-			var text = new StringBuilder()
-				.AppendLine( "# OpenTPW's own settings. The original's Config.tcf beside this one holds the" )
-				.AppendLine( "# options it knows about; these are the ones it has no room for." )
-				.AppendLine( $"display {mode}" )
-				.AppendLine( $"fullscreen {options.FullScreenSize.Width} {options.FullScreenSize.Height} {options.FullScreenSize.RefreshRate}" )
-				.AppendLine( "# graphics improved: OpenTPW's improvements to the original's look, the default: the art at eight bits a" )
-				.AppendLine( "# channel, the ground's tiles at the 32 pixels the detail file asks, the research pumps scrolled smoothly," )
-				.AppendLine( "# the flags easing between winds, the buy and hire screens lettered larger and large letters sharpened." )
-				.AppendLine( "# graphics faithful: every one off, as the original draws them today: four bits a channel unless the detail file says TEXTURE32 1, 16-pixel" )
-				.AppendLine( "# tiles, the pumps stepped picture by picture, the flags jumping, the letters at the original's size and unsharpened." )
-				.AppendLine( "# Read as the game starts." )
-				.AppendLine( $"{GraphicsName} {(options.Faithful ? GraphicsFaithful : GraphicsImproved)}" )
-				.AppendLine( "# gpu auto: the Vulkan graphics card the Options screen's Video Card row says, a discrete one if there is one, else a built-in one. gpu <part of a name>:" )
-				.AppendLine( "# the first card whose name holds it, e.g. gpu GTX 1650. gpu #1: the second card of the list console.log prints" )
-				.AppendLine( "# (\"Graphics card:\"). Read as the game starts." )
-				.AppendLine( $"{GpuName} {(string.IsNullOrWhiteSpace( options.Gpu ) ? GpuChoice.Auto : options.Gpu)}" )
-				.AppendLine( "# updatecheck on: as it starts, a weekly build asks GitHub whether a newer weekly build has been released, and says so in the lobby and the Escape menu." )
-				.AppendLine( "# updatecheck off: no request is made. Nothing is downloaded or installed either way. Read as the game starts." )
-				.AppendLine( $"{UpdateCheckName} {(options.UpdateCheck ? "on" : "off")}" );
+			// What the file holds now, read again rather than remembered: an unreadable file has nothing to keep.
+			var old = new List<string>();
 
-			// The save-folder notices already shown (Q922), each once; a line deleted is told again.
-			if ( options.NoticesTold.Count > 0 )
+			if ( existing != null )
 			{
-				text.AppendLine( "# told <name>: a notice about the save folders the game has shown once and will not show again. Delete the line to see it again." );
+				try
+				{
+					old.AddRange( ReadDisplayText( existing ).Split( '\n' ).Select( line => line.TrimEnd( '\r' ) ) );
 
-				foreach ( var name in options.NoticesTold.Order( StringComparer.OrdinalIgnoreCase ) )
-					text.AppendLine( $"{ToldName} {name}" );
+					// The text after the last line feed is not a line.
+					if ( old.Count > 0 && old[^1].Length == 0 )
+						old.RemoveAt( old.Count - 1 );
+				}
+				catch ( Exception e )
+				{
+					old.Clear();
+					Log.Warning( $"Saves: {path} would not read, so its lines this game does not know are not kept - {e.Message}" );
+				}
 			}
 
-			// How many steps each kind of load took last time, which is how the loading bar knows how far
-			// to fill without being told - see LoadStepCounts. These are measurements rather than choices,
-			// and they settle: once a situation has been seen, it is only written again if it changes.
-			foreach ( var (key, steps) in LoadStepCounts.All )
-				text.AppendLine( $"{LoadStepCounts.LineName} {key} {steps}" );
+			// Each setting this game knows, with the comments that explain it, in the order a new file holds them.
+			var blocks = new List<(string Name, string[] Lines)>
+			{
+				("display", new[]
+				{
+					OwnComments[0],
+					OwnComments[1],
+					$"display {mode}"
+				}),
+				("fullscreen", new[] { $"fullscreen {options.FullScreenSize.Width} {options.FullScreenSize.Height} {options.FullScreenSize.RefreshRate}" }),
+				(GraphicsName, new[]
+				{
+					OwnComments[2],
+					OwnComments[3],
+					OwnComments[4],
+					OwnComments[5],
+					OwnComments[6],
+					OwnComments[7],
+					$"{GraphicsName} {(options.Faithful ? GraphicsFaithful : GraphicsImproved)}"
+				}),
+				(GpuName, new[]
+				{
+					OwnComments[8],
+					OwnComments[9],
+					OwnComments[10],
+					$"{GpuName} {(string.IsNullOrWhiteSpace( options.Gpu ) ? GpuChoice.Auto : options.Gpu)}"
+				}),
+				(UpdateCheckName, new[]
+				{
+					OwnComments[11],
+					OwnComments[12],
+					$"{UpdateCheckName} {(options.UpdateCheck ? "on" : "off")}"
+				}),
 
-			// Lines end in LF on every system: AppendLine writes the system's own, and a file moved between a Windows and a Linux
-			// install (the game folder is shared with the original's) should not change its bytes. LoadDisplay reads either.
-			SaveFileSystem.WriteAllBytes( path, Encoding.UTF8.GetBytes( text.ToString().Replace( "\r\n", "\n" ) ) );
+				// The save-folder notices already shown (Q922), each once; a line deleted is told again.
+				(ToldName, options.NoticesTold.Count == 0
+					? Array.Empty<string>()
+					: options.NoticesTold.Order( StringComparer.OrdinalIgnoreCase ).Select( name => $"{ToldName} {name}" ).Prepend( OwnComments[13] ).ToArray()),
+
+				// How many steps each kind of load took last time, which is how the loading bar knows how far
+				// to fill without being told - see LoadStepCounts. These are measurements rather than choices,
+				// and they settle: once a situation has been seen, it is only written again if it changes.
+				(LoadStepCounts.LineName, LoadStepCounts.All.Select( count => $"{LoadStepCounts.LineName} {count.Key} {count.Value}" ).ToArray())
+			};
+
+			var written = new HashSet<string>();
+			var text = new StringBuilder();
+
+			void Emit( IEnumerable<string> lines )
+			{
+				foreach ( var line in lines )
+					text.Append( line ).Append( '\n' );
+			}
+
+			foreach ( var line in old )
+			{
+				var trimmed = line.Trim();
+				var name = trimmed.Length == 0 || trimmed.StartsWith( '#' )
+					? ""
+					: trimmed.Split( ' ', StringSplitOptions.RemoveEmptyEntries )[0].ToLowerInvariant();
+
+				if ( trimmed.StartsWith( '#' ) && OwnComments.Contains( trimmed ) )
+					continue;
+
+				if ( name.Length > 0 && IsRetired( name ) )
+					continue;
+
+				if ( name.Length > 0 && blocks.FindIndex( block => block.Name == name ) is var at and >= 0 )
+				{
+					// Its whole block stands at the first line of the setting; a second line of it is dropped.
+					if ( written.Add( name ) )
+						Emit( blocks[at].Lines );
+
+					continue;
+				}
+
+				text.Append( line ).Append( '\n' );
+			}
+
+			foreach ( var block in blocks )
+				if ( written.Add( block.Name ) )
+					Emit( block.Lines );
+
+			// Lines end in LF on every system, so a file moved between a Windows and a Linux install (the game folder is
+			// shared with the original's) does not change its bytes. LoadDisplay reads either.
+			SaveFileSystem.WriteAllBytes( path, Encoding.UTF8.GetBytes( text.ToString() ) );
 			_unreadDisplay = null;
 			Log.Info( $"Saves: wrote the display settings to {path}" );
 		}
