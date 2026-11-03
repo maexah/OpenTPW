@@ -40,9 +40,21 @@ public class ProfilePreservationTests
 		Themes.SetValue( null, null );
 	}
 
+	/// <summary>Lets go of everything the save folder wanted to tell (a backup is told too, Q998), so no test hands it to the next.</summary>
+	private static void DrainTrouble()
+	{
+		SaveTrouble.Asked();
+
+		while ( SaveTrouble.Pending )
+			SaveTrouble.Take();
+
+		SaveTrouble.NewVisit();
+	}
+
 	[TestCleanup]
 	public void RestoreFiles()
 	{
+		DrainTrouble();
 		FileSystemOrNull = oldData;
 		SaveFileSystemOrNull = oldSaves;
 		GameOptions.Current = oldOptions;
@@ -399,9 +411,7 @@ public class ProfilePreservationTests
 		}
 		finally
 		{
-			SaveTrouble.Asked();
-			SaveTrouble.Take();
-			SaveTrouble.NewVisit();
+			DrainTrouble();
 		}
 	}
 
@@ -427,9 +437,7 @@ public class ProfilePreservationTests
 		}
 		finally
 		{
-			SaveTrouble.Asked();
-			SaveTrouble.Take();
-			SaveTrouble.NewVisit();
+			DrainTrouble();
 		}
 	}
 

@@ -3,7 +3,7 @@ Enters the stock jungle park on a private game folder (OUT + "-game", made from 
 gms.dat are made odd first: KIND is one of `newer` (version dword +1), `zero` (version 0), `tail` (two bytes more), `short` (cut to
 12 bytes), or `whole` (left as they are, the control). The Options screen's tick writes Config.tcf; `savepark` writes gms.dat
 (Player.Save); each is done twice. Prints each file's md5 at the start, after each write, and each backup's, with the
-`Saves:` log lines. Shots `oddsaves-options1`, `2` and `oddsaves-after-tick1`, `2`. OFFSCREEN on :79 (lane B), or the desktop with `desktop` as an
+`Saves:` log lines, and (Q998) the message box each backup brings: after each write the `windows` census is read, a box is photographed (`oddsaves-box-tick1`, `oddsaves-box-save1`, ...) and closed by its cross, and every `Message box:` line is printed at the end. Shots `oddsaves-options1`, `2` and `oddsaves-after-tick1`, `2`. OFFSCREEN on :79 (lane B), or the desktop with `desktop` as an
 option. Run with review-codex/venv/bin/python -u; parkrun.py's names are in scope, so take none of them (README.md, "Writing a run")."""
 import os, sys, hashlib, glob
 LIB = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, LIB)
@@ -34,6 +34,13 @@ SEED = {"Config.tcf": md5(_tcf), "gms.dat": md5(_gms)}
 exec(open(os.path.join(paths.LIB, "parkrun.py")).read())
 def click(cid, what):
     x_, y_, w_, h_ = place(cid); move(x_ + w_ / 2, y_ + h_ / 2, what); button(1, what); time.sleep(1.2)
+def box_up(): return any("MessageBox" in l_ for l_ in reply("windows", 0.8, 0))
+def box_after(stage):
+    """Q998: a backup is told in a message box; photograph it as `oddsaves-box-<stage>` and close it by its cross (control 9873c8)."""
+    time.sleep(1.0)
+    if not box_up(): print(f"  [{stage}] no message box"); return
+    shot(f"oddsaves-box-{stage}", 0.5); print(f"  [{stage}] a message box is up")
+    x_, y_, w_, h_ = place("9873c8"); move(x_ + w_ / 2, y_ + h_ / 2, "the box's cross"); button(1, "cross"); time.sleep(0.8)
 def report(stage):
     print(f"  [{stage}] Config.tcf {md5(_tcf)}  backups {backups(_tcf)}; gms.dat {md5(_gms)}  backups {backups(_gms)}")
     for _p in backups(_tcf):
@@ -47,8 +54,8 @@ try:
         key("Escape", "the park menu"); time.sleep(0.8)
         click("5", "the menu's Options row"); shot(f"oddsaves-options{n}", 0.5)
         click("ffffffff", "the Options tick"); time.sleep(0.8); shot(f"oddsaves-after-tick{n}", 0.5)
-        report(f"after Options tick {n}")
-        save(); report(f"after savepark {n}")
+        report(f"after Options tick {n}"); box_after(f"tick{n}")
+        save(); report(f"after savepark {n}"); box_after(f"save{n}")
 finally:
     for _l in logtext().splitlines():
         if re.search(r"Saves: |Save trouble|Message box|NOT SAVED", _l): print("LOG>", _l.rstrip())

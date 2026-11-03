@@ -41,7 +41,10 @@ public class SaveTroubleTests
 	private static void Drain()
 	{
 		SaveTrouble.Asked();
-		SaveTrouble.Take();
+
+		while ( SaveTrouble.Pending )
+			SaveTrouble.Take();
+
 		SaveTrouble.NewVisit();
 	}
 
@@ -223,5 +226,92 @@ public class SaveTroubleTests
 
 		Assert.IsFalse( SaveFolder.CanWrite() );
 		Assert.AreEqual( Question + "\nThe save folder cannot be written, so nothing is saved.", SaveTrouble.QuitQuestion( Question ) );
+	}
+
+	private static string Profile( string root ) => Path.Combine( root, "save", "users", "1Test", "gms.dat" );
+
+	/// <summary>A gms.dat this game did not read whole is copied aside and told in a box with no path (Q998).</summary>
+	/// <remarks><b>Mutation:</b> <c>BackUp</c> without <c>SaveTrouble.BackedUp</c>: nothing is pending.</remarks>
+	[TestMethod]
+	public void APlayerFileCopiedAsideIsToldInPlainWords()
+	{
+		Directory.CreateDirectory( Path.GetDirectoryName( Profile( root ) )! );
+		File.WriteAllBytes( Profile( root ), [1, 2, 3] );
+
+		Assert.IsTrue( SaveFolder.SavePlayer( 0, "Test", new PlayerFile() ) );
+		Assert.IsTrue( File.Exists( Profile( root ) + ".opentpw-backup" ) );
+		Assert.IsTrue( SaveTrouble.Pending );
+		Assert.IsFalse( SaveTrouble.LostAWrite, "nothing was lost: the write went through" );
+
+		var text = SaveTrouble.Take( out var name );
+
+		Assert.AreEqual( "PROGRESS FILE BACKED UP\n\nThe game didn't read all of your old progress, so it kept a copy before saving new progress.", text );
+		Assert.IsNull( name, "not a start notice: nothing to count in opentpw.cfg" );
+		Assert.IsFalse( text!.Contains( root ) || text.Contains( "opentpw-backup" ) || text.Contains( '/' ) || text.Contains( '\\' ), "no folder or file path in the box" );
+		Assert.IsFalse( SaveTrouble.Pending );
+		Assert.IsNull( SaveTrouble.Take() );
+	}
+
+	/// <remarks><b>Mutation:</b> <c>SavePlayer</c> telling every write: the whole file is told too.</remarks>
+	[TestMethod]
+	public void AFileThatReadWholeIsWrittenOverInSilence()
+	{
+		Assert.IsTrue( SaveFolder.SavePlayer( 0, "Test", new PlayerFile() ), "a new player" );
+		var file = SaveFolder.LoadPlayer( 0, "Test" )!;
+		Drain();
+
+		Assert.IsTrue( SaveFolder.SavePlayer( 0, "Test", file ) );
+		Assert.IsFalse( File.Exists( Profile( root ) + ".opentpw-backup" ) );
+		Assert.IsFalse( SaveTrouble.Pending );
+	}
+
+	[TestMethod]
+	public void AConfigCopiedAsideIsToldAsOptionsAndOnceForBothFiles()
+	{
+		File.WriteAllBytes( Path.Combine( root, "save", "Config.tcf" ), [1, 2, 3] );
+		var display = Path.Combine( root, "save", "opentpw.cfg" );
+		File.WriteAllText( display, "display windowed\n" );
+
+		// A read that fails (the file held open) leaves the defaults in memory, so its lines are copied aside at the next write.
+		using ( new FileStream( display, FileMode.Open, FileAccess.ReadWrite, FileShare.None ) )
+			SaveFolder.LoadDisplay();
+
+		SaveFolder.SaveConfig();
+		SaveFolder.SaveDisplay( tell: false );
+
+		Assert.IsTrue( File.Exists( Path.Combine( root, "save", "Config.tcf.opentpw-backup" ) ) );
+		Assert.IsTrue( File.Exists( Path.Combine( root, "save", "opentpw.cfg.opentpw-backup" ) ) );
+		Assert.AreEqual( "OPTIONS FILE BACKED UP\n\nThe game didn't read all of your old options, so it kept a copy before saving new ones.", SaveTrouble.Take() );
+		Assert.IsNull( SaveTrouble.Take(), "two files, one kind: one box" );
+	}
+
+	/// <summary>The start's notice comes first, then each backup, then a failure; each is one box.</summary>
+	[TestMethod]
+	public void ABackupIsToldAfterTheNoticeAndAheadOfAFailure()
+	{
+		BlockTheThemeFolder();
+		SaveFolder.WritePark( 0, "Test", "jungle", "jungle", [1] );
+		SaveTrouble.BackedUp( "PLAYER" );
+		SaveTrouble.BackedUp( "OPTIONS" );
+		SaveTrouble.Tell( "SOMETHING\n\nA sentence." );
+
+		Assert.AreEqual( "SOMETHING\n\nA sentence.", SaveTrouble.Take() );
+		StringAssert.StartsWith( SaveTrouble.Take(), "PROGRESS FILE BACKED UP" );
+		StringAssert.StartsWith( SaveTrouble.Take(), "OPTIONS FILE BACKED UP" );
+		StringAssert.StartsWith( SaveTrouble.Take(), "PARK NOT SAVED" );
+		Assert.IsFalse( SaveTrouble.Pending );
+	}
+
+	/// <summary>A write that fails after a good copy is tried again without a second copy and so without a second box.</summary>
+	[TestMethod]
+	public void ARetriedWriteOfACopiedFileIsNotToldTwice()
+	{
+		Directory.CreateDirectory( Path.GetDirectoryName( Profile( root ) )! );
+		File.WriteAllBytes( Profile( root ), [1, 2, 3] );
+		File.WriteAllBytes( Profile( root ) + ".opentpw-backup", [1, 2, 3] );
+
+		Assert.IsTrue( SaveFolder.SavePlayer( 0, "Test", new PlayerFile(), expectMissing: true ) );
+		Assert.IsFalse( File.Exists( Profile( root ) + ".opentpw-backup2" ) );
+		Assert.IsFalse( SaveTrouble.Pending, "the copy was made and told by the earlier try" );
 	}
 }

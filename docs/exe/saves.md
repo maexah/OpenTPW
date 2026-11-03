@@ -4194,6 +4194,11 @@ load failed (`SaveFolder._unreadConfig`). A write that follows reads the file ba
 one odd file is copied once, however many saves follow, and a copy is not made again while the newest backup holds the same bytes (a write that fails after a good copy). A copy that cannot be made (the file will not open, or the folder cannot
 be written) throws before anything is written over it, and `SaveTrouble` tells the player as it does any save that failed.
 
+The copy is told on screen (Q998, Alexah's, 2026-11-02): a message box, in capitals and one short sentence, with no folder or file path
+(the log's `was not read whole by this game, so it is copied to ...` line names the copy), `OPTIONS FILE BACKED UP` for Config.tcf and
+opentpw.cfg and `PROGRESS FILE BACKED UP` for gms.dat (`SaveTrouble.BackedUp`). The original has no such box. A copy made as the window
+closes is told in the log only (Q903).
+
 A folder with no gms.dat at all is a player nobody has saved yet (`SaveFolder.ScanPlayers`): there is nothing to copy, and the first
 save makes the file, as the original's writer does.
 

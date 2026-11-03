@@ -11951,6 +11951,12 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   (`SoundBank.Load` decodes the banks below 16 MB whole, for a park's `ParkAudio` and `ParkAudioScripts` categories, every time). Built: `SoundBank.Load( root, bank, keep )` keeps a bank that decodes whole when a park's category asks (`SoundCategory`'s `keep`), and the lobby's
   constructor lets them all go (`SoundBank.ForgetKept`, which logs the count); the 189 MB music and 17 MB kids banks decode on demand and are not kept. Timed as Q921 on the desk, before and after (`q924/before1`, `after1`, `after2`, `lib/loadtime_clicks.sh`): Load Park from the release 2.16, 1.88, 1.91 s then
   1.01, 0.80, 0.82 s; Restart Park 1.89, 1.95 s then 0.83, 0.72 s; `audio` 1.08 to 1.11 s then 0.055 to 0.068 s; the game's memory the same within 0.01 GB (`memrun.py`). `SoundBankKeptTests` (six tests; 11 bugs put back, all fail). Left: Q925. Not compared: the original's own sound load (it reads the file in place).
+- [x] **Q923. The `NOT SAVED` box still holds a path (`Log: <path>`).** `SaveTrouble.Take` ends `PARK NOT SAVED` / `The save folder cannot be written.` with `Log: <console.log's path>`, which wraps mid-word (`Wrap` has no separator rule; Q908's review, finding 2) and which Alexah's standing rule of 2026-11-02 for boxes ("short and plain, no paths") does not meet. Decide with Alexah: drop the line (the log's place is in the readme and the weekly's notes) or keep it. `SaveTroubleTests` pins the line.
+- [x] **Q998. No on-screen word that a copy was made.** From the week-end audit 2026-10-31 (Q216's review, finding 7; STATUS says "Not built"
+  and no line carried it). Since Q216 a Config.tcf or gms.dat this game did not read whole is copied beside itself (`.opentpw-backup`) and then
+  written over, and only `console.log` says so. It matters most for a good gms.dat that would not open at the read: its whole bytes go to the
+  backup, a blank stand-in becomes the live file, and the player sees only lost progress. The overwrite itself is Alexah's decision and is
+  tested on purpose; **Alexah (2026-11-02):** say it on screen, in a message box in the game's style as `SaveTrouble`'s are, naming the backup that was kept.
 
 ## B. Docs and comments
 

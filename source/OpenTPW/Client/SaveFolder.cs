@@ -114,7 +114,7 @@ internal static class SaveFolder
 				path = existing;
 
 				if ( ReferenceEquals( _unreadConfig, SaveFileSystem ) || !IsWhole( path, stream => ConfigFile.Read( stream )?.ReadWhole == true ) )
-					BackUp( path );
+					BackUp( path, "OPTIONS" );
 			}
 
 			using var memory = new MemoryStream();
@@ -164,9 +164,11 @@ internal static class SaveFolder
 	/// <summary>
 	/// Copies a file beside itself, to a name neither game reads, before it is written over: <c>.opentpw-backup</c>,
 	/// then <c>.opentpw-backup2</c> and on, so an earlier copy is never replaced. The newest copy already holding
-	/// the file's bytes is enough. A copy that cannot be made throws, and the file is left as it is.
+	/// the file's bytes is enough. A copy that cannot be made throws, and the file is left as it is. A copy made is told to the
+	/// player (<see cref="SaveTrouble.BackedUp"/>, Q998), and the log has its path.
 	/// </summary>
-	private static void BackUp( string path )
+	/// <param name="what"><see cref="SaveTrouble.BackedUp"/>'s word for the file: OPTIONS or PLAYER.</param>
+	private static void BackUp( string path, string what )
 	{
 		var backup = path + BackupSuffix;
 		var newest = (string?)null;
@@ -185,6 +187,7 @@ internal static class SaveFolder
 
 		SaveFileSystem.WriteAllBytes( backup, bytes );
 		Log.Warning( $"Saves: {path} was not read whole by this game, so it is copied to {backup} before it is written" );
+		SaveTrouble.BackedUp( what );
 	}
 
 	/// <summary>
@@ -311,7 +314,7 @@ internal static class SaveFolder
 		{
 			// A file this game never read: its lines are copied aside before the defaults replace them (as Config.tcf's are).
 			if ( existing != null && ReferenceEquals( _unreadDisplay, SaveFileSystem ) )
-				BackUp( path );
+				BackUp( path, "OPTIONS" );
 
 			var text = new StringBuilder()
 				.AppendLine( "# OpenTPW's own settings. The original's Config.tcf beside this one holds the" )
@@ -479,7 +482,7 @@ internal static class SaveFolder
 				path = existing;
 
 				if ( expectMissing || !file.ReadWhole || !IsWhole( path, stream => PlayerFile.Read( stream ).ReadWhole ) )
-					BackUp( path );
+					BackUp( path, "PLAYER" );
 			}
 
 			file.Options = GameOptions.Current.ToPlayerOptions();

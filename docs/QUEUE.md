@@ -109,7 +109,9 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
 - [ ] **Q903. A save lost as the window closes is told in the log only.** The window's own close with a park up writes
   the autosave and the player, then the process ends: no scene is left to open a box (Quit Game's question says
   beforehand, Q982). Counted, not built: a close that asked first would be a deviation the original does not have;
-  the log's `Leaving the park: autosave is not written` is all there is. Look at it only if a player meets it.
+  the log's `Leaving the park: autosave is not written` is all there is. Look at it only if a player meets it. The same for a
+  backup made as the window closes (Q998): the first write of a file this game did not read whole, if it is the closing one, is
+  told in the log (`was not read whole by this game, so it is copied to ...`) and in no box.
 - [ ] **Q904. Two cards of one maker cannot be told apart on Windows.** The loader's driver filter works per manifest file and
   `MESA_VK_DEVICE_SELECT` is a Mesa layer's, so an AMD built-in GPU beside a Radeon, or an Intel one beside an Arc, share one
   manifest and `GpuChoice.Levers` cannot put the second first: the log warns and the first device is drawn on (README and
@@ -175,7 +177,6 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
 - [ ] **Q925. What a Load Park and a Restart Park still spend (from Q924).** After Q924 a load from inside a park is 0.7 s in the game's log and 0.7 to 1.0 s in the film (0.14 to 0.17 s in the original, no loading screen). The third Load's phases (`q924/after2/run.log`): `ground` 0.21 s,
   `objects` 0.17, `terrain` 0.14, `guest sprites` 0.05, `queues` 0.03, `audio` 0.07 (the 189 MB music bank and the 17 MB kids bank are read again, because they decode on demand and were not kept), the rest 0.02 or under each; the film adds about 0.1 s to the log's total. Where each could
   be kept across a load (`ground`'s textures and meshes, `terrain`, `objects`' models, the guest sprites) or done off the loading screen, and what keeping costs in memory (the park's 0.70 GB resident), are not looked at; the first load of a launch is 0.2 s slower. Do it only if Alexah wants the load shorter than 0.8 s; Q247's choice on building in place now sets a rebuild of 0.7 to 0.8 s against 0.14 to 0.17 s.
-- [x] **Q923. The `NOT SAVED` box still holds a path (`Log: <path>`).** `SaveTrouble.Take` ends `PARK NOT SAVED` / `The save folder cannot be written.` with `Log: <console.log's path>`, which wraps mid-word (`Wrap` has no separator rule; Q908's review, finding 2) and which Alexah's standing rule of 2026-11-02 for boxes ("short and plain, no paths") does not meet. Decide with Alexah: drop the line (the log's place is in the readme and the weekly's notes) or keep it. `SaveTroubleTests` pins the line.
 - [ ] **Q917. The Crazy Ape's OnAMesh clips and its other heads, and a fitted turn for them (from Q916).** Q916 compared three of the Ape's heads (Head02, Head07, Head13) in
   its clip `l` (role 3), the OnAFace branch, and found no difference above about 0.05 (the census rounds to 0.1). Not compared: the OnAMesh branch (roles 4, 5, 6 and `m1` to
   `m6`), the ride proper's clips (never paused), and a face-anchored head on a non-morphing parent (`LobbyModel.cs:609`). The original named 13 records, ours held 11 heads;
@@ -2399,11 +2400,6 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   where the original's passes over the builder's object, whose life is not read. Another: a leftover `*.TPWS.tmp` is not taken for a park here
   (Q997's S-D2 fix), but the original's own `.TPW*` search would take it, the folder being shared, and nothing deletes it.
   Build or close each with a note.
-- [ ] **Q998. No on-screen word that a copy was made.** From the week-end audit 2026-10-31 (Q216's review, finding 7; STATUS says "Not built"
-  and no line carried it). Since Q216 a Config.tcf or gms.dat this game did not read whole is copied beside itself (`.opentpw-backup`) and then
-  written over, and only `console.log` says so. It matters most for a good gms.dat that would not open at the read: its whole bytes go to the
-  backup, a blank stand-in becomes the live file, and the player sees only lost progress. The overwrite itself is Alexah's decision and is
-  tested on purpose; **Alexah (2026-11-02):** say it on screen, in a message box in the game's style as `SaveTrouble`'s are, naming the backup that was kept.
 - [ ] **Q999. The Options tick over a lost opentpw.cfg alone: RESTART GAME is not asked.** From the week-end audit 2026-10-31 (the outside lead 2,
   `OptionsScreen.cs`, `Keep`; `SaveTrouble.LostAWrite`). The video card lives in Config.tcf (`GameOptions.cs:157`, `:175`), not opentpw.cfg. Where
   Config.tcf is written and opentpw.cfg is not (a per-file fault: on Windows a read-only or locked opentpw.cfg, or a scanner's hold on the `.tmp`),

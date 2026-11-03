@@ -2,7 +2,8 @@ namespace OpenTPW;
 
 /// <summary>
 /// A write to the save folder that failed because the folder cannot be written, kept until the scene tells the player; it
-/// also carries the start's notice about players in the folder not in use (<see cref="SaveHome"/>).
+/// also carries the start's notice about players in the folder not in use (<see cref="SaveHome"/>) and the word that a file
+/// was copied aside before it was written over (<see cref="BackedUp"/>).
 ///
 /// <para>
 /// <b>A deviation</b> (Q982, <c>AGENTS.md</c> rule 11). The original says nothing here: its save answers a failure
@@ -19,6 +20,10 @@ namespace OpenTPW;
 /// the exit. Quit Game cannot tell afterwards, as the window is gone: its question says so beforehand
 /// (<see cref="QuitQuestion"/>). The window's own close tells nobody; the log says.
 /// </para>
+/// <para>
+/// A backup is told as a message box too (Q998, Alexah's, 2026-11-02), in a player's words and with no path: the log names
+/// the copy. Each file that was copied is told once while the box waits, whoever asked for the write.
+/// </para>
 /// </summary>
 internal static class SaveTrouble
 {
@@ -27,9 +32,10 @@ internal static class SaveTrouble
 	private static bool _told;
 	private static string? _notice;
 	private static string? _noticeName;
+	private static readonly List<string> _backedUp = [];
 
 	/// <summary>Whether a failure or a notice waits to be told.</summary>
-	internal static bool Pending => _what != null || _notice != null;
+	internal static bool Pending => _what != null || _notice != null || _backedUp.Count > 0;
 
 	/// <summary>Whether a failed write waits to be told (not the start's notice): what was just written was lost.</summary>
 	internal static bool LostAWrite => _what != null;
@@ -44,6 +50,17 @@ internal static class SaveTrouble
 	{
 		_notice = text;
 		_noticeName = name;
+	}
+
+	/// <summary>
+	/// A file this game did not read whole was copied beside itself and is about to be written over (<see cref="SaveFolder"/>, Q216).
+	/// Told after the start's notice and ahead of a failure; a kind already waiting is not told twice.
+	/// </summary>
+	/// <param name="what">Which file: OPTIONS (Config.tcf and opentpw.cfg) or PLAYER (a player's gms.dat).</param>
+	internal static void BackedUp( string what )
+	{
+		if ( !_backedUp.Contains( what ) )
+			_backedUp.Add( what );
 	}
 
 	/// <summary>
@@ -90,6 +107,13 @@ internal static class SaveTrouble
 			return notice;
 		}
 
+		if ( _backedUp.Count > 0 )
+		{
+			var kept = _backedUp[0];
+			_backedUp.RemoveAt( 0 );
+			return BackedUpText( kept );
+		}
+
 		if ( _what is not { } what )
 			return null;
 
@@ -107,6 +131,12 @@ internal static class SaveTrouble
 
 		return $"{what} NOT SAVED\n\nThe save folder cannot be written.";
 	}
+
+	/// <summary>What the player is told of a copy kept: short, plain, no path (the log names it).</summary>
+	private static string BackedUpText( string what )
+		=> what == "PLAYER"
+			? "PROGRESS FILE BACKED UP\n\nThe game didn't read all of your old progress, so it kept a copy before saving new progress."
+			: "OPTIONS FILE BACKED UP\n\nThe game didn't read all of your old options, so it kept a copy before saving new ones.";
 
 	/// <summary>Quit Game's question, with a line more where nothing can be saved.</summary>
 	internal static string QuitQuestion( string question )

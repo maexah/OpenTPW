@@ -270,7 +270,10 @@ public class SaveHomeTests
 	private static void DrainTrouble()
 	{
 		SaveTrouble.Asked();
-		SaveTrouble.Take();
+
+		while ( SaveTrouble.Pending )
+			SaveTrouble.Take();
+
 		SaveTrouble.NewVisit();
 	}
 
