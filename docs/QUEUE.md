@@ -221,9 +221,9 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
 - [ ] **Q802. What Q800 left for a person or a machine it did not have.** From Q800 (run 13, lane A). Done by the
   coordinator (2026-10-29): `opentpw.maintainer` set in `~/repos/OpenTPW-laneB`, and the Saturday audit runs
   `python3 tools/check_docs_paths.py`. The Linux quick start is marked "tested on the maintainer's Linux machine only"
-  and the Windows and macOS launch steps "not tested" (Alexah, 2026-10-28: no container). Left: (1) the four issues in
-  `docs/GOOD-FIRST-ISSUES.md` (Q159, Q160, Q284, Q288) are drafts: creating them on GitHub is a push-like act and
-  Alexah's; put each issue's number in its draft and in the queue item's `Claimed:` line when somebody takes it.
+  and the Windows and macOS launch steps "not tested" (Alexah, 2026-10-28: no container). Left: (1) the first four good-first items
+  (Q159, Q160, Q284, Q288) were all done by 2026-11-02, so their drafts file was deleted at Alexah's word (2026-11-03);
+  new ones are tagged "Good first" in their queue items when chosen, and making them GitHub issues is Alexah's.
   (2) "A place to ask questions" is issues titled "Question: ..." for now; GitHub Discussions are Alexah's to switch
   on. (3) A test for `tools/check_docs_paths.py` (it is run by hand and by the audit; nothing tests it).
 
