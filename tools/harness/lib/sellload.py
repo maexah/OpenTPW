@@ -5,7 +5,7 @@ Copies <park file> into the private jungle folder, Loads it (the Load list's row
 `savepark`, Loads the saved file (the list's row 2, the newer name), reads it a third time. Each read is `scripts` (the count, the lines
 of <thing> and of every thing-0 script, a SPAWNSOUND child's), the first ride line of `bumpers`, the Engine voices of `voices`, the log's
 Car sounds lines and the `unimplemented` lines of the save and load gaps; a frame follows each (`camera` is the console's, default
-"435 250 60 180", a Hot Pot's site). The saved file is copied to <outdir>/sellload-saved.TPWS for a script-record reader (`q241i/rsse.py`). Run it with the
+"435 250 60 180", a Hot Pot's site). The saved file is copied to <outdir>/sellload-saved.TPWS for a script-record reader (`lib/scriptrecords.py`). Run it with the
 venv's python (docs/TOOLING.md); `<bin>` is the build's folder. Prints "READ <tag> ..." lines; confirm.txt and run.log are in <outdir>."""
 import os, sys, shutil, re as _re
 OUT = sys.argv[1]; BIN = sys.argv[2]; SRC = os.path.expanduser(sys.argv[3]); THING = int(sys.argv[4]); NAME = "sellh"

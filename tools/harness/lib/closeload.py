@@ -3,11 +3,12 @@
 
 Copies <park file> (a file that holds an OPEN ride with its companion child: a ride bought in a park, saved by this game) into the private jungle folder as a Full
 Simulation player's, Loads it (the load starts the companion from the file), writes the ride script's `VAR_RIDECLOSED` to 1 (what the ride window's door writes through
-`ParkRideOperation.Close`; a bought ride's door cannot open it until its queue is joined, so a scene writes the variable), runs until no script has a parent but 0, `savepark`s,
-and Loads the saved file. Each read is `scripts` (the count and every line of <thing>), the gaps of the save and load; a frame follows the first load and the last (`camera` is
+`ParkRideOperation.Close`; a bought ride's door cannot open it until its queue is joined, so a scene writes the variable), runs until <thing>'s line shows no parent but 0 (a wait that times out at 90 s prints "VOID" and stops: nothing is saved, the exit status is 3),
+`savepark`s, and Loads the saved file. Each read is `scripts` (the count and every line of <thing>), the gaps of the save and load; a frame follows the first load and the last (`camera` is
 the console's, default "220 640 60 0", the site of `buy <id> 20 60`), and the saved file is copied to <outdir>/<label>-saved1.TPWS for `scriptrecords.py`. The same file given to a
 binary that has the bug and one that has not shows it: the Q910 tip loads the closed ride's child again (`SAVE_PARK_SCRIPT_ENDED`, smoke on the closed Volcano), the fixed one does not.
-Run it with the venv's python (docs/TOOLING.md); `<bin>` is the build's folder. Prints "R <tag> ..." lines; confirm.txt and run.log are in <outdir>."""
+Run it with the venv's python (docs/TOOLING.md); `<bin>` is the build's folder. Prints "R <tag> ..." lines, and after each load the "companions started" lines that load itself logged, "none" if it logged none (the count is of the lines past that
+load's mark, so the first load's line is never read as the second's); confirm.txt and run.log are in <outdir>."""
 import os, sys, shutil, re as _re
 OUT = sys.argv[1]; BIN = sys.argv[2]; LABEL = sys.argv[3]; SRC = os.path.expanduser(sys.argv[4]); THING = int(sys.argv[5]); NAME = "closeload"
 CAMERA = sys.argv[6] if len(sys.argv) > 6 else "220 640 60 0"
@@ -32,7 +33,7 @@ def wait_until(cond, secs, tag):
         if cond(sc, mine): return sc, mine
         time.sleep(2.5)
     return None, None
-def companions(): return _re.findall(r"[^\n]*companions started[^\n]*", logtext())[-1:]
+def companions(mark): return _re.findall(r"[^\n]*companions started[^\n]*", logtext()[mark:]) or ["none"]
 def view(tag):
     reply(f"camera {CAMERA}", 0.6, 0); reply("resume", 0.3, 0); time.sleep(5); reply("pause", 0.3, 0)
     key("F2", "hide HUD"); away(); shot(f"{LABEL}-{tag}", 0.5); key("F2", "show HUD")
@@ -41,17 +42,19 @@ try:
     fs_on()
     enter(); reply("pause", 0.3, 0)
     shutil.copy(SRC, WROTE); os.chmod(WROTE, 0o644); os.utime(WROTE, None)
-    print("load 1:", load(1)); print("LOG", companions())
+    got1 = load(1); print("load 1:", got1); print("LOG companions started by load 1:", companions(got1[2]))
     reads("1-loaded"); view("1-loaded")
     reply("resume", 0.3, 0)
     print("poke close", reply(f"scriptvar {THING} VAR_RIDECLOSED 1", 0.5, 3))
     got = wait_until(lambda sc, m: any(re.search(rf"thing {THING} ", l) for l in m) and not any(re.search(r"parent [1-9]", l) for l in m), 90, "2-closed")
+    if got[1] is None:
+        print("VOID: no line of thing", THING, "showed the ride closed (no parent) in 90 s; nothing saved or loaded"); reply("pause", 0.3, 0); sys.exit(3)
     print("CLOSED seen:", got[1]); reply("pause", 0.3, 0)
     reads("2-closed"); key("F2", "hide HUD"); away(); shot(f"{LABEL}-2-closed", 0.5); key("F2", "show HUD")
     saved, said = save(); print("SAVED1", said[-1:])
     print("gaps after save 1:", gaps(r"SAVE_PARK|LOADED_|TRACK_CAP"))
     shutil.copy(WROTE, os.path.join(OUT, f"{LABEL}-saved1.TPWS"))
-    print("load 2:", load(1)); print("LOG", companions())
+    got2 = load(1); print("load 2:", got2); print("LOG companions started by load 2:", companions(got2[2]))
     reads("3-reloaded"); view("3-reloaded")
     print("gaps end:", gaps(r"SAVE_PARK|LOADED_|TRACK_CAP"))
 finally:

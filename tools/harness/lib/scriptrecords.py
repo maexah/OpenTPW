@@ -2,8 +2,9 @@
 """scriptrecords.py <park file>...: the script module (RSSE) of a park file, one line a record (Q926).
 
     scriptrecords.py <file>...      prints `h HANDLE thing T pc PC child C parent P sound S dir D` for each script record, a count first:
-                                    the same fields as the console's `scripts` and original/origscripts.py (the link words are +0x0c child,
-                                    +0x10 parent, +0x14 sound child, ParkScriptStates)
+                                    the fields of the console's `scripts` and original/origscripts.py (which prints
+                                    `h pc thing child parent sound`: pc before thing, and no dir) in the order handle, thing, pc (the link
+                                    words are +0x0c child, +0x10 parent, +0x14 sound child, ParkScriptStates)
     records(path)                   the same, as a list of dicts (handle, thing, pc, child, parent, sound, dir)
 
 Read a file a game wrote beside the one it was loaded from to see which records a sale, a purchase or a close left in it."""
