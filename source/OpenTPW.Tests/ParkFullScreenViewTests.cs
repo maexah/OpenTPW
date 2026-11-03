@@ -451,6 +451,41 @@ public class ParkFullScreenViewTests
 	}
 
 	/// <summary>
+	/// <b>A wheel notch over the park zooms it by 10, held to 70..130</b> (<c>ParkOrbitCameraMode.Update</c>; the original's
+	/// <c>FUN_0042a760</c> steps 10, measured 110, 120, 130, 130, then five up 80, 70, 70, Q937), and a notch a modal window takes
+	/// zooms nothing.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the step back to 5 in <c>Update</c> or in <c>ZoomAfterWheel</c>; the wheel's sign turned; the
+	/// <c>WheelTaken</c> gate taken out of the camera.</remarks>
+	[TestMethod]
+	public void AWheelNotchOverTheParkZoomsItByTen()
+	{
+		var stack = APark();
+		_ = AParkLevel( stack );
+		try
+		{
+			WheelFrame( stack, -1f );
+			Assert.AreEqual( 120f, ParkOrbitCameraMode.Zoom, "a notch toward the player, 110 to 120" );
+			WheelFrame( stack, -1f );
+			WheelFrame( stack, -1f );
+			Assert.AreEqual( 130f, ParkOrbitCameraMode.Zoom, "held at 130" );
+			for ( var i = 0; i < 5; i++ )
+				WheelFrame( stack, 1f );
+
+			Assert.AreEqual( 80f, ParkOrbitCameraMode.Zoom, "five notches away from the player" );
+
+			stack.Open( new AWindow( stack, modal: true, parkScreen: false ) );
+			WheelFrame( stack, -1f );
+			Assert.AreEqual( 80f, ParkOrbitCameraMode.Zoom, "a modal window up takes the notch" );
+		}
+		finally
+		{
+			ParkOrbitCameraMode.Forget();
+			UI.ParkCategoryScreens.Seed();
+		}
+	}
+
+	/// <summary>
 	/// <b>No camera key pans or zooms under a message box, the Save or Load screen, the game menu or the options
 	/// screen</b>: the first three switch the camera's table off (<c>FUN_00486b70</c>, <c>0x0047f241</c>,
 	/// <c>0x0049f406</c>), the last two take every key themselves (<c>0x0048b6a0</c>; measured in the original,
@@ -778,6 +813,14 @@ public class ParkFullScreenViewTests
 		Camera.Update();
 	}
 
+	/// <summary>One frame with the wheel turned by <paramref name="notches"/> over the grass, then the camera: what a notch does to the park's zoom.</summary>
+	private static void WheelFrame( UI.WindowStack stack, float notches )
+	{
+		Input.UpdateFrom( new Snapshot( [], Grass, wheel: notches ) );
+		stack.Update();
+		Camera.Update();
+	}
+
 	/// <summary>Puts first person up or down, as entering and leaving it do, without a camera to move.</summary>
 	private static void InFirstPerson( bool active )
 		=> typeof( ParkCamcorderCameraMode ).GetProperty( nameof( ParkCamcorderCameraMode.Active ) )!.SetValue( null, active );
@@ -802,13 +845,13 @@ public class ParkFullScreenViewTests
 	}
 
 	/// <summary>SDL's events for one frame: the keys, where the pointer is and which buttons are down.</summary>
-	private sealed class Snapshot( KeyEvent[] keys, Vector2 at, bool left = false, bool right = false ) : InputSnapshot
+	private sealed class Snapshot( KeyEvent[] keys, Vector2 at, bool left = false, bool right = false, float wheel = 0f ) : InputSnapshot
 	{
 		public IReadOnlyList<KeyEvent> KeyEvents => keys;
 		public IReadOnlyList<MouseEvent> MouseEvents => [];
 		public IReadOnlyList<char> KeyCharPresses => [];
 		public System.Numerics.Vector2 MousePosition => new( at.X, at.Y );
-		public float WheelDelta => 0f;
+		public float WheelDelta => wheel;
 		public bool IsMouseDown( MouseButton button ) => button == MouseButton.Left ? left : button == MouseButton.Right && right;
 	}
 }

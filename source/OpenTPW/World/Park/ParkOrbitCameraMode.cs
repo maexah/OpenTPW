@@ -147,6 +147,20 @@ public sealed class ParkOrbitCameraMode : CameraMode
 	internal const float ZoomKeyRate = 50f;
 
 	/// <summary>
+	/// What one wheel notch moves the zoom by: 10 (the floats <c>0x006fdd5c</c> and <c>0x006fdd7c</c>, -10.0 and +10.0, that
+	/// <c>FUN_0042a760</c> takes from the zoom at <c>0x0042a927</c> and <c>0x0042a938</c>, <c>docs/exe/hud.md</c>, "The wheel over a
+	/// modal screen"). A notch toward the player zooms out, away from the player in.
+	/// </summary>
+	internal const float WheelZoomStep = 10f;
+
+	/// <summary>
+	/// The zoom after the wheel's notches this frame (positive away from the player, in), held to 70..130 as the original's
+	/// update holds it (<c>0x0042c621</c>). The original steps by the sign of each message and a frame can carry one or
+	/// several, so a whole notch here is the same; a fraction (a touchpad's) is ours and moves it by that fraction of 10.
+	/// </summary>
+	internal static float ZoomAfterWheel( float zoom, float notches ) => (zoom - (notches * WheelZoomStep)).Clamp( MinZoom, MaxZoom );
+
+	/// <summary>
 	/// How fast the pan's term catches up with a held key: half the gap every 31 ms. The original halves it every frame
 	/// (<c>0x006fddfc</c>), so its rise is quicker at a higher frame rate; this one is the same at every rate, its frame
 	/// taken as the park's 31 ms tick.
@@ -263,9 +277,8 @@ public sealed class ParkOrbitCameraMode : CameraMode
 		//
 		// Handled here rather than centrally for the reason the camcorder key above gives: a camera
 		// mode is what knows when it should give way.
-		// Ours: 5 a notch; the original's FUN_0042a760 steps 10 (0x006fdd5c, 0x006fdd7c), Q937.
 		if ( Input.Mouse.Wheel != 0 && !UI.WindowStack.WheelTaken )
-			Zoom = (Zoom - (Input.Mouse.Wheel * 5f)).Clamp( MinZoom, MaxZoom );
+			Zoom = ZoomAfterWheel( Zoom, Input.Mouse.Wheel );
 
 		// The keys a box being typed into holds are the box's.
 		var down = keys && !Input.TextCaptured ? Input.Keyboard.KeysDown : [];

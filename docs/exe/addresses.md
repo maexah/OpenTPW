@@ -73,6 +73,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0042a190` | | OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
 | `0x0042a8bd` | FUN_0042a760, a right press: bit 4 of the camera's button word DAT_00790aac set | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x0042a8fb` | FUN_0042a760, a right release: bit 4 of DAT_00790aac cleared | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
+| `0x0042a927` | FUN_0042a760, a wheel notch below nought: the zoom `[0x007909ec]` less `[0x006fdd5c]` (-10.0) | OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
+| `0x0042a938` | FUN_0042a760, any other notch: the zoom less `[0x006fdd7c]` (+10.0) | OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
 | `0x0042af85` | | OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x0042afba` | | OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x0042b925` | First-person camera update: the right button's walk tests the button bit (EDI) and the walking flags (EDX), never RMB cancel | OpenTPW.Tests/ParkFirstPersonRightButtonWalkTests.cs  |
@@ -88,6 +90,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0042c290` | `FUN_0042b1c0`: the Y-axis call of `FUN_004d8750`, pushing a literal 2 | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x0042c460` | The sweep: the whole step, with either axis put back if its cell changed | OpenTPW.Tests/ParkCamcorderWalkTests.cs OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x0042c587` | The camcorder sweep, after every pass: FUN_0042a340 at the pass's cell; a ride found runs Ride it! from first person and ends the sweep | OpenTPW.Tests/ParkCamcorderWalkTests.cs OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
+| `0x0042c621` | The park camera's update holds the zoom to 70..130 | OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
 | `0x0042d130` | | OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
 | `0x004380e7` | SAOC loader: node +0x3c bit 0, the circuit closed, from the saved header's flag bit 0 | OpenTPW.Files/Formats/Save/ParkCoasters.cs OpenTPW/World/Park/ParkRideChoice.cs  |
 | `0x004382b3` | SAOC loader: node +0x3c bit 1, a gap open, from the saved header's flag bit 1 | OpenTPW.Files/Formats/Save/ParkCoasters.cs  |
@@ -1282,6 +1285,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x006c581b` | The one call site of QMixer's SetDistanceMapping, gated on request bit `0x200` of `params + 0x14`, which `FUN_006bc410` sets with the mapping 2.0, the voice's range and 0.8 | OpenTPW/Audio/Audio.cs OpenTPW/Audio/AudioListener.cs  |
 | `0x006c9270` | | OpenTPW/Audio/AudioClip.cs  |
 | `0x006e71b4` | | OpenTPW.Tests/PeepHeadingTests.cs OpenTPW/World/Park/PeepHeading.cs  |
+| `0x006fdd5c` | The wheel's step for a negative notch, -10.0 (FUN_0042a760 `0x0042a927`) | OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
+| `0x006fdd7c` | The wheel's step for a notch of nought or more, +10.0 (FUN_0042a760 `0x0042a938`) | OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
 | `0x006fe2bc` | | OpenTPW/World/Park/ParkBumperBoats.cs  |
 | `0x006fe2c4` | | OpenTPW/World/Park/ParkBumperBoats.cs  |
 | `0x006fe408` | | OpenTPW.Files/Formats/Map/ItemHeightMapFile.cs  |
