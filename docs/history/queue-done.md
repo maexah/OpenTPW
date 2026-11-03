@@ -11935,6 +11935,11 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   attract pass copies the nearest island's `+0x64..+0x6c` to the render camera's `+0x50..+0x58` every frame (`docs/exe/lobby.md`, "Attract"),
   so the sky and fog colour change in one frame when the nearest island changes; `LobbyWeather` fades it over `SkyRate` (about 1 s, a deviation
   unmarked at Alexah's word). Alexah's 2026-10-31 decision named the sound and the camera, not this. **Alexah (2026-11-02):** keep our fade.
+- [x] **Q921. Q247's timing: a Load Park and a Restart Park timed in both games the same way (a piece of Q247).** Run 18, lane A; no build. Method and numbers: `saves.md`,
+  "Load Park timed in both games" (the display filmed with wall-clock stamps, the click stamped, the shipped `Easymode.TPWI` and `restart.INTS`, byte-identical in both). Ours (Release `46e39395`):
+  Load Park 2.33, 2.03, 2.04 s off-screen and 2.15, 1.93, 1.91 s on the desk's GPU, Restart Park 2.02, 2.02 and 1.82, 1.89 s, a loading screen between; the original: 0.141, 0.174, 0.167 s and
+  0.097, 0.141 s, no third picture, its clock falling to the file's tick 0.07 to 0.13 s after the click. Tools: `lib/loadtime.py`, `lib/filmsheet.py`, `lib/loadtime_ours.py`, `original/loadtime.sh`,
+  `original/tickwall.py` (`TOOLING.md`). Not done: a played park's bigger file, and what B touches (Q247).
 
 ## B. Docs and comments
 
