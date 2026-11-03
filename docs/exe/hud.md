@@ -976,7 +976,7 @@ player put it.** Three paths change it:
 
 Three edges a copy must match, found by the skeptic:
 
-- **With count ≤ visible rows the slider is disabled and never repositioned** (`0x006644d2`), so a view scrolled one
+- **With count ≤ visible rows the slider is hidden and never repositioned** (`0x006644d2`), so a view scrolled one
   row down that loses a guest down to thirteen stays one row down, row 0 unseen and the last slot blank, until the
   wheel clamps it (`0x1000d`).
 - **Removing the selected row selects by visible slot, not by index**: `FUN_006647cb` passes the absolute index (the
@@ -2580,7 +2580,7 @@ down (`Slider_SetPosition` `0x0066b088`; the field is a bit test, `& 2`). Its tw
   (`UI_SetVisible( 0 )`) and ranges it ( 0, 0 ), leaving the value (`0x006644d2`).
 - **The thumb** stands `(+0x138 - value) x travel / (+0x138 - +0x13c)` below the track's head, the travel the track's height less the thumb's: row 0 at the
   head, `count - visible` at the foot. `Slider_ReadThumb` (`0x0066af19`) reads it back in whole numbers (a quotient truncated towards nought):
-  `value = (the track's foot - the thumb's foot) x (+0x138 - +0x13c) / travel + +0x13c`, so a thumb dragged to a place whose row is not whole is the row above.
+  `value = (the track's foot - the thumb's foot) x (+0x138 - +0x13c) / travel + +0x13c`, so a thumb dragged to a place whose row is not whole reads the next row down the list (an exact top row of 2.36 reads 3: the quotient is cut towards nought on the distance from the foot).
   The thumb is not moved while it is held: `0x800` goes to the list and the thumb stays where the pointer holds it until it is let go.
 - **Arrows, track and wheel** (`Slider_Callback` `0x0066ba22`): an arrow is a button with the ids 1 (up, `op 6`) and 2 (down, `op 7`); its `0x100`, and each of its repeats
   `0x10009` and `0x10008`, calls `SetPosition( 1 )` for the up arrow (value plus the step, which is -1: one row up) and `SetPosition( 0 )` for the down arrow. A click
@@ -2592,20 +2592,30 @@ down (`Slider_SetPosition` `0x0066b088`; the field is a bit test, `& 2`). Its tw
 - **A repeating arrow** (flag `0x20`, `Button_RepeatTick` `0x00668dd9`, from the interface's tick `0x1e`, the real clock `FUN_0065968e`): state 1 from the press; at 500 ms (`+0x13c`
   at most the time since the stamp) it becomes 2, the stamp is renewed and `0x10009` is posted if the pointer is on it; in state 2 each time more than 125 ms (`+0x140`) has gone it posts
   `0x10008` (if the pointer is on it) and renews the stamp, **posted or not**. `Button_EndRepeat` (`0x00668eff`) on the release answers false after a repeat, so no `0x100` follows.
+- **The highlight does not follow a scroll.** The `hilight` sprite (`+0x174`) is placed by the selection alone, in `FUN_0066525c` (`0x006653a8`..`0x00665471`, at the
+  list's top plus the row height times `+0x14c` less the top row `+0x154`), which runs whenever a row is selected, **the same index included** (`0x006652da` skips only the post
+  of `0x401`). `FUN_00664ea3` (the bar's `0x800`) and `FUN_00663324` (the cells) neither touch `+0x14c` nor call it, so a scroll leaves the sprite on its screen slot, over
+  other rows, with the selected index unchanged (`q918/orig-scroll-sheet.png`: the highlight in slot 8 in all eight frames, tops 1, 4, 9, 0, 3, 3, 9, 7).
+- **The wheel over an arrow** (`0x1000d`): the arrow's procedure (`0x00668f9c`, then the base `0x0065f6d1`) answers `0x10001`..`0x10005` and `0x10002`..`0x10007` only, and
+  nothing passes a message to a parent, so it reaches no one. The camera reads the notch through the park layer's own procedure (`FUN_0042a760`, from `0x00488b6a`), which an
+  arrow is not part of. What the wheel does over the rest of a modal screen's body was not decoded.
 
 **OpenTPW** (`UiList.AddScrollbar`, `UiRepeatButton`; Load Park and Save Park have it): the bar's value is the top row negated (the range ( -(count - visible), 0 ) is the same line on `UiSlider`,
 which has the thumb's top at the highest value); the bar is a rectangle holding the track, both arrows and the thumb, with the track's own rectangle taking the pointer, because a child
 keeps to its parent's third of a window wider than 4:3 only inside the parent's rectangle (the arrows lie outside the stream's track and its thumb 8 units over it: built under a bar of the track's
-size they were drawn and hit at the window's edge, `q918/run1/1-list.png`). Every other list has it since Q919 ("The other lists' bars", below).
+size they were drawn and hit at the window's edge, `q918/run1/1-list.png`). Every other list has it since Q919 ("The other lists' bars", below). The highlight is drawn on the slot it was last placed at (`UiList.HighlightSlot`: set by every selection,
+the same index too, and by the first-row pick and the removal's reselect; a scroll leaves it), so it slides over the rows under it and stays while its row is out of the window, as the original's.
+The wheel over an arrow is taken (`WindowStack.WheelTaken`) and moves nothing, so the park behind the screen does not zoom. **A deviation, said at the site:** `ParkOrbitCameraMode.TakeSaved`
+refuses a file whose camera holds a number that is not finite (NaN or an infinity) and leaves the camera as it is; the original checks no number (`docs/exe/saves.md`, "The load reads the camera module").
 
 #### The other lists' bars (Q919)
 
-Each list's stream holds the same four rectangles, read by `lib/uistream.py` (which reads ops 9 and `0xa` under a type 4 or 7 parent since Q919); `AddScrollbar( bar, up, down, thumb )` is called after `Build()` with them. The thumb is 67 units tall in every
-stream, so a track of height H travels H - 67, and its head is the thumb's first place the bar then moves to the top row's:
+Each list's stream holds the same four rectangles, read by `lib/uistream.py` (which reads ops 9 and `0xa` under a type 4 or 7 parent since Q919); `AddScrollbar( bar, up, down, thumb, track )` is called after `Build()` with them (`track` only where `op 3` differs from `op 9`: the visitors'). The thumb is 67 units tall in every
+stream, so a track of height H travels H - 67 (the track is `op 3`'s rectangle, the one `Slider_SetPosition` and `Slider_ReadThumb` read at `+0x32` and `+0x36`; the visitors' `op 3` begins 2 units above its `op 9`, the other six streams' two agree; measured on the original's frames, the visitors' thumb head at 132 px of 1024 x 768 where `op 9` would give 133), and its head is the thumb's first place the bar then moves to the top row's:
 
-| list (control id) | stream | `op 9` track | up `op 6` | down `op 7` | thumb `op 8` | row area (`op 0xa`) | rows visible at 39 units |
+| list (control id) | stream | track (`op 3` inside `op 9`; `op 9` only where they agree) | up `op 6` | down `op 7` | thumb `op 8` | row area (`op 0xa`) | rows visible at 39 units |
 |---|---|---|---|---|---|---|---|
-| visitors (`0x1e497`) | `0x007506c8`, bar `0x00750740` | 1748, 265, 1807, 835 | 1748, 202, 1808, 262 | 1747, 843, 1807, 903 | 1739, 370, 1807, 437 | 294, 315, 1720, 914 | 10 (rows of 56) |
+| visitors (`0x1e497`) | `0x007506c8`, bar `0x00750740` | 1748, 263, 1807, 835 (`op 9` reads 265) | 1748, 202, 1808, 262 | 1747, 843, 1807, 903 | 1739, 370, 1807, 437 | 294, 315, 1720, 914 | 10 (rows of 56) |
 | all staff (`0x321`) | `0x00750e10`, `0x00750fb4` | 1747, 376, 1806, 719 | 1747, 315, 1807, 375 | 1747, 722, 1807, 782 | 1739, 484, 1806, 551 | 294, 418, 1734, 777 | 9 |
 | all items, rides and shops (`0x190`) | `0x00750ab8`, `0x00750b32` | 1766, 384, 1825, 811 | 1765, 318, 1825, 379 | 1765, 815, 1825, 876 | 1758, 549, 1825, 616 | 275, 428, 1739, 875 | 11 |
 | all items, sideshows and miscellaneous | `0x00750ba0` `0x00750c44`; `0x00750ca0` `0x00750cf0` | the same four rectangles as the rides' | | | | 273, 428, 1741, 876; 275, 428, 1739, 875 | 11 |
@@ -2613,7 +2623,7 @@ stream, so a track of height H travels H - 67, and its head is the thumb's first
 | hire (`0x248e`) | `0x00751fa8`, `0x0075232a` | 1743, 398, 1802, 843 | 1742, 331, 1803, 391 | 1742, 850, 1803, 910 | 1735, 651, 1802, 718 | 1043, 441, 1729, 911 | 12 |
 
 Where each list is long enough in the shipped park or can be made so (measured 2026-11-02, `q919/probe1..3b`): the stock park's visitors list holds 13 rows of 10 (a range of 3); its all-staff cleaners' tab 1 of 9, its all-items rides tab 1 of 11 and its hire cleaners' tab 3 of 12 are short; the buy list's tabs hold 2, 6, 10 and 3
-rows of 11 at 1280 x 720 (rows stay 39 units after `size 800 600`: the font set is chosen at the launch), so **no shipped catalogue makes the buy list scroll at this row height**. The pool grows past a window by `StaffPoolInfo.TimeBetweenStaffUpdates 1`,
+rows of 11 at 1280 x 720 (rows stay 39 units after `size 800 600`: the font set is chosen at the launch). Those are the stock park's researched items only: `ParkBuyScreen.Listed` keeps what is researched, so **research lengthens the tabs past the 11 rows, and the buy list does scroll** (15 rows on the rides tab of a Full Simulation save, `audit-2026-10-17/gp-fs/run.log:1476-1478`, two of them 1500 and 1501 which `Listed` wrongly keeps, Q221 (2); the original would list 13, still over 11; the stock park's lab holds 11 feature projects and 8 ride projects not yet done). The buy list's scrolling was not run in either game. The pool grows past a window by `StaffPoolInfo.TimeBetweenStaffUpdates 1`,
 `MaxNumberOfStaffPerUpdate 30` and `MaxHandymen 30` in `levels/Standard.sam` (a private folder; the original's own file, restored after): 32 candidates, 15 of them cleaners here after 14 s resumed; in the original the foot of the cleaners' list began at the ninth of 12 visible rows, so 20, after about 20 s. Litter Bins (catalogue 1406) added to the miscellaneous tab are a row an object.
 
 **OpenTPW** (Q919): `ParkVisitorsScreen`, `ParkStaffScreen`, `ParkBuyScreen`, `ParkHireScreen` and `ParkItemsScreen` (its three list shapes) call `AddScrollbar` with that table's rectangles; `UiList.Scroll` counts `LIST_SCROLLBAR_NOT_BUILT` for a list longer than its window with no bar (the wheel alone).
@@ -4103,7 +4113,7 @@ its bars 0.5, 0.125, 0.33, 0.902, 1.0, 0.714, 0.527 and 0.5 (the file's happines
 right (0.974), the rides left (0.034) (`q371/side-by-side.png`: the original, this, main). Main's build (`run-control2`)
 lettered 0 and the cash and happiness as bare numbers, every one from the right, and drew no bar. The rows are 56 units
 apart, as the original's 55.8 (Q377, "The rows' font and height"). **Not built**: the first row picked as the list fills
-(Q232); the scrollbar is built since Q919 ("The list's scrollbar", "The other lists' bars").
+(Q232). The scrollbar is built (Q919; "The list's scrollbar", "The other lists' bars").
 
 **OpenTPW** (Q372): `Peep.StayAt`, `ParkVisitorsScreen.HoursIn` and `TimeText`; `RowOf`'s `rewrite` shifts the stay.
 The log's row reads `<cash> <time> (<hours> h) <rides> <bar>`. On `q372/time.TPWS`, paused at the load's tick 964

@@ -389,10 +389,8 @@ public class Level
 		load.Mark( "catalogue" );
 		var catalogue = Catalogue;
 
-		var park = CreatePark( ThemeName, Balance, catalogue, _parkFile );
+		var park = EnterPark( ThemeName, Balance, catalogue, _parkFile );
 		Park = park;
-
-		TakeTheFilesCamera( park );
 
 		StartTheCalendar( ThemeName, park );
 
@@ -624,6 +622,19 @@ public class Level
 		Log.Info( $"{theme}: {player.Name} has no park file for this theme, so the park is made fresh" );
 		var park = new FreshPark( theme, balance, catalogue );
 		Log.Info( $"{theme}: {park.Census()}" );
+		return park;
+	}
+
+	/// <summary>
+	/// The park a level is entered with: <see cref="CreatePark"/>, and the camera it opens on taken from the file
+	/// (<see cref="TakeTheFilesCamera"/>). One call, so a test can see the camera follow the file.
+	/// </summary>
+	internal static IParkInitialState? EnterPark( string theme, ParkBalance balance, ParkItemCatalogue catalogue, string? parkFile = null )
+	{
+		var park = CreatePark( theme, balance, catalogue, parkFile );
+
+		TakeTheFilesCamera( park );
+
 		return park;
 	}
 

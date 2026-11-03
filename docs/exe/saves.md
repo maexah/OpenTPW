@@ -1205,7 +1205,7 @@ over the copy, never the one held.
   closing, as the original's does whatever its save answered; a deviation (Q982) is the message box that says so
   ("OpenTPW's save folder that cannot be written"). Where the folder holds the name in two cases, which
   only a file copied in can make, the one in the typed case is written, the one the question named.
-- **The load reads the camera module** (Q918): a park loaded or entered here opens on its file's zoom, point and rotation (negated into the yaw, and rounded to a quarter turn with the Rotation option on 90 degrees), the yaw set at once where the original eases its drawn rotation onto the rounded one (Q23).
+- **The load reads the camera module** (Q918): a park loaded or entered here opens on its file's zoom, point and rotation (negated into the yaw, and rounded to a quarter turn with the Rotation option on 90 degrees), the yaw set at once where the original eases its drawn rotation onto the rounded one (Q23). **A second deviation:** a file whose camera holds a number that is not finite (NaN or an infinity) is refused with a warning and the camera stays where it is (`ParkOrbitCameraMode.TakeSaved`); the original checks no number and would be left with nothing to draw.
 
 **Measured (Q241f, `q241f/`).** Lost Kingdom entered by a player holding `easymode.TPWI` alone (755, 87987, no
 visitors), stepped under `pause` to `mGameTick` 1000, the camera at `camera 480 280 90 90`, then `savepark Q241f`:

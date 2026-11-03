@@ -192,6 +192,14 @@ internal sealed class UiList : UiControl
 
 	private int _selected = -1;
 
+	// The screen slot the highlight was last placed at, -1 for none. The original places its sprite when a row is
+	// selected (FUN_0066525c, 0x00665471) and a scroll never moves it, so it stays on its slot over the rows that
+	// slide under it (docs/exe/hud.md, "The list's scrollbar").
+	private int _highlightSlot = -1;
+
+	/// <summary>The screen slot the highlight stands on, -1 for none; a scroll leaves it where it is.</summary>
+	internal int HighlightSlot => Selected < 0 ? -1 : _highlightSlot;
+
 	/// <summary>A row was chosen - the original's message <c>0x400</c>. Handed the row's id.</summary>
 	internal Action<int>? Activated { get; set; }
 
@@ -388,6 +396,7 @@ internal sealed class UiList : UiControl
 		_rows.Clear();
 		_scrollTop = 0;
 		_selected = -1;
+		_highlightSlot = -1;
 		Refresh();
 	}
 
@@ -567,13 +576,20 @@ internal sealed class UiList : UiControl
 			var slot = _rows.Count < 1 ? -1 : _selected >= _rows.Count ? _selected - 1 : _selected;
 
 			if ( slot < 0 )
+			{
 				_selected = -1;
+				_highlightSlot = -1;
+			}
 			else if ( slot < VisibleRows && slot < _rows.Count )
+			{
 				_selected = slot + _scrollTop;
+				_highlightSlot = slot;
+			}
 			else
 			{
 				Unimplemented.Report( "LIST_RESELECT_PAST_THE_WINDOW" );
 				_selected = -1;
+				_highlightSlot = -1;
 			}
 
 			// FUN_0066525c sends 0x401 when the index moves, to nothing included.
@@ -614,8 +630,10 @@ internal sealed class UiList : UiControl
 			return;
 		}
 
-		// Slot 0 is under the visible count and the row count, so FUN_0066525c takes the top row's index, and posts
-		// only when that moves the selection.
+		// Slot 0 is under the visible count and the row count, so FUN_0066525c takes the top row's index, places the
+		// highlight there, and posts only when that moves the selection.
+		_highlightSlot = 0;
+
 		if ( _selected == _scrollTop )
 			return;
 
@@ -651,7 +669,7 @@ internal sealed class UiList : UiControl
 
 	/// <summary>
 	/// What <c>FUN_00664495</c> does after an add or a removal: the scrollbar's range becomes count less visible and
-	/// the slider clamps the top row into it. <b>With no more rows than fit, the slider is disabled and the top row
+	/// the slider clamps the top row into it. <b>With no more rows than fit, the slider is hidden and the top row
 	/// is left where it was</b> (<c>0x006644d2</c>), even past the last row; the wheel clamps it (<see cref="Scroll"/>).
 	/// </summary>
 	private void SettleTop()
@@ -746,25 +764,32 @@ internal sealed class UiList : UiControl
 	/// to the head (the highest), as the original's sliders with a positive step do; the original's list bar has the range
 	/// <c>( count - visible, 0 )</c>, which turns the step negative and puts nought at the head. A range of <c>( -(count - visible), 0 )</c> is the same
 	/// line on this class.
+	/// <para>
+	/// <paramref name="bar"/> is the control's own rectangle (<c>op 9</c>), which takes the pointer. The thumb runs along, and the skin is drawn in,
+	/// the slider's text rectangle (<c>op 3</c> inside the <c>op 9</c>: <c>Slider_SetPosition</c> reads <c>+0x32</c> and <c>+0x36</c>), given as
+	/// <paramref name="track"/> where it differs from <paramref name="bar"/> (the visitors' list: <c>docs/exe/hud.md</c>, "The other lists' bars").
+	/// </para>
 	/// </remarks>
-	internal void AddScrollbar( UiRect bar, UiRect up, UiRect down, UiRect thumb )
+	internal void AddScrollbar( UiRect bar, UiRect up, UiRect down, UiRect thumb, UiRect? track = null )
 	{
+		var run = track ?? bar;
+
 		// A child keeps to its parent's place on a wide window only where the parent's rectangle holds it (UiControl.Add), and the stream's
 		// arrows stand outside the bar's own rectangle and its thumb a little over it: so the track's picture is its own control, and the
 		// bar is the rectangle holding all four parts, taking the pointer on the track alone.
-		var whole = new UiRect( Math.Min( Math.Min( bar.Left, up.Left ), Math.Min( down.Left, thumb.Left ) ),
-			Math.Min( Math.Min( bar.Top, up.Top ), Math.Min( down.Top, thumb.Top ) ),
-			Math.Max( Math.Max( bar.Right, up.Right ), Math.Max( down.Right, thumb.Right ) ),
-			Math.Max( Math.Max( bar.Bottom, up.Bottom ), Math.Max( down.Bottom, thumb.Bottom ) ) );
+		var whole = new UiRect( Math.Min( Math.Min( Math.Min( bar.Left, run.Left ), up.Left ), Math.Min( down.Left, thumb.Left ) ),
+			Math.Min( Math.Min( Math.Min( bar.Top, run.Top ), up.Top ), Math.Min( down.Top, thumb.Top ) ),
+			Math.Max( Math.Max( Math.Max( bar.Right, run.Right ), up.Right ), Math.Max( down.Right, thumb.Right ) ),
+			Math.Max( Math.Max( Math.Max( bar.Bottom, run.Bottom ), up.Bottom ), Math.Max( down.Bottom, thumb.Bottom ) ) );
 
-		_barSkin = Add( new UiControl { Rect = bar, Mesh = UiMesh.Get( "!slider" ) } );
+		_barSkin = Add( new UiControl { Rect = run, Mesh = UiMesh.Get( "!slider" ) } );
 
 		_bar = Add( new UiSlider
 		{
 			Id = 1,
 			Rect = whole,
 			HitRect = bar,
-			Track = bar,
+			Track = run,
 			Vertical = true,
 			Moved = BarMoved,
 			WheelTurned = ScrollByWheel
@@ -784,7 +809,7 @@ internal sealed class UiList : UiControl
 	/// <summary>The scrollbar, or null for a list that has none.</summary>
 	internal UiSlider? Scrollbar => _bar;
 
-	/// <summary>Where the window and its bar stand, for the console's <c>control</c> and the screens' log lines.</summary>
+	/// <summary>Where the window and its bar stand, for the console's <c>control</c>.</summary>
 	internal string ScrollCensus()
 		=> $"top row {_scrollTop} of {_rows.Count} rows, {VisibleRows} visible"
 			+ (_bar == null ? ", no scrollbar" : $", scrollbar {(_bar.Visible ? "shown" : "hidden")} value {_bar.Value} in ({_bar.Minimum}, {_bar.Maximum})"
@@ -941,10 +966,13 @@ internal sealed class UiList : UiControl
 	/// </summary>
 	internal override void PointerMoved( float x, float y, bool held )
 	{
-		if ( !SelectsUnderPointer || held || RowAt( x, y ) is not (var index and >= 0) || index == _selected )
+		if ( !SelectsUnderPointer || held || RowAt( x, y ) is not (var index and >= 0) )
 			return;
 
-		Log.Info( $"List 0x{Id:x}: row {_rows[index].Id} at {index} picked under the pointer" );
+		// The same row under the pointer again places the highlight on this slot, posting nothing (0x006652da).
+		if ( index != _selected )
+			Log.Info( $"List 0x{Id:x}: row {_rows[index].Id} at {index} picked under the pointer" );
+
 		Select( index );
 	}
 
@@ -987,6 +1015,9 @@ internal sealed class UiList : UiControl
 
 	private void Select( int index )
 	{
+		// FUN_0066525c places the highlight on the slot even when the index does not move, and posts only when it does.
+		_highlightSlot = index - _scrollTop;
+
 		if ( index == _selected )
 			return;
 
@@ -1005,16 +1036,11 @@ internal sealed class UiList : UiControl
 	{
 		base.OnDraw();
 
-		if ( Selected < 0 )
+		// The sprite shows while a row is selected, on the slot it was placed at, whichever row is under it now.
+		if ( Selected < 0 || _highlightSlot < 0 )
 			return;
 
-		var index = _selected;
-
-		if ( index < _scrollTop || index >= _scrollTop + VisibleRows )
-			return;
-
-		var slot = index - _scrollTop;
-		var top = RowArea.Top + (slot * RowHeight);
+		var top = RowArea.Top + (_highlightSlot * RowHeight);
 		var box = VirtualScreen.ToPixels(
 			new UiRect( RowArea.Left, top, RowArea.Right, top + RowHeight ), Anchor, VerticalAnchor );
 

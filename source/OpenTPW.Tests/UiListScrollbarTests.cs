@@ -302,6 +302,94 @@ public class UiListScrollbarTests
 		Assert.IsTrue( Math.Abs( skin.Pixels.Y - arrows[0].Pixels.Y - (40 * VirtualScreen.Scale) ) < 1.01f, "the up arrow 40 units above the track's head" );
 	}
 
+	/// <summary>One frame with the wheel turned and the pointer where it is.</summary>
+	private void WheelFrame( float wheel, float x, float y, long now )
+	{
+		Time.PinWall( now );
+		Input.Mouse = new() { Position = new Vector2( x, y ), Delta = new Vector2( 1, 0 ), Wheel = wheel };
+		_stack.Update();
+	}
+
+	/// <summary>
+	/// <b>The wheel over a scrollbar's arrow is taken and moves nothing</b>: the arrow's procedure does not answer <c>0x1000d</c>, so in the
+	/// original it reaches no one, and the park behind a modal list must not zoom (<c>WindowStack.WheelTaken</c> is what the camera reads).
+	/// Over the track it scrolls the list and is taken; over a plain place outside the list it is not taken.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the arrow left out of the wheel's takers (the park zooms behind the screen); the arrow scrolling with it.</remarks>
+	[TestMethod]
+	public void TheWheelOverAnArrowIsTakenAndMovesNothing()
+	{
+		Fill( 25 );
+
+		WheelFrame( -1f, 340, 520, 1000 );
+		Assert.IsTrue( WindowStack.WheelTaken, "the down arrow" );
+		Assert.AreEqual( 0, List.ScrollTop, "and the list stays" );
+
+		WheelFrame( 1f, 340, 120, 1100 );
+		Assert.IsTrue( WindowStack.WheelTaken, "the up arrow" );
+		Assert.AreEqual( 0, List.ScrollTop );
+
+		WheelFrame( -1f, 340, 300, 1200 );
+		Assert.IsTrue( WindowStack.WheelTaken, "the track" );
+		Assert.AreEqual( 1, List.ScrollTop, "scrolls a row" );
+
+		WheelFrame( -1f, 900, 800, 1300 );
+		Assert.IsFalse( WindowStack.WheelTaken, "off the window nothing takes it" );
+	}
+
+	/// <summary>
+	/// <b>The highlight stays on its screen slot when the list scrolls</b> (<c>FUN_0066525c</c> places the sprite when a row is selected; <c>FUN_00664ea3</c> and
+	/// <c>FUN_00663324</c> do not touch it), and the selected index stays, so it lies over another row.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the highlight drawn from the selected index less the top (it follows its row, to slot 1 here); the highlight
+	/// dropped when its row leaves the window (the second scroll).
+	/// </remarks>
+	[TestMethod]
+	public void TheHighlightStaysOnItsSlotWhenTheListScrolls()
+	{
+		Fill( 25 );
+
+		Frame( false, 150, 100 + (44 * 3) + 20, 1000 );
+		Assert.AreEqual( 103, List.Selected, "slot 3 of the top row 0 is the row 3" );
+		Assert.AreEqual( 3, List.HighlightSlot );
+
+		List.ScrollByWheel( -2f );
+		Assert.AreEqual( 2, List.ScrollTop );
+		Assert.AreEqual( 3, List.HighlightSlot, "still slot 3, over row 5" );
+		Assert.AreEqual( 103, List.Selected, "the selection is the same index" );
+
+		List.ScrollByWheel( -10f );
+		Assert.AreEqual( 12, List.ScrollTop );
+		Assert.AreEqual( 3, List.HighlightSlot, "and when its row has left the window" );
+		Assert.AreEqual( 103, List.Selected );
+	}
+
+	/// <summary>
+	/// <b>The pointer over the selected index on another slot moves the highlight there, posting nothing</b>: <c>FUN_0066525c</c> skips only the
+	/// post when the index is unchanged and places the sprite all the same (<c>0x006652da</c> to <c>0x006653a8</c>).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the early return for an unchanged index in <c>Select</c> or <c>PointerMoved</c> before the highlight is placed.</remarks>
+	[TestMethod]
+	public void TheSameIndexUnderThePointerOnAnotherSlotPlacesTheHighlightThere()
+	{
+		Fill( 25 );
+
+		var heard = 0;
+		List.SelectionChanged = _ => ++heard;
+
+		Frame( false, 150, 100 + (44 * 3) + 20, 1000 );
+		List.ScrollByWheel( -2f );
+		Assert.AreEqual( 3, List.HighlightSlot );
+		Assert.AreEqual( 1, heard );
+
+		// Slot 1 of the top row 2 is row 3 again.
+		Frame( false, 150, 100 + (44 * 1) + 20, 1100 );
+		Assert.AreEqual( 1, List.HighlightSlot, "the sprite goes under the pointer" );
+		Assert.AreEqual( 103, List.Selected );
+		Assert.AreEqual( 1, heard, "and the index did not move, so nothing is posted" );
+	}
+
 	/// <summary>A window with a list and the stream's three-part scrollbar.</summary>
 	private sealed class AWindow : UiWindow
 	{

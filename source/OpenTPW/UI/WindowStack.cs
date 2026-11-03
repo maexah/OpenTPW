@@ -546,6 +546,12 @@ internal sealed class WindowStack : Panel
 			WheelTaken = true;
 		}
 
+		// A scrollbar's arrow takes the wheel and does nothing with it: its procedure answers 0x10001..0x10005 and the base's
+		// 0x10002..0x10007, and the camera reads the notch only through the park layer's own procedure (0x00668f9c, 0x0065f6d1;
+		// docs/exe/hud.md, "The list's scrollbar"). Without this the park behind a modal list zoomed under the arrow.
+		if ( Input.Mouse.Wheel != 0f && _hovered is UiRepeatButton )
+			WheelTaken = true;
+
 		Keyboard();
 
 		// The bar holds one row, the last posted (docs/exe/hud.md, "The help bar holds one posted row"). The pointer coming

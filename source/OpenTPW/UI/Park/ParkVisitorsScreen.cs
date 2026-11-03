@@ -185,9 +185,10 @@ internal sealed class ParkVisitorsScreen : UiWindow
 
 		_list.Build();
 
-		// The stream's scrollbar (op 9 at 0x00750740, with its arrows and thumb), shown where there are more guests than rows.
+		// The stream's scrollbar (op 9 at 0x00750740, with its arrows and thumb), shown where there are more guests than rows. Its
+		// track is the op 3 rectangle inside it, which begins 2 units higher than the op 9's (docs/exe/hud.md, "The other lists' bars").
 		_list.AddScrollbar( new UiRect( 1748, 265, 1807, 835 ), up: new UiRect( 1748, 202, 1808, 262 ),
-			down: new UiRect( 1747, 843, 1807, 903 ), thumb: new UiRect( 1739, 370, 1807, 437 ) );
+			down: new UiRect( 1747, 843, 1807, 903 ), thumb: new UiRect( 1739, 370, 1807, 437 ), track: new UiRect( 1748, 263, 1807, 835 ) );
 
 		_people = ParkPeople.Current;
 		Show();

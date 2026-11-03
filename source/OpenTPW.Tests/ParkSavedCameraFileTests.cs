@@ -44,7 +44,7 @@ public class ParkSavedCameraFileTests
 	/// <summary>
 	/// <b>The shipped park's own camera is taken on entering</b>: zoom 110, rotation 0 and the point (475, 175.00726), not the default's (475, 175).
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the call left out of <c>Level</c> cannot be seen here, only in the running game; the point taken from the default; the two ground numbers swapped.</remarks>
+	/// <remarks><b>Mutations:</b> the point taken from the default; the two ground numbers swapped. The call in <c>Level.EnterPark</c> is <see cref="TheLevelsEntryOfTheShippedParkTakesItsFilesCamera"/>'s.</remarks>
 	[TestMethod]
 	public void TheShippedParksCameraIsTakenOnEntering()
 	{
@@ -54,6 +54,27 @@ public class ParkSavedCameraFileTests
 
 		Level.TakeTheFilesCamera( _shipped );
 
+		Assert.AreEqual( 110f, ParkOrbitCameraMode.Zoom );
+		Assert.AreEqual( 0f, ParkOrbitCameraMode.Yaw );
+		Assert.AreEqual( new Vector3( 475f, 175.00726f, 0f ), ParkOrbitCameraMode.PointOfInterest );
+	}
+
+	/// <summary>
+	/// <b>Entering the theme through the level's own call takes the shipped file's camera</b>, which is what <c>Level</c> does as it makes the park.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> <c>EnterPark</c> not taking the camera (the park opens on whatever the last one left).</remarks>
+	[TestMethod]
+	public void TheLevelsEntryOfTheShippedParkTakesItsFilesCamera()
+	{
+		Assert.IsNull( Players.Roster.Current, "nobody is playing, so the shipped copy is read" );
+
+		ParkOrbitCameraMode.PointOfInterest = new Vector3( 1f, 2f, 0f );
+		ParkOrbitCameraMode.Zoom = 70f;
+		ParkOrbitCameraMode.Yaw = 1f;
+
+		var park = Level.EnterPark( "jungle", new ParkBalance( "jungle", easyMode: true ), new ParkItemCatalogue( "jungle", instantAction: true ) );
+
+		Assert.IsNotNull( park?.Save );
 		Assert.AreEqual( 110f, ParkOrbitCameraMode.Zoom );
 		Assert.AreEqual( 0f, ParkOrbitCameraMode.Yaw );
 		Assert.AreEqual( new Vector3( 475f, 175.00726f, 0f ), ParkOrbitCameraMode.PointOfInterest );
@@ -96,5 +117,24 @@ public class ParkSavedCameraFileTests
 
 		Assert.AreEqual( new Vector3( 12f, 34f, 0f ), ParkOrbitCameraMode.PointOfInterest );
 		Assert.AreEqual( 77f, ParkOrbitCameraMode.Zoom );
+	}
+
+	/// <summary>A park made fresh, with no file behind it (<c>Save</c> null), leaves the camera where it is too.</summary>
+	/// <remarks><b>Mutations:</b> a default view applied for a park with no file; <c>park?.Save</c> taken as non-null.</remarks>
+	[TestMethod]
+	public void AFreshParkLeavesTheCameraAlone()
+	{
+		var fresh = new FreshPark( "jungle", new ParkBalance( "jungle", easyMode: false ), new ParkItemCatalogue( "jungle", instantAction: false ) );
+		Assert.IsNull( fresh.Save );
+
+		ParkOrbitCameraMode.PointOfInterest = new Vector3( 12f, 34f, 0f );
+		ParkOrbitCameraMode.Zoom = 77f;
+		ParkOrbitCameraMode.Yaw = 1f;
+
+		Level.TakeTheFilesCamera( fresh );
+
+		Assert.AreEqual( new Vector3( 12f, 34f, 0f ), ParkOrbitCameraMode.PointOfInterest );
+		Assert.AreEqual( 77f, ParkOrbitCameraMode.Zoom );
+		Assert.AreEqual( 1f, ParkOrbitCameraMode.Yaw );
 	}
 }

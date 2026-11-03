@@ -87,9 +87,9 @@ public class ParkListScrollbarsTests
 		Frame( false, x, y, now + 60 );
 	}
 
-	/// <summary>Each screen: how it is opened, its list, and the four rectangles its stream gives the bar (the address is the <c>op 9</c>).</summary>
+	/// <summary>Each screen: how it is opened, its list, and the four rectangles its stream gives the bar (the address is the <c>op 9</c>; the track is the <c>op 3</c> inside it where that differs).</summary>
 	private record Case( string Name, Func<WindowStack, UiWindow> Open, Func<UiWindow, UiList> ListOf,
-		UiRect Bar, UiRect Up, UiRect Down, UiRect Thumb );
+		UiRect Bar, UiRect Up, UiRect Down, UiRect Thumb, UiRect? Track = null );
 
 	private static T Field<T>( object screen, string name ) => (T)screen.GetType().GetField( name, Private )!.GetValue( screen )!;
 
@@ -97,7 +97,8 @@ public class ParkListScrollbarsTests
 	private static readonly Case[] Cases =
 	[
 		new( "visitors 0x00750740", s => new ParkVisitorsScreen( s ), w => Field<UiList>( w, "_list" ),
-			new( 1748, 265, 1807, 835 ), new( 1748, 202, 1808, 262 ), new( 1747, 843, 1807, 903 ), new( 1739, 370, 1807, 437 ) ),
+			new( 1748, 265, 1807, 835 ), new( 1748, 202, 1808, 262 ), new( 1747, 843, 1807, 903 ), new( 1739, 370, 1807, 437 ),
+			new( 1748, 263, 1807, 835 ) ),
 		new( "all staff 0x00750fb4", s => new ParkStaffScreen( s ), w => Field<UiList>( w, "_list" ),
 			new( 1747, 376, 1806, 719 ), new( 1747, 315, 1807, 375 ), new( 1747, 722, 1807, 782 ), new( 1739, 484, 1806, 551 ) ),
 		new( "all items 0x00750b32", s => new ParkItemsScreen( s ), w => Field<Dictionary<int, UiList>>( w, "_lists" ).Values.Single( list => list.Visible ),
@@ -136,11 +137,12 @@ public class ParkListScrollbarsTests
 			var bar = list.Scrollbar;
 
 			Assert.IsNotNull( bar, each.Name );
-			Assert.AreEqual( each.Bar, bar.Track, each.Name + ": the track" );
+			Assert.AreEqual( each.Track ?? each.Bar, bar.Track, each.Name + ": the track (op 3's rectangle where it differs from op 9's)" );
 			Assert.AreEqual( each.Up, bar.Children.OfType<UiRepeatButton>().Single( b => b.Id == 1 ).Rect, each.Name + ": the up arrow" );
 			Assert.AreEqual( each.Down, bar.Children.OfType<UiRepeatButton>().Single( b => b.Id == 2 ).Rect, each.Name + ": the down arrow" );
 			Assert.AreEqual( each.Thumb.Width, bar.Thumb!.Rect.Width, each.Name + ": the thumb's size" );
 			Assert.AreEqual( each.Thumb.Left, bar.Thumb.Rect.Left, each.Name + ": the thumb's column" );
+			Assert.AreEqual( (each.Track ?? each.Bar).Top, bar.Thumb.Rect.Top, each.Name + ": the thumb's head stands at the track's top" );
 
 			FillWith( list, list.VisibleRows );
 			Assert.IsFalse( bar.Visible, each.Name + ": a full window needs no bar" );
