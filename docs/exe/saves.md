@@ -409,7 +409,7 @@ taken down where it stands** - `FUN_00457e10`, `FUN_004d8330`, `FUN_0052f8d0( 0x
 `Advisor_StopQuietly( 0 )`, `FUN_004815d0` - the modules are read over it (`FUN_00415270`, "Loading the modules"
 above), and `FUN_00415140` puts it back together ("The in-place load, call by call" below has every call). A module that fails leaves "Loading failed.  System state now (possibly) inconsistent." in the log and
 failure 6. There is no loading screen and no change of scene: under Proton the park was back four seconds after
-the click, its date gone from 2.9.2000 to the save's 2.7.2000.
+the click (a poll's grain; timed in Q921, "Load Park timed in both games" below, the loaded park is on screen 0.14 to 0.17 s after the click's release), its date gone from 2.9.2000 to the save's 2.7.2000.
 
 ### The in-place load, call by call
 
@@ -509,7 +509,7 @@ builds it again, so OpenTPW's load is the original's state 9 route. Textures are
 `Asset.All` through a level's end (`docs/DECISIONS.md`, Q832), and a park entered again loads in 3.1 s against 5.0 s the first time
 (`q832/runs/final-2`, an older build; its phases: audio 1,208 ms, ground 945, objects 369, guest sprites 223, the rest under 100 each,
 indicative only). Entering a park from the lobby here takes 3.1 to 3.4 s (Release,
-2026-10-26; `STATUS.md`, "Numbers"); a Load Park from inside a park takes 1.9 to 2.6 s here and 0.14 to 0.17 s in the original (Q921, below). What a build in place would take here is **not measured**. The twelve teardown calls are not the whole list: the modules empty
+2026-10-26; `STATUS.md`, "Numbers"); a Load Park from inside a park takes 1.9 to 2.3 s here and 0.14 to 0.17 s in the original (Q921, below). What a build in place would take here is **not measured**. The twelve teardown calls are not the whole list: the modules empty
 things too (SPSC's reader `0x00475730` frees every sprite and the table, the particles reader and `0x005200b0`, the voice reader
 `0x006b6da0`), and ours has no "read over" to map onto: each `ParkX` is built once from the immutable park in
 `Level.SetupParkEntities`, `Level.Unload` deletes every entity and HUD panel, `Level.Current` has 180 uses in 35 files and 51 files
@@ -518,31 +518,31 @@ it needs the file read and checked before the scene ends, which the rebuild gets
 catch a cut body (the inflate at `0x00414f5d` is unchecked). The list's scrollbar and the saved camera did not depend on the choice and are built (Q918).
 
 **What Alexah needs to decide.** When a player loads from inside a park (Load Park, Alt+L, Restart Park), does OpenTPW keep ending the park and
-building it again, or swap it in place as the original does? The original shows no loading screen and the picture holds for 0.14 to 0.17 s; ours shows one for 1.9 to 2.6 s (Q921, below).
+building it again, or swap it in place as the original does? The original shows no loading screen and the picture holds for 0.14 to 0.17 s; ours shows one for 1.9 to 2.3 s (Q921, below).
 - **A. Keep the rebuild.** Already said at the site; no new risk.
 - **B. Build in place.** Closest to the original; every park system needs its own reset path, and that cost is not counted.
-- **C. Keep the rebuild but cut the time or the screen.** Sound and ground were about 2.1 s of 3.1 s in Q832's run, and neither needs reading twice for the same theme; or skip the loading bar. Untested.
+- **C. Keep the rebuild but cut the time or the screen.** Q921 measured this route: after a launch's first load `audio` is 1.32 to 1.43 s of the 1.75 to 1.85 s the game logs and `ground` 0.22 to 0.26 s (Q832's "2.1 s of 3.1 s" was a lobby re-entry in an older build). Neither needs reading twice for the same theme, but `audio` is `SoundBank.Load`, which reads the `.sdt` and decodes the clips below the 16 MB limit, so the decoded clips would have to be kept across `Level.Unload`, not only the read saved. With `audio` gone about 0.7 to 0.9 s remains, still behind a loading screen, about five times the original's. Skipping the loading bar removes a picture, not much time (the bar is capped at 30 frames a second, `LoadingScreen.cs:57`, and a load totals the same on lavapipe and the GPU, 1.83 and 1.81 s); its saving is unmeasured. Untested.
 
 The goal is the original unless there is a real, genuine burden. Of the two cheap measurements that would make this a real choice, the first is done
 (Q921, below: ours 2.0 s behind a loading screen, the original 0.15 s with none); the second, what B touches, is not.
 
 **Load Park timed in both games (Q921, 2026-11-02, `q921/`).** The same way in both: the display filmed at 30 fps with wall-clock frame stamps
 (`lib/loadtime.py` reads the film; a frame is 33 ms), the click's press and release stamped by the driver (held 0.06 s here, 0.1 s there), the time taken
-from the release to the first frame of the loaded park. The same file in both: a copy of the shipped `Easymode.TPWI` (38,479 bytes, the same md5 in both
-games' folders) as the Load list's row, loaded from inside a park that was itself loaded; Restart Park reads the same `restart.INTS` in both (38,295 bytes,
-same md5). Ours is the Release build of `46e39395`; the original is `testme.exe` under Proton (`loadtime.sh`).
+from the release to the first frame of the loaded park. The same file in both: a copy of the shipped `Easymode.TPWI` (38,479 bytes, md5 0fe064f8 in both
+games' folders, taken after the runs, the files older than them) as the Load list's row, loaded from inside a park that was itself loaded; Restart Park reads the same `restart.INTS` in both (38,295 bytes,
+md5 1381653b in all three). Ours is the Release build of `46e39395`; the original is `testme.exe` under Proton (`loadtime.sh`).
 
 | | Load Park, from the release | Restart Park | what is on screen between |
 |---|---|---|---|
-| OpenTPW, off-screen (lavapipe) | 2.33, 2.03, 2.04 s (the first of a launch 0.2 to 0.3 s slower) | 2.02, 2.02 s | the "Welcome to SIM Theme Park" loading screen, 57 to 67 frames |
+| OpenTPW, off-screen (lavapipe) | 2.30, 1.99, 2.01 s (the first of a launch 0.2 to 0.3 s slower) | 1.99, 1.99 s | the "Welcome to SIM Theme Park" loading screen, 57 to 67 frames |
 | OpenTPW, the desk's GPU | 2.15, 1.93, 1.91 s | 1.82, 1.89 s | the same, 53 to 63 frames |
 | The original, off-screen (llvmpipe) | 0.141, 0.174, 0.167 s | 0.097, 0.141 s | nothing: the list, then the park (0 frames of a third picture) |
 
-The game's own clocks agree: ours' `[load] jungle: N ms in total` (1,745 to 2,132 ms, 0.08 to 0.20 s under the film's time) and the original's `mGameTick` falling to
-the file's 755 (`tickwall.py`) 0.07 to 0.10 s after the release for a load and 0.09 to 0.13 s for a restart. The earlier runs, before the final tools (`run2`, `run3`; the original's `orig/run2`,
-`orig/restart1`), read ours 2.16 to 2.56 s (off-screen) and the original 0.16 to 0.19 s; the first load of a launch is the slowest. Ours spends the 2.0 s as `audio` 1.2 s (60%),
-`ground` 0.29, `objects` 0.26, `guest sprites` 0.08, `queues` 0.06, the rest under 0.03 each (`q921/run3/run.log`). A load here is about eleven to sixteen times the original's. This is the shipped
-stock park's file; a played park's is bigger, and neither game was timed on one.
+The game's own clocks sit beside the film, which stays the measure: ours' `[load] jungle: N ms in total` (1,745 to 2,132 ms) is 0.08 to 0.17 s under the film's time, and the original's `mGameTick` falling to
+the file's 755 (`tickwall.py`) is one mark inside the load (`FUN_00414d40` reads the file, tears down, reads the modules and rebuilds; the tick neither starts nor ends it), 0.07 to 0.10 s after the release for a load and 0.09 to 0.13 s for a restart, and the film shows the park 0.00 to 0.07 s after it. The earlier runs, before the final tools (`run2`, `run3`; the original's `orig/run2`,
+`orig/restart1`), read ours 2.16 to 2.56 s (off-screen) and the original 0.16 to 0.19 s; the first load of a launch is the slowest in ours (the original's first, 0.141 s, is its fastest). Ours spends the 2.0 s as `audio` 1.2 s (60%),
+`ground` 0.29, `objects` 0.26, `guest sprites` 0.08, `queues` 0.06, the rest under 0.03 each off-screen (`q921/run3/run.log`; on the desk `terrain` is 0.07 to 0.15 s). A load here is about eleven to sixteen times the original's. This is the shipped
+stock park's file; a played park's is bigger, and neither game was timed on one. Neither was timed with a real sound device (`SDL_AUDIODRIVER=dummy`, a null ALSA), and the original runs at a 30 fps cap under software rendering, which counts against it, so its figure is an upper bound; `audio` is `.sdt` reads and decodes, so no change is expected, unproven. The release is the right start for both: the original posts a button's message on the release and gives anything else the click at the release (`hud.md`, "Who acts on the click, and who on the release"), and ours fires `LeftClicked` on the release (`WindowStack.cs`).
 
 ### OpenTPW's Load Park
 

@@ -13,7 +13,7 @@ hold = release - press
 start = press - 2.0
 W, H = 64, 36
 pts = [float(x) for x in sp.check_output(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "frame=pts_time", "-of", "csv=p=0", film]).decode().replace(",", " ").split()]
-raw = sp.check_output(["ffmpeg", "-v", "error", "-i", film, "-vf", f"crop={crop},scale={W}:{H},format=gray", "-f", "rawvideo", "-"])
+raw = sp.check_output(["ffmpeg", "-v", "error", "-i", film, "-fps_mode", "passthrough", "-vf", f"crop={crop},scale={W}:{H},format=gray", "-f", "rawvideo", "-"])
 fr = np.frombuffer(raw, np.uint8).reshape(-1, H * W).astype(np.float32)
 n = min(len(pts), len(fr)); pts = np.array(pts[:n]); fr = fr[:n]
 keep = (pts >= start) & (pts <= end); pts = pts[keep]; fr = fr[keep]; n = len(pts)
