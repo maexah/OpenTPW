@@ -90,7 +90,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0042c290` | `FUN_0042b1c0`: the Y-axis call of `FUN_004d8750`, pushing a literal 2 | OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x0042c460` | The sweep: the whole step, with either axis put back if its cell changed | OpenTPW.Tests/ParkCamcorderWalkTests.cs OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x0042c587` | The camcorder sweep, after every pass: FUN_0042a340 at the pass's cell; a ride found runs Ride it! from first person and ends the sweep | OpenTPW.Tests/ParkCamcorderWalkTests.cs OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
-| `0x0042c621` | The park camera's update holds the zoom to 70..130 | OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
+| `0x0042c621` | The park camera's update holds the zoom to 70..130 (40..300 with bit 0x200; only with bit 0x80, set at every load; park-engine.md, "A hidden wide zoom") | OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
 | `0x0042d130` | | OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
 | `0x004380e7` | SAOC loader: node +0x3c bit 0, the circuit closed, from the saved header's flag bit 0 | OpenTPW.Files/Formats/Save/ParkCoasters.cs OpenTPW/World/Park/ParkRideChoice.cs  |
 | `0x004382b3` | SAOC loader: node +0x3c bit 1, a gap open, from the saved header's flag bit 1 | OpenTPW.Files/Formats/Save/ParkCoasters.cs  |

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""listread.py PID [GLOBAL] - the ORIGINAL's hire screen list, read-only (Q936).
+"""listread.py PID [expire] - the ORIGINAL's hire screen list, read-only (Q936).
 
 Finds the list control under the screen the global points at ([0x007ca308], the hire screen): a control whose
 +0x144 (row tree), +0x150 (count), +0x154 (top row), +0x14c (selected index), +0x172 (visible rows) and +0x48

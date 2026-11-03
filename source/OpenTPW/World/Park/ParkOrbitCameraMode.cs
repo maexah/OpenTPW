@@ -156,7 +156,9 @@ public sealed class ParkOrbitCameraMode : CameraMode
 	/// <summary>
 	/// The zoom after the wheel's notches this frame (positive away from the player, in), held to 70..130 as the original's
 	/// update holds it (<c>0x0042c621</c>). The original steps by the sign of each message and a frame can carry one or
-	/// several, so a whole notch here is the same; a fraction (a touchpad's) is ours and moves it by that fraction of 10.
+	/// several, so a whole notch here is the same. A fraction (a touchpad's) moves it by that fraction of 10, where the original zooms in 10
+	/// for any message under a notch (its window procedure posts the delta over 120, truncated, <c>0x0046bbcc</c>), and a message
+	/// of several notches is one step there, several here (<c>docs/exe/hud.md</c>, "The step, in both games").
 	/// </summary>
 	internal static float ZoomAfterWheel( float zoom, float notches ) => (zoom - (notches * WheelZoomStep)).Clamp( MinZoom, MaxZoom );
 

@@ -1039,10 +1039,10 @@ internal sealed class UiList : UiControl
 		base.OnDraw();
 
 		// The sprite shows while a row is selected, on the slot it was placed at, whichever row is under it now.
-		if ( _selected < 0 || _highlightSlot < 0 )
+		if ( HighlightSlot < 0 )
 			return;
 
-		var top = RowArea.Top + (_highlightSlot * RowHeight);
+		var top = RowArea.Top + (HighlightSlot * RowHeight);
 		var box = VirtualScreen.ToPixels(
 			new UiRect( RowArea.Left, top, RowArea.Right, top + RowHeight ), Anchor, VerticalAnchor );
 

@@ -751,7 +751,8 @@ public sealed class ParkStaffPool
 	/// <summary>
 	/// Takes a candidate out of the pool at once and tells the hire list, as the sweep's time-out does
 	/// (<see cref="Sweep"/>), without waiting for a sweep (which would top the pool up in the same turn): the debug
-	/// console's <c>expire</c>, the measuring instrument for a hire list losing a chosen row.
+	/// console's <c>expire</c>, the measuring instrument for a hire list losing a chosen row. The sweep skips the candidate
+	/// being carried and this does not; <c>PlaceCarried</c> then answers "no longer in the pool".
 	/// </summary>
 	internal bool Expire( int id )
 	{

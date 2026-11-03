@@ -1,5 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Collections.Concurrent;
+using System.Linq;
 using System.Numerics;
 
 namespace OpenTPW.Tests;
@@ -97,7 +99,7 @@ public class ParkSavedCameraTests
 	/// <c>sqrt( zoom )</c> stays a number; a huge one 130; a NaN 70; an infinity 130 or 70 by its sign; one inside, the ends included, as written.
 	/// </summary>
 	/// <remarks>
-	/// <b>Mutations:</b> the zoom taken as written; the clamp's ends swapped or either left off (the -5 and the 1e9 rows); a NaN left to <c>Clamp</c>,
+	/// <b>Mutations:</b> the warning dropped, or printed for a zoom inside the range; the zoom taken as written; the clamp's ends swapped or either left off (the -5 and the 1e9 rows); a NaN left to <c>Clamp</c>,
 	/// which keeps it; a NaN refused (the camera would stay at 90); the clamp applied to the point as well.
 	/// </remarks>
 	[TestMethod]
@@ -116,7 +118,23 @@ public class ParkSavedCameraTests
 	public void AZoomOutsideTheRangeIsHeldToIt( float written, float taken )
 	{
 		ParkOrbitCameraMode.TakeSaved( new( 90f, 0f, 300f, 200f ), quarterTurns: true );
-		ParkOrbitCameraMode.TakeSaved( new( written, 0.5f, 312.5f, 88.25f ), quarterTurns: true );
+
+		var warnings = new ConcurrentQueue<string>();
+		Logger.LogDelegate hear = ( severity, text ) =>
+		{
+			if ( severity == Logger.Level.Warning && text.Contains( "the park file's zoom" ) )
+				warnings.Enqueue( text );
+		};
+
+		Logger.OnLog += hear;
+
+		try { ParkOrbitCameraMode.TakeSaved( new( written, 0.5f, 312.5f, 88.25f ), quarterTurns: true ); }
+		finally { Logger.OnLog -= hear; }
+
+		// The warning is for a zoom held to the range, and for none inside it, the ends included.
+		var held = float.IsNaN( written ) || written != taken;
+		Assert.AreEqual( held ? 1 : 0, warnings.Count, $"{written}: {string.Join( " | ", warnings )}" );
+		Assert.IsTrue( !held || warnings.All( w => w.Contains( $"taken as {taken}" ) ), $"{written}: the warning names the zoom taken" );
 
 		Assert.AreEqual( taken, ParkOrbitCameraMode.Zoom, $"{written}" );
 		Assert.AreEqual( new Vector3( 312.5f, 88.25f, 0f ), ParkOrbitCameraMode.PointOfInterest, "the point is the file's" );
