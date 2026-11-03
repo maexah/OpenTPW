@@ -1,11 +1,11 @@
-"""lobbyoptions.py WORKDIR CASE FOLDER [gpu=LINE] [vc=N] [dispN] [clickN] [backN] [locksave] [lock=FILE] [tick] [box=tick|cross] [exit=cross] [ENV=VAL ...]: one start of the build on a private game
+"""lobbyoptions.py WORKDIR CASE FOLDER [gpu=LINE] [vc=N] [dispN] [clickN] [backN] [locksave] [lock=FILE] [odd] [size=WxH] [tick] [box=tick|cross] [exit=cross] [ENV=VAL ...]: one start of the build on a private game
 folder (made on first use under WORKDIR/game-FOLDER, kept between cases that name the same FOLDER, so a saved Config.tcf carries
 to the next start), the lobby, the Options screen opened from the lobby menu, screenshots (lobby, options, click1..N), optionally
 N clicks on the Video Card row and the tick, then the log's Graphics card / GPU / Options lines. box=tick|cross answers the RESTART GAME box the tick raises after a card change (Q985): cross ticks again and shows the box again, tick waits for the game to end. gpu=LINE sets opentpw.cfg's gpu
 line ("-" removes it); dispN clicks the Display row's arrow N times before the card's clicks (Windowed, FullScreen, Borderless in turn; the row is checked in the log and
 the screenshots); locksave makes the private save/ folder read-only once the Options screen is open (restored at the end), so the start found it writable and the tick's writes fail
 as a folder that cannot be written does (Q982, Q986; a read-only file is no use, the save replaces it); lock=FILE (opentpw.cfg or Config.tcf) makes `FILE.tmp` a directory once the Options screen is open, so that one file's write fails and the other's goes through (Q999; removed at the end); exit=cross
-presses the Options screen's own cross after the RESTART GAME box's cross (Q986); backN clicks the Display row's arrow N more times after the box's cross and before the second tick, so the second tick sets the display back (Q987; needs dispN); and the opentpw.cfg display line and the window's size are printed before and after; vc=N sets Config.tcf's video card field (byte 16; byte 12 is graphics quality). Output in WORKDIR/runs/CASE.
+presses the Options screen's own cross after the RESTART GAME box's cross (Q986); backN clicks the Display row's arrow N more times after the box's cross and before the second tick, so the second tick sets the display back (Q987; needs dispN); and the opentpw.cfg display line and the window's size are printed before and after; vc=N sets Config.tcf's video card field (byte 16; byte 12 is graphics quality); odd appends two bytes to Config.tcf before the start, so the game does not read it whole and the tick keeps a copy of it first (OPTIONS FILE BACKED UP, Q998; with lock=opentpw.cfg the RESTART GAME box then carries that and SOME OPTIONS NOT SAVED too, Q935); size=WxH sends the console's `size` once the lobby is up, so the window is that size (640x480, 1024x768; the least it goes is 512x384) before the Options screen is opened, and prints the size the window then has. Output in WORKDIR/runs/CASE.
 BIN names the build's folder (default this repo's Debug build). Run with the harness Python (Xlib), on the desktop display, or with OFFSCREEN_DISPLAY=:79 in the environment on a private Xvfb drawn by lavapipe (Q987; lane B).
 Q983: TOOLING.md, the table row `lib/lobbyoptions.py`."""
 import os, sys, re, shutil, struct
@@ -14,12 +14,14 @@ REPO = os.path.dirname(os.path.dirname(os.path.dirname(LIB)))
 os.environ["OPENTPW_NO_MESSAGE_BOX"] = "1"
 import gamefolder
 HERE = os.path.abspath(os.path.expanduser(sys.argv[1])); CASE, FOLDER = sys.argv[2], sys.argv[3]
-GPU = VC = LOCKFILE = None; CLICKS = 0; BACK = 0; TICK = False; BOX = None; DISP = 0; LOCKSAVE = False; EXIT = None
+GPU = VC = LOCKFILE = SIZE = None; ODD = False; CLICKS = 0; BACK = 0; TICK = False; BOX = None; DISP = 0; LOCKSAVE = False; EXIT = None
 for kv in sys.argv[4:]:
     if kv.startswith("gpu="): GPU = kv[4:]
     elif kv.startswith("vc="): VC = int(kv[3:])
     elif kv.startswith("disp"): DISP = int(kv[4:] or 1)
     elif kv == "locksave": LOCKSAVE = True
+    elif kv == "odd": ODD = True
+    elif kv.startswith("size="): SIZE = tuple(int(v) for v in kv[5:].split("x"))
     elif kv.startswith("lock="): LOCKFILE = kv[5:]
     elif kv.startswith("exit="): EXIT = kv[5:]
     elif kv.startswith("back"): BACK = int(kv[4:] or 1)
@@ -40,6 +42,8 @@ if GPU is not None:
 tcf = os.path.join(PRIVATE, "save", "Config.tcf")
 if VC is not None:
     b = bytearray(open(tcf, "rb").read()); b[16:20] = struct.pack("<I", VC); open(tcf, "wb").write(b)
+if ODD:
+    open(tcf, "ab").write(b"\xa5\x5a"); print("  Config.tcf given two bytes more than this game writes")
 def vcbyte():
     return struct.unpack("<I", open(tcf, "rb").read()[16:20])[0] if os.path.exists(tcf) else None
 def displayline():
@@ -75,6 +79,8 @@ try:
     wait_for("GPU:", 60)
     wait_for("Loaded the lobby", 150); attach(); time.sleep(3.0)
     shot("lobby", 0.5)
+    if SIZE:
+        send(f"size {SIZE[0]} {SIZE[1]}"); time.sleep(2.0); print(f"  window asked for {SIZE[0]}x{SIZE[1]}, is {win.get_geometry().width}x{win.get_geometry().height}")
     key("Escape", "the lobby menu"); time.sleep(1.0)
     l = ask("control b", "control"); m = re.search(r"at \((-?\d+),(-?\d+)\) size \((\d+),(\d+)\)", l)
     x, y, w_, h = [int(v) for v in m.groups()]
