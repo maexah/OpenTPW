@@ -201,6 +201,101 @@ public class LobbyEyeHandoverTests
 	}
 
 	/// <summary>
+	/// <b>The console's held flight stands still and a pick out of it eases from exactly that state (Q920).</b> The flight is held at
+	/// the eye and look point desk3's C1 pick started from (479.466, 86.613, 363.595) and (575.835, 15.470, 392.691) in the original's
+	/// y-up axes, ours z-up. Twenty frames pass and neither point has moved (the flight would step 0.5 units a frame); a player
+	/// is then picked and one frame of 0.05 s closes 0.04877 of the eye's gap and 0.09516 of the look point's.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the hold not applied; the hold applied but the flight still stepping; the look point left out of the hold.</remarks>
+	[TestMethod]
+	public void AHeldFlightStandsStillAndAPickEasesFromIt()
+	{
+		var camera = ACamera( out var island );
+		island.Position = new Vector3( 400f, 400f, 0f );
+		var eye = new Vector3( 479.466f, 363.595f, 86.613f );
+		var look = new Vector3( 575.835f, 392.691f, 15.470f );
+
+		LobbyCameraMode.BeginLobby();
+		LobbyCameraMode.DebugFlightHold = (eye, look);
+		try
+		{
+			Time.RawDelta = Time.Delta = 0.05f;
+
+			for ( var i = 0; i < 20; i++ )
+				camera.Update();
+
+			AssertNear( eye, GetStatic( "_position" ), 0.001f, "the held flight's eye has not moved" );
+			AssertNear( look, GetStatic( "_lookAt" ), 0.001f, "nor its look point" );
+
+			LobbyCountedGapsTests.SetCurrentPlayer( new Player( 0, "Test", new PlayerFile() ) );
+			camera.Update();
+
+			var wantedEye = island.CameraTarget + new Vector3( 70f * MathF.Sin( 0.01f ), 70f * MathF.Cos( 0.01f ), 20f );
+			AssertNear( eye + ((wantedEye - eye) * 0.048771f), GetStatic( "_position" ), 0.01f, "one frame's ease from the held eye" );
+			AssertNear( look + ((island.CameraTarget - look) * 0.095163f), GetStatic( "_lookAt" ), 0.01f, "and from the held look point" );
+		}
+		finally
+		{
+			LobbyCameraMode.DebugFlightHold = null;
+		}
+	}
+
+	/// <summary>
+	/// <b>A pick from that held state swings the view over near-empty water, as the original's does (Q920).</b> The same state, Lost
+	/// Kingdom at (400, 400) with the shipped orbit (70, 20): at 30 frames a second the view's pitch below the horizon rises from 35 to a
+	/// peak and falls back, because the look point (twice the eye's rate) reaches the island before the eye has come down. Measured
+	/// on the desk, the original from this state: peak 74.2 degrees, over 45 degrees for 0.87 s; ours: 72.9 and 0.94 s
+	/// (<c>docs/exe/lobby.md</c>, "The pick's swing"). The bounds are the two games' numbers with a frame's room.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the look point eased at the eye's rate; the eye eased at the look point's rate; the look point
+	/// jumped to the island whole.</remarks>
+	[TestMethod]
+	public void APickFromTheHeldFlightSwingsOverWaterAsTheOriginalsDoes()
+	{
+		var camera = ACamera( out var island );
+		island.Position = new Vector3( 400f, 400f, 0f );
+
+		LobbyCameraMode.BeginLobby();
+		LobbyCameraMode.DebugFlightHold = (new Vector3( 479.466f, 363.595f, 86.613f ), new Vector3( 575.835f, 392.691f, 15.470f ));
+		try
+		{
+			Time.RawDelta = Time.Delta = 1f / 30f;
+			camera.Update();
+			LobbyCountedGapsTests.SetCurrentPlayer( new Player( 0, "Test", new PlayerFile() ) );
+
+			float peak = 0f, firstOver = -1f, lastOver = -1f;
+
+			for ( var frame = 1; frame <= 90; frame++ )
+			{
+				camera.Update();
+
+				var eye = GetStatic( "_position" );
+				var look = GetStatic( "_lookAt" );
+				var pitch = MathF.Atan2( eye.Z - look.Z, MathF.Sqrt( ((eye.X - look.X) * (eye.X - look.X)) + ((eye.Y - look.Y) * (eye.Y - look.Y)) ) ) * 180f / MathF.PI;
+				var t = frame / 30f;
+
+				peak = MathF.Max( peak, pitch );
+
+				if ( pitch > 45f )
+				{
+					if ( firstOver < 0f )
+						firstOver = t;
+
+					lastOver = t;
+				}
+			}
+
+			Assert.IsTrue( peak is > 66f and < 80f, $"the swing peaks between the games' 72.9 and 74.2 degrees, not {peak}" );
+			Assert.IsTrue( firstOver is > 0.05f and < 0.3f, $"the pitch passes 45 degrees at about +0.12 to +0.14 s, not {firstOver}" );
+			Assert.IsTrue( lastOver - firstOver is > 0.7f and < 1.1f, $"and stays over it for 0.87 to 0.94 s, not {lastOver - firstOver}" );
+		}
+		finally
+		{
+			LobbyCameraMode.DebugFlightHold = null;
+		}
+	}
+
+	/// <summary>
 	/// An island on a stand: at (600, 400, 0), its camera target 12.5 above. The camera reads it as the lobby's only island
 	/// and reads the settings the shipped lobby.txt gives (spin radius 70, vertical offset 20, field of view 100).
 	/// </summary>

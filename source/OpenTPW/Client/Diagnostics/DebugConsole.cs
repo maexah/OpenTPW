@@ -362,6 +362,23 @@ public static class DebugConsole
 					: "lobbyeye: only in the lobby" );
 				break;
 
+			// `lobbyput ex ey ez lx ly lz` holds the attract flight at an eye and look point given in the original's y-up axes, as
+			// `lobbyeye` prints them, until `lobbyput off`; a pick out of it then eases from exactly that state (Q920).
+			case "lobbyput":
+				if ( parts.Length > 1 && parts[1].ToLowerInvariant() == "off" )
+				{
+					LobbyCameraMode.DebugFlightHold = null;
+					Reply( "lobbyput off - the flight flies itself" );
+				}
+				else if ( parts.Length > 6 )
+				{
+					LobbyCameraMode.DebugFlightHold = (new Vector3( Argument( 1 ), Argument( 3 ), Argument( 2 ) ), new Vector3( Argument( 4 ), Argument( 6 ), Argument( 5 ) ));
+					Reply( "lobbyput on - the flight holds the eye and look point given" );
+				}
+				else
+					Reply( "lobbyput ex ey ez lx ly lz (y-up) | off" );
+				break;
+
 			case "settle":
 				// Drops the camera straight onto where it is headed, so a screenshot taken next
 				// frame is the same every run instead of depending on how long the ease had.

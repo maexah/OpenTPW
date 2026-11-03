@@ -163,6 +163,13 @@ public class LobbyCameraMode : CameraMode
 	internal static bool DebugHoldOrbit { get; set; }
 
 	/// <summary>
+	/// A flight state the attract flight stands in, for DebugConsole's `lobbyput`: the eye and look point, in ours' z-up axes. While it is set
+	/// the flight neither moves nor aims, so a click on the player's slot picks out of exactly this state, which is what
+	/// <c>original/lobbypick.py</c> writes into the original's flight, for the same pick in both games (Q920). Off unless a harness asks.
+	/// </summary>
+	internal static (Vector3 Eye, Vector3 Look)? DebugFlightHold { get; set; }
+
+	/// <summary>
 	/// Whether the lobby stays on the island it is showing, however it is asked to move. An Instant
 	/// Action game is played that way: the original's next and previous island handlers (0x005e1ee0
 	/// and 0x005e1f40) do nothing at all unless the game type is something other than 2, so nothing
@@ -641,7 +648,13 @@ public class LobbyCameraMode : CameraMode
 		if ( !_wandering )
 			SeedFlight();
 
-		if ( !Paused )
+		if ( DebugFlightHold is { } hold )
+		{
+			_wanderPosition = hold.Eye;
+			_lookPosition = hold.Look;
+		}
+
+		if ( !Paused && DebugFlightHold is null )
 		{
 			_wanderDirection = Steer( _wanderDirection, _wanderPosition, _wanderTarget );
 			_wanderPosition += _wanderDirection * WanderSpeed * Time.Delta;
@@ -655,7 +668,7 @@ public class LobbyCameraMode : CameraMode
 		CurrentIsland = nearest;
 		IslandIndex = islands.IndexOf( nearest );
 
-		if ( !Paused )
+		if ( !Paused && DebugFlightHold is null )
 		{
 			var wanted = nearest.CameraTarget;
 

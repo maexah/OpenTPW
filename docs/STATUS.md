@@ -42,7 +42,8 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- **Q929 (a bought Hot Pot's engine after a load and a save, seen in ours and in the original's script list and mixer on the same saved file; `q929/`, `PREDICTION.txt`: PA2's record count and PB1's first read missed and are recorded, the rest held), not seen or not compared:** the engine's sound was not heard, its mixer channel was read (`mixfreq.py`, far end 100 at the pot's place); one bought Hot Pot on one site, one round phase per file, no other ride's `EventMap.RSE` or `Worn.RSE`, no bought kart or water ride (the track rides are not run), no code changed so no new test and no `mutate.py` (the control is Q910's tip `52031a4c`, the tree Q911 was built on and 51 source commits behind this one, not the tip with the write put back; the file's 15 records and the gap counter `SAVE_PARK_SCRIPT_MADE_SINCE_THE_LOAD` say the companion write is what differs); the original was shown the saved files, not driven to buy and save its own pot; the original runs off-screen at about four ticks a second, so the two games' events are compared by `mGameTick` to about three ticks; Windows and macOS not run.
+- **Q920 (the lobby's swing over empty water after a pick, ours against the original; `q920/`, `PREDICTION.txt`: P1, P2 and P3's first bound missed and are recorded, the rest held), not seen or not compared:** the two games were compared from two held states (desk3's C1 start; the original's own flight at a swinging start), each with a real click on the slot, rows polled every 2 ms (original) and about 14 ms (ours) and a 30 a second film; the original's clock needed one fitted shift (85 ms and 25 ms; its first moved row is a frame's end), so timings finer than about 85 ms are not compared. The two games' own natural flights were each picked once at a start that does not swing (the original: peak 44.0; ours: 35.6 falling), once at one that does (the original, 81.1); how often each game's own flight stands at a swinging start is not measured, nor Full Simulation, nor Windows or macOS. The film's frames are 16:9 (ours) and 4:3 (the original). The one code change is a console hold (`lobbyput`), so the only new behaviour is a harness's. The original's reference install's `save/` sum was 57983e84 before and after.
+
 
 
 
@@ -55,6 +56,7 @@ Only the item just landed is here. Every earlier item's account is in `docs/hist
 
 ## Numbers (take counts fresh; these go stale within a day)
 
+- Linux, 2026-11-03, Q920 (`capped.sh`, two tests added): with the game, 4801 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 4803; with no game named, 1976 passed, 0 failed, 2827 skipped.
 - Linux, 2026-11-03, Q929 (`capped.sh`, no tests added): with the game, 4799 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 4801; with no game named, 1974 passed, 0 failed, 2827 skipped.
 - Linux, 2026-11-03, Q928 (`capped.sh`, one test added): with the game, 4799 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 4801; with no game named, 1974 passed, 0 failed, 2827 skipped.
 - Linux, 2026-11-03, Q927 (`capped.sh`, no tests added): with the game, 4798 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 4800; with no game named, 1974 passed, 0 failed, 2826 skipped.
