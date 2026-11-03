@@ -552,6 +552,13 @@ internal sealed class WindowStack : Panel
 		if ( Input.Mouse.Wheel != 0f && _hovered is UiRepeatButton )
 			WheelTaken = true;
 
+		// A modal screen up takes the wheel wherever the pointer is. The notch goes to the control under the pointer (0x1000d to
+		// the hovered control, 0x00658bcb) and only the park layer's procedure turns it into a zoom (FUN_0042a760); under the Load Park
+		// screen, the Save Park screen and the game menu the zoom stayed put at every place tried, the frame, the exit cross, the
+		// title, the bare park round it and the gadget (docs/exe/hud.md, "The wheel over a modal screen").
+		if ( Input.Mouse.Wheel != 0f && ModalUp )
+			WheelTaken = true;
+
 		Keyboard();
 
 		// The bar holds one row, the last posted (docs/exe/hud.md, "The help bar holds one posted row"). The pointer coming

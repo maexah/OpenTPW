@@ -4024,7 +4024,8 @@ modifier held it does nothing (`ParkFrontEnd.MenuKey`). Where it parts from the 
   original skips the press and commits on the release.
 - **First person** leaves the screen open (`docs/QUEUE.md` Q122).
 - **F1 over a screen** and **the wheel over a screen's body** are not decoded, and neither is built or counted
-  (`docs/QUEUE.md` Q231). The wheel zooms the camera wherever the pointer is.
+  (`docs/QUEUE.md` Q231). Over a park screen's body the wheel zooms the camera wherever the pointer is; over a modal screen it does not
+  (`hud.md`, "The wheel over a modal screen", Q930).
 
 ### The game menu and the options screen hold the keys
 

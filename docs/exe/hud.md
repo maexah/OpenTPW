@@ -2342,8 +2342,8 @@ cell size. **Only the arithmetic one could not have been talked into.**
 
 - **A HUD panel must leave `Pauses` false** or it stops `GameClock`, and with it the calendar, particles
   and every model animation. The map screen is the exception: the original genuinely pauses there.
-- **The interface takes the mouse before the world does.** `WindowStack.WheelTaken` keeps a wheel a window used
-  from also zooming the park (`ParkOrbitCameraMode`), and `WindowStack.PointerTaken` keeps a left press on a
+- **The interface takes the mouse before the world does.** `WindowStack.WheelTaken` keeps a wheel a window used, or any wheel under a modal one (Q930), from also
+  zooming the park (`ParkOrbitCameraMode`), and `WindowStack.PointerTaken` keeps a left press on a
   window, or any left press under a modal one, from reaching the world (`Level.WorldClick`).
   `WindowStack.RightPointerTaken` keeps a right press there from arming the quick click, except beside a park screen
   (`UiWindow.ParkScreen`), which the original builds onto the park's layer (`park-engine.md`, "Whose a right press
@@ -2598,7 +2598,7 @@ down (`Slider_SetPosition` `0x0066b088`; the field is a bit test, `& 2`). Its tw
   other rows, with the selected index unchanged (`q918/orig-scroll-sheet.png`: the highlight in slot 8 in all eight frames, tops 1, 4, 9, 0, 3, 3, 9, 7).
 - **The wheel over an arrow** (`0x1000d`): the arrow's procedure (`0x00668f9c`, then the base `0x0065f6d1`) answers `0x10001`..`0x10005` and `0x10002`..`0x10007` only, and
   nothing passes a message to a parent, so it reaches no one. The camera reads the notch through the park layer's own procedure (`FUN_0042a760`, from `0x00488b6a`), which an
-  arrow is not part of. What the wheel does over the rest of a modal screen's body was not decoded.
+  arrow is not part of. What the wheel does over the rest of a modal screen's body is measured below ("The wheel over a modal screen", Q930): nothing.
 
 **OpenTPW** (`UiList.AddScrollbar`, `UiRepeatButton`; Load Park and Save Park have it): the bar's value is the top row negated (the range ( -(count - visible), 0 ) is the same line on `UiSlider`,
 which has the thumb's top at the highest value); the bar is a rectangle holding the track, both arrows and the thumb, with the track's own rectangle taking the pointer, because a child
@@ -2628,6 +2628,26 @@ rows of 11 at 1280 x 720 (rows stay 39 units after `size 800 600`: the font set 
 
 **OpenTPW** (Q919): `ParkVisitorsScreen`, `ParkStaffScreen`, `ParkBuyScreen`, `ParkHireScreen` and `ParkItemsScreen` (its three list shapes) call `AddScrollbar` with that table's rectangles; `UiList.Scroll` counts `LIST_SCROLLBAR_NOT_BUILT` for a list longer than its window with no bar (the wheel alone).
 The console's `control` now prefers a shown control to a hidden one of the same id (the items screen builds three lists under id `0x190`).
+
+#### The wheel over a modal screen (Q930)
+
+**Decoded.** The window procedure (`FUN_0046b600`) takes `WM_MOUSEWHEEL` (`0x20a`, and the registered wheel message `[0x007a1c5c]`) and calls `FUN_00658bcb( notch, x, y, 0 )`,
+the notch the `wParam`'s high word over 120. That posts `0x1000d` through `UI_QueueMessage` (`0x00658ccc`) to **one** control: the capture `[0x00faa5e8]` if a control holds it, else the hovered
+one `[0x00faa5e0]`; the position is not used. Only the park layer's procedure (`FUN_0042a760`, `0x1000d`) turns the notch into a zoom, and it hears it only when the park layer is the hovered control
+(the arrow's procedure and the base's, `0x00668f9c` and `0x0065f6d1`, pass it to no one).
+
+**Measured** (Q930, `tools/harness/original/wheel.sh`, which hands `WM_MOUSEWHEEL` to that procedure through gdb, because the X wheel buttons from xdotool reach the original as nothing; three notches over
+a scrolling Load Park list scrolled it by none and the same three through `wheel.sh` by three rows, so the message does reach the controls; zoom read at `0x007909ec` by `camera.py`):
+with no screen open a notch over the park moves the zoom by 10 (110, 120, 130 at the clamp, five notches up to 80; the step is the float `[0x006fdd5c]` = -10.0 taken from the zoom for a negative notch, `[0x006fdd7c]` = +10.0 for a positive one). With **Load Park, Save Park, the game menu, the Options screen, the Restart Park
+box and the map** open, two or three notches each way at the screen's frame, its exit cross or tick, its title, a menu row, the bare park round it and the gadget left the zoom exactly where it was, at every place tried
+(the map's own zoom, `mapview.py`'s `Z`, stayed 1.000 and its picture did not change either); the cross closed Load Park with the zoom as it opened, and a notch over the park moved it by 10 again.
+The Options screen's pointer was near the screen's edge, so the point of interest crept under the edge scroll, which has nothing to do with the wheel. Not measured: the other message boxes, the lobby's
+dialogs, and the park screens that are not modal (`docs/QUEUE.md` Q231 keeps those).
+
+**OpenTPW** (Q930): `WindowStack.OnUpdate` takes the wheel (`WheelTaken`) whenever a modal window is up (`ModalUp`), wherever the pointer is, so the park behind it does not zoom; a list or a slider under the
+pointer still scrolls by it first. Before this, the wheel over the frame, the exit cross or the bare park round a modal screen moved `ParkOrbitCameraMode.Zoom` by 5 a notch (Load Park, Save Park and the game
+menu measured), Cancel left it moved and a Save wrote it. Ours: the window stack's modal windows are the message box, the new player dialog, the file screens, the game menu, the options screen and the map. The original was measured for the Restart Park
+box (of the message boxes), Load Park, Save Park, the game menu, the options screen and the map; the new player dialog is the lobby's, which has no park camera. A notch over a modal screen's body does nothing else here, as the measured original's does nothing else.
 
 ### Both trees, walked to a balanced op 5
 
