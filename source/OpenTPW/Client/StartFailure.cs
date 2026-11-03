@@ -27,7 +27,7 @@ internal static class StartFailure
 
 	public const string Title = "OpenTPW could not start";
 
-	/// <summary>The columns a line of the box is wrapped to: SDL's X11 box is 7 pixels a column, so this is under 500 of a 640-pixel display's.</summary>
+	/// <summary>The columns a line of the box is wrapped to: SDL's X11 box was 7 pixels a column with the font the Xvfb picked (Q912's shots; SDL asks for any 12-point font), so this is under 500 of a 640-pixel display's.</summary>
 	public const int BoxWidth = 64;
 
 	/// <summary>The line the box opens with.</summary>
@@ -104,6 +104,14 @@ internal static class StartFailure
 		foreach ( var word in line.Split( ' ' ) )
 		{
 			var rest = word;
+
+			if ( rest.Length == 0 )
+			{
+				if ( current.Length > 0 && current.Length < width )
+					current += " ";
+
+				continue;
+			}
 
 			if ( current.Length > 0 && current.Length + 1 + rest.Length <= width )
 			{

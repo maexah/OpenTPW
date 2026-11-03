@@ -104,6 +104,11 @@ public class StartFailureTests
 		Assert.AreEqual( "Log:", lines[0], "the label is not run on to a broken path" );
 		Assert.AreEqual( path, string.Concat( lines[1..] ), "no character lost" );
 		Assert.IsTrue( lines[1..^1].All( line => line.EndsWith( '\\' ) ), "each break is after a separator" );
+		CollectionAssert.AreEqual( new[] { "Log:", "C:\\Users\\someone\\AppData\\Local\\OpenTPW\\logs\\", "a-folder-with-a-long-name\\another-folder-too\\console.log" }, lines, "broken after the last separator that fits" );
+
+		var padded = new string( 'a', StartFailure.BoxWidth ) + "  " + "b ";
+
+		Assert.IsTrue( StartFailure.Wrap( padded ).Split( '\n' ).All( line => line.Length <= StartFailure.BoxWidth ), "spaces after a full line do not pass the width" );
 
 		var bare = StartFailure.Wrap( new string( 'x', StartFailure.BoxWidth * 2 + 5 ) ).Split( '\n' );
 
