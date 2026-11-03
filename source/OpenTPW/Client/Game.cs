@@ -66,14 +66,20 @@ internal static class Game
 
 		SaveFileSystem = new BaseFileSystem( saves.Folder );
 
-		if ( saves.Notice is { } notice )
-			SaveTrouble.Tell( notice );
-
 		// The machine's options, which the original reads in WinMain's setup, before its message loop (0x00424930).
 		SaveFolder.LoadConfig();
 
 		// And the ones it has no room for, which are OpenTPW's own - how the game fills the screen.
 		SaveFolder.LoadDisplay();
+
+		// The save-folder notice, once (Q922): opentpw.cfg remembers that it was shown, so it is read first and written after.
+		if ( SaveHome.TellOnce( saves, GameOptions.Current.NoticesTold ) is { } notice )
+		{
+			SaveTrouble.Tell( notice );
+			SaveFolder.SaveDisplay( false );
+		}
+		else if ( saves.Notice != null )
+			Log.Info( $"Saves: the notice {saves.NoticeName} was told before, so no box (delete its \"told\" line in opentpw.cfg to see it again)" );
 
 		// The one look for a newer weekly build (Q941): on another thread, once, and only for a weekly build whose
 		// opentpw.cfg line is not "updatecheck off". Nothing waits for it.

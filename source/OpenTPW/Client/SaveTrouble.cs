@@ -2,7 +2,7 @@ namespace OpenTPW;
 
 /// <summary>
 /// A write to the save folder that failed because the folder cannot be written, kept until the scene tells the player; it
-/// also carries the start's notice that players in the game's own folder are not read (<see cref="SaveHome"/>).
+/// also carries the start's notice about players in the folder not in use (<see cref="SaveHome"/>).
 ///
 /// <para>
 /// <b>A deviation</b> (Q982, <c>AGENTS.md</c> rule 11). The original says nothing here: its save answers a failure

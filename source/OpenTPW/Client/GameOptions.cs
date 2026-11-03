@@ -96,6 +96,13 @@ internal sealed class GameOptions
 	/// </summary>
 	public bool UpdateCheck { get; set; } = true;
 
+	/// <summary>
+	/// The save-folder notices the player has been told (<see cref="SaveHome.TellOnce"/>, Q922), each shown once. <b>OpenTPW's
+	/// own</b>: opentpw.cfg's <c>told</c> lines, read as the game starts (<see cref="SaveFolder.LoadDisplay"/>); delete a line
+	/// to be told again.
+	/// </summary>
+	public HashSet<string> NoticesTold { get; } = new( StringComparer.OrdinalIgnoreCase );
+
 	/// <summary>+0x08: low, medium or high, as 0, 1 or 2.</summary>
 	public int GraphicsQuality { get; set; } = 1;
 

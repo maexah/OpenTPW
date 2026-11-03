@@ -170,6 +170,7 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
     shown. The loop bit (`0x0042fd57`) is read under the definition's `[ebx+0x10]`. The pylon's ground node is already in
     `park-engine.md` (bottom node `0x00432f2f` to `0x00469940`); "four ground vertices on every PC pylon" is unproven.
 
+- [ ] **Q923. The `NOT SAVED` box still holds a path (`Log: <path>`).** `SaveTrouble.Take` ends `PARK NOT SAVED` / `The save folder cannot be written.` with `Log: <console.log's path>`, which wraps mid-word (`Wrap` has no separator rule; Q908's review, finding 2) and which Alexah's standing rule of 2026-11-02 for boxes ("short and plain, no paths") does not meet. Decide with Alexah: drop the line (the log's place is in the readme and the weekly's notes) or keep it. `SaveTroubleTests` pins the line.
 - [ ] **Q917. The Crazy Ape's OnAMesh clips and its other heads, and a fitted turn for them (from Q916).** Q916 compared three of the Ape's heads (Head02, Head07, Head13) in
   its clip `l` (role 3), the OnAFace branch, and found no difference above about 0.05 (the census rounds to 0.1). Not compared: the OnAMesh branch (roles 4, 5, 6 and `m1` to
   `m6`), the ride proper's clips (never paused), and a face-anchored head on a non-morphing parent (`LobbyModel.cs:609`). The original named 13 records, ours held 11 heads;

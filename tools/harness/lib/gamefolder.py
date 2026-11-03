@@ -12,7 +12,7 @@ GAME_FOLDER. `gamefolder.py DEST REL OLD NEW` does one replacement from the shel
 `gamefolder.py lock DEST` makes DEST (as `make( DEST, {} )` does) with its save/ read-only at every level and the first
 player's `restart.INTS` taken out (Q982: `lock( DEST )`); `unlock( DEST )` puts the write bit back, which removing the folder needs.
 Since Q984 the game does not stay in a `save/` it cannot write: its saves go in the player's data folder (`$XDG_DATA_HOME/OpenTPW/save`,
-`~/.local/share/OpenTPW/save`), and a locked `save/` that holds players opens the one SAVES GO IN box. **Set XDG_DATA_HOME to a folder of the
+`~/.local/share/OpenTPW/save`), and a locked `save/` that holds players opens the one YOUR GAME SAVES IN A NEW FOLDER box (Q922; it is shown once, and `told moved` in the fallback's opentpw.cfg remembers it). **Set XDG_DATA_HOME to a folder of the
 run's own first** (and make that folder read-only too for Q982's boxes, which fire only when the fallback cannot be written); `lock()` and
 `fresh()` print a warning, and refuse with `GAMEFOLDER_ALLOW_REAL_HOME=1` unset, when it is not set (AGENTS.md rule 12).
 

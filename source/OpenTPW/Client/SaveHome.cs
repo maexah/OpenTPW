@@ -14,23 +14,30 @@ namespace OpenTPW;
 /// </para>
 /// <para>
 /// Q902 (Alexah's, open): a <c>save\</c> that holds players but cannot be written is read by nothing, and nothing is
-/// copied out of it. The game says so once each start (<see cref="SaveTrouble.Tell"/>; nothing is kept between starts).
+/// copied out of it. The game says so in a short box (<see cref="Notice"/>).
 /// </para>
 /// <para>
 /// The other way (Q908, Alexah's 2026-11-02): a game folder that has become writable is kept, and the players left in the
-/// player's folder are read by nothing and nothing is copied; the game says so the same way, each start while it is so.
+/// player's folder are read by nothing and nothing is copied; the game says so in a short box (<see cref="KeptNotice"/>).
+/// Q922 (Alexah's words, 2026-11-02): neither box holds a path, which a player cannot use and a long one overwhelms; both
+/// folders go to the log at every start. Each box is shown once and remembered (<see cref="TellOnce"/>), in opentpw.cfg.
 /// </para>
 /// </summary>
 internal static class SaveHome
 {
 	internal const string Name = "save";
 
+	/// <summary>The names the two notices are remembered under in opentpw.cfg.</summary>
+	internal const string KeptName = "kept";
+	internal const string MovedName = "moved";
+
 	private const string UsersName = "users";
 
 	/// <param name="Folder">The folder to map.</param>
 	/// <param name="Fallback">Whether it is the player's folder, not the game's.</param>
-	/// <param name="Notice">What to tell the player once, or null where nothing is lost to them by the move.</param>
-	internal readonly record struct Pick( string Folder, bool Fallback, string? Notice );
+	/// <param name="Notice">What to tell the player, or null where there is nothing to tell.</param>
+	/// <param name="NoticeName">The name the notice is remembered under in opentpw.cfg once told (<see cref="TellOnce"/>); null with no notice.</param>
+	internal readonly record struct Pick( string Folder, bool Fallback, string? Notice, string? NoticeName = null );
 
 	/// <summary>The fallback: <c>save</c> in the player's data folder.</summary>
 	internal static string PlayersFolder() => Path.Join( UserFolders.Data(), Name );
@@ -49,8 +56,8 @@ internal static class SaveHome
 			// Alexah's answer (Q908): say so, copy nothing and read no second folder.
 			if ( !PathsMatch( gameSave, playersSave ) && HoldsPlayers( playersSave ) )
 			{
-				Log.Warning( $"Saves: {playersSave} holds players, and the game's own folder is kept, so they are read by nothing and nothing is copied (Q908)" );
-				return new Pick( gameSave, false, KeptNotice( gameSave, playersSave ) );
+				Log.Warning( $"Saves: {playersSave} holds players, and the game's own folder {gameSave} is kept, so they are read by nothing and nothing is copied (Q908)" );
+				return new Pick( gameSave, false, KeptNotice(), KeptName );
 			}
 
 			return new Pick( gameSave, false, null );
@@ -68,17 +75,32 @@ internal static class SaveHome
 		if ( playersWhy != null )
 			Log.Warning( $"Saves: {playersSave} cannot be written either ({playersWhy})" );
 
-		return new Pick( playersSave, true, holds ? Notice( playersSave ) : null );
+		return new Pick( playersSave, true, holds ? Notice() : null, holds ? MovedName : null );
 	}
 
-	/// <summary>The one line the player is told when the move leaves players behind, in the message box's capitals-then-sentence form.</summary>
-	internal static string Notice( string folder )
-		=> $"SAVES GO IN\n\n{folder}\nPlayers in the game's own folder are not copied.";
+	/// <summary>
+	/// What the player is told when the move leaves players behind, in the message box's capitals-then-sentence form. No path:
+	/// the log names both folders at every start (<see cref="Choose"/>).
+	/// </summary>
+	internal static string Notice()
+		=> "YOUR GAME SAVES IN A NEW FOLDER\n\nPlayers saved before are safe, but won't show here.";
 
-	/// <summary>The line the player is told when the game's folder is kept and the player's folder still holds players, in the same form.</summary>
-	internal static string KeptNotice( string gameSave, string playersSave )
-		=> $"SAVES ARE IN\n\n{gameSave}\nPlayers in {playersSave} are not read.";
+	/// <summary>What the player is told when the game's folder is kept and the player's folder still holds players, in the same form.</summary>
+	internal static string KeptNotice()
+		=> "CAN'T SEE YOUR PLAYERS?\n\nThey are safe. Nothing was deleted. If you changed how the game runs, changing it back will show them again.";
 
+	/// <summary>
+	/// The notice if it has not been told before, and then counted as told in <paramref name="told"/> (opentpw.cfg's <c>told</c>
+	/// lines, <see cref="GameOptions.NoticesTold"/>, which the caller writes out); null where the pick has none or it was told.
+	/// </summary>
+	internal static string? TellOnce( Pick pick, ISet<string> told )
+		=> pick.Notice != null && pick.NoticeName is { } name && told.Add( name ) ? pick.Notice : null;
+
+	/// <summary>
+	/// Whether two spellings name one folder: the same full path, trailing separators aside, in the system's case rule. A link to a
+	/// folder is another path to this (<see cref="Path.GetFullPath(string)"/> follows no link), so a <c>save</c> linked to the
+	/// player's folder is taken for a second folder and its players are called unread though the game reads them.
+	/// </summary>
 	private static bool PathsMatch( string a, string b )
 		=> string.Equals( Path.TrimEndingDirectorySeparator( Path.GetFullPath( a ) ), Path.TrimEndingDirectorySeparator( Path.GetFullPath( b ) ),
 			OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal );
@@ -112,8 +134,13 @@ internal static class SaveHome
 				.Where( entry => string.Equals( Path.GetFileName( entry ), UsersName, StringComparison.OrdinalIgnoreCase ) )
 				.Any( users => Directory.EnumerateDirectories( users ).Any() );
 		}
+		catch ( DirectoryNotFoundException )
+		{
+			return false;
+		}
 		catch ( Exception e ) when ( e is IOException or UnauthorizedAccessException )
 		{
+			Log.Warning( $"Saves: {folder} could not be read for players, so it is taken to hold none - {e.Message}" );
 			return false;
 		}
 	}

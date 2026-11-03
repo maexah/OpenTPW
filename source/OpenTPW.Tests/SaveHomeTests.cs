@@ -114,9 +114,9 @@ public class SaveHomeTests
 		Assert.AreEqual( 1, Directory.GetFileSystemEntries( game ).Length, "only users\\ is there" );
 	}
 
-	/// <remarks><b>Mutation:</b> the notice taken off the kept branch, or <see cref="SaveHome.HoldsPlayers"/> asked of the game's folder.</remarks>
+	/// <remarks><b>Mutation:</b> the notice taken off the kept branch, <see cref="SaveHome.HoldsPlayers"/> asked of the game's folder, a path put in the words, or the word of safety taken out.</remarks>
 	[TestMethod]
-	public void AKeptFolderWhileThePlayersFolderHoldsPlayersSaysSoAndCopiesNothing()
+	public void AKeptFolderWhileThePlayersFolderHoldsPlayersSaysTheyAreSafeAndCopiesNothing()
 	{
 		Directory.CreateDirectory( game );
 		Directory.CreateDirectory( Path.Join( players, "users", "1Old", "jungle" ) );
@@ -126,11 +126,20 @@ public class SaveHomeTests
 
 		Assert.AreEqual( game, pick.Folder );
 		Assert.IsFalse( pick.Fallback );
-		StringAssert.StartsWith( pick.Notice, "SAVES ARE IN\n\n" + game );
-		StringAssert.Contains( pick.Notice, players );
-		StringAssert.Contains( pick.Notice, "not read" );
+		Assert.AreEqual( SaveHome.KeptName, pick.NoticeName );
+		StringAssert.StartsWith( pick.Notice, "CAN'T SEE YOUR PLAYERS?\n\nThey are safe. Nothing was deleted." );
+		AssertNoPath( pick.Notice!, game, players );
 		Assert.AreEqual( 0, Directory.GetFileSystemEntries( game ).Length, "nothing is copied in (Q908)" );
 		Assert.IsTrue( File.Exists( Path.Join( players, "users", "1Old", "gms.dat" ) ), "and the players left are untouched" );
+	}
+
+	/// <summary>A box a player reads at a glance holds no folder: a path wraps mid-word and a player cannot use it, so the log has both (Q922).</summary>
+	private static void AssertNoPath( string notice, params string[] folders )
+	{
+		foreach ( var folder in folders )
+			Assert.IsFalse( notice.Contains( folder, StringComparison.OrdinalIgnoreCase ), $"the notice names {folder}" );
+
+		Assert.IsFalse( notice.Contains( '/' ) || notice.Contains( '\\' ), "no separator, so no path" );
 	}
 
 	[TestMethod]
@@ -143,12 +152,126 @@ public class SaveHomeTests
 		Assert.IsNull( SaveHome.Choose( game, players ).Notice, "an options file and an empty users folder are no players" );
 	}
 
+	/// <remarks><b>Mutation:</b> <c>Path.GetFullPath</c> taken out of the comparison, the trailing separator kept, or the case rule made exact on Windows.</remarks>
 	[TestMethod]
 	public void AKeptFolderThatIsThePlayersFolderToldNothingOfItself()
 	{
 		Directory.CreateDirectory( Path.Join( game, "users", "1Test" ) );
 
-		Assert.IsNull( SaveHome.Choose( game, game + Path.DirectorySeparatorChar ).Notice, "the same folder is not left behind" );
+		Assert.IsNull( SaveHome.Choose( game, game + Path.DirectorySeparatorChar ).Notice, "a trailing separator is the same folder" );
+
+		Directory.CreateDirectory( Path.Join( Path.GetDirectoryName( game )!, "elsewhere" ) );
+		var viaParent = Path.Join( Path.GetDirectoryName( game )!, "elsewhere", "..", "save" );
+		Assert.IsNull( SaveHome.Choose( game, viaParent ).Notice, "a spelling through .. is the same folder" );
+
+		if ( OperatingSystem.IsWindows() )
+			Assert.IsNull( SaveHome.Choose( game, game.ToUpperInvariant() ).Notice, "Windows ignores the case of a folder's name" );
+	}
+
+	/// <remarks><b>Mutation:</b> the case rule made loose on Linux, where a folder named in another case is another folder.</remarks>
+	[TestMethod]
+	public void OnLinuxAFolderInAnotherCaseIsAnotherFolder()
+	{
+		if ( !OperatingSystem.IsLinux() )
+			Assert.Inconclusive( "only Linux's folders tell two cases apart for certain" );
+
+		var other = Path.Join( Path.GetDirectoryName( game )!, "SAVE" );
+		Directory.CreateDirectory( game );
+		Directory.CreateDirectory( Path.Join( other, "users", "1Old" ) );
+
+		Assert.IsNotNull( SaveHome.Choose( game, other ).Notice, "SAVE is not save, and it holds a player" );
+	}
+
+	/// <summary>Each notice is told once: the first start gets it and counts it told, the next gets none, and one notice told does not hush the other.</summary>
+	/// <remarks><b>Mutation:</b> the name not added to the set, or both notices under one name.</remarks>
+	[TestMethod]
+	public void ANoticeIsToldOnceAndEachOnItsOwn()
+	{
+		var told = new HashSet<string>( StringComparer.OrdinalIgnoreCase );
+		var kept = new SaveHome.Pick( game, false, SaveHome.KeptNotice(), SaveHome.KeptName );
+		var moved = new SaveHome.Pick( players, true, SaveHome.Notice(), SaveHome.MovedName );
+
+		Assert.AreEqual( SaveHome.KeptNotice(), SaveHome.TellOnce( kept, told ) );
+		Assert.IsNull( SaveHome.TellOnce( kept, told ), "not told again" );
+		Assert.AreEqual( SaveHome.Notice(), SaveHome.TellOnce( moved, told ), "the other notice is its own" );
+		Assert.IsNull( SaveHome.TellOnce( moved, told ) );
+		Assert.IsNull( SaveHome.TellOnce( new SaveHome.Pick( game, false, null ), told ), "nothing to tell" );
+	}
+
+	/// <remarks><b>Mutation:</b> the line not read, not written, or written with no name.</remarks>
+	[TestMethod]
+	public void ANoticeToldIsRememberedInOpenTpwCfgAndAForgottenOneIsToldAgain()
+	{
+		Directory.CreateDirectory( game );
+		var was = GameOptions.Current;
+		var wasSaves = SaveFileSystemOrNull;
+
+		try
+		{
+			SaveFileSystem = new BaseFileSystem( game );
+			GameOptions.Current = new();
+			Assert.IsNotNull( SaveHome.TellOnce( new SaveHome.Pick( game, false, SaveHome.KeptNotice(), SaveHome.KeptName ), GameOptions.Current.NoticesTold ) );
+			SaveFolder.SaveDisplay( tell: false );
+
+			var file = Path.Join( game, "opentpw.cfg" );
+			StringAssert.Contains( File.ReadAllText( file ), "\ntold kept\n" );
+			Assert.IsFalse( File.ReadAllText( file ).Contains( "told moved" ) );
+
+			GameOptions.Current = new();
+			SaveFolder.LoadDisplay();
+			Assert.IsNull( SaveHome.TellOnce( new SaveHome.Pick( game, false, SaveHome.KeptNotice(), SaveHome.KeptName ), GameOptions.Current.NoticesTold ), "read back: told, not shown again" );
+
+			File.WriteAllText( file, File.ReadAllText( file ).Replace( "told kept\n", "" ) );
+			GameOptions.Current = new();
+			SaveFolder.LoadDisplay();
+			Assert.IsNotNull( SaveHome.TellOnce( new SaveHome.Pick( game, false, SaveHome.KeptNotice(), SaveHome.KeptName ), GameOptions.Current.NoticesTold ), "the line deleted: told again" );
+		}
+		finally
+		{
+			GameOptions.Current = was;
+			SaveFileSystemOrNull = wasSaves;
+		}
+	}
+
+	/// <summary>A players folder that cannot be listed is taken to hold none, and the log says so (a folder that is not there says nothing: it is the common case).</summary>
+	/// <remarks><b>Mutation:</b> the warning taken out of the catch, or the not-there folder warned about.</remarks>
+	[TestMethod]
+	public void AFolderThatCannotBeListedIsTakenToHoldNoneAndSaysSoInTheLog()
+	{
+		Directory.CreateDirectory( players );
+		var warned = new List<string>();
+		Logger.LogDelegate hear = ( severity, text ) =>
+		{
+			if ( severity == Logger.Level.Warning )
+				warned.Add( text );
+		};
+
+		Logger.OnLog += hear;
+
+		try
+		{
+			Assert.IsFalse( SaveHome.HoldsPlayers( Path.Join( root, "nowhere" ) ) );
+			Assert.AreEqual( 0, warned.Count, "a folder that is not there is the common case" );
+
+			if ( OperatingSystem.IsWindows() )
+			{
+				Assert.Inconclusive( "a closed folder is made on Unix only here" );
+				return;
+			}
+
+			File.SetUnixFileMode( players, UnixFileMode.None );
+
+			try { _ = Directory.GetDirectories( players ); Assert.Inconclusive( "this system keeps the right to read a closed folder" ); }
+			catch ( UnauthorizedAccessException ) { }
+
+			Assert.IsFalse( SaveHome.HoldsPlayers( players ) );
+			Assert.AreEqual( 1, warned.Count );
+			StringAssert.Contains( warned[0], players );
+		}
+		finally
+		{
+			Logger.OnLog -= hear;
+		}
 	}
 
 	/// <remarks><b>Mutation:</b> the probe back on the fixed name <c>.write-test</c> with <see cref="FileMode.Create"/>: the file is emptied and removed.</remarks>
@@ -227,8 +350,9 @@ public class SaveHomeTests
 
 		Assert.AreEqual( players, pick.Folder );
 		Assert.IsTrue( pick.Fallback );
-		StringAssert.StartsWith( pick.Notice, "SAVES GO IN\n\n" + players );
-		StringAssert.Contains( pick.Notice, "not copied" );
+		Assert.AreEqual( SaveHome.MovedName, pick.NoticeName );
+		StringAssert.StartsWith( pick.Notice, "YOUR GAME SAVES IN A NEW FOLDER\n\nPlayers saved before are safe" );
+		AssertNoPath( pick.Notice!, game, players );
 		Assert.AreEqual( 0, Directory.GetFileSystemEntries( players ).Length, "nothing is copied (Q902)" );
 		Assert.IsTrue( File.Exists( Path.Join( game, "Users", "1Test", "gms.dat" ) ), "and the players left behind are untouched" );
 	}

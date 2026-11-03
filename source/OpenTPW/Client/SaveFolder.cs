@@ -33,6 +33,7 @@ internal static class SaveFolder
 	private const string GraphicsName = "graphics";
 	private const string GpuName = "gpu";
 	private const string UpdateCheckName = "updatecheck";
+	private const string ToldName = "told";
 	private const string GraphicsImproved = "improved";
 	private const string GraphicsFaithful = "faithful";
 	private const string UsersFolder = "users";
@@ -192,7 +193,7 @@ internal static class SaveFolder
 	/// for - see <see cref="Display"/>; the faithful graphics toggle (<see cref="GameOptions.Faithful"/>), read
 	/// before the first texture is made, and set nowhere else; and the graphics card's <c>gpu</c> line
 	/// (<see cref="GameOptions.Gpu"/>), read before the device is made; and the <c>updatecheck</c> line
-	/// (<see cref="GameOptions.UpdateCheck"/>), read before the update check starts.
+	/// (<see cref="GameOptions.UpdateCheck"/>), read before the update check starts; and the <c>told</c> lines (<see cref="GameOptions.NoticesTold"/>).
 	///
 	/// <para>
 	/// It is a plain text file of its own rather than more fields in Config.tcf, so that the original's
@@ -254,6 +255,11 @@ internal static class SaveFolder
 					// The update check (Q941): "off" stops the one request the game makes as it starts; anything else keeps it.
 					case UpdateCheckName:
 						GameOptions.Current.UpdateCheck = !parts[1].Equals( "off", StringComparison.OrdinalIgnoreCase );
+						break;
+
+					// A save-folder notice already shown (Q922): "told kept", "told moved".
+					case ToldName:
+						GameOptions.Current.NoticesTold.Add( parts[1] );
 						break;
 
 					// The graphics card (Q980): the rest of the line, so a name with spaces in it reads whole.
@@ -326,6 +332,15 @@ internal static class SaveFolder
 				.AppendLine( "# updatecheck on: as it starts, a weekly build asks GitHub whether a newer weekly build has been released, and says so in the lobby and the Escape menu." )
 				.AppendLine( "# updatecheck off: no request is made. Nothing is downloaded or installed either way. Read as the game starts." )
 				.AppendLine( $"{UpdateCheckName} {(options.UpdateCheck ? "on" : "off")}" );
+
+			// The save-folder notices already shown (Q922), each once; a line deleted is told again.
+			if ( options.NoticesTold.Count > 0 )
+			{
+				text.AppendLine( "# told <name>: a notice about the save folders the game has shown once and will not show again. Delete the line to see it again." );
+
+				foreach ( var name in options.NoticesTold.Order( StringComparer.OrdinalIgnoreCase ) )
+					text.AppendLine( $"{ToldName} {name}" );
+			}
 
 			// How many steps each kind of load took last time, which is how the loading bar knows how far
 			// to fill without being told - see LoadStepCounts. These are measurements rather than choices,

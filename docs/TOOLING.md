@@ -1882,13 +1882,13 @@ GH=766` there, or the pointer is off):
   `LEDGER = "<path in the run's folder>"` before `parkrun.py` (its ledger of made files is in the private game folder otherwise,
   which a read-only one refuses), then `unfresh( DEST )` / `unlock( DEST )` before `done()`. `fresh` has no player: make one by
   clicking (slot 1's control `7a14`, then the name box `70e`, the name's keys, Return: "is playing in slot 1" in the log) and
-  `park jungle`. The notice box logs `Message box: SAVES GO IN /  / <folder> / ...` (the log joins a box's lines with ` / `, so a
+  `park jungle`. The notice box logs `Message box: YOUR GAME SAVES IN A NEW FOLDER /  / Players saved before are safe, but won't show here.` (before Q922, `SAVES GO IN /  / <folder> / ...`) (the log joins a box's lines with ` / `, so a
   blank line reads ` /  / `). F2 and Alt+S for a hidden interface: send F2, check `windows` says `interface hidden`, send
   Alt+S, read the clock twice, 2 s apart, **after** the key (a reading from before it counts the ticks until the pause). Hold F2 and Alt+S
   0.4 s (`key_down`, sleep, `key_up`): `key()`'s 0.12 s fell between two frames of an off-screen run four times in this item, and
   the key was never seen;
   `Q984_MUTANT`'s run on a build with `TellSaveTrouble`'s `RootPanel.Hidden` and `Covered` taken out shows the old stop.
-  Q908's other way round (`q908/confirm.py <out> <bin> kept|control`): a writable private `save/` and a `<XDG_DATA_HOME>/OpenTPW/save` holding a third player (`kept`) or none (`control`); `kept` logs `Message box: SAVES ARE IN /  / ...`, the lobby lists the game's two players and `Front end: 2 saved player(s)`.
+  Q908's other way round and Q922's once-only memory (`q922/confirm.py <out> <bin> kept|again|control|moved|movedagain [<previous out>]`, on the desk: `OFFSCREEN = False`): `kept` is a writable private `save/` and a `<XDG_DATA_HOME>/OpenTPW/save` holding a third player, and logs `Message box: CAN'T SEE YOUR PLAYERS? /  / They are safe. ...`; `again` is a second start on the same folders (`<previous out>`: `BASE` takes its `game/` and `xdg/`) and logs `Saves: the notice kept was told before, so no box`; `moved` and `movedagain` do the same for a read-only `save/` holding a player (`gamefolder.lock` again at the start of each, `unlock` before `done()`) and `YOUR GAME SAVES IN A NEW FOLDER`. `told <name>` lines in the chosen folder's `opentpw.cfg` are the memory: `grep -c '^told kept$'`. Q908's `q908/confirm.py` is the same run with the old words.
   `neither.sh` is the start that ends: the game folder read-only and `XDG_DATA_HOME`'s `OpenTPW` a file; exit 1 and the
   reasons in the log (`OPENTPW_NO_MESSAGE_BOX=1` keeps the box off).
 - **`wadcat --cat` is for text**: a binary entry comes out with its bytes turned to `?`. Take a binary with `--dump`
